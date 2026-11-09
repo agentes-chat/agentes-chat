@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { GroupedRow, LargeTitleScreen, PULL_TINT, PullOrbit, SkeletonList, SwipeRow } from "@/ui";
 import { router } from "@/ui/navigation";
+import { SkeletonOver, useFirstLoad } from "@/ui/Skeleton";
 import { workByAgent } from "../agents/logic";
 import { useCategoryMenus } from "../categories/menus";
 import { SetupNotice } from "../computer/SetupWait";
@@ -27,7 +28,7 @@ import { ConversationRowView } from "./ConversationRowView";
 import { FirstRunLine } from "./FirstRunLine";
 import { FirstAgentEmpty, Greeting, GreetingSky } from "./Greeting";
 import { Arrive, useHomeEntrance, useWake } from "./HomeEntrance";
-import { CollapsibleSection, SeeAllRow, useHomeCollapsed } from "./HomeSection";
+import { CollapsibleSection, LandRow, SeeAllRow, useHomeCollapsed } from "./HomeSection";
 import { HomeServerError, HomeServerNotice } from "./HomeServerError";
 import { HomeWidgets } from "./HomeWidgets";
 import {
@@ -58,7 +59,8 @@ export const openKindList = (kind: ListKind | `category-${string}`) => router.pu
  * is being prepared, and a notice per computer that went offline with agents waiting for it. Above the sections a
  * Dashboards row pushes the Dashboards list (ADR 0135 §15). An agent's row says it waits on your ok, waits
  * for its computer, or what it is doing. A row swiped left pins it on top (or takes it off), the long press's menu
- * has the rest. While the list loads, rows of its own shape stand in (no spinner, nothing moves when it lands).
+ * has the rest. While the list loads, rows of its own shape stand in (no spinner); when it lands they fade away over
+ * the rows, which come in one after the other, and from then on a row that changes place travels there.
  * Search and Threads have their own tabs. Empty, it invites the first agent. Nothing opens over it on its own: the
  * offer to turn on notifications comes as a line in the right hand's conversation. When the server doesn't answer
  * it says so (`HomeServerError`), over the kept rows as a card, and tries again on its own.
@@ -136,6 +138,8 @@ function Home() {
   const failed = list.failed && list.rows.length === 0;
   // Agents already in the team fill the home (Agentes) instead of the invitation to create the first one.
   const empty = !list.loading && !failed && pinned.rows.length === 0 && starters.length === 0;
+  // The first load: the rows arrive over the stand-ins (a refetch plays nothing).
+  const load = useFirstLoad(list.loading);
 
   // The first Conversas after the splash arrives as one gesture (once per launch, never holding a tap back): the sky
   // comes up from the splash's, the greeting rises, the right hand's field follows and its face wakes with a small
@@ -158,6 +162,8 @@ function Home() {
     ) : null;
 
   let live = 0;
+  // Rows shown so far, top to bottom: the order they arrive in on the first load.
+  let landed = 0;
   return (
     <LargeTitleScreen
       title={t("mobile.chats.title")}
@@ -188,118 +194,145 @@ function Home() {
       <OutageNotices />
       {list.stale && !failed ? <HomeServerNotice retry={list.refetch} /> : null}
       {strip}
-      {failed || empty || list.loading ? null : (
-        <>
-          {/* Início's widgets, and the way to Dashboards ("See all"), not a tab (ADR 0135 §15). */}
-          <HomeWidgets collapsed={collapsed.includes("widgets")} onToggle={() => toggle("widgets")} />
-          <FirstRunLine />
-        </>
-      )}
-      {failed ? (
-        <HomeServerError retry={list.refetch} />
-      ) : empty ? (
-        <FirstAgentEmpty />
-      ) : list.loading ? (
-        <>
-          <CollapsibleSection title={t("mobile.chats.section.agents")} count={0} collapsed={false} onToggle={() => {}}>
-            <SkeletonList rows={4} />
-          </CollapsibleSection>
+      {/* Everything under the strip in one box of its own: the strip grows and shrinks frame by frame, and the box
+          goes with it as one piece, so the rows inside only travel when they change place among themselves. */}
+      <View collapsable={false}>
+        {failed || empty || list.loading ? null : (
+          <>
+            {/* Início's widgets, and the way to Dashboards ("See all"), not a tab (ADR 0135 §15). */}
+            <LandRow land={load.landing}>
+              <HomeWidgets collapsed={collapsed.includes("widgets")} onToggle={() => toggle("widgets")} />
+            </LandRow>
+            <LandRow land={load.landing} moves>
+              <FirstRunLine />
+            </LandRow>
+          </>
+        )}
+        {failed ? (
+          <HomeServerError retry={list.refetch} />
+        ) : empty ? (
+          <FirstAgentEmpty />
+        ) : (
+          <LandRow moves>
+            {load.skeleton ? (
+              <SkeletonOver leaving={load.landing}>
+                <CollapsibleSection
+                  title={t("mobile.chats.section.agents")}
+                  count={0}
+                  collapsed={false}
+                  onToggle={() => {}}
+                >
+                  <SkeletonList rows={4} />
+                </CollapsibleSection>
+                <CollapsibleSection
+                  title={t("mobile.chats.section.channels")}
+                  count={0}
+                  collapsed={false}
+                  onToggle={() => {}}
+                >
+                  <SkeletonList rows={2} />
+                </CollapsibleSection>
+              </SkeletonOver>
+            ) : null}
+            {list.loading
+              ? null
+              : sections.map((s) => {
+                  const off = collapsed.includes(s.key);
+                  const row = (r: ConversationRow, i: number, shown: boolean) => {
+                    const view = (
+                      <ConversationRowView
+                        row={r}
+                        divider={i > 0}
+                        live={shown && live++ < LIVE_ROWS}
+                        agent={agentStates.get(r.key)}
+                        // The pin mark only for what the person pinned, not day one's default (every agent they made).
+                        pinned={pins.chosen && i < (s.pinned ?? 0)}
+                        onHold={menus.openRowMenu}
+                        holdLabel={t("sidebarPins.pin")}
+                        holdActions={menus.rowActionsOf}
+                        {...(r.kind === "dm" && !r.channelId ? { onStart: startDm } : {})}
+                      />
+                    );
+                    // Swiped left: Fixar no topo (or Desafixar), the menu's first action, and on a channel Silenciar
+                    // (or Reativar) beside it, on panes; the row stays opaque over them (the hairline and the sky
+                    // never show).
+                    const pin = menus.rowActionsOf(r).find((a) => a.key === "pin");
+                    const pinPane = pin
+                      ? { label: pin.label, icon: "pin" as const, color: c.agent, ink: c.onAgent, onAction: pin.run }
+                      : null;
+                    const mutePane =
+                      r.kind === "channel"
+                        ? {
+                            label: t(r.muted ? "mobile.chats.swipe.unmute" : "mobile.chats.swipe.mute"),
+                            icon: "mute" as const,
+                            color: c.muted,
+                            ink: c.bg,
+                            onAction: () => mute.mutate({ channelId: r.channelId, muted: !r.muted }),
+                          }
+                        : null;
+                    return (
+                      // The row's key is on the box that travels: a conversation that goes to the top with a new
+                      // message moves there, and the ones it passes move down.
+                      <LandRow key={r.key} land={load.landing} index={shown ? landed++ : 0} moves>
+                        {pinPane ? (
+                          <SwipeRow right={mutePane ? [pinPane, mutePane] : pinPane}>
+                            <View style={{ backgroundColor: c.bg }}>{view}</View>
+                          </SwipeRow>
+                        ) : (
+                          view
+                        )}
+                      </LandRow>
+                    );
+                  };
+                  const hold = s.categoryId ? menus.categoryMenu(s.categoryId, s.name ?? "") : undefined;
+                  return (
+                    <CollapsibleSection
+                      key={s.key}
+                      title={sectionTitle(s)}
+                      count={s.total}
+                      collapsed={off}
+                      onToggle={() => toggle(s.key)}
+                      // A closed category keeps its unread channels in sight, as on the web.
+                      {...(s.categoryId && s.unread.length > 0
+                        ? { kept: s.unread.map((r, i) => row(r, i, true)) }
+                        : {})}
+                      {...(hold ? { onLongPress: hold, holdLabel: t("mobile.categories.title") } : {})}
+                    >
+                      {s.rows.map((r, i) => row(r, i, !off))}
+                      {s.more ? (
+                        <SeeAllRow
+                          label={s.categoryId ? t("mobile.categories.seeAll") : t(`mobile.chats.seeAll.${s.key}`)}
+                          onPress={() =>
+                            openKindList(s.categoryId ? categoryListKind(s.categoryId) : (s.key as ListKind))
+                          }
+                        />
+                      ) : null}
+                    </CollapsibleSection>
+                  );
+                })}
+          </LandRow>
+        )}
+        {others.length > 0 ? (
           <CollapsibleSection
-            title={t("mobile.chats.section.channels")}
-            count={0}
-            collapsed={false}
-            onToggle={() => {}}
+            title={t("shell.otherChannels")}
+            count={others.length}
+            collapsed={collapsed.includes(OTHER_CHANNELS)}
+            onToggle={() => toggle(OTHER_CHANNELS)}
           >
-            <SkeletonList rows={2} />
+            {others.map((o) => (
+              <GroupedRow key={o.id} icon="lock" label={`#${o.name}`} onPress={() => router.push(chatHref(o.id))} />
+            ))}
           </CollapsibleSection>
-        </>
-      ) : (
-        sections.map((s) => {
-          const off = collapsed.includes(s.key);
-          const row = (r: ConversationRow, i: number, shown: boolean) => {
-            const view = (
-              <ConversationRowView
-                key={r.key}
-                row={r}
-                divider={i > 0}
-                live={shown && live++ < LIVE_ROWS}
-                agent={agentStates.get(r.key)}
-                // The pin mark only for what the person pinned, not day one's default (every agent they made).
-                pinned={pins.chosen && i < (s.pinned ?? 0)}
-                onHold={menus.openRowMenu}
-                holdLabel={t("sidebarPins.pin")}
-                holdActions={menus.rowActionsOf}
-                {...(r.kind === "dm" && !r.channelId ? { onStart: startDm } : {})}
-              />
-            );
-            // Swiped left: Fixar no topo (or Desafixar), the menu's first action, and on a channel Silenciar (or
-            // Reativar) beside it, on panes; the row stays opaque over them (the hairline and the sky never show).
-            const pin = menus.rowActionsOf(r).find((a) => a.key === "pin");
-            if (!pin) return view;
-            const pinPane = {
-              label: pin.label,
-              icon: "pin" as const,
-              color: c.agent,
-              ink: c.onAgent,
-              onAction: pin.run,
-            };
-            const mutePane =
-              r.kind === "channel"
-                ? {
-                    label: t(r.muted ? "mobile.chats.swipe.unmute" : "mobile.chats.swipe.mute"),
-                    icon: "mute" as const,
-                    color: c.muted,
-                    ink: c.bg,
-                    onAction: () => mute.mutate({ channelId: r.channelId, muted: !r.muted }),
-                  }
-                : null;
-            return (
-              <SwipeRow key={r.key} right={mutePane ? [pinPane, mutePane] : pinPane}>
-                <View style={{ backgroundColor: c.bg }}>{view}</View>
-              </SwipeRow>
-            );
-          };
-          const hold = s.categoryId ? menus.categoryMenu(s.categoryId, s.name ?? "") : undefined;
-          return (
-            <CollapsibleSection
-              key={s.key}
-              title={sectionTitle(s)}
-              count={s.total}
-              collapsed={off}
-              onToggle={() => toggle(s.key)}
-              // A closed category keeps its unread channels in sight, as on the web.
-              {...(s.categoryId && s.unread.length > 0 ? { kept: s.unread.map((r, i) => row(r, i, true)) } : {})}
-              {...(hold ? { onLongPress: hold, holdLabel: t("mobile.categories.title") } : {})}
-            >
-              {s.rows.map((r, i) => row(r, i, !off))}
-              {s.more ? (
-                <SeeAllRow
-                  label={s.categoryId ? t("mobile.categories.seeAll") : t(`mobile.chats.seeAll.${s.key}`)}
-                  onPress={() => openKindList(s.categoryId ? categoryListKind(s.categoryId) : (s.key as ListKind))}
-                />
-              ) : null}
-            </CollapsibleSection>
-          );
-        })
-      )}
-      {others.length > 0 ? (
-        <CollapsibleSection
-          title={t("shell.otherChannels")}
-          count={others.length}
-          collapsed={collapsed.includes(OTHER_CHANNELS)}
-          onToggle={() => toggle(OTHER_CHANNELS)}
-        >
-          {others.map((o) => (
-            <GroupedRow key={o.id} icon="lock" label={`#${o.name}`} onPress={() => router.push(chatHref(o.id))} />
-          ))}
-        </CollapsibleSection>
-      ) : null}
-      {archived > 0 && !failed && !list.loading ? (
-        <SeeAllRow
-          label={t("channel.archivedCount", { count: archived })}
-          onPress={() => router.push("/archived-channels")}
-        />
-      ) : null}
+        ) : null}
+        {archived > 0 && !failed && !list.loading ? (
+          <LandRow moves>
+            <SeeAllRow
+              label={t("channel.archivedCount", { count: archived })}
+              onPress={() => router.push("/archived-channels")}
+            />
+          </LandRow>
+        ) : null}
+      </View>
     </LargeTitleScreen>
   );
 }

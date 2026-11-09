@@ -1,7 +1,7 @@
 import { useMissionList, useNotifications } from "@agenteschat/client";
 import { approvalTitle } from "@agenteschat/client/lib/approval-words";
 import { timeLeft } from "@agenteschat/client/lib/format";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text as RNText, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -56,7 +56,9 @@ const openWaitingActivity = () =>
  * under it: the tab's badge already counts, and the card says "e mais N". Tapped, it springs open into the card:
  * who asks and the kind, the title, the fuse, Revisar, and "e mais N esperando você" (Atividade on Esperando).
  * Tapping the card opens the request, like Revisar; scrolling the list (`open` is the screen's) closes it.
- * Nothing waiting: nothing.
+ * Nothing waiting: nothing, in no room. When the first thing comes to wait the strip makes its room (the box grows
+ * from nothing, the list under it going down with it) while the line fades in and grows the last bit into its size;
+ * when the last one is answered it leaves the same way backwards. There when the screen opens, it is just there.
  */
 export function WaitingStrip({
   items,
@@ -69,34 +71,85 @@ export function WaitingStrip({
 }) {
   const { motion, reducedMotion } = useTheme();
   const stack = waitingStack(items);
-  // The box follows its content's height with a spring, so the list under it moves with it.
-  const height = useSharedValue(-1);
-  const box = useAnimatedStyle(() => (height.value < 0 ? {} : { height: height.value }));
-  if (!stack.first) return null;
-  const first = stack.first;
+  const present = stack.first !== null;
+  // What it showed last, kept while it leaves: the line fades out with its words still on it.
+  const held = useRef(stack);
+  useEffect(() => {
+    if (stack.first) held.current = stack;
+  });
+  // Left for good (until something waits again): nothing is drawn, the box stays, closed.
+  const [gone, setGone] = useState(!present);
+  const shown = present ? stack : gone ? null : held.current;
+  const first = shown?.first ?? null;
+  // The content's own height, measured; the box follows it with a spring, so the list under it moves with it.
+  const [size, setSize] = useState(0);
+  const height = useSharedValue(0);
+  const fadeK = useSharedValue(present ? 1 : 0);
+  const scale = useSharedValue(present || reducedMotion ? 1 : ENTER_SCALE);
+  // Whether the box stands open at a size, and whether it was there when the screen opened (then it doesn't grow in).
+  const sized = useRef(false);
+  const instant = useRef(present);
+
+  useEffect(() => {
+    if (present) {
+      setGone(false);
+      fadeK.value = reducedMotion ? 1 : withSpring(1, motion.nav);
+      scale.value = reducedMotion ? 1 : withSpring(1, motion.soft);
+      return;
+    }
+    instant.current = false;
+    fadeK.value = reducedMotion ? 0 : withSpring(0, motion.nav);
+    scale.value = reducedMotion ? 1 : withSpring(ENTER_SCALE, motion.soft);
+    // Its content goes once the box has closed over it.
+    const timer = setTimeout(() => setGone(true), reducedMotion ? 0 : LEAVE_MS);
+    return () => clearTimeout(timer);
+  }, [present, reducedMotion, motion, fadeK, scale]);
+
+  useEffect(() => {
+    if (!present) {
+      if (!sized.current) return;
+      sized.current = false;
+      height.value = reducedMotion ? 0 : withSpring(0, motion.nav);
+      return;
+    }
+    if (size === 0) return;
+    // Coming in, the box makes its room as things that change place do; open, it follows the card as a sheet does.
+    const spring = sized.current ? motion.sheet : motion.nav;
+    height.value = instant.current || reducedMotion ? size : withSpring(size, spring);
+    sized.current = true;
+    instant.current = false;
+  }, [present, size, reducedMotion, motion, height]);
+
+  const box = useAnimatedStyle(() => ({ height: height.value }));
+  const look = useAnimatedStyle(() => ({ opacity: fadeK.value, transform: [{ scale: scale.value }] }));
   const fade = reducedMotion ? undefined : { entering: FadeIn.duration(180), exiting: FadeOut.duration(120) };
   return (
-    <Animated.View style={[styles.box, box]}>
-      <View
-        style={styles.measure}
+    <Animated.View style={[styles.box, box]} pointerEvents={present ? "auto" : "none"}>
+      <Animated.View
+        style={[styles.measure, look]}
         onLayout={(e) => {
-          const h = e.nativeEvent.layout.height;
-          height.value = height.value < 0 || reducedMotion ? h : withSpring(h, motion.sheet);
+          // Only what it measures with its content in counts: empty, it is just its padding.
+          if (first) setSize(e.nativeEvent.layout.height);
         }}
       >
-        {open ? (
+        {!shown || !first ? null : open ? (
           <Animated.View key="card" {...fade}>
-            <WaitingOpenCard item={first} rest={stack.rest} faces={stack.faces} />
+            <WaitingOpenCard item={first} rest={shown.rest} faces={shown.faces} />
           </Animated.View>
         ) : (
           <Animated.View key="pill" {...fade}>
-            <WaitingPill item={first} count={stack.count} onPress={() => onOpenChange(true)} />
+            <WaitingPill item={first} count={shown.count} onPress={() => onOpenChange(true)} />
           </Animated.View>
         )}
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }
+
+/** Coming in, the line grows from this into its size (and shrinks back to it leaving). */
+const ENTER_SCALE = 0.94;
+/** How long the strip takes to close, after which its content is let go. */
+const LEAVE_MS = 500;
 
 /** "Theo precisa do seu ok" (or the item's title when the agent is unknown). */
 function useLine(item: WaitingItem) {

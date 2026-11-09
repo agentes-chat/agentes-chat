@@ -104,6 +104,13 @@ function ToastView({ item, onDone }: { item: ToastInput; onDone: () => void }) {
     [opacity, reducedMotion, y],
   );
 
+  // A failure is felt as well as seen: one error tap as its toast arrives. Other toasts follow an action that already
+  // answered the finger, so they stay quiet.
+  const failed = (item.tone ?? toastToneOf(item.icon)) === "danger";
+  useEffect(() => {
+    if (failed) haptics.error();
+  }, [failed]);
+
   useEffect(() => {
     y.set(reducedMotion ? 0 : withTiming(0, { duration: ENTER_MS, easing: EASE_OUT }));
     opacity.set(withTiming(1, { duration: reducedMotion ? LEAVE_MS : ENTER_MS, easing: EASE_OUT }));

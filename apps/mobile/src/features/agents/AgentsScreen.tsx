@@ -39,7 +39,10 @@ import {
   LIST_PREVIEW,
   ListRow,
   PixelOrbit,
+  PULL_TINT,
+  PullOrbit,
   SectionHeader,
+  SkeletonList,
   SwipeRow,
   Text,
   useReducedMotion,
@@ -47,8 +50,9 @@ import {
   weights,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { SkeletonOver, useFirstLoad } from "@/ui/Skeleton";
 import { usePlanHold } from "../ai/parts";
-import { CollapsibleSection, useCollapsedSections } from "../chats/HomeSection";
+import { CollapsibleSection, LandRow, useCollapsedSections } from "../chats/HomeSection";
 import { usePins } from "../chats/pins";
 import { mayCreate } from "../new/logic";
 import { useMachineOutages } from "../outages/queries";
@@ -72,6 +76,8 @@ import { agoShort, workTitle } from "./work";
 const LIVE_ROWS = 8;
 /** While Agentes is on screen, how often it asks whether the task manager is there (the manager itself: seconds). */
 const TASKS_POLL_MS = 15_000;
+/** On the first load the two fixed rows on top arrive first, then the agents in the order they show. */
+const LEAD_ROWS = 2;
 /** A row's state line changes in place (a run starts, a request lands): it crosses over, never pops. */
 const STATE_IN = FadeIn.duration(160);
 /** Back from a routine: the body comes back into its sky's frame. */
@@ -84,7 +90,8 @@ const FACE_IN = FadeIn.duration(280).easing(Easing.bezier(0.23, 1, 0.32, 1));
  * in plain words), split by the workspace's departments when it has some. Each row says its state as text in the
  * state's color (amber only for what waits on you; no badges, no dots), one fact per line, and the face is the state
  * too: running at work, asleep without an AI or while its computer is away. Tapping an agent opens its profile; the
- * bar's "+" creates one; an archived agent restores with a swipe.
+ * bar's "+" creates one; an archived agent restores with a swipe. While the team loads, rows of its own shape stand in;
+ * when it lands they fade away over the rows, which come in one after the other.
  */
 export function AgentsScreen() {
   const { t } = useTranslation();
@@ -133,6 +140,9 @@ export function AgentsScreen() {
     Promise.allSettled([runs.refetch(), dms.refetch(), approvals.refetch(), outages.refetch(), groups.refetch()]),
   );
   const total = agents.length;
+  // The team and, once there is one, its departments: the list shows whole, never first flat and then split.
+  const loading = dir.loading || (dir.agents.length > 0 && groups.isLoading);
+  const load = useFirstLoad(loading);
   // Archived agents have no profile: admins bring them back, or delete them for good (ADR 0082), from here.
   const admin = can(org, "manage_agents");
   const archived = (useFormerAgents(orgId).data ?? []).filter((a) => admin && !a.deleted);
@@ -169,7 +179,8 @@ export function AgentsScreen() {
       title={t("mobile.agents.title")}
       left={header.left}
       actions={actions}
-      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} />}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={PULL_TINT} />}
+      pullMark={<PullOrbit refreshing={pull.refreshing} />}
     >
       {dir.loading ? null : dir.agents.length === 0 ? (
         <FirstUse
@@ -181,89 +192,116 @@ export function AgentsScreen() {
       ) : total === 0 ? (
         <FirstUse place="agentsForYou" acts={false} />
       ) : null}
-      {showsManager ? (
-        <ManagerRow working={working.length} waiting={waiting.length} onPress={() => router.push("/task-manager")} />
-      ) : null}
-      {/* Equipe's org chart and channels (ADR 0148). */}
-      {total > 0 ? <TeamEntry /> : null}
-      <LayoutAnimationConfig skipEntering>
-        {waiting.length > 0 ? (
+      <View>
+        {load.skeleton ? (
+          <SkeletonOver leaving={load.landing}>
+            <SectionHeader title={t("mobile.agents.teamSection")} />
+            <SkeletonList rows={5} />
+          </SkeletonOver>
+        ) : null}
+        {loading ? null : (
           <>
-            <SectionHeader title={t("mobile.intentAgents.waitingSection")} count={waiting.length} />
-            {waiting.map((l, i) => (
-              <AgentRow
-                key={l.agent.id}
-                line={l}
-                divider={i > 0}
-                live={i < LIVE_ROWS}
-                gaze={gazeOf(l.agent.id)}
-                routine={onRoutine.get(l.agent.id)}
-              />
-            ))}
+            {showsManager ? (
+              <LandRow land={load.landing}>
+                <ManagerRow
+                  working={working.length}
+                  waiting={waiting.length}
+                  onPress={() => router.push("/task-manager")}
+                />
+              </LandRow>
+            ) : null}
+            {/* Equipe's org chart and channels (ADR 0148). */}
+            {total > 0 ? (
+              <LandRow land={load.landing} index={1}>
+                <TeamEntry />
+              </LandRow>
+            ) : null}
+            <LayoutAnimationConfig skipEntering>
+              {waiting.length > 0 ? (
+                <>
+                  <SectionHeader title={t("mobile.intentAgents.waitingSection")} count={waiting.length} />
+                  {waiting.map((l, i) => (
+                    <LandRow key={l.agent.id} land={load.landing} index={LEAD_ROWS + i}>
+                      <AgentRow
+                        line={l}
+                        divider={i > 0}
+                        live={i < LIVE_ROWS}
+                        gaze={gazeOf(l.agent.id)}
+                        routine={onRoutine.get(l.agent.id)}
+                      />
+                    </LandRow>
+                  ))}
+                </>
+              ) : null}
+              {working.length > 0 ? (
+                <>
+                  <SectionHeader title={t("mobile.agents.workingSection")} count={working.length} />
+                  {working.map((l, i) => (
+                    <LandRow key={l.agent.id} land={load.landing} index={LEAD_ROWS + waiting.length + i}>
+                      <AgentRow
+                        line={l}
+                        divider={i > 0}
+                        live={waiting.length + i < LIVE_ROWS}
+                        gaze={gazeOf(l.agent.id)}
+                        routine={onRoutine.get(l.agent.id)}
+                      />
+                    </LandRow>
+                  ))}
+                </>
+              ) : null}
+              {free.length > 0 && !groups.isPending ? (
+                <FreeSections
+                  free={free}
+                  groups={groups.data ?? []}
+                  before={busy}
+                  greeting={greeting}
+                  gazeOf={gazeOf}
+                  onRoutine={onRoutine}
+                  land={load.landing}
+                  landFrom={LEAD_ROWS}
+                />
+              ) : null}
+              {archived.length > 0 ? (
+                // Under the departments: it travels with them when one closes or opens.
+                <LandRow moves>
+                  <SectionHeader title={t("team.archived")} count={archived.length} />
+                  {archived.map((a, i) => (
+                    <SwipeRow
+                      key={a.id}
+                      left={{
+                        label: t("team.restore"),
+                        icon: "undo",
+                        color: c.agent,
+                        ink: c.onAgent,
+                        onAction: () => restoreOne(a),
+                      }}
+                    >
+                      {/* The swipe's pane shows under the row, so the row is opaque. */}
+                      <View style={{ backgroundColor: c.bg }}>
+                        <ListRow
+                          onPress={() => archivedActions(a)}
+                          accessibilityRole="button"
+                          accessibilityLabel={[a.name, t("mobile.agents.state.archived")].join(", ")}
+                          accessibilityActions={[{ name: "restore", label: t("team.restore") }]}
+                          onAccessibilityAction={() => restoreOne(a)}
+                          divider={i > 0}
+                          leading={<AgentFace agentId={a.id} size={52} mode="rest" live={false} />}
+                          title={a.name}
+                          sub={
+                            <Text variant="small" tone="faint" numberOfLines={1} style={LIST_PREVIEW}>
+                              {t("mobile.agents.state.archived")}
+                            </Text>
+                          }
+                        />
+                      </View>
+                    </SwipeRow>
+                  ))}
+                </LandRow>
+              ) : null}
+            </LayoutAnimationConfig>
           </>
-        ) : null}
-        {working.length > 0 ? (
-          <>
-            <SectionHeader title={t("mobile.agents.workingSection")} count={working.length} />
-            {working.map((l, i) => (
-              <AgentRow
-                key={l.agent.id}
-                line={l}
-                divider={i > 0}
-                live={waiting.length + i < LIVE_ROWS}
-                gaze={gazeOf(l.agent.id)}
-                routine={onRoutine.get(l.agent.id)}
-              />
-            ))}
-          </>
-        ) : null}
-        {free.length > 0 && !groups.isPending ? (
-          <FreeSections
-            free={free}
-            groups={groups.data ?? []}
-            before={busy}
-            greeting={greeting}
-            gazeOf={gazeOf}
-            onRoutine={onRoutine}
-          />
-        ) : null}
-        {archived.length > 0 ? (
-          <>
-            <SectionHeader title={t("team.archived")} count={archived.length} />
-            {archived.map((a, i) => (
-              <SwipeRow
-                key={a.id}
-                left={{
-                  label: t("team.restore"),
-                  icon: "undo",
-                  color: c.agent,
-                  ink: c.onAgent,
-                  onAction: () => restoreOne(a),
-                }}
-              >
-                {/* The swipe's pane shows under the row, so the row is opaque. */}
-                <View style={{ backgroundColor: c.bg }}>
-                  <ListRow
-                    onPress={() => archivedActions(a)}
-                    accessibilityRole="button"
-                    accessibilityLabel={[a.name, t("mobile.agents.state.archived")].join(", ")}
-                    accessibilityActions={[{ name: "restore", label: t("team.restore") }]}
-                    onAccessibilityAction={() => restoreOne(a)}
-                    divider={i > 0}
-                    leading={<AgentFace agentId={a.id} size={52} mode="rest" live={false} />}
-                    title={a.name}
-                    sub={
-                      <Text variant="small" tone="faint" numberOfLines={1} style={LIST_PREVIEW}>
-                        {t("mobile.agents.state.archived")}
-                      </Text>
-                    }
-                  />
-                </View>
-              </SwipeRow>
-            ))}
-          </>
-        ) : null}
-      </LayoutAnimationConfig>
+        )}
+      </View>
     </LargeTitleScreen>
   );
 }
@@ -312,6 +350,8 @@ function FreeSections({
   greeting,
   gazeOf,
   onRoutine,
+  land,
+  landFrom,
 }: {
   free: TeamLine[];
   groups: AgentGroup[];
@@ -319,6 +359,9 @@ function FreeSections({
   greeting: string | null;
   gazeOf: (id: string) => Gaze | undefined;
   onRoutine: ReadonlyMap<string, string>;
+  /** The list's first load: the rows arrive (`LandRow`), counted from `landFrom` plus the rows before them. */
+  land: boolean;
+  landFrom: number;
 }) {
   const { t } = useTranslation();
   const { collapsed, toggle } = useCollapsedSections<string>(STORED.agentGroupsCollapsed, null);
@@ -330,17 +373,18 @@ function FreeSections({
         const first = shown;
         shown += lines.length;
         const rows = lines.map((l, i) => (
-          <AgentRow
-            key={l.agent.id}
-            line={l}
-            divider={i > 0}
-            // The newcomer and the ones looking at it move while it arrives, wherever they sit in the list.
-            live={first + i < LIVE_ROWS || greeting !== null}
-            pinned={i < pinnedCount}
-            arriving={greeting === l.agent.id}
-            gaze={gazeOf(l.agent.id)}
-            routine={onRoutine.get(l.agent.id)}
-          />
+          <LandRow key={l.agent.id} land={land} index={landFrom + first + i}>
+            <AgentRow
+              line={l}
+              divider={i > 0}
+              // The newcomer and the ones looking at it move while it arrives, wherever they sit in the list.
+              live={first + i < LIVE_ROWS || greeting !== null}
+              pinned={i < pinnedCount}
+              arriving={greeting === l.agent.id}
+              gaze={gazeOf(l.agent.id)}
+              routine={onRoutine.get(l.agent.id)}
+            />
+          </LandRow>
         ));
         return group ? (
           <CollapsibleSection

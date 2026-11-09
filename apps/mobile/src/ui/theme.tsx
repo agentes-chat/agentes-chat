@@ -46,6 +46,19 @@ export const motion = {
   press: { damping: 15, stiffness: 420, mass: 0.6 },
   pop: { damping: 13, stiffness: 260, mass: 0.7 },
   sheet: { damping: 26, stiffness: 260, mass: 0.9 },
+  /**
+   * What moves to a new place (a row that reorders, a face that travels between screens, a card that folds into a
+   * line): settles with no overshoot, and a finger can interrupt it.
+   */
+  nav: { damping: 30, stiffness: 260, mass: 1 },
+  /** The same, slower: something large growing into place (a face into a cover). */
+  soft: { damping: 22, stiffness: 170, mass: 1 },
+  /** A celebration (a count that pops, a face that hops): one clear overshoot. Rare. */
+  bounce: { damping: 15, stiffness: 240, mass: 1 },
+  /** The app's one ease-out for timed fades and arrivals (`Easing.bezier(...motion.ease)`). */
+  ease: [0.23, 1, 0.32, 1] as [number, number, number, number],
+  /** A list row sinks to this under the finger. */
+  rowPress: 0.98,
 } as const;
 
 export interface Theme {

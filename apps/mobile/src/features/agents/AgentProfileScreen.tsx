@@ -31,15 +31,30 @@ import { AUTO, isAuto } from "@agenteschat/client/lib/providers";
 import { isRightHand, tellsNameStory } from "@agenteschat/client/lib/right-hand";
 import { planLine } from "@agenteschat/ui/plan-state";
 import { useQueryClient } from "@tanstack/react-query";
-import { Fragment, type ReactNode, useEffect, useState } from "react";
+import { Children, Fragment, isValidElement, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  type EntryExitAnimationFunction,
+  FadeIn,
+  LayoutAnimationConfig,
+  LinearTransition,
+  type SharedValue,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { readValueSync, STORED, writeValue } from "@/lib/storage";
 import { useOrg } from "@/providers/org";
 import {
   AgentAvatar,
+  type AgentLookInput,
+  type BadgePresence,
   Button,
   EmptyState,
   GROUPED_ROW,
@@ -47,22 +62,28 @@ import {
   GroupedHeader,
   GroupedList,
   GroupedRow,
+  haptics,
   Icon,
   IconButton,
   type IconName,
   Locked,
+  motion,
   PixelOrbit,
   ProviderLogo,
   Segmented,
   Sky,
   SwipeRow,
   Text,
+  useFaceReturn,
+  useFaceSpot,
   useReducedMotion,
+  useTheme,
   useToast,
   WithPresence,
 } from "@/ui";
-import { CoverParallax, useCoverScroll, useScrollFade } from "@/ui/cover";
+import { CoverBarBackdrop, CoverParallax, useCoverScroll, useScrollFade } from "@/ui/cover";
 import { router } from "@/ui/navigation";
+import { SkeletonOver, useFirstLoad } from "@/ui/Skeleton";
 import { openAgentAi } from "../ai/AgentAiScreen";
 import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
@@ -169,10 +190,10 @@ function Profile({ id }: { id: string }) {
   const org = useOrg().org;
   const insets = useSafeAreaInsets();
   const now = useNow();
-  // The cover's sky lags behind the scroll and stretches on pull; the agent fades as it nears the bar.
+  // The cover's sky lags behind the scroll and stretches on pull; the agent fades as it nears the bar, where its
+  // small face and its name take its place.
   const { y, onScroll } = useCoverScroll();
   const underBar = AVATAR_TOP - (insets.top + BAR_HEIGHT);
-  const avatarFade = useScrollFade(y, underBar - 30, underBar + 70);
   const agent = dir.agentById.get(id);
   const models = useModels();
   // Someone it doesn't answer (not its owner, not an admin) sees only its public card: no tools, memory or month.
@@ -185,8 +206,6 @@ function Profile({ id }: { id: string }) {
     setTabState(next);
     void writeValue(STORED.agentProfileTab, next === "today" ? null : next);
   };
-  // A hello when its profile opens (a rare, small moment): it smiles once, unless it is at work.
-  const hello = useHello();
   const reduced = useReducedMotion();
   const modelLabel = useModelLabel();
   const detail = useAgentDetail(orgId, id);
@@ -466,8 +485,9 @@ function Profile({ id }: { id: string }) {
     </>
   );
 
+  // Each view's sections keep their place while its data loads the first time (`TabPage`), then arrive one by one.
   const todayView = (
-    <>
+    <TabPage loading={forYou.isLoading} bones={3}>
       {nowBlock}
       <AgentComputerPicture agentId={id} />
       {/* What it thinks with and how much of it is used this month, one row (ADR 0063 §5): the plan or key as its
@@ -523,7 +543,7 @@ function Profile({ id }: { id: string }) {
           {did.length === 0 ? <GroupedFooter>{t(`mobile.intentAgents.did.empty${g}`, { name })}</GroupedFooter> : null}
         </>
       ) : null}
-    </>
+    </TabPage>
   );
 
   // The approval rule under what it can use: in one sentence, naming whoever decides for it.
@@ -538,7 +558,7 @@ function Profile({ id }: { id: string }) {
         ? asksNote()
         : null;
   const accessView = (
-    <>
+    <TabPage loading={access.isLoading} bones={2}>
       {thinks ? (
         <>
           <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
@@ -636,7 +656,7 @@ function Profile({ id }: { id: string }) {
           </GroupedList>
         </View>
       ) : null}
-    </>
+    </TabPage>
   );
 
   // Who may correct what it knows, said once under the memories (a tap corrects, a swipe forgets).
@@ -669,11 +689,11 @@ function Profile({ id }: { id: string }) {
     </>
   );
   const memoryView = (
-    <>
+    <TabPage loading={knows.isLoading} bones={2}>
       {knows.data ? memoryKnows : null}
       {/* What people told it to always do, under what it learned, as the web's Memória. */}
       <GivenRules agentId={id} name={name} />
-    </>
+    </TabPage>
   );
 
   return (
@@ -690,17 +710,15 @@ function Profile({ id }: { id: string }) {
           <CoverParallax y={y} style={StyleSheet.absoluteFill}>
             <Sky color={look.color} depth={1} style={StyleSheet.absoluteFill} />
           </CoverParallax>
-          {/* Its presence is the badge; a screen reader hears it in words, with why. */}
-          <Animated.View style={avatarFade} {...(status ? { accessible: true, accessibilityLabel: status.line } : {})}>
-            <WithPresence size={FACE} presence={status?.presence} inset={agentBadgeInset(look, FACE)}>
-              <AgentAvatar
-                agent={look}
-                size={FACE}
-                mode={busy ? "run" : "idle"}
-                {...(hello && !busy ? { expression: "happy" as const } : {})}
-              />
-            </WithPresence>
-          </Animated.View>
+          <CoverFace
+            agentId={id}
+            look={look}
+            busy={busy}
+            presence={status?.presence}
+            label={status?.line}
+            y={y}
+            underBar={underBar}
+          />
         </View>
         <View style={styles.prof}>
           <Text variant="display2" style={styles.center}>
@@ -802,9 +820,19 @@ function Profile({ id }: { id: string }) {
           <View style={styles.page}>{nowBlock}</View>
         )}
       </Animated.ScrollView>
+      {/* What the clear bar becomes behind the name once the cover is under it (the system draws it on iOS 26). */}
+      <CoverBarBackdrop
+        y={y}
+        from={underBar - 30}
+        to={underBar + 70}
+        height={insets.top + BAR_HEIGHT}
+        tone={c.grouped}
+      />
       <View style={styles.bar} pointerEvents="box-none">
         {/* Its person changes its look; admins, everything ("Editar", as the web's Configurações). */}
         <PushedHeader
+          // The bar has no title while the cover shows: the face and the name fade in as the cover's leave under it.
+          title={<BarName look={look} name={name} y={y} from={underBar - 30} to={underBar + 70} />}
           plate
           solid={false}
           {...(rightHand
@@ -819,6 +847,199 @@ function Profile({ id }: { id: string }) {
     </View>
   );
 }
+
+/**
+ * The agent on its cover: the face that flew in from the conversation's header (and flies back as the profile
+ * closes), smiling once as the profile opens unless it is at work. It answers a touch: startled for a moment, a small
+ * hop, then a smile, and back to itself. Its presence is the badge; a screen reader hears it in words, with why.
+ */
+function CoverFace({
+  agentId,
+  look,
+  busy,
+  presence,
+  label,
+  y,
+  underBar,
+}: {
+  agentId: string;
+  look: AgentLookInput;
+  busy: boolean;
+  presence: BadgePresence | null | undefined;
+  label: string | undefined;
+  /** The cover's scroll, and how far it goes before the face reaches the bar: it fades there. */
+  y: SharedValue<number>;
+  underBar: number;
+}) {
+  const { motion: m, reducedMotion } = useTheme();
+  const fade = useScrollFade(y, underBar - 30, underBar + 70);
+  const spot = useFaceSpot(agentId, { size: FACE, framed: false, role: "cover" });
+  useFaceReturn(agentId, "cover");
+  // A hello when its profile opens (a rare, small moment): it smiles once, unless it is at work.
+  const hello = useHello();
+  const [mood, setMood] = useState<"surprised" | "happy" | null>(null);
+  const hop = useSharedValue(1);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(
+    () => () => {
+      for (const timer of timers.current) clearTimeout(timer);
+    },
+    [],
+  );
+  const hopped = useAnimatedStyle(() => ({ transform: [{ scale: hop.value }] }));
+  const touch = () => {
+    haptics.light();
+    for (const timer of timers.current) clearTimeout(timer);
+    setMood("surprised");
+    if (!reducedMotion) {
+      hop.value = withSequence(
+        withTiming(0.9, { duration: m.fast, easing: Easing.bezier(...m.ease) }),
+        withSpring(1, m.bounce),
+      );
+    }
+    timers.current = [
+      setTimeout(() => setMood("happy"), STARTLED_MS),
+      setTimeout(() => setMood(null), STARTLED_MS + HELLO_MS),
+    ];
+  };
+  const expression = mood ?? (hello && !busy ? "happy" : undefined);
+  return (
+    <Animated.View style={fade} {...(label ? { accessible: true, accessibilityLabel: label } : {})}>
+      <Pressable accessible={false} onPress={touch}>
+        <Animated.View style={hopped}>
+          <View ref={spot.ref} collapsable={false} style={spot.hidden ? styles.unseen : undefined}>
+            <WithPresence size={FACE} presence={presence} inset={agentBadgeInset(look, FACE)}>
+              <AgentAvatar
+                agent={look}
+                size={FACE}
+                mode={busy ? "run" : "idle"}
+                {...(expression ? { expression } : {})}
+              />
+            </WithPresence>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+/** In the bar once the cover has scrolled under it: the agent's small face and its name, fading in with the scroll. */
+function BarName({
+  look,
+  name,
+  y,
+  from,
+  to,
+}: {
+  look: AgentLookInput;
+  name: string;
+  y: SharedValue<number>;
+  from: number;
+  to: number;
+}) {
+  const fade = useScrollFade(y, from, to, true);
+  return (
+    <Animated.View
+      style={[styles.barName, fade]}
+      pointerEvents="none"
+      // The name is the page's heading under the cover: said once, there.
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <AgentAvatar agent={look} size={BAR_FACE} framed={false} live={false} />
+      <Text variant="body" numberOfLines={1} style={[styles.bold, styles.shrink]}>
+        {name}
+      </Text>
+    </Animated.View>
+  );
+}
+
+/**
+ * One view of the profile (Today, Access, Memory), its sections as children. While its data loads the first time,
+ * grouped lists stand in for them, so nothing pops in; then the stand-ins fade and the sections rise in, one after
+ * the other. A view that opens with its data just shows, and so does a refetch.
+ */
+function TabPage({ loading, bones, children }: { loading: boolean; bones: number; children: ReactNode }) {
+  const first = useFirstLoad(loading);
+  const reduced = useReducedMotion();
+  const sections = Children.toArray(children).filter(isValidElement);
+  return (
+    <View>
+      {first.skeleton ? (
+        <SkeletonOver leaving={first.landing}>
+          <GroupBones groups={bones} />
+        </SkeletonOver>
+      ) : null}
+      {loading
+        ? null
+        : sections.map((section, i) => (
+            <Animated.View
+              key={section.key ?? i}
+              entering={first.landing ? riseIn(i * RISE_GAP_MS) : undefined}
+              // A section that grows moves the ones under it as its own rows move (`GroupedList`).
+              layout={reduced ? undefined : SECTION_SLIDE}
+            >
+              {section}
+            </Animated.View>
+          ))}
+    </View>
+  );
+}
+
+/** Stand-ins shaped as grouped lists: a header's bar, then a white group of one or two rows. */
+function GroupBones({ groups }: { groups: number }) {
+  const c = useColors();
+  const bone = { backgroundColor: c.sunken };
+  return (
+    <View>
+      {BONES.slice(0, groups).map((rows, g) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: fixed shapes, never reordered
+        <View key={g}>
+          <View style={styles.boneHead}>
+            <View style={[styles.boneBar, bone]} />
+          </View>
+          <View style={[styles.boneList, { backgroundColor: c.raised }]}>
+            {rows.map((width, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed shapes, never reordered
+              <View key={i} style={styles.row}>
+                <View style={styles.lead}>
+                  <View style={[styles.tile, bone]} />
+                </View>
+                <View style={styles.grow}>
+                  <View style={[styles.boneLabel, bone, { width: `${width}%` }]} />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** The stand-in groups: each one's rows, as the label's width in percent of its column. */
+const BONES: number[][] = [[52, 38], [44], [58, 36]];
+
+/** A section's arrival: it rises this far while it fades in, each one this long after the one above. */
+const RISE = 16;
+const RISE_MS = 420;
+const RISE_GAP_MS = 45;
+const RISE_EASE = motion.ease;
+const SECTION_SLIDE = LinearTransition.duration(motion.base);
+
+const riseIn =
+  (delay: number): EntryExitAnimationFunction =>
+  () => {
+    "worklet";
+    const timing = { duration: RISE_MS, easing: Easing.bezier(RISE_EASE[0], RISE_EASE[1], RISE_EASE[2], RISE_EASE[3]) };
+    return {
+      initialValues: { opacity: 0, transform: [{ translateY: RISE }] },
+      animations: {
+        opacity: withDelay(delay, withTiming(1, timing)),
+        transform: [{ translateY: withDelay(delay, withTiming(0, timing)) }],
+      },
+    };
+  };
 
 /**
  * "Aprovado sempre", as on the web's Ferramentas e acesso: what the agent runs without asking, approved for good
@@ -1109,8 +1330,10 @@ const TAB_IN = FadeIn.duration(160);
 /** A saved tab, or Hoje. */
 const profileTabOf = (v: string | null): ProfileTab => (v === "access" || v === "memory" ? v : "today");
 
-/** How long the face holds its smile when the profile opens. */
+/** How long the face holds its smile when the profile opens, and after a touch. */
 const HELLO_MS = 900;
+/** How long a touched face stays startled before it smiles. */
+const STARTLED_MS = 280;
 
 /** True for a moment after the profile opens: the face's hello. */
 function useHello() {
@@ -1130,6 +1353,8 @@ const COVER_FOOT = 14;
 /** Where the agent's top sits in the cover, and the bar's height. */
 const AVATAR_TOP = COVER_HEIGHT - COVER_FOOT - FACE;
 const BAR_HEIGHT = 44;
+/** The face beside the name in the bar. */
+const BAR_FACE = 24;
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
@@ -1169,4 +1394,14 @@ const styles = StyleSheet.create({
   tile: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   value: { flexShrink: 1, maxWidth: "50%" },
   src: { flexDirection: "row", alignItems: "center", gap: 6 },
+  // The real face while its copy flies in from the header or back to it.
+  unseen: { opacity: 0 },
+  barName: { flexDirection: "row", alignItems: "center", gap: 8 },
+  shrink: { flexShrink: 1 },
+  // A grouped header's room (20 above its 18 line, 8 under), the bar in the line's middle.
+  boneHead: { height: 46, paddingTop: 24, paddingHorizontal: 16 },
+  boneBar: { width: 96, height: 10, borderRadius: 5 },
+  boneLabel: { height: 12, borderRadius: 6 },
+  // As `GroupedList`'s card.
+  boneList: { borderRadius: 14, overflow: "hidden" },
 });

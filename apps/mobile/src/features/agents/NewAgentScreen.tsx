@@ -45,12 +45,20 @@ import {
 } from "@agenteschat/client/lib/new-agent";
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
 import { AUTO, modelChoices, usableModels } from "@agenteschat/client/lib/providers";
-import { usePreventRemove } from "expo-router";
+import { type NativeStackNavigationOptions, useNavigation, usePreventRemove } from "expo-router";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, ScrollView, type ScrollViewInstance, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Keyboard, ScrollView, type ScrollViewInstance, StyleSheet, TextInput, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
 import {
@@ -64,12 +72,15 @@ import {
   GroupedRow,
   type IconName,
   Locked,
+  motion,
   ProviderLogo,
   Sky,
   Text,
   useReducedMotion,
   useToast,
 } from "@/ui";
+import { faceTravel } from "@/ui/FaceTravel";
+import { MOTION_GATES } from "@/ui/motion-gates";
 import { router } from "@/ui/navigation";
 import { newAgentAi, pickedAi } from "../ai/logic";
 import { openConnectAi } from "../ai/NoAiCard";
@@ -84,6 +95,7 @@ import { chooseAction } from "../settings/parts";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack, PushedHeader, successHaptic, Tile, tapHaptic, useSurface } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
+import { AgentBirth, type BirthFace } from "./AgentBirth";
 import { markArrived } from "./arrival";
 import { BrainPickSheet } from "./BrainPickSheet";
 import { type FullLook, fullLook } from "./edit";
@@ -100,7 +112,8 @@ import { useAgentImport } from "./useAgentImport";
  * (name, @ and look), O que faz (the instructions, prefilled by the role) and Revisar (what it can use
  * and the channels it joins, from the role, and who thinks: the workspace's last setup or Automático,
  * ADR 0094). Budget and who it answers start at the workspace's defaults and change on its page.
- * Created, it opens the direct conversation with it. `initialWhat`
+ * Created, the agent comes to be over the whole screen (`AgentBirth`; a toast instead with reduced motion), then the
+ * direct conversation with it opens. `initialWhat`
  * (an example in the empty Conversas) starts from scratch with that text. `proposalId` (an agent's
  * proposal card, ADR 0081) starts on Revisar, filled in with the draft, while the proposal is open.
  */
@@ -257,12 +270,40 @@ function NewAgentForm({
   // Bringing agents from another app, in place of the role cards (the web's create-agent import step).
   const imp = useAgentImport(orgId);
   const left = useRef(false);
+  // The agent just created, coming to be over the screen (`AgentBirth`); `flown` once its face left for the
+  // conversation. `afterBirth` lets the creating go on when the scene ends.
+  const navigation = useNavigation();
+  const [born, setBorn] = useState<{ look: FullLook; title: string; flown: boolean } | null>(null);
+  const afterBirth = useRef<((face: BirthFace | null) => void) | null>(null);
+  const leave = useSharedValue(0);
+  const leaveStyle = useAnimatedStyle(() => ({
+    opacity: 1 - leave.get(),
+    transform: [{ scale: 1 - 0.06 * leave.get() }],
+  }));
   useEffect(() => {
     left.current = false;
     return () => {
       left.current = true;
+      // Left mid-scene: the creating goes on from here, as it does when the screen is left before it ends.
+      afterBirth.current?.(null);
+      afterBirth.current = null;
     };
   }, []);
+  /** The scene over the form and its bar, until it ends: the form steps back and the agent's sky takes the screen. */
+  const playBirth = (title: string) =>
+    new Promise<BirthFace | null>((resolve) => {
+      afterBirth.current = resolve;
+      Keyboard.dismiss();
+      navigation.setOptions(SCENE_BAR);
+      leave.set(withTiming(1, { duration: 320, easing: Easing.bezier(...motion.ease) }));
+      setBorn({ look, title, flown: false });
+    });
+  /** The form back as it was (the conversation didn't open over the scene). */
+  const endBirth = () => {
+    navigation.setOptions(FORM_BAR);
+    leave.set(0);
+    setBorn(null);
+  };
   const [importing, setImporting] = useState(startImport && mayImport && !proposed);
   const deny = useDenyAgentProposal(orgId);
   // The face answers the name (a first-time moment): it looks down at the field while the name is typed and, when the
@@ -451,20 +492,29 @@ function NewAgentForm({
       }
       if (from && proposed?.routine && withRoutine)
         await savePart(failures, () => api.agents.proposalRoutine(orgId, from.messageId));
+      // Where the scene's big face stands when it ends, for the conversation's header to take it from there.
+      let face: BirthFace | null = null;
+      let played = false;
       if (failures.length > 0) toast({ title: t("mobile.newAgent.partly"), icon: "x" });
       else {
-        successHaptic();
         // Agentes greets it once when it is next on screen (its row comes in, the others look at it).
         markArrived(agent.id);
-        // It joined, and what it thinks with, under its face: the one note before its conversation opens.
-        const thinksLabel = chosen?.title ?? (start && useLast ? startText : t("brain.auto.label"));
-        toast({
-          title: t("mobile.agents.created", { name: agent.name }),
-          subtitle: t("mobile.agents.thinksWith", { label: thinksLabel }),
-          agentId: agent.id,
-          // Its profile one tap away while its conversation opens under the toast.
-          action: { label: t("mobile.chat.profile"), onPress: () => router.push(`/agent/${agent.id}`) },
-        });
+        if (reduced || !MOTION_GATES.agentBirth) {
+          successHaptic();
+          // It joined, and what it thinks with, under its face: the one note before its conversation opens.
+          const thinksLabel = chosen?.title ?? (start && useLast ? startText : t("brain.auto.label"));
+          toast({
+            title: t("mobile.agents.created", { name: agent.name }),
+            subtitle: t("mobile.agents.thinksWith", { label: thinksLabel }),
+            agentId: agent.id,
+            // Its profile one tap away while its conversation opens under the toast.
+            action: { label: t("mobile.chat.profile"), onPress: () => router.push(`/agent/${agent.id}`) },
+          });
+        } else {
+          // The scene is the news (its own taps, no toast): the agent comes to be, then its conversation opens.
+          played = true;
+          face = await playBirth(t("mobile.agents.created", { name: agent.name }));
+        }
       }
       if (from) {
         // From its card: back to that conversation as it was, Connect over it when it has nothing to think with.
@@ -476,6 +526,16 @@ function NewAgentForm({
       // chose to connect here opens over it; with nothing to think with yet, the conversation's own line says so and
       // connects from there (ADR 0061 §6), so nothing jumps in front of its first message.
       void openDm({ agentId: agent.id }).then(() => {
+        // The conversation is on its way: the scene's face travels to its header.
+        if (face && !left.current) {
+          faceTravel.depart(agent.id, { ...look, id: agent.id }, face);
+          setBorn((b) => (b ? { ...b, flown: true } : b));
+        }
+        // The conversation didn't open over the scene (it failed, or it opened beside this screen): the form again.
+        if (played)
+          setTimeout(() => {
+            if (!left.current) endBirth();
+          }, 600);
         // On a billing hold nothing connects before the plan.
         if (held) return;
         if (thinks.connect) openConnectAi({ agentId: agent.id, plan: thinks.connect });
@@ -942,68 +1002,82 @@ function NewAgentForm({
   return (
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
       <PushedHeader title={t("newAgent.title")} solid={false} grouped />
-      <KeyboardAvoidingView behavior="padding" style={styles.fill}>
-        <ScrollView
-          ref={scroll}
-          contentInsetAdjustmentBehavior="automatic"
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.body, footer ? null : { paddingBottom: 32 + insets.bottom }]}
-        >
-          {importing ? (
-            <>
-              {head(t("shell.importAgents"), t("onboarding.import.lead"))}
-              <View style={styles.stack}>
-                <ImportAgents imp={imp} orgId={orgId} />
-              </View>
-            </>
-          ) : (
-            <>
-              <StepBar index={index} total={total} name={stepNames[step]} />
-              <Locked when={busy}>{views[step]()}</Locked>
-            </>
-          )}
-        </ScrollView>
-        {footer ? (
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      {/* The form steps back (fading, a little smaller) while the agent it made comes to be over it. */}
+      <Animated.View style={[styles.fill, leaveStyle]}>
+        <KeyboardAvoidingView behavior="padding" style={styles.fill}>
+          <ScrollView
+            ref={scroll}
+            contentInsetAdjustmentBehavior="automatic"
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[styles.body, footer ? null : { paddingBottom: 32 + insets.bottom }]}
+          >
             {importing ? (
               <>
-                <Button variant="text" label={t("common.back")} disabled={busy} onPress={closeImport} />
-                {imp.planned && imp.picks.length > 0 ? (
-                  <View style={styles.fill}>
-                    <Button
-                      variant="primary"
-                      wide
-                      label={t("onboarding.import.go", { count: imp.picks.length })}
-                      loading={busy}
-                      disabled={busy}
-                      onPress={() => void runImport()}
-                    />
-                  </View>
-                ) : null}
+                {head(t("shell.importAgents"), t("onboarding.import.lead"))}
+                <View style={styles.stack}>
+                  <ImportAgents imp={imp} orgId={orgId} />
+                </View>
               </>
-            ) : null}
-            {backs ? (
-              // Back is a word; Continue is the step's one primary.
-              <Button variant="text" label={t("common.back")} disabled={busy} onPress={() => goTo(index - 1)} />
-            ) : null}
-            {goes ? (
-              <View style={styles.fill}>
-                <Button
-                  variant="primary"
-                  wide
-                  label={
-                    index === total - 1
-                      ? t("newAgent.create", { name: name.trim() || shownName })
-                      : t("common.continue")
-                  }
-                  loading={busy}
-                  onPress={next}
-                />
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-      </KeyboardAvoidingView>
+            ) : (
+              <>
+                <StepBar index={index} total={total} name={stepNames[step]} />
+                <Locked when={busy}>{views[step]()}</Locked>
+              </>
+            )}
+          </ScrollView>
+          {footer ? (
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+              {importing ? (
+                <>
+                  <Button variant="text" label={t("common.back")} disabled={busy} onPress={closeImport} />
+                  {imp.planned && imp.picks.length > 0 ? (
+                    <View style={styles.fill}>
+                      <Button
+                        variant="primary"
+                        wide
+                        label={t("onboarding.import.go", { count: imp.picks.length })}
+                        loading={busy}
+                        disabled={busy}
+                        onPress={() => void runImport()}
+                      />
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+              {backs ? (
+                // Back is a word; Continue is the step's one primary.
+                <Button variant="text" label={t("common.back")} disabled={busy} onPress={() => goTo(index - 1)} />
+              ) : null}
+              {goes ? (
+                <View style={styles.fill}>
+                  <Button
+                    variant="primary"
+                    wide
+                    label={
+                      index === total - 1
+                        ? t("newAgent.create", { name: name.trim() || shownName })
+                        : t("common.continue")
+                    }
+                    loading={busy}
+                    onPress={next}
+                  />
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </KeyboardAvoidingView>
+      </Animated.View>
+      {born ? (
+        <AgentBirth
+          agent={born.look}
+          title={born.title}
+          faceHidden={born.flown}
+          onDone={(face) => {
+            afterBirth.current?.(face);
+            afterBirth.current = null;
+          }}
+        />
+      ) : null}
     </View>
   );
 }
@@ -1040,6 +1114,9 @@ function RowTile({ icon }: { icon: IconName }) {
 
 /** The @ field and the look list come back under the name once it is done. */
 const REST_IN = FadeIn.duration(200);
+/** While the new agent's scene plays it has the whole screen: no bar over it, no swipe back through it. */
+const SCENE_BAR: NativeStackNavigationOptions = { headerShown: false, gestureEnabled: false };
+const FORM_BAR: NativeStackNavigationOptions = { headerShown: true, gestureEnabled: true };
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

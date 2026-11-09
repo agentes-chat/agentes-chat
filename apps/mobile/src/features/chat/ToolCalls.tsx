@@ -32,7 +32,7 @@ import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeInDown, FadeOut, ZoomIn } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeInDown, FadeOut, ZoomIn } from "react-native-reanimated";
 import { useFrameTime } from "@/agent/live";
 import { stopBreath } from "@/agent/orbit";
 import { useOrg } from "@/providers/org";
@@ -40,6 +40,7 @@ import {
   CHROME_MAX_SCALE,
   Icon,
   type IconName,
+  motion,
   PixelDone,
   PixelFail,
   PixelOrbit,
@@ -573,12 +574,32 @@ function useBlockItems(items: ToolItem[]): BlockItem[] {
 
 // ── A reply's tools, live and kept ───────────────────────────────────────────
 
+/** The runs whose tool block was on screen already (live, or risen once): their saved reply's block just stays. */
+const BLOCKS_DRAWN = new Set<string>();
+const BLOCKS_DRAWN_MAX = 48;
+
+function blockDrawn(runId: string) {
+  BLOCKS_DRAWN.delete(runId);
+  BLOCKS_DRAWN.add(runId);
+  while (BLOCKS_DRAWN.size > BLOCKS_DRAWN_MAX) {
+    const oldest = BLOCKS_DRAWN.values().next().value;
+    if (oldest === undefined) break;
+    BLOCKS_DRAWN.delete(oldest);
+  }
+}
+
+/** A block first seen with its finished reply comes up 10pt into place, once. */
+const BLOCK_RISE = FadeInDown.duration(260)
+  .easing(Easing.bezier(...motion.ease))
+  .withInitialValues({ transform: [{ translateY: 10 }] });
+
 /**
  * The tools of an agent's turn while it works (and kept by its saved reply a moment after, `done`): the
  * block saying what it does now, opening into every call; the messages it read under it. Before its first
  * call, what it said and read are plain lines (as on the web's `LiveTools`).
  */
 export function TurnTools({
+  runId,
   items,
   agentName,
   color,
@@ -586,6 +607,8 @@ export function TurnTools({
   done = false,
   settled = false,
 }: {
+  /** Its run: a block the live row never showed rises in with the finished reply, once. */
+  runId?: string | undefined;
   items: ToolItem[];
   agentName: string;
   color: AgentColorName;
@@ -603,6 +626,13 @@ export function TurnTools({
   // A lone quick read that only fed the answer: no card, as if it called nothing. Done, its tools are the summary
   // the person chose not to see (`showActivity`) unless they turned it on.
   const now = quietWork(items) || (done && !showsActivity(org)) ? null : toolNow(items);
+  const reduced = useReducedMotion();
+  // Decided when it is first drawn: the live row's block is this one in the same place, and never comes in twice.
+  const [rises] = useState(() => done && !reduced && runId !== undefined && !BLOCKS_DRAWN.has(runId));
+  const drawn = Boolean(now);
+  useEffect(() => {
+    if (drawn && runId !== undefined) blockDrawn(runId);
+  }, [drawn, runId]);
   if (!now) {
     // Done without a call: its words are the reply now; only the messages it read stay.
     const shown = done ? items.filter((i) => i.kind === "steer") : items;
@@ -632,22 +662,25 @@ export function TurnTools({
         state: now.state,
         count: t("chat.work.steps", { count: calls }),
       };
+  const block = (
+    <ToolBlock
+      logos={toolApps(items).map((a) => ({ key: appKey(a), node: logo(a, 18) }))}
+      head={head}
+      // Its own line is closed until tapped, as the block it stands for (code that runs shows when opened).
+      items={
+        one
+          ? blockItems.map((i) => (i.kind === "line" ? { ...i, line: { ...i.line, defaultOpen: false } } : i))
+          : blockItems
+      }
+      color={color}
+      label={t("chat.work.block", agentGrammar(agentName))}
+      live={!done && !settled}
+      one={one}
+    />
+  );
   return (
     <>
-      <ToolBlock
-        logos={toolApps(items).map((a) => ({ key: appKey(a), node: logo(a, 18) }))}
-        head={head}
-        // Its own line is closed until tapped, as the block it stands for (code that runs shows when opened).
-        items={
-          one
-            ? blockItems.map((i) => (i.kind === "line" ? { ...i, line: { ...i.line, defaultOpen: false } } : i))
-            : blockItems
-        }
-        color={color}
-        label={t("chat.work.block", agentGrammar(agentName))}
-        live={!done && !settled}
-        one={one}
-      />
+      {rises ? <Animated.View entering={BLOCK_RISE}>{block}</Animated.View> : block}
       {items.map((i) =>
         i.kind === "steer" ? (
           <ReadWell key={i.key} now={i.now} quote={quoteOf(i.messageId) ?? ""} settled={settled} />

@@ -4,7 +4,7 @@ import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
 import { TAB_BADGE } from "@/lib/nav";
-import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Text } from "@/ui";
+import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Text, useFaceSpot } from "@/ui";
 import { router } from "@/ui/navigation";
 import { workTitle } from "../agents/work";
 import type { RowAction } from "../categories/menus";
@@ -108,16 +108,20 @@ export const ConversationRowView = memo(function ConversationRowView({
   // Waiting for its offline computer: dozing, no working orbit (its run only waits).
   const away = agentState?.kind === "computer";
   const working = r.kind === "channel" || away ? false : r.working || agentState?.kind === "working";
+  // An agent's face is the one in its conversation's header: it flies there as the row opens, and back.
+  const spot = useFaceSpot(agentDm ? r.with.id : undefined, { size: AVATAR - 2, framed: true, role: "row" });
   const leading =
     r.kind === "dm" ? (
       agentDm ? (
-        <AgentFace
-          agentId={r.with.id}
-          size={AVATAR - 2}
-          mode={away ? "rest" : working ? "run" : "idle"}
-          live={live}
-          presence
-        />
+        <View ref={spot.ref} collapsable={false} style={spot.hidden ? styles.unseen : undefined}>
+          <AgentFace
+            agentId={r.with.id}
+            size={AVATAR - 2}
+            mode={away ? "rest" : working ? "run" : "idle"}
+            live={live}
+            presence
+          />
+        </View>
       ) : (
         <Face who={{ type: r.with.type, id: r.with.id }} size={AVATAR} live={false} presence />
       )
@@ -238,8 +242,13 @@ export const ConversationRowView = memo(function ConversationRowView({
   const href = r.channelId
     ? chatHref(r.channelId, r.kind === "thread" || r.kind === "mission" ? r.threadId : null)
     : null;
-  const open = () => {
+  const leave = () => {
+    // Only into a conversation that exists: one being started opens after a request, too late for the face.
+    if (agentDm && href && !starts) spot.depart();
     onOpen?.();
+  };
+  const open = () => {
+    leave();
     if (onStart && r.kind === "dm") onStart(r.with.id);
     else if (href) router.push(href);
   };
@@ -316,7 +325,7 @@ export const ConversationRowView = memo(function ConversationRowView({
     <Link href={peekHref} asChild>
       <Link.Trigger>
         {/* A row that starts a conversation keeps its own press; the link only serves its preview. */}
-        <RowTrigger row={row} onOpen={onOpen} own={starts ? open : undefined} />
+        <RowTrigger row={row} onOpen={leave} own={starts ? open : undefined} />
       </Link.Trigger>
       <Link.Preview />
       {starts || actions.length > 0 ? (
@@ -365,4 +374,6 @@ const styles = StyleSheet.create({
   shrink: { flexShrink: 1 },
   work: { flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 },
   em: { fontWeight: "500" },
+  // The real face while its copy flies to the conversation or back.
+  unseen: { opacity: 0 },
 });

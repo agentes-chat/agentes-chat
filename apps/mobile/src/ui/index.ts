@@ -14,6 +14,7 @@ export { ComputerSky } from "@/sky/ComputerSky";
 export { Fuse, type FuseProps } from "@/sky/Fuse";
 export type { PlanState } from "@/sky/math";
 export { PlanTrack, type PlanTrackProps } from "@/sky/PlanTrack";
+export { PixelBurst, type PixelBurstProps } from "@/sky/PixelBurst";
 export { Sky, type SkyProps, WorkspaceSky } from "@/sky/Sky";
 export { SpendBar, type SpendBarProps } from "@/sky/SpendBar";
 export { ACT_ROW } from "./ActRow";
@@ -38,6 +39,17 @@ export {
   type EventPillProps,
   EventPillText,
 } from "./EventPill";
+export {
+  type AgentLike,
+  type FaceRole,
+  type FaceSpot,
+  type FaceSpotOptions,
+  FaceTravelHost,
+  faceTravel,
+  faceTravelOptions,
+  useFaceReturn,
+  useFaceSpot,
+} from "./FaceTravel";
 export { type FilterItem, Filters, type FiltersProps } from "./Filters";
 export { Glass, type GlassProps } from "./Glass";
 export {

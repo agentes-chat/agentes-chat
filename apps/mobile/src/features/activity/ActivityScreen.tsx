@@ -17,11 +17,19 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { usageLimitLine } from "@agenteschat/client/lib/person-usage";
 import { useLocalSearchParams } from "expo-router";
 import type { TFunction } from "i18next";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  type EntryExitAnimationFunction,
+  FadeIn,
+  LayoutAnimationConfig,
+  LinearTransition,
+  withTiming,
+} from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
+import { BurstProvider, useBurst, useBurstHost } from "@/sky/PixelBurst";
 import {
   Button,
   EmptyState,
@@ -32,6 +40,7 @@ import {
   LIST_AVATAR,
   LIST_INSET,
   ListRow,
+  motion,
   PersonAvatar,
   PULL_TINT,
   PullOrbit,
@@ -46,7 +55,7 @@ import { router } from "@/ui/navigation";
 import { approvalAction } from "../approvals/logic";
 import { ApprovalMark, ApprovalWhy, useApprovalSource, useApproveNow } from "../approvals/parts";
 import type { AskKind } from "../chat/ask-store";
-import { ASK_ICON, AskButtons } from "../chat/asks";
+import { ApproveSpot, ASK_ICON, AskButtons } from "../chat/asks";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { dashboardWaitingCard } from "../dashboards/logic";
 import { isDeviceNotice } from "../devices/logic";
@@ -56,6 +65,7 @@ import { openWebPath } from "../links/open-web";
 import { ChangeRequestCard } from "../right-hand/SettingsCard";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useDirectory, useNow, useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
+import { agentLook } from "../shared/logic";
 import { Tile } from "../shared/parts";
 import { useWaitingApprovals } from "../shared/queries";
 import { RetryLine, TeamSkyEmpty } from "../shared/TeamSkyEmpty";
@@ -85,6 +95,8 @@ import { useNoticeTitle } from "./noticeTitle";
  * run); then the rest by day as loose rows. How many wait is said once, on the section (the pills carry no counts).
  * Swipe a row right to mark read or unread, left for "Feito" (a toast offers Desfazer). Tapping opens where it
  * happened. Loading: rows of the list's own shape; a load that failed is one gray line over what was kept.
+ * A card decided or a row marked done leaves (fading, a little smaller) and what is under it moves up to its place;
+ * a request approved here bursts in its agent's tones, and the last one cleared brings the team in cheering.
  */
 export function ActivityScreen() {
   const { t } = useTranslation();
@@ -116,79 +128,105 @@ export function ActivityScreen() {
   const pull = usePullRefresh(list.refetch);
   const header = useTabHeader();
   const reduced = useReducedMotion();
-  // A card decided while the page shows fades out and the rest close up; a new one fades in.
-  const cardMotion = reduced ? {} : { entering: CARD_IN, exiting: CARD_OUT, layout: LinearTransition };
+  // A card decided while the page shows leaves and the rest close up; a new one fades in. Rows and the days under
+  // them likewise, so nothing on the page jumps.
+  const cardMotion = reduced ? {} : { entering: CARD_IN, exiting: LEAVE, layout: MOVE };
+  const rowMotion = reduced ? {} : { exiting: LEAVE, layout: MOVE };
+  // Where an approval's burst plays: over the page's content, so the card that started it may leave meanwhile.
+  const { burst, layer } = useBurstHost();
+  // The clear page cheers only when the person saw something waiting here and it is gone now, not when the tab
+  // opens with nothing waiting.
+  const clear =
+    waiting.length === 0 && !list.isLoading && !(list.isError && !list.data) && filter !== "done" && !reduced;
+  const hadWaiting = useRef(false);
+  if (waiting.length > 0) hadWaiting.current = true;
+  const cheer = clear && hadWaiting.current;
+  useEffect(() => {
+    if (clear) hadWaiting.current = false;
+  }, [clear]);
   return (
-    <LargeTitleScreen
-      title={t("mobile.activity.title")}
-      {...header}
-      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={PULL_TINT} />}
-      pullMark={<PullOrbit refreshing={pull.refreshing} />}
-    >
-      <Filters
-        items={[
-          { key: "all", label: t("mobile.activity.filter.all") },
-          // The count is the section's, once.
-          { key: "waiting", label: t("mobile.activity.filter.waiting") },
-          { key: "done", label: t("mobile.activity.filter.done") },
-        ]}
-        value={filter}
-        onChange={(key) => setFilter(key as ActivityFilter)}
-      />
-      {waiting.length > 0 ? (
-        <>
-          <SectionHeader title={t("mobile.home.waiting")} count={waitingCount} />
-          <LayoutAnimationConfig skipEntering skipExiting>
-            <View style={styles.cards}>
-              {waiting.map((n, i) => (
-                <Animated.View key={n.id} {...cardMotion}>
-                  {isDeviceNotice(n.kind) ? (
-                    <DeviceNoticeCard item={n} first={i === 0} />
-                  ) : (
-                    <WaitingCardView item={n} first={i === 0} />
-                  )}
+    <BurstProvider value={burst}>
+      <LargeTitleScreen
+        title={t("mobile.activity.title")}
+        {...header}
+        refreshControl={
+          <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={PULL_TINT} />
+        }
+        pullMark={<PullOrbit refreshing={pull.refreshing} />}
+      >
+        <Filters
+          items={[
+            { key: "all", label: t("mobile.activity.filter.all") },
+            // The count is the section's, once.
+            { key: "waiting", label: t("mobile.activity.filter.waiting") },
+            { key: "done", label: t("mobile.activity.filter.done") },
+          ]}
+          value={filter}
+          onChange={(key) => setFilter(key as ActivityFilter)}
+        />
+        {waiting.length > 0 ? (
+          <>
+            <SectionHeader title={t("mobile.home.waiting")} count={waitingCount} />
+            <LayoutAnimationConfig skipEntering skipExiting>
+              <View style={styles.cards}>
+                {waiting.map((n, i) => (
+                  <Animated.View key={n.id} {...cardMotion}>
+                    {isDeviceNotice(n.kind) ? (
+                      <DeviceNoticeCard item={n} first={i === 0} />
+                    ) : (
+                      <WaitingCardView item={n} first={i === 0} />
+                    )}
+                  </Animated.View>
+                ))}
+              </View>
+            </LayoutAnimationConfig>
+          </>
+        ) : list.isLoading ? (
+          <>
+            <SectionHeader title={t("mobile.activity.day.today")} />
+            <SkeletonList rows={3} />
+            <SectionHeader title={t("mobile.activity.day.yesterday")} />
+            <SkeletonList rows={1} />
+          </>
+        ) : list.isError && !list.data ? (
+          <RetryLine onRetry={() => void list.refetch()} />
+        ) : filter !== "done" ? (
+          <AllClear cheer={cheer} />
+        ) : days.length === 0 ? (
+          <EmptyState size="inline" title={t("mobile.activity.noneDone")} />
+        ) : null}
+        {/* Kept rows under a load that failed: the line says so, what loaded stays readable. */}
+        {list.isError && list.data && !list.isLoading ? <RetryLine onRetry={() => void list.refetch()} /> : null}
+        {/* Another filter is another list: it comes whole, with no row of the last one leaving through it. */}
+        <LayoutAnimationConfig key={filter} skipEntering skipExiting>
+          {days.map(([group, groupItems]) => (
+            <Animated.View key={group} {...rowMotion}>
+              <SectionHeader title={t(`mobile.activity.day.${group satisfies DayGroup}`)} />
+              {/* Loose rows on the page, as Conversas' (no card around them). */}
+              {groupItems.map((n, i) => (
+                <Animated.View key={n.id} {...rowMotion}>
+                  <ActivityRow item={n} divider={i > 0} />
                 </Animated.View>
               ))}
-            </View>
-          </LayoutAnimationConfig>
-        </>
-      ) : list.isLoading ? (
-        <>
-          <SectionHeader title={t("mobile.activity.day.today")} />
-          <SkeletonList rows={3} />
-          <SectionHeader title={t("mobile.activity.day.yesterday")} />
-          <SkeletonList rows={1} />
-        </>
-      ) : list.isError && !list.data ? (
-        <RetryLine onRetry={() => void list.refetch()} />
-      ) : filter !== "done" ? (
-        <AllClear />
-      ) : days.length === 0 ? (
-        <EmptyState size="inline" title={t("mobile.activity.noneDone")} />
-      ) : null}
-      {/* Kept rows under a load that failed: the line says so, what loaded stays readable. */}
-      {list.isError && list.data && !list.isLoading ? <RetryLine onRetry={() => void list.refetch()} /> : null}
-      {days.map(([group, groupItems]) => (
-        <View key={group}>
-          <SectionHeader title={t(`mobile.activity.day.${group satisfies DayGroup}`)} />
-          {/* Loose rows on the page, as Conversas' (no card around them). */}
-          {groupItems.map((n, i) => (
-            <ActivityRow key={n.id} item={n} divider={i > 0} />
+            </Animated.View>
           ))}
-        </View>
-      ))}
-      {list.hasNextPage ? (
-        <Pressable
-          onPress={() => void list.fetchNextPage()}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.more, pressed && styles.morePressed]}
-        >
-          <Text variant="small" tone="muted">
-            {t("mobile.activity.more")}
-          </Text>
-        </Pressable>
-      ) : null}
-    </LargeTitleScreen>
+          {list.hasNextPage ? (
+            <Animated.View layout={reduced ? undefined : MOVE}>
+              <Pressable
+                onPress={() => void list.fetchNextPage()}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.more, pressed && styles.morePressed]}
+              >
+                <Text variant="small" tone="muted">
+                  {t("mobile.activity.more")}
+                </Text>
+              </Pressable>
+            </Animated.View>
+          ) : null}
+        </LayoutAnimationConfig>
+        {layer}
+      </LargeTitleScreen>
+    </BurstProvider>
   );
 }
 
@@ -359,22 +397,29 @@ const OWN_ICON = { join: "members", tools: "bolt", limit: "chart" } as const;
  */
 function ApproveHere({ approval: a, primary }: { approval: Approval; primary: boolean }) {
   const { t } = useTranslation();
-  const { approve, pending, high } = useApproveNow(a);
+  const dir = useDirectory();
+  const burst = useBurst();
+  // Approved: a burst from the button, in the agent's tones (the page's host plays it while the card leaves).
+  const { approve, pending, high } = useApproveNow(a, () => {
+    burst?.fire(agentLook(dir.anyAgent(a.agentId)).color);
+  });
   return (
     <AskButtons
       primary={
-        high ? (
-          <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
-        ) : (
-          <Button
-            variant={primary ? "primary" : "secondary"}
-            size="card"
-            wide
-            label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
-            disabled={pending}
-            onPress={() => approve()}
-          />
-        )
+        <ApproveSpot off={pending && !high}>
+          {high ? (
+            <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
+          ) : (
+            <Button
+              variant={primary ? "primary" : "secondary"}
+              size="card"
+              wide
+              label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
+              disabled={pending}
+              onPress={() => approve()}
+            />
+          )}
+        </ApproveSpot>
       }
       secondary={
         <Button
@@ -404,9 +449,10 @@ function ApprovalSource({ approval: a }: { approval: Approval }) {
 /**
  * Nothing waits on you, right on the page: the sky with the team on its horizon, "Nada esperando você" and one calm
  * line (no card, no button), then the next real event as one line (a routine's next run: its agent, its name and
- * when), which opens the routine; the history follows within the first thumb.
+ * when), which opens the routine; the history follows within the first thumb. `cheer`: the person just cleared the
+ * last thing waiting, and the team comes in happy (`TeamSkyEmpty`).
  */
-function AllClear() {
+function AllClear({ cheer }: { cheer: boolean }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const dir = useDirectory();
@@ -419,7 +465,11 @@ function AllClear() {
   // The last card decided: the clear page fades in where the cards were.
   return (
     <Animated.View entering={reduced ? undefined : FadeIn.duration(160)}>
-      <TeamSkyEmpty title={t("mobile.activityNow.clear.title")} text={t("mobile.activityNow.clear.text")} />
+      <TeamSkyEmpty
+        title={t("mobile.activityNow.clear.title")}
+        text={t("mobile.activityNow.clear.text")}
+        celebrate={cheer}
+      />
       {/* The next run as a row of the list below it: who, the routine's name on one line, and when. */}
       {next ? (
         <>
@@ -641,5 +691,18 @@ const styles = StyleSheet.create({
   morePressed: { opacity: 0.6 },
 });
 
+const EASE_OUT = Easing.bezier(...motion.ease);
 const CARD_IN = FadeIn.duration(160);
-const CARD_OUT = FadeOut.duration(120);
+/** What was decided or done leaves: fading, a little smaller, never to nothing. */
+const LEAVE: EntryExitAnimationFunction = () => {
+  "worklet";
+  return {
+    initialValues: { opacity: 1, transform: [{ scale: 1 }] },
+    animations: {
+      opacity: withTiming(0, { duration: 240, easing: EASE_OUT }),
+      transform: [{ scale: withTiming(0.94, { duration: 240, easing: EASE_OUT }) }],
+    },
+  };
+};
+/** What stays moves to its new place on the ruler's `nav` spring: no overshoot. */
+const MOVE = LinearTransition.springify().damping(motion.nav.damping).stiffness(motion.nav.stiffness);

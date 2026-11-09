@@ -36,16 +36,32 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, Text as RNText, StyleSheet, useWindowDimensions, View } from "react-native";
+import {
+  type LayoutChangeEvent,
+  Pressable,
+  Text as RNText,
+  type StyleProp,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type ViewStyle,
+} from "react-native";
 import Animated, {
+  Easing,
+  Extrapolation,
   FadeIn,
+  interpolate,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import { useOrg } from "@/providers/org";
+import { BurstProvider, useBurst, useBurstHost } from "@/sky/PixelBurst";
 import { Sky } from "@/sky/Sky";
 import {
   CHROME_MAX_SCALE,
@@ -59,6 +75,7 @@ import {
   useReducedMotion,
   useTheme,
 } from "@/ui";
+import { MOTION_GATES } from "@/ui/motion-gates";
 import { SparkCheck } from "@/ui/SparkCheck";
 import { approvalTitleText } from "../approvals/parts";
 import { AgentFace } from "../shared/Face";
@@ -79,7 +96,7 @@ import {
 } from "./ask-store";
 import { LineStop, useRowsInView } from "./LiveRows";
 import { approvalIdOf, lineStops, markedParts, markName, questionOf, workingEntries } from "./logic";
-import { useCardTop, useOwnTop } from "./look";
+import { RowPartContext, useCardTop, useOwnTop, useRhythm } from "./look";
 import type { RowSight } from "./row-sight";
 
 /**
@@ -390,6 +407,167 @@ export function WaitMark({ size = 8 }: { size?: number }) {
   );
 }
 
+/** How far a card's decision is pressed, 0 to 1 on the UI thread; null outside a card. */
+const CardPressContext = createContext<SharedValue<number> | null>(null);
+
+export const CardPressProvider = CardPressContext.Provider;
+
+/**
+ * A request card answering the finger on its decision (`ApproveSpot`): `sink` on the card (it gives a little, as a
+ * thing about to be decided) and `glow` on the wrapper of its sky band, which goes from half strength to whole.
+ * `held` goes to the card's content through `CardPressProvider`.
+ */
+export function useCardPress() {
+  const held = useSharedValue(0);
+  const sink = useAnimatedStyle(() => ({ transform: [{ scale: 1 - 0.025 * held.value }] }));
+  const glow = useAnimatedStyle(() => ({ opacity: 0.5 + 0.5 * held.value }));
+  return { held, sink, glow };
+}
+
+/**
+ * Around a card's approving button, changing nothing of its layout: while a finger is on it the card sinks and its sky
+ * brightens (`useCardPress`), and the burst that follows an approval starts from its center (`useBurst`). `off` while
+ * the button can't be pressed.
+ */
+export function ApproveSpot({
+  children,
+  off = false,
+  style,
+}: {
+  children: ReactNode;
+  off?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { motion, reducedMotion } = useTheme();
+  const held = useContext(CardPressContext);
+  const burst = useBurst();
+  const spot = useRef<ComponentRef<typeof View>>(null);
+  const press = (down: boolean) => {
+    if (down && off) return;
+    if (down) burst?.aim(spot.current);
+    if (held && !reducedMotion) held.value = withSpring(down ? 1 : 0, motion.press);
+  };
+  return (
+    <View
+      ref={spot}
+      collapsable={false}
+      style={style}
+      onTouchStart={() => press(true)}
+      onTouchEnd={() => press(false)}
+      onTouchCancel={() => press(false)}
+    >
+      {children}
+    </View>
+  );
+}
+
+/** The fold's fades run on this clock: the card is gone by 160 ms, the line comes in from 200 to 400. */
+const FOLD_MS = 400;
+/** Whatever became of the spring, the fold is over by then. */
+const FOLD_LIMIT_MS = 1200;
+
+/**
+ * Around a request that shows as a card while it waits and as one line once decided (`children` is whichever it is
+ * now): decided while it shows, the card folds into the line instead of being swapped for it. The card's room closes
+ * on a spring down to the line's height, so the conversation under it moves with it, while the card fades out and the
+ * line fades in. Only a request that was seen waiting here folds: one that loads already decided is the plain line.
+ * It is also where the card's burst plays (`useBurst`), over the fold and never clipped by it. With reduced motion
+ * nothing folds.
+ */
+export function AskFold({ pending, children }: { pending: boolean; children: ReactNode }) {
+  const { motion, reducedMotion } = useTheme();
+  const { burst, layer } = useBurstHost();
+  // Several decided lines keep the room a message's body puts between its parts (they are one part of it here).
+  const rhythm = useRhythm();
+  const lineGap = useContext(RowPartContext) === null ? 0 : rhythm.part;
+  // The card as it last waited (it stays drawn while it folds) and how tall it stood.
+  const card = useRef<ReactNode>(null);
+  const cardHeight = useRef(0);
+  if (pending) card.current = children;
+  const [was, setWas] = useState(pending);
+  // `from` the card's height; `to` the line's, once it is laid out under the card.
+  const [fold, setFold] = useState<{ from: number; to: number | null } | null>(null);
+  if (was !== pending) {
+    setWas(pending);
+    const folds = MOTION_GATES.askFold && was && !reducedMotion && cardHeight.current > 0;
+    setFold(folds ? { from: cardHeight.current, to: null } : null);
+  }
+  // Both rest at 0 (the card whole, the line clear), so the fold's first frame needs nothing set.
+  const closed = useSharedValue(0);
+  const clock = useSharedValue(0);
+  const from = fold?.from ?? 0;
+  const to = fold?.to ?? from;
+  const ghostStyle = useAnimatedStyle(() => ({
+    height: from + (to - from) * closed.value,
+    opacity: interpolate(clock.value, [0, 0.4], [1, 0], Extrapolation.CLAMP),
+  }));
+  const gapStyle = useAnimatedStyle(() => ({ height: Math.max(0, (from - to) * (1 - closed.value)) }));
+  const lineStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(clock.value, [0.5, 1], [0, 1], Extrapolation.CLAMP),
+  }));
+  const folding = fold !== null;
+  const measured = fold !== null && fold.to !== null;
+  useEffect(() => {
+    // Waiting again (a decision taken back): ready to fold once more. Nothing reads these while the card waits.
+    if (!pending) return;
+    closed.value = 0;
+    clock.value = 0;
+  }, [pending, closed, clock]);
+  useEffect(() => {
+    if (!folding) return;
+    const timer = setTimeout(() => setFold(null), FOLD_LIMIT_MS);
+    return () => clearTimeout(timer);
+  }, [folding]);
+  useEffect(() => {
+    if (!measured) return;
+    const end = () => setFold(null);
+    clock.value = withTiming(1, { duration: FOLD_MS, easing: Easing.linear });
+    closed.value = withSpring(1, motion.nav, (done) => {
+      if (done) scheduleOnRN(end);
+    });
+  }, [measured, motion, closed, clock]);
+  const onCard = (e: LayoutChangeEvent) => {
+    cardHeight.current = e.nativeEvent.layout.height;
+  };
+  const onLine = (e: LayoutChangeEvent) => {
+    const height = e.nativeEvent.layout.height;
+    // A line as tall as its card has nothing to fold.
+    setFold((f) => (f && f.to === null ? (height < f.from ? { from: f.from, to: height } : null) : f));
+  };
+  return (
+    <BurstProvider value={burst}>
+      {/* Until the line is measured the box keeps the card's height, so nothing under it moves yet. */}
+      <View collapsable={false} style={fold && fold.to === null ? { minHeight: fold.from } : undefined}>
+        {pending || fold ? (
+          <Animated.View
+            key="card"
+            onLayout={pending ? onCard : undefined}
+            pointerEvents={fold ? "none" : "auto"}
+            accessibilityElementsHidden={folding}
+            importantForAccessibility={folding ? "no-hide-descendants" : "auto"}
+            style={fold ? [styles.ghost, ghostStyle] : undefined}
+          >
+            {card.current}
+          </Animated.View>
+        ) : null}
+        {pending ? null : (
+          <Animated.View
+            key="line"
+            onLayout={fold ? onLine : undefined}
+            style={[{ gap: lineGap }, fold ? lineStyle : undefined]}
+          >
+            {children}
+          </Animated.View>
+        )}
+        {fold && fold.to !== null ? (
+          <Animated.View key="gap" style={[{ height: fold.from - fold.to }, gapStyle]} />
+        ) : null}
+        {layer}
+      </View>
+    </BurstProvider>
+  );
+}
+
 export interface AskWell {
   /** The app or thing it goes through: its mark alone, 20 points (no tile inside the card). */
   tile: ReactNode;
@@ -461,6 +639,7 @@ export function AskCard({
   const surface = useSurface();
   const reduced = useReducedMotion();
   const store = useAskStore();
+  const press = useCardPress();
   // The asking agent's sky, faint across the card's top: the same card as Atividade's and the home's (`WaitingCard`).
   const sky = agentLook(dir.agentById.get(agentId)).color;
   const slot = useRef<ComponentRef<typeof View>>(null);
@@ -518,53 +697,64 @@ export function AskCard({
   return (
     // A plain view the conversation measures (never flattened away), around the card that fades in.
     <View ref={slot} collapsable={false} style={ownTop}>
-      <Animated.View entering={reduced ? undefined : FadeIn.duration(300)} style={[styles.card, surface]}>
-        <View style={styles.clip}>
-          <Sky color={sky} depth={0.55} fade={0.15} surface="raised" style={styles.sky} />
-          <View style={styles.head}>
-            <Icon name={ASK_ICON[kind]} size={13} color={c.muted} />
-            <Text variant="footnote" tone="muted" numberOfLines={1} style={[styles.medium, styles.grow]}>
-              {kindNote ? `${kindWords} · ${kindNote}` : kindWords}
-            </Text>
-            {waitsFor && waitsFor !== "you" ? (
-              <Text variant="footnote" tone="muted" numberOfLines={1} style={styles.shrink}>
-                {waitsFor}
+      <Animated.View entering={reduced ? undefined : FadeIn.duration(300)} style={[styles.card, surface, press.sink]}>
+        {/* Its buttons tell the card when they are pressed (`ApproveSpot`). */}
+        <CardPressProvider value={press.held}>
+          <View style={styles.clip}>
+            {/* Brighter while the decision is pressed (`useCardPress`). */}
+            <Animated.View pointerEvents="none" style={[styles.sky, press.glow]}>
+              <Sky color={sky} depth={0.55} fade={0.15} surface="raised" style={StyleSheet.absoluteFill} />
+            </Animated.View>
+            <View style={styles.head}>
+              <Icon name={ASK_ICON[kind]} size={13} color={c.muted} />
+              <Text variant="footnote" tone="muted" numberOfLines={1} style={[styles.medium, styles.grow]}>
+                {kindNote ? `${kindWords} · ${kindNote}` : kindWords}
+              </Text>
+              {waitsFor && waitsFor !== "you" ? (
+                <Text variant="footnote" tone="muted" numberOfLines={1} style={styles.shrink}>
+                  {waitsFor}
+                </Text>
+              ) : null}
+            </View>
+            {lead ? (
+              <Text variant={well ? "body" : "title"} tone="ink" style={well ? styles.lead : undefined}>
+                {lead}
               </Text>
             ) : null}
+            {/* With a preview, "Ver …" opens the whole in its place; without one, under the name line. */}
+            {preview && !open ? (
+              <View style={[styles.edge, styles.preview, { borderTopColor: c.line }]}>
+                {preview}
+                <LinearGradient pointerEvents="none" colors={[`${c.raised}00`, c.raised]} style={styles.fade} />
+              </View>
+            ) : null}
+            {preview ? opened : null}
+            {line ? (
+              more ? (
+                <Pressable
+                  onPress={toggle}
+                  accessibilityRole="button"
+                  accessibilityHint={more.label}
+                  accessibilityState={{ expanded: open }}
+                  style={({ pressed }) => [
+                    styles.edge,
+                    styles.line,
+                    { borderColor: c.line },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  {line}
+                </Pressable>
+              ) : (
+                <View style={[styles.edge, styles.line, { borderColor: c.line }]}>{line}</View>
+              )
+            ) : null}
+            {preview ? null : opened}
+            {body ? <View style={styles.body}>{body}</View> : null}
+            {foot}
+            {waitsFor === "you" && expiry ? <View style={styles.expiryRow}>{expiry}</View> : null}
           </View>
-          {lead ? (
-            <Text variant={well ? "body" : "title"} tone="ink" style={well ? styles.lead : undefined}>
-              {lead}
-            </Text>
-          ) : null}
-          {/* With a preview, "Ver …" opens the whole in its place; without one, under the name line. */}
-          {preview && !open ? (
-            <View style={[styles.edge, styles.preview, { borderTopColor: c.line }]}>
-              {preview}
-              <LinearGradient pointerEvents="none" colors={[`${c.raised}00`, c.raised]} style={styles.fade} />
-            </View>
-          ) : null}
-          {preview ? opened : null}
-          {line ? (
-            more ? (
-              <Pressable
-                onPress={toggle}
-                accessibilityRole="button"
-                accessibilityHint={more.label}
-                accessibilityState={{ expanded: open }}
-                style={({ pressed }) => [styles.edge, styles.line, { borderColor: c.line }, pressed && styles.pressed]}
-              >
-                {line}
-              </Pressable>
-            ) : (
-              <View style={[styles.edge, styles.line, { borderColor: c.line }]}>{line}</View>
-            )
-          ) : null}
-          {preview ? null : opened}
-          {body ? <View style={styles.body}>{body}</View> : null}
-          {foot}
-          {waitsFor === "you" && expiry ? <View style={styles.expiryRow}>{expiry}</View> : null}
-        </View>
+        </CardPressProvider>
       </Animated.View>
     </View>
   );
@@ -869,6 +1059,9 @@ const styles = StyleSheet.create({
   },
   // Across the top, at half strength, under the kind line (as `WaitingCard`).
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 56, opacity: 0.5 },
+  // The card while it folds into its line: over the line, clipped to the room that closes. It reaches past the sides
+  // so the card's shadow isn't cut there.
+  ghost: { position: "absolute", top: 0, left: -16, right: -16, paddingHorizontal: 16, overflow: "hidden" },
   head: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 18 },
   semibold: { fontWeight: "600" },
   medium: { fontWeight: "500" },

@@ -15,7 +15,7 @@ import {
 } from "@agenteschat/client/lib/activity";
 import { initialReveal, rebaseReveal, revealStep } from "@agenteschat/client/lib/reveal";
 import { barStep, formatDuration } from "@agenteschat/client/lib/work";
-import type { AgentColorName } from "@agenteschat/ui/agent/engine";
+import { type AgentColorName, gradientOf } from "@agenteschat/ui/agent/engine";
 import {
   type ComponentRef,
   createContext,
@@ -43,6 +43,7 @@ import Animated, {
   Easing,
   FadeIn,
   FadeOut,
+  LayoutAnimationConfig,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -51,7 +52,7 @@ import Animated, {
 import { useFrameTime } from "@/agent/live";
 import { Dither } from "@/sky/Dither";
 import { softTones } from "@/sky/math";
-import { CHROME_MAX_SCALE, haptics, Icon, PixelStop, Text, useReducedMotion, useTheme } from "@/ui";
+import { CHROME_MAX_SCALE, haptics, Icon, motion, PixelStop, Text, useReducedMotion, useTheme } from "@/ui";
 import { AgentFace, AgentWho, Face } from "../shared/Face";
 import { useColors, useDirectory, useNow, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -328,7 +329,7 @@ export const TurnRow = memo(function TurnRow({
             )}
           </View>
           {/* Its tools last, where its saved reply keeps them. */}
-          <TurnTools items={lines} agentName={agent?.name ?? ""} color={color} quoteOf={bodyOf} />
+          <TurnTools runId={run.runId} items={lines} agentName={agent?.name ?? ""} color={color} quoteOf={bodyOf} />
         </View>
       </View>
     </>
@@ -546,6 +547,11 @@ export function WorkingLine({
   const openBrowser = browsing && onOpenBrowser ? () => onOpenBrowser(browsing.agentId) : undefined;
   // "Ver" once its row is in the conversation (before that, there is nothing to go back to).
   const seeable = away && turnShows(away) ? away : undefined;
+  // Its effort so far, one pixel per call it made: only for the one agent the line speaks for.
+  const soloRun = solo ? runs.find((r) => r.agentId === solo.id) : undefined;
+  const calls = soloRun ? (soloRun.work ?? []).filter((w) => w.kind === "call").length : 0;
+  // Thinking or using its tools, it looks up; its eyes write only while its words arrive.
+  const writes = (agentId: string) => runs.some((r) => r.agentId === agentId && r.text.length > 0);
   // The line stops only the agents it speaks for: a row on screen has its own stop at its end.
   const stopHere = stop ? stop.runs.filter((r) => !rowInView(r)) : [];
   // Back to the row is a scroll, so no haptic.
@@ -588,7 +594,7 @@ export function WorkingLine({
               );
             return (
               <Animated.View key={`a:${e.id}`} entering={pop} style={[plate, gap]}>
-                <AgentFace agentId={e.id} size={18} mode="run" />
+                <AgentFace agentId={e.id} size={18} mode={writes(e.id) ? "run" : "think"} />
               </Animated.View>
             );
           })}
@@ -613,6 +619,7 @@ export function WorkingLine({
               · {took}
             </Text>
           ) : null}
+          {color && calls > 0 ? <StepPixels count={calls} color={color} reduced={reduced} /> : null}
           {typers ? (
             <View style={styles.also}>
               {piece(`· ${typers}`, styles.shrink)}
@@ -663,6 +670,36 @@ export function WorkingLine({
 const LINE_EASE = Easing.bezier(0.23, 1, 0.32, 1);
 const LINE_IN = FadeIn.duration(160).easing(LINE_EASE);
 const LINE_OUT = FadeOut.duration(120).easing(LINE_EASE);
+
+/** How many of its calls the line draws: the latest ones, the oldest of a full strip fading away. */
+const STEP_PIXELS = 8;
+const STEP_FADE = [0.35, 0.65];
+const { damping: POP_DAMPING, stiffness: POP_STIFFNESS, mass: POP_MASS } = motion.bounce;
+const STEP_POP = ZoomIn.springify().damping(POP_DAMPING).stiffness(POP_STIFFNESS).mass(POP_MASS);
+
+/**
+ * The effort so far, after the line's words: a 4pt pixel per tool call the run made, in the agent's two tones by
+ * turns. Each new one pops in; the ones already made when the line shows are just there. Past eight, the oldest
+ * leave and the two before them fade. Decoration: the line's label says what the agent does.
+ */
+function StepPixels({ count, color, reduced }: { count: number; color: AgentColorName; reduced: boolean }) {
+  const tones = gradientOf(color);
+  const first = Math.max(0, count - STEP_PIXELS);
+  const shown = Array.from({ length: count - first }, (_, i) => first + i);
+  return (
+    <View style={styles.steps} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <LayoutAnimationConfig skipEntering>
+        {shown.map((n, i) => (
+          <Animated.View
+            key={n}
+            entering={reduced ? undefined : STEP_POP}
+            style={[styles.step, { backgroundColor: tones[n % 2], opacity: first > 0 ? (STEP_FADE[i] ?? 1) : 1 }]}
+          />
+        ))}
+      </LayoutAnimationConfig>
+    </View>
+  );
+}
 
 /**
  * "Parar": last in the requests' line's pill after a thin rule (while it takes the working line's place), or at the
@@ -964,6 +1001,9 @@ const styles = StyleSheet.create({
   },
   ink: { fontWeight: "600" },
   took: { fontVariant: ["tabular-nums"] },
+  // The calls' pixels keep their size: the words before them give way.
+  steps: { flexDirection: "row", alignItems: "center", gap: 2, flexShrink: 0 },
+  step: { width: 4, height: 4 },
   clock: { fontWeight: "600", fontVariant: ["tabular-nums"] },
   pressed: { opacity: 0.6 },
   sep: { width: StyleSheet.hairlineWidth * 2, height: 16, marginLeft: 4, marginRight: 2 },

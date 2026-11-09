@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { Button, Icon, type IconName, Sky, Text, weights } from "@/ui";
-import { AskButtons, ExpiryLine } from "../chat/asks";
+import { AskButtons, CardPressProvider, ExpiryLine, useCardPress } from "../chat/asks";
 import { AgentFace } from "./Face";
 import { useColors, useDirectory } from "./hooks";
 import { agentLook } from "./logic";
@@ -44,7 +45,8 @@ export interface WaitingCardProps {
  * the top (gray when no agent asks), its face with the name (15, regular: the request is the card's one bold) and
  * the kind under it (its icon quiet: no "waiting for you" mark, the card itself is the ask) and, at the right, where
  * and when; then the request in words (17 semibold), why in muted, what it goes through on one quiet line, the
- * decision (or its one action) wide under it and, at its end, the fuse to its deadline.
+ * decision (or its one action) wide under it and, at its end, the fuse to its deadline. While a finger is on its
+ * approving button (`ApproveSpot`) the card sinks a little and its sky brightens, as the chat's card does.
  */
 export function WaitingCard({
   agentId,
@@ -64,6 +66,7 @@ export function WaitingCard({
   const c = useColors();
   const dir = useDirectory();
   const surface = useSurface();
+  const press = useCardPress();
   const agent = agentId ? dir.agentById.get(agentId) : undefined;
   const foot =
     decision ??
@@ -81,16 +84,18 @@ export function WaitingCard({
       />
     ) : null);
   return (
-    <View style={[styles.card, surface]}>
+    <Animated.View style={[styles.card, surface, press.sink]}>
       <View style={styles.clip}>
         {/* The asking agent's sky; a gray one when no agent asks (a server, people), so every card reads the same. */}
-        <Sky
-          color={agent ? agentLook(agent).color : "graphite"}
-          depth={0.55}
-          fade={0.15}
-          surface="raised"
-          style={styles.sky}
-        />
+        <Animated.View pointerEvents="none" style={[styles.sky, press.glow]}>
+          <Sky
+            color={agent ? agentLook(agent).color : "graphite"}
+            depth={0.55}
+            fade={0.15}
+            surface="raised"
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
         <Pressable
           onPress={onPress}
           disabled={!onPress}
@@ -128,7 +133,7 @@ export function WaitingCard({
         </Pressable>
         {foot || expires ? (
           <View style={styles.ft}>
-            {foot}
+            <CardPressProvider value={press.held}>{foot}</CardPressProvider>
             {expires ? (
               <View style={styles.expiry}>
                 <ExpiryLine createdAt={expires.createdAt} expiresAt={expires.expiresAt} />
@@ -138,7 +143,7 @@ export function WaitingCard({
         ) : null}
         {footer ? <View style={[styles.footer, { borderTopColor: c.line2 }]}>{footer}</View> : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

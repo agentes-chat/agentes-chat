@@ -219,6 +219,10 @@ export function Composer({
   const button = has || stopMode;
   const mediaButton = media && !has ? media : null;
   const mic = voice && !has ? voice.mic : null;
+  // The mic that comes back for the send button (the words sent or erased) pops in as the button did; the one the
+  // field opens with is just there.
+  const micReturns = useRef(false);
+  if (has) micReturns.current = true;
 
   const put = (next: string, at = next.length) => {
     setText(next);
@@ -410,7 +414,14 @@ export function Composer({
             />
           ) : null}
           {voice?.overlay ?? null}
-          {mic ? <View style={styles.micBox}>{mic}</View> : null}
+          {mic ? (
+            <Animated.View
+              entering={reducedMotion || !micReturns.current ? undefined : BUTTON_IN}
+              style={styles.micBox}
+            >
+              {mic}
+            </Animated.View>
+          ) : null}
         </View>
       </View>
       {hold && !taught && !token ? (
@@ -432,6 +443,9 @@ export function Composer({
     </View>
   );
 }
+
+/** The field's round button and the mic that takes its place pop in on the same spring. */
+const BUTTON_IN = ZoomIn.springify().damping(14).stiffness(320).mass(1);
 
 /**
  * The field's round button: the send arrow, or the stop square. It pops in (ZoomIn) on the glyph it shows, its value
@@ -524,7 +538,7 @@ function SendButton({
   );
   return (
     <Animated.View
-      entering={reducedMotion ? undefined : ZoomIn.springify().damping(14).stiffness(320).mass(1)}
+      entering={reducedMotion ? undefined : BUTTON_IN}
       exiting={reducedMotion ? undefined : ZoomOut.duration(120)}
       style={styles.sendBox}
     >

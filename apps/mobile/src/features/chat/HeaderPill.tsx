@@ -17,7 +17,7 @@ import Animated, {
 import { scheduleOnRN } from "react-native-worklets";
 import { Dither } from "@/sky/Dither";
 import { softTones } from "@/sky/math";
-import { Glass, haptics, PressScale, Text, useReducedMotion, useTheme } from "@/ui";
+import { Glass, haptics, PressScale, Text, useFaceSpot, useReducedMotion, useTheme } from "@/ui";
 
 /** The pill's own padding, the face's box and the gaps: the face sits in the capsule's curve. */
 const PAD_LEFT = 6;
@@ -38,6 +38,10 @@ const BREATH_SCALE = 1.012;
 const BREATH_MS = 1400;
 const BREATH_EASE = Easing.bezier(0.77, 0, 0.175, 1);
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+/** The words' arrival when the face flew in from the screen before: after it lands, from the face's side. */
+const ARRIVE_SHIFT = 8;
+const ARRIVE_MS = 260;
+const ARRIVE_DELAY_MS = 200;
 
 const rollIn: EntryExitAnimationFunction = () => {
   "worklet";
@@ -74,6 +78,9 @@ const rollOut: EntryExitAnimationFunction = () => {
  *
  * Reading up the conversation (`collapsed`), the pill closes to its lead alone, a glass circle: the screen is only
  * messages. While an agent works it breathes (a scale too small to call motion), and the sky sweeps.
+ *
+ * An agent's face (`faceAgentId`) is the same one as in the row the conversation was opened from and on its profile:
+ * it lands here from the row (the words follow it in), and a tap sends it on to the profile's cover.
  */
 export function HeaderPill({
   lead,
@@ -88,6 +95,7 @@ export function HeaderPill({
   onHold,
   holdHint,
   collapsed = false,
+  faceAgentId,
 }: {
   lead?: ReactNode;
   title: string;
@@ -107,6 +115,8 @@ export function HeaderPill({
   onHold?: () => void;
   /** What a screen reader says the hold does. */
   holdHint?: string;
+  /** An agent's DM: the lead is its face, and a tap opens its profile (the face travels between the screens). */
+  faceAgentId?: string | undefined;
 }) {
   const { colors, shadows } = useTheme();
   const reduced = useReducedMotion();
@@ -124,6 +134,17 @@ export function HeaderPill({
   // Closed, the pill is a circle around its lead (no lead to close around: it stays open).
   const closed = collapsed && Boolean(lead);
   const target = nameWidth === null ? null : closed ? HEIGHT : Math.min(room, Math.max(MIN_WIDTH, chrome + words));
+  // Where the face is in the slot, from the width the pill was told to take: the slot never moves, while the pill is
+  // sized on the UI thread (centered in the slot on iOS, leading on Android).
+  const pillLeft = Platform.OS === "ios" && target !== null ? (room - target) / 2 : 0;
+  const spot = useFaceSpot(lead ? faceAgentId : undefined, {
+    size: LEAD,
+    framed: false,
+    role: "pill",
+    inset: target === null ? null : { x: pillLeft + BORDER + PAD_LEFT, y: (HEIGHT - LEAD) / 2 },
+  });
+  // Opened with the face on its way here: the words wait for it.
+  const [arrives] = useState(() => spot.hidden && !reduced);
 
   // -1 until the words are measured: the first width is set, not sprung.
   const pillWidth = useSharedValue(-1);
@@ -131,6 +152,11 @@ export function HeaderPill({
   // The words' presence: they fade before the width closes on them and come back as it opens.
   const open = useSharedValue(closed ? 0 : 1);
   const breath = useSharedValue(1);
+  const arrived = useSharedValue(arrives ? 0 : 1);
+  useEffect(() => {
+    if (!arrives) return;
+    arrived.value = withDelay(ARRIVE_DELAY_MS, withTiming(1, { duration: ARRIVE_MS, easing: EASE_OUT }));
+  }, [arrives, arrived]);
   useEffect(() => {
     if (target === null) return;
     pillWidth.value = reduced || pillWidth.value < 0 ? target : withSpring(target, WIDTH_SPRING);
@@ -163,13 +189,24 @@ export function HeaderPill({
   }));
   // On the glass inside the press: the press's own scale lives on the outer view, and one transform would hide the other.
   const breathing = useAnimatedStyle(() => ({ transform: [{ scale: breath.value }] }));
-  const wordsShown = useAnimatedStyle(() => ({ opacity: open.value }));
+  const wordsShown = useAnimatedStyle(() => ({
+    opacity: open.value * arrived.value,
+    transform: [{ translateX: (arrived.value - 1) * ARRIVE_SHIFT }],
+  }));
+  // The face leaves for the profile's cover as the tap opens it.
+  const press =
+    onPress && faceAgentId
+      ? () => {
+          spot.depart();
+          onPress();
+        }
+      : onPress;
 
   const measured = (set: (width: number) => void) => (e: LayoutChangeEvent) =>
     set(Math.ceil(e.nativeEvent.layout.width));
 
   return (
-    <View style={[styles.slot, { width: room }]} pointerEvents="box-none">
+    <View ref={spot.ref} collapsable={false} style={[styles.slot, { width: room }]} pointerEvents="box-none">
       {/* What the words measure, whole, with no room limit. */}
       <View
         style={styles.measure}
@@ -188,7 +225,7 @@ export function HeaderPill({
       </View>
       <PressScale
         to={0.97}
-        onPress={onPress}
+        onPress={press}
         disabled={!onPress && !onHold}
         {...(onHold
           ? {
@@ -226,7 +263,7 @@ export function HeaderPill({
                 style={[styles.sky, { width: room }]}
               />
             ) : null}
-            {lead ? <View style={styles.lead}>{lead}</View> : null}
+            {lead ? <View style={[styles.lead, spot.hidden && styles.unseen]}>{lead}</View> : null}
             <Animated.View
               style={[styles.text, wordsShown]}
               importantForAccessibility="no-hide-descendants"
@@ -338,6 +375,8 @@ const styles = StyleSheet.create({
   // The drawing keeps the room's width and reads the pill's as a uniform: no canvas resize during a spring.
   sky: { position: "absolute", top: 0, left: 0, height: HEIGHT },
   lead: { alignItems: "center", justifyContent: "center", width: LEAD },
+  // The real face while its copy flies in or out.
+  unseen: { opacity: 0 },
   text: { flex: 1, minWidth: 0 },
   title: { fontWeight: "600", lineHeight: 20 },
   lineBox: { height: 16, overflow: "hidden" },

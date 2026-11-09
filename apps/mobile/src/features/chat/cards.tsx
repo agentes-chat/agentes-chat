@@ -39,6 +39,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { useBurst } from "@/sky/PixelBurst";
 import { Button, Count, EventPillAction, HoldButton, Icon, LineIcon, Text, useReducedMotion, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { approvalAction, approvalRisk, approveAlwaysToast } from "../approvals/logic";
@@ -67,7 +68,7 @@ import { agentLook, genderOf } from "../shared/logic";
 import { PromptForm } from "../shared/PromptForm";
 import { successHaptic, tapHaptic, useSurface } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
-import { AskCard, AskDone, AskFoot, ExpiryLine, useAskStore } from "./asks";
+import { ApproveSpot, AskCard, AskDone, AskFold, AskFoot, ExpiryLine, useAskStore } from "./asks";
 import { markName, threadFaces } from "./logic";
 
 /**
@@ -80,7 +81,7 @@ import { markName, threadFaces } from "./logic";
 /**
  * An approval in the conversation: while it waits, the request card (`ApprovalAsk`); after, one line with
  * what happened. Requests the agent asked later in this conversation join its card (`messageId`): then one card
- * lists them all (`ApprovalGroupAsk`).
+ * lists them all (`ApprovalGroupAsk`). Decided while it shows, the card folds into its line (`AskFold`).
  */
 export function ApprovalInline({ approvalId, messageId }: { approvalId: string; messageId: string }) {
   const orgId = useOrgId();
@@ -98,17 +99,15 @@ export function ApprovalInline({ approvalId, messageId }: { approvalId: string; 
     asOfNow(x),
   );
   if (items.length > 1) {
-    if (items.some((x) => x.status === "pending")) return <ApprovalGroupAsk items={items} />;
+    const waiting = items.some((x) => x.status === "pending");
     return (
-      <>
-        {items.map((x) => (
-          <ApprovalDone key={x.id} approval={x} />
-        ))}
-      </>
+      <AskFold pending={waiting}>
+        {waiting ? <ApprovalGroupAsk items={items} /> : items.map((x) => <ApprovalDone key={x.id} approval={x} />)}
+      </AskFold>
     );
   }
-  if (a.status === "pending") return <ApprovalAsk approval={a} />;
-  return <ApprovalDone approval={a} />;
+  const pending = a.status === "pending";
+  return <AskFold pending={pending}>{pending ? <ApprovalAsk approval={a} /> : <ApprovalDone approval={a} />}</AskFold>;
 }
 
 /** Approvals whose burst already played: a pill scrolling back into view, or remounted, stays quiet. */
@@ -191,6 +190,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const c = useColors();
   const toast = useToast();
   const asks = useAskStore();
+  const burst = useBurst();
   const one = useDecideApproval(orgId);
   const all = useDecideApprovals(orgId);
   // Which runs are unfolded, by `runKeys`: one stays open while its requests are decided, the card reshaping or not.
@@ -215,6 +215,12 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const settle = (list: string[]) => {
     for (const id of list) asks?.settle(id);
   };
+  // Approved here: the burst from the button pressed, in the agent's tones; it is the celebration, so the decided
+  // lines' own checks stay quiet.
+  const cheer = (list: string[]) => {
+    if (!burst?.fire(agentLook(dir.anyAgent(first.agentId)).color)) return;
+    for (const id of list) celebrated.add(id);
+  };
   const decideMany = (list: string[], decision: "approve" | "refuse") =>
     all.mutate(
       { ids: list, decision },
@@ -222,6 +228,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
         onSuccess: () => {
           settle(list);
           if (decision === "approve") {
+            cheer(list);
             successHaptic();
             toast({
               title: t("mobile.approval.approved"),
@@ -234,7 +241,16 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
       },
     );
   const approveOne = (a: Approval) =>
-    one.mutate({ id: a.id, decision: "approve" }, { onSuccess: () => asks?.settle(a.id), onError: failed });
+    one.mutate(
+      { id: a.id, decision: "approve" },
+      {
+        onSuccess: () => {
+          asks?.settle(a.id);
+          cheer([a.id]);
+        },
+        onError: failed,
+      },
+    );
   // "Aprovar sempre" approves the like ones waiting beside it too (`approveAlwaysAlso`).
   const approveAlways = (a: Approval) =>
     one.mutate(
@@ -242,6 +258,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
       {
         onSuccess: () => {
           asks?.settle(a.id);
+          cheer([a.id]);
           const also = approveAlwaysAlso(items, a);
           if (also.length) all.mutate({ ids: also, decision: "approve" }, { onSuccess: () => settle(also) });
           toast({ ...approveAlwaysToast(t, name, alwaysRoutineName(t, a)), agentId: a.agentId });
@@ -280,18 +297,20 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
     return {
       acts: (
         <View style={styles.itemActs}>
-          {high ? (
-            <HoldButton size="card" label={label} onConfirm={() => decideMany(scope, "approve")} />
-          ) : (
-            <Button
-              variant="primary"
-              size="card"
-              icon="check"
-              label={label}
-              disabled={busy}
-              onPress={() => decideMany(scope, "approve")}
-            />
-          )}
+          <ApproveSpot off={busy && !high}>
+            {high ? (
+              <HoldButton size="card" label={label} onConfirm={() => decideMany(scope, "approve")} />
+            ) : (
+              <Button
+                variant="primary"
+                size="card"
+                icon="check"
+                label={label}
+                disabled={busy}
+                onPress={() => decideMany(scope, "approve")}
+              />
+            )}
+          </ApproveSpot>
           {lead ? <ApproveAlwaysButton approval={lead} disabled={busy} onPress={() => approveAlways(lead)} /> : null}
           <Button
             variant="secondary"
@@ -480,17 +499,19 @@ function ApprovalGroupItem({
           </View>
           {pending && a.canDecide ? (
             <View style={styles.itemActs}>
-              {approvalRisk(a) === "high" ? (
-                <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={onApprove} />
-              ) : (
-                <Button
-                  variant="primary"
-                  size="card"
-                  label={t("mobile.approval.approve")}
-                  disabled={busy || refusing}
-                  onPress={onApprove}
-                />
-              )}
+              <ApproveSpot off={(busy || refusing) && approvalRisk(a) !== "high"}>
+                {approvalRisk(a) === "high" ? (
+                  <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={onApprove} />
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="card"
+                    label={t("mobile.approval.approve")}
+                    disabled={busy || refusing}
+                    onPress={onApprove}
+                  />
+                )}
+              </ApproveSpot>
               {always ? <ApproveAlwaysButton approval={a} disabled={busy || refusing} onPress={onAlways} /> : null}
               <Button
                 variant="secondary"
@@ -549,13 +570,18 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
   const dir = useDirectory();
   const c = useColors();
   const asks = useAskStore();
+  const burst = useBurst();
   const origin = useOriginShort(a);
   const ownerId = a.ownerUserId ?? dir.agentById.get(a.agentId)?.ownerUserId ?? null;
   const owner = approvalWaitsFor(a, ownerId ? dir.memberById.get(ownerId)?.name : undefined);
   const requester = requesterDecidesLine(t, a);
   // The same approving as Atividade's card: the haptic, the toast saying what follows; refusing asks once, in the
   // system's alert, with the reason optional.
-  const { approve, pending, high } = useApproveNow(a, () => asks?.settle(a.id));
+  const { approve, pending, high } = useApproveNow(a, () => {
+    asks?.settle(a.id);
+    // The burst from the button, in the agent's tones, is the celebration: the decided line's own check stays quiet.
+    if (burst?.fire(agentLook(dir.anyAgent(a.agentId)).color)) celebrated.add(a.id);
+  });
   const { refuse, pending: refusing } = useRefuseApproval(a, () => asks?.settle(a.id));
   // A connector's detail is its raw call (`tool · key=value`), so its values in words instead, the call under "Ver
   // detalhes". An email's preview says to whom and about what: its line says only where it goes from.
@@ -617,17 +643,19 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
             // Aprovar and Recusar, the same two words as everywhere the request shows; "Aprovar sempre" is a switch
             // in the request's sheet, not a third button here.
             <View style={styles.itemActs}>
-              {high ? (
-                <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
-              ) : (
-                <Button
-                  variant="primary"
-                  size="card"
-                  label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
-                  disabled={pending || refusing}
-                  onPress={() => approve()}
-                />
-              )}
+              <ApproveSpot off={(pending || refusing) && !high}>
+                {high ? (
+                  <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="card"
+                    label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
+                    disabled={pending || refusing}
+                    onPress={() => approve()}
+                  />
+                )}
+              </ApproveSpot>
               <Button
                 variant="secondary"
                 size="card"

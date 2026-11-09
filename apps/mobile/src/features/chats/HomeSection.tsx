@@ -1,9 +1,19 @@
 import type { ReactNode } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, LayoutAnimationConfig, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  LayoutAnimationConfig,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import { readValueSync, STORED, writeValue } from "@/lib/storage";
-import { Count, Icon, LIST_INSET, SCREEN_X, Text, useReducedMotion, weights } from "@/ui";
+import { Count, Icon, LIST_INSET, motion, SCREEN_X, Text, useReducedMotion, weights } from "@/ui";
 import { useColors } from "../shared/hooks";
 import {
   HOME_SECTIONS,
@@ -50,6 +60,57 @@ export function useHomeCollapsed() {
 }
 
 /**
+ * What changes place in a list travels there (a conversation that goes to the top with a new message, the sections
+ * under one that closes): the ruler's spring for things moving to a new place, which settles with no overshoot.
+ */
+export const LIST_MOVE = LinearTransition.springify().damping(motion.nav.damping).stiffness(motion.nav.stiffness);
+
+/** A list's first rows arrive one after the other, this far apart; from the eighth on, together. */
+const LAND_GAP = 30;
+const LAND_ROWS = 8;
+const LAND_RISE = 8;
+const LAND_MS = 420;
+
+/**
+ * One row (or block) of a list. With `land` on its first render (the list's first load, `useFirstLoad`) it arrives:
+ * clear and 8 points low, to its place, `index` rows after the first. It is a value we drive rather than an
+ * `entering`, because the sections skip their rows' entering when the list mounts; a row that mounts later is just
+ * there. With `moves` it travels to its new place when the list reorders or something above it changes size. Give it
+ * the row's key. With reduced motion it is a plain box.
+ */
+export function LandRow({
+  land = false,
+  index = 0,
+  moves = false,
+  children,
+}: {
+  land?: boolean;
+  index?: number;
+  moves?: boolean;
+  children: ReactNode;
+}) {
+  const reduced = useReducedMotion();
+  // Decided once, when the row mounts: later renders never replay it.
+  const [arrives] = useState(land && !reduced);
+  const [delay] = useState(Math.min(index, LAND_ROWS) * LAND_GAP);
+  const shown = useSharedValue(arrives ? 0 : 1);
+  useEffect(() => {
+    if (!arrives) return;
+    shown.value = withDelay(delay, withTiming(1, { duration: LAND_MS, easing: Easing.bezier(...motion.ease) }));
+  }, [arrives, delay, shown]);
+  const look = useAnimatedStyle(() => ({
+    opacity: shown.value,
+    transform: [{ translateY: (1 - shown.value) * LAND_RISE }],
+  }));
+  return (
+    // Only a row that arrives carries a style; the rest stay plain views.
+    <Animated.View layout={moves && !reduced ? LIST_MOVE : undefined} style={arrives ? look : undefined}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/**
  * A section of Conversas: the title, its count (medium, faint) and a chevron that
  * turns when collapsed; tapping the header collapses or opens it.
  */
@@ -81,7 +142,8 @@ export function CollapsibleSection({
     transform: [{ rotate: withTiming(collapsed ? "-90deg" : "0deg", { duration: reduced ? 0 : 200 }) }],
   }));
   return (
-    <View>
+    // The section travels when one above it closes or opens, instead of jumping there.
+    <Animated.View layout={reduced ? undefined : LIST_MOVE}>
       <Pressable
         onPress={onToggle}
         {...(onLongPress
@@ -109,13 +171,19 @@ export function CollapsibleSection({
         </Animated.View>
       </Pressable>
       {collapsed ? (kept ?? null) : null}
-      {/* Opened while the list shows, its rows fade in; open when the list mounts, they just show. */}
+      {/* Opened while the list shows, its rows fade in; open when the list mounts, they just show. Closed, they fade
+          out where they were while what is under the section comes up. */}
       <LayoutAnimationConfig skipEntering>
         {collapsed ? null : (
-          <Animated.View entering={reduced ? undefined : FadeIn.duration(160)}>{children}</Animated.View>
+          <Animated.View
+            entering={reduced ? undefined : FadeIn.duration(160)}
+            exiting={reduced ? undefined : FadeOut.duration(150)}
+          >
+            {children}
+          </Animated.View>
         )}
       </LayoutAnimationConfig>
-    </View>
+    </Animated.View>
   );
 }
 

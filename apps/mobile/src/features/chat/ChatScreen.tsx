@@ -45,7 +45,7 @@ import {
 import { activityVerb, listNames } from "@agenteschat/client/lib/activity";
 import { canTalk } from "@agenteschat/client/lib/audience";
 import { runPosition, screenAboveEnd } from "@agenteschat/client/lib/chat";
-import { CHAT_RHYTHM, firstUnreadId, opensAtLastRead } from "@agenteschat/client/lib/chat-look";
+import { CHAT_RHYTHM, firstUnreadId, mineOnRight, opensAtLastRead } from "@agenteschat/client/lib/chat-look";
 import { type ConversationWait, conversationWaits } from "@agenteschat/client/lib/computer-queue";
 import { consultBlocksNearEnd, consultNoticeFolds, consultsForLine } from "@agenteschat/client/lib/consult-group";
 import { errorCode, errorText } from "@agenteschat/client/lib/errors";
@@ -80,15 +80,17 @@ import { useFocusEffect, useIsFocused, useIsPreview } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Keyboard, type LayoutChangeEvent, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { AppState, Keyboard, type LayoutChangeEvent, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { KeyboardController, KeyboardGestureArea, KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, {
+  type EntryExitAnimationFunction,
   FadeIn,
   FadeInDown,
   FadeOut,
   Keyframe,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -105,6 +107,7 @@ import {
   Composer,
   type ComposerWorking,
   Count,
+  haptics,
   Icon,
   IconButton,
   LineIcon,
@@ -112,6 +115,7 @@ import {
   PressScale,
   type SendHow,
   Text,
+  useFaceReturn,
   useReducedMotion,
   useTheme,
   useToast,
@@ -220,7 +224,7 @@ import {
   ThreadOptions,
 } from "./sheets";
 import { StoppedRunsContext, stoppedRunsKey, stoppedRunsOf } from "./stopped-runs";
-import { turnOrder, turnRuns, withOpacity } from "./turn";
+import { stoppedOf, turnOrder, turnRuns, withOpacity } from "./turn";
 import { JumpToMessageContext } from "./WorkLine";
 
 /** A run's messages this recent are asked whether a take over still holds the agent's browser. */
@@ -277,6 +281,36 @@ const ENTER = new Keyframe({
   100: { opacity: 1, transform: [{ translateY: 0 }] },
 }).duration(motion.base);
 const FRESH_MS = 800;
+/** How far under its place my own message starts: it comes from the composer's side. */
+const SENT_FROM = 28;
+const SENT_SCALE = 0.96;
+/**
+ * My own message as it is sent: it comes up from the field into its place, settling with no overshoot, so the words
+ * read as leaving the field and landing as the row. A bubble on my side also grows a little from its bottom right
+ * corner, the one nearest the send button (the two shifts keep that corner still while it scales).
+ */
+const sentIn = (bubble: boolean): EntryExitAnimationFunction => {
+  const spring = motion.nav;
+  return (target: { targetWidth: number; targetHeight: number }) => {
+    "worklet";
+    const from = bubble ? SENT_SCALE : 1;
+    const dx = (target.targetWidth * (1 - from)) / 2;
+    const dy = SENT_FROM + (target.targetHeight * (1 - from)) / 2;
+    return {
+      initialValues: { opacity: 0, transform: [{ translateX: dx }, { translateY: dy }, { scale: from }] },
+      animations: {
+        opacity: withTiming(1, { duration: 120 }),
+        transform: [
+          { translateX: withSpring(0, spring) },
+          { translateY: withSpring(0, spring) },
+          { scale: withSpring(1, spring) },
+        ],
+      },
+    };
+  };
+};
+const SENT_BUBBLE = sentIn(true);
+const SENT_ROW = sentIn(false);
 /** How close to the end a scroll has to stop for a list held at a long message's start to follow again. */
 const READ_RELEASE_PX = 24;
 /** How long the sheet takes to slide away before the conversation it picked takes this one's place. */
@@ -380,6 +414,8 @@ function Chat({
     dmAgent ? agentLook(dmAgent).color : undefined,
   );
   const rhythm = CHAT_RHYTHM[rowLook.style];
+  // My own rows are bubbles on my side in these looks: a sent one grows from its corner as it lands.
+  const sentEnter = mineOnRight(rowLook.style) ? SENT_BUBBLE : SENT_ROW;
   const quiet = quietInset(rowLook);
   // The right hand (ADR 0137): its own line and composer hint, no computer, and its greeting on top.
   const rightHand = isRightHand(dmAgent) && !isThread;
@@ -1571,6 +1607,9 @@ function Chat({
             onSearch={dm && searchPlace ? openSearch : undefined}
           />,
         );
+  // An agent's face that flew into the pill from its row flies back as the conversation closes (a thread's pill has
+  // no face).
+  useFaceReturn(isThread ? undefined : (dmAgentId ?? undefined), "pill");
   // Holding the pill: "Trocar de conversa". The pick swaps the conversation in place (the route's params; the
   // screen is keyed by them), not a new screen sliding in: the slide made the header's pill jump at its end.
   // The swap waits for the sheet to finish closing (it lives in this screen, which the swap remounts).
@@ -1614,7 +1653,10 @@ function Chat({
               agentId={dmAgentId}
               size={32}
               framed={false}
-              mode={dmDoing ? "run" : "idle"}
+              // Looking up while it thinks or uses a tool, writing eyes once its words are coming.
+              mode={
+                dmDoing ? (runs.some((r) => r.agentId === dmAgentId && r.text.length > 0) ? "run" : "think") : "idle"
+              }
               presence
               ring={c.glassSolid}
             />
@@ -1626,6 +1668,7 @@ function Chat({
         subtitle={dmLine ?? dmDoing ?? subtitle}
         color={dmAgentId ? agentLook(dmAgent).color : undefined}
         working={Boolean(dmDoing)}
+        faceAgentId={dmAgentId ?? undefined}
         // Reading far up, only the face stays (the screen is the messages); a new reply opens it again.
         collapsed={far && unseen.messages === 0}
         extraActions={(dmAgentId ? 1 : 0) + (queueShown ? 1 : 0) + (agentTasks ? tasksBadge(agentTasks).room : 0)}
@@ -1904,7 +1947,9 @@ function Chat({
             <Animated.View
               entering={
                 isFresh(item.key) && (!item.message.agentRunId || isMediaAfterReply(item.message.meta))
-                  ? ENTER
+                  ? item.message.author.type === "person" && item.message.author.id === meId
+                    ? sentEnter
+                    : ENTER
                   : undefined
               }
               style={item.message.id === flashId ? { backgroundColor: c.sunken } : undefined}
@@ -1948,6 +1993,7 @@ function Chat({
       rhythm,
       quiet,
       meId,
+      sentEnter,
       channelId,
       isFresh,
       openBrowsers,
@@ -1978,6 +2024,32 @@ function Chat({
     // taken over before this one's blur).
     return holdOpenConversation({ orgId, channelId, threadId });
   }, [focused, orgId, channelId, threadId]);
+  // An agent's turn ending here is felt, lightly and once: its run seen at work leaves and its reply is listed. Only
+  // with this conversation in front and at its end (the reply lands in view); never for a turn that was stopped or
+  // failed, which say so themselves.
+  const turnsRef = useRef(new Map<string, { quiet: boolean; goneAt: number | null }>());
+  useEffect(() => {
+    const turns = turnsRef.current;
+    const atWork = new Set<string>();
+    for (const r of runs) {
+      if (r.provisional) continue;
+      atWork.add(r.runId);
+      const quiet = Boolean(r.stopping) || r.status === "canceled" || r.status === "failed";
+      turns.set(r.runId, { quiet: quiet || (turns.get(r.runId)?.quiet ?? false), goneAt: null });
+    }
+    const now = Date.now();
+    let ended = false;
+    for (const [runId, turn] of turns) {
+      if (atWork.has(runId)) continue;
+      const reply = list.findLast((m) => m.agentRunId === runId);
+      if (reply) {
+        turns.delete(runId);
+        if (!turn.quiet && !stoppedOf(reply.meta)) ended = true;
+      } else if (turn.goneAt === null) turn.goneAt = now;
+      else if (now - turn.goneAt > HOLD_FINISHED_RUN_MS) turns.delete(runId);
+    }
+    if (ended && focused && !peeking && atEndRef.current && AppState.currentState === "active") haptics.light();
+  }, [runs, list, focused, peeking]);
   // "Falar com o Theo" from two agents' conversation: "@theo " in this field, once this screen is in view again.
   const composerRequest = useComposerRequest(channelId);
   const prefill = focused ? composerRequest : null;

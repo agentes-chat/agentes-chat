@@ -10,11 +10,11 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Icon } from "./Icon";
-import { useReducedMotion } from "./theme";
+import { motion, useReducedMotion } from "./theme";
 
 /** The burst's length: short, once, and over before the eye leaves the line. */
 const BURST_MS = 600;
-const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const EASE_OUT = Easing.bezier(...motion.ease);
 /** Eight pixels on the sky's grid (2 pt squares), out on the compass and its diagonals. */
 const RAYS = [0, 45, 90, 135, 180, 225, 270, 315];
 

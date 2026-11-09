@@ -14,6 +14,8 @@ import { useSounds } from "@/lib/sounds";
 import { useOrg, useOrgGate } from "@/providers/org";
 import {
   coverBarOptions,
+  FaceTravelHost,
+  faceTravelOptions,
   useFormSheetOptions,
   usePushedOptions,
   useScrollUnderPushedOptions,
@@ -45,6 +47,8 @@ export default function AppLayout() {
   return (
     <>
       <AppStack />
+      {/* An agent's face flying from one screen to the next, over the stack. */}
+      <FaceTravelHost />
       {/* What reaches me while the app is open, out of the camera's island (ADR 0071 §9). */}
       <NoticeIsland />
       {/* What other apps share through the system's share sheet opens "Compartilhar com…". */}
@@ -89,7 +93,8 @@ function AppStack() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, gestureEnabled: true }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="chat/[channelId]" options={pushed} />
+      {/* Opened with an agent's face on its way (from its row, from the header), these two fade in under it. */}
+      <Stack.Screen name="chat/[channelId]" options={({ route }) => ({ ...pushed, ...faceTravelOptions(route.key) })} />
       <Stack.Screen name="consultation/[id]" options={pushed} />
       <Stack.Screen name="block/[id]" options={pushed} />
       <Stack.Screen name="conversations/[kind]" options={{ ...pushed, ...scrollUnder }} />
@@ -100,7 +105,10 @@ function AppStack() {
       <Stack.Screen name="channel-categories" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="channel-category-edit" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="mission/[id]" options={{ ...pushed, ...scrollUnder }} />
-      <Stack.Screen name="agent/[id]" options={{ ...pushed, ...coverBarOptions }} />
+      <Stack.Screen
+        name="agent/[id]"
+        options={({ route }) => ({ ...pushed, ...coverBarOptions, ...faceTravelOptions(route.key) })}
+      />
       <Stack.Screen name="account-delete" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="ai-accounts" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="usage" options={{ ...pushed, ...scrollUnder }} />

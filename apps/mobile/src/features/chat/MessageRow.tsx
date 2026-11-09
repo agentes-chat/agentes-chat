@@ -72,6 +72,7 @@ import {
   useTheme,
   useToast,
 } from "@/ui";
+import { Shake } from "@/ui/auth/Shake";
 import { router } from "@/ui/navigation";
 import { InstructionProposals } from "../agents/InstructionProposalCard";
 import { ProposalCard } from "../agents/ProposalCard";
@@ -198,6 +199,25 @@ export const MessageRow = memo(function MessageRow({
   const { t, i18n } = useTranslation();
   // Mine and not sent for lack of a connection: it waits and goes by itself when the connection is back.
   const offline = useWaiting(m.local === "failed" ? m.clientId : null);
+  // The moment a send fails (not a row drawn already failed, nor one waiting for the connection): the row shakes
+  // once and the phone says so, once. A row that was ever on its way keeps the shaking view, so the saved copy
+  // taking its place never mounts the row again.
+  const failedNow = m.local === "failed" && !offline;
+  const sendId = m.clientId ?? m.id;
+  const failSeen = useRef({ id: sendId, failed: failedNow });
+  const [shook, setShook] = useState(false);
+  const [shakes, setShakes] = useState(Boolean(m.local));
+  if (m.local && !shakes) setShakes(true);
+  useEffect(() => {
+    const seen = failSeen.current;
+    failSeen.current = { id: sendId, failed: failedNow };
+    if (!failedNow) setShook(false);
+    else if (seen.id === sendId && !seen.failed) {
+      haptics.error();
+      setShook(true);
+    }
+  }, [sendId, failedNow]);
+  const shaking = (row: ReactNode) => (shakes ? <Shake when={shook}>{row}</Shake> : row);
   const dir = useDirectory();
   const c = useColors();
   const when = useWhen();
@@ -533,7 +553,7 @@ export const MessageRow = memo(function MessageRow({
         <MessageFiles files={files} align="end" />
       </View>
     ) : null;
-    return (
+    return shaking(
       <Pressable
         onPress={onTap}
         onLongPress={press}
@@ -584,7 +604,7 @@ export const MessageRow = memo(function MessageRow({
           </View>
         ) : null}
         {popNode}
-      </Pressable>
+      </Pressable>,
     );
   }
 
@@ -733,7 +753,7 @@ export const MessageRow = memo(function MessageRow({
 
   const quoteAbove = Boolean(quote && !inBubble);
   const nameOrWords = Boolean(inBubble || !grouped || pinLine || reportOpened || opener || words);
-  return (
+  return shaking(
     <>
       {pair}
       {quote && !inBubble ? <QuoteAbove look={look} reply={quote} onJump={onQuote} gap={rowGap} /> : null}
@@ -877,6 +897,7 @@ export const MessageRow = memo(function MessageRow({
             {/* Its tools after its words, what it changed and its cards: the same place live, kept and saved. */}
             {kept ? (
               <TurnTools
+                runId={m.agentRunId ?? undefined}
                 items={opened?.lines ?? kept.items}
                 agentName={agent?.name ?? name}
                 color={color}
@@ -917,7 +938,7 @@ export const MessageRow = memo(function MessageRow({
         </View>
         {popNode}
       </Pressable>
-    </>
+    </>,
   );
 });
 
