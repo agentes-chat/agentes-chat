@@ -41,6 +41,7 @@ import { audienceChip, audienceNames, audienceNotice, canTalk, hiddenAgentIds } 
 import { workspaceNotes } from "@agenteschat/client/lib/deletion";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { BLANK_LINE } from "@agenteschat/client/lib/format";
 import { waitingAgents } from "@agenteschat/client/lib/outages";
 import { can, managesChannel } from "@agenteschat/client/lib/permissions";
 import { AVAILABILITIES, isOutOfOffice, presenceOfAvailability, statusEndNote } from "@agenteschat/client/lib/presence";
@@ -87,6 +88,7 @@ import {
   type DragEvent,
   Fragment,
   type HTMLAttributes,
+  type KeyboardEvent,
   type ReactNode,
   useEffect,
   useLayoutEffect,
@@ -108,6 +110,7 @@ import { requestChannelDetails } from "@/lib/channel-details";
 import type { MenuEntry } from "@/lib/context-menu";
 import { onPhoneAsk, takePhoneAsk, thisMac } from "@/lib/desktop";
 import { entityMenu } from "@/lib/entity-menu";
+import { DropSpot, keepFocus, MOVE_KEYS, moveKey, slideFrom, useListDrag, withSpot } from "@/lib/list-drag";
 import { useOpenParam } from "@/lib/open-param";
 import { markOpen } from "@/lib/perf";
 import { ownPlanLines, planNearLimit, planWord } from "@/lib/plan-usage";
@@ -424,11 +427,31 @@ export function Sidebar() {
           onPrefetch={() => dm && prefetch(dm.channelId)}
           onOpen={() => markOpen(dm?.channelId ?? a.id)}
           drag={organize ? drag.row(a.id) : undefined}
+          lifted={drag.liftedId === a.id}
           menuExtra={manages ? groupEntries(a) : undefined}
         />
       </ErrorBoundary>
     );
   };
+  // While an agent is dragged (lib/list-drag.tsx) its row hides, and a dashed spot of its size stands where it would
+  // land: its place in a group, or where the workspace's order puts it among the agents in no group.
+  const rowsWithSpot = (groupId: string | null | undefined, list: Agent[]) =>
+    withSpot(
+      list,
+      drag.spot,
+      drag.spotIn(
+        groupId,
+        list.map((a) => a.id),
+        () =>
+          ordered(
+            shownAgents.filter(
+              (a) => !pins.agents.includes(a.id) && (a.id === drag.liftedId || !groupOf(groups, a.id)),
+            ),
+          ).map((a) => a.id),
+      ),
+      drag.liftedId,
+      agentRow,
+    );
   // Only the middle scrolls: the workspace card on top and the foot stay put. The active item
   // paints its own background (no sliding pill).
   const navRef = useRef<HTMLDivElement>(null);
@@ -607,7 +630,7 @@ export function Sidebar() {
               <SectionAdd label={t("sidebarAgents.add")} entries={[...createAgentItem, ...newGroupItem]} />
             </>
           }
-          drop={organize ? drag.zone(null) : undefined}
+          drop={organize ? drag.zone(null, true) : undefined}
         >
           {rightHand && (
             <RightHandRow
@@ -618,7 +641,7 @@ export function Sidebar() {
             />
           )}
           {dir.loading && team.length === 0 && <SidebarSkeleton count={2} avatar label={t("common.loadingList")} />}
-          {pinnedAgents.map(agentRow)}
+          {rowsWithSpot(undefined, pinnedAgents)}
           {pinned.hint && (
             <div className="sidebar__pins-hint" role="note">
               <span>{t("sidebarPins.hint")}</span>
@@ -636,7 +659,7 @@ export function Sidebar() {
           {pinnedAgents.length > 0 && (byGroup.ungrouped.length > 0 || agentGroups.length > 0) && (
             <hr className="sidebar__pins-end" />
           )}
-          {ordered(byGroup.ungrouped).map(agentRow)}
+          {rowsWithSpot(null, ordered(byGroup.ungrouped))}
           {!dir.loading && team.length === 0 && createAgentItem.length > 0 && (
             <Link to="/org/$orgId/agents/new" params={{ orgId }} className="sidebar__item sidebar__item--quiet">
               <Icon name="plus" />
@@ -646,10 +669,6 @@ export function Sidebar() {
         </SidebarSection>
         {agentGroups.map(({ group, items }) => {
           const list = ordered(items);
-          // Where a dragged row would land: a line before the row at that place among the others.
-          const others = list.filter((a) => a.id !== drag.dragging);
-          const lineAt = drag.over?.groupId === group.id ? drag.over.index : null;
-          const line = <span className="sidebar__drop-line" aria-hidden="true" />;
           const workingHere = list.filter((a) => busy.has(a.id)).length;
           return (
             <SidebarSection
@@ -670,15 +689,9 @@ export function Sidebar() {
                   {list.length}
                 </span>
               }
-              drop={organize ? drag.zone(group.id) : undefined}
+              drop={{ "data-slide": `group:${group.id}`, ...(organize ? drag.zone(group.id, true) : {}) }}
             >
-              {list.map((a) => (
-                <Fragment key={a.id}>
-                  {lineAt === others.indexOf(a) && line}
-                  {agentRow(a)}
-                </Fragment>
-              ))}
-              {lineAt !== null && lineAt >= others.length && line}
+              {rowsWithSpot(group.id, list)}
               {manages && group.agentIds.length === 0 && (
                 <span className="sidebar__drop-hint">{t("agentGroups.dropHere")}</span>
               )}
@@ -800,6 +813,8 @@ export function Sidebar() {
       <div
         className="sidebar__scroll"
         ref={navRef}
+        // Its lists show together once the channels, the agents and the DMs are in: no section pushes the next down.
+        data-pending={channels.isLoading || dir.loading || dms.isLoading || undefined}
         onKeyDown={(e) => spaceEvent(e) && sidebarMenu.onKeyDown(e)}
         onContextMenu={(e) => spaceEvent(e) && sidebarMenu.onContextMenu(e)}
       >
@@ -926,8 +941,15 @@ function SidebarSection({
   defaultOpen?: boolean;
   summary?: ReactNode;
   action?: ReactNode;
-  /** It takes a drop: dragged agents (`useAgentDrag`), or channels taken out of their category. */
-  drop?: HTMLAttributes<HTMLDivElement> & { "data-drop"?: string | boolean };
+  /**
+   * It takes a drop: dragged agents (`useAgentDrag`), or channels taken out of their category. A category or a group
+   * that moves slides (`data-slide`) and hides while it is dragged (`data-lifted`).
+   */
+  drop?: HTMLAttributes<HTMLDivElement> & {
+    "data-drop"?: string | boolean;
+    "data-slide"?: string;
+    "data-lifted"?: boolean;
+  };
   className?: string;
   /** A channel category's header: its right click and dragging. */
   headProps?: HTMLAttributes<HTMLDivElement>;
@@ -1012,6 +1034,7 @@ interface CategoryAction {
   description?: string;
 }
 const CATEGORY_KEY = "category:";
+const CHANNEL_KEY = "channel:";
 
 /**
  * The channels (ADR 0080): the "Canais" part, its channels with no category first, then one section per category
@@ -1064,8 +1087,6 @@ function SidebarChannels({
   const mayChange = (c: Channel) => managesChannel(c, me.user.id, org);
   const [renaming, setRenaming] = useState<ChannelCategory | null>(null);
   const [moving, setMoving] = useState<Channel | null>(null);
-  const drag = useRef<Dragging | null>(null);
-  const [mark, setMark] = useState<DropMark>(null);
   const failed = (e: unknown) => toast.show(errorText(t, e), "error");
 
   const list = categories.data ?? [];
@@ -1081,13 +1102,20 @@ function SidebarChannels({
   const shown = manages ? list : list.filter((c) => inCategory(c.id).length > 0);
   const categoryIds = shown.map((c) => `${CATEGORY_KEY}${c.id}` as SectionId);
 
-  // ── Dragging: a channel onto a channel (before/after) or a header (into); a header onto a header ──
-  const endDrag = () => {
-    drag.current = null;
-    setMark(null);
+  // ── Dragging (lib/list-drag.tsx): a channel onto a channel (before/after) or a part (into, at its end); a category
+  // onto a category. The dragged row's key is `channel:<id>` or `category:<id>`. ──
+  const layout = `${all.map((c) => `${c.id}:${c.categoryId ?? ""}`).join()}|${list.map((c) => c.id).join()}`;
+  const spot = useListDrag<NonNullable<DropMark>>(layout, (a, b) => a.key === b.key && a.where === b.where);
+  const dragging = (): Dragging | null => {
+    const key = spot.current();
+    if (!key) return null;
+    return key.startsWith(CHANNEL_KEY)
+      ? { kind: "channel", id: key.slice(CHANNEL_KEY.length) }
+      : { kind: "category", id: key.slice(CATEGORY_KEY.length) };
   };
   const startDrag = (e: DragEvent, what: Dragging) => {
-    drag.current = what;
+    const key = `${what.kind === "channel" ? CHANNEL_KEY : CATEGORY_KEY}${what.id}`;
+    spot.begin(key, e.currentTarget.closest("[data-slide]") ?? e.currentTarget);
     e.dataTransfer.effectAllowed = "move";
     // Firefox starts a drag only with some data set. Not text, or a text field it's dropped on types the id.
     e.dataTransfer.setData(`application/x-agentes-${what.kind}`, what.id);
@@ -1100,57 +1128,63 @@ function SidebarChannels({
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
-    if (mark?.key !== key || mark.where !== where) setMark({ key, where });
+    spot.over({ key, where });
+  };
+  /** Over where it already is, it lands nowhere (no drop there): not at the end of the part around it. */
+  const stay = (e: DragEvent) => {
+    e.stopPropagation();
+    spot.over(null);
   };
   const overChannel = (e: DragEvent, c: Channel) => {
-    const d = drag.current;
+    const d = dragging();
     if (d?.kind !== "channel") return;
-    if (d.id !== c.id) return over(e, `channel:${c.id}`, half(e));
-    // Over its own row it lands nowhere: not at the end of the section around it.
-    e.stopPropagation();
-    if (mark) setMark(null);
+    if (d.id !== c.id) return over(e, `${CHANNEL_KEY}${c.id}`, half(e));
+    stay(e);
   };
   // "Into" the part the channel is already in lands nowhere: the server would move it to that part's end.
   const intoPart = (e: DragEvent, key: string) => {
-    const d = drag.current;
+    const d = dragging();
     if (d?.kind !== "channel") return;
     const dragged = channels.find((c) => c.id === d.id);
     const home = dragged && categoryOf(dragged);
     if (home === undefined || key !== (home === null ? "loose" : `${CATEGORY_KEY}${home}`)) return over(e, key, "into");
-    e.stopPropagation();
-    if (mark) setMark(null);
+    stay(e);
   };
   const overCategory = (e: DragEvent, category: ChannelCategory) => {
-    const d = drag.current;
+    const d = dragging();
     if (d?.kind === "channel") intoPart(e, `${CATEGORY_KEY}${category.id}`);
-    else if (d?.kind === "category" && d.id !== category.id) over(e, `${CATEGORY_KEY}${category.id}`, half(e));
+    else if (d?.kind === "category") {
+      if (d.id !== category.id) over(e, `${CATEGORY_KEY}${category.id}`, half(e));
+      else stay(e);
+    }
   };
   const overLoose = (e: DragEvent) => intoPart(e, "loose");
   // Anywhere in a category but on a row (its empty end, a row's hover buttons): a channel goes in, at its end.
   const overCategoryBody = (e: DragEvent, category: ChannelCategory) => intoPart(e, `${CATEGORY_KEY}${category.id}`);
-  const drop = (e: DragEvent) => {
-    const d = drag.current;
-    const m = mark;
-    endDrag();
-    if (!d || !m) return;
-    e.preventDefault();
-    e.stopPropagation();
+  /** Saves where `d` lands at `m`: false when it is there already. */
+  const land = (d: Dragging, m: NonNullable<DropMark>): boolean => {
     if (d.kind === "category") {
       const target = m.key.slice(CATEGORY_KEY.length);
       const i = list.findIndex((c) => c.id === target);
       const before = m.where === "before" ? target : (list[i + 1]?.id ?? null);
-      if (before !== d.id) placeCategory.mutate({ categoryId: d.id, beforeCategoryId: before }, { onError: failed });
-      return;
+      const at = list.findIndex((c) => c.id === d.id);
+      if (before === d.id || (list[at + 1]?.id ?? null) === before) return false;
+      placeCategory.mutate({ categoryId: d.id, beforeCategoryId: before }, { onError: failed });
+      return true;
     }
-    if (m.key === "loose") return place.mutate({ channelId: d.id, categoryId: null }, { onError: failed });
+    if (m.key === "loose") {
+      place.mutate({ channelId: d.id, categoryId: null }, { onError: failed });
+      return true;
+    }
     if (m.key.startsWith(CATEGORY_KEY)) {
       const categoryId = m.key.slice(CATEGORY_KEY.length);
       if (!sections.isOpen(`${CATEGORY_KEY}${categoryId}` as SectionId))
         sections.toggle(`${CATEGORY_KEY}${categoryId}` as SectionId);
-      return place.mutate({ channelId: d.id, categoryId }, { onError: failed });
+      place.mutate({ channelId: d.id, categoryId }, { onError: failed });
+      return true;
     }
-    const target = channels.find((c) => `channel:${c.id}` === m.key);
-    if (!target) return;
+    const target = channels.find((c) => `${CHANNEL_KEY}${c.id}` === m.key);
+    if (!target) return false;
     const categoryId = categoryOf(target);
     const siblings = categoryId ? inCategory(categoryId) : loose;
     const i = siblings.findIndex((c) => c.id === target.id);
@@ -1158,10 +1192,58 @@ function SidebarChannels({
     const from = siblings.findIndex((c) => c.id === d.id);
     // Already there. The server would still renumber the group, and a group arranged by hand takes new
     // channels at its end instead of by name (endOfCategory).
-    if (before === d.id || (from >= 0 && (siblings[from + 1]?.id ?? null) === before)) return;
+    if (before === d.id || (from >= 0 && (siblings[from + 1]?.id ?? null) === before)) return false;
     place.mutate({ channelId: d.id, categoryId, beforeChannelId: before }, { onError: failed });
+    return true;
   };
-  const dropMark = (key: string) => (mark?.key === key ? mark.where : undefined);
+  const drop = (e: DragEvent) => {
+    const d = dragging();
+    if (!d) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const m = spot.mark();
+    spot.drop(m ? land(d, m) : false);
+  };
+  const dropMark = (key: string) => (spot.marked?.key === key ? spot.marked.where : undefined);
+  const spotHere = (at: boolean) => (at && spot.drag ? <DropSpot drag={spot.drag} onDrop={drop} /> : null);
+  /** A row or a category with the dashed spot before or after it when a drag would land there, or in its own place. */
+  const placed = (key: string, el: ReactNode) => (
+    <Fragment key={key}>
+      {spotHere(spot.spotAt({ key, where: "before" }) || (spot.drag?.key === key && spot.spotAt(null)))}
+      {el}
+      {spotHere(spot.spotAt({ key, where: "after" }))}
+    </Fragment>
+  );
+  /** Alt+Shift+↑/↓ on a channel: past its neighbour in its part. */
+  const moveChannel = (e: KeyboardEvent<HTMLElement>, c: Channel) => {
+    const by = moveKey(e);
+    if (!by || !mayChange(c) || categories.data === undefined) return;
+    e.preventDefault();
+    const categoryId = categoryOf(c);
+    const siblings = categoryId ? inCategory(categoryId) : loose;
+    const j = siblings.findIndex((x) => x.id === c.id) + by;
+    if (j < 0 || j >= siblings.length) return;
+    slideFrom();
+    place.mutate(
+      { channelId: c.id, categoryId, beforeChannelId: by < 0 ? siblings[j]?.id : (siblings[j + 1]?.id ?? null) },
+      { onError: failed },
+    );
+    keepFocus(e.currentTarget);
+  };
+  /** Alt+Shift+↑/↓ on a category's header: past its neighbour. */
+  const moveCategory = (e: KeyboardEvent<HTMLElement>, category: ChannelCategory) => {
+    const by = moveKey(e);
+    if (!by || !manages) return;
+    e.preventDefault();
+    const j = list.findIndex((x) => x.id === category.id) + by;
+    if (j < 0 || j >= list.length) return;
+    slideFrom();
+    placeCategory.mutate(
+      { categoryId: category.id, beforeCategoryId: by < 0 ? (list[j]?.id ?? null) : (list[j + 1]?.id ?? null) },
+      { onError: failed },
+    );
+    if (e.target instanceof HTMLElement) keepFocus(e.target);
+  };
 
   // ── Menus: a channel's and a category's right click (lib/entity-menu.ts), and a category's ⋯ ──
   const channelEntries = useChannelMenu();
@@ -1270,6 +1352,11 @@ function SidebarChannels({
     // mention still shows.
     const unread = looksUnread(c);
     const mentions = c.mentionCount ?? 0;
+    const key = `${CHANNEL_KEY}${c.id}`;
+    const moves = categories.data !== undefined && mayChange(c);
+    // On the row itself: the link, or the box around it with its hover buttons.
+    const slides = { "data-slide": key, "data-lifted": spot.hides(key) || undefined };
+    const menu = channelMenu(c);
     const link = (
       <Link
         key={c.id}
@@ -1280,20 +1367,26 @@ function SidebarChannels({
         data-kind="channel"
         data-unread={unread}
         data-muted={c.muted || undefined}
+        {...(mayChange(c) ? {} : slides)}
         {...(top
           ? {}
           : {
-              "data-drop": dropMark(`channel:${c.id}`),
-              draggable: categories.data !== undefined && mayChange(c),
+              "data-drop": dropMark(key),
+              draggable: moves,
+              "aria-keyshortcuts": moves ? MOVE_KEYS : undefined,
               onDragStart: (e: DragEvent) => startDrag(e, { kind: "channel", id: c.id }),
-              onDragEnd: endDrag,
+              onDragEnd: () => spot.end(),
               onDragOver: (e: DragEvent) => overChannel(e, c),
               onDrop: drop,
             })}
         onMouseEnter={() => onPrefetch(c.id)}
         onFocus={() => onPrefetch(c.id)}
         onClick={() => markOpen(c.id)}
-        {...channelMenu(c)}
+        {...menu}
+        onKeyDown={(e: KeyboardEvent<HTMLElement>) => {
+          if (!top) moveChannel(e, c);
+          menu.onKeyDown(e);
+        }}
       >
         <Icon name="channel" className="sidebar__channel-icon" />
         <span className="sidebar__channel-abbr" aria-hidden="true">
@@ -1316,7 +1409,7 @@ function SidebarChannels({
       void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: c.id } });
     };
     return (
-      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={2}>
+      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={2} {...slides}>
         {link}
         <span className="sidebar__row-acts">
           <RowAction icon="personAdd" label={t("shell.sidebarMenu.addMembers")} onClick={open("add")} />
@@ -1362,7 +1455,8 @@ function SidebarChannels({
         {loading && <SidebarSkeleton count={3} label={t("common.loadingList")} />}
         {pinnedChannels.map((c) => row(c, true))}
         {pinnedChannels.length > 0 && (loose.length > 0 || shown.length > 0) && <hr className="sidebar__pins-end" />}
-        {loose.map((c) => row(c))}
+        {loose.map((c) => placed(`${CHANNEL_KEY}${c.id}`, row(c)))}
+        {spotHere(spot.spotAt({ key: "loose", where: "into" }))}
         {others.length > 0 && (
           <Menu
             label={t("shell.otherChannels")}
@@ -1388,35 +1482,48 @@ function SidebarChannels({
       </SidebarSection>
       {shown.map((category) => {
         const actions = categoryActions(category);
-        return (
+        const key = `${CATEGORY_KEY}${category.id}`;
+        const menu = entityMenu(() => [
+          { kind: "header", label: category.name },
+          ...actions.map(
+            (a): MenuEntry => ({
+              kind: "item",
+              id: a.id,
+              label: a.label,
+              icon: a.icon,
+              danger: a.danger,
+              run: a.run,
+            }),
+          ),
+        ]);
+        return placed(
+          key,
           <SidebarSection
             key={category.id}
-            id={`${CATEGORY_KEY}${category.id}`}
+            id={key as SectionId}
             label={category.name}
             sections={sections}
             className="sidebar__section--category"
-            drop={{ onDragOver: (e) => overCategoryBody(e, category), onDrop: drop }}
+            drop={{
+              "data-slide": key,
+              "data-lifted": spot.hides(key) || undefined,
+              onDragOver: (e) => overCategoryBody(e, category),
+              onDrop: drop,
+            }}
             headProps={
               {
                 draggable: manages,
-                "data-drop": dropMark(`${CATEGORY_KEY}${category.id}`),
+                "aria-keyshortcuts": manages ? MOVE_KEYS : undefined,
+                "data-drop": dropMark(key),
                 onDragStart: (e) => startDrag(e, { kind: "category", id: category.id }),
-                onDragEnd: endDrag,
+                onDragEnd: () => spot.end(),
                 onDragOver: (e) => overCategory(e, category),
                 onDrop: drop,
-                ...entityMenu(() => [
-                  { kind: "header", label: category.name },
-                  ...actions.map(
-                    (a): MenuEntry => ({
-                      kind: "item",
-                      id: a.id,
-                      label: a.label,
-                      icon: a.icon,
-                      danger: a.danger,
-                      run: a.run,
-                    }),
-                  ),
-                ]),
+                onContextMenu: menu.onContextMenu,
+                onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
+                  moveCategory(e, category);
+                  menu.onKeyDown(e);
+                },
               } as HTMLAttributes<HTMLDivElement>
             }
             action={
@@ -1448,8 +1555,9 @@ function SidebarChannels({
               </>
             }
           >
-            {inCategory(category.id).map((c) => row(c))}
-          </SidebarSection>
+            {inCategory(category.id).map((c) => placed(`${CHANNEL_KEY}${c.id}`, row(c)))}
+            {spotHere(spot.spotAt({ key, where: "into" }))}
+          </SidebarSection>,
         );
       })}
       {dialogs}
@@ -1555,6 +1663,7 @@ function AgentRow({
   onPrefetch,
   onOpen,
   drag,
+  lifted,
   menuExtra,
 }: {
   agent: Agent;
@@ -1566,6 +1675,8 @@ function AgentRow({
   onPrefetch: () => void;
   onOpen: () => void;
   drag?: ReturnType<ReturnType<typeof useAgentDrag>["row"]>;
+  /** Dragged: out of the list behind its spot. */
+  lifted?: boolean;
   menuExtra?: MenuEntry[];
 }) {
   const { t, i18n } = useTranslation();
@@ -1614,7 +1725,14 @@ function AgentRow({
         : chip
     : (out ?? a.role);
   return (
-    <div className="sidebar__row" data-agent-row={a.id} data-live={live || undefined} data-acts={edits ? 1 : undefined}>
+    <div
+      className="sidebar__row"
+      data-agent-row={a.id}
+      data-slide={`agent:${a.id}`}
+      data-lifted={lifted || undefined}
+      data-live={live || undefined}
+      data-acts={edits ? 1 : undefined}
+    >
       <Link
         {...rowMenu}
         to="/org/$orgId/dm/agent/$agentId"
@@ -1629,6 +1747,10 @@ function AgentRow({
         data-presence={shown?.presence}
         style={{ ...selectionSky(color), "--sel-glow-color": agentGradient(color)[1] } as CSSProperties}
         {...drag}
+        onKeyDown={(e: KeyboardEvent<HTMLElement>) => {
+          drag?.onKeyDown(e);
+          rowMenu.onKeyDown(e);
+        }}
       >
         {busy && <AgentTrail color={color} />}
         {busy && <AgentGlow color={color} />}
@@ -2033,7 +2155,8 @@ function WorkspaceMenu({ summary }: { summary: string | null }) {
         <OrgMark logo={org.logo} className="sidebar__org-mark" />
         <span className="sidebar__org-text">
           <span className="sidebar__org-name">{org.name}</span>
-          {summary && <span className="sidebar__org-meta">{summary}</span>}
+          {/* Its line held until the counts come, so the name doesn't move up and back down. */}
+          <span className="sidebar__org-meta">{summary ?? BLANK_LINE}</span>
         </span>
         <Icon name="chevronDown" size={16} />
       </button>

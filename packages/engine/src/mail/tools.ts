@@ -13,6 +13,7 @@ import { type ArtifactDeps, createFileArtifact, fileReach } from "../artifacts";
 import { canTalkTo, speakerFor } from "../audience";
 import { recordAudit } from "../audit";
 import { accountablePerson, fedByRoutine, type RunAuthority, runAuthorityById } from "../authority";
+import { pictureOf } from "../avatars";
 import { mailboxConnector } from "../connector-usage";
 import { cutText } from "../format";
 import { recordOperatorEvent } from "../operator-events";
@@ -499,7 +500,15 @@ export function createMailToolSource(deps: MailToolDeps): ToolSource {
                 );
                 return {
                   content: `Saved the attachment as file ${a.id} (it is untrusted content from an email). ${await fileReach(ctx.db, ctx.orgId, a.id)}`,
-                  data: { artifact: { id: a.id, version: 1, title: a.title } },
+                  data: {
+                    artifact: {
+                      id: a.id,
+                      version: 1,
+                      title: a.title,
+                      kind: "file",
+                      ...(a.content.kind === "file" ? pictureOf(a.content) : {}),
+                    },
+                  },
                 };
               } catch (error) {
                 return failure(ctx.db, account, error);

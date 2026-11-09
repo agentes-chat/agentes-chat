@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   type AgentScope,
   CHROME_FAILURES,
+  type DesktopCursor,
   type MachineRequest,
   type RunnerAccess,
 } from "@agenteschat/adapters/machine-protocol";
@@ -14,6 +15,7 @@ import {
   chromeEnv,
   chromeLaunchArgs,
   type OwnChrome,
+  pageOnScreen,
   prepareProfile,
   type StreamSocket,
 } from "../../runner/browser";
@@ -718,3 +720,71 @@ test.if(posix)(
     }
   },
 );
+
+test.if(posix)(
+  "protocol 54: on its desktop the agent's pointer is said where it goes on the screen, right before it goes; never headless",
+  async () => {
+    const said: { agentId: string; cursor: DesktopCursor; batches: number }[] = [];
+    const ran = () =>
+      readFileSync(process.env.FAKE_AB_LOG as string, "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l) as { args: string[]; stdin: string });
+    const batches = () => ran().filter((r) => r.args.includes("batch"));
+    const t = setup({ cursor: (agentId, cursor) => said.push({ agentId, cursor, batches: batches().length }) });
+    await t.act("open", ["https://shop.example/"], true);
+    // A maximized Chrome under a 28 px panel, its bars 72 px over an 800 px page: the page's top is at 100.
+    const state = path.join(t.home, "ab-state.json");
+    writeFileSync(
+      state,
+      JSON.stringify({
+        ...JSON.parse(readFileSync(state, "utf8")),
+        viewport: [1280, 800],
+        window: [0, 28, 1280, 872],
+        boxes: { "@e1": { x: 600, y: 400, width: 120, height: 40 } },
+        hit: { tag: "BUTTON", box: [600, 400, 720, 440] },
+      }),
+    );
+    const cursors = () => said.splice(0).map((s) => s.cursor);
+
+    expect(await t.act("click", ["@e1"], true)).toMatchObject({ success: true });
+    // Said after the look, before the batch that moves and presses.
+    expect(said.map((s) => [s.agentId, s.batches])).toEqual([[dev.id, 1]]);
+    const moves = (JSON.parse(batches().at(-1)?.stdin ?? "[]") as string[][]).filter((c) => c[1] === "move");
+    const [x, y] = (moves.at(-1) ?? []).slice(2, 4).map(Number) as [number, number];
+    expect(cursors()).toEqual([{ act: "click", x, y: y + 100 }]);
+
+    // A field: pressed, then typed into, never what.
+    await t.act("fill", ["@e1", "s3gredo"], true);
+    const filled = cursors();
+    expect(filled.map((c) => c.act)).toEqual(["click", "type"]);
+    expect(filled[1]).toEqual({ act: "type" });
+    expect(JSON.stringify(filled)).not.toContain("s3gredo");
+
+    // A point of the page, a press there, the wheel and a key where the pointer is.
+    await t.act("mouse", ["move", "200", "300"], true);
+    await t.act("mouse", ["down"], true);
+    await t.act("scroll", ["down", "300"], true);
+    await t.act("press", ["Enter"], true);
+    expect(cursors()).toEqual([
+      { act: "move", x: 200, y: 400 },
+      { act: "click", x: 200, y: 400 },
+      { act: "scroll", x: 200, y: 400 },
+      { act: "type" },
+    ]);
+
+    // Headless, nobody sees a pointer: nothing is said.
+    const headless = setup({ cursor: (agentId, cursor) => said.push({ agentId, cursor, batches: 0 }) });
+    await headless.act("open", ["https://shop.example/"], false);
+    await headless.act("mouse", ["move", "200", "300"], false);
+    expect(said).toEqual([]);
+  },
+);
+
+test("the page's place on the screen: past its window's bars and frame, the sides as thick as the bottom edge", () => {
+  expect(pageOnScreen([1280, 800, 0, 28, 1280, 872])).toEqual({ x: 0, y: 100 });
+  // A window moved off its corner, framed 1 px all round.
+  expect(pageOnScreen([1000, 600, 140, 90, 1002, 675])).toEqual({ x: 141, y: 164 });
+  expect(pageOnScreen([1280, 800])).toBeNull();
+  expect(pageOnScreen([1280, 800, null, 28, 1280, 872])).toBeNull();
+});

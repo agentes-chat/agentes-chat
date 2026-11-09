@@ -1,4 +1,5 @@
 import { useAnswerChoices, useArtifact, useChoices } from "@agenteschat/client";
+import { TYPICAL_CARD_OPTIONS } from "@agenteschat/client/lib/artifacts";
 import {
   answeredFirst,
   CHOICE_OTHER_MAX,
@@ -10,9 +11,10 @@ import {
   otherChoice,
   pickChoice,
 } from "@agenteschat/client/lib/choices";
+import { BLANK_LINE } from "@agenteschat/client/lib/format";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, MEDIA_ROW, MediaRow, Sky, Text, useToast } from "@/ui";
 import { initialText } from "@/ui/type-scale";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
@@ -20,13 +22,14 @@ import { agentLook } from "../shared/logic";
 import { PromptForm } from "../shared/PromptForm";
 import { tapHaptic } from "../shared/parts";
 import { useSheetIfAny } from "../shared/SheetHost";
+import type { CardShape } from "./logic";
 
 /**
  * An agent asks the person to pick (ADR 0124): big rows lettered A, B, C…, one question at a time. A tap answers at
  * once, as the person's own message to the agent; then the card shows what was picked to everyone. The last row,
  * "Outra resposta", opens a sheet to write the answer instead, as the ask card's does.
  */
-export function ChoicesCard({ id, version }: { id: string; version?: number }) {
+export function ChoicesCard({ id, version, card }: { id: string; version?: number; card?: CardShape }) {
   const { t } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
@@ -40,18 +43,12 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
   const [draft, setDraft] = useState<ChoiceDraft | null>(null);
   const [closed, setClosed] = useState(false);
   const a = artifact.data;
-  if (a?.content.kind !== "choices" || !query.data) {
-    return (
-      <View style={[styles.card, styles.loading, { backgroundColor: c.raised, borderColor: c.line2 }]}>
-        <ActivityIndicator color={c.faint} />
-        <Text variant="footnote" tone="muted">
-          {t("mobile.blocks.building")}
-        </Text>
-      </View>
-    );
-  }
+  if (a?.content.kind !== "choices") return <ChoicesSkeleton card={card} rows={Boolean(sheet)} />;
   const { questions } = a.content;
-  const answered = query.data.answer;
+  // Until its answer is read, the card is the question it most likely still is, with nothing to press yet: one
+  // loading state, at the card's size.
+  const ready = Boolean(query.data);
+  const answered = query.data?.answer;
   const sky = (
     <Sky
       color={agentLook(dir.agentById.get(a.createdBy.id)).color}
@@ -114,7 +111,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
   if (!q) return null;
   const other = otherChoice(q);
   const pick = (option: number, written?: string) => {
-    if (answer.isPending) return;
+    if (answer.isPending || !ready) return;
     tapHaptic();
     const next = pickChoice(d, option, written);
     setDraft(next.draft);
@@ -162,7 +159,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
               accessibilityRole="button"
               accessibilityState={{ selected: on, disabled: answer.isPending }}
               accessibilityLabel={`${choiceLetter(i)}. ${o.label}${o.description ? `. ${o.description}` : ""}`}
-              disabled={answer.isPending}
+              disabled={answer.isPending || !ready}
               onPress={() => pick(i)}
               style={({ pressed }) => [styles.option, { borderColor: c.line2 }, pressed && { backgroundColor: c.line }]}
             >
@@ -181,7 +178,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
             accessibilityRole="button"
             accessibilityState={{ selected: d.picks[d.step] === other, disabled: answer.isPending }}
             accessibilityLabel={`${choiceLetter(other)}. ${t("ask.otherAnswer")}`}
-            disabled={answer.isPending}
+            disabled={answer.isPending || !ready}
             onPress={() =>
               sheet.open(
                 <PromptForm
@@ -257,6 +254,45 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
   );
 }
 
+/**
+ * The card before it loads: its frame, head and option rows (the message's ref says the title and how many), lettered
+ * and empty, so it opens at the size it keeps.
+ */
+function ChoicesSkeleton({ card, rows }: { card?: CardShape; rows: boolean }) {
+  const c = useColors();
+  const steps = card?.questions ?? 1;
+  return (
+    <View
+      style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}
+      accessibilityState={{ busy: true }}
+    >
+      <View style={[styles.head, styles.row]}>
+        <View style={styles.flex}>
+          <Text variant="subhead" style={styles.bold}>
+            {card?.title || BLANK_LINE}
+          </Text>
+          {steps > 1 ? <Text variant="footnote">{BLANK_LINE}</Text> : null}
+        </View>
+      </View>
+      <Text variant="body" style={styles.question}>
+        {BLANK_LINE}
+      </Text>
+      <View style={styles.options}>
+        {Array.from({ length: (card?.options ?? TYPICAL_CARD_OPTIONS) + (rows ? 1 : 0) }, (_, i) => (
+          <View key={choiceLetter(i)} style={[styles.option, { borderColor: c.line2 }]}>
+            <MediaRow size="row" name={BLANK_LINE} face={<Letter letter={choiceLetter(i)} on={false} />} />
+          </View>
+        ))}
+      </View>
+      {steps > 1 ? (
+        <View style={[styles.foot, { borderTopColor: c.line2 }]}>
+          <Text variant="footnote">{BLANK_LINE}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 /** An option's letter in its 24 tile inside its 1-point border: centred in the 22 left, as an initial is. */
 const LETTER_TEXT = initialText(MEDIA_ROW.row.face - 2, 12);
 
@@ -286,7 +322,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderBottomLeftRadius: 4,
   },
-  loading: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 8, opacity: 0.7 },
   head: { gap: 1, paddingHorizontal: 14, paddingTop: 12 },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },

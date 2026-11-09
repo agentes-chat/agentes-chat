@@ -16,6 +16,9 @@ export function formatUsd(locale: string, value: number) {
   return formatMoneyUsd(locale, value);
 }
 
+/** A line with nothing on it yet: a placeholder keeps the height of the words that will fill it. */
+export const BLANK_LINE = "\u00a0";
+
 /** Budget use: "37,5%", "12%", "<1%" (members never see money, only this). */
 export function formatPercent(locale: string, value: number) {
   const fmt = (v: number, digits: number) =>

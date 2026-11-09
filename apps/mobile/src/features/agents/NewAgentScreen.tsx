@@ -21,12 +21,8 @@ import {
 import { type Level, saveLevels } from "@agenteschat/client/lib/access-levels";
 import { draftLevels, draftMailLevels, suggestedAiText } from "@agenteschat/client/lib/action-cards";
 import { newAgentStart, newAgentStartText } from "@agenteschat/client/lib/agent-setup";
-import {
-  type BrainPickOption,
-  brainPickOptions,
-  newPlanAccountOption,
-  planAccountOption,
-} from "@agenteschat/client/lib/brain-picker";
+import { type AiRow, aiRowGroupLabel, aiRowLine, newAgentRows } from "@agenteschat/client/lib/ai-select";
+import { type BrainPickOption, newPlanAccountOption, planAccountOption } from "@agenteschat/client/lib/brain-picker";
 import { connectedItems, itemName } from "@agenteschat/client/lib/connected";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { defaultPolicy, toMailLevel } from "@agenteschat/client/lib/mail";
@@ -43,9 +39,11 @@ import {
   savePart,
   takenHandles,
 } from "@agenteschat/client/lib/new-agent";
+import { planOfAccount } from "@agenteschat/client/lib/no-ai";
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
 import { AUTO, modelChoices, usableModels } from "@agenteschat/client/lib/providers";
 import { usePreventRemove } from "expo-router";
+import type { TFunction } from "i18next";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, type ScrollViewInstance, StyleSheet, TextInput, View } from "react-native";
@@ -226,13 +224,18 @@ function NewAgentForm({
   // Or anything else the agent's page offers ("Quem pensa", the web's model step), from its sheet.
   const aiAccounts = useAiAccounts(orgId, !proposed);
   const held = usePlanHold(orgId, org) !== null;
-  const brainOptions = brainPickOptions(t, i18n.language, {
-    api: choices,
+  // The web's AI select for a new agent (`newAgentRows`): my free accounts, the computers' own sign-ins, the key,
+  // each once, in its group, starting on Automático (its model changes on its page).
+  const brainOptions = newAgentRows(t, i18n.language, {
     machines: brainMachines.data ?? [],
-    accounts: aiAccounts.data?.accounts ?? [],
+    accounts: aiAccounts.data,
     ownerIsMe: true,
-    held,
-  });
+    keys: null,
+    defaultKey: null,
+    serverKey: platform.data === true,
+    apiKey: usable.size > 0,
+    keysAllowed: !held,
+  }).map((r) => rowOption(t, r));
   const [picked, setPicked] = useState<BrainPickOption | null>(null);
   const [picking, setPicking] = useState(false);
   // "Conectar uma IA" from this step (the same sheet as Settings, for the agents I create): a plan account that wasn't
@@ -1073,3 +1076,29 @@ const styles = StyleSheet.create({
   // Back as a word at the left, 16 from the primary that takes the rest.
   footer: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 16, paddingTop: 12 },
 });
+
+/** A row of the AI select as the new agent's sheet lists it: its group, logo, line and what picking it saves. */
+function rowOption(t: TFunction, r: AiRow): BrainPickOption {
+  const line = aiRowLine(r);
+  return {
+    value: r.value,
+    label: r.label,
+    title: r.label,
+    group: aiRowGroupLabel(t, r.group),
+    mark: r.mark,
+    ...(line ? { description: line } : {}),
+    disabled: r.disabled,
+    free: false,
+    keywords: line,
+    pick:
+      r.group === "keys" || r.kind === "model"
+        ? { kind: "model", model: AUTO }
+        : {
+            kind: r.kind,
+            choice: planOfAccount(r.account ?? { kind: r.kind, provider: null }),
+            machineId: r.machineId ?? "",
+            ...(r.account ? { accountId: r.account.id, account: r.account.label } : {}),
+            model: AUTO,
+          },
+  };
+}

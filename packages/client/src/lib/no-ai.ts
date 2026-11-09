@@ -18,7 +18,7 @@ import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
 import { toolOffReason } from "./machines";
 import { can } from "./permissions";
-import { CODING_PLANS, isPlanId, loginPerAgent, PLAN_IDS, type PlanId } from "./plans";
+import { CODING_PLANS, isPlanId, PLAN_IDS, type PlanId } from "./plans";
 import { isRightHand } from "./right-hand";
 
 /**
@@ -48,7 +48,8 @@ export interface NoAiCard {
   /**
    * The team's right hand on a plan (ADR 0137 §7): why that plan can't think now, said as one line with the way to an
    * API key (its computer away or with a problem, the plan at its limit or its model's own, the region that model needs, commands off
-   * there, a plan that answers only its owner, a runner to update there, the plan's CLI offering tools of its own).
+   * there, a plan that answers only its owner, to someone else or to a request no person made, a runner to update
+   * there, the plan's CLI offering tools of its own).
    */
   planLine?: RightHandPlanLine;
   /** With `model_limit`, `model_region` and `model_off`: the model's name. */
@@ -63,6 +64,7 @@ export interface NoAiCard {
 export type RightHandPlanLine =
   | "computer_away"
   | "computer_failed"
+  | "cli_failed"
   | "plan_limit"
   | "model_limit"
   | "model_region"
@@ -70,11 +72,13 @@ export type RightHandPlanLine =
   | "plan_inactive"
   | "commands_off"
   | "plan_not_shared"
+  | "plan_unattended"
   | "runner_outdated"
   | "plan_tools";
 export const RIGHT_HAND_PLAN_LINES: ReadonlySet<string> = new Set<RightHandPlanLine>([
   "computer_away",
   "computer_failed",
+  "cli_failed",
   "plan_limit",
   "model_limit",
   "model_region",
@@ -82,6 +86,7 @@ export const RIGHT_HAND_PLAN_LINES: ReadonlySet<string> = new Set<RightHandPlanL
   "plan_inactive",
   "commands_off",
   "plan_not_shared",
+  "plan_unattended",
   "runner_outdated",
   "plan_tools",
 ]);
@@ -133,7 +138,7 @@ export function keptCardState(s: { hold: BillingHold | null; paid: boolean; read
 
 /** A plan line that passes by itself: once the agent can think again, its card offers "Responder agora". */
 export const planLinePasses = (line: RightHandPlanLine | undefined) =>
-  line === "computer_away" || line === "computer_failed";
+  line === "computer_away" || line === "computer_failed" || line === "cli_failed";
 
 /**
  * The key of a card's line while the agent still can't think (`agentGrammar(name)` fills it): the computer's own
@@ -172,7 +177,8 @@ export const mayConnectAi = (
 
 /**
  * The way out of a plan line for this person: their own plan when the workspace's doesn't serve them, or when a key
- * isn't theirs to set (an API key is always the workspace's, §11), else an API key. Null: neither is theirs to do.
+ * isn't theirs to set (an API key is always the workspace's, §11), else an API key. A request no person made thinks
+ * with no one's own plan: only a key helps there. Null: neither is theirs to do.
  */
 export function planLineFix(
   line: RightHandPlanLine,
@@ -180,6 +186,7 @@ export function planLineFix(
   meId: string | null | undefined,
   org: Parameters<typeof can>[0],
 ): "connectMine" | "useKey" | null {
+  if (line === "plan_unattended") return maySetAgentAi(agent, meId, org) ? "useKey" : null;
   if (!mayConnectAi(agent, meId, org)) return null;
   return line === "plan_not_shared" || !maySetAgentAi(agent, meId, org) ? "connectMine" : "useKey";
 }
@@ -552,16 +559,6 @@ export function gateLine(
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 
-/** Why a plan's rows are dimmed (`gateDims`), in one line under them. */
-export function dimmedLine(
-  t: TFunction,
-  gate: PlanGate,
-  where: { edition: Edition | null; kind: MachineAccountKind; computer: string },
-) {
-  if (gate.state === "billing") return t("connectAi.billing");
-  return gateLine(t, { gate, ...where })?.text ?? t("aiAccounts.connect.noComputer");
-}
-
 /**
  * The phone's words for a plan a billing hold stops: paying has no button or link there (ADR 0079 §6, App Store 3.1.1),
  * so whoever pays reads where, and anyone else who can.
@@ -596,27 +593,19 @@ export const choiceOfIntent = (intent: ConnectIntent | undefined): AiChoice | nu
   intent === "claude" || intent === "chatgpt" ? intent : intent === "api_key" ? "key" : null;
 
 /**
- * The option chosen when the picker opens: what was asked for; the API key for someone who owns no agent but may
- * add keys, or where Claude can't sign in at all (no computer); else the plan the agent it's for thinks
- * with (`plan`, `agentPlan`), else Claude.
+ * What the providers' select opens on: what was asked for (a message's intent, a card's plan, the agent's own plan);
+ * else Claude, or the API key where Claude can't sign in at all (no computer) for whoever may add keys.
  */
 export function defaultChoice({
-  intent,
-  ownsAgents,
+  asked,
   mayAddKey,
   claudeGate,
-  plan,
 }: {
-  intent?: ConnectIntent;
-  ownsAgents: boolean;
+  asked?: AiChoice | null;
   mayAddKey: boolean;
   claudeGate: PlanGate;
-  plan?: PlanChoice | null;
 }): AiChoice {
-  const asked = choiceOfIntent(intent);
-  if (asked) return asked;
-  if (!ownsAgents && mayAddKey) return "key";
-  return claudeGate.state === "missing" ? "key" : (plan ?? "claude");
+  return asked ?? (mayAddKey && claudeGate.state === "missing" ? "key" : "claude");
 }
 
 /** "For which agent": the one asked for, else the first with no AI, else the first. */
@@ -625,11 +614,6 @@ export const firstAgent = <A extends { id: string }>(
   hasAi: (id: string) => boolean,
   asked?: string,
 ) => agents.find((a) => a.id === asked) ?? agents.find((a) => !hasAi(a.id)) ?? agents[0];
-
-/** A plan signs in once per agent with the same account (`LOGIN_PER_AGENT`), so it can think for all of them. */
-export const signsInPerAgent = (choice: PlanChoice) =>
-  // OpenCode's account is its key alone (`zen`), like a coding plan's.
-  loginPerAgent(kindOf(choice), isPlanId(choice) || choice === "zen" ? choice : null);
 
 /** A plan's row in a computer's `shares` (`AiComputer`): Claude's and ChatGPT's sign-ins, or a coding plan's key. */
 export const shareOf = (choice: PlanChoice): keyof NonNullable<AiComputer["shares"]> =>
@@ -666,73 +650,6 @@ export function agentPlan(agent: Pick<Agent, "brain"> | undefined): PlanChoice |
  */
 export const signInAgainPlan = (card: Pick<NoAiCard, "signedOut">, agent: Pick<Agent, "brain"> | undefined) =>
   card.signedOut ? agentPlan(agent) : null;
-
-/** The "For" select's choice that signs a plan in for every agent of `allAgents`. */
-export const ALL_AGENTS = "all";
-
-/**
- * "All agents" for a plan: the viewer's agents that have no AI yet, and those already on this plan (they read as
- * done), on the computer of the first with no AI (else of the first on this plan). An agent on the API key stays
- * out, since a plan makes an agent answer only its owner and one on the key may be answering the team. One on
- * another plan keeps it. Empty where the plan's account thinks for one agent there (neither one sign-in for all,
- * `sharedOn`, nor one login per agent), and below two agents, where the choice is that one agent.
- */
-export function allAgents<A extends { id: string }>({
-  choice,
-  agents,
-  aiOf,
-  machineOf,
-  sharedOn,
-}: {
-  choice: PlanChoice;
-  /** The viewer's agents, in team order. */
-  agents: readonly A[];
-  aiOf: (agentId: string) => AgentAi;
-  /** The computer an agent works on; null or undefined while it has none. */
-  machineOf: (agentId: string) => string | null | undefined;
-  /** One sign-in of this plan thinks for all of the viewer's agents on that computer (`signsInOnce`). */
-  sharedOn?: (machineId: string | null) => boolean;
-}): A[] {
-  const open = agents.filter((a) => {
-    const ai = aiOf(a.id);
-    return ai === null || ai === choice;
-  });
-  const first = open.find((a) => aiOf(a.id) === null) ?? open[0];
-  const machine = first ? (machineOf(first.id) ?? null) : null;
-  if (!signsInPerAgent(choice) && !sharedOn?.(machine)) return [];
-  const set = open.filter((a) => (machineOf(a.id) ?? null) === machine);
-  return set.length >= 2 ? set : [];
-}
-
-/**
- * Whom a plan's panel is for: the agent picked or asked for, all of `set` (`allAgents`) when picked or while two or
- * more of them have no AI yet, else the first agent with no AI (`host` before the others), else the first. "All
- * agents" picked where the plan signs in once per account is that same agent. With no set it is the agent whose
- * computer the panel reads, the same for "All agents", which is on that agent's computer.
- */
-export function defaultTarget<A extends { id: string }>({
-  agents,
-  set,
-  hasAi,
-  asked,
-  picked,
-  host,
-}: {
-  agents: readonly A[];
-  set: readonly { id: string }[];
-  hasAi: (agentId: string) => boolean;
-  asked?: string;
-  /** What the "For" select says (`ALL_AGENTS` or an agent's id), once someone chose. */
-  picked?: string;
-  /** The agent whose face asks the question (the setup's AI step): the one the panel is for, while it has no AI. */
-  host?: string;
-}): string | undefined {
-  const first = (agents.find((a) => a.id === host && !hasAi(a.id)) ?? firstAgent(agents, hasAi))?.id;
-  if (picked === ALL_AGENTS) return set.length >= 2 ? ALL_AGENTS : first;
-  for (const id of [picked, asked]) if (id && agents.some((a) => a.id === id)) return id;
-  if (set.filter((a) => !hasAi(a.id)).length >= 2) return ALL_AGENTS;
-  return first;
-}
 
 /**
  * Every agent with an AI is the viewer's and answers only them, so someone invited now has no agent to talk to (the

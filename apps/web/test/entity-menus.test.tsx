@@ -287,22 +287,19 @@ describe("dragging in the sidebar", () => {
     expect(images[1]?.classList.contains("sidebar__tools")).toBe(true);
   });
 
-  test("one mark where a drag lands, the same for sections, channels, categories and agents", () => {
+  test("one dashed spot where a drag lands, for sections, tools, channels, categories and agents; no line", () => {
     const css = readFileSync(new URL("../src/layout.css", import.meta.url), "utf8");
     const rule = (selector: string) => {
       const start = css.indexOf(`${selector} {`);
       return start < 0 ? "" : css.slice(start, css.indexOf("}", start));
     };
-    // The line: the accent at reduced strength, 2px, round ends, from the names' column.
-    const line = rule('.sidebar :is([data-drop="before"], [data-drop="after"])::after,\n.sidebar__drop-line');
-    expect(line).toContain("height: 2px");
-    expect(line).toContain("border-radius: 999px");
-    expect(line).toContain("color-mix(in srgb, var(--agent) 60%, transparent)");
-    expect(line).toContain("left: var(--drop-inset, 36px)");
-    // No second line in ink stacked on it (a section's box once drew both).
-    expect(css).not.toMatch(/data-drop[^{]*\{[^}]*inset 0 -?2px 0 var\(--ink\)/);
-    expect(rule(".sidebar__block[data-drop]::after")).not.toContain("background");
-    expect(rule(".sidebar__drop-line")).not.toContain("var(--ink)");
+    expect(rule(".drop-spot")).toContain("dashed");
+    expect(css).not.toContain("sidebar__drop-line");
+    expect(css).not.toMatch(/data-drop="(before|after)"\]\)?::after/);
+    // The dragged row leaves the list, whatever keeps rows in sight in a closed part.
+    const hidden = css.indexOf(".sidebar [data-lifted],");
+    expect(hidden).toBeGreaterThan(css.indexOf('.sidebar__section--category[data-open="false"]'));
+    expect(css.slice(hidden, css.indexOf("}", hidden))).toContain("display: none");
     // The desktop app lets the section's grip (a draggable button) start its drag.
     const desktop = readFileSync(new URL("../src/desktop.css", import.meta.url), "utf8");
     expect(desktop).toContain('button:not([draggable="true"])');

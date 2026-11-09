@@ -1930,6 +1930,7 @@
     "popoverTitle": "Agents",
     "seenBy": "Gezien door {{names}}",
     "retry": "Opnieuw proberen",
+    "retrying": "Opnieuw proberen…",
     "platformCap": "Noem een agent met @ om hem te laten antwoorden.",
     "mentionNeeded": "Zonder @ antwoordt geen agent",
     "mentionNeededHint": "Geen AI hier kon een agent voor dit bericht kiezen. Noem een agent om hem te roepen.",
@@ -2298,8 +2299,10 @@
     "rightHand": {
       "computer_away": "{{name}} kan nu niet antwoorden: de computer van het abonnement is niet bereikbaar.",
       "computer_failed": "{{name}} kan nu niet antwoorden: de computer van het abonnement had een probleem.",
+      "cli_failed": "{{name}} kan nu niet antwoorden: de AI van het abonnement is gestopt met een fout.",
       "plan_limit": "{{name}} kan nu niet antwoorden: het abonnement heeft zijn limiet bereikt.",
       "plan_not_shared": "Koppel je eigen abonnement om met {{name}} te praten: het abonnement van de workspace antwoordt alleen de eigenaar.",
+      "plan_unattended": "{{name}} heeft niet geantwoord: het verzoek kwam niet van een persoon, en het abonnement van de workspace antwoordt alleen de eigenaar.",
       "runner_outdated": "{{name}} kan nu niet antwoorden: het programma op de computer van het abonnement heeft een update nodig.",
       "plan_tools": "{{name}} stopte voordat het antwoordde: de AI van het abonnement op die computer bleef niet binnen de tools van agentes.chat.",
       "model_limit": "{{name}} kan nu niet antwoorden: {{model}} heeft zijn eigen limiet in het abonnement bereikt. De andere modellen van het abonnement werken nog.",
@@ -2320,6 +2323,36 @@
     "receipt": "Niemand antwoordt: geen AI gekoppeld",
     "chip": "Geen AI"
   },
+  "aiSelect": {
+    "placeholder": "Kies een AI",
+    "groupOthers": "Abonnementen van anderen",
+    "groupKeys": "API-sleutels",
+    "connect": "Een andere AI koppelen",
+    "connectLine": "Een ander account, abonnement of API-sleutel",
+    "ownOn": "Ingelogd op {{computer}}",
+    "keyRefused": "Sleutel geweigerd",
+    "unknown": "Inloggen niet bevestigd",
+    "inUse": "In gebruik door {{agents}}",
+    "keyDefault": "Standaard van de werkruimte · eindigt op {{hint}}",
+    "serverKey": "Claude-sleutel van deze server",
+    "serverKeyLine": "Ingesteld op de server",
+    "signedOut": "{{label}} is uitgelogd. Log opnieuw in zodat {{name}} het kan gebruiken.",
+    "limited": "Met dit account antwoordt {{name}} pas weer {{when}}.",
+    "limitedUnknown": "Met dit account antwoordt {{name}} pas weer als het abonnement vernieuwt.",
+    "move": "{{agent}} denkt er dan niet meer mee.",
+    "moveTo": "Verplaatsen naar {{name}}",
+    "lent": "{{owner}} krijgt een e-mail en kan het terugnemen.",
+    "useLent": "Het abonnement van {{owner}} gebruiken",
+    "signInAgain": "Opnieuw inloggen bij {{label}}",
+    "for": "Voor {{names}}",
+    "plans": "Je AI-abonnement",
+    "endpointLine": "Je eigen gateway of server",
+    "keyLocked": "Alleen een beheerder kan er een toevoegen",
+    "preparing": "Computer wordt klaargemaakt",
+    "geminiTiers": "Google AI Pro, Ultra of Enterprise",
+    "cursorTiers": "Pro, Pro+, Ultra of Teams",
+    "undo": "Ongedaan maken"
+  },
   "connectAi": {
     "title": {
       "any": "Een AI koppelen",
@@ -2333,23 +2366,10 @@
     },
     "titleFor": "Een AI koppelen voor {{name}}",
     "titleFor_female": "Een AI koppelen voor {{name}}",
-    "have": {
-      "title": "Al gekoppeld",
-      "titleFor": "Al gekoppeld, voor {{name}}",
-      "titleFor_female": "Al gekoppeld, voor {{name}}",
-      "other": "Of koppel een ander",
-      "manageKeys": "Sleutels beheren of verwijderen"
-    },
     "billing": "Een abonnement meldt zich aan op de computer van de workspace, en die computer hoort bij een actief agentes.chat-abonnement.",
     "billingWeb": "Kies er een op het web, op agentes.chat.",
     "orPayGo": "Of betaal per gebruik",
-    "pay": {
-      "label": "Hoe betaal je?",
-      "plan": "Met abonnement",
-      "key": "Met API-sleutel"
-    },
     "pick": {
-      "plan": "Abonnement",
       "placeholder": "Kies een abonnement",
       "search": "Aanbieders zoeken",
       "searchPlaceholder": "Naam van de aanbieder",
@@ -2422,10 +2442,7 @@
       "shared": "Het account dat je agents delen",
       "sharedLower": "het account dat je agents delen",
       "free": "Gratis modellen van OpenCode",
-      "freeLower": "de gratis modellen van OpenCode",
-      "one": "Een account alleen voor {{name}}",
-      "one_female": "Een account alleen voor {{name}}",
-      "each": "Een account alleen voor hen"
+      "freeLower": "de gratis modellen van OpenCode"
     },
     "popup": {
       "title": "{{name}} verbinden",
@@ -2447,14 +2464,11 @@
         "next": "Wacht"
       }
     },
-    "for": "Voor",
-    "all": "Alle agents",
     "agentAria": "Agents die dit abonnement gebruiken",
     "each": "Eén login per agent, met hetzelfde account.",
     "eachHint": "Elke agent houdt een eigen login. Ze delen allemaal de limieten van je abonnement.",
     "once": "Eén login voor allemaal.",
     "onceHint": "Ze delen allemaal de limieten van je abonnement.",
-    "use": "{{label}} gebruiken",
     "another": "Een ander account",
     "reuse": {
       "active": "Je hebt {{label}} hier al. Log er opnieuw op in, of gebruik een ander account.",
@@ -4329,7 +4343,6 @@
         "label_female": "Hoe zij werkt",
         "computer": "Werkt op",
         "brain": "Denkt met",
-        "brainWith": "Denkt met {{plan}}",
         "browser": "Browser",
         "effort": "Inspanning: {{level}}"
       },
@@ -4350,14 +4363,8 @@
       "saved": {
         "brain": "{{name}} denkt nu met {{brain}}.",
         "brain_female": "{{name}} denkt nu met {{brain}}.",
-        "brainMoved": "{{name}} werkt nu op {{computer}} en denkt met {{brain}}.",
-        "brainMoved_female": "{{name}} werkt nu op {{computer}} en denkt met {{brain}}.",
         "brainOwner": "{{name}} denkt nu met {{brain}} en antwoordt alleen {{owner}}.",
         "brainOwner_female": "{{name}} denkt nu met {{brain}} en antwoordt alleen {{owner}}.",
-        "brainMovedOwner": "{{name}} werkt nu op {{computer}}, denkt met {{brain}} en antwoordt alleen {{owner}}.",
-        "brainMovedOwner_female": "{{name}} werkt nu op {{computer}}, denkt met {{brain}} en antwoordt alleen {{owner}}.",
-        "account": "{{name}} gebruikt nu het account {{account}}.",
-        "account_female": "{{name}} gebruikt nu het account {{account}}.",
         "computer": "{{name}} werkt nu op {{computer}}.",
         "computer_female": "{{name}} werkt nu op {{computer}}.",
         "none": "{{name}} heeft nu geen computer.",
@@ -4377,13 +4384,7 @@
         "model": "API-sleutel",
         "modelText": "Betalen per gebruik. Telt mee voor het budget van {{name}}.",
         "modelText_female": "Betalen per gebruik. Telt mee voor het budget van {{name}}.",
-        "planText": "Gebruikt je {{plan}}-abonnement",
-        "planTextOf": "Gebruikt het {{plan}}-abonnement van {{owner}}",
-        "moves": "Gaat naar {{computer}}",
-        "off": "{{computer}} is offline",
-        "none": "Geen computer heeft het",
         "planModel": "Model",
-        "account": "Account",
         "accountWho": "Alleen accounts van {{owner}}, verantwoordelijk voor {{name}}: een abonnement denkt alleen voor de agents van de eigenaar.",
         "accountSignedOut": "Uitgelogd, log opnieuw in",
         "accountUnknown": "Login niet bevestigd, wordt binnenkort opnieuw gecontroleerd",
@@ -4392,19 +4393,14 @@
         "accountAlso": "Ook gebruikt door {{agents}}",
         "accountOf": "Van {{name}}",
         "accountOthers": "Abonnementen van anderen laten zien van wie ze zijn. De eigenaar krijgt een e-mail en kan het terugnemen.",
-        "addAccount": "Account toevoegen",
         "signInAgain": "Opnieuw inloggen",
-        "connectPlan": "Ander abonnement koppelen",
-        "keyLabel": "API-sleutel",
-        "fallbackTitle": "Als {{computer}} niet meer reageert, antwoord via de API",
-        "fallbackHint": "Antwoordt dan via de API en telt mee voor het budget van {{name}}. Anders laat {{name}} het weten aan wie het vroeg en wacht tot de computer terug is.",
-        "fallbackHint_female": "Antwoordt dan via de API en telt mee voor het budget van {{name}}. Anders laat {{name}} het weten aan wie het vroeg en wacht tot de computer terug is.",
         "effort": "Inspanning",
         "efforts": {
           "auto": "Automatisch",
           "low": "Laag",
           "medium": "Gemiddeld",
           "high": "Hoog",
+          "xhigh": "Extra hoog",
           "max": "Maximaal"
         },
         "effortsLower": {
@@ -4412,6 +4408,7 @@
           "low": "laag",
           "medium": "gemiddeld",
           "high": "hoog",
+          "xhigh": "extra hoog",
           "max": "maximaal"
         },
         "effortText": {
@@ -4419,6 +4416,7 @@
           "low": "Antwoordt snel. Goed voor simpele vragen.",
           "medium": "De standaard. Denkt meestal genoeg na.",
           "high": "Denkt meer na bij moeilijke taken. Trager en duurder.",
+          "xhigh": "Denkt veel meer na bij lange, moeilijke taken. Trager en duurder.",
           "max": "Denkt zoveel mogelijk na. Veel trager en duurder."
         },
         "speed": "Snelheid",
@@ -4441,41 +4439,19 @@
         },
         "advanced": {
           "title": "Geavanceerde instellingen",
-          "sub": "{{brain}}. Geldt voor elk gesprek.",
-          "think": "Hoe het denkt",
-          "answers": "Wie het antwoordt",
           "defaults": "Terug naar standaard",
-          "done": "Klaar",
-          "contents": {
-            "model": "Contextvenster",
-            "auto": "Contextvenster en wie het antwoordt",
-            "fixed": "Inspanning, contextvenster en wie het antwoordt",
-            "autoSpeed": "Snelheid, contextvenster en wie het antwoordt",
-            "fixedSpeed": "Inspanning, snelheid, contextvenster en wie het antwoordt"
-          },
           "allDefault": "Alles standaard",
           "effort": "Inspanning: {{level}}",
           "speed": "Snelheid: snel",
-          "context": "Context: {{size}}",
-          "sharing": "Antwoordt andere mensen",
-          "waits": "Wacht op de computer"
+          "context": "Context: {{size}}"
         },
         "copy": {
-          "row": "Gebruiken bij andere agents",
-          "rowLine": "Dezelfde AI, hetzelfde model, dezelfde inspanning en autonomie",
-          "title": "Gebruiken bij andere agents",
-          "sub": "Ze gaan denken met {{setup}}.",
-          "all": "Alle",
-          "allLine_one": "{{count}} agent kan het overnemen",
-          "allLine_other": "{{count}} agents kunnen het overnemen",
-          "none": "Geen andere agent kan het nu overnemen.",
           "now": "Nu: {{brain}}",
           "same": "Denkt al zo",
           "keeps": "Houdt {{account}}",
           "keepsOwn": "Houdt het account van zijn computer",
           "autonomy": "Autonomie: {{from}} → {{to}}",
           "withAutonomy": "Autonomie meenemen",
-          "withAutonomyLine": "{{value}}, zoals bij deze agent. Uit: elk houdt de eigen autonomie.",
           "reasons": {
             "not_allowed": "Alleen beheerders en {{owner}} wijzigen dit",
             "not_allowedNobody": "Alleen beheerders wijzigen dit",
@@ -4488,15 +4464,6 @@
             "model_missing": "{{plan}} heeft geen {{model}}",
             "failed": "Kon het nu niet wijzigen"
           },
-          "search": "Zoek een agent",
-          "noMatch": "Geen agent met de naam “{{q}}”",
-          "pick": "Kies de agents",
-          "use_one": "Gebruiken bij {{count}} agent",
-          "use_other": "Gebruiken bij {{count}} agents",
-          "done_one": "{{count}} agent denkt nu met {{setup}}.",
-          "done_other": "{{count}} agents denken nu met {{setup}}.",
-          "autonomyOnly_one": "Bij {{count}} agent is alleen de autonomie gewijzigd.",
-          "autonomyOnly_other": "Bij {{count}} agents is alleen de autonomie gewijzigd.",
           "missed_one": "{{count}} agent is niet gewijzigd.",
           "missed_other": "{{count}} agents zijn niet gewijzigd."
         },
@@ -4559,10 +4526,8 @@
             "opencode": "Die OpenCode-sleutel is al gekoppeld als {{account}}."
           },
           "startFailed": "Geen antwoord van {{computer}}. Probeer het zo opnieuw.",
-          "sendFailed": "Kon de code niet versturen. Controleer hem en probeer het opnieuw.",
-          "done": "Het account {{account}} staat op {{computer}}. Klik op Gebruiken om op te slaan."
-        },
-        "offCloud": "{{computer}} reageert niet"
+          "sendFailed": "Kon de code niet versturen. Controleer hem en probeer het opnieuw."
+        }
       },
       "computer": {
         "title": "Waar werkt {{name}}?",
@@ -4915,6 +4880,9 @@
         "computer_busy": "De computer bleef bezig met andere taken.",
         "computer_failed": "De computer liep tegen een probleem aan en stopte.",
         "computer_timeout": "De computer deed er te lang over om te antwoorden.",
+        "cli_failed": "Het programma {{brain}} is gestopt met een fout: {{detail}}",
+        "cli_stopped": "Het programma {{brain}} is gestopt met een fout.",
+        "cli_closed": "Het programma {{brain}} werd onverwacht afgesloten.",
         "account_missing": "Het account dat voor deze agent gekozen is staat niet meer op zijn computer. Kies een ander in de instellingen van de agent of voeg het opnieuw toe.",
         "our_error": "Er ging iets mis aan onze kant en de taak is gestopt. Vraag het over een poosje opnieuw.",
         "unknown": "Mislukt."
@@ -5609,8 +5577,6 @@
     "price": "US$ {{input}} / {{output}} per miljoen tokens",
     "plans": "Met een abonnement, op een computer",
     "plansHelp": "Claude Code of Codex met het abonnement van degene die de computer heeft gekoppeld. Geen sleutel nodig.",
-    "planOnlyOwner": "Met een abonnement antwoordt {{name}} eerst alleen {{owner}}. Op de pagina van {{name}} kan {{owner}} kiezen of hij ook andere mensen antwoordt.",
-    "planOnlyOwner_female": "Met een abonnement antwoordt {{name}} eerst alleen {{owner}}. Op de pagina van {{name}} kan {{owner}} kiezen of zij ook andere mensen antwoordt.",
     "partly": "{{name}} is klaar, maar een deel van wat je koos is niet opgeslagen. {{reason}}",
     "partly_female": "{{name}} is klaar, maar een deel van wat je koos is niet opgeslagen. {{reason}}",
     "planNotSaved": "{{name}} is klaar, maar {{brain}} kon nu niet worden ingesteld. Kies het opnieuw bij Wie denkt, op de pagina van {{name}}.",
@@ -5619,7 +5585,6 @@
     "lastAutonomy": "{{value}}, zoals bij de laatste keuze. Uit: hij start met {{fallback}}.",
     "autoCost": "De kosten volgen elke taak",
     "noKeyFor": "Geen {{provider}}-sleutel",
-    "key": "Sleutel",
     "defaultKey": "Standaardsleutel van de werkruimte",
     "defaultKeyDesc": "{{provider}} · eindigt op {{hint}}",
     "otherKeyDesc": "{{provider}} · eindigt op {{hint}}",
@@ -5631,7 +5596,6 @@
       "needsKey": "{{plan}}-sleutel nodig",
       "other": "Iets anders kiezen"
     },
-    "noKeys": "Nog geen sleutels",
     "budgetTitle": "Maandbudget",
     "budget": "Maandbudget (US$)",
     "budgetHelp": "Bij de limiet stopt {{name}} en meldt dat.",
@@ -7144,6 +7108,7 @@
       "computer_busy": "De computer bleef bezig met andere taken",
       "computer_failed": "De computer liep tegen een probleem aan en stopte",
       "computer_timeout": "De computer deed er te lang over om te antwoorden",
+      "cli_failed": "Het AI-programma op de computer is gestopt met een fout",
       "account_missing": "Het account van de agent staat niet meer op zijn computer",
       "our_error": "Er ging iets mis aan onze kant"
     },
@@ -8677,7 +8642,6 @@
       "savedEveryone_female": "{{name}} antwoordt nu ook andere mensen.",
       "savedOwner": "{{name}} antwoordt nu alleen jou.",
       "savedOwner_female": "{{name}} antwoordt nu alleen jou.",
-      "savedOwnerOf": "{{name}} antwoordt nu alleen {{owner}}.",
       "backOnApi": "{{name}} werkt weer via de API en antwoordt nog steeds alleen jou.",
       "backOnApi_female": "{{name}} werkt weer via de API en antwoordt nog steeds alleen jou.",
       "letEveryone": "Laat {{name}} iedereen antwoorden",
@@ -10404,8 +10368,10 @@
       },
       "line": {
         "env": "Ingesteld in de instellingen van deze server (GITHUB_APP_ID).",
-        "invalid": "Deze server kan de opgeslagen app niet openen. Verwijder hem en maak hem opnieuw."
+        "invalid": "Deze server kan de opgeslagen app niet openen. Verwijder hem en maak hem opnieuw.",
+        "events": "Vink deze events aan in de app, zodat agents horen wat er op GitHub gebeurt: {{events}}."
       },
+      "events": "Events aanvinken",
       "open": "Openen op GitHub",
       "remove": "De app verwijderen",
       "removeTitle": "De GitHub-app van deze server verwijderen?",
@@ -12001,6 +11967,9 @@
       "invalidSecret": "Plak het hele Client Secret, zonder spaties.",
       "invalidRepo": "Schrijf de repository als eigenaar/naam."
     },
+    "githubEvent": {
+      "answered": "Iemand heeft al om dit antwoord gevraagd. De agent is ermee bezig."
+    },
     "issue": {
       "assigneeOutside": "Deze persoon ziet deze taak niet. Voeg die eerst toe bij Wie het ziet.",
       "stageFull": "Een fase heeft hoogstens {{max}} kolommen. Verwijder eerst een van de kolommen.",
@@ -12159,7 +12128,7 @@
       "takeOverNoAccess": "Ga in het gesprek van de routine zitten voordat je hem overneemt.",
       "agentNotInChannel": "Voeg de agent eerst toe aan het gesprek.",
       "webhookPaused": "Zet de routine aan om hem te testen.",
-      "continueExtraOff": "Het venster van dit abonnement is op en het lange werk van deze agent gebruikt geen betaald extra gebruik. Zet dat aan in de AI-instellingen om nu door te gaan, anders gaat hij verder na de reset.",
+      "continueExtraOff": "Het venster van dit abonnement is op en het lange werk van deze agent gebruikt het betaalde extra gebruik van het abonnement niet. Hij gaat verder na de reset.",
       "continueExtraUsedUp": "Het venster van dit abonnement is op en het betaalde extra gebruik is ook op of niet beschikbaar. Hij gaat verder na de reset.",
       "actionsNeedApprover": "Alleen de eigenaar van de agent of wie zijn acties goedkeurt, kan een routine zelfstandig laten handelen.",
       "editorOnly": "Alleen wie de routine maakte, de eigenaar van de agent of een beheerder kan hem wijzigen.",
@@ -12170,6 +12139,7 @@
       "agentBusy": "De agent is al bezig in dit gesprek. Wacht tot hij klaar is om door te gaan.",
       "continueForbidden": "Alleen wie het vroeg, de eigenaar van de agent of een beheerder kan het voortzetten.",
       "notRestartable": "Dit antwoord was al begonnen, dus het kan niet opnieuw beginnen. Stuur je bericht opnieuw.",
+      "notRestartableVoice": "Dit antwoord was al begonnen, dus het kan niet opnieuw beginnen. Neem je bericht opnieuw op.",
       "cancelForbidden": "Alleen wie het vroeg, de eigenaar van de agent of een beheerder kan het stoppen.",
       "answerForbidden": "Alleen wie het vroeg, de eigenaar van de agent of een beheerder kan dit doen.",
       "stopReasonForbidden": "Alleen wie het stopte, kan zeggen waarom."
@@ -13635,6 +13605,10 @@
     "statusReplyTurn": "Ik zit midden in een taak ({{duration}}) en kan nog niet antwoorden. Je bericht staat in de wachtrij en ik lees het als deze werkronde klaar is.",
     "statusReplyQueued": "Ik wacht op de computer ({{duration}}). Ik lees je bericht zodra ik aan de beurt ben.",
     "statusReplyAway": "Ik wacht tot mijn computer terug is. Ik lees je bericht zodra hij terug is.",
+    "statusReplyPlan": "Ik wacht tot mijn abonnement terug is ({{when}}). Ik lees je bericht als het terug is.",
+    "statusReplyPlanUnknown": "Ik wacht tot mijn abonnement terug is. Ik lees je bericht zodra het terug is.",
+    "statusReplyBudget": "Ik wacht tot mijn budget voor deze maand wordt vernieuwd ({{when}}). Ik lees je bericht dan, of eerder als een beheerder de limiet verhoogt.",
+    "statusReplyBudgetUnknown": "Ik wacht tot mijn budget voor deze maand wordt vernieuwd. Ik lees je bericht dan, of eerder als een beheerder de limiet verhoogt.",
     "status": {
       "one": "Bezig met: {{subject}}",
       "oneUntitled": "Bezig op de achtergrond",
@@ -13780,6 +13754,21 @@
       "wakeSkippedAnon": "De vermelding van {{name}} bereikte geen andere agent",
       "wakeSkippedAudience": "Alleen bepaalde mensen mogen {{agents}} aanroepen, en dit werk van {{name}} kwam van geen van hen. Iemand die {{agents}} mag aanroepen, kan het verzoek doorgeven.",
       "wakeSkippedCallable": "De instellingen van {{name}} staan niet toe dat het {{agents}} aanroept (een ander project, of niet op de lijst van agents die het mag aanroepen). Wie voor {{name}} zorgt, kan dat aanpassen op de pagina van de agent.",
+      "github": {
+        "comment": "{{who}} reageerde op PR #{{number}} ({{repo}}) op GitHub",
+        "commentIssue": "{{who}} reageerde op issue #{{number}} ({{repo}}) op GitHub",
+        "commentDiscussion": "{{who}} reageerde op discussie #{{number}} ({{repo}}) op GitHub",
+        "opened": "{{who}} riep de agentes.chat-app aan in #{{number}} ({{repo}}) op GitHub",
+        "reviewed": "{{who}} reviewde PR #{{number}} ({{repo}}) op GitHub",
+        "approved": "{{who}} keurde PR #{{number}} ({{repo}}) goed op GitHub",
+        "changes": "{{who}} vroeg om wijzigingen in PR #{{number}} ({{repo}}) op GitHub",
+        "reviewRequested": "{{who}} vroeg {{name}} om PR #{{number}} ({{repo}}) te reviewen op GitHub",
+        "merged": "{{who}} heeft PR #{{number}} ({{repo}}) gemerged op GitHub",
+        "closed": "{{who}} sloot PR #{{number}} ({{repo}}) op GitHub",
+        "closedIssue": "{{who}} sloot issue #{{number}} ({{repo}}) op GitHub",
+        "ask": "Vraag om antwoord",
+        "asked": "{{asker}} vroeg {{name}} om {{who}} op GitHub te antwoorden"
+      },
       "show": "Tonen",
       "hide": "Verbergen",
       "talker": "tijdens het werk",
@@ -14165,8 +14154,10 @@
       "no_ai_not_signed_in": "Ik kan nog niet antwoorden: {{brain}} is niet ingelogd op mijn computer.",
       "no_ai_computer_away": "Ik kan nu niet antwoorden: de computer van mijn abonnement is niet bereikbaar.",
       "no_ai_computer_failed": "Ik kan nu niet antwoorden: de computer van mijn abonnement had een probleem.",
+      "no_ai_cli_failed": "Ik kan nu niet antwoorden: de AI van mijn abonnement is gestopt met een fout.",
       "no_ai_plan_limit": "Ik kan nu niet antwoorden: het abonnement waarmee ik denk heeft zijn limiet bereikt.",
       "no_ai_plan_not_shared": "Ik kan je niet antwoorden via het abonnement van de workspace: het antwoordt alleen de eigenaar. Koppel je eigen abonnement, dan antwoord ik.",
+      "no_ai_plan_unattended": "Ik heb niet geantwoord: het verzoek kwam niet van een persoon, en het abonnement van de workspace antwoordt alleen de eigenaar.",
       "no_ai_runner_outdated": "Ik kan nu niet antwoorden: het programma op de computer van mijn abonnement heeft een update nodig.",
       "no_ai_plan_tools": "Ik stopte voordat ik antwoordde: de AI van mijn abonnement op die computer bleef niet binnen de tools van agentes.chat.",
       "no_ai_model_limit": "Ik kan nu niet antwoorden: {{model}} heeft zijn eigen limiet in mijn abonnement bereikt.",
@@ -15330,6 +15321,13 @@
       "label": "Toetsenbord",
       "field": "Typ op de computer van {{name}}",
       "field_female": "Typ op de computer van {{name}}"
+    },
+    "cursor": {
+      "click": "klikt op {{name}}",
+      "clickPlain": "klikt",
+      "type": "typt",
+      "scroll": "scrolt",
+      "drag": "sleept"
     },
     "seeWhole": "Het hele scherm bekijken",
     "card": {

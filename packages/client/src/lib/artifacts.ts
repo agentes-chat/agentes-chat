@@ -18,6 +18,14 @@ export const KIND_ICON = {
 
 export const isArtifactKind = (v: unknown): v is ArtifactKind => ARTIFACT_KINDS.includes(v as ArtifactKind);
 
+/** What lives in its conversation as a card, never a file's tile (ADR 0113): its size is what it holds. */
+export type CardKind = "block" | "poll" | "choices";
+export const isCardKind = (v: unknown): v is CardKind => v === "block" || v === "poll" || v === "choices";
+/** A card's placeholder rows when its ref doesn't say (written before refs did): a typical card's. */
+export const TYPICAL_CARD_OPTIONS = 2;
+/** The body a live block's placeholder keeps under its head: a block's height is its own, known once it loads. */
+export const CARD_BLOCK_ROOM = 120;
+
 /**
  * The whole text a viewer's "Copiar texto" takes: a document's Markdown, an HTML page's source, a diagram's Mermaid,
  * a text file's text (code, JSON, Markdown, HTML…, as the server sends it for a file small enough to show). None for

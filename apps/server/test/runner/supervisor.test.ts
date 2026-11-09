@@ -4658,6 +4658,26 @@ test("a worker's notice reaches root only well formed, as that agent's", async (
   await run;
 });
 
+test("protocol 54: a worker's pointer steps reach root only well formed, for its own agent's desktop", async () => {
+  const steps: unknown[][] = [];
+  const t = setup({ cursor: (id, cursor) => steps.push([id, cursor]) });
+  t.sup.boot();
+  t.sup.attach();
+  const run = handleRequest(t.ctx, exec(ANA), scope().scope);
+  await waitFor(() => t.workers.length === 1);
+  const ana = t.last(ANA.id);
+  ana.hello();
+  const q = await requestOn(ana);
+  ana.send({ type: "desktop.cursor", act: "click" });
+  ana.send({ type: "desktop.cursor", act: "paste", x: 1, y: 1 });
+  // Whose desktop it is goes by the worker, never by what it says.
+  ana.send({ type: "desktop.cursor", act: "click", x: 514, y: 558, name: "Join the list", agentId: BIA.id });
+  await waitFor(() => steps.length === 1);
+  expect(steps).toEqual([[ANA.id, { act: "click", x: 514, y: 558, name: "Join the list" }]]);
+  ana.send({ type: "result", id: q.id, ok: true, data: execDone });
+  await run;
+});
+
 test.if(posix)(
   "a real worker: the context, the relay's socket, and a tool served to the relay as the agent",
   async () => {

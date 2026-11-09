@@ -8,9 +8,11 @@ import {
   DESKTOP_LIMITS,
   DESKTOP_TEXT_MAX,
   type DesktopAction,
+  type DesktopCursor,
   type DesktopLookReply,
   type DesktopPoint,
   type DesktopRegion,
+  desktopCursorOf,
   MAX_FRAME_BYTES,
   type MachineReplies,
   type RunnerDesktopInfo,
@@ -309,6 +311,8 @@ export interface DesktopManagerOptions {
    * across connections): numbers never come back for other elements. Default: this manager's own.
    */
   numbered?: Map<string, { last: number }>;
+  /** Protocol 54: where the agent's pointer goes, said right before it goes (to whoever watches its desktop). */
+  cursor?: (agentId: string, cursor: DesktopCursor) => void;
   log: (line: string) => void;
   /** Tests: the computer. */
   system?: Pick<DesktopSystem, "platform" | "uid" | "which">;
@@ -921,6 +925,11 @@ export class DesktopManager {
     }
     const wait = spec ? (spec.windowMs ?? 0) + (spec.capMs ?? 0) : 0;
     const timeout = this.requestMs + typed * MS_PER_CHARACTER + paused + wait;
+    const tell = this.opts.cursor;
+    if (tell) {
+      const name = ref ? use.last?.look.targets[ref]?.name : undefined;
+      for (const c of cursorSteps(steps, name)) tell(use.agent.id, c);
+    }
     const out = await this.call(use, "input", spec ? { steps, settle: spec } : { steps }, timeout, ref);
     if (!isRecord(out) || !isInt(out.ms)) throw this.malformed(use, "answer to input");
     return typeof out.settled === "boolean" ? out.settled : undefined;
@@ -1211,6 +1220,31 @@ function pointerSteps(kind: DesktopAction["kind"], spot: Spot): HelperStep[] {
       ...(kind === "double_click" ? { count: 2 as const } : {}),
     },
   ];
+}
+
+/**
+ * Protocol 54: the agent's pointer along a helper's steps, as whoever watches its desktop sees it: each move, press,
+ * drag and wheel where it happens, and typing where the focus is (never what is typed). `name`, what the steps act
+ * on, goes with the first.
+ */
+export function cursorSteps(steps: HelperStep[], name?: string): DesktopCursor[] {
+  const at = (x: number, y: number) => ({ x: Math.max(0, Math.round(x)), y: Math.max(0, Math.round(y)) });
+  const out: DesktopCursor[] = [];
+  for (const s of steps) {
+    if ("move" in s) out.push({ act: "move", ...at(...s.move) });
+    else if ("click" in s) {
+      const act = (s.count ?? 1) > 1 ? "double_click" : s.button === 3 ? "right_click" : "click";
+      out.push({ act, ...at(...s.click) });
+    } else if ("drag" in s) {
+      const [x1, y1, x2, y2] = s.drag;
+      out.push({ act: "move", ...at(x1, y1) }, { act: "drag", ...at(x2, y2) });
+    } else if ("scroll" in s) out.push({ act: "scroll", ...at(...s.scroll) });
+    else if ("type" in s || "fill" in s) out.push({ act: "type" });
+  }
+  const [first] = out;
+  // Cut to what a step carries, as the protocol checks it.
+  if (first && name) out[0] = desktopCursorOf({ ...first, name }) ?? first;
+  return out;
 }
 
 /** The smallest element of a look under a point. */

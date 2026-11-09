@@ -99,7 +99,7 @@ test("auto: the provider its runs would pick decides, with or without a key", as
   expect(await agentAiState(deps, { ...f.agent, model: "auto", credentialId: null })).toEqual({ state: "ready" });
 });
 
-test("a computer brain: signed out, missing or no computer is no_ai unless it may fall back; away is waiting", async () => {
+test("a computer brain: signed out, missing or no computer is no_ai, the API never standing in; away is waiting", async () => {
   f = await setup();
   let status: MachineStatus | null = statusOf();
   const deps = { db: f.db, gateway: f.gateway, machines: { status: async () => status } };
@@ -107,12 +107,10 @@ test("a computer brain: signed out, missing or no computer is no_ai unless it ma
   expect(await agentAiState(deps, computer)).toEqual({ state: "ready" });
 
   status = statusOf({ executors: { claude: { version: "2.1.300", loggedIn: false } } });
-  // The model brain stands in (ADR 0032 §5)…
-  expect(await agentAiState(deps, computer)).toEqual({ state: "ready" });
-  // …unless the owner turned the fallback off, or it's background work. With no account of its own, it's the
-  // computer's own sign-in of Claude Code that isn't there.
+  // The workspace has a key, and still nothing thinks for it. With no account of its own, it's the computer's own
+  // sign-in of Claude Code that isn't there.
   const ownOut = { state: "no_ai", reason: "not_signed_in", own: "claude_code" } as const;
-  expect(await agentAiState(deps, { ...computer, brainFallback: false })).toEqual(ownOut);
+  expect(await agentAiState(deps, computer)).toEqual(ownOut);
   const routine = {
     id: crypto.randomUUID(),
     orgId: f.org.id,

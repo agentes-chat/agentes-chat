@@ -179,6 +179,13 @@ jobs:
         id: build
         if: success() || failure()
         run: bun run build
+      # Opens a channel, its thread, a DM and older messages in Chrome, against a local server (PGlite, the fakes) and the
+      # build above, at a desktop and a phone size, and fails when anything on screen moves by itself: a placeholder of
+      # the wrong size, a card growing when its data comes, a thread jumping to its end (scripts/geometry/shifts.ts).
+      - name: Layout shifts (conversations opening, cards loading)
+        if: (success() || failure()) && steps.build.outcome == 'success'
+        timeout-minutes: 8
+        run: bun run check:shifts --report shifts-report.md
       # Mermaid's bundle and mermaid-frame.js are files of their own, which only the sandboxed frame loads
       # (apps/web/src/lib/mermaid.ts): the app's chunks name both, and none of mermaid's code is in them.
       # Only those two files are left out of that check, not every name starting with mermaid: a chunk
@@ -230,6 +237,7 @@ jobs:
           path: |
             typecheck.log
             typecheck-times.log
+            shifts-report.md
           if-no-files-found: ignore
           retention-days: 7
 

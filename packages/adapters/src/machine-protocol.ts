@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 53;
+export const MACHINE_PROTOCOL_VERSION = 54;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -226,6 +226,41 @@ export interface DesktopLookReply {
 
 /** Protocol 21: the attribute of the agent browser's window in a look (one line: `browser_do` drives it). */
 export const DESKTOP_AGENT_BROWSER = "agent browser: use browser_do";
+
+/**
+ * Protocol 54: the agent's own pointer, for whoever watches its desktop. Xvnc leaves the pointer out of the picture (a
+ * viewer asks for its shape alone) and the browser's commands never move it, so the runner says where the agent points:
+ * right before each pointer step of a `desktop.act`, and each command that points at the page of its Chrome on that
+ * desktop, a `{"type":"cursor"}` text frame goes on the data socket of every stream of the agent's desktop (in system
+ * mode the worker tells root, which holds those sockets). The server passes it on to the viewer, checked. It never says
+ * what is typed. An older runner sends none, and an older server or app drops the frame.
+ */
+export const DESKTOP_CURSOR_PROTOCOL = 54;
+/** What the agent's pointer does where it goes; `type` and `scroll` may have no place (where the focus is). */
+export const DESKTOP_CURSOR_ACTS = ["move", "click", "double_click", "right_click", "drag", "scroll", "type"] as const;
+export type DesktopCursorAct = (typeof DESKTOP_CURSOR_ACTS)[number];
+/** Protocol 54: one step of the agent's pointer, in the desktop's own pixels. */
+export interface DesktopCursor {
+  act: DesktopCursorAct;
+  x?: number;
+  y?: number;
+  /** What it acts on, as the screen names it. */
+  name?: string;
+}
+/** The most characters of a cursor step's `name`. */
+export const DESKTOP_CURSOR_NAME_MAX = 60;
+
+/** A cursor step, checked: both or neither of `x` and `y`, whole pixels of a desktop's largest size; null when it isn't one. */
+export function desktopCursorOf(v: unknown): DesktopCursor | null {
+  if (!isObject(v) || !DESKTOP_CURSOR_ACTS.includes(v.act as DesktopCursorAct)) return null;
+  const act = v.act as DesktopCursorAct;
+  const placed = inRange(v.x, [0, 8191]) && inRange(v.y, [0, 8191]);
+  if (!placed && (v.x !== undefined || v.y !== undefined || (act !== "type" && act !== "scroll"))) return null;
+  const name = isString(v.name)
+    ? [...v.name.replace(/\s+/g, " ").trim()].slice(0, DESKTOP_CURSOR_NAME_MAX).join("")
+    : "";
+  return { act, ...(placed ? { x: v.x as number, y: v.y as number } : {}), ...(name ? { name } : {}) };
+}
 
 /** The screens of an agent that people watch and take over: one open handoff per agent and screen. */
 export const SCREEN_KINDS = ["browser", "desktop"] as const;
@@ -1175,7 +1210,9 @@ export type StreamControl =
   | { type: "exit"; code: number | null }
   | { type: "mode"; mode: DesktopMode }
   /** Protocol 49: a browser view's frame arrived (server → runner): one more may go (`BROWSER_VIEW`). */
-  | { type: "ack" };
+  | { type: "ack" }
+  /** Protocol 54: a step of the agent's pointer on its desktop (runner → viewer, `DESKTOP_CURSOR_PROTOCOL`). */
+  | ({ type: "cursor" } & DesktopCursor);
 
 /**
  * A person's turn in an agent's browser (`browser.handoff`, ADR 0040 §6), as
@@ -3584,8 +3621,14 @@ export const isTerminalSize = (cols: unknown, rows: unknown) =>
 
 /** A text frame on a ready stream (either side); null when it isn't one or a size is out of bounds. */
 export function parseStreamControl(raw: string): StreamControl | null {
-  const f = smallJson(raw, 200);
+  // A cursor step's name may be escaped JSON: its frame alone may be longer.
+  const f = smallJson(raw, 512);
   if (!isObject(f)) return null;
+  if (f.type === "cursor") {
+    const cursor = desktopCursorOf(f);
+    return cursor ? { type: "cursor", ...cursor } : null;
+  }
+  if (raw.length > 200) return null;
   if (f.type === "resize") {
     return isTerminalSize(f.cols, f.rows) ? { type: "resize", cols: f.cols as number, rows: f.rows as number } : null;
   }

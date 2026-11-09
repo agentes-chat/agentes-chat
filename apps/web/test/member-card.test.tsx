@@ -207,6 +207,20 @@ describe("an agent's card", () => {
     ]);
   });
 
+  test("Editar's choices stay one list of rows, whatever is picked", async () => {
+    await go(seedState());
+    const c = await openCard("Ada");
+    await click(within(c).getByRole("button", { name: "Editar" }));
+    await settle(3);
+    const editor = screen().getByRole("dialog", { name: "Quem pode falar com a Ada" });
+    await click(within(editor).getByRole("radio", { name: /^Só algumas pessoas/ }));
+    await settle(2);
+    expect(editor.querySelector(".people-picker")).toBeTruthy();
+    const list = editor.querySelector(".ac-optlist") as HTMLElement;
+    expect(list.classList.contains("ac-optlist--cards")).toBe(false);
+    expect(within(list).getAllByRole("radio")).toHaveLength(3);
+  });
+
   test("Editar for its owner too, not for anyone else", async () => {
     const owner = seedState();
     viewAs(owner, "u-joao");

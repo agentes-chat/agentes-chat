@@ -1,8 +1,10 @@
-import type { DesktopMode, DesktopViewState, Edition, Machine } from "@agenteschat/client";
+import type { DesktopCursor, DesktopMode, DesktopViewState, Edition, Machine } from "@agenteschat/client";
 import {
   ApiError,
   askControlWords,
+  cursorStep,
   DESKTOP_CLOSE,
+  DESKTOP_SIZE,
   desktopCloseState,
   desktopMode,
   desktopRetryMs,
@@ -15,7 +17,7 @@ import {
 } from "@agenteschat/client";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { quoteExcerpt } from "@agenteschat/client/lib/reply";
-import { Button, cx, Icon, InfoHint } from "@agenteschat/ui";
+import { AgentCursor, type AgentCursorHandle, Button, cx, Icon, InfoHint } from "@agenteschat/ui";
 import type RFB from "@novnc/novnc";
 import { type ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,7 +26,7 @@ import { matchesNow, TOUCH, useMatchMedia } from "@/hooks/useMatchMedia";
 import { heldPicture, holdImage, holdPicture, liveCanvas, pictureOf, showsPicture } from "@/lib/canvas";
 import { useSaid } from "@/lib/toast";
 import { SocketFactoryContext } from "@/realtime/context";
-import { withAgentFace } from "../AgentAvatar";
+import { AgentAvatar, withAgentFace } from "../AgentAvatar";
 import { Cover } from "../browser/Cover";
 import { AskActions, HandBackFoot, useAskControl } from "../computer/control";
 import { CantShowCover, ScreenNotice } from "../computer/covers";
@@ -127,6 +129,15 @@ export function DesktopView({
   const screenRef = useRef<HTMLDivElement>(null);
   const rfbRef = useRef<RFB | null>(null);
   const keysRef = useRef<HTMLTextAreaElement>(null);
+  // The agent's own pointer (protocol 54), over the screen's picture at the desktop's own size.
+  const cursorRef = useRef<AgentCursorHandle>(null);
+  const [screenSize, setScreenSize] = useState<{ width: number; height: number }>(DESKTOP_SIZE);
+  // A card's view is small: the pointer says who, not what.
+  const pointTo = useRef<(c: DesktopCursor) => void>(() => undefined);
+  pointTo.current = (c) => {
+    const step = cursorStep(t, c);
+    cursorRef.current?.step(preview ? { ...step, words: "" } : step);
+  };
   const touch = useMatchMedia(TOUCH);
   const [typing, setTyping] = useState(false);
   const attempts = useRef(0);
@@ -256,6 +267,7 @@ export function DesktopView({
         link = opened;
         linkRef.current = opened;
         openedIn.current = opening;
+        opened.onCursor = (c) => pointTo.current(c);
         // noVNC takes its channel's `on*` handlers: the close code comes through a listener of our own.
         socket.addEventListener("close", (e: CloseEvent) => {
           closed = true;
@@ -313,6 +325,10 @@ export function DesktopView({
               if (cancelled) return;
               setReturning(false);
               setView("live");
+              if (canvas?.width && canvas.height) {
+                const { width, height } = canvas;
+                setScreenSize((was) => (was.width === width && was.height === height ? was : { width, height }));
+              }
             };
             clearInterval(looking);
             looking = setInterval(look, PICTURE_POLL_MS);
@@ -605,6 +621,16 @@ export function DesktopView({
           className={inControl ? "dsk-screen is-control" : "dsk-screen"}
           role="img"
           aria-label={t("agentComputer.screen", g)}
+        />
+        {/* Never over what the person does: gone in control and while control changes hands. */}
+        <AgentCursor
+          ref={cursorRef}
+          over={screenRef}
+          size={screenSize}
+          name={name}
+          face={<AgentAvatar agentId={agentId} size="xs" name={name} />}
+          color={color}
+          shown={live && !inControl && !switchingTo}
         />
         {inControl && (
           <textarea

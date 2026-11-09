@@ -105,45 +105,6 @@ p {
 .grid-options--sm {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
-/* The AI picker: what the person already has, a plan or an API key, one select of whose, and the chosen one's panel. */
-.ai-picker {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--form-gap);
-}
-.ai-picker > .ac-option {
-  gap: 10px;
-  padding-inline: 10px;
-}
-.ai-picker .ac-option__title {
-  font-size: 14px;
-}
-/* A row's two lines: its check sits on the first, its name's (the padding, then half the line). */
-.ai-picker > .ac-option.ai-picker__key::after {
-  /* Browsers without the lh unit: the page's 22px line. */
-  top: calc(var(--space-3) + 11px - 9px);
-}
-/* Behind @supports: a declaration holding var() parses even where lh is unknown, so as a second `top` it would
-   replace the fallback there and then compute to auto. */
-@supports (top: 1lh) {
-  .ai-picker > .ac-option.ai-picker__key::after {
-    top: calc(var(--space-3) + 0.5lh - 9px);
-  }
-}
-/* What the person already has: its rows a list, and its line sits on them as a label on its field. */
-.ai-picker > .ac-option + .ac-option {
-  margin-top: calc(var(--space-2) - var(--form-gap));
-}
-.ai-picker__or {
-  margin: 0 0 calc(var(--field-gap) - var(--form-gap));
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ink-muted);
-}
-/* A line about the rows above it, not the label of what follows. */
-.ai-picker__or--note {
-  margin-bottom: 0;
-}
 .grid-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
@@ -434,10 +395,12 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   flex: none;
   color: var(--faint);
 }
+/* On the names' capitals' middle, which sits --cap-mid above their line's middle, where the row centres it. */
 .consult-pair__swap {
   width: 15px;
   height: 15px;
   margin: 0 1px;
+  translate: 0 calc(-1 * var(--cap-mid));
 }
 .consult-pair__faces {
   flex: none;
@@ -538,9 +501,9 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   margin: 4px 0 0;
   white-space: pre-wrap;
 }
-/* Under the request card's well, on its 4px grid. */
+/* 12px under the well's last line (its own 10px padding below it); 12px over the footer (request-card.css). */
 .rq > .ac-locked > .waitcard__lines {
-  margin-top: 12px;
+  margin-top: 2px;
 }
 
 /* An agent waiting for its offline computer, in the sidebar: the clock and "esperando". */
@@ -574,6 +537,11 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+/* Until the channels, the agents and the DMs are all in (Sidebar.tsx): laid out but unseen, then shown together. The
+   tools on top stay (nothing above them moves). */
+.sidebar__scroll[data-pending] > :not([data-section="tools"]:first-child) {
+  visibility: hidden;
 }
 .sidebar__scroll {
   position: relative;
@@ -1188,6 +1156,10 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   flex: 1;
   min-width: 0;
 }
+/* Under Offline: the face and the words faded, as in the members column; the row's options as they are. */
+.member-row--off > :is(:first-child, .list-col) {
+  opacity: 0.45;
+}
 /* Canais arquivados: the rows alone, each a MediaRow (the kit's `.ac-mediarow`): the channel's mark and name on one line
    with Restaurar at its end, when it was archived under them. */
 .archived-channels {
@@ -1590,10 +1562,13 @@ html:not([data-pointer]) .artifact-tile:has(.artifact-tile__open:focus-visible) 
   --tile-w: 320px;
   --tile-cover: 180px;
 }
+/* Its own parts, empty (`TilePlaceholder`): the size it keeps once it loads. */
 .artifact-tile--loading {
-  height: calc(var(--tile-cover) + 52px);
   background: var(--sunken);
   box-shadow: none;
+}
+.artifact-tile--loading .artifact-tile__cover {
+  border-bottom-color: transparent;
 }
 /* The whole tile opens the viewer; its corner actions sit above this button. */
 .artifact-tile__open {
@@ -1865,6 +1840,20 @@ html:not([data-pointer]) .artifact-tile__open:focus-visible {
   height: 100%;
   object-fit: cover;
 }
+/* A picture whose size is known: an empty canvas of that size takes the place the picture will (the same rules size
+   it, before and after it loads), and the picture lies over it. */
+.artifact-tile__picture[data-sized] {
+  position: relative;
+}
+.artifact-tile__picture[data-sized] img {
+  position: absolute;
+  inset: 0;
+}
+.artifact-tile__picture canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .artifact-tile[data-media] {
   box-shadow: 0 0 0 1px var(--line);
 }
@@ -1883,7 +1872,8 @@ html:not([data-pointer]) .artifact-tile__open:focus-visible {
 .artifact-cards > .artifact-tile[data-media]:only-child .artifact-tile__foot {
   display: none;
 }
-.artifact-cards > .artifact-tile[data-media]:only-child .artifact-tile__picture img {
+.artifact-cards > .artifact-tile[data-media]:only-child .artifact-tile__picture:not([data-sized]) img,
+.artifact-cards > .artifact-tile[data-media]:only-child .artifact-tile__picture canvas {
   width: auto;
   min-width: 140px;
   max-width: 100%;
@@ -1891,8 +1881,8 @@ html:not([data-pointer]) .artifact-tile__open:focus-visible {
   min-height: 140px;
   max-height: 320px;
 }
-/* Its loading size (the lone tile's `height: auto` would collapse it until the picture decodes). */
-.artifact-cards > .artifact-tile[data-media]:only-child .artifact-tile__picture[data-loading] {
+/* An older picture's loading size, its own unknown (the lone tile's `height: auto` would collapse it until it decodes). */
+.artifact-cards > .artifact-tile[data-media]:only-child .artifact-tile__picture[data-loading]:not([data-sized]) {
   width: 240px;
   height: 180px;
 }
@@ -3240,6 +3230,8 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
   background: none;
   font: inherit;
   color: inherit;
+  /* A name that wraps (an agent's may be 80 characters) reads from the start, not centred as a button's label. */
+  text-align: start;
   cursor: pointer;
   border-radius: var(--radius-sm);
 }
@@ -4177,7 +4169,9 @@ html:not([data-pointer]) .settings__link:focus-visible {
   padding: var(--row-py) var(--card-pad);
   border-top: 1px solid var(--line);
 }
-.settings-row :is(.ac-select__trigger, .ac-input, .ac-input-affix, .ac-btn:not(.ac-btn--glyph, .ac-btn--icon)) {
+/* A text field of several lines (the right hand's guidance) keeps its rows: the kit's `textarea.ac-input` sizes it. */
+.settings-row
+:is(.ac-select__trigger, .ac-input:not(textarea), .ac-input-affix, .ac-btn:not(.ac-btn--glyph, .ac-btn--icon)) {
   height: var(--control-h-sm);
 }
 .settings-row:first-child {
@@ -4342,11 +4336,14 @@ html:not([data-pointer]) .settings-tile:focus-visible {
     white-space: nowrap;
   }
 }
+/* On a phone the control goes under the words, as wide as the row. The row wraps to put it there, never turns into a
+   column: there the words' 24-character basis (`.ac-actrow`) would be their height. */
 @media (max-width: 760px) {
   .settings-row {
-    flex-direction: column;
-    align-items: stretch;
     gap: 10px;
+  }
+  .settings-row:not(.settings-row--lead) > .ac-actrow__text + * {
+    flex-basis: 100%;
   }
   .settings-row__control {
     flex: none;
@@ -4660,12 +4657,15 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
   height: 112px;
   margin: 0;
 }
+/* The icon on a line of its own over the name: the head wraps, never turns into a column, where the name's 24-character
+   basis (`.ac-actrow`) would be its height. */
 .catalog-svc .ac-dialog__head {
-  flex-direction: column;
-  align-items: flex-start;
   gap: 14px;
   margin-top: -36px;
   padding: 0 var(--dialog-pad) 4px;
+}
+.catalog-svc .ac-dialog__lead {
+  flex-basis: 100%;
 }
 /*
  * The × in the corner, its ink as far from the top as from the side: the button reaches past its row by its plate and
@@ -4852,7 +4852,9 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
   height: 58%;
   object-fit: contain;
 }
-/* A service in a chip: its bare mark in the box of the chip's icons, a little smaller since it fills its square. */
+/* A service in a chip or a line of a card: its bare mark in the box of the icons around it, a little smaller since it
+   fills its square. */
+.waitcard__lines > li > .connector-icon,
 .ac-chip > .connector-icon {
   width: 14px;
   height: 14px;
@@ -4861,6 +4863,7 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
   background: transparent;
   font-size: 8px;
 }
+.waitcard__lines > li > .connector-icon > :is(.connector-icon__mark, .connector-icon__img),
 .ac-chip > .connector-icon > .connector-icon__mark,
 .ac-chip > .connector-icon > .connector-icon__img {
   width: 12px;
@@ -6596,6 +6599,15 @@ html:not([data-pointer]) .msg-quote:focus-visible {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+/* "Atualizar" hangs over its 16px line as the failed run's buttons do over theirs: the line keeps its own height. */
+.run-quiet > .ac-btn {
+  margin-block: calc((16px - var(--control-h-sm)) / 2);
+}
+@media (pointer: coarse) {
+  .run-quiet > .ac-btn {
+    margin-block: calc((16px - var(--control-h-md)) / 2);
+  }
 }
 .stop-run-wrap {
   position: relative;
@@ -8828,6 +8840,14 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   font-size: 13.5px;
   text-wrap: pretty;
 }
+/* Its line is longer than a template's: where it can't keep one line beside the +, the name and the line go under it
+   (a square never owns a column of three lines). */
+.newag__role--blank .newag__role-head {
+  flex-wrap: wrap;
+}
+.newag__role--blank .newag__role-name {
+  flex: 1 1 max-content;
+}
 .newag__blank-icon {
   display: grid;
   place-items: center;
@@ -9063,39 +9083,6 @@ html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
-.newag__sel-value {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  text-align: left;
-}
-.newag__sel-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.3;
-}
-/* Each line in a field one control tall: one that doesn't fit ends in "…" (the open list has it whole), never cut
-   mid-word at the field's edge. */
-.newag__sel-text > * {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.newag__sel-text b {
-  font-size: 14px;
-  font-weight: 600;
-}
-.newag__sel-text span {
-  color: var(--muted);
-  font-size: 12px;
-}
-/* Model and budget. The line under "Quem pensa" ("No plano, … só a você"): the steps have no gap, so it sits as far
-   below it as an error line or a note does. */
-.agp-brainsel + .small {
-  display: block;
-  margin-top: 12px;
-}
 .newag__money {
   display: flex;
   flex-wrap: wrap;
@@ -9303,6 +9290,13 @@ html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
   }
   .newag .level-row__choice {
     width: 100%;
+  }
+}
+/* Under 760px every step's name hides (`.onb__step-text`), the current one's too: its mark keeps the same room on every
+   side. */
+@media (max-width: 760px) {
+  .newag .onb__step[aria-current="step"] {
+    padding-right: 5px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -9624,56 +9618,6 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink2);
 }
-/* "Quem pensa": the opened card's settings full width, a small label above each. */
-.agp-advrow .ac-select__trigger {
-  cursor: pointer;
-}
-.agp-advrow__chev {
-  margin-left: auto;
-  flex: none;
-  color: var(--faint);
-}
-/* "Configuração avançada": its groups (how it thinks, who it answers) under a hairline each. */
-.agp-advgroup {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.agp-advgroup + .agp-advgroup {
-  padding-top: var(--form-gap);
-  border-top: 1px solid var(--line);
-}
-/* A form's group: its gap is its heading's room above the fields. */
-.agp-advgroup > .ac-grouphead {
-  margin-bottom: 0;
-}
-/* In the dialog "Atende outras pessoas" lines up like the switch under it: its line beside the switch, centered. */
-.agp-advgroup .plan-replies__terms {
-  grid-column: 1;
-}
-.agp-advgroup .plan-replies > .ac-switch {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  translate: none;
-}
-.agp-advswitch {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-/* A setting of the opened brain: its label sits on its picker (6px), the settings a card's gap apart. */
-.agp-brainfield {
-  display: flex;
-  flex-direction: column;
-  gap: var(--field-gap);
-}
-.agp-brainfield__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink2);
-}
 /* The account and its plan's usage in one outline: the meters hang under the account's picker, on a sunken band. */
 .agp-acct {
   display: flex;
@@ -9684,72 +9628,32 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   border-bottom-right-radius: 0;
 }
 .agp-acct--use > .ac-planmeter {
-  padding: 12px 14px;
+  /* Even room above the line's capitals and below the bar: the line's own leading comes off the top. */
+  padding: calc(var(--space-3) - 0.5lh + var(--cap-top)) 14px var(--space-3);
   border: 1px solid var(--field-line);
   border-top: 0;
   border-radius: 0 0 var(--control-r-md) var(--control-r-md);
   background: var(--sunken);
 }
-.agp-brainseg {
-  display: flex;
-  width: 100%;
-}
-.agp-brainseg .ac-seg__item {
-  flex: 1;
-}
-.agp-brainsel .ac-select__trigger {
-  min-height: 52px;
-  height: auto;
-  padding: 8px 14px 8px 10px;
-}
-.agp-brainsel .newag__sel-value {
-  gap: 10px;
-}
 /*
- * A switch's label and its ⓘ (an `.ac-hintline`, in the label's type so the ⓘ sits on its line), the switch
- * at the end: the card's foot ("Se o … parar de responder, responder pela API").
- */
-.agp-brainoff {
-  flex: 1;
-  font-size: 13.5px;
-  line-height: 1.35;
-}
-.agp-brainoff label {
-  cursor: pointer;
-}
-.agp-brainoff b {
-  font-weight: 600;
-}
-/*
- * "Atende outras pessoas" (`PlanReplies`), under a plan's account and at the end of a plan's panel: its label with
- * the switch at the end of its line, the switch's middle on the label's capitals' middle as an `.ac-iconline` lead's
- * is; under them the line saying whom the agent answers, the plan's terms behind its ⓘ, under the switch too, so the
- * sentence has the whole width on a phone. The label is in the type of the switches beside it (a plan's panel gives
- * its own).
+ * "Atende outras pessoas" (`PlanReplies`): its label with the ⓘ right after it, the switch at the end of the line, its
+ * middle on the label's capitals' middle as an `.ac-iconline` lead's is. No line under it: what it means is behind the ⓘ.
  */
 .plan-replies {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  column-gap: 16px;
-  font-size: 13.5px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: 14px;
   line-height: 20px;
   color: var(--ink);
 }
-.plan-replies > :first-child {
+.plan-replies label {
   font-weight: 600;
-}
-.plan-replies > label {
   cursor: pointer;
 }
-.plan-replies__terms {
-  grid-column: 1 / -1;
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 400;
-  color: var(--muted);
-}
 .plan-replies > .ac-switch {
+  flex: none;
   /* Browsers without the lh unit: the 20px line. */
   translate: 0 calc(10px - var(--cap-mid) - 50%);
 }
@@ -9758,11 +9662,185 @@ html:not([data-pointer]) .agp-cell:focus-visible {
     translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
   }
 }
-/* At the plan's limit: the owner's free accounts, one click each, and "Conectar outra conta". */
-.agp-planoffer {
+/*
+ * The AI select (`AgentAi.tsx`): the select and what hangs under it, a form's 16 apart. A row's second line says whose
+ * it is and how it stands, the state in its tone (the words say it too); someone else's face before their name.
+ */
+.ai-form,
+.ai-flow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.ai-form > .ac-setnote,
+.ai-flow > .ac-setnote {
+  margin: 0;
+}
+/* The trigger names the AI first: where the line runs out, the email after it is what gives way. */
+.ai-sel__text {
+  display: flex;
+}
+.ai-sel__label {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-sel__text > .ai-sel__who {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-sel__who {
+  color: var(--muted);
+}
+.ai-sel__state[data-tone="warn"] {
+  color: var(--warn);
+}
+.ai-sel__state[data-tone="danger"] {
+  color: var(--danger);
+}
+.ai-sel__face {
+  vertical-align: middle;
+  margin-inline-end: 4px;
+  translate: 0 -1px;
+}
+/* "Conectar outra IA": a neutral tile with a plus in the logos' column, a row's size as every other. */
+.ai-sel__plus {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink2);
+}
+/* What a key costs, in the band a plan's usage takes under the trigger. */
+.agp-acct--use > .ai-sel__strip {
+  margin: 0;
+  padding: var(--space-3) 14px;
+  border: 1px solid var(--field-line);
+  border-top: 0;
+  border-radius: 0 0 var(--control-r-md) var(--control-r-md);
+  background: var(--sunken);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+/* A note's one way out goes under its words. */
+.ai-note__act {
+  display: block;
+  margin-top: var(--space-2);
+}
+/* For several agents: their faces and names, read-only, over the select. */
+.ai-for {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink2);
+}
+/* The settings under the select: one box, hairline rows, the room above a row's words as below them. A select keeps
+   its title's line and the row's words go under both, its full width: beside a select on a phone they would wrap word
+   by word. */
+.ai-set > .ac-setlist__row {
+  padding: var(--space-3) var(--space-4);
+}
+.ai-set > .ac-setlist__row > :is(.ac-setrow, .plan-replies) {
+  flex: 1;
+  min-width: 0;
+}
+:is(.ai-set, .ai-adv__body) .ac-setrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 var(--space-4);
+}
+:is(.ai-set, .ai-adv__body) .ac-setrow__text {
+  display: contents;
+}
+:is(.ai-set, .ai-adv__body) .ac-setrow__status {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: 0;
+}
+:is(.ai-set, .ai-adv__body) .ac-setrow__end {
+  grid-column: 2;
+  grid-row: 1;
+  margin-left: 0;
+}
+/* "Configuração avançada": a row that opens in place, what it holds under it, the chevron turning. */
+.ai-set > .ai-adv {
+  display: block;
+  padding: 0;
+}
+.ai-adv__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ai-adv__toggle:hover {
+  background: var(--plate-soft);
+}
+html:not([data-pointer]) .ai-adv__toggle:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus-ring);
+}
+.ai-adv__text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+.ai-adv__text b {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.ai-adv__text small {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+.ai-adv__chev {
+  flex: none;
+  color: var(--faint);
+  transition: rotate 0.2s var(--out);
+}
+.ai-adv[data-open] .ai-adv__chev {
+  rotate: 180deg;
+}
+.ai-adv__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-4) var(--space-4);
+}
+/* Closed: `hidden` alone gives way to the display above. */
+.ai-adv__body[hidden] {
+  display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ai-adv__body:not([hidden]) {
+    animation: ai-adv-in 0.2s var(--out) both;
+  }
+}
+@keyframes ai-adv-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
 }
 /* "Add account": the provider's own sign-in, in numbered steps, as far apart as a panel's groups: a step's button
    sits nearer its own words than the next step's. Wrapped, its lines never end on a word alone, in a plan's panel or
@@ -10056,12 +10134,6 @@ html:not([data-pointer]) .agp-tabs .ac-tab:focus-visible {
 .agp-card > .ac-card__foot {
   margin-bottom: -12px;
 }
-/* Something changed in it: a bar on its left edge, inside the card's line. */
-.agp-card[data-changed] {
-  box-shadow:
-    var(--card-shadow),
-    inset 2px 0 0 var(--ink);
-}
 /*
  * The overview. Wide: what it does and its recent work on the left, the Ficha as a column on the right (its rows
  * put the label over the value there). The last row takes what the Ficha needs past the left column, so the
@@ -10140,14 +10212,14 @@ html:not([data-pointer]) .agp-tabs .ac-tab:focus-visible {
 .agp-ficha__card .agp-frow[data-open] .agp-cell__chev {
   color: var(--ink2);
 }
-/* Hairlines from the label's column to the row's end (the keys stand free); they fade around a hovered or open row. */
+/* Hairlines across the row's whole width, the key's column too; they fade around a hovered or open row. */
 .agp-ficha__card .agp-frow + .agp-frow::before {
   content: "";
   position: absolute;
   top: 0;
   right: 12px;
   bottom: auto;
-  left: 48px;
+  left: 12px;
   width: auto;
   height: 1px;
   background: var(--line);
@@ -10190,7 +10262,7 @@ html:not([data-pointer]) .agp-tabs .ac-tab:focus-visible {
   line-height: 20px;
 }
 .agp-ficha__card .agp-frow .agp-cell__value > .agp-cell__sub {
-  margin-left: 6px;
+  margin-left: var(--space-2);
   font-size: 13px;
   font-weight: 500;
   line-height: 20px;
@@ -10597,15 +10669,12 @@ html:not([data-pointer]) .agp-chipbtn:focus-visible {
 .agp-repogroup .scope-row {
   align-items: center;
 }
-.agp-repogroup .scope-row[data-off],
-.agp-copydialog .scope-row[data-off],
-.agp-copydialog__all[data-off] {
+.agp-repogroup .scope-row[data-off] {
   cursor: default;
   opacity: 0.55;
 }
 /* "Todos os repositórios" on top of the list, and "Levar a autonomia" and "Todos" over the agents a setup is used on. */
-.agp-repodialog__all,
-.agp-copydialog__all {
+.agp-repodialog__all {
   flex: 1;
   display: flex;
   align-items: center;
@@ -11051,11 +11120,9 @@ html:not([data-pointer]) .agp-subnav__item:focus-visible {
 .agp-savebar:has(> .agp-savebar__hint) {
   flex-wrap: wrap;
 }
+/* An `.ac-iconline`: a problem that wraps keeps its icon on its first line. */
 .agp-savebar__hint {
-  display: flex;
   flex: 1 1 auto;
-  align-items: center;
-  gap: 8px;
   min-width: 0;
   margin-right: auto;
   font-size: 13.5px;
@@ -11813,9 +11880,9 @@ html[data-menu-overlay] .shell {
 .sidebar:not([data-rail="true"]) .sidebar__item:has(> .ac-avatar) {
   padding-block: 8px;
 }
-/* An agent's row breathes: the face 12px from its words, a little air between the name and its line. */
+/* An agent's row breathes: the face 12px from its words, a little air between the name and its line. Its face keeps
+   the 8px from the plate's edges every face row has. */
 .sidebar:not([data-rail="true"]) :is([data-agent-row] > .sidebar__item, .sidebar__item[data-right-hand]) {
-  padding-block: 7px;
   gap: 12px;
 }
 .sidebar:not([data-rail="true"])
@@ -11993,29 +12060,16 @@ html:not([data-pointer]) .sidebar__section-toggle:focus-visible {
 .sidebar__section--category[data-open="false"] .sidebar__section-body > [data-unread="true"] {
   display: flex;
 }
-/* Every drag in the sidebar (a section, a channel, a category, an agent) marks where it lands the same way: one 2px
-   line of the accent at reduced strength with round ends, in the gap before or after the row, from the names' column
-   to the row's end. A line, not an opened gap: the rows stay under the pointer while it moves. A category that takes
-   a channel (`into`), or the group of agents it would land in, takes a faint tint of the accent. */
-.sidebar :is([data-drop="before"], [data-drop="after"]) {
-  position: relative;
-}
-.sidebar :is([data-drop="before"], [data-drop="after"])::after,
-.sidebar__drop-line {
-  content: "";
-  position: absolute;
-  left: var(--drop-inset, 36px);
-  right: 8px;
-  height: 2px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--agent) 60%, transparent);
-  pointer-events: none;
-}
-.sidebar [data-drop="before"]::after {
-  top: -2px;
-}
-.sidebar [data-drop="after"]::after {
-  bottom: -2px;
+/* Every drag in the sidebar (a section, a tool, a channel, a category, an agent; lib/list-drag.tsx) shows where it
+   lands the same way: the row leaves the list and a dashed outline of its size stands there, the rows around sliding to
+   make room. A category that takes a channel (`into`), or the group of agents it would land in, takes a faint tint of
+   the accent too. */
+.drop-spot {
+  flex: none;
+  box-sizing: border-box;
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: var(--control-r-md);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
 }
 .sidebar :is([data-drop="into"], .sidebar__section[data-drop="true"]) {
   background: color-mix(in srgb, var(--agent) 9%, transparent);
@@ -12324,17 +12378,9 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
     display: none;
   }
 }
-/* Dragging an agent: the group it would land in, and inside it the line where it would go, an element in the list
-   with no height of its own (its margins take back its 2px and the gap it adds). */
+/* Dragging an agent: the group it would land in. */
 .sidebar__section[data-drop="true"] {
   border-radius: var(--control-r-sm);
-}
-.sidebar__drop-line {
-  position: relative;
-  left: auto;
-  right: auto;
-  flex: none;
-  margin: -2px 8px -2px var(--drop-inset, 36px);
 }
 /* An empty group, for whoever organizes: where its agents go, in the column of the agents' names. */
 .sidebar__drop-hint {
@@ -12567,15 +12613,18 @@ html:not([data-pointer]) .sidebar__grip:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
-/* A section's line sits in the middle of the 10px between the parts, from the headers' titles. */
-.sidebar__block[data-drop]::after {
-  left: 9px;
+/* A dragged row is out of the list behind its spot, whatever keeps a row in sight in a closed part (an unread channel,
+   an agent at work) or on the icon rail: as specific as those rules, and after them. */
+.sidebar [data-lifted],
+.sidebar__section[data-open] .sidebar__section-body > [data-lifted],
+.sidebar[data-rail] .sidebar__section[data-open] .sidebar__section-body > [data-lifted],
+.sidebar[data-rail] .sidebar__group[data-lifted] {
+  display: none;
 }
-.sidebar__block[data-drop="before"]::after {
-  top: -6px;
-}
-.sidebar__block[data-drop="after"]::after {
-  bottom: -6px;
+/* A part's spot keeps the 10px between the parts. */
+.sidebar:not([data-rail="true"]) .sidebar__scroll > .drop-spot + .sidebar__block,
+.sidebar:not([data-rail="true"]) .sidebar__block + .drop-spot {
+  margin-top: 10px;
 }
 @media (pointer: coarse) {
   .sidebar__grip,
@@ -13053,14 +13102,6 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .ai-panel--plan > .grid-options--sm .ac-option__title {
   padding-right: 22px;
 }
-/* A MediaRow: the option's mark and its name on one line, for whom at that line's end, what it covers under them. */
-.ai-panel__head {
-  /* Its hairline runs edge to edge, as the foot's does. */
-  margin-inline: calc(-1 * var(--card-pad));
-  padding: 0 var(--card-pad) 16px;
-  border-bottom: 1px solid var(--line);
-  line-height: 20px;
-}
 /* The computer's wait in a well, sunk into its card in both themes: here, and on the setup's Computer step. */
 .ai-panel__wait,
 .onb__wait {
@@ -13131,17 +13172,6 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
     padding-bottom: calc(16px + var(--cap-top) - 2 * var(--cap-mid) - 0.5lh);
   }
 }
-/* Who the agents answer ends a plan's panel, as its foot: the icon on the switch's line in the mark's column, the
-   words in the panel's type on the text's. */
-.ai-panel__replies {
-  font-size: 14px;
-  line-height: 20px;
-}
-.ai-panel__replies > .plan-replies {
-  flex: 1;
-  min-width: 0;
-  font-size: inherit;
-}
 /* The Computer step's lines are the well's own, at its gap. */
 .onb__wait > .setup-wait {
   display: contents;
@@ -13181,22 +13211,6 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
   margin: 0;
   font-size: 13px;
   line-height: 18px;
-  color: var(--ink-muted);
-}
-.ai-panel__head > .ac-mediarow__head > .ai-panel__name {
-  font-size: 15px;
-  font-weight: 650;
-}
-.ai-panel__sub {
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ink-muted);
-}
-.ai-panel__agent {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
   color: var(--ink-muted);
 }
 /* What went wrong and its button (Try again): the note in the button's middle, beside it or on the line above it. */
@@ -13279,18 +13293,6 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 }
 .ai-panel--plan .agp-addacct__step.ac-iconline .agp-addacct__busy {
   margin-left: calc((var(--lead) - 14px) / 2 - var(--lead) - 12px);
-}
-/* At phone width for whom goes under the name, on the head's text column. */
-@media (max-width: 640px) {
-  .ai-panel__agent {
-    flex-basis: calc(100% - var(--mark) - 12px);
-    height: auto;
-    margin-top: 0;
-    margin-left: calc(var(--mark) + 12px);
-  }
-  .ai-panel__agent > .ac-select {
-    flex: 1;
-  }
 }
 /* Who thinks (the setup, after a plan): each agent and what it thinks with. */
 .ai-who__list {
@@ -13559,10 +13561,12 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .rh-money .ac-input-affix {
   width: 120px;
 }
+/* The guidance under its label, as wide as the row: a wrap, not a column (`.ac-actrow`). */
 .settings-row.rh-guidance {
-  flex-direction: column;
-  align-items: stretch;
   gap: 10px;
+}
+.rh-guidance > .ac-actrow__text + * {
+  flex-basis: 100%;
 }
 /* Configurações › Sua conta: a line that opens something is a button, its chevron at the end. Its hover stays inside
    the card's corners. */
@@ -13623,9 +13627,7 @@ html:not([data-pointer]) .settings-row--open:focus-visible {
    one card start their controls on one edge. */
 @media (max-width: 760px) {
   .settings-row--lead {
-    flex-direction: row;
     flex-wrap: wrap;
-    align-items: center;
     gap: var(--space-2) var(--space-3);
   }
   .settings-row--lead > .settings-row__text {
@@ -13911,9 +13913,10 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
    keeps the icon and the words on one line, and what ends it goes under them from their edge, where it falls. */
 @container agp-side (max-width: 479px) {
   .agp-card .settings-row:not(.settings-row--lead) {
-    flex-direction: column;
-    align-items: stretch;
     gap: 10px;
+  }
+  .agp-card .settings-row:not(.settings-row--lead) > .ac-actrow__text + * {
+    flex-basis: 100%;
   }
   .agp-card .settings-row__control {
     flex: none;

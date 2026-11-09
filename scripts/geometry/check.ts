@@ -210,8 +210,10 @@ export async function launch(bin: string, profile: string) {
   });
   let id = 0;
   const waiting = new Map<number, { ok: (v: never) => void; fail: (e: Error) => void }>();
+  const listeners = new Map<string, ((params: Record<string, unknown>) => void)[]>();
   ws.onmessage = (e) => {
     const m = JSON.parse(String(e.data));
+    if (m.method) for (const fn of listeners.get(m.method) ?? []) fn(m.params);
     const call = waiting.get(m.id);
     if (!call) return;
     waiting.delete(m.id);
@@ -224,7 +226,10 @@ export async function launch(bin: string, profile: string) {
       waiting.set(id, { ok: ok as (v: never) => void, fail });
       ws.send(JSON.stringify({ id, method, params, sessionId }));
     });
-  return { send, close: () => chrome.kill() };
+  /** A DevTools event, from any tab (`shifts.ts` counts the requests in flight). */
+  const on = (method: string, fn: (params: Record<string, unknown>) => void) =>
+    listeners.set(method, [...(listeners.get(method) ?? []), fn]);
+  return { send, on, close: () => chrome.kill() };
 }
 
 type Send = Awaited<ReturnType<typeof launch>>["send"];
@@ -292,6 +297,7 @@ export const SELF_TESTED = [
   "captop",
   "timeedge",
   "panefill",
+  "optcards",
 ];
 
 /** Rules about a desktop layout only (panes floating beside the conversation, a toolbar's one row): a phone has none. */
@@ -336,7 +342,7 @@ async function orderFindings(tab: Tab, reverse: Tab): Promise<Finding[]> {
 
 /**
  * Every rule fires on each of its fixture's offenders (`bad-<rule>`, `bad-<rule>--<case>`) and stays quiet on each
- * sound twin (`good-…`).
+ * sound twin (`good-…`), and what opens from another layer is the topmost thing at its center (`geometry.layers`).
  */
 async function selfTest(tab: Tab, reverse: Tab) {
   const fixture = readFileSync(join(HERE, "fixture.html"), "utf8");
@@ -356,6 +362,16 @@ async function selfTest(tab: Tab, reverse: Tab) {
         if (cls.startsWith("good-") && hit(rule, cls)) wrong.push(`${rule}@${width} flagged ${cls}`);
       }
     }
+  }
+  // At every width (a dialog is a sheet on a phone) and in both CSS orders.
+  for (const width of WIDTHS) {
+    await Promise.all([tab.resize(width), reverse.resize(width)]);
+    for (const [t, order] of [
+      [tab, "app"],
+      [reverse, "reverse"],
+    ] as const)
+      for (const layer of await t.run<string[]>("geometry.layers()"))
+        wrong.push(`layers@${width} (${order} order): ${layer} opens under what opened it`);
   }
   if (wrong.length) throw new Error(`Self-test: ${wrong.join(", ")}`);
 }

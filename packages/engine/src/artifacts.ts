@@ -25,6 +25,7 @@ import {
 import { type AgentsDmReads, agentsDmReads, readerOfRun } from "./agents-dm-reads";
 import { recordAudit } from "./audit";
 import { runAuthorityById, runPerson, UUID } from "./authority";
+import { pictureSize } from "./avatars";
 import { routineBriefOfRun } from "./background";
 import { answersAgentsOnly, peopleSee } from "./consultations";
 import { isAgentOnlyDm, openDm } from "./dms";
@@ -86,6 +87,9 @@ export interface FileContent {
   size: number;
   sha256: string;
   text?: string;
+  /** A picture's size as it shows (`pictureSize`): the apps hold its box before it loads. */
+  width?: number;
+  height?: number;
 }
 
 export type ArtifactContent =
@@ -511,13 +515,14 @@ const isTextFile = (name: string, contentType: string) =>
 
 /** A `file` version as content: metadata, plus its text when it is a small UTF-8 text file. */
 function fileContent(
-  v: Pick<VersionRow, "fileName" | "contentType" | "size" | "sha256">,
+  v: Pick<VersionRow, "fileName" | "contentType" | "size" | "sha256"> & Partial<Pick<VersionRow, "width" | "height">>,
   body: Uint8Array | null,
 ): FileContent {
   const name = v.fileName ?? "file";
   // By its name first (a picture stored as plain bytes before uploads were typed by name reads as a picture).
   const contentType = fileContentType(name, v.contentType);
   const content: FileContent = { kind: "file", name, contentType, size: v.size, sha256: v.sha256 };
+  if (v.width && v.height) Object.assign(content, { width: v.width, height: v.height });
   if (body && isTextFile(name, v.contentType)) {
     try {
       const text = new TextDecoder("utf-8", { fatal: true }).decode(body);
@@ -539,7 +544,7 @@ const storedFileContent = (
   blob: { contentType: string; size: number; sha: string },
   body: Uint8Array,
 ) => {
-  const v = { fileName: name, contentType: blob.contentType, size: blob.size, sha256: blob.sha };
+  const v = { fileName: name, contentType: blob.contentType, size: blob.size, sha256: blob.sha, ...pictureSize(body) };
   return fileContent(v, wantsFileText(v) ? body : null);
 };
 
@@ -989,6 +994,7 @@ async function insertArtifact(
       size: blob.size,
       sha256: blob.sha,
       fileName: input.stored.fileName ?? null,
+      ...(input.kind === "file" ? pictureSize(input.stored.body) : null),
       note: input.note?.trim().slice(0, 500) || null,
       authorType: author.type,
       authorId: author.id,
@@ -1051,6 +1057,7 @@ export async function insertVersion(
       size: blob.size,
       sha256: blob.sha,
       fileName: input.stored.fileName ?? null,
+      ...(current.kind === "file" ? pictureSize(input.stored.body) : null),
       note,
       authorType: author.type,
       authorId: author.id,
@@ -1401,7 +1408,12 @@ async function sharedList(db: Database, orgId: string, userIds: string[], roleId
 /** The Drive files a run saved, as a message carries them, of those the people of `channelId` see (or everyone does). */
 export function filesOfRun(db: Executor, orgId: string, runId: string, channelId: string) {
   return db
-    .selectDistinct({ id: artifacts.id, version: artifacts.currentVersion, title: artifacts.title })
+    .selectDistinct({
+      id: artifacts.id,
+      version: artifacts.currentVersion,
+      title: artifacts.title,
+      kind: artifacts.kind,
+    })
     .from(artifacts)
     .innerJoin(artifactVersions, eq(artifactVersions.artifactId, artifacts.id))
     .where(

@@ -105,6 +105,7 @@ export function hsvToHex(h: number, s: number, v: number): string;
 export function luminance(hex: string): number;
 export function contrastOf(a: string, b: string): number;
 export function mentionTone(color?: AgentColorName | string, dark?: boolean): { background: string; ink: string };
+export function cursorTones(color?: AgentColorName | string): { arrow: string; tag: string };
 export function customGradient(hex: string): [string, string];
 export function nearestPreset(color: string): AgentColorName;
 export function pickerStart(color?: string): string;

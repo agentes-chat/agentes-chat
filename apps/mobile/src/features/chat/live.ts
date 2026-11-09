@@ -40,6 +40,7 @@ import {
   type Message,
   markStopping,
   type OpenConsult,
+  openConversation,
   type ReactionCount,
   type ReceiptsState,
   reconcileConsults,
@@ -457,16 +458,23 @@ export function useChatLive(orgId: string, channelId: string, enabled: boolean):
 
   useEffect(() => {
     if (!connection || !enabled) return;
-    return connection.subscribe(channelId, (event) => {
+    const close = openConversation(qc, orgId, channelId);
+    const off = connection.subscribe(channelId, (event) => {
       // The server sends my own typing back to me too: never shown, so it never redraws.
       if (event.type === "user.typing" && event.userId === meRef.current) return;
       dispatch({ type: "event", event, at: Date.now() });
       applyToCache(qc, orgId, channelId, event);
       applyMembershipEvent(qc, orgId, event);
-      // A file's cards (a deleted one says so) and an agent's memory list, as on the web.
-      applyConversationEvent(qc, orgId, event);
+      // A file's cards (a deleted one says so, a card made here is read before its message lands) and an agent's
+      // memory list, as on the web.
+      applyConversationEvent(qc, orgId, event, api);
     });
-  }, [connection, enabled, orgId, channelId, qc]);
+    // Left, or the app went to the background: shown again, it reads what it missed, as on the web.
+    return () => {
+      off();
+      close();
+    };
+  }, [connection, enabled, orgId, channelId, qc, api]);
 
   // Safety net, as on the web: a "pensando…" the server never confirmed doesn't spin forever; the
   // conversation resyncs instead (checked every 5 s while there is one).

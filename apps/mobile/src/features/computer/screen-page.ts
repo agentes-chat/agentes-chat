@@ -1,4 +1,4 @@
-import type { DesktopMode, DesktopViewState } from "@agenteschat/client";
+import { type DesktopCursor, type DesktopMode, type DesktopViewState, desktopCursorFrame } from "@agenteschat/client";
 import { originOf } from "@agenteschat/client/lib/server";
 
 /*
@@ -14,7 +14,9 @@ export type ScreenEvent =
   | { type: "changed" }
   /** The stream's session took its mode (a page from before it never says). */
   | { type: "session"; mode: DesktopMode }
-  | { type: "refused"; why: "tooLong" };
+  | { type: "refused"; why: "tooLong" }
+  /** A step of the agent's pointer (protocol 54): the app draws it over the screen while it watches. */
+  | ({ type: "cursor" } & DesktopCursor);
 
 const VIEW_STATES: ReadonlySet<string> = new Set<DesktopViewState>([
   "connecting",
@@ -68,6 +70,10 @@ export function screenEvent(server: string, from: { url: string; data: string })
   }
   if (m.type === "session" && (m.mode === "watch" || m.mode === "control")) return { type: "session", mode: m.mode };
   if (m.type === "refused" && m.why === "tooLong") return { type: "refused", why: "tooLong" };
+  if (m.type === "cursor") {
+    const cursor = desktopCursorFrame(from.data);
+    return cursor ? { type: "cursor", ...cursor } : null;
+  }
   return null;
 }
 

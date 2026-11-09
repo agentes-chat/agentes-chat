@@ -444,6 +444,37 @@ describe("the broker", () => {
     expect(terminal.viewer.closed?.code).toBe(STREAM_CLOSE.badRequest);
   });
 
+  test("protocol 54: the agent's pointer reaches a desktop's viewer as checked, in its place among the bytes; a terminal's never", async () => {
+    f = await setup();
+    const machine = await paired();
+    const { broker, runners } = brokerFor(machine);
+    const open = async (request: StreamRequest) => {
+      const viewer = fakeSocket();
+      const stream = broker.open(viewer.socket, input(request));
+      await until(() => stream.runner !== null, "the data socket");
+      return { viewer, stream, runner: runners.at(-1) as (typeof runners)[number] };
+    };
+    const desktop = await open(WATCH);
+    const step = { type: "cursor", act: "click", x: 514, y: 558, name: " Join the list ", extra: true };
+    await broker.fromRunner(desktop.runner.link, new Uint8Array([1, 2]));
+    await broker.fromRunner(desktop.runner.link, JSON.stringify(step));
+    await broker.fromRunner(desktop.runner.link, JSON.stringify({ type: "cursor", act: "click" }));
+    await broker.fromRunner(desktop.runner.link, new Uint8Array([3]));
+    expect(desktop.viewer.sent).toEqual([
+      new Uint8Array([1, 2]),
+      '{"type":"cursor","act":"click","x":514,"y":558,"name":"Join the list"}',
+      new Uint8Array([3]),
+    ]);
+    expect(desktop.stream.bytesOut).toBe(3);
+
+    const terminal = await open(TERMINAL);
+    await broker.fromRunner(terminal.runner.link, JSON.stringify({ type: "cursor", act: "type" }));
+    expect(terminal.viewer.sent).toEqual([]);
+    // Only the computer says where its agent points: a viewer that does is cut off.
+    broker.fromViewer(desktop.stream, JSON.stringify({ type: "cursor", act: "type" }));
+    expect(desktop.viewer.closed?.code).toBe(STREAM_CLOSE.badRequest);
+  });
+
   test("caps: 4 viewers per desktop, 3 terminals per agent and 10 per computer; closeWhere and stop", async () => {
     f = await setup();
     const machine = await paired();

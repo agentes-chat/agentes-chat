@@ -1,7 +1,7 @@
 import { Popover as RPopover } from "radix-ui";
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { cx } from "../cx";
-import { EDGE_ROOM } from "../floating";
+import { EDGE_ROOM, joinList } from "../floating";
 import { matchesWords } from "../search";
 import { useFieldControl } from "./Field";
 import { ChosenValue, type SelectOption } from "./Select";
@@ -35,6 +35,9 @@ export interface SearchSelectProps<V extends string = string, O extends SelectOp
   disabled?: boolean;
   "aria-label"?: string;
   className?: string;
+  /** As `Select`'s: `sm` in a row's end, whose edge a wider list keeps (`align="end"`). */
+  size?: "md" | "sm";
+  align?: "start" | "end";
 }
 
 const defaultMatches = (o: SelectOption, query: string) =>
@@ -83,6 +86,8 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
   id,
   disabled,
   className,
+  size = "md",
+  align = "start",
   ...rest
 }: SearchSelectProps<V, O>) {
   const wiring = useFieldControl({ id });
@@ -98,6 +103,8 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
   const flat = useMemo(() => groups.flatMap(([, list]) => list), [groups]);
   const optionId = (i: number) => `${listId}-o${i}`;
   const chosen = Array.isArray(options) ? options.find((o) => o.value === value) : undefined;
+  const trigger = useRef<HTMLButtonElement>(null);
+  const join = useCallback((list: HTMLDivElement | null) => (list ? joinList(list, trigger.current) : undefined), []);
 
   // Opening starts on the chosen option; typing goes back to the first match.
   // biome-ignore lint/correctness/useExhaustiveDependencies: only when it opens
@@ -135,10 +142,11 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
 
   let index = -1;
   return (
-    <div className={cx("ac-select", className)}>
+    <div className={cx("ac-select", size === "sm" && "ac-select--sm", className)}>
       <RPopover.Root open={open} onOpenChange={setOpen}>
         <RPopover.Trigger asChild disabled={disabled}>
           <button
+            ref={trigger}
             type="button"
             className="ac-select__trigger"
             id={wiring.id}
@@ -172,7 +180,14 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
           </button>
         </RPopover.Trigger>
         <RPopover.Portal>
-          <RPopover.Content className="ac-menu ac-tz__menu" align="start" sideOffset={4} collisionPadding={EDGE_ROOM}>
+          <RPopover.Content
+            // Joined to its trigger: one border between them.
+            ref={join}
+            className="ac-menu ac-tz__menu"
+            align={align}
+            sideOffset={-1}
+            collisionPadding={EDGE_ROOM}
+          >
             <div className="ac-tz__searchrow">
               <SearchField
                 size="sm"

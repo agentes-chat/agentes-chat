@@ -312,10 +312,22 @@ html[data-pointer] :focus-visible {
   flex-wrap: wrap;
   row-gap: var(--space-2);
 }
-.ac-acts > .ac-btn--ghost {
+.ac-acts > .ac-btn--ghost,
+.ac-setrow__end > .ac-btn--ghost {
   margin-inline: calc(-1 * var(--ghost-plate));
 }
-.ac-acts > .ac-btn--ghost:not(.ac-btn--icon) {
+/*
+ * Among a settings row's controls (a schedule's selects, then "Parar de receber") a ghost button is flush with them as
+ * in a row of actions: under them, its words start on their edge, its plate reaching out past it.
+ */
+.ac-acts > .ac-btn--ghost:not(.ac-btn--icon),
+.ac-setrow__end > .ac-btn--ghost:not(.ac-btn--icon) {
+  padding-inline: var(--ghost-plate);
+}
+/* The same for a ghost button on a line of its own under a settings row's controls (`ac-btn--under`). */
+.ac-btn--ghost.ac-btn--under {
+  align-self: flex-start;
+  margin-inline-start: calc(-1 * var(--ghost-plate));
   padding-inline: var(--ghost-plate);
 }
 /*
@@ -1283,7 +1295,7 @@ html:not([data-pointer]) .ac-msg--grouped:focus-within .ac-msg__gutter-time {
   margin-top: var(--msg-card-gap);
 }
 /* The name stays on its words, and a line's caption on its bubble. */
-.ac-msg .ac-msg__body > .ac-msg__head + :is(.ac-msg__text, .rq-done, .rq-open) {
+.ac-msg .ac-msg__body > .ac-msg__head + :is(.ac-msg__text, .ac-msg__error-row, .rq-done, .rq-open) {
   margin-top: 2px;
 }
 .ac-msg.ac-msg .ac-msg__body > :is(.ac-msg__own-foot, .ac-msg__foot) {
@@ -1431,22 +1443,37 @@ html:not([data-pointer]) .ac-msg__time--details:focus-visible {
   line-height: 20px;
 }
 /*
- * An error line with its fix and its × after it, out of the .ac-iconline: they stay on the reason's first line, not the
- * middle of a reason that wraps. The words start as far down as a small button (32, 40 on touch) centres a line, so a
- * one-line error is as tall as before and its first line runs through the buttons' middle.
+ * A failed run's reason in its text's place, its × after it, out of the .ac-iconline: on the reason's first line, not
+ * the middle of a reason that wraps. The reason takes the text's size and reading line, so its words stand where a
+ * message's would at every text size and look. The × (32, 40 on touch) hangs over that line by as much as it outgrows
+ * it, so the row is as tall as its words. Its fix (a key, a model) goes on a line of its own under the reason, where
+ * the words start (after the 16px alert and its 6px gap): beside it, it squeezed a long reason to a word per line.
  */
 .ac-msg__error-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) max-content;
+  column-gap: 6px;
+  align-items: start;
 }
 .ac-msg__error-row > .ac-msg__error {
   min-width: 0;
-  margin: calc((var(--control-h-sm) - 20px) / 2) 0 0;
+  margin: 0;
+  font-size: var(--msg-text);
+  line-height: var(--msg-line);
+}
+.ac-msg__error-row > .ac-btn--icon {
+  margin-block: calc((var(--msg-line) - var(--control-h-sm)) / 2);
+}
+/* In the reason's column only: spanning the ×'s too, its width went to that column, sized by its content. */
+.ac-msg__error-row > .ac-btn:not(.ac-btn--icon) {
+  grid-area: 2 / 1;
+  justify-self: start;
+  margin-block-start: var(--space-2);
+  margin-inline-start: calc(16px + 6px);
 }
 @media (pointer: coarse) {
-  .ac-msg__error-row > .ac-msg__error {
-    margin-top: calc((var(--control-h-md) - 20px) / 2);
+  .ac-msg__error-row > .ac-btn--icon {
+    margin-block: calc((var(--msg-line) - var(--control-h-md)) / 2);
   }
 }
 .ac-mention {
@@ -1995,6 +2022,33 @@ html:not([data-pointer]) .ac-select__trigger:focus-visible,
 .ac-select__trigger[aria-invalid="true"] {
   border-color: var(--danger);
 }
+/*
+ * An open list joins its trigger (`joinList`): square where the two meet, one border between them, so they read as one
+ * shape. Where the list reaches past the trigger's edge (`data-wide`), that corner of the list stays round.
+ */
+.ac-select__trigger[data-join] {
+  box-shadow: var(--e2);
+}
+.ac-select__trigger[data-join="bottom"] {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+.ac-select__trigger[data-join="top"] {
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+.ac-menu[data-join="bottom"]:not([data-wide="start"], [data-wide="both"]) {
+  border-start-start-radius: 0;
+}
+.ac-menu[data-join="bottom"]:not([data-wide="end"], [data-wide="both"]) {
+  border-start-end-radius: 0;
+}
+.ac-menu[data-join="top"]:not([data-wide="start"], [data-wide="both"]) {
+  border-end-start-radius: 0;
+}
+.ac-menu[data-join="top"]:not([data-wide="end"], [data-wide="both"]) {
+  border-end-end-radius: 0;
+}
 .ac-select__trigger:disabled {
   cursor: not-allowed;
   color: var(--muted);
@@ -2039,6 +2093,17 @@ html:not([data-pointer]) .ac-select__trigger:focus-visible,
   font-size: 10px;
 }
 .ac-select__lead .ac-icon {
+  width: 16px;
+  height: 16px;
+}
+/* A maker's mark is its bare logo there, as beside text anywhere (`.ac-brand--xs`): the list keeps its tile. */
+.ac-select__lead > .ac-brand {
+  width: 16px;
+  height: 16px;
+  background: none;
+  box-shadow: none;
+}
+.ac-select__lead > .ac-brand svg {
   width: 16px;
   height: 16px;
 }
@@ -3699,6 +3764,8 @@ html:not([data-pointer]) .ac-msg:focus-within .ac-msg__actions,
 .ac-receipt__words {
   min-width: 0;
   text-wrap: balance;
+  /* A failure's reason can hold an address with nowhere to break. */
+  overflow-wrap: anywhere;
 }
 /* The dot and its action are one piece that wraps whole, the dot 4px from each. The room before the dot is the
    words', so a line the dot starts starts on the column. */
@@ -3734,6 +3801,15 @@ html:not([data-pointer]) .ac-msg:focus-within .ac-msg__actions,
   color: var(--ink);
   text-decoration: underline;
   cursor: pointer;
+}
+/* On its way (a retry, opening the plans): muted words, and its spinner (which sits on the capitals) before them. */
+.ac-receipt__action:disabled {
+  color: var(--ink-muted);
+  text-decoration: none;
+  cursor: default;
+}
+.ac-receipt__action > .ac-pixspin {
+  margin-inline-end: 4px;
 }
 html:not([data-pointer]) .ac-receipt__action:focus-visible {
   outline: none;
@@ -5791,7 +5867,6 @@ html:not([data-pointer]) .ac-hint:focus-visible {
 .ac-menu__tip {
   position: fixed;
   z-index: var(--z-floating);
-  translate: 0 -100%;
   pointer-events: none;
 }
 
@@ -8157,11 +8232,12 @@ html:not([data-pointer]) .ac-msg:focus-within .ac-react--add,
   max-height: min(420px, 60vh);
   overflow-y: auto;
 }
+/* An option row's height (OptionRow) whatever the query finds, faces or none: the rows keep one height as it's typed. */
 .ac-palette__item {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 40px;
+  min-height: var(--option-h);
   padding: 0 10px;
   border-radius: calc(var(--radius-section) - var(--palette-pad));
   cursor: pointer;
@@ -10289,11 +10365,17 @@ html:not([data-pointer]) .ac-effort:focus-visible .ac-effort__ramp {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-/* Cards (layout="cards"): side by side, illustration on top, radio in the corner. */
+/* Cards (layout="cards"): illustration on top, radio in the corner. All side by side while each gets 168px, else one
+   per row (`--ac-cards`: how many, from OptionList): never two over one left alone, which a scrollbar coming and going
+   switched between. */
 .ac-optlist__cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  --ac-cards-row: calc(var(--ac-cards, 3) * 168px + (var(--ac-cards, 3) - 1) * 10px);
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+}
+.ac-optlist__cards > .ac-optrow {
+  flex: 1 1 calc((var(--ac-cards-row) - 100%) * 999);
 }
 .ac-optlist--cards .ac-optrow {
   position: relative;
@@ -11399,5 +11481,132 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
   /* Its control left the name's line: the face's middle is that line's axis again. */
   .ac-mediarow:has(> .ac-mediarow__end--wrap) > :is(.ac-mediarow__face, .ac-mediarow__head) {
     --mediarow-axis: var(--mediarow-face);
+  }
+}
+
+/* ---------- AgentCursor: an agent's own pointer over a picture of its screen (Lodi's cursor) ---------- */
+/* The picture's box (set inline): nothing here takes the pointer, and what reaches past the picture is cut at it. */
+.ac-cursor {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--out);
+}
+/* Quiet, it rests fainter where the agent left it; quiet for long, it goes until the next step. */
+.ac-cursor[data-phase="rest"] {
+  opacity: 0.6;
+  transition-duration: 400ms;
+}
+.ac-cursor[data-phase="gone"] {
+  opacity: 0;
+  transition-duration: var(--dur-panel);
+}
+/* As large as the picture: moved by a share of itself, its corner lands on the place at any size of the picture. */
+.ac-cursor__track {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+/* The arrow's tip on that corner: the path's tip is a unit (2 px) into its box. */
+.ac-cursor__arrow {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  width: 24px;
+  height: 24px;
+  overflow: visible;
+  transform-origin: 2px 2px;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.3));
+}
+.ac-cursor__arrow path {
+  stroke: #fff;
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+}
+/*
+ * The name below the arrow's right, its sharp corner toward the tip; where it doesn't fit it turns to the side with more
+ * room (`tagSide`). Words that don't fit beside the name go under it, and wrap: never cut.
+ */
+.ac-cursor__tag {
+  position: absolute;
+  left: 15px;
+  top: 19px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  max-width: min(360px, calc(100% - 24px));
+  overflow: hidden;
+  padding: calc(var(--space-1) / 2) var(--space-2) calc(var(--space-1) / 2) calc(var(--space-1) / 2);
+  border-radius: 3px 9px 9px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  transition: transform var(--dur-base) var(--out);
+}
+.ac-cursor__tag[data-west] {
+  border-radius: 9px 3px 9px 9px;
+  transform: translateX(calc(-100% - 19px));
+}
+.ac-cursor__tag[data-north] {
+  border-radius: 9px 9px 9px 3px;
+  transform: translateY(calc(-100% - 23px));
+}
+.ac-cursor__tag[data-west][data-north] {
+  border-radius: 9px 9px 3px;
+  transform: translate(calc(-100% - 19px), calc(-100% - 23px));
+}
+/* The face and the name keep together: a long name wraps beside the face. */
+.ac-cursor__who {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+}
+.ac-cursor__face {
+  display: flex;
+  flex: none;
+  margin-right: var(--space-1);
+}
+.ac-cursor__name,
+.ac-cursor__what {
+  min-width: 0;
+}
+/* While the tag grows to its words, they hold one line beside the name and are uncovered, never wrapped under it. */
+.ac-cursor__tag[data-morphing] {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.ac-cursor__tag[data-morphing] > * {
+  flex-shrink: 0;
+}
+/* The step in words: it fades in and out while the tag morphs to and from it (`AgentCursor`). */
+.ac-cursor__what {
+  opacity: 0.88;
+  font-weight: 500;
+}
+.ac-cursor__what::before {
+  content: "·";
+  margin: 0 var(--space-1);
+}
+/* Too little room beside the tip for the step's words (a small screen): the tag says only who. */
+.ac-cursor__tag[data-terse] .ac-cursor__what {
+  display: none;
+}
+.ac-cursor__ripple {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border-radius: 50%;
+  background: currentColor;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-cursor,
+  .ac-cursor__tag {
+    transition-duration: 120ms;
   }
 }

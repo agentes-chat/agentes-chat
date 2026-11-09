@@ -10,6 +10,7 @@ import {
   getAgent,
   listMembers,
   NotFoundError,
+  pictureSize,
   removeAvatar,
   setAgentAppearance,
   setAvatar,
@@ -107,6 +108,26 @@ describe("photo bytes", () => {
     expect(has(webp, "VP8 ")).toBe(true);
     expect(webp[20]).toBe(0); // EXIF/XMP flags cleared
     expect(new DataView(webp.buffer).getUint32(4, true)).toBe(webp.length - 8);
+  });
+});
+
+/** A JPEG header only: EXIF orientation `orientation`, 40 wide and 30 tall as stored. */
+const exifJpeg = (orientation: number) => {
+  const tiff = [0x4d, 0x4d, 0, 0x2a, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, orientation, 0, 0, 0, 0, 0, 0];
+  const exif = [0x45, 0x78, 0x69, 0x66, 0, 0, ...tiff];
+  const app1 = [0xff, 0xe1, ((exif.length + 2) >> 8) & 0xff, (exif.length + 2) & 0xff, ...exif];
+  const sof = [0xff, 0xc0, 0, 17, 8, 0, 30, 0, 40, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1];
+  return new Uint8Array([0xff, 0xd8, ...app1, ...sof, 0xff, 0xda, 0, 2]);
+};
+
+describe("a picture's size", () => {
+  test("is as it shows: a JPEG its EXIF turns a quarter has its sides swapped; anything else has none", () => {
+    expect(pictureSize(PNG)).toEqual({ width: 512, height: 512 });
+    expect(pictureSize(exifJpeg(1))).toEqual({ width: 40, height: 30 });
+    expect(pictureSize(exifJpeg(3))).toEqual({ width: 40, height: 30 });
+    expect(pictureSize(exifJpeg(6))).toEqual({ width: 30, height: 40 });
+    expect(pictureSize(new TextEncoder().encode("GIF89a, or not a picture at all"))).toBeNull();
+    expect(pictureSize(exifJpeg(6).slice(0, 12))).toBeNull();
   });
 });
 

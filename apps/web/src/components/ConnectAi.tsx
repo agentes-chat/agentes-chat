@@ -1,73 +1,29 @@
 import type { ConnectIntent } from "@agenteschat/client";
-import {
-  keys,
-  useAddCredential,
-  useAiAccounts,
-  useAiStatus,
-  useApi,
-  useCredentials,
-  useMachines,
-  useModels,
-} from "@agenteschat/client";
-import { listsExisting } from "@agenteschat/client/lib/ai-accounts";
-import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
-import { errorCode, errorText, keyRefusal } from "@agenteschat/client/lib/errors";
+import { useAgentDetail, useAiStatus, useApi } from "@agenteschat/client";
+import { errorCode, errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { stepPermissions } from "@agenteschat/client/lib/home";
-import {
-  type AgentAi,
-  type AiChoice,
-  agentAi,
-  agentPlan,
-  aiStateOf,
-  allAgents,
-  defaultChoice,
-  defaultTarget,
-  type ExistingSignIn,
-  freePlanAccount,
-  gateDims,
-  mayConnectAi,
-  type PlanChoice,
-  type PlanGate,
-  signsInOnce,
-} from "@agenteschat/client/lib/no-ai";
+import { aiStateOf, choiceOfIntent, mayConnectAi, type PlanChoice } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
-import { providerGuess, providerLabel } from "@agenteschat/client/lib/providers";
-import { isRightHand, rightHandOf, rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
-import { Button, Dialog, DialogBody, DialogFooter, Spinner } from "@agenteschat/ui";
-import { useQueryClient } from "@tanstack/react-query";
+import { isRightHand, rightHandOf } from "@agenteschat/client/lib/right-hand";
+import { Dialog, DialogBody, Spinner } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  AiPicker,
-  ExistingRows,
-  ExistingThinks,
-  type ExistingUsed,
-  type KeyDraft,
-  KeyPanel,
-  PlanHold,
-  PlanPanel,
-  PlanWithoutAgent,
-  useGatesWithoutAgent,
-  usePlanGates,
-  usePlanHold,
-} from "@/components/ai/ConnectAiSteps";
-import { EndpointForm } from "@/components/ai/EndpointForm";
+import { AgentAiForm, type AiAgent, type AiStart, LoneAiFlow, TeamAi } from "@/components/ai/AgentAi";
+import { PlanHold, usePlanHold } from "@/components/ai/ConnectAiSteps";
 import { useOrg } from "@/components/org-context";
-import { ProviderKeySelect } from "@/components/ProviderKey";
 import { useDirectory } from "@/hooks/useDirectory";
-import { lookOf } from "@/lib/look";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import "./no-ai.css";
 
 /*
  * "Conectar uma IA" (ADR 0061): one dialog for every place that says an agent has no AI (the banner, the agent's
- * card, the receipt under a message, its "Sem IA" chip, Settings › Contas de IA). The same picker as the setup's AI
- * step: the plans first (Claude chosen), each signing in on the agent's computer, then the workspace's API key; a
- * message that asked for one of them opens on it. For one agent with no AI, what the person already has comes before
- * them (`ExistingRows`). Connected from a card or a message, the agent then answers it by itself.
+ * card, the receipt under a message, its "Sem IA" chip, Settings › Contas de IA). For one agent, the AI select of its
+ * page (`AgentAiForm`), each pick saved at once; for several, who it's for and the same select; for someone with no
+ * agent, the steps alone. A message or card that named a plan or a key opens on its steps. Connected from a card or a
+ * message, the agent then answers it by itself.
  */
 
 export interface ConnectAiRequest {
@@ -192,322 +148,110 @@ function ConnectAiDialog({
 }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
+  const navigate = useNavigate();
   const dir = useDirectory(org.id);
   const status = useAiStatus(org.id);
-  const qc = useQueryClient();
-  const navigate = useNavigate();
-  const add = useAddCredential(org.id, true);
-  const api = useApi();
-  const toast = useToast();
-  const models = useModels();
-  // An API key is the organization's (admins); a plan thinks only for its owner's agents (ADR 0059 §3).
-  const mayAddKey = can(org, "manage_credentials");
   const hold = usePlanHold();
   // The team's right hand thinks with each person's own AI (ADR 0137 §11): everyone's to connect for their DM.
   const mine = dir.agents.filter((a) => a.ownerUserId === me.user.id || isRightHand(a));
-  // An agent's card names whom to choose from. Opened for one agent, it is for that agent alone: the title names it,
-  // so no For offers another. Anywhere else every agent of the viewer's stays a choice.
+  // An agent's card names whom it's for; opened for one agent, it is for that agent alone.
   const named = request.agentIds?.length ? request.agentIds : null;
   const only = named ? (named.length === 1 ? named[0] : undefined) : request.agentId;
   const one = only ? dir.agentById.get(only) : undefined;
-  const rightHand = isRightHand(one);
   const pool = request.forNewAgent ? [] : one ? [one.id] : named;
-  const agents = (pool ? mine.filter((a) => pool.includes(a.id)) : mine).map((a) => ({
+  // Of theirs, those that still have no AI (by the AI status, as its "Sem IA" chip); one asked for, whatever it has.
+  // With every one of theirs thinking already: their one agent, else none, since a new AI moving them all would be a
+  // surprise (it is added, for each agent's select, as for someone with no agent).
+  const noAi = (id: string) => (aiStateOf(status.data, id) ?? "no_ai") === "no_ai";
+  const own = mine.filter((a) => !isRightHand(a));
+  const withoutAi = mine.filter((a) => noAi(a.id));
+  // Named ones in the order they were named.
+  const found = (
+    pool
+      ? pool.flatMap((id) => dir.agentById.get(id) ?? [])
+      : withoutAi.length > 0
+        ? withoutAi
+        : own.length === 1
+          ? own
+          : []
+  ).filter((a) => one || mine.includes(a));
+  // Held from the moment they're known: agents getting an AI here, one by one, don't change whom it's for midway.
+  const [held, setHeld] = useState<string[] | null>(null);
+  const ready = !dir.loading && !status.isPending;
+  useEffect(() => {
+    if (ready && held === null) setHeld(found.map((a) => a.id));
+  }, [ready, held, found]);
+  const agents = held ? held.flatMap((id) => dir.agentById.get(id) ?? []) : found;
+  const detail = useAgentDetail(org.id, one?.id ?? agents[0]?.id ?? "");
+  // A plan or a key the message or card named, a key pasted in the composer, or the computer just got ready.
+  const asked = request.plan ?? choiceOfIntent(request.intent);
+  const start: AiStart = {
+    ...(asked && asked !== "key" ? { plan: asked } : {}),
+    ...(asked === "key" || request.apiKey ? { key: true } : {}),
+    ...(request.provider ? { provider: request.provider } : {}),
+    ...(request.apiKey ? { apiKey: request.apiKey } : {}),
+    ...(request.ready ? { ready: true } : {}),
+    // Not opened for an agent (Settings, the banner): a new AI to connect, its providers at once.
+    ...(only ? {} : { other: true }),
+  };
+  const asAi = (a: (typeof dir.agents)[number]): AiAgent => ({
     id: a.id,
     name: a.name,
-    appearance: lookOf(a),
-    initials: dir.agentInitials(a.id),
-  }));
-  const machines = useMachines(org.id);
-  // The agents a plan or a key was connected for here: they think with it before the AI status says so.
-  const [linked, setLinked] = useState<Record<string, AiChoice>>({});
-  const aiOf = (id: string): AgentAi => linked[id] ?? agentAi(dir.agentById.get(id), aiStateOf(status.data, id));
-  const hasAi = (id: string) => aiOf(id) !== null;
-  // By the AI status, as its "Sem IA" chip: an agent on a plan whose sign-in is gone has none either.
-  const noAi = (id: string) => !linked[id] && (aiStateOf(status.data, id) ?? "no_ai") === "no_ai";
-  const machineOf = (id: string) => machines.data?.find((m) => m.agents.some((a) => a.id === id))?.id;
-  const accounts = useAiAccounts(org.id);
-  const setOf = (c: AiChoice) =>
-    c === "key"
-      ? []
-      : allAgents({
-          choice: c,
-          agents,
-          aiOf,
-          machineOf,
-          sharedOn: (id) =>
-            signsInOnce(
-              c,
-              accounts.data?.computers.find((m) => m.machineId === id),
-            ),
-        });
-  // Only a pick is kept; else whom it's for is worked out on each render (a link opens this before the agents load).
-  const [pickedTarget, setPickedTarget] = useState<string>();
-  // Held once a sign-in starts (`onStart`): every move it makes gives an agent an AI, which would move the default.
-  const [heldReader, setHeldReader] = useState<string>();
-  const aimed = { agents, hasAi, asked: request.agentId, picked: pickedTarget };
-  // With no set, the agent whose computer the panel reads, "All agents" too (they're on that one's computer).
-  const reader = heldReader ?? defaultTarget({ ...aimed, set: [] });
-  const theirs = one !== undefined && one.ownerUserId !== me.user.id && !rightHand;
-  // The one agent the dialog is for: what the person already has comes first for it while it has no AI. An admin sees
-  // the accounts of someone else's agent, locked, and may give it a workspace key (ADR 0041 §4).
-  const mayUseKeys = can(org, "manage_agents");
-  const forId = one?.id ?? (agents.length === 1 ? agents[0]?.id : undefined);
-  const forAgent = forId ? { id: forId, name: dir.agentById.get(forId)?.name ?? "" } : undefined;
-  const gates = usePlanGates(org.id, reader ?? (theirs && mayUseKeys ? one?.id : undefined));
-  const credentials = useCredentials(org.id, mayUseKeys && forId !== undefined);
-  // No agent of theirs yet, and it isn't opened for someone else's: a plan signs in for the agents they create.
-  const bare = agents.length === 0 && !theirs && !named;
-  const bareGates = useGatesWithoutAgent(org.id, bare);
-  const gateOf = (c: PlanChoice): PlanGate =>
-    agents.length > 0 ? gates.gateOf(c) : bare ? bareGates.at(c).gate : { state: "loading" };
-  const [used, setUsed] = useState<ExistingUsed | null>(null);
-  const [login, setLogin] = useState<ExistingSignIn | null>(null);
-  const [picked, setPicked] = useState<AiChoice | null>(null);
-  const choice =
-    picked ??
-    request.plan ??
-    defaultChoice({
-      intent: request.intent,
-      // With no agent in the workspace, a plan helps as much as a key: Claude first, as everywhere.
-      ownsAgents: agents.length > 0 || dir.agents.length === 0 || request.forNewAgent === true,
-      mayAddKey,
-      claudeGate: gateOf("claude"),
-      // Signing in on Claude's panel would move a Codex agent onto Claude Code: one agent opens on its own plan.
-      plan: agentPlan(one),
-    });
-  const all = setOf(choice).map((a) => ({ ...a, done: aiOf(a.id) === choice }));
-  const target = defaultTarget({ ...aimed, set: all });
-  const [draft, setDraft] = useState<KeyDraft>(() => ({
-    provider: request.provider === CUSTOM_PROVIDER ? CUSTOM_PROVIDER : providerGuess(request.apiKey, request.provider),
-    apiKey: request.apiKey ?? "",
-  }));
-  // Anything connected shows Done; only a saved key closes the key's field (after a plan, it's for the other agents).
-  const [connected, setConnected] = useState(false);
-  const [keySaved, setKeySaved] = useState(false);
-  const [keyNote, setKeyNote] = useState<string>();
-  const [refused, setRefused] = useState<ReturnType<typeof keyRefusal>>(null);
-  const done = () => {
-    setConnected(true);
-    void qc.invalidateQueries({ queryKey: keys.aiStatus(org.id) });
-    // What "Quem pensa" lists (a new agent's step, an agent's page): the plan's models there are ready now.
-    void qc.invalidateQueries({ queryKey: keys.brainMachines(org.id) });
-    onConnected();
-  };
-  const saveKey = () => {
-    if (draft.provider === CUSTOM_PROVIDER) return;
-    setRefused(null);
-    const provider = providerLabel(draft.provider);
-    add.mutate(
-      { provider: draft.provider, label: provider, apiKey: draft.apiKey.trim() },
-      {
-        onError: (error) => {
-          setRefused(keyRefusal(t, error));
-          if (!keyRefusal(t, error)) toast.show(errorText(t, error), "error");
-        },
-        onSuccess: async (key) => {
-          // The right hand asked for a key ("Usar uma chave de API"): the workspace's AI from now on, and the person's
-          // own DM goes back to it.
-          let moved = false;
-          if (one && rightHand) {
-            moved = await rightHandOnKey(api, org.id, one, key, models.data?.models ?? []).then(
-              () => true,
-              (error) => {
-                toast.show(errorText(t, error), "error");
-                return false;
-              },
-            );
-            void qc.invalidateQueries({ queryKey: keys.agents(org.id) });
-            void qc.invalidateQueries({ queryKey: keys.agentBrain(org.id, one.id) });
-          }
-          setKeyNote(
-            key.check === "unchecked"
-              ? t("connectAi.key.savedUnchecked", { provider })
-              : moved && one
-                ? thinksWithLine(t, "workspace", one.name, key.label)
-                : undefined,
-          );
-          setKeySaved(true);
-          done();
-        },
-      },
-    );
-  };
-
-  // Someone else's agent, or no agent of theirs among those: who connects a plan instead.
-  const owner = one?.ownerUserId ? dir.memberById.get(one.ownerUserId)?.name : undefined;
-  const locked = theirs
-    ? owner
-      ? t("noAi.locked", { name: one.name, owner: owner.split(" ")[0] })
-      : t("noAi.lockedAdmins")
-    : named && agents.length === 0
-      ? t("noAi.lockedAdmins")
-      : undefined;
+    ownerUserId: a.ownerUserId,
+    model: detail.data?.id === a.id ? detail.data.model : a.model,
+    key: detail.data?.id === a.id ? detail.data.credentialId : null,
+  });
+  const single = one ?? (agents.length === 1 ? agents[0] : undefined);
+  // Over Criar agente a computer connects in a new tab, so the draft stays; anywhere else the dialog makes way for it.
   const toComputers = () => {
     if (request.forNewAgent) {
       window.open(`/org/${org.id}/settings/computers`, "_blank", "noopener");
       return;
     }
     onClose();
-    void navigate({
-      to: "/org/$orgId/settings/$section",
-      params: { orgId: org.id, section: "computers" },
-    });
+    void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "computers" } });
   };
+  const keyFirst =
+    !request.plan &&
+    !request.forNewAgent &&
+    own.length === 0 &&
+    dir.agents.length > 0 &&
+    can(org, "manage_credentials");
   return (
     <Dialog
       open
       onOpenChange={(o) => !o && onClose()}
-      title={
-        one && (theirs || target === one.id)
-          ? t("connectAi.titleFor", agentGrammar(one.name))
-          : t("connectAi.title.any")
-      }
+      title={one ? t("connectAi.titleFor", agentGrammar(one.name)) : t("connectAi.title.any")}
       closeLabel={t("common.close")}
-      width={600}
+      width={560}
+      className="agp-wdlg"
     >
       <DialogBody>
-        {/* A link opens this before the agents and their AI load, and what it opens on follows them. */}
         {hold ? (
           // Every way in lands here, a card's or a key pasted in the composer: nothing connects before the plan.
           <PlanHold hold={hold} />
         ) : dir.loading || status.isPending ? (
           <Spinner />
-        ) : used && forAgent ? (
-          <ExistingThinks agent={forAgent} used={used} />
+        ) : single ? (
+          <AgentAiForm
+            agent={asAi(single)}
+            mode="connect"
+            start={start}
+            onThinks={onConnected}
+            onComputer={toComputers}
+          />
+        ) : agents.length > 1 ? (
+          <TeamAi agents={agents.map(asAi)} start={start} onThinks={onConnected} onComputer={toComputers} />
         ) : (
-          <AiPicker
-            choice={login ? null : choice}
-            // Kept while a row's sign-in is open: its panel, under that row, says when it's done.
-            have={(held) =>
-              forAgent &&
-              (login || listsExisting(dir.agentById.get(forAgent.id), noAi(forAgent.id))) && (
-                <ExistingRows
-                  gates={gates}
-                  agent={forAgent}
-                  credentials={credentials.data ?? []}
-                  named={!one}
-                  signIn={login}
-                  panel={held}
-                  onSignIn={(next) => {
-                    setLogin(next);
-                    setPicked(next.choice);
-                    setPickedTarget(forAgent.id);
-                    setHeldReader(undefined);
-                  }}
-                  onManageKeys={() => {
-                    onClose();
-                    void navigate({
-                      to: "/org/$orgId/settings/$section",
-                      params: { orgId: org.id, section: "keys" },
-                    });
-                  }}
-                  onUsed={(id, next) => {
-                    setLinked((l) => ({ ...l, [id]: next.choice }));
-                    setUsed(next);
-                    done();
-                  }}
-                />
-              )
-            }
-            onPick={(next) => {
-              setPicked(next);
-              setLogin(null);
-              if (next === choice) return;
-              setHeldReader(undefined);
-              // Another plan moves on to whoever still has no AI once this one's agents think with a plan from here.
-              if (next !== "key" && Object.keys(linked).length > 0)
-                setPickedTarget(defaultTarget({ agents, hasAi, set: setOf(next) }));
-            }}
-            dims={(c) => (agents.length > 0 || bare) && gateDims(gateOf(c))}
-            busy={add.isPending}
-            keySelect={
-              mayAddKey &&
-              !keySaved && (
-                <ProviderKeySelect
-                  value={draft.provider}
-                  disabled={add.isPending}
-                  onChange={(provider) => setDraft((d) => ({ ...d, provider }))}
-                />
-              )
-            }
-            panel={
-              choice === "key" ? (
-                <KeyPanel
-                  draft={draft}
-                  onDraft={setDraft}
-                  locked={!mayAddKey}
-                  saved={keySaved}
-                  savedNote={keyNote}
-                  refused={refused}
-                  saving={add.isPending}
-                  onSave={saveKey}
-                  endpoint={
-                    <EndpointForm
-                      orgId={org.id}
-                      onDone={() => {
-                        setKeySaved(true);
-                        done();
-                      }}
-                    />
-                  }
-                />
-              ) : bare ? (
-                <PlanWithoutAgent
-                  key={choice}
-                  choice={choice}
-                  gates={bareGates}
-                  mayAddKey={mayAddKey}
-                  onKey={() => setPicked("key")}
-                  onComputer={toComputers}
-                  onDone={() => {
-                    void qc.invalidateQueries({ queryKey: keys.aiAccounts(org.id) });
-                    done();
-                  }}
-                />
-              ) : (
-                <PlanPanel
-                  key={choice}
-                  choice={choice}
-                  gates={gates}
-                  justReady={request.ready}
-                  agents={agents}
-                  all={all}
-                  target={target}
-                  onTarget={(next) => {
-                    setPickedTarget(next);
-                    setHeldReader(undefined);
-                  }}
-                  onStart={() => {
-                    setPickedTarget(target);
-                    setHeldReader(reader);
-                  }}
-                  locked={locked}
-                  {...(login?.choice === choice ? { login } : {})}
-                  onKey={() => {
-                    setPicked("key");
-                    setLogin(null);
-                  }}
-                  onComputer={toComputers}
-                  onDone={(ids) => {
-                    // The panel stays on whom it was for, saying it's done.
-                    setPickedTarget(target);
-                    setLinked((l) => ({ ...l, ...Object.fromEntries(ids.map((id) => [id, choice])) }));
-                    done();
-                  }}
-                />
-              )
-            }
+          // No agent of theirs without an AI: a plan signs in for the agents they create. An admin among other
+          // people's agents starts on the workspace's key, which serves every agent with no plan.
+          <LoneAiFlow
+            start={keyFirst ? { ...start, key: true } : start}
+            onDone={onConnected}
+            onComputer={toComputers}
           />
         )}
       </DialogBody>
-      {(connected || (bare && choice !== "key" && freePlanAccount(bareGates.accounts, choice))) && (
-        <DialogFooter>
-          <Button variant="primary" onClick={onClose}>
-            {t("connectAi.done")}
-          </Button>
-        </DialogFooter>
-      )}
     </Dialog>
   );
 }

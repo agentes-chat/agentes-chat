@@ -112,6 +112,13 @@ export function useAgentPresence(agentId: string | null | undefined): AgentShown
   // A run of its this tab hears: at work before the list's next read says so.
   const working = useStreams((s) => (agentId ? agentStateIn(s, agentId) !== "idle" : false));
   if (!on || status === undefined) return null;
+  return shownOf(status, ai, working);
+}
+
+type AiState = AiStatus["agents"][number]["state"];
+
+/** How an agent shows from its row in the statuses, its AI's state and whether a run of it is heard here. */
+function shownOf(status: AgentStatus | null, ai: AiState | null | undefined, working: boolean): AgentShown {
   // At work it has an AI, whatever the AIs' list reads for this person (the right hand's is each person's own).
   const noAi = ai === "no_ai" && !working && status?.working !== true;
   return {
@@ -120,6 +127,33 @@ export function useAgentPresence(agentId: string | null | undefined): AgentShown
     activeAt: status?.activeAt ?? null,
     noAi,
   };
+}
+
+/**
+ * Every agent's presence and line, for a list that groups them (`useAgentPresence` is one face's): null for one while
+ * the statuses load. `working`: a run of it this tab hears.
+ */
+export function useAgentsShown(working: (agentId: string) => boolean) {
+  const { org } = useOrg();
+  const api = useApi();
+  const statuses = useQuery({
+    queryKey: keys.agentStatus(org.id),
+    queryFn: () => api.agents.statuses(org.id),
+    staleTime: 15_000,
+  }).data;
+  const ai = useQuery({
+    queryKey: keys.aiStatus(org.id),
+    queryFn: () => api.agents.aiStatus(org.id),
+    staleTime: 30_000,
+  }).data;
+  return (agentId: string): AgentShown | null =>
+    statuses
+      ? shownOf(
+          statuses.find((s) => s.agentId === agentId) ?? null,
+          ai?.agents.find((a) => a.agentId === agentId)?.state,
+          working(agentId),
+        )
+      : null;
 }
 
 /** An agent's line in words with its emoji, or null; `locale` words when an agent out of office is back. */

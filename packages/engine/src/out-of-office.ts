@@ -19,24 +19,11 @@ export interface OutOfOffice {
 
 export type OutOfOfficeAgent = Pick<
   Agent,
-  | "id"
-  | "orgId"
-  | "model"
-  | "credentialId"
-  | "brain"
-  | "brainFallback"
-  | "brainAccountId"
-  | "machineId"
-  | "monthlyBudgetNanoUsd"
+  "id" | "orgId" | "model" | "credentialId" | "brain" | "brainAccountId" | "machineId" | "monthlyBudgetNanoUsd"
 >;
 
 export interface OutOfOfficeOptions {
   now?: Date;
-  /**
-   * Whether the agent's model brain has a key (the gateway's `hasModelCredential`): a plan at its limit falls back to
-   * it in a conversation. Absent: a plan at its limit with the fallback on isn't read as out (it may still answer).
-   */
-  hasModel?: (agent: OutOfOfficeAgent) => Promise<boolean>;
 }
 
 /**
@@ -76,18 +63,9 @@ export async function outOfOffice(
     const account = a.brainAccountId ? accounts.get(a.brainAccountId) : undefined;
     const usable = account && account.machineId === a.machineId && account.kind === kind ? account : undefined;
     const usage = usable ? usable.usage : (machines.get(a.machineId)?.[kind] ?? null);
+    // Nothing stands in for a plan at its limit (no API fallback): the agent is out until it resets.
     const limited = planLimitOf(a.machineId, kind, usable?.id, usage, ms);
-    if (!limited) continue;
-    const plan: OutOfOffice = { reason: "plan", until: limited.until !== null ? new Date(limited.until) : null };
-    // A conversation falls back to the model brain (ADR 0032 §5): out only when that can't answer either.
-    if (a.brainFallback === false) {
-      out.set(a.id, plan);
-      continue;
-    }
-    if (!options.hasModel) continue;
-    const hasModel = await options.hasModel(a).catch(() => true);
-    if (!hasModel) out.set(a.id, plan);
-    else if (budgetSpent(a)) out.set(a.id, budgetOut);
+    if (limited) out.set(a.id, { reason: "plan", until: limited.until !== null ? new Date(limited.until) : null });
   }
   return out;
 }
@@ -167,7 +145,6 @@ export async function outOfOfficeIds(
       model: agents.model,
       credentialId: agents.credentialId,
       brain: agents.brain,
-      brainFallback: agents.brainFallback,
       brainAccountId: agents.brainAccountId,
       machineId: agents.machineId,
       monthlyBudgetNanoUsd: agents.monthlyBudgetNanoUsd,

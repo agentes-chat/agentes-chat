@@ -1921,6 +1921,8 @@ export const ptBR = {
     popoverTitle: "Agentes",
     seenBy: "Vista por {{names}}",
     retry: "Tentar de novo",
+    /** On its way (`receipts.retry` pressed): the line says so until the server answers. */
+    retrying: "Tentando de novo…",
     platformCap: "Mencione um agente com @ para ele responder.",
     mentionNeeded: "Nenhum agente vai responder sem @",
     mentionNeededHint:
@@ -2339,9 +2341,14 @@ export const ptBR = {
     rightHand: {
       computer_away: "{{name}} não consegue responder agora: o computador do plano está fora do ar.",
       computer_failed: "{{name}} não consegue responder agora: o computador do plano teve um problema.",
+      /** The plan's CLI on that computer failed, not the computer. */
+      cli_failed: "{{name}} não consegue responder agora: a IA do plano parou com um erro.",
       plan_limit: "{{name}} não consegue responder agora: o plano chegou ao limite.",
       plan_not_shared:
         "Conecte o seu plano para conversar com {{name}}: o plano do workspace só atende o próprio dono.",
+      /** Um pedido que não veio de uma pessoa (de outro agente, de uma rotina): o plano de ninguém responderia a ele. */
+      plan_unattended:
+        "{{name}} não respondeu: o pedido não veio de uma pessoa, e o plano do workspace só atende o próprio dono.",
       runner_outdated:
         "{{name}} não consegue responder agora: o programa no computador do plano precisa ser atualizado.",
       plan_tools:
@@ -2374,6 +2381,49 @@ export const ptBR = {
     chip: "Sem IA",
   },
   /** The Connect dialog: its first step and the plan sign-in around the existing flows. */
+  /**
+   * The AI select (one list wherever an agent's AI is chosen): the viewer's plans, other people's plans, the workspace's
+   * API keys, and the last row to connect another; the notes under it and the provider list of "Conectar outra IA".
+   */
+  aiSelect: {
+    placeholder: "Escolha uma IA",
+    groupOthers: "Planos de outras pessoas",
+    groupKeys: "Chaves de API",
+    connect: "Conectar outra IA",
+    connectLine: "Outra conta, plano ou chave de API",
+    /** The computer's own sign-in, on line 2 ("Login no MacBook · 5h 20%"). */
+    ownOn: "Login no {{computer}}",
+    keyRefused: "Chave recusada",
+    unknown: "Login não confirmado",
+    inUse: "Em uso por {{agents}}",
+    keyDefault: "Padrão do workspace · termina em {{hint}}",
+    serverKey: "Chave do Claude deste servidor",
+    serverKeyLine: "Definida no servidor",
+    signedOut: "{{label}} saiu da conta. Entre de novo para o {{name}} usar.",
+    signedOut_female: "{{label}} saiu da conta. Entre de novo para a {{name}} usar.",
+    limited: "Com esta conta, o {{name}} só volta a responder {{when}}.",
+    limited_female: "Com esta conta, a {{name}} só volta a responder {{when}}.",
+    limitedUnknown: "Com esta conta, o {{name}} só volta a responder quando o plano renovar.",
+    limitedUnknown_female: "Com esta conta, a {{name}} só volta a responder quando o plano renovar.",
+    /** A login that thinks for one agent, picked for another: who stops thinking with it. */
+    move: "{{agent}} deixa de pensar com ela.",
+    moveTo: "Mover para o {{name}}",
+    moveTo_female: "Mover para a {{name}}",
+    lent: "{{owner}} recebe um e-mail e pode tirar de volta.",
+    useLent: "Usar o plano de {{owner}}",
+    /** The head of the steps that sign a signed-out account in again. */
+    signInAgain: "Entrar de novo em {{label}}",
+    /** Above the select for several agents. */
+    for: "Para {{names}}",
+    plans: "Seu plano de IA",
+    endpointLine: "Um gateway ou servidor seu",
+    keyLocked: "Só um admin adiciona",
+    preparing: "Preparando o computador",
+    /** A plan's tiers on one line of the provider list (the steps keep the full ones). */
+    geminiTiers: "Google AI Pro, Ultra ou Enterprise",
+    cursorTiers: "Pro, Pro+, Ultra ou Teams",
+    undo: "Desfazer",
+  },
   connectAi: {
     title: {
       any: "Conectar uma IA",
@@ -2387,25 +2437,10 @@ export const ptBR = {
     },
     titleFor: "Conectar uma IA para o {{name}}",
     titleFor_female: "Conectar uma IA para a {{name}}",
-    /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
-    have: {
-      title: "Já conectadas",
-      titleFor: "Já conectadas, para o {{name}}",
-      titleFor_female: "Já conectadas, para a {{name}}",
-      other: "Ou conecte outra",
-      manageKeys: "Gerenciar ou apagar chaves",
-    },
     billing: "Um plano entra no computador do workspace, e o computador vem com um plano ativo do agentes.chat.",
     billingWeb: "Escolha um na web, em agentes.chat.",
     orPayGo: "Ou pague pelo uso",
-    /** The two ways to pay, on a control the width of a phone: keep them short. */
-    pay: {
-      label: "Como você paga?",
-      plan: "Com um plano",
-      key: "Com chave de API",
-    },
     pick: {
-      plan: "Plano",
       placeholder: "Escolha um plano",
       search: "Buscar provedores",
       searchPlaceholder: "Nome do provedor",
@@ -2460,10 +2495,6 @@ export const ptBR = {
       sharedLower: "a conta que os seus agentes dividem",
       free: "Modelos grátis do OpenCode",
       freeLower: "os modelos grátis do OpenCode",
-      one: "Uma conta só para o {{name}}",
-      one_female: "Uma conta só para a {{name}}",
-      /** For "Todos os agentes": one sign-in each, with the same account. */
-      each: "Uma conta só para eles",
     },
     popup: {
       title: "Conectando {{name}}",
@@ -2481,15 +2512,11 @@ export const ptBR = {
       keyFor: "Chave de API para {{names}}",
       state: { done: "Pronto", now: "Entrando", next: "Esperando" },
     },
-    /** The plan panel's head: whom the plan thinks for. */
-    for: "Para",
-    all: "Todos os agentes",
     agentAria: "Agentes que usam este plano",
     each: "Um login por agente, com a mesma conta.",
     eachHint: "Cada agente tem o próprio login. Todos dividem os limites do seu plano.",
     once: "Um login só para todos.",
     onceHint: "Todos dividem os limites do seu plano.",
-    use: "Usar {{label}}",
     another: "Outra conta",
     /** Before a new sign-in, where the person already has an account of that plan on that computer (`reusableAccount`). */
     reuse: {
@@ -4409,8 +4436,6 @@ export const ptBR = {
         label: "Como trabalha",
         computer: "Trabalha no",
         brain: "Pensa com",
-        /** On a plan: the plan in the label, the model and its effort on the line under it. */
-        brainWith: "Pensa com {{plan}}",
         browser: "Navegador",
         effort: "esforço {{level}}",
       },
@@ -4426,15 +4451,9 @@ export const ptBR = {
       saved: {
         brain: "O {{name}} agora pensa com {{brain}}.",
         brain_female: "A {{name}} agora pensa com {{brain}}.",
-        brainMoved: "O {{name}} agora trabalha no {{computer}} e pensa com {{brain}}.",
-        brainMoved_female: "A {{name}} agora trabalha no {{computer}} e pensa com {{brain}}.",
         /** From the API onto a plan, it answers only its owner (ADR 0059 §5): "você", or their name. */
         brainOwner: "O {{name}} agora pensa com {{brain}} e só atende {{owner}}.",
         brainOwner_female: "A {{name}} agora pensa com {{brain}} e só atende {{owner}}.",
-        brainMovedOwner: "O {{name}} agora trabalha no {{computer}}, pensa com {{brain}} e só atende {{owner}}.",
-        brainMovedOwner_female: "A {{name}} agora trabalha no {{computer}}, pensa com {{brain}} e só atende {{owner}}.",
-        account: "O {{name}} agora usa a conta {{account}}.",
-        account_female: "A {{name}} agora usa a conta {{account}}.",
         computer: "O {{name}} agora trabalha no {{computer}}.",
         computer_female: "A {{name}} agora trabalha no {{computer}}.",
         none: "O {{name}} agora está sem computador.",
@@ -4454,15 +4473,7 @@ export const ptBR = {
         model: "Chave de API",
         modelText: "Pago por uso. Conta no orçamento do {{name}}.",
         modelText_female: "Pago por uso. Conta no orçamento da {{name}}.",
-        /** A plan's card: `plan` is its name ("Claude", "ChatGPT", "OpenCode Go"). */
-        planText: "Usa o seu plano do {{plan}}",
-        /** To anyone but the agent's owner: whose plan it is. */
-        planTextOf: "Usa o plano do {{plan}} de {{owner}}",
-        moves: "Vai para o {{computer}}",
-        off: "O {{computer}} está offline",
-        none: "Nenhum computador tem",
         planModel: "Modelo",
-        account: "Conta",
         /** To an admin: the accounts are the agent's owner's, since a plan thinks only for its owner's agents. */
         accountWho: "Só contas de {{owner}}, responsável pelo {{name}}: um plano só pensa pelos agentes do seu dono.",
         accountWho_female:
@@ -4476,24 +4487,30 @@ export const ptBR = {
         /** Under the account for someone who may use other people's plans (`use_others_plans`). */
         accountOthers:
           "Os planos de outras pessoas mostram de quem são. O dono recebe um e-mail e pode tirar de volta.",
-        addAccount: "Adicionar conta",
         signInAgain: "Entrar de novo",
-        connectPlan: "Conectar outro plano",
-        keyLabel: "Chave da API",
-        fallbackTitle: "Se o {{computer}} parar de responder, responder pela API",
-        /** The switch's ⓘ: the same in both states. */
-        fallbackHint:
-          "Responde pela API e conta no orçamento do {{name}}. Se não, o {{name}} avisa quem chamou e espera o computador voltar.",
-        fallbackHint_female:
-          "Responde pela API e conta no orçamento da {{name}}. Se não, a {{name}} avisa quem chamou e espera o computador voltar.",
         effort: "Esforço",
-        efforts: { auto: "Automático", low: "Baixo", medium: "Médio", high: "Alto", max: "Máximo" },
-        effortsLower: { auto: "automático", low: "baixo", medium: "médio", high: "alto", max: "máximo" },
+        efforts: {
+          auto: "Automático",
+          low: "Baixo",
+          medium: "Médio",
+          high: "Alto",
+          xhigh: "Muito alto",
+          max: "Máximo",
+        },
+        effortsLower: {
+          auto: "automático",
+          low: "baixo",
+          medium: "médio",
+          high: "alto",
+          xhigh: "muito alto",
+          max: "máximo",
+        },
         effortText: {
           auto: "O modelo Automático escolhe o esforço de cada tarefa. Escolha um modelo para fixar o esforço.",
           low: "Responde rápido. Bom para perguntas simples.",
           medium: "O padrão. Pensa o suficiente na maioria das vezes.",
           high: "Pensa mais em tarefas difíceis. Demora e gasta mais.",
+          xhigh: "Pensa bem mais em tarefas longas e difíceis. Mais lento e caro.",
           max: "Pensa o máximo que puder. Bem mais lento e caro.",
         },
         /** Velocidade (ADR 0149): shown on a ChatGPT plan with a model that has Fast mode. `2,5×` is OpenAI's rate. */
@@ -4518,37 +4535,15 @@ export const ptBR = {
         /** "Configuração avançada": a row in the brain's card that opens a smaller dialog over "Quem pensa". */
         advanced: {
           title: "Configuração avançada",
-          sub: "{{brain}}. Vale para todas as conversas.",
-          think: "Como pensa",
-          answers: "Quem atende",
           defaults: "Voltar ao padrão",
-          done: "Pronto",
-          /** The row's line: what the dialog holds. The effort shows only with a fixed model on a plan. */
-          contents: {
-            model: "Janela de contexto",
-            auto: "Janela de contexto e quem atende",
-            fixed: "Esforço, janela de contexto e quem atende",
-            autoSpeed: "Velocidade, janela de contexto e quem atende",
-            fixedSpeed: "Esforço, velocidade, janela de contexto e quem atende",
-          },
           /** After a save: nothing changed from the defaults, else only what did. */
           allDefault: "Tudo no padrão",
           effort: "Esforço {{level}}",
           speed: "Velocidade rápida",
           context: "Contexto de {{size}}",
-          sharing: "Atende outras pessoas",
-          waits: "Espera o computador voltar",
         },
         /** "Usar em outros agentes" (ADR 0094): the same setup on the agents picked, each by its own rules. */
         copy: {
-          row: "Usar em outros agentes",
-          rowLine: "A mesma IA, o modelo, o esforço e a autonomia",
-          title: "Usar em outros agentes",
-          sub: "Eles passam a pensar com {{setup}}.",
-          all: "Todos",
-          allLine_one: "{{count}} agente pode usar",
-          allLine_other: "{{count}} agentes podem usar",
-          none: "Nenhum outro agente pode usar agora.",
           now: "Hoje: {{brain}}",
           same: "Já pensa assim",
           keeps: "Fica com {{account}}",
@@ -4556,7 +4551,6 @@ export const ptBR = {
           autonomy: "Autonomia: {{from}} → {{to}}",
           /** A switch over the agents: off, the setup leaves each agent's Autonomia as it is. */
           withAutonomy: "Levar a autonomia",
-          withAutonomyLine: "{{value}}, como neste agente. Desligado, cada um fica com a sua.",
           reasons: {
             not_allowed: "Só admins e {{owner}} mudam",
             not_allowedNobody: "Só admins mudam",
@@ -4569,15 +4563,6 @@ export const ptBR = {
             model_missing: "O {{plan}} não tem o {{model}}",
             failed: "Não deu para mudar agora",
           },
-          search: "Buscar agente",
-          noMatch: "Nenhum agente com “{{q}}”",
-          pick: "Escolha os agentes",
-          use_one: "Usar em {{count}} agente",
-          use_other: "Usar em {{count}} agentes",
-          done_one: "{{count}} agente agora pensa com {{setup}}.",
-          done_other: "{{count}} agentes agora pensam com {{setup}}.",
-          autonomyOnly_one: "{{count}} agente mudou só a autonomia.",
-          autonomyOnly_other: "{{count}} agentes mudaram só a autonomia.",
           missed_one: "{{count}} agente não mudou.",
           missed_other: "{{count}} agentes não mudaram.",
         },
@@ -4652,9 +4637,7 @@ export const ptBR = {
           },
           startFailed: "O {{computer}} não respondeu. Tente de novo em instantes.",
           sendFailed: "Não deu para enviar o código. Confira e tente de novo.",
-          done: "A conta {{account}} entrou no {{computer}}. Clique em Usar para salvar.",
         },
-        offCloud: "O {{computer}} não está respondendo",
       },
       computer: {
         title: "Onde o {{name}} trabalha?",
@@ -4999,9 +4982,15 @@ export const ptBR = {
         org_deleting: "O workspace está sendo apagado.",
         agent_paused: "O agente está pausado.",
         computer_busy: "O computador continuou ocupado com outras tarefas.",
-        /** A computer brain (Claude Code, Codex) stopped with an error code; the code shows only on hover. */
+        /** The computer's own program (the one that runs the agent's CLI there) failed; its code shows only on hover. */
         computer_failed: "O computador teve um problema e parou.",
         computer_timeout: "O computador demorou demais para responder.",
+        /** The agent's CLI on its computer (`brain`: Claude Code, Codex…) stopped on an error; `detail`: what it said. */
+        cli_failed: "O {{brain}} parou com um erro: {{detail}}",
+        /** The same, when it said nothing about it. */
+        cli_stopped: "O {{brain}} parou com um erro.",
+        /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
+        cli_closed: "O {{brain}} fechou de repente.",
         account_missing:
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
         our_error: "Algo deu errado do nosso lado e a tarefa parou. Peça de novo daqui a pouco.",
@@ -5699,10 +5688,6 @@ export const ptBR = {
     price: "US$ {{input}} / {{output}} por milhão de tokens",
     plans: "Pelo plano, num computador",
     plansHelp: "Claude Code ou Codex com a assinatura de quem conectou o computador. Não usa chave.",
-    planOnlyOwner:
-      "No plano, o {{name}} começa atendendo só {{owner}}. Na página do {{name}}, {{owner}} pode escolher se ele atende outras pessoas.",
-    planOnlyOwner_female:
-      "No plano, a {{name}} começa atendendo só {{owner}}. Na página da {{name}}, {{owner}} pode escolher se ela atende outras pessoas.",
     partly: "O {{name}} já existe, mas parte do que você escolheu não foi salva. {{reason}}",
     partly_female: "A {{name}} já existe, mas parte do que você escolheu não foi salva. {{reason}}",
     planNotSaved:
@@ -5715,7 +5700,6 @@ export const ptBR = {
     lastAutonomy: "{{value}}, como na última escolha. Desligado, começa com {{fallback}}.",
     autoCost: "O custo acompanha cada tarefa",
     noKeyFor: "Sem chave {{provider}}",
-    key: "Chave",
     defaultKey: "Chave padrão do workspace",
     defaultKeyDesc: "{{provider}} · termina em {{hint}}",
     otherKeyDesc: "{{provider}} · termina em {{hint}}",
@@ -5727,7 +5711,6 @@ export const ptBR = {
       needsKey: "Precisa de uma chave {{plan}}",
       other: "Escolher outro",
     },
-    noKeys: "Nenhuma chave cadastrada",
     budgetTitle: "Orçamento mensal",
     budget: "Orçamento mensal (US$)",
     budgetHelp: "Ao atingir o limite, o {{name}} para e avisa.",
@@ -7199,6 +7182,8 @@ export const ptBR = {
       computer_busy: "O computador continuou ocupado com outras tarefas",
       computer_failed: "O computador teve um problema e parou",
       computer_timeout: "O computador demorou demais para responder",
+      /** The agent's CLI on its computer (Claude Code, Codex…) stopped on an error of its own. */
+      cli_failed: "A IA do computador parou com um erro",
       account_missing: "A conta do agente não está mais no computador dele",
       our_error: "Algo deu errado do nosso lado",
     },
@@ -8656,8 +8641,6 @@ export const ptBR = {
       savedEveryone_female: "Agora a {{name}} atende outras pessoas.",
       savedOwner: "O {{name}} agora só atende você.",
       savedOwner_female: "A {{name}} agora só atende você.",
-      savedOwnerOf: "O {{name}} agora só atende {{owner}}.",
-      savedOwnerOf_female: "A {{name}} agora só atende {{owner}}.",
       backOnApi: "O {{name}} voltou a pensar pela API e ainda só atende você.",
       backOnApi_female: "A {{name}} voltou a pensar pela API e ainda só atende você.",
       letEveryone: "Deixar o {{name}} atender todos",
@@ -10418,7 +10401,11 @@ export const ptBR = {
       line: {
         env: "Definido nas configurações deste servidor (GITHUB_APP_ID).",
         invalid: "Este servidor não consegue abrir o app salvo. Remova e crie de novo.",
+        /** O app não assina o que os agentes ouvem no GitHub: `events` são os nomes que o próprio GitHub dá a eles. */
+        events: "Para os agentes ouvirem o que acontece no GitHub, marque estes eventos no app: {{events}}.",
       },
+      /** Abre a página Permissions & events do app no GitHub. */
+      events: "Marcar os eventos",
       open: "Abrir no GitHub",
       remove: "Remover o app",
       removeTitle: "Remover o app do GitHub deste servidor?",
@@ -11770,6 +11757,10 @@ export const ptBR = {
       invalidSecret: "Cole o Client Secret inteiro, sem espaços.",
       invalidRepo: "Escreva o repositório como dono/nome.",
     },
+    /** "Pedir resposta" num aviso do GitHub que outra pessoa já pediu (a linha muda logo depois). */
+    githubEvent: {
+      answered: "Alguém já pediu essa resposta. O agente já foi chamado.",
+    },
     issue: {
       assigneeOutside: "Essa pessoa não vê esta tarefa. Inclua ela em Quem vê primeiro.",
       stageFull: "Uma etapa tem no máximo {{max}} colunas. Exclua uma das colunas dela antes.",
@@ -11941,7 +11932,7 @@ export const ptBR = {
       agentNotInChannel: "Adicione o agente à conversa antes.",
       webhookPaused: "Ligue a rotina para testar.",
       continueExtraOff:
-        "A janela deste plano acabou e o trabalho longo deste agente não usa o uso extra pago. Ligue isso nas configurações de IA dele para continuar agora, ou ele retoma depois que o limite renovar.",
+        "A janela deste plano acabou e o trabalho longo deste agente não usa o uso extra pago do plano. Ele retoma depois que o limite renovar.",
       continueExtraUsedUp:
         "A janela deste plano acabou e o uso extra pago dele acabou ou não está disponível. Ele retoma depois que o limite renovar.",
       actionsNeedApprover: "Só o dono do agente ou quem aprova as ações dele pode deixar uma rotina agir sozinha.",
@@ -11953,6 +11944,8 @@ export const ptBR = {
       agentBusy: "O agente já está trabalhando nesta conversa. Espere ele terminar para continuar.",
       continueForbidden: "Só quem pediu, o dono do agente ou um admin pode continuar.",
       notRestartable: "Esta resposta já tinha começado, então não dá para recomeçar. Mande a mensagem de novo.",
+      /** The same refusal for a voice message: its words are never sent again as text. */
+      notRestartableVoice: "Esta resposta já tinha começado, então não dá para recomeçar. Grave a mensagem de novo.",
       cancelForbidden: "Só quem pediu, o dono do agente ou um admin pode parar.",
       answerForbidden: "Só quem pediu, o dono do agente ou um admin pode fazer isso.",
       stopReasonForbidden: "Só quem parou pode dizer o motivo.",
@@ -13425,6 +13418,14 @@ export const ptBR = {
       "Estou no meio de uma tarefa ({{duration}}) e ainda não consigo responder. Sua mensagem está na fila e eu leio quando esta rodada de trabalho terminar.",
     statusReplyQueued: "Aguardando o computador ({{duration}}). Leio sua mensagem quando chegar minha vez.",
     statusReplyAway: "Aguardando meu computador voltar. Leio sua mensagem assim que ele voltar.",
+    /** A mesma linha para um agente esperando o plano renovar: {{when}} é quando ele volta ("quarta às 14:00"). */
+    statusReplyPlan: "Estou esperando o plano voltar ({{when}}). Leio sua mensagem quando ele voltar.",
+    statusReplyPlanUnknown: "Estou esperando o plano voltar. Leio sua mensagem assim que ele voltar.",
+    /** A mesma linha para um agente cujo orçamento do mês acabou. */
+    statusReplyBudget:
+      "Estou esperando meu orçamento do mês renovar ({{when}}). Leio sua mensagem quando ele renovar, ou antes se um admin aumentar o limite.",
+    statusReplyBudgetUnknown:
+      "Estou esperando meu orçamento do mês renovar. Leio sua mensagem quando ele renovar, ou antes se um admin aumentar o limite.",
     status: {
       one: "Trabalhando em: {{subject}}",
       oneUntitled: "Trabalhando em segundo plano",
@@ -13601,6 +13602,28 @@ export const ptBR = {
         "Só algumas pessoas podem chamar {{agents}}, e este trabalho de {{name}} não veio de nenhuma delas. Alguém que pode chamar {{agents}} passa o pedido adiante.",
       wakeSkippedCallable:
         "As configurações de {{name}} não deixam chamar {{agents}} (outro projeto, ou fora da lista de agentes que pode chamar). Quem cuida de {{name}} muda isso na página do agente.",
+      /**
+       * O que aconteceu no GitHub num item em que um agente trabalhou, ou que chamou o app: `who` é o nome do membro
+       * ou o login no GitHub, `name` o do agente. "Ver" abre o que a pessoa escreveu lá e o link.
+       */
+      github: {
+        comment: "{{who}} comentou no PR #{{number}} ({{repo}}) no GitHub",
+        commentIssue: "{{who}} comentou na issue #{{number}} ({{repo}}) no GitHub",
+        commentDiscussion: "{{who}} comentou na discussão #{{number}} ({{repo}}) no GitHub",
+        /** Um PR, issue ou discussão novo que menciona o app. */
+        opened: "{{who}} chamou o app agentes.chat em #{{number}} ({{repo}}) no GitHub",
+        reviewed: "{{who}} revisou o PR #{{number}} ({{repo}}) no GitHub",
+        approved: "{{who}} aprovou o PR #{{number}} ({{repo}}) no GitHub",
+        changes: "{{who}} pediu mudanças no PR #{{number}} ({{repo}}) no GitHub",
+        reviewRequested: "{{who}} pediu a revisão de {{name}} no PR #{{number}} ({{repo}}) no GitHub",
+        merged: "{{who}} fez o merge do PR #{{number}} ({{repo}}) no GitHub",
+        closed: "{{who}} fechou o PR #{{number}} ({{repo}}) no GitHub",
+        closedIssue: "{{who}} fechou a issue #{{number}} ({{repo}}) no GitHub",
+        /** Na linha de alguém a quem o agente não responde: uma pessoa daqui pede para o agente responder lá. */
+        ask: "Pedir resposta",
+        /** A linha depois que alguém pediu (`asker`), no lugar do botão. */
+        asked: "{{asker}} pediu para {{name}} responder a {{who}} no GitHub",
+      },
       show: "Ver",
       hide: "Ocultar",
       talker: "enquanto trabalha",
@@ -14013,9 +14036,12 @@ export const ptBR = {
       no_ai_not_signed_in: "Ainda não consigo responder: o {{brain}} está sem login no meu computador.",
       no_ai_computer_away: "Agora não consigo responder: o computador do meu plano está fora do ar.",
       no_ai_computer_failed: "Agora não consigo responder: o computador do meu plano teve um problema.",
+      no_ai_cli_failed: "Agora não consigo responder: a IA do meu plano parou com um erro.",
       no_ai_plan_limit: "Agora não consigo responder: o plano com que eu penso chegou ao limite.",
       no_ai_plan_not_shared:
         "Não consigo te responder pelo plano do workspace: ele só atende o próprio dono. Conecte o seu plano e eu respondo.",
+      no_ai_plan_unattended:
+        "Não respondi: o pedido não veio de uma pessoa, e o plano do workspace só atende o próprio dono.",
       no_ai_runner_outdated:
         "Agora não consigo responder: o programa no computador do meu plano precisa ser atualizado.",
       no_ai_plan_tools:
@@ -15259,6 +15285,13 @@ export const ptBR = {
       label: "Teclado",
       field: "Digitar no computador do {{name}}",
       field_female: "Digitar no computador da {{name}}",
+    },
+    cursor: {
+      click: "clicando em {{name}}",
+      clickPlain: "clicando",
+      type: "digitando",
+      scroll: "rolando",
+      drag: "arrastando",
     },
     seeWhole: "Ver a tela inteira",
     card: {

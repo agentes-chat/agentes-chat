@@ -19,18 +19,15 @@
   height: 10px;
   opacity: 0.7;
 }
-.live-block--loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  color: var(--faint);
-  font-size: 13.5px;
+/* A card's placeholder (`CardSkeleton`): each bar sits in the line its words will fill, so the line keeps its height. */
+.live-block .ac-skeleton {
+  display: inline-block;
+  vertical-align: middle;
 }
 .live-block__head {
   display: flex;
   align-items: flex-start;
-  gap: 2px;
+  gap: var(--space-1);
   padding: 12px 8px 6px 16px;
 }
 .live-block__titles {

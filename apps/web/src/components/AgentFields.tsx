@@ -1,5 +1,5 @@
 import type { Credential, Member } from "@agenteschat/client";
-import { apiPickOptions, type BrainPickOption, brainPickText } from "@agenteschat/client/lib/brain-picker";
+import { apiPickOptions, type BrainPickOption } from "@agenteschat/client/lib/brain-picker";
 import { keyLine, type ModelChoice, providerLabel } from "@agenteschat/client/lib/providers";
 import {
   AffixInput,
@@ -80,72 +80,33 @@ export const pickSelectOption = (o: BrainPickOption): SelectOption & BrainPickOp
   ),
 });
 
-/**
- * "Quem pensa" on the new agent's step: every model and plan the agent's page offers (`brainPickOptions`), in one
- * list searched by name, maker, plan or "free"; the chosen one reads as what thinks ("Sonnet pelo plano do Claude").
- */
-export function BrainPickSelect({
-  options,
-  value,
-  onChange,
-  fallback,
-}: {
-  options: BrainPickOption[];
-  value: string | undefined;
-  onChange: (option: BrainPickOption) => void;
-  /** What the trigger says for a choice the list doesn't have (the last setup's, a proposal's). */
-  fallback: string;
-}) {
-  const { t } = useTranslation();
-  const shown = useMemo(() => options.map(pickSelectOption), [options]);
-  return (
-    <SearchSelect
-      className="agp-brainsel"
-      aria-label={t("brain.title")}
-      value={value}
-      onValueChange={(v) => {
-        const o = options.find((x) => x.value === v);
-        if (o) onChange(o);
-      }}
-      options={shown}
-      matches={(o, q) => matchesWords(brainPickText(o), q)}
-      labels={{
-        search: t("models.search"),
-        searchPlaceholder: t("newAgent.brainPick.searchPlaceholder"),
-        noResults: t("models.noResults"),
-        list: t("models.list"),
-      }}
-      renderValue={(o) =>
-        o ? (
-          <span>
-            <ChosenValue option={{ ...o, label: o.title }} />
-          </span>
-        ) : (
-          <span className="newag__sel-value">{fallback}</span>
-        )
-      }
-    />
-  );
-}
-
 /** A model picker for a long list: a search over the models (name, maker, id), shaped like the cards around it. */
 export function ModelSelect({
   value,
   onChange,
   options,
   className,
+  size,
+  align,
+  disabled,
   "aria-label": label,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: SelectOption[];
   className?: string;
+  size?: "md" | "sm";
+  align?: "start" | "end";
+  disabled?: boolean;
   "aria-label"?: string;
 }) {
   const { t } = useTranslation();
   return (
     <SearchSelect
       className={className}
+      size={size}
+      align={align}
+      disabled={disabled}
       aria-label={label}
       value={value}
       onValueChange={onChange}
@@ -479,29 +440,6 @@ export function OwnerValue({ member, meId }: { member: Member | undefined; meId:
         {member && <span>{t(`roles.${member.role}`)}</span>}
       </span>
     </div>
-  );
-}
-
-/** "Chave": the workspace default first, then the other stored keys. */
-export function KeySelect({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: SelectOption[];
-}) {
-  const { t } = useTranslation();
-  return (
-    <Select
-      className="newag__sel"
-      aria-label={t("newAgent.key")}
-      value={value}
-      onValueChange={onChange}
-      placeholder={t("newAgent.noKeys")}
-      options={options}
-    />
   );
 }
 

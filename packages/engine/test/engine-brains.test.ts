@@ -1,7 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { ACCOUNTS_PROTOCOL, channelTopic, MACHINE_PROTOCOL_VERSION, orgTopic } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
-import { systemText } from "@agenteschat/providers";
 import {
   activeRunsIn,
   addChannelMember,
@@ -74,8 +73,8 @@ import { ALL_GITHUB_SCOPES, fakeGithub } from "./tool-fixtures";
  * ADR 0032 integration: the engine with a computer brain (Claude Code, here a
  * scripted fake) on the agent's computer — the turn ends after tools the brain
  * ran through the bridge, a bridged pause leaves the run waiting and resumes
- * the session with the decision, a plan limit falls back to the model brain,
- * and with nothing to fall back on the run waits for the computer.
+ * the session with the decision, and a computer that can't answer (its plan's
+ * limit, offline, busy) makes the run wait: the API never stands in.
  */
 
 let f: Fixture;
@@ -1063,7 +1062,7 @@ test("sent on after its turn, a computer brain that opens again with the same li
   expect(fromAgent.map((m) => (m.meta.question ? "card" : m.body))).toEqual([opening, "card"]);
 });
 
-test("a plan limit falls back to the model brain; the reply carries a quiet note", async () => {
+test("a plan limit: the run waits for the plan, the API never standing in", async () => {
   f = await setup({ reply: () => ({ chunks: ["Respondi pela API."] }) });
   const machineId = await computerAgent(f);
   const { brain, seen } = scriptedComputerBrain(() => [
@@ -1080,21 +1079,9 @@ test("a plan limit falls back to the model brain; the reply carries a quiet note
 
   expect(seen.length).toBe(1);
   const [run] = await f.db.select().from(schema.agentRuns);
-  expect(run?.status).toBe("done");
-  const main = await timeline(f);
-  const reply = main.at(-1);
-  expect(reply?.body).toBe("Respondi pela API.");
-  expect(reply?.meta.brainFallback).toMatchObject({ from: "claude_code", code: "plan_limit" });
-  // The model brain that stood in has no computer tools: no computer note in its prompt.
-  const fallbackPrompt = systemText(f.provider.calls.at(-1)?.request.system ?? "");
-  expect(fallbackPrompt).not.toContain(COMPUTER_TOOLS_NOTE);
-  expect(fallbackPrompt).toContain("Beyond this, you can't.");
-  // That turn ran on the API (the agent's budget) and the limit is remembered for the next turns.
-  const usage = await f.db
-    .select()
-    .from(schema.usageRecords)
-    .where(eq(schema.usageRecords.runId, run?.id ?? ""));
-  expect(usage.some((u) => u.provider === "anthropic")).toBe(true);
+  expect(run?.status).toBe("waiting_input");
+  expect(f.provider.calls).toHaveLength(0);
+  // The limit is remembered for the next turns.
   expect(computerBrainUnavailable("claude_code", machineId, statusOf(machineId))?.code).toBe("plan_limit");
 });
 
@@ -1259,7 +1246,7 @@ test("Fast stays out of every run nobody waits for", async () => {
   expect(await turnFor(fromAgent(true))).toBeUndefined();
 });
 
-test("Claude Code lists every tool; the model brain standing in lists the core ones and finds the rest", async () => {
+test("Claude Code lists every tool, tools on demand or not", async () => {
   f = await setup({ toolsOnDemand: true, issueTools: true, reply: () => ({ chunks: ["Respondi pela API."] }) });
   await computerAgent(f);
   await grantScopes(f.db, f.org.id, f.agent.id, [{ connectionId: null, scope: "issues:read" }]);
@@ -1275,14 +1262,11 @@ test("Claude Code lists every tool; the model brain standing in lists the core o
   await drainOutbox(f.db, handlers);
 
   expect(seen[0]?.tools.map((t) => t.name)).toContain("list_issues");
-  const names = f.provider.calls.at(-1)?.request.tools?.map((t) => t.name) ?? [];
-  expect(names).toContain("find_tools");
-  expect(names).not.toContain("list_issues");
-  const [run] = await f.db.select().from(schema.agentRuns);
-  expect((run?.transcript as { toolGroups?: string[] } | null)?.toolGroups).toEqual([]);
+  // Its plan's limit: the run waits for it, the API never standing in.
+  expect(f.provider.calls).toHaveLength(0);
 });
 
-test("the agent's account and effort reach its turn; a refused sign-in falls back and the computer decides the status", async () => {
+test("the agent's account and effort reach its turn; a refused sign-in ends it as no AI and the computer decides the status", async () => {
   f = await setup({ reply: () => ({ chunks: ["Respondi pela API."] }) });
   const ACCOUNT = "0193dddd-0000-4000-8000-000000000001";
   const machineId = await computerAgent(f, { brainEffort: "high" });
@@ -1312,14 +1296,15 @@ test("the agent's account and effort reach its turn; a refused sign-in falls bac
   const [account] = await f.db.select().from(schema.machineAccounts);
   expect(account?.status).toBe("active");
   const runs = await f.db.select().from(schema.agentRuns);
-  expect(runs.map((r) => r.status)).toEqual(["done"]);
+  expect(runs.map((r) => r.status)).toEqual(["failed"]);
+  expect(f.provider.calls).toHaveLength(0);
 
-  // Until the computer says otherwise, the next turn asks it again (and falls back again).
+  // Until the computer says otherwise, the next turn asks it again.
   await post(f, "@dev de novo");
   await drainOutbox(f.db, handlers);
   expect(seen.length).toBe(2);
   const after = await f.db.select().from(schema.agentRuns);
-  expect(after.map((r) => r.status)).toEqual(["done", "done"]);
+  expect(after.map((r) => r.status)).toEqual(["failed", "failed"]);
 });
 
 test("a Claude Code turn's provider failure is kept on its account and told the operator once per cause", async () => {
@@ -1411,7 +1396,14 @@ test("a Claude Code turn's provider failure is kept on its account and told the 
       "unknown",
     ]);
     const finished = (await events("run.finished")) as { status: string; failure?: unknown }[];
-    expect(finished.find((e) => e.status === "failed")?.failure).toEqual({ code: "claude_failed", cause: "unknown" });
+    // Signed out ends the run with no AI (the API never stands in); the older runner's failure says its own code.
+    expect(finished.filter((e) => e.status === "failed").map((e) => e.failure)).toContainEqual({
+      code: "claude_failed",
+      cause: "unknown",
+    });
+    // The run keeps whose failure it was and what Claude Code said: never "the computer had a problem".
+    const failed = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.status, "failed"));
+    expect(failed.map((r) => r.error)).toContain("cli_failed: Claude Code: boom");
     expect(finished.filter((e) => e.status === "done").every((e) => e.failure === undefined)).toBe(true);
 
     // Not the provider's: nothing kept nor told.
@@ -1481,7 +1473,7 @@ test("the agent's account and effort apply to its own brain; signed out or an ol
   expect(old.unavailable).toMatchObject({ code: "runner_outdated" });
 });
 
-test("someone else's plan never thinks for the agent: plan_not_owner falls back to the API, or the run waits", async () => {
+test("someone else's plan never thinks for the agent: plan_not_owner makes the run wait", async () => {
   f = await setup({ reply: () => ({ chunks: ["Respondi pela API."] }) });
   const machineId = await computerAgent(f);
   const bia = await addMember(f.db, f.org.id, "member", "bia");
@@ -1493,7 +1485,11 @@ test("someone else's plan never thinks for the agent: plan_not_owner falls back 
   await post(f, "@dev oi");
   await drainOutbox(f.db, handlers);
   expect(seen).toEqual([]);
-  expect((await timeline(f)).at(-1)?.meta.brainFallback).toMatchObject({ from: "claude_code", code: "plan_not_owner" });
+  expect(f.provider.calls).toHaveLength(0);
+  const [first] = await f.db.select().from(schema.agentRuns);
+  expect((first?.transcript as { waitingForBrain?: { code: string } } | undefined)?.waitingForBrain?.code).toBe(
+    "plan_not_owner",
+  );
 
   // Her own account on that computer thinks for her agent, while she is in the organization.
   const ACCOUNT = "0193dddd-0000-4000-8000-000000000001";
@@ -1517,18 +1513,6 @@ test("someone else's plan never thinks for the agent: plan_not_owner falls back 
   await f.db.delete(schema.organizationMembers).where(eq(schema.organizationMembers.userId, bia.id));
   const gone = await resolveBrain({ db: f.db, machines: statusAccounts }, agent, run, f.general.id);
   expect(gone.unavailable).toMatchObject({ code: "plan_not_owner" });
-
-  // Ana's agent on a computer Bia connected, nothing to stand in: the run waits instead.
-  await f.db.update(schema.agents).set({ ownerUserId: f.owner.id, brainAccountId: null });
-  await f.db.update(schema.machines).set({ pairedByUserId: bia.id }).where(eq(schema.machines.id, machineId));
-  await f.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
-  await post(f, "@dev de novo");
-  await drainOutbox(f.db, handlers);
-  const runs = await f.db.select().from(schema.agentRuns);
-  expect(runs.map((r) => r.status).sort()).toEqual(["done", "waiting_input"]);
-  const waiting = runs.find((r) => r.status === "waiting_input")?.transcript as { waitingForBrain?: { code: string } };
-  expect(waiting.waitingForBrain?.code).toBe("plan_not_owner");
-  expect(seen).toEqual([]);
 });
 
 test("with no model credential, an offline computer: the agent says so once and the run waits until it is back", async () => {
@@ -2705,6 +2689,50 @@ test("a short line before a bridged approval never shows live: the card says it,
   expect((await timeline(f)).some((m) => m.body.includes("Vou pedir"))).toBe(false);
 });
 
+test("a long line shown before a bridged approval goes with its card, not up where its words first showed", async () => {
+  const gh = fakeGithub();
+  f = await setup({ toolSources: [gh.source] });
+  await grantScopes(f.db, f.org.id, f.agent.id, ALL_GITHUB_SCOPES);
+  const machineId = await computerAgent(f);
+  const said = `Revisei o PR 42: ${"os testes passaram e a revisão aprovou a troca da chave do cache. ".repeat(5)}Peço a aprovação do merge.`;
+  const { brain } = scriptedComputerBrain(async function* (n, turn) {
+    if (n > 0) {
+      yield { type: "done", text: "Ok." };
+      return;
+    }
+    yield { type: "text_delta", text: said };
+    // Someone writes once its words are on screen, before it asks.
+    await Bun.sleep(5);
+    await post(f, "manda ver");
+    await Bun.sleep(5);
+    const id = { orgId: turn.orgId, agentId: turn.agentId, runId: turn.runId, machineId };
+    await executeToolForRun(f.jobDeps, id, {
+      id: "call-1",
+      name: "github_merge_pr",
+      input: { repo: "acme/app", pr: 42, why: "CI passed on the PR and it was reviewed: merging ships the fix." },
+    });
+    yield { type: "done", text: said };
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const events = f.listen(f.general.id);
+  await post(f, "@dev faz o merge do PR 42");
+  await drainOutbox(f.db, handlers);
+
+  expect(events.some((e) => e.type === "agent.delta" && Boolean((e as { shownAt?: string }).shownAt))).toBe(true);
+  const main = await timeline(f);
+  const meanwhile = main.findIndex((m) => m.body === "manda ver");
+  const card = main.findIndex((m) => typeof m.meta.approvalId === "string");
+  const lead = main.findIndex((m) => m.body.startsWith("Revisei o PR 42"));
+  expect(meanwhile).toBeGreaterThan(0);
+  // The bridge posted the card when it asked: what the agent said reads right after it.
+  expect(card).toBeGreaterThan(meanwhile);
+  expect(lead).toBe(card + 1);
+});
+
 test("stopped between calls: the stopped reply keeps the stretch it was on, never the working text before a call", async () => {
   f = await setup();
   await computerAgent(f);
@@ -2978,7 +3006,7 @@ test("no room for over 30 minutes: the run never fails, it keeps its place and a
   expect(pending.length).toBe(1);
 });
 
-test("no room on the computer and a model key: the model brain answers, as for any computer that can't", async () => {
+test("no room on the computer and a model key: the run waits for room, the API never standing in", async () => {
   f = await setup({ reply: () => ({ chunks: ["Respondi pela API."] }) });
   await computerAgent(f);
   const { brain } = scriptedComputerBrain(() => [
@@ -2992,10 +3020,8 @@ test("no room on the computer and a model key: the model brain answers, as for a
   await post(f, "@dev oi");
   await drainOutbox(f.db, handlers);
   const [run] = await f.db.select().from(schema.agentRuns);
-  expect(run?.status).toBe("done");
-  const last = (await timeline(f)).at(-1);
-  expect(last?.body).toBe("Respondi pela API.");
-  expect(last?.meta).toMatchObject({ brainFallback: { from: "claude_code", code: "busy" } });
+  expect(run?.status).toBe("waiting_input");
+  expect(f.provider.calls).toHaveLength(0);
 });
 
 /** Sets when a run started waiting for room (ms). */
@@ -3766,10 +3792,10 @@ test("a session whose folder is gone from the computer goes on fresh in the agen
   expect((await timeline(f)).map((m) => m.body)).toEqual(["@dev oi", "Pronto."]);
 });
 
-test("a Codex session whose folder is gone: a fresh session before the API takes over, once per run", async () => {
+test("a Codex session whose folder is gone: a fresh session, once per run", async () => {
   f = await setup();
   await computerAgent(f);
-  // A Codex runner throws the same refusal, which the brain says is retryable: the model brain would take it.
+  // A Codex runner throws the same refusal, which the brain says is retryable.
   const gone = {
     type: "error",
     code: "runner_failed",
@@ -3784,10 +3810,10 @@ test("a Codex session whose folder is gone: a fresh session before the API takes
   });
   await post(f, "@dev oi");
   await drainOutbox(f.db, handlers);
-  // Gone again in the fresh session: no third session, the run goes on as any failed turn would.
+  // Gone again in the fresh session: no third session, the run goes on as any failed turn would, never on the API.
   expect(seen).toHaveLength(2);
   expect(seen[1]?.session).toMatchObject({ resume: false, ownFolder: true });
-  expect(f.provider.calls.length).toBeGreaterThan(0);
+  expect(f.provider.calls).toHaveLength(0);
 });
 
 test("in a busy channel, its teammates now and why its session was lost reach the computer brain whole", async () => {

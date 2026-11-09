@@ -4,13 +4,14 @@ import { and, eq, schema } from "@agenteschat/db";
 import {
   type Brain,
   type BrainTurn,
+  createAgentRuns,
   createClaudeCodeBrain,
   createJobHandlers,
   drainOutbox,
   getAgentBrain,
+  insertMessage,
   type MachineStatus,
   machineAgents,
-  mayFallBack,
   OpencodeBrain,
   openPersonAgentDm,
   PLAN_OPENED_JOB,
@@ -24,6 +25,7 @@ import {
   UNAVAILABLE_CODES,
 } from "../src";
 import { agentAiState } from "../src/ai-status";
+import { paysExtraUsage } from "../src/usage-pause";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -122,17 +124,17 @@ test("Lodi takes a Claude plan signed in as an account, never a computer's own s
   expect(await lodi()).toMatchObject({ brainAccountId: CAIOS, planForOthers: false });
 });
 
-test("a plan given to Lodi starts with its switches off, whatever was set before it", async () => {
+test("a plan given to Lodi starts with its switch off, whatever was set before it", async () => {
   const { fx, deps, caio, lodi } = await world();
   const id = (await lodi()).id;
-  // An admin arms paid extra usage while it is on a key: it doesn't carry over to Ana's plan.
-  await setAgentBrain(deps, caio.id, fx.org.id, id, { extraUsage: true });
   await setAgentBrain(deps, fx.owner.id, fx.org.id, id, { brain: "claude_code", account: ANAS });
-  expect(await lodi()).toMatchObject({ brainAccountId: ANAS, brainExtraUsage: false, planForOthers: false });
+  expect(await lodi()).toMatchObject({ brainAccountId: ANAS, planForOthers: false });
   // Ana opens hers to others; moved straight onto Caio's plan, his starts closed.
-  await setAgentBrain(deps, fx.owner.id, fx.org.id, id, { onlyOwner: false, extraUsage: true });
+  await setAgentBrain(deps, fx.owner.id, fx.org.id, id, { onlyOwner: false });
   await setAgentBrain(deps, caio.id, fx.org.id, id, { account: CAIOS });
-  expect(await lodi()).toMatchObject({ brainAccountId: CAIOS, brainExtraUsage: false, planForOthers: false });
+  expect(await lodi()).toMatchObject({ brainAccountId: CAIOS, planForOthers: false });
+  // Its long work never spends a plan's paid extra usage.
+  expect(paysExtraUsage(await lodi())).toBe(false);
 });
 
 test("its turns think on the plan's computer and owner; another person's DM only once the plan answers others", async () => {
@@ -164,8 +166,7 @@ test("its turns think on the plan's computer and owner; another person's DM only
   expect((await resolveBrain({ db: fx.db, machines: old }, open, ana.run, ana.dm.id)).unavailable).toMatchObject({
     code: "runner_outdated",
   });
-  // It never stands in on the API, and its state says the computer is away, not "no AI".
-  expect(mayFallBack(open, { background: false })).toBe(false);
+  // Its state says the computer is away, not "no AI".
   const away = { status: async (id: string) => statusOf(id, { online: false }) };
   expect(await agentAiState({ db: fx.db, gateway: fx.gateway, machines: away }, open)).toEqual({ state: "waiting" });
 });
@@ -202,6 +203,45 @@ test("its computer asleep: one line says why, the run fails at once, no wait and
   // Nothing went to the API (no model call recorded for it).
   const usage = await fx.db.select().from(schema.usageRecords).where(eq(schema.usageRecords.agentId, agent.id));
   expect(usage.filter((u) => u.billedTo !== "plan")).toEqual([]);
+});
+
+test("a request no person made, on a plan that answers only its owner: its line never says to connect a plan", async () => {
+  const { fx, deps, lodi: helper } = await world();
+  await setAgentBrain(deps, fx.owner.id, fx.org.id, (await helper()).id, { brain: "claude_code", account: ANAS });
+  const agent = await helper();
+  let turns = 0;
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run() {
+      turns++;
+      yield { type: "done", text: "ok" };
+    },
+  };
+  const machines = { status: async (id: string) => statusOf(id) };
+  const handlers = createJobHandlers({ ...fx.jobDeps, brains: { claude_code: () => brain }, machines });
+  // Another agent asks it on its own, in a channel: nobody is behind that.
+  const asked = await insertMessage(fx.db, {
+    orgId: fx.org.id,
+    channelId: fx.general.id,
+    author: { type: "agent", agentId: fx.agent.id, runId: null, hop: 1, stretchId: null },
+    body: `@${agent.handle} cria o canal de vendas`,
+  });
+  const [run] = await createAgentRuns(fx.db, asked, [agent.id], "mention");
+  if (!run) throw new Error("no run");
+  expect((await resolveBrain({ db: fx.db, machines }, agent, run, fx.general.id)).unavailable).toMatchObject({
+    code: "plan_unattended",
+  });
+  await drainOutbox(fx.db, handlers);
+  const [ended] = await fx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, run.id));
+  expect(ended?.status).toBe("failed");
+  expect(turns).toBe(0);
+  const cards = (await fx.db.select().from(schema.messages).where(eq(schema.messages.authorAgentId, agent.id))).filter(
+    (m) => m.meta.bodyCode === "no_ai",
+  );
+  expect(cards.map((m) => (m.meta.noAi as { reason?: string }).reason)).toEqual(["plan_unattended"]);
+  expect(cards[0]?.body).toBe(
+    "I didn't answer: the request didn't come from a person, and the workspace's plan serves only its owner.",
+  );
 });
 
 test("its CLI killed at a tool of its own after a bridge call: nothing of the turn is posted, only its line", async () => {
@@ -374,10 +414,14 @@ test("its DM's line names the real cause: a model's own limit or region, command
   expect(rightHandNoAiReason("exec_disabled")).toBe("commands_off");
   expect(rightHandNoAiReason("tool_off")).toBe("commands_off");
   expect(rightHandNoAiReason("plan_not_owner")).toBe("plan_not_shared");
+  expect(rightHandNoAiReason("plan_unattended")).toBe("plan_unattended");
   for (const code of ["cli_missing", "codex_missing", "opencode_missing", "antigravity_missing"])
     expect(rightHandNoAiReason(code)).toBe("cli_missing");
   // A failure that may pass is a problem on the computer: never "no AI connected", nor that it's away.
   expect(rightHandNoAiReason("runner_error")).toBe("computer_failed");
+  // The plan's CLI failing (a provider error through it, its own crash) is the plan's AI's, not its computer's.
+  for (const code of ["claude_failed", "codex_failed", "cursor_failed", "grok_failed"])
+    expect(rightHandNoAiReason(code)).toBe("cli_failed");
 });
 
 test("an OpenCode turn of it goes out as the chat profile with no checkout; an older runner gets nothing", async () => {

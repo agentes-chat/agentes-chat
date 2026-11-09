@@ -99,8 +99,8 @@ import { closedRefusal } from "./standing";
 import { wakeAgentUsageWaits } from "./usage-pause";
 
 /*
- * "Quem pensa" (ADR 0032 §5): the brain an agent thinks with, its model and
- * the fallback to the API, stored on the agent (`agents.brain*`), and a
+ * "Quem pensa" (ADR 0032 §5): the brain an agent thinks with and its model,
+ * stored on the agent (`agents.brain*`), and a
  * mission's override (`missions.brain*`). This module stores and validates
  * the choice and says what the agent's computer can offer; the engine
  * resolves it per run (`brainFor`).
@@ -433,9 +433,6 @@ export interface AgentBrainView {
   model: string | null;
   /** What it runs with (`model ?? defaultModel`), null for the model brain. */
   effectiveModel: string | null;
-  fallback: boolean;
-  /** Long work may go on into the plan's paid extra usage where the provider reports it on (ADR 0118). */
-  extraUsage: boolean;
   computer: BrainComputer | null;
   options: BrainOption[];
   /** Every computer the caller may give the agent (admins: all; its owner: the ones they connected), with its options. */
@@ -604,8 +601,6 @@ function view(
     brain,
     model: brain === "model" ? null : agent.brainModel,
     effectiveModel: brain === "model" ? null : (agent.brainModel ?? defaultBrainModel(brain)),
-    fallback: agent.brainFallback,
-    extraUsage: agent.brainExtraUsage,
     computer: machine ? { machineId: machine.id, name: machine.name, online: machineOnline(machine) } : null,
     options: brainOptions(machine),
     machines,
@@ -649,8 +644,6 @@ async function personalAgent(db: Database, agent: Agent, userId: string, account
     brainEffort: own?.brainEffort ?? null,
     brainAccountId: own?.brainAccountId ?? null,
     brainAccountLentBy: own?.brainAccountLentBy ?? null,
-    brainFallback: false,
-    brainExtraUsage: false,
     planForOthers: false,
   };
   // ponytail: the computer of their first plan, so plans on a second computer don't list here; loop over their
@@ -929,8 +922,6 @@ export interface AgentBrainInput {
   brain?: unknown;
   /** Omitted = keep it (or the default when the brain changes); null = the brain's default. */
   model?: unknown;
-  fallback?: unknown;
-  extraUsage?: unknown;
   /**
    * "Atende outras pessoas" turned off (ADR 0059 §5): true, only its owner talks
    * to it; false, whoever its "who can talk" list lets in (everyone with no
@@ -998,12 +989,6 @@ export async function setAgentBrain(
   if (input.brain !== undefined && !isBrainKind(input.brain)) {
     throw new ValidationError("Choose model, claude_code, codex or cursor", "brain.invalid");
   }
-  if (input.fallback !== undefined && typeof input.fallback !== "boolean") {
-    throw new ValidationError("fallback is on or off", "brain.invalid");
-  }
-  if (input.extraUsage !== undefined && typeof input.extraUsage !== "boolean") {
-    throw new ValidationError("extraUsage is on or off", "brain.invalid");
-  }
   if (input.onlyOwner !== undefined && typeof input.onlyOwner !== "boolean") {
     throw new ValidationError("onlyOwner is on or off", "brain.invalid");
   }
@@ -1035,9 +1020,8 @@ export async function setAgentBrain(
       : brain === "model" || changed
         ? carried
         : agent.brainModel;
-  const fallback = (input.fallback as boolean | undefined) ?? agent.brainFallback;
-  // The right hand put on a plan starts with that plan's switches off: neither paid extra usage nor "Atende outras
-  // pessoas" is carried over from whoever set them before (an admin while it was on a key, or another plan's owner).
+  // The right hand put on a plan starts with "Atende outras pessoas" off: never carried over from whoever set it before
+  // (an admin while it was on a key, or another plan's owner).
   const newPlan = rightHand && typeof input.account === "string" && input.account !== access.agent.brainAccountId;
   const next = await nextBrainAccount(deps.db, userId, orgId, agent, brain, changed, machine, input.account, {
     move: input.moveAccount === true,
@@ -1067,16 +1051,6 @@ export async function setAgentBrain(
   const planOwner = lentBy && account ? await accountOwnerOf(deps.db, orgId, account) : agent.ownerUserId;
   // The plan changes hands (someone else's given now, or back from one): it starts as on a new plan.
   const ownerSwitch = accountChanged && (lentBy !== null || agent.brainAccountLentBy != null);
-  const extraBefore = newPlan || ownerSwitch ? false : agent.brainExtraUsage;
-  const extraUsage = (input.extraUsage as boolean | undefined) ?? extraBefore;
-  // Paid extra usage bills the plan's owner (the agent's, unless it was lent): an admin picks the account, not this.
-  // A plan that changes hands starts with it off, so only its owner may send it on with that change.
-  if (input.extraUsage !== undefined && extraUsage !== extraBefore && planOwner !== userId) {
-    throw new ForbiddenError(
-      "Only the agent's owner turns its plan's paid extra usage on or off",
-      "brain.extra_owner_only",
-    );
-  }
   if (input.effort !== undefined && input.effort !== null && !isBrainEffortSetting(input.effort)) {
     throw new ValidationError("Choose auto, low, medium, high, xhigh or max", "brain.invalid_effort");
   }
@@ -1108,8 +1082,6 @@ export async function setAgentBrain(
   const thinks =
     changed ||
     model !== agent.brainModel ||
-    fallback !== agent.brainFallback ||
-    extraUsage !== agent.brainExtraUsage ||
     account !== agent.brainAccountId ||
     effort !== agent.brainEffort ||
     speed !== agent.brainSpeed ||
@@ -1154,8 +1126,6 @@ export async function setAgentBrain(
       .set({
         brain,
         brainModel: model,
-        brainFallback: fallback,
-        brainExtraUsage: extraUsage,
         brainAccountId: account,
         brainAccountLentBy: lentBy,
         brainEffort: effort,
@@ -1225,14 +1195,12 @@ export async function setAgentBrain(
         from: {
           brain: from,
           model: agent.brainModel,
-          fallback: agent.brainFallback,
-          extraUsage: agent.brainExtraUsage,
           account: agent.brainAccountId,
           effort: agent.brainEffort,
           speed: agent.brainSpeed,
           contextTokens: agent.contextTokens,
         },
-        to: { brain, model, fallback, extraUsage, account, effort, speed, contextTokens },
+        to: { brain, model, account, effort, speed, contextTokens },
         ...(rightHand ? { planForOthers: { from: agent.planForOthers, to: planForOthers } } : {}),
         ...options.audit,
       },
@@ -1260,8 +1228,6 @@ export async function setAgentBrain(
     ...agent,
     brain,
     brainModel: model,
-    brainFallback: fallback,
-    brainExtraUsage: extraUsage,
     brainAccountId: account,
     brainAccountLentBy: lentBy,
     brainEffort: effort,
@@ -1274,15 +1240,8 @@ export async function setAgentBrain(
   if (thinks && options.remember !== false && !rightHand) {
     await rememberAgentSetup(deps.db, membership, setupOfAgent(saved));
   }
-  // Another AI, account or model, or extra usage on: what waited on the old one's plan or budget goes on now, in its
-  // line's order.
-  if (
-    changed ||
-    model !== agent.brainModel ||
-    account !== agent.brainAccountId ||
-    fallback !== agent.brainFallback ||
-    (extraUsage && !agent.brainExtraUsage)
-  )
+  // Another AI, account or model: what waited on the old one's plan or budget goes on now, in its line's order.
+  if (changed || model !== agent.brainModel || account !== agent.brainAccountId)
     await wakeAgentUsageWaits(deps.db, orgId, agentId).catch(() => null);
   // The account's `usedBy` changed with it.
   // The right hand's row is on no computer: shown as its settings see it again.

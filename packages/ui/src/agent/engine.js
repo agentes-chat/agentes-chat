@@ -137,6 +137,17 @@ export function mentionTone(color, dark = false) {
 }
 
 /**
+ * An agent's pointer over its screen (`AgentCursor`): the arrow in its own color (a white rim keeps it on any
+ * picture), and its name's tag in that color pushed toward black until white words pass WCAG AA on it.
+ */
+export function cursorTones(color) {
+  const arrow = gradientOf(color)[1];
+  let tag = arrow;
+  for (let k = 0.05; k <= 1 && contrastOf("#ffffff", tag) < 4.5; k += 0.05) tag = mixHex(arrow, "#000000", k);
+  return { arrow, tag };
+}
+
+/**
  * A custom color's [top, bottom], built like the presets: the bottom is the color itself, its lightness held
  * between graphite's and a level where the white eyes and text still read (luminance ≤ 0.28, about 3:1 against
  * white, which also keeps it off a dark theme's background); the top is the same hue 26 points lighter.

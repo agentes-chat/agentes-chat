@@ -11,13 +11,14 @@ import {
   otherChoice,
   pickChoice,
 } from "@agenteschat/client/lib/choices";
-import { Button, Spinner, Textarea } from "@agenteschat/ui";
+import { Button, Textarea } from "@agenteschat/ui";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
 import { CardSky, colorOf } from "@/components/Sky";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
+import { CardSkeleton } from "./CardSkeleton";
 import "./blocks.css";
 
 /**
@@ -41,16 +42,12 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
   const [text, setText] = useState("");
   const list = useRef<HTMLFieldSetElement>(null);
   const a = artifact.data;
-  if (a?.content.kind !== "choices" || !query.data) {
-    return (
-      <div className="live-block live-block--loading" aria-busy="true">
-        <Spinner />
-        <span>{t("blocks.building")}</span>
-      </div>
-    );
-  }
+  if (a?.content.kind !== "choices") return <CardSkeleton kind="choices" />;
   const { questions } = a.content;
-  const answered = query.data.answer;
+  // Until its answer is read, the card is the question it most likely still is, with nothing to press yet: one
+  // loading state, at the card's size.
+  const ready = Boolean(query.data);
+  const answered = query.data?.answer;
   const agent = dir.anyAgent(a.createdBy.id);
 
   if (answered) {
@@ -106,7 +103,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
     setText("");
   };
   const pick = (option: number, written?: string) => {
-    if (answer.isPending) return;
+    if (answer.isPending || !ready) return;
     const next = pickChoice(d, option, written);
     setDraft(next.draft);
     closeWriting();
@@ -188,7 +185,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
             type="button"
             className="choices__option ac-mediarow ac-mediarow--row"
             aria-pressed={d.picks[d.step] === i}
-            disabled={answer.isPending}
+            disabled={answer.isPending || !ready}
             onClick={() => pick(i)}
           >
             <span className="ac-mediarow__face">
@@ -211,7 +208,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
           className="choices__option ac-mediarow ac-mediarow--row"
           aria-pressed={d.picks[d.step] === other}
           aria-expanded={writing}
-          disabled={answer.isPending}
+          disabled={answer.isPending || !ready}
           onClick={write}
         >
           <span className="ac-mediarow__face">

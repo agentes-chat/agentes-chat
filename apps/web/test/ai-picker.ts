@@ -1,12 +1,14 @@
 import { act, fireEvent, within } from "@testing-library/react";
 import { screen, settle } from "./render";
 
-/** Whose plan or whose key, in an open Connect an AI: the picker's select. */
-export const aiSelect = (box: HTMLElement, name: "Plano" | "Provedor" | "Quem pensa" = "Plano") =>
+/** An open dialog's AI select: what thinks ("Quem pensa"), or the providers of "Conectar outra IA". */
+type SelectName = "Quem pensa" | "Conectar outra IA";
+
+export const aiSelect = (box: HTMLElement, name: SelectName = "Conectar outra IA") =>
   within(box).getByRole("combobox", { name });
 
 /** That select opened: its rows. */
-export async function openAiSelect(box: HTMLElement, name: "Plano" | "Provedor" | "Quem pensa" = "Plano") {
+export async function openAiSelect(box: HTMLElement, name: SelectName = "Conectar outra IA") {
   const select = aiSelect(box, name);
   select.focus();
   await act(async () => fireEvent.keyDown(select, { key: "Enter" }));
@@ -19,27 +21,41 @@ export const closeAiSelect = async () => {
   await settle(2);
 };
 
-export const payWith = (box: HTMLElement, name: "Com um plano" | "Com chave de API") =>
-  within(box).getByRole("radio", { name });
-
 const clicked = async (el: Element) => {
   await act(async () => fireEvent.click(el));
   await settle(4);
 };
 
-/** Picks what the old tiles offered: "Chave de API", else a plan by its name, or `maker` the key's maker. */
-export async function chooseAi(box: HTMLElement, name: string, maker = false) {
-  if (name === "Chave de API") return clicked(payWith(box, "Com chave de API"));
-  if (!maker && within(box).queryByRole("combobox", { name: "Plano" }) === null)
-    await clicked(payWith(box, "Com um plano"));
-  const rows = await openAiSelect(box, maker ? "Provedor" : "Plano");
-  const row = rows.find((o) => o.textContent === name || o.textContent?.startsWith(`${name}`)) as Element;
-  await clicked(row);
-}
-
-/** A row of "Quem pensa"'s select by the title it shows. */
+/** A row of a select by the title it shows. */
 export const brainTitle = (option: Element) =>
   option.querySelector(".ac-menu__label > span:first-child")?.textContent ?? "";
+
+/** The heading of the group a row is in ("Seu plano de IA", "Ou pague pelo uso"…). */
+const groupOf = (option: Element) =>
+  option.closest('[role="group"]')?.querySelector(".ac-menu__heading")?.textContent ?? "";
+
+/** "Conectar outra IA" from the AI select, where the providers' select isn't showing yet. */
+export async function connectOther(box: HTMLElement) {
+  if (within(box).queryByRole("combobox", { name: "Conectar outra IA" })) return;
+  const rows = await openAiSelect(box, "Quem pensa");
+  await clicked(rows.find((o) => brainTitle(o) === "Conectar outra IA") as Element);
+}
+
+/**
+ * Picks a provider in "Conectar outra IA" (opened from the AI select first if need be): a plan by its name, "Chave de
+ * API" (Claude's key, to pay as you go), or with `maker` the maker of the key.
+ */
+export async function chooseAi(box: HTMLElement, name: string, maker = false) {
+  await connectOther(box);
+  const rows = await openAiSelect(box, "Conectar outra IA");
+  const keys = rows.filter((o) => groupOf(o) === "Ou pague pelo uso");
+  const plans = rows.filter((o) => !keys.includes(o));
+  const row =
+    name === "Chave de API"
+      ? keys[0]
+      : (maker ? keys : plans).find((o) => brainTitle(o) === name || brainTitle(o).startsWith(name));
+  await clicked(row as Element);
+}
 
 /** Picks what thinks in "Quem pensa". */
 export async function chooseBrain(box: HTMLElement, name: RegExp) {

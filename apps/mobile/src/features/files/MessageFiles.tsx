@@ -1,4 +1,5 @@
-import type { ArtifactDetail } from "@agenteschat/client";
+import type { ArtifactDetail, ArtifactKind } from "@agenteschat/client";
+import { type CardKind, isCardKind } from "@agenteschat/client/lib/artifacts";
 import { formatBytes } from "@agenteschat/client/lib/files";
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
@@ -30,6 +31,13 @@ export interface MessageFile {
   version?: number;
   title: string;
   deleted: boolean;
+  /** What it is and its rows (newer messages): a card's placeholder has the card's shape (`ArtifactRef`). */
+  kind?: ArtifactKind;
+  options?: number;
+  questions?: number;
+  /** A picture's size as it shows (newer messages): its box before it loads. */
+  width?: number;
+  height?: number;
 }
 
 /** Widest a picture block gets in a message. */
@@ -47,15 +55,17 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
   const [width, setWidth] = useState(0);
 
   const images: { file: MessageFile; detail: ArtifactDetail | undefined }[] = [];
-  // What lives in the conversation isn't a file: the thing itself (ADR 0113).
-  const blocks: ArtifactDetail[] = [];
+  // What lives in the conversation isn't a file: the thing itself (ADR 0113), as a card from before it loads when its
+  // ref says what it is.
+  const blocks: { file: MessageFile; kind: CardKind; version?: number }[] = [];
   const videos: { file: MessageFile; detail: ArtifactDetail | undefined }[] = [];
   const others: { file: MessageFile; detail: ArtifactDetail | undefined; failed: boolean }[] = [];
   live.forEach((file, i) => {
     const q = queries[i];
     const detail = q?.data;
-    if (detail?.kind === "block" || detail?.kind === "poll" || detail?.kind === "choices") {
-      blocks.push(detail);
+    const card = detail?.kind ?? file.kind;
+    if (isCardKind(card)) {
+      blocks.push({ file, kind: card, version: detail?.shownVersion ?? file.version });
       return;
     }
     // Until it loads, a name like "print.png" already says it's a picture (no jump into the grid).
@@ -102,13 +112,13 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
       {videos.map(({ file, detail }) => (
         <InlineVideo key={file.id} file={file} detail={detail} width={blockWidth} />
       ))}
-      {blocks.map((b) =>
-        b.kind === "poll" ? (
-          <PollCard key={b.id} id={b.id} version={b.shownVersion} />
-        ) : b.kind === "choices" ? (
-          <ChoicesCard key={b.id} id={b.id} version={b.shownVersion} />
+      {blocks.map(({ file, kind, version }) =>
+        kind === "poll" ? (
+          <PollCard key={file.id} id={file.id} version={version} card={file} />
+        ) : kind === "choices" ? (
+          <ChoicesCard key={file.id} id={file.id} version={version} card={file} />
         ) : (
-          <LiveBlockCard key={b.id} id={b.id} version={b.shownVersion} />
+          <LiveBlockCard key={file.id} id={file.id} version={version} card={file} />
         ),
       )}
       {tiles.length > 0 ? (
@@ -152,7 +162,10 @@ function InlineImage({
   const link = useRemoteFile(orgId, file.id, version);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const [failed, setFailed] = useState(false);
-  const height = singleImageHeight(width, size);
+  // Its size as the server read it (newer pictures), from the first frame: the box never changes when it decodes.
+  const content = detail?.content.kind === "file" ? detail.content : file;
+  const known = content.width && content.height ? { width: content.width, height: content.height } : null;
+  const height = singleImageHeight(width, size ?? known);
   return (
     <Pressable
       onPress={onPress}

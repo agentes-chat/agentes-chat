@@ -10,6 +10,7 @@ import { publishMessageCreated } from "./events";
 import { type Message, messageView } from "./messages";
 import { can, type Membership, requireActiveMembership } from "./organizations";
 import { enqueue } from "./outbox";
+import { isRightHand } from "./right-hand";
 import { isTerminal } from "./runs";
 import { effectiveAgentBudget, monthStartUtc } from "./usage";
 
@@ -358,12 +359,20 @@ export const continuesPastPlan = (r: { source: "plan" | "budget"; used: number; 
   r !== null && r.source === "plan" && !r.extra && r.used >= PLAN_FULL;
 
 /**
- * Why Continuar agora is refused (`continuesPastPlan`), in the words both places use: the agent's extra-usage switch
- * is off, or it is on but the plan has no extra usage left (none reported, or that window is used up too).
+ * Long work may go on into the plan's paid extra usage where the plan reports it on (ADR 0118, its 2026-11-09
+ * addendum): on the agent's owner's own plan. Never on someone else's plan lent to it, which bills that person, nor
+ * for the team's right hand: both started with it off while it was a switch.
+ */
+export const paysExtraUsage = (agent: { brainAccountLentBy?: string | null; builtin?: string | null }) =>
+  !agent.brainAccountLentBy && !isRightHand(agent);
+
+/**
+ * Why Continuar agora is refused (`continuesPastPlan`), in the words both places use: the agent's long work never
+ * uses paid extra usage (`paysExtraUsage`), or the plan has none left (none reported, or that window is used up too).
  */
 export const CONTINUE_PAST_PLAN = {
   extra_off:
-    "This plan's window is used up and this agent's long work doesn't use paid extra usage: turn that on in its AI settings to continue now, or it picks up after the reset",
+    "This plan's window is used up and this agent's long work doesn't use the plan's paid extra usage: it picks up after the reset",
   extra_used_up:
     "This plan's window is used up and its paid extra usage is used up or unavailable: it picks up after the reset",
 } as const;
@@ -381,9 +390,7 @@ export async function pausedPlanReading(
   if (!ref?.machineId) return null;
   const usage = await storedPlanUsage(db, orgId, ref.machineId, kind, ref.accountId).catch(() => null);
   const top = planBinding(usage, { model: ref.model ?? null });
-  return top
-    ? { source: "plan" as const, used: top.used, extra: extraUsage && extraUsageLeft(usage), extraSwitch: extraUsage }
-    : null;
+  return top ? { source: "plan" as const, used: top.used, extra: extraUsage && extraUsageLeft(usage) } : null;
 }
 
 /** Why Continuar agora on the paused run `runId` would go past its plan without extra usage (`continuesPastPlan`); null: it may go on. */
@@ -396,16 +403,18 @@ export async function pauseContinuesPastPlan(
   const [row] = await db
     .select({
       wait: sql<Record<string, unknown> | null>`${agentRuns.transcript}->'waitingForBrain'`,
-      extraUsage: agents.brainExtraUsage,
+      lentBy: agents.brainAccountLentBy,
+      builtin: agents.builtin,
     })
     .from(agentRuns)
     .innerJoin(agents, eq(agents.id, agentRuns.agentId))
     .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));
   const wait = row?.wait as { kind?: BrainKind; source?: string; reading?: PlanReadingRef } | null | undefined;
   if (!row || !wait?.kind || wait.source === "budget") return null;
-  const reading = await pausedPlanReading(db, orgId, wait.kind, wait.reading, row.extraUsage);
+  const extraUsage = paysExtraUsage({ brainAccountLentBy: row.lentBy, builtin: row.builtin });
+  const reading = await pausedPlanReading(db, orgId, wait.kind, wait.reading, extraUsage);
   if (!continuesPastPlan(reading)) return null;
-  return row.extraUsage ? "extra_used_up" : "extra_off";
+  return extraUsage ? "extra_used_up" : "extra_off";
 }
 
 /** Refuses Continuar agora that would go past the plan without extra usage, as `<where>.continue_<reason>`. */

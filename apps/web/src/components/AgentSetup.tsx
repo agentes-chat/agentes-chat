@@ -111,6 +111,19 @@ export function useSetupSteps(agent: Agent | undefined): AgentSetupStep[] {
   return agent ? setupSteps(agent, { meId: me.user.id, admin: can(org, "manage_agents") }) : [];
 }
 
+/**
+ * What the checklist reads, asked for as its agent's DM opens, with the conversation and not once the card shows: its
+ * rows draw done or not on its first paint instead of turning over when their data comes.
+ */
+export function useSetupData(agent: Agent | undefined) {
+  const { org } = useOrg();
+  const steps = useSetupSteps(agent);
+  const on = steps.length > 0 && agent !== undefined;
+  useAiStatus(org.id, on);
+  useAgentDetail(org.id, agent?.id ?? "", on);
+  useAgentAccess(org.id, agent?.id ?? "", on && can(org, "manage_agents") && steps.includes("apps"));
+}
+
 /** The top of a new agent's DM: its greeting and the checklist, as its first message. */
 export function AgentSetupIntro({ agent }: { agent: Agent }) {
   const { t, i18n } = useTranslation();

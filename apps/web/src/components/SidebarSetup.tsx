@@ -23,15 +23,16 @@ import {
 import {
   cloneElement,
   type DragEvent,
+  Fragment,
   type KeyboardEvent,
   type ReactElement,
   type ReactNode,
   useEffect,
   useLayoutEffect,
   useRef,
-  useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { DropSpot, MOVE_KEYS, moveKey, slideFrom, useListDrag } from "@/lib/list-drag";
 import { useOrg } from "./org-context";
 import { sectionName, useSectionOrder } from "./SidebarOrder";
 
@@ -69,37 +70,45 @@ function useToolOrder(orgId: string) {
       : el
     )?.focus();
   }, [key]);
+  /** Saves `next` (false when it is the order already); the rows slide to their new places. */
   const put = (next: SidebarItem[], from?: Element) => {
-    if (sameOrder(next, order)) return;
+    if (sameOrder(next, order)) return false;
     if (from instanceof HTMLElement) focused.current = from;
+    slideFrom();
     save.mutate(sameOrder(next, SIDEBAR_ITEMS) ? null : next);
+    return true;
   };
   return { order, put };
 }
 
 const TOOL_DRAG = "application/x-agentes-tool";
-const MOVE_KEYS = "Alt+Shift+ArrowUp Alt+Shift+ArrowDown";
+const KEY = "tool:";
+type ToolMark = { id: SidebarItem; where: "before" | "after" };
 
 /**
- * The tools shown in the sidebar's list, in the person's order: each dragged onto another goes before or after it,
- * and Alt+Shift+↑/↓ on a focused one moves it past its neighbour (the setup dialog's arrows do it too). The rows stay
- * the links `row` makes, so the browser's own menu on them is kept. Each shows its own grip on hover: the row is what
- * moves, so a mouse drags from anywhere on it and a click on the grip doesn't open the tool.
+ * The tools shown in the sidebar's list, in the person's order: each dragged onto another goes before or after it
+ * (`lib/list-drag.tsx`), and Alt+Shift+↑/↓ on a focused one moves it past its neighbour (the setup dialog's arrows do
+ * it too). The rows stay the links `row` makes, so the browser's own menu on them is kept. Each shows its own grip on
+ * hover: the row is what moves, so a mouse drags from anywhere on it and a click on the grip doesn't open the tool.
  */
 export function ToolList({ items, row }: { items: SidebarItem[]; row: (id: SidebarItem) => ReactElement }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const { order, put } = useToolOrder(org.id);
-  const dragging = useRef<SidebarItem | null>(null);
-  const [mark, setMark] = useState<{ id: SidebarItem; where: "before" | "after" } | null>(null);
+  const drag = useListDrag<ToolMark>(order.join(), (a, b) => a.id === b.id && a.where === b.where);
   const shown = order.filter((id) => items.includes(id));
-  const end = () => {
-    dragging.current = null;
-    setMark(null);
+  const dragged = () => (drag.current()?.slice(KEY.length) ?? null) as SidebarItem | null;
+  const drop = (e: DragEvent) => {
+    const from = dragged();
+    if (!from) return;
+    e.preventDefault();
+    const m = drag.mark();
+    drag.drop(m ? put(placeTool(order, from, m.id, m.where)) : false);
   };
+  const spot = (at: boolean) => (at && drag.drag ? <DropSpot drag={drag.drag} onDrop={drop} /> : null);
   return shown.map((id) => {
     const link = row(id) as ReactElement<{ children?: ReactNode }>;
-    return cloneElement(link as ReactElement<Record<string, unknown>>, {
+    const tool = cloneElement(link as ReactElement<Record<string, unknown>>, {
       children: (
         <>
           {link.props.children}
@@ -115,36 +124,39 @@ export function ToolList({ items, row }: { items: SidebarItem[]; row: (id: Sideb
       ),
       draggable: true,
       "aria-keyshortcuts": MOVE_KEYS,
-      "data-drop": mark?.id === id ? mark.where : undefined,
+      "data-slide": `${KEY}${id}`,
+      "data-lifted": drag.hides(`${KEY}${id}`) || undefined,
+      "data-drop": drag.marked?.id === id ? drag.marked.where : undefined,
       onKeyDown: (e: KeyboardEvent) => {
-        if (!e.altKey || !e.shiftKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+        const by = moveKey(e);
+        if (!by) return;
         e.preventDefault();
-        put(moveShownTool(order, shown, id, e.key === "ArrowUp" ? -1 : 1), e.currentTarget);
+        put(moveShownTool(order, shown, id, by), e.currentTarget);
       },
       onDragStart: (e: DragEvent) => {
-        dragging.current = id;
+        drag.begin(`${KEY}${id}`, e.currentTarget);
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData(TOOL_DRAG, id);
       },
       onDragOver: (e: DragEvent) => {
-        const from = dragging.current;
-        if (!from || from === id) return;
+        const from = dragged();
+        if (!from) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
+        if (from === id) return drag.over(null);
         const r = e.currentTarget.getBoundingClientRect();
-        const where = e.clientY > r.top + r.height / 2 ? "after" : "before";
-        if (mark?.id !== id || mark.where !== where) setMark({ id, where });
+        drag.over({ id, where: e.clientY > r.top + r.height / 2 ? "after" : "before" });
       },
-      onDrop: (e: DragEvent) => {
-        const from = dragging.current;
-        const m = mark;
-        end();
-        if (!from || !m) return;
-        e.preventDefault();
-        put(placeTool(order, from, m.id, m.where));
-      },
-      onDragEnd: end,
+      onDrop: drop,
+      onDragEnd: () => drag.end(),
     });
+    return (
+      <Fragment key={id}>
+        {spot(drag.spotAt({ id, where: "before" }) || (drag.drag?.key === `${KEY}${id}` && drag.spotAt(null)))}
+        {tool}
+        {spot(drag.spotAt({ id, where: "after" }))}
+      </Fragment>
+    );
   });
 }
 
@@ -183,7 +195,7 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
       <DialogBody>
         <ul className="sidebar-setup">
           {tools.order.map((id, i) => (
-            <li key={id} className="sidebar-setup__row">
+            <li key={id} className="sidebar-setup__row" data-slide={`setup-tool:${id}`}>
               <span className="settings-row__icon" aria-hidden="true">
                 <Icon name={SIDEBAR_TOOLS[id].icon} size={16} />
               </span>
@@ -233,7 +245,7 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
         <p className="small muted sidebar-setup__hint">{t("shell.sidebarSetup.orderHint")}</p>
         <ol className="sidebar-setup sidebar-setup--order">
           {sections.order.map((id, i) => (
-            <li key={id} className="sidebar-setup__row" data-section={id}>
+            <li key={id} className="sidebar-setup__row" data-section={id} data-slide={`setup-section:${id}`}>
               <span className="settings-row__icon ac-num" aria-hidden="true">
                 {i + 1}
               </span>

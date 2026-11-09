@@ -61,6 +61,41 @@ describe("the channels' order in the sidebar (ADR 0080)", () => {
     expect(names()).toEqual(["eng", "general"]);
   });
 
+  test("the dragged row hides behind a dashed spot of its size, which goes where it would land", async () => {
+    const state = await go();
+    const general = () => row("general").closest("[data-slide]") as HTMLElement;
+    const spot = () => canais().querySelector<HTMLElement>(".drop-spot");
+    await act(async () => fireEvent.dragStart(row("general"), { dataTransfer }));
+    await settle(2);
+    // In its own place first, the row out of the list behind it.
+    expect(spot()?.dataset.spotFor).toBe(`channel:${GENERAL_ID}`);
+    expect(general().hasAttribute("data-lifted")).toBe(true);
+    const over = createEvent.dragOver(row("eng"), { dataTransfer });
+    Object.defineProperty(over, "clientY", { value: 0 });
+    await act(async () => fireEvent(row("eng"), over));
+    expect(spot()?.nextElementSibling?.contains(row("eng"))).toBe(true);
+    // A drop on the spot lands where it stands.
+    await act(async () => fireEvent.drop(spot() as HTMLElement, { dataTransfer }));
+    await settle(3);
+    expect(places(state)).toEqual([[GENERAL_ID, { categoryId: null, beforeChannelId: ENG_ID }]]);
+    expect(names()).toEqual(["general", "eng"]);
+    expect(spot()).toBeNull();
+    expect(general().hasAttribute("data-lifted")).toBe(false);
+  });
+
+  test("Alt+Shift+↑/↓ moves a channel past its neighbour; an arrow alone does nothing", async () => {
+    const state = await go();
+    expect(row("general").getAttribute("aria-keyshortcuts")).toBe("Alt+Shift+ArrowUp Alt+Shift+ArrowDown");
+    await act(async () => fireEvent.keyDown(row("general"), { key: "ArrowDown" }));
+    await act(async () => fireEvent.keyDown(row("eng"), { key: "ArrowUp", altKey: true, shiftKey: true }));
+    await settle(3);
+    expect(places(state)).toEqual([]);
+    await act(async () => fireEvent.keyDown(row("general"), { key: "ArrowUp", altKey: true, shiftKey: true }));
+    await settle(3);
+    expect(places(state)).toEqual([[GENERAL_ID, { categoryId: null, beforeChannelId: ENG_ID }]]);
+    expect(names()).toEqual(["general", "eng"]);
+  });
+
   test("a drop where the channel already is sends nothing", async () => {
     const state = await go();
     expect(await dragOnto(row("eng"), row("general"), "top")).toBe("before");

@@ -208,7 +208,7 @@ function InUse({ config, place }: { config: StorageConfig; place: string }) {
       )}
       <CopyFiles config={config} place={place} />
       <div className="row">
-        <Button variant="ghost" onClick={() => setConfirm(true)}>
+        <Button variant="ghost" className="ac-btn--under" onClick={() => setConfirm(true)}>
           {t("storage.back", { place })}
         </Button>
       </div>

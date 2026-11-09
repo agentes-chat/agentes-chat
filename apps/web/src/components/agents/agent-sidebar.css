@@ -94,6 +94,23 @@
   background: var(--faint);
   box-shadow: none;
 }
+/* The sections under the head (`Sections`): laid out but unseen until each has its data, then shown together. */
+.dm-side__secs {
+  display: contents;
+}
+.dm-side__secs[data-pending] > * {
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dm-side__secs:not([data-pending]) > * {
+    animation: dm-side-in 160ms var(--ease-out, ease-out);
+  }
+}
+@keyframes dm-side-in {
+  from {
+    opacity: 0;
+  }
+}
 .dm-side__sec {
   padding: 12px 16px 2px;
   border-top: 1px solid var(--line);

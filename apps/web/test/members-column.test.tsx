@@ -230,6 +230,31 @@ describe("the members column", () => {
     expect(screen().getByRole("dialog", { name: "Perfil" }).textContent).toContain("4 conversas esperando");
   });
 
+  test("agents who are out sit under Offline, faded as the people there, their line saying why", async () => {
+    widthIs(DESKTOP_QUERY);
+    const until = new Date(Date.now() + 60_000).toISOString();
+    const state = seedState({
+      agentStatuses: [
+        {
+          agentId: ADA_ID,
+          presence: "out",
+          status: { by: "auto", text: null, kind: "out_of_plan", subject: null, emoji: null, until },
+          activeAt: new Date().toISOString(),
+        },
+        { agentId: ATLAS_ID, presence: "offline", status: null, activeAt: null },
+      ],
+    });
+    await open(state);
+    await settle(4);
+    const side = column() as HTMLElement;
+    expect(within(side).queryByRole("region", { name: "Agentes" })).toBeNull();
+    const offline = within(side).getByRole("region", { name: "Offline" });
+    expect(offline.classList.contains("members-side__group--off")).toBe(true);
+    const line = (name: string) => row(offline, name)?.querySelector(".members-side__line")?.textContent;
+    expect(line("Ada")).toMatch(/^Sem limite · volta às \d{1,2}:\d{2}$/);
+    expect(line("Atlas")).toBe("Pausado");
+  });
+
   test("a row opens the member's card", async () => {
     widthIs(DESKTOP_QUERY);
     await open();

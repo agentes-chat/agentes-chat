@@ -7,7 +7,8 @@
 // (`setAttribute`, kept in `marks` for this page only) and `fill [attr="value"]` finds it by that mark, or nothing
 // (`navigateAfterCheck`: the page goes there right after a check marks a field, as a page that moved on would);
 // `filled` keeps what each fill typed into. With `--bail` the batch stops at the first failure (ADR 0144).
-// `get box <sel>` answers `boxes[sel]`; a script sees `viewport` as `window.innerWidth`/`innerHeight` and
+// `get box <sel>` answers `boxes[sel]`; a script sees `viewport` as `window.innerWidth`/`innerHeight`, `window`
+// (`[screenX, screenY, outerWidth, outerHeight]`) as its window's place on the screen, and
 // `hit` (`{ tag, type, box: [left, top, right, bottom], ref }`) at any `document.elementFromPoint`; a
 // `mouse down` focuses that `ref`; `frames` (`[[width, height]]`) are the page's iframes.
 // `typingMs`: a batch that presses keys or moves the pointer takes that long (a person can step in meanwhile).
@@ -114,7 +115,9 @@ const pageEval = (script, focused) => {
       return found ? { removeAttribute: (name) => delete state.marks[name] } : null;
     },
   };
-  const win = state.viewport ? { innerWidth: state.viewport[0], innerHeight: state.viewport[1] } : {};
+  const [screenX, screenY, outerWidth, outerHeight] = state.window ?? [];
+  const placed = state.window ? { screenX, screenY, outerWidth, outerHeight } : {};
+  const win = state.viewport ? { innerWidth: state.viewport[0], innerHeight: state.viewport[1], ...placed } : {};
   const ancestors = frame.ancestors ?? [];
   const location = { origin: frame.origin ?? origin, ancestorOrigins: ancestors };
   const run = new Function("document", "location", "window", "top", `return ${script}`);
@@ -247,10 +250,13 @@ switch (command) {
     break;
   }
   case "eval":
-    // The page's size, or a settle check (true).
+    // The page's size (and its window's place, `window`), or a settle check (true).
     out({
       success: true,
-      data: { result: args.join(" ").includes("innerWidth") ? [1280, 800] : true, origin: state.url },
+      data: {
+        result: args.join(" ").includes("innerWidth") ? [1280, 800, ...(state.window ?? [])] : true,
+        origin: state.url,
+      },
     });
     break;
   case "upload":

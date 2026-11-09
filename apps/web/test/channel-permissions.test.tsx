@@ -4,7 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -126,5 +126,27 @@ describe("channel permissions (ADR 0134)", () => {
     await settle(3);
     expect(within(dialog).getByText("Quem pode ver este canal")).toBeTruthy();
     expect(within(dialog).queryByText("Aberto para todo o workspace")).toBeNull();
+  });
+
+  test("Membros: an agent out of office or paused and the people not here are under Offline, saying why", async () => {
+    await go((state) => {
+      state.agentStatuses = [
+        {
+          agentId: ADA_ID,
+          presence: "out",
+          status: { by: "auto", text: null, kind: "out_of_budget", subject: null, emoji: null, until: null },
+          activeAt: null,
+        },
+        { agentId: ATLAS_ID, presence: "online", status: null, activeAt: null },
+      ];
+    });
+    const dialog = await openSettings();
+    await click(within(dialog).getByRole("button", { name: "Membros" }));
+    await settle(3);
+    const heads = [...dialog.querySelectorAll(".member-group .ac-eyebrow")].map((h) => h.textContent);
+    expect(heads).toEqual(["Agentes", "Pessoas", "Offline"]);
+    const ada = [...dialog.querySelectorAll(".member-row--off")].find((r) => r.textContent?.includes("Ada"));
+    expect(ada?.textContent).toContain("Sem orçamento");
+    expect(dialog.querySelector(".member-row:not(.member-row--off)")?.textContent).toContain("Atlas");
   });
 });

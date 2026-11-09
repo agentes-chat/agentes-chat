@@ -1,5 +1,6 @@
 import type {
   AgentQuestion,
+  ArtifactKind,
   LiveConsult,
   LiveRun,
   Message,
@@ -10,6 +11,7 @@ import type {
 } from "@agenteschat/client";
 import { agentProposalOf, costlyProposalOf, stretchCardOf } from "@agenteschat/client/lib/action-cards";
 import { type ActivityEntry, barEntries, type barWords, markedPieces, markInk } from "@agenteschat/client/lib/activity";
+import { isArtifactKind, isCardKind } from "@agenteschat/client/lib/artifacts";
 import { splitChannelRefs } from "@agenteschat/client/lib/channel-refs";
 import type { ChatStyle, ChatTextSize } from "@agenteschat/client/lib/chat-look";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
@@ -340,9 +342,17 @@ export function workStepsOf(meta: Message["meta"]): number | null {
 }
 
 /** `meta.artifacts`: the files on a message. */
-export function artifactsOf(
-  meta: Message["meta"],
-): { id: string; version?: number; title: string; deleted: boolean }[] {
+export function artifactsOf(meta: Message["meta"]): {
+  id: string;
+  version?: number;
+  title: string;
+  deleted: boolean;
+  kind?: ArtifactKind;
+  options?: number;
+  questions?: number;
+  width?: number;
+  height?: number;
+}[] {
   const list = meta?.artifacts;
   if (!Array.isArray(list)) return [];
   return list.flatMap((r) => {
@@ -354,6 +364,12 @@ export function artifactsOf(
         ...(typeof o.version === "number" ? { version: o.version } : {}),
         title: str(o.title),
         deleted: o.deleted === true,
+        // What it is and its rows (newer messages): until it loads, its placeholder has its card's shape.
+        ...(isArtifactKind(o.kind) || isCardKind(o.kind) ? { kind: o.kind } : {}),
+        ...(typeof o.options === "number" ? { options: o.options } : {}),
+        ...(typeof o.questions === "number" ? { questions: o.questions } : {}),
+        // A picture's size (newer refs): its box before it loads.
+        ...(typeof o.width === "number" && typeof o.height === "number" ? { width: o.width, height: o.height } : {}),
       },
     ];
   });

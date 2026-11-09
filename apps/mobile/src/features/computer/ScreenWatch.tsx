@@ -1,12 +1,15 @@
-import { type DesktopViewState, keys } from "@agenteschat/client";
+import { cursorStep, type DesktopViewState, keys } from "@agenteschat/client";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useQueryClient } from "@tanstack/react-query";
 import { type Ref, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type LayoutChangeEvent, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
+import { useSharedValue } from "react-native-reanimated";
 import { useServer } from "@/lib/server";
+import { useReducedMotion } from "@/ui";
 import { useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
+import { AgentPointer, type AgentPointerHandle } from "./AgentPointer";
 import { Cover } from "./Cover";
 import { reportStuck, ScreenPage, type ScreenPageHandle } from "./ScreenPage";
 import { DEFAULT_DESKTOP, fitScale, type Size } from "./screen-view";
@@ -57,6 +60,15 @@ export function ScreenWatch({
   const [desk, setDesk] = useState<Size>(DEFAULT_DESKTOP);
   const said = useRef(onState);
   said.current = onState;
+  const reduced = useReducedMotion();
+  // The agent's own pointer (protocol 54), at the card's scale.
+  const agentPointer = useRef<AgentPointerHandle>(null);
+  const camera = {
+    s: useSharedValue(1),
+    x: useSharedValue(0),
+    y: useSharedValue(0),
+    box: useSharedValue({ width: 0, height: 0 }),
+  };
 
   useEffect(() => {
     if (ready) web.current?.call("set", { connect, mode: "watch" });
@@ -97,6 +109,11 @@ export function ScreenWatch({
     setBox((b) => (b.width === width && b.height === height ? b : { width, height }));
   };
   const scale = box.width > 0 && box.height > 0 ? fitScale(box, desk) : 1;
+  const { s, box: seen } = camera;
+  useEffect(() => {
+    s.value = scale;
+    seen.value = box;
+  }, [s, seen, scale, box]);
 
   return (
     <View
@@ -126,11 +143,21 @@ export function ScreenWatch({
             else if (event.type === "size") setDesk({ width: event.width, height: event.height });
             else if (event.type === "changed") {
               void qc.invalidateQueries({ queryKey: keys.agentDesktop(orgId, agentId) });
-            }
+            } else if (event.type === "cursor") agentPointer.current?.step(cursorStep(t, event));
           }}
           onGone={restart}
         />
       </View>
+      <AgentPointer
+        ref={agentPointer}
+        agentId={agentId}
+        name={agent?.name ?? ""}
+        color={color}
+        camera={camera}
+        desk={desk}
+        shown={page === "live" && !parked}
+        reduced={reduced}
+      />
       {page === "live" ? null : <Cover fill sky spinner color={color} text={t("agentComputer.state.opening", g)} />}
     </View>
   );

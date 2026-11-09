@@ -782,8 +782,10 @@ function AudienceEdit({ agent }: { agent: Agent }) {
       >
         <span className="mcard-audience__title">{t("audience.title", g)}</span>
         <Locked when={update.isPending}>
+          {/* Rows, one list whatever is picked: three cards this narrow leave one alone under two. */}
           <AudienceChoice
             compact
+            layout="rows"
             value={draft}
             onChange={setDraft}
             ownerUserId={agent.ownerUserId}

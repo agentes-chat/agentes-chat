@@ -22,7 +22,6 @@ interface Brain {
   brain: string;
   model: string | null;
   effectiveModel: string | null;
-  fallback: boolean;
   computer: { machineId: string; name: string; online: boolean } | null;
   options: { kind: string; available: boolean; reason?: string; models: { value: string }[] }[];
   machines: { machineId: string; name: string; online: boolean; options: { kind: string; available: boolean }[] }[];
@@ -90,14 +89,14 @@ function pairMac(api: (path: string, init?: Parameters<ReturnType<typeof browser
   return pairComputer(t, api, { ...RUNNER, exec: true }, { name: "mac" });
 }
 
-test("agent brain: defaults, who may, letting others talk to a plan, what the computer has, model and fallback", async () => {
+test("agent brain: defaults, who may, letting others talk to a plan, what the computer has, and the model", async () => {
   const { api, asBia, agentId } = await workspace();
 
-  // Defaults: the model (API), fallback on, nothing to offer without a computer.
+  // Defaults: the model (API), nothing to offer without a computer.
   const first = await api(`/agents/${agentId}/brain`);
   expect(first.status).toBe(200);
   const fresh = (await first.json()) as Brain;
-  expect(fresh).toMatchObject({ brain: "model", model: null, effectiveModel: null, fallback: true, computer: null });
+  expect(fresh).toMatchObject({ brain: "model", model: null, effectiveModel: null, computer: null });
   // Accounts (ADR 0041): none without a computer.
   expect(fresh).toMatchObject({
     account: null,
@@ -129,7 +128,7 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
 
   // A member neither sees nor changes it.
   expect((await asBia(`/agents/${agentId}/brain`)).status).toBe(403);
-  expect((await asBia(`/agents/${agentId}/brain`, { method: "PUT", json: { fallback: false } })).status).toBe(403);
+  expect((await asBia(`/agents/${agentId}/brain`, { method: "PUT", json: { onlyOwner: false } })).status).toBe(403);
 
   // With a computer: Claude Code (a runner that doesn't list its CLIs is assumed to have it), no Codex.
   const mac = await pairMac(api);
@@ -193,10 +192,16 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
     "everyone",
   ]);
 
-  // Model and fallback change without confirming again; bad models are refused.
-  const fallbackOff = await api(`/agents/${agentId}/brain`, { method: "PUT", json: { fallback: false } });
-  expect(fallbackOff.status).toBe(200);
-  expect(await fallbackOff.json()).toMatchObject({ brain: "claude_code", model: "opus", fallback: false });
+  // An older app's switches are ignored (the API never stands in, extra usage follows the plan): nothing changes.
+  const ignored = await api(`/agents/${agentId}/brain`, {
+    method: "PUT",
+    json: { fallback: false, extraUsage: false },
+  });
+  expect(ignored.status).toBe(200);
+  const kept = (await ignored.json()) as Brain;
+  expect(kept).toMatchObject({ brain: "claude_code", model: "opus" });
+  expect(kept).not.toHaveProperty("fallback");
+  // The model changes without confirming again; bad models are refused.
   const sonnet = (await (
     await api(`/agents/${agentId}/brain`, { method: "PUT", json: { model: null } })
   ).json()) as Brain;
@@ -206,9 +211,9 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
 
   // Persisted, and audited.
   const [row] = await t.db.select().from(schema.agents).where(eq(schema.agents.id, agentId));
-  expect(row).toMatchObject({ brain: "claude_code", brainModel: null, brainFallback: false });
+  expect(row).toMatchObject({ brain: "claude_code", brainModel: null });
   const audit = await t.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "agent.brain"));
-  expect(audit.length).toBe(3);
+  expect(audit.length).toBe(2);
   expect(JSON.stringify(audit.map((a) => a.details))).not.toMatch(/acceptedPlanTerms|audience/);
 
   // Codex appears once the computer has a recent one; any model name is taken as typed.
@@ -227,7 +232,7 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
 
   // Back to the API: no confirmation, the model is cleared.
   const back = await api(`/agents/${agentId}/brain`, { method: "PUT", json: { brain: "model" } });
-  expect(await back.json()).toMatchObject({ brain: "model", model: null, fallback: false });
+  expect(await back.json()).toMatchObject({ brain: "model", model: null });
 });
 
 test("Outros agentes podem consultar: the audience carries the switch, on by default, kept when absent", async () => {

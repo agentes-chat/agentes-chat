@@ -89,7 +89,7 @@ describe("Contas de IA", () => {
     await act(async () => fireEvent.click(connect));
     await settle(4);
     const dialog = screen().getByRole("dialog", { name: "Conectar uma IA" });
-    expect(within(dialog).getByRole("group", { name: "Qual IA eles vão usar?" })).toBeTruthy();
+    expect(within(dialog).getByRole("combobox", { name: "Conectar outra IA" })).toBeTruthy();
   });
 
   test("a member sees their own plans with their meters, never the workspace's keys; an admin sees both", async () => {

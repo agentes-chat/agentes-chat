@@ -356,7 +356,7 @@ describe("models by provider and the default key", () => {
     await go("agents/new");
     await startAs("QA");
     await proceed(4);
-    await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Quem pensa" })));
+    await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Modelo" })));
     const list = screen().getByRole("listbox", { name: "Modelos" });
     const options = within(list).getAllByRole("option");
     // "Automático" first and chosen, then the models by provider.
@@ -372,8 +372,8 @@ describe("models by provider and the default key", () => {
     await act(async () =>
       fireEvent.keyDown(screen().getByRole("combobox", { name: "Buscar modelos" }), { key: "Escape" }),
     );
-    const key = screen().getByRole("combobox", { name: "Chave" });
-    expect(key.textContent).toContain("Chave padrão do workspace");
+    // What thinks: the workspace's default key, named as the AI select names it.
+    expect(screen().getByRole("combobox", { name: "Quem pensa" }).textContent).toContain("Claude da Acme");
   });
 });
 

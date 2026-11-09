@@ -19,7 +19,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { act, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
-import { aiSelect, chooseAi, closeAiSelect, openAiSelect, payWith } from "./ai-picker";
+import { aiSelect, brainTitle, chooseAi, closeAiSelect, openAiSelect } from "./ai-picker";
 import {
   ADA_ID,
   ATLAS_ID,
@@ -203,15 +203,6 @@ const LIA_ID = "00000000-0000-4000-8000-0000000000a3";
 /** Whether an icon is drawn as `name` (its shape's first path). */
 const drawnAs = (svg: Element | null | undefined, name: keyof typeof icons) =>
   svg?.querySelector("path")?.getAttribute("d") === icons[name].find(([tag]) => tag === "path")?.[1].d;
-/** "For": the select of whom a plan thinks for, opened. */
-async function openFor(inside: HTMLElement) {
-  const select = within(inside).getByRole("combobox", { name: "Agentes que usam este plano" });
-  select.focus();
-  await act(async () => fireEvent.keyDown(select, { key: "Enter" }));
-  await settle(2);
-  return screen().getAllByRole("option");
-}
-
 /** A stylesheet's text, its comments left out. */
 const stylesheet = async (path: string) =>
   (await Bun.file(new URL(path, import.meta.url).pathname).text()).replace(/\/\*[\s\S]*?\*\//g, "");
@@ -247,20 +238,16 @@ describe("Conectar uma IA: one picker, plans first", () => {
     }
   });
 
-  test("Settings › AI accounts opens the same picker: a plan or a key, then one select with Claude chosen and its sign-in", async () => {
+  test("Settings › AI accounts opens on the providers: one select, Claude chosen, its sign-in under it, no footer", async () => {
     const { dialog } = await connect();
-    const group = within(dialog).getByRole("group", { name: "Qual IA eles vão usar?" });
-    expect(group.querySelectorAll(":scope > .ac-option")).toHaveLength(0);
-    // The two ways to pay, then whose: nothing else before the steps.
-    expect(within(group).getByRole("radiogroup", { name: "Como você paga?" })).toBeTruthy();
-    expect(payWith(dialog, "Com um plano").getAttribute("aria-checked")).toBe("true");
-    expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("false");
     const select = aiSelect(dialog);
-    expect(select.textContent).toBe("Claude");
+    expect(select.textContent).toContain("Claude");
     expect(select.querySelector(".ac-brand")?.getAttribute("data-mark")).toBe("claude");
     const options = await openAiSelect(dialog);
-    // The most used first, each by its maker's mark.
-    expect(options.map((o) => o.textContent)).toEqual([
+    const heading = (o: Element) => o.closest('[role="group"]')?.querySelector(".ac-menu__heading")?.textContent ?? "";
+    const plans = options.filter((o) => heading(o) === "Seu plano de IA");
+    // The most used first, each by its maker's mark and what it's sold as.
+    expect(plans.map(brainTitle)).toEqual([
       "Claude",
       "ChatGPT",
       "Gemini",
@@ -272,7 +259,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "MiniMax",
       "OpenCode Go",
     ]);
-    expect(options.map((o) => o.querySelector(".ac-brand")?.getAttribute("data-mark"))).toEqual([
+    expect(plans.map((o) => o.querySelector(".ac-brand")?.getAttribute("data-mark"))).toEqual([
       "claude",
       "openai",
       "gemini",
@@ -284,11 +271,11 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "minimax",
       "opencode",
     ]);
+    expect(plans[0]?.querySelector(".ac-menu__desc")?.textContent).toBe("Pro, Max, Ultra, Team ou Enterprise");
+    // Then the keys, to pay as you go, in the same list.
+    expect(options.some((o) => heading(o) === "Ou pague pelo uso")).toBe(true);
     await closeAiSelect();
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    // Right under the select: nothing comes between a choice and its steps.
-    expect(select.closest(".ac-select")?.nextElementSibling).toBe(panel);
-    expect(panel.textContent).toContain("Pro, Max, Ultra, Team ou Enterprise");
     expect(within(panel).getByRole("button", { name: "Entrar com Claude" })).toBeTruthy();
     // The sign-in step is its title, its ⓘ and its button: the title names the account, the button the sign-in,
     // and the ⓘ says what to do on the wrong account and where the account stays. Its one step takes no number.
@@ -299,27 +286,11 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(panel.querySelector(".agp-addacct__step")?.classList.contains("ac-iconline")).toBe(false);
     expect(panel.querySelector(".agp-addacct__step > i")).toBeNull();
     expect(shownText(panel)).not.toMatch(/Abre a página|nunca vê a senha|senha vai só/);
-    // Whom the agent answers, once, as the panel's foot: "Atende outras pessoas", off, the line saying she answers
-    // only the person on their plan, and Claude's terms behind its ⓘ (no lock note above it).
-    const foot = panel.querySelector(".ac-card__foot") as HTMLElement;
-    expect(panel.lastElementChild).toBe(foot);
-    expect(foot.firstElementChild?.getAttribute("data-icon") ?? foot.querySelector("svg")).toBeTruthy();
-    expect(shownText(foot)).toBe("Atende outras pessoasA Ada só atende você, pelo seu plano do Claude.");
-    expect(within(foot).getByRole("switch", { name: "Atende outras pessoas" }).getAttribute("aria-checked")).toBe(
-      "false",
-    );
-    expect(hintOf("os termos do plano", foot).text).toBe(
-      "Os planos do Claude são para uso pessoal. Deixar outras pessoas usarem o seu é uma zona cinzenta nos termos do Claude.",
-    );
-    expect(panel.classList.contains("ai-panel--plan")).toBe(true);
-    expect(panel.querySelectorAll(".ac-setnote")).toHaveLength(0);
-    // One agent of the viewer's: nobody to choose.
+    // One agent of the viewer's: nobody to choose. A first sign-in asks for no account, computer or name.
     expect(within(panel).queryByRole("combobox")).toBeNull();
-    // A first sign-in asks for no account, and nothing asks for a computer or a name.
     expect(within(panel).queryByLabelText("Qual conta? (opcional)")).toBeNull();
     expect(dialog.textContent).not.toContain("Em qual computador?");
-    // Until something is connected the body is the dialog's last part: its own edge under the panel, no footer.
-    expect(dialog.querySelector(".ac-dialog__body:last-child")).not.toBeNull();
+    // Nothing waits for a button: no footer.
     expect(dialog.querySelector(".ac-dialog__footer")).toBeNull();
   });
 
@@ -330,12 +301,10 @@ describe("Conectar uma IA: one picker, plans first", () => {
     const shown = async (query: string) => {
       await type(field, query);
       await settle(2);
-      return screen()
-        .queryAllByRole("option")
-        .map((o) => o.textContent);
+      return screen().queryAllByRole("option").map(brainTitle);
     };
-    // Its maker, what it is sold as, one of its tiers.
-    expect(await shown("openai")).toEqual(["ChatGPT"]);
+    // Its maker, what it is sold as, one of its tiers; the maker's key to pay as you go too.
+    expect(await shown("openai")).toEqual(["ChatGPT", "OpenAI"]);
     expect(await shown("glm")).toEqual(["GLM Coding"]);
     expect(await shown("supergrok")).toEqual(["Grok"]);
     expect(await shown("nada disso")).toEqual([]);
@@ -344,22 +313,6 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await act(async () => fireEvent.keyDown(field, { key: "Enter" }));
     await settle(4);
     expect(within(dialog).getByRole("region", { name: "Kimi Code" })).toBeTruthy();
-  });
-
-  test("the picker's rows: a check on the name's line, and the chosen option's panel a form's gap under its select", async () => {
-    const ui = await stylesheet("../../../packages/ui/src/styles/components.css");
-    expect(ruleOf(ui, '.ac-option[aria-pressed="true"]::after')).toContain("height: 18px");
-    const layout = await stylesheet("../src/layout.css");
-    // A row has two lines: its check goes on the first, its name's, past the row's padding (the page's 22px line
-    // where the lh unit is unknown).
-    expect(ruleOf(ui, ".ac-option")).toContain("padding: var(--space-3)");
-    const key = ".ai-picker > .ac-option.ai-picker__key::after";
-    expect(ruleOf(layout, key)).toContain("top: calc(var(--space-3) + 11px - 9px)");
-    expect(ruleOf(layout.split("\n@supports (top: 1lh) {")[1] ?? "", key)).toContain(
-      "top: calc(var(--space-3) + 0.5lh - 9px)",
-    );
-    // The form's rhythm: the panel stands from the select as any field from the next.
-    expect(ruleOf(layout, ".ai-picker")).toContain("gap: var(--form-gap)");
   });
 
   test("a coding plan's key: its own key page, then the key sealed to the computer (in no request); the agent thinks with it", async () => {
@@ -371,7 +324,6 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(within(opencode).getByLabelText("Chave do OpenCode Go").getAttribute("placeholder")).toBe("oc_sk_…");
     await choose("GLM Coding");
     const panel = within(dialog).getByRole("region", { name: "GLM Coding Plan" });
-    expect(panel.textContent).toContain("Lite, Pro ou Max");
     expect(within(panel).getByRole("link", { name: "Abrir z.ai" }).getAttribute("href")).toBe(
       "https://z.ai/manage-apikey/apikey-list",
     );
@@ -382,12 +334,8 @@ describe("Conectar uma IA: one picker, plans first", () => {
     );
     const safe = hintOf("Cole a chave aqui", panel);
     expect(safe.text).toBe("A chave vai criptografada para o MacBook e\u00a0fica\u00a0só\u00a0lá.");
-    // The foot names the plan, and its terms are the plan's maker's.
-    const foot = panel.querySelector(".ac-card__foot") as HTMLElement;
-    expect(shownText(foot)).toBe("Atende outras pessoasA Ada só atende você, pelo seu plano GLM Coding.");
-    expect(hintOf("os termos do plano", foot).text).toBe(
-      "Z.ai diz que o plano é só de quem assina. Deixar outras pessoas usarem o seu é uma zona cinzenta nos termos do plano.",
-    );
+    // Whom it answers waits for the plan: the steps alone.
+    expect(within(dialog).queryByRole("switch", { name: "Atende outras pessoas" })).toBeNull();
     expect(shownText(panel)).not.toMatch(/Fica em|Num plano de equipe|criptografada|só de quem assina/);
     expect(within(panel).getByLabelText("Chave do GLM Coding").getAttribute("aria-describedby")).toBe(
       safe.button.getAttribute("aria-describedby"),
@@ -426,8 +374,13 @@ describe("Conectar uma IA: one picker, plans first", () => {
       { brain: "claude_code", account: "acct_new" },
     ]);
     expect(calls(state, "machines.renameAccount")).toHaveLength(0);
-    expect(dialog.textContent).toContain("Ada agora pensa com GLM Coding.");
-    await click(within(dialog).getByRole("button", { name: "Pronto" }));
+    expect(document.body.textContent).toContain("A Ada agora pensa com GLM Coding.");
+    // Back on the select, which names it; under it whom she answers, the plan named and its terms its maker's.
+    expect(within(dialog).getByRole("combobox", { name: "Quem pensa" }).textContent).toContain("GLM Coding");
+    const replies = hintOf("Atende outras pessoas", dialog).text;
+    expect(replies).toContain("A Ada só atende você, pelo seu plano GLM Coding.");
+    expect(replies).toContain("Z.ai diz que o plano é só de quem assina.");
+    await click(within(dialog).getByRole("button", { name: "Fechar" }));
     expect(screen().queryByRole("dialog")).toBeNull();
   });
 
@@ -439,7 +392,6 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await settle(4);
     expect(calls(state, "machines.beginAccountLogin")).toHaveLength(0);
     const panel = within(dialog).getByRole("region", { name: "Seu plano do ChatGPT" });
-    expect(panel.textContent).toContain("Plus, Pro, Business ou Enterprise");
     expect(panel.textContent).toContain("Permita o login com código no ChatGPT");
     expect(within(panel).getByRole("link", { name: "Abrir as configurações do ChatGPT" }).getAttribute("href")).toBe(
       "https://chatgpt.com/#settings/Security",
@@ -480,7 +432,6 @@ describe("Conectar uma IA: one picker, plans first", () => {
     });
     await choose("Cursor");
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Cursor" });
-    expect(panel.textContent).toContain("Pro, Pro+, Ultra ou Teams, ou uma chave de API do Cursor");
     expect(aiSelect(dialog).querySelector(".ac-brand")?.getAttribute("data-mark")).toBe("cursor");
     // Nothing starts before its button; the sign-in asks the computer for Cursor's page, no code to paste.
     expect(calls(state, "machines.beginAccountLogin")).toHaveLength(0);
@@ -532,7 +483,6 @@ describe("Conectar uma IA: one picker, plans first", () => {
     });
     await choose("Gemini");
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Gemini" });
-    expect(panel.textContent).toContain("Google AI Pro, Google AI Ultra ou Gemini Enterprise");
     const warning =
       "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API ou o Gemini Enterprise.";
     expect(shownText(panel)).toContain(warning);
@@ -642,11 +592,6 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(ruleOf(layout, ".ai-panel--plan .agp-addacct__step.ac-iconline .agp-addacct__busy")).toContain(
       "margin-left: calc((var(--lead) - 14px) / 2 - var(--lead) - 12px)",
     );
-    // The head's hairline runs edge to edge, as the foot's does; for whom ends the name's line (a MediaRow's end), no
-    // rise of its own.
-    expect(ruleOf(layout, ".ai-panel__head")).toContain("margin-inline: calc(-1 * var(--card-pad))");
-    expect(ruleOf(layout, ".ai-panel__agent")).not.toContain("margin-top");
-    expect(ruleOf(layout, ".ai-panel__agent")).not.toContain("height");
   });
 
   test("a step's button sits right under its words, on their column, at every width; a failure's note sits in its button's middle", async () => {
@@ -687,78 +632,69 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(ruleOf(layout, ".agp-addacct__paste .ac-input-affix")).toContain("flex: 1 1 100%");
   });
 
-  test("a computer the person connected: the account their agents share, saved for the agent at once; or one just for it", async () => {
+  test("a computer the person connected: its own sign-in is a row of the AI select, saved at once; the providers sign in a new one", async () => {
     const { state, dialog } = await connect({
       brain: { ownSignIn: true },
       computers: [{ ...MAC, own: { claude_code: { plan: "max" } } }],
     });
-    // Who shares the sign-in, in the person's words, with the plan the computer says: never which computer it's on.
-    const own = within(dialog).getByRole("button", { name: /^A conta que os seus agentes dividem/ });
-    expect(own.querySelector(".ac-option__title")?.textContent).toBe("A conta que os seus agentes dividem");
-    expect(own.querySelector(".ac-option__desc")?.textContent).toBe("Claude Max");
-    expect(shownText(dialog)).not.toMatch(/login no|MacBook\b.*conta|Outra conta|todos os seus/);
-    // Small columns, so the two cards sit side by side on the panel's text column in the setup too.
-    expect(own.parentElement?.className).toBe("grid-options grid-options--sm");
-    // Who it replies to is the foot's, once, either way.
-    expect(within(dialog).getAllByRole("switch", { name: "Atende outras pessoas" })).toHaveLength(1);
-    // One just for Ada: its title alone; then the sign-in, which asks for no address: Claude's own page does.
-    const one = within(dialog).getByRole("button", { name: "Uma conta só para a Ada" });
-    expect(one.textContent).toBe("Uma conta só para a Ada");
-    await click(one);
+    // Opened for a new AI: the providers, Claude's sign-in for an account of Ada's own, no choice of accounts in it.
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
     expect(within(panel).getByRole("button", { name: "Entrar com Claude" })).toBeTruthy();
-    expect(within(dialog).getAllByRole("switch", { name: "Atende outras pessoas" })).toHaveLength(1);
+    expect(shownText(panel)).not.toMatch(/A conta que os seus agentes dividem|Uma conta só|Qual conta|opcional/);
     expect(panel.querySelector("input")).toBeNull();
-    expect(within(panel).queryByRole("textbox")).toBeNull();
-    expect(shownText(panel)).not.toMatch(/Qual conta|Email da conta|opcional/);
-    await withPopup(() => click(within(panel).getByRole("button", { name: "Entrar com Claude" })));
-    await settle(6);
-    expect(calls(state, "machines.beginAccountLogin").map((c) => c.args)).toEqual([
-      [ORG_ID, "machine_1", "claude_code"],
-    ]);
+    // One step back, the AI select: the computer's own sign-in by its plan and where it is, never another choice.
+    await click(dialog.querySelector(".ai-flow__head button") as Element);
+    const rows = await openAiSelect(dialog, "Quem pensa");
+    const own = rows.find((o) => o.textContent?.includes("Login no MacBook")) as HTMLElement;
+    expect(brainTitle(own)).toBe("Claude · Max");
     await click(own);
     await settle(4);
     expect(calls(state, "agents.setBrain")[0]?.args).toEqual([ORG_ID, ADA_ID, { brain: "claude_code", account: null }]);
-    expect(dialog.textContent).toContain("Ada agora pensa com a conta que os seus agentes dividem.");
+    expect(document.body.textContent).toContain("A Ada agora pensa com Claude · Max");
   });
 
-  test("all of them on a computer the person connected: the account their agents share, or one just for them, signed in for each", async () => {
-    const { dialog } = await connect({
+  test("all of them on a computer the person connected: its own sign-in, one row, saved for each of them", async () => {
+    const { state, dialog } = await connect({
       crew: true,
       brain: { ownSignIn: true },
       computers: [{ ...MAC, own: { claude_code: { plan: "max" } } }],
     });
-    const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    expect(within(panel).getByRole("combobox").textContent).toBe("Todos os agentes");
-    // Never one agent's name while the panel is for all of them.
-    expect(within(panel).queryByRole("button", { name: /^Uma conta só para (a|o) / })).toBeNull();
-    await click(within(panel).getByRole("button", { name: "Uma conta só para eles" }));
-    expect(within(panel).getByRole("button", { name: "Fazer login para a Ada" })).toBeTruthy();
+    // Never one agent's name while it is for all of them.
+    expect(within(dialog).queryByRole("button", { name: /^Uma conta só para (a|o) / })).toBeNull();
+    await click(dialog.querySelector(".ai-flow__head button") as Element);
+    const rows = await openAiSelect(dialog, "Quem pensa");
+    await click(rows.find((o) => o.textContent?.includes("Login no MacBook")) as HTMLElement);
+    await settle(8);
+    expect(calls(state, "agents.setBrain").map((c) => [c.args[1], c.args[2]])).toEqual([
+      [ADA_ID, { brain: "claude_code", account: null }],
+      [ATLAS_ID, { brain: "claude_code", account: null }],
+      [LIA_ID, { brain: "claude_code", account: null }],
+    ]);
+    expect(document.body.textContent).toContain("Ada, Atlas e Lia agora pensam com Claude · Max.");
   });
 
-  test("a computer the person connected whose Claude isn't signed in: no account to share, only the sign-in", async () => {
-    // The computer says its own sign-ins (`own`); with none for Claude Code, the first card would name no account.
+  test("a computer the person connected whose Claude isn't signed in: no row for it, only the sign-in", async () => {
+    // The computer says its own sign-ins (`own`); with none for Claude Code, there is no account of its to use.
     const { dialog, choose } = await connect({ brain: { ownSignIn: true } });
     const panel = () => within(dialog).getByRole("region", { name: /^Seu plano do/ });
-    expect(within(dialog).queryByRole("button", { name: /^A conta que os seus agentes dividem/ })).toBeNull();
     expect(within(panel()).getByRole("button", { name: "Entrar com Claude" })).toBeTruthy();
-    expect(within(panel()).getAllByRole("switch", { name: "Atende outras pessoas" })).toHaveLength(1);
     // ChatGPT's alike: none reported for Codex, so only its sign-in.
     await choose("ChatGPT");
-    expect(within(panel()).queryByRole("button", { name: "A conta que os seus agentes dividem" })).toBeNull();
     expect(within(panel()).getByRole("button", { name: "Entrar com ChatGPT" })).toBeTruthy();
+    await click(dialog.querySelector(".ai-flow__head button") as Element);
+    const rows = await openAiSelect(dialog, "Quem pensa");
+    expect(rows.filter((o) => o.textContent?.includes("Login no MacBook"))).toEqual([]);
   });
 
-  test("ChatGPT's own sign-in to share once the computer reports it (the usage it read with it)", async () => {
+  test("ChatGPT's own sign-in once the computer reports it: a row of the select, by where it is", async () => {
     const usage = { windows: [], source: "probe" as const, at: "2026-10-30T12:00:00.000Z" };
-    const { dialog, choose } = await connect({
+    const { dialog } = await connect({
       brain: { ownSignIn: true },
       computers: [{ ...MAC, own: { codex: { usage } } }],
     });
-    await choose("ChatGPT");
-    const panel = within(dialog).getByRole("region", { name: "Seu plano do ChatGPT" });
-    expect(within(panel).getByRole("button", { name: "A conta que os seus agentes dividem" })).toBeTruthy();
-    expect(within(panel).getByRole("button", { name: "Uma conta só para a Ada" })).toBeTruthy();
+    await click(dialog.querySelector(".ai-flow__head button") as Element);
+    const rows = await openAiSelect(dialog, "Quem pensa");
+    expect(rows.filter((o) => o.textContent?.includes("Login no MacBook")).map(brainTitle)).toEqual(["ChatGPT"]);
   });
 
   test("a plan its computer can't take: its logo dims, and its panel says why, with the key one click away", async () => {
@@ -780,7 +716,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
       },
     });
     const rows = await openAiSelect(dialog);
-    const dimmed = (name: string) => rows.find((o) => o.textContent === name)?.querySelector(".ac-brand--off") != null;
+    const dimmed = (name: string) => rows.find((o) => brainTitle(o) === name)?.querySelector(".ac-brand--off") != null;
     expect(dimmed("Claude")).toBe(false);
     expect(dimmed("ChatGPT")).toBe(true);
     expect(dimmed("Kimi Code")).toBe(true);
@@ -790,7 +726,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await choose("Kimi Code");
     expect(dialog.textContent).toContain("Atualize o agentes no computador para usar a chave de um plano");
     await click(within(dialog).getByRole("button", { name: "Usar uma chave de API agora" }));
-    expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
+    expect(within(dialog).getByRole("region", { name: "Chave de API" })).toBeTruthy();
   });
 
   test("a plan whose tool is off on its computer: the app's Preferences on a Mac, the command too on Linux", async () => {
@@ -816,8 +752,9 @@ describe("Conectar uma IA: one picker, plans first", () => {
 
   test("self-host with no computer for the agent: plans dim, the key comes first, and a plan's panel says to connect one", async () => {
     const { dialog, router } = await connect({ computers: [], brain: { computer: null, machines: [] } });
-    expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
-    await click(payWith(dialog, "Com um plano"));
+    // With no computer, the key comes first; the plans in the same list, dimmed.
+    expect(within(dialog).getByRole("region", { name: "Chave de API" })).toBeTruthy();
+    await chooseAi(dialog, "Claude");
     expect(aiSelect(dialog).querySelector(".ac-brand--off")).not.toBeNull();
     expect(dialog.textContent).toContain("As contas ficam num computador conectado. Conecte um seu primeiro.");
     await click(within(dialog).getByRole("button", { name: "Conectar um computador" }));
@@ -1035,24 +972,26 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(within(dialog).getByRole("button", { name: "Salvar e testar" }).hasAttribute("disabled")).toBe(false);
   });
 
-  test("a plan for Ada, then the API key for the rest: its field is there, and only a saved key says it's saved", async () => {
+  test("a plan for Ada, then an API key from the select's Conectar outra IA: its field, and once saved she thinks with it", async () => {
     const { state, machines, dialog, choose } = await connect();
     machines?.endLogin("login_1", { state: "done", account: claudeMax });
     await withPopup(() => click(within(dialog).getByRole("button", { name: "Entrar com Claude" })));
     await settle(8);
-    expect(dialog.textContent).toContain("Ada agora pensa com Claude Max.");
+    expect(document.body.textContent).toContain("Ada agora pensa com Claude Max.");
     await choose("Chave de API");
     const panel = within(dialog).getByRole("region", { name: "Chave de API" });
     // Right under its select; Claude's panel is gone from above it.
-    expect(aiSelect(dialog, "Provedor").closest(".ac-select")?.nextElementSibling).toBe(panel);
+    expect(aiSelect(dialog).closest(".ac-select")?.nextElementSibling).toBe(panel);
     expect(within(dialog).queryByRole("region", { name: "Seu plano do Claude" })).toBeNull();
     // The way to pay just chosen already names it: no head again, and who charges for it, once.
     expect(panel.querySelector(".ai-panel__head")).toBeNull();
     expect(shownText(panel).split("Você paga pelo uso, direto ao provedor.")).toHaveLength(2);
     expect(shownText(panel)).toContain("Todo agente sem plano pensa com ela.");
     // Every maker, the most used first; a workspace's own endpoint last (ADR 0146).
-    const makers = await openAiSelect(dialog, "Provedor");
-    expect(makers.map((o) => o.textContent)).toEqual([
+    const makers = (await openAiSelect(dialog)).filter(
+      (o) => o.closest('[role="group"]')?.querySelector(".ac-menu__heading")?.textContent === "Ou pague pelo uso",
+    );
+    expect(makers.map(brainTitle)).toEqual([
       "Claude",
       "OpenAI",
       "Gemini",
@@ -1102,9 +1041,12 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(within(panel).queryByRole("button", { name: "Salvar chave" })).toBeNull();
     await type(within(panel).getByLabelText("Cole aqui"), "sk-ant-api03-abcdefghijklmnop");
     await click(within(panel).getByRole("button", { name: "Salvar chave" }));
-    await settle(4);
+    await settle(8);
     expect(calls(state, "agents.addCredential")).toHaveLength(1);
-    expect(panel.textContent).toContain("Salva. Todo agente sem plano pensa com ela.");
+    // Tried and saved, it is what Ada thinks with: back on the API with it, the select naming it.
+    expect(calls(state, "agents.setBrain").at(-1)?.args[2]).toEqual({ brain: "model" });
+    expect(calls(state, "agents.update").at(-1)?.args[2]).toMatchObject({ credentialId: expect.any(String) });
+    expect(within(dialog).getByRole("combobox", { name: "Quem pensa" }).textContent).toContain("Claude");
   });
 
   test("while a key saves, nothing that belongs to it moves: the way to pay, its maker, the field", async () => {
@@ -1115,8 +1057,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await type(within(panel).getByLabelText("Cole aqui"), "sk-ant-api03-abcdefghijklmnop");
     await click(within(panel).getByRole("button", { name: "Salvar chave" }));
     expect(within(panel).getByLabelText("Cole aqui").closest("fieldset[disabled]")).not.toBeNull();
-    expect(aiSelect(dialog, "Provedor").hasAttribute("disabled")).toBe(true);
-    expect(payWith(dialog, "Com um plano").hasAttribute("disabled")).toBe(true);
+    expect(aiSelect(dialog).hasAttribute("disabled")).toBe(true);
   });
 
   test("a sign-in started once the computer is ready is stopped on that computer when its panel goes", async () => {
@@ -1204,41 +1145,6 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(calls(state, "machines.cancelAccountLogin")).toHaveLength(0);
   });
 
-  test("for which agent: another plan keeps the one chosen; once it thinks with a plan, the next one moves on", async () => {
-    const { state, machines, dialog, choose, services } = await connect({ mine: [ADA_ID, ATLAS_ID] });
-    state.aiStatus = {
-      any: false,
-      agents: [
-        { agentId: ADA_ID, state: "no_ai", reason: "no_key" },
-        { agentId: ATLAS_ID, state: "no_ai", reason: "no_key" },
-      ],
-    };
-    await act(async () => services.queryClient.invalidateQueries({ queryKey: keys.aiStatus(ORG_ID) }));
-    await settle(4);
-    const agent = () => within(dialog).getByRole("combobox", { name: "Agentes que usam este plano" });
-    expect(agent().textContent).toContain("Ada");
-    agent().focus();
-    await act(async () => fireEvent.keyDown(agent(), { key: "Enter" }));
-    await click(screen().getByRole("option", { name: "Atlas" }));
-    await choose("ChatGPT");
-    expect(agent().textContent).toContain("Atlas");
-    // Atlas signs in with ChatGPT: the next plan is for Ada.
-    machines?.endLogin("login_1", {
-      state: "done",
-      account: account({ id: "acct_plus", kind: "codex", label: "ChatGPT Plus", provider: null, keyHint: null }),
-    });
-    await withPopup(() => click(within(dialog).getByRole("button", { name: "Entrar com ChatGPT" })));
-    await settle(8);
-    expect(calls(state, "agents.setBrain")[0]?.args).toEqual([
-      ORG_ID,
-      ATLAS_ID,
-      { brain: "codex", account: "acct_plus" },
-    ]);
-    expect(dialog.textContent).toContain("Atlas agora pensa com ChatGPT Plus.");
-    await choose("Claude");
-    expect(agent().textContent).toContain("Ada");
-  });
-
   test("a hold on the workspace while its computer is prepared: the panel says the hold alone, sign-in off", async () => {
     const state = seedState();
     const ada = state.agents.find((a) => a.id === ADA_ID);
@@ -1266,129 +1172,25 @@ describe("Conectar uma IA: one picker, plans first", () => {
   });
 });
 
-describe("Atende outras pessoas, in the plan's panel", () => {
-  const replies = (inside: HTMLElement, name = "Atende outras pessoas") => within(inside).getByRole("switch", { name });
-
-  test("off by default; on before the sign-in, the move carries it; after, it changes at once", async () => {
-    const { state, machines, dialog, choose } = await connect();
-    await choose("ChatGPT");
-    const panel = within(dialog).getByRole("region", { name: "Seu plano do ChatGPT" });
-    const line = () => panel.querySelector(".plan-replies__terms > span")?.textContent;
-    expect(replies(panel).getAttribute("aria-checked")).toBe("false");
-    expect(line()).toBe("A Ada só atende você, pelo seu plano do ChatGPT.");
-    expect(hintOf("os termos do plano", panel).text).toContain("Os planos do ChatGPT são para uso pessoal.");
-    // Nothing thinks with the plan yet: nothing to save, and the line already says what on does.
-    await click(replies(panel));
-    expect(replies(panel).getAttribute("aria-checked")).toBe("true");
-    expect(line()).toBe("A Ada atende quem pode falar com ela, pelo seu plano do ChatGPT.");
-    expect(calls(state, "agents.setBrain")).toHaveLength(0);
-    machines?.endLogin("login_1", {
-      state: "done",
-      account: account({ id: "acct_plus", kind: "codex", label: "ChatGPT Plus", provider: null, keyHint: null }),
-    });
-    await withPopup(() => click(within(panel).getByRole("button", { name: "Entrar com ChatGPT" })));
-    await settle(8);
-    expect(calls(state, "agents.setBrain").map((c) => c.args)).toEqual([
-      [ORG_ID, ADA_ID, { brain: "codex", account: "acct_plus", onlyOwner: false }],
-    ]);
-    expect(dialog.textContent).toContain("Ada agora pensa com ChatGPT Plus.");
-    // Ada thinks with it now: off saves at once, with nothing asked.
-    await click(replies(panel));
-    expect(calls(state, "agents.setBrain").at(-1)?.args).toEqual([ORG_ID, ADA_ID, { onlyOwner: true }]);
-    expect(replies(panel).getAttribute("aria-checked")).toBe("false");
-    expect(screen().getAllByRole("dialog")).toHaveLength(1);
-  });
-
-  test("an agent already on the plan's brain shows its own, and the account their agents share keeps it", async () => {
-    const { state, dialog } = await connect({
-      brain: { ownSignIn: true },
-      computers: [{ ...MAC, own: { claude_code: { plan: "max" } } }],
-      ada: { brain: { kind: "claude_code", model: "Sonnet" }, audience: { mode: "everyone", userIds: [] } },
-    });
-    const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    expect(replies(panel).getAttribute("aria-checked")).toBe("true");
-    await click(within(panel).getByRole("button", { name: /^A conta que os seus agentes dividem/ }));
-    await settle(4);
-    expect(calls(state, "agents.setBrain")[0]?.args).toEqual([
-      ORG_ID,
-      ADA_ID,
-      { brain: "claude_code", account: null, onlyOwner: false },
-    ]);
-  });
-
-  test("Só algumas pessoas with nobody picked: on lets nobody in, so it goes back off and says to pick people", async () => {
-    const { state, dialog } = await connect({
-      ada: { brain: { kind: "claude_code", model: "Sonnet" }, audience: { mode: "people", userIds: [] } },
-    });
-    const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    expect(replies(panel).getAttribute("aria-checked")).toBe("false");
-    await click(replies(panel));
-    await settle(4);
-    expect(calls(state, "agents.setBrain").at(-1)?.args).toEqual([ORG_ID, ADA_ID, { onlyOwner: false }]);
-    expect(replies(panel).getAttribute("aria-checked")).toBe("false");
-    expect(document.body.textContent).toContain(
-      "A Ada só atende as pessoas escolhidas, e ninguém foi escolhido ainda. Escolha em Quem pode falar.",
-    );
-  });
-
-  test("an agent on the computer's own sign-in, a Team seat there: the seat's words before anything is chosen", async () => {
-    const { dialog } = await connect({
-      brain: { brain: "claude_code", account: null, ownSignIn: true },
-      computers: [{ ...MAC, own: { claude_code: { plan: "team" } } }],
-      ada: { brain: { kind: "claude_code", model: "Sonnet" } },
-    });
-    const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    expect(panel.querySelector(".plan-replies__terms > span")?.textContent).toBe(
-      "A Ada atende quem pode falar com ela, pelo seu assento do Claude.",
-    );
-    expect(hintOf("os termos do plano", panel).text).toBe(
-      "Cada assento do Claude é de uma pessoa só. Deixar outras pessoas usarem o seu é uma zona cinzenta nos termos do Claude.",
-    );
-  });
-});
-
 describe("All agents: one plan for the team, a login per agent", () => {
-  test("the head: the mark and the name on one line, For at its end, All agents first where the plan allows it", async () => {
+  test("several agents: who it's for in one line with their faces, then the providers; each plan's steps for all of them", async () => {
     const { dialog, choose } = await connect({ crew: true });
-    const head = () => dialog.querySelector(".ai-panel__head") as HTMLElement;
-    expect(head().classList.contains("ac-mediarow")).toBe(true);
-    expect(head().querySelector(":scope > .ac-mediarow__head > .ai-panel__name")).toBeTruthy();
-    expect(head().querySelector(":scope > .ac-mediarow__end .ai-panel__agent")).toBeTruthy();
-    expect(head().querySelector(":scope > .ac-mediarow__body.ai-panel__sub")).toBeTruthy();
-    expect(within(head()).getByText("Para")).toBeTruthy();
-    // ChatGPT like Claude: all of them by default, one sign-in per agent.
-    await choose("ChatGPT");
-    const chatgpt = within(dialog).getByRole("region", { name: "Seu plano do ChatGPT" });
-    expect(within(chatgpt).getByRole("combobox").textContent).toBe("Todos os agentes");
-    expect((await openFor(chatgpt)).map((o) => o.textContent)).toEqual([
-      "Todos os agentesAda, Atlas e Lia",
-      "Ada",
-      "Atlas",
-      "Lia",
-    ]);
-    // The select ends the head's row: its list keeps the trigger's end edge, the panel's.
-    expect(screen().getByRole("listbox").getAttribute("data-align")).toBe("end");
-    await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
-    await settle(2);
-    // Claude and a coding plan: all of them, by default, with their faces and names.
-    for (const [plan, name, which] of [
-      ["Claude", "Seu plano do Claude", "plano do Claude"],
-      ["GLM Coding", "GLM Coding Plan", "plano GLM Coding"],
+    const forLine = dialog.querySelector(".ai-for") as HTMLElement;
+    expect(forLine.lastElementChild?.textContent).toBe("Para Ada, Atlas e Lia");
+    expect(forLine.querySelectorAll(".ac-avatar-stack > .ac-avatar")).toHaveLength(3);
+    for (const [plan, name] of [
+      ["ChatGPT", "Seu plano do ChatGPT"],
+      ["Claude", "Seu plano do Claude"],
+      ["GLM Coding", "GLM Coding Plan"],
     ] as const) {
       await choose(plan);
       const panel = within(dialog).getByRole("region", { name });
-      expect(within(panel).getByRole("combobox").textContent).toBe("Todos os agentes");
-      const options = await openFor(panel);
-      expect(options.map((o) => o.textContent)).toEqual(["Todos os agentesAda, Atlas e Lia", "Ada", "Atlas", "Lia"]);
-      expect(options[0]?.querySelectorAll(".ac-avatar-stack > .ac-avatar")).toHaveLength(3);
-      expect(options[1]?.querySelectorAll(".ac-avatar")).toHaveLength(1);
-      // Who it's for, and whom they answer, once (the list's still open, so the rest is hidden from the tree).
-      expect(within(panel).getAllByRole("switch", { name: "Atendem outras pessoas", hidden: true })).toHaveLength(1);
-      expect(panel.querySelector(".plan-replies__terms > span")?.textContent).toBe(
-        `Só atendem você, pelo seu ${which}.`,
-      );
-      await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
-      await settle(2);
+      // Whom it signs in for, each with their face, in turn.
+      expect(
+        [...panel.querySelectorAll(".ai-panel__who > li")].map(
+          (li) => li.querySelector("li > span:not(.ac-avatar, .ac-visually-hidden)")?.textContent,
+        ),
+      ).toEqual(["Ada", "Atlas", "Lia"]);
     }
   });
 
@@ -1405,7 +1207,6 @@ describe("All agents: one plan for the team, a login per agent", () => {
       });
     for (const n of [1, 2, 3]) machines?.endLogin(`login_${n}`, { state: "done", account: max(n) });
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    expect(within(panel).getByRole("combobox").textContent).toBe("Todos os agentes");
     const who = () => [...panel.querySelectorAll(".ai-panel__who > li")].map((li) => li.getAttribute("data-state"));
     expect(who()).toEqual(["now", "next", "next"]);
     expect(shownText(panel)).toContain("Um login por agente, com a mesma conta.");
@@ -1426,7 +1227,7 @@ describe("All agents: one plan for the team, a login per agent", () => {
       [LIA_ID, { brain: "claude_code", account: "acct_3" }],
     ]);
     expect(calls(state, "machines.removeAccount")).toHaveLength(0);
-    expect(shownText(panel)).toContain("Ada, Atlas e Lia agora pensam com Claude Max.");
+    expect(document.body.textContent).toContain("Ada, Atlas e Lia agora pensam com Claude Max.");
   });
 
   test("Claude for all where one sign-in thinks for all of them: one sign-in, then every agent on that account", async () => {
@@ -1434,7 +1235,6 @@ describe("All agents: one plan for the team, a login per agent", () => {
     const { state, machines, dialog } = await connect({ crew: true, computers: [SHARING] });
     machines?.endLogin("login_1", { state: "done", account: { ...claudeMax, shared: true } });
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    expect(within(panel).getByRole("combobox").textContent).toBe("Todos os agentes");
     expect(hintOf("Um login só para todos.", panel).text).toBe("Todos dividem os limites do seu plano.");
     expect(shownText(panel)).not.toContain("Um login por agente");
     // No one at a time: one sign-in, its own words.
@@ -1447,21 +1247,16 @@ describe("All agents: one plan for the team, a login per agent", () => {
       [ATLAS_ID, { brain: "claude_code", account: "acct_max" }],
       [LIA_ID, { brain: "claude_code", account: "acct_max" }],
     ]);
-    expect(shownText(panel)).toContain("Ada, Atlas e Lia agora pensam com Claude Max.");
+    expect(document.body.textContent).toContain("Ada, Atlas e Lia agora pensam com Claude Max.");
   });
 
-  test("an account of the plan that already thinks for all of the person's agents: Use it, with no sign-in", async () => {
+  test("an account of the plan that already thinks for all of the person's agents: a row of the select, with no sign-in", async () => {
     const SHARING: AiComputer = { ...MAC, shares: { claude_code: true, codex: true, key: true } };
     const shared = { ...claudeMax, shared: true, usedBy: ["Atlas"] };
     const { state, dialog } = await connect({ brain: { accounts: [shared] }, computers: [SHARING] });
-    const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    const use = within(panel).getByRole("button", { name: /^Usar Claude Max/ });
-    expect(use.querySelector(".ac-option__desc")?.textContent).toBe("Também usada por Atlas");
-    // The sign-in waits behind Another account.
-    expect(within(panel).queryByRole("button", { name: "Entrar com Claude" })).toBeNull();
-    await click(within(panel).getByRole("button", { name: "Outra conta" }));
-    expect(within(panel).getByRole("button", { name: "Entrar com Claude" })).toBeTruthy();
-    await click(use);
+    await click(dialog.querySelector(".ai-flow__head button") as Element);
+    const rows = await openAiSelect(dialog, "Quem pensa");
+    await click(rows.find((o) => brainTitle(o) === "Claude Max") as HTMLElement);
     await settle(4);
     expect(calls(state, "agents.setBrain")[0]?.args).toEqual([
       ORG_ID,
@@ -1469,7 +1264,7 @@ describe("All agents: one plan for the team, a login per agent", () => {
       { brain: "claude_code", account: "acct_max" },
     ]);
     expect(calls(state, "machines.beginAccountLogin")).toHaveLength(0);
-    expect(dialog.textContent).toContain("Ada agora pensa com Claude Max.");
+    expect(document.body.textContent).toContain("Ada agora pensa com Claude Max");
   });
 
   test("an agent on the API key stays out of All agents: a plan would make it answer only its owner", async () => {
@@ -1486,7 +1281,6 @@ describe("All agents: one plan for the team, a login per agent", () => {
     await settle(4);
     await choose("Kimi Code");
     const panel = within(dialog).getByRole("region", { name: "Kimi Code" });
-    expect((await openFor(panel))[0]?.textContent).toBe("Todos os agentesAda e Lia");
     const who = panel.querySelector(".ai-panel__who") as HTMLElement;
     expect([...who.querySelectorAll("li")].map((li) => li.textContent)).toEqual(["AdaEsperando", "LiaEsperando"]);
   });
@@ -1551,13 +1345,11 @@ describe("All agents: one plan for the team, a login per agent", () => {
     land(1);
     await choose("GLM Coding");
     const panel = within(dialog).getByRole("region", { name: "GLM Coding Plan" });
-    const forWhom = () => within(panel).getByRole("combobox").textContent;
     const who = () => [...panel.querySelectorAll(".ai-panel__who > li")].map((li) => li.getAttribute("data-state"));
     await type(within(panel).getByLabelText("Chave do GLM Coding"), GLM_KEY);
     await click(within(panel).getByRole("button", { name: "Enviar ao MacBook" }));
     await sealed(panel);
     // Ada has an AI now, the first that had none: the panel stays on everyone, the key sent once.
-    expect(forWhom()).toBe("Todos os agentes");
     expect(who()).toEqual(["done", "now", "now"]);
     // Until the last login lands, a line stands in for the key's field and its buttons.
     expect(within(panel).queryByLabelText("Chave do GLM Coding")).toBeNull();
@@ -1568,7 +1360,6 @@ describe("All agents: one plan for the team, a login per agent", () => {
       const poll = keys.accountLogin(ORG_ID, "machine_1", `login_${n}`);
       await act(() => services.queryClient.invalidateQueries({ queryKey: poll }));
       await settle(12);
-      expect(forWhom()).toBe("Todos os agentes");
     }
     expect(shownText(panel)).toContain("Ada, Atlas e Lia agora pensam com GLM Coding.");
     expect(calls(state, "agents.setBrain").map((c) => c.args[1])).toEqual([ADA_ID, ATLAS_ID, LIA_ID]);
@@ -1619,8 +1410,6 @@ describe("All agents: one plan for the team, a login per agent", () => {
     await settle(4);
     await choose("GLM Coding");
     const panel = within(dialog).getByRole("region", { name: "GLM Coding Plan" });
-    await click((await openFor(panel))[0] as HTMLElement);
-    expect(within(panel).getByRole("combobox").textContent).toBe("Todos os agentes");
     expect(shownText(panel)).toContain("Ada, Atlas e Lia agora pensam com GLM Coding.");
     expect(within(panel).queryByLabelText("Chave do GLM Coding")).toBeNull();
     expect(calls(state, "machines.beginAccountLogin")).toHaveLength(0);
@@ -1637,7 +1426,6 @@ describe("All agents: one plan for the team, a login per agent", () => {
       machines?.endLogin("login_2", { state: "done", account: plus(2, "other@acme.com") });
       await choose("ChatGPT");
       const panel = within(dialog).getByRole("region", { name: "Seu plano do ChatGPT" });
-      expect(within(panel).getByRole("combobox").textContent).toBe("Todos os agentes");
       const who = () => [...panel.querySelectorAll(".ai-panel__who > li")].map((li) => li.getAttribute("data-state"));
       expect(who()).toEqual(["now", "next", "next"]);
       expect(hintOf("Um login por agente, com a mesma conta.", panel).text).toBe(
@@ -1720,7 +1508,7 @@ describe("All agents: one plan for the team, a login per agent", () => {
       ADA_ID,
       { brain: "codex", account: "acct_plus" },
     ]);
-    expect(dialog.textContent).toContain("Ada agora pensa com ChatGPT Plus.");
+    expect(document.body.textContent).toContain("Ada agora pensa com ChatGPT Plus.");
   });
 
   test("an account already there that thinks for another agent, or one an older server doesn't send: only Try again", async () => {
@@ -1940,7 +1728,7 @@ describe("A sign-in through a restart of the server or a reconnect of its comput
     }
     machines?.endLogin("login_1", { state: "done", account: chatgptPlus });
     await ask(22_000);
-    expect(shownText(dialog)).toContain("Ada agora pensa com ChatGPT Plus.");
+    expect(shownText(document.body)).toContain("Ada agora pensa com ChatGPT Plus.");
     expect(shownText(dialog)).not.toMatch(/Não deu para entrar|não respondeu/);
     expect(calls(state, "agents.setBrain").map((c) => c.args[2])).toEqual([{ brain: "codex", account: "acct_plus" }]);
   });
@@ -2002,7 +1790,7 @@ describe("A sign-in through a restart of the server or a reconnect of its comput
     online = true;
     machines?.endLogin("login_1", { state: "done", account: chatgptPlus });
     await ask(25_000);
-    expect(shownText(dialog)).toContain("Ada agora pensa com ChatGPT Plus.");
+    expect(shownText(document.body)).toContain("Ada agora pensa com ChatGPT Plus.");
     expect(calls(state, "machines.beginAccountLogin")).toHaveLength(1);
     expect(calls(state, "machines.cancelAccountLogin")).toHaveLength(0);
   });

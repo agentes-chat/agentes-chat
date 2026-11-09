@@ -41,6 +41,8 @@ export const openConnectAi = (
     agentId?: string;
     plan?: string;
     email?: string;
+    /** A signed-out account to sign in again, picked in the AI select (`email` is its address). */
+    again?: string;
     /** "1": from the create-agent step, for the agent being made (a plan signs in for the agents I create). */
     forNew?: string;
   } = {},

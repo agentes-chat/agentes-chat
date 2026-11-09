@@ -16,7 +16,6 @@ import { EFFORT_SHADER } from "@/sky/shaders";
 import { haptics, Text, useReducedMotion, useTheme, useToast } from "@/ui";
 import { effortReach, effortStep } from "./effort";
 
-const STEPS = EFFORT_LEVELS.length;
 const HEIGHT = 46;
 const CELL = 3;
 const FILL_SPRING = { stiffness: 220, damping: 22, mass: 1 };
@@ -43,18 +42,22 @@ export function EffortRamp({
   value,
   onChange,
   color,
+  levels = EFFORT_LEVELS,
   disabled = false,
 }: {
   value: EffortLevel;
   onChange: (level: EffortLevel) => void;
   color: Parameters<typeof bodyTones>[0];
+  /** The model's own levels (`effortLevels`), lowest first: a ramp for up to `EFFORT_RAMP_MAX` of them. */
+  levels?: readonly EffortLevel[];
   disabled?: boolean;
 }) {
+  const STEPS = levels.length;
   const { t } = useTranslation();
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const paused = useLivePaused();
-  const index = Math.max(0, EFFORT_LEVELS.indexOf(value));
+  const index = Math.max(0, levels.indexOf(value));
   const [shown, setShown] = useState(index);
   const [width, setWidth] = useState(0);
   const pos = useSharedValue(index + 1);
@@ -79,7 +82,7 @@ export function EffortRamp({
   const choose = (to: number) => {
     setShown(to);
     land(to);
-    const level = EFFORT_LEVELS[to];
+    const level = levels[to];
     if (level && level !== value) onChange(level);
   };
   const follow = (x: number) => {
@@ -142,7 +145,7 @@ export function EffortRamp({
   const uniforms = useDerivedValue(() => ({ ...base, pos: pos.value, t: moving ? clock.value : 0 }));
 
   const label = t("agentPage.work.brain.effort");
-  const level = EFFORT_LEVELS[shown] ?? value;
+  const level = levels[shown] ?? value;
   const name = t(`agentPage.work.brain.efforts.${level}`);
   const onAction = (e: AccessibilityActionEvent) => {
     const by = e.nativeEvent.actionName === "increment" ? 1 : e.nativeEvent.actionName === "decrement" ? -1 : 0;
@@ -188,7 +191,7 @@ export function EffortRamp({
         </Animated.View>
       </GestureDetector>
       <View style={styles.names}>
-        {EFFORT_LEVELS.map((e, i) => (
+        {levels.map((e, i) => (
           <Pressable
             key={e}
             onPress={() => {

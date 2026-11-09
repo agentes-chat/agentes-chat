@@ -960,13 +960,6 @@ export const AgentBrain = z
     brain: BrainKind,
     model: z.string().nullable().openapi({ description: "As stored; null = the brain's default." }),
     effectiveModel: z.string().nullable(),
-    fallback: z
-      .boolean()
-      .openapi({ description: "When the computer can't answer, answer through the API (agent's budget)." }),
-    extraUsage: z.boolean().openapi({
-      description:
-        "Long work may go on into the plan's paid extra usage where the provider reports it on (ADR 0118); false: it pauses at 95%.",
-    }),
     computer: z.object({ machineId: z.uuid(), name: z.string(), online: z.boolean() }).nullable(),
     options: z.array(BrainOption),
     machines: z.array(BrainMachine).openapi({
@@ -1034,7 +1027,6 @@ export const AgentSetup = z
     effort: BrainEffortSetting.nullable().optional(),
     speed: BrainSpeed.optional().openapi({ description: "Omitted = each agent keeps its own." }),
     contextTokens: ContextLimit.nullable().optional(),
-    fallback: z.boolean().optional(),
     onlyOwner: z.boolean().optional().openapi({
       description:
         '"Atende outras pessoas" off, for the agents that move onto the plan (only the plan\'s owner turns it on).',
@@ -1103,7 +1095,6 @@ export const NewAgentSetup = z
       .optional()
       .openapi({ description: "The computer's own sign-in thinks for the caller's agents (they connected it)." }),
     effort: BrainEffortSetting.nullable().optional(),
-    fallback: z.boolean().optional(),
     autonomy: CommandApproval.nullable().openapi({
       description:
         "Its Autonomia; null = the default. `POST …/agents` takes it only from an admin or the new agent's owner.",

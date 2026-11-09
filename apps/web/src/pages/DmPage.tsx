@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AudienceChip } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { AgentSetupIntro, useSetupSteps } from "@/components/AgentSetup";
+import { AgentSetupIntro, useSetupData, useSetupSteps } from "@/components/AgentSetup";
 import { useAgentPanelShown, useOpenAgentPanel } from "@/components/agent-panel-context";
 import { ComputerButton } from "@/components/computer/ComputerDialog";
 import { ErrorState } from "@/components/Loading";
@@ -58,6 +58,7 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
   const thinks = useAgentThinks(agent);
   // A new agent's setup checklist (ADR 0155 §2) for whoever sets it up: its greeting and the checklist on top.
   const setup = useSetupSteps(agent).length > 0;
+  useSetupData(agent);
   // Its DM is open, from its row or any other way in: its row's "Novo" goes.
   useEffect(() => {
     if (rightHand) rightHandSeen.mark(rightHandSeenKey(me.user.id, org.id));

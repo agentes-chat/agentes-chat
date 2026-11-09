@@ -3,9 +3,12 @@ import { type RefObject, useEffect, useState } from "react";
 /** The opener of a sheet that just went, for one taking its place in the same commit (opened from inside it). */
 let handedOver: HTMLElement | null = null;
 
+/** What stays live over any sheet, both in <body>: the toasts (a Desfazer) and the island (its Ver). */
+const ALWAYS_LIVE = ".ac-toasts, .ni-wrap";
+
 /**
  * A full-screen sheet over the page (phone): while it is mounted, focus is inside it and everything behind it is
- * inert, except the elements matching `keep` (its scrim, which closes it). When it goes, focus returns to what had it
+ * inert, except the elements matching `keep` (its scrim, which closes it) and the toasts and the island. When it goes, focus returns to what had it
  * before, unless something else already took it (a panel the sheet opened). A sheet that replaced another (Ver perfil
  * from a thread) was opened from inside it, gone by then: the focus goes back to what opened the first. Nothing left
  * of either (a popover's row): the conversation's composer, as Esc does (`useEscClose`).
@@ -17,12 +20,13 @@ export function useModalSheet(sheet: RefObject<HTMLElement | null>, keep?: strin
     const el = sheet.current;
     if (!el) return;
     const replaced = handedOver;
+    const live = keep ? `${keep}, ${ALWAYS_LIVE}` : ALWAYS_LIVE;
     const behind: HTMLElement[] = [];
     for (let node: HTMLElement | null = el; node && node !== document.body; node = node.parentElement) {
       const parent: HTMLElement | null = node.parentElement;
       if (!parent) break;
       for (const sib of Array.from(parent.children))
-        if (sib !== node && sib instanceof HTMLElement && !sib.inert && !(keep && sib.matches(keep))) behind.push(sib);
+        if (sib !== node && sib instanceof HTMLElement && !sib.inert && !sib.matches(live)) behind.push(sib);
     }
     for (const b of behind) b.inert = true;
     if (!el.contains(document.activeElement)) el.focus({ preventScroll: true });

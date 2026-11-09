@@ -8,6 +8,7 @@ import {
   useCardApprovals,
   useDecideApproval,
   useDecideApprovals,
+  usePrefetchThread,
 } from "@agenteschat/client";
 import { questionWaitsOn } from "@agenteschat/client/lib/agent-questions";
 import {
@@ -829,9 +830,12 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
   const c = useColors();
   const surface = useSurface();
   const when = useWhen();
+  // From the touch on: its replies and cards load while the finger is down, so it opens on them, at its end.
+  const prefetch = usePrefetchThread(useOrgId());
   const faces = threadFaces(thread.participants, 2);
   return (
     <Pressable
+      onPressIn={() => prefetch(thread.channelId, thread.id)}
       onPress={() => router.push(chatHref(thread.channelId, thread.id))}
       accessibilityRole="button"
       accessibilityLabel={t("mobile.chat.replies", { count: thread.replyCount })}

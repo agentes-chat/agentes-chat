@@ -359,6 +359,10 @@
 .team-frame[data-drop="true"] {
   border-color: var(--agent);
 }
+/* An agent dragged to another setor is out of its frame behind its dashed spot (lib/list-drag.tsx). */
+.team-frame [data-lifted] {
+  display: none;
+}
 .team-frame__head {
   display: flex;
   flex-direction: column;

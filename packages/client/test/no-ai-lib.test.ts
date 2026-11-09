@@ -13,20 +13,16 @@ import type {
 import { setupView } from "../src/lib/computer";
 import { latestText, serverBody } from "../src/lib/message-body";
 import {
-  type AgentAi,
   type AiChoice,
-  ALL_AGENTS,
   agentAi,
   agentPlan,
   aiChoiceOf,
-  allAgents,
   behindComputer,
   CLOUD_AWAY_MS,
   CLOUD_INSTALL_WAIT_MS,
   catchUp,
+  choiceOfIntent,
   defaultChoice,
-  defaultTarget,
-  dimmedLine,
   firstAgent,
   freePlanAccount,
   gateDims,
@@ -54,7 +50,6 @@ import {
   planOfKind,
   signInAgainPlan,
   signsInOnce,
-  signsInPerAgent,
 } from "../src/lib/no-ai";
 import { LOGIN_PER_AGENT, OPENCODE_KEY_PLAN, providerFitsChoice, SHARED_SIGN_INS, signInKey } from "../src/lib/plans";
 
@@ -95,8 +90,6 @@ const brain = (over: Partial<AgentBrain> = {}): AgentBrain => ({
   brain: "model",
   model: null,
   effectiveModel: null,
-  fallback: true,
-  extraUsage: true,
   computer: { machineId: "m1", name: "MacBook", online: true },
   options: [option("claude_code"), option("codex")],
   machines: [],
@@ -301,17 +294,6 @@ describe("the Cloud's plan gate tells the truth", () => {
     expect(planHoldPhoneLine(t, true, true)).toBe("connectAi.key.closed connectAi.billingWeb");
   });
 
-  test("a dimmed plan's rows always have words: the hold's, the computer's, or that it has none", () => {
-    const where = { edition: "cloud", kind: "codex", computer: "Acme" } as const;
-    expect(dimmedLine(enT, { state: "billing", hold: "payment" }, where)).toBe(enT("connectAi.billing"));
-    expect(dimmedLine(enT, { state: "missing" }, { ...where, edition: "selfhost" })).toBe(
-      enT("aiAccounts.connect.noComputer"),
-    );
-    expect(dimmedLine(enT, { state: "unsupported", reason: "not_installed" }, where)).toBe(
-      gateLine(enT, { gate: { state: "unsupported", reason: "not_installed" }, ...where })?.text ?? "",
-    );
-  });
-
   test("a CLI missing from a computer ready just now may still be coming; past that it never reads as installing", () => {
     const soon = codexGate(CLOUD_INSTALL_WAIT_MS - 60_000);
     expect(soon).toEqual({ state: "unsupported", reason: "not_installed" });
@@ -447,34 +429,32 @@ describe("freePlanAccount: a plan account of theirs that thinks for one more age
   });
 });
 
-describe("defaultChoice: what the picker opens on", () => {
+describe("defaultChoice: what the providers' select opens on", () => {
   const ready: PlanGate = { state: "ready" };
-  test("an intent picks its option", () => {
-    const picks: [Parameters<typeof defaultChoice>[0]["intent"], AiChoice][] = [
+  test("what was asked: a message's intent, a card's plan or the agent's own, even where Claude can't sign in", () => {
+    const picks: [Parameters<typeof choiceOfIntent>[0], AiChoice][] = [
       ["claude", "claude"],
       ["chatgpt", "chatgpt"],
       ["api_key", "key"],
       ["any", "claude"],
       ["task", "claude"],
     ];
-    for (const [intent, choice] of picks) {
-      expect(defaultChoice({ intent, ownsAgents: true, mayAddKey: true, claudeGate: ready })).toBe(choice);
-    }
+    for (const [intent, choice] of picks)
+      expect(defaultChoice({ asked: choiceOfIntent(intent), mayAddKey: true, claudeGate: ready })).toBe(choice);
+    expect(defaultChoice({ asked: "kimi", mayAddKey: true, claudeGate: { state: "missing" } })).toBe("kimi");
   });
 
-  test("the key for someone who owns no agent but may add keys, and where Claude can't sign in at all", () => {
-    expect(defaultChoice({ ownsAgents: false, mayAddKey: true, claudeGate: ready })).toBe("key");
-    expect(defaultChoice({ ownsAgents: true, mayAddKey: true, claudeGate: { state: "missing" } })).toBe("key");
+  test("the key where Claude can't sign in at all (no computer), for whoever may add keys", () => {
+    expect(defaultChoice({ mayAddKey: true, claudeGate: { state: "missing" } })).toBe("key");
+    expect(defaultChoice({ mayAddKey: false, claudeGate: { state: "missing" } })).toBe("claude");
   });
 
-  test("Claude otherwise, even while its computer is prepared or the person may not add keys", () => {
-    expect(defaultChoice({ ownsAgents: false, mayAddKey: false, claudeGate: ready })).toBe("claude");
-    expect(
-      defaultChoice({ ownsAgents: true, mayAddKey: true, claudeGate: { state: "preparing", view: setup() } }),
-    ).toBe("claude");
+  test("Claude otherwise, even while its computer is prepared", () => {
+    expect(defaultChoice({ mayAddKey: true, claudeGate: ready })).toBe("claude");
+    expect(defaultChoice({ mayAddKey: true, claudeGate: { state: "preparing", view: setup() } })).toBe("claude");
   });
 
-  test("for one agent on a plan brain, its own plan (`agentPlan`) instead of Claude; what was asked still wins", () => {
+  test("an agent on a plan brain asks for its own plan (`agentPlan`)", () => {
     const on = (kind: "claude_code" | "codex" | "model", provider?: string): Pick<Agent, "brain"> => ({
       brain: { kind, model: null, ...(provider ? { provider } : {}) },
     });
@@ -485,12 +465,7 @@ describe("defaultChoice: what the picker opens on", () => {
       null,
       null,
     ]);
-    const plan = agentPlan(on("codex"));
-    expect(defaultChoice({ ownsAgents: true, mayAddKey: true, claudeGate: ready, plan })).toBe("chatgpt");
-    expect(defaultChoice({ intent: "api_key", ownsAgents: true, mayAddKey: true, claudeGate: ready, plan })).toBe(
-      "key",
-    );
-    expect(defaultChoice({ ownsAgents: true, mayAddKey: true, claudeGate: { state: "missing" }, plan })).toBe("key");
+    expect(defaultChoice({ asked: agentPlan(on("codex")), mayAddKey: true, claudeGate: ready })).toBe("chatgpt");
   });
 });
 
@@ -532,107 +507,17 @@ describe("the agent a plan starts on, and the order of the plans", () => {
   });
 });
 
-describe("All agents: one login per agent, the key pasted once", () => {
+describe("a plan for several agents: one login per agent, or one sign-in for all", () => {
   test("every plan signs in once per agent, ChatGPT's and Cursor's too", () => {
     expect(LOGIN_PER_AGENT).toEqual({ claude_code: true, codex: true, cursor: true, key: true });
-    expect(PLAN_CHOICES.filter(signsInPerAgent)).toEqual([...PLAN_CHOICES]);
-  });
-
-  /** Ada and Theo have no AI, Lia is on GLM Coding, Bo on the API key, Cy on Claude, Di on the other computer. */
-  const team = ["ada", "theo", "lia", "bo", "cy", "di"].map((id) => ({ id }));
-  const ai: Record<string, AgentAi> = { ada: null, theo: null, lia: "zai", bo: "key", cy: "claude", di: null };
-  const machines: Record<string, string> = { di: "m2" };
-  const set = (choice: PlanChoice, agents = team, aiOf = (id: string) => ai[id] ?? null) =>
-    allAgents({ choice, agents, aiOf, machineOf: (id) => machines[id] ?? "m1" }).map((a) => a.id);
-
-  test("the agents with no AI on the first one's computer and those on this plan; never one on the key or another plan", () => {
-    expect(set("zai")).toEqual(["ada", "theo", "lia"]);
-    expect(set("kimi")).toEqual(["ada", "theo"]);
-    // The first one's computer decides: with Di first, Di's, where nobody else fits.
-    expect(set("zai", [...team.filter((a) => a.id === "di"), ...team.filter((a) => a.id !== "di")])).toEqual([]);
-    // No computer yet (the Cloud's on its way) is one place for all of them.
-    expect(
-      allAgents({ choice: "zai", agents: team, aiOf: () => null, machineOf: () => null }).map((a) => a.id),
-    ).toEqual(["ada", "theo", "lia", "bo", "cy", "di"]);
-  });
-
-  test("Claude's and ChatGPT's like a coding plan's, and none for a single agent", () => {
-    expect(set("claude")).toEqual(["ada", "theo", "cy"]);
-    expect(set("chatgpt")).toEqual(["ada", "theo"]);
-    expect(set("zai", [{ id: "ada" }, { id: "bo" }])).toEqual([]);
   });
 
   test("one sign-in for all of them where the computer says so: ChatGPT's too", () => {
     // Where each agent is its own OS user, Claude's and ChatGPT's sign-ins and plans' keys think for all.
     expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, key: true });
-    const sharing = { shares: { claude_code: true, codex: true, key: true } };
-    expect(signsInOnce("chatgpt", sharing)).toBe(true);
+    expect(signsInOnce("chatgpt", { shares: { claude_code: true, codex: true, key: true } })).toBe(true);
     expect(signsInOnce("zai", { shares: { claude_code: true, codex: false, key: false } })).toBe(false);
     expect(signsInOnce("claude", undefined)).toBe(false);
-    const sharedOn = (id: string | null) => id === "m1";
-    const once = (choice: PlanChoice) =>
-      allAgents({
-        choice,
-        agents: team,
-        aiOf: (id) => ai[id] ?? null,
-        machineOf: (id) => machines[id] ?? "m1",
-        sharedOn,
-      }).map((a) => a.id);
-    expect(once("chatgpt")).toEqual(["ada", "theo"]);
-    // Elsewhere ChatGPT's signs in once per agent, as Claude's.
-    expect(
-      allAgents({ choice: "chatgpt", agents: team, aiOf: (id) => ai[id] ?? null, machineOf: () => "m2", sharedOn }).map(
-        (a) => a.id,
-      ),
-    ).toEqual(["ada", "theo", "di"]);
-  });
-
-  test("the panel opens on the agent asked for, then all of them while two have no AI, then the first with no AI", () => {
-    const agents = team;
-    const all = allAgents({
-      choice: "zai",
-      agents,
-      aiOf: (id) => ai[id] ?? null,
-      machineOf: (id) => machines[id] ?? "m1",
-    });
-    const hasAi = (id: string) => ai[id] !== null;
-    expect(defaultTarget({ agents, set: all, hasAi, asked: "theo" })).toBe("theo");
-    expect(defaultTarget({ agents, set: all, hasAi })).toBe(ALL_AGENTS);
-    expect(defaultTarget({ agents, set: all, hasAi, asked: "someone-else" })).toBe(ALL_AGENTS);
-    // One left with no AI, or no set at all (Claude): the first with no AI.
-    expect(defaultTarget({ agents, set: all, hasAi: (id) => id !== "theo" })).toBe("theo");
-    expect(defaultTarget({ agents, set: [], hasAi })).toBe("ada");
-    expect(defaultTarget({ agents: [], set: [], hasAi })).toBeUndefined();
-  });
-
-  test("the agent whose face asks comes before the first with no AI, while it has none; All agents still comes first", () => {
-    const hasAi = (id: string) => ai[id] !== null;
-    const zai = allAgents({ choice: "zai", agents: team, aiOf: (id) => ai[id] ?? null, machineOf: () => "m1" });
-    expect(defaultTarget({ agents: team, set: [], hasAi, host: "theo" })).toBe("theo");
-    expect(defaultTarget({ agents: team, set: [], hasAi, host: "di" })).toBe("di");
-    // Once it has an AI, the next plan goes to the first with none.
-    expect(defaultTarget({ agents: team, set: [], hasAi, host: "lia" })).toBe("ada");
-    expect(defaultTarget({ agents: team, set: zai, hasAi, host: "theo" })).toBe(ALL_AGENTS);
-    expect(defaultTarget({ agents: team, set: [], hasAi, host: "theo", picked: ALL_AGENTS })).toBe("theo");
-    expect(defaultTarget({ agents: team, set: [], hasAi, host: "theo", picked: "ada" })).toBe("ada");
-  });
-
-  test("a pick holds while the plan allows it: All agents elsewhere is the first with no AI", () => {
-    const hasAi = (id: string) => ai[id] !== null;
-    const zai = allAgents({ choice: "zai", agents: team, aiOf: (id) => ai[id] ?? null, machineOf: () => "m1" });
-    expect(defaultTarget({ agents: team, set: zai, hasAi, asked: "theo", picked: ALL_AGENTS })).toBe(ALL_AGENTS);
-    expect(defaultTarget({ agents: team, set: [], hasAi, asked: "theo", picked: ALL_AGENTS })).toBe("ada");
-    expect(defaultTarget({ agents: team, set: zai, hasAi, asked: "theo", picked: "lia" })).toBe("lia");
-    // With no set, whose computer the panel reads: the first with no AI, where All agents is too.
-    expect(defaultTarget({ agents: team, set: [], hasAi, picked: ALL_AGENTS })).toBe("ada");
-    expect(zai[0]?.id).toBe("ada");
-  });
-
-  test("the set is on the first with no AI's computer, even after one on this plan", () => {
-    const agents = [{ id: "lia" }, { id: "ada" }, { id: "theo" }];
-    const aiOf = (id: string): AgentAi => (id === "lia" ? "zai" : null);
-    const machineOf = (id: string) => (id === "lia" ? "m2" : "m1");
-    expect(allAgents({ choice: "zai", agents, aiOf, machineOf }).map((a) => a.id)).toEqual(["ada", "theo"]);
   });
 
   test("what an agent thinks with, from its row and its AI status", () => {
@@ -755,13 +640,12 @@ describe("a card whose plan's sign-in ended", () => {
 });
 
 describe("Cursor (ADR 0114): a plan of its own, signed in through its CLI", () => {
-  test("its accounts and agents read as Cursor's plan, signed in once per agent, and a signed-out CLI names Cursor", () => {
+  test("its accounts and agents read as Cursor's plan, and a signed-out CLI names Cursor", () => {
     expect(planOfKind("cursor")).toBe("cursor");
     expect(planOfAccount({ kind: "cursor", provider: null })).toBe("cursor");
     // An account made with a Cursor API key is still Cursor's plan.
     expect(planOfAccount({ kind: "cursor", provider: "cursor" })).toBe("cursor");
     expect(agentAi({ brain: { kind: "cursor", model: null } }, "ready")).toBe("cursor");
-    expect(signsInPerAgent("cursor")).toBe(true);
     const t = ((key: string, o?: { brain?: string }) => `${key}:${o?.brain ?? ""}`) as unknown as TFunction;
     expect(serverBody(t, "…", { bodyCode: "no_ai", noAi: { reason: "not_signed_in", own: "cursor" } })).toBe(
       "chat.body.no_ai_not_signed_in:Cursor",
@@ -770,14 +654,13 @@ describe("Cursor (ADR 0114): a plan of its own, signed in through its CLI", () =
 });
 
 describe("OpenCode (ADR 0132): its free tier or its key, through its own CLI", () => {
-  test("its accounts and agents read as OpenCode, its mark is OpenCode's, a key thinks for several agents", () => {
+  test("its accounts and agents read as OpenCode, and its mark is OpenCode's", () => {
     expect(planOfKind("opencode")).toBe("zen");
     expect(planOfAccount({ kind: "opencode", provider: "zen" })).toBe("zen");
     // OpenCode Go's key on Claude Code stays the coding plan.
     expect(planOfAccount({ kind: "claude_code", provider: "opencode" })).toBe("opencode");
     expect(agentAi({ brain: { kind: "opencode", model: null } }, "ready")).toBe("zen");
     expect(planMark("zen")).toBe("opencode");
-    expect(signsInPerAgent("zen")).toBe(true);
     expect(signInKey(undefined, "opencode", false)).toEqual({ plan: OPENCODE_KEY_PLAN, provider: "zen" });
     const t = ((key: string, o?: { brain?: string }) => `${key}:${o?.brain ?? ""}`) as unknown as TFunction;
     expect(serverBody(t, "…", { bodyCode: "no_ai", noAi: { reason: "not_signed_in", own: "opencode" } })).toBe(
@@ -958,6 +841,21 @@ describe("a card says the real cause, not that the agent has no AI", () => {
     expect(serverBody(pt, "…", meta("commands_off"))).toBe(
       "Agora não consigo responder: os comandos estão desligados no computador do meu plano.",
     );
+  });
+
+  test("the right hand's run nobody asked for never says to connect your plan: only a key, for who sets its AI", () => {
+    expect(card("plan_unattended")?.planLine).toBe("plan_unattended");
+    expect(pt("noAi.rightHand.plan_unattended", { name: "Bento" })).toBe(
+      "Bento não respondeu: o pedido não veio de uma pessoa, e o plano do workspace só atende o próprio dono.",
+    );
+    expect(serverBody(pt, "…", meta("plan_unattended"))).toBe(
+      "Não respondi: o pedido não veio de uma pessoa, e o plano do workspace só atende o próprio dono.",
+    );
+    const rightHand = { ownerUserId: "u1", builtin: "right_hand" as const };
+    expect(planLineFix("plan_unattended", rightHand, "u1", { permissions: [] })).toBe("useKey");
+    expect(planLineFix("plan_unattended", rightHand, "u2", { permissions: ["manage_agents"] })).toBe("useKey");
+    // A member's own plan never answers it: no Connect for them.
+    expect(planLineFix("plan_unattended", rightHand, "u2", { permissions: [] })).toBeNull();
   });
 
   test("a wait that doesn't pass by itself names its cause and who fixes it", () => {

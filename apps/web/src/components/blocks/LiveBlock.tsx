@@ -7,7 +7,7 @@ import {
   DRAFT_SETTLE_MS,
 } from "@agenteschat/client/lib/blocks";
 import { PAGE_SANDBOX } from "@agenteschat/client/lib/isolated-page";
-import { Button, Menu, MenuItem, Spinner } from "@agenteschat/ui";
+import { Button, Menu, MenuItem } from "@agenteschat/ui";
 import { chartRamp } from "@agenteschat/ui/sky/chart";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +18,7 @@ import { CardSky, colorOf } from "@/components/Sky";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useDarkTheme } from "@/lib/grow";
 import { useToast } from "@/lib/toast";
+import { CardSkeleton } from "./CardSkeleton";
 import { SpecBlock } from "./SpecBlock";
 import "./blocks.css";
 
@@ -361,14 +362,7 @@ export function LiveBlockCard({ id, version }: { id: string; version?: number })
   const keep = useKeepBlock(org.id, id);
   const toast = useToast();
   const a = query.data;
-  if (a?.content.kind !== "block") {
-    return (
-      <div className="live-block live-block--loading" aria-busy="true">
-        <Spinner />
-        <span>{t("blocks.building")}</span>
-      </div>
-    );
-  }
+  if (a?.content.kind !== "block") return <CardSkeleton kind="block" />;
   const agentId = a.createdBy.id;
   const subtitle = a.inDrive ? t("blocks.inDrive") : a.content.subtitle;
   return (

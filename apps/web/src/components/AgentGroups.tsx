@@ -18,9 +18,10 @@ import {
   MenuRadioGroup,
   MenuSeparator,
 } from "@agenteschat/ui";
-import { type DragEvent, type ReactNode, useState } from "react";
+import { type DragEvent, type KeyboardEvent, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDirectory } from "@/hooks/useDirectory";
+import { keepFocus, MOVE_KEYS, moveKey, slideFrom, useListDrag } from "@/lib/list-drag";
 import { useToast } from "@/lib/toast";
 import { useOrg } from "./org-context";
 import "./roles/roles.css";
@@ -320,15 +321,23 @@ export function useMoveAgent(groups: AgentGroup[]) {
   };
 }
 
+/** Where a dragged agent would land: a group (null: none) and its place among the group's rows without it. */
+export type AgentMark = { groupId: string | null; index: number };
+const AGENT_KEY = "agent:";
+
 /**
- * Dragging agents between groups (Equipe and the sidebar's AGENTES, for who manages agents) (owners and admins): rows are draggable, groups take the drop.
- * Inside a group the row lands where the pointer is (`over.index`, before the first row whose middle is below it);
- * the agents in no group keep the workspace's order.
+ * Dragging agents between groups (Equipe and the sidebar's AGENTES, for who manages agents) (owners and admins): rows are
+ * draggable, groups take the drop (`lib/list-drag.tsx`: in the sidebar the row hides behind a dashed spot where it
+ * would land, `spot`). Inside a group the row lands where the pointer is (`over.index`, before the first row whose
+ * middle is below it); the agents in no group keep the workspace's order. `sticky` zones keep the last place when the
+ * pointer crosses the gap between them.
  */
 export function useAgentDrag(groups: AgentGroup[]) {
+  const { org } = useOrg();
   const move = useMoveAgent(groups);
-  const [dragging, setDragging] = useState<string | null>(null);
-  const [over, setOver] = useState<{ groupId: string | null; index: number } | null>(null);
+  const action = useAgentGroupAction(org.id);
+  const list = useListDrag<AgentMark>(groups, (a, b) => a.groupId === b.groupId && a.index === b.index);
+  const dragging = list.current()?.slice(AGENT_KEY.length) ?? null;
   const rowsOf = (e: DragEvent<HTMLElement>) =>
     [...e.currentTarget.querySelectorAll<HTMLElement>("[data-agent-row]")].filter(
       (el) => el.dataset.agentRow !== dragging,
@@ -352,44 +361,74 @@ export function useAgentDrag(groups: AgentGroup[]) {
     const after = order.indexOf(ids[k - 1] ?? "");
     return after >= 0 ? after + 1 : order.length;
   };
-  const end = () => {
-    setDragging(null);
-    setOver(null);
-  };
+  const lifted = list.drag?.lifted ? list.drag : null;
+  const liftedId = lifted?.key.slice(AGENT_KEY.length) ?? null;
   return {
     dragging,
-    over,
+    /** Where it would land, while it moves. */
+    over: list.marked,
+    /** The drag as drawn (the spot's size), also while a drop waits for its save. */
+    spot: list.drag,
+    /** The agent whose row is out of the list behind its spot. */
+    liftedId,
+    /**
+     * Where the spot stands among a list's rows without the dragged one (null: not in this list; `groupId` undefined:
+     * a list nothing lands in, the pinned rows): its place in a group, its own place before it moves, or, in no group,
+     * where `none()` (the agents in no group with it, in their order) puts it.
+     */
+    spotIn: (groupId: string | null | undefined, ids: string[], none?: () => string[]) => {
+      if (!lifted || !liftedId) return null;
+      const mark = lifted.mark;
+      if (!mark) return ids.includes(liftedId) ? ids.indexOf(liftedId) : null;
+      if (mark.groupId !== groupId) return null;
+      return groupId ? mark.index : (none?.().indexOf(liftedId) ?? 0);
+    },
     row: (agentId: string) => ({
       draggable: true,
+      "aria-keyshortcuts": MOVE_KEYS,
+      /** Alt+Shift+↑/↓: past its neighbour in its group (the agents in no group keep the workspace's order). */
+      onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
+        const by = moveKey(e);
+        const group = by ? groupOf(groups, agentId) : undefined;
+        if (!by || !group) return;
+        const index = group.agentIds.indexOf(agentId) + by;
+        if (index < 0 || index >= group.agentIds.length) return;
+        e.preventDefault();
+        slideFrom();
+        action.mutate({ type: "move", agentId, groupId: group.id, index });
+        keepFocus(e.currentTarget);
+      },
       onDragStart: (e: DragEvent<HTMLElement>) => {
+        list.begin(`${AGENT_KEY}${agentId}`, e.currentTarget.closest("[data-agent-row]") ?? e.currentTarget);
         e.dataTransfer.setData(AGENT_DRAG, agentId);
         e.dataTransfer.effectAllowed = "move";
-        setDragging(agentId);
       },
-      onDragEnd: end,
+      onDragEnd: () => list.end(),
     }),
-    zone: (groupId: string | null) => ({
-      "data-drop": over?.groupId === groupId || undefined,
+    zone: (groupId: string | null, sticky = false) => ({
+      "data-drop": list.marked?.groupId === groupId || undefined,
       onDragOver: (e: DragEvent<HTMLElement>) => {
         if (!dragging) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        const index = groupId ? indexAt(e) : 0;
-        if (over?.groupId !== groupId || over.index !== index) setOver({ groupId, index });
+        list.over({ groupId, index: groupId ? indexAt(e) : 0 });
       },
       onDragLeave: (e: DragEvent<HTMLElement>) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null))
-          setOver((o) => (o?.groupId === groupId ? null : o));
+        if (sticky || e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        if (list.marked?.groupId === groupId) list.over(null);
       },
       onDrop: (e: DragEvent<HTMLElement>) => {
         if (!dragging) return;
         e.preventDefault();
+        // On its own spot it stays where it is.
+        if (!list.mark()) return list.drop(false);
         const agentId = dragging;
         const index = groupId ? placeAt(e, groupId) : undefined;
-        end();
         const from = groupOf(groups, agentId);
-        if ((from?.id ?? null) === groupId && (groupId === null || from?.agentIds.indexOf(agentId) === index)) return;
+        if ((from?.id ?? null) === groupId && (groupId === null || from?.agentIds.indexOf(agentId) === index))
+          return list.drop(false);
         move(agentId, groupId, index);
+        list.drop(true);
       },
     }),
   };

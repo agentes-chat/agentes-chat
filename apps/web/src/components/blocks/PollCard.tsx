@@ -1,12 +1,14 @@
 import type { Poll } from "@agenteschat/client";
 import { useArtifact, usePoll, useVote } from "@agenteschat/client";
 import { pollAnswered, pollIsOpen, pollTally, pollToggle } from "@agenteschat/client/lib/blocks";
-import { Icon, Spinner } from "@agenteschat/ui";
+import { BLANK_LINE } from "@agenteschat/client/lib/format";
+import { Icon } from "@agenteschat/ui";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
 import { CardSky, colorOf } from "@/components/Sky";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
+import { CardSkeleton } from "./CardSkeleton";
 import "./blocks.css";
 
 const FACES = 5;
@@ -24,29 +26,26 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
   const query = usePoll(org.id, id);
   const vote = useVote(org.id, id);
   const a = artifact.data;
-  const poll: Poll | undefined = query.data;
-  if (a?.content.kind !== "poll" || !poll) {
-    return (
-      <div className="live-block live-block--loading" aria-busy="true">
-        <Spinner />
-        <span>{t("blocks.building")}</span>
-      </div>
-    );
-  }
+  if (a?.content.kind !== "poll") return <CardSkeleton kind="poll" />;
+  // Until its marks are read: the vote's own rows with none marked and nothing to press, at the card's size.
+  const poll: Poll = query.data ?? { id, closesAt: "", closedAt: null, people: 0, votes: [] };
+  const ready = Boolean(query.data);
   const { options, multiple, question } = a.content;
-  const open = pollIsOpen(poll);
+  const open = !ready || pollIsOpen(poll);
   const answered = pollAnswered(poll);
   const tally = pollTally(options, poll);
   const top = Math.max(...tally.map((o) => o.voters.length));
   const nameOf = (userId: string) => dir.memberById.get(userId)?.name ?? t("blocks.someone");
-  const closes = new Date(poll.closesAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+  const closes = ready ? new Date(poll.closesAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "";
   return (
-    <section className="live-block" aria-label={question}>
+    <section className="live-block" aria-label={question} aria-busy={!ready || undefined}>
       <CardSky color={colorOf(dir.anyAgent(a.createdBy.id))} />
       <header className="live-block__head">
         <span className="live-block__titles">
           <b>{question}</b>
-          <small>{open ? t("blocks.pollCloses", { time: closes }) : t("blocks.pollClosed")}</small>
+          <small>
+            {!ready ? BLANK_LINE : open ? t("blocks.pollCloses", { time: closes }) : t("blocks.pollClosed")}
+          </small>
         </span>
       </header>
       <div className="poll__options">
@@ -60,7 +59,7 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
               className="poll__option"
               aria-pressed={mine}
               data-won={won ? "" : undefined}
-              disabled={!open || vote.isPending}
+              disabled={!ready || !open || vote.isPending}
               onClick={() =>
                 vote.mutate(pollToggle(poll, me.user.id, o.option, multiple), {
                   onError: () => toast.show(t("blocks.voteFailed"), "error"),
@@ -84,10 +83,12 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
       </div>
       {multiple && open && <p className="poll__note">{t("blocks.pollMultiple")}</p>}
       <div className="live-block__foot">
-        <span className="live-block__sent">
-          <span className="live-block__mark" data-open={open ? "" : undefined} aria-hidden="true" />
-          {t("blocks.pollAnswered", { count: answered, total: poll.people })}
-        </span>
+        {ready && (
+          <span className="live-block__sent">
+            <span className="live-block__mark" data-open={open ? "" : undefined} aria-hidden="true" />
+            {t("blocks.pollAnswered", { count: answered, total: poll.people })}
+          </span>
+        )}
       </div>
     </section>
   );

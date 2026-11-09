@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useApi } from "../api/context";
 import { ApiError } from "../api/http";
@@ -219,6 +220,63 @@ export function desktopModeFrame(text: string): DesktopMode | null {
     return frame.type === "mode" && (frame.mode === "watch" || frame.mode === "control") ? frame.mode : null;
   } catch {
     return null;
+  }
+}
+
+/** Every agent desktop's size, which viewers scale; mirrors `DESKTOP_SIZE` in packages/adapters/src/machine-protocol.ts. */
+export const DESKTOP_SIZE = { width: 1280, height: 900 } as const;
+
+/** What the agent's pointer does where it goes; mirrors `DESKTOP_CURSOR_ACTS` in packages/adapters/src/machine-protocol.ts. */
+export const DESKTOP_CURSOR_ACTS = ["move", "click", "double_click", "right_click", "drag", "scroll", "type"] as const;
+export type DesktopCursorAct = (typeof DESKTOP_CURSOR_ACTS)[number];
+
+/** One step of the agent's pointer on its desktop, in the desktop's own pixels: `type` and `scroll` may have no place. */
+export interface DesktopCursor {
+  act: DesktopCursorAct;
+  x?: number;
+  y?: number;
+  /** What it acts on, as the screen names it. */
+  name?: string;
+}
+
+/** The agent's pointer a desktop socket's text frame says (`{"type":"cursor"}`, protocol 54); null for any other. */
+export function desktopCursorFrame(text: string): DesktopCursor | null {
+  let f: { type?: unknown; act?: unknown; x?: unknown; y?: unknown; name?: unknown };
+  try {
+    f = JSON.parse(text) ?? {};
+  } catch {
+    return null;
+  }
+  if (f.type !== "cursor" || !DESKTOP_CURSOR_ACTS.includes(f.act as DesktopCursorAct)) return null;
+  const act = f.act as DesktopCursorAct;
+  const pixel = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) < 8192;
+  const placed = pixel(f.x) && pixel(f.y);
+  if (!placed && (f.x !== undefined || f.y !== undefined || (act !== "type" && act !== "scroll"))) return null;
+  const name = typeof f.name === "string" ? [...f.name.trim()].slice(0, 60).join("") : "";
+  return { act, ...(placed ? { x: f.x as number, y: f.y as number } : {}), ...(name ? { name } : {}) };
+}
+
+/**
+ * How the apps draw a step of the agent's pointer (`AgentCursor`): where it goes, its presses there and the step in
+ * words. A plain move says nothing.
+ */
+export function cursorStep(t: TFunction, c: DesktopCursor): { x?: number; y?: number; presses: number; words: string } {
+  const at = c.x !== undefined && c.y !== undefined ? { x: c.x, y: c.y } : {};
+  const click = () => (c.name ? t("desktop.cursor.click", { name: c.name }) : t("desktop.cursor.clickPlain"));
+  switch (c.act) {
+    case "click":
+    case "right_click":
+      return { ...at, presses: 1, words: click() };
+    case "double_click":
+      return { ...at, presses: 2, words: click() };
+    case "move":
+      return { ...at, presses: 0, words: "" };
+    case "drag":
+      return { ...at, presses: 0, words: t("desktop.cursor.drag") };
+    case "scroll":
+      return { ...at, presses: 0, words: t("desktop.cursor.scroll") };
+    case "type":
+      return { ...at, presses: 0, words: t("desktop.cursor.type") };
   }
 }
 

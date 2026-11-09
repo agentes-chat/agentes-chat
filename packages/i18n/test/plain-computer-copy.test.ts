@@ -79,7 +79,7 @@ const SELFHOST_ONLY = [
 
 /**
  * "Atende outras pessoas", its line and its ⓘ (ADR 0059 §5): beside every plan's sign-in and on every agent's page on
- * a plan, with New agent's note on a plan, the Cloud's included, so they're checked against both editions' words.
+ * a plan, the Cloud's included, so they're checked against both editions' words.
  */
 const PLAN_LINES = ["off", "on", "offAll", "onAll"].map((k) => `aiAccounts.share.line.${k}`);
 const PLAN_TERMS = ["own", "seat", "other"].map((k) => `aiAccounts.share.terms.${k}`);
@@ -91,7 +91,6 @@ const PLAN_REPLIES = [
   ...["own", "seat", "coding"].map((k) => `aiAccounts.share.plan.${k}`),
   "aiAccounts.share.terms.about",
   ...PLAN_TERMS,
-  "newAgent.planOnlyOwner",
 ];
 
 /** Every key a Cloud workspace shows where a computer is named, past the `computerSetup.` and `agentComputer.` ones. */
@@ -121,11 +120,8 @@ const CLOUD_EXTRA = [
   "computers.about",
   "agentPage.work.cell.computer",
   "agentPage.work.offlineCloud",
-  "agentPage.work.brain.fallbackTitle",
-  "agentPage.work.brain.fallbackHint",
   "agentPage.work.brain.add.stepOneHint",
   "aiAccounts.page.hint",
-  "agentPage.work.brain.offCloud",
   "missions.settings.more.sub",
   "missions.settings.recovery.title",
   "onboarding.budget.noteKey",
@@ -182,7 +178,6 @@ const SELFHOST_EXTRA = [
   "computer.machineOffline",
   "desktop.use.title",
   "agentPage.work.offline",
-  "agentPage.work.brain.off",
   "agentPage.work.computer.offline",
   "agentPage.work.computer.alsoOffline",
   "agentPage.work.computer.connect",
@@ -191,7 +186,7 @@ const SELFHOST_EXTRA = [
   "onboarding.keyStep.leadNoComputer",
   "onboarding.brain.failed",
   "connectAi.wait.connecting",
-  ...["shared", "one", "each"].map((k) => `connectAi.own.${k}`),
+  "connectAi.own.shared",
   "usageViews.agent.sharedPart",
   "agentPage.work.brain.add.duplicate.claude_code",
   "agentPage.work.brain.add.duplicate.codex",
@@ -283,7 +278,7 @@ describe("computer copy", () => {
     // sees one shared account on each, so it never claims to be every agent's.
     for (const strings of [ptBR, en]) {
       const values = valuesOf(strings);
-      const choice = ["own.shared", "own.one", "own.each"].map((k) => values.get(`connectAi.${k}`) ?? "");
+      const choice = ["own.shared"].map((k) => values.get(`connectAi.${k}`) ?? "");
       const shared = [values.get("connectAi.own.shared") ?? "", values.get("usageViews.agent.sharedPart") ?? ""];
       expect([...choice, ...shared].every(Boolean)).toBe(true);
       const placed = /\{\{(computer|brand)\}\}|comput|login|signed in|outra|another/i;
@@ -292,9 +287,7 @@ describe("computer copy", () => {
       // The usage sentence says the same name.
       expect(shared[1]?.toLowerCase()).toContain((shared[0] ?? "").replace(/^(the|a) /i, "").toLowerCase());
     }
-    expect(SELFHOST_EXTRA).toEqual(
-      expect.arrayContaining(["connectAi.own.shared", "connectAi.own.one", "usageViews.agent.sharedPart"]),
-    );
+    expect(SELFHOST_EXTRA).toEqual(expect.arrayContaining(["connectAi.own.shared", "usageViews.agent.sharedPart"]));
     expect(CLOUD_EXTRA.filter((k) => k.startsWith("connectAi.own.") || k === "usageViews.agent.sharedPart")).toEqual(
       [],
     );

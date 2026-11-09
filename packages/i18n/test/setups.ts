@@ -99,6 +99,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "noAi.kept.plan",
   ],
   selfhost: [
+    // The server's own Claude key, a row of the AI select only where a self-hosted server has one.
+    "aiSelect.serverKey",
     "auth.owner.",
     "auth.flow.ownerWaits",
     "auth.flow.ownerWaitsLead",
@@ -190,7 +192,7 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "proof.sent",
     "errors.reauth.code",
   ],
-  apiKey: ["agentPage.work.brain.fallbackTitle"],
+  apiKey: [],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),
   // or the receipt of a message a rule sent to its one candidate.
   routing: [

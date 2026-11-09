@@ -108,12 +108,12 @@ const STEPS = 3;
 
 /**
  * "Conectar uma IA" as pushed screens (`/connect-ai?from=<messageId>&intent=<step>&provider=<id>&agentId=<id>
- * &plan=<plan>&email=<address>&ready=1&forNew=1`), one question per screen under a bar that counts the steps
+ * &plan=<plan>&email=<address>&again=<account>&ready=1&forNew=1`), one question per screen under a bar that counts the steps
  * ("1 de 3 · Dora"): how the agent will think (a plan or a key, and what the workspace already has), then the plan's
  * sign-in on the agent's computer or the workspace's API key (ConnectAiFlow), then done. The native back goes one
  * page back inside the flow before it leaves it. A message that asked for one of them opens on its page, and `plan`
  * on that plan's (Sign in again). Once connected from a message, the agent answers it by itself. `email`: one more
- * login of the account other agents use. `ready`: opened because the workspace's computer just got ready (its
+ * login of the account other agents use. `again`: the signed-out account picked in the AI select, signed in again. `ready`: opened because the workspace's computer just got ready (its
  * notification): a plan's page says so.
  */
 export function ConnectAiSheet() {
@@ -132,6 +132,7 @@ export function ConnectAiSheet() {
     intent?: string;
     plan?: string;
     email?: string;
+    again?: string;
     ready?: string;
     forNew?: string;
   }>();
@@ -146,8 +147,13 @@ export function ConnectAiSheet() {
   // The agents a plan was connected for here: they think with it before the AI status says so.
   const [linked, setLinked] = useState<string[]>([]);
   const hasAi = (id: string) => linked.includes(id) || (aiStateOf(status.data, id) ?? "no_ai") !== "no_ai";
+  // "Conectar outra IA" (`intent=other`) opens on the providers.
   const [view, setView] = useState<FlowView>(() =>
-    viewOf(PLAN_CHOICES.find((c) => c === params.plan) ?? choiceOfIntent(params.intent as ConnectIntent | undefined)),
+    params.intent === "other"
+      ? { page: "plans" }
+      : viewOf(
+          PLAN_CHOICES.find((c) => c === params.plan) ?? choiceOfIntent(params.intent as ConnectIntent | undefined),
+        ),
   );
   const form = useConnectKey(orgId, params.provider);
   const models = useModels();
@@ -227,6 +233,7 @@ export function ConnectAiSheet() {
             hasAi={hasAi}
             {...(params.agentId ? { startAgentId: params.agentId } : {})}
             {...(params.email ? { email: params.email } : {})}
+            {...(params.again ? { again: params.again } : {})}
             locked={locked}
             bare={bare}
             onAccount={() => {

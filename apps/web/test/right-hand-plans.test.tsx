@@ -5,7 +5,7 @@ setupDom();
 
 import type { Message } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { chooseAi, openAiSelect, payWith } from "./ai-picker";
+import { brainTitle, chooseAi, chooseBrain, closeAiSelect, openAiSelect } from "./ai-picker";
 import { createFakeApi, fakeAgentBrain, LODI_ID, NOW, ORG_ID, seedDm, seedState, withRightHand } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
@@ -53,9 +53,7 @@ test("its plan's computer away: one plain line in its DM, and Usar uma chave de 
   await settle(6);
   const dialog = screen().getByRole("dialog", { name: /Lodi/ });
   // Every plan, as for any agent: Codex's and Cursor's too (ADR 0137 §4, the owner's accepted risk).
-  await act(async () => fireEvent.click(payWith(dialog, "Com um plano")));
-  await settle(4);
-  const plans = (await openAiSelect(dialog)).map((o) => o.textContent);
+  const plans = (await openAiSelect(dialog)).map(brainTitle);
   expect(plans).toEqual(expect.arrayContaining(["Claude", "ChatGPT", "Cursor", "OpenCode"]));
 });
 
@@ -155,22 +153,22 @@ test("Connect for it, with a ChatGPT plan another agent already thinks with: tha
   await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Conectar" })));
   await settle(8);
   const dialog = screen().getByRole("dialog", { name: "Conectar uma IA para o Lodi" });
-  const picker = within(dialog).getByRole("group", { name: "Qual IA eles vão usar?" });
-  expect(picker.firstElementChild?.textContent).toBe("Já conectadas");
-  const plan = within(picker).getByRole("button", { name: /^ChatGPT · Plus/ });
-  expect(plan.textContent).toContain("Também usada por Ada");
-  // ChatGPT's panel offers that plan again first; its new sign-in, under Outra conta, can be pressed now, never a
-  // button loading for good.
+  // What it can think with, in one select: the ChatGPT plan made for all of its owner's agents, Ada's too.
+  const rows = await openAiSelect(dialog, "Quem pensa");
+  const plus = rows.find((o) => brainTitle(o).startsWith("ChatGPT · Plus")) as HTMLElement;
+  expect(document.getElementById(plus.getAttribute("aria-describedby") ?? "")?.textContent).toBe("Ada pensa com ela");
+  await closeAiSelect();
+  // ChatGPT's own steps: its sign-in can be pressed now, never a button loading for good.
   await chooseAi(dialog, "ChatGPT");
   await settle(10);
   const panel = within(dialog).getByRole("region", { name: "Seu plano do ChatGPT" });
-  expect(within(panel).getByRole("button", { name: /^Usar ChatGPT · Plus/ })).toBeTruthy();
-  await act(async () => fireEvent.click(within(panel).getByRole("button", { name: "Outra conta" })));
-  await settle(6);
   const signIn = within(panel).getByRole("button", { name: "Entrar com ChatGPT" });
   expect(signIn.getAttribute("aria-busy")).not.toBe("true");
   expect(signIn.hasAttribute("disabled")).toBe(false);
-  await act(async () => fireEvent.click(plan));
+  // Back on the select, that plan in one pick.
+  await act(async () => fireEvent.click(dialog.querySelector(".ai-flow__head button") as HTMLElement));
+  await settle(4);
+  await chooseBrain(dialog, /^ChatGPT · Plus/);
   await settle(6);
   expect(state.calls.find((c) => c.method === "agents.setBrain")?.args.slice(1)).toEqual([
     LODI_ID,

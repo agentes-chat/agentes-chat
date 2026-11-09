@@ -27,3 +27,13 @@ test("the channel's members screen and the mention picker read the shared roster
   for (const f of ["features/chat/ChannelMembers.tsx", "features/chat/MentionPicker.tsx"])
     expect(src(f)).toContain("useRoster");
 });
+
+test("the channel's members: agents out of office, paused or with no AI and people not here sit under Offline, faded", () => {
+  const sheet = src("features/chat/ChannelMembers.tsx");
+  expect(sheet).toContain("isAgentOff(a.presence, a.status?.status)");
+  expect(sheet).toContain('group(t("presence.offline"), count("off"), away)');
+  expect(sheet).toContain("faded={off(w)}");
+  // Why it's off and when it's back, under its name.
+  expect(sheet).toContain("agentOffLine(");
+  expect(src("ui/Row.tsx")).toContain("opacity: faded ? FADED : 1");
+});

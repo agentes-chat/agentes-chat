@@ -1,6 +1,7 @@
 import { type DehydratedState, dehydrate, hashKey, hydrate, type Query, type QueryClient } from "@tanstack/react-query";
+import { artifactRefs, isCardKind } from "../lib/artifacts";
 import { MISSIONS_WAITING_COUNT } from "./missions";
-import type { Me, Message } from "./types";
+import type { Artifact, Me, Message } from "./types";
 
 /**
  * A snapshot of the conversations on this device: opening the app shows the
@@ -10,7 +11,7 @@ import type { Me, Message } from "./types";
  *
  * Only an allow-list is kept: the signed-in person, the conversation lists,
  * agents and people, the sidebar's tools and counts, and the latest messages
- * of the most recent chats. It belongs to one person: dropped when `me` leaves
+ * of the most recent chats with what their cards show. It belongs to one person: dropped when `me` leaves
  * the cache (`qc.clear()` on sign-out, sign-in or a 401) or comes back as
  * someone else.
  */
@@ -71,7 +72,32 @@ const isWaitingCount = (key: readonly unknown[]) =>
 /** Always kept (a chat's parts only for the most recent chats). */
 const isKept = (key: readonly unknown[]) => isMe(key) || isOrgList(key) || isWaitingCount(key);
 
-/** The queries worth keeping: the allow-list, loaded, and only the chats most recently updated. */
+/** A kept chat's cards at most (`cardQueries`): a block's page can be large. */
+const SNAPSHOT_CARDS = 40;
+
+/**
+ * What the kept chats' cards show (a live block, a vote, a question card: `["org", orgId, "artifacts", "one", …]`,
+ * `polls`, `choices`, `blocks`), so a chat opened from the snapshot draws them whole too, never a placeholder that
+ * changes size when the server answers.
+ */
+function cardQueries(loaded: Query[], chats: Query[]) {
+  const ids = new Set(
+    chats.flatMap((q) =>
+      chatPart(q.queryKey)?.part === "messages" && Array.isArray(q.state.data)
+        ? (q.state.data as Message[]).flatMap((m) => artifactRefs(m.meta).map((r) => r.id))
+        : [],
+    ),
+  );
+  return loaded
+    .filter(({ queryKey: [org, , list, a, b], state }) => {
+      if (org !== "org") return false;
+      if (list === "artifacts") return a === "one" && ids.has(b as string) && isCardKind((state.data as Artifact).kind);
+      return (list === "polls" || list === "choices" || list === "blocks") && ids.has(a as string);
+    })
+    .slice(0, SNAPSHOT_CARDS * 2);
+}
+
+/** The queries worth keeping: the allow-list, loaded, and only the chats most recently updated, with their cards. */
 export function pickSnapshotQueries(queries: Query[], chats = SNAPSHOT_CHATS): Query[] {
   const loaded = queries.filter((q) => q.state.status === "success" && q.state.data != null);
   const recent = loaded
@@ -80,11 +106,12 @@ export function pickSnapshotQueries(queries: Query[], chats = SNAPSHOT_CHATS): Q
     .slice(0, chats)
     .map((q) => chatPart(q.queryKey)?.chat);
   const kept = new Set(recent);
-  return loaded.filter((q) => {
+  const picked = loaded.filter((q) => {
     if (isKept(q.queryKey)) return true;
     const c = chatPart(q.queryKey);
     return c !== null && kept.has(c.chat);
   });
+  return [...picked, ...cardQueries(loaded, picked)];
 }
 
 /** A conversation's newest messages, without the ones still sending or that failed (they live in memory only). */

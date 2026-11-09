@@ -382,25 +382,29 @@ export function TeamWeekSchedule({
   const hours = Array.from({ length: 24 }, (_, h) => ({ value: String(h), label: hourText(locale, h) }));
   return (
     <>
-      <Select
-        size="sm"
-        aria-label={t("teamWeek.schedule.day")}
-        value={prefs.daily || !admin ? DAILY : String(prefs.day)}
-        options={days}
-        disabled={!on || !admin}
-        onValueChange={(v) => onChange(v === DAILY ? { daily: true } : { daily: false, day: Number(v) })}
-      />
-      <Select
-        size="sm"
-        aria-label={t("teamWeek.schedule.hour")}
-        value={String(prefs.hour)}
-        options={hours}
-        disabled={!on}
-        onValueChange={(v) => onChange({ hour: Number(v) })}
-      />
+      <span className="tw__when">
+        <Select
+          size="sm"
+          aria-label={t("teamWeek.schedule.day")}
+          value={prefs.daily || !admin ? DAILY : String(prefs.day)}
+          options={days}
+          disabled={!on || !admin}
+          onValueChange={(v) => onChange(v === DAILY ? { daily: true } : { daily: false, day: Number(v) })}
+        />
+        <Select
+          size="sm"
+          aria-label={t("teamWeek.schedule.hour")}
+          value={String(prefs.hour)}
+          options={hours}
+          disabled={!on}
+          onValueChange={(v) => onChange({ hour: Number(v) })}
+        />
+      </span>
+      {/* On a line of its own under the selects, its words on their edge. */}
       <Button
         size="sm"
         variant="ghost"
+        className="ac-btn--under"
         onClick={() => onChange(admin ? { off: !prefs.off } : on ? { daily: false } : { daily: true, off: false })}
       >
         {t(on ? "teamWeek.schedule.stop" : "teamWeek.schedule.start")}

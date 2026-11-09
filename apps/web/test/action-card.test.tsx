@@ -72,7 +72,8 @@ describe("an agent's Connect card", () => {
     );
     const both = dialog("Conectar uma IA") as HTMLElement;
     expect(within(both).getByRole("region", { name: "Seu plano do Claude" })).toBeTruthy();
-    expect(within(both).getByRole("combobox", { name: "Agentes que usam este plano" }).textContent).toContain("Atlas");
+    // Both, said in one line over the select.
+    expect(both.querySelector(".ai-for")?.textContent).toContain("Atlas e Ada");
   });
 
   test("an organization's key: no agent named, the key panel with its maker picked; it stays a button", async () => {
@@ -85,7 +86,7 @@ describe("an agent's Connect card", () => {
     expect(row.textContent).not.toContain("Conectado");
     await click(within(row).getByRole("button", { name: "Conectar" }));
     const add = dialog("Conectar uma IA") as HTMLElement;
-    expect(within(add).getByRole("combobox", { name: "Provedor" }).textContent).toBe("OpenAI");
+    expect(within(add).getByRole("combobox", { name: "Conectar outra IA" }).textContent).toContain("OpenAI");
   });
 
   test("done from live data: 'Conectado' once its agents think (with that plan, for a plan's card)", async () => {

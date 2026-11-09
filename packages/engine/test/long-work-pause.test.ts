@@ -255,7 +255,7 @@ async function computerAgent(fx: Fixture, over: Partial<typeof schema.agents.$in
   const paired = await pairMachine(deps, fx.owner.id, fx.org.id, { name: "MacBook", ...RUNNER, exec: true });
   await fx.db
     .update(schema.agents)
-    .set({ machineId: paired.machineId, brain: "claude_code", brainFallback: false, ...over })
+    .set({ machineId: paired.machineId, brain: "claude_code", ...over })
     .where(eq(schema.agents.id, fx.agent.id));
   return paired.machineId;
 }
@@ -332,7 +332,7 @@ test("a routine's slot at 96% of the plan parks before its first turn and picks 
   expect(seen).toHaveLength(1);
 });
 
-test("the plan's paid extra usage lets long work go on, unless its switch is off", async () => {
+test("the plan's paid extra usage lets long work go on, never on someone else's plan lent to the agent", async () => {
   f = await setup();
   const machineId = await computerAgent(f);
   await storeOwnUsage(
@@ -349,7 +349,7 @@ test("the plan's paid extra usage lets long work go on, unless its switch is off
   await drainOutbox(f.db, handlers);
   expect(seen).toHaveLength(1);
 
-  await f.db.update(schema.agents).set({ brainExtraUsage: false }).where(eq(schema.agents.id, f.agent.id));
+  await f.db.update(schema.agents).set({ brainAccountLentBy: f.owner.id }).where(eq(schema.agents.id, f.agent.id));
   await scheduledSlot(f);
   await drainOutbox(f.db, handlers);
   expect(seen).toHaveLength(1);
@@ -550,14 +550,15 @@ test("Rotinas shows a routine's paused slot until its reset; Continuar agora for
 });
 
 /**
- * A slot of a routine paused at `percent` of its plan, on an agent whose long work keeps off paid extra usage (or,
- * with `extraUsage`, may use it but the plan's extra usage window is at `extraUsed`; null: the plan reports none).
+ * A slot of a routine paused at `percent` of its plan, on an agent whose long work keeps off paid extra usage, as on
+ * someone else's plan lent to it (or, with `extraUsage`, its owner's own plan, whose extra usage window is at
+ * `extraUsed`; null: the plan reports none).
  */
 async function pausedExtraOff(
   percent: number,
   { extraUsage = false, extraUsed = 10 as number | null }: { extraUsage?: boolean; extraUsed?: number | null } = {},
 ) {
-  const machineId = await computerAgent(f, { brainExtraUsage: extraUsage });
+  const machineId = await computerAgent(f, extraUsage ? {} : { brainAccountLentBy: f.owner.id });
   const usage = (used: number) =>
     reading([
       { kind: "five_hour", usedPercent: used, resetsAt: iso(3600_000) },
@@ -583,7 +584,7 @@ test("with extra usage off, Continuar agora goes on up to the plan's own allowan
   expect(seen).toHaveLength(0);
   expect((await getRoutineView(f.db, f.owner.id, f.org.id, id)).usagePause?.extraOff).toBe(false);
 
-  // The plan's window is used up meanwhile: going on would be paid extra usage, which this agent's switch keeps off.
+  // The plan's window is used up meanwhile: going on would be paid extra usage, which a lent plan never pays.
   await setUsage(100);
   expect((await getRoutineView(f.db, f.owner.id, f.org.id, id)).usagePause?.extraOff).toBe(true);
   const refused = await continueRoutineUsagePause({ db: f.db }, f.owner.id, f.org.id, id).catch((e) => e);
@@ -625,7 +626,7 @@ test("with extra usage off, Continuar agora goes on up to the plan's own allowan
   expect(seen).toHaveLength(1);
 });
 
-test("with the extra-usage switch on but no extra usage left, Continuar agora past the plan is refused for that reason, not the switch", async () => {
+test("on the owner's own plan with no extra usage left, Continuar agora past the plan is refused for that reason", async () => {
   f = await setup();
   const { id, setUsage } = await pausedExtraOff(97, { extraUsage: true, extraUsed: null });
   expect((await getRoutineView(f.db, f.owner.id, f.org.id, id)).state).toBe("usage_paused");

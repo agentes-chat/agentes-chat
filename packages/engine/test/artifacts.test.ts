@@ -96,7 +96,9 @@ describe("artifacts made by agents", () => {
     // Asked in the channel: the file and the reply are in the channel itself.
     expect(created).toMatchObject({ channelId: f.general.id, threadId: null, createdByType: "agent" });
     const reply = (await listMessages(f.db, f.owner.id, f.org.id, f.general.id)).at(-1);
-    expect(reply?.meta.artifacts).toEqual([{ id: created?.id, version: 1, title: "Relatório de março" }]);
+    expect(reply?.meta.artifacts).toEqual([
+      { id: created?.id, version: 1, title: "Relatório de março", kind: "document" },
+    ]);
     await Bun.sleep(5);
     expect(events.some((e) => e.type === "artifact.created")).toBe(true);
 
@@ -160,7 +162,7 @@ describe("artifacts made by agents", () => {
     const [file] = await f.db.select().from(schema.artifacts);
     const reply = (await listMessages(f.db, f.owner.id, f.org.id, f.general.id)).at(-1);
     // Written at post time with the title, so the context reads it with no query.
-    expect(reply?.meta.artifacts).toEqual([{ id: file?.id, version: 1, title: "Roteiro do vídeo" }]);
+    expect(reply?.meta.artifacts).toEqual([{ id: file?.id, version: 1, title: "Roteiro do vídeo", kind: "document" }]);
 
     await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
       body: "@dev manda isso pra Ana",

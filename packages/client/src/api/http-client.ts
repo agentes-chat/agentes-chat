@@ -135,6 +135,7 @@ import type {
   Memory,
   Message,
   MessageCard,
+  MessageCards,
   MessagePin,
   Mission,
   MissionBrain,
@@ -981,6 +982,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         }),
       cancelFollowUp: (orgId, messageId) =>
         request<void>(`${org(orgId)}/messages/${enc(messageId)}/cancel-follow-up`, { json: {} }),
+      answerGitHub: (orgId, messageId) =>
+        request<void>(`${org(orgId)}/messages/${enc(messageId)}/github-answer`, { json: {} }),
       archive: (orgId, channelId) => request<void>(`${org(orgId)}/channels/${enc(channelId)}`, { method: "DELETE" }),
       unarchive: (orgId, channelId) =>
         request<void>(`${org(orgId)}/channels/${enc(channelId)}/unarchive`, { json: {} }),
@@ -1016,9 +1019,15 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         })) ?? null,
       messages: async (orgId, channelId, options = {}) => {
         const path = `${org(orgId)}/channels/${enc(channelId)}/messages`;
-        const query = { threadId: options.threadId, before: options.before, limit: options.limit };
-        const { messages } = await request<{ messages: Message[] }>(path, { query });
+        const query = {
+          threadId: options.threadId,
+          before: options.before,
+          limit: options.limit,
+          include: options.onCards ? "cards" : undefined,
+        };
+        const { messages, cards } = await request<{ messages: Message[]; cards?: MessageCards }>(path, { query });
         steerStore.seed(channelId, messages);
+        if (cards) options.onCards?.(cards);
         return messages;
       },
       post: async (orgId, channelId, input) => {

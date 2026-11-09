@@ -323,6 +323,7 @@ function AddAccountFlow({
       {code.trim() || !ready ? (
         <View style={styles.send}>
           <Button
+            size="sm"
             variant="primary"
             wide
             label={t("agentPage.work.brain.add.send", { computer })}

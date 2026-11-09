@@ -21,6 +21,8 @@ import { AGENT_WORKER_HOMES } from "@agenteschat/adapters/command-policy";
 import {
   type AccountKind,
   type AgentScope,
+  type DesktopCursor,
+  desktopCursorOf,
   grantedTo,
   HEARTBEAT_MS,
   inRange,
@@ -80,10 +82,10 @@ import type { HostedExit } from "./tasks";
  * A worker runs as the uid the agent's own code runs as, so everything it
  * sends is taken as that agent's: results and output only for requests sent
  * to it, `brain.*` only for its turns, `task.*` only for its tasks, browser
- * frames only for its agent, and never the computer's own frames (pause,
- * access, accounts). Uploads go out from here, with the machine token no
- * worker ever holds, to the server's own request's upload on the server this
- * computer is paired with.
+ * frames and pointer steps only for its agent, and never the computer's own
+ * frames (pause, access, accounts). Uploads go out from here, with the machine
+ * token no worker ever holds, to the server's own request's upload on the
+ * server this computer is paired with.
  *
  * Worker sessions follow the server's: when the socket drops, theirs end too
  * (what they ran is aborted, as in a single runner) and they say hello again,
@@ -245,6 +247,8 @@ export type WorkerLinkFrame =
     }
   /** From the worker: its agent's Chrome is in use on the agent's desktop (`BROWSER_LEASE_MS`). */
   | { type: "browser.desktop" }
+  /** From the worker: a step of its agent's pointer, for the streams of the agent's desktop root holds (protocol 54). */
+  | ({ type: "desktop.cursor" } & DesktopCursor)
   /**
    * To the worker: close its least recently used idle brain CLI (`BrainManager.reclaimIdle`), `spare` last; with
    * `peek`, only say which it would (`idleCandidate`).
@@ -382,6 +386,8 @@ export interface SupervisorOptions {
   desktop?: (agent: AgentScope, use: WorkerDesktopUse) => Promise<WorkerDesktop>;
   /** How many people watch or control the agent's desktop (`DesktopSessions.status`). */
   desktopViewers?: (agentId: string) => number;
+  /** A step of the agent's pointer, to the streams of its desktop (`DesktopSessions.cursor`, protocol 54). */
+  cursor?: (agentId: string, cursor: DesktopCursor) => void;
   /** The account an agent thinks with now, still on this computer (the agents frame); null: none. */
   account?: (agentId: string) => string | null;
   /** The other accounts it thinks with now (`MachineAgent.accounts`). */
@@ -1506,6 +1512,12 @@ export class Supervisor {
     if (!w.ready) return;
     if (f?.type === "browser.desktop") {
       w.browserLeaseAt = (this.opts.now ?? Date.now)();
+      return;
+    }
+    // Taken as its agent's, like its browser frames: only that agent's desktop hears it, checked.
+    if (f?.type === "desktop.cursor") {
+      const cursor = desktopCursorOf(f);
+      if (cursor) this.opts.cursor?.(w.user.id, cursor);
       return;
     }
     // Only for the account a turn this worker runs now thinks with.

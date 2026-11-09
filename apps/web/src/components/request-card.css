@@ -130,10 +130,19 @@
   width: 16px;
   height: 16px;
 }
-/* A face (the agent a proposal would create) stands where the mark would, a step larger. */
-.rq__logo .ac-avatar {
-  width: 26px;
-  height: 26px;
+/* A face (the agent a proposal would create) beside the object's two lines, as tall as they are: the name's capitals
+   start at its top. */
+.rq__well > .rq__logo:has(> .ac-avatar) {
+  height: auto;
+}
+.rq__well:has(> .rq__logo > .ac-avatar) > .rq__wt > b {
+  /* Browsers without the lh unit: the title's 20px line. */
+  margin-block-start: calc(var(--cap-top) - 10px);
+}
+@supports (top: 1lh) {
+  .rq__well:has(> .rq__logo > .ac-avatar) > .rq__wt > b {
+    margin-block-start: calc(var(--cap-top) - 0.5lh);
+  }
 }
 .rq__wt {
   display: flex;
@@ -308,6 +317,10 @@ html:not([data-pointer]) .rq__more:focus-visible {
 }
 .rq__foot > .ac-btn {
   height: 32px;
+}
+/* Under a proposal's lines: 12px over the hairline, as the lines stand 12px under the object. */
+.rq > .ac-locked > .waitcard__lines + .rq__foot {
+  margin-top: 12px;
 }
 /* As `.ac-acts`: a ghost's words stand on the row's edge, on every line when the row wraps. */
 .rq__foot,

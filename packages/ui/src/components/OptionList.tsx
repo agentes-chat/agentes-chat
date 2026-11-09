@@ -1,5 +1,5 @@
 import { RadioGroup as RRadioGroup } from "radix-ui";
-import { Fragment, type ReactNode } from "react";
+import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { cx } from "../cx";
 import { useLocked } from "./Field";
 
@@ -31,9 +31,9 @@ export interface OptionListProps<V extends string> {
   /** Shown but not changeable (the choice is kept, the others fade). */
   disabled?: boolean;
   /**
-   * `rows` (default): full-width rows. `cards`: side by side, the illustration
-   * on top; the chosen card's
-   * settings go under all of them. One column on narrow screens. `tiles`: two
+   * `rows` (default): full-width rows. `cards`: the illustration on top, all
+   * side by side where each gets its room, else one per row (never two over one
+   * left alone); the chosen card's settings go under all of them. `tiles`: two
    * per row, the leading icon on the title's line.
    */
   layout?: "rows" | "cards" | "tiles";
@@ -107,7 +107,9 @@ export function OptionList<V extends string>({
     >
       {cards ? (
         <>
-          <div className="ac-optlist__cards">{options.map(item)}</div>
+          <div className="ac-optlist__cards" style={{ "--ac-cards": options.length } as CSSProperties}>
+            {options.map(item)}
+          </div>
           {chosen?.children && <div className="ac-optrow__more ac-optrow__more--cards">{chosen.children}</div>}
         </>
       ) : (

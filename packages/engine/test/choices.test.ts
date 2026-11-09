@@ -68,7 +68,10 @@ test("an agent asks with a card: in its reply, out of the Drive, with the option
   const row = await asked();
   expect(row).toMatchObject({ kind: "choices", inDrive: false, title: "Deploy", channelId: f.general.id });
   const reply = (await listMessages(f.db, f.owner.id, f.org.id, f.general.id)).at(-1);
-  expect(reply?.meta.artifacts).toEqual([{ id: row.id, version: 1, title: "Deploy" }]);
+  // Its kind and rows ride along: until it loads, the apps hold the card's shape (two options, one question).
+  expect(reply?.meta.artifacts).toEqual([
+    { id: row.id, version: 1, title: "Deploy", kind: "choices", options: 2, questions: 1 },
+  ]);
   const shown = await getArtifact(f.artifactDeps, person(f.owner.id), f.org.id, row.id);
   expect(shown.content).toEqual({ kind: "choices", questions: QUESTIONS });
   expect(await listArtifacts(f.db, person(f.owner.id), f.org.id)).toEqual([]);

@@ -415,9 +415,7 @@ export async function teammatesNowPrompt(
   if (ids.length === 0) return "";
   const [ai, presence] = await Promise.all([
     agentAiStates(deps, orgId, ids),
-    loadAgentStatuses(deps.db, orgId, new Date(), ids, {
-      hasModel: (agent) => deps.gateway.hasModelCredential(agent),
-    }),
+    loadAgentStatuses(deps.db, orgId, new Date(), ids),
   ]);
   const presenceOf = new Map(presence.map((s) => [s.agentId, s]));
   const lines = listed.flatMap((a) => {

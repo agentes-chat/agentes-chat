@@ -158,10 +158,9 @@
 }
 .tw__schedule {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
 }
 /* A narrow column (the phone's browser, a side panel): two numbers a line, the button under its words. */
 @container (max-width: 520px) {
@@ -183,8 +182,13 @@
 /* Settings › Lodi: the same selects and switch as the card's "Mudar". */
 .rh-set__week {
   display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 100%;
+}
+.tw__when {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  max-width: 100%;
+  gap: var(--space-2);
 }

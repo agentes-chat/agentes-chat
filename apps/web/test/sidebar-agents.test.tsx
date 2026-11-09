@@ -244,6 +244,41 @@ describe("Dragging into a setor", () => {
     expect(moves).toEqual([{ groupId: INTEGRATIONS, index: 2 }]);
     expect(rowsIn(section("Integrations"))).toEqual(["Caio", "Ada"]);
   });
+
+  test("the dragged row hides behind a dashed spot of its size, which stands where it would land", async () => {
+    await withLayout();
+    await go(withGroups());
+    const dt = dataTransfer();
+    const ada = () => nav().querySelector(`[data-agent-row="${ADA_ID}"]`) as HTMLElement;
+    const spot = () => nav().querySelector<HTMLElement>(".drop-spot");
+    await act(async () => fireEvent.dragStart(ada().querySelector("a") as HTMLElement, { dataTransfer: dt }));
+    await settle(2);
+    // At first where the row was, the row out of sight.
+    expect(spot()?.closest(".sidebar__section")).toBe(section("Agentes"));
+    expect(shown(ada())).toBe(false);
+    await act(async () => fireEvent.dragOver(section("Integrations"), { dataTransfer: dt, clientY: 9999 }));
+    expect(spot()?.closest(".sidebar__section")).toBe(section("Integrations"));
+    expect(spot()?.previousElementSibling?.getAttribute("data-agent-row")).toBe(ATLAS_ID);
+    await act(async () => fireEvent.drop(section("Integrations"), { dataTransfer: dt, clientY: 9999 }));
+    await settle(6);
+    expect(rowsIn(section("Integrations"))).toEqual(["Atlas", "Ada"]);
+    expect(spot()).toBeNull();
+    expect(shown(ada())).toBe(true);
+  });
+
+  test("Alt+Shift+↑/↓ moves an agent past its neighbour in its setor", async () => {
+    const state = withGroups();
+    state.agentGroups = [{ id: INTEGRATIONS, name: "Integrations", agentIds: [ATLAS_ID, ADA_ID] }];
+    await go(state);
+    const ada = within(section("Integrations")).getByRole("link", { name: /^Ada/ });
+    expect(ada.getAttribute("aria-keyshortcuts")).toBe("Alt+Shift+ArrowUp Alt+Shift+ArrowDown");
+    await act(async () => fireEvent.keyDown(ada, { key: "ArrowUp", altKey: true, shiftKey: true }));
+    await settle(4);
+    expect(state.calls.filter((c) => c.method === "agentGroups.move").map((c) => c.args.slice(1))).toEqual([
+      [ADA_ID, { groupId: INTEGRATIONS, index: 0 }],
+    ]);
+    expect(rowsIn(section("Integrations"))).toEqual(["Ada", "Atlas"]);
+  });
 });
 
 describe("Fixar no topo", () => {

@@ -96,6 +96,8 @@ const FileContent = z
     size: z.number().openapi({ description: "Bytes." }),
     sha256: z.string(),
     text: z.string().optional().openapi({ description: "Small UTF-8 text files only (≤ 40k characters)." }),
+    width: z.number().optional().openapi({ description: "A picture's width as it shows (PNG, JPEG, WebP)." }),
+    height: z.number().optional().openapi({ description: "A picture's height as it shows." }),
   })
   .openapi("ArtifactFileContent", {
     description: "An uploaded file as is: metadata only; the bytes come from the download link.",
@@ -205,7 +207,7 @@ const Artifact = z
   })
   .openapi("Artifact");
 
-const Poll = z
+export const Poll = z
   .object({
     id: z.string(),
     closesAt: z.string(),
@@ -215,7 +217,7 @@ const Poll = z
   })
   .openapi("Poll");
 
-const BlockState = z
+export const BlockState = z
   .object({
     id: z.string(),
     version: z.number(),
@@ -233,7 +235,7 @@ const BlockState = z
   })
   .openapi("BlockState");
 
-const Choices = z
+export const Choices = z
   .object({
     id: z.string(),
     answer: z
@@ -254,7 +256,7 @@ const Choices = z
   })
   .openapi("Choices");
 
-const ArtifactDetail = Artifact.extend({
+export const ArtifactDetail = Artifact.extend({
   shownVersion: z.number(),
   content: Content,
   versioned: z.boolean().openapi({

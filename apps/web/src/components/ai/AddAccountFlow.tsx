@@ -570,7 +570,7 @@ function AddAccountFlow({
           />
         </Locked>
         {(code.trim() || !ready) && (
-          <Button variant="primary" loading={loading} disabled={!valid || !ready} onClick={() => void send()}>
+          <Button size="sm" variant="primary" loading={loading} disabled={!valid || !ready} onClick={() => void send()}>
             {t("agentPage.work.brain.add.send", { computer })}
           </Button>
         )}

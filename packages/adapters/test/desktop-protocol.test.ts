@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
 import {
+  DESKTOP_CURSOR_NAME_MAX,
+  DESKTOP_CURSOR_PROTOCOL,
   DESKTOP_PROTOCOL,
+  desktopCursorOf,
   isStreamId,
   MACHINE_OPS,
   MACHINE_PROTOCOL_VERSION,
@@ -158,5 +161,39 @@ describe("data sockets", () => {
     expect(parseStreamControl(JSON.stringify({ type: "paste", text: "rm -rf /" }))).toBeNull();
     expect(parseStreamControl(JSON.stringify({ type: "resize", cols: 80, rows: 24, pad: "x".repeat(300) }))).toBeNull();
     expect(parseStreamControl("{")).toBeNull();
+  });
+
+  test("the agent's pointer (protocol 54): an act, a place in whole pixels or none, and a short name", () => {
+    expect(MACHINE_PROTOCOL_VERSION).toBeGreaterThanOrEqual(DESKTOP_CURSOR_PROTOCOL);
+    const cursor = (v: Record<string, unknown>) => parseStreamControl(JSON.stringify({ type: "cursor", ...v }));
+    expect(cursor({ act: "click", x: 514, y: 558, name: "  Join\nthe   list ", extra: 1 })).toEqual({
+      type: "cursor",
+      act: "click",
+      x: 514,
+      y: 558,
+      name: "Join the list",
+    });
+    // Typing and the wheel may say no place: where the focus is, or where the pointer already was.
+    expect(cursor({ act: "type" })).toEqual({ type: "cursor", act: "type" });
+    expect(cursor({ act: "scroll", name: "" })).toEqual({ type: "cursor", act: "scroll" });
+    for (const bad of [
+      { act: "click" },
+      { act: "click", x: 10 },
+      { act: "move", x: 10.5, y: 4 },
+      { act: "move", x: -1, y: 4 },
+      { act: "move", x: 8192, y: 4 },
+      { act: "type", x: "10", y: 4 },
+      { act: "paste", x: 1, y: 1 },
+      { x: 1, y: 1 },
+    ]) {
+      expect(cursor(bad)).toBeNull();
+    }
+    // A long name is cut by characters, never in the middle of one, and the step still fits a frame.
+    const long = desktopCursorOf({ act: "double_click", x: 8191, y: 8191, name: `"📁\\`.repeat(200) });
+    if (!long) throw new Error("a long name is cut, not refused");
+    expect(long.name).toBe(`"📁\\`.repeat(DESKTOP_CURSOR_NAME_MAX / 3));
+    expect(cursor({ ...long })).toEqual({ type: "cursor", ...long });
+    expect(desktopCursorOf({ act: "drag", x: 1, y: 2, name: 42 })).toEqual({ act: "drag", x: 1, y: 2 });
+    expect(cursor({ act: "click", x: 1, y: 1, pad: "x".repeat(600) })).toBeNull();
   });
 });

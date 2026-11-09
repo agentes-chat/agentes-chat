@@ -15,6 +15,7 @@ import {
   type ReplyRef,
   type RunConsultation,
   type SearchHit,
+  seedCards,
   sendHelpers,
   typingIn,
   useAgentsBrowserHandoffs,
@@ -68,6 +69,7 @@ import { localMeta } from "@agenteschat/client/lib/reply";
 import { retryAnswer } from "@agenteschat/client/lib/retry-answer";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
 import { seenMessageId } from "@agenteschat/client/lib/seen";
+import { lastPostedId } from "@agenteschat/client/lib/timeline";
 import { voiceOf } from "@agenteschat/client/lib/voice";
 import { isIdHandle } from "@agenteschat/ui/names";
 import { KeyboardAwareLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard";
@@ -220,7 +222,7 @@ import {
   ThreadOptions,
 } from "./sheets";
 import { StoppedRunsContext, stoppedRunsKey, stoppedRunsOf } from "./stopped-runs";
-import { turnOrder, turnRuns, withOpacity } from "./turn";
+import { turnRuns, turnsInPlace, withOpacity } from "./turn";
 import { JumpToMessageContext } from "./WorkLine";
 
 /** A run's messages this recent are asked whether a take over still holds the agent's browser. */
@@ -411,6 +413,7 @@ function Chat({
   const mentionMembers = useMentionMembers(channelId, !dm && Boolean(channel?.isMember));
 
   // ── Messages ──
+  const qc = useQueryClient();
   const top = useMessages(orgId, channelId, readable && !isThread);
   const threadMessages = useThreadMessages(orgId, isThread && readable ? channelId : undefined, threadId ?? "");
   const channelThreads = useChannelThreads(orgId, channelId, "all", readable && !isThread);
@@ -620,8 +623,9 @@ function Chat({
         return key ? { ...r, key } : r;
       });
     };
-    const runRowsOf = (live: LiveRun[]): Row[] =>
-      live.map((run) => ({ kind: "run" as const, key: turnKeyOf(run.runId) ?? `turn-${run.runId}`, run }));
+    const runRowOf = (run: LiveRun): Row => ({ kind: "run", key: turnKeyOf(run.runId) ?? `turn-${run.runId}`, run });
+    // Each block at work where its words first showed, with what people sent meanwhile below it; the others last.
+    const placed = (chatRows: ChatRow[]) => turnsInPlace(asTurns(chatRows), shownRuns, runRowOf);
     if (isThread && threadId) {
       const root = list.find((m) => m.id === threadId);
       const replies = list.filter((m) => m.id !== threadId);
@@ -653,23 +657,25 @@ function Chat({
               },
             ]
           : [];
+      const turns = placed(buildRows(replies, (m) => superseded.has(m.id), agentsAtWork));
       return [
         ...head,
-        ...asTurns(buildRows(replies, (m) => superseded.has(m.id), agentsAtWork)),
+        ...turns.rows,
         ...browsing.map((run) => ({ kind: "browser" as const, key: `browser-${run.agentId}`, run })),
         ...held.map((h) => ({ kind: "browser" as const, key: `browser-${h.agentId}`, run: null, handoff: h })),
         ...waitRows,
-        ...runRowsOf(turnOrder(shownRuns)),
+        ...turns.last,
       ];
     }
     // A thread's replies live in the thread; the channel shows its link.
     const hidden = (m: Message) => superseded.has(m.id) || Boolean(m.threadId);
+    const turns = placed(buildRows(list, hidden, agentsAtWork));
     return [
-      ...asTurns(buildRows(list, hidden, agentsAtWork)),
+      ...turns.rows,
       ...browsing.map((run) => ({ kind: "browser" as const, key: `browser-${run.agentId}`, run })),
       ...held.map((h) => ({ kind: "browser" as const, key: `browser-${h.agentId}`, run: null, handoff: h })),
       ...waitRows,
-      ...runRowsOf(turnOrder(shownRuns)),
+      ...turns.last,
     ];
   }, [
     isThread,
@@ -734,6 +740,7 @@ function Chat({
       rows.map((r) => ({
         key: r.key,
         kind: r.kind === "message" ? "message" : r.kind === "run" ? "run" : "other",
+        ...(r.kind === "message" ? { id: r.message.id } : {}),
         mine: r.kind === "message" && r.message.author.type === "person" && r.message.author.id === meId,
         // An agent's sticker or GIF after its reply (ADR 0091) is never news of its own.
         silent: r.kind === "message" && isMediaAfterReply(r.message.meta),
@@ -753,10 +760,16 @@ function Chat({
   // the end until the person gets there, sends, or takes the pill.
   const [readHold, setReadHold] = useState(false);
   const [seenKey, setSeenKey] = useState<string | null>(null);
+  // The message posted last when the person was last at the end: one posted since in a place above the last row they
+  // saw (a reply keeps the place of its first words) is new to them too.
+  const [seenPostedId, setSeenPostedId] = useState<string | undefined>();
   const latestSeen = lastSeenKey(scrollRows);
+  const postedNow = useMemo(() => lastPostedId(list), [list]);
   useEffect(() => {
-    if (atEnd) setSeenKey(latestSeen);
-  }, [atEnd, latestSeen]);
+    if (!atEnd) return;
+    setSeenKey(latestSeen);
+    setSeenPostedId(postedNow);
+  }, [atEnd, latestSeen, postedNow]);
   // More than a screen above the end: the round button shows even with nothing new below, and the header's pill
   // closes to the face.
   const [far, setFar] = useState(false);
@@ -764,8 +777,8 @@ function Chat({
     () =>
       atEnd
         ? { messages: 0, firstKey: null, authors: [], working: [], mentionsMe: false }
-        : unseenBelow(scrollRows, seenKey),
-    [atEnd, scrollRows, seenKey],
+        : unseenBelow(scrollRows, seenKey, seenPostedId),
+    [atEnd, scrollRows, seenKey, seenPostedId],
   );
   // "Novas": before the first new row while the person reads above; it fades a while after they reach it.
   const [divider, setDivider] = useState<{ beforeKey: string; fading: boolean } | null>(null);
@@ -873,18 +886,18 @@ function Chat({
   );
 
   // ── Read ──
-  // Seen up to the latest message: the list's badges (a channel's or DM's, or a thread's) clear at once.
+  // Seen up to the message posted last, wherever its place: the list's badges (a channel's or DM's, or a thread's)
+  // clear at once.
   const markRead = useMarkChannelRead(orgId).mutate;
   const markThreadRead = useMarkThreadRead(orgId).mutate;
-  const lastId = list.at(-1)?.id;
   // Peeked at from the list (iOS's long press preview): nothing is read until it is opened.
   const peeking = useIsPreview();
   useEffect(() => {
-    if (peeking || !member || !lastId || lastId.startsWith("local-")) return;
+    if (peeking || !member || !postedNow) return;
     const mark = readMark(channelId, threadId);
     if (mark.kind === "thread") markThreadRead(mark.id);
     else markRead(mark.id);
-  }, [peeking, markRead, markThreadRead, channelId, threadId, member, lastId]);
+  }, [peeking, markRead, markThreadRead, channelId, threadId, member, postedNow]);
 
   // ── Older pages (channel view) ──
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -901,7 +914,11 @@ function Chat({
     fetchingOlder.current = true;
     setLoadingOlder(true);
     api.chat
-      .messages(orgId, channelId, { before: oldest.createdAt, limit: MESSAGES_PAGE })
+      .messages(orgId, channelId, {
+        before: oldest.createdAt,
+        limit: MESSAGES_PAGE,
+        onCards: (c) => seedCards(qc, orgId, c),
+      })
       .then((page) => {
         setOlder((prev) => [...page, ...prev]);
         if (page.length < MESSAGES_PAGE) setOlderDone(true);
@@ -911,7 +928,7 @@ function Chat({
         fetchingOlder.current = false;
         setLoadingOlder(false);
       });
-  }, [api, orgId, channelId, isThread, olderDone, loadingOlder, top.data, older]);
+  }, [api, qc, orgId, channelId, isThread, olderDone, loadingOlder, top.data, older]);
 
   // ── Sending ──
   // Without a connection (no internet, or the server restarting) a message isn't "failed": it waits with a
@@ -949,7 +966,6 @@ function Chat({
     setQuote(null);
     return localMeta(quote, dir.nameOf(quote.author), files);
   };
-  const qc = useQueryClient();
   const voiceRefused = useCallback(
     (reason: VoiceRefusal) => toast({ title: t(reason === "limit" ? "voice.limit" : "voice.notSent"), icon: "x" }),
     [t, toast],
@@ -970,14 +986,11 @@ function Chat({
   const sendRef = useRef(send);
   sendRef.current = send;
   const onResend = useCallback(
-    (m: Message) => {
-      void retryAnswer(api, orgId, m, () => {
-        // Sent again as text, a voice message's words would show: it is sent by recording it again.
-        if (voiceOf(m.meta)) return;
+    (m: Message) =>
+      retryAnswer(api, orgId, m, () => {
         sendRef.current(m.body, threadId);
         toEnd();
-      }).catch((error) => toast({ title: errorText(t, error), icon: "x" }));
-    },
+      }).catch((error) => toast({ title: errorText(t, error), icon: "x" })),
     [api, orgId, threadId, toEnd, toast, t],
   );
   const realtime = useRealtime().status;

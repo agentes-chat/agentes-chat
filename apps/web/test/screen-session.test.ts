@@ -215,6 +215,23 @@ describe("the agent's screen on the phone's page", () => {
     expect(sockets).toHaveLength(2);
     expect(sockets[1]?.url).toContain("mode=control");
   });
+
+  test("the agent's pointer (protocol 54) goes to the app as the server says it, never to noVNC", async () => {
+    const { session, sockets, rfbs, events } = setup();
+    session.set({ connect: true, mode: "watch" });
+    const heard: unknown[] = [];
+    const channel = rfbs[0]?.channel as RfbChannel;
+    channel.onmessage = (e) => heard.push(e.data);
+    sockets[0]?.serverSays('{"type":"cursor","act":"click","x":514,"y":558,"name":"Join the list"}');
+    sockets[0]?.serverSays('{"type":"cursor","act":"click"}');
+    sockets[0]?.serverSays('{"type":"cursor","act":"type"}');
+    await Promise.resolve();
+    expect(events.filter((e) => e.type === "cursor")).toEqual([
+      { type: "cursor", act: "click", x: 514, y: 558, name: "Join the list" },
+      { type: "cursor", act: "type" },
+    ]);
+    expect(heard).toEqual([]);
+  });
 });
 
 describe("a browser card's view of the screen on the phone (ADR 0058 §7)", () => {

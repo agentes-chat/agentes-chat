@@ -171,7 +171,7 @@ export function createArtifactToolSource(deps: ArtifactDeps): ToolSource {
           });
           return {
             content: `Saved "${a.title}" (${a.kind}) as artifact ${a.id}, version 1. ${await fileLanded(deps, ctx, a.id, input.shared_drive)}`,
-            data: { artifact: { id: a.id, version: a.version, title: a.title } },
+            data: { artifact: { id: a.id, version: a.version, title: a.title, kind: a.kind } },
           };
         } catch (error) {
           return failed(error);
@@ -203,7 +203,9 @@ export function createArtifactToolSource(deps: ArtifactDeps): ToolSource {
             await moveToSharedDrive(deps, actor as Extract<ArtifactActor, { type: "agent" }>, ctx.orgId, current.id);
             return {
               content: `"${current.title}": ${await fileReach(deps.db, ctx.orgId, current.id)}`,
-              data: { artifact: { id: current.id, version: current.version, title: current.title } },
+              data: {
+                artifact: { id: current.id, version: current.version, title: current.title, kind: current.kind },
+              },
             };
           }
           const a = await updateArtifact(deps, actor, ctx.orgId, current.id, {
@@ -213,7 +215,7 @@ export function createArtifactToolSource(deps: ArtifactDeps): ToolSource {
           });
           return {
             content: `Saved version ${a.version} of "${a.title}". ${await fileLanded(deps, ctx, a.id, input.shared_drive)}`,
-            data: { artifact: { id: a.id, version: a.version, title: a.title } },
+            data: { artifact: { id: a.id, version: a.version, title: a.title, kind: a.kind } },
           };
         } catch (error) {
           return failed(error);
@@ -346,7 +348,7 @@ export function createArtifactToolSource(deps: ArtifactDeps): ToolSource {
           if (result.copied) from += ` ${await fileReach(deps.db, ctx.orgId, a.id)}`;
           return {
             content: `Shared "${a.title}" (${a.kind}) in this conversation as artifact ${a.id}; its card goes with your reply. ${from}`,
-            data: { artifact: { id: a.id, version: a.version, title: a.title } },
+            data: { artifact: { id: a.id, version: a.version, title: a.title, kind: a.kind } },
           };
         } catch (error) {
           return failed(error);

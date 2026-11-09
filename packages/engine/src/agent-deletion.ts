@@ -98,7 +98,6 @@ export async function deleteAgent(deps: AgentDeletionDeps, actorId: string, orgI
         missionCommandApproval: null,
         brain: "model",
         brainModel: null,
-        brainFallback: true,
         brainAccountId: null,
         brainEffort: null,
         brainSpeed: "standard",

@@ -1927,6 +1927,7 @@
     "popoverTitle": "Ajanlar",
     "seenBy": "{{names}} gördü",
     "retry": "Yeniden dene",
+    "retrying": "Yeniden deneniyor…",
     "platformCap": "Yanıt vermesi için bir ajandan @ ile bahsedin.",
     "mentionNeeded": "@ olmadan hiçbir ajan yanıtlamaz",
     "mentionNeededHint": "Buradaki hiçbir yapay zeka bu mesaj için bir ajan seçemedi. Çağırmak için bir ajandan bahsedin.",
@@ -2289,8 +2290,10 @@
     "rightHand": {
       "computer_away": "{{name}} şu an yanıt veremiyor: planın bilgisayarına ulaşılamıyor.",
       "computer_failed": "{{name}} şu an yanıt veremiyor: planın bilgisayarında bir sorun oldu.",
+      "cli_failed": "{{name}} şu an yanıt veremiyor: planın yapay zekası bir hatayla durdu.",
       "plan_limit": "{{name}} şu an yanıt veremiyor: plan sınırına ulaştı.",
       "plan_not_shared": "{{name}} ile konuşmak için kendi planını bağla: çalışma alanının planı yalnızca sahibine yanıt verir.",
+      "plan_unattended": "{{name}} yanıt vermedi: istek bir kişiden gelmedi ve çalışma alanının planı yalnızca sahibine yanıt verir.",
       "runner_outdated": "{{name}} şu an yanıt veremiyor: planın bilgisayarındaki programın güncellenmesi gerekiyor.",
       "plan_tools": "{{name}} yanıt vermeden durdu: o bilgisayardaki planın yapay zekâsı agentes.chat araçlarıyla sınırlı kalmadı.",
       "model_limit": "{{name}} şu an yanıt veremiyor: {{model}} plandaki kendi sınırına ulaştı. Planın diğer modelleri çalışmaya devam ediyor.",
@@ -2311,6 +2314,36 @@
     "receipt": "Kimse yanıt vermeyecek: bağlı yapay zeka yok",
     "chip": "Yapay zeka yok"
   },
+  "aiSelect": {
+    "placeholder": "Bir yapay zeka seçin",
+    "groupOthers": "Başkalarının planları",
+    "groupKeys": "API anahtarları",
+    "connect": "Başka bir yapay zeka bağlayın",
+    "connectLine": "Başka bir hesap, plan veya API anahtarı",
+    "ownOn": "{{computer}} üzerinde oturum açık",
+    "keyRefused": "Anahtar reddedildi",
+    "unknown": "Giriş doğrulanmadı",
+    "inUse": "{{agents}} kullanıyor",
+    "keyDefault": "Çalışma alanı varsayılanı · sonu {{hint}}",
+    "serverKey": "Bu sunucunun Claude anahtarı",
+    "serverKeyLine": "Sunucuda ayarlı",
+    "signedOut": "{{label}} oturumu kapalı. {{name}} kullanabilsin diye yeniden giriş yapın.",
+    "limited": "Bu hesapla {{name}}, {{when}} yeniden yanıt verir.",
+    "limitedUnknown": "Bu hesapla {{name}}, plan yenilendiğinde yeniden yanıt verir.",
+    "move": "{{agent}} artık bununla düşünmez.",
+    "moveTo": "{{name}} ajanına taşı",
+    "lent": "{{owner}} bir e-posta alır ve geri alabilir.",
+    "useLent": "{{owner}} kişisinin planını kullan",
+    "signInAgain": "{{label}} için yeniden giriş yapın",
+    "for": "{{names}} için",
+    "plans": "Yapay zeka planınız",
+    "endpointLine": "Kendi ağ geçidiniz veya sunucunuz",
+    "keyLocked": "Yalnızca bir yönetici ekleyebilir",
+    "preparing": "Bilgisayar hazırlanıyor",
+    "geminiTiers": "Google AI Pro, Ultra veya Enterprise",
+    "cursorTiers": "Pro, Pro+, Ultra veya Teams",
+    "undo": "Geri al"
+  },
   "connectAi": {
     "title": {
       "any": "Bir yapay zeka bağlayın",
@@ -2323,22 +2356,10 @@
       "api_key": "API anahtarı ekleyin"
     },
     "titleFor": "{{name}} için bir yapay zeka bağlayın",
-    "have": {
-      "title": "Zaten bağlı",
-      "titleFor": "Zaten bağlı, {{name}} için",
-      "other": "Ya da başka birini bağlayın",
-      "manageKeys": "Anahtarları yönet veya sil"
-    },
     "billing": "Plan, çalışma alanının bilgisayarında oturum açar ve bilgisayar etkin bir agentes.chat planıyla gelir.",
     "billingWeb": "Web'de, agentes.chat'te bir plan seç.",
     "orPayGo": "Ya da kullandıkça ödeyin",
-    "pay": {
-      "label": "Nasıl ödersiniz?",
-      "plan": "Planla",
-      "key": "API anahtarıyla"
-    },
     "pick": {
-      "plan": "Plan",
       "placeholder": "Plan seçin",
       "search": "Sağlayıcı ara",
       "searchPlaceholder": "Sağlayıcı adı",
@@ -2411,9 +2432,7 @@
       "shared": "Ajanlarınızın paylaştığı hesap",
       "sharedLower": "ajanlarınızın paylaştığı hesap",
       "free": "OpenCode'un ücretsiz modelleri",
-      "freeLower": "OpenCode'un ücretsiz modelleri",
-      "one": "Yalnızca {{name}} için bir hesap",
-      "each": "Yalnızca onlar için bir hesap"
+      "freeLower": "OpenCode'un ücretsiz modelleri"
     },
     "popup": {
       "title": "{{name}} bağlanıyor",
@@ -2435,14 +2454,11 @@
         "next": "Bekliyor"
       }
     },
-    "for": "Kimin için",
-    "all": "Tüm ajanlar",
     "agentAria": "Bu planı kullanan ajanlar",
     "each": "Aynı hesapla, her ajan için ayrı giriş.",
     "eachHint": "Her ajan kendi girişini korur. Hepsi planınızın limitlerini paylaşır.",
     "once": "Hepsi için tek giriş.",
     "onceHint": "Hepsi planınızın limitlerini paylaşır.",
-    "use": "{{label}} kullan",
     "another": "Başka bir hesap",
     "reuse": {
       "active": "{{label}} burada zaten var. Ona yeniden giriş yapın ya da başka bir hesap kullanın.",
@@ -4302,7 +4318,6 @@
         "label_female": "Nasıl çalışır",
         "computer": "Çalıştığı yer",
         "brain": "Düşündüğü yapay zeka",
-        "brainWith": "{{plan}} ile düşünür",
         "browser": "Tarayıcı",
         "effort": "{{level}} çaba"
       },
@@ -4321,10 +4336,7 @@
       },
       "saved": {
         "brain": "{{name}} artık {{brain}} ile düşünüyor.",
-        "brainMoved": "{{name}} artık {{computer}} üzerinde çalışıyor ve {{brain}} ile düşünüyor.",
         "brainOwner": "{{name}} artık {{brain}} ile düşünüyor ve yalnızca şu kişiye yanıt veriyor: {{owner}}.",
-        "brainMovedOwner": "{{name}} artık {{computer}} üzerinde çalışıyor, {{brain}} ile düşünüyor ve yalnızca şu kişiye yanıt veriyor: {{owner}}.",
-        "account": "{{name}} artık {{account}} hesabını kullanıyor.",
         "computer": "{{name}} artık {{computer}} üzerinde çalışıyor.",
         "none": "{{name}} artık bir bilgisayara sahip değil.",
         "browserOn": "{{name}} artık web sitelerinde gezinebilir.",
@@ -4338,13 +4350,7 @@
         "sub": "Yalnızca {{name}} için, her sohbette geçerlidir.",
         "model": "API anahtarı",
         "modelText": "Kullandıkça ödenir. {{name}} ajanının bütçesinden düşer.",
-        "planText": "{{plan}} planınızı kullanır",
-        "planTextOf": "{{owner}} kişisinin {{plan}} planını kullanır",
-        "moves": "{{computer}} bilgisayarına taşınır",
-        "off": "{{computer}} çevrimdışı",
-        "none": "Hiçbir bilgisayarda yok",
         "planModel": "Model",
-        "account": "Hesap",
         "accountWho": "Yalnızca {{name}} sorumlusu {{owner}} hesapları: bir plan yalnızca sahibinin ajanları için düşünür.",
         "accountSignedOut": "Oturum kapandı, yeniden giriş yapın",
         "accountUnknown": "Giriş doğrulanmadı, yakında yeniden kontrol edilecek",
@@ -4353,18 +4359,14 @@
         "accountAlso": "{{agents}} da kullanıyor",
         "accountOf": "{{name}} hesabı",
         "accountOthers": "Başkalarının planları kimin olduğunu gösterir. Sahibi bir e-posta alır ve geri alabilir.",
-        "addAccount": "Hesap ekle",
         "signInAgain": "Yeniden giriş yap",
-        "connectPlan": "Başka bir plan bağla",
-        "keyLabel": "API anahtarı",
-        "fallbackTitle": "{{computer}} yanıt vermezse API üzerinden yanıtla",
-        "fallbackHint": "API üzerinden yanıt verir ve {{name}} ajanının bütçesinden düşer. Aksi halde {{name}} isteyen kişiye haber verir ve bilgisayarın geri gelmesini bekler.",
         "effort": "Çaba",
         "efforts": {
           "auto": "Otomatik",
           "low": "Düşük",
           "medium": "Orta",
           "high": "Yüksek",
+          "xhigh": "Çok yüksek",
           "max": "En yüksek"
         },
         "effortsLower": {
@@ -4372,6 +4374,7 @@
           "low": "düşük",
           "medium": "orta",
           "high": "yüksek",
+          "xhigh": "çok yüksek",
           "max": "en yüksek"
         },
         "effortText": {
@@ -4379,6 +4382,7 @@
           "low": "Hızlı yanıt verir. Basit sorular için iyidir.",
           "medium": "Varsayılan. Çoğu zaman yeterince düşünür.",
           "high": "Zor görevlerde daha çok düşünür. Daha yavaş ve daha pahalıdır.",
+          "xhigh": "Uzun ve zor görevlerde çok daha fazla düşünür. Daha yavaş ve daha pahalıdır.",
           "max": "Olabildiğince çok düşünür. Çok daha yavaş ve daha pahalıdır."
         },
         "speed": "Hız",
@@ -4401,41 +4405,19 @@
         },
         "advanced": {
           "title": "Gelişmiş ayarlar",
-          "sub": "{{brain}}. Her sohbette geçerlidir.",
-          "think": "Nasıl düşünür",
-          "answers": "Kime yanıt verir",
           "defaults": "Varsayılanlara dön",
-          "done": "Bitti",
-          "contents": {
-            "model": "Bağlam penceresi",
-            "auto": "Bağlam penceresi ve kime yanıt verdiği",
-            "fixed": "Çaba, bağlam penceresi ve kime yanıt verdiği",
-            "autoSpeed": "Hız, bağlam penceresi ve kime yanıt verdiği",
-            "fixedSpeed": "Çaba, hız, bağlam penceresi ve kime yanıt verdiği"
-          },
           "allDefault": "Tümü varsayılan",
           "effort": "Çaba: {{level}}",
           "speed": "Hız: hızlı",
-          "context": "Bağlam: {{size}}",
-          "sharing": "Başka kişilere de yanıt verir",
-          "waits": "Bilgisayarı bekler"
+          "context": "Bağlam: {{size}}"
         },
         "copy": {
-          "row": "Diğer ajanlarda kullan",
-          "rowLine": "Aynı yapay zeka, model, çaba ve özerklik",
-          "title": "Diğer ajanlarda kullan",
-          "sub": "{{setup}} ile düşünecekler.",
-          "all": "Tümü",
-          "allLine_one": "{{count}} ajan bunu alabilir",
-          "allLine_other": "{{count}} ajan bunu alabilir",
-          "none": "Şu anda başka hiçbir ajan bunu alamaz.",
           "now": "Şu an: {{brain}}",
           "same": "Zaten böyle düşünüyor",
           "keeps": "{{account}} hesabını korur",
           "keepsOwn": "Kendi bilgisayarının hesabını korur",
           "autonomy": "Özerklik: {{from}} → {{to}}",
           "withAutonomy": "Özerkliği de dahil et",
-          "withAutonomyLine": "{{value}}, bu ajandaki gibi. Kapalıyken her biri kendininkini korur.",
           "reasons": {
             "not_allowed": "Yalnızca yöneticiler ve {{owner}} değiştirebilir",
             "not_allowedNobody": "Yalnızca yöneticiler değiştirebilir",
@@ -4448,15 +4430,6 @@
             "model_missing": "{{plan}} planında {{model}} yok",
             "failed": "Şu anda değiştirilemedi"
           },
-          "search": "Ajan bul",
-          "noMatch": "“{{q}}” adında bir ajan yok",
-          "pick": "Ajanları seçin",
-          "use_one": "{{count}} ajanda kullan",
-          "use_other": "{{count}} ajanda kullan",
-          "done_one": "{{count}} ajan artık {{setup}} ile düşünüyor.",
-          "done_other": "{{count}} ajan artık {{setup}} ile düşünüyor.",
-          "autonomyOnly_one": "{{count}} ajan yalnızca özerkliğini değiştirdi.",
-          "autonomyOnly_other": "{{count}} ajan yalnızca özerkliğini değiştirdi.",
           "missed_one": "{{count}} ajan değişmedi.",
           "missed_other": "{{count}} ajan değişmedi."
         },
@@ -4519,10 +4492,8 @@
             "opencode": "Bu OpenCode anahtarı zaten {{account}} olarak bağlı."
           },
           "startFailed": "{{computer}} yanıt vermedi. Birazdan tekrar deneyin.",
-          "sendFailed": "Kod gönderilemedi. Kontrol edip tekrar deneyin.",
-          "done": "{{account}} hesabı {{computer}} üzerinde. Kaydetmek için Kullan'a tıklayın."
-        },
-        "offCloud": "{{computer}} yanıt vermiyor"
+          "sendFailed": "Kod gönderilemedi. Kontrol edip tekrar deneyin."
+        }
       },
       "computer": {
         "title": "{{name}} nerede çalışsın?",
@@ -4863,6 +4834,9 @@
         "computer_busy": "Bilgisayar başka görevlerle meşgul kaldı.",
         "computer_failed": "Bilgisayar bir sorunla karşılaştı ve durdu.",
         "computer_timeout": "Bilgisayarın yanıt vermesi çok uzun sürdü.",
+        "cli_failed": "Bir hata {{brain}} programını durdurdu: {{detail}}",
+        "cli_stopped": "Bir hata {{brain}} programını durdurdu.",
+        "cli_closed": "Beklenmedik şekilde {{brain}} programı kapandı.",
         "account_missing": "Bu ajan için seçilen hesap artık bilgisayarında değil. Ajanın ayarlarından başka bir hesap seçin ya da yeniden ekleyin.",
         "our_error": "Bizim tarafımızda bir şeyler ters gitti ve görev durdu. Birazdan yeniden isteyin.",
         "unknown": "Başarısız oldu."
@@ -5533,15 +5507,12 @@
     "price": "Milyon token başına US$ {{input}} / {{output}}",
     "plans": "Planla, bir bilgisayarda",
     "plansHelp": "Bilgisayarı bağlayan kişinin aboneliğiyle Claude Code veya Codex. Anahtar gerekmez.",
-    "planOnlyOwner": "Planla, {{name}} başta yalnızca {{owner}} kişisine yanıt verir. {{owner}}, {{name}} sayfasından başkalarına da yanıt verip vermeyeceğini seçebilir.",
-    "planOnlyOwner_female": "Planla, {{name}} başta yalnızca {{owner}} kişisine yanıt verir. {{owner}}, {{name}} sayfasından başkalarına da yanıt verip vermeyeceğini seçebilir.",
     "partly": "{{name}} hazır, ama seçtiklerinizin bir kısmı kaydedilmedi. {{reason}}",
     "planNotSaved": "{{name}} hazır, ama {{brain}} şu an ayarlanamadı. {{name}} sayfasında, Kim düşünüyor bölümünden tekrar seçin.",
     "lastSetup": "Son seçimle başlar: {{setup}}.",
     "lastAutonomy": "Son seçimdeki gibi {{value}}. Kapalıyken {{fallback}} ile başlar.",
     "autoCost": "Maliyet her göreve göre değişir",
     "noKeyFor": "{{provider}} anahtarı yok",
-    "key": "Anahtar",
     "defaultKey": "Çalışma alanının varsayılan anahtarı",
     "defaultKeyDesc": "{{provider}} · sonu {{hint}}",
     "otherKeyDesc": "{{provider}} · sonu {{hint}}",
@@ -5553,7 +5524,6 @@
       "needsKey": "{{plan}} anahtarı gerekli",
       "other": "Başkasını seçin"
     },
-    "noKeys": "Henüz anahtar yok",
     "budgetTitle": "Aylık bütçe",
     "budget": "Aylık bütçe (US$)",
     "budgetHelp": "Sınıra gelince {{name}} durur ve bunu söyler.",
@@ -7055,6 +7025,7 @@
       "computer_busy": "Bilgisayar başka görevlerle meşgul kaldı",
       "computer_failed": "Bilgisayar bir sorunla karşılaştı ve durdu",
       "computer_timeout": "Bilgisayarın yanıt vermesi çok uzun sürdü",
+      "cli_failed": "Bilgisayardaki yapay zeka programı bir hatayla durdu",
       "account_missing": "Ajanın hesabı artık bilgisayarında değil",
       "our_error": "Bizim tarafımızda bir şeyler ters gitti"
     },
@@ -8572,7 +8543,6 @@
       },
       "savedEveryone": "{{name}} artık başka kişilere de yanıt veriyor.",
       "savedOwner": "{{name}} artık yalnızca size yanıt veriyor.",
-      "savedOwnerOf": "{{name}} artık yalnızca {{owner}} kişisine yanıt veriyor.",
       "backOnApi": "{{name}} yeniden API'de ve hâlâ yalnızca size yanıt veriyor.",
       "letEveryone": "{{name}} herkese yanıt versin",
       "letPeople": "{{name}} başka kişilere de yanıt versin",
@@ -10279,8 +10249,10 @@
       },
       "line": {
         "env": "Bu sunucunun ayarlarında tanımlı (GITHUB_APP_ID).",
-        "invalid": "Bu sunucu kayıtlı uygulamayı açamıyor. Kaldırıp yeniden oluşturun."
+        "invalid": "Bu sunucu kayıtlı uygulamayı açamıyor. Kaldırıp yeniden oluşturun.",
+        "events": "Ajanların GitHub'da olanları duyması için uygulamada şu olayları işaretleyin: {{events}}."
       },
+      "events": "Olayları işaretleyin",
       "open": "GitHub'da aç",
       "remove": "Uygulamayı kaldır",
       "removeTitle": "Bu sunucunun GitHub uygulaması kaldırılsın mı?",
@@ -11876,6 +11848,9 @@
       "invalidSecret": "Client Secret'ın tamamını boşluksuz yapıştır.",
       "invalidRepo": "Depoyu sahip/ad biçiminde yaz."
     },
+    "githubEvent": {
+      "answered": "Bu yanıtı zaten biri istedi. Ajan bununla ilgileniyor."
+    },
     "issue": {
       "assigneeOutside": "Bu kişi bu görevi göremiyor. Önce onu Kimler görüyor listesine ekleyin.",
       "stageFull": "Bir aşama en fazla {{max}} sütun alır. Önce sütunlarından birini silin.",
@@ -12034,7 +12009,7 @@
       "takeOverNoAccess": "Rutini devralmadan önce onun konuşmasına katılın.",
       "agentNotInChannel": "Önce ajanı konuşmaya ekleyin.",
       "webhookPaused": "Test etmek için rutini açın.",
-      "continueExtraOff": "Bu planın kullanım dönemi doldu ve bu ajanın uzun işleri ücretli ek kullanımı kullanmıyor. Hemen devam etmek için bunu yapay zeka ayarlarından açın, yoksa sıfırlamadan sonra kaldığı yerden sürer.",
+      "continueExtraOff": "Bu planın kullanım dönemi doldu ve bu ajanın uzun işleri planın ücretli ek kullanımını kullanmıyor. Sıfırlamadan sonra kaldığı yerden sürer.",
       "continueExtraUsedUp": "Bu planın kullanım dönemi doldu ve ücretli ek kullanımı da bitti ya da kullanılamıyor. Sıfırlamadan sonra kaldığı yerden sürer.",
       "actionsNeedApprover": "Bir rutinin kendi başına hareket etmesine yalnızca ajanın sahibi veya eylemlerini onaylayan kişi izin verebilir.",
       "editorOnly": "Rutini yalnızca oluşturan kişi, ajanın sahibi veya bir yönetici değiştirebilir.",
@@ -12045,6 +12020,7 @@
       "agentBusy": "Ajan bu konuşmada zaten çalışıyor. Devam etmek için bitirmesini bekleyin.",
       "continueForbidden": "Buna yalnızca isteyen kişi, ajanın sahibi veya bir yönetici devam ettirebilir.",
       "notRestartable": "Bu yanıt zaten başlamıştı, yeniden başlayamaz. Mesajınızı tekrar gönderin.",
+      "notRestartableVoice": "Bu yanıt zaten başlamıştı, yeniden başlayamaz. Mesajınızı tekrar kaydedin.",
       "cancelForbidden": "Bunu yalnızca isteyen kişi, ajanın sahibi veya bir yönetici durdurabilir.",
       "answerForbidden": "Bunu yalnızca isteyen kişi, ajanın sahibi veya bir yönetici yapabilir.",
       "stopReasonForbidden": "Nedenini yalnızca durduran kişi söyleyebilir."
@@ -13510,6 +13486,10 @@
     "statusReplyTurn": "Bir görevin ortasındayım ({{duration}}) ve henüz yanıt veremiyorum. Mesajın sırada, bu çalışma turu bitince okuyacağım.",
     "statusReplyQueued": "Bilgisayarı bekliyorum ({{duration}}). Sıram gelince mesajını okuyacağım.",
     "statusReplyAway": "Bilgisayarımın geri gelmesini bekliyorum. Geri gelir gelmez mesajını okuyacağım.",
+    "statusReplyPlan": "Planımın geri gelmesini bekliyorum ({{when}}). Geri geldiğinde mesajını okuyacağım.",
+    "statusReplyPlanUnknown": "Planımın geri gelmesini bekliyorum. Geri gelir gelmez mesajını okuyacağım.",
+    "statusReplyBudget": "Aylık bütçemin yenilenmesini bekliyorum ({{when}}). Mesajını o zaman okuyacağım, bir yönetici sınırı artırırsa daha erken.",
+    "statusReplyBudgetUnknown": "Aylık bütçemin yenilenmesini bekliyorum. Mesajını o zaman okuyacağım, bir yönetici sınırı artırırsa daha erken.",
     "status": {
       "one": "Üzerinde çalışıyor: {{subject}}",
       "oneUntitled": "Arka planda çalışıyor",
@@ -13644,6 +13624,21 @@
       "wakeSkippedAnon": "{{name}} adlı ajanın bahsetmesi başka bir ajana ulaşmadı",
       "wakeSkippedAudience": "{{agents}} ajanını yalnızca bazı kişiler çağırabilir ve {{name}} adlı ajanın bu işi onlardan birinden gelmedi. {{agents}} ajanını çağırabilen biri isteği iletebilir.",
       "wakeSkippedCallable": "{{name}} adlı ajanın ayarları {{agents}} ajanını çağırmasına izin vermiyor (başka bir proje ya da çağırabileceği ajanlar listesinde değil). {{name}} ile ilgilenen kişi bunu ajanın sayfasından değiştirebilir.",
+      "github": {
+        "comment": "{{who}}, GitHub'da bir PR'a yorum yaptı: #{{number}} ({{repo}})",
+        "commentIssue": "{{who}}, GitHub'da bir sorun kaydına yorum yaptı: #{{number}} ({{repo}})",
+        "commentDiscussion": "{{who}}, GitHub'da bir tartışmaya yorum yaptı: #{{number}} ({{repo}})",
+        "opened": "{{who}}, GitHub'da agentes.chat uygulamasını çağırdı: #{{number}} ({{repo}})",
+        "reviewed": "{{who}}, GitHub'da bir PR'ı inceledi: #{{number}} ({{repo}})",
+        "approved": "{{who}}, GitHub'da bir PR'ı onayladı: #{{number}} ({{repo}})",
+        "changes": "{{who}}, GitHub'da bir PR'da değişiklik istedi: #{{number}} ({{repo}})",
+        "reviewRequested": "{{who}}, GitHub'da {{name}} ajanından bir PR'ı incelemesini istedi: #{{number}} ({{repo}})",
+        "merged": "{{who}}, GitHub'da bir PR'ı birleştirdi: #{{number}} ({{repo}})",
+        "closed": "{{who}}, GitHub'da bir PR'ı kapattı: #{{number}} ({{repo}})",
+        "closedIssue": "{{who}}, GitHub'da bir sorun kaydını kapattı: #{{number}} ({{repo}})",
+        "ask": "Yanıt iste",
+        "asked": "{{asker}}, {{name}} ajanından GitHub'da {{who}} adlı kişiye yanıt vermesini istedi"
+      },
       "show": "Göster",
       "hide": "Gizle",
       "talker": "çalışırken",
@@ -14028,8 +14023,10 @@
       "no_ai_not_signed_in": "Henüz yanıt veremiyorum: bilgisayarımda {{brain}} oturumu açık değil.",
       "no_ai_computer_away": "Şu an yanıt veremiyorum: planımın bilgisayarına ulaşılamıyor.",
       "no_ai_computer_failed": "Şu an yanıt veremiyorum: planımın bilgisayarında bir sorun oldu.",
+      "no_ai_cli_failed": "Şu an yanıt veremiyorum: planımın yapay zekası bir hatayla durdu.",
       "no_ai_plan_limit": "Şu an yanıt veremiyorum: düşündüğüm plan sınırına ulaştı.",
       "no_ai_plan_not_shared": "Sana çalışma alanının planı üzerinden yanıt veremiyorum: yalnızca sahibine yanıt veriyor. Kendi planını bağlarsan yanıt veririm.",
+      "no_ai_plan_unattended": "Yanıt vermedim: istek bir kişiden gelmedi ve çalışma alanının planı yalnızca sahibine yanıt verir.",
       "no_ai_runner_outdated": "Şu an yanıt veremiyorum: planımın bilgisayarındaki programın güncellenmesi gerekiyor.",
       "no_ai_plan_tools": "Yanıt vermeden durdum: o bilgisayardaki planımın yapay zekâsı agentes.chat araçlarıyla sınırlı kalmadı.",
       "no_ai_model_limit": "Şu an yanıt veremiyorum: {{model}} planımdaki kendi sınırına ulaştı.",
@@ -15106,6 +15103,13 @@
     "keyboard": {
       "label": "Klavye",
       "field": "{{name}} bilgisayarına yazın"
+    },
+    "cursor": {
+      "click": "{{name}} öğesine tıklıyor",
+      "clickPlain": "tıklıyor",
+      "type": "yazıyor",
+      "scroll": "kaydırıyor",
+      "drag": "sürüklüyor"
     },
     "seeWhole": "Tüm ekranı gör",
     "card": {

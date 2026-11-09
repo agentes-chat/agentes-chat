@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { resources } from "@agenteschat/i18n";
+import i18next, { type TFunction } from "i18next";
 import type { MemberPresence, OrgRole } from "../src/api/types";
-import { memberGroups } from "../src/lib/member-groups";
+import { isAgentOff, memberGroups } from "../src/lib/member-groups";
+import { agentOffLine } from "../src/lib/presence";
 
 const role = (id: string, position: number, hoist = true): OrgRole => ({
   id,
@@ -90,4 +93,40 @@ describe("memberGroups", () => {
     expect(groups.map((g) => g.key)).toEqual(["owner", "online", "offline"]);
     expect(ids(groups[1] as (typeof groups)[number])).toEqual(["bia", "caio", "walter"]);
   });
+
+  test("an agent that is off sits under Offline with the people there, by name, and leaves Agentes", () => {
+    const groups = group({ agentOff: (id) => id === "rui" || id === "ada" });
+    const of = (key: string) => groups.find((g) => g.key === key);
+    expect(groups.map((g) => g.key)).toEqual(["owner", "role:admin", "agents", "online", "offline"]);
+    expect(ids(of("agents") as (typeof groups)[number])).toEqual(["theo"]);
+    expect(ids(of("offline") as (typeof groups)[number])).toEqual(["ada", "davi", "ivo", "lara", "rui"]);
+  });
+
+  test("off: out of office, paused or with no AI; away or at work isn't", () => {
+    expect(isAgentOff("out")).toBe(true);
+    expect(isAgentOff("offline")).toBe(true);
+    expect(isAgentOff("away", { kind: "out_of_budget" })).toBe(true);
+    expect(isAgentOff("away", null)).toBe(false);
+    expect(isAgentOff("busy", { kind: "coding" })).toBe(false);
+  });
+});
+
+test("an agent that is off says why under its name: its own line, short, else paused or with no AI", () => {
+  const i18n = i18next.createInstance();
+  void i18n.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+  const t = i18n.t.bind(i18n) as TFunction;
+  const line = {
+    by: "auto" as const,
+    text: null,
+    kind: "out_of_plan" as const,
+    subject: null,
+    emoji: null,
+    until: null,
+  };
+  expect(agentOffLine(t, { presence: "out", line, noAi: false })).toBe("Sem limite");
+  expect(agentOffLine(t, { presence: "offline", line: null, noAi: false })).toBe("Pausado");
+  expect(agentOffLine(t, { presence: "offline", line: null, noAi: true })).toBe("Sem IA conectada");
+  expect(agentOffLine(t, { presence: "out", line: null, noAi: false })).toBe(
+    "Sem limite agora · responde quando renovar",
+  );
 });

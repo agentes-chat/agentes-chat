@@ -316,11 +316,12 @@ export function serveNone(
  * `stream.open` of a desktop: the agent's running desktop logged in with the
  * password of the stream's mode, then its data socket; resolves once both are
  * up, and the bytes go on flowing. The desktop counts the stream as a viewer
- * (it isn't idle) until it ends. A switch of its mode (protocol 30) logs in
- * again once `may` lets that mode go now (it throws when not).
+ * (it isn't idle) until it ends, and its data socket hears the agent's pointer
+ * (protocol 54). A switch of its mode (protocol 30) logs in again once `may`
+ * lets that mode go now (it throws when not).
  */
 export async function openDesktopStream(
-  desktops: Pick<DesktopSessions, "status" | "session" | "hold">,
+  desktops: Pick<DesktopSessions, "status" | "session" | "hold"> & Partial<Pick<DesktopSessions, "show">>,
   agent: AgentScope,
   mode: DesktopMode,
   dial: () => Promise<DataSocket>,
@@ -348,7 +349,11 @@ export async function openDesktopStream(
       vnc.socket.destroy();
       throw err;
     }
-    void serveNone(data, vnc, { login }).finally(release);
+    const hide = desktops.show?.(agent.id, data) ?? (() => undefined);
+    void serveNone(data, vnc, { login }).finally(() => {
+      hide();
+      release();
+    });
   } catch (err) {
     release();
     throw err;

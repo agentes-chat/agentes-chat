@@ -36,6 +36,7 @@ import type {
   DeviceRequest,
   HostComputer,
   Machine,
+  MachineAccount,
   MachineAccountKind,
   MachineOutages,
   MoveAgentsResult,
@@ -78,6 +79,8 @@ export interface FakeMachines {
   endLogin(loginId: string, status: AccountLoginStatus): void;
   /** What "Contas de IA" lists. */
   setAiAccounts(view: AiAccounts): void;
+  /** An account listed there, or one a sign-in here just made. */
+  accountOf(accountId: string): MachineAccount | undefined;
 }
 
 let seq = 0;
@@ -343,6 +346,11 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
     setAiAccounts: (view) => {
       ai = clone(view);
     },
+    accountOf: (accountId) =>
+      clone(
+        ai.accounts.find((x) => x.id === accountId) ??
+          [...loginStatus.values()].find((st) => st.account?.id === accountId)?.account,
+      ),
     addDevice: (userCode, input = {}) => {
       const now = ctx.now();
       const d: DeviceRequest = {

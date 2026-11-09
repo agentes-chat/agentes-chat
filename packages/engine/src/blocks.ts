@@ -442,6 +442,17 @@ export async function someoneAnswers(ctx: ToolContext) {
  * `show_block` and `start_poll`: no scope, like `react` and `ask_user`, because they only speak in the agent's own
  * conversation and touch nothing outside it (ADR 0109). `tools/run-policy.ts` lists them as `HERE`.
  */
+/**
+ * A card on the reply (`meta.artifacts`), with its kind (and a vote's or a question card's rows): until it loads, the
+ * apps hold the card's shape and size.
+ */
+const cardRef = (a: { id: string; version: number; title: string; kind: string }) => ({
+  id: a.id,
+  version: a.version,
+  title: a.title,
+  kind: a.kind,
+});
+
 export function createBlockToolSource(deps: ArtifactDeps): ToolSource {
   const showBlock: ToolDefinition = {
     name: SHOW_BLOCK_TOOL,
@@ -484,7 +495,7 @@ export function createBlockToolSource(deps: ArtifactDeps): ToolSource {
           : await createConversationArtifact(deps, actor, ctx.orgId, { title, content });
         return {
           content: `Showing "${a.title}" in your reply as block ${a.id}. Write a line or two around it, and don't repeat what it shows.`,
-          data: { artifact: { id: a.id, version: a.version, title: a.title } },
+          data: { artifact: cardRef(a) },
         };
       } catch (error) {
         return failed(error);
@@ -540,7 +551,7 @@ export function createBlockToolSource(deps: ArtifactDeps): ToolSource {
         });
         return {
           content: `The vote is in your reply. It closes on ${closesAt.toISOString()} or when everyone has voted, and you'll hear the result then. Say in a line what you're asking and end your turn.`,
-          data: { artifact: { id: a.id, version: a.version, title: a.title } },
+          data: { artifact: { ...cardRef(a), options: a.content.kind === "poll" ? a.content.options.length : 0 } },
         };
       } catch (error) {
         return failed(error);
@@ -597,7 +608,14 @@ export function createBlockToolSource(deps: ArtifactDeps): ToolSource {
         });
         return {
           content: "The card is in your reply. Their pick reaches you as their next message: end your turn now.",
-          data: { artifact: { id: a.id, version: a.version, title: a.title } },
+          data: {
+            artifact: {
+              ...cardRef(a),
+              ...(a.content.kind === "choices"
+                ? { options: a.content.questions[0]?.options.length ?? 0, questions: a.content.questions.length }
+                : {}),
+            },
+          },
         };
       } catch (error) {
         return failed(error);

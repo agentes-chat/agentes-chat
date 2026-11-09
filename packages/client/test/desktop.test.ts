@@ -1,13 +1,23 @@
 import { describe, expect, test } from "bun:test";
 // By path: the client doesn't depend on the adapters, so the package isn't linked here.
-import { STREAM_CLOSE } from "../../adapters/src/machine-protocol";
+import {
+  desktopCursorOf,
+  parseStreamControl,
+  DESKTOP_CURSOR_ACTS as SERVER_CURSOR_ACTS,
+  DESKTOP_SIZE as SERVER_DESKTOP_SIZE,
+  STREAM_CLOSE,
+} from "../../adapters/src/machine-protocol";
 import type { BrowserHandoff, DesktopStatus } from "../src/index";
 import {
   askControlWords,
   browserScreenKey,
   browserShowsDesktop,
+  cursorStep,
   DESKTOP_CLOSE,
+  DESKTOP_CURSOR_ACTS,
+  DESKTOP_SIZE,
   desktopCloseState,
+  desktopCursorFrame,
   desktopMode,
   desktopRetryMs,
   desktopSocketUrl,
@@ -253,5 +263,56 @@ describe("watching, then switching control", () => {
     expect(at({ session: "control" })).toBe("returning");
     // A page that never says its session: only the step itself.
     expect(at({ mode: "control", session: null })).toBeNull();
+  });
+});
+
+describe("the agent's pointer (protocol 54)", () => {
+  test("a socket's cursor frame read as the server checks it: its acts mirror the protocol's", () => {
+    expect([...DESKTOP_CURSOR_ACTS]).toEqual([...SERVER_CURSOR_ACTS]);
+    const frames = [
+      { type: "cursor", act: "click", x: 514, y: 558, name: "Join the list" },
+      { type: "cursor", act: "type" },
+      { type: "cursor", act: "scroll", x: 0, y: 899 },
+      { type: "cursor", act: "move" },
+      { type: "cursor", act: "move", x: 3.5, y: 4 },
+      { type: "cursor", act: "click", x: 8192, y: 4 },
+      { type: "cursor", act: "type", x: 1 },
+      { type: "cursor", act: "wave", x: 1, y: 1 },
+      { type: "mode", mode: "watch" },
+    ];
+    for (const frame of frames) {
+      const text = JSON.stringify(frame);
+      const server = parseStreamControl(text);
+      expect(desktopCursorFrame(text)).toEqual(server?.type === "cursor" ? desktopCursorOf(server) : null);
+    }
+    expect(desktopCursorFrame("{")).toBeNull();
+    expect(desktopCursorFrame("null")).toBeNull();
+    expect(desktopCursorFrame(JSON.stringify({ type: "cursor", act: "click", x: 1, y: 2, name: 7 }))).toEqual({
+      act: "click",
+      x: 1,
+      y: 2,
+    });
+    expect(DESKTOP_SIZE).toEqual(SERVER_DESKTOP_SIZE);
+  });
+
+  test("each step drawn: its presses where it lands, and its words; a plain move says nothing", () => {
+    const t = ((key: string, o?: { name?: string }) => (o?.name ? `${key}(${o.name})` : key)) as never;
+    expect(cursorStep(t, { act: "click", x: 514, y: 558, name: "Join the list" })).toEqual({
+      x: 514,
+      y: 558,
+      presses: 1,
+      words: "desktop.cursor.click(Join the list)",
+    });
+    expect(cursorStep(t, { act: "double_click", x: 1, y: 2 })).toEqual({
+      x: 1,
+      y: 2,
+      presses: 2,
+      words: "desktop.cursor.clickPlain",
+    });
+    expect(cursorStep(t, { act: "right_click", x: 1, y: 2 })).toMatchObject({ presses: 1 });
+    expect(cursorStep(t, { act: "move", x: 3, y: 4 })).toEqual({ x: 3, y: 4, presses: 0, words: "" });
+    expect(cursorStep(t, { act: "type" })).toEqual({ presses: 0, words: "desktop.cursor.type" });
+    expect(cursorStep(t, { act: "scroll", x: 5, y: 6 })).toMatchObject({ presses: 0, words: "desktop.cursor.scroll" });
+    expect(cursorStep(t, { act: "drag", x: 7, y: 8 })).toMatchObject({ presses: 0, words: "desktop.cursor.drag" });
   });
 });

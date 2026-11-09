@@ -1,8 +1,10 @@
 import type { InvalidateQueryFilters, QueryClient } from "@tanstack/react-query";
+import type { ApiClient } from "../api/client";
 import { keys } from "../api/keys";
 import type {
   Agent,
   AgentComputer,
+  Artifact,
   ChannelEvent,
   ComputerSetup,
   ComputerTarget,
@@ -14,6 +16,7 @@ import type {
   OrgDeletion,
   OrgStanding,
 } from "../api/types";
+import { isCardKind } from "../lib/artifacts";
 import { pacer } from "../lib/pace";
 
 const MACHINE_EVENTS = new Set([
@@ -320,12 +323,15 @@ export function applyMembershipEvent(qc: QueryClient, orgId: string, event: Chan
 /**
  * What the open conversation says about lists shown elsewhere too: a file saved, changed or deleted there (its cards,
  * the open viewer, the Drive; a deleted one's cards say so, from the conversation read again), and an agent changing its
- * memory there (its memory list). Returns whether the event was one of these.
+ * memory there (its memory list). A live block, vote or question card made there is read at once (`api`): its message
+ * lands after it, and the card draws whole then. Returns whether the event was one of these.
  */
-export function applyConversationEvent(qc: QueryClient, orgId: string, event: ChannelEvent): boolean {
+export function applyConversationEvent(qc: QueryClient, orgId: string, event: ChannelEvent, api?: ApiClient): boolean {
   const type: string = event.type;
   if (type === "artifact.created" || type === "artifact.updated" || type === "artifact.deleted") {
     void qc.invalidateQueries({ queryKey: keys.artifacts(orgId) });
+    const made = (event as { artifact?: Artifact }).artifact;
+    if (api && made && type !== "artifact.deleted") prefetchCard(api, qc, orgId, made);
     const channelId = (event as { channelId?: unknown }).channelId;
     if (type === "artifact.deleted" && typeof channelId === "string")
       void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
@@ -336,6 +342,24 @@ export function applyConversationEvent(qc: QueryClient, orgId: string, event: Ch
     return true;
   }
   return false;
+}
+
+/** What a card shows (the same caches its card reads), before its message lands. */
+function prefetchCard(api: ApiClient, qc: QueryClient, orgId: string, a: Artifact) {
+  if (!isCardKind(a.kind)) return;
+  void qc.prefetchQuery({
+    queryKey: keys.artifact(orgId, a.id, a.version),
+    queryFn: () => api.artifacts.get(orgId, a.id, a.version),
+  });
+  if (a.kind === "poll")
+    void qc.prefetchQuery({ queryKey: keys.poll(orgId, a.id), queryFn: () => api.artifacts.poll(orgId, a.id) });
+  if (a.kind === "choices")
+    void qc.prefetchQuery({ queryKey: keys.choices(orgId, a.id), queryFn: () => api.artifacts.choices(orgId, a.id) });
+  if (a.kind === "block")
+    void qc.prefetchQuery({
+      queryKey: keys.blockState(orgId, a.id, a.version),
+      queryFn: () => api.artifacts.blockState(orgId, a.id, a.version),
+    });
 }
 
 /**

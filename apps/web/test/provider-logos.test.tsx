@@ -75,7 +75,8 @@ describe("provider marks where a provider is named", () => {
     await startAs("Assistente");
     await proceed(4);
     expect(title()).toBe("Modelo e orçamento");
-    await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Quem pensa" })));
+    // On a key, the model under Quem pensa: its list, every model by its maker.
+    await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Modelo" })));
     const option = (name: RegExp) => screen().getAllByRole("option", { name })[0] as Element;
     expect(
       option(/^Claude Sonnet 5\.5/)

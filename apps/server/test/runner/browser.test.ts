@@ -585,7 +585,10 @@ test("a click goes as a person's: the box, then a pointer path into it, a check 
   // In view: the page stays where it is.
   expect(batches[0]).toEqual([
     ["get", "box", "@e1"],
-    ["eval", "[window.innerWidth, window.innerHeight]"],
+    [
+      "eval",
+      "[window.innerWidth, window.innerHeight, window.screenX, window.screenY, window.outerWidth, window.outerHeight]",
+    ],
   ]);
   const human = batches[1] ?? [];
   expect(human[0]?.slice(0, 2)).toEqual(["mouse", "move"]);

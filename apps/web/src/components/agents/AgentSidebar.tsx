@@ -7,6 +7,7 @@ import {
   useBrowserHandoffMutations,
   useDesktopPicture,
   useIssues,
+  useModels,
   useRoutines,
   useUsage,
 } from "@agenteschat/client";
@@ -85,14 +86,7 @@ export function AgentSidebar({ agent, onClose }: { agent: Agent; onClose?: () =>
           <RightHandMineRow agent={agent} />
         </Section>
       ) : (
-        seesDetails(agent) && (
-          <>
-            <ComputerSection agent={agent} />
-            <RoutinesSection agent={agent} />
-            <ThinksSection agent={agent} />
-            <TasksSection agent={agent} />
-          </>
-        )
+        seesDetails(agent) && <Sections agent={agent} />
       )}
     </ErrorBoundary>
   );
@@ -104,6 +98,30 @@ export function AgentSidebar({ agent, onClose }: { agent: Agent; onClose?: () =>
     );
   }
   return <FloatingSide onClose={onClose}>{body}</FloatingSide>;
+}
+
+/**
+ * Its computer, routines, brain and tasks: they show together, once each has what it draws, so none pushes the next
+ * down when its data comes (laid out but unseen until then).
+ */
+function Sections({ agent }: { agent: Agent }) {
+  const { org } = useOrg();
+  const computer = useAgentComputer(agent);
+  const reads = [
+    useRoutines(org.id),
+    useAgentDetail(org.id, agent.id),
+    useUsage(org.id),
+    useIssues(org.id),
+    useModels(),
+  ];
+  return (
+    <div className="dm-side__secs" data-pending={!computer.ready || reads.some((q) => q.isPending) || undefined}>
+      <ComputerSection agent={agent} />
+      <RoutinesSection agent={agent} />
+      <ThinksSection agent={agent} />
+      <TasksSection agent={agent} />
+    </div>
+  );
 }
 
 function FloatingSide({ onClose, children }: { onClose: () => void; children: ReactNode }) {

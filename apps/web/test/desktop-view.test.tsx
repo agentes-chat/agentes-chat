@@ -228,6 +228,34 @@ async function controlled(cloud = false) {
     field: () => view().getByRole("textbox", { name: "Digitar no computador da Ada" }) as HTMLTextAreaElement,
   };
 }
+/**
+ * The screen laid out as a browser would, `width` by `height` (the test's DOM lays nothing out), until the returned
+ * call: the agent's pointer measures the picture in it.
+ */
+function laidOutScreens(width: number, height: number) {
+  const proto = HTMLElement.prototype;
+  const own = (key: string) => Object.getOwnPropertyDescriptor(proto, key);
+  const was = { clientWidth: own("clientWidth"), clientHeight: own("clientHeight") };
+  for (const [key, value] of [
+    ["clientWidth", width],
+    ["clientHeight", height],
+  ] as const) {
+    const base = was[key] ?? Object.getOwnPropertyDescriptor(Element.prototype, key);
+    Object.defineProperty(proto, key, {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.classList.contains("dsk-screen") ? value : (base?.get?.call(this) ?? 0);
+      },
+    });
+  }
+  return () => {
+    for (const key of ["clientWidth", "clientHeight"] as const) {
+      const before = was[key];
+      if (before) Object.defineProperty(proto, key, before);
+      else Reflect.deleteProperty(proto, key);
+    }
+  };
+}
 /** The line under the screen: its words. */
 const line = () => document.querySelector(".dsk-line > .dsk-words")?.textContent;
 /** What that line says watching: nothing about the viewer's own typing, which they may not be doing. */
@@ -437,6 +465,36 @@ describe("the agent's screen in the computer dialog", () => {
     expect(view().queryByRole("button", { name: "Recolher" })).toBeNull();
     // Watching gives no way to type into it.
     expect(view().queryByRole("textbox", { name: "Digitar no computador da Ada" })).toBeNull();
+  });
+
+  test("protocol 54: the agent's pointer from its computer's steps, over the screen while watching, never in control", async () => {
+    const restore = laidOutScreens(640, 450);
+    try {
+      const t = await dialog();
+      await connected();
+      const layer = () => document.querySelector<HTMLElement>(".dsk-stage > .ac-cursor");
+      // Over the screen's picture, the agent's pointer waits for its first step.
+      expect(layer()?.style.width).toBe("640px");
+      expect(layer()?.dataset.phase).toBe("gone");
+      const ws = t.sockets.desktops[0];
+      const step = { type: "cursor", act: "click", x: 640, y: 450, name: "Join the list" };
+      await act(async () => ws?.serverSends(JSON.stringify(step)));
+      await settle(2);
+      expect(layer()?.dataset.phase).toBe("on");
+      expect(layer()?.querySelector(".ac-cursor__name")?.textContent).toBe("Ada");
+      expect(layer()?.querySelector(".ac-cursor__what")?.textContent).toBe("clicando em Join the list");
+      // Its steps are the page's alone: noVNC never reads them.
+      expect(rfb().got).toEqual([]);
+      // Never over what the person does: taking control hides it, and steps then draw nothing.
+      await click(view().getByRole("button", { name: "Assumir o controle" }));
+      await settle(4);
+      expect(layer()?.dataset.phase).toBe("gone");
+      await act(async () => ws?.serverSends(JSON.stringify({ ...step, x: 10, y: 10 })));
+      await settle(2);
+      expect(layer()?.dataset.phase).toBe("gone");
+    } finally {
+      restore();
+    }
   });
 
   test("Live once a picture is there: a screen that just started stays black a moment, and says Opening meanwhile", async () => {

@@ -4,9 +4,13 @@ import type { AgentBrain } from "../src/api/types";
 import { brainLine, engineOfBrain, engineOfExecutor, engineStateOfOption, thinksWith } from "../src/lib/brain";
 import {
   ADVANCED_DEFAULTS,
-  advancedContents,
   advancedParts,
+  advancedSummary,
+  EFFORT_RAMP_MAX,
+  effortLevel,
+  effortLevels,
   isAdvancedDefault,
+  shownEffort,
   viewSpeedFits,
 } from "../src/lib/brain-advanced";
 
@@ -123,20 +127,45 @@ describe("Velocidade (ADR 0149)", () => {
   test("Rápida counts as a change from the defaults and is named wherever they are", () => {
     const now = { ...ADVANCED_DEFAULTS, speed: "fast" as const };
     expect(isAdvancedDefault("codex", now)).toBe(false);
-    expect(advancedParts(t, "pt-BR", { kind: "codex", autoModel: false, apiKey: false, now })).toEqual([
+    expect(advancedParts(t, "pt-BR", { kind: "codex", autoModel: false, now })).toEqual([
       "agentPage.work.brain.advanced.speed",
     ]);
-    expect(
-      advancedParts(t, "pt-BR", { kind: "codex", autoModel: false, apiKey: false, now: ADVANCED_DEFAULTS }),
-    ).toEqual([]);
-    expect(advancedContents(t, { kind: "codex", autoModel: false, speed: true })).toBe(
-      "agentPage.work.brain.advanced.contents.fixedSpeed",
+    expect(advancedParts(t, "pt-BR", { kind: "codex", autoModel: false, now: ADVANCED_DEFAULTS })).toEqual([]);
+    expect(advancedSummary(t, "pt-BR", { kind: "codex", autoModel: false, now: ADVANCED_DEFAULTS })).toBe(
+      "agentPage.work.brain.advanced.allDefault",
     );
-    expect(advancedContents(t, { kind: "codex", autoModel: true, speed: true })).toBe(
-      "agentPage.work.brain.advanced.contents.autoSpeed",
-    );
-    expect(advancedContents(t, { kind: "codex", autoModel: false })).toBe(
-      "agentPage.work.brain.advanced.contents.fixed",
-    );
+  });
+});
+
+describe("Esforço: the levels each model takes", () => {
+  test("Claude's models from Opus 4.7 on take all five; Opus and Sonnet 4.6 stop before xhigh, Opus 4.5 at high, older none", () => {
+    expect(effortLevels("claude_code", "opus")).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(effortLevels("claude_code", "claude-opus-4-7")).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(effortLevels("claude_code", "claude-sonnet-4-6")).toEqual(["low", "medium", "high", "max"]);
+    expect(effortLevels("claude_code", "claude-opus-4-5")).toEqual(["low", "medium", "high"]);
+    expect(effortLevels("claude_code", "claude-sonnet-4-5")).toEqual([]);
+    expect(effortLevels("claude_code", "claude-3-7-sonnet")).toEqual([]);
+  });
+
+  test("Codex and Grok take three, Gemini three unless its model names its level, Cursor and OpenCode none", () => {
+    expect(effortLevels("codex", "gpt-6-sol")).toEqual(["low", "medium", "high"]);
+    expect(effortLevels("grok", null)).toEqual(["low", "medium", "high"]);
+    expect(effortLevels("antigravity", "gemini-3-pro")).toEqual(["low", "medium", "high"]);
+    expect(effortLevels("antigravity", "gemini-3-pro-high")).toEqual([]);
+    expect(effortLevels("cursor", "auto")).toEqual([]);
+    expect(effortLevels("opencode", null)).toEqual([]);
+    expect(effortLevels("model", null)).toEqual([]);
+  });
+
+  test("a ramp up to four levels, a select past that; an effort stored as none or automatic shows as medium", () => {
+    expect(effortLevels("codex", null).length).toBeLessThanOrEqual(EFFORT_RAMP_MAX);
+    expect(effortLevels("claude_code", "opus").length).toBeGreaterThan(EFFORT_RAMP_MAX);
+    expect(effortLevel("xhigh")).toBe("xhigh");
+    expect(effortLevel("auto")).toBe("medium");
+    expect(effortLevel(null)).toBe("medium");
+    // A level the model doesn't take runs as its highest under it.
+    expect(shownEffort("xhigh", ["low", "medium", "high", "max"])).toBe("high");
+    expect(shownEffort("max", ["low", "medium", "high"])).toBe("high");
+    expect(shownEffort("high", ["low", "medium", "high"])).toBe("high");
   });
 });

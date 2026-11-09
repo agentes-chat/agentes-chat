@@ -23,6 +23,7 @@ import { type AgentActionView, actionsFor } from "./agent-actions";
 import { currentHandles } from "./agents";
 import { withDeletedArtifacts } from "./artifacts";
 import { audienceSql, notifyBlocked } from "./audience";
+import { pictureOf } from "./avatars";
 import { postRefusal, requireChannelAccess } from "./channels";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
 import {
@@ -1590,9 +1591,11 @@ async function attachmentRefsFor(db: Database, userId: string, orgId: string, ch
     });
   }
   const a = schema.artifacts;
+  const v = schema.artifactVersions;
   const rows = await db
-    .select({ id: a.id, title: a.title, version: a.currentVersion })
+    .select({ id: a.id, title: a.title, version: a.currentVersion, kind: a.kind, width: v.width, height: v.height })
     .from(a)
+    .leftJoin(v, and(eq(v.artifactId, a.id), eq(v.version, a.currentVersion)))
     .where(
       and(
         eq(a.orgId, orgId),
@@ -1607,7 +1610,7 @@ async function attachmentRefsFor(db: Database, userId: string, orgId: string, ch
   const byId = new Map(rows.map((r) => [r.id, r]));
   return wanted.map((id) => {
     const r = byId.get(id) as (typeof rows)[number];
-    return { id: r.id, version: r.version, title: r.title };
+    return { id: r.id, version: r.version, title: r.title, kind: r.kind, ...pictureOf(r) };
   });
 }
 

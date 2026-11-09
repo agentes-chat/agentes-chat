@@ -29,9 +29,16 @@ import {
   newAgentStart,
   newAgentStartText,
 } from "@agenteschat/client/lib/agent-setup";
+import { type AiRow, newAgentRows } from "@agenteschat/client/lib/ai-select";
 import { thinksWith } from "@agenteschat/client/lib/brain";
 import {
-  type BrainPickOption,
+  ADVANCED_DEFAULTS,
+  type Advanced,
+  advancedOfStart,
+  effortLevels,
+} from "@agenteschat/client/lib/brain-advanced";
+import {
+  brainModelLine,
   brainPickInput,
   brainPickOptions,
   brainPickValue,
@@ -40,13 +47,15 @@ import {
   planAccountOption,
 } from "@agenteschat/client/lib/brain-picker";
 import { type ConnectedItem, itemName } from "@agenteschat/client/lib/connected";
+import { contextChoices } from "@agenteschat/client/lib/context-limits";
 import { errorText as failureText } from "@agenteschat/client/lib/errors";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { choiceOf, defaultPolicy, MAIL_ACTIONS, toMailLevel } from "@agenteschat/client/lib/mail";
 import { type PlanChoice as AiPlan, planOfKind } from "@agenteschat/client/lib/no-ai";
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
-import { AUTO, apiProviderOf, isAuto, modelChoices, usableModels } from "@agenteschat/client/lib/providers";
+import { brainModelChoices, planOf } from "@agenteschat/client/lib/plans";
+import { AUTO, isAuto, modelChoices, providerLabel, usableModels } from "@agenteschat/client/lib/providers";
 import { scopeText } from "@agenteschat/client/lib/scopes";
 import {
   AffixInput,
@@ -67,9 +76,11 @@ import {
   Locked,
   Logo,
   modKey,
+  PlanMeter,
   ProviderLogo,
   prefersReducedMotion,
   randomAppearance,
+  Select,
   SettingNote,
   SettingRow,
   Spinner,
@@ -84,20 +95,21 @@ import { LevelRow, useConnectedById } from "@/components/AccessLevels";
 import { AudienceChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import {
-  BrainPickSelect,
   BudgetField,
   DEFAULT_KEY,
   InstructionTips,
-  KeySelect,
-  keyOptions,
   LookPicker,
+  ModelSelect,
+  modelOptions,
   NO_OWNER,
   OwnerSelect,
   OwnerValue,
   type PlanChoice,
   usd,
 } from "@/components/AgentFields";
+import { AdvancedSection, AiSelect } from "@/components/ai/AgentAi";
 import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { PlanReplies } from "@/components/ai/PlanReplies";
 import { useConnectAi } from "@/components/ConnectAi";
 import { ConnectorIcon } from "@/components/ConnectorCatalog";
 import { ImportFlow, useImportFlow } from "@/components/ImportFlow";
@@ -130,6 +142,7 @@ import {
   stepErrors,
   takenHandles,
 } from "@/lib/new-agent";
+import { planMeterText } from "@/lib/plan-usage";
 import { proposedRoutineWhen } from "@/lib/recurrence";
 import { useToast } from "@/lib/toast";
 import "./new-agent.css";
@@ -346,6 +359,11 @@ function NewAgentFlow({
   // Or a plan with nothing to think with yet (a coding plan's key): made on Automático, Connect opens on it after.
   const [connectPlan, setConnectPlan] = useState<AiPlan | null>(null);
   const [key, setKey] = useState(DEFAULT_KEY);
+  // On a plan: "Atende outras pessoas" (off: it answers only its owner) and "Configuração avançada", saved with it.
+  const [replies, setReplies] = useState(false);
+  // What the person changed there; the rest is what the last setup had (`onStart`), else the defaults.
+  const [advPicked, setAdvPicked] = useState<Partial<Advanced>>({});
+  const [advOpen, setAdvOpen] = useState(false);
   // Empty = the workspace default budget (every agent has one).
   const [budget, setBudget] = useState("");
 
@@ -513,6 +531,7 @@ function NewAgentFlow({
         (plan.model ?? AUTO) === (start.input.model ?? AUTO)
     : false;
   const autonomy = onStart && withAutonomy ? start?.autonomy : undefined;
+  const adv: Advanced = { ...(start && onStart ? advancedOfStart(start) : ADVANCED_DEFAULTS), ...advPicked };
   // Its Autonomia has a switch of its own under it.
   const startLine =
     start && onStart
@@ -542,13 +561,117 @@ function NewAgentFlow({
         : isAuto(model)
           ? t("brain.auto.label")
           : (modelInfo?.label ?? model);
-  const apiProvider = apiProviderOf(model, models.data?.models ?? []);
-  const keys = keyOptions(t, credentials.data ?? [], settings.data?.defaultCredentialId ?? null, apiProvider);
-  // The key's maker: the one picked, else the workspace's default key, else the model's.
-  const keyProvider =
-    (credentials.data ?? []).find((c) => c.id === (key === DEFAULT_KEY ? settings.data?.defaultCredentialId : key))
-      ?.provider ?? apiProvider;
-  const keyLabel = keys.find((k) => k.value === key)?.label ?? t("newAgent.defaultKey");
+  // "Quem pensa": the AI select's rows for a new agent (its owner's free accounts, the computers' own sign-ins, the
+  // keys), the one picked, and under it the model of what it thinks with.
+  const newRows = newAgentRows(t, locale, {
+    machines: brainMachines.data ?? [],
+    accounts: aiAccounts.data,
+    ownerIsMe: ownerId === me.user.id,
+    keys: can(org, "manage_credentials") ? (credentials.data ?? []) : null,
+    defaultKey: settings.data?.defaultCredentialId ?? null,
+    serverKey: platform.data === true,
+    apiKey: usable.size > 0,
+    keysAllowed: !held,
+  });
+  const aiValue = plan
+    ? (plan.accountId ?? `own:${plan.kind}:${plan.machineId}`)
+    : connectPlan || connectAfter
+      ? null
+      : `key:${key === DEFAULT_KEY ? "default" : key}`;
+  // What it starts on (the last setup's account, a proposal's) and the list leaves out, as while the accounts are on
+  // their way: named all the same, so the select never shows empty.
+  const aiRows: AiRow[] =
+    plan && aiValue && !newRows.some((r) => r.value === aiValue)
+      ? [
+          {
+            value: aiValue,
+            group: "mine",
+            kind: plan.kind,
+            machineId: plan.machineId,
+            mark: plan.kind,
+            label: plan.label ?? t(`aiAccounts.connect.${plan.kind}`),
+            who: null,
+            state: null,
+            tone: null,
+            hint: null,
+            owner: null,
+            disabled: false,
+            act: "use",
+          },
+          ...newRows,
+        ]
+      : newRows;
+  const aiRow = aiRows.find((r) => r.value === aiValue);
+  const pickRow = (r: AiRow) => {
+    setAiPicked(true);
+    setConnectPlan(null);
+    mood.react("happy", 800);
+    if (r.group === "keys") {
+      setPlan(null);
+      setKey(r.key ?? DEFAULT_KEY);
+      return;
+    }
+    // A plan thinks on its computer: the agent's own model there, Automático carried onto it.
+    setModel(AUTO);
+    setPlan({
+      kind: r.kind as PlanChoice["kind"],
+      machineId: r.machineId ?? "",
+      ...(r.account ? { accountId: r.account.id, label: r.account.label } : {}),
+      model: AUTO,
+    });
+  };
+  const aiStrip =
+    aiRow?.group === "keys" ? (
+      <p className="ai-sel__strip">{t("agentPage.work.brain.modelText", g)}</p>
+    ) : aiRow?.account?.usage ? (
+      <PlanMeter usage={aiRow.account.usage} text={planMeterText(t, locale)} compact />
+    ) : null;
+  const planAccount = plan?.accountId
+    ? (aiAccounts.data?.accounts ?? []).find((a) => a.id === plan.accountId)
+    : undefined;
+  const planCoding = planOf(planAccount?.provider ?? null);
+  const planOption = plan
+    ? brainMachines.data?.find((m) => m.machineId === plan.machineId)?.options.find((o) => o.kind === plan.kind)
+    : undefined;
+  const planModels = plan ? brainModelChoices(planCoding, planOption?.models ?? [], planAccount?.provider) : [];
+  const autoChoice = {
+    value: AUTO,
+    label: t("brain.auto.label"),
+    description: t("brain.auto.hint"),
+    leading: (
+      <span className="newag__ib">
+        <Icon name="bulb" size={16} />
+      </span>
+    ),
+  };
+  // Cursor (ADR 0114): the models its plan includes, and where the CLI said so, the rest at API prices.
+  const cursorPlanSays = plan?.kind === "cursor" && planModels.some((m) => m.inPlan);
+  // Several makers' models grouped by maker, each beside its logo; the others beside their plan's, as on its page.
+  const planModelOptions = [
+    autoChoice,
+    ...planModels.map((m) => {
+      const line = brainModelLine(t, plan?.kind ?? "", planCoding, m, cursorPlanSays);
+      return {
+        value: m.value,
+        label: m.label,
+        ...(line ? { description: line } : {}),
+        ...(m.needs ? { hint: t(`brain.modelNeeds.${m.needs}`) } : {}),
+        ...(m.maker
+          ? { group: providerLabel(m.maker), leading: <ProviderLogo id={m.maker} size="sm" /> }
+          : { leading: <ProviderLogo id={aiRow?.mark ?? plan?.kind ?? ""} size="sm" /> }),
+      };
+    }),
+  ];
+  const planModelLine = plan
+    ? isAuto(plan.model ?? AUTO)
+      ? t("brain.auto.hint")
+      : (() => {
+          const m = planModels.find((x) => x.value === plan.model);
+          return m ? (brainModelLine(t, plan.kind, planCoding, m) ?? null) : null;
+        })()
+    : null;
+  const apiModelOptions = [autoChoice, ...modelOptions(t, locale, choices)];
+  const keyLabel = aiRow?.group === "keys" ? aiRow.label : undefined;
   const granted = connectedList.filter((i) => (levels[i.id] ?? "none") !== "none");
   const grantedMail = mailboxes.filter((a) => (mailLevels[a.id] ?? "none") !== "none");
   const mailAsks = MAIL_ACTIONS.approval.map((a) => t(`mail.action.${a}.name`));
@@ -619,11 +742,14 @@ function NewAgentFlow({
     if (plan) {
       try {
         await api.sandbox.setTarget(org.id, agent.id, plan.machineId);
-        await api.agents.setBrain(
-          org.id,
-          agent.id,
-          start && start.brain !== "model" && onStart ? start.input : brainPickInput(plan),
-        );
+        const auto = isAuto(plan.model ?? AUTO);
+        await api.agents.setBrain(org.id, agent.id, {
+          ...(start && start.brain !== "model" && onStart ? start.input : brainPickInput(plan)),
+          ...(auto ? {} : { effort: adv.effort }),
+          ...(adv.speed === "fast" ? { speed: adv.speed } : {}),
+          ...(adv.contextTokens !== null ? { contextTokens: adv.contextTokens } : {}),
+        });
+        if (replies) await api.agents.setBrain(org.id, agent.id, { onlyOwner: false });
         // Saved with no account, it thinks with that computer's own sign-in, which thinks only for agents of whoever
         // connected it, where that CLI is signed in (never on the workspace's computer). Else, for an agent of the
         // person's own, its plan's sign-in opens once it's created: only the owner signs a plan in for it.
@@ -631,8 +757,8 @@ function NewAgentFlow({
       } catch {
         toast.show(t("newAgent.planNotSaved", { ...g, brain: t(`brain.card.${plan.kind}`) }), "error");
       }
-    } else if (start?.brain === "model" && onStart && start.contextTokens !== null) {
-      await api.agents.setBrain(org.id, agent.id, { brain: "model", contextTokens: start.contextTokens });
+    } else if (adv.contextTokens !== null) {
+      await api.agents.setBrain(org.id, agent.id, { brain: "model", contextTokens: adv.contextTokens });
     }
     // The rest is saved one part at a time. What fails is said, and the flow still ends on the new agent: its @ is
     // taken now, so "Criar" again would only be refused.
@@ -1373,69 +1499,98 @@ function NewAgentFlow({
               <Switch id="ag-autonomy" checked={withAutonomy} onCheckedChange={setWithAutonomy} />
             </SettingRow>
           )}
-          <BrainPickSelect
-            options={brainOptions}
-            value={brainValue}
-            fallback={modelLabel}
-            onChange={(o: BrainPickOption) => {
-              const p = o.pick;
-              setAiPicked(true);
-              mood.react(o.value.toLowerCase().includes("opus") ? "star" : "happy", 800);
-              if (p.kind === "model") {
-                setModel(p.model);
-                setPlan(null);
-                setConnectPlan(null);
-                return;
-              }
-              // A plan thinks on its computer: the agent's own model there, Automático carried onto it.
-              setModel(AUTO);
-              if (p.kind === "connect") {
-                setPlan(null);
-                setConnectPlan(p.choice);
-                return;
-              }
-              setConnectPlan(null);
-              setPlan({
-                kind: p.kind,
-                machineId: p.machineId,
-                ...(p.accountId ? { accountId: p.accountId, label: p.account } : {}),
-                model: p.model,
-              });
-            }}
-          />
+          <Field label={t("brain.title")}>
+            <AiSelect
+              label={t("brain.title")}
+              rows={aiRows}
+              value={aiValue}
+              onPick={pickRow}
+              {...(connectsHere ? { onConnect: connectHere } : {})}
+              strip={aiStrip}
+            />
+          </Field>
           {connectPlan && <SettingNote icon="key">{brainChosen?.description}</SettingNote>}
-          {brainChosen?.needs && <SettingNote icon="info">{t(`brain.modelHow.${brainChosen.needs}`)}</SettingNote>}
-          {plan && (
-            <span className="small muted">
-              {t("newAgent.planOnlyOwner", {
-                ...g,
-                owner: ownerId === me.user.id ? t("common.you") : (ownerFirst ?? t("common.you")),
-              })}
-            </span>
-          )}
           {connectAfter && !held && <SettingNote icon="info">{t("newAgent.noAi")}</SettingNote>}
-          {connectsHere && (
+          {connectAfter && connectsHere && (
             <span className="newag__connect">
-              <Button size="sm" variant={connectAfter ? "primary" : "default"} icon="plus" onClick={connectHere}>
+              <Button size="sm" variant="primary" icon="plus" onClick={connectHere}>
                 {t("aiAccounts.page.connect")}
               </Button>
             </span>
           )}
           {errorLine(errorOf("model"))}
-          <div className="newag__sect">
-            <h2>
-              {keyProvider ? <ProviderLogo id={keyProvider} size="xs" /> : <Icon name="key" />}
-              {t("newAgent.key")}
-            </h2>
-          </div>
-          <KeySelect
-            value={key}
-            onChange={(v) => {
-              setKey(v);
-              setAiPicked(true);
-            }}
-            options={keys}
-          />
+          {aiValue && (
+            <div className="ac-setlist ai-set">
+              <div className="ac-setlist__row ac-setlist__row--pad">
+                <SettingRow
+                  title={t("agentPage.work.brain.planModel")}
+                  htmlFor="ag-model"
+                  status={planModelLine ?? (plan ? null : isAuto(model) ? t("brain.auto.hint") : null)}
+                >
+                  {plan ? (
+                    <Select
+                      id="ag-model"
+                      size="sm"
+                      align="end"
+                      aria-label={t("agentPage.work.brain.planModel")}
+                      value={plan.model ?? AUTO}
+                      onValueChange={(v) => setPlan({ ...plan, model: v })}
+                      options={planModelOptions}
+                    />
+                  ) : (
+                    <ModelSelect
+                      size="sm"
+                      align="end"
+                      aria-label={t("agentPage.work.brain.planModel")}
+                      value={model}
+                      onChange={(v) => {
+                        setModel(v);
+                        setAiPicked(true);
+                      }}
+                      options={apiModelOptions}
+                    />
+                  )}
+                </SettingRow>
+              </div>
+              {plan && (
+                <div className="ac-setlist__row ac-setlist__row--pad">
+                  <PlanReplies
+                    agent={displayName}
+                    on={replies}
+                    onChange={setReplies}
+                    brain={plan.kind}
+                    plan={(aiAccounts.data?.accounts ?? []).find((a) => a.id === plan.accountId)?.plan ?? null}
+                    coding={planOf(
+                      (aiAccounts.data?.accounts ?? []).find((a) => a.id === plan.accountId)?.provider ?? null,
+                    )}
+                  />
+                </div>
+              )}
+              <AdvancedSection
+                kind={plan ? plan.kind : "model"}
+                levels={plan ? effortLevels(plan.kind, plan.model) : []}
+                autoModel={isAuto(plan ? (plan.model ?? AUTO) : model)}
+                speedOn={false}
+                value={adv}
+                contextOptions={contextChoices(
+                  plan
+                    ? isAuto(plan.model ?? AUTO)
+                      ? undefined
+                      : brainMachines.data
+                          ?.find((m) => m.machineId === plan.machineId)
+                          ?.options.find((o) => o.kind === plan.kind)
+                          ?.models.find((m) => m.value === plan.model)
+                    : isAuto(model)
+                      ? undefined
+                      : models.data?.models.find((m) => m.id === model),
+                )}
+                open={advOpen}
+                onOpen={setAdvOpen}
+                onChange={(next) => setAdvPicked((a) => ({ ...a, ...next }))}
+                color={look.color}
+              />
+            </div>
+          )}
           <div className="newag__sect">
             <div className="ac-hintline">
               <h2>
@@ -1585,8 +1740,13 @@ function NewAgentFlow({
                 {modelLabel}
                 {autonomy && ` · ${autonomyWords(t, autonomy)}`}{" "}
                 <span className="muted">
-                  · {keyLabel}
-                  {budgetShown !== undefined && ` · ${t("newAgent.upTo", { amount: usd(t, locale, budgetShown) })}`}
+                  {[
+                    keyLabel,
+                    budgetShown !== undefined ? t("newAgent.upTo", { amount: usd(t, locale, budgetShown) }) : null,
+                  ]
+                    .filter(Boolean)
+                    .map((part) => `· ${part}`)
+                    .join(" ")}
                 </span>
               </span>,
             )}

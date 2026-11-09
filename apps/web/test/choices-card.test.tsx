@@ -5,6 +5,8 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { act, cleanup, fireEvent } from "@testing-library/react";
+import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
+import { ArtifactViewerProvider } from "@/components/artifacts/ArtifactViewer";
 import { ChoicesCard } from "@/components/blocks/ChoicesCard";
 import { ADA_ID, createFakeApi } from "./fake-api";
 import { renderPage, settle } from "./render";
@@ -118,4 +120,94 @@ test("Outra resposta by its letter key; Cancelar closes the field and sends noth
   await settle(2);
   expect(document.querySelector(".choices__write")).toBeNull();
   expect(document.querySelector(".choices__picked")).toBeNull();
+});
+
+const detail = (id: string) =>
+  ({
+    id,
+    title: "Revisão",
+    kind: "choices",
+    version: 1,
+    createdBy: { type: "agent", id: ADA_ID },
+    shownVersion: 1,
+    content: { kind: "choices", questions: QUESTIONS },
+  }) as unknown as ArtifactDetail;
+
+/** A read that answers only once `release` is called. */
+function held<T>(read: () => Promise<T>) {
+  let release = () => {};
+  const gate = new Promise<void>((ok) => {
+    release = ok;
+  });
+  return {
+    read: async () => {
+      await gate;
+      return read();
+    },
+    release: () => release(),
+  };
+}
+
+test("before it loads, a question card holds its own shape from its message's ref, never a file's tile", async () => {
+  const api = createFakeApi();
+  const artifact = held(async () => detail("card-1"));
+  api.artifacts.get = artifact.read;
+  const ref = { id: "card-1", version: 1, title: "Revisão", kind: "choices", options: 2, questions: 2 } as const;
+  await renderPage(
+    <ArtifactViewerProvider>
+      <ArtifactCard artifact={ref} />
+    </ArtifactViewerProvider>,
+    { api, org: true },
+  );
+  await settle(4);
+  expect(document.querySelector(".artifact-tile")).toBeNull();
+  const placeholder = document.querySelector('.live-block.choices[aria-busy="true"]');
+  expect(placeholder?.textContent).toContain("Revisão");
+  // Its two options and Outra resposta, and the foot of a card with two questions.
+  expect(placeholder?.querySelectorAll(".choices__option")).toHaveLength(3);
+  expect(placeholder?.querySelector(".choices__foot")).not.toBeNull();
+  await act(async () => artifact.release());
+  await settle(6);
+  expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+  expect(document.querySelectorAll(".choices__option")).toHaveLength(3);
+});
+
+test("while its answer loads, the card is already its question, with nothing to press yet", async () => {
+  const api = createFakeApi();
+  api.artifacts.get = async (_orgId, id) => detail(id);
+  const answer = held(() => Promise.resolve({ id: "card-1", answer: null }));
+  api.artifacts.choices = answer.read;
+  await renderPage(<ChoicesCard id="card-1" />, { api, org: true });
+  await settle(4);
+  const options = () => [...document.querySelectorAll<HTMLButtonElement>(".choices__option")];
+  expect(options()).toHaveLength(3);
+  expect(options().every((o) => o.disabled)).toBe(true);
+  await act(async () => answer.release());
+  await settle(6);
+  expect(options().some((o) => o.disabled)).toBe(false);
+});
+
+test("the worst a ref can say still holds a card's shape: a title that wraps, six options, five questions; a vote too", async () => {
+  const api = createFakeApi();
+  api.artifacts.get = () => new Promise<never>(() => {});
+  const title =
+    "Placas da feira para todas as quarenta mesas, com os nomes das editoras conferidos e revisados por alguém da equipe";
+  await renderPage(
+    <ArtifactViewerProvider>
+      <div className="artifact-cards">
+        <ArtifactCard artifact={{ id: "card-2", version: 1, title, kind: "choices", options: 6, questions: 5 }} />
+        <ArtifactCard artifact={{ id: "poll-1", version: 1, title, kind: "poll", options: 8 }} />
+        <ArtifactCard artifact={{ id: "block-1", version: 1, title, kind: "block" }} />
+      </div>
+    </ArtifactViewerProvider>,
+    { api, org: true },
+  );
+  await settle(4);
+  const [choices, poll, block] = [...document.querySelectorAll('.live-block[aria-busy="true"]')];
+  expect(choices?.querySelectorAll(".choices__option")).toHaveLength(7);
+  expect(choices?.querySelector(".choices__foot")).not.toBeNull();
+  expect(poll?.querySelectorAll(".poll__option")).toHaveLength(8);
+  expect(block?.querySelector(".live-block__room")).not.toBeNull();
+  for (const card of [choices, poll, block]) expect(card?.textContent).toContain(title);
+  expect(document.querySelector(".artifact-tile")).toBeNull();
 });

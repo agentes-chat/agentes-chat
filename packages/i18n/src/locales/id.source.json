@@ -4778,6 +4778,9 @@
   "receipts.retry": {
     "value": "Try again"
   },
+  "receipts.retrying": {
+    "value": "Trying again…"
+  },
   "receipts.platformCap": {
     "value": "Mention an agent with @ to have it answer."
   },
@@ -5641,11 +5644,17 @@
   "noAi.rightHand.computer_failed": {
     "value": "{{name}} can't answer now: the computer the plan is signed in on had a problem."
   },
+  "noAi.rightHand.cli_failed": {
+    "value": "{{name}} can't answer now: the plan's AI stopped with an error."
+  },
   "noAi.rightHand.plan_limit": {
     "value": "{{name}} can't answer now: the plan reached its limit."
   },
   "noAi.rightHand.plan_not_shared": {
     "value": "Connect your own plan to talk to {{name}}: the workspace's plan serves only its owner."
+  },
+  "noAi.rightHand.plan_unattended": {
+    "value": "{{name}} didn't answer: the request didn't come from a person, and the workspace's plan serves only its owner."
   },
   "noAi.rightHand.runner_outdated": {
     "value": "{{name}} can't answer now: the program on the plan's computer needs an update."
@@ -5695,6 +5704,90 @@
   "noAi.chip": {
     "value": "No AI"
   },
+  "aiSelect.placeholder": {
+    "value": "Choose an AI"
+  },
+  "aiSelect.groupOthers": {
+    "value": "Other people's plans"
+  },
+  "aiSelect.groupKeys": {
+    "value": "API keys"
+  },
+  "aiSelect.connect": {
+    "value": "Connect another AI"
+  },
+  "aiSelect.connectLine": {
+    "value": "Another account, plan or API key"
+  },
+  "aiSelect.ownOn": {
+    "value": "Signed in on {{computer}}"
+  },
+  "aiSelect.keyRefused": {
+    "value": "Key refused"
+  },
+  "aiSelect.unknown": {
+    "value": "Sign-in not confirmed"
+  },
+  "aiSelect.inUse": {
+    "value": "In use by {{agents}}"
+  },
+  "aiSelect.keyDefault": {
+    "value": "Workspace default · ends in {{hint}}"
+  },
+  "aiSelect.serverKey": {
+    "value": "This server's Claude key"
+  },
+  "aiSelect.serverKeyLine": {
+    "value": "Set on the server"
+  },
+  "aiSelect.signedOut": {
+    "value": "{{label}} is signed out. Sign in again so {{name}} can use it."
+  },
+  "aiSelect.limited": {
+    "value": "On this account, {{name}} answers again {{when}}."
+  },
+  "aiSelect.limitedUnknown": {
+    "value": "On this account, {{name}} answers again when the plan renews."
+  },
+  "aiSelect.move": {
+    "value": "{{agent}} stops thinking with it."
+  },
+  "aiSelect.moveTo": {
+    "value": "Move to {{name}}"
+  },
+  "aiSelect.lent": {
+    "value": "{{owner}} gets an email and can take it back."
+  },
+  "aiSelect.useLent": {
+    "value": "Use {{owner}}'s plan"
+  },
+  "aiSelect.signInAgain": {
+    "value": "Sign in to {{label}} again"
+  },
+  "aiSelect.for": {
+    "value": "For {{names}}"
+  },
+  "aiSelect.plans": {
+    "value": "Your AI plan"
+  },
+  "aiSelect.endpointLine": {
+    "value": "Your own gateway or server"
+  },
+  "aiSelect.keyLocked": {
+    "value": "Only an admin adds one"
+  },
+  "aiSelect.preparing": {
+    "value": "Getting the computer ready"
+  },
+  "aiSelect.geminiTiers": {
+    "value": "Google AI Pro, Ultra or Enterprise"
+  },
+  "aiSelect.cursorTiers": {
+    "value": "Pro, Pro+, Ultra or Teams"
+  },
+  "aiSelect.undo": {
+    "value": "Undo"
+  },
   "connectAi.title.any": {
     "value": "Connect an AI"
   },
@@ -5722,18 +5815,6 @@
   "connectAi.titleFor": {
     "value": "Connect an AI for {{name}}"
   },
-  "connectAi.have.title": {
-    "value": "Already connected"
-  },
-  "connectAi.have.titleFor": {
-    "value": "Already connected, for {{name}}"
-  },
-  "connectAi.have.other": {
-    "value": "Or connect another"
-  },
-  "connectAi.have.manageKeys": {
-    "value": "Manage or delete keys"
-  },
   "connectAi.billing": {
     "value": "A plan signs in on the workspace's computer, and the computer comes with an active agentes.chat plan."
   },
@@ -5742,18 +5823,6 @@
   },
   "connectAi.orPayGo": {
     "value": "Or pay as you go"
-  },
-  "connectAi.pay.label": {
-    "value": "How do you pay?"
-  },
-  "connectAi.pay.plan": {
-    "value": "With a plan"
-  },
-  "connectAi.pay.key": {
-    "value": "With an API key"
-  },
-  "connectAi.pick.plan": {
-    "value": "Plan"
   },
   "connectAi.pick.placeholder": {
     "value": "Choose a plan"
@@ -5890,12 +5959,6 @@
   "connectAi.own.freeLower": {
     "value": "OpenCode's free models"
   },
-  "connectAi.own.one": {
-    "value": "An account just for {{name}}"
-  },
-  "connectAi.own.each": {
-    "value": "An account just for them"
-  },
   "connectAi.popup.title": {
     "value": "Connecting {{name}}"
   },
@@ -5932,12 +5995,6 @@
   "connectAi.who.state.next": {
     "value": "Waiting"
   },
-  "connectAi.for": {
-    "value": "For"
-  },
-  "connectAi.all": {
-    "value": "All agents"
-  },
   "connectAi.agentAria": {
     "value": "Agents that use this plan"
   },
@@ -5952,9 +6009,6 @@
   },
   "connectAi.onceHint": {
     "value": "They all share your plan's limits."
-  },
-  "connectAi.use": {
-    "value": "Use {{label}}"
   },
   "connectAi.another": {
     "value": "Another account"
@@ -10601,9 +10655,6 @@
   "agentPage.work.cell.brain": {
     "value": "Thinks with"
   },
-  "agentPage.work.cell.brainWith": {
-    "value": "Thinks with {{plan}}"
-  },
   "agentPage.work.cell.browser": {
     "value": "Browser"
   },
@@ -10638,17 +10689,8 @@
   "agentPage.work.saved.brain": {
     "value": "{{name}} now thinks with {{brain}}."
   },
-  "agentPage.work.saved.brainMoved": {
-    "value": "{{name}} now works on {{computer}} and thinks with {{brain}}."
-  },
   "agentPage.work.saved.brainOwner": {
     "value": "{{name}} now thinks with {{brain}} and answers only {{owner}}."
-  },
-  "agentPage.work.saved.brainMovedOwner": {
-    "value": "{{name}} now works on {{computer}}, thinks with {{brain}} and answers only {{owner}}."
-  },
-  "agentPage.work.saved.account": {
-    "value": "{{name}} now uses the {{account}} account."
   },
   "agentPage.work.saved.computer": {
     "value": "{{name}} now works on {{computer}}."
@@ -10683,26 +10725,8 @@
   "agentPage.work.brain.modelText": {
     "value": "Paid per use. It counts against {{name}}'s budget."
   },
-  "agentPage.work.brain.planText": {
-    "value": "Uses your {{plan}} plan"
-  },
-  "agentPage.work.brain.planTextOf": {
-    "value": "Uses {{owner}}'s {{plan}} plan"
-  },
-  "agentPage.work.brain.moves": {
-    "value": "Moves to {{computer}}"
-  },
-  "agentPage.work.brain.off": {
-    "value": "{{computer}} is offline"
-  },
-  "agentPage.work.brain.none": {
-    "value": "No computer has it"
-  },
   "agentPage.work.brain.planModel": {
     "value": "Model"
-  },
-  "agentPage.work.brain.account": {
-    "value": "Account"
   },
   "agentPage.work.brain.accountWho": {
     "value": "Only accounts of {{owner}}, who is responsible for {{name}}: a plan thinks only for its owner's agents."
@@ -10728,23 +10752,8 @@
   "agentPage.work.brain.accountOthers": {
     "value": "Other people's plans show whose they are. Their owner gets an email and can take it back."
   },
-  "agentPage.work.brain.addAccount": {
-    "value": "Add account"
-  },
   "agentPage.work.brain.signInAgain": {
     "value": "Sign in again"
-  },
-  "agentPage.work.brain.connectPlan": {
-    "value": "Connect another plan"
-  },
-  "agentPage.work.brain.keyLabel": {
-    "value": "API key"
-  },
-  "agentPage.work.brain.fallbackTitle": {
-    "value": "If {{computer}} stops answering, answer through the API"
-  },
-  "agentPage.work.brain.fallbackHint": {
-    "value": "It answers through the API and counts against {{name}}'s budget. Otherwise {{name}} tells whoever asked and waits for the computer to come back."
   },
   "agentPage.work.brain.effort": {
     "value": "Effort"
@@ -10761,6 +10770,9 @@
   "agentPage.work.brain.efforts.high": {
     "value": "High"
   },
+  "agentPage.work.brain.efforts.xhigh": {
+    "value": "Extra high"
+  },
   "agentPage.work.brain.efforts.max": {
     "value": "Maximum"
   },
@@ -10776,6 +10788,9 @@
   "agentPage.work.brain.effortsLower.high": {
     "value": "high"
   },
+  "agentPage.work.brain.effortsLower.xhigh": {
+    "value": "extra high"
+  },
   "agentPage.work.brain.effortsLower.max": {
     "value": "maximum"
   },
@@ -10790,6 +10805,9 @@
   },
   "agentPage.work.brain.effortText.high": {
     "value": "Thinks more on hard tasks. Slower and costs more."
+  },
+  "agentPage.work.brain.effortText.xhigh": {
+    "value": "Thinks a lot more on long, hard tasks. Slower and pricier."
   },
   "agentPage.work.brain.effortText.max": {
     "value": "Thinks as much as possible. Much slower and pricier."
@@ -10833,35 +10851,8 @@
   "agentPage.work.brain.advanced.title": {
     "value": "Advanced settings"
   },
-  "agentPage.work.brain.advanced.sub": {
-    "value": "{{brain}}. Applies to every conversation."
-  },
-  "agentPage.work.brain.advanced.think": {
-    "value": "How it thinks"
-  },
-  "agentPage.work.brain.advanced.answers": {
-    "value": "Who it answers"
-  },
   "agentPage.work.brain.advanced.defaults": {
     "value": "Back to defaults"
-  },
-  "agentPage.work.brain.advanced.done": {
-    "value": "Done"
-  },
-  "agentPage.work.brain.advanced.contents.model": {
-    "value": "Context window"
-  },
-  "agentPage.work.brain.advanced.contents.auto": {
-    "value": "Context window and who it answers"
-  },
-  "agentPage.work.brain.advanced.contents.fixed": {
-    "value": "Effort, context window and who it answers"
-  },
-  "agentPage.work.brain.advanced.contents.autoSpeed": {
-    "value": "Speed, context window and who it answers"
-  },
-  "agentPage.work.brain.advanced.contents.fixedSpeed": {
-    "value": "Effort, speed, context window and who it answers"
   },
   "agentPage.work.brain.advanced.allDefault": {
     "value": "All defaults"
@@ -10874,36 +10865,6 @@
   },
   "agentPage.work.brain.advanced.context": {
     "value": "Context: {{size}}"
-  },
-  "agentPage.work.brain.advanced.sharing": {
-    "value": "Answers other people"
-  },
-  "agentPage.work.brain.advanced.waits": {
-    "value": "Waits for the computer"
-  },
-  "agentPage.work.brain.copy.row": {
-    "value": "Use on other agents"
-  },
-  "agentPage.work.brain.copy.rowLine": {
-    "value": "The same AI, model, effort and autonomy"
-  },
-  "agentPage.work.brain.copy.title": {
-    "value": "Use on other agents"
-  },
-  "agentPage.work.brain.copy.sub": {
-    "value": "They'll think with {{setup}}."
-  },
-  "agentPage.work.brain.copy.all": {
-    "value": "All"
-  },
-  "agentPage.work.brain.copy.allLine": {
-    "value": {
-      "one": "{{count}} agent can take it",
-      "other": "{{count}} agents can take it"
-    }
-  },
-  "agentPage.work.brain.copy.none": {
-    "value": "No other agent can take it now."
   },
   "agentPage.work.brain.copy.now": {
     "value": "Now: {{brain}}"
@@ -10922,9 +10883,6 @@
   },
   "agentPage.work.brain.copy.withAutonomy": {
     "value": "Include the autonomy"
-  },
-  "agentPage.work.brain.copy.withAutonomyLine": {
-    "value": "{{value}}, as on this agent. Off: each keeps its own."
   },
   "agentPage.work.brain.copy.reasons.not_allowed": {
     "value": "Only admins and {{owner}} change it"
@@ -10955,33 +10913,6 @@
   },
   "agentPage.work.brain.copy.reasons.failed": {
     "value": "Couldn't change it now"
-  },
-  "agentPage.work.brain.copy.search": {
-    "value": "Find an agent"
-  },
-  "agentPage.work.brain.copy.noMatch": {
-    "value": "No agent named “{{q}}”"
-  },
-  "agentPage.work.brain.copy.pick": {
-    "value": "Pick the agents"
-  },
-  "agentPage.work.brain.copy.use": {
-    "value": {
-      "one": "Use on {{count}} agent",
-      "other": "Use on {{count}} agents"
-    }
-  },
-  "agentPage.work.brain.copy.done": {
-    "value": {
-      "one": "{{count}} agent now thinks with {{setup}}.",
-      "other": "{{count}} agents now think with {{setup}}."
-    }
-  },
-  "agentPage.work.brain.copy.autonomyOnly": {
-    "value": {
-      "one": "{{count}} agent changed only its autonomy.",
-      "other": "{{count}} agents changed only their autonomy."
-    }
   },
   "agentPage.work.brain.copy.missed": {
     "value": {
@@ -11141,12 +11072,6 @@
   },
   "agentPage.work.brain.add.sendFailed": {
     "value": "Couldn't send the code. Check it and try again."
-  },
-  "agentPage.work.brain.add.done": {
-    "value": "The {{account}} account is on {{computer}}. Click Use to save."
-  },
-  "agentPage.work.brain.offCloud": {
-    "value": "{{computer}} isn't answering"
   },
   "agentPage.work.computer.title": {
     "value": "Where does {{name}} work?"
@@ -12029,6 +11954,15 @@
   },
   "agentPage.activity.errors.computer_timeout": {
     "value": "The computer took too long to answer."
+  },
+  "agentPage.activity.errors.cli_failed": {
+    "value": "The {{brain}} program stopped with an error: {{detail}}"
+  },
+  "agentPage.activity.errors.cli_stopped": {
+    "value": "The {{brain}} program stopped with an error."
+  },
+  "agentPage.activity.errors.cli_closed": {
+    "value": "The {{brain}} program closed unexpectedly."
   },
   "agentPage.activity.errors.account_missing": {
     "value": "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again."
@@ -13545,10 +13479,6 @@
   "newAgent.plansHelp": {
     "value": "Claude Code or Codex with the subscription of whoever connected the computer. No key needed."
   },
-  "newAgent.planOnlyOwner": {
-    "value": "On a plan, {{name}} starts answering only {{owner}}. On {{name}}'s page, {{owner}} can choose whether he answers other people.",
-    "female": "On a plan, {{name}} starts answering only {{owner}}. On {{name}}'s page, {{owner}} can choose whether she answers other people."
-  },
   "newAgent.partly": {
     "value": "{{name}} is ready, but part of what you chose wasn't saved. {{reason}}"
   },
@@ -13566,9 +13496,6 @@
   },
   "newAgent.noKeyFor": {
     "value": "No {{provider}} key"
-  },
-  "newAgent.key": {
-    "value": "Key"
   },
   "newAgent.defaultKey": {
     "value": "Workspace default key"
@@ -13596,9 +13523,6 @@
   },
   "newAgent.brainPick.other": {
     "value": "Choose another"
-  },
-  "newAgent.noKeys": {
-    "value": "No keys yet"
   },
   "newAgent.budgetTitle": {
     "value": "Monthly budget"
@@ -17104,6 +17028,9 @@
   },
   "routines.code.computer_timeout": {
     "value": "The computer took too long to answer"
+  },
+  "routines.code.cli_failed": {
+    "value": "The AI program on the computer stopped with an error"
   },
   "routines.code.account_missing": {
     "value": "The agent's account isn't on its computer anymore"
@@ -20881,9 +20808,6 @@
   },
   "aiAccounts.share.savedOwner": {
     "value": "{{name}} now answers only you."
-  },
-  "aiAccounts.share.savedOwnerOf": {
-    "value": "{{name}} now answers only {{owner}}."
   },
   "aiAccounts.share.backOnApi": {
     "value": "{{name}} is back on the API and still answers only you."
@@ -25233,6 +25157,12 @@
   "githubApp.server.line.invalid": {
     "value": "This server can't open the saved app. Remove it and create it again."
   },
+  "githubApp.server.line.events": {
+    "value": "For agents to hear what happens on GitHub, tick these events on the app: {{events}}."
+  },
+  "githubApp.server.events": {
+    "value": "Tick the events"
+  },
   "githubApp.server.open": {
     "value": "Open on GitHub"
   },
@@ -28945,6 +28875,9 @@
   "errors.webhook.invalidRepo": {
     "value": "Write the repository as owner/name."
   },
+  "errors.githubEvent.answered": {
+    "value": "Someone already asked for this reply. The agent is on it."
+  },
   "errors.issue.assigneeOutside": {
     "value": "This person can't see this task. Add them to who sees it first."
   },
@@ -29321,7 +29254,7 @@
     "value": "Turn the routine on to test it."
   },
   "errors.routine.continueExtraOff": {
-    "value": "This plan's window is used up and this agent's long work doesn't use paid extra usage. Turn that on in its AI settings to continue now, or it picks up after the reset."
+    "value": "This plan's window is used up and this agent's long work doesn't use the plan's paid extra usage. It picks up after the reset."
   },
   "errors.routine.continueExtraUsedUp": {
     "value": "This plan's window is used up and its paid extra usage is used up or unavailable. It picks up after the reset."
@@ -29346,6 +29279,9 @@
   },
   "errors.run.notRestartable": {
     "value": "This answer had already started, so it can't start over. Send your message again."
+  },
+  "errors.run.notRestartableVoice": {
+    "value": "This answer had already started, so it can't start over. Record your message again."
   },
   "errors.run.cancelForbidden": {
     "value": "Only who asked, the agent's owner or an admin can stop it."
@@ -32985,6 +32921,18 @@
   "work.statusReplyAway": {
     "value": "Waiting for my computer to come back. I'll read your message as soon as it's back."
   },
+  "work.statusReplyPlan": {
+    "value": "I'm waiting for my plan to come back ({{when}}). I'll read your message when it's back."
+  },
+  "work.statusReplyPlanUnknown": {
+    "value": "I'm waiting for my plan to come back. I'll read your message as soon as it's back."
+  },
+  "work.statusReplyBudget": {
+    "value": "I'm waiting for my monthly budget to renew ({{when}}). I'll read your message then, or sooner if an admin raises the limit."
+  },
+  "work.statusReplyBudgetUnknown": {
+    "value": "I'm waiting for my monthly budget to renew. I'll read your message then, or sooner if an admin raises the limit."
+  },
   "work.status.one": {
     "value": "Working on: {{subject}}"
   },
@@ -33305,6 +33253,45 @@
   },
   "chat.notice.wakeSkippedCallable": {
     "value": "{{name}}'s settings don't let it call {{agents}} (another project, or not on its list of agents to call). Whoever looks after {{name}} can change that on the agent's page."
+  },
+  "chat.notice.github.comment": {
+    "value": "{{who}} commented on PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.commentIssue": {
+    "value": "{{who}} commented on issue #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.commentDiscussion": {
+    "value": "{{who}} commented on discussion #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.opened": {
+    "value": "{{who}} called the agentes.chat app in #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.reviewed": {
+    "value": "{{who}} reviewed PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.approved": {
+    "value": "{{who}} approved PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.changes": {
+    "value": "{{who}} asked for changes on PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.reviewRequested": {
+    "value": "{{who}} asked {{name}} to review PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.merged": {
+    "value": "{{who}} merged PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.closed": {
+    "value": "{{who}} closed PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.closedIssue": {
+    "value": "{{who}} closed issue #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.ask": {
+    "value": "Ask for a reply"
+  },
+  "chat.notice.github.asked": {
+    "value": "{{asker}} asked {{name}} to reply to {{who}} on GitHub"
   },
   "chat.notice.show": {
     "value": "Show"
@@ -34400,11 +34387,17 @@
   "chat.body.no_ai_computer_failed": {
     "value": "I can't answer now: the computer my plan is signed in on had a problem."
   },
+  "chat.body.no_ai_cli_failed": {
+    "value": "I can't answer now: my plan's AI stopped with an error."
+  },
   "chat.body.no_ai_plan_limit": {
     "value": "I can't answer now: the plan I think with reached its limit."
   },
   "chat.body.no_ai_plan_not_shared": {
     "value": "I can't answer you on the workspace's plan: it serves only its owner. Connect your own plan and I will."
+  },
+  "chat.body.no_ai_plan_unattended": {
+    "value": "I didn't answer: the request didn't come from a person, and the workspace's plan serves only its owner."
   },
   "chat.body.no_ai_runner_outdated": {
     "value": "I can't answer now: the program on my plan's computer needs an update."
@@ -36713,6 +36706,21 @@
   },
   "desktop.keyboard.field": {
     "value": "Type on {{name}}'s computer"
+  },
+  "desktop.cursor.click": {
+    "value": "clicking {{name}}"
+  },
+  "desktop.cursor.clickPlain": {
+    "value": "clicking"
+  },
+  "desktop.cursor.type": {
+    "value": "typing"
+  },
+  "desktop.cursor.scroll": {
+    "value": "scrolling"
+  },
+  "desktop.cursor.drag": {
+    "value": "dragging"
   },
   "desktop.seeWhole": {
     "value": "See the whole screen"

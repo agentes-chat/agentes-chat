@@ -124,7 +124,6 @@ const ANA_CLAUDE = (mac: string) => ({
   account: ANAS,
   model: "opus",
   effort: "high",
-  fallback: true,
 });
 
 describe("Usar em outros agentes", () => {
@@ -172,7 +171,6 @@ describe("Usar em outros agentes", () => {
       account: ANAS,
       effort: "high",
       contextTokens: null,
-      fallback: true,
       autonomy: null,
     });
     // Again: they already think so.
@@ -339,7 +337,6 @@ describe("new agents start with the last setup", () => {
       account: { id: ANAS, label: "Claude", provider: null, mine: true, free: true },
       ownSignIn: true,
       effort: "high",
-      fallback: true,
       autonomy: null,
     });
     // Anyone else sees whose it is: a plan thinks only for its owner's agents.

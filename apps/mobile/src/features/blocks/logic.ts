@@ -2,6 +2,10 @@
  * Live blocks on the phone (ADR 0113). Pure, so it is unit-tested. The web view itself is the sandbox here, as for any
  * native host of pages like these: nothing of the app is in it to reach, and these are the rules that keep it so.
  */
+import type { ArtifactRef } from "@agenteschat/client";
+
+/** A card before it loads, from its message's ref: its title and how many options and questions it has. */
+export type CardShape = Pick<ArtifactRef, "title" | "options" | "questions">;
 
 /** Frames kept running at once: each is a browser of its own in memory, and the rest wait for a tap. */
 export const MAX_LIVE_BLOCKS = 3;

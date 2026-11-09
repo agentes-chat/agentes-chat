@@ -115,6 +115,8 @@ export async function createTestServer(
     speechFetch?: typeof fetch;
     /** AI apps (ADR 0119): a fake fetch of apps' metadata documents (CIMD); absent = none answers. */
     appsFetchDocument?: FetchAppDocument;
+    /** The built web app to serve, as `WEB_DIR` does (`scripts/geometry/shifts.ts` opens it in Chromium). */
+    webDir?: string;
   } = {},
 ) {
   const { db, close } = await createTestDatabase();
@@ -232,6 +234,7 @@ export async function createTestServer(
       },
     },
     log,
+    webDir: options.webDir,
   });
   const realtime = createRealtime({
     db,
@@ -294,8 +297,8 @@ export async function upgradeStatus(url: string, headers: Record<string, string>
   return res.status;
 }
 
-/** Minimal browser over `app.request`: keeps cookies and sends our Origin. */
-export function browser(t: TestServer) {
+/** Minimal browser over `app.request`: keeps cookies and sends our Origin (`origin`: a server on another port). */
+export function browser(t: TestServer, origin = ORIGIN) {
   let cookie = "";
   const request = async (
     path: string,
@@ -311,7 +314,7 @@ export function browser(t: TestServer) {
     // The tests' people read Portuguese, as before English became the default (a browser that says none reads English).
     if (!headers.has("accept-language")) headers.set("accept-language", "pt-BR");
     if (cookie) headers.set("cookie", cookie);
-    if (init.origin !== null) headers.set("origin", init.origin ?? ORIGIN);
+    if (init.origin !== null) headers.set("origin", init.origin ?? origin);
     if (init.json !== undefined) headers.set("content-type", "application/json");
     const res = await t.app.request(path, {
       method: init.method ?? (init.json !== undefined ? "POST" : "GET"),

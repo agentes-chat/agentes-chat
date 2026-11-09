@@ -182,6 +182,19 @@ export function agentStatusShort(
 }
 
 /**
+ * The line under an agent that is off (`isAgentOff`) in a members list: its own line, short ("Sem limite · volta às
+ * 16:00"), else why it is off ("Pausado", "Sem IA conectada").
+ */
+export function agentOffLine(
+  t: TFunction,
+  shown: { presence: AgentPresence; line: AgentStatusLine | null; noAi: boolean },
+  locale?: string,
+): string {
+  const own = shown.line ? agentStatusShort(t, shown.line, locale)?.text : undefined;
+  return own ?? t(`presence.agentWhy.${shown.noAi ? "noAi" : shown.presence === "out" ? "out" : "offline"}`);
+}
+
+/**
  * An agent's presence as the apps draw it: no AI to think with reads as offline (ADR 0084 §3). At work it is online
  * (busy on heavy work) whatever this person reads of its AI, which for the right hand is their own, and before the
  * list says it: `working` is a run of its this app hears. Held by the server's operators, it stays offline.

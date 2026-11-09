@@ -240,6 +240,12 @@ export const artifactVersions = pgTable(
     sha256: text().notNull(),
     /** `file` versions: the original file name (`report.pdf`). */
     fileName: text(),
+    /**
+     * A picture's size as it shows (PNG, JPEG, WebP; `pictureSize`): the apps hold its box before it loads. Null for
+     * anything else, and for pictures saved before it was kept.
+     */
+    width: integer(),
+    height: integer(),
     note: text(),
     authorType: text().notNull(),
     authorId: text().notNull(),

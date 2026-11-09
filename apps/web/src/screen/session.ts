@@ -1,4 +1,4 @@
-import type { DesktopMode, DesktopViewState } from "@agenteschat/client";
+import type { DesktopCursor, DesktopMode, DesktopViewState } from "@agenteschat/client";
 import { DESKTOP_CLOSE, desktopCloseState, desktopRetryMs, desktopSocketUrl } from "@agenteschat/client";
 import type RFB from "@novnc/novnc";
 import type { RfbChannel } from "@novnc/novnc";
@@ -16,7 +16,9 @@ export type ScreenEvent =
   | { type: "changed" }
   /** noVNC's session took its mode: the app's switch cover ("Assumindo o controle…") waits for it. */
   | { type: "session"; mode: DesktopMode }
-  | { type: "refused"; why: "tooLong" };
+  | { type: "refused"; why: "tooLong" }
+  /** A step of the agent's pointer (protocol 54): the app draws it over the screen while it watches. */
+  | ({ type: "cursor" } & DesktopCursor);
 
 /** The keys the app's key row presses, as X keysyms. */
 export const SCREEN_KEYS = {
@@ -183,6 +185,7 @@ export class ScreenSession {
       this.start(link, next);
       this.deps.post({ type: "changed" });
     };
+    link.onCursor = (cursor) => this.deps.post({ type: "cursor", ...cursor });
     this.start(link, mode);
   }
 

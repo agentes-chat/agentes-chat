@@ -1317,6 +1317,7 @@ export interface AiStatus {
       | "cli_missing"
       | "computer_away"
       | "computer_failed"
+      | "cli_failed"
       | "plan_limit"
       | "model_limit"
       | "model_region"
@@ -1408,9 +1409,9 @@ export interface ActiveRun {
   background?: boolean;
   /**
    * What its current model call streamed so far past its last tool: `text` starts at `at` of the call's text, so an
-   * app opened mid-answer goes on from `at` plus its length.
+   * app opened mid-answer goes on from `at` plus its length. `shownAt`: as `agent.delta.shownAt`.
    */
-  live?: { turn: number; at: number; text: string };
+  live?: { turn: number; at: number; text: string; shownAt?: string };
 }
 
 /** Real-time channel events (packages/engine/src/events.ts, docs/adr/0010-realtime.md). */
@@ -1492,6 +1493,8 @@ export type ChannelEvent =
       at?: number;
       /** Where its stretch starts in the turn's text (a stretch: the text between two calls of a computer brain). */
       from?: number;
+      /** When its reply first showed words (ISO, the server's clock): its message is posted there (`LiveRun.shownAt`). */
+      shownAt?: string;
     }
   | {
       type: "agent.run";
@@ -1501,6 +1504,9 @@ export type ChannelEvent =
       agentId: string;
       status: RunStatus;
       error?: string;
+      /** A failed run's reason by its code, as `run.finished` says it (`runErrorDetail`). */
+      errorCode?: string;
+      errorParams?: Record<string, string>;
       /** The message that started the run (anchors its live row). */
       triggerMessageId?: string | null;
       startedAt?: string | null;
@@ -2000,6 +2006,11 @@ export interface GitHubAppSetup {
   state: "off" | "ok" | "invalid";
   /** No app yet: the manifest flow makes one. */
   canCreate: boolean;
+  /**
+   * The events agents hear that the app isn't subscribed to on GitHub (by GitHub's names), and its page there where
+   * they're ticked. Absent when it has them all, or GitHub didn't answer.
+   */
+  events?: { missing: string[]; url: string };
 }
 
 /** `GET …/github-app`: whether the app can be installed here, the organization's installations, the server's app. */
@@ -3239,6 +3250,9 @@ export interface ArtifactFileContent {
   size: number;
   sha256: string;
   text?: string;
+  /** A picture's size as it shows (PNG, JPEG, WebP saved since it was kept): its box is held before it loads. */
+  width?: number;
+  height?: number;
 }
 
 export interface ArtifactAuthor {
@@ -3404,6 +3418,26 @@ export interface ArtifactRef {
   /** The file was deleted: the card shows "Arquivo removido". */
   deleted?: boolean;
   title?: string;
+  /** What it is (newer messages): until it loads, its placeholder takes that thing's shape, a card's or a tile's. */
+  kind?: ArtifactKind;
+  /** A vote's options, or a question card's first question's: its placeholder has as many rows. */
+  options?: number;
+  /** A question card's questions (its placeholder's step line and dots). */
+  questions?: number;
+  /** A picture's size as it shows: alone on its message, its placeholder is its box. */
+  width?: number;
+  height?: number;
+}
+
+/**
+ * What a page of messages carries for its cards (`include=cards`): each live block, vote and question card at the
+ * version shown, with its state, so the cards draw whole on the first paint.
+ */
+export interface MessageCards {
+  artifacts: ArtifactDetail[];
+  polls: Poll[];
+  choices: Choices[];
+  blocks: BlockState[];
 }
 
 export interface ArtifactFilters {
@@ -3798,8 +3832,10 @@ export interface Routine {
   waitingFor: { machineId: string; machineName: string; since: string } | null;
   /**
    * Its run waits on its plan or budget (state `usage_paused`, ADR 0118): paused near the limit, or stopped at it
-   * (`limit`: nothing to continue). It picks up at `resetsAt` (null: not known yet); `plan` is the plan's name. `extraOff`: the plan's window is used up and the agent's long work may not use paid
-   * extra usage, so Continuar agora is refused; `extraUsedUp`: the same with the switch on but no extra usage left.
+   * (`limit`: nothing to continue). It picks up at `resetsAt` (null: not known yet); `plan` is the plan's name.
+   * `extraOff`: the plan's window is used up and the agent's long work never uses paid extra usage (someone else's
+   * plan lent to it, or the team's right hand), so Continuar agora is refused; `extraUsedUp`: the same with no extra
+   * usage left on its owner's own plan.
    * Who may press it: `canManage`.
    */
   usagePause?: {
@@ -5465,10 +5501,6 @@ export interface AgentBrain {
   /** As stored; null = the brain's default. */
   model: string | null;
   effectiveModel: string | null;
-  /** If the computer isn't available, answer through the API (counts against the budget). */
-  fallback: boolean;
-  /** Long work may go on into the plan's paid extra usage where the provider reports it on (ADR 0118). */
-  extraUsage: boolean;
   computer: { machineId: string; name: string; online: boolean } | null;
   options: BrainOption[];
   /** Every computer the caller may give the agent, with what each offers ("Vai para o Mac mini"). */
@@ -5625,9 +5657,6 @@ export interface AgentBrainInput {
   scope?: BrainScope;
   brain?: BrainKind;
   model?: string | null;
-  fallback?: boolean;
-  /** Off: long work pauses at 95% of the plan even with its paid extra usage on. */
-  extraUsage?: boolean;
   /**
    * "Atende outras pessoas" turned off: false lets in whoever its "who can talk" list allows (everyone with no list).
    */
@@ -5656,7 +5685,6 @@ export interface AgentSetup {
   /** Omitted = each agent keeps its own. */
   speed?: BrainSpeed;
   contextTokens?: number | null;
-  fallback?: boolean;
   /** "Atende outras pessoas" off, for the agents that move onto the plan. */
   onlyOwner?: boolean;
   /** Its Autonomia, wherever the caller may set it by hand, whatever the AI takes; omitted = each keeps its own. */
@@ -5703,7 +5731,6 @@ export interface NewAgentSetup {
   /** The computer's own sign-in thinks for the caller's agents there (they connected it). */
   ownSignIn?: boolean;
   effort?: BrainEffortSetting | null;
-  fallback?: boolean;
   /** Its Autonomia; null or absent = the default. */
   autonomy?: CommandApproval | null;
 }

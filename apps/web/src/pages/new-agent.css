@@ -274,10 +274,19 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 8px 20px -8px rgba(4, 32, 63, 0.7);
 }
+/* "Quem pensa"'s settings under its select, a field's distance away as on the agent's page (the step's parts have no
+   gap of their own). */
+.newag__content > .ai-set {
+  margin-top: var(--space-4);
+}
 /* Under 1100px the preview is a compact card above the form (details on demand). */
 @media (max-width: 1100px) {
+  /* The preview's row is as tall as its card and the step takes the rest of the page, down to its bar: a short step
+     never stretches the preview's row into a gap above the step. */
   .newag__work {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-auto-rows: 1fr;
     gap: 0;
   }
   .newag__aside {
@@ -285,7 +294,7 @@
     order: -1;
     height: auto;
     max-width: 660px;
-    padding: 22px 0 0;
+    padding: var(--space-6) 0 0;
   }
   /* Above the form it would push the role cards down as one is picked: it comes in with the next step. */
   .newag__aside[data-step="role"] {
@@ -298,7 +307,7 @@
   }
   .newag__main {
     min-height: 0;
-    padding-top: 20px;
+    padding-top: var(--space-6);
   }
   .newag__pv {
     flex-direction: row;
@@ -311,11 +320,14 @@
     height: auto;
     min-height: 76px;
   }
+  /* Beside the name the face sits whole in the middle of its scene, never cut by the card's edge. */
   .newag__pv-cover .newag__pv-agent,
   .newag__pv[data-big] .newag__pv-agent {
-    bottom: -7px;
+    top: 50%;
+    bottom: auto;
     width: 46px;
     height: 46px;
+    transform: translate(-50%, -50%);
   }
   .newag__pv-body {
     flex: 1;

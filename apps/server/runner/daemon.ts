@@ -1142,6 +1142,7 @@ export class RunnerDaemon implements RequestObserver {
       secret: (agent, name) => secretValue(secretsDir, agent, name),
       onChange: () => queueMicrotask(() => this.browsersChanged()),
       desktops: this.desktops,
+      cursor: (agentId, cursor) => this.desktops.cursor(agentId, cursor),
       startPageData: (agent) => ({
         locale: this.agents.find((a) => a.id === agent.id)?.locale,
         egress: this.egress.current,
@@ -1290,6 +1291,7 @@ export class RunnerDaemon implements RequestObserver {
         codexAuth: (accountId, auth) => this.accounts.keepCodexAuth(accountId, auth),
         desktop: (agent, use) => this.workerDesktop(agent, use),
         desktopViewers: (agentId) => this.desktops.status({ id: agentId }).streams,
+        cursor: (agentId, cursor) => this.desktops.cursor(agentId, cursor),
         account: (agentId) => this.agentAccount(agentId),
         accounts: (agentId) => this.agentAccounts(agentId),
         ...(this.opts.workers ? { start: this.opts.workers.start } : { gitCache: rootGitCache() }),

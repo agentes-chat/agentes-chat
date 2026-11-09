@@ -21,6 +21,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import {
   type AgentScope,
   DESKTOP_SIZE,
+  type DesktopCursor,
   type MachineReplies,
   type RunnerDesktopInfo,
 } from "@agenteschat/adapters/machine-protocol";
@@ -584,6 +585,8 @@ export class DesktopSessions {
   private readonly claimed = new Set<number>();
   /** Refreshes run one after another: each starts dozens of short processes on the computer. */
   private refreshes: Promise<void> = Promise.resolve();
+  /** The data sockets of the streams that show each agent's desktop, which its pointer's steps go to (protocol 54). */
+  private readonly shown = new Map<string, Set<{ send(data: string): void }>>();
   private sweepTimer: ReturnType<typeof setInterval> | null = null;
   private readonly sys: DesktopSystem;
   private readonly dir: string;
@@ -737,6 +740,25 @@ export class DesktopSessions {
       d.lastUsed = this.now();
       this.opts.onViewers?.(agentId);
     };
+  }
+
+  /** A stream shows the agent's desktop on `data` until the returned call: its pointer's steps go there too. */
+  show(agentId: string, data: { send(data: string): void }): () => void {
+    const set = this.shown.get(agentId) ?? new Set<{ send(data: string): void }>();
+    this.shown.set(agentId, set);
+    set.add(data);
+    return () => {
+      set.delete(data);
+      if (set.size === 0 && this.shown.get(agentId) === set) this.shown.delete(agentId);
+    };
+  }
+
+  /** One step of the agent's pointer (protocol 54), to every stream that shows its desktop. */
+  cursor(agentId: string, cursor: DesktopCursor) {
+    const set = this.shown.get(agentId);
+    if (!set) return;
+    const line = JSON.stringify({ type: "cursor", ...cursor });
+    for (const data of set) data.send(line);
   }
 
   /**

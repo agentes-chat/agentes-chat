@@ -662,7 +662,7 @@ export function agentRoutes(deps: AppDeps) {
       security,
       summary: "Whether each agent has an AI to think with, whether the organization has any, and who picks the agents",
       description:
-        "Per agent: `ready`; `no_ai` with why (`no_key`, `not_signed_in`, `no_computer`, `cli_missing`: nothing to think with, and no fallback; `own`: with `not_signed_in`, the CLI whose own sign-in isn't there on the computer, where the agent has no account); `waiting` (its computer is away for now). `any`: an agent that isn't archived is ready or waiting. `routing` (ADR 0074): who picks the agents for a message nobody mentioned, for the workspace (`by`) and for the caller's own messages (`mine`): Jev, the organization's small model (`model`), people's own plans (only for their own messages), rules, or `off` (only mentions). `noSmallModel`: with `rules`, the default key's provider, which has no small model. `apiKey`: a key of its own, or the server's own Claude key. Computed on each request; no key is read.",
+        "Per agent: `ready`; `no_ai` with why (`no_key`, `not_signed_in`, `no_computer`, `cli_missing`: nothing to think with; `own`: with `not_signed_in`, the CLI whose own sign-in isn't there on the computer, where the agent has no account); `waiting` (its computer is away for now). `any`: an agent that isn't archived is ready or waiting. `routing` (ADR 0074): who picks the agents for a message nobody mentioned, for the workspace (`by`) and for the caller's own messages (`mine`): Jev, the organization's small model (`model`), people's own plans (only for their own messages), rules, or `off` (only mentions). `noSmallModel`: with `rules`, the default key's provider, which has no small model. `apiKey`: a key of its own, or the server's own Claude key. Computed on each request; no key is read.",
       request: { params: OrgParams },
       responses: {
         200: json(
@@ -680,6 +680,7 @@ export function agentRoutes(deps: AppDeps) {
                     "cli_missing",
                     "computer_away",
                     "computer_failed",
+                    "cli_failed",
                     "plan_limit",
                     "model_limit",
                     "model_region",
@@ -796,15 +797,7 @@ export function agentRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId } = c.req.valid("param");
-      const gateway = deps.extras?.context?.gateway;
-      // A plan at its limit still answers through a model with a key (ADR 0032 §5): not out of office then.
-      const hasModel = gateway
-        ? (agent: Parameters<typeof gateway.hasModelCredential>[0]) => gateway.hasModelCredential(agent)
-        : undefined;
-      return c.json(
-        { agents: await agentStatuses(db, c.get("user").id, orgId, new Date(), hasModel ? { hasModel } : {}) },
-        200,
-      );
+      return c.json({ agents: await agentStatuses(db, c.get("user").id, orgId) }, 200);
     },
   );
 
@@ -1817,7 +1810,7 @@ export function agentRoutes(deps: AppDeps) {
       tags,
       security,
       summary:
-        "\"Quem pensa\" (ADR 0032): the model (API), Claude Code or Codex on its computer, the model and the fallback, with what its computer offers. An admin or the agent's owner; the team's right hand's `mine`, any member.",
+        "\"Quem pensa\" (ADR 0032): the model (API), Claude Code or Codex on its computer and the model, with what its computer offers. An admin or the agent's owner; the team's right hand's `mine`, any member.",
       request: { params: AgentParams, query: z.object({ scope: BrainScope.optional() }) },
       responses: { 200: json(AgentBrain), ...errors },
     }),
@@ -1846,10 +1839,14 @@ export function agentRoutes(deps: AppDeps) {
               description:
                 "Claude Code: `opus`, `sonnet`, `haiku`, a Claude model id or one of a coding plan's models by id (`@agenteschat/providers/plans`; another account runs `sonnet` for it); Codex: a model name; `auto` (each run picks the tier). Null = the brain's default; omitted = keep (reset when the brain changes).",
             }),
-            fallback: z.boolean().optional(),
+            fallback: z.boolean().optional().openapi({
+              deprecated: true,
+              description: "Ignored: the API never stands in for a computer that stops answering. Older apps send it.",
+            }),
             extraUsage: z.boolean().optional().openapi({
+              deprecated: true,
               description:
-                "Long work may go on into the plan's paid extra usage when the provider reports it on (ADR 0118; Claude's plans); false: it pauses at 95% of the plan like any other. Only the agent's owner changes it (`brain.extra_owner_only`): it bills their plan. Omitted = keep.",
+                "Ignored: long work follows the plan's paid extra usage on the agent's owner's own plan (ADR 0118). Older apps send it.",
             }),
             onlyOwner: z.boolean().optional().openapi({
               description:

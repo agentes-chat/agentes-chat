@@ -425,19 +425,16 @@ describe("Revisar: Criar agente filled in with the draft", () => {
     expect(title()).toBe("Qual vai ser o papel?");
   });
 
-  test("no AI, and a coding plan to connect picked: Connect opens once, on that plan", async () => {
+  test("no AI: Connect opens once it's created, for it, on the providers", async () => {
     const state = seedState({ credentials: [], platformKey: false });
     state.messages.push(proposal("p-1", {}, { ai: { kind: "none" } }));
     await renderApp(`/org/${ORG_ID}/agents/new?proposal=p-1`, { api: createFakeApi(state) });
     await settle(8);
-    await click(railStep("Modelo e orçamento"));
-    await click(screen().getByRole("combobox", { name: "Quem pensa" }));
-    await click(screen().getByRole("option", { name: /^Conectar OpenCode Go/ }));
     await click(railStep("Revisar e criar"));
     await click(screen().getByRole("button", { name: "Criar Nina" }), 10);
     const dialogs = screen().getAllByRole("dialog", { name: /Conectar uma IA/ });
     expect(dialogs).toHaveLength(1);
-    expect(aiSelect(dialogs[0] as HTMLElement).textContent).toBe("OpenCode Go");
+    expect(aiSelect(dialogs[0] as HTMLElement).textContent).toContain("Claude");
   });
 
   test("on an account of mine it suggests: created on that account, with no plan sign-in to open", async () => {

@@ -112,7 +112,6 @@ describe("Usar em outros agentes", () => {
       model: "opus",
       effort: "high",
       contextTokens: 400_000,
-      fallback: false,
       onlyOwner: true,
       account: "acc",
       accounts: [],
@@ -125,7 +124,6 @@ describe("Usar em outros agentes", () => {
       model: "opus",
       effort: "high",
       contextTokens: 400_000,
-      fallback: false,
       onlyOwner: true,
     });
     expect(setupOfBrain({ ...view, brain: "model" })).toBeNull();
@@ -145,7 +143,6 @@ describe("a new agent starts with the last setup", () => {
     account: { id: "acc", label: "Claude", provider: null, mine: true, free: true },
     ownSignIn: false,
     effort: "high",
-    fallback: true,
   };
 
   const mine = { ownerIsMe: true, usable: new Set(["claude-opus-5-5"]), keys: [{ id: "k" }] };
@@ -178,7 +175,6 @@ describe("a new agent starts with the last setup", () => {
         model: "opus",
         effort: "high",
         contextTokens: null,
-        fallback: true,
       },
     });
     expect(newAgentStart(plan, { ...mine, ownerIsMe: false })).toBeNull();

@@ -8,7 +8,7 @@ import { island } from "@/lib/island";
 import { builtCss, declarations, topLevel } from "./built-css";
 import { ADA_ID, createFakeApi, ENG_ID, GENERAL_ID, ORG_ID, seedState } from "./fake-api";
 import { notification } from "./fakes/notifications";
-import { renderApp, settle } from "./render";
+import { renderApp, screen, settle } from "./render";
 
 afterEach(() => {
   island.putAway();
@@ -38,6 +38,23 @@ test("the closed island ends in 'Ver', which opens the message where it happened
   expect(r.router.state.location.search).toMatchObject({ m: "m-1" });
   // It goes off the island once opened.
   expect(island.get().items.map((i) => i.n.id)).toEqual([]);
+});
+
+test("'Ver' reaches past a side panel: the island stays live over it, and the message opens in the panel's place", async () => {
+  const r = await renderApp(`/org/${ORG_ID}/dm/agent/${ADA_ID}`, { api: createFakeApi(seedState()) });
+  await settle(8);
+  const header = document.querySelector(".channel__header") as HTMLElement;
+  await act(async () => fireEvent.click(within(header).getByRole("button", { name: "Perfil de Ada" })));
+  await settle(6);
+  expect(screen().getByRole("complementary", { name: "Perfil da Ada" })).toBeTruthy();
+  await act(async () => island.arrive(reply));
+  await settle(3);
+  const see = within(document.querySelector(".ni__bar") as HTMLElement).getByRole("button", { name: "Ver" });
+  expect(see.closest("[inert]")).toBeNull();
+  await act(async () => fireEvent.click(see));
+  await settle(6);
+  expect(r.router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
+  expect(screen().queryByRole("complementary", { name: "Perfil da Ada" })).toBeNull();
 });
 
 test("the island is centered on the window, not the work area beside the sidebar", async () => {

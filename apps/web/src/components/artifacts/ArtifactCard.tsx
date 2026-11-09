@@ -1,11 +1,13 @@
 import type { Artifact, ArtifactContent, ArtifactFileContent, ArtifactRef } from "@agenteschat/client";
 import { useArtifact } from "@agenteschat/client";
-import { documentStart, KIND_ICON, parseDelimited, patchCounts } from "@agenteschat/client/lib/artifacts";
+import { documentStart, isCardKind, KIND_ICON, parseDelimited, patchCounts } from "@agenteschat/client/lib/artifacts";
 import { fileIcon, formatBytes, previewKind } from "@agenteschat/client/lib/files";
+import { BLANK_LINE } from "@agenteschat/client/lib/format";
 import { Button, Icon, type IconName, Menu } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CardSkeleton } from "@/components/blocks/CardSkeleton";
 import { ChoicesCard } from "@/components/blocks/ChoicesCard";
 import { LiveBlockCard } from "@/components/blocks/LiveBlock";
 import { PollCard } from "@/components/blocks/PollCard";
@@ -60,7 +62,8 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
       </div>
     );
   }
-  if (!a) return <div className="artifact-tile artifact-tile--loading" aria-busy="true" />;
+  // Until it loads, the shape it will have: a card's (its ref says what it is), else a file's tile.
+  if (!a) return isCardKind(ref.kind) ? <CardSkeleton kind={ref.kind} card={ref} /> : <TilePlaceholder file={ref} />;
   // What lives in the conversation isn't a file: the thing itself, not a tile that opens it (ADR 0113).
   if (a.kind === "block") return <LiveBlockCard id={a.id} version={a.shownVersion} />;
   if (a.kind === "poll") return <PollCard id={a.id} version={a.shownVersion} />;
@@ -357,7 +360,36 @@ function CoverTable({ columns, rows }: { columns: string[]; rows: string[][] }) 
   );
 }
 
-/** A picture's cover; it keeps its loading size until decoded, so the tile changes size once. */
+/**
+ * A file before it loads: its tile's own parts with nothing in them, at the tile's size; a picture whose size its ref
+ * says is already its box (alone on its message, it shows whole).
+ */
+function TilePlaceholder({ file }: { file: ArtifactRef }) {
+  const picture = Boolean(file.width && file.height);
+  return (
+    <div className="artifact-tile artifact-tile--loading" data-media={picture || undefined} aria-busy="true">
+      <div className="artifact-tile__cover">
+        {picture && (
+          <span className="artifact-tile__picture" data-sized="">
+            <canvas width={file.width} height={file.height} />
+          </span>
+        )}
+      </div>
+      <div className="artifact-tile__foot" aria-hidden="true">
+        <span className="artifact-tile__name">
+          <span className="artifact-tile__title">{BLANK_LINE}</span>
+          <span className="artifact-tile__meta">{BLANK_LINE}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A picture's cover. With its size known, an empty canvas of that size holds the picture's box from the first frame (the
+ * same rules size both) and the picture lies over it once decoded; without, it keeps its loading size until decoded,
+ * so the tile changes size once.
+ */
 function PictureCover({
   content,
   artifactId,
@@ -373,8 +405,14 @@ function PictureCover({
   const { url, failed } = usePreviewUrl(artifactId, version, content.contentType, true);
   const [decoded, setDecoded] = useState<string | null>(null);
   if (failed) return <TypeCover content={content} />;
+  const sized = Boolean(content.width && content.height);
   return (
-    <span className="artifact-tile__picture" data-loading={url && decoded === url ? undefined : "true"}>
+    <span
+      className="artifact-tile__picture"
+      data-loading={url && decoded === url ? undefined : "true"}
+      data-sized={sized ? "" : undefined}
+    >
+      {sized && <canvas width={content.width} height={content.height} />}
       {url && (
         <img
           src={url}

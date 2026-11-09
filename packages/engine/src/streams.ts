@@ -493,7 +493,7 @@ export function createStreamBroker(deps: StreamBrokerDeps) {
       return link;
     },
 
-    /** A frame from the runner: first its `stream.hello`, then the bytes (and a terminal's `exit`). */
+    /** A frame from the runner: first its `stream.hello`, then the bytes (a terminal's `exit`, the agent's pointer). */
     async fromRunner(link: RunnerLink, data: string | Uint8Array) {
       if (link.closed) return;
       if (link.claimed) return link.claimed.data(data);
@@ -507,6 +507,10 @@ export function createStreamBroker(deps: StreamBrokerDeps) {
           }
           // Where the computer's old session ends: the viewer starts noVNC again on the bytes after it.
           if (control?.type === "mode" && s.switches) quietly(() => s.viewer.send(JSON.stringify(control)));
+          // The agent's pointer (protocol 54), as checked: the apps draw it over the screen.
+          if (control?.type === "cursor" && s.request.kind === "desktop") {
+            quietly(() => s.viewer.send(JSON.stringify(control)));
+          }
           return;
         }
         s.bytesOut += data.byteLength;

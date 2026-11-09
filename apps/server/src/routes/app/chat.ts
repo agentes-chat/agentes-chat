@@ -16,14 +16,17 @@ import {
   MEDIA_REFUSALS,
   type MessageView,
   messageCard,
+  messageCards,
   openConsultationsIn,
   postPersonMessage,
   requireChannelAccess,
   STICKER_MOODS,
   ValidationError,
+  withPersonFacts,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../../http/errors";
+import { ArtifactDetail, BlockState, Choices, Poll } from "./artifacts";
 import {
   type AppDeps,
   aiStatusDeps,
@@ -423,10 +426,21 @@ export function chatRoutes(deps: AppDeps) {
                   description:
                     "Work in the background (a routine's, or long work, ADR 0121): not the conversation's working row.",
                 }),
-                live: z.object({ turn: z.number().int(), at: z.number().int(), text: z.string() }).optional().openapi({
-                  description:
-                    "What its current model call has streamed so far (`agent.delta`) past its last tool, when this server runs it: `text` starts at `at` of the call's text, so the next delta's `at` is `at` plus its length.",
-                }),
+                live: z
+                  .object({
+                    turn: z.number().int(),
+                    at: z.number().int(),
+                    text: z.string(),
+                    shownAt: z.string().optional().openapi({
+                      description:
+                        "When the reply it writes first showed words (`agent.delta.shownAt`): its live row, and its message once posted, go there.",
+                    }),
+                  })
+                  .optional()
+                  .openapi({
+                    description:
+                      "What its current model call has streamed so far (`agent.delta`) past its last tool, when this server runs it: `text` starts at `at` of the call's text, so the next delta's `at` is `at` plus its length.",
+                  }),
               }),
             ),
             consults: z
@@ -555,24 +569,51 @@ export function chatRoutes(deps: AppDeps) {
           threadId: z.uuid().optional(),
           before: z.iso.datetime().optional().openapi({ description: "Page backwards from this time." }),
           limit: z.coerce.number().int().min(1).max(200).optional(),
-          include: z
-            .string()
-            .optional()
-            .openapi({ description: "`replies`: add reply count, last activity and the latest replies per thread." }),
+          include: z.string().optional().openapi({
+            description:
+              "`replies`: add reply count, last activity and the latest replies per thread. `cards`: add `cards`, what the messages' live blocks, votes and question cards show, so they draw whole at once.",
+          }),
         }),
       },
-      responses: { 200: json(z.object({ messages: z.array(Message) })), ...errors },
+      responses: {
+        200: json(
+          z.object({
+            messages: z.array(Message),
+            cards: z
+              .object({
+                artifacts: z.array(ArtifactDetail),
+                polls: z.array(Poll),
+                choices: z.array(Choices),
+                blocks: z.array(BlockState),
+              })
+              .optional()
+              .openapi({
+                description:
+                  "With `include=cards`: each card on these messages at the version it shows, with its state (cards the reader can't see are left out).",
+              }),
+          }),
+        ),
+        ...errors,
+      },
     }),
     async (c) => {
       const { orgId, channelId } = c.req.valid("param");
       const q = c.req.valid("query");
-      const messages = await listMessages(db, c.get("user").id, orgId, channelId, {
+      const userId = c.get("user").id;
+      const include = q.include?.split(",") ?? [];
+      const messages = await listMessages(db, userId, orgId, channelId, {
         threadId: q.threadId,
         before: q.before ? new Date(q.before) : undefined,
         limit: q.limit,
-        includeReplies: q.include?.split(",").includes("replies") ?? false,
+        includeReplies: include.includes("replies"),
       });
-      return c.json({ messages }, 200);
+      const artifacts = deps.extras?.artifacts;
+      if (!include.includes("cards") || !artifacts) return c.json({ messages }, 200);
+      const cards = await messageCards(artifacts, userId, orgId, messages);
+      return c.json(
+        { messages, cards: { ...cards, artifacts: await withPersonFacts(db, userId, orgId, cards.artifacts) } },
+        200,
+      );
     },
   );
 
@@ -679,7 +720,7 @@ export function chatRoutes(deps: AppDeps) {
       security,
       summary: "Once an AI is connected, the agent answers what it couldn't (Responder agora)",
       description:
-        "The id is a no-AI card (`meta.noAi`: its agent's failed run in that conversation starts again on the person's message) or the person's message (its failed runs start again on that same message, \"Tentar de novo\" with no second copy, else a `no_ai` decision is routed again; long work goes on with its own Continuar). Who asked, the agent's owner or an admin. 409 `ai.still_missing` while there's still no AI; 409 `run.not_restartable` when that run had already done something (a tool, a reply, an approval), so starting over would repeat it; 403 `audience.only` or `audience.nobody` when the agent no longer answers who asked (an agent moved onto a plan answers only its owner until they turn on \"Atende outras pessoas\"). Pressed again, it returns the runs that answer it. On a stretch's pause card (`meta.actionCard.kind` `stretch_paused`, ADR 0089) it is Continuar: the wake-ups it holds start at hop 1 in a fresh stretch, once (pressed again, no runs); who asked, the agents' owners or an admin. On a long-work pause card (`usage_paused`, ADR 0118) it is Continuar agora: with paid extra usage off the run goes on up to the plan's own allowance, and 409 `run.continue_extra_off` once that window is used up (`run.continue_extra_used_up` when the switch is on but the plan has no extra usage left).",
+        "The id is a no-AI card (`meta.noAi`: its agent's failed run in that conversation starts again on the person's message) or the person's message (its failed runs start again on that same message, \"Tentar de novo\" with no second copy, else a `no_ai` decision is routed again; long work goes on with its own Continuar). Who asked, the agent's owner or an admin. 409 `ai.still_missing` while there's still no AI; 409 `run.not_restartable` when that run had already done something (a tool, a reply, an approval), so starting over would repeat it; 403 `audience.only` or `audience.nobody` when the agent no longer answers who asked (an agent moved onto a plan answers only its owner until they turn on \"Atende outras pessoas\"). Pressed again, it returns the runs that answer it. On a stretch's pause card (`meta.actionCard.kind` `stretch_paused`, ADR 0089) it is Continuar: the wake-ups it holds start at hop 1 in a fresh stretch, once (pressed again, no runs); who asked, the agents' owners or an admin. On a long-work pause card (`usage_paused`, ADR 0118) it is Continuar agora: where the agent's long work never uses paid extra usage (someone else's plan lent to it, or the team's right hand) the run goes on up to the plan's own allowance, and 409 `run.continue_extra_off` once that window is used up (`run.continue_extra_used_up` when the plan has no extra usage left).",
       request: { params: OrgParams.extend({ messageId: z.uuid() }) },
       responses: {
         200: json(z.object({ runs: z.array(z.object({ agentId: z.uuid(), runId: z.uuid() })) })),

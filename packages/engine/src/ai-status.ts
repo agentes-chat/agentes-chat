@@ -3,7 +3,7 @@ import { ensureOpenRouterModels, isAutoModel, routerModelOf } from "@agenteschat
 import type { Agent } from "./agents";
 import { autoModelFor, autoProvider } from "./auto-model";
 import { brainOf } from "./brain-settings";
-import { brainAccountFor, computerBrainUnavailable, mayFallBack, NO_AI_CODES } from "./brains/select";
+import { brainAccountFor, computerBrainUnavailable, NO_AI_CODES } from "./brains/select";
 import { type BrainKind, isComputerBrain } from "./brains/types";
 import type { ModelGateway } from "./gateway";
 import type { MachineStatus } from "./machine-hub";
@@ -15,7 +15,7 @@ import type { AgentRun } from "./runs";
 
 /**
  * Whether an agent has an AI to think with (ADR 0061), from what the engine already uses: a key for its
- * model brain, or its computer brain's availability (with the model brain as the fallback). `waiting`:
+ * model brain, or its computer brain's availability (the API never stands in for it). `waiting`:
  * its computer is away for now (offline, paused, a plan limit), which is not "no AI". Computed per
  * request, with no cache and no secrets: no key is decrypted.
  */
@@ -34,6 +34,7 @@ export type NoAiReason =
   | "cli_missing"
   | "computer_away"
   | "computer_failed"
+  | "cli_failed"
   | "plan_limit"
   | "model_limit"
   | "model_region"
@@ -62,13 +63,10 @@ export interface AiStatusDeps {
   machines?: { status(machineId: string): Promise<MachineStatus | null> } | null;
 }
 
-type AiAgent = Pick<
-  Agent,
-  "orgId" | "model" | "credentialId" | "brain" | "brainFallback" | "brainAccountId" | "machineId"
-> &
+type AiAgent = Pick<Agent, "orgId" | "model" | "credentialId" | "brain" | "brainAccountId" | "machineId"> &
   Partial<Pick<Agent, "builtin" | "ownerUserId" | "planForOthers">>;
 
-/** The run being checked: a mission's turn thinks with the mission's brain, and background work never falls back. */
+/** The run being checked: a mission's turn thinks with the mission's brain. */
 type AiRun = Pick<AgentRun, "id" | "orgId" | "agentId" | "threadRootId" | "triggerMessageId" | "background">;
 
 const READY: AgentAi = { state: "ready" };
@@ -115,7 +113,6 @@ export async function agentAiState(deps: AiStatusDeps, given: AiAgent, run?: AiR
   const unavailable =
     machineId && !deps.machines ? null : computerBrainUnavailable(kind, machineId, status, Date.now(), account);
   if (!unavailable) return READY;
-  if (mayFallBack(agent, { background: run?.background ?? false }) && (await modelReady(deps, agent))) return READY;
   return NO_AI_CODES.has(unavailable.code)
     ? { state: "no_ai", reason: noAiReasonOf(unavailable.code), ...ownNotSignedIn(unavailable.code, kind, account) }
     : { state: "waiting" };
@@ -127,7 +124,6 @@ const agentFields = {
   model: schema.agents.model,
   credentialId: schema.agents.credentialId,
   brain: schema.agents.brain,
-  brainFallback: schema.agents.brainFallback,
   brainAccountId: schema.agents.brainAccountId,
   machineId: schema.agents.machineId,
   builtin: schema.agents.builtin,

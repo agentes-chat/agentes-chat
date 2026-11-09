@@ -181,6 +181,7 @@ import type {
   Memory,
   Message,
   MessageCard,
+  MessageCards,
   MessagePin,
   Mission,
   MissionBrain,
@@ -839,7 +840,13 @@ export interface ApiClient {
     messages(
       orgId: string,
       channelId: string,
-      options?: { threadId?: string; before?: string; limit?: number },
+      options?: {
+        threadId?: string;
+        before?: string;
+        limit?: number;
+        /** Also what the page's cards show (`include=cards`), handed here before the messages return. */
+        onCards?: (cards: MessageCards) => void;
+      },
     ): Promise<Message[]>;
     post(
       orgId: string,
@@ -875,6 +882,11 @@ export interface ApiClient {
     answerNow(orgId: string, messageId: string): Promise<{ runs: { agentId: string; runId: string }[] }>;
     /** Cancels an agent's follow-up from its line (`messageId`); 409 `follow_up.not_pending` once it came. */
     cancelFollowUp(orgId: string, messageId: string): Promise<void>;
+    /**
+     * "Pedir resposta" on a GitHub notice of someone the agent doesn't answer (`messageId`): the agent answers them
+     * there, with this person behind it. 409 `github_event.answered` once someone asked.
+     */
+    answerGitHub(orgId: string, messageId: string): Promise<void>;
   };
 
   approvals: {

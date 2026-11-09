@@ -78,3 +78,11 @@ With 300 messages over a weekly limit, every channel ask parked a turn of its ow
 8. **Long work in the agent's line of work** (`work_queue`, ADR 0121) reads "Ada começa quando terminar outro trabalho" in its receipts (phase `line`), not "Esperando sua resposta".
 
 Routines, missions and long work at 95% keep their own rules (one open routine run, slots more than 12 h late are missed; a mission's own keep-going check; long work keeps its card and Continuar agora). The Jev check before each catch-up (closing one when every asker's ask is clearly closed) is [ADR 0136](0136-a-check-before-each-catch-up.md).
+
+## Addendum (2026-11-09): paid extra usage follows the plan
+
+Product decision, with the AI choice redesign: the switch "Trabalho longo pode usar o uso extra pago" leaves Configuração avançada, since nobody realistically turns it off. What people got with the switch at its default stays:
+
+- **Long work goes on into a plan's paid extra usage where the plan reports it on and has room** (`extraUsageLeft`), on the agent's owner's own plan (`paysExtraUsage`, `usage-pause.ts`). Someone else's plan lent to the agent never spends its owner's extra usage, and the team's right hand never does: both started with the switch off, and only the plan's owner could turn it on.
+- **Continuar agora** is refused past the plan's window only there: `run.continue_extra_off` / `routine.continue_extra_off` now mean "this agent's long work doesn't use the plan's paid extra usage" (a lent plan, the right hand), with no switch to point to. `extra_used_up` is unchanged.
+- **The column.** `agents.brain_extra_usage` leaves the schema (migration 0245, as `brain_fallback` in ADR 0032's addendum of the same day). `PUT …/brain` ignores an older app's `extraUsage`; `brain.extra_owner_only` is no longer returned.

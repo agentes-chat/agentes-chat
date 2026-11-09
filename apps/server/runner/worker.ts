@@ -5,6 +5,7 @@ import type { Readable, Writable } from "node:stream";
 import {
   type AccountKind,
   type AgentScope,
+  type DesktopCursor,
   isAccountId,
   LOAD_SAMPLE_MS,
   MACHINE_PROTOCOL_VERSION,
@@ -385,6 +386,11 @@ export class WorkerLink {
     this.write(JSON.stringify({ type: "browser.desktop" } satisfies WorkerLinkFrame));
   }
 
+  /** A step of its agent's pointer: root passes it to whoever watches the agent's desktop (protocol 54). */
+  cursor(cursor: DesktopCursor) {
+    this.write(JSON.stringify({ type: "desktop.cursor", ...cursor } satisfies WorkerLinkFrame));
+  }
+
   /**
    * Root moves its process `pid` (held, `scope-gate.ts`) into the agent's slice for `kind`: settles once root
    * answered, whatever it says, or after `ENTER_MS` (a root that doesn't know the frame never answers).
@@ -690,6 +696,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
       session: () => desktop,
       status: () => ({ running: desktop !== null, streams: state.desktopViewers ?? 0 }),
     },
+    cursor: (_, cursor) => link.cursor(cursor),
     onChange: () => queueMicrotask(lease),
     ...(chrome ? { startChrome: (exe, args, profile, env) => launchChrome(exe, args, profile, env, chrome) } : {}),
     // The agents share their memory (`agentLimits`): the limit a page dies at is all of theirs.
@@ -741,6 +748,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     uids: () => (own === null ? null : { runner: 0, agents: new Map([[o.agentId, own]]) }),
     secrets: (agent) => agentSecrets(secretsDir, agent),
     browserPid: (agentId) => browser.chromePid(agentId),
+    cursor: (_, cursor) => link.cursor(cursor),
     log,
     ...o.desktop,
   });

@@ -35,6 +35,8 @@ import {
   browserViewportOf,
   CHROME_FAILURES,
   CHROMIUM_LINUX,
+  type DesktopCursor,
+  type DesktopCursorAct,
   type MachineReplies,
   type MachineRequest,
   parseBrowserInputEvent,
@@ -1016,6 +1018,13 @@ export interface InputState {
 const HUMAN_COMMANDS = new Set(["click", "dblclick", "hover", "fill", "type"]);
 /** What `agent-browser` answers to each when the runner did it itself. */
 const HUMAN_DONE: Record<string, string> = { click: "clicked", hover: "hovered", fill: "filled" };
+/** What each does with the agent's pointer where it goes (protocol 54); `fill` presses there, then types. */
+const HUMAN_POINTER: Record<string, DesktopCursorAct> = {
+  click: "click",
+  dblclick: "double_click",
+  hover: "move",
+  type: "type",
+};
 /** The answer to a command a person's taking control cut short (`stopInput`). */
 const TOOK_OVER: BrowserAnswer = {
   success: false,
@@ -1030,7 +1039,22 @@ const BATCH_STEP_MS = 8;
  * own `click` watches for the dialog, `mouse up` doesn't): the batch outlasts that, to hear why.
  */
 const HELD_PRESS_MS = 33_000;
-const VIEWPORT = "[window.innerWidth, window.innerHeight]";
+/** The page's size, then its window's place and size on the screen (`pageOnScreen`). */
+const VIEWPORT =
+  "[window.innerWidth, window.innerHeight, window.screenX, window.screenY, window.outerWidth, window.outerHeight]";
+
+/**
+ * Where the page's top left is on the screen, from `VIEWPORT`'s answer (protocol 54: the agent's pointer on its
+ * desktop): the window's place, past its frame and bars. The width the window has beyond the page is its two sides;
+ * the height beyond the page is its bars and a bottom edge as thick as a side. Null when the answer isn't numbers.
+ */
+export function pageOnScreen(answer: unknown[]): Point | null {
+  const all = answer.slice(0, 6);
+  if (all.length < 6 || !all.every((n) => typeof n === "number" && Number.isFinite(n))) return null;
+  const [w, h, sx, sy, ow, oh] = all as [number, number, number, number, number, number];
+  const side = Math.max(0, (ow - w) / 2);
+  return { x: sx + side, y: sy + Math.max(0, oh - h - side) };
+}
 
 /**
  * Run before every `snapshot`: a button or link with no words of its own (an icon, or an icon font's ligature such as
@@ -1393,6 +1417,8 @@ export interface BrowserManagerOptions {
   windowDrawMs?: number;
   /** The agents' desktops (ADR 0058 §7; a worker's are root's): without them every Chrome is headless. */
   desktops?: Pick<DesktopSessions, "ensure" | "status"> & { session(agentId: string): ChromeDisplay | null };
+  /** Protocol 54: where the agent's pointer goes on its desktop, said right before it goes (its Chrome there only). */
+  cursor?: (agentId: string, cursor: DesktopCursor) => void;
   /** Tests: whether a pid left in `chromes.json` is still that Chrome (default: asks the system). */
   isOurChrome?: (pid: number, profile: string) => Promise<boolean>;
   /** What `states()` returns may have changed (the desktop app's tray shows it). */
@@ -1479,6 +1505,8 @@ interface Session {
   link?: string;
   /** Where the agent's pointer was left on the page (`humanly`). */
   pointer?: Point;
+  /** Where the page's top left was on the screen when last asked (`pageOnScreen`). */
+  page?: Point;
   /** Where its `hover` left it. While that is still `pointer` (the same object), a menu it opened is taken to be open. */
   hovered?: Point;
   /** Ends the agent's command under way when a person takes control (`stopInput`). */
@@ -2208,6 +2236,8 @@ export class BrowserManager {
     const taken = acting.signal.aborted && !human?.success;
     // Cut off during a press, the button would stay down under the person's pointer.
     if (taken) await this.run(session, ["mouse", "up"], { timeoutMs: QUICK_TIMEOUT_MS });
+    if (!human && !taken && command === "scroll") this.point(session, "scroll", session.pointer);
+    if (!human && !taken && command === "press") this.point(session, "type");
     const answer = taken
       ? TOOK_OVER
       : (human ??
@@ -2263,10 +2293,15 @@ export class BrowserManager {
       );
       const boxOf = (r: unknown) => (isRecord(r) && isRecord(r.result) ? r.result : null);
       const { x, y, width, height } = boxOf(seen?.[first.length]) ?? {};
-      const [vw, vh] = (boxOf(seen?.[first.length + 1])?.result ?? []) as unknown[];
+      const viewport = (boxOf(seen?.[first.length + 1])?.result ?? []) as unknown[];
+      const [vw, vh] = viewport;
       const sizes = [width, height, vw, vh] as number[];
       if (typeof x !== "number" || typeof y !== "number" || !sizes.every((n) => n >= 1)) return null;
-      return { box: { x, y, width, height } as Box, view: { width: vw, height: vh } as Box };
+      return {
+        box: { x, y, width, height } as Box,
+        view: { width: vw, height: vh } as Box,
+        page: pageOnScreen(viewport),
+      };
     };
     let seen = await look([]);
     if (!seen) return null;
@@ -2283,6 +2318,11 @@ export class BrowserManager {
         : [...steps.moves, ...(steps.check ? [steps.check] : []), ...steps.act];
     session.pointer = steps.to;
     if (command === "hover") session.hovered = steps.to;
+    session.page = seen.page ?? session.page;
+    if (command === "fill") {
+      this.point(session, "click", steps.to);
+      this.point(session, "type");
+    } else this.point(session, HUMAN_POINTER[command] ?? "move", steps.to);
     let out = await this.run(session, ["batch", "--bail"], {
       ...opts,
       timeoutMs: Math.max(timeoutMs, HELD_PRESS_MS),
@@ -2332,7 +2372,10 @@ export class BrowserManager {
   ): Promise<BrowserAnswer | null> {
     const opts = { timeoutMs, ...(signal ? { signal } : {}) };
     const [what, a = "", b = ""] = args;
-    if (command === "mouse" && what === "down") session.pressedAt = this.now();
+    if (command === "mouse" && what === "down") {
+      session.pressedAt = this.now();
+      this.point(session, a === "right" ? "right_click" : "click", session.pointer);
+    }
     if (command === "mouse" && what === "up" && session.pressedAt !== undefined) {
       const left = session.pressedAt + holdMs(randomSource()) - this.now();
       session.pressedAt = undefined;
@@ -2341,13 +2384,16 @@ export class BrowserManager {
     if (command === "mouse" && what === "move" && args.length === 3) {
       const to = { x: Number(a), y: Number(b) };
       const seen = await this.run(session, ["eval", VIEWPORT], opts);
-      const [width = 0, height = 0] = (isRecord(seen.data) && seen.data.result) as number[];
+      const viewport = isRecord(seen.data) && Array.isArray(seen.data.result) ? (seen.data.result as unknown[]) : [];
+      const [width = 0, height = 0] = viewport as number[];
       if (!Number.isFinite(to.x) || !Number.isFinite(to.y) || width < 1 || height < 1) return null;
       const view = { width, height };
       const rng = randomSource();
       const from = session.pointer ?? startPoint(to, view, rng);
       const path = moveCommands(pointerPath(from, to, rng, { bounds: view, straight: stayed(session) }));
       session.pointer = to;
+      session.page = pageOnScreen(viewport) ?? session.page;
+      this.point(session, "move", to);
       const out = await this.run(session, ["batch", "--bail"], { ...opts, stdin: JSON.stringify(path) });
       const results = batchResults(out);
       return results && !results.some(failedStep) ? { success: true, data: { moved: true, ...to } } : out;
@@ -2356,6 +2402,7 @@ export class BrowserManager {
       if ([...a].length > HUMAN.typeMaxChars) return null;
       const keys = keysFor(a, true, randomSource());
       if (batchMs(keys) > timeoutMs / 2) return null;
+      this.point(session, "type");
       const out = await this.run(session, ["batch", "--bail"], {
         ...opts,
         stdin: JSON.stringify([["eval", FOCUSED_FIELD], ...keys]),
@@ -2369,6 +2416,20 @@ export class BrowserManager {
         : { success: false, data: null, error: String(isRecord(bad) ? bad.error : out.error).slice(0, 2000) };
     }
     return null;
+  }
+
+  /**
+   * Protocol 54: a step of the agent's pointer, at a point of the page, for whoever watches its desktop. Only its
+   * Chrome on that desktop, at the window's own size: an emulated page isn't drawn where its points say.
+   */
+  private point(session: Session, act: DesktopCursorAct, at?: Point) {
+    const tell = this.opts.cursor;
+    const page = session.page;
+    if (!tell || session.chrome?.display === undefined || session.viewport || (at && !page)) return;
+    tell(session.agentId, {
+      act,
+      ...(at && page ? { x: Math.max(0, Math.round(page.x + at.x)), y: Math.max(0, Math.round(page.y + at.y)) } : {}),
+    });
   }
 
   /** Paths stay in the agent's folder; URLs go only to allowed sites. Returns the args to run. */

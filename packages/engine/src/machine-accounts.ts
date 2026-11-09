@@ -324,8 +324,7 @@ export async function releaseAgents(
       brainAccountId: null,
       brainAccountLentBy: null,
       brain: sql`case when ${ownSignIn} then "agents"."brain" else 'model' end`,
-      // Someone else's plan leaves with its switches: its owner's own sign-in neither pays extra nor answers others.
-      brainExtraUsage: sql`case when ${lent} then false else "agents"."brain_extra_usage" end`,
+      // Someone else's plan leaves with its switch: its owner's own sign-in doesn't answer others.
       audienceMode: sql`case when ${lent} and ${ownSignIn} then 'owner' else "agents"."audience_mode" end`,
       updatedAt: now,
     })

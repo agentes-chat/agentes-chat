@@ -34,6 +34,7 @@
     "./sky/avatar": "./src/sky/avatar.ts",
     "./sky/workspace": "./src/sky/workspace.ts",
     "./channel-refs": "./src/channel-refs.ts",
+    "./cursor": "./src/cursor.ts",
     "./diff": "./src/diff.ts",
     "./markdown": "./src/markdown.ts",
     "./media-grid": "./src/media-grid.ts",

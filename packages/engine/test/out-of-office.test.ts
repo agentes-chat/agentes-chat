@@ -28,8 +28,8 @@ afterEach(async () => {
   await current?.close();
 });
 
-const statusOf = async (fx: Fixture, agentId: string, options = {}) =>
-  (await loadAgentStatuses(fx.db, fx.org.id, new Date(), undefined, options)).find((s) => s.agentId === agentId);
+const statusOf = async (fx: Fixture, agentId: string) =>
+  (await loadAgentStatuses(fx.db, fx.org.id, new Date())).find((s) => s.agentId === agentId);
 
 /** Spends `agentId`'s whole budget for this month. */
 async function spendBudget(fx: Fixture, agentId: string) {
@@ -50,7 +50,7 @@ async function spendBudget(fx: Fixture, agentId: string) {
 }
 
 /** Puts `agentId` on Claude Code on a new computer of the workspace. */
-async function onPlan(fx: Fixture, agentId: string, fallback: boolean) {
+async function onPlan(fx: Fixture, agentId: string) {
   const [machine] = await fx.db
     .insert(schema.machines)
     .values({ orgId: fx.org.id, name: "MacBook" })
@@ -58,7 +58,7 @@ async function onPlan(fx: Fixture, agentId: string, fallback: boolean) {
   if (!machine) throw new Error("no machine");
   await fx.db
     .update(schema.agents)
-    .set({ brain: "claude_code", machineId: machine.id, brainFallback: fallback })
+    .set({ brain: "claude_code", machineId: machine.id })
     .where(eq(schema.agents.id, agentId));
   return machine.id;
 }
@@ -75,9 +75,9 @@ test("an agent whose monthly budget is spent is out of office until the next mon
   expect([...(await outOfOfficeIds(f.db, f.org.id, [f.agent.id]))]).toEqual([f.agent.id]);
 });
 
-test("a plan at its limit: out only when no model answers instead, and back at the reset", async () => {
+test("a plan at its limit: out, though the workspace has a key (the API never stands in), and back at the reset", async () => {
   f = await setup();
-  const machineId = await onPlan(f, f.agent.id, false);
+  const machineId = await onPlan(f, f.agent.id);
   const reset = new Date(Date.now() + 2 * 3600_000).toISOString();
   notePlanLimit(machineId, "claude_code", reset);
   expect(await statusOf(f, f.agent.id)).toMatchObject({
@@ -85,17 +85,8 @@ test("a plan at its limit: out only when no model answers instead, and back at t
     status: { kind: "out_of_plan", until: new Date(Date.parse(reset)).toISOString() },
   });
 
-  // With the fallback on, the model brain answers in a conversation: out only when it has no key.
-  await f.db.update(schema.agents).set({ brainFallback: true }).where(eq(schema.agents.id, f.agent.id));
-  expect((await statusOf(f, f.agent.id))?.presence).toBe("away");
-  expect((await statusOf(f, f.agent.id, { hasModel: async () => true }))?.presence).toBe("away");
-  expect((await statusOf(f, f.agent.id, { hasModel: async () => false }))?.presence).toBe("out");
-  // The model it would fall back on has no budget left either.
-  await spendBudget(f, f.agent.id);
-  expect((await statusOf(f, f.agent.id, { hasModel: async () => true }))?.status?.kind).toBe("out_of_budget");
-
   clearPlanLimits();
-  expect((await statusOf(f, f.agent.id, { hasModel: async () => true }))?.presence).toBe("away");
+  expect((await statusOf(f, f.agent.id))?.presence).toBe("away");
 });
 
 test("out of office keeps the agent's own words, and a held agent still reads offline", async () => {

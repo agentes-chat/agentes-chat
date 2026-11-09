@@ -20,7 +20,6 @@ import {
   type IconName,
   InfoHint,
   LineIcon,
-  ProviderLogo,
   Text,
   textLineOf,
   useTheme,
@@ -40,34 +39,6 @@ export const usePlanHold = (orgId: string, org: OrgSummary | null | undefined) =
 export function PlanHoldNote({ org, keys }: { org: OrgSummary | null | undefined; keys?: boolean }) {
   const { t } = useTranslation();
   return <Note icon="pause">{planHoldPhoneLine(t, org ? can(org, "manage_billing") : false, keys)}</Note>;
-}
-
-/**
- * A row of an agent's AI (its page, Connect an AI's first group): its maker's mark, its name, the lines under it
- * (`accountRow`, `existingRows`).
- */
-export function AiRow({
-  row,
-  checked,
-  disabled,
-  onPress,
-}: {
-  row: { label: string; sub?: string; below?: string; mark: string; off: boolean };
-  checked?: boolean;
-  disabled?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <GroupedRow
-      leading={<ProviderLogo id={row.mark} size="sm" off={row.off} />}
-      label={row.label}
-      {...(row.sub ? { sub: row.sub } : {})}
-      {...(row.below ? { belowText: row.below } : {})}
-      {...(checked !== undefined ? { checked } : {})}
-      disabled={disabled}
-      onPress={onPress}
-    />
-  );
 }
 
 /**
@@ -103,9 +74,8 @@ export function Note({
 
 /**
  * "Atende outras pessoas" (ADR 0059 §5), the web's `PlanReplies`: off, an agent on its owner's plan answers only them;
- * on, everyone who may talk to it. Under it, a line saying which, on which plan (whose, to an admin), and the plan's
- * terms behind its ⓘ.
- * A plan's page and the agent's AI draw the same.
+ * on, everyone who may talk to it. Its ⓘ, right after the label, says whom it answers on which plan (whose, to an admin
+ * or on someone else's plan) and the plan's terms: no line under it. A plan's page and the agent's AI draw the same.
  */
 export function PlanReplies({
   on,
@@ -119,9 +89,9 @@ export function PlanReplies({
 }: {
   on: boolean;
   onChange: (on: boolean) => void;
-  /** The agent's name, for the line under the switch. */
+  /** The agent's name, for what the ⓘ says. */
   agent: string;
-  /** The plan's owner's first name, to anyone else (an admin); absent: the viewer's own plan. */
+  /** The plan's owner's first name, to anyone else (an admin or on someone else's plan); absent: the viewer's own plan. */
   owner?: string;
   brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
   /** The account's plan as the CLI says it (`max`, `team`…): a seat has its own words. */
@@ -132,29 +102,18 @@ export function PlanReplies({
 }) {
   const { t } = useTranslation();
   const says = planReplies(t, { on, agent, owner, brain, plan, coding });
+  const label = t("aiAccounts.share.switch");
   return (
-    <View>
-      <GroupedList>
-        <GroupedRow
-          label={t("aiAccounts.share.switch")}
-          labelLines={2}
-          toggle={on}
-          disabled={disabled}
-          onPress={() => onChange(!on)}
-        />
-      </GroupedList>
-      <View style={styles.foot}>
-        <InfoHint
-          name={t("common.about", { label: t("aiAccounts.share.terms.about") })}
-          text={says.text}
-          variant="footnote"
-        >
-          <Text variant="footnote" tone="faint">
-            {says.line}
-          </Text>
-        </InfoHint>
-      </View>
-    </View>
+    <GroupedList>
+      <GroupedRow
+        label={label}
+        labelLines={2}
+        hint={{ name: t("common.about", { label }), text: `${says.line} ${says.text}` }}
+        toggle={on}
+        disabled={disabled}
+        onPress={() => onChange(!on)}
+      />
+    </GroupedList>
   );
 }
 

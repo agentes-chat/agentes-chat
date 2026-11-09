@@ -29,7 +29,7 @@ import { composioUsageText, showsComposioUsage } from "@agenteschat/client/lib/c
 import { computerEdition } from "@agenteschat/client/lib/computer";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, keyRefusal } from "@agenteschat/client/lib/errors";
-import { formatPercent, formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
+import { BLANK_LINE, formatPercent, formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   keyLooksValid,
@@ -719,7 +719,7 @@ function SettingsTiles() {
             {s.id === "usage" && budget !== null && (
               <Meter value={Math.min(100, budget)} max={100} label={t("settings.section.usage")} />
             )}
-            <span className="settings-tile__state">{state[s.id] ?? "\u00a0"}</span>
+            <span className="settings-tile__state">{state[s.id] ?? BLANK_LINE}</span>
           </Link>
         ))}
       </div>

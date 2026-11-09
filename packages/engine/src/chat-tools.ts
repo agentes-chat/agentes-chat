@@ -267,7 +267,8 @@ export function createChatToolSource(deps: {
               // Only a routine's own run takes files from its room; a run it woke takes none from its conversation.
               alsoFrom: routine && ctx.background ? ctx.channelId : null,
             });
-            files.push({ id: shared.artifact.id, version: shared.artifact.version, title: shared.artifact.title });
+            const { id: fileId, version, title, kind } = shared.artifact;
+            files.push({ id: fileId, version, title, kind });
           }
           // A mention reaches only that channel's members: the result names the agents and people it missed.
           const unreached = await unreachedAgents(ctx.db, {
@@ -403,7 +404,8 @@ export function createChatToolSource(deps: {
               requesterUserId: requester,
               alsoFrom: routine && ctx.background ? ctx.channelId : null,
             });
-            files.push({ id: shared.artifact.id, version: shared.artifact.version, title: shared.artifact.title });
+            const { id: fileId, version, title, kind } = shared.artifact;
+            files.push({ id: fileId, version, title, kind });
           }
           const [run] = await ctx.db
             .select({ hop: schema.agentRuns.hop })

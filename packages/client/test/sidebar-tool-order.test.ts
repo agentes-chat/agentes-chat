@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { SidebarItem } from "../src/api/types";
-import { knownToolOrder, moveSection, moveShownTool, placeTool, SIDEBAR_ITEMS } from "../src/lib/sidebar-items";
+import {
+  knownToolOrder,
+  moveSection,
+  moveShownTool,
+  placeBefore,
+  placeTool,
+  SIDEBAR_ITEMS,
+} from "../src/lib/sidebar-items";
 
 const order: SidebarItem[] = [...SIDEBAR_ITEMS];
 
@@ -40,5 +47,16 @@ describe("the tools' order", () => {
   test("the setup dialog moves a tool one place in the whole order", () => {
     expect(moveSection(order, "issues", -1).slice(0, 4)).toEqual(["approvals", "proposals", "issues", "threads"]);
     expect(moveSection(order, "taskManager", 1)).toEqual(order);
+  });
+});
+
+describe("a channel or a category placed before another", () => {
+  const list: { id: string; moved?: boolean }[] = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  test("before the one named, at the end with none or one that's gone, changed as asked", () => {
+    expect(placeBefore(list, "c", "a").map((x) => x.id)).toEqual(["c", "a", "b"]);
+    expect(placeBefore(list, "a", null).map((x) => x.id)).toEqual(["b", "c", "a"]);
+    expect(placeBefore(list, "a", "gone").map((x) => x.id)).toEqual(["b", "c", "a"]);
+    expect(placeBefore(list, "gone", "a")).toEqual(list);
+    expect(placeBefore(list, "b", "a", (x) => ({ ...x, moved: true }))[0]).toEqual({ id: "b", moved: true });
   });
 });

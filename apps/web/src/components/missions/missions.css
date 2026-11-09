@@ -553,6 +553,16 @@ a.mi-ref:hover code {
   .mh__end {
     grid-column: 3;
   }
+  /* The title keeps its words: its state goes under it when both don't fit, never squeezing it to a letter. The
+     buttons on each side stay at its height, not in the middle of the lines under it. */
+  .mh__line {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .mh__lead,
+  .mh__end {
+    align-self: start;
+  }
   .mh__mini,
   .mh[data-compact] .mh__mini,
   .mh__exec,
@@ -1652,11 +1662,10 @@ html:not([data-pointer]) .mi-quiet:focus-visible {
   gap: 10px;
   width: 100%;
 }
+/* An `.ac-iconline`: words that wrap on a phone keep the check on their first line. */
 .mi-cfg__saved {
   flex: 1;
   min-width: 0;
-  display: inline-flex;
-  align-items: center;
   gap: 6px;
   font-size: 13px;
   color: var(--faint);

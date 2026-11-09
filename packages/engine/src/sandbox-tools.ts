@@ -35,7 +35,7 @@ import {
 } from "./artifacts";
 import { recordAudit } from "./audit";
 import { fedByRoutine, runAuthorityById } from "./authority";
-import { sniffModelImage } from "./avatars";
+import { pictureOf, sniffModelImage } from "./avatars";
 import { publishChannelEvent } from "./events";
 import { copyToComputer } from "./file-pulls";
 import { cutText, formatBytes, textOfBytes } from "./format";
@@ -1028,7 +1028,15 @@ export function createSandboxToolSource(
               });
           return {
             content: `Saved ${path} as "${a.title}" (${a.kind}), artifact ${a.id}, version ${a.version}. ${await fileLanded(deps.artifacts, ctx, a.id, input.shared_drive)}`,
-            data: { artifact: { id: a.id, version: a.version, title: a.title } },
+            data: {
+              artifact: {
+                id: a.id,
+                version: a.version,
+                title: a.title,
+                kind: a.kind,
+                ...(a.content.kind === "file" ? pictureOf(a.content) : {}),
+              },
+            },
           };
         } catch (error) {
           return failed(error);
@@ -1084,7 +1092,9 @@ export function createSandboxToolSource(
           if (!done) return { content: `Failed: ${row.error ?? "the upload did not finish"}`, isError: true };
           return {
             content: `Uploaded ${path} as "${done.title}" (file, ${formatBytes(done.size)}), artifact ${done.id}, version ${done.version}. ${await fileLanded(deps.artifacts, ctx, done.id, input.shared_drive)}`,
-            data: { artifact: { id: done.id, version: done.version, title: done.title } },
+            data: {
+              artifact: { id: done.id, version: done.version, title: done.title, kind: "file", ...pictureOf(done) },
+            },
           };
         } catch (error) {
           return failed(error);

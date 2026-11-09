@@ -1,5 +1,6 @@
 import {
   askControlWords,
+  cursorStep,
   type DesktopMode,
   type DesktopViewState,
   desktopMode,
@@ -77,6 +78,7 @@ import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { successHaptic, tapHaptic } from "../shared/parts";
 import { useActiveWork } from "../shared/queries";
+import { AgentPointer, type AgentPointerHandle } from "./AgentPointer";
 import { Cover } from "./Cover";
 import { DOCK_HANG, DockDone, DockIcon, DockRule, DockText, EdgeDock } from "./EdgeDock";
 import { LiveTrail } from "./LiveTrail";
@@ -237,6 +239,8 @@ export function AgentScreen({
 
   const line = useRef(new PointerLine((x, y, buttons) => web.current?.call("pointer", x, y, buttons))).current;
   useEffect(() => () => line.stop(), [line]);
+  // The agent's own pointer (protocol 54), drawn while the person watches.
+  const agentPointer = useRef<AgentPointerHandle>(null);
 
   useEffect(() => {
     if (ready) web.current?.call("set", { connect, mode });
@@ -785,6 +789,7 @@ export function AgentScreen({
                     else if (event.type === "session") setSession(event.mode);
                     else if (event.type === "size") setDeskSize({ width: event.width, height: event.height });
                     else if (event.type === "changed") void view.desktopQ.refetch();
+                    else if (event.type === "cursor") agentPointer.current?.step(cursorStep(t, event));
                     else toast({ title: t("desktop.clipboard.tooLong", g), icon: "x" });
                   }}
                   onGone={() => {
@@ -794,6 +799,17 @@ export function AgentScreen({
                   }}
                 />
               </Animated.View>
+              {/* Never over what the person does: gone in control and while control changes hands. */}
+              <AgentPointer
+                ref={agentPointer}
+                agentId={agentId}
+                name={name}
+                color={color}
+                camera={camera}
+                desk={deskSize}
+                shown={live && !inControl && !switching}
+                reduced={reduced}
+              />
               {inControl && !wide ? (
                 <Animated.View pointerEvents="none" style={[styles.cursor, pointer]}>
                   <PixelCursor />

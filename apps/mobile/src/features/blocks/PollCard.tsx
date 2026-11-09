@@ -1,13 +1,16 @@
 import { useArtifact, usePoll, useVote } from "@agenteschat/client";
+import { TYPICAL_CARD_OPTIONS } from "@agenteschat/client/lib/artifacts";
 import { pollAnswered, pollIsOpen, pollTally, pollToggle } from "@agenteschat/client/lib/blocks";
+import { BLANK_LINE } from "@agenteschat/client/lib/format";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, Sky, Text, textLineOf, useToast } from "@/ui";
 import { useFontScale } from "@/ui/text-scale";
 import { initialText, leadBox } from "@/ui/type-scale";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { tapHaptic } from "../shared/parts";
+import type { CardShape } from "./logic";
 
 const FACES = 4;
 
@@ -15,7 +18,7 @@ const FACES = 4;
  * A vote in the conversation (ADR 0113), drawn by the app and never by a page: a vote is an act of the person's.
  * Everyone sees the marks arrive (`poll.updated`).
  */
-export function PollCard({ id, version }: { id: string; version?: number }) {
+export function PollCard({ id, version, card }: { id: string; version?: number; card?: CardShape }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
@@ -27,31 +30,32 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
   const vote = useVote(orgId, id);
   const fontScale = useFontScale();
   const a = artifact.data;
-  const poll = query.data;
-  if (a?.content.kind !== "poll" || !poll) {
-    return (
-      <View style={[styles.card, styles.loading, { backgroundColor: c.raised, borderColor: c.line2 }]}>
-        <ActivityIndicator color={c.faint} />
-        <Text variant="footnote" tone="muted">
-          {t("mobile.blocks.building")}
-        </Text>
-      </View>
-    );
-  }
-  const { options, multiple, question } = a.content;
-  const open = pollIsOpen(poll);
+  // Before it loads: the vote's frame, its question and as many empty rows as its ref says.
+  const content =
+    a?.content.kind === "poll"
+      ? a.content
+      : {
+          question: card?.title || BLANK_LINE,
+          options: Array.from({ length: card?.options ?? TYPICAL_CARD_OPTIONS }, () => BLANK_LINE),
+          multiple: false,
+        };
+  // Until its marks are read: its rows with none marked and nothing to press, at the card's size.
+  const poll = query.data ?? { id, closesAt: "", closedAt: null, people: 0, votes: [] };
+  const ready = a?.content.kind === "poll" && Boolean(query.data);
+  const { options, multiple, question } = content;
+  const open = !ready || pollIsOpen(poll);
   const tally = pollTally(options, poll);
   const top = Math.max(...tally.map((o) => o.voters.length));
   const nameOf = (userId: string) => dir.memberById.get(userId)?.name ?? t("mobile.blocks.someone");
   // An option's label wraps: its box, mark and faces sit on its first line, not centred on the whole option.
   const line = textLineOf("body", fontScale);
-  const closes = new Intl.DateTimeFormat(i18n.language, { dateStyle: "short", timeStyle: "short" }).format(
-    new Date(poll.closesAt),
-  );
+  const closes = ready
+    ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "short", timeStyle: "short" }).format(new Date(poll.closesAt))
+    : "";
   return (
     <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}>
       <Sky
-        color={agentLook(dir.agentById.get(a.createdBy.id)).color}
+        color={agentLook(dir.agentById.get(a?.createdBy.id ?? "")).color}
         surface="raised"
         depth={0.95}
         fade={0}
@@ -62,7 +66,7 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
           {question}
         </Text>
         <Text variant="footnote" tone="faint">
-          {open ? t("mobile.blocks.pollCloses", { time: closes }) : t("mobile.blocks.pollClosed")}
+          {!ready ? BLANK_LINE : open ? t("mobile.blocks.pollCloses", { time: closes }) : t("mobile.blocks.pollClosed")}
         </Text>
       </View>
       <View style={styles.options}>
@@ -73,9 +77,9 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
             <Pressable
               key={o.option}
               accessibilityRole="checkbox"
-              accessibilityState={{ checked: mine, disabled: !open }}
+              accessibilityState={{ checked: mine, disabled: !open || !ready }}
               accessibilityLabel={`${o.label}, ${o.voters.length}`}
-              disabled={!open || vote.isPending || !meId}
+              disabled={!ready || !open || vote.isPending || !meId}
               onPress={() => {
                 if (!meId) return;
                 tapHaptic();
@@ -127,7 +131,7 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
       <View style={[styles.foot, { borderTopColor: c.line2 }]}>
         <View style={[styles.mark, { backgroundColor: open ? c.faint : c.ok }]} />
         <Text variant="footnote" tone="muted">
-          {t("mobile.blocks.pollAnswered", { count: pollAnswered(poll), total: poll.people })}
+          {ready ? t("mobile.blocks.pollAnswered", { count: pollAnswered(poll), total: poll.people }) : BLANK_LINE}
         </Text>
       </View>
     </View>
@@ -147,7 +151,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderBottomLeftRadius: 4,
   },
-  loading: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 8, opacity: 0.7 },
   head: { gap: 1, paddingHorizontal: 14, paddingTop: 12 },
   bold: { fontWeight: "600" },

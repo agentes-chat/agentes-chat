@@ -2,9 +2,9 @@ import type { Agent, Channel, Member } from "@agenteschat/client";
 import { agentStateIn, useRoles } from "@agenteschat/client";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { relativeTime } from "@agenteschat/client/lib/format";
-import { memberGroups } from "@agenteschat/client/lib/member-groups";
-import { agentStatusShort, isOutOfOffice } from "@agenteschat/client/lib/presence";
-import { Avatar, Button, Icon, matchesWords, PixelSpinner, RoleMark, SearchField } from "@agenteschat/ui";
+import { isAgentOff, memberGroups } from "@agenteschat/client/lib/member-groups";
+import { agentOffLine, agentStatusShort, isOutOfOffice } from "@agenteschat/client/lib/presence";
+import { Avatar, Button, cx, Icon, matchesWords, PixelSpinner, RoleMark, SearchField } from "@agenteschat/ui";
 import { type KeyboardEvent, type TouchEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -16,7 +16,14 @@ import { unshownRow } from "@/components/Sidebar";
 import { AgentTrail, colorOf } from "@/components/Sky";
 import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
 import { useModalSheet } from "@/hooks/useModalSheet";
-import { agentLine, personLine, useAgentPresence, usePersonPresence, usePresences } from "@/hooks/usePresence";
+import {
+  agentLine,
+  personLine,
+  useAgentPresence,
+  useAgentsShown,
+  usePersonPresence,
+  usePresences,
+} from "@/hooks/usePresence";
 import { useStreams } from "@/realtime/context";
 import "./members.css";
 
@@ -156,12 +163,17 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
   );
   const [allOffline, setAllOffline] = useState(false);
   const busy = new Set(busyKey.split(" "));
+  const shownOf = useAgentsShown((id) => busy.has(id));
   const groups = memberGroups({
     people,
     agents,
     roles,
     presenceOf: (id) => presences.get(id),
     busy: (id) => busy.has(id),
+    agentOff: (id) => {
+      const shown = shownOf(id);
+      return shown !== null && isAgentOff(shown.presence, shown.line);
+    },
   });
   // ↑/↓ move between the rows (each row is a button).
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -187,7 +199,11 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
         // ponytail: every row is in the DOM (offline capped at 100); virtualize if a channel reaches thousands.
         const rows = g.key === "offline" && !allOffline ? g.rows.slice(0, OFFLINE_CAP) : g.rows;
         return (
-          <section key={g.key} className="members-side__group" aria-label={label}>
+          <section
+            key={g.key}
+            className={cx("members-side__group", g.key === "offline" && "members-side__group--off")}
+            aria-label={label}
+          >
             <h2 className="members-side__head">
               {g.key === "owner" && <RoleMark color="violet" icon="audienceOwner" size={16} />}
               {g.role && <RoleMark color={g.role.color} icon={g.role.icon} size={16} />}
@@ -285,8 +301,10 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
   const line = shown?.line ? agentStatusShort(t, shown.line, i18n.language) : null;
   const full = agentLine(t, shown?.line ?? null, i18n.language)?.text;
   const doing = state !== "idle" ? t(`channel.agentState.${state}`) : null;
-  // Under the name, one line of one height: its line (why it is out, what it is on), else its role (the agent's fixed
-  // label) as a tag, else its presence. Working here is the pixel orbit beside its name, so the row never jumps.
+  // Under the name, one line of one height: its line (why it is out, what it is on), else, off (under Offline), why,
+  // else its role (the agent's fixed label) as a tag, else its presence. Working here is the pixel orbit beside its
+  // name, so the row never jumps.
+  const why = shown && isAgentOff(shown.presence, shown.line) ? agentOffLine(t, shown, i18n.language) : null;
   const shows = useId();
   return (
     <ProfileTrigger
@@ -320,6 +338,8 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
           </span>
           {line ? (
             <StatusLine {...line} className="members-side__line" />
+          ) : why ? (
+            <span className="members-side__line">{why}</span>
           ) : agent.role ? (
             <span className="members-side__line ac-tag">{agent.role}</span>
           ) : (

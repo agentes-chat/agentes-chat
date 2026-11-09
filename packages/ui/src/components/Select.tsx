@@ -1,9 +1,9 @@
 import { Select as RSelect } from "radix-ui";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cx } from "../cx";
 import { movesByKeys, trackInput } from "../device";
-import { EDGE_ROOM } from "../floating";
+import { EDGE_ROOM, joinList, placeTip } from "../floating";
 import { Icon } from "../icons/Icon";
 import { useFieldControl } from "./Field";
 
@@ -69,8 +69,18 @@ function renderItems<V extends string>(items: SelectOption<V>[], all: typeof ite
 function SelectItem<V extends string>({ option: o }: { option: SelectOption<V> }) {
   const hintId = `hint${useId().replace(/[^\w-]/g, "")}`;
   const mark = useRef<HTMLSpanElement>(null);
+  const tip = useRef<HTMLSpanElement>(null);
   // Where the ⓘ is while its note shows: the list scrolls and clips, so the note is drawn over the page, above it.
   const [at, setAt] = useState<DOMRect | null>(null);
+  const [place, setPlace] = useState<{ left: number; top: number } | null>(null);
+  // The kit's tip room from the ⓘ's own mark (not its padded box), and from the list's edges as from the window's.
+  useLayoutEffect(() => {
+    const box = tip.current?.getBoundingClientRect();
+    if (!at || !box) return setPlace(null);
+    const icon = mark.current?.querySelector("svg")?.getBoundingClientRect() ?? at;
+    const list = mark.current?.closest(".ac-menu")?.getBoundingClientRect();
+    setPlace(placeTip(icon, box, "center", window.innerWidth, list));
+  }, [at]);
   useEffect(() => {
     if (o.hint) trackInput();
   }, [o.hint]);
@@ -128,9 +138,10 @@ function SelectItem<V extends string>({ option: o }: { option: SelectOption<V> }
       {at &&
         createPortal(
           <span
+            ref={tip}
             className="ac-hint__bubble ac-glass ac-menu__tip"
             aria-hidden="true"
-            style={{ right: window.innerWidth - at.right - 4, top: at.top - 6 }}
+            style={place ? { left: place.left, top: place.top } : { left: 0, top: 0, visibility: "hidden" }}
           >
             {o.hint}
           </span>,
@@ -187,6 +198,8 @@ export function Select<V extends string = string>({
 }: SelectProps<V>) {
   const wiring = useFieldControl({ id });
   const chosen = options.find((o) => o.value === value);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const join = useCallback((list: HTMLDivElement | null) => (list ? joinList(list, trigger.current) : undefined), []);
   return (
     <div className={cx("ac-select", size === "sm" && "ac-select--sm", className)}>
       <RSelect.Root
@@ -195,6 +208,7 @@ export function Select<V extends string = string>({
         disabled={disabled}
       >
         <RSelect.Trigger
+          ref={trigger}
           className="ac-select__trigger"
           id={wiring.id}
           aria-label={rest["aria-label"]}
@@ -216,9 +230,11 @@ export function Select<V extends string = string>({
         </RSelect.Trigger>
         <RSelect.Portal>
           <RSelect.Content
+            // Joined to its trigger: one border between them.
+            ref={join}
             className="ac-menu ac-menu--select"
             position="popper"
-            sideOffset={4}
+            sideOffset={-1}
             collisionPadding={EDGE_ROOM}
             align={align}
             aria-label={listLabel ?? rest["aria-label"]}

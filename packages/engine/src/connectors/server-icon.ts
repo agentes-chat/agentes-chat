@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { type BlobStore, readCapped } from "@agenteschat/adapters";
 import { and, type Database, eq, isNull, schema } from "@agenteschat/db";
-import { sniffImage, stripImageMetadata } from "../avatars";
+import { imageDimensions, sniffImage, stripImageMetadata } from "../avatars";
 import { caches } from "../cache";
 import { NotFoundError } from "../errors";
 import { assertPublicHttpsUrl, type ResolveHost } from "../net-guard";
@@ -121,41 +121,6 @@ async function iconBytes(deps: ServerIconDeps, icon: McpIcon): Promise<Uint8Arra
   } catch {
     return null;
   }
-}
-
-/** Width and height from the image's header, or null when it can't be read. */
-export function imageDimensions(b: Uint8Array, type: IconType): { width: number; height: number } | null {
-  const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
-  const ascii = (from: number, to: number) => String.fromCharCode(...b.subarray(from, to));
-  if (type === "image/png") {
-    if (b.length < 24 || ascii(12, 16) !== "IHDR") return null;
-    return { width: view.getUint32(16), height: view.getUint32(20) };
-  }
-  if (type === "image/jpeg") {
-    let i = 2;
-    while (i + 9 <= b.length && b[i] === 0xff) {
-      const marker = b[i + 1] as number;
-      // Start of frame (baseline, progressive, lossless…), not DHT (C4), JPG (C8) or DAC (CC).
-      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-        return { height: view.getUint16(i + 5), width: view.getUint16(i + 7) };
-      }
-      if (marker === 0xda) return null;
-      i += 2 + view.getUint16(i + 2);
-    }
-    return null;
-  }
-  if (b.length < 30) return null;
-  const chunk = ascii(12, 16);
-  if (chunk === "VP8X") {
-    const u24 = (at: number) => (b[at] as number) | ((b[at + 1] as number) << 8) | ((b[at + 2] as number) << 16);
-    return { width: u24(24) + 1, height: u24(27) + 1 };
-  }
-  if (chunk === "VP8 ") return { width: view.getUint16(26, true) & 0x3fff, height: view.getUint16(28, true) & 0x3fff };
-  if (chunk === "VP8L") {
-    const bits = view.getUint32(21, true);
-    return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
-  }
-  return null;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { type BlockChange, useArtifact, useBlockReply, useKeepBlock, useSharedBlock } from "@agenteschat/client";
+import { CARD_BLOCK_ROOM } from "@agenteschat/client/lib/artifacts";
 import { type BlockEvent, blockEvent, blockPage, DRAFT_SETTLE_MS } from "@agenteschat/client/lib/blocks";
-import { clockHour } from "@agenteschat/client/lib/format";
+import { BLANK_LINE, clockHour } from "@agenteschat/client/lib/format";
 import { chartRamp } from "@agenteschat/ui/sky/chart";
 import { randomUUID } from "expo-crypto";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,12 +9,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
-import { Button, IconButton, Sky, Text, useTheme, useToast } from "@/ui";
+import { Button, ICON_BUTTON_SIZE, IconButton, Sky, Text, useTheme, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PushedHeader, tapHaptic } from "../shared/parts";
-import { blockMayLoad, hostScript, INLINE_HEIGHT, themeScript, withLiveBlock } from "./logic";
+import { blockMayLoad, type CardShape, hostScript, INLINE_HEIGHT, themeScript, withLiveBlock } from "./logic";
 import { SpecBlock } from "./SpecBlock";
 
 const SYSTEM_FONT = '-apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,system-ui,sans-serif';
@@ -371,7 +372,7 @@ export function LiveBlock({
 }
 
 /** A block on its message: the agent's card, its title, and the block itself. */
-export function LiveBlockCard({ id, version }: { id: string; version?: number }) {
+export function LiveBlockCard({ id, version, card }: { id: string; version?: number; card?: CardShape }) {
   const { t } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
@@ -379,12 +380,22 @@ export function LiveBlockCard({ id, version }: { id: string; version?: number })
   const query = useArtifact(orgId, id, version);
   const a = query.data;
   if (a?.content.kind !== "block") {
+    // Before it loads: the card's frame, its title and its button's room, then a short body (a block's height is its
+    // own, the same room the web keeps).
     return (
-      <View style={[styles.card, styles.loading, { backgroundColor: c.raised, borderColor: c.line2 }]}>
-        <ActivityIndicator color={c.faint} />
-        <Text variant="footnote" tone="muted">
-          {t("mobile.blocks.building")}
-        </Text>
+      <View
+        style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}
+        accessibilityState={{ busy: true }}
+      >
+        <View style={styles.head}>
+          <View style={styles.titles}>
+            <Text variant="subhead" style={styles.bold} numberOfLines={2}>
+              {card?.title || BLANK_LINE}
+            </Text>
+          </View>
+          <View style={[styles.headButton, { width: ICON_BUTTON_SIZE, height: ICON_BUTTON_SIZE }]} />
+        </View>
+        <View style={{ height: CARD_BLOCK_ROOM }} />
       </View>
     );
   }
@@ -489,7 +500,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderBottomLeftRadius: 4,
   },
-  loading: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 8, opacity: 0.7 },
   head: { flexDirection: "row", alignItems: "flex-start", gap: 4, paddingLeft: 14, paddingRight: 4, paddingTop: 12 },
   titles: { flex: 1, minWidth: 0 },

@@ -432,7 +432,7 @@ describe("a routine's own files", () => {
     await drainOutbox(f.db, f.handlers);
     const [posted] = await messagesIn(f, f.general.id);
     const [file] = await driveOf(f.owner.id);
-    expect(posted?.meta.artifacts).toEqual([{ id: file?.id, version: 1, title: "Semana" }]);
+    expect(posted?.meta.artifacts).toEqual([{ id: file?.id, version: 1, title: "Semana", kind: "document" }]);
   });
 
   test("share_artifact in a routine says the files already go where it reports", async () => {

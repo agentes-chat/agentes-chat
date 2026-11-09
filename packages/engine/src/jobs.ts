@@ -60,6 +60,7 @@ import { executeRun, type RunExecutorDeps } from "./executor";
 import { FOLLOW_UP_JOB, wakeFollowUp } from "./follow-through";
 import { cutText } from "./format";
 import type { GitHubAppAccess } from "./git/github-call";
+import { GITHUB_EVENT_JOB, type GitHubAppEvent, handleGitHubAppEvent } from "./git/github-events";
 import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
 import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
@@ -85,6 +86,7 @@ import { notifyMessage } from "./notification-producers";
 import { ORG_FILES_PURGE_ATTEMPTS, ORG_FILES_PURGE_JOB, USER_FILES_PURGE_JOB } from "./organizations";
 import { outOfOfficeIds } from "./out-of-office";
 import { enqueue, type JobHandlers, type OutboxJob, PermanentJobError } from "./outbox";
+import { checkParkedRun, EARLY_CHECK_JOB, scheduleParkedChecks } from "./parked-asks";
 import { notifyPersonLimit, PERSON_LIMIT_JOB } from "./person-usage";
 import { checkPushReceipts, deliverPush, pushTicketsOf } from "./push";
 import { reachOf, settleReach } from "./reach";
@@ -266,8 +268,7 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
       maxHops: deps.maxHops,
     },
     hasAi: (orgId) => orgHasAi({ db: deps.db, gateway: deps.gateway, machines: deps.machines }, orgId),
-    outOfOffice: (orgId, ids) =>
-      outOfOfficeIds(deps.db, orgId, ids, { hasModel: (agent) => deps.gateway.hasModelCredential(agent) }),
+    outOfOffice: (orgId, ids) => outOfOfficeIds(deps.db, orgId, ids),
     routing: { jev: () => jevPicks(jev?.key), smallModel, plans },
     quietMs: router.quietMs,
     quietByTyping: router.quietByTyping,
@@ -531,7 +532,7 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     missionEngine: deps.missionEngine ?? null,
   };
 
-  return {
+  const handlers: JobHandlers = {
     // A wake the brakes deferred (its agent at its cap of unrequested work, or its computer full) looks again.
     [LATER_JOB]: async (job) => {
       const orgId = orgOf(job);
@@ -796,6 +797,14 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     [POLL_CLOSE_JOB]: async (job) => {
       if (!deps.artifacts) throw new Error("Files are unavailable");
       await closePoll(deps.artifacts, orgOf(job), String(job.payload.artifactId));
+    },
+    // Something landed where a waiting run would read it: its asks, or its own requests, are checked now.
+    [EARLY_CHECK_JOB]: async (job) => {
+      await checkParkedRun(
+        { db: deps.db, pubsub: deps.pubsub, judge: deps.context?.judge },
+        String(job.payload.runId),
+        job.id,
+      );
     },
     // A follow-up's time came: the agent is woken in its conversation (follow-through.ts).
     [FOLLOW_UP_JOB]: async (job) => {
@@ -1093,7 +1102,24 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     [AUTONOMY_REPORT_JOB]: async (job) => {
       await queueAutonomyEmail(deps.db, job.payload, { router: deps.router?.enabled ?? false });
     },
+    // What happened on GitHub to an item an agent worked on, or naming the app (ADR 0156).
+    [GITHUB_EVENT_JOB]: async (job) => {
+      await handleGitHubAppEvent({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), job.payload.event as GitHubAppEvent);
+    },
   };
+  // A waiting run whose ask may have just been handled here checks early (`parked-asks.ts`). After the routing, not
+  // before it: ahead of the routing, that statement delays the walk to the message's root (`messageRoot`), which the
+  // run the message starts shares, and that run's reads then do the walk themselves.
+  const posted = handlers["message.posted"];
+  handlers["message.posted"] = async (job, ctx) => {
+    try {
+      await posted?.(job, ctx);
+    } finally {
+      const message = await getMessage(deps.db, orgOf(job), String(job.payload.messageId)).catch(() => null);
+      if (message) await scheduleParkedChecks(deps.db, message).catch(() => {});
+    }
+  };
+  return handlers;
 }
 
 /** The message opens by addressing `handle` ("@ada …", after any other leading mentions). */

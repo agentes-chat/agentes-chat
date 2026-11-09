@@ -71,17 +71,6 @@ export async function recordRunBrain(db: Executor, runId: string, kind: BrainKin
 }
 
 /**
- * Whether a run whose computer brain can't answer may hand the turn to the model brain (ADR 0032 §5).
- * Never a background run (ADR 0053 §6.4): a routine thinks with its agent's own brain and waits quietly
- * for its computer instead; the agent's owner may also turn the fallback off. Never the team's right hand on a
- * plan (ADR 0137 §7): its DM says why it can't think, with the way to an API key, and nothing runs on a key unasked.
- */
-export const mayFallBack = (
-  agent: Pick<Agent, "brainFallback"> & { builtin?: string | null },
-  run: Pick<AgentRun, "background"> & { workId?: string | null },
-) => !run.background && !run.workId && agent.brainFallback !== false && !isRightHand(agent);
-
-/**
  * Plan limits seen on this process (`limit` events), by machine, brain and account: a cache in front of the
  * stored usage (`storedPlanLimit`), which a deploy or another replica reads too. `until` null: the reset isn't known.
  */
@@ -472,6 +461,7 @@ export const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
   "plan_limit",
   "plan_not_owner",
   "plan_not_shared",
+  "plan_unattended",
   "tools_not_locked",
 ]);
 

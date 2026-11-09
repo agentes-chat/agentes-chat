@@ -66,18 +66,17 @@ export function ChannelHeader({
         >
           <Icon name="cog" />
         </button>
-        {total > 0 && (
-          <button
-            type="button"
-            className="ac-btn ac-btn--ghost ac-btn--icon channel__icon channel__members-toggle"
-            aria-label={t("channel.membersButton", { count: total })}
-            aria-pressed={membersOpen}
-            title={t(membersOpen ? "channel.header.hideMembers" : "channel.header.showMembers")}
-            onClick={onMembers}
-          >
-            <Icon name="members" />
-          </button>
-        )}
+        {/* Always there, before the members load too: the row of buttons keeps its width. */}
+        <button
+          type="button"
+          className="ac-btn ac-btn--ghost ac-btn--icon channel__icon channel__members-toggle"
+          aria-label={t("channel.membersButton", { count: total })}
+          aria-pressed={membersOpen}
+          title={t(membersOpen ? "channel.header.hideMembers" : "channel.header.showMembers")}
+          onClick={onMembers}
+        >
+          <Icon name="members" />
+        </button>
         {isMember && <HeaderSearch channelId={channel.id} onOpen={onSearch} />}
       </div>
     </header>

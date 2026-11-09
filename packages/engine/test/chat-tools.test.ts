@@ -63,10 +63,10 @@ test("post_message: from a DM to #general with the file (as a copy); only channe
     .from(schema.messages)
     .where(and(eq(schema.messages.channelId, f.general.id), eq(schema.messages.authorAgentId, f.agent.id)));
   expect(posted?.body).toBe("Carrossel de Miami pronto");
-  type FileRef = { id: string; version: number; title: string };
+  type FileRef = { id: string; version: number; title: string; kind: string };
   const files = (posted?.meta as { artifacts?: FileRef[] } | undefined)?.artifacts;
-  // The file card's shape (`{ id, version, title }`), so the apps show it and the agent reads it by name.
-  expect(files).toEqual([{ id: expect.any(String), version: 1, title: "Carrossel Miami" }]);
+  // The file card's shape (`{ id, version, title, kind }`), so the apps show it and the agent reads it by name.
+  expect(files).toEqual([{ id: expect.any(String), version: 1, title: "Carrossel Miami", kind: "document" }]);
   // From the DM: a copy in #general, so the people there can open it; the original stays in the DM.
   const [copy] = await f.db
     .select()

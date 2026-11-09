@@ -1,26 +1,22 @@
-import type { AgentBrain, AgentBrainInput, MachineAccount } from "@agenteschat/client";
-import { keys, useAgentBrain, useAiAccounts, useApi, useMachines, useModels } from "@agenteschat/client";
-import {
-  accountChoices,
-  offersSignInAgain,
-  ownSignInListed,
-  ownSignInName,
-  signInOf,
-} from "@agenteschat/client/lib/ai-accounts";
+import type { AgentBrain, AgentBrainInput, MachineAccountKind } from "@agenteschat/client";
+import { keys, useAgentBrain, useApi, useModels } from "@agenteschat/client";
+import { signInPlan } from "@agenteschat/client/lib/ai-accounts";
+import { type AiNote, aiNote } from "@agenteschat/client/lib/ai-select";
+import { EVERYONE_AUDIENCE } from "@agenteschat/client/lib/audience";
 import { brainLine, thinksWith } from "@agenteschat/client/lib/brain";
-import { advancedContents, viewSpeedFits } from "@agenteschat/client/lib/brain-advanced";
-import { computerNameOf } from "@agenteschat/client/lib/computer";
+import { EFFORT_RAMP_MAX, effortLevels } from "@agenteschat/client/lib/brain-advanced";
+import { firstName } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { aiChoiceOf, planOfKind } from "@agenteschat/client/lib/no-ai";
+import { aiChoiceOf, planOfAccount } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { modelLimitText } from "@agenteschat/client/lib/plan-usage";
-import { brainPlan, geminiPersonal, isPlanId, planFreeHint, planOf } from "@agenteschat/client/lib/plans";
+import { brainPlan, geminiPersonal, planFreeHint, planOf } from "@agenteschat/client/lib/plans";
 import { apiProviderOf, isAuto, providerLabel } from "@agenteschat/client/lib/providers";
-import { extraUsageOn, limitOffers, planState } from "@agenteschat/ui/plan-state";
+import { limitOffers, planState } from "@agenteschat/ui/plan-state";
 import { useQueryClient } from "@tanstack/react-query";
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
@@ -30,6 +26,7 @@ import {
   GroupedHeader,
   GroupedList,
   GroupedRow,
+  type IconName,
   ProviderLogo,
   Text,
   useReducedMotion,
@@ -37,38 +34,24 @@ import {
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useWidenAsk } from "../chat/ReachLines";
 import { useColors, useDirectory, useMeId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
 import { PlanMeter } from "../usage/parts";
-import { advancedOf, openAgentAdvanced } from "./AgentAdvancedScreen";
-import { openAgentSetup } from "./AgentSetupScreen";
+import { AdvancedInline, advancedOf } from "./AdvancedInline";
+import { openAgentAiPick, rowLine, useAiPick, useAiRowsOf } from "./AiPick";
 import { EffortRamp, useEffortChoice } from "./EffortRamp";
-import {
-  accountInput,
-  accountKindOf,
-  accountRow,
-  accountSaved,
-  agentAccounts,
-  modelInput,
-  modelRows,
-  modelSections,
-  takenFrom,
-  thinkingUsage,
-} from "./logic";
+import { modelInput, modelRows, modelSections } from "./logic";
 import { openConnectAi } from "./NoAiCard";
-import { AiRow, Note, PlanHoldNote, usePlanHold } from "./parts";
+import { Note, PlanHoldNote, PlanReplies } from "./parts";
 
 /*
- * An agent's AI on the phone (the web's "Quem pensa" for a plan, ADR 0059), from "Pensa com" on its profile, under what
- * thinks in one sentence ("DeepSeek V4.1 Flash pelo OpenCode Go"): the account it thinks with on its computer (one of
- * its owner's, or that computer's own sign-in), one row per account, which is the plan choice (another plan's starts
- * on that plan's default model), then the model, that plan's usage with, at its limit, the owner's other accounts that
- * could think instead, and
- * "Configuração avançada" (ADR 0086: effort, context window, "Atende outras pessoas", the API when away, on a screen of
- * its own). Each choice saves at once. Another AI, or one more login of an account other agents think with where it
- * may have one per agent ("Também usada por Theo"), goes through Connect an AI. Its owner and admins open it; only its
- * owner picks an account or lets other people talk to it on the plan (`canUsePlans`).
+ * An agent's AI on the phone (the web's "Quem pensa", ADR 0059), from "Pensa com" on its profile, under what thinks in
+ * one sentence ("DeepSeek V4.1 Flash pelo OpenCode Go"): one row for what it thinks with (the web's AI select's
+ * trigger), which pushes the list of what it may think with; the note it waits on, with its one way out; then the
+ * model, "Atende outras pessoas" on a plan, the plan's usage (at its limit, the account with the most room, picked in
+ * one tap) and "Configuração avançada" in place. Each choice saves at once. Its owner and admins open it.
  */
 
 /** Opens an agent's AI. */
@@ -110,87 +93,63 @@ function useSaveBrain(agentId: string) {
 export function AgentAiScreen({ agentId }: { agentId: string }) {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
-  const hold = usePlanHold(orgId, org);
   const api = useApi();
   const c = useColors();
   const insets = useSafeAreaInsets();
   const dir = useDirectory();
   const meId = useMeId();
   const agent = dir.agentById.get(agentId);
+  const ask = useWidenAsk(agent);
   const name = agent?.name ?? "";
   const g = agentGrammar(name);
-  const ownerFirst = agent?.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name.split(" ")[0] : undefined;
   // As on the web: its owner and admins load it, members don't.
-  const allowed = (meId !== null && agent?.ownerUserId === meId) || can(org, "manage_agents");
-  const brain = useAgentBrain(orgId, agentId, allowed);
+  const allowed = (meId !== null && agent?.ownerUserId === meId) || (org ? can(org, "manage_agents") : false);
+  const { view, rows, current, loading, computerName, hold, agentModel, computerRow } = useAiRowsOf(agentId, allowed);
+  const { pick, busy: picking } = useAiPick(agentId);
   const { busy, save } = useSaveBrain(agentId);
   // Looking at the plan: its usage is looked up again (it comes back as `machine.updated`).
   useEffect(() => {
     void api.machines.refreshAccountUsage(orgId).catch(() => undefined);
   }, [api, orgId]);
 
-  const view = brain.data;
-  const kind = accountKindOf(view?.brain);
-  // Its computer's row, where that computer's own sign-in shows once its CLI is signed in.
-  const row = useAiAccounts(orgId, view?.canUsePlans === true && kind !== null).data?.computers.find(
-    (c) => c.machineId === view?.computer?.machineId,
-  );
   const thinks = brainLine(t, agent?.brain, t("brain.model"), { agents: dir.agents });
   // Through the API: its maker's mark.
   const models = useModels().data?.models;
   const thinksMark = thinks.mark ?? apiProviderOf(agent?.model, models ?? []);
-  const model = view && kind ? modelRows(t, view, brainPlan(view)).find((r) => r.checked) : undefined;
-  const accounts = view && kind ? agentAccounts(view, kind, agent?.ownerUserId, name) : [];
-  const current = view ? accounts.find((a) => a.id === view.account) : undefined;
-  // Another account, or one more login of `a` other agents use (`also`, its email Claude's hint): Connect an AI on that
-  // plan's page (a coding plan's key, on its first page).
-  const connect = (a: MachineAccount | undefined, also = false) =>
+  const onPlan = view !== undefined && view.brain !== "model";
+  const model = view && onPlan ? modelRows(t, view, brainPlan(view)).find((r) => r.checked) : undefined;
+  const account = current?.account;
+  const note = current
+    ? aiNote(t, i18n.language, current, { rows, agentName: name, computerName, cloud: false })
+    : null;
+  const usage = onPlan && view ? (account ? account.usage : view.ownUsage[view.brain as never]) : undefined;
+  const limited = usage ? planState(usage).state === "limited" : false;
+  // At the limit, one way out: the viewer's other account of that plan with the most room, picked in one tap.
+  const offer =
+    limited && account
+      ? limitOffers(
+          rows.flatMap((r) => (r.account && !r.disabled ? [r.account] : [])),
+          account.kind,
+          account.id,
+        )[0]
+      : undefined;
+  const modelLimit = modelLimitText(t, i18n.language, usage, account?.provider, model?.value);
+  // Whose plan it is, to anyone but its owner: someone else's plan's owner, else (to an admin) the agent's owner.
+  const agentOwner = agent?.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name : undefined;
+  const whose =
+    account && !account.mine && account.ownerId !== agent?.ownerUserId
+      ? firstName(account.ownerName ?? "")
+      : !view?.canUsePlans && agentOwner
+        ? firstName(agentOwner)
+        : undefined;
+  // A row that waits for a sign-in: the plan's steps for it, on that plan's page; a signed-out login as itself.
+  const signIn = () =>
     openConnectAi({
       agentId,
-      ...(kind && !planOf(a?.provider) ? { intent: planOfKind(kind) } : {}),
-      ...(also && a?.email ? { email: a.email } : {}),
+      ...(account ? { plan: planOfAccount(account) } : {}),
+      ...(account && note?.action?.kind !== "signInFor" ? { again: account.id } : {}),
+      ...(account?.email ? { email: account.email } : {}),
     });
-  const computer = computerNameOf(t, org?.name ?? "", view?.computer?.name ?? "");
-  const mayPick = view !== undefined && !busy;
-  const choose = (a: MachineAccount | null) => {
-    if (!view || !mayPick || (a?.id ?? null) === view.account) return;
-    const input = accountInput(view, a);
-    const done = (saved: AgentBrain) => accountSaved(t, i18n.language, name, a, input, saved);
-    const others = a ? takenFrom(a, name) : [];
-    if (!a || others.length === 0) return void save(input, done);
-    // A login made for one agent thinks for one: picking another agent's takes it from that one.
-    Alert.alert(a.label, t("agentPage.work.brain.accountMove", { agents: others.join(", ") }), [
-      { text: t("common.cancel"), style: "cancel" },
-      { text: t("mobile.ai.moveHere"), onPress: () => void save({ ...input, moveAccount: true }, done) },
-    ]);
-  };
-
-  const usage = view && kind ? thinkingUsage(view, kind) : undefined;
-  const limited = usage ? planState(usage).state === "limited" : false;
-  const modelLimit = modelLimitText(t, i18n.language, usage, current?.provider, model?.value);
-  const offers = limited && kind && view ? limitOffers(accounts, kind, view.account).slice(0, 2) : [];
-  const signedOut = current != null && signInOf(current) === "signed_out" && current.mine;
-  const signInAgain = current != null && offersSignInAgain(current) && current.mine;
-  // A coding plan's key that its endpoint refused: a new key, on that plan's page.
-  const refused = signInAgain && current && isPlanId(current.provider) ? current.provider : null;
-  // Someone else's plans listed for whoever may use them: whose they are, and that their owner hears it.
-  const lends = view?.canUseOthersPlans === true && accounts.some((a) => !a.mine && a.ownerId !== agent?.ownerUserId);
-  const accountNote = signedOut
-    ? t(refused ? "aiAccounts.page.keyRefused" : "agentPage.work.brain.accountSignedOut")
-    : current != null && signInOf(current) === "unknown"
-      ? t("aiAccounts.page.statusUnknown")
-      : lends
-        ? t("agentPage.work.brain.accountOthers")
-        : view && !view.canUsePlans && ownerFirst
-          ? t("agentPage.work.brain.accountWho", { ...g, owner: ownerFirst })
-          : null;
-  const ownRow = view !== undefined && kind !== null && ownSignInListed(view, row, kind);
-  const choices = view ? accountChoices(accounts, [view.account]) : [];
-  const adds = view?.canUsePlans === true && view.canManageAccounts;
-  // On someone else's computer only whoever connected it adds a sign-in: with nothing of the owner's there, why, in
-  // place of the list.
-  const lockedHere = view !== undefined && kind !== null && !ownRow && choices.length === 0 && !adds;
-  const pairer = useMachines(orgId, lockedHere).data?.find((m) => m.id === view?.computer?.machineId)?.pairedBy;
 
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
@@ -208,61 +167,48 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
         {hold ? <PlanHoldNote org={org} /> : null}
         {!allowed ? (
           <Note icon="lock">{t("agentPage.lock.admins")}</Note>
-        ) : brain.isPending ? (
+        ) : loading ? (
           <ActivityIndicator color={c.muted} style={styles.loading} />
         ) : !view ? (
           <Note icon="x">{t("common.loadFailed")}</Note>
         ) : (
           <>
-            {/* The account first: on the phone the account list is the plan choice, which the model then follows. */}
-            {kind && view.accountsSupported && view.computer ? (
+            {/* What it thinks with, as the web's select says it: a tap opens the list of what it may think with. */}
+            <GroupedList>
+              {current ? (
+                <GroupedRow
+                  leading={<ProviderLogo id={current.mark} size="sm" />}
+                  label={current.label}
+                  {...(rowLine(current) ? { sub: rowLine(current) } : {})}
+                  chevron
+                  disabled={picking}
+                  onPress={() => openAgentAiPick(agentId)}
+                />
+              ) : (
+                <GroupedRow
+                  icon="sparkle"
+                  label={t("aiSelect.placeholder")}
+                  chevron
+                  onPress={() => openAgentAiPick(agentId)}
+                />
+              )}
+            </GroupedList>
+            {note && note.action?.kind !== "confirm" ? (
               <>
-                <GroupedHeader>{t("agentPage.work.brain.account")}</GroupedHeader>
-                <GroupedList>
-                  {ownRow ? (
-                    <GroupedRow
-                      leading={<ProviderLogo id={kind} size="sm" />}
-                      label={ownSignInName(t, view.ownSignIn && view.canUsePlans, computer, kind)}
-                      checked={view.account === null}
-                      disabled={!mayPick}
-                      onPress={() => choose(null)}
-                    />
-                  ) : null}
-                  {choices.map((c) => (
-                    <AiRow
-                      key={c.login.id}
-                      row={accountRow(t, c, name)}
-                      checked={c.login.id === view.account}
-                      disabled={!mayPick}
-                      onPress={() => (c.also ? connect(c.login, true) : choose(c.login))}
-                    />
-                  ))}
-                  {adds ? (
-                    <GroupedRow
-                      icon="plus"
-                      label={
-                        refused
-                          ? t("aiAccounts.page.newKey")
-                          : signInAgain
-                            ? t("agentPage.work.brain.signInAgain")
-                            : t("agentPage.work.brain.addAccount")
-                      }
-                      onPress={() => (refused ? openConnectAi({ agentId, plan: refused }) : connect(current))}
-                    />
-                  ) : null}
-                </GroupedList>
-                {kind === "antigravity" && geminiPersonal(current) ? (
-                  <Note icon="info">{t("connectAi.plan.gemini.warning")}</Note>
+                <Note icon={NOTE_ICONS[note.icon]}>{note.text}</Note>
+                {note.action?.kind === "signIn" ||
+                note.action?.kind === "newKey" ||
+                note.action?.kind === "signInFor" ? (
+                  <GroupedList>
+                    <GroupedRow icon="plus" label={note.action.label} chevron onPress={signIn} />
+                  </GroupedList>
                 ) : null}
-                {lockedHere ? (
-                  <Note icon="lock">
-                    {t("connectAi.accountsLocked", { name: pairer?.name.split(" ")[0] ?? "", computer })}
-                  </Note>
-                ) : null}
-                {accountNote ? <GroupedFooter>{accountNote}</GroupedFooter> : null}
               </>
             ) : null}
-            {kind ? (
+            {current?.kind === "antigravity" && geminiPersonal(account) ? (
+              <Note icon="info">{t("connectAi.plan.gemini.warning")}</Note>
+            ) : null}
+            {onPlan ? (
               <>
                 <GroupedHeader>{t("agentPage.work.brain.planModel")}</GroupedHeader>
                 <GroupedList>
@@ -274,7 +220,29 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
                     onPress={() => openAgentModel(agentId)}
                   />
                 </GroupedList>
+                {modelLimit ? <GroupedFooter>{modelLimit}</GroupedFooter> : null}
               </>
+            ) : null}
+            {onPlan && view.scope !== "mine" ? (
+              <View style={styles.gap}>
+                <PlanReplies
+                  agent={name}
+                  {...(whose ? { owner: whose } : {})}
+                  on={!view.onlyOwner}
+                  onChange={async (on) => {
+                    // Opening someone else's plan to more people asks first (its owner gets an email).
+                    if (on && !(await ask(EVERYONE_AUDIENCE)([]))) return;
+                    void save(
+                      { onlyOwner: !on },
+                      t(on ? "aiAccounts.share.savedEveryone" : "aiAccounts.share.savedOwner", g),
+                    );
+                  }}
+                  brain={view.brain as "claude_code"}
+                  plan={signInPlan(view, computerRow, view.brain as MachineAccountKind)}
+                  coding={planOf(account?.provider)}
+                  disabled={busy}
+                />
+              </View>
             ) : null}
             {usage ? (
               <>
@@ -283,77 +251,25 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
                   <View style={styles.meter}>
                     <PlanMeter usage={usage} />
                   </View>
-                  {offers.map(({ account: a, used }) => (
+                  {offer ? (
                     <GroupedRow
-                      key={a.id}
-                      leading={<ProviderLogo id={a.provider ?? a.kind} size="sm" />}
+                      leading={<ProviderLogo id={offer.account.provider ?? offer.account.kind} size="sm" />}
                       label={
-                        used === null
-                          ? t("aiAccounts.usage.offer.useUnknown", { label: a.label })
-                          : t("aiAccounts.usage.offer.use", { label: a.label, pct: used })
+                        offer.used === null
+                          ? t("aiAccounts.usage.offer.useUnknown", { label: offer.account.label })
+                          : t("aiAccounts.usage.offer.use", { label: offer.account.label, pct: offer.used })
                       }
-                      disabled={busy}
-                      onPress={() => choose(a)}
-                    />
-                  ))}
-                  {extraUsageOn(usage) ? (
-                    <GroupedRow
-                      label={t("usageCard.extraTitle")}
-                      labelLines={2}
-                      toggle={view.extraUsage}
-                      disabled={busy || !(current ? current.mine : view.canUsePlans)}
-                      onPress={() => void save({ extraUsage: !view.extraUsage }, t("usageCard.extraTitle"))}
-                    />
-                  ) : null}
-                  {limited && view.canUsePlans && view.canManageAccounts ? (
-                    <GroupedRow
-                      icon="plus"
-                      label={t("aiAccounts.usage.offer.connect")}
-                      onPress={() => connect(current)}
+                      disabled={picking}
+                      onPress={() => {
+                        const row = rows.find((r) => r.value === offer.account.id);
+                        if (row) pick(row);
+                      }}
                     />
                   ) : null}
                 </GroupedList>
-                {modelLimit ? <GroupedFooter>{modelLimit}</GroupedFooter> : null}
               </>
             ) : null}
-            <View style={styles.advanced}>
-              <GroupedList>
-                <GroupedRow
-                  label={t("agentPage.work.brain.advanced.title")}
-                  sub={advancedContents(t, {
-                    kind: view.brain,
-                    autoModel: isAuto(view.effectiveModel),
-                    speed: viewSpeedFits(view),
-                  })}
-                  chevron
-                  onPress={() => openAgentAdvanced(agentId)}
-                />
-                {kind &&
-                view.canEdit &&
-                (view.account !== null || ownRow) &&
-                dir.agents.some((a) => a.id !== agentId) ? (
-                  <GroupedRow
-                    label={t("agentPage.work.brain.copy.row")}
-                    sub={t("agentPage.work.brain.copy.rowLine")}
-                    chevron
-                    onPress={() => openAgentSetup(agentId)}
-                  />
-                ) : null}
-              </GroupedList>
-            </View>
-            {view.canUsePlans ? (
-              <>
-                <GroupedHeader>{t("mobile.ai.another")}</GroupedHeader>
-                <GroupedList>
-                  <GroupedRow
-                    icon="brain"
-                    label={t("connectAi.titleFor", g)}
-                    chevron
-                    onPress={() => openConnectAi({ agentId })}
-                  />
-                </GroupedList>
-              </>
-            ) : null}
+            <AdvancedInline agentId={agentId} view={view} {...(agentModel ? { model: agentModel } : {})} />
           </>
         )}
       </ScrollView>
@@ -376,7 +292,9 @@ function EffortDock({ agentId, shown, onHeight }: { agentId: string; shown: bool
   const dir = useDirectory();
   const { orgId } = useOrg();
   const view = useAgentBrain(orgId, agentId).data;
-  const effort = useEffortChoice(agentId, view ? advancedOf(view).effort : undefined);
+  const levels = view && view.brain !== "model" ? effortLevels(view.brain, view.effectiveModel) : [];
+  const saved = view ? advancedOf(view).effort : undefined;
+  const effort = useEffortChoice(agentId, saved && levels.includes(saved) ? saved : undefined);
   const out = useSharedValue(shown ? 0 : 1);
   const height = useSharedValue(0);
   useEffect(() => {
@@ -400,6 +318,7 @@ function EffortDock({ agentId, shown, onHeight }: { agentId: string; shown: bool
         <EffortRamp
           value={effort.value}
           onChange={effort.change}
+          levels={levels}
           color={agentLook(dir.agentById.get(agentId)).color}
           disabled={view?.canEdit !== true}
         />
@@ -430,7 +349,9 @@ export function AgentModelScreen({ agentId }: { agentId: string }) {
   // A model without a maker of its own wears its plan's mark, else its brain's.
   const mark = (plan && view?.accounts.find((a) => a.id === view.account)?.provider) || (view?.brain ?? "");
   const hasModels = view !== undefined && view.brain !== "model";
-  const fixed = hasModels && !isAuto(view.effectiveModel);
+  // The ramp floats over the list for a model with a few levels; more, and they are a list in Configuração avançada.
+  const levels = hasModels ? effortLevels(view.brain, view.effectiveModel) : [];
+  const fixed = hasModels && !isAuto(view.effectiveModel) && levels.length > 0 && levels.length <= EFFORT_RAMP_MAX;
   const [dock, setDock] = useState(0);
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
@@ -481,6 +402,15 @@ export function AgentModelScreen({ agentId }: { agentId: string }) {
   );
 }
 
+/** The note's icon, as the web's says it, in the phone's set. */
+const NOTE_ICONS: Record<AiNote["icon"], IconName> = {
+  alert: "x",
+  info: "info",
+  clock: "clock",
+  computer: "laptop",
+  lock: "lock",
+};
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   in: { paddingHorizontal: 16, paddingTop: 8 },
@@ -489,7 +419,7 @@ const styles = StyleSheet.create({
   loading: { marginTop: 16 },
   meter: { paddingHorizontal: 14, paddingVertical: 12 },
   // A list without a header keeps a header's room above it.
-  advanced: { marginTop: 20 },
+  gap: { marginTop: 20 },
   dock: { position: "absolute", left: 10, right: 10, borderRadius: 28 },
   dockGlass: {
     paddingHorizontal: 16,

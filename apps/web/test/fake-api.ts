@@ -2625,7 +2625,6 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           brain,
           model,
           effectiveModel: brain === "model" ? null : (model ?? option?.defaultModel ?? null),
-          fallback: input.fallback ?? b.fallback,
           // ADR 0041: another brain kind starts on the computer's own account.
           account: input.account !== undefined ? input.account : changed ? null : b.account,
           effort: input.effort !== undefined ? input.effort : b.effort,
@@ -3004,6 +3003,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const line = state.messages.find((m) => m.id === messageId);
         const notice = line?.meta?.notice as { refs?: Record<string, string> } | undefined;
         if (notice?.refs) notice.refs = { ...notice.refs, state: "canceled" };
+      },
+      answerGitHub: async (orgId, messageId) => {
+        log("chat.answerGitHub", orgId, messageId);
+        const line = state.messages.find((m) => m.id === messageId);
+        const notice = line?.meta?.notice as { refs?: Record<string, string> } | undefined;
+        if (notice?.refs) notice.refs = { ...notice.refs, answeredBy: "me" };
       },
       roster: async (_orgId, channelId) =>
         (state.channelMembers[channelId] ?? []).map((m) =>
@@ -3805,6 +3810,16 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
   state.drive = artifacts;
   const client: ApiClient = {
     ...http,
+    agents: {
+      ...http.agents,
+      // As the server lists them: the account an agent thinks with is among its computer's, one just signed in too.
+      brain: async (orgId, agentId) => {
+        const view = await http.agents.brain(orgId, agentId);
+        const made =
+          view.account && !view.accounts.some((a) => a.id === view.account) ? machines.accountOf(view.account) : null;
+        return made ? { ...view, accounts: [...view.accounts, made] } : view;
+      },
+    },
     apps: apps.client,
     sandbox: createFakeSandbox(ctx, (method, ...args) => state.calls.push({ method, args }), machines),
     machines: machines.client,
@@ -4037,8 +4052,6 @@ export function fakeAgentBrain(agentId: string, patch: Partial<AgentBrain> = {})
     brain: "model",
     model: null,
     effectiveModel: null,
-    fallback: true,
-    extraUsage: true,
     computer: { machineId: "machine_1", name: "MacBook", online: true },
     options: [
       { kind: "model", available: true, models: [], defaultModel: null },

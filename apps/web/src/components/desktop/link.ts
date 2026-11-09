@@ -1,4 +1,4 @@
-import { type DesktopMode, desktopModeFrame } from "@agenteschat/client";
+import { type DesktopCursor, type DesktopMode, desktopCursorFrame, desktopModeFrame } from "@agenteschat/client";
 import type { RfbChannel } from "@novnc/novnc";
 
 /** One RFB session's side of a `DesktopLink`, in the shape noVNC takes for a socket. */
@@ -74,6 +74,8 @@ export class DesktopLink {
   mode: DesktopMode | null = null;
   /** The server switched the stream: a new session in `mode` follows, for the next channel. */
   onSwitch: ((mode: DesktopMode) => void) | null = null;
+  /** A step of the agent's pointer (protocol 54): its computer says each, whatever the session. */
+  onCursor: ((cursor: DesktopCursor) => void) | null = null;
   private current: DesktopChannel | null = null;
   private waiting: MessageEvent[] = [];
 
@@ -99,7 +101,11 @@ export class DesktopLink {
       return;
     }
     const mode = desktopModeFrame(e.data);
-    if (!mode) return;
+    if (!mode) {
+      const cursor = desktopCursorFrame(e.data);
+      if (cursor) this.onCursor?.(cursor);
+      return;
+    }
     const first = this.mode === null;
     this.mode = mode;
     if (first) return;

@@ -372,6 +372,8 @@
   const sameLine = (a, b) =>
     Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > Math.min(a.bottom - a.top, b.bottom - b.top) / 2;
   const textRects = (node) => [...textRange(node).getClientRects()].filter((r) => r.width > 1 && r.height > 1);
+  /** A line held for words still loading: a no-break space alone (the app's `BLANK_LINE`). It is one of the lines. */
+  const held = (node) => /^\u00a0+$/.test(node.textContent);
   /** The distinct lines a set of boxes covers, however their type sizes differ on each line. */
   const lineCount = (rects) => {
     const lines = [];
@@ -994,8 +996,13 @@
           !hasSurface(style(square))
         )
           continue;
+        // What ends the row after the words (a count, "Novo") sits on the row's middle in a column of its own: between
+        // two lines, it is none of theirs.
+        const words = kids.slice(1).find((k) => visibleText(k));
+        const end = words ? words.getBoundingClientRect().right : Number.POSITIVE_INFINITY;
         const beside = [];
         for (const kid of kids.slice(1)) {
+          if (kid !== words && kid.getBoundingClientRect().left >= end - 1) continue;
           const walker = document.createTreeWalker(kid, NodeFilter.SHOW_TEXT);
           for (let n = walker.nextNode(); n; n = walker.nextNode()) {
             if (!n.textContent.trim() || !seen(n.parentElement)) continue;
@@ -1198,7 +1205,8 @@
           const lines = [];
           const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
           for (let n = walker.nextNode(); n; n = walker.nextNode())
-            if (n.textContent.trim() && !glyph.contains(n) && seen(n.parentElement)) lines.push(...textRects(n));
+            if ((n.textContent.trim() || held(n)) && !glyph.contains(n) && seen(n.parentElement))
+              lines.push(...textRects(n));
           if (lineCount(lines) === 1 && lines.some((t) => sameLine(t, box))) caps = capsAt(before);
         }
         if (!caps) continue;
@@ -1349,7 +1357,15 @@
           left: b.left + parseFloat(cs.borderLeftWidth),
           right: b.right - parseFloat(cs.borderRightWidth),
         };
-        // A side of the clip on the window's own edge cuts nothing the window wouldn't.
+        // A side of the clip on the window's own edge cuts nothing the window wouldn't. Nor does a scroller's side with
+        // more to scroll to: what it cuts there shows whole once scrolled (the work's sheet ends above the window's edge).
+        const more = {
+          top: clip.scrollTop > 0.5,
+          bottom: clip.scrollHeight - clip.clientHeight - clip.scrollTop > 0.5,
+          left: clip.scrollLeft > 0.5,
+          right: clip.scrollWidth - clip.clientWidth - clip.scrollLeft > 0.5,
+        };
+        const scrolls = (overflow) => overflow === "auto" || overflow === "scroll";
         const cut = [
           ["top", cs.overflowY, pad.top > 0.5 && a.top >= pad.top - 0.5 && a.top - reach.top < pad.top - 0.5],
           [
@@ -1365,7 +1381,7 @@
             cs.overflowX,
             pad.right < innerWidth - 0.5 && a.right <= pad.right + 0.5 && a.right + reach.right > pad.right + 0.5,
           ],
-        ].find(([, overflow, hit]) => hit && overflow !== "visible");
+        ].find(([side, overflow, hit]) => hit && overflow !== "visible" && !(scrolls(overflow) && more[side]));
         if (cut) out.push({ rule: "clip", node: el, el: sig(el), box: sig(clip), side: cut[0] });
       }
     },
@@ -1509,9 +1525,11 @@
           (el) => seen(el) && !el.closest(OWN) && !el.parentElement.closest(ITEM),
         );
         if (!items.length) continue;
-        const faces = items.some((el) =>
-          el.querySelector(":scope > .ac-menu__leading > .ac-avatar, :scope > .ac-avatar"),
-        );
+        // The palette (⌘K) finds people and agents among the rest: its rows are option rows whatever a query found,
+        // one height as it's typed.
+        const faces =
+          menu.matches(".ac-palette__list") ||
+          items.some((el) => el.querySelector(":scope > .ac-menu__leading > .ac-avatar, :scope > .ac-avatar"));
         // The workspace menu (MenuOverlay) fills the screen in 15px type: its rows are the touch ones everywhere.
         const roomy = touch || menu.matches(".ac-mo__group");
         const own = [...menu.querySelectorAll(OWN)].filter((x) => style(x).display !== "none");
@@ -1814,6 +1832,25 @@
      * sizes its view: a split's column grows with the window, so a page's reading width that fits it at 1280 leaves the
      * view short of the pane's edge at 1512. A conversation's own widths (its messages, its composer) are the chat's.
      */
+    /**
+     * Option cards (`OptionList` with layout="cards") stand all side by side or one per row: never some side by side
+     * over one left alone, a layout that a scrollbar coming and going (a picker opening under them) switches.
+     */
+    optcards(out) {
+      for (const box of document.querySelectorAll(".ac-optlist__cards")) {
+        if (!seen(box)) continue;
+        const rows = [];
+        for (const card of box.children) {
+          if (!seen(card)) continue;
+          const top = card.getBoundingClientRect().top;
+          const row = rows.find((x) => Math.abs(x.top - top) <= 2);
+          if (row) row.cards += 1;
+          else rows.push({ top, cards: 1 });
+        }
+        if (rows.length > 1 && rows.some((x) => x.cards > 1))
+          out.push({ rule: "optcards", node: box, el: sig(box), box: placeOf(box), rows: rows.length });
+      }
+    },
     panefill(out) {
       const PANE = "aside,.page-split > *";
       const HOLDS = ":scope > :is(section,article,form,ul,ol,table,.ac-card)";
@@ -1908,6 +1945,52 @@
           };
         });
       });
+    },
+    /**
+     * What opens from another layer stacks above it: a profile card (a popover), a popover from it, a confirm dialog from
+     * that, a list from the dialog, put in the page in that order as Radix portals them, each over the whole window.
+     * The ones that aren't the topmost thing at their center when they open.
+     */
+    layers() {
+      document.body.innerHTML = "";
+      const box = (className) => {
+        const el = document.createElement("div");
+        el.className = className;
+        return el;
+      };
+      // Radix's popper: the content in a fixed wrapper that takes the content's own z-index.
+      const floating = (className) => {
+        const wrapper = document.createElement("div");
+        wrapper.setAttribute("data-radix-popper-content-wrapper", "");
+        wrapper.style.cssText = "position: fixed; inset: 0";
+        const content = box(className);
+        content.style.cssText = "width: 100%; height: 100%; max-width: none; max-height: none";
+        wrapper.append(content);
+        document.body.append(wrapper);
+        wrapper.style.zIndex = getComputedStyle(content).zIndex;
+        return content;
+      };
+      const dialog = () => {
+        const panel = box("ac-dialog");
+        panel.style.height = "240px";
+        document.body.append(box("ac-dialog__scrim"), panel);
+        return panel;
+      };
+      const onTop = (el) => {
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return hit !== null && el.contains(hit);
+      };
+      const under = [];
+      for (const [name, open] of [
+        ["a card", () => floating("ac-menu ac-popover profile-card")],
+        ["a popover from the card", () => floating("ac-menu ac-popover")],
+        ["a dialog from the popover", dialog],
+        ["a list from the dialog", () => floating("ac-menu ac-menu--select")],
+      ])
+        if (!onTop(open())) under.push(name);
+      document.body.innerHTML = "";
+      return under;
     },
   };
 })();

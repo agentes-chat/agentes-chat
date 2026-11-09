@@ -38,6 +38,7 @@ import {
   QUIET_AFTER_MS,
   runsInChannel,
   type StreamsState,
+  seedCards,
   sendHelpers,
   typingIn,
   useAddChannelMember,
@@ -121,6 +122,7 @@ import { workAnchorBody, workContinuable, workIsOver } from "@agenteschat/client
 import { supersededBrainNotices } from "@agenteschat/client/lib/machine-outages";
 import { hasWideBlock, plainLine } from "@agenteschat/client/lib/markdown";
 import { isMediaAfterReply, isMediaAlone, messageMediaOf, quoteText, textOrMedia } from "@agenteschat/client/lib/media";
+import { isAgentOff, isConnected } from "@agenteschat/client/lib/member-groups";
 import { serverBody } from "@agenteschat/client/lib/message-body";
 import {
   isOpenMission,
@@ -138,6 +140,7 @@ import { noAiCardOf } from "@agenteschat/client/lib/no-ai";
 import { isTalkerReply, noticeOf, routineReportText, talkerWaited } from "@agenteschat/client/lib/notices";
 import { brainUnavailableOf, isOfflineNotice } from "@agenteschat/client/lib/outages";
 import { can, leavesChannel, managesChannel, setsAutoReply } from "@agenteschat/client/lib/permissions";
+import { agentOffLine } from "@agenteschat/client/lib/presence";
 import { reachHandoffs } from "@agenteschat/client/lib/reach";
 import { localMeta, replyOf } from "@agenteschat/client/lib/reply";
 import { isReminderMessage, reminderBody, routineReplyOf } from "@agenteschat/client/lib/routines";
@@ -146,7 +149,13 @@ import { seenMessageId } from "@agenteschat/client/lib/seen";
 import { hiddenCount, tasksOf, todayStart } from "@agenteschat/client/lib/task-manager";
 import { holdsText } from "@agenteschat/client/lib/text";
 import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@agenteschat/client/lib/threads";
-import { buildTimeline, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
+import {
+  blockPlaces,
+  buildTimeline,
+  lastPostedId,
+  mergeTimeline,
+  type TimelineItem,
+} from "@agenteschat/client/lib/timeline";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
 import { appVia } from "@agenteschat/client/lib/via";
 import { voiceOf } from "@agenteschat/client/lib/voice";
@@ -231,7 +240,7 @@ import {
   sameSlots,
   waitingLast,
 } from "@/chat/run-slots";
-import { dividerIsFar, firstNewKey, pillParts, unseenOf } from "@/chat/unseen";
+import { dividerIsFar, earlierKey, firstNewKey, landedKey, pillParts, unseenOf } from "@/chat/unseen";
 import { ActionCard } from "@/components/ActionCard";
 import { AgentActionReceipts } from "@/components/AgentActions";
 import { ActorAvatar, AgentAvatar, PersonAvatar } from "@/components/AgentAvatar";
@@ -364,6 +373,7 @@ import { useComposerDraft } from "@/hooks/useComposerDraft";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useDmSidebar, useMembersColumn } from "@/hooks/useMembersColumn";
 import { useMentionSearch } from "@/hooks/useMentionSearch";
+import { useAgentsShown, usePresences } from "@/hooks/usePresence";
 import { usePrefersReducedMotion, useRevealedText } from "@/hooks/useRevealedText";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useHeaderSearch } from "@/hooks/useWorkspaceSearch";
@@ -490,6 +500,8 @@ const GESTURE_MS = 1500;
 const IDLE_CATCH_UP_MS = 20_000;
 /** Older messages per scroll-up page. */
 const OLDER_PAGE = 50;
+/** No rows: a thread's timeline while only its replies' skeleton shows. */
+const NO_ROWS: ReturnType<typeof buildTimeline> = [];
 /** Older pages a channel already loaded, and whether there are no more. */
 type OlderPages = { pages: MessageType[]; done: boolean };
 /** Same limit as the server (`MAX_MESSAGE_ATTACHMENTS`). */
@@ -1103,9 +1115,9 @@ function ChannelView({
   // On screen, this conversation raises no notice on the island (ADR 0071 §9): its messages already show here.
   const screenThread = thread?.id ?? null;
   useEffect(() => holdOnScreen({ channelId: channel.id, threadId: screenThread }), [channel.id, screenThread]);
-  const lastId = channelMessages.data?.at(-1)?.id;
+  const lastId = lastPostedId(channelMessages.data);
   useEffect(() => {
-    if (!isMember || !lastId || lastId.startsWith("local-")) return;
+    if (!isMember || !lastId) return;
     const mark = () => {
       if (document.visibilityState === "visible") markChannelRead(channel.id);
     };
@@ -1116,9 +1128,9 @@ function ChannelView({
   // A thread open in view: its replies are read (its unread and the Threads mark clear, on every device).
   const markThreadRead = useMarkThreadRead(org.id).mutate;
   const threadId = thread?.id;
-  const lastReplyId = threadId && !threadMessages.isPlaceholderData ? threadMessages.data?.at(-1)?.id : undefined;
+  const lastReplyId = threadId && !threadMessages.isPlaceholderData ? lastPostedId(threadMessages.data) : undefined;
   useEffect(() => {
-    if (!threadId || !isMember || !lastReplyId || lastReplyId.startsWith("local-")) return;
+    if (!threadId || !isMember || !lastReplyId) return;
     const mark = () => {
       if (document.visibilityState === "visible") markThreadRead(threadId);
     };
@@ -1127,8 +1139,11 @@ function ChannelView({
     return () => document.removeEventListener("visibilitychange", mark);
   }, [markThreadRead, threadId, isMember, lastReplyId]);
 
-  // The skeleton was on screen: the real messages fade in (once).
-  const hadSkeleton = useRef(messages.isLoading);
+  // A thread whose replies are still loading (the root the channel holds stands in): only their skeleton shows.
+  const replyCount = thread?.replyCount ?? 0;
+  const repliesPending = messages.isPlaceholderData && replyCount > 0;
+  // The skeleton was on screen (a conversation, or a thread's replies): the real messages fade in (once).
+  const hadSkeleton = useRef(messages.isLoading || repliesPending);
   const [fresh, setFresh] = useState(false);
   useEffect(() => {
     if (!serverRead || !hadSkeleton.current) return;
@@ -1161,7 +1176,7 @@ function ChannelView({
     }
     setOlderState("loading");
     api.chat
-      .messages(org.id, channel.id, { before: oldest.createdAt, limit })
+      .messages(org.id, channel.id, { before: oldest.createdAt, limit, onCards: (c) => seedCards(qc, org.id, c) })
       .then((page) => {
         // Keep what's on screen where it is: remember the distance from the bottom.
         const el = scroller.current;
@@ -1249,12 +1264,12 @@ function ChannelView({
     return ungroupAfter(items, special);
   }, [thread, channelList, channelMessages.data, threadMessages.data, threadsView, agentsAtWork]);
 
-  // The agents' blocks at the end of the conversation (one per run, from "pensando" to its final
-  // message: `chat/run-slots.ts`). They change when runs start or end, never on a streaming delta.
+  // The agents' blocks (one per run, from "pensando" to its final message: `chat/run-slots.ts`), each where its words
+  // first showed, else at the end. They change when runs start or end or their words first show, never on a delta.
   const liveRunsKey = useStreams((s) =>
     scopedRuns(s)
       .sort((a, b) => (a.startedAt ?? 0) - (b.startedAt ?? 0))
-      .map((r) => `${r.runId}\t${r.agentId}\t${r.provisional ? 1 : 0}`)
+      .map((r) => `${r.runId}\t${r.agentId}\t${r.provisional ? 1 : 0}\t${r.shownAt ?? ""}`)
       .join("\n"),
   );
   const landedRuns = useMemo(
@@ -1270,8 +1285,8 @@ function ChannelView({
   const slots = useMemo(() => {
     const onScreen = liveRunsKey
       ? liveRunsKey.split("\n").map((line) => {
-          const [runId = "", agentId = "", provisional] = line.split("\t");
-          return { runId, agentId, provisional: provisional === "1" };
+          const [runId = "", agentId = "", provisional, shownAt] = line.split("\t");
+          return { runId, agentId, provisional: provisional === "1", ...(shownAt ? { shownAt } : {}) };
         })
       : [];
     // Its message is in a cache already (it lands in the timeline on the next render), or came without its body and
@@ -1398,9 +1413,12 @@ function ChannelView({
   );
   const unseenFromRef = useRef<string | null>(null);
   const dividerOn = useRef(false);
-  /** Something arrived out of view: the divider before `key` (the first one since the person left). */
-  const markUnseen = (key: string) => {
-    if (unseenFromRef.current !== null) return;
+  /**
+   * Something arrived out of view: the divider before `key` (the first one since the person left). `up`: it landed
+   * above the divider already drawn (a reply keeps the place where its first words showed), which moves there.
+   */
+  const markUnseen = (key: string, up = false) => {
+    if (unseenFromRef.current !== null && !up) return;
     unseenFromRef.current = key;
     dropDividerTimers();
     dividerOn.current = true;
@@ -1545,6 +1563,7 @@ function ChannelView({
     clearUnseen();
   };
   const previousSlots = useRef(slotsKey);
+  const previousKeys = useRef<ReadonlySet<string>>(new Set());
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll whenever rows or agents' blocks come
   useLayoutEffect(() => {
     // A new row glides down (streaming text is followed by the ResizeObserver above).
@@ -1553,17 +1572,28 @@ function ChannelView({
     const newRow = before !== lastKey;
     const settled = before !== undefined && Date.now() - openedAt.current > 1500;
     previousLastKey.current = lastKey;
+    const keysBefore = previousKeys.current;
+    previousKeys.current = new Set(timeline.map((i) => i.key));
     const blocks = previousSlots.current.split(" ");
-    const newBlock = slotsKey.split(" ").some((k) => k && !blocks.includes(k));
+    const shown = slotsKey.split(" ");
+    const newBlock = shown.some((k) => k && !blocks.includes(k));
+    // Runs whose block just went: each one's message took its place, which can be above rows that came after it.
+    const gone = new Set(
+      [...runKeys.current].flatMap(([runId, key]) => (blocks.includes(key) && !shown.includes(key) ? [runId] : [])),
+    );
     previousSlots.current = slotsKey;
     if (scroller.current) measureFar(scroller.current);
     if (stick.current) follow((newRow || newBlock) && settled);
     // Holding a long answer at its start: "Fim da resposta" already leads to what comes after it.
     else if (!holdingRef.current) {
-      const first = newRow ? firstNewKey(timeline, before) : null;
+      const landed = gone.size > 0 ? landedKey(timeline, blockRowByRun(timeline, new Set()), gone, keysBefore) : null;
+      const first = earlierKey(timeline, newRow ? firstNewKey(timeline, before) : null, landed);
       if (first) {
         const drawn = unseenFromRef.current !== null;
-        markUnseen(first);
+        markUnseen(
+          first,
+          drawn && first !== unseenFromRef.current && earlierKey(timeline, unseenFromRef.current, first) === first,
+        );
         // Nobody reading up there: go to what is new (as the pill would), once its divider is drawn.
         if (settled && idleAway()) {
           if (drawn) openUnseen();
@@ -2491,7 +2521,7 @@ function ChannelView({
                           ) : (
                             <>
                               <Timeline
-                                items={timeline}
+                                items={repliesPending ? NO_ROWS : timeline}
                                 ready={serverRead}
                                 slots={slots}
                                 runKeys={runKeys.current}
@@ -2502,10 +2532,9 @@ function ChannelView({
                                 consultGroups={consultGroups}
                                 seenId={thread ? null : seenId}
                               />
-                              {/* A thread's root is on screen from the channel: only its replies are loading. */}
-                              {thread && messages.isPlaceholderData && thread.replyCount > 0 && (
-                                <LoadingConversation count={Math.min(thread.replyCount, 6)} />
-                              )}
+                              {/* A thread whose replies are still loading: their skeleton alone, not its root above it,
+                              which the replies would push out of view. It opens on them, at its end, in one paint. */}
+                              {repliesPending && <LoadingConversation count={Math.min(replyCount + 1, 6)} />}
                               {!thread && (
                                 <ArchivedThreadsNote
                                   channelId={channel.id}
@@ -2915,9 +2944,10 @@ function Parts({ resetKey, children }: { resetKey: unknown; children: ReactNode 
 }
 
 /**
- * Persisted rows, then the agents' live blocks (always last while they work: new messages go above
- * them). One flat keyed list: an answer seen live is drawn under its block's key, so the final message
- * takes the block's place without a remount. Memoized: streaming deltas don't re-render it.
+ * Persisted rows and the agents' live blocks: one whose words showed sits where they first did, with what people sent
+ * meanwhile below it, the others last (`blockPlaces`). One flat keyed list: an answer seen live is drawn under its
+ * block's key in that same place (its message is posted there), so the final message takes the block's place without
+ * a remount. Memoized: streaming deltas don't re-render it.
  */
 const Timeline = memo(function Timeline({
   items,
@@ -3046,6 +3076,8 @@ const Timeline = memo(function Timeline({
     const waiting = new Set(waitingKey.split(" "));
     return waitingLast(slots, (runId) => waiting.has(runId));
   }, [slots, waitingKey]);
+  // Each block where its words first showed (what people sent meanwhile reads below it), the others last.
+  const places = useMemo(() => blockPlaces(items, drawn, (slot) => slot.shownAt), [items, drawn]);
   // A take over whose run has no live block and no message here: its card at the end (`HeldBrowserRow`).
   const heldPlaces = useHeldPlaces();
   const held = useMemo(
@@ -3070,11 +3102,29 @@ const Timeline = memo(function Timeline({
   );
   const rows: ReactElement<{ message?: MessageType }>[] = [];
   const afterUnshown = () => unshown.has(rows.at(-1)?.key ?? "");
+  const blockRow = (slot: RunSlot) => {
+    if (!blockEnters.current.has(slot.key)) blockEnters.current.set(slot.key, ready && Date.now() - mountedAt > 1500);
+    return (
+      <RunBlock
+        key={slot.key}
+        runId={slot.runId}
+        grouped={false}
+        entering={blockEnters.current.get(slot.key) ?? false}
+        modelLabels={modelLabels}
+      />
+    );
+  };
   for (const [at, item] of items.entries()) {
-    const grouped = item.kind === "message" && item.grouped && !afterUnshown();
+    // A block drawn right before it: it starts its own run of rows, its header back.
+    const placed = places.before.get(at) ?? [];
+    const grouped = item.kind === "message" && item.grouped && !afterUnshown() && placed.length === 0;
     const after = items[at + 1];
     // Where it sits in its author's run: my own rows' bubbles square the corners they share.
-    const run = runPosition(grouped, after?.kind === "message" && after.grouped && !unshown.has(item.key));
+    const run = runPosition(
+      grouped,
+      after?.kind === "message" && after.grouped && !unshown.has(item.key) && !places.before.has(at + 1),
+    );
+    for (const slot of placed) rows.push(blockRow(slot));
     if (divider?.key === item.key) {
       rows.push(
         <div key="unread-divider" className="channel__unread" data-fade={divider.fading || undefined}>
@@ -3133,18 +3183,7 @@ const Timeline = memo(function Timeline({
     );
   }
   rows.push(<QueueWaitTurns key="queue-waits" channelId={channelId} messages={shownMessages} />);
-  drawn.forEach((slot) => {
-    if (!blockEnters.current.has(slot.key)) blockEnters.current.set(slot.key, ready && Date.now() - mountedAt > 1500);
-    rows.push(
-      <RunBlock
-        key={slot.key}
-        runId={slot.runId}
-        grouped={false}
-        entering={blockEnters.current.get(slot.key) ?? false}
-        modelLabels={modelLabels}
-      />,
-    );
-  });
+  for (const slot of places.after) rows.push(blockRow(slot));
   for (const place of held) rows.push(<HeldBrowserRow key={`held-${place.runId}`} place={place} />);
   // A row that fails to draw (data this build doesn't expect) is one quiet line: the rest of the conversation, the
   // sidebar and the composer keep working. Its message changing draws it again: a live block that broke has none,
@@ -3199,7 +3238,10 @@ const HELD_RECENT_MS = 12 * 60 * 60_000;
 /** Model names for the rows of "Ajustar trecho" (no usage line is shown there). */
 const NO_LABELS = new Map<string, string>();
 
-/** The live run as a message, while it has none (the block's text and header come from the run). */
+/**
+ * The live run as a message, while it has none (the block's text and header come from the run). Its time is its
+ * message's to be: when its words first showed, else when it started.
+ */
 function liveMessageOf(r: LiveRun): MessageType {
   return {
     id: `live:${r.runId}`,
@@ -3210,7 +3252,7 @@ function liveMessageOf(r: LiveRun): MessageType {
     mentionedAgentIds: [],
     agentRunId: r.runId,
     meta: {},
-    createdAt: new Date(r.startedAt ?? Date.now()).toISOString(),
+    createdAt: r.shownAt ?? new Date(r.startedAt ?? Date.now()).toISOString(),
   } as MessageType;
 }
 
@@ -3245,10 +3287,11 @@ function RunBlock({
   const liveChannel = live?.channelId;
   const liveThread = live?.threadId;
   const liveStart = live?.startedAt;
+  const liveShown = live?.shownAt;
   // biome-ignore lint/correctness/useExhaustiveDependencies: the placeholder only depends on who and when
   const placeholder = useMemo(
     () => (live ? liveMessageOf(live) : null),
-    [liveId, liveAgent, liveChannel, liveThread, liveStart],
+    [liveId, liveAgent, liveChannel, liveThread, liveStart, liveShown],
   );
   // No words of its own yet: the bar above the composer speaks for it, and the block draws only for something to
   // show (`rowShows`). A run gone quiet meanwhile draws for "sem notícias · Atualizar": wake when that moment comes.
@@ -4424,8 +4467,9 @@ export const TimelineMessage = memo(function TimelineMessage({
               <div className="ac-msg__error-row" role="alert">
                 <p className="ac-msg__error ac-iconline">
                   <Icon name="alert" size={16} />
-                  {/* A known code is said in words; the stored error (a computer's code) only on hover. */}
-                  <span title={!refusal && failedWhy ? live.error : undefined}>
+                  {/* A known code is said in words; the stored error (a computer's code) only on hover, unless the
+                      words already say what it said. */}
+                  <span title={!refusal && failedWhy && !live.errorParams?.detail ? live.error : undefined}>
                     {runFailureLine(t, name, { code: live.errorCode, params: live.errorParams }, i18n.language) ??
                       (live.error
                         ? t("channel.runFailed", { agent: name, reason: live.error })
@@ -4794,7 +4838,7 @@ function ChannelDetails({
   /** Open on adding members (who manages the channel), with no details under it. */
   startAdding?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const api = useApi();
   const qc = useQueryClient();
@@ -4802,6 +4846,8 @@ function ChannelDetails({
   const roster = useRoster(org.id, channel.id, open && channel.isMember);
   // What "on its own" means for my messages: who reads the ones that mention nobody.
   const routing = useAiStatus(org.id, open).data?.routing;
+  const presences = usePresences();
+  const agentShown = useAgentsShown(() => false);
   const update = useUpdateChannel(org.id, channel.id);
   const editable = managesChannel(channel, me.user.id, org);
   const toast = useToast();
@@ -4950,15 +4996,132 @@ function ChannelDetails({
     setsReply: m.type === "agent" && setsAutoReply(channel, dir.agentById.get(m.id), me.user.id, org),
   }));
   const shown = all.filter((r) => !needle || `${r.name} ${r.handle} ${r.email}`.toLowerCase().includes(needle));
-  const agents = shown.filter((r) => r.kind === "agent");
-  const people = shown.filter((r) => r.kind === "person");
-  const agentCount = all.filter((r) => r.kind === "agent").length;
+  // Off for now, as in the members column: an agent out of office, paused or with no AI, a person not here.
+  const off = (r: (typeof all)[number]) => {
+    if (r.kind === "person") {
+      const presence = presences.get(r.id);
+      return presence !== undefined && !isConnected(presence);
+    }
+    const s = agentShown(r.id);
+    return s !== null && isAgentOff(s.presence, s.line);
+  };
+  const agents = shown.filter((r) => r.kind === "agent" && !off(r));
+  const people = shown.filter((r) => r.kind === "person" && !off(r));
+  const away = shown.filter(off).sort((a, b) => a.name.localeCompare(b.name));
+  const count = (kind: "agent" | "person" | "off") =>
+    all.filter((r) => (kind === "off" ? off(r) : r.kind === kind && !off(r))).length;
   const inChannel = new Set((roster.data ?? []).map((m) => `${m.type}:${m.id}` as PickKey));
-  const group = (label: string, count: number) => (
+  const group = (label: string, n: number) => (
     <p className="member-group">
       <span className="ac-eyebrow">{label}</span>
-      <span className="member-group__count">{count}</span>
+      <span className="member-group__count">{n}</span>
     </p>
+  );
+  const agentRow = (r: (typeof all)[number], gone = false) => {
+    const s = gone ? agentShown(r.id) : null;
+    return (
+      <div key={r.key} className={cx("member-row", gone && "member-row--off")}>
+        <OpensAgent agentId={r.id} onOpen={leave}>
+          <ActorAvatar actor={{ type: "agent", id: r.id }} size="sm" name={r.name} />
+        </OpensAgent>
+        <span className="list-col">
+          <span style={{ fontWeight: 600 }}>{r.name}</span>
+          <span className="small muted">
+            {s
+              ? agentOffLine(t, s, i18n.language)
+              : !r.autoReply
+                ? t("channelMembers.mentionLine", { handle: r.handle })
+                : !picksForMe(routing)
+                  ? t(replyAloneKey(routing), agentGrammar(r.name))
+                  : t("channelMembers.aloneLine", agentGrammar(r.name))}
+          </span>
+        </span>
+        {r.setsReply && (
+          <Menu
+            align="end"
+            label={t("channelMembers.actions", { name: r.name })}
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon="more"
+                aria-label={t("channelMembers.actions", { name: r.name })}
+                disabled={autoReply.isPending && autoReply.variables?.agentId === r.id}
+              />
+            }
+          >
+            <MenuRadioGroup
+              label={t("channelMembers.replyHeading", agentGrammar(r.name))}
+              value={r.autoReply ? "alone" : "mention"}
+              onValueChange={(v) => autoReply.mutate({ agentId: r.id, on: v === "alone" })}
+              options={[
+                {
+                  value: "alone",
+                  label: (
+                    <>
+                      {t("channelMembers.replyAlone", agentGrammar(r.name))}
+                      <span className="ac-menu__desc">{t(replyAloneKey(routing), agentGrammar(r.name))}</span>
+                    </>
+                  ),
+                },
+                {
+                  value: "mention",
+                  label: (
+                    <>
+                      {t("channelMembers.replyMention")}
+                      <span className="ac-menu__desc">
+                        {t("channelMembers.replyMentionHelp", { handle: r.handle })}
+                      </span>
+                    </>
+                  ),
+                },
+              ]}
+            />
+            {editable && (
+              <>
+                <MenuSeparator />
+                <MenuItem icon="close" danger onSelect={() => setRemoving({ kind: "agent", id: r.id, name: r.name })}>
+                  {t("channelMembers.remove")}
+                </MenuItem>
+              </>
+            )}
+          </Menu>
+        )}
+      </div>
+    );
+  };
+  const personRow = (r: (typeof all)[number], gone = false) => (
+    <div key={r.key} className={cx("member-row", gone && "member-row--off")}>
+      <ActorAvatar actor={{ type: "person", id: r.id }} size="sm" name={r.name} />
+      <span className="list-col">
+        <span style={{ fontWeight: 600 }}>
+          {r.name}
+          {r.id === me.user.id && <span className="member-row__you">{t("common.you")}</span>}
+        </span>
+        <span className="small muted">{r.email}</span>
+      </span>
+      {/* Not on my own row: removing myself from my own list reads as a mistake. */}
+      {editable && r.id !== me.user.id && (
+        <Menu
+          align="end"
+          label={t("channelMembers.actions", { name: r.name })}
+          trigger={
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon="more"
+              aria-label={t("channelMembers.actions", { name: r.name })}
+            />
+          }
+        >
+          <MenuItem icon="close" danger onSelect={() => setRemoving({ kind: "person", id: r.id, name: r.name })}>
+            {t("channelMembers.remove")}
+          </MenuItem>
+        </Menu>
+      )}
+    </div>
   );
   const membersList = (
     <DialogSearchList
@@ -4973,109 +5136,12 @@ function ChannelDetails({
       <p className="member-caption">
         {t(channel.visibility === "public" ? "channelMembers.captionOpen" : "channelMembers.caption")}
       </p>
-      {agents.length > 0 && group(t("channelMembers.agents"), agentCount)}
-      {agents.map((r) => (
-        <div key={r.key} className="member-row">
-          <OpensAgent agentId={r.id} onOpen={leave}>
-            <ActorAvatar actor={{ type: "agent", id: r.id }} size="sm" name={r.name} />
-          </OpensAgent>
-          <span className="list-col">
-            <span style={{ fontWeight: 600 }}>{r.name}</span>
-            <span className="small muted">
-              {!r.autoReply
-                ? t("channelMembers.mentionLine", { handle: r.handle })
-                : !picksForMe(routing)
-                  ? t(replyAloneKey(routing), agentGrammar(r.name))
-                  : t("channelMembers.aloneLine", agentGrammar(r.name))}
-            </span>
-          </span>
-          {r.setsReply && (
-            <Menu
-              align="end"
-              label={t("channelMembers.actions", { name: r.name })}
-              trigger={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  icon="more"
-                  aria-label={t("channelMembers.actions", { name: r.name })}
-                  disabled={autoReply.isPending && autoReply.variables?.agentId === r.id}
-                />
-              }
-            >
-              <MenuRadioGroup
-                label={t("channelMembers.replyHeading", agentGrammar(r.name))}
-                value={r.autoReply ? "alone" : "mention"}
-                onValueChange={(v) => autoReply.mutate({ agentId: r.id, on: v === "alone" })}
-                options={[
-                  {
-                    value: "alone",
-                    label: (
-                      <>
-                        {t("channelMembers.replyAlone", agentGrammar(r.name))}
-                        <span className="ac-menu__desc">{t(replyAloneKey(routing), agentGrammar(r.name))}</span>
-                      </>
-                    ),
-                  },
-                  {
-                    value: "mention",
-                    label: (
-                      <>
-                        {t("channelMembers.replyMention")}
-                        <span className="ac-menu__desc">
-                          {t("channelMembers.replyMentionHelp", { handle: r.handle })}
-                        </span>
-                      </>
-                    ),
-                  },
-                ]}
-              />
-              {editable && (
-                <>
-                  <MenuSeparator />
-                  <MenuItem icon="close" danger onSelect={() => setRemoving({ kind: "agent", id: r.id, name: r.name })}>
-                    {t("channelMembers.remove")}
-                  </MenuItem>
-                </>
-              )}
-            </Menu>
-          )}
-        </div>
-      ))}
-      {people.length > 0 && group(t("channelMembers.people"), all.length - agentCount)}
-      {people.map((r) => (
-        <div key={r.key} className="member-row">
-          <ActorAvatar actor={{ type: "person", id: r.id }} size="sm" name={r.name} />
-          <span className="list-col">
-            <span style={{ fontWeight: 600 }}>
-              {r.name}
-              {r.id === me.user.id && <span className="member-row__you">{t("common.you")}</span>}
-            </span>
-            <span className="small muted">{r.email}</span>
-          </span>
-          {/* Not on my own row: removing myself from my own list reads as a mistake. */}
-          {editable && r.id !== me.user.id && (
-            <Menu
-              align="end"
-              label={t("channelMembers.actions", { name: r.name })}
-              trigger={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  icon="more"
-                  aria-label={t("channelMembers.actions", { name: r.name })}
-                />
-              }
-            >
-              <MenuItem icon="close" danger onSelect={() => setRemoving({ kind: "person", id: r.id, name: r.name })}>
-                {t("channelMembers.remove")}
-              </MenuItem>
-            </Menu>
-          )}
-        </div>
-      ))}
+      {agents.length > 0 && group(t("channelMembers.agents"), count("agent"))}
+      {agents.map((r) => agentRow(r))}
+      {people.length > 0 && group(t("channelMembers.people"), count("person"))}
+      {people.map((r) => personRow(r))}
+      {away.length > 0 && group(t("presence.offline"), count("off"))}
+      {away.map((r) => (r.kind === "agent" ? agentRow(r, true) : personRow(r, true)))}
       {editable && !needle && (
         <button type="button" className="member-row member-row--add" onClick={() => setAdding(true)}>
           <span className="member-row__plus" aria-hidden="true">

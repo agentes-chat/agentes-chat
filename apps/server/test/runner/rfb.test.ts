@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import type net from "node:net";
 import path from "node:path";
 import { type AgentScope, STREAM_CLOSE } from "@agenteschat/adapters/machine-protocol";
+import { DesktopSessions } from "../../runner/desktop-session";
 import { connectVnc, openDesktopStream, serveNone, vncAuthResponse } from "../../runner/rfb";
 import {
   desktopOn,
@@ -315,4 +316,35 @@ test("refused: a desktop that isn't running, one with as many viewers as it take
   expect(lone.holds).toEqual({ taken: 1, released: 1 });
   const last = x.logins.at(-1)?.socket as net.Socket;
   await waitFor(() => last.destroyed);
+});
+
+test("protocol 54: the agent's pointer goes on every stream of its desktop as a text frame, none of another agent's, and none once a stream ended", async () => {
+  const x = await fakeXvnc();
+  const { desktops, holds } = desktopOn(x.socketPath);
+  const home = tempDir("rfb-pointer-");
+  dirs.push(home);
+  const sessions = new DesktopSessions({
+    home,
+    log: () => undefined,
+    user: async () => {
+      throw new Error("no desktop starts here");
+    },
+  });
+  const shown = { ...desktops, show: sessions.show.bind(sessions) };
+  const watching = memoryDataSocket();
+  const control = memoryDataSocket();
+  await openDesktopStream(shown, dev, "watch", async () => watching.socket);
+  await openDesktopStream(shown, dev, "control", async () => control.socket);
+  await viewerHandshake(watching);
+  sessions.cursor(dev.id, { act: "click", x: 514, y: 558, name: "Join the list" });
+  sessions.cursor("01a142cb-489d-7000-87a3-efb5adb382cb", { act: "type" });
+  const step = '{"type":"cursor","act":"click","x":514,"y":558,"name":"Join the list"}';
+  expect(watching.texts()).toEqual([step]);
+  expect(control.texts()).toEqual([step]);
+
+  watching.end();
+  await waitFor(() => holds.released === 1);
+  sessions.cursor(dev.id, { act: "type" });
+  expect(watching.texts()).toEqual([step]);
+  expect(control.texts()).toEqual([step, '{"type":"cursor","act":"type"}']);
 });

@@ -69,6 +69,17 @@ describe("the page behind the agent's screen", () => {
     expect(heard({ type: "session", mode: "drive" })).toBeNull();
     expect(screenEvent(SERVER, { url, data: "{" })).toBeNull();
     expect(screenEvent(SERVER, { url, data: "null" })).toBeNull();
+    // The agent's pointer (protocol 54), as the server checked it.
+    expect(heard({ type: "cursor", act: "click", x: 514, y: 558, name: "Join the list" })).toEqual({
+      type: "cursor",
+      act: "click",
+      x: 514,
+      y: 558,
+      name: "Join the list",
+    });
+    expect(heard({ type: "cursor", act: "type" })).toEqual({ type: "cursor", act: "type" });
+    expect(heard({ type: "cursor", act: "click" })).toBeNull();
+    expect(heard({ type: "cursor", act: "click", x: 1, y: 1 }, "https://evil.example/screen.html")).toBeNull();
   });
 
   test("the session cookie is set only on what the server's address allows", () => {

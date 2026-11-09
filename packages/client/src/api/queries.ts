@@ -41,6 +41,7 @@ import { usagePauseRefetchMs } from "../lib/routine-view";
 import { withRead } from "../lib/seen";
 import {
   knownToolOrder,
+  placeBefore,
   SIDEBAR_DEFAULTS,
   SIDEBAR_ITEMS,
   SIDEBAR_SECTIONS,
@@ -96,6 +97,7 @@ import type {
   CalendarProposal,
   CardDelegate,
   Channel,
+  ChannelCategory,
   ChannelEvent,
   ChannelInput,
   ChannelOverride,
@@ -126,6 +128,7 @@ import type {
   MailImapInput,
   Me,
   Message,
+  MessageCards,
   MessageMemory,
   MoveAgentsInput,
   NoticeCategory,
@@ -1146,19 +1149,26 @@ export function useDeleteChannelCategory(orgId: string) {
   });
 }
 
+/** Moves a category before another (null: to the end). The list moves at once and refetches for the exact order. */
 export function usePlaceChannelCategory(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { categoryId: string; beforeCategoryId: string | null }) =>
       api.chat.placeCategory(orgId, input.categoryId, input.beforeCategoryId),
-    onSuccess: () => refreshLayout(qc, orgId),
+    onMutate: (input) => {
+      qc.setQueryData<ChannelCategory[]>(
+        keys.channelCategories(orgId),
+        (list) => list && placeBefore(list, input.categoryId, input.beforeCategoryId),
+      );
+    },
+    onSettled: () => refreshLayout(qc, orgId),
   });
 }
 
 /**
- * Puts a channel in a category (null: none), before another channel or at its end. The list moves at once
- * (the channel takes its new category) and refetches for the exact order.
+ * Puts a channel in a category (null: none), before another channel or at its end. The list moves at once (the
+ * channel in its new place) and refetches for the exact order.
  */
 export function usePlaceChannel(orgId: string) {
   const api = useApi();
@@ -1167,8 +1177,11 @@ export function usePlaceChannel(orgId: string) {
     mutationFn: (input: { channelId: string; categoryId: string | null; beforeChannelId?: string | null }) =>
       api.chat.place(orgId, input.channelId, { categoryId: input.categoryId, beforeChannelId: input.beforeChannelId }),
     onMutate: (input) => {
-      qc.setQueryData<Channel[]>(keys.channels(orgId), (list) =>
-        list?.map((c) => (c.id === input.channelId ? { ...c, categoryId: input.categoryId } : c)),
+      qc.setQueryData<Channel[]>(
+        keys.channels(orgId),
+        (list) =>
+          list &&
+          placeBefore(list, input.channelId, input.beforeChannelId, (c) => ({ ...c, categoryId: input.categoryId })),
       );
     },
     onSettled: () => refreshLayout(qc, orgId),
@@ -1211,7 +1224,10 @@ export const messagesQuery = (api: ApiClient, orgId: string, channelId: string) 
     queryFn: async ({ client, queryKey }) => {
       const start = client.getQueryData<Message[]>(queryKey);
       return withLocalCopies(
-        await api.chat.messages(orgId, channelId, { limit: MESSAGES_PAGE }),
+        await api.chat.messages(orgId, channelId, {
+          limit: MESSAGES_PAGE,
+          onCards: (cards) => seedCards(client, orgId, cards),
+        }),
         client.getQueryData<Message[]>(queryKey),
         outbox.has,
         start,
@@ -1225,6 +1241,18 @@ export const useMessages = (orgId: string, channelId: string, enabled = true) =>
   const api = useApi();
   return useQuery({ ...messagesQuery(api, orgId, channelId), enabled });
 };
+
+/**
+ * A page's cards (`include=cards`) into the caches their cards read (`useArtifact`, `usePoll`, `useChoices`,
+ * `useSharedBlock`): they draw whole with the messages, never a placeholder that changes size after.
+ */
+export function seedCards(qc: QueryClient, orgId: string, cards: MessageCards) {
+  for (const a of cards.artifacts) qc.setQueryData(keys.artifact(orgId, a.id, a.shownVersion), a);
+  for (const p of cards.polls) qc.setQueryData(keys.poll(orgId, p.id), p);
+  for (const c of cards.choices) qc.setQueryData(keys.choices(orgId, c.id), c);
+  for (const b of cards.blocks)
+    qc.setQueryData<BlockState>(keys.blockState(orgId, b.id, b.version), (old) => newerBlockState(old, b));
+}
 
 /** Sidebar hover/focus: load a conversation before the click. */
 export function usePrefetchMessages(orgId: string) {
@@ -1420,12 +1448,23 @@ export async function catchUpChannel(
     .findAll({ queryKey: prefix, type: "active" })
     .flatMap(({ queryKey: [, , , , list, rootId] }) =>
       list === "messages"
-        ? [api.chat.messages(orgId, channelId, { limit: MESSAGES_PAGE })]
+        ? [api.chat.messages(orgId, channelId, { limit: MESSAGES_PAGE, onCards: (c) => seedCards(qc, orgId, c) })]
         : list === "thread" && typeof rootId === "string"
-          ? [api.chat.messages(orgId, channelId, { threadId: rootId, limit: THREAD_PAGE })]
+          ? [
+              api.chat.messages(orgId, channelId, {
+                threadId: rootId,
+                limit: THREAD_PAGE,
+                onCards: (c) => seedCards(qc, orgId, c),
+              }),
+            ]
           : [],
     );
-  const read = (await Promise.all(reads).catch(() => [])).flat();
+  const settled = await Promise.allSettled(reads);
+  // A read that failed (a deploy, a dropped connection) would leave its list without what it came for until a
+  // reload: the lists read again through the query client, which tries again.
+  if (settled.some((r) => r.status === "rejected"))
+    void qc.invalidateQueries({ queryKey: prefix, predicate: (q) => isMessageList(q.queryKey) });
+  const read = settled.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
   const known = new Set(
     qc
       .getQueriesData<Message[]>({ queryKey: prefix, predicate: (q) => isMessageList(q.queryKey) })
@@ -1436,6 +1475,35 @@ export async function catchUpChannel(
   // Only what it added: this runs on every channel opened, and a reconnect reads the thread lists on its own.
   for (const threadId of new Set(added.flatMap((m) => m.threadId ?? []))) refreshRepliedThread(qc, orgId, threadId);
   return read;
+}
+
+/** The screens open on each conversation (a thread beside its channel is a second one), per query client. */
+const openScreens = new WeakMap<QueryClient, Map<string, number>>();
+
+/**
+ * A screen opened that applies a conversation's live events to its caches; call what this returns when it closes.
+ * Once its last one closes, nothing keeps those caches current: they are marked stale, not read, so the next showing
+ * reads them whatever their `staleTime`, within which it would show the conversation (and its thread lines) as it
+ * was when it closed.
+ */
+export function openConversation(qc: QueryClient, orgId: string, channelId: string): () => void {
+  const counts = openScreens.get(qc) ?? new Map<string, number>();
+  openScreens.set(qc, counts);
+  const key = `${orgId}:${channelId}`;
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+  let closed = false;
+  return () => {
+    if (closed) return;
+    closed = true;
+    const left = (counts.get(key) ?? 1) - 1;
+    if (left > 0) return void counts.set(key, left);
+    counts.delete(key);
+    const conversation = ["org", orgId, "channel", channelId];
+    // A read still on its way would be joined by the next showing, which would take an answer older than itself.
+    void qc.cancelQueries({ queryKey: conversation, predicate: (q) => q.getObserversCount() === 0 });
+    void qc.invalidateQueries({ queryKey: conversation, refetchType: "none" });
+    void qc.invalidateQueries({ queryKey: keys.threads(orgId), refetchType: "none" });
+  };
 }
 
 /** A read's receipts on the copies of its messages the channel's lists hold (nothing else of them changes). */
@@ -2978,12 +3046,13 @@ export function useRemoveCredential(orgId: string) {
   });
 }
 
-export const useAgentDetail = (orgId: string, agentId: string) => {
+export const useAgentDetail = (orgId: string, agentId: string, enabled = true) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.agentDetail(orgId, agentId),
     queryFn: () => api.agents.detail(orgId, agentId),
     staleTime: 15_000,
+    enabled: enabled && agentId !== "",
   });
 };
 
@@ -5175,34 +5244,60 @@ export function useThreadInfo(orgId: string, threadId: string | null | undefined
     queryFn: () => api.threads.get(orgId, threadId ?? ""),
     enabled: Boolean(threadId),
     staleTime: 15_000,
+    // Every opening reads it, as its replies: the open thread clears its unread in this cache before this query
+    // mounts, which would pass for a fresh read, and its count and people kept what they were when it last read.
+    refetchOnMount: "always",
     placeholderData: () => (threadId ? cachedThreadInfo(qc, orgId, threadId) : undefined),
   });
 }
 
+/** A thread's root and replies, with what their cards show (the same cache the channel uses for agent replies). */
+export const threadMessagesQuery = (api: ApiClient, orgId: string, channelId: string, rootId: string) =>
+  queryOptions({
+    queryKey: keys.thread(orgId, channelId, rootId),
+    queryFn: async ({ client, queryKey }) => {
+      const start = client.getQueryData<Message[]>(queryKey);
+      const read = await api.chat.messages(orgId, channelId, {
+        threadId: rootId,
+        limit: THREAD_PAGE,
+        onCards: (cards) => seedCards(client, orgId, cards),
+      });
+      return withLocalCopies(read, client.getQueryData<Message[]>(queryKey), outbox.has, start);
+    },
+    staleTime: 30_000,
+  });
+
 /**
- * A thread's root and replies (the same cache the channel uses for agent replies). Until they are read, the root
- * the channel already holds stands in (`isPlaceholderData`): only the replies are still unknown.
+ * A thread's root and replies. Until they are read, the root the channel already holds stands in
+ * (`isPlaceholderData`): only the replies are still unknown.
  */
 export function useThreadMessages(orgId: string, channelId: string | undefined, rootId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useQuery({
+    ...threadMessagesQuery(api, orgId, channelId ?? "", rootId),
     placeholderData: () => {
       const root = channelId ? cachedTopLevel(qc, orgId, rootId, channelId) : undefined;
       return root ? [root] : undefined;
     },
-    queryKey: keys.thread(orgId, channelId ?? "", rootId),
-    queryFn: async ({ client, queryKey }) => {
-      const start = client.getQueryData<Message[]>(queryKey);
-      const read = await api.chat.messages(orgId, channelId ?? "", { threadId: rootId, limit: THREAD_PAGE });
-      return withLocalCopies(read, client.getQueryData<Message[]>(queryKey), outbox.has, start);
-    },
     enabled: Boolean(channelId),
-    staleTime: 30_000,
     // Every opening reads it: a reply heard live keeps the list looking fresh while it may lack what was said when
     // this channel wasn't listened to.
     refetchOnMount: "always",
   });
+}
+
+/**
+ * A thread line's hover or focus: its replies and cards load before the click, so the panel opens on them, at its end,
+ * in one paint.
+ */
+export function usePrefetchThread(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useCallback(
+    (channelId: string, rootId: string) => void qc.prefetchQuery(threadMessagesQuery(api, orgId, channelId, rootId)),
+    [api, qc, orgId],
+  );
 }
 
 /** How far back the context block looks for the start of a range (pages of 200). */
@@ -5936,6 +6031,10 @@ const taskNoticeOf = (event: { type: string }) =>
 export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: string }) {
   const e = event as UnreadEvent;
   if (e.type === "channel.activity") {
+    // Said where no screen of this app listens (a list loaded ahead, on hover or at start, counts as fresh): that
+    // conversation reads again when it is shown.
+    if (!openScreens.get(qc)?.has(`${orgId}:${e.channelId}`))
+      void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", e.channelId], refetchType: "none" });
     if (e.dm) readOncePerBurst(`${orgId}:dms`, () => void qc.invalidateQueries({ queryKey: keys.dms(orgId) }));
     else readOncePerBurst(`${orgId}:channels`, () => void qc.invalidateQueries({ queryKey: keys.channels(orgId) }));
     if (e.threadId)

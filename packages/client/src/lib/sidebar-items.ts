@@ -70,6 +70,24 @@ export function placeTool(
 }
 
 /**
+ * `list` with entry `id` moved before `before` (to the end when it is null or not there), changed by `edit`: a channel
+ * or a category placed as the server places it (the list it sends back is in that order).
+ */
+export function placeBefore<T extends { id: string }>(
+  list: readonly T[],
+  id: string,
+  before: string | null | undefined,
+  edit: (entry: T) => T = (entry) => entry,
+): T[] {
+  const moved = list.find((x) => x.id === id);
+  if (!moved) return [...list];
+  const rest = list.filter((x) => x !== moved);
+  const at = before ? rest.findIndex((x) => x.id === before) : -1;
+  rest.splice(at >= 0 ? at : rest.length, 0, edit(moved));
+  return rest;
+}
+
+/**
  * `item` one place up (-1) or down (+1) among the tools `shown` in the list: past its neighbour there, whatever sits
  * in More between them. The same order at an end.
  */

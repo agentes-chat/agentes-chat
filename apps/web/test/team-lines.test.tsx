@@ -85,6 +85,17 @@ describe("Responde a, by clicking (ADR 0148 addendum)", () => {
     expect(calls(state, "agents.setLines").at(-1)).toEqual([[{ agentId: ADA_ID, reportsToAgentId: null }]]);
   });
 
+  test("Setor and Responde a are a form's selects, one control tall, and say Ninguém when there's none", async () => {
+    const state = withRightHand(seedState());
+    state.agentGroups = [{ id: "g-ops", name: "Operações", agentIds: [] }];
+    await go(state, `agents/${ADA_ID}?tab=settings&sec=identity`);
+    const reports = screen().getByRole("combobox", { name: "Responde a" });
+    const sector = screen().getByRole("combobox", { name: "Setor" });
+    expect(reports.textContent).toBe("Ninguém");
+    expect(sector.textContent).toBe("Sem setor");
+    for (const select of [reports, sector]) expect(Boolean(select.closest(".newag__sel"))).toBe(false);
+  });
+
   test("a supervisor's page lists who reports to it", async () => {
     await go(lined(), `agents/${ATLAS_ID}?tab=settings&sec=identity`);
     expect(document.body.textContent).toContain("Quem responde a Atlas");

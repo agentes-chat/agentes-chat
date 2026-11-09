@@ -1927,6 +1927,7 @@
     "popoverTitle": "Agenten",
     "seenBy": "Gesehen von {{names}}",
     "retry": "Erneut versuchen",
+    "retrying": "Wird erneut versucht…",
     "platformCap": "Erwähne einen Agenten mit @, damit er antwortet.",
     "mentionNeeded": "Ohne @ antwortet kein Agent",
     "mentionNeededHint": "Keine KI hier konnte einen Agenten für diese Nachricht auswählen. Erwähne einen Agenten, um ihn zu rufen.",
@@ -2299,8 +2300,10 @@
     "rightHand": {
       "computer_away": "{{name}} kann gerade nicht antworten: Der Computer, auf dem das Abo angemeldet ist, ist nicht erreichbar.",
       "computer_failed": "{{name}} kann gerade nicht antworten: Der Computer des Abos hatte ein Problem.",
+      "cli_failed": "{{name}} kann gerade nicht antworten: Die KI des Abos wurde mit einem Fehler beendet.",
       "plan_limit": "{{name}} kann gerade nicht antworten: Das Abo hat sein Limit erreicht.",
       "plan_not_shared": "Verbinde dein eigenes Abo, um mit {{name}} zu sprechen: Das Abo des Workspace antwortet nur der Person, der es gehört.",
+      "plan_unattended": "{{name}} hat nicht geantwortet: Die Anfrage kam nicht von einer Person, und das Abo des Workspace antwortet nur der Person, der es gehört.",
       "runner_outdated": "{{name}} kann gerade nicht antworten: Das Programm auf dem Computer des Abos braucht ein Update.",
       "plan_tools": "{{name}} hat vor der Antwort gestoppt: Die KI des Abos ist auf diesem Computer nicht bei den Werkzeugen von agentes.chat geblieben.",
       "model_limit": "{{name}} kann gerade nicht antworten: {{model}} hat sein eigenes Limit im Abo erreicht. Die anderen Modelle des Abos funktionieren weiter.",
@@ -2321,6 +2324,36 @@
     "receipt": "Niemand wird antworten: keine KI verbunden",
     "chip": "Keine KI"
   },
+  "aiSelect": {
+    "placeholder": "Wähle eine KI",
+    "groupOthers": "Abos anderer Personen",
+    "groupKeys": "API-Schlüssel",
+    "connect": "Eine andere KI verbinden",
+    "connectLine": "Ein anderes Konto, Abo oder ein API-Schlüssel",
+    "ownOn": "Angemeldet auf {{computer}}",
+    "keyRefused": "Schlüssel abgelehnt",
+    "unknown": "Anmeldung nicht bestätigt",
+    "inUse": "Genutzt von {{agents}}",
+    "keyDefault": "Standard des Workspace · endet auf {{hint}}",
+    "serverKey": "Claude-Schlüssel dieses Servers",
+    "serverKeyLine": "Auf dem Server festgelegt",
+    "signedOut": "{{label}} ist abgemeldet. Melde dich erneut an, damit {{name}} es nutzen kann.",
+    "limited": "Mit diesem Konto antwortet {{name}} erst wieder {{when}}.",
+    "limitedUnknown": "Mit diesem Konto antwortet {{name}} erst wieder, wenn sich das Abo erneuert.",
+    "move": "{{agent}} denkt dann nicht mehr damit.",
+    "moveTo": "Zu {{name}} verschieben",
+    "lent": "{{owner}} bekommt eine E-Mail und kann es zurücknehmen.",
+    "useLent": "Das Abo von {{owner}} nutzen",
+    "signInAgain": "Erneut bei {{label}} anmelden",
+    "for": "Für {{names}}",
+    "plans": "Dein KI-Abo",
+    "endpointLine": "Dein eigenes Gateway oder dein Server",
+    "keyLocked": "Nur ein Admin kann einen hinzufügen",
+    "preparing": "Computer wird vorbereitet",
+    "geminiTiers": "Google AI Pro, Ultra oder Enterprise",
+    "cursorTiers": "Pro, Pro+, Ultra oder Teams",
+    "undo": "Rückgängig"
+  },
   "connectAi": {
     "title": {
       "any": "Eine KI verbinden",
@@ -2333,22 +2366,10 @@
       "api_key": "API-Schlüssel hinzufügen"
     },
     "titleFor": "Eine KI für {{name}} verbinden",
-    "have": {
-      "title": "Bereits verbunden",
-      "titleFor": "Bereits verbunden, für {{name}}",
-      "other": "Oder eine andere verbinden",
-      "manageKeys": "Schlüssel verwalten oder löschen"
-    },
     "billing": "Ein Abo meldet sich auf dem Computer des Workspace an, und den Computer gibt es mit einem aktiven agentes.chat-Abo.",
     "billingWeb": "Wähle eines im Web, auf agentes.chat.",
     "orPayGo": "Oder nach Verbrauch zahlen",
-    "pay": {
-      "label": "Wie zahlst du?",
-      "plan": "Mit einem Abo",
-      "key": "Mit API-Schlüssel"
-    },
     "pick": {
-      "plan": "Abo",
       "placeholder": "Abo auswählen",
       "search": "Anbieter suchen",
       "searchPlaceholder": "Name des Anbieters",
@@ -2421,9 +2442,7 @@
       "shared": "Das Konto, das deine Agenten teilen",
       "sharedLower": "das Konto, das deine Agenten teilen",
       "free": "Die kostenlosen Modelle von OpenCode",
-      "freeLower": "die kostenlosen Modelle von OpenCode",
-      "one": "Ein Konto nur für {{name}}",
-      "each": "Ein eigenes Konto für jeden"
+      "freeLower": "die kostenlosen Modelle von OpenCode"
     },
     "popup": {
       "title": "{{name}} wird verbunden",
@@ -2445,14 +2464,11 @@
         "next": "Wartet"
       }
     },
-    "for": "Für",
-    "all": "Alle Agenten",
     "agentAria": "Agenten, die dieses Abo nutzen",
     "each": "Eine Anmeldung pro Agent, mit demselben Konto.",
     "eachHint": "Jeder Agent behält seine eigene Anmeldung. Alle teilen sich die Limits deines Abos.",
     "once": "Eine Anmeldung für alle.",
     "onceHint": "Alle teilen sich die Limits deines Abos.",
-    "use": "{{label}} nutzen",
     "another": "Anderes Konto",
     "reuse": {
       "active": "Du hast {{label}} hier schon. Melde dich erneut an oder nimm ein anderes Konto.",
@@ -4318,7 +4334,6 @@
         "label_female": "So arbeitet sie",
         "computer": "Arbeitet auf",
         "brain": "Denkt mit",
-        "brainWith": "Denkt mit {{plan}}",
         "browser": "Browser",
         "effort": "Aufwand {{level}}"
       },
@@ -4337,10 +4352,7 @@
       },
       "saved": {
         "brain": "{{name}} denkt jetzt mit {{brain}}.",
-        "brainMoved": "{{name}} arbeitet jetzt auf {{computer}} und denkt mit {{brain}}.",
         "brainOwner": "{{name}} denkt jetzt mit {{brain}} und antwortet nur {{owner}}.",
-        "brainMovedOwner": "{{name}} arbeitet jetzt auf {{computer}}, denkt mit {{brain}} und antwortet nur {{owner}}.",
-        "account": "{{name}} nutzt jetzt das Konto {{account}}.",
         "computer": "{{name}} arbeitet jetzt auf {{computer}}.",
         "none": "{{name}} hat jetzt keinen Computer.",
         "browserOn": "{{name}} kann jetzt im Web surfen.",
@@ -4354,13 +4366,7 @@
         "sub": "Gilt nur für {{name}}, in jeder Unterhaltung.",
         "model": "API-Schlüssel",
         "modelText": "Bezahlt nach Nutzung. Zählt zum Budget von {{name}}.",
-        "planText": "Nutzt dein {{plan}}-Abo",
-        "planTextOf": "Nutzt das {{plan}}-Abo von {{owner}}",
-        "moves": "Wechselt zu {{computer}}",
-        "off": "{{computer}} ist offline",
-        "none": "Kein Computer hat es",
         "planModel": "Modell",
-        "account": "Konto",
         "accountWho": "Nur Konten von {{owner}}, verantwortlich für {{name}}: Ein Plan denkt nur für die Agenten seines Inhabers.",
         "accountSignedOut": "Abgemeldet, melde dich erneut an",
         "accountUnknown": "Anmeldung nicht bestätigt, wird bald erneut geprüft",
@@ -4369,18 +4375,14 @@
         "accountAlso": "Auch genutzt von {{agents}}",
         "accountOf": "Von {{name}}",
         "accountOthers": "Abos anderer Personen zeigen, wem sie gehören. Der Inhaber bekommt eine E-Mail und kann es zurücknehmen.",
-        "addAccount": "Konto hinzufügen",
         "signInAgain": "Erneut anmelden",
-        "connectPlan": "Weiteres Abo verbinden",
-        "keyLabel": "API-Schlüssel",
-        "fallbackTitle": "Wenn {{computer}} nicht mehr antwortet, über die API antworten",
-        "fallbackHint": "Die Antwort kommt dann über die API und zählt zum Budget von {{name}}. Sonst sagt {{name}} der Person, die gefragt hat, Bescheid und wartet, bis der Computer zurück ist.",
         "effort": "Aufwand",
         "efforts": {
           "auto": "Automatisch",
           "low": "Niedrig",
           "medium": "Mittel",
           "high": "Hoch",
+          "xhigh": "Sehr hoch",
           "max": "Maximal"
         },
         "effortsLower": {
@@ -4388,6 +4390,7 @@
           "low": "niedrig",
           "medium": "mittel",
           "high": "hoch",
+          "xhigh": "sehr hoch",
           "max": "maximal"
         },
         "effortText": {
@@ -4395,6 +4398,7 @@
           "low": "Antwortet schnell. Gut für einfache Fragen.",
           "medium": "Der Standard. Denkt meistens genug nach.",
           "high": "Denkt bei schweren Aufgaben mehr nach. Langsamer und teurer.",
+          "xhigh": "Denkt bei langen, schweren Aufgaben viel mehr nach. Langsamer und teurer.",
           "max": "Denkt so viel wie möglich nach. Viel langsamer und teurer."
         },
         "speed": "Geschwindigkeit",
@@ -4417,41 +4421,19 @@
         },
         "advanced": {
           "title": "Erweiterte Einstellungen",
-          "sub": "{{brain}}. Gilt für jede Unterhaltung.",
-          "think": "Wie er denkt",
-          "answers": "Wem er antwortet",
           "defaults": "Auf Standard zurücksetzen",
-          "done": "Fertig",
-          "contents": {
-            "model": "Kontextfenster",
-            "auto": "Kontextfenster und wem er antwortet",
-            "fixed": "Aufwand, Kontextfenster und wem er antwortet",
-            "autoSpeed": "Geschwindigkeit, Kontextfenster und wem er antwortet",
-            "fixedSpeed": "Aufwand, Geschwindigkeit, Kontextfenster und wem er antwortet"
-          },
           "allDefault": "Alles Standard",
           "effort": "Aufwand: {{level}}",
           "speed": "Geschwindigkeit: schnell",
-          "context": "Kontext: {{size}}",
-          "sharing": "Antwortet anderen Personen",
-          "waits": "Wartet auf den Computer"
+          "context": "Kontext: {{size}}"
         },
         "copy": {
-          "row": "Für andere Agenten verwenden",
-          "rowLine": "Dieselbe KI, dasselbe Modell, derselbe Aufwand und dieselbe Autonomie",
-          "title": "Für andere Agenten verwenden",
-          "sub": "Sie denken dann mit {{setup}}.",
-          "all": "Alle",
-          "allLine_one": "{{count}} Agent kann es übernehmen",
-          "allLine_other": "{{count}} Agenten können es übernehmen",
-          "none": "Gerade kann kein anderer Agent es übernehmen.",
           "now": "Jetzt: {{brain}}",
           "same": "Denkt schon so",
           "keeps": "Behält {{account}}",
           "keepsOwn": "Behält das Konto seines Computers",
           "autonomy": "Autonomie: {{from}} → {{to}}",
           "withAutonomy": "Autonomie übernehmen",
-          "withAutonomyLine": "{{value}}, wie bei diesem Agenten. Aus: Jeder behält seine eigene.",
           "reasons": {
             "not_allowed": "Nur Admins und {{owner}} können es ändern",
             "not_allowedNobody": "Nur Admins können es ändern",
@@ -4464,15 +4446,6 @@
             "model_missing": "{{plan}} hat kein {{model}}",
             "failed": "Konnte es gerade nicht ändern"
           },
-          "search": "Agent suchen",
-          "noMatch": "Kein Agent namens „{{q}}“",
-          "pick": "Agenten wählen",
-          "use_one": "Für {{count}} Agenten verwenden",
-          "use_other": "Für {{count}} Agenten verwenden",
-          "done_one": "{{count}} Agent denkt jetzt mit {{setup}}.",
-          "done_other": "{{count}} Agenten denken jetzt mit {{setup}}.",
-          "autonomyOnly_one": "Bei {{count}} Agenten wurde nur die Autonomie geändert.",
-          "autonomyOnly_other": "Bei {{count}} Agenten wurde nur die Autonomie geändert.",
           "missed_one": "{{count}} Agent wurde nicht geändert.",
           "missed_other": "{{count}} Agenten wurden nicht geändert."
         },
@@ -4535,10 +4508,8 @@
             "opencode": "Dieser OpenCode-Schlüssel ist schon als {{account}} verbunden."
           },
           "startFailed": "Keine Antwort von {{computer}}. Versuch es gleich noch einmal.",
-          "sendFailed": "Der Code konnte nicht gesendet werden. Prüf ihn und versuch es noch einmal.",
-          "done": "Das Konto {{account}} ist auf {{computer}}. Klicke auf Verwenden, um zu speichern."
-        },
-        "offCloud": "{{computer}} antwortet nicht"
+          "sendFailed": "Der Code konnte nicht gesendet werden. Prüf ihn und versuch es noch einmal."
+        }
       },
       "computer": {
         "title": "Wo arbeitet {{name}}?",
@@ -4879,6 +4850,9 @@
         "computer_busy": "Der Computer war mit anderen Aufgaben beschäftigt.",
         "computer_failed": "Der Computer hatte ein Problem und hat angehalten.",
         "computer_timeout": "Der Computer hat zu lange für eine Antwort gebraucht.",
+        "cli_failed": "Das Programm {{brain}} wurde mit einem Fehler beendet: {{detail}}",
+        "cli_stopped": "Das Programm {{brain}} wurde mit einem Fehler beendet.",
+        "cli_closed": "Das Programm {{brain}} wurde unerwartet beendet.",
         "account_missing": "Das für diesen Agenten gewählte Konto ist nicht mehr auf seinem Computer. Wähl in den Einstellungen des Agenten ein anderes oder füg es erneut hinzu.",
         "our_error": "Bei uns ist etwas schiefgelaufen, und die Aufgabe wurde angehalten. Frag gleich noch einmal.",
         "unknown": "Fehlgeschlagen."
@@ -5568,8 +5542,6 @@
     "price": "US$ {{input}} / {{output}} pro Million Tokens",
     "plans": "Mit einem Abo, auf einem Computer",
     "plansHelp": "Claude Code oder Codex mit dem Abo der Person, die den Computer verbunden hat. Kein Schlüssel nötig.",
-    "planOnlyOwner": "Mit einem Abo antwortet {{name}} zunächst nur {{owner}}. Auf der Seite von {{name}} kann {{owner}} wählen, ob er auch anderen Personen antwortet.",
-    "planOnlyOwner_female": "Mit einem Plan antwortet {{name}} zunächst nur {{owner}}. Auf der Seite von {{name}} kann {{owner}} wählen, ob sie auch anderen Personen antwortet.",
     "partly": "{{name}} ist bereit, aber ein Teil deiner Auswahl wurde nicht gespeichert. {{reason}}",
     "partly_female": "{{name}} ist bereit, aber ein Teil deiner Auswahl wurde nicht gespeichert. {{reason}}",
     "planNotSaved": "{{name}} ist bereit, aber {{brain}} konnte gerade nicht eingerichtet werden. Wähle es auf der Seite von {{name}} unter Wer denkt noch einmal aus.",
@@ -5578,7 +5550,6 @@
     "lastAutonomy": "{{value}}, wie bei der letzten Auswahl. Aus: Er startet mit {{fallback}}.",
     "autoCost": "Die Kosten richten sich nach jeder Aufgabe",
     "noKeyFor": "Kein {{provider}}-Schlüssel",
-    "key": "Schlüssel",
     "defaultKey": "Standardschlüssel des Workspace",
     "defaultKeyDesc": "{{provider}} · endet auf {{hint}}",
     "otherKeyDesc": "{{provider}} · endet auf {{hint}}",
@@ -5590,7 +5561,6 @@
       "needsKey": "Braucht einen {{plan}}-Schlüssel",
       "other": "Anderes wählen"
     },
-    "noKeys": "Noch keine Schlüssel",
     "budgetTitle": "Monatsbudget",
     "budget": "Monatsbudget (US$)",
     "budgetHelp": "Am Limit hält {{name}} an und sagt Bescheid.",
@@ -7097,6 +7067,7 @@
       "computer_busy": "Der Computer war mit anderen Aufgaben beschäftigt",
       "computer_failed": "Der Computer hatte ein Problem und hat angehalten",
       "computer_timeout": "Der Computer hat zu lange gebraucht, um zu antworten",
+      "cli_failed": "Das KI-Programm auf dem Computer wurde mit einem Fehler beendet",
       "account_missing": "Das Konto des Agenten ist nicht mehr auf seinem Computer",
       "our_error": "Bei uns ist etwas schiefgelaufen"
     },
@@ -8627,7 +8598,6 @@
       },
       "savedEveryone": "{{name}} antwortet jetzt anderen Personen.",
       "savedOwner": "{{name}} antwortet jetzt nur dir.",
-      "savedOwnerOf": "{{name}} antwortet jetzt nur {{owner}}.",
       "backOnApi": "{{name}} ist zurück auf der API und antwortet weiterhin nur dir.",
       "letEveryone": "{{name}} allen antworten lassen",
       "letPeople": "{{name}} anderen Personen antworten lassen",
@@ -10339,8 +10309,10 @@
       },
       "line": {
         "env": "In den Einstellungen dieses Servers festgelegt (GITHUB_APP_ID).",
-        "invalid": "Dieser Server kann die gespeicherte App nicht öffnen. Entferne sie und erstelle sie neu."
+        "invalid": "Dieser Server kann die gespeicherte App nicht öffnen. Entferne sie und erstelle sie neu.",
+        "events": "Damit Agenten mitbekommen, was auf GitHub passiert, hak diese Events in der App an: {{events}}."
       },
+      "events": "Events anhaken",
       "open": "Auf GitHub öffnen",
       "remove": "App entfernen",
       "removeTitle": "GitHub-App dieses Servers entfernen?",
@@ -11940,6 +11912,9 @@
       "invalidSecret": "Füge das ganze Client Secret ein, ohne Leerzeichen.",
       "invalidRepo": "Schreib das Repo als besitzer/name."
     },
+    "githubEvent": {
+      "answered": "Jemand hat schon um diese Antwort gebeten. Der Agent kümmert sich darum."
+    },
     "issue": {
       "assigneeOutside": "Diese Person sieht diese Aufgabe nicht. Füge sie zuerst bei Wer es sieht hinzu.",
       "stageFull": "Eine Phase hat höchstens {{max}} Spalten. Lösch zuerst eine ihrer Spalten.",
@@ -12098,7 +12073,7 @@
       "takeOverNoAccess": "Tritt der Unterhaltung der Routine bei, bevor du sie übernimmst.",
       "agentNotInChannel": "Füg den Agent zuerst zur Unterhaltung hinzu.",
       "webhookPaused": "Schalte die Routine ein, um sie zu testen.",
-      "continueExtraOff": "Das Zeitfenster dieses Abos ist aufgebraucht, und die lange Arbeit dieses Agenten nutzt keine bezahlte Zusatznutzung. Schalte sie in seinen KI-Einstellungen ein, um jetzt weiterzumachen, sonst geht es nach dem Zurücksetzen weiter.",
+      "continueExtraOff": "Das Zeitfenster dieses Abos ist aufgebraucht, und die lange Arbeit dieses Agenten nutzt nicht die bezahlte Zusatznutzung des Abos. Es geht nach dem Zurücksetzen weiter.",
       "continueExtraUsedUp": "Das Zeitfenster dieses Abos ist aufgebraucht, und seine bezahlte Zusatznutzung ist aufgebraucht oder nicht verfügbar. Es geht nach dem Zurücksetzen weiter.",
       "actionsNeedApprover": "Nur der Inhaber des Agenten oder wer seine Aktionen genehmigt, kann eine Routine selbstständig handeln lassen.",
       "editorOnly": "Nur wer die Routine erstellt hat, der Inhaber des Agenten oder ein Admin kann sie ändern.",
@@ -12109,6 +12084,7 @@
       "agentBusy": "Der Agent arbeitet schon in dieser Unterhaltung. Warte, bis er fertig ist, um weiterzumachen.",
       "continueForbidden": "Nur wer gefragt hat, der Inhaber des Agenten oder ein Admin kann fortsetzen.",
       "notRestartable": "Diese Antwort hatte schon begonnen und kann nicht neu starten. Sende deine Nachricht noch einmal.",
+      "notRestartableVoice": "Diese Antwort hatte schon begonnen und kann nicht neu starten. Nimm deine Nachricht noch einmal auf.",
       "cancelForbidden": "Nur wer gefragt hat, der Inhaber des Agenten oder ein Admin kann das stoppen.",
       "answerForbidden": "Nur wer gefragt hat, der Inhaber des Agenten oder ein Admin kann das tun.",
       "stopReasonForbidden": "Nur wer gestoppt hat, kann den Grund angeben."
@@ -13580,6 +13556,10 @@
     "statusReplyTurn": "Ich bin mitten in einer Aufgabe ({{duration}}) und kann noch nicht antworten. Deine Nachricht ist vorgemerkt und ich lese sie, wenn diese Arbeitsrunde endet.",
     "statusReplyQueued": "Ich warte auf den Computer ({{duration}}). Ich lese deine Nachricht, sobald ich dran bin.",
     "statusReplyAway": "Ich warte darauf, dass mein Computer zurückkommt. Ich lese deine Nachricht, sobald er wieder da ist.",
+    "statusReplyPlan": "Ich warte darauf, dass mein Abo wieder verfügbar ist ({{when}}). Ich lese deine Nachricht, wenn es wieder da ist.",
+    "statusReplyPlanUnknown": "Ich warte darauf, dass mein Abo wieder verfügbar ist. Ich lese deine Nachricht, sobald es wieder da ist.",
+    "statusReplyBudget": "Ich warte darauf, dass sich mein Monatsbudget erneuert ({{when}}). Ich lese deine Nachricht dann, oder früher, wenn ein Admin das Limit erhöht.",
+    "statusReplyBudgetUnknown": "Ich warte darauf, dass sich mein Monatsbudget erneuert. Ich lese deine Nachricht dann, oder früher, wenn ein Admin das Limit erhöht.",
     "status": {
       "one": "Arbeitet an: {{subject}}",
       "oneUntitled": "Arbeitet im Hintergrund",
@@ -13714,6 +13694,21 @@
       "wakeSkippedAnon": "Die Erwähnung von {{name}} hat keinen anderen Agenten erreicht",
       "wakeSkippedAudience": "Nur bestimmte Personen dürfen {{agents}} aufrufen, und diese Arbeit von {{name}} kam von keiner von ihnen. Jemand, der {{agents}} aufrufen darf, kann die Anfrage weitergeben.",
       "wakeSkippedCallable": "Die Einstellungen von {{name}} erlauben nicht, {{agents}} aufzurufen (ein anderes Projekt oder nicht auf der Liste der aufrufbaren Agenten). Wer sich um {{name}} kümmert, kann das auf der Seite des Agenten ändern.",
+      "github": {
+        "comment": "{{who}} hat PR #{{number}} ({{repo}}) auf GitHub kommentiert",
+        "commentIssue": "{{who}} hat Issue #{{number}} ({{repo}}) auf GitHub kommentiert",
+        "commentDiscussion": "{{who}} hat Diskussion #{{number}} ({{repo}}) auf GitHub kommentiert",
+        "opened": "{{who}} hat die agentes.chat-App in #{{number}} ({{repo}}) auf GitHub gerufen",
+        "reviewed": "{{who}} hat PR #{{number}} ({{repo}}) auf GitHub geprüft",
+        "approved": "{{who}} hat PR #{{number}} ({{repo}}) auf GitHub freigegeben",
+        "changes": "{{who}} hat Änderungen an PR #{{number}} ({{repo}}) auf GitHub angefragt",
+        "reviewRequested": "{{who}} hat {{name}} gebeten, PR #{{number}} ({{repo}}) auf GitHub zu prüfen",
+        "merged": "{{who}} hat PR #{{number}} ({{repo}}) auf GitHub gemergt",
+        "closed": "{{who}} hat PR #{{number}} ({{repo}}) auf GitHub geschlossen",
+        "closedIssue": "{{who}} hat Issue #{{number}} ({{repo}}) auf GitHub geschlossen",
+        "ask": "Um Antwort bitten",
+        "asked": "{{asker}} hat {{name}} gebeten, {{who}} auf GitHub zu antworten"
+      },
       "show": "Anzeigen",
       "hide": "Ausblenden",
       "talker": "während der Arbeit",
@@ -14098,8 +14093,10 @@
       "no_ai_not_signed_in": "Ich kann noch nicht antworten: {{brain}} ist auf meinem Computer nicht angemeldet.",
       "no_ai_computer_away": "Ich kann gerade nicht antworten: Der Computer, auf dem mein Abo angemeldet ist, ist nicht erreichbar.",
       "no_ai_computer_failed": "Ich kann gerade nicht antworten: Der Computer meines Abos hatte ein Problem.",
+      "no_ai_cli_failed": "Ich kann gerade nicht antworten: Die KI meines Abos wurde mit einem Fehler beendet.",
       "no_ai_plan_limit": "Ich kann gerade nicht antworten: Das Abo, mit dem ich denke, hat sein Limit erreicht.",
       "no_ai_plan_not_shared": "Über das Abo des Workspace kann ich dir nicht antworten: Es antwortet nur der Person, der es gehört. Verbinde dein eigenes Abo, dann antworte ich.",
+      "no_ai_plan_unattended": "Ich habe nicht geantwortet: Die Anfrage kam nicht von einer Person, und das Abo des Workspace antwortet nur der Person, der es gehört.",
       "no_ai_runner_outdated": "Ich kann gerade nicht antworten: Das Programm auf dem Computer meines Abos braucht ein Update.",
       "no_ai_plan_tools": "Ich habe vor der Antwort gestoppt: Die KI meines Abos ist auf diesem Computer nicht bei den Werkzeugen von agentes.chat geblieben.",
       "no_ai_model_limit": "Ich kann gerade nicht antworten: {{model}} hat sein eigenes Limit in meinem Abo erreicht.",
@@ -15176,6 +15173,13 @@
     "keyboard": {
       "label": "Tastatur",
       "field": "Auf dem Computer von {{name}} tippen"
+    },
+    "cursor": {
+      "click": "klickt auf {{name}}",
+      "clickPlain": "klickt",
+      "type": "tippt",
+      "scroll": "scrollt",
+      "drag": "zieht"
     },
     "seeWhole": "Ganzen Bildschirm ansehen",
     "card": {

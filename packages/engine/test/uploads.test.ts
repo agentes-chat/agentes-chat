@@ -399,7 +399,7 @@ describe("upload_file", () => {
     expect(out.content).toBe(
       `Uploaded out/chart.png as "Gráfico" (file, ${PNG.byteLength} bytes), artifact ${a?.id}, version 1. It is in the shared Drive, from #general: everyone in the workspace sees it.`,
     );
-    expect(out.data).toEqual({ artifact: { id: a?.id, version: 1, title: "Gráfico" } });
+    expect(out.data).toEqual({ artifact: { id: a?.id, version: 1, title: "Gráfico", kind: "file" } });
     const [up] = await f.db.select().from(schema.artifactUploads);
     expect(up).toMatchObject({ status: "done", path: "out/chart.png", runId: ctx.runId, artifactId: a?.id });
     expect(up?.computer).toBe(`machine:${paired.machineId}`);

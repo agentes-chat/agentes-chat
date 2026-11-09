@@ -1,6 +1,6 @@
 import type { AgentGroup, Team, TeamAgent } from "@agenteschat/client";
 import { useRoles } from "@agenteschat/client";
-import { agentSections } from "@agenteschat/client/lib/agent-groups";
+import { agentSections, groupOf } from "@agenteschat/client/lib/agent-groups";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   type ChartNode,
@@ -13,13 +13,14 @@ import {
 } from "@agenteschat/client/lib/team-views";
 import { CountChip, RoleMark, Segmented } from "@agenteschat/ui";
 import { Link } from "@tanstack/react-router";
-import { type DragEvent, Fragment, type HTMLAttributes, useState } from "react";
+import { type DragEvent, type HTMLAttributes, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar, PersonAvatar } from "@/components/AgentAvatar";
 import { GroupNameDialog, useAgentDrag } from "@/components/AgentGroups";
 import { useOrg } from "@/components/org-context";
 import { OrgMark } from "@/components/ProfilePhoto";
 import { colorOf } from "@/components/Sky";
+import { withSpot } from "@/lib/list-drag";
 import { useSetReportsTo } from "./ReportsTo";
 import { NoSectors, SectorMark, sectorStyle, useTeamLookups } from "./shared";
 
@@ -68,10 +69,13 @@ type NodeDrag = Partial<
 function AgentNode({
   agent,
   drag,
+  lifted,
   line,
 }: {
   agent: TeamAgent;
   drag?: ReturnType<ReturnType<typeof useAgentDrag>["row"]>;
+  /** Dragged to another setor: out of its frame behind its spot. */
+  lifted?: boolean;
   /** Organograma's line: dragged onto another agent, or another agent or setor dropped here. */
   line?: NodeDrag;
 }) {
@@ -82,6 +86,8 @@ function AgentNode({
       params={{ orgId: org.id, agentId: agent.id }}
       className="team-node team-node--agent"
       data-agent-row={agent.id}
+      data-slide={`agent:${agent.id}`}
+      data-lifted={lifted || undefined}
       {...drag}
       {...line}
     >
@@ -301,9 +307,15 @@ function BySector({ team, groups }: { team: Team; groups: AgentGroup[] }) {
   const column = (key: string, group: AgentGroup | null, agents: TeamAgent[]) => {
     const leads = [...new Set(agents.map((a) => reportsTo(a, groups, look.members, team.agents)).filter(Boolean))];
     const supervised = group ? sectorSupervisor(group, team.agents) : null;
-    const others = agents.filter((a) => a.id !== drag.dragging);
-    const lineAt = drag.over?.groupId === (group?.id ?? null) && group ? drag.over.index : null;
-    const dropLine = <span className="sidebar__drop-line" aria-hidden="true" />;
+    // Where a dragged agent would land: a dashed spot of its size (lib/list-drag.tsx), its node hidden meanwhile.
+    const spotAt = drag.spotIn(
+      group?.id ?? null,
+      agents.map((a) => a.id),
+      () =>
+        team.agents
+          .filter((a) => a.id === drag.liftedId || (!look.isLodi(a) && !groupOf(groups, a.id)))
+          .map((a) => a.id),
+    );
     return (
       <section
         key={key}
@@ -336,17 +348,14 @@ function BySector({ team, groups }: { team: Team; groups: AgentGroup[] }) {
             </span>
           )}
         </header>
-        {agents.map((a) => (
-          <Fragment key={a.id}>
-            {lineAt === others.indexOf(a) && dropLine}
-            <AgentNode
-              agent={a}
-              drag={arranges ? drag.row(a.id) : undefined}
-              line={arranges && line.dragging ? line.target(a.id) : undefined}
-            />
-          </Fragment>
+        {withSpot(agents, drag.spot, spotAt, drag.liftedId, (a) => (
+          <AgentNode
+            agent={a}
+            drag={arranges ? drag.row(a.id) : undefined}
+            lifted={drag.liftedId === a.id}
+            line={arranges && line.dragging ? line.target(a.id) : undefined}
+          />
         ))}
-        {lineAt !== null && lineAt >= others.length && dropLine}
         {arranges && group && agents.length === 0 && (
           <span className="sidebar__drop-hint">{t("agentGroups.dropHere")}</span>
         )}

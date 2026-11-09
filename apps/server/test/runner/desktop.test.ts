@@ -6,6 +6,7 @@ import {
   type AgentScope,
   DESKTOP_TEXT_PROTOCOL,
   DESKTOP_USE_PROTOCOL,
+  type DesktopCursor,
   MACHINE_OPS,
   MACHINE_PROTOCOL_VERSION,
   type MachineRequest,
@@ -16,6 +17,7 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import {
   type AgentUids,
+  cursorSteps,
   DesktopManager,
   type DesktopManagerOptions,
   HELPER_IDLE_MS,
@@ -605,6 +607,58 @@ describe("desktop use", () => {
     await Promise.all([t.manager.look(AGENT), t.manager.look(AGENT), t.manager.capture(AGENT, null)]);
     expect(t.requests().map((r) => r.op)).toEqual(["hello", "snapshot", "snapshot", "capture"]);
     expect(t.starts()).toBe(1);
+  });
+});
+
+describe("protocol 54: the agent's pointer", () => {
+  test("each input's pointer is said before the helper gets it, the first step with what it acts on, never what is typed", async () => {
+    const said: { agentId: string; cursor: DesktopCursor; inputs: number }[] = [];
+    let inputs = () => 0;
+    const t = setup({ cursor: (agentId, cursor) => said.push({ agentId, cursor, inputs: inputs() }) });
+    inputs = () => t.requests("input").length;
+    const look = await t.manager.look(AGENT);
+    const steps = async (action: unknown) => {
+      said.length = 0;
+      await t.manager.act(AGENT, action, false, t.where);
+      return said.map((s) => s.cursor);
+    };
+    // The menu's Terminal Emulator is [0, 32, 166, 27]: its center, said while the helper had no input yet.
+    expect(await steps({ kind: "click", at: { ref: refOf(look, "menuitem", "Terminal Emulator") } })).toEqual([
+      { act: "click", x: 83, y: 46, name: "Terminal Emulator" },
+    ]);
+    expect(said[0]).toMatchObject({ agentId: AGENT.id, inputs: 0 });
+    expect(await steps({ kind: "double_click", at: { ref: refOf(look, "button", "Back") } })).toEqual([
+      { act: "double_click", x: 734, y: 108, name: "Back" },
+    ]);
+    expect(await steps({ kind: "right_click", at: { x: 900, y: 300 } })).toEqual([
+      { act: "right_click", x: 900, y: 300 },
+    ]);
+    expect(await steps({ kind: "hover", at: { x: 900, y: 300 } })).toEqual([{ act: "move", x: 900, y: 300 }]);
+    expect(await steps({ kind: "drag", from: { x: 900, y: 300 }, to: { x: 950, y: 320 } })).toEqual([
+      { act: "move", x: 900, y: 300 },
+      { act: "drag", x: 950, y: 320 },
+    ]);
+    expect(await steps({ kind: "scroll", direction: "up", pixels: 300 })).toEqual([{ act: "scroll", x: 993, y: 236 }]);
+    // Typing says where it presses first, then that it types.
+    const typed = [
+      await steps({ kind: "fill", at: { x: 900, y: 300 }, text: "s3gredo-do-dia" }),
+      await steps({ kind: "type", text: "s3gredo-do-dia" }),
+    ];
+    expect(typed).toEqual([[{ act: "click", x: 900, y: 300 }, { act: "type" }], [{ act: "type" }]]);
+    expect(JSON.stringify(said)).not.toContain("s3gredo");
+    // No pointer: keys, an app starting, a window focused by its id.
+    expect(await steps({ kind: "press", key: "Enter" })).toEqual([]);
+    expect(await steps({ kind: "launch", app: "thunar.desktop" })).toEqual([]);
+    const terminal = refOf(look, "button", "Terminal - agent@desktop: ~");
+    expect(await steps({ kind: "focus", at: { ref: terminal } })).toEqual([]);
+  });
+
+  test("whole pixels, and a name cut to what a step carries", () => {
+    expect(cursorSteps([{ click: [10.4, 20.6] }, { key: "Return" }, { type: "x" }], ` ${"A".repeat(100)}`)).toEqual([
+      { act: "click", x: 10, y: 21, name: "A".repeat(60) },
+      { act: "type" },
+    ]);
+    expect(cursorSteps([{ pause: 200 }, { launch: "thunar.desktop" }], "Files")).toEqual([]);
   });
 });
 

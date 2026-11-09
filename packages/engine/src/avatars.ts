@@ -20,6 +20,85 @@ export function sniffImage(bytes: Uint8Array): "image/jpeg" | "image/png" | "ima
   return null;
 }
 
+/** Width and height from the image's header, or null when it can't be read. */
+export function imageDimensions(
+  b: Uint8Array,
+  type: NonNullable<ReturnType<typeof sniffImage>>,
+): { width: number; height: number } | null {
+  const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const ascii = (from: number, to: number) => String.fromCharCode(...b.subarray(from, to));
+  if (type === "image/png") {
+    if (b.length < 24 || ascii(12, 16) !== "IHDR") return null;
+    return { width: view.getUint32(16), height: view.getUint32(20) };
+  }
+  if (type === "image/jpeg") {
+    let i = 2;
+    while (i + 9 <= b.length && b[i] === 0xff) {
+      const marker = b[i + 1] as number;
+      // Start of frame (baseline, progressive, lossless…), not DHT (C4), JPG (C8) or DAC (CC).
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { height: view.getUint16(i + 5), width: view.getUint16(i + 7) };
+      }
+      if (marker === 0xda) return null;
+      i += 2 + view.getUint16(i + 2);
+    }
+    return null;
+  }
+  if (b.length < 30) return null;
+  const chunk = ascii(12, 16);
+  if (chunk === "VP8X") {
+    const u24 = (at: number) => (b[at] as number) | ((b[at + 1] as number) << 8) | ((b[at + 2] as number) << 16);
+    return { width: u24(24) + 1, height: u24(27) + 1 };
+  }
+  if (chunk === "VP8 ") return { width: view.getUint16(26, true) & 0x3fff, height: view.getUint16(28, true) & 0x3fff };
+  if (chunk === "VP8L") {
+    const bits = view.getUint32(21, true);
+    return { width: (bits & 0x3fff) + 1, height: ((bits >> 14) & 0x3fff) + 1 };
+  }
+  return null;
+}
+
+/** A JPEG's EXIF orientation (1 to 8; 1 when it says none). */
+function jpegOrientation(b: Uint8Array): number {
+  const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  let i = 2;
+  while (i + 10 <= b.length && b[i] === 0xff) {
+    const marker = b[i + 1];
+    if (marker === 0xda) return 1;
+    if (marker === 0xe1 && String.fromCharCode(...b.subarray(i + 4, i + 10)) === "Exif\0\0") {
+      const tiff = i + 10;
+      const little = b[tiff] === 0x49;
+      const ifd = tiff + view.getUint32(tiff + 4, little);
+      for (let e = 0, n = view.getUint16(ifd, little); e < n; e++) {
+        const at = ifd + 2 + e * 12;
+        if (view.getUint16(at, little) === 0x0112) return view.getUint16(at + 8, little);
+      }
+      return 1;
+    }
+    i += 2 + view.getUint16(i + 2);
+  }
+  return 1;
+}
+
+/**
+ * A picture's size as it shows (PNG, JPEG, WebP): a JPEG its EXIF turns a quarter is as browsers and phones draw it,
+ * its width and height swapped. Null for anything else, or a header that can't be read.
+ */
+export function pictureSize(bytes: Uint8Array): { width: number; height: number } | null {
+  const type = sniffImage(bytes);
+  try {
+    const size = type ? imageDimensions(bytes, type) : null;
+    if (!size || size.width < 1 || size.height < 1) return null;
+    return type === "image/jpeg" && jpegOrientation(bytes) >= 5 ? { width: size.height, height: size.width } : size;
+  } catch {
+    return null;
+  }
+}
+
+/** A picture's size for a file's ref (`meta.artifacts`), when it has one (a file version's `width` and `height`). */
+export const pictureOf = (p: { width?: number | null; height?: number | null }) =>
+  p.width && p.height ? { width: p.width, height: p.height } : {};
+
 /** An image a model reads (PNG, JPEG, WebP or GIF) by its first bytes: the APIs refuse one sent under another type. */
 export const sniffModelImage = (bytes: Uint8Array) =>
   sniffImage(bytes) ?? (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 ? "image/gif" : null);

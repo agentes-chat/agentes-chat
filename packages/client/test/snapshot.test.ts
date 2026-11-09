@@ -69,6 +69,43 @@ test("keeps the lists and the latest messages of a chat, without anything off th
   expect(kept.at(-1)?.id).toBe("m59");
 });
 
+test("a kept chat's cards are kept too, so it opens with them whole; a file's tile or another chat's card is not", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  qc.setQueryData(keys.me, me("u1"));
+  const card = {
+    id: "card1",
+    version: 1,
+    kind: "choices",
+    shownVersion: 1,
+    content: { kind: "choices", questions: [] },
+  };
+  const file = {
+    id: "doc1",
+    version: 1,
+    kind: "document",
+    shownVersion: 1,
+    content: { kind: "document", markdown: "" },
+  };
+  const elsewhere = { ...card, id: "card9" };
+  qc.setQueryData(keys.messages("o1", "c1"), [
+    msg("m1", { meta: { artifacts: [{ id: "card1", version: 1, title: "Deploy", kind: "choices" }] } }),
+    msg("m2", { meta: { artifacts: [{ id: "doc1", version: 1, title: "Notas" }] } }),
+  ]);
+  qc.setQueryData(keys.artifact("o1", "card1", 1), card);
+  qc.setQueryData(keys.choices("o1", "card1"), { id: "card1", answer: null });
+  qc.setQueryData(keys.artifact("o1", "doc1", 1), file);
+  qc.setQueryData(keys.artifact("o1", "card9", 1), elsewhere);
+  await createSnapshot(qc, store).flush();
+
+  const next = new QueryClient();
+  expect(await createSnapshot(next, store).restore()).toBe(true);
+  expect(next.getQueryData(keys.artifact("o1", "card1", 1))).toEqual(card);
+  expect(next.getQueryData(keys.choices("o1", "card1"))).toEqual({ id: "card1", answer: null });
+  expect(next.getQueryData(keys.artifact("o1", "doc1", 1))).toBeUndefined();
+  expect(next.getQueryData(keys.artifact("o1", "card9", 1))).toBeUndefined();
+});
+
 test("only the most recently updated chats are kept, with their roster", async () => {
   const qc = new QueryClient();
   const store = memory();
