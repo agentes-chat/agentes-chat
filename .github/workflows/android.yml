@@ -55,7 +55,7 @@ jobs:
             if [ -z "$value" ] || [ "$value" = PLACEHOLDER ]; then echo "::error::Secret $name is not set"; missing=1; fi
           done
           if [ "$missing" = 1 ]; then echo "See apps/mobile/README.md, \"Android on GitHub Actions\"."; exit 1; fi
-      - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a # v1.8.1
+      - uses: useblacksmith/checkout@2b9fe87d796feea153b455ec2f3125b471a7b0e7 # v1.8.2
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
@@ -64,7 +64,7 @@ jobs:
         with:
           node-version: 24
       # React Native 0.88's Android build (AGP 9, Gradle 9) runs on JDK 17.
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           java-version: 17
