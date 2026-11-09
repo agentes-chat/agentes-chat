@@ -51,13 +51,13 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       ref: ${{ steps.version.outputs.ref }}
     steps:
+      # main only takes pull requests; the release's deploy key is the one push the ruleset lets through.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
-      # Before any build, so a failed bump costs no build minutes. main only takes pull requests, so the version
-      # commit lives only under its tag (main's version files stay behind), and the next release counts from the
-      # newest desktop-v tag. Pushes made with the workflow token don't start other workflows.
+      # Before any build, so a failed bump costs no build minutes.
       - name: Bump the version, commit and tag
         if: ${{ inputs.release && inputs.release != 'none' }}
         shell: bash
@@ -65,7 +65,12 @@ jobs:
           RELEASE: ${{ inputs.release }}
           NOTES: ${{ inputs.notes }}
           PLATFORMS: ${{ inputs.platforms || 'all' }}
+          HAS_KEY: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
         run: |
+          if [ "$HAS_KEY" != "true" ]; then
+            echo "::error::The RELEASE_DEPLOY_KEY secret is missing: a release pushes its version commit to main with that deploy key"
+            exit 1
+          fi
           if [ "$GITHUB_REF" != "refs/heads/main" ]; then
             echo "::error::Releases are cut from main (this run is on $GITHUB_REF); pick release = none for a test build"
             exit 1
@@ -74,10 +79,8 @@ jobs:
             echo "::error::A release builds every system; pick platforms = all, or release = none for a test build"
             exit 1
           fi
-          PREV=$(git tag -l 'desktop-v*' --sort=-v:refname | head -1)
           CURRENT=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
-          LAST=$(printf '%s\n%s\n' "$CURRENT" "${PREV#desktop-v}" | sort -V | tail -1)
-          IFS=. read -r MAJOR MINOR PATCH <<< "$LAST"
+          IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT"
           case "$RELEASE" in
             fix) PATCH=$((PATCH + 1)) ;;
             feature) MINOR=$((MINOR + 1)); PATCH=0 ;;
@@ -89,6 +92,7 @@ jobs:
             echo "::error::Tag $TAG already exists"
             exit 1
           fi
+          PREV=$(git describe --tags --abbrev=0 --match 'desktop-v*' 2>/dev/null || true)
           if [ -z "$NOTES" ]; then
             NOTES=$(git log --no-merges --format='- %s' ${PREV:+"$PREV"..HEAD} | head -40)
           fi
@@ -101,8 +105,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "chore(desktop): $NEXT"
-          git tag -a "$TAG" -m "$NOTES"
-          git push origin "refs/tags/$TAG"
+          # main may move while this runs: rebase onto it and retry. Commit and tag go up
+          # together (--atomic), so a rejected push never leaves a tag outside main.
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            git tag -f -a "$TAG" -m "$NOTES"
+            if git push --atomic origin HEAD:main "refs/tags/$TAG"; then break; fi
+            if [ "$attempt" = 3 ]; then echo "::error::Couldn't push the version to main"; exit 1; fi
+          done
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
 
       - name: Version
