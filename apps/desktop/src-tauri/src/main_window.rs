@@ -1,7 +1,7 @@
 //! The main window: the server open now, inside the app (agentes.chat, or a server of the person's own,
 //! `servers.rs`). It loads the server's pages itself, so every change to the web shows here at once, and
-//! gets no access to this computer: no app command, only dragging the window by its title bar and `this_mac`
-//! (capabilities/main.json, and the same one added at runtime for another server's origin). Links to
+//! gets limited access through capabilities/main.json (and the same grants at runtime for another server's
+//! origin), including controls for its own window and `this_mac`. Links to
 //! anywhere else open in the person's browser, and so does social sign-in (Google and Apple refuse embedded
 //! web views): the site hands the session back through `/desktop/sign-in` and `/desktop/signed-in`
 //! (apps/server desktop-sign-in.ts). What the site may ask of this computer is `this_mac` (see `Bridge`).
@@ -301,6 +301,8 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         // The buttons are placed by `place_lights` (on every fit), not with `traffic_light_position`.
         .hidden_title(true);
+    #[cfg(target_os = "windows")]
+    let builder = builder.decorations(false).initialization_script(WINDOW_CONTROLS);
     let built = builder.build().map_err(|e| e.to_string())?;
     let window = built.as_ref().window();
     if saved.maximized {
@@ -315,6 +317,39 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
     follow_lights(app);
     fit_page(app);
     front(app)
+}
+
+#[cfg(target_os = "windows")]
+pub const WINDOW_CONTROLS: &str = include_str!("window_controls.js");
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WindowAction {
+    IsMaximized,
+    Minimize,
+    ToggleMaximize,
+    Close,
+}
+
+/// The controls can only act on the window that owns the calling webview.
+#[tauri::command]
+pub async fn main_window_action(webview: tauri::Webview, action: WindowAction) -> Result<bool, String> {
+    let window = webview.window();
+    if !cfg!(target_os = "windows") || window.label() != LABEL {
+        return Err("window controls are only available in the Windows main window".into());
+    }
+    match action {
+        WindowAction::IsMaximized => return window.is_maximized().map_err(|err| err.to_string()),
+        WindowAction::Minimize => window.minimize(),
+        WindowAction::ToggleMaximize => match window.is_maximized() {
+            Ok(true) => window.unmaximize(),
+            Ok(false) => window.maximize(),
+            Err(err) => Err(err),
+        },
+        WindowAction::Close => window.close(),
+    }
+    .map_err(|err| err.to_string())?;
+    Ok(false)
 }
 
 /// The window's name for the page's title: the site's own long title (sign-in, the landing) is just the app's.

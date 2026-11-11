@@ -9,6 +9,7 @@
   "permissions": [
     "core:window:allow-start-dragging",
     "core:window:allow-internal-toggle-maximize",
+    "allow-main-window-action",
     "allow-this-mac",
     "allow-context-menu",
     "allow-page-ready"

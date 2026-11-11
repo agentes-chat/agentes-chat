@@ -676,6 +676,7 @@ pub fn run() {
             menus::app_menu_set,
             menus::context_menu,
             cover::page_ready,
+            main_window::main_window_action,
             cover::cover_retry,
             cover::cover_hide,
             cover::cover_server,

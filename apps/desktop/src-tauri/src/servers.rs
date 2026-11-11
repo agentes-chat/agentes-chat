@@ -210,6 +210,7 @@ fn grant(app: &AppHandle, origin: &str) {
         .webview(crate::main_window::LABEL)
         .permission("core:window:allow-start-dragging")
         .permission("core:window:allow-internal-toggle-maximize")
+        .permission("allow-main-window-action")
         .permission("allow-this-mac")
         .permission("allow-context-menu")
         .permission("allow-page-ready");

@@ -4,6 +4,7 @@
   "webviews": ["main-cover"],
   "permissions": [
     "core:window:allow-start-dragging",
+    "allow-main-window-action",
     "allow-cover-retry",
     "allow-cover-hide",
     "allow-cover-server",
