@@ -2857,6 +2857,17 @@ export const en = {
     emptyAgent_female: "Ask her to remember, forget or work differently.",
     opening: "Opening the conversation…",
     title: "Direct message with {{name}}",
+    /** "Limpar conversa": hidden for the person only, nothing deleted (the agent keeps its context). */
+    clear: {
+      more: "Conversation options",
+      action: "Clear conversation",
+      title: "Clear this conversation?",
+      textAgent:
+        "The messages leave only your screen. {{name}} still knows what you talked about, and nothing is deleted.",
+      textPerson: "The messages leave only your screen. {{name}} still sees them, and nothing is deleted.",
+      confirm: "Clear",
+      done: "Conversation cleared",
+    },
   },
   memoryCard: {
     remembered: "{{name}} remembered",
@@ -4122,6 +4133,13 @@ export const en = {
     summaryAllRead: "all read",
     summaryNothing: "Nothing new here.",
     readAll: "Mark all as read",
+    /** "Concluir todas": everything in the filter to Done, but what waits on the person. */
+    doneAll: "Clear all",
+    doneAllConfirm: {
+      title: "Clear your inbox?",
+      text: "Everything here goes to Done. What is waiting on you stays until you answer it.",
+      confirm: "Clear all",
+    },
     filters: "Filter notifications",
     filter: {
       all: "All",
@@ -4346,6 +4364,8 @@ export const en = {
       undo: "Undo",
       readAll_one: "{{count}} marked as read",
       readAll_other: "{{count}} marked as read",
+      doneAll_one: "{{count}} moved to Done",
+      doneAll_other: "{{count}} moved to Done",
       sent: "Reply sent",
       see: "See",
       answered: "{{name}} got your answer",

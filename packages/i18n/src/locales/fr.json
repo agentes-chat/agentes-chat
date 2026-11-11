@@ -2878,7 +2878,16 @@
     "emptyAgent": "Demandez-lui de retenir, d'oublier ou de travailler autrement.",
     "emptyAgent_female": "Demandez-lui de retenir, d'oublier ou de travailler autrement.",
     "opening": "Ouverture de la conversation…",
-    "title": "Message direct avec {{name}}"
+    "title": "Message direct avec {{name}}",
+    "clear": {
+      "more": "Options de la conversation",
+      "action": "Vider la conversation",
+      "title": "Vider cette conversation ?",
+      "textAgent": "Les messages disparaissent seulement de votre écran. {{name}} sait toujours de quoi vous avez parlé, et rien n’est supprimé.",
+      "textPerson": "Les messages disparaissent seulement de votre écran. {{name}} les voit toujours, et rien n’est supprimé.",
+      "confirm": "Vider",
+      "done": "Conversation vidée"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} a retenu",
@@ -4104,6 +4113,12 @@
     "summaryAllRead": "tout est lu",
     "summaryNothing": "Rien de nouveau ici.",
     "readAll": "Tout marquer comme lu",
+    "doneAll": "Tout terminer",
+    "doneAllConfirm": {
+      "title": "Vider votre boîte de réception ?",
+      "text": "Tout ce qui est ici passe dans Terminées. Ce qui vous attend reste jusqu’à votre réponse.",
+      "confirm": "Tout terminer"
+    },
     "filters": "Filtrer les notifications",
     "filter": {
       "all": "Toutes",
@@ -4340,6 +4355,9 @@
       "readAll_one": "{{count}} marquée comme lue",
       "readAll_many": "{{count}} marquées comme lues",
       "readAll_other": "{{count}} marquées comme lues",
+      "doneAll_one": "{{count}} déplacée dans Terminées",
+      "doneAll_many": "{{count}} déplacées dans Terminées",
+      "doneAll_other": "{{count}} déplacées dans Terminées",
       "sent": "Réponse envoyée",
       "see": "Voir",
       "answered": "{{name}} a reçu votre réponse",

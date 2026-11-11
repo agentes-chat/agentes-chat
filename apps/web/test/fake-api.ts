@@ -3523,6 +3523,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const dm = state.dms.find((d) => d.channelId === channelId);
         if (dm) dm.everRead = true;
       },
+      clear: async (orgId, channelId) => {
+        log("dms.clear", orgId, channelId);
+        // Hidden for me: this fake has one viewer, so its messages simply go.
+        state.messages = state.messages.filter((m) => m.channelId !== channelId);
+        return { clearedAt: new Date().toISOString() };
+      },
       reads: async () => [],
     },
     reads: {

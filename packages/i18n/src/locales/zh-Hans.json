@@ -2677,7 +2677,16 @@
     "emptyAgent": "让他记住、忘记某些事，或换种方式工作。",
     "emptyAgent_female": "让她记住、忘记某些事，或换种方式工作。",
     "opening": "正在打开对话…",
-    "title": "与 {{name}} 的私信"
+    "title": "与 {{name}} 的私信",
+    "clear": {
+      "more": "对话选项",
+      "action": "清空对话",
+      "title": "清空这段对话？",
+      "textAgent": "消息只会从你的屏幕上消失。{{name}} 仍然记得你们聊过的内容，也不会删除任何东西。",
+      "textPerson": "消息只会从你的屏幕上消失。{{name}} 仍然能看到，也不会删除任何东西。",
+      "confirm": "清空",
+      "done": "对话已清空"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} 记住了",
@@ -3852,6 +3861,12 @@
     "summaryAllRead": "全部已读",
     "summaryNothing": "这里没有新内容。",
     "readAll": "全部标为已读",
+    "doneAll": "全部完成",
+    "doneAllConfirm": {
+      "title": "清空收件箱？",
+      "text": "这里的所有内容都会移到“已完成”。等你处理的内容会保留，直到你回复。",
+      "confirm": "全部完成"
+    },
     "filters": "筛选通知",
     "filter": {
       "all": "全部",
@@ -4058,6 +4073,7 @@
       "restored": "已移回收件箱",
       "undo": "撤销",
       "readAll_other": "已将 {{count}} 条标为已读",
+      "doneAll_other": "已将 {{count}} 条移到“已完成”",
       "sent": "回复已发送",
       "see": "查看",
       "answered": "{{name}} 收到了你的回复",

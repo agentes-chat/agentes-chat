@@ -1,0 +1,1 @@
+ALTER TABLE "channel_reads" ADD COLUMN "cleared_at" timestamp with time zone;

@@ -2879,7 +2879,16 @@
     "emptyAgent": "Chiedigli di ricordare, dimenticare o lavorare in modo diverso.",
     "emptyAgent_female": "Chiedile di ricordare, dimenticare o lavorare in modo diverso.",
     "opening": "Apertura della conversazione…",
-    "title": "Messaggio diretto con {{name}}"
+    "title": "Messaggio diretto con {{name}}",
+    "clear": {
+      "more": "Opzioni della conversazione",
+      "action": "Svuota conversazione",
+      "title": "Svuotare questa conversazione?",
+      "textAgent": "I messaggi spariscono solo dal tuo schermo. {{name}} sa ancora di cosa avete parlato, e non viene eliminato nulla.",
+      "textPerson": "I messaggi spariscono solo dal tuo schermo. {{name}} continua a vederli, e non viene eliminato nulla.",
+      "confirm": "Svuota",
+      "done": "Conversazione svuotata"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} ha ricordato",
@@ -4103,6 +4112,12 @@
     "summaryAllRead": "tutto letto",
     "summaryNothing": "Niente di nuovo qui.",
     "readAll": "Segna tutto come letto",
+    "doneAll": "Completa tutte",
+    "doneAllConfirm": {
+      "title": "Svuotare la posta in arrivo?",
+      "text": "Tutto quello che c’è qui passa in Completate. Quello che ti aspetta resta finché non rispondi.",
+      "confirm": "Completa tutte"
+    },
     "filters": "Filtra notifiche",
     "filter": {
       "all": "Tutte",
@@ -4341,6 +4356,9 @@
       "readAll_one": "{{count}} segnata come letta",
       "readAll_many": "{{count}} segnate come lette",
       "readAll_other": "{{count}} segnate come lette",
+      "doneAll_one": "{{count}} spostata in Completate",
+      "doneAll_many": "{{count}} spostate in Completate",
+      "doneAll_other": "{{count}} spostate in Completate",
       "sent": "Risposta inviata",
       "see": "Vedi",
       "answered": "{{name}} ha ricevuto la tua risposta",

@@ -2684,7 +2684,16 @@
     "emptyAgent": "Minta dia mengingat, melupakan, atau bekerja dengan cara lain.",
     "emptyAgent_female": "Minta dia mengingat, melupakan, atau bekerja dengan cara lain.",
     "opening": "Membuka percakapan…",
-    "title": "Pesan langsung dengan {{name}}"
+    "title": "Pesan langsung dengan {{name}}",
+    "clear": {
+      "more": "Opsi percakapan",
+      "action": "Kosongkan percakapan",
+      "title": "Kosongkan percakapan ini?",
+      "textAgent": "Pesan hanya hilang dari layarmu. {{name}} tetap tahu apa yang kalian bicarakan, dan tidak ada yang dihapus.",
+      "textPerson": "Pesan hanya hilang dari layarmu. {{name}} tetap melihatnya, dan tidak ada yang dihapus.",
+      "confirm": "Kosongkan",
+      "done": "Percakapan dikosongkan"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} mengingat",
@@ -3862,6 +3871,12 @@
     "summaryAllRead": "semua sudah dibaca",
     "summaryNothing": "Tidak ada yang baru di sini.",
     "readAll": "Tandai semua sudah dibaca",
+    "doneAll": "Selesaikan semua",
+    "doneAllConfirm": {
+      "title": "Kosongkan kotak masuk?",
+      "text": "Semua yang ada di sini pindah ke Selesai. Yang menunggumu tetap ada sampai kamu menjawab.",
+      "confirm": "Selesaikan semua"
+    },
     "filters": "Filter notifikasi",
     "filter": {
       "all": "Semua",
@@ -4070,6 +4085,7 @@
       "restored": "Kembali ke kotak masukmu",
       "undo": "Urungkan",
       "readAll_other": "{{count}} ditandai sudah dibaca",
+      "doneAll_other": "{{count}} dipindahkan ke Selesai",
       "sent": "Balasan terkirim",
       "see": "Lihat",
       "answered": "{{name}} menerima jawabanmu",

@@ -2972,7 +2972,16 @@
     "emptyAgent": "Poproś go, żeby coś zapamiętał, zapomniał albo pracował inaczej.",
     "emptyAgent_female": "Poproś ją, żeby coś zapamiętała, zapomniała albo pracowała inaczej.",
     "opening": "Otwieramy rozmowę…",
-    "title": "Wiadomość bezpośrednia z: {{name}}"
+    "title": "Wiadomość bezpośrednia z: {{name}}",
+    "clear": {
+      "more": "Opcje rozmowy",
+      "action": "Wyczyść rozmowę",
+      "title": "Wyczyścić tę rozmowę?",
+      "textAgent": "Wiadomości znikają tylko z twojego ekranu. {{name}} nadal wie, o czym rozmawialiście, i nic nie zostaje usunięte.",
+      "textPerson": "Wiadomości znikają tylko z twojego ekranu. {{name}} nadal je widzi, i nic nie zostaje usunięte.",
+      "confirm": "Wyczyść",
+      "done": "Rozmowa wyczyszczona"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} zapamiętuje",
@@ -4244,6 +4253,12 @@
     "summaryAllRead": "wszystko przeczytane",
     "summaryNothing": "Nic nowego.",
     "readAll": "Oznacz wszystko jako przeczytane",
+    "doneAll": "Zakończ wszystkie",
+    "doneAllConfirm": {
+      "title": "Opróżnić skrzynkę odbiorczą?",
+      "text": "Wszystko stąd trafi do Zakończonych. To, co czeka na ciebie, zostaje, dopóki nie odpowiesz.",
+      "confirm": "Zakończ wszystkie"
+    },
     "filters": "Filtruj powiadomienia",
     "filter": {
       "all": "Wszystkie",
@@ -4495,6 +4510,10 @@
       "readAll_few": "Oznaczono {{count}} jako przeczytane",
       "readAll_many": "Oznaczono {{count}} jako przeczytane",
       "readAll_other": "Oznaczono {{count}} jako przeczytane",
+      "doneAll_one": "Przeniesiono {{count}} do Zakończonych",
+      "doneAll_few": "Przeniesiono {{count}} do Zakończonych",
+      "doneAll_many": "Przeniesiono {{count}} do Zakończonych",
+      "doneAll_other": "Przeniesiono {{count}} do Zakończonych",
       "sent": "Wysłano odpowiedź",
       "see": "Zobacz",
       "answered": "{{name}} ma twoją odpowiedź",

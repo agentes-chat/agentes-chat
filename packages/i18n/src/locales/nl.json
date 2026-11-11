@@ -2782,7 +2782,16 @@
     "emptyAgent": "Vraag hem iets te onthouden, te vergeten of anders te werken.",
     "emptyAgent_female": "Vraag haar iets te onthouden, te vergeten of anders te werken.",
     "opening": "Het gesprek openen…",
-    "title": "Direct bericht met {{name}}"
+    "title": "Direct bericht met {{name}}",
+    "clear": {
+      "more": "Opties van het gesprek",
+      "action": "Gesprek wissen",
+      "title": "Dit gesprek wissen?",
+      "textAgent": "De berichten verdwijnen alleen van jouw scherm. {{name}} weet nog steeds waar jullie het over hadden, en er wordt niets verwijderd.",
+      "textPerson": "De berichten verdwijnen alleen van jouw scherm. {{name}} ziet ze nog steeds, en er wordt niets verwijderd.",
+      "confirm": "Wissen",
+      "done": "Gesprek gewist"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} heeft onthouden",
@@ -3991,6 +4000,12 @@
     "summaryAllRead": "alles gelezen",
     "summaryNothing": "Niets nieuws hier.",
     "readAll": "Alles als gelezen markeren",
+    "doneAll": "Alles afronden",
+    "doneAllConfirm": {
+      "title": "Je inbox leegmaken?",
+      "text": "Alles hier gaat naar Afgerond. Wat op jou wacht, blijft staan tot je antwoordt.",
+      "confirm": "Alles afronden"
+    },
     "filters": "Meldingen filteren",
     "filter": {
       "all": "Alle",
@@ -4214,6 +4229,8 @@
       "undo": "Ongedaan maken",
       "readAll_one": "{{count}} als gelezen gemarkeerd",
       "readAll_other": "{{count}} als gelezen gemarkeerd",
+      "doneAll_one": "{{count}} naar Afgerond verplaatst",
+      "doneAll_other": "{{count}} naar Afgerond verplaatst",
       "sent": "Antwoord verstuurd",
       "see": "Bekijken",
       "answered": "{{name}} heeft je antwoord gekregen",

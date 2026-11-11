@@ -476,6 +476,31 @@ describe("Notificações", () => {
     expect(undone.sort()).toEqual(["n-q", "n-rx", "n-thread"]);
   });
 
+  test("Concluir todas asks first, keeps what waits on me, and Desfazer brings the rest back", async () => {
+    const { state } = await go();
+    const waiting = [...document.querySelectorAll<HTMLElement>("[data-n]")]
+      .map((r) => r.dataset.n)
+      .filter((id) => state.notifications.find((n) => n.id === id)?.waiting);
+    await click(screen().getByRole("button", { name: "Concluir todas" }));
+    await settle(2);
+    const dialog = screen().getByRole("dialog");
+    expect(dialog.textContent).toContain("O que espera por você fica até você responder.");
+    expect(state.calls.some((c) => c.method === "notifications.doneAll")).toBe(false);
+    await click(within(dialog).getByRole("button", { name: "Concluir todas" }));
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "notifications.doneAll")?.args).toEqual([ORG_ID, "all"]);
+    const left = [...document.querySelectorAll<HTMLElement>("[data-n]")].map((r) => r.dataset.n);
+    expect(left).toEqual(waiting);
+    expect(document.querySelector('[data-n="n-rx"]')).toBeNull();
+    expect(document.body.textContent).toMatch(/\d+ movidas? para Concluídas/);
+    await click(screen().getByRole("button", { name: "Desfazer" }));
+    await settle(6);
+    const undone = state.calls.filter((c) => c.method === "notifications.done").map((c) => c.args[2]);
+    expect(undone.length).toBeGreaterThan(0);
+    expect(undone.every((d) => d === false)).toBe(true);
+    expect(document.querySelector('[data-n="n-rx"]')).not.toBeNull();
+  });
+
   test("Abrir goes to the source and marks it read", async () => {
     const { state, router } = await go();
     const row = document.querySelector('[data-n="n-thread"]') as HTMLElement;

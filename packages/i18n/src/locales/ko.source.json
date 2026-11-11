@@ -6713,6 +6713,27 @@
   "dm.title": {
     "value": "Direct message with {{name}}"
   },
+  "dm.clear.more": {
+    "value": "Conversation options"
+  },
+  "dm.clear.action": {
+    "value": "Clear conversation"
+  },
+  "dm.clear.title": {
+    "value": "Clear this conversation?"
+  },
+  "dm.clear.textAgent": {
+    "value": "The messages leave only your screen. {{name}} still knows what you talked about, and nothing is deleted."
+  },
+  "dm.clear.textPerson": {
+    "value": "The messages leave only your screen. {{name}} still sees them, and nothing is deleted."
+  },
+  "dm.clear.confirm": {
+    "value": "Clear"
+  },
+  "dm.clear.done": {
+    "value": "Conversation cleared"
+  },
   "memoryCard.remembered": {
     "value": "{{name}} remembered"
   },
@@ -9669,6 +9690,18 @@
   "notifications.readAll": {
     "value": "Mark all as read"
   },
+  "notifications.doneAll": {
+    "value": "Clear all"
+  },
+  "notifications.doneAllConfirm.title": {
+    "value": "Clear your inbox?"
+  },
+  "notifications.doneAllConfirm.text": {
+    "value": "Everything here goes to Done. What is waiting on you stays until you answer it."
+  },
+  "notifications.doneAllConfirm.confirm": {
+    "value": "Clear all"
+  },
   "notifications.filters": {
     "value": "Filter notifications"
   },
@@ -10261,6 +10294,12 @@
     "value": {
       "one": "{{count}} marked as read",
       "other": "{{count}} marked as read"
+    }
+  },
+  "notifications.toast.doneAll": {
+    "value": {
+      "one": "{{count}} moved to Done",
+      "other": "{{count}} moved to Done"
     }
   },
   "notifications.toast.sent": {

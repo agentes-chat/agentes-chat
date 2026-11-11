@@ -2848,6 +2848,17 @@ export const ptBR = {
     emptyAgent: "Peça para lembrar, esquecer ou trabalhar de outro jeito.",
     opening: "Abrindo a conversa…",
     title: "Mensagem direta com {{name}}",
+    /** "Limpar conversa": hidden for the person only, nothing deleted (the agent keeps its context). */
+    clear: {
+      more: "Opções da conversa",
+      action: "Limpar conversa",
+      title: "Limpar esta conversa?",
+      textAgent:
+        "As mensagens saem só da sua tela. {{name}} continua sabendo o que vocês conversaram, e nada é apagado.",
+      textPerson: "As mensagens saem só da sua tela. {{name}} continua vendo tudo, e nada é apagado.",
+      confirm: "Limpar",
+      done: "Conversa limpa",
+    },
   },
   memoryCard: {
     remembered: "{{name}} lembrou",
@@ -4093,6 +4104,13 @@ export const ptBR = {
     summaryAllRead: "tudo lido",
     summaryNothing: "Nada novo por aqui.",
     readAll: "Marcar tudo como lido",
+    /** "Concluir todas": everything in the filter to Done, but what waits on the person. */
+    doneAll: "Concluir todas",
+    doneAllConfirm: {
+      title: "Limpar a caixa de entrada?",
+      text: "Tudo o que está aqui vai para Concluídas. O que espera por você fica até você responder.",
+      confirm: "Concluir todas",
+    },
     filters: "Filtrar notificações",
     filter: {
       all: "Tudo",
@@ -4320,6 +4338,8 @@ export const ptBR = {
       undo: "Desfazer",
       readAll_one: "{{count}} marcada como lida",
       readAll_other: "{{count}} marcadas como lidas",
+      doneAll_one: "{{count}} movida para Concluídas",
+      doneAll_other: "{{count}} movidas para Concluídas",
       sent: "Resposta enviada",
       see: "Ver",
       answered: "{{name}} recebeu sua resposta",

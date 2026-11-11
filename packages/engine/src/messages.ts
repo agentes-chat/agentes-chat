@@ -6,6 +6,7 @@ import {
   desc,
   type Executor,
   eq,
+  gt,
   inArray,
   isNull,
   lt,
@@ -24,6 +25,7 @@ import { currentHandles } from "./agents";
 import { withDeletedArtifacts } from "./artifacts";
 import { audienceSql, notifyBlocked } from "./audience";
 import { postRefusal, requireChannelAccess } from "./channels";
+import { dmClearedAt } from "./dms";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
 import {
   type DecidedBy,
@@ -1649,7 +1651,14 @@ export async function listMessages(
 ): Promise<MessageView[]> {
   await requireChannelAccess(db, userId, orgId, channelId);
   const limit = Math.min(options.limit ?? 50, 200);
-  const scope = and(eq(messages.orgId, orgId), eq(messages.channelId, channelId), isNull(messages.deletedAt));
+  // A DM this person cleared ("Limpar conversa", `clearDm`): only what came after it, for them alone.
+  const cleared = await dmClearedAt(db, orgId, channelId, userId);
+  const scope = and(
+    eq(messages.orgId, orgId),
+    eq(messages.channelId, channelId),
+    isNull(messages.deletedAt),
+    cleared ? gt(messages.createdAt, cleared) : undefined,
+  );
   if (options.threadId) {
     const root = await getMessage(db, orgId, options.threadId);
     if (!root || root.channelId !== channelId) throw new NotFoundError("Thread not found");

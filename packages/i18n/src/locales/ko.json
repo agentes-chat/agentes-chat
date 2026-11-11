@@ -2672,7 +2672,16 @@
     "emptyAgent": "기억하거나, 잊거나, 일하는 방식을 바꾸라고 요청해 보세요.",
     "emptyAgent_female": "기억하거나, 잊거나, 일하는 방식을 바꾸라고 요청해 보세요.",
     "opening": "대화를 여는 중…",
-    "title": "{{name}}와(과)의 다이렉트 메시지"
+    "title": "{{name}}와(과)의 다이렉트 메시지",
+    "clear": {
+      "more": "대화 옵션",
+      "action": "대화 비우기",
+      "title": "이 대화를 비울까요?",
+      "textAgent": "메시지는 내 화면에서만 사라져요. {{name}}은(는) 나눈 이야기를 계속 알고 있고, 아무것도 삭제되지 않아요.",
+      "textPerson": "메시지는 내 화면에서만 사라져요. {{name}}에게는 계속 보이고, 아무것도 삭제되지 않아요.",
+      "confirm": "비우기",
+      "done": "대화를 비웠어요"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}}이(가) 기억했어요",
@@ -3847,6 +3856,12 @@
     "summaryAllRead": "모두 읽음",
     "summaryNothing": "새로운 소식이 없어요.",
     "readAll": "모두 읽음으로 표시",
+    "doneAll": "모두 완료",
+    "doneAllConfirm": {
+      "title": "받은 편지함을 비울까요?",
+      "text": "여기 있는 것은 모두 완료로 옮겨져요. 내 확인을 기다리는 것은 답할 때까지 남아 있어요.",
+      "confirm": "모두 완료"
+    },
     "filters": "알림 필터",
     "filter": {
       "all": "전체",
@@ -4053,6 +4068,7 @@
       "restored": "받은편지함으로 돌아갔어요",
       "undo": "실행 취소",
       "readAll_other": "{{count}}개를 읽음으로 표시했어요",
+      "doneAll_other": "{{count}}개를 완료로 옮겼어요",
       "sent": "답장을 보냈어요",
       "see": "보기",
       "answered": "{{name}}이(가) 내 답을 받았어요",

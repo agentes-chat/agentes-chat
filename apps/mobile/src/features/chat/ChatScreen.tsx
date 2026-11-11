@@ -1584,6 +1584,7 @@ function Chat({
             onPins={openPins}
             onMembers={channel && !dm ? openMembers : undefined}
             onSearch={dm && searchPlace ? openSearch : undefined}
+            dmWith={dm ? { name: dm.with.name, agent: dm.with.type === "agent" } : undefined}
           />,
         );
   // Holding the pill: "Trocar de conversa". The pick swaps the conversation in place (the route's params; the

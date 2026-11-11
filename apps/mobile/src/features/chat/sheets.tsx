@@ -9,6 +9,7 @@ import {
   useApi,
   useChannelCategories,
   useChannels,
+  useClearDm,
   useCloseMission,
   useCreateMission,
   useEligibleAgents,
@@ -41,6 +42,7 @@ import { categoryHrefs } from "../categories/logic";
 import { setPinDraft } from "../dashboards/logic";
 import { chatHref } from "../links/logic";
 import { missionComputerText } from "../missions/logic";
+import { confirmAction } from "../settings/parts";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useDirectory, useEdition, useMeId, useNamesComputers, useOrgId } from "../shared/hooks";
 import { genderOf, previewOf } from "../shared/logic";
@@ -594,6 +596,7 @@ export function ChannelOptions({
   onPins,
   onMembers,
   onSearch,
+  dmWith,
 }: {
   channelId: string;
   title: string;
@@ -608,10 +611,31 @@ export function ChannelOptions({
   onMembers?: (() => void) | undefined;
   /** A DM: searching it (its header keeps the room for the name and the agent's own buttons). */
   onSearch?: (() => void) | undefined;
+  /** A DM: "Limpar conversa", with whom it is (hidden for me only, nothing deleted). */
+  dmWith?: { name: string; agent: boolean } | undefined;
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const sheet = useSheet();
+  const toast = useToast();
+  const clear = useClearDm(orgId);
+  const clearIt = () => {
+    if (!dmWith) return;
+    confirmAction({
+      title: t("dm.clear.title"),
+      text: t(dmWith.agent ? "dm.clear.textAgent" : "dm.clear.textPerson", { name: dmWith.name }),
+      action: t("dm.clear.confirm"),
+      cancel: t("common.cancel"),
+      onConfirm: () =>
+        clear.mutate(channelId, {
+          onSuccess: () => {
+            sheet.close();
+            toast({ title: t("dm.clear.done") });
+          },
+          onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
+        }),
+    });
+  };
   const pins = usePins(orgId, channelId);
   const count = pins.data?.length ?? 0;
   // A channel's sidebar category (ADR 0080), for whoever may move it.
@@ -665,6 +689,18 @@ export function ChannelOptions({
                     sheet.close();
                     router.push(`/agent/${agentId}`);
                   },
+                },
+              ]
+            : []),
+          ...(dmWith
+            ? [
+                {
+                  key: "clear",
+                  icon: "trash" as const,
+                  label: t("dm.clear.action"),
+                  danger: true,
+                  disabled: clear.isPending,
+                  onPress: clearIt,
                 },
               ]
             : []),

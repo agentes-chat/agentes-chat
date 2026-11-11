@@ -5709,7 +5709,11 @@ export type NotificationAction =
   | { type: "snooze"; item: AppNotification; until: string | null }
   | { type: "readAll"; filter: NotificationFilter }
   /** Undo of "Marcar tudo como lido": the ids it changed. */
-  | { type: "unreadMany"; ids: string[] };
+  | { type: "unreadMany"; ids: string[] }
+  /** "Concluir todas" in a filter: what waits on me stays. */
+  | { type: "doneAll"; filter: NotificationFilter }
+  /** Undo of "Concluir todas": the ids it changed, back in the inbox. */
+  | { type: "undoneMany"; ids: string[] };
 
 /** The changed items as the server sent them, and the ids "Marcar tudo como lido" touched. */
 export interface NotificationActionResult {
@@ -5734,6 +5738,15 @@ function optimistic(qc: QC, orgId: string, action: NotificationAction, now: stri
       return action.ids.flatMap((id) => {
         const known = knownNotification(qc, orgId, id);
         return known ? [{ ...known, readAt: null }] : [];
+      });
+    case "doneAll": {
+      const loaded = allItems(qc.getQueryData<NotificationPages>(keys.notificationList(orgId, action.filter)));
+      return loaded.filter((n) => !n.waiting && n.doneAt === null).map((n) => ({ ...n, doneAt: now }));
+    }
+    case "undoneMany":
+      return action.ids.flatMap((id) => {
+        const known = knownNotification(qc, orgId, id);
+        return known ? [{ ...known, doneAt: null }] : [];
       });
   }
 }
@@ -5764,6 +5777,13 @@ export function useNotificationAction(orgId: string) {
             items: await Promise.all(action.ids.map((id) => api.notifications.read(orgId, id, false))),
             ids: action.ids,
           };
+        case "doneAll":
+          return { items: [], ids: (await api.notifications.doneAll(orgId, action.filter)).ids };
+        case "undoneMany":
+          return {
+            items: await Promise.all(action.ids.map((id) => api.notifications.done(orgId, id, false))),
+            ids: action.ids,
+          };
       }
     },
     onMutate: async (action) => {
@@ -5783,8 +5803,13 @@ export function useNotificationAction(orgId: string) {
     },
     onSettled: (_r, _e, action) => {
       void qc.invalidateQueries({ queryKey: keys.notificationCount(orgId) });
-      // Marking everything read touches items beyond the loaded pages.
-      if (action.type === "readAll" || action.type === "unreadMany")
+      // Marking or concluding everything touches items beyond the loaded pages (and "Concluídas").
+      if (
+        action.type === "readAll" ||
+        action.type === "unreadMany" ||
+        action.type === "doneAll" ||
+        action.type === "undoneMany"
+      )
         void qc.invalidateQueries({ queryKey: [...keys.notifications(orgId), "list"] });
     },
   });
@@ -5858,6 +5883,24 @@ export function useMarkChannelRead(orgId: string) {
       void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
       void qc.invalidateQueries({ queryKey: keys.unreadThreads(orgId) });
     },
+  });
+}
+
+/** A DM I cleared, on this device: its messages read again (none from before the clear) and so does the DM list. */
+export function clearedDm(qc: QueryClient, orgId: string, channelId: string) {
+  clearUnread(qc, orgId, channelId);
+  void qc.resetQueries({ queryKey: keys.messages(orgId, channelId) });
+  void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.unreadThreads(orgId) });
+}
+
+/** "Limpar conversa" in a DM: hidden for me only, nothing deleted (the agent keeps its context). */
+export function useClearDm(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (channelId: string) => api.dms.clear(orgId, channelId),
+    onSuccess: (_r, channelId) => clearedDm(qc, orgId, channelId),
   });
 }
 
@@ -6052,6 +6095,7 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
     void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
     void qc.invalidateQueries({ queryKey: keys.unreadThreads(orgId) });
   } else if (e.type === "channel.muted") setMuted(qc, orgId, e.channelId, e.muted);
+  else if (e.type === "channel.cleared") clearedDm(qc, orgId, e.channelId);
   else if (e.type === "thread.read") {
     clearThreadUnread(qc, orgId, e.threadId);
     refreshThreadUnread(qc, orgId);

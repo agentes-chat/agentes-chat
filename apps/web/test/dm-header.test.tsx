@@ -137,6 +137,52 @@ describe("the DM's search is the channel's, held to the DM", () => {
   });
 });
 
+describe("Limpar conversa, in the header's ⋯", () => {
+  test("asks first, saying it hides only for me and the agent keeps its context; then the DM is empty", async () => {
+    const state = seedState();
+    const dm = seedDm(state, { type: "agent", id: ADA_ID }, { body: "zebra na DM" });
+    const header = await go(state, `dm/agent/${ADA_ID}`);
+    expect(document.body.textContent).toContain("zebra na DM");
+    const more = within(header).getByRole("button", { name: "Opções da conversa" });
+    more.focus();
+    await act(async () => {
+      fireEvent.keyDown(more, { key: "Enter" });
+      fireEvent.keyUp(more, { key: "Enter" });
+    });
+    await settle(2);
+    await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Limpar conversa" }));
+    const dialog = screen().getByRole("dialog", { name: "Limpar esta conversa?" });
+    expect(dialog.textContent).toContain(
+      "As mensagens saem só da sua tela. Ada continua sabendo o que vocês conversaram, e nada é apagado.",
+    );
+    expect(state.calls.some((c) => c.method === "dms.clear")).toBe(false);
+    await click(within(dialog).getByRole("button", { name: "Limpar" }), 8);
+    expect(state.calls.find((c) => c.method === "dms.clear")?.args).toEqual([ORG_ID, dm]);
+    expect(screen().queryByRole("dialog", { name: "Limpar esta conversa?" })).toBeNull();
+    expect(document.body.textContent).toContain("Conversa limpa");
+    expect(document.querySelector(`article[data-message-id="m-${dm}"]`)).toBeNull();
+  });
+
+  test("Cancelar keeps everything", async () => {
+    const state = seedState();
+    seedDm(state, { type: "person", id: "u-joao" }, { body: "oi João" });
+    const header = await go(state, "dm/person/u-joao");
+    const more = within(header).getByRole("button", { name: "Opções da conversa" });
+    more.focus();
+    await act(async () => {
+      fireEvent.keyDown(more, { key: "Enter" });
+      fireEvent.keyUp(more, { key: "Enter" });
+    });
+    await settle(2);
+    await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Limpar conversa" }));
+    const dialog = screen().getByRole("dialog", { name: "Limpar esta conversa?" });
+    expect(dialog.textContent).toContain("João continua vendo tudo");
+    await click(within(dialog).getByRole("button", { name: "Cancelar" }));
+    expect(state.calls.some((c) => c.method === "dms.clear")).toBe(false);
+    expect(document.body.textContent).toContain("oi João");
+  });
+});
+
 describe("where Lodi's name comes from", () => {
   const story = "O nome vem de lodestar, a estrela que guia os navegantes.";
   const cardOf = async (state: FakeState) => {

@@ -1,4 +1,4 @@
-import { dmReads, listDms, markChannelRead, openDm, setChannelMuted } from "@agenteschat/engine";
+import { clearDm, dmReads, listDms, markChannelRead, openDm, setChannelMuted } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import {
   type AppDeps,
@@ -121,6 +121,25 @@ export function dmRoutes(deps: AppDeps) {
       const { orgId, channelId } = c.req.valid("param");
       await markChannelRead(db, c.get("user").id, orgId, channelId, new Date(), adapters.pubsub);
       return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/channels/{channelId}/clear",
+      tags,
+      security,
+      summary: '"Limpar conversa": hide a DM\'s messages up to now, for you only',
+      description:
+        "DMs only (a channel gets 400). Nothing is deleted: the other side still reads them, an agent keeps its context and the audit keeps the record. The DM is read up to now as well. Your other devices hear `channel.cleared` on your own topic.",
+      request: { params: OrgParams.extend({ channelId: z.uuid() }), body: body(z.object({})) },
+      responses: { 200: json(z.object({ clearedAt: z.string() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId, channelId } = c.req.valid("param");
+      const { clearedAt } = await clearDm(db, c.get("user").id, orgId, channelId, new Date(), adapters.pubsub);
+      return c.json({ clearedAt: clearedAt.toISOString() }, 200);
     },
   );
 

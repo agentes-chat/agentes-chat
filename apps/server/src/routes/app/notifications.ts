@@ -1,6 +1,7 @@
 import { SCREEN_KINDS } from "@agenteschat/adapters";
 import {
   listNotifications,
+  markAllNotificationsDone,
   markAllNotificationsRead,
   markNotificationDone,
   markNotificationRead,
@@ -225,6 +226,25 @@ export function notificationRoutes(deps: AppDeps) {
       const { orgId } = c.req.valid("param");
       const { filter } = c.req.valid("json");
       return c.json(await markAllNotificationsRead(nd, c.get("user").id, orgId, filter), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/notifications/done-all",
+      tags,
+      security,
+      summary: "Done for everything (in a filter) but what waits on you; returns the ids changed, for the undo",
+      description:
+        "Each leaves the inbox for `done` as `POST …/{notificationId}/done` does (undo it there with `done: false`). Approvals and questions waiting on you stay until answered; `waiting` and `done` change nothing.",
+      request: { params: OrgParams, body: body(z.object({ filter: Filter.optional() })) },
+      responses: { 200: json(z.object({ ids: z.array(z.uuid()) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { filter } = c.req.valid("json");
+      return c.json(await markAllNotificationsDone(nd, c.get("user").id, orgId, filter), 200);
     },
   );
 

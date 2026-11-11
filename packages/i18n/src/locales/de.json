@@ -2779,7 +2779,16 @@
     "emptyAgent": "Bitte ihn, sich etwas zu merken, etwas zu vergessen oder anders zu arbeiten.",
     "emptyAgent_female": "Bitte sie, sich etwas zu merken, etwas zu vergessen oder anders zu arbeiten.",
     "opening": "Unterhaltung wird geöffnet…",
-    "title": "Direktnachricht mit {{name}}"
+    "title": "Direktnachricht mit {{name}}",
+    "clear": {
+      "more": "Optionen der Unterhaltung",
+      "action": "Unterhaltung leeren",
+      "title": "Diese Unterhaltung leeren?",
+      "textAgent": "Die Nachrichten verschwinden nur von deinem Bildschirm. {{name}} weiß weiterhin, worüber ihr gesprochen habt, und nichts wird gelöscht.",
+      "textPerson": "Die Nachrichten verschwinden nur von deinem Bildschirm. {{name}} sieht sie weiterhin, und nichts wird gelöscht.",
+      "confirm": "Leeren",
+      "done": "Unterhaltung geleert"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} hat sich etwas gemerkt",
@@ -3988,6 +3997,12 @@
     "summaryAllRead": "alles gelesen",
     "summaryNothing": "Nichts Neues hier.",
     "readAll": "Alle als gelesen markieren",
+    "doneAll": "Alle erledigen",
+    "doneAllConfirm": {
+      "title": "Posteingang leeren?",
+      "text": "Alles hier wandert nach Erledigt. Was auf dich wartet, bleibt, bis du antwortest.",
+      "confirm": "Alle erledigen"
+    },
     "filters": "Benachrichtigungen filtern",
     "filter": {
       "all": "Alle",
@@ -4211,6 +4226,8 @@
       "undo": "Rückgängig",
       "readAll_one": "{{count}} als gelesen markiert",
       "readAll_other": "{{count}} als gelesen markiert",
+      "doneAll_one": "{{count}} nach Erledigt verschoben",
+      "doneAll_other": "{{count}} nach Erledigt verschoben",
       "sent": "Antwort gesendet",
       "see": "Ansehen",
       "answered": "{{name}} hat deine Antwort bekommen",

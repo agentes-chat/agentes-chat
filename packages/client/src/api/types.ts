@@ -6646,6 +6646,8 @@ export type UnreadEvent =
   | { type: "channel.activity"; channelId: string; threadId: string | null; dm?: boolean }
   | { type: "channel.read"; channelId: string; userId: string; lastReadAt: string }
   | { type: "channel.muted"; channelId: string; muted: boolean }
+  /** I cleared a DM ("Limpar conversa") on one of my devices: what came before it is hidden here too. */
+  | { type: "channel.cleared"; channelId: string; clearedAt: string }
   | { type: "thread.read"; threadId: string; channelId: string; lastReadAt: string };
 
 /** A pinned message (`GET …/channels/{id}/pins`, newest pin first). */

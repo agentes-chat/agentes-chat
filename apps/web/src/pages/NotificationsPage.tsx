@@ -51,6 +51,8 @@ import {
   Button,
   Chip,
   cx,
+  Dialog,
+  DialogFooter,
   EmptyState,
   ExpiryFuse,
   GroupHeading,
@@ -1526,6 +1528,29 @@ export function NotificationsPage() {
     );
   };
 
+  // "Concluir todas": what waits on me stays, so it counts only what doesn't.
+  const [clearing, setClearing] = useState(false);
+  const clearable =
+    !doneView &&
+    filter !== "waiting" &&
+    (filter === "all" ? (counts?.all ?? 0) > (counts?.waiting ?? 0) : (counts?.[filter] ?? 0) > 0);
+  const doneAll = () =>
+    action.mutate(
+      { type: "doneAll", filter },
+      {
+        onSuccess: (res) => {
+          setClearing(false);
+          setCur(null);
+          if (res.ids.length)
+            toast.show(t("notifications.toast.doneAll", { count: res.ids.length }), "info", {
+              label: t("notifications.toast.undo"),
+              run: () => action.mutate({ type: "undoneMany", ids: res.ids }),
+            });
+        },
+        onError: (e) => toast.show(errorText(t, e), "error"),
+      },
+    );
+
   const toggle = (n: AppNotification) => {
     setOpen((s) => {
       const copy = new Set(s);
@@ -1685,9 +1710,29 @@ export function NotificationsPage() {
             <Button disabled={doneView || !counts?.unread || action.isPending} onClick={readAll}>
               {t("notifications.readAll")}
             </Button>
+            <Button disabled={!clearable || action.isPending} onClick={() => setClearing(true)}>
+              {t("notifications.doneAll")}
+            </Button>
           </>
         }
       />
+      <Dialog
+        open={clearing}
+        onOpenChange={(o) => !o && !action.isPending && setClearing(false)}
+        title={t("notifications.doneAllConfirm.title")}
+        description={t("notifications.doneAllConfirm.text")}
+        closeLabel={t("common.close")}
+        width={440}
+      >
+        <DialogFooter>
+          <Button disabled={action.isPending} onClick={() => setClearing(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="primary" loading={action.isPending} onClick={doneAll}>
+            {t("notifications.doneAllConfirm.confirm")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
 
       <div className="nt-tb">
         <div className="nt-segwrap">

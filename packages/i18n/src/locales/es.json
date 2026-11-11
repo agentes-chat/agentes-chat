@@ -2874,7 +2874,16 @@
     "emptyAgent": "Pídele que recuerde, olvide o trabaje de otra forma.",
     "emptyAgent_female": "Pídele que recuerde, olvide o trabaje de otra forma.",
     "opening": "Abriendo la conversación…",
-    "title": "Mensaje directo con {{name}}"
+    "title": "Mensaje directo con {{name}}",
+    "clear": {
+      "more": "Opciones de la conversación",
+      "action": "Vaciar conversación",
+      "title": "¿Vaciar esta conversación?",
+      "textAgent": "Los mensajes desaparecen solo de tu pantalla. {{name}} sigue sabiendo de qué hablaron, y no se borra nada.",
+      "textPerson": "Los mensajes desaparecen solo de tu pantalla. {{name}} los sigue viendo, y no se borra nada.",
+      "confirm": "Vaciar",
+      "done": "Conversación vaciada"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} recordó",
@@ -4099,6 +4108,12 @@
     "summaryAllRead": "todo leído",
     "summaryNothing": "Nada nuevo por aquí.",
     "readAll": "Marcar todo como leído",
+    "doneAll": "Completar todas",
+    "doneAllConfirm": {
+      "title": "¿Vaciar tu bandeja de entrada?",
+      "text": "Todo lo que está aquí pasa a Completadas. Lo que te espera se queda hasta que respondas.",
+      "confirm": "Completar todas"
+    },
     "filters": "Filtrar notificaciones",
     "filter": {
       "all": "Todas",
@@ -4335,6 +4350,9 @@
       "readAll_one": "{{count}} marcada como leída",
       "readAll_many": "{{count}} marcadas como leídas",
       "readAll_other": "{{count}} marcadas como leídas",
+      "doneAll_one": "{{count}} movida a Completadas",
+      "doneAll_many": "{{count}} movidas a Completadas",
+      "doneAll_other": "{{count}} movidas a Completadas",
       "sent": "Respuesta enviada",
       "see": "Ver",
       "answered": "{{name}} recibió tu respuesta",

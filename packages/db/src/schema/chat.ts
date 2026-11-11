@@ -98,6 +98,11 @@ export const channelReads = pgTable(
     lastReadAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     /** Muted by this person: never looks unread to them; mentions of them still count. */
     muted: boolean().notNull().default(false),
+    /**
+     * DMs: "Limpar conversa", for this person only. What was said up to here is hidden from their lists; the messages
+     * stay for the other side, the agent's context and the audit. Null: never cleared.
+     */
+    clearedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
     primaryKey({ columns: [t.channelId, t.userId] }),

@@ -1,13 +1,23 @@
 import type { DmTarget } from "@agenteschat/client";
-import { addDm } from "@agenteschat/client";
+import { addDm, useClearDm } from "@agenteschat/client";
 import { audienceNotice, canTalk, seesDetails } from "@agenteschat/client/lib/audience";
 import { greetingSuggestions } from "@agenteschat/client/lib/chat";
-import { isGone } from "@agenteschat/client/lib/errors";
+import { errorText, isGone } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
-import { Avatar, BrainIcon, Button, EmptyState, ProviderLogo } from "@agenteschat/ui";
+import {
+  Avatar,
+  BrainIcon,
+  Button,
+  Dialog,
+  DialogFooter,
+  EmptyState,
+  Menu,
+  MenuItem,
+  ProviderLogo,
+} from "@agenteschat/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AudienceChip } from "@/components/AgentAudience";
@@ -26,6 +36,7 @@ import { AgentTasksPill } from "@/components/tasks/AgentTasksPanel";
 import { useAgentThinks } from "@/hooks/useAgentThinks";
 import { useDirectory } from "@/hooks/useDirectory";
 import { rightHandSeen } from "@/lib/storage";
+import { useToast } from "@/lib/toast";
 import { ChannelPage, ChannelSkeleton, type DmSideControl } from "./ChannelPage";
 
 /** A direct message with an agent or a person: the channel layout with its own header and empty state. */
@@ -47,6 +58,10 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
     },
     staleTime: Number.POSITIVE_INFINITY,
   });
+  // "Limpar conversa": hidden for me only, after a confirmation (the agent keeps its context).
+  const clear = useClearDm(org.id);
+  const toast = useToast();
+  const [clearing, setClearing] = useState(false);
 
   const agent = "agentId" in target ? dir.agentById.get(target.agentId) : undefined;
   const person = "userId" in target ? dir.memberById.get(target.userId) : undefined;
@@ -145,45 +160,92 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
               onClick={side.toggle}
             />
           )}
+          <Menu
+            align="end"
+            label={t("dm.clear.more")}
+            trigger={
+              <Button
+                size="sm"
+                variant="ghost"
+                iconOnly
+                icon="more"
+                className="channel__icon"
+                aria-label={t("dm.clear.more")}
+                title={t("dm.clear.more")}
+              />
+            }
+          >
+            <MenuItem icon="trash" danger onSelect={() => setClearing(true)}>
+              {t("dm.clear.action")}
+            </MenuItem>
+          </Menu>
         </div>
       </div>
     </header>
   );
+  const channelId = dm.data.channelId;
+  const clearIt = () =>
+    clear.mutate(channelId, {
+      onSuccess: () => {
+        setClearing(false);
+        toast.show(t("dm.clear.done"));
+      },
+      onError: (e) => toast.show(errorText(t, e), "error"),
+    });
   return (
-    <ChannelPage
-      channelId={dm.data.channelId}
-      focusMessageId={focusMessageId}
-      fallback={{
-        id: dm.data.channelId,
-        name,
-        topic: "",
-        visibility: "private",
-        isMember: true,
-        createdAt: "",
-      }}
-      chrome={{
-        header,
-        composerTarget: name,
-        ...(rightHand && agent
-          ? {
-              composerLabel: `${t("channel.composerDm", { name })} · ${t("rightHand.composerHint")}`,
-              intro: <RightHandIntro agent={agent} channelId={dm.data.channelId} />,
-            }
-          : setup && agent
-            ? { intro: <AgentSetupIntro agent={agent} /> }
-            : {}),
-        dmAgentId: agent?.id,
-        dmPersonId: person?.userId,
-        locked:
-          agent && !canTalk(agent)
-            ? audienceNotice(t, agent, (uid) => dir.memberById.get(uid)?.name, dir.roleName)
-            : undefined,
-        lockedAction: agent ? <LetMeTalkButton agent={agent} /> : undefined,
-        emptyText: agent ? t("dm.emptyAgent", agentGrammar(agent.name)) : undefined,
-        emptyTitle: agent ? t("chat.sayHiAgent", agentGrammar(agent.name)) : t("chat.sayHiPerson", { name }),
-        suggestions: agent ? greetingSuggestions(t, agent.role) : [],
-      }}
-    />
+    <>
+      <Dialog
+        open={clearing}
+        onOpenChange={(o) => !o && !clear.isPending && setClearing(false)}
+        title={t("dm.clear.title")}
+        description={t(agent ? "dm.clear.textAgent" : "dm.clear.textPerson", { name })}
+        closeLabel={t("common.close")}
+        width={440}
+      >
+        <DialogFooter>
+          <Button disabled={clear.isPending} onClick={() => setClearing(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button variant="danger" loading={clear.isPending} onClick={clearIt}>
+            {t("dm.clear.confirm")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+      <ChannelPage
+        channelId={channelId}
+        focusMessageId={focusMessageId}
+        fallback={{
+          id: channelId,
+          name,
+          topic: "",
+          visibility: "private",
+          isMember: true,
+          createdAt: "",
+        }}
+        chrome={{
+          header,
+          composerTarget: name,
+          ...(rightHand && agent
+            ? {
+                composerLabel: `${t("channel.composerDm", { name })} · ${t("rightHand.composerHint")}`,
+                intro: <RightHandIntro agent={agent} channelId={channelId} />,
+              }
+            : setup && agent
+              ? { intro: <AgentSetupIntro agent={agent} /> }
+              : {}),
+          dmAgentId: agent?.id,
+          dmPersonId: person?.userId,
+          locked:
+            agent && !canTalk(agent)
+              ? audienceNotice(t, agent, (uid) => dir.memberById.get(uid)?.name, dir.roleName)
+              : undefined,
+          lockedAction: agent ? <LetMeTalkButton agent={agent} /> : undefined,
+          emptyText: agent ? t("dm.emptyAgent", agentGrammar(agent.name)) : undefined,
+          emptyTitle: agent ? t("chat.sayHiAgent", agentGrammar(agent.name)) : t("chat.sayHiPerson", { name }),
+          suggestions: agent ? greetingSuggestions(t, agent.role) : [],
+        }}
+      />
+    </>
   );
 }
 

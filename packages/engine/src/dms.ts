@@ -360,6 +360,8 @@ export async function listDms(db: Database, actorId: string, orgId: string, only
       .orderBy(messages.channelId, desc(messages.createdAt)),
   ]);
   const readAt = new Map(reads.map((r) => [r.channelId, r.lastReadAt]));
+  // A DM I cleared (`clearDm`) shows nothing of what came before: no preview of it, and it sorts by the clear.
+  const clearedAt = new Map(reads.flatMap((r) => (r.clearedAt ? [[r.channelId, r.clearedAt] as const] : [])));
   const unreadRows = await Promise.all(
     ids.map(async (id) => {
       const [row] = await db
@@ -381,7 +383,12 @@ export async function listDms(db: Database, actorId: string, orgId: string, only
     }),
   );
   const unread = new Map(unreadRows);
-  const lastBy = new Map(last.map((m) => [m.channelId, m]));
+  const lastBy = new Map(
+    last.flatMap((m) => {
+      const cleared = clearedAt.get(m.channelId);
+      return cleared && m.createdAt <= cleared ? [] : [[m.channelId, m] as const];
+    }),
+  );
   return mine
     .flatMap((c) => {
       const o = others.find((x) => x.channelId === c.id);
@@ -408,7 +415,7 @@ export async function listDms(db: Database, actorId: string, orgId: string, only
           lastReadAt: readAt.get(c.id) ?? null,
           everRead: readAt.has(c.id),
           openedAt: c.createdAt,
-          sortAt: m?.createdAt ?? c.createdAt,
+          sortAt: m?.createdAt ?? clearedAt.get(c.id) ?? c.createdAt,
         },
       ];
     })
@@ -450,6 +457,46 @@ export async function markChannelRead(
   if (member.kind === "dm") await publishChannelEvent(pubsub, read);
   // My other devices: the conversation stops looking unread there too.
   await publishUserEvent(pubsub, orgId, actorId, read);
+}
+
+/**
+ * "Limpar conversa" in a DM, for me only: what was said up to now leaves my lists (its messages, the DM's preview and
+ * unread). Nothing is deleted: the other side still reads it, and the agent's context and the audit keep it. It also
+ * reads the DM up to now (`markChannelRead`); my other devices hear `channel.cleared`.
+ */
+export async function clearDm(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  channelId: string,
+  at = new Date(),
+  pubsub?: PubSub,
+): Promise<{ clearedAt: Date }> {
+  const [member] = await db
+    .select({ kind: channels.kind })
+    .from(channelMembers)
+    .innerJoin(channels, eq(channels.id, channelMembers.channelId))
+    .where(
+      and(eq(channelMembers.orgId, orgId), eq(channelMembers.channelId, channelId), eq(channelMembers.userId, actorId)),
+    );
+  if (!member) throw new NotFoundError("Channel not found");
+  if (member.kind !== "dm") throw new ValidationError("Only a direct conversation can be cleared", "channel.clear_dm");
+  await db
+    .insert(channelReads)
+    .values({ orgId, channelId, userId: actorId, lastReadAt: at, clearedAt: at })
+    .onConflictDoUpdate({ target: [channelReads.channelId, channelReads.userId], set: { clearedAt: at } });
+  await markChannelRead(db, actorId, orgId, channelId, at, pubsub);
+  await publishUserEvent(pubsub, orgId, actorId, { type: "channel.cleared", channelId, clearedAt: at.toISOString() });
+  return { clearedAt: at };
+}
+
+/** Up to when I cleared this DM (`clearDm`); null when I never did (or it isn't a DM). */
+export async function dmClearedAt(db: Executor, orgId: string, channelId: string, userId: string) {
+  const [row] = await db
+    .select({ clearedAt: channelReads.clearedAt })
+    .from(channelReads)
+    .where(and(eq(channelReads.orgId, orgId), eq(channelReads.channelId, channelId), eq(channelReads.userId, userId)));
+  return row?.clearedAt ?? null;
 }
 
 /**

@@ -2769,7 +2769,16 @@
     "emptyAgent": "Bir şeyi hatırlamasını, unutmasını ya da farklı çalışmasını isteyin.",
     "emptyAgent_female": "Bir şeyi hatırlamasını, unutmasını ya da farklı çalışmasını isteyin.",
     "opening": "Konuşma açılıyor…",
-    "title": "{{name}} ile doğrudan mesaj"
+    "title": "{{name}} ile doğrudan mesaj",
+    "clear": {
+      "more": "Konuşma seçenekleri",
+      "action": "Konuşmayı temizle",
+      "title": "Bu konuşma temizlensin mi?",
+      "textAgent": "Mesajlar yalnızca sizin ekranınızdan kalkar. {{name}} konuştuklarınızı bilmeye devam eder ve hiçbir şey silinmez.",
+      "textPerson": "Mesajlar yalnızca sizin ekranınızdan kalkar. {{name}} onları görmeye devam eder ve hiçbir şey silinmez.",
+      "confirm": "Temizle",
+      "done": "Konuşma temizlendi"
+    }
   },
   "memoryCard": {
     "remembered": "{{name}} hatırladı",
@@ -3974,6 +3983,12 @@
     "summaryAllRead": "hepsi okundu",
     "summaryNothing": "Burada yeni bir şey yok.",
     "readAll": "Tümünü okundu olarak işaretle",
+    "doneAll": "Tümünü tamamla",
+    "doneAllConfirm": {
+      "title": "Gelen kutunuz boşaltılsın mı?",
+      "text": "Buradaki her şey Tamamlananlar’a taşınır. Sizi bekleyenler, yanıtlayana kadar kalır.",
+      "confirm": "Tümünü tamamla"
+    },
     "filters": "Bildirimleri filtrele",
     "filter": {
       "all": "Tümü",
@@ -4195,6 +4210,8 @@
       "undo": "Geri al",
       "readAll_one": "{{count}} bildirim okundu olarak işaretlendi",
       "readAll_other": "{{count}} bildirim okundu olarak işaretlendi",
+      "doneAll_one": "{{count}} bildirim Tamamlananlar’a taşındı",
+      "doneAll_other": "{{count}} bildirim Tamamlananlar’a taşındı",
       "sent": "Yanıt gönderildi",
       "see": "Gör",
       "answered": "{{name}} yanıtınızı aldı",

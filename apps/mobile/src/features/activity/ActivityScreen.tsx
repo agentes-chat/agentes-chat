@@ -23,6 +23,7 @@ import {
   Button,
   EmptyState,
   Filters,
+  type HeaderAction,
   HoldButton,
   type IconName,
   LargeTitleScreen,
@@ -50,6 +51,7 @@ import { DeviceNoticeActions, DeviceNoticeCard } from "../devices/notices";
 import { notificationHref, notificationWebPath, routineHref } from "../links/logic";
 import { openWebPath } from "../links/open-web";
 import { ChangeRequestCard } from "../right-hand/SettingsCard";
+import { confirmAction } from "../settings/parts";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useDirectory, useNow, useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
 import { Tile } from "../shared/parts";
@@ -98,7 +100,9 @@ export function ActivityScreen() {
   const { waiting, days } = activitySections(items, filter);
   const waitingCount = Math.max(waiting.length, counts?.waiting ?? waiting.length);
   const pull = usePullRefresh(list.refetch);
-  const header = useTabHeader();
+  const tabHeader = useTabHeader();
+  const clearAll = useClearAll(filter, counts ? counts.all > counts.waiting : false);
+  const header = clearAll ? { ...tabHeader, actions: [clearAll, ...tabHeader.actions] } : tabHeader;
   const reduced = useReducedMotion();
   // A card decided while the page shows fades out and the rest close up; a new one fades in.
   const cardMotion = reduced ? {} : { entering: CARD_IN, exiting: CARD_OUT, layout: LinearTransition };
@@ -174,6 +178,48 @@ export function ActivityScreen() {
       ) : null}
     </LargeTitleScreen>
   );
+}
+
+/**
+ * "Concluir todas" in the bar, as the web's: after the system's confirmation, everything listed goes to Concluídas but
+ * what waits on you; the toast offers Desfazer. None in Esperando or Concluídas, nor with nothing to conclude.
+ */
+function useClearAll(filter: ActivityFilter, any: boolean): HeaderAction | null {
+  const { t } = useTranslation();
+  const orgId = useOrgId();
+  const act = useNotificationAction(orgId);
+  const toast = useToast();
+  if (filter !== "all" || !any) return null;
+  const run = () =>
+    act.mutate(
+      { type: "doneAll", filter: "all" },
+      {
+        onSuccess: (res) => {
+          if (!res.ids.length) return;
+          toast({
+            title: t("notifications.toast.doneAll", { count: res.ids.length }),
+            action: {
+              label: t("mobile.activity.undo"),
+              onPress: () => act.mutate({ type: "undoneMany", ids: res.ids }),
+            },
+          });
+        },
+      },
+    );
+  return {
+    icon: "check",
+    sf: "checkmark.circle",
+    label: t("notifications.doneAll"),
+    onPress: () =>
+      confirmAction({
+        title: t("notifications.doneAllConfirm.title"),
+        text: t("notifications.doneAllConfirm.text"),
+        action: t("notifications.doneAllConfirm.confirm"),
+        cancel: t("common.cancel"),
+        destructive: false,
+        onConfirm: run,
+      }),
+  };
 }
 
 /**

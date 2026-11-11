@@ -74,6 +74,15 @@ describe("live unread on my own topic", () => {
     expect(qc.getQueryData<ThreadInfo>(keys.threadInfo(ORG, "t1"))?.unread).toBe(0);
   });
 
+  test("a DM cleared on another device: its messages go here too and the DM list reads again", () => {
+    const qc = seeded();
+    qc.setQueryData(keys.messages(ORG, "d1"), [{ id: "m1" }]);
+    applyUnreadEvent(qc, ORG, { type: "channel.cleared", channelId: "d1", clearedAt: "" } as never);
+    expect(qc.getQueryData(keys.messages(ORG, "d1"))).toBeUndefined();
+    expect(qc.getQueryData<DirectMessage[]>(keys.dms(ORG))?.[0]?.unread).toBe(0);
+    expect(stale(qc, keys.dms(ORG))).toBe(true);
+  });
+
   test("new messages have the lists read again once per burst", async () => {
     const qc = seeded();
     for (let i = 0; i < 5; i++)

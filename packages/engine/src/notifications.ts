@@ -1315,3 +1315,28 @@ export async function markAllNotificationsRead(
   if (rows.length > 0) await publishCounts(deps, orgId, userId);
   return { ids: rows.map((r) => r.id) };
 }
+
+/**
+ * "Concluir todas" (in a filter): out of the inbox into "Concluídas", as "Concluir" one by one. What waits on the person
+ * (an approval, a question) stays: it leaves when it is answered. The ids changed, for the undo; the person's other
+ * devices hear each one leave.
+ */
+export async function markAllNotificationsDone(
+  deps: NotificationDeps,
+  userId: string,
+  orgId: string,
+  filter: NotificationFilter = "all",
+): Promise<{ ids: string[] }> {
+  await requirePermission(deps.db, userId, orgId, "read");
+  if (!NOTIFICATION_FILTERS.includes(filter)) throw new ValidationError("Unknown filter");
+  if (filter === "done" || filter === "waiting") return { ids: [] };
+  const now = nowOf(deps);
+  const rows = await deps.db
+    .update(notifications)
+    .set({ doneAt: now, doneByUser: true })
+    .where(and(visible(orgId, userId, now), filterSql(filter), eq(notifications.waiting, false)))
+    .returning({ id: notifications.id });
+  for (const r of rows) await publishUserEvent(deps.pubsub, orgId, userId, { type: "notification.removed", id: r.id });
+  if (rows.length > 0) await publishCounts(deps, orgId, userId);
+  return { ids: rows.map((r) => r.id) };
+}
