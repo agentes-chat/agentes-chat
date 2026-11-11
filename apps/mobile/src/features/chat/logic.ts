@@ -208,17 +208,12 @@ export function standsAlone(m: Message) {
  * routine's call written as its creator is left out, like the web's `buildTimeline`. The sticker or GIF an agent
  * adds right after its own reply (ADR 0091) always groups under that reply, whatever the reply carries.
  */
-export function buildRows(
-  messages: Message[],
-  hidden: (m: Message) => boolean = () => false,
-  /** The agents at work in this conversation: an event over once they happened is left out (`settledNotices`). */
-  working: ReadonlySet<string> = new Set(),
-): ChatRow[] {
+export function buildRows(messages: Message[], hidden: (m: Message) => boolean = () => false): ChatRow[] {
   const rows: ChatRow[] = [];
   let lastDay = "";
   let prev: Message | null = null;
   const answered = answeredNotices(messages);
-  const settled = settledNotices(messages, working);
+  const settled = settledNotices(messages);
   for (const m of [...messages].sort(byTime)) {
     if (
       hidden(m) ||

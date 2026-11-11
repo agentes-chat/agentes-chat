@@ -236,8 +236,8 @@ describe("consultationOfNotice", () => {
 
 describe("events over once they happened", () => {
   const rex = { type: "agent" as const, id: "rex" };
-  const shown = (list: Message[], working = new Set<string>()) =>
-    buildTimeline(list, [], [], working).flatMap((i) => (i.kind === "message" ? [i.message.id] : []));
+  const shown = (list: Message[]) =>
+    buildTimeline(list, [], []).flatMap((i) => (i.kind === "message" ? [i.message.id] : []));
   const follow = (refs: Record<string, string>) => ({
     notice: {
       kind: "follow_up",
@@ -246,16 +246,16 @@ describe("events over once they happened", () => {
     },
   });
 
-  test("a follow-up that came: its line goes, and the line that woke the agent stays only while its turn runs", () => {
+  test("a follow-up that came: its line goes, and the line that woke the agent stays until the agent speaks", () => {
     const set = msg("set", 0, rex, follow({ state: "done" }));
     const woke = msg("woke", 20, rex, follow({ wake: "1", followUpId: "set" }));
     const reply = msg("reply", 21, rex);
-    // The turn is running: nothing after it yet, or a person wrote while the agent works.
+    // Nothing from the agent after it yet (its turn runs, stayed quiet or was held): the line is the trace it came.
     expect(shown([set, woke])).toEqual(["woke"]);
-    expect(shown([set, woke, msg("p", 21, walter)], new Set(["rex"]))).toEqual(["woke", "p"]);
-    // Over: the agent said something after it, or something came after it and the agent isn't at work.
+    expect(shown([set, woke, msg("p", 21, walter)])).toEqual(["woke", "p"]);
+    // Over: the agent said something after it.
     expect(shown([set, woke, reply])).toEqual(["reply"]);
-    expect(shown([set, woke, msg("p", 21, walter)])).toEqual(["p"]);
+    expect(shown([set, woke, msg("p", 21, walter), msg("r2", 22, rex)])).toEqual(["p", "r2"]);
     // Another conversation's message says nothing of this one.
     expect(shown([woke, { ...reply, threadId: "t" }])).toEqual(["woke", "reply"]);
   });

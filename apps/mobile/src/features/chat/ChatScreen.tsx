@@ -601,9 +601,6 @@ function Chat({
   // ── Rows ──
   // One waiting card per agent and computer: an older "my computer is away" gives way to the newer one.
   const superseded = useMemo(() => supersededBrainNotices(list), [list]);
-  const workingKey = runs.map((r) => r.agentId).join(" ");
-  // biome-ignore lint/correctness/useExhaustiveDependencies: new only when who is at work changes
-  const agentsAtWork = useMemo(() => new Set(runs.map((r) => r.agentId)), [workingKey]);
   const waitsNow = conversationWaits(isThread ? list : list.filter((m) => !m.threadId), live.receipts, (id) =>
     live.runs.some((r) => r.runId === id),
   );
@@ -660,7 +657,7 @@ function Chat({
               },
             ]
           : [];
-      const turns = placed(buildRows(replies, (m) => superseded.has(m.id), agentsAtWork));
+      const turns = placed(buildRows(replies, (m) => superseded.has(m.id)));
       return [
         ...head,
         ...turns.rows,
@@ -672,7 +669,7 @@ function Chat({
     }
     // A thread's replies live in the thread; the channel shows its link.
     const hidden = (m: Message) => superseded.has(m.id) || Boolean(m.threadId);
-    const turns = placed(buildRows(list, hidden, agentsAtWork));
+    const turns = placed(buildRows(list, hidden));
     return [
       ...turns.rows,
       ...browsing.map((run) => ({ kind: "browser" as const, key: `browser-${run.agentId}`, run })),
@@ -692,7 +689,6 @@ function Chat({
     browsing,
     held,
     superseded,
-    agentsAtWork,
     t,
     waits,
   ]);

@@ -173,15 +173,9 @@ const dayKey = (iso: string) => {
 /**
  * The rows of the channel: day dividers, messages (grouped when the same
  * author writes again within 5 minutes), approval cards at the time they
- * were asked, and live agent runs at the end. `working`: the agents at work in this conversation (`settledNotices`),
- * those of `runs` when not given.
+ * were asked, and live agent runs at the end.
  */
-export function buildTimeline(
-  messages: Message[],
-  approvals: Approval[],
-  runs: LiveRun[],
-  working: ReadonlySet<string> = new Set(runs.map((r) => r.agentId)),
-): TimelineItem[] {
+export function buildTimeline(messages: Message[], approvals: Approval[], runs: LiveRun[]): TimelineItem[] {
   type Entry = { at: string; id: string; item: TimelineItem };
   const entries: Entry[] = [
     ...messages.map((m) => ({
@@ -208,7 +202,7 @@ export function buildTimeline(
   // Routine reports an agent's message already answers: they fold into it.
   const answered = answeredNotices(messages);
   // Events over once they happened (a follow-up that came, a mention its message's own line explains).
-  const settled = settledNotices(messages, working);
+  const settled = settledNotices(messages);
   // The last message shown, across day dividers and cards (to tell a reply that lands far from its root).
   let lastShown: Message | null = null;
   for (const entry of entries) {

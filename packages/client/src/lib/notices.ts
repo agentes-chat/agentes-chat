@@ -273,10 +273,10 @@ export function noticeView(
 
 /**
  * Notices that only matter while they happen, left out of the conversation once over (the agent's message says the
- * rest): a follow-up that came (its line now past, and the notice that woke the agent once its turn is over: the
- * agent said something after it there, or something else came after it while the agent isn't at work, `working`
- * holding the agents at work here), and an @mention that couldn't wake an agent when the message that named it is
- * here with its own line about it (`meta.reach`). A follow-up still to come or canceled stays.
+ * rest): a follow-up that came (its line now past, and the notice that woke the agent once the agent said something
+ * after it there: a turn that stayed quiet, or was held, leaves the notice as the trace that it came back), and an
+ * @mention that couldn't wake an agent when the message that named it is here with its own line about it
+ * (`meta.reach`). A follow-up still to come or canceled stays.
  */
 export function settledNotices(
   messages: readonly {
@@ -286,29 +286,27 @@ export function settledNotices(
     createdAt: string;
     meta?: Meta | null;
   }[],
-  working: ReadonlySet<string> = new Set(),
 ): Set<string> {
   const out = new Set<string>();
   const byId = new Map(messages.map((m) => [m.id, m]));
-  // The latest message that isn't a notice, by place, and by place and agent.
+  // The latest message that isn't a notice, by place and agent.
   const latest = new Map<string, string>();
   for (const m of messages) {
-    if (noticeOf(m.meta ?? undefined)) continue;
-    const place = m.threadId ?? "";
-    for (const key of [place, `${place}|${m.author.type === "agent" ? m.author.id : ""}`])
-      if ((latest.get(key) ?? "") < m.createdAt) latest.set(key, m.createdAt);
+    if (noticeOf(m.meta ?? undefined) || m.author.type !== "agent") continue;
+    const key = `${m.threadId ?? ""}|${m.author.id}`;
+    if ((latest.get(key) ?? "") < m.createdAt) latest.set(key, m.createdAt);
   }
   for (const m of messages) {
     const notice = noticeOf(m.meta ?? undefined);
     if (!notice) continue;
     if (notice.kind === "follow_up") {
       if (notice.refs.state === "done") out.add(m.id);
-      else if (notice.refs.wake && m.author.id) {
-        const place = m.threadId ?? "";
-        const said = (latest.get(`${place}|${m.author.id}`) ?? "") > m.createdAt;
-        const after = (latest.get(place) ?? "") > m.createdAt;
-        if (said || (after && !working.has(m.author.id))) out.add(m.id);
-      }
+      else if (
+        notice.refs.wake &&
+        m.author.id &&
+        (latest.get(`${m.threadId ?? ""}|${m.author.id}`) ?? "") > m.createdAt
+      )
+        out.add(m.id);
     } else if (notice.kind === "wake_skipped") {
       const named = byId.get(notice.refs.messageId ?? "");
       const told = new Set(reachOf(named?.meta).map((e) => e.handle.toLowerCase()));

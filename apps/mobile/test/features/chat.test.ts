@@ -1344,7 +1344,7 @@ describe("automatic lines (notices) and fast replies", () => {
     expect(woke).toMatchObject({ key: "chat.notice.followUpWake", values: { name: "Ada", about: "ver o CI" } });
   });
 
-  test("as on the web, a follow-up that came leaves the conversation once the agent's turn is over", () => {
+  test("as on the web, a follow-up that came leaves the conversation once the agent spoke after it", () => {
     const refs = { runId: "r1", at: "x", about: "ver o CI" };
     const at = (minute: number) => new Date(Date.UTC(2026, 10, 6, 20, minute)).toISOString();
     const list = [
@@ -1361,8 +1361,10 @@ describe("automatic lines (notices) and fast replies", () => {
     ];
     const ids = (rows: ReturnType<typeof buildRows>) =>
       rows.flatMap((r) => (r.kind === "message" ? [r.message.id] : []));
-    // At work: the line that woke it stays.
-    expect(ids(buildRows(list, undefined, new Set(["ada"])))).toEqual(["woke"]);
+    // Nothing from the agent after it (its turn runs, stayed quiet or was held): the line that woke it stays.
+    expect(ids(buildRows(list))).toEqual(["woke"]);
+    const person = message({ id: "p", body: "E aí?", createdAt: at(21) });
+    expect(ids(buildRows([...list, person]))).toEqual(["woke", "p"]);
     const reply = message({
       id: "reply",
       author: { type: "agent", id: "ada" },

@@ -1240,9 +1240,6 @@ function ChannelView({
       lines: channelList.lines,
     };
   }, [thread, channelList, threadList, older, channelMessages.data, channel.id, panel?.id]);
-  // The agents at work here: a follow-up's line that woke one stays while its turn runs (`settledNotices`).
-  const workingKey = useStreams((s) => [...new Set(scopedRuns(s).map((r) => r.agentId))].sort().join(" "));
-  const agentsAtWork = useMemo(() => new Set(workingKey ? workingKey.split(" ") : []), [workingKey]);
   const timeline = useMemo(() => {
     if (thread) {
       // The thread's conversation. One made from a range: not its root (the channel's marker) nor the
@@ -1259,7 +1256,6 @@ function ChannelView({
         list.filter((m) => !passed.has(m.id)),
         [],
         [],
-        agentsAtWork,
       );
     }
     const visible = channelList?.visible ?? [];
@@ -1268,7 +1264,6 @@ function ChannelView({
       visible.filter((m) => !passed.has(m.id)),
       [],
       [],
-      agentsAtWork,
     );
     // A marker, a closed line or a thread's line is not a message: nothing groups under it.
     const special = (m: MessageType) =>
@@ -1276,7 +1271,7 @@ function ChannelView({
       threadsView?.byId.get(m.id)?.state === "closed" ||
       Boolean(channelList?.lines.has(m.id));
     return ungroupAfter(items, special);
-  }, [thread, channelList, channelMessages.data, threadMessages.data, threadsView, agentsAtWork]);
+  }, [thread, channelList, channelMessages.data, threadMessages.data, threadsView]);
 
   // The agents' blocks (one per run, from "pensando" to its final message: `chat/run-slots.ts`), each where its words
   // first showed, else at the end. They change when runs start or end or their words first show, never on a delta.
