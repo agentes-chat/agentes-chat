@@ -590,6 +590,13 @@ function AddAccountFlow({
 
   // Not the account it was for: one that came back done (`other`), or signing in again, which the server refuses.
   const otherEmail = other?.email ?? (hint ? shown?.signedInAs : undefined);
+  // The computer's reason (a refused code, a CLI to update) under ours: without it, "try again" is all there is.
+  const failedWhy = (
+    <>
+      {t("agentPage.work.brain.add.failed")}
+      {shown?.error && <span className="ai-panel__reason">{shown.error}</span>}
+    </>
+  );
   const why = otherEmail
     ? t(`connectAi.otherAccount.${kind}`, { email: otherEmail, account: hint })
     : noAnswer
@@ -602,7 +609,7 @@ function AddAccountFlow({
             : t(`agentPage.work.brain.add.duplicate.${kind}`, {
                 account: shown.duplicate.account?.email ?? shown.duplicate.label,
               })
-          : t("agentPage.work.brain.add.failed");
+          : failedWhy;
 
   const title = plan ? t("aiAccounts.add.titleKey", { plan: plan.label }) : t(`agentPage.work.brain.add.title.${kind}`);
   const key = code.trim();

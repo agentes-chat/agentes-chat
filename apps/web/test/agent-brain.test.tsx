@@ -1232,10 +1232,17 @@ describe("Quem pensa: the account on the computer and the effort (ADR 0041)", ()
   test("the computer giving up on the code ends the sign-in with its reason, the focus still in the block", async () => {
     const { api, block, paste } = await codeField();
     const machines = fakeMachinesOf.get(api);
-    machines?.endLogin(machines.lastLogin()?.loginId ?? "", { state: "failed" });
+    machines?.endLogin(machines.lastLogin()?.loginId ?? "", {
+      state: "failed",
+      error: "Claude Code couldn't sign in with that code: Invalid code",
+    });
     (within(block).getByRole("textbox", { name: "Código do Claude" }) as HTMLInputElement).focus();
     await paste("c0de-from-claude#st4te");
     expect(shownText(block)).toContain("Não deu para entrar nessa conta. Tente de novo.");
+    // What the computer said, under it: "try again" alone tells nobody what went wrong.
+    expect(block.querySelector(".ai-panel__reason")?.textContent).toBe(
+      "Claude Code couldn't sign in with that code: Invalid code",
+    );
     expect(within(block).getByRole("button", { name: "Tentar de novo" })).toBeTruthy();
     expect(within(block).queryByRole("status")).toBeNull();
     expect(document.activeElement === block).toBe(true);

@@ -13715,6 +13715,12 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
   flex: 1 1 240px;
   margin: 0;
 }
+/* What the computer said when it couldn't sign in, in its own words, under ours. */
+.ai-panel__reason {
+  display: block;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
 /* Its two actions (an account already there): one under the other when they don't fit, and a long email ends in "…"
    (the note above says it whole). */
 .ai-panel__row > .ac-acts,
