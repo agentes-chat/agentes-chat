@@ -7,6 +7,7 @@ import { ApiError, keys, type OrgDeletion, type OrgSummary, type Role } from "@a
 import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createFakeApi, meAsAdmin, ORG_ID, seedState } from "./fake-api";
+import { createFakeAuth } from "./fake-auth";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -639,6 +640,8 @@ describe("an account waiting for its deletion", () => {
     state.me.organizations = [];
     return state;
   };
+  // Sair marks this browser signed out by hand (`STORAGE_KEYS.signedOut`): the next app starts without it.
+  afterEach(() => localStorage.removeItem("agentes.signedOut"));
 
   test("signing in shows one screen in place of the app: when it goes, Restaurar and Sair", async () => {
     const state = waiting(soon(6));
@@ -660,6 +663,81 @@ describe("an account waiting for its deletion", () => {
     expect(screen().getByRole("heading", { name: "Sua conta está sendo apagada" })).toBeTruthy();
     expect(screen().queryByRole("button", { name: "Restaurar conta" })).toBeNull();
     expect(screen().getByRole("button", { name: "Sair" })).toBeTruthy();
+  });
+
+  test("signing in again from the sign-in page brings it back, with no workspace to land in too", async () => {
+    const state = seedState({ me: null });
+    const { auth } = createFakeAuth({ onSignIn: () => (state.me = waiting(soon(6)).me) });
+    const api = createFakeApi(state);
+    api.account.signInOptions = async () => ({ account: true, password: true, providers: [], canSignUp: false });
+    await renderApp("/login", { api, auth });
+    await type(screen().getByLabelText("E-mail"), "ana@example.com");
+    await click(screen().getByRole("button", { name: /^Continuar(?! com)/ }));
+    await settle(4);
+    await type(screen().getByLabelText("Senha"), "correct horse");
+    await click(screen().getByRole("button", { name: /^Entrar/ }));
+    await settle(8);
+    expect(screen().getByRole("heading", { name: "Sua conta está sendo apagada" })).toBeTruthy();
+  });
+
+  // The deletion ended the account's sessions (`state.me = null`): the screen can outlive the one it was drawn with.
+  test("Sair lands on the sign-in even when signing out fails", async () => {
+    const state = waiting(soon(6));
+    const { auth } = createFakeAuth();
+    const failing = {
+      ...auth,
+      signOut: async () => {
+        throw new TypeError("Load failed");
+      },
+    };
+    const { router } = await renderApp("/", { api: createFakeApi(state), auth: failing });
+    await settle(8);
+    state.me = null;
+    await click(screen().getByRole("button", { name: "Sair" }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(screen().queryByRole("heading", { name: "Sua conta está sendo apagada" })).toBeNull();
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+  });
+
+  test("Restaurar with the session gone goes to the sign-in", async () => {
+    const state = waiting(soon(6));
+    const { router } = await renderApp("/", { api: createFakeApi(state) });
+    await settle(8);
+    state.me = null;
+    await click(screen().getByRole("button", { name: "Restaurar conta" }));
+    await settle(8);
+    expect(state.calls.some((c) => c.method === "account.restore")).toBe(true);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(screen().queryByRole("heading", { name: "Sua conta está sendo apagada" })).toBeNull();
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+  });
+
+  test("in the desktop app, Sair on the server it runs here leaves the sign-in to its owner's click", async () => {
+    const asked: Record<string, unknown>[] = [];
+    const win = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+    win.__agentesDesktop = { version: "0.6.0", platform: "mac" };
+    win.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { request: Record<string, unknown> }) => {
+        if (cmd !== "this_mac") return null;
+        asked.push(args.request);
+        return args.request.kind === "status" ? { orgs: [], agentsHere: false, local: true } : {};
+      },
+    };
+    try {
+      const state = waiting(soon(6));
+      const { router } = await renderApp("/", { api: createFakeApi(state) });
+      await settle(8);
+      state.me = null;
+      await click(screen().getByRole("button", { name: "Sair" }));
+      await settle(8);
+      expect(router.state.location.pathname).toBe("/login");
+      expect(screen().getByRole("button", { name: /^Continuar neste/ })).toBeTruthy();
+      expect(asked.filter((r) => r.kind === "signIn")).toEqual([]);
+    } finally {
+      delete win.__agentesDesktop;
+      delete win.__TAURI_INTERNALS__;
+    }
   });
 });
 

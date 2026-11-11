@@ -1,4 +1,5 @@
 import {
+  ApiError,
   type Me,
   meQuery,
   type OrgSummary,
@@ -39,6 +40,7 @@ import { DeleteAccountEntry } from "@/components/DeleteAccount";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePaidReturn } from "@/lib/paid-return";
+import { STORAGE_KEYS, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 
 /**
@@ -252,6 +254,7 @@ export function DeletingScreen({ org, me }: { org: OrgSummary; me: Me }) {
 export function AccountDeletingScreen({ dueAt }: { dueAt: string | null }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const restore = useRestoreAccount();
   const billing = Boolean(useAuthConfig().data?.billingUrl);
@@ -277,7 +280,14 @@ export function AccountDeletingScreen({ dueAt }: { dueAt: string | null }) {
                       toast.show(t("accountDeleting.restored"));
                       await navigate({ to: "/" });
                     },
-                    onError: (error) => toast.show(errorText(t, error), "error"),
+                    onError: (error) => {
+                      // The deletion ended the account's sessions, and this screen can outlive its own: to the
+                      // sign-in, which brings it back.
+                      if (error instanceof ApiError && error.status === 401) {
+                        qc.clear();
+                        void navigate({ to: "/login" });
+                      } else toast.show(errorText(t, error), "error");
+                    },
                   })
                 }
               >
@@ -306,7 +316,9 @@ function SignOutButton({ disabled }: { disabled?: boolean }) {
     <Button
       disabled={disabled}
       onClick={async () => {
-        await auth.signOut();
+        // A session already ended (deleting the account ends them) or a server out of reach: out all the same.
+        await auth.signOut().catch(() => {});
+        storage.set(STORAGE_KEYS.signedOut, "1");
         qc.clear();
         await navigate({ to: "/login" });
       }}

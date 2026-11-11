@@ -1482,10 +1482,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         },
       restore: async () => {
         log("account.restore");
-        if (state.me) {
-          const { deletion: _gone, ...user } = state.me.user;
-          state.me = { ...state.me, user };
-        }
+        const me = requireMe();
+        const { deletion: _gone, ...user } = me.user;
+        state.me = { ...me, user };
       },
       delete: async (input) => {
         log("account.delete", input);

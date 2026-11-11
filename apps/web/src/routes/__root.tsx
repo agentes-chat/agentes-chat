@@ -19,8 +19,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function Root() {
+  // Renders again on every page: `qc.clear()` (signing in or out) drops `me` without telling `useMe` below, which reads
+  // the new one only on a render, and the account's waiting screen would outlast its session or miss the next one.
+  const path = useRouterState({ select: (s) => s.location.pathname });
   // agentes for Mac: the workspace has its title bar (org.$orgId.tsx); every other page drags from the top.
-  const inWorkspace = useRouterState({ select: (s) => s.location.pathname.startsWith("/org/") });
+  const inWorkspace = path.startsWith("/org/");
   const router = useRouter();
   const deletion = useMe().data?.user.deletion;
   // In the app: once this first screen is on the glass, the app's cover over the window goes.
