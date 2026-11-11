@@ -45,7 +45,8 @@
         position: fixed;
         top: 0;
         right: 0;
-        z-index: 60;
+        /* Match the app's layering scale, including on older servers and the cover. */
+        z-index: calc(var(--z-scrim, 50) - 1);
         display: flex;
         height: calc(40px / var(--app-zoom, 1));
         color: var(--window-controls-color, var(--muted, inherit));
