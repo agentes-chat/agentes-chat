@@ -12,8 +12,20 @@
       // Constructed stylesheets keep working on servers that block inline styles with CSP.
       const layout = new CSSStyleSheet();
       layout.replaceSync(`
-      .titlebar {
-        padding-right: calc(138px / var(--app-zoom, 1));
+      html:not([data-fullscreen]) .titlebar {
+        --window-controls-space: calc(138px / var(--app-zoom, 1));
+        padding-right: var(--window-controls-space);
+      }
+      html:not([data-fullscreen]) .titlebar__search {
+        /* Center on the window, clamping to the space between navigation and window controls. */
+        --titlebar-offset: calc(
+          (var(--window-controls-space) - var(--titlebar-lights) - var(--titlebar-nav) - 12px) / 2
+        );
+        transform: translateX(clamp(
+          calc(-1 * var(--titlebar-room)),
+          var(--titlebar-offset),
+          var(--titlebar-room)
+        ));
       }
       html:has(.titlebar) > body > agentes-window-controls {
         --window-drag-display: none;
