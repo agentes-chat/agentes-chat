@@ -140,7 +140,8 @@ export function parseMarkdown(source: string, options: ParseOptions & { ranges?:
   while (i < lines.length) {
     start = i;
     const line = lines[i] as string;
-    const fence = line.match(/^\s*```\s*([\w+-]*)\s*$/);
+    // An info string after the backticks (`c#`, `python3.11`, `sh title=a`): its first word is the language.
+    const fence = line.match(/^\s*```\s*([^\s`]*)[^`]*$/);
     if (fence) {
       const body: string[] = [];
       i++;
@@ -209,12 +210,15 @@ export function parseMarkdown(source: string, options: ParseOptions & { ranges?:
     const para: string[] = [];
     while (i < lines.length) {
       const l = lines[i] as string;
+      // The first line is always taken: a line no block above claimed (four backticks, a `<details>` never closed)
+      // would otherwise end the paragraph before it starts, and the loop would read it again forever.
       if (
-        !l.trim() ||
-        /^(#{1,6})\s|^\s*```|^\s*>/.test(l) ||
-        LIST.test(l) ||
-        (para.length && tableAt(lines, i)) ||
-        (options.details && DETAILS_OPEN.test(l))
+        para.length &&
+        (!l.trim() ||
+          /^(#{1,6})\s|^\s*```|^\s*>/.test(l) ||
+          LIST.test(l) ||
+          tableAt(lines, i) ||
+          (options.details && DETAILS_OPEN.test(l)))
       )
         break;
       para.push(l.trim());
