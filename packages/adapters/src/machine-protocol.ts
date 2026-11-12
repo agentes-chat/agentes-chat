@@ -673,10 +673,11 @@ export const ACCESS_ALLOW_PROTOCOL = 62;
 export const IPHONE_DEV_MODE_PROTOCOL = 65;
 
 /**
- * From this protocol on (ADR 0174): the Muse Code brain. `brain.turn` takes `kind: "muse"` (Meta's `muse exec --json`,
- * one process per turn, refused in `chat` because the CLI has no tool allow/deny list), `account` takes `kind:
- * "muse"` (a Meta API key in the account's own config folder), `hello.executors.muse` reports the CLI, and
- * `access.tools.muse` turns it on or off.
+ * From this protocol on (ADR 0174): the Muse Code brain. `brain.turn` takes `kind: "muse"` (a `muse serve` host
+ * driven over its session protocol, refused in `chat` because the CLI has no tool allow/deny list), `account` takes
+ * `kind: "muse"` (a device-code sign-in in the account's own config folder, `META_API_KEY` kept out of the host's
+ * environment so a key cannot answer for the person), `hello.executors.muse` reports the CLI, and `access.tools.muse`
+ * turns it on or off.
  */
 export const MUSE_PROTOCOL = 59;
 
