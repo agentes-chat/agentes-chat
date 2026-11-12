@@ -37,7 +37,7 @@ const calls = (state: ReturnType<typeof seedState>, method: string) =>
 
 /** [Portuguese, English] */
 type Words = readonly [string, string];
-const SECTION: Words = ["Modelos de decisão", "Decision models"];
+const SECTION: Words = ["Quem escolhe os agentes", "Who picks the agents"];
 const HOW_PICKED: Words = ["Como os agentes são escolhidos", "How agents are picked"];
 const ABOUT: Words = ["Sobre Jev", "About Jev"];
 const HOW_JEV: Words = ["Como o Jev funciona", "How Jev works"];
@@ -66,7 +66,18 @@ const STATES: {
     note: null,
     buttons: [["Configurar o Jev", "Set up Jev"]],
     links: [],
-    text: [],
+    text: [
+      ["Ajuda os agentes a trabalhar em equipe.", "Helps your agents work as a team."],
+      ["Escolhe quem responde Mesmo sem @menção.", "Picks who answers Even without an @mention."],
+      [
+        "Organiza a memória Percebe repetições ditas de outro jeito.",
+        "Keeps memory tidy Spots repeats said in other words.",
+      ],
+      [
+        "Enxerga a tela Os agentes acham botões pela descrição.",
+        "Sees the screen Agents find buttons from a description.",
+      ],
+    ],
   },
   {
     state: "on",
@@ -125,14 +136,13 @@ const STATES: {
 describe("Jev's key in Configurações › IA e uso", () => {
   test("nobody but the server's owner sees it: who picks, and no Jev", async () => {
     await open({ aiStatus: routed("plans") });
-    const section = screen().getByRole("region", { name: "Modelos de decisão" });
+    const section = screen().getByRole("region", { name: "Quem escolhe os agentes" });
     expect(section.textContent).toContain("Cada plano escolhe só nas mensagens de quem o conectou.");
     expect(within(section).getByRole("link", { name: "Como os agentes são escolhidos" }).getAttribute("href")).toBe(
       "https://agentes.chat/pt/docs/who-answers",
     );
     expect(screen().queryByRole("region", { name: "Jev" })).toBeNull();
-    expect(screen().getByRole("region", { name: "Modelos de decisão" })).toBeTruthy();
-    expect(document.body.textContent).not.toContain("Chave da TypeSafe");
+    expect(document.body.textContent).not.toMatch(/jev|typesafe/i);
   });
 
   test("its state sits on its name's first line, however many lines its name and line take", async () => {
@@ -153,15 +163,21 @@ describe("Jev's key in Configurações › IA e uso", () => {
     expect(layout).not.toMatch(/\.jev__head[^{]*\{/);
   });
 
-  test("off: the server connection and setup steps, each with its link; a short key isn't offered", async () => {
+  test("off: why it helps, then its steps in place, each with its link; a short key isn't offered", async () => {
     const { state } = await open({ aiStatus: routed("rules"), jev: OFF });
     // Under who picks now, in the same section.
-    const section = screen().getByRole("region", { name: "Modelos de decisão" });
+    const section = screen().getByRole("region", { name: "Quem escolhe os agentes" });
     expect(section.contains(card())).toBe(true);
     expect(section.textContent).toContain("Os agentes respondem a menções, respostas e continuações.");
     expect(card().querySelector(".ac-brand")?.getAttribute("data-mark")).toBe("typesafe");
     expect(card().querySelector(".ac-chip")?.textContent).toBe("Desligado");
-    expect(card().querySelector(".jev-why")).toBeNull();
+    expect(card().textContent).toContain("Ajuda os agentes a trabalhar em equipe.");
+    for (const why of [
+      "Escolhe quem responde Mesmo sem @menção.",
+      "Organiza a memória Percebe repetições ditas de outro jeito.",
+      "Enxerga a tela Os agentes acham botões pela descrição.",
+    ])
+      expect(card().textContent).toContain(why);
     expect(within(card()).getByRole("link", { name: "Como o Jev funciona" }).getAttribute("href")).toBe(
       "https://agentes.chat/pt/docs/jev",
     );
@@ -226,7 +242,7 @@ describe("Jev's key in Configurações › IA e uso", () => {
 
   test("on: its last 4 and this month's use; Trocar a chave asks only for the new key; Apagar asks first", async () => {
     const { state } = await open({ aiStatus: routed("jev"), jev: ON });
-    expect(screen().getByRole("region", { name: "Modelos de decisão" }).textContent).toContain(
+    expect(screen().getByRole("region", { name: "Quem escolhe os agentes" }).textContent).toContain(
       "O Jev escolhe quem responde cada mensagem sem menção.",
     );
     expect(card().querySelector(".ac-chip")?.textContent).toBe("Ligado");
@@ -265,9 +281,12 @@ describe("Jev's key in Configurações › IA e uso", () => {
     if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
     await renderApp(`/org/${ORG_ID}/settings/keys`, { api: createFakeApi(state) });
     await settle(5);
-    expect(card().querySelector(".jev-why")).toBeNull();
+    expect([...card().querySelectorAll(".jev-why b")].map((b) => b.textContent)).toEqual([
+      "Organiza a memória",
+      "Enxerga a tela",
+    ]);
     // Who picks now is said to admins only.
-    expect(screen().getByRole("region", { name: "Modelos de decisão" }).querySelector(".who-line")).toBeNull();
+    expect(screen().getByRole("region", { name: "Quem escolhe os agentes" }).querySelector(".who-line")).toBeNull();
   });
 
   test("a key not accepted, out of credit: the state, what to do, and the console where it's done", async () => {

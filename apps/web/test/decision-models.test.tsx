@@ -83,15 +83,19 @@ test("failed save preserves the draft and saved setup; screenshots can be disabl
   expect(state.decisions?.settings).toEqual({ ...selected, model: "typesafe/jev-1.14", visionModel: null });
 });
 
-test("no account: connects through existing settings, with no key or Docker configuration requested", async () => {
+test("without OpenRouter the original routing and Jev UI is shown", async () => {
   await open({ credentials: [] });
-  await choose("OpenRouter");
-  expect(
-    card()
-      .getByRole("link", { name: "Connect an OpenRouter API account above to use decision models." })
-      .getAttribute("href"),
-  ).toBe("#sec-keys");
-  expect(card().queryByRole("button", { name: "Test and save" })).toBeNull();
+  expect(screen().getByRole("region", { name: "Who picks the agents" })).toBeTruthy();
+  expect(screen().queryByRole("radio", { name: "OpenRouter" })).toBeNull();
+  expect(screen().queryByRole("region", { name: "Decision models" })).toBeNull();
+});
+
+test("a removed OpenRouter account can be reset without showing the OpenRouter choice", async () => {
+  const { state } = await open({ credentials: [], decisions: { settings: selected, available: false } });
+  expect(screen().queryByRole("radio", { name: "OpenRouter" })).toBeNull();
+  await act(() => fireEvent.click(screen().getByRole("button", { name: "Use the default setup" })));
+  await settle(5);
+  expect(state.decisions?.settings).toBeNull();
 });
 
 test("an unavailable saved account must be replaced or reset; it never picks another account silently", async () => {
@@ -138,6 +142,7 @@ test("the Jev setup is shown only for Jev and its server key is untouched by pro
     jev: { source: "settings", hint: "9f2c", state: "ok", month: { decisions: 0, costUsd: 0 } },
   });
   expect(card().getByRole("region", { name: "Jev" })).toBeTruthy();
+  expect(card().getByText(/A fast model by TypeSafe/)).toBeTruthy();
   await choose("OpenRouter");
   expect(card().queryByRole("region", { name: "Jev" })).toBeNull();
   expect(card().getByLabelText("OpenRouter account")).toBeTruthy();
@@ -187,4 +192,17 @@ test("one shared explanation covers both providers", async () => {
   await choose("OpenRouter");
   expect(card().getAllByText(about)).toHaveLength(1);
   expect(card().queryByText("Helps your agents work as a team.")).toBeNull();
+});
+
+test("a revoked OpenRouter account stays hidden and a failed reset preserves the override", async () => {
+  const { state } = await open({
+    credentials: [{ ...account, revokedAt: "2026-11-12T00:00:00Z" }],
+    decisions: { settings: selected, available: false },
+    decisionError: true,
+  });
+  expect(screen().queryByRole("radio", { name: "OpenRouter" })).toBeNull();
+  await act(() => fireEvent.click(screen().getByRole("button", { name: "Use the default setup" })));
+  await settle(5);
+  expect(screen().getByRole("alert")).toBeTruthy();
+  expect(state.decisions?.settings).toEqual(selected);
 });

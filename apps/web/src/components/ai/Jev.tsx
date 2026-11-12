@@ -2,9 +2,12 @@ import type { AiRouting, JevKey } from "@agenteschat/client";
 import {
   useAiStatus,
   useCheckJevKey,
+  useCredentials,
+  useDecisionSettings,
   useJevKey,
   useModelLabel,
   useRemoveJevKey,
+  useSaveDecisionSettings,
   useSaveJevKey,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -198,22 +201,39 @@ export function WhoPicksSection() {
   const { org } = useOrg();
   const admin = can(org, "manage_credentials");
   const jev = useJevKey();
+  const accounts = useCredentials(org.id, admin);
+  const openrouter = admin && accounts.data?.some((a) => a.provider === "openrouter" && !a.revokedAt);
   // The server's owner gets Jev's card where they aren't an admin too, and its reasons follow who picks.
   const status = useAiStatus(org.id, admin || Boolean(jev.data));
   const modelLabel = useModelLabel();
   const line = admin ? routingLineOf(status.data, modelLabel) : null;
+  const routing = (
+    <>
+      {line && <p className="who-line">{t(line.key, line.params)}</p>}
+      {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
+    </>
+  );
   if (!admin && !line && !jev.data) return null;
   return (
     <Card aria-labelledby="sec-routing" className="who-card">
       <CardHeader
         id="sec-routing"
         icon="agent"
-        title={t("decisions.title")}
+        title={t(openrouter ? "decisions.title" : "routing.title")}
         action={<HelpLink slug="who-answers">{t("routing.how")}</HelpLink>}
       />
-      {admin ? <DecisionModels jev={jev.data ? <JevCard /> : null} /> : jev.data && <JevCard />}
-      {line && <p className="who-line">{t(line.key, line.params)}</p>}
-      {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
+      {openrouter ? (
+        <>
+          <DecisionModels jev={jev.data ? <JevCard /> : null} />
+          {routing}
+        </>
+      ) : (
+        <>
+          {routing}
+          {jev.data && <JevCard legacy routing={status.data?.routing?.by} />}
+          {admin && <UnavailableDecisions />}
+        </>
+      )}
     </Card>
   );
 }
@@ -229,7 +249,7 @@ const CHIP: Record<
 };
 
 /** The server's Jev connection: setup steps, or the saved key's hint, usage and state. */
-function JevCard() {
+function JevCard({ legacy = false, routing }: { legacy?: boolean; routing?: AiRouting["by"] }) {
   const { t, i18n } = useTranslation();
   // Read here rather than handed down: a save or a removal shows its key at once, so focus lands on what stays.
   const view = useJevKey().data;
@@ -348,7 +368,9 @@ function JevCard() {
               <h3 id="jev-title" className="jev__title">
                 {t("jev.title")}
               </h3>
-              <InfoHint name={t("common.about", { label: t("jev.title") })}>{t("jev.about")}</InfoHint>
+              <InfoHint name={t("common.about", { label: t("jev.title") })}>
+                {t(legacy ? "jev.about" : "decisions.serverDefault")}
+              </InfoHint>
             </span>
           </span>
           <span className="ac-mediarow__end">
@@ -356,10 +378,11 @@ function JevCard() {
               {t(`jev.state.${chip.word}`)}
             </Chip>
           </span>
-          <span className="ac-mediarow__body small muted">{t("decisions.serverDefault")}</span>
+          <span className="ac-mediarow__body small muted">{t(legacy ? "jev.lead" : "jev.about")}</span>
         </div>
         {view.source === null ? (
           <div className="ac-list__row jev__body">
+            {legacy && <JevWhy routing={routing} />}
             {steps ? (
               stepsOf(false)
             ) : (
@@ -420,5 +443,27 @@ function JevCard() {
         </DialogFooter>
       </Dialog>
     </section>
+  );
+}
+
+/** A removed OpenRouter account must not leave an invisible workspace override behind. */
+function UnavailableDecisions() {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const view = useDecisionSettings(org.id);
+  const save = useSaveDecisionSettings(org.id);
+  if (!view.data?.settings) return null;
+  return (
+    <>
+      <SettingNote icon="alert">{t("decisions.unavailable")}</SettingNote>
+      <Button loading={save.isPending} onClick={() => save.mutate(null)}>
+        {t("decisions.reset")}
+      </Button>
+      {save.error && (
+        <p role="alert" className="ac-field__error">
+          {errorText(t, save.error)}
+        </p>
+      )}
+    </>
   );
 }

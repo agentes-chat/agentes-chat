@@ -11,7 +11,9 @@ connected an OpenRouter account should be able to use it without changing Docker
 ## Decision
 
 Add **Decision models** in Settings → AI and usage, for people with `manage_credentials`. Start with a
-**Jev / OpenRouter** provider selector. One shared explanation covers routing, memory and screenshot
+**Jev / OpenRouter** provider selector only when an active OpenRouter account is connected. Without
+one, retain the original routing and Jev UI. A saved override whose account was removed still offers
+a reset, without an OpenRouter choice. One shared explanation covers routing, memory and screenshot
 decisions; provider panels describe their connection, and current routing status follows the controls. Jev shows the installation's setup (managed by its owner).
 OpenRouter expands the account, model and testing controls. Selecting Jev from a saved OpenRouter
 configuration resets the workspace override only after the server confirms success. A failed reset
