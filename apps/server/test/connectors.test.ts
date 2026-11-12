@@ -331,7 +331,7 @@ test("catalog: one list of our connectors and the one-click MCP servers, one ent
     description: "Marketplace sales, profit, settlements, catalog, inventory and ads.",
     serverUrl: "https://mcp.radarscout.com.br/mcp",
     available: true,
-    iconUrl: "/connectors/radarscout.svg",
+    iconUrl: "/brands/radarscout.svg",
   });
   // Linear and Sentry are in both lists: without an OAuth app here, the one-click server wins.
   expect(byId("linear")).toMatchObject({ kind: "remote_mcp", serverUrl: "https://mcp.linear.app/mcp" });

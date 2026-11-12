@@ -66,7 +66,7 @@ export const CONNECTOR_BRANDS: Record<string, { file: string; color: string | nu
   mercadopago: { file: "mercadopago", color: "#00B1EA" },
   attio: { file: "attio", color: null },
   close: { file: "close", color: null },
-  radarscout: { file: "radarscout", color: "#F97316" },
+  radarscout: { file: "radarscout", color: null, own: true },
   calendly: { file: "calendly", color: "#006BFF" },
   posthog: { file: "posthog", color: null },
   mixpanel: { file: "mixpanel", color: "#7856FF" },
