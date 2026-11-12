@@ -555,6 +555,25 @@ function AddAccountFlow({
         ) : null}
       </>
     );
+  } else if (kind === "muse") {
+    steps = (
+      <>
+        <Step
+          n={1}
+          state={login ? "done" : "now"}
+          title={t("agentPage.work.brain.add.stepOne.muse")}
+          hint={signInHint}
+          side={login ? openAgain(login.url) : startButton(t("agentPage.work.brain.add.open.muse"), !ready)}
+        >
+          {starting ? <StepText>{t("agentPage.work.brain.add.starting", { computer })}</StepText> : null}
+        </Step>
+        {login?.userCode ? (
+          deviceCode(2, t("agentPage.work.brain.add.museCode"), login.userCode)
+        ) : login && opened ? (
+          <Step n={2} divider title={t("agentPage.work.brain.add.museFinish", { computer })} side={waiting} />
+        ) : null}
+      </>
+    );
   } else if (kind === "codex") {
     steps = (
       <>
