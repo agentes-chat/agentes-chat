@@ -1,5 +1,6 @@
 import { createAnthropicProvider } from "./anthropic";
 import { parseCustomModel } from "./catalog";
+import { createOpenAIProvider } from "./openai";
 import { createOpenRouterProvider } from "./openrouter";
 import { type Endpoint, type ModelProvider, type ModelResult, ProviderError } from "./types";
 
@@ -153,7 +154,9 @@ const readsImages = (model: string) => /claude/i.test(model);
 /**
  * The adapter for every workspace endpoint, registered once as `custom`: each call names its endpoint
  * (`StreamOptions.endpoint`) and goes through the catalog's own adapters with that address, Anthropic's in its
- * compatible mode or the Chat Completions one OpenRouter uses. The endpoint's model id is sent, the full
+ * compatible mode or the Chat Completions one OpenRouter uses. Azure GPT-6.1 Sol uses Responses: its Chat
+ * Completions API rejects tools with reasoning, and the model does not support turning reasoning off.
+ * The endpoint's model id is sent, the full
  * `custom:` id comes back (so a catalog id it may share is never priced at the catalog's prices), and a cost the
  * server reports is ignored: the admin's prices count. `version`: this server's, in the User-Agent an endpoint that
  * asks for one gets (`endpointHeaders`).
@@ -170,6 +173,14 @@ export function createCustomProvider(
       if (!endpoint || !parsed) throw new ProviderError("this model has no endpoint", false);
       const extra = endpointHeaders(endpoint.baseURL, streamOptions.session ?? crypto.randomUUID(), options.version);
       const http = extra ? withHeaders(bounded, extra) : bounded;
+      const url = new URL(endpoint.baseURL);
+      // Keep every turn on Responses so encrypted reasoning survives tool-result follow-ups.
+      const azureResponses =
+        endpoint.style === "openai" &&
+        url.protocol === "https:" &&
+        (url.hostname.endsWith(".openai.azure.com") || url.hostname.endsWith(".cognitiveservices.azure.com")) &&
+        /^\/openai\/v1\/?$/.test(url.pathname) &&
+        /^gpt-6\.1-sol(?:-|$)/.test(parsed.model);
       const inner =
         endpoint.style === "anthropic"
           ? createAnthropicProvider({
@@ -179,11 +190,17 @@ export function createCustomProvider(
               fetch: http,
               maxRetries: options.maxRetries,
             })
-          : createOpenRouterProvider({
-              compatible: { id: "custom", baseURL: endpoint.baseURL },
-              fetch: http,
-              maxRetries: options.maxRetries,
-            });
+          : azureResponses
+            ? createOpenAIProvider({
+                baseURL: endpoint.baseURL,
+                fetch: http,
+                maxRetries: options.maxRetries,
+              })
+            : createOpenRouterProvider({
+                compatible: { id: "custom", baseURL: endpoint.baseURL },
+                fetch: http,
+                maxRetries: options.maxRetries,
+              });
       const { costNanoUsd: _reported, ...result } = await inner.stream(
         { ...request, model: parsed.model },
         streamOptions,

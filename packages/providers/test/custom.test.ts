@@ -107,6 +107,96 @@ const chat = (chunks: Record<string, unknown>[]) =>
   `${chunks.map((c) => `data: ${JSON.stringify({ id: "c1", object: "chat.completion.chunk", created: 1, ...c })}\n\n`).join("")}data: [DONE]\n\n`;
 
 describe("calls", () => {
+  test.each([
+    ["https://resource.openai.azure.com/openai/v1", "gpt-6.1-sol"],
+    ["https://resource.cognitiveservices.azure.com/openai/v1", "gpt-6.1-sol-2026-09-29"],
+  ])("Azure GPT-6.1 Sol preserves reasoning and tools on Responses at %s", async (baseURL, model) => {
+    const reasoning = { type: "reasoning", id: "rs_1", summary: [], encrypted_content: "test-encrypted-reasoning" };
+    const tool = {
+      type: "function_call",
+      id: "fc_1",
+      call_id: "call_1",
+      name: "report_status",
+      arguments: '{"ok":true}',
+      status: "completed",
+    };
+    const response = {
+      id: "resp_1",
+      object: "response",
+      created_at: 1,
+      model: "gpt-6.1-sol-2026-09-29",
+      status: "completed",
+      output: [reasoning, tool],
+      usage: { input_tokens: 10, output_tokens: 8, input_tokens_details: { cached_tokens: 2 } },
+    };
+    const { fetcher, requests } = scripted(
+      sse([
+        { type: "response.created", response: { ...response, status: "in_progress", output: [] } },
+        { type: "response.output_item.added", output_index: 0, item: reasoning },
+        { type: "response.output_item.done", output_index: 0, item: reasoning },
+        { type: "response.output_item.added", output_index: 1, item: { ...tool, arguments: "" } },
+        { type: "response.output_item.done", output_index: 1, item: tool },
+        { type: "response.completed", response },
+      ]),
+    );
+    const provider = createCustomProvider({ fetch: fetcher, maxRetries: 0 });
+    const modelId = customModelId(CRED, model);
+    const request = {
+      model: modelId,
+      system: "Check the connection.",
+      messages: [{ role: "user" as const, content: "Call report_status with ok true." }],
+      maxTokens: 1024,
+      tools: [
+        {
+          name: "report_status",
+          description: "Report connection status.",
+          inputSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+        },
+      ],
+      effort: "high" as const,
+    };
+    const options = { apiKey: "test-key", endpoint: { style: "openai" as const, baseURL }, onDelta: () => {} };
+    const result = await provider.stream(request, options);
+    expect(requests[0]?.url).toBe(`${baseURL}/responses`);
+    expect(requests[0]?.body).toMatchObject({
+      model,
+      instructions: request.system,
+      max_output_tokens: 1024,
+      store: false,
+      include: ["reasoning.encrypted_content"],
+      tools: [{ type: "function", name: "report_status" }],
+    });
+    for (const field of ["max_tokens", "max_completion_tokens", "reasoning_effort"]) {
+      expect(requests[0]?.body).not.toHaveProperty(field);
+    }
+    if (model === "gpt-6.1-sol") expect(requests[0]?.body.reasoning).toEqual({ effort: "high" });
+    expect(result.model).toBe(modelId);
+    expect(result.stopReason).toBe("tool_use");
+    expect(result.usage).toEqual({ inputTokens: 8, outputTokens: 8, cacheReadTokens: 2, cacheWriteTokens: 0 });
+    expect(result.content).toContainEqual({
+      type: "tool_use",
+      id: "call_1",
+      name: "report_status",
+      input: { ok: true },
+    });
+    await provider.stream(
+      {
+        ...request,
+        tools: [],
+        messages: [
+          ...request.messages,
+          { role: "assistant", content: result.content },
+          { role: "user", content: [{ type: "tool_result", toolUseId: "call_1", content: "ok" }] },
+        ],
+      },
+      options,
+    );
+    expect(requests[1]?.url).toBe(`${baseURL}/responses`);
+    expect(requests[1]?.body.input).toContainEqual(reasoning);
+    expect(requests[1]?.body.input).toContainEqual({ type: "function_call_output", call_id: "call_1", output: "ok" });
+    expect(requests[1]?.body).not.toHaveProperty("tools");
+  });
+
   test.each(["gpt-5", "gpt-5.6-sol", "gpt-6-sol", "gpt-6.1-sol", "gpt-6.1-sol-2026-09-29"])(
     "Chat Completions: %s uses completion tokens without changing its deployment id",
     async (model) => {
@@ -150,12 +240,12 @@ describe("calls", () => {
         },
         {
           apiKey: "test-key",
-          endpoint: { style: "openai", baseURL: "https://resource.openai.azure.com/openai/v1" },
+          endpoint: { style: "openai", baseURL: "https://gw.example/v1" },
           onDelta: () => {},
         },
       );
       expect(requests).toHaveLength(1);
-      expect(requests[0]?.url).toBe("https://resource.openai.azure.com/openai/v1/chat/completions");
+      expect(requests[0]?.url).toBe("https://gw.example/v1/chat/completions");
       expect(requests[0]?.body).toMatchObject({
         model,
         max_completion_tokens: 1024,
@@ -166,6 +256,7 @@ describe("calls", () => {
       for (const field of ["max_tokens", "temperature", "top_p", "reasoning", "provider", "cache_control"]) {
         expect(requests[0]?.body).not.toHaveProperty(field);
       }
+      expect(requests[0]?.body).not.toHaveProperty("reasoning_effort");
       expect(result.model).toBe(modelId);
       expect(result.stopReason).toBe("tool_use");
       expect(result.content).toContainEqual({
@@ -174,6 +265,27 @@ describe("calls", () => {
         name: "report_status",
         input: { ok: true },
       });
+    },
+  );
+
+  test.each([false, true])(
+    "GPT-6.1 Sol keeps default reasoning without tools (explicit empty tools: %s)",
+    async (explicit) => {
+      const { fetcher, requests } = scripted(
+        chat([{ choices: [{ index: 0, delta: { content: "ok" }, finish_reason: "stop" }] }]),
+      );
+      await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+        {
+          model: customModelId(CRED, "gpt-6.1-sol"),
+          system: "s",
+          messages: [{ role: "user", content: "hi" }],
+          maxTokens: 100,
+          ...(explicit ? { tools: [] } : {}),
+        },
+        { apiKey: "test-key", endpoint: { style: "openai", baseURL: "https://gw.example/v1" }, onDelta: () => {} },
+      );
+      expect(requests[0]?.body).toMatchObject({ model: "gpt-6.1-sol", max_completion_tokens: 100 });
+      expect(requests[0]?.body).not.toHaveProperty("reasoning_effort");
     },
   );
 
