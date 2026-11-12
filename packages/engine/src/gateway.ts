@@ -863,8 +863,9 @@ export function createModelGateway(deps: ModelGatewayDeps) {
           provider: input.provider,
           model: input.model,
           requestedModel: input.model,
-          inputTokens: input.inputTokens,
-          outputTokens: input.outputTokens,
+          // Decision APIs can report fractional token units; storage uses whole tokens, cost stays exact.
+          inputTokens: Math.round(input.inputTokens),
+          outputTokens: Math.round(input.outputTokens),
           costNanoUsd: input.costNanoUsd,
           billedTo: input.credentialId ? "org" : "platform",
           createdAt: now(),

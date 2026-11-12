@@ -21,6 +21,7 @@ async function setup(env: Record<string, string> = {}) {
   }[] = [];
   let status = 200;
   let malformed = false;
+  let tokens = { input_tokens: 100, output_tokens: 2 };
   const jevFetch = (async (url: string, init: RequestInit) => {
     const body = JSON.parse(String(init.body));
     calls.push({ url, key: new Headers(init.headers).get("authorization"), body });
@@ -47,9 +48,7 @@ async function setup(env: Record<string, string> = {}) {
       }),
     );
     return Response.json(
-      malformed
-        ? { answers: {} }
-        : { model: body.model, answers, usage: { input_tokens: 100, output_tokens: 2, cost: 0.000123 } },
+      malformed ? { answers: {} } : { model: body.model, answers, usage: { ...tokens, cost: 0.000123 } },
     );
   }) as unknown as typeof fetch;
   const server = await createTestServer({ env: { ALLOW_SIGNUP: "true", ...env }, judge: null, jevFetch });
@@ -105,6 +104,9 @@ async function setup(env: Record<string, string> = {}) {
     calls,
     ask,
     addAccount,
+    tokens: (input: number, output: number) => {
+      tokens = { input_tokens: input, output_tokens: output };
+    },
     status: (v: number) => {
       status = v;
     },
@@ -165,6 +167,36 @@ test("selects an existing account without env changes; text, screenshots, router
   expect(instance.month).toEqual({ decisions: 0, costUsd: 0 });
   expect(JSON.stringify(await (await f.owner(f.path)).json())).not.toContain(f.account.key);
   expect(JSON.stringify(await f.server.db.select().from(schema.auditLog))).not.toContain(f.account.key);
+});
+
+test("fractional decision tokens save and remain attributed with the exact reported cost", async () => {
+  const f = await setup();
+  f.tokens(35.2, 6.1);
+  expect((await f.save()).status).toBe(200);
+  await f.ask();
+  await f.router.strategy.decide({
+    orgId: f.org.orgId,
+    channel: { id: f.org.channelId, name: "general", topic: "" },
+    message: { id: "m", author: "Owner", body: "please help" },
+    candidates: [{ agentId: f.org.agentId, handle: "dev", name: "Dev", role: "", about: "" }],
+    thread: [],
+    authorUserId: null,
+  });
+  const usage = await f.server.db
+    .select()
+    .from(schema.usageRecords)
+    .where(eq(schema.usageRecords.provider, "openrouter-decisions"));
+  expect(usage).toHaveLength(4);
+  expect(
+    usage.every(
+      (u) =>
+        u.inputTokens === 35 &&
+        u.outputTokens === 6 &&
+        u.costNanoUsd === 123000 &&
+        u.credentialId === f.account.id &&
+        u.billedTo === "org",
+    ),
+  ).toBe(true);
 });
 
 test("workspace permission and ownership are enforced; foreign and non-OpenRouter accounts cannot be selected", async () => {
