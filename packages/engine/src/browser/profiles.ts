@@ -891,6 +891,8 @@ export async function openProfilePage(
       command,
       args,
       timeoutSeconds: OPEN_PAGE_SECONDS,
+      // The person in control's own move: it runs while they drive (anything else waits for them).
+      person: true,
     },
     { timeoutMs: (OPEN_PAGE_SECONDS + 30) * 1000 },
   );

@@ -2450,6 +2450,12 @@ export type MachineRequest = (
        * may start Chrome, never while someone watches it or a person's turn is open.
        */
       desktop?: boolean;
+      /**
+       * The person in control sent it (the live view's address field, a restart): it runs while they drive the
+       * browser. Anything else meanwhile never reaches the browser: a read of the address or title is answered from
+       * the live view, the rest is refused (a person's input waits behind whatever the browser is busy with).
+       */
+      person?: boolean;
     }
   /** Protocol 12: close the agent's browser session (Stop, idle). */
   | { op: "browser.stop" }

@@ -1044,6 +1044,17 @@ const TOOK_OVER: BrowserAnswer = {
   error:
     "A person took control of your browser, so this stopped where it was. What it typed so far stays in the field: don't type it again, read the page before going on.",
 };
+/**
+ * The answer to a command that came while a person drives the browser (its live view in control): it never reached
+ * the browser, whose one-at-a-time queue the person's clicks and keys go through too.
+ */
+const PERSON_DRIVING: BrowserAnswer = {
+  success: false,
+  data: null,
+  code: "person_in_control",
+  error:
+    "A person has control of your browser now, so this didn't run. Nothing of yours runs in it until they hand it back: read the page again then.",
+};
 /** What one command of a batch costs on its own (measured on a loaded Linux VPS): taken off each pointer step's wait. */
 const BATCH_STEP_MS = 8;
 /**
@@ -1518,6 +1529,8 @@ interface Session {
   calls: Set<AbortController>;
   /** Until when the daemon may still run an agent command that taking control cut off (`DAEMON_HOLD_MS`). */
   daemonBusyUntil?: number;
+  /** How many agent (or server) commands are being performed now: only those make taking control wait (`takeOver`). */
+  agentRunning?: number;
   /** How many `agent-browser` commands of this session are running now. */
   running?: number;
   /** When its `mouse down` went, while no `mouse up` followed. */
@@ -1906,18 +1919,25 @@ export class BrowserManager {
   ): Promise<BrowserAnswer & { setup?: BrowserSetup }> {
     const allowed = allowedDomainsOf(req.allowedDomains);
     const prepared = this.checkCommand(req.command, req.args, req.timeoutSeconds, folder, allowed);
+    // A person drives the browser: only their own commands reach it (`whileDriving`), before and after the queue.
+    const person = req.person === true;
+    const driven = this.sessions.get(String(agent.id ?? ""));
+    if (!person && driven && this.driving(driven)) return this.whileDriving(driven, prepared);
     const setup: BrowserSetup = {};
     const session = await this.timedSession(agent, folder, setup);
     const desktop = req.desktop === true;
     const queuedAt = this.now();
     const acts = actsOnPage(prepared);
-    const call = this.agentCall(session);
+    // The person's own command isn't the agent's: their taking control doesn't stop it.
+    const call = person ? new AbortController() : this.agentCall(session);
     const answer = await this.enqueue(session, async () => {
       this.mark(setup, "queued", queuedAt);
+      if (!person && this.driving(session)) return this.whileDriving(session, prepared);
       // A page that died since the agent last heard, or while this ran, is an action's answer: it changed under it.
       const before = acts ? this.takeCrash(session, false) : null;
       if (before) return before;
       const opening = this.vaultOpening(actor, session);
+      if (!person) session.agentRunning = (session.agentRunning ?? 0) + 1;
       try {
         const done = await this.perform(
           agent,
@@ -1933,10 +1953,38 @@ export class BrowserManager {
         );
         return (acts ? (this.takeCrash(session, true) ?? this.takeBlocked(session)) : null) ?? done;
       } finally {
+        if (!person) session.agentRunning = Math.max(0, (session.agentRunning ?? 1) - 1);
         opening.close();
       }
     }).finally(() => session.calls.delete(call));
     return { ...answer, ...withSetup(setup), ...(session.viewport ? { emulated: session.viewport } : {}) };
+  }
+
+  /** A person drives this session's browser now: its live view is in control. */
+  private driving(session: Session): boolean {
+    return session.stream?.mode === "control";
+  }
+
+  /**
+   * A command that isn't the person's, while they drive: it never reaches the daemon, whose one queue their input goes
+   * through too (one read there held their clicks for seconds). The address or title is what the live view last
+   * showed (the stream's tab list, else the agent's last command), which also counts as use; anything else is
+   * refused as the person's (`PERSON_DRIVING`).
+   */
+  private whileDriving(session: Session, p: Prepared): BrowserAnswer {
+    if (p.command === "get" && p.args.length === 1) {
+      const url = session.stream?.url ?? session.url;
+      const title = session.stream?.title;
+      if (p.args[0] === "url" && url) {
+        session.lastUsed = this.now();
+        return { success: true, data: { url } };
+      }
+      if (p.args[0] === "title" && title !== undefined) {
+        session.lastUsed = this.now();
+        return { success: true, data: { title } };
+      }
+    }
+    return PERSON_DRIVING;
   }
 
   /**
@@ -1956,6 +2004,9 @@ export class BrowserManager {
       ...this.checkCommand(c?.command, c?.args, c?.timeoutSeconds, folder, allowed),
       tolerate: c?.tolerate === true,
     }));
+    // Only the agent sends batches: none reaches the browser while a person drives it (`whileDriving`).
+    const driven = this.sessions.get(String(agent.id ?? ""));
+    if (driven && this.driving(driven)) return { answers: [PERSON_DRIVING] };
     const setup: BrowserSetup = {};
     const session = await this.timedSession(agent, folder, setup);
     const desktop = req.desktop === true;
@@ -1963,6 +2014,7 @@ export class BrowserManager {
     const call = this.agentCall(session);
     return this.enqueue(session, async (): Promise<MachineReplies["browser.batch"]> => {
       this.mark(setup, "queued", queuedAt);
+      if (this.driving(session)) return { answers: [PERSON_DRIVING], ...withSetup(setup) };
       const answers: BrowserAnswer[] = [];
       /** Where this batch's last action answered. */
       let acted = -1;
@@ -1989,6 +2041,7 @@ export class BrowserManager {
         return true;
       };
       const opening = this.vaultOpening(actor, session);
+      session.agentRunning = (session.agentRunning ?? 0) + 1;
       try {
         for (const p of prepared) {
           if (signal?.aborted) break;
@@ -2027,6 +2080,7 @@ export class BrowserManager {
           if ((acted >= 0 && (died() || blocked())) || (!answer.success && !p.tolerate)) break;
         }
       } finally {
+        session.agentRunning = Math.max(0, (session.agentRunning ?? 1) - 1);
         // Each Vault value this batch opened goes with it (ADR 0144).
         opening.close();
       }
@@ -2096,8 +2150,12 @@ export class BrowserManager {
     signal?: AbortSignal,
   ): Promise<MachineReplies["browser.capture"]> {
     const allowed = allowedDomainsOf(allowedDomains);
+    const driven = this.sessions.get(String(agent.id ?? ""));
+    if (driven && this.driving(driven)) throw new RunnerError("bad_request", PERSON_DRIVING.error ?? "");
     const session = await this.session(agent, folder);
     return this.enqueue(session, async () => {
+      // A person drives it now: the picture isn't taken through the queue their input goes through (`whileDriving`).
+      if (this.driving(session)) throw new RunnerError("bad_request", PERSON_DRIVING.error ?? "");
       if (!(await this.browserOpen(session, signal))) {
         throw new RunnerError("bad_request", "The browser isn't open: open a page first");
       }
@@ -3686,7 +3744,11 @@ export class BrowserManager {
   private takeOver(session: Session) {
     for (const call of session.calls) call.abort();
     session.calls.clear();
-    if ((session.running ?? 0) > 0) session.daemonBusyUntil = this.now() + DAEMON_HOLD_MS;
+    // Only an agent's (or the server's) command cut off mid-way holds the daemon on: a screenshot for the live view,
+    // or taking control again (each `browser.handoff` while active says so), never makes the person's input wait.
+    if ((session.agentRunning ?? 0) > 0 && (session.running ?? 0) > 0) {
+      session.daemonBusyUntil = this.now() + DAEMON_HOLD_MS;
+    }
   }
 
   /** A person's turn is open on the agent's browser, or was when the server connection dropped. */

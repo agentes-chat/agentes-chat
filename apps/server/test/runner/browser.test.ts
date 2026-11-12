@@ -865,6 +865,83 @@ describe("a person takes control while the agent's pointer and keys are going", 
       relay.server.stop(true);
     }
   });
+
+  test("while a person drives, nothing but their own commands reaches the browser, and their input goes at once", async () => {
+    const t = setup({ inputTimeoutMs: 200, ...(posix ? {} : { startPageDirectory: tempDir() }) });
+    const relay = fakeRelay();
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      // Any read that reached the daemon would hold it (and the person's clicks behind it) for 20 s.
+      t.page({ port: relay.port, hang: { command: "get", ms: 20_000 } });
+      await t.manager.streamStart(dev, "control");
+      const before = t.logged().length;
+      const startedAt = performance.now();
+      const folder = await t.folder();
+      // The server's read of the address (the handoff's keep-alive, the page a person took control on): the live view's.
+      const url = await t.manager.act(dev, folder, {
+        op: "browser.act",
+        command: "get",
+        args: ["url"],
+        timeoutSeconds: 10,
+      });
+      expect(url).toMatchObject({ success: true, data: { url: expect.stringContaining("shop.example.com") } });
+      // Anything else, an agent's command or batch included: refused before the queue.
+      for (const [command, args] of [
+        ["get", ["text", "@e3"]],
+        ["click", ["@e2"]],
+        ["wait", ["#late"]],
+      ] as const) {
+        const answer = await t.manager.act(dev, folder, {
+          op: "browser.act",
+          command,
+          args: [...args],
+          timeoutSeconds: 30,
+        });
+        expect(answer).toMatchObject({ success: false, code: "person_in_control" });
+        expect(answer.error).toContain("A person has control of your browser");
+      }
+      const { answers } = await t.manager.batch(dev, folder, {
+        op: "browser.batch",
+        commands: [{ command: "snapshot", args: [], timeoutSeconds: 30 }],
+      });
+      expect(answers).toEqual([expect.objectContaining({ code: "person_in_control" })]);
+      expect(performance.now() - startedAt).toBeLessThan(1_000);
+      // Taking control again (each `browser.handoff` while active says so) doesn't make their input wait either.
+      t.manager.setHandoff(dev.id, { status: "active", controller: "Maria" });
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(performance.now() - startedAt).toBeLessThan(1_500);
+      const reached = t
+        .logged()
+        .slice(before)
+        .filter((c) => !c.args.includes("screenshot"));
+      expect(reached.some((c) => ["get", "click", "wait", "snapshot"].some((a) => c.args.includes(a)))).toBe(false);
+      // The person's own move (the live view's address field) still runs while they drive.
+      const moved = await t.manager.act(dev, folder, {
+        op: "browser.act",
+        command: "open",
+        args: ["https://shop.example.com/cart"],
+        timeoutSeconds: 30,
+        person: true,
+      });
+      expect(moved.success).toBe(true);
+      expect(
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("open")),
+      ).toBe(true);
+      // Back to watching: the agent's commands run again.
+      await t.manager.streamStart(dev, "watch");
+      t.page({ hang: null });
+      expect((await t.act("get", ["url"])).code).toBeUndefined();
+    } finally {
+      relay.server.stop(true);
+    }
+  });
 });
 
 test("after a hover the pointer goes straight to the next element, and curves again once it left", async () => {
