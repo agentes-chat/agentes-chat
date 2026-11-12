@@ -67,11 +67,15 @@ export function useNewAgentBrain() {
         ? { kind: own.kind, machineId: own.machineId, accountId: own.accountId, label: own.account, model: AUTO }
         : null;
   const onModel = start?.brain === "model" ? start : null;
+  const firstUsable = usable.size > 0 ? [...usable][0] : undefined;
+  const isCustomOnly = Boolean(firstUsable?.startsWith("custom:"));
+  const defaultModel = onModel?.model ?? (isCustomOnly && firstUsable ? firstUsable : AUTO);
+  const defaultKey = onModel?.key ?? (isCustomOnly && firstUsable ? (firstUsable.split(":")[1] ?? null) : null);
   return {
     hasAi: !held && (plan !== null || onModel !== null || usable.size > 0),
     input: {
-      model: onModel?.model ?? AUTO,
-      credentialId: onModel?.key ?? null,
+      model: defaultModel,
+      credentialId: defaultKey,
       ...(start?.autonomy ? { autonomy: start.autonomy } : {}),
     },
     /** Its plan, once it exists: the computer it thinks on, then its "Quem pensa". */

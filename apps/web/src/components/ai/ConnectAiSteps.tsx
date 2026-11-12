@@ -374,7 +374,11 @@ export function useExistingAi({
       }
       const fits = keyRuns(key, row?.model, models.data?.models ?? []);
       if (view?.brain !== "model") await api.agents.setBrain(org.id, agent.id, { brain: "model" });
-      await api.agents.update(org.id, agent.id, { credentialId: key.id, ...(fits ? {} : { model: AUTO }) });
+      const fallbackModel =
+        key.provider === "custom"
+          ? ((models.data?.models ?? []).find((m) => m.endpoint?.credentialId === key.id)?.id ?? AUTO)
+          : AUTO;
+      await api.agents.update(org.id, agent.id, { credentialId: key.id, ...(fits ? {} : { model: fallbackModel }) });
       return { label: key.label, choice: "key", onlyOwner: false };
     });
   return { rows, busy, refused, pickAccount, pickKey };

@@ -19,7 +19,15 @@ export default defineConfig({
     preloadLocale(),
   ],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  server: { port: 5173, proxy: { "/api": { target: "http://localhost:3000", ws: true } } },
+  server: {
+    port: 5173,
+    proxy: {
+      "/api": { target: "http://localhost:3000", ws: true },
+      "/i": { target: "http://localhost:3000" },
+      "/install": { target: "http://localhost:3000" },
+      "/mcp": { target: "http://localhost:3000" },
+    },
+  },
   // `screen.html`: the agent's screen for the phone app (ADR 0098), a small page of its own, not the web app.
   build: {
     outDir: "dist",

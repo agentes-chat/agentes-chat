@@ -234,7 +234,11 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
           const cred = s.credentials.find((c) => c.id === key);
           // The agent's model where the key runs it, else Automático, which follows the key.
           const fits = !cred || keyRuns(cred, saved.model, s.models);
-          await update.mutateAsync({ credentialId: key, ...(fits ? {} : { model: AUTO }) });
+          const fallbackModel =
+            cred?.provider === "custom"
+              ? (s.models.find((m) => m.endpoint?.credentialId === cred.id)?.id ?? AUTO)
+              : AUTO;
+          await update.mutateAsync({ credentialId: key, ...(fits ? {} : { model: fallbackModel }) });
         }
       }
       return result;

@@ -198,7 +198,7 @@ export const keyRuns = (
   model: string | undefined,
   models: readonly Model[],
 ) =>
-  isAuto(model) ||
+  (isAuto(model) ? key.provider !== "custom" : false) ||
   models.some(
     (m) => m.id === model && m.provider === key.provider && (!m.endpoint || m.endpoint.credentialId === key.id),
   );
