@@ -21779,6 +21779,9 @@
   "endpoint.styles.openai": {
     "value": "OpenAI (Chat Completions)"
   },
+  "endpoint.styles.openai-responses": {
+    "value": "OpenAI (Responses)"
+  },
   "endpoint.styles.anthropic": {
     "value": "Claude (Messages)"
   },
