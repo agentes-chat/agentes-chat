@@ -139,10 +139,12 @@ export function museSettings(input: { mcp: { token: string; url?: string }; mcpC
         : {
             transport: "stdio",
             command: input.mcpCommand?.[0] ?? "agentes-runner",
-            args: input.mcpCommand?.slice(1) ?? [],
+            // `agentes-runner mcp` needs the run: it is an argument, not only the environment.
+            args: [...(input.mcpCommand?.slice(1) ?? ["mcp"]), "--run", env(MUSE_RUN_ENV)],
             env: {
               [CODEX_MCP_ENV[0]]: env(CODEX_MCP_ENV[0]),
               [CODEX_MCP_ENV[2]]: env(CODEX_MCP_ENV[2]),
+              [MUSE_RUN_ENV]: env(MUSE_RUN_ENV),
             },
             mode: "required",
           },
@@ -243,12 +245,13 @@ export function museApprovalVerdict(input: {
     }
     return { allow: true, always: false, why: "it writes inside the turn's folder" };
   }
-  // A subject this can't read: the profile is the whole answer, and a `work` turn is what does the work.
+  // A subject this can't read is the class the host asked about *because* nothing matched it (egress, a third-party
+  // MCP server, a kind newer than this code): with nobody to look, it is refused rather than waved through.
   if (input.profile === "plan") return { allow: false, always: false, why: PLAN_MESSAGE };
   return {
-    allow: true,
+    allow: false,
     always: false,
-    why: `the policy reads no \`${(kind || "unknown").slice(0, 32)}\` subject, and a \`work\` turn approves it once`,
+    why: `the policy reads no \`${(kind || "unknown").slice(0, 32)}\` subject, and nobody is here to look`,
   };
 }
 
@@ -574,6 +577,8 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     );
   }
 
+  // What the host says reaches the thread and the logs: the same redactor the events get.
+  const clean = (text: string) => (redact ? redact(text) : text);
   const mapper = new MuseEventMapper({
     ...(input.model ? { model: input.model } : {}),
     ...(redact ? { redact } : {}),
@@ -615,8 +620,9 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
         ...(home ? { home } : {}),
         runnerHome: opts.runnerHome,
       });
+      // Never a decision of our own: the narrowest offer that says this, else its own refusal, so the host stops
+      // waiting; when not even a refusal was offered the ask is left to the host.
       const choice = museChoice(offered, verdict);
-      // Never a decision of our own: with no offer that says this, the host keeps its own answer.
       if (!choice) return;
       answered.add(approvalId);
       // The reply is nobody's business: a host that doesn't answer it must not hold the turn.
@@ -650,13 +656,13 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   (child as unknown as EventEmitter).on("error", (err: Error) => {
     if (finished) return;
     missingHost = (err as NodeJS.ErrnoException).code === "ENOENT";
-    failure = missingHost ? "ENOENT: Muse Code's CLI is not installed on this computer." : err.message;
+    failure = missingHost ? "ENOENT: Muse Code's CLI is not installed on this computer." : clean(err.message);
     host.fail(failure);
     done();
   });
   (child as unknown as EventEmitter).on("close", () => {
     if (finished) return;
-    failure = host.stderr.trim() || "Muse Code's host ended before the turn did.";
+    failure = clean(host.stderr.trim()) || "Muse Code's host ended before the turn did.";
     done();
   });
 
@@ -678,6 +684,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       : undefined;
     const session = isRecord(resumed?.session) ? resumed?.session : undefined;
     if (session) sessionId = str(session.sessionId);
+    const resumedOk = Boolean(sessionId);
     if (!sessionId) {
       // Muse lost it (its log is in the account's folder, our map in the runner home): a new session, context again.
       opts.sessions.delete(sessionKey);
@@ -692,8 +699,10 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       opts.sessions.set(sessionKey, sessionId);
     }
     // The view is what streams the turn's items; without a subscription a turn runs blind.
-    await host.request("view/subscribe", { sessionId }).catch(() => undefined);
-    const prompt = stored
+    await host.request("view/subscribe", { commandId: uuidv7(), sessionId }).catch(() => undefined);
+    // The context goes with the first prompt of a session. `stored` is not the answer: a resume that failed starts a
+    // new session a few lines above, and that one needs the context too.
+    const prompt = resumedOk
       ? input.prompt
       : input.system.trim()
         ? `${input.system.trim()}\n\n${input.prompt}`
@@ -703,7 +712,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     if (!finished) {
       const message = err instanceof Error ? err.message : String(err);
       // A host that refused the handshake (no sign-in, another version) says why on stderr.
-      const said = host.stderr.trim() || message;
+      const said = clean(host.stderr.trim()) || message;
       await host.close().catch(() => undefined);
       opts.signal.removeEventListener("abort", abort);
       const missing = /ENOENT|not installed/i.test(said);

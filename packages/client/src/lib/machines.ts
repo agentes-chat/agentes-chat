@@ -98,7 +98,7 @@ export function toolOffReason(
   if (!m || allowsInApp(m.os)) return { key: "brain.reasons.tool_off" as const, command: "" };
   return {
     key: "brain.reasons.tool_offLinux" as const,
-    command: toolOnCommand(m, kind === "claude_code" ? "claude" : kind === "muse" ? "claude" : kind),
+    command: toolOnCommand(m, kind === "claude_code" ? "claude" : kind),
   };
 }
 
