@@ -19,6 +19,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import { useFileDrop } from "@/components/drive/DriveUploads";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { matchesNow, TOUCH } from "@/hooks/useMatchMedia";
@@ -98,7 +99,16 @@ interface Added {
  * right hand stands on the sky with an envelope: it takes notes while the person types, and the envelope flies once
  * it is sent. It only illustrates: no agent reads or sends anything.
  */
-export function FeedbackDialog({ reported, onClose }: { reported: Reported | null; onClose: () => void }) {
+export function FeedbackDialog({
+  reported,
+  dropped = [],
+  onClose,
+}: {
+  reported: Reported | null;
+  /** Files dropped on the way to the form (its row in the sidebar): added as it opens, as if picked. */
+  dropped?: File[];
+  onClose: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const api = useApi();
@@ -186,6 +196,15 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
       );
     }
   };
+  const drop = useFileDrop(add, !sent);
+  // Once per form: a second mount of the same form (React's checks in development) uploads nothing twice.
+  const took = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the files it opened with, once
+  useEffect(() => {
+    if (took.current || dropped.length === 0) return;
+    took.current = true;
+    add(dropped);
+  }, []);
   const remove = (file: Added) => {
     setFiles((all) => all.filter((f) => f.key !== file.key));
     if (file.preview) URL.revokeObjectURL(file.preview);
@@ -304,6 +323,10 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
         </DialogFooter>
       ) : (
         <form
+          // A picture dropped anywhere on the form is added, as a paste is.
+          {...drop.props}
+          data-over={drop.over || undefined}
+          className="arrival-feedback__form"
           onSubmit={(e) => {
             e.preventDefault();
             if (ready) send.mutate();
@@ -464,19 +487,28 @@ export function FeedbackHost() {
   // Leaving the workspace leaves the form: it never opens by itself in the next one.
   useEffect(() => closeFeedback, []);
   if (!on || !open) return null;
-  return <FeedbackDialog key={open.n} reported={open.reported} onClose={closeFeedback} />;
+  return <FeedbackDialog key={open.n} reported={open.reported} dropped={open.files} onClose={closeFeedback} />;
 }
 
 /**
  * The way to the feedback form: a quiet row at the bottom of the sidebar, marked Beta. Only where the server takes
- * feedback (`FEEDBACK_EMAIL`): elsewhere there is no row.
+ * feedback (`FEEDBACK_EMAIL`): elsewhere there is no row. A screenshot dragged onto it opens the form with it added.
  */
 export function FeedbackMark() {
   const { t } = useTranslation();
-  if (useAuthConfig().data?.feedback !== true) return null;
+  const on = useAuthConfig().data?.feedback === true;
+  const drop = useFileDrop((files) => openFeedback(null, files), on);
+  if (!on) return null;
   return (
     <div className="sidebar__feedback">
-      <button type="button" className="sidebar__item" aria-label={t("feedback.open")} onClick={() => openFeedback()}>
+      <button
+        type="button"
+        className="sidebar__item"
+        aria-label={t("feedback.open")}
+        data-over={drop.over || undefined}
+        onClick={() => openFeedback()}
+        {...drop.props}
+      >
         <Icon name="message" />
         <span className="sidebar__item-label">{t("feedback.open")}</span>
         <Chip>{t("feedback.mark")}</Chip>

@@ -174,4 +174,33 @@ describe("feedback about what was clicked", () => {
     const sent = state.calls.findLast((c) => c.method === "system.sendFeedback")?.args[0] as FeedbackInput;
     expect(sent.files).toHaveLength(1);
   });
+
+  test("a screenshot dropped on the Beta mark opens the form with it, and the form takes another dropped on it", async () => {
+    const { state } = await open(seedState({ authConfig: { feedback: true } }));
+    const mark = screen().getByRole("button", { name: "Enviar feedback" });
+    const carrying = (name: string, type = "image/png") => ({
+      dataTransfer: { types: ["Files"], files: [new File(["x"], name, { type })], dropEffect: "none" },
+    });
+    await act(async () => fireEvent.dragEnter(mark, carrying("print.png")));
+    expect(mark.hasAttribute("data-over")).toBe(true);
+    await act(async () => fireEvent.drop(mark, carrying("print.png")));
+    await settle(4);
+    expect(mark.hasAttribute("data-over")).toBe(false);
+    const form = screen().getByRole("dialog", { name: "O que faltou, quebrou ou incomodou?" });
+    expect(within(form).getByText("print.png")).toBeTruthy();
+    const box = form.querySelector("form") as HTMLFormElement;
+    await act(async () => fireEvent.dragEnter(box, carrying("notas.pdf", "application/pdf")));
+    expect(box.hasAttribute("data-over")).toBe(true);
+    await act(async () => fireEvent.drop(box, carrying("notas.pdf", "application/pdf")));
+    await act(async () => fireEvent.drop(box, carrying("outra.png")));
+    await settle(4);
+    expect(within(form).getByText("outra.png")).toBeTruthy();
+    expect(within(form).queryByText("notas.pdf")).toBeNull();
+    expect(state.calls.filter((c) => c.method === "system.uploadFeedbackFile")).toHaveLength(2);
+    await type(within(form).getByRole("textbox"), "Olha a tela");
+    await click(within(form).getByRole("button", { name: /^Enviar/ }));
+    await settle(4);
+    const sent = state.calls.findLast((c) => c.method === "system.sendFeedback")?.args[0] as FeedbackInput;
+    expect(sent.files).toHaveLength(2);
+  });
 });

@@ -142,16 +142,19 @@ export function deviceFacts(): [string, string][] {
 /* ---------- opening the form from anywhere ---------- */
 
 type Listener = () => void;
-let open: { n: number; reported: Reported | null } | null = null;
+let open: { n: number; reported: Reported | null; files: File[] } | null = null;
 let seq = 0;
 const listeners = new Set<Listener>();
 const tell = () => {
   for (const l of listeners) l();
 };
 
-/** Opens the feedback form, about `reported` when a right click chose something. */
-export function openFeedback(reported: Reported | null = null) {
-  open = { n: ++seq, reported };
+/**
+ * Opens the feedback form, about `reported` when a right click chose something, with `files` already added when they
+ * were dropped on the way to it.
+ */
+export function openFeedback(reported: Reported | null = null, files: File[] = []) {
+  open = { n: ++seq, reported, files };
   tell();
 }
 export function closeFeedback() {

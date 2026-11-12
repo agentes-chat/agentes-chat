@@ -1017,6 +1017,17 @@ html:not([data-pointer]) .arrival-have__link:focus-visible {
 .sidebar__feedback .ac-chip {
   margin-left: auto;
 }
+/* A file dragged over the row, or over the open form: where it lands is lit, as a task's files are. */
+.sidebar__feedback > .sidebar__item[data-over] {
+  color: var(--ink);
+  background: var(--plate);
+  box-shadow: inset 0 0 0 2px var(--line-strong);
+}
+/* The dialog's form has no box (`display: contents`), so the ring is drawn on its body. */
+.arrival-feedback__form[data-over] > .ac-dialog__body {
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 2px var(--line-strong);
+}
 
 /* A screen that changes slides in from the side it comes from (deeper ones from the end), its title with it; who is
    signing in now moves along the faces, and a check or a mark pops onto a face as it lands. */
