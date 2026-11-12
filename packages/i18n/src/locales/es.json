@@ -2016,6 +2016,7 @@
     },
     "map": {
       "lead": "Quién se ocupa de los agentes, los canales donde están, lo que cada uno hace por su cuenta y lo que espera a una persona. Las líneas punteadas son agentes que se pidieron ayuda en el último día.",
+      "short": "Quién se ocupa de cada agente y dónde trabaja.",
       "lodi": "Organiza el equipo contigo",
       "hint": "Arrastra un agente a otro canal y {{name}} prepara el cambio para que lo apliques",
       "proposed": "{{name}} preparó el cambio en tu conversación. Aplícalo allí.",
@@ -2034,8 +2035,7 @@
       "emptyViewer": "Quien gestiona los agentes los agrega a los canales, y el mapa aparece aquí.",
       "others": "Otros canales",
       "band": "Supervisores",
-      "reportsTo": "Responde a {{name}}",
-      "short": "Quién se ocupa de cada agente y dónde trabaja."
+      "reportsTo": "Responde a {{name}}"
     },
     "sectors": {
       "lead": "Cada departamento tiene un responsable, un suplente, sus agentes y los canales y rutinas de ellos.",
@@ -2283,15 +2283,15 @@
     "sendCorrection": "Enviar corrección",
     "correctionSent": "Corrección enviada. {{name}} aprenderá de ella.",
     "sending": "enviando…",
+    "notSentWhy": "No enviado. {{why}}",
+    "notSentUnknown": "Algo salió mal.",
+    "editSend": "Editar",
     "tooLong": {
       "text": "El mensaje tiene {{length}} caracteres y el límite es {{max}}.",
       "fix": "Envía el texto como archivo.",
       "asFile": "Enviar como archivo",
       "fileName": "mensaje.txt"
     },
-    "notSentWhy": "No enviado. {{why}}",
-    "notSentUnknown": "Algo salió mal.",
-    "editSend": "Editar",
     "long": {
       "more": "Ver más",
       "title": "Mensaje de {{name}}"
@@ -4096,6 +4096,37 @@
       "another": "Elegir otro archivo",
       "close": "Listo"
     },
+    "env": {
+      "open": "Importar .env",
+      "title": "Importar claves",
+      "text": "Acepta un archivo .env, con una línea NOMBRE=valor por clave, o un JSON de nombres y valores.",
+      "paste": "O pega el contenido aquí",
+      "review": "Revisar",
+      "none": "No se encontró ninguna línea NOMBRE=valor. Revisa el archivo e inténtalo de nuevo.",
+      "tooLarge": "Este archivo es demasiado grande (512 KB como máximo).",
+      "tooMany": "Son demasiadas claves a la vez ({{max}} como máximo). Divide el archivo e importa cada parte.",
+      "duplicates": "Repetidas en el archivo, cuenta el último valor: {{names}}",
+      "new": "Nueva",
+      "exists": "Ya existe",
+      "replace": "Reemplazar",
+      "show": "Mostrar el valor de {{name}}",
+      "hide": "Ocultar el valor de {{name}}",
+      "problem": {
+        "name": "El nombre debe ser como ACME_API_KEY",
+        "reserved": "Nombre reservado",
+        "empty": "Sin valor",
+        "tooLarge": "Valor demasiado grande"
+      }
+    },
+    "move": {
+      "toTeam": "Mover a Equipo",
+      "toTeamPersonal": "Mover a Compartido",
+      "toPersonal": "Mover a Personal",
+      "title": "¿Mover {{title}}?",
+      "toTeamText": "Todos en el espacio de trabajo verán este elemento, y sus agentes lo usarán cuando cualquiera lo pida. Quienes administran el Vault pueden editarlo.",
+      "toPersonalText": "Solo tú verás y editarás este elemento, y sus agentes lo usarán solo cuando tú lo pidas. Los demás dejan de verlo.",
+      "moved": "Movido"
+    },
     "connections": {
       "none": "Aquí no se puede conectar ningún gestor de contraseñas.",
       "lead": "Tus agentes usan {{kinds}} que guardas en {{name}}.",
@@ -4221,37 +4252,6 @@
       "codeShort_one": "Escribe el {{count}} dígito.",
       "codeShort_other": "Escribe los {{count}} dígitos.",
       "codeWhere": "Solo el navegador de {{agent}} lo escribe, en {{host}}."
-    },
-    "env": {
-      "open": "Importar .env",
-      "title": "Importar claves",
-      "text": "Acepta un archivo .env, con una línea NOMBRE=valor por clave, o un JSON de nombres y valores.",
-      "paste": "O pega el contenido aquí",
-      "review": "Revisar",
-      "none": "No se encontró ninguna línea NOMBRE=valor. Revisa el archivo e inténtalo de nuevo.",
-      "tooLarge": "Este archivo es demasiado grande (512 KB como máximo).",
-      "tooMany": "Son demasiadas claves a la vez ({{max}} como máximo). Divide el archivo e importa cada parte.",
-      "duplicates": "Repetidas en el archivo, cuenta el último valor: {{names}}",
-      "new": "Nueva",
-      "exists": "Ya existe",
-      "replace": "Reemplazar",
-      "show": "Mostrar el valor de {{name}}",
-      "hide": "Ocultar el valor de {{name}}",
-      "problem": {
-        "name": "El nombre debe ser como ACME_API_KEY",
-        "reserved": "Nombre reservado",
-        "empty": "Sin valor",
-        "tooLarge": "Valor demasiado grande"
-      }
-    },
-    "move": {
-      "toTeam": "Mover a Equipo",
-      "toTeamPersonal": "Mover a Compartido",
-      "toPersonal": "Mover a Personal",
-      "title": "¿Mover {{title}}?",
-      "toTeamText": "Todos en el espacio de trabajo verán este elemento, y sus agentes lo usarán cuando cualquiera lo pida. Quienes administran el Vault pueden editarlo.",
-      "toPersonalText": "Solo tú verás y editarás este elemento, y sus agentes lo usarán solo cuando tú lo pidas. Los demás dejan de verlo.",
-      "moved": "Movido"
     }
   },
   "question": {
@@ -7700,6 +7700,7 @@
       "waiting": "Espera la próxima llamada",
       "every": "Se ejecuta en cada llamada. Las llamadas que llegan juntas se vuelven una sola ejecución.",
       "newNote": "La rutina recibe una dirección propia. Cada POST a ella inicia al agente con lo que se envió. La dirección aparece en la página de la rutina cuando se guarda.",
+      "newShort": "La rutina recibe una dirección propia.",
       "hidden": "Solo quien puede cambiar la rutina ve su dirección.",
       "methods": "Métodos aceptados",
       "methodsHelp": "La dirección solo responde a los métodos marcados. Con GET, los parámetros de la URL son los datos de la llamada.",
@@ -7738,8 +7739,7 @@
         "bad_signature": "Rechazada: firma incorrecta",
         "too_large": "Rechazada: más de 256 KB",
         "rate_limited": "Rechazada: demasiadas llamadas por minuto"
-      },
-      "newShort": "La rutina recibe una dirección propia."
+      }
     },
     "setup": {
       "title": "Webhook de {{provider}}",
@@ -7948,9 +7948,9 @@
     "ownActions": {
       "hint": "Cada ejecución hace esto en tus apps conectadas sin preguntar. Cualquier otra acción en ellas pide aprobación antes, salvo que el agente no pregunte nunca.",
       "none": "En las apps conectadas pide aprobación antes de cada acción. Para que haga su trabajo por su cuenta, dile al agente en el chat qué acciones puede hacer.",
-      "remove": "Volver a preguntar antes de: {{action}}",
       "hintShort": "Cada ejecución hace esto sin preguntar.",
-      "noneShort": "Pide aprobación antes de cada acción."
+      "noneShort": "Pide aprobación antes de cada acción.",
+      "remove": "Volver a preguntar antes de: {{action}}"
     },
     "ahead": {
       "approved": "Aprobada · se ejecuta {{when}}",
@@ -10013,6 +10013,8 @@
     "section": "Quién puede hablar",
     "title": "Quién puede hablar con {{name}}",
     "notListed": "Las personas que no están en la lista no reciben respuesta.",
+    "agentsToo": "Vale también para agentes.",
+    "peopleOnly": "Vale solo para personas.",
     "consultable": "Otros agentes pueden consultar a {{name}}",
     "consultableHint": "Para las personas que no están en la lista, responde solo al agente que preguntó, nunca a ellas directamente. Las acciones sensibles siguen necesitando la aprobación de las personas a cargo de él.",
     "consultableHint_female": "Para las personas que no están en la lista, responde solo al agente que preguntó, nunca a ellas directamente. Las acciones sensibles siguen necesitando la aprobación de las personas a cargo de ella.",
@@ -10072,9 +10074,7 @@
       "only": "{{name}} solo responde a {{names}}.",
       "some": "{{name}} solo responde a algunas personas.",
       "nobody": "{{name}} no le responde a nadie ahora."
-    },
-    "agentsToo": "Vale también para agentes.",
-    "peopleOnly": "Vale solo para personas."
+    }
   },
   "composer": {
     "commands": "Comandos",
@@ -10909,6 +10909,7 @@
       "pickZip": "Elegir .zip o .md",
       "pickFolder": "Elegir carpeta",
       "howTo": "Para crear el .zip: en Finder, haz clic derecho en la carpeta del vault → Comprimir. En Windows, Enviar a → Carpeta comprimida. La carpeta .obsidian (plugins y temas) queda fuera.",
+      "howToLabel": "Cómo crear el .zip",
       "nothingYet": "Nada entra antes de que lo revises.",
       "readingText": "Por ahora solo en tu navegador. Todavía no se envió nada.",
       "notesRead": "notas leídas",
@@ -11018,8 +11019,7 @@
         "empty": "No se encontraron notas .md. Envía el .zip de la carpeta del vault, la carpeta o archivos .md.",
         "too_big": "El vault pesa más de 500 MB. Envíalo sin los adjuntos grandes, o en partes.",
         "unreadable": "No se pudo leer el archivo. ¿Es un .zip del vault?"
-      },
-      "howToLabel": "Cómo crear el .zip"
+      }
     },
     "save": "Guardar en la wiki",
     "saveTitle": "Guardar en la wiki",
@@ -11858,9 +11858,9 @@
       "label": "Puede hacer merge sin preguntar",
       "none": "Ningún repositorio elegido. Cada merge pide aprobación.",
       "help": "En estos repositorios el merge se hace sin tarjeta de aprobación, queda en la auditoría y deja un recibo en la conversación. Un agente que pregunta siempre sigue preguntando.",
+      "short": "En estos repositorios el merge se hace sin tarjeta de aprobación.",
       "dialogTitle": "Dónde {{name}} hace merge sin preguntar",
-      "dialogDesc": "Solo repositorios que ya usa. Un merge en cualquier otro lugar pide aprobación.",
-      "short": "En estos repositorios el merge se hace sin tarjeta de aprobación."
+      "dialogDesc": "Solo repositorios que ya usa. Un merge en cualquier otro lugar pide aprobación."
     },
     "label": "Qué repositorios",
     "all": "Todos los repositorios",
@@ -12806,12 +12806,12 @@
       "title": "Organizaciones a las que llega",
       "none": "Ninguna organización todavía.",
       "lead": "GitHub solo pregunta por las organizaciones la primera vez. Para añadir otra, abre allí la página de la app y pulsa Grant a su lado. Si no eres propietario, el botón dice Request y un propietario lo aprueba.",
+      "short": "GitHub solo pregunta por las organizaciones la primera vez.",
       "open": "Autorizar organizaciones en GitHub",
       "added": "Ahora también: {{names}}.",
       "removed": "Ya no: {{names}}.",
       "same": "Nada cambió en las organizaciones.",
-      "failed": "No se pudieron leer las organizaciones ahora.",
-      "short": "GitHub solo pregunta por las organizaciones la primera vez."
+      "failed": "No se pudieron leer las organizaciones ahora."
     },
     "composioHelp": "Inicias sesión en la página de Composio, en inglés, y vuelves aquí. {{name}} muestra el permiso como “Composio”.",
     "or": "o",
@@ -13015,6 +13015,7 @@
       "databasesHelp": "Las reglas de abajo valen para todas las bases que lee este agente.",
       "hidden": "Columnas que nunca ve",
       "hiddenHelp": "tabla.columna, con los nombres que tienen mayúsculas, espacios o símbolos entre comillas dobles (clientes.\"Tax ID\"). Ya ocultamos las que parecen datos personales o contraseñas.",
+      "hiddenExample": "tabla.columna, como clientes.\"Tax ID\"",
       "hiddenPlaceholder": "clientes.documento",
       "hiddenInvalid": "Escribe tabla.columna (o esquema.tabla.columna), con \"comillas dobles\" en los nombres que tienen mayúsculas, espacios o símbolos.",
       "cap": "Consultas por día",
@@ -13024,8 +13025,7 @@
       "timeoutHelp": "Una consulta que tarda más se cancela, para no cargar la base de datos.",
       "seconds_one": "{{count}} segundo",
       "seconds_many": "{{count}} segundos",
-      "seconds_other": "{{count}} segundos",
-      "hiddenExample": "tabla.columna, como clientes.\"Tax ID\""
+      "seconds_other": "{{count}} segundos"
     },
     "agent": {
       "title": "Bases de datos",
@@ -13127,6 +13127,7 @@
     "rulesRead": "Qué lee",
     "rulesSend": "A quién le escribe",
     "toolsLead": "Qué pueden hacer los agentes en {{name}}. Desactiva lo que ningún agente debe hacer, o pide aprobación también para borradores y organización. Enviar, responder y reenviar siempre piden aprobación en el chat, mostrando el destinatario y el texto.",
+    "toolsShort": "Elige qué hacen los agentes con este correo.",
     "group": {
       "read": "Leen",
       "write": "Escriben",
@@ -13187,6 +13188,7 @@
       "buttonName": "Direcciones de {{name}}",
       "title": "Direcciones de {{address}}",
       "lead": "Los agentes responden desde la dirección a la que se envió el correo. Si este buzón también recibe correos en otras direcciones, como tu propio dominio o un alias, añádelas aquí.",
+      "short": "Los agentes responden desde la dirección a la que se envió el correo.",
       "main": "Dirección principal: {{address}}",
       "others": "Otras direcciones de este buzón",
       "othersHelp": "Alias y tus propios dominios, como hola@tuempresa.com.",
@@ -13197,8 +13199,7 @@
       "newFrom": "Los correos nuevos salen desde",
       "newFromHelp": "Las respuestas siempre salen desde la dirección a la que se envió el correo.",
       "later": "Puedes cambiar esto después en Direcciones.",
-      "saved": "Direcciones de {{address}} guardadas.",
-      "short": "Los agentes responden desde la dirección a la que se envió el correo."
+      "saved": "Direcciones de {{address}} guardadas."
     },
     "agent": {
       "title": "Correo",
@@ -13293,8 +13294,7 @@
       "every": "Se ejecuta con cada correo nuevo que pasa los filtros.",
       "needsReconnect": "Hay que reconectar",
       "error": "Con errores"
-    },
-    "toolsShort": "Elige qué hacen los agentes con este correo."
+    }
   },
   "searchPage": {
     "title": "Buscar en el espacio de trabajo",
@@ -13471,6 +13471,7 @@
       "tooMany": "Es más de lo que cabe aquí. Quita algunos e inténtalo de nuevo.",
       "fillIn": "Completa lo que falta e inténtalo de nuevo.",
       "checkAddress": "Revisa la dirección e inténtalo de nuevo.",
+      "privateNetwork": "Esta dirección está en una red privada: quien administra el servidor puede permitirla con OUTBOUND_ALLOW_HOSTS u OUTBOUND_ALLOW_CIDRS.",
       "tooLong": "Es demasiado largo. Acórtalo e inténtalo de nuevo.",
       "updateComputerApp": "La app de la computadora es demasiado antigua para esto. Actualízala e inténtalo de nuevo.",
       "computerUpdatesItself": "La computadora del espacio de trabajo se actualiza sola para esto. Vuelve a intentarlo en un rato.",
@@ -13811,6 +13812,7 @@
       "csvTooLarge": "El archivo es demasiado grande. El límite es 2 MB.",
       "csvTooManyRows": "El archivo tiene más de 5000 filas. Divídelo e importa cada parte.",
       "csvUnrecognized": "Esto no parece un archivo de contraseñas. Expórtalo de nuevo como CSV.",
+      "unreadable": "El valor guardado no se puede leer aquí. Guárdalo de nuevo y luego muévelo.",
       "requestNotDelivered": "Envíalo primero y luego guárdalo en el Vault.",
       "requestNotSavable": "Este no se puede guardar en el Vault.",
       "sourceUnknown": "Este gestor de contraseñas no está disponible aquí.",
@@ -13827,8 +13829,7 @@
         "unsupported": "Este gestor de contraseñas no se puede conectar aquí.",
         "invalidInput": "Revisa los campos e inténtalo de nuevo.",
         "tooManyItems": "El Vault está lleno. Elimina elementos antes de sincronizar más."
-      },
-      "unreadable": "El valor guardado no se puede leer aquí. Guárdalo de nuevo y luego muévelo."
+      }
     },
     "feedback": {
       "filesGone": "Un archivo que añadiste ya no está. Añádelo de nuevo.",
@@ -15041,13 +15042,13 @@
         "item_created": "Guardó un elemento en el Vault",
         "item_changed": "Cambió un elemento del Vault",
         "item_deleted": "Eliminó un elemento del Vault",
+        "item_moved": "Movió un elemento del Vault entre Personal y Equipo",
         "item_used": "Usó un elemento del Vault",
         "imported": "Importó contraseñas al Vault",
+        "keys_imported": "Importó claves al Vault",
         "connection_added": "Conectó un gestor de contraseñas al Vault",
         "connection_changed": "Cambió la conexión de un gestor de contraseñas",
-        "connection_removed": "Desconectó un gestor de contraseñas del Vault",
-        "item_moved": "Movió un elemento del Vault entre Personal y Equipo",
-        "keys_imported": "Importó claves al Vault"
+        "connection_removed": "Desconectó un gestor de contraseñas del Vault"
       },
       "verb": {
         "created": "Creó",
@@ -15710,6 +15711,7 @@
       "part_female": "Parte de {{name}}: ≈ {{percent}}",
       "estimate": "La parte de {{name}} es el tramo más intenso de cada barra. {{brand}} solo dice cuánto usó la cuenta entera, así que la parte de cada agente es una estimación según lo que gastó.",
       "estimate_female": "La parte de {{name}} es el tramo más intenso de cada barra. {{brand}} solo dice cuánto usó la cuenta entera, así que la parte de cada agente es una estimación según lo que gastó.",
+      "estimateShort": "Una estimación.",
       "byAccount": "Por cuenta, este mes",
       "until": "hasta el {{date}}",
       "nowTag": "ahora",
@@ -15722,8 +15724,7 @@
       "old": "{{brand}}, de antes de las cuentas",
       "oldSub": "Uso de antes de que se registrara la cuenta",
       "ofMonth": "{{percent}} del mes",
-      "shareLabel": "{{source}}: {{percent}} del mes",
-      "estimateShort": "Una estimación."
+      "shareLabel": "{{source}}: {{percent}} del mes"
     }
   },
   "budget": {
@@ -17987,6 +17988,7 @@
       "unknown": "Cada actualización usa el presupuesto de {{name}}"
     },
     "exposure": "Quien ve el panel ve lo que trajeron los agentes, aunque no tenga acceso a las cuentas de donde salió. Los agentes también crean paneles. Para mostrar uno a más personas que quien lo pidió, primero preguntan, en “Te esperan”.",
+    "exposureShort": "Quien ve el panel ve estos datos.",
     "panel": {
       "caresFor": "{{name}} cuida este widget",
       "caresForOn": "{{name}} cuida este widget · {{board}}",
@@ -18071,8 +18073,7 @@
       "textRoutine": "La rutina de {{name}} que lo actualiza se detiene, y su historial de actualizaciones se va con él.",
       "textManual": "Su historial de actualizaciones se va con él.",
       "confirm": "Quitar"
-    },
-    "exposureShort": "Quien ve el panel ve estos datos."
+    }
   },
   "agentPicker": {
     "search": "Buscar agentes",

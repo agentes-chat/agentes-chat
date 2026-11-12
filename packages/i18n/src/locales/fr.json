@@ -2018,6 +2018,7 @@
     },
     "map": {
       "lead": "Qui s'occupe des agents, les canaux où ils sont, ce que chacun fait seul et ce qui attend une personne. Les lignes pointillées relient les agents qui se sont demandé de l'aide ces dernières 24 h.",
+      "short": "Qui s'occupe de chaque agent et où il travaille.",
       "lodi": "Organise l'équipe avec vous",
       "hint": "Faites glisser un agent vers un autre canal et {{name}} prépare le changement pour que vous l'appliquiez",
       "proposed": "{{name}} a préparé le changement dans votre conversation. Appliquez-le là-bas.",
@@ -2036,8 +2037,7 @@
       "emptyViewer": "Les personnes qui gèrent les agents les ajoutent aux canaux, et la carte apparaît ici.",
       "others": "Autres canaux",
       "band": "Superviseurs",
-      "reportsTo": "Rend compte à {{name}}",
-      "short": "Qui s'occupe de chaque agent et où il travaille."
+      "reportsTo": "Rend compte à {{name}}"
     },
     "sectors": {
       "lead": "Chaque service a un responsable, un suppléant, ses agents, leurs canaux et leurs routines.",
@@ -2288,15 +2288,15 @@
     "correctionSent": "Correction envoyée. {{name}} va en tirer une leçon.",
     "correctionSent_female": "Correction envoyée. {{name}} va en tirer une leçon.",
     "sending": "envoi…",
+    "notSentWhy": "Non envoyé. {{why}}",
+    "notSentUnknown": "Un problème est survenu.",
+    "editSend": "Modifier",
     "tooLong": {
       "text": "Le message fait {{length}} caractères et la limite est de {{max}}.",
       "fix": "Envoyez le texte en fichier.",
       "asFile": "Envoyer en fichier",
       "fileName": "message.txt"
     },
-    "notSentWhy": "Non envoyé. {{why}}",
-    "notSentUnknown": "Un problème est survenu.",
-    "editSend": "Modifier",
     "long": {
       "more": "Voir plus",
       "title": "Message de {{name}}"
@@ -4101,6 +4101,37 @@
       "another": "Choisir un autre fichier",
       "close": "Terminé"
     },
+    "env": {
+      "open": "Importer un .env",
+      "title": "Importer des clés",
+      "text": "Accepte un fichier .env, avec une ligne NOM=valeur par clé, ou un JSON de noms et de valeurs.",
+      "paste": "Ou collez son contenu ici",
+      "review": "Vérifier",
+      "none": "Aucune ligne NOM=valeur trouvée. Vérifiez le fichier et réessayez.",
+      "tooLarge": "Ce fichier est trop volumineux (512 Ko au maximum).",
+      "tooMany": "Trop de clés à la fois ({{max}} au maximum). Divisez le fichier et importez chaque partie.",
+      "duplicates": "Présentes plusieurs fois dans le fichier, la dernière valeur compte : {{names}}",
+      "new": "Nouvelle",
+      "exists": "Existe déjà",
+      "replace": "Remplacer",
+      "show": "Afficher la valeur de {{name}}",
+      "hide": "Masquer la valeur de {{name}}",
+      "problem": {
+        "name": "Le nom doit ressembler à ACME_API_KEY",
+        "reserved": "Nom réservé",
+        "empty": "Aucune valeur",
+        "tooLarge": "Valeur trop volumineuse"
+      }
+    },
+    "move": {
+      "toTeam": "Déplacer vers Équipe",
+      "toTeamPersonal": "Déplacer vers Partagé",
+      "toPersonal": "Déplacer vers Personnel",
+      "title": "Déplacer {{title}} ?",
+      "toTeamText": "Tout l'espace de travail verra cet élément, et ses agents l'utiliseront quand quelqu'un le demandera. Les personnes qui gèrent le Vault peuvent le modifier.",
+      "toPersonalText": "Vous seul verrez et modifierez cet élément, et ses agents l'utiliseront seulement quand vous le demanderez. Les autres ne le verront plus.",
+      "moved": "Déplacé"
+    },
     "connections": {
       "none": "Aucun gestionnaire de mots de passe ne peut être connecté ici.",
       "lead": "Vos agents utilisent les {{kinds}} que vous gardez dans {{name}}.",
@@ -4226,37 +4257,6 @@
       "codeShort_one": "Saisissez le chiffre.",
       "codeShort_other": "Saisissez les {{count}} chiffres.",
       "codeWhere": "Seul le navigateur de {{agent}} le saisit, sur {{host}}."
-    },
-    "env": {
-      "open": "Importer un .env",
-      "title": "Importer des clés",
-      "text": "Accepte un fichier .env, avec une ligne NOM=valeur par clé, ou un JSON de noms et de valeurs.",
-      "paste": "Ou collez son contenu ici",
-      "review": "Vérifier",
-      "none": "Aucune ligne NOM=valeur trouvée. Vérifiez le fichier et réessayez.",
-      "tooLarge": "Ce fichier est trop volumineux (512 Ko au maximum).",
-      "tooMany": "Trop de clés à la fois ({{max}} au maximum). Divisez le fichier et importez chaque partie.",
-      "duplicates": "Présentes plusieurs fois dans le fichier, la dernière valeur compte : {{names}}",
-      "new": "Nouvelle",
-      "exists": "Existe déjà",
-      "replace": "Remplacer",
-      "show": "Afficher la valeur de {{name}}",
-      "hide": "Masquer la valeur de {{name}}",
-      "problem": {
-        "name": "Le nom doit ressembler à ACME_API_KEY",
-        "reserved": "Nom réservé",
-        "empty": "Aucune valeur",
-        "tooLarge": "Valeur trop volumineuse"
-      }
-    },
-    "move": {
-      "toTeam": "Déplacer vers Équipe",
-      "toTeamPersonal": "Déplacer vers Partagé",
-      "toPersonal": "Déplacer vers Personnel",
-      "title": "Déplacer {{title}} ?",
-      "toTeamText": "Tout l'espace de travail verra cet élément, et ses agents l'utiliseront quand quelqu'un le demandera. Les personnes qui gèrent le Vault peuvent le modifier.",
-      "toPersonalText": "Vous seul verrez et modifierez cet élément, et ses agents l'utiliseront seulement quand vous le demanderez. Les autres ne le verront plus.",
-      "moved": "Déplacé"
     }
   },
   "question": {
@@ -7752,6 +7752,7 @@
       "waiting": "Attend le prochain appel",
       "every": "S'exécute à chaque appel. Les appels qui arrivent ensemble ne font qu'une exécution.",
       "newNote": "La routine reçoit sa propre adresse. Chaque POST vers elle lance l'agent avec ce qui a été envoyé. L'adresse apparaît sur la page de la routine une fois enregistrée.",
+      "newShort": "La routine reçoit sa propre adresse.",
       "hidden": "Seules les personnes qui peuvent modifier la routine voient son adresse.",
       "methods": "Méthodes acceptées",
       "methodsHelp": "L’adresse ne répond qu’aux méthodes cochées. Avec GET, les paramètres de l’URL sont les données de l’appel.",
@@ -7790,8 +7791,7 @@
         "bad_signature": "Refusé : signature incorrecte",
         "too_large": "Refusé : plus de 256 Ko",
         "rate_limited": "Refusé : trop d'appels par minute"
-      },
-      "newShort": "La routine reçoit sa propre adresse."
+      }
     },
     "setup": {
       "title": "Webhook {{provider}}",
@@ -8000,9 +8000,9 @@
     "ownActions": {
       "hint": "Chaque exécution fait cela dans tes apps connectées sans demander. Toute autre action dans ces apps demande d’abord l’accord d’une personne, sauf si l’agent ne demande jamais.",
       "none": "Dans les apps connectées, elle demande l’accord d’une personne avant chaque action. Pour qu’elle fasse son travail seule, dis à l’agent dans le chat quelles actions elle peut faire.",
-      "remove": "Redemander avant : {{action}}",
       "hintShort": "Chaque exécution fait cela sans demander.",
-      "noneShort": "Elle demande l’accord d’une personne avant chaque action."
+      "noneShort": "Elle demande l’accord d’une personne avant chaque action.",
+      "remove": "Redemander avant : {{action}}"
     },
     "ahead": {
       "approved": "Approuvée · s'exécute {{when}}",
@@ -10073,6 +10073,8 @@
     "title": "Qui peut parler à {{name}}",
     "title_female": "Qui peut parler à {{name}}",
     "notListed": "Les personnes absentes de la liste ne reçoivent pas de réponse.",
+    "agentsToo": "Cela vaut aussi pour les agents.",
+    "peopleOnly": "Cela ne vaut que pour les personnes.",
     "consultable": "Les autres agents peuvent consulter {{name}}",
     "consultable_female": "Les autres agents peuvent consulter {{name}}",
     "consultableHint": "Pour les personnes absentes de la liste, il ne répond qu'à l'agent qui a demandé, jamais directement à elles. Les actions sensibles nécessitent toujours l'approbation des personnes qui s'occupent de lui.",
@@ -10141,9 +10143,7 @@
       "some_female": "{{name}} ne répond qu'à certaines personnes.",
       "nobody": "{{name}} ne répond à personne pour le moment.",
       "nobody_female": "{{name}} ne répond à personne pour le moment."
-    },
-    "agentsToo": "Cela vaut aussi pour les agents.",
-    "peopleOnly": "Cela ne vaut que pour les personnes."
+    }
   },
   "composer": {
     "commands": "Commandes",
@@ -10978,6 +10978,7 @@
       "pickZip": "Choisir un .zip ou des .md",
       "pickFolder": "Choisir un dossier",
       "howTo": "Pour créer le .zip : dans le Finder, clic droit sur le dossier du coffre → Compresser. Sous Windows, Envoyer vers → Dossier compressé. Le dossier .obsidian (plugins et thèmes) est laissé de côté.",
+      "howToLabel": "Comment créer le .zip",
       "nothingYet": "Rien n'entre avant que vous l'ayez vérifié.",
       "readingText": "Seulement dans votre navigateur pour l'instant. Rien n'a encore été envoyé.",
       "notesRead": "notes lues",
@@ -11087,8 +11088,7 @@
         "empty": "Aucune note .md trouvée. Envoyez le .zip du dossier du coffre, le dossier ou des fichiers .md.",
         "too_big": "Le coffre dépasse 500 Mo. Envoyez-le sans les grosses pièces jointes, ou en plusieurs parties.",
         "unreadable": "Impossible de lire le fichier. Est-ce bien un .zip du coffre ?"
-      },
-      "howToLabel": "Comment créer le .zip"
+      }
     },
     "save": "Enregistrer dans le wiki",
     "saveTitle": "Enregistrer dans le wiki",
@@ -11929,9 +11929,9 @@
       "label": "Peut merger sans demander",
       "none": "Aucun dépôt choisi. Chaque merge demande une approbation.",
       "help": "Dans ces dépôts, le merge se fait sans carte d'approbation, figure dans l'audit et laisse un reçu dans la conversation. Un agent qui demande toujours continue de demander.",
+      "short": "Dans ces dépôts, le merge se fait sans carte d'approbation.",
       "dialogTitle": "Où {{name}} merge sans demander",
-      "dialogDesc": "Uniquement les dépôts déjà utilisés. Un merge ailleurs demande une approbation.",
-      "short": "Dans ces dépôts, le merge se fait sans carte d'approbation."
+      "dialogDesc": "Uniquement les dépôts déjà utilisés. Un merge ailleurs demande une approbation."
     },
     "label": "Quels dépôts",
     "all": "Tous les dépôts",
@@ -12877,12 +12877,12 @@
       "title": "Organisations atteintes",
       "none": "Aucune organisation pour l'instant.",
       "lead": "GitHub ne demande les organisations que la première fois. Pour en ajouter une, ouvrez la page de l'app là-bas et cliquez sur Grant à côté. Si vous n'en êtes pas propriétaire, le bouton indique Request et un propriétaire approuve.",
+      "short": "GitHub ne demande les organisations que la première fois.",
       "open": "Autoriser des organisations sur GitHub",
       "added": "Maintenant aussi : {{names}}.",
       "removed": "Plus maintenant : {{names}}.",
       "same": "Rien n'a changé dans les organisations.",
-      "failed": "Impossible de lire les organisations pour le moment.",
-      "short": "GitHub ne demande les organisations que la première fois."
+      "failed": "Impossible de lire les organisations pour le moment."
     },
     "composioHelp": "Vous vous connectez sur la page de Composio, en anglais, puis revenez ici. {{name}} affiche l'autorisation sous le nom « Composio ».",
     "or": "ou",
@@ -13086,6 +13086,7 @@
       "databasesHelp": "Les règles ci-dessous s'appliquent à chaque base que cet agent lit.",
       "hidden": "Colonnes qu'il ne voit jamais",
       "hiddenHelp": "table.colonne, avec les noms contenant des majuscules, des espaces ou des symboles entre guillemets doubles (clients.\"Numéro TVA\"). Nous avons déjà masqué celles qui ressemblent à des données personnelles ou à des mots de passe.",
+      "hiddenExample": "table.colonne, comme clients.\"Numéro TVA\"",
       "hiddenPlaceholder": "clients.email",
       "hiddenInvalid": "Saisissez table.colonne (ou schéma.table.colonne), avec des \"guillemets doubles\" autour des noms contenant des majuscules, des espaces ou des symboles.",
       "cap": "Requêtes par jour",
@@ -13095,8 +13096,7 @@
       "timeoutHelp": "Une requête qui dure plus longtemps est annulée, pour ne pas surcharger la base de données.",
       "seconds_one": "{{count}} seconde",
       "seconds_many": "{{count}} secondes",
-      "seconds_other": "{{count}} secondes",
-      "hiddenExample": "table.colonne, comme clients.\"Numéro TVA\""
+      "seconds_other": "{{count}} secondes"
     },
     "agent": {
       "title": "Bases de données",
@@ -13198,6 +13198,7 @@
     "rulesRead": "Ce qu'il lit",
     "rulesSend": "Ce qu'il envoie",
     "toolsLead": "Ce que les agents peuvent faire dans {{name}}. Désactivez ce qu'aucun agent ne doit faire, ou demandez aussi une approbation pour les brouillons et le tri. L'envoi, la réponse et le transfert demandent toujours une approbation dans la discussion, avec le destinataire et le texte.",
+    "toolsShort": "Choisissez ce que les agents font avec cet e-mail.",
     "group": {
       "read": "Lecture",
       "write": "Écriture",
@@ -13258,6 +13259,7 @@
       "buttonName": "Adresses de {{name}}",
       "title": "Adresses de {{address}}",
       "lead": "Les agents répondent depuis l'adresse à laquelle l'e-mail a été envoyé. Si cette boîte mail reçoit aussi des e-mails à d'autres adresses, comme votre propre domaine ou un alias, ajoutez-les ici.",
+      "short": "Les agents répondent depuis l'adresse à laquelle l'e-mail a été envoyé.",
       "main": "Adresse principale : {{address}}",
       "others": "Autres adresses de cette boîte mail",
       "othersHelp": "Alias et vos propres domaines, comme bonjour@votreentreprise.com.",
@@ -13268,8 +13270,7 @@
       "newFrom": "Les nouveaux e-mails partent de",
       "newFromHelp": "Les réponses partent toujours de l'adresse à laquelle l'e-mail a été envoyé.",
       "later": "Vous pourrez changer cela plus tard dans Adresses.",
-      "saved": "Adresses de {{address}} enregistrées.",
-      "short": "Les agents répondent depuis l'adresse à laquelle l'e-mail a été envoyé."
+      "saved": "Adresses de {{address}} enregistrées."
     },
     "agent": {
       "title": "E-mail",
@@ -13364,8 +13365,7 @@
       "every": "S'exécute pour chaque nouvel e-mail qui passe les filtres.",
       "needsReconnect": "À reconnecter",
       "error": "En échec"
-    },
-    "toolsShort": "Choisissez ce que les agents font avec cet e-mail."
+    }
   },
   "searchPage": {
     "title": "Rechercher dans l'espace de travail",
@@ -13542,6 +13542,7 @@
       "tooMany": "C'est plus que ce qui tient ici. Retirez-en et réessayez.",
       "fillIn": "Remplissez ce qui manque et réessayez.",
       "checkAddress": "Vérifiez l'adresse et réessayez.",
+      "privateNetwork": "Cette adresse est sur un réseau privé : la personne qui gère le serveur peut l’autoriser avec OUTBOUND_ALLOW_HOSTS ou OUTBOUND_ALLOW_CIDRS.",
       "tooLong": "C'est trop long. Raccourcissez et réessayez.",
       "updateComputerApp": "L'application de l'ordinateur est trop ancienne pour ceci. Mettez-la à jour et réessayez.",
       "computerUpdatesItself": "L'ordinateur de l'espace de travail se met à jour tout seul pour cela. Réessayez dans un moment.",
@@ -13882,6 +13883,7 @@
       "csvTooLarge": "Le fichier est trop volumineux. La limite est de 2 Mo.",
       "csvTooManyRows": "Le fichier a plus de 5 000 lignes. Divisez-le et importez chaque partie.",
       "csvUnrecognized": "Ceci ne ressemble pas à un fichier de mots de passe. Exportez-le à nouveau en CSV.",
+      "unreadable": "La valeur enregistrée ne peut pas être lue ici. Enregistrez-la de nouveau, puis déplacez-la.",
       "requestNotDelivered": "Envoyez-le d'abord, puis enregistrez-le dans le Vault.",
       "requestNotSavable": "Celui-ci ne peut pas être enregistré dans le Vault.",
       "sourceUnknown": "Ce gestionnaire de mots de passe n'est pas disponible ici.",
@@ -13898,8 +13900,7 @@
         "unsupported": "Ce gestionnaire de mots de passe ne peut pas être connecté ici.",
         "invalidInput": "Vérifiez les champs et réessayez.",
         "tooManyItems": "Le Vault est plein. Supprimez des éléments avant d'en synchroniser plus."
-      },
-      "unreadable": "La valeur enregistrée ne peut pas être lue ici. Enregistrez-la de nouveau, puis déplacez-la."
+      }
     },
     "feedback": {
       "filesGone": "Un fichier que vous avez ajouté n'est plus là. Ajoutez-le de nouveau.",
@@ -15112,13 +15113,13 @@
         "item_created": "A enregistré un élément dans le Vault",
         "item_changed": "A modifié un élément du Vault",
         "item_deleted": "A supprimé un élément du Vault",
+        "item_moved": "A déplacé un élément du Vault entre Personnel et Équipe",
         "item_used": "A utilisé un élément du Vault",
         "imported": "A importé des mots de passe dans le Vault",
+        "keys_imported": "A importé des clés dans le Vault",
         "connection_added": "A connecté un gestionnaire de mots de passe au Vault",
         "connection_changed": "A modifié la connexion d'un gestionnaire de mots de passe",
-        "connection_removed": "A déconnecté un gestionnaire de mots de passe du Vault",
-        "item_moved": "A déplacé un élément du Vault entre Personnel et Équipe",
-        "keys_imported": "A importé des clés dans le Vault"
+        "connection_removed": "A déconnecté un gestionnaire de mots de passe du Vault"
       },
       "verb": {
         "created": "A créé",
@@ -15781,6 +15782,7 @@
       "part_female": "Part de {{name}} : ≈ {{percent}}",
       "estimate": "La part de {{name}} est la partie la plus foncée de chaque barre. {{brand}} indique seulement combien le compte entier a utilisé, la part de chaque agent est donc une estimation d'après ce qu'il a dépensé.",
       "estimate_female": "La part de {{name}} est la partie la plus foncée de chaque barre. {{brand}} indique seulement combien le compte entier a utilisé, la part de chaque agent est donc une estimation d'après ce qu'il a dépensé.",
+      "estimateShort": "Une estimation.",
       "byAccount": "Par compte, ce mois-ci",
       "until": "jusqu'au {{date}}",
       "nowTag": "maintenant",
@@ -15793,8 +15795,7 @@
       "old": "{{brand}}, d'avant les comptes",
       "oldSub": "Utilisation d'avant l'enregistrement du compte",
       "ofMonth": "{{percent}} du mois",
-      "shareLabel": "{{source}} : {{percent}} du mois",
-      "estimateShort": "Une estimation."
+      "shareLabel": "{{source}} : {{percent}} du mois"
     }
   },
   "budget": {
@@ -18130,6 +18131,7 @@
       "unknown": "Chaque mise à jour utilise le budget de {{name}}"
     },
     "exposure": "Qui voit le tableau de bord voit ce que les agents ont apporté, même sans accès aux comptes d'où cela vient. Les agents créent aussi des tableaux de bord. Pour en montrer un à plus de personnes que celle qui l'a demandé, ils demandent d'abord, dans « Vous attend ».",
+    "exposureShort": "Qui voit le tableau de bord voit ces données.",
     "panel": {
       "caresFor": "{{name}} s'occupe de ce widget",
       "caresForOn": "{{name}} s'occupe de ce widget · {{board}}",
@@ -18214,8 +18216,7 @@
       "textRoutine": "La routine de {{name}} qui le met à jour s'arrête, et son historique de mises à jour part avec lui.",
       "textManual": "Son historique de mises à jour part avec lui.",
       "confirm": "Retirer"
-    },
-    "exposureShort": "Qui voit le tableau de bord voit ces données."
+    }
   },
   "agentPicker": {
     "search": "Rechercher des agents",

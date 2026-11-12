@@ -2075,6 +2075,7 @@
     },
     "map": {
       "lead": "Kto opiekuje się agentami, w jakich kanałach są, co każdy robi sam i co czeka na człowieka. Linie przerywane to agenci, którzy w ostatniej dobie prosili się nawzajem o pomoc.",
+      "short": "Kto opiekuje się każdym agentem i gdzie on pracuje.",
       "lodi": "Porządkuje zespół razem z tobą",
       "hint": "Przeciągnij agenta do innego kanału, a {{name}} przygotuje zmianę do zastosowania",
       "proposed": "{{name}} przygotował zmianę w waszej rozmowie. Zastosuj ją tam.",
@@ -2095,8 +2096,7 @@
       "emptyViewer": "Osoba zarządzająca agentami dodaje ich do kanałów, a mapa pojawi się tutaj.",
       "others": "Inne kanały",
       "band": "Przełożeni",
-      "reportsTo": "Podlega: {{name}}",
-      "short": "Kto opiekuje się każdym agentem i gdzie on pracuje."
+      "reportsTo": "Podlega: {{name}}"
     },
     "sectors": {
       "lead": "Każdy dział ma kierownika, zastępcę, swoich agentów oraz ich kanały i rutyny.",
@@ -2357,15 +2357,15 @@
     "correctionSent": "Wysłano poprawkę. {{name}} się na niej nauczy.",
     "correctionSent_female": "Wysłano poprawkę. {{name}} się na niej nauczy.",
     "sending": "wysyłanie…",
+    "notSentWhy": "Nie wysłano. {{why}}",
+    "notSentUnknown": "Coś poszło nie tak.",
+    "editSend": "Edytuj",
     "tooLong": {
       "text": "Wiadomość ma {{length}} znaków, a limit to {{max}}.",
       "fix": "Wyślij tekst jako plik.",
       "asFile": "Wyślij jako plik",
       "fileName": "wiadomosc.txt"
     },
-    "notSentWhy": "Nie wysłano. {{why}}",
-    "notSentUnknown": "Coś poszło nie tak.",
-    "editSend": "Edytuj",
     "long": {
       "more": "Pokaż więcej",
       "title": "Wiadomość od: {{name}}"
@@ -4237,6 +4237,37 @@
       "another": "Wybierz inny plik",
       "close": "Gotowe"
     },
+    "env": {
+      "open": "Importuj .env",
+      "title": "Importuj klucze",
+      "text": "Przyjmuje plik .env z jednym wierszem NAZWA=wartość na klucz albo JSON z nazwami i wartościami.",
+      "paste": "Albo wklej tutaj zawartość",
+      "review": "Sprawdź",
+      "none": "Nie znaleziono żadnego wiersza NAZWA=wartość. Sprawdź plik i spróbuj ponownie.",
+      "tooLarge": "Ten plik jest za duży (najwyżej 512 KB).",
+      "tooMany": "Za dużo kluczy naraz (najwyżej {{max}}). Podziel plik i zaimportuj każdą część.",
+      "duplicates": "Powtórzone w pliku, liczy się ostatnia wartość: {{names}}",
+      "new": "Nowy",
+      "exists": "Już istnieje",
+      "replace": "Zastąp",
+      "show": "Pokaż wartość {{name}}",
+      "hide": "Ukryj wartość {{name}}",
+      "problem": {
+        "name": "Nazwa musi wyglądać jak ACME_API_KEY",
+        "reserved": "Nazwa zarezerwowana",
+        "empty": "Brak wartości",
+        "tooLarge": "Wartość za duża"
+      }
+    },
+    "move": {
+      "toTeam": "Przenieś do: Zespół",
+      "toTeamPersonal": "Przenieś do: Udostępnione",
+      "toPersonal": "Przenieś do: Osobiste",
+      "title": "Przenieść {{title}}?",
+      "toTeamText": "Wszyscy w przestrzeni roboczej zobaczą ten element, a jego agenci użyją go, gdy ktokolwiek o to poprosi. Zarządzający Vault mogą go edytować.",
+      "toPersonalText": "Tylko ty zobaczysz i edytujesz ten element, a jego agenci użyją go tylko wtedy, gdy o to poprosisz. Pozostali przestaną go widzieć.",
+      "moved": "Przeniesiono"
+    },
     "connections": {
       "none": "Tutaj nie można połączyć żadnego menedżera haseł.",
       "lead": "Twoi agenci używają tego, co trzymasz w {{name}}: {{kinds}}.",
@@ -4370,37 +4401,6 @@
       "codeShort_many": "Wpisz wszystkie {{count}} cyfr.",
       "codeShort_other": "Wpisz wszystkie {{count}} cyfry.",
       "codeWhere": "Wpisuje to tylko przeglądarka agenta {{agent}}, na {{host}}."
-    },
-    "env": {
-      "open": "Importuj .env",
-      "title": "Importuj klucze",
-      "text": "Przyjmuje plik .env z jednym wierszem NAZWA=wartość na klucz albo JSON z nazwami i wartościami.",
-      "paste": "Albo wklej tutaj zawartość",
-      "review": "Sprawdź",
-      "none": "Nie znaleziono żadnego wiersza NAZWA=wartość. Sprawdź plik i spróbuj ponownie.",
-      "tooLarge": "Ten plik jest za duży (najwyżej 512 KB).",
-      "tooMany": "Za dużo kluczy naraz (najwyżej {{max}}). Podziel plik i zaimportuj każdą część.",
-      "duplicates": "Powtórzone w pliku, liczy się ostatnia wartość: {{names}}",
-      "new": "Nowy",
-      "exists": "Już istnieje",
-      "replace": "Zastąp",
-      "show": "Pokaż wartość {{name}}",
-      "hide": "Ukryj wartość {{name}}",
-      "problem": {
-        "name": "Nazwa musi wyglądać jak ACME_API_KEY",
-        "reserved": "Nazwa zarezerwowana",
-        "empty": "Brak wartości",
-        "tooLarge": "Wartość za duża"
-      }
-    },
-    "move": {
-      "toTeam": "Przenieś do: Zespół",
-      "toTeamPersonal": "Przenieś do: Udostępnione",
-      "toPersonal": "Przenieś do: Osobiste",
-      "title": "Przenieść {{title}}?",
-      "toTeamText": "Wszyscy w przestrzeni roboczej zobaczą ten element, a jego agenci użyją go, gdy ktokolwiek o to poprosi. Zarządzający Vault mogą go edytować.",
-      "toPersonalText": "Tylko ty zobaczysz i edytujesz ten element, a jego agenci użyją go tylko wtedy, gdy o to poprosisz. Pozostali przestaną go widzieć.",
-      "moved": "Przeniesiono"
     }
   },
   "question": {
@@ -7973,6 +7973,7 @@
       "waiting": "Czeka na następne wywołanie",
       "every": "Uruchamia się przy każdym wywołaniu. Wywołania, które przyjdą razem, dają jedno uruchomienie.",
       "newNote": "Rutyna dostaje własny adres. Każdy POST na niego uruchamia agenta z tym, co wysłano. Adres pojawi się na stronie rutyny po jej zapisaniu.",
+      "newShort": "Rutyna dostaje własny adres.",
       "hidden": "Adres widzą tylko osoby, które mogą zmieniać rutynę.",
       "methods": "Akceptowane metody",
       "methodsHelp": "Adres odpowiada tylko na zaznaczone metody. Przy GET parametry zapytania w URL są danymi wywołania.",
@@ -8011,8 +8012,7 @@
         "bad_signature": "Odrzucone: zły podpis",
         "too_large": "Odrzucone: ponad 256 KB",
         "rate_limited": "Odrzucone: za dużo wywołań na minutę"
-      },
-      "newShort": "Rutyna dostaje własny adres."
+      }
     },
     "setup": {
       "title": "Webhook {{provider}}",
@@ -8223,9 +8223,9 @@
     "ownActions": {
       "hint": "Każde uruchomienie robi to w twoich połączonych aplikacjach bez pytania. Każda inna akcja w nich najpierw prosi osobę o zgodę, chyba że agent nigdy nie pyta.",
       "none": "W połączonych aplikacjach przed każdą akcją prosi osobę o zgodę. Żeby wykonywała swoją pracę sama, powiedz agentowi na czacie, jakie akcje może wykonywać.",
-      "remove": "Znowu pytaj przed: {{action}}",
       "hintShort": "Każde uruchomienie robi to bez pytania.",
-      "noneShort": "Przed każdą akcją prosi osobę o zgodę."
+      "noneShort": "Przed każdą akcją prosi osobę o zgodę.",
+      "remove": "Znowu pytaj przed: {{action}}"
     },
     "ahead": {
       "approved": "Zatwierdzone · uruchomi się {{when}}",
@@ -10399,6 +10399,8 @@
     "title": "Kto może rozmawiać z {{name}}",
     "title_female": "Kto może rozmawiać z {{name}}",
     "notListed": "Osoby spoza listy nie dostają odpowiedzi.",
+    "agentsToo": "Dotyczy też agentów.",
+    "peopleOnly": "Dotyczy tylko osób.",
     "consultable": "Inni agenci mogą konsultować się z {{name}}",
     "consultable_female": "Inni agenci mogą konsultować się z {{name}}",
     "consultableHint": "Osobom spoza listy odpowiada tylko za pośrednictwem agenta, który pytał, nigdy bezpośrednio. Wrażliwe akcje nadal wymagają zatwierdzenia przez osoby, które się nim opiekują.",
@@ -10469,9 +10471,7 @@
       "some_female": "{{name}} odpowiada tylko niektórym osobom.",
       "nobody": "{{name}} nikomu teraz nie odpowiada.",
       "nobody_female": "{{name}} nikomu teraz nie odpowiada."
-    },
-    "agentsToo": "Dotyczy też agentów.",
-    "peopleOnly": "Dotyczy tylko osób."
+    }
   },
   "composer": {
     "commands": "Polecenia",
@@ -11342,6 +11342,7 @@
       "pickZip": "Wybierz .zip lub .md",
       "pickFolder": "Wybierz folder",
       "howTo": "Aby utworzyć .zip: w Finderze kliknij prawym przyciskiem folder sejfu → Kompresuj. W Windows: Wyślij do → Folder skompresowany. Folder .obsidian (wtyczki i motywy) zostanie pominięty.",
+      "howToLabel": "Jak utworzyć .zip",
       "nothingYet": "Nic nie trafi do wiki, zanim tego nie sprawdzisz.",
       "readingText": "Na razie tylko w twojej przeglądarce. Nic jeszcze nie zostało wysłane.",
       "notesRead": "przeczytane notatki",
@@ -11483,8 +11484,7 @@
         "empty": "Nie znaleziono notatek .md. Wyślij plik .zip folderu sejfu, sam folder lub pliki .md.",
         "too_big": "Sejf ma ponad 500 MB. Wyślij go bez dużych załączników albo w częściach.",
         "unreadable": "Nie udało się odczytać pliku. Czy to plik .zip sejfu?"
-      },
-      "howToLabel": "Jak utworzyć .zip"
+      }
     },
     "save": "Zapisz w wiki",
     "saveTitle": "Zapisz w wiki",
@@ -12354,9 +12354,9 @@
       "label": "Może scalać bez pytania",
       "none": "Nie wybrano repozytoriów. Każde scalanie prosi o zatwierdzenie.",
       "help": "W tych repozytoriach scalanie odbywa się bez karty zatwierdzenia, trafia do audytu i zostawia potwierdzenie w rozmowie. Agent, który zawsze pyta, nadal pyta.",
+      "short": "W tych repozytoriach scalanie odbywa się bez karty zatwierdzenia.",
       "dialogTitle": "Gdzie {{name}} scala bez pytania",
-      "dialogDesc": "Tylko repozytoria, których już używa. Scalanie gdzie indziej prosi o zatwierdzenie.",
-      "short": "W tych repozytoriach scalanie odbywa się bez karty zatwierdzenia."
+      "dialogDesc": "Tylko repozytoria, których już używa. Scalanie gdzie indziej prosi o zatwierdzenie."
     },
     "label": "Które repozytoria",
     "all": "Wszystkie repozytoria",
@@ -13322,12 +13322,12 @@
       "title": "Dostępne organizacje",
       "none": "Na razie żadnej organizacji.",
       "lead": "GitHub pyta o organizacje tylko za pierwszym razem. Aby dodać kolejną, otwórz tam stronę aplikacji i kliknij Grant obok niej. Jeśli nie jesteś właścicielem, przycisk to Request, a właściciel zatwierdza.",
+      "short": "GitHub pyta o organizacje tylko za pierwszym razem.",
       "open": "Zezwól na organizacje w GitHubie",
       "added": "Teraz także: {{names}}.",
       "removed": "Już nie: {{names}}.",
       "same": "W organizacjach nic się nie zmieniło.",
-      "failed": "Nie udało się teraz odczytać organizacji.",
-      "short": "GitHub pyta o organizacje tylko za pierwszym razem."
+      "failed": "Nie udało się teraz odczytać organizacji."
     },
     "composioHelp": "Logujesz się na stronie Composio, po angielsku, i wracasz tutaj. {{name}} pokaże uprawnienie jako „Composio”.",
     "or": "lub",
@@ -13539,6 +13539,7 @@
       "databasesHelp": "Poniższe reguły dotyczą każdej bazy, którą czyta ten agent.",
       "hidden": "Kolumny, których nigdy nie widzi",
       "hiddenHelp": "tabela.kolumna, z nazwami zawierającymi wielkie litery, spacje lub symbole w cudzysłowie (customers.\"Tax ID\"). Kolumny, które wyglądają na dane osobowe lub hasła, już ukryliśmy.",
+      "hiddenExample": "tabela.kolumna, na przykład customers.\"Tax ID\"",
       "hiddenPlaceholder": "customers.pesel",
       "hiddenInvalid": "Wpisz tabela.kolumna (albo schemat.tabela.kolumna), z \"cudzysłowem\" wokół nazw zawierających wielkie litery, spacje lub symbole.",
       "cap": "Zapytania dziennie",
@@ -13549,8 +13550,7 @@
       "seconds_one": "{{count}} sekunda",
       "seconds_few": "{{count}} sekundy",
       "seconds_many": "{{count}} sekund",
-      "seconds_other": "{{count}} sekundy",
-      "hiddenExample": "tabela.kolumna, na przykład customers.\"Tax ID\""
+      "seconds_other": "{{count}} sekundy"
     },
     "agent": {
       "title": "Bazy danych",
@@ -13653,6 +13653,7 @@
     "rulesRead": "Co czyta",
     "rulesSend": "Co wysyła",
     "toolsLead": "Co agenci mogą robić w {{name}}. Wyłącz to, czego żaden agent nie powinien robić, albo wymagaj zatwierdzenia także dla wersji roboczych i porządkowania. Wysyłanie, odpowiadanie i przekazywanie zawsze wymaga zatwierdzenia na czacie, z adresatem i treścią.",
+    "toolsShort": "Wybierz, co agenci robią z tą skrzynką.",
     "group": {
       "read": "Odczyt",
       "write": "Zapis",
@@ -13713,6 +13714,7 @@
       "buttonName": "Adresy: {{name}}",
       "title": "Adresy: {{address}}",
       "lead": "Agenci odpowiadają z adresu, na który wysłano e-mail. Jeśli ta skrzynka odbiera też pocztę na inne adresy, na przykład we własnej domenie lub aliasy, dodaj je tutaj.",
+      "short": "Agenci odpowiadają z adresu, na który wysłano e-mail.",
       "main": "Główny adres: {{address}}",
       "others": "Inne adresy tej skrzynki",
       "othersHelp": "Aliasy i własne domeny, na przykład hello@twojafirma.com.",
@@ -13723,8 +13725,7 @@
       "newFrom": "Nowe e-maile wychodzą z adresu",
       "newFromHelp": "Odpowiedzi zawsze wychodzą z adresu, na który wysłano e-mail.",
       "later": "Możesz to później zmienić w sekcji Adresy.",
-      "saved": "Zapisano adresy {{address}}.",
-      "short": "Agenci odpowiadają z adresu, na który wysłano e-mail."
+      "saved": "Zapisano adresy {{address}}."
     },
     "agent": {
       "title": "Poczta",
@@ -13822,8 +13823,7 @@
       "every": "Uruchamia się dla każdego nowego e-maila, który przejdzie przez filtry.",
       "needsReconnect": "Wymaga ponownego połączenia",
       "error": "Błąd"
-    },
-    "toolsShort": "Wybierz, co agenci robią z tą skrzynką."
+    }
   },
   "searchPage": {
     "title": "Szukaj w przestrzeni roboczej",
@@ -14004,6 +14004,7 @@
       "tooMany": "To więcej, niż się tu mieści. Usuń część i spróbuj ponownie.",
       "fillIn": "Uzupełnij braki i spróbuj ponownie.",
       "checkAddress": "Sprawdź adres i spróbuj ponownie.",
+      "privateNetwork": "Ten adres jest w sieci prywatnej: osoba zarządzająca serwerem może na niego zezwolić za pomocą OUTBOUND_ALLOW_HOSTS lub OUTBOUND_ALLOW_CIDRS.",
       "tooLong": "To za długie. Skróć i spróbuj ponownie.",
       "updateComputerApp": "Aplikacja na komputerze jest na to zbyt stara. Zaktualizuj ją i spróbuj ponownie.",
       "computerUpdatesItself": "Komputer przestrzeni roboczej sam się do tego aktualizuje. Spróbuj ponownie za chwilę.",
@@ -14345,6 +14346,7 @@
       "csvTooLarge": "Plik jest za duży. Limit to 2 MB.",
       "csvTooManyRows": "Plik ma ponad 5000 wierszy. Podziel go i zaimportuj każdą część.",
       "csvUnrecognized": "To nie wygląda na plik z hasłami. Wyeksportuj go ponownie jako CSV.",
+      "unreadable": "Zapisanej wartości nie da się tutaj odczytać. Zapisz ją ponownie, a potem przenieś.",
       "requestNotDelivered": "Najpierw wyślij, potem zapisz w Vault.",
       "requestNotSavable": "Tego nie można zapisać w Vault.",
       "sourceUnknown": "Ten menedżer haseł nie jest tu dostępny.",
@@ -14361,8 +14363,7 @@
         "unsupported": "Tego menedżera haseł nie można tu połączyć.",
         "invalidInput": "Sprawdź pola i spróbuj ponownie.",
         "tooManyItems": "Vault jest pełny. Usuń elementy, zanim zsynchronizujesz więcej."
-      },
-      "unreadable": "Zapisanej wartości nie da się tutaj odczytać. Zapisz ją ponownie, a potem przenieś."
+      }
     },
     "feedback": {
       "filesGone": "Dodany plik zniknął. Dodaj go ponownie.",
@@ -15594,13 +15595,13 @@
         "item_created": "Zapisano element w Vault",
         "item_changed": "Zmieniono element w Vault",
         "item_deleted": "Usunięto element z Vault",
+        "item_moved": "Przeniesiono element Vault między Osobiste a Zespół",
         "item_used": "Użyto elementu z Vault",
         "imported": "Zaimportowano hasła do Vault",
+        "keys_imported": "Zaimportowano klucze do Vault",
         "connection_added": "Połączono menedżer haseł z Vault",
         "connection_changed": "Zmieniono połączenie menedżera haseł",
-        "connection_removed": "Odłączono menedżer haseł od Vault",
-        "item_moved": "Przeniesiono element Vault między Osobiste a Zespół",
-        "keys_imported": "Zaimportowano klucze do Vault"
+        "connection_removed": "Odłączono menedżer haseł od Vault"
       },
       "verb": {
         "created": "Utworzono",
@@ -16267,6 +16268,7 @@
       "sharedWith": "wspólne z: {{names}}",
       "part": "Część {{name}}: ≈ {{percent}}",
       "estimate": "Część {{name}} to mocniejszy fragment każdego paska. {{brand}} podaje tylko, ile zużyło całe konto, więc część każdego agenta to szacunek na podstawie jego wydatków.",
+      "estimateShort": "Szacunek.",
       "byAccount": "Według konta, w tym miesiącu",
       "until": "do {{date}}",
       "nowTag": "teraz",
@@ -16278,8 +16280,7 @@
       "old": "{{brand}}, sprzed kont",
       "oldSub": "Zużycie sprzed zarejestrowania konta",
       "ofMonth": "{{percent}} miesiąca",
-      "shareLabel": "{{source}}: {{percent}} miesiąca",
-      "estimateShort": "Szacunek."
+      "shareLabel": "{{source}}: {{percent}} miesiąca"
     }
   },
   "budget": {
@@ -18609,6 +18610,7 @@
       "unknown": "Każda aktualizacja korzysta z budżetu agenta {{name}}"
     },
     "exposure": "Kto widzi dashboard, widzi to, co przynieśli agenci, nawet bez dostępu do kont, z których to pochodzi. Agenci też tworzą dashboardy. Zanim pokażą któryś większej liczbie osób niż ta, która o niego prosiła, najpierw pytają w „Czeka na ciebie”.",
+    "exposureShort": "Kto widzi dashboard, widzi te dane.",
     "panel": {
       "caresFor": "{{name}} zajmuje się tym widżetem",
       "caresForOn": "{{name}} zajmuje się tym widżetem · {{board}}",
@@ -18694,8 +18696,7 @@
       "textRoutine": "Rutyna agenta {{name}}, która go aktualizuje, się zatrzyma, a jego historia aktualizacji zniknie razem z nim.",
       "textManual": "Jego historia aktualizacji zniknie razem z nim.",
       "confirm": "Usuń"
-    },
-    "exposureShort": "Kto widzi dashboard, widzi te dane."
+    }
   },
   "agentPicker": {
     "search": "Szukaj agentów",

@@ -1960,6 +1960,7 @@
     },
     "map": {
       "lead": "Wie voor de agenten zorgt, in welke kanalen ze zitten, wat elk zelfstandig doet en wat op een persoon wacht. Stippellijnen zijn agenten die elkaar de afgelopen dag om hulp vroegen.",
+      "short": "Wie voor elke agent zorgt en waar die werkt.",
       "lodi": "Organiseert het team met jou",
       "hint": "Sleep een agent naar een ander kanaal en {{name}} bereidt de wijziging voor zodat jij die toepast",
       "proposed": "{{name}} heeft de wijziging voorbereid in je gesprek. Pas die daar toe.",
@@ -1976,8 +1977,7 @@
       "emptyViewer": "Wie de agents beheert, voegt ze toe aan kanalen, en de kaart verschijnt hier.",
       "others": "Andere kanalen",
       "band": "Supervisors",
-      "reportsTo": "Rapporteert aan {{name}}",
-      "short": "Wie voor elke agent zorgt en waar die werkt."
+      "reportsTo": "Rapporteert aan {{name}}"
     },
     "sectors": {
       "lead": "Elke afdeling heeft een hoofd, een vervanger, haar agenten en hun kanalen en routines.",
@@ -2218,15 +2218,15 @@
     "correctionSent": "Correctie verstuurd. {{name}} leert ervan.",
     "correctionSent_female": "Correctie verstuurd. {{name}} leert ervan.",
     "sending": "versturen…",
+    "notSentWhy": "Niet verzonden. {{why}}",
+    "notSentUnknown": "Er ging iets mis.",
+    "editSend": "Bewerken",
     "tooLong": {
       "text": "Het bericht heeft {{length}} tekens en de limiet is {{max}}.",
       "fix": "Stuur de tekst als bestand.",
       "asFile": "Als bestand sturen",
       "fileName": "bericht.txt"
     },
-    "notSentWhy": "Niet verzonden. {{why}}",
-    "notSentUnknown": "Er ging iets mis.",
-    "editSend": "Bewerken",
     "long": {
       "more": "Meer tonen",
       "title": "Bericht van {{name}}"
@@ -3989,6 +3989,37 @@
       "another": "Ander bestand kiezen",
       "close": "Klaar"
     },
+    "env": {
+      "open": ".env importeren",
+      "title": "Sleutels importeren",
+      "text": "Neemt een .env-bestand, met één regel NAAM=waarde per sleutel, of een JSON met namen en waarden.",
+      "paste": "Of plak de inhoud hier",
+      "review": "Controleren",
+      "none": "Geen regel NAAM=waarde gevonden. Controleer het bestand en probeer het opnieuw.",
+      "tooLarge": "Dit bestand is te groot (maximaal 512 KB).",
+      "tooMany": "Te veel sleutels tegelijk (maximaal {{max}}). Splits het bestand en importeer elk deel.",
+      "duplicates": "Staan meer dan eens in het bestand, de laatste waarde telt: {{names}}",
+      "new": "Nieuw",
+      "exists": "Bestaat al",
+      "replace": "Vervangen",
+      "show": "Waarde van {{name}} tonen",
+      "hide": "Waarde van {{name}} verbergen",
+      "problem": {
+        "name": "De naam moet eruitzien als ACME_API_KEY",
+        "reserved": "Gereserveerde naam",
+        "empty": "Geen waarde",
+        "tooLarge": "Waarde te groot"
+      }
+    },
+    "move": {
+      "toTeam": "Verplaatsen naar Team",
+      "toTeamPersonal": "Verplaatsen naar Gedeeld",
+      "toPersonal": "Verplaatsen naar Persoonlijk",
+      "title": "{{title}} verplaatsen?",
+      "toTeamText": "Iedereen in de werkruimte ziet dit item, en de agenten ervan gebruiken het als iemand erom vraagt. Wie de Vault beheert, kan het bewerken.",
+      "toPersonalText": "Alleen jij ziet en bewerkt dit item, en de agenten ervan gebruiken het alleen als jij erom vraagt. Alle anderen zien het niet meer.",
+      "moved": "Verplaatst"
+    },
     "connections": {
       "none": "Hier kan geen wachtwoordmanager koppelen.",
       "lead": "Je agenten gebruiken de {{kinds}} die je in {{name}} bewaart.",
@@ -4114,37 +4145,6 @@
       "codeShort_one": "Typ het cijfer.",
       "codeShort_other": "Typ alle {{count}} cijfers.",
       "codeWhere": "Alleen de browser van {{agent}} typt het, op {{host}}."
-    },
-    "env": {
-      "open": ".env importeren",
-      "title": "Sleutels importeren",
-      "text": "Neemt een .env-bestand, met één regel NAAM=waarde per sleutel, of een JSON met namen en waarden.",
-      "paste": "Of plak de inhoud hier",
-      "review": "Controleren",
-      "none": "Geen regel NAAM=waarde gevonden. Controleer het bestand en probeer het opnieuw.",
-      "tooLarge": "Dit bestand is te groot (maximaal 512 KB).",
-      "tooMany": "Te veel sleutels tegelijk (maximaal {{max}}). Splits het bestand en importeer elk deel.",
-      "duplicates": "Staan meer dan eens in het bestand, de laatste waarde telt: {{names}}",
-      "new": "Nieuw",
-      "exists": "Bestaat al",
-      "replace": "Vervangen",
-      "show": "Waarde van {{name}} tonen",
-      "hide": "Waarde van {{name}} verbergen",
-      "problem": {
-        "name": "De naam moet eruitzien als ACME_API_KEY",
-        "reserved": "Gereserveerde naam",
-        "empty": "Geen waarde",
-        "tooLarge": "Waarde te groot"
-      }
-    },
-    "move": {
-      "toTeam": "Verplaatsen naar Team",
-      "toTeamPersonal": "Verplaatsen naar Gedeeld",
-      "toPersonal": "Verplaatsen naar Persoonlijk",
-      "title": "{{title}} verplaatsen?",
-      "toTeamText": "Iedereen in de werkruimte ziet dit item, en de agenten ervan gebruiken het als iemand erom vraagt. Wie de Vault beheert, kan het bewerken.",
-      "toPersonalText": "Alleen jij ziet en bewerkt dit item, en de agenten ervan gebruiken het alleen als jij erom vraagt. Alle anderen zien het niet meer.",
-      "moved": "Verplaatst"
     }
   },
   "question": {
@@ -7548,6 +7548,7 @@
       "waiting": "Wacht op de volgende aanroep",
       "every": "Draait bij elke aanroep. Aanroepen die tegelijk binnenkomen, worden één run.",
       "newNote": "De routine krijgt een eigen adres. Elke POST ernaartoe start de agent met wat er werd gestuurd. Het adres verschijnt op de pagina van de routine zodra die is opgeslagen.",
+      "newShort": "De routine krijgt een eigen adres.",
       "hidden": "Alleen wie de routine kan wijzigen, ziet het adres.",
       "methods": "Toegestane methoden",
       "methodsHelp": "Het adres reageert alleen op de aangevinkte methoden. Bij GET zijn de queryparameters van de URL de gegevens van de aanroep.",
@@ -7586,8 +7587,7 @@
         "bad_signature": "Geweigerd: verkeerde handtekening",
         "too_large": "Geweigerd: groter dan 256 KB",
         "rate_limited": "Geweigerd: te veel aanroepen per minuut"
-      },
-      "newShort": "De routine krijgt een eigen adres."
+      }
     },
     "setup": {
       "title": "{{provider}}-webhook",
@@ -7788,9 +7788,9 @@
     "ownActions": {
       "hint": "Elke run doet dit in je gekoppelde apps zonder te vragen. Elke andere actie daar vraagt eerst een persoon om goedkeuring, tenzij de agent nooit vraagt.",
       "none": "In gekoppelde apps vraagt ze voor elke actie eerst een persoon om goedkeuring. Wil je dat ze haar werk zelf doet, vertel de agent in de chat welke acties ze mag doen.",
-      "remove": "Weer vragen vóór: {{action}}",
       "hintShort": "Elke run doet dit zonder te vragen.",
-      "noneShort": "Ze vraagt voor elke actie eerst een persoon om goedkeuring."
+      "noneShort": "Ze vraagt voor elke actie eerst een persoon om goedkeuring.",
+      "remove": "Weer vragen vóór: {{action}}"
     },
     "ahead": {
       "approved": "Goedgekeurd · draait {{when}}",
@@ -9774,6 +9774,8 @@
     "title": "Wie met {{name}} mag praten",
     "title_female": "Wie met {{name}} mag praten",
     "notListed": "Mensen die niet op de lijst staan, krijgen geen antwoord.",
+    "agentsToo": "Dit geldt ook voor agents.",
+    "peopleOnly": "Dit geldt alleen voor mensen.",
     "consultable": "Andere agents kunnen {{name}} raadplegen",
     "consultable_female": "Andere agents kunnen {{name}} raadplegen",
     "consultableHint": "Voor mensen die niet op de lijst staan, antwoordt hij alleen de agent die het vroeg, nooit henzelf. Gevoelige acties vragen nog steeds om goedkeuring van de mensen die voor hem verantwoordelijk zijn.",
@@ -9840,9 +9842,7 @@
       "some_female": "{{name}} antwoordt alleen bepaalde mensen.",
       "nobody": "{{name}} antwoordt nu niemand.",
       "nobody_female": "{{name}} antwoordt nu niemand."
-    },
-    "agentsToo": "Dit geldt ook voor agents.",
-    "peopleOnly": "Dit geldt alleen voor mensen."
+    }
   },
   "composer": {
     "commands": "Opdrachten",
@@ -10670,6 +10670,7 @@
       "pickZip": ".zip of .md kiezen",
       "pickFolder": "Map kiezen",
       "howTo": "Zo maak je de .zip: klik in Finder met rechts op de vaultmap → Comprimeer. In Windows: Kopiëren naar → Gecomprimeerde map. De map .obsidian (plug-ins en thema's) wordt overgeslagen.",
+      "howToLabel": "Zo maak je de .zip",
       "nothingYet": "Er gaat niets in voordat je het hebt bekeken.",
       "readingText": "Voorlopig alleen in je browser. Er is nog niets verstuurd.",
       "notesRead": "notities gelezen",
@@ -10763,8 +10764,7 @@
         "empty": "Geen .md-notities gevonden. Stuur de .zip van de vaultmap, de map of .md-bestanden.",
         "too_big": "De vault is groter dan 500 MB. Stuur hem zonder de grote bijlagen, of in delen.",
         "unreadable": "Kon het bestand niet lezen. Is het een .zip van de vault?"
-      },
-      "howToLabel": "Zo maak je de .zip"
+      }
     },
     "save": "Opslaan in de wiki",
     "saveTitle": "Opslaan in de wiki",
@@ -11579,9 +11579,9 @@
       "label": "Mag mergen zonder te vragen",
       "none": "Geen repositories gekozen. Elke merge vraagt om goedkeuring.",
       "help": "In deze repositories loopt een merge zonder goedkeuringskaart, komt in de audit en laat een bewijs achter in het gesprek. Een agent die altijd vraagt, blijft vragen.",
+      "short": "In deze repositories loopt een merge zonder goedkeuringskaart.",
       "dialogTitle": "Waar {{name}} merget zonder te vragen",
-      "dialogDesc": "Alleen repositories die al gebruikt worden. Een merge ergens anders vraagt om goedkeuring.",
-      "short": "In deze repositories loopt een merge zonder goedkeuringskaart."
+      "dialogDesc": "Alleen repositories die al gebruikt worden. Een merge ergens anders vraagt om goedkeuring."
     },
     "label": "Welke repositories",
     "all": "Alle repositories",
@@ -12499,12 +12499,12 @@
       "title": "Bereikte organisaties",
       "none": "Nog geen organisatie.",
       "lead": "GitHub vraagt alleen de eerste keer naar organisaties. Om er een toe te voegen, open je daar de pagina van de app en klik je ernaast op Grant. Ben je geen eigenaar, dan staat er Request en keurt een eigenaar het goed.",
+      "short": "GitHub vraagt alleen de eerste keer naar organisaties.",
       "open": "Organisaties toestaan op GitHub",
       "added": "Nu ook: {{names}}.",
       "removed": "Niet meer: {{names}}.",
       "same": "Er is niets veranderd in de organisaties.",
-      "failed": "De organisaties konden nu niet worden gelezen.",
-      "short": "GitHub vraagt alleen de eerste keer naar organisaties."
+      "failed": "De organisaties konden nu niet worden gelezen."
     },
     "composioHelp": "Je logt in op de pagina van Composio, in het Engels, en komt hier terug. {{name}} toont de toestemming als “Composio”.",
     "or": "of",
@@ -12700,6 +12700,7 @@
       "databasesHelp": "De regels hieronder gelden voor elke database die deze agent leest.",
       "hidden": "Kolommen die hij nooit ziet",
       "hiddenHelp": "tabel.kolom, met namen die hoofdletters, spaties of tekens bevatten tussen dubbele aanhalingstekens (klanten.\"Btw-nummer\"). We hebben de kolommen die op persoonsgegevens of wachtwoorden lijken al verborgen.",
+      "hiddenExample": "tabel.kolom, zoals klanten.\"Btw-nummer\"",
       "hiddenPlaceholder": "klanten.bsn",
       "hiddenInvalid": "Typ tabel.kolom (of schema.tabel.kolom), met \"dubbele aanhalingstekens\" rond namen die hoofdletters, spaties of tekens bevatten.",
       "cap": "Query's per dag",
@@ -12708,8 +12709,7 @@
       "timeout": "Tijdslimiet per query",
       "timeoutHelp": "Een query die langer duurt, wordt geannuleerd, zodat hij de database niet belast.",
       "seconds_one": "{{count}} seconde",
-      "seconds_other": "{{count}} seconden",
-      "hiddenExample": "tabel.kolom, zoals klanten.\"Btw-nummer\""
+      "seconds_other": "{{count}} seconden"
     },
     "agent": {
       "title": "Databases",
@@ -12810,6 +12810,7 @@
     "rulesRead": "Wat hij leest",
     "rulesSend": "Wat hij verstuurt",
     "toolsLead": "Wat agents kunnen doen in {{name}}. Zet uit wat geen enkele agent mag doen, of vraag ook om goedkeuring voor concepten en ordenen. Versturen, beantwoorden en doorsturen vragen altijd om goedkeuring in de chat, met de ontvanger en de tekst erbij.",
+    "toolsShort": "Kies wat agents met deze e-mail doen.",
     "group": {
       "read": "Lezen",
       "write": "Schrijven",
@@ -12870,6 +12871,7 @@
       "buttonName": "Adressen van {{name}}",
       "title": "Adressen van {{address}}",
       "lead": "Agents antwoorden vanaf het adres waar de mail naartoe is gestuurd. Krijgt deze mailbox ook mail op andere adressen, zoals je eigen domein of een alias, voeg ze dan hier toe.",
+      "short": "Agents antwoorden vanaf het adres waar de mail naartoe is gestuurd.",
       "main": "Hoofdadres: {{address}}",
       "others": "Andere adressen van deze mailbox",
       "othersHelp": "Aliassen en je eigen domeinen, zoals hallo@jouwbedrijf.nl.",
@@ -12880,8 +12882,7 @@
       "newFrom": "Nieuwe mails gaan uit vanaf",
       "newFromHelp": "Antwoorden gaan altijd uit vanaf het adres waar de mail naartoe is gestuurd.",
       "later": "Je kunt dit later wijzigen bij Adressen.",
-      "saved": "Adressen van {{address}} opgeslagen.",
-      "short": "Agents antwoorden vanaf het adres waar de mail naartoe is gestuurd."
+      "saved": "Adressen van {{address}} opgeslagen."
     },
     "agent": {
       "title": "Mail",
@@ -12973,8 +12974,7 @@
       "every": "Draait voor elke nieuwe mail die door de filters komt.",
       "needsReconnect": "Opnieuw koppelen nodig",
       "error": "Mislukt"
-    },
-    "toolsShort": "Kies wat agents met deze e-mail doen."
+    }
   },
   "searchPage": {
     "title": "De werkruimte doorzoeken",
@@ -13147,6 +13147,7 @@
       "tooMany": "Dat is meer dan hier past. Haal er een paar weg en probeer het opnieuw.",
       "fillIn": "Vul in wat ontbreekt en probeer het opnieuw.",
       "checkAddress": "Controleer het adres en probeer het opnieuw.",
+      "privateNetwork": "Dit adres ligt op een privénetwerk: wie de server beheert, kan het toestaan met OUTBOUND_ALLOW_HOSTS of OUTBOUND_ALLOW_CIDRS.",
       "tooLong": "Dat is te lang. Maak het korter en probeer het opnieuw.",
       "updateComputerApp": "De app op de computer is hiervoor te oud. Werk hem bij en probeer het opnieuw.",
       "computerUpdatesItself": "De computer van de werkruimte werkt zichzelf hiervoor bij. Probeer het zo opnieuw.",
@@ -13486,6 +13487,7 @@
       "csvTooLarge": "Het bestand is te groot. De limiet is 2 MB.",
       "csvTooManyRows": "Het bestand heeft meer dan 5.000 rijen. Splits het en importeer elk deel.",
       "csvUnrecognized": "Dit lijkt geen wachtwoordbestand. Exporteer het opnieuw als CSV.",
+      "unreadable": "De opgeslagen waarde kan hier niet worden gelezen. Sla hem opnieuw op en verplaats hem daarna.",
       "requestNotDelivered": "Stuur het eerst en sla het daarna op in de Vault.",
       "requestNotSavable": "Dit kan niet in de Vault worden opgeslagen.",
       "sourceUnknown": "Deze wachtwoordmanager is hier niet beschikbaar.",
@@ -13502,8 +13504,7 @@
         "unsupported": "Deze wachtwoordmanager kan hier niet koppelen.",
         "invalidInput": "Controleer de velden en probeer het opnieuw.",
         "tooManyItems": "De Vault is vol. Verwijder items voordat je meer synchroniseert."
-      },
-      "unreadable": "De opgeslagen waarde kan hier niet worden gelezen. Sla hem opnieuw op en verplaats hem daarna."
+      }
     },
     "feedback": {
       "filesGone": "Een bestand dat je hebt toegevoegd is weg. Voeg het opnieuw toe.",
@@ -14698,13 +14699,13 @@
         "item_created": "Een item in de Vault opgeslagen",
         "item_changed": "Een Vault-item gewijzigd",
         "item_deleted": "Een Vault-item verwijderd",
+        "item_moved": "Heeft een Vault-item verplaatst tussen Persoonlijk en Team",
         "item_used": "Een Vault-item gebruikt",
         "imported": "Wachtwoorden in de Vault geïmporteerd",
+        "keys_imported": "Heeft sleutels in de Vault geïmporteerd",
         "connection_added": "Een wachtwoordmanager aan de Vault gekoppeld",
         "connection_changed": "De koppeling van een wachtwoordmanager gewijzigd",
-        "connection_removed": "Een wachtwoordmanager van de Vault ontkoppeld",
-        "item_moved": "Heeft een Vault-item verplaatst tussen Persoonlijk en Team",
-        "keys_imported": "Heeft sleutels in de Vault geïmporteerd"
+        "connection_removed": "Een wachtwoordmanager van de Vault ontkoppeld"
       },
       "verb": {
         "created": "Aangemaakt",
@@ -15353,6 +15354,7 @@
       "sharedWith": "gedeeld met {{names}}",
       "part": "Deel van {{name}}: ≈ {{percent}}",
       "estimate": "Het deel van {{name}} is het sterkere stuk van elke balk. {{brand}} zegt alleen hoeveel het hele account gebruikte, dus het deel van elke agent is een schatting op basis van wat hij uitgaf.",
+      "estimateShort": "Een schatting.",
       "byAccount": "Per account, deze maand",
       "until": "tot {{date}}",
       "nowTag": "nu",
@@ -15364,8 +15366,7 @@
       "old": "{{brand}}, van voor de accounts",
       "oldSub": "Gebruik van voordat het account werd vastgelegd",
       "ofMonth": "{{percent}} van de maand",
-      "shareLabel": "{{source}}: {{percent}} van de maand",
-      "estimateShort": "Een schatting."
+      "shareLabel": "{{source}}: {{percent}} van de maand"
     }
   },
   "budget": {
@@ -17666,6 +17667,7 @@
       "unknown": "Elke update gebruikt het budget van {{name}}"
     },
     "exposure": "Wie het dashboard ziet, ziet wat de agents hebben opgehaald, ook zonder toegang tot de accounts waar het vandaan komt. Agents maken ook dashboards. Om er een aan meer mensen te tonen dan wie erom vroeg, vragen ze het eerst, in “Wacht op jou”.",
+    "exposureShort": "Wie het dashboard ziet, ziet deze gegevens.",
     "panel": {
       "caresFor": "{{name}} zorgt voor deze widget",
       "caresForOn": "{{name}} zorgt voor deze widget · {{board}}",
@@ -17749,8 +17751,7 @@
       "textRoutine": "De routine van {{name}} die hem bijwerkt stopt, en zijn updategeschiedenis gaat mee.",
       "textManual": "Zijn updategeschiedenis gaat mee.",
       "confirm": "Verwijderen"
-    },
-    "exposureShort": "Wie het dashboard ziet, ziet deze gegevens."
+    }
   },
   "agentPicker": {
     "search": "Agents zoeken",

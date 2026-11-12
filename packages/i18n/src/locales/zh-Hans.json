@@ -1905,6 +1905,7 @@
     },
     "map": {
       "lead": "谁负责这些智能体、它们在哪些频道、各自独立做什么、哪些在等人处理。虚线表示过去一天里互相求助过的智能体。",
+      "short": "谁负责每个智能体，以及它在哪里工作。",
       "lodi": "和你一起整理团队",
       "hint": "把智能体拖到另一个频道，{{name}} 会准备好更改，由你来应用",
       "proposed": "{{name}} 已在你们的对话中准备好更改。请在那里应用。",
@@ -1919,8 +1920,7 @@
       "emptyViewer": "管理智能体的成员把它们加入频道后，地图会显示在这里。",
       "others": "其他频道",
       "band": "主管",
-      "reportsTo": "向 {{name}} 汇报",
-      "short": "谁负责每个智能体，以及它在哪里工作。"
+      "reportsTo": "向 {{name}} 汇报"
     },
     "sectors": {
       "lead": "每个部门都有负责人、替补、智能体，以及它们的频道和例行工作。",
@@ -2151,15 +2151,15 @@
     "correctionSent": "纠正已发送。{{name}} 会从中学习。",
     "correctionSent_female": "纠正已发送。{{name}} 会从中学习。",
     "sending": "发送中…",
+    "notSentWhy": "未发送。{{why}}",
+    "notSentUnknown": "出了点问题。",
+    "editSend": "编辑",
     "tooLong": {
       "text": "消息有 {{length}} 个字符，上限为 {{max}} 个。",
       "fix": "请将文本作为文件发送。",
       "asFile": "作为文件发送",
       "fileName": "message.txt"
     },
-    "notSentWhy": "未发送。{{why}}",
-    "notSentUnknown": "出了点问题。",
-    "editSend": "编辑",
     "long": {
       "more": "查看更多",
       "title": "{{name}} 的消息"
@@ -3854,6 +3854,37 @@
       "another": "选择其他文件",
       "close": "完成"
     },
+    "env": {
+      "open": "导入 .env",
+      "title": "导入密钥",
+      "text": "支持 .env 文件（每个密钥一行“名称=值”），或由名称和值组成的 JSON。",
+      "paste": "或将内容粘贴到这里",
+      "review": "检查",
+      "none": "没有找到“名称=值”的行。请检查文件后重试。",
+      "tooLarge": "此文件太大（最大 512 KB）。",
+      "tooMany": "一次导入的密钥太多（最多 {{max}} 个）。请拆分文件后分别导入。",
+      "duplicates": "在文件中重复出现，以最后一个值为准：{{names}}",
+      "new": "新增",
+      "exists": "已存在",
+      "replace": "替换",
+      "show": "显示 {{name}} 的值",
+      "hide": "隐藏 {{name}} 的值",
+      "problem": {
+        "name": "名称需类似 ACME_API_KEY",
+        "reserved": "保留名称",
+        "empty": "没有值",
+        "tooLarge": "值太大"
+      }
+    },
+    "move": {
+      "toTeam": "移到团队",
+      "toTeamPersonal": "移到共享",
+      "toPersonal": "移到个人",
+      "title": "要移动 {{title}} 吗？",
+      "toTeamText": "工作区所有成员都会看到此项目，任何人提出要求时，它的智能体都会使用它。管理 Vault 的人可以编辑。",
+      "toPersonalText": "只有你能看到和编辑此项目，它的智能体只在你要求时使用。其他人将不再看到它。",
+      "moved": "已移动"
+    },
     "connections": {
       "none": "这里无法连接任何密码管理器。",
       "lead": "你的智能体会使用你保存在 {{name}} 中的{{kinds}}。",
@@ -3975,37 +4006,6 @@
       "codeBox": "第 {{n}} 位，共 {{total}} 位",
       "codeShort_other": "请输入全部 {{count}} 位数字。",
       "codeWhere": "只有 {{agent}} 的浏览器会在 {{host}} 上输入它。"
-    },
-    "env": {
-      "open": "导入 .env",
-      "title": "导入密钥",
-      "text": "支持 .env 文件（每个密钥一行“名称=值”），或由名称和值组成的 JSON。",
-      "paste": "或将内容粘贴到这里",
-      "review": "检查",
-      "none": "没有找到“名称=值”的行。请检查文件后重试。",
-      "tooLarge": "此文件太大（最大 512 KB）。",
-      "tooMany": "一次导入的密钥太多（最多 {{max}} 个）。请拆分文件后分别导入。",
-      "duplicates": "在文件中重复出现，以最后一个值为准：{{names}}",
-      "new": "新增",
-      "exists": "已存在",
-      "replace": "替换",
-      "show": "显示 {{name}} 的值",
-      "hide": "隐藏 {{name}} 的值",
-      "problem": {
-        "name": "名称需类似 ACME_API_KEY",
-        "reserved": "保留名称",
-        "empty": "没有值",
-        "tooLarge": "值太大"
-      }
-    },
-    "move": {
-      "toTeam": "移到团队",
-      "toTeamPersonal": "移到共享",
-      "toPersonal": "移到个人",
-      "title": "要移动 {{title}} 吗？",
-      "toTeamText": "工作区所有成员都会看到此项目，任何人提出要求时，它的智能体都会使用它。管理 Vault 的人可以编辑。",
-      "toPersonalText": "只有你能看到和编辑此项目，它的智能体只在你要求时使用。其他人将不再看到它。",
-      "moved": "已移动"
     }
   },
   "question": {
@@ -7293,6 +7293,7 @@
       "waiting": "等待下一次调用",
       "every": "每次调用都会运行。同时到达的调用会合并为一次运行。",
       "newNote": "例行工作会获得一个专属地址。每次向它发送 POST，都会带着发送的内容启动智能体。保存后，地址会显示在例行工作页面上。",
+      "newShort": "例行工作会获得一个专属地址。",
       "hidden": "只有能修改此例行工作的人才能看到它的地址。",
       "methods": "接受的方法",
       "methodsHelp": "该地址只响应勾选的方法。使用 GET 时，URL 的查询参数就是这次调用的数据。",
@@ -7331,8 +7332,7 @@
         "bad_signature": "已拒绝：签名错误",
         "too_large": "已拒绝：超过 256 KB",
         "rate_limited": "已拒绝：每分钟调用次数过多"
-      },
-      "newShort": "例行工作会获得一个专属地址。"
+      }
     },
     "setup": {
       "title": "{{provider}} Webhook",
@@ -7528,9 +7528,9 @@
     "ownActions": {
       "hint": "每次运行都会在你已连接的应用中直接执行这些操作，无需询问。其中的其他操作会先请人审批，除非智能体设为“从不询问”。",
       "none": "在已连接的应用中，每个操作前都会先请人审批。若要让它自动完成工作，请在聊天中告诉智能体可以执行哪些操作。",
-      "remove": "之前再次询问：{{action}}",
       "hintShort": "每次运行都会直接执行这些操作，无需询问。",
-      "noneShort": "每个操作前都会先请人审批。"
+      "noneShort": "每个操作前都会先请人审批。",
+      "remove": "之前再次询问：{{action}}"
     },
     "ahead": {
       "approved": "已批准 · {{when}}运行",
@@ -9401,6 +9401,8 @@
     "title": "谁可以和 {{name}} 对话",
     "title_female": "谁可以和 {{name}} 对话",
     "notListed": "不在名单上的人不会收到回复。",
+    "agentsToo": "这也适用于智能体。",
+    "peopleOnly": "这只适用于人。",
     "consultable": "其他智能体可以咨询 {{name}}",
     "consultable_female": "其他智能体可以咨询 {{name}}",
     "consultableHint": "对于不在名单上的人，他只回复发起询问的智能体，绝不直接回复他们。敏感操作仍需负责他的人审批。",
@@ -9465,9 +9467,7 @@
       "some_female": "{{name}} 只回复部分成员。",
       "nobody": "{{name}} 目前不回复任何人。",
       "nobody_female": "{{name}} 目前不回复任何人。"
-    },
-    "agentsToo": "这也适用于智能体。",
-    "peopleOnly": "这只适用于人。"
+    }
   },
   "composer": {
     "commands": "命令",
@@ -10271,6 +10271,7 @@
       "pickZip": "选择 .zip 或 .md",
       "pickFolder": "选择文件夹",
       "howTo": "制作 .zip：在访达中右键点击仓库文件夹 → 压缩。在 Windows 上，选择 发送到 → 压缩文件夹。.obsidian 文件夹（插件和主题）不会包含在内。",
+      "howToLabel": "如何制作 .zip",
       "nothingYet": "在你检查之前，不会导入任何内容。",
       "readingText": "目前只在你的浏览器中处理，还没有发送任何内容。",
       "notesRead": "篇笔记已读取",
@@ -10340,8 +10341,7 @@
         "empty": "没有找到 .md 笔记。请发送仓库文件夹的 .zip、文件夹本身或 .md 文件。",
         "too_big": "仓库超过 500 MB。请去掉大附件后再发送，或分批发送。",
         "unreadable": "无法读取文件。这是仓库的 .zip 吗？"
-      },
-      "howToLabel": "如何制作 .zip"
+      }
     },
     "save": "保存到 Wiki",
     "saveTitle": "保存到 Wiki",
@@ -11128,9 +11128,9 @@
       "label": "可不经询问直接合并",
       "none": "未选择仓库。每次合并都需要审批。",
       "help": "在这些仓库中，合并无需审批卡片，会记入审计，并在对话中留下回执。设为“始终询问”的智能体仍会询问。",
+      "short": "在这些仓库中，合并无需审批卡片。",
       "dialogTitle": "{{name}}可不经询问直接合并的位置",
-      "dialogDesc": "仅限已在使用的仓库。在其他位置合并需要审批。",
-      "short": "在这些仓库中，合并无需审批卡片。"
+      "dialogDesc": "仅限已在使用的仓库。在其他位置合并需要审批。"
     },
     "label": "哪些仓库",
     "all": "所有仓库",
@@ -12024,12 +12024,12 @@
       "title": "可访问的组织",
       "none": "还没有组织。",
       "lead": "GitHub 只在第一次询问组织。要添加其他组织，请在 GitHub 打开应用页面，然后点击组织旁边的 Grant。如果你不是所有者，按钮显示为 Request，由所有者批准。",
+      "short": "GitHub 只在第一次询问组织。",
       "open": "在 GitHub 上授权组织",
       "added": "现在还包括：{{names}}。",
       "removed": "不再包括：{{names}}。",
       "same": "组织没有变化。",
-      "failed": "现在无法读取组织。",
-      "short": "GitHub 只在第一次询问组织。"
+      "failed": "现在无法读取组织。"
     },
     "composioHelp": "你会在 Composio 的英文页面上登录，然后回到这里。{{name}} 会把这项权限显示为“Composio”。",
     "or": "或",
@@ -12217,6 +12217,7 @@
       "databasesHelp": "以下规则适用于此智能体读取的每个数据库。",
       "hidden": "永远看不到的列",
       "hiddenHelp": "格式为“表.列”，名称含大写字母、空格或符号时用双引号括起来（customers.\"Tax ID\"）。看起来像个人数据或密码的列，我们已经隐藏了。",
+      "hiddenExample": "格式为“表.列”，例如 customers.\"Tax ID\"",
       "hiddenPlaceholder": "customers.cpf",
       "hiddenInvalid": "请输入 table.column（或 schema.table.column），名称含大写字母、空格或符号时用\"双引号\"括起来。",
       "cap": "每天查询次数",
@@ -12224,8 +12225,7 @@
       "capHelpAll": "留空 = 不限。按所有数据库合计。",
       "timeout": "每次查询的时间上限",
       "timeoutHelp": "超时的查询会被取消，以免给数据库造成负担。",
-      "seconds_other": "{{count}} 秒",
-      "hiddenExample": "格式为“表.列”，例如 customers.\"Tax ID\""
+      "seconds_other": "{{count}} 秒"
     },
     "agent": {
       "title": "数据库",
@@ -12325,6 +12325,7 @@
     "rulesRead": "可读取的内容",
     "rulesSend": "可发送的对象",
     "toolsLead": "智能体在 {{name}} 中可以做的事。关闭任何智能体都不该做的操作，也可以让起草和整理同样需要审批。发送、回复和转发始终会在聊天中请求审批，并显示收件人和正文。",
+    "toolsShort": "选择智能体可以用这个邮箱做什么。",
     "group": {
       "read": "读取",
       "write": "写入",
@@ -12385,6 +12386,7 @@
       "buttonName": "{{name}} 的地址",
       "title": "{{address}} 的地址",
       "lead": "智能体会用收到邮件的那个地址回复。如果这个邮箱还会收到发往其他地址的邮件，比如你自己的域名或别名，请在这里添加。",
+      "short": "智能体会用收到邮件的那个地址回复。",
       "main": "主地址：{{address}}",
       "others": "这个邮箱的其他地址",
       "othersHelp": "别名和你自己的域名，比如 hello@yourcompany.com。",
@@ -12395,8 +12397,7 @@
       "newFrom": "新邮件的发件地址",
       "newFromHelp": "回复始终从收到邮件的那个地址发出。",
       "later": "之后你可以在“地址”中更改。",
-      "saved": "{{address}} 的地址已保存。",
-      "short": "智能体会用收到邮件的那个地址回复。"
+      "saved": "{{address}} 的地址已保存。"
     },
     "agent": {
       "title": "邮箱",
@@ -12485,8 +12486,7 @@
       "every": "每收到一封符合筛选条件的新邮件就运行一次。",
       "needsReconnect": "需要重新连接",
       "error": "运行失败"
-    },
-    "toolsShort": "选择智能体可以用这个邮箱做什么。"
+    }
   },
   "searchPage": {
     "title": "搜索工作区",
@@ -12655,6 +12655,7 @@
       "tooMany": "超出了这里的容量。请移除一些后重试。",
       "fillIn": "请补全缺少的内容后重试。",
       "checkAddress": "请检查地址后重试。",
+      "privateNetwork": "此地址位于私有网络中：服务器管理员可以通过 OUTBOUND_ALLOW_HOSTS 或 OUTBOUND_ALLOW_CIDRS 允许它。",
       "tooLong": "内容太长。请缩短后重试。",
       "updateComputerApp": "电脑上的应用版本太旧。请更新后重试。",
       "computerUpdatesItself": "工作区的电脑会为此自动更新。请稍后再试。",
@@ -12993,6 +12994,7 @@
       "csvTooLarge": "文件太大。上限是 2 MB。",
       "csvTooManyRows": "文件超过 5,000 行。请拆分后分别导入。",
       "csvUnrecognized": "这看起来不是密码文件。请重新导出为 CSV。",
+      "unreadable": "这里无法读取已保存的值。请重新保存后再移动。",
       "requestNotDelivered": "请先发送，再保存到 Vault。",
       "requestNotSavable": "此项无法保存到 Vault。",
       "sourceUnknown": "这里无法使用这个密码管理器。",
@@ -13009,8 +13011,7 @@
         "unsupported": "这里无法连接这个密码管理器。",
         "invalidInput": "请检查各字段后重试。",
         "tooManyItems": "Vault 已满。请先删除项目，再同步更多。"
-      },
-      "unreadable": "这里无法读取已保存的值。请重新保存后再移动。"
+      }
     },
     "feedback": {
       "filesGone": "你添加的文件已经不在了。请重新添加。",
@@ -14187,13 +14188,13 @@
         "item_created": "在 Vault 中保存了一个项目",
         "item_changed": "修改了一个 Vault 项目",
         "item_deleted": "删除了一个 Vault 项目",
+        "item_moved": "在个人和团队之间移动了一个 Vault 项目",
         "item_used": "使用了一个 Vault 项目",
         "imported": "将密码导入了 Vault",
+        "keys_imported": "向 Vault 导入了密钥",
         "connection_added": "将密码管理器连接到了 Vault",
         "connection_changed": "修改了一个密码管理器的连接",
-        "connection_removed": "断开了一个密码管理器与 Vault 的连接",
-        "item_moved": "在个人和团队之间移动了一个 Vault 项目",
-        "keys_imported": "向 Vault 导入了密钥"
+        "connection_removed": "断开了一个密码管理器与 Vault 的连接"
       },
       "verb": {
         "created": "创建了",
@@ -14833,6 +14834,7 @@
       "sharedWith": "与 {{names}} 共用",
       "part": "{{name}} 的部分：约 {{percent}}",
       "estimate": "每根柱子中颜色较深的部分是 {{name}} 的用量。{{brand}} 只显示整个账号的用量，所以每个智能体的部分是根据其花费估算的。",
+      "estimateShort": "这是估算值。",
       "byAccount": "按账号，本月",
       "until": "直到 {{date}}",
       "nowTag": "现在",
@@ -14844,8 +14846,7 @@
       "old": "{{brand}}，在启用账号之前",
       "oldSub": "记录账号之前的用量",
       "ofMonth": "本月的 {{percent}}",
-      "shareLabel": "{{source}}：本月的 {{percent}}",
-      "estimateShort": "这是估算值。"
+      "shareLabel": "{{source}}：本月的 {{percent}}"
     }
   },
   "budget": {
@@ -17111,6 +17112,7 @@
       "unknown": "每次更新都使用 {{name}} 的预算"
     },
     "exposure": "能看到仪表盘的人，就能看到智能体带来的内容，即使没有数据来源账号的权限。智能体也会创建仪表盘。要给比提出请求的人更多的人看时，它们会先在“等你处理”中征求同意。",
+    "exposureShort": "能看到仪表盘的人，就能看到这些数据。",
     "panel": {
       "caresFor": "{{name}} 负责这个小组件",
       "caresForOn": "{{name}} 负责这个小组件 · {{board}}",
@@ -17193,8 +17195,7 @@
       "textRoutine": "负责更新它的 {{name}} 的例行工作会停止，更新历史也会一起移除。",
       "textManual": "更新历史也会一起移除。",
       "confirm": "移除"
-    },
-    "exposureShort": "能看到仪表盘的人，就能看到这些数据。"
+    }
   },
   "agentPicker": {
     "search": "搜索智能体",

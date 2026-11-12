@@ -4862,6 +4862,9 @@
   "team.map.lead": {
     "value": "Who looks after the agents, the channels they are in, what each one does on its own and what waits for a person. Dashed lines are agents that asked each other in the last day."
   },
+  "team.map.short": {
+    "value": "Who looks after each agent and where it works."
+  },
   "team.map.lodi": {
     "value": "Organizes the team with you"
   },
@@ -9773,6 +9776,81 @@
   },
   "vault.import.close": {
     "value": "Done"
+  },
+  "vault.env.open": {
+    "value": "Import .env"
+  },
+  "vault.env.title": {
+    "value": "Import keys"
+  },
+  "vault.env.text": {
+    "value": "Takes a .env file, with one NAME=value line per key, or a JSON object of names and values."
+  },
+  "vault.env.paste": {
+    "value": "Or paste its contents here"
+  },
+  "vault.env.review": {
+    "value": "Review"
+  },
+  "vault.env.none": {
+    "value": "No NAME=value line found. Check the file and try again."
+  },
+  "vault.env.tooLarge": {
+    "value": "This file is too large (512 KB at most)."
+  },
+  "vault.env.tooMany": {
+    "value": "Too many keys at once ({{max}} at most). Split the file and import each part."
+  },
+  "vault.env.duplicates": {
+    "value": "Written more than once, the last value counts: {{names}}"
+  },
+  "vault.env.new": {
+    "value": "New"
+  },
+  "vault.env.exists": {
+    "value": "Already saved"
+  },
+  "vault.env.replace": {
+    "value": "Replace"
+  },
+  "vault.env.show": {
+    "value": "Show the value of {{name}}"
+  },
+  "vault.env.hide": {
+    "value": "Hide the value of {{name}}"
+  },
+  "vault.env.problem.name": {
+    "value": "The name must look like ACME_API_KEY"
+  },
+  "vault.env.problem.reserved": {
+    "value": "Reserved name"
+  },
+  "vault.env.problem.empty": {
+    "value": "No value"
+  },
+  "vault.env.problem.tooLarge": {
+    "value": "Value too large"
+  },
+  "vault.move.toTeam": {
+    "value": "Move to Team"
+  },
+  "vault.move.toTeamPersonal": {
+    "value": "Move to Shared"
+  },
+  "vault.move.toPersonal": {
+    "value": "Move to Personal"
+  },
+  "vault.move.title": {
+    "value": "Move {{title}}?"
+  },
+  "vault.move.toTeamText": {
+    "value": "Everyone in the workspace will see this item, and its agents will use it when anyone asks. People who manage the Vault can edit it."
+  },
+  "vault.move.toPersonalText": {
+    "value": "Only you will see and edit this item, and its agents will use it only when you ask. Everyone else stops seeing it."
+  },
+  "vault.move.moved": {
+    "value": "Moved"
   },
   "vault.connections.none": {
     "value": "No password manager can be connected here."
@@ -18103,6 +18181,9 @@
   "routines.webhook.newNote": {
     "value": "The routine gets an address of its own. Every POST to it starts the agent with what was sent. The address shows on the routine's page once it is saved."
   },
+  "routines.webhook.newShort": {
+    "value": "The routine gets an address of its own."
+  },
   "routines.webhook.hidden": {
     "value": "Only who can change the routine sees its address."
   },
@@ -18711,6 +18792,12 @@
   },
   "routines.ownActions.none": {
     "value": "In connected apps it asks a person before each action. To let it do its job on its own, tell the agent in the chat which actions it may do."
+  },
+  "routines.ownActions.hintShort": {
+    "value": "Every run does these without asking."
+  },
+  "routines.ownActions.noneShort": {
+    "value": "It asks a person before each action."
   },
   "routines.ownActions.remove": {
     "value": "Ask again before: {{action}}"
@@ -23489,6 +23576,12 @@
   "audience.notListed": {
     "value": "People not on the list get no reply."
   },
+  "audience.agentsToo": {
+    "value": "This covers agents too."
+  },
+  "audience.peopleOnly": {
+    "value": "This covers people only."
+  },
   "audience.consultable": {
     "value": "Other agents can consult {{name}}"
   },
@@ -25748,6 +25841,9 @@
   },
   "wiki.import.howTo": {
     "value": "To make the .zip: in Finder, right-click the vault folder → Compress. On Windows, Send to → Compressed folder. The .obsidian folder (plugins and themes) is left out."
+  },
+  "wiki.import.howToLabel": {
+    "value": "How to make the .zip"
   },
   "wiki.import.nothingYet": {
     "value": "Nothing goes in before you review it."
@@ -28020,6 +28116,9 @@
   "repos.merge.help": {
     "value": "In these repositories a merge runs with no approval card, goes in the audit and leaves a receipt in the conversation. An agent that always asks still asks."
   },
+  "repos.merge.short": {
+    "value": "In these repositories a merge runs with no approval card."
+  },
   "repos.merge.dialogTitle": {
     "value": "Where {{name}} merges without asking"
   },
@@ -30109,6 +30208,9 @@
   "connectFlow.githubOrgs.lead": {
     "value": "GitHub asks about organizations only the first time. To add one, open the app's page there and press Grant beside it. If you don't own it, the button says Request and an owner approves."
   },
+  "connectFlow.githubOrgs.short": {
+    "value": "GitHub asks about organizations only the first time."
+  },
   "connectFlow.githubOrgs.open": {
     "value": "Grant organizations on GitHub"
   },
@@ -30601,6 +30703,9 @@
   "database.rule.hiddenHelp": {
     "value": "table.column, with names that have capitals, spaces or symbols in double quotes (customers.\"Tax ID\"). We already hid the ones that look like personal data or passwords."
   },
+  "database.rule.hiddenExample": {
+    "value": "table.column, like customers.\"Tax ID\""
+  },
   "database.rule.hiddenPlaceholder": {
     "value": "customers.cpf"
   },
@@ -30847,6 +30952,9 @@
   "mail.toolsLead": {
     "value": "What agents can do in {{name}}. Turn off what no agent should do, or ask for approval for drafts and organizing too. Sending, replying and forwarding always ask for approval in the chat, showing who it goes to and the text."
   },
+  "mail.toolsShort": {
+    "value": "Choose what agents do with this email."
+  },
   "mail.group.read": {
     "value": "Reads"
   },
@@ -30951,6 +31059,9 @@
   },
   "mail.addresses.lead": {
     "value": "Agents reply from the address the email was sent to. If this mailbox also gets email at other addresses, like your own domain or an alias, add them here."
+  },
+  "mail.addresses.short": {
+    "value": "Agents reply from the address the email was sent to."
   },
   "mail.addresses.main": {
     "value": "Main address: {{address}}"
@@ -31620,6 +31731,9 @@
   },
   "errors.said.checkAddress": {
     "value": "Check the address and try again."
+  },
+  "errors.said.privateNetwork": {
+    "value": "This address is on a private network: whoever runs the server can allow it with OUTBOUND_ALLOW_HOSTS or OUTBOUND_ALLOW_CIDRS."
   },
   "errors.said.tooLong": {
     "value": "That's too long. Shorten it and try again."
@@ -32445,6 +32559,9 @@
   },
   "errors.vault.csvUnrecognized": {
     "value": "This doesn't look like a passwords file. Export it again as CSV."
+  },
+  "errors.vault.unreadable": {
+    "value": "The saved value can't be read here. Save it again, then move it."
   },
   "errors.vault.requestNotDelivered": {
     "value": "Send it first, then save it to the Vault."
@@ -35472,11 +35589,17 @@
   "audit.change.vault.item_deleted": {
     "value": "Deleted a Vault item"
   },
+  "audit.change.vault.item_moved": {
+    "value": "Moved a Vault item between Personal and Team"
+  },
   "audit.change.vault.item_used": {
     "value": "Used a Vault item"
   },
   "audit.change.vault.imported": {
     "value": "Imported passwords into the Vault"
+  },
+  "audit.change.vault.keys_imported": {
+    "value": "Imported keys into the Vault"
   },
   "audit.change.vault.connection_added": {
     "value": "Connected a password manager to the Vault"
@@ -37115,6 +37238,9 @@
   },
   "usageViews.agent.estimate": {
     "value": "{{name}}'s part is the stronger stretch of each bar. {{brand}} only tells how much the whole account used, so each agent's part is an estimate from what it spent."
+  },
+  "usageViews.agent.estimateShort": {
+    "value": "An estimate."
   },
   "usageViews.agent.byAccount": {
     "value": "By account, this month"
@@ -40656,6 +40782,9 @@
   "deleteAccount.card.button": {
     "value": "Delete account…"
   },
+  "deleteAccount.card.title": {
+    "value": "Delete"
+  },
   "deleteAccount.title": {
     "value": "Delete your whole account?"
   },
@@ -42261,6 +42390,9 @@
   },
   "widgets.exposure": {
     "value": "Whoever sees the dashboard sees what the agents brought, even without access to the accounts it came from. Agents create dashboards too. To show one to more people than whoever asked, they ask first, in Waiting on you."
+  },
+  "widgets.exposureShort": {
+    "value": "Whoever sees the dashboard sees this data."
   },
   "widgets.panel.caresFor": {
     "value": "{{name}} looks after this widget"
@@ -44193,134 +44325,5 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
-  },
-  "vault.env.open": {
-    "value": "Import .env"
-  },
-  "vault.env.title": {
-    "value": "Import keys"
-  },
-  "vault.env.text": {
-    "value": "Takes a .env file, with one NAME=value line per key, or a JSON object of names and values."
-  },
-  "vault.env.paste": {
-    "value": "Or paste its contents here"
-  },
-  "vault.env.review": {
-    "value": "Review"
-  },
-  "vault.env.none": {
-    "value": "No NAME=value line found. Check the file and try again."
-  },
-  "vault.env.tooLarge": {
-    "value": "This file is too large (512 KB at most)."
-  },
-  "vault.env.tooMany": {
-    "value": "Too many keys at once ({{max}} at most). Split the file and import each part."
-  },
-  "vault.env.duplicates": {
-    "value": "Written more than once, the last value counts: {{names}}"
-  },
-  "vault.env.new": {
-    "value": "New"
-  },
-  "vault.env.exists": {
-    "value": "Already saved"
-  },
-  "vault.env.replace": {
-    "value": "Replace"
-  },
-  "vault.env.show": {
-    "value": "Show the value of {{name}}"
-  },
-  "vault.env.hide": {
-    "value": "Hide the value of {{name}}"
-  },
-  "vault.env.problem.name": {
-    "value": "The name must look like ACME_API_KEY"
-  },
-  "vault.env.problem.reserved": {
-    "value": "Reserved name"
-  },
-  "vault.env.problem.empty": {
-    "value": "No value"
-  },
-  "vault.env.problem.tooLarge": {
-    "value": "Value too large"
-  },
-  "vault.move.toTeam": {
-    "value": "Move to Team"
-  },
-  "vault.move.toTeamPersonal": {
-    "value": "Move to Shared"
-  },
-  "vault.move.toPersonal": {
-    "value": "Move to Personal"
-  },
-  "vault.move.title": {
-    "value": "Move {{title}}?"
-  },
-  "vault.move.toTeamText": {
-    "value": "Everyone in the workspace will see this item, and its agents will use it when anyone asks. People who manage the Vault can edit it."
-  },
-  "vault.move.toPersonalText": {
-    "value": "Only you will see and edit this item, and its agents will use it only when you ask. Everyone else stops seeing it."
-  },
-  "vault.move.moved": {
-    "value": "Moved"
-  },
-  "errors.vault.unreadable": {
-    "value": "The saved value can't be read here. Save it again, then move it."
-  },
-  "audit.change.vault.item_moved": {
-    "value": "Moved a Vault item between Personal and Team"
-  },
-  "audit.change.vault.keys_imported": {
-    "value": "Imported keys into the Vault"
-  },
-  "team.map.short": {
-    "value": "Who looks after each agent and where it works."
-  },
-  "routines.webhook.newShort": {
-    "value": "The routine gets an address of its own."
-  },
-  "routines.ownActions.hintShort": {
-    "value": "Every run does these without asking."
-  },
-  "routines.ownActions.noneShort": {
-    "value": "It asks a person before each action."
-  },
-  "audience.agentsToo": {
-    "value": "This covers agents too."
-  },
-  "audience.peopleOnly": {
-    "value": "This covers people only."
-  },
-  "wiki.import.howToLabel": {
-    "value": "How to make the .zip"
-  },
-  "repos.merge.short": {
-    "value": "In these repositories a merge runs with no approval card."
-  },
-  "connectFlow.githubOrgs.short": {
-    "value": "GitHub asks about organizations only the first time."
-  },
-  "database.rule.hiddenExample": {
-    "value": "table.column, like customers.\"Tax ID\""
-  },
-  "mail.toolsShort": {
-    "value": "Choose what agents do with this email."
-  },
-  "mail.addresses.short": {
-    "value": "Agents reply from the address the email was sent to."
-  },
-  "usageViews.agent.estimateShort": {
-    "value": "An estimate."
-  },
-  "deleteAccount.card.title": {
-    "value": "Delete"
-  },
-  "widgets.exposureShort": {
-    "value": "Whoever sees the dashboard sees this data."
   }
 }

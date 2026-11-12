@@ -1960,6 +1960,7 @@
     },
     "map": {
       "lead": "Ajanlarla kim ilgileniyor, hangi kanallarda bulunuyorlar, her biri kendi başına ne yapıyor ve ne bir kişiyi bekliyor. Kesikli çizgiler son bir günde birbirinden yardım isteyen ajanlardır.",
+      "short": "Her ajanla kim ilgileniyor ve ajan nerede çalışıyor.",
       "lodi": "Ekibi sizinle düzenler",
       "hint": "Bir ajanı başka bir kanala sürükleyin, {{name}} değişikliği uygulamanız için hazırlasın",
       "proposed": "{{name}} değişikliği konuşmanızda hazırladı. Orada uygulayın.",
@@ -1976,8 +1977,7 @@
       "emptyViewer": "Ajanları yöneten kişi onları kanallara ekler ve harita burada görünür.",
       "others": "Diğer kanallar",
       "band": "Yöneticiler",
-      "reportsTo": "{{name}} adlı ajana rapor verir",
-      "short": "Her ajanla kim ilgileniyor ve ajan nerede çalışıyor."
+      "reportsTo": "{{name}} adlı ajana rapor verir"
     },
     "sectors": {
       "lead": "Her departmanın bir sorumlusu, bir yedeği, ajanları ve onların kanalları ile rutinleri vardır.",
@@ -2215,15 +2215,15 @@
     "sendCorrection": "Düzeltmeyi gönder",
     "correctionSent": "Düzeltme gönderildi. {{name}} bundan öğrenecek.",
     "sending": "gönderiliyor…",
+    "notSentWhy": "Gönderilmedi. {{why}}",
+    "notSentUnknown": "Bir şeyler ters gitti.",
+    "editSend": "Düzenle",
     "tooLong": {
       "text": "Mesaj {{length}} karakter, sınır ise {{max}}.",
       "fix": "Metni dosya olarak gönder.",
       "asFile": "Dosya olarak gönder",
       "fileName": "mesaj.txt"
     },
-    "notSentWhy": "Gönderilmedi. {{why}}",
-    "notSentUnknown": "Bir şeyler ters gitti.",
-    "editSend": "Düzenle",
     "long": {
       "more": "Devamını gör",
       "title": "{{name}} adlı kişinin mesajı"
@@ -3974,6 +3974,37 @@
       "another": "Başka dosya seç",
       "close": "Bitti"
     },
+    "env": {
+      "open": ".env içe aktar",
+      "title": "Anahtarları içe aktar",
+      "text": "Her anahtar için bir AD=değer satırı olan bir .env dosyasını veya adlardan ve değerlerden oluşan bir JSON'u kabul eder.",
+      "paste": "Ya da içeriği buraya yapıştırın",
+      "review": "Gözden geçir",
+      "none": "AD=değer satırı bulunamadı. Dosyayı kontrol edip yeniden deneyin.",
+      "tooLarge": "Bu dosya çok büyük (en fazla 512 KB).",
+      "tooMany": "Tek seferde çok fazla anahtar var (en fazla {{max}}). Dosyayı bölüp her parçayı içe aktarın.",
+      "duplicates": "Dosyada birden fazla kez geçiyor, son değer geçerli: {{names}}",
+      "new": "Yeni",
+      "exists": "Zaten var",
+      "replace": "Değiştir",
+      "show": "{{name}} değerini göster",
+      "hide": "{{name}} değerini gizle",
+      "problem": {
+        "name": "Ad, ACME_API_KEY gibi olmalı",
+        "reserved": "Ayrılmış ad",
+        "empty": "Değer yok",
+        "tooLarge": "Değer çok büyük"
+      }
+    },
+    "move": {
+      "toTeam": "Ekip'e taşı",
+      "toTeamPersonal": "Paylaşılan'a taşı",
+      "toPersonal": "Kişisel'e taşı",
+      "title": "{{title}} taşınsın mı?",
+      "toTeamText": "Çalışma alanındaki herkes bu öğeyi görür ve ajanları, biri istediğinde onu kullanır. Vault'u yönetenler düzenleyebilir.",
+      "toPersonalText": "Bu öğeyi yalnızca siz görür ve düzenlersiniz, ajanları da yalnızca siz istediğinizde kullanır. Diğerleri artık göremez.",
+      "moved": "Taşındı"
+    },
     "connections": {
       "none": "Burada hiçbir şifre yöneticisi bağlanamıyor.",
       "lead": "Ajanlarınız, {{name}} içinde sakladığınız şu öğeleri kullanır: {{kinds}}.",
@@ -4099,37 +4130,6 @@
       "codeShort_one": "Rakamı yazın.",
       "codeShort_other": "{{count}} rakamın hepsini yazın.",
       "codeWhere": "Bunu yalnızca {{agent}} ajanının tarayıcısı, {{host}} üzerinde yazar."
-    },
-    "env": {
-      "open": ".env içe aktar",
-      "title": "Anahtarları içe aktar",
-      "text": "Her anahtar için bir AD=değer satırı olan bir .env dosyasını veya adlardan ve değerlerden oluşan bir JSON'u kabul eder.",
-      "paste": "Ya da içeriği buraya yapıştırın",
-      "review": "Gözden geçir",
-      "none": "AD=değer satırı bulunamadı. Dosyayı kontrol edip yeniden deneyin.",
-      "tooLarge": "Bu dosya çok büyük (en fazla 512 KB).",
-      "tooMany": "Tek seferde çok fazla anahtar var (en fazla {{max}}). Dosyayı bölüp her parçayı içe aktarın.",
-      "duplicates": "Dosyada birden fazla kez geçiyor, son değer geçerli: {{names}}",
-      "new": "Yeni",
-      "exists": "Zaten var",
-      "replace": "Değiştir",
-      "show": "{{name}} değerini göster",
-      "hide": "{{name}} değerini gizle",
-      "problem": {
-        "name": "Ad, ACME_API_KEY gibi olmalı",
-        "reserved": "Ayrılmış ad",
-        "empty": "Değer yok",
-        "tooLarge": "Değer çok büyük"
-      }
-    },
-    "move": {
-      "toTeam": "Ekip'e taşı",
-      "toTeamPersonal": "Paylaşılan'a taşı",
-      "toPersonal": "Kişisel'e taşı",
-      "title": "{{title}} taşınsın mı?",
-      "toTeamText": "Çalışma alanındaki herkes bu öğeyi görür ve ajanları, biri istediğinde onu kullanır. Vault'u yönetenler düzenleyebilir.",
-      "toPersonalText": "Bu öğeyi yalnızca siz görür ve düzenlersiniz, ajanları da yalnızca siz istediğinizde kullanır. Diğerleri artık göremez.",
-      "moved": "Taşındı"
     }
   },
   "question": {
@@ -7459,6 +7459,7 @@
       "waiting": "Sonraki çağrıyı bekliyor",
       "every": "Her çağrıda çalışır. Birlikte gelen çağrılar tek bir çalıştırma olur.",
       "newNote": "Rutinin kendine ait bir adresi olur. Bu adrese yapılan her POST, ajanı gönderilen içerikle başlatır. Adres, rutin kaydedildikten sonra rutinin sayfasında görünür.",
+      "newShort": "Rutinin kendine ait bir adresi olur.",
       "hidden": "Adresini yalnızca rutini değiştirebilenler görür.",
       "methods": "Kabul edilen yöntemler",
       "methodsHelp": "Adres yalnızca işaretli yöntemlere yanıt verir. GET ile URL'nin sorgu parametreleri çağrının verisi olur.",
@@ -7497,8 +7498,7 @@
         "bad_signature": "Reddedildi: yanlış imza",
         "too_large": "Reddedildi: 256 KB'tan büyük",
         "rate_limited": "Reddedildi: dakikada çok fazla çağrı"
-      },
-      "newShort": "Rutinin kendine ait bir adresi olur."
+      }
     },
     "setup": {
       "title": "{{provider}} webhook'u",
@@ -7699,9 +7699,9 @@
     "ownActions": {
       "hint": "Her çalıştırma bunları bağlı uygulamalarında sormadan yapar. Oradaki diğer her işlem, ajan hiç sormayacak şekilde ayarlanmadıkça önce bir kişinin onayını ister.",
       "none": "Bağlı uygulamalarda her işlemden önce bir kişinin onayını ister. İşini kendisi yapması için sohbette ajana hangi işlemleri yapabileceğini söyle.",
-      "remove": "Şundan önce yine sor: {{action}}",
       "hintShort": "Her çalıştırma bunları sormadan yapar.",
-      "noneShort": "Her işlemden önce bir kişinin onayını ister."
+      "noneShort": "Her işlemden önce bir kişinin onayını ister.",
+      "remove": "Şundan önce yine sor: {{action}}"
     },
     "ahead": {
       "approved": "Onaylandı · {{when}} çalışır",
@@ -9663,6 +9663,8 @@
     "section": "Kimler konuşabilir",
     "title": "{{name}} ile kimler konuşabilir",
     "notListed": "Listede olmayan kişiler yanıt almaz.",
+    "agentsToo": "Bu ajanlar için de geçerli.",
+    "peopleOnly": "Bu yalnızca kişiler için geçerli.",
     "consultable": "Diğer ajanlar {{name}} ajanına danışabilir",
     "consultableHint": "Listede olmayan kişiler için yalnızca soran ajana yanıt verir, onlara doğrudan asla. Hassas işlemler yine de ondan sorumlu kişilerin onayını gerektirir.",
     "consultableHint_female": "Listede olmayan kişiler için yalnızca soran ajana yanıt verir, onlara doğrudan asla. Hassas işlemler yine de ondan sorumlu kişilerin onayını gerektirir.",
@@ -9720,9 +9722,7 @@
       "only": "{{name}} yalnızca şu kişilere yanıt verir: {{names}}.",
       "some": "{{name}} yalnızca bazı kişilere yanıt verir.",
       "nobody": "{{name}} şu anda kimseye yanıt vermiyor."
-    },
-    "agentsToo": "Bu ajanlar için de geçerli.",
-    "peopleOnly": "Bu yalnızca kişiler için geçerli."
+    }
   },
   "composer": {
     "commands": "Komutlar",
@@ -10546,6 +10546,7 @@
       "pickZip": ".zip veya .md seç",
       "pickFolder": "Klasör seç",
       "howTo": ".zip oluşturmak için: Finder'da kasa klasörüne sağ tıklayın → Sıkıştır. Windows'ta Gönder → Sıkıştırılmış klasör. .obsidian klasörü (eklentiler ve temalar) dışarıda bırakılır.",
+      "howToLabel": ".zip nasıl oluşturulur",
       "nothingYet": "Siz incelemeden hiçbir şey eklenmez.",
       "readingText": "Şimdilik yalnızca tarayıcınızda. Henüz hiçbir şey gönderilmedi.",
       "notesRead": "not okundu",
@@ -10639,8 +10640,7 @@
         "empty": "Hiç .md notu bulunamadı. Kasa klasörünün .zip dosyasını, klasörü ya da .md dosyalarını gönderin.",
         "too_big": "Kasa 500 MB'tan büyük. Büyük ekler olmadan ya da parça parça gönderin.",
         "unreadable": "Dosya okunamadı. Kasanın .zip dosyası mı?"
-      },
-      "howToLabel": ".zip nasıl oluşturulur"
+      }
     },
     "save": "Wiki'ye kaydet",
     "saveTitle": "Wiki'ye kaydet",
@@ -11452,9 +11452,9 @@
       "label": "Sormadan birleştirebilir",
       "none": "Depo seçilmedi. Her birleştirme onay ister.",
       "help": "Bu depolarda birleştirme onay kartı olmadan çalışır, denetim kaydına geçer ve konuşmaya bir makbuz bırakır. Her zaman soran bir ajan sormaya devam eder.",
+      "short": "Bu depolarda birleştirme onay kartı olmadan çalışır.",
       "dialogTitle": "{{name}} nerede sormadan birleştirir",
-      "dialogDesc": "Yalnızca zaten kullandığı depolar. Başka bir yerdeki birleştirme onay ister.",
-      "short": "Bu depolarda birleştirme onay kartı olmadan çalışır."
+      "dialogDesc": "Yalnızca zaten kullandığı depolar. Başka bir yerdeki birleştirme onay ister."
     },
     "label": "Hangi depolar",
     "all": "Tüm depolar",
@@ -12372,12 +12372,12 @@
       "title": "Erişilen kuruluşlar",
       "none": "Henüz kuruluş yok.",
       "lead": "GitHub kuruluşları yalnızca ilk seferde sorar. Başka bir tane eklemek için oradaki uygulama sayfasını açın ve yanındaki Grant düğmesine basın. Sahibi değilseniz düğmede Request yazar ve bir sahip onaylar.",
+      "short": "GitHub kuruluşları yalnızca ilk seferde sorar.",
       "open": "GitHub'da kuruluşlara izin ver",
       "added": "Artık bunlar da var: {{names}}.",
       "removed": "Artık yok: {{names}}.",
       "same": "Kuruluşlarda bir şey değişmedi.",
-      "failed": "Kuruluşlar şu anda okunamadı.",
-      "short": "GitHub kuruluşları yalnızca ilk seferde sorar."
+      "failed": "Kuruluşlar şu anda okunamadı."
     },
     "composioHelp": "Composio sayfasında İngilizce olarak giriş yapıp buraya dönersiniz. {{name}} izni “Composio” olarak gösterir.",
     "or": "veya",
@@ -12573,6 +12573,7 @@
       "databasesHelp": "Aşağıdaki kurallar bu ajanın okuduğu her veritabanı için geçerlidir.",
       "hidden": "Asla görmediği sütunlar",
       "hiddenHelp": "tablo.sütun biçiminde. Büyük harf, boşluk veya simge içeren adları çift tırnak içine alın (customers.\"Tax ID\"). Kişisel veri veya şifre gibi görünenleri zaten gizledik.",
+      "hiddenExample": "tablo.sütun, örneğin customers.\"Tax ID\"",
       "hiddenPlaceholder": "customers.cpf",
       "hiddenInvalid": "tablo.sütun (veya şema.tablo.sütun) yazın. Büyük harf, boşluk veya simge içeren adları \"çift tırnak\" içine alın.",
       "cap": "Günlük sorgu sayısı",
@@ -12581,8 +12582,7 @@
       "timeout": "Sorgu başına süre limiti",
       "timeoutHelp": "Daha uzun süren bir sorgu, veritabanını yormasın diye iptal edilir.",
       "seconds_one": "{{count}} saniye",
-      "seconds_other": "{{count}} saniye",
-      "hiddenExample": "tablo.sütun, örneğin customers.\"Tax ID\""
+      "seconds_other": "{{count}} saniye"
     },
     "agent": {
       "title": "Veritabanları",
@@ -12683,6 +12683,7 @@
     "rulesRead": "Neyi okur",
     "rulesSend": "Neyi gönderir",
     "toolsLead": "Ajanların {{name}} içinde neler yapabileceği. Hiçbir ajanın yapmaması gerekenleri kapatın ya da taslaklar ve düzenleme için de onay isteyin. Gönderme, yanıtlama ve iletme her zaman sohbette, alıcıyı ve metni göstererek onay ister.",
+    "toolsShort": "Ajanların bu e-postayla neler yapacağını seçin.",
     "group": {
       "read": "Okuma",
       "write": "Yazma",
@@ -12743,6 +12744,7 @@
       "buttonName": "Adresler: {{name}}",
       "title": "Adresler: {{address}}",
       "lead": "Ajanlar, e-postanın gönderildiği adresten yanıt verir. Bu posta kutusu kendi alan adınız veya bir takma ad gibi başka adreslere de e-posta alıyorsa buraya ekleyin.",
+      "short": "Ajanlar, e-postanın gönderildiği adresten yanıt verir.",
       "main": "Ana adres: {{address}}",
       "others": "Bu posta kutusunun diğer adresleri",
       "othersHelp": "Takma adlar ve kendi alan adlarınız, örneğin merhaba@sirketiniz.com.",
@@ -12753,8 +12755,7 @@
       "newFrom": "Yeni e-postalar şu adresten gider",
       "newFromHelp": "Yanıtlar her zaman e-postanın gönderildiği adresten gider.",
       "later": "Bunu daha sonra Adresler bölümünden değiştirebilirsiniz.",
-      "saved": "{{address}} adresleri kaydedildi.",
-      "short": "Ajanlar, e-postanın gönderildiği adresten yanıt verir."
+      "saved": "{{address}} adresleri kaydedildi."
     },
     "agent": {
       "title": "E-posta",
@@ -12846,8 +12847,7 @@
       "every": "Filtrelerden geçen her yeni e-posta için çalışır.",
       "needsReconnect": "Yeniden bağlanması gerekiyor",
       "error": "Hata veriyor"
-    },
-    "toolsShort": "Ajanların bu e-postayla neler yapacağını seçin."
+    }
   },
   "searchPage": {
     "title": "Çalışma alanında ara",
@@ -13020,6 +13020,7 @@
       "tooMany": "Buraya sığandan fazla. Birkaçını kaldırıp tekrar deneyin.",
       "fillIn": "Eksikleri doldurup tekrar deneyin.",
       "checkAddress": "Adresi kontrol edip tekrar deneyin.",
+      "privateNetwork": "Bu adres özel bir ağda: sunucuyu yöneten kişi OUTBOUND_ALLOW_HOSTS veya OUTBOUND_ALLOW_CIDRS ile izin verebilir.",
       "tooLong": "Bu çok uzun. Kısaltıp tekrar deneyin.",
       "updateComputerApp": "Bilgisayardaki uygulama bunun için çok eski. Güncelleyip tekrar deneyin.",
       "computerUpdatesItself": "Çalışma alanının bilgisayarı bunun için kendini güncelliyor. Birazdan tekrar deneyin.",
@@ -13359,6 +13360,7 @@
       "csvTooLarge": "Dosya çok büyük. Sınır 2 MB.",
       "csvTooManyRows": "Dosyada 5.000'den fazla satır var. Bölüp her parçayı ayrı içe aktarın.",
       "csvUnrecognized": "Bu bir şifre dosyasına benzemiyor. CSV olarak yeniden dışa aktarın.",
+      "unreadable": "Kaydedilen değer burada okunamıyor. Yeniden kaydedip sonra taşıyın.",
       "requestNotDelivered": "Önce gönderin, sonra Vault'a kaydedin.",
       "requestNotSavable": "Bu, Vault'a kaydedilemez.",
       "sourceUnknown": "Bu şifre yöneticisi burada kullanılamıyor.",
@@ -13375,8 +13377,7 @@
         "unsupported": "Bu şifre yöneticisi burada bağlanamıyor.",
         "invalidInput": "Alanları kontrol edip tekrar deneyin.",
         "tooManyItems": "Vault dolu. Daha fazlasını eşitlemeden önce öğe silin."
-      },
-      "unreadable": "Kaydedilen değer burada okunamıyor. Yeniden kaydedip sonra taşıyın."
+      }
     },
     "feedback": {
       "filesGone": "Eklediğiniz bir dosya artık yok. Yeniden ekleyin.",
@@ -14571,13 +14572,13 @@
         "item_created": "Vault'a bir öğe kaydetti",
         "item_changed": "Bir Vault öğesini değiştirdi",
         "item_deleted": "Bir Vault öğesini sildi",
+        "item_moved": "Bir Vault öğesini Kişisel ile Ekip arasında taşıdı",
         "item_used": "Bir Vault öğesini kullandı",
         "imported": "Vault'a şifre aktardı",
+        "keys_imported": "Vault'a anahtar içe aktardı",
         "connection_added": "Vault'a bir şifre yöneticisi bağladı",
         "connection_changed": "Bir şifre yöneticisinin bağlantısını değiştirdi",
-        "connection_removed": "Bir şifre yöneticisinin Vault bağlantısını kesti",
-        "item_moved": "Bir Vault öğesini Kişisel ile Ekip arasında taşıdı",
-        "keys_imported": "Vault'a anahtar içe aktardı"
+        "connection_removed": "Bir şifre yöneticisinin Vault bağlantısını kesti"
       },
       "verb": {
         "created": "Oluşturdu",
@@ -15226,6 +15227,7 @@
       "sharedWith": "{{names}} ile paylaşılıyor",
       "part": "{{name}} payı: ≈ {{percent}}",
       "estimate": "{{name}} payı, her çubuğun koyu kısmıdır. {{brand}} yalnızca hesabın tamamının ne kadar kullandığını söyler, bu yüzden her ajanın payı harcadığına göre bir tahmindir.",
+      "estimateShort": "Bir tahmindir.",
       "byAccount": "Hesaba göre, bu ay",
       "until": "{{date}} tarihine kadar",
       "nowTag": "şimdi",
@@ -15237,8 +15239,7 @@
       "old": "{{brand}}, hesaplardan önce",
       "oldSub": "Hesap kaydedilmeden önceki kullanım",
       "ofMonth": "Ayın {{percent}} kadarı",
-      "shareLabel": "{{source}}: ayın {{percent}} kadarı",
-      "estimateShort": "Bir tahmindir."
+      "shareLabel": "{{source}}: ayın {{percent}} kadarı"
     }
   },
   "budget": {
@@ -17419,6 +17420,7 @@
       "unknown": "Her güncelleme {{name}} bütçesini kullanır"
     },
     "exposure": "Panoyu gören kişi, verinin geldiği hesaplara erişimi olmasa bile ajanların getirdiklerini görür. Ajanlar da pano oluşturur. Bir panoyu isteyen kişiden daha fazla kişiye göstermek için önce “Sizi bekleyenler” bölümünde sorarlar.",
+    "exposureShort": "Panoyu gören kişi bu verileri görür.",
     "panel": {
       "caresFor": "Bu widget ile {{name}} ilgileniyor",
       "caresForOn": "Bu widget ile {{name}} ilgileniyor · {{board}}",
@@ -17502,8 +17504,7 @@
       "textRoutine": "Onu güncelleyen {{name}} rutini durur ve güncelleme geçmişi de onunla birlikte gider.",
       "textManual": "Güncelleme geçmişi de onunla birlikte gider.",
       "confirm": "Kaldır"
-    },
-    "exposureShort": "Panoyu gören kişi bu verileri görür."
+    }
   },
   "agentPicker": {
     "search": "Ajan ara",
