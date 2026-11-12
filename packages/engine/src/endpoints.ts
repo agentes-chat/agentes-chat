@@ -166,7 +166,9 @@ export async function listEndpoint(
     return { baseURL, models };
   } catch (error) {
     if (error instanceof OutboundAddressError)
-      throw new ValidationError("This address points to an internal network", "url.internal");
+      throw new ValidationError("This address points to an internal network", "url.internal", {
+        host: new URL(baseURL).hostname,
+      });
     return { baseURL, models: [], error: redactCredentials(error instanceof Error ? error.message : String(error)) };
   }
 }

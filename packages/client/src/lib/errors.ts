@@ -477,7 +477,7 @@ const KNOWN = {
   "database.url": "errors.said.checkAddress",
   "url.credentials": "errors.said.checkAddress",
   "url.https_required": "errors.said.checkAddress",
-  "url.internal": "errors.said.checkAddress",
+  "url.internal": "errors.said.privateNetwork",
   "url.invalid": "errors.said.checkAddress",
   "url.not_found": "errors.said.checkAddress",
   "database.too_long": "errors.said.tooLong",

@@ -795,6 +795,15 @@ tools. A model without prices costs nothing in budgets (its tokens are still cou
 `http://` are allowed on a self-hosted server, unless `ALLOW_SIGNUP=true` lets anyone in; set
 `MODEL_ENDPOINTS_PRIVATE` to choose (`false` allows only public https ones, what agentes.chat Cloud does).
 
+**Servers on your private network.** The same switch lets custom MCP servers (and their sign-in), a workspace's
+own bucket, server icons and the pages agents read be on this server's network, over https. For what it doesn't
+cover (a database, a mail server, a password manager), or on a server open to sign-up, name what may be reached:
+`OUTBOUND_ALLOW_HOSTS` takes host names or `*.` suffixes (`*.tail1234.ts.net` for a Tailscale tailnet) and
+`OUTBOUND_ALLOW_CIDRS` takes ranges (`100.64.0.0/10,fd7a:115c:a1e0::/48` for Tailscale's). Name the narrowest
+suffix you can: anyone who can make a name under it can point it at your network. Loopback and cloud metadata
+addresses stay refused whatever you set. An address refused for this shows in the server's log as
+`outbound address refused: private network`, with its host.
+
 **Sign-up.** The first account is allowed unless an owner link or the desktop app's owner key holds
 it (below). After it, with `ALLOW_SIGNUP=false` (the default), only invited people get in: invited by
 email from **Settings → Members and invitations**. A workspace's invitation link lets nobody in by

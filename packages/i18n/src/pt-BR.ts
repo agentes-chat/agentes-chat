@@ -13103,6 +13103,8 @@ export const ptBR = {
       tooMany: "É mais do que cabe aqui. Tire alguns e tente de novo.",
       fillIn: "Preencha o que falta e tente de novo.",
       checkAddress: "Confira o endereço e tente de novo.",
+      privateNetwork:
+        "Este endereço está numa rede privada, que este servidor não acessa por conta própria. Quem administra o servidor pode liberá-lo com OUTBOUND_ALLOW_HOSTS ou OUTBOUND_ALLOW_CIDRS.",
       tooLong: "Ficou longo demais. Encurte e tente de novo.",
       updateComputerApp: "O app do computador é antigo demais para isso. Atualize e tente de novo.",
       computerUpdatesItself: "O computador do workspace se atualiza sozinho para isso. Tente de novo daqui a pouco.",
