@@ -183,11 +183,17 @@ export async function ssoProvider(deps: SsoDeps, providerId: string): Promise<OA
         )
           return null;
         let profile = payload;
-        if ((!payload.email || !payload.name) && metadata.userinfo_endpoint && tokens.accessToken) {
+        if (
+          (!payload.email || !payload.name || payload.email_verified !== true) &&
+          metadata.userinfo_endpoint &&
+          tokens.accessToken
+        ) {
           const info = await readJson(http, metadata.userinfo_endpoint, {
             headers: { authorization: `Bearer ${tokens.accessToken}` },
           });
           if (info.sub !== payload.sub) return null;
+          if (payload.email && info.email && String(payload.email).toLowerCase() !== String(info.email).toLowerCase())
+            return null;
           profile = { ...info, ...payload };
         }
         if (!z.email().safeParse(profile.email).success || profile.email_verified !== true) return null;

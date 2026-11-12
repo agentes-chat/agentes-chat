@@ -14,6 +14,7 @@ afterEach(async () => {
 
 function identityProvider() {
   let available = true;
+  let userinfo: Record<string, unknown> = {};
   const codes = new Map<string, { jwt: string; challenge: string; callback: string }>();
   const http = (async (input: string | URL | Request, init?: RequestInit) => {
     if (!available) throw new TypeError("IdP unavailable");
@@ -24,10 +25,12 @@ function identityProvider() {
         authorization_endpoint: `${issuer}/authorize`,
         token_endpoint: `${issuer}/token`,
         jwks_uri: `${issuer}/keys`,
+        userinfo_endpoint: `${issuer}/userinfo`,
         id_token_signing_alg_values_supported: ["RS256"],
         token_endpoint_auth_methods_supported: ["client_secret_post"],
       });
     if (url === `${issuer}/keys`) return Response.json({ keys: [jwk] });
+    if (url === `${issuer}/userinfo`) return Response.json(userinfo);
     if (url === `${issuer}/token`) {
       const body = new URLSearchParams(String(init?.body));
       const record = codes.get(body.get("code") ?? "");
@@ -75,6 +78,9 @@ function identityProvider() {
   return {
     http,
     authorize,
+    userInfo: (profile: Record<string, unknown>) => {
+      userinfo = profile;
+    },
     offline: () => {
       available = false;
     },
@@ -392,4 +398,18 @@ test("a callback cannot switch the provider bound to its state", async () => {
   const result = await at(back.replace(s.provider, `sso-${id}`), { origin: null });
   expect(new URL(result.headers.get("location") ?? "", ORIGIN).searchParams.get("error")).toBe("invalid_code");
   expect((await at("/api/app/me")).status).toBe(401);
+});
+
+test("UserInfo can supply email verification only for the same subject and email", async () => {
+  const s = await setup();
+  for (const info of [
+    { sub: "other-subject", email: "owner@example.com", email_verified: true },
+    { sub: "owner-subject", email: "other@example.com", email_verified: true },
+  ]) {
+    s.userInfo(info);
+    const result = await s.finish(s.owner, true, { email_verified: undefined });
+    expect(new URL(result.headers.get("location") ?? "", ORIGIN).searchParams.has("error")).toBe(true);
+  }
+  s.userInfo({ sub: "owner-subject", email: "owner@example.com", email_verified: true });
+  expect((await s.finish(s.owner, true, { email_verified: undefined })).headers.get("location")).toBe("/");
 });
