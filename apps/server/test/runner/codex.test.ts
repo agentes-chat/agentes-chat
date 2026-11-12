@@ -35,8 +35,13 @@ const TURN2 = [
 ];
 
 test("Codex events: thread id, human lines, files, pull requests, the result and errors", () => {
-  const cwd = "/w/app";
-  const p = (line: string) => parseOutputLine(line, "codex", cwd);
+  const cwd = path.resolve("/w/app");
+  const p = (line: string) =>
+    parseOutputLine(
+      line.replace("/w/app/src/main.ts", JSON.stringify(path.join(cwd, "src/main.ts")).slice(1, -1)),
+      "codex",
+      cwd,
+    );
   expect(p(TURN1[0] as string)).toEqual({ thread: "01a1463b-6712-7b53-9f12-2499fb614d2d" });
   expect(p(TURN1[1] as string)).toEqual({});
   expect(p(TURN1[2] as string)).toEqual({ line: "pong", result: "pong" });

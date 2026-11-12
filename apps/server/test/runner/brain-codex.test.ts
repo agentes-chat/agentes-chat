@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { spawn } from "node:child_process";
+import { type SpawnOptions, spawn } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { type MachineRequest, parseBrainEvent } from "@agenteschat/adapters";
@@ -60,6 +60,91 @@ test("version gate: 0.163.0 and newer", () => {
   expect(codexVersionOk("codex-cli 0.170.1")).toBe(true);
   expect(codexVersionOk("codex-cli 0.99.0")).toBe(false);
   expect(codexVersionOk(undefined)).toBe(false);
+});
+
+test("Windows Codex streams a chat reply using its own account and a hidden child process", async () => {
+  const root = tempDir("brain-codex-windows-");
+  dirs.push(root);
+  const home = path.join(root, "account with spaces");
+  mkdirSync(home);
+  writeFileSync(path.join(home, "auth.json"), "{}");
+  const log = path.join(root, "codex.jsonl");
+  const events: CodexBrainEvent[] = [];
+  const fake = path.join(root, "fake codex.mjs");
+  writeFileSync(
+    fake,
+    `import { writeFileSync } from "node:fs";
+let prompt = "";
+for await (const chunk of process.stdin) prompt += chunk;
+writeFileSync(process.env.FAKE_CODEX_LOG, JSON.stringify({
+  args: process.argv.slice(2), prompt, codexHome: process.env.CODEX_HOME,
+  apiKey: process.env.OPENAI_API_KEY ?? null,
+}));
+for (const line of ${JSON.stringify(TURN1)}) process.stdout.write(line + "\\n");
+`,
+  );
+  let childOptions: SpawnOptions | undefined;
+  await runCodexTurn(
+    {
+      runId: RUN,
+      sessionId: SESSION,
+      cwd: root,
+      system: "Reply briefly.",
+      prompt: "ping",
+      mcp: { token: "test-mcp-token" },
+      account: { id: "0193aaaa-0000-7000-8000-0000000000b1", home },
+      chat: true,
+    },
+    {
+      platform: "win32",
+      bin: process.execPath,
+      codexVersion: () => "codex-cli 0.167.0",
+      threads: new CodexThreads(path.join(root, "threads.json")),
+      workDir: path.join(root, "turn"),
+      signal: new AbortController().signal,
+      env: { FAKE_CODEX_LOG: log },
+      emit: (event) => events.push(event),
+      spawn: (file, args, options) => {
+        childOptions = options;
+        return spawn(file, [fake, ...args], options);
+      },
+    },
+  );
+  expect(events.at(-1)).toEqual({ type: "done", text: "pong", session: { id: SESSION } });
+  expect(childOptions).toMatchObject({ detached: false, windowsHide: true });
+  const launch = JSON.parse(readFileSync(log, "utf8").trim());
+  expect(launch.codexHome).toBe(home);
+  expect(launch.prompt).toBe("ping");
+  expect(launch.apiKey).toBeNull();
+  expect(launch.args).toContain("read-only");
+  expect(launch.args).not.toContain("--dangerously-bypass-approvals-and-sandbox");
+});
+
+test("Windows Codex cancels a running child instead of leaving the turn pending", async () => {
+  const root = tempDir("brain-codex-windows-cancel-");
+  dirs.push(root);
+  const script = path.join(root, "slow-codex.mjs");
+  writeFileSync(script, `process.stdout.write(${JSON.stringify(`${TURN1[0]}\n`)}); setInterval(() => {}, 1000);`);
+  const abort = new AbortController();
+  const events: CodexBrainEvent[] = [];
+  await runCodexTurn(
+    { runId: RUN, sessionId: SESSION, cwd: root, system: "", prompt: "ping", mcp: { token: "test" } },
+    {
+      platform: "win32",
+      bin: process.execPath,
+      codexVersion: () => "codex-cli 0.167.0",
+      threads: new CodexThreads(path.join(root, "threads.json")),
+      workDir: path.join(root, "turn"),
+      signal: abort.signal,
+      emit: (event) => events.push(event),
+      spawn: (file, args, options) => {
+        const child = spawn(file, [script, ...args], options);
+        child.stdout?.once("data", () => abort.abort());
+        return child;
+      },
+    },
+  );
+  expect(events.at(-1)).toMatchObject({ type: "error", code: "canceled" });
 });
 
 test("command line: first turn with instructions, resume by id without them, options before resume", () => {
@@ -128,8 +213,9 @@ test("MCP bridge overrides: stdio by run with the token through env_vars, or HTT
 });
 
 test("events: commands and edits are executed tool calls, our bridge's calls aren't repeated, the last message wins", () => {
-  const m = new CodexEventMapper({ cwd: "/w/app", model: "gpt-5.5", redact: (s) => s.replaceAll("2 passed", "[ok]") });
-  const out = TURN2.map((l) => l.replace("CWD", "/w/app")).flatMap((l) => m.line(l));
+  const cwd = path.resolve("/w/app");
+  const m = new CodexEventMapper({ cwd, model: "gpt-5.5", redact: (s) => s.replaceAll("2 passed", "[ok]") });
+  const out = TURN2.map((l) => l.replace("CWD", JSON.stringify(cwd).slice(1, -1))).flatMap((l) => m.line(l));
   expect(m.thread).toBe(THREAD);
   expect(out).toEqual([
     {

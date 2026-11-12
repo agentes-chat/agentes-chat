@@ -602,8 +602,8 @@ test("profiles: plan is a read-only sandbox, work a workspace one; neither has t
   expect(
     approvalCalls("item/fileChange/requestApproval", { grantRoot: "/etc" }, { changes: [{ path: "src/a.ts" }] }, "/w"),
   ).toEqual([
-    { tool_name: "Write", input: { file_path: "/w/src/a.ts" } },
-    { tool_name: "Write", input: { file_path: "/etc" } },
+    { tool_name: "Write", input: { file_path: path.resolve("/w/src/a.ts") } },
+    { tool_name: "Write", input: { file_path: path.resolve("/etc") } },
   ]);
   // Nothing to judge it by: declined.
   expect(approvalCalls("item/fileChange/requestApproval", {}, undefined, "/w")).toEqual([]);
