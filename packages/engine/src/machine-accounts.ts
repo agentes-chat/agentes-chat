@@ -35,6 +35,7 @@ import {
   type RunnerAccountInfo,
   SHARED_ACCOUNTS_PROTOCOL,
   SHARED_CODEX_PROTOCOL,
+  SHARED_GEMINI_PROTOCOL,
 } from "@agenteschat/adapters";
 import {
   and,
@@ -860,10 +861,14 @@ export async function refreshAiAccounts(deps: MachineAccountHubDeps, userId: str
   );
 }
 
+/** The runner protocol from which a sign-in of that kind can be made for all agents where each is its own OS user. */
+const sharedSignInProtocol = (kind: string) =>
+  kind === "codex" ? SHARED_CODEX_PROTOCOL : kind === "antigravity" ? SHARED_GEMINI_PROTOCOL : SHARED_ACCOUNTS_PROTOCOL;
+
 /**
  * Whether a new sign-in of that kind on the computer thinks for all of its owner's agents there (protocol 29):
  * every one where the agents are the runner's own user; where each is its own OS user (system mode), as
- * `SHARED_SIGN_INS` says (ChatGPT's from protocol 38, never Cursor's yet).
+ * `SHARED_SIGN_INS` says (ChatGPT's from protocol 38, Gemini's from 58, never Cursor's yet).
  */
 export function sharesSignIns(
   machine: Pick<MachineRow, "protocol" | "executors">,
@@ -871,8 +876,8 @@ export function sharesSignIns(
 ): boolean {
   if (machine.protocol < SHARED_ACCOUNTS_PROTOCOL) return false;
   if (machine.executors?.mode !== "system") return true;
-  if (which === "cursor" || which === "opencode" || which === "grok" || which === "antigravity") return false;
-  return (which !== "codex" || machine.protocol >= SHARED_CODEX_PROTOCOL) && SHARED_SIGN_INS[which];
+  if (which === "cursor" || which === "opencode" || which === "grok") return false;
+  return machine.protocol >= sharedSignInProtocol(which) && SHARED_SIGN_INS[which];
 }
 
 /**
@@ -1134,9 +1139,8 @@ export async function beginAccountLogin(
               ? PLAN_KEYS_PROTOCOL
               : ACCOUNTS_PROTOCOL,
   );
-  // Once for every agent of its owner there, where the runner can (protocol 29; ChatGPT's 38).
-  const shared =
-    protocol >= (kind === "codex" ? SHARED_CODEX_PROTOCOL : SHARED_ACCOUNTS_PROTOCOL) && sharedSignIn(kind, provider);
+  // Once for every agent of its owner there, where the runner can (protocol 29; ChatGPT's 38, Gemini's 58).
+  const shared = protocol >= sharedSignInProtocol(kind) && sharedSignIn(kind, provider);
   const again = accountId !== undefined;
   // A Claude subscription sign-in for all agents (ADR 0150): a new one takes the policy's method once, kept on its
   // row; signing in again keeps the row's, whatever the policy says now (none known: the runner does as before).

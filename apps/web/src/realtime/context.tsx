@@ -539,6 +539,8 @@ export function RealtimeProvider({
         qc.setQueryData(keys.issueColumns(orgId), event.columns as IssueColumn[]);
         void qc.invalidateQueries({ queryKey: keys.issues(orgId), predicate: (q) => q.queryKey[3] === "list" });
       }
+      // A project was made, renamed, recoloured, archived or deleted: the menu and every card that names it.
+      if (event.type === "issue.projects") void qc.invalidateQueries({ queryKey: keys.issues(orgId) });
       applyIssueEvent(qc, orgId, event);
       // An agent switched computers, or its computer was removed: the cached view takes the new target.
       applyComputerEvent(qc, orgId, event);

@@ -447,6 +447,10 @@ pub fn site_path_allowed(method: &str, path: &str) -> bool {
     if path.len() > 512 || path.contains(['?', '#', '%', '\\']) {
         return false;
     }
+    // Whether the person has a password (Preferences' "Add a password" note on the server here).
+    if method == "GET" && path == "/api/app/me" {
+        return true;
+    }
     let parts: Vec<&str> = path.split('/').collect();
     let ["", "api", "app", "organizations", org, rest @ ..] = parts.as_slice() else { return false };
     good_id(org)
@@ -543,6 +547,17 @@ pub fn welcome_mode_take(app: AppHandle, window: tauri::Window) -> Result<Option
     Ok(app.state::<WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()).take().map(str::to_string))
 }
 
+/// "Add a workspace…" and "Add a server…" in Preferences: the welcome window, in its adding mode.
+/// Async, as `show_window`: the welcome window may be made here.
+#[tauri::command]
+pub async fn welcome_add(app: AppHandle, window: tauri::Window) -> Result<(), String> {
+    if window.label() != "prefs" {
+        return Err("only Preferences asks this".into());
+    }
+    *app.state::<WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some("add");
+    crate::present(&app, "welcome")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -617,6 +632,8 @@ mod tests {
     fn only_the_devices_paths_go_with_the_session() {
         let org = "/api/app/organizations/o-1";
         assert!(site_path_allowed("GET", &format!("{org}/devices")));
+        assert!(site_path_allowed("GET", "/api/app/me"));
+        assert!(!site_path_allowed("PATCH", "/api/app/me"));
         assert!(site_path_allowed("GET", &format!("{org}/members")));
         assert!(site_path_allowed("GET", &format!("{org}/roles")));
         assert!(site_path_allowed("PATCH", &format!("{org}/devices/computers/m-1")));
@@ -633,7 +650,6 @@ mod tests {
             ("GET", format!("{org}/devices/")),
             ("PATCH", format!("{org}/devices/phones/../stop")),
             ("GET", "/api/app/organizations/../x/devices".into()),
-            ("GET", "/api/app/me".into()),
             ("GET", format!("{org}/channels")),
             ("POST", format!("{org}/devices/phones/p%2F1/stop")),
         ] {

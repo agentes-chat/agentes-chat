@@ -133,6 +133,24 @@ export interface WidgetFailure {
   detail: string | null;
 }
 
+/**
+ * What a widget's refresh run waits on: paused near its plan's or budget's limit (`usage_pause`: Update now lets it go
+ * on), at that limit (`plan_limit`, `budget`), for its computer to be back (`computer`) or to have room (`busy`), or for
+ * its AI provider (`outage`). `source`: whose limit (null for the others). `resetsAt`: when it picks up by itself, an
+ * outage's next try (null: not known; a budget's: other runs hold it for a moment). `scope` and `model`: a plan's limit
+ * on its model alone, and that model's name. `since`: when a `busy` one began waiting for room. `canContinue`: the
+ * viewer may let a pause go on.
+ */
+export interface WidgetWait {
+  code: "usage_pause" | "plan_limit" | "budget" | "computer" | "busy" | "outage";
+  source: "plan" | "budget" | null;
+  resetsAt: string | null;
+  scope: "model" | "region" | "off" | "inactive" | null;
+  model: string | null;
+  since: string | null;
+  canContinue: boolean;
+}
+
 export interface Widget {
   id: string;
   dashboardId: string;
@@ -148,6 +166,8 @@ export interface Widget {
   alert: { enabled: boolean; condition: string };
   status: WidgetStatus;
   failure: WidgetFailure | null;
+  /** While it is `building` or `updating`: what its run waits on (`widgetWaiting` reads it). */
+  wait: WidgetWait | null;
   refreshedAt: string | null;
   nextRunAt: string | null;
   routineId: string | null;

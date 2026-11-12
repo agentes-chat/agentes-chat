@@ -115,6 +115,7 @@ export {
 } from "./components/Checkbox";
 export { AttentionNote, Chip, type ChipProps, type ChipTone, CountBadge, CountChip } from "./components/Chip";
 export { CodeInput, type CodeInputProps } from "./components/CodeInput";
+export { ColorDot, dotTone } from "./components/ColorDot";
 export { ColorPicker, type ColorPickerLabels } from "./components/ColorPicker";
 export { CommandPalette, filterPalette, type PaletteItem } from "./components/CommandPalette";
 export {
@@ -200,8 +201,9 @@ export {
   type FilterChipProps,
   type FilterOption,
 } from "./components/FilterChip";
+export { FoldRow } from "./components/FoldRow";
 export { GroupHeading } from "./components/GroupHeading";
-export { InfoHint, type InfoHintProps } from "./components/InfoHint";
+export { HintLine, type HintLineProps, InfoHint, type InfoHintProps } from "./components/InfoHint";
 export { isApple, Kbd, modKey, shortcut } from "./components/Kbd";
 export { Logo, LogoMark, type LogoProps } from "./components/Logo";
 export {
@@ -274,6 +276,7 @@ export {
   type PlanMeterUsage,
   type PlanMeterWindow,
   type PlanState,
+  planAttention,
   planLevel,
   planLine,
   planState,
@@ -436,7 +439,7 @@ export {
   type HoverCardOpen,
   useHoverCard,
 } from "./hooks/useHoverCard";
-export { matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMedia";
+export { HOVERLESS, matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMedia";
 export { useNow } from "./hooks/useNow";
 export { type ScrollSides, useScrollSides } from "./hooks/useScrollSides";
 export { Icon, type IconName, type IconProps, iconNames, icons } from "./icons/Icon";
@@ -488,7 +491,18 @@ export {
   startSky,
 } from "./sky/engine";
 export { selectionSkyUrl } from "./sky/selection";
-export { agentTones, EYE, glowTones, mix, parseColor, pixelOf, SKY_TONES, softTones, spriteTone } from "./sky/tones";
+export {
+  agentTones,
+  EYE,
+  glowTones,
+  mix,
+  parseColor,
+  pixelOf,
+  SKY_TONES,
+  softTones,
+  spriteTone,
+  TEAM_NIGHT,
+} from "./sky/tones";
 export {
   cloudAt,
   HEADER_AREA,
@@ -515,6 +529,7 @@ export {
   zoneOption,
   zoneOptions,
 } from "./timezones";
+export { installTitleTips, TITLE_TIP_GRACE_MS, TITLE_TIP_ID, TITLE_TIP_OPEN_MS } from "./title-tips";
 export { DitherLine, fillEnds, paintCells, paintLineArea, useElementWidth } from "./widgets/ChartPieces";
 export { formatWidgetNumber, formatWithUnit, useCountUp, widgetDigits } from "./widgets/format";
 export { ditherTile, WIDGET_CELL, widgetTileVars, widgetTones } from "./widgets/tiles";

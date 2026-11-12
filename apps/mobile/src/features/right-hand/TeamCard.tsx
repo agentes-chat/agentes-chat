@@ -37,24 +37,12 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { StickerCanvas } from "@/agent/StickerCanvas";
 import { useOrg } from "@/providers/org";
-import {
-  AgentAvatar,
-  Button,
-  EventPillAction,
-  fieldText,
-  Icon,
-  LineIcon,
-  Locked,
-  MEDIA_ROW,
-  MediaRow,
-  Sheet,
-  Text,
-} from "@/ui";
+import { AgentAvatar, Button, fieldText, Icon, LineIcon, Locked, MEDIA_ROW, MediaRow, Sheet, Text } from "@/ui";
 import { router } from "@/ui/navigation";
 import { fullLook } from "../agents/edit";
 import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
-import { AskButtons, AskCard, AskDone, AskFoot } from "../chat/asks";
+import { type AskAnswer, AskButtons, AskCard, AskFoot } from "../chat/asks";
 import { MESSAGE_STICKER } from "../chat/media";
 import { useOpenDm } from "../new/useOpenDm";
 import { useFailed } from "../routines/hooks";
@@ -343,158 +331,157 @@ function TeamCardView({ message: m, card }: { message: Message; card: TeamPropos
     plan.agents.map((a) => a.name),
     t,
   );
-  if (status === "open") {
-    const decides = can(org, "create_agents");
-    const busy = team.create.isPending || team.deny.isPending || card.state === "creating";
-    // Agents that each live in a DM with the person have no map to show (ADR 0159): the rows say it all.
-    const mapButton = teamInDms(plan) ? null : (
-      <Button variant="secondary" size="card" wide label={t("teamPlan.card.map")} onPress={() => setMap(true)} />
-    );
-    const dismissButton =
-      decides || card.forUserId === meId ? (
-        <Button
-          variant="ghost"
-          size="card"
-          wide
-          label={t("rightHand.card.dismiss")}
-          disabled={busy}
-          onPress={() => team.deny.mutate(undefined, { onError: failed })}
-        />
-      ) : null;
-    return (
-      <>
-        <AskCard
-          id={m.id}
-          kind="team"
-          agentId={m.author.id ?? ""}
-          waitsFor={decides ? "you" : t("teamPlan.card.onlyCreators")}
-          lead={plan.lead || names}
-          body={
-            <>
-              <TeamRows
-                plan={plan}
-                reviewer={dir.agents.find(isRightHand)?.name ?? RIGHT_HAND_DEFAULT.name}
-                personal={personal}
-                onAdjust={decides ? setAdjusting : undefined}
-              />
-              {card.error ? (
-                <Text variant="small" tone="danger" accessibilityRole="alert">
-                  {teamFailureText(t, card.error, i18n.language)}
-                </Text>
-              ) : null}
-            </>
-          }
-          foot={
-            <AskFoot>
-              <Text variant="caption" tone="muted">
-                {countsText(t, plan, personal)}
-              </Text>
-              {decides ? (
-                <Button
-                  variant="primary"
-                  size="card"
-                  wide
-                  label={t(card.error ? "teamPlan.card.retry" : modeKey(org, "teamPlan.card.create"))}
-                  loading={team.create.isPending || card.state === "creating"}
-                  disabled={busy}
-                  onPress={() =>
-                    team.create.mutate(undefined, {
-                      onSuccess: ({ noAi }) => {
-                        if (held) setWaveFrom(Date.now());
-                        else if (noAi?.[0]) openConnectAi({ agentId: noAi[0] });
-                      },
-                      onError: failed,
-                    })
-                  }
-                />
-              ) : null}
-              {mapButton || dismissButton ? (
-                <AskButtons
-                  primary={mapButton ?? dismissButton}
-                  secondary={mapButton ? (dismissButton ?? undefined) : undefined}
-                />
-              ) : null}
-            </AskFoot>
-          }
-        />
-        <AdjustSheet
-          agent={adjusting}
-          saving={team.adjust.isPending}
-          onClose={() => setAdjusting(null)}
-          onSave={(patch) =>
-            adjusting &&
-            team.adjust.mutate(
-              { handle: adjusting.handle, patch },
-              { onSuccess: () => setAdjusting(null), onError: failed },
-            )
-          }
-        />
-        <TeamMapSheet plan={plan} open={map} onClose={() => setMap(false)} />
-      </>
-    );
-  }
+  // Created, undone, dismissed, expired or replaced by a newer one: the same card, the team still there to read, and
+  // who made it, when and Undo where its buttons were.
+  const open = status === "open";
   const decidedAt = card.decidedAt ? when.short(card.decidedAt) : undefined;
-  if (status === "created") {
-    const by = card.decidedByUserId === meId ? null : dir.memberById.get(card.decidedByUserId ?? "")?.name;
-    const undoable = teamUndoable(card, { userId: meId ?? "", admin: can(org, "manage_agents") });
-    const madeBy = by
-      ? t(modeKey(org, "teamPlan.card.created"), { name: by })
-      : t(modeKey(org, "teamPlan.card.createdYou"));
-    return (
-      <>
-        <AskDone
-          done
-          words={`${madeBy}: ${names}`}
-          time={decidedAt}
-          actions={
-            undoable ? (
-              <EventPillAction
-                label={t("agentActions.undo")}
-                loading={team.undo.isPending}
-                onPress={() => team.undo.mutate(undefined, { onError: failed })}
-              />
-            ) : null
-          }
-        />
-        {card.created?.skipped.includes("skills") ? (
-          <Text variant="footnote" tone="muted">
-            {t("teamPlan.card.skillsWait")}
-          </Text>
-        ) : null}
-        {waveFrom !== undefined ? (
-          <View style={styles.wave} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            {plan.agents.map((a) => (
-              <StickerCanvas
-                key={a.handle}
-                look={fullLook(a.appearance)}
-                mood="wave"
-                size={MESSAGE_STICKER}
-                seed={a.handle}
-                live
-                playFor={WAVE_SECONDS}
-                from={waveFrom}
-              />
-            ))}
-          </View>
-        ) : null}
-        {card.decidedByUserId === meId ? <FirstTasks message={m} card={card} held={held} /> : null}
-      </>
-    );
-  }
+  const by = card.decidedByUserId === meId ? null : dir.memberById.get(card.decidedByUserId ?? "")?.name;
+  const answer: AskAnswer | null = open
+    ? null
+    : status === "created"
+      ? {
+          done: true,
+          words: by
+            ? t(modeKey(org, "teamPlan.card.created"), { name: by })
+            : t(modeKey(org, "teamPlan.card.createdYou")),
+          time: decidedAt,
+          actions: teamUndoable(card, { userId: meId ?? "", admin: can(org, "manage_agents") }) ? (
+            <Button
+              variant="ghost"
+              size="card"
+              label={t("agentActions.undo")}
+              loading={team.undo.isPending}
+              onPress={() => team.undo.mutate(undefined, { onError: failed })}
+            />
+          ) : null,
+        }
+      : {
+          done: false,
+          time: decidedAt,
+          words: t(
+            status === "superseded"
+              ? "rightHand.card.superseded"
+              : status === "undone"
+                ? modeKey(org, "teamPlan.card.undone")
+                : status === "denied"
+                  ? modeKey(org, "teamPlan.card.dismissed")
+                  : "approval.expired",
+          ),
+        };
+  const decides = open && can(org, "create_agents");
+  const busy = team.create.isPending || team.deny.isPending || card.state === "creating";
+  // Agents that each live in a DM with the person have no map to show (ADR 0159): the rows say it all.
+  const mapButton = teamInDms(plan) ? null : (
+    <Button variant="secondary" size="card" wide label={t("teamPlan.card.map")} onPress={() => setMap(true)} />
+  );
+  const dismissButton =
+    decides || card.forUserId === meId ? (
+      <Button
+        variant="ghost"
+        size="card"
+        wide
+        label={t("rightHand.card.dismiss")}
+        disabled={busy}
+        onPress={() => team.deny.mutate(undefined, { onError: failed })}
+      />
+    ) : null;
   return (
-    <AskDone
-      done={false}
-      time={decidedAt}
-      words={`${t(
-        status === "superseded"
-          ? "rightHand.card.superseded"
-          : status === "undone"
-            ? modeKey(org, "teamPlan.card.undone")
-            : status === "denied"
-              ? modeKey(org, "teamPlan.card.dismissed")
-              : "approval.expired",
-      )}: ${names}`}
-    />
+    <>
+      <AskCard
+        id={m.id}
+        kind="team"
+        agentId={m.author.id ?? ""}
+        waitsFor={decides ? "you" : t("teamPlan.card.onlyCreators")}
+        answer={answer}
+        lead={plan.lead || names}
+        body={
+          <>
+            <TeamRows
+              plan={plan}
+              reviewer={dir.agents.find(isRightHand)?.name ?? RIGHT_HAND_DEFAULT.name}
+              personal={personal}
+              onAdjust={decides ? setAdjusting : undefined}
+            />
+            {open && card.error ? (
+              <Text variant="small" tone="danger" accessibilityRole="alert">
+                {teamFailureText(t, card.error, i18n.language)}
+              </Text>
+            ) : null}
+          </>
+        }
+        foot={
+          <AskFoot>
+            <Text variant="caption" tone="muted">
+              {countsText(t, plan, personal)}
+            </Text>
+            {decides ? (
+              <Button
+                variant="primary"
+                size="card"
+                wide
+                label={t(card.error ? "teamPlan.card.retry" : modeKey(org, "teamPlan.card.create"))}
+                loading={team.create.isPending || card.state === "creating"}
+                disabled={busy}
+                onPress={() =>
+                  team.create.mutate(undefined, {
+                    onSuccess: ({ noAi }) => {
+                      if (held) setWaveFrom(Date.now());
+                      else if (noAi?.[0]) openConnectAi({ agentId: noAi[0] });
+                    },
+                    onError: failed,
+                  })
+                }
+              />
+            ) : null}
+            {mapButton || dismissButton ? (
+              <AskButtons
+                primary={mapButton ?? dismissButton}
+                secondary={mapButton ? (dismissButton ?? undefined) : undefined}
+              />
+            ) : null}
+          </AskFoot>
+        }
+      />
+      <AdjustSheet
+        agent={adjusting}
+        saving={team.adjust.isPending}
+        onClose={() => setAdjusting(null)}
+        onSave={(patch) =>
+          adjusting &&
+          team.adjust.mutate(
+            { handle: adjusting.handle, patch },
+            { onSuccess: () => setAdjusting(null), onError: failed },
+          )
+        }
+      />
+      <TeamMapSheet plan={plan} open={map} onClose={() => setMap(false)} />
+      {status === "created" ? (
+        <>
+          {card.created?.skipped.includes("skills") ? (
+            <Text variant="footnote" tone="muted">
+              {t("teamPlan.card.skillsWait")}
+            </Text>
+          ) : null}
+          {waveFrom !== undefined ? (
+            <View style={styles.wave} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              {plan.agents.map((a) => (
+                <StickerCanvas
+                  key={a.handle}
+                  look={fullLook(a.appearance)}
+                  mood="wave"
+                  size={MESSAGE_STICKER}
+                  seed={a.handle}
+                  live
+                  playFor={WAVE_SECONDS}
+                  from={waveFrom}
+                />
+              ))}
+            </View>
+          ) : null}
+          {card.decidedByUserId === meId ? <FirstTasks message={m} card={card} held={held} /> : null}
+        </>
+      ) : null}
+    </>
   );
 }
 

@@ -302,7 +302,7 @@ export const words: EmailWords = {
     workspace: (org) => [
       "Escribe este código para eliminar el espacio de trabajo ",
       { b: org },
-      ". Se cierra para todos al instante y se elimina para siempre 7 días después.",
+      ". Queda en solo lectura para todos al instante y se elimina para siempre 7 días después.",
     ],
     account: (email) => [
       "Escribe este código para eliminar toda la cuenta ",
@@ -322,19 +322,19 @@ export const words: EmailWords = {
       workspace: (org) => [
         "Escribe este código para eliminar tu espacio de trabajo ",
         { b: org },
-        ". Se cierra al instante y se elimina para siempre 7 días después.",
+        ". Queda en solo lectura al instante y se elimina para siempre 7 días después.",
       ],
     },
   },
   deleting: {
     subject: (day) => `Un espacio de trabajo del que formas parte se eliminará el ${day}`,
-    preheader: "Ya está cerrado. Un propietario aún puede restaurarlo hasta entonces.",
+    preheader: "Ya está en solo lectura. Un propietario aún puede restaurarlo hasta entonces.",
     headline: "Se está eliminando un espacio de trabajo",
     body: (by, org, day, time) => [
       { b: by },
       " eliminó el espacio de trabajo ",
       { b: org },
-      `. Ya está cerrado y se elimina para siempre el ${day} a las ${time}.`,
+      `. Ya está en solo lectura y se elimina para siempre el ${day} a las ${time}.`,
     ],
     owner: "¿Cambiaste de opinión? Restáuralo antes de esa fecha.",
     button: "Restaurar el espacio de trabajo",

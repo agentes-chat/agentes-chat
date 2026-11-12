@@ -16,9 +16,10 @@ describe("Quem vê on the phone", () => {
     expect(audienceKind({ mode: "people", userIds: ["me", "ana"] }, "me")).toBe("people");
   });
 
-  test("a wiki page's menu opens it, and an agent's receipt too", () => {
+  test("a wiki page's menu opens it; an agent's receipt says nothing of it (the task's screen does)", () => {
     expect(src("features/wiki/WikiScreen.tsx")).toContain('pathname: "/who-sees", params: { slug: p.slug }');
-    expect(src("features/chat/Receipts.tsx")).toContain('pathname: "/who-sees", params: { number }');
+    expect(src("features/chat/Receipts.tsx")).not.toContain("/who-sees");
+    expect(src("features/chat/Receipts.tsx")).not.toContain("whoSees.");
   });
 });
 

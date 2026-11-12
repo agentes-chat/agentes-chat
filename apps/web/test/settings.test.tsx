@@ -141,13 +141,36 @@ describe("Configurações do workspace", () => {
     );
     const github = screen().getByRole("region", { name: "Repositórios do GitHub" });
     expect(hintOf("Repositórios do GitHub", github).text).toBe(
-      "Onde o app agentes.chat está instalado, os agentes abrem pull requests, issues, comentários e commits como o app, com o nome do agente e de quem pediu. Só a Acme usa o que você instalar daqui.",
+      "Onde o app agentes.chat está instalado, os agentes abrem pull requests, issues, comentários e commits como o app, com o nome do agente e de quem pediu.",
     );
     expect(
       within(github)
         .getAllByText(/^Onde o app agentes.chat está instalado/)
         .map((el) => el.hidden),
     ).toEqual([true]);
+    // A connected service is one line (its name, its pill, who uses it) that opens to its details and actions.
+    const line = within(section).getByRole("button", { name: /^GitHub/ });
+    expect(line.getAttribute("aria-expanded")).toBe("false");
+    expect(line.querySelector(".list-title")?.textContent).toBe("GitHubAtivo");
+    expect(line.querySelector(".connected-row__who")?.textContent).toBe("Nenhum agente ainda");
+    expect(line.textContent).not.toContain("Conectado como");
+    expect(within(section).queryByRole("button", { name: "Quem usa GitHub" })).toBeNull();
+    await click(line);
+    expect(line.getAttribute("aria-expanded")).toBe("true");
+    const more = document.getElementById(line.getAttribute("aria-controls") ?? "") as HTMLElement;
+    expect(more.inert).toBe(false);
+    expect(more.textContent).toContain("Conectado como acme");
+    // Its actions are one row of bare words, the ⋯ last.
+    expect([...more.querySelectorAll(".ac-acts > button")].map((b) => b.className)).toEqual([
+      "ac-link ac-link--action",
+      "ac-link ac-link--action",
+      "ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon",
+    ]);
+    expect(within(more).getByRole("button", { name: "Quem usa GitHub" }).textContent).toBe("Quem usa");
+    await click(line);
+    expect(line.getAttribute("aria-expanded")).toBe("false");
+    expect(more.inert).toBe(true);
+    expect(within(section).queryByRole("button", { name: "Quem usa GitHub" })).toBeNull();
     expect(section.textContent).toContain("GitHub");
     expect(section.textContent).toContain("Ativo");
     expect(section.textContent).toContain("Conectado como acme");

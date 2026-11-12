@@ -91,6 +91,8 @@ export const STORAGE_KEYS = {
   skillInstallFor: "agentes.skills.installFor",
   /** In `sessionStore`: the address this tab signed up with, when the server emailed it a confirmation link. */
   confirmationSent: "agentes.confirmation.sent",
+  /** In `sessionStore`: Criar agente's steps as filled in, while a sign-in elsewhere reloads the app (lib/flow-return.ts). */
+  newAgentDraft: "agentes.newAgent.draft",
   /** In `sessionStore`: the last page this tab showed outside a flow, where the flow's exits go (lib/return-to.ts). */
   flowReturn: "agentes.flow.return",
   /** In `sessionStore`: my messages waiting for the connection (the shared `outbox`), kept through a reload. */

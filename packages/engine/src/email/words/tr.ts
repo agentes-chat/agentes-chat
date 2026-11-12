@@ -307,7 +307,7 @@ export const words: EmailWords = {
     headline: "Kodunuz",
     workspace: (org) => [
       { b: org },
-      " çalışma alanını silmek için bu kodu yazın. Çalışma alanı herkes için hemen kapanır ve 7 gün sonra kalıcı olarak silinir.",
+      " çalışma alanını silmek için bu kodu yazın. Çalışma alanı herkes için hemen salt okunur olur ve 7 gün sonra kalıcı olarak silinir.",
     ],
     account: (email) => [
       { b: email },
@@ -326,19 +326,19 @@ export const words: EmailWords = {
     personal: {
       workspace: (org) => [
         { b: org },
-        " çalışma alanınızı silmek için bu kodu yazın. Hemen kapanır ve 7 gün sonra kalıcı olarak silinir.",
+        " çalışma alanınızı silmek için bu kodu yazın. Hemen salt okunur olur ve 7 gün sonra kalıcı olarak silinir.",
       ],
     },
   },
   deleting: {
     subject: (day) => `Bulunduğunuz bir çalışma alanı ${day} tarihinde silinecek`,
-    preheader: "Şu anda kapalı. Bir sahip o zamana kadar geri yükleyebilir.",
+    preheader: "Şu anda salt okunur. Bir sahip o zamana kadar geri yükleyebilir.",
     headline: "Bir çalışma alanı siliniyor",
     body: (by, org, day, time) => [
       { b: by },
       ", ",
       { b: org },
-      ` çalışma alanını sildi. Şu anda kapalı ve ${day} ${time} itibarıyla kalıcı olarak silinecek.`,
+      ` çalışma alanını sildi. Şu anda salt okunur ve ${day} ${time} itibarıyla kalıcı olarak silinecek.`,
     ],
     owner: "Fikrinizi mi değiştirdiniz? O zamana kadar geri yükleyin.",
     button: "Çalışma alanını geri yükle",

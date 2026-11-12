@@ -13,7 +13,9 @@ import { relativeTime, whenAt } from "@agenteschat/client/lib/format";
 import { githubLinkLabel, isGithubLink } from "@agenteschat/client/lib/github-link";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { webUrl } from "@agenteschat/client/lib/guards";
+import { NO_PROJECT } from "@agenteschat/client/lib/issue-projects";
 import { issueEventText } from "@agenteschat/client/lib/issues";
+import { can } from "@agenteschat/client/lib/permissions";
 import { foldSteps } from "@agenteschat/client/lib/work";
 import {
   Alert,
@@ -77,6 +79,7 @@ import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { useIssueRealtime } from "@/realtime/context";
 import { IssueDeleteButton, IssueDeleteProvider, useIssueDeleting } from "./IssueDelete";
+import { NEW_PROJECT, ProjectDialog, useProjectOptions } from "./IssueProjects";
 import { PRIORITY_ICON } from "./IssuesToolbar";
 import "./issues.css";
 
@@ -880,7 +883,7 @@ function useWhoSeesShown(i: Issue) {
 }
 
 /**
- * The task's fields as one strip under who made it, at every width: Coluna, Responsável, Prioridade, Prazo and Quem
+ * The task's fields as one strip under who made it, at every width: Projeto, Coluna, Responsável, Prioridade, Prazo and Quem
  * vê, each its icon or face and its value (its name on hover and to a screen reader), then after a hairline its pull
  * requests, labels and GitHub link. With no link yet, "GitHub" opens the field to paste one.
  */
@@ -890,6 +893,10 @@ function PropsLine({ issue: i }: { issue: Issue }) {
   const actors = useActors();
   const f = useIssueFields(i);
   const [choosing, setChoosing] = useState(false);
+  const [newProject, setNewProject] = useState(false);
+  const action = useIssueAction(org.id);
+  const setProject = (projectId: string | null) => action.mutate({ type: "update", id: i.id, patch: { projectId } });
+  const projectOptions = useProjectOptions(i.project, can(org, "post"));
   const whoSees = useWhoSeesShown(i);
   const prop = (label: string, control: ReactNode) => (
     <span className="issue-prop" title={label}>
@@ -899,6 +906,17 @@ function PropsLine({ issue: i }: { issue: Issue }) {
   return (
     // biome-ignore lint/a11y/useSemanticElements: a labelled row of controls that change at once, not a form's fieldset
     <div className="ac-props issue-props" role="group" aria-label={t("issues.details")}>
+      {prop(
+        t("issues.projects.label"),
+        <Select
+          size="sm"
+          aria-label={t("issues.projects.label")}
+          value={i.project?.id ?? NO_PROJECT}
+          onValueChange={(v) => (v === NEW_PROJECT ? setNewProject(true) : setProject(v === NO_PROJECT ? null : v))}
+          options={projectOptions}
+        />,
+      )}
+      {newProject && <ProjectDialog onClose={() => setNewProject(false)} onDone={(p) => setProject(p.id)} />}
       {prop(
         t("issues.column"),
         <Select

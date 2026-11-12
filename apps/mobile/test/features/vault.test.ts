@@ -541,6 +541,7 @@ describe("the request card and the screens", () => {
       vaultHref.list,
       vaultHref.item("i1"),
       vaultHref.create("team"),
+      vaultHref.env("team"),
       vaultHref.itemAccess("i1"),
       vaultHref.connectionAccess("c1"),
       vaultHref.connect("bitwarden"),

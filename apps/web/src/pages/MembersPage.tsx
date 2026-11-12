@@ -30,7 +30,7 @@ import {
 } from "@agenteschat/client/lib/format";
 import { approvalNews, JOIN_NOTE_MAX, JOIN_REASON_MAX, sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { membersFull } from "@agenteschat/client/lib/limits";
-import { can } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
 import { grants, rolesOf } from "@agenteschat/client/lib/roles";
 import { isEmail } from "@agenteschat/client/lib/text";
@@ -48,6 +48,7 @@ import {
   Field,
   FilterBar,
   FilterChip,
+  FoldRow,
   GroupHeading,
   Icon,
   type IconName,
@@ -57,19 +58,23 @@ import {
   Menu,
   MenuItem,
   MenuNote,
+  MenuSeparator,
+  MenuSub,
   PageHeader,
   PlanMeter,
+  planAttention,
   SwapLabel,
   Textarea,
 } from "@agenteschat/ui";
 import { useMutation } from "@tanstack/react-query";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { MenuEntries } from "@/components/DesktopMenus";
 import { usePersonMenu } from "@/components/entity-menus";
 import { useFilterCopy } from "@/components/filters";
 import { useCopied } from "@/components/invite/copied";
@@ -78,10 +83,10 @@ import { MembersFull } from "@/components/Limits";
 import { LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
 import { ProfileTrigger } from "@/components/ProfileCard";
-import { RolesPicker } from "@/components/roles/RolesPicker";
+import { RoleChoices, RolesPicker } from "@/components/roles/RolesPicker";
 import { RoleChip } from "@/components/roles/RolesSection";
 import { useDirectory } from "@/hooks/useDirectory";
-import { copyText } from "@/lib/context-menu";
+import { copyText, type MenuEntry } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
 import { planMeterText, usageShown } from "@/lib/plan-usage";
 import { TOAST_MS, useToast } from "@/lib/toast";
@@ -93,6 +98,8 @@ import { CreateAgentLink } from "@/components/new-agent/NewAgentDialog";
  * (tests shorten it).
  */
 export const undoWindow = { ms: TOAST_MS };
+
+type MenuItemEntry = Extract<MenuEntry, { kind: "item" }>;
 
 /** "agora", "há 2 h", "ontem", "em 22 out": when something happened, to follow a verb. */
 function whenWords(t: TFunction, locale: string, iso: string, now = new Date()) {
@@ -150,7 +157,7 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
   const month = formatMonth(i18n.language, new Date());
   const [roles, setRoles] = useState<string[]>([]);
   const personEntries = usePersonMenu();
-  const navigate = useNavigate();
+  const meterText = planMeterText(t, i18n.language);
   const allPeople = peopleQuery.data ?? [];
   // `?request=…&do=approve|deny`: the admins' email opens that request here.
   const search = useSearch({ strict: false }) as { request?: string; do?: string };
@@ -165,7 +172,7 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
       roles.length === 0 || roles.some((r) => (r === "owner" ? m.role === "owner" : (m.roleIds ?? []).includes(r))),
   );
   // A personal workspace (ADR 0159): a few people need no filter by role, and its owner's own row leaves their roles
-  // out (they say nothing to them); everyone else's keep theirs, and the "+" to give one.
+  // out (they say nothing to them); everyone else's keep theirs, and their menu gives one.
   const personal = isPersonal(org);
 
   return (
@@ -223,9 +230,15 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
             {people.map((m) => {
               const isMe = m.userId === me.user.id;
               const held = rolesOf(m, orgRoles);
-              // The server says who is below whom; here the "+" shows when there's anything to give.
+              // The server says who is below whom; here the roles show in the menu when there's anything to give.
               const gives = manage && (m.role !== "owner" || org.role === "owner") && orgRoles.some((r) => r.givable);
               const ownRoles = personal && isMe && m.role === "owner";
+              const linksPassword = !isMe && makesPasswordLinks;
+              // The row's own menu: of the person's right-click menu, what acts on them here.
+              const acts = personEntries(m).filter(
+                (e): e is MenuItemEntry => e.kind === "item" && (e.id === "dm" || e.id === "remove"),
+              );
+              const out = acts.filter((e) => e.id === "remove");
               return (
                 <div key={m.userId} className="ac-list__row members-person" {...entityMenu(() => personEntries(m))}>
                   <ProfileTrigger
@@ -255,31 +268,29 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
                       <span>{m.email}</span>
                     </span>
                   </span>
-                  <span className="members-person__end ac-captail ac-captop">
-                    <span className="small muted members-person__seen">
+                  {!ownRoles && (m.role === "owner" || held.length > 0) && (
+                    <span className="members-roles">
+                      {m.role === "owner" && (
+                        <Chip icon="audienceOwner" title={t("roles.ownerTitle")}>
+                          {t("roles.owner")}
+                        </Chip>
+                      )}
+                      {held.map((r) => (
+                        <RoleChip key={r.id} role={r} />
+                      ))}
+                    </span>
+                  )}
+                  <span className="members-person__seen ac-captail ac-captop">
+                    <span className="small muted">
                       {m.online
                         ? t("members.activeNow")
                         : m.lastSeenAt
                           ? t("members.seen", { when: relativeTime(t, i18n.language, m.lastSeenAt) })
                           : t("members.joined", { when: formatShortDate(i18n.language, m.joinedAt) })}
                     </span>
-                    {!isMe && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        iconOnly
-                        icon="message"
-                        aria-label={t("profile.messageTo", { name: m.name })}
-                        title={t("profile.messageTo", { name: m.name })}
-                        onClick={() =>
-                          void navigate({
-                            to: "/org/$orgId/dm/person/$userId",
-                            params: { orgId: org.id, userId: m.userId },
-                          })
-                        }
-                      />
-                    )}
-                    {!isMe && makesPasswordLinks && (
+                  </span>
+                  <span className="members-person__menu ac-captail ac-captop">
+                    {(acts.length > 0 || gives || linksPassword) && (
                       <Menu
                         align="end"
                         label={t("members.moreOf", { name: m.name })}
@@ -293,50 +304,40 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
                           />
                         }
                       >
-                        <MenuItem
-                          icon="key"
-                          description={t("members.passwordLink.hint")}
-                          onSelect={() => setPasswordLinkFor({ userId: m.userId, name: m.name })}
-                        >
-                          {t("members.passwordLink.item")}
-                        </MenuItem>
+                        <MenuEntries entries={acts.filter((e) => e.id === "dm")} />
+                        {gives && (
+                          <MenuSub
+                            icon="shield"
+                            label={t(
+                              m.role === "owner" || held.length > 0 ? "members.rolesChange" : "members.rolesAdd",
+                            )}
+                          >
+                            <RoleChoices
+                              roles={orgRoles}
+                              value={m.roleIds ?? []}
+                              onChange={(roleIds) =>
+                                setRolesOf.mutate(
+                                  { userId: m.userId, roleIds },
+                                  { onError: (e) => toast.show(errorText(t, e), "error") },
+                                )
+                              }
+                            />
+                          </MenuSub>
+                        )}
+                        {linksPassword && (
+                          <MenuItem
+                            icon="key"
+                            description={t("members.passwordLink.hint")}
+                            onSelect={() => setPasswordLinkFor({ userId: m.userId, name: m.name })}
+                          >
+                            {t("members.passwordLink.item")}
+                          </MenuItem>
+                        )}
+                        {out.length > 0 && (acts.length > out.length || gives || linksPassword) && <MenuSeparator />}
+                        <MenuEntries entries={out} />
                       </Menu>
                     )}
                   </span>
-                  {!ownRoles && (
-                    <span className="members-roles">
-                      {m.role === "owner" && (
-                        <Chip icon="audienceOwner" title={t("roles.ownerTitle")}>
-                          {t("roles.owner")}
-                        </Chip>
-                      )}
-                      {held.map((r) => (
-                        <RoleChip key={r.id} role={r} />
-                      ))}
-                      {gives && (
-                        <RolesPicker
-                          roles={orgRoles}
-                          value={m.roleIds ?? []}
-                          onChange={(roleIds) =>
-                            setRolesOf.mutate(
-                              { userId: m.userId, roleIds },
-                              { onError: (e) => toast.show(errorText(t, e), "error") },
-                            )
-                          }
-                          label={t("members.rolesOf", { name: m.name })}
-                          trigger={
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              iconOnly
-                              icon="plus"
-                              aria-label={t("members.rolesOf", { name: m.name })}
-                            />
-                          }
-                        />
-                      )}
-                    </span>
-                  )}
                 </div>
               );
             })}
@@ -345,11 +346,7 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
         </section>
 
         <section aria-labelledby="sec-agents" className="section section--tight">
-          <GroupHeading
-            id="sec-agents"
-            title={t("members.agents")}
-            aside={can(org, "create_agents") && <CreateAgentLink />}
-          />
+          <GroupHeading id="sec-agents" title={t("members.agents")} aside={makesAgents(org) && <CreateAgentLink />} />
           <List>
             {dir.agents.length === 0 && <div className="ac-list__row muted">{t("members.noAgents")}</div>}
             {dir.agents.map((a) => {
@@ -357,44 +354,59 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
               // Its plan's limits, the budget under them only once it spent through the API (ADR 0063 §5).
               const shown = usageShown(a.brain, a.budgetUsedPercent ?? 0);
               const budget = shown.budget && a.budgetUsedPercent !== undefined;
+              const attention = shown.plan && planAttention(shown.plan.usage, meterText);
               return (
-                <Link
+                <FoldRow
                   key={a.id}
-                  to="/org/$orgId/agents/$agentId"
-                  params={{ orgId: org.id, agentId: a.id }}
-                  className="ac-list__row"
+                  className="members-agent"
+                  face={<AgentAvatar agentId={a.id} size="md" name={a.name} />}
+                  title={
+                    <>
+                      <b>
+                        {a.name}
+                        {a.role ? ` · ${a.role}` : ""}
+                      </b>
+                      <span className="ac-mediarow__meta">
+                        {owner ? t("members.ownerLine", { name: owner.name }) : t("members.noOwner")}
+                      </span>
+                    </>
+                  }
+                  end={
+                    attention && (
+                      <span className="ac-planword" data-level={attention.level}>
+                        {attention.word}
+                      </span>
+                    )
+                  }
                 >
-                  <AgentAvatar agentId={a.id} size="md" name={a.name} />
-                  <span className="list-col">
-                    <span style={{ fontWeight: 600 }}>
-                      {a.name}
-                      {a.role ? ` · ${a.role}` : ""}
-                    </span>
-                    <span className="small muted">
-                      {owner ? t("members.ownerLine", { name: owner.name }) : t("members.noOwner")}
-                    </span>
-                  </span>
-                  {(shown.plan || budget) && (
-                    <div className="list-col" style={{ flex: "0 1 220px", gap: 4 }}>
-                      {shown.plan && (
-                        <PlanMeter
-                          compact
-                          usage={shown.plan.usage}
-                          text={planMeterText(t, i18n.language)}
-                          label={shown.plan.account}
-                        />
-                      )}
-                      {budget && (
-                        <span className="small muted tabular">
-                          {t("members.budgetLine", {
-                            percent: formatPercent(i18n.language, a.budgetUsedPercent ?? 0),
-                            month,
-                          })}
-                        </span>
-                      )}
-                    </div>
+                  {shown.plan && (
+                    <PlanMeter
+                      compact
+                      className="members-agent__usage"
+                      usage={shown.plan.usage}
+                      text={meterText}
+                      label={shown.plan.account}
+                    />
                   )}
-                </Link>
+                  {budget && (
+                    <span className="small muted tabular">
+                      {t("members.budgetLine", {
+                        percent: formatPercent(i18n.language, a.budgetUsedPercent ?? 0),
+                        month,
+                      })}
+                    </span>
+                  )}
+                  {!shown.plan && !budget && (
+                    <span className="small muted">{a.brain?.account ?? t("presence.agentWhy.noAi")}</span>
+                  )}
+                  <div className="ac-acts">
+                    <Button asChild variant="link">
+                      <Link to="/org/$orgId/agents/$agentId" params={{ orgId: org.id, agentId: a.id }}>
+                        {t("profile.viewProfile")}
+                      </Link>
+                    </Button>
+                  </div>
+                </FoldRow>
               );
             })}
           </List>

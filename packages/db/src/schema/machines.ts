@@ -201,6 +201,8 @@ export const machines = pgTable(
      */
     paused: boolean().notNull().default(false),
     pausedUntil: timestamp({ withTimezone: true }),
+    /** Who paused it from the apps (`REMOTE_PAUSE_PROTOCOL`); null when paused on the computer itself. */
+    pausedByUserId: text().references(() => users.id, { onDelete: "set null" }),
     /** Folders and tools the machine allows (protocol 10); null: its runner doesn't report them. */
     access: jsonb().$type<MachineAccess>(),
     /** Its size (protocol 22, kept from the last runner that said); null: unknown. */

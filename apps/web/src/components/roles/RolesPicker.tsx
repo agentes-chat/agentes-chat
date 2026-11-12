@@ -35,13 +35,7 @@ export function RolesPicker({
   align?: "start" | "end";
 }) {
   const { t } = useTranslation();
-  const { org } = useOrg();
-  const givable = sortRoles(roles.filter((r) => !isEveryone(r) && r.givable));
-  // A personal workspace says it in the invitation's plain words (ADR 0159), naming its helper role as it's called.
-  const helper = isPersonal(org) ? personalHelperRole(roles) : null;
   const picked = sortRoles(roles.filter((r) => value.includes(r.id)));
-  const toggle = (id: string, on: boolean) =>
-    onChange(on ? [...new Set([...value, id])] : value.filter((v) => v !== id));
   return (
     <Menu
       label={label}
@@ -59,6 +53,33 @@ export function RolesPicker({
       }
     >
       <MenuHeading>{label}</MenuHeading>
+      <RoleChoices roles={roles} value={value} onChange={onChange} />
+    </Menu>
+  );
+}
+
+/**
+ * The roles the viewer may give, as checkable items of a menu that stays open, and the note about everyone's base
+ * role: the picker's own list, and a person's "Mudar papéis" in their row's menu.
+ */
+export function RoleChoices({
+  roles,
+  value,
+  onChange,
+}: {
+  roles: readonly OrgRole[];
+  value: readonly string[];
+  onChange: (roleIds: string[]) => void;
+}) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const givable = sortRoles(roles.filter((r) => !isEveryone(r) && r.givable));
+  // A personal workspace says it in the invitation's plain words (ADR 0159), naming its helper role as it's called.
+  const helper = isPersonal(org) ? personalHelperRole(roles) : null;
+  const toggle = (id: string, on: boolean) =>
+    onChange(on ? [...new Set([...value, id])] : value.filter((v) => v !== id));
+  return (
+    <>
       {givable.map((r) => (
         <MenuCheckboxItem key={r.id} checked={value.includes(r.id)} onCheckedChange={(on) => toggle(r.id, on)}>
           <span className="roles-picker__item">
@@ -74,6 +95,6 @@ export function RolesPicker({
             ? t("members.everyoneNotePersonal", { role: helper.name })
             : t("members.everyoneNote")}
       </MenuNote>
-    </Menu>
+    </>
   );
 }

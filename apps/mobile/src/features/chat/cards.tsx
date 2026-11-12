@@ -33,26 +33,15 @@ import {
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
-import { nextLabel } from "@agenteschat/client/lib/format";
+import { nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
-import {
-  ACT_LINE,
-  Button,
-  Count,
-  EventPillAction,
-  HoldButton,
-  Icon,
-  LineIcon,
-  Text,
-  useReducedMotion,
-  useToast,
-} from "@/ui";
+import { ACT_LINE, Button, Count, HoldButton, Icon, LineIcon, Text, useReducedMotion, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { approvalAction, approvalRisk, approveAlwaysToast } from "../approvals/logic";
 import {
@@ -80,7 +69,7 @@ import { agentLook, genderOf } from "../shared/logic";
 import { PromptForm } from "../shared/PromptForm";
 import { successHaptic, tapHaptic, useSurface } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
-import { AskCard, AskDone, AskFoot, ExpiryLine, useAskStore } from "./asks";
+import { type AskAnswer, AskCard, AskFoot, ExpiryLine, useAskStore } from "./asks";
 import { markName, parseInline, threadFaces } from "./logic";
 import { Spans } from "./MessageSpans";
 
@@ -92,9 +81,9 @@ import { Spans } from "./MessageSpans";
 // ── Approval ─────────────────────────────────────────────────────────────────
 
 /**
- * An approval in the conversation: while it waits, the request card (`ApprovalAsk`); after, one line with
- * what happened. Requests the agent asked later in this conversation join its card (`messageId`): then one card
- * lists them all (`ApprovalGroupAsk`).
+ * An approval in the conversation: the request card (`ApprovalAsk`), waiting or decided (the same card then says
+ * how it ended where its buttons were). Requests the agent asked later in this conversation join its card
+ * (`messageId`): then one card lists them all (`ApprovalGroupAsk`).
  */
 export function ApprovalInline({ approvalId, messageId }: { approvalId: string; messageId: string }) {
   const orgId = useOrgId();
@@ -111,18 +100,8 @@ export function ApprovalInline({ approvalId, messageId }: { approvalId: string; 
   const items = approvalCardItems([...(approvals.data ?? []), ...(card.data ?? [])], messageId, a).map((x) =>
     asOfNow(x),
   );
-  if (items.length > 1) {
-    if (items.some((x) => x.status === "pending")) return <ApprovalGroupAsk items={items} />;
-    return (
-      <>
-        {items.map((x) => (
-          <ApprovalDone key={x.id} approval={x} />
-        ))}
-      </>
-    );
-  }
-  if (a.status === "pending") return <ApprovalAsk approval={a} />;
-  return <ApprovalDone approval={a} />;
+  if (items.length > 1) return <ApprovalGroupAsk items={items} />;
+  return <ApprovalAsk approval={a} />;
 }
 
 /** Approvals whose burst already played: a pill scrolling back into view, or remounted, stays quiet. */
@@ -139,55 +118,41 @@ function celebrationFor(a: Approval, meId: string | null, color: string): string
 }
 
 /**
- * One decided request, as the conversation's event pill: how it ended and what it did ("Approved by you: Generate
- * image"), when it was decided; its values (so several of one tool are told apart), when it goes out if approved
- * ahead, and the reason open under it ("See details"). Approved ahead and still to run, "Cancel" withdraws it.
+ * How one request ended, for its card's foot: who decided ("Approved by you"), when, when it goes out if approved
+ * ahead and the reason under it, and "Cancel" while one approved ahead can still be withdrawn. Null while it waits.
  */
-function ApprovalDone({ approval: a }: { approval: Approval }) {
+function useApprovalAnswer(a: Approval): AskAnswer | null {
   const { t, i18n } = useTranslation();
   const meId = useMeId();
   const dir = useDirectory();
   const when = useWhen();
-  const outcome = decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name);
-  // Approved by me a moment ago (the card turning into this pill): the check bursts once in the agent's tones.
-  const [celebrate] = useState(() => celebrationFor(a, meId, agentLook(dir.anyAgent(a.agentId)).color));
-  // Approved ahead and still to run: when it goes out, said under its pill, and a way to withdraw it.
-  const scheduled = aheadPhase(a) === "scheduled" && a.runAt;
   const cancelAhead = useCancelAhead();
+  // Approved by me a moment ago (the card answered on screen): the check bursts once in the agent's tones.
+  const celebrate = useRef<string | null>(null);
+  if (a.status === "pending") return null;
+  celebrate.current ??= celebrationFor(a, meId, agentLook(dir.anyAgent(a.agentId)).color);
+  const scheduled = aheadPhase(a) === "scheduled" && a.runAt;
   const lines = [
-    approvalSummary(a, i18n.language),
     scheduled ? t("approval.ahead.scheduled", { when: nextLabel(i18n.language, scheduled) }) : null,
     a.reason ? t("approval.reasonLine", { reason: a.reason }) : null,
   ].filter((x): x is string => Boolean(x));
-  return (
-    <AskDone
-      done={a.status === "approved"}
-      words={`${outcome}: ${markName(approvalHeadline(t, a, i18n.language))}`}
-      celebrate={celebrate}
-      time={a.decidedAt ? when.short(a.decidedAt) : undefined}
-      actions={
-        scheduled && a.canCancel ? (
-          <EventPillAction
-            label={t("approval.ahead.cancel")}
-            loading={cancelAhead.pending}
-            onPress={() => cancelAhead.cancel(a.id)}
-          />
-        ) : null
-      }
-      more={
-        lines.length > 0
-          ? {
-              label: t("approval.seeDetails"),
-              content: (
-                <Text variant="small" tone="muted">
-                  {lines.join("\n")}
-                </Text>
-              ),
-            }
-          : undefined
-      }
-    />
-  );
+  return {
+    done: a.status === "approved",
+    words: decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
+    celebrate: celebrate.current,
+    time: a.decidedAt ? when.short(a.decidedAt) : undefined,
+    note: lines.join("\n") || null,
+    actions:
+      scheduled && a.canCancel ? (
+        <Button
+          variant="ghost"
+          size="card"
+          label={t("approval.ahead.cancel")}
+          loading={cancelAhead.pending}
+          onPress={() => cancelAhead.cancel(a.id)}
+        />
+      ) : null,
+  };
 }
 
 /**
@@ -353,7 +318,9 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
       kind="approval"
       agentId={first.agentId}
       waitsFor={ids.length > 0 ? "you" : owner ? t("ask.waitingFor", { name: owner }) : null}
-      lead={approvalWhy(leadItem) ?? approvalAskLine(t, ids.length > 0, waiting.length)}
+      // Every request decided: the same card, each item saying how it ended, and no foot.
+      ended={waiting.length === 0}
+      lead={approvalWhy(leadItem) ?? approvalAskLine(t, ids.length > 0, waiting.length || items.length)}
       well={
         single
           ? {
@@ -583,7 +550,7 @@ function ApprovalGroupItem({
  * exact action in the well with the app's mark ("Ver o e-mail" / "Ver detalhes" opens it whole, with where it
  * came from and "Aprovar sempre" where it is offered), then the strip with the fuse to its expiry and Aprovar
  * (held for a second when the risk is high) beside "Agora não" (the request's sheet, which asks why: a lesson
- * for the agent). Who can't decide sees who it waits for.
+ * for the agent). Who can't decide sees who it waits for. Decided, the same card says how it ended there.
  */
 function ApprovalAsk({ approval: a }: { approval: Approval }) {
   const { t, i18n } = useTranslation();
@@ -602,6 +569,7 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
   // A connector's detail is its raw call (`tool · key=value`), so its values in words instead, the call under "Ver
   // detalhes". An email's preview says to whom and about what: its line says only where it goes from.
   const source = useApprovalSource(a);
+  const answer = useApprovalAnswer(a);
   const previewed = hasApprovalPreview(a);
   const detail = previewed
     ? source.name
@@ -617,7 +585,8 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
       kindNote={high ? t(modeKey(org, "mobile.approval.leaves")) : undefined}
       agentId={a.agentId}
       waitsFor={a.canDecide ? "you" : owner ? t("ask.waitingFor", { name: owner }) : null}
-      lead={approvalWhy(a) ?? approvalAskLine(t, a.canDecide)}
+      answer={answer}
+      lead={approvalWhy(a) ?? approvalAskLine(t, a.canDecide && !answer)}
       preview={previewed ? <ApprovalPreview approval={a} /> : undefined}
       well={{
         tile: <ApprovalMark approval={a} size={20} bare />,
@@ -695,11 +664,11 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
 /**
  * An agent's question (`ask_user`, `meta.question`) as the request card: the question, then the choices as
  * full-width rows and "Outra resposta" for a free answer beside them; with no choices, just Responder. Once
- * answered, one line with the answer. Anyone in the conversation may answer, unless it is for one person: then
+ * answered, the same card with the answer where the choices were. Anyone in the conversation may answer, unless it is for one person: then
  * everyone else reads who it waits for, and nothing to press.
  */
 export function QuestionCard({ question }: { question: AgentQuestion }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const api = useApi();
   const orgId = useOrgId();
   const meId = useMeId();
@@ -747,14 +716,21 @@ export function QuestionCard({ question }: { question: AgentQuestion }) {
   };
   const busy = picking !== null || skipping;
 
+  // Answered, or closed with no answer: the same card, the question still its words, and who answered what where
+  // the choices were.
   if (q.status === "answered") {
     const who = q.answeredByUserId && q.answeredByUserId !== meId ? dir.memberById.get(q.answeredByUserId)?.name : null;
     const said = markName(q.answer ?? "");
     return (
-      <AskDone
-        done
-        words={
-          q.withdrawn
+      <AskCard
+        id={q.id}
+        kind="question"
+        agentId={q.agentId}
+        waitsFor={null}
+        lead={q.text}
+        answer={{
+          done: q.answer !== null && !q.withdrawn && !q.dismissed,
+          words: q.withdrawn
             ? t("question.withdrawn", agentGrammar(dir.anyAgent(q.agentId)?.name ?? t("channel.unknownAgent")))
             : q.dismissed
               ? who
@@ -764,8 +740,9 @@ export function QuestionCard({ question }: { question: AgentQuestion }) {
                 ? t(ended ? "mobile.chat.question.taken" : "mobile.chat.question.closed")
                 : who
                   ? t("mobile.chat.question.answered", { name: who, answer: said })
-                  : t("mobile.chat.question.answeredByYou", { answer: said })
-        }
+                  : t("mobile.chat.question.answeredByYou", { answer: said }),
+          time: q.answeredAt ? whenAt(t, i18n.language, q.answeredAt) : undefined,
+        }}
       />
     );
   }

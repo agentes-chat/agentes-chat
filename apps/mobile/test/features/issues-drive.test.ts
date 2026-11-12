@@ -585,11 +585,13 @@ describe("a task's number and title on one row; its conversation on the card", (
     expect(header).toContain("paddingTop: Math.max(0, (TOOL_H - line) / 2)");
     const screen = await read("issues/IssuesScreen.tsx");
     expect(screen).toContain('{...(mayNew && g.column.stage === "todo" ? { onNew: newIn(g.column.id) } : {})}');
-    expect(screen).toContain('router.push({ pathname: "/issues/new", params: { column } })');
-    expect(screen).toContain("<Board right={right} views={views} mayNew={mayNew} />");
+    // From a project's tasks, the new one starts in that project too.
+    expect(screen).toContain('pathname: "/issues/new",');
+    expect(screen).toContain("params: { column, ...(project && project !== NO_PROJECT ? { project } : {}) },");
+    expect(screen).toContain("<Board right={right} views={views} mayNew={mayNew} project={shown} />");
     // Nova tarefa says the column and puts the task there (an agent picked starts it and moves it on).
     const form = await read("issues/NewIssueForm.tsx");
-    expect(form).toContain("useLocalSearchParams<{ column?: string }>()");
+    expect(form).toContain("useLocalSearchParams<{ column?: string; project?: string }>()");
     expect(form).toContain(
       '<GroupedRow icon="circle" label={t("issues.column")} sub={columnLabel(column)} subLines={0} />',
     );
@@ -605,6 +607,7 @@ describe("a task's number and title on one row; its conversation on the card", (
       (m) => [m[1], m[2]],
     );
     expect(fields).toEqual([
+      ["issues.projects.label", "pickProject"],
       ["issues.column", "pickColumn"],
       ["issues.form.assignee", "pickAssignee"],
       ["issues.form.priority", "pickPriority"],
@@ -612,13 +615,18 @@ describe("a task's number and title on one row; its conversation on the card", (
       ["whoSees.label", "pickWhoSees"],
     ]);
     // A control, not a pill: 32 high (the toolbar's), the web's control radius, its target grown to a finger's.
-    expect(screen).toMatch(/prop: \{[^}]*minHeight: TOOL_H,[^}]*borderRadius: 10,/);
-    // A long value (a column's name, seven people) wraps inside it, never cut, its mark on the first line.
-    const chip = screen.slice(screen.indexOf("function PropChip("), screen.indexOf("/** Pastes, changes or removes"));
+    // The chip is the tasks' own part: the list's project filter wears it too.
+    const parts = await read("issues/parts.tsx");
+    expect(parts).toMatch(/prop: \{[^}]*minHeight: TOOL_H,[^}]*borderRadius: 10,/);
+    // A long value (a column's name, seven people, a project's) wraps inside it, never cut, its mark on the first line.
+    const chip = parts.slice(
+      parts.indexOf("export function PropChip("),
+      parts.indexOf("const styles = StyleSheet.create"),
+    );
     expect(chip).not.toContain("numberOfLines");
     expect(chip).toContain('<View style={{ height: line, justifyContent: "center" }}>');
-    expect(screen).toMatch(/prop: \{[^}]*alignItems: "flex-start",[^}]*paddingVertical: \(TOOL_H - PROP_LINE\) \/ 2,/);
-    expect(head).toContain("hitSlop={{ top: (TOUCH - TOOL_H) / 2, bottom: (TOUCH - TOOL_H) / 2 }}");
+    expect(parts).toMatch(/prop: \{[^}]*alignItems: "flex-start",[^}]*paddingVertical: \(TOOL_H - PROP_LINE\) \/ 2,/);
+    expect(chip).toContain("hitSlop={{ top: (TOUCH - TOOL_H) / 2, bottom: (TOUCH - TOOL_H) / 2 }}");
     // The head and "…" open the same pickers.
     const menu = screen.slice(screen.indexOf("function IssueMenu("));
     for (const picker of ["pickColumn", "pickPriority", "pickAssignee", "pickWhoSees"])

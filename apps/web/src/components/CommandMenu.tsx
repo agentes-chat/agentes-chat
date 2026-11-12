@@ -97,6 +97,7 @@ export function CommandMenu() {
     const pages = [
       { key: "home", to: "/org/$orgId/home", icon: "home", label: t("shell.home") },
       { key: "dashboards", to: "/org/$orgId/dashboards", icon: "chart", label: t("dashboards.title") },
+      { key: "waiting", to: "/org/$orgId/waiting", icon: "question", label: t("shell.waiting") },
       { key: "approvals", to: "/org/$orgId/approvals", icon: "waiting", label: t("shell.approvals") },
       { key: "proposals", to: "/org/$orgId/proposals", icon: "bulb", label: t("shell.proposals") },
       { key: "issues", to: "/org/$orgId/issues", icon: "issues", label: t("shell.issues") },

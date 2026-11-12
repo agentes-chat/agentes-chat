@@ -32,7 +32,15 @@ const mine = {
   layout: "list",
   group: "assignee",
   sort: "priority",
-  fields: { assignee: true, priority: true, due: false, criteria: true, pullRequest: false, label: true },
+  fields: {
+    project: false,
+    assignee: true,
+    priority: true,
+    due: false,
+    criteria: true,
+    pullRequest: false,
+    label: true,
+  },
   assignees: ["none"],
   priorities: ["high"],
   showCanceled: true,
@@ -57,6 +65,12 @@ test("Tarefas' view: each person's own, per workspace, on every device; known pa
   // A filter twice is kept once; a part the app doesn't know is dropped.
   const twice = { ...mine, assignees: ["none", "none"], extra: 1 };
   expect(await (await owner(path, { method: "PUT", json: { view: twice } })).json()).toEqual({ view: mine });
+
+  // An app from before projects saves its fields without `project`: the cards keep showing it.
+  const { project: _project, ...older } = mine.fields;
+  const fromOlder = await owner(path, { method: "PUT", json: { view: { ...mine, fields: older } } });
+  expect(await fromOlder.json()).toEqual({ view: { ...mine, fields: { ...mine.fields, project: true } } });
+  await owner(path, { method: "PUT", json: { view: mine } });
 
   // A layout, a grouping, an order, a priority or an assignee the app doesn't know, or a part missing: refused, kept.
   const { showCanceled: _, ...partial } = mine;

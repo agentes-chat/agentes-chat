@@ -3522,6 +3522,31 @@ html:not([data-pointer]) .channel-ref:focus-visible {
   margin-top: 2px;
   font-size: 13px;
 }
+/*
+ * A tall message in a conversation (ClippedBody): whole up to `LONG_MESSAGE.over`, past it only its first
+ * `LONG_MESSAGE.shows`, fading out, with "Ver mais" under it. The limits sit on the words' own root, so the bubble
+ * still reads them as its direct child. `clip`, not `hidden`: the browser's find must not scroll the words inside
+ * their box. Only a cut message is clipped: one that shows whole keeps whatever reaches past its lines.
+ */
+.msg-clip--cut {
+  max-height: 360px;
+  overflow-y: clip;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 96px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 96px), transparent);
+}
+.msg-clip__more {
+  display: inline-block;
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: inherit;
+}
+/* The same message whole, in its dialog: the conversation's reading size, room under the last line. */
+.msg-clip__whole {
+  padding-bottom: var(--dialog-pad);
+  font-size: var(--msg-text, 14px);
+  line-height: var(--msg-line, 24px);
+  overflow-wrap: anywhere;
+}
 .channel-card__head {
   display: flex;
   align-items: center;
@@ -3577,6 +3602,24 @@ html:not([data-pointer]) .channel-ref:focus-visible {
 }
 .level-row__text {
   gap: 2px;
+}
+/* A short fact under the name (`meta`): the tile, the two lines and the level share one middle, and a row without the
+   fact is as tall as one with it. */
+.level-row--meta {
+  align-items: center;
+}
+.level-row--meta > .ac-mediarow__face {
+  margin-block-start: 0;
+}
+.level-row--meta > .ac-mediarow__head {
+  flex-flow: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: var(--control-h-md);
+  padding-block-start: 0;
+}
+.level-row--meta > .ac-mediarow__end {
+  height: auto;
 }
 /* The level control's middle on the icon's. */
 .level-row__name {
@@ -3772,7 +3815,7 @@ html:not([data-pointer]) .skill-file--open:focus-visible {
 }
 .skill-picks > legend {
   padding: 0;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-2);
 }
 .skill-pick__name {
   font-weight: 600;
@@ -4208,6 +4251,16 @@ html:not([data-pointer]) .settings__link:focus-visible {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+/* A workspace being deleted: the section's controls greyed out at once (ADR 0088 §7), laid out as without it. */
+.settings__frozen {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 /* "Salvo": shows for a moment after each automatic save. */
 .settings__saved {
@@ -4910,8 +4963,8 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
   height: 12px;
 }
 
-/* Settings → Conectores: one row per connected service, a MediaRow (the tile and the name on one line, the details,
-   who uses it and the actions under them at the row's width). The details wrap whole, never cut. */
+/* Settings → Conectores: one line per connected service (the kit's FoldRow: the tile, the name, its pill, who uses
+   it), opening to its details and its actions. The details wrap whole, never cut. */
 .connected-list {
   container-type: inline-size;
 }
@@ -4922,14 +4975,15 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
 .connected-row__who {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
   white-space: nowrap;
 }
+/* Cofre › a connection's buttons, under its details (its row stays open: it holds a link and what to fix). */
 .connected-row__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /*
@@ -5155,9 +5209,8 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
   color: var(--ink2);
   box-shadow: inset 0 0 0 1px var(--line);
 }
+/* With .ac-iconline: the lock stays on the first line when the sentence wraps. */
 .cflow__asks {
-  display: flex;
-  align-items: center;
   gap: 6px;
   margin: 0;
 }
@@ -8315,6 +8368,8 @@ html:not([data-pointer]) .machine-connect__toggle:focus-visible {
 .hold-banner .outage__text b {
   flex-shrink: 1;
   max-width: none;
+  /* A long workspace name never leaves the end of the date alone on a line ("…em 17" / "nov"). */
+  text-wrap: pretty;
 }
 /*
  * A hold's lines start at the top, 11px over the first and under the last, so one line keeps the 44px strip, and its
@@ -8355,26 +8410,6 @@ html:not([data-pointer]) .machine-connect__toggle:focus-visible {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-/* A suspended workspace's screen: where to ask on a line of its own, its other workspaces under the notice. A
-   workspace being deleted: who may restore it, on a line of its own the same way. */
-.suspended-page .support-line,
-.suspended-page .deleting-page__members {
-  display: block;
-  margin-top: 6px;
-}
-.suspended-page__others {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-.suspended-page__others > h2 {
-  flex-basis: 100%;
-}
-.suspended-page__account {
-  margin-top: 32px;
 }
 .computers-agent {
   flex-wrap: wrap;
@@ -8967,7 +9002,7 @@ html:not([data-pointer]) .onb__step:focus-visible {
   }
 }
 .newag .onb__head {
-  margin-bottom: 22px;
+  margin-bottom: var(--space-6);
 }
 .newag__title:focus {
   outline: none;
@@ -9011,25 +9046,27 @@ html:not([data-pointer]) .onb__step:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: var(--space-3);
   color: var(--danger);
   font-size: 12.5px;
 }
 .newag__card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-4);
 }
+/* A section's label, 24 under what came before and 8 over its block; an action of the section (Sortear, Instalar
+   skill) ends its line. Centred, not on a baseline: a label that starts with an icon has the icon's bottom for one. */
 .newag__sect {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 22px 0 10px;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-2);
 }
 /* "Connect an AI" under the model's notes, the 12px a note keeps from what is above it. */
 .newag__connect {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 .newag__sect--first {
   margin-top: 0;
@@ -9043,8 +9080,10 @@ html:not([data-pointer]) .onb__step:focus-visible {
   font-weight: 650;
   letter-spacing: -0.01em;
 }
-.newag__sect > .small {
-  text-align: right;
+/* The label with its "opcional" and ⓘ, in the label's type so the ⓘ sits on its capitals. */
+.newag__sect > .ac-hintline {
+  min-width: 0;
+  font-size: 15px;
 }
 .newag__label {
   display: flex;
@@ -9059,9 +9098,9 @@ html:not([data-pointer]) .onb__step:focus-visible {
   font-weight: 500;
 }
 .newag__note {
-  gap: 10px;
-  margin: 12px 0 0;
-  padding: 12px 14px;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
   border-radius: 14px;
   background: var(--plate);
   color: var(--muted);
@@ -9110,14 +9149,14 @@ html:not([data-pointer]) .onb__step:focus-visible {
 .newag__scratch {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 /* Two across while a card holds its longest name ("Atendimento", 150px) beside the face and clear of the check, one per
    row below that. */
 .newag__roles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 276px), 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 /* Pressable cards: the role presets, the look options. */
 .newag__role,
@@ -9376,8 +9415,8 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 .newag__origin {
   display: flex;
@@ -9395,8 +9434,8 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   display: grid;
   /* Three across when there's room; one per row in a narrow card (titles stay on one line). */
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
-  gap: 10px;
-  margin-top: 14px;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 .newag__tip {
   gap: 4px;
@@ -9430,22 +9469,32 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   color: var(--ink-muted);
   font-size: 12.5px;
 }
+/* Its words wrap on a phone: the icon stays on their first line (`.ac-iconline` on the row). */
 .newag__addrow {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
   border: 1.5px dashed var(--line2);
   border-radius: 16px;
+  background: none;
   color: var(--muted);
+  font: inherit;
   font-size: 13.5px;
   font-weight: 600;
+  text-align: start;
   text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-base) var(--out),
+    color var(--dur-base) var(--out);
 }
 .newag__addrow:hover {
   background: var(--plate);
   color: var(--ink);
 }
+/* Where the row is a link to another page (an agent's Acesso), it says where it goes. */
 .newag__addrow-aside {
   margin-left: auto;
   color: var(--faint);
@@ -9454,24 +9503,6 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
 .newag__section {
   display: flex;
   flex-direction: column;
-}
-/* Pickers that look like the cards around them (owner, key) */
-.newag__sel .ac-select__trigger {
-  min-height: 60px;
-  height: auto;
-  padding: 10px 16px 10px 12px;
-  border: 0;
-  border-radius: 18px;
-  background: var(--raised);
-  box-shadow: var(--e1), var(--top);
-}
-.newag__card .newag__sel .ac-select__trigger {
-  background: var(--sunken);
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
 }
 /* With a tile beside its name and line it is a face line (`.ac-faceline`): the name's capitals at the tile's top. */
 .newag__sel-value {
@@ -9504,7 +9535,7 @@ html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
    below it as an error line or a note does. */
 .agp-brainsel + .small {
   display: block;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 .newag__money {
   display: flex;
@@ -9673,7 +9704,7 @@ html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
   }
   .newag__tips {
     display: flex;
-    margin: 14px -16px 0;
+    margin: var(--space-3) -16px 0;
     padding: 2px 16px 4px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -9701,11 +9732,7 @@ html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
   }
   .newag__sect {
     flex-wrap: wrap;
-    gap: 4px 12px;
-  }
-  .newag__sect > .small {
-    flex-basis: 100%;
-    text-align: left;
+    gap: var(--space-2) var(--space-3);
   }
   .newag__money-field {
     flex: 1 1 100%;
@@ -10035,7 +10062,8 @@ html:not([data-pointer]) .agp-cell:focus-visible {
 .agp-brainseg .ac-seg__item {
   flex: 1;
 }
-.agp-brainsel .ac-select__trigger {
+/* Only the row that shows a name over a line: a select's trigger shows one line and keeps the kit's height. */
+.agp-brainsel.agp-advrow .ac-select__trigger {
   min-height: 52px;
   height: auto;
   padding: 8px 14px 8px 10px;
@@ -13210,11 +13238,19 @@ html:not([data-pointer]) .channel__latest-btn.ac-btn:focus-visible {
   color: var(--faint);
 }
 /* "Theo pensando…      2 s ■": the time at the bar's end, beside the stop. With someone typing after it
-   ("Ada · 2 s · Marina digitando…") it stays with the phrase, what follows kept at the end. */
+   ("Ada · 2 s · Marina digitando…") it stays with the phrase, what follows kept at the end. One agent's step grows
+   nothing (its pieces are the bar's own): what ends the bar (the globe, Ver, the stop) is at its end before the time
+   comes too, which then comes in on their left and moves none of them. */
 .ac-typing[data-active="true"] .ac-typing__text:has(+ .ac-typing__elapsed) {
   flex: 0 1 auto;
 }
 .ac-typing__text + .ac-typing__elapsed {
+  margin-left: auto;
+}
+/* A rule of its own: in one list with the time's, the build wraps both in `:is()` and the time's would take this one's
+   weight, winning over the time's 0 below. */
+.ac-typing__text:has(> .ac-typing__agents > .ac-typing__step)
++ :is(.ac-typing__browser, .ac-typing__sep, .stop-run-wrap) {
   margin-left: auto;
 }
 .ac-typing__text + .ac-typing__elapsed:has(+ .ac-typing__also) {
@@ -13229,6 +13265,11 @@ html:not([data-pointer]) .channel__latest-btn.ac-btn:focus-visible {
 .ac-typing[data-active="true"] .ac-typing__text:has(> .ac-typing__agents > .ac-typing__step),
 .ac-typing__agents:has(> .ac-typing__step) {
   display: contents;
+}
+/* With their boxes gone, the name and the step stand over the bar's sky themselves, as its other pieces do (the
+   bar's children); unpositioned, the sky would paint over them. */
+.ac-typing__agents:has(> .ac-typing__step) > * {
+  position: relative;
 }
 .ac-typing__agents:has(> .ac-typing__step) > b {
   white-space: normal;
@@ -13691,6 +13732,16 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
   flex: 1 1 240px;
   margin: 0;
 }
+/* What the provider's own program said (a `pre`: its words as it wrote them), in the code well under the line about
+   it: whole, wrapped, to select and copy. It takes a line of the row, so the button goes under it, and gives up the
+   room of the indent it gets there. As tall as what it says: the dialog scrolls, never a second scroller inside it. */
+.ai-panel__row > .agp-addacct__said {
+  flex: 1 1 100%;
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
+  user-select: text;
+}
 /* Its two actions (an account already there): one under the other when they don't fit, and a long email ends in "…"
    (the note above says it whole). */
 .ai-panel__row > .ac-acts,
@@ -14115,15 +14166,17 @@ html:not([data-pointer]) .settings-row--open:focus-visible {
   height: 28px;
   font-size: 12px;
 }
-/* On a phone the icon, the words and a switch or a chevron stay on one line. Any other control (a choice of several,
-   a select, a field, buttons) goes under the words, from their edge (the 28px icon and the 12px gap), so the rows of
-   one card start their controls on one edge. */
+/* On a phone the icon, the words and a switch stay on one line while the words keep their 24 characters there (the
+   kit's `.ac-actrow` basis), else the switch goes under them, at the row's end: beside both, at 320, a long name would
+   wrap a word a line. A chevron stays on its line, its words shrinking (a line that opens something has no ⓘ). Any
+   other control (a choice of several, a select, a field, buttons) goes under the words, from their edge (the 28px icon
+   and the 12px gap), so the rows of one card start their controls on one edge. */
 @media (max-width: 760px) {
   .settings-row--lead {
     flex-wrap: wrap;
     gap: var(--space-2) var(--space-3);
   }
-  .settings-row--lead > .settings-row__text {
+  .settings-row--open > .settings-row__text {
     flex: 1 1 160px;
   }
   .settings-row--lead > .settings-row__end {
@@ -14136,30 +14189,30 @@ html:not([data-pointer]) .settings-row--open:focus-visible {
     padding-left: calc(28px + var(--space-3));
   }
   /* A line with a status under its name and a switch or nothing at its end: the icon, the name and the switch on one
-     line, the status under them at the row's full width, so the icon never owns a column beside three lines. A step
-     (`--space-2`, a MediaRow's) parts it from the icon: closer, it reads as the icon's caption. */
-  .settings-row--lead:has(> .settings-row__text > .settings-row__status):has(> .settings-row__end > .ac-switch),
-  .settings-row--lead:not(.settings-row--open):has(> .settings-row__text > .settings-row__status):not(
-    :has(> .settings-row__end)
-  ) {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--space-2) var(--space-3);
-  }
+     line as above (the name keeps the 24 characters), the status under them at the row's full width, so the icon never
+     owns a column beside three lines. A step (`--space-2`, a MediaRow's) parts it from the icon: closer, it reads as
+     the icon's caption. */
   .settings-row--lead:has(> .settings-row__end > .ac-switch) > .settings-row__text:has(> .settings-row__status),
   .settings-row--lead:not(.settings-row--open, :has(> .settings-row__end))
     > .settings-row__text:has(> .settings-row__status) {
     display: contents;
   }
+  .settings-row--lead:has(> .settings-row__end > .ac-switch)
+    > .settings-row__text:has(> .settings-row__status)
+    > :first-child,
+  .settings-row--lead:not(.settings-row--open, :has(> .settings-row__end))
+    > .settings-row__text:has(> .settings-row__status)
+    > :first-child {
+    flex: 1 1 24ch;
+    max-width: max-content;
+    min-width: 0;
+  }
   .settings-row--lead:has(> .settings-row__end > .ac-switch) > .settings-row__text > .settings-row__status,
   .settings-row--lead:not(.settings-row--open, :has(> .settings-row__end))
     > .settings-row__text
     > .settings-row__status {
-    grid-column: 1 / -1;
-  }
-  .settings-row--lead:has(> .settings-row__text > .settings-row__status) > .settings-row__end {
-    grid-area: 1 / 3;
+    flex-basis: 100%;
+    order: 1;
   }
   /* A line that opens something, with a status: the icon, the name and the chevron (a value before it) on one line,
      the status under them at the row's width, so the icon never owns a column beside three lines. */
@@ -14326,6 +14379,15 @@ html:not([data-pointer]) .voice-tile:has(.voice-tile__radio:focus-visible) {
   color: var(--ink);
   font-weight: 600;
 }
+/* What only the right hand does: plain lines, a tick on each first line. */
+.rh-powers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 .rh-set__budget {
   display: inline-flex;
   align-items: center;
@@ -14371,7 +14433,7 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
     flex-wrap: wrap;
     gap: 10px 14px;
   }
-  .agp-card .settings-row--lead > .settings-row__text {
+  .agp-card .settings-row--open > .settings-row__text {
     flex: 1 1 160px;
   }
   .agp-card .settings-row--lead > .settings-row__end:not(:has(> .ac-switch)) {

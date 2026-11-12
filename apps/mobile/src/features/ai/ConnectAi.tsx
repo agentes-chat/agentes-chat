@@ -10,7 +10,13 @@ import {
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { aiStateOf, choiceOfIntent, freePlanAccount, PLAN_CHOICES } from "@agenteschat/client/lib/no-ai";
+import {
+  aiStateOf,
+  choiceOfIntent,
+  freePlanAccount,
+  noAiLockedLine,
+  PLAN_CHOICES,
+} from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   keyLooksValid,
@@ -32,6 +38,7 @@ import { router } from "@/ui/navigation";
 import { useColors, useDirectory, useMeId } from "../shared/hooks";
 import { PushedHeader } from "../shared/parts";
 import { ConnectAiFlow, viewOf } from "./ConnectAiSteps";
+import { ConnectScene } from "./ConnectScene";
 import type { FlowView } from "./logic";
 import { PlanHoldNote, usePlanHold } from "./parts";
 
@@ -169,11 +176,7 @@ export function ConnectAiSheet() {
   // Someone else's agent: who connects a plan instead.
   const owner = one?.ownerUserId ? dir.memberById.get(one.ownerUserId)?.name : undefined;
   const locked =
-    agents.length > 0 || bare
-      ? undefined
-      : one && owner
-        ? t("noAi.locked", { name: one.name, owner: owner.split(" ")[0] })
-        : t("noAi.lockedAdmins");
+    agents.length > 0 || bare ? undefined : one ? noAiLockedLine(t, one.name, owner) : t("noAi.lockedAdmins");
   const close = () => {
     if (router.canGoBack()) router.back();
   };
@@ -202,6 +205,7 @@ export function ConnectAiSheet() {
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
       >
+        {view.page === "home" && !done ? <ConnectScene /> : null}
         {ready && view.page === "home" && !done ? (
           // The question the first page answers, then the ways under it.
           <View style={styles.head}>

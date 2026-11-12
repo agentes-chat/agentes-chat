@@ -356,8 +356,6 @@
     "switchWorking": "sedang bekerja",
     "join": "Gabung ke kanal",
     "sending": "Mengirim…",
-    "failed": "Tidak terkirim · Coba lagi",
-    "notSent": "Pesan tidak terkirim.",
     "toLatest": "Ke pesan terbaru",
     "toLatestNew": "Ke pesan terbaru: {{text}}",
     "stopAgent": "Hentikan {{name}}",
@@ -1582,13 +1580,7 @@
       "open": "Buka",
       "expandHint": "Ketuk untuk memperbesar",
       "stop": "Hentikan",
-      "giveUp": "Menyerah",
-      "done": "Selesai: {{title}}",
-      "failed": "Tidak berhasil: {{title}}",
-      "failedNote": "Tidak berhasil: {{note}}",
-      "expired": "Tidak ada yang membukanya tepat waktu: {{title}}",
-      "cancelled": "Dibatalkan: {{title}}",
-      "withdrawn": "{{name}} tidak lagi membutuhkan ini: {{title}}"
+      "giveUp": "Menyerah"
     },
     "live": {
       "inControl": "Kamu yang mengendalikan",
@@ -2140,9 +2132,9 @@
     "ofOnline": "{{online}} dari {{count}}",
     "deleteName": "Hapus {{name}}",
     "deleteFoot": "Kamu punya 7 hari untuk berubah pikiran.",
-    "deleteAlert": "Semua orang langsung keluar. Masih bisa dipulihkan selama 7 hari.",
+    "deleteAlert": "Mulai sekarang semua orang hanya bisa membacanya. Masih bisa dipulihkan selama 7 hari.",
     "deleteAction": "Hapus",
-    "deleteIntro": "{{name}} langsung ditutup untuk semua orang dan dihapus selamanya dalam 7 hari.",
+    "deleteIntro": "{{name}} langsung jadi hanya-baca untuk semua orang dan dihapus selamanya dalam 7 hari.",
     "holdDelete": "Tahan untuk menghapus",
     "deleteFailed": "Tidak bisa menghapus ruang kerja. Coba lagi.",
     "access": {
@@ -2433,7 +2425,6 @@
     },
     "formatAuto": "{{name}} memilih yang terbaik",
     "newWidget": {
-      "titleHint": "Judul · {{name}} menyarankan satu saat diuji",
       "alerts": "Peringatan aktif",
       "realData": "Data sungguhan",
       "editAsk": "Ubah permintaan",

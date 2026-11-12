@@ -1,6 +1,7 @@
 import type { ConnectedApp, PersonalToken } from "@agenteschat/client";
 import { useAppActions, useApps } from "@agenteschat/client";
 import { appFacts, appMark, appsSettingsUrl, isAppsEmpty, tokenFacts } from "@agenteschat/client/lib/apps";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
@@ -22,7 +23,7 @@ export function AppsScreen() {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const toast = useToast();
-  const { orgId } = useOrg();
+  const { orgId, org } = useOrg();
   const list = useApps(orgId);
   const { disconnect, revokeToken } = useAppActions(orgId);
   const title = t("settings.section.apps");
@@ -77,7 +78,7 @@ export function AppsScreen() {
     );
   };
   return (
-    <SettingsPage title={title}>
+    <SettingsPage title={title} frozen={settingsFrozen(org, "apps")}>
       <Loaded>
         <GroupedFooter>{t("settings.sectionText.apps")}</GroupedFooter>
         <GroupedHeader>{t("apps.server")}</GroupedHeader>

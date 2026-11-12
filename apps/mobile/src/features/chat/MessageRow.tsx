@@ -24,7 +24,7 @@ import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
-import { CONTINUE_ERRORS, errorCode, errorText } from "@agenteschat/client/lib/errors";
+import { CONTINUE_ERRORS, errorCode, errorText, sendFailureText, sendNeedsEdit } from "@agenteschat/client/lib/errors";
 import { mentionsReader } from "@agenteschat/client/lib/everyone";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { issueWorkOf } from "@agenteschat/client/lib/issues";
@@ -99,6 +99,7 @@ import { VoiceMessage } from "../voice/VoiceMessage";
 import { ReceiptMark } from "./AgentReceipts";
 import { secretRequestOf } from "./ask-store";
 import { ChatMedia } from "./ChatMedia";
+import { ClippedMessage } from "./ClippedMessage";
 import { ConsultPairRow, useRunConsults } from "./ConsultGroup";
 import { ApprovalInline, QuestionCard, ThreadLink } from "./cards";
 import { FeedbackOfferRow } from "./FeedbackOffer";
@@ -111,6 +112,7 @@ import {
   chatNameOf,
   chatTimeOf,
   consultationsOf,
+  DOUBLE_TAP_MS,
   hangsUnder,
   hidesBody,
   MSG_AVATAR,
@@ -469,7 +471,10 @@ export const MessageRow = memo(function MessageRow({
           style={({ pressed }) => pressed && styles.pressedDim}
         >
           <Text variant="caption" tone="danger" style={onRight ? styles.meStatus : undefined}>
-            {t("mobile.chat.failed")}
+            {sendFailureText(t, m.sendFailure, i18n.language)}
+          </Text>
+          <Text variant="caption" tone="ink" style={[styles.retry, onRight ? styles.meStatus : undefined]}>
+            {t(sendNeedsEdit(m.sendFailure) ? "channel.editSend" : "channel.retrySend")}
           </Text>
           {/* Why, as it came: a voice note that never left says what stopped it instead of waiting in silence. */}
           {typeof meta?.sendError === "string" ? (
@@ -512,15 +517,17 @@ export const MessageRow = memo(function MessageRow({
       >
         {quote ? <QuotePlate reply={quote} onJump={onQuote} {...(solidInk ? { ink: solidInk } : {})} /> : null}
         <View style={bubbled ? styles.bubbleLine : undefined}>
-          <MessageText
-            body={body}
-            muted={m.local === "pending"}
-            selectable={false}
-            accent={accent}
-            channelRefs={channelRefsOf(m.meta)}
-            everyone={m.meta?.mentionsEveryone === true}
-            {...(solidInk ? { ink: solidInk } : {})}
-          />
+          <ClippedMessage name={name} body={body} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
+            <MessageText
+              body={body}
+              muted={m.local === "pending"}
+              selectable={false}
+              accent={accent}
+              channelRefs={channelRefsOf(m.meta)}
+              everyone={m.meta?.mentionsEveryone === true}
+              {...(solidInk ? { ink: solidInk } : {})}
+            />
+          </ClippedMessage>
           {bubbled && !m.local ? stamp : null}
         </View>
       </View>
@@ -686,6 +693,9 @@ export const MessageRow = memo(function MessageRow({
         </Text>
       </View>
     ) : null;
+  // What is painted behind someone else's words, bottom first: the screen, then the bubble or a mention's tint.
+  const tinted = mentionsMe ? [c.bg, `${c.amber}${bubbled ? "21" : "17"}`] : null;
+  const behindWords = tinted ?? [bubbled ? c.bubble : c.bg];
   const messageWords = body ? (
     <MessageText
       body={body}
@@ -703,14 +713,16 @@ export const MessageRow = memo(function MessageRow({
   ) : choiceReply ? (
     choiceReply
   ) : body ? (
-    <MessageText
-      body={talk ? talk.lead : body}
-      muted={m.local === "pending" || workOver}
-      selectable={false}
-      accent={accent}
-      channelRefs={channelRefsOf(m.meta)}
-      everyone={m.meta?.mentionsEveryone === true}
-    />
+    <ClippedMessage name={name} body={talk ? talk.lead : body} behind={behindWords}>
+      <MessageText
+        body={talk ? talk.lead : body}
+        muted={m.local === "pending" || workOver}
+        selectable={false}
+        accent={accent}
+        channelRefs={channelRefsOf(m.meta)}
+        everyone={m.meta?.mentionsEveryone === true}
+      />
+    </ClippedMessage>
   ) : null;
   // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line.
   const inBubble = bubbled && Boolean(body) && !brainWait && !deviceWait && !choiceReply;
@@ -849,7 +861,7 @@ export const MessageRow = memo(function MessageRow({
                 limit={providerCut ? "failed" : atLimit ? (atLimit.stuck ? "stuck" : "steps") : undefined}
               />
             ) : null}
-            {isAgent && m.actions?.length ? <Receipts message={m} /> : null}
+            {isAgent && m.actions?.length ? <Receipts message={m} onTap={onTap} onLongPress={press} /> : null}
             {isAgent ? <HandedTaskChips message={m} /> : null}
             {isAgent ? <TeamChecks message={m} /> : null}
             {isAgent ? <ReachLines message={m} /> : null}
@@ -924,7 +936,6 @@ export const MessageRow = memo(function MessageRow({
 
 /** Reactions are stored by name: the thumbs up is `+1` (feedback to the agent). */
 const THUMBS = "+1";
-const DOUBLE_TAP_MS = 300;
 /** The emoji that pops where the finger was: its box, and how long it stays. */
 const POP = 24;
 const POP_MS = 420;
@@ -1345,6 +1356,7 @@ const styles = StyleSheet.create({
     columnGap: 8,
   },
   bubbleEnd: { alignSelf: "flex-end" },
+  retry: { fontWeight: "600", textDecorationLine: "underline" },
   stamp: { flexDirection: "row", alignItems: "center", gap: 4, height: 16, marginLeft: "auto" },
   compactLine: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", columnGap: 6 },
   name: { fontWeight: "600", fontSize: 14, lineHeight: 19, flexShrink: 1 },

@@ -40,8 +40,10 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   createContext,
   type KeyboardEvent,
+  lazy,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -84,6 +86,9 @@ import { AppsPickerDialog } from "./AppsPicker";
 import { useNewAgentBrain } from "./useNewAgentBrain";
 import "../team-plan.css";
 import "./new-agent-card.css";
+
+/** "Trazer agentes de outro app", loaded when it opens: every app's reader stays out of the app's first load. */
+const ImportAgentsDialog = lazy(() => import("./ImportAgentsDialog").then((m) => ({ default: m.ImportAgentsDialog })));
 
 /*
  * A new agent (ADR 0164): one dialog for every way in. On the left, from scratch first, then the ready-made starting
@@ -784,10 +789,7 @@ function NewAgentDialog({
   const appIcon = (id: string) => <ConnectorIcon def={defs.get(id) ?? null} label={appName(id)} />;
 
   const howLabel = name ? t("newAgentCard.how", g) : t("newAgentCard.howBlank");
-  const toImport = () => {
-    onClose();
-    void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "import" } });
-  };
+  const [importing, setImporting] = useState(false);
 
   return (
     <Dialog
@@ -1185,7 +1187,7 @@ function NewAgentDialog({
             className="nac__foot"
             note={
               <span className="nac__foot-left">
-                <button type="button" className="ac-link nac__import" onClick={toImport}>
+                <button type="button" className="ac-link nac__import" onClick={() => setImporting(true)}>
                   <Icon name="download" size={16} />
                   {t("newAgentCard.import")}
                 </button>
@@ -1251,6 +1253,11 @@ function NewAgentDialog({
           onConnect={connectApp}
           onClose={() => setPicking(false)}
         />
+      )}
+      {importing && (
+        <Suspense fallback={null}>
+          <ImportAgentsDialog orgId={org.id} standalone onClose={() => setImporting(false)} />
+        </Suspense>
       )}
       {/* Signing in on the provider's page comes back here, to this card (`takeResume`). */}
       <ConnectFlow

@@ -41,6 +41,14 @@ export type Permission = RolePermission | "read" | "manage_owners";
 export const can = (org: { permissions?: readonly string[] } | null | undefined, permission: Permission) =>
   org?.permissions?.includes(permission) === true;
 
+/** Whether a way into a new agent shows: `create_agents`, in a workspace not being deleted (it takes none, ADR 0088). */
+export const makesAgents = (org: { permissions?: readonly string[]; deletion?: unknown } | null | undefined) =>
+  can(org, "create_agents") && !org?.deletion;
+
+/** Whether a way into connecting a service shows: `manage_connectors`, in a workspace not being deleted. */
+export const addsConnectors = (org: { permissions?: readonly string[]; deletion?: unknown } | null | undefined) =>
+  can(org, "manage_connectors") && !org?.deletion;
+
 type Membership = Parameters<typeof can>[0];
 
 type ChannelLike = {

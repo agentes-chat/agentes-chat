@@ -99,16 +99,26 @@ export function modelLimitText(
 ): string | null {
   const model = ownLimitsModel(provider, value);
   const limit = model ? modelLimitOf(usage?.models, model.id, now.getTime()) : null;
-  if (!model || !limit) return null;
-  if (limit.region) return t("brain.modelRegion", { model: model.label });
+  return model && limit ? modelLimitWords(t, locale, limit, model.label, now) : null;
+}
+
+/**
+ * A model at a limit of its own, in words (`modelLimitOf`'s): the region it needs, its account with no subscription,
+ * the plan refusing it, or when it resets. The brain card and a widget's wait say it alike.
+ */
+export function modelLimitWords(
+  t: TFunction,
+  locale: string | undefined,
+  limit: { until: number | null; region: boolean; off: boolean; inactive: boolean },
+  model: string,
+  now = new Date(),
+): string {
+  if (limit.region) return t("brain.modelRegion", { model });
   if (limit.inactive) return t("brain.planInactive");
-  if (limit.off) return t("brain.modelOff", { model: model.label });
+  if (limit.off) return t("brain.modelOff", { model });
   return limit.until === null
-    ? t("brain.modelLimitUnknown", { model: model.label })
-    : t("brain.modelLimit", {
-        model: model.label,
-        when: usageWhen(t, locale, new Date(limit.until).toISOString(), now),
-      });
+    ? t("brain.modelLimitUnknown", { model })
+    : t("brain.modelLimit", { model, when: usageWhen(t, locale, new Date(limit.until).toISOString(), now) });
 }
 
 /** When the next month starts (UTC): an agent's monthly budget renews then. */

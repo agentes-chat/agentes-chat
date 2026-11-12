@@ -1,9 +1,11 @@
 import {
   type Agent,
+  type AgentBrain,
   type AgentBrainInput,
   keys,
   useAgentBrain,
   useApi,
+  useMachines,
   useModelLabel,
   usePlatformKey,
   useRoles,
@@ -13,13 +15,15 @@ import {
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
 import { agentsReach, audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
+import { modelRows } from "@agenteschat/client/lib/brain-picker";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
-import { accountPlan, planReplies } from "@agenteschat/client/lib/plans";
+import { accountPlan, brainPlan, planReplies } from "@agenteschat/client/lib/plans";
 import { AUTO } from "@agenteschat/client/lib/providers";
-import { mineStatus, rightHandOf } from "@agenteschat/client/lib/right-hand";
+import { mineStatus, RIGHT_HAND_POWERS, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { dayText, hourText, teamWeekOn } from "@agenteschat/client/lib/team-week";
 import { useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, View } from "react-native";
@@ -39,9 +43,11 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { openAgentEdit } from "../agents/AgentEditScreen";
-import { openAgentAi } from "../ai/AgentAiScreen";
+import { openAgentAi, openAgentModel } from "../ai/AgentAiScreen";
 import { openConnectAi } from "../ai/NoAiCard";
 import { PlanHoldNote, usePlanHold } from "../ai/parts";
+import { openComputer } from "../computer/AgentComputerRow";
+import { useAgentComputer } from "../computer/useAgentComputer";
 import { useFailed } from "../routines/hooks";
 import { usePersonalView } from "../settings/hooks";
 import { Gap, SettingsPage } from "../settings/parts";
@@ -54,7 +60,8 @@ import { RightHandApprovalsGroup } from "./Approvals";
 export const openRightHandSettings = () => router.push("/settings/right-hand" as never);
 
 /**
- * The right hand's settings (ADR 0137), as on the web, in two groups. "Só para você": the AI the person's own
+ * The right hand's settings (ADR 0137), as on the web: its computer when it has one, then two groups, then what only it
+ * does. "Só para você": the AI the person's own
  * conversation thinks with, when its weekly card comes, and what it creates and adjusts for them without asking. "Para
  * todo o workspace", only for who manages agents: its name and look, the AI of people with no plan of their own and
  * the switch that lends it, its monthly budget where something bills per use, and who may use it; one line says it
@@ -62,8 +69,9 @@ export const openRightHandSettings = () => router.push("/settings/right-hand" as
  */
 export function RightHandSettingsScreen() {
   const { t } = useTranslation();
-  const { org } = useOrg();
+  const { org, orgId } = useOrg();
   const agent = rightHandOf(useDirectory().agents);
+  const hasComputer = (useMachines(orgId).data ?? []).some((m) => m.agents.some((a) => a.id === agent?.id));
   if (!agent)
     return (
       <SettingsPage title={t("settings.section.right_hand")}>
@@ -72,6 +80,7 @@ export function RightHandSettingsScreen() {
     );
   return (
     <SettingsPage title={agent.name} subtitle={t("rightHand.label")}>
+      {hasComputer ? <Computer agentId={agent.id} /> : null}
       <GroupTitle>{t("rightHand.settings.groupMine")}</GroupTitle>
       <GroupedHeader>{t("rightHand.settings.mine")}</GroupedHeader>
       <RightHandMine agent={agent} />
@@ -83,6 +92,16 @@ export function RightHandSettingsScreen() {
           <Form agent={agent} />
         </>
       ) : null}
+      <GroupedHeader
+        hint={{ name: t("common.about", { label: t("rightHand.powers.title") }), text: t("rightHand.powers.help") }}
+      >
+        {t("rightHand.powers.title")}
+      </GroupedHeader>
+      <GroupedList>
+        {RIGHT_HAND_POWERS.map((p) => (
+          <GroupedRow key={p.id} icon="check" label={t(`rightHand.powers.${p.id}`)} labelLines={4} />
+        ))}
+      </GroupedList>
     </SettingsPage>
   );
 }
@@ -101,15 +120,45 @@ function GroupTitle({ children, note }: { children: string; note?: string }) {
   );
 }
 
+/**
+ * "Computador", once the right hand has one of its own: the row opens the computer every agent's profile opens, for
+ * whoever may watch it.
+ */
+function Computer({ agentId }: { agentId: string }) {
+  const { t } = useTranslation();
+  const view = useAgentComputer(agentId);
+  if (view.forbidden || !view.ready || !view.facts) return null;
+  return (
+    <>
+      <Gap />
+      <GroupedList>
+        <GroupedRow
+          icon="laptop"
+          label={t("agentComputer.button")}
+          {...(view.machine ? { sub: view.machine.name } : {})}
+          chevron
+          onPress={() => openComputer(agentId)}
+        />
+      </GroupedList>
+    </>
+  );
+}
+
+/** The model a plan's view runs, by its name (Automático included). */
+const planModelLabel = (t: TFunction, view: AgentBrain) =>
+  modelRows(t, view, brainPlan(view)).find((r) => r.checked)?.label ?? view.effectiveModel ?? undefined;
+
 /** The choices of "Sua IA": the person's own plan, connecting another one, the workspace's AI. */
 const MINE = "mine";
+const MODEL = "model";
 const OTHER = "other";
 const WORKSPACE = "workspace";
 
 /**
  * "Sua IA" (ADR 0137 §11) as one row that opens, as on the web (`mineStatus`): the logo of what answers the person in
  * their own DM with the right hand, its name and what it is to them (Claude, chave do workspace). Its sheet holds the
- * choice, the one in use checked: their own plan (connecting one, or another) or the workspace's AI. When nothing
+ * choice, the one in use checked: their own plan and, under it, its model (which opens the model's page), connecting
+ * another, or the workspace's AI. When nothing
  * answers them the row is the call to connect a plan. Why it is theirs alone is the row's ⓘ. Everyone has it, on the
  * right hand's profile.
  */
@@ -167,6 +216,7 @@ export function RightHandMine({ agent }: { agent: Agent }) {
       : status.kind === "key"
         ? (status.label ?? t("rightHand.settings.mineKeyName"))
         : t(`aiAccounts.connect.${status.brain}`);
+  const model = own && view ? planModelLabel(t, view) : undefined;
   const sub =
     status.kind === "own"
       ? status.ownerId
@@ -181,6 +231,12 @@ export function RightHandMine({ agent }: { agent: Agent }) {
       options: own
         ? [
             { key: MINE, label, sub, leading },
+            {
+              key: MODEL,
+              label: t("agentPage.work.brain.planModel"),
+              sub: model,
+              leading: { kind: "icon", name: "brain" },
+            },
             { key: OTHER, label: t("agentPage.work.brain.connectPlan"), leading: { kind: "icon", name: "plus" } },
             { key: WORKSPACE, label: t("rightHand.settings.useWorkspace"), leading: { kind: "icon", name: "members" } },
           ]
@@ -189,7 +245,8 @@ export function RightHandMine({ agent }: { agent: Agent }) {
             { key: WORKSPACE, label: t("rightHand.settings.useWorkspace"), sub: `${label} · ${sub}`, leading },
           ],
     });
-    if (picked === OTHER || (picked === MINE && !own)) connect();
+    if (picked === MODEL) openAgentModel(agent.id);
+    else if (picked === OTHER || (picked === MINE && !own)) connect();
     else if (picked === WORKSPACE && own) back();
   };
   return (
@@ -197,7 +254,7 @@ export function RightHandMine({ agent }: { agent: Agent }) {
       <GroupedRow
         {...(logo ? { leading: logo } : { icon: "key" as const })}
         label={label}
-        sub={sub}
+        sub={model ? `${sub} · ${model}` : sub}
         hint={hint}
         chevron
         onPress={() => void choose()}
@@ -314,7 +371,16 @@ function WorkspaceAi({ agent, dir }: { agent: Agent; dir: Directory }) {
           disabled={busy || hold}
           onPress={() => void choose()}
         />
-        {kind ? null : (
+        {kind ? (
+          view ? (
+            <GroupedRow
+              icon="brain"
+              label={planModelLabel(t, view) ?? t("agentPage.work.brain.planModel")}
+              chevron
+              onPress={() => openAgentModel(agent.id, "workspace")}
+            />
+          ) : null
+        ) : (
           <GroupedRow
             icon="brain"
             label={agent.model === AUTO ? t("brain.auto.label") : (modelLabel(agent.model) ?? agent.model)}

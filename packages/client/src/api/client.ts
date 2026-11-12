@@ -17,6 +17,8 @@ import type {
   VaultItemDetail,
   VaultItemInput,
   VaultItemPatch,
+  VaultKeysImportInput,
+  VaultKeysImportResult,
   VaultOverview,
   VaultScope,
 } from "../vault/types";
@@ -167,6 +169,9 @@ import type {
   IssueConversationRef,
   IssueInput,
   IssuePatch,
+  IssueProject,
+  IssueProjectRef,
+  IssueProjects,
   IssueStatus,
   IssuesView,
   JevKey,
@@ -180,6 +185,7 @@ import type {
   MachineAccount,
   MachineAccountKind,
   MachineOutages,
+  MachinePause,
   MachineTask,
   MailAccount,
   MailAccountUpdate,
@@ -317,6 +323,7 @@ import type {
   UnreadTask,
   UsageQueue,
   UsageReport,
+  WaitingList,
   WebhookProvider,
   WebhookSetup,
   WifiIphones,
@@ -1092,6 +1099,12 @@ export interface ApiClient {
     denyDevice(userCode: string): Promise<void>;
     /** ADR 0036 §8: the site only takes away (a folder, for everyone or one agent; a tool). The new access. */
     reduceAccess(orgId: string, machineId: string, input: MachineAccessReduce): Promise<MachineAccess>;
+    /** Pauses it (`until` null: until resumed) or resumes it (`resume`); the pause as it stands then. */
+    setPause(
+      orgId: string,
+      machineId: string,
+      input: { until: string | null } | "resume",
+    ): Promise<MachinePause | null>;
     /** ADR 0036 §9: the newest desktop app build; `null` when there is none (404). */
     desktopLatest(target: string, arch: string): Promise<DesktopRelease | null>;
     /** Offline computers that agents wait for, and where they could move. */
@@ -1275,7 +1288,8 @@ export interface ApiClient {
     saveToVault?(orgId: string, requestId: string, input: SecretToVaultInput): Promise<VaultItem>;
   };
   issues: {
-    list(orgId: string, filters?: { q?: string }): Promise<Issue[]>;
+    /** `projectId`: only that project's tasks, or `none` for the ones with no project. */
+    list(orgId: string, filters?: { q?: string; projectId?: string }): Promise<Issue[]>;
     get(orgId: string, number: number): Promise<Issue>;
     create(orgId: string, input: IssueInput): Promise<Issue>;
     update(orgId: string, id: string, patch: IssuePatch): Promise<Issue>;
@@ -1303,6 +1317,16 @@ export interface ApiClient {
     updateColumn(orgId: string, columnId: string, patch: { name?: string; index?: number }): Promise<IssueColumn[]>;
     /** Deletes a column; its tasks go to `moveTo`. A stage keeps at least one column. */
     deleteColumn(orgId: string, columnId: string, moveTo: string): Promise<IssueColumn[]>;
+    projects(orgId: string): Promise<IssueProjects>;
+    createProject(orgId: string, input: { name: string; color?: string }): Promise<IssueProject>;
+    /** Rename, recolour, archive or bring back. */
+    updateProject(
+      orgId: string,
+      projectId: string,
+      patch: { name?: string; color?: string; archived?: boolean },
+    ): Promise<IssueProjectRef>;
+    /** Its tasks stay, with no project. */
+    deleteProject(orgId: string, projectId: string): Promise<void>;
   };
   /** Threads (ADR 0029): the Threads page, a thread from a range, moving it, closing and archiving. */
   threads: {
@@ -1576,6 +1600,8 @@ export interface ApiClient {
     ): Promise<NotificationPage>;
     /** The sidebar badge. */
     count(orgId: string): Promise<NotificationCount>;
+    /** "Esperando você": what waits on me, oldest first; `channelId` for one conversation's. */
+    waiting(orgId: string, channelId?: string): Promise<WaitingList>;
     read(orgId: string, id: string, read: boolean): Promise<AppNotification>;
     /** "Feito" (`false` undoes it). */
     done(orgId: string, id: string, done: boolean): Promise<AppNotification>;
@@ -1926,6 +1952,13 @@ export interface ApiClient {
     remove(orgId: string, itemId: string): Promise<void>;
     /** A passwords file's text; `dryRun` only counts. 413 `vault.csv_too_large` past 2 MB. */
     importCsv(orgId: string, input: { csv: string; scope: VaultScope; dryRun: boolean }): Promise<VaultImportResult>;
+    /** Several keys in one save (an imported .env). 403 `vault.team_needs_permission` for the team's without it. */
+    importKeys(orgId: string, input: VaultKeysImportInput): Promise<VaultKeysImportResult>;
+    /**
+     * Moves an item kept here between Personal and Team. Either way takes `manage_credentials`; to Personal it
+     * becomes the mover's. 409 `vault.key_name_taken` when a key of that name is already there.
+     */
+    move(orgId: string, itemId: string, scope: VaultScope): Promise<VaultItem>;
     /** Checked with the password manager first: 400 `vault.source.<code>` when it refuses. */
     connect(orgId: string, input: VaultConnectInput): Promise<VaultConnection>;
     updateConnection(orgId: string, connectionId: string, patch: VaultConnectionPatch): Promise<VaultConnection>;

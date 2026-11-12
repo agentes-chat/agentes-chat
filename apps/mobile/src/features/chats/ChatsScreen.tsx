@@ -26,6 +26,7 @@ import { useActiveWork, useConversations, useHiddenAgents, useWorkingNow } from 
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useTabHeader } from "../shared/tabHeader";
 import { ConversationRowView } from "./ConversationRowView";
+import { DeletingNotice } from "./DeletingNotice";
 import { FirstRunLine } from "./FirstRunLine";
 import { FirstAgentEmpty, Greeting, GreetingSky } from "./Greeting";
 import { Arrive, useHomeEntrance, useWake } from "./HomeEntrance";
@@ -219,8 +220,15 @@ function Home() {
       pullMark={<PullOrbit refreshing={pull.refreshing} />}
       onScrollBeginDrag={waitOpen ? () => setWaitOpen(false) : undefined}
     >
-      <SetupNotice />
-      <OutageNotices />
+      {/* Being deleted, its line comes first and alone: its work stopped, nothing else is news (ADR 0088 §7). */}
+      {org?.deletion ? (
+        <DeletingNotice />
+      ) : (
+        <>
+          <SetupNotice />
+          <OutageNotices />
+        </>
+      )}
       {list.stale && !failed ? <HomeServerNotice retry={list.refetch} /> : null}
       {strip}
       {failed || empty || list.loading ? null : (

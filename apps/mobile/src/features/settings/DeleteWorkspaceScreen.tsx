@@ -78,7 +78,7 @@ export function DeleteWorkspaceScreen() {
     if (busy || !toSend.ready) return;
     remove.mutate(toSend.input, {
       onSuccess: () => {
-        // The hold already answered the finger. The root takes over with the workspace's closing screen.
+        // The hold already answered the finger. Back at Conversas, the workspace reads as ever under its notice on top.
         router.dismissTo("/");
       },
       onError: (e) => {

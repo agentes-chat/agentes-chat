@@ -106,7 +106,8 @@ export function Popover({
         onOpenChange?.(o);
       }}
     >
-      <RPopover.Trigger asChild {...hover?.trigger}>
+      {/* A hover card says more than a tip would: its trigger gets none (`installTitleTips`). */}
+      <RPopover.Trigger asChild {...hover?.trigger} data-no-tip={hover ? "" : undefined}>
         {trigger}
       </RPopover.Trigger>
       <RPopover.Portal>

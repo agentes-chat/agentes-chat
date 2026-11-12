@@ -86,6 +86,22 @@ export function createFakeNotifications(
       const c = counts(inbox.items, Date.now());
       return { unread: c.unread, waiting: c.waiting };
     },
+    waiting: async (orgId, channelId) => {
+      log("notifications.waiting", orgId, channelId);
+      const now = Date.now();
+      const items = inbox.items
+        .filter((n) => matchesFilter(n, "waiting", now) && (!channelId || n.source.channelId === channelId))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .map((n) => ({
+          id: n.id,
+          kind: n.kind,
+          asker: n.actors[0] ?? null,
+          source: structuredClone(n.source),
+          question: (n.kind === "agent_question" ? n.latest.text : n.latest.title) ?? n.latest.text ?? "",
+          since: n.createdAt,
+        }));
+      return { items, count: items.length };
+    },
     read: async (orgId, id, read) => {
       log("notifications.read", orgId, id, read);
       const n = find(id);

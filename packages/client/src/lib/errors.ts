@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { ApiError, NetworkError } from "../api/http";
 import type { AuthConfig, OrgStanding } from "../api/types";
+import { widgetWaitOf, widgetWaitText } from "../dashboards/lib";
 import { billingHoldOf } from "./billing";
 import { MAX_UPLOAD_MB } from "./files";
 import { joinNames, lowerFirst } from "./format";
@@ -85,6 +86,7 @@ const KNOWN = {
   "machine.target_not_found": "errors.machine.targetNotFound",
   "machine.target_same": "errors.machine.targetSame",
   "machine.target_paused": "errors.machine.targetPaused",
+  "machine.pause_past": "errors.machine.pausePast",
   // A computer that can't take the request now (`MachineOfflineError`, `MachinePausedError`: `name`), or its own
   // refusal (`MachineRequestError`, as `machine.<code>`).
   "machine.offline": "errors.machine.offline",
@@ -215,6 +217,9 @@ const KNOWN = {
   "account.not_restorable": "errors.account.notRestorable",
   "issue.assignee_outside": "errors.issue.assigneeOutside",
   "issue_column.stage_full": "errors.issue.stageFull",
+  "issue_project.name_taken": "errors.issue.projectNameTaken",
+  "issue_project.archived": "errors.issue.projectArchived",
+  "issue_project.too_many": "errors.issue.projectsFull",
   "issue.delete_forbidden": "errors.issue.deleteForbidden",
   "issue.audience_empty": "errors.issue.audienceEmpty",
   [REAUTH_PASSWORD]: "errors.reauth.password",
@@ -276,6 +281,8 @@ const KNOWN = {
   slug_taken: "errors.wiki.titleTaken",
   "wiki.title_characters": "errors.wiki.titleCharacters",
   "wiki.title_empty_slug": "errors.wiki.titleNoLetters",
+  // With its sizes, `limitRefusalText` says it first: this line is for a refusal that names none.
+  "message.too_long": "channel.tooLong.fix",
   // GIFs and stickers (ADR 0091): off in the workspace (or no GIF search on this server), a GIF gone, or the GIF
   // search not answering.
   "message.reply_not_found": "errors.replyGone",
@@ -303,6 +310,9 @@ const KNOWN = {
   "widget.not_agent_message": "dashboards.errors.notAgentMessage",
   "widget.prompt_required": "dashboards.errors.promptRequired",
   "widget.not_tested": "dashboards.errors.notTested",
+  "widget.needs_ai": "dashboards.errors.needsAi",
+  // Worded with its wait by `knownErrorText` (`widgetWaitText`); this line only names its family.
+  "widget.waiting": "widgets.wait.planUnknown",
   // The Vault (ADR 0144): what a person typed, who may see or use an item, an import, a card's "Save to the Vault".
   "vault.invalid": "errors.vault.invalid",
   "vault.not_found": "errors.vault.notFound",
@@ -331,6 +341,8 @@ const KNOWN = {
   "vault.csv_too_large": "errors.vault.csvTooLarge",
   "vault.csv_too_many_rows": "errors.vault.csvTooManyRows",
   "vault.csv_unrecognized": "errors.vault.csvUnrecognized",
+  "vault.unreadable": "errors.vault.unreadable",
+  "vault.too_many_keys": "vault.env.tooMany",
   "vault.request_not_delivered": "errors.vault.requestNotDelivered",
   "vault.request_not_savable": "errors.vault.requestNotSavable",
   "vault.source_unknown": "errors.vault.sourceUnknown",
@@ -524,6 +536,8 @@ const KNOWN = {
   "github_app.not_visible": "githubApp.notVisible",
   "github_app.other_workspace": "githubApp.otherWorkspace",
   "github_app.installed_outside": "githubApp.installedOutside",
+  "github_app.owner_required": "githubApp.requested",
+  "github_app.owner_unknown": "githubApp.ownerUnknown",
   "github_app.misconfigured": "githubApp.misconfigured",
   github_app_env: "githubApp.server.line.env",
 } as const;
@@ -666,6 +680,36 @@ const UNREACHABLE = new Set([502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 5
 export const serverUnreachable = (error: unknown) =>
   error instanceof ApiError && UNREACHABLE.has(error.status) && error.code === `http_${error.status}`;
 
+/** Why the server refused a message of mine, kept on its failed row (`Message.sendFailure`). */
+export interface SendFailure {
+  status: number;
+  code: string;
+  message: string;
+  params?: Record<string, unknown>;
+}
+
+/** What to keep of a failed send, to say why on its row later: the server's refusal, or nothing for any other failure. */
+export const sendFailureOf = (error: unknown): SendFailure | undefined =>
+  error instanceof ApiError
+    ? {
+        status: error.status,
+        code: error.code,
+        message: error.message,
+        ...(error.params ? { params: error.params } : {}),
+      }
+    : undefined;
+
+/** A failed message's line: "Não enviada." and the refusal kept on it in the person's words, else that something went wrong. */
+export const sendFailureText = (t: TFunction, failure: SendFailure | undefined, locale?: string): string =>
+  t("channel.notSentWhy", {
+    why: failure
+      ? errorText(t, new ApiError(failure.status, failure.code, failure.message, failure.params), locale)
+      : t("channel.notSentUnknown"),
+  });
+
+/** Sending the same text again can't work: it has to change first. */
+export const sendNeedsEdit = (failure: SendFailure | undefined) => failure?.code === "message.too_long";
+
 /**
  * A message that failed to go out with no answer at all (`fetch` throws a `TypeError`: no network), or only the
  * proxy's while the server restarts: it waits for the connection instead of failing. The server refusing it, or a
@@ -718,6 +762,12 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
   // `provider`: the provider whose key is missing, when the server could name it.
   if (error.code === "missing_credential" && typeof error.params?.provider === "string")
     return t("agentPage.activity.errors.missing_credential", error.params);
+  // A widget's run waits (Update now, Resolve): what for, and when it picks up, on the reader's clock.
+  if (error.code === "widget.waiting") {
+    const wait = widgetWaitOf(error.params);
+    const name = typeof error.params?.agentName === "string" ? error.params.agentName : "";
+    return wait ? widgetWaitText(t, locale, wait, name) : t("widgets.wait.planUnknown", { name });
+  }
   // Own keys only: a code from an address (`/login?error=toString`) names no line of Object's.
   const key = Object.hasOwn(KNOWN, error.code) ? KNOWN[error.code as keyof typeof KNOWN] : undefined;
   if (key) return t(key, { max: MAX_UPLOAD_MB, ...error.params });
@@ -875,6 +925,10 @@ const OAUTH_RETURNS = {
   "github_app.other_workspace": "githubApp.otherWorkspace",
   installed_outside: "githubApp.installedOutside",
   "github_app.installed_outside": "githubApp.installedOutside",
+  owner_required: "githubApp.requested",
+  "github_app.owner_required": "githubApp.requested",
+  owner_unknown: "githubApp.ownerUnknown",
+  "github_app.owner_unknown": "githubApp.ownerUnknown",
   "github_app.misconfigured": "githubApp.misconfigured",
   requested: "githubApp.requested",
 } as const;

@@ -19,6 +19,7 @@ export const NOTICE_KINDS = [
   "work_check_in",
   "run_stopped",
   "github_event",
+  "work_follow_up",
 ] as const;
 export type NoticeKind = (typeof NOTICE_KINDS)[number];
 
@@ -47,6 +48,7 @@ export const AGENT_ONLY_NOTICES: ReadonlySet<string> = new Set<NoticeKind>([
   "proposal_result",
   "poll_result",
   "work_check_in",
+  "work_follow_up",
 ]);
 
 /** A message that is a notice only its agent reads: left out of the conversation. */
@@ -262,6 +264,7 @@ export function noticeView(
     case "proposal_result":
     case "poll_result":
     case "work_check_in":
+    case "work_follow_up":
     case "talker_reply":
     case "run_stopped":
       return line("chat.notice.other", { name: names.author });

@@ -329,7 +329,7 @@ describe("on agentes.chat Cloud: what it is, the Terms section and how to contes
 describe("suspended: a screen of its own", () => {
   test("opening a suspended workspace shows the screen at once", async () => {
     await open({ state: "suspended", reason: null });
-    expect(screen().getByRole("heading", { name: "Este workspace está indisponível" })).toBeTruthy();
+    expect(screen().getByRole("heading", { name: "Acme está indisponível" })).toBeTruthy();
     expect(document.body.textContent).toContain("As conversas e os agentes dele estão fechados por enquanto.");
     expect(document.body.textContent).toContain("Precisa de ajuda? Fale com quem cuida deste servidor.");
     expect(screen().queryByRole("combobox", { name: "Mensagem para #eng" })).toBeNull();
@@ -337,10 +337,10 @@ describe("suspended: a screen of its own", () => {
 
   test("in place of the shell, live: why when told, where to ask, the other workspaces, Sair; back once lifted", async () => {
     const { set } = await open(undefined, true, "ajuda@acme.test");
-    expect(screen().queryByRole("heading", { name: "Este workspace está indisponível" })).toBeNull();
+    expect(screen().queryByRole("heading", { name: "Acme está indisponível" })).toBeNull();
 
     await set({ state: "suspended", reason: "uso fora dos termos" });
-    expect(screen().getByRole("heading", { name: "Este workspace está indisponível" })).toBeTruthy();
+    expect(screen().getByRole("heading", { name: "Acme está indisponível" })).toBeTruthy();
     expect(document.body.textContent).toContain("Este workspace está suspenso: uso fora dos termos");
     expect(screen().getByRole("link", { name: "ajuda@acme.test" }).getAttribute("href")).toBe("mailto:ajuda@acme.test");
     // No sidebar, no chat: nothing of the workspace is open.
@@ -355,7 +355,7 @@ describe("suspended: a screen of its own", () => {
     expect(document.body.textContent).not.toContain("uso fora dos termos");
 
     await set({ state: "active", reason: null });
-    expect(screen().queryByRole("heading", { name: "Este workspace está indisponível" })).toBeNull();
+    expect(screen().queryByRole("heading", { name: "Acme está indisponível" })).toBeNull();
     expect(screen().getByRole("combobox", { name: "Mensagem para #eng" })).toBeTruthy();
   });
 });

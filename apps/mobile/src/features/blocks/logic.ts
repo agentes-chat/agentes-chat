@@ -33,3 +33,9 @@ export const themeScript = (theme: "light" | "dark") => hostScript({ theme });
 export function withLiveBlock(live: readonly string[], key: string, max = MAX_LIVE_BLOCKS): string[] {
   return [...live.filter((k) => k !== key), key].slice(-max);
 }
+
+/**
+ * How far a vote's voter tucks under the one before, as the web's stack (`.ac-avatar-stack`): 6 points past a photo,
+ * and past initials only the 2-point rings over each other, so no letter is covered.
+ */
+export const faceOverlap = (afterPhoto: boolean) => ({ marginLeft: afterPhoto ? -6 : -4 });

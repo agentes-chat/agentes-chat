@@ -356,8 +356,6 @@
     "switchWorking": "작업 중",
     "join": "채널 참여",
     "sending": "보내는 중…",
-    "failed": "전송 안 됨 · 다시 시도",
-    "notSent": "메시지가 전송되지 않았어요.",
     "toLatest": "최신 메시지로 이동",
     "toLatestNew": "최신 메시지로 이동: {{text}}",
     "stopAgent": "{{name}} 중지",
@@ -1582,13 +1580,7 @@
       "open": "열기",
       "expandHint": "탭해서 펼치기",
       "stop": "중지",
-      "giveUp": "포기",
-      "done": "완료: {{title}}",
-      "failed": "하지 못함: {{title}}",
-      "failedNote": "하지 못함: {{note}}",
-      "expired": "아무도 제때 열지 않았어요: {{title}}",
-      "cancelled": "취소됨: {{title}}",
-      "withdrawn": "{{name}}에게 더 이상 필요하지 않아요: {{title}}"
+      "giveUp": "포기"
     },
     "live": {
       "inControl": "내가 제어 중",
@@ -2140,9 +2132,9 @@
     "ofOnline": "{{count}}대 중 {{online}}대",
     "deleteName": "{{name}} 삭제",
     "deleteFoot": "마음을 바꿀 수 있는 시간은 7일이에요.",
-    "deleteAlert": "모두가 바로 나가게 돼요. 7일 동안은 복원할 수 있어요.",
+    "deleteAlert": "모두가 지금부터 읽기만 할 수 있어요. 7일 동안은 복원할 수 있어요.",
     "deleteAction": "삭제",
-    "deleteIntro": "{{name}}은(는) 모두에게 바로 닫히고 7일 후 영구 삭제돼요.",
+    "deleteIntro": "{{name}}은(는) 모두에게 바로 읽기 전용이 되고 7일 후 영구 삭제돼요.",
     "holdDelete": "길게 눌러 삭제",
     "deleteFailed": "워크스페이스를 삭제하지 못했어요. 다시 시도해 주세요.",
     "access": {
@@ -2433,7 +2425,6 @@
     },
     "formatAuto": "{{name}}이(가) 가장 좋은 걸 골라요",
     "newWidget": {
-      "titleHint": "제목 · 테스트할 때 {{name}}이(가) 제안해요",
       "alerts": "알림 켜짐",
       "realData": "실제 데이터",
       "editAsk": "요청 바꾸기",

@@ -256,7 +256,7 @@ test("the server here's own new home: the same open tools as any pairing, comman
   ]);
 });
 
-test("Preferences' tools: commands read on only when every organization has them, and say who does", () => {
+test("Preferences' tools: commands read on only when every organization has them", () => {
   const home = (name: string, commands: boolean) =>
     ({
       status: { org: { id: name, name } },
@@ -264,15 +264,12 @@ test("Preferences' tools: commands read on only when every organization has them
     }) as unknown as Home;
   expect(toolsHere([home("Acme", true), home("Beta", false)])).toEqual({
     tools: { claude: true, codex: false, commands: false, browser: true },
-    commandsOnlyFor: ["Acme"],
   });
   expect(toolsHere([home("Acme", true), home("Beta", true)])).toMatchObject({
     tools: { commands: true },
-    commandsOnlyFor: [],
   });
   expect(toolsHere([])).toEqual({
     tools: { claude: false, codex: false, commands: false, browser: false },
-    commandsOnlyFor: [],
   });
 });
 

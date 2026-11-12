@@ -11,6 +11,7 @@ import {
   PlanMeter,
   type PlanMeterText,
   type PlanMeterUsage,
+  planAttention,
   planLevel,
   planLine,
   planState,
@@ -273,6 +274,25 @@ test("compact: a plan that refused a request before any window was known says it
   const bare = render(<PlanMeter usage={refused} text={text} now={NOW} compact />).container;
   expect(bare.querySelector(".ac-planmeter__line")).toBeNull();
   expect(bare.textContent).toBe("No limite");
+});
+
+test("a closed row's one word: nothing while fine, almost from 80 in its bar's level, at the limit with no time", () => {
+  const week = (usedPercent: number, limited = false): PlanMeterUsage => ({
+    windows: [{ kind: "seven_day", usedPercent, resetsAt: at(HOUR) }],
+    limited,
+    at: at(0),
+  });
+  expect(planAttention(week(79), text, NOW)).toBeNull();
+  expect(planAttention(week(80), text, NOW)).toEqual({ word: "Quase no limite", level: "almost" });
+  expect(planAttention(week(95), text, NOW)).toEqual({ word: "Quase no limite", level: "critical" });
+  expect(planAttention(week(100), text, NOW)).toEqual({ word: "No limite", level: "limited" });
+  // It refused a request before any window was known.
+  expect(planAttention({ windows: [], limited: true, at: at(0) }, text, NOW)).toEqual({
+    word: "No limite",
+    level: "limited",
+  });
+  // A window whose reset passed is empty again.
+  expect(planAttention(week(100), text, NOW + 2 * HOUR)).toBeNull();
 });
 
 test("an agent's part: in full ink inside its window's bar, with its words; none once the window reset", () => {

@@ -130,8 +130,9 @@ describe("where the ⓘ is plugged in", () => {
 
   test('every ⓘ in the app is named "About …"', () => {
     const files = readdirSync(SRC, { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".tsx"));
+    // A tag that spreads its props forwards its caller's name, which is checked where the caller writes it.
     const names = files.flatMap((f) =>
-      [...source(f).matchAll(/<InfoHint\b[\s\S]*?\bname=\{([^}]*)\}/g)].map((m) => m[1]),
+      [...source(f).matchAll(/<InfoHint\b(?![^>]*\{\.\.\.)[\s\S]*?\bname=\{([^}]*)\}/g)].map((m) => m[1]),
     );
     const fields = files.flatMap((f) =>
       [...source(f).matchAll(/\bhint=\{[^}]*?\{\s*name:\s*([^,]*),/g)].map((m) => m[1]),

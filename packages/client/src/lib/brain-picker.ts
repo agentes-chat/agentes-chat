@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { AgentBrainInput, AiAccounts, BrainMachine, MachineAccountKind, Model } from "../api/types";
+import type { AgentBrain, AgentBrainInput, AiAccounts, BrainMachine, MachineAccountKind, Model } from "../api/types";
 import { accountChoices, accountTitle, ownSignInReady } from "./ai-accounts";
 import { thinksWith } from "./brain";
 import { isClaudeAlias } from "./brain-advanced";
@@ -7,6 +7,7 @@ import { namesComputers } from "./machines";
 import { kindOf, PLAN_CHOICES, type PlanChoice, planLabel, planMark, planOfAccount, planSearchNames } from "./no-ai";
 import {
   type BrainModelChoice,
+  brainModelChoice,
   brainModelChoices,
   type CodingPlan,
   type PlanModelNeed,
@@ -372,3 +373,71 @@ export function pickGroups<O extends Pick<BrainPickOption, "group">>(options: re
   }
   return out;
 }
+
+/** A row of the agent's model page. */
+export interface ModelRow {
+  value: string;
+  label: string;
+  /** What it does or is sold as. */
+  sub?: string;
+  /** What the plan's account must allow before it answers, behind the row's ⓘ. */
+  note?: string;
+  /** That need's id: chosen, the agent's page says how to give it (`brain.modelHow`). */
+  needs?: PlanModelNeed;
+  /** Who makes it, on a plan of several makers' models: a provider's id or the maker's name. */
+  maker?: string;
+  checked: boolean;
+}
+
+/**
+ * An agent's model as a list, web and phone: Automático, then its brain's models (every model of
+ * its account's coding plan, each with what its maker sells it as; Claude's own with what each is for), the one it
+ * runs checked.
+ */
+export function modelRows(
+  t: TFunction,
+  view: Pick<AgentBrain, "brain" | "effectiveModel" | "options"> & Partial<Pick<AgentBrain, "account" | "accounts">>,
+  plan: CodingPlan | undefined,
+): ModelRow[] {
+  const option = view.options.find((o) => o.kind === view.brain);
+  const chosen = brainModelChoice(view.brain, plan, view.effectiveModel ?? option?.defaultModel ?? "");
+  const provider = view.accounts?.find((a) => a.id === view.account)?.provider;
+  const models = brainModelChoices(plan, option?.models ?? [], provider);
+  const cursorSays = view.brain === "cursor" && models.some((m) => m.inPlan);
+  const rows: Omit<ModelRow, "checked">[] = [
+    { value: AUTO, label: t("brain.auto.label"), sub: t("brain.auto.hint") },
+    // The model it runs stays a row when its list doesn't have it, as the web's picker keeps it: one row is checked.
+    ...(!chosen || isAuto(chosen) || models.some((m) => m.value === chosen) ? [] : [{ value: chosen, label: chosen }]),
+    ...models.map((m) => {
+      // What each is for (Claude's own), sold as, or costs: the agent's page's line.
+      const sub = brainModelLine(t, view.brain, plan, m, cursorSays);
+      return {
+        value: m.value,
+        label: m.label,
+        ...(sub ? { sub } : {}),
+        ...(m.needs ? { note: t(`brain.modelNeeds.${m.needs}`), needs: m.needs } : {}),
+        ...(m.maker ? { maker: m.maker } : {}),
+      };
+    }),
+  ];
+  return rows.map((r) => ({ ...r, checked: r.value === chosen }));
+}
+
+/** What picking a model saves, as the web's dialog does: Automático picks the effort too; a fixed one after it, Médio. */
+export function modelInput(
+  value: string,
+  view: Pick<AgentBrain, "effort" | "options" | "brain">,
+): Pick<AgentBrainInput, "model" | "effort"> {
+  if (isAuto(value)) return { model: AUTO, effort: AUTO };
+  const defaultModel = view.options.find((o) => o.kind === view.brain)?.defaultModel;
+  return { model: value === defaultModel ? null : value, ...(isAuto(view.effort) ? { effort: "medium" } : {}) };
+}
+
+/** Those rows as a select's options: what each is under its name, grouped by maker where a plan has several. */
+export const modelRowOptions = (rows: readonly ModelRow[]) =>
+  rows.map((r) => ({
+    value: r.value,
+    label: r.label,
+    ...(r.sub ? { description: r.sub } : {}),
+    ...(r.maker ? { group: providerLabel(r.maker) } : {}),
+  }));

@@ -1,13 +1,19 @@
 import { useArtifact, usePoll, useVote } from "@agenteschat/client";
 import { pollAnswered, pollIsOpen, pollTally, pollToggle } from "@agenteschat/client/lib/blocks";
+import { joinNames } from "@agenteschat/client/lib/format";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { photoSource } from "@/lib/photo";
+import { serverUrl } from "@/lib/server";
 import { Icon, Sky, Text, textLineOf, useToast } from "@/ui";
 import { useFontScale } from "@/ui/text-scale";
-import { initialText, leadBox } from "@/ui/type-scale";
+import { leadBox } from "@/ui/type-scale";
+import { Face } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { tapHaptic } from "../shared/parts";
+import { faceOverlap } from "./logic";
 
 const FACES = 4;
 
@@ -26,6 +32,8 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
   const query = usePoll(orgId, id);
   const vote = useVote(orgId, id);
   const fontScale = useFontScale();
+  // Every option keeps the widest faces' room: the bars share one scale, each its share of one track.
+  const [facesWidth, setFacesWidth] = useState(0);
   const a = artifact.data;
   const poll = query.data;
   if (a?.content.kind !== "poll" || !poll) {
@@ -43,6 +51,11 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
   const tally = pollTally(options, poll);
   const top = Math.max(...tally.map((o) => o.voters.length));
   const nameOf = (userId: string) => dir.memberById.get(userId)?.name ?? t("mobile.blocks.someone");
+  // As the face draws it: a photo it can load, else the initials.
+  const hasPhoto = (userId: string | undefined) => {
+    const member = userId ? dir.memberById.get(userId) : undefined;
+    return photoSource(member?.avatarUrl ?? member?.image, serverUrl(), {}) !== null;
+  };
   // An option's label wraps: its box, mark and faces sit on its first line, not centred on the whole option.
   const line = textLineOf("body", fontScale);
   const closes = new Intl.DateTimeFormat(i18n.language, { dateStyle: "short", timeStyle: "short" }).format(
@@ -74,7 +87,7 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
               key={o.option}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: mine, disabled: !open }}
-              accessibilityLabel={`${o.label}, ${o.voters.length}`}
+              accessibilityLabel={`${o.label}, ${o.voters.length}${o.voters.length ? `: ${joinNames(o.voters.map(nameOf), t)}` : ""}`}
               disabled={!open || vote.isPending || !meId}
               onPress={() => {
                 if (!meId) return;
@@ -85,28 +98,44 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
               }}
               style={[styles.option, { borderColor: c.line2 }]}
             >
-              <View style={[styles.fill, { width: `${o.share * 100}%`, backgroundColor: c.line }]} />
-              <View style={leadBox(line, 20)}>
-                <View
-                  style={[styles.box, { borderColor: c.faint }, mine && { backgroundColor: c.ink, borderColor: c.ink }]}
-                >
-                  {mine ? <Icon name="check" size={13} color={c.raised} /> : null}
+              {/* The share fills the option up to its faces, never under them: their rings stay the card's face. */}
+              <View style={styles.track}>
+                <View style={[styles.fill, { width: `${o.share * 100}%`, backgroundColor: c.line }]} />
+                <View style={leadBox(line, 20)}>
+                  <View
+                    style={[
+                      styles.box,
+                      { borderColor: c.faint },
+                      mine && { backgroundColor: c.ink, borderColor: c.ink },
+                    ]}
+                  >
+                    {mine ? <Icon name="check" size={13} color={c.raised} /> : null}
+                  </View>
                 </View>
+                <Text variant="body" style={[styles.label, styles.bold]}>
+                  {o.label}
+                </Text>
+                {won ? (
+                  <View style={leadBox(line, 5)}>
+                    <View style={[styles.mark, { backgroundColor: c.ok }]} />
+                  </View>
+                ) : null}
               </View>
-              <Text variant="body" style={[styles.label, styles.bold]}>
-                {o.label}
-              </Text>
-              {won ? (
-                <View style={leadBox(line, 5)}>
-                  <View style={[styles.mark, { backgroundColor: c.ok }]} />
-                </View>
-              ) : null}
-              <View style={[styles.faces, { minHeight: line.height }]}>
-                {o.voters.slice(0, FACES).map((v) => (
-                  <View key={v} style={[styles.face, { backgroundColor: c.line2, borderColor: c.raised }]}>
-                    <Text variant="caption" style={[styles.bold, VOTER_INITIAL]}>
-                      {nameOf(v).slice(0, 1).toUpperCase()}
-                    </Text>
+              <View
+                style={[styles.faces, { minHeight: line.height, minWidth: facesWidth }]}
+                onLayout={(e) => {
+                  const width = e.nativeEvent.layout.width;
+                  setFacesWidth((w) => Math.max(w, width));
+                }}
+              >
+                {/* Each voter's face as the conversation shows it (the photo, else the initials), ringed in the
+                    option's face. */}
+                {o.voters.slice(0, FACES).map((v, i, shown) => (
+                  <View
+                    key={v}
+                    style={[styles.ring, { backgroundColor: c.raised }, i > 0 && faceOverlap(hasPhoto(shown[i - 1]))]}
+                  >
+                    <Face who={{ type: "person", id: v }} size={20} />
                   </View>
                 ))}
                 {o.voters.length > FACES ? (
@@ -133,9 +162,6 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
     </View>
   );
 }
-
-/** A voter's 24 tile inside its 2-point ring: the initial centred in the 20 left. */
-const VOTER_INITIAL = initialText(20, 12);
 
 const styles = StyleSheet.create({
   // As wide as the message, under what comes before it (the files' cards keep the same gap).
@@ -176,16 +202,22 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 2,
   },
   label: { flex: 1, minWidth: 0 },
-  faces: { flexDirection: "row", alignItems: "center" },
-  face: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 24,
-    height: 24,
-    marginLeft: -4,
-    borderWidth: 2,
-    borderRadius: 8,
-    borderBottomLeftRadius: 3,
+  // At the end of the room every option keeps for its faces.
+  faces: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end" },
+  // A 20 face in a 2-point ring: 24 in all, the ring's corner the face's 30% plus the 2 between them.
+  ring: { padding: 2, borderRadius: 8 },
+  // The box, the label and the share's fill behind them, out to the option's left edge, top to bottom.
+  track: {
+    flex: 1,
+    alignSelf: "stretch",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    minWidth: 0,
+    marginLeft: -12,
+    paddingLeft: 12,
+    marginVertical: -12,
+    paddingVertical: 12,
   },
   note: { marginTop: -8, marginBottom: 10, paddingHorizontal: 14 },
   foot: {

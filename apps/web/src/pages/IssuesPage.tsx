@@ -1,12 +1,23 @@
 import type { Actor, Issue, IssueColumn, IssuePriority, IssueStatus, IssuesView } from "@agenteschat/client";
-import { useIssueColumns, useIssues, useIssuesView, useSetIssuesView, useTaskUnread } from "@agenteschat/client";
+import {
+  useIssue,
+  useIssueColumns,
+  useIssueProjectAction,
+  useIssueProjects,
+  useIssues,
+  useIssuesView,
+  useSetIssuesView,
+  useTaskUnread,
+} from "@agenteschat/client";
 import { dueLabel, dueTone, relativeTime } from "@agenteschat/client/lib/format";
 import { githubLinkLabel } from "@agenteschat/client/lib/github-link";
+import { NO_PROJECT, projectOfFilter } from "@agenteschat/client/lib/issue-projects";
 import { ISSUES_VIEW_DEFAULT, PRIORITY_ORDER, sortIssues } from "@agenteschat/client/lib/issues-view";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   Button,
   Chip,
+  ColorDot,
   cx,
   EmptyState,
   FactLine,
@@ -17,12 +28,13 @@ import {
   type LineFact,
   Menu,
   MenuItem,
+  MenuSeparator,
   PageHeader,
   SearchField,
   Toolbar,
   WorkSweep,
 } from "@agenteschat/ui";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useDeferredValue, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActorAvatar, ActorWho, AgentAvatar } from "@/components/AgentAvatar";
@@ -64,6 +76,7 @@ import { type ToastText, useToast } from "@/lib/toast";
 import { AddColumnDialog, Board, type CardState, type IssueGroup, useMoveIssue, usePatchIssue } from "./IssueBoard";
 import { IssueDeleteProvider, useIssueDeleting } from "./IssueDelete";
 import { IssueDialog } from "./IssuePage";
+import { DeleteProjectDialog, ProjectChip, ProjectDialog } from "./IssueProjects";
 import { DisplayButton, IssueFilters, PRIORITY_ICON } from "./IssuesToolbar";
 import { type CardMove, type DropResult, type IssueDrag, useIssueDrag } from "./issue-drag";
 import { NewIssueDialog } from "./NewIssueDialog";
@@ -77,10 +90,29 @@ export function StatusChip({ status }: { status: IssueStatus }) {
 }
 
 /**
+ * The project whose board this is, in the URL (`?project=<id>`, `none` for the tasks with no project): a board of its
+ * own to link to and go back from, so picking one is a new history entry.
+ */
+function useProjectParam(): [string | undefined, (value: string | undefined) => void] {
+  const value = useRouterState({ select: (s) => (s.location.search as { project?: string }).project });
+  const navigate = useNavigate();
+  const set = (next: string | undefined) =>
+    void navigate({
+      to: ".",
+      search: ((prev: Record<string, unknown>) => {
+        const { project: _project, open: _open, m: _m, ...rest } = prev;
+        return next ? { ...rest, project: next } : rest;
+      }) as never,
+    });
+  return [value, set];
+}
+
+/**
  * Tarefas (issues in the code): agents working now, then the tasks as a board or a list, grouped by stage (the org's
  * custom columns in fixed stages), by assignee or by priority, with a details dialog. How the person looks at them
  * (layout, grouping, order, what the cards show, filters) is theirs per workspace, on the server, so every device
- * opens it the same way; the search is not kept.
+ * opens it the same way; the search is not kept. A project's board is this same board with only its tasks, which the
+ * server filters (the list is capped, so filtering here would leave a busy workspace's project half empty).
  */
 export function IssuesPage() {
   const { t } = useTranslation();
@@ -100,7 +132,22 @@ export function IssuesPage() {
   const [creating, setCreating] = useState<false | { columnId: string | null }>(false);
   const [addingColumn, setAddingColumn] = useState(false);
   const search = useDeferredValue(q.trim());
-  const issues = useIssues(org.id, search);
+  const [projectParam, setProjectParam] = useProjectParam();
+  const projectsQuery = useIssueProjects(org.id);
+  const project = projectOfFilter(projectsQuery.data?.projects, projectParam);
+  const projectAction = useIssueProjectAction(org.id);
+  // "Novo projeto", "Editar projeto" and "Excluir projeto", one at a time.
+  const [projectDialog, setProjectDialog] = useState<"new" | "edit" | "delete" | null>(null);
+  // A project deleted elsewhere, or a link to one that is gone: back to every task.
+  const projectGone = Boolean(
+    projectParam && projectParam !== NO_PROJECT && projectsQuery.isSuccess && !projectsQuery.isFetching && !project,
+  );
+  useEffect(() => {
+    if (!projectGone) return;
+    setProjectDialog(null);
+    setProjectParam(undefined);
+  });
+  const issues = useIssues(org.id, search, projectParam);
   const columnsQuery = useIssueColumns(org.id);
   const columns = columnsQuery.data;
   const all = issues.data ?? [];
@@ -109,11 +156,22 @@ export function IssuesPage() {
       (view.assignees.length === 0 || view.assignees.includes(actorKey(i.assignee))) &&
       (view.priorities.length === 0 || view.priorities.includes(i.priority)),
   );
-  const noIssues = issues.isSuccess && all.length === 0 && !search;
+  const noIssues = issues.isSuccess && all.length === 0 && !search && !projectParam;
+  const emptyProject = issues.isSuccess && all.length === 0 && !search && Boolean(projectParam);
+  // A new task on a project's board starts in it. An archived project takes none, so its board offers none.
+  const presetProject = project && !project.archived ? project.id : null;
   const look = useRightHandLook();
   const posts = can(org, "post");
+  const adds = posts && !project?.archived;
   const open = all.filter(isOpen);
-  const opened = all.find((i) => i.number === openNumber) ?? null;
+  const listed = all.find((i) => i.number === openNumber) ?? null;
+  // On a project's board a task that isn't in it still opens (a link, or its project changed in its own dialog).
+  const outside = useIssue(
+    org.id,
+    openNumber ?? 0,
+    Boolean(projectParam) && openNumber !== null && issues.isSuccess && !listed,
+  );
+  const opened = listed ?? (projectParam && outside.data?.number === openNumber ? outside.data : null);
   const toggle = (n: number) => setOpenParam(openNumber === n ? null : n);
   // The saved view decides the layout: until it comes, the skeleton (not the default board, then the list).
   const viewLoading = viewQuery.isLoading;
@@ -125,7 +183,7 @@ export function IssuesPage() {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.toLowerCase() === "n") {
         e.preventDefault();
-        if (posts) setCreating({ columnId: null });
+        if (adds) setCreating({ columnId: null });
       } else if (e.key === "/") {
         e.preventDefault();
         searchRef.current?.focus();
@@ -133,14 +191,24 @@ export function IssuesPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [posts]);
+  }, [adds]);
   return (
     <IssueDeleteProvider onDeleted={() => setOpenParam(null)}>
       <div className="page issues">
         <div className="issues__main">
           <PageHeader
             className="issues-head"
-            title={t("issues.title")}
+            title={
+              projectParam ? (
+                // Inside the title, so the dot stays on the first line of a name that wraps.
+                <>
+                  <ColorDot color={project?.color} />
+                  {project ? project.name : t("issues.projects.none")}
+                </>
+              ) : (
+                t("issues.title")
+              )
+            }
             count={
               <>
                 <span>
@@ -152,12 +220,13 @@ export function IssuesPage() {
                 {open.some((i) => !i.assignee) && (
                   <span> · {t("issues.unassigned", { count: open.filter((i) => !i.assignee).length })}</span>
                 )}
+                {project?.archived && <span> · {t("issues.projects.archivedMark")}</span>}
               </>
             }
             actions={
               // The empty state takes over this button: one way in, in the middle of the page.
               !noIssues &&
-              posts && (
+              adds && (
                 <Button variant="primary" icon="plus" kbd={["N"]} onClick={() => setCreating({ columnId: null })}>
                   {t("issues.new")}
                 </Button>
@@ -182,20 +251,48 @@ export function IssuesPage() {
             actions={
               <span className="issues-tools">
                 <DisplayButton view={view} onChange={changeView} />
-                {view.group === "stage" && (
+                {(view.group === "stage" || (project && posts)) && (
                   <Menu
                     align="end"
                     label={t("issues.moreOptions")}
                     trigger={<Button size="sm" iconOnly icon="more" aria-label={t("issues.moreOptions")} />}
                   >
-                    <MenuItem icon="layers" onSelect={() => setAddingColumn(true)} disabled={!columns}>
-                      {t("issues.columns.add")}
-                    </MenuItem>
+                    {view.group === "stage" && (
+                      <MenuItem icon="layers" onSelect={() => setAddingColumn(true)} disabled={!columns}>
+                        {t("issues.columns.add")}
+                      </MenuItem>
+                    )}
+                    {project && posts && (
+                      <>
+                        {view.group === "stage" && <MenuSeparator />}
+                        <MenuItem icon="edit" onSelect={() => setProjectDialog("edit")}>
+                          {t("issues.projects.edit")}
+                        </MenuItem>
+                        <MenuItem
+                          icon="archive"
+                          disabled={projectAction.isPending}
+                          onSelect={() =>
+                            projectAction.mutate({ type: "update", projectId: project.id, archived: !project.archived })
+                          }
+                        >
+                          {t(project.archived ? "issues.projects.unarchive" : "issues.projects.archive")}
+                        </MenuItem>
+                        <MenuItem icon="trash" danger onSelect={() => setProjectDialog("delete")}>
+                          {t("issues.projects.delete")}
+                        </MenuItem>
+                      </>
+                    )}
                   </Menu>
                 )}
               </span>
             }
           >
+            <ProjectChip
+              data={projectsQuery.data}
+              value={projectParam}
+              onChange={setProjectParam}
+              onNew={posts ? () => setProjectDialog("new") : undefined}
+            />
             <IssueFilters view={view} issues={all} onChange={changeView} />
           </Toolbar>
           {(issues.isLoading || viewLoading || (!columns && columnsQuery.isLoading)) &&
@@ -238,6 +335,21 @@ export function IssuesPage() {
               {t(posts ? "issues.empty" : "issues.emptyViewer")}
             </EmptyState>
           )}
+          {emptyProject && (
+            <EmptyState
+              size="panel"
+              actions={
+                adds &&
+                presetProject && (
+                  <Button variant="primary" icon="plus" onClick={() => setCreating({ columnId: null })}>
+                    {t("issues.new")}
+                  </Button>
+                )
+              }
+            >
+              {t(projectParam === NO_PROJECT ? "issues.noResults" : "issues.projects.empty")}
+            </EmptyState>
+          )}
           {issues.isSuccess && filtered.length === 0 && (all.length > 0 || search) && (
             <EmptyState
               size="panel"
@@ -260,13 +372,14 @@ export function IssuesPage() {
           )}
           {!viewLoading && filtered.length > 0 && columns && (
             <IssuesBody
-              view={view}
+              // A project's own board doesn't say its name again on every card.
+              view={projectParam ? { ...view, fields: { ...view.fields, project: false } } : view}
               columns={columns}
               issues={filtered.filter((i) => view.showCanceled || i.status !== "canceled")}
               all={all}
               openNumber={openNumber}
               onOpen={toggle}
-              onNew={posts ? (columnId) => setCreating({ columnId }) : undefined}
+              onNew={adds ? (columnId) => setCreating({ columnId }) : undefined}
             />
           )}
         </div>
@@ -276,9 +389,23 @@ export function IssuesPage() {
         <NewIssueDialog
           open={creating !== false}
           columnId={creating ? creating.columnId : null}
+          projectId={presetProject}
           columns={columns ?? []}
           onClose={() => setCreating(false)}
         />
+        {projectDialog === "new" && (
+          <ProjectDialog onClose={() => setProjectDialog(null)} onDone={(p) => setProjectParam(p.id)} />
+        )}
+        {projectDialog === "edit" && project && (
+          <ProjectDialog project={project} onClose={() => setProjectDialog(null)} />
+        )}
+        {projectDialog === "delete" && project && (
+          <DeleteProjectDialog
+            project={project}
+            onClose={() => setProjectDialog(null)}
+            onDeleted={() => setProjectParam(undefined)}
+          />
+        )}
         {columns && (
           <AddColumnDialog
             open={addingColumn}
@@ -603,7 +730,8 @@ function CardWho({ issue: i, state, assignee }: { issue: Issue; state: TaskState
 }
 
 /**
- * A card's and a row's one line of facts, each under its view toggle: the number, the label (the line's one pill),
+ * A card's and a row's one line of facts, each under its view toggle: the number, the project (its color's dot and
+ * its name), the label (the line's one pill),
  * the priority, the due date (in the attention tone today, tomorrow and once late), the criteria, GitHub, and the
  * conversation's count (bold while unread, with the red count of mentions of me).
  */
@@ -612,6 +740,13 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
   const { org } = useOrg();
   const { unread, mentions } = useTaskUnread(org.id, i.id);
   const facts: LineFact[] = [{ key: "number", text: `#${i.number}` }];
+  if (fields.project && i.project)
+    facts.push({
+      key: "project",
+      icon: <ColorDot color={i.project.color} />,
+      text: i.project.name,
+      title: t("issues.projects.label"),
+    });
   const [label, ...labels] = i.labels;
   if (fields.label && label) {
     facts.push({ key: "label", text: label, tone: "label" });

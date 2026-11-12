@@ -507,7 +507,11 @@ export function AudienceFields({
           <LineIcon variant="footnote" name="shield" size={14} color={c.faint} />
         </View>
         <View style={styles.grow}>
-          <GroupedFooter>{t("widgets.exposure")}</GroupedFooter>
+          <GroupedFooter
+            hint={{ name: t("common.about", { label: t("dashboards.audience.label") }), text: t("widgets.exposure") }}
+          >
+            {t("widgets.exposureShort")}
+          </GroupedFooter>
         </View>
       </View>
     </>

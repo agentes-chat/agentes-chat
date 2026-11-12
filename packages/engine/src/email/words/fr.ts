@@ -320,7 +320,7 @@ export const words: EmailWords = {
     workspace: (org) => [
       "Saisissez ce code pour supprimer l’espace de travail ",
       { b: org },
-      ". Il se ferme aussitôt pour tout le monde et sera supprimé définitivement 7 jours plus tard.",
+      ". Il passe aussitôt en lecture seule pour tout le monde et sera supprimé définitivement 7 jours plus tard.",
     ],
     account: (email) => [
       "Saisissez ce code pour supprimer tout le compte ",
@@ -341,19 +341,19 @@ export const words: EmailWords = {
       workspace: (org) => [
         "Saisissez ce code pour supprimer votre espace de travail ",
         { b: org },
-        ". Il se ferme aussitôt et sera supprimé définitivement 7 jours plus tard.",
+        ". Il passe aussitôt en lecture seule et sera supprimé définitivement 7 jours plus tard.",
       ],
     },
   },
   deleting: {
     subject: (day) => `Un espace de travail dont vous êtes membre sera supprimé le ${day}`,
-    preheader: "Il est fermé pour l’instant. Un propriétaire peut encore le restaurer d’ici là.",
+    preheader: "Il est en lecture seule pour l’instant. Un propriétaire peut encore le restaurer d’ici là.",
     headline: "Un espace de travail est en cours de suppression",
     body: (by, org, day, time) => [
       { b: by },
       " a supprimé l’espace de travail ",
       { b: org },
-      `. Il est fermé et disparaîtra définitivement le ${day} à ${time}.`,
+      `. Il est en lecture seule et disparaîtra définitivement le ${day} à ${time}.`,
     ],
     owner: "Vous avez changé d’avis ? Restaurez-le d’ici là.",
     button: "Restaurer l’espace de travail",

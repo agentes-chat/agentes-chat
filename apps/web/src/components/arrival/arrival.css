@@ -119,6 +119,50 @@
     background: #ffffff40;
   }
 }
+/* A one-colour mark stays dark on the white plate, on a dark page too. */
+.team-scene__mark .ac-brand--mono {
+  color: inherit;
+}
+
+/* ---------- the band over Conectar uma IA: the team, their computer, the AIs ---------- */
+.team-scene.connect-scene {
+  height: 132px;
+  border-radius: var(--radius-lg);
+}
+.connect-scene .team-scene__row {
+  gap: var(--space-3);
+}
+.connect-scene .ac-computer {
+  flex: none;
+}
+.connect-scene__marks {
+  display: flex;
+  flex: none;
+}
+.connect-scene__marks > .team-scene__mark {
+  width: 36px;
+  height: 36px;
+  animation: none;
+}
+/* Each plate over the one before by less than the room around its mark: no mark is covered. */
+.connect-scene__marks > .team-scene__mark + .team-scene__mark {
+  margin-inline-start: calc(-1 * var(--space-2));
+}
+/* A phone: two faces and three pixels a trail, so nothing is cut at the band's edges. */
+@media (max-width: 520px) {
+  .connect-scene .team-scene__row {
+    gap: var(--space-2);
+  }
+  .connect-scene .team-scene__agent:nth-child(3),
+  .connect-scene .team-scene__trail i:nth-child(n + 4) {
+    display: none;
+  }
+}
+@media (max-width: 359px) {
+  .connect-scene .team-scene__trail {
+    display: none;
+  }
+}
 
 /* ---------- the dialogs ---------- */
 .ac-dialog.arrival {

@@ -119,11 +119,9 @@ test("Preferences › Servers: the server here leads to Jev's key in its Setting
   const openOf = (el: HTMLElement) => jev(el)?.querySelector<HTMLButtonElement>(".dk-crow__end button");
   await servers(createFakeHost("prefs", "here", { here: { reach: true } }), jev, async (el, opened) => {
     const row = jev(el);
-    // Its title's ⓘ says what Jev is, the line where its key goes, and only Open at the end.
+    // Its title's ⓘ says what Jev is and where its key goes, no line under it, and only Open at the end.
     expect(row?.querySelector("button.ac-hint")?.getAttribute("aria-label")).toBe("About Jev");
-    expect(row?.querySelector(".dk-crow__text > small")?.textContent).toBe(
-      "In agentes.chat\u00a0›\u00a0Settings\u00a0›\u00a0AI and usage.",
-    );
+    expect(row?.querySelector(".dk-crow__text > small")).toBeNull();
     expect(row?.querySelector(".ac-chip")).toBeNull();
     expect([openOf(el)?.textContent, openOf(el)?.disabled]).toEqual(["Open", false]);
     await act(async () => openOf(el)?.click());

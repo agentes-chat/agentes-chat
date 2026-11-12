@@ -455,7 +455,7 @@ export function buildEngine(o: EngineOptions) {
       }),
       createIssueToolSource(artifacts),
       // Dashboards and widgets (ADR 0135 §10): boards for the person, and a widget run's only voice (`update_widget`).
-      createDashboardToolSource({ db, pubsub: adapters.pubsub, context }),
+      createDashboardToolSource({ db, pubsub: adapters.pubsub, context, ai: { gateway, machines: machineHub } }),
       createSkillToolSource({
         ...skillDeps,
         judge: context.judge,

@@ -243,6 +243,8 @@ export type ControlRequest =
   | { type: "folders.remove"; path: string; agentId?: string }
   | { type: "folders.setAgents"; path: string; agents: string[] }
   | { type: "tools.set"; tool: keyof RunnerTools; on: boolean }
+  /** Looks for Claude Code and Codex now, not at the next scheduled look. An older runner answers `bad_request`. */
+  | { type: "executors.check" }
   | { type: "access.pending" }
   | { type: "access.answer"; requestId: string; decision: "granted" | "denied"; scope: "agent" | "all" }
   /**
@@ -296,6 +298,7 @@ export interface ControlReplies {
   "folders.remove": RunnerAccess;
   "folders.setAgents": RunnerAccess;
   "tools.set": RunnerAccess;
+  "executors.check": ControlStatus;
   "access.pending": { requests: ControlAccessRequest[] };
   "access.answer": { access: RunnerAccess };
   reconnect: { reconnecting: boolean };

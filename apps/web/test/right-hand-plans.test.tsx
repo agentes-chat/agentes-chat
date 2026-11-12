@@ -152,7 +152,7 @@ test("Connect for it, with a ChatGPT plan another agent already thinks with: tha
     });
   await renderApp(`/org/${ORG_ID}/dm/agent/${LODI_ID}`, { api });
   await settle(8);
-  const card = [...document.querySelectorAll<HTMLElement>(".rq-open")].find((c) =>
+  const card = [...document.querySelectorAll<HTMLElement>(".rq--note")].find((c) =>
     c.textContent?.includes("Conectar uma IA para o time"),
   ) as HTMLElement;
   await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Conectar" })));

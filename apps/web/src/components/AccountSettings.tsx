@@ -21,7 +21,7 @@ import {
   Switch,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
@@ -29,6 +29,7 @@ import type { AuthResult } from "@/auth/client";
 import { useAuth } from "@/auth/context";
 import { ChangeAvatarDialog } from "@/components/AvatarBuilder";
 import { ChatLookSettings } from "@/components/ChatLookSettings";
+import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
 import { PrefRow } from "@/components/NoticePrefs";
 import { OpenOnPhoneDialog } from "@/components/OpenOnPhone";
 import { useOrg } from "@/components/org-context";
@@ -73,6 +74,8 @@ export function AccountSection() {
   // Adding a password and deleting the account: their dialogs are the account button's, kept in the address so a
   // sign-in again comes back to them.
   const [, setAccount] = useOpenParam("account");
+  const owner = org.role === "owner";
+  const [deletingOrg, setDeletingOrg] = useState(false);
   const mine = dir.memberById.get(me.user.id);
   const zone = mine?.timezone || browserTimezone() || "UTC";
   return (
@@ -249,25 +252,25 @@ export function AccountSection() {
         <CardHeader
           id="account-delete"
           icon="trash"
-          title={t("deleteAccount.menu")}
-          subtitle={
-            <>
-              {t("deleteAccount.card.text")}{" "}
-              <Link
-                className="ac-link"
-                to="/org/$orgId/settings/$section"
-                params={{ orgId: org.id, section: org.role === "owner" ? "general" : "members" }}
-              >
-                {t(org.role === "owner" ? "deleteAccount.card.oneWorkspace" : "deleteAccount.card.leaveWorkspace")}
-              </Link>
-            </>
-          }
-          action={
-            <Button size="sm" variant="danger" onClick={() => setAccount("delete")}>
-              {t("deleteAccount.card.button")}
-            </Button>
-          }
+          title={t(owner ? "deleteAccount.card.title" : "deleteAccount.menu")}
         />
+        <div className="danger-pair">
+          <div className="danger-pair__way">
+            <p className="small muted">{t("deleteAccount.card.text")}</p>
+            <Button size="sm" variant="danger" onClick={() => setAccount("delete")}>
+              {t("deleteAccount.menu")}
+            </Button>
+          </div>
+          {owner && (
+            <div className="danger-pair__way">
+              <p className="small muted">{t("deleteOrg.card.text", { name: org.name })}</p>
+              <Button size="sm" variant="danger" onClick={() => setDeletingOrg(true)}>
+                {t("deleteOrg.card.title")}
+              </Button>
+            </div>
+          )}
+        </div>
+        {owner && <DeleteWorkspaceDialog org={org} open={deletingOrg} onClose={() => setDeletingOrg(false)} />}
       </Card>
       <ProfileDialog focus={profile} onClose={() => setProfile(null)} />
       <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />

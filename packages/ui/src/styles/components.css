@@ -489,6 +489,53 @@ html:not([data-pointer]) .ac-btn:focus-visible {
   color: var(--faint);
   text-decoration-color: transparent;
 }
+/* A row's or a card's quiet action (`Button variant="link"`): the words alone, on one line, taking only their own
+   room, so the row's height and its end come from its text. Its icon, when it has one, sits on the capitals. */
+.ac-link--action {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+.ac-link--action > .ac-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.ac-link--action.ac-link--danger {
+  color: var(--danger);
+}
+/* Two of them side by side read as one phrase when only a small gap parts them: at least a step more, and in a row of
+   actions the row's own 16. */
+:not(.ac-acts) > .ac-link--action + .ac-link--action {
+  margin-inline-start: var(--space-2);
+}
+/* Busy: the words keep their room unseen and the spinner takes their middle, as a loading button does, so nothing
+   beside it moves. */
+.ac-link--action.ac-link--loading,
+.ac-link--action.ac-link--loading:disabled {
+  cursor: progress;
+  color: transparent;
+  text-decoration-color: transparent;
+}
+.ac-link--loading > .ac-btn__spinner {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  color: var(--muted);
+}
+/* A finger needs more than a line of text: the press area grows above and under the words and takes no layout room.
+   Never sideways: there it would cover the action 8px beside it, and scroll the page from an action at the screen's
+   edge. */
+@media (pointer: coarse) {
+  .ac-link--action::after {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--space-3)) 0;
+  }
+}
 html:not([data-pointer]) .ac-link:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
@@ -1462,6 +1509,28 @@ html:not([data-pointer]) .ac-msg__time--details:focus-visible {
     max-width: 420px;
   }
 }
+/*
+ * The tooltip of every `title` and icon-only control (`installTitleTips`): an ink plate, the page's colours swapped, in
+ * both themes. Long words wrap at a label's width, a `title`'s own line breaks are kept.
+ */
+.ac-tip--title {
+  /* Over a toast too: a toast's own buttons carry tips. */
+  z-index: var(--z-toast);
+  max-width: min(280px, calc(100vw - 24px));
+  padding: var(--space-1) var(--space-2);
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--e2);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  white-space: pre-line;
+}
+/* Right after another tip: it is there at once, as the browser's is. */
+.ac-tip--now {
+  animation: none;
+}
 /* A person-facing state on the header line ("enviando…"): icon + word, muted */
 .ac-msg__status {
   display: inline-flex;
@@ -1524,6 +1593,21 @@ html:not([data-pointer]) .ac-msg__time--details:focus-visible {
 .ac-msg__error {
   gap: 6px;
   color: var(--danger);
+  font-size: 14px;
+  line-height: 20px;
+}
+/* A message that didn't go: why, then its one way out at the end of the sentence, or under it when it doesn't fit. */
+.ac-msg__unsent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+.ac-msg__unsent > .ac-msg__error {
+  min-width: 0;
+  margin: 0;
+}
+.ac-msg__unsent > .ac-link {
   font-size: 14px;
   line-height: 20px;
 }
@@ -3177,6 +3261,15 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 .ac-planmeter--compact .ac-planmeter__state {
   font-size: 12px;
 }
+/* A plan's state as one word at the end of a closed row (`planAttention`), in its bar's color. */
+.ac-planword {
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--warn);
+}
+.ac-planword:is([data-level="critical"], [data-level="limited"]) {
+  color: var(--danger);
+}
 
 /* A month day by day (UsageDays.tsx): a column per day stacked by source, in 1-px rows; days ahead dotted. */
 .ac-usage-days {
@@ -3263,6 +3356,11 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 }
 .ac-list__row + .ac-list__row {
   border-top: 1px solid var(--line);
+}
+/* A face line in a list (the name risen to its face's top, what ends that line risen with it): the rise takes the
+   line's own room above the words, so the row's padding is all that stands between them and the hairline. */
+.ac-list__row:has(> .ac-captail.ac-captop) {
+  padding-block: var(--space-3);
 }
 /* A ghost icon that ends a row (its actions' menu): its icon on the row's padding line, as far in as the row's lead,
    in the row's first-line box (`.ac-captail`) too. */
@@ -6054,8 +6152,17 @@ html:not([data-pointer]) .ac-hint:focus-visible {
  */
 .ac-hint.ac-menu__hint {
   align-self: center;
-  margin: -5px -5px -5px auto;
+  margin: -5px 0;
+  padding-left: 0;
   translate: none;
+}
+/* Right after the option's words, not at the row's end: there it reads as the check's, and hangs alone on a row that
+   isn't chosen. The label gives up the room it takes in a list of faces, and the check keeps the end. */
+.ac-menu__item:has(> .ac-hint.ac-menu__hint) > .ac-menu__label {
+  flex: 0 1 auto;
+}
+.ac-hint.ac-menu__hint + .ac-menu__check {
+  margin-left: auto;
 }
 .ac-menu__tip {
   position: fixed;
@@ -6156,6 +6263,51 @@ html:not([data-pointer]) .ac-hint:focus-visible {
 .ac-tabpanel > .ac-details__section:first-child {
   padding-top: 0;
   border-top: 0;
+}
+
+/* A color's dot (ColorDot) in an icon's box, so it sits where an icon would. No color: a hollow ring. */
+.ac-colordot {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--dot-box, 14px);
+  height: var(--dot-box, 14px);
+}
+.ac-colordot::before {
+  content: "";
+  width: var(--dot-size, 8px);
+  height: var(--dot-size, 8px);
+  border-radius: 50%;
+  background: var(--dot);
+}
+.ac-colordot[data-none]::before {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--faint);
+}
+/* Beside 16px icons in a menu's rows and a select's value; in a page's title, a bigger dot before its first word. */
+:is(.ac-filter__option, .ac-menu__leading, .ac-select__lead) > .ac-colordot {
+  --dot-box: 16px;
+}
+/*
+ * The dot beside the name as a block of its own, so a name that wraps keeps its lines' left edge and a first word
+ * wider than the line breaks beside the dot, never under it. On the name's baseline (the count beside the title still
+ * lines up with it), raised so its middle is the capitals'.
+ */
+.ac-pagehead__title:has(> .ac-colordot) {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.ac-pagehead__title > .ac-colordot {
+  --dot-box: var(--space-3);
+  --dot-size: var(--space-3);
+  translate: 0 calc(var(--dot-size) / 2 - var(--cap-top) + var(--cap-mid));
+}
+/* In a menu's row the dot keeps to the name's first line when the name wraps. */
+.ac-menu__leading:has(> .ac-colordot) {
+  align-self: flex-start;
+  align-items: center;
+  height: 20px;
 }
 
 /* A role's mark (RoleMark, ADR 0085): the role's color in the agents' dither in a full circle, its icon in white. */
@@ -6487,6 +6639,14 @@ html:not([data-pointer])
 .ac-msg--own .ac-msg__foot {
   justify-content: flex-end;
   text-align: right;
+}
+/* My message that didn't go: the line ends on the bubble's edge, its words still starting right after their mark. */
+.ac-msg--own .ac-msg__unsent {
+  justify-content: flex-end;
+}
+.ac-msg--own .ac-msg__unsent > .ac-msg__error {
+  justify-content: flex-start;
+  text-align: start;
 }
 /* Under the run's last bubble: its time (its details on hover), or "enviando…" in its place on the same line. */
 .ac-msg__own-time {
@@ -7121,6 +7281,16 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
   flex-wrap: wrap;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-2) 0;
+}
+/* Why the text can't go yet, and the way out: its words wrap, the action follows them or drops under them. */
+.ac-composer__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-3) 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
 }
 /* Voice messages (ADR 0100). The recording sits on the text's first line and hides nothing but the text, which keeps
    its place: the box never changes height, whatever was typed. */
@@ -9928,10 +10098,25 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
   width: var(--option-face);
   height: var(--option-face);
 }
+/* A name wider than the menu wraps in its row, whole. */
 .ac-filter__label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ac-filter__list[hidden] {
+  display: none;
+}
+/* The menu's own action ("Novo projeto"), past a line under the options. */
+.ac-filter__foot {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--menu-pad) var(--menu-pad);
+}
+.ac-filter__list[hidden] + .ac-filter__foot {
+  padding-top: var(--menu-pad);
+}
+.ac-filter__foot > .ac-menu__separator {
+  margin: 0 var(--menu-item-px) var(--menu-pad);
 }
 /* A count (Tipo's kinds) ends the row before the check, on one right edge. */
 .ac-filter__option > .ac-countchip {
@@ -10224,6 +10409,27 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
 .ac-menu--dropdown,
 .ac-menu--select {
   max-width: calc(100vw - 24px);
+}
+/* And a name wider than that wraps in its row, never cut at the menu's edge. A row with a face keeps its one line. */
+:is(.ac-menu--dropdown, .ac-menu--select) .ac-menu__item:not(:has(> .ac-menu__leading > .ac-avatar)) > .ac-menu__label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* Its lead no taller than a line (an icon, a mark) keeps to the name's first line then, as an `.ac-iconline` lead. A list
+   with faces centres every lead in its taller row instead. */
+:is(.ac-menu--dropdown, .ac-menu--select):not(:has(.ac-menu__leading > .ac-avatar))
+  .ac-menu__item
+  > .ac-menu__leading:has(> .ac-icon, > .ac-brand--xs) {
+  align-self: flex-start;
+  /* Browsers without the lh unit: the row's 20px line. */
+  translate: 0 calc(10px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  :is(.ac-menu--dropdown, .ac-menu--select):not(:has(.ac-menu__leading > .ac-avatar))
+    .ac-menu__item
+    > .ac-menu__leading:has(> .ac-icon, > .ac-brand--xs) {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
 }
 @media (max-width: 640px) {
   .ac-suggest {
@@ -11617,7 +11823,7 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
   overflow-wrap: anywhere;
 }
 /* Any mark: the kit's icons, a maker's logo drawn in the text's color, 14 on the first line's middle. */
-.ac-factline__fact > svg {
+.ac-factline__fact > :is(svg, .ac-colordot) {
   flex: none;
   align-self: flex-start;
   margin-block-start: 3px;
@@ -11706,6 +11912,31 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
 .ac-props .ac-btn .ac-avatar {
   margin-inline-start: -2px;
 }
+/*
+ * A button's value wraps as a select's does (a long project's name): the control grows from its 32 instead of running
+ * past the strip, and a dot before the words stays on their first line.
+ */
+.ac-props > .ac-btn--sm:not(.ac-btn--icon),
+.ac-props > * > .ac-btn--sm:not(.ac-btn--icon) {
+  max-width: 100%;
+  height: auto;
+  min-height: var(--control-h-sm);
+  padding-block: 5px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+@supports (top: 1lh) {
+  /* The room above the first line is the same on one line or three, so the dot sits on that line either way. */
+  .ac-props > .ac-btn--sm:not(.ac-btn--icon),
+  .ac-props > * > .ac-btn--sm:not(.ac-btn--icon) {
+    padding-block: calc((var(--control-h-sm) - 1lh) / 2);
+  }
+  .ac-props .ac-btn > .ac-colordot:first-child {
+    align-self: flex-start;
+    translate: 0 calc(0.5lh - 50%);
+  }
+}
 /* The date is one more control as wide as its words: its calendar leads, as the others' icons and faces do. */
 .ac-props .ac-date__trigger > .ac-select__chev {
   order: -1;
@@ -11754,8 +11985,8 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
   }
 }
 
-/* ── Step track: a run's steps in one row, nodes joined by a line, a short label and the time under each ── */
-.ac-track {
+/* ── Step track: a run's steps in one row of nodes joined by a line, and one line under it that tells one step whole ── */
+.ac-track__steps {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -11764,17 +11995,19 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
 }
 .ac-track__step {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
   min-width: 0;
-  text-align: center;
+  height: var(--control-h-md);
+  display: grid;
+  place-items: center;
+}
+/* A lone step starts where the line under it does. */
+.ac-track__step:only-child {
+  justify-items: start;
 }
 .ac-track__step + .ac-track__step::before {
   content: "";
   position: absolute;
-  top: 13px;
+  top: calc(var(--control-h-md) / 2 - 1px);
   left: calc(-50% + 18px);
   right: calc(50% + 18px);
   height: 2px;
@@ -11785,59 +12018,118 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
   background: color-mix(in srgb, var(--success) 50%, var(--line2));
 }
 .ac-track__node {
+  appearance: none;
+  position: relative;
   width: 28px;
   height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
   display: grid;
   place-items: center;
+  font: inherit;
   font-size: 11.5px;
   font-weight: 650;
   color: var(--ink2);
   background: var(--sunken);
+  cursor: pointer;
+  transition: box-shadow var(--dur-fast) ease;
+  /* The keys' ring sits outside the told node's own. */
+  outline-offset: 3px;
+}
+/* A finger gets the cell's height, not only the dot. */
+.ac-track__node::after {
+  content: "";
+  position: absolute;
+  inset: -6px -2px;
 }
 .ac-track__node svg {
   width: 14px;
   height: 14px;
 }
-.ac-track__label {
-  max-width: 100%;
-  padding: 0 4px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-  color: var(--ink2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ac-track__time {
-  font-size: 11px;
-  line-height: 14px;
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
+/* The step the line under the track tells. */
+.ac-track__node[data-told] {
+  box-shadow: 0 0 0 2px var(--ink2);
 }
 .ac-track__step.is-now .ac-track__node {
   background: var(--attention-soft);
   color: var(--attention);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--attention) 18%, transparent);
 }
-.ac-track__step.is-now .ac-track__label {
-  color: var(--attention);
+.ac-track__step.is-now .ac-track__node[data-told] {
+  box-shadow: 0 0 0 2px var(--attention);
 }
 .ac-track__step.is-after .ac-track__node {
   background: color-mix(in srgb, var(--success) 14%, transparent);
   color: var(--success);
 }
-/* A failed step keeps its app's logo; the ring and the label say it failed. */
+.ac-track__step.is-after .ac-track__node[data-told] {
+  box-shadow: 0 0 0 2px var(--success);
+}
+/* A failed step keeps its app's logo, the ring and the line say it failed. */
 .ac-track__step.is-failed .ac-track__node {
   color: var(--danger);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 60%, transparent);
 }
-.ac-track__step.is-failed .ac-track__label {
+.ac-track__step.is-failed .ac-track__node[data-told] {
+  box-shadow: 0 0 0 2px var(--danger);
+}
+/* "+1234" is wider than a dot. */
+.ac-track__step.is-more .ac-track__node {
+  width: auto;
+  min-width: 28px;
+  padding: 0 var(--space-1);
+  border-radius: 999px;
+  color: var(--muted);
+}
+/* Two lines are kept for it, so a longer step under the pointer moves nothing below. */
+.ac-track__line {
+  margin: var(--space-1) 0 0;
+  min-height: 40px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink2);
+  overflow-wrap: anywhere;
+}
+.ac-track__label {
+  font-weight: 600;
+}
+.ac-track__line.is-now .ac-track__label {
+  color: var(--attention);
+}
+.ac-track__line.is-failed .ac-track__label {
   color: var(--danger);
 }
-.ac-track__step.is-more .ac-track__node {
+.ac-track__time {
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@supports (top: 1lh) {
+  .ac-track__line {
+    min-height: 2lh;
+  }
+}
+/* Eight nodes across a phone leave little between them: smaller dots keep the joining line a line. */
+@media (max-width: 640px) {
+  .ac-track__node {
+    width: 24px;
+    height: 24px;
+  }
+  .ac-track__step.is-more .ac-track__node {
+    min-width: 24px;
+    padding: 0 2px;
+  }
+  .ac-track__step + .ac-track__step::before {
+    left: calc(-50% + 15px);
+    right: calc(50% + 15px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-track__node {
+    transition: none;
+  }
 }
 
 /*
@@ -12015,6 +12307,129 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
   .ac-mediarow__end--wrap > .ac-btn:only-child:not(.ac-btn--ghost) {
     flex: 1 1 auto;
   }
+}
+
+/*
+ * FoldRow: a list row that opens in place. Its line is a button over the row's whole width (the row's padding is the
+ * button's, so its hover and its ring reach the list's edges), a MediaRow with a fourth column for the chevron, which
+ * stays on the name's line when what ends that line goes under it. Under it the fold is a grid row of no height while
+ * closed, so opening and closing grow and shrink to what it holds: the details, then the row's actions (`.ac-acts`).
+ */
+.ac-list__row.ac-foldrow {
+  display: block;
+  padding: 0;
+}
+.ac-foldrow__head.ac-mediarow {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  width: 100%;
+  padding: var(--row-py) var(--space-4);
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ac-foldrow__head:hover {
+  background: var(--plate-soft);
+}
+/* The list clips at its rounded edge: the ring goes inside, as its link rows' does. */
+html:not([data-pointer]) .ac-foldrow__head:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset);
+}
+/* Open, the line's lower corners are no longer the row's. Open is a class, not an attribute: the layout check tells
+   one screen from another by its classes, so the open row is measured too. */
+.ac-foldrow--open > .ac-foldrow__head {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+/* On the middle of the name's first line, however many lines the name wraps to. `--glyph` is the size the icon is
+   drawn at, which its own style sets. */
+.ac-foldrow__chevron {
+  --glyph: 16px;
+  grid-area: 1 / 4;
+  margin-block-start: calc((var(--mediarow-axis) - var(--glyph)) / 2);
+  color: var(--faint);
+}
+.ac-foldrow--open .ac-foldrow__chevron {
+  rotate: 90deg;
+}
+.ac-foldrow__fold {
+  display: grid;
+  grid-template-rows: 0fr;
+}
+.ac-foldrow--open > .ac-foldrow__fold {
+  grid-template-rows: 1fr;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ac-foldrow__chevron {
+    transition: rotate var(--dur-base) ease;
+  }
+  .ac-foldrow__fold {
+    transition: grid-template-rows var(--dur-panel) ease;
+  }
+}
+/* A pill on the line says what needs the person: where the list is too narrow for it, its words wrap inside the
+   name's column. They never run under the chevron and never end in "…". */
+.ac-foldrow__head > .ac-mediarow__head > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.ac-foldrow__head .ac-chip {
+  align-items: flex-start;
+  height: auto;
+  min-height: 22px;
+  padding-block: 1px;
+  white-space: normal;
+}
+/* Its icon stays on the first line's capitals, as an `.ac-iconline` lead does. Without the lh unit: the name's
+   20px line. */
+.ac-foldrow__head .ac-chip > .ac-icon {
+  translate: 0 calc(10px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  .ac-foldrow__head .ac-chip > .ac-icon {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
+}
+.ac-foldrow__head .ac-chip__text {
+  overflow: visible;
+}
+/* In a narrow list what ends the line goes under it: the chevron takes its column, so no empty one (and its gap)
+   narrows the name. */
+@container (max-width: 479px) {
+  .ac-foldrow__head.ac-mediarow {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .ac-foldrow__chevron {
+    grid-area: 1 / 3;
+  }
+  /* The row's one plated action takes a line of its own, so the bare ones after it share the next and none is left
+     alone on a third. */
+  .ac-foldrow__more > .ac-acts > :is(.ac-btn--primary) {
+    flex: 1 0 100%;
+  }
+}
+/* A margin under the last thing, not a padding: a padding would keep the closed fold that tall. As much room under
+   it as the line has above its face. */
+.ac-foldrow__more {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+}
+.ac-foldrow__more > :last-child {
+  margin-block-end: var(--row-py);
+}
+/* The row's actions wrap under each other on a phone, never past the list's edge. */
+.ac-foldrow__more > .ac-acts {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
 }
 
 /* ---------- A phone's own Settings path (`SettingsPath`) ---------- */

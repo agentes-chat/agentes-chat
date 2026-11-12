@@ -332,7 +332,7 @@ export const words: EmailWords = {
     workspace: (org) => [
       "Wpisz ten kod, żeby usunąć przestrzeń roboczą ",
       { b: org },
-      ". Od razu zamknie się dla wszystkich, a po 7 dniach zostanie usunięta na dobre.",
+      ". Od razu stanie się dla wszystkich tylko do odczytu, a po 7 dniach zostanie usunięta na dobre.",
     ],
     account: (email) => [
       "Wpisz ten kod, żeby usunąć całe konto ",
@@ -353,19 +353,19 @@ export const words: EmailWords = {
       workspace: (org) => [
         "Wpisz ten kod, żeby usunąć swoją przestrzeń roboczą ",
         { b: org },
-        ". Od razu się zamknie, a po 7 dniach zostanie usunięta na dobre.",
+        ". Od razu stanie się tylko do odczytu, a po 7 dniach zostanie usunięta na dobre.",
       ],
     },
   },
   deleting: {
     subject: (day) => `Przestrzeń robocza, w której jesteś, zostanie usunięta ${day}`,
-    preheader: "Jest już zamknięta. Do tego czasu właściciel może ją jeszcze przywrócić.",
+    preheader: "Jest już tylko do odczytu. Do tego czasu właściciel może ją jeszcze przywrócić.",
     headline: "Przestrzeń robocza jest usuwana",
     body: (by, org, day, time) => [
       { b: by },
       " usuwa przestrzeń roboczą ",
       { b: org },
-      `. Jest już zamknięta i zniknie na dobre ${day} o ${time}.`,
+      `. Jest już tylko do odczytu i zniknie na dobre ${day} o ${time}.`,
     ],
     owner: "Zmiana planów? Przywróć ją przed tym terminem.",
     button: "Przywróć przestrzeń roboczą",

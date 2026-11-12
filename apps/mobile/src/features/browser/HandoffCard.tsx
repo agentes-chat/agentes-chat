@@ -9,6 +9,7 @@ import {
   useBrowserHandoffActions,
   useDesktopStatus,
 } from "@agenteschat/client";
+import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
@@ -17,7 +18,7 @@ import { Button, LineIcon, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { AskButtons, AskCard, AskFoot, ExpiryLine, useAskStore } from "../chat/asks";
 import { IconTile } from "../connectors/ConnectorIcon";
-import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
 import { genderOf } from "../shared/logic";
 import { PromptForm } from "../shared/PromptForm";
 import { useSurface } from "../shared/parts";
@@ -34,7 +35,7 @@ import { FrameView, useLiveConnection } from "./parts";
  * reason). A request on the agent's desktop is the same card, Abrir taking it into the computer's full view (the
  * screen needs its room, ADR 0098), and one line that opens that view once someone helps there. Once someone is
  * in control of the browser it is the agent's browser card; once
- * it ends, one line with how. The state comes from the message (`meta.browserHandoff`) and is refreshed
+ * it ends, the request card again, saying how it ended where its buttons were. The state comes from the message (`meta.browserHandoff`) and is refreshed
  * from the server. A push or the inbox opens this card.
  */
 export function HandoffCard({ handoff: fromMessage }: { handoff: BrowserHandoff }) {
@@ -45,6 +46,7 @@ export function HandoffCard({ handoff: fromMessage }: { handoff: BrowserHandoff 
   const surface = useSurface();
   const openId = useOpenHandoffId();
   const dir = useDirectory();
+  const when = useWhen();
   const fresh = useBrowserHandoff(orgId, fromMessage.id);
   const h: BrowserHandoff = fresh.data ?? fromMessage;
   const state = cardStateOf(h, meId);
@@ -57,25 +59,42 @@ export function HandoffCard({ handoff: fromMessage }: { handoff: BrowserHandoff 
   // Opened from here (Abrir, a push): the browser card that takes the request's place starts open.
   const [open, setOpen] = useState(false);
 
+  // Over: the same request card, what was asked still its words, and how it ended and who did it where its buttons were.
   if (state === "done" || state === "failed" || state === "expired" || state === "cancelled" || state === "withdrawn") {
-    const ok = state === "done";
+    const name = dir.agentById.get(h.agentId)?.name ?? t("channel.unknownAgent");
+    const g = agentGrammar(name);
+    const time = h.resolvedAt ? when.short(h.resolvedAt) : "";
+    const helper = h.controllerUserId ? dir.memberById.get(h.controllerUserId)?.name : undefined;
     return (
-      <View style={[styles.done, surface]}>
-        <LineIcon
-          name={ok ? "checkc" : state === "failed" ? "x" : "clock"}
-          variant="small"
-          size={16}
-          color={ok ? c.ok : c.muted}
-        />
-        <Text variant="small" tone="muted" style={styles.grow}>
-          {state === "failed" && h.note
-            ? t("mobile.browser.card.failedNote", { note: h.note })
-            : t(`mobile.browser.card.${state}`, {
-                title: h.instructions,
-                name: dir.agentById.get(h.agentId)?.name ?? t("channel.unknownAgent"),
-              })}
-        </Text>
-      </View>
+      <AskCard
+        id={h.id}
+        kind={desktop ? "desktop" : "browser"}
+        agentId={h.agentId}
+        waitsFor={null}
+        lead={h.instructions}
+        well={{ tile: <IconTile name={desktop ? "laptop" : "globe"} size={20} bare />, title: name, detail: null }}
+        answer={{
+          done: state === "done" || state === "withdrawn",
+          words:
+            state === "done"
+              ? h.controllerUserId === meId
+                ? t(desktop ? "desktop.card.doneByYou" : "browser.card.doneByYou", { ...g, time, agent: name })
+                : t(desktop ? "desktop.card.doneBy" : "browser.card.doneBy", {
+                    ...g,
+                    time,
+                    agent: name,
+                    name: helper ?? "",
+                  })
+              : state === "failed"
+                ? t("browser.card.failed")
+                : state === "cancelled"
+                  ? t("browser.card.cancelled")
+                  : state === "withdrawn"
+                    ? t("browser.card.withdrawn", g)
+                    : t("browser.card.expired", g),
+          note: state === "failed" ? h.note : null,
+        }}
+      />
     );
   }
   if (opensScreen && (state === "mine" || state === "helping")) {

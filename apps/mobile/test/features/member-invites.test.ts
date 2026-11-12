@@ -12,6 +12,7 @@ import {
   invitationSender,
   invitersOf,
   joinRoleWord,
+  memberActions,
   memberLine,
   offeredChannels,
   pendingInvitations,
@@ -118,6 +119,13 @@ describe("Membros e convites (ADR 0090)", () => {
     expect(pt(`members.invitations.${sentWords(false).resent}`, { email, date })).not.toContain("Mandei");
     expect(sentWords(true).newLink).toBe("newLink");
     expect(sentWords(false).copied).toBe("copiedNoEmail");
+  });
+
+  test("a person's menu: a message to anyone but oneself, removing or leaving only when allowed, none when empty", () => {
+    expect(memberActions(false, true)).toEqual(["dm", "remove"]);
+    expect(memberActions(false, false)).toEqual(["dm"]);
+    expect(memberActions(true, true)).toEqual(["leave"]);
+    expect(memberActions(true, false)).toEqual([]);
   });
 
   test("a person's line: their @handle, their role, or Membro, then when they were here", async () => {

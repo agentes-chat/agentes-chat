@@ -52,6 +52,7 @@ import {
   cloudNotice,
   isUserBlocked,
   openOrg,
+  readRefusal,
   refusesNewWorkspace,
   STANDING_COLUMNS,
   type WorkspaceStanding,
@@ -214,9 +215,12 @@ export async function getMembership(
   return row ? withPermissions(row) : null;
 }
 
-/** Refuses a closed workspace (suspended, or being deleted: `closedRefusal`) without changing membership lookups. */
+/**
+ * Refuses a workspace its people can't read (suspended: `readRefusal`) without changing membership lookups. One being
+ * deleted still reads: the API refuses its changes, and `workRefusal` its work.
+ */
 export function assertActiveMembership(membership: Membership): void {
-  const closed = closedRefusal(membership.standing);
+  const closed = readRefusal(membership.standing);
   if (closed) throw closed;
 }
 
@@ -229,12 +233,23 @@ export async function requireActiveMembership(db: Database, userId: string, orgI
 }
 
 /**
- * Throws ForbiddenError unless the user is a member with `permission`, and `org.suspended` or `org.deleting` for
- * anyone in a closed workspace. Returns the membership.
+ * Throws ForbiddenError unless the user is a member with `permission`, and `org.suspended` for anyone in a suspended
+ * workspace. Returns the membership.
  */
 export async function requirePermission(db: Database, userId: string, orgId: string, permission: Permission) {
   const membership = await requireActiveMembership(db, userId, orgId);
   if (!can(membership, permission)) throw new ForbiddenError();
+  return membership;
+}
+
+/**
+ * `requirePermission` for a change that never passes `readOnlyWhileDeleting` (an OAuth return, a socket's input): a
+ * workspace being deleted refuses it too (`closedRefusal`).
+ */
+export async function requireChangePermission(db: Database, userId: string, orgId: string, permission: Permission) {
+  const membership = await requirePermission(db, userId, orgId, permission);
+  const closed = closedRefusal(membership.standing);
+  if (closed) throw closed;
   return membership;
 }
 

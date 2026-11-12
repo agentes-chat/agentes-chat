@@ -12,6 +12,7 @@ import {
   useBrowserProfiles,
   useComputerSetup,
   useMachineAction,
+  useMachinePause,
   useMachines,
   useReduceMachineAccess,
 } from "@agenteschat/client";
@@ -31,6 +32,10 @@ import {
   isPaused,
   MACHINE_TOOLS,
   machineReasonText,
+  PAUSE_CHOICES,
+  pauseChoiceText,
+  pausedByText,
+  pauseUntil,
   sharedFolderFacts,
   sharedFolderOf,
   toolOnCommand,
@@ -66,7 +71,7 @@ import { findDevice } from "../devices/logic";
 import { StatusLine } from "../devices/parts";
 import { useDevices } from "../devices/queries";
 import { AgentFace } from "../shared/Face";
-import { useColors, useDirectory, useOrgId } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack, MONO, successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
 import { DESKTOP_TURN_ON, grantCommand, osOf, pauseText, type Reduce, reduceTexts, seenText } from "./logic";
@@ -88,6 +93,8 @@ export function MachineScreen({ machineId }: { machineId: string }) {
   const machines = useMachines(orgId);
   const askReduce = useAskReduce(machineId);
   const action = useMachineAction(orgId);
+  const pause = useMachinePause(orgId);
+  const meId = useMeId();
   const setupQ = useComputerSetup(orgId);
   const setup = setupView(setupQ.data, setupQ.dataUpdatedAt);
   const m = machines.data?.find((x) => x.id === machineId);
@@ -145,6 +152,35 @@ export function MachineScreen({ machineId }: { machineId: string }) {
     });
   };
 
+  const setPause = (input: { until: string | null } | "resume") =>
+    pause.mutate(
+      { machineId: m.id, input },
+      {
+        onSuccess: () => {
+          successHaptic();
+          toast({
+            title: t(input === "resume" ? "machines.remotePause.resumed" : "machines.remotePause.paused", {
+              name: m.name,
+            }),
+            icon: "check",
+          });
+        },
+        onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+      },
+    );
+  const askPause = () =>
+    chooseAction(
+      t("machines.remotePause.menu", { name: m.name }),
+      PAUSE_CHOICES.map((choice) => ({
+        label: pauseChoiceText(t, choice),
+        onPress: () => setPause({ until: pauseUntil(choice) }),
+      })),
+      t("common.cancel"),
+    );
+  const pausedNow = isPaused(m);
+  // Pause from here: whoever connected it and admins, while it's online; never the workspace's own computer.
+  const pausable = m.canManage && m.online && !managed;
+
   const chips: { icon: IconName; label: string }[] = [
     ...(m.kind === "host" && m.name ? [{ icon: "server" as const, label: t("machines.host.label") }] : []),
     // The device's state says online, busy or paused in its own chip.
@@ -173,7 +209,7 @@ export function MachineScreen({ machineId }: { machineId: string }) {
           seen: seenText(t, i18n.language, m),
         }),
     managed && !m.online ? seenText(t, i18n.language, m) : null,
-    isPaused(m) ? t("machines.pausedHint") : null,
+    isPaused(m) ? (pausedByText(t, i18n.language, m.paused, meId ?? "") ?? t("machines.pausedHint")) : null,
     // System mode: each agent works in its own home, never in the folder the computer was connected from.
     m.mode === "system" && !managed && m.kind !== "host" ? t("machines.agentUsers") : null,
   ].filter((x): x is string => Boolean(x));
@@ -226,6 +262,22 @@ export function MachineScreen({ machineId }: { machineId: string }) {
           </Text>
         ) : null}
       </View>
+
+      {pausable ? (
+        <>
+          <Gap />
+          <GroupedList>
+            <GroupedRow
+              icon={pausedNow ? "play" : "pause"}
+              label={t(pausedNow ? "machines.remotePause.resume" : "machines.remotePause.button")}
+              {...(m.remotePause ? {} : { sub: t("machines.remotePause.outdated"), subLines: 3 })}
+              {...(pausedNow ? {} : { chevron: true })}
+              disabled={!m.remotePause || pause.isPending}
+              onPress={pausedNow ? () => setPause("resume") : askPause}
+            />
+          </GroupedList>
+        </>
+      ) : null}
 
       {device ? <ComputerSection device={device} name={title} /> : null}
 

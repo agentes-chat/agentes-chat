@@ -42,7 +42,7 @@ export interface RunnerConfig {
    */
   managedBy?: "desktop" | "host";
   /** Protocol 9: paused by the owner; `until` null means until resumed. Absent: not paused. */
-  paused?: { until: string | null };
+  paused?: { until: string | null; by?: string };
   /** Protocol 10: folders and tools allowed on this machine (absent: derived from `exec`). */
   access?: RunnerAccess;
   /** The organization this home belongs to (from the device-code pairing). */
@@ -153,9 +153,12 @@ const text = (v: unknown, max = 500) => (typeof v === "string" && v ? v.slice(0,
 
 function parsePaused(v: unknown): RunnerConfig["paused"] {
   if (typeof v !== "object" || v === null) return undefined;
-  const until = (v as { until?: unknown }).until;
-  if (typeof until === "string" && !Number.isNaN(Date.parse(until))) return { until: new Date(until).toISOString() };
-  return { until: null };
+  const { until, by } = v as { until?: unknown; by?: unknown };
+  const who = typeof by === "string" && by && by.length <= 64 ? { by } : {};
+  if (typeof until === "string" && !Number.isNaN(Date.parse(until))) {
+    return { until: new Date(until).toISOString(), ...who };
+  }
+  return { until: null, ...who };
 }
 
 /** A config that still carries a version range (`minVersion`, `maxVersion`) reads the same as one without. */
@@ -312,7 +315,7 @@ export function pauseOf(config: StoredConfig | null, now = Date.now()): RunnerPa
   const p = config?.paused;
   if (!p) return { paused: false };
   if (p.until && Date.parse(p.until) <= now) return { paused: false };
-  return { paused: true, until: p.until };
+  return { paused: true, until: p.until, ...(p.by ? { by: p.by } : {}) };
 }
 
 /** What `writeConfig` writes, exactly (the watcher compares it to tell our own writes apart). */

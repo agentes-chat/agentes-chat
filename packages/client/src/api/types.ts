@@ -302,7 +302,7 @@ export interface OrgSummary {
    * which resumes it, instead of the workspace. Absent: finished, not theirs to set up, or an older server.
    */
   onboarding?: OrgOnboarding;
-  /** From `GET /me` while an owner's deletion is pending, set at once by `org.deleting`: the workspace is closed. */
+  /** From `GET /me` while an owner's deletion is pending, set at once by `org.deleting`: the workspace is read-only. */
   deletion?: OrgDeletion;
   /** From `GET /me`: what opens when the app starts here (ADR 0108). Absent from older servers: the home. */
   start?: StartChoice;
@@ -715,6 +715,8 @@ export interface Agent {
   mediaReplies?: boolean;
   /** Its autonomy brakes (ADR 0131); absent from an older server (the defaults). */
   brakes?: AgentBrakes;
+  /** How much it asks before acting (ADR 0173); absent from an older server (`risky`). */
+  approvalsLevel?: ApprovalsLevel;
   /**
    * Its setup checklist at the top of its chat (ADR 0155 §2): the ready-made role it started from and the steps a
    * person confirmed. Null or absent: an agent made before it (none shows).
@@ -746,6 +748,12 @@ export interface AgentSetupChecklist {
 
 /** A costly step unrequested work needs a person's go for (ADR 0131 §3). */
 export type CostKind = "pr" | "install" | "long";
+
+/**
+ * How much an agent asks before acting (ADR 0173): `always` (every write to a connected app), `risky` (what is marked
+ * sensitive, the default) or `never` (only merge, deploy, rollback and the like).
+ */
+export type ApprovalsLevel = "always" | "risky" | "never";
 
 /** What an agent may start that nobody asked for directly, and which agents it may call (ADR 0131). */
 export interface AgentBrakes {
@@ -902,6 +910,8 @@ export interface AgentInput {
   autonomy?: CommandApproval;
   /** Editing only: its autonomy brakes (ADR 0131); the fields given change. */
   brakes?: Partial<AgentBrakes>;
+  /** How much it asks before acting (ADR 0173); same permission as editing the agent. */
+  approvalsLevel?: ApprovalsLevel;
   /**
    * Creating only: the ready-made role it starts from, for its setup checklist (ADR 0155 §2), and what its card said
    * (ADR 0164): how it introduced itself, the personal starter it began as, the apps it will use at their levels.
@@ -1286,6 +1296,8 @@ export interface Message {
   longWork?: WorkView;
   /** Client only: an optimistic message waiting for the server, or one that failed to send. */
   local?: "pending" | "failed";
+  /** Client only, on a `failed` one the server refused: why (`sendFailureText`). */
+  sendFailure?: { status: number; code: string; message: string; params?: Record<string, unknown> };
   createdAt: string;
 }
 
@@ -1407,6 +1419,11 @@ export interface AiStatus {
       | "plan_tools";
     /** Ready on an API key with Automático: the maker of the key it thinks with (`autoMakerOf`). */
     provider?: string;
+    /**
+     * Its state for background work (a routine, a widget's build) where that differs from `state`: background work
+     * never falls back on the model brain, and the right hand's thinks with the workspace's own AI, nobody's.
+     */
+    background?: "ready" | "no_ai" | "waiting";
   }[];
 }
 
@@ -3161,6 +3178,8 @@ export interface AgentQuestion {
   status: "open" | "answered";
   answer: string | null;
   answeredByUserId: string | null;
+  /** When a person answered or skipped it; absent on a card an older server wrote. */
+  answeredAt?: string | null;
   /** The agent took it back: it no longer needs an answer. */
   withdrawn?: true;
   /** A person (`answeredByUserId`) skipped it: the agent went on without an answer. */
@@ -3559,6 +3578,8 @@ export interface Issue {
   /** Order inside the column, lowest first. */
   boardRank: number;
   priority: IssuePriority;
+  /** Its one project, or none (a server from before projects sends nothing). */
+  project?: IssueProjectRef | null;
   assignee: Actor | null;
   labels: string[];
   /** Day only, `YYYY-MM-DD`. */
@@ -3638,6 +3659,7 @@ export interface IssueInput {
   priority?: IssuePriority;
   dueDate?: string | null;
   labels?: string[];
+  projectId?: string | null;
   githubUrl?: string | null;
   /** Drive files uploaded from the new-issue box (only on create): linked to the issue. */
   attachmentIds?: string[];
@@ -3653,12 +3675,33 @@ export type IssuePatch = Partial<
 > & {
   /** Move to a board column: the issue takes that column's stage. */
   columnId?: string;
+  /** Null takes it out of its project. */
+  projectId?: string | null;
   /**
    * The whole list of acceptance criteria, in order (edited in place): an `id` keeps that criterion and its check,
    * one without is new, one left out is removed.
    */
   criteria?: { id?: string; text: string }[];
 };
+
+/** A task's project as its card shows it: a name and one of the roles' colors. Archived: offered to no new task. */
+export interface IssueProjectRef {
+  id: string;
+  name: string;
+  color: string;
+  archived: boolean;
+}
+
+/** A project in the projects menu, with the open tasks in it that I see. */
+export interface IssueProject extends IssueProjectRef {
+  open: number;
+}
+
+/** The projects by name (archived last) and how many of my open tasks have none. */
+export interface IssueProjects {
+  projects: IssueProject[];
+  unfiled: number;
+}
 
 /** A board column: it sits in a fixed stage; `name` null shows the stage's own name. */
 export interface IssueColumn {
@@ -4422,6 +4465,8 @@ export interface Machine {
   createdAt: string;
   /** ADR 0036 §6: the owner paused it on the machine; nothing new starts until it resumes. Null or absent: not paused. */
   paused?: MachinePause | null;
+  /** Its app takes a pause from the apps (`POST …/pause`); `false` or absent: update the app on it. */
+  remotePause?: boolean;
   /** ADR 0036 §8 (protocol 10): what the machine allows, as last reported. Absent until the machine reports it. */
   access?: MachineAccess | null;
   /** ADR 0040 (protocol 12): whether the agent browser can run there; null or absent when its runner doesn't say. */
@@ -4500,6 +4545,8 @@ export interface MachineBrowser {
 export interface MachinePause {
   paused?: boolean;
   until?: string | null;
+  /** Who paused it from the apps; null or absent: on the computer itself. */
+  by?: { id: string; name: string } | null;
 }
 
 /** A tool the person turns on or off on the machine. */
@@ -6440,6 +6487,8 @@ export interface NotificationLatest {
    * Both said in the person's language.
    */
   reason?: string;
+  /** `widget_failed` with `missing_credential`: why its agent has no AI, coded (`widgetFailureKey`'s `detail`). */
+  detail?: string;
   /** `approval`: asked while nobody watched, by a routine or an unattended run (ADR 0053 §8). */
   origin?: ApprovalOrigin;
   /** `org_standing` to `agent_hold` (agentes.chat Cloud): `network` or `operator`, never the hold's reason. */
@@ -6559,6 +6608,27 @@ export interface NotificationPage {
   nextCursor: string | null;
 }
 
+/**
+ * One thing waiting on me (`GET …/waiting`, ADR 0172): a view of an inbox row that waits, so `id` is that
+ * notification's and `source` opens as it does.
+ */
+export interface WaitingItem {
+  id: string;
+  kind: NotificationKind;
+  /** Who asks; null when nobody is behind it (a workspace's notice). */
+  asker: NotificationActor | null;
+  source: NotificationSource;
+  /** What is asked, in one line. */
+  question: string;
+  since: string;
+}
+
+/** `GET …/waiting`: oldest first, at most 100. */
+export interface WaitingList {
+  items: WaitingItem[];
+  count: number;
+}
+
 /** The sidebar badge (`GET …/notifications/count`, `notification.counts`). */
 /**
  * What reaches my devices as a notification, by category (ADR 0071 §8): the phone's and the browser's pushes and
@@ -6583,6 +6653,7 @@ export interface NoticePrefs {
 
 /** A tool at the top of the sidebar (`SIDEBAR_ITEMS` in packages/engine/src/sidebar-items.ts). */
 export type SidebarItem =
+  | "waiting"
   | "approvals"
   | "proposals"
   | "threads"
@@ -6634,7 +6705,7 @@ export interface IssuesView {
   priorities: IssuePriority[];
   showCanceled: boolean;
 }
-export type IssueCardField = "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
+export type IssueCardField = "project" | "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
 
 export interface NotificationCount {
   unread: number;

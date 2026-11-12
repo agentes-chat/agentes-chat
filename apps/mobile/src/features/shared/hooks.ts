@@ -13,13 +13,14 @@ import {
 } from "@agenteschat/client";
 import { computerEdition } from "@agenteschat/client/lib/computer";
 import { formerById } from "@agenteschat/client/lib/directory";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { clockHour } from "@agenteschat/client/lib/format";
 import { namesComputers } from "@agenteschat/client/lib/machines";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
 import { useRealtime } from "@/providers/realtime";
-import { haptics, rememberAgentLooks, useTheme } from "@/ui";
+import { haptics, rememberAgentLooks, useTheme, useToast } from "@/ui";
 import { agentLook, daysAgo, type PacedClock, pacedClock, whenKind } from "./logic";
 
 /** The current organization's id. */
@@ -181,4 +182,14 @@ export function usePullRefresh(refetch: () => Promise<unknown>): { refreshing: b
       .finally(() => setRefreshing(false));
   }, []);
   return { refreshing, onRefresh };
+}
+
+/** A failed request's toast: its reason in the person's words (`errorText`), never a bare "try again". */
+export function useErrorToast() {
+  const { t, i18n } = useTranslation();
+  const toast = useToast();
+  return useCallback(
+    (error: unknown) => toast({ title: errorText(t, error, i18n.language), icon: "x" }),
+    [t, i18n.language, toast],
+  );
 }

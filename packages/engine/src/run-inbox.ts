@@ -1,6 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, type Executor, eq, gt, inArray, isNull, ne, or, schema, sql } from "@agenteschat/db";
 import { scalarParams } from "./approvals";
+import { runAuthorityById } from "./authority";
 import { mayJoin, type RunTrigger, startOrJoinRun } from "./dispatch";
 import { isAgentOnlyDm } from "./dms";
 import { publishChannelEvent } from "./events";
@@ -11,7 +12,8 @@ import { holdsMessages } from "./run-hold";
 import { inChannelRun } from "./run-scope";
 import { type AgentRun, addRunStep, replyThreadOf } from "./runs";
 
-const { agentConsultations, agentRunSteps, agentRuns, agents, approvals, channels, messages, users } = schema;
+const { agentConsultations, agentRunSteps, agentRuns, agentWorks, agents, approvals, channels, messages, users } =
+  schema;
 
 /**
  * A run's inbox (`agent_runs.pending_message_ids`): messages sent to the agent's conversation while
@@ -131,12 +133,36 @@ async function takeToHandOn(db: Database, run: Pick<AgentRun, "id" | "orgId">, o
 
 /**
  * The run just paused on something a message can't move (`holdsMessages`): what it hadn't read yet gets
- * a run of its own instead of waiting behind the decision. A no-op for any other pause.
+ * a run of its own instead of waiting behind the decision. A no-op for any other pause. What was passed on to its
+ * background work stays: the work reads it once the decision comes, or its end takes it (`endWork`).
  */
 export async function releaseHeldInbox(db: Database, pubsub: PubSub | undefined, runId: string) {
   const [row] = await db.select().from(agentRuns).where(eq(agentRuns.id, runId));
   if (!row || row.pendingMessageIds.length === 0 || !(await holdsMessages(db, row))) return null;
-  return releaseInbox(db, pubsub, row, { reason: "held" });
+  const kept = row.workId ? await passedOnTo(db, row.orgId, row.workId, row.pendingMessageIds) : [];
+  if (kept.length === 0) return releaseInbox(db, pubsub, row, { reason: "held" });
+  return handOnMessages(
+    db,
+    pubsub,
+    row,
+    row.pendingMessageIds.filter((id) => !kept.includes(id)),
+  );
+}
+
+/** Of these messages, the ones passed on to that background work with `steer_work` (`meta.steeredWorkIds`). */
+export async function passedOnTo(db: Executor, orgId: string, workId: string, ids: string[]) {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({ id: messages.id })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.orgId, orgId),
+        inArray(messages.id, ids),
+        sql`${messages.meta}->'steeredWorkIds' ? ${workId}::text`,
+      ),
+    );
+  return rows.map((m) => m.id);
 }
 
 /**
@@ -195,7 +221,7 @@ export async function heldHere(
  */
 export async function whileHeld(
   db: Executor,
-  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId">,
+  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "workId">,
 ): Promise<string | null> {
   // The pause: its last step of its own. Handing its inbox on (`handOn`) writes a step after the run it
   // started, which would hide that run and its trigger.
@@ -207,7 +233,13 @@ export async function whileHeld(
   const since = new Date(paused.at);
   const threadId = replyThreadOf(run);
   const rows = await db
-    .select({ body: messages.body, person: users.name, agent: agents.name })
+    .select({
+      body: messages.body,
+      person: users.name,
+      userId: messages.authorUserId,
+      agent: agents.name,
+      runId: messages.agentRunId,
+    })
     .from(messages)
     .leftJoin(users, eq(users.id, messages.authorUserId))
     .leftJoin(agents, eq(agents.id, messages.authorAgentId))
@@ -230,7 +262,17 @@ export async function whileHeld(
     )
     .orderBy(asc(messages.createdAt))
     .limit(10);
+  // Background work reads only what was said for its asker: anyone else's ask runs after it, as them (`steerWork`), so
+  // neither their words nor the agent's answers to them reach it.
+  const [work] = run.workId
+    ? await db.select({ asker: agentWorks.requestedByUserId }).from(agentWorks).where(eq(agentWorks.id, run.workId))
+    : [];
+  const forAsker = new Map<string, boolean>();
+  for (const m of rows)
+    if (work && m.agent && m.runId && !forAsker.has(m.runId))
+      forAsker.set(m.runId, (await runAuthorityById(db, run.orgId, m.runId)).personId === work.asker);
   const lines = rows.flatMap((m) => {
+    if (work && (m.agent ? !m.runId || !forAsker.get(m.runId) : m.userId !== work.asker)) return [];
     const text = cutText(stripSentinel(m.body), 1500);
     if (!text) return [];
     return [m.agent ? `[You, in another run]: ${text}` : `[${m.person ?? "Someone"}]: ${text}`];

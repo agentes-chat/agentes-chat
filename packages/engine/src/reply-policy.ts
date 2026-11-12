@@ -70,8 +70,8 @@ export interface ReplyPolicy {
 
 /**
  * Notices that only inform the agent (ADR 0053 §10): another agent's note, the late result of a wait it
- * stopped waiting on, its own fast reply, its own follow-up coming due, what happened on GitHub (it answers there).
- * The run one of them wakes may stay quiet.
+ * stopped waiting on, its own fast reply, its own follow-up coming due, what happened on GitHub (it answers there),
+ * the asks its ended background work took on (the work may have done them). The run one of them wakes may stay quiet.
  */
 const INFORMING_NOTICES: ReadonlySet<string> = new Set([
   "agent_note",
@@ -79,6 +79,7 @@ const INFORMING_NOTICES: ReadonlySet<string> = new Set([
   "talker_reply",
   "follow_up",
   "github_event",
+  "work_follow_up",
 ]);
 
 /**

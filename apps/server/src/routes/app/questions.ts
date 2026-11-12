@@ -20,6 +20,7 @@ const AgentQuestion = z
     status: z.enum(["open", "answered"]),
     answer: z.string().nullable(),
     answeredByUserId: z.string().nullable(),
+    answeredAt: z.string().nullable().openapi({ description: "When a person answered or skipped it." }),
     dismissed: z.literal(true).optional(),
   })
   .openapi("AgentQuestion");

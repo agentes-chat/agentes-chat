@@ -256,6 +256,14 @@ function MessageBox({ target, label, onSent }: { target: DmTarget; label: string
       },
     );
   };
+  // Being deleted, the workspace takes no message (ADR 0088 §7): why, where the box would be.
+  if (org.deletion)
+    return (
+      <p className="small muted ac-iconline" role="status">
+        <Icon name="lock" size={16} />
+        <span>{t("deleting.composer")}</span>
+      </p>
+    );
   return (
     <div className="mcard__foot">
       <Locked when={send.isPending}>

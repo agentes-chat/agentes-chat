@@ -1,7 +1,7 @@
 import { useChannels, useDms, useSearch } from "@agenteschat/client";
 import { hitText } from "@agenteschat/client/lib/media";
 import { previewBody } from "@agenteschat/client/lib/message-body";
-import { can } from "@agenteschat/client/lib/permissions";
+import { makesAgents } from "@agenteschat/client/lib/permissions";
 import { searchTerms } from "@agenteschat/client/lib/search-filters";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,7 +30,7 @@ export function SearchResults({ q }: { q: string }) {
   const orgId = useOrgId();
   const dir = useDirectory();
   const when = useWhen();
-  const createsAgents = can(useOrg().org, "create_agents");
+  const createsAgents = makesAgents(useOrg().org);
   const channels = useChannels(orgId);
   const dms = useDms(orgId);
   const hits = useSearch(orgId, q, SEARCH_KINDS);

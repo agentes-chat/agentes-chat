@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { DashboardList, DashboardSummary } from "@agenteschat/client";
+import { type DashboardList, type DashboardSummary, frozenBoard } from "@agenteschat/client";
 import { type OpenTarget, targetPath } from "@agenteschat/client/lib/notifications";
 import { chartAreaTones, chartInk } from "@agenteschat/ui/sky/chart";
 import { agentPickNow, chooseAgent, closeAgentPick, openAgentPick } from "../../src/features/dashboards/agent-pick";
@@ -442,6 +442,22 @@ describe("dashboards on the phone (ADR 0135)", () => {
     expect(boardMenuKeys({ ...manager, canEdit: false, canManage: false, pinned: false })).toEqual(["home"]);
     const home = { ...manager, kind: "home" as const, audience: "private" as const, pinned: false };
     expect(boardMenuKeys(home, true)).toEqual(["organize"]);
+  });
+
+  test("a workspace being deleted offers no change to a board: only Use on Home, as on the web", () => {
+    const manager = { kind: "board" as const, canEdit: true, canManage: true, audience: "workspace" as const };
+    const deleting = { deletion: { dueAt: null, requestedAt: null, requestedBy: null } };
+    const board = frozenBoard({ ...manager, pinned: false }, deleting);
+    expect(board).toMatchObject({ canEdit: false, canManage: false });
+    expect(boardMenuKeys(board)).toEqual(["home"]);
+    expect(boardMenuKeys(frozenBoard({ ...manager, kind: "home" as const, pinned: false }, deleting), true)).toEqual(
+      [],
+    );
+    expect(frozenBoard({ ...manager, pinned: false }, { deletion: undefined })).toMatchObject({ canEdit: true });
+    // The board's screen and the home's strip read it through this, so "+", Share and a card's long press go too.
+    const read = (path: string) => readFileSync(join(import.meta.dir, "../../src/features", path), "utf8");
+    expect(read("dashboards/hooks.ts")).toContain("board: q.data && frozenBoard(q.data, org)");
+    expect(read("chats/HomeWidgets.tsx")).toContain("const board = home.board && frozenBoard(home.board, org);");
   });
 
   test("Use on Home: any board seen; on Início it offers Remove; My Home brings Início back", () => {

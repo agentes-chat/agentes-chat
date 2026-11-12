@@ -1,8 +1,14 @@
-import { Button, Chip, Dialog, DialogFooter, Menu, MenuItem, Switch } from "@agenteschat/ui";
-import { useEffect, useState } from "react";
+import { Button, Chip, Dialog, DialogBody, DialogFooter, Icon, Menu, MenuItem, Select, Switch } from "@agenteschat/ui";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
-import { isHereServer, type LocalServerStatus, type ReachStage, type ServeProblem } from "../../control/local-server";
+import {
+  isHereServer,
+  type KeepRunning,
+  type LocalServerStatus,
+  type ReachStage,
+  type ServeProblem,
+} from "../../control/local-server";
 import {
   homeServer,
   type ServerKind,
@@ -13,10 +19,11 @@ import {
 } from "../../control/server";
 import { pairedHomes } from "../../control/store";
 import { useLocalServer, useOnShown, usePending, useTailnet } from "../../hooks";
+import { OrgTile } from "../../ui/bits";
 import { CopyDetails, ReachProblem, ReachProgress, ReachRow, ServerTile } from "../../ui/here";
 import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
-import { clock, shortPath } from "../../ui/time";
+import { backupsFolder, clock, folderLabel, nightAt, shortPath } from "../../ui/time";
 
 const KIND_SUB: Record<ServerKind, string> = {
   cloud: "desktop.servers.cloudSub",
@@ -116,7 +123,7 @@ export function Servers() {
                   title={serverName(server)}
                   desc={
                     <>
-                      {[t(KIND_SUB[kind]), known && !offline && workspacesLine(t, known)].filter(Boolean).join(" · ")}
+                      {[t(KIND_SUB[kind]), known && workspacesLine(t, known)].filter(Boolean).join(" · ")}
                       {/* Its state as words in its color, never a pill (ADR 0158). */}
                       {offline && (
                         <span className="dk-state-waiting">
@@ -129,8 +136,8 @@ export function Servers() {
                     </>
                   }
                   under={
-                    known?.signedIn && known.orgs.length > 0 ? (
-                      <WorkspaceChips orgs={known.orgs} dim={offline} />
+                    known?.signedIn && known.orgs.length > 1 ? (
+                      <WorkspaceRows orgs={known.orgs} dim={offline} />
                     ) : undefined
                   }
                   end={
@@ -179,7 +186,7 @@ export function Servers() {
         </>
       )}
       <div className="dk-under-card">
-        <Button size="sm" icon="plus" onClick={() => void host.showWindow("welcome")}>
+        <Button size="sm" icon="plus" onClick={() => void host.addWorkspace().catch(() => {})}>
           {t("desktop.servers.add")}
         </Button>
       </div>
@@ -210,23 +217,25 @@ export function Servers() {
   );
 }
 
-/** "2 workspaces", or that the app isn't signed in there. */
+/** In a server's subtitle: its one workspace by name, "3 workspaces" (named in rows under it), or not signed in. */
 function workspacesLine(t: (key: string, o?: Record<string, unknown>) => string, s: ServerWorkspaces) {
-  return s.signedIn ? t("desktop.servers.workspaces", { count: s.orgs.length }) : t("desktop.servers.signedOut");
+  if (!s.signedIn) return t("desktop.servers.signedOut");
+  const [only] = s.orgs;
+  return s.orgs.length === 1 && only ? only.name : t("desktop.servers.workspaces", { count: s.orgs.length });
 }
 
-/** A server's workspaces under its row, each with its logo and unread count; `dim` while it doesn't answer. */
-function WorkspaceChips({ orgs, dim = false }: { orgs: ServerWorkspaces["orgs"]; dim?: boolean }) {
+/** A server's workspaces under its row, one line each with its logo and unread count; `dim` while it doesn't answer. */
+function WorkspaceRows({ orgs, dim = false }: { orgs: ServerWorkspaces["orgs"]; dim?: boolean }) {
   return (
-    <span className="dk-ws-list" data-dim={dim || undefined}>
+    <ul className="dk-ws-rows" data-dim={dim || undefined}>
       {orgs.map((o) => (
-        <Chip key={o.id}>
-          {o.logo && <img className="dk-ws-logo" src={o.logo} alt="" width={16} height={16} />}
-          {o.name}
+        <li key={o.id}>
+          <OrgTile logo={o.logo} size="sm" />
+          <span className="dk-ws-name">{o.name}</span>
           {o.unread > 0 && <span className="dk-ws-count">{o.unread}</span>}
-        </Chip>
+        </li>
       ))}
-    </span>
+    </ul>
   );
 }
 
@@ -277,14 +286,56 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
   // What turning reach on or off is doing, said while it takes (Tailscale, its HTTPS page, the restart).
   const [stage, setStage] = useState<ReachStage | null>(null);
   const [reachProblem, setReachProblem] = useState<ServeProblem | null>(null);
-  const [busy, run] = usePending<"restart" | "stop" | "start" | "usage" | "backup">();
+  const [busy, run] = usePending<"restart" | "stop" | "start" | "usage" | "backup" | "restore">();
   const [stopping, setStopping] = useState(false);
   // Stop asks first (the phone and the team lose access), and how long; turning reach off asks too (ADR 0158).
   const [stopAsk, setStopAsk] = useState(false);
   const [reachOffAsk, setReachOffAsk] = useState(false);
+  // The backup "Restore…" goes back to, while its sheet is open.
+  const [restoring, setRestoring] = useState<string | null>(null);
+  const [noPassword, setNoPassword] = useState(false);
   const address = local.publicUrl ?? local.url ?? "";
   const running = local.phase === "running";
   const up = running || local.phase === "starting" || local.phase === "updating";
+  const { backups } = local;
+  const backupTime = (at: number) => clock(new Date(at).toISOString(), i18n.language);
+  const lastBackup = backups.files[0];
+  const nightlyAt = clock(nightAt().toISOString(), i18n.language, nightAt());
+
+  // The owner signs in on this computer without one (the app's one-time sign-in): elsewhere they need a password.
+  useEffect(() => {
+    if (!running || !address) return;
+    let live = true;
+    void host
+      .siteFetch(address, "GET", "/api/app/me")
+      .then((a) => {
+        const me = a.status === 200 ? (JSON.parse(a.body) as { user?: { hasPassword?: boolean } }) : null;
+        if (live) setNoPassword(me?.user?.hasPassword === false);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [host, address, running]);
+
+  const setBackups = (nightly: boolean, copyTo: string | null) =>
+    void host.setLocalBackups(nightly, copyTo).catch(() => toast(t("desktop.common.error"), "alert"));
+  const chooseCopyTo = async () => {
+    const dir = await host.pickFolder().catch(() => null);
+    if (dir) setBackups(backups.nightly, dir);
+  };
+  const restore = (file: string) =>
+    run("restore", async () => {
+      try {
+        await host.restoreLocalServer(file);
+        const at = backups.files.find((f) => f.path === file)?.at;
+        toast(t("desktop.server.restored", { time: at ? backupTime(at) : "" }), "check");
+      } catch (e) {
+        toast(t(e === "start" ? "desktop.server.restoreFailed" : "desktop.server.restoreUnreadable"), "alert");
+      } finally {
+        setRestoring(null);
+      }
+    });
 
   const act = (what: NonNullable<typeof busy>, action: () => Promise<unknown>) =>
     run(what, () => action().catch(() => toast(t("desktop.common.error"), "alert")));
@@ -344,6 +395,21 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
             )
           }
         />
+        {noPassword && (
+          <PrefRow
+            desc={
+              <span className="dk-honest ac-iconline">
+                <Icon name="key" size={14} />
+                {t("desktop.server.noPassword")}
+              </span>
+            }
+            end={
+              <Button size="sm" onClick={() => void host.openExternal(`${address}/?open=password`).catch(() => {})}>
+                {t("desktop.server.addPassword")}
+              </Button>
+            }
+          />
+        )}
         {local.phase === "failing" && (
           <PrefRow
             desc={t("desktop.server.failingWhy")}
@@ -367,7 +433,6 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
           busy={reaching || !running}
           onChange={(on) => (on ? void reach(true) : setReachOffAsk(true))}
         />
-        <PrefRow desc={t("desktop.server.reachRestart")} />
         {reaching && stage && <PrefRow desc={<ReachProgress stage={stage} />} />}
         {reachProblem && <PrefRow desc={<ReachProblem problem={reachProblem} text="prefs" />} />}
         <PrefRow
@@ -384,18 +449,18 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
             </Button>
           }
         />
-        {/* The restart stays in sight, under the label: it reaches whoever is using agentes.chat at that moment.
-            The switch is described by it too, after its hint. */}
         <PrefRow
-          top
           title={t("desktop.here.usage")}
-          hint={hintFor(t, t("desktop.here.usage"), t("desktop.here.usageText"))}
-          desc={<span id="here-usage-prefs-line">{t("desktop.server.usageRestart")}</span>}
+          hint={hintFor(
+            t,
+            t("desktop.here.usage"),
+            t("common.joinSentences", { a: t("desktop.here.usageText"), b: t("desktop.server.usageRestart") }),
+          )}
           htmlFor="here-usage-prefs"
           end={
             <Switch
               id="here-usage-prefs"
-              aria-describedby="here-usage-prefs-hint here-usage-prefs-line"
+              aria-describedby="here-usage-prefs-hint"
               checked={local.usage}
               disabled={busy !== null}
               onCheckedChange={(on) => void act("usage", () => host.setLocalUsage(on))}
@@ -406,8 +471,11 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
             session there to read it with. */}
         <PrefRow
           title={t("desktop.server.jev")}
-          hint={hintFor(t, t("desktop.server.jev"), t("desktop.server.jevText"))}
-          desc={t("desktop.server.jevWhere")}
+          hint={hintFor(
+            t,
+            t("desktop.server.jev"),
+            t("common.joinSentences", { a: t("desktop.server.jevText"), b: t("desktop.server.jevWhere") }),
+          )}
           end={
             <Button
               size="sm"
@@ -419,9 +487,60 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
           }
         />
         {local.version && <PrefRow desc={t("desktop.server.version", { version: local.version })} />}
+      </PrefCard>
+      <CardTitle>{t("desktop.server.backups")}</CardTitle>
+      <PrefCard>
         <PrefRow
-          title={t("desktop.server.data")}
-          desc={<span className="dk-path">{shortPath(local.dir)}</span>}
+          title={t("desktop.server.nightly")}
+          htmlFor="here-nightly"
+          desc={
+            backups.problem === "backup" ? (
+              <span className="dk-state-waiting">{t("desktop.server.backupFailed")}</span>
+            ) : lastBackup ? (
+              t(backups.nightly ? "desktop.server.nightlyLast" : "desktop.server.lastBackup", {
+                at: nightlyAt,
+                time: backupTime(lastBackup.at),
+              })
+            ) : backups.nightly ? (
+              t("desktop.server.nightlyNone", { at: nightlyAt })
+            ) : (
+              t("desktop.server.noBackup")
+            )
+          }
+          end={
+            <Switch
+              id="here-nightly"
+              checked={backups.nightly}
+              onCheckedChange={(on) => setBackups(on, backups.copyTo)}
+            />
+          }
+        />
+        <PrefRow
+          title={t("desktop.server.copyTo")}
+          hint={hintFor(t, t("desktop.server.copyTo"), t("desktop.server.copyToText"))}
+          desc={
+            backups.problem === "copy" ? (
+              <span className="dk-state-waiting">{t("desktop.server.copyFailed")}</span>
+            ) : backups.copyTo ? (
+              <span className="dk-path">{folderLabel(backups.copyTo)}</span>
+            ) : (
+              t("desktop.server.copyToNone")
+            )
+          }
+          end={
+            <>
+              {backups.copyTo && (
+                <Button size="sm" variant="ghost" onClick={() => setBackups(backups.nightly, null)}>
+                  {t("desktop.server.copyToStop")}
+                </Button>
+              )}
+              <Button size="sm" icon="drive" onClick={() => void chooseCopyTo()}>
+                {t(backups.copyTo ? "desktop.server.change" : "desktop.server.choose")}
+              </Button>
+            </>
+          }
+        />
+        <PrefRow
           end={
             <>
               <Button
@@ -437,7 +556,21 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
               >
                 {t("desktop.server.backup")}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => void host.revealFolder(local.dir).catch(() => {})}>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={!lastBackup || busy !== null}
+                onClick={() => setRestoring(lastBackup?.path ?? null)}
+              >
+                {t("desktop.server.restore")}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  void host.revealFolder(lastBackup ? backupsFolder(local.dir) : local.dir).catch(() => {})
+                }
+              >
                 {host.platform === "mac" ? t("desktop.server.reveal") : t("desktop.server.revealFiles")}
               </Button>
             </>
@@ -483,6 +616,36 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
           </Button>
         </span>
       </div>
+      <KeepItRunning awake={local.awake} />
+      <Dialog
+        open={restoring !== null}
+        onOpenChange={(o) => !o && busy !== "restore" && setRestoring(null)}
+        title={t("desktop.server.restoreTitle")}
+        description={t("desktop.server.restoreBody")}
+        closeLabel={t("desktop.common.close")}
+        width={440}
+      >
+        <DialogBody>
+          <Select
+            aria-label={t("desktop.server.restoreWhich")}
+            value={restoring ?? undefined}
+            onValueChange={setRestoring}
+            disabled={busy === "restore"}
+            options={backups.files.map((f) => ({
+              value: f.path,
+              label: t("desktop.server.backupOf", { time: backupTime(f.at) }),
+            }))}
+          />
+        </DialogBody>
+        <DialogFooter bar>
+          <Button variant="ghost" onClick={() => setRestoring(null)} disabled={busy === "restore"}>
+            {t("desktop.common.cancel")}
+          </Button>
+          <Button variant="danger" loading={busy === "restore"} onClick={() => restoring && void restore(restoring)}>
+            {t("desktop.server.restoreConfirm")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
       <Dialog
         open={stopAsk}
         onOpenChange={(o) => !o && busy !== "stop" && setStopAsk(false)}
@@ -572,6 +735,109 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
           </Button>
         </DialogFooter>
       </Dialog>
+    </>
+  );
+}
+
+/**
+ * What keeps the server here up while nobody is at this computer, each a green check or an amber dot with its way
+ * there: the app opens at login, the Mac signs in by itself after a restart and starts after a power failure, and it
+ * doesn't sleep while serving. Read again whenever the window comes back to the front (the person went to change one).
+ * A row this system can't check isn't shown.
+ */
+function KeepItRunning({ awake }: { awake: boolean }) {
+  const { t } = useTranslation();
+  const host = useHost();
+  const toast = useToast();
+  const [login, setLogin] = useState<boolean | null>(null);
+  const [keep, setKeep] = useState<KeepRunning>({ autoLogin: null, autoRestart: null });
+  const read = useCallback(() => {
+    void host
+      .autostart()
+      .then(setLogin)
+      .catch(() => {});
+    void host
+      .keepRunning()
+      .then(setKeep)
+      .catch(() => {});
+  }, [host]);
+  useEffect(() => {
+    read();
+    window.addEventListener("focus", read);
+    return () => window.removeEventListener("focus", read);
+  }, [read]);
+  useOnShown("prefs", read);
+  const rows: { key: string; ok: boolean | null; title: string; hint?: string; fix?: ReactNode }[] = [
+    {
+      key: "login",
+      ok: login,
+      title: t("desktop.server.keepLogin"),
+      fix: (
+        <Button
+          size="sm"
+          onClick={() =>
+            void host
+              .setAutostart(true)
+              .then(read)
+              .catch(() => toast(t("desktop.common.error"), "alert"))
+          }
+        >
+          {t("desktop.server.keepLoginOn")}
+        </Button>
+      ),
+    },
+    {
+      key: "autoLogin",
+      ok: keep.autoLogin,
+      title: t("desktop.server.keepAutoLogin"),
+      hint: t("desktop.server.keepAutoLoginText"),
+      fix: (
+        <Button size="sm" onClick={() => void host.openSystemSettings("users").catch(() => {})}>
+          {t("desktop.server.keepAutoLoginOpen")}
+        </Button>
+      ),
+    },
+    {
+      key: "power",
+      ok: keep.autoRestart,
+      title: t("desktop.server.keepPower"),
+      hint: t("desktop.server.keepPowerText"),
+      fix: (
+        <Button size="sm" onClick={() => void host.openSystemSettings("energy").catch(() => {})}>
+          {t("desktop.server.keepPowerOpen")}
+        </Button>
+      ),
+    },
+    {
+      key: "awake",
+      ok: host.platform === "mac" ? awake : null,
+      title: t("desktop.server.keepAwake"),
+      hint: t("desktop.server.keepAwakeText"),
+    },
+  ];
+  const shown = rows.filter((r) => r.ok !== null);
+  if (shown.length === 0) return null;
+  return (
+    <>
+      <CardTitle>{t("desktop.server.keep")}</CardTitle>
+      <PrefCard>
+        {shown.map((r) => (
+          <PrefRow
+            key={r.key}
+            lead={
+              <span className="dk-keep" data-ok={r.ok || undefined}>
+                {r.ok ? <Icon name="check" size={16} /> : <span className="dk-keep__dot" />}
+                <span className="ac-visually-hidden">
+                  {t(r.ok ? "desktop.server.keepOn" : "desktop.server.keepOff")}
+                </span>
+              </span>
+            }
+            title={r.title}
+            hint={r.hint && !r.ok ? hintFor(t, r.title, r.hint) : undefined}
+            end={r.ok ? undefined : r.fix}
+          />
+        ))}
+      </PrefCard>
     </>
   );
 }

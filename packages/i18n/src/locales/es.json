@@ -1621,7 +1621,6 @@
       "limit": "{{name}} llegó al límite de hoy: este queda contigo",
       "undoneByYou": "Deshecho por ti",
       "undoneBy": "Deshecho por {{name}}",
-      "why": "¿Por qué?",
       "undo": "Deshacer",
       "undoArchives": "Deshacer archiva a {{name}}. Vale hasta {{until}}.",
       "undoSettings": "Deshacer devuelve la configuración. Vale hasta {{until}}."
@@ -1701,6 +1700,7 @@
     "unshown": "No se pudo mostrar",
     "more": "Más",
     "moreWhat": {
+      "waiting": "Todo lo que espera tu respuesta",
       "approvals": "Lo que los agentes te piden permitir",
       "proposals": "Lo que los agentes proponen cambiar",
       "threads": "Conversaciones que se ramifican, y misiones",
@@ -1800,6 +1800,7 @@
     "summary_one": "{{people}} miembro · {{agents}} agentes",
     "summary_many": "{{people}} miembros · {{agents}} agentes",
     "summary_other": "{{people}} miembros · {{agents}} agentes",
+    "waiting": "Te esperan",
     "approvals": "Aprobaciones",
     "proposals": "Propuestas de mejora",
     "issues": "Tareas",
@@ -2033,7 +2034,8 @@
       "emptyViewer": "Quien gestiona los agentes los agrega a los canales, y el mapa aparece aquí.",
       "others": "Otros canales",
       "band": "Supervisores",
-      "reportsTo": "Responde a {{name}}"
+      "reportsTo": "Responde a {{name}}",
+      "short": "Quién se ocupa de cada agente y dónde trabaja."
     },
     "sectors": {
       "lead": "Cada departamento tiene un responsable, un suplente, sus agentes y los canales y rutinas de ellos.",
@@ -2281,7 +2283,19 @@
     "sendCorrection": "Enviar corrección",
     "correctionSent": "Corrección enviada. {{name}} aprenderá de ella.",
     "sending": "enviando…",
-    "notSent": "No enviado",
+    "tooLong": {
+      "text": "El mensaje tiene {{length}} caracteres y el límite es {{max}}.",
+      "fix": "Envía el texto como archivo.",
+      "asFile": "Enviar como archivo",
+      "fileName": "mensaje.txt"
+    },
+    "notSentWhy": "No enviado. {{why}}",
+    "notSentUnknown": "Algo salió mal.",
+    "editSend": "Editar",
+    "long": {
+      "more": "Ver más",
+      "title": "Mensaje de {{name}}"
+    },
     "retrySend": "Intentar de nuevo",
     "thinking": "{{name}} está pensando…",
     "typing_one": "{{names}} está escribiendo…",
@@ -2404,8 +2418,9 @@
       "connect": {
         "title": "Conectar una IA para el equipo",
         "titlePersonal": "Conectar una IA para tus agentes",
-        "text": "Los agentes piensan con la IA del workspace. Inicia sesión con tu plan de Claude o de ChatGPT, sin clave de API.",
-        "textPersonal": "Tus agentes piensan con esta IA. Inicia sesión con tu plan de Claude o de ChatGPT, sin clave de API.",
+        "text": "Inicia sesión con tu plan de Claude o de ChatGPT, sin clave de API.",
+        "hint": "Los agentes piensan con la IA del workspace.",
+        "hintPersonal": "Tus agentes piensan con esta IA.",
         "action": "Conectar"
       },
       "again": {
@@ -2476,6 +2491,14 @@
       "groupMine": "Solo para ti",
       "groupWorkspace": "Para todo el workspace",
       "groupAdmins": "solo admins"
+    },
+    "powers": {
+      "title": "Poderes del workspace",
+      "help": "Solo tu mano derecha hace esto.",
+      "team": "Monta y cambia todo el equipo con tarjetas que una persona aplica: agentes, personas y ajustes del workspace",
+      "routines": "Ejecuta y elimina rutinas de cualquier agente que puedas gestionar",
+      "asYou": "En tu propia conversación, lee el Drive, la wiki y las tareas que puedes ver",
+      "mentions": "Responde a una @mención en cualquier canal sin ser miembro"
     },
     "card": {
       "settings": "{{name}} · Configuración",
@@ -2781,10 +2804,16 @@
       "useKey": "Usar una clave de API"
     },
     "kept": {
-      "title": "Guardé tu mensaje.",
-      "line": "Responderé aquí cuando el workspace tenga un plan de agentes.chat y una IA conectada.",
+      "title": "Guardé tu mensaje",
+      "wait": {
+        "payment": "Responderé aquí cuando el workspace tenga un plan de agentes.chat.",
+        "unpaid": "Responderé aquí cuando se complete el pago del plan de agentes.chat.",
+        "ended": "Responderé aquí cuando el workspace vuelva a suscribirse a agentes.chat."
+      },
+      "askAdmin": "Responderé aquí cuando un admin resuelva el plan de agentes.chat.",
       "plan": "El plan trae el ordenador de los agentes, siempre encendido. La IA es la que ya pagas: Claude, ChatGPT y otras, o una clave de API.",
-      "active": "Plan activo. Conecta una IA y {{name}} responde aquí.",
+      "activeTitle": "Plan activo",
+      "activeLine": "Conecta una IA y {{name}} responde aquí.",
       "receipt": "Guardado",
       "channel": "Guardado. Los agentes responden cuando el workspace tenga un plan de agentes.chat."
     },
@@ -2917,7 +2946,7 @@
       "gemini": {
         "title": "Tu plan de Gemini",
         "tiers": "Google AI Pro, Google AI Ultra o Gemini Enterprise",
-        "warning": "Google dice que usar un plan personal de Gemini dentro de otras apps puede hacer que suspendan la cuenta. Para no correr ese riesgo, usa una clave de API o Gemini Enterprise."
+        "warning": "Google dice que usar un plan personal de Gemini dentro de otras apps puede hacer que suspendan la cuenta."
       },
       "zen": {
         "title": "OpenCode",
@@ -3043,6 +3072,22 @@
       "always": "{{name}} dijo siempre para esto",
       "not_now": "{{name}} dijo ahora no",
       "never": "{{name}} dijo nunca para esto"
+    }
+  },
+  "approvalsLevel": {
+    "title": "Aprobaciones",
+    "lead": "Cuándo {{name}} pregunta a una persona antes de actuar.",
+    "always": {
+      "title": "Preguntar siempre",
+      "text": "Pregunta antes de cambiar algo en una app."
+    },
+    "risky": {
+      "title": "Solo lo arriesgado",
+      "text": "Pregunta antes de borrar, enviar o pagar."
+    },
+    "never": {
+      "title": "No preguntar nunca",
+      "text": "Sigue preguntando en merge, deploy y rollback."
     }
   },
   "brakes": {
@@ -3195,6 +3240,8 @@
       "title": "{{agent}} propone un nuevo agente",
       "review": "Revisar",
       "created": "Creado",
+      "createdBy": "Creado por {{name}}",
+      "createdByYou": "Creado por ti",
       "aiAccount": "Piensa con {{account}}",
       "aiModel": "Piensa a través de la API",
       "aiNone": "Todavía sin IA. Conecta una después de crearlo",
@@ -3277,6 +3324,8 @@
       "updated_priority": "Puse <b>#{{number}}</b> en prioridad {{priority}} · {{title}}",
       "assigned": "Asigné <b>#{{number}}</b> a {{assignee}} · {{title}}",
       "assigned_self": "Me asigné <b>#{{number}}</b> · {{title}}",
+      "assigned_you": "Te asigné <b>#{{number}}</b> · {{title}}",
+      "assigned_none": "Quité el responsable de <b>#{{number}}</b> · {{title}}",
       "files": "Adjunté {{names}}"
     },
     "memory": {
@@ -3359,6 +3408,7 @@
       "priority": "la prioridad",
       "assignee": "el responsable",
       "labels": "las etiquetas",
+      "project": "el proyecto",
       "dueDate": "la fecha de entrega",
       "githubUrl": "el enlace de GitHub",
       "criteria": "los criterios",
@@ -3382,6 +3432,42 @@
     "changes_other": "{{count}} cambios",
     "undoneBy": "Deshecho por {{name}}",
     "group": "Cambios de {{name}}",
+    "several": {
+      "issue": {
+        "created": "Creé las tareas {{refs}}",
+        "updated": "Cambié {{fields}} de las tareas {{refs}}",
+        "assigned": "Asigné a {{assignee}} las tareas {{refs}}",
+        "assigned_self": "Me asigné las tareas {{refs}}",
+        "assigned_you": "Te asigné las tareas {{refs}}",
+        "assigned_none": "Quité el responsable de las tareas {{refs}}"
+      },
+      "routine": {
+        "created": "Creé las rutinas {{refs}}",
+        "updated": "Cambié {{fields}} de las rutinas {{refs}}",
+        "deleted": "Eliminé las rutinas {{refs}}"
+      },
+      "channel": {
+        "agent_added": "Sumé a {{agentName}} a {{refs}}",
+        "created": "Creé los canales {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Creé las páginas de la wiki {{refs}}",
+        "page_edited": "Edité las páginas de la wiki {{refs}}"
+      },
+      "thread": {
+        "closed": "Cerré las conversaciones {{refs}}"
+      },
+      "skill": {
+        "created": "Convertí lo que aprendí en las habilidades {{refs}}",
+        "updated": "Corregí las habilidades {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "Cambié la configuración de {{refs}}"
+      },
+      "pr": {
+        "merged": "Hice merge en <b>{{repo}}</b> de los PR {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "Alguien cambió esto después. Si lo deshaces ahora, se pierde ese cambio.",
       "expired": "Se acabó el tiempo para deshacer.",
@@ -3778,7 +3864,7 @@
       "clearFilters": "Borrar la búsqueda",
       "personalNote": "Solo tú ves estos elementos. Tus agentes los usan solo cuando se lo pides.",
       "personalEmpty": "Guarda tus inicios de sesión y claves seguros",
-      "personalEmptyText": "Solo tú ves estos elementos. Tus agentes los usan solo cuando se lo pides.",
+      "personalEmptyText": "Solo tú ves estos elementos, y tus agentes los usan solo cuando se lo pides.",
       "teamEmpty": "Comparte accesos sin pasar contraseñas",
       "teamEmptyPersonal": "Guarda los accesos compartidos en un solo lugar",
       "teamEmptyText": "Guarda una vez un inicio de sesión, una clave o datos de contacto, y elige qué agentes pueden usarlo.",
@@ -4135,6 +4221,37 @@
       "codeShort_one": "Escribe el {{count}} dígito.",
       "codeShort_other": "Escribe los {{count}} dígitos.",
       "codeWhere": "Solo el navegador de {{agent}} lo escribe, en {{host}}."
+    },
+    "env": {
+      "open": "Importar .env",
+      "title": "Importar claves",
+      "text": "Acepta un archivo .env, con una línea NOMBRE=valor por clave, o un JSON de nombres y valores.",
+      "paste": "O pega el contenido aquí",
+      "review": "Revisar",
+      "none": "No se encontró ninguna línea NOMBRE=valor. Revisa el archivo e inténtalo de nuevo.",
+      "tooLarge": "Este archivo es demasiado grande (512 KB como máximo).",
+      "tooMany": "Son demasiadas claves a la vez ({{max}} como máximo). Divide el archivo e importa cada parte.",
+      "duplicates": "Repetidas en el archivo, cuenta el último valor: {{names}}",
+      "new": "Nueva",
+      "exists": "Ya existe",
+      "replace": "Reemplazar",
+      "show": "Mostrar el valor de {{name}}",
+      "hide": "Ocultar el valor de {{name}}",
+      "problem": {
+        "name": "El nombre debe ser como ACME_API_KEY",
+        "reserved": "Nombre reservado",
+        "empty": "Sin valor",
+        "tooLarge": "Valor demasiado grande"
+      }
+    },
+    "move": {
+      "toTeam": "Mover a Equipo",
+      "toTeamPersonal": "Mover a Compartido",
+      "toPersonal": "Mover a Personal",
+      "title": "¿Mover {{title}}?",
+      "toTeamText": "Todos en el espacio de trabajo verán este elemento, y sus agentes lo usarán cuando cualquiera lo pida. Quienes administran el Vault pueden editarlo.",
+      "toPersonalText": "Solo tú verás y editarás este elemento, y sus agentes lo usarán solo cuando tú lo pidas. Los demás dejan de verlo.",
+      "moved": "Movido"
     }
   },
   "question": {
@@ -4188,6 +4305,9 @@
       "team": "<b>{{name}}</b> propone un equipo · {{what}}",
       "firstTask": "<b>{{name}}</b> sugiere una primera tarea · {{what}}",
       "more": "+{{count}}",
+      "here_one": "{{count}} te espera aquí",
+      "here_many": "{{count}} te esperan aquí",
+      "here_other": "{{count}} te esperan aquí",
       "see": "Ver"
     }
   },
@@ -5120,7 +5240,9 @@
           "codeLabel": "Código de Claude",
           "notCode": "Eso no parece el código de Claude.",
           "stepTwoGoogle": "Pega el código que muestra Google",
-          "codeLabelGoogle": "Código o enlace",
+          "codeLabelGoogle": "Código de Google",
+          "codeHintGoogle": "Pega el código que muestra la página de Google, no la dirección de la página.",
+          "notCodeGoogle": "Eso es una dirección sin código. Pega el código que muestra la página de Google.",
           "send": "Enviar a {{computer}}",
           "sending": "Enviando el código a {{computer}}…",
           "sent": "Código enviado. Terminando el inicio de sesión en {{computer}}.",
@@ -5133,6 +5255,18 @@
           "reconnecting": "Reconectando…",
           "failed": "No se pudo iniciar sesión en esa cuenta. Inténtalo de nuevo.",
           "expired": "Se acabó el tiempo para iniciar sesión. Inténtalo de nuevo.",
+          "why": {
+            "not_installed": "{{brand}} no está instalado en {{computer}}. Inténtalo de nuevo.",
+            "no_tty": "{{computer}} no pudo entregar el código a {{brand}}. Inténtalo de nuevo.",
+            "network": "{{computer}} no pudo conectar con {{brand}}. Inténtalo de nuevo.",
+            "bad_code": "{{brand}} rechazó el código. Inténtalo de nuevo y pega solo el código que muestra la página.",
+            "cli_exit": "{{brand}} se detuvo con un error en {{computer}}. Inténtalo de nuevo.",
+            "not_signed_in_after_login": "{{brand}} aceptó el inicio de sesión, pero esta cuenta no se puede usar aquí, quizá su plan no lo incluye. Prueba con otra cuenta o una clave de API.",
+            "status_unknown": "{{brand}} no indicó si la cuenta inició sesión. Inténtalo de nuevo.",
+            "no_token": "{{brand}} terminó sin mostrar el token de la cuenta. Inténtalo de nuevo.",
+            "not_kept": "La cuenta inició sesión, pero {{computer}} no pudo guardarla. Inténtalo de nuevo."
+          },
+          "geminiNotShared": "Gemini inició sesión, pero {{computer}} no puede compartir ese inicio de sesión con todos los agentes. Usa una clave de API de Gemini.",
           "duplicate": {
             "claude_code": "Claude inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Claude e inténtalo de nuevo.",
             "codex": "ChatGPT inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de ChatGPT e inténtalo de nuevo.",
@@ -6293,8 +6427,12 @@
     "approvalsNote": "Merge, deploy y rollback siempre piden aprobación en el chat.",
     "approverOwner": "Aprueba {{name}}.",
     "approverAdmins": "Aprueba un admin.",
+    "skillsTitle": "Habilidades del espacio de trabajo",
     "skillsHelp": "Manuales que {{name}} abre cuando los necesita.",
+    "importCard": "De otra app",
+    "importCardLine": "Trae los agentes que ya tienes en otra app.",
     "channels": "Canales",
+    "channelsJoin": "Entra en los canales",
     "channelsHelp": "Entra ahora. Puedes añadirlo a otros canales después.",
     "noChannels": "Todavía no estás en ningún canal. Puedes añadir el agente a un canal después.",
     "owner": "Responsable",
@@ -6537,10 +6675,12 @@
       "title": "Apps de {{name}}",
       "titleBlank": "Apps del agente",
       "lead": "Una app conectada entra en la tarjeta al momento. Las demás las conectas aquí mismo.",
+      "leadList": "Una app conectada entra en la lista al momento. Las demás las conectas aquí mismo.",
       "suggested": "Sugeridas para {{name}}",
       "suggestedBlank": "Sugeridas",
       "use": "Usar",
-      "added": "En la tarjeta"
+      "added": "En la tarjeta",
+      "addedList": "En la lista"
     },
     "create": "Crear a {{name}}",
     "createBlank": "Crear agente",
@@ -6607,6 +6747,8 @@
     "agentsOnlyYouHint": "Con un plan, puedes dejar que cada uno responda a otras personas desde su página.",
     "filters": "Filtrar personas",
     "rolesOf": "Roles de {{name}}",
+    "rolesAdd": "Añadir rol",
+    "rolesChange": "Cambiar roles",
     "moreOf": "Más de {{name}}",
     "passwordLink": {
       "item": "Generar enlace de contraseña nueva",
@@ -7201,6 +7343,7 @@
         "due": "Fecha límite"
       },
       "field": {
+        "project": "Proyecto",
         "assignee": "Responsable",
         "priority": "Prioridad",
         "due": "Fecha límite",
@@ -7227,6 +7370,22 @@
       "prioritized": "La #{{number}} ahora tiene prioridad {{priority}}."
     },
     "canceledColumn": "Canceladas",
+    "projects": {
+      "label": "Proyecto",
+      "none": "Sin proyecto",
+      "all": "Todos los proyectos",
+      "new": "Nuevo proyecto",
+      "edit": "Editar proyecto",
+      "create": "Crear proyecto",
+      "archive": "Archivar proyecto",
+      "unarchive": "Desarchivar proyecto",
+      "archived": "Archivados",
+      "archivedMark": "Archivado",
+      "delete": "Eliminar proyecto",
+      "deleteTitle": "¿Eliminar el proyecto {{name}}?",
+      "deleteBody": "Sus tareas se quedan, sin proyecto.",
+      "empty": "Todavía no hay tareas en este proyecto."
+    },
     "columns": {
       "add": "Agregar columna",
       "options": "Opciones de la columna {{name}}",
@@ -7504,6 +7663,8 @@
       "pr_linked": "vinculó el PR #{{number}}",
       "github_linked": "lo enlazó a GitHub",
       "github_unlinked": "quitó el enlace de GitHub",
+      "project_set": "la movió al proyecto {{project}}",
+      "project_removed": "la quitó del proyecto",
       "artifact_linked": "adjuntó un archivo",
       "files_attached": "adjuntó {{names}}",
       "files_removed": "quitó {{names}} de los adjuntos",
@@ -7574,7 +7735,8 @@
         "bad_signature": "Rechazada: firma incorrecta",
         "too_large": "Rechazada: más de 256 KB",
         "rate_limited": "Rechazada: demasiadas llamadas por minuto"
-      }
+      },
+      "newShort": "La rutina recibe una dirección propia."
     },
     "setup": {
       "title": "Webhook de {{provider}}",
@@ -7771,7 +7933,9 @@
     "ownActions": {
       "hint": "Cada ejecución hace esto en tus apps conectadas sin preguntar. Cualquier otra acción en ellas pide aprobación antes, y merge, deploy y rollback siempre la piden.",
       "none": "En las apps conectadas pide aprobación antes de cada acción. Para que haga su trabajo por su cuenta, dile al agente en el chat qué acciones puede hacer.",
-      "remove": "Volver a preguntar antes de: {{action}}"
+      "remove": "Volver a preguntar antes de: {{action}}",
+      "hintShort": "Cada ejecución hace esto sin preguntar.",
+      "noneShort": "Pide aprobación antes de cada acción."
     },
     "ahead": {
       "approved": "Aprobada · se ejecuta {{when}}",
@@ -9545,7 +9709,7 @@
     "undoUpdate": "Deshacer actualización",
     "undone": "{{name}} volvió a la versión {{version}}.",
     "agentsImprove": "Los agentes mejoran las habilidades solos",
-    "agentsImproveHelp": "Cuando un agente ve que una habilidad está mal o le falta un paso, la corrige al momento: una versión nueva que puedes deshacer, y quien hizo la habilidad se entera. Los cambios en scripts esperan a alguien que gestione habilidades.",
+    "agentsImproveHelp": "Cuando un agente ve que una habilidad está mal o le falta un paso, la corrige al momento: una versión nueva que puedes deshacer, y quien hizo la habilidad se entera.",
     "agentsImproveThis": "Los agentes mejoran esta habilidad solos",
     "agentChange": "{{agent}} la cambió {{when}}",
     "undoAgentChange": "Deshacer cambio",
@@ -9617,8 +9781,7 @@
     "agentTitle": "Habilidades",
     "agentSubtitle": "Lo que {{name}} puede abrir cuando lo necesita.",
     "agentEmpty": "{{name}} aún no tiene habilidades.",
-    "manage": "Gestionar habilidades",
-    "step": "Habilidades"
+    "manage": "Gestionar habilidades"
   },
   "edit": {
     "unsaved": "Cambios sin guardar",
@@ -9894,7 +10057,9 @@
       "only": "{{name}} solo responde a {{names}}.",
       "some": "{{name}} solo responde a algunas personas.",
       "nobody": "{{name}} no le responde a nadie ahora."
-    }
+    },
+    "agentsToo": "Vale también para agentes.",
+    "peopleOnly": "Vale solo para personas."
   },
   "composer": {
     "commands": "Comandos",
@@ -10709,7 +10874,7 @@
     "ask": {
       "button": "Pedir a un agente",
       "title": "Pedir a un agente",
-      "text": "El pedido va a tu conversación con el agente, con el enlace de la página. Edita con las herramientas de la wiki y la versión queda en el historial como hecha a tu pedido.",
+      "text": "El pedido va a tu conversación con el agente, con el enlace de la página.",
       "agent": "Agente",
       "what": "¿Qué hay que cambiar?",
       "placeholder": "Ej.: actualízala con el reajuste de 2027",
@@ -10838,7 +11003,8 @@
         "empty": "No se encontraron notas .md. Envía el .zip de la carpeta del vault, la carpeta o archivos .md.",
         "too_big": "El vault pesa más de 500 MB. Envíalo sin los adjuntos grandes, o en partes.",
         "unreadable": "No se pudo leer el archivo. ¿Es un .zip del vault?"
-      }
+      },
+      "howToLabel": "Cómo crear el .zip"
     },
     "save": "Guardar en la wiki",
     "saveTitle": "Guardar en la wiki",
@@ -11602,7 +11768,7 @@
   },
   "githubApp": {
     "title": "Repositorios de GitHub",
-    "text": "Donde la app agentes.chat está instalada, los agentes abren pull requests, issues, comentarios y commits como la app, con el nombre del agente y de quien lo pidió. Solo {{org}} usa lo que instales desde aquí.",
+    "text": "Donde la app agentes.chat está instalada, los agentes abren pull requests, issues, comentarios y commits como la app, con el nombre del agente y de quien lo pidió.",
     "install": "Instalar la app agentes.chat",
     "installMore": "Instalar en otra cuenta",
     "none": "Todavía no hay cuenta de GitHub.",
@@ -11625,6 +11791,7 @@
     "notVisible": "Tu cuenta de GitHub no puede ver esa instalación. Instálala con una cuenta que tenga acceso.",
     "otherWorkspace": "Esa cuenta de GitHub ya está vinculada a otro espacio de trabajo. Quita la app de allí antes de instalarla aquí.",
     "installedOutside": "La app se instaló en esa cuenta de GitHub fuera de agentes.chat. Quítala en GitHub e instálala de nuevo desde Conectores › GitHub.",
+    "ownerUnknown": "GitHub no dijo quién es dueño de esa organización. Quien administra el servidor tiene que agregar el permiso de organización Members (solo lectura) a la app de GitHub, y después la instalas de nuevo.",
     "misconfigured": "La app de GitHub tiene la clave secreta equivocada en el servidor, así que la instalación no puede terminar. Quien administra el servidor tiene que cambiar la clave en la configuración de la app.",
     "connectAccount": "Conectar una cuenta de GitHub",
     "ownerHint": "El dueño de este servidor puede crear la app de GitHub aquí en Conectores.",
@@ -11677,7 +11844,8 @@
       "none": "Ningún repositorio elegido. Cada merge pide aprobación.",
       "help": "En estos repositorios el merge se hace sin tarjeta de aprobación, queda en la auditoría y deja un recibo en la conversación. Todo lo demás que sea sensible sigue preguntando.",
       "dialogTitle": "Dónde {{name}} hace merge sin preguntar",
-      "dialogDesc": "Solo repositorios que ya usa. Un merge en cualquier otro lugar pide aprobación."
+      "dialogDesc": "Solo repositorios que ya usa. Un merge en cualquier otro lugar pide aprobación.",
+      "short": "En estos repositorios el merge se hace sin tarjeta de aprobación."
     },
     "label": "Qué repositorios",
     "all": "Todos los repositorios",
@@ -12627,7 +12795,8 @@
       "added": "Ahora también: {{names}}.",
       "removed": "Ya no: {{names}}.",
       "same": "Nada cambió en las organizaciones.",
-      "failed": "No se pudieron leer las organizaciones ahora."
+      "failed": "No se pudieron leer las organizaciones ahora.",
+      "short": "GitHub solo pregunta por las organizaciones la primera vez."
     },
     "composioHelp": "Inicias sesión en la página de Composio, en inglés, y vuelves aquí. {{name}} muestra el permiso como “Composio”.",
     "or": "o",
@@ -12840,7 +13009,8 @@
       "timeoutHelp": "Una consulta que tarda más se cancela, para no cargar la base de datos.",
       "seconds_one": "{{count}} segundo",
       "seconds_many": "{{count}} segundos",
-      "seconds_other": "{{count}} segundos"
+      "seconds_other": "{{count}} segundos",
+      "hiddenExample": "tabla.columna, como clientes.\"Tax ID\""
     },
     "agent": {
       "title": "Bases de datos",
@@ -12895,7 +13065,7 @@
     "address": "Dirección de correo",
     "addressPlaceholder": "tu@empresa.com",
     "addressInvalid": "Escribe un correo válido, como tu@empresa.com.",
-    "icloudHint": "Usa tu dirección de iCloud Mail, como nombre@icloud.com, aunque tu Cuenta de Apple use {{name}}. En un iPhone está en Configuración › tu nombre › iCloud › iCloud Mail, o mira icloud.com/mail.",
+    "icloudHint": "Usa tu dirección de iCloud Mail, como nombre@icloud.com, aunque tu Cuenta de Apple use {{name}}.",
     "password": "Contraseña de app",
     "passwordHelp": "Se guarda cifrada en el servidor. Nadie la vuelve a ver.",
     "passwordInvalid": "Pega la contraseña de app.",
@@ -13012,7 +13182,8 @@
       "newFrom": "Los correos nuevos salen desde",
       "newFromHelp": "Las respuestas siempre salen desde la dirección a la que se envió el correo.",
       "later": "Puedes cambiar esto después en Direcciones.",
-      "saved": "Direcciones de {{address}} guardadas."
+      "saved": "Direcciones de {{address}} guardadas.",
+      "short": "Los agentes responden desde la dirección a la que se envió el correo."
     },
     "agent": {
       "title": "Correo",
@@ -13106,7 +13277,8 @@
       "every": "Se ejecuta con cada correo nuevo que pasa los filtros.",
       "needsReconnect": "Hay que reconectar",
       "error": "Con errores"
-    }
+    },
+    "toolsShort": "Elige qué hacen los agentes con este correo."
   },
   "searchPage": {
     "title": "Buscar en el espacio de trabajo",
@@ -13332,6 +13504,9 @@
     },
     "issue": {
       "assigneeOutside": "Esta persona no ve esta tarea. Agrégala primero a Quién lo ve.",
+      "projectNameTaken": "Ya existe un proyecto con ese nombre.",
+      "projectArchived": "Este proyecto está archivado y no recibe tareas nuevas.",
+      "projectsFull": "Un workspace tiene como máximo {{max}} proyectos. Elimina uno antes.",
       "stageFull": "Una etapa tiene como máximo {{max}} columnas. Elimina una de sus columnas antes.",
       "deleteForbidden": "Solo quien creó esta tarea o un administrador puede eliminarla.",
       "audienceEmpty": "Elige quién lo ve."
@@ -13535,6 +13710,7 @@
       "targetNotFound": "Esa computadora ya no existe. Elige otra.",
       "targetSame": "Los agentes ya están en esa computadora.",
       "targetPaused": "Esa computadora está en pausa. Elige otra.",
+      "pausePast": "Elige una hora en el futuro.",
       "accountMethodUnsupported": "Esta computadora todavía no puede conectar Claude de esta forma. Actualiza el programa de agentes.chat en ella o usa una clave de API.",
       "offline": "{{name}} está desconectada ahora. Intenta de nuevo cuando vuelva.",
       "paused": "{{name}} está en pausa: nada nuevo empieza en ella hasta que se reanude.",
@@ -13634,7 +13810,8 @@
         "unsupported": "Este gestor de contraseñas no se puede conectar aquí.",
         "invalidInput": "Revisa los campos e inténtalo de nuevo.",
         "tooManyItems": "El Vault está lleno. Elimina elementos antes de sincronizar más."
-      }
+      },
+      "unreadable": "El valor guardado no se puede leer aquí. Guárdalo de nuevo y luego muévelo."
     },
     "feedback": {
       "filesGone": "Un archivo que añadiste ya no está. Añádelo de nuevo.",
@@ -13669,6 +13846,21 @@
     "paused": "En pausa",
     "pausedUntil": "En pausa hasta las {{time}}",
     "pausedHint": "Pausada en la propia computadora por quien la conectó.",
+    "remotePause": {
+      "button": "Pausar",
+      "menu": "Pausar {{name}}",
+      "oneHour": "Por 1 hora",
+      "tomorrow": "Hasta mañana a las 9 a. m.",
+      "manual": "Hasta que reanude",
+      "resume": "Reanudar",
+      "byYou": "Pausada por ti.",
+      "byYouUntil": "Pausada por ti hasta las {{time}}.",
+      "byName": "Pausada por {{name}}.",
+      "byNameUntil": "Pausada por {{name}} hasta las {{time}}.",
+      "outdated": "Actualiza la app de agentes.chat en esta computadora para pausarla desde aquí.",
+      "paused": "{{name}} está en pausa",
+      "resumed": "{{name}} vuelve a trabajar"
+    },
     "seenNow": "conectada ahora",
     "seen": "vista {{when}}",
     "neverSeen": "aún no se conectó",
@@ -14088,6 +14280,8 @@
       "openApp": "Abrir la app",
       "server": "Un servidor o VPS",
       "serverLine": "Una línea para pegar en su terminal",
+      "httpLine": "Una línea para pegar en su terminal. La app la conecta con un clic en una dirección https.",
+      "httpHow": "Cómo",
       "other": "Otra computadora",
       "otherLine": "Instala la app en ella",
       "android": "Teléfono Android",
@@ -14834,7 +15028,9 @@
         "imported": "Importó contraseñas al Vault",
         "connection_added": "Conectó un gestor de contraseñas al Vault",
         "connection_changed": "Cambió la conexión de un gestor de contraseñas",
-        "connection_removed": "Desconectó un gestor de contraseñas del Vault"
+        "connection_removed": "Desconectó un gestor de contraseñas del Vault",
+        "item_moved": "Movió un elemento del Vault entre Personal y Equipo",
+        "keys_imported": "Importó claves al Vault"
       },
       "verb": {
         "created": "Creó",
@@ -14921,6 +15117,7 @@
       "where": "Dónde",
       "via": "A través de",
       "approval": "Aprobación",
+      "unasked": "No preguntó ({{level}})",
       "approvalWaiting": "Nadie respondió todavía",
       "approvalApproved": "Aprobado por {{name}}",
       "approvalRefused": "Rechazado por {{name}}",
@@ -15508,7 +15705,8 @@
       "old": "{{brand}}, de antes de las cuentas",
       "oldSub": "Uso de antes de que se registrara la cuenta",
       "ofMonth": "{{percent}} del mes",
-      "shareLabel": "{{source}}: {{percent}} del mes"
+      "shareLabel": "{{source}}: {{percent}} del mes",
+      "estimateShort": "Una estimación."
     }
   },
   "budget": {
@@ -16659,8 +16857,6 @@
     },
     "card": {
       "group": "Pedido de ayuda de {{name}} en el navegador",
-      "asked": "le pidió ayuda a {{people}}",
-      "askedShort": "necesita ayuda",
       "left": "Quedan {{time}}",
       "where": "En el navegador de {{name}}",
       "open": "Abrir",
@@ -16675,11 +16871,6 @@
       "expired": "Nadie lo abrió a tiempo. {{name}} se detuvo y lo avisó.",
       "cancelled": "Pedido cancelado.",
       "withdrawn": "{{name}} ya no necesita esto.",
-      "settledDone": "pidió ayuda · resuelto",
-      "settledFailed": "pidió ayuda · no funcionó",
-      "settledExpired": "pidió ayuda · vencido",
-      "settledCancelled": "pidió ayuda · cancelado",
-      "settledWithdrawn": "pidió ayuda · ya no hace falta",
       "busy": "Otra persona ya está ayudando.",
       "openFailed": "No se pudo abrir ahora. Inténtalo de nuevo."
     },
@@ -16795,8 +16986,6 @@
       "couldnt": "No pude",
       "giveUp": "Abandonar",
       "otherHelp": "{{person}} tiene el control. Estás mirando.",
-      "helpingHere": "Estás ayudando · en esta tarjeta",
-      "helpingOther": "{{person}} está ayudando · en esta tarjeta",
       "doneLine": "Listo. {{name}} volverá a leer la página y seguirá.",
       "openHere": "Abrir aquí",
       "openHereHint": "Se abre en esta tarjeta, sin salir del chat.",
@@ -16894,6 +17083,7 @@
     "row": "No disponible",
     "screen": {
       "title": "Este espacio de trabajo no está disponible",
+      "titleNamed": "{{name}} no está disponible",
       "text": "Sus conversaciones y agentes están cerrados por ahora.",
       "others": "Tus otros espacios de trabajo"
     },
@@ -16948,14 +17138,14 @@
   "deleteOrg": {
     "card": {
       "title": "Eliminar espacio de trabajo",
-      "text": "Cierra {{name}} para todos ahora. Se elimina para siempre después de 7 días.",
+      "text": "{{name}} queda en solo lectura para todos ahora. Se elimina para siempre después de 7 días.",
       "button": "Eliminar espacio de trabajo…"
     },
     "title": "¿Eliminar {{name}}?",
     "goes": {
       "content": "Sus conversaciones, archivos, agentes y la memoria de ellos",
-      "people": "Todos pierden el acceso ahora y reciben un correo",
-      "peopleQuiet": "Todos pierden el acceso ahora",
+      "people": "Desde ahora todos solo pueden leerlo y reciben un correo",
+      "peopleQuiet": "Desde ahora todos solo pueden leerlo",
       "computer": "Su computadora se detiene ahora y se borra",
       "computers": "Las computadoras conectadas se desconectan. Las carpetas de los agentes se quedan en ellas hasta que se quite el runner.",
       "connectors": "Los conectores y buzones se desconectan"
@@ -16981,15 +17171,16 @@
   },
   "deleting": {
     "title": "{{name}} se está eliminando",
-    "text": "Este espacio de trabajo ya se está eliminando. No tienes que hacer nada, desaparece el {{date}}.",
-    "textLate": "Este espacio de trabajo ya se está eliminando. No tienes que hacer nada.",
+    "banner": "{{name}} se eliminará el {{date}}",
     "by": "{{by}} lo eliminó el {{date}}.",
+    "byYou": "Lo eliminaste el {{date}}.",
     "row": "Eliminándose, desaparece el {{date}}",
     "rowLate": "Eliminándose",
     "someone": "Alguien",
     "restore": "Restaurar espacio de trabajo",
     "membersOnly": "Solo un propietario puede restaurarlo.",
-    "restored": "{{name}} está de vuelta"
+    "restored": "{{name}} está de vuelta",
+    "composer": "No puedes enviar mensajes mientras este espacio de trabajo se está eliminando"
   },
   "accountDeleting": {
     "title": "Tu cuenta se está eliminando",
@@ -17003,10 +17194,9 @@
   "deleteAccount": {
     "menu": "Eliminar cuenta",
     "card": {
-      "text": "Sales de todos los espacios de trabajo y tu cuenta se elimina para siempre 7 días después. Hasta entonces puedes restaurarla.",
+      "text": "Elimina tu cuenta en 7 días, en todos los espacios de trabajo.",
       "button": "Eliminar cuenta…",
-      "oneWorkspace": "¿Quieres eliminar solo este espacio de trabajo? Está en General.",
-      "leaveWorkspace": "¿Quieres salir solo de este espacio de trabajo? Está en Miembros."
+      "title": "Eliminar"
     },
     "title": "¿Eliminar toda tu cuenta?",
     "intro": "Esto elimina toda tu cuenta, no solo un espacio de trabajo.",
@@ -17717,6 +17907,23 @@
       "timeout": "La actualización tardó demasiado.",
       "invalid_data": "{{name}} no pudo poner los datos en este formato."
     },
+    "needsAi": {
+      "body": "{{name}} lo crea en cuanto se conecte una IA.",
+      "short": "Necesita una IA",
+      "not_signed_in": "Se cerró la sesión del plan de {{name}}.",
+      "no_computer": "La IA de {{name}} necesita una computadora y no hay ninguna.",
+      "cli_missing": "El programa de la IA de {{name}} no está instalado en la computadora.",
+      "plan_not_shared": "El plan de {{name}} solo atiende a su dueño, así que no puede actualizar widgets."
+    },
+    "wait": {
+      "plan": "Esperando a que el plan de {{name}} se renueve {{when}}",
+      "planUnknown": "Esperando a que el plan de {{name}} se renueve",
+      "budget": "Esperando a que el presupuesto de {{name}} se renueve {{when}}",
+      "budgetSoon": "Esperando un momento el presupuesto de {{name}}",
+      "computer": "Esperando la computadora de {{name}}",
+      "busy": "Esperando lugar en la computadora de {{name}}",
+      "provider": "Esperando al proveedor de IA de {{name}}, próximo intento {{when}}"
+    },
     "menu": {
       "label": "Más",
       "open": "Abrir",
@@ -17846,7 +18053,8 @@
       "textRoutine": "La rutina de {{name}} que lo actualiza se detiene, y su historial de actualizaciones se va con él.",
       "textManual": "Su historial de actualizaciones se va con él.",
       "confirm": "Quitar"
-    }
+    },
+    "exposureShort": "Quien ve el panel ve estos datos."
   },
   "agentPicker": {
     "search": "Buscar agentes",
@@ -18084,7 +18292,8 @@
       "blockNotFound": "Ese gráfico ya no está en el mensaje.",
       "notAgentMessage": "Solo se puede fijar el gráfico de un agente.",
       "promptRequired": "Di qué debe mostrar el widget.",
-      "notTested": "Pruébalo antes: el widget se crea cuando la prueba funciona."
+      "notTested": "Pruébalo antes: el widget se crea cuando la prueba funciona.",
+      "needsAi": "{{agentName}} todavía no puede actualizar este widget. El widget dice por qué."
     }
   },
   "teamPlan": {
@@ -18204,7 +18413,6 @@
     "more_one": "{{names}} y {{count}} más",
     "more_many": "{{names}} y {{count}} más",
     "more_other": "{{names}} y {{count}} más",
-    "some": "algunas personas",
     "taskTitle": "Quién ve esta tarea",
     "pageTitle": "Quién ve esta página",
     "admins": "Los administradores siempre lo ven.",
@@ -18213,7 +18421,6 @@
     "search": "Buscar persona",
     "noMatch": "Nadie con ese nombre",
     "moreOptions": "Más opciones",
-    "receipt": "Quién lo ve: {{who}}",
     "limited": "acceso limitado",
     "rolesToo": "Los roles que ya están en esta página la siguen viendo."
   },

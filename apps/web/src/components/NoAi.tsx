@@ -33,7 +33,7 @@ import { usePlanHold } from "@/components/ai/ConnectAiSteps";
 import { useOpenBilling } from "@/components/BillingLinkButton";
 import { type ConnectAiRequest, useConnectAi } from "@/components/ConnectAi";
 import { useOrg } from "@/components/org-context";
-import { RequestDone, RequestOpen } from "@/components/RequestCard";
+import { RequestDone, RequestNote, RequestOpen } from "@/components/RequestCard";
 import { TeamTemplatesDialog } from "@/components/TeamPlan";
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePaidReturn } from "@/lib/paid-return";
@@ -196,8 +196,8 @@ export function NoAiCard({ message }: { message: Message }) {
 
 /**
  * The wall (ADR 0079 §6): an agent kept the person's message for after the plan. It follows the message from there
- * (`keptCardState`): the way to the plans, then Connect for the whole team, and once an AI is there, from wherever it
- * was connected, opening the conversation starts the answer with no click.
+ * (`keptCardState`): a note with the way to the plans, then one with Connect for the whole team, and once an AI is
+ * there, from wherever it was connected, opening the conversation starts the answer with no click.
  */
 function KeptCard({ message, card, hold }: { message: Message; card: NoAiCardMeta; hold: BillingHold | null }) {
   const { t } = useTranslation();
@@ -254,57 +254,56 @@ function KeptCard({ message, card, hold }: { message: Message; card: NoAiCardMet
   if (state === "connect") {
     const mine = connect !== null && mayConnectAi(agent, me.user.id, org);
     return (
-      <RequestOpen
-        mine={mine}
-        icon="plug"
-        action={
+      <RequestNote
+        agent={agent}
+        title={t("noAi.kept.activeTitle")}
+        actions={
           connect && mine ? (
-            <EventPillAction primary onClick={() => connect.open({ from: message.id })}>
+            <Button size="sm" variant="primary" onClick={() => connect.open({ from: message.id })}>
               {t("noAi.action")}
-            </EventPillAction>
+            </Button>
           ) : undefined
         }
-        below={connect && !mine ? <span>{t("noAi.lockedAdmins")}</span> : undefined}
       >
-        {t("noAi.kept.active", { name })}
-      </RequestOpen>
+        {connect && !mine ? t("noAi.lockedAdmins") : t("noAi.kept.activeLine", { name })}
+      </RequestNote>
     );
   }
   const code = hold ?? "payment";
   const canPay = can(org, "manage_billing") && Boolean(billingUrl);
   // With no team yet, the way to one needs no model.
   const noTeam = state === "held" && isRightHand(agent) && can(org, "create_agents") && dir.agents.every(isRightHand);
+  const pays = state === "held" && canPay;
   return (
     <>
-      <RequestOpen
-        mine={state === "held" && canPay}
-        icon="waiting"
-        action={
-          state === "held" && (canPay || noTeam) ? (
+      <RequestNote
+        agent={agent}
+        title={t("noAi.kept.title")}
+        hint={t(code === "payment" ? "noAi.kept.plan" : "standing.billing.sub")}
+        actions={
+          pays || noTeam ? (
             <>
-              {canPay && (
-                <EventPillAction primary disabled={billing.isPending} onClick={() => billing.mutate()}>
+              {pays && (
+                <Button size="sm" variant="primary" loading={billing.isPending} onClick={() => billing.mutate()}>
                   {t(`standing.billing.cta.${code}`)}
-                </EventPillAction>
+                </Button>
               )}
               {noTeam && (
-                <EventPillAction onClick={() => setTemplates(true)}>
+                <Button
+                  size="sm"
+                  variant={pays ? "ghost" : "primary"}
+                  disabled={billing.isPending}
+                  onClick={() => setTemplates(true)}
+                >
                   {t(modeKey(org, "teamPlan.start.templates"))}
-                </EventPillAction>
+                </Button>
               )}
             </>
           ) : undefined
         }
-        below={
-          <>
-            <p>{code === "payment" ? t("noAi.kept.line") : t(`standing.billing.${code}`)}</p>
-            {code === "payment" && <p>{t("noAi.kept.plan")}</p>}
-            {state === "held" && !canPay && <p>{t("standing.billing.askAdmin")}</p>}
-          </>
-        }
       >
-        {t("noAi.kept.title")}
-      </RequestOpen>
+        {state === "held" && !canPay ? t("noAi.kept.askAdmin") : t(`noAi.kept.wait.${code}`)}
+      </RequestNote>
       {noTeam && <TeamTemplatesDialog open={templates} onClose={() => setTemplates(false)} />}
     </>
   );

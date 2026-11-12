@@ -44,6 +44,8 @@ export interface AgentQuestion {
   status: "open" | "answered";
   answer: string | null;
   answeredByUserId: string | null;
+  /** When a person answered or skipped it. */
+  answeredAt: string | null;
   /** The agent took it back (`withdraw_request`): it no longer needs an answer. Kept on the card by later syncs. */
   withdrawn?: true;
   /** A person skipped it (`answeredByUserId`): the agent went on without an answer. */
@@ -65,6 +67,7 @@ export function questionView(q: AgentQuestionRow): AgentQuestion {
     status: q.status === "open" ? "open" : "answered",
     answer: q.answer,
     answeredByUserId: q.answeredByUserId,
+    answeredAt: q.answeredAt?.toISOString() ?? null,
     ...(q.status === "dismissed" ? { dismissed: true as const } : {}),
   };
 }

@@ -101,8 +101,9 @@ export interface MessageProps extends Omit<HTMLAttributes<HTMLElement>, "childre
   menu?: { label: string; items: ReactNode };
 }
 
-/** Taps on these keep doing their own thing (no menu opens). */
-const INTERACTIVE = "a[href], button, input, textarea, select, label, summary, [role='button'], [tabindex='0']";
+/** Taps on these keep doing their own thing (no menu opens), a popover's or a menu's trigger too (`aria-haspopup`). */
+const INTERACTIVE =
+  "a[href], button, input, textarea, select, label, summary, [role='button'], [tabindex='0'], [aria-haspopup]";
 
 /**
  * The touch menu's reactions and most of two items (130px), 2px off the row and 8px inside the window. A row with less

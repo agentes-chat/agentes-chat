@@ -175,13 +175,13 @@ export function SectionGroups({
 
 /**
  * Owners: "Delete <name>" alone in red, behind the system's alert (one firm haptic as it confirms), then the proof and
- * the hold on a screen of its own. Nothing for anyone else.
+ * the hold on a screen of its own. Nothing for anyone else, nor while it is being deleted.
  */
 export function DeleteWorkspaceRow() {
   const { t } = useTranslation();
   const { org } = useOrg();
   const name = org?.name ?? "";
-  if (org?.role !== "owner") return null;
+  if (org?.role !== "owner" || org.deletion) return null;
   const confirmDelete = () =>
     Alert.alert(t("deleteOrg.title", { name }), t("mobile.settings.deleteAlert"), [
       { text: t("common.cancel"), style: "cancel" },

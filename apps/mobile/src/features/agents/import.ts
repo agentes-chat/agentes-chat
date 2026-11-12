@@ -15,6 +15,9 @@ import { isIdHandle } from "@agenteschat/tokens/names";
  * apply are the web's (`@agenteschat/client/lib/import`).
  */
 
+/** Criar agente opened on bringing agents from another app. */
+export const IMPORT_AGENTS_HREF = "/new-agent?import=1";
+
 export { isRequestCard } from "@agenteschat/client/lib/import/flow";
 
 /** Whether "Choose files" applies: not for Grok Bot, which only answers in chat (ChatGPT dots hands back a file). */

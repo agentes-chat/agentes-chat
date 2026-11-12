@@ -1,5 +1,6 @@
-import { type Issue, useIssueColumns, useIssues } from "@agenteschat/client";
+import { type Issue, useIssueColumns, useIssueProjects, useIssues } from "@agenteschat/client";
 import { dueLabel } from "@agenteschat/client/lib/format";
+import { liveProjectFilter, NO_PROJECT, projectFilterRows } from "@agenteschat/client/lib/issue-projects";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { Fragment, type ReactNode, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,9 +39,20 @@ import { Face } from "../shared/Face";
 import { FirstUse } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
-import { FocusLive, PushedHeader } from "../shared/parts";
+import { ActionList, FocusLive, PushedHeader } from "../shared/parts";
+import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { type BoardColumn, issueBoard, taskListSections } from "./logic";
-import { BoardCard, ColumnHeader, StateWords, TaskTitle, useCardState, useColumnLabel } from "./parts";
+import {
+  BoardCard,
+  ColumnHeader,
+  ProjectDot,
+  ProjectName,
+  PropChip,
+  StateWords,
+  TaskTitle,
+  useCardState,
+  useColumnLabel,
+} from "./parts";
 
 /** Cards and rows whose agent moves (a long list stays light). */
 const LIVE_CARDS = 8;
@@ -59,14 +71,63 @@ type TaskView = "list" | "board";
  * green check. Quadro: the stages side by side, swiped one at a time with the next one showing at the edge, the tabs
  * on top with their counts; custom board columns show as headers, each of A fazer's with "+" for a task in it. "+" in
  * the bar opens "Nova tarefa"; columns are edited on the web only. Switching views is a choice made often: it doesn't
- * animate beyond the control's own slide.
+ * animate beyond the control's own slide. Once the workspace has projects, a chip under the views picks one (or the
+ * tasks with none): both views then show only its tasks, which the server filters, and a new task starts in it.
  */
 export function IssuesScreen() {
+  return (
+    <SheetHostProvider>
+      <Tasks />
+    </SheetHostProvider>
+  );
+}
+
+function Tasks() {
   const { t } = useTranslation();
   const orgId = useOrgId();
+  const sheet = useSheet();
   const issues = useIssues(orgId);
+  const projects = useIssueProjects(orgId).data?.projects ?? [];
   const [view, setView] = useState<TaskView>("list");
-  const openNew = () => router.push("/issues/new");
+  // "": every task. A project's id, or `none`.
+  const [filter, setFilter] = useState("");
+  // A project deleted while it was picked: every task again.
+  const shown = liveProjectFilter(projects, filter);
+  const project = projects.find((p) => p.id === shown);
+  const openNew = () =>
+    project && !project.archived
+      ? router.push({ pathname: "/issues/new", params: { project: project.id } })
+      : router.push("/issues/new");
+  const pickProject = () => {
+    const row = (key: string, label: string, leading: ReactNode, hint?: string) => ({
+      key: key || "all",
+      label,
+      leading,
+      ...(hint ? { hint } : {}),
+      ...(key === shown ? { trailing: <Icon name="check" size={18} /> } : {}),
+      onPress: () => {
+        sheet.close();
+        setFilter(key);
+      },
+    });
+    sheet.open(
+      <ActionList
+        items={[
+          row("", t("issues.projects.all"), <Icon name="issue" size={20} />),
+          ...projectFilterRows(projects).map((p) =>
+            p
+              ? row(
+                  p.id,
+                  p.name,
+                  <ProjectDot color={p.color} />,
+                  p.archived ? t("issues.projects.archivedMark") : undefined,
+                )
+              : row(NO_PROJECT, t("issues.projects.none"), <ProjectDot />),
+          ),
+        ]}
+      />,
+    );
+  };
   const mayNew = mayCreate(useOrg().org, "task");
   const empty = issues.isSuccess && (issues.data ?? []).length === 0;
   const right = mayNew ? <IconButton icon="plus" label={t("mobile.issues.new")} onPress={openNew} /> : undefined;
@@ -81,10 +142,20 @@ export function IssuesScreen() {
         value={view}
         onChange={(k) => setView(k as TaskView)}
       />
+      {projects.length > 0 ? (
+        <View style={styles.project}>
+          <PropChip
+            label={t("issues.projects.label")}
+            value={project?.name ?? t(shown === NO_PROJECT ? "issues.projects.none" : "issues.projects.all")}
+            {...(shown ? { leading: <ProjectDot color={project?.color} /> } : { icon: "issue" as const })}
+            onPress={pickProject}
+          />
+        </View>
+      ) : null}
     </View>
   );
-  if (view === "board" && !empty) return <Board right={right} views={views} mayNew={mayNew} />;
-  return <TaskList right={right} views={views} empty={empty} mayNew={mayNew} onNew={openNew} />;
+  if (view === "board" && !empty) return <Board right={right} views={views} mayNew={mayNew} project={shown} />;
+  return <TaskList right={right} views={views} empty={empty} mayNew={mayNew} onNew={openNew} project={shown} />;
 }
 
 /** Lista: the search, the views, then the sections ("Para você", Em andamento, Em revisão, A fazer, Feitas hoje). */
@@ -94,17 +165,20 @@ function TaskList({
   empty,
   mayNew,
   onNew,
+  project,
 }: {
   right: ReactNode;
   views: ReactNode;
   empty: boolean;
   mayNew: boolean;
   onNew: () => void;
+  /** The project filter: "" for every task. */
+  project: string;
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const meId = useMeId();
-  const issues = useIssues(orgId);
+  const issues = useIssues(orgId, "", project);
   const pull = usePullRefresh(issues.refetch);
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
@@ -160,7 +234,9 @@ function TaskList({
                 <SectionHeader title={t(`mobile.issues.list.${s.key}`)} count={s.items.length} />
                 {s.items.map((i, n) => {
                   row += 1;
-                  return <TaskRow key={i.id} issue={i} divider={n > 0} live={row <= LIVE_CARDS} />;
+                  return (
+                    <TaskRow key={i.id} issue={i} divider={n > 0} live={row <= LIVE_CARDS} project={project === ""} />
+                  );
                 })}
               </Fragment>
             ))}
@@ -176,7 +252,18 @@ function TaskList({
  * moving while it works) and its one state in the board card's words ("Pergunta algo" in the attention color), else
  * its due date in words. A long name wraps beside its face, and a state that doesn't fit goes under it, whole.
  */
-function TaskRow({ issue: i, divider, live }: { issue: Issue; divider: boolean; live: boolean }) {
+function TaskRow({
+  issue: i,
+  divider,
+  live,
+  project,
+}: {
+  issue: Issue;
+  divider: boolean;
+  live: boolean;
+  /** Its project after who has it. A project's own list leaves it out. */
+  project: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const dir = useDirectory();
@@ -208,23 +295,34 @@ function TaskRow({ issue: i, divider, live }: { issue: Issue; divider: boolean; 
               {!state && due ? ` · ${due}` : ""}
             </Text>
           </View>
+          {project && i.project ? <ProjectName project={i.project} /> : null}
           {state && words ? <StateWords issue={i} state={state} words={words} /> : null}
         </View>
       }
-      accessibilityLabel={[i.title, who, words ?? due].filter(Boolean).join(", ")}
+      accessibilityLabel={[i.title, who, project ? i.project?.name : null, words ?? due].filter(Boolean).join(", ")}
       onPress={() => router.push(`/issues/${i.number}`)}
     />
   );
 }
 
 /** Quadro: the stages side by side, as before, under the title and the views. */
-function Board({ right, views, mayNew }: { right: ReactNode; views: ReactNode; mayNew: boolean }) {
+function Board({
+  right,
+  views,
+  mayNew,
+  project,
+}: {
+  right: ReactNode;
+  views: ReactNode;
+  mayNew: boolean;
+  project: string;
+}) {
   const { t } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
   const headerHeight = useHeaderHeight();
   const { width } = useWindowDimensions();
-  const issues = useIssues(orgId);
+  const issues = useIssues(orgId, "", project);
   const columns = useIssueColumns(orgId);
   const pull = usePullRefresh(issues.refetch);
   const pager = useRef<ScrollViewInstance>(null);
@@ -277,7 +375,7 @@ function Board({ right, views, mayNew }: { right: ReactNode; views: ReactNode; m
           onScroll={(e) => onPagerScroll(e.nativeEvent.contentOffset.x)}
         >
           {board.map((b) => (
-            <Column key={b.stage} column={b} width={columnWidth} pull={pull} mayNew={mayNew} />
+            <Column key={b.stage} column={b} width={columnWidth} pull={pull} mayNew={mayNew} project={project} />
           ))}
         </ScrollView>
       </FocusLive>
@@ -290,11 +388,13 @@ function Column({
   width,
   pull,
   mayNew,
+  project,
 }: {
   column: BoardColumn;
   width: number;
   pull: ReturnType<typeof usePullRefresh>;
   mayNew: boolean;
+  project: string;
 }) {
   const { t } = useTranslation();
   const c = useColors();
@@ -305,7 +405,11 @@ function Column({
   const reduced = useReducedMotion();
   const fade = reduced ? {} : { entering: FadeIn.duration(160), exiting: FadeOut.duration(120) };
   const layout = reduced ? undefined : LinearTransition.duration(220);
-  const newIn = (column: string) => () => router.push({ pathname: "/issues/new", params: { column } });
+  const newIn = (column: string) => () =>
+    router.push({
+      pathname: "/issues/new",
+      params: { column, ...(project && project !== NO_PROJECT ? { project } : {}) },
+    });
   let card = 0;
   return (
     <ScrollView
@@ -335,7 +439,7 @@ function Column({
               card += 1;
               return (
                 <Animated.View key={i.id} {...fade} layout={layout}>
-                  <BoardCard issue={i} live={card <= LIVE_CARDS} />
+                  <BoardCard issue={i} live={card <= LIVE_CARDS} project={project === ""} />
                 </Animated.View>
               );
             })}
@@ -352,7 +456,8 @@ const styles = StyleSheet.create({
   center: { alignItems: "center", gap: 12, paddingVertical: 48, paddingHorizontal: 24 },
   centerText: { textAlign: "center" },
   search: { paddingHorizontal: SCREEN_X, paddingBottom: 8 },
-  views: { paddingHorizontal: SCREEN_X, paddingTop: 8, paddingBottom: 8 },
+  views: { paddingHorizontal: SCREEN_X, paddingTop: 8, paddingBottom: 8, gap: 8 },
+  project: { flexDirection: "row" },
   check: { width: CHECK_BOX, height: CHECK_BOX, alignItems: "center", justifyContent: "center" },
   // Who has it with the date, then the state, wrapping between them, never the face alone on a line.
   subLine: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 8, rowGap: 2, minWidth: 0 },

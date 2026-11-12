@@ -217,6 +217,11 @@ export interface ComposerProps {
   canSendEmpty?: boolean;
   /** Not yet (e.g. uploads still running): Enter and the send button wait. */
   sendBlocked?: boolean;
+  /**
+   * Inside the card, above the text's row: why this text can't go and the way out (a draft past the length limit,
+   * with "Enviar como arquivo"). Given together with `sendBlocked`.
+   */
+  notice?: ReactNode;
   /** An agent is working in this conversation (send ↔ stop). */
   working?: ComposerWorking | null;
   /**
@@ -499,6 +504,7 @@ export function Composer({
   onFiles,
   header,
   attachments,
+  notice,
   canSendEmpty,
   sendBlocked,
   working,
@@ -943,6 +949,11 @@ export function Composer({
             {header && <div className="ac-composer__header">{header}</div>}
             {pills && !inlinePills && <div className="ac-composer__pills">{pills}</div>}
             {attachments && <div className="ac-composer__attachments">{attachments}</div>}
+            {notice && (
+              <div className="ac-composer__notice" role="alert">
+                {notice}
+              </div>
+            )}
             <div className="ac-composer__row">
               {pills && inlinePills && <div className="ac-composer__pills">{pills}</div>}
               <div className="ac-composer__tools">

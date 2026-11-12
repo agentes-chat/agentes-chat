@@ -20,6 +20,7 @@ import {
   GroupedRow,
   Icon,
   type IconName,
+  InfoHint,
   Locked,
   SearchField,
   Text,
@@ -248,9 +249,15 @@ export function MailReview({
   };
   return (
     <>
-      <Text variant="body" tone="muted">
-        {t("mail.toolsLead", { name: account.address })}
-      </Text>
+      <InfoHint
+        name={t("common.about", { label: account.address })}
+        text={t("mail.toolsLead", { name: account.address })}
+        variant="body"
+      >
+        <Text variant="body" tone="muted">
+          {t("mail.toolsShort")}
+        </Text>
+      </InfoHint>
       <Locked when={update.isPending}>
         <ToolList tools={tools} levelOf={(x) => chosenLevel(state, x)} review={{ state, onChange: setState }} />
       </Locked>

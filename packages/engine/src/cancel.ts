@@ -1,6 +1,7 @@
 import { DESKTOP_PROTOCOL, type PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, gte, inArray, schema, sql } from "@agenteschat/db";
 import { announceAgentStatus } from "./agent-status";
+import { publishApproval } from "./approvals";
 import { recordAudit } from "./audit";
 import { personOfMessage } from "./authority";
 import { lineMachineOf, publishQueueChanged } from "./computer-queue";
@@ -186,9 +187,7 @@ export async function mayStopRun(
   return (await personOfMessage(db, row.run.orgId, row.run.triggerMessageId)) === userId;
 }
 
-/** Who canceled (stored on the run as `canceled_by:{userId}`). */
-export const canceledBy = (error: string | null | undefined) =>
-  error?.startsWith("canceled_by:") ? error.slice("canceled_by:".length) : null;
+export { canceledBy } from "./runs";
 
 /**
  * Stops an agent's run (`POST …/runs/{runId}/cancel`), for who may (`mayStopRun`).
@@ -288,6 +287,7 @@ export async function stopRun(
     const status = run.status;
     let closedSecrets: SecretRequestRow[] = [];
     let closedQuestions: AgentQuestionRow[] = [];
+    let closedApprovals: (typeof approvals.$inferSelect)[] = [];
     const done = await db.transaction(async (tx) => {
       const moved = await transitionRun(tx, run.id, status, "canceled", { error });
       if (!moved) return null;
@@ -299,10 +299,11 @@ export async function stopRun(
           .where(eq(agentRuns.id, run.id));
       }
       const now = new Date();
-      await tx
+      closedApprovals = await tx
         .update(approvals)
         .set({ status: "canceled", decidedAt: now })
-        .where(and(eq(approvals.runId, run.id), eq(approvals.status, "pending")));
+        .where(and(eq(approvals.runId, run.id), eq(approvals.status, "pending")))
+        .returning();
       // Their cards close too, or "Responder" would stay offered on a question nobody can answer anymore.
       closedQuestions = await tx
         .update(agentQuestions)
@@ -335,6 +336,8 @@ export async function stopRun(
     if (done) {
       run = done;
       for (const r of closedSecrets) await publishSecret(deps, r, "secret.updated");
+      // Their cards say canceled and they leave the inbox: nothing waits on a person for a run that stopped.
+      for (const a of closedApprovals) await publishApproval(deps, a, "approval.decided").catch(() => {});
       for (const q of closedQuestions) {
         await publishQuestion(deps.pubsub, q, "question.answered");
         // Out of everyone's inbox too: a question nobody can answer any more never waits on a person.

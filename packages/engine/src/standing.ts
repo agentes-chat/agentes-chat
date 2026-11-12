@@ -198,14 +198,22 @@ export class OrgDeletingError extends ForbiddenError {
 }
 
 /**
- * Why the workspace is closed to its people, or null while it is open: suspended (the operator's, which comes first),
- * else being deleted. The one check behind every way in; only reading who you are, restoring it and leaving it
- * stay open. `closedOrg` says the same in SQL.
+ * Why the workspace is closed to every change and to all work, or null while it is open: suspended (the operator's,
+ * which comes first), else being deleted. Restoring it and leaving it stay open, and its people still read one being
+ * deleted (`readRefusal`). `closedOrg` says the same in SQL.
  */
 export function closedRefusal(standing: WorkspaceStanding | undefined): OrgPausedError | OrgDeletingError | null {
   if (standing?.state === "suspended") return new OrgPausedError(standing);
   if (standing?.deletionDueAt) return new OrgDeletingError(standing.deletionDueAt);
   return null;
+}
+
+/**
+ * Why its people can't even read the workspace, or null: only a suspension. One being deleted stays readable to its
+ * members until it goes (ADR 0088 §7); the API refuses its changes (`readOnlyWhileDeleting`) and `workRefusal` its work.
+ */
+export function readRefusal(standing: WorkspaceStanding | undefined): OrgPausedError | null {
+  return standing?.state === "suspended" ? new OrgPausedError(standing) : null;
 }
 
 /** Why work in the workspace is refused now: `closedRefusal`, else a hold. Null while active. `openOrg` in SQL. */
@@ -221,9 +229,9 @@ export const closedOrg = sql<boolean>`(${organizations.standing} = 'suspended'
 /** `workRefusal` in SQL, for queries over `organizations`: active, and not being deleted. */
 export const openOrg = sql<boolean>`(${organizations.standing} = 'active' and ${organizations.deletionDueAt} is null)`;
 
-/** An org broadcast that closes the workspace to its people (a suspension, its deletion): their sockets close. */
+/** An org broadcast that closes the workspace to its people (a suspension): their sockets close. */
 export const closesWorkspace = (event: { type: string; state?: unknown }) =>
-  event.type === "org.deleting" || (event.type === "org.standing" && event.state === "suspended");
+  event.type === "org.standing" && event.state === "suspended";
 
 /**
  * A suspension, or a hold that isn't billing's: its people don't carry on in a new workspace, and its deletion waits

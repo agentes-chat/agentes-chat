@@ -172,6 +172,13 @@ export const SECRET_NUDGE =
 export const UNBACKED_NUDGE =
   "Not posted: your reply says something was made, sent or done, but no call of yours in this run did it. Do it now with your tools, or say plainly that you couldn't and why. Never say a result is done, attached or sent when no call produced it.";
 
+/**
+ * What a widget's run reads, once, when it ended without `update_widget` taking its data (ADR 0135 §5): its words reach
+ * nobody, so without the call the widget would only fail as `no_update`.
+ */
+export const WIDGET_NUDGE =
+  "Not done: this run ends only through update_widget, and it hasn't taken your data (you didn't call it, or it refused what you sent). Nothing you write here reaches anyone. Call update_widget now with the widget's `data` (fixed as its error said, if it refused it), or with `failed` and why, in the person's words.";
+
 /** The run's last judged turn, kept for the mission's keep-going check (`keepGoingBlocker` reads `waiting`). */
 export const verdictRecord = (v: ContinuationVerdict) =>
   v === "continue" || v === "untried" || v === "unbacked" ? "unkept" : v === "ask" || v === "secret" ? "waiting" : v;
@@ -414,6 +421,8 @@ export interface TurnEnd {
    * says once whether it still needs them before ending.
    */
   openRequest?: string;
+  /** A widget's run whose data `update_widget` hasn't taken (ADR 0135 §5): it is told once (`WIDGET_NUDGE`). */
+  widgetOwed?: boolean;
   /** Something durable brings it back (`wakesLater`), read only when the judgment would run. */
   wakesLater(): Promise<boolean>;
   /** Whatever run set it, something brings it back to this conversation (`comesBackHere`), read on a promise. */
@@ -442,6 +451,8 @@ export async function decideTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   const max = t.kind === "routine" ? CONTINUE.routineMaxPerRun : CONTINUE.maxPerRun;
   const canNudge = t.state.count < max;
   if (t.bound) return { outcome: "done", rule: t.bound };
+  // Quiet or not, a widget's run speaks only through update_widget: without it, nobody gets anything.
+  if (t.widgetOwed && canNudge) return { outcome: "continue", rule: "widget", nudge: WIDGET_NUDGE };
   if (t.quiet) return { outcome: "done", rule: "quiet" };
   if (t.decided && canNudge) return { outcome: "continue", rule: "decision", nudge: decisionNudge(t.decided) };
   if (t.unanswered && canNudge) return { outcome: "continue", rule: "answer", nudge: ANSWER_NUDGE };

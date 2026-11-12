@@ -12,8 +12,9 @@ import { setWorkIssueState } from "./issues";
 import { getMessage } from "./messages";
 import { requireActiveMembership } from "./organizations";
 import { enqueue } from "./outbox";
+import { personCanPost } from "./routine-state";
 import { ACTIVE_RUN_STATUSES, takeInbox } from "./run-inbox";
-import { providerFailure } from "./runs";
+import { continuableEnd } from "./runs";
 import { announceWork, reopenWork, updatesThreadOf } from "./works";
 
 const { agentRuns, agents, messages, channels, users } = schema;
@@ -63,9 +64,9 @@ export async function continueRun(
       : new ForbiddenError("Only who asked, the agent's owner or an admin can continue it", "run.continue_forbidden");
 
   const notContinuable = () => new ConflictError("This task can't be continued", "run.not_continuable");
-  const byPerson = stopped.status === "canceled" && Boolean(canceledBy(stopped.error));
+  const byPerson = stopped.status === "canceled";
   // Long work its AI provider cut off (ADR 0121): its end, posted home, is where it goes on from.
-  const providerCut = stopped.status === "failed" && Boolean(stopped.workId) && Boolean(providerFailure(stopped.error));
+  const providerCut = stopped.status === "failed";
   if (!(byPerson || providerCut || stopped.status === "done") || !stopped.transcript) throw notContinuable();
   const [work] = stopped.workId
     ? await db.select().from(schema.agentWorks).where(eq(schema.agentWorks.id, stopped.workId))
@@ -77,11 +78,13 @@ export async function continueRun(
       : stopped.replyMessageId;
   if (!replyId) throw notContinuable();
   const reply = await getMessage(db, orgId, replyId);
+  // How it ended decides, as at a work's end (`continuableEnd`); a catch-up the check skipped is answered anyway.
+  if (!reply || (!skipped && !continuableEnd(stopped, reply))) throw notContinuable();
   // Its reply says how it ended: stopped by a person (`meta.canceled`), at its step limit (`meta.stepLimit`), its
   // work's end after a provider error (`meta.workEnd`), or skipped as handled (`meta.usageWait.closed`).
   const ending = skipped ? "usageWait" : byPerson ? "canceled" : providerCut ? "workEnd" : "stepLimit";
-  const ended = reply?.meta[ending] as { continuedRunId?: unknown; closed?: ClosedNote } | undefined;
-  if (!reply || reply.deletedAt || !ended || ended.continuedRunId) throw notContinuable();
+  const ended = reply.meta[ending] as { continuedRunId?: unknown; closed?: ClosedNote } | undefined;
+  if (reply.deletedAt || !ended || ended.continuedRunId) throw notContinuable();
   if (skipped && !(Date.now() - Date.parse(ended.closed?.at ?? "") < ANSWER_ANYWAY_MS)) throw notContinuable();
 
   // The new run answers where the stopped reply is: its thread, or (flat: a DM) the reply itself. Long work (ADR 0121)
@@ -115,6 +118,20 @@ export async function continueRun(
   const transcript = continuedTranscript(carried, line);
   const request = carried.request ?? row.request;
   if (request) transcript.request = request;
+  // What people passed on to the work that it never read before it stopped (`endWork`): the next run reads it first,
+  // each from someone who can still post here.
+  const unread = stopped.workId ? stopped.transcript?.unreadAsks : undefined;
+  const ids = Array.isArray(unread) ? unread.filter((id): id is string => typeof id === "string") : [];
+  const authors = ids.length
+    ? await db
+        .select({ id: messages.id, userId: messages.authorUserId })
+        .from(messages)
+        .where(and(eq(messages.orgId, orgId), inArray(messages.id, ids)))
+    : [];
+  const allowed = new Set<string>();
+  for (const a of authors)
+    if (a.userId && (await personCanPost(db, orgId, a.userId, stopped.channelId))) allowed.add(a.id);
+  const unreadAsks = ids.filter((id) => allowed.has(id));
   // Asked for by name: it answers, never passes.
   if (skipped) transcript.answerOwed = true;
   const newRunId = Bun.randomUUIDv7();
@@ -138,6 +155,7 @@ export async function continueRun(
         // A computer brain resumes the session it was stopped in.
         brainSessionId: stopped.brainSessionId,
         workId: stopped.workId,
+        pendingMessageIds: unreadAsks,
       })
       .onConflictDoNothing()
       .returning({ id: agentRuns.id });

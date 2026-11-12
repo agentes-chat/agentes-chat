@@ -45,7 +45,15 @@ export function MergeReposSection({ agentId, name, mayEdit }: { agentId: string;
           />
         ) : null}
       </GroupedList>
-      <GroupedFooter>{list.length === 0 ? t("repos.merge.none") : t("repos.merge.help")}</GroupedFooter>
+      {list.length === 0 ? (
+        <GroupedFooter>{t("repos.merge.none")}</GroupedFooter>
+      ) : (
+        <GroupedFooter
+          hint={{ name: t("common.about", { label: t("repos.merge.label") }), text: t("repos.merge.help") }}
+        >
+          {t("repos.merge.short")}
+        </GroupedFooter>
+      )}
       <Sheet open={picking} onClose={() => setPicking(false)}>
         <SheetTitle title={t("repos.merge.dialogTitle", agentGrammar(name))} />
         <SearchField value={q} onChangeText={setQ} placeholder={t("repos.search")} autoCorrect={false} />

@@ -39,6 +39,23 @@ describe("migrations", () => {
   });
 });
 
+describe("agents", () => {
+  test("a new agent asks only for what is risky", async () => {
+    const { org } = await seed();
+    const [agent] = await db
+      .insert(schema.agents)
+      .values({ orgId: org.id, name: "Dev", handle: "dev", model: "claude-sonnet-5-5" })
+      .returning();
+    expect(agent?.approvalsLevel).toBe("risky");
+    const rows = rowsOf<{ is_nullable: string }>(
+      await db.execute(sql`
+        select is_nullable from information_schema.columns
+        where table_name = 'agents' and column_name = 'approvals_level'`),
+    );
+    expect(rows[0]?.is_nullable).toBe("NO");
+  });
+});
+
 describe("messages partitioning", () => {
   test("messages is range-partitioned with monthly partitions and a default", async () => {
     const parts = rowsOf<{ name: string }>(

@@ -36,7 +36,7 @@ import { WIDGET_UP_FRONT_MAX, widgetUpFront, withWhy } from "./tools/run-policy"
 import type { ToolContext, ToolDefinition, ToolOutput } from "./tools/types";
 import { withWikiLinks } from "./wiki-links";
 
-const { agentRuns, agents, approvals, agentQuestions, secretRequests, machineTasks, messages } = schema;
+const { agentRuns, agents, agentWorks, approvals, agentQuestions, secretRequests, machineTasks, messages } = schema;
 
 /**
  * Tool access for runs, shared by the engine loop and the runner's `agentes`
@@ -852,13 +852,18 @@ export async function postPauseCards(tx: Executor, run: AgentRun, requests: Paus
     }
   }
 
+  // A work's question names no one: it is its asker's, or another person's answer would move it on their access.
+  const [work] = run.workId
+    ? await tx.select({ asker: agentWorks.requestedByUserId }).from(agentWorks).where(eq(agentWorks.id, run.workId))
+    : [];
+  // Someone who can't read where the card goes could never answer it: it waits on the room instead.
+  const reader = async (userId: string | null | undefined) =>
+    userId && (await readableChannelIds(tx, run.orgId, userId, [asked.channelId])).size > 0 ? userId : null;
   for (const ask of requests.questions) {
-    // Someone who can't read where the card goes could never answer it: it waits on the room instead.
     const requestedForUserId =
-      ask.requestedForUserId &&
-      (await readableChannelIds(tx, run.orgId, ask.requestedForUserId, [asked.channelId])).size > 0
-        ? ask.requestedForUserId
-        : await impliedAddressee(tx, run, asked, ask.text);
+      (await reader(ask.requestedForUserId)) ??
+      (await impliedAddressee(tx, run, asked, ask.text)) ??
+      (await reader(work?.asker));
     const [inserted] = await tx
       .insert(agentQuestions)
       .values({

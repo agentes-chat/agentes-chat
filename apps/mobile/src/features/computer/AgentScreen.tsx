@@ -1449,14 +1449,21 @@ function Watching({
       <LiveTrail steps={steps} color={color} now={now} />
       {channelId ? (
         <View style={styles.composer}>
-          <Composer
-            placeholder={t("agentComputer.phone.message", { name })}
-            face={<AgentFace agentId={agentId} size={22} live={false} />}
-            working={
-              atWork ? (mayStop ? { stop: { label: t("mobile.chat.stopAgent", { name }), onStop: stop } } : {}) : null
-            }
-            onSend={send}
-          />
+          {org?.deletion ? (
+            // Being deleted, it reads as ever and takes no message (ADR 0088 §7).
+            <Text variant="footnote" tone="muted" style={styles.readOnly}>
+              {t("deleting.composer")}
+            </Text>
+          ) : (
+            <Composer
+              placeholder={t("agentComputer.phone.message", { name })}
+              face={<AgentFace agentId={agentId} size={22} live={false} />}
+              working={
+                atWork ? (mayStop ? { stop: { label: t("mobile.chat.stopAgent", { name }), onStop: stop } } : {}) : null
+              }
+              onSend={send}
+            />
+          )}
         </View>
       ) : null}
     </View>
@@ -1543,4 +1550,6 @@ const styles = StyleSheet.create({
   request: { marginHorizontal: 12, marginBottom: 4 },
   // The chat's composer, at the bottom with the chat's own side margins.
   composer: { marginTop: "auto", paddingHorizontal: 10, paddingTop: 8 },
+  // In its place while the workspace is being deleted, as the chat says it.
+  readOnly: { textAlign: "center", paddingHorizontal: 16, paddingVertical: 12 },
 });

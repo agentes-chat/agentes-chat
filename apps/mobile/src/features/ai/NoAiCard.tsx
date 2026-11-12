@@ -16,12 +16,13 @@ import {
 } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
-import { EventPillAction, EventPillText, Text } from "@/ui";
+import { Button, EventPillAction, EventPillText, Text } from "@/ui";
 import { router } from "@/ui/navigation";
-import { AskDone, AskWaiting } from "../chat/asks";
+import { AskButtons, AskDone, AskFoot, AskNote, AskWaiting } from "../chat/asks";
 import { TeamTemplatesSheet } from "../right-hand/TeamCard";
 import { useDirectory, useMeId } from "../shared/hooks";
 import { usePlanHold } from "./parts";
@@ -168,8 +169,8 @@ export function NoAiCard({ message: m }: { message: Message }) {
 }
 
 /**
- * The web's wall (ADR 0079 §6): the agent kept the message for after the plan, in words only, since paying has no
- * button or link here (`keptCardState`). Once an AI is there, opening the conversation starts the answer.
+ * The web's wall (ADR 0079 §6): the agent kept the message for after the plan, as a note in words only, since paying
+ * has no button or link here (`keptCardState`). Once an AI is there, opening the conversation starts the answer.
  */
 function KeptCard({ message: m, card, hold }: { message: Message; card: NoAiCardMeta; hold: BillingHold | null }) {
   const { t } = useTranslation();
@@ -213,13 +214,8 @@ function KeptCard({ message: m, card, hold }: { message: Message; card: NoAiCard
   const code = hold ?? "payment";
   // With no team yet, the way to one needs no model.
   const noTeam = isRightHand(agent) && can(org, "create_agents") && dir.agents.every(isRightHand);
-  const title =
-    state === "held" || state === "paid"
-      ? t("noAi.kept.title")
-      : state === "connect"
-        ? t("noAi.kept.active", { name })
-        : t(answering ? "noAi.card.answering" : "noAi.card.connected", { name });
-  if (state === "answer")
+  if (state === "answer") {
+    const title = t(answering ? "noAi.card.answering" : "noAi.card.connected", { name });
     return (
       <AskDone
         done
@@ -232,61 +228,62 @@ function KeptCard({ message: m, card, hold }: { message: Message; card: NoAiCard
         }
       />
     );
+  }
   if (state === "connect") {
     const mine = mayConnectAi(agent, meId, org);
     return (
-      <AskWaiting
-        forMe={mine}
-        mark="bolt"
-        words={title}
-        actions={
+      <AskNote
+        agentId={card.agentId}
+        title={t("noAi.kept.activeTitle")}
+        text={mine ? t("noAi.kept.activeLine", { name }) : t("noAi.lockedAdmins")}
+        foot={
           mine ? (
-            <EventPillAction
-              key="connect"
-              primary
-              label={t("noAi.action")}
-              onPress={() => openConnectAi({ from: m.id })}
-            />
+            <AskFoot>
+              <AskButtons
+                primary={
+                  <Button
+                    variant="primary"
+                    size="card"
+                    wide
+                    label={t("noAi.action")}
+                    onPress={() => openConnectAi({ from: m.id })}
+                  />
+                }
+              />
+            </AskFoot>
           ) : null
-        }
-        below={
-          mine ? null : (
-            <EventPillText>
-              <Text variant="footnote" tone="muted">
-                {t("noAi.lockedAdmins")}
-              </Text>
-            </EventPillText>
-          )
         }
       />
     );
   }
-  // Paying has no button here: the words say where, and who.
+  // Paying has no button here: the sentence says where, or who can.
   return (
     <>
-      <AskWaiting
-        forMe={false}
-        mark="clock"
-        words={title}
-        actions={
-          state === "held" && noTeam ? (
-            <EventPillAction key="templates" label={t("teamPlan.start.templates")} onPress={() => setTemplates(true)} />
-          ) : null
+      <AskNote
+        agentId={card.agentId}
+        title={t("noAi.kept.title")}
+        hint={t(code === "payment" ? "noAi.kept.plan" : "standing.billing.sub")}
+        text={
+          can(org, "manage_billing")
+            ? t("common.joinSentences", { a: t(`noAi.kept.wait.${code}`), b: t("connectAi.billingWeb") })
+            : t("noAi.kept.askAdmin")
         }
-        below={
-          <EventPillText>
-            <Text variant="footnote" tone="ink2">
-              {code === "payment" ? t("noAi.kept.line") : t(`standing.billing.${code}`)}
-            </Text>
-            {code === "payment" ? (
-              <Text variant="footnote" tone="ink2">
-                {t("noAi.kept.plan")}
-              </Text>
-            ) : null}
-            <Text variant="footnote" tone="muted">
-              {t(can(org, "manage_billing") ? "connectAi.billingWeb" : "standing.billing.askAdmin")}
-            </Text>
-          </EventPillText>
+        foot={
+          state === "held" && noTeam ? (
+            <AskFoot>
+              <AskButtons
+                primary={
+                  <Button
+                    variant="primary"
+                    size="card"
+                    wide
+                    label={t(modeKey(org, "teamPlan.start.templates"))}
+                    onPress={() => setTemplates(true)}
+                  />
+                }
+              />
+            </AskFoot>
+          ) : null
         }
       />
       {state === "held" && noTeam ? (

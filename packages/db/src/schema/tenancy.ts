@@ -82,8 +82,8 @@ export const organizations = pgTable("organizations", {
   platformAlertMonth: text(),
   platformAlertPercent: smallint(),
   /**
-   * Set while an owner's deletion is pending: when the workspace goes for good. It is closed meanwhile, like a
-   * suspended one (`closedRefusal`, `openOrg` in `standing.ts`), and restoring it clears the three.
+   * Set while an owner's deletion is pending: when the workspace goes for good. It is read-only meanwhile, its work
+   * stopped (`closedRefusal`, `openOrg` in `standing.ts`), and restoring it clears the three.
    */
   deletionDueAt: timestamp({ withTimezone: true }),
   deletionRequestedAt: timestamp({ withTimezone: true }),

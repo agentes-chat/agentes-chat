@@ -6,6 +6,7 @@ import {
   audienceModeKey,
   audienceModeTextKey,
   offersConsultable,
+  reachShortKey,
 } from "@agenteschat/client/lib/audience";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { aiStateOf, onlyOwnerReplies } from "@agenteschat/client/lib/no-ai";
@@ -17,6 +18,7 @@ import {
   Checkbox,
   Chip,
   fold,
+  HintLine,
   Icon,
   type IconName,
   InfoHint,
@@ -182,7 +184,9 @@ export function AudienceChoice({
       )}
       {reach && (
         <span className="small muted">
-          {t("audience.notListed")} {t(`audience.agents.${reach}`, g)}
+          <HintLine name={t("common.about", { label: t("audience.title", g) })} hint={t(`audience.agents.${reach}`, g)}>
+            {t("audience.notListed")} {t(reachShortKey(reach))}
+          </HintLine>
         </span>
       )}
       {offersConsultable(value, onPlan) && (

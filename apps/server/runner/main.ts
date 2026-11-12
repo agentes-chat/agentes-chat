@@ -489,7 +489,7 @@ async function app(): Promise<number> {
       input: process.stdin,
       output: process.stdout,
       locked: lock.ok ? null : lock.holder,
-      daemon: { log: write, logFile },
+      daemon: { log: write, logFile, refreshPath: () => adoptLoginPath() },
       signal: ac.signal,
     });
   } finally {

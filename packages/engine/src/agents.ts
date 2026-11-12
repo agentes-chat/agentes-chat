@@ -30,6 +30,7 @@ import { recordOperatorEvent } from "./operator-events";
 import { can, getMembership, type Membership, requirePermission } from "./organizations";
 import { isRightHand, RIGHT_HAND_EDITABLE, refuseRightHand, rightHandPermanent } from "./right-hand";
 import { newSetup, type SetupExtras, setupOf } from "./setup-checklist";
+import { APPROVALS_LEVELS, type ApprovalsLevel } from "./tools/run-policy";
 import {
   CONNECTOR_ALL,
   DEFAULT_AGENT_SCOPES,
@@ -95,6 +96,8 @@ export interface AgentInput {
   mediaReplies?: boolean;
   /** Its autonomy brakes (ADR 0131), stored as `autonomySettings` reads them. */
   autonomyBrakes?: Partial<AutonomySettings>;
+  /** How much it asks before acting (ADR 0173). */
+  approvalsLevel?: ApprovalsLevel;
 }
 
 /** An agent's fields as the API takes them: its handle, model, key (of the model's provider), budget and owner. */
@@ -115,6 +118,9 @@ export async function validateAgentFields(db: Database, orgId: string, input: Pa
   }
   if (input.monthlyBudgetNanoUsd != null && input.monthlyBudgetNanoUsd < 0) {
     throw new ValidationError("budget can't be negative");
+  }
+  if (input.approvalsLevel !== undefined && !APPROVALS_LEVELS.includes(input.approvalsLevel)) {
+    throw new ValidationError(`approvalsLevel must be one of: ${APPROVALS_LEVELS.join(", ")}`);
   }
   if (input.credentialId) {
     const [cred] = await db
@@ -204,6 +210,10 @@ export async function createAgent(
   // So whoever gets this far may also set its Autonomia (ADR 0094): an admin or the new agent's owner.
   if (input.ownerUserId !== undefined && input.ownerUserId !== actorId && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only an admin can create an agent for someone else or with no owner");
+  }
+  // How much it asks (ADR 0173) is for who edits any agent, at its creation too.
+  if (input.approvalsLevel !== undefined && !can(membership, "manage_agents")) {
+    throw new ForbiddenError("Only who manages agents can set how much an agent asks");
   }
   const values = { ...fields, handle: fields.handle.toLowerCase(), model: fields.model ?? defaults.model };
   await validateAgentFields(db, orgId, values);
@@ -627,6 +637,8 @@ export const agentView = (a: Agent) => ({
   setup: setupOf(a.setup),
   /** Its autonomy brakes (ADR 0131), with the defaults filled in. */
   brakes: autonomySettings(a.autonomyBrakes),
+  /** How much it asks before acting (ADR 0173). */
+  approvalsLevel: a.approvalsLevel,
   createdAt: a.createdAt,
 });
 

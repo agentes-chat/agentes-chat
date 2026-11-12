@@ -14,6 +14,7 @@ import {
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createI18n } from "@/i18n";
 import { ADA_ID, ADMIN_ROLE_ID, createFakeApi, ENG_ID, ORG_ID, seedDm, seedRoles, seedState } from "./fake-api";
+import { hintOf, shownText } from "./hint";
 import { proceed, startAs } from "./new-agent-flow";
 import { renderApp, screen, settle } from "./render";
 
@@ -110,11 +111,14 @@ describe("Quem pode falar com a Ada", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     expect(section.textContent).toContain("ela responde só ao agente que perguntou, nunca direto à pessoa");
     // Whether it holds for agents too, said plainly under the choice.
-    expect(section.textContent).toContain(
+    expect(shownText(section)).toContain("Quem não está na lista não recebe resposta. Vale só para pessoas.");
+    expect(shownText(section)).not.toContain("Outros agentes ainda podem consultar");
+    expect(hintOf("Quem pode falar com a Ada", section).text).toBe(
       "Vale só para pessoas. Outros agentes ainda podem consultar a Ada por quem não está na lista.",
     );
     await click(toggle);
-    expect(section.textContent).toContain(
+    expect(shownText(section)).toContain("Quem não está na lista não recebe resposta. Vale para agentes também.");
+    expect(hintOf("Quem pode falar com a Ada", section).text).toBe(
       "Vale para agentes também. Nenhum outro agente consegue falar com a Ada por quem não está na lista.",
     );
     await click(

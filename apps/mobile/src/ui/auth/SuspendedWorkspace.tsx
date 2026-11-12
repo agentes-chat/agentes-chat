@@ -29,9 +29,11 @@ export function SuspendedWorkspace({
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const notes = workspaceNotes(t, i18n.language, state.orgs);
+  const name = state.orgs.find((o) => o.id === state.orgId)?.name;
+  const title = name ? t("standing.screen.titleNamed", { name }) : t("standing.screen.title");
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} accessibilityViewIsModal>
-      <AuthScaffold title={t("standing.screen.title")} subtitle={suspendedText(t, suspended)}>
+      <AuthScaffold title={title} subtitle={suspendedText(t, suspended)}>
         <SupportLine />
         {suspended.others.map((o, i) => (
           <Button

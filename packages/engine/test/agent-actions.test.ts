@@ -7,6 +7,7 @@ import {
   createChannel,
   createContextToolSource,
   createIssue,
+  createIssueProject,
   createIssueToolSource,
   createScheduleToolSource,
   createWikiToolSource,
@@ -206,6 +207,23 @@ describe("act with undo: issues", () => {
     expect(action.params).toMatchObject({ fields: ["githubUrl"] });
     await undoAgentAction(deps(f), f.owner.id, f.org.id, action.id);
     expect((await getIssue(f.db, person(f.owner.id), f.org.id, { id: issue.id })).githubUrl).toBeNull();
+  });
+
+  test("update_issue: a project an agent set is a receipt, and undo puts back the one the task had", async () => {
+    f = await setup();
+    const ctx = await runContext(f);
+    const call = await toolsOf([createIssueToolSource(f.artifactDeps)], ctx);
+    const was = await createIssueProject(deps(f), f.owner.id, f.org.id, { name: "Padaria Lia" });
+    await createIssueProject(deps(f), f.owner.id, f.org.id, { name: "Clínica Teo" });
+    const issue = await createIssue(deps(f), person(f.owner.id), f.org.id, { title: "Cardápio", projectId: was.id });
+    await call("update_issue", { issue: "#1", project: "Clínica Teo" });
+    const m = await reply(f, ctx);
+    const [action] = (await actionsFor(f.db, f.org.id, [m.id])).get(m.id) ?? [];
+    if (!action) throw new Error("no action");
+    expect(action.params).toMatchObject({ fields: ["project"] });
+    expect((await getIssue(f.db, person(f.owner.id), f.org.id, { id: issue.id })).project?.name).toBe("Clínica Teo");
+    await undoAgentAction(deps(f), f.owner.id, f.org.id, action.id);
+    expect((await getIssue(f.db, person(f.owner.id), f.org.id, { id: issue.id })).project?.id).toBe(was.id);
   });
 
   test("create_issue: a person's reply in the task's conversation since blocks undo", async () => {

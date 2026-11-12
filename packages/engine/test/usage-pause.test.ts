@@ -904,6 +904,53 @@ test("a turn through on another model doesn't wake a wait parked on its own mode
   expect(await wakePlanWaits(f.db, f.org.id, key, parkedOn ?? null)).toEqual([slot?.id ?? ""]);
 });
 
+test("a reading wakes its plan's limit waits even behind more than a hundred older pauses it leaves paused", async () => {
+  f = await setup();
+  const key = usageWaitKey({ code: "plan_limit", machineId: crypto.randomUUID(), kind: "claude_code" });
+  const now = Date.now();
+  const parked = (code: string, createdAt: Date, trigger = crypto.randomUUID()) => ({
+    orgId: f.org.id,
+    agentId: f.agent.id,
+    channelId: f.general.id,
+    threadRootId: trigger,
+    triggerMessageId: trigger,
+    trigger: "mention" as const,
+    hop: 1,
+    status: "waiting_input" as const,
+    createdAt,
+    transcript: {
+      waitingForBrain: {
+        kind: "claude_code",
+        machineId: "",
+        code,
+        waitId: crypto.randomUUID(),
+        waitKey: key,
+        until: new Date(now + 3600_000).toISOString(),
+        model: null,
+        ...(code === "usage_pause" ? { source: "plan" } : {}),
+      },
+      usageWait: { since: now - 3600_000, step: 0, parkedAt: now - 60_000 },
+    } as never,
+  });
+  await f.db
+    .insert(schema.agentRuns)
+    .values(Array.from({ length: 101 }, (_, i) => parked("usage_pause", new Date(now - 7200_000 + i))));
+  const [limited] = await f.db
+    .insert(schema.agentRuns)
+    .values(parked("plan_limit", new Date(now - 60_000)))
+    .returning();
+  // The 5-hour window reset, the week is still past the pause line: the pauses stay, the limit wait goes on.
+  const usage: PlanUsage = {
+    windows: [
+      { kind: "five_hour", usedPercent: 3, resetsAt: new Date(now + 5 * 3600_000).toISOString() },
+      { kind: "seven_day", usedPercent: 97, resetsAt: new Date(now + 3 * 86_400_000).toISOString() },
+    ],
+    source: "turn",
+    at: new Date(now).toISOString(),
+  };
+  expect(await wakePlanWaits(f.db, f.org.id, key, null, now, { at: now, usage })).toEqual([limited?.id ?? ""]);
+});
+
 test("the line keeps its order on a second hit: the head parks again in its place and the rest wait behind it, 60 s apart", async () => {
   f = await setup({ reply: () => ({ chunks: ["pela API"] }) });
   await computerAgent(f, { brainFallback: false });

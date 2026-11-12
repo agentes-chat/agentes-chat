@@ -152,7 +152,9 @@ describe("Criar agente: steps", () => {
     const hint = (name: string) =>
       document.getElementById(screen().getByRole("button", { name }).getAttribute("aria-describedby") ?? "")
         ?.textContent;
-    expect(hint("Sobre O que a Iris faz")).toBe(
+    // On the field's own label, never in the step's big title.
+    expect(screen().getByRole("heading", { level: 1 }).closest(".ac-hintline")).toBeNull();
+    expect(hint("Sobre Instruções")).toBe(
       "O contexto da Acme (o que a empresa faz, regras da casa) entra antes destas instruções em toda conversa: escreva aqui só o que é da Iris.",
     );
     expect(document.querySelector(".newag__note")).toBeNull();
@@ -167,6 +169,34 @@ describe("Criar agente: steps", () => {
     expect(screen().getByText(/^Vazio: o padrão do workspace/).textContent).toBe(
       "Vazio: o padrão do workspace (US$\u00a050).",
     );
+  });
+
+  test("an app's account or its server's host sits under its name, inside the row; every row has the same shape", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    // The worst case: a long name over a long host, beside an app with nothing under its name.
+    const HOST = "mcp.painel-de-vendas-e-atendimento-da-filial-sul.example.com";
+    await api.customConnectors.connect(ORG_ID, {
+      serverUrl: `https://${HOST}/mcp`,
+      label: "Painel de vendas e atendimento da filial sul",
+      apiKey: "fake-key-for-tests",
+      returnTo: "/",
+    });
+    for (const c of state.connections) if (c.connector === "github") c.accountLabel = null;
+    await open(state, api);
+    await startAs("QA");
+    await proceed(2);
+    const rows = within(screen().getByRole("list", { name: "Conectores e níveis" })).getAllByRole("listitem");
+    expect(rows.length).toBeGreaterThan(1);
+    for (const row of rows) expect(row.classList.contains("level-row--meta")).toBe(true);
+    const metaOf = (name: string) =>
+      rows
+        .find((r) => r.querySelector(".level-row__name")?.textContent === name)
+        ?.querySelector(".ac-mediarow__head > .ac-mediarow__meta")?.textContent ?? null;
+    expect(metaOf("Painel de vendas e atendimento da filial sul")).toBe(HOST);
+    expect(metaOf("GitHub")).toBeNull();
+    // Never on a line of its own under the logo.
+    for (const row of rows) expect(row.querySelector(".ac-mediarow__body")?.textContent).not.toContain(HOST);
   });
 
   test("a role is required; picking one fills the rest (name, @, look, instructions, levels, channels, model)", async () => {
@@ -270,7 +300,8 @@ describe("Criar agente: steps", () => {
     const firstRows = [...step.querySelectorAll(".newag__role")].map(
       (card) => [...card.children].find((c) => !c.classList.contains("newag__check"))?.className,
     );
-    expect(firstRows).toEqual(ROLE_IDS.map(() => "newag__role-head"));
+    // One more than the roles: "De outro app", beside Do zero.
+    expect(firstRows).toEqual([...ROLE_IDS, "import"].map(() => "newag__role-head"));
     expect(step.querySelector(".newag__role .ac-captop, .newag__role .ac-faceline")).toBeNull();
     const css = await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text();
     expect(css).toMatch(/\n\.newag__role-head \{\s*display: flex;\s*align-items: center;/);
@@ -283,11 +314,11 @@ describe("Criar agente: steps", () => {
     await click(within(step).getByRole("button", { name: /^Do zero/ }));
     const scratch = step.querySelector(".newag__scratch");
     expect([...(scratch?.children ?? [])].map((c) => c.className)).toEqual([
-      "newag__role newag__role--blank",
+      "newag__roles",
       expect.stringContaining("newag__card"),
     ]);
     expect(scratch?.nextElementSibling?.tagName).toBe("SECTION");
-    expect(css).toMatch(/\n\.newag__scratch \{[^}]*gap: 12px;/);
+    expect(css).toMatch(/\n\.newag__scratch \{[^}]*gap: var\(--space-3\);/);
     expect(document.activeElement === screen().getByLabelText("Cargo")).toBe(true);
     expect(screen().getByText("O que ele faz pelo time, ex.: Assistente de e-mails e agenda.")).toBeTruthy();
 
@@ -1381,6 +1412,10 @@ describe("Criar agente: what gets created", () => {
     const levels = within(screen().getByRole("list", { name: "Conectores e níveis" }));
     expect(levels.queryByRole("radiogroup", { name: "Nível em joao@acme.com.br" })).toBeNull();
     const mine = levels.getByRole("radiogroup", { name: "Nível em ola@acme.com.br" });
+    // The mailbox's label under its address, inside the row.
+    expect(mine.closest("li")?.querySelector(".ac-mediarow__head > .ac-mediarow__meta")?.textContent).toBe(
+      "Atendimento",
+    );
     expect(within(mine).getByRole("radio", { name: "Sem acesso" }).getAttribute("aria-checked")).toBe("true");
     await click(within(mine).getByRole("radio", { name: "Ler" }));
     await proceed(3);
@@ -1519,6 +1554,152 @@ describe("Criar agente: what gets created", () => {
   });
 });
 
+describe("Criar agente: nothing leaves the steps", () => {
+  // The step's title while a dialog is open over it (the page behind a dialog is hidden from roles).
+  const stepBehind = () => document.querySelector("h1.newag__title")?.textContent;
+
+  test("De outro app is a card beside Do zero, with the first three source apps' marks", async () => {
+    await open();
+    const [scratch, other] = [...(document.querySelector(".newag__scratch > .newag__roles")?.children ?? [])];
+    expect(scratch?.textContent).toBe("Do zeroVocê escreve tudo. Sem acessos até você liberar.");
+    expect(other?.textContent).toBe("De outro appTraga os agentes que você já tem em outro app.");
+    // It opens the import: not one of the roles to choose, so it is never pressed-in.
+    expect(other?.hasAttribute("aria-pressed")).toBe(false);
+    expect([...(other?.querySelectorAll(".newag__marks img") ?? [])].map((i) => i.getAttribute("src"))).toEqual([
+      "/brands/grok-bot.svg",
+      "/brands/chatgpt-dots.svg",
+      "/brands/openbotrun.svg",
+    ]);
+  });
+
+  test("Conectar outro app opens the apps over the step: what is connected is on the list, the rest connects here", async () => {
+    await open();
+    await startAs("QA");
+    await proceed(2);
+    expect(title()).toBe("Ferramentas e acesso");
+    const step = screen().getByRole("heading", { level: 1 }).closest(".newag__content") as HTMLElement;
+    expect(within(step).queryByRole("link", { name: /Conectar outro app/ })).toBeNull();
+    expect(step.textContent).not.toContain("abre Conectores");
+    await click(within(step).getByRole("button", { name: "Conectar outro app" }));
+    const picker = screen().getByRole("dialog", { name: "Apps da Iris" });
+    expect(picker.textContent).toContain("Um app conectado entra na lista na hora. Os outros você conecta aqui mesmo.");
+    expect(picker.textContent).toContain("Na lista");
+    expect(picker.textContent).not.toContain("cartão");
+    expect(within(picker).queryAllByRole("link")).toEqual([]);
+    // Connecting one keeps every step for the way back from the app's own sign-in page.
+    await click(within(picker).getAllByRole("button", { name: "Conectar" })[0] as HTMLElement);
+    const kept = JSON.parse(sessionStorage.getItem("agentes.newAgent.draft") ?? "null");
+    expect(kept.draft).toMatchObject({ index: 3, role: "qa", name: "Iris", handle: "iris" });
+    expect(stepBehind()).toBe("Ferramentas e acesso");
+  });
+
+  test("back from a sign-in elsewhere: the steps as they were, on the step that was open", async () => {
+    sessionStorage.setItem(
+      "agentes.newAgent.draft",
+      JSON.stringify({
+        org: ORG_ID,
+        at: Date.now(),
+        draft: {
+          index: 3,
+          reached: 3,
+          role: "qa",
+          starter: null,
+          roleText: "",
+          name: "Lia",
+          handle: "lia",
+          handleTouched: true,
+          look: ROLE_PRESETS.qa.look,
+          instructions: "Testa antes de liberar.",
+          levels: {},
+          mailLevels: {},
+          skillIds: [],
+          channelIds: [ENG_ID],
+          owner: "u-walter",
+          audience: { mode: "everyone", userIds: [] },
+          model: "auto",
+          plan: null,
+          connectPlan: null,
+          key: "default",
+          budget: "",
+          aiPicked: false,
+          withAutonomy: true,
+        },
+      }),
+    );
+    window.history.replaceState(null, "", `/org/${ORG_ID}/agents/new?resume=1&connected=github`);
+    await open();
+    expect(window.location.search).toBe("");
+    expect(title()).toBe("Ferramentas e acesso");
+    expect(sessionStorage.getItem("agentes.newAgent.draft")).toBeNull();
+    await click(railStep("Instruções"));
+    expect((screen().getByLabelText("Instruções") as HTMLTextAreaElement).value).toBe("Testa antes de liberar.");
+    await click(railStep("Identidade"));
+    expect((screen().getByLabelText("Nome") as HTMLInputElement).value).toBe("Lia");
+  });
+
+  test("Skills do workspace: its ⓘ beside the label, and Instalar skill over the step for who manages agents", async () => {
+    await open();
+    await startAs("QA");
+    await proceed(2);
+    const skills = screen().getByRole("region", { name: /^Skills do workspace/ });
+    expect(hintOf("Skills do workspace", skills).text).toBe("Manuais que a Iris abre quando precisa.");
+    expect(skills.querySelector(".newag__sect > .small")).toBeNull();
+    await click(within(skills).getByRole("button", { name: "Instalar skill" }));
+    const dialog = screen().getByRole("dialog", { name: "Instalar skill" });
+    expect(stepBehind()).toBe("Ferramentas e acesso");
+    const write = within(dialog).getByRole("tab", { name: "Escrever" });
+    write.focus();
+    await press(write, "Enter");
+    await act(async () => fireEvent.mouseDown(write));
+    await settle(2);
+    await typeIn(within(dialog).getByLabelText("Nome"), "Roteiro de testes");
+    await typeIn(within(dialog).getByLabelText("Quando usar"), "Antes de liberar uma versão.");
+    await typeIn(within(dialog).getByLabelText("Instruções (Markdown)"), "# Roteiro\n\n1. Rode os testes.");
+    await click(within(dialog).getByRole("button", { name: "Instalar" }));
+    await settle(8);
+    // Still on the step, the new skill ticked.
+    expect(title()).toBe("Ferramentas e acesso");
+    const pill = within(screen().getByRole("region", { name: /^Skills do workspace/ })).getByRole("checkbox", {
+      name: "Roteiro de testes",
+    });
+    expect(pill.getAttribute("aria-checked") ?? String((pill as HTMLInputElement).checked)).toBe("true");
+  });
+
+  test("Entra nos canais and Responsável: each help behind its ⓘ, the owner a plain select with no card around it", async () => {
+    await open();
+    await startAs("QA");
+    await proceed(3);
+    expect(title()).toBe("Onde trabalha e com quem");
+    expect(hintOf("Entra nos canais").text).toBe("Entra agora. Dá para chamar em outros canais depois.");
+    expect(hintOf("Responsável").text).toBe("Recebe os avisos de orçamento e aprova as ações sensíveis.");
+    const owner = screen().getByRole("combobox", { name: "Responsável" });
+    expect(owner.closest(".ac-card")).toBeNull();
+    expect(owner.closest(".ac-select")?.className).toBe("ac-select");
+    // "Sem responsável" explains itself right after its words: the ⓘ follows the label, the check ends the row.
+    owner.focus();
+    await act(async () => fireEvent.keyDown(owner, { key: "Enter" }));
+    const none = screen().getByRole("option", { name: /^Sem responsável/ });
+    expect([...none.children].map((c) => c.getAttribute("class"))).toEqual([
+      "ac-menu__leading",
+      "ac-menu__label",
+      "ac-hint ac-menu__hint",
+      "ac-menu__check",
+    ]);
+  });
+
+  test("Revisar: Editar is the bare text button, no box around its word", async () => {
+    await open();
+    await startAs("PM");
+    await toReview();
+    const edits = screen().getAllByRole("button", { name: /^Editar / });
+    expect(edits.length).toBeGreaterThan(5);
+    for (const edit of edits) {
+      expect(edit.className).toBe("ac-link ac-link--action");
+      expect(edit.querySelector("svg")).toBeNull();
+    }
+  });
+});
+
 describe("Criar agente with Criar agentes alone: an agent of my own, without apps", () => {
   const asMaker = () => {
     const state = seedState();
@@ -1534,7 +1715,7 @@ describe("Criar agente with Criar agentes alone: an agent of my own, without app
     expect(screen().queryByRole("combobox", { name: "Responsável" })).toBeNull();
     expect(document.querySelector(".newag .agp-person__t")?.textContent).toBe("Walter (você)Membro");
     expect(hintOf("Responsável").text).toBe(
-      "Quem cria o agente é o responsável. Um admin pode passar para outra pessoa depois.",
+      "Quem cria o agente é o responsável. Um admin pode passar para outra pessoa depois. Recebe os avisos de orçamento e aprova as ações sensíveis.",
     );
     await proceed(2);
     await click(screen().getByRole("button", { name: "Criar Iris" }));

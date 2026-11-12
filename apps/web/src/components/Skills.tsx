@@ -270,7 +270,7 @@ export function SkillsSection({
       )}
       {list.length > INLINE && (
         <div className="row">
-          <Button size="sm" variant="ghost" onClick={() => setAll(true)}>
+          <Button variant="link" onClick={() => setAll(true)}>
             {t("skills.seeAll", { count: list.length })}
           </Button>
         </div>
@@ -399,6 +399,7 @@ export function InstallSkillDialog({
   onInstalled,
   initialUrl,
   connected = false,
+  returnTo,
   forAgentId,
 }: {
   open: boolean;
@@ -406,6 +407,8 @@ export function InstallSkillDialog({
   onInstalled: (id: string) => void;
   initialUrl?: string;
   connected?: boolean;
+  /** Where signing in on GitHub comes back to, for the link being read; Skills by default. */
+  returnTo?: (url: string) => string;
   forAgentId?: string;
 }) {
   const { t } = useTranslation();
@@ -766,7 +769,7 @@ export function InstallSkillDialog({
       )}
       <ConnectFlow
         flow={flow}
-        returnTo={returnHere(org.id, url.trim(), sendFor(url))}
+        returnTo={returnTo?.(url.trim()) ?? returnHere(org.id, url.trim(), sendFor(url))}
         onChange={(next) => {
           // Connected without leaving the page (a token): the link again, to pick, behind the steps that follow.
           if (flow?.step === 0) read(url.trim(), true);
@@ -1203,8 +1206,7 @@ export function SkillSheet({
           <>
             {s.source === "url" && s.sourceUrl && (
               <Button
-                size="sm"
-                variant="ghost"
+                variant="link"
                 disabled={action.isPending || refresh.isPending}
                 loading={refresh.isPending}
                 onClick={() =>
@@ -1222,11 +1224,11 @@ export function SkillSheet({
               </Button>
             )}
             {!editing && (
-              <Button size="sm" variant="ghost" icon="edit" onClick={() => setEditing(true)}>
+              <Button variant="link" onClick={() => setEditing(true)}>
                 {t("skills.edit")}
               </Button>
             )}
-            <Button size="sm" variant="ghost" className="ac-btn--danger" onClick={() => setRemoving(true)}>
+            <Button variant="link" className="ac-link--danger" onClick={() => setRemoving(true)}>
               {t("skills.remove")}
             </Button>
           </>

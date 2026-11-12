@@ -131,9 +131,16 @@ export function usageWaitFix(
   who: { admin: boolean; owner: boolean },
 ) {
   const code = meta?.bodyCode;
-  if (code === "budget_wait") return who.admin ? ("raiseBudget" as const) : null;
-  const model = typeof code === "string" && code.startsWith("plan_model_");
-  return model && (who.admin || who.owner) ? ("changeModel" as const) : null;
+  return waitFix(
+    code === "budget_wait" ? "budget" : typeof code === "string" && code.startsWith("plan_model_") ? "model" : null,
+    who,
+  );
+}
+
+/** `usageWaitFix`'s rule, for a wait on a spent budget (`budget`) or on one model's own refusal (`model`). */
+export function waitFix(on: "budget" | "model" | null, who: { admin: boolean; owner: boolean }) {
+  if (on === "budget") return who.admin ? ("raiseBudget" as const) : null;
+  return on === "model" && (who.admin || who.owner) ? ("changeModel" as const) : null;
 }
 
 const CLOSED_REASONS = new Set(["solved", "withdrawn", "task_canceled", "mixed"]);

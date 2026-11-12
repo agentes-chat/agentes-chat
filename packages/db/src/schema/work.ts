@@ -56,6 +56,29 @@ export const issueColumns = pgTable(
 );
 
 /**
+ * A task's project (ADR 0171): a name and a colour. A task has at most one, and a project's board is the org's board
+ * showing only its tasks. Archived: offered nowhere new, its tasks keep it.
+ */
+export const issueProjects = pgTable(
+  "issue_projects",
+  {
+    id: uuid()
+      .primaryKey()
+      .$defaultFn(() => Bun.randomUUIDv7()),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    /** One of the roles' colors (`ROLE_COLORS`). */
+    color: text().notNull().default("graphite"),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  // Agents name a project by its name, so two can't differ only by case.
+  (t) => [uniqueIndex("issue_projects_org_name").on(t.orgId, sql`lower(${t.name})`)],
+);
+
+/**
  * Native issues. Visible to the whole org, or like the conversation they came from (`channel_id`: a DM or a private
  * channel, set by "Transformar em issue" and by an agent's `create_issue` there). Acceptance criteria are a checklist;
  * assignee is a person or an agent.
@@ -78,6 +101,8 @@ export const issues = pgTable(
     /** Order inside its column, lowest first; a move by the system puts it on top (minus the time). */
     boardRank: doublePrecision().notNull().default(0),
     priority: issuePriorityEnum().notNull().default("normal"),
+    /** Its project; deleting the project clears it, the task stays. */
+    projectId: uuid().references(() => issueProjects.id, { onDelete: "set null" }),
     /** `person` or `agent`. */
     assigneeType: text(),
     assigneeId: text(),
@@ -122,6 +147,7 @@ export const issues = pgTable(
     unique().on(t.orgId, t.number),
     index().on(t.orgId, t.status),
     index().on(t.orgId, t.dueDate),
+    index().on(t.orgId, t.projectId),
     index().on(t.parentIssueId),
     uniqueIndex().on(t.conversationChannelId),
     // Every run reads its agent's open tasks, latest activity first (`openTasksBrief`).

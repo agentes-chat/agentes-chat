@@ -1,5 +1,6 @@
 import type { Agent, AgentMediaLevel, GifRating, OrgSettings } from "@agenteschat/client";
 import { useAgents, useSettings, useUpdateAgent, useUpdateSettings } from "@agenteschat/client";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { shownMediaSettings } from "@agenteschat/client/lib/media";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useTranslation } from "react-i18next";
@@ -62,7 +63,7 @@ export function MediaSettingsScreen() {
         : null;
 
   return (
-    <SettingsPage title={title}>
+    <SettingsPage title={title} frozen={settingsFrozen(org, "media")}>
       <Loaded>
         <GroupedFooter>{t("settings.sectionText.media")}</GroupedFooter>
         {!editable ? (

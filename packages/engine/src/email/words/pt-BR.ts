@@ -283,7 +283,7 @@ export const ptBR: Words = {
     workspace: (org) => [
       "Digite este código para apagar o workspace ",
       { b: org },
-      ". Ele fecha para todos na hora e é apagado de vez 7 dias depois.",
+      ". Ele fica só para leitura para todos na hora e é apagado de vez 7 dias depois.",
     ],
     account: (email) => [
       "Digite este código para apagar a conta inteira ",
@@ -304,19 +304,19 @@ export const ptBR: Words = {
       workspace: (org) => [
         "Digite este código para apagar o seu workspace ",
         { b: org },
-        ". Ele fecha na hora e é apagado de vez 7 dias depois.",
+        ". Ele fica só para leitura na hora e é apagado de vez 7 dias depois.",
       ],
     },
   },
   deleting: {
     subject: (day) => `Um workspace em que você está vai ser apagado em ${day}`,
-    preheader: "Ele está fechado agora. Um dono ainda pode restaurar até lá.",
+    preheader: "Ele está só para leitura agora. Um dono ainda pode restaurar até lá.",
     headline: "Um workspace está sendo apagado",
     body: (by, org, day, time) => [
       { b: by },
       " apagou o workspace ",
       { b: org },
-      `. Ele está fechado agora e some de vez em ${day} às ${time}.`,
+      `. Ele está só para leitura agora e some de vez em ${day} às ${time}.`,
     ],
     owner: "Mudou de ideia? Restaure antes disso.",
     button: "Restaurar o workspace",

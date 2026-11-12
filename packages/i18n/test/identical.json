@@ -184,7 +184,6 @@
       "shell.threads",
       "skills.agentTitle",
       "skills.source.url",
-      "skills.step",
       "skills.title",
       "skills.version",
       "storage.accessKey",
@@ -524,6 +523,7 @@
       "devices.armBuild"
     ],
     "fr": [
+      "channel.tooLong.fileName",
       "calendar.moreRuns",
       "devices.cpus",
       "devices.system.android",
@@ -1237,7 +1237,6 @@
       "skills.agentTitle",
       "skills.name",
       "skills.source.url",
-      "skills.step",
       "skills.title",
       "skills.version",
       "storage.bucket",
@@ -2089,7 +2088,6 @@
       "shell.threads",
       "skills.agentTitle",
       "skills.source.url",
-      "skills.step",
       "skills.title",
       "skills.version",
       "storage.accessKey",
@@ -2267,9 +2265,12 @@
       "install.scene.account",
       "install.scene.appLabel",
       "install.scene.downloads",
-      "devices.armBuild"
+      "devices.armBuild",
+      "issues.projects.label",
+      "issues.display.field.project"
     ],
     "ja": [
+      "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
       "devices.transport.usb",
@@ -2426,6 +2427,7 @@
       "devices.armBuild"
     ],
     "ko": [
+      "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
       "devices.transport.usb",
@@ -2577,6 +2579,7 @@
       "devices.armBuild"
     ],
     "zh-Hans": [
+      "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
       "devices.transport.usb",
@@ -3458,6 +3461,7 @@
       "devices.armBuild"
     ],
     "ru": [
+      "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
       "devices.transport.usb",

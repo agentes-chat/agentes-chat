@@ -122,6 +122,8 @@ const SidebarItems = z
 
 /** What a card shows besides its number and title (`ISSUE_CARD_FIELDS`). */
 const IssueCardFields = z.object({
+  // An app from before projects saves its view without it.
+  project: z.boolean().default(true),
   assignee: z.boolean(),
   priority: z.boolean(),
   due: z.boolean(),

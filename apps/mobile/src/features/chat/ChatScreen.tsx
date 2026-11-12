@@ -6,6 +6,7 @@ import {
   type ConnectionStatus,
   heldTakeoversHere,
   inMainTimeline,
+  keys,
   type LiveRun,
   MESSAGES_PAGE,
   type Message,
@@ -41,6 +42,7 @@ import {
   useThreadInfo,
   useThreadMessages,
   useThreadMission,
+  useWaitingOnMe,
 } from "@agenteschat/client";
 import { activityVerb, listNames } from "@agenteschat/client/lib/activity";
 import { canTalk } from "@agenteschat/client/lib/audience";
@@ -53,7 +55,7 @@ import {
   consultNoticeFolds,
   consultsForLine,
 } from "@agenteschat/client/lib/consult-group";
-import { errorCode, errorText } from "@agenteschat/client/lib/errors";
+import { errorText, sendNeedsEdit } from "@agenteschat/client/lib/errors";
 import { mentionsReader, offersEveryone } from "@agenteschat/client/lib/everyone";
 import { capitalize } from "@agenteschat/client/lib/format";
 import { issueTakenOf, issueWorkOf, taskConversationOf } from "@agenteschat/client/lib/issues";
@@ -75,11 +77,13 @@ import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-han
 import { seenMessageId } from "@agenteschat/client/lib/seen";
 import { lastPostedId } from "@agenteschat/client/lib/timeline";
 import { voiceOf } from "@agenteschat/client/lib/voice";
+import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { isIdHandle } from "@agenteschat/ui/names";
 import { KeyboardAwareLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard";
 import type { LegendListRef, OnViewableItemsChanged } from "@legendapp/list/react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
+import { Directory, File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useIsFocused, useIsPreview } from "expo-router";
@@ -128,7 +132,7 @@ import { usePlanHold } from "../ai/parts";
 import { BrowserCard, BrowserRunCard } from "../browser/BrowserCard";
 import { OpenHandoffProvider } from "../browser/open";
 import { threadTitle } from "../chats/logic";
-import { chatHref } from "../links/logic";
+import { chatHref, notificationHref } from "../links/logic";
 import { MissionCardView } from "../missions/cards";
 import { isOpenMission } from "../missions/logic";
 import { PushOfferLine } from "../push/PushOfferLine";
@@ -155,7 +159,7 @@ import { AgentReceiptLine } from "./AgentReceipts";
 import { AttachmentStrip, MAX_PENDING, type PendingFile } from "./AttachmentStrip";
 import { receiptMessageId, turnHeadId } from "./agent-receipts";
 import { AskStore } from "./ask-store";
-import { AskBar, AskProbes, AskStoreProvider, useAskWatch, useAwayAsk } from "./asks";
+import { AskBar, AskProbes, AskStoreProvider, useAskWatch, useAwayAsk, WaitingHereBar } from "./asks";
 import { ChannelHello } from "./ChannelHello";
 import { ChannelMembersSheet } from "./ChannelMembers";
 import { ChannelPicker } from "./ChannelPicker";
@@ -782,6 +786,23 @@ function Chat({
     [rows, letGo],
   );
   const seeAsk = useCallback(() => void holdAt(awayAsk?.ask.messageId), [awayAsk, holdAt]);
+  // What waits on me here with its card not loaded (older, or in a thread): the line counts it and opens the oldest.
+  const waitingOnMe = useWaitingOnMe(orgId).data?.items;
+  const waitingHere = useMemo(
+    () =>
+      waitingAway(
+        waitingOnMe,
+        channelId,
+        threadId ?? null,
+        new Set(rows.flatMap((r) => (r.kind === "message" ? [r.message.id] : []))),
+      ),
+    [waitingOnMe, channelId, threadId, rows],
+  );
+  const waitingFirst = awayAsk ? undefined : waitingHere[0];
+  const seeWaiting = useCallback(() => {
+    const href = waitingFirst && notificationHref(waitingNotification(waitingFirst));
+    if (href) router.push(href);
+  }, [waitingFirst]);
 
   // Rows that arrive at the bottom while the screen is open rise in; older pages and the first load don't.
   const prevKeysRef = useRef<string[]>([]);
@@ -863,10 +884,9 @@ function Chat({
       // A GIF or a sticker alone routes to nobody, so it gets no clock to keep.
       if (channel && channelAgents.length > 0 && !isMediaAlone(message)) live.picking(message.id);
     },
+    // Why, in words: the failed row under it says the same and keeps the text.
     onFailed: (error, { waits }) => {
-      if (waits) return;
-      const gone = errorCode(error) === "message.reply_not_found";
-      toast({ title: gone ? errorText(t, error) : t("mobile.chat.notSent"), icon: "x" });
+      if (!waits) toast({ title: errorText(t, error, i18n.language), icon: "x" });
     },
   });
   const { send, retry } = sendHelpers(post);
@@ -894,9 +914,13 @@ function Chat({
     (m: Message) => {
       // A voice note waits in its own outbox: tried again there, now.
       if (voiceOf(m.meta) && m.local) retryVoice(qc, m.clientId, voiceRefused);
-      else retryRef.current(m);
+      // Only a change to its text can make it go: it leaves the list and the text returns to the field.
+      else if (sendNeedsEdit(m.sendFailure)) {
+        qc.setQueryData<Message[]>(keys.messages(orgId, channelId), (list) => list?.filter((x) => x.id !== m.id));
+        setCaptionBack({ text: m.body, at: Date.now(), join: true });
+      } else retryRef.current(m);
     },
-    [qc, voiceRefused],
+    [qc, voiceRefused, orgId, channelId],
   );
   // "Tentar de novo" under a message no agent could answer: the agent answers that same message again; only when it
   // can't, the same words go again, here (the web's `resend`).
@@ -1042,7 +1066,7 @@ function Chat({
   // send uploads them and sends everything as one message. A thumbnail dims while its upload runs; one that fails
   // stays, marked, and the caption comes back to the field, so nothing typed is lost.
   const [pending, setPending] = useState<PendingFile[]>([]);
-  const [captionBack, setCaptionBack] = useState<{ text: string; at: number } | null>(null);
+  const [captionBack, setCaptionBack] = useState<{ text: string; at: number; join?: boolean } | null>(null);
   const addPending = (files: { uri: string; name: string; type: string }[]) => {
     if (files.length === 0) return;
     const at = Date.now();
@@ -1052,6 +1076,14 @@ function Chat({
     setPending((now) => [...now, ...picked].slice(0, MAX_PENDING));
   };
   const removePending = (id: string) => setPending((now) => now.filter((f) => f.id !== id));
+  // A draft past the length limit goes as a text file instead, which agents open like any other.
+  const longAsFile = (text: string) => {
+    const dir = new Directory(Paths.cache, "drafts", String(Date.now()));
+    dir.create({ intermediates: true, idempotent: true });
+    const file = new File(dir, t("channel.tooLong.fileName"));
+    file.write(text);
+    addPending([{ uri: file.uri, name: file.name, type: "text/plain" }]);
+  };
   const uploadOne = async (file: PendingFile): Promise<ArtifactRef> => {
     // React Native's FormData sends `{ uri, name, type }` as a file part.
     const part = { uri: file.uri, name: file.name, type: file.type };
@@ -1163,6 +1195,7 @@ function Chat({
   const canMission = !mission && (Boolean(dm) || Boolean(channel));
   const canReply =
     member &&
+    !org?.deletion &&
     (!isThread || thread.data?.state !== "archived") &&
     channel?.can?.post !== false &&
     (!dmAgent || canTalk(dmAgent));
@@ -2267,7 +2300,7 @@ function Chat({
                   style={StyleSheet.absoluteFill}
                 />
                 <Connection status={realtime} />
-                {banner ? <NoAiBanner banner={banner} /> : null}
+                {banner && !org?.deletion ? <NoAiBanner banner={banner} /> : null}
                 <UnavailableLines notices={notices} />
                 {/* Who is working, right above the composer (as on the web), while they work; a request waiting out
                     of view takes the line, with "Ver" (and the working line's stop while one agent works). */}
@@ -2281,7 +2314,14 @@ function Chat({
                     onStop={stopRun}
                   />
                 ) : null}
-                {member && !awayAsk ? (
+                {member && waitingFirst ? (
+                  <WaitingHereBar
+                    count={waitingHere.length}
+                    agentId={waitingFirst.asker?.type === "agent" ? waitingFirst.asker.id : null}
+                    onSee={seeWaiting}
+                  />
+                ) : null}
+                {member && !awayAsk && !waitingFirst ? (
                   <WorkingLine
                     runs={runs}
                     consults={lineConsults}
@@ -2294,7 +2334,12 @@ function Chat({
                     stop={lineStop}
                   />
                 ) : null}
-                {member && dmAgent && !canTalk(dmAgent) ? (
+                {org?.deletion ? (
+                  // Being deleted, it reads as ever and takes no message, nor anyone joining (ADR 0088 §7).
+                  <Text variant="footnote" tone="muted" style={styles.readOnly}>
+                    {t("deleting.composer")}
+                  </Text>
+                ) : member && dmAgent && !canTalk(dmAgent) ? (
                   <AgentLocked agent={dmAgent} />
                 ) : member && channel?.can?.post === false ? (
                   // The channel's exceptions keep me from sending here (ADR 0134): reading stays open.
@@ -2331,6 +2376,7 @@ function Chat({
                       ) : undefined
                     }
                     sendEmpty={pending.length > 0}
+                    {...(pending.length < MAX_PENDING ? { onLongAsFile: longAsFile } : {})}
                     mention={({ query, sigil, pick }) =>
                       sigil === "#" ? (
                         <ChannelPicker query={query} pick={pick} />

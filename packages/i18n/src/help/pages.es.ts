@@ -13,7 +13,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Cómo funciona",
         blocks: [
           "Se ejecuta dentro de la app, con su propia base de datos integrada, y guarda todo en una carpeta de esta computadora, `.agentes` en tu carpeta personal. No hay nada más que instalar: ni Docker, ni una base de datos que configurar.",
-          "Arranca con la app y se detiene cuando la cierras. Al cerrarla te pregunta antes, porque nadie puede usar agentes.chat hasta que la app se vuelva a abrir.",
+          "Arranca con la app y se detiene cuando la cierras. Al cerrarla te pregunta antes, porque nadie puede usar agentes.chat hasta que la app se vuelva a abrir. Para detenerlo un rato sin cerrar la app, haz clic en el ícono de agentes.chat junto al reloj y elige **Detener** en el menú **⋯** de su tarjeta.",
         ],
       },
       {
@@ -28,7 +28,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Mantenerla encendida",
         blocks: [
-          "En una computadora que usan otras personas, déjala lista una vez:",
+          "En una computadora que usan otras personas, déjala lista una vez. **Mantenerlo en marcha**, en **Preferencias\u00a0›\u00a0Servidores**, muestra lo que falta y abre los ajustes correctos:",
           {
             list: [
               "**Abrir al iniciar sesión** se activa solo después de la configuración.",
@@ -51,8 +51,8 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "another-workspace",
         heading: "Préstala también a otro espacio de trabajo",
         blocks: [
-          "Los espacios de trabajo del servidor que ejecutas aquí ya usan esta computadora sin que hagas nada. Para que un espacio de trabajo de otro lugar también la use, como uno en agentes.chat Cloud, abre **Preferencias\u00a0›\u00a0Servidores**, pulsa **Agregar un servidor…**, inicia sesión en ese espacio de trabajo y pulsa **Permitir** cuando la app te lo pregunte.",
-          "Cada espacio de trabajo tiene aquí sus propios agentes y carpetas. Los **Comandos** también vienen activados para él. Desactívalos en la pregunta de la app antes de pulsar **Permitir**, o más tarde en **Preferencias\u00a0›\u00a0Herramientas**, donde un solo interruptor vale para todos los espacios de trabajo de esta computadora.",
+          "Los espacios de trabajo del servidor que ejecutas aquí ya usan esta computadora sin que hagas nada. Para que un espacio de trabajo de otro lugar también la use, como uno en agentes.chat Cloud, pulsa **Agregar un espacio de trabajo…** al final de la primera tarjeta de **Preferencias\u00a0›\u00a0General**, o **Agregar un servidor…** en **Preferencias\u00a0›\u00a0Servidores**. Inicia sesión en ese espacio de trabajo y pulsa **Permitir** cuando la app te lo pregunte.",
+          "Cada espacio de trabajo tiene aquí sus propios agentes y carpetas. Los **Comandos** también vienen activados para él. Desactívalos en la pregunta de la app antes de pulsar **Permitir**, o más tarde en **Preferencias\u00a0›\u00a0Herramientas**, donde cada espacio de trabajo tiene su propio interruptor y la app pregunta antes de volver a activar uno.",
         ],
       },
       {
@@ -67,29 +67,29 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Iniciar sesión desde otros dispositivos",
         blocks: [
-          "El propietario empieza sin contraseña: la app inicia tu sesión en esta computadora. Para entrar desde un navegador en otra computadora, crea una en **Configuración\u00a0›\u00a0Tu cuenta**. La app del teléfono se conecta escaneando el código QR de **En tu teléfono**, en **Preferencias\u00a0›\u00a0Servidores**. Para eso, **Accede desde tu teléfono y tu equipo** tiene que estar activado.",
+          "El propietario empieza sin contraseña: la app inicia tu sesión en esta computadora. Para entrar desde un navegador en otra computadora, crea una en **Configuración\u00a0›\u00a0Tu cuenta**. Mientras no la tengas, **Preferencias\u00a0›\u00a0Servidores** te lo recuerda, y **Crear una contraseña** abre esa página. La app del teléfono se conecta escaneando el código QR de **En tu teléfono**, en **Preferencias\u00a0›\u00a0Servidores**. Para eso, **Accede desde tu teléfono y tu equipo** tiene que estar activado.",
         ],
       },
       {
         id: "updates",
         heading: "Actualizaciones",
         blocks: [
-          "La app busca actualizaciones sola, e instala una cuando pulsas **Actualizar y volver a abrir** en **Preferencias\u00a0›\u00a0Actualizaciones**. El servidor y todos los agentes se reinician con ella. Primero se copia la base de datos, y si la nueva versión no responde en 3 minutos, la app vuelve sola a la versión anterior y a sus datos.",
+          "La app busca actualizaciones sola. Con **Instalar actualizaciones solo, de noche** activado, en **Preferencias\u00a0›\u00a0Actualizaciones**, las instala entre las 3:00 y las 5:00 mientras la app está abierta. Viene activado cuando el servidor se ejecuta aquí. Si no, pulsa **Actualizar y volver a abrir**. El servidor y todos los agentes se reinician con ella. Primero se copia la base de datos, y si la nueva versión no responde en 3 minutos, la app vuelve sola a la versión anterior y a sus datos.",
         ],
       },
       {
         id: "backups",
         heading: "Copias de seguridad",
         blocks: [
-          "Todavía no se hace ninguna copia sola. **Hacer una copia ahora**, en **Preferencias\u00a0›\u00a0Servidores**, detiene el servidor un momento y guarda la base de datos, los archivos y el `.env` en `.agentes/backups`, en tu carpeta personal. Conserva las dos más recientes.",
-          "De vez en cuando, cópialas fuera de esta computadora, a un disco o a una unidad en la nube. Contienen tus claves: guárdalas en privado.",
+          "Con **Hacer una copia cada noche** activado (app 0.8.1 y posteriores), en **Preferencias\u00a0›\u00a0Servidores**, la app guarda la base de datos, los archivos y el `.env` en `.agentes/backups`, en tu carpeta personal, cada noche a las 3:00. Una computadora que estaba dormida hace la copia cuando despierta. **Hacer una copia ahora** hace lo mismo al momento. Cada copia detiene el servidor un momento, y se conservan las dos más recientes.",
+          "**Copiar en** también pone cada copia nueva en una carpeta que elijas, como una memoria USB o iCloud Drive, donde se conservan las dos más recientes. Contienen tus claves: guárdalas en privado. **Restaurar…** devuelve agentes.chat a una copia: mensajes, archivos y ajustes. Se detiene un minuto, y lo que había antes se guarda en la carpeta de copias.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code y Codex",
         blocks: [
-          "La app encuentra Claude Code y Codex a través del `PATH` de tu shell de inicio de sesión, además de las carpetas habituales como `~/.local/bin`, `/opt/homebrew/bin` y `/usr/local/bin`. Si **Preferencias\u00a0›\u00a0Herramientas** dice **No encontrado**, comprueba que `claude` o `codex` funcione en una ventana nueva de Terminal, y luego cierra la app y vuelve a abrirla.",
+          "La app encuentra Claude Code y Codex a través del `PATH` de tu shell de inicio de sesión, además de las carpetas habituales como `~/.local/bin`, `/opt/homebrew/bin` y `/usr/local/bin`. Si **Preferencias\u00a0›\u00a0Herramientas** dice **No encontrado**, muestra la línea que lo instala. Ejecútala en Terminal y luego pulsa **Volver a comprobar**.",
         ],
       },
       {
@@ -163,7 +163,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Desde la app de agentes.chat",
         blocks: [
           "Instala la app en la computadora, ábrela e inicia sesión en tu espacio de trabajo. Te pregunta **¿Dejar que los agentes de <workspace> usen esta Mac?** (esta PC en Windows, esta computadora en Linux). Elige quién puede usarla y pulsa **Permitir**. Eso es todo.",
-          "¿Ya iniciaste sesión? Activa el espacio de trabajo en **Preferencias\u00a0›\u00a0General**, en la tarjeta **Agentes**.",
+          "¿Ya iniciaste sesión? Abre **Preferencias\u00a0›\u00a0General** y pulsa **Permitir** en la fila del espacio de trabajo, en la primera tarjeta. ¿No aparece? Pulsa **Agregar un espacio de trabajo…** al final de esa tarjeta e inicia sesión.",
         ],
       },
       {
@@ -206,7 +206,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Pausar y desconectar",
         blocks: [
-          "En la computadora, el ícono de agentes.chat junto al reloj pausa a los agentes de todos los espacios de trabajo. En **Preferencias\u00a0›\u00a0General**, el interruptor de cada espacio de trabajo pausa solo ese, y **Salir** lo desconecta. No empieza nada nuevo mientras está en pausa, y lo que estaba en marcha termina. Al desconectar, las carpetas de los agentes se quedan en el disco.",
+          "En la computadora, el ícono de agentes.chat junto al reloj pausa a los agentes de todos los espacios de trabajo, o de uno solo. En **Preferencias\u00a0›\u00a0General**, el interruptor de cada espacio de trabajo pausa solo ese, y **Salir**, en su menú **⋯**, lo desconecta. No empieza nada nuevo mientras está en pausa, y lo que estaba en marcha termina. Al desconectar, las carpetas de los agentes se quedan en el disco.",
           "Desde el sitio web, **Quitar** en la página del dispositivo lo desconecta.",
         ],
       },
@@ -239,7 +239,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
               "en una computadora que también ejecuta agentes.chat, su base de datos y sus claves en `.agentes`",
             ],
           },
-          "agentes.chat rechaza los comandos que nombran sus claves, tokens e inicios de sesión, pero es una regla, no un muro. Los **Comandos** vienen activados. Desactívalos en la pregunta de la app antes de pulsar **Permitir**, o más tarde en **Preferencias\u00a0›\u00a0Herramientas**, donde un solo interruptor vale para todos los espacios de trabajo de la computadora. Claude Code y Codex ejecutan sus propios comandos en la carpeta del agente, con sus propias reglas.",
+          "agentes.chat rechaza los comandos que nombran sus claves, tokens e inicios de sesión, pero es una regla, no un muro. Los **Comandos** vienen activados. Desactívalos en la pregunta de la app antes de pulsar **Permitir**, o más tarde en **Preferencias\u00a0›\u00a0Herramientas**, donde cada espacio de trabajo tiene su propio interruptor (app 0.8.1 y posteriores) y la app pregunta antes de volver a activar uno. Claude Code y Codex ejecutan sus propios comandos en la carpeta del agente, con sus propias reglas, incluso con los comandos desactivados.",
           "Para un muro de verdad, usa un servidor Linux. En Debian 13, instalado con `--system`, cada agente es un usuario propio. En Ubuntu, los agentes comparten un usuario, `agentes`: ven las carpetas de los demás, no las tuyas ni las del servidor. O dales a los agentes una computadora propia.",
         ],
       },

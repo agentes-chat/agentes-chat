@@ -219,6 +219,12 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         m.access = { folders, tools };
         return clone(m.access);
       },
+      setPause: async (orgId, machineId, input) => {
+        log("machines.setPause", orgId, machineId, input);
+        const m = find(machineId);
+        m.paused = input === "resume" ? null : { until: input.until, by: { id: "u-me", name: "You" } };
+        return m.paused ? clone(m.paused) : null;
+      },
       desktopLatest: async (target, arch) => {
         log("machines.desktopLatest", target, arch);
         const build = arch === "aarch64" && target !== "darwin" ? `${target}-arm64` : target;

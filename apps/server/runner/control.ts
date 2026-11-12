@@ -108,6 +108,8 @@ export class ControlServer {
         return d.foldersSetAgents(str(m.path), m.agents);
       case "tools.set":
         return d.toolsSet(m.tool, m.on);
+      case "executors.check":
+        return d.executorsCheck();
       case "access.pending":
         return { requests: d.accessPending() };
       case "access.answer":

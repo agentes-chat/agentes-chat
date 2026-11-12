@@ -1,7 +1,7 @@
 import { keys, useWikiTree, type WikiImportNote } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { joinNames } from "@agenteschat/client/lib/format";
-import { Button, Checkbox, Dialog, DialogBody, DialogFooter, Icon, Input, Segmented } from "@agenteschat/ui";
+import { Button, Checkbox, Dialog, DialogBody, DialogFooter, HintLine, Icon, Input, Segmented } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
@@ -709,9 +709,10 @@ export function WikiImportDialog({
     body = (
       <>
         <VaultDropZone onFiles={(f, n) => void read(f, n)} />
-        <p className="vault-notice ac-iconline">
-          <Icon name="info" size={16} />
-          <span>{t("wiki.import.howTo")}</span>
+        <p className="vault-notice">
+          <HintLine name={t("common.about", { label: t("wiki.import.howToLabel") })} hint={t("wiki.import.howTo")}>
+            {t("wiki.import.howToLabel")}
+          </HintLine>
         </p>
       </>
     );

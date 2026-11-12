@@ -384,8 +384,6 @@
     "switchWorking": "al lavoro",
     "join": "Entra nel canale",
     "sending": "Invio…",
-    "failed": "Non inviato · Riprova",
-    "notSent": "Il messaggio non è stato inviato.",
     "toLatest": "Vai agli ultimi messaggi",
     "toLatestNew": "Vai agli ultimi messaggi: {{text}}",
     "stopAgent": "Ferma {{name}}",
@@ -1769,13 +1767,7 @@
       "open": "Apri",
       "expandHint": "Tocca per espandere",
       "stop": "Ferma",
-      "giveUp": "Rinuncia",
-      "done": "Fatto: {{title}}",
-      "failed": "Non riuscito: {{title}}",
-      "failedNote": "Non riuscito: {{note}}",
-      "expired": "Nessuno l'ha aperto in tempo: {{title}}",
-      "cancelled": "Annullato: {{title}}",
-      "withdrawn": "A {{name}} non serve più: {{title}}"
+      "giveUp": "Rinuncia"
     },
     "live": {
       "inControl": "Hai il controllo",
@@ -2339,9 +2331,9 @@
     "ofOnline": "{{online}} di {{count}}",
     "deleteName": "Elimina {{name}}",
     "deleteFoot": "Hai 7 giorni per cambiare idea.",
-    "deleteAlert": "Tutti escono subito. Si può ripristinare per 7 giorni.",
+    "deleteAlert": "Da subito tutti possono solo leggerlo. Si può ripristinare per 7 giorni.",
     "deleteAction": "Elimina",
-    "deleteIntro": "{{name}} si chiude per tutti subito e viene eliminato per sempre tra 7 giorni.",
+    "deleteIntro": "{{name}} diventa subito di sola lettura per tutti e viene eliminato per sempre tra 7 giorni.",
     "holdDelete": "Tieni premuto per eliminare",
     "deleteFailed": "Non è stato possibile eliminare lo spazio di lavoro. Riprova.",
     "access": {
@@ -2638,7 +2630,6 @@
     },
     "formatAuto": "{{name}} sceglie il migliore",
     "newWidget": {
-      "titleHint": "Titolo · {{name}} ne suggerisce uno nel test",
       "alerts": "Avvisa",
       "realData": "Dati reali",
       "editAsk": "Cambia la richiesta",

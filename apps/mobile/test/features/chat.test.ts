@@ -808,6 +808,7 @@ describe("an agent's question (ask_user)", () => {
     status: "open",
     answer: null,
     answeredByUserId: null,
+    answeredAt: null,
   };
 
   test("meta.question becomes the card's data; bad shapes are ignored", () => {
@@ -1037,6 +1038,8 @@ describe("an agent's turn: nothing drawn while it works, its work kept for the r
 
   test("a color's fade: hex gets an alpha, rgba is multiplied", () => {
     expect(withOpacity("#000000", 0.5)).toBe("#00000080");
+    expect(withOpacity("#ffaa0020", 0)).toBe("#ffaa0000");
+    expect(withOpacity("#ffaa0020", 0.5)).toBe("#ffaa0010");
     expect(withOpacity("rgba(10, 20, 30, 0.5)", 0.5)).toBe("rgba(10, 20, 30, 0.25)");
     expect(withOpacity("rgb(1, 2, 3)", 1)).toBe("rgba(1, 2, 3, 1)");
     expect(withOpacity("red", 0.5)).toBe("red");

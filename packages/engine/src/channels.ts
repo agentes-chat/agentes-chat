@@ -45,7 +45,7 @@ import {
 } from "./permissions";
 import { refuseRightHand } from "./right-hand";
 import { isRoutineRoomKey } from "./routine-brief";
-import { accountInUse, closedRefusal, STANDING_COLUMNS } from "./standing";
+import { accountInUse, readRefusal, STANDING_COLUMNS } from "./standing";
 import { adminChannelSql, channelReaderSql, channelReadersSql, taskReaderSql } from "./task-access";
 
 const { channels, channelMembers, agents, organizationMembers, organizations, users } = schema;
@@ -611,7 +611,7 @@ export async function requireChannelAccess(db: Database, userId: string, orgId: 
     )
     .where(and(eq(organizationMembers.userId, userId), eq(organizationMembers.orgId, orgId), accountInUse));
   if (!row) throw new ForbiddenError("You are not a member of this organization");
-  const closed = closedRefusal(row.standing);
+  const closed = readRefusal(row.standing);
   if (closed) throw closed;
   const channel = row.channel;
   if (!channel || channel.archivedAt) throw new NotFoundError("Channel not found");

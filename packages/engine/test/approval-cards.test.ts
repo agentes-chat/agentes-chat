@@ -5,6 +5,7 @@ import { systemText } from "@agenteschat/providers";
 import {
   ASK_APPROVALS_TOGETHER,
   buildRunContext,
+  cancelRun,
   decideApproval,
   decideApprovals,
   drainOutbox,
@@ -117,6 +118,21 @@ test("'Aprovar tudo' approves the four rows, resumes the run once, and the card'
   expect(after?.status).toBe("done");
   // One model call to ask, one after the decisions: the run resumed once.
   expect(f.provider.calls).toHaveLength(2);
+});
+
+test("stopping the run cancels its requests and takes their card out of the inbox", async () => {
+  f = await setup({ toolSources: [goals], reply: fourAtOnce });
+  const { run } = await askFour();
+  await cancelRun({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, run.id);
+  const after = await f.db.select().from(schema.approvals);
+  expect(after.map((a) => a.status)).toEqual(["canceled", "canceled", "canceled", "canceled"]);
+  // Nothing waits on a person for a run that stopped.
+  const inbox = await f.db
+    .select()
+    .from(schema.notifications)
+    .where(and(eq(schema.notifications.kind, "approval"), eq(schema.notifications.userId, f.owner.id)));
+  expect(inbox).toHaveLength(1);
+  expect(inbox.every((n) => n.doneAt !== null)).toBe(true);
 });
 
 test("'Aprovar tudo' decides exactly the items it listed: one joining during the click stays waiting", async () => {

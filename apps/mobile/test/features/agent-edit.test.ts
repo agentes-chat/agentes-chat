@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
+import type { ImportCard } from "@agenteschat/client/lib/import/flow";
 import {
   handleAfterRename,
   handleProblemText,
@@ -19,7 +20,14 @@ import {
   sameLook,
   shuffleLook,
 } from "../../src/features/agents/edit";
-import { firstBlockedStep, NEW_AGENT_PHONE_STEPS, roleLine, stepBlocked } from "../../src/features/agents/new-agent";
+import {
+  firstBlockedStep,
+  IMPORT_MARKS,
+  importMarkCards,
+  NEW_AGENT_PHONE_STEPS,
+  roleLine,
+  stepBlocked,
+} from "../../src/features/agents/new-agent";
 import { AGENT_ACCESSORIES, AGENT_COLORS, AGENT_EYES, agentLook } from "../../src/features/shared/logic";
 import { translator } from "./fixtures";
 
@@ -222,6 +230,26 @@ describe("creating an agent on the phone", () => {
     ];
     expect(presetChannels("dev", channels)).toEqual(["1"]);
     expect(presetChannels("assistant", channels)).toEqual(["2"]);
+  });
+
+  test("the import row's tile: the first source apps with a logo, three at most, in the import's order", async () => {
+    expect(importMarkCards((c): c is ImportCard => true)).toEqual(["grok-bot", "chatgpt-dots", "openbotrun"]);
+    expect(IMPORT_MARKS).toBe(3);
+    // One without a logo of its own gives its place to the next; none at all leaves the tile empty.
+    expect(importMarkCards((c): c is ImportCard => c !== "grok-bot")).toEqual([
+      "chatgpt-dots",
+      "openbotrun",
+      "openmausbot",
+    ]);
+    expect(importMarkCards((c): c is ImportCard => c.length === 0)).toEqual([]);
+    // The row sits right under "Do zero" with the web card's words, and the channels say what marking one does.
+    const screen = await Bun.file(
+      new URL("../../src/features/agents/NewAgentScreen.tsx", import.meta.url).pathname,
+    ).text();
+    expect(screen).toContain('label={t("newAgent.importCard")}');
+    expect(screen).toContain('sub={t("newAgent.importCardLine")}');
+    expect(screen.indexOf("<ImportMarks />")).toBeLessThan(screen.indexOf("newAgent.roleGroups.personal"));
+    expect(screen).toContain('<GroupedHeader>{t("newAgent.channelsJoin")}</GroupedHeader>');
   });
 
   test("a preset's line: what it does, then who it starts as, the agent's name kept as written", () => {

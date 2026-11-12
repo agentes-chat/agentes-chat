@@ -19,6 +19,7 @@ import { useOrg } from "@/components/org-context";
 import { SkillPicker } from "@/components/Skills";
 import { lookOf } from "@/lib/look";
 import { ApprovalRulesCard } from "./ApprovalRulesCard";
+import { ApprovalsLevelCard } from "./ApprovalsLevelCard";
 import { CardHead, ChangedTag, useAgentEdit, WasLine } from "./context";
 import { DatabaseAccessCard } from "./DatabaseAccess";
 import { MailAccessCard } from "./MailAccess";
@@ -194,7 +195,7 @@ export function AccessTab({ part = "all" }: { part?: "all" | "basic" | "advanced
                   )}
                   {viewer === "admin" && !needle && !noConnectors && (
                     <Link
-                      className="newag__addrow"
+                      className="newag__addrow ac-iconline"
                       to="/org/$orgId/settings/$section"
                       params={{ orgId: org.id, section: "connectors" }}
                     >
@@ -243,6 +244,7 @@ export function AccessTab({ part = "all" }: { part?: "all" | "basic" | "advanced
               {ownerFirst ? t("newAgent.approverOwner", { name: ownerFirst }) : t("newAgent.approverAdmins")}
             </span>
           </p>
+          {basic && <ApprovalsLevelCard />}
           {advanced && <ApprovalRulesCard />}
           {advanced && (
             <Card

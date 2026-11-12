@@ -6,6 +6,7 @@ import {
   consultableLocked,
   modeOf,
   offersConsultable,
+  reachShortKey,
 } from "@agenteschat/client/lib/audience";
 import { engineOfBrain } from "@agenteschat/client/lib/brain";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -276,7 +277,14 @@ export function AgentEditScreen({ id }: { id: string }) {
                   />
                 </GroupedList>
               ) : null}
-              <GroupedFooter>{t(`audience.agents.${reach}`, agentGrammar(agent.name))}</GroupedFooter>
+              <GroupedFooter
+                hint={{
+                  name: t("common.about", { label: t("audience.title", agentGrammar(agent.name)) }),
+                  text: t(`audience.agents.${reach}`, agentGrammar(agent.name)),
+                }}
+              >
+                {t(reachShortKey(reach))}
+              </GroupedFooter>
             </>
           ) : null}
 

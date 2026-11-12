@@ -1,5 +1,5 @@
-import type { ComputerDevice, DeviceAudience, PhoneDevice } from "@agenteschat/client";
-import { useMachines } from "@agenteschat/client";
+import type { ComputerDevice, DeviceAudience, Machine, PhoneDevice } from "@agenteschat/client";
+import { useMachinePause, useMachines } from "@agenteschat/client";
 import {
   deviceName,
   findPhone,
@@ -14,7 +14,7 @@ import {
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt } from "@agenteschat/client/lib/format";
-import { isPaused } from "@agenteschat/client/lib/machines";
+import { isPaused, PAUSE_CHOICES, pauseChoiceText, pausedByText, pauseUntil } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
@@ -149,6 +149,7 @@ function StatusLine({
   hostOs,
   action,
   ios,
+  text,
 }: {
   status: PhoneDevice["status"];
   host?: string;
@@ -156,9 +157,11 @@ function StatusLine({
   hostOs?: string;
   action?: ReactNode;
   ios?: string | null;
+  /** In place of the status's own sentence. */
+  text?: string | null;
 }) {
   const { t, i18n } = useTranslation();
-  const sentence = statusSentence(t, i18n.language, status, { host, hostOs, ios });
+  const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios });
   const label = status.kind === "in_use" && status.label ? status.label : null;
   return (
     <div className="dv-statusline" data-status={statusLook(status)} role="status">
@@ -169,6 +172,64 @@ function StatusLine({
       </span>
       {action}
     </div>
+  );
+}
+
+const PAUSE_ICONS = { "1h": "clock", tomorrow: "calendar", manual: "pause" } as const;
+
+/**
+ * Pause or Resume on a computer's status line, for whoever connected it and admins. Its app applies it as a pause on
+ * the computer itself; an app too old for it shows the button off and says to update.
+ */
+function PauseControl({ machine, paused }: { machine: Machine; paused: boolean }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const pause = useMachinePause(org.id);
+  const set = (input: { until: string | null } | "resume") =>
+    pause.mutate(
+      { machineId: machine.id, input },
+      {
+        onSuccess: () =>
+          toast.show(
+            t(input === "resume" ? "machines.remotePause.resumed" : "machines.remotePause.paused", {
+              name: machine.name,
+            }),
+          ),
+        onError: (err) => toast.show(errorText(t, err), "error"),
+      },
+    );
+  if (!machine.remotePause) {
+    return (
+      <Button size="sm" icon={paused ? "play" : "pause"} disabled>
+        {t(paused ? "machines.remotePause.resume" : "machines.remotePause.button")}
+      </Button>
+    );
+  }
+  if (paused) {
+    return (
+      <Button size="sm" icon="play" loading={pause.isPending} onClick={() => set("resume")}>
+        {t("machines.remotePause.resume")}
+      </Button>
+    );
+  }
+  const label = t("machines.remotePause.menu", { name: machine.name });
+  return (
+    <Menu
+      align="end"
+      label={label}
+      trigger={
+        <Button size="sm" icon="pause" loading={pause.isPending}>
+          {t("machines.remotePause.button")}
+        </Button>
+      }
+    >
+      {PAUSE_CHOICES.map((choice) => (
+        <MenuItem key={choice} icon={PAUSE_ICONS[choice]} onSelect={() => set({ until: pauseUntil(choice) })}>
+          {pauseChoiceText(t, choice)}
+        </MenuItem>
+      ))}
+    </Menu>
   );
 }
 
@@ -240,6 +301,8 @@ function ComputerPage({ machineId }: { machineId: string }) {
         : d.status;
   const owner = d.ownerUserId === me.user.id;
   const admin = can(org, "configure");
+  const pausedFromApps = status.kind === "paused" ? pausedByText(t, i18n.language, machine?.paused, me.user.id) : null;
+  const pausable = machine?.canManage && machine.online ? machine : null;
   const save = (input: Parameters<typeof update.mutate>[0], done?: string) =>
     update.mutate(input, {
       onSuccess: () => done && toast.show(done),
@@ -294,9 +357,14 @@ function ComputerPage({ machineId }: { machineId: string }) {
             )
           }
         />
-        <StatusLine status={status} />
+        <StatusLine
+          status={status}
+          text={pausedFromApps}
+          action={pausable && <PauseControl machine={pausable} paused={status.kind === "paused"} />}
+        />
+        {pausable && !pausable.remotePause && <span className="small muted">{t("machines.remotePause.outdated")}</span>}
         <Facts facts={facts} />
-        {status.kind === "paused" && <span className="small muted">{t("machines.pausedHint")}</span>}
+        {status.kind === "paused" && !pausedFromApps && <span className="small muted">{t("machines.pausedHint")}</span>}
         {machine && <MachineFactsExtra machine={machine} />}
         {d.systemMode ? (
           <p className="ac-setnote ac-iconline">

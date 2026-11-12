@@ -227,8 +227,7 @@ export function DriveDetails({
                   {!latest && (
                     <span className="drive-versions__tail">
                       <Button
-                        size="sm"
-                        variant="ghost"
+                        variant="link"
                         aria-label={t("drive.seeVersionLabel", { version: v.version })}
                         onClick={() => openFile(v.version)}
                       >

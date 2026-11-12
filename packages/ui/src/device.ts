@@ -1,3 +1,5 @@
+import { HOVERLESS } from "./hooks/useMatchMedia";
+
 /** A phone or tablet typing on its on-screen keyboard (touch first, no mouse). */
 export const onScreenKeyboard = () =>
   typeof navigator !== "undefined" &&
@@ -9,7 +11,7 @@ export const onScreenKeyboard = () =>
 export const hoverPointer = (pointerType: string) => pointerType === "mouse" || pointerType === "pen";
 
 /** A screen whose main pointer can't rest over anything (a phone, a tablet): a tap stands in for hover. */
-export const hoverless = () => typeof window.matchMedia === "function" && window.matchMedia("(hover: none)").matches;
+export const hoverless = () => typeof window.matchMedia === "function" && window.matchMedia(HOVERLESS).matches;
 
 /** Keys that can move the focus besides Tab: between radios, tabs or a menu's items. In a field they move the caret. */
 const MOVES = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"]);

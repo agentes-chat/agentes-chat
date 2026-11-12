@@ -198,6 +198,14 @@ function Items({ data, tab, onNew }: { data: VaultOverview; tab: "team" | "perso
       )}
       <Gap />
       <GroupedList>
+        {mayAdd ? (
+          <GroupedRow
+            icon="key"
+            label={t("vault.env.open")}
+            chevron
+            onPress={() => router.push(vaultHref.env(tab) as never)}
+          />
+        ) : null}
         <GroupedRow
           icon="laptop"
           label={t("mobile.vault.import.title")}

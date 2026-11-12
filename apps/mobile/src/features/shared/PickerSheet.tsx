@@ -21,6 +21,8 @@ export interface PickOption {
   label: string;
   /** A quieter line under it: a person's or an agent's role, a computer's state ("Desligado"). */
   sub?: string | undefined;
+  /** Lines `sub` may take when it is a sentence that must be read whole; one when left out. */
+  subLines?: number | undefined;
   leading?: PickLeading | undefined;
   /** Red, for the action menus that come here on Android ("Apagar conta"). */
   destructive?: boolean | undefined;
@@ -201,6 +203,7 @@ export function PickerHost() {
                 label={o.label}
                 {...(typed ? { labelParts: markTerms(o.label, [typed]) } : {})}
                 {...(o.sub ? { sub: o.sub } : {})}
+                {...(o.subLines ? { subLines: o.subLines } : {})}
                 {...(lead?.kind === "icon" ? { icon: lead.name } : {})}
                 {...(lead?.kind === "person"
                   ? { leading: <Face who={{ type: "person", id: lead.userId }} size={36} /> }

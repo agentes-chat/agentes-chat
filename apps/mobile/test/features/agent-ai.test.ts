@@ -165,7 +165,7 @@ describe("the agent's AI", () => {
       "Ada answers only you, on your Gemini seat.",
     );
     expect(pt("connectAi.plan.gemini.warning")).toBe(
-      "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API ou o Gemini Enterprise.",
+      "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta.",
     );
     expect(geminiPersonal({ provider: "enterprise" })).toBe(false);
     expect(geminiPersonal(undefined)).toBe(true);
@@ -213,6 +213,24 @@ describe("the agent's AI", () => {
     // For the agents I create: none of mine is offered, so a plan signs in for the new one.
     expect(sheet).toMatch(/params\.forNew === "1"\s*\? \[\]/);
     expect(sheet).toContain("queryKey: keys.brainMachines(orgId)");
+  });
+
+  test("Conectar uma IA opens under the team's scene, and a new agent's app shows its account under its name", async () => {
+    const read = (path: string) => Bun.file(new URL(`../../src/features/${path}`, import.meta.url).pathname).text();
+    const [sheet, scene, screen] = await Promise.all([
+      read("ai/ConnectAi.tsx"),
+      read("ai/ConnectScene.tsx"),
+      read("agents/NewAgentScreen.tsx"),
+    ]);
+    // Over the first page only: the steps after it keep the screen for their own fields.
+    expect(sheet).toContain('{view.page === "home" && !done ? <ConnectScene /> : null}');
+    // Decoration, as every sky is: asleep until an AI is there, hidden from screen readers.
+    expect(scene).toContain('accessibilityElementsHidden importantForAccessibility="no-hide-descendants"');
+    expect(scene).toContain('mode="sleep"');
+    expect(scene).toContain("sceneTeam(agents, lead).slice(0, 2)");
+    // No team yet: no trail ending in the air beside the computer.
+    expect(scene).toContain("{team.length > 0 ? trail : null}");
+    expect(screen).toContain("{...(i.account ? { sub: i.account } : {})}");
   });
 
   test("under a hold, Uso's empty plans card says what comes first and invites no plan", async () => {
@@ -287,6 +305,18 @@ describe("the agent's AI", () => {
     expect(t("connectAi.own.shared")).toBe("A conta que os seus agentes dividem");
   });
 
+  test("a Gemini sign-in the computer can't share with every agent says so and what to use instead, no Tentar de novo", async () => {
+    // The flow is a component the tests can't render: what it wires in, as text.
+    const flow = await Bun.file(new URL("../../src/features/ai/AddAccount.tsx", import.meta.url).pathname).text();
+    expect(flow).toContain("const notShared = geminiNotShared(kind, result);");
+    expect(flow).toMatch(/: notShared\s+\? t\("agentPage\.work\.brain\.add\.geminiNotShared", \{ computer \}\)/);
+    expect(flow).toMatch(/\{notShared \? null : \(\s*<Button[^>]*?label=\{t\("common\.retry"\)\}/s);
+    const t = await translator("pt-BR");
+    expect(t("agentPage.work.brain.add.geminiNotShared", { computer: "MacBook" })).toBe(
+      "O Gemini entrou, mas o MacBook não consegue compartilhar esse login com todos os agentes. Use uma chave de API do Gemini.",
+    );
+  });
+
   test("signing in again sends the account's own email as the hint, from Settings and from Connect an AI", async () => {
     const read = (file: string) => Bun.file(new URL(`../../src/features/ai/${file}`, import.meta.url).pathname).text();
     const settings = await read("AiAccountsScreen.tsx");
@@ -325,6 +355,44 @@ describe("the agent's AI", () => {
     expect(parts).toContain("!empty && styles.insetFull");
     const t = await translator("pt-BR");
     expect(t("agentPage.work.brain.add.notCode")).toBe("Isso não parece o código do Claude.");
+  });
+
+  test("a sign-in that ended on the computer says why by its code; Google's code field refuses its page's address", async () => {
+    // The flow is a component the tests can't render: what it wires in, as text. The codes' lines are the client's
+    // `loginFailureLine` (its tests pin them).
+    const flow = await Bun.file(new URL("../../src/features/ai/AddAccount.tsx", import.meta.url).pathname).text();
+    expect(flow).toContain("const failure = loginFailureLine(result?.code);");
+    expect(flow).toMatch(
+      /: t\(failure\.key \?\? "agentPage\.work\.brain\.add\.failed", \{\s+brand: plan\?\.label \?\? t\(/,
+    );
+    // The CLI's own words only under the two lines they explain, whole and selectable.
+    expect(flow).toContain(
+      "const said = byCode && !notShared && failure.detail ? result?.message?.trim() || null : null;",
+    );
+    expect(flow).toMatch(/<Text variant="small" tone="muted" selectable style=\{\[styles\.said,/);
+    expect(flow).not.toMatch(/styles\.said[^>]*numberOfLines/);
+    // Canceled is no failure: no line, the sign-in starts over.
+    expect(flow).toMatch(/if \(canceled\) onRetry\(\);/);
+    expect(flow).toContain('(!canceled && (result?.state === "failed" || result?.state === "expired"))');
+    // Google's page takes the code out of its address: said behind the step's ⓘ, and that address is never sent.
+    expect(flow).toContain('hint={t("agentPage.work.brain.add.codeHintGoogle")}');
+    expect(flow).toContain("key.length > 0 && !isUrlWithoutCode(key),");
+    expect(flow).toMatch(
+      /!busy && isUrlWithoutCode\(key\) \? \(\s*<Note icon="x">\{t\("agentPage\.work\.brain\.add\.notCodeGoogle"\)\}<\/Note>/,
+    );
+    const t = await translator("pt-BR");
+    expect(t("agentPage.work.brain.add.why.bad_code", { brand: "Gemini", computer: "MacBook" })).toBe(
+      "O Gemini recusou o código. Tente de novo e cole só o código que a página mostrar.",
+    );
+    expect(t("agentPage.work.brain.add.why.network", { brand: "Gemini", computer: "MacBook" })).toBe(
+      "O MacBook não conseguiu falar com o Gemini. Tente de novo.",
+    );
+    expect(t("agentPage.work.brain.add.codeHintGoogle")).toBe(
+      "Cole o código que a página do Google mostra, não o endereço da página.",
+    );
+    expect((await translator("en"))("agentPage.work.brain.add.notCodeGoogle")).toBe(
+      "That's an address with no code in it. Paste the code Google's page shows.",
+    );
   });
 
   test("while the code or the key goes and the computer signs in, the orbit and a line stand in for the field and Enviar", async () => {
@@ -493,7 +561,16 @@ describe("the agent's AI", () => {
     expect(card).toContain(
       '<AskWaiting forMe={action !== null} mark="bolt" words={title} actions={action} below={action ? null : locked} />',
     );
-    expect(card).not.toContain("<Button");
+    // No kit button in the pill: the only ones in the file are the kept card's, a house note (the plan hold), where
+    // Conectar is again only for who may connect and anyone else reads who can.
+    const [pill = "", kept = ""] = card.split("\nfunction KeptCard(");
+    expect(pill).not.toContain("<Button");
+    expect(kept).not.toContain("<AskWaiting");
+    expect(kept).toContain("const mine = mayConnectAi(agent, meId, org);");
+    expect(kept).toContain('text={mine ? t("noAi.kept.activeLine", { name }) : t("noAi.lockedAdmins")}');
+    expect(kept).toMatch(
+      /foot=\{\s*mine \? \(\s*<AskFoot>\s*<AskButtons\s*primary=\{\s*<Button[^>]*label=\{t\("noAi\.action"\)\}/,
+    );
     // "Ada's page": its Conectar opens on the plan she thinks with (`agentPlan`), ChatGPT for Codex.
     expect(profile).toContain("openConnectAi({ agentId: id, plan: agentPlan(agent) ?? undefined })");
     // A plan's page asks the computers for their own sign-ins again: Codex's is known by a usage read with it.

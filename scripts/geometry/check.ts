@@ -305,6 +305,7 @@ export const SELF_TESTED = [
   "toolheight",
   "factwrap",
   "undoinline",
+  "barend",
   "countfill",
   "calstack",
   "bleed",

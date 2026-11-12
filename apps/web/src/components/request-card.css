@@ -81,6 +81,25 @@
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
+/* A note (`RequestNote`): its title in the lead's type with the ⓘ after its last word, one quiet sentence under it. */
+.rq__title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.rq__title b {
+  font-weight: 600;
+}
+.rq__note {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink2);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
 /*
  * The object's line, as an attachment's name under its cover: edge to edge under a hairline, the app's mark loose
  * (no tile), its title and values, "Ver …" under them. Nothing with a background of its own inside the card.
@@ -700,6 +719,85 @@ html:not([data-pointer]) .rq__choice:focus-visible {
 /* A card a newer one replaced: still readable, plainly not the one to act on. */
 .rq--muted {
   opacity: 0.6;
+}
+/*
+ * A decided request: the same card, its footer strip saying how it ended where the buttons were (the same 48 strip
+ * for one line of words, so a card that only had buttons keeps its height to the pixel). Mark, words, when: each on
+ * the first line, the words wrapping whole. Nothing about it reads as waiting.
+ */
+.rq--ended > .ac-approval__sky {
+  opacity: 0.3;
+}
+.rq__answer {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--icon-gap);
+  padding-block: 15px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+}
+.rq__answer-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rq__answer-text b {
+  font-weight: 600;
+  color: var(--ink);
+}
+.rq__answer-note {
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--faint);
+}
+.rq__answer-time {
+  flex: none;
+  font-size: 12px;
+  color: var(--faint);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Desfazer, Cancelar: a 32 button on the 18 line, the strip still 48. */
+.rq__answer > .ac-btn {
+  flex: none;
+  height: 32px;
+  margin-block: -7px;
+}
+/* On a narrow card the words and when keep the first line (one line of words is still the 48 strip): what can be done
+   goes under the words, from their edge. */
+@container (max-width: 479px) {
+  .rq__answer {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    row-gap: var(--space-1);
+  }
+  .rq__answer > .ac-btn {
+    grid-area: 2 / 2;
+    justify-self: start;
+    margin-block: 0;
+    margin-inline-start: calc(-1 * var(--control-px-sm));
+  }
+  .rq__answer-time {
+    grid-area: 1 / 3;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rq__answer > * {
+    animation: rq-answer-in 0.22s var(--out) both;
+  }
+}
+@keyframes rq-answer-in {
+  from {
+    opacity: 0;
+  }
+}
+/* What can still be done from a decided card (its agent's page, a routine left to make), under its lines. */
+.rq .ac-locked > .ac-acts {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 /* A settings card's lines (ADR 0137): the setting, then what it was struck through, an arrow and what it becomes. */
 .rq__settings {

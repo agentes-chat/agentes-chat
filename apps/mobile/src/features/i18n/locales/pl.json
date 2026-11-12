@@ -398,8 +398,6 @@
     "switchWorking": "pracuje",
     "join": "Dołącz do kanału",
     "sending": "Wysyłanie…",
-    "failed": "Nie wysłano · Spróbuj ponownie",
-    "notSent": "Wiadomość nie została wysłana.",
     "toLatest": "Przejdź do najnowszych wiadomości",
     "toLatestNew": "Przejdź do najnowszych wiadomości: {{text}}",
     "stopAgent": "Zatrzymaj: {{name}}",
@@ -1870,13 +1868,7 @@
       "open": "Otwórz",
       "expandHint": "Stuknij, aby rozwinąć",
       "stop": "Zatrzymaj",
-      "giveUp": "Zrezygnuj",
-      "done": "Gotowe: {{title}}",
-      "failed": "Nie udało się: {{title}}",
-      "failedNote": "Nie udało się: {{note}}",
-      "expired": "Nikt nie otworzył tego na czas: {{title}}",
-      "cancelled": "Anulowano: {{title}}",
-      "withdrawn": "{{name}} już tego nie potrzebuje: {{title}}"
+      "giveUp": "Zrezygnuj"
     },
     "live": {
       "inControl": "Masz kontrolę",
@@ -2449,9 +2441,9 @@
     "ofOnline": "{{online}} z {{count}}",
     "deleteName": "Usuń {{name}}",
     "deleteFoot": "Masz 7 dni, żeby zmienić zdanie.",
-    "deleteAlert": "Wszyscy od razu tracą dostęp. Przywrócenie jest możliwe przez 7 dni.",
+    "deleteAlert": "Wszyscy od razu mogą już tylko czytać. Przywrócenie jest możliwe przez 7 dni.",
     "deleteAction": "Usuń",
-    "deleteIntro": "Zamykamy {{name}} od razu dla wszystkich i usuwamy na zawsze po 7 dniach.",
+    "deleteIntro": "{{name}} od razu staje się dla wszystkich tylko do odczytu, a po 7 dniach zostaje trwale usunięta.",
     "holdDelete": "Przytrzymaj, aby usunąć",
     "deleteFailed": "Nie udało się usunąć przestrzeni roboczej. Spróbuj ponownie.",
     "access": {
@@ -2760,7 +2752,6 @@
     },
     "formatAuto": "{{name}} wybiera najlepszą",
     "newWidget": {
-      "titleHint": "Tytuł · {{name}} zaproponuje go przy teście",
       "alerts": "Alert włączony",
       "realData": "Prawdziwe dane",
       "editAsk": "Zmień prośbę",

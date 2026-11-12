@@ -181,7 +181,8 @@ html:not([data-pointer]) .onb__me:focus-visible {
     }
   }
 }
-.onb__head {
+/* Only the onboarding's: this file is unlayered, so an unscoped rule would beat Criar agente's own head (layout.css). */
+.onb--rail .onb__head {
   gap: 6px;
   margin: 0;
 }

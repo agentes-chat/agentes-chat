@@ -1,11 +1,13 @@
 import type { Issue, IssueColumn, IssuePriority } from "@agenteschat/client";
-import { useIssueAction, useStartAgentOnTask } from "@agenteschat/client";
+import { useIssueAction, useIssueProjects, useStartAgentOnTask } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { MAX_UPLOAD_MB } from "@agenteschat/client/lib/files";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { NO_PROJECT, pickableProjects } from "@agenteschat/client/lib/issue-projects";
 import { type AudienceChoice, EVERYONE } from "@agenteschat/client/lib/who-sees";
 import {
   Button,
+  ColorDot,
   cx,
   DatePicker,
   DetailsSection,
@@ -15,7 +17,9 @@ import {
   Icon,
   Locked,
   Menu,
+  MenuCheckboxItem,
   MenuItem,
+  MenuSeparator,
   modKey,
   Spinner,
   Switch,
@@ -34,13 +38,14 @@ import { useEdited } from "@/hooks/useEdited";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { columnIdOf, columnsOf, PRIORITIES, splitCriteria, useColumnTitle } from "@/lib/issues";
 import { useToast } from "@/lib/toast";
+import { ProjectDialog } from "./IssueProjects";
 
 /** Description + criteria back into the quick box's text ("-" lines are criteria there). */
 const joinCriteria = (description: string, criteria: string[]) =>
   [description.trim(), criteria.map((c) => `- ${c}`).join("\n")].filter(Boolean).join("\n\n");
 
 /**
- * "Nova tarefa". Quick by default: one box (title, text, files) with who, priority, due date and column as
+ * "Nova tarefa". Quick by default: one box (title, text, files) with the project, who, priority, due date and column as
  * small buttons; "Abrir o formulário completo" grows it into the task's own layout (the same buttons under the title,
  * description, criteria as a list, the attachments grid), keeping what was typed. A print pastes (⌘V) anywhere in
  * it, files drop anywhere on it; they go to the Drive at once and are linked to the task when it's created.
@@ -48,10 +53,13 @@ const joinCriteria = (description: string, criteria: string[]) =>
 export function NewIssueDialog({
   open,
   columnId,
+  projectId = null,
   columns,
   onClose,
 }: {
   open: boolean;
+  /** The project whose board it was asked from: the task starts in it. */
+  projectId?: string | null;
   /** The column of A fazer it was asked from (the "+" in its head); else the first. */
   columnId: string | null;
   columns: IssueColumn[];
@@ -64,12 +72,17 @@ export function NewIssueDialog({
   const todoColumns = columnsOf(columns, "todo");
   const [column, setColumn] = useState<string | null>(null);
   const [openedWith, setOpenedWith] = useState<string | null | undefined>(undefined);
+  const [project, setProject] = useState<string | null>(null);
+  const [newProject, setNewProject] = useState(false);
   if (open && openedWith !== columnId) {
     setOpenedWith(columnId);
     setColumn(columnId);
+    setProject(projectId);
   }
   if (!open && openedWith !== undefined) setOpenedWith(undefined);
   const chosenColumn = todoColumns.find((c) => c.id === column) ?? todoColumns[0];
+  const projects = pickableProjects(useIssueProjects(org.id).data?.projects ?? []);
+  const chosenProject = projects.find((p) => p.id === project) ?? null;
   const actors = useActors();
   const action = useIssueAction(org.id);
   const start = useStartAgentOnTask(org.id);
@@ -167,6 +180,7 @@ export function NewIssueDialog({
           assignee: chosen?.type === "person" ? chosen : null,
           priority,
           dueDate: due,
+          ...(chosenProject ? { projectId: chosenProject.id } : {}),
           audience,
           ...(files.attached.length ? { attachmentIds: files.attached.map((f) => f.id) } : {}),
         },
@@ -215,9 +229,41 @@ export function NewIssueDialog({
     </p>
   );
   const priorityLabel = (p: IssuePriority) => t(`issues.priority.${p}`);
-  // Who, priority, who sees it, the due date and the column: one strip in both forms, under the title in the full one.
+  // The project, who, priority, who sees it, the due date and the column: one strip in both forms, under the title in
+  // the full one.
   const props = (
     <div className="ac-props issue-new__props">
+      <Menu
+        label={t("issues.projects.label")}
+        trigger={
+          <Button
+            size="sm"
+            icon={chosenProject ? undefined : "layers"}
+            aria-label={
+              chosenProject ? `${t("issues.projects.label")}: ${chosenProject.name}` : t("issues.projects.label")
+            }
+          >
+            {chosenProject && <ColorDot color={chosenProject.color} />}
+            {chosenProject ? chosenProject.name : t("issues.projects.label")}
+          </Button>
+        }
+      >
+        {[...projects, null].map((p) => (
+          <MenuCheckboxItem
+            key={p?.id ?? NO_PROJECT}
+            closes
+            checked={(p?.id ?? null) === (chosenProject?.id ?? null)}
+            onCheckedChange={() => setProject(p?.id ?? null)}
+            leading={<ColorDot color={p?.color} />}
+          >
+            {p?.name ?? t("issues.projects.none")}
+          </MenuCheckboxItem>
+        ))}
+        <MenuSeparator />
+        <MenuItem icon="plus" onSelect={() => setNewProject(true)}>
+          {t("issues.projects.new")}
+        </MenuItem>
+      </Menu>
       <Menu
         label={t("issues.form.assignee")}
         trigger={
@@ -509,6 +555,7 @@ export function NewIssueDialog({
           {createButton}
         </DialogFooter>
       </form>
+      {newProject && <ProjectDialog onClose={() => setNewProject(false)} onDone={(p) => setProject(p.id)} />}
       {choosing && (
         <WhoSeesDialog
           title={t("whoSees.taskTitle")}

@@ -29,8 +29,8 @@ import "./deletion.css";
 
 /**
  * Deleting a workspace (owners): what goes, until when any owner can restore it, its export, its name typed to
- * confirm, then the code emailed to them (or their password, where no email goes). It closes for everyone at once and
- * goes for good 7 days later; `onDeleted` follows (the closing screen takes the workspace's place by itself).
+ * confirm, then the code emailed to them (or their password, where no email goes). It turns read-only for everyone at
+ * once and goes for good 7 days later; `onDeleted` follows (the line on top of the workspace shows by itself).
  */
 export function DeleteWorkspaceDialog({
   org,

@@ -1,4 +1,4 @@
-import type { AgentBrain, AgentBrainInput, MachineAccount } from "@agenteschat/client";
+import type { AgentBrain, AgentBrainInput, BrainScope, MachineAccount } from "@agenteschat/client";
 import { keys, useAgentBrain, useAiAccounts, useApi, useMachines, useModels } from "@agenteschat/client";
 import {
   accountChoices,
@@ -75,11 +75,12 @@ import { AiRow, Note, PlanHoldNote, usePlanHold } from "./parts";
 /** Opens an agent's AI. */
 export const openAgentAi = (agentId: string) => router.push(`/agent-ai/${agentId}` as never);
 
-/** Opens an agent's model, from its AI. */
-const openAgentModel = (agentId: string) => router.push(`/agent-model/${agentId}` as never);
+/** Opens an agent's model, from its AI. `scope`: which of the right hand's two AIs (its own by default). */
+export const openAgentModel = (agentId: string, scope?: BrainScope) =>
+  router.push(`/agent-model/${agentId}${scope ? `?scope=${scope}` : ""}` as never);
 
 /** Saves a change to the agent's AI at once and says so (or that it failed). */
-function useSaveBrain(agentId: string) {
+function useSaveBrain(agentId: string, scope?: BrainScope) {
   const { t } = useTranslation();
   const { orgId } = useOrg();
   const api = useApi();
@@ -89,8 +90,8 @@ function useSaveBrain(agentId: string) {
   const save = async (input: AgentBrainInput, done: string | ((saved: AgentBrain) => string)) => {
     setBusy(true);
     try {
-      const saved = await api.agents.setBrain(orgId, agentId, input);
-      qc.setQueryData(keys.agentBrain(orgId, agentId), saved);
+      const saved = await api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input });
+      qc.setQueryData(scope ? [...keys.agentBrain(orgId, agentId), scope] : keys.agentBrain(orgId, agentId), saved);
       toast({ title: typeof done === "string" ? done : done(saved), icon: "check" });
     } catch {
       toast({ title: t("agentPage.work.failed"), icon: "x" });
@@ -370,14 +371,24 @@ const DOCK_SPRING = { stiffness: 240, damping: 26, mass: 1 };
  * The effort, floating over the model list in the thumb's reach, whatever is scrolled under it. It slides away with
  * "Automático", which picks the effort too.
  */
-function EffortDock({ agentId, shown, onHeight }: { agentId: string; shown: boolean; onHeight: (h: number) => void }) {
+function EffortDock({
+  agentId,
+  scope,
+  shown,
+  onHeight,
+}: {
+  agentId: string;
+  scope?: BrainScope;
+  shown: boolean;
+  onHeight: (h: number) => void;
+}) {
   const { colors, shadows } = useTheme();
   const reduced = useReducedMotion();
   const insets = useSafeAreaInsets();
   const dir = useDirectory();
   const { orgId } = useOrg();
-  const view = useAgentBrain(orgId, agentId).data;
-  const effort = useEffortChoice(agentId, view ? advancedOf(view).effort : undefined);
+  const view = useAgentBrain(orgId, agentId, true, false, scope).data;
+  const effort = useEffortChoice(agentId, view ? advancedOf(view).effort : undefined, scope);
   const out = useSharedValue(shown ? 0 : 1);
   const height = useSharedValue(0);
   useEffect(() => {
@@ -413,15 +424,15 @@ function EffortDock({ agentId, shown, onHeight }: { agentId: string; shown: bool
  * The agent's model, pushed from its AI ("Modelo"): Automático, or one of its brain's models (every model of its
  * coding plan, with what each is sold as), and with a fixed model how hard it thinks. A tap saves at once.
  */
-export function AgentModelScreen({ agentId }: { agentId: string }) {
+export function AgentModelScreen({ agentId, scope }: { agentId: string; scope?: BrainScope }) {
   const { t } = useTranslation();
   const { orgId } = useOrg();
   const c = useColors();
   const insets = useSafeAreaInsets();
   const dir = useDirectory();
   const g = agentGrammar(dir.agentById.get(agentId)?.name ?? "");
-  const brain = useAgentBrain(orgId, agentId);
-  const { busy, save } = useSaveBrain(agentId);
+  const brain = useAgentBrain(orgId, agentId, true, false, scope);
+  const { busy, save } = useSaveBrain(agentId, scope);
   // Opened straight from a link too: the plans' lists come with it.
   useModels();
   const view = brain.data;
@@ -477,7 +488,7 @@ export function AgentModelScreen({ agentId }: { agentId: string }) {
         )}
         {view && freeHint ? <Note icon="info">{freeHint}</Note> : null}
       </ScrollView>
-      {hasModels ? <EffortDock agentId={agentId} shown={fixed} onHeight={setDock} /> : null}
+      {hasModels ? <EffortDock agentId={agentId} scope={scope} shown={fixed} onHeight={setDock} /> : null}
     </View>
   );
 }

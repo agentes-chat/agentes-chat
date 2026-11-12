@@ -504,7 +504,7 @@ function ShortHistory({ page, onOpen }: { page: WikiPageData; onOpen: () => void
         })}
       </div>
       {page.version > 3 && (
-        <Button size="sm" variant="ghost" className="wiki-about__more" onClick={onOpen}>
+        <Button variant="link" className="wiki-about__more" onClick={onOpen}>
           {t("wiki.allVersions", { count: page.version })}
         </Button>
       )}

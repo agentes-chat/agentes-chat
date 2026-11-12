@@ -9,6 +9,7 @@ import {
   useTeamMemories,
   useUpdateSettings,
 } from "@agenteschat/client";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { can } from "@agenteschat/client/lib/permissions";
 import { memoryLine } from "@agenteschat/client/lib/proposals";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -405,6 +406,7 @@ export function GeneralScreen() {
             : t("settings.section.general")
       }
       subtitle={saved ? t("settings.savedShort") : undefined}
+      frozen={settingsFrozen(org, "general")}
     >
       {!editable ? (
         <View style={styles.note}>

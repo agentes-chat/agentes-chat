@@ -20,6 +20,49 @@ const tags = ["Notifications"];
 
 const Actor = z.object({ type: z.enum(["user", "agent"]), id: z.string() });
 
+/** Where a notification is from and what it opens. */
+export const NotificationSource = z.object({
+  channelId: z.string().optional(),
+  threadId: z.string().optional(),
+  messageId: z.string().optional(),
+  dmId: z.string().optional(),
+  issueId: z.string().optional(),
+  issueNumber: z.number().int().optional(),
+  topicId: z.string().optional(),
+  approvalId: z.string().optional(),
+  questionId: z.string().optional(),
+  missionId: z.string().optional(),
+  routineId: z.string().optional(),
+  machineId: z.string().optional(),
+  handoffId: z.string().optional(),
+  proposalId: z
+    .string()
+    .optional()
+    .openapi({ description: "`change_request`: the proposal to decide (`POST …/proposals/{id}/accept`)." }),
+  action: z.string().optional().openapi({
+    description: "`change_request` of a right hand's card (`messageId`, `GET …/action-cards/{messageId}`): its action.",
+  }),
+  screen: z.enum(SCREEN_KINDS).optional(),
+  agentId: z
+    .string()
+    .optional()
+    .openapi({ description: "`org_standing` to `agent_hold`: the agent held (its name in `label`)." }),
+  userId: z
+    .string()
+    .optional()
+    .openapi({ description: "`agent_unreached`: the routine's creator, whom the agent's owner may let in." }),
+  dashboardId: z
+    .string()
+    .optional()
+    .openapi({ description: "`widget_alert`, `widget_failed`, `dashboard_proposal`: the board (ADR 0135)." }),
+  widgetId: z.string().optional().openapi({ description: "`widget_alert`, `widget_failed`: the widget." }),
+  accountId: z
+    .string()
+    .optional()
+    .openapi({ description: "`plan_lent`: the plan's account (`POST …/ai-accounts/{id}/take-back`)." }),
+  label: z.string().optional(),
+});
+
 const Notification = z
   .object({
     id: z.uuid(),
@@ -27,48 +70,7 @@ const Notification = z
     waiting: z.boolean(),
     actors: z.array(Actor),
     count: z.number().int(),
-    source: z.object({
-      channelId: z.string().optional(),
-      threadId: z.string().optional(),
-      messageId: z.string().optional(),
-      dmId: z.string().optional(),
-      issueId: z.string().optional(),
-      issueNumber: z.number().int().optional(),
-      topicId: z.string().optional(),
-      approvalId: z.string().optional(),
-      questionId: z.string().optional(),
-      missionId: z.string().optional(),
-      routineId: z.string().optional(),
-      machineId: z.string().optional(),
-      handoffId: z.string().optional(),
-      proposalId: z
-        .string()
-        .optional()
-        .openapi({ description: "`change_request`: the proposal to decide (`POST …/proposals/{id}/accept`)." }),
-      action: z.string().optional().openapi({
-        description:
-          "`change_request` of a right hand's card (`messageId`, `GET …/action-cards/{messageId}`): its action.",
-      }),
-      screen: z.enum(SCREEN_KINDS).optional(),
-      agentId: z
-        .string()
-        .optional()
-        .openapi({ description: "`org_standing` to `agent_hold`: the agent held (its name in `label`)." }),
-      userId: z
-        .string()
-        .optional()
-        .openapi({ description: "`agent_unreached`: the routine's creator, whom the agent's owner may let in." }),
-      dashboardId: z
-        .string()
-        .optional()
-        .openapi({ description: "`widget_alert`, `widget_failed`, `dashboard_proposal`: the board (ADR 0135)." }),
-      widgetId: z.string().optional().openapi({ description: "`widget_alert`, `widget_failed`: the widget." }),
-      accountId: z
-        .string()
-        .optional()
-        .openapi({ description: "`plan_lent`: the plan's account (`POST …/ai-accounts/{id}/take-back`)." }),
-      label: z.string().optional(),
-    }),
+    source: NotificationSource,
     latest: z.object({
       text: z.string().optional(),
       title: z.string().optional(),
@@ -91,6 +93,10 @@ const Notification = z
         .string()
         .optional()
         .openapi({ description: "`routine_paused`: why it paused; `routine_failed`: its run's code (both coded)." }),
+      detail: z.string().optional().openapi({
+        description:
+          "`widget_failed` with `missing_credential`: why its agent has no AI (`no_key`, `not_signed_in`, `plan_not_shared`…, coded).",
+      }),
       origin: ApprovalOrigin.optional().openapi({
         description: "`approval`: asked while nobody watched, by a routine or by unattended work.",
       }),

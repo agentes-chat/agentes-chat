@@ -350,6 +350,8 @@ export interface DaemonOptions {
   /** Tests: an address observation without network or a real agent process. */
   probeEgress?: typeof probeEgress;
   executors?: () => RunnerInfo["executors"];
+  /** App mode: takes the login shell's PATH again before "Check again" looks for the coding CLIs. */
+  refreshPath?: () => void;
   /** Tests: how the coding CLIs' looks run (the background cache stays real). */
   executorRun?: ExecutorRun;
   /** How the accounts' CLIs start (default `claude` / `codex`). */
@@ -451,6 +453,7 @@ export class RunnerDaemon implements RequestObserver {
   private readonly executors: () => NonNullable<RunnerInfo["executors"]>;
   /** False until the first look on a new install: `hello` then leaves the CLIs out, so the server keeps "unknown". */
   private readonly executorsKnown: () => boolean;
+  private readonly executorsFresh: () => Promise<unknown>;
   private readonly now: () => number;
   /** The computer brains' accounts (ADR 0041): machine-wide, kept across pairings and sessions. */
   readonly accounts: AccountManager;
@@ -493,6 +496,7 @@ export class RunnerDaemon implements RequestObserver {
       });
     this.executors = () => exec() ?? {};
     this.executorsKnown = () => !("known" in exec) || exec.known === true;
+    this.executorsFresh = (exec as { fresh?: () => Promise<unknown> }).fresh ?? (async () => this.executors());
     // System mode is set at install and kept through pairings: account folders are lent to agents' users.
     let system = false;
     try {
@@ -1430,6 +1434,7 @@ export class RunnerDaemon implements RequestObserver {
         : async (spare) => brains.warm(spare),
       codex: { runnerHome: home, mcp: mcpCommand, runs: codexRuns, app: codexApp },
       paused: () => this.stopping || this.pauseState().paused,
+      setPause: (paused, until, by) => (paused ? this.pause(until, by) : this.resume()),
       // A config written later without the mode never turns a system session back into one that does agents' work.
       systemMode: () => config.mode === "system" || this.stored?.mode === "system",
       ...(supervisor ? { workers: supervisor } : {}),
@@ -2033,6 +2038,13 @@ export class RunnerDaemon implements RequestObserver {
     return pauseOf(this.stored, this.now());
   }
 
+  /** The app's "Check again": the PATH and the coding CLIs looked up now, then the status with what was found. */
+  async executorsCheck(): Promise<ControlStatus> {
+    this.opts.refreshPath?.();
+    await this.executorsFresh();
+    return this.status();
+  }
+
   status(): ControlStatus {
     const c = this.config;
     const s = this.stored;
@@ -2156,7 +2168,8 @@ export class RunnerDaemon implements RequestObserver {
 
   // ── Pause ──────────────────────────────────────────────────────────────────
 
-  pause(until: string | null): RunnerPause {
+  /** `by`: the person who paused it from the apps (`pause.set`); a pause on the computer itself has none. */
+  pause(until: string | null, by?: string): RunnerPause {
     this.requirePaired();
     let value: string | null = null;
     if (until !== null && until !== undefined) {
@@ -2165,7 +2178,7 @@ export class RunnerDaemon implements RequestObserver {
       if (t <= this.now()) throw new ControlError("bad_request", "until is in the past");
       value = new Date(t).toISOString();
     }
-    this.write({ ...(this.stored ?? {}), paused: { until: value } });
+    this.write({ ...(this.stored ?? {}), paused: { until: value, ...(by ? { by } : {}) } });
     return this.pauseState();
   }
 

@@ -199,8 +199,8 @@ export type EmailTemplate =
       personal?: true;
     }
   /**
-   * An owner deleted a workspace the reader is in, one email per member: it's closed now and goes for good at `dueAt`
-   * (ISO), shown in the reader's `timeZone`. Owners get a button to restore it. `url`: the workspace in the app.
+   * An owner deleted a workspace the reader is in, one email per member: it's read-only now and goes for good at
+   * `dueAt` (ISO), shown in the reader's `timeZone`. Owners get a button to restore it. `url`: the workspace in the app.
    */
   | {
       kind: "workspace_deleting";

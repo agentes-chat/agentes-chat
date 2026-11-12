@@ -8,15 +8,13 @@ import { DOCK_PREF, MENU_BAR_PREF, menuBarShown } from "../../control/dock";
 import { NOTCH_PREF } from "../../control/notch";
 import { SITE_NOTIFY_PREF } from "../../control/notify";
 import { unpairedWorkspaces } from "../../control/pair";
-import { homeServer } from "../../control/server";
 import { type Home, orgName, pairedHomes } from "../../control/store";
 import { macStateOf } from "../../control/tray";
 import { useLocalServer, usePref, useWorkspaces } from "../../hooks";
 import { detectedLocale, LOCALE_PREF, locales, switchDesktopLocale } from "../../i18n";
-import { AgentFace, ConnectionChip, MacPortrait, OrgTile } from "../../ui/bits";
+import { MacPortrait } from "../../ui/bits";
 import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
-import { shortPath } from "../../ui/time";
 import { ThisMacCards } from "./ThisMac";
 
 export function General() {
@@ -111,11 +109,15 @@ export function General() {
     if (!on && !dock) showDock(true);
   };
   // Open at login has an ⓘ only where it changes something: agentes.chat running here, or agents working here.
-  const launchHint = local.run ? "desktop.prefs.general.launchHere" : works ? "desktop.prefs.general.launchDesc" : null;
+  const launchHint = local.run || works;
   const launchRow = (
     <PrefRow
       title={t("desktop.prefs.general.launchTitle")}
-      hint={launchHint ? hintFor(t, t("desktop.prefs.general.launchTitle"), t(launchHint)) : undefined}
+      hint={
+        launchHint
+          ? hintFor(t, t("desktop.prefs.general.launchTitle"), t("desktop.prefs.general.launchWork"))
+          : undefined
+      }
       htmlFor="launch"
       end={
         <Switch
@@ -139,104 +141,44 @@ export function General() {
     <>
       <PrefHead title={t("desktop.prefs.general.title")} />
 
-      {works && (
-        <>
-          <CardTitle>{t("desktop.prefs.general.thisMac")}</CardTitle>
-          <PrefCard>
-            <PrefRow
-              lead={<MacPortrait state={macStateOf(homes)} />}
-              title={t("desktop.prefs.general.name")}
-              htmlFor="machine-name"
-              end={
-                <form
-                  className="dk-inline-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void saveName();
-                  }}
-                >
-                  <Input
-                    id="machine-name"
-                    value={name}
-                    maxLength={64}
-                    aria-label={t("desktop.prefs.general.nameLabel")}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                  {name.trim() && name.trim() !== current && (
-                    <Button type="submit" size="sm" loading={saving}>
-                      {t("desktop.prefs.general.save")}
-                    </Button>
-                  )}
-                </form>
-              }
-            />
-          </PrefCard>
-        </>
-      )}
-
-      {agentsCard && <ThisMacCards homes={homes} offers={offers} bottom={launchRow} />}
-
-      {works && (
-        <>
-          <CardTitle>{t("desktop.prefs.general.orgs")}</CardTitle>
-          <PrefCard>
-            {homes.map((h) => {
-              const agents = h.status?.agents ?? [];
-              const server = homeServer(h);
-              const orgId = h.status?.org?.id;
-              return (
-                <PrefRow
-                  key={h.homeId}
-                  lead={<OrgTile logo={h.logo} size="lg" />}
-                  title={
-                    <>
-                      {orgName(h)} <ConnectionChip status={h.status} running={h.running} />
-                    </>
-                  }
-                  desc={
-                    <>
-                      {agents.length > 0 && (
-                        <span className="dk-avs">
-                          {agents.slice(0, 5).map((a) => (
-                            <AgentFace key={a.id} agent={a} size="xs" />
-                          ))}
-                        </span>
-                      )}
-                      {agents.length
-                        ? t("desktop.prefs.general.agents", { count: agents.length })
-                        : t("desktop.prefs.general.noAgents")}
-                      {h.status?.workspace && (
-                        <>
-                          {" · "}
-                          <span className="dk-path">{shortPath(h.status.workspace)}</span>
-                        </>
-                      )}
-                    </>
-                  }
-                  end={
-                    <>
-                      {server && orgId && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => void host.openExternal(`${server}/org/${encodeURIComponent(orgId)}`)}
-                        >
-                          {t("desktop.common.open")}
-                        </Button>
-                      )}
-                      {/* The server here's own organizations work here by its rule (its computer, ADR 0060). */}
-                      {!(local.run && server === local.url) && (
-                        <Button size="sm" variant="ghost" className="dk-danger-text" onClick={() => setLeaving(h)}>
-                          {t("desktop.prefs.general.leave")}
-                        </Button>
-                      )}
-                    </>
-                  }
-                />
-              );
-            })}
-          </PrefCard>
-        </>
+      {agentsCard && (
+        <ThisMacCards
+          homes={homes}
+          offers={offers}
+          onLeave={setLeaving}
+          top={
+            works && (
+              <PrefRow
+                lead={<MacPortrait state={macStateOf(homes)} />}
+                title={t("desktop.prefs.general.name")}
+                htmlFor="machine-name"
+                end={
+                  <form
+                    className="dk-inline-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void saveName();
+                    }}
+                  >
+                    <Input
+                      id="machine-name"
+                      value={name}
+                      maxLength={64}
+                      aria-label={t("desktop.prefs.general.nameLabel")}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                    {name.trim() && name.trim() !== current && (
+                      <Button type="submit" size="sm" loading={saving}>
+                        {t("desktop.prefs.general.save")}
+                      </Button>
+                    )}
+                  </form>
+                }
+              />
+            )
+          }
+          bottom={launchRow}
+        />
       )}
 
       <CardTitle>{t("desktop.prefs.general.behavior")}</CardTitle>

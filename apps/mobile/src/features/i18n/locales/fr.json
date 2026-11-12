@@ -384,8 +384,6 @@
     "switchWorking": "au travail",
     "join": "Rejoindre le canal",
     "sending": "Envoi…",
-    "failed": "Non envoyé · Réessayer",
-    "notSent": "Le message n'a pas été envoyé.",
     "toLatest": "Aller aux derniers messages",
     "toLatestNew": "Aller aux derniers messages : {{text}}",
     "stopAgent": "Arrêter {{name}}",
@@ -1769,13 +1767,7 @@
       "open": "Ouvrir",
       "expandHint": "Touchez pour agrandir",
       "stop": "Arrêter",
-      "giveUp": "Abandonner",
-      "done": "Fait : {{title}}",
-      "failed": "Pas réussi : {{title}}",
-      "failedNote": "Pas réussi : {{note}}",
-      "expired": "Personne ne l'a ouvert à temps : {{title}}",
-      "cancelled": "Annulé : {{title}}",
-      "withdrawn": "{{name}} n'en a plus besoin : {{title}}"
+      "giveUp": "Abandonner"
     },
     "live": {
       "inControl": "Vous avez la main",
@@ -2339,9 +2331,9 @@
     "ofOnline": "{{online}} sur {{count}}",
     "deleteName": "Supprimer {{name}}",
     "deleteFoot": "Vous avez 7 jours pour changer d'avis.",
-    "deleteAlert": "Tout le monde perd l'accès tout de suite. Vous pouvez le restaurer pendant 7 jours.",
+    "deleteAlert": "Dès maintenant, tout le monde peut seulement le lire. Vous pouvez le restaurer pendant 7 jours.",
     "deleteAction": "Supprimer",
-    "deleteIntro": "{{name}} ferme tout de suite pour tout le monde et sera supprimé définitivement dans 7 jours.",
+    "deleteIntro": "{{name}} passe tout de suite en lecture seule pour tout le monde et sera supprimé définitivement dans 7 jours.",
     "holdDelete": "Maintenir pour supprimer",
     "deleteFailed": "Impossible de supprimer l'espace de travail. Réessayez.",
     "access": {
@@ -2638,7 +2630,6 @@
     },
     "formatAuto": "{{name}} choisit le meilleur",
     "newWidget": {
-      "titleHint": "Titre · {{name}} en propose un au test",
       "alerts": "Alerte activée",
       "realData": "Vraies données",
       "editAsk": "Modifier la demande",

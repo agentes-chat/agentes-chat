@@ -53,8 +53,6 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
       ["chat/EventLine.tsx", ["line"]],
       ["chat/StoppedLine.tsx", ["line"]],
       ["chat/issue-work.tsx", ["line"]],
-      ["agents/ProposalCard.tsx", ["card"]],
-      ["agents/InstructionProposalCard.tsx", ["card"]],
       ["missions/cards.tsx", ["mcard", "askcard", "inv"]],
     ];
     expect(styleOf(row, "msg")).not.toContain("paddingVertical");
@@ -79,8 +77,6 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
       "chat/ReachLines.tsx",
       "missions/cards.tsx",
       "browser/TrailCard.tsx",
-      "agents/ProposalCard.tsx",
-      "agents/InstructionProposalCard.tsx",
       "right-hand/TeamWeekCard.tsx",
     ]) {
       expect(await read(file)).toContain("useCardTop(");

@@ -1,7 +1,8 @@
 /*
  * Receipts under an agent's reply: one change is a quiet row; several are a group with "N changes · X ago". Cards like
- * the reply's tools (the card face, its hairline and cut corner, the same width), flat icons. The sentence wraps,
- * whole; the icon sits on its first line. Undone rows are struck through and dimmed.
+ * the reply's tools (the card face, its hairline and cut corner, the same width), flat icons. A change's sentence is
+ * one line (`.ag-rc__line`); the other rows' wrap, whole, the icon on their first line. Undone rows are struck through
+ * and dimmed.
  */
 /* Its own room outside a message: in one, the conversation's rhythm sets it (`.ac-msg .ac-msg__body > *`). */
 :where(:not(.ac-msg__body)) > .ag-rcs {
@@ -54,6 +55,21 @@
 .ag-rc__sentence {
   overflow-wrap: anywhere;
 }
+/* What an agent changed reads in one line, cut with "…": its whole words are its tip. The clip stands 4px out, so a
+   link's focus ring at the line's edge shows whole; `clip`, not `hidden`, so tabbing to a link past the cut never
+   scrolls the words. */
+.ag-rc__line {
+  overflow: clip;
+  margin: calc(-1 * var(--space-1));
+  padding: var(--space-1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* A link the keys reach is never past the cut: while it has the focus, its line says everything. */
+.ag-rc__line:has(:focus-visible) {
+  overflow: visible;
+  white-space: normal;
+}
 .ag-rc__target {
   color: var(--ink);
   font-weight: 600;
@@ -63,6 +79,11 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* A memory's words opening that memory: the sentence's own weight and colour, underlined under the pointer. */
+.ag-rc__target--words {
+  color: inherit;
+  font-weight: inherit;
+}
 .ag-rc__sentence b {
   color: var(--ink);
   font-weight: 600;
@@ -71,8 +92,50 @@
   font-size: 12.5px;
   color: var(--faint);
 }
-/* A file's name can be one long word: it breaks inside the receipt rather than running out of it. */
-.ag-rc__files {
+/* On a screen with no hover, a row's changes listed whole in a popover (the kit's rows), each sentence opening its own
+   thing, with a chevron where it does. As wide as its words want, up to what the window leaves. */
+.ac-popover.ag-rcpop-card {
+  max-width: min(420px, calc(100vw - 24px));
+}
+.ag-rcpop {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+.ag-rcpop__words {
+  color: var(--ink2);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+a.ag-rcpop__words {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--ink);
+}
+.ag-rcpop__text {
+  flex: 1;
+  min-width: 0;
+}
+/* On the first line's capitals, as the kit's leading icons (`.ac-iconline`); the row's 20px line where lh is unknown. */
+.ag-rcpop__cue {
+  flex: none;
+  color: var(--faint);
+  translate: 0 calc(10px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  .ag-rcpop__cue {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
+}
+a.ag-rcpop__words:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ag-rcpop__by {
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--faint);
   overflow-wrap: anywhere;
 }
 /* A row's action: words only, as `.cq-link`; its height is the first line's, so the sentence and it share a middle. */

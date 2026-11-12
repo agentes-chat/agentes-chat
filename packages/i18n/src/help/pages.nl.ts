@@ -13,7 +13,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Hoe het draait",
         blocks: [
           "Het draait in de app, met een eigen ingebouwde database, en bewaart alles in één map op deze computer: `.agentes` in je thuismap. Verder hoef je niets te installeren: geen Docker, geen database om in te richten.",
-          "Het start met de app en stopt als je de app afsluit. Afsluiten vraagt eerst om bevestiging, want niemand kan agentes.chat gebruiken tot de app weer opent.",
+          "Het start met de app en stopt als je de app afsluit. Afsluiten vraagt eerst om bevestiging, want niemand kan agentes.chat gebruiken tot de app weer opent. Wil je het even stoppen zonder de app af te sluiten, klik dan op het agentes.chat-icoon bij de klok en kies **Stoppen** in het **⋯**-menu van de kaart.",
         ],
       },
       {
@@ -28,7 +28,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Aan laten staan",
         blocks: [
-          "Op een computer die anderen gebruiken, stel je dit één keer in:",
+          "Op een computer die anderen gebruiken, stel je dit één keer in. **Laten draaien**, in **Voorkeuren\u00a0›\u00a0Servers**, laat zien wat er nog ontbreekt en opent de juiste instellingen:",
           {
             list: [
               "**Openen bij inloggen** gaat na de installatie vanzelf aan.",
@@ -51,8 +51,8 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "another-workspace",
         heading: "Leen hem ook uit aan een andere werkruimte",
         blocks: [
-          "De werkruimtes van de server die je hier draait, gebruiken deze computer vanzelf. Wil je dat een werkruimte ergens anders hem ook gebruikt, zoals een op agentes.chat Cloud, open dan **Voorkeuren › Servers**, druk op **Een server toevoegen…**, meld je aan bij die werkruimte en druk op **Toestaan** als de app het vraagt.",
-          "Elke werkruimte krijgt hier eigen agents en mappen. Ook daar staan **Opdrachten** standaard aan. Zet ze uit in de vraag van de app voordat je op **Toestaan** drukt, of later in **Voorkeuren\u00a0›\u00a0Tools**, waar één schakelaar voor alle werkruimtes op deze computer geldt.",
+          "De werkruimtes van de server die je hier draait, gebruiken deze computer vanzelf. Wil je dat een werkruimte ergens anders hem ook gebruikt, zoals een op agentes.chat Cloud, druk dan op **Werkruimte toevoegen…** onderaan de eerste kaart in **Voorkeuren\u00a0›\u00a0Algemeen**, of op **Een server toevoegen…** in **Voorkeuren\u00a0›\u00a0Servers**. Meld je aan bij die werkruimte en druk op **Toestaan** als de app het vraagt.",
+          "Elke werkruimte krijgt hier eigen agents en mappen. Ook daar staan **Opdrachten** standaard aan. Zet ze uit in de vraag van de app voordat je op **Toestaan** drukt, of later in **Voorkeuren\u00a0›\u00a0Tools**, waar elke werkruimte een eigen schakelaar heeft en de app het eerst vraagt voordat er een weer aangaat.",
         ],
       },
       {
@@ -67,29 +67,29 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Inloggen vanaf andere apparaten",
         blocks: [
-          "De eigenaar begint zonder wachtwoord: de app logt je in op deze computer. Om in te loggen vanuit een browser op een andere computer, stel je er een in bij **Instellingen › Je account**. De telefoonapp maakt verbinding als je de QR-code scant onder **Op je telefoon**, in **Voorkeuren › Servers**. Daarvoor moet **Bereik het vanaf je telefoon en je teamgenoten** aan staan.",
+          "De eigenaar begint zonder wachtwoord: de app logt je in op deze computer. Om in te loggen vanuit een browser op een andere computer, stel je er een in bij **Instellingen\u00a0›\u00a0Je account**. Tot je dat doet, meldt **Voorkeuren\u00a0›\u00a0Servers** het, en **Wachtwoord toevoegen** opent die pagina. De telefoonapp maakt verbinding als je de QR-code scant onder **Op je telefoon**, in **Voorkeuren\u00a0›\u00a0Servers**. Daarvoor moet **Bereik het vanaf je telefoon en je teamgenoten** aan staan.",
         ],
       },
       {
         id: "updates",
         heading: "Updates",
         blocks: [
-          "De app zoekt zelf naar updates en installeert er een als je op **Bijwerken en opnieuw openen** drukt in **Voorkeuren › Updates**. De server en alle agents starten mee opnieuw op. Eerst wordt de database gekopieerd, en als de nieuwe versie niet binnen 3 minuten reageert, gaat de app vanzelf terug naar de vorige versie en de gegevens daarvan.",
+          "De app zoekt zelf naar updates. Met **Updates 's nachts vanzelf installeren** aan, in **Voorkeuren\u00a0›\u00a0Updates**, installeert hij ze tussen 3:00 en 5:00 zolang de app open is. Dat staat standaard aan als de server hier draait. Anders druk je op **Bijwerken en opnieuw openen**. De server en alle agents starten mee opnieuw op. Eerst wordt de database gekopieerd, en als de nieuwe versie niet binnen 3 minuten reageert, gaat de app vanzelf terug naar de vorige versie en de gegevens daarvan.",
         ],
       },
       {
         id: "backups",
         heading: "Back-ups",
         blocks: [
-          "Er wordt nog niets vanzelf geback-upt. **Nu een back-up maken**, in **Voorkeuren › Servers**, stopt de server even en bewaart de database, de bestanden en `.env` in `.agentes/backups`, in je thuismap. De twee nieuwste blijven bewaard.",
-          "Kopieer ze af en toe van deze computer af, naar een schijf of een clouddrive. Ze bevatten je sleutels: houd ze privé.",
+          "Met **Elke nacht een back-up maken** aan (app 0.8.1 en nieuwer), in **Voorkeuren\u00a0›\u00a0Servers**, bewaart de app elke nacht om 3:00 de database, de bestanden en `.env` in `.agentes/backups`, in je thuismap. Een computer die toen sliep, maakt de back-up zodra hij wakker is. **Nu een back-up maken** doet hetzelfde meteen. Elke back-up stopt de server even, en de twee nieuwste blijven bewaard.",
+          "**Kopiëren naar** zet elke nieuwe back-up ook in een map die je kiest, zoals een USB-stick of iCloud Drive, waar de twee nieuwste blijven. Ze bevatten je sleutels: houd ze privé. **Terugzetten…** zet agentes.chat terug naar een back-up: berichten, bestanden en instellingen. Het stopt een minuut, en wat er eerst stond, blijft bewaard in de back-upmap.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code en Codex",
         blocks: [
-          "De app vindt Claude Code en Codex via de `PATH` van je login-shell, plus de gebruikelijke mappen zoals `~/.local/bin`, `/opt/homebrew/bin` en `/usr/local/bin`. Staat er in **Voorkeuren › Tools** **Niet gevonden**, controleer dan of `claude` of `codex` werkt in een nieuw Terminal-venster, en sluit de app daarna af en open hem opnieuw.",
+          "De app vindt Claude Code en Codex via de `PATH` van je login-shell, plus de gebruikelijke mappen zoals `~/.local/bin`, `/opt/homebrew/bin` en `/usr/local/bin`. Staat er in **Voorkeuren\u00a0›\u00a0Tools** **Niet gevonden**, dan zie je daar de regel die het installeert. Voer die uit in Terminal en druk daarna op **Opnieuw controleren**.",
         ],
       },
       {
@@ -163,7 +163,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Vanuit de agentes.chat-app",
         blocks: [
           "Installeer de app op de computer, open hem en meld je aan bij je werkruimte. Hij vraagt **Agents van <workspace> deze Mac laten gebruiken?** (deze pc op Windows, deze computer op Linux). Kies wie hem mag gebruiken en druk op **Toestaan**. Dat is alles.",
-          "Al aangemeld? Zet de werkruimte aan in **Voorkeuren › Algemeen**, in de kaart **Agents**.",
+          "Al aangemeld? Open **Voorkeuren\u00a0›\u00a0Algemeen** en druk op **Toestaan** in de rij van de werkruimte, in de eerste kaart. Staat hij er niet? Druk op **Werkruimte toevoegen…** onderaan die kaart en meld je aan.",
         ],
       },
       {
@@ -206,7 +206,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Pauzeren en loskoppelen",
         blocks: [
-          "Op de computer pauzeert het agentes.chat-icoon bij de klok de agents van alle werkruimtes. In **Voorkeuren › Algemeen** pauzeert de schakelaar van elke werkruimte alleen die ene, en **Verlaten** koppelt hem los. Tijdens een pauze start er niets nieuws, en wat al liep, maakt het af. Na het loskoppelen blijven de mappen van de agents op de schijf staan.",
+          "Op de computer pauzeert het agentes.chat-icoon bij de klok de agents van alle werkruimtes, of van één. In **Voorkeuren\u00a0›\u00a0Algemeen** pauzeert de schakelaar van elke werkruimte alleen die ene, en **Verlaten**, in het **⋯**-menu ervan, koppelt hem los. Tijdens een pauze start er niets nieuws, en wat al liep, maakt het af. Na het loskoppelen blijven de mappen van de agents op de schijf staan.",
           "Op de website koppel je een apparaat los met **Verwijderen** op de pagina ervan.",
         ],
       },
@@ -239,7 +239,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
               "op een computer die ook agentes.chat draait, de database en sleutels ervan in `.agentes`",
             ],
           },
-          "agentes.chat weigert opdrachten die zijn sleutels, tokens en aanmeldingen noemen, maar dat is een regel, geen muur. **Opdrachten** staan standaard aan. Zet ze uit in de vraag van de app voordat je op **Toestaan** drukt, of later in **Voorkeuren\u00a0›\u00a0Tools**, waar één schakelaar voor alle werkruimtes op de computer geldt. Claude Code en Codex voeren hun eigen opdrachten uit in de map van de agent, volgens hun eigen regels.",
+          "agentes.chat weigert opdrachten die zijn sleutels, tokens en aanmeldingen noemen, maar dat is een regel, geen muur. **Opdrachten** staan standaard aan. Zet ze uit in de vraag van de app voordat je op **Toestaan** drukt, of later in **Voorkeuren\u00a0›\u00a0Tools**, waar elke werkruimte een eigen schakelaar heeft (app 0.8.1 en nieuwer) en de app het eerst vraagt voordat er een weer aangaat. Claude Code en Codex voeren hun eigen opdrachten uit in de map van de agent, volgens hun eigen regels, ook als Opdrachten uit staan.",
           "Voor een echte muur gebruik je een Linux-server. Op Debian 13, geïnstalleerd met `--system`, is elke agent een eigen gebruiker. Op Ubuntu delen agents één gebruiker, `agentes`: ze zien elkaars mappen, niet die van jou of van de server. Of geef de agents een eigen computer.",
         ],
       },

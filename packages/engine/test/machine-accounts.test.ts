@@ -19,6 +19,7 @@ import {
   type ServerFrame,
   SHARED_ACCOUNTS_PROTOCOL,
   SHARED_CODEX_PROTOCOL,
+  SHARED_GEMINI_PROTOCOL,
   sealSecret,
 } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
@@ -871,6 +872,33 @@ test("ChatGPT's sign-in is made for all of its owner's agents from runner protoc
   expect(await begun(SHARED_CODEX_PROTOCOL - 1)).toBeUndefined();
 });
 
+test("Gemini's sign-in is made for all of its owner's agents from runner protocol 58 on, never before", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine(SHARED_GEMINI_PROTOCOL);
+  const begun = async (protocol: number, provider?: string) => {
+    const runner = fakeHub(
+      machineId,
+      (req) => (req.action === "begin" ? { url: "https://accounts.google.com/o/oauth2/auth?state=s1" } : {}),
+      { protocol },
+    );
+    await beginAccountLogin(
+      runner.deps,
+      f.owner.id,
+      f.org.id,
+      machineId,
+      "antigravity",
+      undefined,
+      undefined,
+      provider,
+    );
+    return (runner.calls.find((c) => c.action === "begin") as { shared?: boolean } | undefined)?.shared;
+  };
+  expect(await begun(SHARED_GEMINI_PROTOCOL)).toBe(true);
+  // A Gemini Enterprise seat too.
+  expect(await begun(SHARED_GEMINI_PROTOCOL, "enterprise")).toBe(true);
+  expect(await begun(SHARED_GEMINI_PROTOCOL - 1)).toBeUndefined();
+});
+
 test("Claude: an account another agent thinks with signs in again as a login of its own, under the account's name", async () => {
   f = await setup();
   const { machineId } = await ownedMachine();
@@ -1670,13 +1698,27 @@ test("an account the runner no longer says is for all agents: the two agents on 
   expect(taken).toMatchObject({ code: "account.in_use" });
 });
 
-test("where each agent is its own OS user, the switch decides: Claude's and ChatGPT's sign-ins and plans' keys for all", async () => {
+test("where each agent is its own OS user, the switch decides: Claude's, ChatGPT's and Gemini's sign-ins and plans' keys for all", async () => {
   f = await setup();
-  const { machineId } = await ownedMachine(SHARED_CODEX_PROTOCOL);
+  const { machineId } = await ownedMachine(SHARED_GEMINI_PROTOCOL);
   const [m] = await f.db.select().from(schema.machines).where(eq(schema.machines.id, machineId));
   await f.db
     .update(schema.machines)
     .set({ executors: { ...m?.executors, mode: "system" } })
+    .where(eq(schema.machines.id, machineId));
+  expect((await listAiAccounts({ db: f.db }, f.owner.id, f.org.id)).computers[0]?.shares).toEqual({
+    claude_code: true,
+    codex: true,
+    cursor: false,
+    opencode: false,
+    grok: false,
+    antigravity: true,
+    key: true,
+  });
+  // A runner before protocol 58 shares Gemini's with no one.
+  await f.db
+    .update(schema.machines)
+    .set({ protocol: SHARED_GEMINI_PROTOCOL - 1 })
     .where(eq(schema.machines.id, machineId));
   expect((await listAiAccounts({ db: f.db }, f.owner.id, f.org.id)).computers[0]?.shares).toEqual({
     claude_code: true,

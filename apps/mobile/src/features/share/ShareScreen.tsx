@@ -1,4 +1,5 @@
 import { keys, useApi } from "@agenteschat/client";
+import { makesAgents } from "@agenteschat/client/lib/permissions";
 import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { type NativeStackNavigationOptions, useNavigation } from "expo-router";
@@ -14,6 +15,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useOrg } from "@/providers/org";
 import {
   Button,
   EmptyState,
@@ -28,13 +30,12 @@ import {
   Text,
   useReducedMotion,
   useTheme,
-  useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { chatHref } from "../links/logic";
 import { askTargets } from "../new/logic";
 import { AgentFace } from "../shared/Face";
-import { useDirectory, useOrgId } from "../shared/hooks";
+import { useDirectory, useErrorToast, useOrgId } from "../shared/hooks";
 import { goBack } from "../shared/parts";
 import { useConversations } from "../shared/queries";
 import { handShare } from "./handoff";
@@ -68,8 +69,9 @@ export function ShareScreen() {
   const { colors } = useTheme();
   const api = useApi();
   const orgId = useOrgId();
+  const creates = makesAgents(useOrg().org);
   const qc = useQueryClient();
-  const toast = useToast();
+  const failed = useErrorToast();
   const dir = useDirectory();
   const list = useConversations();
   const shared = useShared();
@@ -119,10 +121,10 @@ export function ShareScreen() {
       // The catch plays out (it started with the tap), then the conversation: no wait added past a slow network.
       const rest = reduced ? 0 : Math.max(0, CATCH_MS - (Date.now() - started));
       setTimeout(() => router.replace(chatHref(channelId)), rest);
-    } catch {
+    } catch (e) {
       sent.set(withTiming(0, { duration: 160, easing: EASE_OUT }));
       setSending(false);
-      toast({ title: t("mobile.app.failed"), icon: "x" });
+      failed(e);
     }
   };
 
@@ -219,12 +221,14 @@ export function ShareScreen() {
                     title={t("mobile.share.noAgents")}
                     subtitle={t("mobile.share.noAgentsHint")}
                     action={
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        label={t("mobile.share.createAgent")}
-                        onPress={() => router.replace("/new-agent")}
-                      />
+                      creates ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          label={t("mobile.share.createAgent")}
+                          onPress={() => router.replace("/new-agent")}
+                        />
+                      ) : undefined
                     }
                   />
                 ) : null}

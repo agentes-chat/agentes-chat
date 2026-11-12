@@ -212,32 +212,18 @@ html:not([data-pointer]) .ni__pill:focus-visible {
   max-height: min(70vh, 560px);
   overflow: auto;
 }
+/* A media row (`.ac-mediarow`): the face and the headline on one line, the notice and its answer under them. */
 .ni__item {
   position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 12px;
   padding: 12px 12px 14px;
   animation: ni-fade 0.3s both;
 }
 .ni__item + .ni__item {
   box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.08);
 }
-.ni__item > .ni__face {
-  width: 34px;
-  height: 34px;
-}
-.ni__body {
-  min-width: 0;
-  padding-right: 26px;
-}
-/* Its reset at no weight, so the rise to the face's top (`.ac-captop`) wins it. */
-:where(.ni__title) {
-  margin: 0;
-}
+/* Room for the × beside the headline's line. */
 .ni__title {
-  font-size: 14px;
-  line-height: 1.35;
+  padding-right: 26px;
   color: var(--ink-muted);
 }
 .ni__title b {
@@ -246,7 +232,6 @@ html:not([data-pointer]) .ni__pill:focus-visible {
 }
 .ni__text {
   display: -webkit-box;
-  margin-top: 2px;
   font-size: 14px;
   line-height: 1.42;
   color: var(--ink2);
@@ -257,15 +242,11 @@ html:not([data-pointer]) .ni__pill:focus-visible {
 .ni__acts {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
+  gap: var(--space-2);
 }
-/* Only buttons (no answers to pick): they end the notice at its right edge, where the × above ends, the main one
-   last; the body's room for the × is only for the title's lines. */
+/* Only buttons (no answers to pick): they end the notice at its right edge, where the × above ends. */
 .ni__acts:not(:has(.ni__choice)) {
-  flex-direction: row-reverse;
-  justify-content: flex-start;
-  margin-right: -26px;
+  justify-content: flex-end;
 }
 /* Choices can be whole sentences: each grows with its text and wraps inside the card. They are buttons, so the
    ruler's small corner (30% of 32), not a pill. */
@@ -303,7 +284,6 @@ html:not([data-pointer]) .ni__choice:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 10px;
   padding: 4px 4px 4px 12px;
   border-radius: 14px 14px 14px 4px;
   background: rgba(255, 255, 255, 0.06);
@@ -327,15 +307,22 @@ html:not([data-pointer]) .ni__choice:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 13.5px;
   font-weight: 650;
   color: var(--ok);
 }
 .ni__failed {
-  margin: 6px 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--danger);
+}
+/* Why it takes no answer (the workspace is being deleted), where the answer would go. */
+.ni__readonly {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.42;
+  color: var(--ink2);
 }
 .ni__x {
   position: absolute;

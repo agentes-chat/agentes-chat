@@ -1580,7 +1580,6 @@
       "limit": "{{name}} heeft de limiet van vandaag bereikt: deze blijft bij jou",
       "undoneByYou": "Door jou ongedaan gemaakt",
       "undoneBy": "Door {{name}} ongedaan gemaakt",
-      "why": "Waarom?",
       "undo": "Ongedaan maken",
       "undoArchives": "Ongedaan maken archiveert {{name}}. Kan tot {{until}}.",
       "undoSettings": "Ongedaan maken zet de instellingen terug. Kan tot {{until}}."
@@ -1660,6 +1659,7 @@
     "unshown": "Kon niet worden getoond",
     "more": "Meer",
     "moreWhat": {
+      "waiting": "Alles wat op jouw antwoord wacht",
       "approvals": "Wat agents je vragen toe te staan",
       "proposals": "Wat agents willen veranderen",
       "threads": "Gesprekken die aftakken, en missies",
@@ -1758,6 +1758,7 @@
     "searchWorkspace": "De werkruimte doorzoeken",
     "summary_one": "{{people}} lid · {{agents}} agents",
     "summary_other": "{{people}} leden · {{agents}} agents",
+    "waiting": "Wacht op jou",
     "approvals": "Goedkeuringen",
     "proposals": "Verbeteringsvoorstellen",
     "issues": "Taken",
@@ -1975,7 +1976,8 @@
       "emptyViewer": "Wie de agents beheert, voegt ze toe aan kanalen, en de kaart verschijnt hier.",
       "others": "Andere kanalen",
       "band": "Supervisors",
-      "reportsTo": "Rapporteert aan {{name}}"
+      "reportsTo": "Rapporteert aan {{name}}",
+      "short": "Wie voor elke agent zorgt en waar die werkt."
     },
     "sectors": {
       "lead": "Elke afdeling heeft een hoofd, een vervanger, haar agenten en hun kanalen en routines.",
@@ -2216,7 +2218,19 @@
     "correctionSent": "Correctie verstuurd. {{name}} leert ervan.",
     "correctionSent_female": "Correctie verstuurd. {{name}} leert ervan.",
     "sending": "versturen…",
-    "notSent": "Niet verstuurd",
+    "tooLong": {
+      "text": "Het bericht heeft {{length}} tekens en de limiet is {{max}}.",
+      "fix": "Stuur de tekst als bestand.",
+      "asFile": "Als bestand sturen",
+      "fileName": "bericht.txt"
+    },
+    "notSentWhy": "Niet verzonden. {{why}}",
+    "notSentUnknown": "Er ging iets mis.",
+    "editSend": "Bewerken",
+    "long": {
+      "more": "Meer tonen",
+      "title": "Bericht van {{name}}"
+    },
     "retrySend": "Opnieuw proberen",
     "thinking": "{{name}} denkt na…",
     "typing_one": "{{names}} typt…",
@@ -2321,8 +2335,9 @@
       "connect": {
         "title": "Een AI voor het team koppelen",
         "titlePersonal": "Een AI voor je agents koppelen",
-        "text": "De agents denken met de AI van de workspace. Log in met je Claude- of ChatGPT-abonnement, zonder API-sleutel.",
-        "textPersonal": "Je agents denken met deze AI. Log in met je Claude- of ChatGPT-abonnement, zonder API-sleutel.",
+        "text": "Log in met je Claude- of ChatGPT-abonnement, zonder API-sleutel.",
+        "hint": "De agents denken met de AI van de workspace.",
+        "hintPersonal": "Je agents denken met deze AI.",
         "action": "Koppelen"
       },
       "again": {
@@ -2393,6 +2408,14 @@
       "groupMine": "Alleen voor jou",
       "groupWorkspace": "Voor de hele workspace",
       "groupAdmins": "alleen admins"
+    },
+    "powers": {
+      "title": "Bevoegdheden in de workspace",
+      "help": "Alleen je rechterhand doet dit.",
+      "team": "Zet het hele team op en past het aan met kaarten die een persoon toepast: agents, mensen en workspace-instellingen",
+      "routines": "Start en verwijdert routines van elke agent die jij mag beheren",
+      "asYou": "Leest in je eigen gesprek de Drive, de wiki en de taken die jij kunt zien",
+      "mentions": "Antwoordt op een @vermelding in elk kanaal zonder lid te zijn"
     },
     "card": {
       "settings": "{{name}} · Instellingen",
@@ -2691,10 +2714,16 @@
       "useKey": "API-sleutel gebruiken"
     },
     "kept": {
-      "title": "Ik heb je bericht bewaard.",
-      "line": "Ik antwoord hier zodra de workspace een agentes.chat-abonnement en een gekoppelde AI heeft.",
+      "title": "Ik heb je bericht bewaard",
+      "wait": {
+        "payment": "Ik antwoord hier zodra de workspace een agentes.chat-abonnement heeft.",
+        "unpaid": "Ik antwoord hier zodra de betaling van het agentes.chat-abonnement is gelukt.",
+        "ended": "Ik antwoord hier zodra de workspace zich opnieuw op agentes.chat abonneert."
+      },
+      "askAdmin": "Ik antwoord hier zodra een beheerder het agentes.chat-abonnement heeft geregeld.",
       "plan": "Het abonnement brengt de computer van de agents, altijd aan. De AI is die waarvoor je al betaalt: Claude, ChatGPT en andere, of een API-sleutel.",
-      "active": "Abonnement actief. Koppel een AI en {{name}} antwoordt hier.",
+      "activeTitle": "Abonnement actief",
+      "activeLine": "Koppel een AI en {{name}} antwoordt hier.",
       "receipt": "Bewaard",
       "channel": "Bewaard. De agents antwoorden zodra de workspace een agentes.chat-abonnement heeft."
     },
@@ -2825,7 +2854,7 @@
       "gemini": {
         "title": "Je Gemini-abonnement",
         "tiers": "Google AI Pro, Google AI Ultra of Gemini Enterprise",
-        "warning": "Volgens Google kan het gebruik van een persoonlijk Gemini-abonnement in andere apps ertoe leiden dat het account wordt geschorst. Wil je dat risico niet lopen? Gebruik een API-sleutel of Gemini Enterprise."
+        "warning": "Volgens Google kan het gebruik van een persoonlijk Gemini-abonnement in andere apps ertoe leiden dat het account wordt geschorst."
       },
       "zen": {
         "title": "OpenCode",
@@ -2951,6 +2980,22 @@
       "always": "{{name}} zei altijd hiervoor",
       "not_now": "{{name}} zei nu niet",
       "never": "{{name}} zei nooit hiervoor"
+    }
+  },
+  "approvalsLevel": {
+    "title": "Goedkeuringen",
+    "lead": "Wanneer {{name}} iemand vraagt voordat er iets gebeurt.",
+    "always": {
+      "title": "Altijd vragen",
+      "text": "Vraagt voordat er iets in een app verandert."
+    },
+    "risky": {
+      "title": "Alleen wat riskant is",
+      "text": "Vraagt voor verwijderen, verzenden of betalen."
+    },
+    "never": {
+      "title": "Nooit vragen",
+      "text": "Vraagt nog wel bij merge, deploy en rollback."
     }
   },
   "brakes": {
@@ -3096,6 +3141,8 @@
       "title": "{{agent}} stelt een nieuwe agent voor",
       "review": "Bekijken",
       "created": "Aangemaakt",
+      "createdBy": "Gemaakt door {{name}}",
+      "createdByYou": "Door jou gemaakt",
       "aiAccount": "Denkt met {{account}}",
       "aiModel": "Denkt via de API",
       "aiNone": "Nog geen AI. Koppel er een na het aanmaken",
@@ -3177,6 +3224,8 @@
       "updated_priority": "Prioriteit van <b>#{{number}}</b> op {{priority}} gezet · {{title}}",
       "assigned": "<b>#{{number}}</b> toegewezen aan {{assignee}} · {{title}}",
       "assigned_self": "<b>#{{number}}</b> zelf opgepakt · {{title}}",
+      "assigned_you": "<b>#{{number}}</b> aan jou toegewezen · {{title}}",
+      "assigned_none": "Toewijzing van <b>#{{number}}</b> verwijderd · {{title}}",
       "files": "Bijgevoegd: {{names}}"
     },
     "memory": {
@@ -3259,6 +3308,7 @@
       "priority": "de prioriteit",
       "assignee": "de toegewezen persoon",
       "labels": "de labels",
+      "project": "het project",
       "dueDate": "de deadline",
       "githubUrl": "de GitHub-link",
       "criteria": "de criteria",
@@ -3281,6 +3331,42 @@
     "changes_other": "{{count}} wijzigingen",
     "undoneBy": "Ongedaan gemaakt door {{name}}",
     "group": "Wijzigingen door {{name}}",
+    "several": {
+      "issue": {
+        "created": "Taken aangemaakt: {{refs}}",
+        "updated": "Bij taken {{fields}} gewijzigd: {{refs}}",
+        "assigned": "Taken toegewezen aan {{assignee}}: {{refs}}",
+        "assigned_self": "Taken zelf opgepakt: {{refs}}",
+        "assigned_you": "Taken aan jou toegewezen: {{refs}}",
+        "assigned_none": "Toewijzing van taken verwijderd: {{refs}}"
+      },
+      "routine": {
+        "created": "Routines aangemaakt: {{refs}}",
+        "updated": "Bij routines {{fields}} gewijzigd: {{refs}}",
+        "deleted": "Routines verwijderd: {{refs}}"
+      },
+      "channel": {
+        "agent_added": "{{agentName}} toegevoegd aan {{refs}}",
+        "created": "Kanalen aangemaakt: {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Wikipagina's aangemaakt: {{refs}}",
+        "page_edited": "Wikipagina's bewerkt: {{refs}}"
+      },
+      "thread": {
+        "closed": "Gesprekken gesloten: {{refs}}"
+      },
+      "skill": {
+        "created": "Wat ik leerde omgezet in de skills {{refs}}",
+        "updated": "Skills verbeterd: {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "Instellingen gewijzigd van {{refs}}"
+      },
+      "pr": {
+        "merged": "Gemerged in <b>{{repo}}</b>: PR's {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "Iemand heeft dit sindsdien gewijzigd. Nu ongedaan maken zou die wijziging wissen.",
       "expired": "De tijd om ongedaan te maken is voorbij.",
@@ -3671,7 +3757,7 @@
       "clearFilters": "Zoekopdracht wissen",
       "personalNote": "Alleen jij ziet deze items. Je agenten gebruiken ze alleen als je erom vraagt.",
       "personalEmpty": "Bewaar je logins en sleutels veilig",
-      "personalEmptyText": "Alleen jij ziet deze items. Je agenten gebruiken ze alleen als je erom vraagt.",
+      "personalEmptyText": "Alleen jij ziet deze items, en je agenten gebruiken ze alleen als je erom vraagt.",
       "teamEmpty": "Deel logins zonder wachtwoorden door te geven",
       "teamEmptyPersonal": "Bewaar gedeelde logins op één plek",
       "teamEmptyText": "Sla een login, een sleutel of contactgegevens één keer op en kies welke agenten het mogen gebruiken.",
@@ -4028,6 +4114,37 @@
       "codeShort_one": "Typ het cijfer.",
       "codeShort_other": "Typ alle {{count}} cijfers.",
       "codeWhere": "Alleen de browser van {{agent}} typt het, op {{host}}."
+    },
+    "env": {
+      "open": ".env importeren",
+      "title": "Sleutels importeren",
+      "text": "Neemt een .env-bestand, met één regel NAAM=waarde per sleutel, of een JSON met namen en waarden.",
+      "paste": "Of plak de inhoud hier",
+      "review": "Controleren",
+      "none": "Geen regel NAAM=waarde gevonden. Controleer het bestand en probeer het opnieuw.",
+      "tooLarge": "Dit bestand is te groot (maximaal 512 KB).",
+      "tooMany": "Te veel sleutels tegelijk (maximaal {{max}}). Splits het bestand en importeer elk deel.",
+      "duplicates": "Staan meer dan eens in het bestand, de laatste waarde telt: {{names}}",
+      "new": "Nieuw",
+      "exists": "Bestaat al",
+      "replace": "Vervangen",
+      "show": "Waarde van {{name}} tonen",
+      "hide": "Waarde van {{name}} verbergen",
+      "problem": {
+        "name": "De naam moet eruitzien als ACME_API_KEY",
+        "reserved": "Gereserveerde naam",
+        "empty": "Geen waarde",
+        "tooLarge": "Waarde te groot"
+      }
+    },
+    "move": {
+      "toTeam": "Verplaatsen naar Team",
+      "toTeamPersonal": "Verplaatsen naar Gedeeld",
+      "toPersonal": "Verplaatsen naar Persoonlijk",
+      "title": "{{title}} verplaatsen?",
+      "toTeamText": "Iedereen in de werkruimte ziet dit item, en de agenten ervan gebruiken het als iemand erom vraagt. Wie de Vault beheert, kan het bewerken.",
+      "toPersonalText": "Alleen jij ziet en bewerkt dit item, en de agenten ervan gebruiken het alleen als jij erom vraagt. Alle anderen zien het niet meer.",
+      "moved": "Verplaatst"
     }
   },
   "question": {
@@ -4080,6 +4197,8 @@
       "team": "<b>{{name}}</b> stelt een team voor · {{what}}",
       "firstTask": "<b>{{name}}</b> stelt een eerste taak voor · {{what}}",
       "more": "+{{count}}",
+      "here_one": "{{count}} wacht hier op jou",
+      "here_other": "{{count}} wachten hier op jou",
       "see": "Bekijken"
     }
   },
@@ -5003,7 +5122,9 @@
           "codeLabel": "Claude-code",
           "notCode": "Dat lijkt geen code van Claude.",
           "stepTwoGoogle": "Plak de code die Google laat zien",
-          "codeLabelGoogle": "Code of link",
+          "codeLabelGoogle": "Code van Google",
+          "codeHintGoogle": "Plak de code die de pagina van Google laat zien, niet het adres van de pagina.",
+          "notCodeGoogle": "Dat is een adres zonder code. Plak de code die de pagina van Google laat zien.",
           "send": "Naar {{computer}} sturen",
           "sending": "Code naar {{computer}} sturen…",
           "sent": "Code verstuurd. Inloggen wordt afgerond op {{computer}}.",
@@ -5016,6 +5137,18 @@
           "reconnecting": "Opnieuw verbinden…",
           "failed": "Inloggen op dat account lukte niet. Probeer het opnieuw.",
           "expired": "De tijd om in te loggen is verlopen. Probeer het opnieuw.",
+          "why": {
+            "not_installed": "{{brand}} is niet geïnstalleerd op {{computer}}. Probeer het opnieuw.",
+            "no_tty": "De code kwam op {{computer}} niet aan bij {{brand}}. Probeer het opnieuw.",
+            "network": "{{brand}} was niet bereikbaar vanaf {{computer}}. Probeer het opnieuw.",
+            "bad_code": "{{brand}} weigerde de code. Probeer het opnieuw en plak alleen de code die de pagina laat zien.",
+            "cli_exit": "{{brand}} stopte met een fout op {{computer}}. Probeer het opnieuw.",
+            "not_signed_in_after_login": "{{brand}} accepteerde het inloggen, maar dit account kan hier niet worden gebruikt, misschien valt het niet onder het abonnement. Probeer een ander account of een API-sleutel.",
+            "status_unknown": "{{brand}} liet niet weten of het account is ingelogd. Probeer het opnieuw.",
+            "no_token": "{{brand}} was klaar zonder het token van het account te tonen. Probeer het opnieuw.",
+            "not_kept": "Het account is ingelogd, maar {{computer}} kon de login niet bewaren. Probeer het opnieuw."
+          },
+          "geminiNotShared": "Gemini is ingelogd, maar {{computer}} kan die login niet met alle agents delen. Gebruik liever een Gemini-API-sleutel.",
           "duplicate": {
             "claude_code": "Claude is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Claude en probeer het opnieuw.",
             "codex": "ChatGPT is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van ChatGPT en probeer het opnieuw.",
@@ -6169,9 +6302,13 @@
     "approvalsNote": "Merge, deploy en rollback vragen altijd om goedkeuring in de chat.",
     "approverOwner": "{{name}} keurt goed.",
     "approverAdmins": "Een beheerder keurt goed.",
+    "skillsTitle": "Skills van de werkruimte",
     "skillsHelp": "Handleidingen die {{name}} opent als het nodig is.",
     "skillsHelp_female": "Handleidingen die {{name}} opent als het nodig is.",
+    "importCard": "Uit een andere app",
+    "importCardLine": "Haal de agents op die je al in een andere app hebt.",
     "channels": "Kanalen",
+    "channelsJoin": "Komt in deze kanalen",
     "channelsHelp": "Komt er nu in. Je kunt hem later aan andere kanalen toevoegen.",
     "noChannels": "Je zit nog in geen enkel kanaal. Je kunt de agent later aan een kanaal toevoegen.",
     "owner": "Eigenaar",
@@ -6413,10 +6550,12 @@
       "title": "Apps van {{name}}",
       "titleBlank": "Apps van de agent",
       "lead": "Een gekoppelde app komt meteen op de kaart. Andere koppel je hier.",
+      "leadList": "Een gekoppelde app komt meteen op de lijst. Andere koppel je hier.",
       "suggested": "Voorgesteld voor {{name}}",
       "suggestedBlank": "Voorgesteld",
       "use": "Gebruiken",
-      "added": "Op de kaart"
+      "added": "Op de kaart",
+      "addedList": "Op de lijst"
     },
     "create": "{{name}} maken",
     "createBlank": "Agent maken",
@@ -6483,6 +6622,8 @@
     "agentsOnlyYouHint": "Met een abonnement kun je op de pagina van elke agent instellen dat hij ook anderen antwoordt.",
     "filters": "Mensen filteren",
     "rolesOf": "Rollen van {{name}}",
+    "rolesAdd": "Rol toevoegen",
+    "rolesChange": "Rollen wijzigen",
     "moreOf": "Meer voor {{name}}",
     "passwordLink": {
       "item": "Link voor nieuw wachtwoord maken",
@@ -7058,6 +7199,7 @@
         "due": "Deadline"
       },
       "field": {
+        "project": "Project",
         "assignee": "Toegewezen aan",
         "priority": "Prioriteit",
         "due": "Deadline",
@@ -7084,6 +7226,22 @@
       "prioritized": "#{{number}} heeft nu prioriteit {{priority}}."
     },
     "canceledColumn": "Geannuleerd",
+    "projects": {
+      "label": "Project",
+      "none": "Geen project",
+      "all": "Alle projecten",
+      "new": "Nieuw project",
+      "edit": "Project bewerken",
+      "create": "Project maken",
+      "archive": "Project archiveren",
+      "unarchive": "Project terugzetten",
+      "archived": "Gearchiveerd",
+      "archivedMark": "Gearchiveerd",
+      "delete": "Project verwijderen",
+      "deleteTitle": "Project {{name}} verwijderen?",
+      "deleteBody": "De taken blijven bestaan, zonder project.",
+      "empty": "Nog geen taken in dit project."
+    },
     "columns": {
       "add": "Kolom toevoegen",
       "options": "Opties voor kolom {{name}}",
@@ -7353,6 +7511,8 @@
       "pr_linked": "heeft PR #{{number}} gekoppeld",
       "github_linked": "heeft het aan GitHub gekoppeld",
       "github_unlinked": "heeft de GitHub-link verwijderd",
+      "project_set": "heeft de taak naar het project {{project}} verplaatst",
+      "project_removed": "heeft de taak uit het project gehaald",
       "artifact_linked": "heeft een bestand toegevoegd",
       "files_attached": "heeft {{names}} toegevoegd",
       "files_removed": "heeft {{names}} uit de bijlagen gehaald",
@@ -7423,7 +7583,8 @@
         "bad_signature": "Geweigerd: verkeerde handtekening",
         "too_large": "Geweigerd: groter dan 256 KB",
         "rate_limited": "Geweigerd: te veel aanroepen per minuut"
-      }
+      },
+      "newShort": "De routine krijgt een eigen adres."
     },
     "setup": {
       "title": "{{provider}}-webhook",
@@ -7615,7 +7776,9 @@
     "ownActions": {
       "hint": "Elke run doet dit in je gekoppelde apps zonder te vragen. Elke andere actie daar vraagt eerst een persoon om goedkeuring, en merge, deploy en rollback vragen dat altijd.",
       "none": "In gekoppelde apps vraagt ze voor elke actie eerst een persoon om goedkeuring. Wil je dat ze haar werk zelf doet, vertel de agent in de chat welke acties ze mag doen.",
-      "remove": "Weer vragen vóór: {{action}}"
+      "remove": "Weer vragen vóór: {{action}}",
+      "hintShort": "Elke run doet dit zonder te vragen.",
+      "noneShort": "Ze vraagt voor elke actie eerst een persoon om goedkeuring."
     },
     "ahead": {
       "approved": "Goedgekeurd · draait {{when}}",
@@ -9308,7 +9471,7 @@
     "undoUpdate": "Update ongedaan maken",
     "undone": "{{name}} is terug naar versie {{version}}.",
     "agentsImprove": "Agents verbeteren skills zelf",
-    "agentsImproveHelp": "Vindt een agent een skill fout of mist er een stap, dan verbetert hij die meteen: een nieuwe versie die je ongedaan kunt maken, en wie de skill maakte hoort het. Wijzigingen in scripts wachten op iemand die skills beheert.",
+    "agentsImproveHelp": "Vindt een agent een skill fout of mist er een stap, dan verbetert hij die meteen: een nieuwe versie die je ongedaan kunt maken, en wie de skill maakte hoort het.",
     "agentsImproveThis": "Agents verbeteren deze skill zelf",
     "agentChange": "{{agent}} heeft hem gewijzigd {{when}}",
     "undoAgentChange": "Wijziging ongedaan maken",
@@ -9379,8 +9542,7 @@
     "agentTitle": "Skills",
     "agentSubtitle": "Wat {{name}} kan openen als het nodig is.",
     "agentEmpty": "{{name}} heeft nog geen skills.",
-    "manage": "Skills beheren",
-    "step": "Skills"
+    "manage": "Skills beheren"
   },
   "edit": {
     "unsaved": "Niet-opgeslagen wijzigingen",
@@ -9666,7 +9828,9 @@
       "some_female": "{{name}} antwoordt alleen bepaalde mensen.",
       "nobody": "{{name}} antwoordt nu niemand.",
       "nobody_female": "{{name}} antwoordt nu niemand."
-    }
+    },
+    "agentsToo": "Dit geldt ook voor agents.",
+    "peopleOnly": "Dit geldt alleen voor mensen."
   },
   "composer": {
     "commands": "Opdrachten",
@@ -10474,7 +10638,7 @@
     "ask": {
       "button": "Een agent vragen",
       "title": "Een agent vragen",
-      "text": "Het verzoek gaat naar je gesprek met de agent, met de link naar de pagina. Hij bewerkt met de wikitools, en de versie staat in de geschiedenis als op jouw verzoek.",
+      "text": "Het verzoek gaat naar je gesprek met de agent, met de link naar de pagina.",
       "agent": "Agent",
       "what": "Wat moet er veranderen?",
       "placeholder": "Bijv. werk haar bij met de prijsverhoging van 2027",
@@ -10587,7 +10751,8 @@
         "empty": "Geen .md-notities gevonden. Stuur de .zip van de vaultmap, de map of .md-bestanden.",
         "too_big": "De vault is groter dan 500 MB. Stuur hem zonder de grote bijlagen, of in delen.",
         "unreadable": "Kon het bestand niet lezen. Is het een .zip van de vault?"
-      }
+      },
+      "howToLabel": "Zo maak je de .zip"
     },
     "save": "Opslaan in de wiki",
     "saveTitle": "Opslaan in de wiki",
@@ -11327,7 +11492,7 @@
   },
   "githubApp": {
     "title": "GitHub-repository's",
-    "text": "Waar de agentes.chat-app is geïnstalleerd, openen agents pull requests, issues, opmerkingen en commits als de app, met de naam van de agent en van wie het vroeg. Alleen {{org}} gebruikt wat je hier installeert.",
+    "text": "Waar de agentes.chat-app is geïnstalleerd, openen agents pull requests, issues, opmerkingen en commits als de app, met de naam van de agent en van wie het vroeg.",
     "install": "De agentes.chat-app installeren",
     "installMore": "Op een ander account installeren",
     "none": "Nog geen GitHub-account.",
@@ -11350,6 +11515,7 @@
     "notVisible": "Je GitHub-account kan die installatie niet zien. Installeer hem met een account dat er toegang toe heeft.",
     "otherWorkspace": "Dat GitHub-account is al gekoppeld aan een andere werkruimte. Verwijder de app daar voordat je hem hier installeert.",
     "installedOutside": "De app is buiten agentes.chat op dat GitHub-account geïnstalleerd. Verwijder hem op GitHub en installeer hem opnieuw via Connectors › GitHub.",
+    "ownerUnknown": "GitHub zei niet wie eigenaar is van die organisatie. Wie de server beheert, moet de organisatiemachtiging Members (alleen lezen) aan de GitHub-app toevoegen, daarna installeer je hem opnieuw.",
     "misconfigured": "De GitHub-app heeft op de server de verkeerde geheime sleutel, dus de installatie kan niet worden afgerond. Wie de server beheert, moet de sleutel vervangen in de instellingen van de app.",
     "connectAccount": "Een GitHub-account koppelen",
     "ownerHint": "De eigenaar van deze server kan de GitHub-app hier bij Connectors maken.",
@@ -11402,7 +11568,8 @@
       "none": "Geen repositories gekozen. Elke merge vraagt om goedkeuring.",
       "help": "In deze repositories loopt een merge zonder goedkeuringskaart, komt in de audit en laat een bewijs achter in het gesprek. Al het andere gevoelige blijft vragen.",
       "dialogTitle": "Waar {{name}} merget zonder te vragen",
-      "dialogDesc": "Alleen repositories die al gebruikt worden. Een merge ergens anders vraagt om goedkeuring."
+      "dialogDesc": "Alleen repositories die al gebruikt worden. Een merge ergens anders vraagt om goedkeuring.",
+      "short": "In deze repositories loopt een merge zonder goedkeuringskaart."
     },
     "label": "Welke repositories",
     "all": "Alle repositories",
@@ -12324,7 +12491,8 @@
       "added": "Nu ook: {{names}}.",
       "removed": "Niet meer: {{names}}.",
       "same": "Er is niets veranderd in de organisaties.",
-      "failed": "De organisaties konden nu niet worden gelezen."
+      "failed": "De organisaties konden nu niet worden gelezen.",
+      "short": "GitHub vraagt alleen de eerste keer naar organisaties."
     },
     "composioHelp": "Je logt in op de pagina van Composio, in het Engels, en komt hier terug. {{name}} toont de toestemming als “Composio”.",
     "or": "of",
@@ -12528,7 +12696,8 @@
       "timeout": "Tijdslimiet per query",
       "timeoutHelp": "Een query die langer duurt, wordt geannuleerd, zodat hij de database niet belast.",
       "seconds_one": "{{count}} seconde",
-      "seconds_other": "{{count}} seconden"
+      "seconds_other": "{{count}} seconden",
+      "hiddenExample": "tabel.kolom, zoals klanten.\"Btw-nummer\""
     },
     "agent": {
       "title": "Databases",
@@ -12582,7 +12751,7 @@
     "address": "E-mailadres",
     "addressPlaceholder": "jij@bedrijf.nl",
     "addressInvalid": "Typ een geldig e-mailadres, zoals jij@bedrijf.nl.",
-    "icloudHint": "Gebruik je iCloud Mail-adres, zoals naam@icloud.com, ook als je Apple-account {{name}} gebruikt. Op een iPhone staat het in Instellingen › je naam › iCloud › iCloud Mail, of kijk op icloud.com/mail.",
+    "icloudHint": "Gebruik je iCloud Mail-adres, zoals naam@icloud.com, ook als je Apple-account {{name}} gebruikt.",
     "password": "App-wachtwoord",
     "passwordHelp": "Versleuteld opgeslagen op de server. Niemand ziet het nog.",
     "passwordInvalid": "Plak het app-wachtwoord.",
@@ -12699,7 +12868,8 @@
       "newFrom": "Nieuwe mails gaan uit vanaf",
       "newFromHelp": "Antwoorden gaan altijd uit vanaf het adres waar de mail naartoe is gestuurd.",
       "later": "Je kunt dit later wijzigen bij Adressen.",
-      "saved": "Adressen van {{address}} opgeslagen."
+      "saved": "Adressen van {{address}} opgeslagen.",
+      "short": "Agents antwoorden vanaf het adres waar de mail naartoe is gestuurd."
     },
     "agent": {
       "title": "Mail",
@@ -12790,7 +12960,8 @@
       "every": "Draait voor elke nieuwe mail die door de filters komt.",
       "needsReconnect": "Opnieuw koppelen nodig",
       "error": "Mislukt"
-    }
+    },
+    "toolsShort": "Kies wat agents met deze e-mail doen."
   },
   "searchPage": {
     "title": "De werkruimte doorzoeken",
@@ -13012,6 +13183,9 @@
     },
     "issue": {
       "assigneeOutside": "Deze persoon ziet deze taak niet. Voeg die eerst toe bij Wie het ziet.",
+      "projectNameTaken": "Er bestaat al een project met die naam.",
+      "projectArchived": "Dit project is gearchiveerd en krijgt geen nieuwe taken.",
+      "projectsFull": "Een workspace heeft hoogstens {{max}} projecten. Verwijder er eerst een.",
       "stageFull": "Een fase heeft hoogstens {{max}} kolommen. Verwijder eerst een van de kolommen.",
       "deleteForbidden": "Alleen wie deze taak heeft gemaakt of een beheerder kan hem verwijderen.",
       "audienceEmpty": "Kies wie het ziet."
@@ -13215,6 +13389,7 @@
       "targetNotFound": "Die computer bestaat niet meer. Kies een andere.",
       "targetSame": "De agents staan al op die computer.",
       "targetPaused": "Die computer is gepauzeerd. Kies een andere.",
+      "pausePast": "Kies een tijd in de toekomst.",
       "accountMethodUnsupported": "Deze computer kan Claude nog niet op deze manier koppelen. Werk het agentes.chat-programma erop bij, of gebruik een API-sleutel.",
       "offline": "{{name}} is nu offline. Probeer het opnieuw zodra hij terug is.",
       "paused": "{{name}} is gepauzeerd: er start niets nieuws op tot hij wordt hervat.",
@@ -13313,7 +13488,8 @@
         "unsupported": "Deze wachtwoordmanager kan hier niet koppelen.",
         "invalidInput": "Controleer de velden en probeer het opnieuw.",
         "tooManyItems": "De Vault is vol. Verwijder items voordat je meer synchroniseert."
-      }
+      },
+      "unreadable": "De opgeslagen waarde kan hier niet worden gelezen. Sla hem opnieuw op en verplaats hem daarna."
     },
     "feedback": {
       "filesGone": "Een bestand dat je hebt toegevoegd is weg. Voeg het opnieuw toe.",
@@ -13348,6 +13524,21 @@
     "paused": "Gepauzeerd",
     "pausedUntil": "Gepauzeerd tot {{time}}",
     "pausedHint": "Gepauzeerd op de computer zelf door degene die hem heeft gekoppeld.",
+    "remotePause": {
+      "button": "Pauzeren",
+      "menu": "{{name}} pauzeren",
+      "oneHour": "1 uur",
+      "tomorrow": "Tot morgen 9.00 uur",
+      "manual": "Tot ik hervat",
+      "resume": "Hervatten",
+      "byYou": "Door jou gepauzeerd.",
+      "byYouUntil": "Door jou gepauzeerd tot {{time}}.",
+      "byName": "Door {{name}} gepauzeerd.",
+      "byNameUntil": "Door {{name}} gepauzeerd tot {{time}}.",
+      "outdated": "Werk de agentes.chat-app op deze computer bij om hem hiervandaan te pauzeren.",
+      "paused": "{{name}} is gepauzeerd",
+      "resumed": "{{name}} werkt weer"
+    },
     "seenNow": "nu verbonden",
     "seen": "gezien {{when}}",
     "neverSeen": "nog niet verbonden",
@@ -13763,6 +13954,8 @@
       "openApp": "Open de app",
       "server": "Een server of VPS",
       "serverLine": "Eén regel om in de terminal te plakken",
+      "httpLine": "Eén regel om in de terminal te plakken. De app koppelt hem met één klik op een https-adres.",
+      "httpHow": "Hoe",
       "other": "Een andere computer",
       "otherLine": "Installeer de app erop",
       "android": "Android-telefoon",
@@ -14495,7 +14688,9 @@
         "imported": "Wachtwoorden in de Vault geïmporteerd",
         "connection_added": "Een wachtwoordmanager aan de Vault gekoppeld",
         "connection_changed": "De koppeling van een wachtwoordmanager gewijzigd",
-        "connection_removed": "Een wachtwoordmanager van de Vault ontkoppeld"
+        "connection_removed": "Een wachtwoordmanager van de Vault ontkoppeld",
+        "item_moved": "Heeft een Vault-item verplaatst tussen Persoonlijk en Team",
+        "keys_imported": "Heeft sleutels in de Vault geïmporteerd"
       },
       "verb": {
         "created": "Aangemaakt",
@@ -14582,6 +14777,7 @@
       "where": "Waar",
       "via": "Via",
       "approval": "Goedkeuring",
+      "unasked": "Niet gevraagd ({{level}})",
       "approvalWaiting": "Nog niemand heeft geantwoord",
       "approvalApproved": "Goedgekeurd door {{name}}",
       "approvalRefused": "Geweigerd door {{name}}",
@@ -15154,7 +15350,8 @@
       "old": "{{brand}}, van voor de accounts",
       "oldSub": "Gebruik van voordat het account werd vastgelegd",
       "ofMonth": "{{percent}} van de maand",
-      "shareLabel": "{{source}}: {{percent}} van de maand"
+      "shareLabel": "{{source}}: {{percent}} van de maand",
+      "estimateShort": "Een schatting."
     }
   },
   "budget": {
@@ -16310,8 +16507,6 @@
     "card": {
       "group": "Hulpvraag van {{name}} in de browser",
       "group_female": "Hulpvraag van {{name}} in de browser",
-      "asked": "vroeg {{people}} om hulp",
-      "askedShort": "heeft hulp nodig",
       "left": "Nog {{time}}",
       "where": "In de browser van {{name}}",
       "where_female": "In de browser van {{name}}",
@@ -16332,11 +16527,6 @@
       "cancelled": "Verzoek geannuleerd.",
       "withdrawn": "{{name}} heeft dit niet meer nodig.",
       "withdrawn_female": "{{name}} heeft dit niet meer nodig.",
-      "settledDone": "vroeg om hulp · opgelost",
-      "settledFailed": "vroeg om hulp · lukte niet",
-      "settledExpired": "vroeg om hulp · verlopen",
-      "settledCancelled": "vroeg om hulp · geannuleerd",
-      "settledWithdrawn": "vroeg om hulp · niet meer nodig",
       "busy": "Iemand anders helpt al.",
       "openFailed": "Kon het nu niet openen. Probeer het opnieuw."
     },
@@ -16470,8 +16660,6 @@
       "couldnt": "Het lukte me niet",
       "giveUp": "Opgeven",
       "otherHelp": "{{person}} heeft de controle. Jij kijkt mee.",
-      "helpingHere": "Jij helpt · in deze kaart",
-      "helpingOther": "{{person}} helpt · in deze kaart",
       "doneLine": "Klaar. {{name}} leest de pagina opnieuw en gaat verder.",
       "doneLine_female": "Klaar. {{name}} leest de pagina opnieuw en gaat verder.",
       "openHere": "Hier openen",
@@ -16582,6 +16770,7 @@
     "row": "Niet beschikbaar",
     "screen": {
       "title": "Deze werkruimte is niet beschikbaar",
+      "titleNamed": "{{name}} is niet beschikbaar",
       "text": "De gesprekken en agents zijn voorlopig gesloten.",
       "others": "Je andere werkruimtes"
     },
@@ -16636,14 +16825,14 @@
   "deleteOrg": {
     "card": {
       "title": "Werkruimte verwijderen",
-      "text": "Sluit {{name}} nu voor iedereen. Na 7 dagen wordt hij definitief verwijderd.",
+      "text": "{{name}} wordt nu voor iedereen alleen-lezen. Na 7 dagen wordt hij definitief verwijderd.",
       "button": "Werkruimte verwijderen…"
     },
     "title": "{{name}} verwijderen?",
     "goes": {
       "content": "De gesprekken, bestanden, agents en hun geheugen",
-      "people": "Iedereen verliest nu de toegang en krijgt een e-mail",
-      "peopleQuiet": "Iedereen verliest nu de toegang",
+      "people": "Iedereen kan hem vanaf nu alleen nog lezen en krijgt een e-mail",
+      "peopleQuiet": "Iedereen kan hem vanaf nu alleen nog lezen",
       "computer": "De computer stopt nu en wordt gewist",
       "computers": "Gekoppelde computers worden ontkoppeld. De mappen van de agents blijven erop staan tot de runner verwijderd wordt.",
       "connectors": "Connectors en mailboxen worden ontkoppeld"
@@ -16669,15 +16858,16 @@
   },
   "deleting": {
     "title": "{{name}} wordt verwijderd",
-    "text": "Deze werkruimte wordt al verwijderd. Je hoeft niets te doen, hij verdwijnt op {{date}}.",
-    "textLate": "Deze werkruimte wordt al verwijderd. Je hoeft niets te doen.",
+    "banner": "{{name}} wordt op {{date}} verwijderd",
     "by": "{{by}} heeft hem op {{date}} verwijderd.",
+    "byYou": "Je hebt hem op {{date}} verwijderd.",
     "row": "Wordt verwijderd, weg op {{date}}",
     "rowLate": "Wordt verwijderd",
     "someone": "Iemand",
     "restore": "Werkruimte herstellen",
     "membersOnly": "Alleen een eigenaar kan hem herstellen.",
-    "restored": "{{name}} is terug"
+    "restored": "{{name}} is terug",
+    "composer": "Je kunt geen berichten sturen terwijl deze werkruimte wordt verwijderd"
   },
   "accountDeleting": {
     "title": "Je account wordt verwijderd",
@@ -16691,10 +16881,9 @@
   "deleteAccount": {
     "menu": "Account verwijderen",
     "card": {
-      "text": "Je verlaat elke werkruimte en je account wordt 7 dagen later definitief verwijderd. Tot die tijd kun je het herstellen.",
+      "text": "Verwijdert je account over 7 dagen, in alle werkruimtes.",
       "button": "Account verwijderen…",
-      "oneWorkspace": "Wil je alleen deze werkruimte verwijderen? Dat kan bij Algemeen.",
-      "leaveWorkspace": "Wil je alleen deze werkruimte verlaten? Dat kan bij Leden."
+      "title": "Verwijderen"
     },
     "title": "Je hele account verwijderen?",
     "intro": "Dit verwijdert je hele account, niet alleen één werkruimte.",
@@ -17400,6 +17589,23 @@
       "timeout": "De update duurde te lang.",
       "invalid_data": "{{name}} kon de gegevens niet in deze vorm zetten."
     },
+    "needsAi": {
+      "body": "{{name}} bouwt hem zodra er een AI gekoppeld is.",
+      "short": "Heeft een AI nodig",
+      "not_signed_in": "Het abonnement van {{name}} is uitgelogd.",
+      "no_computer": "De AI van {{name}} heeft een computer nodig en die is er niet.",
+      "cli_missing": "Het AI-programma van {{name}} is niet op de computer geïnstalleerd.",
+      "plan_not_shared": "Het abonnement van {{name}} antwoordt alleen de eigenaar, dus het kan geen widgets bijwerken."
+    },
+    "wait": {
+      "plan": "Wacht tot het abonnement van {{name}} {{when}} wordt vernieuwd",
+      "planUnknown": "Wacht tot het abonnement van {{name}} wordt vernieuwd",
+      "budget": "Wacht tot het budget van {{name}} {{when}} wordt vernieuwd",
+      "budgetSoon": "Wacht even op het budget van {{name}}",
+      "computer": "Wacht op de computer van {{name}}",
+      "busy": "Wacht op ruimte op de computer van {{name}}",
+      "provider": "Wacht op de AI-aanbieder van {{name}}, volgende poging {{when}}"
+    },
     "menu": {
       "label": "Meer",
       "open": "Openen",
@@ -17528,7 +17734,8 @@
       "textRoutine": "De routine van {{name}} die hem bijwerkt stopt, en zijn updategeschiedenis gaat mee.",
       "textManual": "Zijn updategeschiedenis gaat mee.",
       "confirm": "Verwijderen"
-    }
+    },
+    "exposureShort": "Wie het dashboard ziet, ziet deze gegevens."
   },
   "agentPicker": {
     "search": "Agents zoeken",
@@ -17762,7 +17969,8 @@
       "blockNotFound": "Die grafiek staat niet meer in het bericht.",
       "notAgentMessage": "Alleen de grafiek van een agent kan worden vastgezet.",
       "promptRequired": "Zeg wat de widget moet tonen.",
-      "notTested": "Test hem eerst: de widget wordt gemaakt zodra de test lukt."
+      "notTested": "Test hem eerst: de widget wordt gemaakt zodra de test lukt.",
+      "needsAi": "{{agentName}} kan deze widget nog niet bijwerken. De widget zegt waarom."
     }
   },
   "teamPlan": {
@@ -17881,7 +18089,6 @@
     "only": "Alleen {{name}}",
     "more_one": "{{names}} en nog {{count}}",
     "more_other": "{{names}} en nog {{count}}",
-    "some": "sommige mensen",
     "taskTitle": "Wie deze taak ziet",
     "pageTitle": "Wie deze pagina ziet",
     "admins": "Beheerders zien het altijd.",
@@ -17890,7 +18097,6 @@
     "search": "Persoon zoeken",
     "noMatch": "Niemand met die naam",
     "moreOptions": "Meer opties",
-    "receipt": "Wie het ziet: {{who}}",
     "limited": "beperkte toegang",
     "rolesToo": "De rollen die al op deze pagina staan, blijven haar zien."
   },

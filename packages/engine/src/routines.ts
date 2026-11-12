@@ -17,6 +17,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { getAgent } from "./agents";
+import type { AiStatusDeps } from "./ai-status";
 import { decidesAgentApprovals, MAX_OWN_ACTIONS, OWN_ACTION_NAME } from "./approval-rules";
 import { cancelRoutineAhead, type RoutineAheadView, routinesAhead } from "./approvals";
 import { audienceError, audienceSql, canTalkTo, speakerFor, speakerOf } from "./audience";
@@ -92,7 +93,7 @@ import {
 } from "./rrule";
 import { providerFailure } from "./runs";
 import { describeWhen, parseSchedule, readSchedule, type ScheduleParse } from "./schedule";
-import { assertCanWork, deletionPending, standingRefusal } from "./standing";
+import { assertCanWork, closedRefusal, deletionPending, orgStanding, standingRefusal } from "./standing";
 import { alwaysAsks } from "./tools/gateway";
 import {
   assertMayContinuePause,
@@ -403,6 +404,8 @@ export interface RoutineDeps {
   hooks?: RoutineHookConfig;
   /** Connector events' webhooks are registered at the provider through the connection (ADR 0130). */
   connectors?: ConnectorTriggerDeps;
+  /** Whether a widget's agent can think before its refresh starts (`widgetFiring`); absent: the run's own check. */
+  ai?: Omit<AiStatusDeps, "db">;
 }
 
 type RoutineRow = typeof routines.$inferSelect;
@@ -801,7 +804,8 @@ function billedTo(
 
 /**
  * Routines as `viewerId` sees them (see `viewerRights`), with their state, last week's health and usage; a webhook
- * routine's address only for who manages it, and only with `hooks`.
+ * routine's address only for who manages it, and only with `hooks`. In a workspace closed to work (suspended, or
+ * being deleted) none has a next run: its slots pass.
  */
 async function views(
   db: Database,
@@ -813,6 +817,7 @@ async function views(
   const first = rows[0];
   if (!first) return [];
   const orgId = first.orgId;
+  const closed = closedRefusal(await orgStanding(db, orgId)) !== null;
   const ids = rows.map((r) => r.id);
   const since = new Date(now.getTime() - ROUTINE_WEEK_MS);
   // The last RECENT_RUNS of each routine (one query, ranked per routine).
@@ -1024,7 +1029,7 @@ async function views(
         },
       ),
       active: r.active,
-      nextRunAt: r.active && r.nextRunAt ? r.nextRunAt.toISOString() : null,
+      nextRunAt: r.active && r.nextRunAt && !closed ? r.nextRunAt.toISOString() : null,
       createdAt: r.createdAt.toISOString(),
       access: routineAccessOf(r.access),
       report: routineReportOf(r.report),
@@ -2207,10 +2212,11 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
     return;
   }
 
-  // A widget's refresh (ADR 0135 §4): its widget and board are still there and its creator still sees the board.
+  // A widget's refresh (ADR 0135 §4): its widget and board are still there, its creator still sees the board and its
+  // agent has an AI.
   let widget: RoutineBrief["widget"];
   if (target.type === "widget") {
-    const firing = await widgetFiring(db, routine.orgId, target, creator, membership);
+    const firing = await widgetFiring(deps, routine.orgId, target, creator, membership);
     if ("skip" in firing) return skip(firing.skip);
     if ("pause" in firing) return paused(firing.pause);
     widget = firing.widget;

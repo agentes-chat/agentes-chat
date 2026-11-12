@@ -368,7 +368,7 @@ describe("Issues (board and list)", () => {
     expect(strip.classList.contains("ac-props")).toBe(true);
     expect(strip.previousElementSibling?.getAttribute("aria-label")).toBe("Título");
     expect([...strip.querySelectorAll("button")].map((b) => b.getAttribute("aria-label")?.replace(/:.*$/, ""))).toEqual(
-      ["Responsável", "Prioridade", "Quem vê", "Prazo"],
+      ["Projeto", "Responsável", "Prioridade", "Quem vê", "Prazo"],
     );
     const add = within(dialog).getByPlaceholderText("Adicionar critério");
     await type(add, "PDF com o logo");
@@ -472,7 +472,7 @@ describe("Issue detail", () => {
     );
   });
 
-  test("at every width the fields are one strip under who made it, in the order Coluna, Responsável, Prioridade, Prazo, Quem vê", async () => {
+  test("at every width the fields are one strip under who made it, in the order Projeto, Coluna, Responsável, Prioridade, Prazo, Quem vê", async () => {
     await go("issues/131");
     // No side column, however wide the window.
     expect(screen().queryByRole("complementary", { name: "Detalhes da tarefa" })).toBeNull();
@@ -483,6 +483,7 @@ describe("Issue detail", () => {
     expect(strip.previousElementSibling?.classList.contains("issue-details__head")).toBe(true);
     expect(strip.nextElementSibling?.querySelector('[role="tablist"]')).toBeTruthy();
     expect([...strip.querySelectorAll(".issue-prop")].map((p) => p.getAttribute("title"))).toEqual([
+      "Projeto",
       "Coluna",
       "Responsável",
       "Prioridade",

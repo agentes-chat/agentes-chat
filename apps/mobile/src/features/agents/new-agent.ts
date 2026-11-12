@@ -1,4 +1,5 @@
 import { lowerFirst } from "@agenteschat/client/lib/format";
+import { IMPORT_CARDS, type ImportCard } from "@agenteschat/client/lib/import/flow";
 import { handleProblem, type RoleId } from "@agenteschat/client/lib/new-agent";
 
 /**
@@ -17,6 +18,13 @@ export interface PhoneDraft {
   /** Handles already used, by agents or people. */
   taken: Set<string>;
 }
+
+/** How many source apps the import row shows, their logos overlapping. */
+export const IMPORT_MARKS = 3;
+
+/** The import row's tile: the first source apps that have a logo of their own, in the import's order. */
+export const importMarkCards = <C extends ImportCard>(hasLogo: (card: ImportCard) => card is C): C[] =>
+  IMPORT_CARDS.filter(hasLogo).slice(0, IMPORT_MARKS);
 
 /** Whether a step can't go on yet. */
 export function stepBlocked(step: PhoneStep, d: PhoneDraft): boolean {

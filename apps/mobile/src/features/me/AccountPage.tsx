@@ -204,15 +204,21 @@ export function AccountPage() {
         />
       </GroupedList>
       <GroupedFooter>{t("deleteAccount.card.text")}</GroupedFooter>
-      <GroupedList>
-        <GroupedRow
-          icon="home"
-          label={t(org.org?.role === "owner" ? "deleteAccount.card.oneWorkspace" : "deleteAccount.card.leaveWorkspace")}
-          labelLines={2}
-          chevron
-          onPress={() => router.push(org.org?.role === "owner" ? "/settings/general" : "/me/members")}
-        />
-      </GroupedList>
+      {org.org?.role === "owner" ? (
+        <>
+          <View style={styles.gapBig} />
+          <GroupedList>
+            <GroupedRow
+              icon="x"
+              label={t("deleteOrg.card.title")}
+              danger
+              chevron
+              onPress={() => router.push("/settings/delete")}
+            />
+          </GroupedList>
+          <GroupedFooter>{t("deleteOrg.card.text", { name: org.org.name })}</GroupedFooter>
+        </>
+      ) : null}
     </Page>
   );
 }

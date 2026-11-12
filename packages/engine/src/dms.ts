@@ -11,7 +11,7 @@ import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from ".
 import { quietNoticeSql } from "./notices";
 import { resolveNotifications } from "./notifications";
 import { can, getMembership, requirePermission } from "./organizations";
-import { accountInUse } from "./standing";
+import { accountInUse, closedRefusal } from "./standing";
 
 const { channels, channelMembers, channelReads, messages, agents, users, organizationMembers } = schema;
 
@@ -133,6 +133,12 @@ export async function openDm(
         .where(and(eq(channels.orgId, orgId), eq(channels.dmKey, dmKey)))
     )[0];
   const found = await existing();
+  // Being deleted, the workspace opens the DMs it has as they are, bringing nobody back, and starts none (ADR 0088 §7).
+  const closed = closedRefusal(membership.standing);
+  if (closed) {
+    if (!found) throw closed;
+    return found;
+  }
   // A new DM with an agent this person can't talk to isn't started (unless they manage agents); an old one stays readable.
   if (!found && blockedAgent) throw await audienceError(db, blockedAgent);
   if (found) await reopenDm(db, orgId, found);
