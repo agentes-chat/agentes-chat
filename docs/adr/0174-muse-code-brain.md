@@ -67,6 +67,19 @@ answers "profile does not exist" — and `-c permissions.default_profile=…` re
 `schema_version` ("Named permission profiles are unavailable: missing field `schema_version`"). Its values are JSON
 too: `-c permissions.default_profile="read-only"`, never a bare string.
 
+### One host per session, never per turn
+
+Neither product that integrated this opens a process per turn, and their code says so plainly: OpenBot keeps one host
+per agent and multiplexes every session over it, guarding teardown with `canReleaseProcess` — false while any thread
+has a turn — so `releaseThread` answers `museBusy` instead of killing a live one. OpenMausBot keeps a host on the
+thread and reuses it while `host.key` matches, where the key is the posture plus the MCP set, starting a fresh host
+and resuming the same session when either changes.
+
+We take OpenMausBot's shape, because our runner is a process per request and the session is the thing that outlives
+it: a host belongs to a session, is reused across its turns, and is remounted — resuming by session id — when the
+posture or the MCP set moves. On release the view is unsubscribed first (`view/unsubscribe`), then the host closed;
+while a turn runs the release is refused, never forced. Idle teardown is bounded, and the kill tree is the fallback.
+
 ### Approvals are the point
 
 An `approval/requested` becomes the agent's approval card, and the person's answer maps back to a `choiceId` the
@@ -136,7 +149,5 @@ always: the runner owns the version, and Muse upgrades itself otherwise. Stored 
 
 ## Open questions
 
-- Whether the host survives between turns of one run (one per run, or one per session) — the SDK model suggests one
-  per session, which changes the supervisor work substantially.
 - What a `turn/completed` with status `failed` carries per cause; only the success path was read.
 - Whether `--workspace` replaces a `cd` into the agent's folder, or both are needed.
