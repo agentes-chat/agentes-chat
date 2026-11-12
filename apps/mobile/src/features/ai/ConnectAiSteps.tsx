@@ -65,6 +65,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
+import { paysHere } from "@/lib/store";
 import {
   Button,
   GroupedFooter,
@@ -1161,7 +1162,7 @@ function GateWait({
   if (gate.state === "loading") wait = <ActivityIndicator color={c.muted} style={styles.loading} />;
   else if (gate.state === "billing") {
     // A hold stops the Model Gateway for keys too, and paying happens on the web.
-    wait = <InfoCard icon="pause">{planHoldPhoneLine(t, org ? can(org, "manage_billing") : false)}</InfoCard>;
+    wait = <InfoCard icon="pause">{planHoldPhoneLine(t, org ? paysHere(can(org, "manage_billing")) : false)}</InfoCard>;
   } else if (gate.state === "preparing") {
     const setup = gate.view;
     // A hold decides when anything runs there: it speaks alone. The wait is the app's own (its steps, the time left,

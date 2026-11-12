@@ -1,5 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
-import { ACCOUNTS_PROTOCOL, channelTopic, MACHINE_PROTOCOL_VERSION, orgTopic } from "@agenteschat/adapters";
+import {
+  ACCOUNTS_PROTOCOL,
+  CODEX_WINDOWS_PROTOCOL,
+  channelTopic,
+  MACHINE_PROTOCOL_VERSION,
+  orgTopic,
+} from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
 import { systemText } from "@agenteschat/providers";
 import {
@@ -222,6 +228,18 @@ test("availability: no computer, offline, old runner, not logged in, Codex missi
   expect(computerBrainUnavailable("claude_code", "m1", statusOf("m1"))?.code).toBe("plan_limit");
   expect(
     computerBrainUnavailable("codex", "m1", statusOf("m1", { executors: { codex: { version: "0.163.0" } } })),
+  ).toBeNull();
+  // On Windows a runner before CODEX_WINDOWS_PROTOCOL refuses every Codex turn: too old there, not elsewhere.
+  const windows = (protocol: number) =>
+    statusOf("m2", { os: "windows", protocol, executors: { codex: { version: "0.170.0" } } });
+  expect(computerBrainUnavailable("codex", "m2", windows(CODEX_WINDOWS_PROTOCOL - 1))?.code).toBe("runner_outdated");
+  expect(computerBrainUnavailable("codex", "m2", windows(CODEX_WINDOWS_PROTOCOL))).toBeNull();
+  expect(
+    computerBrainUnavailable(
+      "codex",
+      "m2",
+      statusOf("m2", { protocol: CODEX_WINDOWS_PROTOCOL - 1, executors: { codex: { version: "0.170.0" } } }),
+    ),
   ).toBeNull();
 });
 

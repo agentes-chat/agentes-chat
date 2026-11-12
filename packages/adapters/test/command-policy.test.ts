@@ -69,6 +69,28 @@ describe("shell parsing", () => {
       expect(simpleCommands(line)).toBeNull();
     }
   });
+
+  test("a comment is left out to its line's end, quotes and all; a line continuation joins two lines", () => {
+    const texts = (line: string) => shellWords(line)?.map((w) => w.text);
+    // Read as a word, `#'` opened a quote that swallowed the next line, which the shell runs.
+    expect(texts("ls #'\nrm -rf x\n#'")).toEqual(["ls", ";", "rm", "-rf", "x", ";"]);
+    expect(bash("ls #'\nrm -rf x\n#'")).toBe(false);
+    // The shell drops a line continuation, so a `#` after one still opens a comment.
+    expect(texts("ls \\\n#'\nrm -rf x\n#'")).toEqual(["ls", ";", "rm", "-rf", "x", ";"]);
+    expect(bash("ls \\\n#'\ngh pr merge 1\n#'")).toBe(false);
+    expect(deniedMessage("Bash", { command: "ls \\\n#'\ngh pr merge 1\n#'" })).not.toBeNull();
+    // Inside a word it leaves the word whole; in double quotes it's dropped too.
+    expect(texts("ls a\\\n#b")).toEqual(["ls", "a#b"]);
+    expect(texts('"g\\\nh" pr view 1')).toEqual(["gh", "pr", "view", "1"]);
+    expect(deniedMessage("Bash", { command: '"g\\\nh" pr merge 1' })).not.toBeNull();
+    // `#12` is a comment to the shell: gh gets no number. A script run before a comment is read as it runs.
+    expect(texts("gh issue view #12")).toEqual(["gh", "issue", "view"]);
+    expect(simpleCommands("bash scripts/release.sh # tag and push")?.map((s) => s.argv)).toEqual([
+      ["bash", "scripts/release.sh"],
+    ]);
+    // Inside a word or in quotes it's a character like any other.
+    expect(texts("echo 'a #b' c#d")).toEqual(["echo", "a #b", "c#d"]);
+  });
 });
 
 describe("read-only calls (allowed at once, no card)", () => {
@@ -823,6 +845,16 @@ describe("where a push goes, as written", () => {
       expect([command, gitPushes(command)]).toEqual([command, null]);
     }
   });
+
+  test("a script's lines as its shell runs them: a continuation joins two, a quoted newline ends none", () => {
+    expect(one("git \\\npush --force origin main").refs).toEqual([{ branch: "main", force: true, delete: false }]);
+    // A line opening with `#` inside a quote is no comment: the push after the quote runs.
+    expect(one("echo '\n# x' ; git push origin main").refs[0]?.branch).toBe("main");
+    // Across a continuation or a quoted newline the policy can't read, a push is still named.
+    for (const command of ['x="$(git \\\npush origin main)"', "eval 'git \\\npush origin main'"]) {
+      expect([command, gitPushes(command)]).toEqual([command, null]);
+    }
+  });
 });
 
 describe("whether a push waits for a person", () => {
@@ -1248,6 +1280,9 @@ describe("loneMerge: the merge a computer may run without a person", () => {
     ["what follows a value the shell reads as a comment", 'gh pr merge 12 --body # -t "\nvercel deploy --prod\n"'],
     ["what follows a line's end the indent hid", "gh pr merge 12 --body \\  \nvercel deploy --prod"],
     ["#12: the shell drops it and -R, and gh merges the folder's branch", "gh pr merge --squash #12 -R acme/app"],
+    ["a comment after it", "gh pr merge 12 --squash # ship it"],
+    ["a line continuation", "gh pr merge 12 \\\n--squash"],
+    ["a comment line a continuation goes on to", "cd app && \\\n# x\ngh pr merge 12"],
     ["git config in front", "git -c core.sshCommand=x merge feature"],
     ["git merge --abort", "git merge --abort"],
     ["two branches", "git merge a b"],

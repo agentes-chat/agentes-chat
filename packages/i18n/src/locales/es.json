@@ -5697,6 +5697,7 @@
         "cli_stopped": "El programa {{brain}} se detuvo con un error.",
         "cli_closed": "El programa {{brain}} se cerró de repente.",
         "account_missing": "La cuenta elegida para este agente ya no está en su computadora. Elige otra en la configuración del agente o agrégala de nuevo.",
+        "windows_sandbox": "Esta computadora con Windows no puede aislar los comandos de Codex: necesita Windows 11 24H2 o una versión más reciente.",
         "our_error": "Algo salió mal de nuestro lado y la tarea se detuvo. Pide de nuevo en un rato.",
         "unknown": "Falló."
       }
@@ -13653,6 +13654,7 @@
       "machineChanged": "La computadora de la misión cambió. Intenta de nuevo.",
       "executorUnavailable": "Esa forma de programar no está instalada en la computadora de la misión.",
       "executorOutdated": "Codex es demasiado viejo en esa computadora: actualízalo ahí.",
+      "codexWindows": "Codex todavía no programa misiones en Windows: elige Claude Code, el propio agente u otra computadora.",
       "invalidExecutor": "Elige quién programa: Claude Code, Codex o el agente.",
       "rateLimited": "La misión hizo demasiado en la última hora. Espera un poco e intenta de nuevo.",
       "pausedStuck": "La misión se pausó porque dejó de avanzar."

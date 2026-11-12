@@ -628,8 +628,8 @@ function Preview({ imp, orgId }: { imp: AgentImport; orgId: string }) {
           {bundle.todo.map((todo) => {
             const href = todoHref(todo.kind);
             return (
-              <View key={`${todo.kind}:${todo.label}`} style={styles.todo}>
-                <Text variant="footnote" tone="ink2" style={styles.fill}>
+              <View key={`${todo.kind}:${todo.label}`} style={[ACT_LINE.row, styles.todo]}>
+                <Text variant="footnote" tone="ink2" style={ACT_LINE.text}>
                   {todoLine(t, todo, nameOf)}
                 </Text>
                 {href ? (
@@ -721,5 +721,6 @@ const styles = StyleSheet.create({
   where: { paddingLeft: 14 + MARK + 12, paddingRight: 14, paddingBottom: 12 },
   note: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 6 },
   todos: { gap: 10, marginTop: 14 },
-  todo: { flexDirection: "row", alignItems: "center", gap: 12 },
+  // The action beside the words while they fit on one line, under them once they wrap (`ACT_LINE`).
+  todo: { alignItems: "center", columnGap: 12, rowGap: 8 },
 });

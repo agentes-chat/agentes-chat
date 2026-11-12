@@ -5800,6 +5800,9 @@ export const ptBR = {
         cli_closed: "O {{brain}} fechou de repente.",
         account_missing:
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
+        /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
+        windows_sandbox:
+          "Este computador com Windows não consegue isolar os comandos do Codex: ele precisa do Windows 11 24H2 ou mais novo.",
         our_error: "Algo deu errado do nosso lado e a tarefa parou. Peça de novo daqui a pouco.",
         unknown: "Falhou.",
       },
@@ -13301,6 +13304,9 @@ export const ptBR = {
       machineChanged: "O computador da missão mudou. Tente de novo.",
       executorUnavailable: "Esse jeito de programar não está instalado no computador da missão.",
       executorOutdated: "O Codex nesse computador é antigo demais: atualize-o lá.",
+      /** Codex on a Windows computer: the runner runs no Codex mission item there yet. */
+      codexWindows:
+        "O Codex ainda não programa missões no Windows: escolha o Claude Code, o próprio agente ou outro computador.",
       invalidExecutor: "Escolha quem programa: Claude Code, Codex ou o agente.",
       rateLimited: "A missão fez coisas demais na última hora. Espere um pouco e tente de novo.",
       pausedStuck: "A missão pausou porque parou de avançar.",

@@ -1132,10 +1132,12 @@ export function mcpScopeFromEnv(env: NodeJS.ProcessEnv): CommandScope | undefine
   if (!cwd || !path.isAbsolute(cwd)) return undefined;
   const folders = (env.AGENTES_MCP_FOLDERS ?? "").split(path.delimiter).filter((f) => f && path.isAbsolute(f));
   const runnerHome = env.AGENTES_RUNNER_HOME?.trim();
+  // Windows has no HOME, as a rule: the home is USERPROFILE (without one, `~` would read as the agent's folder).
+  const home = env.HOME || (process.platform === "win32" ? env.USERPROFILE : undefined);
   return {
     cwd,
     folders: folders.length ? folders : [cwd],
-    ...(env.HOME ? { home: env.HOME } : {}),
+    ...(home ? { home } : {}),
     ...(runnerHome && path.isAbsolute(runnerHome) ? { runnerHome } : {}),
   };
 }

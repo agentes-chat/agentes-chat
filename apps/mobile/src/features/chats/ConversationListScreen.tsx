@@ -16,7 +16,7 @@ import { useHidesQuietGeneral } from "./ChatsScreen";
 import { ConversationRowView } from "./ConversationRowView";
 import { type ConversationRow, type ListKind, rightHandPin, rowsOfKind, withoutQuietGeneral } from "./logic";
 import { useAgentRowStates } from "./useHomeNow";
-import { useWaitingItems } from "./WaitingStrip";
+import { useWaitingItems } from "./useWaitingItems";
 
 /** Rows whose agent moves (a long list stays light). */
 const LIVE_ROWS = 8;

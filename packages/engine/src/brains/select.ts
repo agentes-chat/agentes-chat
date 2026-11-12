@@ -2,6 +2,7 @@ import {
   ANTIGRAVITY_PROTOCOL,
   BRAIN_PROTOCOL,
   type BrainEffort,
+  CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   isBrainEffort,
@@ -432,10 +433,12 @@ export function computerBrainUnavailable(
   }
   const off = toolOff(status, "codex");
   if (off) return off;
-  if (status.protocol < BRAIN_PROTOCOL) {
+  // On Windows a runner before `CODEX_WINDOWS_PROTOCOL` refuses every Codex turn.
+  const windows = status.os === "windows";
+  if (status.protocol < BRAIN_PROTOCOL || (windows && status.protocol < CODEX_WINDOWS_PROTOCOL)) {
     return {
       code: "runner_outdated",
-      message: `The runner on ${status.name} is too old for Codex agents. ${runnerUpdateWay(status)}`,
+      message: `The runner on ${status.name} is too old for Codex agents${windows ? " on Windows" : ""}. ${runnerUpdateWay(status)}`,
     };
   }
   const codex = status.executors?.codex;

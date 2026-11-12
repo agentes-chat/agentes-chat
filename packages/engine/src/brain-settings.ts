@@ -5,6 +5,7 @@ import {
   BRAIN_PROTOCOL,
   type BrainEffort,
   type BrainSpeed,
+  CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   isBrainEffort,
@@ -310,6 +311,8 @@ export interface BrainOption {
 type MachineLike = Parameters<typeof machineExecutors>[0] & {
   id: string;
   name: string;
+  /** Its system (`hello.os`): a Windows runner before `CODEX_WINDOWS_PROTOCOL` can't think with Codex. */
+  os?: string;
   /** Protocol 10: what the machine allows (the app's Ferramentas); absent on older runners. */
   access?: {
     tools?: {
@@ -343,6 +346,8 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
     if (!machine) reason = "no_computer";
     else if (!machine.access?.tools && !machine.execAllowed) reason = "exec_off";
     else if (machine.protocol < BRAIN_PROTOCOL) reason = "runner_old";
+    else if (executor === "codex" && machine.os === "windows" && machine.protocol < CODEX_WINDOWS_PROTOCOL)
+      reason = "runner_old";
     else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     else if (!found?.available.includes(executor))
       reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine);

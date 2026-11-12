@@ -302,6 +302,8 @@ export function runErrorDetail(error: string | null | undefined): {
     PERSON_LIMIT,
     COMPUTER_BUSY,
     STUCK_ERROR,
+    // A Codex turn on a Windows computer where MXC can't hold its commands (the runner's own words say what to do).
+    "windows_sandbox",
   ];
   if (simple.includes(error)) return { errorCode: `run.${error}` };
   if (error === "timeout") return { errorCode: "run.computer_timeout", errorParams: { code: error } };

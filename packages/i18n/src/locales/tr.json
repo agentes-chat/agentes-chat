@@ -5520,6 +5520,7 @@
         "cli_stopped": "Bir hata {{brain}} programını durdurdu.",
         "cli_closed": "Beklenmedik şekilde {{brain}} programı kapandı.",
         "account_missing": "Bu ajan için seçilen hesap artık bilgisayarında değil. Ajanın ayarlarından başka bir hesap seçin ya da yeniden ekleyin.",
+        "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor.",
         "our_error": "Bizim tarafımızda bir şeyler ters gitti ve görev durdu. Birazdan yeniden isteyin.",
         "unknown": "Başarısız oldu."
       }
@@ -13202,6 +13203,7 @@
       "machineChanged": "Misyonun bilgisayarı değişti. Tekrar deneyin.",
       "executorUnavailable": "Bu programlama yolu misyonun bilgisayarında kurulu değil.",
       "executorOutdated": "O bilgisayardaki Codex çok eski: orada güncelleyin.",
+      "codexWindows": "Codex henüz Windows'ta misyon programlamıyor: Claude Code'u, ajanın kendisini veya başka bir bilgisayarı seçin.",
       "invalidExecutor": "Kimin programlayacağını seçin: Claude Code, Codex veya ajan.",
       "rateLimited": "Misyon son bir saatte çok fazla şey yaptı. Biraz bekleyip tekrar deneyin.",
       "pausedStuck": "Misyon ilerlemeyi bıraktığı için duraklatıldı."

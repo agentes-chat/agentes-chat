@@ -91,7 +91,13 @@ import { useHeaderHeight } from "expo-router/react-navigation";
 import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, type LayoutChangeEvent, Platform, ScrollView, StyleSheet, View } from "react-native";
-import { KeyboardController, KeyboardGestureArea, KeyboardStickyView } from "react-native-keyboard-controller";
+import {
+  KeyboardController,
+  KeyboardGestureArea,
+  KeyboardStickyView,
+  useKeyboardHandler,
+  useReanimatedKeyboardAnimation,
+} from "react-native-keyboard-controller";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -1943,6 +1949,21 @@ function Chat({
   // keyboard is dragged down interactively).
   const composerRef = useRef<ComponentRef<typeof View>>(null);
   const { contentInsetEndAdjustment, onComposerLayout } = useKeyboardChatComposerInset(listRef, composerRef);
+  // On iOS the keyboard library moves what rides the keyboard (the composer's dock) when a move starts and while
+  // the keyboard is dragged, and never when the move ends, while the list takes its room from the start and the
+  // end. A last event that wasn't the final state left the box up at the keyboard's height over a list that had
+  // gone back down. The end of every move has the last word for both.
+  const keyboardAt = useReanimatedKeyboardAnimation();
+  useKeyboardHandler(
+    {
+      onEnd: (e) => {
+        "worklet";
+        keyboardAt.height.value = -e.height;
+        keyboardAt.progress.value = e.progress;
+      },
+    },
+    [],
+  );
   const [composerHeight, setComposerHeight] = useState(0);
   const onComposerBoxLayout = (e: LayoutChangeEvent) => {
     onComposerLayout(e);
@@ -2077,6 +2098,16 @@ function Chat({
       void listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0, viewOffset: readRoom });
     });
   }, [readRoom, composerHeight]);
+  // The box growing while the person is at the end (the working line coming in, a banner, an attachment) keeps the
+  // last message above it: the list's end inset moves with the box, but the list follows only its content, so the
+  // line would sit over the message's last lines.
+  const boxHeightRef = useRef(0);
+  useEffect(() => {
+    const before = boxHeightRef.current;
+    boxHeightRef.current = composerHeight;
+    if (before === 0 || composerHeight <= before || !atEndRef.current || readHold) return;
+    requestAnimationFrame(() => void listRef.current?.scrollToEnd({ animated: true }));
+  }, [composerHeight, readHold]);
   useEffect(() => {
     if (!showList) return;
     const state = listRef.current?.getState();

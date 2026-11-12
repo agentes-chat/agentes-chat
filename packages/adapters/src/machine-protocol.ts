@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 59;
+export const MACHINE_PROTOCOL_VERSION = 60;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -616,6 +616,11 @@ export const REMOTE_PAUSE_PROTOCOL = 57;
  * grant). Older runners lend it to one agent.
  */
 export const SHARED_GEMINI_PROTOCOL = 58;
+/**
+ * Codex brain turns on Windows (ADR 0032 "Codex"): the native `codex.exe`, a `plan` or `work` turn only inside MXC.
+ * A Windows runner before it refuses every Codex turn, so the server reads it as too old for Codex there.
+ */
+export const CODEX_WINDOWS_PROTOCOL = 60;
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";

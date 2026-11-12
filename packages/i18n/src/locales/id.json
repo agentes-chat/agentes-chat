@@ -5359,6 +5359,7 @@
         "cli_stopped": "Program {{brain}} berhenti karena kesalahan.",
         "cli_closed": "Program {{brain}} tertutup tiba-tiba.",
         "account_missing": "Akun yang dipilih untuk agen ini sudah tidak ada di komputernya. Pilih akun lain di pengaturan agen, atau tambahkan lagi.",
+        "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru.",
         "our_error": "Ada yang salah di pihak kami dan tugasnya berhenti. Minta lagi sebentar lagi.",
         "unknown": "Gagal."
       }
@@ -12829,6 +12830,7 @@
       "machineChanged": "Komputer misi berubah. Coba lagi.",
       "executorUnavailable": "Cara pemrograman itu tidak terpasang di komputer misi.",
       "executorOutdated": "Codex di komputer itu terlalu lama: perbarui di sana.",
+      "codexWindows": "Codex belum bisa memprogram misi di Windows: pilih Claude Code, agen itu sendiri, atau komputer lain.",
       "invalidExecutor": "Pilih siapa yang memprogram: Claude Code, Codex, atau agen.",
       "rateLimited": "Misi melakukan terlalu banyak hal dalam satu jam terakhir. Tunggu sebentar lalu coba lagi.",
       "pausedStuck": "Misi dijeda karena berhenti mengalami kemajuan."

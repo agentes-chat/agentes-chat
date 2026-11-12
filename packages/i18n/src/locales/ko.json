@@ -5342,6 +5342,7 @@
         "cli_stopped": "오류로 {{brain}} 프로그램이 멈췄어요.",
         "cli_closed": "갑자기 {{brain}} 프로그램이 종료됐어요.",
         "account_missing": "이 에이전트에 고른 계정이 더 이상 컴퓨터에 없어요. 에이전트 설정에서 다른 계정을 고르거나 다시 추가하세요.",
+        "windows_sandbox": "이 Windows 컴퓨터에서는 Codex의 명령을 격리할 수 없어요. Windows 11 24H2 이상이 필요해요.",
         "our_error": "저희 쪽에서 문제가 생겨 작업이 멈췄어요. 잠시 후 다시 요청해 주세요.",
         "unknown": "실패했어요."
       }
@@ -12769,6 +12770,7 @@
       "machineChanged": "미션의 컴퓨터가 바뀌었어요. 다시 시도하세요.",
       "executorUnavailable": "그 프로그래밍 방식은 미션의 컴퓨터에 설치되어 있지 않아요.",
       "executorOutdated": "그 컴퓨터의 Codex가 너무 오래됐어요. 그곳에서 업데이트하세요.",
+      "codexWindows": "Codex는 아직 Windows에서 미션을 프로그래밍하지 못해요. Claude Code, 에이전트 자신 또는 다른 컴퓨터를 고르세요.",
       "invalidExecutor": "프로그래밍할 주체를 고르세요: Claude Code, Codex 또는 에이전트.",
       "rateLimited": "미션이 지난 1시간 동안 너무 많은 작업을 했어요. 잠시 기다렸다가 다시 시도하세요.",
       "pausedStuck": "진행이 멈춰서 미션을 일시 중지했어요."

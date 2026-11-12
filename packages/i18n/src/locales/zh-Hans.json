@@ -5379,6 +5379,7 @@
         "cli_stopped": "因为出错，{{brain}} 程序已停止。",
         "cli_closed": "程序 {{brain}} 意外关闭。",
         "account_missing": "为这个智能体选择的账号已不在它的电脑上。请在智能体设置中选择另一个账号，或重新添加。",
+        "windows_sandbox": "这台 Windows 电脑无法隔离 Codex 的命令：需要 Windows 11 24H2 或更高版本。",
         "our_error": "我们这边出了点问题，任务已停止。请稍后再提一次。",
         "unknown": "失败。"
       }
@@ -12837,6 +12838,7 @@
       "machineChanged": "专项任务的电脑已更换，请重试。",
       "executorUnavailable": "专项任务的电脑上没有安装这种编程方式。",
       "executorOutdated": "那台电脑上的 Codex 版本过旧，请在那里更新。",
+      "codexWindows": "Codex 暂时还不能在 Windows 上为专项任务编程：请选择 Claude Code、智能体本身或另一台电脑。",
       "invalidExecutor": "请选择由谁编程：Claude Code、Codex 或智能体。",
       "rateLimited": "专项任务在过去一小时内操作过多，请稍等后重试。",
       "pausedStuck": "专项任务已暂停，因为它停止了进展。"

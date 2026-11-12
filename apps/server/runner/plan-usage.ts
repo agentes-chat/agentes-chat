@@ -319,7 +319,7 @@ export function jsonLines<T>(
     try {
       child = spawn(run.file, run.args, {
         cwd: p.cwd,
-        env: p.env,
+        env: run.env ? { ...p.env, ...run.env } : p.env,
         stdio: ["pipe", "pipe", "ignore"],
         windowsHide: true,
         // Its own process group: the kill reaches what it started (posix).

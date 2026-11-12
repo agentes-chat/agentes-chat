@@ -13599,6 +13599,9 @@
   "agentPage.activity.errors.account_missing": {
     "value": "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again."
   },
+  "agentPage.activity.errors.windows_sandbox": {
+    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer."
+  },
   "agentPage.activity.errors.our_error": {
     "value": "Something went wrong on our side and it stopped. Ask again in a little while."
   },
@@ -32064,6 +32067,9 @@
   },
   "errors.mission.executorOutdated": {
     "value": "Codex on that computer is too old: update it there."
+  },
+  "errors.mission.codexWindows": {
+    "value": "Codex doesn't program missions on Windows yet: choose Claude Code, the agent itself or another computer."
   },
   "errors.mission.invalidExecutor": {
     "value": "Choose who programs: Claude Code, Codex or the agent."

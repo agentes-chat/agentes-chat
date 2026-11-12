@@ -19,7 +19,9 @@ import {
   codexAppServerArgs,
   codexAtLeast,
   codexThreadPolicy,
+  decideApproval,
 } from "../../runner/brain-codex-app";
+import { CODEX_WINDOWS_CONFIG } from "../../runner/codex-windows";
 import { handleRequest } from "../../runner/handlers";
 import { CODEX_MCP_SERVER, type IpcReply, type McpTaskInfo } from "../../runner/mcp";
 import { agentWorkspace } from "../../runner/paths";
@@ -34,9 +36,12 @@ import { removeDirs, tempDir, waitFor } from "./helpers";
 const dirs: string[] = [];
 const servers: CodexAppServers[] = [];
 const ENV = ["FAKE_CODEX_LOG", "FAKE_CODEX_NO_APP", "FAKE_CODEX_EXEC_MS"];
+const CODEX_HOME = process.env.CODEX_HOME;
 afterEach(() => {
   for (const s of servers.splice(0)) s.close();
   for (const k of ENV) delete process.env[k];
+  if (CODEX_HOME === undefined) delete process.env.CODEX_HOME;
+  else process.env.CODEX_HOME = CODEX_HOME;
   removeDirs(dirs);
 });
 
@@ -63,6 +68,8 @@ async function setup(
   const ws = path.join(root, "ws");
   const home = path.join(root, "home");
   for (const d of [ws, home]) mkdirSync(d, { recursive: true });
+  // The computer's own Codex home, empty: rules of whoever runs the tests would send its turns to exec.
+  process.env.CODEX_HOME = path.join(root, "codex-home");
   const bin = path.join(root, "codex");
   writeFileSync(bin, `#!/bin/sh\nexec "${process.execPath}" "${FAKE}" "$@"\n`);
   chmodSync(bin, 0o755);
@@ -137,7 +144,9 @@ test("version gate and the app-server command line: our overrides, our bridge pe
     writableRoots: ["/w/shared"],
   });
   expect(args[0]).toBe("app-server");
-  expect(args.join(" ")).not.toContain("network_access");
+  // Never the network, whatever the Codex home's own config says.
+  expect(args[args.indexOf("sandbox_workspace_write.network_access=false") - 1]).toBe("-c");
+  expect(args.join(" ")).not.toContain("network_access=true");
   expect(args).toContain('sandbox_workspace_write.writable_roots=["/w/shared"]');
   expect(args).toContain(`mcp_servers.${CODEX_MCP_SERVER}.args=["/r/runner.js","mcp","--run","proc-0001"]`);
   expect(args).toContain(`mcp_servers.${CODEX_MCP_SERVER}.default_tools_approval_mode="approve"`);
@@ -145,6 +154,8 @@ test("version gate and the app-server command line: our overrides, our bridge pe
   // Protocol 28: the agent's context limit is the process's own.
   const limited = codexAppServerArgs({ processId: "proc-0001", contextTokens: 200_000 });
   expect(limited[limited.indexOf("model_auto_compact_token_limit=200000") - 1]).toBe("-c");
+  // No folder but the agent's, whatever the Codex home's config says.
+  expect(limited[limited.indexOf("sandbox_workspace_write.writable_roots=[]") - 1]).toBe("-c");
 });
 
 test.skipIf(!posix)(
@@ -447,6 +458,19 @@ test.skipIf(!posix)("an HTTP bridge (its token is per run) runs with exec", asyn
   expect(turn.events.at(-1)).toMatchObject({ type: "done", text: "exec: hi" });
 });
 
+test.skipIf(!posix)("someone's own Codex rules near a turn: it runs with exec, which leaves them out", async () => {
+  const t = await setup();
+  // An allow there would run a command outside the sandbox, and the app-server would never ask the runner.
+  const rules = path.join(process.env.CODEX_HOME as string, "rules");
+  mkdirSync(rules, { recursive: true });
+  writeFileSync(path.join(rules, "default.rules"), 'prefix_rule(pattern=["git", "push"], decision="allow")\n');
+  const turn = start(t.ctx, request(18, "hi"));
+  await turn.done;
+  expect(t.starts().map((s) => s.start)).toEqual(["exec"]);
+  expect(t.starts()[0]?.args).toContain("--ignore-rules");
+  expect(turn.events.at(-1)).toMatchObject({ type: "done", text: "exec: hi" });
+});
+
 test.skipIf(!posix)(
   "dies mid-turn: that turn runs again with exec (resuming the thread); the next one gets a new app-server that resumes it",
   async () => {
@@ -610,6 +634,55 @@ test("profiles: plan is a read-only sandbox, work a workspace one; neither has t
   expect(approvalCalls("turn/started", {}, undefined, "/w")).toBeNull();
 });
 
+test("an approval's line is judged as its shell runs it: a comment hides no line, a PowerShell line stays whole", async () => {
+  const ask = async (): Promise<IpcReply> => ({ ok: true, text: JSON.stringify({ behavior: "allow" }) });
+  const plan = (command: string) =>
+    decideApproval(approvalCalls("item/commandExecution/requestApproval", { command }, undefined, "/w") ?? [], ask, {
+      scope: { cwd: "/w", folders: ["/w"] },
+      profile: "plan",
+    });
+  // `#` opens a comment to the line's end: the quote after it hides nothing from the shell, which runs the next line,
+  // after a line continuation too.
+  expect(await plan("/bin/zsh -lc \"ls #'\nrm -rf /tmp/elsewhere\n#'\"")).toBe("decline");
+  expect(await plan("/bin/zsh -lc \"ls \\\\\n#'\nrm -rf /tmp/elsewhere\n#'\"")).toBe("decline");
+  // A PowerShell line on a Mac: judged whole (the policy never reads PowerShell as a POSIX shell's script).
+  const pwsh = '/opt/homebrew/bin/pwsh -Command \'echo "a\\" ; Remove-Item -Recurse ~/x ; echo \\"b"\'';
+  expect(approvalCalls("item/commandExecution/requestApproval", { command: pwsh }, undefined, "/w")).toEqual([
+    { tool_name: "Bash", input: { command: pwsh } },
+  ]);
+  expect(await plan(pwsh)).toBe("decline");
+});
+
+test("Windows: the app-server names MXC and nothing asks (the command policy doesn't read PowerShell)", () => {
+  expect(codexThreadPolicy("work", true)).toEqual({ sandbox: "workspace-write", approvalPolicy: "never" });
+  expect(codexThreadPolicy("plan", true)).toEqual({ sandbox: "read-only", approvalPolicy: "never" });
+  const args = codexAppServerArgs({ processId: "p", windows: true });
+  for (const c of CODEX_WINDOWS_CONFIG) expect(args).toContain(c);
+  expect(codexAppServerArgs({ processId: "p" }).join(" ")).not.toContain("windows.sandbox");
+});
+
+test("an approval is judged on its script exactly: a second line is a second command", async () => {
+  const calls = approvalCalls(
+    "item/commandExecution/requestApproval",
+    { command: "/bin/zsh -lc 'ls\nrm -rf /tmp/elsewhere'" },
+    undefined,
+    "/w",
+  );
+  expect(calls).toEqual([{ tool_name: "Bash", input: { command: "ls\nrm -rf /tmp/elsewhere" } }]);
+  const asked: string[] = [];
+  const ask = async (tool: string): Promise<IpcReply> => {
+    asked.push(tool);
+    return { ok: true, text: JSON.stringify({ behavior: "allow" }) };
+  };
+  const scope = { cwd: "/w", folders: ["/w"] };
+  // A plan turn refuses the write on the computer (joined on one line it read as `ls` with arguments, a plain read).
+  expect(await decideApproval(calls ?? [], ask, { scope, profile: "plan" })).toBe("decline");
+  expect(await decideApproval([{ tool_name: "Bash", input: { command: "ls" } }], ask, { scope, profile: "plan" })).toBe(
+    "accept",
+  );
+  expect(asked).toEqual([]);
+});
+
 test.skipIf(!posix)(
   "a plan turn runs in a read-only sandbox without network; a background turn leaves no app-server",
   async () => {
@@ -618,7 +691,7 @@ test.skipIf(!posix)(
     await first.done;
     expect(answerOf(first.events)).toBe("pong");
     expect(t.rpcs("thread/start")[0]).toMatchObject({ sandbox: "read-only", approvalPolicy: "untrusted" });
-    for (const s of t.starts()) expect(String(s.args)).not.toContain("network_access");
+    for (const s of t.starts()) expect(String(s.args)).not.toContain("network_access=true");
     // Background: the process closed with the turn.
     expect(t.app.process(AGENT.id, SESSION)).toBeUndefined();
     expect(t.app.size).toBe(0);

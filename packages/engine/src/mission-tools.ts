@@ -18,7 +18,7 @@ import {
   type MissionDeps,
   type MissionExecutor,
   type MissionRow,
-  machineExecutors,
+  missionExecutors,
   noMentions,
   postMissionMessage,
   proposeMission,
@@ -435,7 +435,7 @@ export function createMissionToolSource(deps: Omit<MissionDeps, "db">): ToolSour
       if (agent?.machineId && !mission) {
         const status = await deps.hub.status(agent.machineId);
         if (status && status.orgId === ctx.orgId) {
-          const { available } = machineExecutors(status);
+          const { available } = missionExecutors(status);
           if (available.length > 0) out.push(proposeTool(status.name, available));
         }
       }

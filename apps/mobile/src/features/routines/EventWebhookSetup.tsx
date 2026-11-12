@@ -74,7 +74,7 @@ export function EventWebhookSetup({ provider }: { provider: WebhookProvider }) {
       <GroupedList>
         <View style={styles.status}>
           <ConnectorIcon def={def} label={name} size={28} />
-          <View style={styles.grow}>
+          <View style={styles.statusText}>
             {!setup ? (
               <ActivityIndicator color={c.muted} />
             ) : (
@@ -265,7 +265,9 @@ function SentrySteps({ setup }: { setup: WebhookSetup }) {
 }
 
 const styles = StyleSheet.create({
-  status: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  // From the top: the status wraps, and its first line sits at the mark's middle (5 points down).
+  status: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  statusText: { flex: 1, minWidth: 0, paddingTop: 5 },
   grow: { flex: 1, minWidth: 0 },
   input: { paddingHorizontal: 14, paddingVertical: 12 },
   gap: { height: 10 },

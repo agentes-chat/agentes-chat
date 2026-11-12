@@ -5735,6 +5735,7 @@
         "cli_stopped": "Le programme {{brain}} s'est arrêté sur une erreur.",
         "cli_closed": "Le programme {{brain}} s'est fermé de façon inattendue.",
         "account_missing": "Le compte choisi pour cet agent n'est plus sur son ordinateur. Choisissez-en un autre dans les paramètres de l'agent, ou ajoutez-le à nouveau.",
+        "windows_sandbox": "Cet ordinateur Windows ne peut pas isoler les commandes de Codex : il lui faut Windows 11 24H2 ou une version plus récente.",
         "our_error": "Un problème est survenu de notre côté et la tâche s'est arrêtée. Redemandez dans un moment.",
         "unknown": "Échec."
       }
@@ -13724,6 +13725,7 @@
       "machineChanged": "L'ordinateur de la mission a changé. Réessayez.",
       "executorUnavailable": "Cette façon de programmer n'est pas installée sur l'ordinateur de la mission.",
       "executorOutdated": "Codex est trop ancien sur cet ordinateur : mettez-le à jour sur place.",
+      "codexWindows": "Codex ne programme pas encore de missions sous Windows : choisissez Claude Code, l'agent lui-même ou un autre ordinateur.",
       "invalidExecutor": "Choisissez qui programme : Claude Code, Codex ou l'agent.",
       "rateLimited": "La mission en a trop fait au cours de la dernière heure. Patientez un peu et réessayez.",
       "pausedStuck": "La mission s'est mise en pause car elle n'avançait plus."

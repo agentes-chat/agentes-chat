@@ -6,6 +6,7 @@ import {
   type BrainTurnRequest,
   brainTopic,
   CODEX_FOLDER_PROTOCOL,
+  CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
@@ -75,6 +76,8 @@ export interface ComputerBrainLink {
     execAllowed: boolean;
     /** The runner's protocol (absent: not checked). */
     protocol?: number;
+    /** The computer's system (`hello.os`: `windows`, `darwin`, `linux`…). */
+    os?: string;
     executors: {
       codex?: { version: string };
       claude?: { version: string };
@@ -182,6 +185,8 @@ interface CliBrainSpec {
   name: string;
   /** The runner protocol it needs. */
   protocol: number;
+  /** The runner protocol it needs on Windows, where an older runner refuses its turns. */
+  windowsProtocol?: number;
   /** The CLI is installed (`hello.executors`) and new enough; else why not. */
   check(executors: {
     codex?: { version: string };
@@ -196,6 +201,7 @@ const CODEX_CLI: CliBrainSpec = {
   kind: "codex",
   name: "Codex",
   protocol: BRAIN_PROTOCOL,
+  windowsProtocol: CODEX_WINDOWS_PROTOCOL,
   check({ codex }) {
     if (!codex) {
       return {
@@ -327,6 +333,17 @@ export class CodexBrain implements Brain {
         type: "error",
         code: "runner_outdated",
         message: `The runner on the computer is too old for agents that think with ${name}. ${runnerUpdateWay(status)}`,
+        retryable: true,
+      };
+      return;
+    }
+    // An older runner on Windows refuses every turn of this CLI there (an unknown protocol, too).
+    const windowsProtocol = this.cli.windowsProtocol;
+    if (status.os === "windows" && windowsProtocol !== undefined && (status.protocol ?? 0) < windowsProtocol) {
+      yield {
+        type: "error",
+        code: "runner_outdated",
+        message: `The runner on the computer is too old for agents that think with ${name} on Windows. ${runnerUpdateWay(status)}`,
         retryable: true,
       };
       return;

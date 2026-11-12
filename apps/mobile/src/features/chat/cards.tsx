@@ -41,7 +41,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
-import { ACT_LINE, Button, Count, HoldButton, Icon, LineIcon, Text, useReducedMotion, useToast } from "@/ui";
+import { ACT_LINE, Button, Count, HoldButton, Icon, Text, useReducedMotion, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { approvalAction, approvalRisk, approveAlwaysToast } from "../approvals/logic";
 import {
@@ -555,7 +555,6 @@ function ApprovalGroupItem({
 function ApprovalAsk({ approval: a }: { approval: Approval }) {
   const { t, i18n } = useTranslation();
   const dir = useDirectory();
-  const c = useColors();
   const asks = useAskStore();
   const origin = useOriginShort(a);
   const { org } = useOrg();
@@ -605,12 +604,9 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
                 </>
               )}
               {origin ? (
-                <View style={styles.origin}>
-                  <LineIcon variant="footnote" name="clock" size={13} color={c.muted} />
-                  <Text variant="footnote" tone="muted" style={styles.grow}>
-                    {origin}
-                  </Text>
-                </View>
+                <Text variant="footnote" tone="muted">
+                  {origin}
+                </Text>
               ) : null}
               {requester ? (
                 <Text variant="footnote" tone="muted">

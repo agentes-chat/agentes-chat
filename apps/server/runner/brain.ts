@@ -61,6 +61,7 @@ import {
 import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { RunnerError } from "./errors";
+import { killTree } from "./exec";
 import { cliSpawn } from "./executors";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
@@ -1032,12 +1033,14 @@ export class ClaudeProcess {
     /** A token root handed over, on its own descriptor (`TOKEN_FD_ENV`). */
     token?: string,
   ) {
-    // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, cmd.exe
-    // with every argument quoted (an empty `--setting-sources` stays one).
+    // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, found on
+    // the PATH (never in the agent's folder), a launcher through cmd.exe with every argument quoted (an empty
+    // `--setting-sources` stays one).
     const run = cliSpawn(command.length ? command : ["claude"], args, env.PATH);
+    const runEnv = run.env ? { ...env, ...run.env } : env;
     this.child = start(run.file, run.args, {
       cwd,
-      env: token ? { ...env, ...TOKEN_FD_ENV } : env,
+      env: token ? { ...runEnv, ...TOKEN_FD_ENV } : runEnv,
       stdio: token ? [...TOKEN_STDIO] : ["pipe", "pipe", "pipe"],
       windowsHide: true,
       windowsVerbatimArguments: run.windowsVerbatimArguments,
@@ -1094,8 +1097,17 @@ export class ClaudeProcess {
     if (this.breach) return;
     this.breach = reason;
     try {
-      this.child.kill("SIGKILL");
+      this.end("SIGKILL");
     } catch {}
+  }
+
+  /**
+   * Ends Claude Code. On Windows its whole tree: started through cmd.exe (npm's `claude.cmd`), killing the child alone
+   * would leave Claude Code running the turn.
+   */
+  private end(signal: NodeJS.Signals) {
+    if (process.platform === "win32") killTree(this.child, signal);
+    else this.child.kill(signal);
   }
 
   private refuseControl(line: string) {
@@ -1234,12 +1246,12 @@ export class ClaudeProcess {
   kill() {
     if (this.exited) return;
     try {
-      this.child.kill("SIGTERM");
+      this.end("SIGTERM");
     } catch {}
     const t = setTimeout(() => {
       if (!this.exited) {
         try {
-          this.child.kill("SIGKILL");
+          this.end("SIGKILL");
         } catch {}
       }
     }, 3000);

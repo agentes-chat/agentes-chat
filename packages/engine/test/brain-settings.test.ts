@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   ACCOUNTS_PROTOCOL,
   BRAIN_PROTOCOL,
+  CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
   MISSION_PROTOCOL,
   SPEED_PROTOCOL,
@@ -105,6 +106,28 @@ describe("brain settings", () => {
     expect(brainModelId("claude_code", "opus")).toBe("claude-opus-5-5");
     expect(brainModelId("claude_code", null)).toBe("claude-sonnet-5-5");
     expect(brainModelId("codex", "gpt-6.1-codex")).toBe("gpt-6.1-codex");
+  });
+
+  test("options: on Windows, Codex needs a runner that runs its turns there", () => {
+    const reasons = (m: ReturnType<typeof mac>) =>
+      brainOptions(m)
+        .slice(1, 3)
+        .map((o) => [o.kind, o.available, o.reason ?? null]);
+    const executors = { claude: { version: "2" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "x" };
+    // An older Windows runner refuses every Codex turn: "update the agentes.chat program", not "update Codex".
+    expect(reasons(mac({ os: "windows", protocol: CODEX_WINDOWS_PROTOCOL - 1, executors }))).toEqual([
+      ["claude_code", true, null],
+      ["codex", false, "runner_old"],
+    ]);
+    expect(reasons(mac({ os: "windows", protocol: CODEX_WINDOWS_PROTOCOL, executors }))).toEqual([
+      ["claude_code", true, null],
+      ["codex", true, null],
+    ]);
+    expect(reasons(mac({ os: "darwin", protocol: CODEX_WINDOWS_PROTOCOL - 1, executors }))[1]).toEqual([
+      "codex",
+      true,
+      null,
+    ]);
   });
 
   test("options: only what the computer has; why the rest can't be chosen", () => {

@@ -117,6 +117,7 @@ const KNOWN = {
   "mission.computer_offline": "errors.mission.computerOffline",
   "mission.exec_disabled": "errors.mission.execDisabled",
   "mission.runner_outdated": "errors.mission.runnerOutdated",
+  "mission.codex_windows": "errors.mission.codexWindows",
   "mission.exists": "errors.mission.exists",
   "mission.closed": "errors.mission.closed",
   "mission.wrong_status": "errors.mission.wrongStatus",

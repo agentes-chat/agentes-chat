@@ -4,7 +4,8 @@ Expo + React Native app for agentes.chat (ADR 0035).
 
 Code is checked in CI (`.github/workflows/ci.yml`: lint, typecheck,
 unit tests of the pure logic in `apps/mobile/test`). Android builds on the **Android build** workflow
-(`.github/workflows/android.yml`); EAS (`.github/workflows/mobile.yml`) still works for either platform.
+(`.github/workflows/android.yml`) and iOS on **iOS build** (`.github/workflows/ios.yml`); EAS
+(`.github/workflows/mobile.yml`) still works for either platform.
 The native projects (`ios/`, `android/`) are made from `app.config.ts` and `plugins/` by `expo prebuild` and never
 committed. **Credentials never go in the repo** (it is public): the upload key, Firebase's files and store accounts
 live in GitHub's secrets or the stores.
@@ -34,6 +35,27 @@ One time, in GitHub → Settings → Secrets and variables → Actions:
 
 A preview APK installs over an earlier one only when both were signed with the same key.
 
+## iOS on GitHub Actions
+
+Run **iOS build** (Actions → Run workflow): production only, sent to TestFlight (or, with "Send to TestFlight" off,
+an `.ipa` kept as the run's artifact). It runs `expo prebuild --platform ios --clean`, `pod install`, then
+`xcodebuild archive` and `-exportArchive` on a macOS runner. Signing is automatic: with the App Store Connect API
+key, Xcode asks Apple for the certificate and the profiles of the app and its share extension
+(`chat.agentes.app.share-extension`, app group `group.chat.agentes.app`), so no certificate or profile is stored
+anywhere. Nothing goes through EAS.
+
+One time:
+1. In App Store Connect: the app exists for `chat.agentes.app` (an upload is refused before that), and an API key
+   with the **Admin** role (Users and Access → Integrations → App Store Connect API); automatic signing takes no
+   lesser role.
+2. In GitHub → Settings → Secrets and variables → Actions: `APPLE_TEAM_ID` (the team's id), `ASC_API_KEY_ID` (the
+   key's id), `ASC_API_ISSUER_ID` (the issuer id) and `ASC_API_KEY_P8` (the text of the `.p8` file). Without them
+   the workflow stops at its first step.
+3. Optional: the variable `IOS_BUILD_NUMBER_BASE` (added to the run number) above the last build number in App
+   Store Connect, if any.
+
+A build made by your own team needs your own bundle id: Apple gives `chat.agentes.app` to one team only.
+
 ## Get a build on a phone with EAS
 
 1. One time, on expo.dev: create an access token (Account settings → Access tokens). The EAS project
@@ -59,6 +81,8 @@ on expo.dev (EAS environment variables) for EAS:
 | `EAS_PROJECT_ID` | EAS project, for the iPhone's Expo push tokens. | ours (`8514d5b3-…`) |
 | `GOOGLE_SERVICES_JSON` | Path to Firebase's `google-services.json` (the Android workflow writes it from a secret): push on Android (FCM). | none |
 | `ANDROID_VERSION_CODE` | The build's version code (the Android workflow's run). | from the config |
+| `APPLE_TEAM_ID` | The Apple team that signs the iOS app and its share extension (the iOS workflow's secret). | none |
+| `IOS_BUILD_NUMBER` | The build's number on iOS (the iOS workflow's run). | from the config |
 | `APP_VARIANT` | `development` / `preview` / `production`: name and bundle id suffix, so all three install side by side. | `production` |
 
 Why the API URL must equal the public URL: React Native's WebSocket adds an `Origin` derived from the URL

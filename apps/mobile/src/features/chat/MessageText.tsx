@@ -160,7 +160,7 @@ function Details({
         >
           {summary.length > 0 ? <Spans inline={summary} channelRefs={channelRefs} /> : "…"}
         </Text>
-        <View style={open ? styles.flip : undefined}>
+        <View style={[styles.chev, open ? styles.flip : undefined]}>
           <Icon name="chev" size={15} color={c.muted} />
         </View>
       </Pressable>
@@ -194,7 +194,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 8,
   },
-  summary: { flexDirection: "row", alignItems: "center", gap: 8 },
+  // From the top: a summary that wraps keeps its chevron on the first line.
+  summary: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  chev: { marginTop: 4 },
   pressed: { opacity: 0.6 },
   flip: { transform: [{ rotate: "180deg" }] },
 });
