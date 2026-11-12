@@ -970,10 +970,19 @@ export function KeyDialog({
     setTouched(false);
     setRefused(null);
   }, [mode, cred]);
-  const valid = keyLooksValid(provider, apiKey);
+  /**
+   * A key of the workspace's own endpoint (ADR 0146) is no provider's: it has no published format, so the provider
+   * patterns below (Claude's `sk-ant-…`, OpenAI's `sk-…`) would refuse it. Its own endpoint is what a supported key
+   * here would otherwise be measured against, and rotating one used to be impossible.
+   */
+  const endpointKey = cred?.provider === CUSTOM_PROVIDER;
+  const valid = endpointKey ? apiKey.trim().length >= 8 : keyLooksValid(provider, apiKey);
   const error =
     !touched || valid ? undefined : mode === "add" ? (
       <KeyMismatch provider={provider} apiKey={apiKey} onPick={setProvider} />
+    ) : endpointKey ? (
+      // A workspace's own endpoint (ADR 0146) publishes no key format: the server's floor is the whole rule.
+      t("settings.keyInvalid")
     ) : (
       t(`onboarding.keyInvalid.${provider}`)
     );
@@ -1068,12 +1077,12 @@ export function KeyDialog({
                 label={t("settings.keyValue")}
                 id="key-value-set"
                 error={error}
-                example={<KeySite provider={provider} />}
+                example={endpointKey ? undefined : <KeySite provider={provider} />}
               >
                 <Input
                   type="password"
                   autoComplete="off"
-                  placeholder={providerOf(provider)?.placeholder}
+                  placeholder={endpointKey ? undefined : providerOf(provider)?.placeholder}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                 />
