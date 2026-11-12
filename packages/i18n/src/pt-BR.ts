@@ -23,8 +23,7 @@ export const ptBR = {
     enabled: "Ativar SSO",
     callback: "URL de retorno",
     loginLink: "Link de acesso",
-    saveFirst:
-      "Salve com o SSO desativado para obter a URL de retorno. Cadastre-a no seu provedor de identidade e ative o SSO.",
+    saveFirst: "Salve para obter a URL de retorno e cadastre-a no seu provedor de identidade antes de entrar.",
     access:
       "O SSO mantém os convites e as permissões do workspace. Contas existentes precisam vincular o SSO enquanto estão conectadas.",
     link: "Vincular SSO à sua conta",

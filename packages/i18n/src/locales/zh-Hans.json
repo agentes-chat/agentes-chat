@@ -14,7 +14,7 @@
     "enabled": "启用SSO",
     "callback": "回调URL",
     "loginLink": "登录链接",
-    "saveFirst": "先在禁用SSO的状态下保存以获取回调URL。在身份提供商处注册该URL，然后启用SSO。",
+    "saveFirst": "保存以获取回调URL，然后在登录前将其注册到身份提供商。",
     "access": "SSO会保留工作区的邀请和权限。已有账户必须在登录后关联SSO。",
     "link": "将SSO关联到你的账户",
     "linked": "SSO已关联到你的账户",

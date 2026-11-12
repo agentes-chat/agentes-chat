@@ -14,7 +14,7 @@
     "enabled": "SSO’yu etkinleştir",
     "callback": "Geri dönüş URL’si",
     "loginLink": "Giriş bağlantısı",
-    "saveFirst": "Geri dönüş URL’sini almak için SSO kapalıyken kaydedin. Kimlik sağlayıcınızda kaydedin, ardından SSO’yu etkinleştirin.",
+    "saveFirst": "Geri dönüş URL’sini almak için kaydedin, ardından giriş yapmadan önce kimlik sağlayıcınızda kaydedin.",
     "access": "SSO, çalışma alanının davetlerini ve izinlerini korur. Mevcut hesaplar, giriş yapmışken SSO’yu bağlamalıdır.",
     "link": "SSO’yu hesabına bağla",
     "linked": "SSO hesabınıza bağlı",

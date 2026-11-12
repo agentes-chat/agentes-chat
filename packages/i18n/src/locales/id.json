@@ -14,7 +14,7 @@
     "enabled": "Aktifkan SSO",
     "callback": "URL panggilan balik",
     "loginLink": "Tautan masuk",
-    "saveFirst": "Simpan dengan SSO nonaktif untuk mendapatkan URL panggilan balik. Daftarkan pada penyedia identitas, lalu aktifkan SSO.",
+    "saveFirst": "Simpan untuk mendapatkan URL panggilan balik, lalu daftarkan pada penyedia identitas sebelum masuk.",
     "access": "SSO mempertahankan undangan dan izin ruang kerja. Akun yang sudah ada harus menautkan SSO saat masuk.",
     "link": "Tautkan SSO ke akun Anda",
     "linked": "SSO ditautkan ke akun Anda",

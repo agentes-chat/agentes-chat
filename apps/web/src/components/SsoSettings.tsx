@@ -20,6 +20,7 @@ function useSso() {
 export function SsoSettingsCard() {
   const { t } = useTranslation();
   const query = useSso();
+  if (query.data?.canManage) return <SsoForm key={JSON.stringify(query.data.provider)} data={query.data} />;
   return (
     <Card aria-label={t("sso.title")}>
       <CardHeader title={t("sso.title")} />
@@ -27,8 +28,6 @@ export function SsoSettingsCard() {
         <p>{t("sso.loading")}</p>
       ) : query.error ? (
         <Alert tone="danger">{errorText(t, query.error)}</Alert>
-      ) : query.data?.canManage ? (
-        <SsoForm key={JSON.stringify(query.data.provider)} data={query.data} />
       ) : null}
     </Card>
   );
@@ -46,17 +45,22 @@ function SsoForm({ data }: { data: SsoSettings }) {
   const [secret, setSecret] = useState("");
   const [scopes, setScopes] = useState(form.scopes.join(" "));
   const save = useMutation({
-    mutationFn: () =>
-      api.account.saveSso(org.id, {
-        ...form,
-        scopes: scopes.split(/\s+/).filter(Boolean),
-        ...(secret ? { clientSecret: secret } : {}),
-      }),
+    mutationFn: (input: SsoInput) => api.account.saveSso(org.id, input),
     onSuccess: (next) => {
       setSecret("");
       qc.setQueryData(ssoKey(org.id), next);
     },
   });
+  const toggle = (enabled: boolean) => {
+    setForm({ ...form, enabled });
+    if (data.provider)
+      save.mutate(
+        { ...data.provider, enabled },
+        {
+          onError: () => setForm((current) => ({ ...current, enabled: !enabled })),
+        },
+      );
+  };
   const field = (key: "name" | "issuer" | "clientId") => (
     <Field label={t(`sso.${key}`)}>
       <Input
@@ -69,69 +73,80 @@ function SsoForm({ data }: { data: SsoSettings }) {
     </Field>
   );
   return (
-    <form
-      className="ac-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        save.mutate();
-      }}
-    >
-      <p>{t("sso.access")}</p>
-      {field("name")}
-      {field("issuer")}
-      {field("clientId")}
-      <Field label={t("sso.secret")} example={data.provider ? t("sso.keepSecret") : undefined}>
-        <Input
-          type="password"
-          disabled={save.isPending}
-          autoComplete="new-password"
-          required={!data.provider}
-          value={secret}
-          maxLength={4096}
-          onChange={(e) => setSecret(e.target.value)}
-        />
-      </Field>
-      <Field label={t("sso.scopes")}>
-        <Input disabled={save.isPending} value={scopes} onChange={(e) => setScopes(e.target.value)} />
-      </Field>
-      <Field label={t("sso.enabled")} group>
-        <Switch
-          disabled={save.isPending}
-          aria-label={t("sso.enabled")}
-          checked={form.enabled}
-          onCheckedChange={(enabled) => setForm({ ...form, enabled })}
-        />
-      </Field>
-      {data.provider ? (
-        <>
-          <Field label={t("sso.callback")}>
-            <Input readOnly value={data.callbackUrl} onFocus={(e) => e.target.select()} />
-          </Field>
-          <Field label={t("sso.loginLink")}>
-            <Input readOnly value={data.loginUrl ?? ""} onFocus={(e) => e.target.select()} />
-          </Field>
-          {data.provider.enabled && (
-            <a href={data.loginUrl ?? ""} target="_blank" rel="noreferrer">
-              {t("sso.continueWith", { name: data.provider.name })}
-            </a>
-          )}
-        </>
-      ) : (
-        <p>{t("sso.saveFirst")}</p>
-      )}
+    <Card aria-label={t("sso.title")}>
+      <CardHeader
+        title={t("sso.title")}
+        action={
+          <Switch
+            aria-label={t("sso.title")}
+            checked={form.enabled}
+            disabled={save.isPending}
+            onCheckedChange={toggle}
+          />
+        }
+      />
       {save.error && <Alert tone="danger">{errorText(t, save.error)}</Alert>}
-      {save.isSuccess && <p role="status">{t("sso.saved")}</p>}
-      <div className="ac-form__actions">
-        {errorCode(save.error) === "sso_reauth" && (
-          <Button type="button" onClick={() => void signInAgain()}>
-            {t("proof.signInButton")}
-          </Button>
-        )}
-        <Button type="submit" variant="primary" loading={save.isPending}>
-          {t("common.save")}
+      {errorCode(save.error) === "sso_reauth" && (
+        <Button type="button" onClick={() => void signInAgain()}>
+          {t("proof.signInButton")}
         </Button>
-      </div>
-    </form>
+      )}
+      {form.enabled && (
+        <form
+          className="ac-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save.mutate({
+              ...form,
+              scopes: scopes.split(/\s+/).filter(Boolean),
+              ...(secret ? { clientSecret: secret } : {}),
+            });
+          }}
+        >
+          <p>{t("sso.access")}</p>
+          {field("name")}
+          {field("issuer")}
+          {field("clientId")}
+          <Field label={t("sso.secret")} example={data.provider ? t("sso.keepSecret") : undefined}>
+            <Input
+              type="password"
+              disabled={save.isPending}
+              autoComplete="new-password"
+              required={!data.provider}
+              value={secret}
+              maxLength={4096}
+              onChange={(e) => setSecret(e.target.value)}
+            />
+          </Field>
+          <Field label={t("sso.scopes")}>
+            <Input disabled={save.isPending} value={scopes} onChange={(e) => setScopes(e.target.value)} />
+          </Field>
+          {data.provider ? (
+            <>
+              <Field label={t("sso.callback")}>
+                <Input readOnly value={data.callbackUrl} onFocus={(e) => e.target.select()} />
+              </Field>
+              <Field label={t("sso.loginLink")}>
+                <Input readOnly value={data.loginUrl ?? ""} onFocus={(e) => e.target.select()} />
+              </Field>
+              {data.provider.enabled && (
+                <a href={data.loginUrl ?? ""} target="_blank" rel="noreferrer">
+                  {t("sso.continueWith", { name: data.provider.name })}
+                </a>
+              )}
+            </>
+          ) : (
+            <p>{t("sso.saveFirst")}</p>
+          )}
+          {save.isSuccess && <p role="status">{t("sso.saved")}</p>}
+          <div className="ac-form__actions">
+            <Button type="submit" variant="primary" loading={save.isPending}>
+              {t("common.save")}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Card>
   );
 }
 

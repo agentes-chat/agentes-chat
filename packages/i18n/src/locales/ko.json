@@ -14,7 +14,7 @@
     "enabled": "SSO 사용",
     "callback": "콜백 URL",
     "loginLink": "로그인 링크",
-    "saveFirst": "SSO를 끈 상태로 저장해 콜백 URL을 받으세요. ID 공급자에 등록한 다음 SSO를 켜세요.",
+    "saveFirst": "저장해 콜백 URL을 받은 다음 로그인하기 전에 ID 공급자에 등록하세요.",
     "access": "SSO는 워크스페이스 초대와 권한을 유지합니다. 기존 계정은 로그인한 상태에서 SSO를 연결해야 합니다.",
     "link": "계정에 SSO 연결",
     "linked": "SSO가 계정에 연결되었습니다",

@@ -14,7 +14,7 @@
     "enabled": "SSO inschakelen",
     "callback": "Terugkeer-URL",
     "loginLink": "Aanmeldlink",
-    "saveFirst": "Sla op met SSO uitgeschakeld om de terugkeer-URL te krijgen. Registreer deze bij je identiteitsaanbieder en schakel SSO in.",
+    "saveFirst": "Sla op om de terugkeer-URL te krijgen en registreer deze bij je identiteitsaanbieder voordat je je aanmeldt.",
     "access": "SSO behoudt de uitnodigingen en rechten van de werkruimte. Bestaande accounts moeten SSO koppelen terwijl ze zijn aangemeld.",
     "link": "SSO aan je account koppelen",
     "linked": "SSO is aan je account gekoppeld",

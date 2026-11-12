@@ -14,7 +14,7 @@
     "enabled": "Attiva SSO",
     "callback": "URL di ritorno",
     "loginLink": "Link di accesso",
-    "saveFirst": "Salva con SSO disattivato per ottenere l’URL di ritorno. Registralo presso il tuo fornitore di identità, poi attiva SSO.",
+    "saveFirst": "Salva per ottenere l’URL di ritorno, poi registralo presso il fornitore di identità prima di accedere.",
     "access": "SSO mantiene gli inviti e le autorizzazioni dello spazio. Gli account esistenti devono collegare SSO dopo aver effettuato l’accesso.",
     "link": "Collega SSO al tuo account",
     "linked": "SSO è collegato al tuo account",

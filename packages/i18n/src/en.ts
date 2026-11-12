@@ -23,8 +23,7 @@ export const en = {
     enabled: "Enable SSO",
     callback: "Callback URL",
     loginLink: "Sign-in link",
-    saveFirst:
-      "Save with SSO disabled to get the callback URL. Register it with your identity provider, then enable SSO.",
+    saveFirst: "Save to get the callback URL, then register it with your identity provider before signing in.",
     access: "SSO keeps workspace invitations and permissions. Existing accounts must link SSO while signed in.",
     link: "Link SSO to your account",
     linked: "SSO is linked to your account",

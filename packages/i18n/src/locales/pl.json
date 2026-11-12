@@ -14,7 +14,7 @@
     "enabled": "Włącz SSO",
     "callback": "Adres zwrotny",
     "loginLink": "Link logowania",
-    "saveFirst": "Zapisz z wyłączonym SSO, aby uzyskać adres zwrotny. Zarejestruj go u dostawcy tożsamości, a następnie włącz SSO.",
+    "saveFirst": "Zapisz, aby uzyskać adres zwrotny, a następnie zarejestruj go u dostawcy tożsamości przed zalogowaniem.",
     "access": "SSO zachowuje zaproszenia i uprawnienia obszaru. Istniejące konta muszą połączyć SSO po zalogowaniu.",
     "link": "Połącz SSO z kontem",
     "linked": "SSO jest połączone z kontem",
