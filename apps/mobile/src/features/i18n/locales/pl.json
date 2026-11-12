@@ -398,8 +398,6 @@
     "switchWorking": "pracuje",
     "join": "Dołącz do kanału",
     "sending": "Wysyłanie…",
-    "failed": "Nie wysłano · Spróbuj ponownie",
-    "notSent": "Wiadomość nie została wysłana.",
     "toLatest": "Przejdź do najnowszych wiadomości",
     "toLatestNew": "Przejdź do najnowszych wiadomości: {{text}}",
     "stopAgent": "Zatrzymaj: {{name}}",
@@ -1870,13 +1868,7 @@
       "open": "Otwórz",
       "expandHint": "Stuknij, aby rozwinąć",
       "stop": "Zatrzymaj",
-      "giveUp": "Zrezygnuj",
-      "done": "Gotowe: {{title}}",
-      "failed": "Nie udało się: {{title}}",
-      "failedNote": "Nie udało się: {{note}}",
-      "expired": "Nikt nie otworzył tego na czas: {{title}}",
-      "cancelled": "Anulowano: {{title}}",
-      "withdrawn": "{{name}} już tego nie potrzebuje: {{title}}"
+      "giveUp": "Zrezygnuj"
     },
     "live": {
       "inControl": "Masz kontrolę",
@@ -2002,6 +1994,10 @@
       "no_driverLinux": "Linux potrzebuje reguł udev dla tego telefonu",
       "os_too_old": "System tego telefonu jest za stary",
       "adb_offline": "Odłącz kabel i podłącz go ponownie",
+      "wifi_away": "Połącz tego iPhone'a z Wi-Fi Maca albo podłącz kabel",
+      "wifi_asleep": "Wybudź i odblokuj tego iPhone'a i trzymaj go blisko Maca",
+      "tunnel_down": "Połączenie Wi-Fi zostało przerwane. Trzymaj tego iPhone'a blisko Maca albo podłącz kabel",
+      "wifi_untrusted": "Podłącz go raz i stuknij Zaufaj",
       "other": "Jeszcze nie jest gotowe"
     },
     "os": {
@@ -2161,6 +2157,15 @@
       "teamMissing": "Xcode jest zalogowany, ale nie pokazuje jeszcze zespołu. W Xcode utwórz dowolną aplikację iOS, wybierz swój zespół w Signing & Capabilities i uruchom ją raz na tym iPhonie.",
       "uiRefused": "Ten iPhone odrzucił stuknięcia pomocnika testowego. Odblokuj go i wpisz kod, jeśli poprosi. Jeśli to się powtarza, wyłącz i włącz Ustawienia › Deweloper › Włącz automatyzację UI.",
       "pluggedIn": "Jest podłączony",
+      "wifi": {
+        "also": "Też w sieci Wi-Fi komputera {{host}}: {{name}}",
+        "use": "Używaj przez Wi-Fi",
+        "hint": "Pojawia się tu tylko iPhone, który już zaufał Macowi przez kabel. Mac łączy się z nim własnym szyfrowanym połączeniem Apple, tym samym, którego używa Xcode.",
+        "stop": "Przestań używać przez Wi-Fi",
+        "stopTitle": "Przestać używać {{name}} przez Wi-Fi?",
+        "stopText": "Agenci nie będą już mogli się z nim połączyć. Aby go używać, wybierz go znowu na komputerze {{host}}.",
+        "stopped": "{{name}} nie jest już używany przez Wi-Fi"
+      },
       "stall": {
         "plug": "{{host}} nie widzi jeszcze tego iPhone'a. Użyj kabla, który przesyła dane, a nie tylko ładuje, trzymaj ten iPhone odblokowany i stuknij Zaufaj, jeśli poprosi.",
         "devmode": "Tryb dewelopera włącza się dopiero po ponownym uruchomieniu tego iPhone'a. Stuknij Uruchom ponownie, a po starcie Włącz. Nie ma przełącznika? Odłącz ten iPhone i podłącz go ponownie."
@@ -2436,9 +2441,9 @@
     "ofOnline": "{{online}} z {{count}}",
     "deleteName": "Usuń {{name}}",
     "deleteFoot": "Masz 7 dni, żeby zmienić zdanie.",
-    "deleteAlert": "Wszyscy od razu tracą dostęp. Przywrócenie jest możliwe przez 7 dni.",
+    "deleteAlert": "Wszyscy od razu mogą już tylko czytać. Przywrócenie jest możliwe przez 7 dni.",
     "deleteAction": "Usuń",
-    "deleteIntro": "Zamykamy {{name}} od razu dla wszystkich i usuwamy na zawsze po 7 dniach.",
+    "deleteIntro": "{{name}} od razu staje się dla wszystkich tylko do odczytu, a po 7 dniach zostaje trwale usunięta.",
     "holdDelete": "Przytrzymaj, aby usunąć",
     "deleteFailed": "Nie udało się usunąć przestrzeni roboczej. Spróbuj ponownie.",
     "access": {
@@ -2747,7 +2752,6 @@
     },
     "formatAuto": "{{name}} wybiera najlepszą",
     "newWidget": {
-      "titleHint": "Tytuł · {{name}} zaproponuje go przy teście",
       "alerts": "Alert włączony",
       "realData": "Prawdziwe dane",
       "editAsk": "Zmień prośbę",

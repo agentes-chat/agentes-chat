@@ -1,7 +1,7 @@
-import type { PhonePairFailure, PhonePairing, PhonePairState } from "@agenteschat/adapters";
+import type { PhonePairFailure, PhonePairing, PhonePairState, PubSub, WifiIphone } from "@agenteschat/adapters";
 import { and, type Database, eq, isNull, schema } from "@agenteschat/db";
 import { recordAudit } from "./audit";
-import { mayManageDevice } from "./devices";
+import { mayManageDevice, publishDevicesChanged } from "./devices";
 import { ForbiddenError, NotFoundError } from "./errors";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
 import { getMachine } from "./machines";
@@ -176,4 +176,66 @@ export async function lookForPhones(deps: Deps, actorId: string, orgId: string, 
   const machine = await getMachine(deps.db, orgId, machineId);
   if (!machine || machine.kind === "managed") throw new NotFoundError("Device not found", "device.not_found");
   await deps.hub.call(machine.id, { op: "phone.look" }).catch(() => undefined);
+}
+
+/**
+ * iPhones on a Mac's Wi-Fi (ADR 0042): the Mac lists the ones that trust it (they did over a cable once), and uses one
+ * only after the person who manages the Mac picks it. Only they see the list: it names phones near the Mac, which may
+ * be anyone's. `update`: the Mac's agentes.chat is too old to use iPhones over Wi-Fi.
+ */
+export interface WifiIphones {
+  available: WifiIphone[];
+  update?: true;
+}
+
+const wifiList = (r: { available?: unknown }): WifiIphone[] =>
+  (Array.isArray(r.available) ? r.available : []).slice(0, 20).flatMap((p: Record<string, unknown>) => {
+    const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
+    const serial = text(p?.serial, 200);
+    if (!serial) return [];
+    const name = text(p.name, 200);
+    return [
+      { serial, model: text(p.model, 120) || "iPhone", ...(name ? { name } : {}), osVersion: text(p.osVersion, 40) },
+    ];
+  });
+
+/** `GET …/computers/{machineId}/wifi-iphones`: an offline Mac lists none. */
+export async function wifiIphones(deps: Deps, actorId: string, orgId: string, machineId: string): Promise<WifiIphones> {
+  const machine = await pairingHost(deps.db, actorId, orgId, machineId);
+  try {
+    return { available: wifiList(await deps.hub.call(machine.id, { op: "phone.wifi", action: "list" })) };
+  } catch (error) {
+    if (tooOld(error)) return { available: [], update: true };
+    return { available: [] };
+  }
+}
+
+/**
+ * `PUT …/wifi-iphones/{serial}` (`use`) and the forget of a phone row over Wi-Fi: the Mac uses that iPhone over Wi-Fi
+ * from now on, or no longer.
+ */
+export async function pickIphoneOverWifi(
+  deps: Deps & { pubsub?: PubSub },
+  actorId: string,
+  orgId: string,
+  machineId: string,
+  serial: string,
+): Promise<WifiIphones> {
+  const machine = await pairingHost(deps.db, actorId, orgId, machineId);
+  let reply: { available?: unknown };
+  try {
+    reply = await deps.hub.call(machine.id, { op: "phone.wifi", action: "allow", serial });
+  } catch (error) {
+    if (tooOld(error)) return { available: [], update: true };
+    throw error;
+  }
+  await recordAudit(deps.db, {
+    orgId,
+    actor: { type: "person", id: actorId },
+    action: "device.iphone_wifi",
+    target: { type: "machine", id: machine.id },
+    details: { on: true },
+  });
+  await publishDevicesChanged(deps.pubsub, orgId);
+  return { available: wifiList(reply) };
 }

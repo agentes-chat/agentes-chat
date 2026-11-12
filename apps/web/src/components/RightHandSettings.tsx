@@ -1,4 +1,4 @@
-import type { Agent, AgentBrainInput } from "@agenteschat/client";
+import type { Agent, AgentBrain, AgentBrainInput } from "@agenteschat/client";
 import {
   keys,
   useAgentBrain,
@@ -12,13 +12,14 @@ import {
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
 import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
+import { modelInput, modelRowOptions, modelRows } from "@agenteschat/client/lib/brain-picker";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { handleAfterRename } from "@agenteschat/client/lib/new-agent";
 import { can } from "@agenteschat/client/lib/permissions";
-import { accountPlan, planReplies } from "@agenteschat/client/lib/plans";
+import { accountPlan, brainPlan, planReplies } from "@agenteschat/client/lib/plans";
 import { AUTO, modelChoices } from "@agenteschat/client/lib/providers";
-import { mineStatus } from "@agenteschat/client/lib/right-hand";
+import { mineStatus, RIGHT_HAND_POWERS } from "@agenteschat/client/lib/right-hand";
 import {
   AffixInput,
   BrainLogo,
@@ -46,7 +47,10 @@ import { AgentAvatar } from "@/components/AgentAvatar";
 import { LookRows, ModelSelect, modelOptions } from "@/components/AgentFields";
 import { RightHandApprovalsCard } from "@/components/ApprovalCover";
 import { PlanHold, usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { useAgentMachineId } from "@/components/ComputerQueue";
 import { useConnectAi } from "@/components/ConnectAi";
+import { useAgentComputer } from "@/components/computer/facts";
+import { useOpenComputer } from "@/components/computer/open";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { TeamWeekSchedule } from "@/components/TeamWeekCard";
@@ -56,7 +60,8 @@ import { fullLook, lookOf } from "@/lib/look";
 import { useToast } from "@/lib/toast";
 
 /**
- * The right hand's page (ADR 0137): its settings in two groups. "Só para você": the AI the viewer's own conversation
+ * The right hand's page (ADR 0137): what it is (its computer when it has one, what only it does), then its settings in
+ * two groups. "Só para você": the AI the viewer's own conversation
  * thinks with, when its weekly card comes, and what it creates and adjusts for them without asking. "Para todo o
  * workspace", only for who manages agents: its name and look, the AI of people with no plan of their own, and who may
  * use it. Its instructions are the product's.
@@ -64,8 +69,15 @@ import { useToast } from "@/lib/toast";
 export function RightHandSettingsSection({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
   const { org } = useOrg();
+  const machineId = useAgentMachineId(agent.id);
   return (
     <div className="ac-groups">
+      <Card>
+        <div className="settings-rows">
+          {machineId && <RightHandComputerRow agent={agent} />}
+          <RightHandPowersRow />
+        </div>
+      </Card>
       <section className="rh-group" aria-labelledby="rh-group-mine">
         <GroupHeading id="rh-group-mine" title={t("rightHand.settings.groupMine")} />
         <Card>
@@ -91,7 +103,7 @@ export function RightHandSettingsSection({ agent }: { agent: Agent }) {
 }
 
 /** A plan's maker, its account's name ("Plano Claude") and whose it is, to anyone but its owner: a row's value line. */
-function PlanLine({ kind, label, owner }: { kind: PlanKind; label?: string; owner?: string }) {
+function PlanLine({ kind, label, owner, model }: { kind: PlanKind; label?: string; owner?: string; model?: string }) {
   const { t } = useTranslation();
   return (
     <span className="rh-value ac-iconline">
@@ -99,10 +111,44 @@ function PlanLine({ kind, label, owner }: { kind: PlanKind; label?: string; owne
       <span>
         <b>{t("rightHand.settings.planName", { name: label ?? t(`aiAccounts.connect.${kind}`) })}</b>
         {owner && ` · ${t("rightHand.settings.planOwner", { owner })}`}
+        {model && ` · ${model}`}
       </span>
     </span>
   );
 }
+
+/**
+ * A plan's model, under the plan while it is the one chosen: the account and its model are one choice, as in an
+ * agent's "Quem pensa".
+ */
+function PlanModel({
+  view,
+  disabled,
+  onChange,
+}: {
+  view: AgentBrain;
+  disabled: boolean;
+  onChange: (input: AgentBrainInput) => void;
+}) {
+  const { t } = useTranslation();
+  const rows = modelRows(t, view, brainPlan(view));
+  const chosen = rows.find((r) => r.checked)?.value ?? AUTO;
+  return (
+    <ModelSelect
+      aria-label={t("agentPage.work.brain.planModel")}
+      value={chosen}
+      disabled={disabled}
+      onChange={(value) => value !== chosen && onChange(modelInput(value, view))}
+      options={modelRowOptions(rows)}
+    />
+  );
+}
+
+/** The model a plan's view runs, by its name (Automático included). */
+const usePlanModelLabel = (view: AgentBrain | undefined) => {
+  const { t } = useTranslation();
+  return view && view.brain !== "model" ? modelRows(t, view, brainPlan(view)).find((r) => r.checked)?.label : undefined;
+};
 
 type PlanKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
 const planKind = (kind: string | undefined): PlanKind | null => (kind && kind !== "model" ? (kind as PlanKind) : null);
@@ -127,22 +173,24 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const status = mineStatus(view, me.user.id, platform, agent.brain?.maker);
-  if (!status) return null;
   const first = (id: string) => dir.memberById.get(id)?.name.split(" ")[0] ?? "";
-  const back = () => {
+  const model = usePlanModelLabel(view);
+  if (!status) return null;
+  const setMine = (input: AgentBrainInput, done?: () => void) => {
     setBusy(true);
     void api.agents
-      .setBrain(org.id, agent.id, { scope: "mine", brain: "model" })
+      .setBrain(org.id, agent.id, { scope: "mine", ...input })
       .then(() =>
         Promise.all([
           qc.invalidateQueries({ queryKey: keys.agentBrain(org.id, agent.id) }),
           qc.invalidateQueries({ queryKey: keys.aiStatus(org.id) }),
         ]),
       )
-      .then(() => setOpen(false))
+      .then(done)
       .catch((e) => toast.show(errorText(t, e), "error"))
       .finally(() => setBusy(false));
   };
+  const back = () => setMine({ brain: "model" }, () => setOpen(false));
   // Connecting is a dialog of its own: this one closes for it.
   const connectMine = connect
     ? () => {
@@ -179,11 +227,18 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
       <span>
         <b>{name}</b>
         {what && ` · ${what}`}
+        {own && model && ` · ${model}`}
       </span>
     </span>
   );
   const options: OptionListItem<"mine" | "other" | "workspace">[] = [];
-  if (own) options.push({ value: "mine", title: name, description: what });
+  if (own)
+    options.push({
+      value: "mine",
+      title: name,
+      description: what,
+      children: view && <PlanModel view={view} disabled={busy} onChange={(input) => setMine(input)} />,
+    });
   // On a billing hold nothing connects before the plan, whose one way in is the hold's banner (ADR 0162).
   if (connectMine && !held)
     options.push(
@@ -239,6 +294,56 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
   );
 }
 
+/**
+ * "Computador", once the right hand has one of its own: the row opens the computer every agent's page opens, for
+ * whoever may watch it.
+ */
+function RightHandComputerRow({ agent }: { agent: Agent }) {
+  const { t } = useTranslation();
+  const view = useAgentComputer(agent);
+  const openComputer = useOpenComputer();
+  if (!view.ready || view.forbidden || !view.facts) return null;
+  return (
+    <PrefRow
+      id="rh-computer"
+      icon="computer"
+      label={t("agentComputer.button")}
+      status={view.machine?.name}
+      onOpen={() => openComputer(agent.id)}
+    />
+  );
+}
+
+/** "Poderes do workspace": one row that opens what only the right hand does, in words (`RIGHT_HAND_POWERS`). */
+function RightHandPowersRow() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <PrefRow id="rh-powers" icon="bolt" label={t("rightHand.powers.title")} onOpen={() => setOpen(true)} />
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t("rightHand.powers.title")}
+        description={t("rightHand.powers.help")}
+        closeLabel={t("common.close")}
+        width={480}
+      >
+        <DialogBody>
+          <ul className="rh-powers">
+            {RIGHT_HAND_POWERS.map((p) => (
+              <li key={p.id} className="ac-iconline">
+                <Icon name="check" size={16} />
+                <span>{t(`rightHand.powers.${p.id}`)}</span>
+              </li>
+            ))}
+          </ul>
+        </DialogBody>
+      </Dialog>
+    </>
+  );
+}
+
 /** "Sua IA"'s explanation, the ⓘ of the section the status stands in. */
 export function useRightHandMineHint(agent: Agent) {
   const { t } = useTranslation();
@@ -273,6 +378,7 @@ function RightHandForm({ agent }: { agent: Agent }) {
   // The workspace's AI (ADR 0137 §11): what every DM thinks with while its person has no plan of their own.
   const kind = planKind(agent.brain?.kind);
   const view = useAgentBrain(org.id, agent.id, true, false, "workspace").data;
+  const planModel = usePlanModelLabel(view);
   const signIn = view?.accounts.find((a) => a.id === view.account);
   const key = view?.workspaceAi?.key;
   const ownerId = signIn?.ownerId;
@@ -352,6 +458,9 @@ function RightHandForm({ agent }: { agent: Agent }) {
         title: t("rightHand.settings.planName", { name: a.label }),
         description: owner ? t("rightHand.settings.planOwner", { owner }) : undefined,
         leading: <BrainLogo kind={a.kind} size="sm" />,
+        children: kind && view && a.id === view.account && (
+          <PlanModel view={view} disabled={busy || !!hold} onChange={setWorkspace} />
+        ),
       };
     }),
   ];
@@ -397,11 +506,14 @@ function RightHandForm({ agent }: { agent: Agent }) {
             label={t("rightHand.settings.workspace")}
             status={
               kind ? (
-                <PlanLine kind={kind} label={signIn?.label} owner={theirs(ownerId)} />
+                <PlanLine kind={kind} label={signIn?.label} owner={theirs(ownerId)} model={planModel} />
               ) : (
                 <span className="rh-value ac-iconline">
                   {key ? <ProviderLogo id={key.provider} size="xs" /> : <Icon name="key" size={14} />}
-                  <b>{key?.label ?? t("rightHand.settings.mineKeyName")}</b>
+                  <span>
+                    <b>{key?.label ?? t("rightHand.settings.mineKeyName")}</b>
+                    {` · ${agent.model === AUTO ? t("brain.auto.label") : (list.find((o) => o.value === agent.model)?.label ?? agent.model)}`}
+                  </span>
                 </span>
               )
             }

@@ -1751,6 +1751,27 @@
       "when": 1794645300000,
       "tag": "0251_user_work_area",
       "breakpoints": true
+    },
+    {
+      "idx": 252,
+      "version": "7",
+      "when": 1794655300000,
+      "tag": "0252_machine_paused_by",
+      "breakpoints": true
+    },
+    {
+      "idx": 253,
+      "version": "7",
+      "when": 1794665300000,
+      "tag": "0253_task_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 254,
+      "version": "7",
+      "when": 1794675300000,
+      "tag": "0254_agent_approvals_level",
+      "breakpoints": true
     }
   ]
 }

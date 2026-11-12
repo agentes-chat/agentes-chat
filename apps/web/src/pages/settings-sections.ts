@@ -119,7 +119,8 @@ export function settingsNavEntry(
  * classify), `?mail=connected|failed&account={id}` (back from Gmail/Outlook),
  * `?request={id}&do=approve|deny` (a request to join, from the admins' email),
  * `?delete=1` (Geral's dialog that deletes the workspace), `?install={link}` (Skills, back from connecting GitHub
- * in Instalar skill: the link to read again) and `?agent={id}` (Auditoria filtered to that agent).
+ * in Instalar skill: the link to read again, with `agent` when an agent's card opened it) and `?agent={id}`
+ * (Auditoria filtered to that agent).
  */
 export const settingsSearch = (
   search: Record<string, unknown>,

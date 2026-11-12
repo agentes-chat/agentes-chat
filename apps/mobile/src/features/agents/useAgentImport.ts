@@ -1,5 +1,6 @@
-import { type ImportItemResult, keys, type MigrationBundle, useApi } from "@agenteschat/client";
+import { type ImportItemResult, keys, type MigrationBundle, useAgents, useApi } from "@agenteschat/client";
 import {
+  agentsSince,
   applyInChunks,
   blockedItems,
   bundleOrigin,
@@ -7,6 +8,7 @@ import {
   githubRoot,
   type ImportCard,
   type ImportFailure,
+  type ImportMethod,
   isGithubLink,
   itemId,
   NOT_GITHUB,
@@ -14,7 +16,8 @@ import {
 } from "@agenteschat/client/lib/import/flow";
 import { type ImportFile, parseImport } from "@agenteschat/client/lib/import/index";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMeId } from "../shared/hooks";
 import { planIn } from "./import";
 
 /** What the phone reads: picked files (already text), a GitHub link, or a pasted reply. */
@@ -27,7 +30,7 @@ export type PhoneImportInput = { files: ImportFile[] | Promise<ImportFile[]> } |
 export function useAgentImport(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
-  const [card, setCard] = useState<ImportCard | null>(null);
+  const [card, pickCard] = useState<ImportCard | null>(null);
   const [busy, setBusy] = useState<"reading" | "planning" | null>(null);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [plan, setPlan] = useState<{
@@ -43,6 +46,32 @@ export function useAgentImport(orgId: string) {
   const done = useRef(new Map<string, ImportItemResult>());
   const run = useRef(0);
   const last = useRef<PhoneImportInput | null>(null);
+  // Connect with MCP or Prompt only, per source, once the person picks one (until then, the source's default).
+  const [methods, setMethods] = useState<Partial<Record<ImportCard, ImportMethod>>>({});
+  // The workspace's agents as read after a source's MCP steps first showed: only the ones made since then arrived.
+  const [watching, setWatching] = useState(false);
+  const [seen, setSeen] = useState<ReadonlySet<string> | null>(null);
+  const since = useRef(0);
+  const me = useMeId();
+  const agents = useAgents(orgId);
+  // From a read that ended after watching started: the cache may miss an agent made while the socket was down.
+  const fresh = watching && !agents.isFetching && agents.dataUpdatedAt >= since.current ? agents.data : undefined;
+  useEffect(() => {
+    if (!seen && fresh) setSeen(new Set(fresh.map((a) => a.id)));
+  }, [seen, fresh]);
+  const arrived = seen && me && agents.data ? agentsSince(agents.data, seen, me) : [];
+  const { refetch } = agents;
+  /** Watches for the agents an AI app creates through MCP (`arrived`) until the returned stop. */
+  const watch = useCallback(() => {
+    since.current = Date.now();
+    setWatching(true);
+    void refetch();
+    return () => setWatching(false);
+  }, [refetch]);
+  const setCard = (next: ImportCard | null) => {
+    if (next !== card) setSeen(null);
+    pickCard(next);
+  };
 
   const read = async (input: PhoneImportInput) => {
     const mine = ++run.current;
@@ -110,6 +139,16 @@ export function useAgentImport(orgId: string) {
   return {
     card,
     setCard,
+    methods,
+    setMethod: (c: ImportCard, method: ImportMethod) => {
+      setFailure(null);
+      setMethods((m) => ({ ...m, [c]: method }));
+    },
+    watch,
+    arrived,
+    /** The read the MCP step counts from failed: nothing can show as arrived until `refetch` works. */
+    watchError: watching && !seen && agents.isError && !agents.isFetching ? agents.error : null,
+    rewatch: () => void refetch(),
     busy,
     failure,
     planned,
@@ -141,6 +180,7 @@ export function useAgentImport(orgId: string) {
       setFailure(null);
       setApplyError(null);
       setPlan(null);
+      setSeen(null);
     },
   };
 }

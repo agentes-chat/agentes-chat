@@ -370,8 +370,6 @@
     "switchWorking": "aan het werk",
     "join": "Lid worden van het kanaal",
     "sending": "Versturen…",
-    "failed": "Niet verstuurd · Probeer opnieuw",
-    "notSent": "Het bericht is niet verstuurd.",
     "toLatest": "Naar de nieuwste berichten",
     "toLatestNew": "Naar de nieuwste berichten: {{text}}",
     "stopAgent": "{{name}} stoppen",
@@ -1678,13 +1676,7 @@
       "open": "Openen",
       "expandHint": "Tik om uit te vouwen",
       "stop": "Stoppen",
-      "giveUp": "Opgeven",
-      "done": "Klaar: {{title}}",
-      "failed": "Niet gelukt: {{title}}",
-      "failedNote": "Niet gelukt: {{note}}",
-      "expired": "Niemand heeft het op tijd geopend: {{title}}",
-      "cancelled": "Geannuleerd: {{title}}",
-      "withdrawn": "{{name}} heeft dit niet meer nodig: {{title}}"
+      "giveUp": "Opgeven"
     },
     "live": {
       "inControl": "Jij hebt de controle",
@@ -1810,6 +1802,10 @@
       "no_driverLinux": "Linux heeft udev-regels voor deze telefoon nodig",
       "os_too_old": "Het systeem van deze telefoon is te oud",
       "adb_offline": "Haal de kabel eruit en sluit hem opnieuw aan",
+      "wifi_away": "Zet deze iPhone op de wifi van de Mac of sluit hem aan",
+      "wifi_asleep": "Maak deze iPhone wakker, ontgrendel hem en houd hem bij de Mac",
+      "tunnel_down": "De wifiverbinding viel weg. Houd deze iPhone bij de Mac of sluit hem aan",
+      "wifi_untrusted": "Sluit hem één keer aan en tik op Vertrouw",
       "other": "Nog niet klaar"
     },
     "os": {
@@ -1967,6 +1963,15 @@
       "teamMissing": "Xcode is ingelogd maar toont nog geen team. Maak in Xcode een willekeurige iOS-app, kies je team bij Signing & Capabilities en voer hem één keer uit op deze iPhone.",
       "uiRefused": "Deze iPhone weigerde de tikken van de testhelper. Ontgrendel hem en voer je toegangscode in als hij erom vraagt. Blijft het gebeuren, zet dan Instellingen › Ontwikkelaar › Schakel UI-automatisering in uit en weer aan.",
       "pluggedIn": "Hij is aangesloten",
+      "wifi": {
+        "also": "Ook op de wifi van {{host}}: {{name}}",
+        "use": "Via wifi gebruiken",
+        "hint": "Hier verschijnt alleen een iPhone die de Mac al eens via een kabel heeft vertrouwd. De Mac bereikt hem via de eigen versleutelde verbinding van Apple, dezelfde die Xcode gebruikt.",
+        "stop": "Niet meer via wifi gebruiken",
+        "stopTitle": "{{name}} niet meer via wifi gebruiken?",
+        "stopText": "Agents kunnen hem niet meer bereiken. Kies hem opnieuw met {{host}} om hem te gebruiken.",
+        "stopped": "{{name}} wordt niet meer via wifi gebruikt"
+      },
       "stall": {
         "plug": "{{host}} ziet deze iPhone nog niet. Gebruik een kabel die data doorgeeft, niet alleen stroom, houd deze iPhone ontgrendeld en tik op Vertrouw als hij erom vraagt.",
         "devmode": "Ontwikkelaarsmodus gaat pas aan nadat deze iPhone herstart. Tik op Herstart en daarna op Zet aan als hij terug is. Geen schakelaar? Koppel deze iPhone los en sluit hem weer aan."
@@ -2230,9 +2235,9 @@
     "ofOnline": "{{online}} van {{count}}",
     "deleteName": "{{name}} verwijderen",
     "deleteFoot": "Je hebt 7 dagen om van gedachten te veranderen.",
-    "deleteAlert": "Iedereen is er meteen uit. Herstellen kan 7 dagen lang.",
+    "deleteAlert": "Iedereen kan hem vanaf nu alleen nog lezen. Herstellen kan 7 dagen lang.",
     "deleteAction": "Verwijderen",
-    "deleteIntro": "{{name}} gaat meteen voor iedereen dicht en wordt over 7 dagen definitief verwijderd.",
+    "deleteIntro": "{{name}} wordt meteen voor iedereen alleen-lezen en wordt over 7 dagen definitief verwijderd.",
     "holdDelete": "Ingedrukt houden om te verwijderen",
     "deleteFailed": "De werkruimte kon niet worden verwijderd. Probeer het opnieuw.",
     "access": {
@@ -2529,7 +2534,6 @@
     },
     "formatAuto": "{{name}} kiest de beste",
     "newWidget": {
-      "titleHint": "Titel · {{name}} stelt er een voor bij het testen",
       "alerts": "Melding aan",
       "realData": "Echte gegevens",
       "editAsk": "Vraag wijzigen",

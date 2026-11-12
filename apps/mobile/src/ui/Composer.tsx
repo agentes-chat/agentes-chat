@@ -1,9 +1,11 @@
+import { joinDrafts, tooLongText, tooLongToSend } from "@agenteschat/client/lib/message-length";
 import { applyFormat, FORMAT_KINDS, type FormatKind } from "@agenteschat/ui/format";
 import { Canvas, Group, Path, Skia, vec } from "@shopify/react-native-skia";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Platform,
+  Pressable,
   Text as RNText,
   ScrollView,
   StyleSheet,
@@ -100,15 +102,21 @@ export interface ComposerProps {
   insertMention?: (text: string, token: ComposerToken, handle: string) => { text: string; caret: number };
   /**
    * Text handed in from another screen ("Falar com o Theo" leaves "@theo " here): put in the field when it is
-   * empty, and the field focused. Once per request (`at`).
+   * empty, and the field focused. Once per request (`at`). With `join` (a refused message coming back to be
+   * changed) it goes in before whatever is being typed, so neither text is lost.
    */
-  prefill?: { text: string; at: number } | null;
+  prefill?: { text: string; at: number; join?: boolean } | null;
   /** A change here brings the keyboard up ("Responder" on a message). */
   focusAt?: number;
   /** Right above the field ("Respondendo a Ana"). */
   banner?: ReactNode;
   /** Something waits above the field to go with the message (photos, files): send shows and sends with no words. */
   sendEmpty?: boolean;
+  /**
+   * The words are past the length limit (said above the field, the send held): this takes them as a text file
+   * instead ("Enviar como arquivo"), and the field empties. Absent where no more files fit: the words say it.
+   */
+  onLongAsFile?: (text: string) => void;
   /** Each change that leaves text in the field ("está digitando…" for the others; the screen throttles it). */
   onType?: (text: string) => void;
   /**
@@ -184,6 +192,7 @@ export function Composer({
   focusAt,
   banner,
   sendEmpty = false,
+  onLongAsFile,
   onType,
   draftKey,
   media,
@@ -191,8 +200,9 @@ export function Composer({
 }: ComposerProps) {
   const theme = useTheme();
   const { colors, shadows, reducedMotion } = theme;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [text, setText] = useState(() => (draftKey ? (DRAFTS.get(draftKey) ?? "") : ""));
+  const tooLong = tooLongToSend(text);
   // Every change of the words is the draft too; an empty field leaves none behind.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the key is the conversation the field belongs to
   useEffect(() => {
@@ -212,7 +222,7 @@ export function Composer({
   useEffect(() => {
     if (!prefill) return;
     const handed = prefill.text;
-    setText((current) => (current.trim() ? current : handed));
+    setText((current) => (prefill.join ? joinDrafts(handed, current) : current.trim() ? current : handed));
     input.current?.focus();
   }, [prefillAt]);
   useEffect(() => {
@@ -233,12 +243,13 @@ export function Composer({
 
   const send = (how: SendHow) => {
     const value = text.trim();
-    if (!value && !sendEmpty) return;
+    if ((!value && !sendEmpty) || tooLong) return;
     onSend(value, working ? how : "join");
     put("", 0);
   };
 
   const press = () => {
+    if (tooLong) return;
     if (has) {
       haptics.light();
       send("join");
@@ -255,7 +266,7 @@ export function Composer({
     setTaught(true);
     writeValueSync(STORED.stopSendTaught, "1");
   };
-  const hold = working && has ? { hint: t("mobile.composer.holdToStop"), onHold: holdSend } : null;
+  const hold = working && has && !tooLong ? { hint: t("mobile.composer.holdToStop"), onHold: holdSend } : null;
 
   const formatting = focused && range.end > range.start && !voice?.active;
   const format = (kind: FormatKind) => {
@@ -308,6 +319,35 @@ export function Composer({
         </ScrollView>
       ) : null}
       {banner}
+      {tooLong ? (
+        <View accessibilityRole="alert" style={styles.tooLong}>
+          <RNText
+            maxFontSizeMultiplier={CHROME_MAX_SCALE}
+            style={[systemText("footnote", weights.regular), { color: colors.danger }]}
+          >
+            {tooLongText(t, i18n.language, text.trim().length)}
+            {onLongAsFile ? "" : ` ${t("channel.tooLong.fix")}`}
+          </RNText>
+          {onLongAsFile ? (
+            // An 18-point line: 13 of slop around it gives the 44-point target.
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={13}
+              onPress={() => {
+                onLongAsFile(text.trim());
+                put("", 0);
+              }}
+            >
+              <RNText
+                maxFontSizeMultiplier={CHROME_MAX_SCALE}
+                style={[systemText("footnote", weights.semibold), styles.tooLongAct, { color: colors.ink }]}
+              >
+                {t("channel.tooLong.asFile")}
+              </RNText>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {voice?.above ?? null}
       {formatting ? (
         <Animated.View
@@ -664,6 +704,16 @@ const placeholderText: TextStyle = {
 };
 
 const styles = StyleSheet.create({
+  // Why the words can't go, then the way out after them, or under them when it doesn't fit.
+  tooLong: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 12,
+    rowGap: 4,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  tooLongAct: { textDecorationLine: "underline" },
   inputBox: { flex: 1, minWidth: 0 },
   inputFill: { flex: 0, width: "100%" },
   // Over the empty field's one line, centered on it.

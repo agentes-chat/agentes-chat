@@ -9,11 +9,13 @@ import type { ControlIphoneSetup } from "@agenteschat/adapters/runner-control";
 import {
   DDIS_UPDATE,
   iosMajor,
+  isIphoneWifiReason,
   PHONE_APP_IN_STORE,
   reasonText,
   tooOldVersion,
   useStalled,
 } from "@agenteschat/client/lib/devices";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { Button, Icon, InfoHint, PixelSpinner, QrCode, SettingsPath } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,8 +30,9 @@ import {
   iphoneStepsUrl,
 } from "../control/devices";
 import { pairedHomes } from "../control/store";
-import { useLocalServer } from "../hooks";
+import { useLocalServer, useWifiIphones } from "../hooks";
 import { hintFor } from "../ui/settings";
+import { useToast } from "../ui/Toast";
 
 /** How often the Mac is asked while the window is open: Xcode installed, the download's progress, a new account. */
 const ASK_MS = 2000;
@@ -111,9 +114,11 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
   const phoneName = phone ? (phone.name ?? phone.model) : "";
   const tooOld = phone?.state === "unsupported";
   // A step that sits unchanged gets what most likely holds it. A download that moves is no stall, and an iPhone below
-  // iOS 17 gets nothing, nor a step whose own text already says what to do (a helper the person must act on, no team).
+  // iOS 17 gets nothing, nor a step whose own text already says what to do (a helper the person must act on, no team),
+  // nor one over Wi-Fi: those lines are about the cable.
   const progress = platform?.state === "downloading" ? `${platform.percent ?? ""}/${platform.done ?? ""}` : "";
   const quiet =
+    phone?.transport === "wifi" ||
     (tooOld && current === "connected") ||
     (current === "helper" && states.helper === "needs") ||
     (current === "account" && (!!setup?.noTeam || reason === "apple_team_missing"));
@@ -124,6 +129,28 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
   );
   const [plugged, setPlugged] = useState(false);
   const looking = current === "connected" && !phone;
+  const toast = useToast();
+  const near = useWifiIphones({ server, orgId: orgId ?? null, machineId: mac?.id ?? null }, looking);
+  const pickOverWifi = (serial: string) => near.pick(serial).catch((err: unknown) => toast(errorText(t, err), "alert"));
+  // iPhones on this Mac's Wi-Fi that trust it, under the step that waits for a cable.
+  const wifiOffer = near.available.map((p) => (
+    <span key={p.serial} className="dk-ip__act dk-ip__wifi">
+      <span className="ac-hintline">
+        <span>{t("devices.iphone.wifi.also", { name: p.name ?? p.model })}</span>
+        <InfoHint name={hintFor(t, t("devices.iphone.wifi.use"), t("devices.iphone.wifi.hint")).name}>
+          {t("devices.iphone.wifi.hint")}
+        </InfoHint>
+      </span>
+      <Button
+        size="sm"
+        loading={near.using === p.serial}
+        disabled={near.using !== null}
+        onClick={() => void pickOverWifi(p.serial)}
+      >
+        {t("devices.iphone.wifi.use")}
+      </Button>
+    </span>
+  ));
   const stall = (step: IphoneSetupStep) =>
     !setup
       ? t("desktop.iphone.checkingStall")
@@ -232,18 +259,26 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
       case "connected":
         return reason === "untrusted" ? (
           t("devices.iphone.trustText")
+        ) : phone && isIphoneWifiReason(reason) ? (
+          t(`devices.iphone.wifiState.${reason}`, { name: phoneName })
         ) : reason === "locked" ? (
           t("desktop.iphone.unlockText")
         ) : tooOld && phone ? (
           t("devices.iphone.tooOld", { name: phoneName, version: tooOldVersion(t, phone.osVersion) })
         ) : looking && !plugged && !stalled ? (
-          <Act text={t("devices.iphone.connectedText", { mac: macName })}>
-            <Button size="sm" onClick={() => setPlugged(true)}>
-              {t("devices.iphone.pluggedIn")}
-            </Button>
-          </Act>
+          <>
+            <Act text={t("devices.iphone.connectedText", { mac: macName })}>
+              <Button size="sm" onClick={() => setPlugged(true)}>
+                {t("devices.iphone.pluggedIn")}
+              </Button>
+            </Act>
+            {wifiOffer}
+          </>
         ) : (
-          t("devices.iphone.connectedText", { mac: macName })
+          <>
+            {t("devices.iphone.connectedText", { mac: macName })}
+            {wifiOffer}
+          </>
         );
       case "developerMode":
         return (

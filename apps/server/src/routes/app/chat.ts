@@ -13,6 +13,7 @@ import {
   listChannels,
   listMessages,
   listWorkingRuns,
+  MAX_MESSAGE_LENGTH,
   MEDIA_REFUSALS,
   type MessageView,
   messageCard,
@@ -589,10 +590,13 @@ export function chatRoutes(deps: AppDeps) {
         params: ChannelParams,
         body: body(
           z.object({
+            // Only a bound on what is parsed: the limit people are told is the engine's (`message.too_long`).
             body: z
               .string()
-              .max(40_000)
-              .openapi({ description: "Markdown. May be empty only when `attachments` has files or `media` is set." }),
+              .max(MAX_MESSAGE_LENGTH * 10)
+              .openapi({
+                description: `Markdown, up to ${MAX_MESSAGE_LENGTH} characters (400 \`message.too_long\` with \`params.length\` and \`params.max\`). May be empty only when \`attachments\` has files or \`media\` is set.`,
+              }),
             threadId: z.uuid().nullable().optional(),
             replyTo: z.uuid().nullable().optional().openapi({
               description:

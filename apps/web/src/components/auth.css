@@ -316,6 +316,33 @@ html:not([data-pointer]) .auth__quiet:focus-visible {
 .auth__fine a {
   color: var(--muted);
 }
+/* A screen in place of the app (a suspended workspace, an account waiting for its deletion): the other workspaces
+   stacked under their heading, and deleting the account apart at the foot (ADR 0088 §10). */
+.auth__ways,
+.auth__apart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.auth__ways > h2,
+.auth__apart > h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--muted);
+}
+.auth__apart {
+  align-items: flex-start;
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--line);
+}
+.auth__apart > p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
 /* "Já tem conta? Entrar" under a form (the invitation page) */
 .auth__foot {
   margin: 8px 0 0;

@@ -5,7 +5,9 @@ import {
   useAiStatus,
   useIssueAction,
   useIssueColumns,
+  useIssueProjects,
 } from "@agenteschat/client";
+import { pickableProjects } from "@agenteschat/client/lib/issue-projects";
 import { PRIORITIES } from "@agenteschat/client/lib/issues";
 import { aiStateOf } from "@agenteschat/client/lib/no-ai";
 import { EVERYONE } from "@agenteschat/client/lib/who-sees";
@@ -21,17 +23,18 @@ import { goBack, PushedHeader, successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
 import { useWhoSeesDraft, useWhoSeesLabel, WhoSeesRows } from "../shared/WhoSees";
 import { columnOfIssue, DUE_CHOICES, type DueChoice, dueDateOf } from "./logic";
-import { useColumnLabel } from "./parts";
+import { ProjectDot, useColumnLabel } from "./parts";
 import { useStartAgent } from "./useStartAgent";
 
-type Open = "who" | "priority" | "due" | "sees" | null;
+type Open = "who" | "project" | "priority" | "due" | "sees" | null;
 
 const close = () => goBack("/issues");
 
 /**
  * "Nova tarefa", a screen pushed over Tarefas (the native bar: back, the title, "Criar"): the title, a
  * description, who does it (an agent picked here is asked right away, as on the web: it starts and the status
- * moves on its own), the priority and the due date. From a board column's "+" (`column`), it goes in that column.
+ * moves on its own), its project, the priority and the due date. From a board column's "+" (`column`), it goes in
+ * that column; from a project's tasks (`project`), it starts in that project.
  */
 export function NewIssueForm() {
   const { t } = useTranslation();
@@ -46,7 +49,10 @@ export function NewIssueForm() {
   const ai = useAiStatus(orgId);
   const columns = useIssueColumns(orgId);
   const columnLabel = useColumnLabel();
-  const { column: columnId } = useLocalSearchParams<{ column?: string }>();
+  const { column: columnId, project: fromProject } = useLocalSearchParams<{ column?: string; project?: string }>();
+  const projects = pickableProjects(useIssueProjects(orgId).data?.projects ?? []);
+  const [projectId, setProjectId] = useState<string | null>(fromProject ?? null);
+  const project = projects.find((p) => p.id === projectId) ?? null;
   const column = columnId ? columns.data?.find((c) => c.id === columnId) : undefined;
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
@@ -83,6 +89,7 @@ export function NewIssueForm() {
           assignee: who?.type === "person" ? who : null,
           priority,
           dueDate: dueDateOf(due),
+          ...(project ? { projectId: project.id } : {}),
           audience: sees.choice,
         },
       },
@@ -190,6 +197,30 @@ export function NewIssueForm() {
               {column ? (
                 <GroupedRow icon="circle" label={t("issues.column")} sub={columnLabel(column)} subLines={0} />
               ) : null}
+              {projects.length > 0 ? (
+                <GroupedRow
+                  leading={<ProjectDot color={project?.color} />}
+                  label={t("issues.projects.label")}
+                  value={project?.name ?? t("issues.projects.none")}
+                  chevron
+                  onPress={() => toggle("project")}
+                />
+              ) : null}
+              {open === "project"
+                ? [...projects, null]
+                    .filter((p) => (p?.id ?? null) !== (project?.id ?? null))
+                    .map((p) => (
+                      <GroupedRow
+                        key={p?.id ?? "none"}
+                        leading={<ProjectDot color={p?.color} />}
+                        label={p?.name ?? t("issues.projects.none")}
+                        onPress={() => {
+                          setProjectId(p?.id ?? null);
+                          setOpen(null);
+                        }}
+                      />
+                    ))
+                : null}
               <GroupedRow
                 icon="flag"
                 label={t("issues.form.priority")}

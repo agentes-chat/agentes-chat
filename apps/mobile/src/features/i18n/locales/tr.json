@@ -370,8 +370,6 @@
     "switchWorking": "çalışıyor",
     "join": "Kanala katıl",
     "sending": "Gönderiliyor…",
-    "failed": "Gönderilmedi · Tekrar deneyin",
-    "notSent": "Mesaj gönderilmedi.",
     "toLatest": "En son mesajlara git",
     "toLatestNew": "En son mesajlara git: {{text}}",
     "stopAgent": "{{name}} ajanını durdur",
@@ -1678,13 +1676,7 @@
       "open": "Aç",
       "expandHint": "Genişletmek için dokunun",
       "stop": "Durdur",
-      "giveUp": "Vazgeç",
-      "done": "Tamamlandı: {{title}}",
-      "failed": "Yapılamadı: {{title}}",
-      "failedNote": "Yapılamadı: {{note}}",
-      "expired": "Kimse zamanında açmadı: {{title}}",
-      "cancelled": "İptal edildi: {{title}}",
-      "withdrawn": "{{name}} artık buna ihtiyaç duymuyor: {{title}}"
+      "giveUp": "Vazgeç"
     },
     "live": {
       "inControl": "Kontrol sizde",
@@ -1810,6 +1802,10 @@
       "no_driverLinux": "Linux'un bu telefon için udev kurallarına ihtiyacı var",
       "os_too_old": "Bu telefonun sistemi çok eski",
       "adb_offline": "Kabloyu çıkarıp yeniden takın",
+      "wifi_away": "Bu iPhone'u Mac'in Wi-Fi ağına bağlayın veya kabloyla bağlayın",
+      "wifi_asleep": "Bu iPhone'u uyandırıp kilidini açın ve Mac'in yakınında tutun",
+      "tunnel_down": "Wi-Fi bağlantısı koptu. Bu iPhone'u Mac'in yakınında tutun veya kabloyla bağlayın",
+      "wifi_untrusted": "Bir kez kabloyla bağlayıp Güven'e dokunun",
       "other": "Henüz hazır değil"
     },
     "os": {
@@ -1967,6 +1963,15 @@
       "teamMissing": "Xcode'da oturum açık ama henüz bir ekip görünmüyor. Xcode'da herhangi bir iOS uygulaması oluşturun, Signing & Capabilities altında ekibinizi seçin ve uygulamayı bu iPhone'da bir kez çalıştırın.",
       "uiRefused": "Bu iPhone, test yardımcısının dokunuşlarını reddetti. Kilidini açın ve isterse parolanızı girin. Tekrar olursa Ayarlar › Geliştirici › UI Otomasyonunu Etkinleştir seçeneğini kapatıp açın.",
       "pluggedIn": "Taktım",
+      "wifi": {
+        "also": "{{host}} Wi-Fi ağında da var: {{name}}",
+        "use": "Wi-Fi üzerinden kullan",
+        "hint": "Burada yalnızca Mac'e daha önce kabloyla güvenmiş bir iPhone görünür. Mac ona Apple'ın kendi şifreli bağlantısıyla, Xcode'un kullandığı bağlantıyla ulaşır.",
+        "stop": "Wi-Fi üzerinden kullanmayı bırak",
+        "stopTitle": "{{name}} Wi-Fi üzerinden kullanılmasın mı?",
+        "stopText": "Ajanlar artık ona ulaşamaz. Kullanmak için {{host}} üzerinden yeniden seçin.",
+        "stopped": "{{name}} artık Wi-Fi üzerinden kullanılmıyor"
+      },
       "stall": {
         "plug": "{{host}} henüz bu iPhone'u görmüyor. Sadece şarj değil veri de taşıyan bir kablo kullanın, bu iPhone'un kilidini açık tutun ve isterse Güven'e dokunun.",
         "devmode": "Geliştirici Modu yalnızca bu iPhone yeniden başladıktan sonra açılır. Yeniden Başlat'a, açıldıktan sonra da Aç'a dokunun. Anahtar yok mu? Bu iPhone'u çıkarıp yeniden takın."
@@ -2230,9 +2235,9 @@
     "ofOnline": "{{online}} / {{count}}",
     "deleteName": "{{name}} çalışma alanını sil",
     "deleteFoot": "Fikrinizi değiştirmek için 7 gününüz var.",
-    "deleteAlert": "Herkes hemen çıkarılır. 7 gün boyunca geri yüklenebilir.",
+    "deleteAlert": "Herkes artık yalnızca okuyabilir. 7 gün boyunca geri yüklenebilir.",
     "deleteAction": "Sil",
-    "deleteIntro": "{{name}} herkes için hemen kapanır ve 7 gün sonra kalıcı olarak silinir.",
+    "deleteIntro": "{{name}} herkes için hemen salt okunur olur ve 7 gün sonra kalıcı olarak silinir.",
     "holdDelete": "Silmek için basılı tutun",
     "deleteFailed": "Çalışma alanı silinemedi. Tekrar deneyin.",
     "access": {
@@ -2529,7 +2534,6 @@
     },
     "formatAuto": "En iyisini {{name}} seçer",
     "newWidget": {
-      "titleHint": "Başlık · {{name}} testte bir tane önerir",
       "alerts": "Uyarı açık",
       "realData": "Gerçek veriler",
       "editAsk": "İsteği değiştir",

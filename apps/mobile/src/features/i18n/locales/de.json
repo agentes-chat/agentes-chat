@@ -370,8 +370,6 @@
     "switchWorking": "arbeitet",
     "join": "Dem Kanal beitreten",
     "sending": "Wird gesendet…",
-    "failed": "Nicht gesendet · Erneut versuchen",
-    "notSent": "Die Nachricht wurde nicht gesendet.",
     "toLatest": "Zu den neuesten Nachrichten",
     "toLatestNew": "Zu den neuesten Nachrichten: {{text}}",
     "stopAgent": "{{name}} stoppen",
@@ -1678,13 +1676,7 @@
       "open": "Öffnen",
       "expandHint": "Zum Vergrößern tippen",
       "stop": "Stoppen",
-      "giveUp": "Aufgeben",
-      "done": "Erledigt: {{title}}",
-      "failed": "Nicht geschafft: {{title}}",
-      "failedNote": "Nicht geschafft: {{note}}",
-      "expired": "Niemand hat es rechtzeitig geöffnet: {{title}}",
-      "cancelled": "Abgebrochen: {{title}}",
-      "withdrawn": "{{name}} braucht das nicht mehr: {{title}}"
+      "giveUp": "Aufgeben"
     },
     "live": {
       "inControl": "Du hast die Steuerung",
@@ -1810,6 +1802,10 @@
       "no_driverLinux": "Linux braucht udev-Regeln für dieses Handy",
       "os_too_old": "Das System dieses Handys ist zu alt",
       "adb_offline": "Zieh das Kabel ab und steck es wieder ein",
+      "wifi_away": "Verbinde dieses iPhone mit dem WLAN des Macs oder schließ es an",
+      "wifi_asleep": "Weck dieses iPhone auf, entsperr es und lass es nah am Mac",
+      "tunnel_down": "Die WLAN-Verbindung ist abgebrochen. Lass dieses iPhone nah am Mac oder schließ es an",
+      "wifi_untrusted": "Schließ es einmal an und tippe auf Vertrauen",
       "other": "Noch nicht bereit"
     },
     "os": {
@@ -1967,6 +1963,15 @@
       "teamMissing": "Xcode ist angemeldet, zeigt aber noch kein Team. Erstelle in Xcode eine beliebige iOS-App, wähle unter Signing & Capabilities dein Team und führe sie einmal auf diesem iPhone aus.",
       "uiRefused": "Dieses iPhone hat die Eingaben der Test-App abgelehnt. Entsperre es und gib deinen Code ein, wenn es danach fragt. Passiert es wieder, schalte Einstellungen › Entwickler › UI-Automatisierung aktivieren aus und wieder ein.",
       "pluggedIn": "Es ist angeschlossen",
+      "wifi": {
+        "also": "Auch im WLAN von {{host}}: {{name}}",
+        "use": "Über WLAN nutzen",
+        "hint": "Hier erscheint nur ein iPhone, das dem Mac schon einmal per Kabel vertraut hat. Der Mac erreicht es über Apples eigene verschlüsselte Verbindung, dieselbe, die Xcode nutzt.",
+        "stop": "Nicht mehr über WLAN nutzen",
+        "stopTitle": "{{name}} nicht mehr über WLAN nutzen?",
+        "stopText": "Agenten erreichen es nicht mehr. Wähl es mit {{host}} wieder aus, um es zu nutzen.",
+        "stopped": "{{name}} wird nicht mehr über WLAN genutzt"
+      },
       "stall": {
         "plug": "{{host}} sieht dieses iPhone noch nicht. Nimm ein Kabel, das Daten überträgt und nicht nur lädt, lass dieses iPhone entsperrt und tippe auf Vertrauen, wenn es fragt.",
         "devmode": "Der Entwicklermodus geht erst nach einem Neustart dieses iPhones an. Tippe auf Neustart und danach auf Aktivieren. Kein Schalter da? Zieh dieses iPhone ab und schließ es wieder an."
@@ -2230,9 +2235,9 @@
     "ofOnline": "{{online}} von {{count}}",
     "deleteName": "{{name}} löschen",
     "deleteFoot": "Du hast 7 Tage Zeit, es dir anders zu überlegen.",
-    "deleteAlert": "Alle verlieren sofort den Zugriff. Wiederherstellen geht noch 7 Tage lang.",
+    "deleteAlert": "Alle können ihn ab sofort nur noch lesen. Wiederherstellen geht noch 7 Tage lang.",
     "deleteAction": "Löschen",
-    "deleteIntro": "{{name}} wird sofort für alle geschlossen und in 7 Tagen endgültig gelöscht.",
+    "deleteIntro": "{{name}} ist ab sofort für alle schreibgeschützt und wird in 7 Tagen endgültig gelöscht.",
     "holdDelete": "Zum Löschen gedrückt halten",
     "deleteFailed": "Der Workspace ließ sich nicht löschen. Versuch es noch einmal.",
     "access": {
@@ -2529,7 +2534,6 @@
     },
     "formatAuto": "{{name}} wählt die beste aus",
     "newWidget": {
-      "titleHint": "Titel · {{name}} schlägt beim Testen einen vor",
       "alerts": "Alarm an",
       "realData": "Echte Daten",
       "editAsk": "Anfrage ändern",

@@ -195,13 +195,14 @@ export async function ensureRightHands(db: Database, batch = 200): Promise<numbe
 export const rightHandPermanent = (what: string) =>
   new ForbiddenError(`The team's right hand can't be ${what}`, "agent.right_hand_permanent");
 
-/** What admins may change on it (ADR 0137): its name and handle, AI and model, budget. Look and audience have their own calls. */
+/** What admins may change on it (ADR 0137): its name and handle, AI and model, budget, how much it asks. Look and audience have their own calls. */
 export const RIGHT_HAND_EDITABLE: ReadonlySet<string> = new Set([
   "name",
   "handle",
   "model",
   "credentialId",
   "monthlyBudgetNanoUsd",
+  "approvalsLevel",
 ]);
 
 /** Refuses `what` for the right hand: archived, deleted. */

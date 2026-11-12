@@ -23,6 +23,7 @@ import {
   Preview,
   SourceMark,
   useImportFlow,
+  useImportMethod,
 } from "@/components/ImportFlow";
 import { EXPORT_PROMPT } from "@/lib/import";
 import {
@@ -72,6 +73,8 @@ export function TeamSourceBody({
   const qc = useQueryClient();
   const flow = useImportFlow(orgId);
   const { link, none } = state;
+  // Grok Bot's answer is pasted on the step's own view, which offers no MCP.
+  const mcp = useImportMethod(flow, orgId).method === "mcp" && !link.replyCard;
   // A clean import whose files still go to the Drive: the step waits for the copy (closing the page would stop it).
   const [awaitCopy, setAwaitCopy] = useState(false);
 
@@ -117,6 +120,7 @@ export function TeamSourceBody({
         coming: null,
         report: false,
         applying: false,
+        mcp,
       };
     const items = new Map(planned.items.map((i) => [itemId(i), i]));
     const comes = (kind: "agent" | "channel", key: string) => {
@@ -136,8 +140,9 @@ export function TeamSourceBody({
       },
       report: flow.report !== null,
       applying: bring.isPending,
+      mcp: false,
     };
-  }, [planned, flow.card, flow.pick, flow.report, bring.isPending, t]);
+  }, [planned, flow.card, flow.pick, flow.report, bring.isPending, mcp, t]);
   useEffect(() => {
     link.publish(facts);
   }, [facts, link.publish]);

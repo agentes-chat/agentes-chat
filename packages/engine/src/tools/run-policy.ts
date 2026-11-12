@@ -1,3 +1,4 @@
+import { and, type Executor, eq, schema } from "@agenteschat/db";
 import { fedByRoutine, type RunAuthority } from "../authority";
 import { directoryRole } from "./directory";
 import type { JsonSchema } from "./json-schema";
@@ -28,6 +29,11 @@ import type { ToolDefinition } from "./types";
  *   reads, the web, the browser) and answers through `update_widget`; everything else is refused with why,
  *   `hand_off` included: a widget's refresh never posts. `update_widget` is no other run's. What it starts with in
  *   hand, where a brain's harness would hold tools back behind a search: `widgetUpFront`.
+ *
+ * The agent's own approvals level (ADR 0173) only moves a run that isn't a routine's nor fed by one: at `always`
+ * every write to a connected app asks, as a routine's does. A routine's run and one its reading feeds ask the same at
+ * every level: text nobody checked feeds them (ADR 0053 §4). What `never` stops asking for is the gateway's
+ * (`unaskedAtNever`), since it reads the call.
  *
  * Tool names are written here as plain strings (not imported) so the table loads before the tool
  * modules, which import the gateway.
@@ -80,6 +86,20 @@ export type InternalArea =
   | "dashboards"
   | "vault";
 
+/** How much an agent asks before acting (`agents.approvals_level`, ADR 0173). */
+export const APPROVALS_LEVELS = ["always", "risky", "never"] as const;
+export type ApprovalsLevel = (typeof APPROVALS_LEVELS)[number];
+export const DEFAULT_APPROVALS_LEVEL: ApprovalsLevel = "risky";
+
+/** An agent's level, read fresh on every call: narrowing it asks at once. */
+export async function approvalsLevelOf(db: Executor, orgId: string, agentId: string): Promise<ApprovalsLevel> {
+  const [row] = await db
+    .select({ level: schema.agents.approvalsLevel })
+    .from(schema.agents)
+    .where(and(eq(schema.agents.orgId, orgId), eq(schema.agents.id, agentId)));
+  return row?.level ?? DEFAULT_APPROVALS_LEVEL;
+}
+
 export type PolicyTool = Pick<ToolDefinition, "name" | "scope" | "connectionId" | "sensitive">;
 
 const ALLOW: PolicyDecision = { action: "allow" };
@@ -103,6 +123,8 @@ const ELSEWHERE = new Set([
   "create_channel",
   "request_secret",
   "request_permission",
+  // An agent's own settings, as its permissions: never what a routine or what it read asks for.
+  "request_settings_change",
   "request_folder_access",
   "propose_event",
   // An email to whoever runs the server, in a person's name (ADR 0160 §11): only a run a person is behind sends it.
@@ -285,8 +307,12 @@ const ROUTINE_HERE_REFUSAL: Readonly<Record<string, string>> = {
   share_artifact: REFUSALS.routineShare,
 };
 
-/** The table (see the file's comment): what `authority` may do with `tool`. */
-export function toolPolicy(authority: RunAuthority, tool: PolicyTool): PolicyDecision {
+/** The table (see the file's comment): what `authority` may do with `tool`, at the agent's approvals level. */
+export function toolPolicy(
+  authority: RunAuthority,
+  tool: PolicyTool,
+  level: ApprovalsLevel = DEFAULT_APPROVALS_LEVEL,
+): PolicyDecision {
   const what = toolKind(tool);
   // A widget's refresh (ADR 0135 §5): reads and `update_widget`, nothing else.
   if (authority.kind === "routine" && authority.brief?.widget) return widgetRunPolicy(what);
@@ -297,7 +323,10 @@ export function toolPolicy(authority: RunAuthority, tool: PolicyTool): PolicyDec
   // A person's run and a run nobody is behind work alike: as the agent, with every tool its scopes give.
   // The mission's own tools check that the run works for the mission (`runActsForMission`).
   const fed = authority.kind === "unattended" && fedByRoutine(authority);
-  if (authority.kind !== "routine" && !fed) return what.kind === "hand_off" ? refuse(REFUSALS.handOffOnly) : ALLOW;
+  if (authority.kind !== "routine" && !fed) {
+    if (what.kind === "hand_off") return refuse(REFUSALS.handOffOnly);
+    return level === "always" && what.kind === "external" ? APPROVE : ALLOW;
+  }
   // What a routine read feeds a run its report or work woke (`fedByRoutine`): that run keeps the routine's
   // bounds, replies where it is, and asks a person before writing to a connected app.
   switch (what.kind) {

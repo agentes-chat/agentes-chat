@@ -339,6 +339,11 @@ export interface NotificationLatest {
    * translates).
    */
   reason?: string;
+  /**
+   * `widget_failed` with `missing_credential`: why its agent has no AI (`AgentAi.reason`, coded), kept apart from
+   * `text`, which the island, the push and the phone show as it is.
+   */
+  detail?: string;
   /** `approval`: asked while nobody watched, by a routine (its name) or an unattended run (ADR 0053 §8). */
   origin?: ApprovalOrigin;
   /** `org_standing` to `agent_hold`: the hold's kind, `network` or `operator`, never its reason. */
@@ -1019,6 +1024,9 @@ function visible(orgId: string, userId: string, now: Date): SQL {
     stillDecides(orgId, userId),
   ) as SQL;
 }
+
+/** The inbox's own rule for what a person sees, for the lists built on it (`waiting.ts`). */
+export const inboxVisible = visible;
 
 function filterSql(filter: NotificationFilter): SQL | undefined {
   switch (filter) {

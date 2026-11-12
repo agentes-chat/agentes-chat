@@ -118,6 +118,7 @@ export const ICONS = {
     p("M19.8 12.6h-4.2a3 3 0 0 0-3 3v4.2"),
   ],
   laptop: [r(5, 5, 14, 10, 1.8), p("M3 18.5h18")],
+  phone: [r(7, 3, 10, 18, 2.4), p("M10.5 17.5h3")],
   // Each computer's line icon (the small form of its portrait, `ComputerIcon`).
   computerMac: [
     r(4, 4.5, 16, 11, 2),

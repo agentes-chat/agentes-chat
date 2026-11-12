@@ -132,6 +132,19 @@ describe("sending", () => {
     expect(rows.filter((m) => voiceOf(m.meta))).toHaveLength(1);
   });
 
+  test("a recording whose workspace began being deleted before its words came is dropped, never sent", async () => {
+    f = await setup();
+    const deps = voiceDeps([engine("oi")]);
+    const { clipId } = await accept(deps);
+    await f.db
+      .update(schema.organizations)
+      .set({ deletionDueAt: new Date(Date.now() + 7 * DAY) })
+      .where(eq(schema.organizations.id, f.org.id));
+    await transcribeVoiceClip(deps, clipId, { finalAttempt: false });
+    expect((await clipOf(clipId)).status).toBe("dropped");
+    expect(await messageOf(clipId)).toBeNull();
+  });
+
   test("only audio is taken, within its limits, and only with an engine", async () => {
     f = await setup();
     const deps = voiceDeps([engine("oi")]);

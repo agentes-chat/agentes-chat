@@ -12,7 +12,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         heading: "Como ele roda",
         blocks: [
           "Ele roda dentro do app, com um banco de dados embutido, e guarda tudo numa pasta deste computador, a `.agentes` da sua pasta pessoal. Nada mais para instalar: sem Docker, sem banco para configurar.",
-          "Ele liga junto com o app e para quando você fecha o app. Fechar pergunta antes, porque ninguém consegue usar o agentes.chat até o app abrir de novo.",
+          "Ele liga junto com o app e para quando você fecha o app. Fechar pergunta antes, porque ninguém consegue usar o agentes.chat até o app abrir de novo. Para parar por um tempo sem fechar o app, clique no ícone do agentes.chat perto do relógio e escolha **Parar** no menu **⋯** do cartão dele.",
         ],
       },
       {
@@ -27,7 +27,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "keep-on",
         heading: "Manter ligado",
         blocks: [
-          "Num computador que outras pessoas usam, deixe tudo pronto uma vez:",
+          "Num computador que outras pessoas usam, deixe tudo pronto uma vez. **Manter funcionando**, em **Preferências\u00a0›\u00a0Servidores**, mostra o que ainda falta e abre os ajustes certos:",
           {
             list: [
               "**Abrir ao iniciar a sessão** liga sozinho depois da configuração.",
@@ -50,8 +50,8 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "another-workspace",
         heading: "Emprestar para outro workspace também",
         blocks: [
-          "Os workspaces do servidor que roda aqui já usam este computador, sem nada a fazer. Para um workspace de outro lugar usar também, como um no agentes.chat Cloud, abra **Preferências\u00a0›\u00a0Servidores**, aperte **Adicionar um servidor…**, entre nesse workspace e aperte **Permitir** quando o app perguntar.",
-          "Cada workspace tem aqui os próprios agentes e pastas. Os **Comandos** também já vêm ligados para ele. Desligue na pergunta do app antes de apertar **Permitir**, ou depois em **Preferências\u00a0›\u00a0Ferramentas**, onde uma única chave vale para todos os workspaces deste computador.",
+          "Os workspaces do servidor que roda aqui já usam este computador, sem nada a fazer. Para um workspace de outro lugar usar também, como um no agentes.chat Cloud, aperte **Adicionar um workspace…** no fim do primeiro cartão de **Preferências\u00a0›\u00a0Geral**, ou **Adicionar um servidor…** em **Preferências\u00a0›\u00a0Servidores**. Entre nesse workspace e aperte **Permitir** quando o app perguntar.",
+          "Cada workspace tem aqui os próprios agentes e pastas. Os **Comandos** também já vêm ligados para ele. Desligue na pergunta do app antes de apertar **Permitir**, ou depois em **Preferências\u00a0›\u00a0Ferramentas**, onde cada workspace tem a própria chave e o app pergunta antes de ligar de novo.",
         ],
       },
       {
@@ -66,29 +66,29 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "password",
         heading: "Entrar de outros aparelhos",
         blocks: [
-          "A conta dona começa sem senha: o app faz o seu login neste computador. Para entrar pelo navegador de outro computador, crie uma em **Configurações\u00a0›\u00a0Sua conta**. O app do celular se conecta escaneando o QR code em **No celular**, em **Preferências\u00a0›\u00a0Servidores**. Para isso, **Acessar pelo celular e pela equipe** precisa estar ligado.",
+          "A conta dona começa sem senha: o app faz o seu login neste computador. Para entrar pelo navegador de outro computador, crie uma em **Configurações\u00a0›\u00a0Sua conta**. Enquanto não criar, **Preferências\u00a0›\u00a0Servidores** avisa, e **Criar uma senha** abre essa página. O app do celular se conecta escaneando o QR code em **No celular**, em **Preferências\u00a0›\u00a0Servidores**. Para isso, **Acessar pelo celular e pela equipe** precisa estar ligado.",
         ],
       },
       {
         id: "updates",
         heading: "Atualizações",
         blocks: [
-          "O app procura atualizações sozinho e instala uma quando você aperta **Atualizar e reabrir** em **Preferências\u00a0›\u00a0Atualizações**. O servidor e todos os agentes reiniciam junto. O banco de dados é copiado antes e, se a versão nova não responder em 3 minutos, o app volta sozinho para a versão anterior e os dados dela.",
+          "O app procura atualizações sozinho. Com **Instalar atualizações sozinho, de madrugada** ligado, em **Preferências\u00a0›\u00a0Atualizações**, ele instala entre 3:00 e 5:00, com o app aberto. Vem ligado quando o servidor roda aqui. Se estiver desligado, aperte **Atualizar e reabrir**. O servidor e todos os agentes reiniciam junto. O banco de dados é copiado antes e, se a versão nova não responder em 3 minutos, o app volta sozinho para a versão anterior e os dados dela.",
         ],
       },
       {
         id: "backups",
         heading: "Backup",
         blocks: [
-          "Nada faz backup sozinho ainda. **Fazer backup agora**, em **Preferências\u00a0›\u00a0Servidores**, para o servidor por um instante e guarda o banco de dados, os arquivos e o `.env` em `.agentes/backups`, na sua pasta pessoal. Ele mantém os dois mais novos.",
-          "De vez em quando, copie esses backups para fora deste computador, num disco ou num serviço de arquivos on-line. Eles guardam as suas chaves: mantenha em sigilo.",
+          "Com **Fazer backup toda noite** ligado (app 0.8.1 ou mais novo), em **Preferências\u00a0›\u00a0Servidores**, o app guarda o banco de dados, os arquivos e o `.env` em `.agentes/backups`, na sua pasta pessoal, toda noite às 3:00. Um computador que estava dormindo faz o backup quando acorda. **Fazer backup agora** faz o mesmo na hora. Cada backup para o servidor por um instante, e os dois mais novos ficam.",
+          "**Copiar para** também põe cada backup novo numa pasta que você escolhe, como um pendrive ou o iCloud Drive, onde os dois mais novos ficam. Eles guardam as suas chaves: mantenha em sigilo. **Restaurar…** volta o agentes.chat para um backup: mensagens, arquivos e ajustes. Ele para por um minuto, e o que havia antes fica guardado na pasta de backups.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code e Codex",
         blocks: [
-          "O app encontra o Claude Code e o Codex pelo `PATH` do seu shell de login, mais as pastas de costume, como `~/.local/bin`, `/opt/homebrew/bin` e `/usr/local/bin`. Se **Preferências\u00a0›\u00a0Ferramentas** mostrar **Não encontrado**, confira se `claude` ou `codex` roda numa janela nova do Terminal, depois feche e abra o app de novo.",
+          "O app encontra o Claude Code e o Codex pelo `PATH` do seu shell de login, mais as pastas de costume, como `~/.local/bin`, `/opt/homebrew/bin` e `/usr/local/bin`. Se **Preferências\u00a0›\u00a0Ferramentas** mostrar **Não encontrado**, ele mostra a linha que instala. Rode essa linha no Terminal e aperte **Verificar de novo**.",
         ],
       },
       {
@@ -160,7 +160,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         heading: "Pelo app do agentes.chat",
         blocks: [
           "Instale o app no computador, abra e entre no seu workspace. Ele pergunta **Deixar os agentes de <workspace> usarem este Mac?** (este PC no Windows, este computador no Linux). Escolha quem pode usar e aperte **Permitir**. Só isso.",
-          "Já entrou? Ligue o workspace em **Preferências\u00a0›\u00a0Geral**, no cartão **Agentes**.",
+          "Já entrou? Abra **Preferências\u00a0›\u00a0Geral** e aperte **Permitir** na linha do workspace, no primeiro cartão. Não está lá? Aperte **Adicionar um workspace…** no fim desse cartão e entre.",
         ],
       },
       {
@@ -203,7 +203,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "pausing",
         heading: "Pausar e desconectar",
         blocks: [
-          "No computador, o ícone do agentes.chat perto do relógio pausa os agentes de todos os workspaces. Em **Preferências\u00a0›\u00a0Geral**, a chave de cada workspace pausa só aquele, e **Sair** desconecta. Nada novo começa enquanto está pausado, e o que já rodava termina. Desconectar mantém as pastas dos agentes no disco.",
+          "No computador, o ícone do agentes.chat perto do relógio pausa os agentes de todos os workspaces, ou de um só. Em **Preferências\u00a0›\u00a0Geral**, a chave de cada workspace pausa só aquele, e **Sair**, no menu **⋯** dele, desconecta. Nada novo começa enquanto está pausado, e o que já rodava termina. Desconectar mantém as pastas dos agentes no disco.",
           "Pelo site, **Remover** na página do dispositivo desconecta ele.",
         ],
       },
@@ -236,7 +236,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
               "num computador que também roda o agentes.chat, o banco de dados e as chaves dele em `.agentes`",
             ],
           },
-          "O agentes.chat recusa comandos que citam as chaves, os tokens e os logins, mas isso é uma regra, não uma parede. Os **Comandos** já vêm ligados. Desligue na pergunta do app antes de apertar **Permitir**, ou depois em **Preferências\u00a0›\u00a0Ferramentas**, onde uma única chave vale para todos os workspaces do computador. O Claude Code e o Codex rodam os próprios comandos na pasta do agente, com as próprias regras.",
+          "O agentes.chat recusa comandos que citam as chaves, os tokens e os logins, mas isso é uma regra, não uma parede. Os **Comandos** já vêm ligados. Desligue na pergunta do app antes de apertar **Permitir**, ou depois em **Preferências\u00a0›\u00a0Ferramentas**, onde cada workspace tem a própria chave (app 0.8.1 ou mais novo) e o app pergunta antes de ligar de novo. O Claude Code e o Codex rodam os próprios comandos na pasta do agente, com as próprias regras, mesmo com Comandos desligado.",
           "Para uma parede de verdade, use um servidor Linux. No Debian 13, instalado com `--system`, cada agente é um usuário só dele. No Ubuntu, os agentes dividem um usuário, `agentes`: eles veem as pastas uns dos outros, não as suas nem as do servidor. Ou dê aos agentes um computador só deles.",
         ],
       },
@@ -269,6 +269,21 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         blocks: [
           "Chaves, senhas, logins e histórico de conversa nunca vêm: os agentes pensam com a IA do workspace. Algumas coisas ainda não têm equivalente aqui, ou nunca devem viajar num arquivo. Dá para recriar depois.",
           "Arquivos e pastas são lidos no seu navegador. Um link do GitHub passa pelo servidor do workspace. Arquivos de chaves e de login nunca são abertos, e nada muda até você confirmar.",
+        ],
+      },
+      {
+        id: "mcp",
+        heading: "Conectar com MCP",
+        blocks: [
+          "O MCP deixa o seu app de IA acessar este workspace, e ele cria os agentes aqui sozinho, com instruções, skills e rotinas. Escolha o seu app, marque **Conectar com MCP** e então:",
+          {
+            list: [
+              "Conecte o endereço que o passo mostra, nos passos do próprio app. [Como conectar, app por app](/help/apps-de-ia#connect)",
+              "Na página de entrada, escolha **Criar e editar agentes, rotinas e skills**.",
+              "Cole o pedido no app. Os agentes aparecem no passo conforme chegam.",
+            ],
+          },
+          "Quando um app não conecta, escolha **Por arquivo** ou **Só o pedido**, o que o passo mostrar. [De outro app](/help/import#other-apps) explica o pedido.",
         ],
       },
       {

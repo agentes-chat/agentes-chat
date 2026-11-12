@@ -605,6 +605,103 @@ describe("Connect a device", () => {
   });
 });
 
+/** An iPhone on Sam's MacBook Pro's Wi-Fi that trusts it, every identifier made up. */
+const NEARBY = { serial: "00008120-000A1B2C3D4E5F60", model: "iPhone 14", name: "Ana's iPhone 14", osVersion: "27.0" };
+
+/** The fixture with Sam's iPhone over Wi-Fi in `status` (null: none on the Mac), and Xcode's team found. */
+const wifiIphoneAs = (status: PhoneDevice["status"] | null, name = "Sam's iPhone 16") => {
+  const list = acmeDevices();
+  const mac = list.devices.find((d) => d.id === MAC);
+  const iphone = mac?.phones.find((p) => p.id === IPHONE);
+  if (!mac || !iphone) throw new Error("fixture");
+  mac.toolchains.appleTeam = "Sam Rivera (Personal Team)";
+  if (status) Object.assign(iphone, { status, transport: "wifi", name });
+  else mac.phones = mac.phones.filter((p) => p.id !== IPHONE);
+  return list;
+};
+
+describe("iPhones over Wi-Fi", () => {
+  test("the guide offers an iPhone on the Mac's Wi-Fi that trusts it, picked with Use over Wi-Fi", async () => {
+    const app = await open(`/org/${ORG_ID}/settings/devices/iphone-setup?computer=${MAC}`, (devices) => {
+      devices.set(wifiIphoneAs(null));
+      devices.setWifi(MAC, [NEARBY]);
+    });
+    await settle(6);
+    const dialog = () => screen().getByRole("dialog", { name: "Connect an iPhone" });
+    const step = () => dialog().querySelector('.dv-step[data-state="current"], .dv-step[data-state="needs"]');
+    expect(step()?.textContent).toContain("iPhone connected");
+    const offer = within(step() as HTMLElement).getByRole("list", {
+      name: "iPhones on the Wi-Fi of Sam's MacBook Pro",
+    });
+    expect(offer.textContent).toContain("Also on this Mac's Wi-Fi: Ana's iPhone 14");
+    // Never used before it's picked: nothing asks the Mac to.
+    expect(calls(app.state, "devices.pickIphoneOverWifi")).toEqual([]);
+    await click(within(offer).getByRole("button", { name: "Use over Wi-Fi" }));
+    expect(calls(app.state, "devices.pickIphoneOverWifi")[0]?.args).toEqual([ORG_ID, MAC, NEARBY.serial]);
+    await refetch(app.services);
+    expect(dialog().querySelector(".dv-wifi")).toBeNull();
+    expect(step()?.textContent).toContain("Test helper");
+  });
+
+  test("an iPhone used over Wi-Fi: each state says why and the way out", async () => {
+    const app = await open(`/org/${ORG_ID}/settings/devices/iphone-setup?computer=${MAC}`);
+    const dialog = () => screen().getByRole("dialog", { name: "Connect an iPhone" });
+    const step = () => dialog().querySelector('.dv-step[data-state="current"], .dv-step[data-state="needs"]');
+    const show = async (status: PhoneDevice["status"]) => {
+      app.devices.set(wifiIphoneAs(status));
+      await refetch(app.services);
+    };
+    await show({ kind: "needs_you", reason: "wifi_away" });
+    expect(step()?.textContent).toContain(
+      "Sam's iPhone 16 isn't on the Mac's Wi-Fi now. Join the same network on the iPhone, or plug it in.",
+    );
+    // A while on, no advice about the cable joins it.
+    try {
+      setSystemTime(new Date(Date.now() + 46_000));
+      await refetch(app.services);
+      expect(step()?.querySelector(".dv-step__stall")).toBeNull();
+    } finally {
+      setSystemTime();
+    }
+    await show({ kind: "needs_you", reason: "wifi_asleep" });
+    expect(step()?.textContent).toContain("Sam's iPhone 16 didn't answer over Wi-Fi. Wake and unlock it");
+    await show({ kind: "needs_you", reason: "tunnel_down" });
+    expect(step()?.textContent).toContain("The Wi-Fi link to Sam's iPhone 16 dropped.");
+    await show({ kind: "needs_you", reason: "wifi_untrusted" });
+    expect(step()?.textContent).toContain("Trust this Mac");
+    expect(step()?.textContent).toContain("Sam's iPhone 16 doesn't trust this Mac. Plug it in once, tap Trust");
+  });
+
+  test("the Mac's page offers it too, in German with a long name, and the list row says Wi-Fi", async () => {
+    const long = { ...NEARBY, name: "Das iPhone von Maximiliane Schwarzenberger-Wittelsbach" };
+    const app = await open(`/org/${ORG_ID}/settings/devices/${MAC}`, (devices) => {
+      devices.set(wifiIphoneAs({ kind: "ready" }));
+      devices.setWifi(MAC, [long]);
+    });
+    await settle(6);
+    expect(document.querySelector(".dv-wifi")?.textContent).toContain(`Also on this Mac's Wi-Fi: ${long.name}`);
+    expect(document.querySelector(".dv-list")?.textContent).toContain("iOS 27.1 · Wi-Fi");
+    await showIn(app.services, "de");
+    await settle(4);
+    expect(document.querySelector(".dv-wifi button")?.textContent).not.toBe("Use over Wi-Fi");
+    await showIn(app.services, "ru");
+    await settle(4);
+    (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
+  });
+
+  test("its page: connected over Wi-Fi, and Stop using over Wi-Fi lets it go after one confirmation", async () => {
+    const { state } = await open(`/org/${ORG_ID}/settings/devices/phones/${IPHONE}`, (devices) =>
+      devices.set(wifiIphoneAs({ kind: "ready" })),
+    );
+    expect(document.querySelector(".dv-facts")?.textContent).toContain("ConnectionWi-Fi");
+    await click(screen().getByRole("button", { name: "Stop using over Wi-Fi" }));
+    const dialog = screen().getByRole("dialog", { name: "Stop using Sam's iPhone 16 over Wi-Fi?" });
+    expect(dialog.textContent).toContain("Agents can't reach it any more. Pick it again on its Mac to use it.");
+    await click(within(dialog).getByRole("button", { name: "Stop using over Wi-Fi" }));
+    expect(calls(state, "devices.forgetPhone")[0]?.args).toEqual([ORG_ID, IPHONE]);
+  });
+});
+
 describe("A device's page", () => {
   test("a phone in use: Stop, and who can use it", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);

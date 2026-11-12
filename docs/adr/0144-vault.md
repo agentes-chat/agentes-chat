@@ -2,6 +2,7 @@
 
 - Status: Accepted (built: the server, the runner, the web and the phone app)
 - Addendum, 2026-11-10: §9, logins agents save in a connected password manager (sources may write)
+- Addendum, 2026-11-11: §11, keys from a .env file, and moving an item between Personal and Team
 - Date: 2026-11-03
 - Amends: ADR 0027 (§7: a site's password is kept in the runner's memory only, never in `store.json`; a request may
   carry a username and ask for a code; the card can save the value to the Vault), ADR 0040 and 0054 (the browser
@@ -9,8 +10,8 @@
 - Builds on: ADR 0007 (sealed values at rest), ADR 0002 (adapters and modules), ADR 0053 (who is behind a run),
   ADR 0085 and 0125 (roles as an audience), ADR 0110 (browser profiles), ADR 0117 (injection hardening)
 - Code: schema `packages/db/src/schema/vault.ts` (`vault_items`, `vault_connections`, `vault_uses`), migration
-  `0214_vault`; engine `packages/engine/src/vault/*` (access, items, connections, sync, CSV import, uses, the agent
-  tools in `tools.ts`); sources `packages/adapters/src/vault/*` (the port `source.ts`, the site rule `site.ts`,
+  `0214_vault`; engine `packages/engine/src/vault/*` (access, items, connections, sync, CSV import, keys import,
+  uses, the agent tools in `tools.ts`); sources `packages/adapters/src/vault/*` (the port `source.ts`, the site rule `site.ts`,
   `onepassword.ts`, `bitwarden.ts`); the box's additional data `vaultAad` in `packages/adapters/src/secret-box.ts`;
   protocol 45 (`VAULT_PROTOCOL`, `vault.key`, `agentes:type_vault`, `exec.vault`), protocol 48 (`vault.password`) and
   the runner's in-memory store
@@ -327,6 +328,50 @@ empty answer was the same in both cases. The product's defaults are open, and ad
   server. Anyone else gets "not found".
 - The right hand has no Vault tools (`vault:read` is not among its fixed grants), so it gets this only once that
   scope is granted to it.
+
+### 11. Keys from a .env file, and moving an item between Personal and Team
+
+**Import .env.** A project's keys already sit in a `.env` file, and typing them one by one is where people gave up.
+In Settings, Vault, "Import" offers the passwords file (§7) and "Import .env", which a new key's form offers too. On
+the web and the phone:
+
+1. The person picks or drops a file, or pastes its text. The app reads it there (`parseEnvFile`,
+   `packages/client/src/lib/vault.ts`): `NAME=value` lines, an `export ` before a name, `#` comments, blank lines,
+   values in double quotes (with `\n`, `\t`, `\"`, `\\`), single quotes or backticks (as written), a quoted value
+   over several lines, CRLF, a byte order mark. A JSON object of names and values (text, numbers, booleans) is read
+   too. A name written twice keeps its last value, and the review says which. At most 512 KB and 200 keys. A text
+   with no such line is refused in place. The server never sees the file.
+2. A review lists each key: its name, its value behind dots until asked, and whether it is new, already saved in
+   the chosen scope (left as it is unless the person ticks Replace, per key), or can't be a key (a name that isn't
+   `UPPER_SNAKE`, a reserved one, no value, a value over 16 KB). Names are not rewritten: a command asks for a
+   variable by its exact name.
+3. Personal or Team once for all of them (Team only for who holds `manage_credentials`: others get no choice), and
+   which agents may use them, with the control a single key has.
+4. One request saves them (`POST /vault/keys`, `importVaultKeys` in `packages/engine/src/vault/keys.ts`): every key
+   checked as a single one is, all written in one transaction or none. A saved key that is replaced takes the new
+   value only: its access and its note stay, since the batch's access was chosen for the new ones. A saved key left
+   as it is isn't sent at all. One audit line (`vault.keys_imported`: the scope and the counts) and a use on each
+   item, never a value and never a name's value in an error.
+
+**Move.** An item kept here (not a password manager's: those follow their connection) moves between Personal and
+Team from its page (`POST /vault/items/{id}/move`, `moveVaultItem`):
+
+- Who: someone who edits the item and holds `manage_credentials`. To the team, that is the permission to write
+  there. From the team, it is the permission to edit what is there. So a member's own items stay personal, and a
+  team item is taken only by who could have deleted it.
+- To Personal it becomes the mover's own, whoever saved it, and nobody else sees it.
+- To Team it starts seen by everyone, as a new team item does. People narrow it afterwards on its page.
+- Its agents stay as they were, both ways. Moving is how a key someone set up for their own agents becomes the
+  team's, and the agents already using it shouldn't stop. What changes is for whom they use it: for its owner
+  alone, or for whoever is in its audience (§2). The confirmation says so in one sentence before anything moves.
+- A key's name is unique per scope: a move onto a name already there is refused (`vault.key_name_taken`).
+- The seal names the owner (§3), so the value and the earlier ones kept behind it (§8) are opened and sealed again
+  for the new owner, at a new version, in the same write. A value that no longer opens here stops the move
+  (`vault.unreadable`): saved again first, then moved.
+- An audit line (`vault.item_moved`: kind, title, from, to) and an edit on the item.
+
+Left out: moving several items at once, moving a password manager's item, renaming keys on import, importing a
+`.env` into a password manager, and other file formats (YAML, TOML, a shell script's logic).
 
 ## Consequences
 

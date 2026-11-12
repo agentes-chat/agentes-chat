@@ -117,3 +117,21 @@ export function noteLines(notes: string | undefined): string[] {
     .map((l) => l.replace(/^\s*[-*•]\s*/, "").trim())
     .filter((l) => l.length > 0 && !l.startsWith("#"));
 }
+
+/** Preferences › Updates › "Install updates by itself, at night": unset, on while the server runs here. */
+export const AUTO_UPDATE_PREF = "autoUpdate";
+
+export const autoUpdateOn = (pref: boolean | null, serverHere: boolean) => pref ?? serverHere;
+
+/** The night's install window, local time: from 03:00 until 05:00. */
+const NIGHT_FROM = 3;
+const NIGHT_UNTIL = 5;
+
+/**
+ * The night `now` falls in, while it is inside the install window ("2026-11-12"), else null: one try per night.
+ */
+export function installNight(now: Date): string | null {
+  const hour = now.getHours();
+  if (hour < NIGHT_FROM || hour >= NIGHT_UNTIL) return null;
+  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+}

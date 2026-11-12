@@ -595,8 +595,7 @@ function RolePeople({ role, roles, people }: { role: OrgRole; roles: OrgRole[]; 
               {gives && below(p) && (
                 <span className="ac-mediarow__end">
                   <Button
-                    size="sm"
-                    variant="ghost"
+                    variant="link"
                     aria-label={t("rolesPage.removeOf", { person: p.name, name })}
                     onClick={() =>
                       set.mutate(
@@ -836,8 +835,7 @@ function OwnerPage({ people, onBack }: { people: Person[]; onBack: () => void })
               {mine && owners.length > 1 && (
                 <span className="ac-mediarow__end">
                   <Button
-                    size="sm"
-                    variant="ghost"
+                    variant="link"
                     aria-label={t("rolesPage.removeOf", { person: p.name, name: t("roles.owner") })}
                     onClick={() => change.mutate({ userId: p.userId, role: "member" }, { onError: fail })}
                   >

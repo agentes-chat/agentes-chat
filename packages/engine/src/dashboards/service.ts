@@ -20,6 +20,7 @@ import { canTalkTo, speakerOf } from "../audience";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { resolveDashboardProposal, resolveWidgetNotices } from "../notification-producers";
 import { getMembership, type Membership, requireActiveMembership } from "../organizations";
+import { closedRefusal, orgStanding } from "../standing";
 import {
   type AudienceMember,
   audienceMembers,
@@ -34,6 +35,7 @@ import {
 } from "./access";
 import { publishDashboardChanged, publishWidgetChanged, widgetEvent } from "./events";
 import { dropWidgetRoutine, refreshWidgetNow, syncWidgetRoutine } from "./refresh";
+import { mayContinueWidgetWait, widgetRunWaits } from "./refresh-fire";
 import {
   type AgentMaker,
   type ConfirmWidgetInput,
@@ -74,6 +76,7 @@ import {
   type WidgetStepView,
   type WidgetUpdateView,
   type WidgetView,
+  type WidgetWaitView,
 } from "./types";
 
 const {
@@ -269,7 +272,12 @@ const span = (n: number): 1 | 2 => (n >= 2 ? 2 : 1);
 
 const isStatus = (v: string): v is WidgetStatus => (WIDGET_STATUSES as readonly string[]).includes(v);
 
-function toWidgetView(row: WidgetRow, nextRunAt: Date | null, lastCostNano: number | null): WidgetView {
+function toWidgetView(
+  row: WidgetRow,
+  nextRunAt: Date | null,
+  lastCostNano: number | null,
+  wait: WidgetWaitView | null,
+): WidgetView {
   const schedule: WidgetSchedule = isWidgetSchedule(row.schedule) ? row.schedule : "manual";
   const status: WidgetStatus = isStatus(row.status) ? row.status : "building";
   return {
@@ -290,6 +298,7 @@ function toWidgetView(row: WidgetRow, nextRunAt: Date | null, lastCostNano: numb
       status === "failed"
         ? { code: row.failureCode ?? WIDGET_FAILURES.error, detail: row.failureDetail ?? null }
         : null,
+    wait: status === "building" || status === "updating" ? wait : null,
     refreshedAt: row.refreshedAt?.toISOString() ?? null,
     nextRunAt: schedule !== "manual" && nextRunAt ? nextRunAt.toISOString() : null,
     routineId: row.routineId,
@@ -307,11 +316,21 @@ function toWidgetView(row: WidgetRow, nextRunAt: Date | null, lastCostNano: numb
 }
 
 /**
- * Widget rows as the apps see them, their routines' next runs and their latest updates' cost (`lastCostUsd`, "This
- * test cost …") read in one query each.
+ * Widget rows as the apps see them, their routines' next runs, their latest updates' cost (`lastCostUsd`, "This
+ * test cost …") and what the runs of those being redone wait on (`wait`), read in one query each. `viewer`: who reads
+ * them, so a pause says whether they may continue it (none: nobody may). In a workspace closed to work (being
+ * deleted) none has a next run: its routines' slots pass.
  */
-export async function widgetViews(db: Executor, rows: readonly WidgetRow[]): Promise<WidgetView[]> {
-  const routineIds = [...new Set(rows.flatMap((r) => (r.routineId && r.schedule !== "manual" ? [r.routineId] : [])))];
+export async function widgetViews(
+  db: Executor,
+  rows: readonly WidgetRow[],
+  viewer?: DashboardViewer | null,
+): Promise<WidgetView[]> {
+  const first = rows[0];
+  const closed = first ? closedRefusal(await orgStanding(db, first.orgId)) !== null : false;
+  const routineIds = closed
+    ? []
+    : [...new Set(rows.flatMap((r) => (r.routineId && r.schedule !== "manual" ? [r.routineId] : [])))];
   const next = new Map<string, Date | null>();
   if (routineIds.length > 0) {
     for (const r of await db
@@ -337,12 +356,36 @@ export async function widgetViews(db: Executor, rows: readonly WidgetRow[]): Pro
       );
     for (const u of latest) cost.set(u.widgetId, Number(u.costNanoUsd));
   }
-  return rows.map((r) => toWidgetView(r, r.routineId ? (next.get(r.routineId) ?? null) : null, cost.get(r.id) ?? null));
+  const busy = rows.flatMap((r) =>
+    r.routineId && (r.status === "building" || r.status === "updating") ? [r.routineId] : [],
+  );
+  const waits = await widgetRunWaits(db, busy);
+  const who = viewer?.membership ? { userId: viewer.userId, membership: viewer.membership } : null;
+  return Promise.all(
+    rows.map(async (r) => {
+      const run = r.routineId ? waits.get(r.routineId) : undefined;
+      const wait: WidgetWaitView | null = run
+        ? {
+            code: run.code,
+            source: run.source,
+            resetsAt: run.resetsAt,
+            scope: run.scope,
+            model: run.model,
+            since: run.since,
+            canContinue:
+              run.code === "usage_pause" &&
+              who !== null &&
+              (await mayContinueWidgetWait(db, who.userId, who.membership, run)),
+          }
+        : null;
+      return toWidgetView(r, r.routineId ? (next.get(r.routineId) ?? null) : null, cost.get(r.id) ?? null, wait);
+    }),
+  );
 }
 
-/** A widget row as the apps see it (its routine's next run read with it). */
-export async function widgetView(db: Executor, row: WidgetRow): Promise<WidgetView> {
-  const [view] = await widgetViews(db, [row]);
+/** A widget row as the apps see it (its routine's next run read with it), for `viewer` (`widgetViews`). */
+export async function widgetView(db: Executor, row: WidgetRow, viewer?: DashboardViewer | null): Promise<WidgetView> {
+  const [view] = await widgetViews(db, [row], viewer);
   if (!view) throw new Error("widget view missing");
   return view;
 }
@@ -490,7 +533,7 @@ export async function dashboardView(
   if (!summary) throw new Error("dashboard view missing");
   return {
     ...summary,
-    widgets: await widgetViews(db, widgets.get(board.id) ?? []),
+    widgets: await widgetViews(db, widgets.get(board.id) ?? [], viewer),
     tiles: board.kind === "home" ? tilesOf(board.homeTiles) : [],
   };
 }
@@ -1031,7 +1074,7 @@ export async function updateWidget(
   widgetId: string,
   patch: UpdateWidgetInput,
 ): Promise<WidgetView> {
-  const { widget, board, membership } = await requireWidget(deps.db, actorId, orgId, widgetId, "edit");
+  const { widget, board, membership, viewer } = await requireWidget(deps.db, actorId, orgId, widgetId, "edit");
   // A draft changes only by being tested again or confirmed (ADR 0135 §16).
   if (widget.draft) throw new NotFoundError("Widget not found", DASHBOARD_ERRORS.widgetNotFound);
   const set: Partial<typeof dashboardWidgets.$inferInsert> = {};
@@ -1084,7 +1127,7 @@ export async function updateWidget(
     set.position = fill.next;
     routineChanged = true;
   }
-  if (Object.keys(set).length === 0) return widgetView(deps.db, widget);
+  if (Object.keys(set).length === 0) return widgetView(deps.db, widget, viewer);
   const at = nowOf(deps);
   const [updated] = await deps.db
     .update(dashboardWidgets)
@@ -1116,7 +1159,7 @@ export async function updateWidget(
   } else {
     await publishWidgetChanged(deps.pubsub, board, { id: row.id, status });
   }
-  return widgetView(deps.db, row);
+  return widgetView(deps.db, row, viewer);
 }
 
 /** Takes a widget off its board (editors): the row goes with its history; its routine is deleted. */
@@ -1309,7 +1352,7 @@ export async function getWidget(
 ): Promise<WidgetDetailView> {
   const { widget, board, viewer } = await requireWidget(deps.db, actorId, orgId, widgetId, "see");
   const [view, history, step] = await Promise.all([
-    widgetView(deps.db, widget),
+    widgetView(deps.db, widget, viewer),
     widgetHistory(deps.db, orgId, widget.id),
     widget.status === "building" || widget.status === "updating" ? widgetStep(deps.db, orgId, widget) : null,
   ]);

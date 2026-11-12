@@ -1231,6 +1231,13 @@ body[data-window="popover"] {
 .dk-ip__tip b {
   font-weight: 600;
 }
+/* An iPhone on this Mac's Wi-Fi: its line, then Use over Wi-Fi, side by side while they fit. */
+.dk-ip__wifi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
 .dk-ip__acts {
   margin-top: auto;
   display: flex;
@@ -1368,31 +1375,51 @@ body[data-window="popover"] {
 .dk-under-card {
   margin-top: 12px;
 }
-/* A server's workspaces under its row in Preferences › Servers (ADR 0154): a chip each, logo and unread count. */
-.dk-ws-list {
+/* A server's workspaces under its row in Preferences › Servers (ADR 0154), when it has several: a line each, logo,
+   name and unread count. One workspace is named in the subtitle instead. */
+.dk-ws-rows {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dk-ws-rows li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dk-ws-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 /* A server that doesn't answer: its last workspaces dimmed, its state in the waiting color (ADR 0158). */
-.dk-ws-list[data-dim] {
+.dk-ws-rows[data-dim] {
   opacity: 0.5;
 }
 .dk-state-waiting {
   color: var(--warn);
 }
-.dk-ws-logo {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  object-fit: cover;
-  margin-right: 6px;
-  vertical-align: -3px;
-}
 .dk-ws-count {
-  margin-left: 6px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+/* Preferences › Servers › Keep it running: a green check when it's set, an amber dot when it's not, in a tile's place. */
+.dk-keep {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  color: var(--ok);
+}
+.dk-keep__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
 }
 /* The server here: Restart and Stop under its card, "Stop running it here…" at the far end. */
 .dk-here__acts {
@@ -1411,6 +1438,14 @@ body[data-window="popover"] {
 }
 .dk-here__more {
   margin-top: 0;
+}
+/* "Also works for …" under it: on the same left edge as the rows below (.dk-psec plus .dk-ohead). */
+.dk-here__also {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 2px 10px 4px;
 }
 
 .dk-prefs {

@@ -14,7 +14,7 @@ import { listsAgent, opensDetails } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
-import { can, leavesChannel, managesChannel, setsAutoReply } from "@agenteschat/client/lib/permissions";
+import { can, leavesChannel, makesAgents, managesChannel, setsAutoReply } from "@agenteschat/client/lib/permissions";
 import { joinsChannels } from "@agenteschat/client/lib/right-hand";
 import { picksForMe, replyAloneKey } from "@agenteschat/client/lib/routing";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -437,7 +437,7 @@ function AddChannelMembers({ channelId, channelName }: { channelId: string; chan
           },
         ]
       : []),
-    ...(can(org, "create_agents")
+    ...(makesAgents(org)
       ? [
           {
             key: "agent",

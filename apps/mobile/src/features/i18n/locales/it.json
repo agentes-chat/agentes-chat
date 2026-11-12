@@ -384,8 +384,6 @@
     "switchWorking": "al lavoro",
     "join": "Entra nel canale",
     "sending": "Invio…",
-    "failed": "Non inviato · Riprova",
-    "notSent": "Il messaggio non è stato inviato.",
     "toLatest": "Vai agli ultimi messaggi",
     "toLatestNew": "Vai agli ultimi messaggi: {{text}}",
     "stopAgent": "Ferma {{name}}",
@@ -1769,13 +1767,7 @@
       "open": "Apri",
       "expandHint": "Tocca per espandere",
       "stop": "Ferma",
-      "giveUp": "Rinuncia",
-      "done": "Fatto: {{title}}",
-      "failed": "Non riuscito: {{title}}",
-      "failedNote": "Non riuscito: {{note}}",
-      "expired": "Nessuno l'ha aperto in tempo: {{title}}",
-      "cancelled": "Annullato: {{title}}",
-      "withdrawn": "A {{name}} non serve più: {{title}}"
+      "giveUp": "Rinuncia"
     },
     "live": {
       "inControl": "Hai il controllo",
@@ -1901,6 +1893,10 @@
       "no_driverLinux": "Linux ha bisogno delle regole udev per questo telefono",
       "os_too_old": "Il sistema di questo telefono è troppo vecchio",
       "adb_offline": "Scollega il cavo e ricollegalo",
+      "wifi_away": "Collega questo iPhone al Wi-Fi del Mac o usa il cavo",
+      "wifi_asleep": "Riattiva e sblocca questo iPhone e tienilo vicino al Mac",
+      "tunnel_down": "Il collegamento Wi-Fi si è interrotto. Tieni questo iPhone vicino al Mac o usa il cavo",
+      "wifi_untrusted": "Collegalo una volta e tocca Autorizza",
       "other": "Non è ancora pronto"
     },
     "os": {
@@ -2059,6 +2055,15 @@
       "teamMissing": "Xcode ha effettuato l'accesso ma non mostra ancora un team. In Xcode crea un'app iOS qualsiasi, scegli il tuo team in Signing & Capabilities ed eseguila una volta su questo iPhone.",
       "uiRefused": "Questo iPhone ha rifiutato i tocchi dell'app di test. Sbloccalo e inserisci il codice se lo chiede. Se succede ancora, disattiva e riattiva Impostazioni › Sviluppatore › Abilita automazione UI.",
       "pluggedIn": "È collegato",
+      "wifi": {
+        "also": "Anche sul Wi-Fi di {{host}}: {{name}}",
+        "use": "Usa via Wi-Fi",
+        "hint": "Qui compare solo un iPhone che ha già autorizzato il Mac tramite cavo. Il Mac lo raggiunge con il collegamento cifrato di Apple, lo stesso che usa Xcode.",
+        "stop": "Smetti di usare via Wi-Fi",
+        "stopTitle": "Smettere di usare {{name}} via Wi-Fi?",
+        "stopText": "Gli agenti non lo raggiungono più. Sceglilo di nuovo con {{host}} per usarlo.",
+        "stopped": "{{name}} non è più usato via Wi-Fi"
+      },
       "stall": {
         "plug": "{{host}} non vede ancora questo iPhone. Usa un cavo che trasmette dati, non solo ricarica, tieni questo iPhone sbloccato e tocca Autorizza se lo chiede.",
         "devmode": "La Modalità sviluppatore si attiva solo dopo il riavvio di questo iPhone. Tocca Riavvia, poi Attiva quando si riaccende. Nessun interruttore? Scollega questo iPhone e ricollegalo."
@@ -2326,9 +2331,9 @@
     "ofOnline": "{{online}} di {{count}}",
     "deleteName": "Elimina {{name}}",
     "deleteFoot": "Hai 7 giorni per cambiare idea.",
-    "deleteAlert": "Tutti escono subito. Si può ripristinare per 7 giorni.",
+    "deleteAlert": "Da subito tutti possono solo leggerlo. Si può ripristinare per 7 giorni.",
     "deleteAction": "Elimina",
-    "deleteIntro": "{{name}} si chiude per tutti subito e viene eliminato per sempre tra 7 giorni.",
+    "deleteIntro": "{{name}} diventa subito di sola lettura per tutti e viene eliminato per sempre tra 7 giorni.",
     "holdDelete": "Tieni premuto per eliminare",
     "deleteFailed": "Non è stato possibile eliminare lo spazio di lavoro. Riprova.",
     "access": {
@@ -2625,7 +2630,6 @@
     },
     "formatAuto": "{{name}} sceglie il migliore",
     "newWidget": {
-      "titleHint": "Titolo · {{name}} ne suggerisce uno nel test",
       "alerts": "Avvisa",
       "realData": "Dati reali",
       "editAsk": "Cambia la richiesta",

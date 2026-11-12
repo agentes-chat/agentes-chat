@@ -20,7 +20,7 @@ describe("a reply's tools sit last", () => {
       ascending(
         at(row, [
           "{openerPart}\n                    {words}\n                  </>\n                )}",
-          "<Receipts message={m} />",
+          "<Receipts message={m} onTap={onTap} onLongPress={press} />",
           "{cards}\n            {/* Its tools after",
           "<TurnTools",
           "<SavedTools",
@@ -183,9 +183,21 @@ describe("what agents did under each reply: the person's own setting, off by def
   });
 });
 
-describe("what an agent changed reads whole", () => {
-  test("receipts and team checks wrap: no line limit cuts their words", () => {
-    for (const file of ["Receipts.tsx", "TeamChecks.tsx"]) expect(source(file)).not.toContain("numberOfLines");
+describe("what an agent changed reads in one line a row, whole in its sheet", () => {
+  test("a receipt's sentence and each line under it are one line (the sheet says them whole); team checks wrap", () => {
+    // No renderer for the phone's components in these tests: the line limits are read from the source.
+    const receipts = source("Receipts.tsx");
+    // The sentence, and the one line every line under it is drawn with (its files, what it does alone, who undid it).
+    const sentence = receipts.slice(receipts.indexOf("function Sentence("), receipts.indexOf("function ChangesSheet("));
+    expect(sentence).toContain("numberOfLines={1}");
+    const under = receipts.slice(receipts.indexOf("const UnderLine = "), receipts.indexOf("function UndoneLine("));
+    expect(under).toContain("numberOfLines={1}");
+    for (const line of ["lines.files", "lines.own", "lines.undone"])
+      expect(receipts).toContain(`<${line === "lines.undone" ? "UndoneLine" : "UnderLine"} text={${line}} />`);
+    expect(receipts).toContain(
+      "<ChangesSheet row={r} channelId={m.channelId} title={title} under={under} close={sheet.close} />",
+    );
+    expect(source("TeamChecks.tsx")).not.toContain("numberOfLines");
   });
 
   test("a receipt is its sentence alone: no Desfazer, no Refazer, no time left, no clock", () => {
@@ -196,7 +208,9 @@ describe("what an agent changed reads whole", () => {
     expect(receipts).not.toContain("ACT_LINE");
     // One undone elsewhere stays as history.
     expect(receipts).toContain("struck={Boolean(a.undoneAt)}");
-    expect(receipts).toContain("{a.undoneAt ? <UndoneBy action={a} /> : <HandyLines action={a} />}");
+    expect(receipts).toContain(
+      "{lines.undone ? <UndoneLine text={lines.undone} /> : r.refs ? null : <CopyHook action={a} />}",
+    );
   });
 
   test("a team check's icon stays outside its action line: Abrir goes under the words, from their edge", () => {
@@ -415,7 +429,7 @@ describe("the secret card on the phone", () => {
     expect(asks).toContain("lineMark: { flexShrink: 0, width: 20, height: 20,");
     // The fuse and the time left under the decision, never on the card's top line.
     expect(asks).toContain('{waitsFor === "you" && expiry ? <View style={styles.expiryRow}>{expiry}</View> : null}');
-    expect(asks).toContain('{waitsFor && waitsFor !== "you" ? (');
+    expect(asks).toContain('{waitsFor && waitsFor !== "you" && !ended ? (');
   });
 });
 
@@ -445,5 +459,35 @@ describe("an agent's offer card is done for everyone once it's done", () => {
     const install = offer.slice(offer.indexOf("function InstallSkill("), offer.indexOf("\nfunction UpdateSkills("));
     expect(install).toContain("useSkills(orgId)");
     expect(install).toContain('action={may ? t("actionCard.install_skill.open") : null}');
+    // Its screen's row turns what installs on for the agent that posted it, as on the web.
+    expect(install).toContain("openedFromCard({ url: card.url, agentId })");
+    expect(install).toContain("&agent=");
+  });
+
+  test("Instalar skill's route keeps the agent only when that agent's card opened it, for the card's own link", async () => {
+    const { openedFromCard, routeAgent } = await import("../../src/features/settings/install-from-card");
+    const link = "https://github.com/acme/skills/tree/main/excel";
+    // A link from outside the app that names an agent: the screen turns nothing on for it.
+    expect(routeAgent(link, "a-dev")).toBeUndefined();
+    openedFromCard({ url: link, agentId: "a-dev" });
+    expect(routeAgent(link, "a-dev")).toBe("a-dev");
+    expect(routeAgent("https://github.com/evil/skills", "a-dev")).toBeUndefined();
+    expect(routeAgent(link, "a-other")).toBeUndefined();
+    expect(routeAgent(link, undefined)).toBeUndefined();
+    // The route hands the screen only what `routeAgent` keeps.
+    const route = readFileSync(join(import.meta.dir, "../../app/(app)/settings/skills/new.tsx"), "utf8");
+    expect(route).toContain("<InstallSkillScreen initialUrl={url} forAgentId={routeAgent(url, agent)} />");
+    // The screen sends it only on an install from the card's link with its row checked, never on a read.
+    const screen = readFileSync(join(import.meta.dir, "../../src/features/settings/SkillsScreen.tsx"), "utf8");
+    expect(screen).toContain(
+      "input: list ? { url: link, list } : { url: link, ...(forAgent ? { forAgentId: forAgent } : {}) }",
+    );
+    expect(screen).toContain("forAgentId: sendFor(url)");
+    // Its row only for a live agent the server would turn it on for: not archived or gone, never the right hand.
+    expect(screen).toContain("const forAgent = forAgentId ? dir.agentById.get(forAgentId) : undefined;");
+    expect(screen).toContain("const forName = forAgent && !isRightHand(forAgent) ? forAgent.name : undefined;");
+    // What a pick replaces, as the server marks it: an installed skill, or a removed one.
+    expect(screen).toContain('c.replaces === "removed" ? "skills.pickReplacesRemoved" : "skills.pickReplaces"');
+    expect(screen).toContain("turnOn && cardLink !== undefined && link.trim() === cardLink ? forAgentId : undefined");
   });
 });

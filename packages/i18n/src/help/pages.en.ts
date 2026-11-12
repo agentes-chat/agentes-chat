@@ -12,7 +12,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "How it runs",
         blocks: [
           "It runs inside the app, with its own database built in, and keeps everything in one folder on this computer, `.agentes` in your home folder. Nothing else to install: no Docker, no database to set up.",
-          "It starts with the app and stops when you quit it. Quitting asks first, because nobody can use agentes.chat until the app opens again.",
+          "It starts with the app and stops when you quit it. Quitting asks first, because nobody can use agentes.chat until the app opens again. To stop it for a while without quitting, click the agentes.chat icon by the clock and choose **Stop** in the **⋯** menu of its card.",
         ],
       },
       {
@@ -27,7 +27,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "keep-on",
         heading: "Keep it on",
         blocks: [
-          "On a computer that others use, set it up once:",
+          "On a computer that others use, set it up once. **Keep it running**, in **Preferences\u00a0›\u00a0Servers**, shows what's still missing and opens the right settings:",
           {
             list: [
               "**Open at login** turns on by itself after the setup.",
@@ -50,8 +50,8 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "another-workspace",
         heading: "Lend it to another workspace too",
         blocks: [
-          "The workspaces of the server you run here use this computer by themselves. To let a workspace somewhere else use it too, such as one on agentes.chat Cloud, open **Preferences\u00a0›\u00a0Servers**, press **Add a server…**, sign in to that workspace and press **Allow** when the app asks.",
-          "Each workspace gets its own agents and folders here. **Commands** are on by default for it too. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where one switch counts for every workspace on this computer.",
+          "The workspaces of the server you run here use this computer by themselves. To let a workspace somewhere else use it too, such as one on agentes.chat Cloud, press **Add a workspace…** at the bottom of the first card in **Preferences\u00a0›\u00a0General**, or **Add a server…** in **Preferences\u00a0›\u00a0Servers**. Sign in to that workspace and press **Allow** when the app asks.",
+          "Each workspace gets its own agents and folders here. **Commands** are on by default for it too. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where each workspace has its own switch and the app asks before turning one back on.",
         ],
       },
       {
@@ -66,29 +66,29 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "password",
         heading: "Signing in from other devices",
         blocks: [
-          "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. The phone app connects by scanning the QR code under **On your phone**, in **Preferences\u00a0›\u00a0Servers**. The QR code needs **Reach it from your phone and teammates** on.",
+          "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. Until you do, **Preferences\u00a0›\u00a0Servers** says so, and **Add a password** opens that page. The phone app connects by scanning the QR code under **On your phone**, in **Preferences\u00a0›\u00a0Servers**. The QR code needs **Reach it from your phone and teammates** on.",
         ],
       },
       {
         id: "updates",
         heading: "Updates",
         blocks: [
-          "The app looks for updates by itself, and installs one when you press **Update and reopen** in **Preferences\u00a0›\u00a0Updates**. The server and every agent restart with it. The database is copied first, and if the new version doesn't answer within 3 minutes, the app goes back to the previous version and its data by itself.",
+          "The app looks for updates by itself. With **Install updates by itself, at night** on, in **Preferences\u00a0›\u00a0Updates**, it installs them between 3:00 and 5:00 while the app is open. It's on by default when the server runs here. Otherwise, press **Update and reopen**. The server and every agent restart with it. The database is copied first, and if the new version doesn't answer within 3 minutes, the app goes back to the previous version and its data by itself.",
         ],
       },
       {
         id: "backups",
         heading: "Backups",
         blocks: [
-          "Nothing backs up by itself yet. **Back up now**, in **Preferences\u00a0›\u00a0Servers**, stops the server for a moment and saves the database, the files and `.env` in `.agentes/backups`, in your home folder. It keeps the two newest.",
-          "Copy them off this computer, to a disk or a cloud drive, now and then. They hold your keys: keep them private.",
+          "With **Back up every night** on (app 0.8.1 and later), in **Preferences\u00a0›\u00a0Servers**, the app saves the database, the files and `.env` in `.agentes/backups`, in your home folder, every night at 3:00. A computer that was asleep then backs up once it's awake. **Back up now** does the same at once. Each backup stops the server for a moment, and the two newest stay.",
+          "**Copy to** also puts each new backup in a folder you pick, like a USB drive or iCloud Drive, where the two newest stay. They hold your keys: keep them private. **Restore…** takes agentes.chat back to a backup: messages, files and settings. It stops for a minute, and what was there before is kept in the backups folder.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code and Codex",
         blocks: [
-          "The app finds Claude Code and Codex through your login shell's `PATH`, plus the usual folders such as `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. If **Preferences\u00a0›\u00a0Tools** says **Not found**, check that `claude` or `codex` runs in a new Terminal window, then quit and reopen the app.",
+          "The app finds Claude Code and Codex through your login shell's `PATH`, plus the usual folders such as `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. If **Preferences\u00a0›\u00a0Tools** says **Not found**, it shows the line that installs it. Run that line in Terminal, then press **Check again**.",
         ],
       },
       {
@@ -160,7 +160,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "From the agentes.chat app",
         blocks: [
           "Install the app on the computer, open it and sign in to your workspace. It asks **Let <workspace>'s agents use this Mac?** (this PC on Windows, this computer on Linux). Choose who can use it and press **Allow**. That's all.",
-          "Already signed in? Turn the workspace on in **Preferences\u00a0›\u00a0General**, in the **Agents** card.",
+          "Already signed in? Open **Preferences\u00a0›\u00a0General** and press **Allow** on the workspace's row in the first card. Not there? Press **Add a workspace…** at the bottom of that card and sign in.",
         ],
       },
       {
@@ -203,7 +203,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "pausing",
         heading: "Pausing and disconnecting",
         blocks: [
-          "On the computer, the agentes.chat icon by the clock pauses the agents of every workspace. In **Preferences\u00a0›\u00a0General**, each workspace's switch pauses just that one, and **Leave** disconnects it. Nothing new starts while paused, and what was running finishes. Disconnecting keeps the agents' folders on disk.",
+          "On the computer, the agentes.chat icon by the clock pauses the agents of every workspace, or of just one. In **Preferences\u00a0›\u00a0General**, each workspace's switch pauses just that one, and **Leave**, in its **⋯** menu, disconnects it. Nothing new starts while paused, and what was running finishes. Disconnecting keeps the agents' folders on disk.",
           "From the website, **Remove** on the device's page disconnects it.",
         ],
       },
@@ -236,7 +236,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
               "on a computer that also runs agentes.chat, its database and keys in `.agentes`",
             ],
           },
-          "agentes.chat refuses commands that name its keys, tokens and sign-ins, but that's a rule, not a wall. **Commands** are on by default. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where one switch counts for every workspace on the computer. Claude Code and Codex run their own commands in the agent's folder, under their own rules.",
+          "agentes.chat refuses commands that name its keys, tokens and sign-ins, but that's a rule, not a wall. **Commands** are on by default. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where each workspace has its own switch (app 0.8.1 and later) and the app asks before turning one back on. Claude Code and Codex run their own commands in the agent's folder, under their own rules, even with Commands off.",
           "For a real wall, use a Linux server. On Debian 13, installed with `--system`, each agent is a user of its own. On Ubuntu, agents share one user, `agentes`: they see each other's folders, not yours or the server's. Or give the agents a computer of their own.",
         ],
       },
@@ -269,6 +269,21 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         blocks: [
           "Keys, passwords, logins and chat history never come along: the agents think with the workspace's AI. Some things have no equivalent here yet, or should never travel in a file. You can recreate them later.",
           "Files and folders are read in your browser. A GitHub link goes through the workspace's server. Key and login files are never opened, and nothing changes until you confirm.",
+        ],
+      },
+      {
+        id: "mcp",
+        heading: "Connect with MCP",
+        blocks: [
+          "MCP lets your AI app reach this workspace, so it creates the agents here itself, with their instructions, skills and routines. Choose your app, pick **Connect with MCP**, then:",
+          {
+            list: [
+              "Connect the address the step shows, in that app's own steps. [How to connect, app by app](/help/apps-de-ia#connect)",
+              "On the sign-in page, pick **Create and edit agents, routines and skills**.",
+              "Paste the request into the app. The agents show up on the step as they arrive.",
+            ],
+          },
+          "When an app can't connect, choose **From a file** or **Prompt only**, whichever the step shows. [From another app](/help/import#other-apps) covers the request.",
         ],
       },
       {

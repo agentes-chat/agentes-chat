@@ -384,8 +384,6 @@
     "switchWorking": "trabajando",
     "join": "Unirte al canal",
     "sending": "Enviando…",
-    "failed": "No enviado · Reintentar",
-    "notSent": "El mensaje no se envió.",
     "toLatest": "Ir a los mensajes más recientes",
     "toLatestNew": "Ir a los mensajes más recientes: {{text}}",
     "stopAgent": "Detener a {{name}}",
@@ -1769,13 +1767,7 @@
       "open": "Abrir",
       "expandHint": "Toca para expandir",
       "stop": "Detener",
-      "giveUp": "Desistir",
-      "done": "Listo: {{title}}",
-      "failed": "No se pudo: {{title}}",
-      "failedNote": "No se pudo: {{note}}",
-      "expired": "Nadie lo abrió a tiempo: {{title}}",
-      "cancelled": "Cancelado: {{title}}",
-      "withdrawn": "{{name}} ya no necesita esto: {{title}}"
+      "giveUp": "Desistir"
     },
     "live": {
       "inControl": "Tienes el control",
@@ -1901,6 +1893,10 @@
       "no_driverLinux": "Linux necesita reglas udev para este teléfono",
       "os_too_old": "El sistema de este teléfono es demasiado antiguo",
       "adb_offline": "Desconecta el cable y vuelve a conectarlo",
+      "wifi_away": "Conecta este iPhone al Wi-Fi de la Mac o usa el cable",
+      "wifi_asleep": "Activa y desbloquea este iPhone y déjalo cerca de la Mac",
+      "tunnel_down": "Se cortó la conexión Wi-Fi. Deja este iPhone cerca de la Mac o conecta el cable",
+      "wifi_untrusted": "Conéctalo una vez y toca Confiar",
       "other": "Todavía no está listo"
     },
     "os": {
@@ -2059,6 +2055,15 @@
       "teamMissing": "Xcode tiene la sesión iniciada pero aún no muestra un equipo. En Xcode, crea cualquier app de iOS, elige tu equipo en Signing & Capabilities y ejecútala una vez en este iPhone.",
       "uiRefused": "Este iPhone rechazó los toques de la app de pruebas. Desbloquéalo y escribe tu código si lo pide. Si vuelve a pasar, desactiva y activa Configuración › Desarrollador › Activar automatización de la IU.",
       "pluggedIn": "Ya está conectado",
+      "wifi": {
+        "also": "También en el Wi-Fi de {{host}}: {{name}}",
+        "use": "Usar por Wi-Fi",
+        "hint": "Aquí solo aparece un iPhone que ya confió en la Mac por cable. La Mac llega a él por la conexión cifrada de la propia Apple, la misma que usa Xcode.",
+        "stop": "Dejar de usar por Wi-Fi",
+        "stopTitle": "¿Dejar de usar {{name}} por Wi-Fi?",
+        "stopText": "Los agentes ya no llegan a él. Elígelo de nuevo con {{host}} para usarlo.",
+        "stopped": "{{name}} ya no se usa por Wi-Fi"
+      },
       "stall": {
         "plug": "{{host}} aún no ve este iPhone. Usa un cable que transmita datos, no solo carga, mantén este iPhone desbloqueado y toca Confiar si lo pide.",
         "devmode": "El Modo de desarrollador solo se activa después de reiniciar este iPhone. Toca Reiniciar y luego Activar cuando vuelva. ¿No ves el interruptor? Desconecta este iPhone y vuelve a conectarlo."
@@ -2326,9 +2331,9 @@
     "ofOnline": "{{online}} de {{count}}",
     "deleteName": "Eliminar {{name}}",
     "deleteFoot": "Tienes 7 días para cambiar de opinión.",
-    "deleteAlert": "Todos salen de inmediato. Se puede restaurar durante 7 días.",
+    "deleteAlert": "Desde ahora todos solo pueden leerlo. Se puede restaurar durante 7 días.",
     "deleteAction": "Eliminar",
-    "deleteIntro": "{{name}} se cierra para todos de inmediato y se elimina para siempre en 7 días.",
+    "deleteIntro": "{{name}} queda en solo lectura para todos de inmediato y se elimina para siempre en 7 días.",
     "holdDelete": "Mantén presionado para eliminar",
     "deleteFailed": "No se pudo eliminar el espacio de trabajo. Inténtalo de nuevo.",
     "access": {
@@ -2625,7 +2630,6 @@
     },
     "formatAuto": "{{name}} elige el mejor",
     "newWidget": {
-      "titleHint": "Título · {{name}} sugiere uno al probar",
       "alerts": "Avisa",
       "realData": "Datos reales",
       "editAsk": "Cambiar el pedido",

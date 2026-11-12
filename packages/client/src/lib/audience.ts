@@ -140,6 +140,10 @@ export const agentsReach = (
         ? "blocked"
         : "consulted";
 
+/** `agentsReach` in one line, which a screen shows with the reach's own sentence (`audience.agents.*`) behind an ⓘ. */
+export const reachShortKey = (reach: "consulted" | "blocked" | "plan") =>
+  reach === "consulted" ? "audience.peopleOnly" : "audience.agentsToo";
+
 /** On a plan only its owner turns the switch back on (ADR 0059 §5); anyone else may only turn it off. */
 export const consultableLocked = (saved: AgentAudience, viewer: { owner: boolean; onPlan: boolean }) =>
   viewer.onPlan && !viewer.owner && saved.consultable === false;

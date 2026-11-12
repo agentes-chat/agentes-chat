@@ -23,6 +23,7 @@ import {
 } from "./runs";
 import { cancelSecretRequests, publishSecret, syncSecretMessage } from "./secrets";
 import { USAGE_WAIT_CODES } from "./usage-pause";
+import { endWork } from "./works";
 
 const { agentRuns, agentRunSteps, outbox, channels, approvals } = schema;
 
@@ -353,6 +354,11 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
   });
   // It was answering another agent: the asker hears it now instead of waiting for the question to expire.
   await onConsultedRunFinished({ db, pubsub: deps.pubsub }, run, "failed", INTERRUPTED_BY_RESTART).catch(() => {});
+  // A work ends before the release, which would drop a reply turn's own message passed on to it (`endWork` keeps it).
+  if (run.workId) {
+    const [ended] = await db.select().from(agentRuns).where(eq(agentRuns.id, run.id));
+    if (ended) await endWork(deps, ended, "failed").catch(() => null);
+  }
   // What was sent to it and not read gets a run of its own.
   await releaseInbox(db, deps.pubsub, run, { reason: "interrupted" }).catch(() => null);
   return true;

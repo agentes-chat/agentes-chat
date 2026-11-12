@@ -23,6 +23,10 @@ export function fromNow(at: Date, now = Date.now()) {
 export const andList = (xs: string[]) =>
   xs.length < 2 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`;
 
+/** The first `max` items, then how many more ("a, b, +3 more"). */
+export const firstOf = (items: string[], max: number) =>
+  items.length > max ? `${items.slice(0, max).join(", ")}, +${items.length - max} more` : items.join(", ");
+
 /**
  * Whether `text` asks something by its punctuation, in any script: `?`, the full-width `？`, the Arabic `؟`, the
  * Spanish `¿`. Greek's `;` is left out: it is also a semicolon.

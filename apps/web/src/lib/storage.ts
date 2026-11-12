@@ -84,8 +84,15 @@ export const STORAGE_KEYS = {
   paidReturn: "agentes.billing.paid",
   /** Prefix (`.<orgId>`, in `sessionStore`): the agents the onboarding imported there, with their models (JSON). */
   onboardingImports: "agentes.onboarding.imports",
+  /**
+   * In `sessionStore`: the install an agent's card opened in this tab (`CardInstall`, JSON), so the agent survives
+   * connecting GitHub on its site, and a link that only names an agent turns nothing on (`cardInstallAgent`).
+   */
+  skillInstallFor: "agentes.skills.installFor",
   /** In `sessionStore`: the address this tab signed up with, when the server emailed it a confirmation link. */
   confirmationSent: "agentes.confirmation.sent",
+  /** In `sessionStore`: Criar agente's steps as filled in, while a sign-in elsewhere reloads the app (lib/flow-return.ts). */
+  newAgentDraft: "agentes.newAgent.draft",
   /** In `sessionStore`: the last page this tab showed outside a flow, where the flow's exits go (lib/return-to.ts). */
   flowReturn: "agentes.flow.return",
   /** In `sessionStore`: my messages waiting for the connection (the shared `outbox`), kept through a reload. */

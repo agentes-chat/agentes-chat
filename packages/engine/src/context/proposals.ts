@@ -836,7 +836,14 @@ function changeLine(p: ProposedChange) {
       .join(" ");
   if (p.target === "agent_role") return `role: ${p.proposedText}`;
   if (p.target === "agent_settings")
-    return `settings: ${(p.settings ?? []).map((l) => `${l.field} ${JSON.stringify(l.label?.from ?? l.from)} → ${JSON.stringify(l.label?.to ?? l.to)}`).join(", ")}`;
+    return `settings: ${(p.settings ?? [])
+      .map((l) =>
+        // A skill's label is its name, the same either way: on or off says what changed.
+        l.field === "skill"
+          ? `skill ${JSON.stringify(l.label?.to ?? "")} ${l.to === true ? "on" : "off"}`
+          : `${l.field} ${JSON.stringify(l.label?.from ?? l.from)} → ${JSON.stringify(l.label?.to ?? l.to)}`,
+      )
+      .join(", ")}`;
   if (p.target === "skill") return `skill ${p.access?.[0]?.label ?? ""}: ${lines("+")}`.trim();
   if (p.target === "agent_access")
     return `access: ${(p.access ?? []).map((l) => `${l.label} ${l.on ? "on" : "off"}`).join(", ")}`;

@@ -133,6 +133,8 @@ export const keys = {
   machines: (orgId: string) => ["org", orgId, "machines"] as const,
   /** Devices (under `machines`: every computer event refetches them too). */
   devices: (orgId: string) => ["org", orgId, "machines", "devices"] as const,
+  /** Under `devices`: a phone picked over Wi-Fi leaves the offer when the list refetches. */
+  wifiIphones: (orgId: string, machineId: string) => ["org", orgId, "machines", "devices", "wifi", machineId] as const,
   connectLink: (orgId: string, linkId: string) => ["org", orgId, "machines", "devices", "link", linkId] as const,
   /** Under `machines`: a computer that changes refreshes what a new agent could think with. */
   brainMachines: (orgId: string) => ["org", orgId, "machines", "brains"] as const,
@@ -165,10 +167,12 @@ export const keys = {
   access: (orgId: string) => ["org", orgId, "access"] as const,
   agentAccess: (orgId: string, agentId: string) => ["org", orgId, "access", "agent", agentId] as const,
   issues: (orgId: string) => ["org", orgId, "issues"] as const,
-  issueList: (orgId: string, q: string) => ["org", orgId, "issues", "list", q] as const,
+  /** `project`: a project's id, `none`, or "" for every task. */
+  issueList: (orgId: string, q: string, project = "") => ["org", orgId, "issues", "list", q, project] as const,
   issue: (orgId: string, number: number) => ["org", orgId, "issues", "one", number] as const,
   issueActivity: (orgId: string, id: string) => ["org", orgId, "issues", "activity", id] as const,
   issueColumns: (orgId: string) => ["org", orgId, "issues", "columns"] as const,
+  issueProjects: (orgId: string) => ["org", orgId, "issues", "projects"] as const,
   /** Every thread view and list (prefix): a `thread.updated` refreshes them all. */
   threads: (orgId: string) => ["org", orgId, "threads"] as const,
   threadList: (orgId: string, filters: object) => ["org", orgId, "threads", "list", filters] as const,
@@ -209,6 +213,8 @@ export const keys = {
   notifications: (orgId: string) => ["org", orgId, "notifications"] as const,
   notificationList: (orgId: string, filter: string) => ["org", orgId, "notifications", "list", filter] as const,
   notificationCount: (orgId: string) => ["org", orgId, "notifications", "count"] as const,
+  /** "Esperando você": under the notifications prefix, so whatever refreshes the inbox refreshes it. */
+  waiting: (orgId: string) => ["org", orgId, "notifications", "waiting"] as const,
   noticePrefs: (orgId: string) => ["org", orgId, "notice-prefs"] as const,
   sidebarItems: (orgId: string) => ["org", orgId, "sidebar-items"] as const,
   sidebarOrder: (orgId: string) => ["org", orgId, "sidebar-order"] as const,

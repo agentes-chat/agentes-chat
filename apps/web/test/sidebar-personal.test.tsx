@@ -115,6 +115,7 @@ describe("a personal workspace's sidebar", () => {
       .map((l) => l.querySelector(".ac-menu__label")?.firstChild?.textContent);
     expect(names).toEqual([
       "Início",
+      "Esperando você",
       "Aprovações",
       "Propostas de melhoria",
       "Rotinas",
@@ -284,6 +285,14 @@ describe("a personal workspace's sidebar", () => {
     expect(within(dialog).queryByRole("textbox", { name: "Nome" })).toBeNull();
     expect(within(dialog).queryByRole("button", { name: /Criar/ })).toBeNull();
     expect(within(dialog).getByRole("button", { name: /Trazer agentes de outro app/ })).toBeTruthy();
+    // It opens the import over the dialog, which stays as it was: nothing goes to Settings.
+    const here = window.location.pathname;
+    await click(within(dialog).getByRole("button", { name: /Trazer agentes de outro app/ }));
+    const bring = await screen().findByRole("dialog", { name: "Trazer agentes de outro app" });
+    expect(within(bring).getByRole("group", { name: "De onde vêm os agentes" })).toBeTruthy();
+    expect(window.location.pathname).toBe(here);
+    await click(within(bring).getByRole("button", { name: "Fechar" }));
+    dialog = screen().getByRole("dialog", { name: "Novo agente" });
     // A row leads to its card, titled with its name, a back arrow before it.
     await click(within(dialog).getByRole("option", { name: /Gabi/ }));
     dialog = screen().getByRole("dialog", { name: "Gabi" });

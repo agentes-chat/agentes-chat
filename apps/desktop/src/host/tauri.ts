@@ -4,7 +4,14 @@ import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Candidate } from "../control/first-run";
-import type { LocalServerStatus, ReachResult, ReachStage, StepChange, Tailnet } from "../control/local-server";
+import type {
+  KeepRunning,
+  LocalServerStatus,
+  ReachResult,
+  ReachStage,
+  StepChange,
+  Tailnet,
+} from "../control/local-server";
 import type { LinkInfo } from "../control/pair";
 import type { SetupState } from "../control/permissions";
 import { platformOf } from "../control/platform";
@@ -67,6 +74,7 @@ export function createTauriHost(): Host {
     siteFetch: (server, method, path, body) =>
       invoke<SiteAnswer>("site_fetch", { server, method, path, body: body ?? null }),
     welcomeMode: () => invoke<string | null>("welcome_mode_take").then((m) => (m === "add" ? "add" : null)),
+    addWorkspace: () => invoke<void>("welcome_add"),
     discover: () => invoke<Candidate[]>("discover"),
     // From the web view itself: every server answers `/api/instance` to any origin (it is public).
     checkServer: (server) => checkServer(server),
@@ -112,6 +120,10 @@ export function createTauriHost(): Host {
     stopLocalReach: () => invoke<void>("local_server_reach_stop"),
     setLocalUsage: (on) => invoke<void>("local_server_usage", { on }),
     backupLocalServer: () => invoke<string>("local_server_backup"),
+    setLocalBackups: (nightly, copyTo) => invoke<void>("local_server_backups_set", { nightly, copyTo }),
+    restoreLocalServer: (file) => invoke<void>("local_server_restore", { file }),
+    keepRunning: () => invoke<KeepRunning>("keep_running"),
+    openSystemSettings: (page) => invoke<void>("open_system_settings", { page }),
     localDiagnostics: () => invoke<string>("local_server_diagnostics"),
     syncLocalHomes: (rotate) => invoke<void>("local_server_sync", { rotate }),
     tailscale: () => invoke<Tailnet>("tailscale_status"),

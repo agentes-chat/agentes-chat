@@ -893,12 +893,6 @@
   "chat.sending": {
     "value": "Sending…"
   },
-  "chat.failed": {
-    "value": "Not sent · Try again"
-  },
-  "chat.notSent": {
-    "value": "The message wasn't sent."
-  },
   "chat.toLatest": {
     "value": "Go to the latest messages"
   },
@@ -4115,24 +4109,6 @@
   "browser.card.giveUp": {
     "value": "Give up"
   },
-  "browser.card.done": {
-    "value": "Done: {{title}}"
-  },
-  "browser.card.failed": {
-    "value": "Couldn't: {{title}}"
-  },
-  "browser.card.failedNote": {
-    "value": "Couldn't: {{note}}"
-  },
-  "browser.card.expired": {
-    "value": "Nobody opened it in time: {{title}}"
-  },
-  "browser.card.cancelled": {
-    "value": "Canceled: {{title}}"
-  },
-  "browser.card.withdrawn": {
-    "value": "{{name}} no longer needs this: {{title}}"
-  },
   "browser.live.inControl": {
     "value": "You're in control"
   },
@@ -4441,6 +4417,18 @@
   },
   "devices.reason.adb_offline": {
     "value": "Unplug the cable and plug it in again"
+  },
+  "devices.reason.wifi_away": {
+    "value": "Join the Mac's Wi-Fi on this iPhone, or plug it in"
+  },
+  "devices.reason.wifi_asleep": {
+    "value": "Wake and unlock this iPhone, and keep it near the Mac"
+  },
+  "devices.reason.tunnel_down": {
+    "value": "The Wi-Fi link dropped. Keep this iPhone near the Mac, or plug it in"
+  },
+  "devices.reason.wifi_untrusted": {
+    "value": "Plug it in once and tap Trust"
   },
   "devices.reason.other": {
     "value": "Not ready yet"
@@ -4846,6 +4834,27 @@
   },
   "devices.iphone.pluggedIn": {
     "value": "It's plugged in"
+  },
+  "devices.iphone.wifi.also": {
+    "value": "Also on the Wi-Fi of {{host}}: {{name}}"
+  },
+  "devices.iphone.wifi.use": {
+    "value": "Use over Wi-Fi"
+  },
+  "devices.iphone.wifi.hint": {
+    "value": "Only an iPhone that trusted the Mac over a cable shows up here. The Mac reaches it through Apple's own encrypted link, the one Xcode uses."
+  },
+  "devices.iphone.wifi.stop": {
+    "value": "Stop using over Wi-Fi"
+  },
+  "devices.iphone.wifi.stopTitle": {
+    "value": "Stop using {{name}} over Wi-Fi?"
+  },
+  "devices.iphone.wifi.stopText": {
+    "value": "Agents can't reach it any more. Pick it again with {{host}} to use it."
+  },
+  "devices.iphone.wifi.stopped": {
+    "value": "{{name}} isn't used over Wi-Fi any more"
   },
   "devices.iphone.stall.plug": {
     "value": "{{host}} doesn't see this iPhone yet. Use a cable that carries data, not only power, keep this iPhone unlocked and tap Trust if it asks."
@@ -5484,13 +5493,13 @@
     "value": "You have 7 days to change your mind."
   },
   "settings.deleteAlert": {
-    "value": "Everyone is out right away. It can be restored for 7 days."
+    "value": "Everyone can only read it from now on. It can be restored for 7 days."
   },
   "settings.deleteAction": {
     "value": "Delete"
   },
   "settings.deleteIntro": {
-    "value": "{{name}} closes for everyone right away and is deleted for good in 7 days."
+    "value": "{{name}} turns read-only for everyone right away and is deleted for good in 7 days."
   },
   "settings.holdDelete": {
     "value": "Hold to delete"
@@ -6178,9 +6187,6 @@
   },
   "dashboards.formatAuto": {
     "value": "{{name}} picks the best one"
-  },
-  "dashboards.newWidget.titleHint": {
-    "value": "Title · {{name}} suggests one when testing"
   },
   "dashboards.newWidget.alerts": {
     "value": "Alerts"

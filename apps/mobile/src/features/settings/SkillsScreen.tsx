@@ -23,6 +23,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { SKILL_ASSET_MB } from "@agenteschat/client/lib/files";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import {
   changedByText,
   changesSinceLink,
@@ -72,7 +73,7 @@ import { Note } from "../ai/parts";
 import { MessageText } from "../chat/MessageText";
 import { ConnectSheet } from "../connectors/ConnectSheet";
 import { FirstUse } from "../shared/FirstUse";
-import { useColors } from "../shared/hooks";
+import { useColors, useDirectory, useErrorToast } from "../shared/hooks";
 import { goBack, successHaptic } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { TextArea } from "../shared/TextArea";
@@ -97,6 +98,7 @@ export function SkillsScreen() {
   const usage = useSkillUsage(orgId, admin && list.length > 0);
   const settings = useSkillSettings(orgId, admin);
   const action = useSkillAction(orgId);
+  const failed = useErrorToast();
   const [q, setQ] = useState("");
   const unavailable = skills.isError && (skills.error as { status?: number }).status === 404;
   const shown = searchSkills(list, q);
@@ -137,7 +139,10 @@ export function SkillsScreen() {
                   toggle={settings.data.agentsImprove}
                   disabled={action.isPending}
                   onPress={() =>
-                    action.mutate({ type: "settings", settings: { agentsImprove: !settings.data?.agentsImprove } })
+                    action.mutate(
+                      { type: "settings", settings: { agentsImprove: !settings.data?.agentsImprove } },
+                      { onError: failed },
+                    )
                   }
                 />
               </GroupedList>
@@ -220,7 +225,7 @@ export function SkillScreen({ id }: { id: string }) {
         t("skills.updated", { when: relativeTime(t, i18n.language, s.updatedAt) }),
       ].join(" · ")
     : undefined;
-  const failed = (e: unknown) => toast({ title: errorText(t, e), icon: "x" });
+  const failed = useErrorToast();
 
   const refresh = (item: SkillDetail) =>
     action.mutate(
@@ -404,6 +409,7 @@ function PendingDiff({ skill: s }: { skill: SkillDetail }) {
 function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const failed = useErrorToast();
   const { orgId } = useOrg();
   const action = useSkillAction(orgId);
   const agents = useAgents(orgId);
@@ -425,6 +431,7 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
           s.lastUpdate?.waited
             ? reopened()
             : said(t("skills.undone", { name: s.name, version: s.lastUpdate?.fromVersion ?? 0 })),
+        onError: failed,
       },
     );
   return (
@@ -456,6 +463,7 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
                           ? t("skills.pending.changedAgain", { name: s.name })
                           : t(waiting.applied, { name: s.name }),
                       ),
+                    onError: failed,
                   },
                 )
               }
@@ -467,7 +475,7 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
               onPress={() =>
                 action.mutate(
                   { type: "dismissUpdate", id: s.id },
-                  { onSuccess: () => said(t(waiting.kept, { name: s.name })) },
+                  { onSuccess: () => said(t(waiting.kept, { name: s.name })), onError: failed },
                 )
               }
             />
@@ -484,7 +492,9 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
               label={t("skills.undo")}
               sub={words.kept}
               disabled={action.isPending}
-              onPress={() => action.mutate({ type: "reopenUpdate", id: s.id }, { onSuccess: reopened })}
+              onPress={() =>
+                action.mutate({ type: "reopenUpdate", id: s.id }, { onSuccess: reopened, onError: failed })
+              }
             />
           </GroupedList>
         </>
@@ -501,7 +511,9 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
           hint={{ name: t("common.about", { label: t("skills.autoUpdate") }), text: t("skills.autoUpdateHelp") }}
           toggle={s.autoUpdate ?? false}
           disabled={action.isPending}
-          onPress={() => action.mutate({ type: "update", id: s.id, patch: { autoUpdate: !s.autoUpdate } })}
+          onPress={() =>
+            action.mutate({ type: "update", id: s.id, patch: { autoUpdate: !s.autoUpdate } }, { onError: failed })
+          }
         />
         {words.last ? (
           <GroupedRow
@@ -549,6 +561,7 @@ function ChangeRow({ change: c, agent }: { change: SkillAgentChange; agent: stri
 function AgentImprove({ skill: s }: { skill: SkillDetail }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const failed = useErrorToast();
   const { orgId } = useOrg();
   const action = useSkillAction(orgId);
   const settings = useSkillSettings(orgId);
@@ -566,7 +579,9 @@ function AgentImprove({ skill: s }: { skill: SkillDetail }) {
           labelLines={2}
           toggle={on}
           disabled={action.isPending}
-          onPress={() => action.mutate({ type: "update", id: s.id, patch: { agentsImprove: !on } })}
+          onPress={() =>
+            action.mutate({ type: "update", id: s.id, patch: { agentsImprove: !on } }, { onError: failed })
+          }
         />
         {change ? (
           <GroupedRow
@@ -585,6 +600,7 @@ function AgentImprove({ skill: s }: { skill: SkillDetail }) {
                     successHaptic();
                     toast({ title: t("skills.undone", { name: s.name, version: change.fromVersion }), icon: "check" });
                   },
+                  onError: failed,
                 },
               )
             }
@@ -623,15 +639,19 @@ const REPOS_SHOWN = 30;
  * connection read it; when none can, "Conectar o GitHub" opens the connect sheet over it (or it says whom to ask),
  * and the link is read again once GitHub is connected.
  */
-export function InstallSkillScreen({ initialUrl }: { initialUrl?: string }) {
+export function InstallSkillScreen({ initialUrl, forAgentId }: { initialUrl?: string; forAgentId?: string }) {
   return (
     <SheetHostProvider>
-      <InstallSkill initialUrl={initialUrl} />
+      <InstallSkill initialUrl={initialUrl} forAgentId={forAgentId} />
     </SheetHostProvider>
   );
 }
 
-function InstallSkill({ initialUrl }: { initialUrl?: string }) {
+/**
+ * `forAgentId`: opened from that agent's card, a row (on by default) turns what installs on for it, as on the web, only
+ * from the card's own link: one typed over it or a repository picked instead goes on for nobody.
+ */
+function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgentId?: string }) {
   const { t } = useTranslation();
   const c = useColors();
   const toast = useToast();
@@ -654,6 +674,16 @@ function InstallSkill({ initialUrl }: { initialUrl?: string }) {
   const [choices, setChoices] = useState<SkillChoice[] | null>(null);
   const [skipped, setSkipped] = useState<SkillSkipped[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [turnOn, setTurnOn] = useState(true);
+  const dir = useDirectory();
+  // Only a live agent the server would turn it on for: not one archived or gone since its card, nor the right hand.
+  const forAgent = forAgentId ? dir.agentById.get(forAgentId) : undefined;
+  const forName = forAgent && !isRightHand(forAgent) ? forAgent.name : undefined;
+  const cardLink = forAgentId && forName ? initialUrl?.trim() : undefined;
+  const forCard = cardLink !== undefined && url.trim() === cardLink;
+  /** The agent what installs from `link` goes on for, when the row shows it and is checked. */
+  const sendFor = (link: string) =>
+    turnOn && cardLink !== undefined && link.trim() === cardLink ? forAgentId : undefined;
   const busy = action.isPending || reading;
   const step = useStepText(busy, [
     t("skills.installStep.fetching"),
@@ -673,8 +703,12 @@ function InstallSkill({ initialUrl }: { initialUrl?: string }) {
   const read = (link: string, list = false) => {
     setError(null);
     setHidden(null);
+    const forAgent = sendFor(link);
     action.mutate(
-      { type: "import", input: list ? { url: link, list } : { url: link } },
+      {
+        type: "import",
+        input: list ? { url: link, list } : { url: link, ...(forAgent ? { forAgentId: forAgent } : {}) },
+      },
       {
         onSuccess: (result) => {
           const found = skillPickOf(result);
@@ -756,7 +790,7 @@ function InstallSkill({ initialUrl }: { initialUrl?: string }) {
         toast({ title: t("skills.installedMany", { count: list.length }), icon: "check" });
         goBack();
       };
-      action.mutate({ type: "importPicked", url: url.trim(), paths }, { onSuccess, onError });
+      action.mutate({ type: "importPicked", url: url.trim(), paths, forAgentId: sendFor(url) }, { onSuccess, onError });
       return;
     }
     if (tab === "zip") {
@@ -871,8 +905,12 @@ function InstallSkill({ initialUrl }: { initialUrl?: string }) {
                 <GroupedRow
                   key={c.path}
                   label={c.name}
-                  sub={c.description}
-                  subLines={2}
+                  sub={
+                    c.replaces
+                      ? `${t(c.replaces === "removed" ? "skills.pickReplacesRemoved" : "skills.pickReplaces", { name: c.name })}\n${c.description}`
+                      : c.description
+                  }
+                  subLines={c.replaces ? 3 : 2}
                   checked={picked.has(c.path)}
                   onPress={() => togglePick([c.path], !picked.has(c.path))}
                 />
@@ -913,6 +951,15 @@ function InstallSkill({ initialUrl }: { initialUrl?: string }) {
               )}
               {found.length > REPOS_SHOWN ? <GroupedFooter>{t("skills.reposMore")}</GroupedFooter> : null}
             </>
+          ) : null}
+          {forCard ? (
+            <GroupedList>
+              <GroupedRow
+                label={t("skills.forAgent", { agent: forName, count: Math.max(picked.size, 1) })}
+                checked={turnOn}
+                onPress={() => setTurnOn((on) => !on)}
+              />
+            </GroupedList>
           ) : null}
         </>
       ) : tab === "zip" ? (

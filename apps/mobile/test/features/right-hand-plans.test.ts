@@ -33,7 +33,13 @@ test("Sua IA is one row that opens its choice: what answers me, by its logo and 
   expect(screen).toContain('<ProviderLogo id={status.brain} size="sm" />');
   expect(screen).toContain("value: own ? MINE : WORKSPACE,");
   expect(screen).toContain('{ key: OTHER, label: t("agentPage.work.brain.connectPlan")');
-  expect(screen).toContain("if (picked === OTHER || (picked === MINE && !own)) connect();");
+  expect(screen).toContain("else if (picked === OTHER || (picked === MINE && !own)) connect();");
+  // The plan's model is a choice of the same sheet, under the plan, and opens the model's page: account and model in
+  // one place, as on an agent's AI. The row behind says the model too.
+  expect(screen).toContain('key: MODEL,\n              label: t("agentPage.work.brain.planModel"),');
+  expect(screen).toContain("if (picked === MODEL) openAgentModel(agent.id);");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the screen's source
+  expect(screen).toContain("sub={model ? `${sub} · ${model}` : sub}");
   expect(screen).toContain("else if (picked === WORKSPACE && own) back();");
   expect(screen).not.toContain("value={t(");
   expect(screen).not.toContain("onPress={back}");
@@ -90,6 +96,11 @@ test("Lodi's settings: the workspace's plan is lent by a switch for whoever sets
   expect(screen).toContain('if (kind) set({ brain: "model" });');
   expect(screen).toContain("set({ brain: plan.kind, account: plan.id });");
   expect(screen).toContain("disabled={busy || hold}");
+  // On a plan, its model is the row under it (as the key's model is), saved as the workspace's.
+  expect(screen).toContain('onPress={() => openAgentModel(agent.id, "workspace")}');
+  const model = readFileSync(join(import.meta.dir, "../../src/features/ai/AgentAiScreen.tsx"), "utf8");
+  expect(model).toContain("const brain = useAgentBrain(orgId, agentId, true, false, scope);");
+  expect(model).toContain("api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input })");
   expect(screen).not.toContain("noAi.rightHand.useKey");
   expect(screen).not.toContain("workspacePlan");
   // Any plan's CLI: Claude Code's, Codex's, Cursor's, OpenCode's, Grok Build's or the Antigravity CLI's.

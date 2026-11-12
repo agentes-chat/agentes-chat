@@ -1,25 +1,33 @@
+import type { Agent } from "@agenteschat/client";
+import { WORKSPACE_COMPUTER_KIND } from "@agenteschat/client/lib/computer";
+import { planMark, SCENE_PLANS } from "@agenteschat/client/lib/no-ai";
+import { rightHandOf, sceneTeam } from "@agenteschat/client/lib/right-hand";
 import {
+  ComputerPortrait,
   cx,
   type Expression,
   mix,
   PixelSky,
+  ProviderLogo,
   parseColor,
   pixelOf,
   prefersReducedMotion,
   type SkyFrame,
   type SkyOptions,
+  TEAM_NIGHT,
 } from "@agenteschat/ui";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import "./arrival.css";
+
+// The onboarding's AI step takes it from here.
+export { sceneTeam };
 
 /*
  * The team on a pixel sky (ADR 0160): the agents the person has, standing under a sky that is night while they have
  * no AI and day once they think. Decorative, as every sky is: what it says is said in words beside it.
  */
 
-/** Top to horizon, as the sky's tones go: deep first. */
-const NIGHT = ["#050814", "#070c1e", "#0a122e", "#0e1a43", "#13245a", "#182f73", "#203f8f", "#2b53ad"];
 const DAY = ["#2468dc", "#2b74e6", "#3f88f5", "#5a9dff", "#78b4ff", "#a6cfff", "#cfe6ff", "#eef7ff"];
 /** The day on a dark page: the same blues, deeper, so the sky doesn't glare beside dark surfaces. */
 const DAY_DARK = ["#0b2459", "#0e2d6c", "#123881", "#174496", "#1d51aa", "#2660bd", "#3170cd", "#4183dc"];
@@ -101,7 +109,7 @@ export function teamSky(day: number, quiet = 0): SkyOptions {
     surface: "--raised",
     light: 0,
     sprites: 0,
-    palette: (surface) => NIGHT.map((n, i) => mix(n, (isDark(surface) ? DAY_DARK : DAY)[i] ?? n, day)),
+    palette: (surface) => TEAM_NIGHT.map((n, i) => mix(n, (isDark(surface) ? DAY_DARK : DAY)[i] ?? n, day)),
     base: (u, v) => {
       const sun = day * 0.2 * Math.exp(-(((u - 0.5) * 1.5) ** 2 + ((v - 1.05) * 2.4) ** 2));
       return Math.min(1, Math.max(0, v ** 0.9 * 0.9 + 0.05 * Math.sin(u * 5.2 + v * 3) + sun));
@@ -211,9 +219,61 @@ export function TeamScene({
   );
 }
 
-/** The agents a scene shows: the right hand in front (second in the row), then the others, four at most. */
-export function sceneTeam<A extends SceneAgent>(agents: readonly A[], lead: A | undefined): A[] {
-  const rest = agents.filter((a) => a.id !== lead?.id).slice(0, lead ? 3 : 4);
-  if (!lead) return rest;
-  return rest.length > 1 ? [rest[0] as A, lead, ...rest.slice(1)] : [lead, ...rest];
+type ScenePlan = (typeof SCENE_PLANS)[number];
+export const isScenePlan = (choice: string | null | undefined): choice is ScenePlan =>
+  SCENE_PLANS.includes(choice as ScenePlan);
+
+/** Pixels between two things on the sky, `--n` counted from the AI's side so the walk goes toward the team. */
+function Trail({ from, state }: { from: number; state: "walk" | "done" | undefined }) {
+  return (
+    <span className="team-scene__trail" data-state={state}>
+      {[4, 3, 2, 1, 0].map((n) => (
+        <i key={n} style={{ "--n": from + n } as CSSProperties} />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The band over "Conectar uma IA": the team asleep under the night, the workspace's computer and the AIs' marks, with
+ * pixels walking from the marks to the team while there is something to connect (`waiting`: a plan comes first, so
+ * nothing walks). `connected`: day comes and the team gets up. `lit`: the plan the person picked, the others dimmed.
+ */
+export function ConnectScene({
+  agents,
+  connected,
+  waiting = false,
+  lit,
+}: {
+  agents: readonly (SceneAgent & Pick<Agent, "builtin">)[];
+  connected: boolean;
+  waiting?: boolean;
+  lit?: ScenePlan | null;
+}) {
+  const day = useDawn(connected);
+  const lead = rightHandOf(agents);
+  const team = sceneTeam(agents, lead).slice(0, 3);
+  const state = connected ? "done" : waiting ? undefined : "walk";
+  return (
+    <TeamScene
+      className="connect-scene"
+      agents={team}
+      lead={lead?.id}
+      asleep={!connected}
+      day={day}
+      expression={connected ? "happy" : undefined}
+    >
+      {/* No team to walk to (none yet, or still loading): the trail would end in the air. */}
+      {team.length > 0 && <Trail from={5} state={state} />}
+      <ComputerPortrait kind={WORKSPACE_COMPUTER_KIND} state={connected ? "online" : "paused"} />
+      <Trail from={0} state={state} />
+      <span className="connect-scene__marks">
+        {SCENE_PLANS.map((plan) => (
+          <span key={plan} className="team-scene__mark">
+            <ProviderLogo id={planMark(plan)} size="sm" off={Boolean(lit) && lit !== plan} />
+          </span>
+        ))}
+      </span>
+    </TeamScene>
+  );
 }

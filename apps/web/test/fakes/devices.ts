@@ -8,6 +8,8 @@
  * - `POST …/devices/access-requests/{id}/decide`, `POST …/runs/{id}/device-wait`
  * - `POST …/computers/{id}/wifi-pairings` → a pairing waiting for the phone (the QR way with Android's QR text);
  *   `GET …/wifi-pairings/{id}` → where it stands (`setPairing()` moves it on), `DELETE` stops it
+ * - `GET …/computers/{id}/wifi-iphones` → the iPhones `setWifi()` put on that Mac's Wi-Fi; `PUT …/{serial}` moves one
+ *   among the Mac's phones, over Wi-Fi and preparing
  * Every call is recorded through `record`.
  */
 import type {
@@ -18,6 +20,7 @@ import type {
   DevicesList,
   Machine,
   PhoneDevice,
+  WifiIphone,
   WifiPairing,
 } from "@agenteschat/client";
 import { ApiError } from "@agenteschat/client";
@@ -30,6 +33,8 @@ export interface FakeDevices {
   setLink(state: ConnectLinkState): void;
   /** What the next `GET …/wifi-pairings/{id}` answers, over the pairing it started. */
   setPairing(state: Partial<WifiPairing>): void;
+  /** The iPhones on `machineId`'s Wi-Fi that trust it, on offer. */
+  setWifi(machineId: string, available: WifiIphone[]): void;
   list(): DevicesList;
 }
 
@@ -72,6 +77,7 @@ export function createFakeDevices(
   let links = 0;
   let pairing: WifiPairing | null = null;
   let pairings = 0;
+  const wifi = new Map<string, WifiIphone[]>();
   const computer = (id: string): ComputerDevice => {
     own ??= current();
     const found = own.devices.find((d) => d.id === id);
@@ -179,6 +185,38 @@ export function createFakeDevices(
     lookForPhones: async (orgId, machineId) => {
       record("devices.lookForPhones", orgId, machineId);
     },
+    wifiIphones: async (orgId, machineId) => {
+      record("devices.wifiIphones", orgId, machineId);
+      return { available: clone(wifi.get(machineId) ?? []) };
+    },
+    pickIphoneOverWifi: async (orgId, machineId, serial) => {
+      record("devices.pickIphoneOverWifi", orgId, machineId, serial);
+      const offered = wifi.get(machineId) ?? [];
+      const picked = offered.find((p) => p.serial === serial);
+      if (!picked) throw new ApiError(503, "machine.phone_missing", "That iPhone isn't on this Mac's Wi-Fi now.");
+      wifi.set(
+        machineId,
+        offered.filter((p) => p !== picked),
+      );
+      const mac = computer(machineId);
+      mac.phones.push({
+        id: `p-wifi-${serial}`,
+        platform: "ios",
+        phoneKind: "device",
+        name: picked.name ?? picked.model,
+        model: picked.model,
+        osVersion: picked.osVersion,
+        hostMachineId: machineId,
+        transport: "wifi",
+        status: { kind: "preparing", reason: "helper_missing" },
+        ownerUserId: mac.ownerUserId,
+        audience: null,
+        mayUse: true,
+        mayManage: mac.mayManage,
+        lastSeenAt: now().toISOString(),
+      });
+      return { available: clone(wifi.get(machineId) ?? []) };
+    },
   };
   return {
     client,
@@ -190,6 +228,9 @@ export function createFakeDevices(
     },
     setPairing: (state) => {
       if (pairing) pairing = { ...pairing, ...clone(state) };
+    },
+    setWifi: (machineId, available) => {
+      wifi.set(machineId, clone(available));
     },
     list: () => clone(current()),
   };

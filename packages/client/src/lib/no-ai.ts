@@ -164,12 +164,19 @@ export const noAiLineKey = (card: Pick<NoAiCard, "own" | "signedOut" | "missing"
 
 type ConnectingAgent = { ownerUserId?: string | null; builtin?: "right_hand" | null };
 
-/** Who can set an agent's own AI: its owner (a plan), who manages agents (a workspace key) or keys. */
-const maySetAgentAi = (
+/**
+ * Who can set an agent's own AI: its owner (a plan), who manages agents (a workspace key) or keys. On the right hand
+ * that is the workspace's AI, the one its background work (a widget's build) thinks with.
+ */
+export const maySetAgentAi = (
   agent: ConnectingAgent | null | undefined,
   meId: string | null | undefined,
   org: Parameters<typeof can>[0],
 ) => (!!meId && agent?.ownerUserId === meId) || can(org, "manage_agents") || can(org, "manage_credentials");
+
+/** Who connects an agent's AI, for a person who may not: its owner (`owner`, by first name) or an admin. */
+export const noAiLockedLine = (t: TFunction, name: string, owner: string | null | undefined) =>
+  owner ? t("noAi.locked", { name, owner: owner.split(" ")[0] }) : t("noAi.lockedAdmins");
 
 /**
  * Who can do something about an agent with no AI: who sets its AI, and on the right hand any member, for their own
@@ -197,6 +204,13 @@ export function planLineFix(
   if (!mayConnectAi(agent, meId, org)) return null;
   return line === "plan_not_shared" || !maySetAgentAi(agent, meId, org) ? "connectMine" : "useKey";
 }
+
+/**
+ * Where Connect opens for a widget waiting on the right hand's plan (`reason` one of its plan lines): the key step,
+ * since a build is nobody's ask and that plan never waits, so only a key builds it (`planLineFix`'s `useKey`).
+ */
+export const planKeyIntent = (agent: ConnectingAgent | null | undefined, reason: string | null | undefined) =>
+  isRightHand(agent) && reason && RIGHT_HAND_PLAN_LINES.has(reason) ? { intent: "api_key" as const } : {};
 
 /** The key of an agent's line from its AI status, for a banner with no card (`noAiLineKey`). */
 export function noAiStatusKey(status: AiStatus | undefined, agentId: string) {
@@ -265,6 +279,8 @@ export const PLAN_CHOICES: readonly PlanChoice[] = [
   "zen",
   ...PLAN_IDS,
 ];
+/** The plans whose marks stand on the scene over "Conectar uma IA": the three most used. */
+export const SCENE_PLANS = ["claude", "chatgpt", "gemini"] as const satisfies readonly PlanChoice[];
 /** The account a plan signs in as: ChatGPT's through Codex, Cursor's and OpenCode's through their CLIs; the rest through Claude Code. */
 export const kindOf = (choice: PlanChoice): MachineAccountKind =>
   choice === "chatgpt" || choice === "cursor" || choice === "zen" || choice === "grok" || choice === "gemini"

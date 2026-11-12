@@ -7,8 +7,10 @@ import type {
   AppNotification,
   AppsList,
   ConnectedApp,
+  OrgStanding,
   PersonalToken,
 } from "../api/types";
+import { billingHoldOf, standingActive } from "./billing";
 import { formatShortDate, joinNames, relativeTime } from "./format";
 
 /*
@@ -73,13 +75,23 @@ export function appCreatedLine(t: TFunction, n: Pick<AppNotification, "latest">)
 }
 
 /**
- * The import's "From your AI app" option: the address to connect and the request to paste, or unavailable where
- * apps that call from their own servers can't reach this one (a self-hosted server on a private host). Null while
- * loading.
+ * The import's "Connect with MCP" way in: the address to connect and the request to paste, or unavailable with the
+ * line saying why: apps that call from their own servers can't reach this one (a self-hosted server on a private
+ * host), or the workspace is on a hold, which refuses an app's sign-in and its calls (`workRefusal`), as a new Cloud
+ * workspace is until its first plan. Null while loading.
  */
-export function aiAppImport(t: TFunction, list: Pick<AppsList, "serverUrl" | "serverPublic"> | undefined) {
+export function aiAppImport(
+  t: TFunction,
+  list: Pick<AppsList, "serverUrl" | "serverPublic"> | undefined,
+  standing: Pick<OrgStanding, "state" | "reason"> | null | undefined,
+) {
   if (!list) return null;
-  if (!list.serverPublic) return { available: false as const };
+  if (!list.serverPublic) return { available: false as const, note: t("onboarding.import.aiApp.private") };
+  if (!standingActive(standing))
+    return {
+      available: false as const,
+      note: t(billingHoldOf(standing) ? "onboarding.import.aiApp.held" : "onboarding.import.aiApp.paused"),
+    };
   return {
     available: true as const,
     url: list.serverUrl,

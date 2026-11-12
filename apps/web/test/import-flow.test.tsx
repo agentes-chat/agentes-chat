@@ -9,11 +9,12 @@ import type { ApiClient, ImportFileInput, ImportInput, ImportItemResult, ImportP
 import { ApiError } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { fileSaver } from "@/components/artifacts/fileSaver";
+import { ImportFlow, useImportFlow } from "@/components/ImportFlow";
 import { EXPORT_PROMPT } from "@/lib/import";
 import { zip } from "./archives";
 import { createFakeApi, fakeAppsOf, ORG_ID, seedState } from "./fake-api";
 import { type FakeApps, SERVER_URL } from "./fakes/apps";
-import { renderApp, screen, settle } from "./render";
+import { renderApp, renderPage, screen, settle } from "./render";
 
 const realSave = fileSaver.save;
 afterEach(() => {
@@ -30,6 +31,7 @@ const go = async (state: State = seedState(), api: ApiClient = createFakeApi(sta
   return { ...r, state, api };
 };
 const button = (name: string | RegExp) => screen().getByRole("button", { name });
+const radio = (name: string) => screen().getByRole("radio", { name });
 const click = async (el: Element, rounds = 4) => {
   await act(async () => fireEvent.click(el));
   await settle(rounds);
@@ -250,32 +252,264 @@ describe("Configurações → Importar e exportar", () => {
     expect(screen().getByRole("tooltip").textContent).toBe(more);
   });
 
-  test("from your AI app, on top: the address to connect, how, and the request to paste with it", async () => {
+  test("Grok Bot: Conectar com MCP by default, in the bot's own steps, then the request; nothing to drop or paste", async () => {
+    const writes: string[] = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (s: string) => void writes.push(s) },
+    });
     await go();
-    const option = button(/Do seu app de IA \(mais confiável\)/);
-    expect(document.querySelector(".imp-pick")?.firstElementChild).toBe(option);
-    expect(option.getAttribute("aria-pressed")).toBe("false");
-    await click(option);
-    expect(option.getAttribute("aria-pressed")).toBe("true");
-    expect(document.querySelector(".machine-command__code")?.textContent).toBe(SERVER_URL);
-    expect(screen().getByRole("link", { name: "Como conectar, app por app" }).getAttribute("href")).toBe(
-      `/org/${ORG_ID}/settings/apps`,
+    await click(button("Grok Bot"), 2);
+    const how = screen().getByRole("radiogroup", { name: "Como trazer" });
+    expect(
+      within(how)
+        .getAllByRole("radio")
+        .map((r) => [r.textContent, r.getAttribute("aria-checked")]),
+    ).toEqual([
+      ["Conectar com MCP", "true"],
+      ["Só o pedido", "false"],
+    ]);
+    const mcp = screen().getByRole("region", { name: "Conectar com MCP" });
+    expect(mcp.querySelector("p")?.textContent).toBe(
+      "O MCP deixa o Grok Bot acessar este workspace, e ele cria os agentes aqui sozinho.",
     );
-    expect(text()).toContain("Na tela de permissão, escolha Criar e editar agentes, rotinas e skills.");
-    expect((screen().getByLabelText("Pedido para o seu app de IA") as HTMLTextAreaElement).value).toBe(
-      `Conecte ${SERVER_URL} e, para cada agente, instrução, skill e rotina que você tem, crie o equivalente no agentes.chat. Antes, liste o que já existe lá para não duplicar.`,
+    // In order: the access is picked where the sign-in asks, and the server is attached before the request.
+    const steps = [...mcp.querySelectorAll("ol > li")];
+    expect(steps.map((li) => (li.querySelector(".apps-step > span") ?? li).textContent)).toEqual([
+      "Na conversa com o seu bot, mande:",
+      "Clique em Add it e depois em Authorize.",
+      "Entre com sua conta do agentes.chat na página que abrir e escolha Criar e editar agentes, rotinas e skills.",
+      "Na conversa, digite @ e escolha agentes.",
+      "Cole este pedido no app:",
+    ]);
+    expect([...mcp.querySelectorAll(".machine-command__code")].map((c) => c.textContent)).toEqual([
+      `Add a custom MCP server called agentes at ${SERVER_URL}`,
+    ]);
+    const prompt = `Use o servidor MCP do agentes.chat que você acabou de conectar (${SERVER_URL}) para trazer o que você tem para o agentes.chat. Primeiro chame import_summary para ver o que já existe lá e não duplicar nada. Depois, para cada agente, instrução, skill e rotina que você tem, crie o equivalente com create_agent, create_skill e create_routine, e guarde o que cada agente deve lembrar com add_memory.`;
+    expect((within(mcp).getByLabelText("Pedido para o seu app de IA") as HTMLTextAreaElement).value).toBe(prompt);
+    await click(within(mcp).getByRole("button", { name: "Copiar o pedido" }), 2);
+    expect(writes).toEqual([prompt]);
+    expect(mcp.textContent).toContain("Esperando os agentes chegarem…");
+    // What to check shows only once a while passes with nothing.
+    expect(mcp.textContent).not.toContain("Nada depois de alguns minutos?");
+    // Grok Bot's steps say where: no help link, and nothing here to drop or paste.
+    expect(within(mcp).queryByRole("link")).toBeNull();
+    expect(document.querySelector(".imp-drop")).toBeNull();
+    expect(screen().queryByLabelText("Ou cole um link do GitHub ou a resposta do outro app")).toBeNull();
+
+    // Só o pedido: today's request, the drop zone and the paste field.
+    await click(radio("Só o pedido"), 2);
+    expect(screen().queryByRole("region", { name: "Conectar com MCP" })).toBeNull();
+    expect(screen().getByRole("region", { name: "Peça para o seu bot exportar" })).toBeTruthy();
+    expect(document.querySelector(".imp-drop")).toBeTruthy();
+    expect(screen().getByLabelText("Ou cole um link do GitHub ou a resposta do outro app")).toBeTruthy();
+    // The pick stays with its source: another card has its own default, and Grok Bot keeps Só o pedido.
+    await click(button("Hermes Agent"), 2);
+    expect(radio("Conectar com MCP").getAttribute("aria-checked")).toBe("true");
+    await click(button("Grok Bot"), 2);
+    expect(radio("Só o pedido").getAttribute("aria-checked")).toBe("true");
+  });
+
+  test("ChatGPT dots: Só o pedido by default; MCP shows ChatGPT's own steps and its notes", async () => {
+    await go();
+    await click(button("ChatGPT dots"), 2);
+    expect(radio("Só o pedido").getAttribute("aria-checked")).toBe("true");
+    expect(screen().getByRole("region", { name: "Peça para o seu dot exportar" })).toBeTruthy();
+    await click(radio("Conectar com MCP"), 2);
+    const mcp = screen().getByRole("region", { name: "Conectar com MCP" });
+    expect(mcp.querySelector("p")?.textContent).toBe(
+      "O MCP deixa o seu dot acessar este workspace por um plugin que você adiciona no ChatGPT, e ele cria os agentes aqui sozinho.",
+    );
+    const open = within(mcp).getByRole("link", { name: "Abrir o ChatGPT" });
+    expect([open.getAttribute("href"), open.getAttribute("target")]).toEqual(["https://chatgpt.com/plugins", "_blank"]);
+    expect(within(mcp).getByText(SERVER_URL)).toBeTruthy();
+    expect(mcp.textContent).toContain("Não dá para adicionar pelo app do celular.");
+    expect(mcp.textContent).toContain(
+      "Entre com sua conta do agentes.chat na página que abrir e escolha Criar e editar agentes, rotinas e skills.",
     );
   });
 
-  test("a server apps on the internet can't reach: no AI app option, one line says why", async () => {
+  test("the file apps: MCP by default in each one's own words; Por arquivo brings back where its file is", async () => {
+    await go();
+    const codes = () => [...document.querySelectorAll(".machine-command__code")].map((c) => c.textContent);
+    await click(button("Hermes Agent"), 2);
+    expect(codes()).toEqual([`mcp_servers:\n  agentes:\n    url: "${SERVER_URL}"\n    auth: oauth`]);
+    const words = () =>
+      [...document.querySelectorAll(".apps-steps > li")].map(
+        (li) => (li.querySelector(".apps-step > span") ?? li).textContent,
+      );
+    expect(words()).toEqual([
+      "Cole em ~/.hermes/config.yaml:",
+      "Para entrar, rode hermes mcp login agentes.",
+      "Entre com sua conta do agentes.chat na página que abrir e escolha Criar e editar agentes, rotinas e skills.",
+      "Depois digite /reload-mcp na conversa.",
+      "Cole este pedido no app:",
+    ]);
+    expect(document.querySelector(".imp-tip")).toBeNull();
+    expect(document.querySelector(".imp-drop")).toBeNull();
+    await click(radio("Por arquivo"), 2);
+    expect(document.querySelector(".imp-tip")?.textContent).toContain("hermes profile export");
+    expect(document.querySelector(".imp-drop")).toBeTruthy();
+
+    await click(button(/^OpenClaw$/), 2);
+    // The Gateway starts again once the sign-in ends, before the request is pasted.
+    expect(codes()).toEqual([
+      `openclaw gateway stop\nopenclaw mcp set agentes '{"url":"${SERVER_URL}","transport":"streamable-http","auth":"oauth"}'\nopenclaw mcp login agentes\nopenclaw gateway start`,
+    ]);
+
+    await click(button("OpenMausBot"), 2);
+    expect(text()).toContain("Abra Plugins\u00a0›\u00a0MCP servers.");
+    expect(codes()).toEqual([SERVER_URL]);
+
+    // No menu words documented: the generic step and the help page, in a new tab.
+    await click(button(/^OpenBot\.run$/), 2);
+    expect(text()).toContain("Cole o endereço no app. Ele abre esta página para você entrar.");
+    const help = screen().getByRole("link", { name: "Como conectar, app por app" });
+    expect([help.getAttribute("href"), help.getAttribute("target")]).toEqual([
+      "https://agentes.chat/pt/docs/apps-de-ia#connect",
+      "_blank",
+    ]);
+
+    // Paperclip and our own export take no MCP server: their tip alone.
+    for (const name of [/^Paperclip$/, /^agentes\.chat$/]) {
+      await click(button(name), 2);
+      expect(screen().queryByRole("radiogroup", { name: "Como trazer" })).toBeNull();
+      expect(document.querySelector(".imp-tip")).toBeTruthy();
+      expect(document.querySelector(".imp-drop")).toBeTruthy();
+    }
+  });
+
+  test("a server apps on the internet can't reach: no MCP choice, today's steps and one line saying why", async () => {
     const state = seedState();
     const api = createFakeApi(state);
     (fakeAppsOf.get(api) as FakeApps).serverPublic = false;
     await go(state, api);
-    expect(screen().queryByRole("button", { name: /Do seu app de IA/ })).toBeNull();
+    await click(button("Grok Bot"), 2);
+    expect(screen().queryByRole("radiogroup", { name: "Como trazer" })).toBeNull();
+    expect(screen().getByRole("region", { name: "Peça para o seu bot exportar" })).toBeTruthy();
+    expect(screen().getByLabelText("Ou cole um link do GitHub ou a resposta do outro app")).toBeTruthy();
     expect(text()).toContain(
-      "Do seu app de IA: indisponível neste servidor, porque apps como o Claude e o ChatGPT só conectam a um endereço https público.",
+      "Conectar com MCP não está disponível neste servidor, porque apps na internet só alcançam um endereço https público.",
     );
+  });
+
+  test("the agents the app creates arrive live: only mine made after the step opened, each linked to its page", async () => {
+    const state = seedState();
+    const me = state.me?.user.id as string;
+    const base = state.agents[0] as State["agents"][number];
+    // Mine, but here before the step opened.
+    state.agents.push({ ...base, id: "a-old", name: "Velho", handle: "velho", ownerUserId: me });
+    const r = await go(state);
+    await act(async () => r.sockets.last().open());
+    await click(button("Grok Bot"), 4);
+    expect(text()).toContain("Esperando os agentes chegarem…");
+    state.agents.push(
+      { ...base, id: "a-nina", name: "Nina", handle: "nina", ownerUserId: me },
+      { ...base, id: "a-otto", name: "Otto", handle: "otto", ownerUserId: "u-someone-else" },
+    );
+    await act(async () => r.sockets.last().push({ type: "event", scope: "org", event: { type: "agents.changed" } }));
+    await settle(6);
+    const mcp = screen().getByRole("region", { name: "Conectar com MCP" });
+    expect(mcp.querySelector(".imp-arrivals__line")?.textContent).toBe("1 agente chegou");
+    expect(
+      within(mcp)
+        .getAllByRole("link")
+        .map((a) => [a.textContent, a.getAttribute("href")]),
+    ).toEqual([["Nina", `/org/${ORG_ID}/agents/a-nina`]]);
+    expect(mcp.textContent).not.toContain("Esperando os agentes chegarem…");
+    // In place: nothing here moved the page.
+    expect(r.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/import`);
+  });
+
+  test("embedded (as onboarding places it): outside the workspace's pages, it never links out or moves the page", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    const me = state.me?.user.id as string;
+    const base = state.agents[0] as State["agents"][number];
+    function Embedded() {
+      const flow = useImportFlow(ORG_ID);
+      return <ImportFlow flow={flow} orgId={ORG_ID} />;
+    }
+    const r = await renderPage(<Embedded />, { api, path: "/onboarding" });
+    await settle(6);
+    await click(button("Grok Bot"), 4);
+    expect(radio("Conectar com MCP").getAttribute("aria-checked")).toBe("true");
+    state.agents.push({ ...base, id: "a-nina", name: "Nina", handle: "nina", ownerUserId: me });
+    await act(async () => r.services.queryClient.invalidateQueries({ queryKey: ["org", ORG_ID, "agents"] }));
+    await settle(6);
+    expect(text()).toContain("1 agente chegou");
+    expect(text()).toContain("Nina");
+    expect(screen().queryByRole("link", { name: "Nina" })).toBeNull();
+    expect(r.router.state.location.pathname).toBe("/onboarding");
+  });
+
+  test("the flow's own imports never count as arrived: Só o pedido, Importar outro arquivo, then MCP waits again", async () => {
+    const { state } = await go();
+    await click(button("Grok Bot"), 4);
+    expect(text()).toContain("Esperando os agentes chegarem…");
+    await click(radio("Só o pedido"), 2);
+    await pasteReply(exportReply("grok-bot", "Minhas automações"));
+    await click(button(/^Importar \d+ ite/), 8);
+    expect(state.agents.some((a) => a.name === "Newsy")).toBe(true);
+    await click(button("Importar outro arquivo"), 4);
+    expect(button("Grok Bot").getAttribute("aria-pressed")).toBe("true");
+    await click(radio("Conectar com MCP"), 6);
+    const line = () => document.querySelector(".imp-arrivals__line")?.textContent;
+    expect(line()).toBe("Esperando os agentes chegarem…");
+    // Another source's MCP step counts from when it opened, not from the first one's.
+    await click(button("Hermes Agent"), 6);
+    expect(line()).toBe("Esperando os agentes chegarem…");
+  });
+
+  test("a file dropped on the MCP steps, then Trocar arquivo: focus lands on the steps, the drop zone isn't there", async () => {
+    await go();
+    await click(button("Grok Bot"), 4);
+    const file = new File([JSON.stringify(exportReply("grok-bot", "Meu bot"))], "agentes-chat-export.json");
+    await drop({ files: [file], items: [] });
+    expect(text()).toContain("Veio do Grok Bot");
+    await click(button("Trocar arquivo"), 4);
+    expect(document.querySelector(".imp-drop")).toBeNull();
+    expect(document.activeElement).toBe(screen().getByRole("region", { name: "Conectar com MCP" }));
+  });
+
+  test("the apps list fails: each source keeps its request or tip, with no MCP choice", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    api.apps = {
+      ...api.apps,
+      list: async () => {
+        throw new ApiError(500, "internal", "boom");
+      },
+    };
+    await go(state, api);
+    await click(button("Grok Bot"), 6);
+    expect(screen().queryByRole("radiogroup", { name: "Como trazer" })).toBeNull();
+    expect(screen().getByRole("region", { name: "Peça para o seu bot exportar" })).toBeTruthy();
+    expect(screen().getByLabelText("Ou cole um link do GitHub ou a resposta do outro app")).toBeTruthy();
+    await click(button("Hermes Agent"), 2);
+    expect(document.querySelector(".imp-tip")?.textContent).toContain("hermes profile export");
+  });
+
+  test("the agents can't be read when the MCP step opens: it says why and reads them again", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    const list = api.agents.list;
+    let fail = true;
+    api.agents = {
+      ...api.agents,
+      list: async (orgId) => {
+        if (fail) throw new ApiError(500, "internal", "boom");
+        return list(orgId);
+      },
+    };
+    await go(state, api);
+    await click(button("Grok Bot"), 8);
+    const mcp = () => screen().getByRole("region", { name: "Conectar com MCP" });
+    expect(mcp().textContent).not.toContain("Esperando os agentes chegarem…");
+    expect(within(mcp()).getByRole("alert")).toBeTruthy();
+    fail = false;
+    await click(within(mcp()).getByRole("button", { name: "Tentar de novo" }), 8);
+    expect(mcp().textContent).toContain("Esperando os agentes chegarem…");
   });
 
   test("its notes and lists lead each line with an icon on the line's first row", async () => {
@@ -302,7 +536,7 @@ describe("Configurações → Importar e exportar", () => {
       for (const s of selectors) seen.push([s, [...document.querySelectorAll(s)]]);
     };
     take(".imp-note");
-    await click(button(/^OpenClaw$/), 1);
+    await click(button(/^Paperclip$/), 1);
     take(".imp-tip");
     await pick("Pasta para importar", folder("paperclip-company"));
     take(".imp-note");
@@ -323,6 +557,7 @@ describe("Configurações → Importar e exportar", () => {
     }
     expect(screen().queryByRole("button", { name: /^OpenBot$/ })).toBeNull();
     await click(button(/^OpenBot\.run$/), 1);
+    await click(radio("Por arquivo"), 1);
     expect(text()).toContain("Solte o openbot-import.json");
     await click(button(/^agentes\.chat$/), 1);
     expect(text()).toContain("Configurações → Importar e exportar → Baixar o arquivo");
@@ -562,6 +797,7 @@ describe("Configurações → Importar e exportar", () => {
     });
     await go();
     await click(button(/^Outro app/), 2);
+    await click(radio("Só o pedido"), 2);
     const other = screen().getByRole("region", { name: "Peça para o outro app exportar" });
     expect((within(other).getByLabelText("Pedido de exportação") as HTMLTextAreaElement).value).toBe(EXPORT_PROMPT);
     // Where each app puts its file is on the help page, one link under the request.
@@ -590,6 +826,7 @@ describe("Configurações → Importar e exportar", () => {
   test("Grok Bot and ChatGPT dots: the same request in each app's own words, and a reply lands on its own card", async () => {
     await go();
     await click(button("Grok Bot"), 2);
+    await click(radio("Só o pedido"), 2);
     const grok = screen().getByRole("region", { name: "Peça para o seu bot exportar" });
     expect([...grok.querySelectorAll("li")].map((li) => li.textContent)).toEqual([
       "Copie o pedido abaixo.",
@@ -611,6 +848,7 @@ describe("Configurações → Importar e exportar", () => {
 
     // A Grok Bot reply pasted with any card picked: from Grok Bot, by its logo, and its card picked after.
     await click(button(/^Outro app/), 2);
+    await click(radio("Só o pedido"), 2);
     await pasteReply(exportReply("grok-bot", "Minhas automações"));
     expect(text()).toContain("Veio do Grok Bot");
     expect(document.querySelector(".imp-head .imp-mark img")?.getAttribute("src")).toBe("/brands/grok-bot.svg");

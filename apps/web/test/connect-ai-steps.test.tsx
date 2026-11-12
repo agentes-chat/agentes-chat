@@ -438,6 +438,32 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(screen().queryByRole("dialog")).toBeNull();
   });
 
+  test("the scene over the choice: the team asleep, their computer and the AIs' marks, the picked one alone lit", async () => {
+    const { dialog, choose } = await connect();
+    const scene = dialog.querySelector(".connect-scene") as HTMLElement;
+    // Decoration: what it says is said by the dialog's words.
+    expect(scene.getAttribute("aria-hidden")).toBe("true");
+    expect(dialog.querySelector(".ac-dialog__body")?.firstElementChild).toBe(scene);
+    const faces = scene.querySelectorAll(".team-scene__agent");
+    expect(faces.length).toBeGreaterThan(0);
+    expect(faces.length).toBeLessThanOrEqual(3);
+    expect(scene.querySelector(".team-scene__cast")?.hasAttribute("data-awake")).toBe(false);
+    expect(scene.querySelector(".ac-computer")?.getAttribute("data-state")).toBe("paused");
+    const marks = () => Array.from(scene.querySelectorAll(".connect-scene__marks .ac-brand"));
+    expect(marks().map((m) => m.getAttribute("data-mark"))).toEqual(["claude", "openai", "gemini"]);
+    expect(marks().filter((m) => m.classList.contains("ac-brand--off"))).toEqual([]);
+    // The pixels walk from the marks to the team: two trails, counted from the AI's side.
+    const trails = Array.from(scene.querySelectorAll(".team-scene__trail"));
+    expect(trails.map((t) => t.getAttribute("data-state"))).toEqual(["walk", "walk"]);
+    expect(
+      Array.from(scene.querySelectorAll<HTMLElement>(".team-scene__trail i")).map((i) =>
+        i.style.getPropertyValue("--n"),
+      ),
+    ).toEqual(["9", "8", "7", "6", "5", "4", "3", "2", "1", "0"]);
+    await choose("ChatGPT");
+    expect(marks().map((m) => m.classList.contains("ac-brand--off"))).toEqual([true, false, true]);
+  });
+
   test("ChatGPT: first its settings, then a sign-in that starts only on its button; switching tiles starts nothing", async () => {
     const { state, dialog, choose } = await connect();
     await choose("ChatGPT");
@@ -540,8 +566,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await choose("Gemini");
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Gemini" });
     expect(panel.textContent).toContain("Google AI Pro, Google AI Ultra ou Gemini Enterprise");
-    const warning =
-      "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API ou o Gemini Enterprise.";
+    const warning = "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta.";
     expect(shownText(panel)).toContain(warning);
     await click(within(panel).getByRole("button", { name: "Usar o Gemini Enterprise" }));
     expect(shownText(panel)).not.toContain(warning);
@@ -554,11 +579,44 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "antigravity",
       { provider: "enterprise" },
     ]);
-    // Its second step is Google's: the code its page shows, or that page's address. Claude is named nowhere.
+    // Its second step is Google's: the code its page shows, never that page's address. Claude is named nowhere.
     expect(shownText(panel)).toContain("Cole o código que o Google mostrar");
-    const field = within(panel).getByRole("textbox", { name: "Código ou link" });
-    expect(field.getAttribute("placeholder")).toBe("Código ou link");
+    const field = within(panel).getByRole("textbox", { name: "Código do Google" });
+    expect(field.getAttribute("placeholder")).toBe("Código do Google");
     expect(shownText(panel)).not.toContain("Claude");
+    const hint = hintOf("Cole o código que o Google mostrar", panel);
+    expect(hint.text).toBe("Cole o código que a página do Google mostra, não o endereço da página.");
+    expect(field.getAttribute("aria-describedby")).toBe(hint.button.getAttribute("aria-describedby"));
+    // The page's own address carries no code: said under the field, and it can't be sent.
+    const noCode = "Isso é um endereço sem código. Cole o código que a página do Google mostra.";
+    await type(field, "https://example.com/oauth-callback");
+    expect(shownText(panel)).toContain(noCode);
+    const send = () => within(panel).getByRole("button", { name: "Enviar ao MacBook" }) as HTMLButtonElement;
+    expect(send().disabled).toBe(true);
+    await act(async () => fireEvent.keyDown(field, { key: "Enter" }));
+    expect(calls(state, "machines.sendAccountCode")).toHaveLength(0);
+    for (const ok of ["https://example.com/oauth-callback?code=4%2F0Afake", "4/0Afake"]) {
+      await type(field, ok);
+      expect(shownText(panel)).not.toContain(noCode);
+      expect(send().disabled).toBe(false);
+    }
+  });
+
+  test("Gemini: a sign-in the computer can't share with every agent says so and what to use instead, with no Tentar de novo", async () => {
+    const base = fakeAgentBrain(ADA_ID);
+    const geminiOption = { kind: "antigravity" as const, available: true, models: [], defaultModel: null };
+    const { machines, dialog, choose } = await connect({
+      computers: [{ ...MAC, brains: { claude_code: true, codex: true, antigravity: true } }],
+      brain: { options: [...base.options, geminiOption] },
+    });
+    machines?.endLogin("login_1", { state: "failed", code: "not_kept", message: "Error: Please sign in." });
+    await choose("Gemini");
+    await withPopup(() => click(within(dialog).getByRole("button", { name: "Entrar com Google" })));
+    await settle(8);
+    expect(shownText(dialog)).toContain(
+      "O Gemini entrou, mas o MacBook não consegue compartilhar esse login com todos os agentes. Use uma chave de API do Gemini.",
+    );
+    expect(within(dialog).queryByRole("button", { name: "Tentar de novo" })).toBeNull();
   });
 
   test("a sign-in starting: the line under its title says the computer is asked, until it answers, and only then", async () => {
@@ -602,6 +660,59 @@ describe("Conectar uma IA: one picker, plans first", () => {
     const retry = within(dialog).getByRole("button", { name: "Tentar de novo" });
     expect(retry.parentElement?.className).toBe("ai-panel__row");
     expect(retry.parentElement?.querySelector(":scope > .ac-setnote")).not.toBeNull();
+  });
+
+  test("a sign-in that ended on the computer says why by its code, the CLI's own words under it only where they explain", async () => {
+    const said = `couldn't log in: ${"token-exchange-failed-".repeat(12)}end`;
+    const cases = [
+      {
+        code: "bad_code",
+        line: "O Gemini recusou o código. Tente de novo e cole só o código que a página mostrar.",
+        detail: false,
+      },
+      { code: "cli_exit", line: "O Gemini parou com um erro no MacBook. Tente de novo.", detail: true },
+      {
+        code: "not_signed_in_after_login",
+        line: "O Gemini aceitou o login, mas esta conta não pode ser usada aqui, talvez o plano não inclua. Tente outra conta ou uma chave de API.",
+        detail: true,
+      },
+      { code: "network", line: "O MacBook não conseguiu falar com o Gemini. Tente de novo.", detail: false },
+      // A code from a newer runner: the plain line.
+      { code: "something_new", line: "Não deu para entrar nessa conta. Tente de novo.", detail: false },
+    ];
+    const base = fakeAgentBrain(ADA_ID);
+    const geminiOption = { kind: "antigravity" as const, available: true, models: [], defaultModel: null };
+    for (const { code, line, detail } of cases) {
+      const { machines, dialog, choose } = await connect({
+        computers: [{ ...MAC, brains: { claude_code: true, codex: true, antigravity: true } }],
+        brain: { options: [...base.options, geminiOption] },
+      });
+      machines?.endLogin("login_1", { state: "failed", code, message: said } as never);
+      await choose("Gemini");
+      await withPopup(() => click(within(dialog).getByRole("button", { name: "Entrar com Google" })));
+      await settle(8);
+      const retry = within(dialog).getByRole("button", { name: "Tentar de novo" });
+      const row = retry.parentElement as HTMLElement;
+      expect(row.querySelector(":scope > .ac-setnote")?.textContent).toBe(line);
+      // Whole, in the code well between the line and its button: never cut, and the button under it.
+      const well = row.querySelector(":scope > .agp-addacct__said");
+      expect(well?.textContent ?? null).toBe(detail ? said : null);
+      if (well) expect([...row.children].indexOf(well)).toBe(1);
+      cleanup();
+    }
+    const layout = await stylesheet("../src/layout.css");
+    expect(ruleOf(layout, ".ai-panel__row > .agp-addacct__said")).toContain("flex: 1 1 100%");
+  });
+
+  test("a sign-in canceled from somewhere else shows no error: it is back at its start", async () => {
+    const { machines, dialog, choose } = await connect();
+    machines?.endLogin("login_1", { state: "failed", code: "canceled", message: "Canceled" });
+    await choose("ChatGPT");
+    await withPopup(() => click(within(dialog).getByRole("button", { name: "Entrar com ChatGPT" })));
+    await settle(8);
+    expect(within(dialog).queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+    expect(dialog.textContent).not.toContain("Não deu para entrar");
+    expect(within(dialog).getByRole("button", { name: "Entrar com ChatGPT" })).toBeTruthy();
   });
 
   test("a plan's panel: its body starts at the panel's edge, every lead centred in the numbers' column, an even well", async () => {
@@ -802,7 +913,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
   });
 
-  test("a plan whose tool is off on its computer: the app's Preferences on a Mac, the command too on Linux", async () => {
+  test("a plan whose tool is off on its computer: what it means, then three plain steps, or the command on Linux", async () => {
     const reason = async (os: string, name: string) => {
       cleanup();
       const options = fakeAgentBrain(ADA_ID).options.map((o) =>
@@ -815,12 +926,20 @@ describe("Conectar uma IA: one picker, plans first", () => {
       await choose("ChatGPT");
       return dialog.textContent;
     };
-    expect(await reason("linux", "Servidor")).toContain(
-      "O Codex está desligado no Servidor. Ligue lá, no app do agentes.chat ou com sudo agentes-runner tools enable codex.",
-    );
-    expect(await reason("darwin", "MacBook")).toContain(
-      "O Codex está desligado no MacBook. Ligue lá, no app do agentes.chat: Preferências → Ferramentas.",
-    );
+    const server = await reason("linux", "Servidor");
+    expect(server).toContain("O Servidor está conectado, mas o Codex está desligado nele.");
+    expect(server).toContain("No Servidor");
+    expect(server).toContain("No terminal do computador, rode:");
+    expect(server).toContain("sudo agentes-runner tools enable codex");
+    const mac = await reason("darwin", "MacBook");
+    expect(mac).toContain("O MacBook está conectado, mas o Codex está desligado nele.");
+    expect(mac).toContain("Clique no ícone do agentes.chat");
+    expect(mac).toContain("Abra Preferências");
+    expect(mac).toContain("Em Ferramentas, ligue Codex");
+    // The arrow of hidden icons is a PC's.
+    expect(mac).not.toContain("No Windows");
+    expect(mac).toContain("Esperando você ligar. Esta tela muda sozinha.");
+    expect(mac).toContain("Usar uma chave de API agora");
   });
 
   test("self-host with no computer for the agent: plans dim, the key comes first, and a plan's panel says to connect one", async () => {

@@ -17,7 +17,7 @@ import { pushLocale, pushStrings } from "./push-messages";
 import { isRightHand } from "./right-hand";
 import { createRoutine, type RoutineDeps } from "./routines";
 import { localDate, nextOccurrence, type ScheduleRule } from "./rrule";
-import { openOrg } from "./standing";
+import { closedRefusal, openOrg, orgStanding } from "./standing";
 import { taskSeenSql } from "./task-access";
 
 /**
@@ -645,7 +645,10 @@ export async function enqueueTeamWeeks(db: Database, now = new Date()) {
   return n;
 }
 
-/** The job: builds this person's card and posts it in their DM with Lodi. Returns the message id, or null. */
+/**
+ * The job: builds this person's card and posts it in their DM with Lodi. Returns the message id, or null (none in a
+ * workspace closed to changes since it was queued).
+ */
 export async function postTeamWeek(
   deps: { db: Database; pubsub?: PubSub },
   orgId: string,
@@ -655,6 +658,7 @@ export async function postTeamWeek(
   const userId = typeof payload.userId === "string" ? payload.userId : null;
   const slot = typeof payload.slot === "string" ? new Date(payload.slot) : null;
   if (!userId || !slot || Number.isNaN(slot.getTime())) return null;
+  if (closedRefusal(await orgStanding(db, orgId))) return null;
   const [member] = rowsOf<{
     team_week: unknown;
     admin: boolean;

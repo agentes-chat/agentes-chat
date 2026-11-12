@@ -1,4 +1,10 @@
-import { type ComputerDevice, type DeviceAudience, type PhoneDevice, useLookForPhones } from "@agenteschat/client";
+import {
+  type ComputerDevice,
+  type DeviceAudience,
+  type PhoneDevice,
+  useLookForPhones,
+  useWifiIphones,
+} from "@agenteschat/client";
 import {
   ANDROID_SLOW_MS,
   ANDROID_TICKABLE,
@@ -16,7 +22,9 @@ import {
   iosMajor,
   iphoneNoTeam,
   iphoneOf,
+  iphoneOverWifi,
   iphoneSteps,
+  isIphoneWifiReason,
   PHONE_APP_IN_STORE,
   phoneLine,
   reasonText,
@@ -31,10 +39,13 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { computerKind } from "@agenteschat/client/lib/machines";
 import {
   Button,
+  Card,
+  CardHeader,
   ComputerIcon,
   DialogBody,
   Field,
   Icon,
+  InfoHint,
   Input,
   Locked,
   PixelSpinner,
@@ -53,6 +64,53 @@ import { FlowFooter, type FlowProps } from "./flow";
 import { DevicePortrait } from "./parts";
 import { useDevices, useUpdatePhone, useWifiPairing } from "./queries";
 import { WhoPicker, WhoSelect } from "./WhoCanUse";
+
+/**
+ * The iPhones on a Mac's Wi-Fi that already trust it, offered to who may manage the Mac: "Also on this Mac's Wi-Fi:
+ * Sam's iPhone", and Use over Wi-Fi. Nothing shows for anyone else, for another computer or while the Mac is offline.
+ * `card`: on the Mac's page with no phone yet, in a card of its own.
+ */
+export function WifiIphoneOffer({ host, card = false }: { host: ComputerDevice; card?: boolean }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const on = host.mayManage && computerKind(host.os) === "mac" && host.status.kind !== "offline";
+  const { available, pick } = useWifiIphones(org.id, host.id, on);
+  if (available.length === 0) return null;
+  const list = (
+    <ul className="dv-wifi" aria-label={t("devices.iphone.wifi.list", { mac: host.name })}>
+      {available.map((p) => (
+        <li key={p.serial} className="dv-wifi__row">
+          <span className="dv-wifi__name ac-iconline small">
+            <Icon name="phone" size={14} />
+            <span className="ac-hintline">
+              <span>{t("devices.iphone.wifi.also", { name: p.name ?? p.model })}</span>
+              <InfoHint name={t("common.about", { label: t("devices.iphone.wifi.use") })}>
+                {t("devices.iphone.wifi.hint")}
+              </InfoHint>
+            </span>
+          </span>
+          <Button
+            size="sm"
+            loading={pick.isPending && pick.variables === p.serial}
+            disabled={pick.isPending}
+            onClick={() => pick.mutate(p.serial, { onError: (err) => toast.show(errorText(t, err), "error") })}
+          >
+            {t("devices.iphone.wifi.use")}
+          </Button>
+        </li>
+      ))}
+    </ul>
+  );
+  return card ? (
+    <Card aria-labelledby="dv-pc-wifi">
+      <CardHeader id="dv-pc-wifi" icon="phone" title={t("devices.phonesHere")} />
+      {list}
+    </Card>
+  ) : (
+    list
+  );
+}
 
 /** While a phone flow is open, the list is asked every 2 s too: the phone may show up between events. */
 const PHONE_POLL_MS = 2000;
@@ -715,11 +773,13 @@ export function IphoneFlow({
   const tooOld = phone?.status.kind === "unsupported";
   const at = IPHONE_STEPS.find((s) => states[s] === "current" || states[s] === "needs") ?? null;
   // The Mac reports by itself; a step that sits unchanged gets what most likely holds it. Nothing to add for an iPhone
-  // below iOS 17, nor where the step's own text already says what to do (a helper the person must act on, no team).
+  // below iOS 17, nor where the step's own text already says what to do (a helper the person must act on, no team),
+  // nor over Wi-Fi: those lines are about the cable.
   const stalled = useStalled(
     at &&
       mac &&
       !tooOld &&
+      !(phone && iphoneOverWifi(phone)) &&
       !(at === "helper" && states.helper === "needs") &&
       !(at === "account" && iphoneNoTeam(mac, phone))
       ? [mac.id, at, phone?.id, reason].join(":")
@@ -755,10 +815,17 @@ export function IphoneFlow({
     connected:
       tooOld && phone
         ? t("devices.iphone.tooOld", { name: phone.name, version: tooOldVersion(t, phone.osVersion) })
-        : states.connected === "done" && phone
-          ? t("devices.iphone.connectedDone", { name: phone.name, version: phone.osVersion })
-          : t("devices.iphone.connectedText", { mac: macName }),
-    trust: states.trust === "done" ? t("devices.iphone.trustDone") : t("devices.iphone.trustText"),
+        : phone && isIphoneWifiReason(reason) && reason !== "wifi_untrusted"
+          ? t(`devices.iphone.wifiState.${reason}`, { name: phone.name })
+          : states.connected === "done" && phone
+            ? t("devices.iphone.connectedDone", { name: phone.name, version: phone.osVersion })
+            : t("devices.iphone.connectedText", { mac: macName }),
+    trust:
+      states.trust === "done"
+        ? t("devices.iphone.trustDone")
+        : phone && reason === "wifi_untrusted"
+          ? t("devices.iphone.wifiState.wifi_untrusted", { name: phone.name })
+          : t("devices.iphone.trustText"),
     developerMode: states.developerMode === "done" ? t("devices.iphone.devModeDone") : t("devices.iphone.devModeText"),
     uiAutomation:
       reason === "ui_not_authorized" ? t("devices.iphone.uiRefusedText") : t("devices.iphone.uiAutomationText"),
@@ -782,14 +849,19 @@ export function IphoneFlow({
         {reason === "xcode_too_old" && phone?.osVersion && <CommandBlock command={DDIS_UPDATE} />}
       </>
     ),
-    ...(looking && !plugged && !stalled
+    ...(looking && mac
       ? {
           connected: (
-            <span className="dv-step__acts">
-              <Button size="sm" onClick={() => setPlugged(true)}>
-                {t("devices.iphone.pluggedIn")}
-              </Button>
-            </span>
+            <>
+              {!plugged && !stalled && (
+                <span className="dv-step__acts">
+                  <Button size="sm" onClick={() => setPlugged(true)}>
+                    {t("devices.iphone.pluggedIn")}
+                  </Button>
+                </span>
+              )}
+              <WifiIphoneOffer host={mac} />
+            </>
           ),
         }
       : {}),

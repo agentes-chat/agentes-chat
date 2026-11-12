@@ -28,6 +28,7 @@ import { ownWords } from "./context/learn";
 import { decideProposal, proposeSettings, type SettingsProposalCard } from "./context/proposals";
 import type { ContextDeps } from "./context/summaries";
 import { publishMessageCreated } from "./events";
+import { firstOf } from "./format";
 import { insertMessage, messageView } from "./messages";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
@@ -53,7 +54,7 @@ import {
 } from "./workspace-actions";
 import { isPersonalWorkspace } from "./workspace-mode";
 
-const { agentActions, agentRuns, channels, machineAccounts, messages, orgRoles } = schema;
+const { agentActions, agentRuns, channels, machineAccounts, messages, orgRoles, skills } = schema;
 
 /** The setup tools' scope: a tool group of its own, loaded when a message is about setting up (ADR 0043). */
 export const SETUP_SCOPE = "setup:write";
@@ -66,8 +67,10 @@ export const OFFER_INVITES_TOOL = "offer_invites";
 export const PROPOSE_REMOVE_AGENTS_TOOL = "propose_remove_agents";
 /** At most this many agents on one removal card. */
 export const MAX_REMOVALS_PER_CARD = 20;
-/** The right hand's settings card (ADR 0137): no other agent has it. */
+/** Teammates' settings on one card (ADR 0137): the right hand's, and any agent's with setup tools (ADR 0139). */
 export const PROPOSE_SETTINGS_TOOL = "propose_settings_change";
+/** An agent asking for its own settings on that card, in any run: every agent but the right hand (ADR 0137). */
+export const REQUEST_SETTINGS_TOOL = "request_settings_change";
 /** The right hand's cards for what a person does elsewhere in the app (ADR 0137 §4): no other agent has them. */
 export const OFFER_APPROVALS_TOOL = "offer_approvals";
 export const PROPOSE_MEMBER_CHANGES_TOOL = "propose_member_changes";
@@ -140,6 +143,8 @@ export const MAX_CARDS_PER_RUN = 3;
 export const MAX_CARDS_PER_RUN_RIGHT_HAND = 10;
 /** A settings card's `bodyCode` (`chat.body.settings_proposal`, with `names`). */
 export const SETTINGS_PROPOSAL_CARD = "settings_proposal";
+/** An agent's own settings card's `bodyCode` (`chat.body.settings_request`): no names, it is the author's. */
+export const SETTINGS_REQUEST_CARD = "settings_request";
 export const MAX_CHANNELS_PER_RUN = 5;
 /** A Connect card's `bodyCode` (the apps say it with `chat.body.action_connect_ai`). */
 export const CONNECT_AI_CARD = "action_connect_ai";
@@ -961,6 +966,8 @@ export function createSetupToolSource(deps: {
   // Any agent that may set the team up proposes teammates' settings too: the right hand decides another agent's card
   // for the person who asked (ADR 0139), never its own.
   const all = [...tools, settingsTool(deps)];
+  // The right hand changes its own settings with the card above; every other agent asks for its own here.
+  const others = [...all, settingsTool(deps, true)];
   const rightHand = [
     ...all,
     ...rightHandCards(deps),
@@ -973,7 +980,7 @@ export function createSetupToolSource(deps: {
     // words (ADR 0159): the same tools, for one person and their agents, whose team card may leave an agent's channel
     // out (it lives in its DM with the person). Only words and that one field: a read that fails keeps the team's.
     tools: async (ctx) => {
-      const listed = isRightHand(await getAgentCached(ctx.db, ctx.orgId, ctx.agentId)) ? rightHand : all;
+      const listed = isRightHand(await getAgentCached(ctx.db, ctx.orgId, ctx.agentId)) ? rightHand : others;
       if (!(await isPersonalWorkspace(ctx.db, ctx.orgId).catch(() => false))) return listed;
       return listed.map((t) => {
         const description = SETUP_TOOLS_PERSONAL[t.name];
@@ -998,7 +1005,7 @@ const SETUP_TOOLS_PERSONAL: Record<string, string> = {
   [SET_TEAM_WEEK_TOOL]:
     "Stop, start again or move the card you post in this person's DM: the weekly look at how their agents did (Fridays at 17h in the workspace's time zone), or 'Resumo do dia', the same card every day at an hour ('me manda isso todo dia às 9h'). Use it when they ask you to stop it, send it again, or on another day or hour. It changes only their card.",
   [PROPOSE_SETTINGS_TOOL]:
-    "Change agents' settings with one card in this conversation: the model, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, its name, its look, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+    "Change agents' settings with one card in this conversation: the model, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
   [OFFER_ANSWERS_TOOL]:
     "Ask the person one short question with answers to tap under it, in this conversation: each tap sends the answer as their own message (several at once with `multiple`), and they can always type instead. Use it for the questions that set their agents up (what they want help with, what takes most of their time, when they want to hear from their agents), one per turn, with `step` and `of` ('Pergunta 2 de 3'). The question shows as your message: write nothing else in this turn and end it. Their answer comes as their next message.",
   [PROPOSE_TEAM_TOOL]:
@@ -1327,6 +1334,8 @@ interface SettingsChangeInput {
   join?: unknown;
   leave?: unknown;
   replies?: unknown;
+  add_skills?: unknown;
+  remove_skills?: unknown;
   name?: unknown;
   look?: unknown;
   reports_to?: unknown;
@@ -1334,6 +1343,8 @@ interface SettingsChangeInput {
 }
 
 const NANO_PER_USD = 1_000_000_000;
+/** Names a refusal lists, at most: a workspace may have hundreds of skills. */
+const NAMES_SHOWN = 20;
 const names = (v: unknown) => (Array.isArray(v) ? v.map((x) => str(x).trim()).filter(Boolean) : []);
 
 /** Each change's names read as ids (people, channels, roles, AI accounts), or why one can't be. */
@@ -1427,6 +1438,40 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
   for (const r of replies)
     if (!names(change.join).some((n) => channelOf(n)?.id === channelOf(str(r.channel))?.id))
       seat("reply_mode", str(r.channel), r.without_mention === true);
+  const wantedSkills = [...names(change.add_skills), ...names(change.remove_skills)];
+  if (wantedSkills.length > 0) {
+    const installed = await ctx.db
+      .select({ id: skills.id, name: skills.name })
+      .from(skills)
+      .where(and(eq(skills.orgId, ctx.orgId), isNull(skills.deletedAt)))
+      .orderBy(skills.name);
+    // Exactly as written first: the slug drops hyphens, so "pdftools" would also match "pdf-tools".
+    const skillOf = (n: string) =>
+      installed.find((k) => k.name === n.trim().toLowerCase()) ?? installed.find((k) => slug(k.name) === slug(n));
+    const unknown = wantedSkills.filter((n) => !skillOf(n));
+    if (unknown.length > 0) {
+      // The right hand has no skill tools: it opens the Skills screen, where any other agent offers the install card.
+      const install = isRightHand(await getAgentCached(ctx.db, ctx.orgId, ctx.agentId))
+        ? "someone who manages agents installs it on the Skills screen (offer_open_page, page skills)"
+        : "offer to install it with offer_install_skill, by its GitHub link";
+      const here = installed.map((k) => k.name);
+      return installed.length
+        ? `No skill ${firstOf(unknown, NAMES_SHOWN)}. Skills here: ${firstOf(here, NAMES_SHOWN)}. One not installed yet: ${install}.`
+        : `No skill is installed here yet: ${install}.`;
+    }
+    const added = new Set(names(change.add_skills).map((n) => skillOf(n)?.id));
+    const both = names(change.remove_skills).filter((n) => added.has(skillOf(n)?.id));
+    if (both.length > 0)
+      return `Each skill goes on or off, not both: ${firstOf(both, NAMES_SHOWN)} is in add_skills and remove_skills.`;
+    for (const [list, on] of [
+      [names(change.add_skills), true],
+      [names(change.remove_skills), false],
+    ] as const)
+      for (const n of list) {
+        const k = skillOf(n);
+        if (k) lines.push({ field: "skill", skillId: k.id, to: on, label: { to: k.name } });
+      }
+  }
   if (typeof change.name === "string")
     lines.push({ field: "name", to: change.name.trim(), label: { to: change.name } });
   if (change.look) lines.push({ field: "look", to: change.look });
@@ -1443,109 +1488,143 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
   return lines;
 }
 
+/** What one agent's change may hold, for both settings tools. */
+const CHANGE_PROPERTIES = {
+  model: { type: "string", minLength: 1, maxLength: 200, description: 'A model id, or "auto".' },
+  ai_account: {
+    type: "string",
+    minLength: 1,
+    maxLength: 200,
+    description: "A Claude or ChatGPT plan signed in on a computer, by its name: only its owner gives it.",
+  },
+  budget_usd: { type: "number", minimum: 0, maximum: 100_000, description: "Monthly, in US dollars." },
+  budget_default: { type: "boolean", description: "True: back to the workspace's default budget." },
+  owner: {
+    type: "string",
+    minLength: 1,
+    maxLength: 200,
+    description: "A person's @handle, email or name.",
+  },
+  who_talks: {
+    type: "object",
+    properties: {
+      everyone: { type: "boolean" },
+      roles: { type: "array", items: { type: "string", minLength: 1, maxLength: 80 }, maxItems: 20 },
+      people: { type: "array", items: { type: "string", minLength: 1, maxLength: 200 }, maxItems: 20 },
+    },
+    additionalProperties: false,
+    description: "Everyone, or only people with these roles (by name) and these people (@handle, email or name).",
+  },
+  join: { type: "array", items: { type: "string", minLength: 1, maxLength: 81 }, maxItems: 10 },
+  leave: { type: "array", items: { type: "string", minLength: 1, maxLength: 81 }, maxItems: 10 },
+  replies: {
+    type: "array",
+    maxItems: 10,
+    items: {
+      type: "object",
+      properties: {
+        channel: { type: "string", minLength: 1, maxLength: 81 },
+        without_mention: { type: "boolean", description: "False: it answers there only when @mentioned." },
+      },
+      required: ["channel", "without_mention"],
+      additionalProperties: false,
+    },
+  },
+  add_skills: {
+    type: "array",
+    items: { type: "string", minLength: 1, maxLength: 80 },
+    maxItems: 20,
+    description: "Skills to turn on for it, by name as the Skills screen lists them.",
+  },
+  remove_skills: {
+    type: "array",
+    items: { type: "string", minLength: 1, maxLength: 80 },
+    maxItems: 20,
+    description: "Skills to turn off for it.",
+  },
+  name: { type: "string", minLength: 1, maxLength: 80 },
+  look: {
+    type: "object",
+    properties: {
+      color: { type: "string", description: `${AGENT_LOOK.colors.join(", ")}, or #rrggbb.` },
+      eyes: { enum: [...AGENT_LOOK.eyes] },
+      accessory: { enum: [...AGENT_LOOK.accessories] },
+    },
+    required: ["color", "eyes"],
+    additionalProperties: false,
+  },
+  reports_to: {
+    type: "string",
+    minLength: 1,
+    maxLength: 64,
+    description:
+      'Responde a: the @handle of the agent it reports to, or "none". It says who it tells, never what it may do.',
+  },
+  archive: { type: "boolean", description: "True: archive it (it stops working; Undo brings it back)." },
+};
+
+const REASON = {
+  type: "string",
+  minLength: 1,
+  maxLength: 500,
+  description: "One short line on the card, in the person's language: why.",
+};
+
 /**
  * `propose_settings_change` (ADR 0137, amending 0092 §5): a teammate's settings as one card in this conversation,
  * one row per agent and whoever decides it, applied by who clicks Aplicar. Rows the person who asked may decide, in
  * their own words (`ownWords`), apply as the card is posted: it shows them done with Desfazer. Never an agent's own row
  * (ADR 0139: an agent raising its own budget is the person's), nor deleting, which has no Undo.
+ *
+ * `own`: `request_settings_change`, the same card for the calling agent's own settings and nobody else's, granted in
+ * every run of every agent but the right hand (no scope, as `request_permission`; on demand, `RARE_TOOLS`). Its rows
+ * always wait for a click, and the right hand never looks at them for the person (ADR 0139 §2 keeps an agent's own
+ * settings the person's).
  */
-function settingsTool(deps: { pubsub?: PubSub }): ToolDefinition {
+function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
   return {
-    name: PROPOSE_SETTINGS_TOOL,
-    description:
-      "Change teammates' settings with one card in this conversation: the model, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, its name, its look, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
-    scope: SETUP_SCOPE,
-    inputSchema: {
-      type: "object",
-      properties: {
-        changes: {
-          type: "array",
-          minItems: 1,
-          maxItems: 10,
-          items: {
-            type: "object",
-            properties: {
-              agent: { type: "string", minLength: 1, maxLength: 64, description: "Its @handle." },
-              model: { type: "string", minLength: 1, maxLength: 200, description: 'A model id, or "auto".' },
-              ai_account: {
-                type: "string",
-                minLength: 1,
-                maxLength: 200,
-                description: "A Claude or ChatGPT plan signed in on a computer, by its name: only its owner gives it.",
-              },
-              budget_usd: { type: "number", minimum: 0, maximum: 100_000, description: "Monthly, in US dollars." },
-              budget_default: { type: "boolean", description: "True: back to the workspace's default budget." },
-              owner: {
-                type: "string",
-                minLength: 1,
-                maxLength: 200,
-                description: "A person's @handle, email or name.",
-              },
-              who_talks: {
+    name: own ? REQUEST_SETTINGS_TOOL : PROPOSE_SETTINGS_TOOL,
+    description: own
+      ? "Ask a person to change a setting of your own, with one card in this conversation: turn on or off a skill installed here, join or leave a channel or how you answer there, your model, the AI account you think with, your monthly budget, your owner, who may talk to you, your name, your look or who you report to. Use it whenever a request needs a setting of yours you don't have, instead of telling the person how to change it by hand or saying you can't ask. Nothing changes until a person clicks, even when the person who asked could change it: the card waits for whoever may (they send one they can't decide from there), and the result says which. Apps and permissions: request_permission. A skill not installed yet: offer_install_skill."
+      : "Change teammates' settings with one card in this conversation: the model, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+    scope: own ? "" : SETUP_SCOPE,
+    inputSchema: own
+      ? {
+          type: "object",
+          properties: { ...CHANGE_PROPERTIES, reason: REASON },
+          required: ["reason"],
+          additionalProperties: false,
+        }
+      : {
+          type: "object",
+          properties: {
+            changes: {
+              type: "array",
+              minItems: 1,
+              maxItems: 10,
+              items: {
                 type: "object",
                 properties: {
-                  everyone: { type: "boolean" },
-                  roles: { type: "array", items: { type: "string", minLength: 1, maxLength: 80 }, maxItems: 20 },
-                  people: { type: "array", items: { type: "string", minLength: 1, maxLength: 200 }, maxItems: 20 },
+                  agent: { type: "string", minLength: 1, maxLength: 64, description: "Its @handle." },
+                  ...CHANGE_PROPERTIES,
                 },
-                additionalProperties: false,
-                description:
-                  "Everyone, or only people with these roles (by name) and these people (@handle, email or name).",
-              },
-              join: { type: "array", items: { type: "string", minLength: 1, maxLength: 81 }, maxItems: 10 },
-              leave: { type: "array", items: { type: "string", minLength: 1, maxLength: 81 }, maxItems: 10 },
-              replies: {
-                type: "array",
-                maxItems: 10,
-                items: {
-                  type: "object",
-                  properties: {
-                    channel: { type: "string", minLength: 1, maxLength: 81 },
-                    without_mention: { type: "boolean", description: "False: it answers there only when @mentioned." },
-                  },
-                  required: ["channel", "without_mention"],
-                  additionalProperties: false,
-                },
-              },
-              name: { type: "string", minLength: 1, maxLength: 80 },
-              look: {
-                type: "object",
-                properties: {
-                  color: { type: "string", description: `${AGENT_LOOK.colors.join(", ")}, or #rrggbb.` },
-                  eyes: { enum: [...AGENT_LOOK.eyes] },
-                  accessory: { enum: [...AGENT_LOOK.accessories] },
-                },
-                required: ["color", "eyes"],
+                required: ["agent"],
                 additionalProperties: false,
               },
-              reports_to: {
-                type: "string",
-                minLength: 1,
-                maxLength: 64,
-                description:
-                  'Responde a: the @handle of the agent it reports to, or "none". It says who it tells, never what it may do.',
-              },
-              archive: { type: "boolean", description: "True: archive it (it stops working; Undo brings it back)." },
             },
-            required: ["agent"],
-            additionalProperties: false,
+            reason: REASON,
           },
+          required: ["changes", "reason"],
+          additionalProperties: false,
         },
-        reason: {
-          type: "string",
-          minLength: 1,
-          maxLength: 500,
-          description: "One short line on the card, in the person's language: why.",
-        },
-      },
-      required: ["changes", "reason"],
-      additionalProperties: false,
-    },
     async execute(input, ctx) {
       try {
         const forUserId = await personBehindCall(ctx);
         if (!forUserId) return { content: "Only a person's request can propose a change.", isError: true };
-        const changes = (Array.isArray(input.changes) ? input.changes : []) as SettingsChangeInput[];
+        const self = own ? await getAgentCached(ctx.db, ctx.orgId, ctx.agentId) : null;
+        const changes = (
+          own ? [{ ...input, agent: self?.handle }] : Array.isArray(input.changes) ? input.changes : []
+        ) as SettingsChangeInput[];
         const named = await agentsByHandle(
           ctx.db,
           ctx.orgId,
@@ -1562,7 +1641,8 @@ function settingsTool(deps: { pubsub?: PubSub }): ToolDefinition {
         if (!at) return NOBODY_READS;
         const full = await cardsLeft(ctx);
         if (full) return full;
-        const atOnce = (await ownWords(ctx)) === forUserId;
+        // An agent's own row never applies at once (below): its own settings need no look at the person's words.
+        const atOnce = !own && (await ownWords(ctx)) === forUserId;
         const { proposals, skipped } = await proposeSettings(
           { db: ctx.db },
           {
@@ -1586,8 +1666,13 @@ function settingsTool(deps: { pubsub?: PubSub }): ToolDefinition {
           orgId: ctx.orgId,
           ...at,
           author: { type: "agent", agentId: ctx.agentId, runId: ctx.runId, hop: await hopOf(ctx) },
-          body: `Proposed a change to ${who}: ${str(input.reason).trim()}`,
-          meta: { ...bodyCode(SETTINGS_PROPOSAL_CARD, { names: who }), actionCard: card },
+          body: own
+            ? `Asks for a change to its own settings: ${str(input.reason).trim()}`
+            : `Proposed a change to ${who}: ${str(input.reason).trim()}`,
+          meta: {
+            ...(own ? bodyCode(SETTINGS_REQUEST_CARD) : bodyCode(SETTINGS_PROPOSAL_CARD, { names: who })),
+            actionCard: card,
+          },
         });
         // Before the card is announced, so it reads as done from its first frame; its receipts need the message.
         const open: typeof proposals = [];
@@ -1604,7 +1689,7 @@ function settingsTool(deps: { pubsub?: PubSub }): ToolDefinition {
         if (deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(message));
         if (open.length < proposals.length)
           await publishMessageActions({ db: ctx.db, pubsub: deps.pubsub }, ctx.orgId, message.id);
-        if (open.length > 0) await queueRightHandLook(ctx.db, ctx.orgId, message.id, forUserId);
+        if (open.length > 0 && !own) await queueRightHandLook(ctx.db, ctx.orgId, message.id, forUserId);
         const decides = open.filter((p) => p.canDecide).length;
         const applied = open.length < proposals.length;
         const rest = applied ? "the rest" : "it";
@@ -1616,8 +1701,11 @@ function settingsTool(deps: { pubsub?: PubSub }): ToolDefinition {
               : decides === 0
                 ? `the person who asked can't apply ${rest}: the card lets them send it to whoever may.`
                 : "the person who asked applies some rows; the card lets them send the rest to whoever may.";
+        const yours = open.some((p) => p.canDecide && p.agentId === ctx.agentId)
+          ? " Your own settings wait for that click even when they could change them: say it waits for it."
+          : "";
         return {
-          content: `Posted the card for ${who}; ${applied ? "applied at once, with Undo on the card, so say it is done. " : ""}${whoDecides}${applied ? "" : " Nothing has changed yet."}${skipped.length ? ` Left off the card: ${skipped.join(" ")}` : ""}`,
+          content: `Posted the card for ${own ? "your settings" : who}; ${applied ? "applied at once, with Undo on the card, so say it is done. " : ""}${whoDecides}${yours}${applied ? "" : " Nothing has changed yet."}${skipped.length ? ` Left off the card: ${skipped.join(" ")}` : ""}`,
           data: { actionCard: { messageId: message.id } },
         };
       } catch (error) {

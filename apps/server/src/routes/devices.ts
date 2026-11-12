@@ -12,11 +12,13 @@ import {
   lookForPhones,
   normalizeUserCode,
   openConnectLink,
+  pickIphoneOverWifi,
   startWifiPairing,
   stopPhone,
   updateComputerDevice,
   updatePhoneDevice,
   ValidationError,
+  wifiIphones,
   wifiPairingState,
 } from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
@@ -179,7 +181,17 @@ const WifiPairing = z
   })
   .openapi("WifiPairing");
 
+const WifiIphones = z
+  .object({
+    available: z.array(
+      z.object({ serial: z.string(), model: z.string(), name: z.string().optional(), osVersion: z.string() }),
+    ),
+    update: z.literal(true).optional(),
+  })
+  .openapi("WifiIphones");
+
 const MachineParams = OrgParams.extend({ machineId: z.uuid() });
+const WifiIphoneParams = MachineParams.extend({ serial: z.string().min(1).max(200) });
 const PairingParams = MachineParams.extend({ pairingId: z.uuid() });
 const PhoneParams = OrgParams.extend({ phoneId: z.uuid() });
 const LinkParams = OrgParams.extend({ linkId: z.uuid() });
@@ -308,12 +320,13 @@ export function deviceAppRoutes(deps: AppDeps) {
       tags,
       security,
       summary: "Forget a phone (its owner or an admin); it comes back if its computer sees it again",
+      description: "An iPhone used over Wi-Fi also stops being used over Wi-Fi: it comes back only if picked again.",
       request: { params: PhoneParams },
       responses: { 204: noContent[204], ...errors },
     }),
     async (c) => {
       const { orgId, phoneId } = c.req.valid("param");
-      await forgetPhone({ db, pubsub }, c.get("user").id, orgId, phoneId);
+      await forgetPhone({ db, pubsub, hub: hub() }, c.get("user").id, orgId, phoneId);
       return c.body(null, 204);
     },
   );
@@ -405,6 +418,45 @@ export function deviceAppRoutes(deps: AppDeps) {
       const { orgId, machineId } = c.req.valid("param");
       await lookForPhones({ db, hub: hub() }, c.get("user").id, orgId, machineId);
       return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/devices/computers/{machineId}/wifi-iphones",
+      tags,
+      security,
+      summary: "iPhones on this Mac's Wi-Fi it could use (its owner or an admin)",
+      description:
+        "The iPhones on the Mac's network that already trust it (they did over a cable once) and aren't used yet. None is used until picked with `PUT`. `update`: the Mac's agentes.chat is too old for this. An offline Mac lists none.",
+      request: { params: MachineParams },
+      responses: { 200: json(WifiIphones), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      return c.json(await wifiIphones({ db, hub: hub() }, c.get("user").id, orgId, machineId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/devices/computers/{machineId}/wifi-iphones/{serial}",
+      tags,
+      security,
+      summary: "Use an iPhone on this Mac's Wi-Fi (its owner or an admin)",
+      description:
+        "From now on the Mac reaches it through CoreDevice's own tunnel, and it shows up among the Mac's phones, connected over Wi-Fi. Forgetting the phone stops it. Answers the iPhones still on offer.",
+      request: { params: WifiIphoneParams, body: body(z.object({}).strict()) },
+      responses: { 200: json(WifiIphones), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId, serial } = c.req.valid("param");
+      return c.json(
+        await pickIphoneOverWifi({ db, pubsub, hub: hub() }, c.get("user").id, orgId, machineId, serial),
+        200,
+      );
     },
   );
 

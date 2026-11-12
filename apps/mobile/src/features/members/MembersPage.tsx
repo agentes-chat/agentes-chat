@@ -11,6 +11,7 @@ import {
   useRemoveMember,
   useRoles,
 } from "@agenteschat/client";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { namesText } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -22,9 +23,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, PersonAvatar, useToast } from "@/ui";
+import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Locked, PersonAvatar, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { Page } from "../me/parts";
+import { useOpenDm } from "../new/useOpenDm";
+import { chooseAction } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { useColors, useMeId } from "../shared/hooks";
 import { errorHaptic, Loaded, successHaptic } from "../shared/parts";
@@ -34,6 +37,7 @@ import {
   invitationLine,
   invitationSender,
   invitersOf,
+  memberActions,
   memberLine,
   membersByName,
   pendingInvitations,
@@ -65,9 +69,13 @@ function Members() {
   const invites = can(org, "invite_people");
   const list = people.data;
   const remove = useRemoveFlow();
+  const openDm = useOpenDm();
   const viewer = { role: org?.role ?? "member", rank: org?.rank, userId: meId ?? "", permissions: org?.permissions };
+  // Being deleted, inviting and removing are greyed out, as on the web; leaving stays (the server takes it then too).
+  const frozen = settingsFrozen(org, "members");
   // Remover do workspace for whoever may, Sair on one's own row (not the last owner); the server checks it again.
-  const removable = (m: Person) => (m.userId === meId ? leaves(viewer, list ?? []) : removes(viewer, m, roles));
+  const removable = (m: Person) =>
+    m.userId === meId ? leaves(viewer, list ?? []) : !frozen && removes(viewer, m, roles);
 
   return (
     <Page
@@ -80,33 +88,59 @@ function Members() {
       }
     >
       <View style={styles.gap} />
-      {invites ? (
-        <>
-          <GroupedList>
-            <GroupedRow icon="plus" label={t("members.inviteTitle")} onPress={() => router.push("/invite-people")} />
-          </GroupedList>
-          <WaitingYou />
-          <SentInvitations />
-        </>
-      ) : (
-        <Suggestions />
-      )}
+      <Locked when={frozen} readable>
+        {invites ? (
+          <>
+            <GroupedList>
+              <GroupedRow icon="plus" label={t("members.inviteTitle")} onPress={() => router.push("/invite-people")} />
+            </GroupedList>
+            <WaitingYou />
+            <SentInvitations />
+          </>
+        ) : (
+          <Suggestions />
+        )}
+      </Locked>
 
       <GroupedHeader>{list ? `${t("members.people")} · ${list.length}` : t("members.people")}</GroupedHeader>
       {list ? (
         <Loaded>
           <GroupedList>
-            {membersByName(list, i18n.language).map((m) => (
-              <GroupedRow
-                key={m.userId}
-                leading={
-                  <Face who={{ type: "person", id: m.userId }} size={30} live={false} presence ring={c.raised} />
-                }
-                label={m.userId === meId ? `${m.name}${t("common.youSuffix")}` : m.name}
-                sub={memberLine(t, i18n.language, m, roles)}
-                {...(removable(m) ? { more: true, onPress: () => void remove(m) } : {})}
-              />
-            ))}
+            {membersByName(list, i18n.language).map((m) => {
+              const acts = memberActions(m.userId === meId, Boolean(removable(m)));
+              const run = { dm: () => void openDm({ userId: m.userId }), remove: () => void remove(m) };
+              return (
+                <GroupedRow
+                  key={m.userId}
+                  leading={
+                    <Face who={{ type: "person", id: m.userId }} size={30} live={false} presence ring={c.raised} />
+                  }
+                  label={m.userId === meId ? `${m.name}${t("common.youSuffix")}` : m.name}
+                  sub={memberLine(t, i18n.language, m, roles)}
+                  {...(acts.length > 0
+                    ? {
+                        more: true,
+                        onPress: () =>
+                          chooseAction(
+                            m.name,
+                            acts.map((a) => ({
+                              label: t(
+                                a === "dm"
+                                  ? "profile.dm"
+                                  : a === "leave"
+                                    ? "members.remove.leave"
+                                    : "members.remove.item",
+                              ),
+                              destructive: a !== "dm",
+                              onPress: run[a === "dm" ? "dm" : "remove"],
+                            })),
+                            t("common.cancel"),
+                          ),
+                      }
+                    : {})}
+                />
+              );
+            })}
           </GroupedList>
         </Loaded>
       ) : (

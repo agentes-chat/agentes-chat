@@ -26,6 +26,7 @@ export function SettingsPage({
   subtitle,
   action,
   locked = false,
+  frozen = false,
   bottom,
   children,
 }: {
@@ -34,6 +35,8 @@ export function SettingsPage({
   action?: HeaderWordAction;
   /** The page's form is sending: its controls are off, the page still scrolls. */
   locked?: boolean;
+  /** The workspace is being deleted and this page would change it (`settingsFrozen`): greyed out, as on the web. */
+  frozen?: boolean;
   /** The page's one main action, docked under it ("Done" at the end of a guide). */
   bottom?: ReactNode;
   children?: ReactNode;
@@ -57,7 +60,7 @@ export function SettingsPage({
         contentContainerStyle={[styles.body, { paddingBottom: 24 + insets.bottom }]}
       >
         {/* What is there as the screen opens doesn't fade in; what loads while it is watched does (`Loaded`). */}
-        <Locked when={locked}>
+        <Locked when={locked || frozen} readable={frozen && !locked}>
           <LayoutAnimationConfig skipEntering>{children}</LayoutAnimationConfig>
         </Locked>
       </ScrollView>

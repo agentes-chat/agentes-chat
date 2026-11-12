@@ -566,6 +566,26 @@ describe("Instalar skill: private repositories", () => {
     expect(dialog.textContent).toContain("Este link tem 1 skill. Marque para instalar.");
     expect(state.calls.some((c) => c.method === "skills.importPicked")).toBe(false);
   });
+
+  test("back with the agent whose card opened it: its box again, only when this tab opened that card", async () => {
+    const folder = `${CONTOSO}/tree/main/skills/deploy`;
+    const back = `/org/${ORG_ID}/settings/skills?install=${encodeURIComponent(folder)}&agent=${ADA_ID}`;
+    const box = () =>
+      within(screen().getByRole("dialog", { name: "Instalar skill" })).queryByRole("checkbox", {
+        name: "Fica ligada para Ada",
+      });
+    sessionStorage.removeItem("agentes.skills.installFor");
+    await renderApp(back, { api: createFakeApi(seedState()) });
+    await settle(8);
+    // A link to Skills that only names an agent turns nothing on for it.
+    expect(box()).toBeNull();
+    cleanup();
+    sessionStorage.setItem("agentes.skills.installFor", JSON.stringify({ url: folder, agentId: ADA_ID }));
+    await renderApp(back, { api: createFakeApi(seedState()) });
+    await settle(8);
+    expect(box()?.getAttribute("aria-checked")).toBe("true");
+    expect(sessionStorage.getItem("agentes.skills.installFor")).toBeNull();
+  });
 });
 
 describe("agent skills", () => {

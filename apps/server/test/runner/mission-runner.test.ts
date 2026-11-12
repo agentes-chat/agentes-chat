@@ -94,6 +94,17 @@ test("protocol 7: hello carries the coding CLIs found; detection is best effort 
   await waitFor(() => calls.filter((c) => c === "claude").length === 6);
 });
 
+test("detection: fresh() looks now, before the TTL, and finds a CLI installed since", async () => {
+  let installed = false;
+  const run = (command: string) =>
+    command === "codex" && installed ? { status: 0, stdout: "codex-cli 0.80.0\n" } : { ...NOT_FOUND };
+  const cached = cachedExecutors({ now: () => 0, run });
+  expect(await cached.ready()).toEqual({});
+  installed = true;
+  expect(cached()).toEqual({});
+  expect(await cached.fresh()).toEqual({ codex: { version: "codex-cli 0.80.0" } });
+});
+
 const NOT_FOUND = { status: null, stdout: "", error: Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" }) };
 const TIMED_OUT = { status: null, stdout: "", error: Object.assign(new Error("timed out"), { code: "ETIMEDOUT" }) };
 

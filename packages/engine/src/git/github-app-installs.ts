@@ -6,7 +6,7 @@ import { clientRefused, OAUTH_STATE_TTL_MS, type OAuthApps, syncGitHubAppConnect
 import { desktopReturnPath, isDesktopReturn, oauthReturnTo } from "../connectors/oauth-return";
 import { randomToken, sealSecret, sha256 } from "../crypto";
 import { ConflictError, ForbiddenError, MisconfiguredError, NotFoundError, ValidationError } from "../errors";
-import { requirePermission } from "../organizations";
+import { requireChangePermission, requirePermission } from "../organizations";
 import {
   forgetInstallationTokens,
   type GitHubAppConfig,
@@ -181,7 +181,7 @@ export async function completeGitHubAppInstall(
     .where(and(eq(oauthStates.id, row.id), isNull(oauthStates.usedAt)))
     .returning({ id: oauthStates.id });
   if (claimed.length === 0) throw new ConflictError("This install link was already used", "oauth.link_used");
-  await requirePermission(deps.db, user.id, row.orgId, "manage_connectors");
+  await requireChangePermission(deps.db, user.id, row.orgId, "manage_connectors");
 
   const h = http(deps);
   const res = await h.fetch(`${h.webUrl}/login/oauth/access_token`, {

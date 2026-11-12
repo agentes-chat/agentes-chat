@@ -40,7 +40,11 @@ export function pauseOf(v: unknown): MachinePause | undefined {
   if (v === null) return { paused: false };
   if (!isObject(v)) return undefined;
   if (v.paused === false) return { paused: false };
-  return { paused: true, until: typeof v.until === "string" ? v.until : null };
+  const by =
+    isObject(v.by) && typeof v.by.id === "string" && typeof v.by.name === "string"
+      ? { id: v.by.id, name: v.by.name }
+      : null;
+  return { paused: true, until: typeof v.until === "string" ? v.until : null, ...(by ? { by } : {}) };
 }
 
 /** Access from an event (`{ folders, tools }`), checked; `null` when the machine stopped reporting it. */
@@ -348,9 +352,9 @@ export function applyConversationEvent(qc: QueryClient, orgId: string, event: Ch
  * (`ready`) refetches the computers; `org.standing` sets this workspace's standing in `GET /me`, so the banner
  * and the suspended screen follow without a reload, and asks for the setup again: a workspace on hold waits for no
  * computer, and one active again waits for one. `org.deleting` (an owner deleted it) sets its deletion there, so the
- * closing screen takes its place at once. `org.limits` (a new plan, ADR 0079) asks for the limits again, so a full
- * workspace's invitations open by themselves. `agent.groups` (ADR 0083) says the groups of agents changed: they are
- * read again.
+ * line on top shows at once and the workspace turns read-only. `org.limits` (a new plan, ADR 0079) asks for the
+ * limits again, so a full workspace's invitations open by themselves. `agent.groups` (ADR 0083) says the groups of
+ * agents changed: they are read again.
  * `member.status` and `agent.status` (ADR 0084) refetch the people and the agents' presence. `org.members` (someone
  * joined or left, a role changed, ADR 0085, or a person's name, handle or photo) refetches the people, Members, each
  * channel's roster, the roles, `me`, the agents, the
@@ -371,6 +375,8 @@ export function applyWorkspaceEvent(qc: QueryClient, orgId: string, event: { typ
     // Each channel's roster names them too, and so does an agent's open page.
     refreshChannelMembers(qc, orgId);
     readList(qc, `${orgId}:agent-pages`, { predicate: (q) => isAgentPart(q.queryKey, orgId, "detail") });
+    // The library and each agent's skills: an agent page saves its whole list, so a stale one would undo a card's.
+    readList(qc, `${orgId}:skills`, { queryKey: keys.skills(orgId) });
     return true;
   }
   if (event.type === "channels.changed") {
@@ -469,7 +475,7 @@ export function applyWorkspaceEvent(qc: QueryClient, orgId: string, event: { typ
       requestedAt: new Date().toISOString(),
       requestedBy: typeof by.id === "string" && typeof by.name === "string" ? { id: by.id, name: by.name } : null,
     });
-    // The socket closes right after it: the server's own record replaces this one.
+    // The server's own record replaces this one.
     void qc.invalidateQueries({ queryKey: keys.me });
     return true;
   }

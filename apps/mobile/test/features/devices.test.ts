@@ -140,6 +140,16 @@ describe("the phone in hand", () => {
     expect(reasonText(t, "apple_team_missing")).toBe("Xcode on the Mac shows no team yet");
     expect(reasonText(t, "ui_not_authorized")).toBe("This iPhone refused the test helper's taps");
   });
+  test("an iPhone over Wi-Fi: not reached is the first step, not trusted the second, each in its own words", async () => {
+    for (const reason of ["wifi_away", "wifi_asleep", "tunnel_down"])
+      expect(iphoneStep(phone({ id: "i", status: needs(reason) }))).toBe(0);
+    expect(iphoneStep(phone({ id: "i", status: needs("wifi_untrusted") }))).toBe(1);
+    const t = await translator("en");
+    expect(reasonText(t, "wifi_away")).toBe("Join the Mac's Wi-Fi on this iPhone, or plug it in");
+    expect(reasonText(t, "tunnel_down")).toBe("The Wi-Fi link dropped. Keep this iPhone near the Mac, or plug it in");
+    const pt = await translator("pt-BR");
+    expect(reasonText(pt, "wifi_untrusted")).toBe("Conecte uma vez e toque em Confiar");
+  });
   test("a phone waiting on someone is drawn dimmed, an offline one dark", () => {
     expect(phonePortrait(phone({ id: "i", platform: "ios", status: needs("locked") }))).toEqual({
       kind: "iphone",

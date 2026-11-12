@@ -20,6 +20,7 @@ import { selfHosted, showsAbout } from "@agenteschat/client/lib/about";
 import { keyRemovalText } from "@agenteschat/client/lib/ai-accounts";
 import { composioUsageText, showsComposioUsage } from "@agenteschat/client/lib/composio";
 import { computerEdition } from "@agenteschat/client/lib/computer";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
@@ -151,7 +152,7 @@ function Settings({
   device?: string;
   /** Devices, with the connect dialog open on this flow (the phone guide's link opens the Android one). */
   connect?: ConnectStart;
-  /** Auditoria: the agent it opens filtered to. */
+  /** Auditoria: the agent it opens filtered to. Skills, with `install`: the agent whose card opened that install. */
   agent?: string;
   /** Orçamento e uso › Pessoas: the person whose month opens (a limit's notice). */
   person?: string;
@@ -218,7 +219,7 @@ function Settings({
     </li>
   );
 
-  const body = (
+  const sections = (
     <>
       {current !== "members" && current !== "general" && current !== "roles" && current !== "vault" && (
         <PageHeader
@@ -251,7 +252,7 @@ function Settings({
       {current === "connectors" && (
         <ConnectorsSection connected={connected} outcome={outcome} review={review} mail={mail} account={account} />
       )}
-      {current === "skills" && <SkillsSection install={install} connected={connected} skill={skill} />}
+      {current === "skills" && <SkillsSection install={install} connected={connected} skill={skill} agent={agent} />}
       {current === "storage" && <StorageSection />}
       {current === "devices" && (device ? <DevicePage path={device} /> : <DevicesSection start={connect} />)}
       {current === "usage" && (
@@ -268,6 +269,14 @@ function Settings({
       {current === "billing" && <BillingSection />}
       {current === "about" && <AboutSection />}
     </>
+  );
+  // Being deleted, what would change the workspace is greyed out in one place, as on the phone (`settingsFrozen`).
+  const body = settingsFrozen(org, current) ? (
+    <fieldset className="settings__frozen" disabled>
+      {sections}
+    </fieldset>
+  ) : (
+    sections
   );
 
   return (
@@ -628,7 +637,7 @@ function GeneralSection() {
       <TeamMemoryCard />
 
       <UsageStatisticsCard />
-      {org.role === "owner" && <DeleteWorkspaceCard />}
+      {org.role === "owner" && !org.deletion && <DeleteWorkspaceCard />}
       <OrgLogoDialog open={logo} onClose={() => setLogo(false)} />
       <WorkspaceModeDialog
         open={switching}
@@ -685,8 +694,7 @@ function UsageStatisticsCard() {
         title={t("settings.telemetry.title")}
         action={
           <Button
-            size="sm"
-            variant="ghost"
+            variant="link"
             onClick={() => {
               setOpen(true);
               void telemetry.refetch();
@@ -826,15 +834,14 @@ function KeysSection() {
                 </span>
                 <span className="key-row__tail ac-mediarow__end ac-mediarow__end--wrap">
                   {c.endpoint ? (
-                    <Button variant="ghost" size="sm" onClick={() => setDialog({ type: "models", cred: c })}>
+                    <Button variant="link" onClick={() => setDialog({ type: "models", cred: c })}>
                       {t("endpoint.models")}
                     </Button>
                   ) : isDefault ? (
                     <Chip icon="check">{t("settings.default")}</Chip>
                   ) : (
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="link"
                       disabled={updateSettings.isPending}
                       loading={updateSettings.isPending}
                       onClick={() => updateSettings.mutate({ defaultCredentialId: c.id })}
@@ -842,16 +849,15 @@ function KeysSection() {
                       {t("settings.makeDefault")}
                     </Button>
                   )}
-                  <div className="row" style={{ gap: 4 }}>
+                  <div className="ac-acts">
                     {!hold && (
-                      <Button variant="ghost" size="sm" onClick={() => setDialog({ type: "rotate", cred: c })}>
+                      <Button variant="link" onClick={() => setDialog({ type: "rotate", cred: c })}>
                         {t("settings.rotate")}
                       </Button>
                     )}
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ac-btn--danger"
+                      variant="link"
+                      className="ac-link--danger"
                       onClick={() => setDialog({ type: "remove", cred: c })}
                     >
                       {t("settings.remove")}

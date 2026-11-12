@@ -201,6 +201,8 @@ export const machines = pgTable(
      */
     paused: boolean().notNull().default(false),
     pausedUntil: timestamp({ withTimezone: true }),
+    /** Who paused it from the apps (`REMOTE_PAUSE_PROTOCOL`); null when paused on the computer itself. */
+    pausedByUserId: text().references(() => users.id, { onDelete: "set null" }),
     /** Folders and tools the machine allows (protocol 10); null: its runner doesn't report them. */
     access: jsonb().$type<MachineAccess>(),
     /** Its size (protocol 22, kept from the last runner that said); null: unknown. */
@@ -519,7 +521,10 @@ export const machineFilePulls = pgTable(
 
 /** What a phone's host last said about it (`RunnerPhone` in the machine protocol, minus who holds it). */
 export interface MachinePhoneFacts {
-  /** `usb`, `wifi` (adb over the network) or `local` (an emulator or simulator on the host itself). */
+  /**
+   * `usb`, `wifi` (adb over the network, or an iPhone through its Mac's CoreDevice tunnel) or `local` (an emulator or
+   * simulator on the host itself).
+   */
   transport?: "usb" | "wifi" | "local";
   screen?: { width: number; height: number };
   abi?: string;

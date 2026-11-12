@@ -5,12 +5,13 @@ import type {
   ImportSkipReason,
   MigrationBundle,
 } from "@agenteschat/client";
-import { keys, useApps } from "@agenteschat/client";
+import { keys, useAgents, useApps, useMe } from "@agenteschat/client";
 import { aiAppImport } from "@agenteschat/client/lib/apps";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { formatBytes, MAX_UPLOAD_MB } from "@agenteschat/client/lib/files";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { frontmatter } from "@agenteschat/client/lib/import/shared";
-import { can } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import {
   AffixInput,
   Alert,
@@ -29,6 +30,7 @@ import {
   isIdHandle,
   normalizeAppearance,
   OptionCard,
+  Segmented,
   Spinner,
   SwapLabel,
   Switch,
@@ -37,13 +39,22 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { type ComponentProps, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { failedOffline } from "@/chat/offline";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { ClientSteps } from "@/components/AiApps";
 import { HelpLink } from "@/components/HelpLink";
-import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import {
   type AgentFile,
@@ -56,6 +67,7 @@ import {
 } from "@/lib/import";
 import {
   agentsArrived,
+  agentsSince,
   applyInChunks,
   blockedItems,
   bundleOrigin,
@@ -63,6 +75,7 @@ import {
   cardName,
   choosable,
   copyAgentFiles,
+  defaultMethod,
   droppedFiles,
   type FileLeft,
   type FilesCopy,
@@ -72,12 +85,15 @@ import {
   IMPORT_KINDS,
   type ImportCard,
   type ImportFailure,
+  type ImportMethod,
   importApplyErrorText,
   importFailureText,
   isGithubLink,
+  isRequestCard,
   itemId,
   kindsLine,
   MANY_FILES,
+  mcpClient,
   NOT_GITHUB,
   picksOf,
   type RequestCard,
@@ -121,6 +137,8 @@ const NAMES_SHOWN = 4;
 const FIELDS = ["name", "role", "instructions", "handle", "topic", "prompt", "title", "content", "appearance"] as const;
 /** Rows a group shows before "Mostrar mais". */
 const SHOWN = 6;
+/** How often the MCP step reads the agents again while it waits. */
+export const WATCH_POLL_MS = 5_000;
 
 type ReadInput = { files: PickedFile[] | Promise<PickedFile[]> } | { url: string } | { text: string };
 type Focus = "preview" | "report" | "drop" | null;
@@ -136,7 +154,7 @@ export function useImportFlow(orgId: string | null) {
   const qc = useQueryClient();
   const { t } = useTranslation();
   const toast = useToast();
-  const [card, setCard] = useState<ImportCard | null>(null);
+  const [card, pickCard] = useState<ImportCard | null>(null);
   const [busy, setBusy] = useState<"reading" | "planning" | null>(null);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [planned, setPlanned] = useState<{
@@ -175,6 +193,46 @@ export function useImportFlow(orgId: string | null) {
   }, [copying]);
   // Agents whose files were sent to the Drive, so a later apply (a retry) sends only those it brought.
   const sent = useRef(new Set<string>());
+  // Connect with MCP or Prompt only, per source, once the person picks one (until then, the source's default).
+  const [methods, setMethods] = useState<Partial<Record<ImportCard, ImportMethod>>>({});
+  // The workspace's agents as read after a source's MCP steps first showed: only the ones made since then arrived.
+  // Per source, and the flow's own imports join it, so they never count.
+  const [watching, setWatching] = useState(false);
+  const [seen, setSeen] = useState<ReadonlySet<string> | null>(null);
+  const since = useRef(0);
+  const me = useMe().data?.user.id;
+  // Kept fresh by `agents.changed` and by coming back to the tab, as from the AI app's.
+  const agents = useAgents(orgId ?? "", orgId !== null && watching);
+  // From a read that ended after watching started: the cache may miss an agent made while the socket was down.
+  const fresh = watching && !agents.isFetching && agents.dataUpdatedAt >= since.current ? agents.data : undefined;
+  useEffect(() => {
+    if (!seen && fresh) setSeen(new Set(fresh.map((a) => a.id)));
+  }, [seen, fresh]);
+  const list = agents.data;
+  const arrived = useMemo(() => (seen && list && me ? agentsSince(list, seen, me) : []), [seen, list, me]);
+  const { refetch } = agents;
+  // The first read failed: the step says so, and its Tentar de novo reads again, not the poll under it.
+  const stalled = useRef(false);
+  stalled.current = !seen && agents.isError;
+  /** Watches for the agents an AI app creates through MCP (`arrived`) until the returned stop. */
+  const watch = useCallback(() => {
+    since.current = Date.now();
+    setWatching(true);
+    void refetch();
+    // The onboarding has no workspace socket, so no `agents.changed`, and an AI app beside the window never hides the
+    // tab: the list is read again meanwhile.
+    const poll = setInterval(() => {
+      if (!stalled.current) void refetch();
+    }, WATCH_POLL_MS);
+    return () => {
+      clearInterval(poll);
+      setWatching(false);
+    };
+  }, [refetch]);
+  const setCard = (next: ImportCard | null) => {
+    if (next !== card) setSeen(null);
+    pickCard(next);
+  };
 
   const read = async (input: ReadInput) => {
     if (!orgId) return;
@@ -292,6 +350,7 @@ export function useImportFlow(orgId: string | null) {
       setReport(items);
       const arrived = agentsArrived(planned.items, items, pick, sent.current);
       for (const [key, id] of arrived) agentIds.current.set(key, id);
+      setSeen((s) => s && new Set([...s, ...arrived.values()]));
       const theirs = planned.files.filter((f) => arrived.has(f.agent));
       if (copyFiles && theirs.length > 0) {
         for (const key of arrived.keys()) sent.current.add(key);
@@ -317,6 +376,17 @@ export function useImportFlow(orgId: string | null) {
   return {
     card,
     setCard,
+    methods,
+    setMethod: (c: ImportCard, method: ImportMethod) => {
+      setFailure(null);
+      setMethods((m) => ({ ...m, [c]: method }));
+    },
+    watch,
+    /** The person's agents made since the source's MCP steps first showed: an embedder's way on, as `report` is. */
+    arrived,
+    /** The read the MCP step counts from failed: nothing can show as arrived until `refetch` works. */
+    watchError: watching && !seen && agents.isError && !agents.isFetching ? agents.error : null,
+    rewatch: () => void refetch(),
     busy,
     failure,
     planned,
@@ -361,19 +431,27 @@ export function useImportFlow(orgId: string | null) {
       setPlanned(null);
       setReport(null);
       setCopy(null);
+      setSeen(null);
     },
   };
 }
 
 export type ImportFlowState = ReturnType<typeof useImportFlow>;
 
-/** Moves focus to `el` once, when the flow asked for it (a step that replaced what had focus). */
-function useFocusOn<T extends HTMLElement>(flow: ImportFlowState, target: Exclude<Focus, null>) {
+/**
+ * Moves focus to `el` once, when the flow asked for it (a step that replaced what had focus), or to `instead` where
+ * `el` isn't shown.
+ */
+function useFocusOn<T extends HTMLElement>(
+  flow: ImportFlowState,
+  target: Exclude<Focus, null>,
+  instead?: RefObject<HTMLElement | null>,
+) {
   const el = useRef<T>(null);
   useEffect(() => {
     if (flow.focus.current !== target) return;
     flow.focus.current = null;
-    el.current?.focus();
+    (el.current ?? instead?.current)?.focus();
   });
   return el;
 }
@@ -409,7 +487,7 @@ export function ImportFlow({
   if (flow.planned && flow.report)
     return <ImportReport flow={flow} orgId={orgId} level={level} onAnother={flow.reset} linked={standalone} />;
   if (flow.planned) return <Preview flow={flow} orgId={orgId} standalone={standalone} level={level} />;
-  return <Picker flow={flow} orgId={orgId} />;
+  return <Picker flow={flow} orgId={orgId} linked={standalone} />;
 }
 
 function Heading({ level, ...rest }: { level: 2 | 3 | 4 } & ComponentProps<"h2">) {
@@ -435,12 +513,38 @@ export function SourceMark({ card }: { card: ImportCard }) {
   );
 }
 
-/** Pick the app (for where its file is), then drop, choose, link or paste: the source is recognized either way. */
-function Picker({ flow, orgId }: { flow: ImportFlowState; orgId: string }) {
+/**
+ * This server's MCP way in and the way on screen for the flow's source, which an embedder reads to say what the step
+ * asks. Prompt only for an app that takes no MCP, where MCP can't work now (`aiAppImport`), or when this server's
+ * address couldn't be read. Null while it loads, so the default never changes under the person.
+ */
+export function useImportMethod(flow: ImportFlowState, orgId: string) {
   const { t } = useTranslation();
+  const apps = useApps(orgId);
+  const standing = useMe().data?.organizations.find((o) => o.id === orgId)?.standing;
+  const mcp = aiAppImport(t, apps.data, standing);
+  const method: ImportMethod | null =
+    !flow.card || !mcpClient(flow.card)
+      ? "prompt"
+      : mcp
+        ? ((mcp.available ? flow.methods[flow.card] : undefined) ?? defaultMethod(flow.card, mcp.available))
+        : apps.isError
+          ? "prompt"
+          : null;
+  return { mcp, method };
+}
+
+/**
+ * Pick the app, then connect it with MCP (where it takes it, and apps reach this server), or drop, choose, link or
+ * paste: the source is recognized either way, and a dropped file is read on either path.
+ */
+function Picker({ flow, orgId, linked }: { flow: ImportFlowState; orgId: string; linked: boolean }) {
+  const { t } = useTranslation();
+  const { mcp, method } = useImportMethod(flow, orgId);
   const filesInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
-  const drop = useFocusOn<HTMLButtonElement>(flow, "drop");
+  const steps = useRef<HTMLElement>(null);
+  const drop = useFocusOn<HTMLButtonElement>(flow, "drop", steps);
   const [over, setOver] = useState(false);
   const [text, setText] = useState("");
   const busy = flow.busy !== null;
@@ -477,7 +581,6 @@ function Picker({ flow, orgId }: { flow: ImportFlowState; orgId: string }) {
         if (!busy) void flow.read({ files: droppedFiles(e.dataTransfer) });
       }}
     >
-      <AiAppImport orgId={orgId} />
       {/* biome-ignore lint/a11y/useSemanticElements: pressable cards, not a native fieldset */}
       <div className="imp-sources" role="group" aria-label={t("onboarding.import.sourcesLabel")}>
         {IMPORT_CARDS.map((c) => (
@@ -494,15 +597,17 @@ function Picker({ flow, orgId }: { flow: ImportFlowState; orgId: string }) {
         ))}
       </div>
 
-      {flow.card === "grok-bot" || flow.card === "chatgpt-dots" || flow.card === "other" ? (
-        <OtherApp key={flow.card} card={flow.card} />
-      ) : (
-        flow.card && (
-          <p className="imp-tip ac-iconline">
-            <Icon name="info" size={16} />
-            <span>{t(`onboarding.import.where.${flow.card}`)}</span>
-          </p>
-        )
+      {flow.card && (
+        <SourceSteps
+          key={flow.card}
+          card={flow.card}
+          flow={flow}
+          orgId={orgId}
+          mcp={mcp}
+          method={method}
+          linked={linked}
+          stepsRef={steps}
+        />
       )}
 
       {busy ? (
@@ -516,16 +621,19 @@ function Picker({ flow, orgId }: { flow: ImportFlowState; orgId: string }) {
           </Button>
         </div>
       ) : (
-        <div className="imp-drop">
-          <button ref={drop} type="button" className="imp-drop__area" onClick={() => filesInput.current?.click()}>
-            <Icon name="upload" />
-            <b>{over ? t("onboarding.import.dropping") : t("onboarding.import.drop")}</b>
-            <span>{t("onboarding.import.dropHelp")}</span>
-          </button>
-          <Button size="sm" variant="ghost" icon="drive" onClick={() => folderInput.current?.click()}>
-            {t("onboarding.import.pickFolder")}
-          </Button>
-        </div>
+        // With MCP the drop zone shows only while a file is dragged over: the file is still read.
+        (method === "prompt" || over) && (
+          <div className="imp-drop">
+            <button ref={drop} type="button" className="imp-drop__area" onClick={() => filesInput.current?.click()}>
+              <Icon name="upload" />
+              <b>{over ? t("onboarding.import.dropping") : t("onboarding.import.drop")}</b>
+              <span>{t("onboarding.import.dropHelp")}</span>
+            </button>
+            <Button size="sm" variant="ghost" icon="drive" onClick={() => folderInput.current?.click()}>
+              {t("onboarding.import.pickFolder")}
+            </Button>
+          </div>
+        )
       )}
       <input
         ref={filesInput}
@@ -553,34 +661,36 @@ function Picker({ flow, orgId }: { flow: ImportFlowState; orgId: string }) {
         }}
       />
 
-      <Field label={t("onboarding.import.paste")} id="import-paste">
-        <AffixInput
-          value={text}
-          placeholder={t("onboarding.import.pastePlaceholder")}
-          autoComplete="off"
-          spellCheck={false}
-          disabled={busy}
-          onChange={(e) => setText(e.target.value)}
-          onPaste={(e) => {
-            // A pasted reply is read right away, line breaks and all (a one-line field would drop them).
-            const pasted = e.clipboardData.getData("text");
-            if (!pasted.trim() || /^\s*https?:\/\//i.test(pasted)) return;
-            e.preventDefault();
-            setText("");
-            submit(pasted);
-          }}
-          onKeyDown={(e) => {
-            if (e.key !== "Enter") return;
-            e.preventDefault();
-            submit(text);
-          }}
-          action={
-            <Button variant="ghost" size="sm" onClick={() => submit(text)} disabled={!text.trim() || busy}>
-              {t("onboarding.import.readPasted")}
-            </Button>
-          }
-        />
-      </Field>
+      {method === "prompt" && (
+        <Field label={t("onboarding.import.paste")} id="import-paste">
+          <AffixInput
+            value={text}
+            placeholder={t("onboarding.import.pastePlaceholder")}
+            autoComplete="off"
+            spellCheck={false}
+            disabled={busy}
+            onChange={(e) => setText(e.target.value)}
+            onPaste={(e) => {
+              // A pasted reply is read right away, line breaks and all (a one-line field would drop them).
+              const pasted = e.clipboardData.getData("text");
+              if (!pasted.trim() || /^\s*https?:\/\//i.test(pasted)) return;
+              e.preventDefault();
+              setText("");
+              submit(pasted);
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              submit(text);
+            }}
+            action={
+              <Button variant="ghost" size="sm" onClick={() => submit(text)} disabled={!text.trim() || busy}>
+                {t("onboarding.import.readPasted")}
+              </Button>
+            }
+          />
+        </Field>
+      )}
 
       {flow.failure && (
         <div className="imp-failure">
@@ -593,40 +703,212 @@ function Picker({ flow, orgId }: { flow: ImportFlowState; orgId: string }) {
         </div>
       )}
       {/* What a person needs before dropping a folder that holds keys: said on the line, the rest in its ⓘ. */}
-      <p className="imp-note ac-iconline">
-        <Icon name="lock" size={16} />
-        <span className="ac-hintline">
-          <span>{t("onboarding.import.privacy")}</span>
-          <InfoHint name={t("common.about", { label: t("onboarding.import.privacyLabel") })}>
-            {t("onboarding.import.privacyMore")}
-          </InfoHint>
-        </span>
-      </p>
+      {method === "prompt" && (
+        <p className="imp-note ac-iconline">
+          <Icon name="lock" size={16} />
+          <span className="ac-hintline">
+            <span>{t("onboarding.import.privacy")}</span>
+            <InfoHint name={t("common.about", { label: t("onboarding.import.privacyLabel") })}>
+              {t("onboarding.import.privacyMore")}
+            </InfoHint>
+          </span>
+        </p>
+      )}
     </div>
   );
 }
 
+type McpOption = ReturnType<typeof aiAppImport>;
+
+/** How long the MCP step waits before it says what to check when nothing came. */
+const STUCK_MS = 2 * 60_000;
+
 /**
- * "Do seu app de IA" on top of the sources (ADR 0119): the person connects their AI app to this server and asks it to
- * create here what it has, which beats any file or copied reply. Where apps on the internet can't reach this server
- * (a self-hosted one on a private host), one line says why instead.
+ * What to do in the picked source: the two ways in, MCP first where the app takes it and apps on the internet reach
+ * this server, then that way's steps. With no MCP for the app, or no way to tell, its request or where its file is;
+ * where MCP can't work now (a server apps can't reach, a workspace on hold), that and one line saying why. Nothing
+ * while the server's address is still loading.
  */
-function AiAppImport({ orgId }: { orgId: string }) {
+function SourceSteps({
+  card,
+  flow,
+  orgId,
+  mcp,
+  method,
+  linked,
+  stepsRef,
+}: {
+  card: ImportCard;
+  flow: ImportFlowState;
+  orgId: string;
+  mcp: McpOption;
+  method: ImportMethod | null;
+  linked: boolean;
+  stepsRef: RefObject<HTMLElement | null>;
+}) {
   const { t } = useTranslation();
-  const option = aiAppImport(t, useApps(orgId).data);
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState<"ok" | "failed" | null>(null);
-  if (!option) return null;
-  if (!option.available)
+  const client = mcpClient(card);
+  const prompt = isRequestCard(card) ? (
+    <OtherApp card={card} />
+  ) : (
+    <p className="imp-tip ac-iconline">
+      <Icon name="info" size={16} />
+      <span>{t(`onboarding.import.where.${card}`)}</span>
+    </p>
+  );
+  if (!method) return null;
+  if (!client || !mcp) return prompt;
+  if (!mcp.available)
     return (
-      <p className="imp-tip ac-iconline">
-        <Icon name="info" size={16} />
-        <span>{t("onboarding.import.aiApp.private")}</span>
-      </p>
+      <>
+        {prompt}
+        <p className="imp-note ac-iconline">
+          <Icon name="info" size={16} />
+          <span>{mcp.note}</span>
+        </p>
+      </>
     );
+  return (
+    <>
+      <Segmented
+        block
+        label={t("onboarding.import.method.label")}
+        value={method}
+        onValueChange={(m) => flow.setMethod(card, m)}
+        options={[
+          { value: "mcp", label: t("onboarding.import.method.mcp") },
+          {
+            value: "prompt",
+            label: isRequestCard(card) ? t("onboarding.import.method.prompt") : t("onboarding.import.method.file"),
+          },
+        ]}
+      />
+      {method === "mcp" ? (
+        <section ref={stepsRef} tabIndex={-1} className="imp-other" aria-label={t("onboarding.import.method.mcp")}>
+          <p className="small muted">
+            {card === "other"
+              ? t("onboarding.import.aiApp.leadAny")
+              : card === "chatgpt-dots"
+                ? t("onboarding.import.aiApp.leadDots")
+                : t("onboarding.import.aiApp.lead", { app: cardName(t, card) })}
+          </p>
+          <ClientSteps client={client} url={mcp.url}>
+            <li>
+              <span className="apps-step">
+                <span>{t("onboarding.import.aiApp.paste")}</span>
+                <RequestBox
+                  text={mcp.prompt}
+                  label={t("onboarding.import.aiApp.promptLabel")}
+                  copy={t("onboarding.import.aiApp.copy")}
+                  copied={t("onboarding.import.aiApp.copied")}
+                />
+              </span>
+            </li>
+          </ClientSteps>
+          {(card === "openbotrun" || card === "other") && (
+            <p className="imp-help">
+              <HelpLink slug="apps-de-ia" section="connect">
+                {t("onboarding.import.aiApp.howTo")}
+              </HelpLink>
+            </p>
+          )}
+          <Arrivals flow={flow} orgId={orgId} linked={linked} />
+        </section>
+      ) : (
+        prompt
+      )}
+    </>
+  );
+}
+
+/**
+ * The agents the app creates, as they arrive (the agents list, read again on `agents.changed` and back on the tab),
+ * watched while the step shows: waiting (what to check once a while passes with nothing), then how many, each to its
+ * page where the flow links out.
+ */
+function Arrivals({ flow, orgId, linked }: { flow: ImportFlowState; orgId: string; linked: boolean }) {
+  const { t, i18n } = useTranslation();
+  const { watch, arrived, watchError } = flow;
+  useEffect(watch, [watch]);
+  const [late, setLate] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setLate(true), STUCK_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  if (watchError)
+    return (
+      <div className="imp-failure">
+        <Alert>{errorText(t, watchError, i18n.language)}</Alert>
+        <Button size="sm" icon="refresh" onClick={flow.rewatch}>
+          {t("common.retry")}
+        </Button>
+      </div>
+    );
+  return (
+    <div className="imp-arrivals">
+      {arrived.length === 0 ? (
+        <>
+          <p className="imp-arrivals__line ac-iconline" role="status">
+            <Spinner />
+            <span>{t("onboarding.import.aiApp.waiting")}</span>
+          </p>
+          {late && (
+            <p className="small muted">{t("onboarding.import.aiApp.stuck", { access: t("apps.consent.manage") })}</p>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="imp-arrivals__line ac-iconline" role="status">
+            <Icon name="check" size={16} />
+            <b>{t("onboarding.import.aiApp.arrived", { count: arrived.length })}</b>
+          </p>
+          {linked ? (
+            <span className="imp-made__links">
+              {arrived.map((a) => (
+                <Link
+                  key={a.id}
+                  to="/org/$orgId/agents/$agentId"
+                  params={{ orgId, agentId: a.id }}
+                  className="imp-link"
+                >
+                  <AgentAvatar name={a.name} appearance={normalizeAppearance(a.appearance)} size="sm" />
+                  {a.name}
+                </Link>
+              ))}
+            </span>
+          ) : (
+            <p className="small muted">
+              {joinNames(
+                arrived.map((a) => a.name),
+                t,
+              )}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** A request to paste in another app: selected whole on focus, and a copy button that says when it couldn't. */
+function RequestBox({
+  text,
+  label,
+  copy: copyLabel,
+  copied: copiedText,
+  rows = 4,
+}: {
+  text: string;
+  label: string;
+  copy: string;
+  copied: string;
+  rows?: number;
+}) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState<"ok" | "failed" | null>(null);
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(option.prompt);
+      await navigator.clipboard.writeText(text);
       setCopied("ok");
     } catch {
       setCopied("failed");
@@ -634,58 +916,22 @@ function AiAppImport({ orgId }: { orgId: string }) {
   };
   return (
     <>
-      <OptionCard pressed={open} onClick={() => setOpen(!open)} className="imp-aiapp ac-mediarow">
-        <span className="ac-mediarow__face">
-          <span className="imp-mark" aria-hidden="true">
-            <Icon name="agent" />
-          </span>
+      <Textarea
+        readOnly
+        rows={rows}
+        value={text}
+        aria-label={label}
+        className="imp-other__prompt"
+        onFocus={(e) => e.currentTarget.select()}
+      />
+      <div className="imp-other__copy">
+        <Button onClick={() => void copy()}>
+          <SwapLabel icon="copy" altIcon="check" label={copyLabel} alt={t("common.copied")} showAlt={copied === "ok"} />
+        </Button>
+        <span role="status" className="small muted">
+          {copied === "ok" ? copiedText : copied === "failed" ? t("onboarding.import.request.copyFailed") : ""}
         </span>
-        <span className="ac-mediarow__head">
-          <span className="ac-option__title">{t("onboarding.import.aiApp.title")}</span>
-        </span>
-        <span className="ac-mediarow__body">
-          <span className="ac-option__desc">{t("onboarding.import.aiApp.lead")}</span>
-        </span>
-      </OptionCard>
-      {open && (
-        <section className="imp-other" aria-label={t("onboarding.import.aiApp.title")}>
-          <p className="imp-other__steps">{t("onboarding.import.aiApp.connect")}</p>
-          <CommandBlock command={option.url} copied={t("apps.serverCopied")} />
-          <p className="imp-help">
-            <Link className="ac-link" to="/org/$orgId/settings/$section" params={{ orgId, section: "apps" }}>
-              {t("onboarding.import.aiApp.howTo")}
-            </Link>
-          </p>
-          <p className="imp-other__steps">{t("onboarding.import.aiApp.allow")}</p>
-          <p className="imp-other__steps">{t("onboarding.import.aiApp.paste")}</p>
-          <Textarea
-            readOnly
-            rows={4}
-            value={option.prompt}
-            aria-label={t("onboarding.import.aiApp.promptLabel")}
-            className="imp-other__prompt"
-            onFocus={(e) => e.currentTarget.select()}
-          />
-          <div className="imp-other__copy">
-            <Button onClick={() => void copy()}>
-              <SwapLabel
-                icon="copy"
-                altIcon="check"
-                label={t("onboarding.import.aiApp.copy")}
-                alt={t("common.copied")}
-                showAlt={copied === "ok"}
-              />
-            </Button>
-            <span role="status" className="small muted">
-              {copied === "ok"
-                ? t("onboarding.import.aiApp.copied")
-                : copied === "failed"
-                  ? t("onboarding.import.request.copyFailed")
-                  : ""}
-            </span>
-          </div>
-        </section>
-      )}
+      </div>
     </>
   );
 }
@@ -696,15 +942,6 @@ function AiAppImport({ orgId }: { orgId: string }) {
  */
 function OtherApp({ card }: { card: RequestCard }) {
   const { t } = useTranslation();
-  const [copied, setCopied] = useState<"ok" | "failed" | null>(null);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(EXPORT_PROMPT);
-      setCopied("ok");
-    } catch {
-      setCopied("failed");
-    }
-  };
   return (
     <section className="imp-other" aria-labelledby="imp-other-title">
       <h3 id="imp-other-title" className="imp-other__title">
@@ -715,32 +952,13 @@ function OtherApp({ card }: { card: RequestCard }) {
         <li>{t(`onboarding.import.request.${card}.paste`)}</li>
         <li>{t(`onboarding.import.request.${card}.back`)}</li>
       </ol>
-      <Textarea
-        readOnly
+      <RequestBox
+        text={EXPORT_PROMPT}
         rows={6}
-        value={EXPORT_PROMPT}
-        aria-label={t("onboarding.import.request.prompt")}
-        className="imp-other__prompt"
-        onFocus={(e) => e.currentTarget.select()}
+        label={t("onboarding.import.request.prompt")}
+        copy={t("onboarding.import.request.copy")}
+        copied={t(`onboarding.import.request.${card}.copied`)}
       />
-      <div className="imp-other__copy">
-        <Button onClick={() => void copy()}>
-          <SwapLabel
-            icon="copy"
-            altIcon="check"
-            label={t("onboarding.import.request.copy")}
-            alt={t("common.copied")}
-            showAlt={copied === "ok"}
-          />
-        </Button>
-        <span role="status" className="small muted">
-          {copied === "ok"
-            ? t(`onboarding.import.request.${card}.copied`)
-            : copied === "failed"
-              ? t("onboarding.import.request.copyFailed")
-              : ""}
-        </span>
-      </div>
       {card === "other" && (
         <p className="imp-help">
           <HelpLink slug="import" section="other-apps">
@@ -1513,7 +1731,8 @@ export function ImportReport({
 
 /**
  * Configurações → Importar e exportar (admins): the import flow, and this workspace as a file, with what it never
- * carries (whoever shares the file needs that); the full list is on the help page.
+ * carries (whoever shares the file needs that); the full list is on the help page. A workspace being deleted takes no
+ * agent, so only its export shows.
  */
 export function ImportExportSection() {
   const { t } = useTranslation();
@@ -1524,10 +1743,12 @@ export function ImportExportSection() {
   const download = () => saveExport(api, org.id);
   return (
     <>
-      <Card aria-labelledby="imp-import-title">
-        <CardHeader icon="upload" id="imp-import-title" title={t("settings.import.title")} />
-        <ImportFlow flow={flow} orgId={org.id} standalone level={3} />
-      </Card>
+      {makesAgents(org) && (
+        <Card aria-labelledby="imp-import-title">
+          <CardHeader icon="upload" id="imp-import-title" title={t("settings.import.title")} />
+          <ImportFlow flow={flow} orgId={org.id} standalone level={3} />
+        </Card>
+      )}
       <Card aria-labelledby="imp-export-title">
         <CardHeader
           icon="download"

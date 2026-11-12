@@ -5,8 +5,11 @@ import { knownErrorText } from "@agenteschat/client/lib/errors";
 import {
   beginLogin,
   freeDuplicate,
+  geminiNotShared,
   isSignInCode,
+  isUrlWithoutCode,
   type LoginRead,
+  loginFailureLine,
   loginRead,
   loginReadPasses,
   otherThanHint,
@@ -34,7 +37,8 @@ import { openPopup, openWaitingPopup, sendPopup } from "@/lib/popup";
  * its own key page, then the key, sealed the same way; it never reaches our
  * server. Cursor (ADR 0114): its sign-in page, and the computer finishes by
  * itself; or, chosen under it, a Cursor API key, sent like a plan's key. Gemini (ADR 0143): Google's sign-in page,
- * then the code it shows, pasted like Claude's; a personal Google account under the plain warning about Google's
+ * then the code it shows, pasted like Claude's (its page's address, which carries no code, is never sent); a
+ * personal Google account under the plain warning about Google's
  * terms, or (chosen under it) Gemini Enterprise. "Paste" shows only while the field is empty. Every start is a click,
  * never the block showing. The page asks every 2 s; Back or closing stops
  * the sign-in on the computer. "Copy link" beside a sign-in's button copies
@@ -423,7 +427,14 @@ function AddAccountFlow({
   const reads = [read, ...Object.values(fanReads)];
   const shown = fanFailed ?? result;
   const noAnswer = startFailed !== null || reads.includes("noAnswer");
-  const ended = noAnswer || reads.includes("failed") || shown?.state === "failed" || shown?.state === "expired";
+  const failure = loginFailureLine(shown?.code);
+  // Canceled from somewhere else: nothing went wrong, so no line; the sign-in starts over.
+  const canceled = (shown?.state === "failed" || shown?.state === "expired") && failure.key === null;
+  useEffect(() => {
+    if (canceled) onRetry();
+  }, [canceled, onRetry]);
+  const ended =
+    noAnswer || reads.includes("failed") || (!canceled && (shown?.state === "failed" || shown?.state === "expired"));
   // The code or the key on its way to the computer, then the computer signing in with it: a line stands in for the
   // field and its buttons until the sign-in ends.
   const busy = (sending || sent) && !(other || ended);
@@ -587,7 +598,7 @@ function AddAccountFlow({
             spellCheck={false}
             placeholder={placeholder}
             aria-label={label}
-            aria-describedby={plan ? keyHintId : undefined}
+            aria-describedby={plan || kind === "antigravity" ? keyHintId : undefined}
             onChange={(e) => take(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -625,6 +636,10 @@ function AddAccountFlow({
 
   // Not the account it was for: one that came back done (`other`), or signing in again, which the server refuses.
   const otherEmail = other?.email ?? (hint ? shown?.signedInAs : undefined);
+  // The computer's own reason is the line only when nothing nearer the person explains it.
+  const byCode = !otherEmail && !noAnswer && shown?.state !== "expired" && !shown?.duplicate;
+  // Trying again would end the same way: no Try again, the words say what to use instead.
+  const notShared = geminiNotShared(kind, shown);
   const why = otherEmail
     ? t(`connectAi.otherAccount.${kind}`, { email: otherEmail, account: hint })
     : noAnswer
@@ -637,7 +652,14 @@ function AddAccountFlow({
             : t(`agentPage.work.brain.add.duplicate.${kind}`, {
                 account: shown.duplicate.account?.email ?? shown.duplicate.label,
               })
-          : t("agentPage.work.brain.add.failed");
+          : notShared
+            ? t("agentPage.work.brain.add.geminiNotShared", { computer })
+            : t(failure.key ?? "agentPage.work.brain.add.failed", {
+                brand: plan?.label ?? t(`aiAccounts.connect.${kind}`),
+                computer,
+              });
+  // What the provider's own program said, under the line about it.
+  const said = byCode && !notShared && failure.detail ? shown?.message?.trim() || null : null;
 
   const endWhy = other || ended ? why : null;
   useEffect(() => {
@@ -842,17 +864,23 @@ function AddAccountFlow({
         )}
         {login && opened && (
           <Step side={busy && !reads.includes("reconnecting") ? undefined : waiting}>
-            <label htmlFor={codeId}>
-              <b>{t("agentPage.work.brain.add.stepTwoGoogle")}</b>
-            </label>
+            <StepTitle
+              title={t("agentPage.work.brain.add.stepTwoGoogle")}
+              hint={t("agentPage.work.brain.add.codeHintGoogle")}
+              htmlFor={codeId}
+              hintId={keyHintId}
+            />
             {busy
               ? busyLine
               : pasteRow(
                   t("agentPage.work.brain.add.codeLabelGoogle"),
                   t("agentPage.work.brain.add.codeLabelGoogle"),
                   false,
-                  key.length > 0,
+                  key.length > 0 && !isUrlWithoutCode(key),
                 )}
+            {!busy && isUrlWithoutCode(key) && (
+              <SettingNote icon="alert">{t("agentPage.work.brain.add.notCodeGoogle")}</SettingNote>
+            )}
           </Step>
         )}
         {!login && !again && (
@@ -951,17 +979,19 @@ function AddAccountFlow({
                 </span>
               </Button>
             )}
-            <Button
-              variant="primary"
-              icon="refresh"
-              onClick={() => {
-                if (other && !again)
-                  void api.machines.removeAccount(org.id, machineId, other.id).catch(() => undefined);
-                onRetry();
-              }}
-            >
-              {t("common.retry")}
-            </Button>
+            {!notShared && (
+              <Button
+                variant="primary"
+                icon="refresh"
+                onClick={() => {
+                  if (other && !again)
+                    void api.machines.removeAccount(org.id, machineId, other.id).catch(() => undefined);
+                  onRetry();
+                }}
+              >
+                {t("common.retry")}
+              </Button>
+            )}
           </>,
           actionsAt,
         )
@@ -970,6 +1000,7 @@ function AddAccountFlow({
           <SettingNote icon="alert" live>
             {why}
           </SettingNote>
+          {said && <pre className="ac-tools__io agp-addacct__said">{said}</pre>}
           {instead ? (
             <span className="ac-acts">
               {retry}
@@ -980,7 +1011,7 @@ function AddAccountFlow({
               </Button>
             </span>
           ) : (
-            retry
+            !notShared && retry
           )}
         </div>
       ) : (

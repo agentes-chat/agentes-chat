@@ -13,7 +13,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Nasıl çalışır",
         blocks: [
           "Uygulamanın içinde, kendi yerleşik veritabanıyla çalışır ve her şeyi bu bilgisayardaki tek bir klasörde, ana klasörünüzdeki `.agentes` içinde tutar. Başka hiçbir şey kurmanız gerekmez: Docker yok, kurulacak bir veritabanı yok.",
-          "Uygulamayla birlikte başlar ve uygulamadan çıktığınızda durur. Çıkmadan önce uygulama sorar, çünkü uygulama yeniden açılana kadar kimse agentes.chat'i kullanamaz.",
+          "Uygulamayla birlikte başlar ve uygulamadan çıktığınızda durur. Çıkmadan önce uygulama sorar, çünkü uygulama yeniden açılana kadar kimse agentes.chat'i kullanamaz. Uygulamadan çıkmadan bir süre durdurmak için saatin yanındaki agentes.chat simgesine tıklayın ve kartının **⋯** menüsünden **Durdur**'u seçin.",
         ],
       },
       {
@@ -28,7 +28,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Açık tutun",
         blocks: [
-          "Başkalarının da kullandığı bir bilgisayarda bunu bir kez ayarlayın:",
+          "Başkalarının da kullandığı bir bilgisayarda bunu bir kez ayarlayın. **Tercihler\u00a0›\u00a0Sunucular** içindeki **Çalışır halde tut**, hâlâ eksik olanı gösterir ve doğru ayarları açar:",
           {
             list: [
               "**Oturum açılınca başlat** kurulumdan sonra kendiliğinden açılır.",
@@ -51,8 +51,8 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "another-workspace",
         heading: "Başka bir çalışma alanına da açın",
         blocks: [
-          "Burada çalıştırdığınız sunucunun çalışma alanları bu bilgisayarı kendiliğinden kullanır. Başka bir yerdeki bir çalışma alanının da, örneğin agentes.chat Cloud'daki birinin, kullanmasını istiyorsanız **Tercihler\u00a0›\u00a0Sunucular** bölümünü açın, **Sunucu ekle…** düğmesine basın, o çalışma alanında oturum açın ve uygulama sorduğunda **İzin ver** düğmesine basın.",
-          "Her çalışma alanının burada kendi ajanları ve klasörleri olur. **Komutlar** onun için de varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Oradaki tek anahtar bu bilgisayardaki tüm çalışma alanları için geçerlidir.",
+          "Burada çalıştırdığınız sunucunun çalışma alanları bu bilgisayarı kendiliğinden kullanır. Başka bir yerdeki bir çalışma alanının da, örneğin agentes.chat Cloud'daki birinin, kullanmasını istiyorsanız **Tercihler\u00a0›\u00a0Genel** içindeki ilk kartın en altında bulunan **Çalışma alanı ekle…** düğmesine ya da **Tercihler\u00a0›\u00a0Sunucular** içindeki **Sunucu ekle…** düğmesine basın. O çalışma alanında oturum açın ve uygulama sorduğunda **İzin ver** düğmesine basın.",
+          "Her çalışma alanının burada kendi ajanları ve klasörleri olur. **Komutlar** onun için de varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Orada her çalışma alanının kendi anahtarı vardır ve uygulama birini yeniden açmadan önce sorar.",
         ],
       },
       {
@@ -67,29 +67,29 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Diğer cihazlardan giriş",
         blocks: [
-          "Sahibin başta bir şifresi yoktur: uygulama bu bilgisayarda sizin yerinize oturum açar. Başka bir bilgisayardaki tarayıcıdan giriş yapmak için **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden bir şifre ekleyin. Telefon uygulaması, **Tercihler\u00a0›\u00a0Sunucular** içindeki **Telefonunuzda** altında bulunan QR kodunu tarayarak bağlanır. Bunun için **Telefonunuzdan ve ekip arkadaşlarınızdan erişin** açık olmalıdır.",
+          "Sahibin başta bir şifresi yoktur: uygulama bu bilgisayarda sizin yerinize oturum açar. Başka bir bilgisayardaki tarayıcıdan giriş yapmak için **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden bir şifre ekleyin. Eklemediğiniz sürece **Tercihler\u00a0›\u00a0Sunucular** bunu hatırlatır ve **Parola ekle** o sayfayı açar. Telefon uygulaması, **Tercihler\u00a0›\u00a0Sunucular** içindeki **Telefonunuzda** altında bulunan QR kodunu tarayarak bağlanır. Bunun için **Telefonunuzdan ve ekip arkadaşlarınızdan erişin** açık olmalıdır.",
         ],
       },
       {
         id: "updates",
         heading: "Güncellemeler",
         blocks: [
-          "Uygulama güncellemeleri kendisi arar ve **Tercihler\u00a0›\u00a0Güncellemeler** içinde **Güncelle ve yeniden aç** düğmesine bastığınızda yükler. Sunucu ve tüm ajanlar onunla birlikte yeniden başlar. Önce veritabanı kopyalanır ve yeni sürüm 3 dakika içinde yanıt vermezse uygulama kendiliğinden önceki sürüme ve onun verilerine geri döner.",
+          "Uygulama güncellemeleri kendisi arar. **Tercihler\u00a0›\u00a0Güncellemeler** içinde **Güncellemeleri gece kendiliğinden yükle** açıksa, uygulama açık olduğu sürece onları 3:00 ile 5:00 arasında yükler. Sunucu burada çalışıyorsa bu baştan açıktır. Değilse **Güncelle ve yeniden aç** düğmesine basın. Sunucu ve tüm ajanlar onunla birlikte yeniden başlar. Önce veritabanı kopyalanır ve yeni sürüm 3 dakika içinde yanıt vermezse uygulama kendiliğinden önceki sürüme ve onun verilerine geri döner.",
         ],
       },
       {
         id: "backups",
         heading: "Yedekler",
         blocks: [
-          "Henüz hiçbir şey kendiliğinden yedeklenmiyor. **Tercihler\u00a0›\u00a0Sunucular** içindeki **Şimdi yedekle**, sunucuyu kısa bir süre durdurur ve veritabanını, dosyaları ve `.env` dosyasını ana klasörünüzdeki `.agentes/backups` içine kaydeder. En yeni iki yedeği tutar.",
-          "Bunları ara sıra bu bilgisayarın dışına, bir diske ya da bir bulut depolama alanına kopyalayın. İçlerinde anahtarlarınız var: onları gizli tutun.",
+          "**Tercihler\u00a0›\u00a0Sunucular** içinde **Her gece yedekle** açıksa (uygulama 0.8.1 ve sonrası), uygulama her gece saat 3:00'te veritabanını, dosyaları ve `.env` dosyasını ana klasörünüzdeki `.agentes/backups` içine kaydeder. O saatte uykuda olan bir bilgisayar uyandığında yedekler. **Şimdi yedekle** aynısını hemen yapar. Her yedekleme sunucuyu kısa bir süre durdurur ve en yeni iki yedek kalır.",
+          "**Şuraya kopyala**, her yeni yedeği seçtiğiniz bir klasöre de koyar, örneğin bir USB belleğe ya da iCloud Drive'a, ve orada da en yeni iki yedek kalır. İçlerinde anahtarlarınız var: onları gizli tutun. **Geri yükle…** agentes.chat'i bir yedeğe döndürür: mesajlar, dosyalar ve ayarlar. Bir dakikalığına durur ve önceden orada olanlar yedek klasöründe kalır.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code ve Codex",
         blocks: [
-          "Uygulama Claude Code ve Codex'i oturum açma kabuğunuzun `PATH` değişkeniyle ve `~/.local/bin`, `/opt/homebrew/bin` ve `/usr/local/bin` gibi alışılmış klasörlerde arar. **Tercihler\u00a0›\u00a0Araçlar** **Bulunamadı** diyorsa `claude` ya da `codex` komutunun yeni bir Terminal penceresinde çalıştığını kontrol edin, sonra uygulamadan çıkıp yeniden açın.",
+          "Uygulama Claude Code ve Codex'i oturum açma kabuğunuzun `PATH` değişkeniyle ve `~/.local/bin`, `/opt/homebrew/bin` ve `/usr/local/bin` gibi alışılmış klasörlerde arar. **Tercihler\u00a0›\u00a0Araçlar** **Bulunamadı** diyorsa, onu kuran satırı da gösterir. O satırı Terminal'de çalıştırın, sonra **Tekrar kontrol et** düğmesine basın.",
         ],
       },
       {
@@ -123,7 +123,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "agentes.chat uygulamasından",
         blocks: [
           "Uygulamayı bilgisayara kurun, açın ve çalışma alanınızda oturum açın. Uygulama **<workspace> ajanları bu Mac cihazını kullanabilsin mi?** diye sorar (Windows'ta bu PC, Linux'ta bu bilgisayar). Kimlerin kullanabileceğini seçin ve **İzin ver** düğmesine basın. Hepsi bu.",
-          "Zaten oturum açtınız mı? Çalışma alanını **Tercihler\u00a0›\u00a0Genel** içindeki **Ajanlar** kartında açın.",
+          "Zaten oturum açtınız mı? **Tercihler\u00a0›\u00a0Genel** bölümünü açın ve ilk karttaki çalışma alanı satırında **İzin ver** düğmesine basın. Orada yok mu? O kartın en altındaki **Çalışma alanı ekle…** düğmesine basın ve oturum açın.",
         ],
       },
       {
@@ -166,7 +166,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Duraklatma ve bağlantıyı kesme",
         blocks: [
-          "Bilgisayarda, saatin yanındaki agentes.chat simgesi tüm çalışma alanlarının ajanlarını duraklatır. **Tercihler\u00a0›\u00a0Genel** içinde her çalışma alanının anahtarı yalnızca onu duraklatır, **Ayrıl** ise bağlantısını keser. Duraklatılmışken yeni hiçbir şey başlamaz ve çalışmakta olanlar tamamlanır. Bağlantıyı kesmek ajanların klasörlerini diskte bırakır.",
+          "Bilgisayarda, saatin yanındaki agentes.chat simgesi tüm çalışma alanlarının ya da yalnızca birinin ajanlarını duraklatır. **Tercihler\u00a0›\u00a0Genel** içinde her çalışma alanının anahtarı yalnızca onu duraklatır, **⋯** menüsündeki **Ayrıl** ise bağlantısını keser. Duraklatılmışken yeni hiçbir şey başlamaz ve çalışmakta olanlar tamamlanır. Bağlantıyı kesmek ajanların klasörlerini diskte bırakır.",
           "Web sitesinden, cihazın sayfasındaki **Kaldır** onun bağlantısını keser.",
         ],
       },
@@ -199,7 +199,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
               "agentes.chat'i de çalıştıran bir bilgisayarda, onun `.agentes` içindeki veritabanı ve anahtarları",
             ],
           },
-          "agentes.chat anahtarların, token'ların ve oturum bilgilerinin adını geçiren komutları reddeder, ama bu bir kuraldır, duvar değil. **Komutlar** varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Oradaki tek anahtar bilgisayardaki tüm çalışma alanları için geçerlidir. Claude Code ve Codex kendi komutlarını ajanın klasöründe, kendi kurallarıyla çalıştırır.",
+          "agentes.chat anahtarların, token'ların ve oturum bilgilerinin adını geçiren komutları reddeder, ama bu bir kuraldır, duvar değil. **Komutlar** varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Orada her çalışma alanının kendi anahtarı vardır (uygulama 0.8.1 ve sonrası) ve uygulama birini yeniden açmadan önce sorar. Claude Code ve Codex, Komutlar kapalıyken bile kendi komutlarını ajanın klasöründe, kendi kurallarıyla çalıştırır.",
           "Gerçek bir duvar için bir Linux sunucu kullanın. Debian 13'te `--system` ile kurulduğunda her ajan ayrı bir kullanıcıdır. Ubuntu'da ajanlar tek bir kullanıcıyı, `agentes` kullanıcısını paylaşır: birbirlerinin klasörlerini görürler, sizinkileri ya da sunucununkileri görmezler. Ya da ajanlara kendilerine ait bir bilgisayar verin.",
         ],
       },
@@ -272,6 +272,21 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "Anahtarlar, şifreler, oturum bilgileri ve sohbet geçmişi asla gelmez: ajanlar çalışma alanının yapay zekasıyla düşünür. Bazı şeylerin burada henüz karşılığı yok ya da bir dosyada hiç taşınmamalı. Bunları sonra yeniden oluşturabilirsiniz.",
           "Dosyalar ve klasörler tarayıcınızda okunur. Bir GitHub bağlantısı çalışma alanının sunucusundan geçer. Anahtar ve oturum dosyaları asla açılmaz ve siz onaylayana kadar hiçbir şey değişmez.",
+        ],
+      },
+      {
+        id: "mcp",
+        heading: "MCP ile bağlan",
+        blocks: [
+          "MCP, yapay zeka uygulamanızın bu çalışma alanına erişmesini sağlar, böylece ajanları talimatları, becerileri ve rutinleriyle birlikte burada kendisi oluşturur. Uygulamanızı seçin, **MCP ile bağlan** seçeneğini işaretleyin ve sonra:",
+          {
+            list: [
+              "Adımın gösterdiği adresi, uygulamanın kendi adımlarıyla bağlayın. [Uygulama uygulama nasıl bağlanır](/help/apps-de-ia#connect)",
+              "Giriş sayfasında **Ajan, rutin ve beceri oluşturma ve düzenleme** seçeneğini seçin.",
+              "İsteği uygulamaya yapıştırın. Ajanlar geldikçe adımda görünür.",
+            ],
+          },
+          "Bir uygulama bağlanamıyorsa adımda hangisi görünüyorsa **Dosyadan** ya da **Yalnızca istek** seçeneğini seçin. İstek, [Başka bir uygulamadan](/help/import#other-apps) bölümünde anlatılıyor.",
         ],
       },
       {

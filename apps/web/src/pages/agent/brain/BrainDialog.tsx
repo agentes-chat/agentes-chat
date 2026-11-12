@@ -21,6 +21,7 @@ import { type AiChoice, planMark } from "@agenteschat/client/lib/no-ai";
 import { usageWhen } from "@agenteschat/client/lib/plan-usage";
 import { geminiPersonal, isPlanId, planFreeHint, signInProviderOf } from "@agenteschat/client/lib/plans";
 import { AUTO, isAuto, keyRuns, providerLabel } from "@agenteschat/client/lib/providers";
+import { sceneTeam } from "@agenteschat/client/lib/right-hand";
 import {
   AvatarStack,
   Button,
@@ -47,7 +48,7 @@ import { AddAccount, OpenPage } from "@/components/ai/AddAccountFlow";
 import { PlanHold } from "@/components/ai/ConnectAiSteps";
 import { PlanReplies } from "@/components/ai/PlanReplies";
 import { HaveList, HaveRow, sortHave } from "@/components/arrival/ConnectHave";
-import { sceneTeam, TeamScene, useDawn } from "@/components/arrival/TeamScene";
+import { TeamScene, useDawn } from "@/components/arrival/TeamScene";
 import { useConnectAi } from "@/components/ConnectAi";
 import { useOrg } from "@/components/org-context";
 import { useWidenAsk } from "@/components/ReachLines";

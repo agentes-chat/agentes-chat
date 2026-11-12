@@ -1,12 +1,12 @@
 import { LICENSE_URL, PUBLIC_SOURCE_URL } from "@agenteschat/client/lib/about";
 import { DOCS_SITE } from "@agenteschat/i18n/docs";
-import { Button, Chip } from "@agenteschat/ui";
+import { Button, Chip, InfoHint, Switch } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useHost } from "../../app";
-import { noteLines } from "../../control/version";
-import { type UpdateCheck, useLocalServer } from "../../hooks";
-import { CardTitle, PrefCard, PrefHead } from "../../ui/settings";
+import { AUTO_UPDATE_PREF, autoUpdateOn, noteLines } from "../../control/version";
+import { type UpdateCheck, useLocalServer, usePref } from "../../hooks";
+import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settings";
 import { useToast } from "../../ui/Toast";
 import { clock } from "../../ui/time";
 
@@ -24,6 +24,7 @@ export function Updates({ update }: { update: UpdateCheck }) {
   const [progress, setProgress] = useState<{ got: number; total: number | null } | null>(null);
   const [manual, setManual] = useState(false);
   const local = useLocalServer();
+  const [autoPref, setAutoPref] = usePref<boolean | null>(AUTO_UPDATE_PREF, null);
   useEffect(() => host.onUpdateProgress((got, total) => setProgress({ got, total })), [host]);
 
   const install = async () => {
@@ -59,7 +60,7 @@ export function Updates({ update }: { update: UpdateCheck }) {
         <div className="dk-ver">
           <span className="dk-ver__big ac-num">{update.version ?? "…"}</span>
           <span className="dk-ver__text">
-            <span>
+            <span className="ac-hintline">
               {required ? (
                 <Chip icon="alert" tone="waiting">
                   {t("desktop.prefs.updates.required")}
@@ -73,6 +74,11 @@ export function Updates({ update }: { update: UpdateCheck }) {
                   {t("desktop.prefs.updates.upToDate")}
                 </Chip>
               )}
+              {local.run && (
+                <InfoHint name={t("common.about", { label: t("desktop.prefs.updates.title") })}>
+                  {t("desktop.server.updatesWithApp")}
+                </InfoHint>
+              )}
             </span>
             <small className="dk-help">
               {update.checkedAt
@@ -81,12 +87,26 @@ export function Updates({ update }: { update: UpdateCheck }) {
                   })
                 : t("desktop.prefs.updates.neverChecked")}
             </small>
-            {local.run && <small className="dk-help">{t("desktop.server.updatesWithApp")}</small>}
           </span>
           <Button size="sm" loading={update.checking} onClick={() => void checkNow()}>
             {t("desktop.prefs.updates.checkNow")}
           </Button>
         </div>
+      </PrefCard>
+      <PrefCard>
+        <PrefRow
+          htmlFor="auto-update"
+          title={t("desktop.prefs.updates.autoInstall")}
+          hint={hintFor(t, t("desktop.prefs.updates.autoInstall"), t("desktop.prefs.updates.autoInstallDesc"))}
+          end={
+            <Switch
+              id="auto-update"
+              aria-describedby="auto-update-hint"
+              checked={autoUpdateOn(autoPref, local.run)}
+              onCheckedChange={setAutoPref}
+            />
+          }
+        />
       </PrefCard>
 
       {available && latest && (

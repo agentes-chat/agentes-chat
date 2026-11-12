@@ -356,8 +356,6 @@
     "switchWorking": "작업 중",
     "join": "채널 참여",
     "sending": "보내는 중…",
-    "failed": "전송 안 됨 · 다시 시도",
-    "notSent": "메시지가 전송되지 않았어요.",
     "toLatest": "최신 메시지로 이동",
     "toLatestNew": "최신 메시지로 이동: {{text}}",
     "stopAgent": "{{name}} 중지",
@@ -1582,13 +1580,7 @@
       "open": "열기",
       "expandHint": "탭해서 펼치기",
       "stop": "중지",
-      "giveUp": "포기",
-      "done": "완료: {{title}}",
-      "failed": "하지 못함: {{title}}",
-      "failedNote": "하지 못함: {{note}}",
-      "expired": "아무도 제때 열지 않았어요: {{title}}",
-      "cancelled": "취소됨: {{title}}",
-      "withdrawn": "{{name}}에게 더 이상 필요하지 않아요: {{title}}"
+      "giveUp": "포기"
     },
     "live": {
       "inControl": "내가 제어 중",
@@ -1714,6 +1706,10 @@
       "no_driverLinux": "Linux에 이 휴대폰용 udev 규칙이 필요해요",
       "os_too_old": "이 휴대폰의 시스템이 너무 오래됐어요",
       "adb_offline": "케이블을 뺐다가 다시 연결하세요",
+      "wifi_away": "이 iPhone을 Mac의 Wi-Fi에 연결하거나 케이블로 연결하세요",
+      "wifi_asleep": "이 iPhone을 깨우고 잠금 해제한 뒤 Mac 가까이에 두세요",
+      "tunnel_down": "Wi-Fi 연결이 끊겼어요. 이 iPhone을 Mac 가까이에 두거나 케이블로 연결하세요",
+      "wifi_untrusted": "한 번 케이블로 연결하고 신뢰를 탭하세요",
       "other": "아직 준비되지 않았어요"
     },
     "os": {
@@ -1870,6 +1866,15 @@
       "teamMissing": "Xcode에 로그인되어 있지만 아직 팀이 표시되지 않아요. Xcode에서 아무 iOS 앱이나 만들고 Signing & Capabilities에서 팀을 고른 다음 이 iPhone에서 한 번 실행하세요.",
       "uiRefused": "이 iPhone이 테스트 도우미의 탭을 거부했어요. 잠금을 해제하고 요청하면 암호를 입력하세요. 계속 그러면 설정 › 개발자 › UI 자동화 활성화를 껐다가 다시 켜세요.",
       "pluggedIn": "연결했어요",
+      "wifi": {
+        "also": "{{host}}의 Wi-Fi에도 있어요: {{name}}",
+        "use": "Wi-Fi로 사용",
+        "hint": "케이블로 Mac을 신뢰한 적이 있는 iPhone만 여기에 나타나요. Mac은 Xcode가 쓰는 것과 같은 Apple의 암호화된 연결로 iPhone에 닿아요.",
+        "stop": "Wi-Fi로 사용 중지",
+        "stopTitle": "{{name}}을(를) Wi-Fi로 사용하지 않을까요?",
+        "stopText": "에이전트가 더 이상 닿을 수 없어요. 다시 쓰려면 {{host}}에서 다시 고르세요.",
+        "stopped": "{{name}}을(를) 더 이상 Wi-Fi로 사용하지 않아요"
+      },
       "stall": {
         "plug": "{{host}}이(가) 아직 이 iPhone을 인식하지 못해요. 충전 전용이 아닌 데이터 케이블을 쓰고, 이 iPhone 잠금을 해제해 둔 채 요청하면 신뢰를 탭하세요.",
         "devmode": "개발자 모드는 이 iPhone을 재시동한 뒤에만 켜져요. 재시동을 탭하고 다시 켜지면 켜기를 탭하세요. 스위치가 없나요? 이 iPhone을 뽑았다가 다시 연결하세요."
@@ -2127,9 +2132,9 @@
     "ofOnline": "{{count}}대 중 {{online}}대",
     "deleteName": "{{name}} 삭제",
     "deleteFoot": "마음을 바꿀 수 있는 시간은 7일이에요.",
-    "deleteAlert": "모두가 바로 나가게 돼요. 7일 동안은 복원할 수 있어요.",
+    "deleteAlert": "모두가 지금부터 읽기만 할 수 있어요. 7일 동안은 복원할 수 있어요.",
     "deleteAction": "삭제",
-    "deleteIntro": "{{name}}은(는) 모두에게 바로 닫히고 7일 후 영구 삭제돼요.",
+    "deleteIntro": "{{name}}은(는) 모두에게 바로 읽기 전용이 되고 7일 후 영구 삭제돼요.",
     "holdDelete": "길게 눌러 삭제",
     "deleteFailed": "워크스페이스를 삭제하지 못했어요. 다시 시도해 주세요.",
     "access": {
@@ -2420,7 +2425,6 @@
     },
     "formatAuto": "{{name}}이(가) 가장 좋은 걸 골라요",
     "newWidget": {
-      "titleHint": "제목 · 테스트할 때 {{name}}이(가) 제안해요",
       "alerts": "알림 켜짐",
       "realData": "실제 데이터",
       "editAsk": "요청 바꾸기",

@@ -285,7 +285,7 @@ export const words: EmailWords = {
     workspace: (org) => [
       "Ketik kode ini untuk menghapus ruang kerja ",
       { b: org },
-      ". Ruang kerja ini langsung ditutup untuk semua orang dan dihapus permanen 7 hari kemudian.",
+      ". Ruang kerja ini langsung jadi hanya-baca untuk semua orang dan dihapus permanen 7 hari kemudian.",
     ],
     account: (email) => [
       "Ketik kode ini untuk menghapus seluruh akun ",
@@ -305,19 +305,19 @@ export const words: EmailWords = {
       workspace: (org) => [
         "Ketik kode ini untuk menghapus ruang kerjamu ",
         { b: org },
-        ". Ruang kerja ini langsung ditutup dan dihapus permanen 7 hari kemudian.",
+        ". Ruang kerja ini langsung jadi hanya-baca dan dihapus permanen 7 hari kemudian.",
       ],
     },
   },
   deleting: {
     subject: (day) => `Ruang kerja yang kamu ikuti akan dihapus pada ${day}`,
-    preheader: "Sekarang sudah ditutup. Pemilik masih bisa memulihkannya sampai saat itu.",
+    preheader: "Sekarang hanya bisa dibaca. Pemilik masih bisa memulihkannya sampai saat itu.",
     headline: "Sebuah ruang kerja sedang dihapus",
     body: (by, org, day, time) => [
       { b: by },
       " menghapus ruang kerja ",
       { b: org },
-      `. Sekarang sudah ditutup dan akan hilang permanen pada ${day} pukul ${time}.`,
+      `. Sekarang hanya bisa dibaca dan akan hilang permanen pada ${day} pukul ${time}.`,
     ],
     owner: "Berubah pikiran? Pulihkan sebelum waktu itu.",
     button: "Pulihkan ruang kerja",

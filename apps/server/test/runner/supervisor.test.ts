@@ -20,6 +20,7 @@ import { sealSecret, secretAad, vaultAad } from "@agenteschat/adapters/secret-bo
 import { AccountBrains, type AccountBrainsOptions, SHARED_LOGIN_OFF } from "../../runner/account-brains";
 import { AccountManager } from "../../runner/accounts";
 import { AGENT_USERS_FILE, type AgentUser, systemLauncher } from "../../runner/agent-users";
+import { AGY_SIGN_IN_FILE } from "../../runner/agy-home";
 import { BrainManager, PERSONAL_MCP_REFUSED } from "../../runner/brain";
 import { BrowserManager } from "../../runner/browser";
 import { type StoredConfig, writeConfig } from "../../runner/config";
@@ -2415,6 +2416,16 @@ test.if(posix)(
     const agentHome = tempDir("agent-home-");
     const ownHome = tempDir("worker-home-");
     dirs.push(agentHome, ownHome);
+    // The copy of a Gemini sign-in root keeps that its last worker, killed mid-turn, left behind.
+    const left = path.join(
+      ownHome,
+      "accounts",
+      "antigravity",
+      "0193eeee-0000-7000-8000-0000000000a1",
+      AGY_SIGN_IN_FILE,
+    );
+    mkdirSync(path.dirname(left), { recursive: true });
+    writeFileSync(left, "{}");
     const input = new PassThrough();
     const output = new PassThrough();
     const frames: Got[] = [];
@@ -2432,6 +2443,7 @@ test.if(posix)(
     };
     await waitFor(() => frames.length === 1);
     expect(frames[0]).toMatchObject({ type: "hello", token: "", exec: false, workspace: realpathSync(agentHome) });
+    expect(existsSync(left)).toBe(false);
     send({ type: "welcome", machineId: ANA.id, name: "ag-a1b2c3d4", heartbeatMs: 25_000 });
     // Nothing is allowed until the supervisor says what the computer allows.
     send({ type: "request", id: "1", ...exec(ANA, "pwd") });
@@ -4262,6 +4274,8 @@ test.if(posix)("a turn dropped on purpose ends now: its CLI isn't taken for cras
   expect(await errorCode(() => run)).toBe("dropped");
   await sleep(100);
   stop();
+  // The fake CLI may still be writing its last line when the turn ends: read the log once every line is whole.
+  await waitFor(() => readFileSync(h.log, "utf8").endsWith("\n"));
   const started = readFileSync(h.log, "utf8")
     .trim()
     .split("\n")

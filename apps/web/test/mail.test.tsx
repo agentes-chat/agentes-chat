@@ -7,7 +7,7 @@ import { ApiError, type MailAccount, type RoutineInput } from "@agenteschat/clie
 import { defaultPolicy } from "@agenteschat/client/lib/mail";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { setNavigateAway } from "@/lib/navigate";
-import { pick, service } from "./catalog";
+import { openConnected, pick, service } from "./catalog";
 import { ADA_ID, ATLAS_ID, createFakeApi, fakeMailOf, ORG_ID, seedState } from "./fake-api";
 import { MAIL_PROVIDERS } from "./fakes/mail";
 import { renderApp, screen, settle } from "./render";
@@ -233,6 +233,7 @@ describe("Conectores → Email", () => {
       expect.objectContaining({ level: "read", policy: expect.objectContaining({ folders: ["INBOX"] }) }),
     );
     // The new row: the mailbox, active, used by 2 agents.
+    await openConnected();
     const row = screen()
       .getByRole("button", { name: "Quem usa ana@example.com" })
       .closest(".connected-row") as HTMLElement;
@@ -249,7 +250,7 @@ describe("Conectores → Email", () => {
     const hint = () => document.getElementById(address().getAttribute("aria-describedby") ?? "")?.textContent ?? null;
     await type(address(), "Ana@Gmail.com");
     expect(hint()).toBe(
-      "Use o endereço do Mail do iCloud, como nome@icloud.com, mesmo que a sua Conta Apple use o Gmail. No iPhone ele está em Ajustes\u00a0›\u00a0seu nome\u00a0›\u00a0iCloud\u00a0›\u00a0Mail do iCloud, ou veja em icloud.com/mail.",
+      "Use o endereço do Mail do iCloud, como nome@icloud.com, mesmo que a sua Conta Apple use o Gmail.",
     );
     await type(address(), "ana@hotmail.com");
     expect(hint()).toContain("use o Outlook");
@@ -309,6 +310,7 @@ describe("Conectores → Email", () => {
     const { api, state } = mailApi([{ address: "ana@icloud.com", aliases: ["suporte@acme.com.br"] }]);
     await renderApp(`/org/${ORG_ID}/settings/connectors`, { api });
     await settle(8);
+    await openConnected();
     await click(screen().getByRole("button", { name: "Endereços de ana@icloud.com" }));
     await settle(4);
     const dialog = screen().getByRole("dialog", { name: "Endereços de ana@icloud.com" });
@@ -491,6 +493,7 @@ describe("Conectores → Email", () => {
     ]);
     await renderApp(`/org/${ORG_ID}/settings/connectors`, { api });
     await settle(8);
+    await openConnected();
     const row = screen()
       .getByRole("button", { name: "Quem usa ana@example.com" })
       .closest(".connected-row") as HTMLElement;
@@ -519,6 +522,7 @@ describe("Conectores → Email", () => {
     const { api, state } = mailApi([{ address: "ana@example.com" }]);
     await renderApp(`/org/${ORG_ID}/settings/connectors`, { api });
     await settle(8);
+    await openConnected();
     await click(screen().getByRole("button", { name: "Desconectar ana@example.com" }));
     const confirm = screen().getByRole("dialog", { name: "Desconectar ana@example.com?" });
     await click(within(confirm).getByRole("button", { name: "Desconectar" }));

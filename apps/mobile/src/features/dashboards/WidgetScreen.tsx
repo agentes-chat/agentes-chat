@@ -1,5 +1,7 @@
 import {
   useAskWidgetChange,
+  useBuildOnceAi,
+  useDesktopStatus,
   useRefreshWidget,
   useRemoveWidget,
   useUpdateWidget,
@@ -7,9 +9,15 @@ import {
   type WidgetDetail,
   type WidgetSchedule,
   type WidgetUpdate,
+  type WidgetWait,
+  widgetCardStatus,
+  widgetNeedsAi,
+  widgetWaitFix,
+  widgetWaiting,
 } from "@agenteschat/client";
 import { upcomingAt, whenAt } from "@agenteschat/client/lib/format";
 import { plainInline } from "@agenteschat/client/lib/markdown";
+import { can } from "@agenteschat/client/lib/permissions";
 import { WIDGET_LIMITS, WIDGET_SCHEDULES } from "@agenteschat/ui/widgets/spec";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
@@ -17,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useOrg } from "@/providers/org";
 import {
   Button,
   GroupedHeader,
@@ -33,13 +42,16 @@ import {
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { openAgentEdit } from "../agents/AgentEditScreen";
+import { openAgentAi } from "../ai/AgentAiScreen";
+import { openComputer } from "../computer/AgentComputerRow";
 import { boardHref, routineHref } from "../links/logic";
 import { useFailed } from "../routines/hooks";
-import { useOrgId, usePullRefresh } from "../shared/hooks";
+import { useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { goBack, PushedHeader, successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
-import { useAgentLook, useWidgetWords } from "./hooks";
+import { useAgentLook, useWidgetAiWay, useWidgetWords } from "./hooks";
 import { HOME, shownWidgetTitle } from "./logic";
 import { WidgetCard } from "./WidgetView";
 
@@ -49,7 +61,8 @@ const HISTORY_SHOWN = 10;
 const CONDITION_MAX = 200;
 
 /**
- * A widget, pushed from its board (ADR 0135): the widget big, why it didn't update (with Resolve), its title (renamed
+ * A widget, pushed from its board (ADR 0135): the widget big, why it didn't update (with Resolve) or what its refresh
+ * waits for (with Continue now on a pause), its title (renamed
  * in place; a person's title is kept: the agent no longer changes it), how it updates
  * (its schedule, picked in place; the alert and its condition; what the agent reads; its routine), the latest updates,
  * "Update now" and the remove; at the bottom, "Ask <agent> for a change" goes to the agent, who redoes it in place.
@@ -91,12 +104,18 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
   const refresh = useRefreshWidget(orgId);
   const update = useUpdateWidget(orgId);
   const remove = useRemoveWidget(orgId);
+  useBuildOnceAi(orgId, w, w.canEdit);
+  const needsAi = widgetNeedsAi(w);
+  const aiWay = useWidgetAiWay(needsAi ? w.agentId : null, w.failure?.detail);
   const [open, setOpen] = useState<"title" | "schedule" | "alert" | null>(null);
   const [alertOn, setAlertOn] = useState(w.alert.enabled);
   const [condition, setCondition] = useState(w.alert.condition);
   const [title, setTitle] = useState(w.title);
   const home = w.dashboard.kind === "home";
-  const busy = w.status === "building" || w.status === "updating";
+  // A refresh that waits stands still: Update now on it goes on now, or says why it can't.
+  const waiting = widgetWaiting(w, words.now);
+  const status = widgetCardStatus(w, words.now);
+  const busy = status === "building" || status === "updating";
   const shown = shownWidgetTitle(w.title, w.kind, (k) => t(k));
   const toggle = (what: "title" | "schedule" | "alert") => {
     // The title field opens with the widget's title as it is now (the agent may have named it meanwhile).
@@ -228,17 +247,54 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
             refreshedAt: w.refreshedAt,
             schedule: w.schedule,
             w: 2,
+            needsAi,
+            wait: w.wait,
           }}
         />
+        {waiting?.code === "usage_pause" && w.canEdit ? (
+          <View style={styles.failure}>
+            <Text variant="footnote" tone="muted" style={styles.grow}>
+              {t(
+                !waiting.canContinue
+                  ? "usageCard.forbidden"
+                  : waiting.source === "budget"
+                    ? "usageCard.hintBudget"
+                    : "usageCard.hint",
+              )}
+            </Text>
+            <Button
+              size="sm"
+              variant="secondary"
+              label={t("usageCard.continue")}
+              loading={refresh.isPending}
+              disabled={!waiting.canContinue}
+              onPress={updateNow}
+            />
+          </View>
+        ) : waiting ? (
+          <WaitFix agentId={w.agentId} wait={waiting} />
+        ) : null}
         {w.status === "failed" && w.failure ? (
           <View style={styles.failure}>
             <View style={styles.failureLine}>
-              <LineIcon name="info" size={13} color={c.warn} variant="footnote" />
-              <Text variant="footnote" style={[styles.grow, { color: c.warn }]}>
-                {words.failure(w)}
-              </Text>
+              <LineIcon name={needsAi ? "bolt" : "info"} size={13} color={c.warn} variant="footnote" />
+              <View style={styles.grow}>
+                <Text variant="footnote" style={{ color: c.warn }}>
+                  {words.failure(w)}
+                </Text>
+                {aiWay && "locked" in aiWay ? (
+                  <Text variant="footnote" tone="muted">
+                    {aiWay.locked}
+                  </Text>
+                ) : null}
+              </View>
             </View>
-            {w.canEdit ? (
+            {/* Waiting for an AI: Connect (or who can), never Resolve (it builds by itself once one is there). */}
+            {needsAi ? (
+              aiWay && "connect" in aiWay ? (
+                <Button size="sm" variant="secondary" label={t("noAi.action")} onPress={aiWay.connect} />
+              ) : null
+            ) : w.canEdit ? (
               <Button
                 size="sm"
                 variant="secondary"
@@ -413,12 +469,41 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
   );
 }
 
-/** "Ask Theo for a change": a field at the bottom; what is sent goes to the agent, who redoes the widget in place. */
+/**
+ * What ends a widget's wait sooner, under it, for who may do it (`widgetWaitFix`): the agent's budget or AI on its
+ * screens, or its computer for whoever may watch it.
+ */
+function WaitFix({ agentId, wait }: { agentId: string; wait: WidgetWait }) {
+  const { t } = useTranslation();
+  const { org, orgId } = useOrg();
+  const dir = useDirectory();
+  const meId = useMeId();
+  const owner = dir.anyAgent(agentId)?.ownerUserId === meId;
+  const fix = widgetWaitFix(wait, { admin: can(org, "manage_agents"), owner });
+  const watches = useDesktopStatus(orgId, agentId, { enabled: fix === "openComputer" }).isSuccess;
+  if (!fix || (fix === "openComputer" && !watches)) return null;
+  const go = fix === "openComputer" ? openComputer : fix === "raiseBudget" ? openAgentEdit : openAgentAi;
+  return (
+    <View style={styles.failure}>
+      <Button
+        size="sm"
+        variant="secondary"
+        label={t(fix === "openComputer" ? "queue.openComputer" : `usageCard.${fix}`)}
+        onPress={() => go(agentId)}
+      />
+    </View>
+  );
+}
+
+/**
+ * "Ask Theo for a change": a field at the bottom; what is sent goes to the agent, who redoes the widget in place. While
+ * the workspace is being deleted it says why it takes none, as a conversation does (ADR 0088 §7).
+ */
 function AskChange({ widget: w, name }: { widget: WidgetDetail; name: string }) {
   const { t } = useTranslation();
   const { colors: c, shadows } = useTheme();
   const insets = useSafeAreaInsets();
-  const orgId = useOrgId();
+  const { orgId, org } = useOrg();
   const toast = useToast();
   const failed = useFailed();
   const ask = useAskWidgetChange(orgId);
@@ -448,31 +533,37 @@ function AskChange({ widget: w, name }: { widget: WidgetDetail; name: string }) 
           locations={[0, 0.3]}
           style={StyleSheet.absoluteFill}
         />
-        <Locked when={ask.isPending}>
-          <View style={[styles.field, { backgroundColor: c.raised, boxShadow: `${shadows.e1}, ${shadows.top}` }]}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder={t("widgets.menu.change", { name })}
-              placeholderTextColor={c.faint}
-              accessibilityLabel={t("widgets.panel.ask")}
-              multiline
-              maxLength={1000}
-              style={[styles.input, systemText("body"), { color: c.ink }]}
-            />
-            <PressScale
-              to={0.9}
-              onPress={send}
-              disabled={!ready}
-              accessibilityRole="button"
-              accessibilityLabel={t("widgets.panel.send")}
-              style={[styles.send, { backgroundColor: ready ? c.ink : c.plate }]}
-              contentStyle={styles.sendIn}
-            >
-              <Icon name="send" size={18} color={ready ? c.bg : c.faint} />
-            </PressScale>
-          </View>
-        </Locked>
+        {org?.deletion ? (
+          <Text variant="footnote" tone="muted" style={styles.readOnly}>
+            {t("deleting.composer")}
+          </Text>
+        ) : (
+          <Locked when={ask.isPending}>
+            <View style={[styles.field, { backgroundColor: c.raised, boxShadow: `${shadows.e1}, ${shadows.top}` }]}>
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder={t("widgets.menu.change", { name })}
+                placeholderTextColor={c.faint}
+                accessibilityLabel={t("widgets.panel.ask")}
+                multiline
+                maxLength={1000}
+                style={[styles.input, systemText("body"), { color: c.ink }]}
+              />
+              <PressScale
+                to={0.9}
+                onPress={send}
+                disabled={!ready}
+                accessibilityRole="button"
+                accessibilityLabel={t("widgets.panel.send")}
+                style={[styles.send, { backgroundColor: ready ? c.ink : c.plate }]}
+                contentStyle={styles.sendIn}
+              >
+                <Icon name="send" size={18} color={ready ? c.bg : c.faint} />
+              </PressScale>
+            </View>
+          </Locked>
+        )}
       </View>
     </KeyboardStickyView>
   );
@@ -506,6 +597,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   input: { flex: 1, maxHeight: 120, paddingTop: 6, paddingBottom: 6 },
+  // As a conversation's line in place of its composer.
+  readOnly: { textAlign: "center", paddingHorizontal: 16, paddingVertical: 12 },
   send: { width: 36, height: 36, borderRadius: 18 },
   sendIn: { alignItems: "center", justifyContent: "center" },
 });

@@ -273,6 +273,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   run_routine_now: "runningRoutine",
   propose_team: "proposingTeam",
   propose_settings_change: "proposingChange",
+  request_settings_change: "proposingChange",
   propose_member_changes: "proposingChange",
   propose_remove_agents: "proposingChange",
   // The right hand's catalog of what a person can do: a look for the action, the change at once, or its card.

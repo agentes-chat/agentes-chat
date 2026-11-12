@@ -43,11 +43,12 @@ import {
 } from "@agenteschat/client/lib/action-cards";
 import { APP_PAGES, appPagePath } from "@agenteschat/client/lib/app-pages";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { formatTime, lowerFirst } from "@agenteschat/client/lib/format";
+import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
 import {
+  cardDecidedBy,
   cardOutcome,
   chosenRows,
   decidersOf,
@@ -67,11 +68,10 @@ import { Trans, useTranslation } from "react-i18next";
 import { AgentProposalCardView } from "@/components/ActionCard";
 import { AgentAvatar, PersonAvatar } from "@/components/AgentAvatar";
 import { ApprovalAsk } from "@/components/ApprovalAsk";
-import { InlineApproval } from "@/components/ApprovalItem";
 import { DeleteAgentsDialog } from "@/components/DeleteAgentDialog";
 import { useOrg } from "@/components/org-context";
 import { RemoveMemberDialog } from "@/components/RemoveMember";
-import { RequestCard, RequestDone, RequestOpen } from "@/components/RequestCard";
+import { type RequestAnswer, RequestCard, RequestOpen } from "@/components/RequestCard";
 import { DelegateNote, DelegateUndo, useDelegateLine } from "@/components/RightHandDelegate";
 import { useDirectory } from "@/hooks/useDirectory";
 import { inlineWords } from "@/lib/markdown";
@@ -149,52 +149,36 @@ function RemovalCard({
       },
     );
 
+  // Decided: the same card, its rows saying how each ended, and who decided, when and Desfazer where the buttons were.
+  let answer: RequestAnswer | undefined;
   if (open.length === 0) {
     const outcome = cardOutcome(t, rows);
     const receipts = (message?.actions ?? []).filter((a) => rows.some((p) => p.undoActionId === a.id));
     const undoable = receipts.some((a) => !a.undoneAt && a.undoableUntil && Date.parse(a.undoableUntil) > Date.now());
     const undone = receipts.length > 0 && receipts.every((a) => a.undoneAt);
-    const done = rows.filter((p) => p.status === "accepted");
-    // One person decided every row the same way: "Aplicado por você", as on a settings row.
-    const by = first.decidedBy;
-    const alike = rows.every((p) => p.status === first.status && p.decidedBy?.userId === by?.userId);
-    const byMe = by?.userId === me.user.id;
-    const who =
-      !alike || !by
-        ? outcome.label
-        : first.status === "accepted"
-          ? byMe
-            ? t("rightHand.card.appliedByYou")
-            : t("rightHand.card.appliedBy", { name: by.name })
-          : byMe
-            ? t("rightHand.card.declinedByYou")
-            : t("rightHand.card.declinedBy", { name: by.name });
-    return (
-      <RequestDone
-        done={outcome.accepted && !undone}
-        label={label}
-        action={
-          undoable && (
-            <EventPillAction
-              disabled={actions.undoAll.isPending}
-              onClick={() =>
-                message &&
-                actions.undoAll.mutate(message.id, {
-                  onSuccess: () => void qc.invalidateQueries({ queryKey: keys.agents(org.id) }),
-                  onError: failed,
-                })
-              }
-            >
-              {t("rightHand.card.undo")}
-            </EventPillAction>
-          )
-        }
-        time={first.decidedAt ? formatTime(i18n.language, first.decidedAt) : undefined}
-      >
-        {who}: <b>{(done.length ? done : rows).map(nameOf).join(", ")}</b>
-        {undone && ` · ${t("rightHand.card.undone")}`}
-      </RequestDone>
-    );
+    answer = {
+      done: outcome.accepted && !undone,
+      text: undone
+        ? `${cardDecidedBy(t, rows, me.user.id)} · ${t("rightHand.card.undone")}`
+        : cardDecidedBy(t, rows, me.user.id),
+      time: first.decidedAt ? formatTime(i18n.language, first.decidedAt) : undefined,
+      action: undoable ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={actions.undoAll.isPending}
+          onClick={() =>
+            message &&
+            actions.undoAll.mutate(message.id, {
+              onSuccess: () => void qc.invalidateQueries({ queryKey: keys.agents(org.id) }),
+              onError: failed,
+            })
+          }
+        >
+          {t("rightHand.card.undo")}
+        </Button>
+      ) : undefined,
+    };
   }
 
   const unsent = open.filter((p) => !p.canDecide && !p.askedAt);
@@ -263,7 +247,8 @@ function RemovalCard({
         label={label}
         mine={decides}
         waitingFor={state}
-        lead={del ? `${proposalWhy(t, first)} ${t("rightHand.remove.deleteHelp")}` : proposalWhy(t, first)}
+        answer={answer}
+        lead={del && !answer ? `${proposalWhy(t, first)} ${t("rightHand.remove.deleteHelp")}` : proposalWhy(t, first)}
         body={
           <ul className="proposal-rows">
             {rows.map((p) => {
@@ -299,7 +284,7 @@ function RemovalCard({
             })}
           </ul>
         }
-        actions={decision || undefined}
+        actions={(!answer && decision) || undefined}
         what={label}
         locked={decide.isPending || ask.isPending}
       />
@@ -355,52 +340,36 @@ function SettingsRow({
   const delegated = useDelegateLine(delegate);
   const byRightHand = delegated && (delegate?.state === "approved" || delegate?.state === "undone");
 
+  // Decided: the same card, the lines it changed still there, and who did it, when and Desfazer where the buttons were.
+  let answer: RequestAnswer | undefined;
   if (p.status !== "pending") {
     const receipt = message?.actions?.find((a) => a.id === p.undoActionId);
-    const byMe = p.decidedBy?.userId === me.user.id;
-    const who = byRightHand
-      ? delegated
-      : p.status === "accepted"
-        ? byMe
-          ? t("rightHand.card.appliedByYou")
-          : t("rightHand.card.appliedBy", { name: p.decidedBy?.name ?? "" })
-        : byMe
-          ? t("rightHand.card.declinedByYou")
-          : t("rightHand.card.declinedBy", { name: p.decidedBy?.name ?? "" });
+    const who = byRightHand ? delegated : cardDecidedBy(t, [p], me.user.id);
     const undoable =
       receipt && !receipt.undoneAt && receipt.undoableUntil && Date.parse(receipt.undoableUntil) > Date.now();
-    return (
-      <RequestDone
-        done={p.status === "accepted" && !receipt?.undoneAt && delegate?.state !== "undone"}
-        label={label}
-        more={
-          byRightHand && delegate?.reason
-            ? { label: t("rightHandApprovals.card.why"), content: <p>{inlineWords(delegate.reason)}</p> }
-            : undefined
-        }
-        action={
-          byRightHand
-            ? first && <DelegateUndo d={delegate} />
-            : undoable && (
-                <EventPillAction
-                  disabled={actions.undo.isPending}
-                  onClick={() =>
-                    actions.undo.mutate(receipt.id, {
-                      onSuccess: () => void qc.invalidateQueries({ queryKey: keys.agents(org.id) }),
-                      onError: failed,
-                    })
-                  }
-                >
-                  {t("rightHand.card.undo")}
-                </EventPillAction>
-              )
-        }
-        time={p.decidedAt ? formatTime(i18n.language, p.decidedAt) : undefined}
-      >
-        {who}: <b>{[name, ...lines.map((l) => `${lowerFirst(l.field, i18n.language)} ${l.to}`)].join(" · ")}</b>
-        {receipt?.undoneAt && ` · ${t("rightHand.card.undone")}`}
-      </RequestDone>
-    );
+    answer = {
+      done: p.status === "accepted" && !receipt?.undoneAt && delegate?.state !== "undone",
+      text: receipt?.undoneAt ? `${who} · ${t("rightHand.card.undone")}` : who,
+      note: byRightHand && delegate?.reason ? inlineWords(delegate.reason) : undefined,
+      time: p.decidedAt ? formatTime(i18n.language, p.decidedAt) : undefined,
+      action: byRightHand
+        ? (first && <DelegateUndo d={delegate} />) || undefined
+        : undoable && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={actions.undo.isPending}
+              onClick={() =>
+                actions.undo.mutate(receipt.id, {
+                  onSuccess: () => void qc.invalidateQueries({ queryKey: keys.agents(org.id) }),
+                  onError: failed,
+                })
+              }
+            >
+              {t("rightHand.card.undo")}
+            </Button>
+          ),
+    };
   }
 
   const asked = p.askedAt
@@ -477,16 +446,17 @@ function SettingsRow({
       label={label}
       mine={p.canDecide && !p.stale}
       waitingFor={state}
-      lead={p.stale ? t("rightHand.card.staleHelp", g) : proposalWhy(t, p)}
+      answer={answer}
+      lead={p.stale && !answer ? t("rightHand.card.staleHelp", g) : proposalWhy(t, p)}
       object={{
         logo: <AgentAvatar agentId={p.agentId} name={name} size="md" />,
         title: t("rightHand.card.settings", { name }),
         detail: [agent?.handle ? `@${agent.handle}` : null, agent?.role].filter(Boolean).join(" · "),
       }}
       body={
-        (delegated || lines.length > 0) && (
+        ((delegated && !answer) || lines.length > 0) && (
           <>
-            {first && <DelegateNote d={delegate} />}
+            {first && !answer && <DelegateNote d={delegate} />}
             {lines.length > 0 && (
               <dl className="rq__settings">
                 {lines.map((l) => (
@@ -504,7 +474,7 @@ function SettingsRow({
           </>
         )
       }
-      actions={decision || undefined}
+      actions={(!answer && decision) || undefined}
       what={label}
       locked={decide.isPending || ask.isPending || redo.isPending}
     />
@@ -585,11 +555,7 @@ export function CardApproval({ id }: { id: string }) {
   const approval = listed ?? one.data;
   if (!approval) return null;
   const agent = dir.anyAgent(approval.agentId);
-  return approval.status === "pending" ? (
-    <ApprovalAsk approval={approval} agent={agent} members={members} />
-  ) : (
-    <InlineApproval approval={approval} agent={agent} members={members} />
-  );
+  return <ApprovalAsk approval={approval} agent={agent} members={members} />;
 }
 
 /**
@@ -647,13 +613,8 @@ function MemberChanges({ message, card }: { message: Message; card: MemberChange
     const now = people.find((p) => p.userId === r.userId)?.roleIds;
     if (now) setRoles.mutate({ userId: r.userId, roleIds: rolesAfter(r, now) }, { onError: failed });
   };
-  if (members.isSuccess && card.rows.every(done)) {
-    return (
-      <RequestDone done label={title}>
-        {t("rightHand.people.done")}: <b>{[...new Set(card.rows.map((r) => r.name))].join(", ")}</b>
-      </RequestDone>
-    );
-  }
+  // Every row done: the same card, each row saying so, and no footer.
+  const over = members.isSuccess && card.rows.every(done);
   const open = card.rows.filter((r) => !done(r));
   const mine = open.some(may);
   const blocked = open.some((r) => "role" in r && !may(r))
@@ -668,6 +629,7 @@ function MemberChanges({ message, card }: { message: Message; card: MemberChange
         agent={dir.anyAgent(message.author.id ?? "")}
         label={title}
         mine={mine}
+        ended={over}
         waitingFor={mine ? undefined : t(blocked)}
         lead={card.why}
         body={
@@ -809,6 +771,8 @@ export function WorkspaceActionCardView({
   const detail = actionCardDetail(card, t, i18n.language);
   const may = mayApplyCard(card, { userId: me.user.id, may: (key) => can(org, key) });
   const mine = card.forUserId === me.user.id;
+  // Decided: the same card, and who did it, when and Desfazer where the buttons were.
+  let answer: RequestAnswer | undefined;
   if (card.state !== "pending") {
     const receipt = actions?.find((a) => a.kind === "workspace.changed");
     const undoable = receipt && !receipt.undoneAt && Date.parse(receipt.undoableUntil) > Date.now();
@@ -822,23 +786,21 @@ export function WorkspaceActionCardView({
         : byMe
           ? t("rightHand.card.declinedByYou")
           : t("rightHand.card.declinedBy", { name });
-    return (
-      <RequestDone
-        done={card.state === "applied" && !receipt?.undoneAt}
-        label={label}
-        action={
-          undoable && (
-            <EventPillAction disabled={undo.isPending} onClick={() => undo.mutate(receipt.id, { onError: failed })}>
-              {t("rightHand.card.undo")}
-            </EventPillAction>
-          )
-        }
-        time={card.decidedAt ? formatTime(i18n.language, card.decidedAt) : undefined}
-      >
-        {who}: {sentence}
-        {receipt?.undoneAt && ` · ${t("rightHand.card.undone")}`}
-      </RequestDone>
-    );
+    answer = {
+      done: card.state === "applied" && !receipt?.undoneAt,
+      text: receipt?.undoneAt ? `${who} · ${t("rightHand.card.undone")}` : who,
+      time: card.decidedAt ? formatTime(i18n.language, card.decidedAt) : undefined,
+      action: undoable && (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={undo.isPending}
+          onClick={() => undo.mutate(receipt.id, { onError: failed })}
+        >
+          {t("rightHand.card.undo")}
+        </Button>
+      ),
+    };
   }
   const decision = may ? (
     <>
@@ -887,13 +849,14 @@ export function WorkspaceActionCardView({
       label={label}
       mine={may}
       waitingFor={may ? undefined : t("rightHand.action.only")}
+      answer={answer}
       lead={card.params.why || sentence}
       object={{
         logo: <Icon name={card.params.action.includes("channel") ? "channel" : "shield"} size={20} />,
         title: sentence,
         ...(detail ? { detail } : {}),
       }}
-      actions={decision || undefined}
+      actions={(!answer && decision) || undefined}
       what={label}
       locked={decide.isPending}
     />

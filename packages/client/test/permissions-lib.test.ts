@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { addsAgentsTo, editsMemory, leavesChannel, managesChannel, setsAutoReply } from "../src/lib/permissions";
+import {
+  addsAgentsTo,
+  addsConnectors,
+  editsMemory,
+  leavesChannel,
+  makesAgents,
+  managesChannel,
+  setsAutoReply,
+} from "../src/lib/permissions";
 
 const member = { permissions: ["read", "post"] };
 const manager = { permissions: ["read", "post", "manage_channels"] };
@@ -60,4 +68,19 @@ test("anyone in a channel may leave it, except #general, where everyone stays", 
   expect(leavesChannel({ name: "eng", isMember: true })).toBe(true);
   expect(leavesChannel({ name: "eng", isMember: false })).toBe(false);
   expect(leavesChannel({ name: "general", isMember: true })).toBe(false);
+});
+
+test("a way into a new agent shows for who creates agents, never in a workspace being deleted", () => {
+  const maker = { permissions: ["read", "create_agents"] };
+  expect(makesAgents(maker)).toBe(true);
+  expect(makesAgents(member)).toBe(false);
+  expect(makesAgents({ ...maker, deletion: { dueAt: null, requestedAt: null, requestedBy: null } })).toBe(false);
+  expect(makesAgents(null)).toBe(false);
+});
+
+test("a way into connecting a service shows for who manages connectors, never in a workspace being deleted", () => {
+  const admin = { permissions: ["read", "manage_connectors"] };
+  expect(addsConnectors(admin)).toBe(true);
+  expect(addsConnectors(member)).toBe(false);
+  expect(addsConnectors({ ...admin, deletion: { dueAt: null, requestedAt: null, requestedBy: null } })).toBe(false);
 });

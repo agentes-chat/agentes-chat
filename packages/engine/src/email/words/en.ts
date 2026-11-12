@@ -320,7 +320,7 @@ export const en = {
     workspace: (org: string): Text => [
       "Type this code to delete the workspace ",
       { b: org },
-      ". It closes for everyone at once and is deleted for good 7 days later.",
+      ". It turns read-only for everyone at once and is deleted for good 7 days later.",
     ],
     account: (email: string): Text => [
       "Type this code to delete the whole account ",
@@ -340,19 +340,19 @@ export const en = {
       workspace: (org: string): Text => [
         "Type this code to delete your workspace ",
         { b: org },
-        ". It closes at once and is deleted for good 7 days later.",
+        ". It turns read-only at once and is deleted for good 7 days later.",
       ],
     },
   },
   deleting: {
     subject: (day: string) => `A workspace you're in will be deleted on ${day}`,
-    preheader: "It's closed now. An owner can still restore it until then.",
+    preheader: "It's read-only now. An owner can still restore it until then.",
     headline: "A workspace is being deleted",
     body: (by: string, org: string, day: string, time: string): Text => [
       { b: by },
       " deleted the workspace ",
       { b: org },
-      `. It's closed now and goes for good on ${day} at ${time}.`,
+      `. It's read-only now and goes for good on ${day} at ${time}.`,
     ],
     owner: "Changed your mind? Restore it before then.",
     button: "Restore the workspace",

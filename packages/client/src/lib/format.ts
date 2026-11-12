@@ -97,6 +97,9 @@ export const capitalize = (s: string, locale?: string) => s.charAt(0).toLocaleUp
  */
 export const keepWhole = (fact: string) => fact.replace(/ /g, "\u00a0");
 
+/** Words written with `<code>` tags, as plain text where the tags can't be drawn. */
+export const stripCodeTags = (words: string) => words.replace(/<\/?code>/g, "");
+
 /**
  * A sentence's first letter in lower case, to follow a "·" ("Trabalhando · preencheu um campo"). German keeps it: its
  * nouns are capitalized, so only a translator knows a lowercase form there. A name ("GitHub", "PDF") stays as it is.

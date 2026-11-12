@@ -186,9 +186,7 @@ export async function mayStopRun(
   return (await personOfMessage(db, row.run.orgId, row.run.triggerMessageId)) === userId;
 }
 
-/** Who canceled (stored on the run as `canceled_by:{userId}`). */
-export const canceledBy = (error: string | null | undefined) =>
-  error?.startsWith("canceled_by:") ? error.slice("canceled_by:".length) : null;
+export { canceledBy } from "./runs";
 
 /**
  * Stops an agent's run (`POST …/runs/{runId}/cancel`), for who may (`mayStopRun`).

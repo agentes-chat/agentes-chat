@@ -115,6 +115,20 @@
 .imp-other p {
   margin: 0;
 }
+/* Connect with MCP takes focus where the drop zone it replaced had it (Trocar arquivo, Importar outro). */
+.imp-other:focus {
+  outline: none;
+}
+
+/* Connect with MCP: the agents the app creates, as they arrive. */
+.imp-arrivals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.imp-arrivals__line {
+  font-size: 13.5px;
+}
 
 /* ── Drop zone, reading, paste ──────────────────────────────────────────── */
 .imp-drop {
@@ -445,11 +459,6 @@ html:not([data-pointer]) .imp-link:focus-visible {
   .imp-todo__link {
     margin-left: 24px;
   }
-}
-
-/* ── "Do seu app de IA": the most reliable way, on top of the sources ───── */
-.imp-aiapp {
-  text-align: left;
 }
 
 /* "Arquivos que ficaram de fora": each reason's chip and its files on one line, on one baseline, wrapping as words. */

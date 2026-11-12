@@ -15,7 +15,8 @@ import {
   type TurnContext,
 } from "@agenteschat/adapters/machine-protocol";
 import { realFoldersFor } from "./access";
-import { agentAccountHome, grantOf, lentAccounts } from "./accounts";
+import { agentAccountHome, agentAccountsDir, grantOf, lentAccounts } from "./accounts";
+import { dropAgySignIns } from "./agy-home";
 import { BrainManager, turnContext } from "./brain";
 import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager, type BrowserManagerOptions, launchChrome } from "./browser";
@@ -549,6 +550,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     systemdBooted() ? (file, args, options) => spawnGated(kind, file, args, options, link.enterScope) : undefined;
   const cli = gated("cli");
   const chrome = gated("browser");
+  dropAgySignIns(agentAccountsDir(home, "antigravity"));
   // The account folders root lends to this agent's user for its turns and tasks (`AccountManager.lendTo`), and its
   // own folder for an account root keeps, whose credential comes with each turn and task (`AccountManager.grant`).
   // What the turns say about the plan's usage goes to root, which keeps the accounts.
