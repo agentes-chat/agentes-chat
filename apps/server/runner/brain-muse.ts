@@ -1,14 +1,13 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import type { EventEmitter } from "node:events";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createInterface } from "node:readline";
 import type { CommandProfile } from "@agenteschat/adapters/command-policy";
-import type { AgentScope } from "@agenteschat/adapters/machine-protocol";
-import { isAccountId } from "@agenteschat/adapters/machine-protocol";
+import { type AgentScope, isAccountId } from "@agenteschat/adapters/machine-protocol";
 import { redactSecrets } from "@agenteschat/adapters/secret-box";
-import { ACCOUNT_MISSING_MESSAGE, accountEnv, museKeyOf, withoutSignIns } from "./accounts";
+import { ACCOUNT_MISSING_MESSAGE, accountEnv, museKeyOf } from "./accounts";
 import {
   CODEX_TOOL_OUTPUT_MAX,
   type CodexBrainEvent,
@@ -19,45 +18,45 @@ import {
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { MUSE_BIN, resolveCommand } from "./executors";
-import { CODEX_MCP_ENV, CODEX_MCP_SERVER, redactDeep } from "./mcp";
+import { CODEX_MCP_ENV, CODEX_MCP_SERVER } from "./mcp";
 import { resolveForAgent } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
 
 /**
- * The Muse Code branch of `brain.turn` (protocol 59, ADR 0174): one agent turn as one run of Muse's CLI
- * (`muse exec --json`), its JSONL turn events turned into brain events. Read in the binary at 1.4.18 (`muse exec
- * --help`, `muse schema`, a live echo run) and in the two products that integrated it first (OpenBot's
- * `muse-client.ts`, OpenMausBot's `muse-code.ts`).
+ * The Muse Code brain (protocol 59, ADR 0174): a turn of Meta's agent on the agent's computer, driven over **MSP** —
+ * one `muse serve` host per turn, which speaks the protocol on its stdio — under a person's signed-in subscription.
  *
- * - `muse exec --json`, an argv with no prompt in it: `exec` reads no standard input at all ("missing prompt"), so
- *   the prompt goes in a file of our own (`--prompt-file`) — no argument limit, and a new session's prompt carries
- *   the engine's context, as Muse has no system prompt flag.
- * - The session: every line's `stream` names it; our session → Muse's lives in `<runner home>/brain/muse-sessions.json`
- *   (per account, like Codex's threads and OpenCode's sessions). A runner that lost it starts a new session, with the
- *   context again.
- * - Everything we set rides in the account's own `settings.json` (`$XDG_CONFIG_HOME/muse`, `schema_version` 1 or every
- *   command fails): our MCP server as `mcp_servers.agentes` (stdio, `required`, so a bridge that does not come up ends
- *   the turn instead of going quiet), no hooks of the machine, and the permission postures.
- * - Postures here are flags, not approvals: `exec` has nobody to ask, so approval is off and the sandbox alone
- *   contains the agent (`--disable-approval`). A plan turn also loses write and shell (`--disable-write
- *   --disable-shell`, measured to be the only path — `--permission-profile read-only` answers "profile does not
- *   exist").
- * - Contributor mode is on for subscriptions by default: every turn turns it off, or the workspace's code trains Meta.
- * - Two things are refused rather than faked: a `chat` turn (there is no tool allow/deny list on this CLI, so the
- *   right-hand guard of ADR 0137 §4 cannot be enforced) and Windows.
+ * Why `serve` and not `muse exec`: a subscription turn needs a session that outlives the turn (the next message
+ * continues instead of restating everything) and somewhere for an approval to be answered. `exec` offers neither,
+ * and a one-shot process can be neither steered nor interrupted either. Read in the SDK's own protocol documentation
+ * (`@muse-code/sdk` 1.4.15: `msp.d.ts`, `connection.d.ts`) and in a live handshake against
+ * `muse serve --provider echo`, whose frames the tests replay.
+ *
+ * - Frames are NDJSON of JSON-RPC 2.0. `initialize` is answered and then the `initialized` notification unlocks
+ *   every other method, which is why a handshake without it answers `notInitialized` to everything. Every command
+ *   carries a **UUIDv7** `commandId`; a v4 is refused ("expected UUIDv7").
+ * - The session: our session → Muse's lives in `<runner home>/brain/muse-sessions.json`, per account. A stored one is
+ *   resumed (`session/resume`), so the agent keeps its thread; a lost one starts a new session and the engine's
+ *   context leads the prompt again, as every other brain does with a new session.
+ * - The account is a **sign-in**, not a key: `META_API_KEY` is deleted from the host's environment, or a key would
+ *   answer in the person's place, and the account's own `XDG_CONFIG_HOME` keeps its credential and sessions apart.
+ * - Approval mode is `never` for now: nothing here answers an `approval/requested`, and `onRequest` would leave the
+ *   turn hanging. The sandbox, which is what actually contains the agent, stays on.
+ * - Contributor mode is on for subscriptions by default; every host turns it off, or the workspace's code trains Meta.
+ * - Refused rather than faked: a `chat` turn (no tool allow/deny list on this CLI) and Windows.
  */
 
 const KILL_GRACE_MS = 5000;
+const INIT_TIMEOUT_MS = 30_000;
+const CLOSE_TIMEOUT_MS = 5000;
 
-/** Muse's own key variable; also what an account sets. */
+/** Muse's key variable: an account may carry one, and it must not answer for the sign-in. */
 export const MUSE_KEY_ENV = "META_API_KEY";
-/** The launcher installs itself over the version we pinned, mid-turn. */
+/** The launcher upgrades itself: a version must not change under a live host. */
 export const MUSE_NO_AUTO_UPDATE = "1";
 /** Its own mark, absent from a plain machine: the same rule as `OPENCODE_RUN_ENV`. */
 export const MUSE_RUN_ENV = "AGENTES_MCP_RUN";
-/** The brief it gets before its first turn of a session. */
-const MUSE_SESSION_GONE = /session not found|unknown session|no such session/i;
 
 export interface MuseBrainTurnRequest {
   runId: string;
@@ -76,23 +75,46 @@ export interface MuseBrainTurnRequest {
 
 /** Where our session → Muse session ids live in the runner home. */
 export const museSessionsFile = (runnerHome: string) => path.join(runnerHome, "brain", "muse-sessions.json");
-/** The account's config folder (Muse reads `$XDG_CONFIG_HOME/muse`; its credential location is undocumented). */
+/** The account's config folder: Muse reads `$XDG_CONFIG_HOME/muse`, and its sign-in rests beside it. */
 export const museConfigDir = (accountHome: string) => path.join(accountHome, "config");
 
 /** `muse --version` prints `Muse Code 1.4.18 (1.4.18-R8587.1)`. */
 export const museVersion = (output: string) => output.match(/\b\d+\.\d+\.\d+-R\d+(?:\.\d+)?\b/)?.[0];
 
-/** The settings document of an account turn: our MCP server, no hooks, and nothing of the machine's. */
-export function museSettings(input: {
-  mcp: { token: string; url?: string };
-  mcpCommand?: string[];
-  chat?: boolean;
-}): string {
+/** A UUIDv7, which every MSP command requires. */
+export function uuidv7(now = Date.now()): string {
+  const b = randomBytes(16);
+  const ms = BigInt(now);
+  for (let i = 0; i < 6; i++) b[i] = Number((ms >> BigInt(8 * (5 - i))) & 0xffn);
+  b[6] = ((b[6] as number) & 0x0f) | 0x70;
+  b[8] = ((b[8] as number) & 0x3f) | 0x80;
+  const h = b.toString("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/**
+ * The host's argv. The sandbox posture is decided here (the wire cannot change it); the approval mode is decided on
+ * the wire, which is why no approval flag appears.
+ */
+export function museServeArgs(input: { profile?: CommandProfile } = {}): string[] {
+  return ["serve", "--trust-workspace", ...(input.profile === "plan" ? ["--disable-write", "--disable-shell"] : [])];
+}
+
+/** The host's environment: no key to answer in the person's place, no self-upgrade, no contributor mode. */
+export function museHostEnv(base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const env = { ...base };
+  delete env[MUSE_KEY_ENV];
+  env.MUSE_NO_AUTO_UPDATE = MUSE_NO_AUTO_UPDATE;
+  env.MUSE_CONTRIBUTOR_MODE = "0";
+  return env;
+}
+
+/** The account's settings document: our MCP server in it, and none of the machine's hooks (they run unsandboxed). */
+export function museSettings(input: { mcp: { token: string; url?: string }; mcpCommand?: string[] }): string {
   const env = (name: string) => `\${${name}}`;
   return JSON.stringify({
-    // Required, or every command refuses the document ("missing field `schema_version`").
+    // Required: without it every command refuses the document ("missing field `schema_version`").
     schema_version: 1,
-    // The machine's hooks run outside Muse's sandbox: none of them, from either file.
     hooks: {},
     managed_hooks_path: null,
     mcp_servers: {
@@ -110,7 +132,6 @@ export function museSettings(input: {
             env: {
               [CODEX_MCP_ENV[0]]: env(CODEX_MCP_ENV[0]),
               [CODEX_MCP_ENV[2]]: env(CODEX_MCP_ENV[2]),
-              ...(env(CODEX_MCP_ENV[1]) ? {} : {}),
             },
             mode: "required",
           },
@@ -118,27 +139,8 @@ export function museSettings(input: {
   });
 }
 
-/**
- * The turn's argv. No prompt: it goes through `--prompt-file`. A plan turn is read-only by flags, because
- * `--permission-profile read-only` takes a profile id Muse does not ship under that name.
- */
-export function museTurnArgs(input: { session?: string; model?: string; profile?: CommandProfile }): string[] {
-  return [
-    "exec",
-    "--json",
-    // Nobody answers an approval in `exec`: the sandbox is the guard that is left.
-    "--disable-approval",
-    "--trust-workspace",
-    "--contributor-mode",
-    "off",
-    ...(input.profile === "plan" ? ["--disable-write", "--disable-shell"] : []),
-    ...(input.session ? ["--session-id", input.session] : []),
-    ...(input.model ? ["--model", input.model] : []),
-  ];
-}
-
 const USAGE_LIMIT = /usage limit|allowance (?:is )?(?:exhausted|used up)|out of (?:allowance|credits)/i;
-export const MUSE_AUTH = /not logged in|unauthori[sz]ed|invalid api key|401/i;
+export const MUSE_AUTH = /not logged in|signed out|unauthori[sz]ed|invalid api key|401/i;
 
 export function museProblem(problem: string, worked = false): CodexBrainEvent[] {
   if (USAGE_LIMIT.test(problem)) return [{ type: "limit", ...(/reset/i.test(problem) ? { resetsAt: problem } : {}) }];
@@ -155,19 +157,12 @@ const cut = (text: string) =>
   text.length > CODEX_TOOL_OUTPUT_MAX ? `${text.slice(0, CODEX_TOOL_OUTPUT_MAX)}\n…` : text;
 
 /**
- * One line of `muse exec --json` into brain events. Only four payload families matter here; the rest of the log
- * (task lifecycle, session, runtime commands) is skipped by its `payload_type` **before** its payload is read —
- * a one-word echo turn is twenty-five records.
+ * One MSP notification into brain events. Three families matter; everything else (task lifecycle, reminders, view
+ * bookkeeping) is skipped by its method before its payload is read.
  */
 export class MuseEventMapper {
-  /** The Muse session this turn belongs to, once a line names one. */
-  session?: string;
-  /** The text that streamed, for a `done` that carries none. */
-  streamed = "";
-  /** Muse's own words about a failure, when it gave any. */
-  failed?: string;
-  private tokens = { input: 0, output: 0, cacheRead: 0, model: undefined as string | undefined };
   private readonly items = new Map<string, { name: string; args: unknown }>();
+  usage = { input: 0, output: 0, cacheRead: 0, model: undefined as string | undefined };
 
   constructor(private readonly opts: { model?: string; redact?: (text: string) => string } = {}) {}
 
@@ -175,37 +170,23 @@ export class MuseEventMapper {
     return this.opts.redact ? this.opts.redact(text) : text;
   }
 
-  line(raw: string): CodexBrainEvent[] {
-    const trimmed = raw.trim();
-    if (!trimmed.startsWith("{")) return [];
-    let ev: Record<string, unknown>;
-    try {
-      ev = JSON.parse(trimmed) as Record<string, unknown>;
-    } catch {
-      return [];
-    }
-    const stream = isRecord(ev.stream) ? ev.stream : undefined;
-    if (stream && stream.kind === "session" && !this.session) this.session = str(stream.id);
-    return this.payload(str(ev.payload_type), isRecord(ev.payload) ? ev.payload : {});
-  }
-
-  private payload(type: string, p: Record<string, unknown>): CodexBrainEvent[] {
-    switch (type) {
-      case "run.output.delta": {
-        const text = this.clean(str(p.text));
-        if (!text) return [];
-        this.streamed += text;
-        return [{ type: "text_delta", text }];
+  event(method: string, p: Record<string, unknown>): CodexBrainEvent[] {
+    switch (method) {
+      case "item/delta": {
+        // Only the answer's own text: reasoning and summaries have fields of their own.
+        const field = str(p.field);
+        if (field && field !== "text") return [];
+        const text = this.clean(str(p.delta));
+        return text ? [{ type: "text_delta", text }] : [];
       }
-      case "item.started":
-      case "item.completed": {
+      case "item/started":
+      case "item/completed": {
         const item = isRecord(p.item) ? p.item : {};
-        const kind = str(item.kind);
-        if (kind !== "toolCall") return [];
+        if (str(item.kind) !== "toolCall") return [];
         const id = str(item.itemId);
         const name = this.clean(str(item.tool) || "tool");
-        if (type === "item.started") {
-          // `args` is model-authored and may not be JSON yet while it streams: never a failure, the input stays raw.
+        if (method === "item/started") {
+          // `args` is model-authored JSON that may still be incomplete: the raw string is kept, never a failure.
           const raw = str(item.args);
           let parsed: unknown = raw;
           if (raw) {
@@ -221,63 +202,159 @@ export class MuseEventMapper {
         const known = this.items.get(id);
         this.items.delete(id);
         const output = str(item.visibleOutput) || str(item.output);
+        const failed = str(item.status) === "failed";
         return [
           {
             type: "tool_call",
             id,
             name: known?.name ?? name,
-            input: this.clean(JSON.stringify(known?.args ?? {})),
-            ...(output
-              ? {
-                  executed: {
-                    content: cut(this.clean(output)),
-                    ...(item.status === "failed" ? { isError: true } : {}),
-                  },
-                }
+            input: known?.args ?? {},
+            // A completed call is a result whichever way it went; a failed one with no words still says it failed.
+            ...(output || failed
+              ? { executed: { content: cut(this.clean(output)), ...(failed ? { isError: true } : {}) } }
               : {}),
           },
         ];
       }
-      case "run.usage": {
-        for (const model of Array.isArray(p.models) ? p.models : []) {
-          if (!isRecord(model)) continue;
-          this.tokens.input += num(model.input_tokens);
-          this.tokens.output += num(model.output_tokens);
-          this.tokens.cacheRead += num(model.cached_tokens);
-          if (!this.tokens.model && typeof model.model === "string") this.tokens.model = model.model;
-        }
+      case "session/tokenUsage": {
+        this.usage.input += num(p.promptTokens);
+        this.usage.output += num(p.outputTokens);
+        const cumulative = isRecord(p.cumulative) ? p.cumulative : {};
+        this.usage.cacheRead += num(cumulative.cacheReadTokens);
+        if (!this.usage.model && typeof p.modelId === "string") this.usage.model = p.modelId;
         return [];
       }
-      case "run.terminal.completed":
-        return [];
-      case "run.terminal.failed":
-      case "run.terminal.cancelled":
-        this.failed = this.clean(str(p.reason) || str(p.text) || type.replace("run.terminal.", ""));
-        return [];
       default:
         return [];
     }
   }
 
-  /** The turn's end: its usage (when a step reported tokens), then one `done`, or `error` (after `limit`). */
-  finish(input: { exitCode: number | null; sessionId: string; stderr?: string }): CodexBrainEvent[] {
-    void input.stderr;
-    const { input: read, output, cacheRead } = this.tokens;
-    const usage: CodexBrainEvent[] = [
+  /** The turn's usage and its one `done`. */
+  finish(sessionId: string): CodexBrainEvent[] {
+    const { input, output, cacheRead, model } = this.usage;
+    const named = this.opts.model ?? model;
+    return [
       {
         type: "usage",
-        input: read,
+        input,
         output,
         source: "plan",
-        ...((this.opts.model ?? this.tokens.model) ? { model: this.opts.model ?? this.tokens.model } : {}),
+        ...(named ? { model: named } : {}),
         ...(cacheRead ? { cacheRead } : {}),
       },
+      { type: "done", text: "", session: { id: sessionId } },
     ];
-    const failed = this.failed;
-    if (failed) return [...usage, ...museProblem(failed, Boolean(this.streamed))];
-    if (input.exitCode !== 0)
-      return [...usage, ...museProblem(`Muse Code exited with code ${input.exitCode ?? "?"}`, Boolean(this.streamed))];
-    return [...usage, { type: "done", text: this.streamed, session: { id: input.sessionId } }];
+  }
+}
+
+type Reply = { result?: Record<string, unknown>; error?: { code: number; message: string } };
+
+/** A `muse serve` host: NDJSON frames on stdio, one request table, notifications routed out. */
+export class MuseHost {
+  private buffer = "";
+  private nextId = 1;
+  private readonly waiting = new Map<number, (reply: Reply) => void>();
+  private closed = false;
+  private ended = false;
+  stderr = "";
+
+  constructor(
+    private readonly child: ChildProcess,
+    private readonly onNotification: (method: string, params: Record<string, unknown>) => void,
+  ) {
+    child.stdout?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk: string) => this.read(chunk));
+    child.stdin?.on("error", () => undefined);
+    child.stderr?.setEncoding("utf8");
+    child.stderr?.on("data", (chunk: string) => {
+      this.stderr = (this.stderr + chunk).slice(-2000);
+    });
+    // A host that dies mid-handshake leaves requests unanswered: they fail now, with what it said.
+    (child as unknown as EventEmitter).on("close", () => {
+      this.ended = true;
+      for (const [, waiting] of this.waiting)
+        waiting({ error: { code: -1, message: this.stderr.trim() || "The Muse host ended." } });
+      this.waiting.clear();
+    });
+  }
+
+  private read(chunk: string) {
+    this.buffer += chunk;
+    for (;;) {
+      const at = this.buffer.indexOf("\n");
+      if (at < 0) return;
+      const line = this.buffer.slice(0, at);
+      this.buffer = this.buffer.slice(at + 1);
+      if (!line.trim()) continue;
+      let frame: Record<string, unknown>;
+      try {
+        frame = JSON.parse(line) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+      const id = typeof frame.id === "number" ? frame.id : undefined;
+      const waiting = id === undefined ? undefined : this.waiting.get(id);
+      if (waiting !== undefined && id !== undefined) {
+        this.waiting.delete(id);
+        waiting(frame.error ? { error: frame.error as Reply["error"] } : { result: frame.result as Reply["result"] });
+        continue;
+      }
+      if (typeof frame.method === "string") {
+        // A request the host sends us is answered empty: we subscribe to views, we do not serve methods.
+        if (id !== undefined) this.write({ jsonrpc: "2.0", id, result: {} });
+        this.onNotification(frame.method, isRecord(frame.params) ? frame.params : {});
+      }
+    }
+  }
+
+  private write(frame: Record<string, unknown>) {
+    if (this.closed) return;
+    this.child.stdin?.write(`${JSON.stringify(frame)}\n`);
+  }
+
+  request(method: string, params?: Record<string, unknown>, timeoutMs = 0): Promise<Record<string, unknown>> {
+    const id = this.nextId++;
+    return new Promise((resolve, reject) => {
+      const timer = timeoutMs
+        ? setTimeout(() => {
+            this.waiting.delete(id);
+            reject(new Error(`${method} timed out`));
+          }, timeoutMs)
+        : undefined;
+      this.waiting.set(id, (reply) => {
+        if (timer) clearTimeout(timer);
+        if (reply.error) reject(new Error(reply.error.message));
+        else resolve(reply.result ?? {});
+      });
+      this.write(params === undefined ? { jsonrpc: "2.0", id, method } : { jsonrpc: "2.0", id, method, params });
+    });
+  }
+
+  /** Fails every in-flight request: the host is gone and nothing will answer. */
+  fail(message: string) {
+    for (const [, waiting] of this.waiting) waiting({ error: { code: -1, message } });
+    this.waiting.clear();
+  }
+
+  notify(method: string) {
+    this.write({ jsonrpc: "2.0", method });
+  }
+
+  async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
+    this.child.stdin?.end();
+    if (this.ended) return;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        killTree(this.child, "SIGKILL");
+        resolve();
+      }, CLOSE_TIMEOUT_MS);
+      (this.child as unknown as { on: (event: string, fn: () => void) => void }).on("close", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
   }
 }
 
@@ -289,11 +366,10 @@ export interface MuseTurnInput {
   system: string;
   prompt: string;
   mcp: { token: string; url?: string };
-  /** The account (its sessions are its own): its folder, and its key. */
+  /** The account (its sessions and its sign-in are its own): its folder, and a key when it carries one. */
   account?: { id: string; home: string; key?: string };
   profile?: CommandProfile;
   chat?: boolean;
-  freeTier?: boolean;
 }
 
 export interface MuseTurnOptions {
@@ -311,6 +387,13 @@ export interface MuseTurnOptions {
   platform?: NodeJS.Platform;
 }
 
+/** The turn's outcome, once its host is gone. */
+export interface MuseTurnEnd {
+  done: boolean;
+  canceled: boolean;
+  failure?: string;
+}
+
 /** Runs one Muse turn and emits its events; ends with exactly one `done` or `error`. Never throws. */
 export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): Promise<void> {
   const fail = (code: string, message: string, retryable?: boolean) =>
@@ -319,24 +402,20 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     return fail("unsupported", "The Muse Code brain isn't supported on Windows yet.");
   if (input.chat)
     return fail("unsupported", "Muse Code can't hold a right hand yet: its CLI has no way to withhold its own tools.");
+
   const key = input.account?.key;
   const sessionKey = codexThreadKey(input.sessionId, input.account?.id);
   const inherited: NodeJS.ProcessEnv = { ...process.env, ...(opts.env ?? {}) };
   const home = inherited.HOME || os.homedir();
-  // No account: the machine's own sign-in must not answer for a turn that asked for none.
   const base: NodeJS.ProcessEnv = {
-    ...(input.freeTier && !input.account ? withoutSignIns(inherited) : inherited),
+    ...museHostEnv(inherited),
     [MUSE_RUN_ENV]: input.runId,
     [CODEX_MCP_ENV[0]]: input.mcp.token,
     ...(opts.socketPath ? { [CODEX_MCP_ENV[1]]: opts.socketPath } : {}),
     [CODEX_MCP_ENV[2]]: opts.runnerHome,
-    // The launcher upgrades itself: a version must not change under this parser mid-turn.
-    MUSE_NO_AUTO_UPDATE: MUSE_NO_AUTO_UPDATE,
   };
-  delete base[MUSE_KEY_ENV];
-  const env = input.account ? accountEnv("muse", input.account.home, base) : base;
   const configDir = museConfigDir(input.account ? input.account.home : path.join(opts.runnerHome, "brain", "muse"));
-  env.XDG_CONFIG_HOME = configDir;
+  const env = input.account ? accountEnv("muse", configDir, base) : { ...base, XDG_CONFIG_HOME: configDir };
   // The agent's commands inherit XDG_CONFIG_HOME: gh keeps finding its sign-in where it was.
   env.GH_CONFIG_DIR ??= path.join(inherited.XDG_CONFIG_HOME || path.join(home, ".config"), "gh");
   if (key) env[MUSE_KEY_ENV] = key;
@@ -354,119 +433,122 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   const redact = key
     ? (text: string) => redactSecrets(opts.redact ? opts.redact(text) : text, [{ name: MUSE_KEY_ENV, value: key }])
     : opts.redact;
-  const promptFile = path.join(configDir, `prompt-${input.runId}.md`);
-  const prompt =
-    input.sessionId && opts.sessions.get(sessionKey)
+
+  let child: ChildProcess;
+  try {
+    child = (opts.spawn ?? spawn)(
+      resolveCommand(opts.bin ?? MUSE_BIN, env.PATH),
+      museServeArgs({ ...(input.profile ? { profile: input.profile } : {}) }),
+      { cwd: input.cwd, env, stdio: ["pipe", "pipe", "pipe"], detached: true },
+    );
+  } catch (err) {
+    const missing = (err as NodeJS.ErrnoException).code === "ENOENT";
+    return fail(
+      missing ? "muse_missing" : "muse_failed",
+      missing ? "Muse Code's CLI is not installed on this computer." : (err as Error).message,
+      true,
+    );
+  }
+
+  const mapper = new MuseEventMapper({
+    ...(input.model ? { model: input.model } : {}),
+    ...(redact ? { redact } : {}),
+  });
+  let finished = false;
+  let missingHost = false;
+  let failure: string | undefined;
+  let sessionId: string | undefined;
+  let done: () => void = () => undefined;
+  const turnOver = new Promise<void>((resolve) => {
+    done = resolve;
+  });
+
+  const host = new MuseHost(child, (method, params) => {
+    if (method === "turn/completed") {
+      finished = true;
+      done();
+      return;
+    }
+    for (const event of mapper.event(method, params)) opts.emit(event);
+  });
+  (child as unknown as EventEmitter).on("error", (err: Error) => {
+    if (finished) return;
+    missingHost = (err as NodeJS.ErrnoException).code === "ENOENT";
+    failure = missingHost ? "ENOENT: Muse Code's CLI is not installed on this computer." : err.message;
+    host.fail(failure);
+    done();
+  });
+  (child as unknown as EventEmitter).on("close", () => {
+    if (finished) return;
+    failure = host.stderr.trim() || "Muse Code's host ended before the turn did.";
+    done();
+  });
+
+  const abort = () => {
+    if (sessionId) void host.request("turn/interrupt", { commandId: uuidv7(), sessionId }).catch(() => undefined);
+    setTimeout(() => killTree(child, "SIGKILL"), KILL_GRACE_MS);
+  };
+  if (opts.signal.aborted) abort();
+  else opts.signal.addEventListener("abort", abort, { once: true });
+
+  try {
+    await host.request("initialize", { clientInfo: { name: "agentes_chat", version: "1" } }, INIT_TIMEOUT_MS);
+    host.notify("initialized");
+    const stored = opts.sessions.get(sessionKey);
+    const resumed = stored
+      ? await host
+          .request("session/resume", { commandId: uuidv7(), sessionId: stored }, INIT_TIMEOUT_MS)
+          .catch(() => undefined)
+      : undefined;
+    const session = isRecord(resumed?.session) ? resumed?.session : undefined;
+    if (session) sessionId = str(session.sessionId);
+    if (!sessionId) {
+      // Muse lost it (its log is in the account's folder, our map in the runner home): a new session, context again.
+      opts.sessions.delete(sessionKey);
+      const started = await host.request("session/start", {
+        commandId: uuidv7(),
+        approvalMode: "allowAll",
+        ...(input.model ? { modelId: input.model } : {}),
+      });
+      sessionId = str(isRecord(started.session) ? started.session.sessionId : "");
+      if (!sessionId) throw new Error("The Muse host started no session.");
+      opts.sessions.set(sessionKey, sessionId);
+    }
+    // The view is what streams the turn's items; without a subscription a turn runs blind.
+    await host.request("view/subscribe", { sessionId }).catch(() => undefined);
+    const prompt = stored
       ? input.prompt
       : input.system.trim()
         ? `${input.system.trim()}\n\n${input.prompt}`
         : input.prompt;
-  try {
-    writeFileSync(promptFile, prompt, { mode: 0o600 });
+    await host.request("turn/start", { commandId: uuidv7(), sessionId, input: [{ type: "text", text: prompt }] });
   } catch (err) {
-    return fail("muse_failed", err instanceof Error ? err.message : String(err), true);
+    if (!finished) {
+      const message = err instanceof Error ? err.message : String(err);
+      // A host that refused the handshake (no sign-in, another version) says why on stderr.
+      const said = host.stderr.trim() || message;
+      await host.close().catch(() => undefined);
+      opts.signal.removeEventListener("abort", abort);
+      const missing = /ENOENT|not installed/i.test(said);
+      opts.emit({
+        ...museProblem(missing ? "Muse Code's CLI is not installed on this computer." : said)[0],
+        ...(missing ? { code: "muse_missing" } : {}),
+      } as CodexBrainEvent);
+      return;
+    }
   }
 
-  const once = async (session: string | undefined) => {
-    const args = [
-      ...museTurnArgs({
-        ...(session ? { session } : {}),
-        ...(input.model ? { model: input.model } : {}),
-        ...(input.profile ? { profile: input.profile } : {}),
-      }),
-      "--prompt-file",
-      promptFile,
-    ];
-    const mapper = new MuseEventMapper({
-      ...(input.model ? { model: input.model } : {}),
-      ...(redact ? { redact } : {}),
-    });
-    let child: ChildProcess;
-    try {
-      child = (opts.spawn ?? spawn)(resolveCommand(opts.bin ?? MUSE_BIN, env.PATH), args, {
-        cwd: input.cwd,
-        env,
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
-      });
-    } catch (err) {
-      return { mapper, exit: { code: null, error: err instanceof Error ? err : new Error(String(err)) }, stderr: "" };
-    }
-    let stderr = "";
-    child.stderr?.on("data", (c: Buffer) => {
-      stderr = (stderr + c.toString("utf8")).slice(-2000);
-    });
-    const lines = createInterface({ input: child.stdout as NonNullable<ChildProcess["stdout"]> });
-    (lines as unknown as EventEmitter).on("line", (line: string) => {
-      for (const event of mapper.line(line)) opts.emit(event);
-      if (mapper.session) opts.sessions.set(sessionKey, mapper.session);
-    });
-    let killTimer: ReturnType<typeof setTimeout> | undefined;
-    const abort = () => {
-      killTree(child, "SIGTERM");
-      killTimer = setTimeout(() => killTree(child, "SIGKILL"), KILL_GRACE_MS);
-    };
-    if (opts.signal.aborted) abort();
-    else opts.signal.addEventListener("abort", abort, { once: true });
-    const exit = await new Promise<{ code: number | null; error?: Error }>((resolve) => {
-      let settled = false;
-      const proc = child as unknown as EventEmitter;
-      proc.on("error", (error: Error) => {
-        if (!settled) {
-          settled = true;
-          resolve({ code: null, error });
-        }
-      });
-      proc.on("close", (code: number | null) => {
-        if (!settled) {
-          settled = true;
-          resolve({ code });
-        }
-      });
-    });
-    opts.signal.removeEventListener("abort", abort);
-    if (killTimer) clearTimeout(killTimer);
-    lines.close();
-    return { mapper, exit, stderr: stderr.trim() };
-  };
-
-  const stored = opts.sessions.get(sessionKey);
-  let turn: Awaited<ReturnType<typeof once>>;
-  try {
-    turn = await once(stored);
-    // Muse lost the session (its log lives in the account's folder, our map in the runner home): forget it and start
-    // a new one, with the context again.
-    if (
-      stored &&
-      !opts.signal.aborted &&
-      turn.exit.code !== 0 &&
-      !turn.mapper.streamed &&
-      MUSE_SESSION_GONE.test(`${turn.mapper.failed ?? ""}\n${turn.stderr}`)
-    ) {
-      opts.sessions.delete(sessionKey);
-      turn = await once(undefined);
-    }
-  } finally {
-    rmSync(promptFile, { force: true });
-  }
+  await turnOver;
+  opts.signal.removeEventListener("abort", abort);
+  await host.close().catch(() => undefined);
   if (opts.signal.aborted) return fail("canceled", "The turn was canceled.");
-  const { mapper, exit, stderr } = turn;
-  if (exit.error) {
-    const missing = (exit.error as NodeJS.ErrnoException).code === "ENOENT";
-    return fail(
-      missing ? "muse_missing" : "muse_failed",
-      missing ? "Muse Code's CLI is not installed on this computer." : exit.error.message,
-      true,
-    );
+  if (missingHost) return fail("muse_missing", "Muse Code's CLI is not installed on this computer.", true);
+  if (failure) {
+    for (const event of museProblem(failure)) opts.emit(event);
+    return;
   }
-  if (!mapper.failed && exit.code !== 0 && stderr && !mapper.streamed) mapper.failed = stderr;
-  for (const event of mapper.finish({ exitCode: exit.code, sessionId: input.sessionId, stderr })) opts.emit(event);
+  for (const event of mapper.finish(input.sessionId)) opts.emit(event);
 }
-
-/** The redactor a turn uses, exported for the tests. */
-export const museRedact = redactDeep;
-/** Said when an account's folder is gone. */
-export const MUSE_ACCOUNT_MISSING = ACCOUNT_MISSING_MESSAGE.muse;
 
 export interface MuseBrainContext {
   folder: string;
@@ -512,10 +594,10 @@ export async function handleMuseBrainTurn(
     if (!isAccountId(accountId)) throw new RunnerError("bad_request", "Invalid account id");
     const home = ctx.accounts?.accountDir("muse", accountId);
     if (!home) {
-      scope.emit({ type: "error", code: "account_missing", message: MUSE_ACCOUNT_MISSING, retryable: false });
+      scope.emit({ type: "error", code: "account_missing", message: ACCOUNT_MISSING_MESSAGE.muse, retryable: false });
       return;
     }
-    const key = await museKeyOf(home);
+    const key = await museKeyOf(home).catch(() => null);
     account = { id: accountId, home, ...(key ? { key } : {}) };
   }
   const secrets = await agentSecrets(ctx.secretsDir, req.agent);

@@ -187,8 +187,9 @@ const LOGIN_ARGS: Record<AccountKind, string[]> = {
   grok: ["login", "--device-auth"],
   // Google's sign-in by a pasted code, then it exits (antigravity.google/docs/ide/extensions/acp).
   antigravity: ["acp", "--login"],
-  // A Meta account is its key: `muse auth set` stores one, and a Meta Managed Account has no browser flow at all.
-  muse: ["auth", "set"],
+  // The sign-in a subscription is: `muse login` prints a code for Meta's page and saves the credential in the
+  // account's own folder. A key is still accepted (`muse auth set`), and is the only way into a Meta Managed Account.
+  muse: ["login"],
 };
 const STATUS_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "status", "--json"],
