@@ -5576,6 +5576,9 @@ html:not([data-pointer]) .tr-ok:focus-visible {
 .tr-row__why span {
   min-width: 0;
 }
+.tr-row__why--warn > svg {
+  color: var(--warn);
+}
 .tr-row__why b {
   color: var(--ink2);
   font-weight: 600;

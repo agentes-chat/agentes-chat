@@ -210,6 +210,11 @@ export const customTools = pgTable(
     sensitive: boolean().notNull().default(false),
     /** A person confirmed the level of an ambiguous tool (until then it waits in "needs your decision"). */
     confirmedAt: timestamp({ withTimezone: true }),
+    /**
+     * A person set this sensitive tool to `read` or `write` anyway (ADR 0174): it runs without asking, and a listing
+     * keeps that level. Without it a sensitive tool asks whatever `access` says.
+     */
+    freedAt: timestamp({ withTimezone: true }),
   },
   (t) => [unique().on(t.connectionId, t.name), index().on(t.orgId)],
 );

@@ -12316,7 +12316,8 @@
     "missing_one": "{{count}} karar kaldı. Devam ederseniz öneri uygulanır.",
     "missing_other": "{{count}} karar kaldı. Devam ederseniz öneriler uygulanır.",
     "later": "Bunların hepsini daha sonra değiştirebilirsiniz.",
-    "sensitive": "Hassas eylem: yalnızca onay isteyebilir ya da kapalı olabilir.",
+    "sensitive": "Hassas eylem: varsayılan olarak onay ister.",
+    "freedWarning": "Hizmet bunu riskli olarak işaretliyor. Bu seviyede ajanlar bunu kimseye sormadan kullanır.",
     "reason": {
       "reads_only": "yalnızca sayılara bakar, hiçbir şeyi değiştirmez",
       "changes_undoable": "hiçbir şey silmez ve para harcamaz",

@@ -12381,7 +12381,8 @@
     "missing_one": "{{count}} Entscheidung offen. Wenn du weitermachst, gilt der Vorschlag.",
     "missing_other": "{{count}} Entscheidungen offen. Wenn du weitermachst, gelten die Vorschläge.",
     "later": "Du kannst das alles später ändern.",
-    "sensitive": "Sensible Aktion: Sie kann nur nach Freigabe fragen oder aus sein.",
+    "sensitive": "Sensible Aktion: Sie fragt standardmäßig nach Freigabe.",
+    "freedWarning": "Der Dienst stuft dies als riskant ein. Auf dieser Stufe nutzen Agenten es, ohne jemanden zu fragen.",
     "reason": {
       "reads_only": "es schaut nur auf Zahlen, ändert nichts",
       "changes_undoable": "es löscht nichts und gibt kein Geld aus",

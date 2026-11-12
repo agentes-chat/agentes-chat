@@ -14,8 +14,10 @@ import { catalogLabel, toolKey } from "./tool-labels";
 export type ToolLevelKind = "read" | "write" | "approval" | "off";
 
 export const REVIEW_LEVELS: ToolLevelKind[] = ["read", "write", "approval", "off"];
-/** Sensitive tools (delete, send, pay…) may only ask or be off. */
+/** Sensitive tools (delete, send, pay…) a person may not free (Composio's, an older server): only ask or off. */
 export const SENSITIVE_LEVELS: ToolLevelKind[] = ["approval", "off"];
+/** A sensitive tool a person may free (ADR 0174): also "Muda coisas", never "Só consulta" (it changes things). */
+export const FREEABLE_LEVELS: ToolLevelKind[] = ["write", "approval", "off"];
 
 export interface ReviewTool {
   /** The technical name. */
@@ -30,6 +32,8 @@ export interface ReviewTool {
   /** Why (pending tools): `toolReview.reason.*`. */
   reason: string | null;
   sensitive: boolean;
+  /** A person set this sensitive tool to write (ADR 0174): it runs without asking. */
+  freed?: boolean;
   /** Waits in "Precisam da sua decisão". */
   pending: boolean;
   /** The label people had (approval cards); saved back as is. */
@@ -205,6 +209,13 @@ export function subjectLabel(t: TFunction, subject: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/**
+ * A sensitive tool at the level that runs without asking: the review warns under it (ADR 0174). Saving it frees the
+ * tool, and the audit log names it.
+ */
+export const runsUnasked = (tool: Pick<ReviewTool, "sensitive">, level: ToolDecision) =>
+  tool.sensitive && level === "write";
+
 const isAccess = (v: unknown): v is ToolAccess => v === "read" || v === "write" || v === "approval";
 
 /** A custom server's tools, ready for the review. */
@@ -221,7 +232,8 @@ export function reviewTool(t: TFunction, tool: CustomTool): ReviewTool {
       : "approval";
   const sensitive = tool.sensitive === true;
   let level: ToolDecision = tool.level ?? tool.access ?? suggested;
-  if (sensitive && (level === "read" || level === "write")) level = "approval";
+  // A free level on a sensitive tool holds only when a person freed it to write (ADR 0174). Otherwise it asks.
+  if (sensitive && !(tool.freed && level === "write") && (level === "read" || level === "write")) level = "approval";
   return {
     name: tool.name,
     label: toolName(t, parts, tool.name),
@@ -231,8 +243,10 @@ export function reviewTool(t: TFunction, tool: CustomTool): ReviewTool {
     suggested,
     reason: tool.suggestionReason ?? null,
     sensitive,
+    freed: tool.freed === true,
     pending: tool.pending === true,
     savedLabel: tool.label || humanize(tool.name),
+    ...(sensitive ? { levels: tool.mayFree === true ? FREEABLE_LEVELS : SENSITIVE_LEVELS } : {}),
   };
 }
 

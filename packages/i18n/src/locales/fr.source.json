@@ -29969,7 +29969,10 @@
     "value": "You can change all of this later."
   },
   "toolReview.sensitive": {
-    "value": "Sensitive action: it can only ask for approval or be off."
+    "value": "Sensitive action: it asks for approval by default."
+  },
+  "toolReview.freedWarning": {
+    "value": "The service marks this as risky. At this level agents run it without asking anyone."
   },
   "toolReview.reason.reads_only": {
     "value": "it only looks at numbers, changes nothing"

@@ -12454,7 +12454,9 @@ export const ptBR = {
     missing_one: "Falta {{count}} decisão. Se continuar, vale a sugestão.",
     missing_other: "Faltam {{count}} decisões. Se continuar, valem as sugestões.",
     later: "Dá para mudar tudo isso depois.",
-    sensitive: "Ação sensível: só pode pedir aprovação ou ficar desligada.",
+    sensitive: "Ação sensível: por padrão, pede aprovação.",
+    /** Under a sensitive tool set to run on its own (ADR 0174). */
+    freedWarning: "O serviço marca esta ação como arriscada. Neste nível os agentes a usam sem perguntar a ninguém.",
     reason: {
       reads_only: "só consulta números, não muda nada",
       changes_undoable: "não apaga nada nem gasta dinheiro",
