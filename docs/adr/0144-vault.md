@@ -382,3 +382,10 @@ Left out: moving several items at once, moving a password manager's item, renami
   so.
 - Left for later: the browser under its own system user, usage alerts to an item's owner (first use on a new site,
   bursts), Bitwarden organization collections, 1Password's desktop app as a source.
+
+## Addendum 2026-11-12: a value being typed may be seen before it is saved
+
+§2 has a value leave the screen "as it is typed" and never come back to one. On a phone keyboard a mistyped key is
+invisible, and a Vault item exists to be used elsewhere — so the field that types a value now carries the eye the
+sign-in field already had, and nothing else changes: it is still the value on screen, still nothing sent, and a saved
+item's page still shows dots and only Change (§7).

@@ -807,3 +807,29 @@ describe("the secret request card: Save to the Vault (ADR 0144)", () => {
     expect(state.calls.some((c) => c.method === "secrets.saveToVault")).toBe(false);
   });
 });
+
+/**
+ * A value is typed once and never comes back (ADR 0144 §2), so the eye only exists before Salvar: it shows what is
+ * on screen, sends nothing, and the saved item's page is unchanged.
+ */
+test("a value being typed can be shown, and showing it saves nothing", async () => {
+  const { state, t } = await openVault();
+  await click(screen().getByRole("button", { name: t("vault.new.open") }));
+  await settle(2);
+  const create = screen().getByRole("dialog", { name: t("vault.new.title") });
+  const field = () => within(create).getByLabelText(t("vault.field.password")) as HTMLInputElement;
+  await type(field(), "fake-value-typed-not-real");
+  expect(field().type).toBe("password");
+
+  const eye = within(create).getByRole("button", { name: t("vault.env.show", { name: t("vault.field.password") }) });
+  expect(eye.getAttribute("aria-pressed")).toBe("false");
+  await click(eye);
+  // Same input, now in the clear, with the value kept; the form is still open and nothing was sent.
+  expect(field().type).toBe("text");
+  expect(field().value).toBe("fake-value-typed-not-real");
+  expect(screen().queryByRole("dialog", { name: t("vault.new.title") })).toBeTruthy();
+  expect(state.calls.some((c) => c.method === "vault.create")).toBe(false);
+
+  await click(within(create).getByRole("button", { name: t("vault.env.hide", { name: t("vault.field.password") }) }));
+  expect(field().type).toBe("password");
+});
