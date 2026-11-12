@@ -97,7 +97,7 @@ import {
 } from "@agenteschat/client/lib/chat";
 import { firstUnreadId, opensAtLastRead } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
-import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
+import { type DraftFile, draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
 import { consultsForLine } from "@agenteschat/client/lib/consult-group";
 import { consultationsOf } from "@agenteschat/client/lib/consultations";
 import { deviceWaitOf } from "@agenteschat/client/lib/devices";
@@ -354,7 +354,7 @@ import { PushAskContext, PushAskInline, usePushAsk } from "@/components/WebPush"
 import { useWikiLinkRenderer } from "@/components/WikiLinks";
 import { BarAlsoTyping, BarPhrase, BarStep, ConsultClock, WorkingStack } from "@/components/WorkingLine";
 import { useChannelSearch } from "@/hooks/useChannelSearch";
-import { useComposerDraft } from "@/hooks/useComposerDraft";
+import { readComposerDraft, useComposerDraft, writeComposerDraftFiles } from "@/hooks/useComposerDraft";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useDmSidebar, useMembersColumn } from "@/hooks/useMembersColumn";
 import { useMentionSearch } from "@/hooks/useMentionSearch";
@@ -495,7 +495,9 @@ interface PendingFile {
   name: string;
   icon: IconName;
   size: number;
-  /** An image's local thumbnail (an object URL, revoked when the file leaves the composer). */
+  /** Its MIME type ("" when the browser gave none), kept with the draft for its icon and thumbnail. */
+  type: string;
+  /** An image's thumbnail: a local object URL (revoked when the file leaves the composer), or its Drive file's. */
   preview?: string;
   status: "uploading" | "done" | "failed";
   ref?: ArtifactRef;
@@ -1880,14 +1882,48 @@ function ChannelView({
     jumpTo(focusMessageId);
   }, [focusMessageId]);
 
-  // Files for the next message: uploaded to the Drive (this channel) right away; sending waits for them.
-  const [files, setFiles] = useState<PendingFile[]>([]);
+  // Files for the next message: uploaded to the Drive (this channel) right away; sending waits for them. The uploaded
+  // ones stay with the unsent text, so leaving the conversation (to take another screenshot) or reloading keeps them.
+  const filesKey = draftKeyOf(channel.id, thread?.id);
+  const [files, setFiles] = useState<PendingFile[]>(() =>
+    (readComposerDraft(me.user.id, filesKey)?.files ?? []).map((f) => ({
+      key: `${f.id}-${f.version}`,
+      name: f.name,
+      icon: fileIcon(f.name, f.type),
+      size: f.size,
+      type: f.type,
+      preview:
+        previewKind(f.type) === "image" ? api.artifacts.fileUrl(org.id, f.id, { version: f.version }) : undefined,
+      status: "done",
+      ref: { id: f.id, version: f.version, title: f.title },
+    })),
+  );
+  const keptFiles = files.flatMap((f): DraftFile[] =>
+    f.status === "done" && f.ref
+      ? [
+          {
+            id: f.ref.id,
+            version: f.ref.version ?? 1,
+            title: f.ref.title ?? f.name,
+            name: f.name,
+            size: f.size,
+            type: f.type,
+          },
+        ]
+      : [],
+  );
+  const keptKey = JSON.stringify(keptFiles);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: written when the uploaded files change, not each render
+  useEffect(() => {
+    writeComposerDraftFiles(me.user.id, filesKey, keptFiles);
+  }, [keptKey, me.user.id, filesKey]);
   const uploadFailed = useUploadFailed();
   // Thumbnails are object URLs: freed when a file leaves the composer and when the page goes.
   const previews = useRef(new Set<string>());
   const dropFiles = (keep: (f: PendingFile) => boolean) => {
     for (const f of files) {
-      if (keep(f) || !f.preview) continue;
+      // A Drive file's thumbnail (a kept draft's) is no object URL: nothing to free.
+      if (keep(f) || !f.preview || !previews.current.has(f.preview)) continue;
       objectUrls.revoke(f.preview);
       previews.current.delete(f.preview);
     }
@@ -1915,7 +1951,15 @@ function ChannelView({
       if (preview) previews.current.add(preview);
       setFiles((prev) => [
         ...prev,
-        { key, name: file.name, icon: fileIcon(file.name, file.type), size: file.size, preview, status: "uploading" },
+        {
+          key,
+          name: file.name,
+          icon: fileIcon(file.name, file.type),
+          size: file.size,
+          type: file.type,
+          preview,
+          status: "uploading",
+        },
       ]);
       api.artifacts
         .upload(org.id, file, { channelId: channel.id })
