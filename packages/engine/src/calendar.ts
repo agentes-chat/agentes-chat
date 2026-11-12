@@ -1180,32 +1180,47 @@ export async function confirmCalendarProposal(deps: CalendarDeps, userId: string
     ...(p.participants as CalendarActor[]),
     ...(agent ? [{ type: "agent" as const, id: agent.id }] : []),
   ];
-  const event = await createCalendarEvent(deps, userId, orgId, {
-    title: p.title,
-    description: p.description,
-    start: p.startAt.toISOString(),
-    end: p.endAt.toISOString(),
-    rule: (p.rule as EventRule | null) ?? null,
-    participants,
-    channelId: null,
-  });
+  // Claimed before the event is made: two confirmations at once make one event, not two.
+  await claimProposal(deps.db, p.id, "confirmed");
+  let event: Awaited<ReturnType<typeof createCalendarEvent>>;
+  try {
+    event = await createCalendarEvent(deps, userId, orgId, {
+      title: p.title,
+      description: p.description,
+      start: p.startAt.toISOString(),
+      end: p.endAt.toISOString(),
+      rule: (p.rule as EventRule | null) ?? null,
+      participants,
+      channelId: null,
+    });
+  } catch (error) {
+    // No event came of it: the proposal can be answered again.
+    await deps.db.update(calendarProposals).set({ status: "pending" }).where(eq(calendarProposals.id, p.id));
+    throw error;
+  }
   const [row] = await deps.db
     .update(calendarProposals)
-    .set({ status: "confirmed", eventId: event.id })
+    .set({ eventId: event.id })
     .where(eq(calendarProposals.id, p.id))
     .returning();
   if (row) await syncProposalCard(deps, row);
   return event;
 }
 
+/** `pending` → the decision, only while it is still pending: the one of two answers at once that loses is told. */
+async function claimProposal(db: Database, id: string, status: "confirmed" | "dismissed") {
+  const [row] = await db
+    .update(calendarProposals)
+    .set({ status })
+    .where(and(eq(calendarProposals.id, id), eq(calendarProposals.status, "pending")))
+    .returning();
+  if (!row) throw new ValidationError("This proposal was already decided");
+  return row;
+}
+
 export async function dismissCalendarProposal(deps: CalendarDeps, userId: string, orgId: string, id: string) {
   const p = await decideProposalRow(deps.db, userId, orgId, id);
-  const [row] = await deps.db
-    .update(calendarProposals)
-    .set({ status: "dismissed" })
-    .where(eq(calendarProposals.id, p.id))
-    .returning();
-  if (row) await syncProposalCard(deps, row);
+  await syncProposalCard(deps, await claimProposal(deps.db, p.id, "dismissed"));
 }
 
 /** Resolves `@ana` / `@dev` handles (or ids) to people and agents of the org. */

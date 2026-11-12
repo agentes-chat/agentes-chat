@@ -475,6 +475,8 @@ export function WikiImportDialog({
         failures: [...done.failures.filter((f) => f.reason !== "batch" && f.reason !== "stopped"), ...again.failures],
         retry: again.retry,
       });
+    } catch (e) {
+      toast.show(errorText(t, e, i18n.language), "error");
     } finally {
       void qc.invalidateQueries({ queryKey: keys.wiki(org.id) });
       setImporting(null);
@@ -484,14 +486,16 @@ export function WikiImportDialog({
 
   const agents = dir.agents.slice(0, 2);
   const missing = done ? done.failures.length + done.skipped.length : 0;
-  const title = done
+  // A retry is an import again: its progress (and Stop) shows, not the report it started from with its buttons.
+  const shown = importing ? null : done;
+  const title = shown
     ? missing
       ? t("wiki.import.partialTitle")
       : t("wiki.import.doneTitle")
     : report && reader.state.step === "ready"
       ? report.name
       : t("wiki.import.title");
-  const description = done
+  const description = shown
     ? undefined
     : importing
       ? t("wiki.import.importingText")
@@ -503,7 +507,7 @@ export function WikiImportDialog({
 
   let body: ReactNode;
   let footer: ReactNode;
-  if (done && missing > 0) {
+  if (!importing && done && missing > 0) {
     body = (
       <>
         <div className="vault-done vault-done--partial">
@@ -545,7 +549,7 @@ export function WikiImportDialog({
         )}
       </>
     );
-  } else if (done) {
+  } else if (!importing && done) {
     body = (
       <div className="vault-done">
         <WikiSky variant="glow" />

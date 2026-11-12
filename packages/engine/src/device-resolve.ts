@@ -445,10 +445,13 @@ export async function decideDeviceAccess(
   if (rule.ownerUserId !== actorId) throw new ForbiddenError("Only the device's owner can answer this");
   if (row.status !== "pending") throw new ValidationError("This request was already answered");
   const status = decision === "no" ? "denied" : decision;
-  await deps.db
+  // Only while it is still pending: of two answers at once (two of the owner's screens), one stands.
+  const [decided] = await deps.db
     .update(deviceAccessRequests)
     .set({ status, decidedByUserId: actorId, decidedAt: new Date() })
-    .where(eq(deviceAccessRequests.id, row.id));
+    .where(and(eq(deviceAccessRequests.id, row.id), eq(deviceAccessRequests.status, "pending")))
+    .returning({ id: deviceAccessRequests.id });
+  if (!decided) throw new ValidationError("This request was already answered");
   if (decision === "always") {
     // The requester joins the rule the owner reads (the phone's own, or for an iPhone its host's).
     const followsHost = phone ? phone.followsHost : true;

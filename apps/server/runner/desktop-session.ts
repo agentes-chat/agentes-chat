@@ -884,8 +884,9 @@ export class DesktopSessions {
    * this computer still serves (one archived or moved to another computer leaves).
    */
   async stopAll(keep: ReadonlySet<string> = new Set()) {
-    const leaving = [...this.desktops.values()].filter((d) => !keep.has(d.agent.id));
-    await Promise.all(leaving.map((d) => this.stop(d.agent).catch(() => undefined)));
+    // One still starting isn't in `desktops` yet: its stop waits in its agent's queue and ends it once it is up.
+    const leaving = [...new Set([...this.desktops.keys(), ...this.operations.keys()])].filter((id) => !keep.has(id));
+    await Promise.all(leaving.map((id) => this.stop({ id }).catch(() => undefined)));
   }
 
   /**
