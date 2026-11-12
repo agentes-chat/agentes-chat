@@ -3,6 +3,7 @@ import { and, type Database, type Executor, eq, isNotNull, ne, schema, sql } fro
 import { en } from "@agenteschat/i18n/en";
 import { enqueueAccountContact } from "./account-contacts";
 import { recordAudit } from "./audit";
+import { profileIdOfKey } from "./browser/profiles";
 import { caches } from "./cache";
 import { ForbiddenError } from "./errors";
 import { publishOrgEvent } from "./events";
@@ -256,6 +257,8 @@ export async function billingHold(db: Executor, orgId: string): Promise<BillingH
 
 /** This agent's hold (its stored reason), or null while it isn't held: cached 5 s per process like the standing. */
 async function agentHold(db: Executor, orgId: string, agentId: string): Promise<{ reason: string | null } | null> {
+  // A shared browser profile's stream goes by "profile:<id>": no agent, so no hold of its own (and no row to ask for).
+  if (profileIdOfKey(agentId)) return null;
   return (await caches.standing.getOrLoad(`${orgId}:${agentId}`, async () => {
     const [row] = await db
       .select({ heldAt: agents.operatorHoldAt, reason: agents.operatorHoldReason })

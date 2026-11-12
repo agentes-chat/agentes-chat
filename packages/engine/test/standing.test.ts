@@ -406,6 +406,14 @@ describe("agent hold", () => {
     expect(await setAgentHold(f.db, crypto.randomUUID(), f.agent.id, { held: true, reason: null })).toBeNull();
   });
 
+  test("a shared browser profile's key is no agent: only the workspace's standing is asked", async () => {
+    f = await setup();
+    const key = "profile:6f1c2a34-5b6d-4e7f-8a90-b1c2d3e4f5a6";
+    await assertCanWork(f.db, f.org.id, key);
+    await standing("suspended");
+    await expect(assertCanWork(f.db, f.org.id, key)).rejects.toMatchObject({ code: "org.suspended" });
+  });
+
   test("the router never picks a held agent: the others answer", async () => {
     f = await setup();
     const ops = await createAgent(
