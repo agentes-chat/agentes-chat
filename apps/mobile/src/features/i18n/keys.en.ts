@@ -393,8 +393,6 @@ export const featureKeysEn = {
     switchWorking: "working",
     join: "Join the channel",
     sending: "Sending…",
-    failed: "Not sent · Try again",
-    notSent: "The message wasn't sent.",
     toLatest: "Go to the latest messages",
     toLatestNew: "Go to the latest messages: {{text}}",
     stopAgent: "Stop {{name}}",
@@ -1756,12 +1754,6 @@ export const featureKeysEn = {
       expandHint: "Tap to expand",
       stop: "Stop",
       giveUp: "Give up",
-      done: "Done: {{title}}",
-      failed: "Couldn't: {{title}}",
-      failedNote: "Couldn't: {{note}}",
-      expired: "Nobody opened it in time: {{title}}",
-      cancelled: "Canceled: {{title}}",
-      withdrawn: "{{name}} no longer needs this: {{title}}",
     },
     live: {
       inControl: "You're in control",
@@ -2363,10 +2355,10 @@ export const featureKeysEn = {
     deleteName: "Delete {{name}}",
     deleteFoot: "You have 7 days to change your mind.",
     /** The system alert's text; its title is `deleteOrg.title`. */
-    deleteAlert: "Everyone is out right away. It can be restored for 7 days.",
+    deleteAlert: "Everyone can only read it from now on. It can be restored for 7 days.",
     deleteAction: "Delete",
     /** The last step: what deleting it does, the proof it's you and the hold. */
-    deleteIntro: "{{name}} closes for everyone right away and is deleted for good in 7 days.",
+    deleteIntro: "{{name}} turns read-only for everyone right away and is deleted for good in 7 days.",
     holdDelete: "Hold to delete",
     deleteFailed: "Couldn't delete the workspace. Try again.",
     access: {
@@ -2671,7 +2663,6 @@ export const featureKeysEn = {
     formatAuto: "{{name}} picks the best one",
     /** New widget's card, which is the form. */
     newWidget: {
-      titleHint: "Title · {{name}} suggests one when testing",
       alerts: "Alerts",
       realData: "Real data",
       editAsk: "Change the ask",

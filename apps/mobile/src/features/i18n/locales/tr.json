@@ -370,8 +370,6 @@
     "switchWorking": "çalışıyor",
     "join": "Kanala katıl",
     "sending": "Gönderiliyor…",
-    "failed": "Gönderilmedi · Tekrar deneyin",
-    "notSent": "Mesaj gönderilmedi.",
     "toLatest": "En son mesajlara git",
     "toLatestNew": "En son mesajlara git: {{text}}",
     "stopAgent": "{{name}} ajanını durdur",
@@ -1678,13 +1676,7 @@
       "open": "Aç",
       "expandHint": "Genişletmek için dokunun",
       "stop": "Durdur",
-      "giveUp": "Vazgeç",
-      "done": "Tamamlandı: {{title}}",
-      "failed": "Yapılamadı: {{title}}",
-      "failedNote": "Yapılamadı: {{note}}",
-      "expired": "Kimse zamanında açmadı: {{title}}",
-      "cancelled": "İptal edildi: {{title}}",
-      "withdrawn": "{{name}} artık buna ihtiyaç duymuyor: {{title}}"
+      "giveUp": "Vazgeç"
     },
     "live": {
       "inControl": "Kontrol sizde",
@@ -2243,9 +2235,9 @@
     "ofOnline": "{{online}} / {{count}}",
     "deleteName": "{{name}} çalışma alanını sil",
     "deleteFoot": "Fikrinizi değiştirmek için 7 gününüz var.",
-    "deleteAlert": "Herkes hemen çıkarılır. 7 gün boyunca geri yüklenebilir.",
+    "deleteAlert": "Herkes artık yalnızca okuyabilir. 7 gün boyunca geri yüklenebilir.",
     "deleteAction": "Sil",
-    "deleteIntro": "{{name}} herkes için hemen kapanır ve 7 gün sonra kalıcı olarak silinir.",
+    "deleteIntro": "{{name}} herkes için hemen salt okunur olur ve 7 gün sonra kalıcı olarak silinir.",
     "holdDelete": "Silmek için basılı tutun",
     "deleteFailed": "Çalışma alanı silinemedi. Tekrar deneyin.",
     "access": {
@@ -2542,7 +2534,6 @@
     },
     "formatAuto": "En iyisini {{name}} seçer",
     "newWidget": {
-      "titleHint": "Başlık · {{name}} testte bir tane önerir",
       "alerts": "Uyarı açık",
       "realData": "Gerçek veriler",
       "editAsk": "İsteği değiştir",

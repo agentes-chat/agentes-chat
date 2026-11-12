@@ -352,6 +352,7 @@ export class FakeRunner {
     const s = this.seed;
     switch (msg.type) {
       case "status":
+      case "executors.check":
         return reply(this.status());
       case "jobs":
         return reply({ jobs: s?.jobs ?? [] });

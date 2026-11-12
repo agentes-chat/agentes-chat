@@ -101,6 +101,8 @@ describe("geometry check", () => {
       expect(SELF_TESTED).toContain(rule);
     // A calendar item never covers another: what meets sits beside it.
     expect(SELF_TESTED).toContain("calstack");
+    // The working line's stop is at its end before its time comes, not beside its words.
+    expect(SELF_TESTED).toContain("barend");
     // A task card's line of facts wraps between facts, never inside one.
     for (const twin of ["bad-factwrap--line", "good-factwrap--line"]) expect(fixture).toContain(twin);
     // A title in a row that wraps a word a line is squeezed; one long address wrapping its full lines is not.
@@ -156,7 +158,7 @@ describe("geometry check", () => {
     // Stacked, the top row keeps the search at its floor beside the actions, or the search takes it alone (`split`).
     for (const part of [
       'querySelector(":scope > .ac-toolbar__actions")',
-      "floor + gap + actions.getBoundingClientRect().width <= bar.clientWidth + 0.5",
+      "floor + gap + actions.getBoundingClientRect().width <= bar.clientWidth - 0.5",
       '"data-stack", topRowFits(',
     ]) {
       expect(rules).toContain(part);

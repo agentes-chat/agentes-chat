@@ -11,7 +11,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { formatBytes, MAX_UPLOAD_MB } from "@agenteschat/client/lib/files";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { frontmatter } from "@agenteschat/client/lib/import/shared";
-import { can } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import {
   AffixInput,
   Alert,
@@ -1731,7 +1731,8 @@ export function ImportReport({
 
 /**
  * Configurações → Importar e exportar (admins): the import flow, and this workspace as a file, with what it never
- * carries (whoever shares the file needs that); the full list is on the help page.
+ * carries (whoever shares the file needs that); the full list is on the help page. A workspace being deleted takes no
+ * agent, so only its export shows.
  */
 export function ImportExportSection() {
   const { t } = useTranslation();
@@ -1742,10 +1743,12 @@ export function ImportExportSection() {
   const download = () => saveExport(api, org.id);
   return (
     <>
-      <Card aria-labelledby="imp-import-title">
-        <CardHeader icon="upload" id="imp-import-title" title={t("settings.import.title")} />
-        <ImportFlow flow={flow} orgId={org.id} standalone level={3} />
-      </Card>
+      {makesAgents(org) && (
+        <Card aria-labelledby="imp-import-title">
+          <CardHeader icon="upload" id="imp-import-title" title={t("settings.import.title")} />
+          <ImportFlow flow={flow} orgId={org.id} standalone level={3} />
+        </Card>
+      )}
       <Card aria-labelledby="imp-export-title">
         <CardHeader
           icon="download"

@@ -302,6 +302,20 @@ describe("GitHub App installations are bound to one organization", () => {
     await expect(startGitHubAppInstall(w.deps, member.id, w.orgA.id)).rejects.toThrow();
   });
 
+  test("an install begun before its workspace began being deleted binds nothing", async () => {
+    const w = await world();
+    w.gh.visible[`user-${w.ana.id}`] = [1];
+    const { state } = await startGitHubAppInstall(w.deps, w.ana.id, w.orgA.id);
+    await w.db
+      .update(schema.organizations)
+      .set({ deletionDueAt: new Date(Date.now() + 7 * 86_400_000) })
+      .where(eq(schema.organizations.id, w.orgA.id));
+    await expect(
+      completeGitHubAppInstall(w.deps, w.ana, { state, code: `code-${w.ana.id}`, installationId: 1 }),
+    ).rejects.toMatchObject({ code: "org.deleting" });
+    expect(await w.db.select().from(schema.githubAppInstallations)).toEqual([]);
+  });
+
   test("returnTo: a path, the phone app's marker, or the desktop window's path; never another site", async () => {
     const w = await world();
     const landing = async (returnTo: string) => {

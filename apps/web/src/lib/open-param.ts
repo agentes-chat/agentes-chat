@@ -1,3 +1,4 @@
+import { projectFilterOf } from "@agenteschat/client/lib/issue-projects";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 
@@ -53,6 +54,12 @@ export function openSearch(search: Record<string, unknown>): { open?: string | n
 export function taskSearch(search: Record<string, unknown>): { open?: string | number; m?: string } {
   const m = typeof search.m === "string" && search.m ? { m: search.m } : {};
   return { ...openSearch(search), ...m };
+}
+
+/** `validateSearch` for the board: a task's, and `project`, the project whose board it is (`none`: tasks with none). */
+export function boardSearch(search: Record<string, unknown>): ReturnType<typeof taskSearch> & { project?: string } {
+  const project = projectFilterOf(search.project);
+  return { ...taskSearch(search), ...(project ? { project } : {}) };
 }
 
 /** The thread open in the panel beside a conversation: `reply` puts the focus in its composer, `focus` opens at a message. */

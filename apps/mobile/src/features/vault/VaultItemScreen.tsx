@@ -1,12 +1,16 @@
 import {
   ApiError,
   useDeleteVaultItem,
+  useMoveVaultItem,
   useUpdateVaultItem,
+  useVault,
   useVaultItem,
   type VaultItemDetail,
   type VaultMatch,
+  type VaultScope,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { canMoveVaultItem } from "@agenteschat/client/lib/vault";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
@@ -74,6 +78,10 @@ function ItemPage({ item }: { item: VaultItemDetail }) {
   const now = useNow(60_000);
   const update = useUpdateVaultItem(orgId);
   const remove = useDeleteVaultItem(orgId);
+  const move = useMoveVaultItem(orgId);
+  const movable = canMoveVaultItem(item, useVault(orgId).data?.canManageTeam ?? false);
+  const moveTo: VaultScope = item.scope === "team" ? "personal" : "team";
+  const moveLabel = t(moveTo === "team" ? "vault.move.toTeam" : "vault.move.toPersonal");
   const [form, setForm] = useState<VaultForm>(() => formOf(item));
   // "Change password": the field for a new value opens only when asked.
   const [changing, setChanging] = useState(false);
@@ -111,6 +119,25 @@ function ItemPage({ item }: { item: VaultItemDetail }) {
       { itemId: item.id, accessFromConnection: true },
       { onSuccess: () => toast({ title: t("mobile.vault.access.saved") }), onError: failed },
     );
+  const askMove = () =>
+    confirmAction({
+      title: t("vault.move.title", { title: item.title }),
+      text: t(moveTo === "team" ? "vault.move.toTeamText" : "vault.move.toPersonalText"),
+      action: moveLabel,
+      cancel: t("mobile.common.cancel"),
+      destructive: false,
+      onConfirm: () =>
+        move.mutate(
+          { itemId: item.id, scope: moveTo },
+          {
+            onSuccess: () => {
+              successHaptic();
+              toast({ title: t("vault.move.moved") });
+            },
+            onError: failed,
+          },
+        ),
+    });
   const askDelete = () =>
     confirmAction({
       title: t("mobile.vault.item.deleteTitle", { title: item.title }),
@@ -301,6 +328,7 @@ function ItemPage({ item }: { item: VaultItemDetail }) {
           chevron={editable}
           {...(editable ? { onPress: () => router.push(vaultHref.itemAccess(item.id) as never) } : {})}
         />
+        {movable ? <GroupedRow icon="swap" label={moveLabel} disabled={move.isPending} onPress={askMove} /> : null}
         {external && editable && !item.accessFromConnection ? (
           <GroupedRow
             icon="undo"

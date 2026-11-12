@@ -108,7 +108,7 @@ html:not([data-pointer]) .thread-marker__open:focus-visible {
 }
 .thread-closed__actions {
   display: flex;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 /* ── "Threads (N)" ─────────────────────────────────────────────────────── */

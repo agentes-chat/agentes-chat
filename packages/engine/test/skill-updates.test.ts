@@ -208,6 +208,20 @@ describe("updating by itself, every day", () => {
     expect(await runSkillUpdates(deps, f.org.id)).toEqual({ updated: 0, waiting: 1, failed: 0 });
     expect((await getSkill(f.db, f.owner.id, f.org.id, skill.id)).updateError).toBeNull();
   });
+
+  test("a workspace being deleted keeps its skills as they are and tells nobody", async () => {
+    f = await setup();
+    const { gh, deps, skill } = await install(f, { "deploy/SKILL.md": skillMd("# v1") });
+    await setSkillAutoUpdate(f.db, f.owner.id, f.org.id, skill.id, true);
+    gh.state.files = { "deploy/SKILL.md": skillMd("# v2") };
+    await f.db
+      .update(schema.organizations)
+      .set({ deletionDueAt: new Date(Date.now() + 7 * 86_400_000) })
+      .where(eq(schema.organizations.id, f.org.id));
+    expect(await runSkillUpdates(deps, f.org.id)).toEqual({ updated: 0, waiting: 0, failed: 0 });
+    expect((await getSkill(f.db, f.owner.id, f.org.id, skill.id)).version).toBe(skill.version);
+    expect(await inbox(f, f.owner.id)).toEqual([]);
+  });
 });
 
 describe("edge cases of updating from a link", () => {

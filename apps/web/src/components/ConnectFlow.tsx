@@ -53,6 +53,7 @@ import {
   DialogBody,
   DialogFooter,
   Field,
+  HintLine,
   Icon,
   Input,
   Locked,
@@ -559,7 +560,14 @@ function GithubOrgs() {
       )}
       {manageUrl && (
         <>
-          <p className="small muted">{t("connectFlow.githubOrgs.lead")}</p>
+          <p className="small muted">
+            <HintLine
+              name={t("common.about", { label: t("connectFlow.githubOrgs.title") })}
+              hint={t("connectFlow.githubOrgs.lead")}
+            >
+              {t("connectFlow.githubOrgs.short")}
+            </HintLine>
+          </p>
           <Button
             asChild
             size="sm"
@@ -915,7 +923,7 @@ function WhoStep({ item, onBack, onClose }: { item: ConnectedItem; onBack: () =>
               </ul>
             </>
           )}
-          <p className="small muted cflow__asks">
+          <p className="small muted cflow__asks ac-iconline">
             <Icon name="lock" />
             {asks > 0 ? t("connectFlow.asksCount", { count: asks }) : t("connectFlow.asksDefault")}
           </p>

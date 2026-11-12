@@ -19,6 +19,7 @@ import {
   type MachineStatus,
   missingPermissions,
   requestBrowserProfile,
+  requireProfileDriver,
   requireProfileWatcher,
   setAgentBrowserProfile,
   setBrowserProfileAgents,
@@ -460,6 +461,19 @@ test("a person in control holds the profile: agents wait, Devolver frees it; wat
   await expect(requireProfileWatcher(f.db, asker.id, f.org.id, p.id)).rejects.toBeInstanceOf(ForbiddenError);
   await f.db.update(schema.agents).set({ ownerUserId: asker.id }).where(eq(schema.agents.id, b.bia.id));
   expect((await requireProfileWatcher(f.db, asker.id, f.org.id, p.id)).id).toBe(p.id);
+});
+
+test("a workspace being deleted: its profiles are still watched, never driven (the socket's typing checks this too)", async () => {
+  const b = await profilesSetup();
+  const p = await b.profile([b.bia.id]);
+  await f.db
+    .update(schema.organizations)
+    .set({ deletionDueAt: new Date(Date.now() + 7 * 86_400_000) })
+    .where(eq(schema.organizations.id, f.org.id));
+  expect((await requireProfileWatcher(f.db, f.owner.id, f.org.id, p.id)).id).toBe(p.id);
+  await expect(requireProfileDriver(f.db, f.owner.id, f.org.id, p.id)).rejects.toMatchObject({
+    code: "org.deleting",
+  });
 });
 
 test("request_permission offers profiles apart from 'all tools'; approving grants one", async () => {

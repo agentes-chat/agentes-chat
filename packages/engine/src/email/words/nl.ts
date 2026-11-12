@@ -309,7 +309,7 @@ export const words: EmailWords = {
     workspace: (org) => [
       "Typ deze code om de werkruimte ",
       { b: org },
-      " te verwijderen. Hij gaat meteen voor iedereen dicht en wordt 7 dagen later definitief verwijderd.",
+      " te verwijderen. Hij wordt meteen voor iedereen alleen-lezen en 7 dagen later definitief verwijderd.",
     ],
     account: (email) => [
       "Typ deze code om het hele account ",
@@ -330,19 +330,19 @@ export const words: EmailWords = {
       workspace: (org) => [
         "Typ deze code om je werkruimte ",
         { b: org },
-        " te verwijderen. Hij gaat meteen dicht en wordt 7 dagen later definitief verwijderd.",
+        " te verwijderen. Hij wordt meteen alleen-lezen en 7 dagen later definitief verwijderd.",
       ],
     },
   },
   deleting: {
     subject: (day) => `Een werkruimte waar je in zit wordt op ${day} verwijderd`,
-    preheader: "Hij is nu gesloten. Tot dan kan een eigenaar hem nog herstellen.",
+    preheader: "Hij is nu alleen-lezen. Tot dan kan een eigenaar hem nog herstellen.",
     headline: "Een werkruimte wordt verwijderd",
     body: (by, org, day, time) => [
       { b: by },
       " heeft de werkruimte ",
       { b: org },
-      ` verwijderd. Hij is nu gesloten en verdwijnt definitief op ${day} om ${time}.`,
+      ` verwijderd. Hij is nu alleen-lezen en verdwijnt definitief op ${day} om ${time}.`,
     ],
     owner: "Toch van gedachten veranderd? Herstel hem voor die tijd.",
     button: "Werkruimte herstellen",

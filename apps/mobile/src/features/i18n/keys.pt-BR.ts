@@ -386,8 +386,6 @@ export const featureKeysPtBR = {
     switchWorking: "trabalhando",
     join: "Entrar no canal",
     sending: "Enviando…",
-    failed: "Não foi enviada · Tentar de novo",
-    notSent: "A mensagem não foi enviada.",
     toLatest: "Ir para as mensagens mais recentes",
     toLatestNew: "Ir para as mensagens mais recentes: {{text}}",
     stopAgent: "Parar {{name}}",
@@ -1711,12 +1709,6 @@ export const featureKeysPtBR = {
       expandHint: "Toque para expandir",
       stop: "Parar",
       giveUp: "Desistir",
-      done: "Feito: {{title}}",
-      failed: "Não deu: {{title}}",
-      failedNote: "Não deu: {{note}}",
-      expired: "Ninguém abriu a tempo: {{title}}",
-      cancelled: "Cancelado: {{title}}",
-      withdrawn: "{{name}} não precisa mais disso: {{title}}",
     },
     live: {
       inControl: "Você está no controle",
@@ -2288,9 +2280,9 @@ export const featureKeysPtBR = {
     ofOnline: "{{online}} de {{count}}",
     deleteName: "Apagar {{name}}",
     deleteFoot: "Você tem 7 dias para voltar atrás.",
-    deleteAlert: "Todo mundo sai agora. Dá para restaurar por 7 dias.",
+    deleteAlert: "Todos passam a só ler. Dá para restaurar por 7 dias.",
     deleteAction: "Apagar",
-    deleteIntro: "{{name}} fecha para todos agora e é apagado de vez em 7 dias.",
+    deleteIntro: "{{name}} fica só para leitura para todos agora e é apagado de vez em 7 dias.",
     holdDelete: "Segure para apagar",
     deleteFailed: "Não deu para apagar o workspace. Tente de novo.",
     access: {
@@ -2592,7 +2584,6 @@ export const featureKeysPtBR = {
     formatAuto: "{{name}} escolhe o melhor",
     /** New widget's card, which is the form. */
     newWidget: {
-      titleHint: "Título · {{name}} sugere ao testar",
       alerts: "Avisa",
       realData: "Dados de verdade",
       editAsk: "Mudar o pedido",

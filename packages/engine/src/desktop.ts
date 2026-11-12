@@ -92,7 +92,7 @@ export async function desktopTarget(
  * every 30 s while it is open: watching follows the desktop's rule, control and the terminal its computer's
  * driver. While someone controls the desktop, or the browser showing the same window, nobody else sees it;
  * control is only theirs, on the desktop's own handoff (`control`: its id). Nobody has one in a closed
- * workspace (suspended, or being deleted), where every permission check refuses (`closedRefusal`).
+ * workspace (suspended, or being deleted: `closedRefusal`).
  */
 async function streamAccess(
   db: Database,

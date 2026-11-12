@@ -194,7 +194,7 @@ html:not([data-pointer]) .nt-item:focus-visible {
 }
 
 /* ── Day groups and items ───────────────────────────────────────────────── */
-/* The shared list card, but tooltips under the last row must not be clipped. */
+/* The shared list card, unclipped. */
 .nt-list {
   overflow: visible;
 }
@@ -551,24 +551,6 @@ html:not([data-pointer]) .nt-nb:focus-visible {
 .nt-nb__label {
   display: none;
 }
-.nt-nb[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 5px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  color: var(--bg);
-  background: var(--ink);
-  box-shadow: var(--e2);
-  pointer-events: none;
-  animation: nt-fi 0.15s var(--out);
-  z-index: 5;
-}
 
 /* ── The mini composer, opened in place ─────────────────────────────────── */
 .nt-cmp {
@@ -607,6 +589,14 @@ html:not([data-pointer]) .nt-nb:focus-visible {
   color: var(--muted);
   -webkit-text-fill-color: currentColor;
   cursor: not-allowed;
+}
+/* Why it takes nothing (the workspace is being deleted), where the text would start. */
+.nt-cmp__readonly {
+  margin: 0;
+  padding: 2px 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 .nt-cmp__row {
   display: flex;
@@ -754,9 +744,6 @@ html:not([data-pointer]) .nt-nb:focus-visible {
   .nt-nb[data-act="open"] .nt-nb__label {
     display: none;
   }
-  .nt-nb[data-tip]:hover::after {
-    display: none;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .nt-item,
@@ -767,7 +754,6 @@ html:not([data-pointer]) .nt-nb:focus-visible {
   .nt-wi.is-new,
   .nt-item.is-new::after,
   .nt-item.is-pulse,
-  .nt-nb[data-tip]:hover::after,
   .nt-acts,
   .nt-nb,
   .nt-nb::after,

@@ -1171,7 +1171,7 @@ a.wiki-embed:hover {
   min-width: 260px;
 }
 .wiki-uses-pop .wiki-label {
-  margin: 4px 4px 6px;
+  margin: var(--space-1) var(--space-1) var(--space-2);
 }
 .wiki-uses-pop .wiki-use,
 .wiki-uses-pop .wiki-about__note,

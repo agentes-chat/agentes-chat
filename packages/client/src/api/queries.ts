@@ -20,7 +20,7 @@ import { newerSetup } from "../lib/computer";
 import { CONSULT_CONVERSATION_POLL_MS, CONSULT_GROUP_POLL_MS, exchangeIds } from "../lib/consult-group";
 import { forPeople } from "../lib/consultations";
 import { PHONE_LOOK_MS, WIFI_IPHONES_POLL_MS, WIFI_PAIR_POLL_MS, wifiPairLive } from "../lib/devices";
-import { answerWithin, noAnswer, sendWaits } from "../lib/errors";
+import { answerWithin, noAnswer, sendFailureOf, sendWaits } from "../lib/errors";
 import { ISSUES_VIEW_DEFAULT, type IssuesViewChange, withIssuesView } from "../lib/issues-view";
 import { LoginReadError, loginReadPasses } from "../lib/machines";
 import { GIF_PAGE, isMediaAfterReply, messageMediaOf, postedMedia } from "../lib/media";
@@ -119,6 +119,7 @@ import type {
   IssueColumn,
   IssueInput,
   IssuePatch,
+  IssueProjectRef,
   IssueStatus,
   IssuesView,
   JevKey,
@@ -356,12 +357,12 @@ export function useCreateOrganization() {
   });
 }
 
-/** How often a workspace's closing screen asks `GET /me` again: its socket is closed, so no event reaches it. */
+/** How often `useClosingMe` asks `GET /me` again: no event says that a deletion was undone. */
 export const CLOSING_POLL_MS = 30_000;
 
 /**
- * `GET /me` while a workspace's closing screen shows: every 30 s and whenever the app comes back to the front, so a
- * restore opens the workspace again and a deletion done drops it from the list.
+ * `GET /me` while a workspace's line on top, or an account's screen, says it is being deleted: every 30 s and whenever
+ * the app comes back to the front, so a restore shows at once and a deletion done drops it from the list.
  */
 export const useClosingMe = () =>
   useQuery({ ...meQuery(useApi()), refetchInterval: CLOSING_POLL_MS, refetchOnWindowFocus: "always" });
@@ -389,8 +390,8 @@ export const useAccountDeletionPlan = (enabled = true) => {
 };
 
 /**
- * Deletes the workspace (owners), with the proof that it's them (the emailed code, or the password). Its closing
- * screen shows here at once, and through `org.deleting` everywhere else. The dialog says its refusals.
+ * Deletes the workspace (owners), with the proof that it's them (the emailed code, or the password). Its line on top
+ * shows here at once, and through `org.deleting` everywhere else. The dialog says its refusals.
  */
 export function useDeleteWorkspace(orgId: string) {
   const api = useApi();
@@ -1668,7 +1669,11 @@ export function postMessageMutation(
       if (waits && ctx?.local) outbox.add(orgId, ctx.local);
       options.onFailed?.(error, { clientId, waits });
       qc.setQueryData<Message[]>(key, (list) =>
-        list?.map((m) => (m.local && m.clientId === clientId ? { ...m, local: "failed" as const } : m)),
+        list?.map((m) =>
+          m.local && m.clientId === clientId
+            ? { ...m, local: "failed" as const, sendFailure: waits ? undefined : sendFailureOf(error) }
+            : m,
+        ),
       );
     },
   });
@@ -1866,6 +1871,9 @@ export function flushOutbox(
       } catch (error) {
         if (sendWaits(error)) return true;
         outbox.remove(clientId);
+        qc.setQueryData<Message[]>(keys.messages(orgId, local.channelId), (list) =>
+          list?.map((m) => (m.local && m.clientId === clientId ? { ...m, sendFailure: sendFailureOf(error) } : m)),
+        );
         onRefused?.(error);
       }
     }
@@ -3026,6 +3034,25 @@ export const useAiStatus = (
   });
 };
 
+/**
+ * The AI status as read after `waiting` turned true (it is read again then), undefined until it is: one kept from
+ * before something started waiting for an AI may still call its agent ready, and a build asked on it is only refused.
+ */
+export function useAiStatusSince(orgId: string, waiting: boolean): AiStatus | undefined {
+  const status = useAiStatus(orgId, waiting);
+  const [since, setSince] = useState<number | null>(null);
+  const { refetch } = status;
+  useEffect(() => {
+    if (!waiting) {
+      setSince(null);
+      return;
+    }
+    setSince(Date.now());
+    void refetch({ cancelRefetch: false });
+  }, [waiting, refetch]);
+  return since !== null && status.dataUpdatedAt >= since ? status.data : undefined;
+}
+
 export function useRotateCredential(orgId: string, silent = false) {
   const api = useApi();
   const qc = useQueryClient();
@@ -4050,11 +4077,12 @@ export const useArtifactBlob = (orgId: string, id: string, version: number, enab
 
 // ── Issues ───────────────────────────────────────────────────────────────────
 
-export const useIssues = (orgId: string, q = "") => {
+/** `project`: only a project's tasks (its id), or `none` for the ones with no project. The server filters. */
+export const useIssues = (orgId: string, q = "", project = "") => {
   const api = useApi();
   return useQuery({
-    queryKey: keys.issueList(orgId, q),
-    queryFn: () => api.issues.list(orgId, q ? { q } : {}),
+    queryKey: keys.issueList(orgId, q, project),
+    queryFn: () => api.issues.list(orgId, { ...(q ? { q } : {}), ...(project ? { projectId: project } : {}) }),
     placeholderData: (prev) => prev,
     // While an agent works on an issue its steps change without an event: look again every 10 s.
     refetchInterval: (query) => (query.state.data?.some((i) => i.work && i.work.state !== "stalled") ? 10_000 : false),
@@ -4237,6 +4265,38 @@ export function useIssueColumnAction(orgId: string) {
     onSuccess: (columns) => qc.setQueryData(keys.issueColumns(orgId), columns),
     // Deleting a column moves its tasks.
     onSettled: () => void qc.invalidateQueries({ queryKey: keys.issues(orgId) }),
+  });
+}
+
+/** The tasks' projects; they live under the issues key, so their counts follow every task change. */
+export const useIssueProjects = (orgId: string) => {
+  const api = useApi();
+  return useQuery({ queryKey: keys.issueProjects(orgId), queryFn: () => api.issues.projects(orgId) });
+};
+
+export function useIssueProjectAction(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      action:
+        | { type: "create"; name: string; color: string }
+        | { type: "update"; projectId: string; name?: string; color?: string; archived?: boolean }
+        | { type: "delete"; projectId: string },
+    ): Promise<IssueProjectRef | undefined> => {
+      switch (action.type) {
+        case "create":
+          return api.issues.createProject(orgId, { name: action.name, color: action.color });
+        case "update": {
+          const { type: _type, projectId, ...patch } = action;
+          return api.issues.updateProject(orgId, projectId, patch);
+        }
+        case "delete":
+          return api.issues.deleteProject(orgId, action.projectId).then(() => undefined);
+      }
+    },
+    // The tasks carry their project's name and colour: they read again too.
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.issues(orgId) }),
   });
 }
 
@@ -4903,6 +4963,23 @@ export const useDesktopLatest = (target: string, arch: string, enabled = true) =
   });
 };
 
+/** Pauses a computer from the apps (`until` null: until resumed) or resumes it; the list follows at once. */
+export function useMachinePause(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ machineId, input }: { machineId: string; input: { until: string | null } | "resume" }) =>
+      api.machines.setPause(orgId, machineId, input),
+    meta: { silent: true },
+    onSuccess: (paused, { machineId }) => {
+      qc.setQueryData<Machine[]>(keys.machines(orgId), (list) =>
+        list?.map((m) => (m.id === machineId ? { ...m, paused: paused ?? { paused: false } } : m)),
+      );
+      void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
+    },
+  });
+}
+
 /** Removes a folder (for everyone or one agent) or turns a tool off; the machine follows. */
 export function useReduceMachineAccess(orgId: string) {
   const api = useApi();
@@ -5424,6 +5501,20 @@ export const useNotificationCount = (orgId: string) => {
   });
 };
 
+/**
+ * "Esperando você" (ADR 0172): what waits on me in this workspace, oldest first. Live through the inbox's own events
+ * (`applyNotificationEvent`).
+ */
+export const useWaitingOnMe = (orgId: string) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.waiting(orgId),
+    queryFn: () => api.notifications.waiting(orgId),
+    staleTime: 60_000,
+    meta: { quiet: true },
+  });
+};
+
 /** What reaches my devices as a notification in this workspace (ADR 0071 §8). */
 export const useNoticePrefs = (orgId: string) => {
   const api = useApi();
@@ -5710,6 +5801,9 @@ export function dropNotification(qc: QC, orgId: string, id: string, keepDone = f
 export function applyNotificationEvent(qc: QC, orgId: string, event: NotificationEvent) {
   if (event.type === "notification.upserted" && event.notification.kind === "join_request")
     void qc.invalidateQueries({ queryKey: keys.joinRequests(orgId) });
+  // What waits on me changes with a waiting row coming or any row leaving (a count alone says nothing new).
+  if (event.type === "notification.removed" || (event.type === "notification.upserted" && event.notification.waiting))
+    void qc.invalidateQueries({ queryKey: keys.waiting(orgId) });
   if (event.type === "notification.upserted") cacheNotification(qc, orgId, event.notification);
   else if (event.type === "notification.removed") {
     dropNotification(qc, orgId, event.id, true);

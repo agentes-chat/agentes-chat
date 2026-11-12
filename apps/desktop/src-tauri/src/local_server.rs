@@ -894,6 +894,12 @@ struct HereFile {
     /// short by quitting the app still moves the database or goes back to that version at the next start.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     updating_from: Option<String>,
+    /// The nightly backup's switch; None is on, the default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    nightly: Option<bool>,
+    /// A folder each new backup is copied to as well ("Copy to").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    backup_copy: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -952,6 +958,10 @@ struct Inner {
     awake: Option<u32>,
     /// It is being set up, since then (Copy details' timeline counts from it).
     setting_up: Option<Instant>,
+    /// The last backup didn't finish (`backup`), or its copy didn't reach the "Copy to" folder (`copy`).
+    backup_problem: Option<&'static str>,
+    /// The night (`YYYY-MM-DD`) a nightly backup was last tried: once a night, even when it fails.
+    nightly_tried: Option<String>,
 }
 
 #[derive(Default)]
@@ -1128,6 +1138,26 @@ pub struct Status {
     held_until: Option<u64>,
     /// Reach is on but Tailscale isn't connected on this computer: nobody else can reach it now.
     tailnet_down: bool,
+    backups: Backups,
+    /// `caffeinate` keeps this Mac awake for it now.
+    awake: bool,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Backups {
+    nightly: bool,
+    copy_to: Option<String>,
+    /// Its backups in `backups/`, newest first.
+    files: Vec<BackupFile>,
+    problem: Option<&'static str>,
+}
+
+#[derive(Clone, Serialize)]
+pub struct BackupFile {
+    path: String,
+    /// Unix milliseconds.
+    at: u64,
 }
 
 fn system_name() -> Option<String> {
@@ -1153,9 +1183,9 @@ fn system_name() -> Option<String> {
 }
 
 pub fn status(app: &AppHandle, welcome: bool) -> Status {
-    let (here, phase, back_to, tailnet_down) = {
+    let (here, phase, back_to, tailnet_down, backup_problem, awake) = {
         let inner = state(app);
-        (inner.here.clone(), inner.phase, inner.back_to.clone(), inner.tailnet_down)
+        (inner.here.clone(), inner.phase, inner.back_to.clone(), inner.tailnet_down, inner.backup_problem, inner.awake.is_some())
     };
     let folder = folder(app);
     let env = folder.as_ref().map(read_env).unwrap_or_default();
@@ -1192,7 +1222,7 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
             .as_ref()
             .and_then(|r| r["version"].as_str().map(str::to_string))
             .or_else(|| folder.as_ref().and_then(current_version)),
-        dir: folder.map(|f| f.0.to_string_lossy().into_owned()).unwrap_or_default(),
+        dir: folder.as_ref().map(|f| f.0.to_string_lossy().into_owned()).unwrap_or_default(),
         system_name: (welcome && installed != Installed::App).then(system_name).flatten(),
         serving,
         claim,
@@ -1200,6 +1230,22 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
         held: run && here.hold.is_some(),
         held_until: here.hold.and_then(|h| h.until).map(|t| t * 1000),
         tailnet_down: tailnet_down && reach,
+        backups: Backups {
+            nightly: here.nightly.unwrap_or(true),
+            files: folder
+                .as_ref()
+                .map(|f| backup_files(&f.backups()))
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(at, path)| BackupFile {
+                    path: path.to_string_lossy().into_owned(),
+                    at: at.duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0),
+                })
+                .collect(),
+            copy_to: here.backup_copy,
+            problem: backup_problem,
+        },
+        awake,
     }
 }
 
@@ -1597,10 +1643,11 @@ pub fn check_tailnet(app: &AppHandle) {
     }
 }
 
-/// With reach on, people reach the server here from their phones and computers: this Mac stays awake while it
-/// runs (`caffeinate -i -w <the server>`, which ends by itself when the server does). Other systems: nothing.
+/// This Mac stays awake while the server runs here, for the agents' work and its nightly backup, and for people
+/// reaching it from their phones and computers (`caffeinate -i -w <the server>`, which ends by itself when the
+/// server does). Other systems: nothing.
 fn keep_awake(app: &AppHandle, server_pid: u32) {
-    if !cfg!(target_os = "macos") || !reached(app) {
+    if !cfg!(target_os = "macos") {
         return;
     }
     let_sleep(app);
@@ -1711,6 +1758,7 @@ pub fn load(app: &AppHandle) {
         .unwrap_or_default();
     let hold = here.hold;
     state(app).here = here;
+    nightly(app);
     if !runs(app) {
         return;
     }
@@ -2107,20 +2155,21 @@ fn backup(app: &AppHandle) -> Result<String, String> {
     let folder = folder(app).ok_or("no folder")?;
     let was_running = state(app).pid.is_some();
     make_private_dir(&folder.backups()).map_err(|e| e.to_string())?;
-    // Windows has no `date` program: the stamp then.
-    #[cfg(unix)]
-    let date = Command::new("date").arg("+%Y-%m-%d-%H%M%S").output().ok();
-    #[cfg(not(unix))]
-    let date: Option<std::process::Output> = None;
-    let date = date.map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).filter(|d| !d.is_empty());
-    let name = format!("agentes-{}.tar.gz", date.unwrap_or_else(stamp));
+    let name = format!("agentes-{}.tar.gz", local_stamp().unwrap_or_else(stamp));
     let out = folder.backups().join(&name);
     if was_running {
         stop(app, false);
     }
     let parts: Vec<&str> = ["db", "files", ".env"].into_iter().filter(|p| folder.0.join(p).exists()).collect();
     // Windows 10 and later carry `tar` too.
-    let tar = crate::no_console(&mut Command::new("tar")).arg("-czf").arg(&out).arg("-C").arg(&folder.0).args(&parts).status();
+    // Under a temporary name until it's whole: a quit in the middle (the night's update) never leaves a cut file
+    // that lists as the newest backup.
+    let tmp = folder.backups().join(format!("{name}.tmp"));
+    let tar = crate::no_console(&mut Command::new("tar")).arg("-czf").arg(&tmp).arg("-C").arg(&folder.0).args(&parts).status();
+    let tar = tar.and_then(|s| if s.success() { fs::rename(&tmp, &out).map(|()| s) } else { Ok(s) });
+    if !tar.as_ref().is_ok_and(|s| s.success()) {
+        let _ = fs::remove_file(&tmp);
+    }
     if was_running {
         fresh_start(app);
         let _ = spawn(app, Phase::Starting);
@@ -2132,11 +2181,187 @@ fn backup(app: &AppHandle) -> Result<String, String> {
                 use std::os::unix::fs::PermissionsExt;
                 let _ = fs::set_permissions(&out, fs::Permissions::from_mode(0o600));
             }
-            prune(&folder.backups(), "agentes-", 2, &[]);
+            prune(&folder.backups(), "agentes-", KEEP_BACKUPS, &[]);
+            let copied = copy_out(app, &out);
+            state(app).backup_problem = (!copied).then_some("copy");
+            emit_status(app);
             Ok(out.to_string_lossy().into_owned())
         }
-        _ => Err("the copy didn't finish".into()),
+        _ => {
+            state(app).backup_problem = Some("backup");
+            emit_status(app);
+            Err("the copy didn't finish".into())
+        }
     }
+}
+
+/// Backups kept, here and in the "Copy to" folder.
+const KEEP_BACKUPS: usize = 2;
+/// The nightly backup's hour, local time.
+const NIGHTLY_HOUR: &str = "030000";
+
+/// Now on this computer's clock as `YYYY-MM-DD-HHMMSS` (backups' names); None where there is no `date` program
+/// (Windows, whose builds don't carry the server).
+fn local_stamp() -> Option<String> {
+    #[cfg(unix)]
+    let date = Command::new("date").arg("+%Y-%m-%d-%H%M%S").output().ok();
+    #[cfg(not(unix))]
+    let date: Option<std::process::Output> = None;
+    date.map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).filter(|d| d.len() == 17)
+}
+
+/// The backups `backup` wrote in `dir` (`agentes-*.tar.gz`), newest first. Only those: the "Copy to" folder is the
+/// person's own and may hold anything else.
+fn backup_files(dir: &Path) -> Vec<(SystemTime, PathBuf)> {
+    let Ok(entries) = fs::read_dir(dir) else { return Vec::new() };
+    let mut files: Vec<(SystemTime, PathBuf)> = entries
+        .flatten()
+        .filter(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+            name.starts_with("agentes-") && name.ends_with(".tar.gz") && e.path().is_file()
+        })
+        .map(|e| (e.metadata().and_then(|m| m.modified()).unwrap_or(UNIX_EPOCH), e.path()))
+        .collect();
+    files.sort_by(|a, b| b.0.cmp(&a.0));
+    files
+}
+
+/// The new backup copied to the "Copy to" folder too (under a temporary name until it's whole), where the two
+/// newest stay. False when it didn't get there; true with no such folder.
+fn copy_out(app: &AppHandle, file: &Path) -> bool {
+    let Some(dir) = state(app).here.backup_copy.clone().map(PathBuf::from) else { return true };
+    let Some(name) = file.file_name() else { return false };
+    let tmp = dir.join(format!("{}.tmp", name.to_string_lossy()));
+    let copied = dir.is_dir() && fs::copy(file, &tmp).is_ok() && fs::rename(&tmp, dir.join(name)).is_ok();
+    if !copied {
+        let _ = fs::remove_file(&tmp);
+        note(app, format!("backup: it didn't reach {}", dir.display()));
+        return false;
+    }
+    for (_, old) in backup_files(&dir).into_iter().skip(KEEP_BACKUPS) {
+        let _ = fs::remove_file(old);
+    }
+    true
+}
+
+/// Whether the nightly backup is due at `now` (both `YYYY-MM-DD-HHMMSS`, local time): past 3:00 and no backup since
+/// 3:00 today, and not tried yet tonight. A computer that slept or was off at 3:00 backs up when it's back.
+pub fn nightly_due(now: &str, last: Option<&str>, tried: Option<&str>) -> bool {
+    let (Some(today), Some(time)) = (now.get(..10), now.get(11..)) else { return false };
+    let since = format!("{today}-{NIGHTLY_HOUR}");
+    time >= NIGHTLY_HOUR && tried != Some(today) && last.map_or(true, |l| l < since.as_str())
+}
+
+/// Once a minute while the app is open: the nightly backup when it's due, the switch is on and the server runs
+/// here. A minute's sleep that lasted a night (the computer slept) is caught up at the next check.
+pub fn nightly(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(60));
+        let wanted = {
+            let inner = state(&app);
+            inner.here.nightly.unwrap_or(true) && inner.setting_up.is_none()
+        };
+        if !wanted || !runs(&app) {
+            continue;
+        }
+        let Some(now) = local_stamp() else { continue };
+        let Some(folder) = folder(&app) else { continue };
+        let last = backup_files(&folder.backups())
+            .first()
+            .and_then(|(_, p)| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+            .and_then(|n| n.strip_prefix("agentes-").and_then(|n| n.strip_suffix(".tar.gz")).map(str::to_string));
+        let tried = state(&app).nightly_tried.clone();
+        if !nightly_due(&now, last.as_deref(), tried.as_deref()) {
+            continue;
+        }
+        // Not under another long operation (a restart, reach, a backup by hand): the next minute then.
+        let server = app.state::<LocalServer>();
+        let Ok(_busy) = server.busy.try_lock() else { continue };
+        state(&app).nightly_tried = now.get(..10).map(str::to_string);
+        if let Err(err) = backup(&app) {
+            note(&app, format!("nightly backup: {err}"));
+        }
+    });
+}
+
+/// "Restore…": the server goes back to one of its backups in `backups/`. It stops, what the folder holds now moves
+/// aside to `backups/before-restore-<time>` (never deleted), the backup takes its place and it starts again. A
+/// backup that doesn't start puts the folder back as it was. Its address and port stay this computer's.
+fn restore(app: &AppHandle, file: &str) -> Result<(), String> {
+    let folder = folder(app).ok_or("no folder")?;
+    let file = PathBuf::from(file);
+    if !backup_files(&folder.backups()).iter().any(|(_, p)| *p == file) {
+        return Err("not one of its backups".into());
+    }
+    let at = stamp();
+    let unpacked = folder.backups().join(format!("restore-{at}.tmp"));
+    make_private_dir(&unpacked).map_err(|e| e.to_string())?;
+    let tar = crate::no_console(&mut Command::new("tar")).arg("-xzf").arg(&file).arg("-C").arg(&unpacked).status();
+    if !tar.is_ok_and(|s| s.success()) || !unpacked.join("db").is_dir() {
+        let _ = fs::remove_dir_all(&unpacked);
+        return Err("unreadable".into());
+    }
+    let env_now = read_env(&folder);
+    let kept: Vec<(&str, String)> =
+        ["PORT", "PUBLIC_URL"].into_iter().filter_map(|k| env_get(&env_now, k).map(|v| (k, v))).collect();
+    let aside = folder.backups().join(format!("before-restore-{at}"));
+    let had: Vec<&str> = DATA_PARTS.into_iter().filter(|p| folder.0.join(p).exists()).collect();
+    let started = |app: &AppHandle| {
+        fresh_start(app);
+        spawn(app, Phase::Starting).is_ok() && wait_running(app) == Phase::Running
+    };
+    stop(app, false);
+    let swapped = make_private_dir(&aside)
+        .and_then(|()| move_parts(&folder.0, &aside))
+        .and_then(|()| move_parts(&unpacked, &folder.0))
+        .and_then(|()| write_env(&folder, &kept));
+    if swapped.is_ok() && started(app) {
+        let _ = fs::remove_dir_all(&unpacked);
+        return Ok(());
+    }
+    note(app, format!("restore: it didn't start ({swapped:?}), putting back what was there"));
+    stop(app, false);
+    let failed = folder.backups().join(format!("failed-restore-{at}"));
+    let back = make_private_dir(&failed).and_then(|()| put_back(&folder.0, &aside, &failed, &had));
+    let _ = fs::remove_dir_all(&unpacked);
+    if back.is_err() {
+        note(app, format!("restore: putting it back failed, the old data is in {}", aside.display()));
+    }
+    let _ = started(app);
+    Err("start".into())
+}
+
+/// The folder's data, as a backup holds it: database, files, settings.
+const DATA_PARTS: [&str; 3] = ["db", "files", ".env"];
+
+/// Moves the folder's data from `from` to `to`, each part only when `from` has it, never over one `to` has.
+fn move_parts(from: &Path, to: &Path) -> io::Result<()> {
+    for part in DATA_PARTS {
+        if !from.join(part).exists() {
+            continue;
+        }
+        if to.join(part).exists() {
+            return Err(io::Error::new(io::ErrorKind::AlreadyExists, part));
+        }
+        fs::rename(from.join(part), to.join(part))?;
+    }
+    Ok(())
+}
+
+/// After a restore that didn't start: what the backup brought goes to `failed`, and what was set aside comes back.
+/// A part the folder `had` that never moved aside stays where it is.
+fn put_back(folder: &Path, aside: &Path, failed: &Path, had: &[&str]) -> io::Result<()> {
+    for part in DATA_PARTS {
+        let set_aside = aside.join(part).exists();
+        if folder.join(part).exists() && (set_aside || !had.contains(&part)) {
+            fs::rename(folder.join(part), failed.join(part))?;
+        }
+        if set_aside {
+            fs::rename(aside.join(part), folder.join(part))?;
+        }
+    }
+    Ok(())
 }
 
 /// What "Copy details" copies: versions and state, what the server and the setup said, the end of its log. No
@@ -2401,6 +2626,101 @@ pub async fn local_server_backup(app: AppHandle, webview: tauri::Webview) -> Res
     .map_err(|e| e.to_string())?
 }
 
+/// Async: a "Copy to" folder on a drive that went away can keep `is_dir` waiting, never on the main thread.
+#[tauri::command]
+pub async fn local_server_backups_set(
+    app: AppHandle,
+    webview: tauri::Webview,
+    nightly: bool,
+    copy_to: Option<String>,
+) -> Result<(), String> {
+    app_window(&webview, &["prefs"])?;
+    if copy_to.as_deref().is_some_and(|d| !Path::new(d).is_absolute() || !Path::new(d).is_dir()) {
+        return Err("not a folder".into());
+    }
+    let here = {
+        let mut inner = state(&app);
+        if inner.here.backup_copy != copy_to {
+            inner.backup_problem = inner.backup_problem.filter(|p| *p != "copy");
+        }
+        inner.here.nightly = (!nightly).then_some(false);
+        inner.here.backup_copy = copy_to;
+        inner.here.clone()
+    };
+    save_here(&app, &here);
+    emit_status(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn local_server_restore(app: AppHandle, webview: tauri::Webview, file: String) -> Result<(), String> {
+    app_window(&webview, &["prefs"])?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let server = app.state::<LocalServer>();
+        let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
+        let result = restore(&app, &file);
+        emit_status(&app);
+        result
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// What keeps the server here up after a restart or a power cut (macOS; None where the app can't tell): automatic
+/// login, and starting up again after a power failure (`pmset`; None on a Mac without that setting, a laptop).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeepRunning {
+    auto_login: Option<bool>,
+    auto_restart: Option<bool>,
+}
+
+/// `pmset -g`'s `autorestart` line, when it has one.
+pub fn auto_restart_in(pmset: &str) -> Option<bool> {
+    pmset.lines().find_map(|l| {
+        let mut words = l.split_whitespace();
+        (words.next() == Some("autorestart")).then(|| words.next().is_some_and(|v| v != "0"))
+    })
+}
+
+#[tauri::command]
+pub async fn keep_running(webview: tauri::Webview) -> Result<KeepRunning, String> {
+    app_window(&webview, &["prefs"])?;
+    if !cfg!(target_os = "macos") {
+        return Ok(KeepRunning { auto_login: None, auto_restart: None });
+    }
+    tauri::async_runtime::spawn_blocking(|| {
+        let auto_login = Command::new("/usr/bin/defaults")
+            .args(["read", "/Library/Preferences/com.apple.loginwindow", "autoLoginUser"])
+            .output()
+            .map(|o| o.status.success() && !String::from_utf8_lossy(&o.stdout).trim().is_empty())
+            .ok();
+        let auto_restart = Command::new("/usr/bin/pmset")
+            .arg("-g")
+            .output()
+            .ok()
+            .and_then(|o| auto_restart_in(&String::from_utf8_lossy(&o.stdout)));
+        KeepRunning { auto_login, auto_restart }
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// System Settings at Users & Groups (automatic login) or Energy (start after a power failure). macOS only.
+#[tauri::command]
+pub fn open_system_settings(webview: tauri::Webview, page: String) -> Result<(), String> {
+    app_window(&webview, &["prefs"])?;
+    if !cfg!(target_os = "macos") {
+        return Err("macOS only".into());
+    }
+    let url = match page.as_str() {
+        "users" => "x-apple.systempreferences:com.apple.preferences.users",
+        "energy" => "x-apple.systempreferences:com.apple.preference.energysaver",
+        _ => return Err("unknown page".into()),
+    };
+    Command::new("/usr/bin/open").arg(url).status().map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn local_server_diagnostics(app: AppHandle, webview: tauri::Webview) -> Result<String, String> {
     app_window(&webview, ANY)?;
@@ -2446,6 +2766,48 @@ mod tests {
         assert!(!sign_in_owner(Some("u-2"), Some("u-1")), "a teammate signed in there gets the sign-in page");
         assert!(!sign_in_owner(None, Some("u-1")), "signed out there: the sign-in page");
         assert!(sign_in_owner(Some("u-1"), None), "an older server that doesn't say: as before");
+    }
+
+    #[test]
+    fn the_nightly_backup_once_a_night_after_three() {
+        let due = |now, last, tried| nightly_due(now, last, tried);
+        assert!(!due("2026-11-11-025900", None, None));
+        assert!(due("2026-11-11-030000", None, None));
+        assert!(due("2026-11-11-030100", Some("2026-11-10-030012"), None));
+        // Back up now at 1:00 isn't tonight's; one after 3:00 is.
+        assert!(due("2026-11-11-091500", Some("2026-11-11-010000"), None));
+        assert!(!due("2026-11-11-091500", Some("2026-11-11-030005"), None));
+        // Tried tonight already (it failed): tomorrow.
+        assert!(!due("2026-11-11-091500", Some("2026-11-10-030012"), Some("2026-11-11")));
+        assert!(!due("nonsense", None, None));
+    }
+
+    #[test]
+    fn power_failure_restart_from_pmset() {
+        assert_eq!(auto_restart_in("System-wide power settings:\n Sleep On Power Button 1\n autorestart          1\n"), Some(true));
+        assert_eq!(auto_restart_in(" autorestart          0\n"), Some(false));
+        assert_eq!(auto_restart_in(" womp                 1\n"), None);
+    }
+
+    #[test]
+    fn a_restore_that_failed_puts_back_what_was_there() {
+        let root = temp("put-back");
+        let (folder, aside, failed) = (root.join("f"), root.join("aside"), root.join("failed"));
+        for d in [&folder, &aside, &failed] {
+            fs::create_dir_all(d).unwrap();
+        }
+        // It had a database and settings; the database moved aside, the settings didn't, and the backup brought
+        // its database and files.
+        fs::create_dir_all(aside.join("db")).unwrap();
+        fs::write(aside.join("db/mark"), "old").unwrap();
+        fs::write(folder.join(".env"), "old").unwrap();
+        fs::create_dir_all(folder.join("db")).unwrap();
+        fs::create_dir_all(folder.join("files")).unwrap();
+        assert!(move_parts(&aside, &folder).is_err(), "never over a part that is there");
+        put_back(&folder, &aside, &failed, &["db", ".env"]).unwrap();
+        assert_eq!(fs::read_to_string(folder.join("db/mark")).unwrap(), "old");
+        assert_eq!(fs::read_to_string(folder.join(".env")).unwrap(), "old");
+        assert!(!folder.join("files").exists() && failed.join("files").is_dir() && failed.join("db").is_dir());
     }
 
     #[test]

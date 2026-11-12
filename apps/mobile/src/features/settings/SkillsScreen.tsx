@@ -73,7 +73,7 @@ import { Note } from "../ai/parts";
 import { MessageText } from "../chat/MessageText";
 import { ConnectSheet } from "../connectors/ConnectSheet";
 import { FirstUse } from "../shared/FirstUse";
-import { useColors, useDirectory } from "../shared/hooks";
+import { useColors, useDirectory, useErrorToast } from "../shared/hooks";
 import { goBack, successHaptic } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { TextArea } from "../shared/TextArea";
@@ -98,6 +98,7 @@ export function SkillsScreen() {
   const usage = useSkillUsage(orgId, admin && list.length > 0);
   const settings = useSkillSettings(orgId, admin);
   const action = useSkillAction(orgId);
+  const failed = useErrorToast();
   const [q, setQ] = useState("");
   const unavailable = skills.isError && (skills.error as { status?: number }).status === 404;
   const shown = searchSkills(list, q);
@@ -138,7 +139,10 @@ export function SkillsScreen() {
                   toggle={settings.data.agentsImprove}
                   disabled={action.isPending}
                   onPress={() =>
-                    action.mutate({ type: "settings", settings: { agentsImprove: !settings.data?.agentsImprove } })
+                    action.mutate(
+                      { type: "settings", settings: { agentsImprove: !settings.data?.agentsImprove } },
+                      { onError: failed },
+                    )
                   }
                 />
               </GroupedList>
@@ -221,7 +225,7 @@ export function SkillScreen({ id }: { id: string }) {
         t("skills.updated", { when: relativeTime(t, i18n.language, s.updatedAt) }),
       ].join(" · ")
     : undefined;
-  const failed = (e: unknown) => toast({ title: errorText(t, e), icon: "x" });
+  const failed = useErrorToast();
 
   const refresh = (item: SkillDetail) =>
     action.mutate(
@@ -405,6 +409,7 @@ function PendingDiff({ skill: s }: { skill: SkillDetail }) {
 function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const failed = useErrorToast();
   const { orgId } = useOrg();
   const action = useSkillAction(orgId);
   const agents = useAgents(orgId);
@@ -426,6 +431,7 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
           s.lastUpdate?.waited
             ? reopened()
             : said(t("skills.undone", { name: s.name, version: s.lastUpdate?.fromVersion ?? 0 })),
+        onError: failed,
       },
     );
   return (
@@ -457,6 +463,7 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
                           ? t("skills.pending.changedAgain", { name: s.name })
                           : t(waiting.applied, { name: s.name }),
                       ),
+                    onError: failed,
                   },
                 )
               }
@@ -468,7 +475,7 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
               onPress={() =>
                 action.mutate(
                   { type: "dismissUpdate", id: s.id },
-                  { onSuccess: () => said(t(waiting.kept, { name: s.name })) },
+                  { onSuccess: () => said(t(waiting.kept, { name: s.name })), onError: failed },
                 )
               }
             />
@@ -485,7 +492,9 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
               label={t("skills.undo")}
               sub={words.kept}
               disabled={action.isPending}
-              onPress={() => action.mutate({ type: "reopenUpdate", id: s.id }, { onSuccess: reopened })}
+              onPress={() =>
+                action.mutate({ type: "reopenUpdate", id: s.id }, { onSuccess: reopened, onError: failed })
+              }
             />
           </GroupedList>
         </>
@@ -502,7 +511,9 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
           hint={{ name: t("common.about", { label: t("skills.autoUpdate") }), text: t("skills.autoUpdateHelp") }}
           toggle={s.autoUpdate ?? false}
           disabled={action.isPending}
-          onPress={() => action.mutate({ type: "update", id: s.id, patch: { autoUpdate: !s.autoUpdate } })}
+          onPress={() =>
+            action.mutate({ type: "update", id: s.id, patch: { autoUpdate: !s.autoUpdate } }, { onError: failed })
+          }
         />
         {words.last ? (
           <GroupedRow
@@ -550,6 +561,7 @@ function ChangeRow({ change: c, agent }: { change: SkillAgentChange; agent: stri
 function AgentImprove({ skill: s }: { skill: SkillDetail }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const failed = useErrorToast();
   const { orgId } = useOrg();
   const action = useSkillAction(orgId);
   const settings = useSkillSettings(orgId);
@@ -567,7 +579,9 @@ function AgentImprove({ skill: s }: { skill: SkillDetail }) {
           labelLines={2}
           toggle={on}
           disabled={action.isPending}
-          onPress={() => action.mutate({ type: "update", id: s.id, patch: { agentsImprove: !on } })}
+          onPress={() =>
+            action.mutate({ type: "update", id: s.id, patch: { agentsImprove: !on } }, { onError: failed })
+          }
         />
         {change ? (
           <GroupedRow
@@ -586,6 +600,7 @@ function AgentImprove({ skill: s }: { skill: SkillDetail }) {
                     successHaptic();
                     toast({ title: t("skills.undone", { name: s.name, version: change.fromVersion }), icon: "check" });
                   },
+                  onError: failed,
                 },
               )
             }

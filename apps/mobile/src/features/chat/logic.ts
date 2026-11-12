@@ -375,6 +375,7 @@ export function questionOf(meta: Message["meta"]): AgentQuestion | null {
     status: q.status === "answered" ? "answered" : "open",
     answer: str(q.answer) || null,
     answeredByUserId: str(q.answeredByUserId) || null,
+    answeredAt: str(q.answeredAt) || null,
     ...(str(q.requestedForUserId) ? { requestedForUserId: str(q.requestedForUserId) } : {}),
     ...(q.withdrawn === true ? { withdrawn: true as const } : {}),
     ...(q.dismissed === true ? { dismissed: true as const } : {}),
@@ -935,3 +936,6 @@ export const readMark = (channelId: string, threadId: string | null | undefined)
  */
 export const messageRefWords = (t: TFunction, card: MessageCard) =>
   `${card.kind === "dm" ? `@${card.name}` : `#${card.name}`}${card.threadId ? ` › ${t("messageRefs.thread")}` : ""} › `;
+
+/** Two taps this close on a message are its double tap (the thumbs up), on its words or on a receipt under them. */
+export const DOUBLE_TAP_MS = 300;

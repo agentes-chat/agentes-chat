@@ -356,8 +356,6 @@
     "switchWorking": "作業中",
     "join": "チャンネルに参加",
     "sending": "送信中…",
-    "failed": "未送信 · もう一度試す",
-    "notSent": "メッセージは送信されませんでした。",
     "toLatest": "最新のメッセージへ",
     "toLatestNew": "最新のメッセージへ: {{text}}",
     "stopAgent": "{{name}}を止める",
@@ -1582,13 +1580,7 @@
       "open": "開く",
       "expandHint": "タップして展開",
       "stop": "停止",
-      "giveUp": "あきらめる",
-      "done": "完了: {{title}}",
-      "failed": "できませんでした: {{title}}",
-      "failedNote": "できませんでした: {{note}}",
-      "expired": "時間内に誰も開きませんでした: {{title}}",
-      "cancelled": "キャンセル済み: {{title}}",
-      "withdrawn": "{{name}}にはもう不要です: {{title}}"
+      "giveUp": "あきらめる"
     },
     "live": {
       "inControl": "あなたが操作中",
@@ -2140,9 +2132,9 @@
     "ofOnline": "{{count}}台中{{online}}台",
     "deleteName": "{{name}}を削除",
     "deleteFoot": "考え直せる期間は7日間です。",
-    "deleteAlert": "すぐに全員が使えなくなります。7日間は復元できます。",
+    "deleteAlert": "すぐに全員が閲覧だけできる状態になります。7日間は復元できます。",
     "deleteAction": "削除",
-    "deleteIntro": "{{name}}はすぐに全員が使えなくなり、7日後に完全に削除されます。",
+    "deleteIntro": "{{name}}はすぐに全員に対して閲覧のみになり、7日後に完全に削除されます。",
     "holdDelete": "長押しして削除",
     "deleteFailed": "ワークスペースを削除できませんでした。もう一度お試しください。",
     "access": {
@@ -2433,7 +2425,6 @@
     },
     "formatAuto": "{{name}}が最適なものを選びます",
     "newWidget": {
-      "titleHint": "タイトル · テスト時に{{name}}が提案します",
       "alerts": "アラートあり",
       "realData": "実データ",
       "editAsk": "依頼を変更",

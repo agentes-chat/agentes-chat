@@ -384,8 +384,6 @@
     "switchWorking": "trabajando",
     "join": "Unirte al canal",
     "sending": "Enviando…",
-    "failed": "No enviado · Reintentar",
-    "notSent": "El mensaje no se envió.",
     "toLatest": "Ir a los mensajes más recientes",
     "toLatestNew": "Ir a los mensajes más recientes: {{text}}",
     "stopAgent": "Detener a {{name}}",
@@ -1769,13 +1767,7 @@
       "open": "Abrir",
       "expandHint": "Toca para expandir",
       "stop": "Detener",
-      "giveUp": "Desistir",
-      "done": "Listo: {{title}}",
-      "failed": "No se pudo: {{title}}",
-      "failedNote": "No se pudo: {{note}}",
-      "expired": "Nadie lo abrió a tiempo: {{title}}",
-      "cancelled": "Cancelado: {{title}}",
-      "withdrawn": "{{name}} ya no necesita esto: {{title}}"
+      "giveUp": "Desistir"
     },
     "live": {
       "inControl": "Tienes el control",
@@ -2339,9 +2331,9 @@
     "ofOnline": "{{online}} de {{count}}",
     "deleteName": "Eliminar {{name}}",
     "deleteFoot": "Tienes 7 días para cambiar de opinión.",
-    "deleteAlert": "Todos salen de inmediato. Se puede restaurar durante 7 días.",
+    "deleteAlert": "Desde ahora todos solo pueden leerlo. Se puede restaurar durante 7 días.",
     "deleteAction": "Eliminar",
-    "deleteIntro": "{{name}} se cierra para todos de inmediato y se elimina para siempre en 7 días.",
+    "deleteIntro": "{{name}} queda en solo lectura para todos de inmediato y se elimina para siempre en 7 días.",
     "holdDelete": "Mantén presionado para eliminar",
     "deleteFailed": "No se pudo eliminar el espacio de trabajo. Inténtalo de nuevo.",
     "access": {
@@ -2638,7 +2630,6 @@
     },
     "formatAuto": "{{name}} elige el mejor",
     "newWidget": {
-      "titleHint": "Título · {{name}} sugiere uno al probar",
       "alerts": "Avisa",
       "realData": "Datos reales",
       "editAsk": "Cambiar el pedido",

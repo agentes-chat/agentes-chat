@@ -321,9 +321,9 @@ describe("pause (protocol 9)", () => {
 
     const [row] = await f.db.select().from(schema.machines).where(eq(schema.machines.id, paired.machineId));
     expect(row).toMatchObject({ paused: true, pausedUntil: new Date(until) });
-    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.paused).toEqual({ until });
+    expect((await listMachines(f.db, f.owner.id, f.org.id))[0]?.paused).toEqual({ until, by: null });
     expect((await hub.status(paired.machineId))?.paused).toEqual({ until, timezone: null });
-    expect(events).toContainEqual(expect.objectContaining({ type: "machine.updated", paused: { until } }));
+    expect(events).toContainEqual(expect.objectContaining({ type: "machine.updated", paused: { until, by: null } }));
 
     const refused = hub.call(paired.machineId, { op: "exec", command: "ls", timeoutSeconds: 5, stream: false });
     await expect(refused).rejects.toThrow(MachinePausedError);

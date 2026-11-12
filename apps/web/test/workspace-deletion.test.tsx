@@ -6,7 +6,7 @@ setupDom();
 import { ApiError, keys, type OrgDeletion, type OrgSummary, type Role } from "@agenteschat/client";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { createFakeApi, meAsAdmin, ORG_ID, seedState } from "./fake-api";
+import { createFakeApi, ENG_ID, meAsAdmin, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -50,7 +50,8 @@ async function open(
     deletion?: OrgDeletion;
     standing?: OrgSummary["standing"];
     createdAt?: string;
-    beta?: OrgSummary;
+    /** Null: Acme is their only workspace. */
+    beta?: OrgSummary | null;
     state?: ReturnType<typeof seedState>;
   } = {},
 ) {
@@ -64,7 +65,7 @@ async function open(
       ...(standing ? { standing } : {}),
       ...(createdAt ? { createdAt } : {}),
     },
-    beta,
+    ...(beta ? [beta] : []),
   ];
   const r = await renderApp(path, { api: createFakeApi(state) });
   await settle(8);
@@ -75,7 +76,9 @@ describe("deleting a workspace (Configurações › Geral)", () => {
   test("only its owners get the card", async () => {
     await open(`/org/${ORG_ID}/settings`);
     const card = screen().getByRole("region", { name: "Apagar workspace" });
-    expect(card.textContent).toContain("Fecha Acme para todos agora. Ele é apagado de vez depois de 7 dias.");
+    expect(card.textContent).toContain(
+      "Acme fica só para leitura para todos agora. Ele é apagado de vez depois de 7 dias.",
+    );
     expect(within(card).getByRole("button", { name: "Apagar workspace…" })).toBeTruthy();
     for (const admin of [true, false]) {
       cleanup();
@@ -96,7 +99,7 @@ describe("deleting a workspace (Configurações › Geral)", () => {
     await settle(4);
     const dialog = screen().getByRole("dialog", { name: "Apagar Ac\u200bme?" });
     expect(dialog.textContent).toContain("Qualquer dono pode restaurar até");
-    expect(dialog.textContent).toContain("Todos perdem o acesso agora e recebem um email");
+    expect(dialog.textContent).toContain("Todos passam a só ler e recebem um email");
     expect(dialog.textContent).toContain(`Vamos mandar um código para ${email} para confirmar que é você.`);
     const send = within(dialog).getByRole("button", { name: "Enviar código" });
     expect(send.hasAttribute("disabled")).toBe(true);
@@ -121,8 +124,11 @@ describe("deleting a workspace (Configurações › Geral)", () => {
     await click(submit);
     await settle(6);
     expect(state.calls.find((c) => c.method === "orgs.deleteWorkspace")?.args).toEqual([ORG_ID, { code: "482913" }]);
-    // Its closing screen takes its place at once.
-    expect(screen().getByRole("heading", { name: "Ac\u200bme está sendo apagado" })).toBeTruthy();
+    // The line on top says so at once, over Geral, which has no way to delete it again.
+    expect(screen().getByRole("region", { name: "Status do workspace" }).textContent).toContain(
+      "Ac\u200bme vai ser apagado em",
+    );
+    expect(screen().queryByRole("region", { name: "Apagar workspace" })).toBeNull();
     expect(screen().queryByRole("dialog")).toBeNull();
     // Out of the address too: restored, Geral doesn't open the dialog again.
     expect(router.state.location.search).not.toHaveProperty("delete");
@@ -148,7 +154,7 @@ describe("deleting a workspace (Configurações › Geral)", () => {
     await open(`/org/${ORG_ID}/settings/general?delete=1`, { state });
     let dialog = screen().getByRole("dialog", { name: "Apagar Acme?" });
     expect(dialog.textContent).not.toContain("Vamos mandar um código");
-    expect(dialog.textContent).toContain("Todos perdem o acesso agora");
+    expect(dialog.textContent).toContain("Todos passam a só ler");
     await type(within(dialog).getByLabelText("Digite Acme para confirmar"), "Acme");
     const submit = within(dialog).getByRole("button", { name: "Apagar workspace" });
     expect(submit.hasAttribute("disabled")).toBe(true);
@@ -176,47 +182,108 @@ describe("deleting a workspace (Configurações › Geral)", () => {
   });
 });
 
-describe("a workspace being deleted: a screen of its own", () => {
-  const deletion = (dueAt: string | null): OrgDeletion => ({
+describe("a workspace being deleted opens as ever, read-only, under a line on top", () => {
+  const deletion = (dueAt: string | null, by = { id: "u-joao", name: "João" }): OrgDeletion => ({
     dueAt,
     requestedAt: new Date(Date.now() - DAY).toISOString(),
-    requestedBy: { id: "u-joao", name: "João" },
+    requestedBy: by,
   });
+  const line = () => screen().getByRole("region", { name: "Status do workspace" });
 
-  test("its owners restore it before the date, and it opens again", async () => {
+  test("its owners read when it goes and who deleted it, and restore it there before the date", async () => {
     const { state, services } = await open(`/org/${ORG_ID}/settings`, { deletion: deletion(soon(6)) });
-    expect(screen().getByRole("heading", { name: "Acme está sendo apagado" })).toBeTruthy();
-    expect(document.body.textContent).toContain(
-      "Este workspace já está sendo apagado. Não precisa fazer nada, ele some em",
-    );
-    expect(document.body.textContent).toContain("João apagou em");
-    // Its socket is refused: GET /me is asked again every 30 s.
+    expect(line().textContent).toMatch(/Acme vai ser apagado em \d+ \w+/);
+    expect(line().textContent).toContain("João apagou em");
+    expect(line().textContent).not.toContain("Só um dono");
+    // The page under it is the workspace's own, with no way to delete it again.
+    expect(screen().queryByRole("region", { name: "Apagar workspace" })).toBeNull();
+    // Nobody hears of a restore: GET /me is asked again every 30 s meanwhile.
     expect(meEvery(services.queryClient)).toContain(30_000);
-    expect(
-      within(screen().getByRole("navigation", { name: "Seus outros workspaces" })).getByRole("link", { name: "Beta" }),
-    ).toBeTruthy();
-    // Someone whose only workspace is going isn't stuck there for 7 days.
-    expect(screen().getByRole("link", { name: "Novo workspace" }).getAttribute("href")).toBe("/onboarding");
-    await click(screen().getByRole("button", { name: "Restaurar workspace" }));
+    await click(within(line()).getByRole("button", { name: "Restaurar workspace" }));
     await settle(6);
     expect(state.calls.filter((c) => c.method === "orgs.restore")).toHaveLength(1);
-    expect(screen().queryByRole("heading", { name: "Acme está sendo apagado" })).toBeNull();
+    expect(screen().queryByRole("region", { name: "Status do workspace" })).toBeNull();
     expect(meEvery(services.queryClient)).not.toContain(30_000);
   });
 
-  test("members read that only an owner can; past the date nobody restores, and no date shows", async () => {
-    await open(`/org/${ORG_ID}`, { role: "member", deletion: deletion(soon(6)) });
-    expect(screen().queryByRole("button", { name: "Restaurar workspace" })).toBeNull();
-    expect(document.body.textContent).toContain("Só um dono pode restaurar.");
-    expect(screen().getByRole("button", { name: "Sair" })).toBeTruthy();
+  test("the one who deleted it reads that they did; members, that only an owner can restore it", async () => {
+    await open(`/org/${ORG_ID}`, { deletion: deletion(soon(6), { id: "u-walter", name: "Walter" }) });
+    expect(line().textContent).toContain("Você apagou em");
 
     cleanup();
+    await open(`/org/${ORG_ID}`, { role: "member", deletion: deletion(soon(6)) });
+    expect(within(line()).queryByRole("button", { name: "Restaurar workspace" })).toBeNull();
+    expect(line().textContent).toContain("Só um dono pode restaurar.");
+
+    // Past the date nobody restores, and no date shows.
+    cleanup();
     await open(`/org/${ORG_ID}`, { deletion: deletion(null) });
-    expect(screen().getByRole("heading", { name: "Acme está sendo apagado" })).toBeTruthy();
-    expect(screen().queryByRole("button", { name: "Restaurar workspace" })).toBeNull();
-    expect(document.body.textContent).toContain("Este workspace já está sendo apagado. Não precisa fazer nada.");
-    expect(document.body.textContent).not.toContain("some em");
-    expect(document.body.textContent).not.toContain("Só um dono");
+    expect(line().textContent).toContain("Acme está sendo apagado");
+    expect(within(line()).queryByRole("button", { name: "Restaurar workspace" })).toBeNull();
+    expect(line().textContent).not.toContain("vai ser apagado");
+    expect(line().textContent).not.toContain("Só um dono");
+  });
+
+  test("its conversations read as ever, the message box says why nothing can be sent", async () => {
+    await open(`/org/${ORG_ID}/c/${ENG_ID}`, { deletion: deletion(soon(6)) });
+    expect(screen().getByRole("heading", { name: "eng" })).toBeTruthy();
+    expect(
+      screen().getByText("Você não pode enviar mensagens enquanto este workspace está sendo apagado"),
+    ).toBeTruthy();
+    expect(screen().queryByRole("combobox", { name: "Mensagem para #eng" })).toBeNull();
+  });
+
+  test("what would change it is greyed out or gone, and the line stays on top in Criar agente; the person's own stays", async () => {
+    const frozen = () => document.querySelector("fieldset.settings__frozen");
+    const pill = () => screen().queryByRole("group", { name: "Meu Início" });
+    // As ever first: Novo agente under the agents, Organizar and Widget on Início, Geral's fields.
+    await open(`/org/${ORG_ID}`);
+    expect(document.querySelector(".sidebar__new-agent")).toBeTruthy();
+    expect(pill()).toBeTruthy();
+    cleanup();
+    await open(`/org/${ORG_ID}`, { deletion: deletion(soon(6)) });
+    expect(document.querySelector(".sidebar__new-agent")).toBeNull();
+    expect(pill()).toBeNull();
+
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/general`, { deletion: deletion(soon(6)) });
+    expect(frozen()?.hasAttribute("disabled")).toBe(true);
+    expect(frozen()?.querySelector("input, button")).toBeTruthy();
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/account`, { deletion: deletion(soon(6)) });
+    expect(frozen()).toBeNull();
+    // What is read through its rows and tabs stays as ever (the Vault, roles, skills, the agents' access): the server
+    // refuses its writes.
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/roles`, { deletion: deletion(soon(6)) });
+    expect(frozen()).toBeNull();
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/access`, { deletion: deletion(soon(6)) });
+    expect(frozen()).toBeNull();
+    expect(screen().getByRole("radio", { name: "Nativos" })).toBeTruthy();
+    // Importar e exportar keeps the workspace as a file and brings no agent in.
+    const card = (name: string) => screen().queryByRole("region", { name });
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/import`);
+    expect([card("Importar") !== null, card("Exportar") !== null]).toEqual([true, true]);
+    cleanup();
+    await open(`/org/${ORG_ID}/settings/import`, { deletion: deletion(soon(6)) });
+    expect([card("Importar") !== null, card("Exportar") !== null]).toEqual([false, true]);
+
+    // Equipe with no agent yet speaks as to someone who can't make one, since no button follows.
+    const team = async (deleting: boolean) => {
+      cleanup();
+      const state = seedState();
+      state.agents = [];
+      await open(`/org/${ORG_ID}/team`, { state, ...(deleting ? { deletion: deletion(soon(6)) } : {}) });
+      return document.querySelector(".team .ac-empty__title")?.textContent;
+    };
+    expect(await team(false)).toBe("Monte seu time de agentes");
+    expect(await team(true)).toBe("Seu time de agentes aparece aqui");
+
+    cleanup();
+    await open(`/org/${ORG_ID}/agents/new`, { deletion: deletion(soon(6)) });
+    expect(line().textContent).toMatch(/Acme vai ser apagado em/);
   });
 });
 
@@ -235,13 +302,13 @@ describe("a workspace being deleted, at its end and in the desktop app", () => {
     expect(document.body.textContent).not.toContain("Você não faz parte deste workspace");
   });
 
-  test("in the desktop app, the window drags from the top of the closing screen, which has no title bar", async () => {
+  test("in the desktop app, it opens under its title bar as ever, the line on top of the work area", async () => {
     const app = window as { __agentesDesktop?: unknown };
     app.__agentesDesktop = { version: "0.6.0" };
     try {
       await open(`/org/${ORG_ID}`, { deletion: deleted(soon(6)) });
-      expect(screen().getByRole("heading", { name: "Acme está sendo apagado" })).toBeTruthy();
-      expect(document.querySelector(".titlebar-strip")).not.toBeNull();
+      expect(screen().getByRole("region", { name: "Status do workspace" }).textContent).toContain("vai ser apagado");
+      expect(document.querySelector(".titlebar")).not.toBeNull();
     } finally {
       delete app.__agentesDesktop;
     }
@@ -377,13 +444,12 @@ describe("deleting your account (Configurações › Sua conta)", () => {
       },
     });
     const { router } = await open(`/org/${ORG_ID}/settings/account`, { state });
-    const card = screen().getByRole("region", { name: "Apagar conta" });
+    const card = screen().getByRole("region", { name: "Apagar" });
     // The kit's Tabs wrap the strip and the panel in a box that lays nothing out (`display: contents`).
     const cards = document.querySelectorAll(".settings__body .ac-tabpanel > .ac-card");
     expect(cards[cards.length - 1]).toBe(card);
     expect(card.classList.contains("settings-danger")).toBe(true);
-    expect(card.textContent).toContain("a sua conta é apagada de vez 7 dias depois. Até lá, dá para restaurar.");
-    await click(within(card).getByRole("button", { name: "Apagar conta…" }));
+    await click(within(card).getByRole("button", { name: "Apagar conta" }));
     await settle(6);
     // Kept in the address: a sign-in again comes back to it.
     expect(router.state.location.search).toMatchObject({ account: "delete" });
@@ -441,28 +507,19 @@ describe("deleting your account (Configurações › Sua conta)", () => {
     expect(within(dialog).getByRole("link", { name: "Apagar Beta" }).getAttribute("href")).toBe("/onboarding?delete=1");
   });
 
-  test("only for someone with no workspace that opens: under its own heading, apart from Restaurar and Sair", async () => {
-    const closing = { dueAt: soon(6), requestedAt: soon(-1), requestedBy: null };
-    const betaClosed: OrgSummary = { id: BETA_ID, name: "Beta", role: "member", deletion: closing };
+  test("only for someone with no workspace that opens: under its own heading, apart from Sair", async () => {
+    const suspended = { state: "suspended", reason: null } as const;
+    const betaClosed: OrgSummary = { id: BETA_ID, name: "Beta", role: "member", standing: suspended };
     const heading = () => screen().getByRole("region", { name: "Sua conta inteira" });
-    const ask = async () => {
-      await click(within(heading()).getByRole("button", { name: "Apagar conta…" }));
-      await settle(6);
-      expect(screen().getByRole("dialog", { name: "Apagar a sua conta inteira?" })).toBeTruthy();
-    };
-    const { router } = await open(`/org/${ORG_ID}`, { deletion: closing, beta: betaClosed });
-    expect(within(heading()).queryByRole("button", { name: "Restaurar workspace" })).toBeNull();
+    const { router } = await open(`/org/${ORG_ID}`, { standing: suspended, beta: betaClosed });
+    expect(screen().getByRole("heading", { name: "Acme está indisponível" })).toBeTruthy();
     expect(within(heading()).queryByRole("button", { name: "Sair" })).toBeNull();
-    // Restaurar is still the owner's, and with nowhere else to go it is the main action.
-    expect(screen().getByRole("button", { name: "Restaurar workspace" }).className).toContain("ac-btn--primary");
-    await ask();
+    expect(screen().getByRole("button", { name: "Sair" })).toBeTruthy();
+    await click(within(heading()).getByRole("button", { name: "Apagar conta…" }));
+    await settle(6);
+    expect(screen().getByRole("dialog", { name: "Apagar a sua conta inteira?" })).toBeTruthy();
     // Kept in the address: a sign-in again comes back to it.
     expect(router.state.location.search).toMatchObject({ account: "delete" });
-
-    cleanup();
-    await open(`/org/${ORG_ID}`, { standing: { state: "suspended", reason: null }, beta: betaClosed });
-    expect(screen().getByRole("heading", { name: "Este workspace está indisponível" })).toBeTruthy();
-    await ask();
 
     cleanup();
     const state = seedState();
@@ -484,19 +541,22 @@ describe("deleting your account (Configurações › Sua conta)", () => {
       expect(screen().queryByRole("button", { name: /^Apagar conta/ })).toBeNull();
       expect(screen().queryByRole("region", { name: "Sua conta inteira" })).toBeNull();
     };
-    await open(`/org/${ORG_ID}`, { deletion: closing });
+    // Being deleted, even their only workspace opens: Sua conta is there.
+    await open(`/org/${ORG_ID}`, { deletion: closing, beta: null });
     noAccountDeletion();
-    expect(screen().getByRole("link", { name: "Beta" }).className).toContain("ac-btn--primary");
-    expect(screen().getByRole("button", { name: "Restaurar workspace" }).className).not.toContain("ac-btn--primary");
+    expect(screen().getByRole("region", { name: "Status do workspace" })).toBeTruthy();
 
     cleanup();
-    await open(`/org/${ORG_ID}`, { standing: { state: "suspended", reason: null } });
+    await open(`/org/${ORG_ID}`, {
+      standing: { state: "suspended", reason: null },
+      beta: { id: BETA_ID, name: "Beta", role: "member", deletion: closing },
+    });
     noAccountDeletion();
-    expect(screen().getByRole("link", { name: "Beta" }).className).toContain("ac-btn--primary");
+    expect(screen().getByRole("link", { name: /^Beta/ }).className).toContain("ac-btn--primary");
 
     // Even from the address: this account's deletion starts in Sua conta.
     cleanup();
-    await open(`/org/${ORG_ID}?account=delete`, { deletion: closing });
+    await open(`/org/${ORG_ID}?account=delete`, { standing: { state: "suspended", reason: null } });
     expect(screen().queryByRole("dialog")).toBeNull();
 
     cleanup();
@@ -513,26 +573,40 @@ describe("deleting your account (Configurações › Sua conta)", () => {
   });
 
   test("one still being set up doesn't count as a way to Sua conta", async () => {
-    const closing = { dueAt: soon(6), requestedAt: soon(-1), requestedBy: null };
     await open(`/org/${ORG_ID}`, {
-      deletion: closing,
+      standing: { state: "suspended", reason: null },
       beta: { id: BETA_ID, name: "Beta", role: "owner", onboarding: { step: "agents", generalChannelId: "c-beta" } },
     });
     expect(screen().getByRole("region", { name: "Sua conta inteira" })).toBeTruthy();
   });
 
-  test("Sua conta points to Geral for someone who owns this workspace and only meant it", async () => {
-    await open(`/org/${ORG_ID}/settings/account`);
-    const card = screen().getByRole("region", { name: "Apagar conta" });
-    expect(
-      within(card).getByRole("link", { name: "Quer apagar só este workspace? Fica em Geral." }).getAttribute("href"),
-    ).toBe(`/org/${ORG_ID}/settings/general`);
-    cleanup();
+  test("Sua conta's last card: two plain buttons for an owner, the workspace's dialog opening in place", async () => {
+    const { router } = await open(`/org/${ORG_ID}/settings/account`);
+    const card = screen().getByRole("region", { name: "Apagar" });
+    const ways = Array.from(card.querySelectorAll(".danger-pair__way"));
+    expect(ways.map((w) => w.textContent)).toEqual([
+      "Apaga a sua conta em 7 dias, em todos os workspaces.Apagar conta",
+      "Acme fica só para leitura para todos agora. Ele é apagado de vez depois de 7 dias.Apagar workspace",
+    ]);
+    // One sentence and one button each: no link out of the card, no "…" on a button.
+    expect(within(card).queryAllByRole("link")).toEqual([]);
+    expect(card.textContent).not.toContain("…");
+    await click(within(card).getByRole("button", { name: "Apagar workspace" }));
+    await settle(4);
+    expect(screen().getByRole("dialog", { name: /^Apagar Ac/ })).toBeTruthy();
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/account`);
+  });
+
+  test("someone who can't delete the workspace gets the account's button alone, under its own name", async () => {
     await open(`/org/${ORG_ID}/settings/account`, { role: "member" });
-    expect(screen().queryByRole("link", { name: /Quer apagar só este workspace/ })).toBeNull();
+    const card = screen().getByRole("region", { name: "Apagar conta" });
+    expect(card.querySelectorAll(".danger-pair__way").length).toBe(1);
     expect(
-      screen().getByRole("link", { name: "Quer sair só deste workspace? Fica em Membros." }).getAttribute("href"),
-    ).toBe(`/org/${ORG_ID}/settings/members`);
+      within(card)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Apagar conta"]);
+    expect(within(card).queryAllByRole("link")).toEqual([]);
   });
 
   test("two with the same name in the dialog: told apart in what it says and in its links", async () => {
@@ -646,6 +720,9 @@ describe("an account waiting for its deletion", () => {
     await settle(8);
     expect(screen().getByRole("heading", { name: "Sua conta está sendo apagada" })).toBeTruthy();
     expect(screen().getByRole("button", { name: "Sair" })).toBeTruthy();
+    // What happens until then is behind the ⓘ beside when it goes.
+    expect(screen().getByRole("button", { name: "Sobre Sua conta está sendo apagada" })).toBeTruthy();
+    expect(document.body.textContent).toContain("Até lá ninguém fala com você aqui");
     const restore = screen().getByRole("button", { name: "Restaurar conta" });
     await click(restore);
     await settle(8);

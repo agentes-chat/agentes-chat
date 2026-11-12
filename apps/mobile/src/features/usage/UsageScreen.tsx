@@ -53,7 +53,7 @@ import { LOGO_SIZES } from "@/ui/provider-marks";
 import { PlanHoldNote, usePlanHold } from "../ai/parts";
 import { AgentFace } from "../shared/Face";
 import { FirstUse } from "../shared/FirstUse";
-import { useColors, useDirectory } from "../shared/hooks";
+import { useColors, useDirectory, useErrorToast } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { Loaded, PushedHeader } from "../shared/parts";
 import { Meter, PlanMeter, Tag, UsageCard } from "./parts";
@@ -445,6 +445,7 @@ function DefaultBudgetCard() {
   const settings = useSettings(orgId);
   const update = useUpdateSettings(orgId);
   const toast = useToast();
+  const failed = useErrorToast();
   const { colors: c, shadows } = useTheme();
   const editable = can(org, "configure");
   const saved = settings.data?.defaultAgentBudgetUsd;
@@ -482,7 +483,10 @@ function DefaultBudgetCard() {
               onPress={() =>
                 update.mutate(
                   { defaultAgentBudgetUsd: amount },
-                  { onSuccess: () => toast({ title: t("settings.defaultBudgetSaved"), icon: "check" }) },
+                  {
+                    onSuccess: () => toast({ title: t("settings.defaultBudgetSaved"), icon: "check" }),
+                    onError: failed,
+                  },
                 )
               }
             />

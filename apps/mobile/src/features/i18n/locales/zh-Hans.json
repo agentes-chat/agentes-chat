@@ -356,8 +356,6 @@
     "switchWorking": "工作中",
     "join": "加入频道",
     "sending": "正在发送…",
-    "failed": "未发送 · 重试",
-    "notSent": "消息未发送。",
     "toLatest": "前往最新消息",
     "toLatestNew": "前往最新消息：{{text}}",
     "stopAgent": "停止 {{name}}",
@@ -1582,13 +1580,7 @@
       "open": "打开",
       "expandHint": "点按展开",
       "stop": "停止",
-      "giveUp": "放弃",
-      "done": "已完成：{{title}}",
-      "failed": "未能完成：{{title}}",
-      "failedNote": "未能完成：{{note}}",
-      "expired": "没有人及时打开：{{title}}",
-      "cancelled": "已取消：{{title}}",
-      "withdrawn": "{{name}} 不再需要这个：{{title}}"
+      "giveUp": "放弃"
     },
     "live": {
       "inControl": "由你控制",
@@ -2140,9 +2132,9 @@
     "ofOnline": "{{online}}/{{count}} 台在线",
     "deleteName": "删除 {{name}}",
     "deleteFoot": "你有 7 天时间改变主意。",
-    "deleteAlert": "所有人会立即无法访问。7 天内可以恢复。",
+    "deleteAlert": "所有人立即只能查看。7 天内可以恢复。",
     "deleteAction": "删除",
-    "deleteIntro": "{{name}} 会立即对所有人关闭，并在 7 天后永久删除。",
+    "deleteIntro": "{{name}} 会立即对所有人变为只读，并在 7 天后永久删除。",
     "holdDelete": "长按以删除",
     "deleteFailed": "无法删除工作区，请重试。",
     "access": {
@@ -2433,7 +2425,6 @@
     },
     "formatAuto": "{{name}} 会选最合适的",
     "newWidget": {
-      "titleHint": "标题 · {{name}} 会在测试时建议一个",
       "alerts": "提醒已开",
       "realData": "真实数据",
       "editAsk": "修改需求",

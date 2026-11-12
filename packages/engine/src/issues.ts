@@ -30,6 +30,7 @@ import {
 } from "./events";
 import { cutText } from "./format";
 import { boardColumns, columnForMove, columnOf, topRank } from "./issue-columns";
+import { type IssueProjectRef, projectForTask, projectsById } from "./issue-projects";
 import type { IssueWorkMeta } from "./issue-work";
 import { fileIdsOf, getMessage, insertMessage, type MessageView, messageView, postPersonMessage } from "./messages";
 import { enqueueRunJob } from "./mission-runs";
@@ -53,6 +54,7 @@ const {
   issues,
   issueActivity,
   issueCounters,
+  issueProjects,
   channels,
   channelMembers,
   artifacts,
@@ -87,6 +89,8 @@ export interface IssueView {
   /** Order inside the column, lowest first. */
   boardRank: number;
   priority: IssuePriority;
+  /** Its one project (ADR 0171), or none. */
+  project: IssueProjectRef | null;
   assignee: WorkActor | null;
   labels: string[];
   dueDate: string | null;
@@ -176,6 +180,7 @@ export interface IssueInput {
   dueDate?: string | null;
   labels?: string[];
   githubUrl?: string | null;
+  projectId?: string | null;
 }
 
 export type IssuePatch = Partial<{
@@ -189,6 +194,8 @@ export type IssuePatch = Partial<{
   assignee: WorkActor | null;
   dueDate: string | null;
   labels: string[];
+  /** Null takes it out of its project. */
+  projectId: string | null;
   /** Null removes it. */
   githubUrl: string | null;
   /**
@@ -556,7 +563,14 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
     : [];
   const byId = new Map(files.map((f) => [f.id, f]));
   const orgId = rows[0]?.orgId;
-  const [columns, tied] = await Promise.all([orgId ? boardColumns(db, orgId) : [], tiedPeople(db, rows)]);
+  const [columns, tied, projects] = await Promise.all([
+    orgId ? boardColumns(db, orgId) : [],
+    tiedPeople(db, rows),
+    projectsById(
+      db,
+      rows.map((r) => r.projectId),
+    ),
+  ]);
   return rows.map((r) => ({
     id: r.id,
     number: r.number,
@@ -566,6 +580,7 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
     columnId: columnOf(columns, r)?.id ?? null,
     boardRank: r.boardRank,
     priority: r.priority,
+    project: (r.projectId && projects.get(r.projectId)) || null,
     assignee: r.assigneeType && r.assigneeId ? { type: r.assigneeType as WorkActor["type"], id: r.assigneeId } : null,
     labels: r.labels,
     dueDate: r.dueDate,
@@ -738,6 +753,8 @@ function eventDetail(event: string | null, data: Record<string, unknown>) {
       return s(data.number) ? out(event, { number: s(data.number) as string }) : {};
     case "github_link":
       return out(s(data.url) ? "github_linked" : "github_unlinked");
+    case "project_changed":
+      return s(data.project) ? out("project_set", { project: s(data.project) as string }) : out("project_removed");
     case "criterion_checked":
       return s(data.text)
         ? out(data.done ? "criterion_checked" : "criterion_unchecked", { text: s(data.text) as string })
@@ -850,6 +867,7 @@ export async function createIssue(
         ? await chosenScope(db, actor, orgId, input.audience, assigned)
         : (made?.scope ?? { ...WORKSPACE_SCOPE, channelId: made?.tiedTo ?? input.channelId ?? null });
   await checkAssignee(db, orgId, input.assignee, scope);
+  const project = input.projectId ? await projectForTask(db, orgId, input.projectId) : null;
   const author = actorOf(actor);
   const source: IssueSource =
     input.source ?? (actor.type === "agent" ? { type: "agent", agentId: actor.agentId } : { type: "manual" });
@@ -868,6 +886,7 @@ export async function createIssue(
         description: (input.description ?? "").slice(0, 50_000),
         priority: input.priority ?? "normal",
         boardRank: topRank(),
+        projectId: project?.id ?? null,
         assigneeType: input.assignee?.type ?? null,
         assigneeId: input.assignee?.id ?? null,
         labels: cleanLabels(input.labels) ?? [],
@@ -993,7 +1012,15 @@ export async function listIssues(
   db: Database,
   actor: IssueActor,
   orgId: string,
-  filters: { q?: string; status?: IssueStatus; assignee?: WorkActor; parentIssueId?: string; limit?: number } = {},
+  filters: {
+    q?: string;
+    status?: IssueStatus;
+    assignee?: WorkActor;
+    parentIssueId?: string;
+    /** Only that project's tasks; `none`: the ones with no project. */
+    projectId?: string;
+    limit?: number;
+  } = {},
 ): Promise<IssueView[]> {
   await requireOrgMember(db, actor, orgId);
   const q = filters.q?.trim();
@@ -1006,6 +1033,11 @@ export async function listIssues(
         actor.type === "person" ? taskSeenSql("issues", sql`${actor.userId}::text`) : undefined,
         filters.status ? eq(issues.status, filters.status) : undefined,
         filters.parentIssueId ? eq(issues.parentIssueId, filters.parentIssueId) : undefined,
+        filters.projectId === "none"
+          ? isNull(issues.projectId)
+          : filters.projectId
+            ? eq(issues.projectId, filters.projectId)
+            : undefined,
         filters.assignee
           ? and(eq(issues.assigneeType, filters.assignee.type), eq(issues.assigneeId, filters.assignee.id))
           : undefined,
@@ -1122,6 +1154,15 @@ export async function updateIssue(
     });
   }
   if (patch.labels !== undefined) set.labels = cleanLabels(patch.labels) ?? [];
+  if (patch.projectId !== undefined && patch.projectId !== current.projectId) {
+    const project = patch.projectId ? await projectForTask(db, orgId, patch.projectId) : null;
+    set.projectId = project?.id ?? null;
+    events.push({
+      text: project ? `moved it to the project ${project.name}` : "took it out of its project",
+      event: "project_changed",
+      data: { project: project?.name ?? null },
+    });
+  }
   if (patch.githubUrl !== undefined) {
     const url = checkGithubUrl(patch.githubUrl);
     if (url !== current.githubUrl) {
@@ -1749,8 +1790,15 @@ export async function openTasksBrief(
 ) {
   const visible = await agentSearchChannels(db, orgId, agentId, channelId);
   const rows = await db
-    .select({ number: issues.number, title: issues.title, status: issues.status, criteria: issues.criteria })
+    .select({
+      number: issues.number,
+      title: issues.title,
+      status: issues.status,
+      criteria: issues.criteria,
+      project: issueProjects.name,
+    })
     .from(issues)
+    .leftJoin(issueProjects, eq(issueProjects.id, issues.projectId))
     .where(
       and(
         eq(issues.orgId, orgId),
@@ -1780,7 +1828,12 @@ export async function openTasksBrief(
     "Issues assigned to you, latest activity first:",
     ...rows.map((r) => {
       const done = r.criteria.filter((c) => c.done).length;
-      return `- #${r.number} ${r.title} (${r.status}${r.criteria.length ? `, criteria ${done}/${r.criteria.length}` : ""})`;
+      const facts = [
+        r.status,
+        ...(r.project ? [`project ${r.project}`] : []),
+        ...(r.criteria.length ? [`criteria ${done}/${r.criteria.length}`] : []),
+      ];
+      return `- #${r.number} ${r.title} (${facts.join(", ")})`;
     }),
     ...(updates
       ? [

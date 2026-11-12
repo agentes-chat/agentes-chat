@@ -6,7 +6,14 @@ import { CLOUD_SERVER } from "../lib/server";
 import type { TeamWeekPrefs } from "../lib/team-week";
 import { consultSeeds } from "../realtime/consults";
 import { steerStore } from "../realtime/steer";
-import type { VaultConnection, VaultImportResult, VaultItem, VaultItemDetail, VaultOverview } from "../vault/types";
+import type {
+  VaultConnection,
+  VaultImportResult,
+  VaultItem,
+  VaultItemDetail,
+  VaultKeysImportResult,
+  VaultOverview,
+} from "../vault/types";
 import type { HttpApi, OpenedWorkspace } from "./client";
 import { ApiError, createFileRequester, createRequester, enc, type TransportOptions } from "./http";
 import type {
@@ -122,6 +129,9 @@ import type {
   IssueActivity,
   IssueColumn,
   IssueConversationRef,
+  IssueProject,
+  IssueProjectRef,
+  IssueProjects,
   IssuesView,
   JevKey,
   JoinApproval,
@@ -132,6 +142,7 @@ import type {
   MachineAccess,
   MachineAccount,
   MachineOutages,
+  MachinePause,
   MachineTask,
   MailAccount,
   MailFolder,
@@ -229,6 +240,7 @@ import type {
   UnreadTask,
   UsageQueue,
   UsageReport,
+  WaitingList,
   WebhookSetup,
   WifiIphones,
   WifiPairing,
@@ -493,6 +505,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<VaultItem>(`${org(orgId)}/vault/items/${enc(itemId)}`, { method: "PATCH", json: patch }),
       remove: (orgId, itemId) => request<void>(`${org(orgId)}/vault/items/${enc(itemId)}`, { method: "DELETE" }),
       importCsv: (orgId, input) => request<VaultImportResult>(`${org(orgId)}/vault/import`, { json: input }),
+      importKeys: (orgId, input) => request<VaultKeysImportResult>(`${org(orgId)}/vault/keys`, { json: input }),
+      move: (orgId, itemId, scope) =>
+        request<VaultItem>(`${org(orgId)}/vault/items/${enc(itemId)}/move`, { json: { scope } }),
       connect: (orgId, input) => request<VaultConnection>(`${org(orgId)}/vault/connections`, { json: input }),
       updateConnection: (orgId, connectionId, patch) =>
         request<VaultConnection>(`${org(orgId)}/vault/connections/${enc(connectionId)}`, {
@@ -1237,6 +1252,13 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         // The new access, bare or wrapped.
         return "access" in out ? out.access : out;
       },
+      setPause: async (orgId, machineId, input) =>
+        (
+          await request<{ paused: MachinePause | null }>(
+            `${org(orgId)}/machines/${enc(machineId)}/${input === "resume" ? "resume" : "pause"}`,
+            { json: input === "resume" ? {} : input },
+          )
+        ).paused,
       // A self-hosted server has no builds of its own (no `DESKTOP_RELEASES_TOKEN`): agentes.chat's, then.
       desktopLatest: async (target, arch) =>
         (await nullOn(404, () => request<DesktopRelease>("/api/desktop/latest", { query: { target, arch } }))) ??
@@ -1443,7 +1465,11 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     issues: {
       list: async (orgId, filters = {}) =>
-        (await request<{ issues: Issue[] }>(`${org(orgId)}/issues`, { query: { q: filters.q } })).issues,
+        (
+          await request<{ issues: Issue[] }>(`${org(orgId)}/issues`, {
+            query: { q: filters.q, projectId: filters.projectId },
+          })
+        ).issues,
       get: (orgId, number) => request<Issue>(`${org(orgId)}/issues/by-number/${number}`),
       create: (orgId, input) => request<Issue>(`${org(orgId)}/issues`, { json: input }),
       update: (orgId, id, patch) => request<Issue>(`${org(orgId)}/issues/${enc(id)}`, { method: "PATCH", json: patch }),
@@ -1483,6 +1509,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
             query: { moveTo },
           })
         ).columns,
+      projects: (orgId) => request<IssueProjects>(`${org(orgId)}/issue-projects`),
+      createProject: (orgId, input) => request<IssueProject>(`${org(orgId)}/issue-projects`, { json: input }),
+      updateProject: (orgId, projectId, patch) =>
+        request<IssueProjectRef>(`${org(orgId)}/issue-projects/${enc(projectId)}`, { method: "PATCH", json: patch }),
+      deleteProject: (orgId, projectId) =>
+        request<void>(`${org(orgId)}/issue-projects/${enc(projectId)}`, { method: "DELETE" }),
     },
     threads: {
       list: (orgId, filters = {}) => request<ThreadPage>(`${org(orgId)}/threads`, { query: threadQuery(filters) }),
@@ -1714,6 +1746,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           query: { filter: query.filter, cursor: query.cursor, limit: query.limit },
         }),
       count: (orgId) => request<NotificationCount>(`${org(orgId)}/notifications/count`),
+      waiting: (orgId, channelId) => request<WaitingList>(`${org(orgId)}/waiting`, { query: { channelId } }),
       read: (orgId, id, read) =>
         request<AppNotification>(`${org(orgId)}/notifications/${enc(id)}/read`, { json: { read } }),
       done: (orgId, id, done) =>

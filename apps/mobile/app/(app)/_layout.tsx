@@ -1,4 +1,5 @@
 import { usePrefetchRecent, useSendWaiting } from "@agenteschat/client";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { type ErrorBoundaryProps, Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -67,9 +68,9 @@ function AppStack() {
   // The unread and latest conversations load while the app is idle: opening them is instant.
   usePrefetchRecent(orgId);
   // What I sent while the connection was down goes out once it's back, whatever screen is open.
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
-  useSendWaiting(orgId, useConnection(), () => toast({ title: t("mobile.chat.notSent"), icon: "x" }));
+  useSendWaiting(orgId, useConnection(), (error) => toast({ title: errorText(t, error, i18n.language), icon: "x" }));
   const pushed = usePushedOptions();
   const scrollUnder = useScrollUnderPushedOptions();
   // A request reads as grouped facts (its white groups on the sheet's gray), as the system's own sheets do.
@@ -239,6 +240,7 @@ function AppStack() {
       <Stack.Screen name="settings/vault" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-item" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-new" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="settings/vault-env" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-access" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-connect" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-connection" options={{ ...pushed, ...scrollUnder }} />

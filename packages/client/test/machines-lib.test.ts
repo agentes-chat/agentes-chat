@@ -18,17 +18,22 @@ import {
   foldersOfAgent,
   formatUserCode,
   freeDuplicate,
+  geminiNotShared,
   installCommand,
   isHandheld,
   isPaused,
+  isUrlWithoutCode,
   LOGIN_RECONNECT_MS,
   LoginReadError,
   locationText,
+  loginFailureLine,
   loginRead,
   loginReadPasses,
   machineReasonText,
   normalizeUserCode,
   otherThanHint,
+  pausedByText,
+  pauseUntil,
   platformOf,
   sharedFolderFacts,
   sharedFolderOf,
@@ -126,6 +131,13 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect(isPaused({ paused: null })).toBe(false);
     expect(pauseOf({ paused: false, until: "x" })).toEqual({ paused: false });
     expect(pauseOf("yes")).toBeUndefined();
+    // Who paused it from the apps comes along only when the event says so.
+    expect(pauseOf({ until: null, by: { id: "u1", name: "Ana" } })).toEqual({
+      paused: true,
+      until: null,
+      by: { id: "u1", name: "Ana" },
+    });
+    expect(pauseOf({ until: null, by: "u1" })).toEqual({ paused: true, until: null });
     expect(accessOf(null)).toBeNull();
     expect(accessOf({ folders: "no" })).toBeUndefined();
   });
@@ -329,6 +341,15 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect(freeDuplicate(undefined)).toBeNull();
   });
 
+  test("a Gemini sign-in the computer couldn't share with every agent: trying again ends the same way", () => {
+    expect(geminiNotShared("antigravity", { state: "failed", code: "not_kept" })).toBe(true);
+    // Claude's token the computer couldn't write, and Gemini's other failures, may pass on another try.
+    expect(geminiNotShared("claude_code", { state: "failed", code: "not_kept" })).toBe(false);
+    expect(geminiNotShared("antigravity", { state: "failed", code: "bad_code" })).toBe(false);
+    expect(geminiNotShared("antigravity", { state: "failed" })).toBe(false);
+    expect(geminiNotShared("antigravity", undefined)).toBe(false);
+  });
+
   test("a new sign-in is another account only when its hint named a different email", () => {
     expect(otherThanHint("walt@pessoal.com", { email: "walt@acme.com" })).toBe(true);
     expect(otherThanHint("Walt@Pessoal.com", { email: "walt@pessoal.com" })).toBe(false);
@@ -456,5 +477,74 @@ describe("the shared folder (ADR 0115)", () => {
       'machines.shared.size{"size":"3.2 GB"} · machines.shared.free{"free":"43 GB"}',
     );
     expect(sharedFolderFacts(t, "en", null)).toBe("machines.shared.measuring");
+  });
+
+  test("why a sign-in ended: a line per code, the CLI's words under two of them, none when canceled", () => {
+    const add = "agentPage.work.brain.add";
+    const worded = [
+      "not_installed",
+      "no_tty",
+      "network",
+      "bad_code",
+      "cli_exit",
+      "not_signed_in_after_login",
+      "status_unknown",
+      "no_token",
+      "not_kept",
+    ];
+    for (const code of worded) {
+      expect(loginFailureLine(code)).toEqual({
+        key: `${add}.why.${code}`,
+        detail: code === "cli_exit" || code === "not_signed_in_after_login",
+      } as never);
+    }
+    // Too long is what an expired sign-in already says.
+    expect(loginFailureLine("timeout")).toEqual({ key: `${add}.expired`, detail: false });
+    expect(loginFailureLine("canceled")).toEqual({ key: null, detail: false });
+    // An older runner sends no code, a newer one may send one this app doesn't know: the plain line.
+    for (const code of [undefined, null, "", "something_new", "toString"]) {
+      expect(loginFailureLine(code)).toEqual({ key: `${add}.failed`, detail: false });
+    }
+  });
+
+  test("a pasted address without a code is told from a code and from an address that carries one", () => {
+    for (const url of [
+      "https://example.com/oauth-callback",
+      " https://example.com/oauth-callback?state=abc ",
+      "http://localhost:8085/?code=",
+      "HTTPS://example.com/#code=4/0Afake",
+      "https://",
+    ]) {
+      expect(isUrlWithoutCode(url)).toBe(true);
+    }
+    for (const ok of [
+      "",
+      "4/0AfakeCode",
+      "https://example.com/callback?code=4%2F0Afake&state=abc",
+      "code=abc",
+      "http",
+    ]) {
+      expect(isUrlWithoutCode(ok)).toBe(false);
+    }
+  });
+});
+
+describe("pausing from the apps", () => {
+  test("an hour, tomorrow at 9:00 local time, or until resumed", () => {
+    const now = new Date(2026, 10, 11, 15, 30);
+    expect(pauseUntil("1h", now)).toBe(new Date(2026, 10, 11, 16, 30).toISOString());
+    expect(pauseUntil("tomorrow", now)).toBe(new Date(2026, 10, 12, 9, 0).toISOString());
+    expect(pauseUntil("manual", now)).toBeNull();
+  });
+
+  test("the line says who paused it, and nothing for a pause on the computer", () => {
+    const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
+    expect(pausedByText(t, "en", { until: null }, "u1")).toBeNull();
+    expect(pausedByText(t, "en", { until: null, by: { id: "u1", name: "Ana" } }, "u1")).toBe(
+      "machines.remotePause.byYou",
+    );
+    expect(pausedByText(t, "en", { until: null, by: { id: "u2", name: "Bia" } }, "u1")).toBe(
+      'machines.remotePause.byName{"name":"Bia"}',
+    );
   });
 });

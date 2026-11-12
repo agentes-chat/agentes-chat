@@ -325,6 +325,34 @@ export function proposalStatus(
   return Date.parse(card.expiresAt) <= now ? "expired" : "open";
 }
 
+/**
+ * How a proposal of a new agent ended and who did it, for its card: "Criado por você", "Recusado por Ana", "Expirou"
+ * (nobody decided one that ran out), or that a newer card took its place. `decider`: the name of who decided, when
+ * the viewer can read it; without one it says only how it ended.
+ */
+export function agentProposalEnd(
+  t: TFunction,
+  card: AgentProposalCard,
+  status: Exclude<ReturnType<typeof proposalStatus>, "open">,
+  meId: string | null,
+  decider: string | undefined,
+): string {
+  if (status === "expired") return t("approval.expired");
+  if (status === "superseded") return t("rightHand.card.superseded");
+  const mine = card.decidedByUserId !== null && card.decidedByUserId === meId;
+  if (status === "created")
+    return mine
+      ? t("actionCard.agentProposal.createdByYou")
+      : decider
+        ? t("actionCard.agentProposal.createdBy", { name: decider })
+        : t("actionCard.agentProposal.created");
+  return mine
+    ? t("rightHand.card.declinedByYou")
+    : decider
+      ? t("rightHand.card.declinedBy", { name: decider })
+      : t("proposals.refused");
+}
+
 /** "Pensa com Claude Max", "Pensa pela API", "Sem IA ainda…": the AI a proposal suggests. */
 export const suggestedAiText = (t: TFunction, ai: SuggestedAi) =>
   ai.kind === "account"

@@ -260,7 +260,7 @@ export const words: EmailWords = {
     subjectAccount: (code) => `删除整个账号的验证码：${code}`,
     preheader: "在 agentes.chat 中输入它来确认。10 分钟内有效。",
     headline: "你的验证码",
-    workspace: (org) => ["输入这个验证码即可删除工作区 ", { b: org }, "。它会立即对所有人关闭，7 天后被永久删除。"],
+    workspace: (org) => ["输入这个验证码即可删除工作区 ", { b: org }, "。它会立即对所有人变为只读，7 天后被永久删除。"],
     account: (email) => [
       "输入这个验证码即可删除整个账号 ",
       { b: email },
@@ -276,18 +276,18 @@ export const words: EmailWords = {
     whyWorkspace: (org) => `你收到这封邮件，是因为你的账号请求删除 agentes.chat 上的 ${org}。`,
     whyAccount: "你收到这封邮件，是因为你的账号请求在 agentes.chat 上删除自己。",
     personal: {
-      workspace: (org) => ["输入这个验证码即可删除你的工作区 ", { b: org }, "。它会立即关闭，7 天后被永久删除。"],
+      workspace: (org) => ["输入这个验证码即可删除你的工作区 ", { b: org }, "。它会立即变为只读，7 天后被永久删除。"],
     },
   },
   deleting: {
     subject: (day) => `你所在的一个工作区将于 ${day} 删除`,
-    preheader: "它现在已关闭。在那之前，所有者仍可恢复它。",
+    preheader: "它现在只读。在那之前，所有者仍可恢复它。",
     headline: "一个工作区正在被删除",
     body: (by, org, day, time) => [
       { b: by },
       " 删除了工作区 ",
       { b: org },
-      `。它现在已关闭，将于 ${day} ${time} 被永久删除。`,
+      `。它现在只读，将于 ${day} ${time} 被永久删除。`,
     ],
     owner: "改变主意了？在那之前恢复它。",
     button: "恢复工作区",

@@ -89,6 +89,7 @@ export const desktopPtBR = {
     pause1h: "Por 1 hora",
     pauseTomorrow: "Até amanhã às 9h",
     pauseManual: "Até eu retomar",
+    pauseAll: "Todos os workspaces",
     pauseHint: "O que já está rodando termina normalmente.",
     /** With the agentes.chat this computer runs: pausing the agents leaves it up (ADR 0158). */
     pauseHintServer: "O que já está rodando termina normalmente. O servidor segue no ar.",
@@ -109,6 +110,10 @@ export const desktopPtBR = {
     pausedUntil: "Pausado até {{time}}",
     pausedUntilResume: "Pausado até você retomar",
     pausedBody: "Nenhum agente, de nenhum workspace, começa nada novo neste {{device}}.",
+    pausedSomeBody: "Em pausa: {{orgs}}. Os agentes dos outros workspaces continuam trabalhando.",
+    alsoWorksFor: "Também trabalha para {{orgs}}",
+    otherWorkspaces_one: "{{count}} outro workspace",
+    otherWorkspaces_other: "{{count}} outros workspaces",
     resumeNow: "Retomar agora",
     plusHour: "+1 hora",
     updateTitle: "Versão {{version}} disponível",
@@ -397,6 +402,49 @@ export const desktopPtBR = {
     updatesWithApp: "Atualizar o app atualiza também o agentes.chat neste {{device}}.",
     updateBack: "A atualização não iniciou. O agentes.chat voltou para a {{version}}.",
     updateBackBody: "A versão nova é tentada de novo na próxima atualização do app.",
+    backups: "Cópias de segurança",
+    nightly: "Fazer backup toda noite",
+    nightlyLast: "Às {{at}} · o último {{time}}",
+    nightlyNone: "Às {{at}} · nenhum backup ainda",
+    lastBackup: "O último {{time}}",
+    noBackup: "Nenhum backup ainda",
+    backupFailed: "O último backup não terminou. Faça backup agora para tentar de novo.",
+    copyTo: "Copiar para",
+    copyToText:
+      "Cada backup novo também é copiado para esta pasta, como um pendrive ou o iCloud Drive. Os dois mais novos ficam lá.",
+    copyToNone: "Só neste {{device}}",
+    copyToStop: "Parar de copiar",
+    choose: "Escolher…",
+    change: "Trocar…",
+    copyFailed: "O último backup não chegou a esta pasta. Veja se ela ainda existe, ou escolha outra.",
+    restore: "Restaurar…",
+    restoreTitle: "Restaurar um backup?",
+    restoreBody:
+      "O agentes.chat deste {{device}} volta para esse backup: mensagens, arquivos e configurações. Ele para por um minuto. O que está lá agora fica guardado na pasta de backups.",
+    restoreWhich: "Backup a restaurar",
+    backupOf: "Backup de {{time}}",
+    restoreConfirm: "Restaurar",
+    restored: "Backup de {{time}} restaurado",
+    restoreFailed: "Esse backup não iniciou, então o agentes.chat voltou como estava. Tente o outro backup.",
+    restoreUnreadable: "Esse backup não abre. Tente o outro.",
+    noPassword: "Crie uma senha para entrar pelo celular e por outros computadores.",
+    addPassword: "Criar uma senha",
+    keep: "Manter funcionando",
+    keepLogin: "Abre ao iniciar a sessão",
+    keepLoginOn: "Ativar",
+    keepAutoLogin: "Entra sozinho depois de reiniciar",
+    keepAutoLoginText:
+      "Depois de reiniciar, este {{device}} fica na tela de entrada e o agentes.chat não abre. Ative o login automático em Usuários e Grupos.",
+    keepAutoLoginOpen: "Abrir Usuários e Grupos",
+    keepPower: "Liga depois de uma queda de energia",
+    keepPowerText:
+      "Depois de uma queda de energia, este {{device}} fica desligado até alguém apertar o botão. Os ajustes de Energia podem ligá-lo sozinho.",
+    keepPowerOpen: "Abrir ajustes de Energia",
+    keepAwake: "Não dorme enquanto serve",
+    keepAwakeText:
+      "Este {{device}} fica acordado enquanto o agentes.chat roda aqui. Inicie o agentes.chat para mantê-lo acordado.",
+    keepOn: "Feito",
+    keepOff: "Ainda não",
   },
   /** The system's own dialog before a page pairs this computer (main_window.rs draws it). */
   pair: {
@@ -406,6 +454,8 @@ export const desktopPtBR = {
     notNow: "Agora não",
     offerTitle: "Deixar os agentes de {{org}} usarem este {{device}}?",
     keepReady: "Deixar pronto: abrir o agentes.chat ao iniciar a sessão",
+    offerOnlyIf:
+      "Só se você quiser que este {{device}} também faça trabalho dos agentes. Com Agora não, você continua usando {{org}} aqui normalmente.",
     canDo: "O que os agentes podem fazer aqui",
     foldersLater: "Nenhuma pasta sua por enquanto. Adicione depois em Preferências\u00a0›\u00a0Pastas.",
     linkTitle: "Conectar este {{device}} a {{org}}?",
@@ -444,9 +494,11 @@ export const desktopPtBR = {
   },
   tools: {
     claudeName: "Claude Code",
-    claudeDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Claude.",
+    claudeDesc:
+      "Escreve e muda código nas pastas liberadas, com a sua conta do Claude. Roda os próprios comandos na pasta do agente, mesmo com Comandos desligado.",
     codexName: "Codex",
-    codexDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do ChatGPT.",
+    codexDesc:
+      "Escreve e muda código nas pastas liberadas, com a sua conta do ChatGPT. Roda os próprios comandos na pasta do agente, mesmo com Comandos desligado.",
     cursorName: "Cursor",
     cursorDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Cursor.",
     opencodeName: "OpenCode",
@@ -465,6 +517,16 @@ export const desktopPtBR = {
     commandsWarnHere:
       "Comandos rodam como você e alcançam o resto deste {{device}}, inclusive os dados do próprio agentes.chat.",
     commandsSome: "Ligado só para {{orgs}}. Ligue para todos os workspaces daqui.",
+    commandsAbout:
+      "Testes, builds e outros comandos do Terminal. Cada um aparece em Atividade. Comandos rodam como você. Eles leem tudo o que você lê neste {{device}}, inclusive o banco de dados e as chaves do agentes.chat. Ligue só para workspaces em que você confia com tudo isso.",
+    commandsReach:
+      "Comandos rodam como você. Eles leem tudo o que você lê neste {{device}}, inclusive o banco de dados e as chaves do agentes.chat. Ligue só para workspaces em que você confia com tudo isso.",
+    commandsAsk: "Ligar Comandos para {{org}}?",
+    commandsTurnOn: "Ligar",
+    checkAgain: "Verificar de novo",
+    lookPath: "O agentes.chat procura no PATH do shell de login.",
+    lookPathWindows: "O agentes.chat procura no PATH.",
+    stillMissing: "{{tool}} ainda não foi encontrado. Rode o comando acima e verifique de novo.",
     browserName: "Navegador",
     browserDesc: "Abre sites para os agentes num navegador só deles, sem os seus logins.",
     browserLogins:
@@ -515,6 +577,7 @@ export const desktopPtBR = {
       launchTitle: "Abrir ao iniciar a sessão",
       launchDesc: "Os agentes só usam este {{device}} com o app aberto.",
       launchHere: "O agentes.chat neste {{device}} só roda com o app aberto.",
+      launchWork: "Os agentes só trabalham com o app aberto.",
       notifySiteTitle: "Avisar sobre mensagens e pedidos",
       notifySiteDesc: "Menções, mensagens diretas e o que espera por você, com o app em segundo plano.",
       notifyTitle: "Avisar quando um agente pedir uma pasta",
@@ -550,10 +613,18 @@ export const desktopPtBR = {
       plug: "Conecte um celular neste {{device}} para adicionar.",
       androidSteps: "Passos no Android",
       iphoneSteps: "Passos no iPhone",
-      wider: "Os agentes de outras pessoas rodam como {{user}} aqui e podem ler os seus arquivos.",
+      wider:
+        "Só eu quer dizer você, e os agentes que trabalham para você. Os agentes de outras pessoas rodam como {{user}} aqui e podem ler os seus arquivos.",
       phoneWho: "{{who}} pode usar",
       signedOut: "Entre em {{server}} no app para ver quem pode usar este {{device}}.",
       unreachable: "Não deu para falar com {{server}}. Confira a conexão e tente de novo.",
+      placeHere: "Neste {{device}}",
+      placeCloud: "agentes.chat Cloud",
+      more: "Mais opções de {{org}}",
+      otherWorkspace: "Outro workspace",
+      otherWorkspaceDesc:
+        "Deixe um workspace do agentes.chat Cloud ou de outro servidor usar este {{device}} também. Cada um mantém o próprio login.",
+      addWorkspace: "Adicionar um workspace…",
     },
     folders: {
       title: "Pastas",
@@ -580,8 +651,7 @@ export const desktopPtBR = {
       connected: "Conectado",
       protection: "Proteção",
       protectedTitle: "Modo protegido",
-      protectedDesc:
-        "Comandos só escrevem nas pastas liberadas e não leem o resto do {{device}}. Algumas ferramentas podem ficar mais lentas.",
+      protectedDesc: "Em breve: comandos que só escrevem nas pastas liberadas e não leem o resto deste {{device}}.",
       commandsOn: "Comandos ligados",
     },
     accounts: {
@@ -636,6 +706,9 @@ export const desktopPtBR = {
       downloading: "Baixando…",
       installing: "Instalando…",
       installFailed: "Não deu para atualizar sozinho. Baixe e instale à mão.",
+      autoInstall: "Instalar atualizações sozinho, de madrugada",
+      autoInstallDesc:
+        "O servidor e os agentes reiniciam por um minuto. Se a versão nova não abrir, volta sozinho para a anterior.",
       download: "Baixar a versão {{version}}",
       howTitle: "Atualizar à mão",
       step1: "Saia do agentes.chat (⌘Q).",

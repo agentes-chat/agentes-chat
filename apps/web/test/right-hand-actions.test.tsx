@@ -112,7 +112,11 @@ describe("changing people", () => {
     const dialog = screen().getByRole("dialog");
     await click(within(dialog).getByRole("button", { name: "Remover João" }));
     expect(state.calls.find((x) => x.method === "orgs.removeMember")?.args).toEqual([ORG_ID, "u-joao"]);
-    expect(screen().getByRole("group", { name: "Mudar pessoas" }).textContent).toContain("Feito: João");
+    // Every row done: the same card, each row saying so, nothing left to press.
+    const over = screen().getByRole("group", { name: "Mudar pessoas" });
+    expect(over.classList.contains("rq--ended")).toBe(true);
+    expect([...over.querySelectorAll(".proposal-row__status")].map((s) => s.textContent)).toEqual(["Feito", "Feito"]);
+    expect(within(over).queryByRole("button")).toBeNull();
   });
 
   test("a member reads that only owners change who is an owner, with no button", async () => {

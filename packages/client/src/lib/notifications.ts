@@ -317,6 +317,19 @@ export function replyTarget(n: AppNotification): ReplyTarget | null {
   }
 }
 
+/**
+ * The island's quick reply: where an answer goes and the answers to pick. A workspace being deleted takes none (ADR
+ * 0088 §7): `readOnly` puts the line saying why in their place.
+ */
+export function quickReply(n: AppNotification, deleting: boolean) {
+  const answerable = replyTarget(n);
+  return {
+    target: deleting ? null : answerable,
+    suggestions: !deleting && n.kind === "agent_question" ? (n.latest.suggestions ?? []) : [],
+    readOnly: deleting && answerable !== null,
+  };
+}
+
 /** Where "Abrir" goes (the app's routes). */
 export type OpenTarget =
   | { to: "/org/$orgId/threads/$threadId"; params: { threadId: string }; search?: { m: string } }
@@ -489,8 +502,14 @@ export function widgetNoticeOf(n: Pick<AppNotification, "kind" | "source" | "lat
   const agentId = s.agentId ?? (n.actors[0]?.type === "agent" ? n.actors[0].id : null);
   const base = { dashboardId: s.dashboardId ?? null, widgetId: s.widgetId ?? null, agentId, title: s.label ?? "" };
   if (n.kind === "widget_alert") return { ...base, kind: "alert" as const, text: n.latest.text ?? "" };
+  // Its failure's detail as the widget keeps it: the agent's words (`agent_reported`), or why its agent has no AI.
   if (n.kind === "widget_failed")
-    return { ...base, kind: "failed" as const, reason: n.latest.reason ?? "error", text: n.latest.text ?? null };
+    return {
+      ...base,
+      kind: "failed" as const,
+      reason: n.latest.reason ?? "error",
+      detail: n.latest.text ?? n.latest.detail ?? null,
+    };
   return {
     ...base,
     kind: "proposal" as const,

@@ -8,7 +8,7 @@ import { openSecret, randomToken, sealSecret, sha256 } from "../crypto";
 import { ConflictError, ForbiddenError, MisconfiguredError, NotFoundError, ValidationError } from "../errors";
 import { forgetInstallationTokens } from "../git/github-app";
 import { outboundFetch, type ResolveHost } from "../net-guard";
-import { requirePermission } from "../organizations";
+import { requireChangePermission, requirePermission } from "../organizations";
 import { CONNECTOR_ALL } from "../tools/scopes";
 import { CONNECTOR_CATALOG, type ConnectorDefinition } from "./catalog";
 import { type ComposioConnectors, completeComposioOAuth, forgetComposioAccount } from "./composio";
@@ -792,8 +792,8 @@ export async function completeOAuth(
     .where(and(eq(oauthStates.id, row.id), isNull(oauthStates.usedAt)))
     .returning({ id: oauthStates.id });
   if (claimed.length === 0) throw new ConflictError("This authorization link was already used", "oauth.link_used");
-  // Still an admin? (Roles can change during the round trip.)
-  await requirePermission(deps.db, user.id, row.orgId, "manage_connectors");
+  // Still an admin, in a workspace not being deleted? Both can change during the round trip.
+  await requireChangePermission(deps.db, user.id, row.orgId, "manage_connectors");
 
   if (row.composioAccountId) return completeComposioOAuth(deps, user, row, input.code);
   if (row.oauthClientId) return completeMcpOAuth(deps, user, row, input.code, at);

@@ -4,6 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { localMeta, quoteExcerpt, replyOf } from "@agenteschat/client/lib/reply";
+import { installTitleTips, TITLE_TIP_ID, TITLE_TIP_OPEN_MS } from "@agenteschat/ui";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { objectUrls } from "@/components/artifacts/FileView";
 import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
@@ -155,6 +156,53 @@ describe("reactions on any message", () => {
     expect(pill.getAttribute("aria-pressed")).toBe("false");
     // "+" adds another.
     expect(within(pills).getByRole("button", { name: "Adicionar reação" })).toBeTruthy();
+  });
+
+  test("the pill's hover text is the product's tip: every name whole, você first", async () => {
+    const state = seedState();
+    const joao = state.members.find((m) => m.userId === "u-joao");
+    if (joao) joao.name = "João Pedro Lima";
+    const { socket } = await open(state);
+    const off = installTitleTips();
+    try {
+      await act(async () =>
+        socket.push({
+          type: "event",
+          channelId: ENG_ID,
+          event: {
+            type: "message.reactions",
+            channelId: ENG_ID,
+            messageId: "m-1",
+            reactions: [{ reaction: "🚀", count: 3, userIds: ["u-walter", "u-joao"], agentIds: [ADA_ID] }],
+          },
+        }),
+      );
+      await settle(2);
+      // No line breaks inside a name: its spaces are no-break ones.
+      const who = "você, João\u00a0Pedro\u00a0Lima e Ada reagiram com 🚀";
+      const pills = within(article("o login está devolvendo 401")).getByRole("group", { name: "Reações" });
+      const pill = within(pills).getByRole("button", { name: who });
+      expect(pill.getAttribute("title")).toBe(who);
+      await act(async () => fireEvent.pointerOver(pill, { pointerType: "mouse" }));
+      // Held while the pointer is on it: the browser's own tooltip has nothing to show.
+      expect(pill.getAttribute("title")).toBe("");
+      await act(() => new Promise((r) => setTimeout(r, TITLE_TIP_OPEN_MS + 20)));
+      expect(document.getElementById(TITLE_TIP_ID)?.textContent).toBe(who);
+      expect(pill.getAttribute("aria-label")).toBe(who);
+      expect(pill.hasAttribute("aria-describedby")).toBe(false);
+      // "+" has no title: an icon-only control says its label.
+      const add = within(pills).getByRole("button", { name: "Adicionar reação" });
+      await act(async () => {
+        fireEvent.pointerOut(pill, { pointerType: "mouse", relatedTarget: add });
+        fireEvent.pointerOver(add, { pointerType: "mouse" });
+      });
+      expect(document.getElementById(TITLE_TIP_ID)?.textContent).toBe("Adicionar reação");
+      expect(pill.getAttribute("title")).toBe(who);
+      await act(async () => fireEvent.pointerOut(add, { pointerType: "mouse" }));
+      expect(document.getElementById(TITLE_TIP_ID)).toBeNull();
+    } finally {
+      off();
+    }
   });
 });
 

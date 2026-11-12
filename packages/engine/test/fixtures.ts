@@ -67,7 +67,7 @@ import {
   type WorkspaceComputer,
   zonedParts,
 } from "../src";
-import { listenLiveSteering } from "../src/live-steer";
+import { type LiveSteeringHooks, listenLiveSteering } from "../src/live-steer";
 
 export const SECRET = "test-secret-".padEnd(48, "x");
 
@@ -467,7 +467,8 @@ export type Fixture = Awaited<ReturnType<typeof setup>>;
 /**
  * What the executor of a run set to `running` by hand would do: answer a message steered into the run at once
  * (no turn takes it here, so it stays in the run's inbox). Unanswered, posting that message waits out
- * `LIVE_STEER_WAIT_MS`, 3 s of real time.
+ * `LIVE_STEER_WAIT_MS`, 3 s of real time. `hooks`: the executor's own (its inbox, its background work), for a test
+ * that hands it a turn.
  */
-export const answerSteering = (f: Fixture, run: AgentRun) =>
-  listenLiveSteering(f, run, null, { take: async () => [], onRead: () => {} });
+export const answerSteering = (f: Fixture, run: AgentRun, hooks: Partial<LiveSteeringHooks> = {}) =>
+  listenLiveSteering(f, run, null, { take: async () => [], onRead: () => {}, ...hooks });

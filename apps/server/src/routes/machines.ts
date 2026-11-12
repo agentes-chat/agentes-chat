@@ -28,6 +28,7 @@ import {
   restoreHostComputer,
   safeEqual,
   setAgentComputerTarget,
+  setMachinePause,
   startDeviceCode,
   startLinkedDeviceCode,
   syncHostComputer,
@@ -54,6 +55,16 @@ const tags = ["Connected computers"];
 
 /** Headers and framing around a pushed file: the body may be a little over the file limit. */
 const UPLOAD_SLACK_BYTES = 64 * 1024;
+
+const MachinePause = z
+  .object({
+    until: z.string().nullable(),
+    by: z
+      .object({ id: z.string(), name: z.string() })
+      .nullable()
+      .openapi({ description: "Who paused it from the apps; null: paused on the computer itself." }),
+  })
+  .openapi("MachinePause");
 
 export const MachineAccess = z
   .object({
@@ -127,10 +138,13 @@ export const Machine = z
         "Its runner can hold browser profiles (protocol 34, ADR 0110); `false`: update the computer. A system-mode computer has none at all (`mode`): the apps hide them there.",
     }),
     execAllowed: z.boolean().openapi({ description: "`false`: started with `--no-exec` (files and uploads only)." }),
-    paused: z
-      .object({ until: z.string().nullable() })
-      .nullable()
-      .openapi({ description: "The owner paused it (no new work); `until` null: until resumed (`machine.updated`)." }),
+    paused: MachinePause.nullable().openapi({
+      description: "The owner paused it (no new work); `until` null: until resumed (`machine.updated`).",
+    }),
+    remotePause: z.boolean().openapi({
+      description:
+        "Its app takes a pause from here (`POST …/pause`); `false`: update the app on it. Never the workspace's own computer.",
+    }),
     pairedBy: z.object({ id: z.string(), name: z.string() }).nullable(),
     agents: z.array(z.object({ id: z.uuid(), name: z.string(), handle: z.string() })),
     workspace: z
@@ -575,6 +589,51 @@ export function machineAppRoutes(deps: AppDeps) {
         c.req.valid("json"),
       );
       return c.json({ access }, 200);
+    },
+  );
+
+  const pauseResponses = {
+    200: json(z.object({ paused: MachinePause.nullable() })),
+    ...errors,
+    409: errorResponse("The computer is offline (`machine.offline`)"),
+  };
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/pause",
+      tags,
+      security,
+      summary:
+        "Pause it (admins or the person who connected it): nothing new starts there until `until`, or until resumed when null. Work already running finishes",
+      request: {
+        params: MachineParams,
+        body: body(z.object({ until: z.iso.datetime({ offset: true }).nullable() }).strict()),
+      },
+      responses: pauseResponses,
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const { until } = c.req.valid("json");
+      const deps = { db, pubsub, hub: hub() };
+      return c.json(await setMachinePause(deps, c.get("user").id, orgId, machineId, { paused: true, until }), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/resume",
+      tags,
+      security,
+      summary: "Resume it (admins or the person who connected it), however it was paused",
+      request: { params: MachineParams },
+      responses: pauseResponses,
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const deps = { db, pubsub, hub: hub() };
+      return c.json(await setMachinePause(deps, c.get("user").id, orgId, machineId, { paused: false }), 200);
     },
   );
 

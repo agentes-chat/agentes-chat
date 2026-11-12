@@ -8,6 +8,8 @@ import { AgentAvatar } from "@/components/AgentAvatar";
 export interface ChannelActions {
   insertMention: (handle: string) => void;
   retry: (local: MessageType) => void;
+  /** A message the server refused for its text: it leaves the list and its text returns to the composer. */
+  editUnsent: (local: MessageType) => void;
   resend: (body: string) => void;
   /** "Responder" on an agent's question: type the answer in the composer. */
   focusComposer: () => void;

@@ -152,7 +152,8 @@ describe("my own messages sit on the right", () => {
       said("w2", "u-walter", "E o link", 0, { local: "pending", clientId: "c-2" }),
     ]);
     expect(row("w1").classList.contains("ac-msg--failed")).toBe(true);
-    expect(row("w1").textContent).toContain("Não enviada");
+    // No reason kept (a row from before a reload): it still says more than "Não enviada".
+    expect(row("w1").textContent).toContain("Não enviada. Algo deu errado.");
     expect(within(row("w1")).getByRole("button", { name: "Tentar de novo" })).toBeTruthy();
     expect(row("w2").classList.contains("ac-msg--pending")).toBe(true);
     const status = row("w2").querySelector(".ac-msg__own-time");

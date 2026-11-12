@@ -732,6 +732,40 @@ html:not([data-pointer]) :is(a, button).dv-option:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring-inset);
 }
+/* A row with a link in its line: the title's button covers the row, the link stays above it. */
+.dv-option--stretch {
+  position: relative;
+}
+.dv-option__hit {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.dv-option__hit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.dv-option--stretch .ac-link {
+  position: relative;
+  z-index: 1;
+}
+.dv-option--stretch:has(.dv-option__hit:hover) {
+  background: var(--plate-soft);
+}
+.dv-option--stretch:has(.dv-option__hit:hover) .dv-option__arrow {
+  color: var(--ink);
+}
+html:not([data-pointer]) .dv-option__hit:focus-visible {
+  outline: none;
+}
+html:not([data-pointer]) .dv-option--stretch:has(.dv-option__hit:focus-visible) {
+  box-shadow: var(--focus-ring-inset);
+}
 .dv-option__text {
   display: flex;
   flex-direction: column;
