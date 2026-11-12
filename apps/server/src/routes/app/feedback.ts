@@ -1,5 +1,6 @@
 import {
   attachFeedbackFiles,
+  attachmentDisposition,
   decideFeedbackOffer,
   dropFeedbackFile,
   FEEDBACK_ABOUT_MAX,
@@ -300,7 +301,8 @@ export function registerFeedbackFiles(api: OpenAPIHono, deps: AppDeps) {
     return c.body(new Uint8Array(file.body), 200, {
       "content-type": file.contentType,
       "content-length": String(file.size),
-      "content-disposition": `attachment; filename="${file.name.replace(/["\\]/g, "")}"; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+      // An ASCII fallback beside the name as is: a header can't carry macOS's "11.43.12 PM" (a narrow no-break space).
+      "content-disposition": attachmentDisposition(file.name),
       "x-content-type-options": "nosniff",
       "content-security-policy": "default-src 'none'; sandbox",
       "cache-control": "private, no-store",

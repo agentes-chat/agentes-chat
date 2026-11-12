@@ -139,6 +139,26 @@ test("feedback: a picture is added, sent as a link good for a month, and opens o
   expect((await ana(`/api/app/feedback/files/${file.id}`, { method: "DELETE" })).status).toBe(404);
 });
 
+test("feedback: a screenshot named by macOS (a narrow no-break space before PM) still opens, its name kept", async () => {
+  t = await createTestServer({ env: { FEEDBACK_EMAIL: "feedback@example.com" } });
+  const ana = browser(t);
+  await signUp(ana, "ana@example.com");
+  await t.drain();
+  t.email.sent.length = 0;
+  const name = "Screenshot 2026-11-10 at 11.43.12 PM.png";
+  const file = (await (await upload(ana, PNG, name)).json()) as { id: string; name: string };
+  expect(file.name).toBe(name);
+  expect((await ana("/api/app/feedback", { json: { id: ID, text: "Look", files: [file.id] } })).status).toBe(204);
+  await t.drain();
+  const link = /https?:\/\/\S+\/api\/feedback-files\/[\w-]+/.exec(t.email.sent[0]?.text ?? "")?.[0] ?? "";
+  const opened = await browser(t)(new URL(link).pathname);
+  expect(opened.status).toBe(200);
+  expect(opened.headers.get("content-disposition")).toBe(
+    `attachment; filename="Screenshot 2026-11-10 at 11.43.12_PM.png"; filename*=UTF-8''${encodeURIComponent(name)}`,
+  );
+  expect(new Uint8Array(await opened.arrayBuffer())).toEqual(PNG);
+});
+
 test("feedback files: the hour's limit and the size are answered before the file is read", async () => {
   t = await createTestServer({ env: { FEEDBACK_EMAIL: "feedback@example.com" } });
   const ana = browser(t);
