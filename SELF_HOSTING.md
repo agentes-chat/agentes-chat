@@ -1391,9 +1391,11 @@ a terminal, yes). System mode's installer brings the browser and the screens its
 and Codex are asked about there. It installs them as root with the computers' installer
 (`curl -fsSL http://127.0.0.1:3000/api/machines/install.sh | sh -s -- --requirements browser,desktop,claude,codex`,
 which also works by hand): Chromium from Debian's apt, or Ubuntu's snap where apt has none; Claude Code
-with Anthropic's installer, copied to `/usr/local/bin`; Codex from the latest release of OpenAI's
-`codex` on GitHub, to `/usr/local/bin`. Running the setup again installs nothing that's there; Claude
-Code and Codex update themselves where they can, or with that command.
+with Anthropic's installer, copied to `/usr/local/bin`; Codex's whole package from the latest release
+of OpenAI's `codex` on GitHub, in `/usr/local/lib/codex`, linked from `/usr/local/bin`. Running the
+setup again installs nothing that's there; Claude Code and Codex update themselves where they can, or
+with that command. A Codex an earlier setup installed as its lone binary can't run code mode (its
+agents fail on a missing `codex-code-mode-host`): `--requirements codex` installs it again, whole.
 
 By hand on Linux (a server set up before, say): set a token in `.env` and give the same one to the
 agents' computer, as root, in the folder with `.env` (3000 is the app's port, `HOST_PORT` if you
