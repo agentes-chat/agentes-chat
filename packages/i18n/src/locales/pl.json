@@ -19324,6 +19324,8 @@
     "checkFailed": "OpenRouter nie mógł zweryfikować tego modelu decyzyjnego. Sprawdź konto, saldo i identyfikator modelu, a następnie spróbuj ponownie.",
     "serverDefault": "Domyślna konfiguracja serwera dla obszarów bez własnych modeli decyzyjnych.",
     "provider": "Dostawca decyzji",
-    "jevManaged": "Właściciel serwera zarządza konfiguracją Jev."
+    "jevManaged": "Właściciel serwera zarządza konfiguracją Jev.",
+    "otherModel": "Inny model…",
+    "visionOff": "Wyłączone"
   }
 }

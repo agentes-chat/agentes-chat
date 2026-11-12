@@ -32,9 +32,15 @@ const choose = async (name: "Jev" | "OpenRouter") => {
   });
   await settle(5);
 };
+const pickModel = async (name: string, label: string) => {
+  await act(() => fireEvent.click(card().getByRole("combobox", { name })));
+  await settle(2);
+  await act(() => fireEvent.click(within(screen().getByRole("listbox")).getByText(label, { exact: true })));
+  await settle(2);
+};
 const change = (name: string, value: string) =>
   act(() => {
-    fireEvent.change(card().getByLabelText(name), { target: { value } });
+    fireEvent.change(card().getByRole("textbox", { name }), { target: { value } });
   });
 const click = async (name: string) => {
   await act(() => {
@@ -49,9 +55,9 @@ test("saves with the existing OpenRouter account and model IDs, shows the active
   expect(card().queryByLabelText("OpenRouter account")).toBeNull();
   expect(card().queryByLabelText("Text decision model")).toBeNull();
   await choose("OpenRouter");
-  expect(card().getByRole("combobox").textContent).toContain("My OpenRouter");
+  expect(card().getByRole("combobox", { name: "OpenRouter account" }).textContent).toContain("My OpenRouter");
   expect(card().queryByLabelText(/key/i)).toBeNull();
-  await change("Text decision model", selected.model);
+  await pickModel("Text decision model", "Kev 4B");
   await click("Test and save");
   expect(state.calls.filter((c) => c.method === "system.saveDecisions").map((c) => c.args)).toEqual([
     [ORG_ID, selected],
@@ -66,11 +72,11 @@ test("saves with the existing OpenRouter account and model IDs, shows the active
 
 test("failed save preserves the draft and saved setup; screenshots can be disabled", async () => {
   const { state } = await open({ decisions: { settings: selected, available: true }, decisionError: true });
-  await change("Text decision model", "typesafe/jev-1.14");
-  await change("Vision decision model (optional)", "");
+  await pickModel("Text decision model", "Jev 1.14");
+  await pickModel("Vision decision model (optional)", "Off");
   await click("Test and save");
   expect(card().getByRole("alert").textContent).toContain("OpenRouter could not verify");
-  expect((card().getByLabelText("Text decision model") as HTMLInputElement).value).toBe("typesafe/jev-1.14");
+  expect(card().getByRole("combobox", { name: "Text decision model" }).textContent).toContain("Jev 1.14");
   expect(state.decisions?.settings).toEqual(selected);
   state.decisionError = false;
   await click("Test and save");
@@ -94,11 +100,14 @@ test("an unavailable saved account must be replaced or reset; it never picks ano
 test("provider choices retain an unsaved draft without changing the active setup", async () => {
   const { state } = await open();
   await choose("OpenRouter");
-  await change("Text decision model", "jaredpalmer/kev-4b");
+  await pickModel("Text decision model", "Other model…");
+  await change("Text decision model", "maker/decision-v2");
   await choose("Jev");
   expect(card().queryByLabelText("Text decision model")).toBeNull();
   await choose("OpenRouter");
-  expect((card().getByLabelText("Text decision model") as HTMLInputElement).value).toBe("jaredpalmer/kev-4b");
+  expect((card().getByRole("textbox", { name: "Text decision model" }) as HTMLInputElement).value).toBe(
+    "maker/decision-v2",
+  );
   expect(state.calls.filter((c) => c.method === "system.saveDecisions")).toHaveLength(0);
 });
 
@@ -133,4 +142,36 @@ test("the Jev setup is shown only for Jev and its server key is untouched by pro
   expect(
     state.calls.filter((c) => ["system.saveJev", "system.removeJev", "system.saveDecisions"].includes(c.method)),
   ).toHaveLength(0);
+});
+
+test("other model IDs are sent unchanged for text and vision, while a failed test keeps the draft", async () => {
+  const { state } = await open({ decisionError: true });
+  await choose("OpenRouter");
+  await pickModel("Text decision model", "Other model…");
+  await change("Text decision model", "maker/decision-v2");
+  await pickModel("Vision decision model (optional)", "Other model…");
+  await change("Vision decision model (optional)", "maker/vision-v2");
+  await click("Test and save");
+  expect(card().getByRole("alert")).toBeTruthy();
+  expect((card().getByRole("textbox", { name: "Text decision model" }) as HTMLInputElement).value).toBe(
+    "maker/decision-v2",
+  );
+  state.decisionError = false;
+  await click("Test and save");
+  expect(state.decisions?.settings).toEqual({
+    credentialId: account.id,
+    model: "maker/decision-v2",
+    visionModel: "maker/vision-v2",
+  });
+});
+
+test("saved unlisted models stay editable and are never replaced with a preset", async () => {
+  const settings = { credentialId: account.id, model: "maker/decision-v2", visionModel: "maker/vision-v2" };
+  const { state } = await open({ decisions: { settings, available: true } });
+  expect((card().getByRole("textbox", { name: "Text decision model" }) as HTMLInputElement).value).toBe(settings.model);
+  expect((card().getByRole("textbox", { name: "Vision decision model (optional)" }) as HTMLInputElement).value).toBe(
+    settings.visionModel,
+  );
+  await click("Test and save");
+  expect(state.decisions?.settings).toEqual(settings);
 });

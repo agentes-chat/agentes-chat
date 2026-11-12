@@ -8,20 +8,23 @@ workspace or real API key was used, and no paid provider call was made during de
 
 1. Open Settings → AI and usage → Decision models with an existing workspace OpenRouter account.
 2. Confirm **Jev** is selected by default and OpenRouter fields are collapsed. Choose **OpenRouter**
-   to expand its account and model controls. Keep the default Jev model or enter another compatible
-   text decision model. Optionally select a separate vision decision model, or leave it empty to
-   disable image judgments.
+   to expand its branded provider card, account picker and model controls. Choose Jev or Kev for text,
+   or choose **Other model…** and enter another compatible model ID. For vision, choose Jev, another
+   compatible model through **Other model…**, or **Off** to disable image judgments. Verify the model
+   picker supports search and keyboard selection.
 3. Choose Test and save. Verify the selected account and model appear as active.
 4. Reload the page and verify that selection persists.
 5. Choose **Jev** to return to the server setup and verify the OpenRouter fields collapse.
    Confirm an unsaved draft survives switching views.
 6. Check the same controls at a 390 px viewport. The form must remain readable with no horizontal overflow.
 
-The browser run confirmed persistence after reload, no page errors and no horizontal overflow.
+The browser run confirmed keyboard model selection, custom draft retention, persistence after reload,
+no page errors and no horizontal overflow.
 Automated tests cover account ownership, non-manager access, non-OpenRouter/revoked accounts, failed
 capability tests and failed provider switches preserving settings, key rotation, calibration, image
 requests, routing, billed cost and credential attribution, platform-cap separation, reset and the
-existing TypeSafe path.
+existing TypeSafe path. UI tests also cover custom text and vision IDs, failed checks preserving
+those drafts, and saved unlisted IDs remaining editable.
 
 ## Screenshots
 
@@ -35,6 +38,10 @@ The dark-theme views below include the workspace sidebar, Settings navigation an
 at a 1440 × 1000 viewport, so the feature can be reviewed in the surrounding app.
 
 ![Full application window showing decision model setup](../images/openrouter-decisions-wide-setup.png)
+
+### Full window — shared model picker
+
+![Decision models using the same searchable picker as other OpenRouter settings](../images/openrouter-decisions-model-picker.png)
 
 ### Full window — saved selection
 

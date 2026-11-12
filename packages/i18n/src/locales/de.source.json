@@ -43995,5 +43995,11 @@
   },
   "decisions.jevManaged": {
     "value": "The server owner manages the Jev setup."
+  },
+  "decisions.otherModel": {
+    "value": "Other model…"
+  },
+  "decisions.visionOff": {
+    "value": "Off"
   }
 }

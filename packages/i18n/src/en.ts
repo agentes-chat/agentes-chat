@@ -9552,6 +9552,8 @@ export const en = {
     discard: "Discard",
   },
   decisions: {
+    otherModel: "Other model…",
+    visionOff: "Off",
     provider: "Decision provider",
     jevManaged: "The server owner manages the Jev setup.",
     serverDefault: "Server default for workspaces without their own decision models.",

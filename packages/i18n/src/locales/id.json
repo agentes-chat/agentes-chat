@@ -17737,6 +17737,8 @@
     "checkFailed": "OpenRouter tidak dapat memverifikasi model keputusan ini. Periksa akun, saldo, dan ID model lalu coba lagi.",
     "serverDefault": "Pengaturan bawaan server untuk ruang kerja tanpa model keputusan sendiri.",
     "provider": "Penyedia keputusan",
-    "jevManaged": "Pemilik server mengelola pengaturan Jev."
+    "jevManaged": "Pemilik server mengelola pengaturan Jev.",
+    "otherModel": "Model lain…",
+    "visionOff": "Nonaktif"
   }
 }

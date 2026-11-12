@@ -16,6 +16,11 @@ OpenRouter expands the account, model and testing controls. Selecting Jev from a
 configuration resets the workspace override only after the server confirms success. A failed reset
 keeps OpenRouter selected. Merely opening the OpenRouter form makes no provider call.
 
+Reuse the existing provider rows, masked account descriptions and `ModelSelect` control. Offer Jev
+and Kev for text, and Jev or Off for vision. **Other model…** reveals an ID field for either role;
+saved unlisted IDs remain editable. The ordinary OpenRouter chat catalog does not describe System
+One capabilities, so it is not used to populate these choices. Capability checks still run on save.
+
 Store a nullable `organization_settings.decisions` value containing a credential ID, text model ID
 and optional vision model ID. The account must be active, be OpenRouter's and belong to that workspace. Validate at
 the route and engine boundaries. Saving tests Noul, Choice and Score and, when selected, a synthetic

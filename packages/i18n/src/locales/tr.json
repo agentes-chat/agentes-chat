@@ -18124,6 +18124,8 @@
     "checkFailed": "OpenRouter bu karar modelini doğrulayamadı. Hesabı, bakiyeyi ve model kimliğini kontrol edip tekrar deneyin.",
     "serverDefault": "Kendi karar modeli olmayan çalışma alanları için sunucunun varsayılan ayarları.",
     "provider": "Karar sağlayıcısı",
-    "jevManaged": "Jev ayarlarını sunucu sahibi yönetir."
+    "jevManaged": "Jev ayarlarını sunucu sahibi yönetir.",
+    "otherModel": "Başka model…",
+    "visionOff": "Kapalı"
   }
 }

@@ -18837,6 +18837,8 @@
     "checkFailed": "OpenRouter n’a pas pu vérifier ce modèle de décision. Vérifiez le compte, le crédit et l’identifiant du modèle, puis réessayez.",
     "serverDefault": "Configuration par défaut du serveur pour les espaces sans modèles de décision propres.",
     "provider": "Fournisseur de décisions",
-    "jevManaged": "Le propriétaire du serveur gère la configuration de Jev."
+    "jevManaged": "Le propriétaire du serveur gère la configuration de Jev.",
+    "otherModel": "Autre modèle…",
+    "visionOff": "Désactivé"
   }
 }

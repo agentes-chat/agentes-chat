@@ -1440,15 +1440,16 @@ tokens read, about US$ 0.0001 per routed message. Without it, see https://agente
 
 **Decision models on your OpenRouter account.** Open **Settings → AI and usage → Decision models**.
 Choose **OpenRouter** in **Decision provider** to reveal the account and model settings.
-Choose an OpenRouter API account already connected to this workspace, set the text decision model
-(for example, `typesafe/jev-1.14` or `jaredpalmer/kev-4b`) and, optionally, an image decision model.
+Choose an OpenRouter API account already connected to this workspace, then choose **Jev 1.14** or
+**Kev 4B** for text. **Other model…** reveals a field for another compatible model ID. For images,
+choose **Jev 1.14**, **Off**, or another compatible model through **Other model…**.
 Choose **Test and save**. It makes small paid test requests for Noul, Choice and Score, plus an image
 and Box test when you select a vision model. A failed check keeps the previous configuration.
 No Docker settings, environment variables, new key or restart is needed.
 
 The selection applies only to this workspace, including message routing, memory judgments and
 screenshots. Keep a vision model such as `typesafe/jev-1.14` when your text model does not read images,
-or leave the vision field empty to turn off image judgments. Ordinary chat models are not decision
+or choose **Off** to turn off image judgments. Ordinary chat models are not decision
 models. Evaluate calibration before switching models that make memory or screen decisions.
 
 The account stays encrypted in its original credential row. Changes, rotations and revocations are

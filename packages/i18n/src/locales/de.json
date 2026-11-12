@@ -18195,6 +18195,8 @@
     "checkFailed": "OpenRouter konnte dieses Entscheidungsmodell nicht prüfen. Prüfe Konto, Guthaben und Modell-ID und versuche es erneut.",
     "serverDefault": "Serverstandard für Arbeitsbereiche ohne eigene Entscheidungsmodelle.",
     "provider": "Anbieter für Entscheidungen",
-    "jevManaged": "Die Serverkonfiguration von Jev verwaltet der Serverinhaber."
+    "jevManaged": "Die Serverkonfiguration von Jev verwaltet der Serverinhaber.",
+    "otherModel": "Anderes Modell…",
+    "visionOff": "Aus"
   }
 }
