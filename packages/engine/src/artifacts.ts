@@ -455,6 +455,7 @@ const CONTENT_TYPES: Record<string, string> = {
   txt: "text/plain; charset=utf-8",
   log: "text/plain; charset=utf-8",
   md: "text/markdown; charset=utf-8",
+  markdown: "text/markdown; charset=utf-8",
   csv: "text/csv; charset=utf-8",
   tsv: "text/tab-separated-values; charset=utf-8",
   json: "application/json",
@@ -472,7 +473,7 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 /** Text-like extensions whose small files get `text` (beyond `text/*` types). */
-const TEXT_EXTENSIONS = new Set(["md", "csv", "tsv", "json", "txt", "log", "yaml", "yml", "xml"]);
+const TEXT_EXTENSIONS = new Set(["md", "markdown", "csv", "tsv", "json", "txt", "log", "yaml", "yml", "xml"]);
 const TEXT_READ_BYTES = 200_000;
 
 const extensionOf = (name: string) => /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase() ?? "";

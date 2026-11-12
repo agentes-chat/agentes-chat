@@ -240,6 +240,23 @@ describe("artifact viewer", () => {
     expect(screen().getByText("Texto copiado.")).toBeTruthy();
   });
 
+  test("renderiza Markdown de um anexo e copia o conteúdo original", async () => {
+    const api = createFakeApi(seedState());
+    const source = "# Cobranças\n\n**Parcelas abertas**\n\n| Situação | Total |\n| --- | ---: |\n| Ativo | 7 |";
+    const file = await api.artifacts.upload(ORG_ID, new File([source], "relatorio.md", { type: "text/plain" }));
+
+    await renderApp(`/org/${ORG_ID}/drive?artifact=${file.id}`, { api });
+    await settle(8);
+    const dialog = within(screen().getByRole("dialog", { name: "relatorio.md" }));
+    expect(dialog.getByRole("heading", { name: "Cobranças" })).toBeTruthy();
+    expect(dialog.getByText("Parcelas abertas").tagName).toBe("STRONG");
+    expect(within(dialog.getByRole("table")).getByRole("cell", { name: "7" })).toBeTruthy();
+
+    await click(dialog.getByRole("button", { name: "Copiar texto" }));
+    await settle(2);
+    expect(copied.at(-1)).toBe(source);
+  });
+
   test("an uploaded text file (HTML, JSON, code): Copiar texto between Baixar and Enviar nova versão", async () => {
     const api = createFakeApi(seedState());
     const page = '<h2 id="combo">Como funciona</h2>\n<p>Texto da matéria.</p>\n';

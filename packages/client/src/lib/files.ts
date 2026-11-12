@@ -127,6 +127,10 @@ const BY_EXTENSION: Record<string, FileIconName> = {
 export const isJsonFile = (name: string, contentType = "") =>
   extension(name) === "json" || /^application\/(?:[\w.-]+\+)?json$/.test(previewType(contentType));
 
+/** Identifica anexos Markdown pelo nome ou pelo tipo MIME. */
+export const isMarkdownFile = (name: string, contentType = "") =>
+  /^(md|markdown)$/.test(extension(name)) || previewType(contentType) === "text/markdown";
+
 /** An icon for a file from its name, then its type. */
 export function fileIcon(name: string, contentType = ""): FileIconName {
   const byName = BY_EXTENSION[extension(name)];
