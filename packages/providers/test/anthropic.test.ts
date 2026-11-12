@@ -625,4 +625,39 @@ describe("prompt cache: a stable prefix whatever tools load", () => {
     expect(JSON.stringify(body.messages)).not.toContain('"image"');
     expect(JSON.stringify(body.messages)).toContain("The image is not shown");
   });
+
+  // The API reads a request's breakpoints in order (tools, system, messages) and refuses a 1h one after a 5m one:
+  // the compatible mode keeps 5 minutes on the history, as it already did on the system (issue #235).
+  test("another company's endpoint keeps the history's breakpoint at 5 minutes, never 1h", async () => {
+    const { fetcher, requests } = scripted(
+      sse([start(1), { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 1 } }]),
+    );
+    await createAnthropicProvider({ fetch: fetcher, maxRetries: 0, compat: { toolChoiceAny: true } })
+      .stream(
+        {
+          model: "claude-sonnet-5-5",
+          system: [{ text: "agent", cache: true }],
+          messages: [{ role: "user", content: [{ type: "text", text: "olha isso", cache: true }] }],
+          maxTokens: 10,
+          cacheTtl: "1h",
+        },
+        { apiKey: "k", onDelta: () => {} },
+      )
+      .catch(() => {});
+    const body = requests[0]?.body as Record<string, unknown>;
+    // Both breakpoints, both at the 5-minute default.
+    expect(body.system).toEqual([{ type: "text", text: "agent", cache_control: { type: "ephemeral" } }]);
+    const [message] = body.messages as { content: { cache_control?: unknown }[] }[];
+    expect(message?.content[0]?.cache_control).toEqual({ type: "ephemeral" });
+    expect(JSON.stringify(body)).not.toContain('"ttl"');
+  });
+
+  test("Claude's own API still takes the 1h the turn asks for, in both places", async () => {
+    const { body } = await send({
+      system: [{ text: "agent", cache: true }],
+      messages: [{ role: "user", content: [{ type: "text", text: "olha isso", cache: true }] }],
+      cacheTtl: "1h",
+    });
+    expect(JSON.stringify(body)).toContain('"ttl":"1h"');
+  });
 });

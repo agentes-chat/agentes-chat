@@ -144,7 +144,9 @@ export function createAnthropicProvider(
             compat ? withoutImages(request.messages) : request.messages,
             id,
             withThinking,
-            cacheControl(request),
+            // The history stays at 5 minutes, as the system's does here: the API reads the breakpoints in order and
+            // refuses a 1h one after a 5m one (`tools`, `system`, `messages`).
+            compat ? undefined : cacheControl(request),
           ),
           ...(compat ? {} : { cache_control: { type: "ephemeral" as const } }),
           ...(tools.length > 0 ? { tools } : {}),
