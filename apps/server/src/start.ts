@@ -75,6 +75,7 @@ import {
   memoryBudget,
   meterComposio,
   moveIssueComments,
+  publicHostAddress,
   publicHttpsFetch,
   queueEmbeddingBackfill,
   relayCredentials,
@@ -832,10 +833,11 @@ function mailAdapters(
         beforeToolCall,
       })
     : null;
-  // A mail server named by a person never resolves to our network (private, loopback, metadata).
+  // A mail server named by a person never resolves to our network (private, loopback, metadata), unless the
+  // operator allowed that host or range (ADR 0174): the same check as when the account was saved.
   const checkHost = async (host: string) => {
-    const addresses = await resolveHostDns(host);
-    if (addresses.length === 0 || addresses.some(isBlockedAddress)) throw new Error("blocked host");
+    const checked = await publicHostAddress(host);
+    if (!checked.ok) throw new Error(checked.reason === "blocked" ? "blocked host" : `no address for ${host}`);
   };
   const imapOptions = { checkHost };
   return {

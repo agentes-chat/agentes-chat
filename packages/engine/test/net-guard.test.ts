@@ -275,6 +275,7 @@ test("loopback and metadata addresses stay refused whatever is allowed", async (
     for (const address of [
       "127.0.0.1",
       "169.254.169.254",
+      "100.100.100.200",
       "::1",
       "fd00:ec2::254",
       "fe80::1",

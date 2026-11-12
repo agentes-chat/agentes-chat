@@ -32,10 +32,12 @@ it. A server open to sign-up had no way to allow one network without opening all
 2. **Allow-lists for what the switch doesn't cover.** `OUTBOUND_ALLOW_HOSTS` (names, or `*.` and a suffix of two
    labels or more) and `OUTBOUND_ALLOW_CIDRS` (ranges or addresses), set by the operator, let a private address
    through every typed-address guard: `assertPublicHttpsUrl`, `publicHttpsFetch` (checked and pinned at every
-   connection as before) and `publicHostAddress`. A host on the list may resolve to any private address; a range lets
+   connection as before) and `publicHostAddress` (also the mail server's check at every IMAP connection, in
+   `start.ts`). A host on the list may resolve to any private address; a range lets
    its addresses through whatever the name. Unset, nothing changes.
 3. **Some addresses never pass.** Loopback and unspecified addresses, link-local ones (the cloud metadata address
-   `169.254.169.254` among them), AWS's `fd00:ec2::254`, multicast and reserved addresses, and the names `localhost`
+   `169.254.169.254` among them), AWS's `fd00:ec2::254` and Alibaba's `100.100.100.200` (inside Tailscale's
+   range), multicast and reserved addresses, and the names `localhost`
    and `*.localhost` stay refused even inside an allowed range or behind an allowed name, also with the switch on.
    An IPv4 address carried in IPv6 is judged as the IPv4 address.
 4. **Addresses named by someone outside stay public.** An OAuth client's metadata document (`fetchPublicDocument`),
@@ -51,3 +53,8 @@ it. A server open to sign-up had no way to allow one network without opening all
   network. The setting's description says to name a narrow suffix. agentes.chat Cloud sets neither list.
 - With the switch on, `assertPublicHttpsUrl` refuses loopback while the plain `fetch` after it would not: the typed
   address is what is checked, and a connector to the server's own loopback has no use.
+- `assertPublicHttpsUrl` also guards the pages agents read and the skills they fetch, so what the switch or the
+  lists allow, an agent may open too, on an address a model chose. That was already the switch's documented reach
+  (its `fetch` was plain), and the lists are the operator's to keep narrow. A server closed to sign-up has the
+  switch on unless `MODEL_ENDPOINTS_PRIVATE=false`.
+- Nothing refuses the lists on agentes.chat Cloud: they are the operator's setting, like the switch.

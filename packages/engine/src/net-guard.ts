@@ -73,13 +73,15 @@ export function isBlockedAddress(address: string): boolean {
 
 /**
  * The addresses no setting lets through: loopback and unspecified, link-local (the cloud metadata address
- * 169.254.169.254 among them, and AWS's fd00:ec2::254), multicast and reserved, and anything that isn't an address.
+ * 169.254.169.254 among them), the other clouds' metadata addresses (AWS's fd00:ec2::254, Alibaba's
+ * 100.100.100.200), multicast and reserved, and anything that isn't an address.
  */
 function alwaysBlocked(address: string): boolean {
   const ip = plainAddress(address);
   if (isIP(ip) === 4) {
     const [a = 0, b = 0] = ipv4Parts(ip);
-    return a === 0 || a === 127 || (a === 169 && b === 254) || a >= 224;
+    // 100.100.100.200: Alibaba Cloud's metadata address, inside the CGNAT range Tailscale uses.
+    return a === 0 || a === 127 || (a === 169 && b === 254) || a >= 224 || ip === "100.100.100.200";
   }
   const g = isIP(ip) === 6 ? ipv6Groups(ip) : null;
   if (!g) return true;
@@ -103,7 +105,7 @@ let allowedHosts: readonly string[] = [];
 let allowedRanges: BlockList | null = null;
 
 /** Whether a host matches `OUTBOUND_ALLOW_HOSTS`: the name itself, or under a `*.suffix` (never the suffix alone). */
-function hostAllowed(host: string): boolean {
+function hostOnAllowList(host: string): boolean {
   const h = host.toLowerCase().replace(/\.$/, "");
   return allowedHosts.some((entry) => (entry.startsWith("*.") ? h.endsWith(entry.slice(1)) : h === entry));
 }
@@ -147,7 +149,7 @@ export function allowOutbound(list: { hosts?: readonly string[]; cidrs?: readonl
 function refusedAddress(address: string, host: string, orPrivate = false): boolean {
   if (!isBlockedAddress(address)) return false;
   if (alwaysBlocked(address)) return true;
-  return !((orPrivate && privateOutbound) || hostAllowed(host) || rangeAllowed(address));
+  return !((orPrivate && privateOutbound) || hostOnAllowList(host) || rangeAllowed(address));
 }
 
 /** Names that only mean this machine: refused whatever is allowed. */
@@ -160,14 +162,14 @@ const loopbackName = (host: string) => host === "localhost" || host.endsWith(".l
 function internalNameRefused(host: string, orPrivate = false): boolean {
   if (loopbackName(host)) return true;
   if (!(host.endsWith(".local") || host.endsWith(".internal"))) return false;
-  return !((orPrivate && privateOutbound) || hostAllowed(host));
+  return !((orPrivate && privateOutbound) || hostOnAllowList(host));
 }
 
 /**
  * The refusal of an address on a private network, with its host (logged by the server, named by the apps along with
  * the settings that would allow it).
  */
-const internalAddress = (host: string) =>
+export const internalAddress = (host: string) =>
   new ValidationError("This address points to an internal network", "url.internal", { host });
 
 /**
