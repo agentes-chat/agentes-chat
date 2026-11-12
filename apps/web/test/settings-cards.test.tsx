@@ -200,6 +200,41 @@ describe("a teammate's settings, on the right hand's card", () => {
     expect(sent.textContent).toContain("Enviado para João");
   });
 
+  test("an agent asking for its own skill: the same card, on itself, sent on by a member who can't decide", async () => {
+    const state = asMember(seedState());
+    const dm = seedDm(state, { type: "agent", id: ADA_ID });
+    const row = settingsRow({
+      proposedByAgentId: ADA_ID,
+      canDecide: false,
+      settings: [{ field: "skill", skillId: "s-excel", from: false, to: true, label: { to: "excel" } }],
+      why: "Preciso da skill excel para ler a planilha.",
+    });
+    state.proposals.push(row);
+    state.messages.push({
+      ...lodiMessage("m-own", {
+        actionCard: { kind: "settings_proposal", forUserId: "u-walter", proposalIds: [row.id] },
+      }),
+      channelId: dm,
+      author: { type: "agent", id: ADA_ID },
+    });
+    await go(state, `dm/agent/${ADA_ID}`);
+    const c = card("Mudar as configurações da Ada");
+    for (const shown of [
+      "Propõe uma mudança",
+      "Preciso da skill excel",
+      "Ada · Configurações",
+      "Só admins mudam as skills de um agente",
+    ])
+      expect(c.textContent).toContain(shown);
+    const lines = [...c.querySelectorAll(".rq__setting")].map((l) =>
+      [l.querySelector("dt"), l.querySelector("s"), l.querySelector("b")].map((x) => x?.textContent),
+    );
+    expect(lines).toEqual([["Skill excel", "Desligada", "Ligada"]]);
+    expect(within(c).queryByRole("button", { name: "Aplicar" })).toBeNull();
+    await click(within(c).getByRole("button", { name: "Pedir a um admin" }));
+    expect(state.calls.some((x) => x.method === "proposals.ask" && x.args[1] === "set-1")).toBe(true);
+  });
+
   test("one line about the model says only admins change it", async () => {
     const row = settingsRow({
       canDecide: false,

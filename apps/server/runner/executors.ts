@@ -74,19 +74,51 @@ export function resolveCommand(
   return sharedBin && dirs[0] ? join(dirs[0], command) : command;
 }
 
+/**
+ * One argument on cmd.exe's command line, read back by the program as it was: in quotes, so an empty one stays an
+ * argument and a space, `&` or `|` stays text; backslashes doubled only where they come before a quote; a quote
+ * doubled. `%NAME%` still expands there, so what a person typed goes through its own check first.
+ */
+export const winQuote = (arg: string) => `"${arg.replace(/(\\*)"/g, '$1$1""').replace(/(\\+)$/, "$1$1")}"`;
+
+/**
+ * How a CLI (`command`: a bare name, or a launcher and what it runs) starts with `args`. On Windows a bare name goes
+ * through cmd.exe, the one that finds `claude.cmd` and `claude.exe` alike on the PATH, with every argument quoted:
+ * Node's own `shell: true` joins them as they are, so an empty one (`--setting-sources ""`) vanished and the next
+ * flag became its value, and a path with a space split in two. Elsewhere, and for a launcher: the file and its argv,
+ * no shell.
+ */
+export function cliSpawn(
+  command: readonly string[],
+  args: readonly string[],
+  pathList?: string,
+  platform: NodeJS.Platform = process.platform,
+): { file: string; args: string[]; windowsVerbatimArguments?: true } {
+  const [file = "", ...pre] = command;
+  if (platform === "win32" && command.length === 1) {
+    const line = [file, ...args].map(winQuote).join(" ");
+    return {
+      file: process.env.ComSpec || "cmd.exe",
+      args: ["/d", "/s", "/c", `"${line}"`],
+      windowsVerbatimArguments: true,
+    };
+  }
+  return { file: resolveCommand(file, pathList), args: [...pre, ...args] };
+}
+
 const defaultRun: Run = (command, args) =>
   new Promise((resolve) => {
+    const run = cliSpawn([command], args);
     execFile(
-      resolveCommand(command),
-      args,
+      run.file,
+      run.args,
       {
         encoding: "utf8",
         timeout: 8000,
         maxBuffer: 1024 * 1024,
         windowsHide: true,
         env: process.env,
-        // Windows finds `claude.cmd` / `codex.cmd` only through the shell.
-        shell: process.platform === "win32",
+        windowsVerbatimArguments: run.windowsVerbatimArguments,
       },
       (err, stdout, stderr) => {
         const code = (err as { code?: unknown } | null)?.code;

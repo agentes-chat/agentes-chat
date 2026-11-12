@@ -32,6 +32,8 @@ export function createFakeSkills(
   github: () => "none" | "refused" | "ok" = () => "none",
 ): ApiClient["skills"] {
   const assigned = new Map<string, Set<string>>();
+  /** Names of skills removed here: a pick named like one replaces it, as the server says. */
+  const removed = new Set<string>();
   /** A waiting update a person chose, as it was: Desfazer makes it wait again. */
   const chosen = new Map<string, Pick<SkillDetail, "body" | "pendingUpdate" | "pending">>();
   /** "Agentes melhoram as skills sozinhos" per workspace (on unless saved off). */
@@ -143,6 +145,17 @@ export function createFakeSkills(
     s.version += 1;
     return clone(s);
   };
+  /** The picks as the server lists them: one named like a skill installed, or removed, says it replaces it. */
+  const marked = async (orgId: string, choices: typeof CHOICES) => {
+    const names = new Set((await store(orgId)).map((s) => s.name));
+    return clone(choices).map((c) =>
+      names.has(c.name)
+        ? { ...c, replaces: "installed" as const }
+        : removed.has(c.name)
+          ? { ...c, replaces: "removed" as const }
+          : c,
+    );
+  };
   const forAgent = async (orgId: string, agentId: string) =>
     (await store(orgId)).map(({ body: _b, files: _f, ...s }) => ({
       ...clone(s),
@@ -180,9 +193,9 @@ export function createFakeSkills(
       }
       const via = url?.includes("/contoso/") ? { via: "github" as const } : {};
       if (url && /^https:\/\/github\.com\/[^/]+\/[^/]+\/?$/.test(url)) {
-        return { choices: clone(CHOICES), skipped: clone(SKIPPED), ...via };
+        return { choices: await marked(orgId, CHOICES), skipped: clone(SKIPPED), ...via };
       }
-      if (url && "list" in input && input.list) return { choices: clone(CHOICES.slice(0, 1)), ...via };
+      if (url && "list" in input && input.list) return { choices: await marked(orgId, CHOICES.slice(0, 1)), ...via };
       const name = url ? (url.split("/").filter(Boolean).pop() ?? "skill") : "Skill enviada";
       return make(orgId, {
         name,
@@ -195,8 +208,8 @@ export function createFakeSkills(
         files: [{ path: "SKILL.md", size: 10, mime: "text/markdown", status: "stored" }],
       });
     },
-    importPicked: async (orgId, url, paths) => {
-      log("skills.importPicked", orgId, url, paths);
+    importPicked: async (orgId, url, paths, forAgentId) => {
+      log("skills.importPicked", orgId, url, paths, ...(forAgentId ? [forAgentId] : []));
       const installed: SkillDetail[] = [];
       for (const path of paths) {
         const choice = CHOICES.find((c) => c.path === path);
@@ -289,6 +302,8 @@ export function createFakeSkills(
       log("skills.remove", orgId, id);
       const list = await store(orgId);
       const i = list.findIndex((x) => x.id === id);
+      const gone = list[i];
+      if (gone) removed.add(gone.name);
       if (i >= 0) list.splice(i, 1);
       for (const set of assigned.values()) set.delete(id);
     },

@@ -8,6 +8,7 @@ import {
   type ErrorReporter,
   HEARTBEAT_MS,
   HELLO_TIMEOUT_MS,
+  IPHONE_WIFI_PROTOCOL,
   type MachineErrorCode,
   type MachineOp,
   type MachineReplies,
@@ -74,6 +75,8 @@ import {
   machineOnline,
   machineOwnerTimezone,
   machinePause,
+  memberPause,
+  pauseForApps,
   publishMachineStatus,
   publishMachineUpdated,
 } from "./machines";
@@ -273,8 +276,8 @@ export interface MachineConnection {
   pingTimer: ReturnType<typeof setInterval> | null;
   /** The runner's protocol (from its hello). */
   protocol: number;
-  /** The pause the runner last reported (protocol 9); null = not paused. */
-  pause: { until: string | null } | null;
+  /** The pause the runner last reported (protocol 9); null = not paused. `by`: who paused it from the apps. */
+  pause: { until: string | null; by?: string | null } | null;
 }
 
 export interface MachineHubDeps {
@@ -364,8 +367,11 @@ export function isNewWork(request: MachineRequest) {
     case "phone.pair.code":
     case "phone.pair.status":
     case "phone.pair.cancel":
-    // A person's guide asking the computer to look for a phone.
+    // Pausing or resuming the computer itself: a resume must reach a paused one.
+    case "pause.set":
+    // A person's guide asking the computer to look for a phone, or its owner picking an iPhone on its Wi-Fi.
     case "phone.look":
+    case "phone.wifi":
       return false;
     case "secret":
       return request.action !== "discard" && request.action !== "remove" && request.action !== "activate";
@@ -386,8 +392,8 @@ const phonesTooOld = (name: string) =>
 const pauseActive = (pause: { until: string | null } | null, now = Date.now()) =>
   Boolean(pause && (!pause.until || Date.parse(pause.until) > now));
 
-const pauseOf = (p: RunnerPause | undefined): { until: string | null } | null =>
-  p?.paused ? { until: p.until ?? null } : null;
+const pauseOf = (p: RunnerPause | undefined): { until: string | null; by: string | null } | null =>
+  p?.paused ? { until: p.until ?? null, by: p.by ?? null } : null;
 
 /** `machine_rpc` rows older than this are deleted (opportunistically). */
 export const MACHINE_RPC_KEEP_MS = 60 * 60_000;
@@ -598,6 +604,9 @@ export function createMachineHub(deps: MachineHubDeps) {
         MACHINE_CLOSE.invalidToken,
       );
     }
+    // Protocol 9: a runner that says nothing about the pause isn't paused.
+    const reported =
+      frame.protocol >= PAUSE_PROTOCOL ? await memberPause(db, machine.orgId, pauseOf(frame.paused)) : null;
     if (conn.closed) return;
     if (conn.helloTimer) clearTimeout(conn.helloTimer);
     conn.helloTimer = null;
@@ -606,8 +615,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     conn.name = machine.name;
     conn.kind = machine.kind;
     conn.protocol = frame.protocol;
-    // Protocol 9: a runner that says nothing about the pause isn't paused.
-    conn.pause = frame.protocol >= PAUSE_PROTOCOL ? pauseOf(frame.paused) : null;
+    conn.pause = reported;
     const old = local.get(machine.id);
     local.set(machine.id, conn);
     if (old && old !== conn) {
@@ -679,6 +687,7 @@ export function createMachineHub(deps: MachineHubDeps) {
           : {}),
         paused: conn.pause !== null,
         pausedUntil: conn.pause?.until ? new Date(conn.pause.until) : null,
+        pausedByUserId: conn.pause?.by ?? null,
         // Protocol 10: what the machine allows (an older runner reports nothing: unknown).
         access: frame.access ?? null,
         // Protocol 22: its size (an older runner says nothing: kept, unknown if it never did).
@@ -758,7 +767,10 @@ export function createMachineHub(deps: MachineHubDeps) {
     }, heartbeatMs);
     await publishMachineStatus(pubsub, machine.orgId, machine.id, true);
     if (frame.protocol >= PAUSE_PROTOCOL) {
-      await publishMachineUpdated(pubsub, machine.orgId, machine.id, { paused: conn.pause, access: true });
+      await publishMachineUpdated(pubsub, machine.orgId, machine.id, {
+        paused: await pauseForApps(db, machine.orgId, conn.pause),
+        access: true,
+      });
     }
     removeAccounts(conn, removed);
     if (frame.protocol >= TASKS_PROTOCOL) {
@@ -826,18 +838,22 @@ export function createMachineHub(deps: MachineHubDeps) {
   async function runnerState(conn: MachineConnection, frame: Extract<RunnerFrame, { type: "runner.state" }>) {
     const machineId = conn.machineId as string;
     const wasPaused = pauseActive(conn.pause);
-    conn.pause = pauseOf(frame.paused);
+    const said = pauseOf(frame.paused);
+    conn.pause = conn.orgId ? await memberPause(db, conn.orgId, said) : said && { ...said, by: null };
     const [row] = await db
       .update(machines)
       .set({
         paused: conn.pause !== null,
         pausedUntil: conn.pause?.until ? new Date(conn.pause.until) : null,
+        pausedByUserId: conn.pause?.by ?? null,
         updatedAt: new Date(),
       })
       .where(eq(machines.id, machineId))
       .returning({ orgId: machines.orgId });
     if (!row) return;
-    await publishMachineUpdated(pubsub, row.orgId, machineId, { paused: conn.pause });
+    await publishMachineUpdated(pubsub, row.orgId, machineId, {
+      paused: await pauseForApps(db, row.orgId, conn.pause),
+    });
     // Resumed: what waited for this computer goes on (runs waiting for its brain, missions' queued work).
     if (wasPaused && !pauseActive(conn.pause) && hooks.online) {
       const online = hooks.online;
@@ -1475,7 +1491,11 @@ export function createMachineHub(deps: MachineHubDeps) {
     ): Promise<MachineReplies[Op]> {
       const conn = local.get(machineId);
       const phoneOp = request.op.startsWith("phone.");
-      const phonesNeed = request.op.startsWith("phone.pair.") ? PHONE_PAIRING_PROTOCOL : PHONES_PROTOCOL;
+      const phonesNeed = request.op.startsWith("phone.pair.")
+        ? PHONE_PAIRING_PROTOCOL
+        : request.op === "phone.wifi"
+          ? IPHONE_WIFI_PROTOCOL
+          : PHONES_PROTOCOL;
       if (conn) {
         if (phoneOp && conn.protocol < phonesNeed) throw phonesTooOld(conn.name);
         if (isNewWork(request)) {

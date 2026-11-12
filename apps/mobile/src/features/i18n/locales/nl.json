@@ -1810,6 +1810,10 @@
       "no_driverLinux": "Linux heeft udev-regels voor deze telefoon nodig",
       "os_too_old": "Het systeem van deze telefoon is te oud",
       "adb_offline": "Haal de kabel eruit en sluit hem opnieuw aan",
+      "wifi_away": "Zet deze iPhone op de wifi van de Mac of sluit hem aan",
+      "wifi_asleep": "Maak deze iPhone wakker, ontgrendel hem en houd hem bij de Mac",
+      "tunnel_down": "De wifiverbinding viel weg. Houd deze iPhone bij de Mac of sluit hem aan",
+      "wifi_untrusted": "Sluit hem één keer aan en tik op Vertrouw",
       "other": "Nog niet klaar"
     },
     "os": {
@@ -1967,6 +1971,15 @@
       "teamMissing": "Xcode is ingelogd maar toont nog geen team. Maak in Xcode een willekeurige iOS-app, kies je team bij Signing & Capabilities en voer hem één keer uit op deze iPhone.",
       "uiRefused": "Deze iPhone weigerde de tikken van de testhelper. Ontgrendel hem en voer je toegangscode in als hij erom vraagt. Blijft het gebeuren, zet dan Instellingen › Ontwikkelaar › Schakel UI-automatisering in uit en weer aan.",
       "pluggedIn": "Hij is aangesloten",
+      "wifi": {
+        "also": "Ook op de wifi van {{host}}: {{name}}",
+        "use": "Via wifi gebruiken",
+        "hint": "Hier verschijnt alleen een iPhone die de Mac al eens via een kabel heeft vertrouwd. De Mac bereikt hem via de eigen versleutelde verbinding van Apple, dezelfde die Xcode gebruikt.",
+        "stop": "Niet meer via wifi gebruiken",
+        "stopTitle": "{{name}} niet meer via wifi gebruiken?",
+        "stopText": "Agents kunnen hem niet meer bereiken. Kies hem opnieuw met {{host}} om hem te gebruiken.",
+        "stopped": "{{name}} wordt niet meer via wifi gebruikt"
+      },
       "stall": {
         "plug": "{{host}} ziet deze iPhone nog niet. Gebruik een kabel die data doorgeeft, niet alleen stroom, houd deze iPhone ontgrendeld en tik op Vertrouw als hij erom vraagt.",
         "devmode": "Ontwikkelaarsmodus gaat pas aan nadat deze iPhone herstart. Tik op Herstart en daarna op Zet aan als hij terug is. Geen schakelaar? Koppel deze iPhone los en sluit hem weer aan."

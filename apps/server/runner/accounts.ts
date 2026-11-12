@@ -52,6 +52,7 @@ import {
   claudeKeptPlan,
   claudePlan,
   claudeTier,
+  cliSpawn,
   GROK_BIN,
   isExecutable,
   OPENCODE_BIN,
@@ -1113,15 +1114,14 @@ interface CliResult {
 /** Runs a CLI to the end (killed after `timeoutMs`); never throws. */
 function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeoutMs: number): Promise<CliResult> {
   return new Promise((resolve) => {
-    const [file, ...pre] = command;
+    const run = cliSpawn(command, args, env.PATH);
     let child: ChildProcess;
     try {
-      child = spawn(resolveCommand(file ?? "", env.PATH), [...pre, ...args], {
+      child = spawn(run.file, run.args, {
         env,
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
-        // Windows finds `claude.cmd` / `codex.cmd` only through the shell (argv: fixed words).
-        shell: process.platform === "win32" && command.length === 1,
+        windowsVerbatimArguments: run.windowsVerbatimArguments,
       });
     } catch (err) {
       resolve({ status: null, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
@@ -1661,20 +1661,16 @@ export class AccountManager {
     const { command, env, cwd } = login.cliShared
       ? this.sharedCli(login.id)
       : { command: this.command(login.kind), env: this.env(login.kind, login.dir), cwd: login.dir };
-    const [file, ...pre] = command;
-    const child = spawn(
-      resolveCommand(file ?? "", env.PATH),
-      [...pre, ...LOGIN_ARGS[login.kind], ...(email ? ["--email", email] : [])],
-      {
-        cwd,
-        env,
-        stdio: ["pipe", "pipe", "pipe"],
-        windowsHide: true,
-        // Its own process group: a kill reaches what it started (posix).
-        detached: process.platform !== "win32",
-        shell: process.platform === "win32" && command.length === 1,
-      },
-    );
+    const run = cliSpawn(command, [...LOGIN_ARGS[login.kind], ...(email ? ["--email", email] : [])], env.PATH);
+    const child = spawn(run.file, run.args, {
+      cwd,
+      env,
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+      // Its own process group: a kill reaches what it started (posix).
+      detached: process.platform !== "win32",
+      windowsVerbatimArguments: run.windowsVerbatimArguments,
+    });
     login.child = child;
     const onData = (chunk: string) => {
       login.output = (login.output + chunk).slice(-OUTPUT_KEEP);

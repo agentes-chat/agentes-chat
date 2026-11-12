@@ -180,6 +180,7 @@ import type {
   MachineAccount,
   MachineAccountKind,
   MachineOutages,
+  MachinePause,
   MachineTask,
   MailAccount,
   MailAccountUpdate,
@@ -319,6 +320,7 @@ import type {
   UsageReport,
   WebhookProvider,
   WebhookSetup,
+  WifiIphones,
   WifiPairing,
   WikiBulkFailed,
   WikiBulkTarget,
@@ -1063,6 +1065,10 @@ export interface ApiClient {
     cancelWifiPairing(orgId: string, machineId: string, pairingId: string): Promise<void>;
     /** Asks the computer to also look for a plugged phone it has no driver for, which adb never lists (Windows). */
     lookForPhones(orgId: string, machineId: string): Promise<void>;
+    /** The iPhones on this Mac's Wi-Fi that trust it and aren't used yet (its owner or an admin). */
+    wifiIphones(orgId: string, machineId: string): Promise<WifiIphones>;
+    /** Uses that iPhone over Wi-Fi from now on; forgetting the phone stops it. */
+    pickIphoneOverWifi(orgId: string, machineId: string, serial: string): Promise<WifiIphones>;
   };
   /** Connected computers (ADR 0025): machines running `agentes-runner`. */
   machines: {
@@ -1087,6 +1093,12 @@ export interface ApiClient {
     denyDevice(userCode: string): Promise<void>;
     /** ADR 0036 §8: the site only takes away (a folder, for everyone or one agent; a tool). The new access. */
     reduceAccess(orgId: string, machineId: string, input: MachineAccessReduce): Promise<MachineAccess>;
+    /** Pauses it (`until` null: until resumed) or resumes it (`resume`); the pause as it stands then. */
+    setPause(
+      orgId: string,
+      machineId: string,
+      input: { until: string | null } | "resume",
+    ): Promise<MachinePause | null>;
     /** ADR 0036 §9: the newest desktop app build; `null` when there is none (404). */
     desktopLatest(target: string, arch: string): Promise<DesktopRelease | null>;
     /** Offline computers that agents wait for, and where they could move. */
@@ -1134,14 +1146,15 @@ export interface ApiClient {
      * A GitHub link (a skill's folder or a file in it) or the folder as a zip in base64 (writes are JSON only). A link
      * holding several skills (or any, with `list`) installs nothing and answers with them to pick from
      * (`importPicked`), those that can't be installed apart. A private repository is read through the workspace's
-     * GitHub, on the server.
+     * GitHub, on the server. `forAgentId`: the agent whose card opened the install, which gets what installs turned on
+     * when the installer may change its skills.
      */
     import(
       orgId: string,
-      input: { url: string; list?: boolean } | { zipBase64: string },
+      input: { url: string; list?: boolean; forAgentId?: string } | { zipBase64: string },
     ): Promise<SkillDetail | SkillPick>;
-    /** Installs the skills picked among a link's choices (their `path`). */
-    importPicked(orgId: string, url: string, paths: string[]): Promise<SkillDetail[]>;
+    /** Installs the skills picked among a link's choices (their `path`), on for `forAgentId` as `import` does. */
+    importPicked(orgId: string, url: string, paths: string[], forAgentId?: string): Promise<SkillDetail[]>;
     update(orgId: string, id: string, patch: SkillPatch): Promise<SkillDetail>;
     /** Fetch the link again (`url` skills). */
     reimport(orgId: string, id: string): Promise<SkillDetail>;

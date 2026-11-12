@@ -1714,6 +1714,10 @@
       "no_driverLinux": "Linux 需要为这台手机添加 udev 规则",
       "os_too_old": "这台手机的系统太旧",
       "adb_offline": "拔下数据线，再重新插上",
+      "wifi_away": "让这台 iPhone 连接 Mac 的 Wi-Fi，或插上数据线",
+      "wifi_asleep": "唤醒并解锁这台 iPhone，并放在 Mac 附近",
+      "tunnel_down": "Wi-Fi 连接断了。请把这台 iPhone 放在 Mac 附近，或插上数据线",
+      "wifi_untrusted": "用数据线连接一次并点按“信任”",
       "other": "还没准备好"
     },
     "os": {
@@ -1870,6 +1874,15 @@
       "teamMissing": "Xcode 已登录，但还没有显示团队。在 Xcode 中新建任意 iOS App，在 Signing & Capabilities 下选择你的团队，然后在这台 iPhone 上运行一次。",
       "uiRefused": "这台 iPhone 拒绝了测试助手的点按。请解锁它，如有要求就输入密码。如果反复出现，把 设置 › 开发者 › 启用 UI 自动化 关闭再打开。",
       "pluggedIn": "已经插好了",
+      "wifi": {
+        "also": "也在 {{host}} 的 Wi-Fi 上：{{name}}",
+        "use": "通过 Wi-Fi 使用",
+        "hint": "只有曾通过数据线信任过 Mac 的 iPhone 才会出现在这里。Mac 通过 Apple 自己的加密连接访问它，和 Xcode 用的是同一种。",
+        "stop": "停止通过 Wi-Fi 使用",
+        "stopTitle": "停止通过 Wi-Fi 使用“{{name}}”？",
+        "stopText": "智能体将无法再访问它。要使用它，请通过 {{host}} 重新选择。",
+        "stopped": "“{{name}}”不再通过 Wi-Fi 使用"
+      },
       "stall": {
         "plug": "{{host}} 还没有看到这台 iPhone。请使用能传输数据的线，而不是只能充电的线，保持这台 iPhone 解锁，如有提示就点按“信任”。",
         "devmode": "开发者模式要在这台 iPhone 重启后才会打开。点按“重新启动”，开机后点按“打开”。没有这个开关？拔下这台 iPhone 再重新插上。"

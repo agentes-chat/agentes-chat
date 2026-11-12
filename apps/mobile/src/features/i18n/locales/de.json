@@ -1810,6 +1810,10 @@
       "no_driverLinux": "Linux braucht udev-Regeln für dieses Handy",
       "os_too_old": "Das System dieses Handys ist zu alt",
       "adb_offline": "Zieh das Kabel ab und steck es wieder ein",
+      "wifi_away": "Verbinde dieses iPhone mit dem WLAN des Macs oder schließ es an",
+      "wifi_asleep": "Weck dieses iPhone auf, entsperr es und lass es nah am Mac",
+      "tunnel_down": "Die WLAN-Verbindung ist abgebrochen. Lass dieses iPhone nah am Mac oder schließ es an",
+      "wifi_untrusted": "Schließ es einmal an und tippe auf Vertrauen",
       "other": "Noch nicht bereit"
     },
     "os": {
@@ -1967,6 +1971,15 @@
       "teamMissing": "Xcode ist angemeldet, zeigt aber noch kein Team. Erstelle in Xcode eine beliebige iOS-App, wähle unter Signing & Capabilities dein Team und führe sie einmal auf diesem iPhone aus.",
       "uiRefused": "Dieses iPhone hat die Eingaben der Test-App abgelehnt. Entsperre es und gib deinen Code ein, wenn es danach fragt. Passiert es wieder, schalte Einstellungen › Entwickler › UI-Automatisierung aktivieren aus und wieder ein.",
       "pluggedIn": "Es ist angeschlossen",
+      "wifi": {
+        "also": "Auch im WLAN von {{host}}: {{name}}",
+        "use": "Über WLAN nutzen",
+        "hint": "Hier erscheint nur ein iPhone, das dem Mac schon einmal per Kabel vertraut hat. Der Mac erreicht es über Apples eigene verschlüsselte Verbindung, dieselbe, die Xcode nutzt.",
+        "stop": "Nicht mehr über WLAN nutzen",
+        "stopTitle": "{{name}} nicht mehr über WLAN nutzen?",
+        "stopText": "Agenten erreichen es nicht mehr. Wähl es mit {{host}} wieder aus, um es zu nutzen.",
+        "stopped": "{{name}} wird nicht mehr über WLAN genutzt"
+      },
       "stall": {
         "plug": "{{host}} sieht dieses iPhone noch nicht. Nimm ein Kabel, das Daten überträgt und nicht nur lädt, lass dieses iPhone entsperrt und tippe auf Vertrauen, wenn es fragt.",
         "devmode": "Der Entwicklermodus geht erst nach einem Neustart dieses iPhones an. Tippe auf Neustart und danach auf Aktivieren. Kein Schalter da? Zieh dieses iPhone ab und schließ es wieder an."

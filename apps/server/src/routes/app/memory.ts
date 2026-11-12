@@ -147,13 +147,14 @@ const Proposal = z
           from: z.unknown(),
           to: z.unknown(),
           channelId: z.string().optional(),
+          skillId: z.string().optional(),
           label: z.object({ from: z.string().optional(), to: z.string().optional() }).optional(),
         }),
       )
       .nullable()
       .openapi({
         description:
-          "`agent_settings`: each setting then (`from`) and proposed (`to`): `model` a model id; `ai_account` `{ brain, accountId }`; `budget` nano-USD a month or null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` / `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a mention); `archive` / `delete` true (deleting is for good, ADR 0082). `label`: names for ids.",
+          "`agent_settings`: each setting then (`from`) and proposed (`to`): `model` a model id; `ai_account` `{ brain, accountId }`; `budget` nano-USD a month or null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` / `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a mention); `skill` whether it has the skill in `skillId` on; `archive` / `delete` true (deleting is for good, ADR 0082). `label`: names for ids.",
       }),
     requestedBy: z
       .object({ userId: z.string(), name: z.string() })

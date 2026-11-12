@@ -570,6 +570,30 @@ export const inviteDone = (card: InviteCard, invited: readonly string[]) => {
 export const installSkillDone = (card: InstallSkillCard, skills: readonly Pick<Skill, "sourceUrl">[]) =>
   skills.some((s) => s.sourceUrl === card.url);
 
+/** The install an agent's card opened: its own link and the agent that posted it (kept by the app that opened it). */
+export interface CardInstall {
+  url: string;
+  agentId: string;
+}
+
+/** A kept `CardInstall` read back (JSON), or null when it isn't one. */
+export function cardInstallOf(raw: string | null | undefined): CardInstall | null {
+  try {
+    const v = JSON.parse(raw ?? "null") as Partial<CardInstall> | null;
+    return typeof v?.url === "string" && typeof v.agentId === "string" ? { url: v.url, agentId: v.agentId } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The agent that what installs may go on for: only the one whose card opened the install, named by the screen it
+ * opened (`agent`), and only for that card's own link. A link typed over it or a repository picked instead goes on for
+ * nobody, and so does a link to the screen that merely names an agent.
+ */
+export const cardInstallAgent = (from: CardInstall | null | undefined, url?: string, agent?: string) =>
+  from && agent && from.agentId === agent && from.url === url?.trim() ? agent : undefined;
+
 /**
  * Where a skill of an update card stands: `waiting` (its update changes files that run), `done` (its link was read
  * after the card was posted and nothing waits) or `open` (to update from its link). A skill that's gone counts as done.

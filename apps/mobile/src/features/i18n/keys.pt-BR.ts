@@ -1839,6 +1839,10 @@ export const featureKeysPtBR = {
       no_driverLinux: "O Linux precisa de regras udev para este celular",
       os_too_old: "O sistema deste celular é antigo demais",
       adb_offline: "Desconecte o cabo e conecte de novo",
+      wifi_away: "Entre no Wi-Fi do Mac neste iPhone ou conecte o cabo",
+      wifi_asleep: "Acorde e desbloqueie este iPhone e deixe perto do Mac",
+      tunnel_down: "A ligação pelo Wi-Fi caiu. Deixe este iPhone perto do Mac ou conecte o cabo",
+      wifi_untrusted: "Conecte uma vez e toque em Confiar",
       other: "Ainda não está pronto",
     },
     os: { android: "Android {{version}}", ios: "iOS {{version}}" },
@@ -1999,6 +2003,15 @@ export const featureKeysPtBR = {
       uiRefused:
         "Este iPhone recusou os toques do app de testes. Desbloqueie e digite seu código se ele pedir. Se continuar, desligue e ligue Ajustes\u00a0›\u00a0Desenvolvedor\u00a0›\u00a0Ativar Automação da IU.",
       pluggedIn: "Já está ligado",
+      wifi: {
+        also: "Também no Wi-Fi de {{host}}: {{name}}",
+        use: "Usar pelo Wi-Fi",
+        hint: "Só aparece aqui um iPhone que já confiou no Mac pelo cabo. O Mac chega nele pela ligação criptografada da própria Apple, a mesma que o Xcode usa.",
+        stop: "Parar de usar pelo Wi-Fi",
+        stopTitle: "Parar de usar {{name}} pelo Wi-Fi?",
+        stopText: "Os agentes não chegam mais nele. Escolha de novo com {{host}} para usar.",
+        stopped: "{{name}} não é mais usado pelo Wi-Fi",
+      },
       stall: {
         plug: "O {{host}} ainda não vê este iPhone. Use um cabo que passe dados, não só carga, deixe este iPhone desbloqueado e toque em Confiar se ele pedir.",
         devmode:

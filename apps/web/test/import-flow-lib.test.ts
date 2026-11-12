@@ -13,12 +13,15 @@ import { createI18n } from "@/i18n";
 import { type AgentFile, ImportError } from "@/lib/import";
 import {
   agentsArrived,
+  agentsSince,
   applyInChunks,
   blockedItems,
   bundleOrigin,
   copyAgentFiles,
+  defaultMethod,
   filesNotes,
   githubRoot,
+  IMPORT_CARDS,
   isGithubLink,
   NOT_GITHUB,
   PER_APPLY,
@@ -386,6 +389,25 @@ describe("the agents' files to the Drive", () => {
     expect(notes).toEqual([
       { key: "scout/drive-files", agent: "scout", kind: "fact", content: "Seus arquivos estão em Drive › Scout." },
     ]);
+  });
+});
+
+describe("Conectar com MCP", () => {
+  test("the default way in: MCP where the app takes it and apps reach this server; a dot asks first", () => {
+    const pick = (reachable: boolean) => IMPORT_CARDS.filter((c) => defaultMethod(c, reachable) === "mcp");
+    expect(pick(true)).toEqual(["grok-bot", "openbotrun", "openmausbot", "hermes", "openclaw", "other"]);
+    expect(pick(false)).toEqual([]);
+  });
+
+  test("arrived: my agents not there when the steps opened, never another person's", () => {
+    const list = [
+      { id: "a-old", ownerUserId: "u-me" },
+      { id: "a-new", ownerUserId: "u-me" },
+      { id: "a-theirs", ownerUserId: "u-them" },
+      { id: "a-nobody", ownerUserId: null },
+    ];
+    expect(agentsSince(list, new Set(["a-old"]), "u-me").map((a) => a.id)).toEqual(["a-new"]);
+    expect(agentsSince(list, new Set(list.map((a) => a.id)), "u-me")).toEqual([]);
   });
 });
 

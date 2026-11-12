@@ -240,7 +240,9 @@ export function iphoneStep(phone: Pick<PhoneDevice, "status"> | null | undefined
   if (isUp(phone.status)) return IPHONE_STEPS.length;
   const s = phone.status;
   const reason = "reason" in s ? s.reason : "";
-  if (reason === "untrusted" || reason === "locked") return 1;
+  // Over Wi-Fi the first step is being reached at all: on the Mac's network, awake, its tunnel up.
+  if (reason === "wifi_away" || reason === "wifi_asleep" || reason === "tunnel_down") return 0;
+  if (reason === "untrusted" || reason === "locked" || reason === "wifi_untrusted") return 1;
   if (reason === "ui_automation_off" || reason === "ui_not_authorized") return 3;
   if (HELPER_STEP.has(reason)) return 4;
   return 2;

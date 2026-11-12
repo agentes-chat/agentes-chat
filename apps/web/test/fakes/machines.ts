@@ -59,6 +59,7 @@ export interface FakeMachines {
   /** A computer asked for a code (`POST /api/machines/device`). */
   addDevice(userCode: string, input?: Partial<DeviceRequest>): DeviceRequest;
   /** The newest desktop build; `null` = none (404). With `targets`, only those systems have it (`darwin`, `windows`, `linux`). */
+  /** `targets`: the builds that have it (`darwin`, `windows`, `linux`, `windows-arm64`, `linux-arm64`); all when unset. */
   setRelease(release: DesktopRelease | null, targets?: string[]): void;
   /** Offline computers and where their agents could go. */
   setOutages(outages: MachineOutages): void;
@@ -218,9 +219,16 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         m.access = { folders, tools };
         return clone(m.access);
       },
+      setPause: async (orgId, machineId, input) => {
+        log("machines.setPause", orgId, machineId, input);
+        const m = find(machineId);
+        m.paused = input === "resume" ? null : { until: input.until, by: { id: "u-me", name: "You" } };
+        return m.paused ? clone(m.paused) : null;
+      },
       desktopLatest: async (target, arch) => {
         log("machines.desktopLatest", target, arch);
-        return release && (!releaseTargets || releaseTargets.includes(target)) ? clone(release) : null;
+        const build = arch === "aarch64" && target !== "darwin" ? `${target}-arm64` : target;
+        return release && (!releaseTargets || releaseTargets.includes(build)) ? clone(release) : null;
       },
       // Read on every workspace page (the notice): not logged, so tests' call lists stay as they were.
       outages: async () => clone(outages),

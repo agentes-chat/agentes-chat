@@ -54,7 +54,7 @@ const TOOLS = ["adb", "xcrun", "xcode-select", "maestro", "scrcpy", "bundletool"
 const PIXEL = "38021FDH2000AB";
 const EMU = "emulator-5554";
 const SIM = "5C5C62E5-74E2-4E25-93AD-65E264BE78A4";
-const IPHONE = "00008110-001475263AC0A01E";
+const IPHONE = "00008110-000A1B2C3D4E5F60";
 
 const PIXEL_FACTS = `model=Pixel 8
 market=
@@ -128,7 +128,7 @@ const iphone = (over: { transport?: string; pairing?: string; devMode?: string; 
     reality: "physical",
     udid: over.udid ?? IPHONE,
   },
-  identifier: "F231DD07-C736-5329-B5FE-287E4F2B2A5C",
+  identifier: "A1B2C3D4-0000-4000-8000-0000000000A1",
 });
 
 test("adb devices -l: serials, states, models, kinds and transports", () => {

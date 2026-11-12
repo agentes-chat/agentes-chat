@@ -445,5 +445,35 @@ describe("an agent's offer card is done for everyone once it's done", () => {
     const install = offer.slice(offer.indexOf("function InstallSkill("), offer.indexOf("\nfunction UpdateSkills("));
     expect(install).toContain("useSkills(orgId)");
     expect(install).toContain('action={may ? t("actionCard.install_skill.open") : null}');
+    // Its screen's row turns what installs on for the agent that posted it, as on the web.
+    expect(install).toContain("openedFromCard({ url: card.url, agentId })");
+    expect(install).toContain("&agent=");
+  });
+
+  test("Instalar skill's route keeps the agent only when that agent's card opened it, for the card's own link", async () => {
+    const { openedFromCard, routeAgent } = await import("../../src/features/settings/install-from-card");
+    const link = "https://github.com/acme/skills/tree/main/excel";
+    // A link from outside the app that names an agent: the screen turns nothing on for it.
+    expect(routeAgent(link, "a-dev")).toBeUndefined();
+    openedFromCard({ url: link, agentId: "a-dev" });
+    expect(routeAgent(link, "a-dev")).toBe("a-dev");
+    expect(routeAgent("https://github.com/evil/skills", "a-dev")).toBeUndefined();
+    expect(routeAgent(link, "a-other")).toBeUndefined();
+    expect(routeAgent(link, undefined)).toBeUndefined();
+    // The route hands the screen only what `routeAgent` keeps.
+    const route = readFileSync(join(import.meta.dir, "../../app/(app)/settings/skills/new.tsx"), "utf8");
+    expect(route).toContain("<InstallSkillScreen initialUrl={url} forAgentId={routeAgent(url, agent)} />");
+    // The screen sends it only on an install from the card's link with its row checked, never on a read.
+    const screen = readFileSync(join(import.meta.dir, "../../src/features/settings/SkillsScreen.tsx"), "utf8");
+    expect(screen).toContain(
+      "input: list ? { url: link, list } : { url: link, ...(forAgent ? { forAgentId: forAgent } : {}) }",
+    );
+    expect(screen).toContain("forAgentId: sendFor(url)");
+    // Its row only for a live agent the server would turn it on for: not archived or gone, never the right hand.
+    expect(screen).toContain("const forAgent = forAgentId ? dir.agentById.get(forAgentId) : undefined;");
+    expect(screen).toContain("const forName = forAgent && !isRightHand(forAgent) ? forAgent.name : undefined;");
+    // What a pick replaces, as the server marks it: an installed skill, or a removed one.
+    expect(screen).toContain('c.replaces === "removed" ? "skills.pickReplacesRemoved" : "skills.pickReplaces"');
+    expect(screen).toContain("turnOn && cardLink !== undefined && link.trim() === cardLink ? forAgentId : undefined");
   });
 });

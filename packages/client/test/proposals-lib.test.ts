@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { en } from "@agenteschat/i18n";
 import type { TFunction } from "i18next";
 import type { Proposal } from "../src/api/types";
 import {
@@ -125,6 +126,27 @@ describe("a name and a look on a settings card", () => {
     expect(onlyKey({ settings: [{ field: "reports_to", from: null, to: "a-bea" }] })).toBe(
       "rightHand.card.only.reports_to",
     );
+  });
+});
+
+describe("a skill line on a settings card", () => {
+  const names = { model: (id: string) => id, person: () => undefined, channel: () => undefined, role: () => undefined };
+  test("reads as the skill by its name, off to on, and only admins change it, as on the agent's page", () => {
+    expect(
+      settingLineText(
+        t,
+        "pt-BR",
+        { field: "skill", skillId: "s-excel", from: false, to: true, label: { to: "excel" } },
+        names,
+      ),
+    ).toEqual({
+      field: 'rightHand.field.skill {"name":"excel"}',
+      from: "rightHand.value.skillOff",
+      to: "rightHand.value.skillOn",
+    });
+    const key = onlyKey({ settings: [{ field: "skill", skillId: "s-excel", from: true, to: false }] });
+    expect(key).toBe("rightHand.card.only.skill");
+    expect(en.rightHand.card.only.skill).toBe("Only admins change an agent's skills");
   });
 });
 

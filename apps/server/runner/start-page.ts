@@ -55,6 +55,21 @@ export function startPageHtml(agent: Pick<AgentScope, "name" | "handle">, data: 
 }
 
 /**
+ * Whether the start page's folder could be someone else's or written by others: not a folder, not this user's, or
+ * writable by its group or everyone. Windows reports a mode made up from the read-only attribute alone (0o666 for any
+ * ordinary folder) and no owner id, so neither says anything there, where access is in the folder's ACL.
+ */
+export function unsafeStartFolder(
+  st: { isDirectory(): boolean; uid: number; mode: number },
+  platform: NodeJS.Platform = process.platform,
+  uid: number | undefined = process.getuid?.(),
+) {
+  if (!st.isDirectory()) return true;
+  if (platform === "win32") return false;
+  return (uid !== undefined && st.uid !== uid) || (st.mode & 0o022) !== 0;
+}
+
+/**
  * Writes the agent's start page (`START_FILE`) in `directory` and returns its path. It holds no credentials. System
  * mode writes it as root outside the agent's writable home, readable by the agent's group alone.
  */
@@ -67,8 +82,7 @@ export function prepareStartPage(
   mkdirSync(path.dirname(directory), { recursive: true, mode: 0o755 });
   mkdirSync(directory, { recursive: true, mode: gid === undefined ? 0o755 : 0o750 });
   const st = lstatSync(directory);
-  if (!st.isDirectory() || (process.getuid && st.uid !== process.getuid()) || st.mode & 0o022)
-    throw new Error("Unsafe start page folder");
+  if (unsafeStartFolder(st)) throw new Error("Unsafe start page folder");
   if (gid !== undefined) {
     if (st.gid !== gid) chownSync(directory, 0, gid);
     if ((st.mode & 0o777) !== 0o750) chmodSync(directory, 0o750);

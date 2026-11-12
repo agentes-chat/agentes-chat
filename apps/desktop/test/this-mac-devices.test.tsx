@@ -16,13 +16,9 @@ import { createDesktopI18n } from "../src/i18n";
 import { ToastProvider } from "../src/ui/Toast";
 import { WindowView } from "../src/WindowView";
 import { ThisMacCards } from "../src/windows/prefs/ThisMac";
+import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-async function until(ready: () => unknown) {
-  for (let i = 0; i < 200 && !ready(); i++) await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-  expect(Boolean(ready())).toBe(true);
-}
 
 async function mount(
   window: "prefs" | "welcome",
@@ -95,6 +91,22 @@ describe("Preferences › This Mac", () => {
       expect(readPref(IPHONE_SETUP_PREF, false)).toBe(true);
       expect(host.window).toBe("welcome");
       writePref(IPHONE_SETUP_PREF, false);
+    }));
+
+  test("an iPhone on this Mac's Wi-Fi: offered, used once picked, and let go again", () =>
+    mount("prefs", <OneWorkspace />, async (el, host) => {
+      const offer = "Also on this Mac's Wi-Fi: Ana's iPhone 14";
+      await until(() => rowOf(el, offer));
+      expect(host.site.calls.some((c) => c.method === "PUT")).toBe(false);
+      await act(async () => button(rowOf(el, offer), "Use over Wi-Fi")?.click());
+      await until(() => rowOf(el, "Ana's iPhone 14"));
+      expect(rowOf(el, offer)).toBeUndefined();
+      expect(host.site.calls.find((c) => c.method === "PUT")?.path).toMatch(
+        /^\/api\/app\/organizations\/org_acme\/devices\/computers\/[^/]+\/wifi-iphones\/00008120-000A1B2C3D4E5F60$/,
+      );
+      // Over Wi-Fi now, its helper still being set up: Show me how, as for one on the cable.
+      const phone = rowOf(el, "Ana's iPhone 14");
+      expect(button(phone, "Show me how")).toBeTruthy();
     }));
 
   test("signed out on that server: says so, with the way to sign in", () =>
@@ -206,7 +218,10 @@ describe("the iPhone setup window", () => {
         setSystemTime();
       }
     });
-  });
+    // The window asks the Mac every 2 s and this walks six states, each seen on the next ask: up to 12 s of
+    // waiting, past the 5 s a test gets. Cut short, it went on running under the files after it (its window still
+    // mounted, the clock moved 46 s on) and failed their tests.
+  }, 30_000);
 
   test("without the ask, the welcome window is the first run", () =>
     mount("welcome", <WindowView name="welcome" />, async (el) => {

@@ -61,7 +61,7 @@ import {
 import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { RunnerError } from "./errors";
-import { resolveCommand } from "./executors";
+import { cliSpawn } from "./executors";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
 import {
@@ -918,7 +918,7 @@ export function brainProfileLaunch(
 /** Claude Code under opus falls back to sonnet when opus is overloaded or out of the plan. */
 export const fallbackModelFor = (model: string | undefined) => (model && /opus/i.test(model) ? "sonnet" : undefined);
 
-/** The argv of a brain turn's Claude Code (spawned without a shell: nothing needs quoting). */
+/** The argv of a brain turn's Claude Code (on Windows `cliSpawn` quotes each for cmd.exe). */
 export function claudeBrainArgs(l: ClaudeLaunch): string[] {
   const model = l.model && MODEL.test(l.model) ? l.model : undefined;
   const fallback = l.noFallback ? undefined : fallbackModelFor(model);
@@ -1029,15 +1029,15 @@ export class ClaudeProcess {
     /** A token root handed over, on its own descriptor (`TOKEN_FD_ENV`). */
     token?: string,
   ) {
-    const [file, ...pre] = command;
-    // A full path: the compiled runner would look the bare name up on the PATH it started with.
-    this.child = start(resolveCommand(file ?? "claude", env.PATH), [...pre, ...args], {
+    // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, cmd.exe
+    // with every argument quoted (an empty `--setting-sources` stays one).
+    const run = cliSpawn(command.length ? command : ["claude"], args, env.PATH);
+    this.child = start(run.file, run.args, {
       cwd,
       env: token ? { ...env, ...TOKEN_FD_ENV } : env,
       stdio: token ? [...TOKEN_STDIO] : ["pipe", "pipe", "pipe"],
       windowsHide: true,
-      // Windows finds `claude.cmd` only through the shell (argv stays plain: files, ids, flags).
-      shell: process.platform === "win32" && command.length === 1,
+      windowsVerbatimArguments: run.windowsVerbatimArguments,
     });
     if (token) handToken(this.child, token);
     const events = this.child as unknown as EventEmitter;

@@ -109,8 +109,8 @@ import "./no-ai.css";
  * step: the plans first (Claude chosen), each signing in on the agent's computer, then the workspace's API key; a
  * message that asked for one of them opens on it. For one agent with no AI, what the person already has comes before
  * them (`ExistingRows`). Connected from a card or a message, the agent then answers it by itself.
- * Opened from an agent's own conversation, or for the whole team, it is the narrow dialog under the sky instead
- * (ADR 0160, addendum: `BandDialog`).
+ * Opened for one agent the person may connect (their own, or the team's right hand), or for the whole team, it is the
+ * narrow dialog under the sky instead (ADR 0160, addendum: `BandDialog`).
  */
 
 export interface ConnectAiRequest {
@@ -150,8 +150,9 @@ export interface ConnectAiRequest {
    */
   chat?: boolean;
   /**
-   * The card already picked (the onboarding's AI step, ADR 0162): for the team the dialog opens on that choice's steps,
-   * a key's too. Unlike `plan` (sign in again) and `intent: "api_key"` (a key asked for), which keep the plain dialog.
+   * The card already picked (the onboarding's AI step, ADR 0162): the narrow dialog, for the team or for one agent,
+   * opens on that choice's steps, a key's too. Unlike `plan` (sign in again) and `intent: "api_key"` (a key asked
+   * for), which keep the plain dialog.
    */
   start?: AiChoice;
   /**
@@ -437,44 +438,28 @@ function ConnectAiDialog({
   const machines = useMachines(org.id, true, poll);
   const loaded = !(dir.loading || status.isPending || machines.isPending);
   const machineOf = (id: string) => machines.data?.find((m) => m.agents.some((a) => a.id === id))?.id;
-  // Any way in that names one agent and no step (a key, a plan to sign in to again) is that agent's dialog.
+  // A list that names one agent alone and no step (the first-run list with nobody but the right hand, an agent just
+  // made) asks for that agent, as `agentId` does. A card that asks for a step (`intent`) keeps the plain dialog, which
+  // opens on it.
+  const sole = named?.length === 1 && request.intent === undefined ? named[0] : undefined;
+  // Any way in that names several agents to choose from, or a step (a key, a plan to sign in to again), keeps the
+  // plain dialog.
   const plain =
-    request.agentIds !== undefined ||
+    (request.agentIds !== undefined && sole === undefined) ||
     request.plan !== undefined ||
     request.apiKey !== undefined ||
     request.forNewAgent === true ||
     request.intent === "api_key";
-  const asked = request.agentId && (request.chat || !plain) ? dir.agentById.get(request.agentId) : undefined;
+  const askedId = request.agentId ?? sole;
+  const askedFor = askedId && (request.chat || !plain) ? dir.agentById.get(askedId) : undefined;
   const asleep = (id: string) => (aiStateOf(status.data, id) ?? "no_ai") === "no_ai";
-  // "All agents" from a conversation: its agent first, then the person's other agents that can't think either, on
-  // the same computer (a plan signs in on one computer). The right hand has its own Connect.
-  const chatOn = asked !== undefined && asked.ownerUserId === me.user.id && !isRightHand(asked);
-  const chatNow = {
-    on: chatOn,
-    set:
-      chatOn && asked
-        ? [
-            asked.id,
-            ...mine
-              .filter(
-                (a) =>
-                  a.id !== asked.id &&
-                  !isRightHand(a) &&
-                  asleep(a.id) &&
-                  (machineOf(a.id) ?? null) === (machineOf(asked.id) ?? null),
-              )
-              .map((a) => a.id),
-          ]
-        : [],
-  };
-  const [chatKept, setChatKept] = useState<typeof chatNow>();
   // Opened for several agents or none (the channel's notice, Settings › AI accounts, the first-run list, a team just
   // made, a receipt or a card for several agents, the onboarding's AI step): the narrow dialog under the sky, for every
   // agent of the person's that can't think, on the computer of the first of them since a plan signs in on one computer
   // (ADR 0160, addendum). The plain dialog stays for every way in that names one thing or has its own: someone else's
-  // agent (locked), one agent alone (the right hand's own AI among them), a plan to sign in to again (`plan`), a key
-  // asked for or pasted, an agent still being made (`forNewAgent`), a billing hold (its notice is the whole dialog),
-  // and nobody to wake (no agent of theirs yet, or every one of them already thinks).
+  // agent (locked), a plan to sign in to again (`plan`), a key asked for or pasted, an agent still being made
+  // (`forNewAgent`), a billing hold (its notice is the whole dialog), and nobody to wake (no agent of theirs yet, or
+  // every one of them already thinks).
   const teamAsk =
     hold === null &&
     !request.arrival &&
@@ -486,7 +471,7 @@ function ConnectAiDialog({
     (named ? named.length >= 2 : request.agentId === undefined);
   // The right hand never has a computer (ADR 0137), so it never picks the one a plan signs in on: that is the first
   // other agent's. It wakes with the others and comes last, so neither whom a plan's panel is for nor whose computer
-  // it reads is ever the right hand. With nobody else to wake it is one agent alone: its own plain dialog.
+  // it reads is ever the right hand. With nobody else to wake it is one agent alone: the narrow dialog for it.
   const handOf = (id: string) => isRightHand(dir.agentById.get(id));
   // `hand`: the right hand the only one of them still without an AI (the team already thinks), its own dialog then.
   const teamNow = ((): { ids: string[]; hand?: string } => {
@@ -499,6 +484,33 @@ function ConnectAiDialog({
       ids: [...ids.filter((id) => !handOf(id) && (machineOf(id) ?? null) === where), ...ids.filter((id) => handOf(id))],
     };
   })();
+  // The one agent the narrow dialog is for: the one asked for, or the right hand left alone without an AI.
+  const askedNow = askedFor ?? (teamNow.hand ? dir.agentById.get(teamNow.hand) : undefined);
+  // "All agents" from a conversation: its agent first, then the person's other agents that can't think either, on
+  // the same computer (a plan signs in on one computer). The right hand is everyone's to connect (ADR 0137 §11) and
+  // has no computer, so it is always for it alone.
+  const chatOn = askedNow !== undefined && (askedNow.ownerUserId === me.user.id || isRightHand(askedNow));
+  const chatNow = {
+    on: chatOn,
+    set:
+      chatOn && askedNow
+        ? [
+            askedNow.id,
+            ...(isRightHand(askedNow)
+              ? []
+              : mine
+                  .filter(
+                    (a) =>
+                      a.id !== askedNow.id &&
+                      !isRightHand(a) &&
+                      asleep(a.id) &&
+                      (machineOf(a.id) ?? null) === (machineOf(askedNow.id) ?? null),
+                  )
+                  .map((a) => a.id)),
+          ]
+        : [],
+  };
+  const [chatKept, setChatKept] = useState<typeof chatNow>();
   const [teamKept, setTeamKept] = useState<typeof teamNow>();
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, as the agents and their AI load
   useEffect(() => {
@@ -508,6 +520,7 @@ function ConnectAiDialog({
   }, [loaded]);
   const chat = chatKept ?? chatNow;
   const { ids: teamIds, hand: handAlone } = teamKept ?? teamNow;
+  const asked = askedFor ?? (handAlone ? dir.agentById.get(handAlone) : undefined);
   const team = teamAsk && (!loaded || teamIds.length > 0);
   // Whom of them it is for ("Choose": all of them until the person narrows it), the list being edited meanwhile, and
   // each new start for those a round left without an AI ("Connect Lia").
@@ -627,9 +640,12 @@ function ConnectAiDialog({
   // The arrival's stage: never over a billing hold, whose notice is the whole dialog.
   const stage = request.arrival === true && !hold;
   // Its first screen is the cards; a pick moves on to that plan's steps, and Back returns to the cards.
-  // For the team, a card already picked (`start`) or a message that asked for Claude or ChatGPT opens on its steps.
+  // A card already picked (`start`, for the team or for one agent) opens on its steps; for the team, a message that
+  // asked for Claude or ChatGPT too.
   const [chosen, setChosen] = useState(
-    teamAsk && (request.start !== undefined || request.intent === "claude" || request.intent === "chatgpt"),
+    request.start !== undefined
+      ? teamAsk || (request.agentId !== undefined && !plain)
+      : teamAsk && (request.intent === "claude" || request.intent === "chatgpt"),
   );
   // From a conversation: the sky as a band over a narrow dialog.
   const band = chat.on && !hold;

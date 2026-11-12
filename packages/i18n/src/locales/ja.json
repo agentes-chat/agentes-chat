@@ -715,6 +715,7 @@
         "askPersonal": "ほかの場所でもうエージェントを使っていますか？全員ここに連れてきます。",
         "bring": "リクエストをコピーして{{app}}に貼り付け、返ってきた答えを持ってきてください。あとは私がやります。",
         "bringFiles": "アプリが書き出したものをここにドロップしてください。あとは私がやります。",
+        "bringMcp": "アプリで手順どおりに進めると、アプリ自身がここにエージェントを作ります。届くのを見守っていますね。",
         "found": "あなたのチームが見つかりました。全員そろっているか確認してください。",
         "foundPersonal": "あなたのエージェントが見つかりました。全員そろっているか確認してください。",
         "ai": "最後のステップです。いま使っているAIを選ぶと、チームが目を覚まします。",
@@ -927,18 +928,28 @@
       "title": "すでに別のアプリでエージェントを使っていますか？",
       "lead": "指示、スキル、ルーティン、メモリごと移行できます。",
       "sourcesLabel": "エージェントの移行元",
+      "method": {
+        "label": "取り込み方",
+        "mcp": "MCPで接続",
+        "prompt": "リクエストのみ",
+        "file": "ファイルから"
+      },
       "aiApp": {
-        "title": "AIアプリから（最も確実）",
-        "lead": "AIアプリにあるエージェント、指示、スキル、ルーティンを、AIアプリがここに一つずつ作成します。",
-        "connect": "アプリをこのアドレスに接続してください:",
+        "lead": "MCPを使うと{{app}}がこのワークスペースにアクセスでき、ここにエージェントを自分で作成します。",
+        "leadAny": "MCPを使うとAIアプリがこのワークスペースにアクセスでき、ここにエージェントを自分で作成します。",
+        "leadDots": "MCPを使うと、ChatGPTで追加したプラグインを通じてdotがこのワークスペースにアクセスでき、ここにエージェントを自分で作成します。",
         "howTo": "アプリごとの接続方法",
-        "allow": "権限のページで「エージェント、ルーティン、スキルの作成と編集」を選んでください。",
-        "paste": "次に、このリクエストをアプリに貼り付けてください:",
-        "prompt": "{{url}}に接続して、あなたが持っているすべてのエージェント、指示、スキル、ルーティンについて、agentes.chatに同等のものを作成してください。重複しないように、まずそこにすでにあるものを一覧にしてください。",
+        "paste": "このリクエストをアプリに貼り付けてください:",
+        "prompt": "いま接続したagentes.chatのMCPサーバー（{{url}}）を使って、あなたが持っているものをagentes.chatに移してください。まずimport_summaryを呼び出して、すでにあるものを確認し、重複させないでください。次に、あなたが持っている各エージェント、指示、スキル、ルーティンについて、create_agent、create_skill、create_routineで同じものを作成し、各エージェントが覚えておくべきことをadd_memoryで保存してください。",
         "promptLabel": "AIアプリへのリクエスト",
         "copy": "リクエストをコピー",
         "copied": "AIアプリに貼り付けてください。",
-        "private": "AIアプリから: このサーバーでは利用できません。ClaudeやChatGPTなどのアプリは、公開されたhttpsアドレスにしか接続できないためです。"
+        "waiting": "エージェントの到着を待っています…",
+        "arrived_other": "{{count}}件のエージェントが届きました",
+        "stuck": "数分たっても何も届きませんか？アプリをもう一度接続し、{{access}}を選んで、リクエストをもう一度送ってください。",
+        "private": "このサーバーでは「MCPで接続」を使えません。インターネット上のアプリは公開されたhttpsアドレスにしか届かないためです。",
+        "held": "「MCPで接続」は、ワークスペースのプランが有効になると使えます。今はこの方法でエージェントを取り込んでください。",
+        "paused": "このワークスペースは一時停止中のため、「MCPで接続」は使えません。今はこの方法でエージェントを取り込んでください。"
       },
       "otherName": "別のアプリ",
       "agenteschatName": "agentes.chat",
@@ -1398,7 +1409,10 @@
       "why": "Ubuntu、Debianなどのシステム向け（x64）です。Linuxでは追加の確認はありません:",
       "apt": ".debをダブルクリックするか、ターミナルからインストールします。",
       "aptLong": "ダウンロードしたファイルをダブルクリックして「インストール」をクリックするか、これをターミナルに貼り付けます:",
-      "open": "アプリの一覧からagentes.chatを開きます。"
+      "open": "アプリの一覧からagentes.chatを開きます。",
+      "otherTitle": "Arch、Fedora など、.deb を使えないシステムですか？",
+      "otherText": "AppImage をダウンロードしてください。どのディストリビューションでも動作し、自動で更新されます。保存したフォルダーで、ターミナルに次を貼り付けてください:",
+      "appImage": "AppImage をダウンロード"
     },
     "page": {
       "docTitle": "アプリをダウンロード · agentes.chat",
@@ -2329,6 +2343,7 @@
         "delete": "エージェントを削除できるのは管理者だけです",
         "audience": "話せる人を変えられるのは管理者と責任者だけです",
         "channels": "チャンネルを変えられるのは管理者と責任者だけです",
+        "skill": "エージェントのスキルを変えられるのは管理者だけです",
         "ai_account": "割り当てられるのはアカウントの持ち主だけです",
         "name": "エージェントの名前を変えられるのは管理者だけです",
         "look": "見た目を変えられるのは管理者と責任者だけです",
@@ -2346,7 +2361,8 @@
       "channel": "チャンネル",
       "name": "名前",
       "look": "見た目",
-      "reports_to": "報告先"
+      "reports_to": "報告先",
+      "skill": "スキル「{{name}}」"
     },
     "value": {
       "lookDefault": "標準の見た目",
@@ -2362,7 +2378,9 @@
       "deleted": "削除済み",
       "notIn": "チャンネル外",
       "withoutMention": "自分の判断で",
-      "mentionOnly": "メンションされたときだけ"
+      "mentionOnly": "メンションされたときだけ",
+      "skillOn": "オン",
+      "skillOff": "オフ"
     },
     "remove": {
       "archiveTitle_other": "{{count}}体のエージェントをアーカイブしますか？",
@@ -2592,6 +2610,17 @@
       "gemini": "Geminiのプランを接続",
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
+    },
+    "toolOff": {
+      "text": "{{computer}}は接続されていますが、{{program}}がオフになっています。安全のため、オンにできるのはそのコンピューター上だけです。",
+      "where": "{{computer}}で",
+      "one": "時計の横にあるagentes.chatのアイコン<mark/>をクリック",
+      "oneWindows": "Windowsでは、タスクバーの矢印 ^ の中にあることがあります。",
+      "two": "<b>環境設定</b>を開く",
+      "three": "<b>ツール</b>で<b>{{program}}</b>をオンにする",
+      "terminal": "コンピューターのターミナルで実行:",
+      "here": "<b>ツール</b>で<b>{{program}}</b>をオンにしてください。",
+      "waiting": "オンになるのを待っています。この画面は自動で切り替わります。"
     },
     "titleFor": "{{name}}のAIを接続",
     "have": {
@@ -8303,7 +8332,6 @@
     "more": "{{title}}のその他のアクション",
     "open": "スレッドを開く",
     "read": "スレッドを読む",
-    "details": "詳細を見る",
     "pick": "{{title}}を選択",
     "pickShort": "選択",
     "unpick": "選択から外す",
@@ -8457,26 +8485,6 @@
       "blockedText_other": "{{names}}は#{{channel}}にいません。コンテキストは、スレッドを読む全員がすでに読めるものに限られます。",
       "someone": "誰か",
       "someAgent": "エージェント"
-    },
-    "panel": {
-      "label": "{{title}}の詳細",
-      "close": "詳細を閉じる",
-      "archivedTitle": "アーカイブ済み · 閲覧のみ",
-      "archived": "リストや検索には表示されません。返信するにはアーカイブを解除してください。",
-      "closedTitle": "終了",
-      "closed": "{{where}}では1行で表示されます。誰かが返信すると自動で再開します。",
-      "origin": "元の場所",
-      "fromRange_other": "{{where}}の{{count}}件のメッセージ",
-      "fromMessage": "{{where}}での{{name}}のメッセージ",
-      "seeInChannel": "チャンネルで見る",
-      "movedHint": "チャンネルから切り出し、お知らせを残しました",
-      "peopleTitle": "参加者",
-      "people_other": "参加者 · {{count}}",
-      "agent": "エージェント",
-      "person": "人",
-      "created": "作成",
-      "createdBy": "{{when}} · {{name}}",
-      "lives": "場所"
     }
   },
   "filters": {
@@ -8858,6 +8866,9 @@
     "pickAll": "すべて",
     "pickMissing": "スキルを1つ以上選んでください。",
     "pickSkipped": "インストールできません。{{reason}}",
+    "pickReplaces": "インストール済みのスキル {{name}} を置き換えます",
+    "pickReplacesRemoved": "削除されたスキル {{name}} を置き換えます",
+    "forAgent_other": "{{agent}} でオンにする",
     "installedMany": "{{count}}件のスキルをインストールしました。",
     "zipHelp": "ルートにSKILL.mdがある.zip。",
     "zipPick": ".zipを選択",
@@ -12654,6 +12665,7 @@
       "targetNotFound": "そのコンピューターはもう存在しません。別のものを選んでください。",
       "targetSame": "エージェントはすでにそのコンピューターにいます。",
       "targetPaused": "そのコンピューターは一時停止中です。別のものを選んでください。",
+      "pausePast": "未来の時刻を選んでください。",
       "accountMethodUnsupported": "このコンピューターでは、まだこの方法でClaudeを接続できません。コンピューターのagentes.chatプログラムを更新するか、APIキーを使ってください。",
       "offline": "{{name}}は現在オフラインです。戻ったらもう一度お試しください。",
       "paused": "{{name}}は一時停止中です。再開されるまで新しいものは始まりません。",
@@ -12695,7 +12707,8 @@
       "ownerOrAdmin": "これができるのは、エージェントのオーナーか管理者だけです。",
       "detailsHidden": "仕組みを見られるのは、{{agentName}} と話す人だけです。",
       "extraOwnerOnly": "プランの有料の追加使用量をオンまたはオフにできるのは、エージェントのオーナーだけです。",
-      "undoForbidden": "元に戻せるのは、エージェントが作業した相手、そのオーナー、または管理者だけです。"
+      "undoForbidden": "元に戻せるのは、エージェントが作業した相手、そのオーナー、または管理者だけです。",
+      "undoSkillsAdmins": "エージェントのスキルの変更を元に戻したりやり直したりできるのは管理者だけです。"
     },
     "account": {
       "notRestorable": "このアカウントはもう復元できません。",
@@ -12785,6 +12798,21 @@
     "paused": "一時停止中",
     "pausedUntil": "{{time}}まで一時停止中",
     "pausedHint": "接続した人がコンピューター本体で一時停止しています。",
+    "remotePause": {
+      "button": "一時停止",
+      "menu": "{{name}}を一時停止",
+      "oneHour": "1時間",
+      "tomorrow": "明日の午前9時まで",
+      "manual": "再開するまで",
+      "resume": "再開",
+      "byYou": "あなたが一時停止しました。",
+      "byYouUntil": "あなたが{{time}}まで一時停止しました。",
+      "byName": "{{name}}さんが一時停止しました。",
+      "byNameUntil": "{{name}}さんが{{time}}まで一時停止しました。",
+      "outdated": "ここから一時停止するには、このコンピューターのagentes.chatアプリを更新してください。",
+      "paused": "{{name}}を一時停止しました",
+      "resumed": "{{name}}が作業を再開しました"
+    },
     "seenNow": "接続中",
     "seen": "最終接続 {{when}}",
     "neverSeen": "まだ接続されていません",
@@ -13099,6 +13127,10 @@
       "no_driverLinux": "Linuxでこのスマートフォンを開けません",
       "os_too_old": "このシステムはツールに対して古すぎます",
       "adb_offline": "スマートフォンが応答しません",
+      "wifi_away": "iPhoneがMacのWi-Fiにありません",
+      "wifi_asleep": "iPhoneがWi-Fiで応答しませんでした",
+      "tunnel_down": "iPhoneとのWi-Fi接続が切れました",
+      "wifi_untrusted": "iPhoneがこのMacを信頼していません",
       "other": "デバイスで対応が必要です",
       "iosTooOld": "iOS {{version}}です。エージェントにはiOS 17以降が必要です"
     },
@@ -13123,6 +13155,10 @@
       "no_driverLinux": "このスマートフォン用のudevルールを追加",
       "os_too_old": "スマートフォンをアップデート",
       "adb_offline": "接続し直す",
+      "wifi_away": "MacのWi-Fiにつなぐか、ケーブルで接続",
+      "wifi_asleep": "iPhoneのスリープとロックを解除",
+      "tunnel_down": "Macの近くに置くか、ケーブルで接続",
+      "wifi_untrusted": "一度ケーブルでつないで「信頼」をタップ",
       "other": "必要なことを確認"
     },
     "facts": {
@@ -13188,6 +13224,8 @@
       "openApp": "アプリを開く",
       "server": "サーバーまたはVPS",
       "serverLine": "ターミナルに1行貼り付けるだけ",
+      "httpLine": "ターミナルに1行貼り付けるだけ。httpsのアドレスなら、アプリがワンクリックで接続します。",
+      "httpHow": "方法",
       "other": "ほかのコンピューター",
       "otherLine": "アプリをインストール",
       "android": "Androidスマートフォン",
@@ -13396,6 +13434,22 @@
         "helper": "{{mac}}がテストヘルパーを作成してiPhoneで起動します。初回は数分かかります。iPhoneはロックを解除し、つないだままにしてください。"
       },
       "ready": "{{name}}はエージェントが使える状態です。",
+      "wifi": {
+        "list": "{{mac}}のWi-Fi上のiPhone",
+        "also": "このMacのWi-Fiにもあります：{{name}}",
+        "use": "Wi-Fiで使う",
+        "hint": "以前にケーブルでこのMacを信頼したiPhoneだけがここに表示されます。MacはXcodeと同じ、Apple独自の暗号化された接続でiPhoneにつなぎます。",
+        "stop": "Wi-Fiでの利用をやめる",
+        "stopTitle": "{{name}}のWi-Fiでの利用をやめますか？",
+        "stopText": "エージェントはこのiPhoneにつなげなくなります。使うには、そのMacでもう一度選んでください。",
+        "stopped": "{{name}}はWi-Fiで使われなくなりました。"
+      },
+      "wifiState": {
+        "wifi_away": "{{name}}は今、MacのWi-Fiにありません。iPhoneを同じネットワークにつなぐか、ケーブルで接続してください。",
+        "wifi_asleep": "{{name}}がWi-Fiで応答しませんでした。スリープとロックを解除して、Macの近くに置いてください。",
+        "tunnel_down": "{{name}}とのWi-Fi接続が切れました。ロックを解除したままMacの近くに置くか、ケーブルで接続してください。",
+        "wifi_untrusted": "{{name}}がこのMacを信頼していません。一度ケーブルでつなぎ、「信頼」をタップしてパスコードを入力してください。"
+      },
       "path": {
         "settings": "設定",
         "privacy": "プライバシーとセキュリティ",
@@ -13717,9 +13771,13 @@
         "orFile": "または<code>{{file}}</code>に貼り付け:",
         "pasteConfig": "貼り付け:",
         "mode": "チャットで{{mode}}モードに切り替えます。",
+        "sendInChat": "ボットとのチャットで次を送信します。",
+        "reload": "次に、チャットで<code>{{command}}</code>と入力します。",
         "loginRun": "ログインするには<code>{{command}}</code>を実行します。",
         "loginType": "ログインするには、アプリで<code>{{command}}</code>と入力します。",
         "signIn": "開いたページでagentes.chatのアカウントにログインします。",
+        "signInManage": "開いたページでagentes.chatのアカウントにログインし、{{access}}を選びます。",
+        "mention": "チャットで<code>@</code>と入力し、<code>{{name}}</code>を選びます。",
         "signInFirst": "初回使用時にアプリからログインを求められます。",
         "token": "個人トークンを作成し、{{placeholder}}の部分に入れます。",
         "install": "{{app}}に追加"
@@ -15181,6 +15239,7 @@
       "agent_proposal": "新しいエージェントを提案しました: {{name}}",
       "team_proposal": "チームを提案しました：{{names}}",
       "settings_proposal": "{{names}}への変更を提案しました",
+      "settings_request": "自分の設定の変更を依頼しています",
       "approval_request": "承認リクエスト: {{title}}",
       "secret_request": "{{agent}}がキーを求めました: {{name}}",
       "secret_requestAnon": "キーを求めました: {{name}}",

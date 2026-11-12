@@ -9,7 +9,7 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import { type PlanId, planOf } from "@agenteschat/providers/plans";
 import { killTree } from "./exec";
-import { resolveCommand } from "./executors";
+import { cliSpawn } from "./executors";
 
 /**
  * Plan usage (protocol 19), read without touching any token: the CLIs and the
@@ -314,18 +314,17 @@ export function jsonLines<T>(
   onLine: (msg: Record<string, unknown>, send: (msg: unknown) => void) => T | null | undefined,
 ): Promise<T | null> {
   return new Promise((resolve) => {
-    const [file, ...pre] = p.command;
+    const run = cliSpawn(p.command, args, p.env.PATH);
     let child: ChildProcess;
     try {
-      child = spawn(resolveCommand(file ?? "", p.env.PATH), [...pre, ...args], {
+      child = spawn(run.file, run.args, {
         cwd: p.cwd,
         env: p.env,
         stdio: ["pipe", "pipe", "ignore"],
         windowsHide: true,
         // Its own process group: the kill reaches what it started (posix).
         detached: process.platform !== "win32",
-        // Windows finds `claude.cmd` / `codex.cmd` only through the shell (argv: fixed words).
-        shell: process.platform === "win32" && p.command.length === 1,
+        windowsVerbatimArguments: run.windowsVerbatimArguments,
       });
     } catch {
       resolve(null);

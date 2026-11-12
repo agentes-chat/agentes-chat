@@ -268,7 +268,7 @@ export class FakeRunner {
     },
     {
       platform: "ios",
-      serial: "00008110-001475263AC0A01E",
+      serial: "00008110-000A1B2C3D4E5F60",
       kind: "device",
       model: "iPhone 16",
       name: "Sam's iPhone 16",

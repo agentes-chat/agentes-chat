@@ -132,7 +132,7 @@ import {
 import { type CachedLogo, logoDataUrl, readCachedLogo, removeCachedLogo, syncOrgLogo } from "./org-logo";
 import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, uniqueWorkspace } from "./pairing";
 import { agentId8, agentWorkspace } from "./paths";
-import { PhoneManager, type PhoneManagerOptions } from "./phones";
+import { iphonesWifiFileOf, PhoneManager, type PhoneManagerOptions } from "./phones";
 import { agentSecrets, dropStoredSiteSecrets, secretValue } from "./secrets";
 import { AGENTS_CGROUP } from "./service";
 import {
@@ -1401,6 +1401,7 @@ export class RunnerDaemon implements RequestObserver {
           this.send({ type: "phones.changed", phones });
           this.queueStatus();
         },
+        iphonesWifiFile: () => iphonesWifiFileOf(home, this.stored?.machineId),
         ...(this.opts.caffeinate !== undefined ? { caffeinate: this.opts.caffeinate } : {}),
         ...this.opts.phones,
       });
@@ -1429,6 +1430,7 @@ export class RunnerDaemon implements RequestObserver {
         : async (spare) => brains.warm(spare),
       codex: { runnerHome: home, mcp: mcpCommand, runs: codexRuns, app: codexApp },
       paused: () => this.stopping || this.pauseState().paused,
+      setPause: (paused, until, by) => (paused ? this.pause(until, by) : this.resume()),
       // A config written later without the mode never turns a system session back into one that does agents' work.
       systemMode: () => config.mode === "system" || this.stored?.mode === "system",
       ...(supervisor ? { workers: supervisor } : {}),
@@ -2155,7 +2157,8 @@ export class RunnerDaemon implements RequestObserver {
 
   // ── Pause ──────────────────────────────────────────────────────────────────
 
-  pause(until: string | null): RunnerPause {
+  /** `by`: the person who paused it from the apps (`pause.set`); a pause on the computer itself has none. */
+  pause(until: string | null, by?: string): RunnerPause {
     this.requirePaired();
     let value: string | null = null;
     if (until !== null && until !== undefined) {
@@ -2164,7 +2167,7 @@ export class RunnerDaemon implements RequestObserver {
       if (t <= this.now()) throw new ControlError("bad_request", "until is in the past");
       value = new Date(t).toISOString();
     }
-    this.write({ ...(this.stored ?? {}), paused: { until: value } });
+    this.write({ ...(this.stored ?? {}), paused: { until: value, ...(by ? { by } : {}) } });
     return this.pauseState();
   }
 

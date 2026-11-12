@@ -436,6 +436,12 @@ describe("agents installing and updating skills", () => {
     await importSkillFromUrl(deps, f.owner.id, f.org.id, LINK);
     const again = await call(deps, await runFor(f, f.owner.id), "offer_install_skill", { url: LINK, why: "x" });
     expect(again.content).toContain("already installed as the skill deploy");
+    // Installed but off for this agent: it asks on its own settings card, never another install card.
+    expect(again.content).toContain("not on for you: ask for it with request_settings_change");
+    const load = await call(deps, await runFor(f, f.owner.id), "load_skill", { name: "deploy" });
+    expect(load).toMatchObject({ isError: true });
+    expect(load.content).toContain("The skill deploy is installed here but not on for you: ask for it with");
+    expect(await cardsOf(f)).toHaveLength(1);
   });
 
   test("update_skill_from_source: text applies with Undo, a script waits on a card, and who can't gets a card for who can", async () => {

@@ -177,3 +177,19 @@ test("Wi-Fi pairing over HTTP: the computer's owner only, a checked address and 
   // Cancel never fails on a computer that's gone.
   expect((await owner(`${path}/${crypto.randomUUID()}`, { method: "DELETE" })).status).toBe(204);
 });
+
+test("iPhones over Wi-Fi over HTTP: the Mac's owner only; an offline Mac offers none and can't pick one", async () => {
+  const { owner, rui } = await start();
+  const paired = await pairComputer(t, owner, { ...RUNNER, os: "darwin", exec: true }, { name: "MacBook" });
+  const path = `/devices/computers/${paired.machineId}/wifi-iphones`;
+  // A member who doesn't manage the Mac is never told which phones are near it.
+  expect((await rui(path)).status).toBe(403);
+  expect((await rui(`${path}/00008120-000A1B2C3D4E5F60`, { method: "PUT", json: {} })).status).toBe(403);
+  const offer = await owner(path);
+  expect(offer.status).toBe(200);
+  expect(await offer.json()).toEqual({ available: [] });
+  const picked = await owner(`${path}/00008120-000A1B2C3D4E5F60`, { method: "PUT", json: {} });
+  expect(picked.status).toBe(409);
+  expect(((await picked.json()) as { error: { code: string } }).error.code).toBe("machine.offline");
+  expect((await owner(`${path}/${"x".repeat(201)}`, { method: "PUT", json: {} })).status).toBe(400);
+});

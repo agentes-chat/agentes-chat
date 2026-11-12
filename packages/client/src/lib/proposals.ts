@@ -293,8 +293,8 @@ function lookWords(t: TFunction, value: unknown) {
 
 /**
  * One line of the right hand's settings card (ADR 0137) in the person's language: what it changes ("Modelo",
- * "#suporte") and the value then and proposed ("Haiku 4.5" → "Sonnet 4.5"). A seat in a channel reads as how the
- * agent answers there, or that it isn't in it.
+ * "#suporte", "Skill excel") and the value then and proposed ("Haiku 4.5" → "Sonnet 4.5"). A seat in a channel reads
+ * as how the agent answers there, or that it isn't in it.
  */
 export function settingLineText(
   t: TFunction,
@@ -330,6 +330,8 @@ export function settingLineText(
         return v === true ? t("rightHand.value.archived") : t("rightHand.value.active");
       case "delete":
         return v === true ? t("rightHand.value.deleted") : t("rightHand.value.active");
+      case "skill":
+        return v === true ? t("rightHand.value.skillOn") : t("rightHand.value.skillOff");
       default:
         return v === null || v === undefined
           ? t("rightHand.value.notIn")
@@ -342,9 +344,11 @@ export function settingLineText(
       ? channel
         ? `#${channel}`
         : (line.label?.to ?? t("rightHand.field.channel"))
-      : (t as unknown as (key: string) => string)(
-          `rightHand.field.${line.field === "delete" ? "archive" : line.field}`,
-        );
+      : line.field === "skill"
+        ? t("rightHand.field.skill", { name: line.label?.to ?? "" })
+        : (t as unknown as (key: string) => string)(
+            `rightHand.field.${line.field === "delete" ? "archive" : line.field}`,
+          );
   return { field, from: value(line.from, "from"), to: value(line.to, "to") };
 }
 

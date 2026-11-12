@@ -12986,6 +12986,16 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
 .sidebar__new-agent:hover .sidebar__new-agent-face {
   color: var(--ink);
 }
+/* "New group conversation", the only row of a personal workspace's group conversations while there is none
+   (ADR 0159): quiet, as the other rows that create. */
+.sidebar__new-channel {
+  width: 100%;
+  color: var(--muted);
+}
+.sidebar__new-channel:hover,
+.sidebar__new-channel:focus-visible {
+  color: var(--ink);
+}
 /* Go to… in a personal workspace's More (ADR 0159): its ⌘K quiet at the line's end. */
 .sidebar__goto-keys {
   display: inline-flex;
@@ -13378,6 +13388,142 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 }
 .ai-panel--plan .agp-addacct__step > i {
   margin-inline: calc((var(--lead) - 20px) / 2);
+}
+/*
+ * A program switched off on the computer (`ToolOffSteps`): the computer's name, then plain lines between hairlines,
+ * nothing sunken. A line's number, and the switch drawn at its end, sit on its first line.
+ */
+.tool-off {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tool-off__where {
+  margin: 0;
+  color: var(--ink2);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 20px;
+}
+.tool-off__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.tool-off__list > li,
+.tool-off__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 20px;
+}
+.tool-off__row {
+  border-top: 1px solid var(--line);
+}
+.tool-off__row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.tool-off__list > li > span:not(.tool-off__switch),
+.tool-off__row > span {
+  flex: 1;
+  min-width: 0;
+}
+/* The app's own button is 32px on a 20px line: on the line's middle. */
+.tool-off__row > .ac-btn {
+  flex: none;
+  margin-block: -6px;
+}
+.tool-off__list > li > i {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 650;
+}
+.tool-off__list small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 18px;
+}
+/* The app's icon inside the sentence, as a word of it: on the line's middle, never a lead. */
+.tool-off__app {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 18px;
+  margin-inline: 2px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  vertical-align: middle;
+}
+/* The kit's switch, drawn (`.ac-switch`), turning on over and over. */
+.tool-off__switch {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: var(--radius-full);
+  background: var(--line-strong);
+}
+.tool-off__switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+}
+@keyframes tool-off-track {
+  0%,
+  40% {
+    background: var(--line-strong);
+  }
+  55%,
+  100% {
+    background: var(--action);
+  }
+}
+@keyframes tool-off-thumb {
+  0%,
+  40% {
+    transform: none;
+  }
+  55%,
+  100% {
+    transform: translateX(12px);
+  }
+}
+.tool-off__wait {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tool-off__switch {
+    animation: tool-off-track 3s infinite;
+  }
+  .tool-off__switch::after {
+    animation: tool-off-thumb 3s infinite;
+  }
 }
 /* A step's title, an option's and the foot's line break into lines of a length, never onto a word or two alone. */
 .ai-panel--plan :is(.agp-addacct__text b, .ac-option__title, .ac-card__foot) {

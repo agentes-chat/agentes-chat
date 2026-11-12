@@ -725,6 +725,7 @@
         "askPersonal": "Gebruik je al agents ergens anders? Ik haal ze allemaal hierheen.",
         "bring": "Kopieer het verzoek, plak het in {{app}} en breng het antwoord terug. De rest doe ik.",
         "bringFiles": "Zet hier neer wat de app heeft geëxporteerd. De rest doe ik.",
+        "bringMcp": "Volg de stappen in de app, dan maakt die de agents hier zelf aan. Ik houd het in de gaten.",
         "found": "Ik heb je team gevonden. Kijk of iedereen er is.",
         "foundPersonal": "Ik heb je agents gevonden. Kijk of ze er allemaal zijn.",
         "ai": "Laatste stap. Kies de AI die je al gebruikt en het team wordt wakker.",
@@ -943,18 +944,29 @@
       "title": "Gebruik je al agents in een andere app?",
       "lead": "Ze komen mee met hun instructies, skills, routines en geheugen.",
       "sourcesLabel": "Waar de agents vandaan komen",
+      "method": {
+        "label": "Hoe je ze ophaalt",
+        "mcp": "Verbinden met MCP",
+        "prompt": "Alleen het verzoek",
+        "file": "Uit een bestand"
+      },
       "aiApp": {
-        "title": "Vanuit je AI-app (het betrouwbaarst)",
-        "lead": "Je AI-app maakt hier elke agent, instructie, skill en routine aan die je erin hebt.",
-        "connect": "Koppel de app aan dit adres:",
+        "lead": "Met MCP kan {{app}} bij deze werkruimte, zodat het de agents hier zelf aanmaakt.",
+        "leadAny": "Met MCP kan je AI-app bij deze werkruimte, zodat die de agents hier zelf aanmaakt.",
+        "leadDots": "Met MCP kan je dot via een plugin die je in ChatGPT toevoegt bij deze werkruimte, zodat hij de agents hier zelf aanmaakt.",
         "howTo": "Zo koppel je het, per app",
-        "allow": "Kies op de toestemmingspagina Agents, routines en skills maken en bewerken.",
-        "paste": "Plak daarna dit verzoek in de app:",
-        "prompt": "Koppel {{url}} en maak voor elke agent, instructie, skill en routine die je hebt het equivalent aan in agentes.chat. Toon eerst wat daar al bestaat, zodat er niets dubbel komt.",
+        "paste": "Plak dit verzoek in de app:",
+        "prompt": "Gebruik de MCP-server van agentes.chat die je net hebt gekoppeld ({{url}}) om wat je hebt naar agentes.chat over te zetten. Roep eerst import_summary aan om te zien wat er al is, zodat niets dubbel wordt. Maak daarna voor elke agent, instructie, skill en routine die je hebt het equivalent met create_agent, create_skill en create_routine, en sla met add_memory op wat elke agent moet onthouden.",
         "promptLabel": "Verzoek voor je AI-app",
         "copy": "Het verzoek kopiëren",
         "copied": "Plak het nu in je AI-app.",
-        "private": "Vanuit je AI-app: niet beschikbaar op deze server, omdat apps zoals Claude en ChatGPT alleen met een openbaar https-adres verbinden."
+        "waiting": "Wachten tot de agents binnenkomen…",
+        "arrived_one": "{{count}} agent binnengekomen",
+        "arrived_other": "{{count}} agents binnengekomen",
+        "stuck": "Na een paar minuten nog niets? Koppel de app opnieuw, kies {{access}} en stuur het verzoek opnieuw.",
+        "private": "Verbinden met MCP is niet beschikbaar op deze server, omdat apps op internet alleen een openbaar https-adres bereiken.",
+        "held": "Verbinden met MCP werkt zodra het abonnement van de werkruimte actief is. Haal de agents voorlopig op deze manier op.",
+        "paused": "Verbinden met MCP staat uit zolang deze werkruimte gepauzeerd is. Haal de agents voorlopig op deze manier op."
       },
       "otherName": "Een andere app",
       "agenteschatName": "agentes.chat",
@@ -1437,7 +1449,10 @@
       "why": "Voor Ubuntu, Debian en vergelijkbare systemen (x64). Linux vraagt niets extra:",
       "apt": "Installeer de .deb met een dubbelklik, of via de terminal.",
       "aptLong": "Dubbelklik op het gedownloade bestand en klik op Installeren, of plak dit in de terminal:",
-      "open": "Open agentes.chat vanuit je apps."
+      "open": "Open agentes.chat vanuit je apps.",
+      "otherTitle": "Gebruik je Arch, Fedora of een ander systeem dat geen .deb accepteert?",
+      "otherText": "Download de AppImage: die werkt op elke distributie en werkt zichzelf bij. Plak daarna dit in de terminal, in de map waar je het hebt opgeslagen:",
+      "appImage": "AppImage downloaden"
     },
     "page": {
       "docTitle": "Download de app · agentes.chat",
@@ -2410,6 +2425,7 @@
         "delete": "Alleen admins verwijderen een agent",
         "audience": "Alleen admins en de verantwoordelijke wijzigen wie met hem praat",
         "channels": "Alleen admins en de verantwoordelijke wijzigen zijn kanalen",
+        "skill": "Alleen admins wijzigen de skills van een agent",
         "ai_account": "Alleen de eigenaar van het account geeft het",
         "name": "Alleen admins hernoemen een agent",
         "look": "Alleen admins en de verantwoordelijke wijzigen het uiterlijk",
@@ -2427,7 +2443,8 @@
       "channel": "Kanaal",
       "name": "Naam",
       "look": "Uiterlijk",
-      "reports_to": "Rapporteert aan"
+      "reports_to": "Rapporteert aan",
+      "skill": "Skill {{name}}"
     },
     "value": {
       "lookDefault": "Het standaarduiterlijk",
@@ -2443,7 +2460,9 @@
       "deleted": "Verwijderd",
       "notIn": "Niet in het kanaal",
       "withoutMention": "Uit zichzelf",
-      "mentionOnly": "Alleen bij vermelding"
+      "mentionOnly": "Alleen bij vermelding",
+      "skillOn": "Aan",
+      "skillOff": "Uit"
     },
     "remove": {
       "archiveTitle_one": "{{count}} agent archiveren?",
@@ -2692,6 +2711,17 @@
       "gemini": "Koppel je Gemini-abonnement",
       "zen": "Koppel OpenCode",
       "api_key": "Een API-sleutel toevoegen"
+    },
+    "toolOff": {
+      "text": "{{computer}} is verbonden, maar {{program}} staat daar uit. Voor de veiligheid kan het alleen op de computer zelf worden aangezet.",
+      "where": "Op {{computer}}",
+      "one": "Klik op het agentes.chat-icoon <mark/> bij de klok",
+      "oneWindows": "In Windows kan het achter de pijl ^ van de taakbalk zitten.",
+      "two": "Open <b>Voorkeuren</b>",
+      "three": "Zet onder <b>Tools</b> <b>{{program}}</b> aan",
+      "terminal": "Voer in de terminal van de computer uit:",
+      "here": "Zet <b>{{program}}</b> aan onder <b>Tools</b>.",
+      "waiting": "Wachten tot je het aanzet. Dit scherm verandert vanzelf."
     },
     "titleFor": "Een AI koppelen voor {{name}}",
     "titleFor_female": "Een AI koppelen voor {{name}}",
@@ -8671,7 +8701,6 @@
     "more": "Meer acties voor {{title}}",
     "open": "Thread openen",
     "read": "De thread lezen",
-    "details": "Details bekijken",
     "pick": "{{title}} selecteren",
     "pickShort": "Selecteren",
     "unpick": "Uit selectie halen",
@@ -8846,28 +8875,6 @@
       "blockedText_other": "{{names}} zitten niet in #{{channel}}. Context gaat alleen naar plekken waar iedereen die de thread leest, het al kon lezen.",
       "someone": "Iemand",
       "someAgent": "Een agent"
-    },
-    "panel": {
-      "label": "Details van {{title}}",
-      "close": "Details sluiten",
-      "archivedTitle": "Gearchiveerd · alleen lezen",
-      "archived": "Uit lijsten en zoekresultaten. Haal uit het archief om te antwoorden.",
-      "closedTitle": "Gesloten",
-      "closed": "In {{where}} is het één regel. Hij gaat vanzelf weer open als iemand antwoordt.",
-      "origin": "Herkomst",
-      "fromRange_one": "{{count}} bericht uit {{where}}",
-      "fromRange_other": "{{count}} berichten uit {{where}}",
-      "fromMessage": "Bericht van {{name}} in {{where}}",
-      "seeInChannel": "Bekijken in het kanaal",
-      "movedHint": "Uit het kanaal gehaald, met daar een melding",
-      "peopleTitle": "Deelnemers",
-      "people_one": "Deelnemers · {{count}}",
-      "people_other": "Deelnemers · {{count}}",
-      "agent": "agent",
-      "person": "persoon",
-      "created": "Gemaakt",
-      "createdBy": "{{when}} · door {{name}}",
-      "lives": "Staat in"
     }
   },
   "filters": {
@@ -9263,6 +9270,10 @@
     "pickAll": "Alle",
     "pickMissing": "Kies minstens één skill.",
     "pickSkipped": "Kan niet worden geïnstalleerd. {{reason}}",
+    "pickReplaces": "Vervangt de geïnstalleerde skill {{name}}",
+    "pickReplacesRemoved": "Vervangt de verwijderde skill {{name}}",
+    "forAgent_one": "Aanzetten voor {{agent}}",
+    "forAgent_other": "Aanzetten voor {{agent}}",
     "installedMany": "{{count}} skills geïnstalleerd.",
     "zipHelp": "Een .zip met SKILL.md in de hoofdmap.",
     "zipPick": ".zip kiezen",
@@ -13204,6 +13215,7 @@
       "targetNotFound": "Die computer bestaat niet meer. Kies een andere.",
       "targetSame": "De agents staan al op die computer.",
       "targetPaused": "Die computer is gepauzeerd. Kies een andere.",
+      "pausePast": "Kies een tijd in de toekomst.",
       "accountMethodUnsupported": "Deze computer kan Claude nog niet op deze manier koppelen. Werk het agentes.chat-programma erop bij, of gebruik een API-sleutel.",
       "offline": "{{name}} is nu offline. Probeer het opnieuw zodra hij terug is.",
       "paused": "{{name}} is gepauzeerd: er start niets nieuws op tot hij wordt hervat.",
@@ -13246,7 +13258,8 @@
       "ownerOrAdmin": "Alleen de eigenaar van de agent of een beheerder kan dit doen.",
       "detailsHidden": "Alleen wie met {{agentName}} praat, ziet hoe het werkt.",
       "extraOwnerOnly": "Alleen de eigenaar van de agent zet het betaalde extra gebruik van het abonnement aan of uit.",
-      "undoForbidden": "Alleen de persoon voor wie de agent werkte, zijn eigenaar of een beheerder kan dit ongedaan maken."
+      "undoForbidden": "Alleen de persoon voor wie de agent werkte, zijn eigenaar of een beheerder kan dit ongedaan maken.",
+      "undoSkillsAdmins": "Alleen een beheerder kan een wijziging in de skills van een agent ongedaan maken of opnieuw doen."
     },
     "account": {
       "notRestorable": "Dit account kan niet meer hersteld worden.",
@@ -13336,6 +13349,21 @@
     "paused": "Gepauzeerd",
     "pausedUntil": "Gepauzeerd tot {{time}}",
     "pausedHint": "Gepauzeerd op de computer zelf door degene die hem heeft gekoppeld.",
+    "remotePause": {
+      "button": "Pauzeren",
+      "menu": "{{name}} pauzeren",
+      "oneHour": "1 uur",
+      "tomorrow": "Tot morgen 9.00 uur",
+      "manual": "Tot ik hervat",
+      "resume": "Hervatten",
+      "byYou": "Door jou gepauzeerd.",
+      "byYouUntil": "Door jou gepauzeerd tot {{time}}.",
+      "byName": "Door {{name}} gepauzeerd.",
+      "byNameUntil": "Door {{name}} gepauzeerd tot {{time}}.",
+      "outdated": "Werk de agentes.chat-app op deze computer bij om hem hiervandaan te pauzeren.",
+      "paused": "{{name}} is gepauzeerd",
+      "resumed": "{{name}} werkt weer"
+    },
     "seenNow": "nu verbonden",
     "seen": "gezien {{when}}",
     "neverSeen": "nog niet verbonden",
@@ -13652,6 +13680,10 @@
       "no_driverLinux": "Linux kan deze telefoon niet openen",
       "os_too_old": "Dit systeem is te oud voor de tools",
       "adb_offline": "De telefoon reageert niet",
+      "wifi_away": "De iPhone zit niet op de wifi van de Mac",
+      "wifi_asleep": "De iPhone gaf geen antwoord via wifi",
+      "tunnel_down": "De wifiverbinding met de iPhone is weggevallen",
+      "wifi_untrusted": "De iPhone vertrouwt deze Mac niet",
       "other": "Er is iets nodig op het apparaat",
       "iosTooOld": "Hij draait iOS {{version}}, agents hebben iOS 17 of nieuwer nodig"
     },
@@ -13676,6 +13708,10 @@
       "no_driverLinux": "Voeg udev-regels toe voor deze telefoon",
       "os_too_old": "Werk de telefoon bij",
       "adb_offline": "Sluit hem opnieuw aan",
+      "wifi_away": "Ga op de wifi van de Mac of sluit hem aan",
+      "wifi_asleep": "Maak de iPhone wakker en ontgrendel hem",
+      "tunnel_down": "Houd hem bij de Mac of sluit hem aan",
+      "wifi_untrusted": "Sluit hem één keer aan en tik op Vertrouw",
       "other": "Bekijk wat er nodig is"
     },
     "facts": {
@@ -13743,6 +13779,8 @@
       "openApp": "Open de app",
       "server": "Een server of VPS",
       "serverLine": "Eén regel om in de terminal te plakken",
+      "httpLine": "Eén regel om in de terminal te plakken. De app koppelt hem met één klik op een https-adres.",
+      "httpHow": "Hoe",
       "other": "Een andere computer",
       "otherLine": "Installeer de app erop",
       "android": "Android-telefoon",
@@ -13951,6 +13989,22 @@
         "helper": "{{mac}} bouwt de testhelper en start hem op de iPhone, wat de eerste keer een paar minuten duurt. Houd de iPhone ontgrendeld en aangesloten."
       },
       "ready": "{{name}} is klaar voor agents.",
+      "wifi": {
+        "list": "iPhones op de wifi van {{mac}}",
+        "also": "Ook op de wifi van deze Mac: {{name}}",
+        "use": "Via wifi gebruiken",
+        "hint": "Hier verschijnt alleen een iPhone die deze Mac al eens via een kabel heeft vertrouwd. De Mac bereikt hem via de eigen versleutelde verbinding van Apple, dezelfde die Xcode gebruikt.",
+        "stop": "Niet meer via wifi gebruiken",
+        "stopTitle": "{{name}} niet meer via wifi gebruiken?",
+        "stopText": "Agents kunnen hem niet meer bereiken. Kies hem opnieuw op zijn Mac om hem te gebruiken.",
+        "stopped": "{{name}} wordt niet meer via wifi gebruikt."
+      },
+      "wifiState": {
+        "wifi_away": "{{name}} zit nu niet op de wifi van de Mac. Zet de iPhone op hetzelfde netwerk of sluit hem aan.",
+        "wifi_asleep": "{{name}} gaf geen antwoord via wifi. Maak hem wakker, ontgrendel hem en houd hem bij de Mac.",
+        "tunnel_down": "De wifiverbinding met {{name}} is weggevallen. Houd hem ontgrendeld en bij de Mac, of sluit hem aan.",
+        "wifi_untrusted": "{{name}} vertrouwt deze Mac niet. Sluit hem één keer aan, tik op Vertrouw en voer de toegangscode in."
+      },
       "path": {
         "settings": "Instellingen",
         "privacy": "Privacy en beveiliging",
@@ -14286,9 +14340,13 @@
         "orFile": "Of plak in <code>{{file}}</code>:",
         "pasteConfig": "Plak:",
         "mode": "Schakel in de chat over naar de modus {{mode}}.",
+        "sendInChat": "Stuur in de chat met je bot:",
+        "reload": "Typ daarna <code>{{command}}</code> in de chat.",
         "loginRun": "Voer <code>{{command}}</code> uit om in te loggen.",
         "loginType": "Typ <code>{{command}}</code> in de app om in te loggen.",
         "signIn": "Log in met je agentes.chat-account op de pagina die opent.",
+        "signInManage": "Log in met je agentes.chat-account op de pagina die opent en kies {{access}}.",
+        "mention": "Typ in de chat <code>@</code> en kies <code>{{name}}</code>.",
         "signInFirst": "De app vraagt je in te loggen als je hem voor het eerst gebruikt.",
         "token": "Maak een persoonlijk token en zet het op de plek van {{placeholder}}.",
         "install": "Toevoegen aan {{app}}"
@@ -15775,6 +15833,7 @@
       "agent_proposal": "Nieuwe agent voorgesteld: {{name}}",
       "team_proposal": "Stelde een team voor: {{names}}",
       "settings_proposal": "Stelde een wijziging voor {{names}} voor",
+      "settings_request": "Vraagt een wijziging in de eigen instellingen",
       "approval_request": "Goedkeuringsverzoek: {{title}}",
       "secret_request": "{{agent}} vroeg om een sleutel: {{name}}",
       "secret_requestAnon": "Vroeg om een sleutel: {{name}}",

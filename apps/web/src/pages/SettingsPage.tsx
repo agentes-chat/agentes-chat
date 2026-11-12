@@ -151,7 +151,7 @@ function Settings({
   device?: string;
   /** Devices, with the connect dialog open on this flow (the phone guide's link opens the Android one). */
   connect?: ConnectStart;
-  /** Auditoria: the agent it opens filtered to. */
+  /** Auditoria: the agent it opens filtered to. Skills, with `install`: the agent whose card opened that install. */
   agent?: string;
   /** Orçamento e uso › Pessoas: the person whose month opens (a limit's notice). */
   person?: string;
@@ -251,7 +251,7 @@ function Settings({
       {current === "connectors" && (
         <ConnectorsSection connected={connected} outcome={outcome} review={review} mail={mail} account={account} />
       )}
-      {current === "skills" && <SkillsSection install={install} connected={connected} skill={skill} />}
+      {current === "skills" && <SkillsSection install={install} connected={connected} skill={skill} agent={agent} />}
       {current === "storage" && <StorageSection />}
       {current === "devices" && (device ? <DevicePage path={device} /> : <DevicesSection start={connect} />)}
       {current === "usage" && (

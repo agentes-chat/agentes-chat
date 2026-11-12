@@ -579,12 +579,17 @@ async function loadAction(db: Database, orgId: string, id: string) {
   return row;
 }
 
-/** The person the agent worked for, an admin, or the agent's owner. */
+/** The person the agent worked for, an admin, or the agent's owner. A change to skills: only an admin. */
 async function requireMayUndo(db: Database, userId: string, a: Row) {
   const membership = await getMembership(db, userId, a.orgId);
   if (!membership) throw new NotFoundError("Action not found", "action.not_found");
   assertActiveMembership(membership);
-  if (a.requestedByUserId === userId || can(membership, "manage_agents")) return;
+  if (can(membership, "manage_agents")) return;
+  // Skills are who manages agents' on the agent's page (`SETTING_GROUP`), though `setAgentSkills` takes its owner too.
+  const fields = (a.params as { fields?: unknown }).fields;
+  if (a.kind === "agent.settings_changed" && Array.isArray(fields) && fields.includes("skill"))
+    throw new ForbiddenError("Only an admin can undo or redo a change to an agent's skills", "action.skills_admins");
+  if (a.requestedByUserId === userId) return;
   const agent = await getAgentCached(db, a.orgId, a.agentId);
   if (agent?.ownerUserId === userId) return;
   throw new ForbiddenError(
@@ -693,9 +698,11 @@ export async function undoMessageActions(deps: AgentUndoDeps, userId: string, or
     .where(and(eq(agentActions.orgId, orgId), eq(agentActions.messageId, messageId)))
     .orderBy(desc(agentActions.createdAt));
   if (rows.length === 0) throw new NotFoundError("This message has no changes to undo", "action.not_found");
+  const open = rows.filter((a) => !a.undoneAt && a.undoableUntil.getTime() > now.getTime());
+  // A card's receipts can differ in who may undo them (a skill's is only an admin's): refused before any is undone.
+  for (const a of open) await requireMayUndo(deps.db, userId, a);
   const failed: { id: string; code: string; message: string }[] = [];
-  for (const a of rows) {
-    if (a.undoneAt || a.undoableUntil.getTime() <= now.getTime()) continue;
+  for (const a of open) {
     try {
       await toggle(deps, userId, orgId, a.id, "undo");
     } catch (error) {

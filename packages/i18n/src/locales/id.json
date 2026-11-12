@@ -715,6 +715,7 @@
         "askPersonal": "Sudah memakai agen di tempat lain? Aku bawa semuanya ke sini.",
         "bring": "Salin permintaannya, tempel di {{app}}, lalu bawa jawabannya. Sisanya urusanku.",
         "bringFiles": "Taruh di sini apa yang diekspor aplikasinya. Sisanya urusanku.",
+        "bringMcp": "Ikuti langkahnya di aplikasi, lalu aplikasinya sendiri yang membuat agen di sini. Aku pantau kedatangannya.",
         "found": "Timmu sudah ketemu. Cek apakah semuanya ada.",
         "foundPersonal": "Agenmu sudah ketemu. Cek apakah semuanya ada.",
         "ai": "Langkah terakhir. Pilih AI yang sudah kamu pakai dan timmu bangun.",
@@ -927,18 +928,28 @@
       "title": "Sudah memakai agen di aplikasi lain?",
       "lead": "Agen datang bersama instruksi, skill, rutinitas, dan memorinya.",
       "sourcesLabel": "Asal agen",
+      "method": {
+        "label": "Cara membawanya",
+        "mcp": "Hubungkan dengan MCP",
+        "prompt": "Hanya permintaan",
+        "file": "Dari file"
+      },
       "aiApp": {
-        "title": "Dari aplikasi AI-mu (paling andal)",
-        "lead": "Aplikasi AI-mu membuat di sini setiap agen, instruksi, skill, dan rutinitas yang kamu punya di sana.",
-        "connect": "Hubungkan aplikasi ke alamat ini:",
+        "lead": "MCP memberi {{app}} akses ke ruang kerja ini, jadi ia membuat agen di sini sendiri.",
+        "leadAny": "MCP memberi aplikasi AI-mu akses ke ruang kerja ini, jadi ia membuat agen di sini sendiri.",
+        "leadDots": "MCP memberi dot-mu akses ke ruang kerja ini lewat plugin yang kamu tambahkan di ChatGPT, jadi ia membuat agen di sini sendiri.",
         "howTo": "Cara menghubungkan, per aplikasi",
-        "allow": "Di halaman izin, pilih Buat dan edit agen, rutinitas, dan skill.",
-        "paste": "Lalu tempel permintaan ini di aplikasi:",
-        "prompt": "Hubungkan {{url}} dan, untuk setiap agen, instruksi, skill, dan rutinitas yang kamu punya, buat padanannya di agentes.chat. Pertama, tampilkan daftar yang sudah ada di sana agar tidak ada yang terduplikasi.",
+        "paste": "Tempel permintaan ini di aplikasi:",
+        "prompt": "Gunakan server MCP agentes.chat yang baru kamu hubungkan ({{url}}) untuk memindahkan yang kamu punya ke agentes.chat. Pertama panggil import_summary untuk melihat apa yang sudah ada di sana, agar tidak ada yang ganda. Lalu, untuk setiap agen, instruksi, skill, dan rutinitas yang kamu punya, buat padanannya dengan create_agent, create_skill, dan create_routine, dan simpan apa yang harus diingat setiap agen dengan add_memory.",
         "promptLabel": "Permintaan untuk aplikasi AI-mu",
         "copy": "Salin permintaan",
         "copied": "Sekarang tempel di aplikasi AI-mu.",
-        "private": "Dari aplikasi AI-mu: tidak tersedia di server ini, karena aplikasi seperti Claude dan ChatGPT hanya terhubung ke alamat https publik."
+        "waiting": "Menunggu agen tiba…",
+        "arrived_other": "{{count}} agen tiba",
+        "stuck": "Belum ada apa-apa setelah beberapa menit? Hubungkan aplikasinya lagi, pilih {{access}}, lalu kirim permintaannya lagi.",
+        "private": "Hubungkan dengan MCP tidak tersedia di server ini, karena aplikasi di internet hanya bisa menjangkau alamat https publik.",
+        "held": "Hubungkan dengan MCP bisa dipakai setelah paket ruang kerja aktif. Untuk sekarang, bawa agen lewat cara ini.",
+        "paused": "Hubungkan dengan MCP nonaktif selama ruang kerja ini dijeda. Untuk sekarang, bawa agen lewat cara ini."
       },
       "otherName": "Aplikasi lain",
       "agenteschatName": "agentes.chat",
@@ -1398,7 +1409,10 @@
       "why": "Untuk Ubuntu, Debian, dan sistem serupa (x64). Linux tidak meminta apa pun tambahan:",
       "apt": "Pasang .deb dengan klik dua kali, atau dari terminal.",
       "aptLong": "Klik dua kali file yang diunduh lalu klik Pasang, atau tempel ini di terminal:",
-      "open": "Buka agentes.chat dari daftar aplikasimu."
+      "open": "Buka agentes.chat dari daftar aplikasimu.",
+      "otherTitle": "Pakai Arch, Fedora, atau sistem lain yang tidak menerima .deb?",
+      "otherText": "Unduh AppImage: berjalan di distribusi apa pun dan memperbarui dirinya sendiri. Lalu tempel ini di terminal, di folder tempat Anda menyimpannya:",
+      "appImage": "Unduh AppImage"
     },
     "page": {
       "docTitle": "Unduh aplikasinya · agentes.chat",
@@ -2329,6 +2343,7 @@
         "delete": "Hanya admin yang menghapus agen",
         "audience": "Hanya admin dan penanggung jawabnya yang mengubah siapa yang bicara dengannya",
         "channels": "Hanya admin dan penanggung jawabnya yang mengubah kanalnya",
+        "skill": "Hanya admin yang mengubah skill agen",
         "ai_account": "Hanya pemilik akun yang memberikannya",
         "name": "Hanya admin yang mengganti nama agen",
         "look": "Hanya admin dan penanggung jawabnya yang mengubah tampilannya",
@@ -2346,7 +2361,8 @@
       "channel": "Kanal",
       "name": "Nama",
       "look": "Tampilan",
-      "reports_to": "Melapor ke"
+      "reports_to": "Melapor ke",
+      "skill": "Skill {{name}}"
     },
     "value": {
       "lookDefault": "Tampilan bawaan",
@@ -2362,7 +2378,9 @@
       "deleted": "Dihapus",
       "notIn": "Tidak di kanal",
       "withoutMention": "Atas inisiatif sendiri",
-      "mentionOnly": "Hanya saat disebut"
+      "mentionOnly": "Hanya saat disebut",
+      "skillOn": "Aktif",
+      "skillOff": "Nonaktif"
     },
     "remove": {
       "archiveTitle_other": "Arsipkan {{count}} agen?",
@@ -2598,6 +2616,17 @@
       "gemini": "Hubungkan paket Gemini-mu",
       "zen": "Hubungkan OpenCode",
       "api_key": "Tambahkan kunci API"
+    },
+    "toolOff": {
+      "text": "{{computer}} sudah terhubung, tetapi {{program}} dimatikan di sana. Demi keamanan, hanya bisa dinyalakan di komputer itu sendiri.",
+      "where": "Di {{computer}}",
+      "one": "Klik ikon agentes.chat <mark/> di dekat jam",
+      "oneWindows": "Di Windows, ikonnya bisa berada di balik panah ^ pada bilah tugas.",
+      "two": "Buka <b>Preferensi</b>",
+      "three": "Di <b>Alat</b>, nyalakan <b>{{program}}</b>",
+      "terminal": "Di terminal komputer itu, jalankan:",
+      "here": "Nyalakan <b>{{program}}</b> di <b>Alat</b>.",
+      "waiting": "Menunggu Anda menyalakannya. Layar ini berubah sendiri."
     },
     "titleFor": "Hubungkan AI untuk {{name}}",
     "titleFor_female": "Hubungkan AI untuk {{name}}",
@@ -8352,7 +8381,6 @@
     "more": "Tindakan lain untuk {{title}}",
     "open": "Buka utas",
     "read": "Baca utasnya",
-    "details": "Lihat detail",
     "pick": "Pilih {{title}}",
     "pickShort": "Pilih",
     "unpick": "Hapus dari pilihan",
@@ -8506,26 +8534,6 @@
       "blockedText_other": "{{names}} tidak ada di #{{channel}}. Konteks hanya bisa dipindah ke tempat yang semua pembaca utasnya sudah bisa membacanya.",
       "someone": "Seseorang",
       "someAgent": "Sebuah agen"
-    },
-    "panel": {
-      "label": "Detail {{title}}",
-      "close": "Tutup detail",
-      "archivedTitle": "Diarsipkan · hanya baca",
-      "archived": "Keluar dari daftar dan pencarian. Batalkan arsip untuk membalas.",
-      "closedTitle": "Ditutup",
-      "closed": "Di {{where}} utas ini tampil sebagai satu baris. Utas ini terbuka lagi dengan sendirinya saat seseorang membalas.",
-      "origin": "Asal",
-      "fromRange_other": "{{count}} pesan dari {{where}}",
-      "fromMessage": "Pesan dari {{name}} di {{where}}",
-      "seeInChannel": "Lihat di kanal",
-      "movedHint": "Dikeluarkan dari kanal, dengan pemberitahuan yang ditinggalkan di sana",
-      "peopleTitle": "Peserta",
-      "people_other": "Peserta · {{count}}",
-      "agent": "agen",
-      "person": "orang",
-      "created": "Dibuat",
-      "createdBy": "{{when}} · oleh {{name}}",
-      "lives": "Berada di"
     }
   },
   "filters": {
@@ -8907,6 +8915,9 @@
     "pickAll": "Semua",
     "pickMissing": "Pilih setidaknya satu skill.",
     "pickSkipped": "Tidak bisa dipasang. {{reason}}",
+    "pickReplaces": "Menggantikan skill {{name}} yang sudah terpasang",
+    "pickReplacesRemoved": "Menggantikan skill {{name}} yang sudah dihapus",
+    "forAgent_other": "Aktifkan untuk {{agent}}",
     "installedMany": "{{count}} skill terpasang.",
     "zipHelp": "File .zip dengan SKILL.md di folder utamanya.",
     "zipPick": "Pilih .zip",
@@ -12708,6 +12719,7 @@
       "targetNotFound": "Komputer itu sudah tidak ada. Pilih yang lain.",
       "targetSame": "Agen sudah ada di komputer itu.",
       "targetPaused": "Komputer itu sedang dijeda. Pilih yang lain.",
+      "pausePast": "Pilih waktu di masa depan.",
       "accountMethodUnsupported": "Komputer ini belum bisa menghubungkan Claude dengan cara ini. Perbarui program agentes.chat di komputer ini, atau pakai kunci API.",
       "offline": "{{name}} sedang offline. Coba lagi setelah ia kembali.",
       "paused": "{{name}} dijeda: tidak ada yang baru dimulai di sana sampai dilanjutkan.",
@@ -12749,7 +12761,8 @@
       "ownerOrAdmin": "Hanya pemilik agen atau Admin yang bisa melakukan ini.",
       "detailsHidden": "Hanya orang yang berbicara dengan {{agentName}} yang bisa melihat cara kerjanya.",
       "extraOwnerOnly": "Hanya pemilik agen yang bisa menyalakan atau mematikan penggunaan ekstra berbayar pada paket.",
-      "undoForbidden": "Hanya orang yang dibantu agen, pemiliknya, atau Admin yang bisa membatalkan ini."
+      "undoForbidden": "Hanya orang yang dibantu agen, pemiliknya, atau Admin yang bisa membatalkan ini.",
+      "undoSkillsAdmins": "Hanya Admin yang bisa membatalkan atau mengulang perubahan pada skill agen."
     },
     "account": {
       "notRestorable": "Akun ini sudah tidak bisa dipulihkan.",
@@ -12839,6 +12852,21 @@
     "paused": "Dijeda",
     "pausedUntil": "Dijeda sampai {{time}}",
     "pausedHint": "Dijeda di komputer itu sendiri oleh orang yang menghubungkannya.",
+    "remotePause": {
+      "button": "Jeda",
+      "menu": "Jeda {{name}}",
+      "oneHour": "Selama 1 jam",
+      "tomorrow": "Sampai besok pukul 09.00",
+      "manual": "Sampai aku melanjutkan",
+      "resume": "Lanjutkan",
+      "byYou": "Dijeda olehmu.",
+      "byYouUntil": "Dijeda olehmu sampai {{time}}.",
+      "byName": "Dijeda oleh {{name}}.",
+      "byNameUntil": "Dijeda oleh {{name}} sampai {{time}}.",
+      "outdated": "Perbarui aplikasi agentes.chat di komputer ini untuk menjedanya dari sini.",
+      "paused": "{{name}} dijeda",
+      "resumed": "{{name}} kembali bekerja"
+    },
     "seenNow": "terhubung sekarang",
     "seen": "terlihat {{when}}",
     "neverSeen": "belum pernah terhubung",
@@ -13153,6 +13181,10 @@
       "no_driverLinux": "Linux tidak bisa membuka ponsel ini",
       "os_too_old": "Sistem ini terlalu lama untuk alat-alatnya",
       "adb_offline": "Ponselnya tidak merespons",
+      "wifi_away": "iPhone tidak ada di Wi-Fi Mac",
+      "wifi_asleep": "iPhone tidak menjawab lewat Wi-Fi",
+      "tunnel_down": "Sambungan Wi-Fi ke iPhone terputus",
+      "wifi_untrusted": "iPhone tidak memercayai Mac ini",
       "other": "Ada yang perlu dilakukan di perangkat",
       "iosTooOld": "Ini memakai iOS {{version}}, agen butuh iOS 17 atau lebih baru"
     },
@@ -13177,6 +13209,10 @@
       "no_driverLinux": "Tambahkan aturan udev untuk ponsel ini",
       "os_too_old": "Perbarui ponsel",
       "adb_offline": "Colokkan lagi",
+      "wifi_away": "Gabung ke Wi-Fi Mac atau colokkan kabel",
+      "wifi_asleep": "Bangunkan dan buka kunci iPhone",
+      "tunnel_down": "Dekatkan ke Mac atau colokkan kabel",
+      "wifi_untrusted": "Colokkan sekali dan ketuk Percayai",
       "other": "Lihat apa yang dibutuhkan"
     },
     "facts": {
@@ -13242,6 +13278,8 @@
       "openApp": "Buka aplikasinya",
       "server": "Server atau VPS",
       "serverLine": "Satu baris untuk ditempel di terminalnya",
+      "httpLine": "Satu baris untuk ditempel di terminalnya. Aplikasi menghubungkannya dengan sekali klik di alamat https.",
+      "httpHow": "Caranya",
       "other": "Komputer lain",
       "otherLine": "Pasang aplikasinya di sana",
       "android": "Ponsel Android",
@@ -13450,6 +13488,22 @@
         "helper": "{{mac}} membuat helper pengujian dan menjalankannya di iPhone, yang butuh beberapa menit untuk pertama kali. Biarkan iPhone tidak terkunci dan tetap tercolok."
       },
       "ready": "{{name}} siap untuk agen.",
+      "wifi": {
+        "list": "iPhone di Wi-Fi {{mac}}",
+        "also": "Juga di Wi-Fi Mac ini: {{name}}",
+        "use": "Pakai lewat Wi-Fi",
+        "hint": "Hanya iPhone yang pernah memercayai Mac ini lewat kabel yang muncul di sini. Mac menjangkaunya lewat sambungan terenkripsi milik Apple sendiri, yang juga dipakai Xcode.",
+        "stop": "Berhenti memakai lewat Wi-Fi",
+        "stopTitle": "Berhenti memakai {{name}} lewat Wi-Fi?",
+        "stopText": "Agen tidak bisa menjangkaunya lagi. Pilih lagi di Mac-nya untuk memakainya.",
+        "stopped": "{{name}} tidak lagi dipakai lewat Wi-Fi."
+      },
+      "wifiState": {
+        "wifi_away": "{{name}} sedang tidak ada di Wi-Fi Mac. Sambungkan iPhone ke jaringan yang sama atau colokkan kabel.",
+        "wifi_asleep": "{{name}} tidak menjawab lewat Wi-Fi. Bangunkan, buka kuncinya, dan dekatkan ke Mac.",
+        "tunnel_down": "Sambungan Wi-Fi ke {{name}} terputus. Biarkan tidak terkunci dan dekat Mac, atau colokkan kabel.",
+        "wifi_untrusted": "{{name}} tidak memercayai Mac ini. Colokkan sekali, ketuk Percayai, lalu masukkan kode sandinya."
+      },
       "path": {
         "settings": "Pengaturan",
         "privacy": "Privasi & Keamanan",
@@ -13771,9 +13825,13 @@
         "orFile": "Atau tempel di <code>{{file}}</code>:",
         "pasteConfig": "Tempel:",
         "mode": "Di chat, beralih ke mode {{mode}}.",
+        "sendInChat": "Di chat dengan bot-mu, kirim:",
+        "reload": "Lalu ketik <code>{{command}}</code> di chat.",
         "loginRun": "Untuk masuk, jalankan <code>{{command}}</code>.",
         "loginType": "Untuk masuk, ketik <code>{{command}}</code> di aplikasi.",
         "signIn": "Masuk dengan akun agentes.chat-mu di halaman yang terbuka.",
+        "signInManage": "Masuk dengan akun agentes.chat-mu di halaman yang terbuka, lalu pilih {{access}}.",
+        "mention": "Di chat, ketik <code>@</code> dan pilih <code>{{name}}</code>.",
         "signInFirst": "Aplikasi memintamu masuk saat pertama kali memakainya.",
         "token": "Buat token pribadi dan taruh di tempat {{placeholder}}.",
         "install": "Tambahkan ke {{app}}"
@@ -15235,6 +15293,7 @@
       "agent_proposal": "Mengusulkan agen baru: {{name}}",
       "team_proposal": "Mengusulkan tim: {{names}}",
       "settings_proposal": "Mengusulkan perubahan untuk {{names}}",
+      "settings_request": "Meminta perubahan pada pengaturannya sendiri",
       "approval_request": "Permintaan persetujuan: {{title}}",
       "secret_request": "{{agent}} meminta kunci: {{name}}",
       "secret_requestAnon": "Meminta kunci: {{name}}",

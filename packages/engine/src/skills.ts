@@ -5,12 +5,14 @@ import { recordAudit } from "./audit";
 import { mapInBatches } from "./batches";
 import { activeConnections, type ConnectorDeps } from "./connectors/connections";
 import { type ErrorParams, ForbiddenError, NotFoundError, TooManyError, ValidationError } from "./errors";
+import { publishAgentsChanged } from "./events";
 import { formatBytes } from "./format";
 import { connectionToken } from "./git/branches";
 import { appTokenForRepo, boundInstallations, type GitHubAppConfig, type GitHubHttp } from "./git/github-app";
 import { assertStorageRoom } from "./limits";
 import { assertPublicHttpsUrl, type ResolveHost } from "./net-guard";
 import { can, requirePermission } from "./organizations";
+import { isRightHand } from "./right-hand";
 import { inflateZipEntry, listZip, type ZipListing } from "./zip";
 
 const { skills, skillFiles, agentSkills } = schema;
@@ -552,7 +554,8 @@ export async function saveSkill(
     .where(and(eq(skills.orgId, orgId), eq(skills.slug, input.name)));
   let row: SkillRow;
   if (existing) {
-    // Same name: a new version of that skill. A deleted one comes back (with its agents' assignments).
+    // Same name: a new version of that skill. A deleted one comes back with its agents' assignments, except from a link
+    // (a pick of one too): it may hold anything under that name, so it comes back on for none of its old agents.
     const [updated] = await deps.db
       .update(skills)
       .set({
@@ -576,6 +579,8 @@ export async function saveSkill(
       .returning();
     if (!updated) throw new Error("skill update returned nothing");
     row = updated;
+    if (existing.deletedAt && input.source === "url")
+      await deps.db.update(agentSkills).set({ enabled: false }).where(eq(agentSkills.skillId, existing.id));
   } else {
     const [created] = await deps.db
       .insert(skills)
@@ -997,11 +1002,16 @@ function repositorySkill(zip: Uint8Array, dir: string, inside: [string, ZipListi
   return { ...parseSkillMarkdown(skillMd), files };
 }
 
-/** A skill a GitHub link holds, offered to pick when it holds several. `path`: its folder from the repository's root. */
+/**
+ * A skill a GitHub link holds, offered to pick when it holds several. `path`: its folder from the repository's root.
+ * `replaces`: a skill of this name is installed (it becomes a new version of it, for every agent that has it) or was
+ * removed (it comes back on for none of its old agents).
+ */
 export interface SkillChoice {
   path: string;
   name: string;
   description: string;
+  replaces?: "installed" | "removed";
 }
 
 /** A skill a GitHub link holds that can't be installed, with the refusal: its code, English text and params. */
@@ -1085,19 +1095,22 @@ export interface SkillPick {
  * name is already installed makes a new version. A private repository is read through the workspace's GitHub (the
  * GitHub App, else the connection): installing skills (`manage_agents`) is what lets a person read through it.
  * `through`: that connection first, with no read without credentials (a skill updated from the link it came from).
+ * `forAgentId`: the agent whose card opened the install (`turnOnFor`).
  */
 export async function importSkillFromUrl(
   deps: SkillDeps,
   actorId: string,
   orgId: string,
   url: string,
-  options: { list?: boolean; through?: SkillVia | null } = {},
+  options: { list?: boolean; through?: SkillVia | null; forAgentId?: string } = {},
 ): Promise<SkillDetail | SkillPick> {
   await requirePermission(deps.db, actorId, orgId, "manage_agents");
   const link = await readGithubLink(deps, orgId, url, options.through);
   const [only, ...more] = link.found.keys();
   if (!options.list && only !== undefined && more.length === 0) {
-    return saveSkill(deps, actorId, orgId, link.skillAt(only));
+    const skill = await saveSkill(deps, actorId, orgId, link.skillAt(only));
+    await turnOnFor(deps, actorId, orgId, options.forAgentId, [skill.id]);
+    return skill;
   }
   const choices: SkillChoice[] = [];
   const skipped: SkillSkipped[] = [];
@@ -1113,7 +1126,48 @@ export async function importSkillFromUrl(
     }
   }
   if (choices.length === 0) throw refused;
+  const same = await deps.db
+    .select({ slug: skills.slug, deletedAt: skills.deletedAt })
+    .from(skills)
+    .where(
+      and(
+        eq(skills.orgId, orgId),
+        inArray(
+          skills.slug,
+          choices.map((c) => c.name),
+        ),
+      ),
+    );
+  for (const c of choices) {
+    const hit = same.find((k) => k.slug === c.name);
+    if (hit) c.replaces = hit.deletedAt ? "removed" : "installed";
+  }
   return { choices, ...(skipped.length > 0 ? { skipped } : {}), ...(link.via ? { via: link.via } : {}) };
+}
+
+/**
+ * Skills installed from an agent's card (`offer_install_skill`), the installer's box checked, go on for that agent when
+ * the installer may change its skills, as on its page. Not for an agent archived or gone, nor the right hand (it has
+ * no skill tools): the install still stands, and an agent asks for them on its own settings card.
+ */
+async function turnOnFor(deps: SkillDeps, actorId: string, orgId: string, agentId: string | undefined, ids: string[]) {
+  if (!agentId || ids.length === 0) return;
+  const agent = await getAgent(deps.db, orgId, agentId);
+  if (!agent || agent.archivedAt || isRightHand(agent)) return;
+  try {
+    await setAgentSkills(
+      deps.db,
+      actorId,
+      orgId,
+      agentId,
+      ids.map((skillId) => ({ skillId, enabled: true })),
+    );
+  } catch (error) {
+    if (error instanceof ForbiddenError) return;
+    throw error;
+  }
+  // An open agent page saves its whole list: it reads the new one first.
+  await publishAgentsChanged(deps.pubsub, orgId);
 }
 
 /** Installs the skills picked among a link's choices (`paths`, as `importSkillFromUrl` gave them). */
@@ -1123,6 +1177,7 @@ export async function importPickedSkills(
   orgId: string,
   url: string,
   paths: string[],
+  options: { forAgentId?: string } = {},
 ) {
   await requirePermission(deps.db, actorId, orgId, "manage_agents");
   const link = await readGithubLink(deps, orgId, url);
@@ -1155,6 +1210,13 @@ export async function importPickedSkills(
       ),
     );
   }
+  await turnOnFor(
+    deps,
+    actorId,
+    orgId,
+    options.forAgentId,
+    installed.map((k) => k.id),
+  );
   return installed;
 }
 
@@ -1271,7 +1333,8 @@ export async function updateSkill(
 export async function deleteSkill(db: Database, actorId: string, orgId: string, id: string) {
   await requirePermission(db, actorId, orgId, "manage_agents");
   const s = await loadSkill(db, orgId, id);
-  // Soft delete: agents stop seeing it at once; their assignments come back if the skill is installed again.
+  // Soft delete: agents stop seeing it at once. Their assignments come back when it is restored or saved again under
+  // its name, except by an install from a link (`saveSkill`).
   await db.update(skills).set({ deletedAt: new Date() }).where(eq(skills.id, s.id));
   await recordAudit(db, {
     orgId,

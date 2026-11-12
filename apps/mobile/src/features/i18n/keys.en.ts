@@ -1888,6 +1888,10 @@ export const featureKeysEn = {
       no_driverLinux: "Linux needs udev rules for this phone",
       os_too_old: "This phone's system is too old",
       adb_offline: "Unplug the cable and plug it in again",
+      wifi_away: "Join the Mac's Wi-Fi on this iPhone, or plug it in",
+      wifi_asleep: "Wake and unlock this iPhone, and keep it near the Mac",
+      tunnel_down: "The Wi-Fi link dropped. Keep this iPhone near the Mac, or plug it in",
+      wifi_untrusted: "Plug it in once and tap Trust",
       other: "Not ready yet",
     },
     os: { android: "Android {{version}}", ios: "iOS {{version}}" },
@@ -2054,6 +2058,16 @@ export const featureKeysEn = {
         "This iPhone refused the test helper's taps. Unlock it and enter its passcode if it asks. If it keeps happening, turn Settings\u00a0›\u00a0Developer\u00a0›\u00a0Enable UI Automation off and on.",
       /** A button on step 1: the person says it's plugged in, and the guide says what to check. */
       pluggedIn: "It's plugged in",
+      /** iPhones on the Mac's network that already trust it (they did over a cable once), offered, never used until picked. */
+      wifi: {
+        also: "Also on the Wi-Fi of {{host}}: {{name}}",
+        use: "Use over Wi-Fi",
+        hint: "Only an iPhone that trusted the Mac over a cable shows up here. The Mac reaches it through Apple's own encrypted link, the one Xcode uses.",
+        stop: "Stop using over Wi-Fi",
+        stopTitle: "Stop using {{name}} over Wi-Fi?",
+        stopText: "Agents can't reach it any more. Pick it again with {{host}} to use it.",
+        stopped: "{{name}} isn't used over Wi-Fi any more",
+      },
       /** Under a step that sat unchanged for a while: what most likely holds it, and one way out. */
       stall: {
         plug: "{{host}} doesn't see this iPhone yet. Use a cable that carries data, not only power, keep this iPhone unlocked and tap Trust if it asks.",

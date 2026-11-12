@@ -1901,6 +1901,10 @@
       "no_driverLinux": "Linux a besoin de règles udev pour ce téléphone",
       "os_too_old": "Le système de ce téléphone est trop ancien",
       "adb_offline": "Débranchez le câble et rebranchez-le",
+      "wifi_away": "Rejoignez le Wi-Fi du Mac sur cet iPhone ou branchez-le",
+      "wifi_asleep": "Réveillez et déverrouillez cet iPhone, et gardez-le près du Mac",
+      "tunnel_down": "La liaison Wi-Fi a été coupée. Gardez cet iPhone près du Mac ou branchez-le",
+      "wifi_untrusted": "Branchez-le une fois et touchez Se fier",
       "other": "Pas encore prêt"
     },
     "os": {
@@ -2059,6 +2063,15 @@
       "teamMissing": "Xcode est connecté mais n'affiche pas encore d'équipe. Dans Xcode, créez n'importe quelle app iOS, choisissez votre équipe dans Signing & Capabilities et lancez-la une fois sur cet iPhone.",
       "uiRefused": "Cet iPhone a refusé les touchers de l'app de test. Déverrouillez-le et saisissez votre code s'il le demande. Si cela continue, désactivez puis réactivez Réglages › Développeur › Activer l'automatisation de l'IU.",
       "pluggedIn": "Il est branché",
+      "wifi": {
+        "also": "Aussi sur le Wi-Fi de {{host}} : {{name}}",
+        "use": "Utiliser en Wi-Fi",
+        "hint": "Seul un iPhone qui a déjà fait confiance au Mac par câble apparaît ici. Le Mac le joint par la liaison chiffrée d'Apple, celle qu'utilise Xcode.",
+        "stop": "Ne plus utiliser en Wi-Fi",
+        "stopTitle": "Ne plus utiliser {{name}} en Wi-Fi ?",
+        "stopText": "Les agents ne peuvent plus l'atteindre. Choisissez-le à nouveau avec {{host}} pour l'utiliser.",
+        "stopped": "{{name}} n'est plus utilisé en Wi-Fi"
+      },
       "stall": {
         "plug": "{{host}} ne voit pas encore cet iPhone. Utilisez un câble qui transmet les données, pas seulement la charge, gardez cet iPhone déverrouillé et touchez Se fier s'il le demande.",
         "devmode": "Le Mode développeur ne s'active qu'après le redémarrage de cet iPhone. Touchez Redémarrer, puis Activer une fois qu'il a redémarré. Pas d'interrupteur ? Débranchez cet iPhone et rebranchez-le."

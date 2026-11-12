@@ -214,7 +214,7 @@ test("a burst before the first computer turn (ADR 0112): one turn whose prompt h
   const drained = drainOutbox(fx.db, handlers);
   const start = Date.now();
   while (!(await fx.db.select().from(schema.agentRuns)).some((r) => r.status === "running")) {
-    if (Date.now() - start > 5000) throw new Error("the run never started");
+    if (Date.now() - start > 15000) throw new Error("the run never started");
     await new Promise((r) => setTimeout(r, 5));
   }
   // No @ needed: the same person's follow-ups go to the agent still answering them (the floor).

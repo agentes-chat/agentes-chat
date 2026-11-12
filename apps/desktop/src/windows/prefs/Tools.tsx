@@ -19,6 +19,21 @@ import { useToast } from "../../ui/Toast";
 import { listNames } from "../../ui/time";
 import { ToolAccounts } from "./Accounts";
 
+type Cli = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+
+/** The coding programs agents think with, each with a switch of its own; the first two have a portrait. */
+const CLIS: { tool: Cli; kind: string; portrait?: "claude_code" | "codex" }[] = [
+  { tool: "claude", kind: "claude_code", portrait: "claude_code" },
+  { tool: "codex", kind: "codex", portrait: "codex" },
+  { tool: "cursor", kind: "cursor" },
+  { tool: "opencode", kind: "opencode" },
+  { tool: "grok", kind: "grok" },
+  { tool: "antigravity", kind: "antigravity" },
+];
+
+/** A program's switch; one a runner stored no switch for follows Codex's, as the runner and the server read it. */
+export const cliOn = (tools: RunnerTools, tool: Cli) => (tools[tool] ?? tools.codex) === true;
+
 /** Tools are for the whole computer: every organization gets the same switch. */
 export function Tools() {
   const { t, i18n } = useTranslation();
@@ -71,48 +86,44 @@ export function Tools() {
     <>
       <PrefHead title={t("desktop.prefs.tools.title")} lead={t("desktop.prefs.tools.lead")} />
       <PrefCard>
-        <PrefRow
-          lead={<BrainPortrait kind="claude_code" state={engineState(executors.claude)} />}
-          htmlFor="tool-claude"
-          title={
-            <>
-              <ProviderLogo id="claude_code" size="xs" />
-              {t("desktop.tools.claudeName")}
-            </>
-          }
-          hint={hintFor(t, t("desktop.tools.claudeName"), t("desktop.tools.claudeDesc"))}
-          chip={exec(executors.claude)}
-          end={
-            <Switch
-              id="tool-claude"
-              aria-describedby="tool-claude-hint"
-              checked={tools.claude && !!executors.claude}
-              disabled={!executors.claude || homes.length === 0 || pending !== null}
-              onCheckedChange={(on) => void set("claude", on)}
+        {CLIS.map(({ tool, kind, portrait }) => {
+          const name = t(`desktop.tools.${tool}Name`);
+          return (
+            <PrefRow
+              key={tool}
+              lead={
+                portrait ? (
+                  <BrainPortrait kind={portrait} state={engineState(executors[tool])} />
+                ) : (
+                  <ProviderLogo id={kind} off={!executors[tool]} />
+                )
+              }
+              htmlFor={`tool-${tool}`}
+              title={
+                portrait ? (
+                  <>
+                    <ProviderLogo id={kind} size="xs" />
+                    {name}
+                  </>
+                ) : (
+                  name
+                )
+              }
+              hint={hintFor(t, name, t(`desktop.tools.${tool}Desc`))}
+              chip={exec(executors[tool])}
+              end={
+                // On or off whether or not its program is here yet: one installed later then works (ADR 0165).
+                <Switch
+                  id={`tool-${tool}`}
+                  aria-describedby={`tool-${tool}-hint`}
+                  checked={cliOn(tools, tool)}
+                  disabled={homes.length === 0 || pending !== null}
+                  onCheckedChange={(on) => void set(tool, on)}
+                />
+              }
             />
-          }
-        />
-        <PrefRow
-          lead={<BrainPortrait kind="codex" state={engineState(executors.codex)} />}
-          htmlFor="tool-codex"
-          title={
-            <>
-              <ProviderLogo id="codex" size="xs" />
-              {t("desktop.tools.codexName")}
-            </>
-          }
-          hint={hintFor(t, t("desktop.tools.codexName"), t("desktop.tools.codexDesc"))}
-          chip={exec(executors.codex)}
-          end={
-            <Switch
-              id="tool-codex"
-              aria-describedby="tool-codex-hint"
-              checked={tools.codex && !!executors.codex}
-              disabled={!executors.codex || homes.length === 0 || pending !== null}
-              onCheckedChange={(on) => void set("codex", on)}
-            />
-          }
-        />
+          );
+        })}
         <PrefRow
           lead={logo("code")}
           htmlFor="tool-commands"

@@ -2,6 +2,7 @@ import type { ComputerDevice, DeviceAudience, DevicesList, Member, OrgRole, Phon
 import {
   audienceWords,
   iosOf,
+  iphoneOverWifi,
   portraitOf,
   reasonText,
   sameAudience,
@@ -41,7 +42,7 @@ import { type PairTarget, pairWithSession, targetKey } from "../../control/pair"
 import { serverName } from "../../control/server";
 import { type Home, orgName } from "../../control/store";
 import { toolsHere } from "../../control/this-mac";
-import { agentOf, useLocalServer, usePending, writePref } from "../../hooks";
+import { agentOf, useLocalServer, usePending, useWifiIphones, writePref } from "../../hooks";
 import type { Host } from "../../host/types";
 import { AgentFace, ConnectionChip, OrgTile } from "../../ui/bits";
 import { MacPermissionCard, useMacGrants } from "../../ui/permissions";
@@ -275,8 +276,14 @@ export function ThisMacCards({ homes, offers, bottom }: { homes: Home[]; offers:
             <CardTitle>
               {multi ? t("desktop.prefs.thisMac.phonesIn", { org: orgName(h) }) : t("desktop.prefs.thisMac.phones")}
             </CardTitle>
-            {computer && computer.phones.length > 0 && (
-              <PrefCard>
+            {computer && (
+              <PhonesCard
+                computer={computer}
+                server={target.server}
+                orgId={target.orgId}
+                wifi={host.platform === "mac"}
+                onChanged={load}
+              >
                 {computer.phones.map((p) => (
                   <PhoneRow
                     key={p.id}
@@ -288,7 +295,7 @@ export function ThisMacCards({ homes, offers, bottom }: { homes: Home[]; offers:
                     onChanged={load}
                   />
                 ))}
-              </PrefCard>
+              </PhonesCard>
             )}
             <p className={computer?.phones.length ? "dk-under-card dk-help" : "dk-help"}>
               {t("desktop.prefs.thisMac.plug")}{" "}
@@ -641,6 +648,62 @@ export function PeoplePicker({
   );
 }
 
+/**
+ * This computer's phones, then on a Mac the iPhones on its Wi-Fi that trust it, each with Use over Wi-Fi (for who may
+ * manage it). No card when there are neither.
+ */
+function PhonesCard({
+  computer,
+  server,
+  orgId,
+  wifi,
+  onChanged,
+  children,
+}: {
+  computer: ComputerDevice;
+  server: string;
+  orgId: string;
+  wifi: boolean;
+  onChanged: () => Promise<void>;
+  children: ReactNode;
+}) {
+  const { t, i18n } = useTranslation();
+  const toast = useToast();
+  const near = useWifiIphones({ server, orgId, machineId: computer.id }, wifi && computer.mayManage);
+  if (computer.phones.length === 0 && near.available.length === 0) return null;
+  const pickIt = async (serial: string) => {
+    try {
+      await near.pick(serial);
+      await onChanged();
+    } catch (err) {
+      toast(errorText(t, err, i18n.language), "alert");
+    }
+  };
+  return (
+    <PrefCard>
+      {children}
+      {near.available.map((p) => (
+        <PrefRow
+          key={p.serial}
+          lead={<ComputerPortrait kind="iphone" state="paused" size={48} />}
+          title={t("devices.iphone.wifi.also", { name: p.name ?? p.model })}
+          hint={hintFor(t, t("devices.iphone.wifi.use"), t("devices.iphone.wifi.hint"))}
+          end={
+            <Button
+              size="sm"
+              loading={near.using === p.serial}
+              disabled={near.using !== null}
+              onClick={() => void pickIt(p.serial)}
+            >
+              {t("devices.iphone.wifi.use")}
+            </Button>
+          }
+        />
+      ))}
+    </PrefCard>
+  );
+}
+
 /** One phone on this computer: its state, who can use it, and its one way out (Stop, Show me how). */
 function PhoneRow({
   phone,
@@ -697,6 +760,20 @@ function PhoneRow({
   ) : undefined;
   const howTo = phone.platform === "ios" ? look === "needs" || look === "preparing" : look === "needs";
 
+  // An iPhone over Wi-Fi is let go here, and comes back only if picked again.
+  const letGo = async () => {
+    setStopping(true);
+    try {
+      await siteApi(host, server).devices.forgetPhone(orgId, phone.id);
+      toast(t("devices.iphone.wifi.stopped", { name: phone.name }));
+      await onChanged();
+    } catch (err) {
+      toast(errorText(t, err, i18n.language), "alert");
+    } finally {
+      setStopping(false);
+    }
+  };
+
   const stop = async () => {
     setStopping(true);
     try {
@@ -741,6 +818,10 @@ function PhoneRow({
             }
           >
             {t("devices.showMe")}
+          </Button>
+        ) : iphoneOverWifi(phone) && computer.mayManage ? (
+          <Button size="sm" loading={stopping} onClick={() => void letGo()}>
+            {t("devices.iphone.wifi.stop")}
           </Button>
         ) : undefined
       }

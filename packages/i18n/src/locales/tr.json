@@ -725,6 +725,7 @@
         "askPersonal": "Başka bir yerde zaten ajan mı kullanıyorsun? Hepsini buraya getiririm.",
         "bring": "İsteği kopyala, {{app}} içine yapıştır ve cevabı getir. Gerisini ben hallederim.",
         "bringFiles": "Uygulamanın dışa aktardığını buraya bırak. Gerisini ben hallederim.",
+        "bringMcp": "Uygulamadaki adımları izle, ajanları buraya kendisi oluşturur. Gelişlerini takip ediyorum.",
         "found": "Ekibini buldum. Herkes burada mı, bir bak.",
         "foundPersonal": "Ajanlarını buldum. Hepsi burada mı, bir bak.",
         "ai": "Son adım. Zaten kullandığın yapay zekayı seç, ekip uyansın.",
@@ -943,18 +944,29 @@
       "title": "Ajanları zaten başka bir uygulamada mı kullanıyorsunuz?",
       "lead": "Talimatları, becerileri, rutinleri ve bellekleriyle birlikte gelirler.",
       "sourcesLabel": "Ajanlar nereden geliyor",
+      "method": {
+        "label": "Nasıl getirilsin",
+        "mcp": "MCP ile bağlan",
+        "prompt": "Yalnızca istek",
+        "file": "Dosyadan"
+      },
       "aiApp": {
-        "title": "Yapay zeka uygulamanızdan (en güvenilir)",
-        "lead": "Yapay zeka uygulamanız, içindeki her ajanı, talimatı, beceriyi ve rutini burada oluşturur.",
-        "connect": "Uygulamayı bu adrese bağlayın:",
+        "lead": "MCP, {{app}} uygulamasının bu çalışma alanına erişmesini sağlar, böylece ajanları burada kendisi oluşturur.",
+        "leadAny": "MCP, yapay zeka uygulamanızın bu çalışma alanına erişmesini sağlar, böylece ajanları burada kendisi oluşturur.",
+        "leadDots": "MCP, dot'unuzun ChatGPT'de eklediğiniz bir eklenti üzerinden bu çalışma alanına erişmesini sağlar, böylece ajanları burada kendisi oluşturur.",
         "howTo": "Uygulama uygulama nasıl bağlanır",
-        "allow": "İzin sayfasında Ajan, rutin ve beceri oluşturma ve düzenleme'yi seçin.",
-        "paste": "Sonra bu isteği uygulamaya yapıştırın:",
-        "prompt": "{{url}} adresine bağlan ve sahip olduğun her ajan, talimat, beceri ve rutin için agentes.chat'te karşılığını oluştur. Hiçbir şey tekrarlanmasın diye önce orada zaten var olanları listele.",
+        "paste": "Bu isteği uygulamaya yapıştırın:",
+        "prompt": "Az önce bağladığın agentes.chat MCP sunucusunu ({{url}}) kullanarak sahip olduklarını agentes.chat'e taşı. Önce orada zaten ne olduğunu görmek ve hiçbir şeyi çoğaltmamak için import_summary'yi çağır. Sonra sahip olduğun her ajan, talimat, beceri ve rutin için create_agent, create_skill ve create_routine ile karşılığını oluştur ve her ajanın hatırlaması gerekenleri add_memory ile kaydet.",
         "promptLabel": "Yapay zeka uygulamanız için istek",
         "copy": "İsteği kopyala",
         "copied": "Şimdi yapay zeka uygulamanıza yapıştırın.",
-        "private": "Yapay zeka uygulamanızdan: bu sunucuda kullanılamıyor, çünkü Claude ve ChatGPT gibi uygulamalar yalnızca herkese açık bir https adresine bağlanır."
+        "waiting": "Ajanların gelmesi bekleniyor…",
+        "arrived_one": "{{count}} ajan geldi",
+        "arrived_other": "{{count}} ajan geldi",
+        "stuck": "Birkaç dakika sonra hâlâ bir şey yok mu? Uygulamayı yeniden bağlayın, {{access}} seçeneğini seçin ve isteği yeniden gönderin.",
+        "private": "MCP ile bağlan bu sunucuda kullanılamıyor, çünkü internetteki uygulamalar yalnızca herkese açık bir https adresine ulaşabilir.",
+        "held": "MCP ile bağlan, çalışma alanının planı etkinleşince kullanılabilir. Şimdilik ajanları bu yolla getirin.",
+        "paused": "Bu çalışma alanı duraklatıldığı sürece MCP ile bağlan kapalı. Şimdilik ajanları bu yolla getirin."
       },
       "otherName": "Başka bir uygulama",
       "agenteschatName": "agentes.chat",
@@ -1437,7 +1449,10 @@
       "why": "Ubuntu, Debian ve benzeri sistemler için (x64). Linux fazladan bir şey sormaz:",
       "apt": ".deb dosyasını çift tıklayarak ya da terminalden kurun.",
       "aptLong": "İndirilen dosyaya çift tıklayıp Yükle'ye tıklayın ya da bunu terminale yapıştırın:",
-      "open": "agentes.chat'i uygulamalarınızdan açın."
+      "open": "agentes.chat'i uygulamalarınızdan açın.",
+      "otherTitle": "Arch, Fedora veya .deb kabul etmeyen başka bir sistem mi kullanıyorsunuz?",
+      "otherText": "AppImage'ı indirin: her dağıtımda çalışır ve kendini günceller. Ardından bunu, kaydettiğiniz klasörde terminale yapıştırın:",
+      "appImage": "AppImage'ı indir"
     },
     "page": {
       "docTitle": "Uygulamayı indirin · agentes.chat",
@@ -2407,6 +2422,7 @@
         "delete": "Bir ajanı yalnızca yöneticiler siler",
         "audience": "Onunla kimin konuşacağını yalnızca yöneticiler ve sorumlusu değiştirir",
         "channels": "Kanallarını yalnızca yöneticiler ve sorumlusu değiştirir",
+        "skill": "Bir ajanın becerilerini yalnızca yöneticiler değiştirir",
         "ai_account": "Yalnızca hesabın sahibi verebilir",
         "name": "Bir ajanın adını yalnızca yöneticiler değiştirir",
         "look": "Görünümünü yalnızca yöneticiler ve sorumlusu değiştirir",
@@ -2424,7 +2440,8 @@
       "channel": "Kanal",
       "name": "Ad",
       "look": "Görünüm",
-      "reports_to": "Rapor verdiği"
+      "reports_to": "Rapor verdiği",
+      "skill": "{{name}} becerisi"
     },
     "value": {
       "lookDefault": "Varsayılan görünüm",
@@ -2440,7 +2457,9 @@
       "deleted": "Silindi",
       "notIn": "Kanalda değil",
       "withoutMention": "Kendiliğinden",
-      "mentionOnly": "Yalnızca bahsedilince"
+      "mentionOnly": "Yalnızca bahsedilince",
+      "skillOn": "Açık",
+      "skillOff": "Kapalı"
     },
     "remove": {
       "archiveTitle_one": "{{count}} ajan arşivlensin mi?",
@@ -2683,6 +2702,17 @@
       "gemini": "Gemini planınızı bağlayın",
       "zen": "OpenCode'u bağlayın",
       "api_key": "API anahtarı ekleyin"
+    },
+    "toolOff": {
+      "text": "{{computer}} bağlı, ancak {{program}} orada kapalı. Güvenlik nedeniyle yalnızca bilgisayarın kendisinden açılabilir.",
+      "where": "{{computer}} üzerinde",
+      "one": "Saatin yanındaki agentes.chat simgesine <mark/> tıklayın",
+      "oneWindows": "Windows'ta görev çubuğundaki ^ okunun arkasında olabilir.",
+      "two": "<b>Tercihler</b>'i açın",
+      "three": "<b>Araçlar</b> altında <b>{{program}}</b> seçeneğini açın",
+      "terminal": "Bilgisayarın terminalinde çalıştırın:",
+      "here": "<b>Araçlar</b> altında <b>{{program}}</b> seçeneğini açın.",
+      "waiting": "Açmanız bekleniyor. Bu ekran kendiliğinden değişir."
     },
     "titleFor": "{{name}} için bir yapay zeka bağlayın",
     "have": {
@@ -8570,7 +8600,6 @@
     "more": "{{title}} için diğer eylemler",
     "open": "İleti dizisini aç",
     "read": "İleti dizisini oku",
-    "details": "Ayrıntıları gör",
     "pick": "{{title}} seç",
     "pickShort": "Seç",
     "unpick": "Seçimden çıkar",
@@ -8745,28 +8774,6 @@
       "blockedText_other": "{{names}} #{{channel}} kanalında değil. Bağlam yalnızca ileti dizisini okuyan herkesin zaten okuyabildiği yere gider.",
       "someone": "Biri",
       "someAgent": "Bir ajan"
-    },
-    "panel": {
-      "label": "{{title}} ayrıntıları",
-      "close": "Ayrıntıları kapat",
-      "archivedTitle": "Arşivlendi · salt okunur",
-      "archived": "Listelerin ve aramanın dışında. Yanıtlamak için arşivden çıkarın.",
-      "closedTitle": "Kapalı",
-      "closed": "{{where}} içinde tek satır olarak görünür. Biri yanıtladığında kendiliğinden yeniden açılır.",
-      "origin": "Kaynak",
-      "fromRange_one": "{{where}} içinden {{count}} mesaj",
-      "fromRange_other": "{{where}} içinden {{count}} mesaj",
-      "fromMessage": "{{where}} içinde {{name}} kişisinden mesaj",
-      "seeInChannel": "Kanalda gör",
-      "movedHint": "Kanaldan çıkarıldı, orada bir uyarı bırakıldı",
-      "peopleTitle": "Katılımcılar",
-      "people_one": "Katılımcılar · {{count}}",
-      "people_other": "Katılımcılar · {{count}}",
-      "agent": "ajan",
-      "person": "kişi",
-      "created": "Oluşturuldu",
-      "createdBy": "{{when}} · {{name}} tarafından",
-      "lives": "Bulunduğu yer"
     }
   },
   "filters": {
@@ -9162,6 +9169,10 @@
     "pickAll": "Tümü",
     "pickMissing": "En az bir beceri seçin.",
     "pickSkipped": "Yüklenemiyor. {{reason}}",
+    "pickReplaces": "Yüklü {{name}} becerisinin yerini alır",
+    "pickReplacesRemoved": "Kaldırılan {{name}} becerisinin yerini alır",
+    "forAgent_one": "{{agent}} için aç",
+    "forAgent_other": "{{agent}} için aç",
     "installedMany": "{{count}} beceri yüklendi.",
     "zipHelp": "Kökünde SKILL.md bulunan bir .zip.",
     "zipPick": ".zip seç",
@@ -13077,6 +13088,7 @@
       "targetNotFound": "O bilgisayar artık yok. Başka birini seçin.",
       "targetSame": "Ajanlar zaten o bilgisayarda.",
       "targetPaused": "O bilgisayar duraklatıldı. Başka birini seçin.",
+      "pausePast": "Gelecekte bir zaman seçin.",
       "accountMethodUnsupported": "Bu bilgisayar Claude'u henüz bu şekilde bağlayamıyor. Üzerindeki agentes.chat programını güncelleyin ya da bir API anahtarı kullanın.",
       "offline": "{{name}} şu an çevrimdışı. Geri geldiğinde tekrar deneyin.",
       "paused": "{{name}} duraklatıldı: devam ettirilene kadar üzerinde yeni bir şey başlamaz.",
@@ -13119,7 +13131,8 @@
       "ownerOrAdmin": "Bunu yalnızca ajanın sahibi veya bir yönetici yapabilir.",
       "detailsHidden": "Nasıl çalıştığını yalnızca {{agentName}} ile konuşanlar görür.",
       "extraOwnerOnly": "Planın ücretli ek kullanımını yalnızca ajanın sahibi açıp kapatabilir.",
-      "undoForbidden": "Bunu yalnızca ajanın çalıştığı kişi, sahibi veya bir yönetici geri alabilir."
+      "undoForbidden": "Bunu yalnızca ajanın çalıştığı kişi, sahibi veya bir yönetici geri alabilir.",
+      "undoSkillsAdmins": "Bir ajanın becerilerindeki değişikliği yalnızca bir yönetici geri alabilir veya yineleyebilir."
     },
     "account": {
       "notRestorable": "Bu hesap artık geri yüklenemez.",
@@ -13209,6 +13222,21 @@
     "paused": "Duraklatıldı",
     "pausedUntil": "{{time}} saatine kadar duraklatıldı",
     "pausedHint": "Bağlayan kişi tarafından bilgisayarın kendisinde duraklatıldı.",
+    "remotePause": {
+      "button": "Duraklat",
+      "menu": "{{name}} bilgisayarını duraklat",
+      "oneHour": "1 saatliğine",
+      "tomorrow": "Yarın saat 09.00'a kadar",
+      "manual": "Ben sürdürene kadar",
+      "resume": "Sürdür",
+      "byYou": "Senin tarafından duraklatıldı.",
+      "byYouUntil": "Senin tarafından {{time}} saatine kadar duraklatıldı.",
+      "byName": "{{name}} tarafından duraklatıldı.",
+      "byNameUntil": "{{name}} tarafından {{time}} saatine kadar duraklatıldı.",
+      "outdated": "Buradan duraklatmak için bu bilgisayardaki agentes.chat uygulamasını güncelle.",
+      "paused": "{{name}} duraklatıldı",
+      "resumed": "{{name}} yeniden çalışıyor"
+    },
     "seenNow": "şu an bağlı",
     "seen": "son görülme {{when}}",
     "neverSeen": "henüz bağlanmadı",
@@ -13525,6 +13553,10 @@
       "no_driverLinux": "Linux bu telefonu açamıyor",
       "os_too_old": "Bu sistem araçlar için çok eski",
       "adb_offline": "Telefon yanıt vermiyor",
+      "wifi_away": "iPhone, Mac'in Wi-Fi ağında değil",
+      "wifi_asleep": "iPhone Wi-Fi üzerinden yanıt vermedi",
+      "tunnel_down": "iPhone ile Wi-Fi bağlantısı koptu",
+      "wifi_untrusted": "iPhone bu Mac'e güvenmiyor",
       "other": "Cihazda bir şey yapılması gerekiyor",
       "iosTooOld": "iOS {{version}} kullanıyor, ajanlar iOS 17 veya daha yenisini gerektirir"
     },
@@ -13549,6 +13581,10 @@
       "no_driverLinux": "Bu telefon için udev kuralları ekleyin",
       "os_too_old": "Telefonu güncelleyin",
       "adb_offline": "Yeniden takın",
+      "wifi_away": "Mac'in Wi-Fi ağına katılın veya kabloyla bağlayın",
+      "wifi_asleep": "iPhone'u uyandırıp kilidini açın",
+      "tunnel_down": "Mac'in yakınında tutun veya kabloyla bağlayın",
+      "wifi_untrusted": "Bir kez kabloyla bağlayıp Güven'e dokunun",
       "other": "Neye ihtiyacı olduğuna bakın"
     },
     "facts": {
@@ -13616,6 +13652,8 @@
       "openApp": "Uygulamayı aç",
       "server": "Bir sunucu ya da VPS",
       "serverLine": "Terminaline yapıştırılacak tek satır",
+      "httpLine": "Terminaline yapıştırılacak tek satır. Uygulama, https adresinde tek tıkla bağlar.",
+      "httpHow": "Nasıl",
       "other": "Başka bir bilgisayar",
       "otherLine": "Uygulamayı ona yükleyin",
       "android": "Android telefon",
@@ -13824,6 +13862,22 @@
         "helper": "{{mac}} test yardımcısını oluşturup iPhone'da başlatır, ilk seferde bu birkaç dakika sürer. iPhone'un kilidini açık ve takılı tutun."
       },
       "ready": "{{name}} ajanlar için hazır.",
+      "wifi": {
+        "list": "{{mac}} Wi-Fi ağındaki iPhone'lar",
+        "also": "Bu Mac'in Wi-Fi ağında da var: {{name}}",
+        "use": "Wi-Fi üzerinden kullan",
+        "hint": "Burada yalnızca bu Mac'e daha önce kabloyla güvenmiş bir iPhone görünür. Mac ona Apple'ın kendi şifreli bağlantısıyla, Xcode'un kullandığı bağlantıyla ulaşır.",
+        "stop": "Wi-Fi üzerinden kullanmayı bırak",
+        "stopTitle": "{{name}} Wi-Fi üzerinden kullanılmasın mı?",
+        "stopText": "Ajanlar artık ona ulaşamaz. Kullanmak için Mac'inde yeniden seçin.",
+        "stopped": "{{name}} artık Wi-Fi üzerinden kullanılmıyor."
+      },
+      "wifiState": {
+        "wifi_away": "{{name}} şu an Mac'in Wi-Fi ağında değil. iPhone'u aynı ağa bağlayın veya kabloyla bağlayın.",
+        "wifi_asleep": "{{name}} Wi-Fi üzerinden yanıt vermedi. Uyandırıp kilidini açın ve Mac'in yakınında tutun.",
+        "tunnel_down": "{{name}} ile Wi-Fi bağlantısı koptu. Kilidi açık ve Mac'in yakınında tutun veya kabloyla bağlayın.",
+        "wifi_untrusted": "{{name}} bu Mac'e güvenmiyor. Bir kez kabloyla bağlayın, Güven'e dokunun ve parolasını girin."
+      },
       "path": {
         "settings": "Ayarlar",
         "privacy": "Gizlilik ve Güvenlik",
@@ -14159,9 +14213,13 @@
         "orFile": "Veya <code>{{file}}</code> dosyasına yapıştırın:",
         "pasteConfig": "Yapıştırın:",
         "mode": "Sohbette {{mode}} moduna geçin.",
+        "sendInChat": "Botunuzla sohbette şunu gönderin:",
+        "reload": "Sonra sohbete <code>{{command}}</code> yazın.",
         "loginRun": "Giriş yapmak için <code>{{command}}</code> komutunu çalıştırın.",
         "loginType": "Giriş yapmak için uygulamada <code>{{command}}</code> yazın.",
         "signIn": "Açılan sayfada agentes.chat hesabınızla giriş yapın.",
+        "signInManage": "Açılan sayfada agentes.chat hesabınızla giriş yapın ve {{access}} seçeneğini seçin.",
+        "mention": "Sohbette <code>@</code> yazın ve <code>{{name}}</code> seçeneğini seçin.",
         "signInFirst": "Uygulama, ilk kullandığınızda giriş yapmanızı ister.",
         "token": "Kişisel bir token oluşturup {{placeholder}} yerine koyun.",
         "install": "{{app}} uygulamasına ekle"
@@ -15636,6 +15694,7 @@
       "agent_proposal": "Yeni bir ajan önerdi: {{name}}",
       "team_proposal": "Bir ekip önerdi: {{names}}",
       "settings_proposal": "{{names}} için bir değişiklik önerdi",
+      "settings_request": "Kendi ayarlarında bir değişiklik istiyor",
       "approval_request": "Onay isteği: {{title}}",
       "secret_request": "{{agent}} bir anahtar istedi: {{name}}",
       "secret_requestAnon": "Bir anahtar istendi: {{name}}",

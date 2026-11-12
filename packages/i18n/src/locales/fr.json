@@ -735,6 +735,7 @@
         "askPersonal": "Vous utilisez déjà des agents ailleurs ? Je les apporte tous ici.",
         "bring": "Copiez la demande, collez-la dans {{app}} et rapportez la réponse. Je m'occupe du reste.",
         "bringFiles": "Déposez ici ce que l'app a exporté. Je m'occupe du reste.",
+        "bringMcp": "Suivez les étapes dans l'app et elle crée elle-même les agents ici. Je guette leur arrivée.",
         "found": "J'ai trouvé votre équipe. Vérifiez que tout le monde est là.",
         "foundPersonal": "J'ai trouvé vos agents. Vérifiez qu'ils sont tous là.",
         "ai": "Dernière étape. Choisissez l'IA que vous utilisez déjà et l'équipe se réveille.",
@@ -961,18 +962,30 @@
       "title": "Vous utilisez déjà des agents dans une autre app ?",
       "lead": "Ils arrivent avec leurs instructions, compétences, routines et mémoire.",
       "sourcesLabel": "D'où viennent les agents",
+      "method": {
+        "label": "Comment les importer",
+        "mcp": "Connecter avec MCP",
+        "prompt": "Demande seule",
+        "file": "Depuis un fichier"
+      },
       "aiApp": {
-        "title": "Depuis votre app d'IA (le plus fiable)",
-        "lead": "Votre app d'IA crée ici chaque agent, instruction, compétence et routine que vous y avez.",
-        "connect": "Connectez l'app à cette adresse :",
+        "lead": "MCP permet à {{app}} d'accéder à cet espace de travail, pour qu'il y crée les agents tout seul.",
+        "leadAny": "MCP permet à votre app d'IA d'accéder à cet espace de travail, pour qu'elle y crée les agents toute seule.",
+        "leadDots": "MCP permet à votre dot d'accéder à cet espace de travail par un plugin que vous ajoutez dans ChatGPT, pour qu'il y crée les agents tout seul.",
         "howTo": "Comment se connecter, app par app",
-        "allow": "Sur la page d'autorisation, choisissez Créer et modifier des agents, des routines et des compétences.",
-        "paste": "Puis collez cette demande dans l'app :",
-        "prompt": "Connecte-toi à {{url}} et, pour chaque agent, instruction, compétence et routine que tu as, crée l'équivalent dans agentes.chat. Liste d'abord ce qui existe déjà là-bas pour ne rien dupliquer.",
+        "paste": "Collez cette demande dans l'app :",
+        "prompt": "Utilise le serveur MCP d'agentes.chat que tu viens de connecter ({{url}}) pour transférer ce que tu as vers agentes.chat. Appelle d'abord import_summary pour voir ce qui existe déjà, afin de ne rien dupliquer. Ensuite, pour chaque agent, instruction, compétence et routine que tu as, crée l'équivalent avec create_agent, create_skill et create_routine, et enregistre ce que chaque agent doit retenir avec add_memory.",
         "promptLabel": "Demande pour votre app d'IA",
         "copy": "Copier la demande",
         "copied": "Collez-la maintenant dans votre app d'IA.",
-        "private": "Depuis votre app d'IA : indisponible sur ce serveur, car les apps comme Claude et ChatGPT ne se connectent qu'à une adresse https publique."
+        "waiting": "En attente de l'arrivée des agents…",
+        "arrived_one": "{{count}} agent est arrivé",
+        "arrived_many": "{{count}} agents sont arrivés",
+        "arrived_other": "{{count}} agents sont arrivés",
+        "stuck": "Rien après quelques minutes ? Connectez l'app à nouveau, choisissez {{access}}, puis renvoyez la demande.",
+        "private": "Connecter avec MCP n'est pas disponible sur ce serveur, car les apps sur Internet n'atteignent qu'une adresse https publique.",
+        "held": "Connecter avec MCP fonctionnera dès que l'abonnement de l'espace de travail sera actif. Pour l'instant, importez les agents par ici.",
+        "paused": "Connecter avec MCP est désactivé tant que cet espace de travail est en pause. Pour l'instant, importez les agents par ici."
       },
       "otherName": "Une autre app",
       "agenteschatName": "agentes.chat",
@@ -1478,7 +1491,10 @@
       "why": "Pour Ubuntu, Debian et les systèmes similaires (x64). Linux ne demande rien de plus :",
       "apt": "Installez le .deb d'un double-clic, ou depuis le terminal.",
       "aptLong": "Double-cliquez sur le fichier téléchargé puis sur Installer, ou collez ceci dans le terminal :",
-      "open": "Ouvrez agentes.chat depuis vos applications."
+      "open": "Ouvrez agentes.chat depuis vos applications.",
+      "otherTitle": "Vous utilisez Arch, Fedora ou un autre système qui n'accepte pas les .deb ?",
+      "otherText": "Téléchargez l'AppImage : elle fonctionne sur toutes les distributions et se met à jour toute seule. Collez ensuite ceci dans le terminal, dans le dossier où vous l'avez enregistrée :",
+      "appImage": "Télécharger l'AppImage"
     },
     "page": {
       "docTitle": "Télécharger l'app · agentes.chat",
@@ -2497,6 +2513,7 @@
         "delete": "Seuls les admins suppriment un agent",
         "audience": "Seuls les admins et son responsable changent qui lui parle",
         "channels": "Seuls les admins et son responsable changent ses canaux",
+        "skill": "Seuls les admins changent les compétences d’un agent",
         "ai_account": "Seul le propriétaire du compte l’attribue",
         "name": "Seuls les admins renomment un agent",
         "look": "Seuls les admins et son responsable changent son apparence",
@@ -2514,7 +2531,8 @@
       "channel": "Canal",
       "name": "Nom",
       "look": "Apparence",
-      "reports_to": "Rend compte à"
+      "reports_to": "Rend compte à",
+      "skill": "Compétence {{name}}"
     },
     "value": {
       "lookDefault": "L'apparence par défaut",
@@ -2530,7 +2548,9 @@
       "deleted": "Supprimé",
       "notIn": "Pas dans le canal",
       "withoutMention": "De sa propre initiative",
-      "mentionOnly": "Seulement quand on le mentionne"
+      "mentionOnly": "Seulement quand on le mentionne",
+      "skillOn": "Activée",
+      "skillOff": "Désactivée"
     },
     "remove": {
       "archiveTitle_one": "Archiver {{count}} agent ?",
@@ -2786,6 +2806,17 @@
       "gemini": "Connecter votre abonnement Gemini",
       "zen": "Connecter OpenCode",
       "api_key": "Ajouter une clé API"
+    },
+    "toolOff": {
+      "text": "{{computer}} est connecté, mais {{program}} y est désactivé. Par sécurité, il ne s'active que sur l'ordinateur lui-même.",
+      "where": "Sur {{computer}}",
+      "one": "Cliquez sur l'icône agentes.chat <mark/> près de l'horloge",
+      "oneWindows": "Sous Windows, elle peut se trouver derrière la flèche ^ de la barre des tâches.",
+      "two": "Ouvrez <b>Préférences</b>",
+      "three": "Dans <b>Outils</b>, activez <b>{{program}}</b>",
+      "terminal": "Dans le terminal de l'ordinateur, lancez :",
+      "here": "Activez <b>{{program}}</b> dans <b>Outils</b>.",
+      "waiting": "En attente de l'activation. Cet écran change tout seul."
     },
     "titleFor": "Connecter une IA pour {{name}}",
     "titleFor_female": "Connecter une IA pour {{name}}",
@@ -8922,7 +8953,6 @@
     "more": "Plus d'actions pour {{title}}",
     "open": "Ouvrir le fil",
     "read": "Lire le fil",
-    "details": "Voir les détails",
     "pick": "Sélectionner {{title}}",
     "pickShort": "Sélectionner",
     "unpick": "Retirer de la sélection",
@@ -9118,30 +9148,6 @@
       "blockedText_other": "{{names}} ne sont pas dans #{{channel}}. Le contexte ne va que là où tous ceux qui lisent le fil pouvaient déjà lire.",
       "someone": "Quelqu'un",
       "someAgent": "Un agent"
-    },
-    "panel": {
-      "label": "Détails de {{title}}",
-      "close": "Fermer les détails",
-      "archivedTitle": "Archivé · lecture seule",
-      "archived": "Hors des listes et de la recherche. Désarchivez pour répondre.",
-      "closedTitle": "Fermé",
-      "closed": "Dans {{where}}, c'est une ligne. Il se rouvre tout seul quand quelqu'un répond.",
-      "origin": "Origine",
-      "fromRange_one": "{{count}} message de {{where}}",
-      "fromRange_many": "{{count}} messages de {{where}}",
-      "fromRange_other": "{{count}} messages de {{where}}",
-      "fromMessage": "Message de {{name}} dans {{where}}",
-      "seeInChannel": "Voir dans le canal",
-      "movedHint": "Sorti du canal, avec un avis laissé sur place",
-      "peopleTitle": "Participants",
-      "people_one": "Participants · {{count}}",
-      "people_many": "Participants · {{count}}",
-      "people_other": "Participants · {{count}}",
-      "agent": "agent",
-      "person": "personne",
-      "created": "Créé",
-      "createdBy": "{{when}} · par {{name}}",
-      "lives": "Se trouve dans"
     }
   },
   "filters": {
@@ -9551,6 +9557,11 @@
     "pickAll": "Toutes",
     "pickMissing": "Choisissez au moins une compétence.",
     "pickSkipped": "Installation impossible. {{reason}}",
+    "pickReplaces": "Remplace la compétence {{name}} déjà installée",
+    "pickReplacesRemoved": "Remplace la compétence {{name}} supprimée",
+    "forAgent_one": "L’activer pour {{agent}}",
+    "forAgent_many": "Les activer pour {{agent}}",
+    "forAgent_other": "Les activer pour {{agent}}",
     "installedMany": "{{count}} compétences installées.",
     "zipHelp": "Un .zip avec SKILL.md à la racine.",
     "zipPick": "Choisir un .zip",
@@ -13595,6 +13606,7 @@
       "targetNotFound": "Cet ordinateur n'existe plus. Choisissez-en un autre.",
       "targetSame": "Les agents sont déjà sur cet ordinateur.",
       "targetPaused": "Cet ordinateur est en pause. Choisissez-en un autre.",
+      "pausePast": "Choisissez une heure dans le futur.",
       "accountMethodUnsupported": "Cet ordinateur ne peut pas encore connecter Claude de cette façon. Mettez à jour le programme agentes.chat dessus ou utilisez une clé API.",
       "offline": "{{name}} est hors ligne pour le moment. Réessayez quand il sera de retour.",
       "paused": "{{name}} est en pause : rien de nouveau n'y démarre tant qu'il n'a pas repris.",
@@ -13638,7 +13650,8 @@
       "ownerOrAdmin": "Seuls le responsable de l'agent ou un admin peuvent faire cela.",
       "detailsHidden": "Seules les personnes qui parlent à {{agentName}} voient comment cela fonctionne.",
       "extraOwnerOnly": "Seul le responsable de l'agent active ou désactive l'usage supplémentaire payant de l'abonnement.",
-      "undoForbidden": "Seuls la personne pour qui l'agent a travaillé, son responsable ou un admin peuvent annuler cela."
+      "undoForbidden": "Seuls la personne pour qui l'agent a travaillé, son responsable ou un admin peuvent annuler cela.",
+      "undoSkillsAdmins": "Seul un admin peut annuler ou rétablir une modification des compétences d’un agent."
     },
     "account": {
       "notRestorable": "Ce compte ne peut plus être restauré.",
@@ -13728,6 +13741,21 @@
     "paused": "En pause",
     "pausedUntil": "En pause jusqu'à {{time}}",
     "pausedHint": "Mis en pause sur l'ordinateur lui-même par la personne qui l'a connecté.",
+    "remotePause": {
+      "button": "Mettre en pause",
+      "menu": "Mettre {{name}} en pause",
+      "oneHour": "Pendant 1 heure",
+      "tomorrow": "Jusqu'à demain 9 h",
+      "manual": "Jusqu'à ce que je reprenne",
+      "resume": "Reprendre",
+      "byYou": "Mis en pause par toi.",
+      "byYouUntil": "Mis en pause par toi jusqu'à {{time}}.",
+      "byName": "Mis en pause par {{name}}.",
+      "byNameUntil": "Mis en pause par {{name}} jusqu'à {{time}}.",
+      "outdated": "Mets à jour l'app agentes.chat sur cet ordinateur pour le mettre en pause d'ici.",
+      "paused": "{{name}} est en pause",
+      "resumed": "{{name}} reprend le travail"
+    },
     "seenNow": "connecté en ce moment",
     "seen": "vu {{when}}",
     "neverSeen": "pas encore connecté",
@@ -14046,6 +14074,10 @@
       "no_driverLinux": "Linux ne peut pas ouvrir ce téléphone",
       "os_too_old": "Ce système est trop ancien pour les outils",
       "adb_offline": "Le téléphone ne répond pas",
+      "wifi_away": "L'iPhone n'est pas sur le Wi-Fi du Mac",
+      "wifi_asleep": "L'iPhone n'a pas répondu en Wi-Fi",
+      "tunnel_down": "La liaison Wi-Fi avec l'iPhone a été coupée",
+      "wifi_untrusted": "L'iPhone ne fait pas confiance à ce Mac",
       "other": "Il faut faire quelque chose sur l'appareil",
       "iosTooOld": "Il est sous iOS {{version}}, les agents ont besoin d'iOS 17 ou plus récent"
     },
@@ -14070,6 +14102,10 @@
       "no_driverLinux": "Ajoutez des règles udev pour ce téléphone",
       "os_too_old": "Mettez le téléphone à jour",
       "adb_offline": "Rebranchez-le",
+      "wifi_away": "Rejoignez le Wi-Fi du Mac ou branchez-le",
+      "wifi_asleep": "Réveillez et déverrouillez l'iPhone",
+      "tunnel_down": "Gardez-le près du Mac ou branchez-le",
+      "wifi_untrusted": "Branchez-le une fois et touchez Se fier",
       "other": "Voir ce qu'il faut faire"
     },
     "facts": {
@@ -14139,6 +14175,8 @@
       "openApp": "Ouvrir l'app",
       "server": "Un serveur ou un VPS",
       "serverLine": "Une ligne à coller dans son terminal",
+      "httpLine": "Une ligne à coller dans son terminal. L'app le connecte en un clic sur une adresse https.",
+      "httpHow": "Comment",
       "other": "Un autre ordinateur",
       "otherLine": "Installez l'app dessus",
       "android": "Téléphone Android",
@@ -14347,6 +14385,22 @@
         "helper": "{{mac}} crée l'app de test et la lance sur l'iPhone, ce qui prend quelques minutes la première fois. Gardez l'iPhone déverrouillé et branché."
       },
       "ready": "{{name}} est prêt pour les agents.",
+      "wifi": {
+        "list": "iPhone sur le Wi-Fi de {{mac}}",
+        "also": "Aussi sur le Wi-Fi de ce Mac : {{name}}",
+        "use": "Utiliser en Wi-Fi",
+        "hint": "Seul un iPhone qui a déjà fait confiance à ce Mac par câble apparaît ici. Le Mac le joint par la liaison chiffrée d'Apple, celle qu'utilise Xcode.",
+        "stop": "Ne plus utiliser en Wi-Fi",
+        "stopTitle": "Ne plus utiliser {{name}} en Wi-Fi ?",
+        "stopText": "Les agents ne peuvent plus l'atteindre. Choisissez-le à nouveau sur son Mac pour l'utiliser.",
+        "stopped": "{{name}} n'est plus utilisé en Wi-Fi."
+      },
+      "wifiState": {
+        "wifi_away": "{{name}} n'est pas sur le Wi-Fi du Mac pour l'instant. Rejoignez le même réseau sur l'iPhone ou branchez-le.",
+        "wifi_asleep": "{{name}} n'a pas répondu en Wi-Fi. Réveillez-le, déverrouillez-le et gardez-le près du Mac.",
+        "tunnel_down": "La liaison Wi-Fi avec {{name}} a été coupée. Gardez-le déverrouillé et près du Mac, ou branchez-le.",
+        "wifi_untrusted": "{{name}} ne fait pas confiance à ce Mac. Branchez-le une fois, touchez Se fier et saisissez son code."
+      },
       "path": {
         "settings": "Réglages",
         "privacy": "Confidentialité et sécurité",
@@ -14696,9 +14750,13 @@
         "orFile": "Ou collez dans <code>{{file}}</code> :",
         "pasteConfig": "Collez :",
         "mode": "Dans le chat, passez en mode {{mode}}.",
+        "sendInChat": "Dans la discussion avec votre bot, envoyez :",
+        "reload": "Puis tapez <code>{{command}}</code> dans la discussion.",
         "loginRun": "Pour vous connecter, exécutez <code>{{command}}</code>.",
         "loginType": "Pour vous connecter, tapez <code>{{command}}</code> dans l'app.",
         "signIn": "Connectez-vous avec votre compte agentes.chat sur la page qui s'ouvre.",
+        "signInManage": "Connectez-vous avec votre compte agentes.chat sur la page qui s'ouvre, et choisissez {{access}}.",
+        "mention": "Dans la discussion, tapez <code>@</code> et choisissez <code>{{name}}</code>.",
         "signInFirst": "L'app vous demande de vous connecter la première fois que vous l'utilisez.",
         "token": "Créez un jeton personnel et mettez-le à la place de {{placeholder}}.",
         "install": "Ajouter à {{app}}"
@@ -16210,6 +16268,7 @@
       "agent_proposal": "A proposé un nouvel agent : {{name}}",
       "team_proposal": "A proposé une équipe : {{names}}",
       "settings_proposal": "A proposé un changement pour {{names}}",
+      "settings_request": "Demande une modification de ses propres réglages",
       "approval_request": "Demande d'approbation : {{title}}",
       "secret_request": "{{agent}} a demandé une clé : {{name}}",
       "secret_requestAnon": "A demandé une clé : {{name}}",

@@ -1127,6 +1127,30 @@
   "tools.codexDesc": {
     "value": "Writes and changes code in the allowed folders, with your ChatGPT account."
   },
+  "tools.cursorName": {
+    "value": "Cursor"
+  },
+  "tools.cursorDesc": {
+    "value": "Writes and changes code in the allowed folders, with your Cursor account."
+  },
+  "tools.opencodeName": {
+    "value": "OpenCode"
+  },
+  "tools.opencodeDesc": {
+    "value": "Writes and changes code in the allowed folders, with OpenCode's free models or your key."
+  },
+  "tools.grokName": {
+    "value": "Grok Build"
+  },
+  "tools.grokDesc": {
+    "value": "Writes and changes code in the allowed folders, with your Grok account."
+  },
+  "tools.antigravityName": {
+    "value": "Antigravity CLI"
+  },
+  "tools.antigravityDesc": {
+    "value": "Writes and changes code in the allowed folders, with your Gemini account."
+  },
   "tools.found": {
     "value": "Found"
   },

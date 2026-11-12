@@ -275,6 +275,21 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         ],
       },
       {
+        id: "mcp",
+        heading: "Conectar con MCP",
+        blocks: [
+          "MCP permite que tu app de IA acceda a este espacio de trabajo, así que crea los agentes aquí por sí sola, con sus instrucciones, habilidades y rutinas. Elige tu app, marca **Conectar con MCP** y luego:",
+          {
+            list: [
+              "Conecta la dirección que muestra el paso, con los pasos de la propia app. [Cómo conectar, app por app](/help/apps-de-ia#connect)",
+              "En la página de inicio de sesión, elige **Crear y editar agentes, rutinas y habilidades**.",
+              "Pega el pedido en la app. Los agentes aparecen en el paso a medida que llegan.",
+            ],
+          },
+          "Si una app no se puede conectar, elige **Desde un archivo** o **Solo el pedido**, lo que muestre el paso. [Desde otra app](/help/import#other-apps) explica el pedido.",
+        ],
+      },
+      {
         id: "other-apps",
         heading: "Desde otra app",
         blocks: [

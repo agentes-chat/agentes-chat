@@ -19,6 +19,7 @@ import { General } from "../src/windows/prefs/General";
 import { Servers } from "../src/windows/prefs/Servers";
 import { Tools } from "../src/windows/prefs/Tools";
 import { Updates } from "../src/windows/prefs/Updates";
+import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -61,11 +62,6 @@ async function pane(
     stop();
     for (const runner of host.runners.values()) runner.stop();
   }
-}
-
-async function until(ready: () => unknown) {
-  for (let i = 0; i < 150 && !ready(); i++) await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-  expect(Boolean(ready())).toBe(true);
 }
 
 /** What an element is described by, each description in order (a hint's text is in the page while it's closed). */
@@ -226,6 +222,26 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
             line: null,
           },
           {
+            title: "Cursor",
+            hint: "Writes and changes code in the allowed folders, with your Cursor account.",
+            line: null,
+          },
+          {
+            title: "OpenCode",
+            hint: "Writes and changes code in the allowed folders, with OpenCode's free models or your key.",
+            line: null,
+          },
+          {
+            title: "Grok Build",
+            hint: "Writes and changes code in the allowed folders, with your Grok account.",
+            line: null,
+          },
+          {
+            title: "Antigravity CLI",
+            hint: "Writes and changes code in the allowed folders, with your Gemini account.",
+            line: null,
+          },
+          {
             title: "Commands",
             hint: "Tests, builds and other Terminal commands. Each one shows in Activity.",
             line: null,
@@ -256,6 +272,24 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
         expect(el.querySelector(".dk-phead .dk-lead")?.textContent).toBe(
           "What agents of every workspace can run on this Mac.",
         );
+      },
+    ));
+
+  test("Tools: every coding program has a switch of its own, on or off whether or not it is installed", () =>
+    pane(
+      "selfhost",
+      <Tools />,
+      // The switches are there before the computer's access is: Claude Code's turns on once it arrives.
+      (el) => el.querySelector('#tool-claude[aria-checked="true"]'),
+      async (el) => {
+        const state = (id: string) => el.querySelector(`#tool-${id}`)?.getAttribute("aria-checked");
+        const programs = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"];
+        // One with no switch stored follows Codex's, off here; none of the four is found here.
+        expect(programs.map(state)).toEqual(["true", "false", "false", "false", "false", "false"]);
+        expect(programs.every((id) => !(el.querySelector(`#tool-${id}`) as HTMLButtonElement).disabled)).toBe(true);
+        await act(async () => (el.querySelector("#tool-opencode") as HTMLElement).click());
+        await until(() => state("opencode") === "true");
+        expect(programs.map(state)).toEqual(["true", "false", "false", "true", "false", "false"]);
       },
     ));
 

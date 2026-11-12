@@ -802,7 +802,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
   });
 
-  test("a plan whose tool is off on its computer: the app's Preferences on a Mac, the command too on Linux", async () => {
+  test("a plan whose tool is off on its computer: what it means, then three plain steps, or the command on Linux", async () => {
     const reason = async (os: string, name: string) => {
       cleanup();
       const options = fakeAgentBrain(ADA_ID).options.map((o) =>
@@ -815,12 +815,20 @@ describe("Conectar uma IA: one picker, plans first", () => {
       await choose("ChatGPT");
       return dialog.textContent;
     };
-    expect(await reason("linux", "Servidor")).toContain(
-      "O Codex está desligado no Servidor. Ligue lá, no app do agentes.chat ou com sudo agentes-runner tools enable codex.",
-    );
-    expect(await reason("darwin", "MacBook")).toContain(
-      "O Codex está desligado no MacBook. Ligue lá, no app do agentes.chat: Preferências → Ferramentas.",
-    );
+    const server = await reason("linux", "Servidor");
+    expect(server).toContain("O Servidor está conectado, mas o Codex está desligado nele.");
+    expect(server).toContain("No Servidor");
+    expect(server).toContain("No terminal do computador, rode:");
+    expect(server).toContain("sudo agentes-runner tools enable codex");
+    const mac = await reason("darwin", "MacBook");
+    expect(mac).toContain("O MacBook está conectado, mas o Codex está desligado nele.");
+    expect(mac).toContain("Clique no ícone do agentes.chat");
+    expect(mac).toContain("Abra Preferências");
+    expect(mac).toContain("Em Ferramentas, ligue Codex");
+    // The arrow of hidden icons is a PC's.
+    expect(mac).not.toContain("No Windows");
+    expect(mac).toContain("Esperando você ligar. Esta tela muda sozinha.");
+    expect(mac).toContain("Usar uma chave de API agora");
   });
 
   test("self-host with no computer for the agent: plans dim, the key comes first, and a plan's panel says to connect one", async () => {

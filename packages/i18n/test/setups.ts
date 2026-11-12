@@ -228,6 +228,11 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "devices.fix.device_support",
     "devices.fix.helper_missing",
     "devices.fix.helper_expired",
+    // An iPhone over Wi-Fi is reached through its Mac, on the Mac's network.
+    "devices.reason.wifi_away",
+    "devices.reason.wifi_untrusted",
+    "devices.fix.wifi_away",
+    "devices.fix.tunnel_down",
     "devices.who.followsHint",
     "devices.choose.thisMac",
     "devices.screen.needsHelper",
@@ -236,6 +241,10 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "mobile.devices.reason.device_support",
     "mobile.devices.reason.apple_account_missing",
     "mobile.devices.reason.apple_team_missing",
+    "mobile.devices.reason.wifi_away",
+    "mobile.devices.reason.wifi_asleep",
+    "mobile.devices.reason.tunnel_down",
+    "mobile.devices.iphone.wifi.",
     // The iPhone setup window opens only on a Mac.
     "desktop.iphone.checkingStall",
   ],

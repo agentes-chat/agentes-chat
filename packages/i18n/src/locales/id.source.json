@@ -1802,6 +1802,9 @@
   "onboarding.flow.lodi.bringFiles": {
     "value": "Drop here what the app exported. I'll do the rest."
   },
+  "onboarding.flow.lodi.bringMcp": {
+    "value": "Follow the steps in the app and it creates the agents here itself. I'll watch for them."
+  },
   "onboarding.flow.lodi.found": {
     "value": "Found your team. Check that everyone is here."
   },
@@ -2309,26 +2312,35 @@
   "onboarding.import.sourcesLabel": {
     "value": "Where the agents come from"
   },
-  "onboarding.import.aiApp.title": {
-    "value": "From your AI app (most reliable)"
+  "onboarding.import.method.label": {
+    "value": "How to bring them"
+  },
+  "onboarding.import.method.mcp": {
+    "value": "Connect with MCP"
+  },
+  "onboarding.import.method.prompt": {
+    "value": "Prompt only"
+  },
+  "onboarding.import.method.file": {
+    "value": "From a file"
   },
   "onboarding.import.aiApp.lead": {
-    "value": "Your AI app creates here each agent, instruction, skill and routine you have in it."
+    "value": "MCP lets {{app}} reach this workspace, so it creates the agents here itself."
   },
-  "onboarding.import.aiApp.connect": {
-    "value": "Connect the app to this address:"
+  "onboarding.import.aiApp.leadAny": {
+    "value": "MCP lets your AI app reach this workspace, so it creates the agents here itself."
+  },
+  "onboarding.import.aiApp.leadDots": {
+    "value": "MCP lets your dot reach this workspace through a plugin you add in ChatGPT, so it creates the agents here itself."
   },
   "onboarding.import.aiApp.howTo": {
     "value": "How to connect, app by app"
   },
-  "onboarding.import.aiApp.allow": {
-    "value": "On the permission page, pick Create and edit agents, routines and skills."
-  },
   "onboarding.import.aiApp.paste": {
-    "value": "Then paste this request into the app:"
+    "value": "Paste this request into the app:"
   },
   "onboarding.import.aiApp.prompt": {
-    "value": "Connect {{url}} and, for every agent, instruction, skill and routine you have, create the equivalent in agentes.chat. First list what already exists there so nothing is duplicated."
+    "value": "Use the agentes.chat MCP server you just connected ({{url}}) to move what you have to agentes.chat. First call import_summary to see what is already there, so nothing is duplicated. Then, for every agent, instruction, skill and routine you have, create the equivalent with create_agent, create_skill and create_routine, and save what each agent should remember with add_memory."
   },
   "onboarding.import.aiApp.promptLabel": {
     "value": "Request for your AI app"
@@ -2339,8 +2351,26 @@
   "onboarding.import.aiApp.copied": {
     "value": "Now paste it into your AI app."
   },
+  "onboarding.import.aiApp.waiting": {
+    "value": "Waiting for the agents to arrive…"
+  },
+  "onboarding.import.aiApp.arrived": {
+    "value": {
+      "one": "{{count}} agent arrived",
+      "other": "{{count}} agents arrived"
+    }
+  },
+  "onboarding.import.aiApp.stuck": {
+    "value": "Nothing after a few minutes? Connect the app again, pick {{access}}, then send the request again."
+  },
   "onboarding.import.aiApp.private": {
-    "value": "From your AI app: not available on this server, because apps like Claude and ChatGPT only connect to a public https address."
+    "value": "Connect with MCP isn't available on this server, because apps on the internet only reach a public https address."
+  },
+  "onboarding.import.aiApp.held": {
+    "value": "Connect with MCP works once the workspace's plan is active. Bring the agents this way for now."
+  },
+  "onboarding.import.aiApp.paused": {
+    "value": "Connect with MCP is off while this workspace is paused. Bring the agents this way for now."
   },
   "onboarding.import.otherName": {
     "value": "Another app"
@@ -3535,6 +3565,15 @@
   },
   "install.linux.open": {
     "value": "Open agentes.chat from your apps."
+  },
+  "install.linux.otherTitle": {
+    "value": "On Arch, Fedora or another system that doesn't take a .deb?"
+  },
+  "install.linux.otherText": {
+    "value": "Download the AppImage: it runs on any distribution and updates itself. Then paste this in the terminal, in the folder you saved it to:"
+  },
+  "install.linux.appImage": {
+    "value": "Download the AppImage"
   },
   "install.page.docTitle": {
     "value": "Download the app · agentes.chat"
@@ -6014,6 +6053,9 @@
   "rightHand.card.only.channels": {
     "value": "Only admins and its owner change its channels"
   },
+  "rightHand.card.only.skill": {
+    "value": "Only admins change an agent's skills"
+  },
   "rightHand.card.only.ai_account": {
     "value": "Only the account's owner gives it"
   },
@@ -6059,6 +6101,9 @@
   "rightHand.field.reports_to": {
     "value": "Reports to"
   },
+  "rightHand.field.skill": {
+    "value": "{{name}} skill"
+  },
   "rightHand.value.lookDefault": {
     "value": "The default look"
   },
@@ -6100,6 +6145,12 @@
   },
   "rightHand.value.mentionOnly": {
     "value": "Only when mentioned"
+  },
+  "rightHand.value.skillOn": {
+    "value": "On"
+  },
+  "rightHand.value.skillOff": {
+    "value": "Off"
   },
   "rightHand.remove.archiveTitle": {
     "value": {
@@ -6660,6 +6711,33 @@
   },
   "connectAi.title.api_key": {
     "value": "Add an API key"
+  },
+  "connectAi.toolOff.text": {
+    "value": "{{computer}} is connected, but {{program}} is switched off on it. For safety, it can only be turned on at the computer itself."
+  },
+  "connectAi.toolOff.where": {
+    "value": "On {{computer}}"
+  },
+  "connectAi.toolOff.one": {
+    "value": "Click the agentes.chat icon <mark/> by the clock"
+  },
+  "connectAi.toolOff.oneWindows": {
+    "value": "On Windows, it may be behind the taskbar's ^ arrow."
+  },
+  "connectAi.toolOff.two": {
+    "value": "Open <b>Preferences</b>"
+  },
+  "connectAi.toolOff.three": {
+    "value": "Under <b>Tools</b>, turn on <b>{{program}}</b>"
+  },
+  "connectAi.toolOff.terminal": {
+    "value": "In the computer's terminal, run:"
+  },
+  "connectAi.toolOff.here": {
+    "value": "Turn on <b>{{program}}</b> under <b>Tools</b>."
+  },
+  "connectAi.toolOff.waiting": {
+    "value": "Waiting for you to turn it on. This screen changes by itself."
   },
   "connectAi.titleFor": {
     "value": "Connect an AI for {{name}}"
@@ -20927,9 +21005,6 @@
   "threads.read": {
     "value": "Read the thread"
   },
-  "threads.details": {
-    "value": "See details"
-  },
   "threads.pick": {
     "value": "Select {{title}}"
   },
@@ -21364,66 +21439,6 @@
   },
   "threads.adjust.someAgent": {
     "value": "An agent"
-  },
-  "threads.panel.label": {
-    "value": "Details of {{title}}"
-  },
-  "threads.panel.close": {
-    "value": "Close details"
-  },
-  "threads.panel.archivedTitle": {
-    "value": "Archived · read only"
-  },
-  "threads.panel.archived": {
-    "value": "Out of lists and search. Unarchive to reply."
-  },
-  "threads.panel.closedTitle": {
-    "value": "Closed"
-  },
-  "threads.panel.closed": {
-    "value": "In {{where}} it is one line. It reopens by itself when someone replies."
-  },
-  "threads.panel.origin": {
-    "value": "Origin"
-  },
-  "threads.panel.fromRange": {
-    "value": {
-      "one": "{{count}} message from {{where}}",
-      "other": "{{count}} messages from {{where}}"
-    }
-  },
-  "threads.panel.fromMessage": {
-    "value": "Message from {{name}} in {{where}}"
-  },
-  "threads.panel.seeInChannel": {
-    "value": "See in the channel"
-  },
-  "threads.panel.movedHint": {
-    "value": "Taken out of the channel, with a notice left there"
-  },
-  "threads.panel.peopleTitle": {
-    "value": "Participants"
-  },
-  "threads.panel.people": {
-    "value": {
-      "one": "Participants · {{count}}",
-      "other": "Participants · {{count}}"
-    }
-  },
-  "threads.panel.agent": {
-    "value": "agent"
-  },
-  "threads.panel.person": {
-    "value": "person"
-  },
-  "threads.panel.created": {
-    "value": "Created"
-  },
-  "threads.panel.createdBy": {
-    "value": "{{when}} · by {{name}}"
-  },
-  "threads.panel.lives": {
-    "value": "Lives in"
   },
   "filters.clear": {
     "value": "Clear {{name}}"
@@ -22385,6 +22400,18 @@
   },
   "skills.pickSkipped": {
     "value": "Can't be installed. {{reason}}"
+  },
+  "skills.pickReplaces": {
+    "value": "Replaces the installed skill {{name}}"
+  },
+  "skills.pickReplacesRemoved": {
+    "value": "Replaces the removed skill {{name}}"
+  },
+  "skills.forAgent": {
+    "value": {
+      "one": "Turn it on for {{agent}}",
+      "other": "Turn them on for {{agent}}"
+    }
   },
   "skills.installedMany": {
     "value": "{{count}} skills installed."
@@ -31903,6 +31930,9 @@
   "errors.machine.targetPaused": {
     "value": "That computer is paused. Choose another one."
   },
+  "errors.machine.pausePast": {
+    "value": "Choose a time in the future."
+  },
   "errors.machine.accountMethodUnsupported": {
     "value": "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key."
   },
@@ -32001,6 +32031,9 @@
   },
   "errors.agent.undoForbidden": {
     "value": "Only the person the agent worked for, its owner or an admin can undo this."
+  },
+  "errors.agent.undoSkillsAdmins": {
+    "value": "Only an admin can undo or redo a change to an agent's skills."
   },
   "errors.account.notRestorable": {
     "value": "This account can't be restored anymore."
@@ -32211,6 +32244,45 @@
   },
   "machines.pausedHint": {
     "value": "Paused on the computer itself by whoever connected it."
+  },
+  "machines.remotePause.button": {
+    "value": "Pause"
+  },
+  "machines.remotePause.menu": {
+    "value": "Pause {{name}}"
+  },
+  "machines.remotePause.oneHour": {
+    "value": "For 1 hour"
+  },
+  "machines.remotePause.tomorrow": {
+    "value": "Until tomorrow at 9 AM"
+  },
+  "machines.remotePause.manual": {
+    "value": "Until I resume"
+  },
+  "machines.remotePause.resume": {
+    "value": "Resume"
+  },
+  "machines.remotePause.byYou": {
+    "value": "Paused by you."
+  },
+  "machines.remotePause.byYouUntil": {
+    "value": "Paused by you until {{time}}."
+  },
+  "machines.remotePause.byName": {
+    "value": "Paused by {{name}}."
+  },
+  "machines.remotePause.byNameUntil": {
+    "value": "Paused by {{name}} until {{time}}."
+  },
+  "machines.remotePause.outdated": {
+    "value": "Update the agentes.chat app on this computer to pause it from here."
+  },
+  "machines.remotePause.paused": {
+    "value": "{{name}} is paused"
+  },
+  "machines.remotePause.resumed": {
+    "value": "{{name}} is back to work"
   },
   "machines.seenNow": {
     "value": "connected now"
@@ -33039,6 +33111,18 @@
   "devices.reason.adb_offline": {
     "value": "The phone isn't answering"
   },
+  "devices.reason.wifi_away": {
+    "value": "The iPhone isn't on the Mac's Wi-Fi"
+  },
+  "devices.reason.wifi_asleep": {
+    "value": "The iPhone didn't answer over Wi-Fi"
+  },
+  "devices.reason.tunnel_down": {
+    "value": "The Wi-Fi link to the iPhone dropped"
+  },
+  "devices.reason.wifi_untrusted": {
+    "value": "The iPhone doesn't trust this Mac"
+  },
   "devices.reason.other": {
     "value": "It needs something on the device"
   },
@@ -33104,6 +33188,18 @@
   },
   "devices.fix.adb_offline": {
     "value": "Plug it in again"
+  },
+  "devices.fix.wifi_away": {
+    "value": "Join the Mac's Wi-Fi, or plug it in"
+  },
+  "devices.fix.wifi_asleep": {
+    "value": "Wake and unlock the iPhone"
+  },
+  "devices.fix.tunnel_down": {
+    "value": "Keep it near the Mac, or plug it in"
+  },
+  "devices.fix.wifi_untrusted": {
+    "value": "Plug it in once and tap Trust"
   },
   "devices.fix.other": {
     "value": "See what it needs"
@@ -33269,6 +33365,12 @@
   },
   "devices.choose.serverLine": {
     "value": "One line to paste in its terminal"
+  },
+  "devices.choose.httpLine": {
+    "value": "One line to paste in its terminal. The app connects in one click on an https address."
+  },
+  "devices.choose.httpHow": {
+    "value": "How"
   },
   "devices.choose.other": {
     "value": "Another computer"
@@ -33809,6 +33911,42 @@
   },
   "devices.iphone.ready": {
     "value": "{{name}} is ready for agents."
+  },
+  "devices.iphone.wifi.list": {
+    "value": "iPhones on the Wi-Fi of {{mac}}"
+  },
+  "devices.iphone.wifi.also": {
+    "value": "Also on this Mac's Wi-Fi: {{name}}"
+  },
+  "devices.iphone.wifi.use": {
+    "value": "Use over Wi-Fi"
+  },
+  "devices.iphone.wifi.hint": {
+    "value": "Only an iPhone that trusted this Mac over a cable shows up here. The Mac reaches it through Apple's own encrypted link, the one Xcode uses."
+  },
+  "devices.iphone.wifi.stop": {
+    "value": "Stop using over Wi-Fi"
+  },
+  "devices.iphone.wifi.stopTitle": {
+    "value": "Stop using {{name}} over Wi-Fi?"
+  },
+  "devices.iphone.wifi.stopText": {
+    "value": "Agents can't reach it any more. Pick it again on its Mac to use it."
+  },
+  "devices.iphone.wifi.stopped": {
+    "value": "{{name}} isn't used over Wi-Fi any more."
+  },
+  "devices.iphone.wifiState.wifi_away": {
+    "value": "{{name}} isn't on the Mac's Wi-Fi now. Join the same network on the iPhone, or plug it in."
+  },
+  "devices.iphone.wifiState.wifi_asleep": {
+    "value": "{{name}} didn't answer over Wi-Fi. Wake and unlock it, and keep it near the Mac."
+  },
+  "devices.iphone.wifiState.tunnel_down": {
+    "value": "The Wi-Fi link to {{name}} dropped. Keep it unlocked and near the Mac, or plug it in."
+  },
+  "devices.iphone.wifiState.wifi_untrusted": {
+    "value": "{{name}} doesn't trust this Mac. Plug it in once, tap Trust and enter its passcode."
   },
   "devices.iphone.path.settings": {
     "value": "Settings"
@@ -34602,6 +34740,12 @@
   "apps.dialog.step.mode": {
     "value": "In the chat, switch to {{mode}} mode."
   },
+  "apps.dialog.step.sendInChat": {
+    "value": "In the chat with your bot, send:"
+  },
+  "apps.dialog.step.reload": {
+    "value": "Then type <code>{{command}}</code> in the chat."
+  },
   "apps.dialog.step.loginRun": {
     "value": "To sign in, run <code>{{command}}</code>."
   },
@@ -34610,6 +34754,12 @@
   },
   "apps.dialog.step.signIn": {
     "value": "Sign in with your agentes.chat account on the page that opens."
+  },
+  "apps.dialog.step.signInManage": {
+    "value": "Sign in with your agentes.chat account on the page that opens, and pick {{access}}."
+  },
+  "apps.dialog.step.mention": {
+    "value": "In the chat, type <code>@</code> and pick <code>{{name}}</code>."
   },
   "apps.dialog.step.signInFirst": {
     "value": "The app asks you to sign in the first time you use it."
@@ -38437,6 +38587,9 @@
   },
   "chat.body.settings_proposal": {
     "value": "Proposed a change to {{names}}"
+  },
+  "chat.body.settings_request": {
+    "value": "Asks for a change to its own settings"
   },
   "chat.body.approval_request": {
     "value": "Approval request: {{title}}"

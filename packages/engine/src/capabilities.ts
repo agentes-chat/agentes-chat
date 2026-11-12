@@ -204,6 +204,11 @@ export function describeCapabilities(
         "- To install a skill: `offer_install_skill`, never your CLI's own skills folder (~/.claude/skills…). To update installed ones from their links: `update_skill_from_source`.",
       );
     }
+    if (names.has("request_settings_change")) {
+      lines.push(
+        "- A skill, a channel or another setting of your own you lack: ask with `request_settings_change`, a card a person approves. Never steps by hand, never a can't.",
+      );
+    }
     if (loaded.has("share_artifact")) {
       lines.push(
         "- A request for a file you already made (here, in a DM or in another channel): find it with `list_artifacts` and bring it with `share_artifact` instead of creating it again.",

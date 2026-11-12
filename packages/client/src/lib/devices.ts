@@ -65,6 +65,16 @@ export function statusPill(t: TFunction, s: DeviceStatus): string {
   }
 }
 
+/** Why an iPhone used over Wi-Fi can't be reached now: the guide words each in full (`devices.iphone.wifiState`). */
+export const IPHONE_WIFI_REASONS = ["wifi_away", "wifi_asleep", "tunnel_down", "wifi_untrusted"] as const;
+export type IphoneWifiReason = (typeof IPHONE_WIFI_REASONS)[number];
+export const isIphoneWifiReason = (reason: string | null | undefined): reason is IphoneWifiReason =>
+  (IPHONE_WIFI_REASONS as readonly string[]).includes(reason ?? "");
+
+/** An iPhone its Mac reaches over Wi-Fi, through CoreDevice's tunnel (picked by the Mac's owner). */
+export const iphoneOverWifi = (p: { platform: string; transport: string | null }) =>
+  p.platform === "ios" && p.transport === "wifi";
+
 /** A reason code the apps word (`devices.reason.<code>`); a code they don't know reads as a generic line. */
 const REASONS = new Set([
   "locked",
@@ -86,6 +96,7 @@ const REASONS = new Set([
   "no_driver",
   "os_too_old",
   "adb_offline",
+  ...IPHONE_WIFI_REASONS,
 ]);
 /** A reason's key. A phone with no driver reads by the host's system: Windows wants its maker's driver, Linux udev rules. */
 const reasonKey = (reason: string, os?: string | null) =>
@@ -476,6 +487,8 @@ export const PHONE_APP_IN_STORE = { android: false, ios: false } as const;
 
 /** How often a Wi-Fi pairing is asked where it stands while it runs. */
 export const WIFI_PAIR_POLL_MS = 1500;
+/** How often a Mac's iPhones on its Wi-Fi are asked while its page or the iPhone guide is open. */
+export const WIFI_IPHONES_POLL_MS = 5000;
 
 /** The computer still looks for the phone, pairs or connects it. */
 export const wifiPairLive = (p: Pick<WifiPairing, "state"> | undefined) =>
@@ -537,6 +550,10 @@ const IPHONE_REASON: Record<string, IphoneStep> = {
   apple_team_missing: "account",
   ui_not_authorized: "uiAutomation",
   os_too_old: "connected",
+  wifi_away: "connected",
+  wifi_asleep: "connected",
+  tunnel_down: "connected",
+  wifi_untrusted: "trust",
   team_limit: "helper",
   helper_untrusted: "helper",
 };

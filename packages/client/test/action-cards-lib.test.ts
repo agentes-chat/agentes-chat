@@ -6,6 +6,8 @@ import {
   actionCardKey,
   actionCardOf,
   agentProposalOf,
+  cardInstallAgent,
+  cardInstallOf,
   connectAppDone,
   draftLevels,
   draftMailLevels,
@@ -402,4 +404,17 @@ test("a card of a workspace change shows all it changes, and a card of their own
   expect(mayApplyCard(status, { userId: "u1", may: () => false })).toBe(true);
   expect(mayApplyCard(status, { userId: "u2", may: () => true })).toBe(false);
   expect(actionCardOf({ actionCard: status })).toMatchObject({ params: { self: true } });
+});
+
+test("an install turns its skill on only for the agent whose card opened it, from that card's own link", () => {
+  const link = "https://github.com/acme/skills/tree/main/excel";
+  const from = cardInstallOf(JSON.stringify({ url: link, agentId: "a-dev" }));
+  expect(from).toEqual({ url: link, agentId: "a-dev" });
+  expect(cardInstallAgent(from, ` ${link} `, "a-dev")).toBe("a-dev");
+  // A link to the screen that only names an agent, another agent, a link typed over the card's: nobody.
+  expect(cardInstallAgent(null, link, "a-dev")).toBeUndefined();
+  expect(cardInstallAgent(from, link, "a-other")).toBeUndefined();
+  expect(cardInstallAgent(from, "https://github.com/evil/skills", "a-dev")).toBeUndefined();
+  expect(cardInstallAgent(from, link, undefined)).toBeUndefined();
+  for (const raw of [null, "", "{", "[]", JSON.stringify({ url: link })]) expect(cardInstallOf(raw)).toBeNull();
 });

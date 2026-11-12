@@ -715,6 +715,7 @@
         "askPersonal": "已经在别处使用智能体了？我把它们全部搬过来。",
         "bring": "复制请求，粘贴到 {{app}}，再把回复带回来。剩下的交给我。",
         "bringFiles": "把应用导出的内容拖到这里。剩下的交给我。",
+        "bringMcp": "在应用里按步骤操作，它会自己在这里创建智能体。我会留意它们的到来。",
         "found": "找到你的团队了。看看大家是不是都在。",
         "foundPersonal": "找到你的智能体了。看看是不是都在。",
         "ai": "最后一步。选择你已经在用的 AI，团队就会醒来。",
@@ -927,18 +928,28 @@
       "title": "已经在其他应用中使用智能体了？",
       "lead": "它们会连同指令、技能、例行工作和记忆一起迁移过来。",
       "sourcesLabel": "智能体来自哪里",
+      "method": {
+        "label": "导入方式",
+        "mcp": "通过 MCP 连接",
+        "prompt": "仅请求",
+        "file": "从文件导入"
+      },
       "aiApp": {
-        "title": "从你的 AI 应用导入（最可靠）",
-        "lead": "你的 AI 应用会在这里逐一创建你在其中拥有的每个智能体、指令、技能和例行工作。",
-        "connect": "把应用连接到这个地址：",
+        "lead": "MCP 让 {{app}} 能访问本工作区，它会自己在这里创建智能体。",
+        "leadAny": "MCP 让你的 AI 应用能访问本工作区，它会自己在这里创建智能体。",
+        "leadDots": "MCP 让你的 dot 通过你在 ChatGPT 中添加的插件访问本工作区，它会自己在这里创建智能体。",
         "howTo": "逐个应用的连接方法",
-        "allow": "在授权页面上，选择“创建和编辑智能体、例行工作和技能”。",
-        "paste": "然后把这段请求粘贴到应用中：",
-        "prompt": "连接 {{url}}，为你拥有的每个智能体、指令、技能和例行工作，在 agentes.chat 中创建对应的内容。先列出那里已有的内容，以免重复。",
+        "paste": "把这段请求粘贴到应用中：",
+        "prompt": "使用你刚连接的 agentes.chat MCP 服务器（{{url}}），把你拥有的内容迁移到 agentes.chat。先调用 import_summary 查看那里已有的内容，避免重复。然后，对你拥有的每个智能体、指令、技能和例行工作，用 create_agent、create_skill 和 create_routine 创建对应的内容，并用 add_memory 保存每个智能体应记住的内容。",
         "promptLabel": "给你的 AI 应用的请求",
         "copy": "复制请求",
         "copied": "现在把它粘贴到你的 AI 应用中。",
-        "private": "从你的 AI 应用导入：此服务器不支持，因为 Claude 和 ChatGPT 等应用只能连接公开的 https 地址。"
+        "waiting": "正在等待智能体到达…",
+        "arrived_other": "已到达 {{count}} 个智能体",
+        "stuck": "几分钟后还是什么都没有？请重新连接应用，选择“{{access}}”，然后再次发送请求。",
+        "private": "此服务器无法使用“通过 MCP 连接”，因为互联网上的应用只能访问公开的 https 地址。",
+        "held": "工作区的套餐生效后，即可使用“通过 MCP 连接”。现在请先用这种方式导入智能体。",
+        "paused": "此工作区暂停期间，“通过 MCP 连接”不可用。现在请先用这种方式导入智能体。"
       },
       "otherName": "其他应用",
       "agenteschatName": "agentes.chat",
@@ -1398,7 +1409,10 @@
       "why": "适用于 Ubuntu、Debian 及类似系统（x64）。Linux 不需要额外确认：",
       "apt": "双击 .deb 文件安装，或在终端中安装。",
       "aptLong": "双击下载的文件并点击“安装”，或把这段粘贴到终端中：",
-      "open": "从你的应用中打开 agentes.chat。"
+      "open": "从你的应用中打开 agentes.chat。",
+      "otherTitle": "使用 Arch、Fedora 或其他不支持 .deb 的系统？",
+      "otherText": "下载 AppImage：它可在任何发行版上运行，并会自动更新。然后在保存它的文件夹中，将以下内容粘贴到终端：",
+      "appImage": "下载 AppImage"
     },
     "page": {
       "docTitle": "下载应用 · agentes.chat",
@@ -2328,6 +2342,7 @@
         "delete": "只有管理员能删除智能体",
         "audience": "只有管理员和负责人能更改谁能和它交谈",
         "channels": "只有管理员和负责人能更改它的频道",
+        "skill": "只有管理员能更改智能体的技能",
         "ai_account": "只有账户所有者能分配它",
         "name": "只有管理员能重命名智能体",
         "look": "只有管理员和负责人能更改它的外观",
@@ -2345,7 +2360,8 @@
       "channel": "频道",
       "name": "名称",
       "look": "外观",
-      "reports_to": "汇报对象"
+      "reports_to": "汇报对象",
+      "skill": "技能 {{name}}"
     },
     "value": {
       "lookDefault": "默认外观",
@@ -2361,7 +2377,9 @@
       "deleted": "已删除",
       "notIn": "不在频道中",
       "withoutMention": "自主回复",
-      "mentionOnly": "仅在被提及时"
+      "mentionOnly": "仅在被提及时",
+      "skillOn": "已开启",
+      "skillOff": "已关闭"
     },
     "remove": {
       "archiveTitle_other": "归档 {{count}} 个智能体？",
@@ -2591,6 +2609,17 @@
       "gemini": "连接你的 Gemini 套餐",
       "zen": "连接 OpenCode",
       "api_key": "添加 API 密钥"
+    },
+    "toolOff": {
+      "text": "{{computer}} 已连接，但其中的 {{program}} 处于关闭状态。出于安全考虑，只能在这台电脑上开启。",
+      "where": "在 {{computer}} 上",
+      "one": "点击时钟旁的 agentes.chat 图标 <mark/>",
+      "oneWindows": "在 Windows 上，它可能藏在任务栏的箭头 ^ 里。",
+      "two": "打开<b>偏好设置</b>",
+      "three": "在<b>工具</b>中开启 <b>{{program}}</b>",
+      "terminal": "在这台电脑的终端中运行：",
+      "here": "在<b>工具</b>中开启 <b>{{program}}</b>。",
+      "waiting": "正在等待你开启。此界面会自动更新。"
     },
     "titleFor": "为 {{name}} 连接 AI",
     "titleFor_female": "为 {{name}} 连接 AI",
@@ -8348,7 +8377,6 @@
     "more": "{{title}} 的更多操作",
     "open": "打开话题",
     "read": "阅读话题",
-    "details": "查看详情",
     "pick": "选择 {{title}}",
     "pickShort": "选择",
     "unpick": "取消选择",
@@ -8502,26 +8530,6 @@
       "blockedText_other": "{{names}} 不在 #{{channel}} 中。上下文只能放在所有阅读话题的人本来就能看到的地方。",
       "someone": "某人",
       "someAgent": "一个智能体"
-    },
-    "panel": {
-      "label": "{{title}} 的详情",
-      "close": "关闭详情",
-      "archivedTitle": "已归档 · 只读",
-      "archived": "不在列表和搜索中显示。取消归档后才能回复。",
-      "closedTitle": "已关闭",
-      "closed": "在{{where}}中显示为一行。有人回复时会自动重新打开。",
-      "origin": "来源",
-      "fromRange_other": "来自{{where}}的 {{count}} 条消息",
-      "fromMessage": "{{name}} 在{{where}}中的消息",
-      "seeInChannel": "在频道中查看",
-      "movedHint": "已移出频道，并在那里留下了提示",
-      "peopleTitle": "参与者",
-      "people_other": "参与者 · {{count}}",
-      "agent": "智能体",
-      "person": "成员",
-      "created": "创建时间",
-      "createdBy": "{{when}} · 由 {{name}} 创建",
-      "lives": "所在位置"
     }
   },
   "filters": {
@@ -8903,6 +8911,9 @@
     "pickAll": "全部",
     "pickMissing": "请至少选择一个技能。",
     "pickSkipped": "无法安装。{{reason}}",
+    "pickReplaces": "将替换已安装的技能 {{name}}",
+    "pickReplacesRemoved": "将替换已移除的技能 {{name}}",
+    "forAgent_other": "为 {{agent}} 开启",
     "installedMany": "已安装 {{count}} 个技能。",
     "zipHelp": "根目录中包含 SKILL.md 的 .zip 文件。",
     "zipPick": "选择 .zip",
@@ -12716,6 +12727,7 @@
       "targetNotFound": "那台电脑已不存在，请选择另一台。",
       "targetSame": "智能体已经在那台电脑上了。",
       "targetPaused": "那台电脑已暂停，请选择另一台。",
+      "pausePast": "请选择一个未来的时间。",
       "accountMethodUnsupported": "这台电脑暂时无法用这种方式连接 Claude。请更新电脑上的 agentes.chat 程序，或使用 API 密钥。",
       "offline": "{{name}} 现在离线，等它恢复后再试。",
       "paused": "{{name}} 已暂停：恢复之前不会在上面开始新的工作。",
@@ -12757,7 +12769,8 @@
       "ownerOrAdmin": "只有智能体负责人或管理员可以执行此操作。",
       "detailsHidden": "只有与 {{agentName}} 对话的人可以看到它的工作方式。",
       "extraOwnerOnly": "只有智能体负责人可以开启或关闭套餐的付费额外用量。",
-      "undoForbidden": "只有智能体为其工作的人、智能体负责人或管理员可以撤销此操作。"
+      "undoForbidden": "只有智能体为其工作的人、智能体负责人或管理员可以撤销此操作。",
+      "undoSkillsAdmins": "只有管理员能撤销或重做对智能体技能的更改。"
     },
     "account": {
       "notRestorable": "这个账号已无法恢复。",
@@ -12847,6 +12860,21 @@
     "paused": "已暂停",
     "pausedUntil": "暂停至 {{time}}",
     "pausedHint": "由连接这台电脑的人在电脑上暂停。",
+    "remotePause": {
+      "button": "暂停",
+      "menu": "暂停 {{name}}",
+      "oneHour": "1 小时",
+      "tomorrow": "到明天上午 9 点",
+      "manual": "直到我恢复",
+      "resume": "恢复",
+      "byYou": "你暂停了它。",
+      "byYouUntil": "你暂停了它，直到 {{time}}。",
+      "byName": "{{name}} 暂停了它。",
+      "byNameUntil": "{{name}} 暂停了它，直到 {{time}}。",
+      "outdated": "更新这台电脑上的 agentes.chat 应用，才能从这里暂停它。",
+      "paused": "{{name}} 已暂停",
+      "resumed": "{{name}} 已恢复工作"
+    },
     "seenNow": "当前已连接",
     "seen": "上次在线 {{when}}",
     "neverSeen": "还没有连接过",
@@ -13161,6 +13189,10 @@
       "no_driverLinux": "Linux 无法打开这台手机",
       "os_too_old": "这个系统太旧，无法使用这些工具",
       "adb_offline": "手机没有响应",
+      "wifi_away": "iPhone 不在 Mac 的 Wi-Fi 上",
+      "wifi_asleep": "iPhone 没有通过 Wi-Fi 响应",
+      "tunnel_down": "与 iPhone 的 Wi-Fi 连接断了",
+      "wifi_untrusted": "iPhone 不信任这台 Mac",
       "other": "设备上需要处理一些事",
       "iosTooOld": "它运行 iOS {{version}}，智能体需要 iOS 17 或更新版本"
     },
@@ -13185,6 +13217,10 @@
       "no_driverLinux": "为这台手机添加 udev 规则",
       "os_too_old": "更新手机系统",
       "adb_offline": "重新插上",
+      "wifi_away": "连接 Mac 的 Wi-Fi，或插上数据线",
+      "wifi_asleep": "唤醒并解锁 iPhone",
+      "tunnel_down": "放在 Mac 附近，或插上数据线",
+      "wifi_untrusted": "用数据线连接一次并点按“信任”",
       "other": "查看需要什么"
     },
     "facts": {
@@ -13250,6 +13286,8 @@
       "openApp": "打开应用",
       "server": "服务器或 VPS",
       "serverLine": "在它的终端里粘贴一行命令",
+      "httpLine": "在它的终端里粘贴一行命令。在 https 地址上，应用一键即可连接。",
+      "httpHow": "怎么做",
       "other": "另一台电脑",
       "otherLine": "在上面安装应用",
       "android": "Android 手机",
@@ -13458,6 +13496,22 @@
         "helper": "{{mac}} 会构建测试助手并在 iPhone 上启动它，第一次需要几分钟。请保持 iPhone 解锁并连接。"
       },
       "ready": "{{name}} 已可供智能体使用。",
+      "wifi": {
+        "list": "{{mac}} 的 Wi-Fi 上的 iPhone",
+        "also": "也在这台 Mac 的 Wi-Fi 上：{{name}}",
+        "use": "通过 Wi-Fi 使用",
+        "hint": "只有曾通过数据线信任过这台 Mac 的 iPhone 才会出现在这里。Mac 通过 Apple 自己的加密连接访问它，和 Xcode 用的是同一种。",
+        "stop": "停止通过 Wi-Fi 使用",
+        "stopTitle": "停止通过 Wi-Fi 使用“{{name}}”？",
+        "stopText": "智能体将无法再访问它。要使用它，请在它的 Mac 上重新选择。",
+        "stopped": "“{{name}}”不再通过 Wi-Fi 使用。"
+      },
+      "wifiState": {
+        "wifi_away": "“{{name}}”现在不在 Mac 的 Wi-Fi 上。请让 iPhone 连接同一网络，或插上数据线。",
+        "wifi_asleep": "“{{name}}”没有通过 Wi-Fi 响应。请唤醒并解锁它，并放在 Mac 附近。",
+        "tunnel_down": "与“{{name}}”的 Wi-Fi 连接断了。请保持解锁并放在 Mac 附近，或插上数据线。",
+        "wifi_untrusted": "“{{name}}”不信任这台 Mac。请用数据线连接一次，点按“信任”并输入密码。"
+      },
       "path": {
         "settings": "设置",
         "privacy": "隐私与安全性",
@@ -13779,9 +13833,13 @@
         "orFile": "或粘贴到 <code>{{file}}</code>：",
         "pasteConfig": "粘贴：",
         "mode": "在聊天中切换到 {{mode}} 模式。",
+        "sendInChat": "在与你的机器人的聊天中发送：",
+        "reload": "然后在聊天中输入 <code>{{command}}</code>。",
         "loginRun": "要登录，请运行 <code>{{command}}</code>。",
         "loginType": "要登录，请在应用中输入 <code>{{command}}</code>。",
         "signIn": "在打开的页面中用你的 agentes.chat 账号登录。",
+        "signInManage": "在打开的页面中用你的 agentes.chat 账号登录，并选择“{{access}}”。",
+        "mention": "在聊天中输入 <code>@</code>，然后选择 <code>{{name}}</code>。",
         "signInFirst": "首次使用时，应用会要求你登录。",
         "token": "创建一个个人令牌，替换 {{placeholder}}。",
         "install": "添加到 {{app}}"
@@ -15249,6 +15307,7 @@
       "agent_proposal": "提议了一个新智能体：{{name}}",
       "team_proposal": "提议了一个团队：{{names}}",
       "settings_proposal": "提议更改 {{names}}",
+      "settings_request": "请求修改自己的设置",
       "approval_request": "审批请求：{{title}}",
       "secret_request": "{{agent}} 请求了一个密钥：{{name}}",
       "secret_requestAnon": "请求了一个密钥：{{name}}",

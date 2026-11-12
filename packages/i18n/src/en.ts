@@ -760,6 +760,8 @@ export const en = {
         bring: "Copy the request, paste it in {{app}} and bring back the answer. I'll do the rest.",
         /** The same, for an app that hands back a file or a folder, dropped on the step. */
         bringFiles: "Drop here what the app exported. I'll do the rest.",
+        /** The same, while the import's "Connect with MCP" steps are on screen: the app creates the agents itself. */
+        bringMcp: "Follow the steps in the app and it creates the agents here itself. I'll watch for them.",
         found: "Found your team. Check that everyone is here.",
         foundPersonal: "Found your agents. Check that they're all here.",
         /** The AI step: picking an AI wakes the team (or, alone, Lodi). */
@@ -1027,20 +1029,38 @@ export const en = {
       title: "Already using agents in another app?",
       lead: "They come with their instructions, skills, routines and memory.",
       sourcesLabel: "Where the agents come from",
+      /** Each source's two ways in: its app connects to this server's MCP and creates the agents, or the request. */
+      method: {
+        label: "How to bring them",
+        mcp: "Connect with MCP",
+        prompt: "Prompt only",
+        file: "From a file",
+      },
       aiApp: {
-        title: "From your AI app (most reliable)",
-        lead: "Your AI app creates here each agent, instruction, skill and routine you have in it.",
-        connect: "Connect the app to this address:",
+        /** What connecting does, in a person's words. {{app}}: the source's name, as Grok Bot. */
+        lead: "MCP lets {{app}} reach this workspace, so it creates the agents here itself.",
+        leadAny: "MCP lets your AI app reach this workspace, so it creates the agents here itself.",
+        /** ChatGPT dots: a dot reaches MCP servers only through the plugins added in ChatGPT. */
+        leadDots:
+          "MCP lets your dot reach this workspace through a plugin you add in ChatGPT, so it creates the agents here itself.",
         howTo: "How to connect, app by app",
-        allow: "On the permission page, pick Create and edit agents, routines and skills.",
-        paste: "Then paste this request into the app:",
+        paste: "Paste this request into the app:",
         prompt:
-          "Connect {{url}} and, for every agent, instruction, skill and routine you have, create the equivalent in agentes.chat. First list what already exists there so nothing is duplicated.",
+          "Use the agentes.chat MCP server you just connected ({{url}}) to move what you have to agentes.chat. First call import_summary to see what is already there, so nothing is duplicated. Then, for every agent, instruction, skill and routine you have, create the equivalent with create_agent, create_skill and create_routine, and save what each agent should remember with add_memory.",
         promptLabel: "Request for your AI app",
         copy: "Copy the request",
         copied: "Now paste it into your AI app.",
+        waiting: "Waiting for the agents to arrive…",
+        arrived_one: "{{count}} agent arrived",
+        arrived_other: "{{count}} agents arrived",
+        /** Shown after a few minutes with nothing. {{access}}: the consent page's option, as it reads there. */
+        stuck: "Nothing after a few minutes? Connect the app again, pick {{access}}, then send the request again.",
         private:
-          "From your AI app: not available on this server, because apps like Claude and ChatGPT only connect to a public https address.",
+          "Connect with MCP isn't available on this server, because apps on the internet only reach a public https address.",
+        /** A workspace on a billing hold, as a new Cloud one is until its first plan: apps can't sign in to it. */
+        held: "Connect with MCP works once the workspace's plan is active. Bring the agents this way for now.",
+        /** A workspace paused for any other reason. */
+        paused: "Connect with MCP is off while this workspace is paused. Bring the agents this way for now.",
       },
       otherName: "Another app",
       agenteschatName: "agentes.chat",
@@ -1536,6 +1556,11 @@ export const en = {
       apt: "Install the .deb with a double-click, or from the terminal.",
       aptLong: "Double-click the downloaded file and click Install, or paste this in the terminal:",
       open: "Open agentes.chat from your apps.",
+      /** Under the steps: the AppImage, for a distribution without .deb packages. */
+      otherTitle: "On Arch, Fedora or another system that doesn't take a .deb?",
+      otherText:
+        "Download the AppImage: it runs on any distribution and updates itself. Then paste this in the terminal, in the folder you saved it to:",
+      appImage: "Download the AppImage",
     },
     page: {
       docTitle: "Download the app · agentes.chat",
@@ -1847,7 +1872,7 @@ export const en = {
     drive: "Drive",
     members: "Members",
     channels: "Channels",
-    /** The channels' section in a personal workspace's sidebar (ADR 0159): only once there is one to show. */
+    /** The channels' section in a personal workspace's sidebar (ADR 0159). */
     channelsPersonal: "Group conversations",
     agents: "Agents",
     directMessages: "Direct messages",
@@ -2545,6 +2570,7 @@ export const en = {
         delete: "Only admins delete an agent",
         audience: "Only admins and its owner change who talks to it",
         channels: "Only admins and its owner change its channels",
+        skill: "Only admins change an agent's skills",
         ai_account: "Only the account's owner gives it",
         name: "Only admins rename an agent",
         look: "Only admins and its owner change its look",
@@ -2563,6 +2589,7 @@ export const en = {
       name: "Name",
       look: "Look",
       reports_to: "Reports to",
+      skill: "{{name}} skill",
     },
     value: {
       lookDefault: "The default look",
@@ -2579,6 +2606,8 @@ export const en = {
       notIn: "Not in it",
       withoutMention: "On its own",
       mentionOnly: "Only when mentioned",
+      skillOn: "On",
+      skillOff: "Off",
     },
     /** One card that archives or deletes several agents (`propose_remove_agents`), each with its switch. */
     remove: {
@@ -2855,6 +2884,24 @@ export const en = {
       gemini: "Connect your Gemini plan",
       zen: "Connect OpenCode",
       api_key: "Add an API key",
+    },
+    /**
+     * A plan whose program is switched off on a computer the person connected. `program`: "Claude Code" or "Codex"
+     * (`brain.card`), as its switch is named in that computer's own settings.
+     */
+    toolOff: {
+      text: "{{computer}} is connected, but {{program}} is switched off on it. For safety, it can only be turned on at the computer itself.",
+      where: "On {{computer}}",
+      /** `<mark/>`: the app's icon, drawn. */
+      one: "Click the agentes.chat icon <mark/> by the clock",
+      oneWindows: "On Windows, it may be behind the taskbar's ^ arrow.",
+      two: "Open <b>Preferences</b>",
+      three: "Under <b>Tools</b>, turn on <b>{{program}}</b>",
+      /** On a computer that may have no app: its command follows. */
+      terminal: "In the computer's terminal, run:",
+      /** In the app on that very computer: Open Tools follows. */
+      here: "Turn on <b>{{program}}</b> under <b>Tools</b>.",
+      waiting: "Waiting for you to turn it on. This screen changes by itself.",
     },
     titleFor: "Connect an AI for {{name}}",
     /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
@@ -8826,7 +8873,6 @@ export const en = {
     more: "More actions for {{title}}",
     open: "Open thread",
     read: "Read the thread",
-    details: "See details",
     pick: "Select {{title}}",
     pickShort: "Select",
     unpick: "Remove from selection",
@@ -8998,28 +9044,6 @@ export const en = {
         "{{names}} aren't in #{{channel}}. Context only goes where everyone who reads the thread could already read.",
       someone: "Someone",
       someAgent: "An agent",
-    },
-    panel: {
-      label: "Details of {{title}}",
-      close: "Close details",
-      archivedTitle: "Archived · read only",
-      archived: "Out of lists and search. Unarchive to reply.",
-      closedTitle: "Closed",
-      closed: "In {{where}} it is one line. It reopens by itself when someone replies.",
-      origin: "Origin",
-      fromRange_one: "{{count}} message from {{where}}",
-      fromRange_other: "{{count}} messages from {{where}}",
-      fromMessage: "Message from {{name}} in {{where}}",
-      seeInChannel: "See in the channel",
-      movedHint: "Taken out of the channel, with a notice left there",
-      peopleTitle: "Participants",
-      people_one: "Participants · {{count}}",
-      people_other: "Participants · {{count}}",
-      agent: "agent",
-      person: "person",
-      created: "Created",
-      createdBy: "{{when}} · by {{name}}",
-      lives: "Lives in",
     },
   },
   filters: {
@@ -9355,6 +9379,13 @@ export const en = {
     pickAll: "All",
     pickMissing: "Pick at least one skill.",
     pickSkipped: "Can't be installed. {{reason}}",
+    /** A pick named like a skill already installed: installing it makes a new version of that one, for every agent. */
+    pickReplaces: "Replaces the installed skill {{name}}",
+    /** A pick named like a removed skill: it comes back under that name, on for none of its old agents. */
+    pickReplacesRemoved: "Replaces the removed skill {{name}}",
+    /** Opened from an agent's card (`offer_install_skill`): what installs goes on for that agent, unless unchecked. */
+    forAgent_one: "Turn it on for {{agent}}",
+    forAgent_other: "Turn them on for {{agent}}",
     installedMany: "{{count}} skills installed.",
     zipHelp: "A .zip with SKILL.md at its root.",
     zipPick: "Choose .zip",
@@ -13089,6 +13120,7 @@ export const en = {
       targetNotFound: "That computer no longer exists. Choose another one.",
       targetSame: "The agents are already on that computer.",
       targetPaused: "That computer is paused. Choose another one.",
+      pausePast: "Choose a time in the future.",
       accountMethodUnsupported:
         "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key.",
       offline: "{{name}} is offline right now. Try again once it's back.",
@@ -13136,6 +13168,8 @@ export const en = {
       detailsHidden: "Only who talks to {{agentName}} sees how it works.",
       extraOwnerOnly: "Only the agent's owner turns its plan's paid extra usage on or off.",
       undoForbidden: "Only the person the agent worked for, its owner or an admin can undo this.",
+      /** `action.skills_admins`: skills are only admins' on the agent's page, so are their Undo and Redo. */
+      undoSkillsAdmins: "Only an admin can undo or redo a change to an agent's skills.",
     },
     account: {
       notRestorable: "This account can't be restored anymore.",
@@ -13230,6 +13264,22 @@ export const en = {
     paused: "Paused",
     pausedUntil: "Paused until {{time}}",
     pausedHint: "Paused on the computer itself by whoever connected it.",
+    /** Pausing a computer from the web or phone app, for whoever connected it and admins. */
+    remotePause: {
+      button: "Pause",
+      menu: "Pause {{name}}",
+      oneHour: "For 1 hour",
+      tomorrow: "Until tomorrow at 9 AM",
+      manual: "Until I resume",
+      resume: "Resume",
+      byYou: "Paused by you.",
+      byYouUntil: "Paused by you until {{time}}.",
+      byName: "Paused by {{name}}.",
+      byNameUntil: "Paused by {{name}} until {{time}}.",
+      outdated: "Update the agentes.chat app on this computer to pause it from here.",
+      paused: "{{name}} is paused",
+      resumed: "{{name}} is back to work",
+    },
     seenNow: "connected now",
     seen: "seen {{when}}",
     neverSeen: "hasn't connected yet",
@@ -13532,6 +13582,10 @@ export const en = {
       no_driverLinux: "Linux can't open this phone",
       os_too_old: "This system is too old for the tools",
       adb_offline: "The phone isn't answering",
+      wifi_away: "The iPhone isn't on the Mac's Wi-Fi",
+      wifi_asleep: "The iPhone didn't answer over Wi-Fi",
+      tunnel_down: "The Wi-Fi link to the iPhone dropped",
+      wifi_untrusted: "The iPhone doesn't trust this Mac",
       other: "It needs something on the device",
       /** An iPhone below iOS 17. */
       iosTooOld: "It runs iOS {{version}}, agents need iOS 17 or newer",
@@ -13558,6 +13612,10 @@ export const en = {
       no_driverLinux: "Add udev rules for this phone",
       os_too_old: "Update the phone",
       adb_offline: "Plug it in again",
+      wifi_away: "Join the Mac's Wi-Fi, or plug it in",
+      wifi_asleep: "Wake and unlock the iPhone",
+      tunnel_down: "Keep it near the Mac, or plug it in",
+      wifi_untrusted: "Plug it in once and tap Trust",
       other: "See what it needs",
     },
     facts: {
@@ -13625,6 +13683,9 @@ export const en = {
       openApp: "Open the app",
       server: "A server or VPS",
       serverLine: "One line to paste in its terminal",
+      /** This computer, on a server at a plain http address: the app's one-click link needs https. */
+      httpLine: "One line to paste in its terminal. The app connects in one click on an https address.",
+      httpHow: "How",
       other: "Another computer",
       otherLine: "Install the app on it",
       android: "Android phone",
@@ -13875,6 +13936,25 @@ export const en = {
           "{{mac}} builds the test helper and starts it on the iPhone, which takes a few minutes the first time. Keep the iPhone unlocked and plugged in.",
       },
       ready: "{{name}} is ready for agents.",
+      /** iPhones on a Mac's network that already trust it (they did over a cable once), offered, never used until picked. */
+      wifi: {
+        /** A list's name for screen readers. */
+        list: "iPhones on the Wi-Fi of {{mac}}",
+        also: "Also on this Mac's Wi-Fi: {{name}}",
+        use: "Use over Wi-Fi",
+        hint: "Only an iPhone that trusted this Mac over a cable shows up here. The Mac reaches it through Apple's own encrypted link, the one Xcode uses.",
+        stop: "Stop using over Wi-Fi",
+        stopTitle: "Stop using {{name}} over Wi-Fi?",
+        stopText: "Agents can't reach it any more. Pick it again on its Mac to use it.",
+        stopped: "{{name}} isn't used over Wi-Fi any more.",
+      },
+      /** Why an iPhone used over Wi-Fi can't be reached now, and the way out, on the step that waits for it. */
+      wifiState: {
+        wifi_away: "{{name}} isn't on the Mac's Wi-Fi now. Join the same network on the iPhone, or plug it in.",
+        wifi_asleep: "{{name}} didn't answer over Wi-Fi. Wake and unlock it, and keep it near the Mac.",
+        tunnel_down: "The Wi-Fi link to {{name}} dropped. Keep it unlocked and near the Mac, or plug it in.",
+        wifi_untrusted: "{{name}} doesn't trust this Mac. Plug it in once, tap Trust and enter its passcode.",
+      },
       /** iOS's own names for these Settings screens, as the iPhone shows them in this language. */
       path: {
         settings: "Settings",
@@ -14213,9 +14293,16 @@ export const en = {
         orFile: "Or paste into <code>{{file}}</code>:",
         pasteConfig: "Paste:",
         mode: "In the chat, switch to {{mode}} mode.",
+        /** Grok Bot adds a server when asked in its chat: the message to send follows. */
+        sendInChat: "In the chat with your bot, send:",
+        reload: "Then type <code>{{command}}</code> in the chat.",
         loginRun: "To sign in, run <code>{{command}}</code>.",
         loginType: "To sign in, type <code>{{command}}</code> in the app.",
         signIn: "Sign in with your agentes.chat account on the page that opens.",
+        /** {{access}}: the consent page's option, as it reads there. */
+        signInManage: "Sign in with your agentes.chat account on the page that opens, and pick {{access}}.",
+        /** Grok Bot uses a connected server only once it is attached to the message. */
+        mention: "In the chat, type <code>@</code> and pick <code>{{name}}</code>.",
         signInFirst: "The app asks you to sign in the first time you use it.",
         /** {{placeholder}} is the spot in the config above where the token goes. */
         token: "Create a personal token and put it in place of {{placeholder}}.",
@@ -15789,6 +15876,8 @@ export const en = {
       agent_proposal: "Proposed a new agent: {{name}}",
       team_proposal: "Proposed a team: {{names}}",
       settings_proposal: "Proposed a change to {{names}}",
+      /** An agent's card asking for a change to its own settings (`request_settings_change`). */
+      settings_request: "Asks for a change to its own settings",
       approval_request: "Approval request: {{title}}",
       secret_request: "{{agent}} asked for a key: {{name}}",
       secret_requestAnon: "Asked for a key: {{name}}",

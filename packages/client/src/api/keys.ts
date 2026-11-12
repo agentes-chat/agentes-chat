@@ -133,6 +133,8 @@ export const keys = {
   machines: (orgId: string) => ["org", orgId, "machines"] as const,
   /** Devices (under `machines`: every computer event refetches them too). */
   devices: (orgId: string) => ["org", orgId, "machines", "devices"] as const,
+  /** Under `devices`: a phone picked over Wi-Fi leaves the offer when the list refetches. */
+  wifiIphones: (orgId: string, machineId: string) => ["org", orgId, "machines", "devices", "wifi", machineId] as const,
   connectLink: (orgId: string, linkId: string) => ["org", orgId, "machines", "devices", "link", linkId] as const,
   /** Under `machines`: a computer that changes refreshes what a new agent could think with. */
   brainMachines: (orgId: string) => ["org", orgId, "machines", "brains"] as const,

@@ -1,17 +1,18 @@
-import type { ComputerDevice, PhoneDevice } from "@agenteschat/client";
+import { type ComputerDevice, type PhoneDevice, useWifiIphones } from "@agenteschat/client";
 import { computerName } from "@agenteschat/client/lib/computer";
-import { iosMajor, tooOldVersion, useStalled } from "@agenteschat/client/lib/devices";
+import { iosMajor, iphoneOverWifi, tooOldVersion, useStalled } from "@agenteschat/client/lib/devices";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import * as Device from "expo-device";
 import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Button, GroupedFooter, GroupedList, GroupedRow, Icon, InkOrbit, Text, useTheme } from "@/ui";
+import { Button, GroupedFooter, GroupedList, GroupedRow, Icon, InkOrbit, Text, useTheme, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { Note, Step, StepsCard, StepText } from "../ai/parts";
 import { Gap, SettingsPage } from "../settings/parts";
-import { useMeId } from "../shared/hooks";
+import { useMeId, useOrgId } from "../shared/hooks";
 import { pickOne } from "../shared/PickerSheet";
 import { goBack } from "../shared/parts";
 import {
@@ -48,8 +49,9 @@ export function IphoneSetupScreen({ machineId }: { machineId?: string }) {
   const step = iphoneStep(phone);
   const reason = phone && phone.status.kind !== "offline" && "reason" in phone.status ? phone.status.reason : null;
   const tooOld = phone?.status.kind === "unsupported";
-  // A step that sits unchanged gets what most likely holds it.
-  const stalled = useStalled(host && !tooOld ? [host.id, step, phone?.id, reason].join(":") : null);
+  // A step that sits unchanged gets what most likely holds it, except over Wi-Fi: those lines are about the cable.
+  const overWifi = phone ? iphoneOverWifi(phone) : false;
+  const stalled = useStalled(host && !tooOld && !overWifi ? [host.id, step, phone?.id, reason].join(":") : null);
   const [plugged, setPlugged] = useState(false);
   if (host && phone && step === IPHONE_STEPS.length)
     return <IphoneDone phone={phone} host={host} hostName={hostName} />;
@@ -123,7 +125,9 @@ export function IphoneSetupScreen({ machineId }: { machineId?: string }) {
           <View style={styles.steps}>
             <StepsCard>
               <Step n={1} title={t("mobile.devices.iphone.step1", { host: hostName })} state={state(0)}>
-                {step === 0 ? (
+                {step === 0 && phone && reason ? (
+                  <Note icon="info">{reasonText(t, reason)}</Note>
+                ) : step === 0 ? (
                   <>
                     {waiting}
                     {stall("plug")}
@@ -135,11 +139,17 @@ export function IphoneSetupScreen({ machineId }: { machineId?: string }) {
                         onPress={() => setPlugged(true)}
                       />
                     ) : null}
+                    <WifiOffer host={host} hostName={hostName} />
                   </>
                 ) : null}
               </Step>
               <Step n={2} divider title={t("mobile.devices.iphone.step2")} state={state(1)}>
-                {step === 1 ? <StepText>{t("mobile.devices.iphone.step2Text")}</StepText> : null}
+                {step === 1 ? (
+                  <>
+                    {reason === "wifi_untrusted" ? <Note icon="info">{reasonText(t, reason)}</Note> : null}
+                    <StepText>{t("mobile.devices.iphone.step2Text")}</StepText>
+                  </>
+                ) : null}
               </Step>
               <Step
                 n={3}
@@ -186,6 +196,36 @@ export function IphoneSetupScreen({ machineId }: { machineId?: string }) {
         </>
       ) : null}
     </SettingsPage>
+  );
+}
+
+/**
+ * The iPhones on the Mac's Wi-Fi that already trust it (this one, if it did over a cable once), offered to who may
+ * manage the Mac: Use over Wi-Fi.
+ */
+function WifiOffer({ host, hostName }: { host: ComputerDevice; hostName: string }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const orgId = useOrgId();
+  const { available, pick } = useWifiIphones(orgId, host.id, host.mayManage && host.status.kind !== "offline");
+  if (available.length === 0) return null;
+  return (
+    <>
+      {available.map((p) => (
+        <View key={p.serial} style={styles.wifi}>
+          <StepText>{t("mobile.devices.iphone.wifi.also", { host: hostName, name: p.name ?? p.model })}</StepText>
+          <Button
+            size="sm"
+            variant="secondary"
+            label={t("mobile.devices.iphone.wifi.use")}
+            loading={pick.isPending && pick.variables === p.serial}
+            disabled={pick.isPending}
+            onPress={() => pick.mutate(p.serial, { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) })}
+          />
+        </View>
+      ))}
+      <Note icon="info">{t("mobile.devices.iphone.wifi.hint")}</Note>
+    </>
   );
 }
 
@@ -282,6 +322,7 @@ function IphoneDone({ phone, host, hostName }: { phone: PhoneDevice; host: Compu
 
 const styles = StyleSheet.create({
   block: { paddingHorizontal: 4, paddingTop: 16, gap: 12, alignItems: "flex-start" },
+  wifi: { gap: 8, alignItems: "flex-start" },
   steps: { paddingTop: 12 },
   path: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 4, rowGap: 4, marginTop: 4 },
   crumbStep: { flexDirection: "row", alignItems: "center", gap: 4 },

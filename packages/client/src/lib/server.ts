@@ -127,6 +127,9 @@ export const pairLink = (server: string, link: string) => `agenteschat://pair?${
  */
 export const appPairsWith = (server: string) => normalizeServer(server) !== null && !isLoopback(server);
 
+/** A server at a plain http address that isn't this computer: an https address would let the app connect it. */
+export const plainHttpServer = (server: string) => /^http:\/\//i.test(server.trim()) && !isLoopback(server);
+
 /**
  * The server, one-time sign-in and owner claim of a connect link; null for any other text or code, a link over
  * 2 KB, or a token or claim that isn't one. Other parameters are ignored.

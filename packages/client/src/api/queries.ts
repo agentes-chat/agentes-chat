@@ -19,7 +19,7 @@ import type { ChoiceAnswer } from "../lib/choices";
 import { newerSetup } from "../lib/computer";
 import { CONSULT_CONVERSATION_POLL_MS, CONSULT_GROUP_POLL_MS, exchangeIds } from "../lib/consult-group";
 import { forPeople } from "../lib/consultations";
-import { PHONE_LOOK_MS, WIFI_PAIR_POLL_MS, wifiPairLive } from "../lib/devices";
+import { PHONE_LOOK_MS, WIFI_IPHONES_POLL_MS, WIFI_PAIR_POLL_MS, wifiPairLive } from "../lib/devices";
 import { answerWithin, noAnswer, sendWaits } from "../lib/errors";
 import { ISSUES_VIEW_DEFAULT, type IssuesViewChange, withIssuesView } from "../lib/issues-view";
 import { LoginReadError, loginReadPasses } from "../lib/machines";
@@ -636,12 +636,13 @@ export function useRevokeInvitation(orgId: string) {
 
 // ── Agents ──────────────────────────────────────────────────────────────────
 
-export const useAgents = (orgId: string) => {
+export const useAgents = (orgId: string, enabled = true) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.agents(orgId),
     queryFn: () => api.agents.list(orgId),
     staleTime: 30_000,
+    enabled,
     ...BACK_TO_TAB,
   });
 };
@@ -4592,8 +4593,8 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
     ...(silent ? { meta: { silent: true } } : {}),
     mutationFn: (
       action:
-        | { type: "import"; input: { url: string; list?: boolean } | { zipBase64: string } }
-        | { type: "importPicked"; url: string; paths: string[] }
+        | { type: "import"; input: { url: string; list?: boolean; forAgentId?: string } | { zipBase64: string } }
+        | { type: "importPicked"; url: string; paths: string[]; forAgentId?: string }
         | { type: "create"; input: SkillInput }
         | { type: "update"; id: string; patch: SkillPatch }
         | { type: "reimport"; id: string }
@@ -4608,7 +4609,7 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
         case "import":
           return api.skills.import(orgId, action.input);
         case "importPicked":
-          return api.skills.importPicked(orgId, action.url, action.paths);
+          return api.skills.importPicked(orgId, action.url, action.paths, action.forAgentId);
         case "create":
           return api.skills.create(orgId, action.input);
         case "update":
@@ -4901,6 +4902,23 @@ export const useDesktopLatest = (target: string, arch: string, enabled = true) =
     meta: { quiet: true },
   });
 };
+
+/** Pauses a computer from the apps (`until` null: until resumed) or resumes it; the list follows at once. */
+export function useMachinePause(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ machineId, input }: { machineId: string; input: { until: string | null } | "resume" }) =>
+      api.machines.setPause(orgId, machineId, input),
+    meta: { silent: true },
+    onSuccess: (paused, { machineId }) => {
+      qc.setQueryData<Machine[]>(keys.machines(orgId), (list) =>
+        list?.map((m) => (m.id === machineId ? { ...m, paused: paused ?? { paused: false } } : m)),
+      );
+      void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
+    },
+  });
+}
 
 /** Removes a folder (for everyone or one agent) or turns a tool off; the machine follows. */
 export function useReduceMachineAccess(orgId: string) {
@@ -6491,6 +6509,32 @@ export function useLookForPhones(orgId: string, machineId: string | null, on: bo
     const id = setInterval(look, PHONE_LOOK_MS);
     return () => clearInterval(id);
   }, [api, orgId, machineId, on]);
+}
+
+/**
+ * The iPhones `machineId` (a Mac) offers over Wi-Fi, asked while `on` (its page or the iPhone guide is open, for who
+ * may manage it): one is picked with `pick`, and the devices refetch so it shows up among the Mac's phones.
+ */
+export function useWifiIphones(orgId: string, machineId: string | null, on: boolean) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const list = useQuery({
+    queryKey: keys.wifiIphones(orgId, machineId ?? ""),
+    queryFn: () => api.devices.wifiIphones(orgId, machineId ?? ""),
+    enabled: on && machineId !== null,
+    retry: false,
+    refetchInterval: WIFI_IPHONES_POLL_MS,
+    meta: { quiet: true },
+  });
+  const pick = useMutation({
+    mutationFn: (serial: string) => api.devices.pickIphoneOverWifi(orgId, machineId ?? "", serial),
+    meta: { silent: true },
+    onSuccess: (data) => {
+      qc.setQueryData(keys.wifiIphones(orgId, machineId ?? ""), data);
+      void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
+    },
+  });
+  return { available: on ? (list.data?.available ?? []) : [], pick };
 }
 
 /**

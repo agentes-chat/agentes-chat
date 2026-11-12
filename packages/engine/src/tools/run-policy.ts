@@ -103,6 +103,8 @@ const ELSEWHERE = new Set([
   "create_channel",
   "request_secret",
   "request_permission",
+  // An agent's own settings, as its permissions: never what a routine or what it read asks for.
+  "request_settings_change",
   "request_folder_access",
   "propose_event",
   // An email to whoever runs the server, in a person's name (ADR 0160 §11): only a run a person is behind sends it.

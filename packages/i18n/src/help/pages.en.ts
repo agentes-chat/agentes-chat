@@ -272,6 +272,21 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         ],
       },
       {
+        id: "mcp",
+        heading: "Connect with MCP",
+        blocks: [
+          "MCP lets your AI app reach this workspace, so it creates the agents here itself, with their instructions, skills and routines. Choose your app, pick **Connect with MCP**, then:",
+          {
+            list: [
+              "Connect the address the step shows, in that app's own steps. [How to connect, app by app](/help/apps-de-ia#connect)",
+              "On the sign-in page, pick **Create and edit agents, routines and skills**.",
+              "Paste the request into the app. The agents show up on the step as they arrive.",
+            ],
+          },
+          "When an app can't connect, choose **From a file** or **Prompt only**, whichever the step shows. [From another app](/help/import#other-apps) covers the request.",
+        ],
+      },
+      {
         id: "other-apps",
         heading: "From another app",
         blocks: [

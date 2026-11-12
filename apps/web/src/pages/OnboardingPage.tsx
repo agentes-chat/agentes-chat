@@ -83,6 +83,11 @@ import "./onboarding.css";
 const PAID_POLL_MS = 5000;
 /** On the step that connects an AI, its status is read this often: a connection made in another tab moves it on. */
 const AI_POLL_MS = 10_000;
+/**
+ * Once a team is here, the agents are read this often: an AI app creating them through MCP may still be at it after
+ * the first one moves the rail on, and this page has no socket to say so.
+ */
+const TEAM_POLL_MS = 5000;
 
 /**
  * The onboarding (ADR 0162): the blue rail with Lodi on its horizon, one step at a time, read from the workspace's own
@@ -169,6 +174,7 @@ export function OnboardingPage() {
     queryFn: () => api.agents.list(orgId ?? ""),
     enabled: orgId !== null,
     refetchOnWindowFocus: "always",
+    refetchInterval: (q) => (q.state.data?.some((a) => !isRightHand(a)) ? TEAM_POLL_MS : false),
   });
   const lodi = agents.data?.find(isRightHand);
   // In the order they were made (the server's), a template's team in its template's order: as every screen lists it.

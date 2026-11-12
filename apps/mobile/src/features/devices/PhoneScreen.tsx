@@ -1,5 +1,5 @@
 import { computerName } from "@agenteschat/client/lib/computer";
-import { personInControl } from "@agenteschat/client/lib/devices";
+import { iphoneOverWifi, personInControl } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useTranslation } from "react-i18next";
@@ -62,16 +62,25 @@ export function PhoneScreen({ phoneId }: { phoneId: string }) {
   // The guide is for the phone in hand: an iPhone's steps on an iPhone, Android's on Android.
   const guide =
     s.kind === "needs_you" && (Platform.OS === "ios") === (p.platform === "ios") && p.phoneKind === "device";
+  // An iPhone over Wi-Fi is let go, not forgotten: it comes back only if picked again.
+  const wifi = iphoneOverWifi(p);
   const askForget = () =>
     confirmAction({
-      title: t("mobile.devices.page.forgetTitle", { name: p.name }),
-      text: t("mobile.devices.page.forgetText", { host }),
-      action: t("mobile.devices.page.forget"),
+      title: wifi
+        ? t("mobile.devices.iphone.wifi.stopTitle", { name: p.name })
+        : t("mobile.devices.page.forgetTitle", { name: p.name }),
+      text: wifi ? t("mobile.devices.iphone.wifi.stopText", { host }) : t("mobile.devices.page.forgetText", { host }),
+      action: wifi ? t("mobile.devices.iphone.wifi.stop") : t("mobile.devices.page.forget"),
       cancel: t("common.cancel"),
       onConfirm: () =>
         forget.mutate(p.id, {
           onSuccess: () => {
-            toast({ title: t("mobile.devices.page.forgotten", { name: p.name }), icon: "check" });
+            toast({
+              title: wifi
+                ? t("mobile.devices.iphone.wifi.stopped", { name: p.name })
+                : t("mobile.devices.page.forgotten", { name: p.name }),
+              icon: "check",
+            });
             goBack();
           },
           onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
@@ -150,7 +159,7 @@ export function PhoneScreen({ phoneId }: { phoneId: string }) {
             {p.mayManage ? (
               <GroupedRow
                 icon="x"
-                label={t("mobile.devices.page.forget")}
+                label={wifi ? t("mobile.devices.iphone.wifi.stop") : t("mobile.devices.page.forget")}
                 danger
                 disabled={forget.isPending}
                 onPress={askForget}

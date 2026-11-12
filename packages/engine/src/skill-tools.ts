@@ -16,7 +16,7 @@ import { can, getMembership } from "./organizations";
 import { personBehindCall } from "./requester";
 import { bodyCode } from "./run-tools";
 import { type SandboxDeps, withSandbox } from "./sandbox";
-import { cardsLeft, hopOf, NOBODY_READS, whoActs } from "./setup-tools";
+import { cardsLeft, hopOf, NOBODY_READS, REQUEST_SETTINGS_TOOL, whoActs } from "./setup-tools";
 import { updateSkillFromSource } from "./skill-updates";
 import {
   agentSkillByName,
@@ -59,6 +59,29 @@ const failed = (error: unknown): ToolOutput => ({
   content: `Failed: ${error instanceof Error ? error.message : String(error)}`,
   isError: true,
 });
+
+/** How an agent asks for a skill installed here that it doesn't have on: its own settings card, never by hand. */
+const ASK_FOR_SKILL = `ask for it with ${REQUEST_SETTINGS_TOOL} (add_skills), a card a person approves.`;
+
+/** Why a skill isn't one of the agent's, with the way to get it when it is installed here. */
+async function notYours(ctx: ToolContext, name: string): Promise<ToolOutput> {
+  const [installed] = await ctx.db
+    .select({ name: schema.skills.name })
+    .from(schema.skills)
+    .where(
+      and(
+        eq(schema.skills.orgId, ctx.orgId),
+        eq(schema.skills.slug, name.trim().toLowerCase()),
+        isNull(schema.skills.deletedAt),
+      ),
+    );
+  return {
+    content: installed
+      ? `The skill ${installed.name} is installed here but not on for you: ${ASK_FOR_SKILL}`
+      : `No skill named ${name} is enabled for you.`,
+    isError: true,
+  };
+}
 
 export const LOAD_SKILL_TOOL = "load_skill";
 
@@ -143,7 +166,7 @@ export function createSkillToolSource(
       async execute(input, ctx) {
         try {
           const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.name));
-          if (!skill) return { content: `No skill named ${str(input.name)} is enabled for you.`, isError: true };
+          if (!skill) return notYours(ctx, str(input.name));
           // Use keeps an agent-made skill from being archived for disuse (ADR 0120).
           await ctx.db
             .update(schema.skills)
@@ -176,7 +199,7 @@ export function createSkillToolSource(
       async execute(input, ctx) {
         try {
           const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.name));
-          if (!skill) return { content: `No skill named ${str(input.name)} is enabled for you.`, isError: true };
+          if (!skill) return notYours(ctx, str(input.name));
           const path = str(input.path);
           if (path.endsWith("/")) {
             const prefix = path === "./" ? "" : path;
@@ -315,7 +338,7 @@ export function createSkillToolSource(
     {
       name: OFFER_INSTALL_SKILL_TOOL,
       description:
-        "Offer to install a skill for the workspace with a card in this conversation: its button opens the app's install dialog (Settings › Skills) with the GitHub link filled in, where a person who manages skills picks it and installs it, since a skill adds instructions and scripts agents run. Use it whenever someone asks to install or add a skill. Never install one into your CLI's own skills folder on your computer (~/.claude/skills, ~/.codex/skills, .agents/skills…) for the workspace: only you would have it there, nobody reviews it and it never updates.",
+        "Offer to install a skill for the workspace with a card in this conversation: its button opens the app's install dialog (Settings › Skills) with the GitHub link filled in, where a person who manages skills picks it and installs it, since a skill adds instructions and scripts agents run. Installed from the card, it goes on for you. Use it whenever someone asks to install or add a skill that isn't installed here (one that is, but not on for you: request_settings_change). Never install one into your CLI's own skills folder on your computer (~/.claude/skills, ~/.codex/skills, .agents/skills…) for the workspace: only you would have it there, nobody reviews it and it never updates.",
       scope: "skills:read",
       inputSchema: {
         type: "object",
@@ -361,8 +384,9 @@ export function createSkillToolSource(
               ),
             );
           if (installed) {
+            const on = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, installed.name);
             return {
-              content: `That link is already installed as the skill ${installed.name}. To bring it up to date, use update_skill_from_source.`,
+              content: `That link is already installed as the skill ${installed.name}, ${on ? "on for you. To bring it up to date, use update_skill_from_source." : `not on for you: ${ASK_FOR_SKILL}`}`,
               isError: true,
             };
           }
@@ -385,7 +409,7 @@ export function createSkillToolSource(
             params: { url, why },
           });
           return {
-            content: `Posted the card to install the skill: a person picks and installs it in the app's dialog.${acts === "person" ? "" : " The person who asked can't install skills: someone who manages agents here does it from the card. Say so."} Don't install it anywhere yourself, and don't say it's installed until it shows in your skills.`,
+            content: `Posted the card to install the skill: a person picks and installs it in the app's dialog.${acts === "person" ? "" : " The person who asked can't install skills: someone who manages agents here does it from the card. Say so."} Installed from the card, it goes on for you too. Don't install it anywhere yourself, and don't say it's installed until it shows in your skills.`,
             data: { actionCard: { messageId: message.id } },
           };
         } catch (error) {
