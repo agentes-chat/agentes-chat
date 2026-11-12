@@ -128,15 +128,17 @@ describe("a change proposed for several agents in the chat", () => {
     await click(within(card).getByRole("button", { name: "Aceitar para todos" }));
     await settle(4);
     expect(accepted(state)).toEqual(["p-ada", "p-atlas"]);
-    // Decided: one line takes the request card's place.
+    // Decided: the same card. What it was, its rows with how each ended, and who decided where the buttons were.
     const done = screen().getByRole("group", { name: "Proposta de mudança de Atlas para 2 agentes" });
-    // What it was and how it ended, the change and its rows when asked for.
-    expect(done.textContent).toContain("Aceita: Atlas propõe · instruções de 2 agentes");
+    expect(done.classList.contains("rq--ended")).toBe(true);
+    expect(done.querySelector(".rq__lead")?.textContent).toBe("Atlas propõe · instruções de 2 agentes");
+    expect(done.querySelector(".rq__answer-text")?.textContent).toBe("Aplicado por você");
     expect(done.querySelector(".rq-done__mark[data-done]")).not.toBeNull();
-    expect(done.querySelector(".ac-diff")).toBeNull();
-    await click(within(done).getByRole("button", { name: "Ver a mudança" }));
-    expect(done.querySelector(".ac-diff")).not.toBeNull();
     expect([...done.querySelectorAll(".proposal-row__status")].map((s) => s.textContent)).toEqual(["Aceita", "Aceita"]);
+    // Nothing left to switch or decide; the change still opens.
+    expect(within(done).queryByRole("switch")).toBeNull();
+    expect(within(done).queryByRole("button", { name: "Aceitar para todos" })).toBeNull();
+    expect(within(done).getByRole("button", { name: "Ver a mudança" })).toBeTruthy();
   });
 
   test("a row the viewer can't decide stays off and says whom it waits for; the button counts the chosen rows", async () => {

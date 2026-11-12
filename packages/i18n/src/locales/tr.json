@@ -1580,7 +1580,6 @@
       "limit": "{{name}} bugünkü sınıra ulaştı: bu sizde kalıyor",
       "undoneByYou": "Sizin tarafınızdan geri alındı",
       "undoneBy": "{{name}} tarafından geri alındı",
-      "why": "Neden?",
       "undo": "Geri al",
       "undoArchives": "Geri almak {{name}} adlı ajanı arşivler. {{until}} saatine kadar geçerli.",
       "undoSettings": "Geri almak ayarları eski haline getirir. {{until}} saatine kadar geçerli."
@@ -1660,6 +1659,7 @@
     "unshown": "Gösterilemedi",
     "more": "Daha fazla",
     "moreWhat": {
+      "waiting": "Yanıtınızı bekleyen her şey",
       "approvals": "Ajanların sizden izin istedikleri",
       "proposals": "Ajanların değiştirmeyi önerdikleri",
       "threads": "Ayrılan konuşmalar ve misyonlar",
@@ -1758,6 +1758,7 @@
     "searchWorkspace": "Çalışma alanında ara",
     "summary_one": "{{people}} üye · {{agents}} ajan",
     "summary_other": "{{people}} üye · {{agents}} ajan",
+    "waiting": "Sizi bekliyor",
     "approvals": "Onaylar",
     "proposals": "İyileştirme önerileri",
     "issues": "Görevler",
@@ -2214,7 +2215,19 @@
     "sendCorrection": "Düzeltmeyi gönder",
     "correctionSent": "Düzeltme gönderildi. {{name}} bundan öğrenecek.",
     "sending": "gönderiliyor…",
-    "notSent": "Gönderilmedi",
+    "tooLong": {
+      "text": "Mesaj {{length}} karakter, sınır ise {{max}}.",
+      "fix": "Metni dosya olarak gönder.",
+      "asFile": "Dosya olarak gönder",
+      "fileName": "mesaj.txt"
+    },
+    "notSentWhy": "Gönderilmedi. {{why}}",
+    "notSentUnknown": "Bir şeyler ters gitti.",
+    "editSend": "Düzenle",
+    "long": {
+      "more": "Devamını gör",
+      "title": "{{name}} adlı kişinin mesajı"
+    },
     "retrySend": "Tekrar dene",
     "thinking": "{{name}} düşünüyor…",
     "typing_one": "{{names}} yazıyor…",
@@ -2319,8 +2332,9 @@
       "connect": {
         "title": "Ekip için bir yapay zeka bağla",
         "titlePersonal": "Ajanların için bir yapay zeka bağla",
-        "text": "Ajanlar çalışma alanının yapay zekasıyla düşünür. Claude veya ChatGPT planınla giriş yap, API anahtarı gerekmez.",
-        "textPersonal": "Ajanların bu yapay zekayla düşünür. Claude veya ChatGPT planınla giriş yap, API anahtarı gerekmez.",
+        "text": "Claude veya ChatGPT planınla giriş yap, API anahtarı gerekmez.",
+        "hint": "Ajanlar çalışma alanının yapay zekasıyla düşünür.",
+        "hintPersonal": "Ajanların bu yapay zekayla düşünür.",
         "action": "Bağla"
       },
       "again": {
@@ -2391,6 +2405,14 @@
       "groupMine": "Yalnızca sizin için",
       "groupWorkspace": "Tüm çalışma alanı için",
       "groupAdmins": "yalnızca yöneticiler"
+    },
+    "powers": {
+      "title": "Çalışma alanı yetkileri",
+      "help": "Bunları yalnızca sağ kolun yapar.",
+      "team": "Bir kişinin uyguladığı kartlarla tüm ekibi kurar ve değiştirir: ajanlar, kişiler ve çalışma alanı ayarları",
+      "routines": "Yönetebildiğin her ajanın rutinini çalıştırır ve siler",
+      "asYou": "Kendi sohbetinde, görebildiğin Drive'ı, wikiyi ve görevleri okur",
+      "mentions": "Üyesi olmadan her kanaldaki bir @bahsetmeye yanıt verir"
     },
     "card": {
       "settings": "{{name}} · Ayarlar",
@@ -2684,10 +2706,16 @@
       "useKey": "API anahtarı kullan"
     },
     "kept": {
-      "title": "Mesajını sakladım.",
-      "line": "Çalışma alanının agentes.chat planı ve bağlı bir yapay zekası olunca burada yanıtlayacağım.",
+      "title": "Mesajını sakladım",
+      "wait": {
+        "payment": "Çalışma alanının agentes.chat planı olunca burada yanıtlayacağım.",
+        "unpaid": "agentes.chat planının ödemesi geçince burada yanıtlayacağım.",
+        "ended": "Çalışma alanı agentes.chat'e yeniden abone olunca burada yanıtlayacağım."
+      },
+      "askAdmin": "Bir yönetici agentes.chat planını çözünce burada yanıtlayacağım.",
       "plan": "Plan, ajanların her zaman açık bilgisayarını getirir. Yapay zeka zaten ödediğindir: Claude, ChatGPT ve diğerleri ya da bir API anahtarı.",
-      "active": "Plan etkin. Bir yapay zeka bağla, {{name}} burada yanıtlasın.",
+      "activeTitle": "Plan etkin",
+      "activeLine": "Bir yapay zeka bağla, {{name}} burada yanıtlasın.",
       "receipt": "Saklandı",
       "channel": "Saklandı. Çalışma alanının agentes.chat planı olunca ajanlar yanıtlar."
     },
@@ -2941,6 +2969,22 @@
       "never": "{{name}} bunun için asla dedi"
     }
   },
+  "approvalsLevel": {
+    "title": "Onaylar",
+    "lead": "{{name}} harekete geçmeden önce birine ne zaman sorar.",
+    "always": {
+      "title": "Her zaman sor",
+      "text": "Bir uygulamada bir şeyi değiştirmeden önce sorar."
+    },
+    "risky": {
+      "title": "Yalnızca riskli olanlar",
+      "text": "Silmeden, göndermeden veya ödemeden önce sorar."
+    },
+    "never": {
+      "title": "Hiç sorma",
+      "text": "Merge, deploy ve rollback için yine sorar."
+    }
+  },
   "brakes": {
     "title": "Kimsenin istemediği iş",
     "subtitle": "Bir rutin, bir uyarı veya başka bir ajan üzerine kendi başına başlattığı şeyler. Bir kişinin istediği hiçbir zaman bekletilmez.",
@@ -3084,6 +3128,8 @@
       "title": "{{agent}} yeni bir ajan öneriyor",
       "review": "İncele",
       "created": "Oluşturuldu",
+      "createdBy": "{{name}} oluşturdu",
+      "createdByYou": "Siz oluşturdunuz",
       "aiAccount": "{{account}} ile düşünür",
       "aiModel": "API üzerinden düşünür",
       "aiNone": "Henüz yapay zeka yok. Oluşturduktan sonra bir tane bağlayın",
@@ -3697,7 +3743,7 @@
       "clearFilters": "Aramayı temizle",
       "personalNote": "Bu öğeleri yalnızca siz görürsünüz. Ajanlarınız bunları yalnızca siz istediğinizde kullanır.",
       "personalEmpty": "Girişlerinizi ve anahtarlarınızı güvende tutun",
-      "personalEmptyText": "Bu öğeleri yalnızca siz görürsünüz. Ajanlarınız bunları yalnızca siz istediğinizde kullanır.",
+      "personalEmptyText": "Bu öğeleri yalnızca siz görürsünüz ve ajanlarınız bunları yalnızca siz istediğinizde kullanır.",
       "teamEmpty": "Parola dolaştırmadan girişleri paylaşın",
       "teamEmptyPersonal": "Paylaşılan girişleri tek yerde tutun",
       "teamEmptyText": "Bir giriş bilgisini, anahtarı ya da iletişim bilgilerini bir kez kaydedin ve hangi ajanların kullanabileceğini seçin.",
@@ -4137,6 +4183,8 @@
       "team": "<b>{{name}}</b> bir ekip öneriyor · {{what}}",
       "firstTask": "<b>{{name}}</b> ilk görevi öneriyor · {{what}}",
       "more": "+{{count}}",
+      "here_one": "Burada sizi bekleyen {{count}} şey var",
+      "here_other": "Burada sizi bekleyen {{count}} şey var",
       "see": "Gör"
     }
   },
@@ -14602,6 +14650,7 @@
       "where": "Nerede",
       "via": "Üzerinden",
       "approval": "Onay",
+      "unasked": "Sorulmadı ({{level}})",
       "approvalWaiting": "Henüz kimse yanıt vermedi",
       "approvalApproved": "{{name}} onayladı",
       "approvalRefused": "{{name}} reddetti",
@@ -16311,8 +16360,6 @@
     },
     "card": {
       "group": "{{name}} ajanının tarayıcıda yardım isteği",
-      "asked": "{{people}} kişisinden yardım istedi",
-      "askedShort": "yardım istiyor",
       "left": "{{time}} kaldı",
       "where": "{{name}} ajanının tarayıcısında",
       "open": "Aç",
@@ -16327,11 +16374,6 @@
       "expired": "Kimse zamanında açmadı. {{name}} durdu ve bunu bildirdi.",
       "cancelled": "İstek iptal edildi.",
       "withdrawn": "{{name}} artık buna ihtiyaç duymuyor.",
-      "settledDone": "yardım istedi · çözüldü",
-      "settledFailed": "yardım istedi · olmadı",
-      "settledExpired": "yardım istedi · süresi doldu",
-      "settledCancelled": "yardım istedi · iptal edildi",
-      "settledWithdrawn": "yardım istedi · artık gerekmiyor",
       "busy": "Başka biri zaten yardım ediyor.",
       "openFailed": "Şu anda açılamadı. Tekrar deneyin."
     },
@@ -16446,8 +16488,6 @@
       "couldnt": "Yapamadım",
       "giveUp": "Vazgeç",
       "otherHelp": "Kontrol {{person}} kişisinde. Siz izliyorsunuz.",
-      "helpingHere": "Yardım ediyorsunuz · bu kartta",
-      "helpingOther": "{{person}} yardım ediyor · bu kartta",
       "doneLine": "Bitti. {{name}} sayfayı yeniden okuyup devam edecek.",
       "openHere": "Burada aç",
       "openHereHint": "Sohbetten çıkmadan bu kartta açılır.",

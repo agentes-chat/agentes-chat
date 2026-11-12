@@ -214,6 +214,8 @@ export const keys = {
   notifications: (orgId: string) => ["org", orgId, "notifications"] as const,
   notificationList: (orgId: string, filter: string) => ["org", orgId, "notifications", "list", filter] as const,
   notificationCount: (orgId: string) => ["org", orgId, "notifications", "count"] as const,
+  /** "Esperando você": under the notifications prefix, so whatever refreshes the inbox refreshes it. */
+  waiting: (orgId: string) => ["org", orgId, "notifications", "waiting"] as const,
   noticePrefs: (orgId: string) => ["org", orgId, "notice-prefs"] as const,
   sidebarItems: (orgId: string) => ["org", orgId, "sidebar-items"] as const,
   sidebarOrder: (orgId: string) => ["org", orgId, "sidebar-order"] as const,

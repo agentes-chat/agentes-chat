@@ -73,6 +73,7 @@ export function ConsultationPanel({
     () => ({
       insertMention: (handle) => latest.current.onTalk(handle),
       retry: () => undefined,
+      editUnsent: () => undefined,
       resend: () => undefined,
       focusComposer: () => latest.current.onAnswer(),
       channelAgents: [],

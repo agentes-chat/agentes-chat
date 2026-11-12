@@ -1540,7 +1540,6 @@
       "limit": "{{name}} sudah mencapai batas hari ini: yang ini tetap padamu",
       "undoneByYou": "Dibatalkan olehmu",
       "undoneBy": "Dibatalkan oleh {{name}}",
-      "why": "Kenapa?",
       "undo": "Batalkan",
       "undoArchives": "Membatalkan akan mengarsipkan {{name}}. Berlaku hingga {{until}}.",
       "undoSettings": "Membatalkan akan mengembalikan pengaturan. Berlaku hingga {{until}}."
@@ -1620,6 +1619,7 @@
     "unshown": "Tidak bisa ditampilkan",
     "more": "Lainnya",
     "moreWhat": {
+      "waiting": "Semua yang menunggu jawabanmu",
       "approvals": "Yang diminta agen untuk kamu izinkan",
       "proposals": "Yang diusulkan agen untuk diubah",
       "threads": "Percakapan yang bercabang, dan misi",
@@ -1717,6 +1717,7 @@
     "expandNav": "Bentangkan sidebar",
     "searchWorkspace": "Cari di ruang kerja",
     "summary_other": "{{people}} anggota · {{agents}} agen",
+    "waiting": "Menunggumu",
     "approvals": "Persetujuan",
     "proposals": "Usulan perbaikan",
     "issues": "Tugas",
@@ -2147,7 +2148,19 @@
     "sendCorrection": "Kirim koreksi",
     "correctionSent": "Koreksi terkirim. {{name}} akan belajar darinya.",
     "sending": "mengirim…",
-    "notSent": "Tidak terkirim",
+    "tooLong": {
+      "text": "Pesan ini {{length}} karakter dan batasnya {{max}}.",
+      "fix": "Kirim teksnya sebagai file.",
+      "asFile": "Kirim sebagai file",
+      "fileName": "pesan.txt"
+    },
+    "notSentWhy": "Tidak terkirim. {{why}}",
+    "notSentUnknown": "Terjadi kesalahan.",
+    "editSend": "Ubah",
+    "long": {
+      "more": "Lihat selengkapnya",
+      "title": "Pesan dari {{name}}"
+    },
     "retrySend": "Coba lagi",
     "thinking": "{{name}} sedang berpikir…",
     "typing_other": "{{names}} sedang mengetik…",
@@ -2240,8 +2253,9 @@
       "connect": {
         "title": "Hubungkan AI untuk tim",
         "titlePersonal": "Hubungkan AI untuk agenmu",
-        "text": "Agen berpikir dengan AI workspace. Masuk dengan paket Claude atau ChatGPT Anda, tanpa kunci API.",
-        "textPersonal": "Agenmu berpikir dengan AI ini. Masuk dengan paket Claude atau ChatGPT-mu, tanpa kunci API.",
+        "text": "Masuk dengan paket Claude atau ChatGPT Anda, tanpa kunci API.",
+        "hint": "Agen berpikir dengan AI workspace.",
+        "hintPersonal": "Agenmu berpikir dengan AI ini.",
         "action": "Hubungkan"
       },
       "again": {
@@ -2312,6 +2326,14 @@
       "groupMine": "Hanya untukmu",
       "groupWorkspace": "Untuk seluruh workspace",
       "groupAdmins": "khusus admin"
+    },
+    "powers": {
+      "title": "Kemampuan di workspace",
+      "help": "Hanya tangan kanan Anda yang melakukan ini.",
+      "team": "Menyiapkan dan mengubah seluruh tim lewat kartu yang diterapkan seseorang: agen, orang, dan pengaturan workspace",
+      "routines": "Menjalankan dan menghapus rutinitas agen mana pun yang boleh Anda kelola",
+      "asYou": "Dalam percakapan Anda sendiri, membaca Drive, wiki, dan tugas yang bisa Anda lihat",
+      "mentions": "Menjawab @mention di kanal mana pun tanpa menjadi anggota"
     },
     "card": {
       "settings": "{{name}} · Pengaturan",
@@ -2598,10 +2620,16 @@
       "useKey": "Pakai kunci API"
     },
     "kept": {
-      "title": "Saya menyimpan pesanmu.",
-      "line": "Saya akan menjawab di sini setelah workspace punya paket agentes.chat dan AI yang terhubung.",
+      "title": "Saya menyimpan pesanmu",
+      "wait": {
+        "payment": "Saya akan menjawab di sini setelah workspace punya paket agentes.chat.",
+        "unpaid": "Saya akan menjawab di sini setelah pembayaran paket agentes.chat berhasil.",
+        "ended": "Saya akan menjawab di sini setelah workspace berlangganan agentes.chat lagi."
+      },
+      "askAdmin": "Saya akan menjawab di sini setelah admin membereskan paket agentes.chat.",
       "plan": "Paket ini membawa komputer agen, selalu menyala. AI-nya yang sudah kamu bayar: Claude, ChatGPT dan lainnya, atau kunci API.",
-      "active": "Paket aktif. Hubungkan AI dan {{name}} menjawab di sini.",
+      "activeTitle": "Paket aktif",
+      "activeLine": "Hubungkan AI dan {{name}} menjawab di sini.",
       "receipt": "Disimpan",
       "channel": "Disimpan. Agen menjawab setelah workspace punya paket agentes.chat."
     },
@@ -2856,6 +2884,22 @@
       "never": "{{name}} bilang tidak pernah untuk ini"
     }
   },
+  "approvalsLevel": {
+    "title": "Persetujuan",
+    "lead": "Kapan {{name}} bertanya kepada seseorang sebelum bertindak.",
+    "always": {
+      "title": "Selalu tanya",
+      "text": "Bertanya sebelum mengubah apa pun di aplikasi."
+    },
+    "risky": {
+      "title": "Hanya yang berisiko",
+      "text": "Bertanya sebelum menghapus, mengirim, atau membayar."
+    },
+    "never": {
+      "title": "Jangan pernah tanya",
+      "text": "Tetap bertanya untuk merge, deploy, dan rollback."
+    }
+  },
   "brakes": {
     "title": "Pekerjaan yang tidak diminta siapa pun",
     "subtitle": "Apa yang dimulainya sendiri, dari rutinitas, peringatan, atau agen lain. Yang diminta seseorang tidak pernah ditahan.",
@@ -2992,6 +3036,8 @@
       "title": "{{agent}} mengusulkan agen baru",
       "review": "Tinjau",
       "created": "Dibuat",
+      "createdBy": "Dibuat oleh {{name}}",
+      "createdByYou": "Dibuat olehmu",
       "aiAccount": "Berpikir dengan {{account}}",
       "aiModel": "Berpikir lewat API",
       "aiNone": "Belum ada AI. Hubungkan setelah membuatnya",
@@ -3601,7 +3647,7 @@
       "clearFilters": "Hapus pencarian",
       "personalNote": "Hanya kamu yang melihat item ini. Agenmu hanya menggunakannya saat kamu minta.",
       "personalEmpty": "Simpan login dan kuncimu dengan aman",
-      "personalEmptyText": "Hanya kamu yang melihat item ini. Agenmu hanya menggunakannya saat kamu minta.",
+      "personalEmptyText": "Hanya kamu yang melihat item ini, dan agenmu hanya menggunakannya saat kamu minta.",
       "teamEmpty": "Bagikan login tanpa mengoper kata sandi",
       "teamEmptyPersonal": "Simpan login bersama di satu tempat",
       "teamEmptyText": "Simpan login, kunci, atau kontak sekali, lalu pilih agen mana yang boleh menggunakannya.",
@@ -4024,6 +4070,7 @@
       "team": "<b>{{name}}</b> mengusulkan tim · {{what}}",
       "firstTask": "<b>{{name}}</b> menyarankan tugas pertama · {{what}}",
       "more": "+{{count}}",
+      "here_other": "{{count}} menunggumu di sini",
       "see": "Lihat"
     }
   },
@@ -14214,6 +14261,7 @@
       "where": "Di mana",
       "via": "Lewat",
       "approval": "Persetujuan",
+      "unasked": "Tidak ditanyakan ({{level}})",
       "approvalWaiting": "Belum ada yang menjawab",
       "approvalApproved": "Disetujui oleh {{name}}",
       "approvalRefused": "Ditolak oleh {{name}}",
@@ -15905,8 +15953,6 @@
     },
     "card": {
       "group": "Permintaan bantuan {{name}} di browser",
-      "asked": "meminta bantuan {{people}}",
-      "askedShort": "butuh bantuan",
       "left": "{{time}} lagi",
       "where": "Di browser {{name}}",
       "open": "Buka",
@@ -15921,11 +15967,6 @@
       "expired": "Tidak ada yang membukanya tepat waktu. {{name}} berhenti dan memberi tahu.",
       "cancelled": "Permintaan dibatalkan.",
       "withdrawn": "{{name}} tidak membutuhkan ini lagi.",
-      "settledDone": "meminta bantuan · terselesaikan",
-      "settledFailed": "meminta bantuan · tidak berhasil",
-      "settledExpired": "meminta bantuan · kedaluwarsa",
-      "settledCancelled": "meminta bantuan · dibatalkan",
-      "settledWithdrawn": "meminta bantuan · tidak dibutuhkan lagi",
       "busy": "Orang lain sudah membantu.",
       "openFailed": "Tidak bisa membukanya sekarang. Coba lagi."
     },
@@ -16039,8 +16080,6 @@
       "couldnt": "Aku tidak bisa",
       "giveUp": "Menyerah",
       "otherHelp": "{{person}} yang mengendalikan. Kamu menonton.",
-      "helpingHere": "Kamu sedang membantu · di kartu ini",
-      "helpingOther": "{{person}} sedang membantu · di kartu ini",
       "doneLine": "Selesai. {{name}} akan membaca halamannya lagi lalu melanjutkan.",
       "openHere": "Buka di sini",
       "openHereHint": "Terbuka di kartu ini, tanpa meninggalkan chat.",

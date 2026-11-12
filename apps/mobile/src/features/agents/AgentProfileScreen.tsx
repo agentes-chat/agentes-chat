@@ -88,6 +88,7 @@ import { StatusCard } from "../status/StatusCard";
 import { openAgentUsage } from "../usage/UsageScreen";
 import { openAgentEdit } from "./AgentEditScreen";
 import { useAgentMailboxes } from "./AgentMailSection";
+import { ApprovalsLevelRow } from "./ApprovalsLevelRow";
 import {
   agoOf,
   byPlaybook,
@@ -633,6 +634,11 @@ function Profile({ id }: { id: string }) {
           </GroupedList>
           {usesNote ? <GroupedFooter>{usesNote}</GroupedFooter> : null}
         </>
+      ) : null}
+      {agent ? (
+        <View style={styles.apart}>
+          <ApprovalsLevelRow agent={agent} />
+        </View>
       ) : null}
       {personal ? (
         // A personal workspace keeps its rules, repositories and the rest in Advanced (ADR 0159 §3).

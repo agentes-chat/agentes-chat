@@ -33,6 +33,7 @@ import {
   setAgentScopes,
   type ToolContext,
   takeBridgeEffects,
+  updateAgent,
   ValidationError,
   wrapExternal,
 } from "../src";
@@ -237,6 +238,17 @@ describe('"Pode fazer merge sem perguntar": the GitHub connector', () => {
     const [receipt] = await f.db.select().from(schema.agentActions).where(eq(schema.agentActions.runId, ctx.runId));
     expect(receipt).toMatchObject({ kind: "pr.merged", params: { repo: "Acme/App", number: 7 } });
     expect(receipt?.undoableUntil).toEqual(receipt?.createdAt);
+  });
+
+  test("an agent that always asks merges nowhere alone; its repositories stay chosen for another level", async () => {
+    const { ctx } = await world();
+    await setAgentMergeRepositories(f.db, f.owner.id, f.org.id, f.agent.id, ["acme/app"]);
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { approvalsLevel: "always" });
+    expect(await mergeReposOfCall(ctx)).toEqual([]);
+    for (const approvalsLevel of ["never", "risky"] as const) {
+      await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { approvalsLevel });
+      expect(await mergeReposOfCall(ctx)).toEqual(["acme/app"]);
+    }
   });
 
   test("a run a routine's report woke asks, here and on the computer: text nobody checked feeds it", async () => {

@@ -269,6 +269,12 @@ export const AgentAudience = z
   })
   .openapi("AgentAudience");
 
+/** How much an agent asks before acting (ADR 0173). */
+export const ApprovalsLevel = z.enum(["always", "risky", "never"]).openapi("ApprovalsLevel", {
+  description:
+    "`always`: every write to a connected app asks a person. `risky` (the default): what is marked sensitive asks. `never`: only merge, deploy, rollback and the like ask. A routine's run, and one a routine's reading feeds, ask for every write to a connected app at any level. Scopes, connector access and the budget bind at every level.",
+});
+
 /** An agent's autonomy brakes (ADR 0131): what it may start that nobody asked for directly, and whom it may call. */
 export const AgentBrakes = z
   .object({
@@ -427,6 +433,7 @@ export const Agent = z
       description:
         "It may send a sticker or a GIF (ADR 0091): when someone asks for one, and after a light reply as often as the workspace's `agentMedia` allows.",
     }),
+    approvalsLevel: ApprovalsLevel,
     builtin: z.enum(["right_hand"]).nullable().openapi({
       description:
         "A built-in agent the product ships (ADR 0137): `right_hand`, the team's right hand, one per workspace, never archived, deleted or exported. Null for the agents people make.",

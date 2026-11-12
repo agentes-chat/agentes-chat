@@ -1486,7 +1486,7 @@ all Jev requests, including key checks and screenshots, now go to OpenRouter, wh
 Usage records use OpenRouter's reported cost and the provider `openrouter-decisions`, separate from
 ordinary OpenRouter chat; the Jev monthly total includes both direct and OpenRouter decision calls.
 To switch back, remove `TYPESAFE_BASE_URL` and `JEV_MODEL`, restore a TypeSafe key and restart.
-No additional SDK is needed. Migration `0254_workspace_decisions` adds the nullable workspace setting. See the [OpenRouter compatibility contract](https://openrouter.ai/docs/guides/community/typesafe-sdk).
+No additional SDK is needed. Migration `0255_workspace_decisions` adds the nullable workspace setting. See the [OpenRouter compatibility contract](https://openrouter.ai/docs/guides/community/typesafe-sdk).
 
 **Plans.** An agent can think with a Claude or ChatGPT subscription instead of a key, on a connected
 computer: Claude Code or Codex signs in there with the provider's own flow. Each account is a folder

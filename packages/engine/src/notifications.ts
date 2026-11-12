@@ -1025,6 +1025,9 @@ function visible(orgId: string, userId: string, now: Date): SQL {
   ) as SQL;
 }
 
+/** The inbox's own rule for what a person sees, for the lists built on it (`waiting.ts`). */
+export const inboxVisible = visible;
+
 function filterSql(filter: NotificationFilter): SQL | undefined {
   switch (filter) {
     case "mentions":

@@ -1,6 +1,17 @@
 import type { Agent } from "@agenteschat/client";
 import { askKindWords } from "@agenteschat/client/lib/approval-words";
-import { EventPill, EventPillMore, ExpiryFuse, Icon, type IconName, Locked, Spinner } from "@agenteschat/ui";
+import {
+  cx,
+  EventPill,
+  EventPillMore,
+  ExpiryFuse,
+  Icon,
+  type IconName,
+  InfoHint,
+  Locked,
+  prefersReducedMotion,
+  Spinner,
+} from "@agenteschat/ui";
 import {
   createContext,
   type FormEvent,
@@ -9,6 +20,7 @@ import {
   type Ref,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -105,12 +117,36 @@ export function useExpired(expiresAt: string | null | undefined) {
   return passed;
 }
 
+/** How a request ended, where its fields and buttons were: the card keeps its box, its words and its object. */
+export type RequestAnswer = {
+  /** It went through. */
+  done: boolean;
+  /** How it ended and who did it ("Você respondeu: X", "Aprovado por Ana"). */
+  text: ReactNode;
+  /** When. */
+  time?: string;
+  /** A quiet line under it (when one approved ahead runs, a save that failed). */
+  note?: ReactNode;
+  /** What can still be done about it (Desfazer, Cancelar): small ghost buttons. */
+  action?: ReactNode;
+};
+
+/**
+ * How tall each waiting card last stood, by request: the card that takes its place once answered (often another
+ * component instance, its caller's branches differ) grows or shrinks from there instead of jumping.
+ */
+const waitingHeights = new Map<string, number>();
+const SETTLE_MS = 220;
+
 /**
  * One card for every request an agent makes in the conversation, so each reads the same way and its decision
  * sits in the same place: a quiet header (what kind of request, and who else it waits for), the agent's own
  * words, what will happen drawn edge to edge (its preview, as an attachment's cover), the object on a line of its own between
  * hairlines with "Ver …" under its words opening it whole, anything to fill in, and the footer strip with the decision on
  * the left and the time left on the right. One surface: nothing inside has a background of its own.
+ *
+ * Decided (`answer`), it is the same card: the header, the words and the object stay where they were, and the footer
+ * strip says how it ended, who did it and when, in the buttons' place.
  *
  * While it waits for the viewer it registers with its conversation (`AskRegistryProvider`), so the bar above the
  * composer can say it waits while it is out of view; `data-ask-id` lets "Ver" find it and bring it back.
@@ -120,7 +156,7 @@ export function RequestCard({
   kind,
   agent,
   label,
-  mine,
+  mine: waitsOnMe,
   waitingFor,
   who,
   source,
@@ -137,6 +173,8 @@ export function RequestCard({
   onSubmit,
   muted = false,
   locked = false,
+  answer,
+  ended: over = false,
 }: {
   id: string;
   kind: RequestKind;
@@ -179,11 +217,40 @@ export function RequestCard({
   muted?: boolean;
   /** Its decision is on its way or can't be made any more: what is filled in and clicked turns off, "Ver …" stays. */
   locked?: boolean;
+  /** Decided: the footer says how it ended in place of `actions` and `end`; `body` is then what stays to read. */
+  answer?: RequestAnswer;
+  /** Decided with nothing to say in the footer (a card of several requests: each row says how it ended). */
+  ended?: boolean;
 }) {
   const { t } = useTranslation();
   const registry = useContext(AskRegistryContext);
   const root = useRef<HTMLDivElement>(null);
   const agentId = agent?.id ?? "";
+  const ended = over || Boolean(answer);
+  // Nothing waits on the viewer once it is decided.
+  const mine = waitsOnMe && !ended;
+  // No dependency list: its height is read after every draw, so the answered card starts from the last one.
+  useLayoutEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const height = el.offsetHeight;
+    if (!ended) {
+      if (height) waitingHeights.set(id, height);
+      return;
+    }
+    const from = waitingHeights.get(id);
+    waitingHeights.delete(id);
+    if (!from || !height || from === height || prefersReducedMotion() || !el.animate) return;
+    el.animate(
+      [
+        { height: `${from}px`, overflow: "clip" },
+        { height: `${height}px`, overflow: "clip" },
+      ],
+      { duration: SETTLE_MS, easing: "ease-out" },
+    );
+  });
+  // A waiting card that left the screen for good (scrolled out of a long list) is no start for a later one.
+  useEffect(() => () => void waitingHeights.delete(id), [id]);
   // Waiting for the viewer: in the conversation's list, with what the bar says (kept current in place).
   useEffect(() => {
     const el = root.current;
@@ -201,11 +268,25 @@ export function RequestCard({
     if (openProp === undefined) setOpenSelf(next);
     onOpenChange?.(next);
   };
-  const foot = (actions || end) && (
-    <div className="rq__foot">
-      {actions}
-      {end && <span className="rq__end">{end}</span>}
+  const foot = answer ? (
+    <div className="rq__foot rq__answer">
+      <span className="rq-done__mark" data-done={answer.done || undefined} aria-hidden="true">
+        <span />
+      </span>
+      <span className="rq__answer-text">
+        {answer.text}
+        {answer.note && <small className="rq__answer-note">{answer.note}</small>}
+      </span>
+      {answer.action}
+      {answer.time && <time className="rq__answer-time">{answer.time}</time>}
     </div>
+  ) : (
+    (actions || end) && (
+      <div className="rq__foot">
+        {actions}
+        {end && <span className="rq__end">{end}</span>}
+      </div>
+    )
   );
   const fill = (
     <Locked when={locked}>
@@ -228,7 +309,7 @@ export function RequestCard({
           {source && <span className="rq__source"> · {source}</span>}
         </span>
         {/* Who else it waits for; waiting for me needs no words (the buttons say it). */}
-        {!mine && waitingFor && <span className="rq__state rq__state--other">{waitingFor}</span>}
+        {!mine && !ended && waitingFor && <span className="rq__state rq__state--other">{waitingFor}</span>}
       </div>
       <p className="rq__lead">{inlineWords(lead, "rq")}</p>
       {preview && !(open && details) && <div className="rq__preview">{preview}</div>}
@@ -272,10 +353,10 @@ export function RequestCard({
     // biome-ignore lint/a11y/useSemanticElements: a labelled group inside a message, not a fieldset
     <div
       ref={root}
-      className={muted ? "rq rq--muted" : "rq"}
+      className={cx("rq", muted && "rq--muted", ended && "rq--ended")}
       role="group"
       aria-label={label}
-      data-ask-id={id}
+      data-ask-id={ended ? undefined : id}
       data-ask-kind={kind}
       data-ask-mine={mine ? "" : undefined}
     >
@@ -432,6 +513,44 @@ export function RequestOpen({
     >
       {children}
     </EventPill>
+  );
+}
+
+/**
+ * A card that says one thing and offers its way out, with no request behind it (a plan to pick, an AI to connect): the
+ * request card's surface with a title, its detail behind the ⓘ beside it, one sentence, and the footer's buttons, the
+ * main one first.
+ */
+export function RequestNote({
+  agent,
+  title,
+  hint,
+  actions,
+  children,
+}: {
+  agent: Agent | undefined;
+  title: string;
+  /** Behind the ⓘ beside the title: plain sentences only. */
+  hint?: ReactNode;
+  /** The footer's kit buttons: one primary, the others ghosts. */
+  actions?: ReactNode;
+  /** The one sentence. */
+  children?: ReactNode;
+}) {
+  const { t } = useTranslation();
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: a labelled group inside a message, not a fieldset
+    <div className="rq rq--note" role="group" aria-label={title}>
+      <CardSky color={colorOf(agent)} />
+      <p className="rq__title">
+        <span className="ac-hintline">
+          <b>{title}</b>
+          {hint && <InfoHint name={t("common.about", { label: title })}>{hint}</InfoHint>}
+        </span>
+      </p>
+      {children && <p className="rq__note">{children}</p>}
+      {actions && <div className="rq__foot">{actions}</div>}
+    </div>
   );
 }
 

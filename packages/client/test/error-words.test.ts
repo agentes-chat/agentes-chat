@@ -10,10 +10,14 @@ import {
   hasWordsFor,
   noAnswer,
   oauthReturnText,
+  sendFailureOf,
+  sendFailureText,
+  sendNeedsEdit,
   sendWaits,
   signInRefusalText,
   vaultConnectRefusal,
 } from "../src/lib/errors";
+import { clippedHeight, LONG_MESSAGE, MAX_MESSAGE_LENGTH, tooLongToSend } from "../src/lib/message-length";
 
 const failure = new TypeError("Failed to fetch");
 const unreachable = async () => {
@@ -531,6 +535,52 @@ function serverCodes() {
     }
   return [...codes].sort();
 }
+
+describe("a message past the length limit", () => {
+  const tooLong = new ApiError(400, "message.too_long", "Message is longer than 100000 characters", {
+    length: 120_000,
+    max: 100_000,
+  });
+
+  test("the client's limit is the server's", () => {
+    const engine = readFileSync(join(import.meta.dir, "../../engine/src/messages.ts"), "utf8");
+    const server = Number(/export const MAX_MESSAGE_LENGTH = ([\d_]+);/.exec(engine)?.[1]?.replace(/_/g, ""));
+    expect(server).toBe(MAX_MESSAGE_LENGTH);
+    expect(tooLongToSend("x".repeat(MAX_MESSAGE_LENGTH))).toBe(false);
+    expect(tooLongToSend(` ${"x".repeat(MAX_MESSAGE_LENGTH)} `)).toBe(false);
+    expect(tooLongToSend("x".repeat(MAX_MESSAGE_LENGTH + 1))).toBe(true);
+  });
+
+  test("the refusal says both sizes in the person's numbers and the way out", () => {
+    const t = i18next.createInstance();
+    void t.init({ lng: "pt-BR", resources, initAsync: false, interpolation: { escapeValue: false } });
+    const said = errorText(t.t, tooLong, "pt-BR");
+    expect(said).toBe("A mensagem tem 120.000 caracteres e o limite é 100.000. Envie o texto como arquivo.");
+  });
+
+  test("a failed row keeps the server's refusal and says it later; with none kept, that something went wrong", () => {
+    const kept = sendFailureOf(tooLong);
+    expect(kept).toEqual({ status: 400, code: "message.too_long", message: tooLong.message, params: tooLong.params });
+    expect(sendFailureOf(new TypeError("Failed to fetch"))).toBeUndefined();
+    const t = i18next.createInstance();
+    void t.init({ lng: "pt-BR", resources, initAsync: false, interpolation: { escapeValue: false } });
+    expect(sendFailureText(t.t, kept, "pt-BR")).toBe(
+      "Não enviada. A mensagem tem 120.000 caracteres e o limite é 100.000. Envie o texto como arquivo.",
+    );
+    expect(sendFailureText(t.t, sendFailureOf(new ApiError(500, "internal_error", "x")))).toBe(
+      `Não enviada. ${ptBR.common.ourSide}`,
+    );
+    expect(sendFailureText(t.t, undefined)).toBe("Não enviada. Algo deu errado.");
+    expect(sendNeedsEdit(kept)).toBe(true);
+    expect(sendNeedsEdit(undefined)).toBe(false);
+  });
+
+  test("a message shows whole up to a height, then clipped well short of it", () => {
+    expect(clippedHeight(LONG_MESSAGE.over)).toBeNull();
+    expect(clippedHeight(LONG_MESSAGE.over + 1)).toBe(LONG_MESSAGE.shows);
+    expect(LONG_MESSAGE.over - LONG_MESSAGE.shows).toBeGreaterThanOrEqual(120);
+  });
+});
 
 describe("every refusal has words", () => {
   const codes = serverCodes();

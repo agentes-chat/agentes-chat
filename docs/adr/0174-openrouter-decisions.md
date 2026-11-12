@@ -1,4 +1,4 @@
-# 0172 — Decision models on an existing OpenRouter account
+# 0174 — Decision models on an existing OpenRouter account
 
 Status: Proposed
 

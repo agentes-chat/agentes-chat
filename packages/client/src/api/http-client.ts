@@ -241,6 +241,7 @@ import type {
   UnreadTask,
   UsageQueue,
   UsageReport,
+  WaitingList,
   WebhookSetup,
   WifiIphones,
   WifiPairing,
@@ -1752,6 +1753,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           query: { filter: query.filter, cursor: query.cursor, limit: query.limit },
         }),
       count: (orgId) => request<NotificationCount>(`${org(orgId)}/notifications/count`),
+      waiting: (orgId, channelId) => request<WaitingList>(`${org(orgId)}/waiting`, { query: { channelId } }),
       read: (orgId, id, read) =>
         request<AppNotification>(`${org(orgId)}/notifications/${enc(id)}/read`, { json: { read } }),
       done: (orgId, id, done) =>

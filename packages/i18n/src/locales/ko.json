@@ -1540,7 +1540,6 @@
       "limit": "{{name}}이(가) 오늘 한도에 닿았어요. 이건 내가 결정해요",
       "undoneByYou": "내가 되돌렸어요",
       "undoneBy": "{{name}}이(가) 되돌렸어요",
-      "why": "이유",
       "undo": "되돌리기",
       "undoArchives": "되돌리면 {{name}}이(가) 보관돼요. {{until}}까지 가능해요.",
       "undoSettings": "되돌리면 설정이 원래대로 돌아가요. {{until}}까지 가능해요."
@@ -1620,6 +1619,7 @@
     "unshown": "표시할 수 없어요",
     "more": "더 보기",
     "moreWhat": {
+      "waiting": "내 답을 기다리는 모든 것",
       "approvals": "에이전트가 허락을 구하는 일",
       "proposals": "에이전트가 변경을 제안한 내용",
       "threads": "갈라져 나온 대화와 미션",
@@ -1717,6 +1717,7 @@
     "expandNav": "사이드바 펼치기",
     "searchWorkspace": "워크스페이스 검색",
     "summary_other": "멤버 {{people}}명 · 에이전트 {{agents}}명",
+    "waiting": "내 확인 대기",
     "approvals": "승인",
     "proposals": "개선 제안",
     "issues": "작업",
@@ -2147,7 +2148,19 @@
     "sendCorrection": "정정 보내기",
     "correctionSent": "정정을 보냈어요. {{name}}이(가) 이걸로 배울 거예요.",
     "sending": "보내는 중…",
-    "notSent": "보내지 못함",
+    "tooLong": {
+      "text": "메시지가 {{length}}자이고 한도는 {{max}}자입니다.",
+      "fix": "텍스트를 파일로 보내세요.",
+      "asFile": "파일로 보내기",
+      "fileName": "message.txt"
+    },
+    "notSentWhy": "전송되지 않았습니다. {{why}}",
+    "notSentUnknown": "문제가 발생했습니다.",
+    "editSend": "편집",
+    "long": {
+      "more": "더 보기",
+      "title": "{{name}}의 메시지"
+    },
     "retrySend": "다시 시도",
     "thinking": "{{name}}이(가) 생각 중…",
     "typing_other": "{{names}}이(가) 입력 중…",
@@ -2240,8 +2253,9 @@
       "connect": {
         "title": "팀을 위한 AI 연결",
         "titlePersonal": "에이전트를 위한 AI 연결",
-        "text": "에이전트는 워크스페이스의 AI로 생각해요. Claude 또는 ChatGPT 요금제로 로그인하세요. API 키는 필요 없어요.",
-        "textPersonal": "에이전트는 이 AI로 생각해요. Claude 또는 ChatGPT 요금제로 로그인하세요. API 키는 필요 없어요.",
+        "text": "API 키 없이 Claude 또는 ChatGPT 요금제로 로그인하세요.",
+        "hint": "에이전트는 워크스페이스의 AI로 생각해요.",
+        "hintPersonal": "에이전트는 이 AI로 생각해요.",
         "action": "연결"
       },
       "again": {
@@ -2312,6 +2326,14 @@
       "groupMine": "나만",
       "groupWorkspace": "워크스페이스 전체",
       "groupAdmins": "관리자만"
+    },
+    "powers": {
+      "title": "워크스페이스 권한",
+      "help": "이 일은 오른팔만 해요.",
+      "team": "사람이 적용하는 카드로 팀 전체를 꾸리고 바꿔요. 에이전트, 사람, 워크스페이스 설정이 대상이에요",
+      "routines": "내가 관리할 수 있는 루틴이면 어느 에이전트의 것이든 실행하고 삭제해요",
+      "asYou": "나와의 대화에서는 내가 볼 수 있는 Drive, 위키, 작업을 읽어요",
+      "mentions": "멤버가 아니어도 모든 채널의 @멘션에 답해요"
     },
     "card": {
       "settings": "{{name}} · 설정",
@@ -2590,10 +2612,16 @@
       "useKey": "API 키 쓰기"
     },
     "kept": {
-      "title": "메시지를 보관했어요.",
-      "line": "워크스페이스에 agentes.chat 요금제와 연결된 AI가 생기면 여기에서 답할게요.",
+      "title": "메시지를 보관했어요",
+      "wait": {
+        "payment": "워크스페이스에 agentes.chat 요금제가 생기면 여기에서 답할게요.",
+        "unpaid": "agentes.chat 요금제 결제가 완료되면 여기에서 답할게요.",
+        "ended": "워크스페이스가 agentes.chat을 다시 구독하면 여기에서 답할게요."
+      },
+      "askAdmin": "관리자가 agentes.chat 요금제를 해결하면 여기에서 답할게요.",
       "plan": "요금제에는 항상 켜져 있는 에이전트 컴퓨터가 포함돼요. AI는 이미 결제하고 있는 것을 써요. Claude, ChatGPT 등이나 API 키요.",
-      "active": "요금제가 활성화됐어요. AI를 연결하면 {{name}}이(가) 여기에서 답해요.",
+      "activeTitle": "요금제가 활성화됐어요",
+      "activeLine": "AI를 연결하면 {{name}}이(가) 여기에서 답해요.",
       "receipt": "보관됨",
       "channel": "보관됨. 워크스페이스에 agentes.chat 요금제가 생기면 에이전트가 답해요."
     },
@@ -2844,6 +2872,22 @@
       "never": "{{name}} 님이 이 일은 하지 말라고 했습니다"
     }
   },
+  "approvalsLevel": {
+    "title": "승인",
+    "lead": "{{name}}이(가) 실행 전에 사람에게 묻는 경우.",
+    "always": {
+      "title": "항상 묻기",
+      "text": "앱에서 무언가를 바꾸기 전에 묻습니다."
+    },
+    "risky": {
+      "title": "위험한 것만",
+      "text": "삭제, 전송, 결제 전에 묻습니다."
+    },
+    "never": {
+      "title": "묻지 않기",
+      "text": "머지, 배포, 롤백은 계속 묻습니다."
+    }
+  },
   "brakes": {
     "title": "아무도 요청하지 않은 작업",
     "subtitle": "루틴, 알림, 다른 에이전트에서 시작해 스스로 하는 작업입니다. 사람이 요청한 일은 절대 멈추지 않습니다.",
@@ -2980,6 +3024,8 @@
       "title": "{{agent}}이(가) 새 에이전트를 제안해요",
       "review": "검토",
       "created": "생성됨",
+      "createdBy": "만든 사람: {{name}}",
+      "createdByYou": "내가 만듦",
       "aiAccount": "{{account}}(으)로 생각해요",
       "aiModel": "API로 생각해요",
       "aiNone": "아직 AI가 없어요. 만든 다음 연결하세요",
@@ -3588,7 +3634,7 @@
       "clearFilters": "검색 지우기",
       "personalNote": "이 항목은 나만 볼 수 있어요. 내가 부탁할 때만 에이전트가 사용해요.",
       "personalEmpty": "로그인 정보와 키를 안전하게 보관해요",
-      "personalEmptyText": "이 항목은 나만 볼 수 있어요. 내가 부탁할 때만 에이전트가 사용해요.",
+      "personalEmptyText": "이 항목은 나만 볼 수 있고, 내가 부탁할 때만 에이전트가 사용해요.",
       "teamEmpty": "비밀번호를 돌리지 않고 로그인을 공유하세요",
       "teamEmptyPersonal": "공유 로그인을 한곳에 모아 두세요",
       "teamEmptyText": "로그인, 키, 연락처를 한 번 저장하고, 사용할 수 있는 에이전트를 고르세요.",
@@ -4011,6 +4057,7 @@
       "team": "<b>{{name}}</b>가 팀을 제안해요 · {{what}}",
       "firstTask": "<b>{{name}}</b>가 첫 작업을 제안해요 · {{what}}",
       "more": "+{{count}}",
+      "here_other": "여기서 내 확인을 기다리는 항목 {{count}}개",
       "see": "보기"
     }
   },
@@ -14152,6 +14199,7 @@
       "where": "위치",
       "via": "경유",
       "approval": "승인",
+      "unasked": "묻지 않음 ({{level}})",
       "approvalWaiting": "아직 아무도 응답하지 않았어요",
       "approvalApproved": "{{name}}님이 승인함",
       "approvalRefused": "{{name}}님이 거절함",
@@ -15843,8 +15891,6 @@
     },
     "card": {
       "group": "브라우저에서 도움을 구하는 {{name}}의 요청",
-      "asked": "{{people}}에게 도움을 요청했어요",
-      "askedShort": "도움 필요",
       "left": "{{time}} 남음",
       "where": "{{name}}의 브라우저에서",
       "open": "열기",
@@ -15859,11 +15905,6 @@
       "expired": "제시간에 아무도 열지 않았어요. {{name}}이(가) 멈추고 알렸어요.",
       "cancelled": "요청을 취소했어요.",
       "withdrawn": "{{name}}에게 더 이상 필요하지 않아요.",
-      "settledDone": "도움 요청 · 해결됨",
-      "settledFailed": "도움 요청 · 잘 안 됨",
-      "settledExpired": "도움 요청 · 만료됨",
-      "settledCancelled": "도움 요청 · 취소됨",
-      "settledWithdrawn": "도움 요청 · 더 이상 필요 없음",
       "busy": "이미 다른 사람이 돕고 있어요.",
       "openFailed": "지금은 열 수 없어요. 다시 시도하세요."
     },
@@ -15977,8 +16018,6 @@
       "couldnt": "못 했어요",
       "giveUp": "포기",
       "otherHelp": "{{person}}님이 제어 중이에요. 지켜보는 중이에요.",
-      "helpingHere": "내가 돕는 중 · 이 카드에서",
-      "helpingOther": "{{person}}님이 돕는 중 · 이 카드에서",
       "doneLine": "완료했어요. {{name}}이(가) 페이지를 다시 읽고 이어 갈 거예요.",
       "openHere": "여기서 열기",
       "openHereHint": "채팅을 떠나지 않고 이 카드에서 열어요.",

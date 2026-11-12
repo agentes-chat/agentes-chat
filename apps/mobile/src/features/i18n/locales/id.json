@@ -356,8 +356,6 @@
     "switchWorking": "sedang bekerja",
     "join": "Gabung ke kanal",
     "sending": "Mengirim…",
-    "failed": "Tidak terkirim · Coba lagi",
-    "notSent": "Pesan tidak terkirim.",
     "toLatest": "Ke pesan terbaru",
     "toLatestNew": "Ke pesan terbaru: {{text}}",
     "stopAgent": "Hentikan {{name}}",
@@ -1582,13 +1580,7 @@
       "open": "Buka",
       "expandHint": "Ketuk untuk memperbesar",
       "stop": "Hentikan",
-      "giveUp": "Menyerah",
-      "done": "Selesai: {{title}}",
-      "failed": "Tidak berhasil: {{title}}",
-      "failedNote": "Tidak berhasil: {{note}}",
-      "expired": "Tidak ada yang membukanya tepat waktu: {{title}}",
-      "cancelled": "Dibatalkan: {{title}}",
-      "withdrawn": "{{name}} tidak lagi membutuhkan ini: {{title}}"
+      "giveUp": "Menyerah"
     },
     "live": {
       "inControl": "Kamu yang mengendalikan",

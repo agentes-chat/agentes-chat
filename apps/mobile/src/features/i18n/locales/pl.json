@@ -398,8 +398,6 @@
     "switchWorking": "pracuje",
     "join": "Dołącz do kanału",
     "sending": "Wysyłanie…",
-    "failed": "Nie wysłano · Spróbuj ponownie",
-    "notSent": "Wiadomość nie została wysłana.",
     "toLatest": "Przejdź do najnowszych wiadomości",
     "toLatestNew": "Przejdź do najnowszych wiadomości: {{text}}",
     "stopAgent": "Zatrzymaj: {{name}}",
@@ -1870,13 +1868,7 @@
       "open": "Otwórz",
       "expandHint": "Stuknij, aby rozwinąć",
       "stop": "Zatrzymaj",
-      "giveUp": "Zrezygnuj",
-      "done": "Gotowe: {{title}}",
-      "failed": "Nie udało się: {{title}}",
-      "failedNote": "Nie udało się: {{note}}",
-      "expired": "Nikt nie otworzył tego na czas: {{title}}",
-      "cancelled": "Anulowano: {{title}}",
-      "withdrawn": "{{name}} już tego nie potrzebuje: {{title}}"
+      "giveUp": "Zrezygnuj"
     },
     "live": {
       "inControl": "Masz kontrolę",

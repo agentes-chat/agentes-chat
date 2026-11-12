@@ -1621,7 +1621,6 @@
       "limit": "{{name}} llegó al límite de hoy: este queda contigo",
       "undoneByYou": "Deshecho por ti",
       "undoneBy": "Deshecho por {{name}}",
-      "why": "¿Por qué?",
       "undo": "Deshacer",
       "undoArchives": "Deshacer archiva a {{name}}. Vale hasta {{until}}.",
       "undoSettings": "Deshacer devuelve la configuración. Vale hasta {{until}}."
@@ -1701,6 +1700,7 @@
     "unshown": "No se pudo mostrar",
     "more": "Más",
     "moreWhat": {
+      "waiting": "Todo lo que espera tu respuesta",
       "approvals": "Lo que los agentes te piden permitir",
       "proposals": "Lo que los agentes proponen cambiar",
       "threads": "Conversaciones que se ramifican, y misiones",
@@ -1800,6 +1800,7 @@
     "summary_one": "{{people}} miembro · {{agents}} agentes",
     "summary_many": "{{people}} miembros · {{agents}} agentes",
     "summary_other": "{{people}} miembros · {{agents}} agentes",
+    "waiting": "Te esperan",
     "approvals": "Aprobaciones",
     "proposals": "Propuestas de mejora",
     "issues": "Tareas",
@@ -2282,7 +2283,19 @@
     "sendCorrection": "Enviar corrección",
     "correctionSent": "Corrección enviada. {{name}} aprenderá de ella.",
     "sending": "enviando…",
-    "notSent": "No enviado",
+    "tooLong": {
+      "text": "El mensaje tiene {{length}} caracteres y el límite es {{max}}.",
+      "fix": "Envía el texto como archivo.",
+      "asFile": "Enviar como archivo",
+      "fileName": "mensaje.txt"
+    },
+    "notSentWhy": "No enviado. {{why}}",
+    "notSentUnknown": "Algo salió mal.",
+    "editSend": "Editar",
+    "long": {
+      "more": "Ver más",
+      "title": "Mensaje de {{name}}"
+    },
     "retrySend": "Intentar de nuevo",
     "thinking": "{{name}} está pensando…",
     "typing_one": "{{names}} está escribiendo…",
@@ -2405,8 +2418,9 @@
       "connect": {
         "title": "Conectar una IA para el equipo",
         "titlePersonal": "Conectar una IA para tus agentes",
-        "text": "Los agentes piensan con la IA del workspace. Inicia sesión con tu plan de Claude o de ChatGPT, sin clave de API.",
-        "textPersonal": "Tus agentes piensan con esta IA. Inicia sesión con tu plan de Claude o de ChatGPT, sin clave de API.",
+        "text": "Inicia sesión con tu plan de Claude o de ChatGPT, sin clave de API.",
+        "hint": "Los agentes piensan con la IA del workspace.",
+        "hintPersonal": "Tus agentes piensan con esta IA.",
         "action": "Conectar"
       },
       "again": {
@@ -2477,6 +2491,14 @@
       "groupMine": "Solo para ti",
       "groupWorkspace": "Para todo el workspace",
       "groupAdmins": "solo admins"
+    },
+    "powers": {
+      "title": "Poderes del workspace",
+      "help": "Solo tu mano derecha hace esto.",
+      "team": "Monta y cambia todo el equipo con tarjetas que una persona aplica: agentes, personas y ajustes del workspace",
+      "routines": "Ejecuta y elimina rutinas de cualquier agente que puedas gestionar",
+      "asYou": "En tu propia conversación, lee el Drive, la wiki y las tareas que puedes ver",
+      "mentions": "Responde a una @mención en cualquier canal sin ser miembro"
     },
     "card": {
       "settings": "{{name}} · Configuración",
@@ -2783,10 +2805,16 @@
       "useKey": "Usar una clave de API"
     },
     "kept": {
-      "title": "Guardé tu mensaje.",
-      "line": "Responderé aquí cuando el workspace tenga un plan de agentes.chat y una IA conectada.",
+      "title": "Guardé tu mensaje",
+      "wait": {
+        "payment": "Responderé aquí cuando el workspace tenga un plan de agentes.chat.",
+        "unpaid": "Responderé aquí cuando se complete el pago del plan de agentes.chat.",
+        "ended": "Responderé aquí cuando el workspace vuelva a suscribirse a agentes.chat."
+      },
+      "askAdmin": "Responderé aquí cuando un admin resuelva el plan de agentes.chat.",
       "plan": "El plan trae el ordenador de los agentes, siempre encendido. La IA es la que ya pagas: Claude, ChatGPT y otras, o una clave de API.",
-      "active": "Plan activo. Conecta una IA y {{name}} responde aquí.",
+      "activeTitle": "Plan activo",
+      "activeLine": "Conecta una IA y {{name}} responde aquí.",
       "receipt": "Guardado",
       "channel": "Guardado. Los agentes responden cuando el workspace tenga un plan de agentes.chat."
     },
@@ -3047,6 +3075,22 @@
       "never": "{{name}} dijo nunca para esto"
     }
   },
+  "approvalsLevel": {
+    "title": "Aprobaciones",
+    "lead": "Cuándo {{name}} pregunta a una persona antes de actuar.",
+    "always": {
+      "title": "Preguntar siempre",
+      "text": "Pregunta antes de cambiar algo en una app."
+    },
+    "risky": {
+      "title": "Solo lo arriesgado",
+      "text": "Pregunta antes de borrar, enviar o pagar."
+    },
+    "never": {
+      "title": "No preguntar nunca",
+      "text": "Sigue preguntando en merge, deploy y rollback."
+    }
+  },
   "brakes": {
     "title": "Trabajo que nadie pidió",
     "subtitle": "Lo que empieza por su cuenta, a partir de una rutina, una alerta u otro agente. Lo que pide una persona nunca se detiene.",
@@ -3197,6 +3241,8 @@
       "title": "{{agent}} propone un nuevo agente",
       "review": "Revisar",
       "created": "Creado",
+      "createdBy": "Creado por {{name}}",
+      "createdByYou": "Creado por ti",
       "aiAccount": "Piensa con {{account}}",
       "aiModel": "Piensa a través de la API",
       "aiNone": "Todavía sin IA. Conecta una después de crearlo",
@@ -3819,7 +3865,7 @@
       "clearFilters": "Borrar la búsqueda",
       "personalNote": "Solo tú ves estos elementos. Tus agentes los usan solo cuando se lo pides.",
       "personalEmpty": "Guarda tus inicios de sesión y claves seguros",
-      "personalEmptyText": "Solo tú ves estos elementos. Tus agentes los usan solo cuando se lo pides.",
+      "personalEmptyText": "Solo tú ves estos elementos, y tus agentes los usan solo cuando se lo pides.",
       "teamEmpty": "Comparte accesos sin pasar contraseñas",
       "teamEmptyPersonal": "Guarda los accesos compartidos en un solo lugar",
       "teamEmptyText": "Guarda una vez un inicio de sesión, una clave o datos de contacto, y elige qué agentes pueden usarlo.",
@@ -4260,6 +4306,9 @@
       "team": "<b>{{name}}</b> propone un equipo · {{what}}",
       "firstTask": "<b>{{name}}</b> sugiere una primera tarea · {{what}}",
       "more": "+{{count}}",
+      "here_one": "{{count}} te espera aquí",
+      "here_many": "{{count}} te esperan aquí",
+      "here_other": "{{count}} te esperan aquí",
       "see": "Ver"
     }
   },
@@ -15068,6 +15117,7 @@
       "where": "Dónde",
       "via": "A través de",
       "approval": "Aprobación",
+      "unasked": "No preguntó ({{level}})",
       "approvalWaiting": "Nadie respondió todavía",
       "approvalApproved": "Aprobado por {{name}}",
       "approvalRefused": "Rechazado por {{name}}",
@@ -16807,8 +16857,6 @@
     },
     "card": {
       "group": "Pedido de ayuda de {{name}} en el navegador",
-      "asked": "le pidió ayuda a {{people}}",
-      "askedShort": "necesita ayuda",
       "left": "Quedan {{time}}",
       "where": "En el navegador de {{name}}",
       "open": "Abrir",
@@ -16823,11 +16871,6 @@
       "expired": "Nadie lo abrió a tiempo. {{name}} se detuvo y lo avisó.",
       "cancelled": "Pedido cancelado.",
       "withdrawn": "{{name}} ya no necesita esto.",
-      "settledDone": "pidió ayuda · resuelto",
-      "settledFailed": "pidió ayuda · no funcionó",
-      "settledExpired": "pidió ayuda · vencido",
-      "settledCancelled": "pidió ayuda · cancelado",
-      "settledWithdrawn": "pidió ayuda · ya no hace falta",
       "busy": "Otra persona ya está ayudando.",
       "openFailed": "No se pudo abrir ahora. Inténtalo de nuevo."
     },
@@ -16943,8 +16986,6 @@
       "couldnt": "No pude",
       "giveUp": "Abandonar",
       "otherHelp": "{{person}} tiene el control. Estás mirando.",
-      "helpingHere": "Estás ayudando · en esta tarjeta",
-      "helpingOther": "{{person}} está ayudando · en esta tarjeta",
       "doneLine": "Listo. {{name}} volverá a leer la página y seguirá.",
       "openHere": "Abrir aquí",
       "openHereHint": "Se abre en esta tarjeta, sin salir del chat.",

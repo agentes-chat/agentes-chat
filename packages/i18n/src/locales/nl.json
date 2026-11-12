@@ -1580,7 +1580,6 @@
       "limit": "{{name}} heeft de limiet van vandaag bereikt: deze blijft bij jou",
       "undoneByYou": "Door jou ongedaan gemaakt",
       "undoneBy": "Door {{name}} ongedaan gemaakt",
-      "why": "Waarom?",
       "undo": "Ongedaan maken",
       "undoArchives": "Ongedaan maken archiveert {{name}}. Kan tot {{until}}.",
       "undoSettings": "Ongedaan maken zet de instellingen terug. Kan tot {{until}}."
@@ -1660,6 +1659,7 @@
     "unshown": "Kon niet worden getoond",
     "more": "Meer",
     "moreWhat": {
+      "waiting": "Alles wat op jouw antwoord wacht",
       "approvals": "Wat agents je vragen toe te staan",
       "proposals": "Wat agents willen veranderen",
       "threads": "Gesprekken die aftakken, en missies",
@@ -1758,6 +1758,7 @@
     "searchWorkspace": "De werkruimte doorzoeken",
     "summary_one": "{{people}} lid · {{agents}} agents",
     "summary_other": "{{people}} leden · {{agents}} agents",
+    "waiting": "Wacht op jou",
     "approvals": "Goedkeuringen",
     "proposals": "Verbeteringsvoorstellen",
     "issues": "Taken",
@@ -2217,7 +2218,19 @@
     "correctionSent": "Correctie verstuurd. {{name}} leert ervan.",
     "correctionSent_female": "Correctie verstuurd. {{name}} leert ervan.",
     "sending": "versturen…",
-    "notSent": "Niet verstuurd",
+    "tooLong": {
+      "text": "Het bericht heeft {{length}} tekens en de limiet is {{max}}.",
+      "fix": "Stuur de tekst als bestand.",
+      "asFile": "Als bestand sturen",
+      "fileName": "bericht.txt"
+    },
+    "notSentWhy": "Niet verzonden. {{why}}",
+    "notSentUnknown": "Er ging iets mis.",
+    "editSend": "Bewerken",
+    "long": {
+      "more": "Meer tonen",
+      "title": "Bericht van {{name}}"
+    },
     "retrySend": "Opnieuw proberen",
     "thinking": "{{name}} denkt na…",
     "typing_one": "{{names}} typt…",
@@ -2322,8 +2335,9 @@
       "connect": {
         "title": "Een AI voor het team koppelen",
         "titlePersonal": "Een AI voor je agents koppelen",
-        "text": "De agents denken met de AI van de workspace. Log in met je Claude- of ChatGPT-abonnement, zonder API-sleutel.",
-        "textPersonal": "Je agents denken met deze AI. Log in met je Claude- of ChatGPT-abonnement, zonder API-sleutel.",
+        "text": "Log in met je Claude- of ChatGPT-abonnement, zonder API-sleutel.",
+        "hint": "De agents denken met de AI van de workspace.",
+        "hintPersonal": "Je agents denken met deze AI.",
         "action": "Koppelen"
       },
       "again": {
@@ -2394,6 +2408,14 @@
       "groupMine": "Alleen voor jou",
       "groupWorkspace": "Voor de hele workspace",
       "groupAdmins": "alleen admins"
+    },
+    "powers": {
+      "title": "Bevoegdheden in de workspace",
+      "help": "Alleen je rechterhand doet dit.",
+      "team": "Zet het hele team op en past het aan met kaarten die een persoon toepast: agents, mensen en workspace-instellingen",
+      "routines": "Start en verwijdert routines van elke agent die jij mag beheren",
+      "asYou": "Leest in je eigen gesprek de Drive, de wiki en de taken die jij kunt zien",
+      "mentions": "Antwoordt op een @vermelding in elk kanaal zonder lid te zijn"
     },
     "card": {
       "settings": "{{name}} · Instellingen",
@@ -2693,10 +2715,16 @@
       "useKey": "API-sleutel gebruiken"
     },
     "kept": {
-      "title": "Ik heb je bericht bewaard.",
-      "line": "Ik antwoord hier zodra de workspace een agentes.chat-abonnement en een gekoppelde AI heeft.",
+      "title": "Ik heb je bericht bewaard",
+      "wait": {
+        "payment": "Ik antwoord hier zodra de workspace een agentes.chat-abonnement heeft.",
+        "unpaid": "Ik antwoord hier zodra de betaling van het agentes.chat-abonnement is gelukt.",
+        "ended": "Ik antwoord hier zodra de workspace zich opnieuw op agentes.chat abonneert."
+      },
+      "askAdmin": "Ik antwoord hier zodra een beheerder het agentes.chat-abonnement heeft geregeld.",
       "plan": "Het abonnement brengt de computer van de agents, altijd aan. De AI is die waarvoor je al betaalt: Claude, ChatGPT en andere, of een API-sleutel.",
-      "active": "Abonnement actief. Koppel een AI en {{name}} antwoordt hier.",
+      "activeTitle": "Abonnement actief",
+      "activeLine": "Koppel een AI en {{name}} antwoordt hier.",
       "receipt": "Bewaard",
       "channel": "Bewaard. De agents antwoorden zodra de workspace een agentes.chat-abonnement heeft."
     },
@@ -2955,6 +2983,22 @@
       "never": "{{name}} zei nooit hiervoor"
     }
   },
+  "approvalsLevel": {
+    "title": "Goedkeuringen",
+    "lead": "Wanneer {{name}} iemand vraagt voordat er iets gebeurt.",
+    "always": {
+      "title": "Altijd vragen",
+      "text": "Vraagt voordat er iets in een app verandert."
+    },
+    "risky": {
+      "title": "Alleen wat riskant is",
+      "text": "Vraagt voor verwijderen, verzenden of betalen."
+    },
+    "never": {
+      "title": "Nooit vragen",
+      "text": "Vraagt nog wel bij merge, deploy en rollback."
+    }
+  },
   "brakes": {
     "title": "Werk waar niemand om vroeg",
     "subtitle": "Wat hij zelf begint, na een routine, een melding of een andere agent. Waar een persoon om vraagt, wordt nooit tegengehouden.",
@@ -3098,6 +3142,8 @@
       "title": "{{agent}} stelt een nieuwe agent voor",
       "review": "Bekijken",
       "created": "Aangemaakt",
+      "createdBy": "Gemaakt door {{name}}",
+      "createdByYou": "Door jou gemaakt",
       "aiAccount": "Denkt met {{account}}",
       "aiModel": "Denkt via de API",
       "aiNone": "Nog geen AI. Koppel er een na het aanmaken",
@@ -3712,7 +3758,7 @@
       "clearFilters": "Zoekopdracht wissen",
       "personalNote": "Alleen jij ziet deze items. Je agenten gebruiken ze alleen als je erom vraagt.",
       "personalEmpty": "Bewaar je logins en sleutels veilig",
-      "personalEmptyText": "Alleen jij ziet deze items. Je agenten gebruiken ze alleen als je erom vraagt.",
+      "personalEmptyText": "Alleen jij ziet deze items, en je agenten gebruiken ze alleen als je erom vraagt.",
       "teamEmpty": "Deel logins zonder wachtwoorden door te geven",
       "teamEmptyPersonal": "Bewaar gedeelde logins op één plek",
       "teamEmptyText": "Sla een login, een sleutel of contactgegevens één keer op en kies welke agenten het mogen gebruiken.",
@@ -4152,6 +4198,8 @@
       "team": "<b>{{name}}</b> stelt een team voor · {{what}}",
       "firstTask": "<b>{{name}}</b> stelt een eerste taak voor · {{what}}",
       "more": "+{{count}}",
+      "here_one": "{{count}} wacht hier op jou",
+      "here_other": "{{count}} wachten hier op jou",
       "see": "Bekijken"
     }
   },
@@ -14729,6 +14777,7 @@
       "where": "Waar",
       "via": "Via",
       "approval": "Goedkeuring",
+      "unasked": "Niet gevraagd ({{level}})",
       "approvalWaiting": "Nog niemand heeft geantwoord",
       "approvalApproved": "Goedgekeurd door {{name}}",
       "approvalRefused": "Geweigerd door {{name}}",
@@ -16458,8 +16507,6 @@
     "card": {
       "group": "Hulpvraag van {{name}} in de browser",
       "group_female": "Hulpvraag van {{name}} in de browser",
-      "asked": "vroeg {{people}} om hulp",
-      "askedShort": "heeft hulp nodig",
       "left": "Nog {{time}}",
       "where": "In de browser van {{name}}",
       "where_female": "In de browser van {{name}}",
@@ -16480,11 +16527,6 @@
       "cancelled": "Verzoek geannuleerd.",
       "withdrawn": "{{name}} heeft dit niet meer nodig.",
       "withdrawn_female": "{{name}} heeft dit niet meer nodig.",
-      "settledDone": "vroeg om hulp · opgelost",
-      "settledFailed": "vroeg om hulp · lukte niet",
-      "settledExpired": "vroeg om hulp · verlopen",
-      "settledCancelled": "vroeg om hulp · geannuleerd",
-      "settledWithdrawn": "vroeg om hulp · niet meer nodig",
       "busy": "Iemand anders helpt al.",
       "openFailed": "Kon het nu niet openen. Probeer het opnieuw."
     },
@@ -16618,8 +16660,6 @@
       "couldnt": "Het lukte me niet",
       "giveUp": "Opgeven",
       "otherHelp": "{{person}} heeft de controle. Jij kijkt mee.",
-      "helpingHere": "Jij helpt · in deze kaart",
-      "helpingOther": "{{person}} helpt · in deze kaart",
       "doneLine": "Klaar. {{name}} leest de pagina opnieuw en gaat verder.",
       "doneLine_female": "Klaar. {{name}} leest de pagina opnieuw en gaat verder.",
       "openHere": "Hier openen",

@@ -260,7 +260,10 @@ export function Sidebar() {
   }, []);
   const proposalsWaiting = overview.data?.proposalsWaitingForMe ?? 0;
   // The bell: unread notifications (live through `notification.counts`); the badge bumps when one arrives.
-  const unreadNotifications = useNotificationCount(orgId).data?.unread ?? 0;
+  const notificationCount = useNotificationCount(orgId).data;
+  const unreadNotifications = notificationCount?.unread ?? 0;
+  // "Esperando você": everything that waits on me, the same live count (ADR 0172).
+  const waitingOnMe = notificationCount?.waiting ?? 0;
   const lastUnread = useRef(unreadNotifications);
   const [bumps, setBumps] = useState(0);
   useEffect(() => {
@@ -282,6 +285,7 @@ export function Sidebar() {
   const proposalsRow = inSidebarList(sidebarPlace(sidebarItems, "proposals", personal), proposalsWaiting);
   const pending = (overview.data?.approvalsWaitingForMe ?? 0) + (proposalsRow ? 0 : proposalsWaiting);
   const counts: Partial<Record<SidebarItem, number>> = {
+    waiting: waitingOnMe,
     approvals: pending,
     proposals: proposalsWaiting,
     threads: missionsWaiting + unreadThreads,
@@ -291,7 +295,11 @@ export function Sidebar() {
   const listed = toolOrder.filter((id) => inSidebarList(sidebarPlace(sidebarItems, id, personal), counts[id] ?? 0));
   const inMore = toolOrder.filter((id) => !listed.includes(id));
   const countOf = (id: SidebarItem) =>
-    id === "approvals" && pending > 0 ? (
+    id === "waiting" && waitingOnMe > 0 ? (
+      <CountBadge aria-label={t("notifications.summaryWaiting", { count: waitingOnMe })}>
+        {badgeCount(waitingOnMe)}
+      </CountBadge>
+    ) : id === "approvals" && pending > 0 ? (
       <CountBadge aria-label={t("shell.pendingApprovals", { count: pending })}>{pending}</CountBadge>
     ) : id === "proposals" && proposalsWaiting > 0 ? (
       <CountBadge aria-label={t("shell.pendingProposals", { count: proposalsWaiting })}>{proposalsWaiting}</CountBadge>
@@ -1577,9 +1585,10 @@ function SidebarChannels({
   );
 }
 
-/** The tools whose line in More has a personal workspace's words (ADR 0159); Routines' and Drive's fit both. */
-type PersonalWhat = Exclude<SidebarItem, "routines" | "drive">;
-const hasPersonalWhat = (id: SidebarItem): id is PersonalWhat => id !== "routines" && id !== "drive";
+/** The tools whose line in More has a personal workspace's words (ADR 0159); the others' fit both. */
+type PersonalWhat = Exclude<SidebarItem, "routines" | "drive" | "waiting">;
+const hasPersonalWhat = (id: SidebarItem): id is PersonalWhat =>
+  id !== "routines" && id !== "drive" && id !== "waiting";
 
 /**
  * More: the tools the person keeps out of the list, in a panel beside the sidebar (so nothing below moves), each with a

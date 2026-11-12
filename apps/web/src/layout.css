@@ -3522,6 +3522,31 @@ html:not([data-pointer]) .channel-ref:focus-visible {
   margin-top: 2px;
   font-size: 13px;
 }
+/*
+ * A tall message in a conversation (ClippedBody): whole up to `LONG_MESSAGE.over`, past it only its first
+ * `LONG_MESSAGE.shows`, fading out, with "Ver mais" under it. The limits sit on the words' own root, so the bubble
+ * still reads them as its direct child. `clip`, not `hidden`: the browser's find must not scroll the words inside
+ * their box. Only a cut message is clipped: one that shows whole keeps whatever reaches past its lines.
+ */
+.msg-clip--cut {
+  max-height: 360px;
+  overflow-y: clip;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 96px), transparent);
+  mask-image: linear-gradient(#000 calc(100% - 96px), transparent);
+}
+.msg-clip__more {
+  display: inline-block;
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: inherit;
+}
+/* The same message whole, in its dialog: the conversation's reading size, room under the last line. */
+.msg-clip__whole {
+  padding-bottom: var(--dialog-pad);
+  font-size: var(--msg-text, 14px);
+  line-height: var(--msg-line, 24px);
+  overflow-wrap: anywhere;
+}
 .channel-card__head {
   display: flex;
   align-items: center;
@@ -9444,9 +9469,10 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   color: var(--ink-muted);
   font-size: 12.5px;
 }
+/* Its words wrap on a phone: the icon stays on their first line (`.ac-iconline` on the row). */
 .newag__addrow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   width: 100%;
   padding: var(--space-3) var(--space-4);
@@ -14350,6 +14376,15 @@ html:not([data-pointer]) .voice-tile:has(.voice-tile__radio:focus-visible) {
 .rh-value b {
   color: var(--ink);
   font-weight: 600;
+}
+/* What only the right hand does: plain lines, a tick on each first line. */
+.rh-powers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .rh-set__budget {
   display: inline-flex;

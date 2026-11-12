@@ -3914,9 +3914,6 @@
   "rightHandApprovals.card.undoneBy": {
     "value": "Undone by {{name}}"
   },
-  "rightHandApprovals.card.why": {
-    "value": "Why?"
-  },
   "rightHandApprovals.card.undo": {
     "value": "Undo"
   },
@@ -4057,6 +4054,9 @@
   },
   "shell.more": {
     "value": "More"
+  },
+  "shell.moreWhat.waiting": {
+    "value": "Everything waiting for your answer"
   },
   "shell.moreWhat.approvals": {
     "value": "What agents ask you to allow"
@@ -4336,6 +4336,9 @@
       "one": "{{people}} member · {{agents}} agents",
       "other": "{{people}} members · {{agents}} agents"
     }
+  },
+  "shell.waiting": {
+    "value": "Waiting on you"
   },
   "shell.approvals": {
     "value": "Approvals"
@@ -5504,8 +5507,32 @@
   "channel.sending": {
     "value": "sending…"
   },
-  "channel.notSent": {
-    "value": "Not sent"
+  "channel.notSentWhy": {
+    "value": "Not sent. {{why}}"
+  },
+  "channel.notSentUnknown": {
+    "value": "Something went wrong."
+  },
+  "channel.editSend": {
+    "value": "Edit"
+  },
+  "channel.tooLong.text": {
+    "value": "The message has {{length}} characters and the limit is {{max}}."
+  },
+  "channel.tooLong.fix": {
+    "value": "Send the text as a file."
+  },
+  "channel.tooLong.asFile": {
+    "value": "Send as a file"
+  },
+  "channel.tooLong.fileName": {
+    "value": "message.txt"
+  },
+  "channel.long.more": {
+    "value": "See more"
+  },
+  "channel.long.title": {
+    "value": "Message from {{name}}"
   },
   "channel.retrySend": {
     "value": "Try again"
@@ -5784,10 +5811,13 @@
     "value": "Connect an AI for your agents"
   },
   "rightHand.intro.connect.text": {
-    "value": "The agents think with the workspace's AI. Sign in with your Claude or ChatGPT plan, no API key needed."
+    "value": "Sign in with your Claude or ChatGPT plan, no API key needed."
   },
-  "rightHand.intro.connect.textPersonal": {
-    "value": "Your agents think with this AI. Sign in with your Claude or ChatGPT plan, no API key needed."
+  "rightHand.intro.connect.hint": {
+    "value": "The agents think with the workspace's AI."
+  },
+  "rightHand.intro.connect.hintPersonal": {
+    "value": "Your agents think with this AI."
   },
   "rightHand.intro.connect.action": {
     "value": "Connect"
@@ -5965,6 +5995,24 @@
   },
   "rightHand.settings.groupAdmins": {
     "value": "admins only"
+  },
+  "rightHand.powers.title": {
+    "value": "Workspace powers"
+  },
+  "rightHand.powers.help": {
+    "value": "Only your right hand does these."
+  },
+  "rightHand.powers.team": {
+    "value": "Sets up and changes the whole team with cards a person applies: agents, people and workspace settings"
+  },
+  "rightHand.powers.routines": {
+    "value": "Runs and deletes any agent's routine you may manage"
+  },
+  "rightHand.powers.asYou": {
+    "value": "In your own conversation, reads the Drive, the wiki and the tasks you can see"
+  },
+  "rightHand.powers.mentions": {
+    "value": "Answers an @mention in any channel without being a member"
   },
   "rightHand.card.settings": {
     "value": "{{name}} · Settings"
@@ -6665,16 +6713,28 @@
     "value": "Use an API key"
   },
   "noAi.kept.title": {
-    "value": "I kept your message."
+    "value": "I kept your message"
   },
-  "noAi.kept.line": {
-    "value": "I'll answer here once the workspace has an agentes.chat plan and an AI connected."
+  "noAi.kept.wait.payment": {
+    "value": "I'll answer here once the workspace has an agentes.chat plan."
+  },
+  "noAi.kept.wait.unpaid": {
+    "value": "I'll answer here once the agentes.chat plan's payment goes through."
+  },
+  "noAi.kept.wait.ended": {
+    "value": "I'll answer here once the workspace subscribes to agentes.chat again."
+  },
+  "noAi.kept.askAdmin": {
+    "value": "I'll answer here once an admin sorts out the agentes.chat plan."
   },
   "noAi.kept.plan": {
     "value": "The plan brings the agents' computer, always on. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key."
   },
-  "noAi.kept.active": {
-    "value": "Plan active. Connect an AI and {{name}} answers here."
+  "noAi.kept.activeTitle": {
+    "value": "Plan active"
+  },
+  "noAi.kept.activeLine": {
+    "value": "Connect an AI and {{name}} answers here."
   },
   "noAi.kept.receipt": {
     "value": "Kept"
@@ -7231,6 +7291,30 @@
   "costlyCard.decided.never": {
     "value": "{{name}} said never for this"
   },
+  "approvalsLevel.title": {
+    "value": "Approvals"
+  },
+  "approvalsLevel.lead": {
+    "value": "When {{name}} asks a person before acting."
+  },
+  "approvalsLevel.always.title": {
+    "value": "Always ask"
+  },
+  "approvalsLevel.always.text": {
+    "value": "Asks before changing anything in an app."
+  },
+  "approvalsLevel.risky.title": {
+    "value": "Only what is risky"
+  },
+  "approvalsLevel.risky.text": {
+    "value": "Asks before deleting, sending or paying."
+  },
+  "approvalsLevel.never.title": {
+    "value": "Never ask"
+  },
+  "approvalsLevel.never.text": {
+    "value": "Still asks for merge, deploy and rollback."
+  },
   "brakes.title": {
     "value": "Work nobody asked for"
   },
@@ -7587,6 +7671,12 @@
   },
   "actionCard.agentProposal.created": {
     "value": "Created"
+  },
+  "actionCard.agentProposal.createdBy": {
+    "value": "Created by {{name}}"
+  },
+  "actionCard.agentProposal.createdByYou": {
+    "value": "Created by you"
   },
   "actionCard.agentProposal.aiAccount": {
     "value": "Thinks with {{account}}"
@@ -9106,7 +9196,7 @@
     "value": "Keep your logins and keys safe"
   },
   "vault.list.personalEmptyText": {
-    "value": "Only you see these. Your agents use them only when you ask."
+    "value": "Only you see these, and your agents use them only when you ask."
   },
   "vault.list.teamEmpty": {
     "value": "Share logins without passing passwords around"
@@ -10103,6 +10193,12 @@
   },
   "ask.bar.more": {
     "value": "+{{count}}"
+  },
+  "ask.bar.here": {
+    "value": {
+      "one": "{{count}} waiting on you here",
+      "other": "{{count}} waiting on you here"
+    }
   },
   "ask.bar.see": {
     "value": "See"
@@ -35577,6 +35673,9 @@
   "audit.panel.approval": {
     "value": "Approval"
   },
+  "audit.panel.unasked": {
+    "value": "Not asked ({{level}})"
+  },
   "audit.panel.approvalWaiting": {
     "value": "Nobody has answered yet"
   },
@@ -39651,12 +39750,6 @@
   "browser.card.group": {
     "value": "{{name}}'s request for help in the browser"
   },
-  "browser.card.asked": {
-    "value": "asked {{people}} for help"
-  },
-  "browser.card.askedShort": {
-    "value": "needs help"
-  },
   "browser.card.left": {
     "value": "{{time}} left"
   },
@@ -39698,21 +39791,6 @@
   },
   "browser.card.withdrawn": {
     "value": "{{name}} no longer needs this."
-  },
-  "browser.card.settledDone": {
-    "value": "asked for help · resolved"
-  },
-  "browser.card.settledFailed": {
-    "value": "asked for help · didn't work"
-  },
-  "browser.card.settledExpired": {
-    "value": "asked for help · expired"
-  },
-  "browser.card.settledCancelled": {
-    "value": "asked for help · cancelled"
-  },
-  "browser.card.settledWithdrawn": {
-    "value": "asked for help · no longer needed"
   },
   "browser.card.busy": {
     "value": "Someone else is already helping."
@@ -40019,12 +40097,6 @@
   },
   "browser.inCard.otherHelp": {
     "value": "{{person}} is in control. You're watching."
-  },
-  "browser.inCard.helpingHere": {
-    "value": "You're helping · in this card"
-  },
-  "browser.inCard.helpingOther": {
-    "value": "{{person}} is helping · in this card"
   },
   "browser.inCard.doneLine": {
     "value": "Done. {{name}} will read the page again and carry on."

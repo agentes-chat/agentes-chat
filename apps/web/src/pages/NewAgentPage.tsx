@@ -1430,7 +1430,7 @@ function NewAgentFlow({
             </p>
           )}
           {managesAgents && (
-            <button type="button" className="newag__addrow" onClick={() => setPicking(true)}>
+            <button type="button" className="newag__addrow ac-iconline" onClick={() => setPicking(true)}>
               <Icon name="plug" />
               {t("newAgent.connectOther")}
             </button>

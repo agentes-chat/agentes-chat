@@ -893,12 +893,6 @@
   "chat.sending": {
     "value": "Sending…"
   },
-  "chat.failed": {
-    "value": "Not sent · Try again"
-  },
-  "chat.notSent": {
-    "value": "The message wasn't sent."
-  },
   "chat.toLatest": {
     "value": "Go to the latest messages"
   },
@@ -4114,24 +4108,6 @@
   },
   "browser.card.giveUp": {
     "value": "Give up"
-  },
-  "browser.card.done": {
-    "value": "Done: {{title}}"
-  },
-  "browser.card.failed": {
-    "value": "Couldn't: {{title}}"
-  },
-  "browser.card.failedNote": {
-    "value": "Couldn't: {{note}}"
-  },
-  "browser.card.expired": {
-    "value": "Nobody opened it in time: {{title}}"
-  },
-  "browser.card.cancelled": {
-    "value": "Canceled: {{title}}"
-  },
-  "browser.card.withdrawn": {
-    "value": "{{name}} no longer needs this: {{title}}"
   },
   "browser.live.inControl": {
     "value": "You're in control"

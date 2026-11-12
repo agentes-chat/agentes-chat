@@ -125,6 +125,8 @@ export async function recordToolCall(
     secretRequestId?: string | null;
     /** A call that ran without asking under "Aprovar sempre": its rules (`approval_rules`). */
     approvalRules?: string[] | null;
+    /** A call that ran without the card its tool would open, because its agent never asks (ADR 0173). */
+    unasked?: boolean;
     about?: ToolCallSubject | null;
   },
 ) {
@@ -154,6 +156,7 @@ export async function recordToolCall(
       ...(call.approvalId ? { approvalId: call.approvalId } : {}),
       ...(call.secretRequestId ? { secretRequestId: call.secretRequestId } : {}),
       ...(call.approvalRules?.length ? { approvalRules: call.approvalRules } : {}),
+      ...(call.unasked ? { approvalsLevel: "never" } : {}),
       ...(call.about ? { about: call.about } : {}),
     },
     runId: call.runId,

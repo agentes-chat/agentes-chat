@@ -384,8 +384,6 @@
     "switchWorking": "au travail",
     "join": "Rejoindre le canal",
     "sending": "Envoi…",
-    "failed": "Non envoyé · Réessayer",
-    "notSent": "Le message n'a pas été envoyé.",
     "toLatest": "Aller aux derniers messages",
     "toLatestNew": "Aller aux derniers messages : {{text}}",
     "stopAgent": "Arrêter {{name}}",
@@ -1769,13 +1767,7 @@
       "open": "Ouvrir",
       "expandHint": "Touchez pour agrandir",
       "stop": "Arrêter",
-      "giveUp": "Abandonner",
-      "done": "Fait : {{title}}",
-      "failed": "Pas réussi : {{title}}",
-      "failedNote": "Pas réussi : {{note}}",
-      "expired": "Personne ne l'a ouvert à temps : {{title}}",
-      "cancelled": "Annulé : {{title}}",
-      "withdrawn": "{{name}} n'en a plus besoin : {{title}}"
+      "giveUp": "Abandonner"
     },
     "live": {
       "inControl": "Vous avez la main",

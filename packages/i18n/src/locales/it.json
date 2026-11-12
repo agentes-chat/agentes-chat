@@ -1622,7 +1622,6 @@
       "limit": "{{name}} ha raggiunto il limite di oggi: questa resta a te",
       "undoneByYou": "Annullato da te",
       "undoneBy": "Annullato da {{name}}",
-      "why": "Perché?",
       "undo": "Annulla",
       "undoArchives": "Annulla archivia {{name}}. Vale fino a {{until}}.",
       "undoSettings": "Annulla ripristina le impostazioni. Vale fino a {{until}}."
@@ -1702,6 +1701,7 @@
     "unshown": "Impossibile mostrarlo",
     "more": "Altro",
     "moreWhat": {
+      "waiting": "Tutto ciò che aspetta una tua risposta",
       "approvals": "Cosa ti chiedono di consentire gli agenti",
       "proposals": "Cosa propongono di cambiare gli agenti",
       "threads": "Conversazioni che si diramano, e missioni",
@@ -1801,6 +1801,7 @@
     "summary_one": "{{people}} membro · {{agents}} agenti",
     "summary_many": "{{people}} membri · {{agents}} agenti",
     "summary_other": "{{people}} membri · {{agents}} agenti",
+    "waiting": "Ti aspetta",
     "approvals": "Approvazioni",
     "proposals": "Proposte di miglioramento",
     "issues": "Attività",
@@ -2286,7 +2287,19 @@
     "correctionSent": "Correzione inviata. {{name}} ne terrà conto.",
     "correctionSent_female": "Correzione inviata. {{name}} ne terrà conto.",
     "sending": "invio…",
-    "notSent": "Non inviato",
+    "tooLong": {
+      "text": "Il messaggio ha {{length}} caratteri e il limite è {{max}}.",
+      "fix": "Invia il testo come file.",
+      "asFile": "Invia come file",
+      "fileName": "messaggio.txt"
+    },
+    "notSentWhy": "Non inviato. {{why}}",
+    "notSentUnknown": "Qualcosa è andato storto.",
+    "editSend": "Modifica",
+    "long": {
+      "more": "Mostra altro",
+      "title": "Messaggio di {{name}}"
+    },
     "retrySend": "Riprova",
     "thinking": "{{name}} sta pensando…",
     "typing_one": "{{names}} sta scrivendo…",
@@ -2405,8 +2418,9 @@
       "connect": {
         "title": "Collega un’IA per il team",
         "titlePersonal": "Collega un'IA per i tuoi agenti",
-        "text": "Gli agenti pensano con l’IA del workspace. Accedi con il tuo piano di Claude o di ChatGPT, senza chiave API.",
-        "textPersonal": "I tuoi agenti pensano con questa IA. Accedi con il tuo piano di Claude o di ChatGPT, senza chiave API.",
+        "text": "Accedi con il tuo piano di Claude o di ChatGPT, senza chiave API.",
+        "hint": "Gli agenti pensano con l’IA del workspace.",
+        "hintPersonal": "I tuoi agenti pensano con questa IA.",
         "action": "Collega"
       },
       "again": {
@@ -2477,6 +2491,14 @@
       "groupMine": "Solo per te",
       "groupWorkspace": "Per tutto il workspace",
       "groupAdmins": "solo admin"
+    },
+    "powers": {
+      "title": "Poteri nel workspace",
+      "help": "Solo il tuo braccio destro fa queste cose.",
+      "team": "Organizza e cambia tutto il team con schede che una persona applica: agenti, persone e impostazioni del workspace",
+      "routines": "Avvia ed elimina le routine di qualsiasi agente che puoi gestire",
+      "asYou": "Nella tua conversazione, legge il Drive, la wiki e le attività che puoi vedere",
+      "mentions": "Risponde a una @menzione in qualsiasi canale senza esserne membro"
     },
     "card": {
       "settings": "{{name}} · Impostazioni",
@@ -2789,10 +2811,16 @@
       "useKey": "Usa una chiave API"
     },
     "kept": {
-      "title": "Ho conservato il tuo messaggio.",
-      "line": "Risponderò qui quando il workspace avrà un piano agentes.chat e un'IA collegata.",
+      "title": "Ho conservato il tuo messaggio",
+      "wait": {
+        "payment": "Risponderò qui quando il workspace avrà un piano agentes.chat.",
+        "unpaid": "Risponderò qui quando il pagamento del piano agentes.chat andrà a buon fine.",
+        "ended": "Risponderò qui quando il workspace si abbonerà di nuovo ad agentes.chat."
+      },
+      "askAdmin": "Risponderò qui quando un admin avrà sistemato il piano agentes.chat.",
       "plan": "Il piano porta il computer degli agenti, sempre acceso. L'IA è quella che paghi già: Claude, ChatGPT e altre, o una chiave API.",
-      "active": "Piano attivo. Collega un'IA e {{name}} risponde qui.",
+      "activeTitle": "Piano attivo",
+      "activeLine": "Collega un'IA e {{name}} risponde qui.",
       "receipt": "Conservato",
       "channel": "Conservato. Gli agenti rispondono quando il workspace ha un piano agentes.chat."
     },
@@ -3054,6 +3082,22 @@
       "never": "{{name}} ha detto mai per questo"
     }
   },
+  "approvalsLevel": {
+    "title": "Approvazioni",
+    "lead": "Quando {{name}} chiede a una persona prima di agire.",
+    "always": {
+      "title": "Chiedere sempre",
+      "text": "Chiede prima di cambiare qualcosa in un’app."
+    },
+    "risky": {
+      "title": "Solo ciò che è rischioso",
+      "text": "Chiede prima di eliminare, inviare o pagare."
+    },
+    "never": {
+      "title": "Non chiedere mai",
+      "text": "Chiede comunque per merge, deploy e rollback."
+    }
+  },
   "brakes": {
     "title": "Lavoro che nessuno ha chiesto",
     "subtitle": "Ciò che inizia da solo, da una routine, un avviso o un altro agente. Ciò che chiede una persona non viene mai fermato.",
@@ -3204,6 +3248,8 @@
       "title": "{{agent}} propone un nuovo agente",
       "review": "Rivedi",
       "created": "Creato",
+      "createdBy": "Creato da {{name}}",
+      "createdByYou": "Creato da te",
       "aiAccount": "Pensa con {{account}}",
       "aiModel": "Pensa tramite l'API",
       "aiNone": "Ancora nessuna IA. Collegane una dopo averlo creato",
@@ -3825,7 +3871,7 @@
       "clearFilters": "Cancella la ricerca",
       "personalNote": "Solo tu vedi questi elementi. I tuoi agenti li usano solo quando glielo chiedi.",
       "personalEmpty": "Tieni al sicuro i tuoi accessi e le tue chiavi",
-      "personalEmptyText": "Solo tu vedi questi elementi. I tuoi agenti li usano solo quando glielo chiedi.",
+      "personalEmptyText": "Solo tu vedi questi elementi, e i tuoi agenti li usano solo quando glielo chiedi.",
       "teamEmpty": "Condividi gli accessi senza passarti le password",
       "teamEmptyPersonal": "Tieni gli accessi condivisi in un solo posto",
       "teamEmptyText": "Salva una volta un login, una chiave o dei contatti, e scegli quali agenti possono usarli.",
@@ -4265,6 +4311,9 @@
       "team": "<b>{{name}}</b> propone un team · {{what}}",
       "firstTask": "<b>{{name}}</b> suggerisce un primo compito · {{what}}",
       "more": "+{{count}}",
+      "here_one": "{{count}} ti aspetta qui",
+      "here_many": "{{count}} ti aspettano qui",
+      "here_other": "{{count}} ti aspettano qui",
       "see": "Vedi"
     }
   },
@@ -15149,6 +15198,7 @@
       "where": "Dove",
       "via": "Tramite",
       "approval": "Approvazione",
+      "unasked": "Non chiesto ({{level}})",
       "approvalWaiting": "Nessuno ha ancora risposto",
       "approvalApproved": "Approvata da {{name}}",
       "approvalRefused": "Rifiutata da {{name}}",
@@ -16902,8 +16952,6 @@
     "card": {
       "group": "Richiesta di aiuto di {{name}} nel browser",
       "group_female": "Richiesta di aiuto di {{name}} nel browser",
-      "asked": "ha chiesto aiuto a {{people}}",
-      "askedShort": "ha bisogno di aiuto",
       "left": "{{time}} rimasti",
       "where": "Nel browser di {{name}}",
       "where_female": "Nel browser di {{name}}",
@@ -16924,11 +16972,6 @@
       "cancelled": "Richiesta annullata.",
       "withdrawn": "{{name}} non ne ha più bisogno.",
       "withdrawn_female": "{{name}} non ne ha più bisogno.",
-      "settledDone": "ha chiesto aiuto · risolto",
-      "settledFailed": "ha chiesto aiuto · non ha funzionato",
-      "settledExpired": "ha chiesto aiuto · scaduto",
-      "settledCancelled": "ha chiesto aiuto · annullato",
-      "settledWithdrawn": "ha chiesto aiuto · non serve più",
       "busy": "Qualcun altro sta già aiutando.",
       "openFailed": "Impossibile aprirla ora. Riprova."
     },
@@ -17063,8 +17106,6 @@
       "couldnt": "Non ce l'ho fatta",
       "giveUp": "Rinuncia",
       "otherHelp": "{{person}} ha il controllo. Stai guardando.",
-      "helpingHere": "Stai aiutando · in questa scheda",
-      "helpingOther": "{{person}} sta aiutando · in questa scheda",
       "doneLine": "Fatto. {{name}} rileggerà la pagina e andrà avanti.",
       "doneLine_female": "Fatto. {{name}} rileggerà la pagina e andrà avanti.",
       "openHere": "Apri qui",

@@ -1621,7 +1621,6 @@ export const ptBR = {
       limit: "{{name}} chegou ao limite de hoje: este fica com você",
       undoneByYou: "Desfeito por você",
       undoneBy: "Desfeito por {{name}}",
-      why: "Por quê?",
       undo: "Desfazer",
       undoArchives: "Desfazer arquiva {{name}}. Vale até {{until}}.",
       undoSettings: "Desfazer volta as configurações. Vale até {{until}}.",
@@ -1678,6 +1677,7 @@ export const ptBR = {
     unshown: "Não pôde ser exibido",
     more: "Mais",
     moreWhat: {
+      waiting: "Tudo o que espera uma resposta sua",
       approvals: "O que os agentes pedem para você liberar",
       proposals: "O que os agentes propõem mudar",
       threads: "Conversas que seguem à parte, e as missões",
@@ -1780,6 +1780,7 @@ export const ptBR = {
     searchWorkspace: "Buscar no workspace",
     summary_one: "{{people}} membro · {{agents}} agentes",
     summary_other: "{{people}} membros · {{agents}} agentes",
+    waiting: "Esperando você",
     approvals: "Aprovações",
     proposals: "Propostas de melhoria",
     issues: "Tarefas",
@@ -2243,7 +2244,23 @@ export const ptBR = {
     correctionSent: "Correção enviada. O {{name}} vai aprender com ela.",
     correctionSent_female: "Correção enviada. A {{name}} vai aprender com ela.",
     sending: "enviando…",
-    notSent: "Não enviada",
+    notSentWhy: "Não enviada. {{why}}",
+    /** The `why` of a failed message when the server gave no reason. */
+    notSentUnknown: "Algo deu errado.",
+    /** A failed message whose text must change before it can go: it returns to the field. */
+    editSend: "Editar",
+    /** A draft past the length limit, said above the field before sending: its sizes, then the way out. */
+    tooLong: {
+      text: "A mensagem tem {{length}} caracteres e o limite é {{max}}.",
+      fix: "Envie o texto como arquivo.",
+      asFile: "Enviar como arquivo",
+      fileName: "mensagem.txt",
+    },
+    /** A tall message, clipped in the conversation: the button under it and the dialog that shows it whole. */
+    long: {
+      more: "Ver mais",
+      title: "Mensagem de {{name}}",
+    },
     retrySend: "Tentar de novo",
     thinking: "{{name}} está pensando…",
     typing_one: "{{names}} está digitando…",
@@ -2365,9 +2382,9 @@ export const ptBR = {
       connect: {
         title: "Conectar uma IA para o time",
         titlePersonal: "Conectar uma IA para os seus agentes",
-        text: "Os agentes pensam com a IA do workspace. Entre com o seu plano do Claude ou do ChatGPT, sem chave de API.",
-        textPersonal:
-          "Os seus agentes pensam com essa IA. Entre com o seu plano do Claude ou do ChatGPT, sem chave de API.",
+        text: "Entre com o seu plano do Claude ou do ChatGPT, sem chave de API.",
+        hint: "Os agentes pensam com a IA do workspace.",
+        hintPersonal: "Os seus agentes pensam com essa IA.",
         action: "Conectar",
       },
       /** Under its greeting once the start card stopped asking; `message`: what the button sends, as the person. */
@@ -2452,6 +2469,14 @@ export const ptBR = {
       groupMine: "Só para você",
       groupWorkspace: "Para todo o workspace",
       groupAdmins: "só admins",
+    },
+    powers: {
+      title: "Poderes do workspace",
+      help: "Só o seu braço direito faz isto.",
+      team: "Monta e muda o time inteiro por cards que uma pessoa aplica: agentes, pessoas e ajustes do workspace",
+      routines: "Roda e apaga rotinas de qualquer agente que você pode gerenciar",
+      asYou: "Na sua conversa, lê o Drive, a wiki e as tarefas que você pode ver",
+      mentions: "Responde a um @ em qualquer canal sem ser membro",
     },
     card: {
       settings: "{{name}} · Configurações",
@@ -2789,10 +2814,16 @@ export const ptBR = {
       useKey: "Usar uma chave de API",
     },
     kept: {
-      title: "Guardei a sua mensagem.",
-      line: "Eu respondo aqui quando o workspace tiver um plano do agentes.chat e uma IA conectada.",
+      title: "Guardei a sua mensagem",
+      wait: {
+        payment: "Respondo aqui quando o workspace tiver um plano do agentes.chat.",
+        unpaid: "Respondo aqui quando o pagamento do plano do agentes.chat passar.",
+        ended: "Respondo aqui quando o workspace assinar o agentes.chat de novo.",
+      },
+      askAdmin: "Respondo aqui quando um admin resolver o plano do agentes.chat.",
       plan: "O plano traz o computador dos agentes, sempre ligado. A IA é a que você já paga: Claude, ChatGPT e outras, ou uma chave de API.",
-      active: "Plano ativo. Conecte uma IA e {{name}} responde aqui.",
+      activeTitle: "Plano ativo",
+      activeLine: "Conecte uma IA e {{name}} responde aqui.",
       receipt: "Guardada",
       channel: "Guardada. Os agentes respondem quando o workspace tiver um plano do agentes.chat.",
     },
@@ -3068,6 +3099,23 @@ export const ptBR = {
       never: "{{name}} disse nunca para isso",
     },
   },
+  /** How much an agent asks before acting (ADR 0173): the row on its page and the three choices behind it. */
+  approvalsLevel: {
+    title: "Aprovações",
+    lead: "Quando {{name}} pergunta a uma pessoa antes de agir.",
+    always: {
+      title: "Sempre perguntar",
+      text: "Pergunta antes de mudar algo em um app.",
+    },
+    risky: {
+      title: "Só o arriscado",
+      text: "Pergunta antes de apagar, enviar ou pagar.",
+    },
+    never: {
+      title: "Nunca perguntar",
+      text: "Ainda pergunta em merge, deploy e rollback.",
+    },
+  },
   /** Configurações do agente: o que ele pode começar sem ninguém pedir diretamente, e quais agentes pode chamar (ADR 0131). */
   brakes: {
     title: "Trabalho que ninguém pediu",
@@ -3216,6 +3264,8 @@ export const ptBR = {
       title: "{{agent}} propõe um novo agente",
       review: "Revisar",
       created: "Criado",
+      createdBy: "Criado por {{name}}",
+      createdByYou: "Criado por você",
       aiAccount: "Pensa com {{account}}",
       aiModel: "Pensa pela API",
       aiNone: "Sem IA ainda. Conecte uma depois de criar",
@@ -3851,7 +3901,7 @@ export const ptBR = {
       clearFilters: "Limpar a busca",
       personalNote: "Só você vê estes itens. Seus agentes só usam quando você pede.",
       personalEmpty: "Guarde seus logins e chaves em segurança",
-      personalEmptyText: "Só você vê estes itens. Seus agentes só usam quando você pede.",
+      personalEmptyText: "Só você vê estes itens, e seus agentes só usam quando você pede.",
       teamEmpty: "Compartilhe logins sem passar senha",
       teamEmptyPersonal: "Guarde os logins compartilhados num lugar só",
       teamEmptyText: "Salve um login, uma chave ou dados de contato uma vez e escolha quais agentes podem usar.",
@@ -4303,6 +4353,9 @@ export const ptBR = {
       team: "<b>{{name}}</b> propõe um time · {{what}}",
       firstTask: "<b>{{name}}</b> sugere uma primeira tarefa · {{what}}",
       more: "+{{count}}",
+      /** What waits on me here with its card not loaded (older, or in a thread): "Ver" goes to the oldest. */
+      here_one: "{{count}} esperando você aqui",
+      here_other: "{{count}} esperando você aqui",
       see: "Ver",
     },
   },
@@ -14750,6 +14803,8 @@ export const ptBR = {
       where: "Onde",
       via: "Por onde",
       approval: "Aprovação",
+      /** In place of an approval: it ran without one because its agent never asks. `level`: that choice's name. */
+      unasked: "Não perguntou ({{level}})",
       approvalWaiting: "Ainda ninguém respondeu",
       approvalApproved: "Aprovado por {{name}}",
       approvalRefused: "Recusado por {{name}}",
@@ -16567,8 +16622,6 @@ export const ptBR = {
     card: {
       group: "Pedido de ajuda do {{name}} no navegador",
       group_female: "Pedido de ajuda da {{name}} no navegador",
-      asked: "pediu ajuda a {{people}}",
-      askedShort: "precisa de ajuda",
       left: "{{time}} restantes",
       where: "No navegador do {{name}}",
       where_female: "No navegador da {{name}}",
@@ -16589,11 +16642,6 @@ export const ptBR = {
       cancelled: "Pedido cancelado.",
       withdrawn: "O {{name}} não precisa mais disso.",
       withdrawn_female: "A {{name}} não precisa mais disso.",
-      settledDone: "pediu ajuda · resolvido",
-      settledFailed: "pediu ajuda · não deu",
-      settledExpired: "pediu ajuda · expirou",
-      settledCancelled: "pediu ajuda · cancelado",
-      settledWithdrawn: "pediu ajuda · não precisa mais",
       busy: "Outra pessoa já está ajudando.",
       openFailed: "Não deu para abrir agora. Tente de novo.",
     },
@@ -16722,8 +16770,6 @@ export const ptBR = {
       couldnt: "Não consegui",
       giveUp: "Desistir",
       otherHelp: "{{person}} está no controle. Você só assiste.",
-      helpingHere: "Você está ajudando · neste card",
-      helpingOther: "{{person}} está ajudando · neste card",
       doneLine: "Pronto. O {{name}} vai ler a página de novo e seguir.",
       doneLine_female: "Pronto. A {{name}} vai ler a página de novo e seguir.",
       openHere: "Abrir aqui",

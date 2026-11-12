@@ -1,5 +1,5 @@
 {
-  "id": "01c71b46-1adf-4c6b-bd7c-b35f1877157a",
+  "id": "817ad818-590a-4e75-9750-523c68b66516",
   "prevId": "c301a139-ef5d-4a24-8fc0-2fc0030e6294",
   "version": "7",
   "dialect": "postgresql",
@@ -277,6 +277,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "approvals_level": {
+          "name": "approvals_level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'risky'"
         },
         "brain": {
           "name": "brain",
@@ -670,12 +677,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
-        },
-        "decisions": {
-          "name": "decisions",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
         },
         "router_model": {
           "name": "router_model",

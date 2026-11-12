@@ -229,3 +229,15 @@ export const teamAnswered = (
   team: readonly Pick<Agent, "id">[],
   statuses: readonly Pick<AgentStatus, "agentId" | "activeAt">[] | undefined,
 ) => team.length === 0 || (statuses?.some((s) => s.activeAt !== null && team.some((a) => a.id === s.agentId)) ?? false);
+
+/**
+ * What only the right hand does, in the order its page lists them (`rightHand.powers.<id>`), each with the server's
+ * grants behind it (`RIGHT_HAND_GRANTS` in the engine's `right-hand.ts`). `mentions` is no grant: the server's
+ * `rightHandReaches`.
+ */
+export const RIGHT_HAND_POWERS = [
+  { id: "team", grants: ["setup:write"] },
+  { id: "routines", grants: ["schedule:write"] },
+  { id: "asYou", grants: ["drive:read", "wiki:read", "issues:read"] },
+  { id: "mentions", grants: [] },
+] as const;

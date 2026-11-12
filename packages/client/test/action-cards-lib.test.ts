@@ -5,6 +5,7 @@ import {
   actionCardDetail,
   actionCardKey,
   actionCardOf,
+  agentProposalEnd,
   agentProposalOf,
   cardInstallAgent,
   cardInstallOf,
@@ -70,6 +71,24 @@ test("where it stands: open until a day passes (also while someone creates it), 
   expect(proposalStatus(card(), NOW + 2 * HOUR)).toBe("expired");
   expect(proposalStatus(card({ state: "created", agentId: "a1" }), NOW + 2 * HOUR)).toBe("created");
   expect(proposalStatus(card({ state: "denied" }), NOW)).toBe("denied");
+});
+
+test("how it ended names who decided: the viewer as you, someone else by name, nobody when it ran out", () => {
+  const t = ((key: string, values?: Record<string, string>) =>
+    values ? `${key}:${JSON.stringify(values)}` : key) as unknown as TFunction;
+  const made = card({ state: "created", agentId: "a1", decidedByUserId: "u-ana" });
+  expect(agentProposalEnd(t, made, "created", "u-ana", "Ana")).toBe("actionCard.agentProposal.createdByYou");
+  expect(agentProposalEnd(t, made, "created", "u-me", "Ana")).toBe('actionCard.agentProposal.createdBy:{"name":"Ana"}');
+  // A name the viewer can't read: only how it ended.
+  expect(agentProposalEnd(t, made, "created", "u-me", undefined)).toBe("actionCard.agentProposal.created");
+  const refused = card({ state: "denied", decidedByUserId: "u-ana" });
+  expect(agentProposalEnd(t, refused, "denied", "u-ana", "Ana")).toBe("rightHand.card.declinedByYou");
+  expect(agentProposalEnd(t, refused, "denied", "u-me", "Ana")).toBe('rightHand.card.declinedBy:{"name":"Ana"}');
+  expect(agentProposalEnd(t, refused, "denied", null, undefined)).toBe("proposals.refused");
+  expect(agentProposalEnd(t, card(), "expired", "u-me", undefined)).toBe("approval.expired");
+  expect(agentProposalEnd(t, card({ state: "superseded" }), "superseded", "u-me", undefined)).toBe(
+    "rightHand.card.superseded",
+  );
 });
 
 test("the draft's levels by connection, and the AI it suggests in words", () => {

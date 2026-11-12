@@ -370,8 +370,6 @@
     "switchWorking": "çalışıyor",
     "join": "Kanala katıl",
     "sending": "Gönderiliyor…",
-    "failed": "Gönderilmedi · Tekrar deneyin",
-    "notSent": "Mesaj gönderilmedi.",
     "toLatest": "En son mesajlara git",
     "toLatestNew": "En son mesajlara git: {{text}}",
     "stopAgent": "{{name}} ajanını durdur",
@@ -1678,13 +1676,7 @@
       "open": "Aç",
       "expandHint": "Genişletmek için dokunun",
       "stop": "Durdur",
-      "giveUp": "Vazgeç",
-      "done": "Tamamlandı: {{title}}",
-      "failed": "Yapılamadı: {{title}}",
-      "failedNote": "Yapılamadı: {{note}}",
-      "expired": "Kimse zamanında açmadı: {{title}}",
-      "cancelled": "İptal edildi: {{title}}",
-      "withdrawn": "{{name}} artık buna ihtiyaç duymuyor: {{title}}"
+      "giveUp": "Vazgeç"
     },
     "live": {
       "inControl": "Kontrol sizde",

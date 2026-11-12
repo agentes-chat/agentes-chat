@@ -49,7 +49,18 @@ import { connectorFirst } from "./connector-first";
 import { type BlockedTool, compactSchema, presentTools, resolveCall } from "./directory";
 import { canonicalJson, validateJson } from "./json-schema";
 import { missingPermissions, REQUEST_PERMISSION_TOOL } from "./permission";
-import { approvalOrigin, type PolicyDecision, takeWhy, toolKind, toolPolicy, WHY_REFUSAL, withWhy } from "./run-policy";
+import {
+  type ApprovalsLevel,
+  approvalOrigin,
+  approvalsLevelOf,
+  DEFAULT_APPROVALS_LEVEL,
+  type PolicyDecision,
+  takeWhy,
+  toolKind,
+  toolPolicy,
+  WHY_REFUSAL,
+  withWhy,
+} from "./run-policy";
 import {
   accessWithNeeds,
   BUILTIN_SCOPES,
@@ -159,6 +170,31 @@ export function rememberable(
   if (!actions || actions.some((a) => actionLevel(a) === "sensitive")) return null;
   if ([tool.name, tool.rememberAs, tool.scope, ...actions].some(alwaysAsks)) return null;
   return { tool: tool.rememberAs, actions };
+}
+
+/**
+ * "Nunca perguntar" (`agents.approvals_level` = `never`, ADR 0173): whether this call runs without the card its tool
+ * would open. Only a connected app's tool that asks because it is marked sensitive (its level, a delete, a send), on
+ * a run whose policy lets it through: a routine's run and one its reading feeds keep asking (ADR 0053 §4). Still
+ * asked: merge, deploy, rollback and what starts them under another name or runs whatever its arguments say
+ * (`customAlwaysAsks`), a call whose actions aren't known, and a tool with its own approvers (someone's mailbox is
+ * theirs to answer for). `input` null: judged without a call, so a tool that runs other actions isn't covered.
+ * Scopes are checked before it: the level never gives the agent a tool.
+ */
+export function unaskedAtNever(
+  level: ApprovalsLevel,
+  tool: ToolDefinition,
+  input: Record<string, unknown> | null,
+  authority: RunAuthority | null,
+  decision: PolicyDecision,
+): boolean {
+  if (level !== "never" || !authority || decision.action !== "allow") return false;
+  // Said here too, not only by the policy's answer: no reading of a tool's kind may let outside text act alone.
+  if (fedByRoutine(authority)) return false;
+  if (!tool.connectionId || tool.sensitive !== true || tool.approvers) return false;
+  const actions = tool.actions ? (input ? tool.actions(input) : null) : [];
+  if (!actions || alwaysAsks(tool.scope)) return false;
+  return ![tool.name, tool.rememberAs ?? "", ...actions].some((name) => name && customAlwaysAsks(name));
 }
 
 /**
@@ -392,15 +428,17 @@ const authorityOf = (ctx: ToolContext): Promise<RunAuthority | null> =>
   ctx.runId ? runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : Promise.resolve(null);
 
 const ALLOWED: PolicyDecision = { action: "allow" };
-const policyFor = (authority: RunAuthority | null, tool: ToolDefinition) =>
-  authority ? toolPolicy(authority, tool) : ALLOWED;
+const policyFor = (authority: RunAuthority | null, tool: ToolDefinition, level = DEFAULT_APPROVALS_LEVEL) =>
+  authority ? toolPolicy(authority, tool, level) : ALLOWED;
 
 /**
  * A tool as a run sees it: one the policy says asks a person becomes sensitive (its card, and the
  * "asks a person's approval" in a directory), and every tool that asks a person takes the required
  * `why` the card shows. The same list goes to the model loop and to the bridge.
  */
-function asListed(tool: ToolDefinition, decision: PolicyDecision): ToolDefinition {
+function asListed(tool: ToolDefinition, decision: PolicyDecision, unasked = false): ToolDefinition {
+  // An agent that never asks sees the tool as it runs for it: no card, no `why`.
+  if (unasked) return { ...tool, sensitive: false };
   if (!asksPerson(tool, decision)) return tool;
   return {
     ...tool,
@@ -495,12 +533,17 @@ export function createToolGateway(deps: {
     known?: Map<string, ToolDefinition>,
     heldBack?: string[],
   ): Promise<ToolDefinition[]> {
-    const [keys, all] = await Promise.all([grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId), known ?? allTools(ctx)]);
+    const [keys, all, level] = await Promise.all([
+      grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId),
+      known ?? allTools(ctx),
+      approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+    ]);
     return [...all.values()]
       .filter((t) => isAllowed(accessWithNeeds(keys, t).state))
       .flatMap((t) => {
-        const decision = policyFor(authority, t);
-        if (decision.action !== "refuse") return [asListed(t, decision)];
+        const decision = policyFor(authority, t, level);
+        if (decision.action !== "refuse")
+          return [asListed(t, decision, unaskedAtNever(level, t, null, authority, decision))];
         heldBack?.push(t.name);
         return [];
       })
@@ -932,7 +975,11 @@ export function createToolGateway(deps: {
       // The model's arguments land in jsonb and text columns (steps, approvals, the audit): a NUL would fail them.
       const requested = { ...raw, input: pgSafeJson(raw.input) };
       // Who is behind the run decides what it may do: listing already hid refused tools, this is the call.
-      const [all, authority] = await Promise.all([allTools(ctx), authorityOf(ctx)]);
+      const [all, authority, level] = await Promise.all([
+        allTools(ctx),
+        authorityOf(ctx),
+        approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+      ]);
       // A directory (tools/directory.ts): `use_tool` runs the tool it names by that tool's own name, so everything
       // below (steps, policy, scope, schema, checks, approval) is that tool's; `find_tools` runs as is. Any tool goes
       // through any `use_tool`, a directory's own and one already listed too: a computer brain's harness may still
@@ -993,6 +1040,8 @@ export function createToolGateway(deps: {
       let approvedBy: string[] | null = null;
       /** What the call's line in the chat says of it: approved by a rule, whose person, a read-only SQL one or not. */
       let autoApproved: { by: string | null; reads: boolean } | null = null;
+      /** It ran without the card its tool would open, because its agent never asks (`unaskedAtNever`). */
+      let unasked = false;
       // The audit (agent-audit.ts): every call that matters, with how it ended. A routine's belongs where it
       // delivers, never to its room.
       const actionChannel =
@@ -1023,6 +1072,7 @@ export function createToolGateway(deps: {
           input: call.input,
           outcome,
           approvalRules: approvedBy,
+          unasked: unasked && outcome !== "refused",
           ...extra,
         });
       };
@@ -1071,7 +1121,7 @@ export function createToolGateway(deps: {
         }
       }
       const builtIn = isBuiltIn(tool);
-      const decision = policyFor(authority, tool);
+      const decision = policyFor(authority, tool, level);
       if (decision.action === "refuse") {
         return finish(
           { content: decision.reason, isError: true, data: { code: "tool.not_allowed", refusal: "policy" } },
@@ -1093,7 +1143,8 @@ export function createToolGateway(deps: {
       // A call that asks a person says why (shown on its card); the tool itself never sees it. It is
       // asked for last: a call refused for any other reason (its input, a repository outside the agent's
       // list) gets that reason first.
-      let approves = decision.action === "approve" || isSensitive(tool) || asksWithWhy(tool, call.input);
+      unasked = unaskedAtNever(level, tool, takeWhy(tool.inputSchema, call.input).input, authority, decision);
+      let approves = decision.action === "approve" || (isSensitive(tool) && !unasked) || asksWithWhy(tool, call.input);
       // Only its `why` makes it ask: a command the computer holds, or (a merge this agent does alone) doesn't.
       const askedByWhy = approves && decision.action !== "approve" && !isSensitive(tool);
       let why = "";
@@ -1101,7 +1152,7 @@ export function createToolGateway(deps: {
       if (asksPerson(tool, decision) || asksWithWhy(tool, call.input)) {
         const taken = takeWhy(tool.inputSchema, call.input);
         why = taken.why ?? "";
-        whyMissing = !taken.why;
+        whyMissing = !taken.why && !unasked;
         call = { ...call, input: taken.input };
       }
       // Team actions (ADR 0064): an outside call repeated after the agent was told the team already did it

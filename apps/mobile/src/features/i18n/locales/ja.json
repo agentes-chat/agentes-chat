@@ -356,8 +356,6 @@
     "switchWorking": "作業中",
     "join": "チャンネルに参加",
     "sending": "送信中…",
-    "failed": "未送信 · もう一度試す",
-    "notSent": "メッセージは送信されませんでした。",
     "toLatest": "最新のメッセージへ",
     "toLatestNew": "最新のメッセージへ: {{text}}",
     "stopAgent": "{{name}}を止める",
@@ -1582,13 +1580,7 @@
       "open": "開く",
       "expandHint": "タップして展開",
       "stop": "停止",
-      "giveUp": "あきらめる",
-      "done": "完了: {{title}}",
-      "failed": "できませんでした: {{title}}",
-      "failedNote": "できませんでした: {{note}}",
-      "expired": "時間内に誰も開きませんでした: {{title}}",
-      "cancelled": "キャンセル済み: {{title}}",
-      "withdrawn": "{{name}}にはもう不要です: {{title}}"
+      "giveUp": "あきらめる"
     },
     "live": {
       "inControl": "あなたが操作中",

@@ -1540,7 +1540,6 @@
       "limit": "{{name}}は今日の上限に達しました。これはあなたが決めます",
       "undoneByYou": "あなたが取り消しました",
       "undoneBy": "{{name}}が取り消しました",
-      "why": "理由",
       "undo": "取り消す",
       "undoArchives": "取り消すと{{name}}をアーカイブします。{{until}}まで有効です。",
       "undoSettings": "取り消すと設定が元に戻ります。{{until}}まで有効です。"
@@ -1620,6 +1619,7 @@
     "unshown": "表示できませんでした",
     "more": "その他",
     "moreWhat": {
+      "waiting": "あなたの返事を待っているものすべて",
       "approvals": "エージェントからの許可のお願い",
       "proposals": "エージェントが変更を提案している内容",
       "threads": "枝分かれした会話とミッション",
@@ -1717,6 +1717,7 @@
     "expandNav": "サイドバーを展開",
     "searchWorkspace": "ワークスペースを検索",
     "summary_other": "メンバー{{people}}人 · エージェント{{agents}}体",
+    "waiting": "あなたの対応待ち",
     "approvals": "承認",
     "proposals": "改善提案",
     "issues": "タスク",
@@ -2147,7 +2148,19 @@
     "sendCorrection": "修正を送信",
     "correctionSent": "修正を送信しました。{{name}}はここから学びます。",
     "sending": "送信中…",
-    "notSent": "送信されていません",
+    "tooLong": {
+      "text": "メッセージは{{length}}文字で、上限は{{max}}文字です。",
+      "fix": "テキストをファイルとして送信してください。",
+      "asFile": "ファイルとして送信",
+      "fileName": "message.txt"
+    },
+    "notSentWhy": "未送信。{{why}}",
+    "notSentUnknown": "問題が発生しました。",
+    "editSend": "編集",
+    "long": {
+      "more": "もっと見る",
+      "title": "{{name}}のメッセージ"
+    },
     "retrySend": "もう一度試す",
     "thinking": "{{name}}が考えています…",
     "typing_other": "{{names}}が入力中…",
@@ -2240,8 +2253,9 @@
       "connect": {
         "title": "チームのAIを接続",
         "titlePersonal": "エージェントのAIを接続",
-        "text": "エージェントはワークスペースのAIで考えます。ClaudeまたはChatGPTのプランでログインできます。APIキーは不要です。",
-        "textPersonal": "エージェントはこのAIで考えます。ClaudeまたはChatGPTのプランでログインできます。APIキーは不要です。",
+        "text": "APIキーなしで、ClaudeまたはChatGPTのプランでログインできます。",
+        "hint": "エージェントはワークスペースのAIで考えます。",
+        "hintPersonal": "エージェントはこのAIで考えます。",
         "action": "接続"
       },
       "again": {
@@ -2312,6 +2326,14 @@
       "groupMine": "あなただけ",
       "groupWorkspace": "ワークスペース全体",
       "groupAdmins": "管理者のみ"
+    },
+    "powers": {
+      "title": "ワークスペースでの権限",
+      "help": "これができるのはあなたの右腕だけです。",
+      "team": "人が適用するカードでチーム全体を整え、変更します。対象はエージェント、メンバー、ワークスペースの設定です",
+      "routines": "あなたが管理できるルーティンなら、どのエージェントのものでも実行、削除します",
+      "asYou": "あなたとの会話では、あなたが見られる Drive、Wiki、タスクを読みます",
+      "mentions": "メンバーでなくても、どのチャンネルの @メンションにも答えます"
     },
     "card": {
       "settings": "{{name}} · 設定",
@@ -2592,10 +2614,16 @@
       "useKey": "APIキーを使う"
     },
     "kept": {
-      "title": "メッセージを保存しました。",
-      "line": "ワークスペースにagentes.chatのプランとAIの接続が揃ったら、ここで返信します。",
+      "title": "メッセージを保存しました",
+      "wait": {
+        "payment": "ワークスペースにagentes.chatのプランが入ったら、ここで返信します。",
+        "unpaid": "agentes.chatのプランの支払いが完了したら、ここで返信します。",
+        "ended": "ワークスペースがagentes.chatに再び登録したら、ここで返信します。"
+      },
+      "askAdmin": "管理者がagentes.chatのプランを整えたら、ここで返信します。",
       "plan": "プランにはエージェントのコンピューターが含まれ、常に稼働します。AIはすでに支払っているものを使えます。Claude、ChatGPTなど、またはAPIキーです。",
-      "active": "プランが有効です。AIを接続すると{{name}}がここで返信します。",
+      "activeTitle": "プランが有効です",
+      "activeLine": "AIを接続すると{{name}}がここで返信します。",
       "receipt": "保存済み",
       "channel": "保存済み。ワークスペースにagentes.chatのプランがあると、エージェントが返信します。"
     },
@@ -2846,6 +2874,22 @@
       "never": "{{name}}さんがこれはしないと答えました"
     }
   },
+  "approvalsLevel": {
+    "title": "承認",
+    "lead": "{{name}} が動く前に人へ確認するタイミング。",
+    "always": {
+      "title": "常に確認する",
+      "text": "アプリで何かを変更する前に確認します。"
+    },
+    "risky": {
+      "title": "リスクのあるものだけ",
+      "text": "削除、送信、支払いの前に確認します。"
+    },
+    "never": {
+      "title": "確認しない",
+      "text": "マージ、デプロイ、ロールバックは引き続き確認します。"
+    }
+  },
   "brakes": {
     "title": "誰も頼んでいない作業",
     "subtitle": "ルーティン、アラート、ほかのエージェントをきっかけに自分で始める作業。人が頼んだことは止められません。",
@@ -2982,6 +3026,8 @@
       "title": "{{agent}}が新しいエージェントを提案しています",
       "review": "確認する",
       "created": "作成済み",
+      "createdBy": "{{name}}が作成",
+      "createdByYou": "あなたが作成",
       "aiAccount": "{{account}}で考えます",
       "aiModel": "API経由で考えます",
       "aiNone": "AIはまだありません。作成後に接続してください",
@@ -3590,7 +3636,7 @@
       "clearFilters": "検索をクリア",
       "personalNote": "これらの項目はあなただけに表示されます。エージェントは、あなたが頼んだときだけ使います。",
       "personalEmpty": "ログイン情報やキーを安全に保管",
-      "personalEmptyText": "これらの項目はあなただけに表示されます。エージェントは、あなたが頼んだときだけ使います。",
+      "personalEmptyText": "これらの項目はあなただけに表示され、エージェントはあなたが頼んだときだけ使います。",
       "teamEmpty": "パスワードを回さずにログインを共有",
       "teamEmptyPersonal": "共有ログインを一か所にまとめましょう",
       "teamEmptyText": "ログイン、キー、連絡先を一度保存し、使えるエージェントを選びましょう。",
@@ -4013,6 +4059,7 @@
       "team": "<b>{{name}}</b>がチームを提案しています · {{what}}",
       "firstTask": "<b>{{name}}</b>が最初のタスクを提案しています · {{what}}",
       "more": "+{{count}}",
+      "here_other": "ここであなたの対応待ち{{count}}件",
       "see": "見る"
     }
   },
@@ -14160,6 +14207,7 @@
       "where": "場所",
       "via": "経由",
       "approval": "承認",
+      "unasked": "確認なし（{{level}}）",
       "approvalWaiting": "まだ誰も応答していません",
       "approvalApproved": "{{name}}が承認",
       "approvalRefused": "{{name}}が却下",
@@ -15851,8 +15899,6 @@
     },
     "card": {
       "group": "{{name}}からのブラウザでのヘルプ依頼",
-      "asked": "{{people}}に助けを求めました",
-      "askedShort": "助けが必要です",
       "left": "残り{{time}}",
       "where": "{{name}}のブラウザ内",
       "open": "開く",
@@ -15867,11 +15913,6 @@
       "expired": "時間内に誰も開きませんでした。{{name}}は停止して、そのことを伝えました。",
       "cancelled": "リクエストはキャンセルされました。",
       "withdrawn": "{{name}}にはもう必要ありません。",
-      "settledDone": "助けを求めました · 解決済み",
-      "settledFailed": "助けを求めました · うまくいきませんでした",
-      "settledExpired": "助けを求めました · 期限切れ",
-      "settledCancelled": "助けを求めました · キャンセル済み",
-      "settledWithdrawn": "助けを求めました · 不要になりました",
       "busy": "すでにほかの人が対応しています。",
       "openFailed": "今は開けませんでした。もう一度お試しください。"
     },
@@ -15985,8 +16026,6 @@
       "couldnt": "できませんでした",
       "giveUp": "あきらめる",
       "otherHelp": "{{person}}が操作中です。あなたは見ています。",
-      "helpingHere": "あなたが対応中 · このカード内",
-      "helpingOther": "{{person}}が対応中 · このカード内",
       "doneLine": "完了しました。{{name}}はページを読み直して作業を続けます。",
       "openHere": "ここで開く",
       "openHereHint": "チャットを離れずに、このカード内で開きます。",

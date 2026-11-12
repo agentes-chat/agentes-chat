@@ -4,6 +4,7 @@ import type { TFunction } from "i18next";
 import type { Proposal } from "../src/api/types";
 import {
   appLabel,
+  cardDecidedBy,
   cardHead,
   cardOutcome,
   cardProposalIds,
@@ -272,6 +273,35 @@ describe("how a decided card ended", () => {
       accepted: true,
       label: 'proposals.acceptedSome {"done":1,"total":2}',
     });
+  });
+});
+
+describe("who decided a card", () => {
+  const ana = { userId: "u-ana", name: "Ana" };
+
+  test("one person deciding every row the same way is named, the viewer as you", () => {
+    const rows = [row("1", { status: "accepted", decidedBy: ana }), row("2", { status: "accepted", decidedBy: ana })];
+    expect(cardDecidedBy(t, rows, "u-me")).toBe('rightHand.card.appliedBy {"name":"Ana"}');
+    expect(cardDecidedBy(t, rows, "u-ana")).toBe("rightHand.card.appliedByYou");
+    expect(cardDecidedBy(t, [row("1", { status: "refused", decidedBy: ana })], "u-me")).toBe(
+      'rightHand.card.declinedBy {"name":"Ana"}',
+    );
+    expect(cardDecidedBy(t, [row("1", { status: "refused", decidedBy: ana })], "u-ana")).toBe(
+      "rightHand.card.declinedByYou",
+    );
+  });
+
+  test("rows that ended apart, a newer text or nobody on record say only how the card ended", () => {
+    const bia = { userId: "u-bia", name: "Bia" };
+    expect(
+      cardDecidedBy(
+        t,
+        [row("1", { status: "accepted", decidedBy: ana }), row("2", { status: "accepted", decidedBy: bia })],
+        "u-me",
+      ),
+    ).toBe("proposals.accepted");
+    expect(cardDecidedBy(t, [row("1", { stale: true })], "u-me")).toBe("proposals.stale");
+    expect(cardDecidedBy(t, [row("1", { status: "accepted" })], "u-me")).toBe("proposals.accepted");
   });
 });
 

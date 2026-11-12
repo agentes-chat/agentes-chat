@@ -47,10 +47,9 @@ test("the cards in a message share one width: the tools, a lone call's line, eve
     ".iw-card",
     // A request still waiting as a pill: connect an AI, a stretch, waiting for its computer.
     ".rq-open",
-    // A mission's link and its command to approve, the browser's request and where it browsed.
+    // A mission's link and its command to approve.
     ".mi-linkcard",
     ".mi-cmd",
-    ".brw-rq",
     // Open or not, the browser card; a request or its decided line; a mission's card.
     ".brw-ac",
     ".rq",

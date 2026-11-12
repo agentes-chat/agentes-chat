@@ -115,6 +115,7 @@ describe("a personal workspace's sidebar", () => {
       .map((l) => l.querySelector(".ac-menu__label")?.firstChild?.textContent);
     expect(names).toEqual([
       "Início",
+      "Esperando você",
       "Aprovações",
       "Propostas de melhoria",
       "Rotinas",

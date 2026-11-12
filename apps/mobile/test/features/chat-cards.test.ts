@@ -429,7 +429,7 @@ describe("the secret card on the phone", () => {
     expect(asks).toContain("lineMark: { flexShrink: 0, width: 20, height: 20,");
     // The fuse and the time left under the decision, never on the card's top line.
     expect(asks).toContain('{waitsFor === "you" && expiry ? <View style={styles.expiryRow}>{expiry}</View> : null}');
-    expect(asks).toContain('{waitsFor && waitsFor !== "you" ? (');
+    expect(asks).toContain('{waitsFor && waitsFor !== "you" && !ended ? (');
   });
 });
 

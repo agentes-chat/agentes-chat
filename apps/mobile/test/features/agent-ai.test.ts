@@ -561,7 +561,16 @@ describe("the agent's AI", () => {
     expect(card).toContain(
       '<AskWaiting forMe={action !== null} mark="bolt" words={title} actions={action} below={action ? null : locked} />',
     );
-    expect(card).not.toContain("<Button");
+    // No kit button in the pill: the only ones in the file are the kept card's, a house note (the plan hold), where
+    // Conectar is again only for who may connect and anyone else reads who can.
+    const [pill = "", kept = ""] = card.split("\nfunction KeptCard(");
+    expect(pill).not.toContain("<Button");
+    expect(kept).not.toContain("<AskWaiting");
+    expect(kept).toContain("const mine = mayConnectAi(agent, meId, org);");
+    expect(kept).toContain('text={mine ? t("noAi.kept.activeLine", { name }) : t("noAi.lockedAdmins")}');
+    expect(kept).toMatch(
+      /foot=\{\s*mine \? \(\s*<AskFoot>\s*<AskButtons\s*primary=\{\s*<Button[^>]*label=\{t\("noAi\.action"\)\}/,
+    );
     // "Ada's page": its Conectar opens on the plan she thinks with (`agentPlan`), ChatGPT for Codex.
     expect(profile).toContain("openConnectAi({ agentId: id, plan: agentPlan(agent) ?? undefined })");
     // A plan's page asks the computers for their own sign-ins again: Codex's is known by a usage read with it.

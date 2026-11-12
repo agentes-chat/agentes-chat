@@ -523,6 +523,7 @@
       "devices.armBuild"
     ],
     "fr": [
+      "channel.tooLong.fileName",
       "calendar.moreRuns",
       "devices.cpus",
       "devices.system.android",
@@ -2269,6 +2270,7 @@
       "issues.display.field.project"
     ],
     "ja": [
+      "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
       "devices.transport.usb",
@@ -2425,6 +2427,7 @@
       "devices.armBuild"
     ],
     "ko": [
+      "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
       "devices.transport.usb",
@@ -2576,6 +2579,7 @@
       "devices.armBuild"
     ],
     "zh-Hans": [
+      "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
       "devices.transport.usb",
@@ -3457,6 +3461,7 @@
       "devices.armBuild"
     ],
     "ru": [
+      "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
       "devices.transport.usb",

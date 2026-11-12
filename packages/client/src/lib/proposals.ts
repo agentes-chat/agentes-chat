@@ -155,6 +155,21 @@ export function cardOutcome(t: TFunction, rows: Proposal[]): { accepted: boolean
   return { accepted: done > 0, label };
 }
 
+/**
+ * How a decided card ended and who did it: "Aplicado por você", "Recusado por Ana" when one person decided every row
+ * the same way, else how it ended (`cardOutcome`: a newer text took its place, or the rows ended apart).
+ */
+export function cardDecidedBy(t: TFunction, rows: Proposal[], meId: string): string {
+  const [first] = rows;
+  const by = first?.decidedBy;
+  const alike = rows.every((p) => !p.stale && p.status === first?.status && p.decidedBy?.userId === by?.userId);
+  if (!first || !by || !alike || first.status === "pending") return cardOutcome(t, rows).label;
+  const mine = by.userId === meId;
+  if (first.status === "accepted")
+    return mine ? t("rightHand.card.appliedByYou") : t("rightHand.card.appliedBy", { name: by.name });
+  return mine ? t("rightHand.card.declinedByYou") : t("rightHand.card.declinedBy", { name: by.name });
+}
+
 /** Rows a decision couldn't apply because what they were made against changed since (409). */
 export const staleCount = (failed: { error: unknown }[]) =>
   failed.filter((f) => (f.error as { status?: unknown } | null)?.status === 409).length;

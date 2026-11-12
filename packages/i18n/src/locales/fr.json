@@ -1622,7 +1622,6 @@
       "limit": "{{name}} a atteint la limite du jour : celle-ci reste avec vous",
       "undoneByYou": "Annulé par vous",
       "undoneBy": "Annulé par {{name}}",
-      "why": "Pourquoi ?",
       "undo": "Annuler",
       "undoArchives": "Annuler archive {{name}}. Possible jusqu'à {{until}}.",
       "undoSettings": "Annuler rétablit les réglages. Possible jusqu'à {{until}}."
@@ -1702,6 +1701,7 @@
     "unshown": "Affichage impossible",
     "more": "Plus",
     "moreWhat": {
+      "waiting": "Tout ce qui attend votre réponse",
       "approvals": "Ce que les agents vous demandent d'autoriser",
       "proposals": "Ce que les agents proposent de changer",
       "threads": "Les conversations qui partent en fil, et les missions",
@@ -1801,6 +1801,7 @@
     "summary_one": "{{people}} membre · {{agents}} agents",
     "summary_many": "{{people}} membres · {{agents}} agents",
     "summary_other": "{{people}} membres · {{agents}} agents",
+    "waiting": "Vous attend",
     "approvals": "Approbations",
     "proposals": "Propositions d'amélioration",
     "issues": "Tâches",
@@ -2287,7 +2288,19 @@
     "correctionSent": "Correction envoyée. {{name}} va en tirer une leçon.",
     "correctionSent_female": "Correction envoyée. {{name}} va en tirer une leçon.",
     "sending": "envoi…",
-    "notSent": "Non envoyé",
+    "tooLong": {
+      "text": "Le message fait {{length}} caractères et la limite est de {{max}}.",
+      "fix": "Envoyez le texte en fichier.",
+      "asFile": "Envoyer en fichier",
+      "fileName": "message.txt"
+    },
+    "notSentWhy": "Non envoyé. {{why}}",
+    "notSentUnknown": "Un problème est survenu.",
+    "editSend": "Modifier",
+    "long": {
+      "more": "Voir plus",
+      "title": "Message de {{name}}"
+    },
     "retrySend": "Réessayer",
     "thinking": "{{name}} réfléchit…",
     "typing_one": "{{names}} écrit…",
@@ -2410,8 +2423,9 @@
       "connect": {
         "title": "Connecter une IA pour l’équipe",
         "titlePersonal": "Connecter une IA pour vos agents",
-        "text": "Les agents réfléchissent avec l’IA du workspace. Connectez-vous avec votre abonnement Claude ou ChatGPT, sans clé API.",
-        "textPersonal": "Vos agents réfléchissent avec cette IA. Connectez-vous avec votre abonnement Claude ou ChatGPT, sans clé API.",
+        "text": "Connectez-vous avec votre abonnement Claude ou ChatGPT, sans clé API.",
+        "hint": "Les agents réfléchissent avec l’IA du workspace.",
+        "hintPersonal": "Vos agents réfléchissent avec cette IA.",
         "action": "Connecter"
       },
       "again": {
@@ -2482,6 +2496,14 @@
       "groupMine": "Rien que pour vous",
       "groupWorkspace": "Pour tout le workspace",
       "groupAdmins": "admins uniquement"
+    },
+    "powers": {
+      "title": "Pouvoirs dans le workspace",
+      "help": "Seul votre bras droit fait cela.",
+      "team": "Met en place et modifie toute l'équipe avec des cartes qu'une personne applique : agents, personnes et réglages du workspace",
+      "routines": "Lance et supprime les routines de n'importe quel agent que vous pouvez gérer",
+      "asYou": "Dans votre propre conversation, lit le Drive, le wiki et les tâches que vous pouvez voir",
+      "mentions": "Répond à une @mention dans n'importe quel canal sans en être membre"
     },
     "card": {
       "settings": "{{name}} · Réglages",
@@ -2788,10 +2810,16 @@
       "useKey": "Utiliser une clé API"
     },
     "kept": {
-      "title": "J'ai gardé votre message.",
-      "line": "Je répondrai ici dès que le workspace aura un abonnement agentes.chat et une IA connectée.",
+      "title": "J'ai gardé votre message",
+      "wait": {
+        "payment": "Je répondrai ici dès que le workspace aura un abonnement agentes.chat.",
+        "unpaid": "Je répondrai ici dès que le paiement de l'abonnement agentes.chat sera passé.",
+        "ended": "Je répondrai ici dès que le workspace se réabonnera à agentes.chat."
+      },
+      "askAdmin": "Je répondrai ici dès qu'un admin aura réglé l'abonnement agentes.chat.",
       "plan": "L'abonnement apporte l'ordinateur des agents, toujours allumé. L'IA est celle que vous payez déjà : Claude, ChatGPT et d'autres, ou une clé API.",
-      "active": "Abonnement actif. Connectez une IA et {{name}} répond ici.",
+      "activeTitle": "Abonnement actif",
+      "activeLine": "Connectez une IA et {{name}} répond ici.",
       "receipt": "Gardé",
       "channel": "Gardé. Les agents répondent dès que le workspace a un abonnement agentes.chat."
     },
@@ -3052,6 +3080,22 @@
       "never": "{{name}} a dit jamais pour ceci"
     }
   },
+  "approvalsLevel": {
+    "title": "Approbations",
+    "lead": "Quand {{name}} demande à une personne avant d’agir.",
+    "always": {
+      "title": "Toujours demander",
+      "text": "Demande avant de modifier quoi que ce soit dans une app."
+    },
+    "risky": {
+      "title": "Seulement ce qui est risqué",
+      "text": "Demande avant de supprimer, envoyer ou payer."
+    },
+    "never": {
+      "title": "Ne jamais demander",
+      "text": "Demande toujours pour un merge, un deploy ou un rollback."
+    }
+  },
   "brakes": {
     "title": "Travail que personne n'a demandé",
     "subtitle": "Ce qu'il commence seul, à partir d'une routine, d'une alerte ou d'un autre agent. Ce qu'une personne demande n'est jamais retenu.",
@@ -3202,6 +3246,8 @@
       "title": "{{agent}} propose un nouvel agent",
       "review": "Examiner",
       "created": "Créé",
+      "createdBy": "Créé par {{name}}",
+      "createdByYou": "Créé par vous",
       "aiAccount": "Réfléchit avec {{account}}",
       "aiModel": "Réfléchit via l'API",
       "aiNone": "Pas encore d'IA. Connectez-en une après la création",
@@ -3824,7 +3870,7 @@
       "clearFilters": "Effacer la recherche",
       "personalNote": "Vous seul voyez ces éléments. Vos agents les utilisent seulement quand vous le demandez.",
       "personalEmpty": "Gardez vos identifiants et clés en sécurité",
-      "personalEmptyText": "Vous seul voyez ces éléments. Vos agents les utilisent seulement quand vous le demandez.",
+      "personalEmptyText": "Vous seul voyez ces éléments, et vos agents les utilisent seulement quand vous le demandez.",
       "teamEmpty": "Partagez des accès sans faire circuler de mots de passe",
       "teamEmptyPersonal": "Gardez les accès partagés au même endroit",
       "teamEmptyText": "Enregistrez une fois un identifiant, une clé ou des coordonnées, et choisissez quels agents peuvent l'utiliser.",
@@ -4265,6 +4311,9 @@
       "team": "<b>{{name}}</b> propose une équipe · {{what}}",
       "firstTask": "<b>{{name}}</b> suggère une première tâche · {{what}}",
       "more": "+{{count}}",
+      "here_one": "{{count}} vous attend ici",
+      "here_many": "{{count}} vous attendent ici",
+      "here_other": "{{count}} vous attendent ici",
       "see": "Voir"
     }
   },
@@ -15139,6 +15188,7 @@
       "where": "Où",
       "via": "Via",
       "approval": "Approbation",
+      "unasked": "Pas demandé ({{level}})",
       "approvalWaiting": "Personne n'a encore répondu",
       "approvalApproved": "Approuvé par {{name}}",
       "approvalRefused": "Refusé par {{name}}",
@@ -16898,8 +16948,6 @@
     "card": {
       "group": "Demande d'aide de {{name}} dans le navigateur",
       "group_female": "Demande d'aide de {{name}} dans le navigateur",
-      "asked": "a demandé de l'aide à {{people}}",
-      "askedShort": "a besoin d'aide",
       "left": "Encore {{time}}",
       "where": "Dans le navigateur de {{name}}",
       "where_female": "Dans le navigateur de {{name}}",
@@ -16920,11 +16968,6 @@
       "cancelled": "Demande annulée.",
       "withdrawn": "{{name}} n'en a plus besoin.",
       "withdrawn_female": "{{name}} n'en a plus besoin.",
-      "settledDone": "a demandé de l'aide · résolu",
-      "settledFailed": "a demandé de l'aide · n'a pas fonctionné",
-      "settledExpired": "a demandé de l'aide · expiré",
-      "settledCancelled": "a demandé de l'aide · annulé",
-      "settledWithdrawn": "a demandé de l'aide · plus nécessaire",
       "busy": "Quelqu'un d'autre aide déjà.",
       "openFailed": "Impossible de l'ouvrir pour le moment. Réessayez."
     },
@@ -17059,8 +17102,6 @@
       "couldnt": "Je n'ai pas pu",
       "giveUp": "Abandonner",
       "otherHelp": "{{person}} a la main. Vous regardez.",
-      "helpingHere": "Vous aidez · dans cette carte",
-      "helpingOther": "{{person}} aide · dans cette carte",
       "doneLine": "C'est fait. {{name}} va relire la page et continuer.",
       "doneLine_female": "C'est fait. {{name}} va relire la page et continuer.",
       "openHere": "Ouvrir ici",

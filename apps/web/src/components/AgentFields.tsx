@@ -136,12 +136,14 @@ export function ModelSelect({
   onChange,
   options,
   className,
+  disabled,
   "aria-label": label,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: SelectOption[];
   className?: string;
+  disabled?: boolean;
   "aria-label"?: string;
 }) {
   const { t } = useTranslation();
@@ -149,6 +151,7 @@ export function ModelSelect({
     <SearchSelect
       className={className}
       aria-label={label}
+      disabled={disabled}
       value={value}
       onValueChange={onChange}
       options={options}

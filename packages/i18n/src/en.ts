@@ -1697,7 +1697,6 @@ export const en = {
       limit: "{{name}} reached today's limit: this one stays with you",
       undoneByYou: "Undone by you",
       undoneBy: "Undone by {{name}}",
-      why: "Why?",
       undo: "Undo",
       undoArchives: "Undo archives {{name}}. It lasts until {{until}}.",
       undoSettings: "Undo puts the settings back. It lasts until {{until}}.",
@@ -1753,6 +1752,7 @@ export const en = {
     unshown: "Couldn't be shown",
     more: "More",
     moreWhat: {
+      waiting: "Everything waiting for your answer",
       approvals: "What agents ask you to allow",
       proposals: "What agents propose to change",
       threads: "Conversations that branch off, and missions",
@@ -1859,6 +1859,7 @@ export const en = {
     searchWorkspace: "Search the workspace",
     summary_one: "{{people}} member · {{agents}} agents",
     summary_other: "{{people}} members · {{agents}} agents",
+    waiting: "Waiting on you",
     approvals: "Approvals",
     proposals: "Improvement proposals",
     issues: "Tasks",
@@ -2330,7 +2331,23 @@ export const en = {
     sendCorrection: "Send correction",
     correctionSent: "Correction sent. {{name}} will learn from it.",
     sending: "sending…",
-    notSent: "Not sent",
+    notSentWhy: "Not sent. {{why}}",
+    /** The `why` of a failed message when the server gave no reason. */
+    notSentUnknown: "Something went wrong.",
+    /** A failed message whose text must change before it can go: it returns to the field. */
+    editSend: "Edit",
+    /** A draft past the length limit, said above the field before sending: its sizes, then the way out. */
+    tooLong: {
+      text: "The message has {{length}} characters and the limit is {{max}}.",
+      fix: "Send the text as a file.",
+      asFile: "Send as a file",
+      fileName: "message.txt",
+    },
+    /** A tall message, clipped in the conversation: the button under it and the dialog that shows it whole. */
+    long: {
+      more: "See more",
+      title: "Message from {{name}}",
+    },
     retrySend: "Try again",
     thinking: "{{name}} is thinking…",
     typing_one: "{{names}} is typing…",
@@ -2454,8 +2471,10 @@ export const en = {
       connect: {
         title: "Connect an AI for the team",
         titlePersonal: "Connect an AI for your agents",
-        text: "The agents think with the workspace's AI. Sign in with your Claude or ChatGPT plan, no API key needed.",
-        textPersonal: "Your agents think with this AI. Sign in with your Claude or ChatGPT plan, no API key needed.",
+        text: "Sign in with your Claude or ChatGPT plan, no API key needed.",
+        /** Behind the card's ⓘ. */
+        hint: "The agents think with the workspace's AI.",
+        hintPersonal: "Your agents think with this AI.",
         action: "Connect",
       },
       /** Under its greeting once the start card stopped asking; `message`: what the button sends, as the person. */
@@ -2539,6 +2558,15 @@ export const en = {
       groupMine: "Just for you",
       groupWorkspace: "For the whole workspace",
       groupAdmins: "admins only",
+    },
+    /** "Workspace powers" on its page: what only the right hand does, one line each (`RIGHT_HAND_POWERS`). */
+    powers: {
+      title: "Workspace powers",
+      help: "Only your right hand does these.",
+      team: "Sets up and changes the whole team with cards a person applies: agents, people and workspace settings",
+      routines: "Runs and deletes any agent's routine you may manage",
+      asYou: "In your own conversation, reads the Drive, the wiki and the tasks you can see",
+      mentions: "Answers an @mention in any channel without being a member",
     },
     card: {
       settings: "{{name}} · Settings",
@@ -2865,11 +2893,20 @@ export const en = {
     },
     /** The card an agent posts on a billing hold (`reason: plan_hold`): the message waits for the plan. */
     kept: {
-      title: "I kept your message.",
-      line: "I'll answer here once the workspace has an agentes.chat plan and an AI connected.",
+      title: "I kept your message",
+      /** The card's one sentence, by the hold's code. */
+      wait: {
+        payment: "I'll answer here once the workspace has an agentes.chat plan.",
+        unpaid: "I'll answer here once the agentes.chat plan's payment goes through.",
+        ended: "I'll answer here once the workspace subscribes to agentes.chat again.",
+      },
+      /** The same for whoever can't pay. */
+      askAdmin: "I'll answer here once an admin sorts out the agentes.chat plan.",
+      /** Behind the card's ⓘ on a first plan. */
       plan: "The plan brings the agents' computer, always on. The AI is the one you already pay for: Claude, ChatGPT and more, or an API key.",
       /** The hold lifted: the plan is paid, an AI is what's left. */
-      active: "Plan active. Connect an AI and {{name}} answers here.",
+      activeTitle: "Plan active",
+      activeLine: "Connect an AI and {{name}} answers here.",
       /** A second message's receipt, where it would say no AI. */
       receipt: "Kept",
       /** The receipt of a channel message nobody mentioned. */
@@ -3135,6 +3172,23 @@ export const en = {
       never: "{{name}} said never for this",
     },
   },
+  /** How much an agent asks before acting (ADR 0173): the row on its page and the three choices behind it. */
+  approvalsLevel: {
+    title: "Approvals",
+    lead: "When {{name}} asks a person before acting.",
+    always: {
+      title: "Always ask",
+      text: "Asks before changing anything in an app.",
+    },
+    risky: {
+      title: "Only what is risky",
+      text: "Asks before deleting, sending or paying.",
+    },
+    never: {
+      title: "Never ask",
+      text: "Still asks for merge, deploy and rollback.",
+    },
+  },
   /** Agent settings: what it may start that nobody asked for directly, and which agents it may call (ADR 0131). */
   brakes: {
     title: "Work nobody asked for",
@@ -3286,6 +3340,8 @@ export const en = {
       title: "{{agent}} proposes a new agent",
       review: "Review",
       created: "Created",
+      createdBy: "Created by {{name}}",
+      createdByYou: "Created by you",
       aiAccount: "Thinks with {{account}}",
       aiModel: "Thinks through the API",
       aiNone: "No AI yet. Connect one after creating it",
@@ -3936,7 +3992,7 @@ export const en = {
       clearFilters: "Clear the search",
       personalNote: "Only you see these. Your agents use them only when you ask.",
       personalEmpty: "Keep your logins and keys safe",
-      personalEmptyText: "Only you see these. Your agents use them only when you ask.",
+      personalEmptyText: "Only you see these, and your agents use them only when you ask.",
       teamEmpty: "Share logins without passing passwords around",
       teamEmptyPersonal: "Keep shared logins in one place",
       teamEmptyText: "Save a login, a key or contact details once, and choose which agents may use it.",
@@ -4402,6 +4458,9 @@ export const en = {
       team: "<b>{{name}}</b> proposes a team · {{what}}",
       firstTask: "<b>{{name}}</b> suggests a first task · {{what}}",
       more: "+{{count}}",
+      /** What waits on me here with its card not loaded (older, or in a thread): "Ver" goes to the oldest. */
+      here_one: "{{count}} waiting on you here",
+      here_other: "{{count}} waiting on you here",
       see: "See",
     },
   },
@@ -14746,6 +14805,8 @@ export const en = {
       where: "Where",
       via: "Through",
       approval: "Approval",
+      /** In place of an approval: it ran without one because its agent never asks. `level`: that choice's name. */
+      unasked: "Not asked ({{level}})",
       approvalWaiting: "Nobody has answered yet",
       approvalApproved: "Approved by {{name}}",
       approvalRefused: "Refused by {{name}}",
@@ -16557,8 +16618,6 @@ export const en = {
     },
     card: {
       group: "{{name}}'s request for help in the browser",
-      asked: "asked {{people}} for help",
-      askedShort: "needs help",
       left: "{{time}} left",
       where: "In {{name}}'s browser",
       open: "Open",
@@ -16573,11 +16632,6 @@ export const en = {
       expired: "Nobody opened it in time. {{name}} stopped and said so.",
       cancelled: "Request cancelled.",
       withdrawn: "{{name}} no longer needs this.",
-      settledDone: "asked for help · resolved",
-      settledFailed: "asked for help · didn't work",
-      settledExpired: "asked for help · expired",
-      settledCancelled: "asked for help · cancelled",
-      settledWithdrawn: "asked for help · no longer needed",
       busy: "Someone else is already helping.",
       openFailed: "Couldn't open it now. Try again.",
     },
@@ -16689,8 +16743,6 @@ export const en = {
       couldnt: "I couldn't",
       giveUp: "Give up",
       otherHelp: "{{person}} is in control. You're watching.",
-      helpingHere: "You're helping · in this card",
-      helpingOther: "{{person}} is helping · in this card",
       doneLine: "Done. {{name}} will read the page again and carry on.",
       openHere: "Open here",
       openHereHint: "Opens in this card, without leaving the chat.",

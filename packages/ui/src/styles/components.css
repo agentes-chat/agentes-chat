@@ -1596,6 +1596,21 @@ html:not([data-pointer]) .ac-msg__time--details:focus-visible {
   font-size: 14px;
   line-height: 20px;
 }
+/* A message that didn't go: why, then its one way out at the end of the sentence, or under it when it doesn't fit. */
+.ac-msg__unsent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+.ac-msg__unsent > .ac-msg__error {
+  min-width: 0;
+  margin: 0;
+}
+.ac-msg__unsent > .ac-link {
+  font-size: 14px;
+  line-height: 20px;
+}
 /*
  * A failed run's reason in its text's place, its × after it, out of the .ac-iconline: on the reason's first line, not
  * the middle of a reason that wraps. The reason takes the text's size and reading line, so its words stand where a
@@ -6625,6 +6640,14 @@ html:not([data-pointer])
   justify-content: flex-end;
   text-align: right;
 }
+/* My message that didn't go: the line ends on the bubble's edge, its words still starting right after their mark. */
+.ac-msg--own .ac-msg__unsent {
+  justify-content: flex-end;
+}
+.ac-msg--own .ac-msg__unsent > .ac-msg__error {
+  justify-content: flex-start;
+  text-align: start;
+}
 /* Under the run's last bubble: its time (its details on hover), or "enviando…" in its place on the same line. */
 .ac-msg__own-time {
   min-height: 16px;
@@ -7258,6 +7281,16 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
   flex-wrap: wrap;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-2) 0;
+}
+/* Why the text can't go yet, and the way out: its words wrap, the action follows them or drops under them. */
+.ac-composer__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-3) 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
 }
 /* Voice messages (ADR 0100). The recording sits on the text's first line and hides nothing but the text, which keeps
    its place: the box never changes height, whatever was typed. */

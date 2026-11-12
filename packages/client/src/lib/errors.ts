@@ -284,6 +284,8 @@ const KNOWN = {
   slug_taken: "errors.wiki.titleTaken",
   "wiki.title_characters": "errors.wiki.titleCharacters",
   "wiki.title_empty_slug": "errors.wiki.titleNoLetters",
+  // With its sizes, `limitRefusalText` says it first: this line is for a refusal that names none.
+  "message.too_long": "channel.tooLong.fix",
   // GIFs and stickers (ADR 0091): off in the workspace (or no GIF search on this server), a GIF gone, or the GIF
   // search not answering.
   "message.reply_not_found": "errors.replyGone",
@@ -678,6 +680,36 @@ const UNREACHABLE = new Set([502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 5
 /** No answer from the server itself, only from the proxy in front of it: it may be back in a moment. */
 export const serverUnreachable = (error: unknown) =>
   error instanceof ApiError && UNREACHABLE.has(error.status) && error.code === `http_${error.status}`;
+
+/** Why the server refused a message of mine, kept on its failed row (`Message.sendFailure`). */
+export interface SendFailure {
+  status: number;
+  code: string;
+  message: string;
+  params?: Record<string, unknown>;
+}
+
+/** What to keep of a failed send, to say why on its row later: the server's refusal, or nothing for any other failure. */
+export const sendFailureOf = (error: unknown): SendFailure | undefined =>
+  error instanceof ApiError
+    ? {
+        status: error.status,
+        code: error.code,
+        message: error.message,
+        ...(error.params ? { params: error.params } : {}),
+      }
+    : undefined;
+
+/** A failed message's line: "Não enviada." and the refusal kept on it in the person's words, else that something went wrong. */
+export const sendFailureText = (t: TFunction, failure: SendFailure | undefined, locale?: string): string =>
+  t("channel.notSentWhy", {
+    why: failure
+      ? errorText(t, new ApiError(failure.status, failure.code, failure.message, failure.params), locale)
+      : t("channel.notSentUnknown"),
+  });
+
+/** Sending the same text again can't work: it has to change first. */
+export const sendNeedsEdit = (failure: SendFailure | undefined) => failure?.code === "message.too_long";
 
 /**
  * A message that failed to go out with no answer at all (`fetch` throws a `TypeError`: no network), or only the

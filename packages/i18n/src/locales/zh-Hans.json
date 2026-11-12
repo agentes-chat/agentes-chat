@@ -1540,7 +1540,6 @@
       "limit": "{{name}} 已达今日上限：这个由你决定",
       "undoneByYou": "已由你撤销",
       "undoneBy": "已由 {{name}} 撤销",
-      "why": "为什么？",
       "undo": "撤销",
       "undoArchives": "撤销会归档 {{name}}。有效期至 {{until}}。",
       "undoSettings": "撤销会恢复设置。有效期至 {{until}}。"
@@ -1620,6 +1619,7 @@
     "unshown": "无法显示",
     "more": "更多",
     "moreWhat": {
+      "waiting": "所有等你答复的事",
       "approvals": "智能体请求你允许的事",
       "proposals": "智能体提议更改的内容",
       "threads": "分支出去的对话和专项任务",
@@ -1717,6 +1717,7 @@
     "expandNav": "展开侧边栏",
     "searchWorkspace": "搜索工作区",
     "summary_other": "{{people}} 位成员 · {{agents}} 个智能体",
+    "waiting": "等你处理",
     "approvals": "审批",
     "proposals": "改进建议",
     "issues": "任务",
@@ -2150,7 +2151,19 @@
     "correctionSent": "纠正已发送。{{name}} 会从中学习。",
     "correctionSent_female": "纠正已发送。{{name}} 会从中学习。",
     "sending": "发送中…",
-    "notSent": "未发送",
+    "tooLong": {
+      "text": "消息有 {{length}} 个字符，上限为 {{max}} 个。",
+      "fix": "请将文本作为文件发送。",
+      "asFile": "作为文件发送",
+      "fileName": "message.txt"
+    },
+    "notSentWhy": "未发送。{{why}}",
+    "notSentUnknown": "出了点问题。",
+    "editSend": "编辑",
+    "long": {
+      "more": "查看更多",
+      "title": "{{name}} 的消息"
+    },
     "retrySend": "重试",
     "thinking": "{{name}} 正在思考…",
     "typing_other": "{{names}} 正在输入…",
@@ -2239,8 +2252,9 @@
       "connect": {
         "title": "为团队连接 AI",
         "titlePersonal": "为你的智能体连接 AI",
-        "text": "智能体用工作区的 AI 思考。用你的 Claude 或 ChatGPT 套餐登录，不需要 API 密钥。",
-        "textPersonal": "你的智能体用这个 AI 思考。用你的 Claude 或 ChatGPT 套餐登录，不需要 API 密钥。",
+        "text": "用你的 Claude 或 ChatGPT 套餐登录，不需要 API 密钥。",
+        "hint": "智能体用工作区的 AI 思考。",
+        "hintPersonal": "你的智能体用这个 AI 思考。",
         "action": "连接"
       },
       "again": {
@@ -2311,6 +2325,14 @@
       "groupMine": "仅对你",
       "groupWorkspace": "对整个工作区",
       "groupAdmins": "仅管理员"
+    },
+    "powers": {
+      "title": "工作区权限",
+      "help": "只有你的得力助手能做这些事。",
+      "team": "通过由人来应用的卡片搭建和调整整个团队，包括智能体、成员和工作区设置",
+      "routines": "运行和删除你有权管理的任何智能体的例行任务",
+      "asYou": "在你自己的对话里，读取你能看到的 Drive、Wiki 和任务",
+      "mentions": "不是成员也能回应任何频道里的 @提及"
     },
     "card": {
       "settings": "{{name}} · 设置",
@@ -2591,10 +2613,16 @@
       "useKey": "使用 API 密钥"
     },
     "kept": {
-      "title": "我保留了你的消息。",
-      "line": "工作区有了 agentes.chat 套餐并连接 AI 后，我会在这里回复。",
+      "title": "我保留了你的消息",
+      "wait": {
+        "payment": "工作区有了 agentes.chat 套餐后，我会在这里回复。",
+        "unpaid": "agentes.chat 套餐付款成功后，我会在这里回复。",
+        "ended": "工作区重新订阅 agentes.chat 后，我会在这里回复。"
+      },
+      "askAdmin": "管理员处理好 agentes.chat 套餐后，我会在这里回复。",
       "plan": "套餐包含智能体的电脑，始终开机。AI 用的是你已经付费的：Claude、ChatGPT 等，或 API 密钥。",
-      "active": "套餐已生效。连接 AI 后，{{name}} 会在这里回复。",
+      "activeTitle": "套餐已生效",
+      "activeLine": "连接 AI 后，{{name}} 会在这里回复。",
       "receipt": "已保留",
       "channel": "已保留。工作区有 agentes.chat 套餐后，智能体就会回复。"
     },
@@ -2849,6 +2877,22 @@
       "never": "{{name}} 说这类永远不要"
     }
   },
+  "approvalsLevel": {
+    "title": "审批",
+    "lead": "{{name}} 在行动前何时询问人。",
+    "always": {
+      "title": "始终询问",
+      "text": "在应用中更改任何内容前先询问。"
+    },
+    "risky": {
+      "title": "仅有风险的操作",
+      "text": "删除、发送或付款前先询问。"
+    },
+    "never": {
+      "title": "从不询问",
+      "text": "合并、部署和回滚仍会询问。"
+    }
+  },
   "brakes": {
     "title": "没人要求的工作",
     "subtitle": "它因为例程、警报或其他智能体而自己开始的工作。人要求的事从不会被拦下。",
@@ -2985,6 +3029,8 @@
       "title": "{{agent}} 提议创建一个新智能体",
       "review": "查看",
       "created": "已创建",
+      "createdBy": "由 {{name}} 创建",
+      "createdByYou": "由你创建",
       "aiAccount": "使用 {{account}} 思考",
       "aiModel": "通过 API 思考",
       "aiNone": "还没有 AI。创建后再连接一个",
@@ -3591,7 +3637,7 @@
       "clearFilters": "清除搜索",
       "personalNote": "只有你能看到这些项目。你的智能体只在你要求时使用它们。",
       "personalEmpty": "安全保存你的登录信息和密钥",
-      "personalEmptyText": "只有你能看到这些项目。你的智能体只在你要求时使用它们。",
+      "personalEmptyText": "只有你能看到这些项目，你的智能体只在你要求时使用它们。",
       "teamEmpty": "共享登录信息，不用到处传密码",
       "teamEmptyPersonal": "把共享的登录信息放在一处",
       "teamEmptyText": "只需保存一次登录信息、密钥或联系信息，然后选择哪些智能体可以使用。",
@@ -4013,6 +4059,7 @@
       "team": "<b>{{name}}</b> 提议了一个团队 · {{what}}",
       "firstTask": "<b>{{name}}</b> 建议了第一个任务 · {{what}}",
       "more": "+{{count}}",
+      "here_other": "这里有 {{count}} 件事等你处理",
       "see": "查看"
     }
   },
@@ -14222,6 +14269,7 @@
       "where": "位置",
       "via": "途径",
       "approval": "审批",
+      "unasked": "未询问（{{level}}）",
       "approvalWaiting": "还没有人回应",
       "approvalApproved": "由 {{name}} 批准",
       "approvalRefused": "由 {{name}} 拒绝",
@@ -15927,8 +15975,6 @@
     "card": {
       "group": "{{name}} 在浏览器中的求助",
       "group_female": "{{name}} 在浏览器中的求助",
-      "asked": "向 {{people}} 求助",
-      "askedShort": "需要帮助",
       "left": "还剩 {{time}}",
       "where": "在 {{name}} 的浏览器中",
       "where_female": "在 {{name}} 的浏览器中",
@@ -15949,11 +15995,6 @@
       "cancelled": "请求已取消。",
       "withdrawn": "{{name}} 不再需要这个了。",
       "withdrawn_female": "{{name}} 不再需要这个了。",
-      "settledDone": "求助 · 已解决",
-      "settledFailed": "求助 · 没有成功",
-      "settledExpired": "求助 · 已过期",
-      "settledCancelled": "求助 · 已取消",
-      "settledWithdrawn": "求助 · 不再需要",
       "busy": "已有其他人在帮忙。",
       "openFailed": "暂时无法打开，请重试。"
     },
@@ -16086,8 +16127,6 @@
       "couldnt": "我没能完成",
       "giveUp": "放弃",
       "otherHelp": "{{person}} 正在控制，你在观看。",
-      "helpingHere": "你正在帮忙 · 在这张卡片中",
-      "helpingOther": "{{person}} 正在帮忙 · 在这张卡片中",
       "doneLine": "完成。{{name}} 会重新读取页面并继续。",
       "doneLine_female": "完成。{{name}} 会重新读取页面并继续。",
       "openHere": "在这里打开",
