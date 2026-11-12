@@ -240,7 +240,7 @@ const KNOWN = {
   sso_disabled: "sso.failed",
   sso_changed: "sso.failed",
   sso_issuer: "sso.failed",
-  sso_last_method: "shell.addPasswordHint",
+  sso_last_method: "shell.addPassword",
   sso_secret: "sso.failed",
   sso_unavailable: "sso.failed",
   account_not_linked: "auth.unconfirmed",

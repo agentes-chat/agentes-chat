@@ -14,3 +14,5 @@ CREATE TABLE "oidc_providers" (
 );
 --> statement-breakpoint
 ALTER TABLE "oidc_providers" ADD CONSTRAINT "oidc_providers_org_id_organizations_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+CREATE UNIQUE INDEX "accounts_oidc_identity" ON "accounts" USING btree ("provider_id","account_id") WHERE "accounts"."provider_id" like 'sso-%';

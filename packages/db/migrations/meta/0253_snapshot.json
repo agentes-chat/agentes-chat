@@ -1,5 +1,5 @@
 {
-  "id": "fdee8295-95f7-4dbd-9120-32f6d09b9730",
+  "id": "3310ef75-1445-4f32-8294-37a0f50b0c02",
   "prevId": "b1ce50f7-99fc-4ad4-871b-2b7120f01ab3",
   "version": "7",
   "dialect": "postgresql",
@@ -1973,6 +1973,28 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "accounts_oidc_identity": {
+          "name": "accounts_oidc_identity",
+          "columns": [
+            {
+              "expression": "provider_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"accounts\".\"provider_id\" like 'sso-%'",
           "concurrently": false,
           "method": "btree",
           "with": {}
