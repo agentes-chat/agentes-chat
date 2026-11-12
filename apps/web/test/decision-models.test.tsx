@@ -206,3 +206,22 @@ test("a revoked OpenRouter account stays hidden and a failed reset preserves the
   expect(screen().getByRole("alert")).toBeTruthy();
   expect(state.decisions?.settings).toEqual(selected);
 });
+
+test("the Jev settings keep their explanation without advertising the fallback chat model", async () => {
+  await open({
+    credentials: [],
+    jev: { source: null, hint: null, state: "off", month: { decisions: 0, costUsd: 0 } },
+    aiStatus: {
+      any: true,
+      agents: [],
+      apiKey: true,
+      routing: { by: "model", mine: "model", model: "claude-haiku-5-5", noSmallModel: null },
+    },
+  });
+  const section = screen().getByRole("region", { name: "Who picks the agents" });
+  expect(section.textContent).not.toContain("Haiku");
+  expect(within(section).getByRole("region", { name: "Jev" }).textContent).toContain(
+    "Helps your agents work as a team.",
+  );
+  expect(section.textContent).toContain("Keeps memory tidy");
+});

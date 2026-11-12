@@ -209,7 +209,7 @@ export function WhoPicksSection() {
   const line = admin ? routingLineOf(status.data, modelLabel) : null;
   const routing = (
     <>
-      {line && <p className="who-line">{t(line.key, line.params)}</p>}
+      {line && status.data?.routing?.by !== "model" && <p className="who-line">{t(line.key, line.params)}</p>}
       {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
     </>
   );
