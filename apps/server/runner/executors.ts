@@ -272,12 +272,20 @@ export function parseOpencodeModels(output: string): CursorModelInfo[] {
   return out;
 }
 
-/** OpenCode's versions are plain semver (`1.19.5`): an `opencode` on the PATH that says anything else is skipped. */
-const OPENCODE_VERSION = /^v?\d+\.\d+\.\d+\b/;
+/**
+ * OpenCode's versions are plain semver (`1.19.5`), behind its name since 2.2 (`opencode v2.2.7`): an `opencode` on the
+ * PATH that says anything else is skipped.
+ */
+const OPENCODE_VERSION = /^(?:opencode\s+)?v?\d+\.\d+\.\d+\b/;
 
-/** Protocol 39 (ADR 0132): OpenCode's CLI and the models it lists (`opencode models`: the free tier with no key). */
-function detectOpencode(run: Run): Promise<Probe> {
-  return detectWithModels(run, OPENCODE_BIN, OPENCODE_VERSION, parseOpencodeModels);
+/**
+ * Protocol 39 (ADR 0132): OpenCode's CLI and the models it lists (`opencode models`: the free tier with no key). Its
+ * version is kept without the name.
+ */
+async function detectOpencode(run: Run): Promise<Probe> {
+  const probe = await detectWithModels(run, OPENCODE_BIN, OPENCODE_VERSION, parseOpencodeModels);
+  if (probe.entry) probe.entry = { ...probe.entry, version: probe.entry.version.replace(/^opencode\s+/, "") };
+  return probe;
 }
 
 /** xAI's Grok Build CLI. Always `grok`: its installer also makes `~/.local/bin/agent`, which is Cursor's name. */

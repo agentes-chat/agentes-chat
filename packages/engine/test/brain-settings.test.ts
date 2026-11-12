@@ -444,6 +444,36 @@ describe("a plan answers its owner until it answers other people (Atende outras 
     );
   });
 
+  test("from one plan to another kind of plan it keeps answering whoever its owner let in", async () => {
+    const { fx, deps, machineId, bia, caio, row, audits } = await world();
+    await fx.db
+      .update(schema.machines)
+      .set({
+        executors: {
+          claude: { version: "2.1.304", loggedIn: true },
+          codex: { version: "0.170.0" },
+          detectedAt: new Date().toISOString(),
+        },
+      })
+      .where(eq(schema.machines.id, machineId));
+    await setAgentAudience(fx.db, fx.owner.id, fx.org.id, fx.agent.id, { mode: "people", userIds: [bia.id] });
+    await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "claude_code", onlyOwner: false });
+    const changes = (await audits("agent.audience_changed")).length;
+    // Another model on the same plan, then another plan: neither is a move onto a plan.
+    await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "claude_code", model: "opus" });
+    const moved = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "codex" });
+    expect(moved).toMatchObject({ brain: "codex", onlyOwner: false });
+    const after = await row();
+    expect(after).toMatchObject({ audienceMode: "people", audienceUserIds: [bia.id] });
+    expect([canTalkTo(after, bia.id, NO_PERSON), canTalkTo(after, caio.id, NO_PERSON)]).toEqual([true, false]);
+    expect(await audits("agent.audience_changed")).toHaveLength(changes);
+    // One that answered only its owner still does on the other plan.
+    await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { onlyOwner: true });
+    expect((await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "claude_code" })).onlyOwner).toBe(
+      true,
+    );
+  });
+
   test("back on the API it still answers only its owner; letting it out brings back whoever it answered", async () => {
     const { fx, deps, bia, caio, row } = await world();
     await setAgentAudience(fx.db, fx.owner.id, fx.org.id, fx.agent.id, { mode: "people", userIds: [bia.id] });
