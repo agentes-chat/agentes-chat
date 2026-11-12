@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import { z } from "zod";
 import { parseFirebaseServiceAccount, parsePemKey } from "./pem";
 
@@ -46,6 +47,31 @@ const DSN_MESSAGE = "must be a DSN such as https://<key>@errors.example.com/1";
 
 /** Claude model ids accepted as defaults. Prices live in `@agenteschat/providers` (`MODEL_CATALOG`). */
 const modelId = z.string().regex(/^[a-z0-9][a-z0-9.-]*$/, "must be a model id such as claude-sonnet-5-5");
+
+/** A comma-separated list, trimmed and normalized, empty entries dropped; each entry checked by `ok`. */
+const commaList = (ok: (entry: string) => boolean, message: string, normalize = (entry: string) => entry) =>
+  z
+    .string()
+    .optional()
+    .transform((value) =>
+      (value ?? "")
+        .split(",")
+        .map((entry) => normalize(entry.trim()))
+        .filter(Boolean),
+    )
+    .refine((entries) => entries.every(ok), message);
+
+const HOST_LABELS = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+/** A host name, or `*.` and a suffix of two labels or more (never a whole top-level domain). */
+const allowedHost = (entry: string) =>
+  !isIP(entry) && HOST_LABELS.test(entry.startsWith("*.") ? entry.slice(2) : entry);
+/** An IPv4 or IPv6 address, alone or with a prefix length in range. */
+const allowedRange = (entry: string) => {
+  const [address = "", bits, ...rest] = entry.split("/");
+  const family = isIP(address);
+  if (!family || rest.length > 0) return false;
+  return bits === undefined || (/^\d{1,3}$/.test(bits) && Number(bits) <= (family === 6 ? 128 : 32));
+};
 
 export const envVars = {
   NODE_ENV: {
@@ -417,6 +443,24 @@ export const envVars = {
     description:
       "Whether a workspace's own model endpoint (Settings › AI keys › Other provider) may be on this server's network or over http: an Ollama, vLLM, LM Studio or LiteLLM next to it. The same switch covers the other addresses a workspace names: custom MCP servers and their sign-in, its own bucket, server icons and the pages agents read. Unset: allowed, except on agentes.chat Cloud (https://app.agentes.chat) and with `ALLOW_SIGNUP=true`, where only public https addresses are, checked again at every connection.",
     section: "Agents",
+  },
+  OUTBOUND_ALLOW_HOSTS: {
+    schema: commaList(
+      allowedHost,
+      "must be host names or *.suffixes such as *.tail1234.ts.net, comma-separated",
+      (host) => host.toLowerCase(),
+    ),
+    description:
+      "Comma-separated host names, or `*.` suffixes, that addresses a workspace types (custom MCP servers and their sign-in, its own bucket, a database, a mail server, a password manager) may reach on a private network, such as a Tailscale tailnet or a LAN, whatever they resolve to. Loopback and cloud metadata addresses stay refused. For a server where `MODEL_ENDPOINTS_PRIVATE` is off, or for what it doesn't cover. Name a narrow suffix: everyone who can make a name under it can point it at your network. Unset: none.",
+    section: "Security",
+    example: "*.tail1234.ts.net,nas.example.com",
+  },
+  OUTBOUND_ALLOW_CIDRS: {
+    schema: commaList(allowedRange, "must be IP addresses or CIDR ranges such as 100.64.0.0/10, comma-separated"),
+    description:
+      "Comma-separated IP ranges (CIDR) or addresses that addresses a workspace types may reach, as with `OUTBOUND_ALLOW_HOSTS`: Tailscale's are `100.64.0.0/10` and `fd7a:115c:a1e0::/48`. Loopback, link-local and cloud metadata addresses stay refused even inside a range. Unset: none.",
+    section: "Security",
+    example: "100.64.0.0/10,fd7a:115c:a1e0::/48",
   },
   SUMMARY_MODEL: {
     schema: modelId.default("claude-haiku-5-5"),

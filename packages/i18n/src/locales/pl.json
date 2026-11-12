@@ -14039,6 +14039,7 @@
       "tooMany": "To więcej, niż się tu mieści. Usuń część i spróbuj ponownie.",
       "fillIn": "Uzupełnij braki i spróbuj ponownie.",
       "checkAddress": "Sprawdź adres i spróbuj ponownie.",
+      "privateNetwork": "Ten adres jest w sieci prywatnej: osoba zarządzająca serwerem może na niego zezwolić za pomocą OUTBOUND_ALLOW_HOSTS lub OUTBOUND_ALLOW_CIDRS.",
       "tooLong": "To za długie. Skróć i spróbuj ponownie.",
       "updateComputerApp": "Aplikacja na komputerze jest na to zbyt stara. Zaktualizuj ją i spróbuj ponownie.",
       "computerUpdatesItself": "Komputer przestrzeni roboczej sam się do tego aktualizuje. Spróbuj ponownie za chwilę.",

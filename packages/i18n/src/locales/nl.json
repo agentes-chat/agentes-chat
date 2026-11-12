@@ -13182,6 +13182,7 @@
       "tooMany": "Dat is meer dan hier past. Haal er een paar weg en probeer het opnieuw.",
       "fillIn": "Vul in wat ontbreekt en probeer het opnieuw.",
       "checkAddress": "Controleer het adres en probeer het opnieuw.",
+      "privateNetwork": "Dit adres ligt op een privénetwerk: wie de server beheert, kan het toestaan met OUTBOUND_ALLOW_HOSTS of OUTBOUND_ALLOW_CIDRS.",
       "tooLong": "Dat is te lang. Maak het korter en probeer het opnieuw.",
       "updateComputerApp": "De app op de computer is hiervoor te oud. Werk hem bij en probeer het opnieuw.",
       "computerUpdatesItself": "De computer van de werkruimte werkt zichzelf hiervoor bij. Probeer het zo opnieuw.",

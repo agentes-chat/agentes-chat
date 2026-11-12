@@ -31795,6 +31795,9 @@
   "errors.said.checkAddress": {
     "value": "Check the address and try again."
   },
+  "errors.said.privateNetwork": {
+    "value": "This address is on a private network: whoever runs the server can allow it with OUTBOUND_ALLOW_HOSTS or OUTBOUND_ALLOW_CIDRS."
+  },
   "errors.said.tooLong": {
     "value": "That's too long. Shorten it and try again."
   },

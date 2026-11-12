@@ -13506,6 +13506,7 @@
       "tooMany": "Es más de lo que cabe aquí. Quita algunos e inténtalo de nuevo.",
       "fillIn": "Completa lo que falta e inténtalo de nuevo.",
       "checkAddress": "Revisa la dirección e inténtalo de nuevo.",
+      "privateNetwork": "Esta dirección está en una red privada: quien administra el servidor puede permitirla con OUTBOUND_ALLOW_HOSTS u OUTBOUND_ALLOW_CIDRS.",
       "tooLong": "Es demasiado largo. Acórtalo e inténtalo de nuevo.",
       "updateComputerApp": "La app de la computadora es demasiado antigua para esto. Actualízala e inténtalo de nuevo.",
       "computerUpdatesItself": "La computadora del espacio de trabajo se actualiza sola para esto. Vuelve a intentarlo en un rato.",

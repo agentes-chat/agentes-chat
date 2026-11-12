@@ -13120,6 +13120,7 @@
       "tooMany": "Das ist mehr, als hier passt. Entferne etwas und versuch es noch einmal.",
       "fillIn": "Füll aus, was fehlt, und versuch es noch einmal.",
       "checkAddress": "Prüf die Adresse und versuch es noch einmal.",
+      "privateNetwork": "Diese Adresse liegt in einem privaten Netzwerk: Wer den Server betreibt, kann sie mit OUTBOUND_ALLOW_HOSTS oder OUTBOUND_ALLOW_CIDRS erlauben.",
       "tooLong": "Das ist zu lang. Kürz es und versuch es noch einmal.",
       "updateComputerApp": "Die App auf dem Computer ist dafür zu alt. Aktualisiere sie und versuch es noch einmal.",
       "computerUpdatesItself": "Der Computer des Workspace aktualisiert sich dafür von selbst. Versuch es gleich noch einmal.",

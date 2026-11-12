@@ -12690,6 +12690,7 @@
       "tooMany": "超出了这里的容量。请移除一些后重试。",
       "fillIn": "请补全缺少的内容后重试。",
       "checkAddress": "请检查地址后重试。",
+      "privateNetwork": "此地址位于私有网络中：服务器管理员可以通过 OUTBOUND_ALLOW_HOSTS 或 OUTBOUND_ALLOW_CIDRS 允许它。",
       "tooLong": "内容太长。请缩短后重试。",
       "updateComputerApp": "电脑上的应用版本太旧。请更新后重试。",
       "computerUpdatesItself": "工作区的电脑会为此自动更新。请稍后再试。",

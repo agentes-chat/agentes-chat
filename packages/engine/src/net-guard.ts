@@ -1,6 +1,6 @@
 import { lookup } from "node:dns/promises";
 import type { request as httpsRequest } from "node:https";
-import { isIP } from "node:net";
+import { BlockList, isIP } from "node:net";
 import { OutboundAddressError } from "@agenteschat/adapters";
 import { ValidationError } from "./errors";
 
@@ -72,12 +72,116 @@ export function isBlockedAddress(address: string): boolean {
 }
 
 /**
+ * The addresses no setting lets through: loopback and unspecified, link-local (the cloud metadata address
+ * 169.254.169.254 among them), the other clouds' metadata addresses (AWS's fd00:ec2::254, Alibaba's
+ * 100.100.100.200), multicast and reserved, and anything that isn't an address.
+ */
+function alwaysBlocked(address: string): boolean {
+  const ip = plainAddress(address);
+  if (isIP(ip) === 4) {
+    const [a = 0, b = 0] = ipv4Parts(ip);
+    // 100.100.100.200: Alibaba Cloud's metadata address, inside the CGNAT range Tailscale uses.
+    return a === 0 || a === 127 || (a === 169 && b === 254) || a >= 224 || ip === "100.100.100.200";
+  }
+  const g = isIP(ip) === 6 ? ipv6Groups(ip) : null;
+  if (!g) return true;
+  if ((g[0] & 0xffc0) === 0xfe80 || (g[0] & 0xff00) === 0xff00) return true;
+  return g[0] === 0xfd00 && g[1] === 0xec2 && g.slice(2, 7).every((n) => n === 0) && g[7] === 0x254;
+}
+
+/** An address as the socket sees it: no brackets, lowercase, and an IPv4 address carried in IPv6 as IPv4. */
+function plainAddress(address: string): string {
+  let ip = address.toLowerCase();
+  if (ip.startsWith("[") && ip.endsWith("]")) ip = ip.slice(1, -1);
+  if (isIP(ip) !== 6) return ip;
+  const g = ipv6Groups(ip);
+  if (g?.slice(0, 5).every((n) => n === 0) && (g[5] === 0 || g[5] === 0xffff)) {
+    return `${g[6] >> 8}.${g[6] & 0xff}.${g[7] >> 8}.${g[7] & 0xff}`;
+  }
+  return ip;
+}
+
+let allowedHosts: readonly string[] = [];
+let allowedRanges: BlockList | null = null;
+
+/** Whether a host matches `OUTBOUND_ALLOW_HOSTS`: the name itself, or under a `*.suffix` (never the suffix alone). */
+function hostOnAllowList(host: string): boolean {
+  const h = host.toLowerCase().replace(/\.$/, "");
+  return allowedHosts.some((entry) => (entry.startsWith("*.") ? h.endsWith(entry.slice(1)) : h === entry));
+}
+
+function rangeAllowed(address: string): boolean {
+  const ip = plainAddress(address);
+  const family = isIP(ip);
+  return !!allowedRanges && !!family && allowedRanges.check(ip, family === 6 ? "ipv6" : "ipv4");
+}
+
+/**
+ * The networks a self-hosted server's operator lets typed-in addresses reach (`OUTBOUND_ALLOW_HOSTS`,
+ * `OUTBOUND_ALLOW_CIDRS`, ADR 0174): a Tailscale tailnet, a LAN. Set once at boot; called with nothing, it clears
+ * both. Hosts are names (`nas.example.com`) or suffixes (`*.tail1234.ts.net`); ranges are CIDRs or single addresses.
+ * Throws on an entry that isn't one (the config refuses those first).
+ */
+export function allowOutbound(list: { hosts?: readonly string[]; cidrs?: readonly string[] } = {}) {
+  allowedHosts = (list.hosts ?? []).map((h) => h.trim().toLowerCase().replace(/\.$/, "")).filter(Boolean);
+  const cidrs = (list.cidrs ?? []).map((c) => c.trim()).filter(Boolean);
+  if (cidrs.length === 0) {
+    allowedRanges = null;
+    return;
+  }
+  const ranges = new BlockList();
+  for (const entry of cidrs) {
+    const [address = "", bits] = entry.split("/");
+    const family = isIP(address);
+    if (!family) throw new Error(`Not an address or a CIDR range: ${entry}`);
+    const type = family === 6 ? "ipv6" : "ipv4";
+    if (bits === undefined) ranges.addAddress(address, type);
+    else ranges.addSubnet(address, Number(bits), type);
+  }
+  allowedRanges = ranges;
+}
+
+/**
+ * Whether the guard refuses to connect to `address` for `host`: a blocked address (`isBlockedAddress`) unless the
+ * operator let it through (`allowOutbound`'s host or range, or with `orPrivate` the private switch), and never one
+ * of `alwaysBlocked`'s.
+ */
+function refusedAddress(address: string, host: string, orPrivate = false): boolean {
+  if (!isBlockedAddress(address)) return false;
+  if (alwaysBlocked(address)) return true;
+  return !((orPrivate && privateOutbound) || hostOnAllowList(host) || rangeAllowed(address));
+}
+
+/** Names that only mean this machine: refused whatever is allowed. */
+const loopbackName = (host: string) => host === "localhost" || host.endsWith(".localhost");
+
+/**
+ * Names that never leave the local network, refused without being resolved, unless the operator allowed the host
+ * (or with `orPrivate`, the private switch is on). Loopback names are refused always.
+ */
+function internalNameRefused(host: string, orPrivate = false): boolean {
+  if (loopbackName(host)) return true;
+  if (!(host.endsWith(".local") || host.endsWith(".internal"))) return false;
+  return !((orPrivate && privateOutbound) || hostOnAllowList(host));
+}
+
+/**
+ * The refusal of an address on a private network, with its host (logged by the server, named by the apps along with
+ * the settings that would allow it).
+ */
+export const internalAddress = (host: string) =>
+  new ValidationError("This address points to an internal network", "url.internal", { host });
+
+/**
  * Checks a URL a person typed for an outbound connection (custom MCP
  * servers, an org's own storage endpoint): https only, no credentials in
  * it, and neither the host nor any address it resolves to may be private,
  * loopback, link-local or a cloud metadata address (SSRF). DNS can change
  * between this check and the request; the check still stops the obvious
- * cases and every typed-in internal name.
+ * cases and every typed-in internal name. Private addresses pass where the
+ * operator allowed them: the hosts and ranges of `allowOutbound`, or every
+ * one with the private switch (`allowPrivateOutbound`), whose `fetch` is
+ * the plain one; loopback and metadata never do.
  */
 export async function assertPublicHttpsUrl(raw: string, resolve: ResolveHost = resolveHostDns): Promise<URL> {
   let url: URL;
@@ -90,11 +194,9 @@ export async function assertPublicHttpsUrl(raw: string, resolve: ResolveHost = r
   if (url.username || url.password)
     throw new ValidationError("The address can't have a user or password", "url.credentials");
   const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) {
-    throw new ValidationError("This address points to an internal network", "url.internal");
-  }
+  if (internalNameRefused(host, true)) throw internalAddress(host);
   if (isIP(host)) {
-    if (isBlockedAddress(host)) throw new ValidationError("This address points to an internal network", "url.internal");
+    if (refusedAddress(host, host, true)) throw internalAddress(host);
     return url;
   }
   let addresses: string[];
@@ -103,8 +205,8 @@ export async function assertPublicHttpsUrl(raw: string, resolve: ResolveHost = r
   } catch {
     throw new ValidationError(`Couldn't find ${host}`, "url.not_found", { host });
   }
-  if (addresses.length === 0 || addresses.some(isBlockedAddress)) {
-    throw new ValidationError("This address points to an internal network", "url.internal");
+  if (addresses.length === 0 || addresses.some((address) => refusedAddress(address, host, true))) {
+    throw internalAddress(host);
   }
   return url;
 }
@@ -139,9 +241,8 @@ export async function publicHostAddress(
     .trim()
     .toLowerCase()
     .replace(/^\[|\]$/g, "");
-  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal"))
-    return { ok: false, reason: "blocked" };
-  if (isIP(h)) return isBlockedAddress(h) ? { ok: false, reason: "blocked" } : { ok: true, address: h };
+  if (internalNameRefused(h)) return { ok: false, reason: "blocked" };
+  if (isIP(h)) return refusedAddress(h, h) ? { ok: false, reason: "blocked" } : { ok: true, address: h };
   if (!HOST_NAME.test(h)) return { ok: false, reason: "blocked" };
   let addresses: string[];
   try {
@@ -151,7 +252,7 @@ export async function publicHostAddress(
   }
   const first = addresses[0];
   if (!first) return { ok: false, reason: "unreachable" };
-  if (addresses.some(isBlockedAddress)) return { ok: false, reason: "blocked" };
+  if (addresses.some((address) => refusedAddress(address, h))) return { ok: false, reason: "blocked" };
   return { ok: true, address: first };
 }
 
@@ -254,10 +355,6 @@ export type ResolveAddresses = (host: string) => Promise<{ address: string; fami
 
 const resolveAddresses: ResolveAddresses = (host) => lookup(host, { all: true, verbatim: true });
 
-/** Names that never leave the local network, refused without being resolved (as `assertPublicHttpsUrl` does). */
-const internalName = (host: string) =>
-  host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal");
-
 /** A request's body as bytes: what the guarded fetch sends (strings, bytes and form parameters). */
 function bodyBytes(body: RequestInit["body"]): Uint8Array | null {
   if (body === undefined || body === null) return null;
@@ -288,11 +385,11 @@ export function publicHttpsFetch(
       throw new OutboundAddressError("Only https:// addresses without a user or password");
     }
     const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-    if (internalName(host)) throw new OutboundAddressError();
+    if (internalNameRefused(host)) throw new OutboundAddressError();
     let pinned: { address: string; family: number };
     const family = isIP(host);
     if (family) {
-      if (isBlockedAddress(host)) throw new OutboundAddressError();
+      if (refusedAddress(host, host)) throw new OutboundAddressError();
       pinned = { address: host, family };
     } else {
       let addresses: { address: string; family: number }[];
@@ -302,7 +399,7 @@ export function publicHttpsFetch(
         throw new TypeError(`Couldn't find ${host}`);
       }
       if (addresses.length === 0) throw new TypeError(`Couldn't find ${host}`);
-      if (addresses.some((a) => isBlockedAddress(a.address))) throw new OutboundAddressError();
+      if (addresses.some((a) => refusedAddress(a.address, host))) throw new OutboundAddressError();
       pinned = addresses.find((a) => a.family === 4) ?? (addresses[0] as { address: string; family: number });
     }
     const body = bodyBytes(init.body);

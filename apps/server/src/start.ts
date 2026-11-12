@@ -53,6 +53,7 @@ import {
 import {
   APP_JOB_KINDS,
   adoptRestoredOperatorEvents,
+  allowOutbound,
   allowPrivateOutbound,
   allowsPrivateEndpoints,
   backfillMemoryTrust,
@@ -74,6 +75,7 @@ import {
   memoryBudget,
   meterComposio,
   moveIssueComments,
+  publicHostAddress,
   publicHttpsFetch,
   queueEmbeddingBackfill,
   relayCredentials,
@@ -344,6 +346,8 @@ async function boot(
   // Addresses a workspace names (custom MCP servers, its own bucket, pages agents read) are pinned to public ones at
   // every request, except where the operator lets workspaces reach this server's network.
   allowPrivateOutbound(allowsPrivateEndpoints(config));
+  // The private hosts and ranges the operator named reach the guard everywhere, whatever the switch (ADR 0174).
+  allowOutbound({ hosts: config.OUTBOUND_ALLOW_HOSTS, cidrs: config.OUTBOUND_ALLOW_CIDRS });
   // Per-process caches for agent/org/channel config, scopes, connections, credential rows (30 s TTL).
   enableCaches();
   // A write in any process (the app, a worker) clears what every process cached of it.
@@ -617,6 +621,7 @@ async function boot(
     workers.stop();
     // The switch is the process's: a server started after this one sets its own.
     allowPrivateOutbound(false);
+    allowOutbound();
     // `/api/health` answers 503 from now on: the proxy's health check takes this instance out before it stops
     // listening, and holds new requests for the next one instead of failing them.
     if (config.SHUTDOWN_DELAY_MS > 0) await Bun.sleep(config.SHUTDOWN_DELAY_MS);
@@ -828,10 +833,11 @@ function mailAdapters(
         beforeToolCall,
       })
     : null;
-  // A mail server named by a person never resolves to our network (private, loopback, metadata).
+  // A mail server named by a person never resolves to our network (private, loopback, metadata), unless the
+  // operator allowed that host or range (ADR 0174): the same check as when the account was saved.
   const checkHost = async (host: string) => {
-    const addresses = await resolveHostDns(host);
-    if (addresses.length === 0 || addresses.some(isBlockedAddress)) throw new Error("blocked host");
+    const checked = await publicHostAddress(host);
+    if (!checked.ok) throw new Error(checked.reason === "blocked" ? "blocked host" : `no address for ${host}`);
   };
   const imapOptions = { checkHost };
   return {

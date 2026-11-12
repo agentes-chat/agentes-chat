@@ -13577,6 +13577,7 @@
       "tooMany": "C'est plus que ce qui tient ici. Retirez-en et réessayez.",
       "fillIn": "Remplissez ce qui manque et réessayez.",
       "checkAddress": "Vérifiez l'adresse et réessayez.",
+      "privateNetwork": "Cette adresse est sur un réseau privé : la personne qui gère le serveur peut l’autoriser avec OUTBOUND_ALLOW_HOSTS ou OUTBOUND_ALLOW_CIDRS.",
       "tooLong": "C'est trop long. Raccourcissez et réessayez.",
       "updateComputerApp": "L'application de l'ordinateur est trop ancienne pour ceci. Mettez-la à jour et réessayez.",
       "computerUpdatesItself": "L'ordinateur de l'espace de travail se met à jour tout seul pour cela. Réessayez dans un moment.",

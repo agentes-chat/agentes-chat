@@ -13055,6 +13055,7 @@
       "tooMany": "Buraya sığandan fazla. Birkaçını kaldırıp tekrar deneyin.",
       "fillIn": "Eksikleri doldurup tekrar deneyin.",
       "checkAddress": "Adresi kontrol edip tekrar deneyin.",
+      "privateNetwork": "Bu adres özel bir ağda: sunucuyu yöneten kişi OUTBOUND_ALLOW_HOSTS veya OUTBOUND_ALLOW_CIDRS ile izin verebilir.",
       "tooLong": "Bu çok uzun. Kısaltıp tekrar deneyin.",
       "updateComputerApp": "Bilgisayardaki uygulama bunun için çok eski. Güncelleyip tekrar deneyin.",
       "computerUpdatesItself": "Çalışma alanının bilgisayarı bunun için kendini güncelliyor. Birazdan tekrar deneyin.",
