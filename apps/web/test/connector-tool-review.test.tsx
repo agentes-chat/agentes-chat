@@ -83,9 +83,17 @@ const SERVER: CustomServer = {
   ],
 };
 
-function Harness({ onState, moved }: { onState: (s: ToolReviewState) => void; moved: string[] }) {
+function Harness({
+  onState,
+  moved,
+  server = SERVER,
+}: {
+  onState: (s: ToolReviewState) => void;
+  moved: string[];
+  server?: CustomServer;
+}) {
   const { t } = useTranslation();
-  const tools = reviewToolsOf(t, SERVER);
+  const tools = reviewToolsOf(t, server);
   const [state, setState] = useState<ToolReviewState>({ levels: {}, decided: new Set() });
   return (
     <ToolReview
@@ -101,10 +109,10 @@ function Harness({ onState, moved }: { onState: (s: ToolReviewState) => void; mo
   );
 }
 
-async function mount() {
+async function mount(server = SERVER) {
   const ref: { state: ToolReviewState } = { state: { levels: {}, decided: new Set() } };
   const moved: string[] = [];
-  await renderPage(<Harness onState={(s) => (ref.state = s)} moved={moved} />, {
+  await renderPage(<Harness onState={(s) => (ref.state = s)} moved={moved} server={server} />, {
     api: createFakeApi(seedState()),
   });
   return { ref, moved };
@@ -158,6 +166,40 @@ describe("readable names, subjects and search", () => {
 });
 
 describe("the tools step", () => {
+  test("a sensitive tool the server lets a person free: Muda too, never Consulta, and a warning while it runs alone", async () => {
+    const freeable: CustomServer = {
+      ...SERVER,
+      tools: SERVER.tools.map((x) => (x.name === "campaign_delete" ? { ...x, mayFree: true } : x)),
+    };
+    const { ref } = await mount(freeable);
+    await click(screen().getByRole("button", { name: /^Campanhas/ }));
+    const subject = screen().getByRole("region", { name: "Campanhas" });
+    const levels = within(subject).getByRole("radiogroup", { name: "Nível de Apagar campanha" });
+    expect(
+      within(levels)
+        .getAllByRole("radio")
+        .map((r) => r.textContent),
+    ).toEqual(["Muda", "Aprovação", "Desligada"]);
+    expect(row("campaign_delete")?.querySelector(".tr-row__why--warn")).toBeNull();
+    await click(within(levels).getByRole("radio", { name: "Muda" }));
+    expect(ref.state.levels.campaign_delete).toBe("write");
+    expect(row("campaign_delete")?.querySelector(".tr-row__why--warn")?.textContent).toBe(
+      "O serviço marca esta ação como arriscada. Neste nível os agentes a usam sem perguntar a ninguém.",
+    );
+    // Composio's, or a server that doesn't say: only ask or off.
+    cleanup();
+    await mount();
+    await click(screen().getByRole("button", { name: /^Campanhas/ }));
+    const locked = within(screen().getByRole("region", { name: "Campanhas" })).getByRole("radiogroup", {
+      name: "Nível de Apagar campanha",
+    });
+    expect(
+      within(locked)
+        .getAllByRole("radio")
+        .map((r) => r.textContent),
+    ).toEqual(["Aprovação", "Desligada"]);
+  });
+
   test("the pending group comes first: illustration, suggestion preselected, reason and OK", async () => {
     await mount();
     const g = group() as HTMLElement;
