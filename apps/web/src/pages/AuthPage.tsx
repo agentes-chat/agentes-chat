@@ -399,12 +399,18 @@ export function AuthPage({
     const timer = setInterval(() => void check(), REDEEM_EVERY_MS);
     const giveUp = setTimeout(() => clearInterval(timer), REDEEM_FOR_MS);
     const onFocus = () => void check();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void check();
+    };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    void check();
     return () => {
       stopped = true;
       clearInterval(timer);
       clearTimeout(giveUp);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [step, browser, auth, redirect]);
 
@@ -456,7 +462,7 @@ export function AuthPage({
   const fix = step === "email" || step === "forgot" ? emailTypoFix(email) : null;
   const help = passwordHelp(t, password);
   const mail = webmailOf(email);
-  const who = step !== "email" && step !== "forgot" && step !== "sent" && (
+  const who = Boolean(email.trim()) && step !== "email" && step !== "forgot" && step !== "sent" && (
     <span className="auth__who">
       <Icon name="mail" size={14} />
       <span className="auth__who-email">{email.trim()}</span>

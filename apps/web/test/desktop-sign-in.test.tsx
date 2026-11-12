@@ -70,7 +70,7 @@ describe("in the Mac app's window", () => {
       await settle(3);
       expect(assign.urls).toHaveLength(1);
       redeemed = true;
-      await act(async () => window.dispatchEvent(new Event("focus")));
+      await act(async () => document.dispatchEvent(new Event("visibilitychange")));
       await settle(3);
       expect(assign.urls[1]).toBe("/desktop/signed-in?to=%2F");
       const verifiers = calls.filter((c) => c.method === "desktopRedeem").map((c) => c.args[0]);
