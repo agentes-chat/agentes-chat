@@ -34,6 +34,7 @@ import { LEARN_JOB, learnRun } from "./context/learn";
 import { REFLECT_DEFAULTS, reflectThread } from "./context/reflect";
 import { judgeOf, summaryModelReady } from "./context/summaries";
 import { reportDroppedMentions, tellWakeSkipped } from "./continuation";
+import type { WorkspaceDecisions } from "./decision-settings";
 import { DEVICE_WAIT_EXPIRED_JOB, expireDeviceWait } from "./device-waits";
 import {
   deferMentionReport,
@@ -67,7 +68,7 @@ import { GITHUB_EVENT_JOB, type GitHubAppEvent, handleGitHubAppEvent } from "./g
 import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
 import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
-import { DEEP_MENTION_THRESHOLD, DEEP_WAKE_HOP, MENTION_WAKE_THRESHOLD, mentionNeedsNothing } from "./judge";
+import { DEEP_MENTION_THRESHOLD, DEEP_WAKE_HOP, judgeName, MENTION_WAKE_THRESHOLD, mentionNeedsNothing } from "./judge";
 import { platformCapReached } from "./limits";
 import { wakeForAccessDecision } from "./machine-access";
 import type { MachineCaller } from "./machine-hub";
@@ -212,6 +213,7 @@ export interface JobDeps extends RunExecutorDeps {
     /** Replaces the core small-model step (e.g. an optional external classifier). */
     strategy?: RouterStrategy;
     /** TypeSafe Jev as the chain's first step (the installation's key, never per org). */
+    decisions?: WorkspaceDecisions;
     jev?: { key: JevKeySource; timeoutMs?: number; fetch?: typeof fetch; baseURL?: string; model?: string };
     /**
      * The author's own plan as a step (ADR 0074 §3): the computers it picks on, and this server's address. Off
@@ -244,19 +246,21 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
   const jev = router.jev;
   const plans = router.plans && !isAgentesCloud(router.plans.publicUrl) ? router.plans.hub : null;
   const steps = [
-    ...(jev
+    ...(jev || router.decisions
       ? [
           createJevRouterStrategy({
-            key: jev.key,
-            timeoutMs: jev.timeoutMs,
-            fetch: jev.fetch,
-            baseURL: jev.baseURL,
-            model: jev.model,
+            key: jev?.key ?? { key: async () => null, usable: () => false, report: () => {} },
+            resolve: router.decisions?.target,
+            timeoutMs: jev?.timeoutMs,
+            fetch: jev?.fetch,
+            baseURL: jev?.baseURL,
+            model: jev?.model,
             recordUsage: async (u) => {
               await deps.gateway.recordExternalUsage({
                 orgId: u.orgId,
                 kind: "router",
                 provider: u.provider ?? "typesafe",
+                credentialId: u.credentialId,
                 model: u.model,
                 inputTokens: u.inputTokens,
                 outputTokens: u.outputTokens,
@@ -280,12 +284,25 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
     hasAi: (orgId) => orgHasAi({ db: deps.db, gateway: deps.gateway, machines: deps.machines }, orgId),
     outOfOffice: (orgId, ids) =>
       outOfOfficeIds(deps.db, orgId, ids, { hasModel: (agent) => deps.gateway.hasModelCredential(agent) }),
-    routing: { jev: () => jevPicks(jev?.key), smallModel, plans },
+    routing: {
+      jev: async (orgId) => {
+        const view = await router.decisions?.view(orgId);
+        return view?.settings ? view.available : jevPicks(jev?.key);
+      },
+      decisionModel: async (orgId) => (await router.decisions?.view(orgId))?.settings?.model ?? null,
+      smallModel,
+      plans,
+    },
     quietMs: router.quietMs,
     quietByTyping: router.quietByTyping,
     pubsub: deps.pubsub,
     // Jev bills the platform: past the workspace's platform AI for the month, only @mentions start agents.
-    ...(jev ? { platformCapReached: (orgId: string) => platformCapReached(deps.db, orgId) } : {}),
+    ...(jev
+      ? {
+          platformCapReached: async (orgId: string) =>
+            (await router.decisions?.view(orgId))?.settings ? false : platformCapReached(deps.db, orgId),
+        }
+      : {}),
   };
 }
 
@@ -358,7 +375,7 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
           targets: others.map((t) => ({ agentId: t.id, handle: t.handle, name: t.name, role: t.role || null })),
         });
         for (const [id, nothing] of out) scores.set(id, 1 - nothing);
-        strategy = `mention-${judge.name}`;
+        strategy = `mention-${await judgeName(judge, message.orgId)}`;
       } catch (e) {
         error = e instanceof Error ? e.message.slice(0, 300) : String(e);
       }

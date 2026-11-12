@@ -57,7 +57,7 @@ export interface DesktopToolDeps {
    * Whether the judge sees images now (Jev's vision model): a target the screen's text lacks is looked for on a
    * screenshot. Asked on each call, since the installation's Jev key can come and go.
    */
-  vision?: () => boolean;
+  vision?: (orgId: string) => boolean | Promise<boolean>;
   /** Tests: the memory of targets per app (default: one per source, in memory). */
   targets?: TargetCache;
   now?: () => number;
@@ -375,7 +375,7 @@ export function createDesktopToolSource(deps: DesktopToolDeps): ToolSource {
         },
         last: seen.within(key, FRESH_LOOK_MS),
         before: seen.within(key, KNOWN_LOOK_MS),
-        vision: deps.vision?.() === true,
+        vision: (await deps.vision?.(ctx.orgId)) === true,
         // What covers a target on a desktop is usually a real dialog ("Save changes?"): never closed on a guess.
         dismiss: false,
         now,

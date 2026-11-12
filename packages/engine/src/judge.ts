@@ -84,8 +84,13 @@ export interface JudgeRequest {
 
 export interface Judge {
   name: string;
+  nameFor?(orgId: string): Promise<string>;
   ask(request: JudgeRequest): Promise<Record<string, JudgeAnswer>>;
 }
+
+/** A workspace can use its own decision account while another still uses the LLM fallback. */
+export const judgeName = (judge: Judge, orgId: string): Promise<string> =>
+  judge.nameFor?.(orgId) ?? Promise.resolve(judge.name);
 
 /** The model call a judge made, as an error report tags it (`judgeCallOf`). */
 export interface JudgeCallTags {
@@ -129,6 +134,7 @@ export function createJevJudge(options: {
   visionModel?: string;
   /** Images make a request bigger and slower: its own timeout (default 6 s). */
   visionTimeoutMs?: number;
+  credentialId?: string;
   fetch?: typeof fetch;
 }): Judge {
   return {
@@ -178,6 +184,7 @@ export function createJevJudge(options: {
           runId: request.runId,
           kind: "router",
           ...usage,
+          credentialId: options.credentialId,
           model: body.model ?? model,
           inputTokens,
           outputTokens: body.usage?.output_tokens ?? 0,

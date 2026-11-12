@@ -2735,7 +2735,8 @@
       "plans": "Chaque abonnement choisit seulement pour les messages de son propriétaire.",
       "rules": "Les agents répondent aux mentions, aux réponses et aux suites de conversation.",
       "off": "Les agents ne répondent que lorsqu'ils sont mentionnés.",
-      "noSmall": "{{provider}} n'a pas de petit modèle pour cela. Les agents répondent aux mentions, aux réponses et aux suites de conversation."
+      "noSmall": "{{provider}} n'a pas de petit modèle pour cela. Les agents répondent aux mentions, aux réponses et aux suites de conversation.",
+      "decision": "{{model}} choisit qui répond."
     }
   },
   "noAi": {
@@ -18814,5 +18815,26 @@
       "alwaysOn": "Désormais, les rapports de ce type partent sans demander.",
       "askFirst": "Demander avant d'envoyer"
     }
+  },
+  "decisions": {
+    "title": "Modèles de décision",
+    "description": "Utilisez Jev ou un autre modèle de décision avec un compte OpenRouter déjà connecté à cet espace. Aucune configuration du serveur nécessaire.",
+    "account": "Compte OpenRouter",
+    "chooseAccount": "Choisir un compte",
+    "model": "Modèle de décision pour le texte",
+    "modelHelp": "Utilisez un identifiant de modèle de décision, comme typesafe/jev-1.14 ou jaredpalmer/kev-4b. Les modèles de chat ordinaires ne fonctionnent pas ici.",
+    "visionModel": "Modèle de décision pour les images (facultatif)",
+    "visionHelp": "Utilisez un modèle prenant en charge les images et les questions Box. Laissez vide pour désactiver les décisions sur les images.",
+    "save": "Tester et enregistrer",
+    "testNotice": "L’enregistrement vérifie les modèles avec de petites requêtes payantes à OpenRouter. Les changements s’appliquent immédiatement à cet espace uniquement et votre compte paie ses décisions.",
+    "active": "Utilisation de {{account}} · {{model}}",
+    "unavailable": "Le compte OpenRouter sélectionné est indisponible. Choisissez un autre compte ou rétablissez les réglages par défaut.",
+    "connect": "Connectez un compte API OpenRouter ci-dessus pour utiliser les modèles de décision.",
+    "reset": "Utiliser la configuration par défaut",
+    "loadFailed": "Impossible de charger les réglages de décision. Rechargez la page pour réessayer.",
+    "invalidAccount": "Choisissez un compte OpenRouter actif de cet espace.",
+    "invalidModel": "Saisissez un identifiant de modèle de décision valide.",
+    "checkFailed": "OpenRouter n’a pas pu vérifier ce modèle de décision. Vérifiez le compte, le crédit et l’identifiant du modèle, puis réessayez.",
+    "serverDefault": "Configuration par défaut du serveur pour les espaces sans modèles de décision propres."
   }
 }

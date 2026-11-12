@@ -2635,7 +2635,8 @@
       "plans": "Jedes Abo wählt nur für die Nachrichten seines Inhabers aus.",
       "rules": "Agenten antworten auf Erwähnungen, Antworten und Nachfragen.",
       "off": "Agenten antworten nur, wenn sie erwähnt werden.",
-      "noSmall": "{{provider}} hat dafür kein kleines Modell. Agenten antworten auf Erwähnungen, Antworten und Nachfragen."
+      "noSmall": "{{provider}} hat dafür kein kleines Modell. Agenten antworten auf Erwähnungen, Antworten und Nachfragen.",
+      "decision": "{{model}} wählt aus, wer antwortet."
     }
   },
   "noAi": {
@@ -18172,5 +18173,26 @@
       "alwaysOn": "Ab jetzt gehen solche Berichte ohne Nachfrage raus.",
       "askFirst": "Vor dem Senden fragen"
     }
+  },
+  "decisions": {
+    "title": "Entscheidungsmodelle",
+    "description": "Nutze Jev oder ein anderes Entscheidungsmodell mit einem bereits verbundenen OpenRouter-Konto dieses Arbeitsbereichs. Keine Serverkonfiguration nötig.",
+    "account": "OpenRouter-Konto",
+    "chooseAccount": "Konto auswählen",
+    "model": "Entscheidungsmodell für Text",
+    "modelHelp": "Verwende eine Modell-ID wie typesafe/jev-1.14 oder jaredpalmer/kev-4b. Gewöhnliche Chatmodelle funktionieren hier nicht.",
+    "visionModel": "Entscheidungsmodell für Bilder (optional)",
+    "visionHelp": "Verwende ein Modell mit Unterstützung für Bilder und Box-Fragen. Leer lassen, um Bildentscheidungen auszuschalten.",
+    "save": "Testen und speichern",
+    "testNotice": "Beim Speichern werden die Modelle mit kleinen kostenpflichtigen Anfragen an OpenRouter geprüft. Änderungen gelten sofort nur für diesen Arbeitsbereich. Dein Konto bezahlt dessen Entscheidungen.",
+    "active": "Verwendet {{account}} · {{model}}",
+    "unavailable": "Das ausgewählte OpenRouter-Konto ist nicht verfügbar. Wähle ein anderes Konto oder setze die Einstellungen zurück.",
+    "connect": "Verbinde oben ein OpenRouter-API-Konto, um Entscheidungsmodelle zu verwenden.",
+    "reset": "Standardeinstellungen verwenden",
+    "loadFailed": "Die Entscheidungseinstellungen konnten nicht geladen werden. Lade die Seite erneut.",
+    "invalidAccount": "Wähle ein aktives OpenRouter-Konto dieses Arbeitsbereichs.",
+    "invalidModel": "Gib eine gültige Entscheidungsmodell-ID ein.",
+    "checkFailed": "OpenRouter konnte dieses Entscheidungsmodell nicht prüfen. Prüfe Konto, Guthaben und Modell-ID und versuche es erneut.",
+    "serverDefault": "Serverstandard für Arbeitsbereiche ohne eigene Entscheidungsmodelle."
   }
 }

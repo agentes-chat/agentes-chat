@@ -240,6 +240,9 @@ const KNOWN = {
   human_check: "errors.humanCheck",
   human_check_blocked: "errors.humanCheckBlocked",
   // TypeSafe refused the key pasted for Jev: said under its field, nothing kept.
+  decision_account_invalid: "decisions.invalidAccount",
+  decision_model_invalid: "decisions.invalidModel",
+  decision_check_failed: "decisions.checkFailed",
   jev_key_invalid: "jev.steps.invalid",
   // GIPHY refused the key pasted for GIFs (ADR 0091): said under its field, nothing kept.
   gif_key_invalid: "settings.media.giphy.invalid",

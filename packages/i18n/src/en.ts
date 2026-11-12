@@ -1317,6 +1317,7 @@ export const en = {
       confirming: "Confirming the payment for this workspace's agentes.chat plan.",
       leadNoComputer: "Your agents think with an API\u00a0key, or with your AI plan on a computer you connect.",
     },
+
     jev: {
       title: "Help your agents work as a team",
       lead: "Jev, by TypeSafe, makes quick decisions for them.",
@@ -2786,6 +2787,7 @@ export const en = {
     reflectionOff: "Memory doesn't learn from finished conversations yet: that needs a provider key, added above.",
     how: "How agents are picked",
     by: {
+      decision: "{{model}} picks who answers.",
       jev: "Jev picks who answers each message without a mention.",
       model: "{{model}} picks who answers each message without a mention.",
       plans: "Each plan picks only for its owner's messages.",
@@ -9548,6 +9550,31 @@ export const en = {
     unsaved: "Unsaved changes",
     keepEditing: "Keep editing",
     discard: "Discard",
+  },
+  decisions: {
+    serverDefault: "Server default for workspaces without their own decision models.",
+    title: "Decision models",
+    description:
+      "Use Jev or another decision model with an OpenRouter account already connected to this workspace. No server configuration needed.",
+    account: "OpenRouter account",
+    chooseAccount: "Choose an account",
+    model: "Text decision model",
+    modelHelp:
+      "Use a decision model ID, such as typesafe/jev-1.14 or jaredpalmer/kev-4b. Ordinary chat models do not work here.",
+    visionModel: "Vision decision model (optional)",
+    visionHelp: "Use a model that supports images and Box questions. Leave empty to turn off image judgments.",
+    save: "Test and save",
+    testNotice:
+      "Saving checks the models with small paid requests to OpenRouter. Changes apply to this workspace immediately and your account pays for its decisions.",
+    active: "Using {{account}} · {{model}}",
+    unavailable: "The selected OpenRouter account is unavailable. Choose another account or reset these settings.",
+    connect: "Connect an OpenRouter API account above to use decision models.",
+    reset: "Use the default setup",
+    loadFailed: "Could not load decision settings. Reload this page to try again.",
+    invalidAccount: "Choose an active OpenRouter account from this workspace.",
+    invalidModel: "Enter a valid decision model ID.",
+    checkFailed:
+      "OpenRouter could not verify this decision model. Check the account, credit and model ID, then try again.",
   },
   jev: {
     title: "Jev",

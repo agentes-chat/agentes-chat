@@ -515,6 +515,7 @@ async function boot(
         talker: engine.talker,
         router: engine.router,
         jevKey: engine.jevKey,
+        decisions: engine.decisions,
         gifKey: gifKey ?? undefined,
         githubApp: engine.githubApp,
         speech: engine.speech,

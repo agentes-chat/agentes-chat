@@ -142,7 +142,8 @@ describe("Jev's key in Configurações › IA e uso", () => {
       "https://agentes.chat/pt/docs/who-answers",
     );
     expect(screen().queryByRole("region", { name: "Jev" })).toBeNull();
-    expect(document.body.textContent).not.toMatch(/jev|typesafe/i);
+    expect(screen().getByRole("region", { name: "Modelos de decisão" })).toBeTruthy();
+    expect(document.body.textContent).not.toContain("Chave da TypeSafe");
   });
 
   test("its state sits on its name's first line, however many lines its name and line take", async () => {

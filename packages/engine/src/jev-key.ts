@@ -45,6 +45,17 @@ export interface JevKey {
 /** A fixed key (evals, tests), or the installation's. */
 export type JevKeySource = string | Pick<JevKey, "key" | "report" | "usable">;
 
+/** One workspace's decision source; resolved before each call so settings and credential changes apply live. */
+export interface JevTarget {
+  key: JevKeySource;
+  fetch?: typeof fetch;
+  timeoutMs?: number;
+  baseURL?: string;
+  model?: string;
+  visionModel?: string | null;
+  credentialId?: string;
+}
+
 /** No Jev key to call with now: the next step decides. */
 export class JevOffError extends Error {
   constructor() {
@@ -160,6 +171,7 @@ export async function jevMonth(db: Database, now = new Date()) {
       and(
         inArray(usageRecords.provider, ["typesafe", "openrouter-decisions"]),
         gte(usageRecords.createdAt, monthStartUtc(now)),
+        eq(usageRecords.billedTo, "platform"),
       ),
     );
   return { decisions: row?.decisions ?? 0, costNanoUsd: Number(row?.cost ?? 0) };

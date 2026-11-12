@@ -35,6 +35,7 @@ import { customConnectorRoutes } from "./routes/app/connectors-custom";
 import { type AppDeps, agentDetailsGate, readOnlyWhileDeleting } from "./routes/app/context";
 import { dashboardRoutes } from "./routes/app/dashboards";
 import { databaseRoutes } from "./routes/app/databases";
+import { decisionRoutes } from "./routes/app/decisions";
 import { desktopRoutes } from "./routes/app/desktop";
 import { deviceWaitRoutes } from "./routes/app/device-waits";
 import { dmRoutes } from "./routes/app/dms";
@@ -222,6 +223,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", dashboardRoutes(deps));
     api.route("/app", telemetryRoutes(deps));
     api.route("/app", jevRoutes(deps));
+    api.route("/app", decisionRoutes(deps));
     api.route("/app", feedbackRoutes(deps));
     api.route("/app", gifKeyRoutes(deps));
     api.route("/app", speechKeyRoutes(deps));

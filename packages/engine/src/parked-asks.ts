@@ -31,6 +31,7 @@ import { publishChannelEvent, publishMessageCreated } from "./events";
 import type { Transcript } from "./executor";
 import { cutText, fromNow, pgSafeJson, stringsOf } from "./format";
 import type { Judge } from "./judge";
+import { judgeName } from "./judge";
 import { getMessage, insertMessage, type Message, messageView } from "./messages";
 import { notifyCatchUpClosed, notifyCatchUpClosedAsker } from "./notification-producers";
 import { openRequestsOf } from "./open-requests";
@@ -115,9 +116,10 @@ export interface ParkedDeps {
  */
 export async function checkParkedRun(deps: ParkedDeps, runId: string, jobId?: string) {
   const { db, judge } = deps;
-  if (!judge || judge.name === "llm") return;
+  if (!judge) return;
   const [run] = await db.select().from(agentRuns).where(eq(agentRuns.id, runId));
   if (run?.status !== "waiting_input" || run.background || run.workId) return;
+  if ((await judgeName(judge, run.orgId)) === "llm") return;
   if (await checkedElsewhere(db, run.id, jobId, !computerWaitOf(run))) return;
   const [trigger, agent] = await Promise.all([
     getMessage(db, run.orgId, run.triggerMessageId),
@@ -177,7 +179,7 @@ async function checkAsks(deps: ParkedDeps, judge: Judge, run: AgentRun, trigger:
   const base = {
     at: Date.now(),
     bar,
-    judge: judge.name,
+    judge: await judgeName(judge, run.orgId),
     calls: (prior?.calls ?? 0) + 1,
     seenThrough: snapshot.latest,
     ...(prior?.busyRetries ? { busyRetries: prior.busyRetries } : {}),

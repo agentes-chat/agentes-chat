@@ -80,6 +80,7 @@ import {
   createWebToolSource,
   createWikiToolSource,
   createWithdrawRequestToolSource,
+  createWorkspaceDecisions,
   createWorkspaceToolSource,
   createWorkToolSource,
   deviceWaitHooks,
@@ -250,6 +251,13 @@ export function buildEngine(o: EngineOptions) {
     model: config.JEV_MODEL,
     fetch: o.jevFetch,
   });
+  const decisions = createWorkspaceDecisions({
+    db,
+    keyWrappers,
+    gateway,
+    fetch: o.jevFetch,
+    timeoutMs: config.JEV_TIMEOUT_MS,
+  });
   // The small model that routes and judges on an organization's keys (ADR 0074): the deployment's own on a
   // Claude or an OpenAI key, the catalog's routing pick on the others.
   const smallModels = { anthropic: config.ROUTER_MODEL, openai: config.OPENAI_CHEAP_MODEL };
@@ -260,25 +268,28 @@ export function buildEngine(o: EngineOptions) {
       gateway,
       resolveModel: (orgId) => smallModelFor({ db, gateway }, orgId, smallModels),
     });
-    context.judge = withJudgeFallback(
-      platformCapJudge(
-        db,
-        createJevJudge({
-          key: jevKey,
-          gateway,
-          baseURL: config.TYPESAFE_BASE_URL,
-          model: config.JEV_MODEL,
-          timeoutMs: config.JEV_TIMEOUT_MS,
-          visionModel: config.JEV_VISION_MODEL,
-          fetch: o.jevFetch,
-        }),
+    context.judge = decisions.judge(
+      withJudgeFallback(
+        platformCapJudge(
+          db,
+          createJevJudge({
+            key: jevKey,
+            gateway,
+            baseURL: config.TYPESAFE_BASE_URL,
+            model: config.JEV_MODEL,
+            timeoutMs: config.JEV_TIMEOUT_MS,
+            visionModel: config.JEV_VISION_MODEL,
+            fetch: o.jevFetch,
+          }),
+        ),
+        llmJudge,
+        () => jevKey.usable(),
       ),
       llmJudge,
-      () => jevKey.usable(),
     );
   }
   // Screenshots go only to Jev's vision model: with a fake judge (tests) nothing looks at them.
-  const vision = o.judge ? undefined : () => jevKey.usable();
+  const vision = o.judge ? undefined : async (orgId: string) => (await decisions.vision(orgId)) ?? jevKey.usable();
   // Nothing is judged for a workspace on hold or suspended: Jev bills the server, not the workspace.
   context.judge = standingJudge(db, context.judge);
   // The agents' conversation layer: a fast reply on the org's cheap model while a task works or waits.
@@ -796,6 +807,7 @@ export function buildEngine(o: EngineOptions) {
     onTiming: o.onTiming,
     onRunProfile: o.onRunProfile,
     router: {
+      decisions,
       enabled: config.ROUTER_ENABLED,
       model: smallModels.anthropic,
       cheapModels: { openai: smallModels.openai },
@@ -854,6 +866,7 @@ export function buildEngine(o: EngineOptions) {
     talker,
     /** Awaited before the server serves (`ready()`), and the owner's routes read and change it. */
     jevKey,
+    decisions,
     /** Likewise: the server's GitHub App (ADR 0156). */
     githubApp,
     /** Likewise: the speech engines, read before the first voice message. */

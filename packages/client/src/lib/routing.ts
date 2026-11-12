@@ -26,6 +26,8 @@ export const replyAloneKey = (routing: AiRouting | undefined) =>
 export function routingLineOf(status: AiStatus | undefined, modelLabel: (id: string) => string | null) {
   const routing = status?.any ? status.routing : undefined;
   if (!routing) return null;
+  if (routing.by === "jev" && routing.model)
+    return { key: "routing.by.decision" as const, params: { model: routing.model } };
   if (routing.by === "model") {
     const model = routing.model ? modelLabel(routing.model) : null;
     return model ? { key: "routing.by.model" as const, params: { model } } : null;

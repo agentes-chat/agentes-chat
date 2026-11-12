@@ -1,5 +1,5 @@
 import { cutText } from "./format";
-import { callJev, type JevKeySource, JevOffError } from "./jev-key";
+import { callJev, type JevKeySource, JevOffError, type JevTarget } from "./jev-key";
 import {
   asksAddressee,
   ROUTER_MESSAGE_CHARS,
@@ -37,6 +37,7 @@ export interface JevUsage {
   outputTokens: number;
   provider?: string;
   costNanoUsd?: number;
+  credentialId?: string;
 }
 
 /**
@@ -83,6 +84,8 @@ interface JevAnswer {
 export function createJevRouterStrategy(options: {
   /** Read on every call (`jev-key.ts`): without one it throws `JevOffError`. */
   key: JevKeySource;
+  resolve?(orgId: string): Promise<JevTarget | null>;
+  credentialId?: string;
   /** Records the call's usage (kind `router`, including OpenRouter's reported cost when used). */
   recordUsage(usage: JevUsage): Promise<void>;
   baseURL?: string;
@@ -94,6 +97,7 @@ export function createJevRouterStrategy(options: {
     name: "jev",
     on: () => typeof options.key === "string" || options.key.usable(),
     async decide(input: RoutingInput): Promise<RoutingResult> {
+      const target = (await options.resolve?.(input.orgId)) ?? options;
       const handles = input.candidates.map((c) => c.handle);
       const state = {
         channel: { name: input.channel.name, topic: input.channel.topic || null, direct_message: false },
@@ -196,18 +200,19 @@ export function createJevRouterStrategy(options: {
         model?: string;
         answers?: Record<string, JevAnswer>;
         usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
-      }>(options.key, {
-        fetch: options.fetch,
-        baseURL: options.baseURL,
-        body: { state, model: options.model ?? "jev-latest", questions },
-        timeoutMs: options.timeoutMs ?? 2000,
+      }>(target.key, {
+        fetch: target.fetch ?? options.fetch,
+        baseURL: target.baseURL,
+        body: { state, model: target.model ?? "jev-latest", questions },
+        timeoutMs: target.timeoutMs ?? options.timeoutMs ?? 2000,
       });
-      const usage = jevUsageDetails(options.baseURL, body.usage);
+      const usage = jevUsageDetails(target.baseURL, body.usage);
       await options
         .recordUsage({
           orgId: input.orgId,
+          ...(target.credentialId ? { credentialId: target.credentialId } : {}),
           ...(usage.provider === "openrouter-decisions" ? usage : {}),
-          model: body.model ?? options.model ?? "jev-latest",
+          model: body.model ?? target.model ?? "jev-latest",
           inputTokens: body.usage?.input_tokens ?? 0,
           outputTokens: body.usage?.output_tokens ?? 0,
         })

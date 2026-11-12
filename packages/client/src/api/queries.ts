@@ -104,6 +104,7 @@ import type {
   ComputerSetup,
   DatabaseActionName,
   DatabaseConnectionInput,
+  DecisionSettings,
   DeletionProofInput,
   DirectMessage,
   DmRead,
@@ -6559,4 +6560,23 @@ export function useWifiPairState(orgId: string, machineId: string | null, starte
     return () => void api.devices.cancelWifiPairing(orgId, machineId, id).catch(() => undefined);
   }, [api, orgId, machineId, id]);
   return started && state.data ? { ...state.data, qr: started.qr } : started;
+}
+
+export function useDecisionSettings(orgId: string, enabled = true) {
+  const api = useApi();
+  return useQuery({ queryKey: keys.decisions(orgId), queryFn: () => api.system.decisions(orgId), enabled });
+}
+export function useSaveDecisionSettings(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (settings: DecisionSettings | null) => api.system.saveDecisions(orgId, settings),
+    onSuccess: (view) => {
+      qc.setQueryData(keys.decisions(orgId), view);
+      void qc.invalidateQueries({
+        predicate: (q) => q.queryKey[0] === "org" && q.queryKey[1] === orgId && q.queryKey[3] === "ai-status",
+      });
+    },
+    meta: { silent: true },
+  });
 }

@@ -32,6 +32,7 @@ import type {
   ConnectorDef,
   ConsultationConversation,
   Credential,
+  DecisionSettingsView,
   Edition,
   EndpointCheck,
   FeedbackOffer,
@@ -377,6 +378,8 @@ export interface FakeState {
   telemetry?: ServerTelemetry;
   /** `system.jev`: the installation's Jev key; unset = I'm not its owner on a self-hosted server (null). */
   jev?: JevKey;
+  decisions?: DecisionSettingsView;
+  decisionError?: boolean;
   /**
    * What TypeSafe says of a key `system.saveJev` checks: refused (422, nothing kept) or out of credit; else it works.
    * `rate_limited`: the server's limit answers the first try (429), and the next one goes through.
@@ -1373,6 +1376,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("system.decideFeedbackOffer", orgId, messageId, decision);
         const offer = state.messages.find((m) => m.id === messageId)?.meta?.feedbackOffer as FeedbackOffer;
         return { ...offer, state: decision === "send" ? "sent" : "dismissed", decidedAt: new Date().toISOString() };
+      },
+      decisions: async (orgId) => {
+        log("system.decisions", orgId);
+        return state.decisions ?? { settings: null, available: false };
+      },
+      saveDecisions: async (orgId, settings) => {
+        log("system.saveDecisions", orgId, settings);
+        if (state.decisionError) throw new ApiError(400, "decision_check_failed", "Decision check failed");
+        state.decisions = { settings, available: settings !== null };
+        return state.decisions;
       },
       jev: async () => state.jev ?? null,
       saveJev: async (apiKey) => {

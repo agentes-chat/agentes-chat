@@ -43929,5 +43929,65 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
+  },
+  "decisions.title": {
+    "value": "Decision models"
+  },
+  "decisions.description": {
+    "value": "Use Jev or another decision model with an OpenRouter account already connected to this workspace. No server configuration needed."
+  },
+  "decisions.account": {
+    "value": "OpenRouter account"
+  },
+  "decisions.chooseAccount": {
+    "value": "Choose an account"
+  },
+  "decisions.model": {
+    "value": "Text decision model"
+  },
+  "decisions.modelHelp": {
+    "value": "Use a decision model ID, such as typesafe/jev-1.14 or jaredpalmer/kev-4b. Ordinary chat models do not work here."
+  },
+  "decisions.visionModel": {
+    "value": "Vision decision model (optional)"
+  },
+  "decisions.visionHelp": {
+    "value": "Use a model that supports images and Box questions. Leave empty to turn off image judgments."
+  },
+  "decisions.save": {
+    "value": "Test and save"
+  },
+  "decisions.testNotice": {
+    "value": "Saving checks the models with small paid requests to OpenRouter. Changes apply to this workspace immediately and your account pays for its decisions."
+  },
+  "decisions.active": {
+    "value": "Using {{account}} · {{model}}"
+  },
+  "decisions.unavailable": {
+    "value": "The selected OpenRouter account is unavailable. Choose another account or reset these settings."
+  },
+  "decisions.connect": {
+    "value": "Connect an OpenRouter API account above to use decision models."
+  },
+  "decisions.reset": {
+    "value": "Use the default setup"
+  },
+  "decisions.loadFailed": {
+    "value": "Could not load decision settings. Reload this page to try again."
+  },
+  "decisions.invalidAccount": {
+    "value": "Choose an active OpenRouter account from this workspace."
+  },
+  "decisions.invalidModel": {
+    "value": "Enter a valid decision model ID."
+  },
+  "decisions.checkFailed": {
+    "value": "OpenRouter could not verify this decision model. Check the account, credit and model ID, then try again."
+  },
+  "routing.by.decision": {
+    "value": "{{model}} picks who answers."
+  },
+  "decisions.serverDefault": {
+    "value": "Server default for workspaces without their own decision models."
   }
 }

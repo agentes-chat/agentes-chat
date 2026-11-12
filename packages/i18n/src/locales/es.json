@@ -2730,7 +2730,8 @@
       "plans": "Cada plan elige solo para los mensajes de su dueño.",
       "rules": "Los agentes responden menciones, respuestas y seguimientos.",
       "off": "Los agentes responden solo cuando se los menciona.",
-      "noSmall": "{{provider}} no tiene un modelo pequeño para esto. Los agentes responden menciones, respuestas y seguimientos."
+      "noSmall": "{{provider}} no tiene un modelo pequeño para esto. Los agentes responden menciones, respuestas y seguimientos.",
+      "decision": "{{model}} elige quién responde."
     }
   },
   "noAi": {
@@ -18671,5 +18672,26 @@
       "alwaysOn": "De ahora en adelante, informes como este salen sin preguntar.",
       "askFirst": "Preguntar antes de enviar"
     }
+  },
+  "decisions": {
+    "title": "Modelos de decisión",
+    "description": "Usa Jev u otro modelo de decisión con una cuenta OpenRouter ya conectada a este espacio. No hace falta configurar el servidor.",
+    "account": "Cuenta OpenRouter",
+    "chooseAccount": "Elige una cuenta",
+    "model": "Modelo de decisión para texto",
+    "modelHelp": "Usa el ID de un modelo de decisión, como typesafe/jev-1.14 o jaredpalmer/kev-4b. Los modelos de chat comunes no funcionan aquí.",
+    "visionModel": "Modelo de decisión para imágenes (opcional)",
+    "visionHelp": "Usa un modelo que admita imágenes y preguntas Box. Déjalo vacío para desactivar las decisiones sobre imágenes.",
+    "save": "Probar y guardar",
+    "testNotice": "Guardar verifica los modelos con pequeñas solicitudes de pago a OpenRouter. Los cambios se aplican inmediatamente solo a este espacio y tu cuenta paga sus decisiones.",
+    "active": "Usando {{account}} · {{model}}",
+    "unavailable": "La cuenta OpenRouter seleccionada no está disponible. Elige otra cuenta o restablece estos ajustes.",
+    "connect": "Conecta una cuenta de API de OpenRouter arriba para usar modelos de decisión.",
+    "reset": "Usar la configuración predeterminada",
+    "loadFailed": "No se pudieron cargar los ajustes de decisión. Recarga la página para volver a intentarlo.",
+    "invalidAccount": "Elige una cuenta OpenRouter activa de este espacio.",
+    "invalidModel": "Introduce un ID de modelo de decisión válido.",
+    "checkFailed": "OpenRouter no pudo verificar este modelo de decisión. Revisa la cuenta, el saldo y el ID del modelo e inténtalo de nuevo.",
+    "serverDefault": "Configuración predeterminada del servidor para espacios sin modelos de decisión propios."
   }
 }

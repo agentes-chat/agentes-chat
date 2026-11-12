@@ -120,6 +120,8 @@ import type {
   DatabaseConnection,
   DatabaseConnectionInput,
   DatabaseTable,
+  DecisionSettings,
+  DecisionSettingsView,
   DeletionProofInput,
   DesktopPictureView,
   DesktopRelease,
@@ -371,6 +373,8 @@ export interface ApiClient {
     decideFeedbackOffer(orgId: string, messageId: string, decision: "send" | "dismiss"): Promise<FeedbackOffer>;
     /** `null` unless I am the installation's owner on a self-hosted server. */
     jev(): Promise<JevKey | null>;
+    decisions(orgId: string): Promise<DecisionSettingsView>;
+    saveDecisions(orgId: string, settings: DecisionSettings | null): Promise<DecisionSettingsView>;
     /** Checked with TypeSafe first: `jev_key_invalid` (422) when it refuses, `jev_key_env` (409) with an env key. */
     saveJev(apiKey: string): Promise<JevKey>;
     checkJev(): Promise<JevKey>;

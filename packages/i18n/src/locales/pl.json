@@ -2831,7 +2831,8 @@
       "plans": "Każdy plan wybiera tylko dla wiadomości swojego właściciela.",
       "rules": "Agenci odpowiadają na wzmianki, odpowiedzi i kontynuacje.",
       "off": "Agenci odpowiadają tylko na wzmianki.",
-      "noSmall": "{{provider}} nie ma do tego małego modelu. Agenci odpowiadają na wzmianki, odpowiedzi i kontynuacje."
+      "noSmall": "{{provider}} nie ma do tego małego modelu. Agenci odpowiadają na wzmianki, odpowiedzi i kontynuacje.",
+      "decision": "{{model}} wybiera, kto odpowie."
     }
   },
   "noAi": {
@@ -19301,5 +19302,26 @@
       "alwaysOn": "Od teraz takie zgłoszenia będą wysyłane bez pytania.",
       "askFirst": "Pytaj przed wysłaniem"
     }
+  },
+  "decisions": {
+    "title": "Modele decyzyjne",
+    "description": "Używaj Jev lub innego modelu decyzyjnego z kontem OpenRouter już połączonym z tym obszarem. Konfiguracja serwera nie jest potrzebna.",
+    "account": "Konto OpenRouter",
+    "chooseAccount": "Wybierz konto",
+    "model": "Model decyzyjny do tekstu",
+    "modelHelp": "Podaj identyfikator modelu decyzyjnego, np. typesafe/jev-1.14 lub jaredpalmer/kev-4b. Zwykłe modele czatu tu nie działają.",
+    "visionModel": "Model decyzyjny do obrazów (opcjonalnie)",
+    "visionHelp": "Użyj modelu obsługującego obrazy i pytania Box. Pozostaw puste, aby wyłączyć ocenę obrazów.",
+    "save": "Przetestuj i zapisz",
+    "testNotice": "Zapisanie sprawdza modele za pomocą małych płatnych zapytań do OpenRouter. Zmiany obowiązują od razu tylko w tym obszarze, a decyzje są opłacane z Twojego konta.",
+    "active": "Używane konto: {{account}} · {{model}}",
+    "unavailable": "Wybrane konto OpenRouter jest niedostępne. Wybierz inne konto lub przywróć ustawienia domyślne.",
+    "connect": "Połącz powyżej konto API OpenRouter, aby korzystać z modeli decyzyjnych.",
+    "reset": "Użyj ustawień domyślnych",
+    "loadFailed": "Nie udało się wczytać ustawień decyzji. Odśwież stronę i spróbuj ponownie.",
+    "invalidAccount": "Wybierz aktywne konto OpenRouter z tego obszaru.",
+    "invalidModel": "Wpisz prawidłowy identyfikator modelu decyzyjnego.",
+    "checkFailed": "OpenRouter nie mógł zweryfikować tego modelu decyzyjnego. Sprawdź konto, saldo i identyfikator modelu, a następnie spróbuj ponownie.",
+    "serverDefault": "Domyślna konfiguracja serwera dla obszarów bez własnych modeli decyzyjnych."
   }
 }

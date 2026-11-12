@@ -2539,7 +2539,8 @@
       "plans": "Setiap paket hanya memilih untuk pesan pemiliknya.",
       "rules": "Agen menjawab sebutan, balasan, dan tindak lanjut.",
       "off": "Agen hanya menjawab saat disebut.",
-      "noSmall": "{{provider}} tidak punya model kecil untuk ini. Agen menjawab sebutan, balasan, dan tindak lanjut."
+      "noSmall": "{{provider}} tidak punya model kecil untuk ini. Agen menjawab sebutan, balasan, dan tindak lanjut.",
+      "decision": "{{model}} memilih siapa yang menjawab."
     }
   },
   "noAi": {
@@ -17714,5 +17715,26 @@
       "alwaysOn": "Mulai sekarang, laporan seperti ini dikirim tanpa bertanya.",
       "askFirst": "Tanya dulu sebelum mengirim"
     }
+  },
+  "decisions": {
+    "title": "Model keputusan",
+    "description": "Gunakan Jev atau model keputusan lain dengan akun OpenRouter yang sudah terhubung ke ruang kerja ini. Tidak perlu mengatur server.",
+    "account": "Akun OpenRouter",
+    "chooseAccount": "Pilih akun",
+    "model": "Model keputusan teks",
+    "modelHelp": "Gunakan ID model keputusan, seperti typesafe/jev-1.14 atau jaredpalmer/kev-4b. Model chat biasa tidak dapat digunakan di sini.",
+    "visionModel": "Model keputusan gambar (opsional)",
+    "visionHelp": "Gunakan model yang mendukung gambar dan pertanyaan Box. Kosongkan untuk menonaktifkan penilaian gambar.",
+    "save": "Uji dan simpan",
+    "testNotice": "Menyimpan akan memeriksa model dengan permintaan berbayar kecil ke OpenRouter. Perubahan langsung berlaku hanya untuk ruang kerja ini dan biaya keputusannya dibayar oleh akun Anda.",
+    "active": "Menggunakan {{account}} · {{model}}",
+    "unavailable": "Akun OpenRouter yang dipilih tidak tersedia. Pilih akun lain atau pulihkan pengaturan bawaan.",
+    "connect": "Hubungkan akun API OpenRouter di atas untuk menggunakan model keputusan.",
+    "reset": "Gunakan pengaturan bawaan",
+    "loadFailed": "Pengaturan keputusan tidak dapat dimuat. Muat ulang halaman untuk mencoba lagi.",
+    "invalidAccount": "Pilih akun OpenRouter aktif dari ruang kerja ini.",
+    "invalidModel": "Masukkan ID model keputusan yang valid.",
+    "checkFailed": "OpenRouter tidak dapat memverifikasi model keputusan ini. Periksa akun, saldo, dan ID model lalu coba lagi.",
+    "serverDefault": "Pengaturan bawaan server untuk ruang kerja tanpa model keputusan sendiri."
   }
 }

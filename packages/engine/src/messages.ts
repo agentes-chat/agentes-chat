@@ -34,7 +34,7 @@ import {
   publishUserEvent,
 } from "./events";
 import { cutText } from "./format";
-import { type Judge, personMentionAddressees } from "./judge";
+import { type Judge, judgeName, personMentionAddressees } from "./judge";
 import { PLATFORM_CAP } from "./limits";
 import { isMediaAfterReply, isStickerMood, type MessageMedia, mediaOf, mediaSettings, type StickerMood } from "./media";
 import { type MessageMemory, memoriesFor } from "./message-memories";
@@ -1456,14 +1456,14 @@ export async function classifyAddressees(
     const scores = targets.map((t) => ({ agentId: t.id, score: judged.get(t.id) ?? 0 }));
     const addressees = pickAddressees(scores);
     return {
-      strategy: `addressees-${judge.name}`,
+      strategy: `addressees-${await judgeName(judge, input.orgId)}`,
       scores,
       addressees,
       referenced: everyone.filter((id) => !addressees.includes(id)),
     };
   } catch (error) {
     return {
-      strategy: `addressees-${judge.name}`,
+      strategy: `addressees-${await judgeName(judge, input.orgId)}`,
       scores: everyone.map((agentId) => ({ agentId, score: 0 })),
       addressees: everyone,
       referenced: [],

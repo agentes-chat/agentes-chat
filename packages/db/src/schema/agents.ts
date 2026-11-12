@@ -336,6 +336,8 @@ export const organizationSettings = pgTable("organization_settings", {
   defaultCredentialId: uuid().references(() => providerCredentials.id, { onDelete: "set null" }),
   /** The default key per provider (`{ anthropic: id, openai: id }`); wins over `default_credential_id`. */
   defaultCredentialIds: jsonb().$type<Partial<Record<string, string>>>().notNull().default({}),
+  /** OpenRouter decision models on an existing workspace credential; null uses the installation's Jev setup. */
+  decisions: jsonb().$type<{ credentialId: string; model: string; visionModel: string | null }>(),
   /** Router model for this organization (catalog id). Null = `ROUTER_MODEL` of the deployment. */
   routerModel: text(),
   /** Model that writes thread/period summaries. Null = `SUMMARY_MODEL` of the deployment. */
