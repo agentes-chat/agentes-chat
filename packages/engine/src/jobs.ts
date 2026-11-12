@@ -90,6 +90,7 @@ import { ORG_FILES_PURGE_ATTEMPTS, ORG_FILES_PURGE_JOB, USER_FILES_PURGE_JOB } f
 import { outOfOfficeIds } from "./out-of-office";
 import { enqueue, type JobHandlers, type OutboxJob, PermanentJobError } from "./outbox";
 import { checkParkedRun, EARLY_CHECK_JOB, scheduleParkedChecks } from "./parked-asks";
+import { PARTNER_WAITLIST_CONTACT_JOB, savePartnerWaitlistContact } from "./partner-waitlist";
 import { notifyPersonLimit, PERSON_LIMIT_JOB } from "./person-usage";
 import { checkPushReceipts, deliverPush, pushTicketsOf } from "./push";
 import { reachOf, settleReach } from "./reach";
@@ -999,6 +1000,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     "waitlist.contact": async (job) => {
       if (!deps.email) throw new PermanentJobError("no email sender configured");
       await saveWaitlistContact(deps.db, deps.email, String(job.payload.entryId));
+    },
+    [PARTNER_WAITLIST_CONTACT_JOB]: async (job) => {
+      if (!deps.email) throw new PermanentJobError("no email sender configured");
+      await savePartnerWaitlistContact(deps.db, deps.email, String(job.payload.entryId));
     },
     [ACCOUNT_CONTACT_JOB]: async (job) => {
       if (!deps.email) throw new PermanentJobError("no email sender configured");

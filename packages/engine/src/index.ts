@@ -215,6 +215,7 @@ export * from "./out-of-office";
 export * from "./outbound";
 export * from "./outbox";
 export * from "./parked-asks";
+export * from "./partner-waitlist";
 export * from "./password-link";
 export * from "./pdf";
 export * from "./permissions";

@@ -1751,6 +1751,13 @@
       "when": 1794645300000,
       "tag": "0251_user_work_area",
       "breakpoints": true
+    },
+    {
+      "idx": 252,
+      "version": "7",
+      "when": 1794450790634,
+      "tag": "0252_partner_waitlist",
+      "breakpoints": true
     }
   ]
 }
