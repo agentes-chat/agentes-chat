@@ -2198,6 +2198,8 @@
     "replyingTo": "Risposta a {{name}}",
     "cancelReply": "Annulla risposta",
     "jumpMissing": "Non è stato possibile raggiungere quel messaggio qui. Potrebbe essere stato eliminato o essere troppo indietro.",
+    "clearHistoryText": "Nascondi i messaggi precedenti su questo dispositivo",
+    "showPreviousMessages": "Mostra i messaggi precedenti",
     "emoji": "Emoji",
     "uploading": "caricamento…",
     "uploadFailed": "non è stato caricato",

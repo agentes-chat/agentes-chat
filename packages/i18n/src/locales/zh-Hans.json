@@ -2064,6 +2064,8 @@
     "replyingTo": "正在回复 {{name}}",
     "cancelReply": "取消回复",
     "jumpMissing": "无法在此处跳转到该消息。它可能已被删除或过于久远。",
+    "clearHistoryText": "在此设备上隐藏之前的消息",
+    "showPreviousMessages": "显示之前的消息",
     "emoji": "表情",
     "uploading": "上传中…",
     "uploadFailed": "未上传",

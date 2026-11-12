@@ -47,6 +47,7 @@ import {
 import { activityVerb, listNames } from "@agenteschat/client/lib/activity";
 import { canTalk } from "@agenteschat/client/lib/audience";
 import { runPosition, screenAboveEnd } from "@agenteschat/client/lib/chat";
+import { isClearCommand, useChatHistory } from "@agenteschat/client/lib/chat-history";
 import { CHAT_RHYTHM, firstUnreadId, opensAtLastRead } from "@agenteschat/client/lib/chat-look";
 import { type ConversationWait, conversationWaits } from "@agenteschat/client/lib/computer-queue";
 import {
@@ -106,7 +107,8 @@ import { frameClock } from "@/agent/clock";
 import { StickerStageContext } from "@/agent/StickerCanvas";
 import { createStickerStage } from "@/agent/sticker-stage";
 import { holdOpenConversation } from "@/lib/push";
-import { rightHandSeen } from "@/lib/storage";
+import { perServer, serverUrl } from "@/lib/server";
+import { readValueSync, rightHandSeen, writeValueSync } from "@/lib/storage";
 import { useOrg } from "@/providers/org";
 import { usePush } from "@/providers/push";
 import { useRealtime } from "@/providers/realtime";
@@ -435,6 +437,16 @@ function Chat({
     }
     return mergeTimeline([...older, ...(top.data ?? [])], []);
   }, [isThread, threadId, top.data, threadMessages.data, older]);
+  const history = useChatHistory(
+    perServer(`chat-history.${meId}.${orgId}.${channelId}.${threadId ?? "main"}`, serverUrl()),
+    readValueSync,
+    writeValueSync,
+  );
+  const showHistory = history.show;
+  useEffect(() => {
+    if (focusId) showHistory();
+  }, [focusId, showHistory]);
+  const visibleList = useMemo(() => list.filter(history.includes), [list, history.includes]);
   // Messages said in the channel itself: a "thinking" row the app guessed hangs off one of them.
   const topIds = useMemo(() => new Set(list.flatMap((m) => (m.threadId ? [] : [m.id]))), [list]);
   // A DM with a person: their face beside my latest message once they read it (live: `channel.read`).
@@ -585,8 +597,8 @@ function Chat({
       wait,
     }));
     if (isThread && threadId) {
-      const root = list.find((m) => m.id === threadId);
-      const replies = list.filter((m) => m.id !== threadId);
+      const root = visibleList.find((m) => m.id === threadId);
+      const replies = visibleList.filter((m) => m.id !== threadId);
       const info = thread.data;
       // A task's conversation (ADR 0145): its root stands for the task, one screen back; only the replies show.
       const head: Row[] =
@@ -626,12 +638,25 @@ function Chat({
     // A thread's replies live in the thread; the channel shows its link.
     const hidden = (m: Message) => superseded.has(m.id) || Boolean(m.threadId);
     return [
-      ...buildRows(list, hidden, agentsAtWork),
+      ...buildRows(visibleList, hidden, agentsAtWork),
       ...browsing.map((run) => ({ kind: "browser" as const, key: `browser-${run.agentId}`, run })),
       ...held.map((h) => ({ kind: "browser" as const, key: `browser-${h.agentId}`, run: null, handoff: h })),
       ...waitRows,
     ];
-  }, [isThread, threadId, list, thread.data, channel?.name, dm, browsing, held, superseded, agentsAtWork, t, waits]);
+  }, [
+    isThread,
+    threadId,
+    visibleList,
+    thread.data,
+    channel?.name,
+    dm,
+    browsing,
+    held,
+    superseded,
+    agentsAtWork,
+    t,
+    waits,
+  ]);
   const shownMessages = useMemo(() => rows.flatMap((r) => (r.kind === "message" ? [r.message] : [])), [rows]);
   // Questions agents asked other agents, in the pair row before the replies that asked (`ConsultGroup`): how each
   // answer's notice draws (hidden under a reply close by, one line to one farther up, and while its asker still works
@@ -846,7 +871,7 @@ function Chat({
   // time, whatever the state says this render.
   const fetchingOlder = useRef(false);
   const loadOlder = useCallback(() => {
-    if (isThread || olderDone || loadingOlder || fetchingOlder.current || !top.data) return;
+    if (history.cleared || isThread || olderDone || loadingOlder || fetchingOlder.current || !top.data) return;
     const oldest = older[0] ?? top.data[0];
     if (!oldest || top.data.length < MESSAGES_PAGE) {
       setOlderDone(true);
@@ -865,7 +890,7 @@ function Chat({
         fetchingOlder.current = false;
         setLoadingOlder(false);
       });
-  }, [api, orgId, channelId, isThread, olderDone, loadingOlder, top.data, older]);
+  }, [api, orgId, channelId, isThread, olderDone, loadingOlder, top.data, older, history.cleared]);
 
   // ── Sending ──
   // Without a connection (no internet, or the server restarting) a message isn't "failed": it waits with a
@@ -976,6 +1001,12 @@ function Chat({
       return;
     }
     if (!text) return;
+    if (isClearCommand(text)) {
+      history.clear(list);
+      setQuote(null);
+      toEnd();
+      return;
+    }
     const cmd = parseSlash(text);
     if (!cmd) {
       const meta = takeQuote();
@@ -1231,6 +1262,10 @@ function Chat({
   const seekRefreshing = isThread ? threadMessages.isFetching : top.isFetching;
   useEffect(() => {
     if (!seek || !seekReady) return;
+    if (history.cleared) {
+      showHistory();
+      return;
+    }
     const index = shownRows.findIndex((r) => r.kind === "message" && r.message.id === seek);
     if (index >= 0) {
       setSeek(null);
@@ -1253,7 +1288,21 @@ function Chat({
       seekPages.current += 1;
       loadOlder();
     }
-  }, [seek, seekReady, seekRefreshing, shownRows, isThread, olderDone, loadingOlder, loadOlder, letGo, t, toast]);
+  }, [
+    seek,
+    seekReady,
+    seekRefreshing,
+    shownRows,
+    isThread,
+    olderDone,
+    loadingOlder,
+    loadOlder,
+    letGo,
+    t,
+    toast,
+    history.cleared,
+    showHistory,
+  ]);
   useEffect(() => {
     if (!flashId) return;
     const timer = setTimeout(() => setFlashId(null), FLASH_MS);
@@ -1955,15 +2004,15 @@ function Chat({
   const barHeight = useHeaderHeight();
   const headerHeight = peeking ? 0 : barHeight;
   const lift = Math.max(0, bottomPad - KEYBOARD_GAP);
-  const showList = !loading && !(rows.length === 0 && runs.length === 0);
+  const showList = !loading && (history.cleared || rows.length > 0 || runs.length > 0);
   // The conversation starts below the clear bar by our own padding, on both platforms (the pinned card, when there
   // is one, already holds that room). iOS's automatic inset made keyboard moves land short at the end.
   const hasPin = pinned !== null;
   // The conversation's first message is loaded (a thread loads whole): what sits above it can show.
   const atStart = isThread || olderDone || (top.data?.length ?? 0) < MESSAGES_PAGE;
   const listPad = useMemo(
-    () => (hasPin ? styles.listPad : [styles.listPad, { paddingTop: headerHeight + 8 }]),
-    [hasPin, headerHeight],
+    () => (hasPin || history.cleared ? styles.listPad : [styles.listPad, { paddingTop: headerHeight + 8 }]),
+    [hasPin, headerHeight, history.cleared],
   );
 
   // ── Requests out of view ──
@@ -2114,6 +2163,11 @@ function Chat({
             ) : null}
           </View>
         ) : null}
+        {history.cleared ? (
+          <View style={{ paddingTop: hasPin ? 0 : headerHeight }}>
+            <Button size="sm" variant="ghost" onPress={history.show} label={t("channel.showPreviousMessages")} />
+          </View>
+        ) : null}
         {/* No `textInputNativeID`: with it the composer could stay down while the keyboard was up (iOS 26; Bluesky
             drops it too). The offset is whole points: a fractional one made the overscroll glitch. */}
         <KeyboardGestureArea
@@ -2194,7 +2248,7 @@ function Chat({
                             // the first message reveals them), then the right hand's greeting or a new agent's
                             // checklist.
                             ListHeaderComponent={
-                              atStart && (hasPins || (dmAgent && (rightHand || setupIntro))) ? (
+                              !history.cleared && atStart && (hasPins || (dmAgent && (rightHand || setupIntro))) ? (
                                 <>
                                   {hasPins ? (
                                     <PinnedLines

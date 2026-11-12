@@ -2064,6 +2064,8 @@
     "replyingTo": "{{name}}님에게 답장 중",
     "cancelReply": "답장 취소",
     "jumpMissing": "여기서는 그 메시지로 이동할 수 없습니다. 삭제되었거나 너무 오래된 메시지일 수 있습니다.",
+    "clearHistoryText": "이 기기에서 이전 메시지 숨기기",
+    "showPreviousMessages": "이전 메시지 표시",
     "emoji": "이모지",
     "uploading": "업로드 중…",
     "uploadFailed": "업로드되지 않았어요",

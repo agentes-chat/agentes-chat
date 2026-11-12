@@ -1553,6 +1553,14 @@ html:not([data-pointer]) .member-row--add:focus-visible {
   color: var(--ink-muted);
 }
 
+.channel__history {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
 /* Newest at the bottom: short channels sit right above the composer */
 .channel__spacer {
   flex: 1 0 auto;

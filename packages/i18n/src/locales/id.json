@@ -2064,6 +2064,8 @@
     "replyingTo": "Membalas {{name}}",
     "cancelReply": "Batalkan balasan",
     "jumpMissing": "Pesan itu tidak bisa dijangkau di sini. Mungkin sudah dihapus atau terlalu jauh ke belakang.",
+    "clearHistoryText": "Sembunyikan pesan sebelumnya di perangkat ini",
+    "showPreviousMessages": "Tampilkan pesan sebelumnya",
     "emoji": "Emoji",
     "uploading": "mengunggah…",
     "uploadFailed": "tidak terunggah",

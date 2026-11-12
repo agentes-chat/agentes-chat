@@ -2199,6 +2199,8 @@
     "replyingTo": "Réponse à {{name}}",
     "cancelReply": "Annuler la réponse",
     "jumpMissing": "Impossible d'atteindre ce message ici. Il a peut-être été supprimé ou il est trop ancien.",
+    "clearHistoryText": "Masquer les messages précédents sur cet appareil",
+    "showPreviousMessages": "Afficher les messages précédents",
     "emoji": "Emoji",
     "uploading": "envoi…",
     "uploadFailed": "n'a pas été envoyé",

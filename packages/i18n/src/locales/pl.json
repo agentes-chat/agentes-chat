@@ -2267,6 +2267,8 @@
     "replyingTo": "Odpowiadasz: {{name}}",
     "cancelReply": "Anuluj odpowiedź",
     "jumpMissing": "Nie udało się dotrzeć do tej wiadomości. Mogła zostać usunięta lub jest zbyt stara.",
+    "clearHistoryText": "Ukryj wcześniejsze wiadomości na tym urządzeniu",
+    "showPreviousMessages": "Pokaż wcześniejsze wiadomości",
     "emoji": "Emoji",
     "uploading": "przesyłanie…",
     "uploadFailed": "nie został przesłany",

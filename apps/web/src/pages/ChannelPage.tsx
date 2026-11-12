@@ -97,6 +97,7 @@ import {
   screenAboveEnd,
   usageLine,
 } from "@agenteschat/client/lib/chat";
+import { isClearCommand, useChatHistory, visibleHistory } from "@agenteschat/client/lib/chat-history";
 import { firstUnreadId, opensAtLastRead } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
@@ -386,6 +387,7 @@ import { typingInField } from "@/lib/keys";
 import { lookOf } from "@/lib/look";
 import { threadSearch, useThreadPanel } from "@/lib/open-param";
 import { reportPainted } from "@/lib/perf";
+import { STORAGE_KEYS, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import {
   reconcileChannelRuns,
@@ -794,6 +796,15 @@ function ChannelView({
   // Thread view: the thread's root and replies (the channel's page still holds my unsent replies).
   const threadMessages = useThreadMessages(org.id, thread && readable ? channel.id : undefined, thread?.id ?? "");
   const messages = thread ? threadMessages : channelMessages;
+  const history = useChatHistory(
+    `${STORAGE_KEYS.chatHistory}.${me.user.id}.${org.id}.${channel.id}.${thread?.id ?? "main"}`,
+    storage.get,
+    storage.set,
+  );
+  const showHistory = history.show;
+  useEffect(() => {
+    if (focusMessageId) showHistory();
+  }, [focusMessageId, showHistory]);
   // Our notifications ask, under the message it follows in the channel's own list (never a thread's, never read only).
   const topLevel = useMemo(() => channelMessages.data?.filter((m) => !m.threadId), [channelMessages.data]);
   const pushAsk = usePushAsk(thread || !isMember ? undefined : topLevel);
@@ -1181,7 +1192,7 @@ function ChannelView({
   const anchor = useRef<{ height: number; top: number } | null>(null);
   const loadOlder = (limit = OLDER_PAGE) => {
     // A thread view loads its whole conversation at once.
-    if (thread || olderState !== "idle" || !messages.data) return;
+    if (history.cleared || thread || olderState !== "idle" || !messages.data) return;
     const oldest = older[0] ?? messages.data[0];
     if (!oldest || messages.data.length < MESSAGES_PAGE) {
       setOlderState("done");
@@ -1242,7 +1253,7 @@ function ChannelView({
   // The agents at work here: a follow-up's line that woke one stays while its turn runs (`settledNotices`).
   const workingKey = useStreams((s) => [...new Set(scopedRuns(s).map((r) => r.agentId))].sort().join(" "));
   const agentsAtWork = useMemo(() => new Set(workingKey ? workingKey.split(" ") : []), [workingKey]);
-  const timeline = useMemo(() => {
+  const fullTimeline = useMemo(() => {
     if (thread) {
       // The thread's conversation. One made from a range: not its root (the channel's marker) nor the
       // moved messages (written before the root; the context block lists them).
@@ -1276,6 +1287,7 @@ function ChannelView({
       Boolean(channelList?.lines.has(m.id));
     return ungroupAfter(items, special);
   }, [thread, channelList, channelMessages.data, threadMessages.data, threadsView, agentsAtWork]);
+  const timeline = useMemo(() => visibleHistory(fullTimeline, history.includes), [fullTimeline, history.includes]);
 
   // The agents' blocks (one per run, from "pensando" to its final message: `chat/run-slots.ts`), at the end. They
   // change when runs start or end, never on another of a run's events.
@@ -1287,8 +1299,10 @@ function ChannelView({
   );
   const landedRuns = useMemo(
     () =>
-      new Set(timeline.flatMap((i) => (i.kind === "message" && i.message.agentRunId ? [i.message.agentRunId] : []))),
-    [timeline],
+      new Set(
+        fullTimeline.flatMap((i) => (i.kind === "message" && i.message.agentRunId ? [i.message.agentRunId] : [])),
+      ),
+    [fullTimeline],
   );
   const slotsRef = useRef<RunSlot[]>([]);
   // Every block's key by run (the final message is drawn under it), kept for this view.
@@ -1774,6 +1788,14 @@ function ChannelView({
         },
       ]
     : [];
+  commands.push({
+    key: "clear",
+    label: "/clear",
+    description: t("channel.clearHistoryText"),
+    leading: <Icon name="eye" size={16} />,
+    insert: "",
+    onPick: () => void runCommand("/clear"),
+  });
   // Mission commands (English, like the server's): `/mission` anywhere with an agent; the rest in a mission's thread.
   const threadMission = useThreadMission(org.id, thread?.id);
   const homeMission = threadMission.data && isOpenMission(threadMission.data) ? threadMission.data : null;
@@ -1811,6 +1833,16 @@ function ChannelView({
   const missionControl = useMissionControl(org.id);
   /** `/mission`, `/stop`, `/pause`, `/resume`, `/summary`, `/plan`: nothing is posted. True when handled. */
   async function runCommand(text: string): Promise<boolean> {
+    if (isClearCommand(text)) {
+      history.clear([
+        ...(messages.data ?? []),
+        ...fullTimeline.flatMap((item) => (item.kind === "message" ? [item.message] : [])),
+      ]);
+      setDraft("");
+      setQuote(null);
+      toBottom();
+      return true;
+    }
     const cmd = parseMissionCommand(text);
     if (!cmd) return false;
     setDraft("");
@@ -1915,6 +1947,7 @@ function ChannelView({
   }, [found, focusDone, focusTarget, serverRead, olderState, older.length, messages.isFetching]);
   /** A quote was clicked: the original on screen, or paged in like `?m=`. */
   const jumpTo = (messageId: string) => {
+    history.show();
     if (highlightMessage(scroller.current, messageId)) {
       stick.current = false;
       if (!panel) setSearchOpen(false);
@@ -1998,7 +2031,7 @@ function ChannelView({
       setKeyAsk({ text, key, interrupt: opts?.interrupt });
       return;
     }
-    if (attached.length === 0 && parseMissionCommand(text)) {
+    if (attached.length === 0 && (isClearCommand(text) || parseMissionCommand(text))) {
       void runCommand(text);
       return;
     }
@@ -2417,6 +2450,13 @@ function ChannelView({
                 {/* Under the header: the conversation, and the members beside it (the header spans both, as Discord's). */}
                 <div className="channel__body">
                   <div className="channel__col">
+                    {history.cleared && (
+                      <div className="channel__history">
+                        <Button size="sm" variant="ghost" onClick={history.show}>
+                          {t("channel.showPreviousMessages")}
+                        </Button>
+                      </div>
+                    )}
                     {isMember && (
                       <ChannelPinnedBar
                         channelId={channel.id}
@@ -2522,12 +2562,13 @@ function ChannelView({
                             {/* Pushes short channels down, next to the composer. */}
                             <div className="channel__spacer" aria-hidden="true" />
                             {chrome?.top}
-                            {chrome?.intro}
+                            {!history.cleared && chrome?.intro}
                             {messages.isLoading && <LoadingConversation />}
                             {messages.isError && !messages.data && (
                               <ErrorState error={messages.error} onRetry={() => void messages.refetch()} />
                             )}
                             {serverRead &&
+                              !history.cleared &&
                               timeline.length === 0 &&
                               slots.length === 0 &&
                               !thread &&
