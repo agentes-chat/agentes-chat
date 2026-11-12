@@ -50,8 +50,8 @@ from the SDK — OpenMausBot's `stdioTransport` is the model for that.
 
 Arguments: `serve --trust-workspace`, plus `--disable-sandbox` at the `yolo` level and nothing else. The sandbox is a
 host-construction decision the wire cannot change ("neither is negotiable over the wire"); the approval mode is the
-other way round — "it is selected on the wire, so there is no approval flag here" — so `yolo` sets `allowAll` and
-every other level `promptUnmatched` on the request, not on the argv.
+other way round — "it is selected on the wire, so there is no approval flag here" — so a level nobody answers needs `allowAll`
+(a value the wire has; `never` is not one), and `promptUnmatched` is for when approvals are wired.
 
 The levels are four, and only two of them are a posture:
 
@@ -79,6 +79,14 @@ We take OpenMausBot's shape, because our runner is a process per request and the
 it: a host belongs to a session, is reused across its turns, and is remounted — resuming by session id — when the
 posture or the MCP set moves. On release the view is unsubscribed first (`view/unsubscribe`), then the host closed;
 while a turn runs the release is refused, never forced. Idle teardown is bounded, and the kill tree is the fallback.
+
+### The wire, as measured
+
+`initialize` → the `initialized` notification → `session/start` (or `session/resume`) → `view/subscribe` →
+`turn/start`, NDJSON frames of JSON-RPC 2.0, every command carrying a **UUIDv7** (`expected UUIDv7` otherwise).
+`clientInfo.name` must be `^[a-z0-9_]+$`. Approval modes are `allowAll`, `promptUnmatched`, `onRequest`,
+`denyUnmatched` — there is no `never`. A turn's text is `item/delta` on field `text`; its calls are `item/*` of kind
+`toolCall`; it ends at `turn/completed`.
 
 ### Approvals are the point
 
