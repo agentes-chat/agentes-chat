@@ -1,6 +1,9 @@
 // A stand-in for `muse serve`: speaks MSP on stdio (NDJSON JSON-RPC), one echo turn, and tells on stderr when asked
 // to start without a handshake — the two things the brain must get right. With `FAKE_MUSE_APPROVAL=1` a turn parks an
 // approval first, as the real host does, and only finishes once the client answers it with a `choiceId` it offered.
+// `FAKE_MUSE_STATUS/REASON/ERROR/RESETS_MS` shape the `turn/completed` record (completed by default, failed or
+// cancelled when asked), and `FAKE_MUSE_SILENT=1|turn` makes a host that never answers the submit, or answers it and
+// then goes quiet — the two hangs only a deadline catches.
 
 import { randomUUID } from "node:crypto";
 import { appendFileSync } from "node:fs";
@@ -75,20 +78,46 @@ function finishTurn() {
   notification("session/tokenUsage", {
     sessionId: session,
     promptTokens: 10,
-    outputTokens: 4,
-    cumulative: { cacheReadTokens: 2 },
+    totalTokens: 14,
+    usage: { inputTokens: 10, outputTokens: 4, cachedTokens: 0, reasoningTokens: 0 },
+    cumulative: { promptTokens: 10, outputTokens: 4, totalTokens: 14, cacheReadTokens: 2 },
   });
-  notification("turn/completed", { sessionId: session, commandId });
+  // The real terminal record: `terminal` is the status, and a failure settles its `error` (or a bare `reason`).
+  const terminal = process.env.FAKE_MUSE_STATUS ?? "completed";
+  const reason = process.env.FAKE_MUSE_REASON;
+  const message = process.env.FAKE_MUSE_ERROR;
+  const resetsAtMs = process.env.FAKE_MUSE_RESETS_MS;
+  const error =
+    message || (terminal === "failed" && !reason)
+      ? {
+          kind: process.env.FAKE_MUSE_ERROR_KIND ?? "modelError",
+          message: message ?? "the model call failed",
+          retryable: false,
+          ...(resetsAtMs ? { quota: { limitKind: "usage", resetsAtMs: Number(resetsAtMs) } } : {}),
+        }
+      : undefined;
+  notification("turn/completed", {
+    sessionId: session,
+    commandId,
+    turnId: commandId,
+    terminal,
+    ...(reason ? { reason } : {}),
+    ...(error ? { error } : {}),
+  });
 }
 
 /** Parks an approval the turn waits on, as the host does mid-turn. */
 function askApproval() {
   const approvalId = v7();
   approval = { approvalId, offered: OFFERS.map((o) => o.choiceId) };
+  // A subject is either a shell command or a file it writes: both are asks the policy has to read.
+  const file = process.env.FAKE_MUSE_APPROVAL_PATH;
   notification("approval/requested", {
     sessionId: session,
     approvalId,
-    subject: { kind: "command", command: process.env.FAKE_MUSE_APPROVAL_COMMAND ?? "ls" },
+    subject: file
+      ? { kind: "path", path: file }
+      : { kind: "command", command: process.env.FAKE_MUSE_APPROVAL_COMMAND ?? "ls" },
     availableChoices: OFFERS,
   });
   log({ requested: approvalId, offered: approval.offered });
@@ -154,8 +183,12 @@ createInterface({ input: process.stdin })
     }
     if (frame.method === "turn/start") {
       commandId = frame.params?.commandId ?? commandId;
+      // `FAKE_MUSE_SILENT=1`: a host that never answers the submit, as a wedged one doesn't. `=turn`: the turn was
+      // accepted and then the host says nothing more, which is the case only a total deadline catches.
+      if (process.env.FAKE_MUSE_SILENT === "1") return;
       say({ id: frame.id, result: {} });
       notification("turn/started", { commandId, sessionId: session });
+      if (process.env.FAKE_MUSE_SILENT === "turn") return;
       if (process.env.FAKE_MUSE_APPROVAL === "1") {
         askApproval();
         return;
@@ -186,7 +219,13 @@ createInterface({ input: process.stdin })
     }
     if (frame.method === "turn/interrupt") {
       say({ id: frame.id, result: {} });
-      notification("turn/completed", { sessionId: session, commandId });
+      notification("turn/completed", {
+        sessionId: session,
+        commandId,
+        turnId: commandId,
+        terminal: "cancelled",
+        reason: "interrupted",
+      });
       return;
     }
     if (frame.id !== undefined) say({ id: frame.id, result: {} });

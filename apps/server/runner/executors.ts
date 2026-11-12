@@ -1,4 +1,5 @@
-import { execFile } from "node:child_process";
+import { type ChildProcess, execFile, spawn } from "node:child_process";
+import type { EventEmitter } from "node:events";
 import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join, win32 } from "node:path";
@@ -9,6 +10,7 @@ import {
   type RunnerInfo,
 } from "@agenteschat/adapters/machine-protocol";
 import { isOpencodeFreeModel, OPENCODE_FREE_MODELS } from "@agenteschat/providers/plans";
+import { killTree } from "./exec";
 import { readSmallJson, writeJson } from "./json-file";
 import { SHARED_BIN_ENV } from "./shared-folder";
 
@@ -487,12 +489,158 @@ function detectAntigravity(run: Run): Promise<Probe> {
 /** Muse Code's CLI (Meta's installer puts it at `~/.local/bin/muse`). */
 export const MUSE_BIN = "muse";
 
+/** Muse Code's version line: `Muse Code 1.4.18 (1.4.18-R8587.1)`, on 1.5 `1.5.0`; anything else is skipped. */
+const MUSE_VERSION = /^(?:Muse Code\s+)?\d+\.\d+\.\d+\b/;
+
+/** What the catalog host gets: measured on 1.4.18, `initialize` answers in 0.18 s and `model/list` in the same batch. */
+export const MUSE_CATALOG_TIMEOUT_MS = 6000;
+
 /**
- * Protocol 59 (ADR 0174): the Muse Code CLI. `muse --version` prints `Muse Code 1.4.18 (1.4.18-R8587.1)`; it lists no
- * models from the command line, so only the version is read.
+ * `model/list`'s answer, as the host's stdout carries it: NDJSON JSON-RPC frames, the result being
+ * `{ models: ModelCatalogEntry[], providerId, profileId, source }` (ADR 0174, `muse schema generate-json-schema`).
+ * `modelId` is what `session/start` takes as `modelId`, `displayLabel` its name. A frame that isn't JSON, a
+ * notification, an error answer and a row without a usable id are all skipped; at most 60 rows, like every other CLI.
  */
-function detectMuse(run: Run): Promise<Probe> {
-  return detectWithModels(run, MUSE_BIN, /^(?:Muse Code\s+)?\d+\.\d+\.\d+\b/, () => []);
+export function parseMuseModels(output: string): CursorModelInfo[] {
+  const out: CursorModelInfo[] = [];
+  for (const line of output.split("\n")) {
+    const raw = line.trim();
+    if (!raw.startsWith("{")) continue;
+    let frame: unknown;
+    try {
+      frame = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    const models = (frame as { result?: { models?: unknown } } | null)?.result?.models;
+    if (!Array.isArray(models)) continue;
+    for (const model of models) {
+      const id = (model as { modelId?: unknown } | null)?.modelId;
+      if (typeof id !== "string" || !/^[a-z0-9][\w.:/-]{0,79}$/i.test(id) || out.some((x) => x.id === id)) continue;
+      const label = (model as { displayLabel?: unknown } | null)?.displayLabel;
+      out.push({
+        id,
+        ...(typeof label === "string" && label.trim() ? { label: label.trim().slice(0, 80) } : {}),
+      });
+      if (out.length >= 60) break;
+    }
+  }
+  return out;
+}
+
+/**
+ * Muse Code's models, read from the only place that has them: its MSP host. The CLI has no `models` subcommand and
+ * `muse schema` exports the protocol without a catalog, so `serve` on stdio with `initialize`, `initialized` (which
+ * unlocks every other method) and `model/list` — a **query**, so no `commandId`, unlike a command. The host is killed
+ * the moment the answer lands or the deadline passes, process group and all, or it would serve for ever.
+ *
+ * A build that ships no catalog answers `[]` under `source: "bundledCatalog"` (a supported configuration), and a
+ * signed-out host answers the same; empty is not a failure. The catalog read is the host's own (its build and its
+ * settings), under the runner's home: what a particular sign-in's provider would add is a turn's business, not a
+ * look's. No `META_API_KEY` goes in: a catalog needs no account, and a saved key must never answer in the person's
+ * place. Windows is skipped (the brain refuses it there too).
+ */
+export function museModelCatalog(
+  opts: { bin?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv } = {},
+): Promise<CursorModelInfo[]> {
+  if (process.platform === "win32") return Promise.resolve([]);
+  const env = { ...(opts.env ?? process.env) };
+  delete env.META_API_KEY;
+  env.MUSE_NO_AUTO_UPDATE = "1";
+  env.MUSE_CONTRIBUTOR_MODE = "0";
+  return new Promise((resolve) => {
+    let child: ChildProcess;
+    try {
+      child = spawn(resolveCommand(opts.bin ?? MUSE_BIN), ["serve", "--no-session-log"], {
+        env,
+        stdio: ["pipe", "pipe", "pipe"],
+        // Its own group, so the kill takes the host and anything it started with it.
+        detached: true,
+        windowsHide: true,
+      });
+    } catch {
+      resolve([]);
+      return;
+    }
+    // The host's stderr is never read: drained, or a full pipe would park it before it answers.
+    child.stderr?.resume();
+    let done = false;
+    let sentList = false;
+    let out = "";
+    let buffered = "";
+    const finish = (models: CursorModelInfo[]) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      killTree(child, "SIGKILL");
+      resolve(models);
+    };
+    const timer = setTimeout(() => finish(parseMuseModels(out)), opts.timeoutMs ?? MUSE_CATALOG_TIMEOUT_MS);
+    timer.unref?.();
+    const write = (frame: unknown) => {
+      try {
+        child.stdin?.write(`${JSON.stringify(frame)}\n`);
+      } catch {
+        finish(parseMuseModels(out));
+      }
+    };
+    const events = child as unknown as EventEmitter;
+    events.on("error", () => finish([]));
+    events.on("exit", () => finish(parseMuseModels(out)));
+    child.stdout?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk: string) => {
+      buffered += chunk;
+      let at = buffered.indexOf("\n");
+      while (at >= 0) {
+        const line = buffered.slice(0, at);
+        buffered = buffered.slice(at + 1);
+        out += `${line}\n`;
+        let frame: { id?: unknown; result?: { models?: unknown } } | null = null;
+        try {
+          frame = JSON.parse(line) as { id?: unknown; result?: { models?: unknown } } | null;
+        } catch {
+          // Not a frame (a log line on stdout): the parser skips it too.
+        }
+        if (Array.isArray(frame?.result?.models)) {
+          finish(parseMuseModels(out));
+          return;
+        }
+        // `initialize` answered: `initialized` unlocks the rest, and then the catalog is one query away.
+        if (frame?.id === 1 && !sentList) {
+          sentList = true;
+          write({ jsonrpc: "2.0", method: "initialized", params: {} });
+          write({ jsonrpc: "2.0", id: 2, method: "model/list", params: {} });
+        }
+        at = buffered.indexOf("\n");
+      }
+      // A host that floods stdout is no catalog: drop it instead of growing the look's memory.
+      if (out.length > 256 * 1024) finish([]);
+    });
+    write({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { clientInfo: { name: "agentes_chat", version: "1" } },
+    });
+  });
+}
+
+/** The catalog a Muse host serves; a test passes its own instead of starting one. */
+export type MuseCatalog = () => Promise<CursorModelInfo[]>;
+
+/**
+ * Protocol 59 (ADR 0174): the Muse Code CLI, its version and the models `model/list` returns. The catalog costs a host
+ * of its own, so it is read only once `--version` matched, and a host that fails, times out or answers nothing leaves
+ * the version standing: it says nothing about the CLI being there, so the look is not `unsure` (which would retry it
+ * every 30 s for nothing) and no other CLI's look is touched.
+ */
+async function detectMuse(run: Run, catalog: MuseCatalog): Promise<Probe> {
+  const r = await run(MUSE_BIN, ["--version"]);
+  if (r.error || r.status !== 0) return versionFailed(r);
+  const version = firstLine(r);
+  if (!MUSE_VERSION.test(version)) return {};
+  const models = await catalog().catch((): CursorModelInfo[] => []);
+  return { entry: { version, ...(models.length ? { models } : {}) } };
 }
 
 /**
@@ -539,12 +687,14 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
 /**
  * Every CLI looked up at once. One that couldn't tell keeps its entry from `prev` (the last good look), and the
  * whole look is `unsure`, so it is retried soon instead of cached. `strikes` counts each CLI's failing exits in a
- * row across looks (the caller keeps it).
+ * row across looks (the caller keeps it). `museCatalog` is Muse's catalog, which only an MSP host can answer (a test
+ * passes its own instead of starting one).
  */
 export async function detectExecutors(
   run: Run = defaultRun,
   prev: Executors = {},
   strikes: Partial<Record<string, number>> = {},
+  museCatalog: MuseCatalog = museModelCatalog,
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
   const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "muse"] as const;
@@ -555,7 +705,7 @@ export async function detectExecutors(
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),
     safe(() => detectAntigravity(run)),
-    safe(() => detectMuse(run)),
+    safe(() => detectMuse(run, museCatalog)),
   ]);
   const found: Executors = {};
   let unsure = false;

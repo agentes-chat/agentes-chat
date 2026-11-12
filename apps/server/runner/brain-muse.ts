@@ -28,6 +28,7 @@ import { killTree } from "./exec";
 import { MUSE_BIN, resolveCommand } from "./executors";
 import { CODEX_MCP_ENV, CODEX_MCP_SERVER } from "./mcp";
 import { resolveForAgent } from "./paths";
+import { resetFromWords } from "./plan-usage";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
 
@@ -44,6 +45,9 @@ import { agentSecrets } from "./secrets";
  * - Frames are NDJSON of JSON-RPC 2.0. `initialize` is answered and then the `initialized` notification unlocks
  *   every other method, which is why a handshake without it answers `notInitialized` to everything. Every command
  *   carries a **UUIDv7** `commandId`; a v4 is refused ("expected UUIDv7").
+ * - The turn ends at `turn/completed`, whose `terminal` is `completed | failed | cancelled` (an open enum) and whose
+ *   `error` carries the settled `{kind, message, retryable, quota?}` of a failure; the notification says the record
+ *   landed, not that the turn went well, so its status decides between `done` and an error.
  * - The session: our session → Muse's lives in `<runner home>/brain/muse-sessions.json`, per account. A stored one is
  *   resumed (`session/resume`), so the agent keeps its thread; a lost one starts a new session and the engine's
  *   context leads the prompt again, as every other brain does with a new session.
@@ -54,6 +58,13 @@ import { agentSecrets } from "./secrets";
  *   `approval/requested` for what its own policy doesn't match, and the turn decides with the command policy every
  *   brain follows and answers `approval/decide` with a `choiceId` the host offered. `allowAll`, which an unanswered
  *   turn needed, let every call through unseen. The sandbox, which is what actually contains the agent, stays on.
+ * - No `--trust-workspace`: measured against `muse serve` 1.4.18 (`--provider echo`), the flag alone loads nothing — a
+ *   session's workspace is declared on the wire (`session/start.workspaceRoots`), and this brain declares none, so
+ *   `session/started` answers `workspaceRoot: null` and a workspace's `.muse/hooks.json` never runs, flag or not. With
+ *   the flag *and* a declared root, a `SessionStart` hook in `.muse/hooks.json` ran and wrote outside the workspace
+ *   with the host's own rights; without the flag the same file was never read, and the turn still completed. This
+ *   brain needs nothing from the workspace (the engine's context leads the prompt), so the flag bought nothing and
+ *   armed a hole: a cloned repo must not reach a hook.
  * - Contributor mode is on for subscriptions by default; every host turns it off, or the workspace's code trains Meta.
  * - Refused rather than faked: a `chat` turn (no tool allow/deny list on this CLI) and Windows.
  */
@@ -61,6 +72,13 @@ import { agentSecrets } from "./secrets";
 const KILL_GRACE_MS = 5000;
 const INIT_TIMEOUT_MS = 30_000;
 const CLOSE_TIMEOUT_MS = 5000;
+/** A host that took a turn answers `turn/start` at once; one that doesn't is gone or wedged, not busy. */
+const TURN_START_TIMEOUT_MS = 60_000;
+/**
+ * The turn's outer bound, not its work budget: the host's own step limits end a real turn long before, and this only
+ * catches a host that will never speak again — a run (and a person) waiting on a process that is already dead inside.
+ */
+const TURN_DEADLINE_MS = 30 * 60_000;
 
 /** Muse's key variable: an account may carry one, and it must not answer for the sign-in. */
 export const MUSE_KEY_ENV = "META_API_KEY";
@@ -105,10 +123,12 @@ export function uuidv7(now = Date.now()): string {
 
 /**
  * The host's argv. The sandbox posture is decided here (the wire cannot change it); the approval mode is decided on
- * the wire, which is why no approval flag appears.
+ * the wire, which is why no approval flag appears. `--trust-workspace` (load the workspace's rules, skills and hooks)
+ * is deliberately absent: what it would load is a cloned repo's own `.muse/hooks.json`, which the host runs as itself
+ * and outside the shell sandbox, and this brain never declares a workspace root, so the flag loads nothing today.
  */
 export function museServeArgs(input: { profile?: CommandProfile } = {}): string[] {
-  return ["serve", "--trust-workspace", ...(input.profile === "plan" ? ["--disable-write", "--disable-shell"] : [])];
+  return ["serve", ...(input.profile === "plan" ? ["--disable-write", "--disable-shell"] : [])];
 }
 
 /** The host's environment: no key to answer in the person's place, no self-upgrade, no contributor mode. */
@@ -155,12 +175,67 @@ export function museSettings(input: { mcp: { token: string; url?: string }; mcpC
 const USAGE_LIMIT = /usage limit|allowance (?:is )?(?:exhausted|used up)|out of (?:allowance|credits)/i;
 export const MUSE_AUTH = /not logged in|signed out|unauthori[sz]ed|invalid api key|401/i;
 
-export function museProblem(problem: string, worked = false): CodexBrainEvent[] {
-  if (USAGE_LIMIT.test(problem)) return [{ type: "limit", ...(/reset/i.test(problem) ? { resetsAt: problem } : {}) }];
+/** A `quota.resetsAtMs` as the ISO time the engine's `limit` event carries, and nothing when it isn't one. */
+const isoAt = (ms: unknown) =>
+  typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : undefined;
+
+/**
+ * How a Muse turn that went wrong ends, as `codexProblem` and `opencodeProblem` do: a usage limit is `limit` and then
+ * `plan_limit` (both in `UNAVAILABLE_CODES`), a refused sign-in `not_logged_in`, anything else `muse_failed`. The
+ * typed `quota` detail the host settles on a failed turn is the signal; the words are the fallback for a host that
+ * sends none. `resetsAt` is a time or absent — never the sentence it was read from.
+ */
+export function museProblem(problem: string, worked = false, quota?: { resetsAtMs?: number }): CodexBrainEvent[] {
+  if (quota || USAGE_LIMIT.test(problem)) {
+    const resetsAt = isoAt(quota?.resetsAtMs) ?? resetFromWords(problem);
+    return [
+      { type: "limit", ...(resetsAt ? { resetsAt } : {}) },
+      { type: "error", code: "plan_limit", message: problem, worked },
+    ];
+  }
   if (MUSE_AUTH.test(problem)) return [{ type: "error", code: "not_logged_in", message: problem, retryable: true }];
   return [
     { type: "error", code: "muse_failed", message: problem, retryable: true, ...(worked ? { worked: true } : {}) },
   ];
+}
+
+/** What `turn/completed` said the turn ended as. */
+export type MuseTerminal = "completed" | "failed" | "cancelled";
+
+/** One turn's end, as its own terminal record states it. */
+export interface MuseTurnOutcome {
+  terminal: MuseTerminal;
+  /** The settled failure text (`error.message`, else `reason`), when the host gave one. */
+  message?: string;
+  /** The typed quota detail of the stopping failure: `resetsAtMs`, when present. */
+  quota?: { resetsAtMs?: number };
+}
+
+/**
+ * `turn/completed` params → what the turn ended as. `terminal` is the field (`status` the older spelling); the enum is
+ * open, so a terminal this code doesn't know is a failure, never a success, and a `failed` with no words still names
+ * the `error.kind`. No terminal and no error at all: the host said the record landed and nothing else, which is the
+ * `completed` the notification's own name promises.
+ */
+export function museTurnOutcome(params: Record<string, unknown>): MuseTurnOutcome {
+  const said = (str(params.terminal) || str(params.status)).trim().toLowerCase();
+  const error = isRecord(params.error) ? params.error : undefined;
+  const message = str(error?.message) || str(params.reason);
+  const resetsAtMs = isRecord(error?.quota) ? error.quota.resetsAtMs : undefined;
+  const terminal: MuseTerminal =
+    said === "completed"
+      ? "completed"
+      : said === "cancelled" || said === "canceled"
+        ? "cancelled"
+        : said || error
+          ? "failed"
+          : "completed";
+  const kind = str(error?.kind);
+  return {
+    terminal,
+    ...(message ? { message } : kind ? { message: `The Muse turn failed (${kind}).` } : {}),
+    ...(isoAt(resetsAtMs) ? { quota: { resetsAtMs: Number(resetsAtMs) } } : {}),
+  };
 }
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -205,6 +280,9 @@ export interface MuseApprovalVerdict {
  * and every push are refused; what the policy can't read is the profile's call — a `plan` turn refuses it, and a
  * `work` turn approves it once. That last one is the only place this is wider than a person's card, and it is what
  * the turn was asked for: `plan` reads, `work` works.
+ *
+ * The folders are the turn's and the ones the agent was granted (`ctx.grants`), as the delegated tools build them
+ * (`[...cwd, folder, ...grants]`): a grant is a folder the person handed over, and the same write is allowed there.
  */
 export function museApprovalVerdict(input: {
   subject: MuseApprovalSubject;
@@ -212,10 +290,11 @@ export function museApprovalVerdict(input: {
   profile: CommandProfile;
   home?: string;
   runnerHome?: string;
+  grants?: readonly string[];
 }): MuseApprovalVerdict {
   const scope: CommandScope = {
     cwd: input.cwd,
-    folders: [input.cwd],
+    folders: [...new Set([input.cwd, ...(input.grants ?? [])])],
     ...(input.home ? { home: input.home } : {}),
     ...(input.runnerHome ? { runnerHome: input.runnerHome } : {}),
   };
@@ -290,6 +369,8 @@ function offersOf(params: Record<string, unknown>): MuseApprovalChoice[] {
 export class MuseEventMapper {
   private readonly items = new Map<string, { name: string; args: unknown }>();
   usage = { input: 0, output: 0, cacheRead: 0, model: undefined as string | undefined };
+  /** The turn called a tool: a failure after that loses work the API couldn't see, so a retry is the person's call. */
+  worked = false;
 
   constructor(private readonly opts: { model?: string; redact?: (text: string) => string } = {}) {}
 
@@ -314,6 +395,7 @@ export class MuseEventMapper {
         const name = this.clean(str(item.tool) || "tool");
         if (method === "item/started") {
           // `args` is model-authored JSON that may still be incomplete: the raw string is kept, never a failure.
+          this.worked = true;
           const raw = str(item.args);
           let parsed: unknown = raw;
           if (raw) {
@@ -344,8 +426,11 @@ export class MuseEventMapper {
         ];
       }
       case "session/tokenUsage": {
-        this.usage.input += num(p.promptTokens);
-        this.usage.output += num(p.outputTokens);
+        // The wire carries `promptTokens` (counted once) and the raw counters under `usage`; `outputTokens` is only
+        // ever the raw one, so it is read there — a host that puts it on top too is read either way.
+        const raw = isRecord(p.usage) ? p.usage : {};
+        this.usage.input += num(p.promptTokens) || num(raw.inputTokens);
+        this.usage.output += num(p.outputTokens) || num(raw.outputTokens);
         const cumulative = isRecord(p.cumulative) ? p.cumulative : {};
         this.usage.cacheRead += num(cumulative.cacheReadTokens);
         if (!this.usage.model && typeof p.modelId === "string") this.usage.model = p.modelId;
@@ -375,6 +460,17 @@ export class MuseEventMapper {
 }
 
 type Reply = { result?: Record<string, unknown>; error?: { code: number; message: string } };
+
+/** A request the host never answered: named so the turn can say which one, instead of "timed out". */
+export class MuseTimeout extends Error {
+  constructor(
+    readonly method: string,
+    readonly ms: number,
+  ) {
+    super(`no reply to ${method} within ${ms >= 1000 ? `${Math.round(ms / 1000)}s` : `${ms}ms`}`);
+    this.name = "MuseTimeout";
+  }
+}
 
 /** A `muse serve` host: NDJSON frames on stdio, one request table, notifications routed out. */
 export class MuseHost {
@@ -445,7 +541,7 @@ export class MuseHost {
       const timer = timeoutMs
         ? setTimeout(() => {
             this.waiting.delete(id);
-            reject(new Error(`${method} timed out`));
+            reject(new MuseTimeout(method, timeoutMs));
           }, timeoutMs)
         : undefined;
       this.waiting.set(id, (reply) => {
@@ -497,6 +593,8 @@ export interface MuseTurnInput {
   account?: { id: string; home: string; key?: string };
   profile?: CommandProfile;
   chat?: boolean;
+  /** Folders the agent was granted: writes there are the person's, and the approval policy reads them as its own. */
+  grants?: readonly string[];
 }
 
 export interface MuseTurnOptions {
@@ -512,6 +610,9 @@ export interface MuseTurnOptions {
   bin?: string;
   spawn?: Spawn;
   platform?: NodeJS.Platform;
+  /** Tests: how long `turn/start` may go unanswered, and how long the whole turn may live. */
+  turnStartMs?: number;
+  deadlineMs?: number;
 }
 
 /** The turn's outcome, once its host is gone. */
@@ -590,6 +691,8 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   let finished = false;
   let missingHost = false;
   let failure: string | undefined;
+  /** What the host said the turn ended as, read the moment `turn/completed` arrives — before its `done()`. */
+  let ended: MuseTurnOutcome | undefined;
   let sessionId: string | undefined;
   let done: () => void = () => undefined;
   const turnOver = new Promise<void>((resolve) => {
@@ -598,6 +701,9 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
 
   const host = new MuseHost(child, (method, params) => {
     if (method === "turn/completed") {
+      // The status is read here, not after `turnOver` resolves: the notification also resolves it, and a failed or
+      // cancelled turn would otherwise be decided as the success its `done` reports.
+      ended = museTurnOutcome(params);
       finished = true;
       done();
       return;
@@ -619,6 +725,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
         profile,
         ...(home ? { home } : {}),
         runnerHome: opts.runnerHome,
+        ...(input.grants?.length ? { grants: input.grants } : {}),
       });
       // Never a decision of our own: the narrowest offer that says this, else its own refusal, so the host stops
       // waiting; when not even a refusal was offered the ask is left to the host.
@@ -673,6 +780,18 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   if (opts.signal.aborted) abort();
   else opts.signal.addEventListener("abort", abort, { once: true });
 
+  // A host that takes the turn and then goes quiet would hold the run for as long as it lives: the deadline closes it
+  // and says so, instead of a thread (and a person) waiting on a process that will never speak again.
+  const deadlineMs = opts.deadlineMs ?? TURN_DEADLINE_MS;
+  const deadline = setTimeout(() => {
+    if (finished) return;
+    finished = true;
+    const span = deadlineMs >= 60_000 ? `${Math.round(deadlineMs / 60_000)}-minute` : `${deadlineMs}ms`;
+    failure = `The Muse turn ran past its ${span} deadline, and its host was closed.`;
+    killTree(child, "SIGKILL");
+    done();
+  }, deadlineMs);
+
   try {
     await host.request("initialize", { clientInfo: { name: "agentes_chat", version: "1" } }, INIT_TIMEOUT_MS);
     host.notify("initialized");
@@ -707,14 +826,25 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       : input.system.trim()
         ? `${input.system.trim()}\n\n${input.prompt}`
         : input.prompt;
-    await host.request("turn/start", { commandId: uuidv7(), sessionId, input: [{ type: "text", text: prompt }] });
+    await host.request(
+      "turn/start",
+      { commandId: uuidv7(), sessionId, input: [{ type: "text", text: prompt }] },
+      opts.turnStartMs ?? TURN_START_TIMEOUT_MS,
+    );
   } catch (err) {
     if (!finished) {
-      const message = err instanceof Error ? err.message : String(err);
+      // A host that never answered a request we waited on is not a host that refused: it is gone or wedged, and the
+      // error says which request, so the person reads what happened instead of "timed out".
+      const message =
+        err instanceof MuseTimeout
+          ? `The Muse host stopped answering (${err.message}), so the turn was closed.`
+          : err instanceof Error
+            ? err.message
+            : String(err);
       // A host that refused the handshake (no sign-in, another version) says why on stderr.
       const said = clean(host.stderr.trim()) || message;
       await host.close().catch(() => undefined);
-      opts.signal.removeEventListener("abort", abort);
+      clearTimeout(deadline);
       const missing = /ENOENT|not installed/i.test(said);
       opts.emit({
         ...museProblem(missing ? "Muse Code's CLI is not installed on this computer." : said)[0],
@@ -722,15 +852,25 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       } as CodexBrainEvent);
       return;
     }
+  } finally {
+    opts.signal.removeEventListener("abort", abort);
   }
 
   await turnOver;
-  opts.signal.removeEventListener("abort", abort);
+  clearTimeout(deadline);
   await host.close().catch(() => undefined);
   if (opts.signal.aborted) return fail("canceled", "The turn was canceled.");
   if (missingHost) return fail("muse_missing", "Muse Code's CLI is not installed on this computer.", true);
   if (failure) {
     for (const event of museProblem(failure)) opts.emit(event);
+    return;
+  }
+  // The notification said the record landed; its own status says how the turn went, and only `completed` is a `done`.
+  if (ended?.terminal === "cancelled")
+    return fail("canceled", ended.message ?? "The Muse host ended the turn as cancelled.");
+  if (ended?.terminal === "failed") {
+    for (const event of museProblem(ended.message ?? "The Muse turn failed.", mapper.worked, ended.quota))
+      opts.emit(event);
     return;
   }
   for (const event of mapper.finish(input.sessionId)) opts.emit(event);
@@ -802,6 +942,7 @@ export async function handleMuseBrainTurn(
       ...(account ? { account } : {}),
       profile: codexProfileOf(req),
       ...(req.permissions?.mode === "chat" ? { chat: true } : {}),
+      ...(ctx.grants?.length ? { grants: ctx.grants } : {}),
     },
     {
       sessions,
