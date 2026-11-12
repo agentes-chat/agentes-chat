@@ -1475,6 +1475,14 @@ test("the desktops of agents this computer no longer serves stop; the others go 
   expect(t.desktops.status(ops).running).toBe(false);
 });
 
+test("a desktop still starting when the switch goes off stops as soon as it is up", async () => {
+  const t = setup();
+  const starting = t.desktops.ensure(dev);
+  await t.desktops.stopAll();
+  await starting;
+  expect(t.desktops.status(dev).running).toBe(false);
+});
+
 test("where the memory isn't known there is always room", async () => {
   const t = setup({ memAvailable: () => null });
   for (const agent of [dev, ops]) expect((await t.desktops.ensure(agent)).started).toBe(true);

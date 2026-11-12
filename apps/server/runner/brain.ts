@@ -1931,6 +1931,8 @@ export class BrainManager {
     // A route on this sign-in stops first: two processes on one sign-in race on its refresh token. Kept right
     // before the process starts, since a route may begin during any await before it.
     await yieldRoute("claude_code", ctx.accountHome);
+    // The runner began to stop during the awaits since the turn came in: `close` wouldn't reach a process started now.
+    if (this.closed) return errorEvent("runner_stopping", "The runner is stopping.", true);
     const sig = this.signature(cwd, req, ctx);
     let live = this.live.get(key);
     // A turn Claude Code runs by itself there (or one due): its output would read as this turn's. Wait for

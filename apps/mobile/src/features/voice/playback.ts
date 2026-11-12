@@ -18,6 +18,8 @@ const TICK_MS = 50;
 let player: AudioPlayer | null = null;
 let now: PlayRequest | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
+/** Goes up with every stop (each start begins with one): a start that waited sees it was overtaken. */
+let turn = 0;
 const listeners = new Set<() => void>();
 const say = () => {
   for (const listener of listeners) listener();
@@ -37,6 +39,7 @@ const fraction = (p: AudioPlayer, durationMs: number) => {
 };
 
 export function stopPlayback() {
+  turn++;
   if (timer) clearInterval(timer);
   timer = null;
   player?.pause();
@@ -47,12 +50,16 @@ export function stopPlayback() {
 
 export async function startPlayback(request: PlayRequest) {
   stopPlayback();
+  const mine = turn;
   await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, interruptionMode: "doNotMix" });
+  // Stopped, or another one started, while this waited: that one has the player (and the one timer).
+  if (mine !== turn) return;
   const p = player ?? createAudioPlayer(null, { updateInterval: 100 });
   player = p;
   p.replace(request.source);
   p.setPlaybackRate(request.speed);
   if (request.from > 0) await p.seekTo((request.from * request.durationMs) / 1000);
+  if (mine !== turn) return;
   p.play();
   now = request;
   say();

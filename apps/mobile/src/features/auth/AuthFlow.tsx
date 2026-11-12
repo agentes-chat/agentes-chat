@@ -152,8 +152,12 @@ export function AuthFlow({
   };
 
   /** Who is this e-mail: the next step follows from the server's answer. */
+  // One at a time: the offline retry asks again every few seconds, and a late answer to an earlier ask would change
+  // the step and empty the password already being typed.
+  const looking = useRef(false);
   const lookUp = async (value = email) => {
-    if (!isEmail(value)) return;
+    if (!isEmail(value) || looking.current) return;
+    looking.current = true;
     setPending(true);
     setError(null);
     try {
@@ -173,6 +177,7 @@ export function AuthFlow({
       if (e instanceof TypeError && /network|fetch/i.test(e.message)) setOffline(true);
       else if (!(e instanceof CheckCancelled)) setError(lookUpFailureText(t, e));
     } finally {
+      looking.current = false;
       setPending(false);
     }
   };

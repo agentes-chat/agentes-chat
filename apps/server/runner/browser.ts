@@ -1665,6 +1665,10 @@ export class BrowserManager {
   private closed = false;
   /** Every `closeAll` still running; a new session starts only after them. */
   private closing: Promise<void> = Promise.resolve();
+  /** Goes up with every `closeAll`: a session that was opening meanwhile isn't kept (its Chrome would outlive it). */
+  private closes = 0;
+  /** Goes up each time the server's connection drops (`stopStreams`): a stream opening for the old one doesn't stay. */
+  private streamTurn = 0;
   /** `<runner home>/browser/chromes.json`: the Chromes this runner home started (pid and profile). */
   private readonly pidFile: string;
   /** What each running Chrome sends and receives (protocol 23). */
@@ -2448,6 +2452,7 @@ export class BrowserManager {
   }
 
   private async openSession(agentId: string, agent: AgentScope, folder: string): Promise<Session> {
+    const closes = this.closes;
     const live = this.liveSessions();
     if (live.length >= this.maxSessions) {
       throw new RunnerError(
@@ -2479,6 +2484,10 @@ export class BrowserManager {
       aliveAt: null,
       crashes: new Map(),
     };
+    // Every browser closed while this one opened (the switch went off, the runner stops): it doesn't open after all.
+    if (closes !== this.closes) {
+      throw new RunnerError("browser_unavailable", "The browser was closed while it opened. Try again.");
+    }
     this.sessions.set(agentId, session);
     this.sweepTimer ??= setInterval(() => void this.sweep(), SWEEP_MS);
     (this.sweepTimer as { unref?: () => void }).unref?.();
@@ -3620,6 +3629,7 @@ export class BrowserManager {
 
   /** Every browser of this runner home closes (the switch went off, the runner stops, or it just started). */
   async closeAll() {
+    this.closes++;
     const sessions = [...this.sessions.values()];
     for (const s of sessions) this.endStream(s, "closed");
     this.sessions.clear();
@@ -3656,6 +3666,7 @@ export class BrowserManager {
     const session = this.sessions.get(String(agent.id ?? ""));
     if (!session) throw new RunnerError("browser_closed", "The agent's browser isn't open");
     session.lastUsed = this.now();
+    const turn = this.streamTurn;
     // Before the wait: opening a stream queues behind the very command this stops.
     if (mode === "control") session.acting?.abort();
     // One socket per session: a start while another opens waits for it, then only changes the mode.
@@ -3675,7 +3686,7 @@ export class BrowserManager {
       void this.firstFrame(session, session.stream);
       return { mode };
     }
-    const opening = this.openStream(agent, session, mode);
+    const opening = this.openStream(agent, session, mode, turn);
     session.streamOpening = opening;
     try {
       await opening;
@@ -3685,7 +3696,7 @@ export class BrowserManager {
     return { mode };
   }
 
-  private async openStream(agent: AgentScope, session: Session, mode: BrowserStreamMode): Promise<void> {
+  private async openStream(agent: AgentScope, session: Session, mode: BrowserStreamMode, turn: number): Promise<void> {
     const port = await this.enqueue(session, async () => {
       // Closed anyway while a person's help is asked for (Chrome crashed or was quit, or `agent-browser` let go of
       // it): open again where it was, when that page is still on the agent's allowed sites.
@@ -3750,6 +3761,12 @@ export class BrowserManager {
         reject(new RunnerError("internal", "The browser's live view didn't open"));
       };
     });
+    // The server's connection dropped while this opened (`stopStreams` found no stream yet): its frames have nowhere
+    // to go, and a stream kept here would hold the browser open. The server asks again when it is back.
+    if (turn !== this.streamTurn) {
+      socket.close();
+      throw new RunnerError("browser_closed", "The live view was stopped while it opened");
+    }
     // Never two sockets: one left over (it shouldn't be) is closed quietly.
     const old = session.stream;
     if (old) {
@@ -3979,6 +3996,7 @@ export class BrowserManager {
 
   /** The connection to the server dropped: frames have nowhere to go; the server asks again when it is back. */
   stopStreams() {
+    this.streamTurn++;
     for (const s of this.sessions.values()) {
       if (!s.stream) continue;
       s.stream.closing = true;

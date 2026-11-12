@@ -156,7 +156,11 @@ function HandoffAsk({
   };
 
   // `Button` gives the press's haptic: none more here, or a press taps twice.
+  // One at a time: a second tap while it takes the control would push the screen twice.
+  const taking = useRef(false);
   const take = async () => {
+    if (taking.current) return;
+    taking.current = true;
     onOpened(true);
     try {
       await actions.takeControl(h.id);
@@ -164,6 +168,8 @@ function HandoffAsk({
       if (opensScreen) router.push(`/computer/${h.agentId}`);
     } catch (err) {
       failed(err);
+    } finally {
+      taking.current = false;
     }
   };
   // A push or the inbox opened this request: it takes the control once (first one wins), when it is the person's.
