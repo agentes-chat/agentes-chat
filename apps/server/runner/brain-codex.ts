@@ -693,9 +693,6 @@ const codexVersion = cachedCodexVersion();
 export async function runCodexTurn(input: CodexTurnInput, opts: CodexTurnOptions): Promise<void> {
   const fail = (code: string, message: string, retryable?: boolean) =>
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
-  if ((opts.platform ?? process.platform) === "win32") {
-    return fail("unsupported", "The Codex brain isn't supported on Windows yet.");
-  }
   const version = await (opts.codexVersion ?? codexVersion)();
   if (version === null)
     return fail("codex_failed", "Couldn't check Codex on this computer (`codex --version` didn't answer).", true);
@@ -779,7 +776,8 @@ async function runCodexExec(input: CodexTurnInput, opts: CodexTurnOptions): Prom
       cwd: input.cwd,
       env,
       stdio: ["pipe", "pipe", "pipe"],
-      detached: true,
+      detached: (opts.platform ?? process.platform) !== "win32",
+      windowsHide: true,
     });
   } catch (err) {
     return fail("codex_failed", err instanceof Error ? err.message : String(err));

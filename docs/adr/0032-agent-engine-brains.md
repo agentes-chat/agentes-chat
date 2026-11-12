@@ -233,3 +233,9 @@ The agent's "Quem pensa" was a form: a select of what pays, a card under it with
 - **Opened on a screen.** A link can open it past its first screen, which "back" leads to: `?sec=brain&brain=model` (or `more`, `switch`) on the agent's page. The notice that a model left its plan's list ("Escolher outro modelo") opens it on the model. A screen the person can't change opens the first one instead.
 - **Motion.** Screens slide in from the side they come from, the dialog's height glides between them, bars fill as they show, a new mark comes in where the last stood and the trail lights after a switch; with reduced motion nothing moves.
 - The phone's "Pensa com" is unchanged.
+
+## Addendum (2026-11-12): native Windows Codex turns
+
+The native Windows runner may use the computer's installed Codex CLI for both `exec` turns and the existing app-server mode. The version and account checks still apply; Windows alone no longer refuses a turn as `unsupported`.
+
+`codex exec` starts with `windowsHide` and without a detached process group on Windows. POSIX keeps its process group. Cancellation uses the runner's existing `killTree`, including Windows process-tree termination. The account's `CODEX_HOME`, sandbox, permission profile and the right hand's restricted tools are unchanged. This does not add a Windows desktop or terminal.
