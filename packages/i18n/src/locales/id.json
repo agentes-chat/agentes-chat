@@ -17838,6 +17838,7 @@
     "provider": "Penyedia keputusan",
     "jevManaged": "Pemilik server mengelola pengaturan Jev.",
     "otherModel": "Model lain…",
-    "visionOff": "Nonaktif"
+    "visionOff": "Nonaktif",
+    "about": "Model ini membantu memilih siapa yang menjawab, menata memori, dan memahami tangkapan layar."
   }
 }

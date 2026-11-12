@@ -7,6 +7,8 @@ workspace or real API key was used, and no paid provider call was made during de
 ## Flow exercised in the browser
 
 1. Open Settings → AI and usage → Decision models with an existing workspace OpenRouter account.
+   Verify one section contains the provider choice, a shared explanation, connection settings, and
+   the current routing status. The shared explanation appears for both Jev and OpenRouter.
 2. Confirm **Jev** is selected by default and OpenRouter fields are collapsed. Choose **OpenRouter**
    to expand its branded provider card, account picker and model controls. Choose Jev or Kev for text,
    or choose **Other model…** and enter another compatible model ID. For vision, choose Jev, another

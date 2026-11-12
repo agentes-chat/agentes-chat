@@ -9655,6 +9655,7 @@ export const ptBR = {
     discard: "Descartar",
   },
   decisions: {
+    about: "Esses modelos ajudam a escolher quem responde, organizar a memória e entender capturas de tela.",
     otherModel: "Outro modelo…",
     visionOff: "Desativado",
     provider: "Provedor de decisões",

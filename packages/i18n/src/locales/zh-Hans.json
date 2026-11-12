@@ -17912,6 +17912,7 @@
     "provider": "决策服务提供方",
     "jevManaged": "Jev 由服务器所有者配置和管理。",
     "otherModel": "其他模型…",
-    "visionOff": "关闭"
+    "visionOff": "关闭",
+    "about": "这些模型帮助选择由谁回复、整理记忆并理解屏幕截图。"
   }
 }

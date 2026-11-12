@@ -18942,6 +18942,7 @@
     "provider": "Fornitore delle decisioni",
     "jevManaged": "Il proprietario del server gestisce la configurazione di Jev.",
     "otherModel": "Altro modello…",
-    "visionOff": "Disattivato"
+    "visionOff": "Disattivato",
+    "about": "Questi modelli aiutano a scegliere chi risponde, organizzare la memoria e comprendere le schermate."
   }
 }

@@ -18938,6 +18938,7 @@
     "provider": "Fournisseur de décisions",
     "jevManaged": "Le propriétaire du serveur gère la configuration de Jev.",
     "otherModel": "Autre modèle…",
-    "visionOff": "Désactivé"
+    "visionOff": "Désactivé",
+    "about": "Ces modèles aident à choisir qui répond, à organiser la mémoire et à comprendre les captures d’écran."
   }
 }

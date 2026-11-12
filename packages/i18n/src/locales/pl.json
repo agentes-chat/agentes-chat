@@ -19425,6 +19425,7 @@
     "provider": "Dostawca decyzji",
     "jevManaged": "Właściciel serwera zarządza konfiguracją Jev.",
     "otherModel": "Inny model…",
-    "visionOff": "Wyłączone"
+    "visionOff": "Wyłączone",
+    "about": "Te modele pomagają wybrać, kto odpowiada, porządkować pamięć i rozumieć zrzuty ekranu."
   }
 }

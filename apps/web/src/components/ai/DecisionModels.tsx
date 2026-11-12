@@ -85,12 +85,9 @@ function DecisionForm({ view, accounts, jev }: { view: DecisionSettingsView; acc
       id="decision-models"
       tabIndex={-1}
       className="jev"
-      aria-labelledby="decision-models-title"
+      aria-label={t("decisions.provider")}
       aria-busy={save.isPending || undefined}
     >
-      <h3 id="decision-models-title" className="jev__title">
-        {t("decisions.title")}
-      </h3>
       <Field label={t("decisions.provider")} group>
         <Segmented<"jev" | "openrouter">
           value={provider}
@@ -103,6 +100,7 @@ function DecisionForm({ view, accounts, jev }: { view: DecisionSettingsView; acc
           ]}
         />
       </Field>
+      <p className="who-line">{t("decisions.about")}</p>
       {provider === "jev" ? (
         (jev ?? <SettingNote icon="info">{t("decisions.jevManaged")}</SettingNote>)
       ) : (
@@ -114,7 +112,6 @@ function DecisionForm({ view, accounts, jev }: { view: DecisionSettingsView; acc
             <span className="ac-mediarow__head">
               <b>OpenRouter</b>
             </span>
-            <span className="ac-mediarow__body small muted">{t("decisions.description")}</span>
           </div>
           <div className="ac-list__row jev__body">
             {view.settings && (

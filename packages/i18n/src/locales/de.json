@@ -18296,6 +18296,7 @@
     "provider": "Anbieter für Entscheidungen",
     "jevManaged": "Die Serverkonfiguration von Jev verwaltet der Serverinhaber.",
     "otherModel": "Anderes Modell…",
-    "visionOff": "Aus"
+    "visionOff": "Aus",
+    "about": "Diese Modelle helfen dabei, Antworten zuzuweisen, Erinnerungen zu ordnen und Bildschirmaufnahmen zu verstehen."
   }
 }

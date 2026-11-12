@@ -190,8 +190,8 @@ export function JevSteps({
 }
 
 /**
- * Settings › AI accounts, after Provider keys: who picks the agents for a message nobody mentioned, for admins, and
- * under it Jev's key for the installation's owner on a self-hosted server (the API answers null to everyone else).
+ * Decision models share one explanation; each provider shows its connection settings, followed by routing status.
+ * The installation's Jev key is visible only to its owner (the API answers null to everyone else).
  */
 export function WhoPicksSection() {
   const { t } = useTranslation();
@@ -208,25 +208,12 @@ export function WhoPicksSection() {
       <CardHeader
         id="sec-routing"
         icon="agent"
-        title={t("routing.title")}
+        title={t("decisions.title")}
         action={<HelpLink slug="who-answers">{t("routing.how")}</HelpLink>}
       />
+      {admin ? <DecisionModels jev={jev.data ? <JevCard /> : null} /> : jev.data && <JevCard />}
       {line && <p className="who-line">{t(line.key, line.params)}</p>}
       {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
-      {admin ? (
-        <DecisionModels
-          jev={
-            jev.data ? (
-              <>
-                <p className="small muted">{t("decisions.serverDefault")}</p>
-                <JevCard routing={status.data?.routing?.by} />
-              </>
-            ) : null
-          }
-        />
-      ) : (
-        jev.data && <JevCard routing={status.data?.routing?.by} />
-      )}
     </Card>
   );
 }
@@ -241,8 +228,8 @@ const CHIP: Record<
   no_credit: { icon: "alert", tone: "waiting", word: "no_credit" },
 };
 
-/** Jev's key: why it helps and the steps while there's none; the key's last 4, this month's use and its state once set. */
-function JevCard({ routing }: { routing?: AiRouting["by"] }) {
+/** The server's Jev connection: setup steps, or the saved key's hint, usage and state. */
+function JevCard() {
   const { t, i18n } = useTranslation();
   // Read here rather than handed down: a save or a removal shows its key at once, so focus lands on what stays.
   const view = useJevKey().data;
@@ -369,11 +356,10 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
               {t(`jev.state.${chip.word}`)}
             </Chip>
           </span>
-          <span className="ac-mediarow__body small muted">{t("jev.lead")}</span>
+          <span className="ac-mediarow__body small muted">{t("decisions.serverDefault")}</span>
         </div>
         {view.source === null ? (
           <div className="ac-list__row jev__body">
-            <JevWhy routing={routing} />
             {steps ? (
               stepsOf(false)
             ) : (

@@ -18225,6 +18225,7 @@
     "provider": "Karar sağlayıcısı",
     "jevManaged": "Jev ayarlarını sunucu sahibi yönetir.",
     "otherModel": "Başka model…",
-    "visionOff": "Kapalı"
+    "visionOff": "Kapalı",
+    "about": "Bu modeller kimin yanıt vereceğini seçmeye, belleği düzenlemeye ve ekran görüntülerini anlamaya yardımcı olur."
   }
 }

@@ -18795,6 +18795,7 @@
     "provider": "Proveedor de decisiones",
     "jevManaged": "El propietario del servidor gestiona la configuración de Jev.",
     "otherModel": "Otro modelo…",
-    "visionOff": "Desactivado"
+    "visionOff": "Desactivado",
+    "about": "Estos modelos ayudan a elegir quién responde, organizar la memoria y entender capturas de pantalla."
   }
 }

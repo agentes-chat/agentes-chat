@@ -9634,6 +9634,7 @@ export const en = {
     discard: "Discard",
   },
   decisions: {
+    about: "These models help choose who replies, organize memory, and understand screenshots.",
     otherModel: "Other model…",
     visionOff: "Off",
     provider: "Decision provider",

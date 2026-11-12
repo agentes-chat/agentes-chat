@@ -44262,5 +44262,8 @@
   },
   "decisions.visionOff": {
     "value": "Off"
+  },
+  "decisions.about": {
+    "value": "These models help choose who replies, organize memory, and understand screenshots."
   }
 }

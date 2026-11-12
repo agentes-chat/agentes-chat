@@ -86,7 +86,11 @@ test("failed save preserves the draft and saved setup; screenshots can be disabl
 test("no account: connects through existing settings, with no key or Docker configuration requested", async () => {
   await open({ credentials: [] });
   await choose("OpenRouter");
-  expect(card().getByRole("link").getAttribute("href")).toBe("#sec-keys");
+  expect(
+    card()
+      .getByRole("link", { name: "Connect an OpenRouter API account above to use decision models." })
+      .getAttribute("href"),
+  ).toBe("#sec-keys");
   expect(card().queryByRole("button", { name: "Test and save" })).toBeNull();
 });
 
@@ -124,7 +128,7 @@ test("the Jev deep link focuses the selected provider without resetting OpenRout
   const result = await renderApp("/?open=jev", { api: createFakeApi(state) });
   await settle(6);
   await showIn(result.services, "en");
-  expect(document.activeElement).toBe(screen().getByRole("region", { name: "Decision models" }));
+  expect(document.activeElement).toBe(screen().getByRole("region", { name: "Decision provider" }));
   expect(card().getByRole("radio", { name: "OpenRouter" }).getAttribute("aria-checked")).toBe("true");
   expect(state.calls.filter((c) => c.method === "system.saveDecisions")).toHaveLength(0);
 });
@@ -174,4 +178,13 @@ test("saved unlisted models stay editable and are never replaced with a preset",
   );
   await click("Test and save");
   expect(state.decisions?.settings).toEqual(settings);
+});
+
+test("one shared explanation covers both providers", async () => {
+  await open();
+  const about = "These models help choose who replies, organize memory, and understand screenshots.";
+  expect(card().getAllByText(about)).toHaveLength(1);
+  await choose("OpenRouter");
+  expect(card().getAllByText(about)).toHaveLength(1);
+  expect(card().queryByText("Helps your agents work as a team.")).toBeNull();
 });
