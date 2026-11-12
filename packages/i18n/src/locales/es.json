@@ -12748,7 +12748,8 @@
     "missing_many": "Faltan {{count}} decisiones. Si continúas, se aplican las sugerencias.",
     "missing_other": "Faltan {{count}} decisiones. Si continúas, se aplican las sugerencias.",
     "later": "Puedes cambiar todo esto después.",
-    "sensitive": "Acción sensible: solo puede pedir aprobación o estar desactivada.",
+    "sensitive": "Acción sensible: por defecto pide aprobación.",
+    "freedWarning": "El servicio la marca como arriesgada. En este nivel los agentes la usan sin preguntar a nadie.",
     "reason": {
       "reads_only": "solo mira números, no cambia nada",
       "changes_undoable": "no borra nada ni gasta dinero",

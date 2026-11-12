@@ -442,7 +442,7 @@ test("catalog: with its OAuth app configured, our Linear connector replaces the 
   expect(linear[0]).toMatchObject({ kind: "catalog", category: "product", iconUrl: "/connectors/linear.svg" });
 });
 
-test("connector tools API: classified on listing (judge for ambiguous names), sensitive ones can't be freed", async () => {
+test("connector tools API: classified on listing (judge for ambiguous names), sensitive ones freed only to write", async () => {
   const tools = [
     { name: "campaign_list", inputSchema: { type: "object" } },
     { name: "campaign_delete", inputSchema: { type: "object" } },
@@ -497,8 +497,10 @@ test("connector tools API: classified on listing (judge for ambiguous names), se
       method: "PUT",
       json: { label: "Ads", tools: [{ name, access, label: name }] },
     });
+  // Never as a read; as a write it is freed (ADR 0174), and asking again un-frees it.
   expect((await save("read")).status).toBe(400);
-  expect((await save("write")).status).toBe(400);
+  const freed = (await (await save("write")).json()) as { tools: { name: string; freed: boolean }[] };
+  expect(freed.tools.find((x) => x.name === "campaign_delete")?.freed).toBe(true);
   expect((await save("off")).status).toBe(200);
   const ok = (await (await save("approval", "pixel_track")).json()) as { tools: { name: string; pending: boolean }[] };
   expect(ok.tools.find((x) => x.name === "pixel_track")?.pending).toBe(false);

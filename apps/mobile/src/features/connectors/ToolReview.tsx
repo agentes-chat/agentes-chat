@@ -8,7 +8,7 @@ import {
   useMailAction,
 } from "@agenteschat/client";
 import { mailActionsChanged, mailActionsFrom, mailReviewTools } from "@agenteschat/client/lib/mail";
-import { type ReviewTool, reviewDecisions, reviewToolsOf } from "@agenteschat/client/lib/tool-review";
+import { type ReviewTool, reviewDecisions, reviewToolsOf, runsUnasked } from "@agenteschat/client/lib/tool-review";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
@@ -336,7 +336,11 @@ function ToolList({
       key={tool.name}
       label={tool.label}
       labelLines={2}
-      {...(tech ? { sub: tool.name } : {})}
+      {...(review && runsUnasked(tool, levelOf(tool))
+        ? { sub: t("toolReview.freedWarning"), subLines: 3 }
+        : tech
+          ? { sub: tool.name }
+          : {})}
       value={t(`toolReview.short.${levelOf(tool)}`)}
       {...(suggested ? { valueLeading: <Icon name="wait" size={13} color={c.amber} /> } : {})}
       chevron={Boolean(review)}

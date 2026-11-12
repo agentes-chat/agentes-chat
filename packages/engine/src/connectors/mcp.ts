@@ -33,6 +33,7 @@ import {
   classifiedTools,
   composioActions,
   customScope,
+  freedByPerson,
   isCustom,
   syncCustomTools,
   type ToolAccess,
@@ -333,8 +334,9 @@ export function createConnectorToolSource(
 
   /**
    * A custom server's tools that an admin classified (hidden until then; `off`
-   * never shows). `approval` and sensitive tools ask a person for every call;
-   * `write` tools run on their own and each call goes to the audit log.
+   * never shows). `approval` and sensitive tools ask a person for every call,
+   * except a sensitive tool a person freed to `write` (ADR 0174); `write` tools
+   * run on their own and each call goes to the audit log.
    * Composio's executor says which actions each call runs: reads go as the
    * server's reads, and "Aprovar sempre" covers its other actions one by one;
    * its workbench, bash and proxy ask whatever their stored level, and like
@@ -362,6 +364,7 @@ export function createConnectorToolSource(
       const tool = byName.get(row.name);
       const access = row.access as ToolAccess;
       if (!tool) return [];
+      const freed = freedByPerson(row);
       const executor = tool.name === COMPOSIO_EXECUTOR;
       const sqlArg = composio ? null : sqlArgOf(tool, preset);
       // Our rules for a Composio action as they are now (its entry's `ask`, its tags at the pinned version), not only
@@ -385,8 +388,8 @@ export function createConnectorToolSource(
           service: preset,
           serviceIcon: connection.icon ?? undefined,
           toolPrefix: prefix,
-          // A sensitive tool never runs without approval, whatever is stored.
-          sensitive: access === "approval" || row.sensitive || asks || COMPOSIO_ANY_ACTION.has(tool.name),
+          // A sensitive tool runs without approval only when a person freed it through the API, never by what is stored.
+          sensitive: access === "approval" || (row.sensitive && !freed) || asks || COMPOSIO_ANY_ACTION.has(tool.name),
           // Its exact call may be approved ahead, except a tool that runs whatever its input says.
           ahead: !COMPOSIO_ANY_ACTION.has(tool.name),
           external: true, // whatever the server returns is third-party text
@@ -421,7 +424,8 @@ export function createConnectorToolSource(
               );
               result = { ...result, content: kept };
             }
-            if (access === "write" && !row.sensitive) {
+            // A call that asked has its approval on record already.
+            if (access === "write" && (!row.sensitive || freed)) {
               await recordAudit(ctx.db, {
                 orgId: ctx.orgId,
                 actor: { type: "agent", id: ctx.agentId },

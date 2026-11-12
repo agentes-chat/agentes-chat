@@ -205,11 +205,18 @@ describe("what the review shows", () => {
 });
 
 describe("deciding", () => {
-  test("the web's choices: four levels, sensitive tools only ask or are off", async () => {
+  test("the web's choices: four levels, sensitive tools change things only when they may be freed", async () => {
     const t = await translator("pt-BR");
     const tools = reviewToolsOf(t, server(TOOLS));
     expect(choicesOf(named(tools, "list_tickets"))).toEqual(["read", "write", "approval", "off"]);
+    // A server that doesn't say a person may free it (an older one, Composio's): only ask or off.
     expect(choicesOf(named(tools, "delete_customer"))).toEqual(["approval", "off"]);
+    // One that does (ADR 0174): it may change things too, never only read.
+    const freeable = reviewToolsOf(
+      t,
+      server(TOOLS.map((x) => (x.name === "delete_customer" ? { ...x, mayFree: true } : x))),
+    );
+    expect(choicesOf(named(freeable, "delete_customer"))).toEqual(["write", "approval", "off"]);
     expect(t("toolReview.short.approval")).toBe("Aprovação");
   });
 

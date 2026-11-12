@@ -82,7 +82,17 @@ const CustomServer = z
           .string()
           .nullable()
           .openapi({ description: "Why, as a code the web translates (`spends_money`, `unknown`…)." }),
-        sensitive: z.boolean().openapi({ description: "May only ask for approval or be off." }),
+        sensitive: z
+          .boolean()
+          .openapi({ description: "Deletes, sends, pays…: asks for approval unless a person freed it (`freed`)." }),
+        freed: z.boolean().openapi({
+          description:
+            "A person set this sensitive tool to `read` or `write` anyway (ADR 0174): it runs without asking, and a listing keeps that level.",
+        }),
+        mayFree: z.boolean().openapi({
+          description:
+            "Whether a sensitive tool may be set to `read` or `write`: not through Composio, whose own rules ask on every call.",
+        }),
         pending: z
           .boolean()
           .openapi({ description: "The name couldn't decide it and no one confirmed the suggestion yet." }),

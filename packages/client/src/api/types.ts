@@ -2662,8 +2662,12 @@ export interface CustomTool {
   suggestionSource?: "annotation" | "verb" | "preset" | "judge" | "judge_failed" | null;
   /** Why we suggest it, as a code (`spends_money`, `unknown`…): `toolReview.reason.*`. */
   suggestionReason?: string | null;
-  /** Deletes, sends, pays…: only "Pede aprovação" or "Desligada". */
+  /** Deletes, sends, pays…: asks for approval unless a person freed it (`freed`). */
   sensitive?: boolean;
+  /** A person set this sensitive tool to read or write anyway (ADR 0174): it runs without asking. */
+  freed?: boolean;
+  /** Whether a sensitive tool may be set to read or write (`false` through Composio). */
+  mayFree?: boolean;
   /** The name couldn't decide it and no one confirmed the suggestion yet ("Precisam da sua decisão"). */
   pending?: boolean;
   off?: boolean;

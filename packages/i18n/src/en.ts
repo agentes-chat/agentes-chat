@@ -12418,7 +12418,9 @@ export const en = {
     missing_one: "{{count}} decision left. If you continue, the suggestion applies.",
     missing_other: "{{count}} decisions left. If you continue, the suggestions apply.",
     later: "You can change all of this later.",
-    sensitive: "Sensitive action: it can only ask for approval or be off.",
+    sensitive: "Sensitive action: it asks for approval by default.",
+    /** Under a sensitive tool set to run on its own (ADR 0174). */
+    freedWarning: "The service marks this as risky. At this level agents run it without asking anyone.",
     reason: {
       reads_only: "it only looks at numbers, changes nothing",
       changes_undoable: "it deletes nothing and spends no money",

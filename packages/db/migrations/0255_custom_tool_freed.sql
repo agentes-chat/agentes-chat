@@ -1,0 +1,1 @@
+ALTER TABLE "custom_tools" ADD COLUMN "freed_at" timestamp with time zone;

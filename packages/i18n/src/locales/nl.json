@@ -12442,7 +12442,8 @@
     "missing_one": "Nog {{count}} beslissing. Als je doorgaat, geldt de suggestie.",
     "missing_other": "Nog {{count}} beslissingen. Als je doorgaat, gelden de suggesties.",
     "later": "Je kunt dit allemaal later wijzigen.",
-    "sensitive": "Gevoelige actie: kan alleen om goedkeuring vragen of uit staan.",
+    "sensitive": "Gevoelige actie: vraagt standaard om goedkeuring.",
+    "freedWarning": "De dienst markeert dit als riskant. Op dit niveau gebruiken agents het zonder iemand te vragen.",
     "reason": {
       "reads_only": "hij kijkt alleen naar cijfers en wijzigt niets",
       "changes_undoable": "hij verwijdert niets en geeft geen geld uit",

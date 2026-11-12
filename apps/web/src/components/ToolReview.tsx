@@ -6,7 +6,7 @@ import {
   matchTool,
   REVIEW_LEVELS,
   type ReviewTool,
-  SENSITIVE_LEVELS,
+  runsUnasked,
   subjectLabel,
 } from "@agenteschat/client/lib/tool-review";
 import {
@@ -30,7 +30,8 @@ import { Trans, useTranslation } from "react-i18next";
  * grouped list. "Precisam da sua decisão" first (only the tools whose names
  * don't say what they do), then every subject with its pixel strip and a
  * short summary; expanding shows the tools with one control each (Consulta ·
- * Muda · Aprovação · Desligada; sensitive tools only Aprovação · Desligada).
+ * Muda · Aprovação · Desligada). A sensitive tool set to run without asking
+ * says so under its name (ADR 0174); Composio's only ask or are off.
  * One search across subjects. Read-only (the agent page) shows each level
  * instead of the control.
  */
@@ -56,7 +57,7 @@ function LevelControl({
   onChange: (level: ToolDecision) => void;
 }) {
   const { t } = useTranslation();
-  const opts = tool.levels ?? (tool.sensitive ? SENSITIVE_LEVELS : REVIEW_LEVELS);
+  const opts = tool.levels ?? REVIEW_LEVELS;
   return (
     <Segmented
       size="sm"
@@ -113,6 +114,12 @@ function ToolRow({
                 components={{ b: <b /> }}
               />
             </span>
+          </span>
+        )}
+        {onLevel && runsUnasked(tool, level) && (
+          <span className="tr-row__why tr-row__why--warn ac-iconline">
+            <Icon name="alert" size={14} />
+            <span>{t("toolReview.freedWarning")}</span>
           </span>
         )}
         {showTech && <span className="tr-row__tech">{tool.name}</span>}

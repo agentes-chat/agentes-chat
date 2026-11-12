@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { schema } from "@agenteschat/db";
+import { eq, schema } from "@agenteschat/db";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -21,7 +21,6 @@ import {
   saveCustomTools,
   setAgentScopes,
   sharedPrefix,
-  ValidationError,
 } from "../src";
 import { type Fixture, setup } from "./fixtures";
 
@@ -112,7 +111,7 @@ describe("classification by the rules", () => {
 
 /** An ads server: read, write and sensitive verbs, two annotations and two names the verb can't decide. */
 function adsMcp() {
-  const state = { calls: [] as string[], extra: false };
+  const state = { calls: [] as string[], extra: false, destructive: [] as string[] };
   const tool = (server: McpServer, name: string, annotations: Record<string, boolean> = {}) =>
     server.registerTool(
       name,
@@ -125,7 +124,11 @@ function adsMcp() {
   const connect: McpConnect = async () => {
     const server = new McpServer({ name: "ads", version: "1" });
     tool(server, "campaign_list");
-    tool(server, "campaign_budget_update");
+    tool(
+      server,
+      "campaign_budget_update",
+      state.destructive.includes("campaign_budget_update") ? { destructiveHint: true } : {},
+    );
     tool(server, "campaign_delete");
     tool(server, "report_export", { readOnlyHint: true });
     tool(server, "campaign_status_toggle", { destructiveHint: true });
@@ -299,20 +302,6 @@ describe("the person's choices", () => {
     const deps = depsOf(fx, { connect: mcp.connect, judge: adsJudge() });
     const server = await connectAds(fx, deps);
 
-    // A sensitive tool may only ask or be off.
-    await expect(
-      saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
-        label: "Ads",
-        tools: [{ name: "campaign_delete", access: "read", label: "x" }],
-      }),
-    ).rejects.toBeInstanceOf(ValidationError);
-    await expect(
-      saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
-        label: "Ads",
-        tools: [{ name: "campaign_status_toggle", access: "write", label: "x" }],
-      }),
-    ).rejects.toThrow("can only ask for approval or be off");
-
     const decisions: Record<string, "read" | "write" | "approval" | "off"> = {
       campaign_list: "read",
       campaign_budget_update: "write",
@@ -376,6 +365,111 @@ describe("the person's choices", () => {
     const accepted = await acceptCustomSuggestion(deps, fx.owner.id, fx.org.id, server.id);
     expect(accepted.server.tools.find((t) => t.name === "report_export")?.access).toBe("off");
     expect(accepted.server.tools.filter((t) => t.pending).map((t) => t.name)).toEqual(["report_task_run"]);
+  });
+
+  test("a person may free a sensitive tool: it runs without asking, each call audited, and the save says so", async () => {
+    f = await setup();
+    const fx = f;
+    const mcp = adsMcp();
+    const deps = depsOf(fx, { connect: mcp.connect });
+    const server = await connectAds(fx, deps);
+    const saved = await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [
+        { name: "campaign_status_toggle", access: "write", label: "Ligar campanha" },
+        { name: "campaign_delete", access: "approval", label: "Apagar campanha" },
+      ],
+    });
+    expect(saved.tools.find((t) => t.name === "campaign_status_toggle")).toMatchObject({
+      access: "write",
+      level: "write",
+      sensitive: true,
+      freed: true,
+    });
+    expect(saved.tools.find((t) => t.name === "campaign_delete")).toMatchObject({ sensitive: true, freed: false });
+    const [classified] = (await fx.db.select().from(schema.auditLog)).filter(
+      (a) => a.action === "connector.custom_tools_classified",
+    );
+    expect((classified?.details as { freed?: string[] } | undefined)?.freed).toEqual(["campaign_status_toggle"]);
+
+    await setAgentScopes(
+      fx.db,
+      fx.owner.id,
+      fx.org.id,
+      fx.agent.id,
+      [{ connectionId: server.id, scope: `custom:${server.id}:write` }],
+      connectorGrantValidator,
+    );
+    const gateway = createToolGateway({ sources: [createConnectorToolSource(deps)] });
+    const ctx = await runContext(fx);
+    const toggled = await gateway.invoke(ctx, {
+      toolUseId: "t1",
+      name: "ads_campaign_status_toggle",
+      input: { id: 1 },
+    });
+    expect(toggled.type).toBe("result");
+    expect(mcp.state.calls).toEqual(["campaign_status_toggle"]);
+    const changed = (await fx.db.select().from(schema.auditLog)).filter((a) => a.action === "connector.tool_changed");
+    expect(changed.map((a) => (a.details as { tool: string }).tool)).toEqual(["campaign_status_toggle"]);
+  });
+
+  test("a listing keeps a freed level; asking again or off un-frees it", async () => {
+    f = await setup();
+    const fx = f;
+    const mcp = adsMcp();
+    const deps = depsOf(fx, { connect: mcp.connect });
+    const server = await connectAds(fx, deps);
+    // Never as a read: a read runs in routines and goes to every agent that may read.
+    await expect(
+      saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+        label: "Ads",
+        tools: [{ name: "campaign_delete", access: "read", label: "Apagar campanha" }],
+      }),
+    ).rejects.toMatchObject({ code: "connector.sensitive_tool" });
+    await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [{ name: "campaign_delete", access: "write", label: "Apagar campanha" }],
+    });
+    const again = await refreshCustomServer(deps, fx.owner.id, fx.org.id, server.id);
+    expect(again.tools.find((t) => t.name === "campaign_delete")).toMatchObject({ access: "write", freed: true });
+    // Accepting the suggestions keeps it too.
+    const accepted = await acceptCustomSuggestion(deps, fx.owner.id, fx.org.id, server.id);
+    expect(accepted.server.tools.find((t) => t.name === "campaign_delete")).toMatchObject({
+      access: "write",
+      freed: true,
+    });
+
+    await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [{ name: "campaign_delete", access: "approval", label: "Apagar campanha" }],
+    });
+    // Free again by hand in the database, around the API: not freed, so it asks and a listing tightens it.
+    await fx.db
+      .update(schema.customTools)
+      .set({ access: "write" })
+      .where(eq(schema.customTools.name, "campaign_delete"));
+    const tools = await createConnectorToolSource(deps).tools(await runContext(fx));
+    expect(tools.find((t) => t.name === "ads_campaign_delete")?.sensitive).toBe(true);
+    const listed = await refreshCustomServer(deps, fx.owner.id, fx.org.id, server.id);
+    expect(listed.tools.find((t) => t.name === "campaign_delete")).toMatchObject({ access: "approval", freed: false });
+  });
+
+  test("a tool freed before it was sensitive still tightens when the server starts marking it destructive", async () => {
+    f = await setup();
+    const fx = f;
+    const mcp = adsMcp();
+    const deps = depsOf(fx, { connect: mcp.connect, judge: adsJudge() });
+    const server = await connectAds(fx, deps);
+    await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [{ name: "campaign_budget_update", access: "write", label: "Orçamento" }],
+    });
+    mcp.state.destructive = ["campaign_budget_update"];
+    const listed = await refreshCustomServer(deps, fx.owner.id, fx.org.id, server.id);
+    expect(listed.tools.find((t) => t.name === "campaign_budget_update")).toMatchObject({
+      access: "approval",
+      freed: false,
+    });
   });
 
   test("a stored free decision on a sensitive tool still asks for approval", async () => {

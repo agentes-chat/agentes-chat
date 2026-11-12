@@ -1772,6 +1772,13 @@
       "when": 1794675300000,
       "tag": "0254_agent_approvals_level",
       "breakpoints": true
+    },
+    {
+      "idx": 255,
+      "version": "7",
+      "when": 1794685300000,
+      "tag": "0255_custom_tool_freed",
+      "breakpoints": true
     }
   ]
 }

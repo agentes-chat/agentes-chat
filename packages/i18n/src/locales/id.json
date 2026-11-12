@@ -11960,7 +11960,8 @@
     "review_other": "Tinjau {{count}} saran",
     "missing_other": "{{count}} keputusan tersisa. Kalau kamu lanjut, sarannya yang berlaku.",
     "later": "Kamu bisa mengubah semua ini nanti.",
-    "sensitive": "Tindakan sensitif: hanya bisa minta persetujuan atau dimatikan.",
+    "sensitive": "Tindakan sensitif: secara bawaan minta persetujuan.",
+    "freedWarning": "Layanan menandai ini berisiko. Di tingkat ini agen menjalankannya tanpa bertanya kepada siapa pun.",
     "reason": {
       "reads_only": "hanya melihat angka, tidak mengubah apa pun",
       "changes_undoable": "tidak menghapus apa pun dan tidak mengeluarkan uang",

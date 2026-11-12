@@ -12819,7 +12819,8 @@
     "missing_many": "{{count}} décisions restantes. Si vous continuez, les suggestions s'appliquent.",
     "missing_other": "{{count}} décisions restantes. Si vous continuez, les suggestions s'appliquent.",
     "later": "Vous pourrez tout modifier plus tard.",
-    "sensitive": "Action sensible : elle ne peut que demander une approbation ou être désactivée.",
+    "sensitive": "Action sensible : par défaut, elle demande une approbation.",
+    "freedWarning": "Le service la signale comme risquée. À ce niveau, les agents l'utilisent sans demander à personne.",
     "reason": {
       "reads_only": "il ne fait que regarder des chiffres, ne change rien",
       "changes_undoable": "il ne supprime rien et ne dépense pas d'argent",

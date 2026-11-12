@@ -13263,7 +13263,8 @@
     "missing_many": "Zostało {{count}} decyzji. Jeśli przejdziesz dalej, zostaną zastosowane sugestie.",
     "missing_other": "Zostały {{count}} decyzje. Jeśli przejdziesz dalej, zostaną zastosowane sugestie.",
     "later": "Wszystko to możesz później zmienić.",
-    "sensitive": "Akcja wrażliwa: może tylko prosić o zatwierdzenie albo być wyłączona.",
+    "sensitive": "Akcja wrażliwa: domyślnie prosi o zatwierdzenie.",
+    "freedWarning": "Usługa oznacza to jako ryzykowne. Na tym poziomie agenci używają tego, nie pytając nikogo.",
     "reason": {
       "reads_only": "tylko patrzy na liczby, niczego nie zmienia",
       "changes_undoable": "niczego nie usuwa i nie wydaje pieniędzy",

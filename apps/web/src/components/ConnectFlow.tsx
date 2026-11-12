@@ -43,6 +43,7 @@ import {
   type ReviewTool,
   reviewDecisions,
   reviewToolsOf,
+  SENSITIVE_LEVELS,
   toolName,
 } from "@agenteschat/client/lib/tool-review";
 import {
@@ -685,6 +686,8 @@ function catalogReviewTools(t: TFunction, item: ConnectedItem): ReviewTool[] {
       sensitive: tool.sensitive,
       pending: false,
       savedLabel: humanize(tool.name),
+      // Our catalog's sensitive tools are never freed: they only ask or are off.
+      ...(tool.sensitive ? { levels: SENSITIVE_LEVELS } : {}),
     };
   });
 }

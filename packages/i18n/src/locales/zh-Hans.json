@@ -11968,7 +11968,8 @@
     "review_other": "检查这 {{count}} 条建议",
     "missing_other": "还有 {{count}} 项待决定。如果继续，将采用建议。",
     "later": "这些之后都可以修改。",
-    "sensitive": "敏感操作：只能设为需要审批或关闭。",
+    "sensitive": "敏感操作：默认需要审批。",
+    "freedWarning": "服务将此标记为有风险。在此级别，智能体会直接执行，不询问任何人。",
     "reason": {
       "reads_only": "它只查看数字，不做任何修改",
       "changes_undoable": "它不删除任何内容，也不花钱",

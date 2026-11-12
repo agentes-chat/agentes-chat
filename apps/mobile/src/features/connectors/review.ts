@@ -113,6 +113,8 @@ export function catalogReviewTools(t: TFunction, def: ConnectorDef): ReviewTool[
       sensitive: tool.sensitive,
       pending: false,
       savedLabel: humanize(tool.name),
+      // Our catalog's sensitive tools are never freed: they only ask or are off.
+      ...(tool.sensitive ? { levels: SENSITIVE_LEVELS } : {}),
     };
   });
 }
@@ -132,9 +134,8 @@ export const chosenLevel = (state: ReviewState, tool: ReviewTool): ToolDecision 
 /** Still in "Precisam da sua decisão": the name couldn't decide it and the person hasn't yet. */
 export const isWaiting = (state: ReviewState, tool: ReviewTool) => tool.pending && !state.decided.has(tool.name);
 
-/** The levels a tool can take (sensitive ones only ask or are off). */
-export const choicesOf = (tool: ReviewTool): ToolDecision[] =>
-  tool.levels ?? (tool.sensitive ? SENSITIVE_LEVELS : REVIEW_LEVELS);
+/** The levels a tool can take: every one, unless it says fewer (email reads, a sensitive tool nobody may free). */
+export const choicesOf = (tool: ReviewTool): ToolDecision[] => tool.levels ?? REVIEW_LEVELS;
 
 /** Picking a level; on a waiting tool it is also the decision (it leaves the group). */
 export function choose(state: ReviewState, tool: ReviewTool, level: ToolDecision): ReviewState {
