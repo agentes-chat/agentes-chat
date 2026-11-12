@@ -43,7 +43,7 @@ const response = () => ({
   usage: { input_tokens: 384, output_tokens: 61, cost: 0, opencode: { billing_source: "free" } },
 });
 
-function endpoint(reply: unknown = response(), status = 200, headers?: HeadersInit) {
+function endpoint(reply: unknown = response(), status = 200, headers?: Record<string, string>) {
   const calls: { url: string; headers: Headers; body: Record<string, unknown> }[] = [];
   const fetcher = (async (url: string, init: RequestInit) => {
     calls.push({ url, headers: new Headers(init.headers), body: JSON.parse(init.body as string) });
