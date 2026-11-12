@@ -17899,6 +17899,7 @@
     "aboutThis": "关于你点击的内容",
     "aboutDrop": "不发送这段摘录",
     "attach": "添加照片或视频",
+    "drop": "松开即可添加",
     "filesHint": "最多 {{images}} 张照片（每张 {{imageMb}} MB）和一个视频（{{videoMb}} MB），保留 {{days}} 天。",
     "removeFile": "移除 {{name}}",
     "uploading": "正在发送 {{name}}",

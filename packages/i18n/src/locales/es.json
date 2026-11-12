@@ -18784,6 +18784,7 @@
     "aboutThis": "Sobre lo que pulsaste",
     "aboutDrop": "No enviar este fragmento",
     "attach": "Adjuntar foto o video",
+    "drop": "Suelta para adjuntar",
     "filesHint": "Hasta {{images}} fotos de {{imageMb}} MB y un video de {{videoMb}} MB, guardados durante {{days}} días.",
     "removeFile": "Quitar {{name}}",
     "uploading": "Enviando {{name}}",

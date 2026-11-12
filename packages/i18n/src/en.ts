@@ -18568,6 +18568,8 @@ export const en = {
     aboutThis: "About what you clicked",
     aboutDrop: "Don't send this excerpt",
     attach: "Add a photo or video",
+    /** Over the form while pictures or a video are dragged onto it from the computer. */
+    drop: "Drop to attach",
     /** Beside Add a photo or video. */
     filesHint: "Up to {{images}} photos of {{imageMb}} MB and one video of {{videoMb}} MB, kept for {{days}} days.",
     removeFile: "Remove {{name}}",

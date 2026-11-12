@@ -18931,6 +18931,7 @@
     "aboutThis": "Su ciò che hai cliccato",
     "aboutDrop": "Non inviare questo estratto",
     "attach": "Allega foto o video",
+    "drop": "Rilascia per allegare",
     "filesHint": "Fino a {{images}} foto da {{imageMb}} MB e un video da {{videoMb}} MB, conservati per {{days}} giorni.",
     "removeFile": "Rimuovi {{name}}",
     "uploading": "Invio di {{name}}",

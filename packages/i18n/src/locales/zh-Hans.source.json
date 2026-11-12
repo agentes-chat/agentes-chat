@@ -44059,6 +44059,9 @@
   "feedback.attach": {
     "value": "Add a photo or video"
   },
+  "feedback.drop": {
+    "value": "Drop to attach"
+  },
   "feedback.filesHint": {
     "value": "Up to {{images}} photos of {{imageMb}} MB and one video of {{videoMb}} MB, kept for {{days}} days."
   },

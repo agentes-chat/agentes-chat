@@ -19415,6 +19415,7 @@
     "aboutThis": "O tym, co kliknięto",
     "aboutDrop": "Nie wysyłaj tego fragmentu",
     "attach": "Dodaj zdjęcie lub wideo",
+    "drop": "Upuść, aby dodać",
     "filesHint": "Do {{images}} zdjęć po {{imageMb}} MB i jedno wideo do {{videoMb}} MB, przechowywane przez {{days}} dni.",
     "removeFile": "Usuń {{name}}",
     "uploading": "Wysyłanie {{name}}",

@@ -19,6 +19,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
+import { useFileDrop } from "@/components/drive/DriveUploads";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { matchesNow, TOUCH } from "@/hooks/useMatchMedia";
@@ -191,6 +192,8 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
     if (file.preview) URL.revokeObjectURL(file.preview);
     if (file.id) void api.system.dropFeedbackFile(file.id).catch(() => {});
   };
+  // Pictures and a video dragged from the computer (Finder, the desktop) onto the form: as the picker or a paste.
+  const drop = useFileDrop(add, !sent);
 
   /** What the app knows of where the person is, for whoever reads the email. */
   const facts = (): [string, string][] => {
@@ -308,8 +311,25 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
             e.preventDefault();
             if (ready) send.mutate();
           }}
+          {...drop.props}
         >
-          <DialogBody>
+          <DialogBody className="arrival-feedback__body">
+            {drop.over && (
+              <div className="arrival-feedback__drop" aria-hidden="true">
+                <span className="arrival-feedback__drop-in">
+                  <Icon name="upload" />
+                  <b>{t("feedback.drop")}</b>
+                  <span>
+                    {t("feedback.filesHint", {
+                      images: FILE_LIMITS.images,
+                      imageMb: FILE_LIMITS.imageMb,
+                      videoMb: FILE_LIMITS.videoMb,
+                      days: FILE_LIMITS.days,
+                    })}
+                  </span>
+                </span>
+              </div>
+            )}
             {about && (
               <div className="arrival-about">
                 <span className="arrival-about__title">

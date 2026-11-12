@@ -18618,6 +18618,7 @@ export const ptBR = {
     aboutThis: "Sobre o que você clicou",
     aboutDrop: "Não enviar este trecho",
     attach: "Anexar foto ou vídeo",
+    drop: "Solte para anexar",
     filesHint: "Até {{images}} fotos de {{imageMb}} MB e um vídeo de {{videoMb}} MB, guardados por {{days}} dias.",
     removeFile: "Tirar {{name}}",
     uploading: "Enviando {{name}}",
