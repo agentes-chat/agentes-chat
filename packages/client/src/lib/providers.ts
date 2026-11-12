@@ -97,7 +97,6 @@ export const PROVIDERS = [
   {
     id: "commandcode",
     label: "Command Code",
-    // It publishes no key format; its keys seen so far start with `user_`.
     placeholder: "user_…",
     pattern: /^(?!sk-|AQ\.|AIza)[A-Za-z0-9_-]{32,}$/,
     site: "commandcode.ai/settings/keys",

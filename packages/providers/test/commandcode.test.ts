@@ -71,7 +71,6 @@ describe("calls (scripted transport)", () => {
     expect(req?.body).toMatchObject({ model: "deepseek/deepseek-v4.1-flash", stream_options: { include_usage: true } });
     expect(req?.body.provider).toBeUndefined();
     expect(req?.body.reasoning).toBeUndefined();
-    // The full id comes back and Command Code's own cost field is ignored: the catalog prices the call.
     expect(result.model).toBe(model);
     expect(result.costNanoUsd).toBeUndefined();
     expect(result.content).toEqual([{ type: "text", text: "ok" }]);
@@ -100,7 +99,6 @@ describe("calls (scripted transport)", () => {
     expect(req?.url).toStartWith(`${COMMANDCODE_API}/v1/messages`);
     expect(req?.headers.get("x-api-key")).toBe("user_k123456789");
     expect(req?.body.model).toBe("claude-sonnet-5-5");
-    // Nothing only Anthropic's own API takes.
     for (const field of ["cache_control", "fallbacks"]) expect(req?.body).not.toHaveProperty(field);
     expect(result.model).toBe("commandcode:claude-sonnet-5-5");
     expect(result.content).toEqual([{ type: "text", text: "oi" }]);

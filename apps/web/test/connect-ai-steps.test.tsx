@@ -1190,8 +1190,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "Kimi",
       "Z.ai",
       "MiniMax",
-      // No mark of its own yet (ADR 0174): its initial stands in.
-      "CCommand Code",
+      "Command Code",
       expect.stringContaining("Outro provedor"),
     ]);
     await closeAiSelect();

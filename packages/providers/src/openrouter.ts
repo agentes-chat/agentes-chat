@@ -37,10 +37,7 @@ export const OPENROUTER_API = "https://openrouter.ai/api/v1";
 /** OpenRouter's app attribution: the product's name and site, never a self-hosted server's own address. */
 const ATTRIBUTION = { "HTTP-Referer": "https://agentes.chat", "X-OpenRouter-Title": "agentes.chat" };
 
-/**
- * An OpenRouter model id (`z-ai/glm-5.3`, `~z-ai/glm-latest`): the catalog's ids never have a slash, but for
- * Command Code's (`commandcode:zai-org/GLM-5.3`), and a workspace endpoint's are its own.
- */
+/** An OpenRouter model id (`z-ai/glm-5.3`, `~z-ai/glm-latest`): the catalog's ids have a slash only on Command Code's. */
 export const isOpenRouterModel = (model: string) =>
   model.includes("/") && !isCustomModel(model) && !model.startsWith("commandcode:");
 

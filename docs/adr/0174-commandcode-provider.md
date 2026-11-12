@@ -3,7 +3,7 @@
 - Status: Proposed
 - Date: 2026-11-12
 - Extends 0007, 0018 and 0087.
-- Code: `packages/providers/src/anthropic.ts` (compatible mode's history breakpoints), `packages/providers/src/commandcode.ts` (`createCommandCodeProvider`, `commandCodeModelOf`), `packages/providers/src/catalog.ts` (`commandcode` in `PROVIDERS`, its catalog rows), `packages/providers/src/index.ts`, `packages/providers/src/openrouter.ts` (`isOpenRouterModel`), `packages/engine/src/router.ts` (`SMALL_MODEL_ORDER`), `packages/client/src/lib/providers.ts`, `packages/i18n`
+- Code: `packages/providers/src/anthropic.ts` (compatible mode's history breakpoints), `packages/providers/src/commandcode.ts` (`createCommandCodeProvider`, `commandCodeModelOf`), `packages/providers/src/catalog.ts` (`commandcode` in `PROVIDERS`, its catalog rows), `packages/providers/src/index.ts`, `packages/providers/src/openrouter.ts` (`isOpenRouterModel`), `packages/engine/src/router.ts` (`SMALL_MODEL_ORDER`), `packages/client/src/lib/providers.ts`, `packages/ui/src/brand/marks.ts`, `packages/i18n`
 
 ## Context
 
@@ -31,7 +31,7 @@ Checked against the live API before this was written: Claude Haiku with a forced
 - Images don't reach Claude through the compatible mode, as for the other Anthropic-compatible providers.
 - Command Code's Go plan has no API access: a Go key is refused when saved (403). Some models need a larger plan or on-demand usage (Claude Opus 5.5 from its Provider plan, GPT-6.1 Sol from Max): a call answers 403 `MODEL_NOT_IN_PLAN`, in Command Code's words, and the key's other models go on answering.
 - The pickers list some models twice, under Claude's or OpenAI's name and under Command Code's, each in its provider's group.
-- No brand mark yet: the apps show the provider's initial (ADR 0059's sources rule applies to adding one).
+- Its mark is the symbol from its brand page, one color, so it takes the theme's ink (ADR 0059 §9).
 
 ## Alternatives considered
 

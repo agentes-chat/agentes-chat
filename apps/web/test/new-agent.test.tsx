@@ -66,7 +66,7 @@ const openBrain = async () => {
 };
 const chooseBrain = async (name: RegExp) => {
   await openBrain();
-  // Command Code serves some of the same models under its own group, after Claude's (ADR 0174): the first is Claude's.
+  // Claude's own, not Command Code's same model.
   await click(screen().getAllByRole("option", { name })[0] as HTMLElement);
 };
 const groupNames = (list: HTMLElement) =>
@@ -246,7 +246,6 @@ describe("Criar agente: steps", () => {
     const list = await openBrain();
     const [auto, ...rest] = within(list).getAllByRole("option");
     expect(auto?.getAttribute("aria-selected")).toBe("true");
-    // Claude's own, before Command Code's same model (ADR 0174).
     const sonnet = screen().getAllByRole("option", { name: /^Claude Sonnet 5\.5/ })[0] as HTMLElement;
     expect(sonnet.getAttribute("aria-selected")).toBe("false");
     expect(rest.indexOf(sonnet)).toBeGreaterThanOrEqual(0);

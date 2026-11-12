@@ -67,8 +67,7 @@ export const PROVIDERS = {
   },
   // Its models come from its public list at run time (`openrouter.ts`), never from this catalog.
   openrouter: { label: "OpenRouter", protocol: "openrouter" },
-  // Many makers' models on one key, Claude over Anthropic Messages and the rest over Chat Completions
-  // (`commandcode.ts`). Its catalog ids are `commandcode:<its own id>`.
+  // Claude over Anthropic Messages, the rest over Chat Completions (`commandcode.ts`).
   commandcode: { label: "Command Code", protocol: "commandcode" },
   // A workspace's own endpoint (ADR 0146): its address, API style and models live on its credential (`custom.ts`).
   custom: { label: "Other provider", protocol: "custom" },
@@ -363,10 +362,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     cheap: true,
     tier: "small",
   },
-  // Command Code's Provider API at its published rates (commandcode.ai/docs/resources/pricing-limits, read
-  // 2026-11-12: each maker's API rates; where it lists no cache write, the input's). A few of its models, not its
-  // whole list: `/v1/models` carries no prices. Open models first, as Command Code itself: Automático picks DeepSeek
-  // Flash, GLM-5.3 and Claude Sonnet; Claude Haiku routes (thinking off, a forced tool).
+  // Command Code at its published rates (commandcode.ai/docs/resources/pricing-limits); its model list has no prices.
   "commandcode:claude-opus-5-5": {
     provider: "commandcode",
     label: "Claude Opus 5.5",
