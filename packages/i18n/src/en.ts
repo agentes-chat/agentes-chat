@@ -9875,6 +9875,7 @@ export const en = {
     option: "Other provider",
     optionSub: "OpenAI- or Claude-compatible: a gateway, Ollama, vLLM, LM Studio, LiteLLM",
     name: "Name",
+    preset: "Start from",
     namePlaceholder: "My gateway",
     style: "API",
     styles: {

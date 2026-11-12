@@ -9880,6 +9880,7 @@
     "option": "Altro provider",
     "optionSub": "Compatibile con OpenAI o Claude: un gateway, Ollama, vLLM, LM Studio, LiteLLM",
     "name": "Nome",
+    "preset": "Inizia da",
     "namePlaceholder": "Il mio gateway",
     "style": "API",
     "styles": {

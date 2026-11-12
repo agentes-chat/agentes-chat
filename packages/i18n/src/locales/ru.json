@@ -10163,6 +10163,7 @@
     "option": "Другой провайдер",
     "optionSub": "Совместимый с OpenAI или Claude: шлюз, Ollama, vLLM, LM Studio, LiteLLM",
     "name": "Название",
+    "preset": "Начать с",
     "namePlaceholder": "Мой шлюз",
     "style": "API",
     "styles": {

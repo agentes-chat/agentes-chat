@@ -9509,6 +9509,7 @@
     "option": "Anderer Anbieter",
     "optionSub": "OpenAI- oder Claude-kompatibel: ein Gateway, Ollama, vLLM, LM Studio, LiteLLM",
     "name": "Name",
+    "preset": "Starten mit",
     "namePlaceholder": "Mein Gateway",
     "style": "API",
     "styles": {

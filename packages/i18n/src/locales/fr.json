@@ -9864,6 +9864,7 @@
     "option": "Autre fournisseur",
     "optionSub": "Compatible OpenAI ou Claude : une passerelle, Ollama, vLLM, LM Studio, LiteLLM",
     "name": "Nom",
+    "preset": "Commencer par",
     "namePlaceholder": "Ma passerelle",
     "style": "API",
     "styles": {

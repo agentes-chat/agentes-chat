@@ -5,6 +5,7 @@ import {
   CUSTOM_PROVIDER,
   checksInOrder,
   draftOfEndpoint,
+  ENDPOINT_PRESETS,
   ENDPOINT_SEARCH_FROM,
   ENDPOINT_STYLES,
   type EndpointDraft,
@@ -18,6 +19,7 @@ import {
   withChecks,
   withListedModels,
   withoutModel,
+  withPreset,
   withTypedModel,
 } from "@agenteschat/client/lib/endpoints";
 import {
@@ -107,13 +109,22 @@ export function EndpointForm({
     if (!models) return;
     if (editing && credential) {
       change.mutate(
-        { credentialId: credential.id, models },
+        { credentialId: credential.id, models, where: { style: draft.style, baseURL: draft.baseURL.trim() } },
         {
           onSuccess: (r) =>
             setSaved({
               cred: {
                 ...credential,
-                ...(credential.endpoint ? { endpoint: { ...credential.endpoint, models: r.models } } : {}),
+                ...(credential.endpoint
+                  ? {
+                      endpoint: {
+                        ...credential.endpoint,
+                        style: draft.style,
+                        baseURL: draft.baseURL.trim(),
+                        models: r.models,
+                      },
+                    }
+                  : {}),
               },
               checks: r.checks,
             }),
@@ -132,7 +143,9 @@ export function EndpointForm({
     );
   };
   const saving = add.isPending || change.isPending;
-  const ready = editing ? endpointModelsOf(draft) !== null : endpointReady(draft);
+  const ready = editing
+    ? endpointModelsOf(draft) !== null && endpointAddressLooksValid(draft.baseURL)
+    : endpointReady(draft);
   const unpriced = draft.models.some((m) => m.on && !m.input.trim() && !m.output.trim());
 
   const Body = onCancel ? DialogBody : FormStack;
@@ -185,6 +198,22 @@ export function EndpointForm({
           {lead}
           {!editing && (
             <>
+              <Field label={t("endpoint.preset")} group>
+                {/* The kit's action row, wrapped as a card's is: nine at a phone's width go past one line. */}
+                <div className="ac-acts" style={{ flexWrap: "wrap", rowGap: "var(--space-2)" }}>
+                  {ENDPOINT_PRESETS.map((p) => (
+                    <Button
+                      key={p.label}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDraft((d) => withPreset(d, p))}
+                    >
+                      {p.label}
+                    </Button>
+                  ))}
+                </div>
+              </Field>
               <Field label={t("endpoint.name")} id={`${ids}-name`}>
                 <Input
                   value={draft.name}
@@ -193,28 +222,34 @@ export function EndpointForm({
                   onChange={(e) => set({ name: e.target.value })}
                 />
               </Field>
-              <Field label={t("endpoint.style")} group>
-                <Segmented<EndpointStyle>
-                  label={t("endpoint.style")}
-                  value={draft.style}
-                  onValueChange={(style) => set({ style })}
-                  options={ENDPOINT_STYLES.map((s) => ({ value: s, label: t(`endpoint.styles.${s}`) }))}
-                />
-              </Field>
-              <Field
-                label={t("endpoint.address")}
-                id={`${ids}-url`}
-                example={t("endpoint.addressHelp", { example: endpointBaseExample(draft.style) })}
-              >
-                <Input
-                  value={draft.baseURL}
-                  inputMode="url"
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder={endpointBaseExample(draft.style)}
-                  onChange={(e) => set({ baseURL: e.target.value })}
-                />
-              </Field>
+            </>
+          )}
+          {/* An endpoint's own address and API stay editable once saved (ADR 0146 §1): a gateway that moved, or an
+              address typed wrong, is fixable without losing the credential, its key or the agents using it. */}
+          <Field label={t("endpoint.style")} group>
+            <Segmented<EndpointStyle>
+              label={t("endpoint.style")}
+              value={draft.style}
+              onValueChange={(style) => set({ style })}
+              options={ENDPOINT_STYLES.map((s) => ({ value: s, label: t(`endpoint.styles.${s}`) }))}
+            />
+          </Field>
+          <Field
+            label={t("endpoint.address")}
+            id={`${ids}-url`}
+            example={t("endpoint.addressHelp", { example: endpointBaseExample(draft.style) })}
+          >
+            <Input
+              value={draft.baseURL}
+              inputMode="url"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={endpointBaseExample(draft.style)}
+              onChange={(e) => set({ baseURL: e.target.value })}
+            />
+          </Field>
+          {!editing && (
+            <>
               <Field
                 label={t("endpoint.key")}
                 id={`${ids}-key`}

@@ -9454,6 +9454,7 @@
     "option": "Başka bir sağlayıcı",
     "optionSub": "OpenAI veya Claude uyumlu: bir ağ geçidi, Ollama, vLLM, LM Studio, LiteLLM",
     "name": "Ad",
+    "preset": "Şununla başla",
     "namePlaceholder": "Ağ geçidim",
     "style": "API",
     "styles": {

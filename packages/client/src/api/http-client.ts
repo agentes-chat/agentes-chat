@@ -899,10 +899,10 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           `${org(orgId)}/credentials/endpoint-models`,
           { json: input },
         ),
-      setEndpointModels: (orgId, id, models) =>
+      setEndpointModels: (orgId, id, models, where) =>
         request<{ models: EndpointModel[]; checks: EndpointCheck[] }>(`${org(orgId)}/credentials/${enc(id)}/models`, {
           method: "PUT",
-          json: { models },
+          json: { models, ...(where ?? {}) },
         }),
       rotateCredential: (orgId, id, input) =>
         request<Credential>(`${org(orgId)}/credentials/${enc(id)}/rotate`, { json: input }),

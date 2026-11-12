@@ -189,3 +189,84 @@ describe("Outro provedor in Settings › Chaves de IA", () => {
     ).toBe(true);
   });
 });
+
+/**
+ * The ones people run on their own computer are a click away instead of typed from memory; every field stays theirs
+ * to change, and a name already typed is kept.
+ */
+describe("Outro provedor: a preset fills the address", () => {
+  const open = async () => {
+    const state = seedState();
+    await renderApp(`/org/${ORG_ID}/settings/keys`, { api: createFakeApi(state) });
+    await settle(5);
+    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    await click(within(keys).getByRole("button", { name: "Adicionar chave" }));
+    const add = screen().getByRole("dialog", { name: "Adicionar chave de API" });
+    await pick(within(add).getByRole("combobox", { name: "Provedor" }), /Outro provedor/);
+    return add;
+  };
+
+  test("its name and address, and the API it speaks", async () => {
+    const add = await open();
+    await click(within(add).getByRole("button", { name: "Ollama" }));
+    expect((within(add).getByLabelText("Nome") as HTMLInputElement).value).toBe("Ollama");
+    expect((within(add).getByLabelText("Endereço") as HTMLInputElement).value).toBe("http://localhost:11434/v1");
+    // A local server is reachable with http: the form takes it as typed.
+    expect(within(add).getByRole("button", { name: "Buscar modelos" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  test("a gateway over https is offered too, at its own address", async () => {
+    const add = await open();
+    await click(within(add).getByRole("button", { name: "TokenRouter" }));
+    expect((within(add).getByLabelText("Endereço") as HTMLInputElement).value).toBe("https://api.tokenrouter.com/v1");
+    expect(within(add).getByRole("button", { name: "Buscar modelos" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  test("a name already typed stays", async () => {
+    const add = await open();
+    await type(within(add).getByLabelText("Nome"), "Meu Ollama");
+    await click(within(add).getByRole("button", { name: "LiteLLM" }));
+    expect((within(add).getByLabelText("Nome") as HTMLInputElement).value).toBe("Meu Ollama");
+    expect((within(add).getByLabelText("Endereço") as HTMLInputElement).value).toBe("http://localhost:4000/v1");
+  });
+});
+
+/**
+ * A saved endpoint keeps its credential and key but not a wrong address: the dialog that changes its models can fix
+ * where the calls go (ADR 0146 §1).
+ */
+test("an endpoint's address is editable after it is saved", async () => {
+  const state = seedState({
+    credentials: [
+      {
+        id: "cred-endpoint",
+        provider: "custom",
+        label: "TokenRouter",
+        keyHint: "9f3c",
+        createdAt: "2026-11-01T10:00:00.000Z",
+        revokedAt: null,
+        endpoint: {
+          style: "openai",
+          baseURL: "https://api.tokenruter.com/v1",
+          models: [{ id: "glm-5.3" }],
+        },
+      },
+    ],
+  });
+  await renderApp(`/org/${ORG_ID}/settings/keys`, { api: createFakeApi(state) });
+  await settle(5);
+  const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+  await click(within(keys).getByRole("button", { name: "Modelos" }));
+  const dialog = screen().getByRole("dialog", { name: "Modelos de TokenRouter" });
+  // The address it was saved with is in front of the person, not hidden behind a new dialog.
+  expect((within(dialog).getByLabelText("Endereço") as HTMLInputElement).value).toBe("https://api.tokenruter.com/v1");
+  const fixed = "https://api.tokenrouter.com/v1";
+  await type(within(dialog).getByLabelText("Endereço"), fixed);
+  await click(within(dialog).getByRole("button", { name: "Salvar e testar de novo" }));
+  await settle(4);
+  expect(state.calls.find((c) => c.method === "agents.setEndpointModels")?.args[2]).toMatchObject({
+    baseURL: fixed,
+    style: "openai",
+  });
+  expect(state.credentials[0]?.endpoint?.baseURL).toBe(fixed);
+});

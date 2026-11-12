@@ -9879,6 +9879,7 @@ export const ptBR = {
     option: "Outro provedor",
     optionSub: "Compatível com OpenAI ou Claude: um gateway, Ollama, vLLM, LM Studio, LiteLLM",
     name: "Nome",
+    preset: "Começar de",
     namePlaceholder: "Meu gateway",
     style: "API",
     styles: {

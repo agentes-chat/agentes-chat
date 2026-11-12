@@ -9178,6 +9178,7 @@
     "option": "Penyedia lain",
     "optionSub": "Kompatibel dengan OpenAI atau Claude: gateway, Ollama, vLLM, LM Studio, LiteLLM",
     "name": "Nama",
+    "preset": "Mulai dari",
     "namePlaceholder": "Gateway saya",
     "style": "API",
     "styles": {
