@@ -328,6 +328,8 @@ const ALIASES: Record<string, MarkId> = {
   moonshot: "kimi",
   zen: "opencode",
   enterprise: "gemini",
+  /** Muse Code is Meta's: its CLI and its plan wear Meta's mark. */
+  muse: "meta",
 };
 
 /**

@@ -509,6 +509,8 @@ export const desktopPtBR = {
     grokDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Grok.",
     antigravityName: "Antigravity CLI",
     antigravityDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Gemini.",
+    museName: "Muse Code",
+    museDesc: "Escreve e muda código nas pastas liberadas, com a sua conta da Meta.",
     found: "Encontrado",
     notFound: "Não encontrado",
     loggedOut: "Sem login",

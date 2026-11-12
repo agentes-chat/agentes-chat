@@ -7501,6 +7501,9 @@
   "noAi.notSignedIn.grok": {
     "value": "Grok isn't signed in on this computer. Connect a Grok account on {{name}}'s page."
   },
+  "noAi.notSignedIn.muse": {
+    "value": "Muse isn't signed in on this computer. Connect a Muse account on {{name}}'s page."
+  },
   "noAi.notSignedIn.antigravity": {
     "value": "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s page."
   },
@@ -7632,6 +7635,9 @@
   },
   "connectAi.title.grok": {
     "value": "Connect your Grok plan"
+  },
+  "connectAi.title.muse": {
+    "value": "Connect your Meta plan"
   },
   "connectAi.title.gemini": {
     "value": "Connect your Gemini plan"
@@ -7864,6 +7870,12 @@
   "connectAi.plan.grok.tiers": {
     "value": "SuperGrok, SuperGrok Heavy or X Premium+"
   },
+  "connectAi.plan.muse.title": {
+    "value": "Your Meta plan"
+  },
+  "connectAi.plan.muse.tiers": {
+    "value": "A Meta subscription with Muse Code"
+  },
   "connectAi.plan.gemini.title": {
     "value": "Your Gemini plan"
   },
@@ -8079,6 +8091,9 @@
   },
   "connectAi.otherAccount.grok": {
     "value": "Grok signed in as {{email}}, not {{account}}. Sign out on Grok's page and try again."
+  },
+  "connectAi.otherAccount.muse": {
+    "value": "Muse signed in as {{email}}, not {{account}}. Sign out on Muse's page and try again."
   },
   "connectAi.otherAccount.antigravity": {
     "value": "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again."
@@ -13557,6 +13572,9 @@
   "agentPage.work.brain.add.title.grok": {
     "value": "Add a Grok account"
   },
+  "agentPage.work.brain.add.title.muse": {
+    "value": "Add a Muse Code account"
+  },
   "agentPage.work.brain.add.title.antigravity": {
     "value": "Add a Gemini account"
   },
@@ -13573,6 +13591,9 @@
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.grok": {
+    "value": "The account with your plan"
+  },
+  "agentPage.work.brain.add.stepOne.muse": {
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.antigravity": {
@@ -13596,6 +13617,9 @@
   "agentPage.work.brain.add.open.grok": {
     "value": "Sign in with Grok"
   },
+  "agentPage.work.brain.add.open.muse": {
+    "value": "Sign in with Muse Code"
+  },
   "agentPage.work.brain.add.open.antigravity": {
     "value": "Sign in with Google"
   },
@@ -13607,6 +13631,9 @@
   },
   "agentPage.work.brain.add.grokFinish": {
     "value": "Sign in on Grok's page, and the sign-in finishes on {{computer}} by itself."
+  },
+  "agentPage.work.brain.add.museFinish": {
+    "value": "Confirm the code on Muse's page, and the sign-in finishes on {{computer}} by itself."
   },
   "agentPage.work.brain.add.geminiEnterprise": {
     "value": "Use Gemini Enterprise instead"
@@ -13661,6 +13688,9 @@
   },
   "agentPage.work.brain.add.grokCode": {
     "value": "Code for Grok"
+  },
+  "agentPage.work.brain.add.museCode": {
+    "value": "Code for Muse"
   },
   "agentPage.work.brain.add.deviceCodeText": {
     "value": "Type this code on the page that opens."
@@ -13724,6 +13754,9 @@
   },
   "agentPage.work.brain.add.duplicate.grok": {
     "value": "Grok signed in as {{account}}, an account you already connected. To use another, sign out on Grok's page and try again."
+  },
+  "agentPage.work.brain.add.duplicate.muse": {
+    "value": "Muse signed in as {{account}}, an account you already connected. To use another, sign out on Muse's page and try again."
   },
   "agentPage.work.brain.add.duplicate.antigravity": {
     "value": "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again."
@@ -24534,6 +24567,9 @@
   "aiAccounts.connect.antigravity": {
     "value": "Gemini"
   },
+  "aiAccounts.connect.muse": {
+    "value": "Muse Code"
+  },
   "aiAccounts.connect.opencode": {
     "value": "OpenCode"
   },
@@ -27697,6 +27733,9 @@
   "brain.line.gemini": {
     "value": "{{model}} on the Gemini plan"
   },
+  "brain.line.muse": {
+    "value": "{{model}} on the Muse plan"
+  },
   "brain.line.zen": {
     "value": "{{model}} on OpenCode"
   },
@@ -27717,6 +27756,9 @@
   },
   "brain.line.geminiOf": {
     "value": "{{model}} on {{owner}}'s Gemini plan"
+  },
+  "brain.line.museOf": {
+    "value": "{{model}} on {{owner}}'s Muse plan"
   },
   "brain.line.zenOf": {
     "value": "{{model}} on {{owner}}'s OpenCode"
@@ -27739,6 +27781,9 @@
   "brain.line.geminiAuto": {
     "value": "Gemini plan"
   },
+  "brain.line.museAuto": {
+    "value": "Muse plan"
+  },
   "brain.line.zenAuto": {
     "value": "OpenCode"
   },
@@ -27759,6 +27804,9 @@
   },
   "brain.line.geminiAutoOf": {
     "value": "{{owner}}'s Gemini plan"
+  },
+  "brain.line.museAutoOf": {
+    "value": "{{owner}}'s Muse plan"
   },
   "brain.line.zenAutoOf": {
     "value": "{{owner}}'s OpenCode"
@@ -27796,6 +27844,9 @@
   "brain.card.antigravity": {
     "value": "Antigravity CLI"
   },
+  "brain.card.muse": {
+    "value": "Muse Code"
+  },
   "brain.foot.api": {
     "value": "Through the API"
   },
@@ -27822,6 +27873,9 @@
   },
   "brain.antigravityText": {
     "value": "Uses the Gemini plan of whoever connected the computer."
+  },
+  "brain.museText": {
+    "value": "Uses the Meta plan of whoever connected the computer."
   },
   "brain.opencodeText": {
     "value": "OpenCode's free models, or the OpenCode key of whoever connected the computer."
@@ -34521,6 +34575,9 @@
   "machines.access.tool.antigravity": {
     "value": "Antigravity CLI"
   },
+  "machines.access.tool.muse": {
+    "value": "Muse Code"
+  },
   "machines.access.tool.opencode": {
     "value": "OpenCode"
   },
@@ -34544,6 +34601,9 @@
   },
   "machines.access.toolText.antigravity": {
     "value": "Like Claude Code, with a Gemini account. Only in the allowed folders."
+  },
+  "machines.access.toolText.muse": {
+    "value": "Like Claude Code, with a Meta account. Only in the allowed folders."
   },
   "machines.access.toolText.opencode": {
     "value": "Like Claude Code, with OpenCode's free models or an OpenCode key. Only in the allowed folders."

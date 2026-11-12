@@ -471,6 +471,8 @@
     "grokDesc": "Grok hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Gemini hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
+    "museName": "Muse Code",
+    "museDesc": "Meta hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
     "found": "Bulundu",
     "notFound": "Bulunamadı",
     "loggedOut": "Giriş yapılmadı",

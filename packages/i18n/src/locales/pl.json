@@ -3261,6 +3261,7 @@
       "codex": "Codex nie jest zalogowany na tym komputerze. Podłącz konto ChatGPT na stronie agenta {{name}}.",
       "cursor": "Cursor nie jest zalogowany na tym komputerze. Podłącz konto Cursor na stronie agenta {{name}}.",
       "grok": "Grok nie jest zalogowany na tym komputerze. Podłącz konto Grok na stronie agenta {{name}}.",
+      "muse": "Muse nie jest zalogowany na tym komputerze. Podłącz konto Muse na stronie agenta {{name}}.",
       "antigravity": "Gemini nie jest zalogowany na tym komputerze. Podłącz konto Gemini na stronie agenta {{name}}.",
       "opencode": "OpenCode nie może myśleć na tym komputerze. Połącz klucz OpenCode na stronie agenta {{name}}."
     },
@@ -3319,6 +3320,7 @@
       "chatgpt": "Połącz swój plan ChatGPT",
       "cursor": "Połącz swój plan Cursor",
       "grok": "Połącz swój plan Grok",
+      "muse": "Połącz swój plan Meta",
       "gemini": "Połącz swój plan Gemini",
       "zen": "Połącz OpenCode",
       "api_key": "Dodaj klucz API"
@@ -3427,6 +3429,10 @@
         "title": "Twój plan Grok",
         "tiers": "SuperGrok, SuperGrok Heavy lub X Premium+"
       },
+      "muse": {
+        "title": "Twój plan Meta",
+        "tiers": "Subskrypcja Meta z Muse Code"
+      },
       "gemini": {
         "title": "Twój plan Gemini",
         "tiers": "Google AI Pro, Google AI Ultra lub Gemini Enterprise",
@@ -3529,6 +3535,7 @@
       "codex": "ChatGPT jest zalogowany jako {{email}}, a nie {{account}}. Wyloguj się na stronie ChatGPT i spróbuj ponownie.",
       "cursor": "Cursor jest zalogowany jako {{email}}, a nie {{account}}. Wyloguj się na stronie Cursor i spróbuj ponownie.",
       "grok": "Grok jest zalogowany jako {{email}}, a nie {{account}}. Wyloguj się na stronie Grok i spróbuj ponownie.",
+      "muse": "Muse jest zalogowany jako {{email}}, a nie {{account}}. Wyloguj się na stronie Muse i spróbuj ponownie.",
       "antigravity": "Gemini jest zalogowany jako {{email}}, a nie {{account}}. Wyloguj się na stronie Google i spróbuj ponownie.",
       "opencode": "OpenCode zalogował się jako {{email}}, a nie {{account}}. Spróbuj ponownie z właściwym kluczem."
     },
@@ -5912,6 +5919,7 @@
             "codex": "Dodaj konto ChatGPT",
             "cursor": "Dodaj konto Cursor",
             "grok": "Dodaj konto Grok",
+            "muse": "Dodaj konto Muse Code",
             "antigravity": "Dodaj konto Gemini",
             "opencode": "Dodaj klucz OpenCode"
           },
@@ -5920,6 +5928,7 @@
             "codex": "Konto z twoim planem",
             "cursor": "Konto z twoim planem",
             "grok": "Konto z twoim planem",
+            "muse": "Konto z twoim planem",
             "antigravity": "Konto Google z twoim planem",
             "antigravityEnterprise": "Twoje konto Gemini Enterprise"
           },
@@ -5929,11 +5938,13 @@
             "codex": "Zaloguj się przez ChatGPT",
             "cursor": "Zaloguj się przez Cursor",
             "grok": "Zaloguj się przez Grok",
+            "muse": "Zaloguj się przez Muse Code",
             "antigravity": "Zaloguj się przez Google"
           },
           "opencodeFree": "Darmowe modele OpenCode nie wymagają klucza. Klucz z konsoli OpenCode dodaje modele płatne.",
           "cursorFinish": "Zaloguj się na stronie Cursor, a logowanie na komputerze {{computer}} zakończy się samo.",
           "grokFinish": "Zaloguj się na stronie Grok, a logowanie na komputerze {{computer}} zakończy się samo.",
+          "museFinish": "Potwierdź kod na stronie Muse, a logowanie na komputerze {{computer}} zakończy się samo.",
           "geminiEnterprise": "Użyj zamiast tego Gemini Enterprise",
           "geminiPersonal": "Użyj zamiast tego prywatnego konta Google",
           "cursorKey": "Użyj zamiast tego klucza API Cursor",
@@ -5952,6 +5963,7 @@
           "local": "Jesteś na samym komputerze {{computer}}? Jeśli jego przeglądarka otworzyła się sama, po prostu autoryzuj tam.",
           "deviceCode": "Kod do ChatGPT",
           "grokCode": "Kod do Grok",
+          "museCode": "Kod do Muse",
           "deviceCodeText": "Wpisz ten kod na stronie, która się otworzy.",
           "starting": "Pytanie komputera {{computer}}…",
           "waiting": "Czekanie",
@@ -5976,6 +5988,7 @@
             "codex": "ChatGPT zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie ChatGPT i spróbuj ponownie.",
             "cursor": "Cursor zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie Cursor i spróbuj ponownie.",
             "grok": "Grok zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie Grok i spróbuj ponownie.",
+            "muse": "Muse zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie Muse i spróbuj ponownie.",
             "antigravity": "Gemini zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie Google i spróbuj ponownie.",
             "opencode": "Ten klucz OpenCode jest już połączony jako {{account}}."
           },
@@ -10830,6 +10843,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "muse": "Muse Code",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Zaktualizuj agentes na komputerze, żeby używać klucza planu"
@@ -12206,6 +12220,7 @@
       "cursor": "{{model}} w planie Cursor",
       "grok": "{{model}} w planie Grok",
       "gemini": "{{model}} w planie Gemini",
+      "muse": "{{model}} w planie Muse",
       "zen": "{{model}} przez OpenCode",
       "coding": "{{model}} w {{plan}}",
       "claudeOf": "{{model}} w planie Claude użytkownika {{owner}}",
@@ -12213,6 +12228,7 @@
       "cursorOf": "{{model}} w planie Cursor użytkownika {{owner}}",
       "grokOf": "{{model}} w planie Grok użytkownika {{owner}}",
       "geminiOf": "{{model}} w planie Gemini użytkownika {{owner}}",
+      "museOf": "{{model}} w planie Muse użytkownika {{owner}}",
       "zenOf": "{{model}} przez OpenCode użytkownika {{owner}}",
       "codingOf": "{{model}} w {{plan}} użytkownika {{owner}}",
       "claudeAuto": "Plan Claude",
@@ -12220,6 +12236,7 @@
       "cursorAuto": "Plan Cursor",
       "grokAuto": "Plan Grok",
       "geminiAuto": "Plan Gemini",
+      "museAuto": "Plan Muse",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Plan Claude użytkownika {{owner}}",
@@ -12227,6 +12244,7 @@
       "cursorAutoOf": "Plan Cursor użytkownika {{owner}}",
       "grokAutoOf": "Plan Grok użytkownika {{owner}}",
       "geminiAutoOf": "Plan Gemini użytkownika {{owner}}",
+      "museAutoOf": "Plan Muse użytkownika {{owner}}",
       "zenAutoOf": "OpenCode użytkownika {{owner}}",
       "codingAutoOf": "{{plan}} użytkownika {{owner}}",
       "on": "{{line}} na komputerze {{computer}}"
@@ -12241,7 +12259,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "muse": "Muse Code"
     },
     "foot": {
       "api": "Przez API",
@@ -12254,6 +12273,7 @@
     "cursorText": "Korzysta z planu Cursor osoby, która połączyła komputer.",
     "grokText": "Korzysta z planu Grok osoby, która połączyła komputer.",
     "antigravityText": "Korzysta z planu Gemini osoby, która połączyła komputer.",
+    "museText": "Korzysta z planu Meta osoby, która połączyła komputer.",
     "opencodeText": "Darmowe modele OpenCode albo klucz OpenCode osoby, która połączyła komputer.",
     "cursorModel": {
       "inPlan": "W twoim planie Cursor",
@@ -15208,6 +15228,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "muse": "Muse Code",
         "opencode": "OpenCode",
         "commands": "Polecenia",
         "browser": "Przeglądarka"
@@ -15218,6 +15239,7 @@
         "cursor": "Jak Claude Code, z kontem Cursor. Tylko w dozwolonych folderach.",
         "grok": "Jak Claude Code, z kontem Grok. Tylko w dozwolonych folderach.",
         "antigravity": "Jak Claude Code, z kontem Gemini. Tylko w dozwolonych folderach.",
+        "muse": "Jak Claude Code, z kontem Meta. Tylko w dozwolonych folderach.",
         "opencode": "Jak Claude Code, z darmowymi modelami OpenCode albo kluczem OpenCode. Tylko w dozwolonych folderach.",
         "commands": "Uruchamia polecenia w Terminalu, na przykład testy i buildy."
       },

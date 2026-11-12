@@ -471,6 +471,8 @@
     "grokDesc": "Schrijft en wijzigt code in de toegestane mappen, met je Grok-account.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Schrijft en wijzigt code in de toegestane mappen, met je Gemini-account.",
+    "museName": "Muse Code",
+    "museDesc": "Schrijft en wijzigt code in de toegestane mappen, met je Meta-account.",
     "found": "Gevonden",
     "notFound": "Niet gevonden",
     "loggedOut": "Niet ingelogd",

@@ -256,6 +256,15 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         const expiresAt = new Date(ctx.now().getTime() + 15 * 60_000).toISOString();
         if (kind === "codex")
           return { loginId, kind, url: "https://auth.openai.com/codex/device", userCode: "ABCD-1234", expiresAt };
+        // Muse's sign-in: Meta's device page and the code to confirm there, the computer finishing by itself.
+        if (kind === "muse")
+          return {
+            loginId,
+            kind,
+            url: "https://auth.meta.com/oauth/device/?code=PXGP-CRND",
+            userCode: "PXGP-CRND",
+            expiresAt,
+          };
         // Cursor's sign-in: its page, and the computer finishes by itself (no code).
         if (kind === "cursor" && !options.provider)
           return { loginId, kind, url: "https://cursor.com/loginDeepControl?challenge=fake", expiresAt };

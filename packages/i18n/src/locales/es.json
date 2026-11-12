@@ -3141,6 +3141,7 @@
       "codex": "Codex no tiene la sesión iniciada en esta computadora. Conecta una cuenta de ChatGPT en la página de {{name}}.",
       "cursor": "Cursor no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Cursor en la página de {{name}}.",
       "grok": "Grok no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Grok en la página de {{name}}.",
+      "muse": "Muse no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Muse en la página de {{name}}.",
       "antigravity": "Gemini no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Gemini en la página de {{name}}.",
       "opencode": "OpenCode no puede pensar en esta computadora. Conecta una clave de OpenCode en la página de {{name}}."
     },
@@ -3199,6 +3200,7 @@
       "chatgpt": "Conecta tu plan de ChatGPT",
       "cursor": "Conecta tu plan de Cursor",
       "grok": "Conecta tu plan de Grok",
+      "muse": "Conecta tu plan de Meta",
       "gemini": "Conecta tu plan de Gemini",
       "zen": "Conectar OpenCode",
       "api_key": "Agrega una clave de API"
@@ -3305,6 +3307,10 @@
         "title": "Tu plan de Grok",
         "tiers": "SuperGrok, SuperGrok Heavy o X Premium+"
       },
+      "muse": {
+        "title": "Tu plan de Meta",
+        "tiers": "Una suscripción de Meta con Muse Code"
+      },
       "gemini": {
         "title": "Tu plan de Gemini",
         "tiers": "Google AI Pro, Google AI Ultra o Gemini Enterprise",
@@ -3409,6 +3415,7 @@
       "codex": "ChatGPT inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de ChatGPT e intenta de nuevo.",
       "cursor": "Cursor inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de Cursor e intenta de nuevo.",
       "grok": "Grok inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de Grok e intenta de nuevo.",
+      "muse": "Muse inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de Muse e intenta de nuevo.",
       "antigravity": "Gemini inició sesión como {{email}}, no como {{account}}. Cierra sesión en la página de Google e intenta de nuevo.",
       "opencode": "OpenCode inició sesión como {{email}}, no como {{account}}. Inténtalo de nuevo con la clave correcta."
     },
@@ -5686,6 +5693,7 @@
             "codex": "Agregar una cuenta de ChatGPT",
             "cursor": "Agregar una cuenta de Cursor",
             "grok": "Agregar una cuenta de Grok",
+            "muse": "Agregar una cuenta de Muse Code",
             "antigravity": "Agregar una cuenta de Gemini",
             "opencode": "Agregar una clave de OpenCode"
           },
@@ -5694,6 +5702,7 @@
             "codex": "La cuenta con tu plan",
             "cursor": "La cuenta con tu plan",
             "grok": "La cuenta con tu plan",
+            "muse": "La cuenta con tu plan",
             "antigravity": "La cuenta de Google con tu plan",
             "antigravityEnterprise": "Tu cuenta de Gemini Enterprise"
           },
@@ -5703,11 +5712,13 @@
             "codex": "Iniciar sesión con ChatGPT",
             "cursor": "Iniciar sesión con Cursor",
             "grok": "Iniciar sesión con Grok",
+            "muse": "Iniciar sesión con Muse Code",
             "antigravity": "Iniciar sesión con Google"
           },
           "opencodeFree": "Los modelos gratis de OpenCode no necesitan clave. Una clave de la consola de OpenCode suma los de pago.",
           "cursorFinish": "Inicia sesión en la página de Cursor y el inicio de sesión termina solo en {{computer}}.",
           "grokFinish": "Inicia sesión en la página de Grok y el inicio de sesión termina solo en {{computer}}.",
+          "museFinish": "Confirma el código en la página de Muse y el inicio de sesión termina solo en {{computer}}.",
           "geminiEnterprise": "Usar Gemini Enterprise",
           "geminiPersonal": "Usar una cuenta personal de Google",
           "cursorKey": "Usar una clave de API de Cursor",
@@ -5726,6 +5737,7 @@
           "local": "¿Estás en {{computer}}? Si su navegador se abrió solo, autoriza allí.",
           "deviceCode": "Código para ChatGPT",
           "grokCode": "Código para Grok",
+          "museCode": "Código para Muse",
           "deviceCodeText": "Escribe este código en la página que se abre.",
           "starting": "Consultando a {{computer}}…",
           "waiting": "Esperando",
@@ -5750,6 +5762,7 @@
             "codex": "ChatGPT inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de ChatGPT e inténtalo de nuevo.",
             "cursor": "Cursor inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Cursor e inténtalo de nuevo.",
             "grok": "Grok inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Grok e inténtalo de nuevo.",
+            "muse": "Muse inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Muse e inténtalo de nuevo.",
             "antigravity": "Gemini inició sesión como {{account}}, una cuenta que ya conectaste. Para usar otra, cierra sesión en la página de Google e inténtalo de nuevo.",
             "opencode": "Esa clave de OpenCode ya está conectada como {{account}}."
           },
@@ -10422,6 +10435,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "muse": "Muse Code",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Actualiza agentes en la computadora para usar la clave de un plan"
@@ -11707,6 +11721,7 @@
       "cursor": "{{model}} con el plan de Cursor",
       "grok": "{{model}} con el plan de Grok",
       "gemini": "{{model}} con el plan de Gemini",
+      "muse": "{{model}} con el plan de Muse",
       "zen": "{{model}} con OpenCode",
       "coding": "{{model}} con {{plan}}",
       "claudeOf": "{{model}} con el plan de Claude de {{owner}}",
@@ -11714,6 +11729,7 @@
       "cursorOf": "{{model}} con el plan de Cursor de {{owner}}",
       "grokOf": "{{model}} con el plan de Grok de {{owner}}",
       "geminiOf": "{{model}} con el plan de Gemini de {{owner}}",
+      "museOf": "{{model}} con el plan de Muse de {{owner}}",
       "zenOf": "{{model}} con el OpenCode de {{owner}}",
       "codingOf": "{{model}} con {{plan}} de {{owner}}",
       "claudeAuto": "Plan de Claude",
@@ -11721,6 +11737,7 @@
       "cursorAuto": "Plan de Cursor",
       "grokAuto": "Plan de Grok",
       "geminiAuto": "Plan de Gemini",
+      "museAuto": "Plan de Muse",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Plan de Claude de {{owner}}",
@@ -11728,6 +11745,7 @@
       "cursorAutoOf": "Plan de Cursor de {{owner}}",
       "grokAutoOf": "Plan de Grok de {{owner}}",
       "geminiAutoOf": "Plan de Gemini de {{owner}}",
+      "museAutoOf": "Plan de Muse de {{owner}}",
       "zenAutoOf": "OpenCode de {{owner}}",
       "codingAutoOf": "{{plan}} de {{owner}}",
       "on": "{{line}} en {{computer}}"
@@ -11741,7 +11759,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "muse": "Muse Code"
     },
     "foot": {
       "api": "A través de la API",
@@ -11754,6 +11773,7 @@
     "cursorText": "Usa el plan de Cursor de quien conectó la computadora.",
     "grokText": "Usa el plan de Grok de quien conectó la computadora.",
     "antigravityText": "Usa el plan de Gemini de quien conectó la computadora.",
+    "museText": "Usa el plan de Meta de quien conectó la computadora.",
     "opencodeText": "Los modelos gratis de OpenCode, o la clave de OpenCode de quien conectó la computadora.",
     "cursorModel": {
       "inPlan": "Incluido en tu plan de Cursor",
@@ -14637,6 +14657,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "muse": "Muse Code",
         "opencode": "OpenCode",
         "commands": "Comandos",
         "browser": "Navegador"
@@ -14647,6 +14668,7 @@
         "cursor": "Como Claude Code, con una cuenta de Cursor. Solo en las carpetas permitidas.",
         "grok": "Como Claude Code, con una cuenta de Grok. Solo en las carpetas permitidas.",
         "antigravity": "Como Claude Code, con una cuenta de Gemini. Solo en las carpetas permitidas.",
+        "muse": "Como Claude Code, con una cuenta de Meta. Solo en las carpetas permitidas.",
         "opencode": "Como Claude Code, con los modelos gratis de OpenCode o una clave de OpenCode. Solo en las carpetas permitidas.",
         "commands": "Ejecuta comandos en la Terminal, como pruebas y builds."
       },
