@@ -41,7 +41,14 @@ import { type MenuLook, menuLook, onMenuLookChange, setMenuLook } from "@/lib/co
 import { inDesktopApp } from "@/lib/desktop";
 import { useOpenParam } from "@/lib/open-param";
 import { ownPlanLines, planMeterText } from "@/lib/plan-usage";
-import { onSoundChoiceChange, type SoundChoice, setSoundChoice, soundChoice } from "@/lib/sounds";
+import {
+  onSoundChoiceChange,
+  type SoundChoice,
+  setSoundChoice,
+  setTypingSound,
+  soundChoice,
+  typingSoundOn,
+} from "@/lib/sounds";
 import { type ThemePreference, useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
 import { LanguageSelect } from "./LanguageSelect";
@@ -69,6 +76,7 @@ export function AccountSection() {
   const theme = useTheme();
   const look = useSyncExternalStore(onMenuLookChange, menuLook, () => "ours" as const);
   const sounds = useSyncExternalStore(onSoundChoiceChange, soundChoice, soundChoice);
+  const typing = useSyncExternalStore(onSoundChoiceChange, typingSoundOn, typingSoundOn);
   const [profile, setProfile] = useState<"name" | "timezone" | null>(null);
   const [phone, setPhone] = useState(false);
   // Adding a password and deleting the account: their dialogs are the account button's, kept in the address so a
@@ -224,6 +232,20 @@ export function AccountSection() {
                   { value: "pixel", label: t("shell.soundPixel") },
                   { value: "off", label: t("shell.soundOff") },
                 ]}
+              />
+            }
+          />
+          <PrefRow
+            id="account-typing-sound"
+            icon="sound"
+            label={t("shell.typingSound")}
+            hint={t("shell.typingSoundHint")}
+            control={
+              <Switch
+                checked={typing && sounds !== "off"}
+                disabled={sounds === "off"}
+                onCheckedChange={setTypingSound}
+                aria-label={t("shell.typingSound")}
               />
             }
           />

@@ -26,6 +26,7 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import { exitCodeOf, formatBytes, killTree, runCommand } from "./exec";
 import { isExecutable, resolveCommand } from "./executors";
+import { fullAccess } from "./full-access";
 import { touchesGitInternals } from "./git-guard";
 import { fileLines } from "./lines";
 import {
@@ -673,6 +674,8 @@ export class DelegatedTools {
     const { s } = r;
     const scope = this.commandScope(s);
     const { profile } = s.scope;
+    // Full access on this computer (`full-access.ts`): a work turn's calls go through, asked of nobody.
+    if (profile !== "plan" && fullAccess()) return null;
     const verdict = localVerdict(tool, input, scope, profile, s.scope.task ? ASK_AFTER_TASK : ASK_IN_CHAT);
     const refuse = (message: string) => {
       if (s.scope.task) this.opts.onDenied?.(s.scope.session, tool, input);

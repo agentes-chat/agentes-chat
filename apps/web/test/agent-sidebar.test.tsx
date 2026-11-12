@@ -265,8 +265,10 @@ describe("what the viewer sees", () => {
       agents: state.agents.map((a) => ({ agentId: a.id, state: "ready" as const, provider: "anthropic" })),
     };
     await openDm({ state });
-    expect(section("Como pensa")?.textContent).toContain("Claude");
-    expect(section("Como pensa")?.textContent).not.toContain("Automático");
+    // The line says who answers; the Modelo control under it (for who may change it) keeps the choice, Automático.
+    const line = section("Como pensa")?.querySelector(".dm-side__facts dd")?.textContent;
+    expect(line).toContain("Claude");
+    expect(line).not.toContain("Automático");
     expect(document.querySelector(".channel__header .channel__brain")?.textContent).toBe("Claude");
   });
 

@@ -4433,6 +4433,12 @@
   "shell.soundOff": {
     "value": "Off"
   },
+  "shell.typingSound": {
+    "value": "Typing sound"
+  },
+  "shell.typingSoundHint": {
+    "value": "A soft key click as you type a message, in the style above"
+  },
   "shell.browserNoticesHint": {
     "value": "Even with the tab closed"
   },
@@ -41244,6 +41250,9 @@
   },
   "agentSide.thinksWith": {
     "value": "Thinks with"
+  },
+  "agentSide.pickNextRun": {
+    "value": "It's working now: a change applies from its next task."
   },
   "agentSide.owner": {
     "value": "Owner"

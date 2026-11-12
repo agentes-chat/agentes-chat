@@ -14,6 +14,7 @@ import {
   type RepoFacts,
   simpleCommands,
 } from "@agenteschat/adapters/command-policy";
+import { fullAccess } from "./full-access";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 
 /**
@@ -168,8 +169,19 @@ async function scriptOf(command: string, cwd: string): Promise<{ text: string; c
  */
 export async function commandApproval(
   command: string,
-  opts: { cwd: string | null; own: readonly string[]; how: string; head?: string; script?: boolean },
+  opts: {
+    cwd: string | null;
+    own: readonly string[];
+    how: string;
+    head?: string;
+    script?: boolean;
+    /** This computer gives its agents full access (`fullAccess`, default from the env). */
+    fullAccess?: boolean;
+  },
 ): Promise<Hold | null> {
+  // Full access on this computer (`full-access.ts`): nothing waits for a person. A push through our git proxy is
+  // still the server's to decide there.
+  if (opts.fullAccess ?? fullAccess()) return null;
   const cwd = opts.cwd;
   const facts = new Map<string, RepoFacts>();
   const factsAt = (dir: string | null): RepoFacts => {

@@ -52,7 +52,13 @@ const mac = (patch: Record<string, unknown> = {}) => ({
 
 describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
-    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus", "Sonnet", "Haiku"]);
+    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual([
+      "Opus 5.5",
+      "Sonnet 5.5",
+      "Haiku 5.5",
+      "Fable 5.1",
+    ]);
+    expect(brainModelOptions("claude_code").at(-1)?.value).toBe("claude-fable-5-1");
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
     // Codex offers the catalog's OpenAI rows, GPT-6.1 Terra and GPT-6 Astra among them; GPT-6.1 Sol stays its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([
@@ -71,14 +77,15 @@ describe("brain settings", () => {
     // An alias the plan leaves out, or "Automático", is its main model; the value stays an alias.
     expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.3");
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
-    expect(brainModelLabel("claude_code", "opus")).toBe("Opus");
+    expect(brainModelLabel("claude_code", "opus")).toBe("Opus 5.5");
+    expect(brainModelLabel("claude_code", "claude-fable-5-1")).toBe("Fable 5.1");
     expect(normalizeBrainModel("claude_code", "haiku")).toBe("haiku");
     // One of a plan's other models is stored by its id and named after it there; while Claude thinks it runs Sonnet.
     expect(normalizeBrainModel("claude_code", "deepseek-v4.1-flash")).toBe("deepseek-v4.1-flash");
     expect(normalizeBrainModel("claude_code", "k3-256k")).toBe("k3-256k");
     expect(brainModelLabel("claude_code", "deepseek-v4.1-flash", "opencode")).toBe("DeepSeek V4.1 Flash");
     expect(brainModelLabel("claude_code", "deepseek-v4.1-flash", "kimi")).toBe("Kimi for Coding");
-    expect(brainModelLabel("claude_code", "deepseek-v4.1-flash")).toBe("Sonnet");
+    expect(brainModelLabel("claude_code", "deepseek-v4.1-flash")).toBe("Sonnet 5.5");
     expect(brainModelLabel("claude_code", "auto")).toBe("auto");
   });
 

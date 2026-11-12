@@ -1891,6 +1891,8 @@ export const en = {
     soundSky: "Sky",
     soundPixel: "Pixel",
     soundOff: "Off",
+    typingSound: "Typing sound",
+    typingSoundHint: "A soft key click as you type a message, in the style above",
     browserNoticesHint: "Even with the tab closed",
     browserNoticesBlocked:
       "Your browser blocked them. To allow them, click the icon next to the site's address and turn notifications on.",
@@ -17300,6 +17302,8 @@ export const en = {
     seeAll: "See all",
     thinks: "How it thinks",
     thinksWith: "Thinks with",
+    /** Under the model and effort while the agent works: a change applies to what it does next. */
+    pickNextRun: "It's working now: a change applies from its next task.",
     owner: "Owner",
     usage: "This month",
     spentOf: "{{spent}} of {{limit}}",

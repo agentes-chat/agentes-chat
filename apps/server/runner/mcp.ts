@@ -33,6 +33,7 @@ import {
 } from "@agenteschat/adapters/machine-protocol";
 import { commandApproval, lonePush, pushesOwnBranches, pushThroughProxy } from "./command-gate";
 import { RUNNER_VERSION } from "./errors";
+import { fullAccess, fullAccessEnv } from "./full-access";
 
 /**
  * The local `agentes` MCP server of a mission task (protocol 5, ADR 0029).
@@ -917,6 +918,8 @@ export async function permissionPrompt(
     scope?: CommandScope;
     /** The turn's permission profile (default `work`). */
     profile?: CommandProfile;
+    /** This computer gives its agents full access (`fullAccess`, default from the env). */
+    fullAccess?: boolean;
   } = {},
 ): Promise<PermissionAnswer> {
   const toolName = typeof args.tool_name === "string" ? args.tool_name : "";
@@ -925,6 +928,10 @@ export async function permissionPrompt(
       ? (args.input as Record<string, unknown>)
       : {};
   if (!toolName) return { behavior: "deny", message: "Unknown tool." };
+  // Full access on this computer (`full-access.ts`): every call of a work turn goes through, asked of nobody.
+  if ((opts.fullAccess ?? fullAccess()) && (opts.profile ?? "work") !== "plan") {
+    return { behavior: "allow", updatedInput: input };
+  }
   const how = opts.task ? ASK_AFTER_TASK : ASK_IN_CHAT;
   const verdict = localVerdict(toolName, input, opts.scope, opts.profile ?? "work", how);
   if (verdict?.behavior === "deny") return verdict;
@@ -1192,6 +1199,7 @@ export function claudeMcpConfig(input: {
           ...(input.runnerHome ? { AGENTES_RUNNER_HOME: input.runnerHome } : {}),
           ...(input.branches?.length ? { AGENTES_MCP_BRANCHES: input.branches.join(",") } : {}),
           ...(input.task ? { AGENTES_MCP_TASK: input.task } : {}),
+          ...fullAccessEnv(),
         },
       },
     },
@@ -1373,6 +1381,22 @@ export const ALWAYS_DENY_RULES: readonly string[] = [
   ...INLINE_CODE_DENY_RULES,
 ];
 
+/** A work turn's tools on a computer with full access (`claudePermissionSettings`): all of Claude Code's own and ours. */
+const FULL_ACCESS_TOOLS = [
+  "mcp__agentes",
+  "Bash",
+  "Read",
+  "Edit",
+  "Write",
+  "MultiEdit",
+  "NotebookEdit",
+  "Glob",
+  "Grep",
+  "LS",
+  "WebSearch",
+  "WebFetch",
+] as const;
+
 /** What a `plan` turn never gets: edits. Reading the web is a read (ADR 0109). */
 const PLAN_DENY = ["Edit", "Write", "NotebookEdit"];
 
@@ -1400,11 +1424,18 @@ export function claudePermissionSettings(
     promptReads?: boolean;
     /** The runner's home when it isn't under `.agentes-runner` (system mode): read by no tool or command either. */
     runnerHome?: string;
+    /** This computer gives its agents full access (`fullAccess`, default from the env). */
+    fullAccess?: boolean;
   } = {},
 ) {
   const shellReads = opts.promptReads ? [] : readOnlyShell();
   const home = opts.runnerHome?.startsWith("/") && !opts.runnerHome.includes("*") ? opts.runnerHome : null;
   const homeDeny = home ? [`Read(/${home}/**)`, `Bash(*${home}/*)`] : [];
+  // Full access on this computer (`full-access.ts`): a work turn may use every tool, nothing kept for a person.
+  // The runner's own home stays unread: its sign-ins and tokens aren't the agent's work.
+  if (mode === "work" && (opts.fullAccess ?? fullAccess())) {
+    return { permissions: { allow: [...FULL_ACCESS_TOOLS], ask: [], deny: [...homeDeny] } };
+  }
   // The team's right hand on a person's plan (protocol 41): our tools only, every tool of Claude Code's own refused.
   if (mode === "chat") {
     return {

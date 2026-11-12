@@ -99,6 +99,8 @@ export const STORAGE_KEYS = {
   outbox: "agentes.outbox",
   /** The app's sounds on this device: "tactile" (default), "sky", "pixel" or "off" (lib/sounds.ts). */
   sounds: "agentes.sounds",
+  /** A soft key click as the person types in the message box: "on", or anything else for off (lib/sounds.ts). */
+  typingSounds: "agentes.sounds.typing",
   /** In `sessionStore`, this tab's id; in `storage`, the tab the person used last (it plays sounds while hidden). */
   soundTab: "agentes.sounds.tab",
   /** How many times our notifications ask showed by itself in this browser (`usePushAsk`, ADR 0071). */

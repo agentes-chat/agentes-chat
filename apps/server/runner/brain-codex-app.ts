@@ -23,6 +23,7 @@ import {
 } from "./brain-codex";
 import { killTree } from "./exec";
 import { resolveCommand } from "./executors";
+import { FULL_ACCESS_NOTE, fullAccess } from "./full-access";
 import {
   CODEX_MCP_ENV,
   codexWritableRoots,
@@ -187,10 +188,11 @@ export function codexAppServerArgs(input: {
  * `plan` reads in a read-only sandbox, `work` writes in its folders; neither has the network. Codex
  * asks before anything else (`untrusted`), and the runner answers with the command policy.
  */
-export const codexThreadPolicy = (profile: CommandProfile) => ({
-  sandbox: codexSandbox(profile),
-  approvalPolicy: "untrusted" as const,
-});
+export const codexThreadPolicy = (profile: CommandProfile, full: boolean = fullAccess()) => {
+  const sandbox = codexSandbox(profile, full);
+  // Full access on this computer (`full-access.ts`): no sandbox and nothing to ask, so Codex asks nobody.
+  return { sandbox, approvalPolicy: sandbox === "danger-full-access" ? ("never" as const) : ("untrusted" as const) };
+};
 
 // ── JSON-RPC client ──────────────────────────────────────────────────────────
 
@@ -1000,7 +1002,9 @@ export class CodexAppServers implements CodexAppRunner {
         );
       }
     }
-    const instructions = input.system.trim();
+    const told = input.system.trim();
+    // A work turn on a computer with full access is told so (`full-access.ts`).
+    const instructions = told && common.sandbox === "danger-full-access" ? told + FULL_ACCESS_NOTE : told;
     try {
       const r = await client.request<ThreadResponse>("thread/start", {
         ...common,

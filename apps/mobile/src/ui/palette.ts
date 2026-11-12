@@ -85,9 +85,6 @@ export function appColors(scheme: Scheme): AppColors {
   };
 }
 
-/** A card inside a dark sheet: one step above the sheet, as the sheet is one above the screen. */
-const DARK_SHEET_CARD = "#292928";
-
 /**
  * The colors inside a form sheet. In dark the sheet is lifted one step above the screen behind it (the dark
  * page's own color made the two read as one) and its cards one more, as the system's own sheets do. Light
@@ -100,11 +97,12 @@ export function sheetColors(colors: AppColors, scheme: Scheme): AppColors {
     bg: colors.raised,
     grouped: colors.raised,
     surface: colors.raised,
-    raised: DARK_SHEET_CARD,
-    raised2: DARK_SHEET_CARD,
-    surfaceRaised: DARK_SHEET_CARD,
+    // A card inside it: one step above the sheet (the screen's raised-2), as the sheet is one above the screen.
+    raised: colors.raised2,
+    raised2: colors.raised2,
+    surfaceRaised: colors.raised2,
     // Android's "glass" plates (round buttons) are opaque: a card's tone, so they don't vanish into the sheet.
-    glassSolid: DARK_SHEET_CARD,
+    glassSolid: colors.raised2,
   };
 }
 

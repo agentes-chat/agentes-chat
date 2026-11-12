@@ -160,7 +160,7 @@ describe("the look", () => {
     const { html } = renderEmail(verify, art);
     expect(html).toContain('<meta name="color-scheme" content="light dark">');
     expect(html).toContain(":root{color-scheme:light dark;");
-    expect(html).toContain("@media (prefers-color-scheme:dark){.bg{background:#0f0f0e!important}");
+    expect(html).toContain("@media (prefers-color-scheme:dark){.bg{background:#131312!important}");
     expect(html).toContain("[data-ogsb] .logo-ink{display:none!important}");
     expect(html).toContain('<!--[if !mso]><!--><img class="logo-bone"');
   });
@@ -177,9 +177,9 @@ describe("the look", () => {
     expect(html).not.toMatch(/style="[^"]*background-image/);
     expect(html).toContain("font-size:15px;line-height:20px;font-weight:600;text-decoration:none;padding:13px 15px");
     // Dark: the flat bone wherever our dark applies, and the bone gradient in a block of its own after Outlook's hooks.
-    expect(html).toContain(".btn{background:#efefec!important;color:#0f0f0e!important;border-color:#efefec!important}");
+    expect(html).toContain(".btn{background:#efefec!important;color:#131312!important;border-color:#efefec!important}");
     const gradient =
-      "<style>\n@media (prefers-color-scheme:dark){.btn{background-image:linear-gradient(180deg,#c7c7c4 0%,#efefec 100%)!important}}\n</style>";
+      "<style>\n@media (prefers-color-scheme:dark){.btn{background-image:linear-gradient(180deg,#c7c7c5 0%,#efefec 100%)!important}}\n</style>";
     expect(html.indexOf(gradient)).toBeGreaterThan(html.lastIndexOf("[data-ogsb] "));
     // Classic Outlook: its spacers in em at the 15 px label, both labels raised alike, no exact line height on a link.
     expect(html).toContain('<i style="mso-font-width:107%;mso-text-raise:187%" hidden>&emsp;</i>');

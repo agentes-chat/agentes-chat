@@ -44,24 +44,26 @@
   --chosen-press: inset 0 2px 5px rgba(0, 0, 0, 0.16), inset 0 1px 1.5px rgba(0, 0, 0, 0.12);
 }
 [data-theme="dark"] {
-  --bg: #0f0f0e;
-  --raised: #1c1c1b;
-  --raised-2: #242423;
-  --sunken: #0a0a09;
-  /* Three columns, two steps: both sidebars a step under the chat (Discord's split). */
+  --bg: #131312;
+  --raised: #272726;
+  --raised-2: #31312f;
+  --sunken: #0c0c0b;
+  /* Three columns, two steps: both sidebars a step under the chat (Discord's split). Each step up (side, pane, raised,
+     raised-2) is at least 1.12:1 from the one under it, and a hairline at least 1.5:1 on any of them, so cards, wells and
+     the sheet's edge show on a dim screen too; muted and faint keep their 5.8:1 and 4.5:1 on every face. */
   --side: #0b0d11;
-  --pane: #181817;
-  --side-hover: color-mix(in srgb, var(--ink) 6%, var(--side));
-  --side-chosen: color-mix(in srgb, var(--ink) 14%, var(--side));
-  --glass: rgba(30, 30, 28, 0.86);
-  --glass-solid: #1e1e1c;
-  --line: rgba(255, 255, 255, 0.1);
-  --line2: rgba(255, 255, 255, 0.15);
+  --pane: #1a1a19;
+  --side-hover: color-mix(in srgb, var(--ink) 9%, var(--side));
+  --side-chosen: color-mix(in srgb, var(--ink) 18%, var(--side));
+  --glass: rgba(43, 43, 41, 0.88);
+  --glass-solid: #2b2b29;
+  --line: rgba(255, 255, 255, 0.14);
+  --line2: rgba(255, 255, 255, 0.2);
   --line-strong: #71716c;
   --ink: #efefec;
   --ink2: #d6d6d2;
-  --muted: #a3a39e;
-  --faint: #8f8f89;
+  --muted: #b2b2ad;
+  --faint: #9d9d97;
   --agent: #5aa8ff;
   --agent2: #8cc3ff;
   --agent-soft: #11253f;
@@ -81,7 +83,7 @@
   --scrim: rgba(0, 0, 0, 0.5);
   /* A black press shows only on a face it can darken: dark's chosen face sits lighter than a card, as light as the
      faint words on it allow (4.5:1), under light's shadow made deeper. */
-  --chosen-bg: #282827;
+  --chosen-bg: #333331;
   --chosen-press: inset 0 2px 5px rgba(0, 0, 0, 0.9), inset 0 1px 1.5px rgba(0, 0, 0, 0.7);
 }
 :root,

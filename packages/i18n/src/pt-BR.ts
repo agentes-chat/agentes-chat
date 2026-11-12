@@ -1811,6 +1811,8 @@ export const ptBR = {
     soundSky: "Céu",
     soundPixel: "Pixel",
     soundOff: "Sem som",
+    typingSound: "Som de digitação",
+    typingSoundHint: "Um clique suave de tecla enquanto você escreve uma mensagem, no estilo acima",
     browserNoticesHint: "Mesmo com a aba fechada",
     browserNoticesBlocked:
       "O navegador bloqueou os avisos. Para permitir, clique no ícone ao lado do endereço do site e ligue as notificações.",
@@ -17383,6 +17385,8 @@ export const ptBR = {
     seeAll: "Ver todas",
     thinks: "Como pensa",
     thinksWith: "Pensa com",
+    /** Under the model and effort while the agent works: a change applies to what it does next. */
+    pickNextRun: "Está trabalhando agora: a troca vale a partir da próxima tarefa.",
     owner: "Responsável",
     usage: "Uso no mês",
     spentOf: "{{spent}} de {{limit}}",

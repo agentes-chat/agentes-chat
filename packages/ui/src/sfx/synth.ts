@@ -14,6 +14,12 @@ export const DEFAULT_SOUND_STYLE: SoundStyle = "tactile";
 
 export const SOUNDS = ["send", "reply", "done", "attention", "approved", "error", "stop", "mention"] as const;
 export type SoundName = (typeof SOUNDS)[number];
+/**
+ * The key click the web plays as the person types, when they turn it on (ADR 0070, addendum): rendered like the
+ * others, never an event's sound, so the phone (which makes a file of every `SOUNDS`) has none to make.
+ */
+export const KEY_SOUND = "key";
+export type SynthSound = SoundName | typeof KEY_SOUND;
 
 export const isSoundStyle = (v: unknown): v is SoundStyle => (SOUND_STYLES as readonly unknown[]).includes(v);
 
@@ -273,7 +279,7 @@ const POST: Record<SoundStyle, (x: Float32Array) => Float32Array> = {
 type Score = (out: Float32Array, v: Voice, style: SoundStyle) => void;
 
 /** Each sound: its peak (how loud it is next to the others) and its notes; clicks differ per style. */
-const SCORE: Record<SoundName, [peak: number, score: Score]> = {
+const SCORE: Record<SynthSound, [peak: number, score: Score]> = {
   send: [
     0.55,
     (o, v, s) => {
@@ -345,6 +351,20 @@ const SCORE: Record<SoundName, [peak: number, score: Score]> = {
       }
     },
   ],
+  // A key under the person's finger as they type (off unless they turn it on): a click, no melody, so a fast run of
+  // them never turns into a tune. The quietest of all.
+  key: [
+    0.35,
+    (o, v, s) => {
+      if (s === "tactile") {
+        noise(o, { d: 0.01, g: 0.7, type: "bp", fc: 3200, q: 2.2 });
+        noise(o, { t: 0.004, d: 0.02, g: 0.25, type: "lp", fc: 900 });
+      } else if (s === "sky") {
+        noise(o, { d: 0.012, g: 0.4, type: "hp", fc: 5200 });
+        v(o, 0.002, "E7", { d: 0.04, g: 0.18 });
+      } else v(o, 0, "E6", { d: 0.03, g: 0.6 });
+    },
+  ],
   mention: [
     0.85,
     (o, v, s) => {
@@ -358,7 +378,7 @@ const SCORE: Record<SoundName, [peak: number, score: Score]> = {
 };
 
 /** One sound's samples (mono, `SAMPLE_RATE`, peak under 0.9). */
-export function renderSound(style: SoundStyle, name: SoundName): Float32Array {
+export function renderSound(style: SoundStyle, name: SynthSound): Float32Array {
   const [peak, score] = SCORE[name];
   const out = new Float32Array(Math.ceil(1.8 * SR));
   score(out, VOICE[style], style);

@@ -46,6 +46,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { usd } from "@/components/AgentFields";
+import { ThinksPicker, useEditableBrain } from "@/components/agents/ThinksPicker";
 import { stepText } from "@/components/browser/BrowserCard";
 import { useAgentComputer } from "@/components/computer/facts";
 import { useOpenComputer } from "@/components/computer/open";
@@ -404,6 +405,7 @@ function ThinksSection({ agent }: { agent: Agent }) {
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const thinks = useAgentThinks(agent);
+  const editable = useEditableBrain(agent);
   const detail = useAgentDetail(org.id, agent.id);
   const admin = can(org, "manage_agents");
   const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId) : undefined;
@@ -413,8 +415,8 @@ function ThinksSection({ agent }: { agent: Agent }) {
   const limit = detail.data?.monthlyBudgetUsd ?? detail.data?.defaultBudgetUsd;
   return (
     <Section title={t("agentSide.thinks")}>
-      <dl className="dm-side__facts">
-        {thinks?.text && (
+      {thinks?.text && (
+        <dl className="dm-side__facts">
           <div>
             <dt>{t("agentSide.thinksWith")}</dt>
             <dd className="ac-iconline">
@@ -423,7 +425,11 @@ function ThinksSection({ agent }: { agent: Agent }) {
               {agent.brain?.speed && ` · ${t("agentPage.work.brain.speeds.fast")}`}
             </dd>
           </div>
-        )}
+        </dl>
+      )}
+      {/* Under what thinks, its model and effort for whoever may change them, one click away (ThinksPicker). */}
+      {editable && <ThinksPicker agent={agent} view={editable} />}
+      <dl className="dm-side__facts">
         <div>
           <dt>{t("agentSide.owner")}</dt>
           <dd>{owner?.name ?? t("newAgent.noOwnerOption")}</dd>

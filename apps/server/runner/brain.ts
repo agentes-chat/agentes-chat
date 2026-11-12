@@ -62,6 +62,7 @@ import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { RunnerError } from "./errors";
 import { cliSpawn } from "./executors";
+import { withFullAccessNote } from "./full-access";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
 import {
@@ -2204,7 +2205,8 @@ export class BrainManager {
     const systemFile = path.join(dir, "system.txt");
     const mode = req.permissions?.mode === "plan" || req.permissions?.mode === "chat" ? req.permissions.mode : "work";
     const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined);
-    const system = typeof req.system === "string" ? req.system : "";
+    // A work turn on a computer with full access is told so (`full-access.ts`).
+    const system = withFullAccessNote(typeof req.system === "string" ? req.system : "", mode === "work");
     const ranKey = ranKeyOf(req, session);
     // A `chat` turn reads nothing of the folder, its CLAUDE.md included.
     const withRepo = launch.settingSources === "" && mode !== "chat";
