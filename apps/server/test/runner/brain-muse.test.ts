@@ -122,6 +122,9 @@ test("the account's settings document carries our server and none of the machine
   expect(doc.mcp_servers.agenteschat_agentes.transport).toBe("stdio");
   expect(doc.mcp_servers.agenteschat_agentes.mode).toBe("required");
   expect(doc.mcp_servers.agenteschat_agentes.command).toBe("agentes-runner");
+  // `agentes-runner mcp` needs the run, and with `mode: required` a bridge that exits ends the turn.
+  expect(doc.mcp_servers.agenteschat_agentes.args).toEqual(["mcp", "--run", "${AGENTES_MCP_RUN}"]);
+  expect(doc.mcp_servers.agenteschat_agentes.env.AGENTES_MCP_RUN).toBe("${AGENTES_MCP_RUN}");
   const overHttp = JSON.parse(museSettings({ mcp: { token: "t", url: "https://x/mcp" } }));
   expect(overHttp.mcp_servers.agenteschat_agentes.transport).toBe("streamable_http");
 });
@@ -236,12 +239,16 @@ test("the approval policy: a read and work inside the folder, nothing outside it
   expect(verdict({ kind: "command", command: "cat ~/.ssh/id_rsa" }).allow).toBe(false);
   expect(verdict({ kind: "command", command: "git push origin main" }).allow).toBe(false);
 
-  // A `plan` turn reads and nothing else; a subject the policy can't read is the profile's call.
+  // A `plan` turn reads and nothing else; a subject the policy can't read is refused, in either profile: the host
+  // asks about it precisely because nothing matched, and there is nobody here to look.
   const planned = verdict({ kind: "command", command: "echo hi > notes.txt" }, "plan");
   expect(planned.allow).toBe(false);
   expect(planned.why).toContain("may only read");
-  expect(verdict({ kind: "network" }, "plan").allow).toBe(false);
-  expect(verdict({ kind: "network" }, "work").allow).toBe(true);
+  const networked = verdict({ kind: "network" }, "work");
+  expect(networked.allow).toBe(false);
+  expect(networked.why).toContain("nobody is here to look");
+  // A plan turn refuses it for its own reason, before a subject is even read.
+  expect(verdict({ kind: "network" }, "plan").why).toContain("may only read");
 });
 
 test("the offer taken is the narrowest the host made: once by default, the session only when it is meant", () => {
