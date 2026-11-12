@@ -18715,6 +18715,7 @@
     "stopOnHome": "Usuń ze Startu",
     "onHome": "Na Starcie",
     "onHomeDone": "Start pokazuje teraz ten pulpit",
+    "updateAll": "Zaktualizuj wszystkie",
     "groups": {
       "workspace": "Przestrzeń robocza",
       "workspaceHint": "widzą wszyscy",
