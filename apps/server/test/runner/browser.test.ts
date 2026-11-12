@@ -249,6 +249,44 @@ class FakeSocket implements StreamSocket {
   }
 }
 
+test("a browser daemon holding the CLI's pipes open does not block the live view or command errors", async () => {
+  const t = setup({ firstFrameMs: 60_000 });
+  const pids = path.join(t.home, "daemon-pids");
+  const previous = process.env.FAKE_AB_HOLD_STDIO;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await t.act("open", ["https://shop.example.com"]);
+    process.env.FAKE_AB_HOLD_STDIO = pids;
+    await Promise.race([
+      (async () => {
+        expect(await t.manager.streamStart(dev, "watch")).toEqual({ mode: "watch" });
+        expect(t.sockets).toHaveLength(1);
+        expect(await t.act("get", ["title"])).toMatchObject({ success: false, error: "bad get" });
+      })(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("waited for the daemon's pipes after the CLI exited")), 3000);
+      }),
+    ]);
+    // They are still alive: success came from the CLI's exit and answer, not the daemon finally closing its pipes.
+    for (const pid of readFileSync(pids, "utf8").trim().split("\n"))
+      expect(() => process.kill(Number(pid), 0)).not.toThrow();
+  } finally {
+    clearTimeout(timer);
+    if (previous === undefined) delete process.env.FAKE_AB_HOLD_STDIO;
+    else process.env.FAKE_AB_HOLD_STDIO = previous;
+    if (existsSync(pids)) {
+      for (const pid of readFileSync(pids, "utf8").trim().split("\n")) {
+        try {
+          process.kill(Number(pid), "SIGKILL");
+        } catch {
+          // Already gone.
+        }
+      }
+    }
+    await t.manager.close();
+  }
+});
+
 // ── Pure parts ───────────────────────────────────────────────────────────────
 
 test("the runner speaks the browser's protocol (12) or later, and the browser is a fourth machine switch", () => {

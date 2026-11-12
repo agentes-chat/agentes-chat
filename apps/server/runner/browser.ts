@@ -1616,8 +1616,8 @@ const sha256File = async (file: string) =>
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
-/** `agent-browser`'s JSON answer, or a failure built from what it printed. */
-function parseAnswer(stdout: string, stderr: string, exitCode: number | null): BrowserAnswer {
+/** `agent-browser`'s complete JSON answer, including an unsuccessful command. */
+function jsonAnswer(stdout: string, exitCode: number | null): BrowserAnswer | null {
   const text = stdout.trim();
   for (const candidate of [text, text.split("\n").at(-1) ?? ""]) {
     if (!candidate) continue;
@@ -1636,7 +1636,15 @@ function parseAnswer(stdout: string, stderr: string, exitCode: number | null): B
       // not JSON: fall through
     }
   }
-  const why = (stderr.trim() || text).split("\n").find((l) => l.trim()) ?? `agent-browser exited with ${exitCode}`;
+  return null;
+}
+
+/** `agent-browser`'s JSON answer, or a failure built from what it printed. */
+function parseAnswer(stdout: string, stderr: string, exitCode: number | null): BrowserAnswer {
+  const answer = jsonAnswer(stdout, exitCode);
+  if (answer) return answer;
+  const why =
+    (stderr.trim() || stdout.trim()).split("\n").find((l) => l.trim()) ?? `agent-browser exited with ${exitCode}`;
   return { success: false, data: null, error: why.slice(0, 2000) };
 }
 
@@ -4125,12 +4133,21 @@ export class BrowserManager {
       let size = 0;
       let timedOut = false;
       let done = false;
+      let exited = false;
+      let exitCode: number | null = null;
       const finish = (exitCode: number | null) => {
         if (done) return;
         done = true;
         clearTimeout(timer);
         opts.signal?.removeEventListener("abort", onAbort);
+        child.stdout.destroy();
+        child.stderr.destroy();
         resolve({ stdout, stderr, exitCode, timedOut });
+      };
+      // On Windows the daemon inherits the CLI's pipes. Its answer and exit finish the command: waiting for
+      // `close` waits for the daemon instead. Data can arrive after `exit`, so both events check for a full answer.
+      const answered = () => {
+        if (exited && args.includes("--json") && jsonAnswer(stdout, exitCode)) finish(exitCode);
       };
       const kill = () => {
         try {
@@ -4149,12 +4166,18 @@ export class BrowserManager {
         size += chunk.byteLength;
         if (size <= MAX_STDOUT) stdout += chunk.toString("utf8");
         else kill();
+        answered();
       });
       child.stderr.on("data", (chunk: Buffer) => {
         if (stderr.length < 8192) stderr += chunk.toString("utf8");
       });
       // Through EventEmitter: some @types/node versions lose ChildProcess's event methods.
       const events = child as unknown as EventEmitter;
+      events.on("exit", (code: number | null) => {
+        exited = true;
+        exitCode = code;
+        answered();
+      });
       events.on("error", (err: Error) => {
         stderr += err.message;
         finish(null);
