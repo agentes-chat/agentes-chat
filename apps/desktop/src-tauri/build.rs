@@ -34,6 +34,7 @@ const COMMANDS: &[&str] = &[
     "app_menu_set",
     "context_menu",
     "page_ready",
+    "main_window_action",
     "cover_retry",
     "cover_hide",
     "cover_server",

@@ -53,6 +53,8 @@ pub fn attach(app: &AppHandle, window: &tauri::Window) -> tauri::Result<()> {
         .transparent(!cfg!(target_os = "windows"))
         .background_color(SKY)
         .auto_resize();
+    #[cfg(target_os = "windows")]
+    let cover = cover.initialization_script(main_window::WINDOW_CONTROLS);
     window.add_child(cover, LogicalPosition::new(0.0, 0.0), size)?;
     let mut shown = lock(app);
     shown.since = Some((Instant::now(), OPENING));
