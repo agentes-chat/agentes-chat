@@ -18,6 +18,7 @@ import {
   foldersOfAgent,
   formatUserCode,
   freeDuplicate,
+  geminiNotShared,
   installCommand,
   isHandheld,
   isPaused,
@@ -29,6 +30,8 @@ import {
   machineReasonText,
   normalizeUserCode,
   otherThanHint,
+  pausedByText,
+  pauseUntil,
   platformOf,
   sharedFolderFacts,
   sharedFolderOf,
@@ -126,6 +129,13 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect(isPaused({ paused: null })).toBe(false);
     expect(pauseOf({ paused: false, until: "x" })).toEqual({ paused: false });
     expect(pauseOf("yes")).toBeUndefined();
+    // Who paused it from the apps comes along only when the event says so.
+    expect(pauseOf({ until: null, by: { id: "u1", name: "Ana" } })).toEqual({
+      paused: true,
+      until: null,
+      by: { id: "u1", name: "Ana" },
+    });
+    expect(pauseOf({ until: null, by: "u1" })).toEqual({ paused: true, until: null });
     expect(accessOf(null)).toBeNull();
     expect(accessOf({ folders: "no" })).toBeUndefined();
   });
@@ -329,6 +339,15 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect(freeDuplicate(undefined)).toBeNull();
   });
 
+  test("a Gemini sign-in the computer couldn't share with every agent: trying again ends the same way", () => {
+    expect(geminiNotShared("antigravity", { state: "failed", code: "not_kept" })).toBe(true);
+    // Claude's token the computer couldn't write, and Gemini's other failures, may pass on another try.
+    expect(geminiNotShared("claude_code", { state: "failed", code: "not_kept" })).toBe(false);
+    expect(geminiNotShared("antigravity", { state: "failed", code: "bad_code" })).toBe(false);
+    expect(geminiNotShared("antigravity", { state: "failed" })).toBe(false);
+    expect(geminiNotShared("antigravity", undefined)).toBe(false);
+  });
+
   test("a new sign-in is another account only when its hint named a different email", () => {
     expect(otherThanHint("walt@pessoal.com", { email: "walt@acme.com" })).toBe(true);
     expect(otherThanHint("Walt@Pessoal.com", { email: "walt@pessoal.com" })).toBe(false);
@@ -456,5 +475,25 @@ describe("the shared folder (ADR 0115)", () => {
       'machines.shared.size{"size":"3.2 GB"} · machines.shared.free{"free":"43 GB"}',
     );
     expect(sharedFolderFacts(t, "en", null)).toBe("machines.shared.measuring");
+  });
+});
+
+describe("pausing from the apps", () => {
+  test("an hour, tomorrow at 9:00 local time, or until resumed", () => {
+    const now = new Date(2026, 10, 11, 15, 30);
+    expect(pauseUntil("1h", now)).toBe(new Date(2026, 10, 11, 16, 30).toISOString());
+    expect(pauseUntil("tomorrow", now)).toBe(new Date(2026, 10, 12, 9, 0).toISOString());
+    expect(pauseUntil("manual", now)).toBeNull();
+  });
+
+  test("the line says who paused it, and nothing for a pause on the computer", () => {
+    const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
+    expect(pausedByText(t, "en", { until: null }, "u1")).toBeNull();
+    expect(pausedByText(t, "en", { until: null, by: { id: "u1", name: "Ana" } }, "u1")).toBe(
+      "machines.remotePause.byYou",
+    );
+    expect(pausedByText(t, "en", { until: null, by: { id: "u2", name: "Bia" } }, "u1")).toBe(
+      'machines.remotePause.byName{"name":"Bia"}',
+    );
   });
 });

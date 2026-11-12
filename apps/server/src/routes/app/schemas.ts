@@ -138,7 +138,7 @@ export const Organization = z
       .optional()
       .openapi({
         description:
-          "In `GET /me`, while an owner's deletion is pending: the workspace is closed (`org.deleting`), and any owner can restore it until `dueAt` (`DELETE …/deletion`). Absent: not being deleted.",
+          "In `GET /me`, while an owner's deletion is pending: the workspace is read-only (its changes answer `org.deleting`), and any owner can restore it until `dueAt` (`DELETE …/deletion`). Absent: not being deleted.",
       }),
     start: StartChoice.optional().openapi({
       description: "In `GET /me`: what opens when the app starts here (`PUT …/me/start`). Absent elsewhere.",

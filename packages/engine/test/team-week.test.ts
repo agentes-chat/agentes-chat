@@ -283,6 +283,18 @@ describe("the card", () => {
     ).toBeNull();
   });
 
+  test("a busy week whose workspace began being deleted since it was queued posts nothing", async () => {
+    f = await setup({ rightHand: true });
+    await busyWeek(f);
+    await f.db
+      .update(schema.organizations)
+      .set({ deletionDueAt: new Date(Date.now() + 7 * DAY) })
+      .where(eq(schema.organizations.id, f.org.id));
+    expect(
+      await postTeamWeek({ db: f.db, pubsub: f.pubsub }, f.org.id, { userId: f.owner.id, slot: SLOT.toISOString() }),
+    ).toBeNull();
+  });
+
   test("rows apply as whoever clicks: the budget with Undo on the card, a routine, Lodi asked, the task's agent told", async () => {
     f = await setup({ rightHand: true });
     const { lodi, dm, parent } = await busyWeek(f);

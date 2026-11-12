@@ -132,6 +132,7 @@ import type {
   MachineAccess,
   MachineAccount,
   MachineOutages,
+  MachinePause,
   MachineTask,
   MailAccount,
   MailFolder,
@@ -1237,6 +1238,13 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         // The new access, bare or wrapped.
         return "access" in out ? out.access : out;
       },
+      setPause: async (orgId, machineId, input) =>
+        (
+          await request<{ paused: MachinePause | null }>(
+            `${org(orgId)}/machines/${enc(machineId)}/${input === "resume" ? "resume" : "pause"}`,
+            { json: input === "resume" ? {} : input },
+          )
+        ).paused,
       // A self-hosted server has no builds of its own (no `DESKTOP_RELEASES_TOKEN`): agentes.chat's, then.
       desktopLatest: async (target, arch) =>
         (await nullOn(404, () => request<DesktopRelease>("/api/desktop/latest", { query: { target, arch } }))) ??

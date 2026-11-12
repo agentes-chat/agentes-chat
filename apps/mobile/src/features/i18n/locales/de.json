@@ -2243,9 +2243,9 @@
     "ofOnline": "{{online}} von {{count}}",
     "deleteName": "{{name}} löschen",
     "deleteFoot": "Du hast 7 Tage Zeit, es dir anders zu überlegen.",
-    "deleteAlert": "Alle verlieren sofort den Zugriff. Wiederherstellen geht noch 7 Tage lang.",
+    "deleteAlert": "Alle können ihn ab sofort nur noch lesen. Wiederherstellen geht noch 7 Tage lang.",
     "deleteAction": "Löschen",
-    "deleteIntro": "{{name}} wird sofort für alle geschlossen und in 7 Tagen endgültig gelöscht.",
+    "deleteIntro": "{{name}} ist ab sofort für alle schreibgeschützt und wird in 7 Tagen endgültig gelöscht.",
     "holdDelete": "Zum Löschen gedrückt halten",
     "deleteFailed": "Der Workspace ließ sich nicht löschen. Versuch es noch einmal.",
     "access": {

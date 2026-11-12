@@ -935,3 +935,6 @@ export const readMark = (channelId: string, threadId: string | null | undefined)
  */
 export const messageRefWords = (t: TFunction, card: MessageCard) =>
   `${card.kind === "dm" ? `@${card.name}` : `#${card.name}`}${card.threadId ? ` › ${t("messageRefs.thread")}` : ""} › `;
+
+/** Two taps this close on a message are its double tap (the thumbs up), on its words or on a receipt under them. */
+export const DOUBLE_TAP_MS = 300;

@@ -32,7 +32,7 @@ import { channelRoutes } from "./routes/app/channels";
 import { chatRoutes } from "./routes/app/chat";
 import { connectorRoutes } from "./routes/app/connectors";
 import { customConnectorRoutes } from "./routes/app/connectors-custom";
-import { type AppDeps, agentDetailsGate } from "./routes/app/context";
+import { type AppDeps, agentDetailsGate, readOnlyWhileDeleting } from "./routes/app/context";
 import { dashboardRoutes } from "./routes/app/dashboards";
 import { databaseRoutes } from "./routes/app/databases";
 import { desktopRoutes } from "./routes/app/desktop";
@@ -171,6 +171,7 @@ export function createApp(options: AppOptions) {
     registerInstance(api, deps, version);
     registerFeedbackFiles(api, deps);
     api.use("/app/organizations/:orgId/agents/:agentId/:part", agentDetailsGate(deps));
+    api.use("/app/organizations/:orgId/*", readOnlyWhileDeleting(deps));
     api.route("/app", accountRoutes(deps));
     api.route("/app", accessRoutes(deps));
     api.route("/app", agentRoutes(deps));

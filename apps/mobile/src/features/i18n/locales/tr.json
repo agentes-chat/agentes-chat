@@ -2243,9 +2243,9 @@
     "ofOnline": "{{online}} / {{count}}",
     "deleteName": "{{name}} çalışma alanını sil",
     "deleteFoot": "Fikrinizi değiştirmek için 7 gününüz var.",
-    "deleteAlert": "Herkes hemen çıkarılır. 7 gün boyunca geri yüklenebilir.",
+    "deleteAlert": "Herkes artık yalnızca okuyabilir. 7 gün boyunca geri yüklenebilir.",
     "deleteAction": "Sil",
-    "deleteIntro": "{{name}} herkes için hemen kapanır ve 7 gün sonra kalıcı olarak silinir.",
+    "deleteIntro": "{{name}} herkes için hemen salt okunur olur ve 7 gün sonra kalıcı olarak silinir.",
     "holdDelete": "Silmek için basılı tutun",
     "deleteFailed": "Çalışma alanı silinemedi. Tekrar deneyin.",
     "access": {

@@ -1,13 +1,14 @@
 import type { ComputerDevice } from "@agenteschat/client";
 import { useComputerSetup, useMachines } from "@agenteschat/client";
 import { computerName, setupPending, setupView } from "@agenteschat/client/lib/computer";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { can } from "@agenteschat/client/lib/permissions";
 import { helpUrl } from "@agenteschat/client/lib/server";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Button, GroupedHeader, GroupedList, GroupedRow, Text } from "@/ui";
+import { Button, GroupedHeader, GroupedList, GroupedRow, Locked, Text } from "@/ui";
 import { router } from "@/ui/navigation";
 import { Note, openPage } from "../ai/parts";
 import { SetupWait } from "../computer/SetupWait";
@@ -38,6 +39,8 @@ export function DevicesScreen() {
   const c = useColors();
   const { orgId, org } = useOrg();
   const pairs = can(org, "pair_computers");
+  // Being deleted, what would change the workspace is greyed out, as on the web; each device still opens its page.
+  const frozen = settingsFrozen(org, "devices");
   const list = useDevices();
   const setup = useComputerSetup(orgId);
   const view = setupView(setup.data, setup.dataUpdatedAt);
@@ -59,11 +62,11 @@ export function DevicesScreen() {
       {requests.length > 0 ? (
         <Loaded>
           <GroupedHeader>{t("mobile.devices.join.header")}</GroupedHeader>
-          <View style={styles.cards}>
+          <Locked when={frozen} readable style={styles.cards}>
             {requests.map((r) => (
               <JoinRequestCard key={r.id} request={r} />
             ))}
-          </View>
+          </Locked>
         </Loaded>
       ) : null}
       <Gap />
@@ -78,24 +81,26 @@ export function DevicesScreen() {
         <DeviceList devices={list.data?.devices ?? []} pairs={pairs} />
       )}
       <Gap />
-      <GroupedList>
-        {pairs ? (
+      <Locked when={frozen} readable>
+        <GroupedList>
+          {pairs ? (
+            <GroupedRow
+              icon="plus"
+              label={t("mobile.devices.connect.title")}
+              chevron
+              onPress={() => router.push("/settings/devices/connect")}
+            />
+          ) : null}
           <GroupedRow
-            icon="plus"
-            label={t("mobile.devices.connect.title")}
+            icon="join"
+            label={Platform.OS === "ios" ? t("mobile.devices.iphone.title") : t("mobile.devices.android.entry")}
             chevron
-            onPress={() => router.push("/settings/devices/connect")}
+            onPress={() => openThisPhone()}
           />
-        ) : null}
-        <GroupedRow
-          icon="join"
-          label={Platform.OS === "ios" ? t("mobile.devices.iphone.title") : t("mobile.devices.android.entry")}
-          chevron
-          onPress={() => openThisPhone()}
-        />
-      </GroupedList>
-      <HostComputerOff />
-      <AgentComputers />
+        </GroupedList>
+        <HostComputerOff />
+        <AgentComputers />
+      </Locked>
       <Gap />
       <GroupedList>
         <GroupedRow

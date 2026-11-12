@@ -2,6 +2,7 @@ import type { ServerCheck } from "@agenteschat/client/lib/server";
 import type { HelloLine } from "../control/client";
 import type { Candidate } from "../control/first-run";
 import type {
+  KeepRunning,
   LocalChoice,
   LocalServerStatus,
   ReachResult,
@@ -114,6 +115,8 @@ export interface Host {
   siteFetch(server: string, method: string, path: string, body?: string): Promise<SiteAnswer>;
   /** How the welcome window opens, taken once: `add` from the site's "Add a workspace", else null. */
   welcomeMode(): Promise<"add" | null>;
+  /** The welcome window in its adding mode ("Add a workspace", from Preferences). */
+  addWorkspace(): Promise<void>;
   /** Takes `server` out of the list (the server and the account there stay as they are). */
   removeServer(server: string): Promise<void>;
   /** Signs the app out of `server`, which stays in the list (signed out); a window on it goes to its sign-in. */
@@ -203,6 +206,14 @@ export interface Host {
   setLocalUsage(on: boolean): Promise<void>;
   /** "Back up now": the file it wrote. */
   backupLocalServer(): Promise<string>;
+  /** The nightly backup's switch and the "Copy to" folder (null: none). */
+  setLocalBackups(nightly: boolean, copyTo: string | null): Promise<void>;
+  /** The server here goes back to one of its backups; rejects with `start` when that backup didn't start. */
+  restoreLocalServer(file: string): Promise<void>;
+  /** Automatic login and start after a power failure (macOS). */
+  keepRunning(): Promise<KeepRunning>;
+  /** System Settings at Users & Groups or Energy (macOS). */
+  openSystemSettings(page: "users" | "energy"): Promise<void>;
   /** What "Copy details" copies. */
   localDiagnostics(): Promise<string>;
   /** The server here's homes again, with new tokens for the organizations in `rotate`. */

@@ -19,6 +19,15 @@ import type {
  * Share, a board's order of widgets and tiles, Organize's moves, a failure's words and the cost line.
  */
 
+/**
+ * A board as the person may change it: as its `canEdit` and `canManage` say, and not at all while the workspace is
+ * being deleted (ADR 0088 §7), so no way into a change shows.
+ */
+export const frozenBoard = <B extends Pick<DashboardSummary, "canEdit" | "canManage">>(
+  board: B,
+  org: { deletion?: unknown } | null | undefined,
+): B => (org?.deletion ? { ...board, canEdit: false, canManage: false } : board);
+
 const byOrder = (a: DashboardSummary, b: DashboardSummary) =>
   Number(b.pinned) - Number(a.pinned) || a.position - b.position || a.title.localeCompare(b.title);
 

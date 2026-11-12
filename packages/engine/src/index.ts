@@ -165,6 +165,7 @@ export * from "./machine-accounts";
 export * from "./machine-device";
 export * from "./machine-hub";
 export * from "./machine-outages";
+export * from "./machine-pause";
 export * from "./machine-provider";
 export * from "./machine-provisioning";
 export * from "./machine-tasks";

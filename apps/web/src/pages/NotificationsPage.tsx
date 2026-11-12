@@ -281,7 +281,10 @@ function placeholderFor(t: TFunction, n: AppNotification, dir: Dir, channelName:
   return channel ? t("notifications.composer.channel", { channel }) : t("notifications.composer.reply");
 }
 
-/** The mini composer, opened in place (⌘↵ sends, esc closes). */
+/**
+ * The mini composer, opened in place (⌘↵ sends, esc closes). While the workspace is being deleted it says why it takes
+ * nothing, with Cancel (ADR 0088 §7).
+ */
 function Composer({
   id,
   placeholder,
@@ -300,6 +303,7 @@ function Composer({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
+  const deleting = Boolean(useOrg().org.deletion);
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const ta = ref.current;
@@ -315,6 +319,22 @@ function Composer({
     ta.style.height = "auto";
     ta.style.height = `${Math.min(180, ta.scrollHeight)}px`;
   }, [draft]);
+  if (deleting)
+    return (
+      // biome-ignore lint/a11y/noStaticElementInteractions: clicks inside the composer stay out of the row
+      <div className="nt-cmp" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <p className="nt-cmp__readonly ac-iconline" role="status">
+          <Icon name="lock" size={16} />
+          <span>{t("deleting.composer")}</span>
+        </p>
+        <div className="nt-cmp__row">
+          <span className="nt-grow" />
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            {t("notifications.composer.cancel")}
+          </Button>
+        </div>
+      </div>
+    );
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: clicks inside the composer stay out of the row
     <div className="nt-cmp" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>

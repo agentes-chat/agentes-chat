@@ -2288,9 +2288,9 @@ export const featureKeysPtBR = {
     ofOnline: "{{online}} de {{count}}",
     deleteName: "Apagar {{name}}",
     deleteFoot: "Você tem 7 dias para voltar atrás.",
-    deleteAlert: "Todo mundo sai agora. Dá para restaurar por 7 dias.",
+    deleteAlert: "Todos passam a só ler. Dá para restaurar por 7 dias.",
     deleteAction: "Apagar",
-    deleteIntro: "{{name}} fecha para todos agora e é apagado de vez em 7 dias.",
+    deleteIntro: "{{name}} fica só para leitura para todos agora e é apagado de vez em 7 dias.",
     holdDelete: "Segure para apagar",
     deleteFailed: "Não deu para apagar o workspace. Tente de novo.",
     access: {

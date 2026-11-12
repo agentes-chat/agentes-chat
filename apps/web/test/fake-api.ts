@@ -1640,7 +1640,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("orgs.deleteWorkspace", orgId, input);
         const me = requireMe();
         if (state.deletionError) throw state.deletionError;
-        // On the real clock: the closing screen compares the date with it.
+        // On the real clock: the line on top compares the date with it.
         const dueAt = new Date(Date.now() + 7 * 86_400_000).toISOString();
         const deletion = {
           dueAt,

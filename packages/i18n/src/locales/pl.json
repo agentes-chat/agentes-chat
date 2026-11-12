@@ -3383,6 +3383,8 @@
       "updated_priority": "Ustawiono priorytet <b>#{{number}}</b> na {{priority}} · {{title}}",
       "assigned": "Przypisano <b>#{{number}}</b> do: {{assignee}} · {{title}}",
       "assigned_self": "Biorę <b>#{{number}}</b> na siebie · {{title}}",
+      "assigned_you": "Przypisano ci <b>#{{number}}</b> · {{title}}",
+      "assigned_none": "Usunięto przypisanie <b>#{{number}}</b> · {{title}}",
       "files": "Załączono {{names}}"
     },
     "memory": {
@@ -3489,6 +3491,42 @@
     "changes_other": "{{count}} zmiany",
     "undoneBy": "Cofnięte przez: {{name}}",
     "group": "Zmiany: {{name}}",
+    "several": {
+      "issue": {
+        "created": "Utworzono zadania {{refs}}",
+        "updated": "Zmieniono {{fields}} w zadaniach {{refs}}",
+        "assigned": "Przypisano do: {{assignee}} – zadania {{refs}}",
+        "assigned_self": "Biorę na siebie zadania {{refs}}",
+        "assigned_you": "Przypisano ci zadania {{refs}}",
+        "assigned_none": "Usunięto przypisanie zadań {{refs}}"
+      },
+      "routine": {
+        "created": "Utworzono rutyny {{refs}}",
+        "updated": "Zmieniono {{fields}} w rutynach {{refs}}",
+        "deleted": "Usunięto rutyny {{refs}}"
+      },
+      "channel": {
+        "agent_added": "Dodano {{agentName}} do {{refs}}",
+        "created": "Utworzono kanały {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Utworzono strony wiki {{refs}}",
+        "page_edited": "Edytowano strony wiki {{refs}}"
+      },
+      "thread": {
+        "closed": "Zamknięto rozmowy {{refs}}"
+      },
+      "skill": {
+        "created": "Zamieniono zdobytą wiedzę w umiejętności {{refs}}",
+        "updated": "Poprawiono umiejętności {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "Zmieniono ustawienia {{refs}}"
+      },
+      "pr": {
+        "merged": "Scalono w <b>{{repo}}</b> PR {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "Ktoś to w międzyczasie zmienił. Cofnięcie teraz usunęłoby tę zmianę.",
       "expired": "Czas na cofnięcie minął.",
@@ -5332,6 +5370,7 @@
           "reconnecting": "Ponowne łączenie…",
           "failed": "Nie udało się zalogować na to konto. Spróbuj ponownie.",
           "expired": "Czas na zalogowanie minął. Spróbuj ponownie.",
+          "geminiNotShared": "Gemini zalogował się, ale {{computer}} nie może udostępnić tego logowania wszystkim agentom. Użyj zamiast tego klucza API Gemini.",
           "duplicate": {
             "claude_code": "Claude zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie Claude i spróbuj ponownie.",
             "codex": "ChatGPT zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie ChatGPT i spróbuj ponownie.",
@@ -14064,6 +14103,7 @@
       "targetNotFound": "Ten komputer już nie istnieje. Wybierz inny.",
       "targetSame": "Agenci są już na tym komputerze.",
       "targetPaused": "Ten komputer jest wstrzymany. Wybierz inny.",
+      "pausePast": "Wybierz godzinę w przyszłości.",
       "accountMethodUnsupported": "Ten komputer nie może jeszcze połączyć Claude w ten sposób. Zaktualizuj na nim program agentes.chat albo użyj klucza API.",
       "offline": "{{name}} jest teraz offline. Spróbuj ponownie, gdy wróci.",
       "paused": "{{name}} jest wstrzymany: nic nowego na nim nie ruszy, dopóki nie zostanie wznowiony.",
@@ -14199,6 +14239,21 @@
     "paused": "Wstrzymany",
     "pausedUntil": "Wstrzymany do {{time}}",
     "pausedHint": "Wstrzymany na samym komputerze przez osobę, która go podłączyła.",
+    "remotePause": {
+      "button": "Wstrzymaj",
+      "menu": "Wstrzymaj {{name}}",
+      "oneHour": "Na 1 godzinę",
+      "tomorrow": "Do jutra do 9:00",
+      "manual": "Dopóki nie wznowię",
+      "resume": "Wznów",
+      "byYou": "Wstrzymany przez ciebie.",
+      "byYouUntil": "Wstrzymany przez ciebie do {{time}}.",
+      "byName": "Wstrzymany przez {{name}}.",
+      "byNameUntil": "Wstrzymany przez {{name}} do {{time}}.",
+      "outdated": "Zaktualizuj aplikację agentes.chat na tym komputerze, aby wstrzymać go stąd.",
+      "paused": "{{name}} jest wstrzymany",
+      "resumed": "{{name}} znów pracuje"
+    },
     "seenNow": "połączony teraz",
     "seen": "widziany {{when}}",
     "neverSeen": "jeszcze się nie połączył",
@@ -14622,6 +14677,8 @@
       "openApp": "Otwórz aplikację",
       "server": "Serwer lub VPS",
       "serverLine": "Jedno polecenie do wklejenia w jego terminalu",
+      "httpLine": "Jedno polecenie do wklejenia w jego terminalu. Pod adresem https aplikacja łączy go jednym kliknięciem.",
+      "httpHow": "Jak",
       "other": "Inny komputer",
       "otherLine": "Zainstaluj na nim aplikację",
       "android": "Telefon z Androidem",
@@ -17520,6 +17577,7 @@
     "row": "Niedostępna",
     "screen": {
       "title": "Ta przestrzeń robocza jest niedostępna",
+      "titleNamed": "{{name}} jest niedostępna",
       "text": "Jej rozmowy i agenci są na razie zamknięci.",
       "others": "Twoje pozostałe przestrzenie robocze"
     },
@@ -17574,14 +17632,14 @@
   "deleteOrg": {
     "card": {
       "title": "Usuń przestrzeń roboczą",
-      "text": "Zamyka {{name}} dla wszystkich od razu. Po 7 dniach zostaje trwale usunięta.",
+      "text": "{{name}} od razu staje się dla wszystkich tylko do odczytu. Po 7 dniach zostaje trwale usunięta.",
       "button": "Usuń przestrzeń roboczą…"
     },
     "title": "Usunąć {{name}}?",
     "goes": {
       "content": "Jej rozmowy, pliki, agenci i ich pamięć",
-      "people": "Wszyscy od razu tracą dostęp i dostają e-mail",
-      "peopleQuiet": "Wszyscy od razu tracą dostęp",
+      "people": "Wszyscy od razu mogą już tylko czytać i dostają e-mail",
+      "peopleQuiet": "Wszyscy od razu mogą już tylko czytać",
       "computer": "Jej komputer zostaje od razu zatrzymany i wyczyszczony",
       "computers": "Podłączone komputery zostaną odłączone. Foldery agentów zostaną na nich, dopóki runner nie zostanie usunięty.",
       "connectors": "Konektory i skrzynki pocztowe zostaną odłączone"
@@ -17607,15 +17665,16 @@
   },
   "deleting": {
     "title": "{{name}} jest usuwana",
-    "text": "Ta przestrzeń robocza jest już usuwana. Nie musisz nic robić, zniknie {{date}}.",
-    "textLate": "Ta przestrzeń robocza jest już usuwana. Nie musisz nic robić.",
+    "banner": "{{name}} zostanie usunięta {{date}}",
     "by": "Usunięta {{date}} przez: {{by}}.",
+    "byYou": "Usunięta {{date}} przez Ciebie.",
     "row": "Usuwana, zniknie {{date}}",
     "rowLate": "Usuwana",
     "someone": "Ktoś",
     "restore": "Przywróć przestrzeń roboczą",
     "membersOnly": "Przywrócić ją może tylko właściciel.",
-    "restored": "{{name}} wróciła"
+    "restored": "{{name}} wróciła",
+    "composer": "Nie możesz wysyłać wiadomości, gdy ta przestrzeń robocza jest usuwana"
   },
   "accountDeleting": {
     "title": "Twoje konto jest usuwane",
@@ -18833,7 +18892,6 @@
     "more_few": "{{names}} i jeszcze {{count}}",
     "more_many": "{{names}} i jeszcze {{count}}",
     "more_other": "{{names}} i jeszcze {{count}}",
-    "some": "niektóre osoby",
     "taskTitle": "Kto widzi to zadanie",
     "pageTitle": "Kto widzi tę stronę",
     "admins": "Administratorzy zawsze to widzą.",
@@ -18842,7 +18900,6 @@
     "search": "Szukaj osoby",
     "noMatch": "Nikt o takim imieniu",
     "moreOptions": "Więcej opcji",
-    "receipt": "Kto to widzi: {{who}}",
     "limited": "ograniczony dostęp",
     "rolesToo": "Role, które są już na tej stronie, nadal ją widzą."
   },

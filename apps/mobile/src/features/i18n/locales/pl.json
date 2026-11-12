@@ -2449,9 +2449,9 @@
     "ofOnline": "{{online}} z {{count}}",
     "deleteName": "Usuń {{name}}",
     "deleteFoot": "Masz 7 dni, żeby zmienić zdanie.",
-    "deleteAlert": "Wszyscy od razu tracą dostęp. Przywrócenie jest możliwe przez 7 dni.",
+    "deleteAlert": "Wszyscy od razu mogą już tylko czytać. Przywrócenie jest możliwe przez 7 dni.",
     "deleteAction": "Usuń",
-    "deleteIntro": "Zamykamy {{name}} od razu dla wszystkich i usuwamy na zawsze po 7 dniach.",
+    "deleteIntro": "{{name}} od razu staje się dla wszystkich tylko do odczytu, a po 7 dniach zostaje trwale usunięta.",
     "holdDelete": "Przytrzymaj, aby usunąć",
     "deleteFailed": "Nie udało się usunąć przestrzeni roboczej. Spróbuj ponownie.",
     "access": {

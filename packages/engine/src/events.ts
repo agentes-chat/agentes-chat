@@ -765,8 +765,8 @@ export type OrgEvent =
   | { type: "org.broadcast"; orgId: string; event: { type: string; [key: string]: unknown } };
 
 /**
- * An org broadcast: an owner (`by`) deleted the workspace. It is closed now, so its people's sockets close after this
- * event, and it goes for good at `dueAt` unless an owner restores it first.
+ * An org broadcast: an owner (`by`) deleted the workspace. It is read-only now (its people's sockets stay open), and it
+ * goes for good at `dueAt` unless an owner restores it first.
  */
 export type OrgDeletingEvent = {
   type: "org.deleting";

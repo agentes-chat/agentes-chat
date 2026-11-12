@@ -46,7 +46,7 @@ import { afterReplyAnswered } from "./questions";
 import { rightHandReaches } from "./right-hand";
 import { inChannelRun, waitsOnUsage, workKeepsThread, workTakesPersonMessage } from "./run-scope";
 import { computerWaitSql, KEPT_ON_HOLD, NO_AI, outageParkedSql, passedSql, runErrorDetail, usageWaitSql } from "./runs";
-import { accountInUse } from "./standing";
+import { accountInUse, closedRefusal } from "./standing";
 import { afterSteered } from "./steering";
 import type { Talker } from "./talker";
 import { admitTaskAgents, taskReaderSql } from "./task-access";
@@ -920,7 +920,7 @@ export async function insertMessageWithRuns(
           and r.status in ('queued', 'running', 'waiting_input')
           and not r.background
           -- Background work (ADR 0121) never holds a person's message while it works: a reply turn answers it.
-          and ${workTakesPersonMessage(sql`r`)}
+          and ${workTakesPersonMessage(sql`r`, userId)}
           and r.agent_id not in (select agent_id from answered)
           and r.agent_id not in (select agent_id from muted)
           and r.agent_id <> all(${referenced}::uuid[])
@@ -1219,8 +1219,11 @@ export async function postPersonMessage(
     media?: MessageMediaInput;
   },
 ): Promise<MessageView> {
-  // One access check (membership + channel) instead of two round trips.
+  // One access check (membership + channel) instead of two round trips. It reads a workspace being deleted; posting
+  // there is refused here too, for what posts without the API (a voice note's job).
   const { channel, membership, workspace } = await requireChannelAccess(deps.db, userId, orgId, channelId);
+  const closed = closedRefusal(membership.standing);
+  if (closed) throw closed;
   if (!can(membership, "post")) throw postRefusal(workspace);
   // A task's conversation (ADR 0145): an agent mentioned there that sees the task joins it, so the mention wakes it.
   if (channel.kind === "task") {

@@ -101,6 +101,8 @@ describe("geometry check", () => {
       expect(SELF_TESTED).toContain(rule);
     // A calendar item never covers another: what meets sits beside it.
     expect(SELF_TESTED).toContain("calstack");
+    // The working line's stop is at its end before its time comes, not beside its words.
+    expect(SELF_TESTED).toContain("barend");
     // A task card's line of facts wraps between facts, never inside one.
     for (const twin of ["bad-factwrap--line", "good-factwrap--line"]) expect(fixture).toContain(twin);
     // A title in a row that wraps a word a line is squeezed; one long address wrapping its full lines is not.

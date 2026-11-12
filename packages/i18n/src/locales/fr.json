@@ -3282,6 +3282,8 @@
       "updated_priority": "A mis <b>#{{number}}</b> en priorité {{priority}} · {{title}}",
       "assigned": "A assigné <b>#{{number}}</b> à {{assignee}} · {{title}}",
       "assigned_self": "J'ai pris <b>#{{number}}</b> moi-même · {{title}}",
+      "assigned_you": "Vous a assigné <b>#{{number}}</b> · {{title}}",
+      "assigned_none": "A retiré le responsable de <b>#{{number}}</b> · {{title}}",
       "files": "A joint {{names}}"
     },
     "memory": {
@@ -3387,6 +3389,42 @@
     "changes_other": "{{count}} modifications",
     "undoneBy": "Annulé par {{name}}",
     "group": "Modifications de {{name}}",
+    "several": {
+      "issue": {
+        "created": "A créé les tâches {{refs}}",
+        "updated": "A modifié {{fields}} des tâches {{refs}}",
+        "assigned": "A assigné à {{assignee}} les tâches {{refs}}",
+        "assigned_self": "J'ai pris moi-même les tâches {{refs}}",
+        "assigned_you": "Vous a assigné les tâches {{refs}}",
+        "assigned_none": "A retiré le responsable des tâches {{refs}}"
+      },
+      "routine": {
+        "created": "A créé les routines {{refs}}",
+        "updated": "A modifié {{fields}} des routines {{refs}}",
+        "deleted": "A supprimé les routines {{refs}}"
+      },
+      "channel": {
+        "agent_added": "A ajouté {{agentName}} à {{refs}}",
+        "created": "A créé les canaux {{refs}}"
+      },
+      "wiki": {
+        "page_created": "A créé les pages wiki {{refs}}",
+        "page_edited": "A modifié les pages wiki {{refs}}"
+      },
+      "thread": {
+        "closed": "A clos les conversations {{refs}}"
+      },
+      "skill": {
+        "created": "J'ai fait de ce que j'ai appris les compétences {{refs}}",
+        "updated": "J'ai corrigé les compétences {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "J'ai modifié les paramètres de {{refs}}"
+      },
+      "pr": {
+        "merged": "J'ai mergé dans <b>{{repo}}</b> les PR {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "Quelqu'un a modifié ceci entre-temps. Annuler maintenant ferait perdre cette modification.",
       "expired": "Le délai pour annuler est dépassé.",
@@ -5159,6 +5197,7 @@
           "reconnecting": "Reconnexion…",
           "failed": "Impossible de se connecter à ce compte. Réessayez.",
           "expired": "Le délai de connexion est écoulé. Réessayez.",
+          "geminiNotShared": "Gemini s'est connecté, mais cette connexion ne peut pas être partagée avec tous les agents sur {{computer}}. Utilisez plutôt une clé API Gemini.",
           "duplicate": {
             "claude_code": "Claude s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Claude et réessayez.",
             "codex": "ChatGPT s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de ChatGPT et réessayez.",
@@ -13606,6 +13645,7 @@
       "targetNotFound": "Cet ordinateur n'existe plus. Choisissez-en un autre.",
       "targetSame": "Les agents sont déjà sur cet ordinateur.",
       "targetPaused": "Cet ordinateur est en pause. Choisissez-en un autre.",
+      "pausePast": "Choisissez une heure dans le futur.",
       "accountMethodUnsupported": "Cet ordinateur ne peut pas encore connecter Claude de cette façon. Mettez à jour le programme agentes.chat dessus ou utilisez une clé API.",
       "offline": "{{name}} est hors ligne pour le moment. Réessayez quand il sera de retour.",
       "paused": "{{name}} est en pause : rien de nouveau n'y démarre tant qu'il n'a pas repris.",
@@ -13740,6 +13780,21 @@
     "paused": "En pause",
     "pausedUntil": "En pause jusqu'à {{time}}",
     "pausedHint": "Mis en pause sur l'ordinateur lui-même par la personne qui l'a connecté.",
+    "remotePause": {
+      "button": "Mettre en pause",
+      "menu": "Mettre {{name}} en pause",
+      "oneHour": "Pendant 1 heure",
+      "tomorrow": "Jusqu'à demain 9 h",
+      "manual": "Jusqu'à ce que je reprenne",
+      "resume": "Reprendre",
+      "byYou": "Mis en pause par toi.",
+      "byYouUntil": "Mis en pause par toi jusqu'à {{time}}.",
+      "byName": "Mis en pause par {{name}}.",
+      "byNameUntil": "Mis en pause par {{name}} jusqu'à {{time}}.",
+      "outdated": "Mets à jour l'app agentes.chat sur cet ordinateur pour le mettre en pause d'ici.",
+      "paused": "{{name}} est en pause",
+      "resumed": "{{name}} reprend le travail"
+    },
     "seenNow": "connecté en ce moment",
     "seen": "vu {{when}}",
     "neverSeen": "pas encore connecté",
@@ -14159,6 +14214,8 @@
       "openApp": "Ouvrir l'app",
       "server": "Un serveur ou un VPS",
       "serverLine": "Une ligne à coller dans son terminal",
+      "httpLine": "Une ligne à coller dans son terminal. L'app le connecte en un clic sur une adresse https.",
+      "httpHow": "Comment",
       "other": "Un autre ordinateur",
       "otherLine": "Installez l'app dessus",
       "android": "Téléphone Android",
@@ -17023,6 +17080,7 @@
     "row": "Indisponible",
     "screen": {
       "title": "Cet espace de travail est indisponible",
+      "titleNamed": "{{name}} est indisponible",
       "text": "Ses conversations et ses agents sont fermés pour le moment.",
       "others": "Vos autres espaces de travail"
     },
@@ -17077,14 +17135,14 @@
   "deleteOrg": {
     "card": {
       "title": "Supprimer l'espace de travail",
-      "text": "Ferme {{name}} pour tout le monde dès maintenant. Il est supprimé définitivement après 7 jours.",
+      "text": "{{name}} passe en lecture seule pour tout le monde dès maintenant. Il est supprimé définitivement après 7 jours.",
       "button": "Supprimer l'espace de travail…"
     },
     "title": "Supprimer {{name}} ?",
     "goes": {
       "content": "Ses conversations, fichiers, agents et leur mémoire",
-      "people": "Tout le monde perd l'accès dès maintenant et reçoit un e-mail",
-      "peopleQuiet": "Tout le monde perd l'accès dès maintenant",
+      "people": "Dès maintenant, tout le monde peut seulement le lire et reçoit un e-mail",
+      "peopleQuiet": "Dès maintenant, tout le monde peut seulement le lire",
       "computer": "Son ordinateur s'arrête dès maintenant et est effacé",
       "computers": "Les ordinateurs connectés sont déconnectés. Les dossiers des agents y restent jusqu'à la suppression du runner.",
       "connectors": "Les connecteurs et les boîtes mail sont déconnectés"
@@ -17110,15 +17168,16 @@
   },
   "deleting": {
     "title": "{{name}} est en cours de suppression",
-    "text": "Cet espace de travail est déjà en cours de suppression. Vous n'avez rien à faire, il disparaît le {{date}}.",
-    "textLate": "Cet espace de travail est déjà en cours de suppression. Vous n'avez rien à faire.",
+    "banner": "{{name}} sera supprimé le {{date}}",
     "by": "{{by}} l'a supprimé le {{date}}.",
+    "byYou": "Vous l'avez supprimé le {{date}}.",
     "row": "En cours de suppression, disparaît le {{date}}",
     "rowLate": "En cours de suppression",
     "someone": "Quelqu'un",
     "restore": "Restaurer l'espace de travail",
     "membersOnly": "Seul un propriétaire peut le restaurer.",
-    "restored": "{{name}} est de retour"
+    "restored": "{{name}} est de retour",
+    "composer": "Vous ne pouvez pas envoyer de messages pendant la suppression de cet espace de travail"
   },
   "accountDeleting": {
     "title": "Votre compte est en cours de suppression",
@@ -18346,7 +18405,6 @@
     "more_one": "{{names}} et {{count}} de plus",
     "more_many": "{{names}} et {{count}} de plus",
     "more_other": "{{names}} et {{count}} de plus",
-    "some": "quelques personnes",
     "taskTitle": "Qui voit cette tâche",
     "pageTitle": "Qui voit cette page",
     "admins": "Les administrateurs le voient toujours.",
@@ -18355,7 +18413,6 @@
     "search": "Chercher une personne",
     "noMatch": "Personne avec ce nom",
     "moreOptions": "Plus d'options",
-    "receipt": "Qui le voit : {{who}}",
     "limited": "accès limité",
     "rolesToo": "Les rôles déjà sur cette page continuent de la voir."
   },

@@ -317,6 +317,19 @@ export function replyTarget(n: AppNotification): ReplyTarget | null {
   }
 }
 
+/**
+ * The island's quick reply: where an answer goes and the answers to pick. A workspace being deleted takes none (ADR
+ * 0088 §7): `readOnly` puts the line saying why in their place.
+ */
+export function quickReply(n: AppNotification, deleting: boolean) {
+  const answerable = replyTarget(n);
+  return {
+    target: deleting ? null : answerable,
+    suggestions: !deleting && n.kind === "agent_question" ? (n.latest.suggestions ?? []) : [],
+    readOnly: deleting && answerable !== null,
+  };
+}
+
 /** Where "Abrir" goes (the app's routes). */
 export type OpenTarget =
   | { to: "/org/$orgId/threads/$threadId"; params: { threadId: string }; search?: { m: string } }

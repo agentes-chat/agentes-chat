@@ -436,7 +436,7 @@ export {
   type HoverCardOpen,
   useHoverCard,
 } from "./hooks/useHoverCard";
-export { matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMedia";
+export { HOVERLESS, matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMedia";
 export { useNow } from "./hooks/useNow";
 export { type ScrollSides, useScrollSides } from "./hooks/useScrollSides";
 export { Icon, type IconName, type IconProps, iconNames, icons } from "./icons/Icon";

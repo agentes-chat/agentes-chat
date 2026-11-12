@@ -2339,9 +2339,9 @@
     "ofOnline": "{{online}} di {{count}}",
     "deleteName": "Elimina {{name}}",
     "deleteFoot": "Hai 7 giorni per cambiare idea.",
-    "deleteAlert": "Tutti escono subito. Si può ripristinare per 7 giorni.",
+    "deleteAlert": "Da subito tutti possono solo leggerlo. Si può ripristinare per 7 giorni.",
     "deleteAction": "Elimina",
-    "deleteIntro": "{{name}} si chiude per tutti subito e viene eliminato per sempre tra 7 giorni.",
+    "deleteIntro": "{{name}} diventa subito di sola lettura per tutti e viene eliminato per sempre tra 7 giorni.",
     "holdDelete": "Tieni premuto per eliminare",
     "deleteFailed": "Non è stato possibile eliminare lo spazio di lavoro. Riprova.",
     "access": {

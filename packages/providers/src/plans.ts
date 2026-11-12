@@ -526,20 +526,24 @@ export const loginPerAgent = (kind: string, provider?: string | null) =>
  * Where each agent is its own OS user (system mode), whether a new sign-in is made once for every agent of its
  * owner on that computer (ADR 0059 §2, amended 2026-10-30, protocol 29): root keeps it and hands each turn what
  * its CLI needs. For Claude that is the token `claude setup-token` makes, which the runner then keeps; for ChatGPT
- * (protocol 38) a copy of the `auth.json` root signed in to, whose refreshed copies come back to root. Set a kind
- * to false to go back to one login per agent there. Where every agent is the runner's own user, any sign-in thinks
- * for all of them, as the computer's own always has. Accounts made for all agents keep thinking when a kind is
- * switched off, until signed in again or removed.
+ * (protocol 38) a copy of the `auth.json` root signed in to, whose refreshed copies come back to root; for Gemini
+ * (protocol 58) a copy of the Google sign-in root's Antigravity CLI keeps. Set a kind to false to go back to one
+ * login per agent there. Where every agent is the runner's own user, any sign-in thinks for all of them, as the
+ * computer's own always has. Accounts made for all agents keep thinking when a kind is switched off, until signed in
+ * again or removed.
  */
-export const SHARED_SIGN_INS: Readonly<Record<"claude_code" | "codex" | "key", boolean>> = {
+export const SHARED_SIGN_INS: Readonly<Record<"claude_code" | "codex" | "antigravity" | "key", boolean>> = {
   claude_code: true,
   codex: true,
+  antigravity: true,
   key: true,
 };
 
 /** Whether a new sign-in of an account (its CLI's kind, and a coding plan's `provider`) is made for all agents. */
 export const sharedSignIn = (kind: string, provider?: string | null) =>
-  isPlanId(provider) ? SHARED_SIGN_INS.key : (kind === "claude_code" || kind === "codex") && SHARED_SIGN_INS[kind];
+  isPlanId(provider)
+    ? SHARED_SIGN_INS.key
+    : (kind === "claude_code" || kind === "codex" || kind === "antigravity") && SHARED_SIGN_INS[kind];
 
 /**
  * OpenCode's free tier (ADR 0132): models OpenCode serves at no cost and only to its own CLI ("Free-tier chat models

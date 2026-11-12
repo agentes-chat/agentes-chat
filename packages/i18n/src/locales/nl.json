@@ -3177,6 +3177,8 @@
       "updated_priority": "Prioriteit van <b>#{{number}}</b> op {{priority}} gezet · {{title}}",
       "assigned": "<b>#{{number}}</b> toegewezen aan {{assignee}} · {{title}}",
       "assigned_self": "<b>#{{number}}</b> zelf opgepakt · {{title}}",
+      "assigned_you": "<b>#{{number}}</b> aan jou toegewezen · {{title}}",
+      "assigned_none": "Toewijzing van <b>#{{number}}</b> verwijderd · {{title}}",
       "files": "Bijgevoegd: {{names}}"
     },
     "memory": {
@@ -3281,6 +3283,42 @@
     "changes_other": "{{count}} wijzigingen",
     "undoneBy": "Ongedaan gemaakt door {{name}}",
     "group": "Wijzigingen door {{name}}",
+    "several": {
+      "issue": {
+        "created": "Taken aangemaakt: {{refs}}",
+        "updated": "Bij taken {{fields}} gewijzigd: {{refs}}",
+        "assigned": "Taken toegewezen aan {{assignee}}: {{refs}}",
+        "assigned_self": "Taken zelf opgepakt: {{refs}}",
+        "assigned_you": "Taken aan jou toegewezen: {{refs}}",
+        "assigned_none": "Toewijzing van taken verwijderd: {{refs}}"
+      },
+      "routine": {
+        "created": "Routines aangemaakt: {{refs}}",
+        "updated": "Bij routines {{fields}} gewijzigd: {{refs}}",
+        "deleted": "Routines verwijderd: {{refs}}"
+      },
+      "channel": {
+        "agent_added": "{{agentName}} toegevoegd aan {{refs}}",
+        "created": "Kanalen aangemaakt: {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Wikipagina's aangemaakt: {{refs}}",
+        "page_edited": "Wikipagina's bewerkt: {{refs}}"
+      },
+      "thread": {
+        "closed": "Gesprekken gesloten: {{refs}}"
+      },
+      "skill": {
+        "created": "Wat ik leerde omgezet in de skills {{refs}}",
+        "updated": "Skills verbeterd: {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "Instellingen gewijzigd van {{refs}}"
+      },
+      "pr": {
+        "merged": "Gemerged in <b>{{repo}}</b>: PR's {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "Iemand heeft dit sindsdien gewijzigd. Nu ongedaan maken zou die wijziging wissen.",
       "expired": "De tijd om ongedaan te maken is voorbij.",
@@ -5016,6 +5054,7 @@
           "reconnecting": "Opnieuw verbinden…",
           "failed": "Inloggen op dat account lukte niet. Probeer het opnieuw.",
           "expired": "De tijd om in te loggen is verlopen. Probeer het opnieuw.",
+          "geminiNotShared": "Gemini is ingelogd, maar {{computer}} kan die login niet met alle agents delen. Gebruik liever een Gemini-API-sleutel.",
           "duplicate": {
             "claude_code": "Claude is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Claude en probeer het opnieuw.",
             "codex": "ChatGPT is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van ChatGPT en probeer het opnieuw.",
@@ -13215,6 +13254,7 @@
       "targetNotFound": "Die computer bestaat niet meer. Kies een andere.",
       "targetSame": "De agents staan al op die computer.",
       "targetPaused": "Die computer is gepauzeerd. Kies een andere.",
+      "pausePast": "Kies een tijd in de toekomst.",
       "accountMethodUnsupported": "Deze computer kan Claude nog niet op deze manier koppelen. Werk het agentes.chat-programma erop bij, of gebruik een API-sleutel.",
       "offline": "{{name}} is nu offline. Probeer het opnieuw zodra hij terug is.",
       "paused": "{{name}} is gepauzeerd: er start niets nieuws op tot hij wordt hervat.",
@@ -13348,6 +13388,21 @@
     "paused": "Gepauzeerd",
     "pausedUntil": "Gepauzeerd tot {{time}}",
     "pausedHint": "Gepauzeerd op de computer zelf door degene die hem heeft gekoppeld.",
+    "remotePause": {
+      "button": "Pauzeren",
+      "menu": "{{name}} pauzeren",
+      "oneHour": "1 uur",
+      "tomorrow": "Tot morgen 9.00 uur",
+      "manual": "Tot ik hervat",
+      "resume": "Hervatten",
+      "byYou": "Door jou gepauzeerd.",
+      "byYouUntil": "Door jou gepauzeerd tot {{time}}.",
+      "byName": "Door {{name}} gepauzeerd.",
+      "byNameUntil": "Door {{name}} gepauzeerd tot {{time}}.",
+      "outdated": "Werk de agentes.chat-app op deze computer bij om hem hiervandaan te pauzeren.",
+      "paused": "{{name}} is gepauzeerd",
+      "resumed": "{{name}} werkt weer"
+    },
     "seenNow": "nu verbonden",
     "seen": "gezien {{when}}",
     "neverSeen": "nog niet verbonden",
@@ -13763,6 +13818,8 @@
       "openApp": "Open de app",
       "server": "Een server of VPS",
       "serverLine": "Eén regel om in de terminal te plakken",
+      "httpLine": "Eén regel om in de terminal te plakken. De app koppelt hem met één klik op een https-adres.",
+      "httpHow": "Hoe",
       "other": "Een andere computer",
       "otherLine": "Installeer de app erop",
       "android": "Android-telefoon",
@@ -16582,6 +16639,7 @@
     "row": "Niet beschikbaar",
     "screen": {
       "title": "Deze werkruimte is niet beschikbaar",
+      "titleNamed": "{{name}} is niet beschikbaar",
       "text": "De gesprekken en agents zijn voorlopig gesloten.",
       "others": "Je andere werkruimtes"
     },
@@ -16636,14 +16694,14 @@
   "deleteOrg": {
     "card": {
       "title": "Werkruimte verwijderen",
-      "text": "Sluit {{name}} nu voor iedereen. Na 7 dagen wordt hij definitief verwijderd.",
+      "text": "{{name}} wordt nu voor iedereen alleen-lezen. Na 7 dagen wordt hij definitief verwijderd.",
       "button": "Werkruimte verwijderen…"
     },
     "title": "{{name}} verwijderen?",
     "goes": {
       "content": "De gesprekken, bestanden, agents en hun geheugen",
-      "people": "Iedereen verliest nu de toegang en krijgt een e-mail",
-      "peopleQuiet": "Iedereen verliest nu de toegang",
+      "people": "Iedereen kan hem vanaf nu alleen nog lezen en krijgt een e-mail",
+      "peopleQuiet": "Iedereen kan hem vanaf nu alleen nog lezen",
       "computer": "De computer stopt nu en wordt gewist",
       "computers": "Gekoppelde computers worden ontkoppeld. De mappen van de agents blijven erop staan tot de runner verwijderd wordt.",
       "connectors": "Connectors en mailboxen worden ontkoppeld"
@@ -16669,15 +16727,16 @@
   },
   "deleting": {
     "title": "{{name}} wordt verwijderd",
-    "text": "Deze werkruimte wordt al verwijderd. Je hoeft niets te doen, hij verdwijnt op {{date}}.",
-    "textLate": "Deze werkruimte wordt al verwijderd. Je hoeft niets te doen.",
+    "banner": "{{name}} wordt op {{date}} verwijderd",
     "by": "{{by}} heeft hem op {{date}} verwijderd.",
+    "byYou": "Je hebt hem op {{date}} verwijderd.",
     "row": "Wordt verwijderd, weg op {{date}}",
     "rowLate": "Wordt verwijderd",
     "someone": "Iemand",
     "restore": "Werkruimte herstellen",
     "membersOnly": "Alleen een eigenaar kan hem herstellen.",
-    "restored": "{{name}} is terug"
+    "restored": "{{name}} is terug",
+    "composer": "Je kunt geen berichten sturen terwijl deze werkruimte wordt verwijderd"
   },
   "accountDeleting": {
     "title": "Je account wordt verwijderd",
@@ -17880,7 +17939,6 @@
     "only": "Alleen {{name}}",
     "more_one": "{{names}} en nog {{count}}",
     "more_other": "{{names}} en nog {{count}}",
-    "some": "sommige mensen",
     "taskTitle": "Wie deze taak ziet",
     "pageTitle": "Wie deze pagina ziet",
     "admins": "Beheerders zien het altijd.",
@@ -17889,7 +17947,6 @@
     "search": "Persoon zoeken",
     "noMatch": "Niemand met die naam",
     "moreOptions": "Meer opties",
-    "receipt": "Wie het ziet: {{who}}",
     "limited": "beperkte toegang",
     "rolesToo": "De rollen die al op deze pagina staan, blijven haar zien."
   },

@@ -1163,6 +1163,7 @@ function Chat({
   const canMission = !mission && (Boolean(dm) || Boolean(channel));
   const canReply =
     member &&
+    !org?.deletion &&
     (!isThread || thread.data?.state !== "archived") &&
     channel?.can?.post !== false &&
     (!dmAgent || canTalk(dmAgent));
@@ -2267,7 +2268,7 @@ function Chat({
                   style={StyleSheet.absoluteFill}
                 />
                 <Connection status={realtime} />
-                {banner ? <NoAiBanner banner={banner} /> : null}
+                {banner && !org?.deletion ? <NoAiBanner banner={banner} /> : null}
                 <UnavailableLines notices={notices} />
                 {/* Who is working, right above the composer (as on the web), while they work; a request waiting out
                     of view takes the line, with "Ver" (and the working line's stop while one agent works). */}
@@ -2294,7 +2295,12 @@ function Chat({
                     stop={lineStop}
                   />
                 ) : null}
-                {member && dmAgent && !canTalk(dmAgent) ? (
+                {org?.deletion ? (
+                  // Being deleted, it reads as ever and takes no message, nor anyone joining (ADR 0088 §7).
+                  <Text variant="footnote" tone="muted" style={styles.readOnly}>
+                    {t("deleting.composer")}
+                  </Text>
+                ) : member && dmAgent && !canTalk(dmAgent) ? (
                   <AgentLocked agent={dmAgent} />
                 ) : member && channel?.can?.post === false ? (
                   // The channel's exceptions keep me from sending here (ADR 0134): reading stays open.

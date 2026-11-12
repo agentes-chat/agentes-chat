@@ -4,10 +4,14 @@ import type { Database } from "@agenteschat/db";
 import {
   type AiStatusDeps,
   type ConnectorTriggerDeps,
+  closedRefusal,
   composioConnectorsOf,
   connectOverHttp,
   ForbiddenError,
+  getMembership,
   MisconfiguredError,
+  OrgDeletingError,
+  orgStanding,
   type RoutineHookConfig,
   type RoutineHookDeps,
   requireAgentDetails,
@@ -187,6 +191,36 @@ export function agentDetailsGate(deps: Pick<AppDeps, "auth" | "db">) {
     return session(c, async () => {
       await requireAgentDetails(deps.db, c.get("user").id, orgId, agentId as string);
       await next();
+    });
+  });
+}
+
+/**
+ * What a workspace being deleted still takes (ADR 0088 §7): restoring or deleting it, the person's own settings there,
+ * their inbox and what they read, opening a DM it already has (`openDm` starts none then) and the payer's way to its
+ * invoices and card (`billing-link`).
+ */
+const OPEN_WHILE_DELETING =
+  /\/organizations\/[^/]+\/(?:deletion(?:\/code)?|me(?:\/.*)?|notification-prefs|notifications\/.+|(?:channels|threads)\/[^/]+\/read|dms|billing-link)$/;
+
+/**
+ * Before every route under a workspace: one being deleted reads as ever but changes nothing, so any write but leaving it
+ * and those `OPEN_WHILE_DELETING` names answers `org.deleting`. Only its members hear why: anyone else gets what the
+ * route says to them. A suspended one is left to the routes, which refuse it everything.
+ */
+export function readOnlyWhileDeleting(deps: Pick<AppDeps, "auth" | "db">) {
+  const session = requireSession(deps.auth);
+  return createMiddleware<AppEnv>(async (c, next) => {
+    const orgId = c.req.param("orgId");
+    if (c.req.method === "GET" || c.req.method === "HEAD" || !orgId || !z.uuid().safeParse(orgId).success)
+      return next();
+    const refusal = closedRefusal(await orgStanding(deps.db, orgId));
+    if (!(refusal instanceof OrgDeletingError) || OPEN_WHILE_DELETING.test(c.req.path)) return next();
+    return session(c, async () => {
+      const me = c.get("user").id;
+      const leaving = c.req.method === "DELETE" && c.req.path.endsWith(`/members/${me}`);
+      if (leaving || !(await getMembership(deps.db, me, orgId))) return next();
+      throw refusal;
     });
   });
 }

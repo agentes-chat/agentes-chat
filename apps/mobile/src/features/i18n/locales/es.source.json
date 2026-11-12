@@ -5517,13 +5517,13 @@
     "value": "You have 7 days to change your mind."
   },
   "settings.deleteAlert": {
-    "value": "Everyone is out right away. It can be restored for 7 days."
+    "value": "Everyone can only read it from now on. It can be restored for 7 days."
   },
   "settings.deleteAction": {
     "value": "Delete"
   },
   "settings.deleteIntro": {
-    "value": "{{name}} closes for everyone right away and is deleted for good in 7 days."
+    "value": "{{name}} turns read-only for everyone right away and is deleted for good in 7 days."
   },
   "settings.holdDelete": {
     "value": "Hold to delete"

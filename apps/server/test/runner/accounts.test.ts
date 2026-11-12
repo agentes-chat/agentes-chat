@@ -1572,6 +1572,27 @@ test.if(posix)(
   20_000,
 );
 
+test.if(posix)(
+  "a look that read an account before a turn's refusal is never kept: the server hears it signed out at once",
+  async () => {
+    const { m, runs } = setup();
+    const id = LOGIN(88);
+    await signInClaude(m, id);
+    process.env.FAKE_ACCOUNT_STATUS_DELAY = "500";
+    const before = runs().length;
+    m.invalidate();
+    const stale = m.refresh();
+    // Its status look is running: it found no refusal.
+    await waitFor(() => runs().length > before, 5000);
+    await m.refused("claude_code", id);
+    m.invalidate();
+    expect((await m.refresh(true))[0]).toMatchObject({ id, loggedIn: false });
+    expect((await stale)[0]).toMatchObject({ id, loggedIn: true });
+    expect((await m.list())[0]).toMatchObject({ id, loggedIn: false });
+  },
+  20_000,
+);
+
 // ── Claude's own login for all agents: the CLI runs as the sign-in's user ────
 
 function sharedLoginSetup(ready = true, over: Partial<AccountManagerOptions> = {}) {

@@ -146,6 +146,22 @@ describe("a person's card", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/person/u-joao`);
   });
 
+  test("in a workspace being deleted the box says why nothing can be sent there", async () => {
+    const state = seedState();
+    for (const org of state.me?.organizations ?? [])
+      org.deletion = {
+        dueAt: new Date(Date.now() + 6 * 86_400_000).toISOString(),
+        requestedAt: null,
+        requestedBy: null,
+      };
+    await go(state);
+    const c = await openCard("João");
+    expect(within(c).queryByRole("textbox", { name: "Mensagem para João" })).toBeNull();
+    expect(
+      within(c).getByText("Você não pode enviar mensagens enquanto este workspace está sendo apagado"),
+    ).toBeTruthy();
+  });
+
   test("⋯ lists the right click's entries, Copiar ID last", async () => {
     await go(seedState());
     const c = await openCard("João");

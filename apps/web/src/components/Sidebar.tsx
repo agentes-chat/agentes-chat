@@ -44,7 +44,7 @@ import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { waitingAgents } from "@agenteschat/client/lib/outages";
-import { can, managesChannel } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents, managesChannel } from "@agenteschat/client/lib/permissions";
 import { AVAILABILITIES, isOutOfOffice, presenceOfAvailability, statusEndNote } from "@agenteschat/client/lib/presence";
 import { recentDms } from "@agenteschat/client/lib/recent";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
@@ -508,9 +508,7 @@ export function Sidebar() {
     archivedChannels.length > 0
       ? [item("archived-channels", t("channel.archivedTitle"), "archive", () => setShowArchived(true))]
       : [];
-  const createAgentItem = can(org, "create_agents")
-    ? [item("create-agent", t("shell.createAgent"), "plus", newAgent)]
-    : [];
+  const createAgentItem = makesAgents(org) ? [item("create-agent", t("shell.createAgent"), "plus", newAgent)] : [];
   const newGroupItem = manages
     ? [item("new-group", t("agentGroups.newGroup"), "layers", () => setGroupDialog({ mode: "create" }))]
     : [];
@@ -933,7 +931,7 @@ export function Sidebar() {
           <SidebarHorizon working={working} total={dir.agents.length} />
           {/* The full sidebar creates from the Agentes header's + (always shown on touch screens); the rail has no
               headers. */}
-          {rail && can(org, "create_agents") && <CreateAgentTile onOpen={newAgent} />}
+          {rail && createAgentItem.length > 0 && <CreateAgentTile onOpen={newAgent} />}
           <div className="sidebar__me">
             <AccountMenu />
             {bell}

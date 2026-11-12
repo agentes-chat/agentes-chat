@@ -5,6 +5,7 @@ import { knownErrorText } from "@agenteschat/client/lib/errors";
 import {
   beginLogin,
   freeDuplicate,
+  geminiNotShared,
   isSignInCode,
   type LoginRead,
   loginRead,
@@ -625,6 +626,8 @@ function AddAccountFlow({
 
   // Not the account it was for: one that came back done (`other`), or signing in again, which the server refuses.
   const otherEmail = other?.email ?? (hint ? shown?.signedInAs : undefined);
+  // Trying again would end the same way: no Try again, the words say what to use instead.
+  const notShared = geminiNotShared(kind, shown);
   const why = otherEmail
     ? t(`connectAi.otherAccount.${kind}`, { email: otherEmail, account: hint })
     : noAnswer
@@ -637,7 +640,9 @@ function AddAccountFlow({
             : t(`agentPage.work.brain.add.duplicate.${kind}`, {
                 account: shown.duplicate.account?.email ?? shown.duplicate.label,
               })
-          : t("agentPage.work.brain.add.failed");
+          : notShared
+            ? t("agentPage.work.brain.add.geminiNotShared", { computer })
+            : t("agentPage.work.brain.add.failed");
 
   const endWhy = other || ended ? why : null;
   useEffect(() => {
@@ -951,17 +956,19 @@ function AddAccountFlow({
                 </span>
               </Button>
             )}
-            <Button
-              variant="primary"
-              icon="refresh"
-              onClick={() => {
-                if (other && !again)
-                  void api.machines.removeAccount(org.id, machineId, other.id).catch(() => undefined);
-                onRetry();
-              }}
-            >
-              {t("common.retry")}
-            </Button>
+            {!notShared && (
+              <Button
+                variant="primary"
+                icon="refresh"
+                onClick={() => {
+                  if (other && !again)
+                    void api.machines.removeAccount(org.id, machineId, other.id).catch(() => undefined);
+                  onRetry();
+                }}
+              >
+                {t("common.retry")}
+              </Button>
+            )}
           </>,
           actionsAt,
         )
@@ -980,7 +987,7 @@ function AddAccountFlow({
               </Button>
             </span>
           ) : (
-            retry
+            !notShared && retry
           )}
         </div>
       ) : (

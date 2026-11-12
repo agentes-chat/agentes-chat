@@ -95,7 +95,7 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import { isRightHand, personalBrain } from "./right-hand";
 import { orgModelProvider } from "./router";
-import { closedRefusal } from "./standing";
+import { readRefusal } from "./standing";
 import { wakeAgentUsageWaits } from "./usage-pause";
 
 /*
@@ -1681,7 +1681,7 @@ export async function agentBrainSummaries(
   ]);
   const live = new Map(machines.filter((m) => !m.deletedAt).map((m) => [m.id, m]));
   const accountById = new Map(accounts.map((r) => [r.id, r]));
-  const manages = membership !== null && !closedRefusal(membership.standing) && can(membership, "manage_agents");
+  const manages = membership !== null && !readRefusal(membership.standing) && can(membership, "manage_agents");
   for (const a of agents) {
     const kind = brainOf(a.brain);
     const machine = a.machineId ? live.get(a.machineId) : undefined;

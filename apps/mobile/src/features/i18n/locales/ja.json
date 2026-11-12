@@ -2140,9 +2140,9 @@
     "ofOnline": "{{count}}台中{{online}}台",
     "deleteName": "{{name}}を削除",
     "deleteFoot": "考え直せる期間は7日間です。",
-    "deleteAlert": "すぐに全員が使えなくなります。7日間は復元できます。",
+    "deleteAlert": "すぐに全員が閲覧だけできる状態になります。7日間は復元できます。",
     "deleteAction": "削除",
-    "deleteIntro": "{{name}}はすぐに全員が使えなくなり、7日後に完全に削除されます。",
+    "deleteIntro": "{{name}}はすぐに全員に対して閲覧のみになり、7日後に完全に削除されます。",
     "holdDelete": "長押しして削除",
     "deleteFailed": "ワークスペースを削除できませんでした。もう一度お試しください。",
     "access": {

@@ -4,7 +4,7 @@ import { recordAudit } from "../audit";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import type { MachineCaller } from "../machine-hub";
 import { type NotificationDeps, notify } from "../notifications";
-import { can, requireActiveMembership, requirePermission } from "../organizations";
+import { can, requireActiveMembership, requireChangePermission, requirePermission } from "../organizations";
 import { BROWSER_HANDOFF_TOPIC, type PageMove, pageCommand } from "./handoff";
 
 const { agents, agentRuns, browserProfiles, browserProfileGrants, machines, organizationMembers } = schema;
@@ -688,9 +688,12 @@ export async function runBrowserProfile(
   return agent?.id ?? null;
 }
 
-/** Who may drive a profile (log in, open a site, take control): `manage_connectors` with `control_browsers`. */
+/**
+ * Who may drive a profile (log in, open a site, take control, type in it): `manage_connectors` with
+ * `control_browsers`, never in a workspace being deleted.
+ */
 export async function requireProfileDriver(db: Database, userId: string, orgId: string, profileId: string) {
-  const membership = await requirePermission(db, userId, orgId, "manage_connectors");
+  const membership = await requireChangePermission(db, userId, orgId, "manage_connectors");
   if (!can(membership, "control_browsers")) throw new ForbiddenError();
   return requireProfile(db, orgId, profileId);
 }

@@ -561,6 +561,23 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(shownText(panel)).not.toContain("Claude");
   });
 
+  test("Gemini: a sign-in the computer can't share with every agent says so and what to use instead, with no Tentar de novo", async () => {
+    const base = fakeAgentBrain(ADA_ID);
+    const geminiOption = { kind: "antigravity" as const, available: true, models: [], defaultModel: null };
+    const { machines, dialog, choose } = await connect({
+      computers: [{ ...MAC, brains: { claude_code: true, codex: true, antigravity: true } }],
+      brain: { options: [...base.options, geminiOption] },
+    });
+    machines?.endLogin("login_1", { state: "failed", code: "not_kept", message: "Error: Please sign in." });
+    await choose("Gemini");
+    await withPopup(() => click(within(dialog).getByRole("button", { name: "Entrar com Google" })));
+    await settle(8);
+    expect(shownText(dialog)).toContain(
+      "O Gemini entrou, mas o MacBook não consegue compartilhar esse login com todos os agentes. Use uma chave de API do Gemini.",
+    );
+    expect(within(dialog).queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+  });
+
   test("a sign-in starting: the line under its title says the computer is asked, until it answers, and only then", async () => {
     const { api, dialog, choose } = await connect();
     // The computer answers only when let.

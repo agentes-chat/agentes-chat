@@ -148,7 +148,10 @@ describe("count badge", () => {
     const src = (path: string) => readFileSync(join(import.meta.dir, "../src", path), "utf8");
     expect(src("agent/PersonAvatar.tsx")).toContain("...initialText(size)");
     expect(src("ui/ProviderLogo.tsx")).toContain("...initialText(box, INITIAL_SIZE[size])");
-    expect(src("features/blocks/PollCard.tsx")).toContain("const VOTER_INITIAL = initialText(20, 12);");
+    // A vote's voters are their faces (the photo, else PersonAvatar's initial), never a letter of the poll's own.
+    const poll = src("features/blocks/PollCard.tsx");
+    expect(poll).toContain('<Face who={{ type: "person", id: v }} size={20} />');
+    expect(poll).not.toContain(".slice(0, 1)");
   });
 });
 

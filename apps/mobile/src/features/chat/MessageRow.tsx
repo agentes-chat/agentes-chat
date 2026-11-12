@@ -111,6 +111,7 @@ import {
   chatNameOf,
   chatTimeOf,
   consultationsOf,
+  DOUBLE_TAP_MS,
   hangsUnder,
   hidesBody,
   MSG_AVATAR,
@@ -849,7 +850,7 @@ export const MessageRow = memo(function MessageRow({
                 limit={providerCut ? "failed" : atLimit ? (atLimit.stuck ? "stuck" : "steps") : undefined}
               />
             ) : null}
-            {isAgent && m.actions?.length ? <Receipts message={m} /> : null}
+            {isAgent && m.actions?.length ? <Receipts message={m} onTap={onTap} onLongPress={press} /> : null}
             {isAgent ? <HandedTaskChips message={m} /> : null}
             {isAgent ? <TeamChecks message={m} /> : null}
             {isAgent ? <ReachLines message={m} /> : null}
@@ -924,7 +925,6 @@ export const MessageRow = memo(function MessageRow({
 
 /** Reactions are stored by name: the thumbs up is `+1` (feedback to the agent). */
 const THUMBS = "+1";
-const DOUBLE_TAP_MS = 300;
 /** The emoji that pops where the finger was: its box, and how long it stays. */
 const POP = 24;
 const POP_MS = 420;

@@ -2363,10 +2363,10 @@ export const featureKeysEn = {
     deleteName: "Delete {{name}}",
     deleteFoot: "You have 7 days to change your mind.",
     /** The system alert's text; its title is `deleteOrg.title`. */
-    deleteAlert: "Everyone is out right away. It can be restored for 7 days.",
+    deleteAlert: "Everyone can only read it from now on. It can be restored for 7 days.",
     deleteAction: "Delete",
     /** The last step: what deleting it does, the proof it's you and the hold. */
-    deleteIntro: "{{name}} closes for everyone right away and is deleted for good in 7 days.",
+    deleteIntro: "{{name}} turns read-only for everyone right away and is deleted for good in 7 days.",
     holdDelete: "Hold to delete",
     deleteFailed: "Couldn't delete the workspace. Try again.",
     access: {

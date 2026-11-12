@@ -82,6 +82,8 @@ export const desktopEn = {
     pause1h: "For 1 hour",
     pauseTomorrow: "Until tomorrow at 9 AM",
     pauseManual: "Until I resume",
+    /** The pause menu with several workspaces: every one of them, then each on its own. */
+    pauseAll: "All workspaces",
     pauseHint: "What is already running finishes normally.",
     /** With the agentes.chat this computer runs: pausing the agents leaves it up (ADR 0158). */
     pauseHintServer: "What is already running finishes normally. The server stays up.",
@@ -102,6 +104,12 @@ export const desktopEn = {
     pausedUntil: "Paused until {{time}}",
     pausedUntilResume: "Paused until you resume",
     pausedBody: "No agent, from any workspace, starts anything new on this {{device}}.",
+    /** Only some workspaces paused: `orgs` is their names ("Acme and Northwind"). */
+    pausedSomeBody: "On hold: {{orgs}}. The other workspaces' agents keep working.",
+    /** Under the card of the server this computer runs: other servers' workspaces whose agents use it too. */
+    alsoWorksFor: "Also works for {{orgs}}",
+    otherWorkspaces_one: "{{count}} other workspace",
+    otherWorkspaces_other: "{{count}} other workspaces",
     resumeNow: "Resume now",
     plusHour: "+1 hour",
     updateTitle: "Version {{version}} is available",
@@ -395,6 +403,48 @@ export const desktopEn = {
     updatesWithApp: "Updating the app updates agentes.chat on this {{device}} too.",
     updateBack: "The update didn't start. agentes.chat is back on {{version}}.",
     updateBackBody: "The new version is tried again with the app's next update.",
+    backups: "Backups",
+    nightly: "Back up every night",
+    nightlyLast: "At {{at}} · last one {{time}}",
+    nightlyNone: "At {{at}} · no backup yet",
+    lastBackup: "Last one {{time}}",
+    noBackup: "No backup yet",
+    backupFailed: "The last backup didn't finish. Back up now to try again.",
+    copyTo: "Copy to",
+    copyToText:
+      "Each new backup is copied to this folder too, like a USB drive or iCloud Drive. The two newest stay there.",
+    copyToNone: "Only on this {{device}}",
+    copyToStop: "Stop copying",
+    choose: "Choose…",
+    change: "Change…",
+    copyFailed: "The last backup didn't reach this folder. Check that it's still there, or choose another.",
+    restore: "Restore…",
+    restoreTitle: "Restore a backup?",
+    restoreBody:
+      "agentes.chat on this {{device}} goes back to that backup: messages, files and settings. It stops for a minute. What's there now is kept in the backups folder.",
+    restoreWhich: "Backup to restore",
+    backupOf: "Backup from {{time}}",
+    restoreConfirm: "Restore",
+    restored: "Restored the backup from {{time}}",
+    restoreFailed: "That backup didn't start, so agentes.chat is back as it was. Try the other backup.",
+    restoreUnreadable: "That backup can't be opened. Try the other one.",
+    noPassword: "Add a password to sign in from your phone and other computers.",
+    addPassword: "Add a password",
+    keep: "Keep it running",
+    keepLogin: "Opens at login",
+    keepLoginOn: "Turn on",
+    keepAutoLogin: "Signs in by itself after a restart",
+    keepAutoLoginText:
+      "After a restart, this {{device}} waits at its sign-in screen and agentes.chat doesn't open. Turn on automatic login in Users & Groups.",
+    keepAutoLoginOpen: "Open Users & Groups",
+    keepPower: "Starts after a power failure",
+    keepPowerText:
+      "After a power cut, this {{device}} stays off until someone presses its button. Energy settings can start it by itself.",
+    keepPowerOpen: "Open Energy settings",
+    keepAwake: "Doesn't sleep while serving",
+    keepAwakeText: "This {{device}} stays awake while agentes.chat runs here. Start agentes.chat to keep it awake.",
+    keepOn: "Done",
+    keepOff: "Not yet",
   },
   pair: {
     title: "Let agents of {{org}} work on this {{device}}?",
@@ -408,6 +458,9 @@ export const desktopEn = {
     /** Shown once after sign-in, for a workspace this computer doesn't work for yet. */
     offerTitle: "Let {{org}}'s agents use this {{device}}?",
     keepReady: "Keep it ready: open agentes.chat at login",
+    /** The offer for a server elsewhere that this computer only opens: pairing lends it, it isn't needed to get in. */
+    offerOnlyIf:
+      "Only if you want this {{device}} to do agents' work too. With Not now you still use {{org}} here as usual.",
     /** Over the pairing's switches (Commands, Claude Code, Codex, Browser), on as they start. */
     canDo: "What agents can do here",
     foldersLater: "No folders of yours yet. Add them later in Preferences\u00a0›\u00a0Folders.",
@@ -458,9 +511,11 @@ export const desktopEn = {
   },
   tools: {
     claudeName: "Claude Code",
-    claudeDesc: "Writes and changes code in the allowed folders, with your Claude account.",
+    claudeDesc:
+      "Writes and changes code in the allowed folders, with your Claude account. Runs its own commands in the agent's folder, even with Commands off.",
     codexName: "Codex",
-    codexDesc: "Writes and changes code in the allowed folders, with your ChatGPT account.",
+    codexDesc:
+      "Writes and changes code in the allowed folders, with your ChatGPT account. Runs its own commands in the agent's folder, even with Commands off.",
     cursorName: "Cursor",
     cursorDesc: "Writes and changes code in the allowed folders, with your Cursor account.",
     opencodeName: "OpenCode",
@@ -479,6 +534,16 @@ export const desktopEn = {
     commandsWarnHere:
       "Commands run as you and can reach the rest of this {{device}}, agentes.chat's own data included.",
     commandsSome: "On only for {{orgs}}. Turn it on for every workspace here.",
+    commandsAbout:
+      "Tests, builds and other Terminal commands. Each one shows in Activity. Commands run as you. They can read anything you can on this {{device}}, agentes.chat's database and keys included. Turn them on only for workspaces you trust with all of it.",
+    commandsReach:
+      "Commands run as you. They can read anything you can on this {{device}}, agentes.chat's database and keys included. Turn them on only for workspaces you trust with all of it.",
+    commandsAsk: "Turn on Commands for {{org}}?",
+    commandsTurnOn: "Turn on",
+    checkAgain: "Check again",
+    lookPath: "agentes.chat looks in your login shell's PATH.",
+    lookPathWindows: "agentes.chat looks in PATH.",
+    stillMissing: "{{tool}} still isn't found. Run the command above, then check again.",
     browserName: "Browser",
     browserDesc: "Opens websites for the agents in a browser of their own, without your logins.",
     browserLogins:
@@ -529,6 +594,7 @@ export const desktopEn = {
       launchTitle: "Open at login",
       launchDesc: "Agents only use this {{device}} while the app is open.",
       launchHere: "agentes.chat on this {{device}} runs only while the app is open.",
+      launchWork: "Agents work only while the app is open.",
       notifySiteTitle: "Let me know about messages and requests",
       notifySiteDesc: "Mentions, direct messages and what waits for you, while the app is in the background.",
       notifyTitle: "Let me know when an agent asks for a folder",
@@ -563,10 +629,18 @@ export const desktopEn = {
       plug: "Plug a phone into this {{device}} to add it.",
       androidSteps: "Android steps",
       iphoneSteps: "iPhone steps",
-      wider: "Other people's agents run as {{user}} here and can read your files.",
+      wider:
+        "Only me means you, and agents working for you. Other people's agents run as {{user}} here and can read your files.",
       phoneWho: "{{who}} can use it",
       signedOut: "Sign in to {{server}} in the app to see who can use this {{device}}.",
       unreachable: "Couldn't reach {{server}}. Check the connection and try again.",
+      placeHere: "On this {{device}}",
+      placeCloud: "agentes.chat Cloud",
+      more: "More for {{org}}",
+      otherWorkspace: "Another workspace",
+      otherWorkspaceDesc:
+        "Let a workspace on agentes.chat Cloud or on another server use this {{device}} too. Each one keeps its own sign-in.",
+      addWorkspace: "Add a workspace…",
     },
     folders: {
       title: "Folders",
@@ -593,8 +667,7 @@ export const desktopEn = {
       connected: "Connected",
       protection: "Protection",
       protectedTitle: "Protected mode",
-      protectedDesc:
-        "Commands only write in the allowed folders and don't read the rest of the {{device}}. Some tools may get slower.",
+      protectedDesc: "Coming: commands that write only in allowed folders and can't read the rest of this {{device}}.",
       commandsOn: "Commands are on",
     },
     accounts: {
@@ -649,6 +722,9 @@ export const desktopEn = {
       downloading: "Downloading…",
       installing: "Installing…",
       installFailed: "Couldn't update on its own. Download and install it by hand.",
+      autoInstall: "Install updates by itself, at night",
+      autoInstallDesc:
+        "The server and agents restart for a minute. If the new version doesn't start, it goes back by itself.",
       download: "Download version {{version}}",
       howTitle: "Update by hand",
       step1: "Quit agentes.chat (⌘Q).",

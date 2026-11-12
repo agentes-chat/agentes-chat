@@ -308,7 +308,7 @@ export const words: EmailWords = {
     workspace: (org) => [
       "Gib diesen Code ein, um den Workspace ",
       { b: org },
-      " zu löschen. Er wird sofort für alle geschlossen und 7 Tage später endgültig gelöscht.",
+      " zu löschen. Er ist sofort für alle schreibgeschützt und wird 7 Tage später endgültig gelöscht.",
     ],
     account: (email) => [
       "Gib diesen Code ein, um das ganze Konto ",
@@ -329,19 +329,19 @@ export const words: EmailWords = {
       workspace: (org) => [
         "Gib diesen Code ein, um deinen Workspace ",
         { b: org },
-        " zu löschen. Er wird sofort geschlossen und 7 Tage später endgültig gelöscht.",
+        " zu löschen. Er ist sofort schreibgeschützt und wird 7 Tage später endgültig gelöscht.",
       ],
     },
   },
   deleting: {
     subject: (day) => `Ein Workspace, in dem du bist, wird am ${day} gelöscht`,
-    preheader: "Er ist jetzt geschlossen. Bis dahin kann ein Inhaber ihn noch wiederherstellen.",
+    preheader: "Er ist jetzt schreibgeschützt. Bis dahin kann ein Inhaber ihn noch wiederherstellen.",
     headline: "Ein Workspace wird gelöscht",
     body: (by, org, day, time) => [
       { b: by },
       " hat den Workspace ",
       { b: org },
-      ` gelöscht. Er ist jetzt geschlossen und wird am ${day} um ${time} endgültig entfernt.`,
+      ` gelöscht. Er ist jetzt schreibgeschützt und wird am ${day} um ${time} endgültig entfernt.`,
     ],
     owner: "Doch anders überlegt? Stell ihn vorher wieder her.",
     button: "Workspace wiederherstellen",

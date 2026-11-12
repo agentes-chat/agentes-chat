@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 56;
+export const MACHINE_PROTOCOL_VERSION = 58;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -605,6 +605,17 @@ export const PHONE_PAIRING_PROTOCOL = 55;
  * once its owner picks it (`allow`), through CoreDevice's own tunnel. The server asks no older runner.
  */
 export const IPHONE_WIFI_PROTOCOL = 56;
+/**
+ * `pause.set`: a person who may manage the computer pauses or resumes it from the apps. The runner applies it as its
+ * own pause (stored, `runner.state` sent) and keeps `by`, the person who did it, until the next local change.
+ */
+export const REMOTE_PAUSE_PROTOCOL = 57;
+/**
+ * From this protocol on, in system mode a Gemini sign-in is made for all of its owner's agents there too (`begin`'s
+ * `shared` for `antigravity`): root's Antigravity CLI keeps the Google sign-in and each turn gets a copy (`agy_auth`
+ * grant). Older runners lend it to one agent.
+ */
+export const SHARED_GEMINI_PROTOCOL = 58;
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";
@@ -1106,7 +1117,10 @@ export const ACCOUNT_LOGIN_FAILURES = [
   "cli_exit",
   /** The CLI finished, but its status says the account isn't signed in (its words in `message`). */
   "not_signed_in_after_login",
-  /** The CLI finished, but its status didn't answer in time. */
+  /**
+   * The CLI finished, but its status didn't answer in time; or a Gemini sign-in for all agents' copy said nothing for
+   * sure (its words, if any, in `message`).
+   */
   "status_unknown",
   /** `claude setup-token` finished without showing its token. */
   "no_token",
@@ -2068,6 +2082,8 @@ export interface RunnerPause {
   paused: boolean;
   /** ISO time; absent or null with `paused: true` means "until resumed". */
   until?: string | null;
+  /** `REMOTE_PAUSE_PROTOCOL`: the user id of the person who paused it from the apps; absent when paused on it. */
+  by?: string | null;
 }
 
 /** The tools a person turns on or off on the machine (protocol 10). */
@@ -2382,6 +2398,8 @@ export type MachineRequest = (
   | { op: "phone.pair.code"; address: string; code: string }
   | { op: "phone.pair.status"; pairingId: string }
   | { op: "phone.pair.cancel"; pairingId: string }
+  /** `REMOTE_PAUSE_PROTOCOL`: pause (until `until`, null: until resumed) or resume, for the person `by`. */
+  | { op: "pause.set"; paused: boolean; until?: string | null; by: string }
   /**
    * A phone guide is open and waits for a phone: for the next minute, a Windows runner also looks for a plugged phone
    * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. Older runners answer
@@ -2463,6 +2481,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "phone.pair.code",
   "phone.pair.status",
   "phone.pair.cancel",
+  "pause.set",
   "phone.look",
   "phone.wifi",
 ];
@@ -2623,6 +2642,7 @@ export interface MachineReplies {
   "phone.pair.code": PhonePairing;
   "phone.pair.status": PhonePairing;
   "phone.pair.cancel": { canceled: boolean };
+  "pause.set": { paused: RunnerPause };
   "phone.look": { looking: boolean };
   "phone.wifi": { available: WifiIphone[] };
 }
@@ -3883,7 +3903,8 @@ export const isSafeRule = (rule: string) =>
 export function parsePause(v: unknown): RunnerPause | undefined {
   if (!isObject(v) || typeof v.paused !== "boolean") return undefined;
   const until = isString(v.until) && !Number.isNaN(Date.parse(v.until)) ? new Date(v.until).toISOString() : null;
-  return v.paused ? { paused: true, until } : { paused: false };
+  if (!v.paused) return { paused: false };
+  return isString(v.by) && v.by.length <= 64 ? { paused: true, until, by: v.by } : { paused: true, until };
 }
 
 /** `hello.access` / `access.changed.access`, checked and cut. */

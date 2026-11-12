@@ -180,6 +180,7 @@ import type {
   MachineAccount,
   MachineAccountKind,
   MachineOutages,
+  MachinePause,
   MachineTask,
   MailAccount,
   MailAccountUpdate,
@@ -1092,6 +1093,12 @@ export interface ApiClient {
     denyDevice(userCode: string): Promise<void>;
     /** ADR 0036 §8: the site only takes away (a folder, for everyone or one agent; a tool). The new access. */
     reduceAccess(orgId: string, machineId: string, input: MachineAccessReduce): Promise<MachineAccess>;
+    /** Pauses it (`until` null: until resumed) or resumes it (`resume`); the pause as it stands then. */
+    setPause(
+      orgId: string,
+      machineId: string,
+      input: { until: string | null } | "resume",
+    ): Promise<MachinePause | null>;
     /** ADR 0036 §9: the newest desktop app build; `null` when there is none (404). */
     desktopLatest(target: string, arch: string): Promise<DesktopRelease | null>;
     /** Offline computers that agents wait for, and where they could move. */

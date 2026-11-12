@@ -2140,9 +2140,9 @@
     "ofOnline": "{{online}}/{{count}} 台在线",
     "deleteName": "删除 {{name}}",
     "deleteFoot": "你有 7 天时间改变主意。",
-    "deleteAlert": "所有人会立即无法访问。7 天内可以恢复。",
+    "deleteAlert": "所有人立即只能查看。7 天内可以恢复。",
     "deleteAction": "删除",
-    "deleteIntro": "{{name}} 会立即对所有人关闭，并在 7 天后永久删除。",
+    "deleteIntro": "{{name}} 会立即对所有人变为只读，并在 7 天后永久删除。",
     "holdDelete": "长按以删除",
     "deleteFailed": "无法删除工作区，请重试。",
     "access": {

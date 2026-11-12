@@ -422,6 +422,8 @@ export interface ExecutorsCache {
   readonly known: boolean;
   /** The list, waiting for the first look when none is known yet. */
   ready(): Promise<Executors>;
+  /** A look now, whatever the TTL says (the app's "Check again" after an install). */
+  fresh(): Promise<Executors>;
 }
 
 /**
@@ -471,6 +473,7 @@ export function cachedExecutors(
     return value;
   }) as ExecutorsCache;
   get.ready = () => (known ? Promise.resolve(get()) : look());
+  get.fresh = look;
   Object.defineProperty(get, "known", { get: () => known });
   return get;
 }

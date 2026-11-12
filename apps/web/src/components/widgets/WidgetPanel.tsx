@@ -22,6 +22,7 @@ import { type ReactNode, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useFocusAtEnd, useSent } from "@/components/EditInPlace";
+import { useOrg } from "@/components/org-context";
 import { useNow } from "@/hooks/useNow";
 import { useToast } from "@/lib/toast";
 import { failureText, useWidgetAgent, WidgetFace, WidgetFoot, widgetTitle } from "./parts";
@@ -427,12 +428,26 @@ const historyFailure = (t: TFunction, u: WidgetUpdate, name: string) =>
     ? plainInline(u.summary)
     : failureText(t, { code: u.failureCode ?? "error", detail: u.summary || null }, name);
 
-/** "Ask for a change": the words go to the agent, who redoes the widget with them. */
+/**
+ * "Ask for a change": the words go to the agent, who redoes the widget with them. While the workspace is being deleted
+ * it says why it takes none (ADR 0088 §7).
+ */
 function AskChange({ orgId, widget, name }: { orgId: string; widget: WidgetDetail; name: string }) {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const deleting = Boolean(useOrg().org.deletion);
   const ask = useAskWidgetChange(orgId);
   const [text, setText] = useState("");
+  if (deleting)
+    return (
+      <section className="wd__sec wd__ask" aria-label={t("widgets.panel.ask")}>
+        <h3>{t("widgets.panel.ask")}</h3>
+        <p className="wd__readonly ac-iconline" role="status">
+          <Icon name="lock" size={16} />
+          <span>{t("deleting.composer")}</span>
+        </p>
+      </section>
+    );
   return (
     <section className="wd__sec wd__ask" aria-label={t("widgets.panel.ask")}>
       <h3>{t("widgets.panel.ask")}</h3>

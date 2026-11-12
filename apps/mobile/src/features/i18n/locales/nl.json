@@ -2243,9 +2243,9 @@
     "ofOnline": "{{online}} van {{count}}",
     "deleteName": "{{name}} verwijderen",
     "deleteFoot": "Je hebt 7 dagen om van gedachten te veranderen.",
-    "deleteAlert": "Iedereen is er meteen uit. Herstellen kan 7 dagen lang.",
+    "deleteAlert": "Iedereen kan hem vanaf nu alleen nog lezen. Herstellen kan 7 dagen lang.",
     "deleteAction": "Verwijderen",
-    "deleteIntro": "{{name}} gaat meteen voor iedereen dicht en wordt over 7 dagen definitief verwijderd.",
+    "deleteIntro": "{{name}} wordt meteen voor iedereen alleen-lezen en wordt over 7 dagen definitief verwijderd.",
     "holdDelete": "Ingedrukt houden om te verwijderen",
     "deleteFailed": "De werkruimte kon niet worden verwijderd. Probeer het opnieuw.",
     "access": {

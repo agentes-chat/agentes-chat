@@ -20,6 +20,7 @@ import { selfHosted, showsAbout } from "@agenteschat/client/lib/about";
 import { keyRemovalText } from "@agenteschat/client/lib/ai-accounts";
 import { composioUsageText, showsComposioUsage } from "@agenteschat/client/lib/composio";
 import { computerEdition } from "@agenteschat/client/lib/computer";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
@@ -218,7 +219,7 @@ function Settings({
     </li>
   );
 
-  const body = (
+  const sections = (
     <>
       {current !== "members" && current !== "general" && current !== "roles" && current !== "vault" && (
         <PageHeader
@@ -268,6 +269,14 @@ function Settings({
       {current === "billing" && <BillingSection />}
       {current === "about" && <AboutSection />}
     </>
+  );
+  // Being deleted, what would change the workspace is greyed out in one place, as on the phone (`settingsFrozen`).
+  const body = settingsFrozen(org, current) ? (
+    <fieldset className="settings__frozen" disabled>
+      {sections}
+    </fieldset>
+  ) : (
+    sections
   );
 
   return (
@@ -628,7 +637,7 @@ function GeneralSection() {
       <TeamMemoryCard />
 
       <UsageStatisticsCard />
-      {org.role === "owner" && <DeleteWorkspaceCard />}
+      {org.role === "owner" && !org.deletion && <DeleteWorkspaceCard />}
       <OrgLogoDialog open={logo} onClose={() => setLogo(false)} />
       <WorkspaceModeDialog
         open={switching}

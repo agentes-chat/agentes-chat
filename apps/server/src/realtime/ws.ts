@@ -24,7 +24,6 @@ import {
   type BrowserLive,
   browserFrameBase64,
   browserFrameBytes,
-  closedRefusal,
   closesWorkspace,
   ForbiddenError,
   getMembership,
@@ -33,6 +32,7 @@ import {
   NotFoundError,
   type OrgEvent,
   profileIdOfKey,
+  readRefusal,
   requireBrowserAccess,
   requireChannelAccess,
   requireProfileWatcher,
@@ -177,7 +177,8 @@ const MEMBERSHIP_CHECK_TIMEOUT_MS = 5_000;
  * The checks before a person's socket opens (`/api/ws`, and the desktop and
  * terminal streams): our Origin, or the phone app without one (cross-site
  * WebSocket hijacking); a session from the cookie; membership of `orgId`,
- * a workspace that isn't closed (`closedRefusal`). The person, or the refusal.
+ * a workspace its people can read (`readRefusal`: one being deleted still
+ * reads, the streams refuse it on their own). The person, or the refusal.
  */
 export async function personUpgrade(
   deps: Pick<RealtimeDeps, "auth" | "db">,
@@ -195,7 +196,7 @@ export async function personUpgrade(
   if (!session) return new Response("Sign in to continue", { status: 401 });
   const user = session.user as SessionUser;
   const membership = await getMembership(deps.db, user.id, orgId);
-  if (!membership || closedRefusal(membership.standing)) {
+  if (!membership || readRefusal(membership.standing)) {
     return new Response("Not a member of this organization", { status: 403 });
   }
   return { ...user, sessionToken: session.session.token };
@@ -249,7 +250,7 @@ export async function currentSubscriptions(
   channelIds: string[],
 ): Promise<Set<string> | null> {
   const member = await getMembership(db, userId, orgId);
-  if (!member || closedRefusal(member.standing)) return null;
+  if (!member || readRefusal(member.standing)) return null;
   if (channelIds.length === 0) return new Set();
   const rows = await db
     .select({ id: schema.channels.id })

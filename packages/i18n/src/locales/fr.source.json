@@ -7774,6 +7774,12 @@
   "agentActions.issue.assigned_self": {
     "value": "Took <b>#{{number}}</b> myself · {{title}}"
   },
+  "agentActions.issue.assigned_you": {
+    "value": "Assigned <b>#{{number}}</b> to you · {{title}}"
+  },
+  "agentActions.issue.assigned_none": {
+    "value": "Removed the assignee of <b>#{{number}}</b> · {{title}}"
+  },
   "agentActions.issue.files": {
     "value": "Attached {{names}}"
   },
@@ -8016,6 +8022,60 @@
   },
   "agentActions.group": {
     "value": "Changes by {{name}}"
+  },
+  "agentActions.several.issue.created": {
+    "value": "Created tasks {{refs}}"
+  },
+  "agentActions.several.issue.updated": {
+    "value": "Changed {{fields}} of tasks {{refs}}"
+  },
+  "agentActions.several.issue.assigned": {
+    "value": "Assigned {{assignee}} tasks {{refs}}"
+  },
+  "agentActions.several.issue.assigned_self": {
+    "value": "Took on tasks {{refs}}"
+  },
+  "agentActions.several.issue.assigned_you": {
+    "value": "Assigned you tasks {{refs}}"
+  },
+  "agentActions.several.issue.assigned_none": {
+    "value": "Removed the assignee of tasks {{refs}}"
+  },
+  "agentActions.several.routine.created": {
+    "value": "Created the routines {{refs}}"
+  },
+  "agentActions.several.routine.updated": {
+    "value": "Changed {{fields}} of the routines {{refs}}"
+  },
+  "agentActions.several.routine.deleted": {
+    "value": "Deleted the routines {{refs}}"
+  },
+  "agentActions.several.channel.agent_added": {
+    "value": "Brought {{agentName}} into {{refs}}"
+  },
+  "agentActions.several.channel.created": {
+    "value": "Created the channels {{refs}}"
+  },
+  "agentActions.several.wiki.page_created": {
+    "value": "Created the wiki pages {{refs}}"
+  },
+  "agentActions.several.wiki.page_edited": {
+    "value": "Edited the wiki pages {{refs}}"
+  },
+  "agentActions.several.thread.closed": {
+    "value": "Closed the conversations {{refs}}"
+  },
+  "agentActions.several.skill.created": {
+    "value": "Turned what I learned into the skills {{refs}}"
+  },
+  "agentActions.several.skill.updated": {
+    "value": "Fixed the skills {{refs}}"
+  },
+  "agentActions.several.agent.settings_changed": {
+    "value": "Changed the settings of {{refs}}"
+  },
+  "agentActions.several.pr.merged": {
+    "value": "Merged in <b>{{repo}}</b>: PRs {{refs}}"
   },
   "agentActions.errors.changed_since": {
     "value": "Someone changed this since. Undoing now would lose that change."
@@ -12329,6 +12389,9 @@
   },
   "agentPage.work.brain.add.expired": {
     "value": "The time to sign in ran out. Try again."
+  },
+  "agentPage.work.brain.add.geminiNotShared": {
+    "value": "Gemini signed in, but {{computer}} can't share that sign-in with every agent. Use a Gemini API key instead."
   },
   "agentPage.work.brain.add.duplicate.claude_code": {
     "value": "Claude signed in as {{account}}, an account you already connected. To use another, sign out on Claude's page and try again."
@@ -31930,6 +31993,9 @@
   "errors.machine.targetPaused": {
     "value": "That computer is paused. Choose another one."
   },
+  "errors.machine.pausePast": {
+    "value": "Choose a time in the future."
+  },
   "errors.machine.accountMethodUnsupported": {
     "value": "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key."
   },
@@ -32241,6 +32307,45 @@
   },
   "machines.pausedHint": {
     "value": "Paused on the computer itself by whoever connected it."
+  },
+  "machines.remotePause.button": {
+    "value": "Pause"
+  },
+  "machines.remotePause.menu": {
+    "value": "Pause {{name}}"
+  },
+  "machines.remotePause.oneHour": {
+    "value": "For 1 hour"
+  },
+  "machines.remotePause.tomorrow": {
+    "value": "Until tomorrow at 9 AM"
+  },
+  "machines.remotePause.manual": {
+    "value": "Until I resume"
+  },
+  "machines.remotePause.resume": {
+    "value": "Resume"
+  },
+  "machines.remotePause.byYou": {
+    "value": "Paused by you."
+  },
+  "machines.remotePause.byYouUntil": {
+    "value": "Paused by you until {{time}}."
+  },
+  "machines.remotePause.byName": {
+    "value": "Paused by {{name}}."
+  },
+  "machines.remotePause.byNameUntil": {
+    "value": "Paused by {{name}} until {{time}}."
+  },
+  "machines.remotePause.outdated": {
+    "value": "Update the agentes.chat app on this computer to pause it from here."
+  },
+  "machines.remotePause.paused": {
+    "value": "{{name}} is paused"
+  },
+  "machines.remotePause.resumed": {
+    "value": "{{name}} is back to work"
   },
   "machines.seenNow": {
     "value": "connected now"
@@ -33323,6 +33428,12 @@
   },
   "devices.choose.serverLine": {
     "value": "One line to paste in its terminal"
+  },
+  "devices.choose.httpLine": {
+    "value": "One line to paste in its terminal. The app connects in one click on an https address."
+  },
+  "devices.choose.httpHow": {
+    "value": "How"
   },
   "devices.choose.other": {
     "value": "Another computer"
@@ -40059,6 +40170,9 @@
   "standing.screen.title": {
     "value": "This workspace is unavailable"
   },
+  "standing.screen.titleNamed": {
+    "value": "{{name}} is unavailable"
+  },
   "standing.screen.text": {
     "value": "Its conversations and agents are closed for now."
   },
@@ -40168,7 +40282,7 @@
     "value": "Delete workspace"
   },
   "deleteOrg.card.text": {
-    "value": "Closes {{name}} for everyone now. It's deleted for good after 7 days."
+    "value": "{{name}} turns read-only for everyone now. It's deleted for good after 7 days."
   },
   "deleteOrg.card.button": {
     "value": "Delete workspace…"
@@ -40180,10 +40294,10 @@
     "value": "Its conversations, files, agents and their memory"
   },
   "deleteOrg.goes.people": {
-    "value": "Everyone loses access now and gets an email"
+    "value": "Everyone can only read it from now on and gets an email"
   },
   "deleteOrg.goes.peopleQuiet": {
-    "value": "Everyone loses access now"
+    "value": "Everyone can only read it from now on"
   },
   "deleteOrg.goes.computer": {
     "value": "Its computer stops now and is wiped"
@@ -40245,14 +40359,14 @@
   "deleting.title": {
     "value": "{{name}} is being deleted"
   },
-  "deleting.text": {
-    "value": "This workspace is already being deleted. There's nothing you need to do, it goes on {{date}}."
-  },
-  "deleting.textLate": {
-    "value": "This workspace is already being deleted. There's nothing you need to do."
+  "deleting.banner": {
+    "value": "{{name}} will be deleted on {{date}}"
   },
   "deleting.by": {
     "value": "{{by}} deleted it on {{date}}."
+  },
+  "deleting.byYou": {
+    "value": "You deleted it on {{date}}."
   },
   "deleting.row": {
     "value": "Being deleted, goes on {{date}}"
@@ -40271,6 +40385,9 @@
   },
   "deleting.restored": {
     "value": "{{name}} is back"
+  },
+  "deleting.composer": {
+    "value": "You can't send messages while this workspace is being deleted"
   },
   "accountDeleting.title": {
     "value": "Your account is being deleted"
@@ -42964,9 +43081,6 @@
       "other": "{{names}} and {{count}} more"
     }
   },
-  "whoSees.some": {
-    "value": "some people"
-  },
   "whoSees.taskTitle": {
     "value": "Who sees this task"
   },
@@ -42990,9 +43104,6 @@
   },
   "whoSees.moreOptions": {
     "value": "More options"
-  },
-  "whoSees.receipt": {
-    "value": "Who sees it: {{who}}"
   },
   "whoSees.limited": {
     "value": "limited access"

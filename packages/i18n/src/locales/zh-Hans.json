@@ -3063,6 +3063,8 @@
       "updated_priority": "将 <b>#{{number}}</b> 的优先级设为{{priority}} · {{title}}",
       "assigned": "将 <b>#{{number}}</b> 分配给 {{assignee}} · {{title}}",
       "assigned_self": "自己接手了 <b>#{{number}}</b> · {{title}}",
+      "assigned_you": "将 <b>#{{number}}</b> 分配给你 · {{title}}",
+      "assigned_none": "移除了 <b>#{{number}}</b> 的负责人 · {{title}}",
       "files": "附加了 {{names}}"
     },
     "memory": {
@@ -3166,6 +3168,42 @@
     "changes_other": "{{count}} 项更改",
     "undoneBy": "已由 {{name}} 撤销",
     "group": "{{name}} 的更改",
+    "several": {
+      "issue": {
+        "created": "创建了任务 {{refs}}",
+        "updated": "修改了任务的{{fields}}：{{refs}}",
+        "assigned": "将任务分配给 {{assignee}}：{{refs}}",
+        "assigned_self": "自己接手了任务 {{refs}}",
+        "assigned_you": "将任务分配给你：{{refs}}",
+        "assigned_none": "移除了任务的负责人：{{refs}}"
+      },
+      "routine": {
+        "created": "创建了例行工作 {{refs}}",
+        "updated": "修改了例行工作的{{fields}}：{{refs}}",
+        "deleted": "删除了例行工作 {{refs}}"
+      },
+      "channel": {
+        "agent_added": "将 {{agentName}} 加入了 {{refs}}",
+        "created": "创建了频道 {{refs}}"
+      },
+      "wiki": {
+        "page_created": "创建了 Wiki 页面 {{refs}}",
+        "page_edited": "编辑了 Wiki 页面 {{refs}}"
+      },
+      "thread": {
+        "closed": "关闭了对话 {{refs}}"
+      },
+      "skill": {
+        "created": "把学到的内容整理成了技能 {{refs}}",
+        "updated": "修正了技能 {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "更改了设置：{{refs}}"
+      },
+      "pr": {
+        "merged": "已合并 <b>{{repo}}</b> 的 PR {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "此后有人修改过这里。现在撤销会丢失那次修改。",
       "expired": "撤销时间已过。",
@@ -4843,6 +4881,7 @@
           "reconnecting": "正在重新连接…",
           "failed": "无法登录该账号，请重试。",
           "expired": "登录超时，请重试。",
+          "geminiNotShared": "Gemini 已登录，但 {{computer}} 无法把这个登录共享给所有智能体。请改用 Gemini API 密钥。",
           "duplicate": {
             "claude_code": "Claude 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Claude 的页面上退出登录后重试。",
             "codex": "ChatGPT 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 ChatGPT 的页面上退出登录后重试。",
@@ -12727,6 +12766,7 @@
       "targetNotFound": "那台电脑已不存在，请选择另一台。",
       "targetSame": "智能体已经在那台电脑上了。",
       "targetPaused": "那台电脑已暂停，请选择另一台。",
+      "pausePast": "请选择一个未来的时间。",
       "accountMethodUnsupported": "这台电脑暂时无法用这种方式连接 Claude。请更新电脑上的 agentes.chat 程序，或使用 API 密钥。",
       "offline": "{{name}} 现在离线，等它恢复后再试。",
       "paused": "{{name}} 已暂停：恢复之前不会在上面开始新的工作。",
@@ -12859,6 +12899,21 @@
     "paused": "已暂停",
     "pausedUntil": "暂停至 {{time}}",
     "pausedHint": "由连接这台电脑的人在电脑上暂停。",
+    "remotePause": {
+      "button": "暂停",
+      "menu": "暂停 {{name}}",
+      "oneHour": "1 小时",
+      "tomorrow": "到明天上午 9 点",
+      "manual": "直到我恢复",
+      "resume": "恢复",
+      "byYou": "你暂停了它。",
+      "byYouUntil": "你暂停了它，直到 {{time}}。",
+      "byName": "{{name}} 暂停了它。",
+      "byNameUntil": "{{name}} 暂停了它，直到 {{time}}。",
+      "outdated": "更新这台电脑上的 agentes.chat 应用，才能从这里暂停它。",
+      "paused": "{{name}} 已暂停",
+      "resumed": "{{name}} 已恢复工作"
+    },
     "seenNow": "当前已连接",
     "seen": "上次在线 {{when}}",
     "neverSeen": "还没有连接过",
@@ -13270,6 +13325,8 @@
       "openApp": "打开应用",
       "server": "服务器或 VPS",
       "serverLine": "在它的终端里粘贴一行命令",
+      "httpLine": "在它的终端里粘贴一行命令。在 https 地址上，应用一键即可连接。",
+      "httpHow": "怎么做",
       "other": "另一台电脑",
       "otherLine": "在上面安装应用",
       "android": "Android 手机",
@@ -16050,6 +16107,7 @@
     "row": "不可用",
     "screen": {
       "title": "此工作区不可用",
+      "titleNamed": "{{name}} 不可用",
       "text": "它的对话和智能体暂时关闭。",
       "others": "你的其他工作区"
     },
@@ -16104,14 +16162,14 @@
   "deleteOrg": {
     "card": {
       "title": "删除工作区",
-      "text": "立即为所有人关闭 {{name}}，7 天后永久删除。",
+      "text": "{{name}} 立即对所有人变为只读，7 天后永久删除。",
       "button": "删除工作区…"
     },
     "title": "删除 {{name}}？",
     "goes": {
       "content": "它的对话、文件、智能体及其记忆",
-      "people": "所有人立即失去访问权限，并会收到邮件",
-      "peopleQuiet": "所有人立即失去访问权限",
+      "people": "所有人立即只能查看，并会收到邮件",
+      "peopleQuiet": "所有人立即只能查看",
       "computer": "它的电脑立即停止并被清空",
       "computers": "已连接的电脑会断开连接。智能体的文件夹会保留在电脑上，直到移除运行程序。",
       "connectors": "连接器和邮箱会断开连接"
@@ -16137,15 +16195,16 @@
   },
   "deleting": {
     "title": "{{name}} 正在删除中",
-    "text": "此工作区已在删除中。你无需做任何事，它将于 {{date}} 消失。",
-    "textLate": "此工作区已在删除中。你无需做任何事。",
+    "banner": "{{name}} 将于 {{date}} 删除",
     "by": "{{by}} 于 {{date}} 删除了它。",
+    "byYou": "你于 {{date}} 删除了它。",
     "row": "正在删除，{{date}} 消失",
     "rowLate": "正在删除",
     "someone": "有人",
     "restore": "恢复工作区",
     "membersOnly": "只有所有者可以恢复它。",
-    "restored": "{{name}} 已恢复"
+    "restored": "{{name}} 已恢复",
+    "composer": "这个工作区正在删除中，你不能发送消息"
   },
   "accountDeleting": {
     "title": "你的账号正在删除",
@@ -17320,7 +17379,6 @@
     "people": "指定的人",
     "only": "仅 {{name}}",
     "more_other": "{{names}} 等 {{count}} 人",
-    "some": "部分人",
     "taskTitle": "谁能看到这个任务",
     "pageTitle": "谁能看到这个页面",
     "admins": "管理员始终可以看到。",
@@ -17329,7 +17387,6 @@
     "search": "搜索成员",
     "noMatch": "没有这个名字的人",
     "moreOptions": "更多选项",
-    "receipt": "谁能看到：{{who}}",
     "limited": "访问受限",
     "rolesToo": "已在此页面上的角色仍可查看。"
   },

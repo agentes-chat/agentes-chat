@@ -3062,6 +3062,8 @@
       "updated_priority": "<b>#{{number}}</b>の優先度を{{priority}}にしました · {{title}}",
       "assigned": "<b>#{{number}}</b>を{{assignee}}に割り当てました · {{title}}",
       "assigned_self": "<b>#{{number}}</b>を自分で引き受けました · {{title}}",
+      "assigned_you": "<b>#{{number}}</b>をあなたに割り当てました · {{title}}",
+      "assigned_none": "<b>#{{number}}</b>の担当者を外しました · {{title}}",
       "files": "{{names}}を添付しました"
     },
     "memory": {
@@ -3165,6 +3167,42 @@
     "changes_other": "{{count}}件の変更",
     "undoneBy": "{{name}}が元に戻しました",
     "group": "{{name}}による変更",
+    "several": {
+      "issue": {
+        "created": "タスクを作成しました: {{refs}}",
+        "updated": "タスクの{{fields}}を変更しました: {{refs}}",
+        "assigned": "タスクを{{assignee}}に割り当てました: {{refs}}",
+        "assigned_self": "タスクを自分で引き受けました: {{refs}}",
+        "assigned_you": "タスクをあなたに割り当てました: {{refs}}",
+        "assigned_none": "タスクの担当者を外しました: {{refs}}"
+      },
+      "routine": {
+        "created": "ルーティンを作成しました: {{refs}}",
+        "updated": "ルーティンの{{fields}}を変更しました: {{refs}}",
+        "deleted": "ルーティンを削除しました: {{refs}}"
+      },
+      "channel": {
+        "agent_added": "{{agentName}}をチャンネルに追加しました: {{refs}}",
+        "created": "チャンネルを作成しました: {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Wikiページを作成しました: {{refs}}",
+        "page_edited": "Wikiページを編集しました: {{refs}}"
+      },
+      "thread": {
+        "closed": "会話を終了しました: {{refs}}"
+      },
+      "skill": {
+        "created": "学んだことをスキルにまとめました: {{refs}}",
+        "updated": "スキルを修正しました: {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "設定を変更しました: {{refs}}"
+      },
+      "pr": {
+        "merged": "<b>{{repo}}</b>のPRをマージしました: {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "その後、誰かがこれを変更しました。今元に戻すと、その変更が失われます。",
       "expired": "元に戻せる時間が過ぎました。",
@@ -4820,6 +4858,7 @@
           "reconnecting": "再接続しています…",
           "failed": "そのアカウントにログインできませんでした。もう一度お試しください。",
           "expired": "ログインの制限時間が過ぎました。もう一度お試しください。",
+          "geminiNotShared": "Geminiにはログインできましたが、{{computer}}ではこのログインをすべてのエージェントで共有できません。代わりにGeminiのAPIキーを使ってください。",
           "duplicate": {
             "claude_code": "Claudeは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Claudeのページでログアウトしてからもう一度お試しください。",
             "codex": "ChatGPTは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、ChatGPTのページでログアウトしてからもう一度お試しください。",
@@ -12665,6 +12704,7 @@
       "targetNotFound": "そのコンピューターはもう存在しません。別のものを選んでください。",
       "targetSame": "エージェントはすでにそのコンピューターにいます。",
       "targetPaused": "そのコンピューターは一時停止中です。別のものを選んでください。",
+      "pausePast": "未来の時刻を選んでください。",
       "accountMethodUnsupported": "このコンピューターでは、まだこの方法でClaudeを接続できません。コンピューターのagentes.chatプログラムを更新するか、APIキーを使ってください。",
       "offline": "{{name}}は現在オフラインです。戻ったらもう一度お試しください。",
       "paused": "{{name}}は一時停止中です。再開されるまで新しいものは始まりません。",
@@ -12797,6 +12837,21 @@
     "paused": "一時停止中",
     "pausedUntil": "{{time}}まで一時停止中",
     "pausedHint": "接続した人がコンピューター本体で一時停止しています。",
+    "remotePause": {
+      "button": "一時停止",
+      "menu": "{{name}}を一時停止",
+      "oneHour": "1時間",
+      "tomorrow": "明日の午前9時まで",
+      "manual": "再開するまで",
+      "resume": "再開",
+      "byYou": "あなたが一時停止しました。",
+      "byYouUntil": "あなたが{{time}}まで一時停止しました。",
+      "byName": "{{name}}さんが一時停止しました。",
+      "byNameUntil": "{{name}}さんが{{time}}まで一時停止しました。",
+      "outdated": "ここから一時停止するには、このコンピューターのagentes.chatアプリを更新してください。",
+      "paused": "{{name}}を一時停止しました",
+      "resumed": "{{name}}が作業を再開しました"
+    },
     "seenNow": "接続中",
     "seen": "最終接続 {{when}}",
     "neverSeen": "まだ接続されていません",
@@ -13208,6 +13263,8 @@
       "openApp": "アプリを開く",
       "server": "サーバーまたはVPS",
       "serverLine": "ターミナルに1行貼り付けるだけ",
+      "httpLine": "ターミナルに1行貼り付けるだけ。httpsのアドレスなら、アプリがワンクリックで接続します。",
+      "httpHow": "方法",
       "other": "ほかのコンピューター",
       "otherLine": "アプリをインストール",
       "android": "Androidスマートフォン",
@@ -15936,6 +15993,7 @@
     "row": "利用不可",
     "screen": {
       "title": "このワークスペースは利用できません",
+      "titleNamed": "{{name}}は利用できません",
       "text": "会話とエージェントは現在閉じられています。",
       "others": "ほかのワークスペース"
     },
@@ -15990,14 +16048,14 @@
   "deleteOrg": {
     "card": {
       "title": "ワークスペースを削除",
-      "text": "{{name}}を今すぐ全員に対して閉鎖します。7日後に完全に削除されます。",
+      "text": "{{name}}は今すぐ全員に対して閲覧のみになります。7日後に完全に削除されます。",
       "button": "ワークスペースを削除…"
     },
     "title": "{{name}}を削除しますか？",
     "goes": {
       "content": "会話、ファイル、エージェントとそのメモリ",
-      "people": "全員がすぐにアクセスできなくなり、メールが届きます",
-      "peopleQuiet": "全員がすぐにアクセスできなくなります",
+      "people": "全員がすぐに閲覧だけできる状態になり、メールが届きます",
+      "peopleQuiet": "全員がすぐに閲覧だけできる状態になります",
       "computer": "コンピューターはすぐに停止し、消去されます",
       "computers": "接続されたコンピューターは切断されます。エージェントのフォルダは、ランナーが削除されるまで残ります。",
       "connectors": "コネクタとメールボックスの接続が解除されます"
@@ -16023,15 +16081,16 @@
   },
   "deleting": {
     "title": "{{name}}は削除中です",
-    "text": "このワークスペースはすでに削除中です。何もする必要はありません。{{date}}に消えます。",
-    "textLate": "このワークスペースはすでに削除中です。何もする必要はありません。",
+    "banner": "{{name}}は{{date}}に削除されます",
     "by": "{{by}}が{{date}}に削除しました。",
+    "byYou": "{{date}}にあなたが削除しました。",
     "row": "削除中、{{date}}に消えます",
     "rowLate": "削除中",
     "someone": "誰か",
     "restore": "ワークスペースを復元",
     "membersOnly": "復元できるのはオーナーだけです。",
-    "restored": "{{name}}が復元されました"
+    "restored": "{{name}}が復元されました",
+    "composer": "このワークスペースは削除中のため、メッセージを送れません"
   },
   "accountDeleting": {
     "title": "アカウントを削除しています",
@@ -17144,7 +17203,6 @@
     "people": "特定の人",
     "only": "{{name}}のみ",
     "more_other": "{{names}}ほか{{count}}人",
-    "some": "一部の人",
     "taskTitle": "このタスクを閲覧できる人",
     "pageTitle": "このページを閲覧できる人",
     "admins": "管理者は常に閲覧できます。",
@@ -17153,7 +17211,6 @@
     "search": "人を検索",
     "noMatch": "その名前の人はいません",
     "moreOptions": "その他のオプション",
-    "receipt": "閲覧できる人：{{who}}",
     "limited": "アクセス制限あり",
     "rolesToo": "このページにすでに設定されているロールは引き続き閲覧できます。"
   },

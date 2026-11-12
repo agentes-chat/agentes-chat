@@ -1253,7 +1253,7 @@ export function accountRoutes(deps: AppDeps) {
       tags,
       security,
       summary: "Delete a workspace (owners)",
-      description: `It closes to everyone now, like a suspended workspace: requests answer 403 \`org.deleting\`, and its people's apps hear an \`org.deleting\` org event. Its work stops, and it is deleted for good 7 days later. Until then any owner can restore it (\`DELETE …/deletion\`). ${PROOF_TEXT} A workspace takes 3 deletions a day (429). Already being deleted, it answers 202 with its date before any proof, and nobody is told again. 403 \`forbidden\` for anyone but an owner, \`org.suspended\` while suspended.`,
+      description: `It turns read-only for everyone now: its members still read it, every other change answers 403 \`org.deleting\` (restoring it, leaving it, read marks, the inbox and their own settings there stay open), and its people's apps hear an \`org.deleting\` org event. Its work stops, and it is deleted for good 7 days later. Until then any owner can restore it (\`DELETE …/deletion\`). ${PROOF_TEXT} A workspace takes 3 deletions a day (429). Already being deleted, it answers 202 with its date before any proof, and nobody is told again. 403 \`forbidden\` for anyone but an owner, \`org.suspended\` while suspended.`,
       request: { params: OrgParams, body: body(Proof) },
       responses: {
         202: json(

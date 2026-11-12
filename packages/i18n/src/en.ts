@@ -3370,6 +3370,10 @@ export const en = {
       updated_priority: "Set <b>#{{number}}</b> to {{priority}} priority · {{title}}",
       assigned: "Assigned <b>#{{number}}</b> to {{assignee}} · {{title}}",
       assigned_self: "Took <b>#{{number}}</b> myself · {{title}}",
+      /** Assigned to the person reading it: the language's own words for "to you" ("Te asigné"). */
+      assigned_you: "Assigned <b>#{{number}}</b> to you · {{title}}",
+      /** The task no longer has anyone on it. */
+      assigned_none: "Removed the assignee of <b>#{{number}}</b> · {{title}}",
       /** Under the line: the files that went with the task (their names). */
       files: "Attached {{names}}",
     },
@@ -3482,6 +3486,46 @@ export const en = {
     changes_other: "{{count}} changes",
     undoneBy: "Undone by {{name}}",
     group: "Changes by {{name}}",
+    /**
+     * Several changes of one kind on one line, cut with "…" when long: `{{refs}}` lists what they name (task numbers,
+     * routine names…), each in bold and opening its own. What they share goes before it, so a cut list never hides it.
+     */
+    several: {
+      issue: {
+        created: "Created tasks {{refs}}",
+        updated: "Changed {{fields}} of tasks {{refs}}",
+        assigned: "Assigned {{assignee}} tasks {{refs}}",
+        assigned_self: "Took on tasks {{refs}}",
+        assigned_you: "Assigned you tasks {{refs}}",
+        assigned_none: "Removed the assignee of tasks {{refs}}",
+      },
+      routine: {
+        created: "Created the routines {{refs}}",
+        updated: "Changed {{fields}} of the routines {{refs}}",
+        deleted: "Deleted the routines {{refs}}",
+      },
+      channel: {
+        agent_added: "Brought {{agentName}} into {{refs}}",
+        created: "Created the channels {{refs}}",
+      },
+      wiki: {
+        page_created: "Created the wiki pages {{refs}}",
+        page_edited: "Edited the wiki pages {{refs}}",
+      },
+      thread: {
+        closed: "Closed the conversations {{refs}}",
+      },
+      skill: {
+        created: "Turned what I learned into the skills {{refs}}",
+        updated: "Fixed the skills {{refs}}",
+      },
+      agent: {
+        settings_changed: "Changed the settings of {{refs}}",
+      },
+      pr: {
+        merged: "Merged in <b>{{repo}}</b>: PRs {{refs}}",
+      },
+    },
     errors: {
       changed_since: "Someone changed this since. Undoing now would lose that change.",
       expired: "The time to undo is over.",
@@ -5245,6 +5289,9 @@ export const en = {
           reconnecting: "Reconnecting…",
           failed: "Couldn't sign in to that account. Try again.",
           expired: "The time to sign in ran out. Try again.",
+          /** Gemini signed in for all agents, but a copy of it doesn't work for each one: signing in again won't help. */
+          geminiNotShared:
+            "Gemini signed in, but {{computer}} can't share that sign-in with every agent. Use a Gemini API key instead.",
           duplicate: {
             claude_code:
               "Claude signed in as {{account}}, an account you already connected. To use another, sign out on Claude's page and try again.",
@@ -13120,6 +13167,7 @@ export const en = {
       targetNotFound: "That computer no longer exists. Choose another one.",
       targetSame: "The agents are already on that computer.",
       targetPaused: "That computer is paused. Choose another one.",
+      pausePast: "Choose a time in the future.",
       accountMethodUnsupported:
         "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key.",
       offline: "{{name}} is offline right now. Try again once it's back.",
@@ -13263,6 +13311,22 @@ export const en = {
     paused: "Paused",
     pausedUntil: "Paused until {{time}}",
     pausedHint: "Paused on the computer itself by whoever connected it.",
+    /** Pausing a computer from the web or phone app, for whoever connected it and admins. */
+    remotePause: {
+      button: "Pause",
+      menu: "Pause {{name}}",
+      oneHour: "For 1 hour",
+      tomorrow: "Until tomorrow at 9 AM",
+      manual: "Until I resume",
+      resume: "Resume",
+      byYou: "Paused by you.",
+      byYouUntil: "Paused by you until {{time}}.",
+      byName: "Paused by {{name}}.",
+      byNameUntil: "Paused by {{name}} until {{time}}.",
+      outdated: "Update the agentes.chat app on this computer to pause it from here.",
+      paused: "{{name}} is paused",
+      resumed: "{{name}} is back to work",
+    },
     seenNow: "connected now",
     seen: "seen {{when}}",
     neverSeen: "hasn't connected yet",
@@ -13666,6 +13730,9 @@ export const en = {
       openApp: "Open the app",
       server: "A server or VPS",
       serverLine: "One line to paste in its terminal",
+      /** This computer, on a server at a plain http address: the app's one-click link needs https. */
+      httpLine: "One line to paste in its terminal. The app connects in one click on an https address.",
+      httpHow: "How",
       other: "Another computer",
       otherLine: "Install the app on it",
       android: "Android phone",
@@ -16591,6 +16658,8 @@ export const en = {
     row: "Unavailable",
     screen: {
       title: "This workspace is unavailable",
+      /** `title` with the workspace's name. */
+      titleNamed: "{{name}} is unavailable",
       text: "Its conversations and agents are closed for now.",
       others: "Your other workspaces",
     },
@@ -16659,18 +16728,18 @@ export const en = {
     writeAfter: ".",
     ask: "Need help? Ask the people who run this server.",
   },
-  /** Deleting a workspace (owners): it closes for everyone now and is deleted for good 7 days later. */
+  /** Deleting a workspace (owners): it turns read-only for everyone now and is deleted for good 7 days later. */
   deleteOrg: {
     card: {
       title: "Delete workspace",
-      text: "Closes {{name}} for everyone now. It's deleted for good after 7 days.",
+      text: "{{name}} turns read-only for everyone now. It's deleted for good after 7 days.",
       button: "Delete workspace…",
     },
     title: "Delete {{name}}?",
     goes: {
       content: "Its conversations, files, agents and their memory",
-      people: "Everyone loses access now and gets an email",
-      peopleQuiet: "Everyone loses access now",
+      people: "Everyone can only read it from now on and gets an email",
+      peopleQuiet: "Everyone can only read it from now on",
       computer: "Its computer stops now and is wiped",
       computers: "Connected computers are disconnected. The agents' folders stay on them until the runner is removed.",
       connectors: "Connectors and mailboxes are disconnected",
@@ -16700,12 +16769,14 @@ export const en = {
     password: "Your password",
     signInButton: "Sign in again",
   },
-  /** A workspace being deleted: the screen in its place until it goes. */
+  /** A workspace being deleted: a line on top of it, read-only, until it goes. `title` once its date passed. */
   deleting: {
     title: "{{name}} is being deleted",
-    text: "This workspace is already being deleted. There's nothing you need to do, it goes on {{date}}.",
-    textLate: "This workspace is already being deleted. There's nothing you need to do.",
+    /** The line's title while its date is ahead. */
+    banner: "{{name}} will be deleted on {{date}}",
     by: "{{by}} deleted it on {{date}}.",
+    /** `by`, for the person who deleted it. */
+    byYou: "You deleted it on {{date}}.",
     /** Beside its name in a list of workspaces. */
     row: "Being deleted, goes on {{date}}",
     rowLate: "Being deleted",
@@ -16714,6 +16785,8 @@ export const en = {
     restore: "Restore workspace",
     membersOnly: "Only an owner can restore it.",
     restored: "{{name}} is back",
+    /** In place of the message box. */
+    composer: "You can't send messages while this workspace is being deleted",
   },
   /** The screen an account waiting for its deletion sees in place of the app: `text` while its date is ahead. */
   accountDeleting: {
@@ -17901,7 +17974,6 @@ export const en = {
     only: "Only {{name}}",
     more_one: "{{names}} and {{count}} more",
     more_other: "{{names}} and {{count}} more",
-    some: "some people",
     taskTitle: "Who sees this task",
     pageTitle: "Who sees this page",
     admins: "Administrators always see it.",
@@ -17910,7 +17982,6 @@ export const en = {
     search: "Search people",
     noMatch: "Nobody with that name",
     moreOptions: "More options",
-    receipt: "Who sees it: {{who}}",
     limited: "limited access",
     rolesToo: "The roles already on this page keep seeing it.",
   },

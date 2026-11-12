@@ -2195,6 +2195,21 @@
       }
     },
     /**
+     * The working line's own controls (the globe, Ver, the stop) end it at its end from the first frame: one beside
+     * words that grow nothing would jump to the end once the time comes in before it.
+     */
+    barend(out) {
+      for (const bar of document.querySelectorAll('.ac-typing[data-active="true"]')) {
+        const last = bar.lastElementChild;
+        if (!seen(bar) || !last?.matches(".stop-run-wrap, .ac-typing__browser, .ac-typing__see") || !seen(last))
+          continue;
+        const s = style(bar);
+        const end = bar.getBoundingClientRect().right - parseFloat(s.borderRightWidth) - parseFloat(s.paddingRight);
+        const free = end - last.getBoundingClientRect().right - parseFloat(style(last).marginRight);
+        if (free > 1) out.push({ rule: "barend", node: last, el: sig(last), box: sig(bar), px: +free.toFixed(1) });
+      }
+    },
+    /**
      * A count that calls on someone (an unread or waiting count: the sidebar's, the bell's) shows against what is
      * behind it, its fill at least 3:1 (rule 19). A neutral count (`--quiet`) is a fact, not a call.
      */

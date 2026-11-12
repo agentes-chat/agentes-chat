@@ -3073,6 +3073,8 @@
       "updated_priority": "Mengatur prioritas <b>#{{number}}</b> ke {{priority}} · {{title}}",
       "assigned": "Menugaskan <b>#{{number}}</b> ke {{assignee}} · {{title}}",
       "assigned_self": "Mengambil <b>#{{number}}</b> sendiri · {{title}}",
+      "assigned_you": "Menugaskan <b>#{{number}}</b> ke kamu · {{title}}",
+      "assigned_none": "Menghapus penanggung jawab <b>#{{number}}</b> · {{title}}",
       "files": "Melampirkan {{names}}"
     },
     "memory": {
@@ -3176,6 +3178,42 @@
     "changes_other": "{{count}} perubahan",
     "undoneBy": "Diurungkan oleh {{name}}",
     "group": "Perubahan oleh {{name}}",
+    "several": {
+      "issue": {
+        "created": "Membuat tugas {{refs}}",
+        "updated": "Mengubah {{fields}} di tugas {{refs}}",
+        "assigned": "Menugaskan ke {{assignee}}: tugas {{refs}}",
+        "assigned_self": "Mengambil sendiri tugas {{refs}}",
+        "assigned_you": "Menugaskan ke kamu: tugas {{refs}}",
+        "assigned_none": "Menghapus penanggung jawab tugas {{refs}}"
+      },
+      "routine": {
+        "created": "Membuat rutinitas {{refs}}",
+        "updated": "Mengubah {{fields}} di rutinitas {{refs}}",
+        "deleted": "Menghapus rutinitas {{refs}}"
+      },
+      "channel": {
+        "agent_added": "Membawa {{agentName}} ke {{refs}}",
+        "created": "Membuat kanal {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Membuat halaman wiki {{refs}}",
+        "page_edited": "Mengedit halaman wiki {{refs}}"
+      },
+      "thread": {
+        "closed": "Menutup percakapan {{refs}}"
+      },
+      "skill": {
+        "created": "Mengubah yang aku pelajari menjadi skill {{refs}}",
+        "updated": "Memperbaiki skill {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "Mengubah pengaturan {{refs}}"
+      },
+      "pr": {
+        "merged": "Merge di <b>{{repo}}</b>: PR {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "Seseorang mengubah ini sejak itu. Mengurungkan sekarang akan menghilangkan perubahan tersebut.",
       "expired": "Waktu untuk mengurungkan sudah habis.",
@@ -4835,6 +4873,7 @@
           "reconnecting": "Menghubungkan ulang…",
           "failed": "Tidak bisa masuk ke akun itu. Coba lagi.",
           "expired": "Waktu untuk masuk sudah habis. Coba lagi.",
+          "geminiNotShared": "Gemini sudah masuk, tetapi sesi masuk itu tidak bisa dibagikan ke semua agen di {{computer}}. Pakai kunci API Gemini saja.",
           "duplicate": {
             "claude_code": "Claude masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Claude lalu coba lagi.",
             "codex": "ChatGPT masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman ChatGPT lalu coba lagi.",
@@ -12719,6 +12758,7 @@
       "targetNotFound": "Komputer itu sudah tidak ada. Pilih yang lain.",
       "targetSame": "Agen sudah ada di komputer itu.",
       "targetPaused": "Komputer itu sedang dijeda. Pilih yang lain.",
+      "pausePast": "Pilih waktu di masa depan.",
       "accountMethodUnsupported": "Komputer ini belum bisa menghubungkan Claude dengan cara ini. Perbarui program agentes.chat di komputer ini, atau pakai kunci API.",
       "offline": "{{name}} sedang offline. Coba lagi setelah ia kembali.",
       "paused": "{{name}} dijeda: tidak ada yang baru dimulai di sana sampai dilanjutkan.",
@@ -12851,6 +12891,21 @@
     "paused": "Dijeda",
     "pausedUntil": "Dijeda sampai {{time}}",
     "pausedHint": "Dijeda di komputer itu sendiri oleh orang yang menghubungkannya.",
+    "remotePause": {
+      "button": "Jeda",
+      "menu": "Jeda {{name}}",
+      "oneHour": "Selama 1 jam",
+      "tomorrow": "Sampai besok pukul 09.00",
+      "manual": "Sampai aku melanjutkan",
+      "resume": "Lanjutkan",
+      "byYou": "Dijeda olehmu.",
+      "byYouUntil": "Dijeda olehmu sampai {{time}}.",
+      "byName": "Dijeda oleh {{name}}.",
+      "byNameUntil": "Dijeda oleh {{name}} sampai {{time}}.",
+      "outdated": "Perbarui aplikasi agentes.chat di komputer ini untuk menjedanya dari sini.",
+      "paused": "{{name}} dijeda",
+      "resumed": "{{name}} kembali bekerja"
+    },
     "seenNow": "terhubung sekarang",
     "seen": "terlihat {{when}}",
     "neverSeen": "belum pernah terhubung",
@@ -13262,6 +13317,8 @@
       "openApp": "Buka aplikasinya",
       "server": "Server atau VPS",
       "serverLine": "Satu baris untuk ditempel di terminalnya",
+      "httpLine": "Satu baris untuk ditempel di terminalnya. Aplikasi menghubungkannya dengan sekali klik di alamat https.",
+      "httpHow": "Caranya",
       "other": "Komputer lain",
       "otherLine": "Pasang aplikasinya di sana",
       "android": "Ponsel Android",
@@ -15990,6 +16047,7 @@
     "row": "Tidak tersedia",
     "screen": {
       "title": "Ruang kerja ini tidak tersedia",
+      "titleNamed": "{{name}} tidak tersedia",
       "text": "Percakapan dan agennya ditutup untuk sementara.",
       "others": "Ruang kerjamu yang lain"
     },
@@ -16044,14 +16102,14 @@
   "deleteOrg": {
     "card": {
       "title": "Hapus ruang kerja",
-      "text": "Menutup {{name}} untuk semua orang sekarang. Dihapus selamanya setelah 7 hari.",
+      "text": "{{name}} jadi hanya-baca untuk semua orang sekarang. Dihapus selamanya setelah 7 hari.",
       "button": "Hapus ruang kerja…"
     },
     "title": "Hapus {{name}}?",
     "goes": {
       "content": "Percakapan, file, agen, dan memori mereka",
-      "people": "Semua orang kehilangan akses sekarang dan menerima email",
-      "peopleQuiet": "Semua orang kehilangan akses sekarang",
+      "people": "Mulai sekarang semua orang hanya bisa membacanya dan menerima email",
+      "peopleQuiet": "Mulai sekarang semua orang hanya bisa membacanya",
       "computer": "Komputernya berhenti sekarang dan dibersihkan",
       "computers": "Komputer yang terhubung diputuskan. Folder agen tetap ada di sana sampai runner-nya dihapus.",
       "connectors": "Konektor dan kotak surat diputuskan"
@@ -16077,15 +16135,16 @@
   },
   "deleting": {
     "title": "{{name}} sedang dihapus",
-    "text": "Ruang kerja ini sudah sedang dihapus. Kamu tidak perlu melakukan apa-apa, ruang kerja ini hilang pada {{date}}.",
-    "textLate": "Ruang kerja ini sudah sedang dihapus. Kamu tidak perlu melakukan apa-apa.",
+    "banner": "{{name}} akan dihapus pada {{date}}",
     "by": "{{by}} menghapusnya pada {{date}}.",
+    "byYou": "Kamu menghapusnya pada {{date}}.",
     "row": "Sedang dihapus, hilang pada {{date}}",
     "rowLate": "Sedang dihapus",
     "someone": "Seseorang",
     "restore": "Pulihkan ruang kerja",
     "membersOnly": "Hanya Pemilik yang bisa memulihkannya.",
-    "restored": "{{name}} sudah kembali"
+    "restored": "{{name}} sudah kembali",
+    "composer": "Kamu tidak bisa mengirim pesan selama ruang kerja ini sedang dihapus"
   },
   "accountDeleting": {
     "title": "Akunmu sedang dihapus",
@@ -17246,7 +17305,6 @@
     "people": "Orang tertentu",
     "only": "Hanya {{name}}",
     "more_other": "{{names}} dan {{count}} lainnya",
-    "some": "beberapa orang",
     "taskTitle": "Siapa yang melihat tugas ini",
     "pageTitle": "Siapa yang melihat halaman ini",
     "admins": "Administrator selalu bisa melihat.",
@@ -17255,7 +17313,6 @@
     "search": "Cari orang",
     "noMatch": "Tidak ada orang dengan nama itu",
     "moreOptions": "Opsi lainnya",
-    "receipt": "Siapa yang melihat: {{who}}",
     "limited": "akses terbatas",
     "rolesToo": "Peran yang sudah ada di halaman ini tetap melihatnya."
   },

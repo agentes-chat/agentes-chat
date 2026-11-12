@@ -302,7 +302,7 @@ export interface OrgSummary {
    * which resumes it, instead of the workspace. Absent: finished, not theirs to set up, or an older server.
    */
   onboarding?: OrgOnboarding;
-  /** From `GET /me` while an owner's deletion is pending, set at once by `org.deleting`: the workspace is closed. */
+  /** From `GET /me` while an owner's deletion is pending, set at once by `org.deleting`: the workspace is read-only. */
   deletion?: OrgDeletion;
   /** From `GET /me`: what opens when the app starts here (ADR 0108). Absent from older servers: the home. */
   start?: StartChoice;
@@ -4422,6 +4422,8 @@ export interface Machine {
   createdAt: string;
   /** ADR 0036 §6: the owner paused it on the machine; nothing new starts until it resumes. Null or absent: not paused. */
   paused?: MachinePause | null;
+  /** Its app takes a pause from the apps (`POST …/pause`); `false` or absent: update the app on it. */
+  remotePause?: boolean;
   /** ADR 0036 §8 (protocol 10): what the machine allows, as last reported. Absent until the machine reports it. */
   access?: MachineAccess | null;
   /** ADR 0040 (protocol 12): whether the agent browser can run there; null or absent when its runner doesn't say. */
@@ -4500,6 +4502,8 @@ export interface MachineBrowser {
 export interface MachinePause {
   paused?: boolean;
   until?: string | null;
+  /** Who paused it from the apps; null or absent: on the computer itself. */
+  by?: { id: string; name: string } | null;
 }
 
 /** A tool the person turns on or off on the machine. */

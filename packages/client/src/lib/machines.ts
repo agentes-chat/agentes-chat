@@ -7,10 +7,12 @@ import type {
   MachineAccount,
   MachineAccountKind,
   MachineFolderGrant,
+  MachinePause,
   MachineToolName,
 } from "../api/types";
 import { errorCode, sendWaits } from "./errors";
 import { formatBytes } from "./files";
+import { clockAt } from "./format";
 
 /**
  * Connected computers (ADR 0025, ADR 0036): the device code, the commands the
@@ -147,6 +149,43 @@ export function isPaused(m: Pick<Machine, "paused">, now = Date.now()): boolean 
   if (!p.until) return true;
   const end = Date.parse(p.until);
   return Number.isNaN(end) || end > now;
+}
+
+/** A pause's length, as the desktop's tray and the apps offer it. */
+export type PauseChoice = "1h" | "tomorrow" | "manual";
+export const PAUSE_CHOICES: readonly PauseChoice[] = ["1h", "tomorrow", "manual"];
+
+/** `until` for a choice: an hour from now, tomorrow at 9:00 local time, or null (until resumed). */
+export function pauseUntil(choice: PauseChoice, now: Date = new Date()): string | null {
+  if (choice === "manual") return null;
+  if (choice === "1h") return new Date(now.getTime() + 60 * 60 * 1000).toISOString();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0, 0, 0).toISOString();
+}
+
+const PAUSE_KEYS = {
+  "1h": "machines.remotePause.oneHour",
+  tomorrow: "machines.remotePause.tomorrow",
+  manual: "machines.remotePause.manual",
+} as const;
+
+/** "For 1 hour", "Until tomorrow at 9 AM", "Until I resume". */
+export const pauseChoiceText = (t: TFunction, choice: PauseChoice) => t(PAUSE_KEYS[choice]);
+
+/** "Paused by you." when someone paused it from the apps; null when it was paused on the computer. */
+export function pausedByText(
+  t: TFunction,
+  locale: string,
+  pause: MachinePause | null | undefined,
+  meId: string,
+  now = new Date(),
+): string | null {
+  const by = pause?.by;
+  if (!by) return null;
+  const time = pause.until ? clockAt(locale, pause.until, now) : null;
+  if (by.id === meId) return time ? t("machines.remotePause.byYouUntil", { time }) : t("machines.remotePause.byYou");
+  return time
+    ? t("machines.remotePause.byNameUntil", { name: by.name, time })
+    : t("machines.remotePause.byName", { name: by.name });
 }
 
 /** The download link as given, or on `origin` when the server sends a path. */
@@ -300,6 +339,13 @@ export function freeDuplicate(status: AccountLoginStatus | undefined): MachineAc
   const account = status?.duplicate?.account;
   return account?.status === "active" && (account.usedBy.length === 0 || account.shared === true) ? account : null;
 }
+
+/**
+ * A Gemini sign-in for all agents the computer couldn't hand to each of them (`not_kept`: its copy didn't sign in, or
+ * the CLI kept it where no copy can be made). Signing in again ends the same way, so the way out is a Gemini API key.
+ */
+export const geminiNotShared = (kind: MachineAccountKind, status: AccountLoginStatus | undefined): boolean =>
+  kind === "antigravity" && status?.code === "not_kept";
 
 /**
  * A new sign-in came back as another account than its hint (Claude's login hint only steers Claude's page): the

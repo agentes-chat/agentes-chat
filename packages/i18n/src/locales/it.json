@@ -3283,6 +3283,8 @@
       "updated_priority": "Ho impostato la priorità di <b>#{{number}}</b> su {{priority}} · {{title}}",
       "assigned": "Ho assegnato <b>#{{number}}</b> a {{assignee}} · {{title}}",
       "assigned_self": "Ho preso <b>#{{number}}</b> io · {{title}}",
+      "assigned_you": "Ti ho assegnato <b>#{{number}}</b> · {{title}}",
+      "assigned_none": "Ho tolto il responsabile di <b>#{{number}}</b> · {{title}}",
       "files": "Ho allegato {{names}}"
     },
     "memory": {
@@ -3388,6 +3390,42 @@
     "changes_other": "{{count}} modifiche",
     "undoneBy": "Annullato da {{name}}",
     "group": "Modifiche di {{name}}",
+    "several": {
+      "issue": {
+        "created": "Ho creato le attività {{refs}}",
+        "updated": "Ho cambiato {{fields}} delle attività {{refs}}",
+        "assigned": "Ho assegnato a {{assignee}} le attività {{refs}}",
+        "assigned_self": "Ho preso io le attività {{refs}}",
+        "assigned_you": "Ti ho assegnato le attività {{refs}}",
+        "assigned_none": "Ho tolto il responsabile delle attività {{refs}}"
+      },
+      "routine": {
+        "created": "Ho creato le routine {{refs}}",
+        "updated": "Ho cambiato {{fields}} delle routine {{refs}}",
+        "deleted": "Ho eliminato le routine {{refs}}"
+      },
+      "channel": {
+        "agent_added": "Ho portato {{agentName}} in {{refs}}",
+        "created": "Ho creato i canali {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Ho creato le pagine wiki {{refs}}",
+        "page_edited": "Ho modificato le pagine wiki {{refs}}"
+      },
+      "thread": {
+        "closed": "Ho chiuso le conversazioni {{refs}}"
+      },
+      "skill": {
+        "created": "Ho trasformato ciò che ho imparato nelle skill {{refs}}",
+        "updated": "Ho corretto le skill {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "Ho cambiato le impostazioni di {{refs}}"
+      },
+      "pr": {
+        "merged": "Ho fatto il merge in <b>{{repo}}</b> delle PR {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "Qualcuno l'ha cambiato nel frattempo. Annullando ora perderesti quella modifica.",
       "expired": "Il tempo per annullare è scaduto.",
@@ -5161,6 +5199,7 @@
           "reconnecting": "Riconnessione…",
           "failed": "Impossibile accedere a quell'account. Riprova.",
           "expired": "Il tempo per accedere è scaduto. Riprova.",
+          "geminiNotShared": "Gemini ha effettuato l'accesso, ma su {{computer}} questo accesso non si può condividere con tutti gli agenti. Usa invece una chiave API di Gemini.",
           "duplicate": {
             "claude_code": "Claude ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Claude e riprova.",
             "codex": "ChatGPT ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di ChatGPT e riprova.",
@@ -13616,6 +13655,7 @@
       "targetNotFound": "Quel computer non esiste più. Scegline un altro.",
       "targetSame": "Gli agenti sono già su quel computer.",
       "targetPaused": "Quel computer è in pausa. Scegline un altro.",
+      "pausePast": "Scegli un orario nel futuro.",
       "accountMethodUnsupported": "Questo computer non può ancora collegare Claude in questo modo. Aggiorna il programma agentes.chat che ha installato, oppure usa una chiave API.",
       "offline": "{{name}} è offline in questo momento. Riprova quando torna disponibile.",
       "paused": "{{name}} è in pausa: non parte nulla di nuovo finché non riprende.",
@@ -13750,6 +13790,21 @@
     "paused": "In pausa",
     "pausedUntil": "In pausa fino alle {{time}}",
     "pausedHint": "Messo in pausa sul computer stesso da chi l'ha collegato.",
+    "remotePause": {
+      "button": "Metti in pausa",
+      "menu": "Metti in pausa {{name}}",
+      "oneHour": "Per 1 ora",
+      "tomorrow": "Fino a domani alle 9",
+      "manual": "Finché non riprendo",
+      "resume": "Riprendi",
+      "byYou": "Messo in pausa da te.",
+      "byYouUntil": "Messo in pausa da te fino alle {{time}}.",
+      "byName": "Messo in pausa da {{name}}.",
+      "byNameUntil": "Messo in pausa da {{name}} fino alle {{time}}.",
+      "outdated": "Aggiorna l'app agentes.chat su questo computer per metterlo in pausa da qui.",
+      "paused": "{{name}} è in pausa",
+      "resumed": "{{name}} è di nuovo al lavoro"
+    },
     "seenNow": "connesso ora",
     "seen": "visto {{when}}",
     "neverSeen": "non si è ancora connesso",
@@ -14169,6 +14224,8 @@
       "openApp": "Apri l'app",
       "server": "Un server o VPS",
       "serverLine": "Una riga da incollare nel suo terminale",
+      "httpLine": "Una riga da incollare nel suo terminale. L'app lo collega con un clic su un indirizzo https.",
+      "httpHow": "Come",
       "other": "Un altro computer",
       "otherLine": "Installa l'app lì",
       "android": "Telefono Android",
@@ -17027,6 +17084,7 @@
     "row": "Non disponibile",
     "screen": {
       "title": "Questo spazio di lavoro non è disponibile",
+      "titleNamed": "{{name}} non è disponibile",
       "text": "Le sue conversazioni e i suoi agenti per ora sono chiusi.",
       "others": "I tuoi altri spazi di lavoro"
     },
@@ -17081,14 +17139,14 @@
   "deleteOrg": {
     "card": {
       "title": "Elimina spazio di lavoro",
-      "text": "Chiude {{name}} per tutti adesso. Viene eliminato per sempre dopo 7 giorni.",
+      "text": "{{name}} diventa di sola lettura per tutti adesso. Viene eliminato per sempre dopo 7 giorni.",
       "button": "Elimina spazio di lavoro…"
     },
     "title": "Eliminare {{name}}?",
     "goes": {
       "content": "Le sue conversazioni, i file, gli agenti e la loro memoria",
-      "people": "Tutti perdono l'accesso subito e ricevono un'email",
-      "peopleQuiet": "Tutti perdono l'accesso subito",
+      "people": "Da subito tutti possono solo leggerlo e ricevono un'email",
+      "peopleQuiet": "Da subito tutti possono solo leggerlo",
       "computer": "Il suo computer si ferma subito e viene cancellato",
       "computers": "I computer collegati vengono scollegati. Le cartelle degli agenti restano lì finché il runner non viene rimosso.",
       "connectors": "Connettori e caselle di posta vengono scollegati"
@@ -17114,15 +17172,16 @@
   },
   "deleting": {
     "title": "{{name}} è in eliminazione",
-    "text": "Questo spazio di lavoro è già in eliminazione. Non devi fare nulla, sparisce il {{date}}.",
-    "textLate": "Questo spazio di lavoro è già in eliminazione. Non devi fare nulla.",
+    "banner": "{{name}} verrà eliminato il {{date}}",
     "by": "{{by}} l'ha eliminato il {{date}}.",
+    "byYou": "L'hai eliminato il {{date}}.",
     "row": "In eliminazione, sparisce il {{date}}",
     "rowLate": "In eliminazione",
     "someone": "Qualcuno",
     "restore": "Ripristina spazio di lavoro",
     "membersOnly": "Solo un Proprietario può ripristinarlo.",
-    "restored": "{{name}} è tornato"
+    "restored": "{{name}} è tornato",
+    "composer": "Non puoi inviare messaggi mentre questo spazio di lavoro è in eliminazione"
   },
   "accountDeleting": {
     "title": "Il tuo account è in eliminazione",
@@ -18350,7 +18409,6 @@
     "more_one": "{{names}} e altri {{count}}",
     "more_many": "{{names}} e altri {{count}}",
     "more_other": "{{names}} e altri {{count}}",
-    "some": "alcune persone",
     "taskTitle": "Chi vede questa attività",
     "pageTitle": "Chi vede questa pagina",
     "admins": "Gli amministratori lo vedono sempre.",
@@ -18359,7 +18417,6 @@
     "search": "Cerca una persona",
     "noMatch": "Nessuno con questo nome",
     "moreOptions": "Altre opzioni",
-    "receipt": "Chi lo vede: {{who}}",
     "limited": "accesso limitato",
     "rolesToo": "I ruoli già su questa pagina continuano a vederla."
   },

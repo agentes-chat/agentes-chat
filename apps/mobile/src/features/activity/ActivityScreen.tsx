@@ -19,6 +19,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
+import { useOrg } from "@/providers/org";
 import {
   Button,
   EmptyState,
@@ -358,9 +359,11 @@ function ApprovalSource({ approval: a }: { approval: Approval }) {
 function AllClear() {
   const { t } = useTranslation();
   const orgId = useOrgId();
+  const deleting = Boolean(useOrg().org?.deletion);
   const dir = useDirectory();
   const routines = useRoutines(orgId);
-  const next = useMemo(() => nextRoutine<Routine>(routines.data ?? []), [routines.data]);
+  // Being deleted, its routines' slots pass: none is next (the server says so too, once the list is read again).
+  const next = useMemo(() => (deleting ? null : nextRoutine<Routine>(routines.data ?? [])), [deleting, routines.data]);
   const nextAgent = next ? dir.agentById.get(next.agentId) : undefined;
   const when = useWhen();
   const date = next?.nextRunAt ? nextRunWords(t, when, next.nextRunAt) : null;

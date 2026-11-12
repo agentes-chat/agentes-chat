@@ -13,7 +13,7 @@ import {
 } from "@agenteschat/client/lib/access-levels";
 import { type ConnectedItem, connectedItems, itemName } from "@agenteschat/client/lib/connected";
 import type { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { can } from "@agenteschat/client/lib/permissions";
+import { addsConnectors, can, makesAgents } from "@agenteschat/client/lib/permissions";
 import { builtinToolText } from "@agenteschat/client/lib/scopes";
 import { labelIsName } from "@agenteschat/client/lib/tool-labels";
 import { partsOf, toolName } from "@agenteschat/client/lib/tool-review";
@@ -311,10 +311,10 @@ export function AccessMatrixSection() {
         <EmptyState
           size="panel"
           agent={look}
-          title={t(can(org, "create_agents") ? "access.noAgentsTitle" : "team.emptyViewerTitle")}
-          actions={can(org, "create_agents") && <CreateAgentButton />}
+          title={t(makesAgents(org) ? "access.noAgentsTitle" : "team.emptyViewerTitle")}
+          actions={makesAgents(org) && <CreateAgentButton />}
         >
-          {t(can(org, "create_agents") ? "access.noAgents" : "team.emptyViewer")}
+          {t(makesAgents(org) ? "access.noAgents" : "team.emptyViewer")}
         </EmptyState>
       )}
       {first && columns.length === 0 && <NoConnectors look={look} />}
@@ -416,7 +416,7 @@ export function AccessMatrixSection() {
 export function NoConnectors({ look }: { look: AgentAppearance | true }) {
   const { t } = useTranslation();
   const { org } = useOrg();
-  const admin = can(org, "manage_connectors");
+  const admin = addsConnectors(org);
   return (
     <EmptyState
       size="panel"

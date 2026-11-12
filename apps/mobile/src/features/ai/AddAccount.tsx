@@ -5,6 +5,7 @@ import { knownErrorText } from "@agenteschat/client/lib/errors";
 import {
   beginLogin,
   freeDuplicate,
+  geminiNotShared,
   isSignInCode,
   loginRead,
   loginReadPasses,
@@ -346,6 +347,8 @@ function AddAccountFlow({
   // Not the account it was for: a new login that came back as another (`other`), or signing in again as another,
   // which the server keeps signed out, saying which came back.
   const otherEmail = other?.email ?? (hint ? result?.signedInAs : undefined);
+  // Trying again would end the same way: no Tentar de novo, the words say what to use instead.
+  const notShared = geminiNotShared(kind, result);
   const why = otherEmail
     ? t(`connectAi.otherAccount.${kind}`, { email: otherEmail, account: hint })
     : noAnswer
@@ -358,7 +361,9 @@ function AddAccountFlow({
             : t(`agentPage.work.brain.add.duplicate.${kind}`, {
                 account: result.duplicate.account?.email ?? result.duplicate.label,
               })
-          : t("agentPage.work.brain.add.failed");
+          : notShared
+            ? t("agentPage.work.brain.add.geminiNotShared", { computer })
+            : t("agentPage.work.brain.add.failed");
 
   const key = code.trim();
   const keyOk = plan ? planKeyFits(plan, key) : key.length > 0;
@@ -595,17 +600,19 @@ function AddAccountFlow({
           <Note icon="x" live>
             {why}
           </Note>
-          <Button
-            size="sm"
-            variant="secondary"
-            icon="undo"
-            label={t("common.retry")}
-            onPress={() => {
-              // A new login that came back as another account goes; one signed in again stays the person's account.
-              if (other && !again) void api.machines.removeAccount(orgId, machineId, other.id).catch(() => undefined);
-              onRetry();
-            }}
-          />
+          {notShared ? null : (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="undo"
+              label={t("common.retry")}
+              onPress={() => {
+                // A new login that came back as another account goes; one signed in again stays the person's account.
+                if (other && !again) void api.machines.removeAccount(orgId, machineId, other.id).catch(() => undefined);
+                onRetry();
+              }}
+            />
+          )}
           {other ? (
             <Button
               size="sm"

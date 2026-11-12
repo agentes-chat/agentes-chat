@@ -608,6 +608,14 @@ html:not([data-pointer]) .nt-nb:focus-visible {
   -webkit-text-fill-color: currentColor;
   cursor: not-allowed;
 }
+/* Why it takes nothing (the workspace is being deleted), where the text would start. */
+.nt-cmp__readonly {
+  margin: 0;
+  padding: 2px 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
 .nt-cmp__row {
   display: flex;
   align-items: center;

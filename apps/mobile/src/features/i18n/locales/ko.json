@@ -2140,9 +2140,9 @@
     "ofOnline": "{{count}}대 중 {{online}}대",
     "deleteName": "{{name}} 삭제",
     "deleteFoot": "마음을 바꿀 수 있는 시간은 7일이에요.",
-    "deleteAlert": "모두가 바로 나가게 돼요. 7일 동안은 복원할 수 있어요.",
+    "deleteAlert": "모두가 지금부터 읽기만 할 수 있어요. 7일 동안은 복원할 수 있어요.",
     "deleteAction": "삭제",
-    "deleteIntro": "{{name}}은(는) 모두에게 바로 닫히고 7일 후 영구 삭제돼요.",
+    "deleteIntro": "{{name}}은(는) 모두에게 바로 읽기 전용이 되고 7일 후 영구 삭제돼요.",
     "holdDelete": "길게 눌러 삭제",
     "deleteFailed": "워크스페이스를 삭제하지 못했어요. 다시 시도해 주세요.",
     "access": {

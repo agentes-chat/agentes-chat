@@ -2658,7 +2658,7 @@ async function executeRunInner(
     if (ids.length === 0) return null;
     for (const id of ids) readIds.add(id);
     // Rendered as live steering renders them mid-turn (`live-steer.ts`).
-    const rows = await renderSteered(db, run.orgId, ids, { beforeStart });
+    const rows = await renderSteered(db, run.orgId, ids, { beforeStart, workId: run.workId });
     if (rows.length === 0) return null;
     const text = rows.map((m) => m.text).join("\n\n");
     const t = transcript as Transcript;
@@ -3931,6 +3931,7 @@ async function executeRunInner(
   steerGate.close();
   const live = listenLiveSteering({ db, pubsub: deps.pubsub }, run, replyThreadId, {
     take: takeSteering,
+    workId: () => run.workId,
     onHanded: (ids) => {
       for (const id of ids) readIds.add(id);
     },

@@ -61,16 +61,34 @@ const rowOf = (el: HTMLElement, title: string) =>
   );
 const button = (root: ParentNode | undefined, text: string) =>
   [...(root?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((b) => b.textContent === text);
+const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]') ?? undefined;
+
+/** Who can use it: the workspace's ⋯, then its item, in a dialog. */
+async function openWho(el: HTMLElement, org: string) {
+  const more = rowOf(el, org)?.querySelector<HTMLButtonElement>(`button[aria-label="More for ${org}"]`);
+  more?.focus();
+  await act(async () => more?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+  const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+    (m) => m.textContent === "Who can use it",
+  );
+  await act(async () => item?.click());
+  await until(() => dialog());
+}
 
 describe("Preferences › This Mac", () => {
-  test("agents, commands as this user, who can use it, and each phone with its state and one way out", () =>
+  test("agents, who can use it, and each phone with its state and one way out", () =>
     mount("prefs", <OneWorkspace />, async (el, host) => {
-      await until(() => rowOf(el, "Pixel 8") && rowOf(el, "Who can use it")?.querySelector('[role="combobox"]'));
-      expect(
-        rowOf(el, "Let Acme's agents use this Mac")?.querySelector('[role="switch"]')?.getAttribute("aria-checked"),
-      ).toBe("true");
-      expect(document.getElementById("mac-commands-hint")?.textContent).toContain("They run as sam");
-      expect(rowOf(el, "Who can use it")?.querySelector('[role="combobox"]')?.textContent).toBe("Only me");
+      await until(() => rowOf(el, "Pixel 8"));
+      expect(rowOf(el, "Acme")?.querySelector('[role="switch"]')?.getAttribute("aria-checked")).toBe("true");
+      // The phones' help is one line in their card.
+      expect(rowOf(el, "Pixel 8")?.closest(".dk-card")?.textContent).toContain(
+        "Plug a phone into this Mac to add it. Android steps · iPhone steps",
+      );
+      await openWho(el, "Acme");
+      await until(() => rowOf(dialog() as HTMLElement, "Acme")?.querySelector('[role="combobox"]'));
+      expect(rowOf(dialog() as HTMLElement, "Acme")?.querySelector('[role="combobox"]')?.textContent).toBe("Only me");
+      await act(async () => dialog()?.querySelector<HTMLButtonElement>('button[aria-label="Close"]')?.click());
+      await until(() => !dialog());
 
       const pixel = rowOf(el, "Pixel 8");
       expect(pixel?.querySelector(".ac-chip")?.textContent).toBe("In use by Ada");
@@ -112,11 +130,13 @@ describe("Preferences › This Mac", () => {
   test("signed out on that server: says so, with the way to sign in", () =>
     mount("prefs", <OneWorkspace />, async (el, host) => {
       host.site.signedOut = true;
-      await until(() => rowOf(el, "Who can use it")?.querySelector("small"));
-      expect(rowOf(el, "Who can use it")?.querySelector("small")?.textContent).toBe(
+      await until(() => rowOf(el, "Acme"));
+      await openWho(el, "Acme");
+      await until(() => rowOf(dialog() as HTMLElement, "Acme")?.querySelector("small"));
+      expect(rowOf(dialog() as HTMLElement, "Acme")?.querySelector("small")?.textContent).toBe(
         "Sign in to agentes.tail1234.ts.net in the app to see who can use this Mac.",
       );
-      expect(button(rowOf(el, "Who can use it"), "Open")).toBeTruthy();
+      expect(button(rowOf(dialog() as HTMLElement, "Acme"), "Open")).toBeTruthy();
     }));
 });
 

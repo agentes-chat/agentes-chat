@@ -30,7 +30,7 @@ import {
 } from "@agenteschat/client/lib/format";
 import { approvalNews, JOIN_NOTE_MAX, JOIN_REASON_MAX, sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { membersFull } from "@agenteschat/client/lib/limits";
-import { can } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
 import { grants, rolesOf } from "@agenteschat/client/lib/roles";
 import { isEmail } from "@agenteschat/client/lib/text";
@@ -345,11 +345,7 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
         </section>
 
         <section aria-labelledby="sec-agents" className="section section--tight">
-          <GroupHeading
-            id="sec-agents"
-            title={t("members.agents")}
-            aside={can(org, "create_agents") && <CreateAgentLink />}
-          />
+          <GroupHeading id="sec-agents" title={t("members.agents")} aside={makesAgents(org) && <CreateAgentLink />} />
           <List>
             {dir.agents.length === 0 && <div className="ac-list__row muted">{t("members.noAgents")}</div>}
             {dir.agents.map((a) => {

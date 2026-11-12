@@ -4209,6 +4209,16 @@ html:not([data-pointer]) .settings__link:focus-visible {
   flex-direction: column;
   gap: var(--space-4);
 }
+/* A workspace being deleted: the section's controls greyed out at once (ADR 0088 §7), laid out as without it. */
+.settings__frozen {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
 /* "Salvo": shows for a moment after each automatic save. */
 .settings__saved {
   display: inline-flex;
@@ -8315,6 +8325,8 @@ html:not([data-pointer]) .machine-connect__toggle:focus-visible {
 .hold-banner .outage__text b {
   flex-shrink: 1;
   max-width: none;
+  /* A long workspace name never leaves the end of the date alone on a line ("…em 17" / "nov"). */
+  text-wrap: pretty;
 }
 /*
  * A hold's lines start at the top, 11px over the first and under the last, so one line keeps the 44px strip, and its
@@ -8355,26 +8367,6 @@ html:not([data-pointer]) .machine-connect__toggle:focus-visible {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-/* A suspended workspace's screen: where to ask on a line of its own, its other workspaces under the notice. A
-   workspace being deleted: who may restore it, on a line of its own the same way. */
-.suspended-page .support-line,
-.suspended-page .deleting-page__members {
-  display: block;
-  margin-top: 6px;
-}
-.suspended-page__others {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-.suspended-page__others > h2 {
-  flex-basis: 100%;
-}
-.suspended-page__account {
-  margin-top: 32px;
 }
 .computers-agent {
   flex-wrap: wrap;
@@ -13210,11 +13202,19 @@ html:not([data-pointer]) .channel__latest-btn.ac-btn:focus-visible {
   color: var(--faint);
 }
 /* "Theo pensando…      2 s ■": the time at the bar's end, beside the stop. With someone typing after it
-   ("Ada · 2 s · Marina digitando…") it stays with the phrase, what follows kept at the end. */
+   ("Ada · 2 s · Marina digitando…") it stays with the phrase, what follows kept at the end. One agent's step grows
+   nothing (its pieces are the bar's own): what ends the bar (the globe, Ver, the stop) is at its end before the time
+   comes too, which then comes in on their left and moves none of them. */
 .ac-typing[data-active="true"] .ac-typing__text:has(+ .ac-typing__elapsed) {
   flex: 0 1 auto;
 }
 .ac-typing__text + .ac-typing__elapsed {
+  margin-left: auto;
+}
+/* A rule of its own: in one list with the time's, the build wraps both in `:is()` and the time's would take this one's
+   weight, winning over the time's 0 below. */
+.ac-typing__text:has(> .ac-typing__agents > .ac-typing__step)
++ :is(.ac-typing__browser, .ac-typing__sep, .stop-run-wrap) {
   margin-left: auto;
 }
 .ac-typing__text + .ac-typing__elapsed:has(+ .ac-typing__also) {
@@ -13229,6 +13229,11 @@ html:not([data-pointer]) .channel__latest-btn.ac-btn:focus-visible {
 .ac-typing[data-active="true"] .ac-typing__text:has(> .ac-typing__agents > .ac-typing__step),
 .ac-typing__agents:has(> .ac-typing__step) {
   display: contents;
+}
+/* With their boxes gone, the name and the step stand over the bar's sky themselves, as its other pieces do (the
+   bar's children); unpositioned, the sky would paint over them. */
+.ac-typing__agents:has(> .ac-typing__step) > * {
+  position: relative;
 }
 .ac-typing__agents:has(> .ac-typing__step) > b {
   white-space: normal;

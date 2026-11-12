@@ -356,12 +356,12 @@ export function useCreateOrganization() {
   });
 }
 
-/** How often a workspace's closing screen asks `GET /me` again: its socket is closed, so no event reaches it. */
+/** How often `useClosingMe` asks `GET /me` again: no event says that a deletion was undone. */
 export const CLOSING_POLL_MS = 30_000;
 
 /**
- * `GET /me` while a workspace's closing screen shows: every 30 s and whenever the app comes back to the front, so a
- * restore opens the workspace again and a deletion done drops it from the list.
+ * `GET /me` while a workspace's line on top, or an account's screen, says it is being deleted: every 30 s and whenever
+ * the app comes back to the front, so a restore shows at once and a deletion done drops it from the list.
  */
 export const useClosingMe = () =>
   useQuery({ ...meQuery(useApi()), refetchInterval: CLOSING_POLL_MS, refetchOnWindowFocus: "always" });
@@ -389,8 +389,8 @@ export const useAccountDeletionPlan = (enabled = true) => {
 };
 
 /**
- * Deletes the workspace (owners), with the proof that it's them (the emailed code, or the password). Its closing
- * screen shows here at once, and through `org.deleting` everywhere else. The dialog says its refusals.
+ * Deletes the workspace (owners), with the proof that it's them (the emailed code, or the password). Its line on top
+ * shows here at once, and through `org.deleting` everywhere else. The dialog says its refusals.
  */
 export function useDeleteWorkspace(orgId: string) {
   const api = useApi();
@@ -4902,6 +4902,23 @@ export const useDesktopLatest = (target: string, arch: string, enabled = true) =
     meta: { quiet: true },
   });
 };
+
+/** Pauses a computer from the apps (`until` null: until resumed) or resumes it; the list follows at once. */
+export function useMachinePause(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ machineId, input }: { machineId: string; input: { until: string | null } | "resume" }) =>
+      api.machines.setPause(orgId, machineId, input),
+    meta: { silent: true },
+    onSuccess: (paused, { machineId }) => {
+      qc.setQueryData<Machine[]>(keys.machines(orgId), (list) =>
+        list?.map((m) => (m.id === machineId ? { ...m, paused: paused ?? { paused: false } } : m)),
+      );
+      void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
+    },
+  });
+}
 
 /** Removes a folder (for everyone or one agent) or turns a tool off; the machine follows. */
 export function useReduceMachineAccess(orgId: string) {

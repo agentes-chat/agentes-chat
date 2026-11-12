@@ -85,6 +85,7 @@ const KNOWN = {
   "machine.target_not_found": "errors.machine.targetNotFound",
   "machine.target_same": "errors.machine.targetSame",
   "machine.target_paused": "errors.machine.targetPaused",
+  "machine.pause_past": "errors.machine.pausePast",
   // A computer that can't take the request now (`MachineOfflineError`, `MachinePausedError`: `name`), or its own
   // refusal (`MachineRequestError`, as `machine.<code>`).
   "machine.offline": "errors.machine.offline",

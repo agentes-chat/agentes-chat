@@ -1,5 +1,6 @@
 import {
   type Dashboard,
+  frozenBoard,
   useDashboard,
   useHomeDashboard,
   useRoles,
@@ -11,6 +12,7 @@ import { isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useOrg } from "@/providers/org";
 import { useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { HOME } from "./logic";
@@ -22,18 +24,26 @@ export function useAgentLook(agentId: string | null | undefined): { name: string
   return { name: agent?.name ?? "", color: agentLook(agent).color };
 }
 
-/** A board by id, or My Home (`home`): made the first time it is opened. */
+/**
+ * A board by id, or My Home (`home`): made the first time it is opened. In a workspace being deleted it offers no
+ * change (`frozenBoard`), as on the web.
+ */
 export function useBoard(id: string): {
   board: Dashboard | undefined;
   loading: boolean;
   failed: boolean;
   refetch: () => Promise<unknown>;
 } {
-  const orgId = useOrgId();
+  const { orgId, org } = useOrg();
   const home = useHomeDashboard(orgId, id === HOME);
   const one = useDashboard(orgId, id === HOME ? null : id);
   const q = id === HOME ? home : one;
-  return { board: q.data, loading: q.isLoading, failed: q.isError && !q.data, refetch: q.refetch };
+  return {
+    board: q.data && frozenBoard(q.data, org),
+    loading: q.isLoading,
+    failed: q.isError && !q.data,
+    refetch: q.refetch,
+  };
 }
 
 /** The workspace's own roles (not "everyone"), top first: Share's chips and a board's line. */

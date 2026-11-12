@@ -3162,6 +3162,8 @@
       "updated_priority": "<b>#{{number}}</b> görevinin önceliğini {{priority}} yaptım · {{title}}",
       "assigned": "<b>#{{number}}</b> görevini {{assignee}} kişisine atadım · {{title}}",
       "assigned_self": "<b>#{{number}}</b> görevini kendim üstlendim · {{title}}",
+      "assigned_you": "<b>#{{number}}</b> görevini size atadım · {{title}}",
+      "assigned_none": "<b>#{{number}}</b> görevinin atamasını kaldırdım · {{title}}",
       "files": "{{names}} ekledim"
     },
     "memory": {
@@ -3266,6 +3268,42 @@
     "changes_other": "{{count}} değişiklik",
     "undoneBy": "{{name}} geri aldı",
     "group": "{{name}} tarafından yapılan değişiklikler",
+    "several": {
+      "issue": {
+        "created": "Görevleri oluşturdum: {{refs}}",
+        "updated": "Görevlerde {{fields}} değiştirdim: {{refs}}",
+        "assigned": "Görevleri {{assignee}} kişisine atadım: {{refs}}",
+        "assigned_self": "Görevleri kendim üstlendim: {{refs}}",
+        "assigned_you": "Görevleri size atadım: {{refs}}",
+        "assigned_none": "Görevlerin atamasını kaldırdım: {{refs}}"
+      },
+      "routine": {
+        "created": "Rutinleri oluşturdum: {{refs}}",
+        "updated": "Rutinlerde {{fields}} değiştirdim: {{refs}}",
+        "deleted": "Rutinleri sildim: {{refs}}"
+      },
+      "channel": {
+        "agent_added": "{{agentName}} ajanını kanallara getirdim: {{refs}}",
+        "created": "Kanalları oluşturdum: {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Wiki sayfalarını oluşturdum: {{refs}}",
+        "page_edited": "Wiki sayfalarını düzenledim: {{refs}}"
+      },
+      "thread": {
+        "closed": "Sohbetleri kapattım: {{refs}}"
+      },
+      "skill": {
+        "created": "Öğrendiklerimi becerilere dönüştürdüm: {{refs}}",
+        "updated": "Becerileri düzelttim: {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "Ayarlarını değiştirdim: {{refs}}"
+      },
+      "pr": {
+        "merged": "<b>{{repo}}</b> içindeki PR'ları birleştirdim: {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "O zamandan beri biri bunu değiştirdi. Şimdi geri almak o değişikliği kaybettirir.",
       "expired": "Geri alma süresi doldu.",
@@ -4976,6 +5014,7 @@
           "reconnecting": "Yeniden bağlanıyor…",
           "failed": "Bu hesaba giriş yapılamadı. Tekrar deneyin.",
           "expired": "Giriş süresi doldu. Tekrar deneyin.",
+          "geminiNotShared": "Gemini'ye giriş yapıldı, ancak {{computer}} bu girişi tüm ajanlarla paylaşamıyor. Bunun yerine bir Gemini API anahtarı kullanın.",
           "duplicate": {
             "claude_code": "Claude, zaten bağladığınız {{account}} hesabıyla giriş yaptı. Başka bir hesap kullanmak için Claude sayfasında çıkış yapıp tekrar deneyin.",
             "codex": "ChatGPT, zaten bağladığınız {{account}} hesabıyla giriş yaptı. Başka bir hesap kullanmak için ChatGPT sayfasında çıkış yapıp tekrar deneyin.",
@@ -13088,6 +13127,7 @@
       "targetNotFound": "O bilgisayar artık yok. Başka birini seçin.",
       "targetSame": "Ajanlar zaten o bilgisayarda.",
       "targetPaused": "O bilgisayar duraklatıldı. Başka birini seçin.",
+      "pausePast": "Gelecekte bir zaman seçin.",
       "accountMethodUnsupported": "Bu bilgisayar Claude'u henüz bu şekilde bağlayamıyor. Üzerindeki agentes.chat programını güncelleyin ya da bir API anahtarı kullanın.",
       "offline": "{{name}} şu an çevrimdışı. Geri geldiğinde tekrar deneyin.",
       "paused": "{{name}} duraklatıldı: devam ettirilene kadar üzerinde yeni bir şey başlamaz.",
@@ -13221,6 +13261,21 @@
     "paused": "Duraklatıldı",
     "pausedUntil": "{{time}} saatine kadar duraklatıldı",
     "pausedHint": "Bağlayan kişi tarafından bilgisayarın kendisinde duraklatıldı.",
+    "remotePause": {
+      "button": "Duraklat",
+      "menu": "{{name}} bilgisayarını duraklat",
+      "oneHour": "1 saatliğine",
+      "tomorrow": "Yarın saat 09.00'a kadar",
+      "manual": "Ben sürdürene kadar",
+      "resume": "Sürdür",
+      "byYou": "Senin tarafından duraklatıldı.",
+      "byYouUntil": "Senin tarafından {{time}} saatine kadar duraklatıldı.",
+      "byName": "{{name}} tarafından duraklatıldı.",
+      "byNameUntil": "{{name}} tarafından {{time}} saatine kadar duraklatıldı.",
+      "outdated": "Buradan duraklatmak için bu bilgisayardaki agentes.chat uygulamasını güncelle.",
+      "paused": "{{name}} duraklatıldı",
+      "resumed": "{{name}} yeniden çalışıyor"
+    },
     "seenNow": "şu an bağlı",
     "seen": "son görülme {{when}}",
     "neverSeen": "henüz bağlanmadı",
@@ -13636,6 +13691,8 @@
       "openApp": "Uygulamayı aç",
       "server": "Bir sunucu ya da VPS",
       "serverLine": "Terminaline yapıştırılacak tek satır",
+      "httpLine": "Terminaline yapıştırılacak tek satır. Uygulama, https adresinde tek tıkla bağlar.",
+      "httpHow": "Nasıl",
       "other": "Başka bir bilgisayar",
       "otherLine": "Uygulamayı ona yükleyin",
       "android": "Android telefon",
@@ -16397,6 +16454,7 @@
     "row": "Kullanılamıyor",
     "screen": {
       "title": "Bu çalışma alanı kullanılamıyor",
+      "titleNamed": "{{name}} kullanılamıyor",
       "text": "Konuşmaları ve ajanları şimdilik kapalı.",
       "others": "Diğer çalışma alanlarınız"
     },
@@ -16451,14 +16509,14 @@
   "deleteOrg": {
     "card": {
       "title": "Çalışma alanını sil",
-      "text": "{{name}} herkes için şimdi kapanır. 7 gün sonra kalıcı olarak silinir.",
+      "text": "{{name}} şimdi herkes için salt okunur olur. 7 gün sonra kalıcı olarak silinir.",
       "button": "Çalışma alanını sil…"
     },
     "title": "{{name}} silinsin mi?",
     "goes": {
       "content": "Konuşmaları, dosyaları, ajanları ve onların belleği",
-      "people": "Herkes erişimini hemen kaybeder ve bir e-posta alır",
-      "peopleQuiet": "Herkes erişimini hemen kaybeder",
+      "people": "Herkes artık yalnızca okuyabilir ve bir e-posta alır",
+      "peopleQuiet": "Herkes artık yalnızca okuyabilir",
       "computer": "Bilgisayarı hemen durur ve silinir",
       "computers": "Bağlı bilgisayarların bağlantısı kesilir. Ajanların klasörleri, çalıştırıcı kaldırılana kadar o bilgisayarlarda kalır.",
       "connectors": "Bağlayıcıların ve posta kutularının bağlantısı kesilir"
@@ -16484,15 +16542,16 @@
   },
   "deleting": {
     "title": "{{name}} siliniyor",
-    "text": "Bu çalışma alanı zaten siliniyor. Bir şey yapmanız gerekmiyor, {{date}} tarihinde gider.",
-    "textLate": "Bu çalışma alanı zaten siliniyor. Bir şey yapmanız gerekmiyor.",
+    "banner": "{{name}} {{date}} tarihinde silinecek",
     "by": "{{by}} onu {{date}} tarihinde sildi.",
+    "byYou": "Onu {{date}} tarihinde sildiniz.",
     "row": "Siliniyor, {{date}} tarihinde gider",
     "rowLate": "Siliniyor",
     "someone": "Biri",
     "restore": "Çalışma alanını geri yükle",
     "membersOnly": "Onu yalnızca bir sahip geri yükleyebilir.",
-    "restored": "{{name}} geri döndü"
+    "restored": "{{name}} geri döndü",
+    "composer": "Bu çalışma alanı silinirken mesaj gönderemezsiniz"
   },
   "accountDeleting": {
     "title": "Hesabınız siliniyor",
@@ -17633,7 +17692,6 @@
     "only": "Yalnızca {{name}}",
     "more_one": "{{names}} ve {{count}} kişi daha",
     "more_other": "{{names}} ve {{count}} kişi daha",
-    "some": "bazı kişiler",
     "taskTitle": "Bu görevi kimler görüyor",
     "pageTitle": "Bu sayfayı kimler görüyor",
     "admins": "Yöneticiler her zaman görür.",
@@ -17642,7 +17700,6 @@
     "search": "Kişi ara",
     "noMatch": "Bu adda kimse yok",
     "moreOptions": "Diğer seçenekler",
-    "receipt": "Kimler görüyor: {{who}}",
     "limited": "sınırlı erişim",
     "rolesToo": "Bu sayfada zaten olan roller onu görmeye devam eder."
   },

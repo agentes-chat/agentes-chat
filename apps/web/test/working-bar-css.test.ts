@@ -43,8 +43,19 @@ test("what ships keeps the bar above the composer one low width, the composer's:
     last('.ac-typing[data-active="true"] .ac-typing__text:has(>.ac-typing__agents>.ac-typing__step)', "display"),
   ).toBe("contents");
   expect(last(".ac-typing__agents:has(>.ac-typing__step)>b", "white-space")).toBe("normal");
+  // Their boxes gone, the name and the step stand over the sky themselves: unpositioned, the sky painted over them.
+  expect(last(".ac-typing__agents:has(>.ac-typing__step)>*", "position")).toBe("relative");
   expect(last(".ac-typing__also", "white-space")).toBeUndefined();
   expect(last(".ac-typing__also", "min-width")).toBeUndefined();
+  // One agent's pieces grow nothing: the time, or else the globe, the rule before Ver or the stop, takes the room
+  // left, so the stop is at the end from the first frame and the time, when it comes, comes in on its left.
+  expect(last(".ac-typing__text+.ac-typing__elapsed", "margin-left")).toBe("auto");
+  expect(
+    last(
+      ".ac-typing__text:has(>.ac-typing__agents>.ac-typing__step)+:is(.ac-typing__browser,.ac-typing__sep,.stop-run-wrap)",
+      "margin-left",
+    ),
+  ).toBe("auto");
   // The clock's figures are all one width (`ac-num`), so the seconds never nudge it.
   expect(last(".ac-num", "font-variant-numeric")).toBe("tabular-nums");
 });

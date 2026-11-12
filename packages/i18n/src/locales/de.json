@@ -3176,6 +3176,8 @@
       "updated_priority": "Priorität von <b>#{{number}}</b> auf {{priority}} gesetzt · {{title}}",
       "assigned": "<b>#{{number}}</b> {{assignee}} zugewiesen · {{title}}",
       "assigned_self": "<b>#{{number}}</b> selbst übernommen · {{title}}",
+      "assigned_you": "<b>#{{number}}</b> dir zugewiesen · {{title}}",
+      "assigned_none": "Zuständigkeit für <b>#{{number}}</b> entfernt · {{title}}",
       "files": "Angehängt: {{names}}"
     },
     "memory": {
@@ -3280,6 +3282,42 @@
     "changes_other": "{{count}} Änderungen",
     "undoneBy": "Rückgängig gemacht von {{name}}",
     "group": "Änderungen von {{name}}",
+    "several": {
+      "issue": {
+        "created": "Aufgaben erstellt: {{refs}}",
+        "updated": "Bei den Aufgaben {{fields}} geändert: {{refs}}",
+        "assigned": "Aufgaben {{assignee}} zugewiesen: {{refs}}",
+        "assigned_self": "Aufgaben selbst übernommen: {{refs}}",
+        "assigned_you": "Aufgaben dir zugewiesen: {{refs}}",
+        "assigned_none": "Zuständigkeit für Aufgaben entfernt: {{refs}}"
+      },
+      "routine": {
+        "created": "Routinen erstellt: {{refs}}",
+        "updated": "Bei den Routinen {{fields}} geändert: {{refs}}",
+        "deleted": "Routinen gelöscht: {{refs}}"
+      },
+      "channel": {
+        "agent_added": "{{agentName}} geholt in {{refs}}",
+        "created": "Kanäle erstellt: {{refs}}"
+      },
+      "wiki": {
+        "page_created": "Wiki-Seiten erstellt: {{refs}}",
+        "page_edited": "Wiki-Seiten bearbeitet: {{refs}}"
+      },
+      "thread": {
+        "closed": "Unterhaltungen geschlossen: {{refs}}"
+      },
+      "skill": {
+        "created": "Das Gelernte in Skills verwandelt: {{refs}}",
+        "updated": "Skills korrigiert: {{refs}}"
+      },
+      "agent": {
+        "settings_changed": "Einstellungen geändert: {{refs}}"
+      },
+      "pr": {
+        "merged": "In <b>{{repo}}</b> gemergt: PRs {{refs}}"
+      }
+    },
     "errors": {
       "changed_since": "Jemand hat das inzwischen geändert. Wenn du es jetzt rückgängig machst, geht diese Änderung verloren.",
       "expired": "Die Zeit zum Rückgängigmachen ist abgelaufen.",
@@ -4993,6 +5031,7 @@
           "reconnecting": "Verbindung wird wiederhergestellt…",
           "failed": "Anmeldung bei diesem Konto hat nicht geklappt. Versuch es noch einmal.",
           "expired": "Die Zeit für die Anmeldung ist abgelaufen. Versuch es noch einmal.",
+          "geminiNotShared": "Gemini hat sich angemeldet, aber auf {{computer}} lässt sich diese Anmeldung nicht mit allen Agenten teilen. Nutze stattdessen einen Gemini-API-Schlüssel.",
           "duplicate": {
             "claude_code": "Claude hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Claude ab und versuchst es noch einmal.",
             "codex": "ChatGPT hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von ChatGPT ab und versuchst es noch einmal.",
@@ -13153,6 +13192,7 @@
       "targetNotFound": "Diesen Computer gibt es nicht mehr. Wähl einen anderen.",
       "targetSame": "Die Agenten sind schon auf diesem Computer.",
       "targetPaused": "Dieser Computer ist pausiert. Wähl einen anderen.",
+      "pausePast": "Wähl eine Zeit in der Zukunft.",
       "accountMethodUnsupported": "Dieser Computer kann Claude noch nicht auf diese Weise verbinden. Aktualisiere das agentes.chat-Programm darauf oder verwende einen API-Schlüssel.",
       "offline": "{{name}} ist gerade offline. Versuch es noch einmal, sobald er wieder da ist.",
       "paused": "{{name}} ist pausiert: Darauf startet nichts Neues, bis er fortgesetzt wird.",
@@ -13286,6 +13326,21 @@
     "paused": "Pausiert",
     "pausedUntil": "Pausiert bis {{time}}",
     "pausedHint": "Auf dem Computer selbst pausiert, von der Person, die ihn verbunden hat.",
+    "remotePause": {
+      "button": "Pausieren",
+      "menu": "{{name}} pausieren",
+      "oneHour": "Für 1 Stunde",
+      "tomorrow": "Bis morgen um 9 Uhr",
+      "manual": "Bis ich fortsetze",
+      "resume": "Fortsetzen",
+      "byYou": "Von dir pausiert.",
+      "byYouUntil": "Von dir pausiert bis {{time}}.",
+      "byName": "Von {{name}} pausiert.",
+      "byNameUntil": "Von {{name}} pausiert bis {{time}}.",
+      "outdated": "Aktualisiere die agentes.chat-App auf diesem Computer, um ihn von hier zu pausieren.",
+      "paused": "{{name}} ist pausiert",
+      "resumed": "{{name}} arbeitet wieder"
+    },
     "seenNow": "gerade verbunden",
     "seen": "zuletzt gesehen {{when}}",
     "neverSeen": "hat sich noch nicht verbunden",
@@ -13701,6 +13756,8 @@
       "openApp": "App öffnen",
       "server": "Ein Server oder VPS",
       "serverLine": "Eine Zeile für sein Terminal",
+      "httpLine": "Eine Zeile für sein Terminal. Die App verbindet ihn mit einem Klick unter einer https-Adresse.",
+      "httpHow": "Wie",
       "other": "Ein anderer Computer",
       "otherLine": "Installiere dort die App",
       "android": "Android-Handy",
@@ -16468,6 +16525,7 @@
     "row": "Nicht verfügbar",
     "screen": {
       "title": "Dieser Workspace ist nicht verfügbar",
+      "titleNamed": "{{name}} ist nicht verfügbar",
       "text": "Seine Unterhaltungen und Agenten sind vorerst geschlossen.",
       "others": "Deine anderen Workspaces"
     },
@@ -16522,14 +16580,14 @@
   "deleteOrg": {
     "card": {
       "title": "Workspace löschen",
-      "text": "Schließt {{name}} sofort für alle. Nach 7 Tagen wird er endgültig gelöscht.",
+      "text": "{{name}} ist ab sofort für alle schreibgeschützt. Nach 7 Tagen wird er endgültig gelöscht.",
       "button": "Workspace löschen…"
     },
     "title": "{{name}} löschen?",
     "goes": {
       "content": "Seine Unterhaltungen, Dateien, Agenten und ihr Gedächtnis",
-      "people": "Alle verlieren sofort den Zugriff und bekommen eine E-Mail",
-      "peopleQuiet": "Alle verlieren sofort den Zugriff",
+      "people": "Alle können ihn ab sofort nur noch lesen und bekommen eine E-Mail",
+      "peopleQuiet": "Alle können ihn ab sofort nur noch lesen",
       "computer": "Sein Computer stoppt sofort und wird gelöscht",
       "computers": "Verbundene Computer werden getrennt. Die Ordner der Agenten bleiben darauf, bis der Runner entfernt wird.",
       "connectors": "Konnektoren und Postfächer werden getrennt"
@@ -16555,15 +16613,16 @@
   },
   "deleting": {
     "title": "{{name}} wird gelöscht",
-    "text": "Dieser Workspace wird bereits gelöscht. Du musst nichts tun, er verschwindet am {{date}}.",
-    "textLate": "Dieser Workspace wird bereits gelöscht. Du musst nichts tun.",
+    "banner": "{{name}} wird am {{date}} gelöscht",
     "by": "{{by}} hat ihn am {{date}} gelöscht.",
+    "byYou": "Du hast ihn am {{date}} gelöscht.",
     "row": "Wird gelöscht, weg am {{date}}",
     "rowLate": "Wird gelöscht",
     "someone": "Jemand",
     "restore": "Workspace wiederherstellen",
     "membersOnly": "Nur ein Inhaber kann ihn wiederherstellen.",
-    "restored": "{{name}} ist zurück"
+    "restored": "{{name}} ist zurück",
+    "composer": "Du kannst keine Nachrichten senden, während dieser Workspace gelöscht wird"
   },
   "accountDeleting": {
     "title": "Dein Konto wird gelöscht",
@@ -17704,7 +17763,6 @@
     "only": "Nur {{name}}",
     "more_one": "{{names}} und {{count}} weitere",
     "more_other": "{{names}} und {{count}} weitere",
-    "some": "einige Personen",
     "taskTitle": "Wer diese Aufgabe sieht",
     "pageTitle": "Wer diese Seite sieht",
     "admins": "Administratoren sehen es immer.",
@@ -17713,7 +17771,6 @@
     "search": "Person suchen",
     "noMatch": "Niemand mit diesem Namen",
     "moreOptions": "Weitere Optionen",
-    "receipt": "Wer es sieht: {{who}}",
     "limited": "eingeschränkter Zugriff",
     "rolesToo": "Die Rollen, die schon auf dieser Seite sind, sehen sie weiterhin."
   },

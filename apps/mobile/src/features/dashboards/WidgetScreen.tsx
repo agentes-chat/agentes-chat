@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useOrg } from "@/providers/org";
 import {
   Button,
   GroupedHeader,
@@ -413,12 +414,15 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
   );
 }
 
-/** "Ask Theo for a change": a field at the bottom; what is sent goes to the agent, who redoes the widget in place. */
+/**
+ * "Ask Theo for a change": a field at the bottom; what is sent goes to the agent, who redoes the widget in place. While
+ * the workspace is being deleted it says why it takes none, as a conversation does (ADR 0088 §7).
+ */
 function AskChange({ widget: w, name }: { widget: WidgetDetail; name: string }) {
   const { t } = useTranslation();
   const { colors: c, shadows } = useTheme();
   const insets = useSafeAreaInsets();
-  const orgId = useOrgId();
+  const { orgId, org } = useOrg();
   const toast = useToast();
   const failed = useFailed();
   const ask = useAskWidgetChange(orgId);
@@ -448,31 +452,37 @@ function AskChange({ widget: w, name }: { widget: WidgetDetail; name: string }) 
           locations={[0, 0.3]}
           style={StyleSheet.absoluteFill}
         />
-        <Locked when={ask.isPending}>
-          <View style={[styles.field, { backgroundColor: c.raised, boxShadow: `${shadows.e1}, ${shadows.top}` }]}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder={t("widgets.menu.change", { name })}
-              placeholderTextColor={c.faint}
-              accessibilityLabel={t("widgets.panel.ask")}
-              multiline
-              maxLength={1000}
-              style={[styles.input, systemText("body"), { color: c.ink }]}
-            />
-            <PressScale
-              to={0.9}
-              onPress={send}
-              disabled={!ready}
-              accessibilityRole="button"
-              accessibilityLabel={t("widgets.panel.send")}
-              style={[styles.send, { backgroundColor: ready ? c.ink : c.plate }]}
-              contentStyle={styles.sendIn}
-            >
-              <Icon name="send" size={18} color={ready ? c.bg : c.faint} />
-            </PressScale>
-          </View>
-        </Locked>
+        {org?.deletion ? (
+          <Text variant="footnote" tone="muted" style={styles.readOnly}>
+            {t("deleting.composer")}
+          </Text>
+        ) : (
+          <Locked when={ask.isPending}>
+            <View style={[styles.field, { backgroundColor: c.raised, boxShadow: `${shadows.e1}, ${shadows.top}` }]}>
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder={t("widgets.menu.change", { name })}
+                placeholderTextColor={c.faint}
+                accessibilityLabel={t("widgets.panel.ask")}
+                multiline
+                maxLength={1000}
+                style={[styles.input, systemText("body"), { color: c.ink }]}
+              />
+              <PressScale
+                to={0.9}
+                onPress={send}
+                disabled={!ready}
+                accessibilityRole="button"
+                accessibilityLabel={t("widgets.panel.send")}
+                style={[styles.send, { backgroundColor: ready ? c.ink : c.plate }]}
+                contentStyle={styles.sendIn}
+              >
+                <Icon name="send" size={18} color={ready ? c.bg : c.faint} />
+              </PressScale>
+            </View>
+          </Locked>
+        )}
       </View>
     </KeyboardStickyView>
   );
@@ -506,6 +516,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   input: { flex: 1, maxHeight: 120, paddingTop: 6, paddingBottom: 6 },
+  // As a conversation's line in place of its composer.
+  readOnly: { textAlign: "center", paddingHorizontal: 16, paddingVertical: 12 },
   send: { width: 36, height: 36, borderRadius: 18 },
   sendIn: { alignItems: "center", justifyContent: "center" },
 });
