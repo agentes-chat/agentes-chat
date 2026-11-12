@@ -1272,7 +1272,8 @@
       "moonshot": "Kimi 키는 sk-로 시작해요. 확인하고 다시 붙여넣으세요.",
       "zai": "공백 없이 Z.ai 키 전체를 붙여넣으세요. 확인하고 다시 붙여넣으세요.",
       "minimax": "공백 없이 MiniMax 키 전체를 붙여넣으세요. sk-cp-로 시작하는 키는 요금제용이라 여기서 작동하지 않아요.",
-      "openrouter": "OpenRouter 키는 sk-or-v1-로 시작해요. 확인하고 다시 붙여넣으세요."
+      "openrouter": "OpenRouter 키는 sk-or-v1-로 시작해요. 확인하고 다시 붙여넣으세요.",
+      "commandcode": "공백 없이 Command Code 키 전체를 붙여넣으세요. 확인하고 다시 붙여넣으세요."
     },
     "keyFromOther": "다른 제공업체의 키인가요?",
     "anthropicWorkspace": "Claude Console 워크스페이스 ID",

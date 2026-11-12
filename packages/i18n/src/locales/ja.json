@@ -1272,7 +1272,8 @@
       "moonshot": "Kimiのキーはsk-で始まります。確認してもう一度貼り付けてください。",
       "zai": "Z.aiのキー全体を、スペースなしで貼り付けてください。確認してもう一度貼り付けてください。",
       "minimax": "MiniMaxのキー全体を、スペースなしで貼り付けてください。sk-cp-で始まるキーはプラン用で、ここでは使えません。",
-      "openrouter": "OpenRouterのキーはsk-or-v1-で始まります。確認してもう一度貼り付けてください。"
+      "openrouter": "OpenRouterのキーはsk-or-v1-で始まります。確認してもう一度貼り付けてください。",
+      "commandcode": "Command Codeのキー全体を、スペースなしで貼り付けてください。確認してもう一度貼り付けてください。"
     },
     "keyFromOther": "別のプロバイダーのキーですか？",
     "anthropicWorkspace": "Claude ConsoleのワークスペースID",

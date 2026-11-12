@@ -1309,7 +1309,8 @@
       "moonshot": "Kimi-Schlüssel beginnen mit sk-. Prüfe ihn und füge ihn noch einmal ein.",
       "zai": "Füge den ganzen Z.ai-Schlüssel ohne Leerzeichen ein. Prüfe ihn und füge ihn noch einmal ein.",
       "minimax": "Füge den ganzen MiniMax-Schlüssel ohne Leerzeichen ein. Schlüssel, die mit sk-cp- beginnen, gehören zum Abo und funktionieren hier nicht.",
-      "openrouter": "OpenRouter-Schlüssel beginnen mit sk-or-v1-. Prüfe ihn und füge ihn noch einmal ein."
+      "openrouter": "OpenRouter-Schlüssel beginnen mit sk-or-v1-. Prüfe ihn und füge ihn noch einmal ein.",
+      "commandcode": "Füge den ganzen Command-Code-Schlüssel ohne Leerzeichen ein. Prüfe ihn und füge ihn noch einmal ein."
     },
     "keyFromOther": "Ist er von einem anderen Anbieter?",
     "anthropicWorkspace": "Workspace-ID der Claude Console",

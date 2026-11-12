@@ -60,6 +60,8 @@ describe("provider marks where a provider is named", () => {
       "Kimi",
       "Z.ai",
       "MiniMax",
+      // No mark of its own yet (ADR 0174): its initial stands in.
+      "CCommand Code",
       // A workspace's own endpoint (ADR 0146), its line under its name.
       expect.stringContaining("Outro provedor"),
     ]);

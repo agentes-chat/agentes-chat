@@ -144,12 +144,13 @@ export function createAnthropicProvider(
           model: request.model,
           max_tokens: request.maxTokens,
           system: toSystem(request, compat ? undefined : room(request)),
-          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images, unless it says it does.
+          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax, Command Code) isn't trusted to take images, unless
+          // it says it does, or a 1-hour cache breakpoint (ADR 0174).
           messages: toMessageParams(
             textOnly ? withoutImages(request.messages, request.model) : request.messages,
             id,
             withThinking,
-            cacheControl(request),
+            compat ? undefined : cacheControl(request),
           ),
           ...(compat ? {} : { cache_control: { type: "ephemeral" as const } }),
           ...(tools.length > 0 ? { tools } : {}),

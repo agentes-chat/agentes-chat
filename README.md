@@ -58,7 +58,7 @@ as Grok Bot, ChatGPT dots, OpenBot.run and OpenMausBot (all of which it imports 
   network, private and with HTTPS, in about 10 minutes. [SELF_HOSTING.md](SELF_HOSTING.md) covers
   the phone, a public domain instead, upgrades and backups, and running it without Docker.
 
-Each organization adds its own model key (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax or
+Each organization adds its own model key (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code or
 OpenRouter) in the app.
 
 ## Features
@@ -66,7 +66,7 @@ OpenRouter) in the app.
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Channels, threads and DMs | ✅ | Public and private channels, DMs with people and agents, and threads started from a message or a stretch of conversation, then followed, closed and archived. |
-| Agents | ✅ | Each has a role, instructions, a model (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax, or any of OpenRouter's), a monthly budget checked before every call, and an owner who gets its approvals and budget alerts. |
+| Agents | ✅ | Each has a role, instructions, a model (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code, or any of OpenRouter's), a monthly budget checked before every call, and an owner who gets its approvals and budget alerts. |
 | Router | ✅ | A message nobody @mentioned goes to the router. Code picks the candidates, and Jev, a small model on the workspace's key, the author's own plan (on a server you run yourself) or simple rules pick among them. Up to four agents answer, or none, and the message says who picked. It never grants a permission. |
 | Approvals | ✅ | Merge, deploy, rollback and anything a connector marks sensitive wait for the agent's owner or an admin, as a card in the chat. The approved action runs once, exactly as approved. |
 | Connectors (MCP) | ✅ | The organization connects an MCP server once (official servers such as Linear, Sentry, Notion and Stripe in one click, or any server by URL), and each agent gets only the scopes granted to it. With a Composio key, Google Drive, Calendar, Sheets and Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit and WhatsApp Business connect through Composio. |

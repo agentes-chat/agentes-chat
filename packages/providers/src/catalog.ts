@@ -20,7 +20,7 @@ export interface TokenPrices {
 export interface ProviderInfo {
   label: string;
   /** The API it speaks, which picks its adapter (`createModelProviders`). */
-  protocol: "anthropic" | "openai" | "gemini" | "openrouter" | "custom";
+  protocol: "anthropic" | "openai" | "gemini" | "openrouter" | "commandcode" | "custom";
   /** Replaces the SDK's default host. */
   baseURL?: string;
   /**
@@ -67,6 +67,9 @@ export const PROVIDERS = {
   },
   // Its models come from its public list at run time (`openrouter.ts`), never from this catalog.
   openrouter: { label: "OpenRouter", protocol: "openrouter" },
+  // Many makers' models on one key, Claude over Anthropic Messages and the rest over Chat Completions
+  // (`commandcode.ts`). Its catalog ids are `commandcode:<its own id>`.
+  commandcode: { label: "Command Code", protocol: "commandcode" },
   // A workspace's own endpoint (ADR 0146): its address, API style and models live on its credential (`custom.ts`).
   custom: { label: "Other provider", protocol: "custom" },
 } as const satisfies Record<string, ProviderInfo>;
@@ -359,6 +362,87 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     serverSideFallback: false,
     cheap: true,
     tier: "small",
+  },
+  // Command Code's Provider API at its published rates (commandcode.ai/docs/resources/pricing-limits, read
+  // 2026-11-12: each maker's API rates; where it lists no cache write, the input's). A few of its models, not its
+  // whole list: `/v1/models` carries no prices. Open models first, as Command Code itself: Automático picks DeepSeek
+  // Flash, GLM-5.3 and Claude Sonnet; Claude Haiku routes (thinking off, a forced tool).
+  "commandcode:claude-opus-5-5": {
+    provider: "commandcode",
+    label: "Claude Opus 5.5",
+    prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 5000 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+  },
+  "commandcode:claude-sonnet-5-5": {
+    provider: "commandcode",
+    label: "Claude Sonnet 5.5",
+    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    tier: "large",
+  },
+  "commandcode:claude-haiku-5-5": {
+    provider: "commandcode",
+    label: "Claude Haiku 5.5",
+    prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    router: true,
+    leastThinking: "off",
+  },
+  "commandcode:gpt-6.1-sol": {
+    provider: "commandcode",
+    label: "GPT-6.1 Sol",
+    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
+    contextWindow: 1_050_000,
+    serverSideFallback: false,
+  },
+  "commandcode:gpt-6-luna": {
+    provider: "commandcode",
+    label: "GPT-6 Luna",
+    prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
+    contextWindow: 1_050_000,
+    serverSideFallback: false,
+  },
+  "commandcode:zai-org/GLM-5.3": {
+    provider: "commandcode",
+    label: "GLM-5.3",
+    prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    recommended: true,
+    tier: "medium",
+  },
+  "commandcode:moonshotai/Kimi-K3.1-Pro": {
+    provider: "commandcode",
+    label: "Kimi K3.1 Pro",
+    prices: { input: 2000, output: 10000, cacheRead: 200, cacheWrite: 2000 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  "commandcode:deepseek/deepseek-v4-pro": {
+    provider: "commandcode",
+    label: "DeepSeek V4 Pro",
+    prices: { input: 660, output: 1980, cacheRead: 22, cacheWrite: 660 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+  },
+  "commandcode:deepseek/deepseek-v4.1-flash": {
+    provider: "commandcode",
+    label: "DeepSeek V4.1 Flash",
+    prices: { input: 150, output: 600, cacheRead: 3, cacheWrite: 150 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    cheap: true,
+    tier: "small",
+  },
+  "commandcode:google/gemini-3.8-flash": {
+    provider: "commandcode",
+    label: "Gemini 3.8 Flash",
+    prices: { input: 1500, output: 7500, cacheRead: 150, cacheWrite: 1500 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
   },
 };
 

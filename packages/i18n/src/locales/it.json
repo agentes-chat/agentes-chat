@@ -1348,7 +1348,8 @@
       "moonshot": "Le chiavi Kimi iniziano con sk-. Controllala e incollala di nuovo.",
       "zai": "Incolla tutta la chiave Z.ai, senza spazi. Controllala e incollala di nuovo.",
       "minimax": "Incolla tutta la chiave MiniMax, senza spazi. Le chiavi che iniziano con sk-cp- sono del piano e qui non funzionano.",
-      "openrouter": "Le chiavi OpenRouter iniziano con sk-or-v1-. Controllala e incollala di nuovo."
+      "openrouter": "Le chiavi OpenRouter iniziano con sk-or-v1-. Controllala e incollala di nuovo.",
+      "commandcode": "Incolla tutta la chiave Command Code, senza spazi. Controllala e incollala di nuovo."
     },
     "keyFromOther": "È di un altro provider?",
     "anthropicWorkspace": "ID dello spazio di lavoro di Claude Console",
