@@ -6,7 +6,7 @@ import type {
   BetaTextBlockParam,
   BetaTool,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
-import { MODEL_CATALOG } from "./catalog";
+import { MODEL_CATALOG, readsImages } from "./catalog";
 import {
   type ContentBlock,
   deniedError,
@@ -139,9 +139,10 @@ export function createAnthropicProvider(
           model: request.model,
           max_tokens: request.maxTokens,
           system: toSystem(request, compat ? undefined : room(request)),
-          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images.
+          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images; a Claude is,
+          // wherever it is served, its own API or a workspace's endpoint.
           messages: toMessageParams(
-            compat ? withoutImages(request.messages) : request.messages,
+            compat && !readsImages(request.model) ? withoutImages(request.messages) : request.messages,
             id,
             withThinking,
             cacheControl(request),

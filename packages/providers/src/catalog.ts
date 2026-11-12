@@ -461,6 +461,13 @@ export const contextWindowOf = (model: string) => modelInfo(model)?.contextWindo
 
 export const isKnownModel = (model: string) => modelInfo(model) !== undefined;
 
+/**
+ * A model that reads pictures: Claude, wherever it is served — Anthropic's API, a gateway that prefixes it
+ * (`anthropic.claude-…`, `us.anthropic.claude-…`) or a workspace's own endpoint. Another company (DeepSeek, Kimi,
+ * Z.ai, MiniMax) doesn't, and one image sent to it fails the whole call.
+ */
+export const readsImages = (model: string) => /claude/i.test(model);
+
 /** The catalog id of a model a CLI named (`claude-opus-5-5[1m]`, a dated `…-20261001`); null when it has no price. */
 export function catalogModelOf(model: string | null | undefined): string | null {
   const base = model?.replace(/\[[^\]]*\]$/, "").replace(/-\d{8}$/, "");

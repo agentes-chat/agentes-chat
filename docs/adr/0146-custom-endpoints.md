@@ -43,3 +43,19 @@ On agentes.chat Cloud the address must be https and every address its host resol
 
 - A workspace with only an endpoint has no model for routing, the judge or summaries: those need a provider that follows a JSON schema.
 - Telemetry counts endpoint models as `other`; their names never leave the server.
+
+## Addendum 2026-11-12: a Claude on an endpoint keeps its pictures
+
+§4 sends every workspace endpoint through the Anthropic adapter's compatible mode, described as "text only": the
+adapter dropped images for the whole mode, so a Claude served by an endpoint (Bedrock's `/anthropic`, any
+Anthropic-compatible gateway) lost a pasted print while the same model on Anthropic's API kept it.
+
+`readsImages` (`packages/providers/src/catalog.ts`) matches Claude by name — the API's id, a gateway's
+`anthropic.claude-…` prefix, or an endpoint's own id — and the compatible mode only strips images for a model outside
+it. Another company (DeepSeek, Kimi, Z.ai, MiniMax) still gets none, which is what the mode is for: one image sent to
+a model that doesn't read it fails the whole call.
+
+Beside it, `read_artifact` attaches a picture instead of calling it binary (`fileImageOf` in
+`packages/engine/src/artifacts.ts`, at most `MODEL_IMAGE_BYTES` 3.75 MB, type sniffed from the bytes): the metadata
+alone was an agent answering "I can't see your print". A computer brain still gets the words — the runner's bridge
+carries no image, and there the file is on the computer to open.

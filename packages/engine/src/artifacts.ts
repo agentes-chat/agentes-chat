@@ -25,6 +25,7 @@ import {
 import { type AgentsDmReads, agentsDmReads, readerOfRun } from "./agents-dm-reads";
 import { recordAudit } from "./audit";
 import { runAuthorityById, runPerson, UUID } from "./authority";
+import { sniffModelImage } from "./avatars";
 import { routineBriefOfRun } from "./background";
 import { answersAgentsOnly, peopleSee } from "./consultations";
 import { isAgentOnlyDm, openDm } from "./dms";
@@ -1497,6 +1498,32 @@ export async function fileFullText(
   const a = await readable(deps, actor, orgId, artifactId);
   const v = await versionRow(deps.db, a, version);
   return isTextFile(v.fileName ?? "", v.contentType) ? textOfBytes((await readVersion(deps, a, v)).body) : null;
+}
+
+/**
+ * The largest picture `read_artifact` puts in front of the model: 3.75 MB is 5 MB once base64'd, the APIs' ceiling.
+ * A bigger one is reported by its metadata instead, never read and thrown away.
+ */
+export const MODEL_IMAGE_BYTES = 3_750_000;
+
+/**
+ * A `file`'s bytes as a picture a model can be shown, which `read_artifact` attaches: the type is sniffed from the
+ * bytes (a `.png` holding a JPEG is sent as a JPEG), and null means "not a picture the APIs take" or "too large".
+ */
+export async function fileImageOf(
+  deps: ArtifactDeps,
+  actor: ArtifactActor,
+  orgId: string,
+  artifactId: string,
+  version?: number,
+): Promise<{ mediaType: string; data: string } | null> {
+  const a = await readable(deps, actor, orgId, artifactId);
+  if (a.kind !== "file") return null;
+  const v = await versionRow(deps.db, a, version);
+  if (v.size > MODEL_IMAGE_BYTES) return null;
+  const body = (await readVersion(deps, a, v)).body;
+  const mediaType = sniffModelImage(body);
+  return mediaType ? { mediaType, data: Buffer.from(body).toString("base64") } : null;
 }
 
 /** One artifact at `version` (default: latest), with content. */

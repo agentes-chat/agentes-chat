@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { and, eq, schema, sql } from "@agenteschat/db";
 import type { ModelRequest } from "@agenteschat/providers";
+import type { ToolContext } from "../src";
 import {
   addChannelMember,
   addFileVersion,
@@ -13,6 +14,7 @@ import {
   drainOutbox,
   getArtifact,
   invokeToolForRun,
+  MODEL_IMAGE_BYTES,
   openDm,
   openPersonAgentDm,
   postPersonMessage,
@@ -77,6 +79,12 @@ const bridged = async (run: { id: string; agentId: string }, name: string, input
     { id: crypto.randomUUID(), name, input },
   );
   return result;
+};
+
+const call = async (ctx: ToolContext, name: string, input: Record<string, unknown>) => {
+  const outcome = await f.tools?.invoke(ctx, { toolUseId: crypto.randomUUID(), name, input });
+  if (outcome?.type !== "result") throw new Error(`expected a result, got ${outcome?.type}`);
+  return outcome.output;
 };
 
 const listedOnBridge = async (run: { id: string; agentId: string }) =>
@@ -655,5 +663,94 @@ describe("how a file's bytes become text", () => {
     const run = await runOf(f.agent.id, dm.id, "lê");
     expect((await bridged(run, "read_artifact", { artifact_id: page.id })).content).toContain("<p>preço</p>");
     expect((await bridged(run, "read_artifact", { artifact_id: junk.id })).content).toContain("Binary");
+  });
+});
+
+/**
+ * A picture a person pastes is a `file` like any other, and a model can only work with it if it is shown as a
+ * picture (ADR 0019): sending its metadata alone was "I can't see your print".
+ */
+describe("a pasted picture", () => {
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
+  const uploadPicture = (channelId: string) =>
+    createFileArtifact(f.artifactDeps, person(), f.org.id, {
+      title: "print.png",
+      name: "print.png",
+      bytes: PNG,
+      contentType: "image/png",
+      channelId,
+    });
+
+  /** The model brain's own context: no bridge, which carries no image. */
+  const modelCtx = async (run: { id: string; agentId: string; channelId: string; threadRootId: string }) => ({
+    db: f.db,
+    orgId: f.org.id,
+    agentId: run.agentId,
+    runId: run.id,
+    channelId: run.channelId,
+    threadRootId: run.threadRootId,
+    triggerMessageId: run.id,
+  });
+
+  test("comes back as the picture itself, never as binary", async () => {
+    f = await world();
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const picture = await uploadPicture(dm.id);
+    const run = await runOf(f.agent.id, dm.id, "olha esse print", f.owner.id, [picture.id]);
+    const read = await call(await modelCtx(run), "read_artifact", { artifact_id: picture.id });
+    expect(read.content).toContain("The picture is attached");
+    expect(read.content).not.toContain("Binary:");
+    expect(read.images).toEqual([{ mediaType: "image/png", data: Buffer.from(PNG).toString("base64") }]);
+  });
+
+  test("the type comes from the bytes, whatever the name says", async () => {
+    f = await world();
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    // A JPEG's first bytes under a `.png` name.
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+    const picture = await createFileArtifact(f.artifactDeps, person(), f.org.id, {
+      title: "print.png",
+      name: "print.png",
+      bytes: jpeg,
+      contentType: "image/png",
+      channelId: dm.id,
+    });
+    const run = await runOf(f.agent.id, dm.id, "olha esse print", f.owner.id, [picture.id]);
+    const read = await call(await modelCtx(run), "read_artifact", { artifact_id: picture.id });
+    expect(read.images?.[0]?.mediaType).toBe("image/jpeg");
+  });
+
+  test("a computer brain still gets the words: its bridge carries no image", async () => {
+    f = await world();
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const picture = await uploadPicture(dm.id);
+    const run = await runOf(f.agent.id, dm.id, "olha esse print", f.owner.id, [picture.id]);
+    // A real bridge identity: `bridged`'s empty machineId is falsy, so its context carries no bridge at all.
+    const { result } = await invokeToolForRun(
+      { db: f.db, pubsub: f.pubsub, tools: f.tools },
+      { orgId: f.org.id, agentId: run.agentId, runId: run.id, machineId: "machine-1" },
+      { id: crypto.randomUUID(), name: "read_artifact", input: { artifact_id: picture.id } },
+    );
+    // `ToolResult` has no `images` at all: the bridge's own type says an image never crosses it.
+    expect(result).not.toHaveProperty("images");
+    expect(result.content).toContain("Binary:");
+  });
+
+  test("a picture over the ceiling is described, not attached", async () => {
+    f = await world();
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const big = new Uint8Array(MODEL_IMAGE_BYTES + 1);
+    big.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const picture = await createFileArtifact(f.artifactDeps, person(), f.org.id, {
+      title: "grande.png",
+      name: "grande.png",
+      bytes: big,
+      contentType: "image/png",
+      channelId: dm.id,
+    });
+    const run = await runOf(f.agent.id, dm.id, "olha esse print", f.owner.id, [picture.id]);
+    const read = await call(await modelCtx(run), "read_artifact", { artifact_id: picture.id });
+    expect(read.images).toBeUndefined();
+    expect(read.content).toContain("too large to show here");
   });
 });

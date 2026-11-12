@@ -625,4 +625,38 @@ describe("prompt cache: a stable prefix whatever tools load", () => {
     expect(JSON.stringify(body.messages)).not.toContain('"image"');
     expect(JSON.stringify(body.messages)).toContain("The image is not shown");
   });
+
+  // A Claude served by a workspace endpoint reads pictures like the API's own does: dropping them there made a
+  // pasted print unreadable on Bedrock and on any Anthropic-compatible gateway (issue #242).
+  test("another company's endpoint keeps the image when the model is a Claude", async () => {
+    const { fetcher, requests } = scripted(
+      sse([start(1), { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 1 } }]),
+    );
+    await createAnthropicProvider({ fetch: fetcher, maxRetries: 0, compat: { toolChoiceAny: true } })
+      .stream(
+        {
+          model: "anthropic.claude-sonnet-5-5-20260101-v1:0",
+          system: "s",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "tool_result",
+                  toolUseId: "t1",
+                  content: "a/b.png",
+                  images: [{ mediaType: "image/png", data: "UE5H" }],
+                },
+              ],
+            },
+          ],
+          maxTokens: 10,
+        },
+        { apiKey: "k", onDelta: () => {} },
+      )
+      .catch(() => {});
+    const body = requests[0]?.body as Record<string, unknown>;
+    expect(JSON.stringify(body.messages)).toContain('"image"');
+    expect(JSON.stringify(body.messages)).not.toContain("The image is not shown");
+  });
 });
