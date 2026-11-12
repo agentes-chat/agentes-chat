@@ -519,9 +519,9 @@ test("command line: stream-json both ways, opus falls back to sonnet, strict MCP
   expect(resumed).not.toContain("--model");
   expect(resumed.slice(-2)).toEqual(["--resume", SESSION(1)]);
   // Only the project's settings and the built-in tools agents use, when asked.
-  expect(args).not.toContain("--setting-sources");
+  expect(args.some((a) => a.startsWith("--setting-sources"))).toBe(false);
   const lean = claudeBrainArgs({ ...base, settingSources: "project", builtinTools: BRAIN_BUILTIN_TOOLS });
-  expect(lean.join(" ")).toContain("--setting-sources project");
+  expect(lean).toContain("--setting-sources=project");
   // Our web tools instead of Claude Code's (they mark what they read as outside content, ADR 0117).
   expect(lean.join(" ")).toContain("--tools Bash,Read,Edit,Write,Glob,Grep,ToolSearch");
   expect(lean.join(" ")).not.toContain("WebFetch");
@@ -549,7 +549,7 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   const plan = claudeBrainArgs({ ...base, ...brainProfileLaunch("plan", true) });
   const at = (args: string[], flag: string) => args[args.indexOf(flag) + 1];
   expect(plan).toContain("--strict-mcp-config");
-  expect(at(plan, "--setting-sources")).toBe("");
+  expect(plan).toContain("--setting-sources=");
   expect(at(plan, "--permission-mode")).toBe("default");
   // ToolSearch loads our tools that aren't always listed (without it Claude Code lists them all).
   expect(at(plan, "--tools")).toBe("Bash,Read,Glob,Grep,ToolSearch");
@@ -558,13 +558,15 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   expect(at(work, "--permission-mode")).toBe("acceptEdits");
   // No settings file of the checkout either (ADR 0117): the agent can edit them.
   expect(brainProfileLaunch("work", false).settingSources).toBe("");
-  expect(at(work, "--setting-sources")).toBe("");
+  expect(work).toContain("--setting-sources=");
+  // Never an empty argument of its own: a shell or wrapper that drops it makes `--tools` its value.
+  expect(work).not.toContain("--setting-sources");
   expect(at(work, "--tools")).toBe(BRAIN_BUILTIN_TOOLS.join(","));
   expect(work).toContain("--permission-prompt-tool");
   // With the owner's servers (work): their settings and every tool, as before.
   const personal = claudeBrainArgs({ ...base, ...brainProfileLaunch("work", true) });
   expect(personal).not.toContain("--strict-mcp-config");
-  expect(personal).not.toContain("--setting-sources");
+  expect(personal.some((a) => a.startsWith("--setting-sources"))).toBe(false);
   // Every tool of Claude Code but its web: ours read it.
   expect(at(personal, "--disallowedTools")).toBe("WebFetch,WebSearch");
   expect(work).not.toContain("--disallowedTools");
@@ -584,7 +586,7 @@ test("protocol 41: a chat turn (the team's right hand on a plan) gets our MCP to
   });
   expect(at(chat, "--tools")).toBe("");
   expect(chat).toContain("--strict-mcp-config");
-  expect(at(chat, "--setting-sources")).toBe("");
+  expect(chat).toContain("--setting-sources=");
   expect(at(chat, "--permission-mode")).toBe("dontAsk");
   expect(at(chat, "--allowedTools")).toBe("mcp__agentes");
   expect(chat).toContain("--disable-slash-commands");
@@ -1217,7 +1219,7 @@ test.if(posix)(
     const args = spawns()[0]?.args ?? [];
     const at = (flag: string) => args[args.indexOf(flag) + 1];
     expect(args).toContain("--strict-mcp-config");
-    expect(at("--setting-sources")).toBe("");
+    expect(args).toContain("--setting-sources=");
     expect(at("--permission-mode")).toBe("default");
     expect(at("--tools")).toBe("Bash,Read,Glob,Grep,ToolSearch");
     expect(at("--permission-prompt-tool")).toBe("mcp__agentes__permission_prompt");
@@ -1283,7 +1285,7 @@ test.if(posix)(
     writeFileSync(path.join(folder, "AGENTS.md"), "x".repeat(30_000));
     await turn(1, "do");
     const args = spawns()[0]?.args ?? [];
-    expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
+    expect(args).toContain("--setting-sources=");
     expect(args.join(" ")).not.toContain("collect.example.net");
     const system = readFileSync(args[args.indexOf("--append-system-prompt-file") + 1] as string, "utf8");
     expect(system.startsWith("You are dev.")).toBe(true);
@@ -1294,7 +1296,7 @@ test.if(posix)(
     const own = setup();
     await own.turn(1, "do", { personalMcp: true });
     const oargs = own.spawns()[0]?.args ?? [];
-    expect(oargs).not.toContain("--setting-sources");
+    expect(oargs.some((a) => a.startsWith("--setting-sources"))).toBe(false);
     expect(readFileSync(oargs[oargs.indexOf("--append-system-prompt-file") + 1] as string, "utf8")).toBe(
       "You are dev.",
     );
@@ -2466,7 +2468,7 @@ test.if(posix)("delegated: argv, files and environment are root's, with no agent
     settingsEnv: Record<string, string>;
   };
   expect(typed(spawn, "--tools")).toBe("ToolSearch");
-  expect(typed(spawn, "--setting-sources")).toBe("");
+  expect(spawn.args).toContain("--setting-sources=");
   expect(typed(spawn, "--allowedTools")).toBe("mcp__agentes");
   expect(spawn.args).toEqual(
     expect.arrayContaining([

@@ -376,7 +376,7 @@ test.if(posix)(
     const [run] = logged(log);
     expect(run?.args).toEqual(CLAUDE_PROBE_ARGS);
     expect(run?.args).toEqual(
-      expect.arrayContaining(["--setting-sources", "", "--strict-mcp-config", "--no-session-persistence"]),
+      expect.arrayContaining(["--setting-sources=", "--strict-mcp-config", "--no-session-persistence"]),
     );
     expect(run?.cwd).toBe(home);
     // Gone once it answered.
