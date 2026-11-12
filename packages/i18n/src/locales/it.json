@@ -2753,7 +2753,8 @@
       "plans": "Ogni piano sceglie solo per i messaggi del suo titolare.",
       "rules": "Gli agenti rispondono a menzioni, risposte e seguiti.",
       "off": "Gli agenti rispondono solo quando vengono menzionati.",
-      "noSmall": "{{provider}} non ha un modello piccolo per questo. Gli agenti rispondono a menzioni, risposte e seguiti."
+      "noSmall": "{{provider}} non ha un modello piccolo per questo. Gli agenti rispondono a menzioni, risposte e seguiti.",
+      "decision": "{{model}} sceglie chi risponde."
     }
   },
   "noAi": {
@@ -18958,5 +18959,31 @@
       "alwaysOn": "D'ora in poi, segnalazioni come questa partono senza chiedere.",
       "askFirst": "Chiedi prima di inviare"
     }
+  },
+  "decisions": {
+    "title": "Modelli decisionali",
+    "description": "Usa Jev o un altro modello decisionale con un account OpenRouter già collegato a questo spazio. Non serve configurare il server.",
+    "account": "Account OpenRouter",
+    "chooseAccount": "Scegli un account",
+    "model": "Modello decisionale per il testo",
+    "modelHelp": "Usa un ID di modello decisionale, come typesafe/jev-1.14 o jaredpalmer/kev-4b. I normali modelli di chat non funzionano qui.",
+    "visionModel": "Modello decisionale per le immagini (facoltativo)",
+    "visionHelp": "Usa un modello che supporti immagini e domande Box. Lascia vuoto per disattivare le decisioni sulle immagini.",
+    "save": "Prova e salva",
+    "testNotice": "Il salvataggio verifica i modelli con piccole richieste a pagamento a OpenRouter. Le modifiche valgono subito solo per questo spazio e il tuo account paga le sue decisioni.",
+    "active": "In uso: {{account}} · {{model}}",
+    "unavailable": "L’account OpenRouter scelto non è disponibile. Scegli un altro account o ripristina queste impostazioni.",
+    "connect": "Collega un account API OpenRouter qui sopra per usare i modelli decisionali.",
+    "reset": "Usa la configurazione predefinita",
+    "loadFailed": "Impossibile caricare le impostazioni decisionali. Ricarica la pagina per riprovare.",
+    "invalidAccount": "Scegli un account OpenRouter attivo di questo spazio.",
+    "invalidModel": "Inserisci un ID di modello decisionale valido.",
+    "checkFailed": "OpenRouter non ha potuto verificare questo modello decisionale. Controlla account, credito e ID del modello e riprova.",
+    "serverDefault": "Configurazione predefinita del server per gli spazi senza modelli decisionali propri.",
+    "provider": "Fornitore delle decisioni",
+    "jevManaged": "Il proprietario del server gestisce la configurazione di Jev.",
+    "otherModel": "Altro modello…",
+    "visionOff": "Disattivato",
+    "about": "Questi modelli aiutano a scegliere chi risponde, organizzare la memoria e comprendere le schermate."
   }
 }

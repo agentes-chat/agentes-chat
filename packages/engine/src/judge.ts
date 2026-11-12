@@ -2,7 +2,7 @@ import { modelInfo } from "@agenteschat/providers";
 import { cutText } from "./format";
 import type { ModelGateway } from "./gateway";
 import { callJev, type JevKeySource } from "./jev-key";
-import { jevCostNanoUsd } from "./router-jev";
+import { jevUsageDetails } from "./router-jev";
 
 /**
  * Small semantic judgments about what people write ("is this asking the agent
@@ -84,8 +84,13 @@ export interface JudgeRequest {
 
 export interface Judge {
   name: string;
+  nameFor?(orgId: string): Promise<string>;
   ask(request: JudgeRequest): Promise<Record<string, JudgeAnswer>>;
 }
+
+/** A workspace can use its own decision account while another still uses the LLM fallback. */
+export const judgeName = (judge: Judge, orgId: string): Promise<string> =>
+  judge.nameFor?.(orgId) ?? Promise.resolve(judge.name);
 
 /** The model call a judge made, as an error report tags it (`judgeCallOf`). */
 export interface JudgeCallTags {
@@ -129,6 +134,7 @@ export function createJevJudge(options: {
   visionModel?: string;
   /** Images make a request bigger and slower: its own timeout (default 6 s). */
   visionTimeoutMs?: number;
+  credentialId?: string;
   fetch?: typeof fetch;
 }): Judge {
   return {
@@ -145,7 +151,7 @@ export function createJevJudge(options: {
       const body = await callJev<{
         model?: string;
         answers?: Record<string, JudgeAnswer>;
-        usage?: { input_tokens?: number; output_tokens?: number };
+        usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
       }>(options.key, {
         fetch: options.fetch,
         baseURL: options.baseURL,
@@ -161,8 +167,15 @@ export function createJevJudge(options: {
           ? (options.visionTimeoutMs ?? Math.max(6000, options.timeoutMs ?? 0))
           : (request.timeoutMs ?? options.timeoutMs ?? 2000),
       }).catch((error: unknown) => {
-        throw withJudgeCall(error, model, "typesafe");
+        throw withJudgeCall(
+          error,
+          model,
+          options.baseURL && new URL(options.baseURL).hostname === "openrouter.ai"
+            ? "openrouter-decisions"
+            : "typesafe",
+        );
       });
+      const usage = jevUsageDetails(options.baseURL, body.usage);
       const inputTokens = body.usage?.input_tokens ?? 0;
       await options.gateway
         .recordExternalUsage({
@@ -170,11 +183,11 @@ export function createJevJudge(options: {
           agentId: request.agentId,
           runId: request.runId,
           kind: "router",
-          provider: "typesafe",
+          ...usage,
+          credentialId: options.credentialId,
           model: body.model ?? model,
           inputTokens,
           outputTokens: body.usage?.output_tokens ?? 0,
-          costNanoUsd: jevCostNanoUsd(inputTokens),
         })
         .catch(() => {});
       const out: Record<string, JudgeAnswer> = {};

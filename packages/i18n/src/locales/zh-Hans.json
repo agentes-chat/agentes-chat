@@ -2561,7 +2561,8 @@
       "plans": "每个套餐只为其所有者的消息挑选。",
       "rules": "智能体会回应提及、回复和后续消息。",
       "off": "智能体只在被提及时回答。",
-      "noSmall": "{{provider}} 没有适合做这件事的小模型。智能体会回应提及、回复和后续消息。"
+      "noSmall": "{{provider}} 没有适合做这件事的小模型。智能体会回应提及、回复和后续消息。",
+      "decision": "由 {{model}} 选择回复者。"
     }
   },
   "noAi": {
@@ -17926,5 +17927,31 @@
       "alwaysOn": "从现在起，这类报告会直接发送，不再询问。",
       "askFirst": "发送前先询问"
     }
+  },
+  "decisions": {
+    "title": "决策模型",
+    "description": "使用已连接到此工作区的 OpenRouter 账户运行 Jev 或其他决策模型，无需配置服务器。",
+    "account": "OpenRouter 账户",
+    "chooseAccount": "选择账户",
+    "model": "文本决策模型",
+    "modelHelp": "输入决策模型 ID，例如 typesafe/jev-1.14 或 jaredpalmer/kev-4b。这里不支持普通聊天模型。",
+    "visionModel": "图像决策模型（可选）",
+    "visionHelp": "使用支持图像和 Box 问题的模型。留空即可关闭图像判断。",
+    "save": "测试并保存",
+    "testNotice": "保存时会向 OpenRouter 发送小额付费请求以验证模型。更改仅对本工作区立即生效，决策费用由所选账户支付。",
+    "active": "正在使用 {{account}} · {{model}}",
+    "unavailable": "所选 OpenRouter 账户不可用。请选择其他账户或恢复默认设置。",
+    "connect": "请先在上方连接 OpenRouter API 账户，即可使用决策模型。",
+    "reset": "使用默认设置",
+    "loadFailed": "无法加载决策设置。请刷新页面后重试。",
+    "invalidAccount": "请选择本工作区中有效的 OpenRouter 账户。",
+    "invalidModel": "请输入有效的决策模型 ID。",
+    "checkFailed": "OpenRouter 无法验证此决策模型。请检查账户、余额和模型 ID 后重试。",
+    "serverDefault": "供未设置自有决策模型的工作区使用的服务器默认配置。",
+    "provider": "决策服务提供方",
+    "jevManaged": "Jev 由服务器所有者配置和管理。",
+    "otherModel": "其他模型…",
+    "visionOff": "关闭",
+    "about": "这些模型帮助选择由谁回复、整理记忆并理解屏幕截图。"
   }
 }

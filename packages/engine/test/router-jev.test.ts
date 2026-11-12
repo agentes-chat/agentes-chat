@@ -18,6 +18,7 @@ import {
   insertMessage,
   JevOffError,
   jevCostNanoUsd,
+  jevUsageDetails,
   loadReplyPolicy,
   messageRouter,
   postPersonMessage,
@@ -40,6 +41,16 @@ afterEach(() => f?.close());
 
 const cand = (agentId: string): RoutingCandidate => ({ agentId, handle: agentId, name: agentId, role: "", about: "" });
 const policy = { minScore: 0.5, maxAgents: 2, maxHops: 3, continuityMinScore: 0.3, singleAgentMinScore: 0.35 };
+
+test("OpenRouter decision accounting requires reported cost, including a valid zero", () => {
+  expect(jevUsageDetails("https://openrouter.ai/api", { input_tokens: 100, cost: 0 })).toEqual({
+    provider: "openrouter-decisions",
+    costNanoUsd: 0,
+  });
+  for (const cost of [undefined, -1, Number.NaN, Number.POSITIVE_INFINITY])
+    expect(() => jevUsageDetails("https://openrouter.ai/api", { cost })).toThrow(/usage.cost/);
+  expect(jevUsageDetails(undefined, { input_tokens: 100 })).toEqual({ provider: "typesafe", costNanoUsd: 4200 });
+});
 
 describe("policy in code", () => {
   test("continuity lowers the bar for the agent the person was just talking to, even past a low need score", () => {
@@ -1339,5 +1350,46 @@ describe("Jev on a social message", () => {
     const runs = await f.db.select().from(schema.agentRuns);
     expect(runs.map((r) => [r.agentId, r.triggerMessageId])).toEqual([[f.agent.id, insist.id]]);
     expect(f.provider.calls).toHaveLength(1); // only the agent's answer: Jev decided both, no LLM router call
+  });
+});
+
+test("message router uses an OpenRouter decision model and records its billed cost", async () => {
+  f = await setup();
+  const requests: { url: string; body: Record<string, unknown> }[] = [];
+  const fetcher = (async (url: string, init: RequestInit) => {
+    requests.push({ url, body: JSON.parse(String(init.body)) });
+    return Response.json({
+      model: "jaredpalmer/kev-4b",
+      answers: { needs_agent: { noul: 0.9 }, agent_0: { noul: 0.8 } },
+      usage: { input_tokens: 100, output_tokens: 3, cost: 0.000123 },
+    });
+  }) as unknown as typeof fetch;
+  const router = messageRouter({
+    ...f.jobDeps,
+    router: {
+      enabled: true,
+      model: "claude-haiku-5-5",
+      jev: { key: "sk-or-test", baseURL: "https://openrouter.ai/api", model: "jaredpalmer/kev-4b", fetch: fetcher },
+    },
+  });
+  if (!router?.strategy) throw new Error("missing router");
+  const result = await router.strategy.decide({
+    orgId: f.org.id,
+    channel: { id: f.general.id, name: "general", topic: "" },
+    message: { id: "m", author: "ana", body: "please help" },
+    thread: [],
+    candidates: [cand(f.agent.id)],
+    authorUserId: f.owner.id,
+  });
+  expect(result.strategy).toBe("jev");
+  expect(requests).toHaveLength(1);
+  expect(requests[0]?.url).toBe("https://openrouter.ai/api/v1/systemone");
+  expect(requests[0]?.body.model).toBe("jaredpalmer/kev-4b");
+  const [usage] = await f.db.select().from(schema.usageRecords);
+  expect(usage).toMatchObject({
+    provider: "openrouter-decisions",
+    model: "jaredpalmer/kev-4b",
+    costNanoUsd: 123000,
+    inputTokens: 100,
   });
 });

@@ -93,6 +93,7 @@ import type {
   CustomServer,
   DatabaseConnection,
   DatabaseTable,
+  DecisionSettingsView,
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
@@ -563,6 +564,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
             json: { orgId, decision },
           })
         ).offer,
+      decisions: (orgId) => request<DecisionSettingsView>(`/api/app/organizations/${orgId}/decisions`),
+      saveDecisions: (orgId, settings) =>
+        request<DecisionSettingsView>(`/api/app/organizations/${orgId}/decisions`, {
+          method: "PUT",
+          json: { settings },
+        }),
       jev: () => nullOn(404, () => request<JevKey>("/api/app/jev")),
       saveJev: (apiKey) => request<JevKey>("/api/app/jev", { method: "PUT", json: { apiKey } }),
       checkJev: () => request<JevKey>("/api/app/jev/check", { method: "POST" }),

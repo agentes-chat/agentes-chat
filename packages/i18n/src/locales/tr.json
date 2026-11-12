@@ -2654,7 +2654,8 @@
       "plans": "Her plan yalnızca kendi sahibinin mesajları için seçer.",
       "rules": "Ajanlar bahsetmelere, yanıtlara ve devam mesajlarına yanıt verir.",
       "off": "Ajanlar yalnızca kendilerinden bahsedildiğinde yanıt verir.",
-      "noSmall": "{{provider}} bunun için küçük bir model sunmuyor. Ajanlar bahsetmelere, yanıtlara ve devam mesajlarına yanıt verir."
+      "noSmall": "{{provider}} bunun için küçük bir model sunmuyor. Ajanlar bahsetmelere, yanıtlara ve devam mesajlarına yanıt verir.",
+      "decision": "Kimin yanıt vereceğini {{model}} seçer."
     }
   },
   "noAi": {
@@ -18240,5 +18241,31 @@
       "alwaysOn": "Bundan sonra bu tür bildirimler sormadan gider.",
       "askFirst": "Göndermeden önce sor"
     }
+  },
+  "decisions": {
+    "title": "Karar modelleri",
+    "description": "Bu çalışma alanına bağlı bir OpenRouter hesabıyla Jev veya başka bir karar modeli kullanın. Sunucu yapılandırması gerekmez.",
+    "account": "OpenRouter hesabı",
+    "chooseAccount": "Hesap seçin",
+    "model": "Metin karar modeli",
+    "modelHelp": "typesafe/jev-1.14 veya jaredpalmer/kev-4b gibi bir karar modeli kimliği kullanın. Normal sohbet modelleri burada çalışmaz.",
+    "visionModel": "Görsel karar modeli (isteğe bağlı)",
+    "visionHelp": "Görselleri ve Box sorularını destekleyen bir model kullanın. Görsel değerlendirmelerini kapatmak için boş bırakın.",
+    "save": "Test et ve kaydet",
+    "testNotice": "Kaydederken modeller OpenRouter’a gönderilen küçük ücretli isteklerle kontrol edilir. Değişiklikler yalnızca bu çalışma alanında hemen geçerli olur ve karar ücretlerini hesabınız öder.",
+    "active": "Kullanılan: {{account}} · {{model}}",
+    "unavailable": "Seçili OpenRouter hesabı kullanılamıyor. Başka bir hesap seçin veya varsayılan ayarlara dönün.",
+    "connect": "Karar modellerini kullanmak için yukarıdan bir OpenRouter API hesabı bağlayın.",
+    "reset": "Varsayılan ayarları kullan",
+    "loadFailed": "Karar ayarları yüklenemedi. Tekrar denemek için sayfayı yenileyin.",
+    "invalidAccount": "Bu çalışma alanından etkin bir OpenRouter hesabı seçin.",
+    "invalidModel": "Geçerli bir karar modeli kimliği girin.",
+    "checkFailed": "OpenRouter bu karar modelini doğrulayamadı. Hesabı, bakiyeyi ve model kimliğini kontrol edip tekrar deneyin.",
+    "serverDefault": "Kendi karar modeli olmayan çalışma alanları için sunucunun varsayılan ayarları.",
+    "provider": "Karar sağlayıcısı",
+    "jevManaged": "Jev ayarlarını sunucu sahibi yönetir.",
+    "otherModel": "Başka model…",
+    "visionOff": "Kapalı",
+    "about": "Bu modeller kimin yanıt vereceğini seçmeye, belleği düzenlemeye ve ekran görüntülerini anlamaya yardımcı olur."
   }
 }

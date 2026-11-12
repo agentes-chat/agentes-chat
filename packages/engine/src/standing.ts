@@ -305,6 +305,7 @@ export function standingJudge(db: Database, judge: Judge): Judge {
     get name() {
       return judge.name;
     },
+    nameFor: judge.nameFor?.bind(judge),
     async ask(request) {
       await assertCanWork(db, request.orgId);
       return judge.ask(request);

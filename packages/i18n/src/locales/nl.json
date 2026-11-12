@@ -2657,7 +2657,8 @@
       "plans": "Elk abonnement kiest alleen voor de berichten van zijn eigenaar.",
       "rules": "Agents beantwoorden vermeldingen, antwoorden en vervolgvragen.",
       "off": "Agents antwoorden alleen als ze worden genoemd.",
-      "noSmall": "{{provider}} heeft hiervoor geen klein model. Agents beantwoorden vermeldingen, antwoorden en vervolgvragen."
+      "noSmall": "{{provider}} heeft hiervoor geen klein model. Agents beantwoorden vermeldingen, antwoorden en vervolgvragen.",
+      "decision": "{{model}} kiest wie antwoordt."
     }
   },
   "noAi": {
@@ -18487,5 +18488,31 @@
       "alwaysOn": "Vanaf nu gaan zulke meldingen weg zonder te vragen.",
       "askFirst": "Vragen voor het versturen"
     }
+  },
+  "decisions": {
+    "title": "Beslismodellen",
+    "description": "Gebruik Jev of een ander beslismodel met een OpenRouter-account dat al aan deze werkruimte is gekoppeld. Serverinstellingen zijn niet nodig.",
+    "account": "OpenRouter-account",
+    "chooseAccount": "Kies een account",
+    "model": "Beslismodel voor tekst",
+    "modelHelp": "Gebruik een beslismodel-ID, zoals typesafe/jev-1.14 of jaredpalmer/kev-4b. Gewone chatmodellen werken hier niet.",
+    "visionModel": "Beslismodel voor afbeeldingen (optioneel)",
+    "visionHelp": "Gebruik een model dat afbeeldingen en Box-vragen ondersteunt. Laat leeg om beeldbeslissingen uit te schakelen.",
+    "save": "Testen en opslaan",
+    "testNotice": "Opslaan controleert de modellen met kleine betaalde verzoeken aan OpenRouter. Wijzigingen gelden meteen alleen voor deze werkruimte. Je account betaalt voor de beslissingen.",
+    "active": "Gebruikt {{account}} · {{model}}",
+    "unavailable": "Het geselecteerde OpenRouter-account is niet beschikbaar. Kies een ander account of herstel de standaardinstellingen.",
+    "connect": "Koppel hierboven een OpenRouter-API-account om beslismodellen te gebruiken.",
+    "reset": "Standaardinstellingen gebruiken",
+    "loadFailed": "De beslisinstellingen konden niet worden geladen. Laad de pagina opnieuw om het nogmaals te proberen.",
+    "invalidAccount": "Kies een actief OpenRouter-account van deze werkruimte.",
+    "invalidModel": "Voer een geldig beslismodel-ID in.",
+    "checkFailed": "OpenRouter kon dit beslismodel niet controleren. Controleer het account, het tegoed en het model-ID en probeer opnieuw.",
+    "serverDefault": "Serverstandaard voor werkruimtes zonder eigen beslismodellen.",
+    "provider": "Aanbieder van beslissingen",
+    "jevManaged": "De servereigenaar beheert de instellingen van Jev.",
+    "otherModel": "Ander model…",
+    "visionOff": "Uit",
+    "about": "Deze modellen helpen kiezen wie antwoordt, het geheugen ordenen en schermafbeeldingen begrijpen."
   }
 }

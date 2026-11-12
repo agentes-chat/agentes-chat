@@ -1240,6 +1240,7 @@ export const ptBR = {
       leadNoComputer:
         "Os agentes pensam com uma chave\u00a0de\u00a0API, ou com o seu plano de IA num computador que você conectar.",
     },
+
     jev: {
       title: "Ajude os agentes a trabalhar em equipe",
       lead: "O Jev, da TypeSafe, toma decisões rápidas por eles.",
@@ -2724,6 +2725,7 @@ export const ptBR = {
       "A memória ainda não aprende com as conversas encerradas: para isso, adicione uma chave de provedor acima.",
     how: "Como os agentes são escolhidos",
     by: {
+      decision: "{{model}} escolhe quem responde.",
       jev: "O Jev escolhe quem responde cada mensagem sem menção.",
       model: "O {{model}} escolhe quem responde cada mensagem sem menção.",
       plans: "Cada plano escolhe só nas mensagens de quem o conectou.",
@@ -9704,6 +9706,37 @@ export const ptBR = {
     unsaved: "Alterações não salvas",
     keepEditing: "Continuar editando",
     discard: "Descartar",
+  },
+  decisions: {
+    about: "Esses modelos ajudam a escolher quem responde, organizar a memória e entender capturas de tela.",
+    otherModel: "Outro modelo…",
+    visionOff: "Desativado",
+    provider: "Provedor de decisões",
+    jevManaged: "Quem configurou o servidor gerencia o Jev.",
+    serverDefault: "Padrão do servidor para espaços sem seus próprios modelos de decisão.",
+    title: "Modelos de decisão",
+    description:
+      "Use o Jev ou outro modelo de decisão com uma conta OpenRouter já conectada a este espaço. Não precisa configurar o servidor.",
+    account: "Conta OpenRouter",
+    chooseAccount: "Escolha uma conta",
+    model: "Modelo de decisão para texto",
+    modelHelp:
+      "Use o ID de um modelo de decisão, como typesafe/jev-1.14 ou jaredpalmer/kev-4b. Modelos de chat comuns não funcionam aqui.",
+    visionModel: "Modelo de decisão para imagens (opcional)",
+    visionHelp: "Use um modelo que aceite imagens e perguntas Box. Deixe vazio para desligar a análise de imagens.",
+    save: "Testar e salvar",
+    testNotice:
+      "Salvar verifica os modelos com pequenas chamadas pagas ao OpenRouter. A mudança vale imediatamente só neste espaço e sua conta paga pelas decisões dele.",
+    active: "Usando {{account}} · {{model}}",
+    unavailable:
+      "A conta OpenRouter escolhida está indisponível. Escolha outra conta ou restaure a configuração padrão.",
+    connect: "Conecte uma conta de API do OpenRouter acima para usar modelos de decisão.",
+    reset: "Usar a configuração padrão",
+    loadFailed: "Não foi possível carregar os modelos de decisão. Recarregue a página para tentar de novo.",
+    invalidAccount: "Escolha uma conta OpenRouter ativa deste espaço.",
+    invalidModel: "Digite um ID válido de modelo de decisão.",
+    checkFailed:
+      "O OpenRouter não conseguiu verificar este modelo de decisão. Confira a conta, o crédito e o ID do modelo e tente de novo.",
   },
   jev: {
     title: "Jev",

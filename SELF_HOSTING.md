@@ -1438,6 +1438,56 @@ asks once), or puts it in `.env` as `TYPESAFE_API_KEY`, which wins. It is stored
 provider keys and never sent back to a browser. TypeSafe bills your account: US$ 0.042 per million
 tokens read, about US$ 0.0001 per routed message. Without it, see https://agentes.chat/docs/jev#without.
 
+**Decision models on your OpenRouter account.** Open **Settings → AI and usage → Decision models**.
+Choose **OpenRouter** in **Decision provider** to reveal the account and model settings.
+Choose an OpenRouter API account already connected to this workspace, then choose **Jev 1.14** or
+**Kev 4B** for text. **Other model…** reveals a field for another compatible model ID. For images,
+choose **Jev 1.14**, **Off**, or another compatible model through **Other model…**.
+Choose **Test and save**. It makes small paid test requests for Noul, Choice and Score, plus an image
+and Box test when you select a vision model. A failed check keeps the previous configuration.
+No Docker settings, environment variables, new key or restart is needed.
+
+The selection applies only to this workspace, including message routing, memory judgments and
+screenshots. Keep a vision model such as `typesafe/jev-1.14` when your text model does not read images,
+or choose **Off** to turn off image judgments. Ordinary chat models are not decision
+models. Evaluate calibration before switching models that make memory or screen decisions.
+
+The account stays encrypted in its original credential row. Changes, rotations and revocations are
+picked up without a restart. If the account is removed, choose another account or choose **Jev**
+in the provider selector. That action clears only the workspace decision selection,
+keeping the OpenRouter account and returning to the server's Jev setup. A failed switch keeps the
+working OpenRouter selection. The Jev controls appear only when Jev is selected.
+Workspace decisions and their test calls are billed to that account and recorded with its credential
+ID and OpenRouter's reported cost, separately from the server's Jev monthly total and platform cap.
+Only people who can manage the workspace's credentials can read or change these settings.
+See the [UI verification and screenshots](docs/testing/openrouter-decisions.md).
+
+**Installation-wide alternative.** The server owner can still use an environment key for the default
+setup used by workspaces without their own selection:
+
+```dotenv
+TYPESAFE_BASE_URL=https://openrouter.ai/api
+TYPESAFE_API_KEY=<your OpenRouter API key>
+JEV_MODEL=jaredpalmer/kev-4b
+JEV_VISION_MODEL=typesafe/jev-1.14
+```
+
+Restart the server after changing these settings. `JEV_MODEL` controls text judgments, message
+routing and key checks; use `typesafe/jev-1.14` there too to use Jev for both. Choose a
+[System One decision model](https://openrouter.ai/models?output_modalities=decisions) that supports
+Noul, Choice and Score. Ordinary chat models and `typesafe/jev-router` are not decision models.
+Images and Box questions use `JEV_VISION_MODEL` separately, so a text-only decision model can handle
+routing while Jev handles screenshots. Models with different calibration may need different routing
+thresholds; evaluate them before relying on memory or screen judgments.
+
+The key can also be saved in the existing Jev settings after configuring the base URL (the server's
+environment key still wins). Replace any saved TypeSafe key with an OpenRouter key when switching:
+all Jev requests, including key checks and screenshots, now go to OpenRouter, which bills your account.
+Usage records use OpenRouter's reported cost and the provider `openrouter-decisions`, separate from
+ordinary OpenRouter chat; the Jev monthly total includes both direct and OpenRouter decision calls.
+To switch back, remove `TYPESAFE_BASE_URL` and `JEV_MODEL`, restore a TypeSafe key and restart.
+No additional SDK is needed. Migration `0255_workspace_decisions` adds the nullable workspace setting. See the [OpenRouter compatibility contract](https://openrouter.ai/docs/guides/community/typesafe-sdk).
+
 **Plans.** An agent can think with a Claude or ChatGPT subscription instead of a key, on a connected
 computer: Claude Code or Codex signs in there with the provider's own flow. Each account is a folder
 on that computer, `<runner home>/accounts/<kind>/<id>` (`~/.agentes-runner/accounts/…` for a runner

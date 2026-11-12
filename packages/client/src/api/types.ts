@@ -7751,3 +7751,14 @@ export interface PhoneDeviceInput {
   name?: string;
   audience?: DeviceAudience;
 }
+
+/** Workspace-owned decision models. The account's key never leaves the server. */
+export interface DecisionSettings {
+  credentialId: string;
+  model: string;
+  visionModel: string | null;
+}
+export interface DecisionSettingsView {
+  settings: DecisionSettings | null;
+  available: boolean;
+}

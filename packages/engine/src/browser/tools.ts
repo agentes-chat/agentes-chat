@@ -285,7 +285,7 @@ export interface BrowserToolDeps {
    * Whether the judge sees images now (Jev's vision model): a target the page's text lacks is looked for on a
    * screenshot. Asked on each call, since the installation's Jev key can come and go.
    */
-  vision?: () => boolean;
+  vision?: (orgId: string) => boolean | Promise<boolean>;
   /** Tests: the memory of targets per site (default: one per source, in memory). */
   targets?: TargetCache;
   now?: () => number;
@@ -936,7 +936,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
         return reply.answers.map((a) => (a.success ? { ok: true, data: a.data } : failed(a.error, a.code)));
       },
       async capture() {
-        if (!fast || !deps.vision?.()) return null;
+        if (!fast || !(await deps.vision?.(ctx.orgId))) return null;
         try {
           if (await renew()) return null;
           const shot = await caller.call<"browser.capture">(
@@ -1174,7 +1174,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
         },
         last: seen.within(key, FRESH_LOOK_MS),
         before: seen.within(key, KNOWN_LOOK_MS),
-        vision: deps.vision?.() === true && linked.status.protocol >= BROWSER_FAST_PROTOCOL,
+        vision: (await deps.vision?.(ctx.orgId)) === true && linked.status.protocol >= BROWSER_FAST_PROTOCOL,
         now,
       },
       steps,

@@ -2562,7 +2562,8 @@
       "plans": "각 요금제는 소유자의 메시지에 대해서만 에이전트를 골라요.",
       "rules": "에이전트는 멘션, 답장, 이어지는 대화에 답해요.",
       "off": "에이전트는 멘션될 때만 답해요.",
-      "noSmall": "{{provider}}에는 이 용도의 소형 모델이 없어요. 에이전트는 멘션, 답장, 이어지는 대화에 답해요."
+      "noSmall": "{{provider}}에는 이 용도의 소형 모델이 없어요. 에이전트는 멘션, 답장, 이어지는 대화에 답해요.",
+      "decision": "{{model}}이 응답할 에이전트를 선택해요."
     }
   },
   "noAi": {
@@ -17742,5 +17743,31 @@
       "alwaysOn": "이제부터 이런 보고는 묻지 않고 보내요.",
       "askFirst": "보내기 전에 묻기"
     }
+  },
+  "decisions": {
+    "title": "판단 모델",
+    "description": "이 워크스페이스에 연결된 OpenRouter 계정으로 Jev 또는 다른 판단 모델을 사용하세요. 서버 설정은 필요하지 않아요.",
+    "account": "OpenRouter 계정",
+    "chooseAccount": "계정 선택",
+    "model": "텍스트 판단 모델",
+    "modelHelp": "typesafe/jev-1.14 또는 jaredpalmer/kev-4b 같은 판단 모델 ID를 입력하세요. 일반 채팅 모델은 여기서 사용할 수 없어요.",
+    "visionModel": "이미지 판단 모델 (선택 사항)",
+    "visionHelp": "이미지와 Box 질문을 지원하는 모델을 사용하세요. 비워 두면 이미지 판단을 꺼요.",
+    "save": "테스트하고 저장",
+    "testNotice": "저장하면 OpenRouter에 소액의 유료 요청을 보내 모델을 확인해요. 변경은 이 워크스페이스에만 즉시 적용되며 판단 비용은 선택한 계정에 청구돼요.",
+    "active": "사용 중: {{account}} · {{model}}",
+    "unavailable": "선택한 OpenRouter 계정을 사용할 수 없어요. 다른 계정을 선택하거나 기본 설정으로 되돌리세요.",
+    "connect": "판단 모델을 사용하려면 위에서 OpenRouter API 계정을 연결하세요.",
+    "reset": "기본 설정 사용",
+    "loadFailed": "판단 설정을 불러오지 못했어요. 페이지를 새로고침해서 다시 시도하세요.",
+    "invalidAccount": "이 워크스페이스의 활성 OpenRouter 계정을 선택하세요.",
+    "invalidModel": "올바른 판단 모델 ID를 입력하세요.",
+    "checkFailed": "OpenRouter에서 이 판단 모델을 확인하지 못했어요. 계정, 잔액, 모델 ID를 확인하고 다시 시도하세요.",
+    "serverDefault": "자체 판단 모델을 설정하지 않은 워크스페이스의 서버 기본 설정이에요.",
+    "provider": "판단 서비스 제공업체",
+    "jevManaged": "서버 소유자가 Jev 설정을 관리해요.",
+    "otherModel": "다른 모델…",
+    "visionOff": "사용 안 함",
+    "about": "이 모델들은 응답할 에이전트를 고르고, 메모리를 정리하고, 스크린샷을 이해하는 데 도움을 줍니다."
   }
 }

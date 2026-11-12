@@ -650,7 +650,8 @@ export async function orgModelProvider(db: Executor, orgId: string): Promise<str
 /** What each step of the chain can use for an organization now, for `ai-status` (the chain runs only on a message). */
 export interface RoutingSetup {
   /** Jev picks: a key whose owner sees it working (a limit or an outage doesn't count), and the chain starts with it. */
-  jev(): Promise<boolean>;
+  jev(orgId: string): Promise<boolean>;
+  decisionModel?(orgId: string): Promise<string | null>;
   /** The organization's small model, or null. */
   smallModel(orgId: string): Promise<string | null>;
   /** The plan step's computers; null where it is off (the Cloud). */

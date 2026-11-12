@@ -266,7 +266,7 @@ export async function orgRouting(
     apiKey,
   });
   if (!routing) return of("off", "off", null, null);
-  if (await routing.jev()) return of("jev", "jev", null, null);
+  if (await routing.jev(orgId)) return of("jev", "jev", (await routing.decisionModel?.(orgId)) ?? null, null);
   const model = await routing.smallModel(orgId);
   if (model) return of("model", "model", model, null);
   const plans = routing.plans ? await planSignInsOf(deps.db, routing.plans, orgId) : [];

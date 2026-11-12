@@ -208,7 +208,7 @@ import { agentRepositoryList, repositoriesPrompt } from "./git/repos";
 import { askVerdict, handOffHolds, repeatedAsk, saysNeedsNothing } from "./hand-off";
 import { UPDATE_ISSUE_TOOL } from "./issue-tools";
 import { linkRunToIssue, mirrorReplyToIssue } from "./issues";
-import { type Judge, judgeCallOf } from "./judge";
+import { type Judge, judgeCallOf, judgeName } from "./judge";
 import {
   KEY_LINE_PERSON_MINUTES,
   type KeyLinePlace,
@@ -1100,7 +1100,7 @@ async function executeRunInner(
       !row.workId &&
       !row.cut &&
       deps.context?.judge &&
-      deps.context.judge.name !== "llm" &&
+      (await judgeName(deps.context.judge, row.orgId)) !== "llm" &&
       Date.now() - Number(row.since ?? Date.now()) >= CATCH_UP_AFTER_MS &&
       busyTries < BUSY_RETRIES &&
       (await otherAgentAnswering(db, row).catch(() => false))
@@ -1815,7 +1815,7 @@ async function executeRunInner(
           prior,
           mission: await inMission(db, run).catch(() => false),
           overruled: await overruledHere(db, run).catch(() => true),
-          noJev: judge.name === "llm",
+          noJev: (await judgeName(judge, run.orgId)) === "llm",
         })
       : ({ skip: "skipped_rule" } as const);
     const at = Date.now();
@@ -1827,7 +1827,13 @@ async function executeRunInner(
       catchUpBrief = snapshot ? triageBrief(snapshot, null) || undefined : undefined;
     } else if (!gate && snapshot) {
       const bar = await catchUpBar(db, run.orgId).catch(() => CATCH_UP_CLOSE_AT);
-      const facts = { at, bar, judge: judge.name, calls: base.calls + 1, seenThrough: snapshot.latest };
+      const facts = {
+        at,
+        bar,
+        judge: await judgeName(judge, run.orgId),
+        calls: base.calls + 1,
+        seenThrough: snapshot.latest,
+      };
       try {
         const answers = await askCatchUp(judge, snapshot, { orgId: run.orgId, agentId: agent.id, runId: run.id });
         verdict = catchUpDecision(answers, snapshot, bar);

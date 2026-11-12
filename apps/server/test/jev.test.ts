@@ -153,7 +153,8 @@ test("the month: Jev's calls since the 1st (UTC), every workspace together, and 
     .insert(schema.usageRecords)
     .values([
       row(acme, "typesafe", new Date()),
-      row(beta, "typesafe", new Date()),
+      row(beta, "openrouter-decisions", new Date()),
+      row(acme, "openrouter", new Date()),
       row(acme, "typesafe", new Date(start.getTime() - 3600_000)),
       row(acme, "anthropic", new Date()),
     ]);
@@ -188,4 +189,72 @@ test("once no account is left, the next first account has it", async () => {
   const next = browser(t);
   await signUp(next, "next@example.com");
   expect((await next("/api/app/jev")).status).toBe(200);
+});
+
+test("OpenRouter endpoint and decision model reach saved-key checks and text and image judgments", async () => {
+  const calls: { url: string; headers: Headers; body: Record<string, unknown> }[] = [];
+  const jevFetch = (async (url: string, init: RequestInit) => {
+    calls.push({ url, headers: new Headers(init.headers), body: JSON.parse(String(init.body)) });
+    return Response.json({
+      model: calls.at(-1)?.body.model,
+      answers: { ok: { noul: 1 }, target: { box: { top: 0.1, bottom: 0.5, left: 0.2, right: 0.6 }, confidence: 0.9 } },
+      usage: { input_tokens: 100, output_tokens: 2, cost: 0.000123 },
+    });
+  }) as unknown as typeof fetch;
+  t = await createTestServer({
+    env: {
+      ALLOW_SIGNUP: "true",
+      TYPESAFE_BASE_URL: "https://openrouter.ai/api/",
+      JEV_MODEL: "jaredpalmer/kev-4b",
+      JEV_VISION_MODEL: "typesafe/jev-1.14",
+    },
+    jevFetch,
+    judge: null,
+  });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const orgId = await org(owner, "Acme");
+  expect((await owner("/api/app/jev", { method: "PUT", json: { apiKey: "sk-or-test-only" } })).status).toBe(200);
+  expect((await owner("/api/app/jev/check", { json: {} })).status).toBe(200);
+  const judge = t.engine.context.judge;
+  if (!judge) throw new Error("missing judge");
+  expect(
+    await judge.ask({
+      orgId,
+      kind: "test",
+      state: { text: "ok" },
+      questions: { ok: { type: "noul", instructions: "Is it ok?", criteria: { true: "ok", false: "not ok" } } },
+    }),
+  ).toEqual({ ok: { noul: 1 } });
+  const images = { screen: { data: "test-png", format: "png" as const } };
+  expect(
+    await judge.ask({
+      orgId,
+      kind: "test",
+      state: { screenshot: "screen" },
+      images,
+      questions: { target: { type: "box", instructions: "the button" } },
+    }),
+  ).toMatchObject({ target: { confidence: 0.9, box: { left: 0.2 } } });
+  expect(calls.map((c) => c.body.model)).toEqual([
+    "jaredpalmer/kev-4b",
+    "jaredpalmer/kev-4b",
+    "jaredpalmer/kev-4b",
+    "typesafe/jev-1.14",
+  ]);
+  expect(
+    calls.every(
+      (c) =>
+        c.url === "https://openrouter.ai/api/v1/systemone" &&
+        c.headers.get("authorization") === "Bearer sk-or-test-only",
+    ),
+  ).toBe(true);
+  expect(calls[3]?.body.assets).toEqual({ screen: { data_base64: "test-png", format: "png" } });
+  expect(calls[3]?.headers.get("TypeSafe-Danger-Zone-Images")).toBe("true");
+  const usage = await t.db
+    .select()
+    .from(schema.usageRecords)
+    .where(eq(schema.usageRecords.provider, "openrouter-decisions"));
+  expect(usage).toHaveLength(2);
+  expect(usage.every((u) => u.costNanoUsd === 123000)).toBe(true);
 });

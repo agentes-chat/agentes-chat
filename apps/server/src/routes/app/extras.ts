@@ -17,6 +17,7 @@ import type {
   StreamBroker,
   Talker,
   VoiceDeps,
+  WorkspaceDecisions,
 } from "@agenteschat/engine";
 
 /**
@@ -59,6 +60,7 @@ export interface AppExtras {
   pushRelaySender?: PushSender | null;
   /** The installation's Jev key, for its owner's routes (ADR 0073); absent = those routes answer 404. */
   jevKey?: JevKey;
+  decisions?: WorkspaceDecisions;
   /**
    * The installation's GIPHY key, for its owner's routes (ADR 0091, amended 2026-10-31); absent (agentes.chat's own
    * servers) = those routes answer 404.

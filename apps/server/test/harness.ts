@@ -77,8 +77,8 @@ export async function createTestServer(
     resolveHost?: ResolveHost;
     /** Fake GitHub (git smart HTTP and REST) for the git proxy. */
     github?: { gitUrl: string; apiUrl: string; fetch: typeof fetch };
-    /** Answers of the fake judge (judge.ts). Default: every Noul 0, but an agent's mention needs nothing. */
-    judge?: Parameters<typeof createFakeJudge>[0];
+    /** Answers of the fake judge. Null: the real judge with jevFetch. Default: every Noul 0. */
+    judge?: Parameters<typeof createFakeJudge>[0] | null;
     /** The fake schedule reader's table (phrase → answer), on top of `TEST_SCHEDULES`. */
     schedules?: FakeScheduleAnswers;
     /** Fake Apple token revocation (account deletion). */
@@ -173,7 +173,7 @@ export async function createTestServer(
     speechFetch: options.speechFetch,
     resolveHost: options.resolveHost,
     github: options.github,
-    judge: createFakeJudge(options.judge),
+    judge: options.judge === null ? undefined : createFakeJudge(options.judge),
     schedules: createFakeScheduleReader({ ...TEST_SCHEDULES, ...options.schedules }),
     toolsOnDemand: false,
     emailArt: options.emailArt,
@@ -224,6 +224,7 @@ export async function createTestServer(
         router: engine.router,
         streams: engine.streams,
         jevKey: engine.jevKey,
+        decisions: engine.decisions,
         gifKey,
         githubApp: engine.githubApp,
         speech: engine.speech,

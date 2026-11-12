@@ -1,5 +1,6 @@
 import { cutText } from "./format";
 import type { Judge, JudgeQuestion } from "./judge";
+import { judgeName } from "./judge";
 import { canonicalJson } from "./tools/json-schema";
 
 /**
@@ -149,7 +150,7 @@ export async function isStuck(
       },
       questions: { stuck: STUCK_QUESTION },
     });
-    return { stuck: (answers.stuck?.noul ?? 0) >= STUCK.verdict, by: judge.name };
+    return { stuck: (answers.stuck?.noul ?? 0) >= STUCK.verdict, by: await judgeName(judge, input.orgId) };
   } catch {
     return { stuck: true, by: "structural" };
   }
