@@ -12604,13 +12604,10 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
 .sidebar__section--group[data-open="false"] .sidebar__section-body > [data-live="true"] {
   display: flex;
 }
-/* A group stands apart from the agents above it; its mark in gray, as quiet as its name. */
+/* A group stands apart from the agents above it. Its mark keeps the setor's own color, as Equipe › Setores shows it:
+   ADR 0083 (amended 2026-11-04) gives each setor a color and an icon, and the sidebar shows the color too. */
 .sidebar:not([data-rail="true"]) .sidebar__section--group {
   margin-top: 8px;
-}
-.sidebar__section--group .sidebar__section-toggle > .ac-rolemark {
-  filter: grayscale(1);
-  opacity: 0.6;
 }
 .sidebar__section-count {
   min-width: 24px;
