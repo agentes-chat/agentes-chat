@@ -2,7 +2,7 @@ import { modelInfo } from "@agenteschat/providers";
 import { cutText } from "./format";
 import type { ModelGateway } from "./gateway";
 import { callJev, type JevKeySource } from "./jev-key";
-import { jevCostNanoUsd } from "./router-jev";
+import { jevUsageDetails } from "./router-jev";
 
 /**
  * Small semantic judgments about what people write ("is this asking the agent
@@ -145,7 +145,7 @@ export function createJevJudge(options: {
       const body = await callJev<{
         model?: string;
         answers?: Record<string, JudgeAnswer>;
-        usage?: { input_tokens?: number; output_tokens?: number };
+        usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
       }>(options.key, {
         fetch: options.fetch,
         baseURL: options.baseURL,
@@ -161,8 +161,15 @@ export function createJevJudge(options: {
           ? (options.visionTimeoutMs ?? Math.max(6000, options.timeoutMs ?? 0))
           : (request.timeoutMs ?? options.timeoutMs ?? 2000),
       }).catch((error: unknown) => {
-        throw withJudgeCall(error, model, "typesafe");
+        throw withJudgeCall(
+          error,
+          model,
+          options.baseURL && new URL(options.baseURL).hostname === "openrouter.ai"
+            ? "openrouter-decisions"
+            : "typesafe",
+        );
       });
+      const usage = jevUsageDetails(options.baseURL, body.usage);
       const inputTokens = body.usage?.input_tokens ?? 0;
       await options.gateway
         .recordExternalUsage({
@@ -170,11 +177,10 @@ export function createJevJudge(options: {
           agentId: request.agentId,
           runId: request.runId,
           kind: "router",
-          provider: "typesafe",
+          ...usage,
           model: body.model ?? model,
           inputTokens,
           outputTokens: body.usage?.output_tokens ?? 0,
-          costNanoUsd: jevCostNanoUsd(inputTokens),
         })
         .catch(() => {});
       const out: Record<string, JudgeAnswer> = {};

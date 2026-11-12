@@ -339,3 +339,28 @@ describe("FIREBASE_SERVICE_ACCOUNT", () => {
     expect(message).not.toContain("MIIEvQ");
   });
 });
+
+test("System One defaults and OpenRouter decision model IDs", () => {
+  const defaults = loadConfig(valid);
+  expect(defaults.TYPESAFE_BASE_URL).toBe("https://api.typesafe.ai");
+  expect(defaults.JEV_MODEL).toBe("jev-latest");
+  expect(defaults.JEV_VISION_MODEL).toBe("jev-preview");
+  const config = loadConfig({
+    ...valid,
+    TYPESAFE_BASE_URL: "https://openrouter.ai/api/",
+    JEV_MODEL: "jaredpalmer/kev-4b",
+    JEV_VISION_MODEL: "~typesafe/jev-latest",
+  });
+  expect(config.JEV_MODEL).toBe("jaredpalmer/kev-4b");
+  expect(config.JEV_VISION_MODEL).toBe("~typesafe/jev-latest");
+  for (const url of [
+    "not a URL",
+    "file:///tmp/key",
+    "https://user:pass@openrouter.ai/api",
+    "https://openrouter.ai/api?key=secret",
+    "https://openrouter.ai/api#fragment",
+  ])
+    expect(() => loadConfig({ ...valid, TYPESAFE_BASE_URL: url })).toThrow(/TYPESAFE_BASE_URL/);
+  for (const model of ["a model", "a".repeat(201)])
+    expect(() => loadConfig({ ...valid, JEV_MODEL: model })).toThrow(/JEV_MODEL/);
+});

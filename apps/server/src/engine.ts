@@ -246,6 +246,8 @@ export function buildEngine(o: EngineOptions) {
     keyWrapper: adapters.keyWrapper,
     keyWrappers,
     envKey: config.TYPESAFE_API_KEY,
+    baseURL: config.TYPESAFE_BASE_URL,
+    model: config.JEV_MODEL,
     fetch: o.jevFetch,
   });
   // The small model that routes and judges on an organization's keys (ADR 0074): the deployment's own on a
@@ -264,6 +266,8 @@ export function buildEngine(o: EngineOptions) {
         createJevJudge({
           key: jevKey,
           gateway,
+          baseURL: config.TYPESAFE_BASE_URL,
+          model: config.JEV_MODEL,
           timeoutMs: config.JEV_TIMEOUT_MS,
           visionModel: config.JEV_VISION_MODEL,
           fetch: o.jevFetch,
@@ -803,7 +807,15 @@ export function buildEngine(o: EngineOptions) {
       quietByTyping: true,
       // Jev first whenever the installation has its key, unless ROUTER_STRATEGY=llm.
       ...((config.ROUTER_STRATEGY ?? "jev") === "jev"
-        ? { jev: { key: jevKey, timeoutMs: config.JEV_TIMEOUT_MS, fetch: o.jevFetch } }
+        ? {
+            jev: {
+              key: jevKey,
+              timeoutMs: config.JEV_TIMEOUT_MS,
+              fetch: o.jevFetch,
+              baseURL: config.TYPESAFE_BASE_URL,
+              model: config.JEV_MODEL,
+            },
+          }
         : {}),
     },
   };

@@ -1,5 +1,5 @@
 import type { KeyWrapper } from "@agenteschat/adapters";
-import { and, type Database, type Executor, eq, gte, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, gte, inArray, schema, sql } from "@agenteschat/db";
 import { type AuditEntry, auditEveryOrg } from "./audit";
 import { openSecret, sealSecret } from "./crypto";
 import { ConflictError, ValidationError } from "./errors";
@@ -126,7 +126,8 @@ export async function callJev<T>(source: JevKeySource, call: JevCall): Promise<T
   const r = await systemOne(apiKey, call);
   if (r.state) jev.report(r.state, r.retryAfterMs, apiKey);
   if (r.state !== "ok" || r.body === null) {
-    throw new Error(r.status ? `TypeSafe answered ${r.status}` : "TypeSafe didn't answer");
+    const service = call.baseURL && new URL(call.baseURL).hostname === "openrouter.ai" ? "OpenRouter" : "TypeSafe";
+    throw new Error(r.status ? `${service} answered ${r.status}` : `${service} didn't answer`);
   }
   return r.body as T;
 }
@@ -134,7 +135,7 @@ export async function callJev<T>(source: JevKeySource, call: JevCall): Promise<T
 /** A tiny real call (about 50 tokens): only a real call can say that a key has no credit. */
 export async function checkJevKey(
   apiKey: string,
-  o: { fetch?: typeof fetch; baseURL?: string } = {},
+  o: { fetch?: typeof fetch; baseURL?: string; model?: string } = {},
 ): Promise<JevState> {
   const question = {
     type: "noul",
@@ -144,7 +145,7 @@ export async function checkJevKey(
   const r = await systemOne(apiKey, {
     ...o,
     timeoutMs: CHECK_TIMEOUT_MS,
-    body: { model: "jev-latest", state: "ok", questions: { ok: question } },
+    body: { model: o.model ?? "jev-latest", state: "ok", questions: { ok: question } },
   });
   return r.state ?? "unchecked";
 }
@@ -155,7 +156,12 @@ export async function jevMonth(db: Database, now = new Date()) {
   const [row] = await db
     .select({ decisions: sql<number>`count(*)::int`, cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}), 0)` })
     .from(usageRecords)
-    .where(and(eq(usageRecords.provider, "typesafe"), gte(usageRecords.createdAt, monthStartUtc(now))));
+    .where(
+      and(
+        inArray(usageRecords.provider, ["typesafe", "openrouter-decisions"]),
+        gte(usageRecords.createdAt, monthStartUtc(now)),
+      ),
+    );
   return { decisions: row?.decisions ?? 0, costNanoUsd: Number(row?.cost ?? 0) };
 }
 
@@ -183,13 +189,14 @@ export function createJevKey(deps: {
   envKey?: string;
   fetch?: typeof fetch;
   baseURL?: string;
+  model?: string;
   now?: () => number;
 }): JevKey {
   const now = deps.now ?? Date.now;
   const env = deps.envKey?.trim() || null;
   // An env key that can't be sent reads as not accepted, and nothing calls with it.
   const envKey = env && KEY_SHAPE.test(env) ? env : null;
-  const tsa = { fetch: deps.fetch, baseURL: deps.baseURL };
+  const tsa = { fetch: deps.fetch, baseURL: deps.baseURL, model: deps.model };
   /** The saved row as last read. `key` is null when it doesn't open (another `AGENTES_SECRET`). */
   let saved: { key: string | null; hint: string; at: number } | null = null;
   let readAt = Number.NEGATIVE_INFINITY;

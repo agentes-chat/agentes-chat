@@ -335,9 +335,39 @@ export const envVars = {
   TYPESAFE_API_KEY: {
     schema: z.string().optional(),
     description:
-      "Your TypeSafe key for Jev (https://console.typesafe.ai/keys), optional. Jev picks who answers messages nobody @mentioned, keeps memory tidy and finds what agents look for on their screens. The installation's owner can also add it in Settings › AI accounts. This variable wins over that one. Never sent to a browser. Calls are billed to your TypeSafe account.",
+      "Your key for the configured System One service (TypeSafe by default, https://console.typesafe.ai/keys), optional. With TYPESAFE_BASE_URL=https://openrouter.ai/api, use an OpenRouter key instead. Jev picks who answers messages nobody @mentioned, keeps memory tidy and finds what agents look for on their screens. The installation's owner can also add it in Settings › AI accounts. This variable wins over that one. Never sent to a browser. Calls are billed by the configured service.",
     section: "Agents",
     secret: true,
+  },
+  TYPESAFE_BASE_URL: {
+    schema: z
+      .url()
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return (
+            ["https:", "http:"].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash
+          );
+        } catch {
+          return false;
+        }
+      }, "Use an HTTP(S) base URL without credentials, query or fragment")
+      .default("https://api.typesafe.ai"),
+    description:
+      "System One base URL (without /v1/systemone). For OpenRouter, set https://openrouter.ai/api and use an OpenRouter key as TYPESAFE_API_KEY. Applies to key checks, routing and all judgments, including images. Restart after changing it.",
+    section: "Agents",
+  },
+  JEV_MODEL: {
+    schema: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .regex(/^[~a-zA-Z0-9][a-zA-Z0-9._~/:+-]*$/)
+      .default("jev-latest"),
+    description:
+      "System One model for routing and text judgments, also used to check the key. OpenRouter accepts namespaced decision model IDs, such as typesafe/jev-1.14 or jaredpalmer/kev-4b. Must support Noul, Choice and Score; ordinary chat models do not work here.",
+    section: "Agents",
   },
   JEV_TIMEOUT_MS: {
     schema: z.coerce.number().int().min(200).max(30_000).default(2000),
@@ -348,10 +378,13 @@ export const envVars = {
   JEV_VISION_MODEL: {
     schema: z
       .string()
-      .regex(/^[a-z0-9][a-z0-9._-]{0,63}$/)
+      .trim()
+      .min(1)
+      .max(200)
+      .regex(/^[~a-zA-Z0-9][a-zA-Z0-9._~/:+-]*$/)
       .default("jev-preview"),
     description:
-      "Jev model for judgments over images (an agent finding a target on a screenshot of its browser or desktop). Needs a release that takes images.",
+      "Jev model for judgments over images (an agent finding a target on a screenshot of its browser or desktop). Needs a decision model that takes images and supports Box. OpenRouter accepts namespaced IDs; set this separately when JEV_MODEL is text-only.",
     section: "Agents",
   },
   OPENAI_CHEAP_MODEL: {
