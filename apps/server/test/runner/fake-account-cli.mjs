@@ -9,13 +9,17 @@
 // stand-in for running as the sign-in's own user).
 // $FAKE_ACCOUNT_STATUS: "garbage" makes `auth status` answer no JSON; "org" adds the Claude organization.
 // $FAKE_ACCOUNT_STATUS_DELAY: `auth status` answers after that many ms (and logs `done` then).
+// Muse Code too (`login`, `usage`, `logout`, run with $XDG_CONFIG_HOME and no CODEX_HOME): it prints 1.4.18's
+// device-code words, keeps its sign-in in `$XDG_CONFIG_HOME/muse/credential.json`, answers `usage` with "not logged
+// in" on stderr and exit 1 while signed out, and `logout` drops that folder. $FAKE_MUSE_LOGIN_MS is how long its
+// `login` takes to be approved (default 300); $FAKE_ACCOUNT_MODE "nocode" prints the page and never a code.
 // `auth login --email <address>` signs in like `auth login` (the address is only the account
 // to offer). With $ANTHROPIC_API_KEY set, `auth status` says it is signed in with that key, as
 // Claude Code does whatever the folder holds. `setup-token` draws Claude Code 2.1.314's screen
 // in its terminal (words apart by cursor moves, the link in an OSC 8 hyperlink), takes the code
 // as a terminal pastes it, and on success shows a token drawn in two pieces, as a screen that
 // redraws only what changed does; "notoken" signs in but shows none.
-import { appendFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
 
@@ -23,14 +27,20 @@ const args = process.argv.slice(2).join(" ");
 // Each reads only its own variable, as the real CLIs do (`auth …` is Claude Code, the rest Codex): a
 // CLAUDE_CONFIG_DIR inherited from the shell (set when tests run inside Claude Code) must not move Codex's folder.
 const claude = args.startsWith("auth ") || args === "setup-token";
-const home = (claude ? process.env.CLAUDE_CONFIG_DIR : process.env.CODEX_HOME) ?? "";
-const marker = path.join(home, "signed-in");
+// Muse Code's commands carry no `auth` and it runs with no CODEX_HOME: its folder is the $XDG_CONFIG_HOME it runs
+// with, and its sign-in rests under `muse/` there (where exactly is undocumented; 1.4.18 keeps one file).
+const muse =
+  !claude && (args === "login" || args.startsWith("usage") || (args === "logout" && !process.env.CODEX_HOME));
+const home = muse
+  ? path.join(process.env.XDG_CONFIG_HOME ?? "", "muse")
+  : ((claude ? process.env.CLAUDE_CONFIG_DIR : process.env.CODEX_HOME) ?? "");
+const marker = path.join(home, muse ? "credential.json" : "signed-in");
 const mode = process.env.FAKE_ACCOUNT_MODE ?? "";
 const log = process.env.FAKE_ACCOUNT_LOG;
 if (log)
   appendFileSync(
     log,
-    `${JSON.stringify({ args, home, ...(process.stdin.isTTY ? { terminal: true } : {}), ...(process.env.FAKE_AUTH_GROUP ? { authGroup: true } : {}), ...(process.env.FAKE_ACCOUNT_USER ? { asUser: true } : {}) })}\n`,
+    `${JSON.stringify({ args, home, ...(process.stdin.isTTY ? { terminal: true } : {}), ...(process.env.FAKE_AUTH_GROUP ? { authGroup: true } : {}), ...(process.env.FAKE_ACCOUNT_USER ? { asUser: true } : {}), ...(muse ? { xdg: process.env.XDG_CONFIG_HOME ?? null } : {}), ...(process.env.META_API_KEY ? { metaKey: true } : {}) })}\n`,
   );
 
 const ESC = "\x1b";
@@ -52,6 +62,18 @@ const drawn = (text, from = 2) => {
     .join("");
 };
 const FAKE_TOKEN = "sk-ant-oat01-fake-token-for-tests-only";
+
+/** The device-code words `muse login` prints on 1.4.18, measured (`cat -A`: plain lines, no colors). */
+const museLogin = (code) =>
+  [
+    "Open this page to sign in:",
+    `  https://auth.meta.com/oauth/device/?code=${code}`,
+    "confirm this code matches:",
+    `  ${code}`,
+    "",
+    "Waiting for approval…",
+    "",
+  ].join("\n");
 
 switch (args.replace(/^auth login --email \S+$/, "auth login")) {
   case "setup-token": {
@@ -110,6 +132,40 @@ switch (args.replace(/^auth login --email \S+$/, "auth login")) {
     });
     break;
   }
+  case "login": {
+    // Muse Code (`muse login`): the page and the code, and it ends by itself once the person approves it.
+    if (mode === "silent") {
+      waitForever();
+      break;
+    }
+    if (mode === "nocode") {
+      // The page with no code: the runner must refuse, not show a sign-in nobody can finish.
+      process.stdout.write(
+        "Open this page to sign in:\n  https://auth.meta.com/oauth/device/\n\nWaiting for approval…\n",
+      );
+      waitForever();
+      break;
+    }
+    if (mode === "fail") end(1, "Error: sign-in failed: invalid_grant\n", process.stderr);
+    else {
+      process.stdout.write(museLogin(process.env.FAKE_ACCOUNT_CODE ?? "DSVV-LHWG"));
+      setTimeout(
+        () => {
+          mkdirSync(home, { recursive: true, mode: 0o700 });
+          writeFileSync(marker, JSON.stringify({ account: "dev@acme.test" }));
+          end(0, "Signed in as dev@acme.test\n");
+        },
+        Number(process.env.FAKE_MUSE_LOGIN_MS ?? 300),
+      );
+    }
+    break;
+  }
+  case "usage":
+    // Muse Code 1.4.18: signed out, stderr and exit 1; a key in the environment answers for the person with exit 0.
+    if (process.env.META_API_KEY) end(0, "No subscription allowance (api_key)\n");
+    else if (!existsSync(marker)) end(1, "muse usage: not logged in: run `muse login` first\n", process.stderr);
+    else end(0, "Subscription: Muse Pro\nAllowance: 42% left this month\n");
+    break;
   case "auth login": {
     if (mode === "silent") {
       waitForever();
@@ -210,6 +266,13 @@ switch (args.replace(/^auth login --email \S+$/, "auth login")) {
     break;
   case "auth logout":
   case "logout":
+    // `muse logout`: the words are 1.4.18's when it had nothing stored; its sign-in goes with the `muse/` folder.
+    if (muse) {
+      const had = existsSync(marker);
+      if (had) rmSync(home, { recursive: true, force: true });
+      end(0, had ? "Removed the stored Meta credential\n" : "no stored Meta credential to remove\n");
+      break;
+    }
     rmSync(marker, { force: true });
     end(0, "Successfully logged out\n");
     break;

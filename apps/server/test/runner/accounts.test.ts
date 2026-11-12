@@ -30,10 +30,13 @@ import {
   codexAuthOf,
   grantOf,
   lentAccounts,
+  MUSE_QUIET_ENV,
   parseClaudeLoginUrl,
   parseClaudeStatus,
   parseCodexLogin,
   parseCodexStatus,
+  parseMuseLogin,
+  parseMuseStatus,
   parseSetupToken,
   placeCodexAuth,
   planKeyOf,
@@ -55,12 +58,15 @@ const FAKE_ENV = [
   "FAKE_CODEX_REFRESHED",
   "FAKE_ACCOUNT_STATUS",
   "FAKE_ACCOUNT_STATUS_DELAY",
+  "FAKE_MUSE_LOGIN_MS",
 ];
 const dirs: string[] = [];
 const managers: AccountManager[] = [];
 afterEach(async () => {
   for (const m of managers.splice(0)) await m.close();
   for (const k of FAKE_ENV) delete process.env[k];
+  // A key of this machine's own would answer for a person's sign-in (`muse login --help`).
+  delete process.env.META_API_KEY;
   removeDirs(dirs);
 });
 
@@ -108,6 +114,78 @@ test("Codex's device sign-in: the link and the one-time code, colors stripped, t
   expect(parseCodexLogin(partial, true)?.userCode).toBe("7HYC-J6JG");
   expect(parseCodexLogin("1. https://auth.openai.com/codex/device\n")).toBeNull();
   expect(parseCodexLogin("ABCD-EFGH\nhttps://example.com/device\n", true)).toBeNull();
+});
+
+test("Muse Code's device sign-in: the page and the code of `muse login`, colors, either case, JSON or not", () => {
+  // Muse Code 1.4.18, measured on stdout (plain lines: no colors, nothing on stderr).
+  const real = [
+    "Open this page to sign in:",
+    "  https://auth.meta.com/oauth/device/?code=DSVV-LHWG",
+    "confirm this code matches:",
+    "  DSVV-LHWG",
+    "",
+    "Waiting for approval…",
+    "",
+  ].join("\n");
+  const page = "https://auth.meta.com/oauth/device/?code=DSVV-LHWG";
+  expect(parseMuseLogin(real)).toEqual({ url: page, userCode: "DSVV-LHWG" });
+  // Colors aside, and a code printed in lower case as some terminals show it.
+  const colored = `${ESC}[1mOpen this page to sign in:${ESC}[0m\n  ${ESC}[94mhttps://auth.meta.com/oauth/device/?code=dsvv-lhwg${ESC}[0m\n  ${ESC}[33mdsvv-lhwg${ESC}[0m\n\n`;
+  expect(parseMuseLogin(colored)).toEqual({
+    url: "https://auth.meta.com/oauth/device/?code=dsvv-lhwg",
+    userCode: "dsvv-lhwg",
+  });
+  // The login as a frame, the names OpenBot reads: camel case, snake case, escaped slashes.
+  expect(
+    parseMuseLogin(
+      '{"type":"login.device_code","verificationUrl":"https:\\/\\/auth.meta.com\\/oauth\\/device\\/?code=WDJB-MJHT","userCode":"WDJB-MJHT"}\n',
+    ),
+  ).toEqual({ url: "https://auth.meta.com/oauth/device/?code=WDJB-MJHT", userCode: "WDJB-MJHT" });
+  expect(
+    parseMuseLogin('{"verification_url":"https://auth.meta.com/oauth/device/","user_code":"WDJB-MJHT"}', true),
+  ).toEqual({
+    url: "https://auth.meta.com/oauth/device/",
+    userCode: "WDJB-MJHT",
+  });
+  // Still arriving: the page cut short waits, and so does a page with no code after it yet.
+  expect(parseMuseLogin("Open https://auth.meta.com/oauth/device/?code=DS")).toBeNull();
+  expect(parseMuseLogin(`Open\n  ${page}`)).toBeNull();
+  expect(parseMuseLogin(`Open\n  ${page}`, true)).toEqual({ url: page, userCode: "DSVV-LHWG" });
+  // A sign-in is the code: a page without one, or another vendor's, is no sign-in to show.
+  expect(parseMuseLogin("  https://auth.meta.com/oauth/device/\n\nWaiting for approval…\n", true)).toBeNull();
+  expect(parseMuseLogin("Open https://example.com/oauth/device?code=DSVV-LHWG\n", true)).toBeNull();
+});
+
+test('Muse Code\'s status: `muse usage` answers the allowance signed in, "not logged in" signed out, a key is no sign-in', () => {
+  // 1.4.18: signed out it exits 1 and says so on stderr; signed in it prints the allowance and exits 0.
+  expect(parseMuseStatus(0, "Subscription: Muse Pro\nAllowance: 42% left this month\n")).toEqual({ loggedIn: true });
+  expect(parseMuseStatus(1, "muse usage: not logged in: run `muse login` first\n")).toEqual({ loggedIn: false });
+  expect(parseMuseStatus(0, "Not logged in\n")).toEqual({ loggedIn: false });
+  // Measured: a key in the environment answers for the person, exit 0 — that never makes the account's sign-in.
+  expect(parseMuseStatus(0, "No subscription allowance (api_key)\n")).toEqual({ loggedIn: false });
+  // Timed out or killed: no exit code, nothing to believe.
+  expect(parseMuseStatus(null, "Subscription: Muse Pro\n")).toEqual({ loggedIn: false });
+});
+
+test("a Muse account folder is its XDG home, with no Meta key of the machine's and none of its switches", () => {
+  const env = accountEnv("muse", "/acc/muse", {
+    PATH: "/bin",
+    META_API_KEY: "mk-machine-wide",
+    MUSE_CONTRIBUTOR_MODE: "1",
+    MUSE_AUTO_UPDATE: "1",
+  });
+  // Its settings, its sessions and its sign-in all stay in the folder (`accountEnv` takes the CLI's own home there;
+  // `cliHome` gives login, status and sign-out `<folder>/config`, where a brain turn reads them).
+  expect(env).toMatchObject({
+    XDG_CONFIG_HOME: "/acc/muse",
+    XDG_CACHE_HOME: "/acc/muse",
+    XDG_STATE_HOME: "/acc/muse",
+    ...MUSE_QUIET_ENV,
+  });
+  // A key would answer in the person's place (`muse login --help`), and the launcher would upgrade itself.
+  expect(env.META_API_KEY).toBeUndefined();
+  expect(env.MUSE_AUTO_UPDATE).toBeUndefined();
+  expect(env.MUSE_CONTRIBUTOR_MODE).toBe("0");
 });
 
 test("status commands: signed in through claude.ai with email and plan (short words only), anything else is signed out", () => {
@@ -182,7 +260,16 @@ function setup(over: Partial<AccountManagerOptions> = {}) {
         .split("\n")
         .filter(Boolean)
         .map(
-          (l) => JSON.parse(l) as { args: string; home: string; terminal?: boolean; authGroup?: true; asUser?: true },
+          (l) =>
+            JSON.parse(l) as {
+              args: string;
+              home: string;
+              terminal?: boolean;
+              authGroup?: true;
+              asUser?: true;
+              xdg?: string;
+              metaKey?: true;
+            },
         );
     } catch {
       return [];
@@ -461,6 +548,68 @@ test.if(posix)("a CLI that prints no link, or isn't installed, fails the begin a
     (e: Error) => e,
   );
   expect(err3?.message).toContain("not installed");
+});
+
+test.if(posix)(
+  "Muse Code: begin gives the page and its code, runs in the account's own XDG home without the machine's key, and signs in",
+  async () => {
+    // A key of this computer's own: with it `muse usage` exits 0 and the account would read as signed in without a
+    // sign-in ever happening (`muse login --help`: META_API_KEY always takes priority over the account login).
+    process.env.META_API_KEY = "mk-machine-wide";
+    const { m, root, runs } = setup({ commands: { muse: [process.execPath, FAKE] } });
+    const id = LOGIN(31);
+    const begun = await m.begin("muse", id);
+    expect(begun.url).toBe("https://auth.meta.com/oauth/device/?code=DSVV-LHWG");
+    expect(begun.userCode).toBe("DSVV-LHWG");
+    // Nothing is pasted back: the person approves the code on Meta's page.
+    expect(begun.publicKey).toBeUndefined();
+    const dir = path.join(root, "muse", id);
+    const config = path.join(dir, "config");
+    // The CLI ran in the account's own config home — the one a brain turn gives it — and never saw the key.
+    expect(runs()).toEqual([{ args: "login", home: path.join(config, "muse"), xdg: config }]);
+    // It ends by itself once the code is approved.
+    await waitFor(() => m.status(id).state !== "waiting", 5000);
+    expect(m.status(id)).toEqual({
+      state: "done",
+      account: { id, kind: "muse", loggedIn: true, shared: true, authMethod: "cli_login" },
+    });
+    expect(m.accountDir("muse", id)).toBe(dir);
+    expect(await m.list()).toEqual([{ id, kind: "muse", loggedIn: true, shared: true, authMethod: "cli_login" }]);
+    // Its status is `muse usage`, run in that same folder and without the key either.
+    expect(runs().filter((r) => r.args === "usage")).toEqual([
+      { args: "usage", home: path.join(config, "muse"), xdg: config },
+    ]);
+    expect(runs().some((r) => r.metaKey)).toBe(false);
+  },
+  15_000,
+);
+
+test.if(posix)("Muse Code: a sign-in that prints no code is refused with words a person can read", async () => {
+  process.env.FAKE_ACCOUNT_MODE = "nocode";
+  const { m, root } = setup({ commands: { muse: [process.execPath, FAKE] }, beginWaitMs: 400 });
+  const id = LOGIN(32);
+  const err = await m.begin("muse", id).then(
+    () => null,
+    (e: Error) => e,
+  );
+  // A page nobody can confirm with a code is no sign-in: the begin fails, and leaves no folder behind.
+  expect(err?.message).toContain("Muse Code didn't show a sign-in link");
+  expect(existsSync(path.join(root, "muse", id))).toBe(false);
+  expect(await errorCode(() => m.status(id))).toBe("not_found");
+});
+
+test.if(posix)("Muse Code: removing the account signs out in its own folder and deletes it", async () => {
+  const { m, root, runs } = setup({ commands: { muse: [process.execPath, FAKE] } });
+  const id = LOGIN(33);
+  await m.begin("muse", id);
+  await waitFor(() => m.status(id).state === "done", 5000);
+  const dir = path.join(root, "muse", id);
+  const config = path.join(dir, "config");
+  expect(existsSync(path.join(config, "muse", "credential.json"))).toBe(true);
+  expect(await m.remove("muse", id)).toBe(true);
+  // `muse logout` ran in the account's folder, then the folder went with its sign-in.
+  expect(runs().at(-1)).toEqual({ args: "logout", home: path.join(config, "muse"), xdg: config });
+  expect(existsSync(dir)).toBe(false);
 });
 
 test.if(posix)("a sign-in nobody finishes expires: the CLI is killed and the folder removed", async () => {
