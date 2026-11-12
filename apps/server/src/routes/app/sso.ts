@@ -137,6 +137,11 @@ export function ssoRoutes(deps: AppDeps) {
           "sso_issuer",
         );
       if (before?.enabled && !input.enabled) {
+        if (config.AUTH_SSO_ONLY && config.AUTH_SSO_PROVIDER_ID === ssoId(before.id))
+          throw new ConflictError(
+            "Set AUTH_SSO_ONLY=false before disabling this server's sign-in provider.",
+            "sso_last_method",
+          );
         const methods = await db
           .select({ providerId: schema.accounts.providerId, password: schema.accounts.password })
           .from(schema.accounts)

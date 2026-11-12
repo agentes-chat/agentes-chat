@@ -1,12 +1,27 @@
 # OpenID Connect single sign-on
 
-Workspace owners can configure one standards-compliant OIDC identity provider in **Settings → Workspace → Single sign-on**. The same UI and API work on agentes.chat Cloud and self-hosted servers. Configuration is workspace-scoped; another workspace's owner cannot change it. Existing password and social login methods remain available.
+Workspace owners can configure one standards-compliant OIDC identity provider in **Settings → Workspace → Single sign-on**. The same UI and API work on agentes.chat Cloud and self-hosted servers. Configuration is workspace-scoped; another workspace's owner cannot change it. Existing password and social login methods remain available by default.
 
 1. Create a confidential web client at your identity provider using the authorization-code grant and PKCE (`S256`).
 2. Turn on **Single sign-on** to expand its settings. Enter the issuer (or `/.well-known/openid-configuration` URL) and choose **Check provider** to confirm discovery and load its advertised scopes. Copy the client ID and secret from your provider’s web application, choose a display name, and save. A new connection only becomes active after its settings are saved.
 3. Use the copy button beside the exact **Callback URL** shown after saving and register it at your identity provider. It has the form `https://YOUR-SERVER/api/auth/sso/callback/sso-PROVIDER-UUID`. Use this server callback for web, desktop and mobile alike; do not register a native app scheme at the provider.
 4. Share the **Sign-in link**, `https://YOUR-SERVER/login?sso=sso-PROVIDER-UUID`.
 5. Existing members first sign in with their existing method, then open **Settings → Your account → Single sign-on** and choose **Link SSO to your account**. Linking and configuration require a sign-in within the last ten minutes. Test the shared link in a separate browser after linking.
+
+## Show SSO on the server login page
+
+On a self-hosted server, set `AUTH_SSO_PROVIDER_ID` to the `sso-...` ID from the saved sign-in link and restart the server. The normal `/login` page then shows **Continue with your provider**, including in the desktop app, without entering an email or opening a special link. Only the explicitly selected provider is advertised; other workspace providers are not listed publicly.
+
+After linking existing accounts and verifying a fresh SSO login, you may also set:
+
+```dotenv
+AUTH_SSO_PROVIDER_ID=sso-11111111-1111-4111-8111-111111111111
+AUTH_SSO_ONLY=true
+```
+
+`AUTH_SSO_ONLY` defaults to `false` and requires the provider ID. It hides password/social forms and rejects their sign-in and password-reset endpoints on the server, including direct API calls. Invitations and SSO identity checks still apply. Existing sessions, stored passwords, conversations and identity links remain intact; a server restart does not sign everyone out. Native apps retain their verified browser handoffs. The selected provider cannot be disabled in workspace settings while this mode is on.
+
+If the IdP becomes unavailable, set `AUTH_SSO_ONLY=false` in the server environment and restart to recover the existing password or social login. Keep server administration access available. Configure, link and test SSO before enabling this policy; do not enable it during first-owner setup.
 
 The issuer is immutable after the connection is saved. A blank client-secret field on edits keeps the saved secret. The secret is encrypted with the installation's normal key wrapper (KMS where configured), never returned by the API, and travels with database backups. Self-hosted recovery needs the same `AGENTES_SECRET` and any configured key wrapper. Settings are read on each OIDC request, so changes need no restart and reach every replica. Configuration changes are recorded in the workspace audit log without secrets.
 

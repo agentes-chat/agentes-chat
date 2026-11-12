@@ -138,6 +138,9 @@ export interface FeedbackFile {
 }
 
 export interface AuthConfig {
+  /** Installation-wide login policy; absent on older servers. */
+  ssoOnly?: boolean;
+  ssoProviderId?: `sso-${string}` | null;
   socialProviders: { google: boolean; github: boolean; apple?: boolean };
   signupOpen: boolean;
   firstRun: boolean;

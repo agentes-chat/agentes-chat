@@ -339,3 +339,13 @@ describe("FIREBASE_SERVICE_ACCOUNT", () => {
     expect(message).not.toContain("MIIEvQ");
   });
 });
+
+test("SSO-only login requires an explicit server sign-in provider", () => {
+  expect(() => loadConfig({ ...valid, AUTH_SSO_ONLY: "true" })).toThrow("AUTH_SSO_PROVIDER_ID");
+  const config = loadConfig({
+    ...valid,
+    AUTH_SSO_ONLY: "true",
+    AUTH_SSO_PROVIDER_ID: "sso-11111111-1111-4111-8111-111111111111",
+  });
+  expect(config.AUTH_SSO_ONLY).toBe(true);
+});

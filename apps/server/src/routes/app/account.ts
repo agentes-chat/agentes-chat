@@ -1,4 +1,5 @@
 import { isLoopback } from "@agenteschat/client/lib/server";
+import { isSsoProvider } from "@agenteschat/client/lib/sso";
 import { isWorkAreaAnswer, WORK_AREA_ANSWERS } from "@agenteschat/client/lib/work-area";
 import {
   acceptInvitation,
@@ -315,6 +316,8 @@ export function accountRoutes(deps: AppDeps) {
       responses: {
         200: json(
           z.object({
+            ssoOnly: z.boolean(),
+            ssoProviderId: z.string().nullable(),
             socialProviders: z.object({ google: z.boolean(), github: z.boolean(), apple: z.boolean() }),
             signupOpen: z
               .boolean()
@@ -381,10 +384,10 @@ export function accountRoutes(deps: AppDeps) {
       return c.json(
         {
           ...authUiConfig(config),
-          signupOpen: await signupOpen(db, config, users),
+          signupOpen: !config.AUTH_SSO_ONLY && (await signupOpen(db, config, users)),
           firstRun: users === 0 && !ownerWaits,
           ownerClaim: users === 0 && Boolean(config.OWNER_CLAIM_SHA256),
-          passwordReset: deps.adapters.email.delivers === true,
+          passwordReset: !config.AUTH_SSO_ONLY && deps.adapters.email.delivers === true,
           workspaceComputer: config.MACHINE_PROVISIONING === "external",
           billingUrl: config.BILLING_URL ?? null,
           cloud: isAgentesCloud(config.PUBLIC_URL),
@@ -453,7 +456,13 @@ export function accountRoutes(deps: AppDeps) {
       );
       if (refused) return apiError(c, 403, refused.code, refused.message);
       const { email, access } = c.req.valid("json");
-      return c.json(await signInOptions(db, email, signupPolicy(config), access), 200);
+      const options = await signInOptions(db, email, signupPolicy(config), access);
+      return c.json(
+        config.AUTH_SSO_ONLY
+          ? { ...options, password: false, canSignUp: false, providers: options.providers.filter(isSsoProvider) }
+          : options,
+        200,
+      );
     },
   );
 

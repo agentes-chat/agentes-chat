@@ -156,7 +156,9 @@ export function AuthPage({
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [options, setOptions] = useState<SignInOptions | null>(null);
-  const canReset = config.data?.passwordReset === true;
+  const ssoOnly = config.data?.ssoOnly === true;
+  const ssoProvider = sso ?? config.data?.ssoProviderId;
+  const canReset = !ssoOnly && config.data?.passwordReset === true;
   const refusal = refused ? signInRefusalText(t, refused, canReset) : null;
   const [error, setError] = useState<string | null>(refusal);
   const [wrong, setWrong] = useState(false);
@@ -357,7 +359,7 @@ export function AuthPage({
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!ready || pending) return;
+    if (ssoOnly || !ready || pending) return;
     if (step === "email") void lookUp();
     else if (step === "password") void signIn();
     else if (step === "name") go("newPassword");
@@ -449,7 +451,7 @@ export function AuthPage({
   };
   // No account yet, and only the installer's owner link makes the first one: nothing to sign in to here.
   const shown: Step = config.data?.ownerClaim ? "ownerWaits" : step;
-  const [title, lead] = bubble[shown];
+  const [title, lead] = ssoOnly && shown === "email" ? [t("sso.title"), ""] : bubble[shown];
 
   const fix = step === "email" || step === "forgot" ? emailTypoFix(email) : null;
   const help = passwordHelp(t, password);
@@ -558,7 +560,7 @@ export function AuthPage({
             <Locked when={pending || ownerPending}>
               {who}
 
-              {local && (step === "email" || step === "noPassword") && (
+              {!ssoOnly && local && (step === "email" || step === "noPassword") && (
                 <>
                   <Button
                     type="button"
@@ -579,7 +581,7 @@ export function AuthPage({
                 </>
               )}
 
-              {(step === "email" || step === "forgot") && (
+              {!ssoOnly && (step === "email" || step === "forgot") && (
                 <div className="auth__field">
                   <Input
                     className="auth__big"
@@ -632,7 +634,7 @@ export function AuthPage({
                 </div>
               )}
 
-              {submitLabel[step] && human.slot}
+              {!ssoOnly && submitLabel[step] && human.slot}
 
               {error && (
                 <p className="auth__error ac-iconline" role="alert">
@@ -651,7 +653,7 @@ export function AuthPage({
                 </p>
               )}
 
-              {submitLabel[step] && (
+              {!ssoOnly && submitLabel[step] && (
                 <Button
                   type="submit"
                   variant={local && step === "email" ? "default" : "primary"}
@@ -665,16 +667,16 @@ export function AuthPage({
                 </Button>
               )}
 
-              {step === "email" && sso && (
+              {step === "email" && ssoProvider && (
                 <SsoLoginButton
-                  id={sso}
+                  id={ssoProvider}
                   onSignIn={(id) => {
                     if (desktop) void signInInBrowser(id);
                     else void auth.signInSocial(id, redirect ?? "/");
                   }}
                 />
               )}
-              {step === "email" && offeredProviders.length > 0 && (
+              {!ssoOnly && step === "email" && offeredProviders.length > 0 && (
                 <>
                   <div className="auth__or">{t("common.or")}</div>
                   <SocialButtons

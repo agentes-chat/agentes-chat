@@ -253,7 +253,7 @@ export function SsoAccountCard() {
   );
 }
 
-/** A connection's shared login link reveals its display name only to whoever has the link. */
+/** Resolve the provider from its shared link or the installation's explicit login configuration. */
 export function SsoLoginButton({ id, onSignIn }: { id: `sso-${string}`; onSignIn: (id: `sso-${string}`) => void }) {
   const { t } = useTranslation();
   const api = useApi();

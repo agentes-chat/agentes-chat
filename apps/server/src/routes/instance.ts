@@ -56,7 +56,7 @@ export function registerInstance(api: OpenAPIHono, deps: AppDeps, version: strin
   api.openapi(route, async (c) => {
     const { config } = deps;
     const users = await countUsers(deps.db);
-    const open = await signupOpen(deps.db, config, users);
+    const open = !config.AUTH_SSO_ONLY && (await signupOpen(deps.db, config, users));
     return c.json(
       {
         name: "agentes.chat" as const,
@@ -65,7 +65,7 @@ export function registerInstance(api: OpenAPIHono, deps: AppDeps, version: strin
         minApi: MIN_API,
         url: new URL(config.PUBLIC_URL).origin,
         sourceUrl: config.SOURCE_URL,
-        signIn: { email: true, ...authUiConfig(config).socialProviders },
+        signIn: { email: !config.AUTH_SSO_ONLY, ...authUiConfig(config).socialProviders },
         signup: open ? ("open" as const) : ("invite" as const),
         ownerClaim: users === 0 && Boolean(config.OWNER_CLAIM_SHA256),
         cloud: isAgentesCloud(config.PUBLIC_URL),

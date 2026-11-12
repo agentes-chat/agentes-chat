@@ -171,6 +171,21 @@ export const envVars = {
       "Forces sign-up open: anyone can create an account. When off (default), the **first** account can sign up (it becomes owner of the installation), and after it sign-up is by invitation only until the operator API's sign-up mode is set to open, live, with no restart (ADR 0078). Keep it off on a self-hosted instance reachable from the internet.",
     section: "Sign-in",
   },
+  AUTH_SSO_PROVIDER_ID: {
+    schema: z
+      .string()
+      .regex(/^sso-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+      .optional(),
+    description:
+      "SSO provider shown on the server's normal login page, including desktop. Configure and link it first in workspace settings, then copy the sso-... ID from its sign-in link. Unset: SSO is offered only by its link or after entering a linked email; other workspace providers stay private.",
+    section: "Sign-in",
+  },
+  AUTH_SSO_ONLY: {
+    schema: z.stringbool().default(false),
+    description:
+      "Allow new logins only through configured OIDC SSO, hiding and rejecting password and social login. Requires AUTH_SSO_PROVIDER_ID. Existing sessions, passwords and account links are preserved. Confirm a linked SSO login works before enabling; set false and restart to restore password login if the identity provider is unavailable.",
+    section: "Sign-in",
+  },
   OWNER_CLAIM_SHA256: {
     schema: z
       .string()

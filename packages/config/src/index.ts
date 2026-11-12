@@ -44,6 +44,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     );
   }
   const config = result.data;
+  if (config.AUTH_SSO_ONLY && !config.AUTH_SSO_PROVIDER_ID) {
+    throw new ConfigError(["AUTH_SSO_ONLY=true needs AUTH_SSO_PROVIDER_ID; configure and link SSO before enabling"]);
+  }
   if (config.HOST_COMPUTER_TOKEN && config.ALLOW_SIGNUP) {
     throw new ConfigError([
       "HOST_COMPUTER_TOKEN can't be set with ALLOW_SIGNUP=true: this server's computer runs agents on the machine itself, so people join only by invitation",

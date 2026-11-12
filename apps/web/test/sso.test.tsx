@@ -237,3 +237,18 @@ test("a provider without a scope list keeps custom entry, duplicate prevention a
   await change("Add a custom scope (optional)", "email");
   expect(screen().getByRole("button", { name: "Add scope" }).hasAttribute("disabled")).toBe(true);
 });
+
+test("the configured server SSO is visible on a plain login URL, including SSO-only mode", async () => {
+  const api = createFakeApi(seedState({ me: null }));
+  const original = api.account.authConfig;
+  api.account.authConfig = async () => ({ ...(await original()), ssoProviderId: providerId, ssoOnly: true });
+  api.account.ssoProvider = async () => ({ id: providerId, name: "Acme SSO" });
+  const auth = createFakeAuth();
+  const rendered = await renderApp("/login", { api, auth: auth.auth });
+  await showIn(rendered.services, "en");
+  await settle();
+  expect(screen().queryByRole("textbox") === null).toBe(true);
+  expect(screen().queryByRole("button", { name: /Continue with GitHub/ }) === null).toBe(true);
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: "Continue with Acme SSO" })));
+  expect(auth.calls.find((call) => call.method === "signInSocial")?.args.slice(0, 2)).toEqual([providerId, "/"]);
+});

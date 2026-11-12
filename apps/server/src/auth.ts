@@ -181,7 +181,7 @@ export function createAuth(deps: {
       cookieCache: { enabled: true, maxAge: 5 * 60 },
     },
     emailAndPassword: {
-      enabled: true,
+      enabled: !config.AUTH_SSO_ONLY,
       minPasswordLength: 8,
       maxPasswordLength: 128,
       revokeSessionsOnPasswordReset: true,
@@ -267,7 +267,7 @@ export function createAuth(deps: {
         }
       : {}),
     socialProviders: {
-      ...(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET
+      ...(!config.AUTH_SSO_ONLY && config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET
         ? {
             google: {
               clientId: config.GOOGLE_CLIENT_ID,
@@ -276,7 +276,7 @@ export function createAuth(deps: {
             },
           }
         : {}),
-      ...(config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET
+      ...(!config.AUTH_SSO_ONLY && config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET
         ? {
             github: {
               clientId: config.GITHUB_CLIENT_ID,
@@ -285,7 +285,7 @@ export function createAuth(deps: {
             },
           }
         : {}),
-      ...(apple ? { apple: { ...apple, mapProfileToUser: noteProviderEmail } } : {}),
+      ...(!config.AUTH_SSO_ONLY && apple ? { apple: { ...apple, mapProfileToUser: noteProviderEmail } } : {}),
     },
     rateLimit: {
       enabled: config.NODE_ENV !== "test",
@@ -323,6 +323,24 @@ export function createAuth(deps: {
       // Checked before the endpoint runs so the person sees the real reason.
       // The database hook below also guards social sign-in.
       before: createAuthMiddleware(async (ctx) => {
+        if (
+          config.AUTH_SSO_ONLY &&
+          ([
+            "/sign-in/email",
+            "/sign-up/email",
+            "/sign-in/social",
+            "/owner-claim",
+            "/owner-key",
+            "/request-password-reset",
+            "/reset-password",
+          ].includes(ctx.path) ||
+            ctx.path.startsWith("/callback/") ||
+            ctx.path.startsWith("/reset-password/"))
+        )
+          throw new APIError("FORBIDDEN", {
+            code: "sso_required",
+            message: "This server requires SSO. Continue with its identity provider.",
+          });
         const providerId = ctx.path?.startsWith("/sso/callback/") ? ctx.params?.providerId : ctx.body?.providerId;
         if (ctx.path === "/sign-in/sso" || ctx.path?.startsWith("/sso/callback/")) {
           if (typeof providerId !== "string" || !SSO_ID.test(providerId))
@@ -743,10 +761,12 @@ export const workspacePolicy = (config: Config): WorkspacePolicy => ({
 /** Sign-in options the login and sign-up pages need to render. */
 export function authUiConfig(config: Config) {
   return {
+    ssoOnly: config.AUTH_SSO_ONLY,
+    ssoProviderId: config.AUTH_SSO_PROVIDER_ID ?? null,
     socialProviders: {
-      google: Boolean(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET),
-      github: Boolean(config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET),
-      apple: appleConfigured(config),
+      google: !config.AUTH_SSO_ONLY && Boolean(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET),
+      github: !config.AUTH_SSO_ONLY && Boolean(config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET),
+      apple: !config.AUTH_SSO_ONLY && appleConfigured(config),
     },
     termsUrl: config.TERMS_URL ?? null,
     privacyUrl: config.PRIVACY_URL ?? null,

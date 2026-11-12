@@ -196,3 +196,28 @@ describe("in the browser, for the app", () => {
     expect(heading()).toBe("Esse pedido expirou.");
   });
 });
+
+test("server SSO is offered without a special link and opens the desktop browser handoff", async () => {
+  app().__agentesDesktop = { version: "0.6.0" };
+  const assign = recordAssign();
+  const provider = "sso-11111111-1111-4111-8111-111111111111" as const;
+  const api = createFakeApi(seedState({ me: null }));
+  const config = api.account.authConfig;
+  api.account.authConfig = async () => ({ ...(await config()), ssoProviderId: provider });
+  api.account.ssoProvider = async () => ({ id: provider, name: "Acme SSO" });
+  const { auth, calls } = createFakeAuth();
+  try {
+    await renderApp("/login", { api, auth });
+    await settle(8);
+    await act(async () => fireEvent.click(screen().getByRole("button", { name: /Acme SSO/ })));
+    await settle(6);
+    expect(calls.some((c) => c.method === "desktopOpen")).toBe(true);
+    expect(calls.some((c) => c.method === "signInSocial")).toBe(false);
+    const url = new URL(assign.urls[0] ?? "", "https://chat.example.com");
+    expect(url.pathname).toBe("/desktop/sign-in");
+    expect(url.searchParams.get("provider")).toBe(provider);
+    expect(url.searchParams.get("request")).toBe("r".repeat(43));
+  } finally {
+    assign.restore();
+  }
+});

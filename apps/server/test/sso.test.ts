@@ -498,3 +498,69 @@ test("UserInfo can supply email verification only for the same subject and email
   s.userInfo({ sub: "owner-subject", email: "owner@example.com", email_verified: true });
   expect((await s.finish(s.owner, true, { email_verified: undefined })).headers.get("location")).toBe("/");
 });
+
+test("SSO-only rejects password and social logins while linked desktop SSO still works", async () => {
+  const s = await setup();
+  await s.finish(s.owner, true);
+  const accounts = await t.db
+    .select({
+      id: schema.accounts.id,
+      accountId: schema.accounts.accountId,
+      providerId: schema.accounts.providerId,
+      userId: schema.accounts.userId,
+      password: schema.accounts.password,
+    })
+    .from(schema.accounts);
+  t.config.AUTH_SSO_PROVIDER_ID = s.provider;
+  t.config.AUTH_SSO_ONLY = true;
+  const window = browser(t);
+  for (const [path, json] of [
+    ["/sign-in/email", { email: "owner@example.com", password: "password123" }],
+    ["/sign-up/email", { name: "Other", email: "other@example.com", password: "password123" }],
+    ["/sign-in/social", { provider: "google", callbackURL: "/" }],
+    ["/request-password-reset", { email: "owner@example.com" }],
+    ["/owner-key", { key: "x".repeat(43) }],
+  ] as const) {
+    const refused = await window(`/api/auth${path}`, { json });
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { code: string }).code).toBe("sso_required");
+  }
+  const config = await (await window("/api/app/auth-config")).json();
+  expect(config).toMatchObject({
+    ssoOnly: true,
+    ssoProviderId: s.provider,
+    signupOpen: false,
+    passwordReset: false,
+    socialProviders: { google: false, github: false, apple: false },
+  });
+  const options = await (await window("/api/app/sign-in-options", { json: { email: "owner@example.com" } })).json();
+  expect(options).toMatchObject({ password: false, canSignUp: false, providers: [s.provider] });
+  const verifier = "v".repeat(43);
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const { requestId } = (await (await window("/api/auth/desktop/open", { json: { challenge } })).json()) as {
+    requestId: string;
+  };
+  const at = browser(t);
+  const callback = `/desktop/sign-in?provider=${s.provider}&request=${requestId}&done=1`;
+  const back = await at(await s.authorize(await s.start(at, false, callback)), { origin: null });
+  expect(back.headers.get("location")).toBe(callback);
+  expect(await (await at("/api/auth/desktop/handoff", { json: { requestId } })).json()).toEqual({ ok: true });
+  expect(await (await window("/api/auth/desktop/redeem", { json: { verifier } })).json()).toEqual({ signedIn: true });
+  expect((await window("/api/app/me")).status).toBe(200);
+  expect(
+    await t.db
+      .select({
+        id: schema.accounts.id,
+        accountId: schema.accounts.accountId,
+        providerId: schema.accounts.providerId,
+        userId: schema.accounts.userId,
+        password: schema.accounts.password,
+      })
+      .from(schema.accounts),
+  ).toEqual(accounts);
+  const disabled = await s.owner(s.configPath, {
+    method: "PUT",
+    json: { name: "Company SSO", issuer, clientId: "client", scopes: ["openid", "email", "profile"], enabled: false },
+  });
+  expect(disabled.status).toBe(409);
+});
