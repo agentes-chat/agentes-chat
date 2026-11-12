@@ -505,6 +505,9 @@ function NewAgentForm({
           action: { label: t("mobile.chat.profile"), onPress: () => router.push(`/agent/${agent.id}`) },
         });
       }
+      // The person left this screen while it was made (the leave alert): it exists, as the toast said, and moving them
+      // now would pop or cover wherever they went.
+      if (left.current) return;
       if (from) {
         // From its card: back to that conversation as it was, Connect over it when it has nothing to think with.
         router.back();

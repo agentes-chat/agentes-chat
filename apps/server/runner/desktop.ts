@@ -1053,6 +1053,10 @@ export class DesktopManager {
     timeoutMs = this.requestMs,
     ref?: string,
   ): Promise<unknown> {
+    // Stopped under this request (`stopAll`: a switch went off): a helper started now would be one nobody stops.
+    if (this.uses.get(use.agent.id) !== use) {
+      throw new RunnerError("desktop_unavailable", "The agent's desktop stopped. Try again.");
+    }
     const helper = use.helper ?? (await this.start(use));
     try {
       const data = await helper.request(op, body, timeoutMs);

@@ -78,12 +78,14 @@ export function IssueFiles({ issue, activity }: { issue: Issue; activity: IssueA
   useEffect(() => {
     if (!doneIds || sending.current) return;
     sending.current = true;
+    const sent = adding.items.map((f) => f.key);
     action.mutate(
       { type: "comment", id: issue.id, text: "", attachmentIds: doneIds.split(",") },
       {
         onSettled: () => {
           sending.current = false;
-          adding.clear();
+          // Only what was in the box as it went: a file added meanwhile stays, and goes as the next comment.
+          for (const key of sent) adding.remove(key);
         },
       },
     );

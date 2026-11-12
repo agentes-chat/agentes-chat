@@ -17,7 +17,7 @@ import {
   vaultAad,
   workspacePath,
 } from "@agenteschat/adapters";
-import { and, eq, schema } from "@agenteschat/db";
+import { and, eq, isNull, schema } from "@agenteschat/db";
 import { getAgentCached } from "./agents";
 import { fileLanded, SHARED_DRIVE_INPUT } from "./artifact-tools";
 import {
@@ -1556,7 +1556,14 @@ export function createSandboxToolSource(
           const [ended] = await ctx.db
             .update(schema.machineTasks)
             .set({ status: "canceled", endedAt: new Date(), updatedAt: new Date() })
-            .where(and(eq(schema.machineTasks.id, row.id), eq(schema.machineTasks.canceledBy, by)))
+            // Not one that ended meanwhile (the runner "no longer has it" because it finished): its ending stands.
+            .where(
+              and(
+                eq(schema.machineTasks.id, row.id),
+                eq(schema.machineTasks.canceledBy, by),
+                isNull(schema.machineTasks.endedAt),
+              ),
+            )
             .returning();
           if (ended) {
             await recordTaskFinished(ctx.db, ended);

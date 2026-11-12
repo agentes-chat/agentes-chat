@@ -300,6 +300,8 @@ export function useVoiceTake(target: VoiceTarget) {
       haptics.medium();
       setPhase("hold");
       await record();
+      // Deleted while the recorder was starting (`cancel` found nothing to stop yet): it stops here, not never.
+      if (phaseRef.current === "idle") return void (await cancel(false));
       if (released.current) await send();
     } catch {
       toast({ title: t("voice.notSent"), icon: "x" });
@@ -307,7 +309,7 @@ export function useVoiceTake(target: VoiceTarget) {
     } finally {
       starting.current = false;
     }
-  }, [record, reset, send, setPhase, t, toast]);
+  }, [cancel, record, reset, send, setPhase, t, toast]);
 
   /** The finger came up: a hold sends; a lock already took over. */
   const release = useCallback(() => {

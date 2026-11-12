@@ -336,7 +336,8 @@ export function createRealtime(deps: RealtimeDeps) {
           return false;
         }
         ws.data.sessionValidatedAt = Date.now();
-        return true;
+        // Closed while the session was read: `close` already ran, so whatever the caller set up next would stay.
+        return ws.readyState === 1;
       } catch {
         // If the session store cannot be checked, stop forwarding private events.
         if (ws.readyState === 1) ws.close(1011, "session unavailable");
@@ -798,6 +799,8 @@ export function createRealtime(deps: RealtimeDeps) {
         );
         const wasConnected = await isConnected(deps.presence, orgId, user.id);
         await deps.presence.connect(ws.data.orgId, ws.data.user.id, ws.data.connectionId);
+        // Closed while it connected: `close` found nothing to disconnect, so nobody stays online for this socket.
+        if (ws.readyState !== 1) return void (await deps.presence.disconnect(orgId, user.id, ws.data.connectionId));
         await touchLastSeen(deps.db, orgId, user.id).catch(() => {});
         if (!wasConnected) await announcePresence(deps, orgId, user.id).catch(() => {});
         send(ws, { type: "ready", orgId: ws.data.orgId, userId: ws.data.user.id });

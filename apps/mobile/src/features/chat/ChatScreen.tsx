@@ -1094,23 +1094,36 @@ function Chat({
     });
     return { id: saved.id, version: saved.version, title: saved.title };
   };
+  const sendingFiles = useRef(false);
   const sendWithFiles = async (text: string, how: SendHow, files: PendingFile[] = pending) => {
-    setPending((now) => now.map((f): PendingFile => ({ ...f, state: "sending" })));
-    const results = await Promise.allSettled(files.map(uploadOne));
-    const failed = new Set(files.filter((_, i) => results[i]?.status === "rejected").map((f) => f.id));
-    if (failed.size > 0) {
-      // Nothing goes half sent: the ones that failed stay marked, the caption comes back to try again.
-      const after = (f: PendingFile): PendingFile["state"] => (failed.has(f.id) ? "failed" : "waiting");
-      setPending((now) => now.map((f) => ({ ...f, state: after(f) })));
+    // One send at a time: a second tap while these upload would send them again. Its words come back to the field.
+    if (sendingFiles.current) {
       if (text) setCaptionBack({ text, at: Date.now() });
-      toast({ title: t("mobile.chat.uploadFailed"), icon: "x" });
       return;
     }
-    const refs = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
-    const meta = takeQuote(refs);
-    send(text, threadId, how === "now" ? { ...meta, steer: "now" } : meta);
-    setPending([]);
-    toEnd();
+    sendingFiles.current = true;
+    try {
+      setPending((now) => now.map((f): PendingFile => ({ ...f, state: "sending" })));
+      const results = await Promise.allSettled(files.map(uploadOne));
+      const failed = new Set(files.filter((_, i) => results[i]?.status === "rejected").map((f) => f.id));
+      if (failed.size > 0) {
+        // Nothing goes half sent: the ones that failed stay marked, the caption comes back to try again.
+        const after = (f: PendingFile): PendingFile["state"] => (failed.has(f.id) ? "failed" : "waiting");
+        setPending((now) => now.map((f) => ({ ...f, state: after(f) })));
+        if (text) setCaptionBack({ text, at: Date.now() });
+        toast({ title: t("mobile.chat.uploadFailed"), icon: "x" });
+        return;
+      }
+      const refs = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+      const meta = takeQuote(refs);
+      send(text, threadId, how === "now" ? { ...meta, steer: "now" } : meta);
+      // Only what went: one picked while these uploaded waits for the next send.
+      const sent = new Set(files.map((f) => f.id));
+      setPending((now) => now.filter((f) => !sent.has(f.id)));
+      toEnd();
+    } finally {
+      sendingFiles.current = false;
+    }
   };
   // What another app shared ("Compartilhar com…" picked this agent): it goes at once, through this conversation's own
   // sending, so the photos show in the strip while they upload and the agent starts reading as soon as it lands.
