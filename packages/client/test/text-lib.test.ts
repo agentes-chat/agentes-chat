@@ -209,3 +209,9 @@ test("plainLine: a text cut in the middle leaves no half marks", () => {
   expect(plainLine("Antes **negrito cortad")).toBe("Antes negrito cortad");
   expect(plainLine("| Clínica | Faltas |\n| --- | --")).toBe("Clínica · Faltas");
 });
+
+test("plainLines: a ``` with more after it on its line is text, and the parse ends", () => {
+  // A step line reads a reply that opens with a code block with its line breaks as spaces (`takeStepWords`).
+  expect(plainLines("``` uid=1000(ana) gid=1000(ana) ```")).toEqual(["uid=1000(ana) gid=1000(ana)"]);
+  expect(plainLine("Rodei:\n```id; pwd```")).toBe("Rodei: id; pwd");
+});

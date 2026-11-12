@@ -220,6 +220,9 @@ export function parseMarkdown(source: string, options: ParseOptions & { ranges?:
       para.push(l.trim());
       i++;
     }
+    // A line no block above takes but that ends a paragraph (a ``` with more after it on the same line, a <details>
+    // that doesn't open a block): it is text, so every turn of this loop moves past at least one line.
+    if (para.length === 0) para.push((lines[i++] as string).trim());
     push({ type: "paragraph", text: para.join(join) });
   }
   return out;
