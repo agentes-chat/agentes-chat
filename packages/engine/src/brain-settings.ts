@@ -222,6 +222,22 @@ export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = (
   ] as const
 ).map((o) => ({ ...o, label: MODEL_CATALOG[o.modelId]?.label.replace(/^Claude /, "") ?? o.value }));
 
+ * Muse Code's models (ADR 0174): what its MSP host's `model/list` returned for the agent's computer, else the ids
+ * Meta documents, newest first as the other CLIs list theirs. The id is free text on the wire — `session/start` takes
+ * any `modelId` — so a catalog with no rows still leaves a picker worth opening.
+ * ponytail: hand-copied list, the host's own catalog replaces it wherever the runner reports one.
+ */
+export const MUSE_MODELS: readonly { id: string; label: string }[] = [
+  { id: "muse-spark-1.3", label: "Muse Spark 1.3" },
+  { id: "muse-spark-1.2", label: "Muse Spark 1.2" },
+];
+
+/** What Muse Code runs when nobody chose a model: the id Meta documents (and the host's own default). */
+export const MUSE_DEFAULT_MODEL = "muse-spark-1.2";
+
+export const museModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] =>
+  (listed.length ? listed : MUSE_MODELS).map((m) => ({ value: m.id, label: m.label || m.id }));
+
 /** Codex's models: the OpenAI rows of the catalog (any other name is accepted as typed). */
 export const codexModels = (): BrainModelOption[] =>
   Object.entries(MODEL_CATALOG)
@@ -248,19 +264,17 @@ function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExe
   if (kind === "opencode") return opencodeModels(machine?.executors?.opencode?.models);
   if (kind === "grok") return grokModels(machine?.executors?.grok?.models);
   if (kind === "antigravity") return antigravityModels(machine?.executors?.antigravity?.models);
+  if (kind === "muse") return museModels(machine?.executors?.muse?.models);
   return [];
 }
 
-/** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity: its CLI's own default, null). */
+/**
+ * What a computer brain runs with when nobody chose a model: Cursor, OpenCode, Grok and Antigravity leave it to the
+ * CLI's own default (null); Muse Code names the id it documents, which `session/start` takes as `modelId`.
+ */
 export function defaultBrainModel(kind: BrainKind): string | null {
-  if (
-    kind === "model" ||
-    kind === "cursor" ||
-    kind === "opencode" ||
-    kind === "grok" ||
-    kind === "antigravity" ||
-    kind === "muse"
-  )
+  if (kind === "muse") return MUSE_DEFAULT_MODEL;
+  if (kind === "model" || kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity")
     return null;
   const options = brainModelOptions(kind);
   return (options.find((o) => o.recommended) ?? options[0])?.value ?? (kind === "codex" ? "gpt-6.1-sol" : "sonnet");
@@ -409,12 +423,14 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
     cliOption(machine, "opencode"),
     cliOption(machine, "grok"),
     cliOption(machine, "antigravity"),
+    cliOption(machine, "muse"),
   ];
 }
 
 /**
- * Cursor (ADR 0114, runner protocol 36) or OpenCode (ADR 0132, protocol 39): the runner's protocol, its switch (or
- * Codex's on a runner before it) and its CLI found there.
+ * Cursor (ADR 0114, runner protocol 36), OpenCode (ADR 0132, protocol 39), Grok Build (ADR 0142), the Antigravity CLI
+ * (ADR 0143) or Muse Code (ADR 0174, protocol 59): the runner's protocol, its switch (or Codex's on a runner before
+ * it) and its CLI found there, with the models the CLI listed and — Muse only — the id it runs when none is chosen.
  */
 function cliOption(
   machine: MachineLike | null,
@@ -446,7 +462,7 @@ function cliOption(
     available: !reason,
     ...(reason ? { reason } : {}),
     models: brainModelOptions(kind, machine),
-    defaultModel: null,
+    defaultModel: defaultBrainModel(kind),
   };
 }
 

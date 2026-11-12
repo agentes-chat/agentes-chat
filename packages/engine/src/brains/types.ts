@@ -63,7 +63,13 @@ export function askingPermissions(
 
 /** Brains that run on the agent's computer with a person's plan. */
 export const isComputerBrain = (v: unknown): v is ComputerBrainKind =>
-  v === "claude_code" || v === "codex" || v === "cursor" || v === "opencode" || v === "grok" || v === "antigravity";
+  v === "claude_code" ||
+  v === "codex" ||
+  v === "cursor" ||
+  v === "opencode" ||
+  v === "grok" ||
+  v === "antigravity" ||
+  v === "muse";
 
 /**
  * Brains whose shell runs in a sandbox of the CLI's own (ADR 0053 §3, 0114, 0142, 0143), the limit of what their turns
