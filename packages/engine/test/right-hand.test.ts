@@ -232,7 +232,12 @@ test("called in a channel, its prompt holds no private channel, money or app: ot
   const dm = await prompt(true);
   expect(dm).toContain("#diretoria");
   expect(dm).toMatch(/@dev \(Dev\)[^\n]*budget US\$/);
-  expect(dm).toContain("Apps connected: Linear.");
+  expect(dm).toContain("Apps connected here, for the agents and never for you: Linear. You can't use them yourself");
+  // The apps are the agents', and no page turns one on for it: the prompt has to say both.
+  expect(dm).toContain("Tools and access, on that agent's page");
+  expect(dm).toContain("none is yours, and nothing turns one on for you");
+  expect(dm).toContain("Never open a page to switch it on for you");
+  expect(dm).not.toContain("Apps connected:");
   const channel = await prompt(false);
   expect(channel).not.toContain("diretoria");
   expect(channel).not.toContain("US$");
