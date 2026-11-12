@@ -13,7 +13,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { AUTO_MODEL, isAutoModel, MODEL_CATALOG, parseCustomModel } from "@agenteschat/providers";
+import { AUTO_MODEL, customModelId, isAutoModel, MODEL_CATALOG, parseCustomModel } from "@agenteschat/providers";
 import { isIdHandle } from "@agenteschat/ui/names";
 import type { AgentAppearance } from "./appearance";
 import { dropAgentRules } from "./approval-rules";
@@ -22,7 +22,7 @@ import { recordAudit } from "./audit";
 import { type AutonomySettings, autonomySettings, chosenAutonomy } from "./autonomy-settings";
 import { isComputerBrain } from "./brains/types";
 import { caches } from "./cache";
-import { modelInfoFor } from "./credentials";
+import { modelInfoFor, usableCredentialRow } from "./credentials";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
 import { publishAgentsChanged } from "./events";
 import type { CommandApproval } from "./missions";
@@ -98,6 +98,16 @@ export interface AgentInput {
   autonomyBrakes?: Partial<AutonomySettings>;
   /** How much it asks before acting (ADR 0173). */
   approvalsLevel?: ApprovalsLevel;
+}
+
+/** Endpoints have no catalog tiers: connecting their key on Automatic pins one of their own models (ADR 0146). */
+async function endpointModel<T extends Partial<AgentInput>>(db: Database, orgId: string, input: T): Promise<T> {
+  if (!isAutoModel(input.model) || !input.credentialId) return input;
+  const credential = await usableCredentialRow(db, orgId, input.credentialId);
+  if (credential?.provider !== "custom") return input;
+  const model = credential.options?.endpoint?.models[0];
+  if (!model) throw new ValidationError("An endpoint needs at least one model");
+  return { ...input, model: customModelId(credential.id, model.id) };
 }
 
 /** An agent's fields as the API takes them: its handle, model, key (of the model's provider), budget and owner. */
@@ -215,7 +225,11 @@ export async function createAgent(
   if (input.approvalsLevel !== undefined && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only who manages agents can set how much an agent asks");
   }
-  const values = { ...fields, handle: fields.handle.toLowerCase(), model: fields.model ?? defaults.model };
+  const values = await endpointModel(db, orgId, {
+    ...fields,
+    handle: fields.handle.toLowerCase(),
+    model: fields.model ?? defaults.model,
+  });
   await validateAgentFields(db, orgId, values);
   const ownerUserId = input.ownerUserId === undefined ? actorId : input.ownerUserId;
   // A personal workspace's new agent answers only its owner until someone says otherwise (ADR 0159): who joins later
@@ -394,6 +408,16 @@ export async function updateAgent(
 ): Promise<Agent> {
   const membership = await requirePermission(db, actorId, orgId, "manage_agents");
   await refuseRightHandFields(db, orgId, agentId, patch);
+  // The connect flow may send only the key when the agent is already on Automatic.
+  if (patch.credentialId !== undefined || isAutoModel(patch.model)) {
+    const current = await getAgent(db, orgId, agentId);
+    const selected = await endpointModel(db, orgId, {
+      model: patch.model ?? current?.model,
+      credentialId: patch.credentialId === undefined ? current?.credentialId : patch.credentialId,
+    });
+    if (selected.model && selected.model !== (patch.model ?? current?.model))
+      patch = { ...patch, model: selected.model };
+  }
   const cleaned =
     patch.handle === undefined ? patch : { ...patch, handle: patch.handle.trim().replace(/^@/, "").toLowerCase() };
   // Only what people set is stored (normalized): the rest follows the defaults (`chosenAutonomy`).
