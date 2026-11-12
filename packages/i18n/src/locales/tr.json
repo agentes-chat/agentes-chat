@@ -18213,6 +18213,8 @@
     "aboutThis": "Tıkladığınız şey hakkında",
     "aboutDrop": "Bu alıntıyı gönderme",
     "attach": "Fotoğraf veya video ekle",
+    "alongWith": "Birlikte gidenler",
+    "seeAlongWith": "Birlikte gidenleri gör",
     "filesHint": "En fazla {{images}} fotoğraf ({{imageMb}} MB) ve bir video ({{videoMb}} MB), {{days}} gün saklanır.",
     "removeFile": "{{name}} dosyasını kaldır",
     "uploading": "{{name}} gönderiliyor",

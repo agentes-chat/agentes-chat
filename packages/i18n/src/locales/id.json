@@ -17825,6 +17825,8 @@
     "aboutThis": "Tentang yang kamu klik",
     "aboutDrop": "Jangan kirim kutipan ini",
     "attach": "Lampirkan foto atau video",
+    "alongWith": "Yang ikut dikirim",
+    "seeAlongWith": "Lihat yang ikut dikirim",
     "filesHint": "Hingga {{images}} foto berukuran {{imageMb}} MB dan satu video {{videoMb}} MB, disimpan selama {{days}} hari.",
     "removeFile": "Hapus {{name}}",
     "uploading": "Mengirim {{name}}",

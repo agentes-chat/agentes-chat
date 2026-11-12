@@ -10,13 +10,14 @@ import {
   OFFER_FEEDBACK_TOOL,
   type PendingFeedbackOffer,
 } from "./feedback-offers";
+import { runFeedbackFacts, SEND_FEEDBACK_TOOL } from "./feedback-run-facts";
 import { getMembership } from "./organizations";
 import { personBehindCall } from "./requester";
 import type { ToolDefinition, ToolSource } from "./tools/types";
 
 const { agents, users } = schema;
 
-export const SEND_FEEDBACK_TOOL = "send_feedback";
+export { SEND_FEEDBACK_TOOL };
 
 const NOBODY =
   "Feedback goes in a person's name, and nobody asked for this one: nothing was sent. Say it in your reply instead.";
@@ -104,6 +105,8 @@ export function createFeedbackToolSource(deps: {
           facts: [
             ["Role", member.role],
             ["Written by", agent ? `${agent.name} (@${agent.handle}), an agent, when they asked` : "an agent"],
+            // The run's side, as the approval's card listed it (`approvalContext`).
+            ...(await runFeedbackFacts(ctx.db, { orgId: ctx.orgId, runId: ctx.runId, agentId: ctx.agentId })),
           ],
           version: deps.version,
         },
@@ -154,12 +157,15 @@ export function createFeedbackToolSource(deps: {
         userId: person,
       });
       if (refusal) return { content: refusal, isError: true };
+      // The run's side goes with the report, kept on the row: what the person reads is what is sent.
+      const facts = await runFeedbackFacts(ctx.db, { orgId: ctx.orgId, runId: ctx.runId, agentId: ctx.agentId });
       const pending: PendingFeedbackOffer = {
         view: {
           id: crypto.randomUUID(),
           forUserId: person,
           summary: summary.slice(0, FEEDBACK_SUMMARY_MAX),
           text: text.slice(0, FEEDBACK_MAX),
+          ...(facts.length > 0 ? { facts } : {}),
           state: "offered",
         },
       };
@@ -187,6 +193,7 @@ export function createFeedbackToolSource(deps: {
             agent,
             text: pending.view.text,
             how: "on its own; they chose to always send these",
+            ...(pending.view.facts ? { facts: pending.view.facts } : {}),
           });
         }
       }

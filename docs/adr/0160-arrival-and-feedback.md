@@ -1,6 +1,6 @@
 # 0160. The arrival after the onboarding, and feedback by email
 
-- Status: Accepted
+- Status: Accepted. Amended 2026-11-11: an agent's feedback carries the run's side, listed before it goes (§ Amendment at the end).
 - Date: 2026-11-09
 - Code: web `components/arrival/*` (`Arrival`, `BetaDialog`, `TeamScene`, `ConnectChoices`, `FeedbackDialog`,
   `FeedbackMark`), `components/ConnectAi.tsx` (`ConnectAiRequest.arrival`), `pages/OnboardingPage.tsx`
@@ -172,3 +172,17 @@ Someone on a self-hosted server opened Connect for the team's right hand, the on
 - The right hand alone is the narrow dialog too, named for it: opened for it (`agentId`), from its conversation, or as the only one left without an AI. It is everyone's to connect (ADR 0137 §11) and has no computer, so it is never "all agents". This supersedes "one agent alone (the right hand's own AI among them)" in the plain dialog's list above; the rest of that list stays.
 - A card already picked (`start`) opens on its steps for one agent as for the team, so the onboarding's AI step sends `start` for the right hand alone as well.
 - A plan whose program is switched off on a computer the person connected (`tool_off`, self-host) says what that means (the computer is connected, the program is switched off on it, and it can only be turned on there), then shows the way under the computer's name (`ToolOffSteps`): three plain lines for the app's three clicks (the icon by the clock, Preferences, the switch under Tools), what to look for in bold, the switch drawn at the end of the last one, and on a PC that the icon may be behind the taskbar's arrow. Lines between hairlines, nothing sunken: three small drawings side by side did not fit the narrow dialog. On a computer that may have no app, the command; when the page runs in the app on that very computer, one button to its Tools. The dialog says it waits and changes by itself, which it does, since a computer's switches come back as its own event. The key stays offered under it. The browser's steps on the agent's Work tab are unchanged.
+
+## Amendment (2026-11-11): an agent's feedback carries the run's side, and the person sees all of it first
+
+### Context
+
+§11 and §12 gave an agent's feedback its text alone, while the person's form carries the screen, the build and the app's last errors. Yet the agent is the one that saw the failure from inside: which of our tools broke and how, on what brain, model and computer. All of that reached whoever runs the server only as far as the agent wrote it in words, and the person approving it in their name couldn't see more than that text.
+
+### Decision
+
+1. **The run's side, from stored data** (`runFeedbackFacts`, no model call): the run's brain, the model that last answered with its provider (never an account or a key), the computer it ran on as its system and runner (never its name), the last three failures of the app's own tools as the tool and its error's first line (a connected app's failures stay out: their text is that app's data), and the run's id and start. `send_feedback` and `offer_feedback` add them to the email's facts, after the role and "Written by".
+2. **What the person reads is what goes.** `send_feedback`'s approval carries them (`ApprovalView.feedback`), read from the run as it will be sent; the card shows the words as its cover and the lines under "See what goes along", on the web, and as the request's rows on the phone. An offer keeps them on its row (`FeedbackOfferView.facts`, at most twelve, read back safely), opened with the report, and its email carries exactly those.
+3. **What stays.** Only with the person's approval or click, in their name, within their ten an hour. Nothing of the conversation beyond what the agent writes. The labels are the email's own, in English, for its reader.
+
+Proposed with two more parts that need an approval's decision to carry something (issue #153): the person's app adding the form's own facts at the click, and the agent's last screenshot as one unchecked box on the same card. They wait for that design.

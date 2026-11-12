@@ -30,6 +30,11 @@ export interface FeedbackOfferView {
   forUserId: string;
   summary: string;
   text: string;
+  /**
+   * What goes along with the text (`runFeedbackFacts`, as label and value), kept as the row shows it so the email
+   * carries exactly what the person read. Absent on offers made before.
+   */
+  facts?: [string, string][];
   state: FeedbackOfferState;
   /** Sent with the reply, without asking: they chose "Always send". */
   auto?: true;
@@ -48,17 +53,34 @@ export interface PendingFeedbackOffer {
  */
 export const APP_FAULT_HINT = `This looks like a fault of the app itself, not yours. If it got in the way of your answer, ${OFFER_FEEDBACK_TOOL} offers the person a report of it (a row under your reply); otherwise carry on.`;
 
+/** At most this many lines go along with an offer's report. */
+export const FEEDBACK_OFFER_FACTS = 12;
+
+/** Facts as label and value, read safely: two short strings each, at most `FEEDBACK_OFFER_FACTS`. */
+export function feedbackFactsOf(value: unknown): [string, string][] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (f): f is [string, string] =>
+        Array.isArray(f) && f.length === 2 && typeof f[0] === "string" && typeof f[1] === "string",
+    )
+    .slice(0, FEEDBACK_OFFER_FACTS)
+    .map(([k, v]) => [k.slice(0, 40), v.slice(0, 300)]);
+}
+
 /** A message's offer, read safely. */
 export function feedbackOfferOf(meta: unknown): FeedbackOfferView | null {
   const o = (meta as { feedbackOffer?: Partial<FeedbackOfferView> } | null | undefined)?.feedbackOffer;
   if (!o || typeof o.id !== "string" || typeof o.forUserId !== "string") return null;
   if (typeof o.summary !== "string" || typeof o.text !== "string") return null;
   const state: FeedbackOfferState = o.state === "sent" || o.state === "dismissed" ? o.state : "offered";
+  const facts = feedbackFactsOf(o.facts);
   return {
     id: o.id,
     forUserId: o.forUserId,
     summary: o.summary,
     text: o.text,
+    ...(facts.length > 0 ? { facts } : {}),
     state,
     ...(o.auto === true ? { auto: true as const } : {}),
     ...(typeof o.decidedAt === "string" ? { decidedAt: o.decidedAt } : {}),
@@ -126,6 +148,8 @@ export function agentFeedback(input: {
   text: string;
   /** How it came to be sent, after the agent's name in "Written by". */
   how: string;
+  /** What goes along, as the person read it (`runFeedbackFacts`). */
+  facts?: [string, string][];
 }): Feedback {
   const by = input.agent ? `${input.agent.name} (@${input.agent.handle}), an agent` : "an agent";
   return {
@@ -135,10 +159,7 @@ export function agentFeedback(input: {
     orgName: input.orgName,
     text: input.text.trim().slice(0, FEEDBACK_MAX),
     app: "agent",
-    facts: [
-      ["Role", input.role],
-      ["Written by", `${by}, ${input.how}`],
-    ],
+    facts: [["Role", input.role], ["Written by", `${by}, ${input.how}`], ...(input.facts ?? [])],
     version: input.version,
   };
 }
@@ -198,6 +219,7 @@ export async function decideFeedbackOffer(
       agent: await agentOf(db, input.orgId, message.authorAgentId),
       text: offer.text,
       how: "on its own; they read it and sent it",
+      ...(offer.facts ? { facts: offer.facts } : {}),
     });
   }
   const next: FeedbackOfferView = {

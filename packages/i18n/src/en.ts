@@ -18568,6 +18568,10 @@ export const en = {
     aboutThis: "About what you clicked",
     aboutDrop: "Don't send this excerpt",
     attach: "Add a photo or video",
+    /** Over the list of what a feedback an agent writes carries besides its text (the run it came from). */
+    alongWith: "What goes along",
+    /** On an agent's feedback card: opens that list before it is approved. */
+    seeAlongWith: "See what goes along",
     /** Beside Add a photo or video. */
     filesHint: "Up to {{images}} photos of {{imageMb}} MB and one video of {{videoMb}} MB, kept for {{days}} days.",
     removeFile: "Remove {{name}}",

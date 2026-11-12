@@ -17715,6 +17715,8 @@
     "aboutThis": "클릭한 항목에 대해",
     "aboutDrop": "이 발췌는 보내지 않기",
     "attach": "사진이나 동영상 첨부",
+    "alongWith": "함께 보내는 것",
+    "seeAlongWith": "함께 보내는 것 보기",
     "filesHint": "사진은 {{imageMb}} MB까지 {{images}}장, 동영상은 {{videoMb}} MB까지 1개. {{days}}일 동안 보관돼요.",
     "removeFile": "{{name}} 삭제",
     "uploading": "{{name}} 보내는 중",

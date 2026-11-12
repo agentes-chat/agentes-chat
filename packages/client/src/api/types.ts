@@ -115,6 +115,8 @@ export interface FeedbackOffer {
   summary: string;
   /** The report, as the email carries it. */
   text: string;
+  /** What goes along with it (the run it came from), as label and value: the row lists it, the email carries it. */
+  facts?: [string, string][];
   state: "offered" | "sent" | "dismissed";
   auto?: true;
   decidedAt?: string;
@@ -1944,6 +1946,8 @@ export interface Approval {
   connectorAccount?: string | null;
   /** The email itself, for mail drafts and sends; null for every other action. */
   email?: ApprovalEmail | null;
+  /** A feedback an agent sends: what its email carries besides the text, as label and value; null otherwise. */
+  feedback?: { facts: [string, string][] } | null;
   /** Why it asks (ADR 0053 §8): what the agent found and why this action. Shown above the action. */
   why?: string | null;
   /** Asked while nobody watched: by a routine (its name) or by an unattended run. Null: a person was there. */

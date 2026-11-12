@@ -326,6 +326,10 @@ html:not([data-pointer]) .ag-fb__more:focus-visible {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* What goes along, between the report and the note: 8 from the words above it. */
+.ag-fb__open .fb-facts {
+  margin-top: 8px;
+}
 .ag-fb__note {
   margin: 6px 0 0;
   font-size: 12.5px;

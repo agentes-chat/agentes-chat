@@ -18460,6 +18460,8 @@
     "aboutThis": "Over waar je op klikte",
     "aboutDrop": "Dit fragment niet versturen",
     "attach": "Foto of video toevoegen",
+    "alongWith": "Wat er meegaat",
+    "seeAlongWith": "Bekijk wat er meegaat",
     "filesHint": "Maximaal {{images}} foto's van {{imageMb}} MB en één video van {{videoMb}} MB, {{days}} dagen bewaard.",
     "removeFile": "{{name}} verwijderen",
     "uploading": "{{name}} wordt verstuurd",

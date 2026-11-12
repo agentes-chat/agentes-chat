@@ -17723,6 +17723,8 @@
     "aboutThis": "クリックした箇所について",
     "aboutDrop": "この抜粋は送らない",
     "attach": "写真や動画を添付",
+    "alongWith": "一緒に送られるもの",
+    "seeAlongWith": "一緒に送られるものを見る",
     "filesHint": "写真は{{imageMb}} MBまでを{{images}}枚、動画は{{videoMb}} MBまでを1本。{{days}}日間保管されます。",
     "removeFile": "{{name}}を削除",
     "uploading": "{{name}}を送信中",

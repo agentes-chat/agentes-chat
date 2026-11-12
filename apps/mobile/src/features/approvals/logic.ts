@@ -45,10 +45,11 @@ export function waitingApprovals(list: Approval[], now = Date.now()): Approval[]
  * (`via`: the connector and its account) first, then the exact values it runs with, in words and one level
  * into objects (the web's `approvalValues`: a tool run by name shows its arguments, not `name`). Only what
  * the request carries; nothing is made up. `label: null` is the "Por onde" row (its label is translated).
- * `long`: every value whole (the request's sheet); else values over 60 characters stay out (cards).
+ * `long`: every value whole (the request's sheet); else values over 60 characters stay out (cards). A feedback an
+ * agent sends adds what goes along with its text (ADR 0160 §11), each line as the email carries it.
  */
 export function approvalTable(
-  a: Pick<Approval, "params" | "connector" | "connectorAccount" | "email">,
+  a: Pick<Approval, "params" | "connector" | "connectorAccount" | "email" | "feedback">,
   max = 3,
   connectorName: (id: string) => string = (id) => id,
   long = false,
@@ -56,6 +57,7 @@ export function approvalTable(
   const via = a.connector ? [connectorName(a.connector), a.connectorAccount].filter(Boolean).join(" · ") : "";
   const rows: { label: string | null; value: string }[] = via ? [{ label: null, value: via }] : [];
   for (const [label, value] of approvalValues(a, { max, long })) rows.push({ label, value });
+  for (const [label, value] of a.feedback?.facts ?? []) rows.push({ label, value });
   return rows.slice(0, max);
 }
 

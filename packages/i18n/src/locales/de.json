@@ -18284,6 +18284,8 @@
     "aboutThis": "Zu dem, was du angeklickt hast",
     "aboutDrop": "Diesen Ausschnitt nicht senden",
     "attach": "Foto oder Video anhängen",
+    "alongWith": "Was mitgeht",
+    "seeAlongWith": "Ansehen, was mitgeht",
     "filesHint": "Bis zu {{images}} Fotos mit {{imageMb}} MB und ein Video mit {{videoMb}} MB, {{days}} Tage aufbewahrt.",
     "removeFile": "{{name}} entfernen",
     "uploading": "{{name}} wird gesendet",

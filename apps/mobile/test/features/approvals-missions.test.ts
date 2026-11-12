@@ -349,6 +349,25 @@ describe("the exact request", () => {
     expect(approvalTable(approval({ id: "b", params: { title: "Oi" } }))).toEqual([{ label: "Title", value: "Oi" }]);
   });
 
+  test("a feedback an agent sends: its words, then what goes along with them, as its email carries it", () => {
+    const a = approval({
+      id: "fb",
+      tool: "send_feedback",
+      params: { text: "A página nunca abriu." },
+      feedback: {
+        facts: [
+          ["Model", "claude-sonnet-5-5 (anthropic)"],
+          ["Tool error", "browser_do: closed"],
+        ],
+      },
+    });
+    expect(approvalTable(a, Number.POSITIVE_INFINITY, (id) => id, true)).toEqual([
+      { label: "Text", value: "A página nunca abriu." },
+      { label: "Model", value: "claude-sonnet-5-5 (anthropic)" },
+      { label: "Tool error", value: "browser_do: closed" },
+    ]);
+  });
+
   test("a tool run by name: its arguments in words, without the name; objects one level in", () => {
     const a = approval({
       id: "s",

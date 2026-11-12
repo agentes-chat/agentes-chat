@@ -3,6 +3,7 @@ import { feedbackOfferFor } from "@agenteschat/client/lib/feedback-offer";
 import { EventPillAction, Icon } from "@agenteschat/ui";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { FeedbackFacts } from "./FeedbackFacts";
 import { useOrg } from "./org-context";
 import { RequestDone } from "./RequestCard";
 import "./agent-actions.css";
@@ -32,6 +33,7 @@ export function FeedbackOfferRow({ message }: { message: Message }) {
   const report = (
     <>
       <p className="ag-fb__text">{offer.text}</p>
+      <FeedbackFacts facts={offer.facts} />
       <p className="ag-fb__note">{t("feedback.offer.answer")}</p>
     </>
   );

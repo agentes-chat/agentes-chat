@@ -18784,6 +18784,8 @@
     "aboutThis": "Sobre lo que pulsaste",
     "aboutDrop": "No enviar este fragmento",
     "attach": "Adjuntar foto o video",
+    "alongWith": "Lo que va con él",
+    "seeAlongWith": "Ver lo que va con él",
     "filesHint": "Hasta {{images}} fotos de {{imageMb}} MB y un video de {{videoMb}} MB, guardados durante {{days}} días.",
     "removeFile": "Quitar {{name}}",
     "uploading": "Enviando {{name}}",

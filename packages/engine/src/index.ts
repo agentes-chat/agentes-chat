@@ -123,6 +123,7 @@ export * from "./executor";
 export * from "./exports";
 export * from "./feedback";
 export * from "./feedback-offers";
+export { FEEDBACK_TOOL_ERRORS, runFeedbackFacts } from "./feedback-run-facts";
 export * from "./feedback-tools";
 export * from "./file-pulls";
 export * from "./follow-through";

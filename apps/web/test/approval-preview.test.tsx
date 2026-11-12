@@ -56,6 +56,36 @@ describe("an approval's preview: what will happen, drawn as an attachment's cove
     expect(card.querySelector(".rq__details .email-letter")).not.toBeNull();
   });
 
+  test("a feedback an agent sends: its words as the cover, and all that goes with it before it is approved", async () => {
+    const card = await openCard((a) => {
+      a.tool = "send_feedback";
+      a.title = "Send feedback to whoever runs this server";
+      // One of our own tools: no connector, no scope.
+      a.connector = null;
+      a.connectorAccount = null;
+      a.scope = "";
+      a.params = { text: "A página do relatório nunca abriu." };
+      // As the server writes it (`send_feedback` describes a call by its text).
+      a.detail = "A página do relatório nunca abriu.";
+      a.feedback = {
+        facts: [
+          ["Model", "claude-sonnet-5-5 (anthropic)"],
+          ["Tool error", "browser_do: The browser closed"],
+        ],
+      };
+    });
+    const preview = card.querySelector(".rq__preview") as HTMLElement;
+    expect(preview.querySelector(".rq-mail__body")?.textContent).toBe("A página do relatório nunca abriu.");
+    expect(card.querySelector(".rq__well small")).toBeNull();
+    // "Ver o que vai junto" lists every line its email carries besides the words.
+    await click(within(card).getByRole("button", { name: "Ver o que vai junto" }));
+    const along = within(card).getByRole("region", { name: "O que vai junto" });
+    expect([...along.querySelectorAll(".fb-facts__row")].map((r) => r.textContent)).toEqual([
+      "Modelclaude-sonnet-5-5 (anthropic)",
+      "Tool errorbrowser_do: The browser closed",
+    ]);
+  });
+
   test("an action's values stay on its line: no preview (their names are the tool's own)", async () => {
     const card = await openCard((a) => {
       a.params = { repo: "agentes-chat/app", pull_number: 42 };

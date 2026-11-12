@@ -91,6 +91,14 @@ export const Approval = z
     email: ApprovalEmail.nullable().openapi({
       description: "The email itself, for mail drafts and sends (From, To, Subject, text); null otherwise.",
     }),
+    feedback: z
+      .object({ facts: z.array(z.tuple([z.string(), z.string()])) })
+      .nullable()
+      .optional()
+      .openapi({
+        description:
+          "A feedback an agent sends (send_feedback): what its email carries besides the text, as label and value; null otherwise.",
+      }),
     why: z
       .string()
       .nullable()
