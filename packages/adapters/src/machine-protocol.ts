@@ -711,6 +711,11 @@ export interface CliInstall {
  * one process per turn, refused in `chat` because the CLI has no tool allow/deny list), `account` takes `kind:
  * "muse"` (a Meta API key in the account's own config folder), `hello.executors.muse` reports the CLI, and
  * `access.tools.muse` turns it on or off.
+ * From this protocol on (ADR 0174): the Muse Code brain. `brain.turn` takes `kind: "muse"` (a `muse serve` host
+ * driven over its session protocol, refused in `chat` because the CLI has no tool allow/deny list), `account` takes
+ * `kind: "muse"` (a device-code sign-in in the account's own config folder, `META_API_KEY` kept out of the host's
+ * environment so a key cannot answer for the person), `hello.executors.muse` reports the CLI, and `access.tools.muse`
+ * turns it on or off.
  */
 export const MUSE_PROTOCOL = 67;
 

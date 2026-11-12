@@ -69,6 +69,10 @@ too: `-c permissions.default_profile="read-only"`, never a bare string.
 
 ### One host per session, never per turn
 
+**Chosen; the first implementation is one host per turn** (the session id is still kept and resumed, so the thread
+survives across hosts). The rest of this section is what moving to a held host costs and why it is the shape to
+grow into.
+
 Neither product that integrated this opens a process per turn, and their code says so plainly: OpenBot keeps one host
 per agent and multiplexes every session over it, guarding teardown with `canReleaseProcess` — false while any thread
 has a turn — so `releaseThread` answers `museBusy` instead of killing a live one. OpenMausBot keeps a host on the
@@ -124,8 +128,9 @@ always: the runner owns the version, and Muse upgrades itself otherwise. Stored 
   `--contributor-mode off` (or `MUSE_CONTRIBUTOR_MODE=0`), and the switch is stated in the UI as ADR 0142 §7 does,
   rather than living only in the CLI's docs.
 - **Four background observer agents are on by default** and make **their own model calls** — the docs say they add
-  token usage, so the person's allowance pays for advice nobody read. They come off in the account's settings, whose
-  document must carry `schema_version: 1` or every command fails.
+  token usage, so the person's allowance pays for advice nobody read. The account's settings document exists and
+  carries `schema_version: 1`, but the key that turns the observers off is not written yet: that part of the claim is
+  still open.
 
 ## Consequences
 
