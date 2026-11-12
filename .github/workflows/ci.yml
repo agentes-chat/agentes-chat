@@ -726,6 +726,40 @@ jobs:
           fi
           docker buildx imagetools inspect "$(jq -r '.tags[0]' <<<"$META")"
 
+  # Linked repositories do not make existing GHCR packages public. Check what self-hosters can pull
+  # without signing in after publishing (#122, #127), so a private package cannot pass unnoticed.
+  public-pulls:
+    name: Published images allow anonymous pulls
+    needs: publish
+    if: ${{ needs.publish.result == 'success' }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Check public registry access
+        env:
+          IMAGE_TAG: ${{ github.ref_type == 'tag' && 'latest' || 'edge' }}
+        run: |
+          set -euo pipefail
+          for image in "$APP_IMAGE" "$BACKUP_IMAGE" "$SPEECH_IMAGE"; do
+            reference="$image:$IMAGE_TAG"
+            echo "Checking anonymous access to $reference"
+            accessible=false
+            for attempt in {1..6}; do
+              if docker buildx imagetools inspect "$reference" >/dev/null 2>"$RUNNER_TEMP/ghcr-inspect-error"; then
+                accessible=true
+                break
+              fi
+              if ((attempt < 6)); then sleep 5; fi
+            done
+            if [[ "$accessible" != true ]]; then
+              echo "::error title=GHCR image is not publicly readable::Anonymous access failed for $reference. Confirm that the package exists, this tag was published, and its visibility is Public."
+              cat "$RUNNER_TEMP/ghcr-inspect-error"
+              exit 1
+            fi
+          done
+
   # A version tag's GitHub release carries that version's install.sh, from a green run only, so
   # `…/releases/download/v1.2.3/install.sh` is an installer the tests passed.
   release-install:
