@@ -720,6 +720,7 @@
       "steps": {
         "name": "Nazwa przestrzeni roboczej",
         "business": "Czym się zajmujecie",
+        "you": "O tobie",
         "team": "Twój zespół",
         "plan": "Włącz zespół",
         "ai": "Połącz AI",
@@ -738,8 +739,8 @@
         "teamMadePersonal": "Twoi agenci już tu są. Ruszamy dalej, kiedy chcesz.",
         "plan": "Po planie zostaje tylko podłączyć AI. Pokażę ci, gdzie.",
         "planThen": "Gdy plan będzie włączony, na następnym ekranie połączysz swoją AI.",
-        "area": "Jeszcze jedno pytanie przed zespołem.",
-        "areaPersonal": "Jeszcze jedno pytanie przed twoimi agentami.",
+        "you": "Zanim zajmiemy się zespołem, trochę o tobie.",
+        "youPersonal": "Zanim zajmiemy się agentami, trochę o tobie.",
         "ask": "Masz już zespół gdzie indziej? Przeniosę go tu w całości.",
         "start": "Mam zespół gotowy do tego, czym się zajmujecie. Albo zaczynamy we dwoje.",
         "askPersonal": "Używasz już agentów gdzie indziej? Przeniosę ich tu wszystkich.",
@@ -757,10 +758,18 @@
         "people": "Teraz ludzie. Podaj mi ich adresy e-mail, a wyślę zaproszenia.",
         "peopleLink": "Teraz ludzie. Wyślij im link, a pokażę ci każdą prośbę."
       },
+      "you": {
+        "title": "Teraz o tobie",
+        "lead": "Twoje imię i zdjęcie widzą zespół i agenci.",
+        "leadPersonal": "Twoje imię i zdjęcie widzą twoi agenci.",
+        "photo": "Twoje zdjęcie",
+        "build": "Stwórz awatar",
+        "edit": "Edytuj awatar",
+        "upload": "Prześlij zdjęcie",
+        "area": "Czym się zajmujesz?",
+        "areaHint": "Opcjonalnie. Tylko po to, żebyśmy wiedzieli, kto używa agentes.chat."
+      },
       "area": {
-        "title": "A ty, czym się zajmujesz?",
-        "lead": "Tylko po to, żebyśmy wiedzieli, kto używa agentes.chat.",
-        "skip": "Pomiń ten krok",
         "options": {
           "dev": "Programowanie",
           "marketing": "Marketing",

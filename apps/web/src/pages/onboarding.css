@@ -889,3 +889,31 @@ html:not([data-pointer]) .onb__logo:focus-visible {
     animation: none;
   }
 }
+
+/*
+ * The person's own step (ADR 0162, amended 2026-11-12): their face large, its label and its two ways in beside it on
+ * its first line, then the name and the area as the step's fields.
+ */
+.onb-you {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.onb-you__face.ac-avatar {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  font-size: 34px;
+}
+.onb-you__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-top: var(--space-3);
+}
+.onb-you__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

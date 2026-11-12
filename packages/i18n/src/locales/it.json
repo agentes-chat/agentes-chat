@@ -710,6 +710,7 @@
       "steps": {
         "name": "Nome dello spazio di lavoro",
         "business": "Cosa fate",
+        "you": "Su di te",
         "team": "Il tuo team",
         "plan": "Attiva il team",
         "ai": "Collega un'IA",
@@ -728,8 +729,8 @@
         "teamMadePersonal": "I tuoi agenti sono già qui. Andiamo avanti quando vuoi.",
         "plan": "Dopo il piano, manca solo collegare un'IA. Ti mostro dove.",
         "planThen": "Con il piano attivo, la prossima schermata è quella per collegare la tua IA.",
-        "area": "Un'ultima domanda prima del team.",
-        "areaPersonal": "Un'ultima domanda prima dei tuoi agenti.",
+        "you": "Prima del team, un po' su di te.",
+        "youPersonal": "Prima dei tuoi agenti, un po' su di te.",
         "ask": "Hai già un team da un'altra parte? Lo porto qui tutto intero.",
         "start": "Ho un team pronto per quello che fate. Oppure iniziamo noi due.",
         "askPersonal": "Usi già agenti da un'altra parte? Li porto tutti qui.",
@@ -747,10 +748,18 @@
         "people": "Ora le persone. Dammi le loro email e mando gli inviti.",
         "peopleLink": "Ora le persone. Mandagli il link e ti mostro ogni richiesta."
       },
+      "you": {
+        "title": "Ora, parliamo di te",
+        "lead": "Il tuo nome e la tua foto li vedono il team e gli agenti.",
+        "leadPersonal": "Il tuo nome e la tua foto li vedono i tuoi agenti.",
+        "photo": "La tua foto",
+        "build": "Crea un avatar",
+        "edit": "Modifica avatar",
+        "upload": "Carica una foto",
+        "area": "Di cosa ti occupi?",
+        "areaHint": "Facoltativo. Solo per capire chi usa agentes.chat."
+      },
       "area": {
-        "title": "E tu, di cosa ti occupi?",
-        "lead": "Solo per capire chi usa agentes.chat.",
-        "skip": "Salta questo passaggio",
         "options": {
           "dev": "Sviluppo",
           "marketing": "Marketing",

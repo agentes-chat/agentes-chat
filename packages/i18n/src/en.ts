@@ -725,6 +725,8 @@ export const en = {
       steps: {
         name: "Workspace name",
         business: "What you do",
+        /** The person's own step: their photo, their name and their area. */
+        you: "About you",
         team: "Your team",
         plan: "Turn the team on",
         /** The rail's last step: connecting the AI the team thinks with. */
@@ -749,8 +751,8 @@ export const en = {
         /** On the plan step, with the AI step right after it. */
         planThen: "Once the plan is on, the next screen is where you connect your AI.",
         /** The person's own area, asked once: on a team's rail after what it does, on a personal one after its purpose. */
-        area: "One last thing before the team.",
-        areaPersonal: "One last thing before your agents.",
+        you: "Before the team, a little about you.",
+        youPersonal: "Before your agents, a little about you.",
         /** The team step's question: does the person already have agents in another app. */
         ask: "Already have a team somewhere else? I'll bring all of it here.",
         /** How a team with no agents yet starts: the template for what it does, or just the two of them. */
@@ -782,10 +784,19 @@ export const en = {
        * The person's own area (about them, never the workspace), asked once per account: on a team's rail after what
        * it does, on a personal one after what it is for. Optional; the operator API reads it.
        */
+      /** The person's own step (ADR 0162, amended 2026-11-12): their photo, their name and their area. */
+      you: {
+        title: "Now, about you",
+        lead: "Your name and photo show to the team and to the agents.",
+        leadPersonal: "Your name and photo show to your agents.",
+        photo: "Your photo",
+        build: "Build an avatar",
+        edit: "Edit avatar",
+        upload: "Upload a photo",
+        area: "What do you work on?",
+        areaHint: "Optional. Just so we know who uses agentes.chat.",
+      },
       area: {
-        title: "And you, what do you work on?",
-        lead: "Just so we know who uses agentes.chat.",
-        skip: "Skip this step",
         options: {
           dev: "Development",
           marketing: "Marketing",

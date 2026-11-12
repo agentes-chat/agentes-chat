@@ -711,6 +711,7 @@ export const ptBR = {
       steps: {
         name: "Nome do workspace",
         business: "O que vocês fazem",
+        you: "Sobre você",
         team: "Seu time",
         plan: "Ligar o time",
         ai: "Conectar uma IA",
@@ -730,8 +731,8 @@ export const ptBR = {
         teamMadePersonal: "Os seus agentes já estão aqui. Quando quiser, a gente segue.",
         plan: "Depois do plano, falta só conectar uma IA. Eu mostro onde.",
         planThen: "Com o plano ligado, a próxima tela já é a de conectar a sua IA.",
-        area: "Última curiosidade antes do time.",
-        areaPersonal: "Última curiosidade antes dos seus agentes.",
+        you: "Antes do time, um pouco sobre você.",
+        youPersonal: "Antes dos seus agentes, um pouco sobre você.",
         ask: "Já tem um time em outro lugar? Eu trago ele inteiro para cá.",
         start: "Tenho um time pronto para o que vocês fazem. Ou a gente começa só nós dois.",
         askPersonal: "Já usa agentes em outro lugar? Eu trago todos para cá.",
@@ -749,10 +750,19 @@ export const ptBR = {
         people: "Agora as pessoas. Me passa os e-mails que eu mando os convites.",
         peopleLink: "Agora as pessoas. Mande o link e eu te mostro cada pedido.",
       },
+      /** The person's own step (ADR 0162, amended 2026-11-12): their photo, their name and their area. */
+      you: {
+        title: "Agora, sobre você",
+        lead: "Seu nome e sua foto aparecem para o time e para os agentes.",
+        leadPersonal: "Seu nome e sua foto aparecem para os seus agentes.",
+        photo: "Sua foto",
+        build: "Criar um avatar",
+        edit: "Editar avatar",
+        upload: "Enviar uma foto",
+        area: "Você cuida de quê?",
+        areaHint: "Opcional. Só para a gente entender quem usa o agentes.chat.",
+      },
       area: {
-        title: "E você, cuida de quê?",
-        lead: "Só para a gente entender quem usa o agentes.chat.",
-        skip: "Pular esta etapa",
         options: {
           dev: "Desenvolvimento",
           marketing: "Marketing",

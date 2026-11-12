@@ -1733,6 +1733,9 @@
   "onboarding.flow.steps.business": {
     "value": "What you do"
   },
+  "onboarding.flow.steps.you": {
+    "value": "About you"
+  },
   "onboarding.flow.steps.team": {
     "value": "Your team"
   },
@@ -1781,11 +1784,11 @@
   "onboarding.flow.lodi.planThen": {
     "value": "Once the plan is on, the next screen is where you connect your AI."
   },
-  "onboarding.flow.lodi.area": {
-    "value": "One last thing before the team."
+  "onboarding.flow.lodi.you": {
+    "value": "Before the team, a little about you."
   },
-  "onboarding.flow.lodi.areaPersonal": {
-    "value": "One last thing before your agents."
+  "onboarding.flow.lodi.youPersonal": {
+    "value": "Before your agents, a little about you."
   },
   "onboarding.flow.lodi.ask": {
     "value": "Already have a team somewhere else? I'll bring all of it here."
@@ -1835,14 +1838,32 @@
   "onboarding.flow.lodi.peopleLink": {
     "value": "Now the people. Send them the link and I'll show you each request."
   },
-  "onboarding.flow.area.title": {
-    "value": "And you, what do you work on?"
+  "onboarding.flow.you.title": {
+    "value": "Now, about you"
   },
-  "onboarding.flow.area.lead": {
-    "value": "Just so we know who uses agentes.chat."
+  "onboarding.flow.you.lead": {
+    "value": "Your name and photo show to the team and to the agents."
   },
-  "onboarding.flow.area.skip": {
-    "value": "Skip this step"
+  "onboarding.flow.you.leadPersonal": {
+    "value": "Your name and photo show to your agents."
+  },
+  "onboarding.flow.you.photo": {
+    "value": "Your photo"
+  },
+  "onboarding.flow.you.build": {
+    "value": "Build an avatar"
+  },
+  "onboarding.flow.you.edit": {
+    "value": "Edit avatar"
+  },
+  "onboarding.flow.you.upload": {
+    "value": "Upload a photo"
+  },
+  "onboarding.flow.you.area": {
+    "value": "What do you work on?"
+  },
+  "onboarding.flow.you.areaHint": {
+    "value": "Optional. Just so we know who uses agentes.chat."
   },
   "onboarding.flow.area.options.dev": {
     "value": "Development"

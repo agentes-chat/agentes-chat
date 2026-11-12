@@ -700,6 +700,7 @@
       "steps": {
         "name": "Naam van de werkruimte",
         "business": "Wat jullie doen",
+        "you": "Over jou",
         "team": "Je team",
         "plan": "Team aanzetten",
         "ai": "Een AI koppelen",
@@ -718,8 +719,8 @@
         "teamMadePersonal": "Je agents zijn er al. We gaan verder wanneer je wilt.",
         "plan": "Na het abonnement hoef je alleen nog een AI te koppelen. Ik laat je zien waar.",
         "planThen": "Zodra het abonnement aanstaat, koppel je op het volgende scherm je AI.",
-        "area": "Nog één laatste vraag voor het team.",
-        "areaPersonal": "Nog één laatste vraag voor je agents.",
+        "you": "Voor het team, eerst iets over jou.",
+        "youPersonal": "Voor je agents, eerst iets over jou.",
         "ask": "Heb je al een team ergens anders? Ik haal het in zijn geheel hierheen.",
         "start": "Ik heb een team klaar voor wat jullie doen. Of we beginnen met z'n tweeën.",
         "askPersonal": "Gebruik je al agents ergens anders? Ik haal ze allemaal hierheen.",
@@ -737,10 +738,18 @@
         "people": "Nu de mensen. Geef me hun e-mailadressen en ik stuur de uitnodigingen.",
         "peopleLink": "Nu de mensen. Stuur ze de link en ik laat je elk verzoek zien."
       },
+      "you": {
+        "title": "Nu over jou",
+        "lead": "Je naam en je foto zijn zichtbaar voor het team en de agents.",
+        "leadPersonal": "Je naam en je foto zijn zichtbaar voor je agents.",
+        "photo": "Je foto",
+        "build": "Avatar maken",
+        "edit": "Avatar bewerken",
+        "upload": "Foto uploaden",
+        "area": "Waar werk je aan?",
+        "areaHint": "Optioneel. Alleen zodat we weten wie agentes.chat gebruikt."
+      },
       "area": {
-        "title": "En jij, waar werk je aan?",
-        "lead": "Alleen zodat we weten wie agentes.chat gebruikt.",
-        "skip": "Deze stap overslaan",
         "options": {
           "dev": "Ontwikkeling",
           "marketing": "Marketing",

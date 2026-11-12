@@ -700,6 +700,7 @@
       "steps": {
         "name": "Çalışma alanı adı",
         "business": "Ne yapıyorsunuz",
+        "you": "Hakkında",
         "team": "Ekibin",
         "plan": "Ekibi başlat",
         "ai": "Yapay zeka bağla",
@@ -718,8 +719,8 @@
         "teamMadePersonal": "Ajanlarınız zaten burada. Hazır olduğunuzda devam ederiz.",
         "plan": "Plandan sonra sadece bir yapay zeka bağlamak kalıyor. Nerede olduğunu gösteririm.",
         "planThen": "Plan başlayınca sıradaki ekranda yapay zekanı bağlayacaksın.",
-        "area": "Ekipten önce son bir soru.",
-        "areaPersonal": "Ajanlarından önce son bir soru.",
+        "you": "Ekipten önce biraz senden bahsedelim.",
+        "youPersonal": "Ajanlarından önce biraz senden bahsedelim.",
         "ask": "Başka bir yerde zaten ekibin mi var? Hepsini buraya getiririm.",
         "start": "Yaptığınız işe uygun hazır bir ekibim var. Ya da sadece ikimiz başlarız.",
         "askPersonal": "Başka bir yerde zaten ajan mı kullanıyorsun? Hepsini buraya getiririm.",
@@ -737,10 +738,18 @@
         "people": "Şimdi sıra kişilerde. E-postalarını bana ver, davetleri göndereyim.",
         "peopleLink": "Şimdi sıra kişilerde. Onlara bağlantıyı gönder, her isteği sana göstereyim."
       },
+      "you": {
+        "title": "Şimdi sen",
+        "lead": "Adın ve fotoğrafın ekibe ve ajanlara görünür.",
+        "leadPersonal": "Adın ve fotoğrafın ajanlarına görünür.",
+        "photo": "Fotoğrafın",
+        "build": "Avatar oluştur",
+        "edit": "Avatarı düzenle",
+        "upload": "Fotoğraf yükle",
+        "area": "Ne iş yapıyorsun?",
+        "areaHint": "İsteğe bağlı. Sadece agentes.chat'i kimlerin kullandığını anlamak için."
+      },
       "area": {
-        "title": "Peki sen, ne iş yapıyorsun?",
-        "lead": "Sadece agentes.chat'i kimlerin kullandığını anlamak için.",
-        "skip": "Bu adımı atla",
         "options": {
           "dev": "Geliştirme",
           "marketing": "Pazarlama",
