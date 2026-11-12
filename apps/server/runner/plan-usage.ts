@@ -377,8 +377,8 @@ export const CLAUDE_PROBE_ARGS = [
   "--output-format",
   "stream-json",
   "--verbose",
-  "--setting-sources",
-  "",
+  // One argument, so no shell or wrapper on the way can drop its empty value (see `claudeBrainArgs`).
+  "--setting-sources=",
   "--strict-mcp-config",
   "--no-session-persistence",
 ];

@@ -942,7 +942,9 @@ export function claudeBrainArgs(l: ClaudeLaunch): string[] {
     ...(l.mcpConfigFile ? ["--allowedTools", "mcp__agentes"] : []),
     ...(l.promptTool && l.mcpConfigFile ? ["--permission-prompt-tool", PERMISSION_PROMPT_TOOL] : []),
     ...(l.addDirs ?? []).flatMap((d) => ["--add-dir", d]),
-    ...(l.settingSources !== undefined ? ["--setting-sources", l.settingSources] : []),
+    // One argument: an empty value on its own was dropped by a shell or wrapper on the way, and the CLI then read
+    // the next flag as its value ("Invalid setting source: --tools").
+    ...(l.settingSources !== undefined ? [`--setting-sources=${l.settingSources}`] : []),
     ...(l.builtinTools ? ["--tools", l.builtinTools.join(",")] : []),
     ...(l.disallowedTools?.length ? ["--disallowedTools", l.disallowedTools.join(",")] : []),
     ...(l.noSlashCommands ? ["--disable-slash-commands", "--no-chrome"] : []),
@@ -1030,7 +1032,7 @@ export class ClaudeProcess {
     token?: string,
   ) {
     // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, cmd.exe
-    // with every argument quoted (an empty `--setting-sources` stays one).
+    // with every argument quoted (an empty one stays one).
     const run = cliSpawn(command.length ? command : ["claude"], args, env.PATH);
     this.child = start(run.file, run.args, {
       cwd,
