@@ -55,7 +55,8 @@ export interface MachineExecutors {
   grok?: { version: string; models?: { id: string; label?: string }[] };
   /** Google's Antigravity CLI (protocol 44, ADR 0143), and the models it lists. */
   antigravity?: { version: string; models?: { id: string; label?: string }[] };
-  muse?: { version: string };
+  /** Meta's Muse Code (protocol 59, ADR 0174), and the models its MSP host's `model/list` returns. */
+  muse?: { version: string; models?: { id: string; label?: string }[] };
   /** A CLI that is there and can't start (`--version` keeps failing), with its own error line; `git_missing`: see `CLI_GIT_MISSING`. */
   broken?: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse", string>>;
   /** `hello.browser` (ADR 0040): whether the agent browser can run there; absent = not reported. */

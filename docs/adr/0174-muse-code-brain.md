@@ -48,7 +48,10 @@ machine like the others.
 the runner. The host is spawned by the runner like every other brain (`scope-gate`), and only the framing is taken
 from the SDK — OpenMausBot's `stdioTransport` is the model for that.
 
-Arguments: `serve --trust-workspace`, plus `--disable-sandbox` at the `yolo` level and nothing else. The sandbox is a
+Arguments: `serve`, plus `--disable-sandbox` at the `yolo` level and nothing else. No `--trust-workspace`: measured
+against 1.4.18, the flag alone loads nothing (the workspace only loads when a session declares `workspaceRoots`, which
+this brain does not), and with a root declared it is what makes a cloned repo's `.muse/hooks.json` run a command as the
+host itself, outside the shell sandbox. The sandbox is a
 host-construction decision the wire cannot change ("neither is negotiable over the wire"); the approval mode is the
 other way round — "it is selected on the wire, so there is no approval flag here" — so a level nobody answers needs `allowAll`
 (a value the wire has; `never` is not one), and `promptUnmatched` is for when approvals are wired.
@@ -142,7 +145,8 @@ always: the runner owns the version, and Muse upgrades itself otherwise. Stored 
 - **The installer does not pin.** It writes a launcher that upgrades itself, so a version can change under a running
   parser: the image pins the binary and every host carries `MUSE_NO_AUTO_UPDATE=1`.
 - **Hooks run outside the sandbox.** A trusted workspace's `.muse/hooks.json` executes through the shell with only a
-  cleared environment, so the account's settings keep `hooks={}` and `managed_hooks_path=null`.
+  cleared environment. Two guards: the account's settings keep `hooks={}` and `managed_hooks_path=null`, and the host
+  is started without `--trust-workspace`, so nothing of a cloned repo runs today.
 - **`mode: required` on our own MCP server aborts the run** when the bridge does not come up, which is what we want
   for the agent's tools — but it also means a bridge failure reads as a Muse failure, so the message has to say so.
 - **`muse usage` answers without a turn** (window, weekly use, reset, tier, since 1.4.13): the plan figures come from
