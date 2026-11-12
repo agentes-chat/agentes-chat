@@ -2,6 +2,7 @@ import { modelInfo } from "@agenteschat/providers";
 import { cutText } from "./format";
 import type { ModelGateway } from "./gateway";
 import { callJev, type JevKeySource } from "./jev-key";
+import { type JevProviderProfile, jevReportedCostNanoUsd, resolveJevProvider } from "./jev-provider";
 import { jevCostNanoUsd } from "./router-jev";
 
 /**
@@ -124,6 +125,7 @@ export function createJevJudge(options: {
   gateway: Pick<ModelGateway, "recordExternalUsage">;
   baseURL?: string;
   model?: string;
+  profile?: JevProviderProfile;
   timeoutMs?: number;
   /** For images and `box` (`jev-preview` by default: images are a preview feature there). */
   visionModel?: string;
@@ -131,11 +133,19 @@ export function createJevJudge(options: {
   visionTimeoutMs?: number;
   fetch?: typeof fetch;
 }): Judge {
+  const profile = options.profile ?? resolveJevProvider();
   return {
     name: "jev",
     async ask(request) {
       const vision = judgeSeesImages(request);
-      const model = vision ? (options.visionModel ?? "jev-preview") : (options.model ?? "jev-latest");
+      if (vision && !profile.supportsVision)
+        throw new Error(`${profile.displayName} Jev: images and Box questions are not enabled`);
+      const model =
+        profile.provider === "opencode"
+          ? profile.model
+          : vision
+            ? (options.visionModel ?? "jev-preview")
+            : (options.model ?? profile.model);
       const assets = Object.fromEntries(
         Object.entries(request.images ?? {}).map(([key, image]) => [
           key,
@@ -145,10 +155,11 @@ export function createJevJudge(options: {
       const body = await callJev<{
         model?: string;
         answers?: Record<string, JudgeAnswer>;
-        usage?: { input_tokens?: number; output_tokens?: number };
+        usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
       }>(options.key, {
         fetch: options.fetch,
         baseURL: options.baseURL,
+        profile,
         // Images and Box questions are off unless asked for on each request.
         headers: vision ? { "TypeSafe-Danger-Zone-Images": "true" } : undefined,
         body: {
@@ -161,7 +172,7 @@ export function createJevJudge(options: {
           ? (options.visionTimeoutMs ?? Math.max(6000, options.timeoutMs ?? 0))
           : (request.timeoutMs ?? options.timeoutMs ?? 2000),
       }).catch((error: unknown) => {
-        throw withJudgeCall(error, model, "typesafe");
+        throw withJudgeCall(error, model, profile.provider);
       });
       const inputTokens = body.usage?.input_tokens ?? 0;
       await options.gateway
@@ -170,11 +181,12 @@ export function createJevJudge(options: {
           agentId: request.agentId,
           runId: request.runId,
           kind: "router",
-          provider: "typesafe",
+          provider: profile.provider,
           model: body.model ?? model,
           inputTokens,
           outputTokens: body.usage?.output_tokens ?? 0,
-          costNanoUsd: jevCostNanoUsd(inputTokens),
+          costNanoUsd:
+            profile.provider === "opencode" ? jevReportedCostNanoUsd(body.usage) : jevCostNanoUsd(inputTokens),
         })
         .catch(() => {});
       const out: Record<string, JudgeAnswer> = {};

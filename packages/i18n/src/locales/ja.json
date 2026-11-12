@@ -9150,6 +9150,15 @@
     "discard": "破棄"
   },
   "jev": {
+    "opencode": {
+      "about": "Jev は OpenCode 経由ですばやく判断します。この連携はテキストのみを使い、画像の判定は無効です。",
+      "lead": "{{model}} · OpenCode 経由のテキスト判断。",
+      "serverConfigured": "サーバーで設定済みです。",
+      "serverMissing": "このサーバーの設定で OpenCode キーを設定してください。",
+      "envInvalid": "OpenCode キーが拒否されたか、有効期限が切れています。このサーバーの設定で更新してください。",
+      "unavailable": "OpenCode で Jev が有効になっていません。このサーバーの設定でアクセスを確認してください。",
+      "unavailableState": "利用できません"
+    },
     "title": "Jev",
     "about": "TypeSafeの高速モデルで、すばやい判断のために作られています。agentes.chatは、誰が返信するかといった小さな質問をJevに尋ねます。料金はTypeSafeに直接お支払いください。",
     "lead": "エージェントがチームとして働けるよう手助けします。",

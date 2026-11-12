@@ -9721,6 +9721,16 @@ export const ptBR = {
   },
   jev: {
     title: "Jev",
+    opencode: {
+      about:
+        "O Jev faz decisões rápidas pelo OpenCode. Esta integração usa apenas texto. Os julgamentos sobre imagens ficam desativados.",
+      lead: "{{model}} · Decisões por texto pelo OpenCode.",
+      serverConfigured: "Configurado no servidor.",
+      serverMissing: "Configure a chave do OpenCode nas configurações deste servidor.",
+      envInvalid: "A chave do OpenCode foi recusada ou expirou. Atualize-a nas configurações deste servidor.",
+      unavailable: "O OpenCode não liberou o Jev. Confira o acesso nas configurações deste servidor.",
+      unavailableState: "Indisponível",
+    },
     about:
       "Um modelo rápido da TypeSafe, feito para decisões rápidas. O agentes.chat faz perguntas pequenas a ele, como quem deve responder. Você paga direto à TypeSafe.",
     lead: "Ajuda os agentes a trabalhar em equipe.",

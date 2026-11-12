@@ -10175,6 +10175,15 @@
     "discard": "Odrzuć"
   },
   "jev": {
+    "opencode": {
+      "about": "Jev podejmuje szybkie decyzje przez OpenCode. Ta integracja używa tylko tekstu. Oceny obrazów są wyłączone.",
+      "lead": "{{model}} · Decyzje tekstowe przez OpenCode.",
+      "serverConfigured": "Skonfigurowano na serwerze.",
+      "serverMissing": "Skonfiguruj klucz OpenCode w ustawieniach tego serwera.",
+      "envInvalid": "Klucz OpenCode został odrzucony lub wygasł. Zaktualizuj go w ustawieniach tego serwera.",
+      "unavailable": "OpenCode nie udostępnił Jev. Sprawdź dostęp w ustawieniach tego serwera.",
+      "unavailableState": "Niedostępne"
+    },
     "title": "Jev",
     "about": "Szybki model od TypeSafe, stworzony do szybkich decyzji. agentes.chat zadaje mu drobne pytania, na przykład kto ma odpowiedzieć. Płacisz bezpośrednio TypeSafe.",
     "lead": "Pomaga twoim agentom działać jak zespół.",

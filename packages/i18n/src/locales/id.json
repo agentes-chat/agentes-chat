@@ -9199,6 +9199,15 @@
     "discard": "Buang"
   },
   "jev": {
+    "opencode": {
+      "about": "Jev membuat keputusan cepat melalui OpenCode. Integrasi ini hanya menggunakan teks. Penilaian gambar dinonaktifkan.",
+      "lead": "{{model}} · Keputusan teks melalui OpenCode.",
+      "serverConfigured": "Dikonfigurasi di server.",
+      "serverMissing": "Siapkan kunci OpenCode di pengaturan server ini.",
+      "envInvalid": "Kunci OpenCode ditolak atau kedaluwarsa. Perbarui di pengaturan server ini.",
+      "unavailable": "OpenCode belum mengaktifkan Jev. Periksa akses di pengaturan server ini.",
+      "unavailableState": "Tidak tersedia"
+    },
     "title": "Jev",
     "about": "Model cepat dari TypeSafe, dibuat untuk keputusan cepat. agentes.chat mengajukan pertanyaan kecil padanya, seperti siapa yang sebaiknya menjawab. Kamu membayar langsung ke TypeSafe.",
     "lead": "Membantu agen-agenmu bekerja sebagai tim.",

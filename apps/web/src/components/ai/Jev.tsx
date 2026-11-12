@@ -54,7 +54,7 @@ export const JEV_KEY_MIN = 8;
  * Why Jev helps: three reasons, each a quiet icon, the reason in bold and a few words. Where the server's router is off
  * (`routing` "off"), nothing picks who answers, so that reason is left out.
  */
-export function JevWhy({ routing }: { routing?: AiRouting["by"] }) {
+export function JevWhy({ routing, supportsVision = true }: { routing?: AiRouting["by"]; supportsVision?: boolean }) {
   const { t } = useTranslation();
   const reasons: [IconName, "route" | "memory" | "screen"][] = [
     ["agent", "route"],
@@ -64,7 +64,7 @@ export function JevWhy({ routing }: { routing?: AiRouting["by"] }) {
   return (
     <ul className="jev-why">
       {reasons
-        .filter(([, why]) => why !== "route" || routing !== "off")
+        .filter(([, why]) => (why !== "route" || routing !== "off") && (why !== "screen" || supportsVision))
         .map(([icon, why]) => (
           <li key={why} className="ac-iconline">
             <Icon name={icon} size={16} />
@@ -258,6 +258,8 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   }, [hash]);
   if (!view) return null;
   const env = view.source === "env";
+  const opencode = view.provider === "opencode";
+  const supportsVision = view.supportsVision ?? !opencode;
   const chip = CHIP[view.state];
   const close = () => {
     setSteps(null);
@@ -280,12 +282,11 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
       onCancel={close}
     />
   );
-  const site =
-    view.state === "invalid" ? (
-      <OpenPage href={TYPESAFE_KEYS}>{t("jev.steps.openKeys")}</OpenPage>
-    ) : view.state === "no_credit" ? (
-      <OpenPage href={TYPESAFE_CONSOLE}>{t("jev.steps.openSite")}</OpenPage>
-    ) : null;
+  const site = opencode ? null : view.state === "invalid" ? (
+    <OpenPage href={TYPESAFE_KEYS}>{t("jev.steps.openKeys")}</OpenPage>
+  ) : view.state === "no_credit" ? (
+    <OpenPage href={TYPESAFE_CONSOLE}>{t("jev.steps.openSite")}</OpenPage>
+  ) : null;
   const ghost = (
     label: string,
     onClick: () => void,
@@ -303,8 +304,12 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
       {label}
     </Button>
   );
-  // What the owner can do: only the console where the key comes from `.env`.
-  const actions: ReactNode = env ? (
+  // Server-managed keys can't be changed here. OpenCode's status can still be checked.
+  const actions: ReactNode = opencode ? (
+    env ? (
+      ghost(t("jev.checkAgain"), () => check.mutate(), { loading: check.isPending })
+    ) : null
+  ) : env ? (
     site
   ) : view.state === "invalid" ? (
     <>
@@ -322,13 +327,21 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
       {ghost(t("settings.remove"), () => setRemoving(true), { danger: true })}
     </>
   );
-  const note = env
-    ? view.state === "invalid"
-      ? t("jev.line.envInvalid")
-      : t("jev.line.env")
-    : view.state === "invalid" || view.state === "no_credit"
-      ? t(`jev.line.${view.state}`)
-      : null;
+  const note = opencode
+    ? view.source === null
+      ? t("jev.opencode.serverMissing")
+      : view.state === "invalid"
+        ? t("jev.opencode.envInvalid")
+        : view.state === "no_credit"
+          ? t("jev.opencode.unavailable")
+          : t("jev.opencode.serverConfigured")
+    : env
+      ? view.state === "invalid"
+        ? t("jev.line.envInvalid")
+        : t("jev.line.env")
+      : view.state === "invalid" || view.state === "no_credit"
+        ? t(`jev.line.${view.state}`)
+        : null;
   const facts = [
     view.hint && t("settings.keyEndsIn", { hint: view.hint }),
     view.month.decisions > 0 &&
@@ -340,26 +353,32 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
       <List>
         <div className="ac-list__row jev__head ac-mediarow ac-mediarow--row">
           <span className="ac-mediarow__face">
-            <ProviderLogo id="typesafe" size="sm" />
+            <ProviderLogo id={opencode ? "opencode" : "typesafe"} size="sm" />
           </span>
           <span className="ac-mediarow__head">
             <span className="ac-hintline">
               <h3 id="jev-title" className="jev__title">
                 {t("jev.title")}
               </h3>
-              <InfoHint name={t("common.about", { label: t("jev.title") })}>{t("jev.about")}</InfoHint>
+              <InfoHint name={t("common.about", { label: t("jev.title") })}>
+                {t(opencode ? "jev.opencode.about" : "jev.about")}
+              </InfoHint>
             </span>
           </span>
           <span className="ac-mediarow__end">
             <Chip icon={chip.icon} tone={chip.tone}>
-              {t(`jev.state.${chip.word}`)}
+              {opencode && view.state === "no_credit"
+                ? t("jev.opencode.unavailableState")
+                : t(`jev.state.${chip.word}`)}
             </Chip>
           </span>
-          <span className="ac-mediarow__body small muted">{t("jev.lead")}</span>
+          <span className="ac-mediarow__body small muted">
+            {opencode ? t("jev.opencode.lead", { model: view.model ?? "jev-1.13-free" }) : t("jev.lead")}
+          </span>
         </div>
-        {view.source === null ? (
+        {view.source === null && !opencode ? (
           <div className="ac-list__row jev__body">
-            <JevWhy routing={routing} />
+            <JevWhy routing={routing} supportsVision={supportsVision} />
             {steps ? (
               stepsOf(false)
             ) : (
@@ -372,7 +391,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
           <>
             <div className="ac-list__row jev__key">
               <span className="list-col">
-                <span className="ai-accounts__name">{t("jev.keyName")}</span>
+                <span className="ai-accounts__name">{opencode ? "OpenCode" : t("jev.keyName")}</span>
                 <span className="small muted">
                   {facts.map((fact, i) => (
                     <Fragment key={String(fact)}>
@@ -385,7 +404,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
               </span>
               {actions && <span className="ac-acts ac-captail">{actions}</span>}
             </div>
-            {steps === "replace" && <div className="ac-list__row jev__body">{stepsOf(true)}</div>}
+            {!opencode && steps === "replace" && <div className="ac-list__row jev__body">{stepsOf(true)}</div>}
           </>
         )}
       </List>

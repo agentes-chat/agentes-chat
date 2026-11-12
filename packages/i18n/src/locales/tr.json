@@ -9461,6 +9461,15 @@
     "discard": "Vazgeç"
   },
   "jev": {
+    "opencode": {
+      "about": "Jev, OpenCode üzerinden hızlı kararlar verir. Bu entegrasyon yalnızca metin kullanır. Görsel değerlendirmeleri kapalıdır.",
+      "lead": "{{model}} · OpenCode üzerinden metin kararları.",
+      "serverConfigured": "Sunucuda yapılandırıldı.",
+      "serverMissing": "OpenCode anahtarını bu sunucunun ayarlarında yapılandırın.",
+      "envInvalid": "OpenCode anahtarı reddedildi veya süresi doldu. Bu sunucunun ayarlarında güncelleyin.",
+      "unavailable": "OpenCode, Jev erişimini açmadı. Bu sunucunun ayarlarında erişimi kontrol edin.",
+      "unavailableState": "Kullanılamıyor"
+    },
     "title": "Jev",
     "about": "TypeSafe'in hızlı kararlar için yaptığı hızlı bir model. agentes.chat ona kimin yanıt vereceği gibi küçük sorular sorar. Ücreti doğrudan TypeSafe'e ödersiniz.",
     "lead": "Ajanlarınızın ekip olarak çalışmasına yardım eder.",

@@ -5,6 +5,7 @@ import {
   jevMonth,
   NotFoundError,
   pinnedOwner,
+  resolveJevProvider,
   ValidationError,
 } from "@agenteschat/engine";
 import { nanoUsdToUsd } from "@agenteschat/providers";
@@ -16,14 +17,17 @@ const tags = ["System"];
 
 const Jev = z
   .object({
-    source: z
-      .enum(["env", "settings"])
-      .nullable()
-      .openapi({ description: "`env`: `TYPESAFE_API_KEY`, read-only here. `settings`: added here. Null: none." }),
+    source: z.enum(["env", "settings"]).nullable().openapi({
+      description:
+        "`env`: the selected provider's server key, read-only here. `settings`: TypeSafe key added here. Null: none.",
+    }),
     hint: z.string().nullable().openapi({ description: "The key's last 4 characters. The key is never returned." }),
     state: z.enum(["off", "ok", "invalid", "no_credit"]).openapi({
       description: "What its owner can fix: TypeSafe refused the key, or its account is out of credit. Else `ok`.",
     }),
+    provider: z.enum(["typesafe", "opencode"]).optional(),
+    model: z.string().optional(),
+    supportsVision: z.boolean().optional(),
     month: z
       .object({ decisions: z.number().int(), costUsd: z.number() })
       .openapi({ description: "Jev's calls this month (UTC), every workspace on the server together." }),
@@ -46,6 +50,7 @@ const tooMany = { 429: errorResponse("Too many tries (`rate_limited`)") };
 /** The installation's Jev key (ADR 0073): only its pinned owner, and never on agentes.chat's own servers. */
 export function jevRoutes(deps: AppDeps) {
   const { db, config } = deps;
+  const profile = resolveJevProvider(config.JEV_PROVIDER);
   const app = createAppRouter(deps);
   app.use("/jev", requireSession(deps.auth));
   app.use("/jev/*", requireSession(deps.auth));
@@ -58,7 +63,14 @@ export function jevRoutes(deps: AppDeps) {
   const allowed = async (userId: string) => (await deps.adapters.rateLimiter.consume(`jev:${userId}`, WRITES)).allowed;
   const withMonth = async (view: JevKeyView) => {
     const month = await jevMonth(db);
-    return { ...view, month: { decisions: month.decisions, costUsd: nanoUsdToUsd(month.costNanoUsd) } };
+    return {
+      ...view,
+      // Keep the default response backward-compatible for existing clients.
+      ...(profile.provider === "opencode"
+        ? { provider: profile.provider, model: profile.model, supportsVision: profile.supportsVision }
+        : {}),
+      month: { decisions: month.decisions, costUsd: nanoUsdToUsd(month.costNanoUsd) },
+    };
   };
 
   app.openapi(
@@ -113,7 +125,7 @@ export function jevRoutes(deps: AppDeps) {
       method: "post",
       path: "/jev/check",
       tags,
-      summary: "Check the Jev key with TypeSafe again",
+      summary: "Check the Jev key with the selected provider again",
       description: `${notFound} An answer that says nothing about the key (a limit, an outage) leaves its state as it was.`,
       security,
       responses: { 200: json(Jev), 401: errors[401], 404: errors[404], ...tooMany },

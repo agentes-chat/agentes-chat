@@ -1,9 +1,9 @@
 # 0073. Jev on a self-hosted server: the owner's key
 
-- Status: Accepted (built: the key, its routes and the shared client; the setup's screen, the Settings card, the desktop app's row and the setup CLI's flag follow). Amended 2026-10-30: §7 (the owner key and the server's own computer follow the pin; ADR 0088: the owner may still delete their account)
+- Status: Accepted (built: the key, its routes and the shared client; the setup's screen, the Settings card, the desktop app's row and the setup CLI's flag follow). Amended 2026-10-30: §7 (the owner key and the server's own computer follow the pin; ADR 0088: the owner may still delete their account). Amended 2026-11-12: optional installation-wide OpenCode provider (addendum below).
 - Date: 2026-10-27
 - Amends: ADR 0013 (Jev "enabled by env only"), ADR 0028 §0 (the judge's key), ADR 0060 §5 (who has the usage report's switch)
-- Code: `packages/engine/src/jev-key.ts` (`createJevKey`, `callJev`, `checkJevKey`, `jevStateOf`, `jevMonth`), `packages/engine/src/judge.ts`, `packages/engine/src/router-jev.ts`, `packages/engine/src/organizations.ts` (`pinnedOwner`), `packages/db/src/schema/instance-secrets.ts`, `apps/server/src/engine.ts`, `apps/server/src/routes/app/jev.ts`
+- Code: `packages/engine/src/jev-key.ts` (`createJevKey`, `callJev`, `checkJevKey`, `jevStateOf`, `jevMonth`), `packages/engine/src/jev-provider.ts`, `packages/engine/src/judge.ts`, `packages/engine/src/router-jev.ts`, `packages/engine/src/organizations.ts` (`pinnedOwner`), `packages/db/src/schema/instance-secrets.ts`, `apps/server/src/engine.ts`, `apps/server/src/routes/app/jev.ts`
 
 ## Context
 
@@ -35,3 +35,51 @@ Jev picks who answers a message nobody @mentioned, makes the judge's calls (memo
 - **A key per workspace.** Jev's questions are the server's own, and on the Cloud one key serves every workspace. One key per installation keeps both editions alike.
 - **The oldest account as the gate (`installOwner`).** The first account may delete itself once someone else owns its workspaces, and the next oldest is any member of any workspace, who could then send every workspace's messages, memory and screenshots to a TypeSafe account of their own.
 - **A TypeSafe call at boot to know the state.** The first real call tells, and a restart shouldn't wait on TypeSafe.
+
+## Addendum 2026-11-12: optional OpenCode provider
+
+OpenCode exposes Jev through its [System One endpoint](https://opencode.ai/docs/console/models/#jev),
+including the temporary `jev-1.13-free` offer. An installation whose operator already has an OpenCode
+Console key can use that route without obtaining or storing a TypeSafe key. This remains an
+installation-wide choice for the server's own decisions, separate from an agent's conversation
+model, coding plan or workspace model credentials.
+
+1. **TypeSafe remains the default.** `JEV_PROVIDER=typesafe` keeps the key resolution and behavior
+   described above: `TYPESAFE_API_KEY`, then the owner's encrypted `typesafe` row. Operators opt in
+   explicitly with `JEV_PROVIDER=opencode`; removing that setting returns to the default after a
+   restart. Changing an environment key also requires a restart.
+2. **One provider profile for every call.** `resolveJevProvider` supplies the endpoint, text model,
+   provider name, environment variable and vision capability to key verification, routing and the
+   judge. OpenCode fixes the base to `https://opencode.ai/inference/systemone` and the text model to
+   `jev-1.13-free`. Calls append `/v1/systemone`. A caller cannot redirect this profile or replace
+   the free model with a paid Jev model.
+3. **A dedicated server-only credential.** OpenCode uses only `OPENCODE_JEV_API_KEY`. It never reads,
+   replaces or removes the saved TypeSafe key, even when the OpenCode key is missing. Without its
+   key Jev is off; the application still starts and retains its existing fallbacks. Settings shows
+   the selected provider, model, capability, state, last four characters and monthly use, with the
+   key managed on the server. Save and remove remain read-only (409 `jev_key_env`) in this mode.
+   No new `instance_secrets` name or database migration is needed.
+4. **Validate the gateway's typed answers before using them.** OpenCode responses must contain the
+   requested question IDs, valid Noul/Choice/Score values and probabilities, the expected model,
+   and a valid reported cost. Incomplete or inconsistent answers are failures rather than zero
+   decisions. Protocol failures participate in the existing outage cooldown; a gateway access
+   restriction is not automatically classified as an invalid key. The TypeSafe path retains its
+   existing response handling.
+5. **Record the provider and its reported cost.** OpenCode routing and judgments are recorded as
+   `provider=opencode`, using `usage.cost`, including an explicit zero. They do not use the TypeSafe
+   tariff. The installation's monthly Jev total includes OpenCode `router` records as well as the
+   existing TypeSafe records, without counting OpenCode conversation calls or rewriting history.
+6. **Vision is a separate capability.** The OpenCode profile sets `supportsVision=false`, so a usable
+   key does not enable screenshot judgments. Images and Box requests are rejected locally on this
+   route. This is a gateway support boundary, not a claim that Jev 1.13 cannot read images:
+   [TypeSafe documents images in both 1.13 and 1.14, with Box requiring 1.14](https://docs.typesafe.ai/models).
+   Browser DOM/text tools, commands and screenshot capture continue to work. Enabling vision through
+   OpenCode would require verifying its image transport and a compatible model separately.
+
+The free offer is temporary, not an availability or price guarantee. This option does not select a
+paid Jev model automatically when the free route fails. Existing routing and judgment fallback
+policies remain in effect, and a fallback model may incur charges on the organization's key.
+
+Workspace-specific decision providers are a separate concern. This addendum supplies the
+installation default; it does not add a workspace selector or store another copy of a workspace's
+provider credential.
