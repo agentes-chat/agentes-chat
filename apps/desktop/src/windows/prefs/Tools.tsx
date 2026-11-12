@@ -24,7 +24,7 @@ import { CardTitle, hintFor, PrefCard, PrefHead, PrefRow } from "../../ui/settin
 import { useToast } from "../../ui/Toast";
 import { ToolAccounts } from "./Accounts";
 
-type Cli = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+type Cli = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
 /** The coding programs agents think with, each with a switch of its own; the first two have a portrait. */
 const CLIS: { tool: Cli; kind: string; portrait?: "claude_code" | "codex" }[] = [
@@ -34,6 +34,7 @@ const CLIS: { tool: Cli; kind: string; portrait?: "claude_code" | "codex" }[] = 
   { tool: "opencode", kind: "opencode" },
   { tool: "grok", kind: "grok" },
   { tool: "antigravity", kind: "antigravity" },
+  { tool: "muse", kind: "muse" },
 ];
 
 /** A program's switch; one a runner stored no switch for follows Codex's, as the runner and the server read it. */

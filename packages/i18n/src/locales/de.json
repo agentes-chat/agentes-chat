@@ -2682,6 +2682,8 @@
       "cursor_female": "Cursor ist auf diesem Computer nicht angemeldet. Verbinde ein Cursor-Konto auf der Seite von {{name}}.",
       "grok": "Grok ist auf diesem Computer nicht angemeldet. Verbinde ein Grok-Konto auf der Seite von {{name}}.",
       "grok_female": "Grok ist auf diesem Computer nicht angemeldet. Verbinde ein Grok-Konto auf der Seite von {{name}}.",
+      "muse": "Muse ist auf diesem Computer nicht angemeldet. Verbinde ein Muse-Konto auf der Seite von {{name}}.",
+      "muse_female": "Muse ist auf diesem Computer nicht angemeldet. Verbinde ein Muse-Konto auf der Seite von {{name}}.",
       "antigravity": "Gemini ist auf diesem Computer nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
       "antigravity_female": "Gemini ist auf diesem Computer nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
       "opencode": "OpenCode kann auf diesem Computer nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}.",
@@ -2738,6 +2740,7 @@
       "chatgpt": "Dein ChatGPT-Abo verbinden",
       "cursor": "Dein Cursor-Abo verbinden",
       "grok": "Dein Grok-Abo verbinden",
+      "muse": "Dein Meta-Abo verbinden",
       "gemini": "Dein Gemini-Abo verbinden",
       "zen": "OpenCode verbinden",
       "api_key": "API-Schlüssel hinzufügen"
@@ -2850,6 +2853,10 @@
         "title": "Dein Grok-Abo",
         "tiers": "SuperGrok, SuperGrok Heavy oder X Premium+"
       },
+      "muse": {
+        "title": "Dein Meta-Abo",
+        "tiers": "Ein Meta-Abo mit Muse Code"
+      },
       "gemini": {
         "title": "Dein Gemini-Abo",
         "tiers": "Google AI Pro, Google AI Ultra oder Gemini Enterprise",
@@ -2944,6 +2951,7 @@
       "codex": "ChatGPT ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von ChatGPT ab und versuch es noch einmal.",
       "cursor": "Cursor ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von Cursor ab und versuch es noch einmal.",
       "grok": "Grok ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von Grok ab und versuch es noch einmal.",
+      "muse": "Muse ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von Muse ab und versuch es noch einmal.",
       "antigravity": "Gemini ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von Google ab und versuch es noch einmal.",
       "opencode": "OpenCode ist als {{email}} angemeldet, nicht als {{account}}. Versuch es mit dem richtigen Schlüssel noch einmal."
     },
@@ -5068,6 +5076,7 @@
             "codex": "ChatGPT-Konto hinzufügen",
             "cursor": "Cursor-Konto hinzufügen",
             "grok": "Grok-Konto hinzufügen",
+            "muse": "Muse-Code-Konto hinzufügen",
             "antigravity": "Gemini-Konto hinzufügen",
             "opencode": "OpenCode-Schlüssel hinzufügen"
           },
@@ -5076,6 +5085,7 @@
             "codex": "Das Konto mit deinem Abo",
             "cursor": "Das Konto mit deinem Abo",
             "grok": "Das Konto mit deinem Abo",
+            "muse": "Das Konto mit deinem Abo",
             "antigravity": "Das Google-Konto mit deinem Abo",
             "antigravityEnterprise": "Dein Gemini-Enterprise-Konto"
           },
@@ -5085,11 +5095,13 @@
             "codex": "Mit ChatGPT anmelden",
             "cursor": "Mit Cursor anmelden",
             "grok": "Mit Grok anmelden",
+            "muse": "Mit Muse Code anmelden",
             "antigravity": "Mit Google anmelden"
           },
           "opencodeFree": "Die kostenlosen Modelle von OpenCode brauchen keinen Schlüssel. Ein Schlüssel aus der OpenCode-Konsole fügt die kostenpflichtigen hinzu.",
           "cursorFinish": "Melde dich auf der Seite von Cursor an, dann schließt sich die Anmeldung auf {{computer}} von selbst ab.",
           "grokFinish": "Melde dich auf der Seite von Grok an, dann schließt sich die Anmeldung auf {{computer}} von selbst ab.",
+          "museFinish": "Bestätige den Code auf der Seite von Muse, dann schließt sich die Anmeldung auf {{computer}} von selbst ab.",
           "geminiEnterprise": "Stattdessen Gemini Enterprise verwenden",
           "geminiPersonal": "Stattdessen ein privates Google-Konto verwenden",
           "cursorKey": "Stattdessen einen Cursor-API-Schlüssel verwenden",
@@ -5108,6 +5120,7 @@
           "local": "Direkt auf {{computer}}? Wenn sich dort der Browser von selbst geöffnet hat, bestätige einfach dort.",
           "deviceCode": "Code für ChatGPT",
           "grokCode": "Code für Grok",
+          "museCode": "Code für Muse",
           "deviceCodeText": "Gib diesen Code auf der Seite ein, die sich öffnet.",
           "starting": "{{computer}} wird gefragt…",
           "waiting": "Warten",
@@ -5131,6 +5144,7 @@
             "codex": "ChatGPT hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von ChatGPT ab und versuchst es noch einmal.",
             "cursor": "Cursor hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Cursor ab und versuchst es noch einmal.",
             "grok": "Grok hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Grok ab und versuchst es noch einmal.",
+            "muse": "Muse hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Muse ab und versuchst es noch einmal.",
             "antigravity": "Gemini hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Google ab und versuchst es noch einmal.",
             "opencode": "Dieser OpenCode-Schlüssel ist schon als {{account}} verbunden."
           },
@@ -9607,6 +9621,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "muse": "Muse Code",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Aktualisiere agentes auf dem Computer, um den Schlüssel eines Abos zu nutzen"
@@ -10785,6 +10800,7 @@
       "cursor": "{{model}} über das Cursor-Abo",
       "grok": "{{model}} über das Grok-Abo",
       "gemini": "{{model}} über das Gemini-Abo",
+      "muse": "{{model}} über das Muse-Abo",
       "zen": "{{model}} über OpenCode",
       "coding": "{{model}} über {{plan}}",
       "claudeOf": "{{model}} über das Claude-Abo von {{owner}}",
@@ -10792,6 +10808,7 @@
       "cursorOf": "{{model}} über das Cursor-Abo von {{owner}}",
       "grokOf": "{{model}} über das Grok-Abo von {{owner}}",
       "geminiOf": "{{model}} über das Gemini-Abo von {{owner}}",
+      "museOf": "{{model}} über das Muse-Abo von {{owner}}",
       "zenOf": "{{model}} über das OpenCode von {{owner}}",
       "codingOf": "{{model}} über {{plan}} von {{owner}}",
       "claudeAuto": "Claude-Abo",
@@ -10799,6 +10816,7 @@
       "cursorAuto": "Cursor-Abo",
       "grokAuto": "Grok-Abo",
       "geminiAuto": "Gemini-Abo",
+      "museAuto": "Muse-Abo",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Claude-Abo von {{owner}}",
@@ -10806,6 +10824,7 @@
       "cursorAutoOf": "Cursor-Abo von {{owner}}",
       "grokAutoOf": "Grok-Abo von {{owner}}",
       "geminiAutoOf": "Gemini-Abo von {{owner}}",
+      "museAutoOf": "Muse-Abo von {{owner}}",
       "zenAutoOf": "OpenCode von {{owner}}",
       "codingAutoOf": "{{plan}} von {{owner}}",
       "on": "{{line}} auf {{computer}}"
@@ -10819,7 +10838,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "muse": "Muse Code"
     },
     "foot": {
       "api": "Über die API",
@@ -10832,6 +10852,7 @@
     "cursorText": "Nutzt das Cursor-Abo der Person, die den Computer verbunden hat.",
     "grokText": "Nutzt das Grok-Abo der Person, die den Computer verbunden hat.",
     "antigravityText": "Nutzt das Gemini-Abo der Person, die den Computer verbunden hat.",
+    "museText": "Nutzt das Meta-Abo der Person, die den Computer verbunden hat.",
     "opencodeText": "Die kostenlosen Modelle von OpenCode oder der OpenCode-Schlüssel der Person, die den Computer verbunden hat.",
     "cursorModel": {
       "inPlan": "In deinem Cursor-Abo",
@@ -13609,6 +13630,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "muse": "Muse Code",
         "opencode": "OpenCode",
         "commands": "Befehle",
         "browser": "Browser"
@@ -13619,6 +13641,7 @@
         "cursor": "Wie Claude Code, mit einem Cursor-Konto. Nur in den erlaubten Ordnern.",
         "grok": "Wie Claude Code, mit einem Grok-Konto. Nur in den erlaubten Ordnern.",
         "antigravity": "Wie Claude Code, mit einem Gemini-Konto. Nur in den erlaubten Ordnern.",
+        "muse": "Wie Claude Code, mit einem Meta-Konto. Nur in den erlaubten Ordnern.",
         "opencode": "Wie Claude Code, mit den kostenlosen Modellen von OpenCode oder einem OpenCode-Schlüssel. Nur in den erlaubten Ordnern.",
         "commands": "Führt Terminal-Befehle aus, etwa Tests und Builds."
       },

@@ -4550,7 +4550,7 @@ export interface MachinePause {
 }
 
 /** A tool the person turns on or off on the machine. */
-export type MachineToolName = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commands";
+export type MachineToolName = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse" | "commands";
 
 /** A folder allowed on the machine and the agents (ids) that may use it; empty: allowed, no agent yet. */
 export interface MachineFolderGrant {
@@ -4565,7 +4565,7 @@ export interface MachineAccess {
    * `browser` (ADR 0040): the agent browser; absent on runners before protocol 12 (off). `desktop` and
    * `terminal` (ADR 0058): the agents' desktops and terminals; absent before protocol 18 (off).
    */
-  tools: Record<Exclude<MachineToolName, "cursor" | "opencode" | "grok" | "antigravity">, boolean> & {
+  tools: Record<Exclude<MachineToolName, "cursor" | "opencode" | "grok" | "antigravity" | "muse">, boolean> & {
     /** Protocol 36 (ADR 0114): Cursor's CLI; absent on older runners, where it follows Codex's. */
     cursor?: boolean;
     /** Protocol 39 (ADR 0132): OpenCode's CLI; absent on older runners, where it follows Codex's. */
@@ -4574,6 +4574,8 @@ export interface MachineAccess {
     grok?: boolean;
     /** Protocol 44 (ADR 0143): the Antigravity CLI; absent on older runners, where it follows Codex's. */
     antigravity?: boolean;
+    /** Protocol 59 (ADR 0174): Muse Code; absent on older runners, where it follows Codex's. */
+    muse?: boolean;
     browser?: boolean;
     desktop?: boolean;
     terminal?: boolean;
@@ -4620,7 +4622,7 @@ export interface DesktopRelease {
 }
 
 /** A computer brain that runs on a connected machine. */
-export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
 /** An agent waiting for an offline computer, and what it has waiting. */
 export interface OutageAgent {

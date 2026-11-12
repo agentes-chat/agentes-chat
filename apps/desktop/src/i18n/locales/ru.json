@@ -478,6 +478,8 @@
     "grokDesc": "Пишет и меняет код в разрешённых папках, с вашим аккаунтом Grok.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Пишет и меняет код в разрешённых папках, с вашим аккаунтом Gemini.",
+    "museName": "Muse Code",
+    "museDesc": "Пишет и меняет код в разрешённых папках, с вашим аккаунтом Meta.",
     "found": "Найден",
     "notFound": "Не найден",
     "loggedOut": "Вход не выполнен",

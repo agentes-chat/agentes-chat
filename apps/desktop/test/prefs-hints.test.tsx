@@ -235,6 +235,10 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
             hint: "Writes and changes code in the allowed folders, with your Gemini account.",
           },
           {
+            title: "Muse Code",
+            hint: "Writes and changes code in the allowed folders, with your Meta account.",
+          },
+          {
             title: "Commands",
             hint: "Tests, builds and other Terminal commands. Each one shows in Activity. Commands run as you. They can read anything you can on this Mac, agentes.chat's database and keys included. Turn them on only for workspaces you trust with all of it.",
           },

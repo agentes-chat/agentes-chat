@@ -2581,6 +2581,7 @@
       "codex": "这台电脑上的 Codex 未登录。请在 {{name}} 的页面上连接 ChatGPT 账号。",
       "cursor": "这台电脑上的 Cursor 未登录。请在 {{name}} 的页面上连接 Cursor 账号。",
       "grok": "这台电脑上的 Grok 未登录。请在 {{name}} 的页面上连接 Grok 账号。",
+      "muse": "这台电脑上的 Muse 未登录。请在 {{name}} 的页面上连接 Muse 账号。",
       "antigravity": "这台电脑上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
       "opencode": "OpenCode 无法在这台电脑上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
     },
@@ -2635,6 +2636,7 @@
       "chatgpt": "连接你的 ChatGPT 套餐",
       "cursor": "连接你的 Cursor 套餐",
       "grok": "连接你的 Grok 套餐",
+      "muse": "连接你的 Meta 套餐",
       "gemini": "连接你的 Gemini 套餐",
       "zen": "连接 OpenCode",
       "api_key": "添加 API 密钥"
@@ -2745,6 +2747,10 @@
         "title": "你的 Grok 套餐",
         "tiers": "SuperGrok、SuperGrok Heavy 或 X Premium+"
       },
+      "muse": {
+        "title": "你的 Meta 套餐",
+        "tiers": "带 Muse Code 的 Meta 订阅"
+      },
       "gemini": {
         "title": "你的 Gemini 套餐",
         "tiers": "Google AI Pro、Google AI Ultra 或 Gemini Enterprise",
@@ -2841,6 +2847,7 @@
       "codex": "ChatGPT 登录的是 {{email}}，而不是 {{account}}。请在 ChatGPT 页面退出登录后重试。",
       "cursor": "Cursor 登录的是 {{email}}，而不是 {{account}}。请在 Cursor 页面退出登录后重试。",
       "grok": "Grok 登录的是 {{email}}，而不是 {{account}}。请在 Grok 页面退出登录后重试。",
+      "muse": "Muse 登录的是 {{email}}，而不是 {{account}}。请在 Muse 页面退出登录后重试。",
       "antigravity": "Gemini 登录的是 {{email}}，而不是 {{account}}。请在 Google 页面退出登录后重试。",
       "opencode": "OpenCode 登录的是 {{email}}，不是 {{account}}。请用正确的密钥重试。"
     },
@@ -4917,6 +4924,7 @@
             "codex": "添加 ChatGPT 账号",
             "cursor": "添加 Cursor 账号",
             "grok": "添加 Grok 账号",
+            "muse": "添加 Muse Code 账号",
             "antigravity": "添加 Gemini 账号",
             "opencode": "添加 OpenCode 密钥"
           },
@@ -4925,6 +4933,7 @@
             "codex": "有你套餐的那个账号",
             "cursor": "有你套餐的那个账号",
             "grok": "有你套餐的那个账号",
+            "muse": "有你套餐的那个账号",
             "antigravity": "有你套餐的 Google 账号",
             "antigravityEnterprise": "你的 Gemini Enterprise 账号"
           },
@@ -4934,11 +4943,13 @@
             "codex": "使用 ChatGPT 登录",
             "cursor": "使用 Cursor 登录",
             "grok": "使用 Grok 登录",
+            "muse": "使用 Muse Code 登录",
             "antigravity": "使用 Google 登录"
           },
           "opencodeFree": "OpenCode 的免费模型无需密钥。用 OpenCode 控制台的密钥还能使用付费模型。",
           "cursorFinish": "在 Cursor 的页面上登录后，{{computer}} 上的登录会自动完成。",
           "grokFinish": "在 Grok 的页面上登录后，{{computer}} 上的登录会自动完成。",
+          "museFinish": "在 Muse 的页面上确认验证码后，{{computer}} 上的登录会自动完成。",
           "geminiEnterprise": "改用 Gemini Enterprise",
           "geminiPersonal": "改用个人 Google 账号",
           "cursorKey": "改用 Cursor API 密钥",
@@ -4957,6 +4968,7 @@
           "local": "就在 {{computer}} 本机上？如果它的浏览器自动打开了，直接在那里授权即可。",
           "deviceCode": "ChatGPT 验证码",
           "grokCode": "Grok 验证码",
+          "museCode": "Muse 验证码",
           "deviceCodeText": "在打开的页面中输入这个验证码。",
           "starting": "正在请求 {{computer}}…",
           "waiting": "等待中",
@@ -4980,6 +4992,7 @@
             "codex": "ChatGPT 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 ChatGPT 的页面上退出登录后重试。",
             "cursor": "Cursor 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Cursor 的页面上退出登录后重试。",
             "grok": "Grok 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Grok 的页面上退出登录后重试。",
+            "muse": "Muse 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Muse 的页面上退出登录后重试。",
             "antigravity": "Gemini 已登录为 {{account}}，这个账号你已经连接过了。要使用其他账号，请在 Google 的页面上退出登录后重试。",
             "opencode": "这个 OpenCode 密钥已作为 {{account}} 连接。"
           },
@@ -9295,6 +9308,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "muse": "Muse Code",
       "opencode": "OpenCode",
       "needs": {
         "keys": "在电脑上更新 agentes，即可使用套餐密钥"
@@ -10428,6 +10442,7 @@
       "cursor": "Cursor 套餐上的 {{model}}",
       "grok": "Grok 套餐上的 {{model}}",
       "gemini": "Gemini 套餐上的 {{model}}",
+      "muse": "Muse 套餐上的 {{model}}",
       "zen": "通过 OpenCode 使用 {{model}}",
       "coding": "{{plan}} 上的 {{model}}",
       "claudeOf": "{{owner}} 的 Claude 套餐上的 {{model}}",
@@ -10435,6 +10450,7 @@
       "cursorOf": "{{owner}} 的 Cursor 套餐上的 {{model}}",
       "grokOf": "{{owner}} 的 Grok 套餐上的 {{model}}",
       "geminiOf": "{{owner}} 的 Gemini 套餐上的 {{model}}",
+      "museOf": "{{owner}} 的 Muse 套餐上的 {{model}}",
       "zenOf": "通过 {{owner}} 的 OpenCode 使用 {{model}}",
       "codingOf": "{{owner}} 的 {{plan}} 上的 {{model}}",
       "claudeAuto": "Claude 套餐",
@@ -10442,6 +10458,7 @@
       "cursorAuto": "Cursor 套餐",
       "grokAuto": "Grok 套餐",
       "geminiAuto": "Gemini 套餐",
+      "museAuto": "Muse 套餐",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "{{owner}} 的 Claude 套餐",
@@ -10449,6 +10466,7 @@
       "cursorAutoOf": "{{owner}} 的 Cursor 套餐",
       "grokAutoOf": "{{owner}} 的 Grok 套餐",
       "geminiAutoOf": "{{owner}} 的 Gemini 套餐",
+      "museAutoOf": "{{owner}} 的 Muse 套餐",
       "zenAutoOf": "{{owner}} 的 OpenCode",
       "codingAutoOf": "{{owner}} 的 {{plan}}",
       "on": "{{computer}} 上的{{line}}"
@@ -10463,7 +10481,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "muse": "Muse Code"
     },
     "foot": {
       "api": "通过 API",
@@ -10476,6 +10495,7 @@
     "cursorText": "使用连接这台电脑的人的 Cursor 套餐。",
     "grokText": "使用连接这台电脑的人的 Grok 套餐。",
     "antigravityText": "使用连接这台电脑的人的 Gemini 套餐。",
+    "museText": "使用连接这台电脑的人的 Meta 套餐。",
     "opencodeText": "使用 OpenCode 的免费模型，或连接这台电脑的人的 OpenCode 密钥。",
     "cursorModel": {
       "inPlan": "包含在你的 Cursor 套餐中",
@@ -13181,6 +13201,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "muse": "Muse Code",
         "opencode": "OpenCode",
         "commands": "命令",
         "browser": "浏览器"
@@ -13191,6 +13212,7 @@
         "cursor": "类似 Claude Code，使用 Cursor 账号。仅限允许的文件夹。",
         "grok": "类似 Claude Code，使用 Grok 账号。仅限允许的文件夹。",
         "antigravity": "类似 Claude Code，使用 Gemini 账号。仅限允许的文件夹。",
+        "muse": "类似 Claude Code，使用 Meta 账号。仅限允许的文件夹。",
         "opencode": "类似 Claude Code，使用 OpenCode 的免费模型或 OpenCode 密钥。仅限允许的文件夹。",
         "commands": "运行终端命令，比如测试和构建。"
       },

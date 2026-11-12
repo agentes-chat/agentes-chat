@@ -247,7 +247,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
     for (const part of parts) expect(part).not.toMatch(/margin(-block|-top|-bottom)?: (?!0)/);
     // So every part a flow draws has to be one of these: a new kind brings its own margin past the check above.
     const { dialog, choose } = await connect();
-    for (const name of ["Claude", "ChatGPT", "Cursor", "OpenCode Go", "Grok", "Gemini", "GLM Coding"]) {
+    for (const name of ["Claude", "ChatGPT", "Cursor", "OpenCode Go", "Grok", "Muse Code", "Gemini", "GLM Coding"]) {
       await choose(name);
       for (const part of Array.from(dialog.querySelector(".agp-addacct")?.children ?? []))
         expect(part.className).toMatch(/agp-addacct__step|ac-setnote|ac-btn|agp-addacct__head|ai-panel__row/);
@@ -272,6 +272,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "ChatGPT",
       "Gemini",
       "Grok",
+      "Muse Code",
       "Cursor",
       "OpenCode",
       "GLM Coding",
@@ -284,6 +285,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "openai",
       "gemini",
       "grok",
+      "meta",
       "cursor",
       "opencode",
       "zai",
@@ -345,6 +347,9 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(await shown("openai")).toEqual(["ChatGPT"]);
     expect(await shown("glm")).toEqual(["GLM Coding"]);
     expect(await shown("supergrok")).toEqual(["Grok"]);
+    // Muse signs in with its code: it is found by its maker, and by the CLI's own name.
+    expect(await shown("meta")).toEqual(["Muse Code"]);
+    expect(await shown("muse")).toEqual(["Muse Code"]);
     expect(await shown("nada disso")).toEqual([]);
     expect(screen().getByText("Nenhum provedor encontrado")).toBeTruthy();
     await shown("kimi");

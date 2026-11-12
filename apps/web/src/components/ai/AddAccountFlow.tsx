@@ -903,6 +903,19 @@ function AddAccountFlow({
           : login && opened && <Step side={waiting}>{t("agentPage.work.brain.add.grokFinish", { computer })}</Step>}
       </>
     );
+  } else if (kind === "muse") {
+    steps = (
+      <>
+        {firstStep(
+          signInLabel ?? t("agentPage.work.brain.add.open.muse"),
+          <StepTitle title={t("agentPage.work.brain.add.stepOne.muse")} hint={signInHint} />,
+          1,
+        )}
+        {login?.userCode
+          ? deviceCode(after(2), t("agentPage.work.brain.add.museCode"), login.userCode)
+          : login && opened && <Step side={waiting}>{t("agentPage.work.brain.add.museFinish", { computer })}</Step>}
+      </>
+    );
   } else if (kind === "codex") {
     steps = (
       <>

@@ -466,6 +466,8 @@
     "grokDesc": "あなたのGrokアカウントで、許可されたフォルダ内のコードを書いたり変更したりします。",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "あなたのGeminiアカウントで、許可されたフォルダ内のコードを書いたり変更したりします。",
+    "museName": "Muse Code",
+    "museDesc": "あなたのMetaアカウントで、許可されたフォルダ内のコードを書いたり変更したりします。",
     "found": "見つかりました",
     "notFound": "見つかりません",
     "loggedOut": "ログインしていません",

@@ -587,7 +587,7 @@ function ToolsCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r: R
   const access = m.access;
   if (!access) return null;
   const isOn = (tool: (typeof MACHINE_TOOLS)[number]) =>
-    tool === "cursor" || tool === "opencode" || tool === "grok" || tool === "antigravity"
+    tool === "cursor" || tool === "opencode" || tool === "grok" || tool === "antigravity" || tool === "muse"
       ? (access.tools[tool] ?? access.tools.codex)
       : access.tools[tool];
   return (

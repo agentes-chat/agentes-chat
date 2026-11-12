@@ -115,6 +115,7 @@ export const MACHINE_TOOLS: MachineToolName[] = [
   "opencode",
   "grok",
   "antigravity",
+  "muse",
   "commands",
 ];
 
