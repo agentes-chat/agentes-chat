@@ -6682,6 +6682,8 @@ export interface SidebarPins {
 /** How my sidebar shows the agents, and what I pinned, in one workspace (`GET …/me/sidebar/view`). */
 export interface SidebarView {
   agentSort: AgentSort;
+  /** One agent kept in a larger card above the scrolling list. Unset or null: no featured agent. */
+  featuredAgentId?: string | null;
   /** Who manages agents also lists the ones that don't talk to them. */
   showAllAgents: boolean;
   /** Never saved: the apps pin my own agents (`dayOnePins`). */

@@ -54,3 +54,21 @@ People said the setores didn't stay organized in the sidebar, that pinning an ag
 - **A pin of something gone holds no place.** The apps leave out the pins of agents, channels and people no longer in their lists before counting the five and when they save (`pinsOf` with `known`); a list not loaded yet keeps its pins. This replaces the consequence above that a stale pin costs a place until it is unpinned.
 - **A setor's menu on its header.** Who manages agents gets a "…" on each setor's header in the sidebar, and the same choices on the header's right click: Editar (name, color and icon), Mover para cima or para baixo, Excluir setor after a question. It is Equipe › Setores' menu (`useGroupEntries`). On the phone, each setor's header in Agentes has a "…" and a long press with Editar, which opens the setor's page, where who manages agents now renames it, and Excluir setor. The phone's channel category headers show the same "…" for their long press menu. "Organizar setores na Equipe" in AGENTES' "…" opens Equipe on Setores.
 
+## Amendment (2026-11-12): one featured agent in the web sidebar
+
+Section pins still scroll with their section. Someone who returns frequently to one agent can now choose
+**Destacar na barra lateral** from its menu. One larger card stays between the workspace header and the scrolling
+list, including in the narrow-screen drawer. On the icon rail it is a normal tile. **Remover destaque da barra
+lateral** restores the regular row, and featuring another agent replaces the previous choice.
+
+The optional `featuredAgentId` is saved per person and workspace in the existing sidebar view, without a migration.
+Missing or null means no featured agent, so older clients and saved views still work. The card resolves the id
+against the same visible directory as the list. It does not grant access, change departments, change section pins,
+or add a second sidebar entry. The native phone app keeps its current lists and preserves this field when saving
+other sidebar preferences.
+
+The card reuses the regular agent row's conversation link, live presence, unread count and menus. Its name and role
+wrap below the larger face. Settings occupy the heading, while the pin and unread count occupy the face's row,
+so those controls do not overlap. Very long identities scroll within a bounded card, leaving the rest of the sidebar
+reachable.
+

@@ -80,6 +80,12 @@ test("a stored sidebar view is never trusted as is: known orders only, each pin 
   });
 });
 
+test("the featured agent is optional in older sidebar views and invalid stored values are ignored", () => {
+  expect(sidebarViewOf({ featuredAgentId: "agent-1" }).featuredAgentId).toBe("agent-1");
+  for (const featuredAgentId of [undefined, null, "", 42, {}, "x".repeat(65)])
+    expect(sidebarViewOf({ featuredAgentId }).featuredAgentId).toBeUndefined();
+});
+
 /** A new workspace, set up (one still in its onboarding would come back instead of another). */
 async function workspace(b: ReturnType<typeof browser>, name: string) {
   const created = (await (await b("/api/app/organizations", { json: { name } })).json()) as {
@@ -292,6 +298,7 @@ test("the sidebar view: each person's own, per workspace, beside the tools' plac
   await owner(sidebar, { method: "PATCH", json: { item: "wiki", place: "always" } });
   const mine = {
     agentSort: "mine",
+    featuredAgentId: "agent-1",
     showAllAgents: true,
     pins: { agents: ["agent-1"], channels: ["channel-1", "channel-2"], people: [] },
   };
@@ -312,6 +319,15 @@ test("the sidebar view: each person's own, per workspace, beside the tools' plac
   // Someone else keeps their own.
   const member = await joinByInvitation(t, owner, orgId, "member@example.com");
   expect(await view(member)).toEqual({ agentSort: "workspace", showAllAgents: false, pins: null });
+  const other = await workspace(owner, "Beta");
+  expect(
+    ((await (await owner(`/api/app/organizations/${other}/me/sidebar/view`)).json()) as { view: unknown }).view,
+  ).toEqual({ agentSort: "workspace", showAllAgents: false, pins: null });
+  for (const featuredAgentId of ["", 42, "x".repeat(65)])
+    expect((await put({ view: { ...mine, featuredAgentId } })).status).toBe(400);
+  expect(await view()).toEqual(mine);
+  expect((await put({ view: { ...mine, featuredAgentId: null } })).status).toBe(200);
+  expect(await view()).toEqual({ agentSort: mine.agentSort, showAllAgents: true, pins: mine.pins });
 });
 
 test("a personal workspace reads its own default orders (ADR 0159); a saved order stays, the team's included", async () => {

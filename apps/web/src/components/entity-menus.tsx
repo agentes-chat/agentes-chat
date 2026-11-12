@@ -300,7 +300,7 @@ export function useAgentMenu() {
           ] satisfies MenuEntry[])
         : []),
       // The right hand has its own row on top of the sidebar.
-      ...(isRightHand(a) ? [] : [pins.entry("agents", a.id)]),
+      ...(isRightHand(a) ? [] : [pins.entry("agents", a.id), pins.featuredEntry(a.id)]),
       ...mention(a.handle),
       ...copyHandle(a.handle),
       ...markRead(dm?.channelId, dm?.unread ?? 0),

@@ -1969,6 +1969,9 @@ export const en = {
   },
   /** "Pin to top": a row kept on top of its own sidebar section, above a thin line. */
   sidebarPins: {
+    feature: "Feature in sidebar",
+    unfeature: "Remove sidebar highlight",
+    featured: "Featured agent",
     pin: "Pin to top",
     unpin: "Unpin",
     pinned: "Pinned",

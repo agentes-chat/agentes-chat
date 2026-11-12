@@ -81,6 +81,85 @@ const shown = (el: Element) => {
   return true;
 };
 
+describe("Featured agent", () => {
+  const featured = () => within(nav()).queryByRole("region", { name: "Agente em destaque" });
+
+  test("chosen from the row's menu, saved, outside the scrolling list, and restored after a reload", async () => {
+    const { state } = await go();
+    expect(featured()).toBeNull();
+    await rightClick(within(nav()).getByRole("link", { name: /^Ada/ }));
+    await pick("Destacar na barra lateral");
+    expect(featured()?.querySelector(`[data-agent-row="${ADA_ID}"]`)).toBeTruthy();
+    expect(featured()?.closest(".sidebar__scroll")).toBeNull();
+    expect(nav().querySelectorAll(`[data-agent-row="${ADA_ID}"]`)).toHaveLength(1);
+    expect(featured()?.querySelector("[draggable='true']")).toBeNull();
+    expect(views(state).at(-1)).toMatchObject({ featuredAgentId: ADA_ID });
+    cleanup();
+    await go(state);
+    expect(featured()?.querySelector(`[data-agent-row="${ADA_ID}"]`)).toBeTruthy();
+  });
+
+  test("only one agent is featured, and removing the highlight restores its regular row", async () => {
+    const state = seedState();
+    state.sidebarView = { agentSort: "workspace", showAllAgents: false, pins: null, featuredAgentId: ADA_ID };
+    await go(state);
+    await rightClick(within(nav()).getByRole("link", { name: /^Atlas/ }));
+    await pick("Destacar na barra lateral");
+    expect(featured()?.querySelector(`[data-agent-row="${ATLAS_ID}"]`)).toBeTruthy();
+    expect(rowsIn(section("Agentes"))).toEqual(["Ada"]);
+    await rightClick(within(featured() as HTMLElement).getByRole("link", { name: /^Atlas/ }));
+    await pick("Remover destaque da barra lateral");
+    expect(featured()).toBeNull();
+    expect(rowsIn(section("Agentes"))).toEqual(["Ada", "Atlas"]);
+    expect(views(state).at(-1)).toMatchObject({ featuredAgentId: null });
+  });
+
+  test("a grouped agent keeps its department and pins while featured, even with Agents collapsed", async () => {
+    const state = withGroups();
+    state.sidebarView = {
+      agentSort: "workspace",
+      showAllAgents: false,
+      pins: { agents: [ATLAS_ID], channels: [ENG_ID], people: [] },
+      featuredAgentId: ATLAS_ID,
+    };
+    await go(state);
+    await click(within(nav()).getByRole("button", { name: "Agentes" }));
+    expect(featured()?.querySelector(`[data-agent-row="${ATLAS_ID}"]`)).toBeTruthy();
+    expect(state.agentGroups?.[0]?.agentIds).toEqual([ATLAS_ID]);
+    expect(state.sidebarView.pins?.agents).toEqual([ATLAS_ID]);
+    expect(state.calls.some((c) => c.method === "agentGroups.move")).toBe(false);
+  });
+
+  test("a removed agent or one outside the person's visible audience never appears from a saved shortcut", async () => {
+    for (const id of ["removed-agent", ADA_ID]) {
+      const state = asMember(seedState());
+      const ada = state.agents.find((a) => a.id === ADA_ID);
+      if (ada) ada.audience = { mode: "owner", userIds: [] };
+      state.sidebarView = { agentSort: "workspace", showAllAgents: false, pins: null, featuredAgentId: id };
+      await go(state);
+      expect(featured()).toBeNull();
+      expect(nav().querySelector(`[data-agent-row="${ADA_ID}"]`)).toBeNull();
+      cleanup();
+    }
+  });
+
+  test("long names, roles and unread counts remain in the featured card without a second row", async () => {
+    const state = seedState();
+    const ada = state.agents.find((a) => a.id === ADA_ID);
+    if (ada) {
+      ada.name = "Diretora Geral de Operações Internacionais e Qualidade";
+      ada.role = "Responsável pelas equipes e pelo acompanhamento das entregas em todos os departamentos";
+    }
+    seedDm(state, { type: "agent", id: ADA_ID }, { ago: 1, unread: 999 });
+    state.sidebarView = { agentSort: "workspace", showAllAgents: false, pins: null, featuredAgentId: ADA_ID };
+    await go(state);
+    expect(featured()?.textContent).toContain(ada?.name ?? "missing");
+    expect(featured()?.textContent).toContain(ada?.role ?? "missing");
+    expect(featured()?.querySelector(".sidebar__unread")).toBeTruthy();
+    expect(nav().querySelectorAll(`[data-agent-row="${ADA_ID}"]`)).toHaveLength(1);
+  });
+});
+
 describe("Agentes and its groups", () => {
   test("the agents in no group first, with no header; each group a header with its count", async () => {
     await go(withGroups());

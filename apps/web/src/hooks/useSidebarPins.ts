@@ -56,6 +56,14 @@ export function useSidebarPins() {
     pins,
     isPinned: (kind: PinKind, id: string) => pins[kind].includes(id),
     toggle,
+    /** A personal shortcut, independent of section pins and the agent's department. */
+    featuredEntry: (id: string): MenuEntry => ({
+      kind: "item",
+      id: "feature-agent",
+      label: t(view.featuredAgentId === id ? "sidebarPins.unfeature" : "sidebarPins.feature"),
+      icon: "agent",
+      run: () => setView((now) => ({ ...now, featuredAgentId: now.featuredAgentId === id ? null : id })),
+    }),
     /** "Fixar no topo" / "Tirar do topo" for a row's menus. */
     entry: (kind: PinKind, id: string): MenuEntry => ({
       kind: "item",
