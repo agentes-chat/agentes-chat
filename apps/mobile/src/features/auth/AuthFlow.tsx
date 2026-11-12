@@ -1,5 +1,6 @@
 import { invitationQuery, type SignInOptions, useApi, useAuthConfig } from "@agenteschat/client";
 import { type HumanAction, humanCheckHeaders, withHumanCheck } from "@agenteschat/client/lib/human-check";
+import { signInProviderNameKey } from "@agenteschat/client/lib/sso";
 import {
   emailTypoFix,
   isEmail,
@@ -166,7 +167,7 @@ export function AuthFlow({
       // No password and no provider this server signs in with (the owner's account made by the desktop
       // app): the web's "noPassword" step says where to add one, instead of an empty provider list.
       const on = config.data?.socialProviders as Partial<Record<string, boolean>> | undefined;
-      const usable = found.providers.some((p) => on?.[p] === true);
+      const usable = found.providers.some((p) => p.startsWith("sso-") || on?.[p] === true);
       go(lookUpStep(found, usable));
     } catch (e) {
       // No connection: the e-mail stays, a quiet line says so, and the lookup tries again by itself (below).
@@ -350,7 +351,7 @@ export function AuthFlow({
   const expression = wrong ? "cross" : wink ? "wink" : secret ? "closed" : step === "sent" ? "happy" : undefined;
 
   const first = name.trim().split(/\s+/)[0] ?? "";
-  const providerNames = linkedProviders.map((p) => t(`auth.provider.${p}`)).join(" · ");
+  const providerNames = linkedProviders.map((p) => t(signInProviderNameKey(p))).join(" · ");
   // Steps without a subtitle: their field and buttons say it (the new password's meter gives the minimum).
   const who = email.trim();
   const bubble: Record<Step, [string, string?]> = {

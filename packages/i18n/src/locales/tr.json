@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "Bu sağlayıcı, diğer çalışma alanları dahil tüm hesabınıza giriş yapabilir. Yalnızca güvendiğiniz bir sağlayıcıyı bağlayın.",
+    "title": "Tek oturum açma",
+    "provider": "SSO sağlayıcısı",
+    "signIn": "SSO ile giriş yap",
+    "continueWith": "{{name}} ile devam et",
+    "name": "Görünen ad",
+    "issuer": "Düzenleyen veya keşif URL’si",
+    "clientId": "İstemci kimliği",
+    "secret": "İstemci sırrı",
+    "keepSecret": "Kaydedilen sırrı korumak için boş bırakın",
+    "scopes": "Kapsamlar",
+    "enabled": "SSO’yu etkinleştir",
+    "callback": "Geri dönüş URL’si",
+    "loginLink": "Giriş bağlantısı",
+    "saveFirst": "Geri dönüş URL’sini almak için SSO kapalıyken kaydedin. Kimlik sağlayıcınızda kaydedin, ardından SSO’yu etkinleştirin.",
+    "access": "SSO, çalışma alanının davetlerini ve izinlerini korur. Mevcut hesaplar, giriş yapmışken SSO’yu bağlamalıdır.",
+    "link": "SSO’yu hesabına bağla",
+    "linked": "SSO hesabınıza bağlı",
+    "failed": "SSO tamamlanamadı. Ayarları kontrol edip tekrar deneyin.",
+    "reauth": "SSO’yu değiştirmeden veya hesabınızı bağlamadan önce tekrar giriş yapın.",
+    "saved": "SSO ayarları kaydedildi",
+    "loading": "SSO ayarları yükleniyor…"
+  },
   "app": {
     "name": "agentes"
   },

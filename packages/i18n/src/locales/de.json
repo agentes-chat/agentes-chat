@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "Dieser Anbieter kann sich bei deinem gesamten Konto anmelden, auch in anderen Arbeitsbereichen. Verknüpfe nur einen Anbieter, dem du vertraust.",
+    "title": "Einmalanmeldung",
+    "provider": "SSO-Anbieter",
+    "signIn": "Mit SSO anmelden",
+    "continueWith": "Mit {{name}} fortfahren",
+    "name": "Anzeigename",
+    "issuer": "Aussteller- oder Discovery-URL",
+    "clientId": "Client-ID",
+    "secret": "Client-Geheimnis",
+    "keepSecret": "Leer lassen, um das gespeicherte Geheimnis zu behalten",
+    "scopes": "Berechtigungsbereiche",
+    "enabled": "SSO aktivieren",
+    "callback": "Rückruf-URL",
+    "loginLink": "Anmeldelink",
+    "saveFirst": "Speichere mit deaktiviertem SSO, um die Rückruf-URL zu erhalten. Registriere sie bei deinem Identitätsanbieter und aktiviere dann SSO.",
+    "access": "SSO behält die Einladungen und Berechtigungen des Arbeitsbereichs bei. Bestehende Konten müssen SSO im angemeldeten Zustand verknüpfen.",
+    "link": "SSO mit deinem Konto verknüpfen",
+    "linked": "SSO ist mit deinem Konto verknüpft",
+    "failed": "SSO konnte nicht abgeschlossen werden. Prüfe die Einstellungen und versuche es erneut.",
+    "reauth": "Melde dich erneut an, bevor du SSO änderst oder dein Konto verknüpfst.",
+    "saved": "SSO-Einstellungen gespeichert",
+    "loading": "SSO-Einstellungen werden geladen…"
+  },
   "app": {
     "name": "agentes"
   },

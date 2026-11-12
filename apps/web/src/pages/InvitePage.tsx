@@ -13,6 +13,7 @@ import {
   sendsEmail,
   typedCode,
 } from "@agenteschat/client/lib/join-requests";
+import { signInProviderNameKey } from "@agenteschat/client/lib/sso";
 import {
   emailTypoFix,
   isEmail,
@@ -458,7 +459,8 @@ function EmailInvitation({
   const org = preview.orgName;
   const by = preview.invitedBy ? firstName(preview.invitedBy) : null;
   const account = preview.account ?? NO_ACCOUNT;
-  const signedOut = (): EmailStep => (account.exists ? (account.password ? "password" : "social") : "name");
+  const signedOut = (): EmailStep =>
+    account.exists ? (account.password ? "password" : "social") : account.providers.length > 0 ? "social" : "name";
   const [step, setStep] = useState<EmailStep>(() =>
     user ? (sameAddress(user.email, invited) ? "accept" : "other") : signedOut(),
   );
@@ -617,7 +619,7 @@ function EmailInvitation({
   const calledYou = by
     ? t(modeKey(preview, "invite.calledYou"), { name: by, org })
     : t(modeKey(preview, "invite.calledYouNoName"), { org });
-  const providerNames = providers.map((p) => t(`auth.provider.${p}`)).join(" · ");
+  const providerNames = providers.map((p) => t(signInProviderNameKey(p))).join(" · ");
   const signInStep = account.password ? "password" : "social";
   const mail = webmailOf(invited);
   const bubble: Record<EmailStep, [string, string?]> = {

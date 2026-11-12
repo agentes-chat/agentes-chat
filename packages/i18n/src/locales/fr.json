@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "Ce fournisseur peut accéder à tout votre compte, y compris aux autres espaces de travail. Associez uniquement un fournisseur de confiance.",
+    "title": "Authentification unique",
+    "provider": "Fournisseur SSO",
+    "signIn": "Se connecter avec SSO",
+    "continueWith": "Continuer avec {{name}}",
+    "name": "Nom affiché",
+    "issuer": "URL de l’émetteur ou de découverte",
+    "clientId": "ID du client",
+    "secret": "Secret du client",
+    "keepSecret": "Laissez vide pour conserver le secret enregistré",
+    "scopes": "Portées",
+    "enabled": "Activer SSO",
+    "callback": "URL de retour",
+    "loginLink": "Lien de connexion",
+    "saveFirst": "Enregistrez avec SSO désactivé pour obtenir l’URL de retour. Ajoutez-la chez votre fournisseur d’identité, puis activez SSO.",
+    "access": "SSO conserve les invitations et les autorisations de l’espace. Les comptes existants doivent associer SSO en étant connectés.",
+    "link": "Associer SSO à votre compte",
+    "linked": "SSO est associé à votre compte",
+    "failed": "Impossible de terminer la connexion SSO. Vérifiez les paramètres et réessayez.",
+    "reauth": "Reconnectez-vous avant de modifier SSO ou d’associer votre compte.",
+    "saved": "Paramètres SSO enregistrés",
+    "loading": "Chargement des paramètres SSO…"
+  },
   "app": {
     "name": "agentes"
   },

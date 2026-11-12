@@ -6,7 +6,7 @@ import { useAuth } from "@/auth/context";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
 import { GitHubMark } from "./GitHubMark";
 
-const BRAND: Record<SignInProvider, ReactNode> = {
+const BRAND: Partial<Record<SignInProvider, ReactNode>> = {
   google: (
     <svg className="auth-social__mark" viewBox="0 0 24 24" aria-hidden="true">
       <path
@@ -32,7 +32,7 @@ const BRAND: Record<SignInProvider, ReactNode> = {
   ),
 };
 
-const ORDER: SignInProvider[] = ["google", "github", "apple"];
+const ORDER = ["google", "github", "apple"] as const;
 
 /** How this browser signed in last (marked "Último usado"). */
 export const lastSignIn = () => storage.get(STORAGE_KEYS.lastSignIn);
@@ -46,7 +46,10 @@ export function useSocialProviders(only?: SignInProvider[]): SignInProvider[] {
   const config = useAuthConfig();
   const on = config.data?.socialProviders;
   if (!on) return [];
-  return ORDER.filter((p) => on[p] && (!only || only.includes(p)));
+  return [
+    ...ORDER.filter((p) => on[p] && (!only || only.includes(p))),
+    ...(only?.filter((p) => p.startsWith("sso-")) ?? []),
+  ];
 }
 
 /**
@@ -91,8 +94,8 @@ export function SocialButtons({
               else void auth.signInSocial(p, callbackURL, earlyAccess);
             }}
           >
-            {BRAND[p]}
-            {label[p]}
+            {BRAND[p] ?? <Icon name="shield" size={20} />}
+            {p.startsWith("sso-") ? t("sso.signIn") : label[p as keyof typeof label]}
           </Button>
           {last === p && (
             <span className="auth-social__last ac-iconline" id={lastId}>

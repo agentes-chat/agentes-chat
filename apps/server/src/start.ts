@@ -490,6 +490,7 @@ async function boot(
     rateLimiter: adapters.rateLimiter,
     humanCheck: adapters.humanCheck,
     pubsub: adapters.pubsub,
+    keyWrappers: [adapters.keyWrapper, ...adapters.legacyKeyWrappers],
   });
   let stopping = false;
   const app = createApp({

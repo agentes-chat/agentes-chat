@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "Questo fornitore può accedere a tutto il tuo account, inclusi altri spazi di lavoro. Collega solo un fornitore di cui ti fidi.",
+    "title": "Accesso unico",
+    "provider": "Fornitore SSO",
+    "signIn": "Accedi con SSO",
+    "continueWith": "Continua con {{name}}",
+    "name": "Nome visualizzato",
+    "issuer": "URL dell’emittente o di rilevamento",
+    "clientId": "ID del client",
+    "secret": "Segreto del client",
+    "keepSecret": "Lascia vuoto per mantenere il segreto salvato",
+    "scopes": "Ambiti",
+    "enabled": "Attiva SSO",
+    "callback": "URL di ritorno",
+    "loginLink": "Link di accesso",
+    "saveFirst": "Salva con SSO disattivato per ottenere l’URL di ritorno. Registralo presso il tuo fornitore di identità, poi attiva SSO.",
+    "access": "SSO mantiene gli inviti e le autorizzazioni dello spazio. Gli account esistenti devono collegare SSO dopo aver effettuato l’accesso.",
+    "link": "Collega SSO al tuo account",
+    "linked": "SSO è collegato al tuo account",
+    "failed": "Impossibile completare SSO. Controlla le impostazioni e riprova.",
+    "reauth": "Accedi di nuovo prima di modificare SSO o collegare il tuo account.",
+    "saved": "Impostazioni SSO salvate",
+    "loading": "Caricamento delle impostazioni SSO…"
+  },
   "app": {
     "name": "agentes"
   },

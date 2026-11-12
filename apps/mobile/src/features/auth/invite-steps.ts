@@ -37,7 +37,7 @@ const NO_ACCOUNT: InvitedAccount = { exists: false, password: false, providers: 
 
 /** The first screen for this address: a new one's name, a password's field, or its provider. */
 export function emailStart(account: InvitedAccount = NO_ACCOUNT): EmailStep {
-  if (!account.exists) return "name";
+  if (!account.exists) return account.providers.length > 0 ? "social" : "name";
   return account.password ? "password" : "social";
 }
 

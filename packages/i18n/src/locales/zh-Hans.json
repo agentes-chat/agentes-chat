@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "此提供商可以登录你的整个账户，包括其他工作区。请仅关联你信任的提供商。",
+    "title": "单点登录",
+    "provider": "SSO提供商",
+    "signIn": "使用SSO登录",
+    "continueWith": "使用{{name}}继续",
+    "name": "显示名称",
+    "issuer": "签发者或发现URL",
+    "clientId": "客户端ID",
+    "secret": "客户端密钥",
+    "keepSecret": "留空以保留已保存的密钥",
+    "scopes": "权限范围",
+    "enabled": "启用SSO",
+    "callback": "回调URL",
+    "loginLink": "登录链接",
+    "saveFirst": "先在禁用SSO的状态下保存以获取回调URL。在身份提供商处注册该URL，然后启用SSO。",
+    "access": "SSO会保留工作区的邀请和权限。已有账户必须在登录后关联SSO。",
+    "link": "将SSO关联到你的账户",
+    "linked": "SSO已关联到你的账户",
+    "failed": "无法完成SSO。请检查设置并重试。",
+    "reauth": "更改SSO或关联账户前，请重新登录。",
+    "saved": "SSO设置已保存",
+    "loading": "正在加载SSO设置…"
+  },
   "app": {
     "name": "agentes"
   },

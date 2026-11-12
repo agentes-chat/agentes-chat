@@ -1444,6 +1444,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       },
     },
     account: {
+      sso: async () => ({ provider: null, callbackUrl: "", loginUrl: null, linked: false, canManage: true }),
+      saveSso: async (_orgId, input) => ({
+        provider: { id: "sso-11111111-1111-4111-8111-111111111111", ...input },
+        callbackUrl: "https://chat.example.com/api/auth/callback/sso-11111111-1111-4111-8111-111111111111",
+        loginUrl: "https://chat.example.com/login?sso=sso-11111111-1111-4111-8111-111111111111",
+        linked: false,
+        canManage: true,
+      }),
+      ssoProvider: async (id) => ({ id: id as `sso-${string}`, name: "Company SSO" }),
+
       authConfig: async () => ({
         socialProviders: { google: false, github: true },
         signupOpen: true,

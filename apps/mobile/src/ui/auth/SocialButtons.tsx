@@ -1,4 +1,5 @@
 import { type SignInProvider, useAuthConfig } from "@agenteschat/client";
+import { signInProviderNameKey } from "@agenteschat/client/lib/sso";
 import { jwtEmail } from "@agenteschat/client/lib/text";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { useEffect, useState } from "react";
@@ -26,7 +27,10 @@ export function useSocialProviders(only?: SignInProvider[]): SignInProvider[] {
   const config = useAuthConfig();
   const on = config.data?.socialProviders as Partial<Record<SignInProvider, boolean>> | undefined;
   if (!on) return [];
-  return ORDER.filter((p) => on[p] === true && (!only || only.includes(p)));
+  return [
+    ...ORDER.filter((p) => on[p] === true && (!only || only.includes(p))),
+    ...(only?.filter((p) => p.startsWith("sso-")) ?? []),
+  ];
 }
 
 /**
@@ -117,12 +121,13 @@ export function SocialButtons({
   const apple = providers.includes("apple");
   const others = providers.filter((p) => p !== "apple");
   // Alone in its row a provider says the whole sentence; beside another, only its name (the mark says the rest).
-  const full: Record<SignInProvider, string> = {
+  const full: Partial<Record<SignInProvider, string>> = {
     google: t("auth.continueWithGoogle"),
     github: t("auth.continueWithGithub"),
     apple: t("auth.continueWithApple"),
   };
-  const label = (p: SignInProvider, short: boolean) => (short ? t(`auth.provider.${p}`) : full[p]);
+  const label = (p: SignInProvider, short: boolean) =>
+    p.startsWith("sso-") ? t("sso.signIn") : short ? t(signInProviderNameKey(p)) : (full[p] ?? "");
 
   return (
     <View style={{ gap: 8 }}>

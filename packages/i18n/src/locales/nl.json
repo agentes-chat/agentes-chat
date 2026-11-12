@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "Deze aanbieder kan inloggen op je hele account, inclusief andere werkruimten. Koppel alleen een aanbieder die je vertrouwt.",
+    "title": "Eenmalig aanmelden",
+    "provider": "SSO-aanbieder",
+    "signIn": "Aanmelden met SSO",
+    "continueWith": "Doorgaan met {{name}}",
+    "name": "Weergavenaam",
+    "issuer": "URL van uitgever of detectie",
+    "clientId": "Client-ID",
+    "secret": "Clientgeheim",
+    "keepSecret": "Laat leeg om het opgeslagen geheim te behouden",
+    "scopes": "Bereiken",
+    "enabled": "SSO inschakelen",
+    "callback": "Terugkeer-URL",
+    "loginLink": "Aanmeldlink",
+    "saveFirst": "Sla op met SSO uitgeschakeld om de terugkeer-URL te krijgen. Registreer deze bij je identiteitsaanbieder en schakel SSO in.",
+    "access": "SSO behoudt de uitnodigingen en rechten van de werkruimte. Bestaande accounts moeten SSO koppelen terwijl ze zijn aangemeld.",
+    "link": "SSO aan je account koppelen",
+    "linked": "SSO is aan je account gekoppeld",
+    "failed": "SSO kon niet worden voltooid. Controleer de instellingen en probeer het opnieuw.",
+    "reauth": "Meld je opnieuw aan voordat je SSO wijzigt of je account koppelt.",
+    "saved": "SSO-instellingen opgeslagen",
+    "loading": "SSO-instellingen laden…"
+  },
   "app": {
     "name": "agentes"
   },

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomBytes, sign as signWithKey } from "node:crypto";
-import type { HumanAction, HumanCheck, PubSub, RateLimiter } from "@agenteschat/adapters";
+import type { HumanAction, HumanCheck, KeyWrapper, PubSub, RateLimiter } from "@agenteschat/adapters";
 import { nameIsPassword } from "@agenteschat/client/lib/text";
 import type { Config } from "@agenteschat/config";
 import { and, type Database, eq, ne, schema } from "@agenteschat/db";
@@ -39,9 +39,11 @@ import { type BetterAuthPlugin, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
   APIError,
+  addOAuthServerContext,
   createAuthEndpoint,
   createAuthMiddleware,
   formCsrfMiddleware,
+  getAuthoritativeSessionFromCtx,
   getOAuthState,
   isAPIError,
 } from "better-auth/api";
@@ -53,6 +55,7 @@ import { humanCheckRefusal } from "./http/human-check";
 import type { Logger } from "./logger";
 import { ownerSignIn } from "./owner-claim";
 import { phoneBrowserSignIn, phoneFlowStarted } from "./phone-browser-sign-in";
+import { discoverSso, SSO_ID, ssoForId, ssoHttp, ssoProvider, validateSsoUser } from "./sso";
 
 /**
  * Sign-in for people, built on Better Auth (ADR 0006):
@@ -80,6 +83,8 @@ export function createAuth(deps: {
   humanCheck?: HumanCheck | null;
   /** Tells a person's workspaces their name changed. */
   pubsub?: PubSub;
+  keyWrappers?: KeyWrapper[];
+  ssoFetch?: typeof fetch;
 }) {
   const { db, config, log, rateLimiter } = deps;
   const emailEnabled = deps.emailDelivers === true;
@@ -118,6 +123,7 @@ export function createAuth(deps: {
   const appOrigins = [APP_SCHEME, ...(config.NODE_ENV !== "production" ? ["exp://", "exp://**"] : [])];
   const apple = appleSignIn(config);
   const authorizations = socialAuthorizations(config, apple?.clientId ?? null);
+  const ssoDeps = { db, config, keyWrappers: deps.keyWrappers ?? [], http: deps.ssoFetch };
 
   return betterAuth({
     appName: "agentes.chat",
@@ -150,6 +156,7 @@ export function createAuth(deps: {
     }),
     user: {
       additionalFields: { locale: { type: "string", required: false, input: false } },
+      validateUserInfo: (data, context) => validateSsoUser(ssoDeps, data, context),
     },
     session: {
       additionalFields: { activeOrganizationId: { type: "string", required: false, input: false } },
@@ -301,12 +308,39 @@ export function createAuth(deps: {
       // Checked before the endpoint runs so the person sees the real reason.
       // The database hook below also guards social sign-in.
       before: createAuthMiddleware(async (ctx) => {
+        const providerId = ctx.path?.startsWith("/callback/") ? ctx.params?.id : ctx.body?.provider;
+        if (typeof providerId === "string" && SSO_ID.test(providerId)) {
+          if (ctx.body?.idToken) throw new APIError("BAD_REQUEST", { message: "SSO uses the authorization-code flow" });
+          if (ctx.path === "/link-social") {
+            const session = await getAuthoritativeSessionFromCtx(ctx);
+            if (!session || Date.now() - new Date(session.session.createdAt).getTime() > FRESH_SIGN_IN_MS)
+              throw new APIError("FORBIDDEN", { code: "sso_reauth", message: "Sign in again before linking SSO" });
+            await addOAuthServerContext({ ssoLinkSession: session.session.id });
+          }
+          if (ctx.path === "/sign-in/social" || ctx.path === "/link-social") {
+            await addOAuthServerContext({ ssoProvider: providerId });
+          }
+          const provider = await ssoProvider(ssoDeps, providerId);
+          if (!provider) throw new APIError("BAD_REQUEST", { message: "SSO is disabled" });
+          // Context is request-local; never mutate the shared providers array or another tenant's options.
+          ctx.context.socialProviders = [...ctx.context.socialProviders, provider];
+        }
         if (ctx.path === EXPO_PROXY_PATH) {
           const target =
             (ctx.query as { authorizationURL?: unknown } | undefined)?.authorizationURL ??
             (ctx.request ? new URL(ctx.request.url).searchParams.get("authorizationURL") : undefined);
+          const allowed = [...authorizations];
+          if (typeof target === "string" && URL.canParse(target)) {
+            const callback = new URL(target).searchParams.get("redirect_uri");
+            const id = callback?.split("/callback/")[1];
+            const row = id ? await ssoForId(db, id) : null;
+            if (row && id) {
+              const metadata = await discoverSso(row.issuer, ssoHttp(config, deps.ssoFetch));
+              allowed.push({ id, endpoint: metadata.authorization_endpoint, clientId: row.clientId });
+            }
+          }
           if (
-            !expoProxyAllowed(target, authorizations, ctx.context.baseURL) ||
+            !expoProxyAllowed(target, allowed, ctx.context.baseURL) ||
             !(await phoneFlowStarted(ctx.context, target))
           ) {
             throw new APIError("BAD_REQUEST", { message: "Invalid authorizationURL" });

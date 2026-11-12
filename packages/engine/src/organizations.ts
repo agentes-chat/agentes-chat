@@ -559,8 +559,25 @@ export async function canCreateWorkspace(db: Database, userId: string, policy: W
   return !(await needsWorkspaceAllowance(db, userId, policy)) || (await hasWorkspaceAllowance(db, userId));
 }
 
-export type SignInProvider = "google" | "github" | "apple";
+export type SignInProvider = "google" | "github" | "apple" | `sso-${string}`;
 const SIGN_IN_PROVIDERS = new Set<string>(["google", "github", "apple"]);
+
+async function invitedSsoProviders(db: Database, email: string, now: Date, orgId?: string): Promise<SignInProvider[]> {
+  const rows = await db
+    .select({ id: schema.oidcProviders.id })
+    .from(schema.oidcProviders)
+    .innerJoin(organizationInvitations, eq(organizationInvitations.orgId, schema.oidcProviders.orgId))
+    .where(
+      and(
+        eq(schema.oidcProviders.enabled, true),
+        eq(organizationInvitations.email, email),
+        isNull(organizationInvitations.acceptedAt),
+        gt(organizationInvitations.expiresAt, now),
+        orgId ? eq(schema.oidcProviders.orgId, orgId) : undefined,
+      ),
+    );
+  return [...new Set(rows.map((r) => `sso-${r.id}` as const))];
+}
 
 /**
  * The sign-in screen asks for the e-mail first, then shows the one next step:
@@ -589,7 +606,7 @@ export async function signInOptions(
     return {
       account: false,
       password: false,
-      providers: [] as SignInProvider[],
+      providers: await invitedSsoProviders(db, stored, now),
       canSignUp,
       ...(link && link.email === stored && link.expiresAt <= now ? { accessExpired: true as const } : {}),
     };
@@ -598,7 +615,14 @@ export async function signInOptions(
   return {
     account: true,
     password: ids.includes("credential"),
-    providers: [...new Set(ids.filter((id) => SIGN_IN_PROVIDERS.has(id)))] as SignInProvider[],
+    providers: [
+      ...new Set(
+        ids.filter(
+          (id) =>
+            SIGN_IN_PROVIDERS.has(id) || /^sso-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id),
+        ),
+      ),
+    ] as SignInProvider[],
     canSignUp: false,
   };
 }
@@ -1910,7 +1934,7 @@ const inviteLogo = (token: string, logo: string | null) => {
  * How the invited address signs in (ADR 0090), for the invite page to ask only what is missing: whether it has an
  * account, a password, and which social sign-ins. Only for the holder of an invitation to that address.
  */
-async function invitedAccount(db: Database, email: string) {
+async function invitedAccount(db: Database, email: string, orgId: string) {
   const rows = await db
     .select({ providerId: accounts.providerId })
     .from(users)
@@ -1920,7 +1944,18 @@ async function invitedAccount(db: Database, email: string) {
   return {
     exists: rows.length > 0,
     password: ids.includes("credential"),
-    providers: [...new Set(ids.filter((id) => SIGN_IN_PROVIDERS.has(id)))] as SignInProvider[],
+    providers:
+      rows.length === 0
+        ? await invitedSsoProviders(db, email, new Date(), orgId)
+        : ([
+            ...new Set(
+              ids.filter(
+                (id) =>
+                  SIGN_IN_PROVIDERS.has(id) ||
+                  /^sso-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id),
+              ),
+            ),
+          ] as SignInProvider[]),
   };
 }
 
@@ -2029,7 +2064,7 @@ export async function previewInvitation(db: Database, token: string, now = new D
     invitedBy: inviter ? (row.invitedBy ?? null) : null,
     mode: await workspaceMode(db, row.orgId),
     expiresAt: row.expiresAt.toISOString(),
-    account: await invitedAccount(db, row.email),
+    account: await invitedAccount(db, row.email, row.orgId),
     ...((await seatsFull(db, row.orgId)) ? { full: true as const } : {}),
     // Only while it can be accepted, as `invitedOrgId` serves it.
     ...inviteLogo(token, row.orgLogo),

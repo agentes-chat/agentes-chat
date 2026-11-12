@@ -7,6 +7,32 @@ import type { Widen } from "./widen";
  * no exclamation marks, buttons start with a verb, "agentes" in lower case.
  */
 export const en = {
+  sso: {
+    trust:
+      "This provider can sign in to your whole account, including other workspaces. Link only a provider you trust.",
+    title: "Single sign-on",
+    provider: "SSO provider",
+    signIn: "Sign in with SSO",
+    continueWith: "Continue with {{name}}",
+    name: "Display name",
+    issuer: "Issuer or discovery URL",
+    clientId: "Client ID",
+    secret: "Client secret",
+    keepSecret: "Leave empty to keep the saved secret",
+    scopes: "Scopes",
+    enabled: "Enable SSO",
+    callback: "Callback URL",
+    loginLink: "Sign-in link",
+    saveFirst:
+      "Save with SSO disabled to get the callback URL. Register it with your identity provider, then enable SSO.",
+    access: "SSO keeps workspace invitations and permissions. Existing accounts must link SSO while signed in.",
+    link: "Link SSO to your account",
+    linked: "SSO is linked to your account",
+    failed: "SSO couldn't complete. Check the settings and try again.",
+    reauth: "Sign in again before changing SSO or linking your account.",
+    saved: "SSO settings saved",
+    loading: "Loading SSO settings…",
+  },
   app: { name: "agentes" },
   common: {
     close: "Close",

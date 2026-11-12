@@ -60,6 +60,7 @@ import { routineRoutes } from "./routes/app/routines";
 import { sandboxRoutes } from "./routes/app/sandboxes";
 import { secretRoutes } from "./routes/app/secrets";
 import { skillRoutes } from "./routes/app/skills";
+import { ssoRoutes } from "./routes/app/sso";
 import { storageRoutes } from "./routes/app/storage";
 import { teamWeekRoutes } from "./routes/app/team-week";
 import { telemetryRoutes } from "./routes/app/telemetry";
@@ -173,6 +174,7 @@ export function createApp(options: AppOptions) {
     api.use("/app/organizations/:orgId/agents/:agentId/:part", agentDetailsGate(deps));
     api.use("/app/organizations/:orgId/*", readOnlyWhileDeleting(deps));
     api.route("/app", accountRoutes(deps));
+    api.route("/app", ssoRoutes(deps));
     api.route("/app", accessRoutes(deps));
     api.route("/app", agentRoutes(deps));
     api.route("/app", chatRoutes(deps));

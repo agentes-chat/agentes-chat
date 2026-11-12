@@ -424,7 +424,12 @@ export function accountRoutes(deps: AppDeps) {
             account: z.boolean(),
             password: z.boolean().openapi({ description: "The account has a password." }),
             providers: z
-              .array(z.enum(["google", "github", "apple"]))
+              .array(
+                z.union([
+                  z.enum(["google", "github", "apple"]),
+                  z.string().regex(/^sso-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/),
+                ]),
+              )
               .openapi({ description: "Social sign-ins linked." }),
             canSignUp: z.boolean().openapi({ description: "No account, and this e-mail may create one." }),
             accessExpired: z.literal(true).optional().openapi({
@@ -513,7 +518,12 @@ export function accountRoutes(deps: AppDeps) {
               .object({
                 exists: z.boolean(),
                 password: z.boolean(),
-                providers: z.array(z.enum(["google", "github", "apple"])),
+                providers: z.array(
+                  z.union([
+                    z.enum(["google", "github", "apple"]),
+                    z.string().regex(/^sso-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/),
+                  ]),
+                ),
               })
               .optional()
               .openapi({
