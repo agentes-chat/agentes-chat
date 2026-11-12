@@ -144,7 +144,8 @@ export function createAnthropicProvider(
             compat ? withoutImages(request.messages) : request.messages,
             id,
             withThinking,
-            cacheControl(request),
+            // The system's breakpoints stay 5-minute ones on another company's endpoint; a longer one after them is refused.
+            compat ? { type: "ephemeral" } : cacheControl(request),
           ),
           ...(compat ? {} : { cache_control: { type: "ephemeral" as const } }),
           ...(tools.length > 0 ? { tools } : {}),
