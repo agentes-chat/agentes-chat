@@ -895,6 +895,12 @@ test.skipIf(process.platform === "win32")(
     });
     const tarball = path.join(pc.home, "codex.tar.gz");
     spawnSync("tar", ["-czf", tarball, "-C", release, "codex-aarch64-unknown-linux-musl"]);
+    // Its code-mode host, an asset of its own the standalone build leaves out (#144).
+    writeFileSync(path.join(release, "codex-code-mode-host-aarch64-unknown-linux-musl"), "#!/bin/sh\n", {
+      mode: 0o755,
+    });
+    const hostTarball = path.join(pc.home, "codex-code-mode-host.tar.gz");
+    spawnSync("tar", ["-czf", hostTarball, "-C", release, "codex-code-mode-host-aarch64-unknown-linux-musl"]);
     fake(
       "curl",
       `#!/bin/sh
@@ -906,6 +912,7 @@ case "$url" in
     'chmod 755 "$HOME/.local/share/claude-2.1.319"' 'ln -s "$HOME/.local/share/claude-2.1.319" "$HOME/.local/bin/claude"' \\
     'echo "claude install as $CLAUDE_INSTALL_ALLOW_SUDO" >> "$LOG"' > "$out" ;;
   *codex-aarch64-unknown-linux-musl.tar.gz) cp '${tarball}' "$out" ;;
+  *codex-code-mode-host-aarch64-unknown-linux-musl.tar.gz) cp '${hostTarball}' "$out" ;;
   *) printf '#!/usr/bin/env node\\n' > "$out" ;;
 esac
 `,
@@ -943,6 +950,11 @@ printf '#!/bin/sh\\necho "Chromium 157.0.8103.38 snap"\\n' > '${pc.at("snap/chro
       "curl https://github.com/openai/codex/releases/latest/download/codex-aarch64-unknown-linux-musl.tar.gz\n",
     );
     expect(r.out).toContain(`Codex 0.167.0, in ${pc.at("bin/codex")}`);
+    // With its code-mode host beside it, where Codex looks for it.
+    expect(r.log).toContain(
+      "curl https://github.com/openai/codex/releases/latest/download/codex-code-mode-host-aarch64-unknown-linux-musl.tar.gz\n",
+    );
+    expect(lstatSync(pc.at("bin/codex-code-mode-host")).isFile()).toBe(true);
     // Nothing of the runner: it stops there.
     expect(r.log).not.toContain("agentes-runner.mjs");
 
@@ -952,6 +964,16 @@ printf '#!/bin/sh\\necho "Chromium 157.0.8103.38 snap"\\n' > '${pc.at("snap/chro
     expect(again.log.split("snap install").length).toBe(2);
     expect(again.out).toContain("Chromium 157.0.8103.38, updated by this computer's own updates");
     expect(again.out).toContain("Claude Code 2.1.319\n");
+    expect(again.log.split("codex-code-mode-host-aarch64").length).toBe(2);
+
+    // Codex kept from an install that left its code-mode host out: the host alone, Codex itself untouched.
+    rmSync(pc.at("bin/codex-code-mode-host"));
+    const repair = pc.install(script, ["--requirements", "codex"]);
+    expect(repair.status).toBe(0);
+    expect(repair.log.split("codex-code-mode-host-aarch64").length).toBe(3);
+    expect(repair.log.split("download/codex-aarch64").length).toBe(2);
+    expect(lstatSync(pc.at("bin/codex-code-mode-host")).isFile()).toBe(true);
+    expect(repair.out).toContain("Codex 0.167.0\n");
   },
   30_000,
 );
