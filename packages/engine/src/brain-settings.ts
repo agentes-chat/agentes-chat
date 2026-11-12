@@ -10,6 +10,7 @@ import {
   GROK_PROTOCOL,
   isBrainEffort,
   isBrainSpeed,
+  MUSE_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
   type OwnPlanUsage,
@@ -121,6 +122,7 @@ export const BRAIN_KINDS: readonly BrainKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "muse",
 ];
 export const isBrainKind = (v: unknown): v is BrainKind =>
   typeof v === "string" && (BRAIN_KINDS as readonly string[]).includes(v);
@@ -245,7 +247,14 @@ function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExe
 
 /** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity: its CLI's own default, null). */
 export function defaultBrainModel(kind: BrainKind): string | null {
-  if (kind === "model" || kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity")
+  if (
+    kind === "model" ||
+    kind === "cursor" ||
+    kind === "opencode" ||
+    kind === "grok" ||
+    kind === "antigravity" ||
+    kind === "muse"
+  )
     return null;
   const options = brainModelOptions(kind);
   return (options.find((o) => o.recommended) ?? options[0])?.value ?? (kind === "codex" ? "gpt-6.1-sol" : "sonnet");
@@ -330,6 +339,7 @@ type MachineLike = Parameters<typeof machineExecutors>[0] & {
       opencode?: boolean;
       grok?: boolean;
       antigravity?: boolean;
+      muse?: boolean;
     };
   } | null;
 } & Parameters<typeof machineOnline>[0];
@@ -382,7 +392,10 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
  * Cursor (ADR 0114, runner protocol 36) or OpenCode (ADR 0132, protocol 39): the runner's protocol, its switch (or
  * Codex's on a runner before it) and its CLI found there.
  */
-function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "grok" | "antigravity"): BrainOption {
+function cliOption(
+  machine: MachineLike | null,
+  kind: "cursor" | "opencode" | "grok" | "antigravity" | "muse",
+): BrainOption {
   const tools = machine?.access?.tools;
   let reason: BrainUnavailable | undefined;
   if (!machine) reason = "no_computer";
@@ -394,6 +407,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
       opencode: OPENCODE_PROTOCOL,
       grok: GROK_PROTOCOL,
       antigravity: ANTIGRAVITY_PROTOCOL,
+      muse: MUSE_PROTOCOL,
     }[kind]
   )
     reason = "runner_old";
@@ -1933,6 +1947,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: sharesSignIns(m, "opencode"),
           grok: sharesSignIns(m, "grok"),
           antigravity: sharesSignIns(m, "antigravity"),
+          muse: sharesSignIns(m, "muse"),
           key: sharesSignIns(m, "key"),
         },
         off: Object.fromEntries(options.flatMap((o) => (o.reason ? [[o.kind, o.reason]] : []))),
@@ -1943,6 +1958,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: can("opencode"),
           grok: can("grok"),
           antigravity: can("antigravity"),
+          muse: can("muse"),
         },
         own: m.pairedByUserId === userId ? ownSignIns(m.executors, can) : {},
       };

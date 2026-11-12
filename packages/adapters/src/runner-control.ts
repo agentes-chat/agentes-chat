@@ -97,7 +97,9 @@ export interface ControlStatus {
   protocol: number;
   paused: RunnerPause;
   /** The coding CLIs found here, as `hello.executors` lists them. */
-  executors: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity", RunnerExecutorInfo>>;
+  executors: Partial<
+    Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse", RunnerExecutorInfo>
+  >;
   /** Absolute path of the workspace (the agents' folders live inside it). */
   workspace?: string;
   /** Agents of the organization that use this computer. */

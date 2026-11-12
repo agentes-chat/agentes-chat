@@ -6,6 +6,7 @@ import {
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   isBrainEffort,
+  MUSE_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
   type PlanUsage,
@@ -34,7 +35,16 @@ import { accountUnavailable, brainSessionId, claudeCodeAvailability, toolOff } f
 import { codexVersionOk } from "./codex";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
 
-const KINDS: readonly BrainKind[] = ["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"];
+const KINDS: readonly BrainKind[] = [
+  "model",
+  "claude_code",
+  "codex",
+  "cursor",
+  "opencode",
+  "grok",
+  "antigravity",
+  "muse",
+];
 const kindOf = (v: unknown): BrainKind => (KINDS.includes(v as BrainKind) ? (v as BrainKind) : "model");
 
 /** A mission's choice for a run in its thread (`missionTurnFor`). */
@@ -410,7 +420,7 @@ export function computerBrainUnavailable(
       ...pausedUntil,
     };
   }
-  if (kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity") {
+  if (kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity" || kind === "muse") {
     const off = toolOff(status, kind);
     if (off) return off;
     if (
@@ -420,6 +430,7 @@ export function computerBrainUnavailable(
         opencode: OPENCODE_PROTOCOL,
         grok: GROK_PROTOCOL,
         antigravity: ANTIGRAVITY_PROTOCOL,
+        muse: MUSE_PROTOCOL,
       }[kind]
     ) {
       return {
@@ -480,6 +491,7 @@ export const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
   "opencode_missing",
   "grok_missing",
   "antigravity_missing",
+  "muse_missing",
   "plan_limit",
   "plan_not_owner",
   "plan_not_shared",
@@ -500,6 +512,7 @@ export const NO_AI_CODES: ReadonlySet<string> = new Set([
   "opencode_missing",
   "grok_missing",
   "antigravity_missing",
+  "muse_missing",
 ]);
 
 /** What the engine runs a turn with. */

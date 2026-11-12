@@ -509,6 +509,8 @@ export const LOCKED_BRAIN_PROTOCOL = 41;
 export const EXECUTORS_CHANGED_PROTOCOL = 42;
 /** `account` `begin`'s `provider` for an OpenCode account: an OpenCode (Zen / Go) API key, its only sign-in. */
 export const OPENCODE_KEY_PROVIDER = "zen";
+/** `account` `begin`'s `provider` for a Muse Code account: a Meta API key, which is its only sign-in (ADR 0174). */
+export const MUSE_KEY_PROVIDER = "meta";
 /**
  * From this protocol on (ADR 0142): the Grok brain. `brain.turn` takes `kind: "grok"` (xAI's Grok Build CLI,
  * `grok -p --output-format streaming-messages-json`, one process per turn), `account` takes `kind: "grok"` (a
@@ -669,6 +671,14 @@ export const ACCESS_ALLOW_PROTOCOL = 62;
  * switch on a plugged iPhone that hides it. Older runners answer `phone.look` at once and `xcode.open` `bad_request`.
  */
 export const IPHONE_DEV_MODE_PROTOCOL = 65;
+
+/**
+ * From this protocol on (ADR 0174): the Muse Code brain. `brain.turn` takes `kind: "muse"` (Meta's `muse exec --json`,
+ * one process per turn, refused in `chat` because the CLI has no tool allow/deny list), `account` takes `kind:
+ * "muse"` (a Meta API key in the account's own config folder), `hello.executors.muse` reports the CLI, and
+ * `access.tools.muse` turns it on or off.
+ */
+export const MUSE_PROTOCOL = 59;
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";
@@ -1012,7 +1022,7 @@ export interface ExecVault {
 }
 
 /** Which CLI an account signs in. */
-export type AccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type AccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 export const ACCOUNT_KINDS: readonly AccountKind[] = [
   "claude_code",
   "codex",
@@ -1020,6 +1030,7 @@ export const ACCOUNT_KINDS: readonly AccountKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "muse",
 ];
 export const isAccountKind = (v: unknown): v is AccountKind => ACCOUNT_KINDS.some((k) => k === v);
 /** Account and sign-in ids: UUIDs (the server makes them; the desktop app's runner too). */
@@ -1183,6 +1194,7 @@ export const OWN_USAGE_ID: Record<AccountKind, string> = {
   opencode: "own:opencode",
   grok: "own:grok",
   antigravity: "own:antigravity",
+  muse: "own:muse",
 };
 
 export const PLAN_USAGE_LIMITS = { windows: 8, label: 40 } as const;
@@ -2031,9 +2043,9 @@ export interface BrainTurnRequest {
   runId: string;
   /**
    * `cursor`: protocol 36 (`CURSOR_PROTOCOL`); `opencode`: protocol 39 (`OPENCODE_PROTOCOL`); `grok`: 43
-   * (`GROK_PROTOCOL`); `antigravity`: 44 (`ANTIGRAVITY_PROTOCOL`).
+   * (`GROK_PROTOCOL`); `antigravity`: 44 (`ANTIGRAVITY_PROTOCOL`); `muse`: 59 (`MUSE_PROTOCOL`).
    */
-  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
   /** The executor's session (a UUID, stable per thread); `resume`: the server knows it ran before (a hint). */
   session: { id: string; resume: boolean };
   /** Relative to the agent's folder ("" = the folder). */
@@ -2267,6 +2279,7 @@ export interface RunnerTools {
   grok?: boolean;
   /** Protocol 44: Google's Antigravity CLI (ADR 0143). Absent = off (older runners). */
   antigravity?: boolean;
+  muse?: boolean;
   /** Shell commands (`exec`, `shell` tasks). The same as `exec` in `hello` once protocol 10 is in use. */
   commands: boolean;
   /** Protocol 12: the agent browser (ADR 0040). Absent = off (older runners). */
@@ -2333,6 +2346,7 @@ export interface RunnerInfo {
     opencode?: RunnerExecutorInfo;
     grok?: RunnerExecutorInfo;
     antigravity?: RunnerExecutorInfo;
+    muse?: RunnerExecutorInfo;
   };
   /** Protocol 9: whether the owner paused this computer. */
   paused?: RunnerPause;
@@ -3275,7 +3289,7 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
 export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerInfo["executors"]> {
   const out: NonNullable<RunnerInfo["executors"]> = {};
   const word = (x: unknown) => (isString(x) && /^[\w.-]{1,40}$/.test(x) ? x : undefined);
-  for (const name of ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const) {
+  for (const name of ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "muse"] as const) {
     const e = v[name];
     if (!isObject(e) || !isString(e.version)) continue;
     const authMethod = word(e.authMethod);

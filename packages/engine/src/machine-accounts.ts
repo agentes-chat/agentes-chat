@@ -21,6 +21,7 @@ import {
   isLoginEmail,
   MAX_MACHINE_ACCOUNTS,
   type MachineReplies,
+  MUSE_KEY_PROVIDER,
   OPENCODE_KEY_PROVIDER,
   OPENCODE_PROTOCOL,
   OWN_USAGE_ID,
@@ -759,7 +760,8 @@ export async function syncMachineAccounts(
         const provider =
           isPlanId(a.provider) ||
           (a.kind === "cursor" && a.provider === CURSOR_KEY_PROVIDER) ||
-          (a.kind === "opencode" && a.provider === OPENCODE_KEY_PROVIDER)
+          (a.kind === "opencode" && a.provider === OPENCODE_KEY_PROVIDER) ||
+          (a.kind === "muse" && a.provider === MUSE_KEY_PROVIDER)
             ? a.provider
             : null;
         const candidate = { orgId, machineId, id: a.id, kind: a.kind, createdBy: owner, provider };
@@ -1009,11 +1011,11 @@ const sharedSignInProtocol = (kind: string) =>
  */
 export function sharesSignIns(
   machine: Pick<MachineRow, "protocol" | "executors">,
-  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "key",
+  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse" | "key",
 ): boolean {
   if (machine.protocol < SHARED_ACCOUNTS_PROTOCOL) return false;
   if (machine.executors?.mode !== "system") return true;
-  if (which === "cursor" || which === "opencode" || which === "grok") return false;
+  if (which === "cursor" || which === "opencode" || which === "grok" || which === "muse") return false;
   return machine.protocol >= sharedSignInProtocol(which) && SHARED_SIGN_INS[which];
 }
 
@@ -1184,7 +1186,7 @@ export interface AccountLoginView {
   /** The provider's page (Claude's sign-in, Codex's device page, or where a plan's key is made). */
   url: string;
   /** A key account's coding plan, `cursor` for a Cursor API key, or `zen` for an OpenCode key. */
-  provider?: PlanId | typeof CURSOR_KEY_PROVIDER | typeof OPENCODE_KEY_PROVIDER;
+  provider?: PlanId | typeof CURSOR_KEY_PROVIDER | typeof OPENCODE_KEY_PROVIDER | typeof MUSE_KEY_PROVIDER;
   /** Claude Code: the key the browser seals the pasted code to (raw P-256, base64). */
   publicKey?: string;
   /** Codex: the one-time code to type on its page. */
@@ -1233,7 +1235,8 @@ export async function beginAccountLogin(
   // A CLI's own API key: Cursor's (chosen), OpenCode's (its only sign-in).
   const cliKey =
     (kind === "cursor" && provider === CURSOR_KEY_PROVIDER) ||
-    (kind === "opencode" && provider === OPENCODE_KEY_PROVIDER);
+    (kind === "opencode" && provider === OPENCODE_KEY_PROVIDER) ||
+    (kind === "muse" && provider === MUSE_KEY_PROVIDER);
   // Not a key: Gemini Enterprise's sign-in (ADR 0143), kept as the account's provider.
   const enterprise = kind === "antigravity" && provider === GEMINI_ENTERPRISE_PROVIDER;
   if (provider !== undefined && !cliKey && !enterprise && (kind !== "claude_code" || !isPlanId(provider))) {
