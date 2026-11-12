@@ -4,6 +4,7 @@ import {
   costNanoUsd,
   createCustomProvider,
   createModelProviders,
+  createOpenRouterProvider,
   customModelId,
   customModelOf,
   isOpenRouterModel,
@@ -106,6 +107,105 @@ const chat = (chunks: Record<string, unknown>[]) =>
   `${chunks.map((c) => `data: ${JSON.stringify({ id: "c1", object: "chat.completion.chunk", created: 1, ...c })}\n\n`).join("")}data: [DONE]\n\n`;
 
 describe("calls", () => {
+  test.each(["gpt-5", "gpt-5.6-sol", "gpt-6-sol", "gpt-6.1-sol", "gpt-6.1-sol-2026-09-29"])(
+    "Chat Completions: %s uses completion tokens without changing its deployment id",
+    async (model) => {
+      const { fetcher, requests } = scripted(
+        chat([
+          {
+            model: "gpt-6.1-sol",
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: "call_1",
+                      type: "function",
+                      function: { name: "report_status", arguments: '{"ok":true}' },
+                    },
+                  ],
+                },
+                finish_reason: "tool_calls",
+              },
+            ],
+          },
+        ]),
+      );
+      const modelId = customModelId(CRED, model);
+      const result = await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+        {
+          model: modelId,
+          system: "You are checking that a connection works.",
+          messages: [{ role: "user", content: "Call report_status with ok set to true." }],
+          maxTokens: 1024,
+          tools: [
+            {
+              name: "report_status",
+              description: "Report that the connection works.",
+              inputSchema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] },
+            },
+          ],
+        },
+        {
+          apiKey: "test-key",
+          endpoint: { style: "openai", baseURL: "https://resource.openai.azure.com/openai/v1" },
+          onDelta: () => {},
+        },
+      );
+      expect(requests).toHaveLength(1);
+      expect(requests[0]?.url).toBe("https://resource.openai.azure.com/openai/v1/chat/completions");
+      expect(requests[0]?.body).toMatchObject({
+        model,
+        max_completion_tokens: 1024,
+        stream: true,
+        stream_options: { include_usage: true },
+        tools: [{ type: "function", function: { name: "report_status" } }],
+      });
+      for (const field of ["max_tokens", "temperature", "top_p", "reasoning", "provider", "cache_control"]) {
+        expect(requests[0]?.body).not.toHaveProperty(field);
+      }
+      expect(result.model).toBe(modelId);
+      expect(result.stopReason).toBe("tool_use");
+      expect(result.content).toContainEqual({
+        type: "tool_use",
+        id: "call_1",
+        name: "report_status",
+        input: { ok: true },
+      });
+    },
+  );
+
+  test.each(["gpt-4.1", "gpt-4o", "meta-llama/llama-4:70b", "production", "gpt-60", "gpt-6ish"])(
+    "Chat Completions: %s keeps the legacy token field",
+    async (model) => {
+      const { fetcher, requests } = scripted(
+        chat([{ choices: [{ index: 0, delta: { content: "ok" }, finish_reason: "stop" }] }]),
+      );
+      const modelId = customModelId(CRED, model);
+      const result = await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+        { model: modelId, system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 100 },
+        { apiKey: "test-key", endpoint: { style: "openai", baseURL: "https://gw.example/v1" }, onDelta: () => {} },
+      );
+      expect(requests[0]?.body).toMatchObject({ model, max_tokens: 100 });
+      expect(requests[0]?.body).not.toHaveProperty("max_completion_tokens");
+      expect(result.model).toBe(modelId);
+    },
+  );
+
+  test("OpenRouter keeps its own token field for GPT models", async () => {
+    const { fetcher, requests } = scripted(
+      chat([{ choices: [{ index: 0, delta: { content: "ok" }, finish_reason: "stop" }] }]),
+    );
+    await createOpenRouterProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+      { model: "openai/gpt-6-luna", system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 100 },
+      { apiKey: "test-key", onDelta: () => {} },
+    );
+    expect(requests[0]?.body).toMatchObject({ model: "openai/gpt-6-luna", max_tokens: 100 });
+    expect(requests[0]?.body).not.toHaveProperty("max_completion_tokens");
+  });
+
   test("Chat Completions: the endpoint's address and model id, no OpenRouter extras, usage asked, its cost ignored", async () => {
     const { fetcher, requests } = scripted(
       chat([

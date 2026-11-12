@@ -410,10 +410,12 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
 function toBody(request: ModelRequest, compatible: boolean) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
+  // GPT-5/6 Chat Completions include reasoning in the completion budget; OpenRouter keeps its own parameter.
+  const completionTokens = compatible && /^gpt-[56](?:[.-]|$)/.test(request.model);
   return {
     model: request.model,
     messages: toMessages(request, claude),
-    max_tokens: request.maxTokens,
+    ...(completionTokens ? { max_completion_tokens: request.maxTokens } : { max_tokens: request.maxTokens }),
     stream: true as const,
     ...(request.tools && request.tools.length > 0
       ? {
