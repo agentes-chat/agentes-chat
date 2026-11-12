@@ -68,14 +68,15 @@ const THINKING_BINDING_BETA = "thinking-binding-controls-2026-08-01";
  * streaming, `countTokens` and `output_config.format`. Structured output is a
  * `structured_output` tool, forced where `tool_choice: any` is honored, and
  * its input comes back as the reply's JSON text. Medium effort is sent as
- * `high`: Kimi and GLM take only low, high and max.
+ * `high`: Kimi and GLM take only low, high and max. Tool results' images are left out too, unless `compat.images`
+ * says the model reads them (Claude served by Amazon Bedrock).
  */
 export function createAnthropicProvider(
   options: {
     /** The provider's id in `PROVIDERS`. */
     id?: string;
     baseURL?: string;
-    compat?: { toolChoiceAny: boolean };
+    compat?: { toolChoiceAny: boolean; images?: boolean };
     maxRetries?: number;
     /** Tests only: scripted transport. */
     fetch?: typeof fetch;
@@ -139,9 +140,9 @@ export function createAnthropicProvider(
           model: request.model,
           max_tokens: request.maxTokens,
           system: toSystem(request, compat ? undefined : room(request)),
-          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images.
+          // Another company's endpoint (DeepSeek, Kimi, Z.ai, MiniMax) isn't trusted to take images, unless it says it does.
           messages: toMessageParams(
-            compat ? withoutImages(request.messages) : request.messages,
+            compat && !compat.images ? withoutImages(request.messages) : request.messages,
             id,
             withThinking,
             cacheControl(request),

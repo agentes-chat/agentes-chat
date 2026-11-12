@@ -241,6 +241,56 @@ describe("calls", () => {
     expect((error as ProviderError).message).toContain("model llama-9 not found");
   });
 
+  test("a tool result's image goes to Claude on an Anthropic-compatible endpoint, never to another company's model", async () => {
+    const reply = sse([
+      {
+        type: "message_start",
+        message: {
+          id: "m",
+          type: "message",
+          role: "assistant",
+          model: "x",
+          content: [],
+          stop_reason: null,
+          usage: { input_tokens: 5, output_tokens: 1 },
+        },
+      },
+      { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1 } },
+      { type: "message_stop" },
+    ]);
+    const messages = [
+      { role: "user" as const, content: "what is in the file?" },
+      { role: "assistant" as const, content: [{ type: "tool_use" as const, id: "t1", name: "read_file", input: {} }] },
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "tool_result" as const,
+            toolUseId: "t1",
+            content: "shot.png",
+            images: [{ mediaType: "image/png", data: "UE5H" }],
+          },
+        ],
+      },
+    ];
+    const send = async (model: string) => {
+      const { fetcher, requests } = scripted(reply);
+      await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+        { model: customModelId(CRED, model), system: "s", messages, maxTokens: 100 },
+        {
+          apiKey: "k-123456789",
+          endpoint: { style: "anthropic", baseURL: "https://bedrock-runtime.us-east-1.amazonaws.com/anthropic" },
+          onDelta() {},
+        },
+      );
+      return JSON.stringify(requests[0]?.body.messages);
+    };
+    expect(await send("global.anthropic.claude-sonnet-5-5")).toContain('"type":"image"');
+    const other = await send("moonshotai.kimi-k2.5");
+    expect(other).not.toContain('"type":"image"');
+    expect(other).toContain("The image is not shown");
+  });
+
   test("tool calls without an index, or with object arguments, stay apart and readable", async () => {
     const { fetcher } = scripted(
       chat([

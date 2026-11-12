@@ -15,6 +15,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import type { ToolImage } from "@agenteschat/providers";
 import {
   type BlockSpec,
   BlockSpecError,
@@ -25,6 +26,7 @@ import {
 import { type AgentsDmReads, agentsDmReads, readerOfRun } from "./agents-dm-reads";
 import { recordAudit } from "./audit";
 import { runAuthorityById, runPerson, UUID } from "./authority";
+import { MODEL_IMAGE_BYTES, sniffModelImage } from "./avatars";
 import { routineBriefOfRun } from "./background";
 import { answersAgentsOnly, peopleSee } from "./consultations";
 import { isAgentOnlyDm, openDm } from "./dms";
@@ -1497,6 +1499,25 @@ export async function fileFullText(
   const a = await readable(deps, actor, orgId, artifactId);
   const v = await versionRow(deps.db, a, version);
   return isTextFile(v.fileName ?? "", v.contentType) ? textOfBytes((await readVersion(deps, a, v)).body) : null;
+}
+
+/**
+ * A `file` that is a picture the model reads (PNG, JPEG, WebP or GIF by its bytes, at most `MODEL_IMAGE_BYTES`), for
+ * `read_artifact` to show it; else null. A person's screenshot pasted in the chat is one.
+ */
+export async function fileImage(
+  deps: ArtifactDeps,
+  actor: ArtifactActor,
+  orgId: string,
+  artifactId: string,
+  version?: number,
+): Promise<ToolImage | null> {
+  const a = await readable(deps, actor, orgId, artifactId);
+  const v = await versionRow(deps.db, a, version);
+  if (a.kind !== "file" || v.size > MODEL_IMAGE_BYTES) return null;
+  const { body } = await readVersion(deps, a, v);
+  const mediaType = sniffModelImage(body);
+  return mediaType ? { mediaType, data: Buffer.from(body).toString("base64") } : null;
 }
 
 /** One artifact at `version` (default: latest), with content. */
