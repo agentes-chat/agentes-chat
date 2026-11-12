@@ -3,11 +3,15 @@ import { setupDom } from "../testing/dom";
 
 setupDom();
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { claimPlayback, releasePlayback, stopPlayback } from "../src/components/media-playback";
 import { VideoPlayer, type VideoPlayerProps } from "../src/components/VideoPlayer";
 
 afterEach(() => cleanup());
+
+const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
+/** The declarations of the first rule written exactly as `selector {`. */
+const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
 
 const labels: VideoPlayerProps["labels"] = {
   play: "Tocar",
@@ -84,6 +88,42 @@ describe("VideoPlayer", () => {
     fireEvent.click(speed());
     fireEvent.click(speed());
     expect(speed().textContent).toBe("1×");
+  });
+});
+
+describe("full screen", () => {
+  test("the player marks itself while it is the full screen element, and unmarks when it leaves", () => {
+    player();
+    const root = document.querySelector(".ac-video") as HTMLElement;
+    const setFull = (el: Element | null) => {
+      Object.defineProperty(document, "fullscreenElement", { configurable: true, value: el });
+      act(() => {
+        document.dispatchEvent(new Event("fullscreenchange"));
+      });
+    };
+    try {
+      setFull(root);
+      expect(root.hasAttribute("data-full")).toBe(true);
+      setFull(null);
+      expect(root.hasAttribute("data-full")).toBe(false);
+    } finally {
+      Reflect.deleteProperty(document, "fullscreenElement");
+    }
+  });
+
+  test("a chat tile in full screen leaves its 320 x 180 box: its video fills the screen", () => {
+    // The browser stretches the full screen tile itself; the chat's fixed media box would otherwise stay in force
+    // and leave a small video in the corner of a black screen.
+    expect(rule(".ac-video--tile .ac-video__media")).toContain("width: 320px");
+    expect(rule(".ac-video--tile .ac-video__media")).toContain("height: 180px");
+    const media = rule(".ac-video--tile[data-full] .ac-video__media");
+    expect(media).toContain("width: 100%");
+    expect(media).toContain("max-width: none");
+    expect(media).toContain("height: 100%");
+    // Written after the rules it undoes.
+    expect(css.indexOf("\n.ac-video--tile[data-full] .ac-video__media {")).toBeGreaterThan(
+      css.indexOf("\n.ac-video--tile .ac-video__media {"),
+    );
   });
 });
 

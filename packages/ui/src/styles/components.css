@@ -7398,6 +7398,16 @@ button.ac-voice__play:active {
 .ac-video[data-full] {
   border-radius: 0;
 }
+/* Full screen takes the tile itself, which the browser's own :fullscreen rules already stretch over the screen; its
+   video still kept the chat's 320 x 180 box, so it leaves it and fills the screen (still whole inside it). */
+.ac-video--tile[data-full] {
+  box-shadow: none;
+}
+.ac-video--tile[data-full] .ac-video__media {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+}
 .ac-video[data-hide] {
   cursor: none;
 }
