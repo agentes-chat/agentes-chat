@@ -1,6 +1,7 @@
 import type { Agent, PinnableBlock, Widget, WidgetFormat, WidgetSchedule, WidgetSize } from "@agenteschat/client";
 import {
   useAgents,
+  useAiStatusSince,
   useConfirmWidget,
   useDashboards,
   useHomeDashboard,
@@ -11,6 +12,8 @@ import {
   useWidgetDraft,
   useWidgetSuggestions,
   WIDGET_STILL_MS,
+  widgetAiReady,
+  widgetNeedsAi,
   widgetStepWords,
   widgetWaiting,
   widgetWaitText,
@@ -51,10 +54,12 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { AgentPickerDialog } from "@/components/agents/AgentPickerDialog";
+import { COMPACT_QUERY } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { colorOf } from "@/components/Sky";
-import { failureText } from "@/components/widgets/parts";
+import { failureText, useWidgetAiWay } from "@/components/widgets/parts";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useMatchMedia } from "@/hooks/useMatchMedia";
 import { useToast } from "@/lib/toast";
 import "@/pages/dashboards.css";
 
@@ -153,6 +158,8 @@ function NewWidgetBody({
   const [condition, setCondition] = useState("");
   const [alertOpen, setAlertOpen] = useState(false);
   const [size, setSize] = useState<WidgetSize>("m");
+  // A phone's card and the small size have no room for the whole hint beside the face and the bell.
+  const compact = useMatchMedia(COMPACT_QUERY);
   const [dest, setDest] = useState<string>(dashboardId ?? HOME);
   const [block, setBlock] = useState<number | null>(null);
   const [choosing, setChoosing] = useState(false);
@@ -183,6 +190,12 @@ function NewWidgetBody({
   const detail = useWidgetDraft(orgId, draftId).data;
   const live = detail ?? (test.data?.id === draftId ? test.data : undefined);
   const draft = draftId && live?.id === draftId ? live : undefined;
+  // Its agent has no AI: the test waits for one (no build started), and runs again once one is connected.
+  const needsAi = Boolean(draft && widgetNeedsAi(draft));
+  const aiStatus = useAiStatusSince(orgId, needsAi);
+  const aiBack = Boolean(draft && widgetAiReady(draft, aiStatus));
+  const retested = useRef(false);
+  const aiWay = useWidgetAiWay(draft?.agentId, draft?.failure?.detail);
 
   // A draft nobody created is deleted when the dialog closes or another test replaces it (the server sweeps any
   // left behind after a day). `pending` is the draft still to delete; one being created is kept.
@@ -306,6 +319,13 @@ function NewWidgetBody({
     // Its promise, not the mutation's callbacks: those don't run once the dialog is gone, and the draft must go then.
     void test.mutateAsync(input).then(made, refused);
   };
+  // Once per dialog: a status the server still disagrees with can't test again and again.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `runTest` changes each render; once its agent has an AI
+  useEffect(() => {
+    if (!aiBack || retested.current) return;
+    retested.current = true;
+    runTest();
+  }, [aiBack]);
 
   /** Stop: the build ends (its draft goes, and its run with it) and the ask is back as it was written. */
   const stop = () => {
@@ -660,6 +680,25 @@ function NewWidgetBody({
           </div>
         </div>
       </div>
+    ) : phase === "failed" && needsAi ? (
+      <div className="nw-fail ac-iconline" role="status">
+        <Icon name="plug" size={18} />
+        <div>
+          <b>{failureText(t, draft?.failure ?? null, name)}</b>
+          <p>{t("widgets.needsAi.body", { name })}</p>
+          {aiWay && "locked" in aiWay && <p>{aiWay.locked}</p>}
+          <span className="nw-fail__acts">
+            {aiWay && "connect" in aiWay && (
+              <Button size="sm" onClick={aiWay.connect}>
+                {t("noAi.action")}
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+              {t("dashboards.newWidget.editAsk")}
+            </Button>
+          </span>
+        </div>
+      </div>
     ) : phase === "failed" ? (
       <div className="nw-fail ac-iconline" role="status">
         <Icon name="alert" size={18} />
@@ -670,7 +709,7 @@ function NewWidgetBody({
             <Button size="sm" icon="refresh" disabled={!canTest} onClick={runTest}>
               {t("dashboards.newWidget.tryAgain")}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+            <Button variant="link" onClick={() => setEditing(true)}>
               {t("dashboards.newWidget.editAsk")}
             </Button>
           </span>
@@ -763,9 +802,11 @@ function NewWidgetBody({
             </span>
           )
         )}
-        <span className="wg__dot" aria-hidden="true">
-          ·
-        </span>
+        {(mode === "ask" || owner) && (
+          <span className="wg__dot" aria-hidden="true">
+            ·
+          </span>
+        )}
         {scheduleSelect}
         {tested && <span className="nwc-when">{testedWhen}</span>}
       </>
@@ -800,7 +841,9 @@ function NewWidgetBody({
           autoComplete="off"
           aria-label={t("dashboards.newWidget.titleField")}
           placeholder={
-            mode === "pin" ? t("dashboards.newWidget.titleField") : t("dashboards.newWidget.titlePlaceholder", { name })
+            mode === "pin" || compact || size === "s"
+              ? t("dashboards.newWidget.titleField")
+              : t("dashboards.newWidget.titlePlaceholder", { name })
           }
           onChange={(e) => setTitleEdit(e.target.value)}
         />

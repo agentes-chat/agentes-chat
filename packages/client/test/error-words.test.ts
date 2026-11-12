@@ -374,6 +374,9 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // Only an agent names a project by a name that isn't one, and the pickers offer only projects that exist.
+  "issue_project.unknown",
+  "issue_project.not_found",
   // A portrait's recipe is written by the builder, never typed: a malformed one is a fault of the app, not a choice
   // the person can fix.
   "avatar.portrait",

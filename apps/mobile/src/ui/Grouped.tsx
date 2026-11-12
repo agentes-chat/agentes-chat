@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
-import { useInfoHint } from "./InfoHint";
+import { InfoHint, useInfoHint } from "./InfoHint";
 import { MEDIA_ROW } from "./media-row";
 import { GROUPED_ROW } from "./rhythm";
 import { Text, textLineOf } from "./Text";
@@ -149,8 +149,25 @@ function HintedHeader({ children, aside, hint }: GroupedHeaderProps & { hint: { 
 }
 
 /** The faint explanation under a group. */
-export function GroupedFooter({ children }: { children: ReactNode }) {
+export function GroupedFooter({
+  children,
+  hint,
+}: {
+  children: ReactNode;
+  /** An ⓘ after the footer's one sentence, with the rest of the explanation; its text shows under the sentence. */
+  hint?: { name: string; text: string };
+}) {
   const { reducedMotion } = useTheme();
+  if (hint)
+    return (
+      <Animated.View layout={reducedMotion ? undefined : SLIDE} style={styles.footer}>
+        <InfoHint {...hint} variant="footnote">
+          <Text variant="footnote" tone="faint">
+            {children}
+          </Text>
+        </InfoHint>
+      </Animated.View>
+    );
   return (
     <Animated.View layout={reducedMotion ? undefined : SLIDE}>
       <Text variant="footnote" tone="faint" style={styles.footer}>

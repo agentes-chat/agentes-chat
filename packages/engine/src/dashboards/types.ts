@@ -8,6 +8,7 @@ import type {
   WidgetSpec,
   WidgetStatus,
 } from "@agenteschat/ui/widgets/spec";
+import type { AiStatusDeps } from "../ai-status";
 import type { ModelScope } from "../brains/select";
 import type { ContextDeps } from "../context/summaries";
 
@@ -108,6 +109,8 @@ export const DASHBOARD_ERRORS = {
   promptRequired: "widget.prompt_required",
   /** 409: a draft is confirmed only once its test build worked (`ok`, ADR 0135 §16). */
   notTested: "widget.not_tested",
+  /** 409: its agent has no AI to build it with (`params.agentName`); the widget waits for one (ADR 0135 §20). */
+  needsAi: "widget.needs_ai",
   /**
    * 409: Update now or Resolve while its run waits at its plan's or budget's limit, for its computer or its AI provider:
    * nothing can run it sooner (`params`: the wait's `code`, `source`, `resetsAt`, `scope` and `model`, and `agentName`).
@@ -134,6 +137,8 @@ export interface DashboardDeps {
   pubsub: PubSub;
   /** The cheap model for suggestions and the schedule's time zone helpers; absent: suggestions are empty. */
   context?: ContextDeps;
+  /** Whether a widget's agent can think before its build is queued; absent: only the run's own check says so. */
+  ai?: Omit<AiStatusDeps, "db">;
   now?: () => Date;
 }
 

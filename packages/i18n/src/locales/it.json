@@ -2034,7 +2034,8 @@
       "emptyViewer": "Chi gestisce gli agenti li aggiunge ai canali, e la mappa compare qui.",
       "others": "Altri canali",
       "band": "Supervisori",
-      "reportsTo": "Risponde a {{name}}"
+      "reportsTo": "Risponde a {{name}}",
+      "short": "Chi si occupa di ogni agente e dove lavora."
     },
     "sectors": {
       "lead": "Ogni reparto ha un responsabile, un sostituto, i suoi agenti e i loro canali e routine.",
@@ -2925,7 +2926,7 @@
       "gemini": {
         "title": "Il tuo piano Gemini",
         "tiers": "Google AI Pro, Google AI Ultra o Gemini Enterprise",
-        "warning": "Google dice che usare un piano Gemini personale all'interno di altre app può portare alla sospensione dell'account. Per non correre questo rischio, usa una chiave API o Gemini Enterprise."
+        "warning": "Google dice che usare un piano Gemini personale all'interno di altre app può portare alla sospensione dell'account."
       },
       "zen": {
         "title": "OpenCode",
@@ -3368,6 +3369,7 @@
       "priority": "la priorità",
       "assignee": "l'assegnatario",
       "labels": "le etichette",
+      "project": "il progetto",
       "dueDate": "la scadenza",
       "githubUrl": "il link GitHub",
       "criteria": "i criteri",
@@ -4180,6 +4182,37 @@
       "codeShort_one": "Digita la cifra.",
       "codeShort_other": "Digita tutte le {{count}} cifre.",
       "codeWhere": "Solo il browser di {{agent}} lo digita, su {{host}}."
+    },
+    "env": {
+      "open": "Importa .env",
+      "title": "Importa chiavi",
+      "text": "Accetta un file .env, con una riga NOME=valore per chiave, o un JSON di nomi e valori.",
+      "paste": "Oppure incolla qui il contenuto",
+      "review": "Controlla",
+      "none": "Nessuna riga NOME=valore trovata. Controlla il file e riprova.",
+      "tooLarge": "Questo file è troppo grande (al massimo 512 KB).",
+      "tooMany": "Troppe chiavi in una volta (al massimo {{max}}). Dividi il file e importa ogni parte.",
+      "duplicates": "Ripetute nel file, vale l'ultimo valore: {{names}}",
+      "new": "Nuova",
+      "exists": "Esiste già",
+      "replace": "Sostituisci",
+      "show": "Mostra il valore di {{name}}",
+      "hide": "Nascondi il valore di {{name}}",
+      "problem": {
+        "name": "Il nome deve essere come ACME_API_KEY",
+        "reserved": "Nome riservato",
+        "empty": "Nessun valore",
+        "tooLarge": "Valore troppo grande"
+      }
+    },
+    "move": {
+      "toTeam": "Sposta in Team",
+      "toTeamPersonal": "Sposta in Condiviso",
+      "toPersonal": "Sposta in Personale",
+      "title": "Spostare {{title}}?",
+      "toTeamText": "Tutti nello spazio di lavoro vedranno questo elemento, e i suoi agenti lo useranno quando qualcuno lo chiede. Chi gestisce il Vault può modificarlo.",
+      "toPersonalText": "Solo tu vedrai e modificherai questo elemento, e i suoi agenti lo useranno solo quando lo chiedi tu. Gli altri non lo vedranno più.",
+      "moved": "Spostato"
     }
   },
   "question": {
@@ -5187,7 +5220,9 @@
           "codeLabel": "Codice di Claude",
           "notCode": "Non sembra un codice di Claude.",
           "stepTwoGoogle": "Incolla il codice che mostra Google",
-          "codeLabelGoogle": "Codice o link",
+          "codeLabelGoogle": "Codice di Google",
+          "codeHintGoogle": "Incolla il codice mostrato dalla pagina di Google, non l'indirizzo della pagina.",
+          "notCodeGoogle": "Questo è un indirizzo senza codice. Incolla il codice mostrato dalla pagina di Google.",
           "send": "Invia a {{computer}}",
           "sending": "Invio del codice a {{computer}}…",
           "sent": "Codice inviato. Completamento dell'accesso su {{computer}}.",
@@ -5200,6 +5235,17 @@
           "reconnecting": "Riconnessione…",
           "failed": "Impossibile accedere a quell'account. Riprova.",
           "expired": "Il tempo per accedere è scaduto. Riprova.",
+          "why": {
+            "not_installed": "{{brand}} non è installato su {{computer}}. Riprova.",
+            "no_tty": "Il codice non è arrivato a {{brand}} su {{computer}}. Riprova.",
+            "network": "{{brand}} non è raggiungibile da {{computer}}. Riprova.",
+            "bad_code": "{{brand}} ha rifiutato il codice. Riprova e incolla solo il codice mostrato dalla pagina.",
+            "cli_exit": "{{brand}} si è fermato con un errore su {{computer}}. Riprova.",
+            "not_signed_in_after_login": "{{brand}} ha accettato l'accesso, ma questo account non si può usare qui, forse il piano non lo include. Prova un altro account o una chiave API.",
+            "status_unknown": "{{brand}} non ha indicato se l'account ha effettuato l'accesso. Riprova.",
+            "no_token": "{{brand}} ha finito senza mostrare il token dell'account. Riprova.",
+            "not_kept": "L'account ha effettuato l'accesso, ma {{computer}} non è riuscito a conservarlo. Riprova."
+          },
           "geminiNotShared": "Gemini ha effettuato l'accesso, ma su {{computer}} questo accesso non si può condividere con tutti gli agenti. Usa invece una chiave API di Gemini.",
           "duplicate": {
             "claude_code": "Claude ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Claude e riprova.",
@@ -6388,9 +6434,13 @@
     "approvalsNote": "Merge, deploy e rollback chiedono sempre l'approvazione in chat.",
     "approverOwner": "L'approvazione spetta a {{name}}.",
     "approverAdmins": "L'approvazione spetta a un admin.",
+    "skillsTitle": "Skill dello spazio di lavoro",
     "skillsHelp": "Manuali che {{name}} apre quando servono.",
     "skillsHelp_female": "Manuali che {{name}} apre quando servono.",
+    "importCard": "Da un'altra app",
+    "importCardLine": "Porta gli agenti che hai già in un'altra app.",
     "channels": "Canali",
+    "channelsJoin": "Entra nei canali",
     "channelsHelp": "Entra subito. Puoi aggiungerlo ad altri canali più tardi.",
     "noChannels": "Non sei ancora in nessun canale. Puoi aggiungere l'agente a un canale più tardi.",
     "owner": "Proprietario",
@@ -6636,10 +6686,12 @@
       "title": "App di {{name}}",
       "titleBlank": "App dell'agente",
       "lead": "Un'app collegata entra subito nella scheda. Le altre le colleghi qui.",
+      "leadList": "Un'app collegata entra subito nell'elenco. Le altre le colleghi qui.",
       "suggested": "Suggerite per {{name}}",
       "suggestedBlank": "Suggerite",
       "use": "Usa",
-      "added": "Nella scheda"
+      "added": "Nella scheda",
+      "addedList": "Nell'elenco"
     },
     "create": "Crea {{name}}",
     "createBlank": "Crea agente",
@@ -6706,6 +6758,8 @@
     "agentsOnlyYouHint": "Con un piano, puoi far rispondere ognuno anche ad altre persone dalla sua pagina.",
     "filters": "Filtra persone",
     "rolesOf": "Ruoli di {{name}}",
+    "rolesAdd": "Aggiungi ruolo",
+    "rolesChange": "Cambia ruoli",
     "moreOf": "Altro per {{name}}",
     "passwordLink": {
       "item": "Crea link per nuova password",
@@ -7300,6 +7354,7 @@
         "due": "Scadenza"
       },
       "field": {
+        "project": "Progetto",
         "assignee": "Assegnatario",
         "priority": "Priorità",
         "due": "Scadenza",
@@ -7326,6 +7381,22 @@
       "prioritized": "La #{{number}} ora ha priorità {{priority}}."
     },
     "canceledColumn": "Annullate",
+    "projects": {
+      "label": "Progetto",
+      "none": "Nessun progetto",
+      "all": "Tutti i progetti",
+      "new": "Nuovo progetto",
+      "edit": "Modifica progetto",
+      "create": "Crea progetto",
+      "archive": "Archivia progetto",
+      "unarchive": "Ripristina progetto",
+      "archived": "Archiviati",
+      "archivedMark": "Archiviato",
+      "delete": "Elimina progetto",
+      "deleteTitle": "Eliminare il progetto {{name}}?",
+      "deleteBody": "Le sue attività restano, senza progetto.",
+      "empty": "Ancora nessuna attività in questo progetto."
+    },
     "columns": {
       "add": "Aggiungi colonna",
       "options": "Opzioni per la colonna {{name}}",
@@ -7603,6 +7674,8 @@
       "pr_linked": "ha collegato la PR #{{number}}",
       "github_linked": "l'ha collegata a GitHub",
       "github_unlinked": "ha rimosso il link GitHub",
+      "project_set": "l'ha spostata nel progetto {{project}}",
+      "project_removed": "l'ha tolta dal progetto",
       "artifact_linked": "ha allegato un file",
       "files_attached": "ha allegato {{names}}",
       "files_removed": "ha tolto {{names}} dagli allegati",
@@ -7673,7 +7746,8 @@
         "bad_signature": "Rifiutata: firma errata",
         "too_large": "Rifiutata: oltre 256 KB",
         "rate_limited": "Rifiutata: troppe chiamate al minuto"
-      }
+      },
+      "newShort": "La routine riceve un indirizzo tutto suo."
     },
     "setup": {
       "title": "Webhook di {{provider}}",
@@ -7867,7 +7941,9 @@
     "ownActions": {
       "hint": "Ogni esecuzione fa queste azioni nelle tue app collegate senza chiedere. Qualsiasi altra azione lì chiede prima l’approvazione di una persona, e merge, deploy e rollback la chiedono sempre.",
       "none": "Nelle app collegate chiede l’approvazione di una persona prima di ogni azione. Per farle fare il suo lavoro da sola, di’ all’agente in chat quali azioni può fare.",
-      "remove": "Torna a chiedere prima di: {{action}}"
+      "remove": "Torna a chiedere prima di: {{action}}",
+      "hintShort": "Ogni esecuzione fa queste azioni senza chiedere.",
+      "noneShort": "Chiede l’approvazione di una persona prima di ogni azione."
     },
     "ahead": {
       "approved": "Approvata · parte {{when}}",
@@ -9653,7 +9729,7 @@
     "undoUpdate": "Annulla aggiornamento",
     "undone": "{{name}} è tornata alla versione {{version}}.",
     "agentsImprove": "Gli agenti migliorano le skill da soli",
-    "agentsImproveHelp": "Quando un agente trova una skill sbagliata o a cui manca un passo, la corregge subito: una nuova versione che puoi annullare, e chi ha creato la skill viene avvisato. Le modifiche agli script aspettano chi gestisce le skill.",
+    "agentsImproveHelp": "Quando un agente trova una skill sbagliata o a cui manca un passo, la corregge subito: una nuova versione che puoi annullare, e chi ha creato la skill viene avvisato.",
     "agentsImproveThis": "Gli agenti migliorano questa skill da soli",
     "agentChange": "{{agent}} l'ha modificata {{when}}",
     "undoAgentChange": "Annulla modifica",
@@ -9725,8 +9801,7 @@
     "agentTitle": "Skill",
     "agentSubtitle": "Cosa può aprire {{name}} quando serve.",
     "agentEmpty": "{{name}} non ha ancora skill.",
-    "manage": "Gestisci skill",
-    "step": "Skill"
+    "manage": "Gestisci skill"
   },
   "edit": {
     "unsaved": "Modifiche non salvate",
@@ -10020,7 +10095,9 @@
       "some_female": "{{name}} risponde solo ad alcune persone.",
       "nobody": "{{name}} non risponde a nessuno in questo momento.",
       "nobody_female": "{{name}} non risponde a nessuno in questo momento."
-    }
+    },
+    "agentsToo": "Vale anche per gli agenti.",
+    "peopleOnly": "Vale solo per le persone."
   },
   "composer": {
     "commands": "Comandi",
@@ -10836,7 +10913,7 @@
     "ask": {
       "button": "Chiedi a un agente",
       "title": "Chiedi a un agente",
-      "text": "La richiesta va nella tua conversazione con l'agente, con il link della pagina. Modifica con gli strumenti del wiki e la versione resta nella cronologia come fatta su tua richiesta.",
+      "text": "La richiesta va nella tua conversazione con l'agente, con il link della pagina.",
       "agent": "Agente",
       "what": "Cosa va cambiato?",
       "placeholder": "Es.: aggiornala con l'aumento del 2027",
@@ -10965,7 +11042,8 @@
         "empty": "Nessuna nota .md trovata. Invia il .zip della cartella del vault, la cartella o i file .md.",
         "too_big": "Il vault supera i 500 MB. Invialo senza gli allegati grandi, o in più parti.",
         "unreadable": "Non è stato possibile leggere il file. È un .zip del vault?"
-      }
+      },
+      "howToLabel": "Come creare il .zip"
     },
     "save": "Salva nel wiki",
     "saveTitle": "Salva nel wiki",
@@ -11727,7 +11805,7 @@
   },
   "githubApp": {
     "title": "Repository GitHub",
-    "text": "Dove l'app agentes.chat è installata, gli agenti aprono pull request, issue, commenti e commit come l'app, con il nome dell'agente e di chi l'ha chiesto. Solo {{org}} usa ciò che installi da qui.",
+    "text": "Dove l'app agentes.chat è installata, gli agenti aprono pull request, issue, commenti e commit come l'app, con il nome dell'agente e di chi l'ha chiesto.",
     "install": "Installa l'app agentes.chat",
     "installMore": "Installa su un altro account",
     "none": "Ancora nessun account GitHub.",
@@ -11802,7 +11880,8 @@
       "none": "Nessun repository scelto. Ogni merge chiede l'approvazione.",
       "help": "In questi repository il merge avviene senza scheda di approvazione, finisce nell'audit e lascia una ricevuta nella conversazione. Tutto il resto di sensibile continua a chiedere.",
       "dialogTitle": "Dove {{name}} fa il merge senza chiedere",
-      "dialogDesc": "Solo repository che usa già. Un merge altrove chiede l'approvazione."
+      "dialogDesc": "Solo repository che usa già. Un merge altrove chiede l'approvazione.",
+      "short": "In questi repository il merge avviene senza scheda di approvazione."
     },
     "label": "Quali repository",
     "all": "Tutti i repository",
@@ -12748,7 +12827,8 @@
       "added": "Ora anche: {{names}}.",
       "removed": "Non più: {{names}}.",
       "same": "Nelle organizzazioni non è cambiato nulla.",
-      "failed": "Non è stato possibile leggere le organizzazioni ora."
+      "failed": "Non è stato possibile leggere le organizzazioni ora.",
+      "short": "GitHub chiede delle organizzazioni solo la prima volta."
     },
     "composioHelp": "Accedi nella pagina di Composio, in inglese, e torni qui. {{name}} mostra il permesso come “Composio”.",
     "or": "oppure",
@@ -12961,7 +13041,8 @@
       "timeoutHelp": "Una query che dura di più viene annullata, così non appesantisce il database.",
       "seconds_one": "{{count}} secondo",
       "seconds_many": "{{count}} secondi",
-      "seconds_other": "{{count}} secondi"
+      "seconds_other": "{{count}} secondi",
+      "hiddenExample": "tabella.colonna, come clienti.\"Codice Fiscale\""
     },
     "agent": {
       "title": "Database",
@@ -13016,7 +13097,7 @@
     "address": "Indirizzo email",
     "addressPlaceholder": "tu@azienda.com",
     "addressInvalid": "Scrivi un'email valida, come tu@azienda.com.",
-    "icloudHint": "Usa il tuo indirizzo di iCloud Mail, come nome@icloud.com, anche se il tuo Account Apple usa {{name}}. Su iPhone lo trovi in Impostazioni › il tuo nome › iCloud › iCloud Mail, oppure vai su icloud.com/mail.",
+    "icloudHint": "Usa il tuo indirizzo di iCloud Mail, come nome@icloud.com, anche se il tuo Account Apple usa {{name}}.",
     "password": "Password per app",
     "passwordHelp": "Salvata cifrata sul server. Nessuno la vedrà più.",
     "passwordInvalid": "Incolla la password per app.",
@@ -13133,7 +13214,8 @@
       "newFrom": "Le nuove email partono da",
       "newFromHelp": "Le risposte partono sempre dall'indirizzo a cui è stata inviata l'email.",
       "later": "Puoi cambiarlo più tardi in Indirizzi.",
-      "saved": "Indirizzi di {{address}} salvati."
+      "saved": "Indirizzi di {{address}} salvati.",
+      "short": "Gli agenti rispondono dall'indirizzo a cui è stata inviata l'email."
     },
     "agent": {
       "title": "Email",
@@ -13227,7 +13309,8 @@
       "every": "Si avvia per ogni nuova email che passa i filtri.",
       "needsReconnect": "Da ricollegare",
       "error": "Non funziona"
-    }
+    },
+    "toolsShort": "Scegli cosa fanno gli agenti con questa email."
   },
   "searchPage": {
     "title": "Cerca nello spazio di lavoro",
@@ -13453,6 +13536,9 @@
     },
     "issue": {
       "assigneeOutside": "Questa persona non vede questa attività. Aggiungila prima a Chi lo vede.",
+      "projectNameTaken": "Esiste già un progetto con questo nome.",
+      "projectArchived": "Questo progetto è archiviato e non accetta nuove attività.",
+      "projectsFull": "Un workspace contiene al massimo {{max}} progetti. Eliminane uno prima.",
       "stageFull": "Una fase ha al massimo {{max}} colonne. Elimina prima una delle sue colonne.",
       "deleteForbidden": "Solo chi ha creato questa attività o un amministratore può eliminarla.",
       "audienceEmpty": "Scegli chi lo vede."
@@ -13756,7 +13842,8 @@
         "unsupported": "Questo gestore di password non si può collegare qui.",
         "invalidInput": "Controlla i campi e riprova.",
         "tooManyItems": "Il Vault è pieno. Elimina degli elementi prima di sincronizzarne altri."
-      }
+      },
+      "unreadable": "Il valore salvato non può essere letto qui. Salvalo di nuovo, poi spostalo."
     },
     "feedback": {
       "filesGone": "Un file che hai aggiunto non c'è più. Aggiungilo di nuovo.",
@@ -14973,7 +15060,9 @@
         "imported": "Ha importato password nel Vault",
         "connection_added": "Ha collegato un gestore di password al Vault",
         "connection_changed": "Ha modificato il collegamento di un gestore di password",
-        "connection_removed": "Ha scollegato un gestore di password dal Vault"
+        "connection_removed": "Ha scollegato un gestore di password dal Vault",
+        "item_moved": "Ha spostato un elemento del Vault tra Personale e Team",
+        "keys_imported": "Ha importato chiavi nel Vault"
       },
       "verb": {
         "created": "Ha creato",
@@ -15641,7 +15730,8 @@
       "old": "{{brand}}, da prima degli account",
       "oldSub": "Consumi di prima che l'account venisse registrato",
       "ofMonth": "{{percent}} del mese",
-      "shareLabel": "{{source}}: {{percent}} del mese"
+      "shareLabel": "{{source}}: {{percent}} del mese",
+      "estimateShort": "Una stima."
     }
   },
   "budget": {
@@ -17196,10 +17286,9 @@
   "deleteAccount": {
     "menu": "Elimina account",
     "card": {
-      "text": "Esci da tutti gli spazi di lavoro e il tuo account viene eliminato per sempre 7 giorni dopo. Fino ad allora puoi ripristinarlo.",
+      "text": "Elimina il tuo account tra 7 giorni, in tutti gli spazi di lavoro.",
       "button": "Elimina account…",
-      "oneWorkspace": "Vuoi eliminare solo questo spazio di lavoro? Lo trovi in Generali.",
-      "leaveWorkspace": "Vuoi uscire solo da questo spazio di lavoro? Lo trovi in Membri."
+      "title": "Elimina"
     },
     "title": "Eliminare tutto il tuo account?",
     "intro": "Elimina tutto il tuo account, non solo uno spazio di lavoro.",
@@ -17924,6 +18013,14 @@
       "timeout": "L'aggiornamento ha richiesto troppo tempo.",
       "invalid_data": "{{name}} non è riuscito a mettere i dati in questo formato."
     },
+    "needsAi": {
+      "body": "{{name}} lo crea non appena viene collegata un'IA.",
+      "short": "Serve un'IA",
+      "not_signed_in": "Il piano di {{name}} è disconnesso.",
+      "no_computer": "L'IA di {{name}} ha bisogno di un computer e non ce n'è nessuno.",
+      "cli_missing": "Il programma dell'IA di {{name}} non è installato sul computer.",
+      "plan_not_shared": "Il piano di {{name}} risponde solo al suo proprietario, quindi non può aggiornare i widget."
+    },
     "wait": {
       "plan": "In attesa che il piano di {{name}} si rinnovi {{when}}",
       "planUnknown": "In attesa che il piano di {{name}} si rinnovi",
@@ -18062,7 +18159,8 @@
       "textRoutine": "La routine di {{name}} che lo aggiorna si ferma, e la sua cronologia degli aggiornamenti se ne va con lui.",
       "textManual": "La sua cronologia degli aggiornamenti se ne va con lui.",
       "confirm": "Rimuovi"
-    }
+    },
+    "exposureShort": "Chi vede la dashboard vede questi dati."
   },
   "agentPicker": {
     "search": "Cerca agenti",
@@ -18299,7 +18397,8 @@
       "blockNotFound": "Quel grafico non è più nel messaggio.",
       "notAgentMessage": "Si può fissare solo il grafico di un agente.",
       "promptRequired": "Di' cosa deve mostrare il widget.",
-      "notTested": "Provalo prima: il widget viene creato quando la prova va a buon fine."
+      "notTested": "Provalo prima: il widget viene creato quando la prova va a buon fine.",
+      "needsAi": "{{agentName}} non può ancora aggiornare questo widget. Il widget dice perché."
     }
   },
   "teamPlan": {

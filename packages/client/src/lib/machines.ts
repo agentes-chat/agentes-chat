@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type {
+  AccountLoginFailure,
   AccountLoginStatus,
   DeviceLocation,
   Machine,
@@ -301,6 +302,48 @@ export function isSignInCode(text: string, signInUrl: string): boolean {
   }
   const code = text.trim();
   return Boolean(state) && code.length > (state?.length ?? 0) + 1 && code.endsWith(`#${state}`) && !/\s/.test(code);
+}
+
+/**
+ * A pasted address that carries no sign-in code (no `code` in its query): Google's page shows the code and takes it
+ * out of its own address, so that address signs nobody in. Said before sending, never sent.
+ */
+export function isUrlWithoutCode(text: string): boolean {
+  const value = text.trim();
+  if (!/^https?:\/\//i.test(value)) return false;
+  try {
+    return !new URL(value).searchParams.get("code");
+  } catch {
+    return true;
+  }
+}
+
+/** The failures with a sentence of their own (`agentPage.work.brain.add.why.<code>`). */
+const WORDED_LOGIN_FAILURES = [
+  "not_installed",
+  "no_tty",
+  "network",
+  "bad_code",
+  "cli_exit",
+  "not_signed_in_after_login",
+  "status_unknown",
+  "no_token",
+  "not_kept",
+] as const satisfies readonly AccountLoginFailure[];
+
+/**
+ * How a sign-in that ended on the computer is said (`AccountLoginStatus.code`): its sentence's key, and whether the
+ * CLI's own words (`message`) go under it. `key` null: no line at all (the person canceled, the flow starts over). A
+ * code this app doesn't know, or none (an older runner): the plain line.
+ */
+export function loginFailureLine(code: string | null | undefined) {
+  if (code === "canceled") return { key: null, detail: false };
+  if (code === "timeout") return { key: "agentPage.work.brain.add.expired" as const, detail: false };
+  const worded = WORDED_LOGIN_FAILURES.find((c) => c === code);
+  return {
+    key: worded ? (`agentPage.work.brain.add.why.${worded}` as const) : ("agentPage.work.brain.add.failed" as const),
+    detail: worded === "cli_exit" || worded === "not_signed_in_after_login",
+  };
 }
 
 /** What starts a sign-in on the computer (`beginAccountLogin`'s options). */

@@ -2433,7 +2433,6 @@
     },
     "formatAuto": "{{name}} memilih yang terbaik",
     "newWidget": {
-      "titleHint": "Judul · {{name}} menyarankan satu saat diuji",
       "alerts": "Peringatan aktif",
       "realData": "Data sungguhan",
       "editAsk": "Ubah permintaan",

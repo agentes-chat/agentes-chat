@@ -449,7 +449,7 @@
     if (!search || !actions) return true;
     const gap = parseFloat(style(bar).columnGap) || 0;
     const floor = parseFloat(style(search).minWidth) || 0;
-    return floor + gap + actions.getBoundingClientRect().width <= bar.clientWidth + 0.5;
+    return floor + gap + actions.getBoundingClientRect().width <= bar.clientWidth - 0.5;
   };
   const stackToolbars = () => {
     for (const bar of document.querySelectorAll(".ac-toolbar:has(> .ac-toolbar__search)")) {
@@ -1609,7 +1609,7 @@
           const extra = desc
             ? grown(el.querySelector(".ac-menu__label > :first-child:not(.ac-menu__desc)")) +
               grown(el.querySelector(".ac-menu__desc"))
-            : 0;
+            : grown(el.querySelector(".ac-menu__label, .ac-filter__label"));
           const want = (faces ? (roomy ? 44 : 36) : desc ? (roomy ? 58 : 50) : roomy ? 40 : 32) + extra;
           const r = el.getBoundingClientRect();
           const base = { rule: "menuitem", node: el, el: sig(el), box: sig(menu) };
@@ -1716,7 +1716,9 @@
               continue;
             }
             // A plate or a control as tall as the row (its whole row a button) holds the row's content: look inside.
-            const full = n.getBoundingClientRect().height >= b.height - 1;
+            // So does the line of a row that opens under it (`.ac-foldrow__head`): the row's room is above what the
+            // line holds and below what it unfolds.
+            const full = n.getBoundingClientRect().height >= b.height - 1 || n.matches(".ac-foldrow__head");
             if ((n.matches(`${HOLDS},${FACE},svg`) || hasSurface(style(n))) && !full) {
               const r = n.getBoundingClientRect();
               add(r.top, r.bottom);

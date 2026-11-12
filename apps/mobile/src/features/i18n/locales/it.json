@@ -2638,7 +2638,6 @@
     },
     "formatAuto": "{{name}} sceglie il migliore",
     "newWidget": {
-      "titleHint": "Titolo · {{name}} ne suggerisce uno nel test",
       "alerts": "Avvisa",
       "realData": "Dati reali",
       "editAsk": "Cambia la richiesta",

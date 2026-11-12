@@ -1975,7 +1975,8 @@
       "emptyViewer": "Ajanları yöneten kişi onları kanallara ekler ve harita burada görünür.",
       "others": "Diğer kanallar",
       "band": "Yöneticiler",
-      "reportsTo": "{{name}} adlı ajana rapor verir"
+      "reportsTo": "{{name}} adlı ajana rapor verir",
+      "short": "Her ajanla kim ilgileniyor ve ajan nerede çalışıyor."
     },
     "sectors": {
       "lead": "Her departmanın bir sorumlusu, bir yedeği, ajanları ve onların kanalları ile rutinleri vardır.",
@@ -2814,7 +2815,7 @@
       "gemini": {
         "title": "Gemini planınız",
         "tiers": "Google AI Pro, Google AI Ultra veya Gemini Enterprise",
-        "warning": "Google, kişisel bir Gemini planını başka uygulamaların içinde kullanmanın hesabın askıya alınmasına yol açabileceğini söylüyor. Bu riski almamak için bir API anahtarı ya da Gemini Enterprise kullanın."
+        "warning": "Google, kişisel bir Gemini planını başka uygulamaların içinde kullanmanın hesabın askıya alınmasına yol açabileceğini söylüyor."
       },
       "zen": {
         "title": "OpenCode",
@@ -3247,6 +3248,7 @@
       "priority": "önceliği",
       "assignee": "atanan kişiyi",
       "labels": "etiketleri",
+      "project": "projeyi",
       "dueDate": "bitiş tarihini",
       "githubUrl": "GitHub bağlantısını",
       "criteria": "kriterleri",
@@ -4052,6 +4054,37 @@
       "codeShort_one": "Rakamı yazın.",
       "codeShort_other": "{{count}} rakamın hepsini yazın.",
       "codeWhere": "Bunu yalnızca {{agent}} ajanının tarayıcısı, {{host}} üzerinde yazar."
+    },
+    "env": {
+      "open": ".env içe aktar",
+      "title": "Anahtarları içe aktar",
+      "text": "Her anahtar için bir AD=değer satırı olan bir .env dosyasını veya adlardan ve değerlerden oluşan bir JSON'u kabul eder.",
+      "paste": "Ya da içeriği buraya yapıştırın",
+      "review": "Gözden geçir",
+      "none": "AD=değer satırı bulunamadı. Dosyayı kontrol edip yeniden deneyin.",
+      "tooLarge": "Bu dosya çok büyük (en fazla 512 KB).",
+      "tooMany": "Tek seferde çok fazla anahtar var (en fazla {{max}}). Dosyayı bölüp her parçayı içe aktarın.",
+      "duplicates": "Dosyada birden fazla kez geçiyor, son değer geçerli: {{names}}",
+      "new": "Yeni",
+      "exists": "Zaten var",
+      "replace": "Değiştir",
+      "show": "{{name}} değerini göster",
+      "hide": "{{name}} değerini gizle",
+      "problem": {
+        "name": "Ad, ACME_API_KEY gibi olmalı",
+        "reserved": "Ayrılmış ad",
+        "empty": "Değer yok",
+        "tooLarge": "Değer çok büyük"
+      }
+    },
+    "move": {
+      "toTeam": "Ekip'e taşı",
+      "toTeamPersonal": "Paylaşılan'a taşı",
+      "toPersonal": "Kişisel'e taşı",
+      "title": "{{title}} taşınsın mı?",
+      "toTeamText": "Çalışma alanındaki herkes bu öğeyi görür ve ajanları, biri istediğinde onu kullanır. Vault'u yönetenler düzenleyebilir.",
+      "toPersonalText": "Bu öğeyi yalnızca siz görür ve düzenlersiniz, ajanları da yalnızca siz istediğinizde kullanır. Diğerleri artık göremez.",
+      "moved": "Taşındı"
     }
   },
   "question": {
@@ -5002,7 +5035,9 @@
           "codeLabel": "Claude kodu",
           "notCode": "Bu bir Claude kodu gibi görünmüyor.",
           "stepTwoGoogle": "Google'ın gösterdiği kodu yapıştır",
-          "codeLabelGoogle": "Kod veya bağlantı",
+          "codeLabelGoogle": "Google kodu",
+          "codeHintGoogle": "Sayfanın adresini değil, Google sayfasının gösterdiği kodu yapıştırın.",
+          "notCodeGoogle": "Bu, kod içermeyen bir adres. Google sayfasının gösterdiği kodu yapıştırın.",
           "send": "{{computer}} bilgisayarına gönder",
           "sending": "Kod {{computer}} bilgisayarına gönderiliyor…",
           "sent": "Kod gönderildi. Giriş {{computer}} üzerinde tamamlanıyor.",
@@ -5015,6 +5050,17 @@
           "reconnecting": "Yeniden bağlanıyor…",
           "failed": "Bu hesaba giriş yapılamadı. Tekrar deneyin.",
           "expired": "Giriş süresi doldu. Tekrar deneyin.",
+          "why": {
+            "not_installed": "{{brand}}, {{computer}} üzerinde kurulu değil. Tekrar deneyin.",
+            "no_tty": "{{computer}}, kodu {{brand}} tarafına iletemedi. Tekrar deneyin.",
+            "network": "{{computer}}, {{brand}} ile bağlantı kuramadı. Tekrar deneyin.",
+            "bad_code": "{{brand}} kodu reddetti. Tekrar deneyin ve yalnızca sayfanın gösterdiği kodu yapıştırın.",
+            "cli_exit": "{{brand}}, {{computer}} üzerinde bir hatayla durdu. Tekrar deneyin.",
+            "not_signed_in_after_login": "{{brand}} girişi kabul etti ama bu hesap burada kullanılamıyor, planı bunu kapsamıyor olabilir. Başka bir hesap veya bir API anahtarı deneyin.",
+            "status_unknown": "{{brand}}, hesabın giriş yapıp yapmadığını bildirmedi. Tekrar deneyin.",
+            "no_token": "{{brand}}, hesabın belirtecini göstermeden bitti. Tekrar deneyin.",
+            "not_kept": "Hesap giriş yaptı ama {{computer}} girişi saklayamadı. Tekrar deneyin."
+          },
           "geminiNotShared": "Gemini'ye giriş yapıldı, ancak {{computer}} bu girişi tüm ajanlarla paylaşamıyor. Bunun yerine bir Gemini API anahtarı kullanın.",
           "duplicate": {
             "claude_code": "Claude, zaten bağladığınız {{account}} hesabıyla giriş yaptı. Başka bir hesap kullanmak için Claude sayfasında çıkış yapıp tekrar deneyin.",
@@ -6134,8 +6180,12 @@
     "approvalsNote": "Birleştirme, dağıtım ve geri alma her zaman sohbette onay ister.",
     "approverOwner": "{{name}} onaylar.",
     "approverAdmins": "Bir yönetici onaylar.",
+    "skillsTitle": "Çalışma alanının becerileri",
     "skillsHelp": "{{name}} kişisinin gerektiğinde açtığı kılavuzlar.",
+    "importCard": "Başka bir uygulamadan",
+    "importCardLine": "Başka bir uygulamada zaten olan ajanlarınızı getirin.",
     "channels": "Kanallar",
+    "channelsJoin": "Kanallara katılır",
     "channelsHelp": "Şimdi katılır. Daha sonra başka kanallara ekleyebilirsiniz.",
     "noChannels": "Henüz hiçbir kanalda değilsiniz. Ajanı daha sonra bir kanala ekleyebilirsiniz.",
     "owner": "Sahip",
@@ -6374,10 +6424,12 @@
       "title": "{{name}} uygulamaları",
       "titleBlank": "Ajanın uygulamaları",
       "lead": "Bağlı bir uygulama hemen karta eklenir. Diğerlerini burada bağlarsın.",
+      "leadList": "Bağlı bir uygulama hemen listeye eklenir. Diğerlerini burada bağlarsın.",
       "suggested": "{{name}} için önerilenler",
       "suggestedBlank": "Önerilenler",
       "use": "Kullan",
-      "added": "Kartta"
+      "added": "Kartta",
+      "addedList": "Listede"
     },
     "create": "{{name}} oluştur",
     "createBlank": "Ajan oluştur",
@@ -6444,6 +6496,8 @@
     "agentsOnlyYouHint": "Bir planla, her birinin sayfasından diğer kişilere de yanıt vermesine izin verebilirsiniz.",
     "filters": "Kişileri filtrele",
     "rolesOf": "Roller: {{name}}",
+    "rolesAdd": "Rol ekle",
+    "rolesChange": "Rolleri değiştir",
     "moreOf": "{{name}} için daha fazlası",
     "passwordLink": {
       "item": "Yeni şifre bağlantısı oluştur",
@@ -7018,6 +7072,7 @@
         "due": "Son tarih"
       },
       "field": {
+        "project": "Proje",
         "assignee": "Atanan",
         "priority": "Öncelik",
         "due": "Son tarih",
@@ -7044,6 +7099,22 @@
       "prioritized": "#{{number}} artık {{priority}} öncelikli."
     },
     "canceledColumn": "İptal edildi",
+    "projects": {
+      "label": "Proje",
+      "none": "Proje yok",
+      "all": "Tüm projeler",
+      "new": "Yeni proje",
+      "edit": "Projeyi düzenle",
+      "create": "Proje oluştur",
+      "archive": "Projeyi arşivle",
+      "unarchive": "Projeyi arşivden çıkar",
+      "archived": "Arşivlenmiş",
+      "archivedMark": "Arşivlendi",
+      "delete": "Projeyi sil",
+      "deleteTitle": "{{name}} projesi silinsin mi?",
+      "deleteBody": "Görevleri projesiz olarak kalır.",
+      "empty": "Bu projede henüz görev yok."
+    },
     "columns": {
       "add": "Sütun ekle",
       "options": "{{name}} sütunu için seçenekler",
@@ -7304,6 +7375,8 @@
       "pr_linked": "PR #{{number}} bağladı",
       "github_linked": "GitHub'a bağladı",
       "github_unlinked": "GitHub bağlantısını kaldırdı",
+      "project_set": "{{project}} projesine taşıdı",
+      "project_removed": "projeden çıkardı",
       "artifact_linked": "bir dosya ekledi",
       "files_attached": "{{names}} ekledi",
       "files_removed": "{{names}} eklerden çıkardı",
@@ -7374,7 +7447,8 @@
         "bad_signature": "Reddedildi: yanlış imza",
         "too_large": "Reddedildi: 256 KB'tan büyük",
         "rate_limited": "Reddedildi: dakikada çok fazla çağrı"
-      }
+      },
+      "newShort": "Rutinin kendine ait bir adresi olur."
     },
     "setup": {
       "title": "{{provider}} webhook'u",
@@ -7566,7 +7640,9 @@
     "ownActions": {
       "hint": "Her çalıştırma bunları bağlı uygulamalarında sormadan yapar. Oradaki diğer her işlem önce bir kişinin onayını ister, merge, deploy ve rollback ise her zaman onay ister.",
       "none": "Bağlı uygulamalarda her işlemden önce bir kişinin onayını ister. İşini kendisi yapması için sohbette ajana hangi işlemleri yapabileceğini söyle.",
-      "remove": "Şundan önce yine sor: {{action}}"
+      "remove": "Şundan önce yine sor: {{action}}",
+      "hintShort": "Her çalıştırma bunları sormadan yapar.",
+      "noneShort": "Her işlemden önce bir kişinin onayını ister."
     },
     "ahead": {
       "approved": "Onaylandı · {{when}} çalışır",
@@ -9247,7 +9323,7 @@
     "undoUpdate": "Güncellemeyi geri al",
     "undone": "{{name}} {{version}} sürümüne döndü.",
     "agentsImprove": "Ajanlar becerileri kendileri geliştirir",
-    "agentsImproveHelp": "Bir ajan bir becerinin yanlış olduğunu ya da bir adımının eksik olduğunu görünce hemen düzeltir: geri alabileceğiniz yeni bir sürüm olur ve beceriyi oluşturan kişiye haber verilir. Betik değişiklikleri becerileri yöneten birini bekler.",
+    "agentsImproveHelp": "Bir ajan bir becerinin yanlış olduğunu ya da bir adımının eksik olduğunu görünce hemen düzeltir: geri alabileceğiniz yeni bir sürüm olur ve beceriyi oluşturan kişiye haber verilir.",
     "agentsImproveThis": "Ajanlar bu beceriyi kendileri geliştirir",
     "agentChange": "{{agent}} {{when}} değiştirdi",
     "undoAgentChange": "Değişikliği geri al",
@@ -9318,8 +9394,7 @@
     "agentTitle": "Beceriler",
     "agentSubtitle": "{{name}} ajanının gerektiğinde açabilecekleri.",
     "agentEmpty": "{{name}} ajanının henüz becerisi yok.",
-    "manage": "Becerileri yönet",
-    "step": "Beceriler"
+    "manage": "Becerileri yönet"
   },
   "edit": {
     "unsaved": "Kaydedilmemiş değişiklikler",
@@ -9586,7 +9661,9 @@
       "only": "{{name}} yalnızca şu kişilere yanıt verir: {{names}}.",
       "some": "{{name}} yalnızca bazı kişilere yanıt verir.",
       "nobody": "{{name}} şu anda kimseye yanıt vermiyor."
-    }
+    },
+    "agentsToo": "Bu ajanlar için de geçerli.",
+    "peopleOnly": "Bu yalnızca kişiler için geçerli."
   },
   "composer": {
     "commands": "Komutlar",
@@ -10390,7 +10467,7 @@
     "ask": {
       "button": "Bir ajandan iste",
       "title": "Bir ajandan iste",
-      "text": "İstek, sayfanın bağlantısıyla birlikte ajanla konuşmana gider. Ajan wiki araçlarıyla düzenler ve sürüm geçmişte senin isteğinle yapılmış olarak görünür.",
+      "text": "İstek, sayfanın bağlantısıyla birlikte ajanla konuşmana gider.",
       "agent": "Ajan",
       "what": "Ne değişmeli?",
       "placeholder": "Örn.: 2027 zammıyla güncelle",
@@ -10503,7 +10580,8 @@
         "empty": "Hiç .md notu bulunamadı. Kasa klasörünün .zip dosyasını, klasörü ya da .md dosyalarını gönderin.",
         "too_big": "Kasa 500 MB'tan büyük. Büyük ekler olmadan ya da parça parça gönderin.",
         "unreadable": "Dosya okunamadı. Kasanın .zip dosyası mı?"
-      }
+      },
+      "howToLabel": ".zip nasıl oluşturulur"
     },
     "save": "Wiki'ye kaydet",
     "saveTitle": "Wiki'ye kaydet",
@@ -11240,7 +11318,7 @@
   },
   "githubApp": {
     "title": "GitHub depoları",
-    "text": "agentes.chat uygulamasının yüklü olduğu yerlerde ajanlar çekme isteklerini, sorun kayıtlarını, yorumları ve commit'leri uygulama olarak açar, ajanın adı ve isteyen kişiyle birlikte. Buradan yüklediklerinizi yalnızca {{org}} kullanır.",
+    "text": "agentes.chat uygulamasının yüklü olduğu yerlerde ajanlar çekme isteklerini, sorun kayıtlarını, yorumları ve commit'leri uygulama olarak açar, ajanın adı ve isteyen kişiyle birlikte.",
     "install": "agentes.chat uygulamasını yükle",
     "installMore": "Başka bir hesaba yükle",
     "none": "Henüz GitHub hesabı yok.",
@@ -11315,7 +11393,8 @@
       "none": "Depo seçilmedi. Her birleştirme onay ister.",
       "help": "Bu depolarda birleştirme onay kartı olmadan çalışır, denetim kaydına geçer ve konuşmaya bir makbuz bırakır. Diğer tüm hassas işlemler sormaya devam eder.",
       "dialogTitle": "{{name}} nerede sormadan birleştirir",
-      "dialogDesc": "Yalnızca zaten kullandığı depolar. Başka bir yerdeki birleştirme onay ister."
+      "dialogDesc": "Yalnızca zaten kullandığı depolar. Başka bir yerdeki birleştirme onay ister.",
+      "short": "Bu depolarda birleştirme onay kartı olmadan çalışır."
     },
     "label": "Hangi depolar",
     "all": "Tüm depolar",
@@ -12237,7 +12316,8 @@
       "added": "Artık bunlar da var: {{names}}.",
       "removed": "Artık yok: {{names}}.",
       "same": "Kuruluşlarda bir şey değişmedi.",
-      "failed": "Kuruluşlar şu anda okunamadı."
+      "failed": "Kuruluşlar şu anda okunamadı.",
+      "short": "GitHub kuruluşları yalnızca ilk seferde sorar."
     },
     "composioHelp": "Composio sayfasında İngilizce olarak giriş yapıp buraya dönersiniz. {{name}} izni “Composio” olarak gösterir.",
     "or": "veya",
@@ -12441,7 +12521,8 @@
       "timeout": "Sorgu başına süre limiti",
       "timeoutHelp": "Daha uzun süren bir sorgu, veritabanını yormasın diye iptal edilir.",
       "seconds_one": "{{count}} saniye",
-      "seconds_other": "{{count}} saniye"
+      "seconds_other": "{{count}} saniye",
+      "hiddenExample": "tablo.sütun, örneğin customers.\"Tax ID\""
     },
     "agent": {
       "title": "Veritabanları",
@@ -12495,7 +12576,7 @@
     "address": "E-posta adresi",
     "addressPlaceholder": "siz@sirket.com",
     "addressInvalid": "Geçerli bir e-posta yazın, örneğin siz@sirket.com.",
-    "icloudHint": "Apple Hesabınız {{name}} kullansa bile iCloud Mail adresinizi kullanın, örneğin ad@icloud.com. iPhone'da Ayarlar › adınız › iCloud › iCloud Mail altındadır, ya da icloud.com/mail adresine bakın.",
+    "icloudHint": "Apple Hesabınız {{name}} kullansa bile iCloud Mail adresinizi kullanın, örneğin ad@icloud.com.",
     "password": "Uygulama şifresi",
     "passwordHelp": "Sunucuda şifreli saklanır. Kimse bir daha görmez.",
     "passwordInvalid": "Uygulama şifresini yapıştırın.",
@@ -12612,7 +12693,8 @@
       "newFrom": "Yeni e-postalar şu adresten gider",
       "newFromHelp": "Yanıtlar her zaman e-postanın gönderildiği adresten gider.",
       "later": "Bunu daha sonra Adresler bölümünden değiştirebilirsiniz.",
-      "saved": "{{address}} adresleri kaydedildi."
+      "saved": "{{address}} adresleri kaydedildi.",
+      "short": "Ajanlar, e-postanın gönderildiği adresten yanıt verir."
     },
     "agent": {
       "title": "E-posta",
@@ -12703,7 +12785,8 @@
       "every": "Filtrelerden geçen her yeni e-posta için çalışır.",
       "needsReconnect": "Yeniden bağlanması gerekiyor",
       "error": "Hata veriyor"
-    }
+    },
+    "toolsShort": "Ajanların bu e-postayla neler yapacağını seçin."
   },
   "searchPage": {
     "title": "Çalışma alanında ara",
@@ -12925,6 +13008,9 @@
     },
     "issue": {
       "assigneeOutside": "Bu kişi bu görevi göremiyor. Önce onu Kimler görüyor listesine ekleyin.",
+      "projectNameTaken": "Bu adla bir proje zaten var.",
+      "projectArchived": "Bu proje arşivlendi ve yeni görev almıyor.",
+      "projectsFull": "Bir çalışma alanında en fazla {{max}} proje olabilir. Önce birini silin.",
       "stageFull": "Bir aşama en fazla {{max}} sütun alır. Önce sütunlarından birini silin.",
       "deleteForbidden": "Bu görevi yalnızca oluşturan kişi veya bir yönetici silebilir.",
       "audienceEmpty": "Kimlerin göreceğini seçin."
@@ -13227,7 +13313,8 @@
         "unsupported": "Bu şifre yöneticisi burada bağlanamıyor.",
         "invalidInput": "Alanları kontrol edip tekrar deneyin.",
         "tooManyItems": "Vault dolu. Daha fazlasını eşitlemeden önce öğe silin."
-      }
+      },
+      "unreadable": "Kaydedilen değer burada okunamıyor. Yeniden kaydedip sonra taşıyın."
     },
     "feedback": {
       "filesGone": "Eklediğiniz bir dosya artık yok. Yeniden ekleyin.",
@@ -14426,7 +14513,9 @@
         "imported": "Vault'a şifre aktardı",
         "connection_added": "Vault'a bir şifre yöneticisi bağladı",
         "connection_changed": "Bir şifre yöneticisinin bağlantısını değiştirdi",
-        "connection_removed": "Bir şifre yöneticisinin Vault bağlantısını kesti"
+        "connection_removed": "Bir şifre yöneticisinin Vault bağlantısını kesti",
+        "item_moved": "Bir Vault öğesini Kişisel ile Ekip arasında taşıdı",
+        "keys_imported": "Vault'a anahtar içe aktardı"
       },
       "verb": {
         "created": "Oluşturdu",
@@ -15085,7 +15174,8 @@
       "old": "{{brand}}, hesaplardan önce",
       "oldSub": "Hesap kaydedilmeden önceki kullanım",
       "ofMonth": "Ayın {{percent}} kadarı",
-      "shareLabel": "{{source}}: ayın {{percent}} kadarı"
+      "shareLabel": "{{source}}: ayın {{percent}} kadarı",
+      "estimateShort": "Bir tahmindir."
     }
   },
   "budget": {
@@ -16566,10 +16656,9 @@
   "deleteAccount": {
     "menu": "Hesabı sil",
     "card": {
-      "text": "Tüm çalışma alanlarından ayrılırsınız ve hesabınız 7 gün sonra kalıcı olarak silinir. O zamana kadar geri yükleyebilirsiniz.",
+      "text": "Hesabınızı 7 gün sonra tüm çalışma alanlarında siler.",
       "button": "Hesabı sil…",
-      "oneWorkspace": "Yalnızca bu çalışma alanını mı silmek istiyorsunuz? Genel bölümünde.",
-      "leaveWorkspace": "Yalnızca bu çalışma alanından mı ayrılmak istiyorsunuz? Üyeler bölümünde."
+      "title": "Sil"
     },
     "title": "Hesabınızın tamamı silinsin mi?",
     "intro": "Bu, tek bir çalışma alanını değil hesabınızın tamamını siler.",
@@ -17213,6 +17302,14 @@
       "timeout": "Güncelleme çok uzun sürdü.",
       "invalid_data": "{{name}} verileri bu biçime getiremedi."
     },
+    "needsAi": {
+      "body": "Bir yapay zeka bağlanır bağlanmaz {{name}} onu oluşturur.",
+      "short": "Yapay zeka gerekiyor",
+      "not_signed_in": "{{name}} adlı ajanın planının oturumu kapandı.",
+      "no_computer": "{{name}} adlı ajanın yapay zekasının bir bilgisayara ihtiyacı var ama hiç yok.",
+      "cli_missing": "{{name}} adlı ajanın yapay zeka programı bilgisayarda kurulu değil.",
+      "plan_not_shared": "{{name}} adlı ajanın planı yalnızca sahibine yanıt verir, bu yüzden widget'ları güncelleyemez."
+    },
     "wait": {
       "plan": "{{name}} adlı ajanın planının {{when}} sıfırlanması bekleniyor",
       "planUnknown": "{{name}} adlı ajanın planının sıfırlanması bekleniyor",
@@ -17350,7 +17447,8 @@
       "textRoutine": "Onu güncelleyen {{name}} rutini durur ve güncelleme geçmişi de onunla birlikte gider.",
       "textManual": "Güncelleme geçmişi de onunla birlikte gider.",
       "confirm": "Kaldır"
-    }
+    },
+    "exposureShort": "Panoyu gören kişi bu verileri görür."
   },
   "agentPicker": {
     "search": "Ajan ara",
@@ -17583,7 +17681,8 @@
       "blockNotFound": "O grafik artık mesajda yok.",
       "notAgentMessage": "Yalnızca bir ajanın grafiği sabitlenebilir.",
       "promptRequired": "Widget'ın ne göstermesi gerektiğini yazın.",
-      "notTested": "Önce test edin: widget, testi başarılı olunca oluşturulur."
+      "notTested": "Önce test edin: widget, testi başarılı olunca oluşturulur.",
+      "needsAi": "{{agentName}} bu widget'ı henüz güncelleyemiyor. Nedeni widget'ta yazıyor."
     }
   },
   "teamPlan": {

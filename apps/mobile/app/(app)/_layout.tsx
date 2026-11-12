@@ -239,6 +239,7 @@ function AppStack() {
       <Stack.Screen name="settings/vault" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-item" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-new" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="settings/vault-env" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-access" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-connect" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-connection" options={{ ...pushed, ...scrollUnder }} />

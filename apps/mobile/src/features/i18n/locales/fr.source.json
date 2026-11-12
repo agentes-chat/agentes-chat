@@ -6212,9 +6212,6 @@
   "dashboards.formatAuto": {
     "value": "{{name}} picks the best one"
   },
-  "dashboards.newWidget.titleHint": {
-    "value": "Title · {{name}} suggests one when testing"
-  },
   "dashboards.newWidget.alerts": {
     "value": "Alerts"
   },

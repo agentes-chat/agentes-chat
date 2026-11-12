@@ -2592,7 +2592,6 @@ export const featureKeysPtBR = {
     formatAuto: "{{name}} escolhe o melhor",
     /** New widget's card, which is the form. */
     newWidget: {
-      titleHint: "Título · {{name}} sugere ao testar",
       alerts: "Avisa",
       realData: "Dados de verdade",
       editAsk: "Mudar o pedido",

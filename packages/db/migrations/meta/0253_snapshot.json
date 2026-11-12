@@ -1,5 +1,5 @@
 {
-  "id": "e0155d38-0fe3-4018-a71c-34450172ad26",
+  "id": "c301a139-ef5d-4a24-8fc0-2fc0030e6294",
   "prevId": "b1ce50f7-99fc-4ad4-871b-2b7120f01ab3",
   "version": "7",
   "dialect": "postgresql",
@@ -670,12 +670,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
-        },
-        "decisions": {
-          "name": "decisions",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
         },
         "router_model": {
           "name": "router_model",
@@ -25351,6 +25345,93 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.issue_projects": {
+      "name": "issue_projects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'graphite'"
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "issue_projects_org_name": {
+          "name": "issue_projects_org_name",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "issue_projects_org_id_organizations_id_fk": {
+          "name": "issue_projects_org_id_organizations_id_fk",
+          "tableFrom": "issue_projects",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.issues": {
       "name": "issues",
       "schema": "",
@@ -25414,6 +25495,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'normal'"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "assignee_type": {
           "name": "assignee_type",
@@ -25588,6 +25675,27 @@
           "method": "btree",
           "with": {}
         },
+        "issues_org_id_project_id_index": {
+          "name": "issues_org_id_project_id_index",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "issues_parent_issue_id_index": {
           "name": "issues_parent_issue_id_index",
           "columns": [
@@ -25672,6 +25780,19 @@
           "tableTo": "issue_columns",
           "columnsFrom": [
             "column_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "issues_project_id_issue_projects_id_fk": {
+          "name": "issues_project_id_issue_projects_id_fk",
+          "tableFrom": "issues",
+          "tableTo": "issue_projects",
+          "columnsFrom": [
+            "project_id"
           ],
           "columnsTo": [
             "id"

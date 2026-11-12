@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import type { AiStatus } from "../api/types";
 import { activityVerb, toolActivity } from "../lib/activity";
 import { capitalize } from "../lib/format";
 import { modelLimitWords, usageWhen } from "../lib/plan-usage";
@@ -231,10 +232,54 @@ export const WIDGET_FAILURE_CODES = [
 ] as const;
 export type WidgetFailureCode = (typeof WIDGET_FAILURE_CODES)[number];
 
-/** The `widgets.failure.*` key of a failure code. `agent_reported` shows the agent's own words instead. */
-export function widgetFailureKey(code: string): `widgets.failure.${WidgetFailureCode}` {
+/**
+ * Why a widget's agent has no AI for its build (`missing_credential`'s detail, `AgentAi.reason`) in words: a widget's
+ * own, else the right hand's plan line (that plan never waits, so its computer away or its limit is no AI either,
+ * ADR 0137 §7). `no_key`, and any other, keep the code's words.
+ */
+const NEEDS_AI_WORDS = {
+  not_signed_in: "widgets.needsAi.not_signed_in",
+  no_computer: "widgets.needsAi.no_computer",
+  cli_missing: "widgets.needsAi.cli_missing",
+  plan_not_shared: "widgets.needsAi.plan_not_shared",
+  // Its run's word for the same: no person is behind a build.
+  plan_unattended: "widgets.needsAi.plan_not_shared",
+  computer_away: "widgets.failure.waiting_computer",
+  plan_limit: "widgets.failure.waiting_plan",
+  model_limit: "widgets.failure.waiting_plan",
+  commands_off: "noAi.rightHand.commands_off",
+  runner_outdated: "noAi.rightHand.runner_outdated",
+  computer_failed: "noAi.rightHand.computer_failed",
+  cli_failed: "noAi.rightHand.cli_failed",
+  plan_tools: "noAi.rightHand.plan_tools",
+} as const;
+
+/**
+ * The key of a failure's words: `widgets.failure.*` by its code, or the reason a widget waits for an AI (`detail`,
+ * `NEEDS_AI_WORDS`). `agent_reported` shows the agent's own words instead.
+ */
+export function widgetFailureKey(code: string, detail?: string | null) {
+  if (code === "missing_credential" && detail && Object.hasOwn(NEEDS_AI_WORDS, detail))
+    return NEEDS_AI_WORDS[detail as keyof typeof NEEDS_AI_WORDS];
   const known = (WIDGET_FAILURE_CODES as readonly string[]).includes(code) ? (code as WidgetFailureCode) : "error";
-  return `widgets.failure.${known}`;
+  return `widgets.failure.${known}` as const;
+}
+
+/**
+ * The widget waits for its agent to have an AI (ADR 0135 §20): no build starts until then, so its way out is
+ * connecting one (it builds by itself after), never Resolve. The server's `widgetNeedsAi`.
+ */
+export const widgetNeedsAi = (w: Pick<Widget, "status" | "failure">) =>
+  w.status === "failed" && w.failure?.code === "missing_credential";
+
+/**
+ * A widget waiting for an AI whose agent has one for background work now (the AI status's `background`, else its
+ * `state`): its build can start. Its computer away is no missing AI: the build waits for it as any run does.
+ */
+export function widgetAiReady(w: Pick<Widget, "status" | "failure" | "agentId">, status: AiStatus | undefined) {
+  const agent = status?.agents.find((a) => a.agentId === w.agentId);
+  const state = agent?.background ?? agent?.state;
+  return widgetNeedsAi(w) && state !== undefined && state !== "no_ai";
 }
 
 /** The cost line of "New widget": a day, a week, only when asked, on a plan, or nothing known. */

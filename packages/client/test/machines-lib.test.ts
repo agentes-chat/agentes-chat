@@ -22,9 +22,11 @@ import {
   installCommand,
   isHandheld,
   isPaused,
+  isUrlWithoutCode,
   LOGIN_RECONNECT_MS,
   LoginReadError,
   locationText,
+  loginFailureLine,
   loginRead,
   loginReadPasses,
   machineReasonText,
@@ -475,6 +477,55 @@ describe("the shared folder (ADR 0115)", () => {
       'machines.shared.size{"size":"3.2 GB"} · machines.shared.free{"free":"43 GB"}',
     );
     expect(sharedFolderFacts(t, "en", null)).toBe("machines.shared.measuring");
+  });
+
+  test("why a sign-in ended: a line per code, the CLI's words under two of them, none when canceled", () => {
+    const add = "agentPage.work.brain.add";
+    const worded = [
+      "not_installed",
+      "no_tty",
+      "network",
+      "bad_code",
+      "cli_exit",
+      "not_signed_in_after_login",
+      "status_unknown",
+      "no_token",
+      "not_kept",
+    ];
+    for (const code of worded) {
+      expect(loginFailureLine(code)).toEqual({
+        key: `${add}.why.${code}`,
+        detail: code === "cli_exit" || code === "not_signed_in_after_login",
+      } as never);
+    }
+    // Too long is what an expired sign-in already says.
+    expect(loginFailureLine("timeout")).toEqual({ key: `${add}.expired`, detail: false });
+    expect(loginFailureLine("canceled")).toEqual({ key: null, detail: false });
+    // An older runner sends no code, a newer one may send one this app doesn't know: the plain line.
+    for (const code of [undefined, null, "", "something_new", "toString"]) {
+      expect(loginFailureLine(code)).toEqual({ key: `${add}.failed`, detail: false });
+    }
+  });
+
+  test("a pasted address without a code is told from a code and from an address that carries one", () => {
+    for (const url of [
+      "https://example.com/oauth-callback",
+      " https://example.com/oauth-callback?state=abc ",
+      "http://localhost:8085/?code=",
+      "HTTPS://example.com/#code=4/0Afake",
+      "https://",
+    ]) {
+      expect(isUrlWithoutCode(url)).toBe(true);
+    }
+    for (const ok of [
+      "",
+      "4/0AfakeCode",
+      "https://example.com/callback?code=4%2F0Afake&state=abc",
+      "code=abc",
+      "http",
+    ]) {
+      expect(isUrlWithoutCode(ok)).toBe(false);
+    }
   });
 });
 

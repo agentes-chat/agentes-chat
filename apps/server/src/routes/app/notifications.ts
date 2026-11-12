@@ -91,6 +91,10 @@ const Notification = z
         .string()
         .optional()
         .openapi({ description: "`routine_paused`: why it paused; `routine_failed`: its run's code (both coded)." }),
+      detail: z.string().optional().openapi({
+        description:
+          "`widget_failed` with `missing_credential`: why its agent has no AI (`no_key`, `not_signed_in`, `plan_not_shared`…, coded).",
+      }),
       origin: ApprovalOrigin.optional().openapi({
         description: "`approval`: asked while nobody watched, by a routine or by unattended work.",
       }),

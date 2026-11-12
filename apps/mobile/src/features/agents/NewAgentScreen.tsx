@@ -48,6 +48,7 @@ import {
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
 import { AUTO, modelChoices, usableModels } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
+import { Image } from "expo-image";
 import { usePreventRemove } from "expo-router";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -72,6 +73,7 @@ import {
   Sky,
   Text,
   useReducedMotion,
+  useTheme,
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -94,8 +96,16 @@ import { type FullLook, fullLook } from "./edit";
 import { ErrorLine, HandleInput } from "./HandleInput";
 import { ImportAgents } from "./ImportAgents";
 import { arrivedAgents, landingOf, reportCounts } from "./import";
+import { IMPORT_LOGO } from "./import-logos";
 import { LookList } from "./LookPicker";
-import { firstBlockedStep, NEW_AGENT_PHONE_STEPS, type PhoneStep, roleLine, stepBlocked } from "./new-agent";
+import {
+  firstBlockedStep,
+  importMarkCards,
+  NEW_AGENT_PHONE_STEPS,
+  type PhoneStep,
+  roleLine,
+  stepBlocked,
+} from "./new-agent";
 import { RoleInput } from "./RoleInput";
 import { useAgentImport } from "./useAgentImport";
 
@@ -601,6 +611,24 @@ function NewAgentForm({
         {role === "custom" && !starter ? (
           <RoleInput value={roleText} onChangeText={setRoleText} placeholder={t("agent.roleHelp")} grouped />
         ) : null}
+        {/* Right under "Do zero", a card of its own: the other way to start, before the presets. */}
+        {mayImport && !proposed ? (
+          <View style={styles.other}>
+            <GroupedList>
+              <GroupedRow
+                leading={<ImportMarks />}
+                label={t("newAgent.importCard")}
+                sub={t("newAgent.importCardLine")}
+                subLines={2}
+                chevron
+                onPress={() => {
+                  setImporting(true);
+                  scroll.current?.scrollTo({ y: 0, animated: false });
+                }}
+              />
+            </GroupedList>
+          </View>
+        ) : null}
         {personal ? (
           // One person's agents (ADR 0159 §3): the right hand's personal ones, not a company's roles.
           <>
@@ -655,24 +683,6 @@ function NewAgentForm({
           <View style={styles.foot}>
             <ErrorLine text={t("newAgent.errors.roleRequired")} />
           </View>
-        ) : null}
-        {mayImport && !proposed ? (
-          <>
-            <View style={styles.gap} />
-            <GroupedList>
-              <GroupedRow
-                leading={<RowTile icon="archive" />}
-                label={t("shell.importAgents")}
-                sub={t("onboarding.import.lead")}
-                subLines={2}
-                chevron
-                onPress={() => {
-                  setImporting(true);
-                  scroll.current?.scrollTo({ y: 0, animated: false });
-                }}
-              />
-            </GroupedList>
-          </>
         ) : null}
       </>
     ),
@@ -889,6 +899,7 @@ function NewAgentForm({
                 key={i.id}
                 leading={<ConnectorIcon def={i.def} image={i.image} label={app} size={32} />}
                 label={app}
+                {...(i.account ? { sub: i.account } : {})}
                 value={
                   proposed
                     ? t(`access.level.${level}`)
@@ -954,7 +965,7 @@ function NewAgentForm({
           </>
         ) : null}
 
-        <GroupedHeader>{t("newAgent.channels")}</GroupedHeader>
+        <GroupedHeader>{t("newAgent.channelsJoin")}</GroupedHeader>
         <GroupedList>
           {myChannels.map((ch) => (
             <GroupedRow
@@ -1094,6 +1105,34 @@ function RowTile({ icon }: { icon: IconName }) {
 /** The @ field and the look list come back under the name once it is done. */
 const REST_IN = FadeIn.duration(200);
 
+const MARK = 36;
+const MARK_OVERLAP = 12;
+const hasLogo = (card: string): card is keyof typeof IMPORT_LOGO => card in IMPORT_LOGO;
+
+/** Up to three of the apps agents come from, their logos overlapping, each ringed in the row's colour. */
+function ImportMarks() {
+  const { colors: c, scheme } = useTheme();
+  return (
+    <View style={styles.marks} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {importMarkCards(hasLogo).map((card, i) => {
+        const logo = IMPORT_LOGO[card];
+        return (
+          <View
+            key={card}
+            style={[styles.mark, i > 0 && styles.markAfter, { backgroundColor: c.sunken, borderColor: c.raised }]}
+          >
+            <Image
+              source={scheme === "dark" ? (logo.dark ?? logo.light) : logo.light}
+              contentFit="contain"
+              style={styles.markLogo}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   closed: { paddingHorizontal: 16, gap: 8 },
@@ -1105,6 +1144,18 @@ const styles = StyleSheet.create({
   head: { gap: 2, paddingHorizontal: 4, paddingTop: 10, paddingBottom: 16 },
   stack: { gap: 8 },
   gap: { height: 24 },
+  other: { paddingTop: 12 },
+  marks: { flexDirection: "row" },
+  mark: {
+    width: MARK,
+    height: MARK,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markAfter: { marginLeft: -MARK_OVERLAP },
+  markLogo: { width: 22, height: 22 },
   foot: { paddingTop: 7, paddingHorizontal: 16 },
   stage: {
     height: 150,

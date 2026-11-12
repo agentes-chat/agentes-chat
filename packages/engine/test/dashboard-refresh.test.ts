@@ -33,7 +33,7 @@ import {
   WIDGET_UP_FRONT_MAX,
   widgetUpFront,
 } from "../src";
-import { widgetFailureCode } from "../src/dashboards/refresh-ledger";
+import { holdWidgetForAi, widgetFailureCode } from "../src/dashboards/refresh-ledger";
 import { monthStartUtc } from "../src/usage";
 import { addMember, type Fixture, setup } from "./fixtures";
 import {
@@ -418,6 +418,52 @@ describe("the refresh run", () => {
     expect((await routineRow(f, routineId)).failuresInRow).toBe(1);
   });
 
+  test("a run that ends without update_widget is told once that only update_widget answers, then builds", async () => {
+    const nudged: boolean[] = [];
+    await setupWidgets((req, call) => {
+      if (seen(req).includes("Updated:")) return { chunks: ["Ok."] };
+      // Its numbers in its words, never through the tool: nobody would get them.
+      if (call === 0) return { chunks: ["As vendas de hoje somam R$ 18.420."] };
+      nudged.push(seen(req).includes("this run ends only through update_widget"));
+      return {
+        chunks: [],
+        toolUses: [{ name: "update_widget", input: { data: KPI, summary: "R$ 18.420", title: "Vendas" } }],
+      };
+    });
+    const b = await board();
+    const w = await createWidget(dash(), f.owner.id, f.org.id, b.id, {
+      agentId: f.agent.id,
+      prompt: "Vendas de hoje",
+      format: "auto",
+      schedule: "manual",
+    });
+    await drainOutbox(f.db, f.handlers);
+    expect(nudged).toEqual([true]);
+    expect(await widgetOf(w.id)).toMatchObject({ status: "ok", title: "Vendas", failureCode: null });
+    // Its step says it was the widget's nudge, never an unkept promise.
+    const steps = await f.db.select().from(schema.agentRunSteps).where(eq(schema.agentRunSteps.kind, "context"));
+    expect(steps.map((s) => s.data.nudged).filter(Boolean)).toEqual(["widget"]);
+  });
+
+  test("one that still sends nothing after that one nudge fails as no_update", async () => {
+    let calls = 0;
+    await setupWidgets(() => {
+      calls++;
+      return { chunks: ["Nada mudou."] };
+    });
+    const b = await board();
+    const w = await createWidget(dash(), f.owner.id, f.org.id, b.id, {
+      agentId: f.agent.id,
+      prompt: "Vendas de hoje",
+      format: "auto",
+      schedule: "manual",
+    });
+    await drainOutbox(f.db, f.handlers);
+    expect(calls).toBe(2);
+    expect(await widgetOf(w.id)).toMatchObject({ status: "failed", failureCode: "no_update" });
+    expect((await f.db.select().from(schema.routineRuns))[0]).toMatchObject({ status: "failed", code: "no_update" });
+  });
+
   test("update_widget is applied once per run and only by its own run", async () => {
     await setupWidgets(() => ({ chunks: ["Ok."] }));
     const b = await board();
@@ -446,6 +492,159 @@ describe("the refresh run", () => {
         update: { spec: { kind: "bars", labels: ["a"], values: [1] }, summary: "x" },
       }),
     ).rejects.toMatchObject({ code: "widget.invalid_data" });
+  });
+});
+
+describe("an agent with no AI", () => {
+  const revokeKeys = (revokedAt: Date | null) => f.db.update(schema.providerCredentials).set({ revokedAt });
+  const checked = (): DashboardDeps => ({ ...dash(), ai: { gateway: f.gateway } });
+
+  test("gets no build run: the widget waits for an AI, quietly, and builds once it has one", async () => {
+    await setupWidgets((req) => {
+      if (seen(req).includes("Updated:")) return { chunks: ["Ok."] };
+      return {
+        chunks: [],
+        toolUses: [{ name: "update_widget", input: { data: KPI, summary: "R$ 18.420", title: "Vendas" } }],
+      };
+    });
+    const b = await board();
+    await revokeKeys(new Date());
+    const w = await createWidget(checked(), f.owner.id, f.org.id, b.id, {
+      agentId: f.agent.id,
+      prompt: "Vendas de hoje",
+      format: "auto",
+      schedule: "manual",
+    });
+    // Why, for the apps' words: no key for its model.
+    expect(w).toMatchObject({ status: "failed", failure: { code: "missing_credential", detail: "no_key" } });
+    // No run that could only fail, and nobody told: the widget says it where it was just made.
+    expect(await f.db.select().from(schema.routineRuns)).toEqual([]);
+    expect(await f.db.select().from(schema.agentRuns)).toEqual([]);
+    expect(await notificationsOf(f, "widget_failed")).toEqual([]);
+    // Asked again, a person hears why; the widget says it once.
+    await expect(refreshWidgetNow(checked(), f.owner.id, f.org.id, w.id)).rejects.toMatchObject({
+      code: "widget.needs_ai",
+      params: { agentName: "Dev" },
+    });
+    await expect(askWidgetChange(checked(), f.owner.id, f.org.id, w.id, "Por semana")).rejects.toMatchObject({
+      code: "widget.needs_ai",
+    });
+    expect((await historyOf(w.id)).map((h) => h.failureCode)).toEqual(["missing_credential"]);
+    expect(await f.db.select().from(schema.routineRuns)).toEqual([]);
+
+    // With a key again, the next ask builds it.
+    await revokeKeys(null);
+    expect((await refreshWidgetNow(checked(), f.owner.id, f.org.id, w.id)).status).toBe("building");
+    await drainOutbox(f.db, f.handlers);
+    expect(await widgetOf(w.id)).toMatchObject({ status: "ok", title: "Vendas", failureCode: null });
+  });
+
+  test("a test of a widget (New widget's draft) waits the same way", async () => {
+    await setupWidgets(() => ({ chunks: ["Ok."] }));
+    const b = await board();
+    await revokeKeys(new Date());
+    const draft = await testWidget(checked(), f.owner.id, f.org.id, b.id, {
+      agentId: f.agent.id,
+      prompt: "MRR em real",
+      format: "auto",
+      schedule: "hour",
+    });
+    expect(draft).toMatchObject({ draft: true, status: "failed", failure: { code: "missing_credential" } });
+    expect(await f.db.select().from(schema.routineRuns)).toEqual([]);
+  });
+
+  test("a slot is skipped, never failed: the widget that had data says it once, and its creator hears it", async () => {
+    await setupWidgets(() => ({ chunks: ["Ok."] }));
+    const b = await board();
+    const w = await shownWidget(b.id, { schedule: "hour" });
+    const routineId = w.routineId ?? "";
+    await revokeKeys(new Date());
+    for (let i = 0; i < 2; i++) {
+      const queued = await queueRoutineRun({ db: f.db }, await routineRow(f, routineId), new Date(), "manual");
+      await drainOutbox(f.db, f.handlers);
+      expect(await routineRunRow(f, queued?.id ?? "")).toMatchObject({ status: "skipped", code: "no_ai" });
+    }
+    expect(await f.db.select().from(schema.agentRuns)).toEqual([]);
+    expect(await routineRow(f, routineId)).toMatchObject({ active: true, failuresInRow: 0, pausedReason: null });
+    // Its last data stays, under the reason.
+    const row = await widgetOf(w.id);
+    expect(row).toMatchObject({ status: "failed", failureCode: "missing_credential" });
+    expect(row.spec).toMatchObject({ kind: "kpi", value: 100 });
+    expect((await historyOf(w.id)).map((h) => h.failureCode)).toEqual(["missing_credential"]);
+    const told = await notificationsOf(f, "widget_failed");
+    expect(told).toHaveLength(1);
+    // Why, for the apps' words, apart from the text the island and the push show as it is.
+    expect(told[0]?.latest).toMatchObject({ reason: "missing_credential", detail: "no_key" });
+    expect(told[0]?.latest.text).toBeUndefined();
+  });
+
+  test("it says so again only when why changes, in its history and on the widget", async () => {
+    await setupWidgets(() => ({ chunks: ["Ok."] }));
+    const b = await board();
+    const w = await shownWidget(b.id);
+    const [row] = await f.db.select().from(schema.dashboards).where(eq(schema.dashboards.id, b.id));
+    if (!row) throw new Error("no board");
+    const hold = async (reason: string) => holdWidgetForAi(dash(), await widgetOf(w.id), row, reason);
+    await hold("no_key");
+    await hold("no_key");
+    expect((await historyOf(w.id)).map((h) => h.summary)).toEqual(["no_key"]);
+    await hold("not_signed_in");
+    expect((await historyOf(w.id)).map((h) => h.summary)).toEqual(["no_key", "not_signed_in"]);
+    expect(await widgetOf(w.id)).toMatchObject({ failureCode: "missing_credential", failureDetail: "not_signed_in" });
+    // One notice for the streak, whatever the reason does after.
+    expect(await notificationsOf(f, "widget_failed")).toHaveLength(1);
+  });
+
+  test("a run that finds no AI after all keeps why, and the widget says it", async () => {
+    await setupWidgets(() => ({ chunks: ["Ok."] }));
+    const b = await board();
+    const w = await shownWidget(b.id, { schedule: "hour" });
+    // Its slot fired while the key was there; the key went before its run thought.
+    await fireWidget(w.routineId ?? "");
+    await revokeKeys(new Date());
+    await drainOutbox(f.db, f.handlers);
+    expect((await f.db.select().from(schema.routineRuns))[0]).toMatchObject({ status: "failed", code: "no_ai" });
+    expect(await widgetOf(w.id)).toMatchObject({ failureCode: "missing_credential", failureDetail: "no_key" });
+    const [told] = await notificationsOf(f, "widget_failed");
+    expect(told?.latest).toMatchObject({ reason: "missing_credential", detail: "no_key" });
+  });
+
+  test("the apps' own build once it has an AI only queues: it never takes the routine over or resumes it", async () => {
+    await setupWidgets(() => ({ chunks: ["Ok."] }));
+    const bia = await addMember(f.db, f.org.id, "member", "bia");
+    const b = await board();
+    const w = await shownWidget(b.id, { schedule: "hour" });
+    const routineId = w.routineId ?? "";
+    const routine = (set: Partial<typeof schema.routines.$inferInsert>) =>
+      f.db.update(schema.routines).set(set).where(eq(schema.routines.id, routineId));
+    const auto = () => refreshWidgetNow(checked(), f.owner.id, f.org.id, w.id, { auto: true });
+    const waitingAuto = async () => {
+      await f.db
+        .update(schema.dashboardWidgets)
+        .set({ status: "failed", failureCode: "missing_credential", failureDetail: "no_key" })
+        .where(eq(schema.dashboardWidgets.id, w.id));
+      return auto();
+    };
+    // Its creator left: the widget says so for a person's Resolve, and the routine stays theirs.
+    await routine({ createdByUserId: bia.id });
+    await f.db.delete(schema.organizationMembers).where(eq(schema.organizationMembers.userId, bia.id));
+    expect(await waitingAuto()).toMatchObject({ status: "failed", failure: { code: "creator_left" } });
+    expect(await routineRow(f, routineId)).toMatchObject({ active: true, createdByUserId: bia.id });
+    // Not waiting for an AI any more: nothing.
+    await auto();
+    expect((await historyOf(w.id)).filter((h) => h.failureCode === "creator_left")).toHaveLength(1);
+    // Paused by itself, it stays paused. Paused by a person, the widget reads as stopped.
+    await routine({ active: false, nextRunAt: null, pausedReason: "failing", createdByUserId: f.owner.id });
+    expect(await waitingAuto()).toMatchObject({ failure: { code: "failing" } });
+    expect(await routineRow(f, routineId)).toMatchObject({ active: false, pausedReason: "failing" });
+    await routine({ pausedReason: null });
+    expect(await waitingAuto()).toMatchObject({ failure: { code: "stopped" } });
+    expect(await f.db.select().from(schema.routineRuns)).toEqual([]);
+    // On, with a creator who still fits: it builds, nothing else changes.
+    await routine({ active: true });
+    expect((await waitingAuto()).status).toBe("updating");
+    expect(await routineRow(f, routineId)).toMatchObject({ active: true, createdByUserId: f.owner.id });
+    expect((await f.db.select().from(schema.routineRuns)).map((r) => r.trigger)).toEqual(["manual"]);
   });
 });
 

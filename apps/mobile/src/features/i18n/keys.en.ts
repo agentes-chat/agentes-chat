@@ -2671,7 +2671,6 @@ export const featureKeysEn = {
     formatAuto: "{{name}} picks the best one",
     /** New widget's card, which is the form. */
     newWidget: {
-      titleHint: "Title · {{name}} suggests one when testing",
       alerts: "Alerts",
       realData: "Real data",
       editAsk: "Change the ask",

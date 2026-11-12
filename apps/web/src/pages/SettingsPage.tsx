@@ -694,8 +694,7 @@ function UsageStatisticsCard() {
         title={t("settings.telemetry.title")}
         action={
           <Button
-            size="sm"
-            variant="ghost"
+            variant="link"
             onClick={() => {
               setOpen(true);
               void telemetry.refetch();
@@ -835,15 +834,14 @@ function KeysSection() {
                 </span>
                 <span className="key-row__tail ac-mediarow__end ac-mediarow__end--wrap">
                   {c.endpoint ? (
-                    <Button variant="ghost" size="sm" onClick={() => setDialog({ type: "models", cred: c })}>
+                    <Button variant="link" onClick={() => setDialog({ type: "models", cred: c })}>
                       {t("endpoint.models")}
                     </Button>
                   ) : isDefault ? (
                     <Chip icon="check">{t("settings.default")}</Chip>
                   ) : (
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="link"
                       disabled={updateSettings.isPending}
                       loading={updateSettings.isPending}
                       onClick={() => updateSettings.mutate({ defaultCredentialId: c.id })}
@@ -851,16 +849,15 @@ function KeysSection() {
                       {t("settings.makeDefault")}
                     </Button>
                   )}
-                  <div className="row" style={{ gap: 4 }}>
+                  <div className="ac-acts">
                     {!hold && (
-                      <Button variant="ghost" size="sm" onClick={() => setDialog({ type: "rotate", cred: c })}>
+                      <Button variant="link" onClick={() => setDialog({ type: "rotate", cred: c })}>
                         {t("settings.rotate")}
                       </Button>
                     )}
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ac-btn--danger"
+                      variant="link"
+                      className="ac-link--danger"
                       onClick={() => setDialog({ type: "remove", cred: c })}
                     >
                       {t("settings.remove")}

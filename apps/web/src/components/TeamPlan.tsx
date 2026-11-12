@@ -187,8 +187,7 @@ export function TeamPlanBody({
               )}
               {onAdjust && (
                 <Button
-                  size="sm"
-                  variant="ghost"
+                  variant="link"
                   aria-label={t("teamPlan.card.adjustName", { name: a.name })}
                   disabled={locked}
                   onClick={() => onAdjust(a)}

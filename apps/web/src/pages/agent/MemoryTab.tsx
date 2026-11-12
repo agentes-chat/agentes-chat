@@ -242,9 +242,7 @@ function LearnedRow({ m }: { m: Memory }) {
           <>
             {(m.lowTrust || !m.verified) && (
               <Button
-                size="sm"
-                variant="ghost"
-                icon="check"
+                variant="link"
                 title={t("memory.confirmTitle")}
                 disabled={act.isPending}
                 onClick={() =>
@@ -257,9 +255,7 @@ function LearnedRow({ m }: { m: Memory }) {
             {/* Tornar do time (ADR 0167): who reviews memory makes it every agent's, its copies archived. */}
             {can(org, "review_memory") && !m.howTo && !m.playbook && m.kind !== "lesson" && (
               <Button
-                size="sm"
-                variant="ghost"
-                icon="members"
+                variant="link"
                 disabled={act.isPending}
                 onClick={() =>
                   act.mutate({ type: "team", id: m.id }, { onSuccess: () => toast.show(t("teamMemory.made")) })
@@ -268,12 +264,11 @@ function LearnedRow({ m }: { m: Memory }) {
                 {t("teamMemory.make")}
               </Button>
             )}
-            <Button size="sm" variant="ghost" icon="edit" onClick={() => setDraft(m.text)}>
+            <Button variant="link" onClick={() => setDraft(m.text)}>
               {t("agentPage.memory.edit")}
             </Button>
             <Button
-              size="sm"
-              variant="ghost"
+              variant="link"
               disabled={act.isPending}
               onClick={() =>
                 act.mutate(
@@ -320,24 +315,18 @@ function LearnedSkillRow({ s }: { s: LearnedSkill }) {
       </span>
       {open && <pre className="agp-skill-body">{s.body}</pre>}
       <span className="agp-row">
-        <Button size="sm" variant="ghost" onClick={() => setOpen((v) => !v)}>
+        <Button variant="link" onClick={() => setOpen((v) => !v)}>
           {open ? t("agentPage.memory.hide") : t("agentPage.memory.view")}
         </Button>
         {!s.canChange ? null : s.archived ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={act.isPending}
-            onClick={() => act.mutate({ type: "restore", id: s.id })}
-          >
+          <Button variant="link" disabled={act.isPending} onClick={() => act.mutate({ type: "restore", id: s.id })}>
             {t("agentPage.memory.restore")}
           </Button>
         ) : (
           <>
             {s.canRevert && (
               <Button
-                size="sm"
-                variant="ghost"
+                variant="link"
                 disabled={act.isPending}
                 onClick={() =>
                   act.mutate(
@@ -350,8 +339,7 @@ function LearnedSkillRow({ s }: { s: LearnedSkill }) {
               </Button>
             )}
             <Button
-              size="sm"
-              variant="ghost"
+              variant="link"
               disabled={act.isPending}
               onClick={() => act.mutate({ type: "update", id: s.id, patch: { locked: !s.locked } })}
             >
@@ -405,8 +393,7 @@ function RulesCard({ rules }: { rules: Memory[] }) {
             {m.removable && (
               <span className="agp-row">
                 <Button
-                  size="sm"
-                  variant="ghost"
+                  variant="link"
                   disabled={act.isPending}
                   onClick={() =>
                     act.mutate(

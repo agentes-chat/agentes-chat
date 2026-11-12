@@ -16,6 +16,7 @@ import {
   type Saved,
 } from "@/lib/agent-edit";
 import { ADA_ID, createFakeApi, ENG_ID, GENERAL_ID, NOW, ORG_ID, seedState } from "./fake-api";
+import { hintOf, shownText } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -257,9 +258,11 @@ describe("agent page: its usage (ADR 0063)", () => {
     expect(week.getAttribute("aria-valuenow")).toBe("41");
     expect(week.querySelector(".ac-meter__part")?.getAttribute("style")).toContain("width: 30%");
     expect(now.textContent).toContain("Parte da Ada: ≈ 30%");
-    expect(now.textContent).toContain("é uma estimativa");
-    // It informs: changing the account is "Quem pensa"'s.
-    expect(within(now).queryByRole("button")).toBeNull();
+    expect(shownText(now)).toContain("Estimativa.");
+    expect(shownText(now)).not.toContain("é uma estimativa");
+    expect(hintOf("Agora", now).text).toContain("a parte de cada agente é uma estimativa");
+    // It informs: changing the account is "Quem pensa"'s. Its one button is the ⓘ.
+    expect(within(now).getAllByRole("button")).toEqual([hintOf("Agora", now).button]);
     const sources = screen().getByRole("region", { name: "Por conta, este mês" });
     expect(sources.textContent).toContain("≈ US$\u00a076,00 pelo preço da API");
     expect(sources.textContent).toContain("US$\u00a00,80 pagos");

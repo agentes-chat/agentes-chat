@@ -217,6 +217,9 @@ const KNOWN = {
   "account.not_restorable": "errors.account.notRestorable",
   "issue.assignee_outside": "errors.issue.assigneeOutside",
   "issue_column.stage_full": "errors.issue.stageFull",
+  "issue_project.name_taken": "errors.issue.projectNameTaken",
+  "issue_project.archived": "errors.issue.projectArchived",
+  "issue_project.too_many": "errors.issue.projectsFull",
   "issue.delete_forbidden": "errors.issue.deleteForbidden",
   "issue.audience_empty": "errors.issue.audienceEmpty",
   [REAUTH_PASSWORD]: "errors.reauth.password",
@@ -308,6 +311,7 @@ const KNOWN = {
   "widget.not_agent_message": "dashboards.errors.notAgentMessage",
   "widget.prompt_required": "dashboards.errors.promptRequired",
   "widget.not_tested": "dashboards.errors.notTested",
+  "widget.needs_ai": "dashboards.errors.needsAi",
   // Worded with its wait by `knownErrorText` (`widgetWaitText`); this line only names its family.
   "widget.waiting": "widgets.wait.planUnknown",
   // The Vault (ADR 0144): what a person typed, who may see or use an item, an import, a card's "Save to the Vault".
@@ -338,6 +342,8 @@ const KNOWN = {
   "vault.csv_too_large": "errors.vault.csvTooLarge",
   "vault.csv_too_many_rows": "errors.vault.csvTooManyRows",
   "vault.csv_unrecognized": "errors.vault.csvUnrecognized",
+  "vault.unreadable": "errors.vault.unreadable",
+  "vault.too_many_keys": "vault.env.tooMany",
   "vault.request_not_delivered": "errors.vault.requestNotDelivered",
   "vault.request_not_savable": "errors.vault.requestNotSavable",
   "vault.source_unknown": "errors.vault.sourceUnknown",

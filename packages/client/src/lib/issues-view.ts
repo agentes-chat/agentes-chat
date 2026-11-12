@@ -2,6 +2,7 @@ import type { IssueCardField, IssuePriority, IssuesView } from "../api/types";
 
 /** What a card can show besides its number and title, in the order the screen offers them. */
 export const ISSUE_CARD_FIELDS: readonly IssueCardField[] = [
+  "project",
   "assignee",
   "priority",
   "due",
@@ -25,7 +26,7 @@ export const ISSUES_VIEW_DEFAULT: IssuesView = {
   layout: "board",
   group: "stage",
   sort: "manual",
-  fields: { assignee: true, priority: true, due: true, criteria: true, pullRequest: true, label: true },
+  fields: { project: true, assignee: true, priority: true, due: true, criteria: true, pullRequest: true, label: true },
   assignees: [],
   priorities: [],
   showCanceled: false,

@@ -10,6 +10,7 @@ import { appHeaders, readCookie } from "@/lib/auth";
 import { useOrg } from "@/providers/org";
 import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
+import { IMPORT_AGENTS_HREF } from "../agents/import";
 import { Note, openPage } from "../ai/parts";
 import { successHaptic } from "../shared/parts";
 import { exportFileName } from "./logic";
@@ -94,7 +95,7 @@ export function ImportScreen() {
                   icon="archive"
                   label={t("shell.importAgents")}
                   chevron
-                  onPress={() => router.push("/new-agent?import=1" as never)}
+                  onPress={() => router.push(IMPORT_AGENTS_HREF as never)}
                 />
               </GroupedList>
             </>

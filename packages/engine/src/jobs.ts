@@ -918,7 +918,12 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     "routine.run": async (job) => {
       await executeRoutineRun(
-        { db: deps.db, pubsub: deps.pubsub, context: deps.context },
+        {
+          db: deps.db,
+          pubsub: deps.pubsub,
+          context: deps.context,
+          ai: { gateway: deps.gateway, machines: deps.machines ?? null },
+        },
         String(job.payload.routineRunId),
       );
     },

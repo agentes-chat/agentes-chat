@@ -1407,6 +1407,11 @@ export interface AiStatus {
       | "plan_tools";
     /** Ready on an API key with Automático: the maker of the key it thinks with (`autoMakerOf`). */
     provider?: string;
+    /**
+     * Its state for background work (a routine, a widget's build) where that differs from `state`: background work
+     * never falls back on the model brain, and the right hand's thinks with the workspace's own AI, nobody's.
+     */
+    background?: "ready" | "no_ai" | "waiting";
   }[];
 }
 
@@ -3559,6 +3564,8 @@ export interface Issue {
   /** Order inside the column, lowest first. */
   boardRank: number;
   priority: IssuePriority;
+  /** Its one project, or none (a server from before projects sends nothing). */
+  project?: IssueProjectRef | null;
   assignee: Actor | null;
   labels: string[];
   /** Day only, `YYYY-MM-DD`. */
@@ -3638,6 +3645,7 @@ export interface IssueInput {
   priority?: IssuePriority;
   dueDate?: string | null;
   labels?: string[];
+  projectId?: string | null;
   githubUrl?: string | null;
   /** Drive files uploaded from the new-issue box (only on create): linked to the issue. */
   attachmentIds?: string[];
@@ -3653,12 +3661,33 @@ export type IssuePatch = Partial<
 > & {
   /** Move to a board column: the issue takes that column's stage. */
   columnId?: string;
+  /** Null takes it out of its project. */
+  projectId?: string | null;
   /**
    * The whole list of acceptance criteria, in order (edited in place): an `id` keeps that criterion and its check,
    * one without is new, one left out is removed.
    */
   criteria?: { id?: string; text: string }[];
 };
+
+/** A task's project as its card shows it: a name and one of the roles' colors. Archived: offered to no new task. */
+export interface IssueProjectRef {
+  id: string;
+  name: string;
+  color: string;
+  archived: boolean;
+}
+
+/** A project in the projects menu, with the open tasks in it that I see. */
+export interface IssueProject extends IssueProjectRef {
+  open: number;
+}
+
+/** The projects by name (archived last) and how many of my open tasks have none. */
+export interface IssueProjects {
+  projects: IssueProject[];
+  unfiled: number;
+}
 
 /** A board column: it sits in a fixed stage; `name` null shows the stage's own name. */
 export interface IssueColumn {
@@ -6444,6 +6473,8 @@ export interface NotificationLatest {
    * Both said in the person's language.
    */
   reason?: string;
+  /** `widget_failed` with `missing_credential`: why its agent has no AI, coded (`widgetFailureKey`'s `detail`). */
+  detail?: string;
   /** `approval`: asked while nobody watched, by a routine or an unattended run (ADR 0053 §8). */
   origin?: ApprovalOrigin;
   /** `org_standing` to `agent_hold` (agentes.chat Cloud): `network` or `operator`, never the hold's reason. */
@@ -6638,7 +6669,7 @@ export interface IssuesView {
   priorities: IssuePriority[];
   showCanceled: boolean;
 }
-export type IssueCardField = "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
+export type IssueCardField = "project" | "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
 
 export interface NotificationCount {
   unread: number;

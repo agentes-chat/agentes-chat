@@ -4,6 +4,7 @@ import {
   boardItems,
   layoutOf,
   resizeItem,
+  useBuildOnceAi,
   useRefreshWidget,
   useSaveLayout,
   widgetCardStatus,
@@ -30,7 +31,7 @@ import { useTranslation } from "react-i18next";
 import { useNow } from "@/hooks/useNow";
 import { type GridMove, useGridDrag } from "@/lib/grid-drag";
 import { useToast } from "@/lib/toast";
-import { useWidgetAgent, WidgetFace, WidgetFoot, widgetTitle } from "./parts";
+import { useWidgetAgent, WidgetFace, WidgetFoot, widgetBodyText, widgetTitle } from "./parts";
 import { RemoveWidgetDialog } from "./RemoveWidgetDialog";
 import "./widgets.css";
 
@@ -260,6 +261,7 @@ function BoardWidget({
   const toast = useToast();
   const { name, color } = useWidgetAgent(widget.agentId);
   const refresh = useRefreshWidget(orgId);
+  useBuildOnceAi(orgId, widget, editable);
   // A refresh that waits stands still: Update now on it goes on now, or says why it can't.
   const status = widgetCardStatus(widget, now);
   const busy = status === "building" || status === "updating" || refresh.isPending;
@@ -278,7 +280,7 @@ function BoardWidget({
       color={color}
       size={{ w: widget.layout.w, h: widget.layout.h }}
       locale={i18n.language}
-      buildingText={status === widget.status ? t("widgets.status.building", { name }) : undefined}
+      buildingText={status === widget.status ? widgetBodyText(t, widget, name) : undefined}
       face={<WidgetFace agentId={widget.agentId} name={name} />}
       onOpen={onOpen}
       board={board}

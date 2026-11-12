@@ -1918,7 +1918,8 @@
       "emptyViewer": "エージェントの管理者がチャンネルに追加すると、ここにマップが表示されます。",
       "others": "ほかのチャンネル",
       "band": "監督",
-      "reportsTo": "{{name}} に報告"
+      "reportsTo": "{{name}} に報告",
+      "short": "各エージェントの担当者と、働いている場所です。"
     },
     "sectors": {
       "lead": "各部署には担当者、代理、エージェント、そのチャンネルとルーティンがあります。",
@@ -2719,7 +2720,7 @@
       "gemini": {
         "title": "あなたのGeminiプラン",
         "tiers": "Google AI Pro、Google AI Ultra、またはGemini Enterprise",
-        "warning": "Googleによると、個人のGeminiプランを他のアプリ内で使うと、アカウントが停止されることがあります。このリスクを避けるには、APIキーかGemini Enterpriseを使ってください。"
+        "warning": "Googleによると、個人のGeminiプランを他のアプリ内で使うと、アカウントが停止されることがあります。"
       },
       "zen": {
         "title": "OpenCode",
@@ -3147,6 +3148,7 @@
       "priority": "優先度",
       "assignee": "担当者",
       "labels": "ラベル",
+      "project": "プロジェクト",
       "dueDate": "期日",
       "githubUrl": "GitHub リンク",
       "criteria": "完了条件",
@@ -3927,6 +3929,37 @@
       "codeBox": "{{total}}桁中{{n}}桁目",
       "codeShort_other": "{{count}}桁の数字をすべて入力してください。",
       "codeWhere": "{{host}}で{{agent}}のブラウザーだけが入力します。"
+    },
+    "env": {
+      "open": ".envを読み込む",
+      "title": "キーを読み込む",
+      "text": ".envファイル（キーごとに「名前=値」の1行）か、名前と値のJSONを読み込めます。",
+      "paste": "または内容をここに貼り付け",
+      "review": "確認",
+      "none": "「名前=値」の行が見つかりません。ファイルを確認して、もう一度お試しください。",
+      "tooLarge": "このファイルは大きすぎます（最大512 KB）。",
+      "tooMany": "一度に読み込むキーが多すぎます（最大{{max}}個）。ファイルを分けて、それぞれ読み込んでください。",
+      "duplicates": "ファイル内で重複しています。最後の値を使います：{{names}}",
+      "new": "新規",
+      "exists": "保存済み",
+      "replace": "置き換える",
+      "show": "{{name}}の値を表示",
+      "hide": "{{name}}の値を隠す",
+      "problem": {
+        "name": "名前はACME_API_KEYのような形式にしてください",
+        "reserved": "予約されている名前",
+        "empty": "値がありません",
+        "tooLarge": "値が大きすぎます"
+      }
+    },
+    "move": {
+      "toTeam": "チームに移動",
+      "toTeamPersonal": "共有に移動",
+      "toPersonal": "個人に移動",
+      "title": "{{title}}を移動しますか？",
+      "toTeamText": "ワークスペースの全員にこの項目が表示され、誰かが頼んだときにこの項目のエージェントが使います。Vaultを管理する人は編集できます。",
+      "toPersonalText": "この項目を表示・編集できるのはあなただけになり、エージェントはあなたが頼んだときだけ使います。ほかの人には表示されなくなります。",
+      "moved": "移動しました"
     }
   },
   "question": {
@@ -4846,7 +4879,9 @@
           "codeLabel": "Claudeのコード",
           "notCode": "Claudeのコードではないようです。",
           "stepTwoGoogle": "Google に表示されたコードを貼り付けてください",
-          "codeLabelGoogle": "コードまたはリンク",
+          "codeLabelGoogle": "Googleのコード",
+          "codeHintGoogle": "ページのアドレスではなく、Googleのページに表示されたコードを貼り付けてください。",
+          "notCodeGoogle": "これはコードを含まないアドレスです。Googleのページに表示されたコードを貼り付けてください。",
           "send": "{{computer}}に送信",
           "sending": "{{computer}}にコードを送信しています…",
           "sent": "コードを送信しました。{{computer}}でログインを完了しています。",
@@ -4859,6 +4894,17 @@
           "reconnecting": "再接続しています…",
           "failed": "そのアカウントにログインできませんでした。もう一度お試しください。",
           "expired": "ログインの制限時間が過ぎました。もう一度お試しください。",
+          "why": {
+            "not_installed": "{{computer}}に{{brand}}がインストールされていません。もう一度お試しください。",
+            "no_tty": "{{computer}}がコードを{{brand}}に渡せませんでした。もう一度お試しください。",
+            "network": "{{computer}}が{{brand}}に接続できませんでした。もう一度お試しください。",
+            "bad_code": "{{brand}}がコードを受け付けませんでした。もう一度試して、ページに表示されたコードだけを貼り付けてください。",
+            "cli_exit": "{{computer}}で{{brand}}がエラーで停止しました。もう一度お試しください。",
+            "not_signed_in_after_login": "{{brand}}はログインを受け付けましたが、このアカウントはここでは使えません。プランに含まれていない可能性があります。別のアカウントかAPIキーをお試しください。",
+            "status_unknown": "{{brand}}からアカウントがログインできたかどうかの応答がありませんでした。もう一度お試しください。",
+            "no_token": "{{brand}}がアカウントのトークンを表示せずに終了しました。もう一度お試しください。",
+            "not_kept": "アカウントはログインしましたが、{{computer}}がログインを保存できませんでした。もう一度お試しください。"
+          },
           "geminiNotShared": "Geminiにはログインできましたが、{{computer}}ではこのログインをすべてのエージェントで共有できません。代わりにGeminiのAPIキーを使ってください。",
           "duplicate": {
             "claude_code": "Claudeは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Claudeのページでログアウトしてからもう一度お試しください。",
@@ -5951,8 +5997,12 @@
     "approvalsNote": "マージ、デプロイ、ロールバックは常にチャットで承認を求めます。",
     "approverOwner": "{{name}}が承認します。",
     "approverAdmins": "管理者が承認します。",
+    "skillsTitle": "ワークスペースのスキル",
     "skillsHelp": "{{name}}が必要に応じて開くマニュアルです。",
+    "importCard": "ほかのアプリから",
+    "importCardLine": "ほかのアプリにあるエージェントを取り込みます。",
     "channels": "チャンネル",
+    "channelsJoin": "参加するチャンネル",
     "channelsHelp": "今すぐ参加します。ほかのチャンネルにはあとで追加できます。",
     "noChannels": "まだどのチャンネルにも参加していません。エージェントはあとでチャンネルに追加できます。",
     "owner": "オーナー",
@@ -6189,10 +6239,12 @@
       "title": "{{name}} のアプリ",
       "titleBlank": "エージェントのアプリ",
       "lead": "接続済みのアプリはすぐカードに入ります。ほかのアプリはここで接続できます。",
+      "leadList": "接続済みのアプリはすぐリストに入ります。ほかのアプリはここで接続できます。",
       "suggested": "{{name}} へのおすすめ",
       "suggestedBlank": "おすすめ",
       "use": "使う",
-      "added": "カードにあり"
+      "added": "カードにあり",
+      "addedList": "リストにあり"
     },
     "create": "{{name}} を作成",
     "createBlank": "エージェントを作成",
@@ -6259,6 +6311,8 @@
     "agentsOnlyYouHint": "プランがあれば、エージェントのページでほかの人にも返信できるよう設定できます。",
     "filters": "人を絞り込む",
     "rolesOf": "{{name}}のロール",
+    "rolesAdd": "ロールを追加",
+    "rolesChange": "ロールを変更",
     "moreOf": "{{name}} のその他の操作",
     "passwordLink": {
       "item": "新しいパスワードのリンクを作成",
@@ -6813,6 +6867,7 @@
         "due": "期日"
       },
       "field": {
+        "project": "プロジェクト",
         "assignee": "担当者",
         "priority": "優先度",
         "due": "期日",
@@ -6839,6 +6894,22 @@
       "prioritized": "#{{number}}の優先度は{{priority}}になりました。"
     },
     "canceledColumn": "キャンセル済み",
+    "projects": {
+      "label": "プロジェクト",
+      "none": "プロジェクトなし",
+      "all": "すべてのプロジェクト",
+      "new": "新しいプロジェクト",
+      "edit": "プロジェクトを編集",
+      "create": "プロジェクトを作成",
+      "archive": "プロジェクトをアーカイブ",
+      "unarchive": "プロジェクトのアーカイブを解除",
+      "archived": "アーカイブ済み",
+      "archivedMark": "アーカイブ済み",
+      "delete": "プロジェクトを削除",
+      "deleteTitle": "プロジェクト「{{name}}」を削除しますか？",
+      "deleteBody": "タスクはプロジェクトなしで残ります。",
+      "empty": "このプロジェクトにはまだタスクがありません。"
+    },
     "columns": {
       "add": "列を追加",
       "options": "列「{{name}}」のオプション",
@@ -7091,6 +7162,8 @@
       "pr_linked": "PR #{{number}}をリンクしました",
       "github_linked": "GitHub にリンクしました",
       "github_unlinked": "GitHub リンクを削除しました",
+      "project_set": "プロジェクト「{{project}}」に移動しました",
+      "project_removed": "プロジェクトから外しました",
       "artifact_linked": "ファイルを添付しました",
       "files_attached": "{{names}}を添付しました",
       "files_removed": "{{names}}を添付ファイルから外しました",
@@ -7161,7 +7234,8 @@
         "bad_signature": "拒否: 署名が正しくありません",
         "too_large": "拒否: 256 KBを超えています",
         "rate_limited": "拒否: 1分あたりの呼び出しが多すぎます"
-      }
+      },
+      "newShort": "ルーティンに専用のアドレスが割り当てられます。"
     },
     "setup": {
       "title": "{{provider}}のWebhook",
@@ -7354,7 +7428,9 @@
     "ownActions": {
       "hint": "毎回の実行で、接続済みアプリでこれらを確認なしで行います。それ以外の操作は先に人の承認を求め、マージ、デプロイ、ロールバックは常に承認を求めます。",
       "none": "接続済みアプリでは、操作のたびに人の承認を求めます。自動で仕事をさせるには、チャットでエージェントにどの操作をしてよいか伝えてください。",
-      "remove": "次の前に再度確認する: {{action}}"
+      "remove": "次の前に再度確認する: {{action}}",
+      "hintShort": "毎回の実行で、これらを確認なしで行います。",
+      "noneShort": "操作のたびに人の承認を求めます。"
     },
     "ahead": {
       "approved": "承認済み · {{when}}に実行",
@@ -8942,7 +9018,7 @@
     "undoUpdate": "更新を元に戻す",
     "undone": "{{name}}をバージョン{{version}}に戻しました。",
     "agentsImprove": "エージェントがスキルを自分で改善",
-    "agentsImproveHelp": "スキルが間違っていたり手順が抜けていたりすると、エージェントがすぐに直します。新しいバージョンは元に戻せて、スキルを作った人に通知されます。スクリプトの変更は、スキルを管理する人の確認を待ちます。",
+    "agentsImproveHelp": "スキルが間違っていたり手順が抜けていたりすると、エージェントがすぐに直します。新しいバージョンは元に戻せて、スキルを作った人に通知されます。",
     "agentsImproveThis": "エージェントがこのスキルを自分で改善",
     "agentChange": "{{agent}}が{{when}}に変更",
     "undoAgentChange": "変更を元に戻す",
@@ -9011,8 +9087,7 @@
     "agentTitle": "スキル",
     "agentSubtitle": "{{name}}が必要なときに開けるもの。",
     "agentEmpty": "{{name}}にはまだスキルがありません。",
-    "manage": "スキルを管理",
-    "step": "スキル"
+    "manage": "スキルを管理"
   },
   "edit": {
     "unsaved": "未保存の変更があります",
@@ -9271,7 +9346,9 @@
       "only": "{{name}}は{{names}}にだけ返信します。",
       "some": "{{name}}は一部の人にだけ返信します。",
       "nobody": "{{name}}は現在誰にも返信していません。"
-    }
+    },
+    "agentsToo": "これはエージェントにも適用されます。",
+    "peopleOnly": "これは人にだけ適用されます。"
   },
   "composer": {
     "commands": "コマンド",
@@ -10052,7 +10129,7 @@
     "ask": {
       "button": "エージェントに頼む",
       "title": "エージェントに頼む",
-      "text": "依頼はページへのリンク付きで、あなたとエージェントの会話に送られます。エージェントはWikiのツールで編集し、そのバージョンは履歴にあなたの依頼として残ります。",
+      "text": "依頼はページへのリンク付きで、あなたとエージェントの会話に送られます。",
       "agent": "エージェント",
       "what": "何を変えますか？",
       "placeholder": "例：2027年の値上げを反映して",
@@ -10141,7 +10218,8 @@
         "empty": ".mdのノートが見つかりません。Vaultフォルダの.zip、フォルダ、または.mdファイルを送ってください。",
         "too_big": "Vaultが500 MBを超えています。大きな添付ファイルを除くか、分割して送ってください。",
         "unreadable": "ファイルを読み取れませんでした。Vaultの.zipですか？"
-      }
+      },
+      "howToLabel": ".zipの作り方"
     },
     "save": "Wikiに保存",
     "saveTitle": "Wikiに保存",
@@ -10854,7 +10932,7 @@
   },
   "githubApp": {
     "title": "GitHubリポジトリ",
-    "text": "agentes.chat アプリがインストールされている場所では、エージェントがアプリとしてプルリクエスト、Issue、コメント、コミットを作成し、エージェントの名前と依頼した人が添えられます。ここからインストールしたものを使うのは{{org}}だけです。",
+    "text": "agentes.chat アプリがインストールされている場所では、エージェントがアプリとしてプルリクエスト、Issue、コメント、コミットを作成し、エージェントの名前と依頼した人が添えられます。",
     "install": "agentes.chat アプリをインストール",
     "installMore": "別のアカウントにインストール",
     "none": "GitHubアカウントはまだありません。",
@@ -10929,7 +11007,8 @@
       "none": "リポジトリは選択されていません。マージのたびに承認を求めます。",
       "help": "これらのリポジトリでは、マージは承認カードなしで実行され、監査に記録され、会話に記録が残ります。その他の機密性の高い操作は引き続き確認します。",
       "dialogTitle": "{{name}}が確認なしでマージできる場所",
-      "dialogDesc": "すでに使用しているリポジトリのみです。それ以外の場所でのマージは承認を求めます。"
+      "dialogDesc": "すでに使用しているリポジトリのみです。それ以外の場所でのマージは承認を求めます。",
+      "short": "これらのリポジトリでは、マージは承認カードなしで実行されます。"
     },
     "label": "対象のリポジトリ",
     "all": "すべてのリポジトリ",
@@ -11831,7 +11910,8 @@
       "added": "新しく追加: {{names}}。",
       "removed": "届かなくなった組織: {{names}}。",
       "same": "組織に変更はありません。",
-      "failed": "今は組織を読み取れませんでした。"
+      "failed": "今は組織を読み取れませんでした。",
+      "short": "GitHub が組織を確認するのは最初の一度だけです。"
     },
     "composioHelp": "Composioのページ（英語）でログインして、ここに戻ってきます。{{name}}では権限が「Composio」と表示されます。",
     "or": "または",
@@ -12026,7 +12106,8 @@
       "capHelpAll": "空欄 = 上限なし。すべてのデータベースの合計です。",
       "timeout": "クエリごとの制限時間",
       "timeoutHelp": "これより時間がかかるクエリは、データベースに負荷をかけないようキャンセルされます。",
-      "seconds_other": "{{count}}秒"
+      "seconds_other": "{{count}}秒",
+      "hiddenExample": "テーブル.列の形式で。例: customers.\"Tax ID\""
     },
     "agent": {
       "title": "データベース",
@@ -12079,7 +12160,7 @@
     "address": "メールアドレス",
     "addressPlaceholder": "you@company.com",
     "addressInvalid": "you@company.comのような有効なメールアドレスを入力してください。",
-    "icloudHint": "Apple Accountが{{name}}を使っていても、name@icloud.comのようなiCloudメールのアドレスを使ってください。iPhoneでは設定 › ユーザー名 › iCloud › iCloudメールにあります。icloud.com/mailでも確認できます。",
+    "icloudHint": "Apple Accountが{{name}}を使っていても、name@icloud.comのようなiCloudメールのアドレスを使ってください。",
     "password": "アプリパスワード",
     "passwordHelp": "サーバーに暗号化して保存されます。二度と誰にも表示されません。",
     "passwordInvalid": "アプリパスワードを貼り付けてください。",
@@ -12196,7 +12277,8 @@
       "newFrom": "新しいメールの送信元",
       "newFromHelp": "返信は常に、メールが送られてきたアドレスから送信されます。",
       "later": "あとで「アドレス」で変更できます。",
-      "saved": "{{address}}のアドレスを保存しました。"
+      "saved": "{{address}}のアドレスを保存しました。",
+      "short": "エージェントは、メールが送られてきたアドレスから返信します。"
     },
     "agent": {
       "title": "メール",
@@ -12284,7 +12366,8 @@
       "every": "フィルターを通過した新しいメールごとに実行されます。",
       "needsReconnect": "再接続が必要",
       "error": "エラー発生中"
-    }
+    },
+    "toolsShort": "このメールでエージェントができることを選びます。"
   },
   "searchPage": {
     "title": "ワークスペースを検索",
@@ -12502,6 +12585,9 @@
     },
     "issue": {
       "assigneeOutside": "この人はこのタスクを見ることができません。先に閲覧できる人に追加してください。",
+      "projectNameTaken": "同じ名前のプロジェクトがすでにあります。",
+      "projectArchived": "このプロジェクトはアーカイブ済みで、新しいタスクは追加できません。",
+      "projectsFull": "ワークスペースのプロジェクトは最大{{max}}個です。先に1つ削除してください。",
       "stageFull": "1つのステージに置ける列は{{max}}列までです。先にその列を1つ削除してください。",
       "deleteForbidden": "このタスクを削除できるのは作成者か管理者だけです。",
       "audienceEmpty": "閲覧できる人を選んでください。"
@@ -12803,7 +12889,8 @@
         "unsupported": "このパスワードマネージャーはここでは接続できません。",
         "invalidInput": "入力欄を確認して、もう一度お試しください。",
         "tooManyItems": "Vaultがいっぱいです。さらに同期する前に項目を削除してください。"
-      }
+      },
+      "unreadable": "保存された値をここでは読み取れません。もう一度保存してから移動してください。"
     },
     "feedback": {
       "filesGone": "追加したファイルがなくなりました。もう一度追加してください。",
@@ -13984,7 +14071,9 @@
         "imported": "Vaultにパスワードをインポート",
         "connection_added": "Vaultにパスワードマネージャーを接続",
         "connection_changed": "パスワードマネージャーの接続を変更",
-        "connection_removed": "Vaultからパスワードマネージャーを切断"
+        "connection_removed": "Vaultからパスワードマネージャーを切断",
+        "item_moved": "Vaultの項目を個人とチームの間で移動しました",
+        "keys_imported": "Vaultにキーを読み込みました"
       },
       "verb": {
         "created": "作成",
@@ -14640,7 +14729,8 @@
       "old": "{{brand}}（アカウント導入前）",
       "oldSub": "アカウントが記録される前の使用量",
       "ofMonth": "月の{{percent}}",
-      "shareLabel": "{{source}}: 月の{{percent}}"
+      "shareLabel": "{{source}}: 月の{{percent}}",
+      "estimateShort": "推定値です。"
     }
   },
   "budget": {
@@ -16105,10 +16195,9 @@
   "deleteAccount": {
     "menu": "アカウントを削除",
     "card": {
-      "text": "すべてのワークスペースから抜け、アカウントは7日後に完全に削除されます。それまでは復元できます。",
+      "text": "7日後に、すべてのワークスペースでアカウントを削除します。",
       "button": "アカウントを削除…",
-      "oneWorkspace": "このワークスペースだけを削除しますか？一般にあります。",
-      "leaveWorkspace": "このワークスペースからだけ抜けますか？メンバーにあります。"
+      "title": "削除"
     },
     "title": "アカウント全体を削除しますか？",
     "intro": "ワークスペース1つではなく、アカウント全体を削除します。",
@@ -16733,6 +16822,14 @@
       "timeout": "更新に時間がかかりすぎました。",
       "invalid_data": "{{name}}はデータをこの形式にできませんでした。"
     },
+    "needsAi": {
+      "body": "AIが接続されると、{{name}}がすぐに作成します。",
+      "short": "AIが必要です",
+      "not_signed_in": "{{name}}のプランがログアウトしています。",
+      "no_computer": "{{name}}のAIにはコンピューターが必要ですが、ありません。",
+      "cli_missing": "{{name}}のAIのプログラムがコンピューターにインストールされていません。",
+      "plan_not_shared": "{{name}}のプランは持ち主にしか応えないため、ウィジェットを更新できません。"
+    },
     "wait": {
       "plan": "{{name}}のプランが{{when}}にリセットされるのを待っています",
       "planUnknown": "{{name}}のプランのリセットを待っています",
@@ -16869,7 +16966,8 @@
       "textRoutine": "これを更新している{{name}}のルーティンが停止し、更新履歴も消えます。",
       "textManual": "更新履歴も消えます。",
       "confirm": "削除"
-    }
+    },
+    "exposureShort": "ダッシュボードを見られる人は、このデータを見られます。"
   },
   "agentPicker": {
     "search": "エージェントを検索",
@@ -17098,7 +17196,8 @@
       "blockNotFound": "そのグラフはもうメッセージにありません。",
       "notAgentMessage": "固定できるのはエージェントのグラフだけです。",
       "promptRequired": "ウィジェットに表示する内容を書いてください。",
-      "notTested": "先にテストしてください。テストが成功するとウィジェットが作成されます。"
+      "notTested": "先にテストしてください。テストが成功するとウィジェットが作成されます。",
+      "needsAi": "{{agentName}}はまだこのウィジェットを更新できません。理由はウィジェットに表示されています。"
     }
   },
   "teamPlan": {

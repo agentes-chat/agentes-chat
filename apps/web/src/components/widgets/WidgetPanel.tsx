@@ -1,6 +1,7 @@
 import type { WidgetDetail, WidgetSchedule, WidgetUpdate } from "@agenteschat/client";
 import {
   useAskWidgetChange,
+  useBuildOnceAi,
   useRefreshWidget,
   useUpdateWidget,
   useWidget,
@@ -31,7 +32,7 @@ import { useFocusAtEnd, useSent } from "@/components/EditInPlace";
 import { useOrg } from "@/components/org-context";
 import { useNow } from "@/hooks/useNow";
 import { useToast } from "@/lib/toast";
-import { failureText, useWidgetAgent, WidgetFace, WidgetFoot, widgetTitle } from "./parts";
+import { failureText, useWidgetAgent, WidgetFace, WidgetFoot, widgetBodyText, widgetTitle } from "./parts";
 import { RemoveWidgetDialog } from "./RemoveWidgetDialog";
 import "./widgets.css";
 
@@ -184,6 +185,7 @@ function PanelBody({ orgId, widget, onClose }: { orgId: string; widget: WidgetDe
   const now = useNow(60_000);
   const { name, color } = useWidgetAgent(widget.agentId);
   const refresh = useRefreshWidget(orgId);
+  useBuildOnceAi(orgId, widget, widget.canEdit);
   const [removing, setRemoving] = useState(false);
   const say = (e: unknown) => toast.show(errorText(t, e, i18n.language), "error");
   const removeLabel = t(widget.dashboard.kind === "home" ? "widgets.menu.removeHome" : "widgets.menu.removeBoard");
@@ -198,7 +200,7 @@ function PanelBody({ orgId, widget, onClose }: { orgId: string; widget: WidgetDe
         color={color}
         size={{ w: 2, h: 2 }}
         locale={i18n.language}
-        buildingText={status === widget.status ? t("widgets.status.building", { name }) : undefined}
+        buildingText={status === widget.status ? widgetBodyText(t, widget, name) : undefined}
         face={<WidgetFace agentId={widget.agentId} name={name} />}
         footer={
           <WidgetFoot
@@ -304,7 +306,7 @@ function HowItUpdates({
           sub={alert.enabled ? t("widgets.alert.where") : null}
           action={
             widget.canEdit && !alerting ? (
-              <Button size="sm" variant="ghost" onClick={() => setAlerting(true)}>
+              <Button variant="link" onClick={() => setAlerting(true)}>
                 {t("widgets.panel.changeAlert")}
               </Button>
             ) : null

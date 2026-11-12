@@ -2433,7 +2433,6 @@
     },
     "formatAuto": "{{name}} 会选最合适的",
     "newWidget": {
-      "titleHint": "标题 · {{name}} 会在测试时建议一个",
       "alerts": "提醒已开",
       "realData": "真实数据",
       "editAsk": "修改需求",

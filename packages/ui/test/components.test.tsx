@@ -14,6 +14,7 @@ import {
   CardFooter,
   CardHeader,
   Chip,
+  ColorDot,
   Composer,
   EventPill,
   FilterChip,
@@ -34,12 +35,33 @@ import {
   Meter,
   RunMark,
   Steps,
+  StepTrack,
+  type StepTrackStep,
   Textarea,
 } from "../src";
 
 const body = () => within(document.body);
 
 describe("Button", () => {
+  test("variant link: the words alone as a button, with none of a button's box classes", () => {
+    const { getByRole } = render(
+      <>
+        <Button variant="link" size="sm" block>
+          Editar
+        </Button>
+        <Button variant="link" className="ac-link--danger" disabled>
+          Remover a chave de um nome bem comprido
+        </Button>
+      </>,
+    );
+    const edit = getByRole("button", { name: "Editar" });
+    expect(edit.className).toBe("ac-link ac-link--action");
+    expect(edit.getAttribute("type")).toBe("button");
+    const remove = getByRole("button", { name: /^Remover/ }) as HTMLButtonElement;
+    expect(remove.className).toBe("ac-link ac-link--action ac-link--danger");
+    expect(remove.disabled).toBe(true);
+  });
+
   test("variants map to the design classes; default type is button", () => {
     render(
       <>
@@ -865,6 +887,73 @@ describe("Logo, Icon, Meter", () => {
     expect((meter.firstElementChild as HTMLElement).style.width).toBe("31%");
   });
 
+  test("step track: nodes carry no words, one line tells one step whole (the waiting one, else the pointed or pressed)", () => {
+    const long = "Rodou: git log --oneline origin/main..HEAD -- packages/engine/src/context/memory.ts";
+    const steps: StepTrackStep[] = [
+      ...Array.from({ length: 12 }, (_, i) => ({
+        key: `s${i}`,
+        icon: "code" as IconName,
+        label: `Passo ${i}`,
+        title: i === 0 ? long : undefined,
+        state: "done" as const,
+      })),
+      { key: "asked", icon: "waiting", label: "Pediu aprovação", time: "09:18", state: "now" },
+    ];
+    const { container } = render(<StepTrack steps={steps} more={(n) => `${n} passos`} aria-label="Como chegou aqui" />);
+    const line = () => container.querySelector(".ac-track__line")?.textContent;
+    const nodes = within(body().getByRole("list", { name: "Como chegou aqui" })).getAllByRole("button");
+    // 13 steps on 8 nodes: two, the folded middle, the last five.
+    expect(nodes.map((n) => n.getAttribute("aria-label"))).toEqual([
+      long,
+      "Passo 1",
+      "6 passos",
+      "Passo 8",
+      "Passo 9",
+      "Passo 10",
+      "Passo 11",
+      "Pediu aprovação · 09:18",
+    ]);
+    expect(container.querySelectorAll(".ac-track__step .ac-track__label")).toHaveLength(0);
+    expect(line()).toBe("Pediu aprovação · 09:18");
+    const told = () => nodes.filter((n) => n.hasAttribute("data-told")).map((n) => n.getAttribute("aria-label"));
+    const current = () => nodes.filter((n) => n.getAttribute("aria-current")).map((n) => n.getAttribute("aria-label"));
+    expect(told()).toEqual(["Pediu aprovação · 09:18"]);
+    expect(current()).toEqual(["Pediu aprovação · 09:18"]);
+    // The pointer previews, a press keeps, the folded node says how many it holds.
+    fireEvent.mouseEnter(nodes[0] as HTMLElement);
+    expect(line()).toBe(long);
+    fireEvent.mouseLeave(nodes[0] as HTMLElement);
+    expect(line()).toBe("Pediu aprovação · 09:18");
+    fireEvent.click(nodes[2] as HTMLElement);
+    expect(line()).toBe("6 passos");
+    // The told node is marked for the eye only: the step that waits stays the current one for a screen reader.
+    expect(told()).toEqual(["6 passos"]);
+    expect(current()).toEqual(["Pediu aprovação · 09:18"]);
+    fireEvent.focus(nodes[1] as HTMLElement);
+    expect(line()).toBe("Passo 1");
+    fireEvent.blur(nodes[1] as HTMLElement);
+    expect(line()).toBe("6 passos");
+  });
+
+  test("step track: one step is one node and its line, 60 fold to eight, and a press on the folded node calls onMore", () => {
+    const step = (i: number): StepTrackStep => ({ key: `s${i}`, icon: "code", label: `Passo ${i}`, state: "done" });
+    const one = render(<StepTrack steps={[step(0)]} aria-label="Um" />);
+    expect(within(one.container).getAllByRole("button")).toHaveLength(1);
+    expect(one.container.querySelector(".ac-track__line")?.textContent).toBe("Passo 0");
+    one.unmount();
+    let opened = 0;
+    const { container } = render(
+      <StepTrack steps={Array.from({ length: 60 }, (_, i) => step(i))} onMore={() => opened++} aria-label="Muitos" />,
+    );
+    const nodes = within(container).getAllByRole("button");
+    expect(nodes.map((n) => n.textContent)).toEqual(["", "", "+53", "", "", "", "", ""]);
+    // Nobody waits: the line tells the last step.
+    expect(container.querySelector(".ac-track__line")?.textContent).toBe("Passo 59");
+    fireEvent.click(nodes[2] as HTMLElement);
+    expect(opened).toBe(1);
+    expect(container.querySelector(".ac-track__line")?.textContent).toBe("Passo 59");
+  });
+
   test("steps: the ones before the current are done; the current is under way, not done (on the last one too)", () => {
     const bars = (current: number) => {
       const { container, unmount } = render(<Steps current={current} total={4} label={`Passo ${current} de 4`} />);
@@ -1413,5 +1502,79 @@ describe("FilterChip", () => {
     ]);
     expect(options[0]?.querySelector(".ac-tz__check svg")).not.toBeNull();
     expect(options[1]?.querySelector(".ac-tz__check svg")).toBeNull();
+  });
+
+  test("an action row past a line makes a new one and closes the menu; a picked value's mark replaces the icon", async () => {
+    let made = 0;
+    const chip = (value: string[]) => (
+      <FilterChip
+        label="Projeto"
+        icon="layers"
+        clearLabel="Limpar Projeto"
+        value={value}
+        onChange={() => {}}
+        valueText={(o) => o.label}
+        valueLeading
+        action={{ label: "Novo projeto", icon: "plus", onSelect: () => made++ }}
+        options={[
+          { value: "a", label: "Acme", leading: <ColorDot color="teal" />, count: 3 },
+          { value: "none", label: "Sem projeto", leading: <ColorDot /> },
+        ]}
+      />
+    );
+    const { rerender } = render(chip([]));
+    const trigger = () => document.querySelector(".ac-filter__trigger") as HTMLElement;
+    // Nothing picked: the filter's own icon.
+    expect(trigger().querySelector("svg.ac-icon")).not.toBeNull();
+    expect(trigger().querySelector(".ac-colordot")).toBeNull();
+    await act(async () => fireEvent.click(trigger()));
+    const foot = document.querySelector(".ac-filter__foot") as HTMLElement;
+    expect([...foot.children].map((c) => c.getAttribute("class"))).toEqual(["ac-menu__separator", "ac-filter__option"]);
+    // Not an option of the list: it picks nothing.
+    expect(body().getAllByRole("option")).toHaveLength(2);
+    await act(async () => fireEvent.click(within(foot).getByRole("button", { name: "Novo projeto" })));
+    expect(made).toBe(1);
+    expect(document.querySelector(".ac-filter__menu")).toBeNull();
+
+    rerender(chip(["a"]));
+    expect(trigger().textContent).toBe("Acme");
+    expect(trigger().querySelector(".ac-colordot")?.getAttribute("style")).toContain("--dot: #");
+    expect(trigger().querySelector("svg.ac-icon")).toBeNull();
+    expect(body().getByRole("button", { name: "Limpar Projeto" })).toBeTruthy();
+  });
+
+  test("with an action and nothing to pick yet, the menu is that one row: no empty list, no line", async () => {
+    render(
+      <FilterChip
+        label="Projeto"
+        icon="layers"
+        clearLabel="Limpar Projeto"
+        value={[]}
+        onChange={() => {}}
+        action={{ label: "Novo projeto", icon: "plus", onSelect: () => {} }}
+        options={[]}
+      />,
+    );
+    await act(async () => fireEvent.click(document.querySelector(".ac-filter__trigger") as HTMLElement));
+    expect(document.querySelector(".ac-filter__list")?.hasAttribute("hidden")).toBe(true);
+    expect(document.querySelector(".ac-filter__foot .ac-menu__separator")).toBeNull();
+    expect(body().getByRole("button", { name: "Novo projeto" })).toBeTruthy();
+  });
+});
+
+describe("ColorDot", () => {
+  test("a color's middle tone as the dot; no color is a hollow ring", () => {
+    const { container } = render(
+      <>
+        <ColorDot color="amber" />
+        <ColorDot />
+      </>,
+    );
+    const [amber, none] = [...container.querySelectorAll(".ac-colordot")];
+    expect(amber?.getAttribute("style")).toMatch(/--dot: #[0-9a-f]{6}/i);
+    expect(amber?.hasAttribute("data-none")).toBe(false);
+    expect(none?.hasAttribute("data-none")).toBe(true);
+    expect(none?.getAttribute("style")).toBeNull();
+    expect(amber?.getAttribute("aria-hidden")).toBe("true");
   });
 });

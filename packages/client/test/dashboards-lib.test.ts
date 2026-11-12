@@ -24,9 +24,11 @@ import {
   toggleEditRole,
   WIDGET_LINE_NOTE_MS,
   type Widget,
+  widgetAiReady,
   widgetCardStatus,
   widgetCostLine,
   widgetFailureKey,
+  widgetNeedsAi,
   widgetStepWords,
   widgetWaitFix,
   widgetWaiting,
@@ -34,6 +36,7 @@ import {
   widgetWaitText,
   withEditRoles,
 } from "../src/index";
+import { planKeyIntent } from "../src/lib/no-ai";
 import { usageWhen } from "../src/lib/plan-usage";
 
 const summary = (over: Partial<DashboardSummary>): DashboardSummary => ({
@@ -234,6 +237,59 @@ describe("words", () => {
     expect(widgetFailureKey("no_update")).toBe("widgets.failure.no_update");
     expect(widgetFailureKey("budget_exceeded")).toBe("widgets.failure.budget_exceeded");
     expect(widgetFailureKey("something_new")).toBe("widgets.failure.error");
+    // Waiting for an AI, the reason it was held for: no key keeps the code's words.
+    expect(widgetFailureKey("missing_credential", "not_signed_in")).toBe("widgets.needsAi.not_signed_in");
+    expect(widgetFailureKey("missing_credential", "cli_missing")).toBe("widgets.needsAi.cli_missing");
+    expect(widgetFailureKey("missing_credential", "no_key")).toBe("widgets.failure.missing_credential");
+    expect(widgetFailureKey("no_update", "not_signed_in")).toBe("widgets.failure.no_update");
+    // The right hand on a plan that serves only its owner, as the hold and as its run say it.
+    expect(widgetFailureKey("missing_credential", "plan_not_shared")).toBe("widgets.needsAi.plan_not_shared");
+    expect(widgetFailureKey("missing_credential", "plan_unattended")).toBe("widgets.needsAi.plan_not_shared");
+    // Its plan away or held: a widget's own words where it has them, else the plan's line.
+    expect(widgetFailureKey("missing_credential", "computer_away")).toBe("widgets.failure.waiting_computer");
+    expect(widgetFailureKey("missing_credential", "plan_limit")).toBe("widgets.failure.waiting_plan");
+    expect(widgetFailureKey("missing_credential", "commands_off")).toBe("noAi.rightHand.commands_off");
+    // Nothing a widget doesn't know, nor what any object has.
+    expect(widgetFailureKey("missing_credential", "toString")).toBe("widgets.failure.missing_credential");
+  });
+
+  test("Connect for a widget waiting on the right hand's plan opens on a key, the one AI its build can use", () => {
+    const hand = { builtin: "right_hand" as const, ownerUserId: "u-walter" };
+    expect(planKeyIntent(hand, "plan_not_shared")).toEqual({ intent: "api_key" });
+    expect(planKeyIntent(hand, "computer_away")).toEqual({ intent: "api_key" });
+    // No AI at all, or signed out: the plain dialog, whose plan or key fixes it.
+    expect(planKeyIntent(hand, "no_key")).toEqual({});
+    expect(planKeyIntent(hand, "not_signed_in")).toEqual({});
+    expect(planKeyIntent({ builtin: null, ownerUserId: "u-walter" }, "plan_not_shared")).toEqual({});
+  });
+
+  test("a widget whose agent has no AI waits for one, and may build once the AI status says it has one", () => {
+    const waiting: Widget = {
+      ...widget("w", 0),
+      status: "failed",
+      failure: { code: "missing_credential", detail: null },
+    };
+    const failed: Widget = { ...waiting, failure: { code: "no_update", detail: null } };
+    expect(widgetNeedsAi(waiting)).toBe(true);
+    expect(widgetNeedsAi(failed)).toBe(false);
+    expect(widgetNeedsAi({ ...waiting, status: "building" })).toBe(false);
+    const status = (state: "ready" | "no_ai" | "waiting") => ({ any: true, agents: [{ agentId: "theo", state }] });
+    expect(widgetAiReady(waiting, status("ready"))).toBe(true);
+    // Its computer away is no missing AI: the build waits for it as any run does.
+    expect(widgetAiReady(waiting, status("waiting"))).toBe(true);
+    expect(widgetAiReady(waiting, status("no_ai"))).toBe(false);
+    // Not known yet, or another agent's: nothing starts.
+    expect(widgetAiReady(waiting, undefined)).toBe(false);
+    expect(widgetAiReady({ ...waiting, agentId: "ada" }, status("ready"))).toBe(false);
+    expect(widgetAiReady(failed, status("ready"))).toBe(false);
+    // What a build thinks with decides: ready for chat through the fallback is no AI for it, and the right hand
+    // shown on someone's own AI may still build on the workspace's.
+    const apart = (state: "ready" | "no_ai", background: "ready" | "no_ai") => ({
+      any: true,
+      agents: [{ agentId: "theo", state, background }],
+    });
+    expect(widgetAiReady(waiting, apart("ready", "no_ai"))).toBe(false);
+    expect(widgetAiReady(waiting, apart("no_ai", "ready"))).toBe(true);
   });
 
   test("the cost line follows the schedule and who pays", () => {

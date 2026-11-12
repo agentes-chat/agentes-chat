@@ -177,6 +177,7 @@ import {
 import { modelInfoFor } from "./credentials";
 import { sha256 } from "./crypto";
 import { widgetRunWaitChanged } from "./dashboards/refresh-fire";
+import { WIDGET_FAILURES } from "./dashboards/types";
 import { publishDelivery } from "./delivery";
 import { isAgentOnlyDm } from "./dms";
 import {
@@ -1511,7 +1512,7 @@ async function executeRunInner(
   };
   /**
    * Nothing to think with (ADR 0061): the run fails with `no_ai`, and the conversation gets its agent's
-   * card with Connect. Background work only fails (its routine says why).
+   * card with Connect. Background work only fails, its routine run keeping why (a widget says it, ADR 0135 §20).
    */
   const failNoAi = async (why: NoAiCardReason, own?: AgentAi["own"], model?: string, said?: string) => {
     if (!run.background) {
@@ -1520,7 +1521,7 @@ async function executeRunInner(
         .catch((error) => addRunStep(db, run, "error", { reason: "no_ai_card", message: String(error) }))
         .catch(() => {});
     }
-    await fail(NO_AI);
+    await fail(NO_AI, { code: NO_AI, detail: why });
   };
 
   /**
@@ -4864,7 +4865,7 @@ async function executeRunInner(
         const routineRunId = routineRunIdOf(triggerMessage?.meta);
         const [routineRun] = routineRunId
           ? await db
-              .select({ status: routineRuns.status })
+              .select({ status: routineRuns.status, code: routineRuns.code })
               .from(routineRuns)
               .where(and(eq(routineRuns.id, routineRunId), eq(routineRuns.orgId, run.orgId)))
           : [];
@@ -4874,6 +4875,11 @@ async function executeRunInner(
           kind: "routine",
           executed: transcript.executedCalls ?? 0,
           bound: run.turns + 1 >= maxTurns ? "turn_cap" : routineRun?.status === "reported" ? "reported" : null,
+          // A good update made the run `reported`; one with `failed` left its code (ADR 0135 §5).
+          widgetOwed:
+            Boolean(routineBriefOf(triggerMessage?.meta)?.widget) &&
+            (routineRun?.status === "starting" || routineRun?.status === "started") &&
+            routineRun.code !== WIDGET_FAILURES.agentReported,
           quiet: !record,
           decided: null,
           unanswered: false,
@@ -4906,7 +4912,12 @@ async function executeRunInner(
           addRunStep(db, run, "context", {
             continuation: recorded,
             ...(decision.outcome === "continue"
-              ? { nudged: decision.rule === "untried" || decision.rule === "unbacked" ? decision.rule : "promise" }
+              ? {
+                  nudged:
+                    decision.rule === "untried" || decision.rule === "unbacked" || decision.rule === "widget"
+                      ? decision.rule
+                      : "promise",
+                }
               : {}),
           }),
         );

@@ -1,19 +1,23 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, inArray, isNotNull, isNull, or, schema, sql } from "@agenteschat/db";
+import { getAgent } from "../agents";
+import { type AiStatusDeps, backgroundAiState } from "../ai-status";
 import type { ModelScope } from "../brains/select";
 import type { Membership } from "../organizations";
 import { waitModel } from "../task-manager";
 import { mayContinuePause } from "../usage-pause";
 import { dashboardRights, viewerOf } from "./access";
 import { publishWidgetChanged, widgetEvent } from "./events";
+import { holdWidgetForAi } from "./refresh-ledger";
 import type { WidgetStatus, WidgetWaitView } from "./types";
 
 const { agentRuns, agents, dashboards, dashboardWidgets, routineRuns, routines } = schema;
 
 /*
- * A widget routine as it fires (ADR 0135 §4, ADR 0053 §6): its widget and board must still be there, and its creator
- * must still see the board; then the widget shows it is being redone, and what its run waits on, if anything. Kept
- * apart from `refresh.ts` so `routines.ts` and the executor read it without an import cycle.
+ * A widget routine as it fires (ADR 0135 §4, ADR 0053 §6): its widget and board must still be there, its creator
+ * must still see the board, and its agent must have an AI to think with; then the widget shows it is being redone,
+ * and what its run waits on, if anything. Kept apart from `refresh.ts` so `routines.ts` and the executor read it
+ * without an import cycle.
  */
 
 /** A widget's refresh run that waits, with what it waits on and who may let a pause go on (`mayContinueWidgetWait`). */
@@ -150,29 +154,48 @@ export function isWidgetChangeRun(run: { event?: Record<string, unknown> | null 
   return run.event?.type === WIDGET_CHANGE_EVENT;
 }
 
+type FiringDeps = { db: Database; pubsub?: PubSub; ai?: Omit<AiStatusDeps, "db"> };
+
+/**
+ * The widget's agent and why (`AgentAi.reason`) when it has no AI to think with for its build, else null (also when
+ * nothing can tell: no `ai`). A build is background work (`backgroundAiState`), as the run's own check reads it.
+ */
+export async function widgetAgentWithoutAi(deps: FiringDeps, orgId: string, agentId: string) {
+  if (!deps.ai) return null;
+  const agent = await getAgent(deps.db, orgId, agentId);
+  if (!agent || agent.archivedAt) return null;
+  const ai = await backgroundAiState({ ...deps.ai, db: deps.db }, agent);
+  return ai.state === "no_ai" ? { agent, reason: ai.reason ?? null } : null;
+}
+
 export type WidgetFiring =
   | { widget: { widgetId: string; dashboardId: string } }
-  /** The widget or its board is gone: the slot passes. */
-  | { skip: "deleted" }
+  /** The widget or its board is gone, or its agent has no AI (the widget says so, `holdWidgetForAi`): the slot passes. */
+  | { skip: "deleted" | "no_ai" }
   /** Its creator no longer sees the board: the routine pauses, the widget says why. */
   | { pause: "creator_no_access" };
 
 /** Whether a widget routine's slot runs, for its creator (`creatorId`, whose `membership` it is). */
 export async function widgetFiring(
-  db: Database,
+  deps: FiringDeps,
   orgId: string,
   target: { widgetId: string; dashboardId: string },
   creatorId: string,
   membership: Membership,
 ): Promise<WidgetFiring> {
-  const [row] = await db
-    .select({ widgetId: dashboardWidgets.id, dashboardId: dashboardWidgets.dashboardId, board: dashboards })
+  const [row] = await deps.db
+    .select({ widget: dashboardWidgets, board: dashboards })
     .from(dashboardWidgets)
     .innerJoin(dashboards, eq(dashboards.id, dashboardWidgets.dashboardId))
     .where(and(eq(dashboardWidgets.orgId, orgId), eq(dashboardWidgets.id, target.widgetId)));
   if (!row || row.board.deletedAt) return { skip: "deleted" };
   if (!dashboardRights(row.board, viewerOf(membership, creatorId)).see) return { pause: "creator_no_access" };
-  return { widget: { widgetId: row.widgetId, dashboardId: row.dashboardId } };
+  const without = await widgetAgentWithoutAi(deps, orgId, row.widget.agentId);
+  if (without) {
+    await holdWidgetForAi(deps, row.widget, row.board, without.reason);
+    return { skip: "no_ai" };
+  }
+  return { widget: { widgetId: row.widget.id, dashboardId: row.widget.dashboardId } };
 }
 
 /** The refresh starts: the widget is `updating` (its last data stays on screen), or `building` while it has none. */

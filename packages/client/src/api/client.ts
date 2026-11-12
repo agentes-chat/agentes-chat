@@ -17,6 +17,8 @@ import type {
   VaultItemDetail,
   VaultItemInput,
   VaultItemPatch,
+  VaultKeysImportInput,
+  VaultKeysImportResult,
   VaultOverview,
   VaultScope,
 } from "../vault/types";
@@ -169,6 +171,9 @@ import type {
   IssueConversationRef,
   IssueInput,
   IssuePatch,
+  IssueProject,
+  IssueProjectRef,
+  IssueProjects,
   IssueStatus,
   IssuesView,
   JevKey,
@@ -1286,7 +1291,8 @@ export interface ApiClient {
     saveToVault?(orgId: string, requestId: string, input: SecretToVaultInput): Promise<VaultItem>;
   };
   issues: {
-    list(orgId: string, filters?: { q?: string }): Promise<Issue[]>;
+    /** `projectId`: only that project's tasks, or `none` for the ones with no project. */
+    list(orgId: string, filters?: { q?: string; projectId?: string }): Promise<Issue[]>;
     get(orgId: string, number: number): Promise<Issue>;
     create(orgId: string, input: IssueInput): Promise<Issue>;
     update(orgId: string, id: string, patch: IssuePatch): Promise<Issue>;
@@ -1314,6 +1320,16 @@ export interface ApiClient {
     updateColumn(orgId: string, columnId: string, patch: { name?: string; index?: number }): Promise<IssueColumn[]>;
     /** Deletes a column; its tasks go to `moveTo`. A stage keeps at least one column. */
     deleteColumn(orgId: string, columnId: string, moveTo: string): Promise<IssueColumn[]>;
+    projects(orgId: string): Promise<IssueProjects>;
+    createProject(orgId: string, input: { name: string; color?: string }): Promise<IssueProject>;
+    /** Rename, recolour, archive or bring back. */
+    updateProject(
+      orgId: string,
+      projectId: string,
+      patch: { name?: string; color?: string; archived?: boolean },
+    ): Promise<IssueProjectRef>;
+    /** Its tasks stay, with no project. */
+    deleteProject(orgId: string, projectId: string): Promise<void>;
   };
   /** Threads (ADR 0029): the Threads page, a thread from a range, moving it, closing and archiving. */
   threads: {
@@ -1937,6 +1953,13 @@ export interface ApiClient {
     remove(orgId: string, itemId: string): Promise<void>;
     /** A passwords file's text; `dryRun` only counts. 413 `vault.csv_too_large` past 2 MB. */
     importCsv(orgId: string, input: { csv: string; scope: VaultScope; dryRun: boolean }): Promise<VaultImportResult>;
+    /** Several keys in one save (an imported .env). 403 `vault.team_needs_permission` for the team's without it. */
+    importKeys(orgId: string, input: VaultKeysImportInput): Promise<VaultKeysImportResult>;
+    /**
+     * Moves an item kept here between Personal and Team. Either way takes `manage_credentials`; to Personal it
+     * becomes the mover's. 409 `vault.key_name_taken` when a key of that name is already there.
+     */
+    move(orgId: string, itemId: string, scope: VaultScope): Promise<VaultItem>;
     /** Checked with the password manager first: 400 `vault.source.<code>` when it refuses. */
     connect(orgId: string, input: VaultConnectInput): Promise<VaultConnection>;
     updateConnection(orgId: string, connectionId: string, patch: VaultConnectionPatch): Promise<VaultConnection>;

@@ -444,13 +444,12 @@ describe("deleting your account (Configurações › Sua conta)", () => {
       },
     });
     const { router } = await open(`/org/${ORG_ID}/settings/account`, { state });
-    const card = screen().getByRole("region", { name: "Apagar conta" });
+    const card = screen().getByRole("region", { name: "Apagar" });
     // The kit's Tabs wrap the strip and the panel in a box that lays nothing out (`display: contents`).
     const cards = document.querySelectorAll(".settings__body .ac-tabpanel > .ac-card");
     expect(cards[cards.length - 1]).toBe(card);
     expect(card.classList.contains("settings-danger")).toBe(true);
-    expect(card.textContent).toContain("a sua conta é apagada de vez 7 dias depois. Até lá, dá para restaurar.");
-    await click(within(card).getByRole("button", { name: "Apagar conta…" }));
+    await click(within(card).getByRole("button", { name: "Apagar conta" }));
     await settle(6);
     // Kept in the address: a sign-in again comes back to it.
     expect(router.state.location.search).toMatchObject({ account: "delete" });
@@ -581,18 +580,33 @@ describe("deleting your account (Configurações › Sua conta)", () => {
     expect(screen().getByRole("region", { name: "Sua conta inteira" })).toBeTruthy();
   });
 
-  test("Sua conta points to Geral for someone who owns this workspace and only meant it", async () => {
-    await open(`/org/${ORG_ID}/settings/account`);
-    const card = screen().getByRole("region", { name: "Apagar conta" });
-    expect(
-      within(card).getByRole("link", { name: "Quer apagar só este workspace? Fica em Geral." }).getAttribute("href"),
-    ).toBe(`/org/${ORG_ID}/settings/general`);
-    cleanup();
+  test("Sua conta's last card: two plain buttons for an owner, the workspace's dialog opening in place", async () => {
+    const { router } = await open(`/org/${ORG_ID}/settings/account`);
+    const card = screen().getByRole("region", { name: "Apagar" });
+    const ways = Array.from(card.querySelectorAll(".danger-pair__way"));
+    expect(ways.map((w) => w.textContent)).toEqual([
+      "Apaga a sua conta em 7 dias, em todos os workspaces.Apagar conta",
+      "Acme fica só para leitura para todos agora. Ele é apagado de vez depois de 7 dias.Apagar workspace",
+    ]);
+    // One sentence and one button each: no link out of the card, no "…" on a button.
+    expect(within(card).queryAllByRole("link")).toEqual([]);
+    expect(card.textContent).not.toContain("…");
+    await click(within(card).getByRole("button", { name: "Apagar workspace" }));
+    await settle(4);
+    expect(screen().getByRole("dialog", { name: /^Apagar Ac/ })).toBeTruthy();
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/account`);
+  });
+
+  test("someone who can't delete the workspace gets the account's button alone, under its own name", async () => {
     await open(`/org/${ORG_ID}/settings/account`, { role: "member" });
-    expect(screen().queryByRole("link", { name: /Quer apagar só este workspace/ })).toBeNull();
+    const card = screen().getByRole("region", { name: "Apagar conta" });
+    expect(card.querySelectorAll(".danger-pair__way").length).toBe(1);
     expect(
-      screen().getByRole("link", { name: "Quer sair só deste workspace? Fica em Membros." }).getAttribute("href"),
-    ).toBe(`/org/${ORG_ID}/settings/members`);
+      within(card)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Apagar conta"]);
+    expect(within(card).queryAllByRole("link")).toEqual([]);
   });
 
   test("two with the same name in the dialog: told apart in what it says and in its links", async () => {

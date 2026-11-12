@@ -115,6 +115,13 @@ export function firstVisitOf(dms: readonly DirectMessage[] | undefined, agentId:
 /** The workspace's right hand among its agents, when this person may see it. */
 export const rightHandOf = <A extends Pick<Agent, "builtin">>(agents: readonly A[]) => agents.find(isRightHand);
 
+/** The agents a scene of the team shows: the right hand in front (second in the row), then the others, four at most. */
+export function sceneTeam<A extends { id: string }>(agents: readonly A[], lead: A | undefined): A[] {
+  const rest = agents.filter((a) => a.id !== lead?.id).slice(0, lead ? 3 : 4);
+  if (!lead) return rest;
+  return rest.length > 1 ? [rest[0] as A, lead, ...rest.slice(1)] : [lead, ...rest];
+}
+
 /**
  * Its name and look before the workspace exists (the onboarding's first question): the server's
  * `RIGHT_HAND_DEFAULTS` (packages/engine/src/right-hand.ts).

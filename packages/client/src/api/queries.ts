@@ -120,6 +120,7 @@ import type {
   IssueColumn,
   IssueInput,
   IssuePatch,
+  IssueProjectRef,
   IssueStatus,
   IssuesView,
   JevKey,
@@ -3027,6 +3028,25 @@ export const useAiStatus = (
   });
 };
 
+/**
+ * The AI status as read after `waiting` turned true (it is read again then), undefined until it is: one kept from
+ * before something started waiting for an AI may still call its agent ready, and a build asked on it is only refused.
+ */
+export function useAiStatusSince(orgId: string, waiting: boolean): AiStatus | undefined {
+  const status = useAiStatus(orgId, waiting);
+  const [since, setSince] = useState<number | null>(null);
+  const { refetch } = status;
+  useEffect(() => {
+    if (!waiting) {
+      setSince(null);
+      return;
+    }
+    setSince(Date.now());
+    void refetch({ cancelRefetch: false });
+  }, [waiting, refetch]);
+  return since !== null && status.dataUpdatedAt >= since ? status.data : undefined;
+}
+
 export function useRotateCredential(orgId: string, silent = false) {
   const api = useApi();
   const qc = useQueryClient();
@@ -4051,11 +4071,12 @@ export const useArtifactBlob = (orgId: string, id: string, version: number, enab
 
 // ── Issues ───────────────────────────────────────────────────────────────────
 
-export const useIssues = (orgId: string, q = "") => {
+/** `project`: only a project's tasks (its id), or `none` for the ones with no project. The server filters. */
+export const useIssues = (orgId: string, q = "", project = "") => {
   const api = useApi();
   return useQuery({
-    queryKey: keys.issueList(orgId, q),
-    queryFn: () => api.issues.list(orgId, q ? { q } : {}),
+    queryKey: keys.issueList(orgId, q, project),
+    queryFn: () => api.issues.list(orgId, { ...(q ? { q } : {}), ...(project ? { projectId: project } : {}) }),
     placeholderData: (prev) => prev,
     // While an agent works on an issue its steps change without an event: look again every 10 s.
     refetchInterval: (query) => (query.state.data?.some((i) => i.work && i.work.state !== "stalled") ? 10_000 : false),
@@ -4238,6 +4259,38 @@ export function useIssueColumnAction(orgId: string) {
     onSuccess: (columns) => qc.setQueryData(keys.issueColumns(orgId), columns),
     // Deleting a column moves its tasks.
     onSettled: () => void qc.invalidateQueries({ queryKey: keys.issues(orgId) }),
+  });
+}
+
+/** The tasks' projects; they live under the issues key, so their counts follow every task change. */
+export const useIssueProjects = (orgId: string) => {
+  const api = useApi();
+  return useQuery({ queryKey: keys.issueProjects(orgId), queryFn: () => api.issues.projects(orgId) });
+};
+
+export function useIssueProjectAction(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      action:
+        | { type: "create"; name: string; color: string }
+        | { type: "update"; projectId: string; name?: string; color?: string; archived?: boolean }
+        | { type: "delete"; projectId: string },
+    ): Promise<IssueProjectRef | undefined> => {
+      switch (action.type) {
+        case "create":
+          return api.issues.createProject(orgId, { name: action.name, color: action.color });
+        case "update": {
+          const { type: _type, projectId, ...patch } = action;
+          return api.issues.updateProject(orgId, projectId, patch);
+        }
+        case "delete":
+          return api.issues.deleteProject(orgId, action.projectId).then(() => undefined);
+      }
+    },
+    // The tasks carry their project's name and colour: they read again too.
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.issues(orgId) }),
   });
 }
 

@@ -17,6 +17,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { getAgent } from "./agents";
+import type { AiStatusDeps } from "./ai-status";
 import { decidesAgentApprovals, MAX_OWN_ACTIONS, OWN_ACTION_NAME } from "./approval-rules";
 import { cancelRoutineAhead, type RoutineAheadView, routinesAhead } from "./approvals";
 import { audienceError, audienceSql, canTalkTo, speakerFor, speakerOf } from "./audience";
@@ -403,6 +404,8 @@ export interface RoutineDeps {
   hooks?: RoutineHookConfig;
   /** Connector events' webhooks are registered at the provider through the connection (ADR 0130). */
   connectors?: ConnectorTriggerDeps;
+  /** Whether a widget's agent can think before its refresh starts (`widgetFiring`); absent: the run's own check. */
+  ai?: Omit<AiStatusDeps, "db">;
 }
 
 type RoutineRow = typeof routines.$inferSelect;
@@ -2209,10 +2212,11 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
     return;
   }
 
-  // A widget's refresh (ADR 0135 §4): its widget and board are still there and its creator still sees the board.
+  // A widget's refresh (ADR 0135 §4): its widget and board are still there, its creator still sees the board and its
+  // agent has an AI.
   let widget: RoutineBrief["widget"];
   if (target.type === "widget") {
-    const firing = await widgetFiring(db, routine.orgId, target, creator, membership);
+    const firing = await widgetFiring(deps, routine.orgId, target, creator, membership);
     if ("skip" in firing) return skip(firing.skip);
     if ("pause" in firing) return paused(firing.pause);
     widget = firing.widget;

@@ -1,5 +1,6 @@
 import {
   useAskWidgetChange,
+  useBuildOnceAi,
   useDesktopStatus,
   useRefreshWidget,
   useRemoveWidget,
@@ -10,6 +11,7 @@ import {
   type WidgetUpdate,
   type WidgetWait,
   widgetCardStatus,
+  widgetNeedsAi,
   widgetWaitFix,
   widgetWaiting,
 } from "@agenteschat/client";
@@ -49,7 +51,7 @@ import { useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { goBack, PushedHeader, successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
-import { useAgentLook, useWidgetWords } from "./hooks";
+import { useAgentLook, useWidgetAiWay, useWidgetWords } from "./hooks";
 import { HOME, shownWidgetTitle } from "./logic";
 import { WidgetCard } from "./WidgetView";
 
@@ -102,6 +104,9 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
   const refresh = useRefreshWidget(orgId);
   const update = useUpdateWidget(orgId);
   const remove = useRemoveWidget(orgId);
+  useBuildOnceAi(orgId, w, w.canEdit);
+  const needsAi = widgetNeedsAi(w);
+  const aiWay = useWidgetAiWay(needsAi ? w.agentId : null, w.failure?.detail);
   const [open, setOpen] = useState<"title" | "schedule" | "alert" | null>(null);
   const [alertOn, setAlertOn] = useState(w.alert.enabled);
   const [condition, setCondition] = useState(w.alert.condition);
@@ -242,6 +247,7 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
             refreshedAt: w.refreshedAt,
             schedule: w.schedule,
             w: 2,
+            needsAi,
             wait: w.wait,
           }}
         />
@@ -271,12 +277,24 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
         {w.status === "failed" && w.failure ? (
           <View style={styles.failure}>
             <View style={styles.failureLine}>
-              <LineIcon name="info" size={13} color={c.warn} variant="footnote" />
-              <Text variant="footnote" style={[styles.grow, { color: c.warn }]}>
-                {words.failure(w)}
-              </Text>
+              <LineIcon name={needsAi ? "bolt" : "info"} size={13} color={c.warn} variant="footnote" />
+              <View style={styles.grow}>
+                <Text variant="footnote" style={{ color: c.warn }}>
+                  {words.failure(w)}
+                </Text>
+                {aiWay && "locked" in aiWay ? (
+                  <Text variant="footnote" tone="muted">
+                    {aiWay.locked}
+                  </Text>
+                ) : null}
+              </View>
             </View>
-            {w.canEdit ? (
+            {/* Waiting for an AI: Connect (or who can), never Resolve (it builds by itself once one is there). */}
+            {needsAi ? (
+              aiWay && "connect" in aiWay ? (
+                <Button size="sm" variant="secondary" label={t("noAi.action")} onPress={aiWay.connect} />
+              ) : null
+            ) : w.canEdit ? (
               <Button
                 size="sm"
                 variant="secondary"

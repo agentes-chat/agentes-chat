@@ -26,6 +26,7 @@ import {
   Dialog,
   DialogFooter,
   DialogSearchList,
+  HintLine,
   Icon,
   type IconName,
   Locked,
@@ -139,7 +140,7 @@ export function ReposBlock() {
           ))
         )}
         {editable && (
-          <Button size="sm" variant="ghost" icon="edit" onClick={() => pickRepos()}>
+          <Button variant="link" onClick={() => pickRepos()}>
             {r.mode === "all" ? t("repos.choose") : t("repos.change")}
           </Button>
         )}
@@ -189,12 +190,16 @@ export function MergeReposBlock() {
           ))
         )}
         {editable && (
-          <Button size="sm" variant="ghost" icon="edit" onClick={() => setPicking(true)}>
+          <Button variant="link" onClick={() => setPicking(true)}>
             {list.length === 0 ? t("repos.choose") : t("repos.change")}
           </Button>
         )}
       </span>
-      <span className="small muted">{t("repos.merge.help")}</span>
+      <span className="small muted">
+        <HintLine name={t("common.about", { label: t("repos.merge.label") })} hint={t("repos.merge.help")}>
+          {t("repos.merge.short")}
+        </HintLine>
+      </span>
       {picking && <MergeRepoDialog chosen={list} onClose={() => setPicking(false)} />}
     </div>
   );

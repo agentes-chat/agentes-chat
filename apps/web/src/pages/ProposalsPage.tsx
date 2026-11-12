@@ -204,7 +204,7 @@ export function ProposalsPage({ agentId }: { agentId?: string }) {
                 <span className="ac-eyebrow">{t("proposals.change", { target: targetLabel(current) })}</span>
                 {current.status === "pending" && current.canDecide && isText(current) && (
                   <span className="ac-acts">
-                    <Button variant="ghost" size="sm" disabled={decide.isPending} onClick={() => setEditing((v) => !v)}>
+                    <Button variant="link" disabled={decide.isPending} onClick={() => setEditing((v) => !v)}>
                       {editing ? t("proposals.viewDiff") : t("proposals.editFirst")}
                     </Button>
                   </span>

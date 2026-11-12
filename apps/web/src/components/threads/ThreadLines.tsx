@@ -211,10 +211,10 @@ export function ClosedThreadLine({ thread }: { thread: ThreadInfo }) {
         <span>{t("threads.line.closed", { title: threadTitle(thread), count: threadMessageCount(thread) })}</span>
       </span>
       <span className="thread-closed__actions">
-        <Button size="sm" variant="ghost" asChild>
+        <Button variant="link" asChild>
           <OpenThread threadId={thread.id}>{t("threads.line.openShort")}</OpenThread>
         </Button>
-        <Button size="sm" variant="ghost" asChild>
+        <Button variant="link" asChild>
           <OpenThread threadId={thread.id} reply>
             {t("threads.line.reply")}
           </OpenThread>
@@ -236,7 +236,7 @@ export function ArchivedThreadsNote({ channelId, count }: { channelId: string; c
         <span>{t("threads.line.archived", { count })}</span>
       </span>
       <span className="thread-closed__actions">
-        <Button size="sm" variant="ghost" asChild>
+        <Button variant="link" asChild>
           <Link to="/org/$orgId/threads" params={{ orgId: org.id }} search={{ tab: "archived", channel: channelId }}>
             {t("threads.line.see")}
           </Link>

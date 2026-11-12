@@ -660,13 +660,14 @@ test("a widget's refresh isn't long work by kind: at 96% of the plan its slot ru
   // Its first build, as its schedule's slot: by hand it wouldn't be long work anyway.
   await f.db.update(schema.routineRuns).set({ trigger: "schedule" });
   await drainOutbox(f.db, handlers);
-  expect(seen).toHaveLength(1);
+  // Its turn, then the one more a widget's run gets for ending without `update_widget`: neither paused.
+  expect(seen).toHaveLength(2);
   const [refresh] = await runs(f);
   expect(await routineRunRefreshesWidget(f.db, refresh?.id ?? "")).toBe(true);
 
   await scheduledSlot(f);
   await drainOutbox(f.db, handlers);
-  expect(seen).toHaveLength(1);
+  expect(seen).toHaveLength(2);
   const slot = (await runs(f)).at(-1);
   expect((slot?.transcript as { waitingForBrain?: { code?: string } } | undefined)?.waitingForBrain?.code).toBe(
     "usage_pause",

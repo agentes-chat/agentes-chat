@@ -502,8 +502,14 @@ export function widgetNoticeOf(n: Pick<AppNotification, "kind" | "source" | "lat
   const agentId = s.agentId ?? (n.actors[0]?.type === "agent" ? n.actors[0].id : null);
   const base = { dashboardId: s.dashboardId ?? null, widgetId: s.widgetId ?? null, agentId, title: s.label ?? "" };
   if (n.kind === "widget_alert") return { ...base, kind: "alert" as const, text: n.latest.text ?? "" };
+  // Its failure's detail as the widget keeps it: the agent's words (`agent_reported`), or why its agent has no AI.
   if (n.kind === "widget_failed")
-    return { ...base, kind: "failed" as const, reason: n.latest.reason ?? "error", text: n.latest.text ?? null };
+    return {
+      ...base,
+      kind: "failed" as const,
+      reason: n.latest.reason ?? "error",
+      detail: n.latest.text ?? n.latest.detail ?? null,
+    };
   return {
     ...base,
     kind: "proposal" as const,

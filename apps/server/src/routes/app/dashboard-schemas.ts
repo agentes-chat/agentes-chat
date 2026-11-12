@@ -371,6 +371,15 @@ export const ConfirmWidgetBody = z
 
 export const WidgetChangeBody = z.object({ text: z.string().trim().min(1).max(1000) }).openapi("WidgetChange");
 
+export const WidgetRefreshBody = z
+  .object({
+    auto: z.boolean().optional().openapi({
+      description:
+        "The apps' own build once the agent of a widget waiting for an AI has one: it only queues, never taking the routine over or resuming it. A routine paused or whose creator no longer fits fails the widget with that reason instead (Resolve takes it on).",
+    }),
+  })
+  .openapi("WidgetRefresh");
+
 export const DashboardParams = z.object({
   orgId: z.uuid().openapi({ param: { name: "orgId", in: "path" } }),
   dashboardId: z.uuid().openapi({ param: { name: "dashboardId", in: "path" } }),

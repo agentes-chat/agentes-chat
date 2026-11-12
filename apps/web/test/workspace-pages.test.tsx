@@ -362,10 +362,11 @@ describe("Membros", () => {
     const people = screen().getByRole("region", { name: "Pessoas" });
     expect(people.textContent).toContain("Walter (você)");
     expect(people.textContent).toContain("Ativo agora");
-    // Each person's roles as chips (ADR 0085), and a "+" to give or take them.
+    // Each person's roles as chips (ADR 0085). Giving or taking them is in the row's menu, never a loose "+".
     const joao = within(people).getByText("João").closest(".ac-list__row") as HTMLElement;
-    expect(joao.querySelector(".members-roles")?.textContent).toContain("Admin");
-    expect(within(joao).getByRole("button", { name: "Papéis de João" })).toBeTruthy();
+    expect(joao.querySelector(".members-roles")?.textContent).toBe("Admin");
+    expect(within(joao).queryByRole("button", { name: "Papéis de João" })).toBeNull();
+    expect(within(joao).getByRole("button", { name: "Mais de João" })).toBeTruthy();
     const agents = screen().getByRole("region", { name: "Agentes" });
     expect(agents.textContent).toContain("Ada · Dev");
     expect(agents.textContent).toContain("Responsável: João");
@@ -394,9 +395,9 @@ describe("Membros", () => {
     atlas.brain = { kind: "codex", model: "GPT", account: "ChatGPT Plus" };
     state.spentUsd = { [ATLAS_ID]: 0 };
     await go("members", state);
-    const [adaRow, atlasRow] = screen().getByRole("region", { name: "Agentes" }).querySelectorAll("a.ac-list__row");
+    const [adaRow, atlasRow] = screen().getByRole("region", { name: "Agentes" }).querySelectorAll(".ac-foldrow");
     expect(adaRow?.querySelector(".ac-planmeter__line")?.textContent).toBe("Claude Team · semana 40% · 5h 12%");
-    expect(adaRow?.textContent).toMatch(/Claude Team · semana 40% · 5h 12%31% do orçamento de \S+$/);
+    expect(adaRow?.textContent).toMatch(/Claude Team · semana 40% · 5h 12%31% do orçamento de \S+Ver perfil$/);
     expect(atlasRow?.querySelector(".ac-planmeter")).toBeNull();
     expect(atlasRow?.textContent).not.toMatch(/orçamento|%/);
   });

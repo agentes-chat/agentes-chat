@@ -2638,7 +2638,6 @@
     },
     "formatAuto": "{{name}} elige el mejor",
     "newWidget": {
-      "titleHint": "Título · {{name}} sugiere uno al probar",
       "alerts": "Avisa",
       "realData": "Datos reales",
       "editAsk": "Cambiar el pedido",

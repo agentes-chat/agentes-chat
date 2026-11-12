@@ -10,12 +10,15 @@ import {
   widgetWaitText,
 } from "@agenteschat/client";
 import { relativeTime } from "@agenteschat/client/lib/format";
+import { maySetAgentAi, noAiLockedLine, planKeyIntent } from "@agenteschat/client/lib/no-ai";
 import { isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
-import { useDirectory, useNow, useOrgId } from "../shared/hooks";
+import { openConnectAi } from "../ai/NoAiCard";
+import { usePlanHold } from "../ai/parts";
+import { useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { HOME } from "./logic";
 
@@ -68,7 +71,7 @@ export function useWidgetWords() {
       if (!w.failure) return "";
       const name = dir.anyAgent(w.agentId)?.name ?? "";
       if (w.failure.code === "agent_reported") return w.failure.detail || t("widgets.failure.error");
-      return t(widgetFailureKey(w.failure.code), { name, detail: w.failure.detail ?? "" });
+      return t(widgetFailureKey(w.failure.code, w.failure.detail), { name, detail: w.failure.detail ?? "" });
     },
     [t, dir],
   );
@@ -82,4 +85,27 @@ export function useWidgetWords() {
   );
   const ago = useCallback((iso: string) => relativeTime(t, i18n.language, iso, new Date(now)), [t, i18n.language, now]);
   return { failure, wait, ago, now, locale: i18n.language };
+}
+
+/**
+ * What a widget waiting for an AI offers this person (its screen, its card's footer, New widget's test), as the web's:
+ * Connect to whoever may set its agent's AI (for the right hand the workspace's, since a build thinks with nobody's
+ * own; on a plan that can't take it, `reason` a plan line, a key: `planKeyIntent`), else who can. Nothing on a billing
+ * hold: an AI comes after the plan.
+ */
+export function useWidgetAiWay(
+  agentId: string | null | undefined,
+  reason?: string | null,
+): { connect: () => void } | { locked: string } | null {
+  const { t } = useTranslation();
+  const { orgId, org } = useOrg();
+  const dir = useDirectory();
+  const meId = useMeId();
+  const hold = usePlanHold(orgId, org);
+  const agent = agentId ? dir.agentById.get(agentId) : undefined;
+  if (!agent || hold) return null;
+  if (maySetAgentAi(agent, meId, org))
+    return { connect: () => openConnectAi({ agentId: agent.id, ...planKeyIntent(agent, reason) }) };
+  const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name : null;
+  return { locked: noAiLockedLine(t, agent.name, owner) };
 }

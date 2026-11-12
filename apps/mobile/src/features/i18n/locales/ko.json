@@ -2433,7 +2433,6 @@
     },
     "formatAuto": "{{name}}이(가) 가장 좋은 걸 골라요",
     "newWidget": {
-      "titleHint": "제목 · 테스트할 때 {{name}}이(가) 제안해요",
       "alerts": "알림 켜짐",
       "realData": "실제 데이터",
       "editAsk": "요청 바꾸기",

@@ -1762,8 +1762,15 @@
     {
       "idx": 253,
       "version": "7",
-      "when": 1794655300001,
-      "tag": "0253_workspace_decisions",
+      "when": 1794665300000,
+      "tag": "0253_task_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 254,
+      "version": "7",
+      "when": 1794665300001,
+      "tag": "0254_workspace_decisions",
       "breakpoints": true
     }
   ]

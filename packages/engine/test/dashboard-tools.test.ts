@@ -29,10 +29,10 @@ type Call = { name: string; input: Record<string, unknown> };
 
 /**
  * A fixture whose agent, in a run that isn't a widget's, calls `calls` once (in order, one per turn) and then answers
- * that it is done; `results` gets each tool result it read.
+ * that it is done; `results` gets each tool result it read. `ai`: what the tools check a widget's build against.
  */
-async function setupAgent(calls: (req: ModelRequest) => Call[], results: string[] = []) {
-  const deps = { db: undefined as unknown as Database, pubsub: undefined as unknown as PubSub } as DashboardDeps;
+async function setupAgent(calls: (req: ModelRequest) => Call[], results: string[] = [], ai?: DashboardDeps["ai"]) {
+  const deps = { db: undefined as unknown as Database, pubsub: undefined as unknown as PubSub, ai } as DashboardDeps;
   const source = createDashboardToolSource(deps);
   f = await setup({
     toolSources: [source],
@@ -284,6 +284,25 @@ describe("create_widget", () => {
     await ask("põe no outro painel");
     expect(results.at(-1)).toContain(`No dashboard ${other}`);
     expect(await widgets()).toHaveLength(1);
+  });
+
+  test("its agent with no AI for its build: it waits for one, and the reply says why and who fixes it", async () => {
+    const results = await setupAgent(
+      (req) =>
+        JSON.stringify(req.messages.at(-1)?.content).includes("visitas")
+          ? [{ name: "create_widget", input: { title: "Visitas", prompt: "Visitas do site hoje", schedule: "day" } }]
+          : [],
+      [],
+      // The chat thinks on its key; where a build looks, there's none.
+      { gateway: { hasModelCredential: async () => false } },
+    );
+    await ask("mostra as visitas do site no meu início");
+    const [made] = await widgets();
+    expect(made).toMatchObject({ status: "failed", failureCode: "missing_credential", failureDetail: "no_key" });
+    expect(await f.db.select().from(schema.routineRuns)).toEqual([]);
+    expect(results[0]).toContain("It can't be built yet");
+    expect(results[0]).toContain("you have no AI to think with. Tell ana to connect one on your page");
+    expect(results[0]).not.toContain("builds it in the background shortly");
   });
 
   test("invalid data is refused with what to fix", async () => {

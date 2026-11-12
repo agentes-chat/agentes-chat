@@ -1219,8 +1219,8 @@ export async function notifyWidgetAlert(
 
 /**
  * A widget stopped updating (ADR 0135 §6): `userId` (its creator, else who looks after its routine) hears it once per
- * failure streak (`streakKey`), with the coded reason (`agent_reported`: the agent's words in `latest.text`). Inbox
- * only; resolved by its next good update.
+ * failure streak (`streakKey`), with the coded reason (`agent_reported`: the agent's words in `latest.text`;
+ * `missing_credential`: why its agent has no AI in `latest.detail`). Inbox only; resolved by its next good update.
  */
 export async function notifyWidgetFailed(
   deps: NotificationDeps,
@@ -1234,6 +1234,7 @@ export async function notifyWidgetFailed(
     streakKey: string;
     reason: string;
     text?: string | null;
+    detail?: string | null;
   },
 ) {
   await notify(deps, {
@@ -1247,6 +1248,7 @@ export async function notifyWidgetFailed(
       title: input.title,
       reason: input.reason,
       ...(input.text ? { text: notificationSnippet(input.text) } : {}),
+      ...(input.detail ? { detail: input.detail } : {}),
     },
   });
 }

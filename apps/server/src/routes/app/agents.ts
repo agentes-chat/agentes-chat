@@ -700,6 +700,10 @@ export function agentRoutes(deps: AppDeps) {
                 provider: z.string().optional().openapi({
                   description: "Ready on an API key with Automático: the maker of the key it thinks with.",
                 }),
+                background: z.enum(["ready", "no_ai", "waiting"]).optional().openapi({
+                  description:
+                    "Its state for background work (a routine, a widget's build) where that differs from `state`: background work never falls back on the model brain, and the right hand's thinks with the workspace's own AI, nobody's.",
+                }),
               }),
             ),
             routing: z.object({

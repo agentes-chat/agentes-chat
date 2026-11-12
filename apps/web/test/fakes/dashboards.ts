@@ -7,8 +7,9 @@
  * "Test" (`testWidget`) makes a draft (`fake.drafts`, on no board) that is built on the next tick, or at the latest on
  * its next read: `ok` with the example data of its format (a kpi for `auto`), titled after the ask, costing
  * `fake.testCostUsd`; `failed` (`agent_reported`) when the ask contains "fail". `fake.holdDrafts` keeps them
- * `building` until `fake.finish`. `confirmWidget` moves a draft that worked onto a board (first); `removeWidget`
- * drops it.
+ * `building` until `fake.finish`. An agent in `fake.agentsWithoutAi` gets no build: its draft comes back `failed`
+ * (`missing_credential`) at once, as the server holds it. `confirmWidget` moves a draft that worked onto a board
+ * (first); `removeWidget` drops it.
  */
 import type {
   ApiClient,
@@ -52,6 +53,8 @@ export interface FakeDashboards {
   drafts: Widget[];
   /** Keeps new drafts `building` until a test calls `finish` (default: built on the next tick). */
   holdDrafts: boolean;
+  /** Agents with no AI to build with: their drafts wait for one (`failed`, `missing_credential`). */
+  agentsWithoutAi: Set<string>;
   /** What a draft's test costs (`lastCostUsd`). */
   testCostUsd: number;
   /** The call a building draft's run is in (its view's `step`), by widget id. */
@@ -218,6 +221,7 @@ export function createFakeDashboards(
     homeDashboardId: null,
     drafts: [],
     holdDrafts: false,
+    agentsWithoutAi: new Set(),
     testCostUsd: 0.01,
     steps: new Map(),
     history: new Map(),
@@ -351,7 +355,9 @@ export function createFakeDashboards(
         fake.drafts.push(w);
         // A person keeps 5 drafts at most: the oldest go.
         if (fake.drafts.length > 5) fake.drafts = fake.drafts.slice(-5);
-        if (!fake.holdDrafts) {
+        if (fake.agentsWithoutAi.has(input.agentId)) {
+          Object.assign(w, { status: "failed", failure: { code: "missing_credential", detail: null } });
+        } else if (!fake.holdDrafts) {
           building.add(w.id);
           setTimeout(() => build(w.id), 0);
         }
@@ -444,8 +450,8 @@ export function createFakeDashboards(
         d.widgets = d.widgets.filter((x) => x.id !== widgetId);
         touch(d);
       },
-      refreshWidget: async (orgId, widgetId) => {
-        log("dashboards.refreshWidget", orgId, widgetId);
+      refreshWidget: async (orgId, widgetId, auto) => {
+        log("dashboards.refreshWidget", orgId, widgetId, ...(auto ? [auto] : []));
         const { w } = find(widgetId);
         // As the server: a pause near the limit goes on now for who may let it, any other wait says why it can't go
         // sooner.

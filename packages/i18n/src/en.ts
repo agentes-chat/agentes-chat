@@ -2071,6 +2071,8 @@ export const en = {
     /** The team map: people on top, a column per channel, the right hand below. */
     map: {
       lead: "Who looks after the agents, the channels they are in, what each one does on its own and what waits for a person. Dashed lines are agents that asked each other in the last day.",
+      /** The one line over the map, with `lead` behind its ⓘ. */
+      short: "Who looks after each agent and where it works.",
       lodi: "Organizes the team with you",
       hint: "Drag an agent to another channel and {{name}} prepares the change for you to apply",
       proposed: "{{name}} prepared the change in your conversation. Apply it there.",
@@ -3011,8 +3013,7 @@ export const en = {
         title: "Your Gemini plan",
         tiers: "Google AI Pro, Google AI Ultra or Gemini Enterprise",
         /** Shown plainly wherever a personal Gemini plan is connected or chosen: Google's own rule for consumer plans. */
-        warning:
-          "Google says using a personal Gemini plan inside other apps can get the account suspended. To avoid that risk, use an API key or Gemini Enterprise.",
+        warning: "Google says using a personal Gemini plan inside other apps can get the account suspended.",
       },
       /** OpenCode's CLI (ADR 0132): its free models with no sign-in, or a key from OpenCode's console. */
       zen: { title: "OpenCode", tiers: "Free models, or your OpenCode key" },
@@ -3466,6 +3467,7 @@ export const en = {
       priority: "the priority",
       assignee: "the assignee",
       labels: "the labels",
+      project: "the project",
       dueDate: "the due date",
       githubUrl: "the GitHub link",
       criteria: "the criteria",
@@ -4173,6 +4175,39 @@ export const en = {
       done_other: "{{count}} logins imported",
       another: "Choose another file",
       close: "Done",
+    },
+    env: {
+      open: "Import .env",
+      title: "Import keys",
+      text: "Takes a .env file, with one NAME=value line per key, or a JSON object of names and values.",
+      paste: "Or paste its contents here",
+      review: "Review",
+      none: "No NAME=value line found. Check the file and try again.",
+      tooLarge: "This file is too large (512 KB at most).",
+      tooMany: "Too many keys at once ({{max}} at most). Split the file and import each part.",
+      duplicates: "Written more than once, the last value counts: {{names}}",
+      new: "New",
+      exists: "Already saved",
+      replace: "Replace",
+      show: "Show the value of {{name}}",
+      hide: "Hide the value of {{name}}",
+      problem: {
+        name: "The name must look like ACME_API_KEY",
+        reserved: "Reserved name",
+        empty: "No value",
+        tooLarge: "Value too large",
+      },
+    },
+    move: {
+      toTeam: "Move to Team",
+      toTeamPersonal: "Move to Shared",
+      toPersonal: "Move to Personal",
+      title: "Move {{title}}?",
+      toTeamText:
+        "Everyone in the workspace will see this item, and its agents will use it when anyone asks. People who manage the Vault can edit it.",
+      toPersonalText:
+        "Only you will see and edit this item, and its agents will use it only when you ask. Everyone else stops seeing it.",
+      moved: "Moved",
     },
     connections: {
       none: "No password manager can be connected here.",
@@ -5276,9 +5311,11 @@ export const en = {
           stepTwo: "Paste the code Claude shows",
           codeLabel: "Claude code",
           notCode: "That doesn't look like Claude's code.",
-          /** The Gemini sign-in's second step: Google's page shows a code, or lands on one whose link works too. */
+          /** The Gemini sign-in's second step: Google's page shows a code and takes it out of its own address. */
           stepTwoGoogle: "Paste the code Google shows",
-          codeLabelGoogle: "Code or link",
+          codeLabelGoogle: "Google's code",
+          codeHintGoogle: "Paste the code Google's page shows, not the page's address.",
+          notCodeGoogle: "That's an address with no code in it. Paste the code Google's page shows.",
           send: "Send to {{computer}}",
           sending: "Sending the code to {{computer}}…",
           sent: "Code sent. Finishing the sign-in on {{computer}}.",
@@ -5291,6 +5328,18 @@ export const en = {
           reconnecting: "Reconnecting…",
           failed: "Couldn't sign in to that account. Try again.",
           expired: "The time to sign in ran out. Try again.",
+          why: {
+            not_installed: "{{brand}} isn't installed on {{computer}}. Try again.",
+            no_tty: "The code didn't reach {{brand}} on {{computer}}. Try again.",
+            network: "{{brand}} couldn't be reached from {{computer}}. Try again.",
+            bad_code: "{{brand}} refused the code. Try again and paste only the code the page shows.",
+            cli_exit: "{{brand}} stopped with an error on {{computer}}. Try again.",
+            not_signed_in_after_login:
+              "{{brand}} accepted the sign-in, but this account can't be used here, maybe its plan doesn't include it. Try another account or an API key.",
+            status_unknown: "{{brand}} didn't say whether the account signed in. Try again.",
+            no_token: "{{brand}} finished without showing the account's token. Try again.",
+            not_kept: "The account signed in, but {{computer}} couldn't keep the sign-in. Try again.",
+          },
           /** Gemini signed in for all agents, but a copy of it doesn't work for each one: signing in again won't help. */
           geminiNotShared:
             "Gemini signed in, but {{computer}} can't share that sign-in with every agent. Use a Gemini API key instead.",
@@ -6435,8 +6484,12 @@ export const en = {
     approvalsNote: "Merge, deploy and rollback always ask for approval in chat.",
     approverOwner: "{{name}} approves.",
     approverAdmins: "An admin approves.",
+    skillsTitle: "Workspace skills",
     skillsHelp: "Manuals {{name}} opens when needed.",
+    importCard: "From another app",
+    importCardLine: "Bring the agents you already have in another app.",
     channels: "Channels",
+    channelsJoin: "Joins these channels",
     channelsHelp: "Joins now. You can add it to other channels later.",
     noChannels: "You're not in any channel yet. You can add the agent to a channel later.",
     owner: "Owner",
@@ -6684,10 +6737,12 @@ export const en = {
       title: "{{name}}'s apps",
       titleBlank: "The agent's apps",
       lead: "A connected app goes on the card at once. Connect any other right here.",
+      leadList: "A connected app goes on the list at once. Connect any other right here.",
       suggested: "Suggested for {{name}}",
       suggestedBlank: "Suggested",
       use: "Use",
       added: "On the card",
+      addedList: "On the list",
     },
     create: "Create {{name}}",
     createBlank: "Create agent",
@@ -6760,6 +6815,8 @@ export const en = {
     agentsOnlyYouHint: "On a plan, you can let each one answer other people on its page.",
     filters: "Filter people",
     rolesOf: "{{name}}'s roles",
+    rolesAdd: "Add role",
+    rolesChange: "Change roles",
     moreOf: "More for {{name}}",
     /** On a server that sends no email, an owner's new-password link for a member (ADR 0158). */
     passwordLink: {
@@ -7318,6 +7375,7 @@ export const en = {
       by: { stage: "Stage", assignee: "Assignee", priority: "Priority" },
       order: { manual: "Manual", priority: "Priority", due: "Due date" },
       field: {
+        project: "Project",
         assignee: "Assignee",
         priority: "Priority",
         due: "Due date",
@@ -7344,6 +7402,24 @@ export const en = {
       prioritized: "#{{number}} now has {{priority}} priority.",
     },
     canceledColumn: "Canceled",
+    /** A task's one project: the toolbar's chip and its menu, the task's field, a project board's ⋯ menu. */
+    projects: {
+      label: "Project",
+      none: "No project",
+      all: "All projects",
+      new: "New project",
+      edit: "Edit project",
+      create: "Create project",
+      archive: "Archive project",
+      unarchive: "Unarchive project",
+      archived: "Archived",
+      /** Beside one archived project's name. */
+      archivedMark: "Archived",
+      delete: "Delete project",
+      deleteTitle: "Delete the project {{name}}?",
+      deleteBody: "Its tasks stay, with no project.",
+      empty: "No tasks in this project yet.",
+    },
     columns: {
       add: "Add column",
       options: "Options for column {{name}}",
@@ -7599,6 +7675,8 @@ export const en = {
       pr_linked: "linked PR #{{number}}",
       github_linked: "linked it to GitHub",
       github_unlinked: "removed the GitHub link",
+      project_set: "moved it to the project {{project}}",
+      project_removed: "took it out of its project",
       artifact_linked: "attached a file",
       files_attached: "attached {{names}}",
       files_removed: "removed {{names}} from the attachments",
@@ -7632,6 +7710,8 @@ export const en = {
       every: "Runs on every call. Calls that arrive together become one run.",
       newNote:
         "The routine gets an address of its own. Every POST to it starts the agent with what was sent. The address shows on the routine's page once it is saved.",
+      /** The one line a screen shows, with `newNote` behind its ⓘ. */
+      newShort: "The routine gets an address of its own.",
       hidden: "Only who can change the routine sees its address.",
       methods: "Accepted methods",
       methodsHelp:
@@ -7853,6 +7933,9 @@ export const en = {
     ownActions: {
       hint: "Every run does these in your connected apps without asking. Any other action there asks a person first, and merge, deploy and rollback always ask.",
       none: "In connected apps it asks a person before each action. To let it do its job on its own, tell the agent in the chat which actions it may do.",
+      /** The one line a screen shows, with `hint` (or `none`) behind its ⓘ. */
+      hintShort: "Every run does these without asking.",
+      noneShort: "It asks a person before each action.",
       /** Screen reader name of the button that takes one action out of the routine's list. */
       remove: "Ask again before: {{action}}",
     },
@@ -9471,7 +9554,7 @@ export const en = {
     undone: "{{name}} is back to version {{version}}.",
     agentsImprove: "Agents improve skills by themselves",
     agentsImproveHelp:
-      "When an agent finds a skill wrong or missing a step, it fixes it right away: a new version you can undo, and whoever made the skill is told. Changes to scripts wait for someone who manages skills.",
+      "When an agent finds a skill wrong or missing a step, it fixes it right away: a new version you can undo, and whoever made the skill is told.",
     agentsImproveThis: "Agents improve this skill by themselves",
     agentChange: "{{agent}} changed it {{when}}",
     undoAgentChange: "Undo change",
@@ -9544,7 +9627,6 @@ export const en = {
     agentSubtitle: "What {{name}} can open when needed.",
     agentEmpty: "{{name}} has no skills yet.",
     manage: "Manage skills",
-    step: "Skills",
   },
   edit: {
     unsaved: "Unsaved changes",
@@ -9799,6 +9881,9 @@ export const en = {
     section: "Who can talk",
     title: "Who can talk to {{name}}",
     notListed: "People not on the list get no reply.",
+    /** After `notListed`, with the matching `agents.*` sentence behind its ⓘ. */
+    agentsToo: "This covers agents too.",
+    peopleOnly: "This covers people only.",
     consultable: "Other agents can consult {{name}}",
     consultableHint:
       "For people not on the list, he answers only the agent that asked, never them directly. Sensitive actions still need approval from the people who look after him.",
@@ -10634,7 +10719,7 @@ export const en = {
     ask: {
       button: "Ask an agent",
       title: "Ask an agent",
-      text: "The request goes to your conversation with the agent, with a link to the page. It edits with the wiki tools, and the version shows in the history as done at your request.",
+      text: "The request goes to your conversation with the agent, with a link to the page.",
       agent: "Agent",
       what: "What should change?",
       placeholder: "E.g. update it with the 2027 price increase",
@@ -10655,6 +10740,8 @@ export const en = {
       pickFolder: "Choose folder",
       howTo:
         "To make the .zip: in Finder, right-click the vault folder → Compress. On Windows, Send to → Compressed folder. The .obsidian folder (plugins and themes) is left out.",
+      /** The label whose ⓘ holds `howTo`. */
+      howToLabel: "How to make the .zip",
       nothingYet: "Nothing goes in before you review it.",
       readingText: "Only in your browser for now. Nothing has been sent yet.",
       notesRead: "notes read",
@@ -11501,7 +11588,7 @@ export const en = {
   },
   githubApp: {
     title: "GitHub repositories",
-    text: "Where the agentes.chat app is installed, agents open pull requests, issues, comments and commits as the app, with the agent's name and who asked. Only {{org}} uses what you install from here.",
+    text: "Where the agentes.chat app is installed, agents open pull requests, issues, comments and commits as the app, with the agent's name and who asked.",
     install: "Install the agentes.chat app",
     installMore: "Install on another account",
     none: "No GitHub account yet.",
@@ -11599,6 +11686,8 @@ export const en = {
       label: "Can merge without asking",
       none: "No repositories chosen. Every merge asks for approval.",
       help: "In these repositories a merge runs with no approval card, goes in the audit and leaves a receipt in the conversation. Everything else that's sensitive still asks.",
+      /** The one line a screen shows, with `help` behind its ⓘ. */
+      short: "In these repositories a merge runs with no approval card.",
       dialogTitle: "Where {{name}} merges without asking",
       dialogDesc: "Only repositories it already uses. A merge anywhere else asks for approval.",
     },
@@ -12336,6 +12425,8 @@ export const en = {
       title: "Organizations it reaches",
       none: "No organization yet.",
       lead: "GitHub asks about organizations only the first time. To add one, open the app's page there and press Grant beside it. If you don't own it, the button says Request and an owner approves.",
+      /** The one line a screen shows, with `lead` behind its ⓘ. */
+      short: "GitHub asks about organizations only the first time.",
       open: "Grant organizations on GitHub",
       added: "Now also: {{names}}.",
       removed: "No longer: {{names}}.",
@@ -12543,6 +12634,8 @@ export const en = {
       hidden: "Columns it never sees",
       hiddenHelp:
         'table.column, with names that have capitals, spaces or symbols in double quotes (customers."Tax ID"). We already hid the ones that look like personal data or passwords.',
+      /** The example under the field, with `hiddenHelp` behind its ⓘ. */
+      hiddenExample: 'table.column, like customers."Tax ID"',
       hiddenPlaceholder: "customers.cpf",
       hiddenInvalid:
         'Type table.column (or schema.table.column), with "double quotes" around names that have capitals, spaces or symbols.',
@@ -12588,8 +12681,7 @@ export const en = {
     address: "Email address",
     addressPlaceholder: "you@company.com",
     addressInvalid: "Type a valid email, like you@company.com.",
-    icloudHint:
-      "Use your iCloud Mail address, like name@icloud.com, even if your Apple Account uses {{name}}. On an iPhone it's in Settings\u00a0›\u00a0your name\u00a0›\u00a0iCloud\u00a0›\u00a0iCloud Mail, or see icloud.com/mail.",
+    icloudHint: "Use your iCloud Mail address, like name@icloud.com, even if your Apple Account uses {{name}}.",
     password: "App password",
     passwordHelp: "Stored encrypted on the server. Nobody sees it again.",
     passwordInvalid: "Paste the app password.",
@@ -12640,6 +12732,8 @@ export const en = {
     rulesSend: "What it sends",
     toolsLead:
       "What agents can do in {{name}}. Turn off what no agent should do, or ask for approval for drafts and organizing too. Sending, replying and forwarding always ask for approval in the chat, showing who it goes to and the text.",
+    /** The one line a screen shows, with `toolsLead` behind its ⓘ. */
+    toolsShort: "Choose what agents do with this email.",
     group: {
       read: "Reads",
       write: "Writes",
@@ -12669,6 +12763,8 @@ export const en = {
       buttonName: "Addresses of {{name}}",
       title: "Addresses of {{address}}",
       lead: "Agents reply from the address the email was sent to. If this mailbox also gets email at other addresses, like your own domain or an alias, add them here.",
+      /** The one line a screen shows, with `lead` behind its ⓘ. */
+      short: "Agents reply from the address the email was sent to.",
       main: "Main address: {{address}}",
       others: "Other addresses of this mailbox",
       othersHelp: "Aliases and your own domains, like hello@yourcompany.com.",
@@ -12978,6 +13074,9 @@ export const en = {
     },
     issue: {
       assigneeOutside: "This person can't see this task. Add them to who sees it first.",
+      projectNameTaken: "A project with that name already exists.",
+      projectArchived: "This project is archived and takes no new tasks.",
+      projectsFull: "A workspace holds at most {{max}} projects. Delete one first.",
       stageFull: "A stage holds at most {{max}} columns. Delete one of its columns first.",
       deleteForbidden: "Only who created this task or an administrator can delete it.",
       audienceEmpty: "Choose who sees it.",
@@ -13286,6 +13385,7 @@ export const en = {
       csvTooLarge: "The file is too large. The limit is 2 MB.",
       csvTooManyRows: "The file has more than 5,000 rows. Split it and import each part.",
       csvUnrecognized: "This doesn't look like a passwords file. Export it again as CSV.",
+      unreadable: "The saved value can't be read here. Save it again, then move it.",
       requestNotDelivered: "Send it first, then save it to the Vault.",
       requestNotSavable: "This one can't be saved to the Vault.",
       sourceUnknown: "This password manager isn't available here.",
@@ -14552,8 +14652,10 @@ export const en = {
         item_created: "Saved an item to the Vault",
         item_changed: "Changed a Vault item",
         item_deleted: "Deleted a Vault item",
+        item_moved: "Moved a Vault item between Personal and Team",
         item_used: "Used a Vault item",
         imported: "Imported passwords into the Vault",
+        keys_imported: "Imported keys into the Vault",
         connection_added: "Connected a password manager to the Vault",
         connection_changed: "Changed a password manager's connection",
         connection_removed: "Disconnected a password manager from the Vault",
@@ -15204,6 +15306,8 @@ export const en = {
       part: "{{name}}'s part: ≈ {{percent}}",
       estimate:
         "{{name}}'s part is the stronger stretch of each bar. {{brand}} only tells how much the whole account used, so each agent's part is an estimate from what it spent.",
+      /** The one word a screen shows, with `estimate` behind its ⓘ. */
+      estimateShort: "An estimate.",
       byAccount: "By account, this month",
       until: "until {{date}}",
       nowTag: "now",
@@ -16835,12 +16939,10 @@ export const en = {
     menu: "Delete account",
     /** Sua conta's last card: its title is `menu`. */
     card: {
-      text: "You leave every workspace and your account is deleted for good 7 days later. You can restore it until then.",
+      text: "Deletes your account in 7 days, in every workspace.",
       button: "Delete account…",
-      /** The link to Settings › General, for someone who only meant this workspace. */
-      oneWorkspace: "Want to delete just this workspace? It's in General.",
-      /** The link to Members, for someone who can't delete this workspace and only meant to leave it. */
-      leaveWorkspace: "Want to leave just this workspace? It's in Members.",
+      /** The card's title for an owner, over its two buttons: the account and the workspace. */
+      title: "Delete",
     },
     title: "Delete your whole account?",
     intro: "This deletes your whole account, not just one workspace.",
@@ -17511,6 +17613,20 @@ export const en = {
       timeout: "The update took too long.",
       invalid_data: "{{name}} couldn't put the data in this format.",
     },
+    /** Its agent has no AI to build it with (ADR 0135 §20): no build starts, and it builds by itself once one is connected. */
+    needsAi: {
+      body: "{{name}} builds it as soon as an AI is connected.",
+      /** The phone's one-line footer, before "Connect". */
+      short: "Needs an AI",
+      /** Why, in place of `failure.missing_credential` (no key or plan): the sign-in of the plan it thinks with ended. */
+      not_signed_in: "{{name}}'s plan is signed out.",
+      /** Its AI thinks on a computer, and it has none. */
+      no_computer: "{{name}}'s AI needs a computer and there is none.",
+      /** The program of its AI isn't installed on its computer. */
+      cli_missing: "{{name}}'s AI program isn't installed on the computer.",
+      /** The right hand's workspace plan with "Atende outras pessoas" off: a widget's updates are nobody's request. */
+      plan_not_shared: "{{name}}'s plan serves only its owner, so it can't update widgets.",
+    },
     /**
      * What a widget's refresh waits on, said in place of its spinner, and when Update now can't go sooner ({{when}}:
      * "at 13:00", "Friday at 10:00", "on December 1").
@@ -17570,6 +17686,8 @@ export const en = {
     },
     exposure:
       "Whoever sees the dashboard sees what the agents brought, even without access to the accounts it came from. Agents create dashboards too. To show one to more people than whoever asked, they ask first, in Waiting on you.",
+    /** The one line a screen shows, with `exposure` behind its ⓘ. */
+    exposureShort: "Whoever sees the dashboard sees this data.",
     panel: {
       caresFor: "{{name}} looks after this widget",
       caresForOn: "{{name}} looks after this widget · {{board}}",
@@ -17895,6 +18013,8 @@ export const en = {
       notAgentMessage: "Only an agent's chart can be pinned.",
       promptRequired: "Say what the widget should show.",
       notTested: "Test it first: the widget is created once its test works.",
+      /** Update now or Ask for a change on a widget waiting for an AI: the widget itself says the cause and the way out. */
+      needsAi: "{{agentName}} can't update this widget yet. The widget says why.",
     },
     // end of dashboards
   },

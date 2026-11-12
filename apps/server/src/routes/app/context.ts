@@ -300,9 +300,15 @@ export async function keyTester(deps: AppDeps, userId: string) {
   return (await deps.adapters.rateLimiter.consume(`key-test:${userId}`, KEY_TESTS)).allowed ? gateway : undefined;
 }
 
+/** What the AI status reads (`ai-status.ts`) besides the database; undefined while no gateway is configured. */
+export function aiCheckOf(deps: AppDeps): Omit<AiStatusDeps, "db"> | undefined {
+  const gateway = deps.extras?.context?.gateway;
+  return gateway ? { gateway, machines: deps.extras?.sandbox?.machines?.hub ?? null } : undefined;
+}
+
 /** What the AI status reads (`ai-status.ts`): the gateway's key check and the computers' status. */
 export function aiStatusDeps(deps: AppDeps): AiStatusDeps {
-  const gateway = deps.extras?.context?.gateway;
-  if (!gateway) throw new Error("The model gateway isn't configured on this server");
-  return { db: deps.db, gateway, machines: deps.extras?.sandbox?.machines?.hub ?? null };
+  const ai = aiCheckOf(deps);
+  if (!ai) throw new Error("The model gateway isn't configured on this server");
+  return { db: deps.db, ...ai };
 }

@@ -3578,6 +3578,24 @@ html:not([data-pointer]) .channel-ref:focus-visible {
 .level-row__text {
   gap: 2px;
 }
+/* A short fact under the name (`meta`): the tile, the two lines and the level share one middle, and a row without the
+   fact is as tall as one with it. */
+.level-row--meta {
+  align-items: center;
+}
+.level-row--meta > .ac-mediarow__face {
+  margin-block-start: 0;
+}
+.level-row--meta > .ac-mediarow__head {
+  flex-flow: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: var(--control-h-md);
+  padding-block-start: 0;
+}
+.level-row--meta > .ac-mediarow__end {
+  height: auto;
+}
 /* The level control's middle on the icon's. */
 .level-row__name {
   font-weight: 600;
@@ -3772,7 +3790,7 @@ html:not([data-pointer]) .skill-file--open:focus-visible {
 }
 .skill-picks > legend {
   padding: 0;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-2);
 }
 .skill-pick__name {
   font-weight: 600;
@@ -4920,8 +4938,8 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
   height: 12px;
 }
 
-/* Settings → Conectores: one row per connected service, a MediaRow (the tile and the name on one line, the details,
-   who uses it and the actions under them at the row's width). The details wrap whole, never cut. */
+/* Settings → Conectores: one line per connected service (the kit's FoldRow: the tile, the name, its pill, who uses
+   it), opening to its details and its actions. The details wrap whole, never cut. */
 .connected-list {
   container-type: inline-size;
 }
@@ -4932,14 +4950,15 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
 .connected-row__who {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
   white-space: nowrap;
 }
+/* Cofre › a connection's buttons, under its details (its row stays open: it holds a link and what to fix). */
 .connected-row__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /*
@@ -5165,9 +5184,8 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
   color: var(--ink2);
   box-shadow: inset 0 0 0 1px var(--line);
 }
+/* With .ac-iconline: the lock stays on the first line when the sentence wraps. */
 .cflow__asks {
-  display: flex;
-  align-items: center;
   gap: 6px;
   margin: 0;
 }
@@ -8959,7 +8977,7 @@ html:not([data-pointer]) .onb__step:focus-visible {
   }
 }
 .newag .onb__head {
-  margin-bottom: 22px;
+  margin-bottom: var(--space-6);
 }
 .newag__title:focus {
   outline: none;
@@ -9003,25 +9021,27 @@ html:not([data-pointer]) .onb__step:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: var(--space-3);
   color: var(--danger);
   font-size: 12.5px;
 }
 .newag__card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-4);
 }
+/* A section's label, 24 under what came before and 8 over its block; an action of the section (Sortear, Instalar
+   skill) ends its line. Centred, not on a baseline: a label that starts with an icon has the icon's bottom for one. */
 .newag__sect {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 22px 0 10px;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-2);
 }
 /* "Connect an AI" under the model's notes, the 12px a note keeps from what is above it. */
 .newag__connect {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 .newag__sect--first {
   margin-top: 0;
@@ -9035,8 +9055,10 @@ html:not([data-pointer]) .onb__step:focus-visible {
   font-weight: 650;
   letter-spacing: -0.01em;
 }
-.newag__sect > .small {
-  text-align: right;
+/* The label with its "opcional" and ⓘ, in the label's type so the ⓘ sits on its capitals. */
+.newag__sect > .ac-hintline {
+  min-width: 0;
+  font-size: 15px;
 }
 .newag__label {
   display: flex;
@@ -9051,9 +9073,9 @@ html:not([data-pointer]) .onb__step:focus-visible {
   font-weight: 500;
 }
 .newag__note {
-  gap: 10px;
-  margin: 12px 0 0;
-  padding: 12px 14px;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
   border-radius: 14px;
   background: var(--plate);
   color: var(--muted);
@@ -9102,14 +9124,14 @@ html:not([data-pointer]) .onb__step:focus-visible {
 .newag__scratch {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 /* Two across while a card holds its longest name ("Atendimento", 150px) beside the face and clear of the check, one per
    row below that. */
 .newag__roles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 276px), 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 /* Pressable cards: the role presets, the look options. */
 .newag__role,
@@ -9368,8 +9390,8 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 .newag__origin {
   display: flex;
@@ -9387,8 +9409,8 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   display: grid;
   /* Three across when there's room; one per row in a narrow card (titles stay on one line). */
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
-  gap: 10px;
-  margin-top: 14px;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 .newag__tip {
   gap: 4px;
@@ -9425,19 +9447,28 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
 .newag__addrow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
   border: 1.5px dashed var(--line2);
   border-radius: 16px;
+  background: none;
   color: var(--muted);
+  font: inherit;
   font-size: 13.5px;
   font-weight: 600;
+  text-align: start;
   text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-base) var(--out),
+    color var(--dur-base) var(--out);
 }
 .newag__addrow:hover {
   background: var(--plate);
   color: var(--ink);
 }
+/* Where the row is a link to another page (an agent's Acesso), it says where it goes. */
 .newag__addrow-aside {
   margin-left: auto;
   color: var(--faint);
@@ -9446,24 +9477,6 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
 .newag__section {
   display: flex;
   flex-direction: column;
-}
-/* Pickers that look like the cards around them (owner, key) */
-.newag__sel .ac-select__trigger {
-  min-height: 60px;
-  height: auto;
-  padding: 10px 16px 10px 12px;
-  border: 0;
-  border-radius: 18px;
-  background: var(--raised);
-  box-shadow: var(--e1), var(--top);
-}
-.newag__card .newag__sel .ac-select__trigger {
-  background: var(--sunken);
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
 }
 /* With a tile beside its name and line it is a face line (`.ac-faceline`): the name's capitals at the tile's top. */
 .newag__sel-value {
@@ -9496,7 +9509,7 @@ html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
    below it as an error line or a note does. */
 .agp-brainsel + .small {
   display: block;
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 .newag__money {
   display: flex;
@@ -9665,7 +9678,7 @@ html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
   }
   .newag__tips {
     display: flex;
-    margin: 14px -16px 0;
+    margin: var(--space-3) -16px 0;
     padding: 2px 16px 4px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -9693,11 +9706,7 @@ html:not([data-pointer]) .newag__sel .ac-select__trigger:focus-visible {
   }
   .newag__sect {
     flex-wrap: wrap;
-    gap: 4px 12px;
-  }
-  .newag__sect > .small {
-    flex-basis: 100%;
-    text-align: left;
+    gap: var(--space-2) var(--space-3);
   }
   .newag__money-field {
     flex: 1 1 100%;
@@ -10027,7 +10036,8 @@ html:not([data-pointer]) .agp-cell:focus-visible {
 .agp-brainseg .ac-seg__item {
   flex: 1;
 }
-.agp-brainsel .ac-select__trigger {
+/* Only the row that shows a name over a line: a select's trigger shows one line and keeps the kit's height. */
+.agp-brainsel.agp-advrow .ac-select__trigger {
   min-height: 52px;
   height: auto;
   padding: 8px 14px 8px 10px;
@@ -13695,6 +13705,16 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .ai-panel__row > .ac-setnote {
   flex: 1 1 240px;
   margin: 0;
+}
+/* What the provider's own program said (a `pre`: its words as it wrote them), in the code well under the line about
+   it: whole, wrapped, to select and copy. It takes a line of the row, so the button goes under it, and gives up the
+   room of the indent it gets there. As tall as what it says: the dialog scrolls, never a second scroller inside it. */
+.ai-panel__row > .agp-addacct__said {
+  flex: 1 1 100%;
+  min-width: 0;
+  max-height: none;
+  overflow: visible;
+  user-select: text;
 }
 /* Its two actions (an account already there): one under the other when they don't fit, and a long email ends in "…"
    (the note above says it whole). */

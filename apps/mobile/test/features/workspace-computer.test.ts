@@ -179,7 +179,11 @@ describe("Apagar conta on the phone's closed screens and first run", () => {
     expect(screen).toContain('t("deleteAccount.oneWorkspace")');
     expect(screen).toContain("notes,\n");
     expect(screen).toContain('t("deleteAccount.deleteOrg", { name: named(o) })');
-    expect(read("features/me/AccountPage.tsx")).toContain('"deleteAccount.card.leaveWorkspace"');
+    // Conta: the account's row for everyone, the workspace's own for an owner, each with one sentence and no link row.
+    const account = read("features/me/AccountPage.tsx");
+    expect(account).toContain('label={t("deleteOrg.card.title")}');
+    expect(account).toContain('router.push("/settings/delete")');
+    expect(account).not.toContain("labelLines={2}\n          chevron");
   });
 });
 
