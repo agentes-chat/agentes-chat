@@ -4,7 +4,15 @@ import type { EventEmitter } from "node:events";
 import { mkdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { CommandProfile } from "@agenteschat/adapters/command-policy";
+import {
+  type CommandProfile,
+  type CommandScope,
+  commandKind,
+  forbiddenReason,
+  gitPushes,
+  localVerdict,
+  PLAN_MESSAGE,
+} from "@agenteschat/adapters/command-policy";
 import { type AgentScope, isAccountId } from "@agenteschat/adapters/machine-protocol";
 import { redactSecrets } from "@agenteschat/adapters/secret-box";
 import { ACCOUNT_MISSING_MESSAGE, accountEnv, museKeyOf } from "./accounts";
@@ -41,8 +49,11 @@ import { agentSecrets } from "./secrets";
  *   context leads the prompt again, as every other brain does with a new session.
  * - The account is a **sign-in**, not a key: `META_API_KEY` is deleted from the host's environment, or a key would
  *   answer in the person's place, and the account's own `XDG_CONFIG_HOME` keeps its credential and sessions apart.
- * - Approval mode is `never` for now: nothing here answers an `approval/requested`, and `onRequest` would leave the
- *   turn hanging. The sandbox, which is what actually contains the agent, stays on.
+ * - Approvals are answered on the wire. The session's mode is `promptUnmatched` (the wire's own names are
+ *   `allowAll`, `promptUnmatched`, `onRequest`, `denyUnmatched`; there is no `never`), so the host asks
+ *   `approval/requested` for what its own policy doesn't match, and the turn decides with the command policy every
+ *   brain follows and answers `approval/decide` with a `choiceId` the host offered. `allowAll`, which an unanswered
+ *   turn needed, let every call through unseen. The sandbox, which is what actually contains the agent, stays on.
  * - Contributor mode is on for subscriptions by default; every host turns it off, or the workspace's code trains Meta.
  * - Refused rather than faked: a `chat` turn (no tool allow/deny list on this CLI) and Windows.
  */
@@ -155,6 +166,119 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const cut = (text: string) =>
   text.length > CODEX_TOOL_OUTPUT_MAX ? `${text.slice(0, CODEX_TOOL_OUTPUT_MAX)}\n…` : text;
+
+// ── Approvals on the wire ────────────────────────────────────────────────────
+
+/**
+ * What a refusal tells the agent. A brain turn has no card to open and nobody reading it live, so a refusal must not
+ * describe one (the prompt tools' `ASK_IN_CHAT` does, where a person is a message away).
+ */
+export const MUSE_ASK = "Nobody can approve it in this turn: do the work another way, or leave it for a person.";
+
+/** The subject an `approval/requested` names: a command, a file it writes, or a kind this can't read. */
+export interface MuseApprovalSubject {
+  kind: string;
+  command?: string;
+  path?: string;
+}
+
+/** One offer of `availableChoices`: the host's own `decision` and `scope` words, and the `choiceId` it answers with. */
+export interface MuseApprovalChoice {
+  choiceId: string;
+  decision: string;
+  scope?: string;
+}
+
+/** What one ask was decided to mean; the thread shows it, and the host only ever hears a `choiceId` it offered. */
+export interface MuseApprovalVerdict {
+  allow: boolean;
+  /** A session-wide offer may be taken: only for a kind the agent's computer may run for good (`commandKind`). */
+  always: boolean;
+  why: string;
+}
+
+/**
+ * One approval decided by the policy every brain follows (`localVerdict`, `forbiddenReason`, `gitPushes`), with
+ * nobody to ask: a read is allowed at once; the deny list, a secret, a write or a command outside the turn's folder
+ * and every push are refused; what the policy can't read is the profile's call — a `plan` turn refuses it, and a
+ * `work` turn approves it once. That last one is the only place this is wider than a person's card, and it is what
+ * the turn was asked for: `plan` reads, `work` works.
+ */
+export function museApprovalVerdict(input: {
+  subject: MuseApprovalSubject;
+  cwd: string;
+  profile: CommandProfile;
+  home?: string;
+  runnerHome?: string;
+}): MuseApprovalVerdict {
+  const scope: CommandScope = {
+    cwd: input.cwd,
+    folders: [input.cwd],
+    ...(input.home ? { home: input.home } : {}),
+    ...(input.runnerHome ? { runnerHome: input.runnerHome } : {}),
+  };
+  const { kind } = input.subject;
+  // Read by the field the subject carries, not by the host's name for its kind: a `command` is a Bash call and a
+  // `path` a write, whatever the wire calls them, and one that names neither is a kind this can't read.
+  const command = (input.subject.command ?? "").trim();
+  const file = (input.subject.path ?? "").trim();
+  const tool = command ? "Bash" : file ? "Write" : "";
+  const call = tool === "Bash" ? { command } : { file_path: file };
+  if (tool) {
+    // Deny list, secrets and a `plan` turn's everything: the same first verdict the prompt tools ask (`localVerdict`).
+    const verdict = localVerdict(tool, call, scope, input.profile, MUSE_ASK);
+    if (verdict?.behavior === "deny") return { allow: false, always: false, why: verdict.message };
+    if (verdict?.behavior === "allow")
+      return { allow: true, always: false, why: "it only reads, which the policy allows at once" };
+    // What code never lets a judge approve either: a write outside the folder, the system, another host, inline code.
+    const forbidden = forbiddenReason(tool, call, scope);
+    if (forbidden) return { allow: false, always: false, why: forbidden };
+    if (tool === "Bash") {
+      // A push leaves the computer, and where it goes waits for a person (`heldPush`): there is none in a turn.
+      const pushes = gitPushes(command);
+      if (pushes === null || pushes.length > 0)
+        return { allow: false, always: false, why: "a push leaves the computer, and where it goes waits for a person" };
+      // "Always" only where the agent's computer could offer it for good: the kind, without arguments (`bun test`).
+      return { allow: true, always: commandKind(command) !== null, why: "it works inside the turn's folder" };
+    }
+    return { allow: true, always: false, why: "it writes inside the turn's folder" };
+  }
+  // A subject this can't read: the profile is the whole answer, and a `work` turn is what does the work.
+  if (input.profile === "plan") return { allow: false, always: false, why: PLAN_MESSAGE };
+  return {
+    allow: true,
+    always: false,
+    why: `the policy reads no \`${(kind || "unknown").slice(0, 32)}\` subject, and a \`work\` turn approves it once`,
+  };
+}
+
+/**
+ * The offer taken: `approved` for once, and `approvedForSession` only when the verdict says `always` (never the other
+ * way round, so a narrow decision can't become a session-wide one); a refusal takes `denied`, else `abort`, where a
+ * shell ask offers no deny (ADR 0174). Undefined: the host offered nothing that says this, so nothing is sent.
+ */
+export function museChoice(
+  choices: readonly MuseApprovalChoice[],
+  verdict: Pick<MuseApprovalVerdict, "allow" | "always">,
+): MuseApprovalChoice | undefined {
+  const offered = choices.filter((c) => c.choiceId.length > 0);
+  const pick = (decision: string) => offered.find((c) => c.decision === decision);
+  if (!verdict.allow) return pick("denied") ?? pick("abort");
+  return verdict.always ? (pick("approvedForSession") ?? pick("approved")) : pick("approved");
+}
+
+/** The offers of one `approval/requested`, as the host wrote them (a malformed one names no choice and is dropped). */
+function offersOf(params: Record<string, unknown>): MuseApprovalChoice[] {
+  const list = Array.isArray(params.availableChoices) ? params.availableChoices : [];
+  return list
+    .filter(isRecord)
+    .map((c) => ({
+      choiceId: str(c.choiceId),
+      decision: str(c.decision),
+      ...(str(c.scope) ? { scope: str(c.scope) } : {}),
+    }))
+    .filter((c) => c.choiceId && c.decision);
+}
 
 /**
  * One MSP notification into brain events. Three families matter; everything else (task lifecycle, reminders, view
@@ -454,6 +578,10 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     ...(input.model ? { model: input.model } : {}),
     ...(redact ? { redact } : {}),
   });
+  const profile = input.profile ?? "work";
+  const shown = (text: string) => (redact ? redact(text) : text);
+  /** Approvals already answered: a host that asks again for one gets no second decision in the thread. */
+  const answered = new Set<string>();
   let finished = false;
   let missingHost = false;
   let failure: string | undefined;
@@ -467,6 +595,54 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     if (method === "turn/completed") {
       finished = true;
       done();
+      return;
+    }
+    if (method === "approval/requested") {
+      // The ask answered here, by the policy every brain follows: the host hears one of its own `choiceId`s, and the
+      // thread gets the subject and the decision as a call, so a refusal is visible instead of silent.
+      const approvalId = str(params.approvalId);
+      const subject = isRecord(params.subject) ? params.subject : {};
+      const kind = str(subject.kind);
+      const command = str(subject.command);
+      const file = str(subject.path);
+      const offered = offersOf(params);
+      // Nothing to answer without an id, and one decision per ask: a host that repeats an approval gets no second.
+      if (!approvalId || answered.has(approvalId)) return;
+      const verdict = museApprovalVerdict({
+        subject: { kind, ...(command ? { command } : {}), ...(file ? { path: file } : {}) },
+        cwd: input.cwd,
+        profile,
+        ...(home ? { home } : {}),
+        runnerHome: opts.runnerHome,
+      });
+      const choice = museChoice(offered, verdict);
+      // Never a decision of our own: with no offer that says this, the host keeps its own answer.
+      if (!choice) return;
+      answered.add(approvalId);
+      // The reply is nobody's business: a host that doesn't answer it must not hold the turn.
+      void host
+        .request("approval/decide", { approvalId, choiceId: choice.choiceId, commandId: uuidv7() })
+        .catch(() => undefined);
+      const takenScope = choice.scope ?? "once";
+      opts.emit({
+        type: "tool_call",
+        id: approvalId,
+        name: "approval",
+        input: {
+          approvalId,
+          ...(kind ? { kind } : {}),
+          ...(command ? { command: shown(command) } : {}),
+          ...(file ? { path: file } : {}),
+          decision: verdict.allow ? "allow" : "deny",
+          scope: takenScope,
+          choiceId: choice.choiceId,
+          offered: offered.map((c) => c.choiceId),
+        },
+        executed: {
+          content: `${verdict.allow ? "allowed" : "denied"} (${takenScope}): ${shown(verdict.why)}`,
+          ...(verdict.allow ? {} : { isError: true }),
+        },
+      });
       return;
     }
     for (const event of mapper.event(method, params)) opts.emit(event);
@@ -507,7 +683,8 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       opts.sessions.delete(sessionKey);
       const started = await host.request("session/start", {
         commandId: uuidv7(),
-        approvalMode: "allowAll",
+        // The host asks for what its own policy doesn't match, and this turn answers every ask (ADR 0174).
+        approvalMode: "promptUnmatched",
         ...(input.model ? { modelId: input.model } : {}),
       });
       sessionId = str(isRecord(started.session) ? started.session.sessionId : "");
