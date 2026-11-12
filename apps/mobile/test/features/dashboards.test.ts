@@ -22,6 +22,7 @@ import {
   dashboardWaitingCard,
   destinationsOf,
   ditherCells,
+  EVERY_HOURS as EVERY_CHOICE,
   editorsChoices,
   exampleWordsOf,
   formatWidgetNumber,
@@ -42,6 +43,8 @@ import {
   realBoardId,
   roleNamesOf,
   roundRectPath,
+  scheduleChoiceOf,
+  schedulePicked,
   setPinDraft,
   shareInputOf,
   shownWidgetTitle,
@@ -661,5 +664,18 @@ describe("Who looks after it", () => {
     chooseAgent("a3");
     expect(applied).toEqual(["a2"]);
     expect(agentPickNow()).toBeNull();
+  });
+});
+
+describe("every N hours on the phone (ADR 0135 §7)", () => {
+  test("a schedule shows as its preset, or as Every … hours; picking keeps the hours there are", () => {
+    expect(scheduleChoiceOf("day")).toBe("day");
+    expect(scheduleChoiceOf("h:12")).toBe(EVERY_CHOICE);
+    // From a preset, Every … hours starts at 6; picked again, it keeps the hours typed.
+    expect(schedulePicked("hour", EVERY_CHOICE)).toBe("h:6");
+    expect(schedulePicked("h:36", EVERY_CHOICE)).toBe("h:36");
+    // A preset is itself, from anything.
+    expect(schedulePicked("h:36", "week")).toBe("week");
+    expect(schedulePicked("manual", "half")).toBe("half");
   });
 });

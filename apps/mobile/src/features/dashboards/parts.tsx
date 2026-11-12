@@ -8,11 +8,18 @@ import {
   type WidgetSchedule,
   withEditRoles,
 } from "@agenteschat/client";
-import { WIDGET_SCHEDULES, WIDGET_SIZES, type WidgetSize } from "@agenteschat/ui/widgets/spec";
+import {
+  everyHours,
+  everyHoursOf,
+  WIDGET_EVERY_HOURS,
+  WIDGET_SCHEDULES,
+  WIDGET_SIZES,
+  type WidgetSize,
+} from "@agenteschat/ui/widgets/spec";
 import { Canvas } from "@shopify/react-native-skia";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import Svg, { Path, Rect } from "react-native-svg";
 import {
   Button,
@@ -27,6 +34,7 @@ import {
   MediaRow,
   PressScale,
   Segmented,
+  systemText,
   Text,
   useTheme,
   useToast,
@@ -42,9 +50,13 @@ import { closeEditRoles, openEditRoles } from "./edit-roles";
 import { useAgentLook, useCustomRoles } from "./hooks";
 import {
   type AudienceDraft,
+  EVERY_HOURS,
   editorsChoices,
+  FIRST_HOURS,
   roleNamesOf,
   roundRectPath,
+  scheduleChoiceOf,
+  schedulePicked,
   thumbRects,
   toggleRole,
   widgetTones,
@@ -342,7 +354,69 @@ export function ChoiceChips<K extends string>({
   );
 }
 
-/** How often it updates: the five schedules, the shortest words, in a row that scrolls on a small phone. */
+/**
+ * "every [N] hours" (ADR 0135 §7): a number field and its unit. It keeps what is typed and hands on a whole number
+ * from 1 to 720 on Done or when left; anything else is said under it and not handed on. Nothing for a preset.
+ */
+export function EveryHoursInput({
+  value,
+  onChange,
+}: {
+  value: WidgetSchedule;
+  onChange: (schedule: WidgetSchedule) => void;
+}) {
+  const { t } = useTranslation();
+  const { colors: c } = useTheme();
+  const hours = everyHoursOf(value);
+  const [draft, setDraft] = useState(String(hours ?? FIRST_HOURS));
+  // Changed elsewhere (another device, the choice above): the field follows.
+  useEffect(() => {
+    if (hours !== null) setDraft(String(hours));
+  }, [hours]);
+  if (hours === null) return null;
+  const typed = Number(draft);
+  const fits = Number.isInteger(typed) && typed >= WIDGET_EVERY_HOURS.min && typed <= WIDGET_EVERY_HOURS.max;
+  const commit = () => {
+    if (!fits) return;
+    const next = everyHours(typed);
+    if (next !== value) onChange(next);
+  };
+  return (
+    <View style={styles.every}>
+      <View style={styles.everyLine}>
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          keyboardType="number-pad"
+          returnKeyType="done"
+          maxLength={3}
+          selectTextOnFocus
+          onSubmitEditing={commit}
+          onBlur={commit}
+          accessibilityLabel={t("widgets.everyHoursField")}
+          style={[
+            styles.hours,
+            systemText("body"),
+            { color: c.ink, backgroundColor: c.bg, borderColor: fits ? c.line2 : c.danger },
+          ]}
+        />
+        <Text variant="body" tone="ink2">
+          {t("widgets.everyHoursUnit", { count: fits ? typed : 2 })}
+        </Text>
+      </View>
+      {fits ? null : (
+        <Text variant="caption" tone="danger" accessibilityRole="alert">
+          {t("widgets.everyHoursRange", { min: WIDGET_EVERY_HOURS.min, max: WIDGET_EVERY_HOURS.max })}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * How often it updates: the five schedules and "Every … hours", the shortest words, in a row that scrolls on a small
+ * phone; every N hours shows its number under the row.
+ */
 export function ScheduleChoice({
   value,
   onChange,
@@ -355,21 +429,30 @@ export function ScheduleChoice({
 }) {
   const { t } = useTranslation();
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.segments}
-    >
-      <Segmented
-        items={WIDGET_SCHEDULES.filter((s) => s !== without).map((s) => ({
-          key: s,
-          label: t(`widgets.schedulesShort.${s}`),
-        }))}
-        value={value}
-        onChange={(k) => onChange(k as WidgetSchedule)}
-      />
-    </ScrollView>
+    <>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.segments}
+      >
+        <Segmented
+          items={[
+            ...WIDGET_SCHEDULES.filter((s) => s !== without).map((s) => ({
+              key: s,
+              label: t(`widgets.schedulesShort.${s}`),
+            })),
+            { key: EVERY_HOURS, label: t("widgets.everyHoursPick") },
+          ]}
+          value={scheduleChoiceOf(value)}
+          onChange={(k) => {
+            const next = schedulePicked(value, k);
+            if (next !== value) onChange(next);
+          }}
+        />
+      </ScrollView>
+      <EveryHoursInput value={value} onChange={onChange} />
+    </>
   );
 }
 
@@ -519,6 +602,17 @@ export function AudienceFields({
 }
 
 const styles = StyleSheet.create({
+  // Every N hours: its number and unit on a line, the range note under them.
+  every: { gap: 4, paddingTop: 8 },
+  everyLine: { flexDirection: "row", alignItems: "center", gap: 8 },
+  hours: {
+    width: 72,
+    height: 40,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    textAlign: "right",
+  },
   grow: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1 },
   semibold: { fontWeight: "600" },

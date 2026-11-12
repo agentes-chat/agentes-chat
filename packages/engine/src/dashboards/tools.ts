@@ -3,7 +3,9 @@ import {
   isWidgetFormat,
   isWidgetSchedule,
   isWidgetSize,
+  scheduleWordsEn,
   validateWidgetSpec,
+  WIDGET_EVERY_HOURS,
   WIDGET_FORMATS,
   WIDGET_KINDS,
   WIDGET_SCHEDULES,
@@ -202,13 +204,11 @@ async function briefOf(ctx: ToolContext) {
   return routineBriefOf(m?.meta);
 }
 
-const SCHEDULE_WORDS: Record<WidgetSchedule, string> = {
-  half: "every 30 minutes",
-  hour: "every hour",
-  day: "every day at 08:00",
-  week: "every Monday at 08:00",
-  manual: "only when someone asks",
-};
+/** A schedule as the tools say it ("every 6 hours"); anything else read as `manual`. */
+const scheduleWords = (schedule: unknown) => scheduleWordsEn(isWidgetSchedule(schedule) ? schedule : "manual");
+
+/** The presets, or every N hours as `h:N` (whole hours within `WIDGET_EVERY_HOURS`). */
+const SCHEDULE_PATTERN = `^(${WIDGET_SCHEDULES.join("|")}|h:[1-9][0-9]{0,3})$`;
 
 /** Why the agent can't build its widget (the hold's reason, `holdWidgetForAi`) and who fixes it, in its own words. */
 const noAiForBuild = (reason: string | null, person: string) =>
@@ -283,7 +283,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
             : "";
         const pending = b.proposal ? `; waiting on ${person.name} to publish it wider` : "";
         const each = own.map((w) => {
-          const when = SCHEDULE_WORDS[w.schedule as WidgetSchedule] ?? w.schedule;
+          const when = scheduleWords(w.schedule);
           return `${w.title} (${when}${w.status === "failed" ? ", failing" : ""})`;
         });
         const list = own.length === 0 ? "no widgets yet" : `${own.length} widgets: ${each.join("; ")}`;
@@ -374,7 +374,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
 
   const createWidget: ToolDefinition = {
     name: "create_widget",
-    description: `Add a widget: one number, goal, chart, list or short summary that you keep up to date on a dashboard (or the person's Home), redone in place on a schedule by your own background run, which posts nothing in the chat. Use it when someone asks to "keep this updated", "pin this chart", "put it on my Home", "add to the dashboard", "acompanhar", "fixar", or for a number they want to look at every day. \`prompt\` is what to show, in their words (it is your instructions on every update). \`schedule\`: half (every 30 min, the most often), hour, day (08:00), week (Monday 08:00) or manual (only when asked). \`alert\`: a condition in their words ("drops 20% below yesterday"; "" = when something is off) when they want to hear it: you judge it on each update and it goes to their Waiting on you, never the chat. Give \`data\` when you already have the numbers (it shows at once), else your first update builds it soon. Without \`dashboard_id\` it goes on their Home.`,
+    description: `Add a widget: one number, goal, chart, list or short summary that you keep up to date on a dashboard (or the person's Home), redone in place on a schedule by your own background run, which posts nothing in the chat. Use it when someone asks to "keep this updated", "pin this chart", "put it on my Home", "add to the dashboard", "acompanhar", "fixar", or for a number they want to look at every day. \`prompt\` is what to show, in their words (it is your instructions on every update). \`schedule\`: half (every 30 min, the most often), hour, day (08:00), week (Monday 08:00), manual (only when asked), or every N hours as h:N, N from ${WIDGET_EVERY_HOURS.min} to ${WIDGET_EVERY_HOURS.max} ("a cada 6 horas" is h:6). \`alert\`: a condition in their words ("drops 20% below yesterday"; "" = when something is off) when they want to hear it: you judge it on each update and it goes to their Waiting on you, never the chat. Give \`data\` when you already have the numbers (it shows at once), else your first update builds it soon. Without \`dashboard_id\` it goes on their Home.`,
     scope: "",
     inputSchema: {
       type: "object",
@@ -392,7 +392,11 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
           enum: [...WIDGET_FORMATS],
           description: "auto (default: you pick on each first build) or the kind they asked for",
         },
-        schedule: { type: "string", enum: [...WIDGET_SCHEDULES] },
+        schedule: {
+          type: "string",
+          pattern: SCHEDULE_PATTERN,
+          description: `half (every 30 minutes), hour, day (08:00), week (Monday 08:00), manual (only when asked), or h:N for every N hours, N from ${WIDGET_EVERY_HOURS.min} to ${WIDGET_EVERY_HOURS.max} ("h:6")`,
+        },
         alert: { type: "string", maxLength: WIDGET_ALERT_CONDITION_MAX },
         size: { type: "string", enum: [...WIDGET_SIZES], description: "s (1×1), m (2×1) or l (2×2)" },
         data: dataSchema,
@@ -421,7 +425,13 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
           return refusal(`${person.name} can't talk to you, so you can't keep a widget for them.`);
         }
         const format: WidgetFormat = isWidgetFormat(input.kind) ? input.kind : "auto";
-        const schedule: WidgetSchedule = isWidgetSchedule(input.schedule) ? input.schedule : "manual";
+        // The gateway's schema check reads no pattern: a schedule it can't keep is refused here, never read as manual.
+        if (!isWidgetSchedule(input.schedule)) {
+          return refusal(
+            `«${str(input.schedule)}» isn't a schedule: use half, hour, day, week, manual or h:N (every N hours, N from ${WIDGET_EVERY_HOURS.min} to ${WIDGET_EVERY_HOURS.max}).`,
+          );
+        }
+        const schedule: WidgetSchedule = input.schedule;
         let spec: WidgetSpec | null = null;
         if (input.data !== undefined) {
           const check = validateWidgetSpec(input.data);
@@ -460,7 +470,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
           ? ` On each update you judge its alert (${str(input.alert).trim() || "when something is off"}); ${person.name} hears it in Waiting on you.`
           : "";
         return {
-          content: `Added widget ${row.id} «${row.title}» to ${where}, updated ${SCHEDULE_WORDS[schedule]}. ${shows}${alertText} Tell ${person.name} where it is.`,
+          content: `Added widget ${row.id} «${row.title}» to ${where}, updated ${scheduleWords(schedule)}. ${shows}${alertText} Tell ${person.name} where it is.`,
           data: { widget: { id: row.id, dashboardId: board.id } },
         };
       } catch (error) {

@@ -16915,6 +16915,13 @@
       "week": "Setiap Senin",
       "manual": "Saat saya minta"
     },
+    "everyHours_other": "Setiap {{count}} jam",
+    "everyHoursShort_other": "Setiap {{count}} jam",
+    "everyHoursInline_other": "setiap {{count}} jam",
+    "everyHoursPick": "Setiap … jam",
+    "everyHoursField": "Setiap berapa jam",
+    "everyHoursUnit_other": "jam",
+    "everyHoursRange": "Dari {{min}} sampai {{max}} jam.",
     "schedulesInline": {
       "half": "setiap 30 menit",
       "hour": "setiap jam",

@@ -8,8 +8,11 @@
 export type WidgetKind = "kpi" | "goal" | "bars" | "line" | "list" | "text";
 /** What a person asks for: a kind, or `auto` (the agent picks). */
 export type WidgetFormat = "auto" | WidgetKind;
-/** Every 30 min (the floor), every hour, every day at 08:00, every Monday at 08:00, or only when asked. */
-export type WidgetSchedule = "half" | "hour" | "day" | "week" | "manual";
+/**
+ * Every 30 min (the floor), every hour, every day at 08:00, every Monday at 08:00, only when asked, or every N hours
+ * from midnight (`h:N`, N from 1 to 720: `@agenteschat/ui/widgets/spec` `everyHoursOf`).
+ */
+export type WidgetSchedule = "half" | "hour" | "day" | "week" | "manual" | `h:${number}`;
 /** S = 1×1, M = 2×1, L = 2×2. */
 export type WidgetSize = "s" | "m" | "l";
 /** Its first run, data shown, a refresh running (the last data stays), or it failed. */

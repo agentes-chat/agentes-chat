@@ -14,6 +14,7 @@ import {
   type Widget,
   type WidgetFormat,
   type WidgetKind,
+  type WidgetSchedule,
   type WidgetSpec,
 } from "@agenteschat/client";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
@@ -22,6 +23,8 @@ import { bayerAt } from "@agenteschat/ui/sky/math";
 import {
   defaultSize,
   type ExampleWords,
+  everyHours,
+  everyHoursOf,
   exampleWidgetSpec,
   phoneSpan,
   sizeToLayout,
@@ -626,4 +629,22 @@ export function agentsMatching<T extends { name: string; role?: string | null }>
   const q = foldWords(query);
   if (!q) return [...agents];
   return agents.filter((a) => foldWords(a.name).includes(q) || foldWords(a.role ?? "").includes(q));
+}
+
+/** The choice for every N hours (ADR 0135 §7), beside the presets in every schedule picker. */
+export const EVERY_HOURS = "every";
+/** What "Every … hours" starts at when picked from a preset. */
+export const FIRST_HOURS = 6;
+
+/** The choice a schedule shows as picked: its preset, or `EVERY_HOURS` for every N hours. */
+export const scheduleChoiceOf = (schedule: WidgetSchedule): WidgetSchedule | typeof EVERY_HOURS =>
+  everyHoursOf(schedule) !== null ? EVERY_HOURS : schedule;
+
+/**
+ * What picking `choice` sets from `current`: a preset as it is; "Every … hours" starts at `FIRST_HOURS`, or keeps
+ * the hours already there (picking it again changes nothing).
+ */
+export function schedulePicked(current: WidgetSchedule, choice: string): WidgetSchedule {
+  if (choice !== EVERY_HOURS) return choice as WidgetSchedule;
+  return everyHoursOf(current) !== null ? current : everyHours(FIRST_HOURS);
 }

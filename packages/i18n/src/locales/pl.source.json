@@ -41965,6 +41965,39 @@
   "widgets.schedulesShort.manual": {
     "value": "When I ask"
   },
+  "widgets.everyHours": {
+    "value": {
+      "one": "Every hour",
+      "other": "Every {{count}} hours"
+    }
+  },
+  "widgets.everyHoursShort": {
+    "value": {
+      "one": "Every hour",
+      "other": "Every {{count}} h"
+    }
+  },
+  "widgets.everyHoursInline": {
+    "value": {
+      "one": "every hour",
+      "other": "every {{count}} hours"
+    }
+  },
+  "widgets.everyHoursPick": {
+    "value": "Every … hours"
+  },
+  "widgets.everyHoursField": {
+    "value": "Every how many hours"
+  },
+  "widgets.everyHoursUnit": {
+    "value": {
+      "one": "hour",
+      "other": "hours"
+    }
+  },
+  "widgets.everyHoursRange": {
+    "value": "From {{min}} to {{max}} hours."
+  },
   "widgets.schedulesInline.half": {
     "value": "every 30 min"
   },

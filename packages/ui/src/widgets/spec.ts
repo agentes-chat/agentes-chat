@@ -12,9 +12,18 @@ export type WidgetKind = (typeof WIDGET_KINDS)[number];
 export const WIDGET_FORMATS = ["auto", ...WIDGET_KINDS] as const;
 export type WidgetFormat = (typeof WIDGET_FORMATS)[number];
 
-/** How often its agent redoes it: every 30 minutes at the least (the floor), or only when asked. */
+/**
+ * How often its agent redoes it: every 30 minutes at the least (the floor), or only when asked. The presets are
+ * listed; besides them, every N hours (`h:N`, `WIDGET_EVERY_HOURS`), which a person types.
+ */
 export const WIDGET_SCHEDULES = ["half", "hour", "day", "week", "manual"] as const;
-export type WidgetSchedule = (typeof WIDGET_SCHEDULES)[number];
+export type WidgetPreset = (typeof WIDGET_SCHEDULES)[number];
+/** Every N hours, N whole and within `WIDGET_EVERY_HOURS`: "h:6" redoes it at 00:00, 06:00, 12:00… */
+export type WidgetEveryHours = `h:${number}`;
+export type WidgetSchedule = WidgetPreset | WidgetEveryHours;
+
+/** Every N hours: from 1 to 720 (30 days). */
+export const WIDGET_EVERY_HOURS = { min: 1, max: 720 } as const;
 
 /** S = 1×1, M = 2×1, L = 2×2 on the 4-column board. */
 export const WIDGET_SIZES = ["s", "m", "l"] as const;
@@ -140,8 +149,8 @@ export const DASHBOARDS_MAX = 200;
 /** Updates kept per widget (its history). */
 export const WIDGET_HISTORY_KEPT = 20;
 
-/** Runs a day of each schedule (`week`: one in seven days). */
-export const SCHEDULE_RUNS_PER_DAY: Record<WidgetSchedule, number> = {
+/** Runs a day of each preset (`week`: one in seven days). */
+export const SCHEDULE_RUNS_PER_DAY: Record<WidgetPreset, number> = {
   half: 48,
   hour: 24,
   day: 1,
@@ -149,13 +158,48 @@ export const SCHEDULE_RUNS_PER_DAY: Record<WidgetSchedule, number> = {
   manual: 0,
 };
 
-export const scheduleRunsPerDay = (schedule: WidgetSchedule): number => SCHEDULE_RUNS_PER_DAY[schedule] ?? 0;
+/** Runs a day of a schedule: a preset's, or 24 / N for every N hours. */
+export function scheduleRunsPerDay(schedule: WidgetSchedule): number {
+  const hours = everyHoursOf(schedule);
+  if (hours !== null) return 24 / hours;
+  return SCHEDULE_RUNS_PER_DAY[schedule as WidgetPreset] ?? 0;
+}
+
+/** The N of an every-N-hours schedule ("h:6" → 6), or null for a preset or anything else. */
+export function everyHoursOf(schedule: unknown): number | null {
+  if (typeof schedule !== "string") return null;
+  const m = /^h:([1-9]\d{0,3})$/.exec(schedule);
+  const n = m ? Number(m[1]) : Number.NaN;
+  return Number.isInteger(n) && n >= WIDGET_EVERY_HOURS.min && n <= WIDGET_EVERY_HOURS.max ? n : null;
+}
+
+/** Every `hours` hours as a schedule ("h:6"); the hours are rounded and kept within `WIDGET_EVERY_HOURS`. */
+export const everyHours = (hours: number): WidgetEveryHours =>
+  `h:${Math.min(WIDGET_EVERY_HOURS.max, Math.max(WIDGET_EVERY_HOURS.min, Math.round(hours) || WIDGET_EVERY_HOURS.min))}`;
+
+/** A schedule in English, lower case ("every 6 hours"): a routine's description and the agents' tools. */
+export function scheduleWordsEn(schedule: WidgetSchedule): string {
+  const hours = everyHoursOf(schedule);
+  if (hours !== null) return hours === 1 ? "every hour" : `every ${hours} hours`;
+  const words: Record<WidgetPreset, string> = {
+    half: "every 30 minutes",
+    hour: "every hour",
+    day: "every day at 08:00",
+    week: "every Monday at 08:00",
+    manual: "only when someone asks",
+  };
+  return words[schedule as WidgetPreset] ?? words.manual;
+}
+
+export const isWidgetPreset = (v: unknown): v is WidgetPreset =>
+  typeof v === "string" && (WIDGET_SCHEDULES as readonly string[]).includes(v);
 
 /**
- * The cron of each schedule, read in the time zone of whoever set it up (its routine's): every 30 minutes, every
- * hour on the hour, every day at 08:00, every Monday at 08:00. `manual` has none.
+ * The cron of each preset, read in the time zone of whoever set it up (its routine's): every 30 minutes, every
+ * hour on the hour, every day at 08:00, every Monday at 08:00. `manual` has none; every N hours is a rule of its
+ * routine (hourly, interval N), since a cron restarts its hours each day.
  */
-export const WIDGET_SCHEDULE_CRON: Record<Exclude<WidgetSchedule, "manual">, string> = {
+export const WIDGET_SCHEDULE_CRON: Record<Exclude<WidgetPreset, "manual">, string> = {
   half: "*/30 * * * *",
   hour: "0 * * * *",
   day: "0 8 * * *",
@@ -166,8 +210,7 @@ export const isWidgetKind = (v: unknown): v is WidgetKind =>
   typeof v === "string" && (WIDGET_KINDS as readonly string[]).includes(v);
 export const isWidgetFormat = (v: unknown): v is WidgetFormat =>
   typeof v === "string" && (WIDGET_FORMATS as readonly string[]).includes(v);
-export const isWidgetSchedule = (v: unknown): v is WidgetSchedule =>
-  typeof v === "string" && (WIDGET_SCHEDULES as readonly string[]).includes(v);
+export const isWidgetSchedule = (v: unknown): v is WidgetSchedule => isWidgetPreset(v) || everyHoursOf(v) !== null;
 export const isWidgetSize = (v: unknown): v is WidgetSize =>
   typeof v === "string" && (WIDGET_SIZES as readonly string[]).includes(v);
 

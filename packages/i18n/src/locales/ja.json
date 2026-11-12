@@ -16813,6 +16813,13 @@
       "week": "毎週月曜",
       "manual": "頼んだとき"
     },
+    "everyHours_other": "{{count}}時間ごと",
+    "everyHoursShort_other": "{{count}}時間ごと",
+    "everyHoursInline_other": "{{count}}時間ごと",
+    "everyHoursPick": "…時間ごと",
+    "everyHoursField": "何時間ごと",
+    "everyHoursUnit_other": "時間",
+    "everyHoursRange": "{{min}}〜{{max}}時間です。",
     "schedulesInline": {
       "half": "30分ごと",
       "hour": "1時間ごと",

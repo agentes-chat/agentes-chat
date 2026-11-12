@@ -1,3 +1,4 @@
+import { everyHoursOf, type WidgetPreset } from "@agenteschat/ui/widgets/spec";
 import type { TFunction } from "i18next";
 import type { AiStatus } from "../api/types";
 import { activityVerb, toolActivity } from "../lib/activity";
@@ -297,9 +298,29 @@ export function widgetCostLine(
   if (schedule === "manual") return { kind: "manual" };
   if (!estimate) return { kind: "unknown" };
   if (estimate.billedTo === "plan") return { kind: "plan" };
-  const usd = schedule === "week" ? estimate.perWeekUsd : estimate.perDayUsd;
+  // Once a week or less often, a week's cost: a day's would read as a few cents of something that runs once.
+  const weekly = schedule === "week" || (everyHoursOf(schedule) ?? 0) >= 7 * 24;
+  const usd = weekly ? estimate.perWeekUsd : estimate.perDayUsd;
   if (usd === null) return { kind: "unknown" };
-  return schedule === "week" ? { kind: "week", usd } : { kind: "day", usd };
+  return weekly ? { kind: "week", usd } : { kind: "day", usd };
+}
+
+/**
+ * A schedule in words: `full` ("Every 6 hours", a widget's panel), `short` (a select's option, "Every 6 h") or
+ * `inline` (after a name and a time in a widget's footer, "every 6 hours"). The presets have their own words.
+ */
+export function scheduleText(
+  t: TFunction,
+  schedule: WidgetSchedule,
+  form: "full" | "short" | "inline" = "full",
+): string {
+  const hours = everyHoursOf(schedule);
+  if (hours !== null) {
+    const key = form === "full" ? "everyHours" : form === "short" ? "everyHoursShort" : "everyHoursInline";
+    return t(`widgets.${key}`, { count: hours });
+  }
+  const group = form === "full" ? "schedules" : form === "short" ? "schedulesShort" : "schedulesInline";
+  return t(`widgets.${group}.${schedule as WidgetPreset}`);
 }
 
 /** The widgets of a board at work: updating or being built (a sweep on each), and not standing still on a wait. */

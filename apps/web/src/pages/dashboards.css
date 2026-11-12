@@ -647,7 +647,8 @@ html:not([data-pointer]) .nwc-asked:focus-visible {
   box-shadow: var(--focus-ring);
 }
 /* A part of the card that opens something (the format, the schedule): quiet text with a small chevron. */
-.nwc-pk.ac-select {
+.nwc-pk.ac-select,
+.nwc-pk .ac-select {
   flex: none;
   min-width: 0;
   max-width: 100%;
@@ -671,6 +672,17 @@ html:not([data-pointer]) .nwc-asked:focus-visible {
 }
 html:not([data-pointer]) .nwc-pk .ac-select__trigger:focus-visible {
   box-shadow: var(--focus-ring);
+}
+/* The schedule's number (every N hours) beside its part: the parts' own height and type, so the line stays one. */
+.nwc-pk .wsched__hours {
+  width: 56px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+.nwc-pk .wsched__unit {
+  font-size: 12.5px;
 }
 .nwc-pk .ac-select__chev {
   width: 12px;

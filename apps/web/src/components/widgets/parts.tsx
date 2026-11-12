@@ -1,5 +1,6 @@
 import type { Widget, WidgetFailure, WidgetKind, WidgetWait } from "@agenteschat/client";
 import {
+  scheduleText,
   useDesktopStatus,
   widgetFailureKey,
   widgetNeedsAi,
@@ -133,7 +134,7 @@ export function WidgetFoot({
   resolving?: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const schedule = t(`widgets.schedulesInline.${widget.schedule}`);
+  const schedule = scheduleText(t, widget.schedule, "inline");
   const waiting = resolving ? null : widgetWaiting(widget, now);
   if (waiting)
     return (

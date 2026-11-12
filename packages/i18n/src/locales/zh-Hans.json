@@ -16989,6 +16989,13 @@
       "week": "每周一",
       "manual": "按需"
     },
+    "everyHours_other": "每 {{count}} 小时",
+    "everyHoursShort_other": "每 {{count}} 小时",
+    "everyHoursInline_other": "每 {{count}} 小时",
+    "everyHoursPick": "每 … 小时",
+    "everyHoursField": "每隔几小时",
+    "everyHoursUnit_other": "小时",
+    "everyHoursRange": "{{min}} 到 {{max}} 小时。",
     "schedulesInline": {
       "half": "每 30 分钟",
       "hour": "每小时",

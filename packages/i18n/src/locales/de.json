@@ -17365,6 +17365,17 @@
       "week": "Montags",
       "manual": "Auf Anfrage"
     },
+    "everyHours_one": "Jede Stunde",
+    "everyHours_other": "Alle {{count}} Stunden",
+    "everyHoursShort_one": "Jede Stunde",
+    "everyHoursShort_other": "Alle {{count}} Std.",
+    "everyHoursInline_one": "jede Stunde",
+    "everyHoursInline_other": "alle {{count}} Stunden",
+    "everyHoursPick": "Alle … Stunden",
+    "everyHoursField": "Alle wie viele Stunden",
+    "everyHoursUnit_one": "Stunde",
+    "everyHoursUnit_other": "Stunden",
+    "everyHoursRange": "Von {{min}} bis {{max}} Stunden.",
     "schedulesInline": {
       "half": "alle 30 Minuten",
       "hour": "jede Stunde",

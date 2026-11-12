@@ -17294,6 +17294,17 @@
       "week": "Her pazartesi",
       "manual": "İstediğimde"
     },
+    "everyHours_one": "Her saat",
+    "everyHours_other": "{{count}} saatte bir",
+    "everyHoursShort_one": "Her saat",
+    "everyHoursShort_other": "{{count}} saatte bir",
+    "everyHoursInline_one": "her saat",
+    "everyHoursInline_other": "{{count}} saatte bir",
+    "everyHoursPick": "… saatte bir",
+    "everyHoursField": "Kaç saatte bir",
+    "everyHoursUnit_one": "saat",
+    "everyHoursUnit_other": "saat",
+    "everyHoursRange": "{{min}} ile {{max}} saat arası.",
     "schedulesInline": {
       "half": "30 dakikada bir",
       "hour": "saatte bir",

@@ -17541,6 +17541,17 @@
       "week": "Elke maandag",
       "manual": "Op verzoek"
     },
+    "everyHours_one": "Elk uur",
+    "everyHours_other": "Elke {{count}} uur",
+    "everyHoursShort_one": "Elk uur",
+    "everyHoursShort_other": "Elke {{count}} u",
+    "everyHoursInline_one": "elk uur",
+    "everyHoursInline_other": "elke {{count}} uur",
+    "everyHoursPick": "Elke … uur",
+    "everyHoursField": "Om de hoeveel uur",
+    "everyHoursUnit_one": "uur",
+    "everyHoursUnit_other": "uur",
+    "everyHoursRange": "Van {{min}} tot {{max}} uur.",
     "schedulesInline": {
       "half": "elke 30 minuten",
       "hour": "elk uur",

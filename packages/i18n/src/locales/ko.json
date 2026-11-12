@@ -16805,6 +16805,13 @@
       "week": "매주 월요일",
       "manual": "요청할 때"
     },
+    "everyHours_other": "{{count}}시간마다",
+    "everyHoursShort_other": "{{count}}시간마다",
+    "everyHoursInline_other": "{{count}}시간마다",
+    "everyHoursPick": "…시간마다",
+    "everyHoursField": "몇 시간마다",
+    "everyHoursUnit_other": "시간",
+    "everyHoursRange": "{{min}}~{{max}}시간이에요.",
     "schedulesInline": {
       "half": "30분마다",
       "hour": "매시간",

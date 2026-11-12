@@ -1,4 +1,5 @@
 import {
+  scheduleText,
   useAskWidgetChange,
   useBuildOnceAi,
   useDesktopStatus,
@@ -18,7 +19,7 @@ import {
 import { upcomingAt, whenAt } from "@agenteschat/client/lib/format";
 import { plainInline } from "@agenteschat/client/lib/markdown";
 import { can } from "@agenteschat/client/lib/permissions";
-import { WIDGET_LIMITS, WIDGET_SCHEDULES } from "@agenteschat/ui/widgets/spec";
+import { everyHoursOf, WIDGET_LIMITS, WIDGET_SCHEDULES } from "@agenteschat/ui/widgets/spec";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,6 +29,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
 import {
   Button,
+  GROUPED_ROW,
   GroupedHeader,
   GroupedList,
   GroupedRow,
@@ -52,7 +54,8 @@ import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { goBack, PushedHeader, successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
 import { useAgentLook, useWidgetAiWay, useWidgetWords } from "./hooks";
-import { HOME, shownWidgetTitle } from "./logic";
+import { EVERY_HOURS, HOME, schedulePicked, shownWidgetTitle } from "./logic";
+import { EveryHoursInput } from "./parts";
 import { WidgetCard } from "./WidgetView";
 
 /** Rows of the history shown (the server keeps the latest 20). */
@@ -136,7 +139,7 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
       {
         onSuccess: () => {
           successHaptic();
-          const when = t(`widgets.schedulesInline.${schedule}`);
+          const when = scheduleText(t, schedule, "inline");
           toast({ title: t("mobile.dashboards.widget.scheduleSaved", { schedule: when }) });
         },
         onError: failed,
@@ -354,7 +357,7 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
         <GroupedList>
           <GroupedRow
             icon="clock"
-            label={t(`widgets.schedules.${w.schedule}`)}
+            label={scheduleText(t, w.schedule)}
             sub={next}
             subLines={2}
             chevron={w.canEdit}
@@ -364,12 +367,29 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
             ? WIDGET_SCHEDULES.map((s) => (
                 <GroupedRow
                   key={s}
-                  label={t(`widgets.schedules.${s}`)}
+                  label={scheduleText(t, s)}
                   checked={s === w.schedule}
                   onPress={() => setSchedule(s)}
                 />
               ))
             : null}
+          {open === "schedule" ? (
+            <GroupedRow
+              key={EVERY_HOURS}
+              label={t("widgets.everyHoursPick")}
+              checked={everyHoursOf(w.schedule) !== null}
+              onPress={() => {
+                const next = schedulePicked(w.schedule, EVERY_HOURS);
+                if (next !== w.schedule) setSchedule(next);
+              }}
+            />
+          ) : null}
+          {/* Every N hours: its number under its choice, saved on Done or when left. */}
+          {open === "schedule" && everyHoursOf(w.schedule) !== null ? (
+            <View key="every-hours" style={styles.everyHours}>
+              <EveryHoursInput value={w.schedule} onChange={setSchedule} />
+            </View>
+          ) : null}
           <GroupedRow
             icon="bell"
             label={alertLine}
@@ -570,6 +590,8 @@ function AskChange({ widget: w, name }: { widget: WidgetDetail; name: string }) 
 }
 
 const styles = StyleSheet.create({
+  // Every N hours' number, inside the group under its choice, on the rows' leading edge.
+  everyHours: { paddingHorizontal: GROUPED_ROW.padX, paddingBottom: 12 },
   screen: { flex: 1 },
   in: { paddingHorizontal: 16 },
   cares: { paddingHorizontal: 4, marginTop: -6, marginBottom: 10 },

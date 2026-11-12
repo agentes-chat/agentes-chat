@@ -21,6 +21,7 @@ import {
   moveItem,
   resizeItem,
   roleSeesBoard,
+  scheduleText,
   toggleEditRole,
   WIDGET_LINE_NOTE_MS,
   type Widget,
@@ -309,6 +310,19 @@ describe("words", () => {
     expect(widgetCostLine("hour", { ...estimate, billedTo: "plan" })).toEqual({ kind: "plan" });
     expect(widgetCostLine("hour", { ...estimate, perDayUsd: null })).toEqual({ kind: "unknown" });
     expect(widgetCostLine("day", null)).toEqual({ kind: "unknown" });
+    // Every N hours: a day's cost, or a week's once it runs once a week or less often.
+    expect(widgetCostLine("h:6", estimate)).toEqual({ kind: "day", usd: 0.36 });
+    expect(widgetCostLine("h:168", estimate)).toEqual({ kind: "week", usd: 2.52 });
+  });
+
+  test("a schedule in words: the presets' own, every N hours counted", () => {
+    const t = ((key: string, o?: { count?: number }) => (o?.count !== undefined ? `${key}(${o.count})` : key)) as never;
+    expect(scheduleText(t, "hour")).toBe("widgets.schedules.hour");
+    expect(scheduleText(t, "day", "short")).toBe("widgets.schedulesShort.day");
+    expect(scheduleText(t, "week", "inline")).toBe("widgets.schedulesInline.week");
+    expect(scheduleText(t, "h:6")).toBe("widgets.everyHours(6)");
+    expect(scheduleText(t, "h:12", "short")).toBe("widgets.everyHoursShort(12)");
+    expect(scheduleText(t, "h:36", "inline")).toBe("widgets.everyHoursInline(36)");
   });
 });
 

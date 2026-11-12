@@ -17605,6 +17605,24 @@ export const en = {
       week: "Every Monday",
       manual: "When I ask",
     },
+    /** Every N hours a person typed (`h:N`, 1 to 720), in a widget's panel. */
+    everyHours_one: "Every hour",
+    everyHours_other: "Every {{count}} hours",
+    /** The same, as a select's chosen value: short. */
+    everyHoursShort_one: "Every hour",
+    everyHoursShort_other: "Every {{count}} h",
+    /** The same, after a name and a time in a widget's footer. */
+    everyHoursInline_one: "every hour",
+    everyHoursInline_other: "every {{count}} hours",
+    /** The select's option that opens a field for the number of hours. */
+    everyHoursPick: "Every … hours",
+    /** The number field's name, for screen readers. */
+    everyHoursField: "Every how many hours",
+    /** After the number field: "every [6] hours". */
+    everyHoursUnit_one: "hour",
+    everyHoursUnit_other: "hours",
+    /** Under the field when the number can't be kept. */
+    everyHoursRange: "From {{min}} to {{max}} hours.",
     /** After a name and a time in a widget's footer: "Theo · 12 min ago · every hour". */
     schedulesInline: {
       half: "every 30 min",

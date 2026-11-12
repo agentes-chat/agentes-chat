@@ -1,20 +1,23 @@
 import { and, type Database, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
 import {
+  everyHoursOf,
   isWidgetSchedule,
+  scheduleWordsEn,
   validateWidgetSpec,
   WIDGET_SCHEDULE_CRON,
+  type WidgetPreset,
   type WidgetSchedule,
 } from "@agenteschat/ui/widgets/spec";
 import { getAgent } from "../agents";
 import { canTalkTo, speakerOf } from "../audience";
-import { nextCronTime } from "../cron";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { publishRoutineRuns } from "../events";
 import { notifyWidgetAlert, resolveRoutinePaused, resolveWidgetFailed } from "../notification-producers";
 import { can, getMembership, type Membership } from "../organizations";
 import { type EventMerge, queueEventRun, routineInFlight } from "../routine-events";
 import { haltRoutineRuns } from "../routine-firing";
-import { queueRoutineRun } from "../routines";
+import { nextRoutineTime, queueRoutineRun } from "../routines";
+import { localDate, normalizeRule, type ScheduleRule } from "../rrule";
 import { assertMayContinuePause, overrideUsagePause } from "../usage-pause";
 import { dashboardRights, requireWidget, viewerOf } from "./access";
 import { publishWidgetChanged, widgetEvent } from "./events";
@@ -85,14 +88,36 @@ const SOURCE_MAX = 80;
 const SUMMARY_MAX = 280;
 const ALERT_MAX = 280;
 
-/** English words of each schedule, for the routine's description (the apps say it in the person's words). */
-const SCHEDULE_WORDS: Record<WidgetSchedule, string> = {
-  half: "Every 30 minutes",
-  hour: "Every hour",
-  day: "Every day at 08:00",
-  week: "Every Monday at 08:00",
-  manual: "Only when asked",
+/** A schedule's words for the routine's description (the apps say it in the person's words): "Every 6 hours". */
+const scheduleWords = (schedule: WidgetSchedule) => {
+  const words = schedule === "manual" ? "only when asked" : scheduleWordsEn(schedule);
+  return words.charAt(0).toUpperCase() + words.slice(1);
 };
+
+/**
+ * When a widget's routine runs: a preset's cron, or every N hours as an hourly rule counted from midnight in the
+ * creator's zone (a cron restarts its hours each day, so "every 5 hours" would run at 20:00 and again at 00:00). An
+ * unchanged rule is kept, so editing anything else doesn't move its slots.
+ */
+function widgetTiming(
+  schedule: WidgetSchedule,
+  zone: string,
+  existing: { rule: unknown; timezone: string | null } | undefined,
+  now: Date,
+): { cron: string | null; rule: ScheduleRule | null } {
+  if (schedule === "manual") return { cron: null, rule: null };
+  const hours = everyHoursOf(schedule);
+  if (hours === null) return { cron: WIDGET_SCHEDULE_CRON[schedule as Exclude<WidgetPreset, "manual">], rule: null };
+  const kept = existing?.rule as Partial<ScheduleRule> | null | undefined;
+  if (kept?.freq === "hourly" && kept.interval === hours && kept.timezone === zone && existing?.timezone === zone) {
+    return { cron: null, rule: kept as ScheduleRule };
+  }
+  const rule = normalizeRule(
+    { freq: "hourly", interval: hours, times: ["00:00"], timezone: zone, start: localDate(now, zone) },
+    now,
+  );
+  return { cron: null, rule };
+}
 
 const nowOf = (deps: DashboardDeps) => deps.now?.() ?? new Date();
 
@@ -147,7 +172,8 @@ async function defaultCreator(db: Database, widget: WidgetRow, board: DashboardR
 /**
  * Makes the widget's routine match its row (at most one per widget: name = its title, prompt = its instructions,
  * created by `options.creatorUserId` ?? the widget's creator, access `act`, report `when_new`, trigger `schedule`). A
- * schedule other than `manual` sets `cron` = `WIDGET_SCHEDULE_CRON[schedule]` in its creator's time zone and its next
+ * preset other than `manual` sets `cron` = `WIDGET_SCHEDULE_CRON[schedule]`, every N hours an hourly `rule`
+ * (`widgetTiming`), in its creator's time zone, and its next
  * run (every schedule is 30 minutes apart at the least: the floor, ADR 0135 §7; anything else stored reads as
  * `manual`). A `manual` widget keeps an existing routine with no next run (`cron` and `rule` null), and gets none
  * until a run is asked (`options.ensure`, as `refreshWidgetNow` does). Returns the routine's id (written to
@@ -181,8 +207,9 @@ export async function syncWidgetRoutine(
     options?.creatorUserId ?? (existing ? existing.createdByUserId : await defaultCreator(db, widget, board));
   const zone =
     existing?.timezone && existing.createdByUserId === creator ? existing.timezone : await zoneOf(db, orgId, creator);
-  const cron = schedule === "manual" ? null : WIDGET_SCHEDULE_CRON[schedule];
   const now = nowOf(deps);
+  const { cron, rule } = widgetTiming(schedule, zone, existing, now);
+  const timing = { cron, rule: rule as unknown as Record<string, unknown> | null, timezone: zone };
   const target: WidgetRoutineTarget = { type: "widget", widgetId: widget.id, dashboardId: widget.dashboardId };
   const fields = {
     agentId: widget.agentId,
@@ -192,9 +219,9 @@ export async function syncWidgetRoutine(
     triggerType: "schedule",
     phrase: null,
     cron,
-    rule: null,
+    rule: rule as unknown as Record<string, unknown> | null,
     timezone: zone,
-    description: SCHEDULE_WORDS[schedule],
+    description: scheduleWords(schedule),
     event: null,
     access: "act",
     report: "when_new",
@@ -203,12 +230,13 @@ export async function syncWidgetRoutine(
   };
   let routineId: string;
   if (existing) {
-    const moved = existing.cron !== cron || existing.timezone !== zone;
+    const moved =
+      existing.cron !== cron || existing.timezone !== zone || JSON.stringify(existing.rule) !== JSON.stringify(rule);
     const nextRunAt =
-      !cron || !existing.active
+      (!cron && !rule) || !existing.active
         ? null
         : moved || !existing.nextRunAt
-          ? nextCronTime(cron, zone, now)
+          ? nextRoutineTime(timing, now)
           : existing.nextRunAt;
     await db
       .update(routines)
@@ -218,7 +246,7 @@ export async function syncWidgetRoutine(
   } else {
     const [made] = await db
       .insert(routines)
-      .values({ orgId, ...fields, active: true, nextRunAt: cron ? nextCronTime(cron, zone, now) : null })
+      .values({ orgId, ...fields, active: true, nextRunAt: cron || rule ? nextRoutineTime(timing, now) : null })
       .returning({ id: routines.id });
     if (!made) throw new Error("widget routine insert returned nothing");
     routineId = made.id;
@@ -319,7 +347,7 @@ async function readyRoutine(
     set.active = true;
     set.pausedReason = null;
     set.failuresInRow = 0;
-    set.nextRunAt = routine.cron ? nextCronTime(routine.cron, routine.timezone ?? "UTC", nowOf(deps)) : null;
+    set.nextRunAt = routine.cron || routine.rule ? nextRoutineTime(routine, nowOf(deps)) : null;
   }
   if (Object.keys(set).length === 0) return routine;
   await db

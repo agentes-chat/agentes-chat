@@ -604,6 +604,41 @@ describe("a widget's side panel", () => {
     expect((router.state.location.search as { widget?: string }).widget).toBeUndefined();
   });
 
+  test("every N hours: picked, a number beside it; left or Enter saves a whole number from 1 to 720, never another", async () => {
+    const s = setup();
+    const { state } = await open(`/org/${ORG_ID}/home`, s);
+    await click(within(widget("Vendas hoje")).getByRole("button", { name: "Vendas hoje" }));
+    await settle(4);
+    const panel = screen().getByRole("dialog", { name: "Vendas hoje" });
+    const how = within(panel).getByRole("region", { name: "Como atualiza" });
+    const saved = () => state.calls.filter((c) => c.method === "dashboards.updateWidget").map((c) => c.args[2]);
+    await pick(within(how).getByRole("combobox", { name: "Mudar quando atualiza" }), "A cada … horas");
+    expect(saved()).toEqual([{ schedule: "h:6" }]);
+    await settle(3);
+    const hours = within(how).getByRole("spinbutton", { name: "A cada quantas horas" }) as HTMLInputElement;
+    expect(hours.value).toBe("6");
+    expect(how.textContent).toContain("A cada 6 horas");
+    // Typed and left: saved.
+    await act(async () => fireEvent.change(hours, { target: { value: "36" } }));
+    await act(async () => fireEvent.blur(hours));
+    await settle(3);
+    expect(saved().at(-1)).toEqual({ schedule: "h:36" });
+    // Out of the range: said under it, nothing saved.
+    const count = saved().length;
+    await act(async () => fireEvent.change(hours, { target: { value: "0" } }));
+    await act(async () => fireEvent.keyDown(hours, { key: "Enter" }));
+    expect(within(how).getByRole("alert").textContent).toBe("De 1 a 720 horas.");
+    await act(async () => fireEvent.change(hours, { target: { value: "721" } }));
+    await act(async () => fireEvent.blur(hours));
+    expect(saved()).toHaveLength(count);
+    // Enter saves too.
+    await act(async () => fireEvent.change(hours, { target: { value: "12" } }));
+    await act(async () => fireEvent.keyDown(hours, { key: "Enter" }));
+    await settle(3);
+    expect(saved().at(-1)).toEqual({ schedule: "h:12" });
+    expect(within(how).queryByRole("alert")).toBeNull();
+  });
+
   test("its title is renamed in place: Enter saves, Esc cancels and keeps the panel open", async () => {
     const s = setup();
     const { state } = await open(`/org/${ORG_ID}/home?widget=${s.sales.id}`, s);
@@ -807,5 +842,29 @@ describe("Pin from the chat", () => {
     expect(document.body.textContent).toContain("Fixado em Meu Início · Ada refaz todo dia às 8h");
     const added = s.fake.boards.find((b) => b.id === s.home.id)?.widgets.find((w: Widget) => w.sourceMessageId);
     expect(added?.title).toBe("Pedidos por canal");
+
+    // Again, every 12 hours: the same select as a widget's panel, without "only when asked" (that is the switch).
+    await click(within(chart).getByRole("button", { name: "Fixar num painel" }));
+    await settle(4);
+    const again = screen().getByRole("dialog", { name: "Fixar num painel" });
+    await click(within(again).getByRole("switch", { name: "Manter atualizado" }));
+    const every = within(again).getByRole("combobox", { name: "Atualiza" });
+    every.focus();
+    await act(async () => fireEvent.keyDown(every, { key: "Enter" }));
+    const offered = screen()
+      .getAllByRole("option")
+      .map((o) => o.textContent);
+    expect(offered).toContain("A cada … horas");
+    expect(offered.some((o) => o?.includes("Quando eu pedir"))).toBe(false);
+    await click(screen().getByRole("option", { name: "A cada … horas" }));
+    await settle(2);
+    const hours = within(again).getByRole("spinbutton", { name: "A cada quantas horas" });
+    await act(async () => fireEvent.change(hours, { target: { value: "12" } }));
+    await act(async () => fireEvent.blur(hours));
+    await settle(2);
+    expect(again.textContent).toContain("Ada refaz a cada 12 horas");
+    await click(within(again).getByRole("button", { name: "Fixar" }));
+    await settle(4);
+    expect((last(state, "dashboards.pinWidget") as unknown[])[2]).toMatchObject({ schedule: "h:12" });
   });
 });

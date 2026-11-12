@@ -429,7 +429,7 @@ const widgetBoardOf = (r: RoutineRow) => {
  * Routines lists a widget's routine only while the widget updates on a schedule (ADR 0135 §4): one that updates only
  * when asked has no slot of its own to show.
  */
-const listedInRoutines = (r: RoutineRow) => targetOf(r).type !== "widget" || Boolean(r.cron);
+const listedInRoutines = (r: RoutineRow) => targetOf(r).type !== "widget" || Boolean(r.cron || r.rule);
 
 /** The next slot of a scheduled routine after `after`: its rule, else its cron (older routines). */
 export function nextRoutineTime(r: Pick<RoutineRow, "rule" | "cron" | "timezone">, after: Date): Date | null {

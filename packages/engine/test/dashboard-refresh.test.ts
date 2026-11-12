@@ -168,6 +168,41 @@ describe("scheduling", () => {
     expect((await listRoutines(f.db, f.owner.id, f.org.id)).some((r) => r.id === routine.id)).toBe(false);
   });
 
+  test("every N hours: an hourly rule from midnight, N hours apart across days, kept while nothing else moves it", async () => {
+    await setupWidgets(() => ({ chunks: ["Ok."] }));
+    const b = await board();
+    const w = await shownWidget(b.id, { schedule: "h:5" });
+    const routine = await routineRow(f, w.routineId ?? "");
+    // A cron would restart its hours each day (20:00, then 00:00): a rule counts on.
+    expect(routine).toMatchObject({ cron: null, active: true, description: "Every 5 hours" });
+    expect(routine.rule).toMatchObject({ freq: "hourly", interval: 5, times: ["00:00"] });
+    expect(routine.nextRunAt).not.toBeNull();
+    const slots = routineSlots(routine, new Date(), new Date(Date.now() + 3 * 86_400_000));
+    expect(slots.length).toBeGreaterThan(10);
+    for (let i = 1; i < slots.length; i++) {
+      expect((slots[i] as Date).getTime() - (slots[i - 1] as Date).getTime()).toBe(5 * 3_600_000);
+    }
+    expect((await listRoutines(f.db, f.owner.id, f.org.id)).some((r) => r.id === routine.id)).toBe(true);
+    // Its title changed: the same slots.
+    await updateWidget(dash(), f.owner.id, f.org.id, w.id, { title: "Vendas de hoje" });
+    const renamed = await routineRow(f, routine.id);
+    expect(renamed.rule).toEqual(routine.rule);
+    expect(renamed.nextRunAt).toEqual(routine.nextRunAt);
+    // Every 36 hours: past a day, still counted on.
+    await updateWidget(dash(), f.owner.id, f.org.id, w.id, { schedule: "h:36" });
+    const longer = await routineRow(f, routine.id);
+    expect(longer.rule).toMatchObject({ freq: "hourly", interval: 36 });
+    const far = routineSlots(longer, new Date(), new Date(Date.now() + 8 * 86_400_000));
+    for (let i = 1; i < far.length; i++) {
+      expect((far[i] as Date).getTime() - (far[i - 1] as Date).getTime()).toBe(36 * 3_600_000);
+    }
+    // Back to a preset: its cron, and the rule gone.
+    await updateWidget(dash(), f.owner.id, f.org.id, w.id, { schedule: "day" });
+    expect(await routineRow(f, routine.id)).toMatchObject({ cron: WIDGET_SCHEDULE_CRON.day, rule: null });
+    // Off the range: refused, as any unknown schedule.
+    await expect(updateWidget(dash(), f.owner.id, f.org.id, w.id, { schedule: "h:0" as never })).rejects.toThrow();
+  });
+
   test("a manual widget gets no routine until a run is asked; a schedule off the list reads as manual", async () => {
     await setupWidgets(() => ({ chunks: ["Ok."] }));
     const b = await board();

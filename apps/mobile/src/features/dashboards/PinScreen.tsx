@@ -1,4 +1,4 @@
-import { useDashboards, useHomeDashboard, usePinWidget, type WidgetSchedule } from "@agenteschat/client";
+import { scheduleText, useDashboards, useHomeDashboard, usePinWidget, type WidgetSchedule } from "@agenteschat/client";
 import { chartBlockToWidgetSpec, sizeToLayout, type WidgetSize } from "@agenteschat/ui/widgets/spec";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -59,7 +59,7 @@ export function PinScreen() {
                 : t("widgets.pin.doneUpdating", {
                     where,
                     name: look.name,
-                    schedule: t(`widgets.schedulesInline.${every}`),
+                    schedule: scheduleText(t, every, "inline"),
                   }),
           });
           goBack();
@@ -136,7 +136,7 @@ export function PinScreen() {
                   <GroupedFooter>
                     {t("dashboards.newWidget.steps.redoes", {
                       name: look.name,
-                      schedule: t(`widgets.schedulesInline.${schedule}`),
+                      schedule: scheduleText(t, schedule, "inline"),
                     })}
                   </GroupedFooter>
                 </>

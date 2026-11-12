@@ -1,6 +1,6 @@
 # 0135. Dashboards and widgets: numbers agents keep up to date, on boards people share
 
-- Status: Accepted
+- Status: Accepted. Amended 2026-11-11: every N hours (§7; § Amendment at the end).
 - Date: 2026-11-03
 - Extends: ADR 0053 (routines and unattended work: a widget is redone by a routine of its own), 0085 (roles and permissions: who sees a board), 0108 (Home: "My Home" is its board), 0113 (live blocks: what is pinned is a chart, not a live block), 0125 (an audience by role, the same model), 0071 (notifications: alerts and requests wait on the person)
 - Code: `packages/db/src/schema/dashboards.ts` (`dashboards`, `dashboard_widgets`, `dashboard_widget_updates`), migration `0199_dashboards.sql`; `packages/ui/src/widgets/spec.ts` (`@agenteschat/ui/widgets/spec`: `WidgetSpec`, `validateWidgetSpec`, `chartBlockToWidgetSpec`, schedules, sizes, caps); `packages/engine/src/dashboards/*` (`access.ts`, `service.ts`, `pin.ts`, `cost.ts`, `suggestions.ts`, `refresh.ts`, `proposals.ts`, `tools.ts`, `events.ts`, `types.ts`), `routines.ts` and `routine-ledger.ts` (the `widget` target), `tools/run-policy.ts` (a widget's refresh run), `notifications.ts` (`widget_alert`, `widget_failed`, `dashboard_proposal`); server `routes/app/dashboards.ts`, `dashboard-schemas.ts`; client `packages/client/src/dashboards/*`; web `packages/ui/src/widgets/*`, `pages/HomePage.tsx` (the mural), `pages/DashboardsPage.tsx`, `pages/DashboardPage.tsx`, `components/dashboards/*`; phone `app/(app)/dashboards.tsx` (pushed from `src/features/chats/DashboardsEntry.tsx` on the home), `src/features/dashboards/*`
@@ -86,7 +86,8 @@ people than asked.
    stops updating tells its creator once per failure streak (`widget_failed`, inbox only), resolved by its next good
    update.
 7. **Schedules, the floor, the cap and the cost.** Every 30 minutes (`half`), every hour, every day at 08:00, every
-   Monday at 08:00 (in the time zone of whoever set it up), or only when asked (`manual`): never more often than every
+   Monday at 08:00 (in the time zone of whoever set it up), every N hours (`h:N`, N from 1 to 720, amended
+   2026-11-11), or only when asked (`manual`): never more often than every
    30 minutes, so the 15-minute floor of routines never binds. A workspace keeps at most 60 widgets updating on a
    schedule (`widget.scheduled_cap`; manual ones don't count): a sane ceiling for a team's boards that bounds what
    unattended refreshes cost. The estimate (`GET …/widget-cost`) is runs a day × the agent's average cost of a routine
@@ -242,3 +243,17 @@ people than asked.
   wait days for its owner to look, and nothing needs to wait for it (§11).
 - **Posting the refreshed chart in a channel.** What people do today, and what this replaces: the latest number gets
   buried, and the conversation fills with reports nobody asked to read.
+
+## Amendment (2026-11-11): every N hours
+
+### Context
+
+Four presets and "only when asked" left out what people asked for most: a number every few hours, every 12, every two days. "Every hour" spends a run an hour on a number that moves twice a day; "every day at 08:00" misses the afternoon.
+
+### Decision
+
+- **`h:N`**: every N hours, N a whole number from 1 to 720 (30 days), stored in `dashboard_widgets.schedule` as text (no migration), checked by `isWidgetSchedule` / `everyHoursOf` wherever a schedule comes in (the routes, the agents' tools, a pin); one spelling only (`h:6`, never `h:06`), so two values never mean the same schedule.
+- **A rule, not a cron.** Its routine gets an hourly `ScheduleRule` (`interval` N, from 00:00 of the day it was set, in its creator's zone), since a cron restarts its hours each day ("every 5 hours" would run at 20:00 and again at 00:00). The rule is kept while the widget changes otherwise, so its slots don't move; the presets keep their crons. Routines lists a widget's routine while it has either (`listedInRoutines`).
+- **The floor, the cap and the cost hold.** An hour is above the 30-minute floor; it counts in the 60 scheduled widgets; the estimate is 24 / N runs a day, said for a week from a week up.
+- **The agents** pass `h:N` to `create_widget` ("a cada 6 horas" is `h:6`); one they can't keep is refused with what to use, never read as `manual` (the gateway's schema check reads no pattern).
+- **The apps.** The web's schedule select (a widget's panel, the New widget dialog, a chart's pin, where "only when asked" is its Keep updated switch) has "Every … hours", which shows a number field (under the panel's row, beside the select elsewhere), saved when left or on Enter, a number off the range said under it and not saved. The phone's three pickers (a widget's screen, New widget, Pin) have the same choice and field (`scheduleChoiceOf`, `schedulePicked`, `EveryHoursInput`). Every screen says it in words ("Every 6 hours", `scheduleText`).
