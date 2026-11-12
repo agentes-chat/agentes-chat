@@ -90,6 +90,8 @@ export function ScreenWatch({
 
   const restart = () => {
     setReady(false);
+    // The page that said "live" is gone: the new one starts over, cover and wait included.
+    setPage("connecting");
     setLife((n) => n + 1);
   };
   const onLayout = (e: LayoutChangeEvent) => {

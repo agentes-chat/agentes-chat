@@ -899,6 +899,11 @@ export class CodexAppServers implements CodexAppRunner {
       client.close(0);
       return null;
     }
+    // The runner began to stop during the handshake: `close` has run, and nothing would close this process.
+    if (this.closed) {
+      client.close(0);
+      return null;
+    }
     const bridge: McpTaskInfo = {
       token,
       missionId: "",

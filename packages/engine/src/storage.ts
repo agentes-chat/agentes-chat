@@ -395,6 +395,16 @@ function migrationView(m: MigrationRow | undefined | null): StorageMigrationView
   return { status: m.status, copied: m.copied, total: m.total, error: m.error };
 }
 
+/**
+ * Whether a `running` migration has no job behind it any more (its worker died on its last attempt), so asking again
+ * starts it over instead of answering "running" forever. `runMigration` writes `updatedAt` after every file it copies.
+ */
+function migrationStalled(m: MigrationRow, now: Date): boolean {
+  // ponytail: one file that takes longer than this to copy reads as stalled, and asking again then starts a second
+  // job beside the first (as every second ask did before). A beat written while a file copies, if files get that large.
+  return now.getTime() - m.updatedAt.getTime() > 10 * 60_000;
+}
+
 async function latestMigration(db: Database, orgId: string) {
   const [m] = await db
     .select()
@@ -515,6 +525,11 @@ export async function startMigration(deps: StorageDeps, actorId: string, orgId: 
   await requirePermission(deps.db, actorId, orgId, "configure");
   const target = (await activeConfig(deps.db, orgId))?.id ?? null;
   const last = await latestMigration(deps.db, orgId);
+  // A running one is returned as is (asked twice, two jobs would copy the same files and count each twice), unless
+  // nothing is behind it any more.
+  if (last?.status === "running" && !migrationStalled(last, new Date())) {
+    return migrationView(last) as StorageMigrationView;
+  }
   const [counted] = await deps.db
     .select({ n: sql<number>`count(*)::int` })
     .from(artifactVersions)

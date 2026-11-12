@@ -95,6 +95,8 @@ export function useVoiceTake(target: VoiceTarget) {
   /** The finger left before the recorder started. */
   const starting = useRef(false);
   const released = useRef(false);
+  /** A pause or a send is stopping the recorder: a second tap meanwhile would keep the same stretch twice. */
+  const ending = useRef(false);
   const targetRef = useRef(target);
   targetRef.current = target;
 
@@ -181,10 +183,15 @@ export function useVoiceTake(target: VoiceTarget) {
   }, []);
 
   const pause = useCallback(async () => {
-    if (phaseRef.current === "idle" || phaseRef.current === "paused") return;
-    await finishStretch();
-    setPhase("paused");
-    await joined();
+    if (phaseRef.current === "idle" || phaseRef.current === "paused" || ending.current) return;
+    ending.current = true;
+    try {
+      await finishStretch();
+      setPhase("paused");
+      await joined();
+    } finally {
+      ending.current = false;
+    }
     wholeWave();
     progress.value = 0;
     const whole = Math.floor(doneMs.current / 1000);
@@ -192,7 +199,7 @@ export function useVoiceTake(target: VoiceTarget) {
     setTotal(whole);
   }, [finishStretch, joined, wholeWave, progress, setPhase]);
 
-  const send = useCallback(async () => {
+  const sendTake = useCallback(async () => {
     const { orgId, channelId, threadId, replyTo = null, authorId, afterSend } = targetRef.current;
     stopPlayback();
     await finishStretch();
@@ -230,6 +237,15 @@ export function useVoiceTake(target: VoiceTarget) {
     reset();
     afterSend();
   }, [finishStretch, i18n.language, joined, qc, refused, reset, t, toast]);
+  const send = useCallback(async () => {
+    if (ending.current) return;
+    ending.current = true;
+    try {
+      await sendTake();
+    } finally {
+      ending.current = false;
+    }
+  }, [sendTake]);
 
   const cancel = useCallback(
     async (notice = true) => {

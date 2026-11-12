@@ -82,10 +82,13 @@ export function IssueFiles({ issue, activity }: { issue: Issue; activity: IssueA
     action.mutate(
       { type: "comment", id: issue.id, text: "", attachmentIds: doneIds.split(",") },
       {
+        // Only what was in the box as it went: a file added meanwhile stays, and goes as the next comment. Refused,
+        // they all stay (the failed write has its toast): the next file added sends them again, × takes one out.
+        onSuccess: () => {
+          for (const key of sent) adding.remove(key);
+        },
         onSettled: () => {
           sending.current = false;
-          // Only what was in the box as it went: a file added meanwhile stays, and goes as the next comment.
-          for (const key of sent) adding.remove(key);
         },
       },
     );

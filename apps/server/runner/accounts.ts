@@ -1584,6 +1584,11 @@ export class AccountManager {
       timer: null,
       again,
     };
+    // The runner began to stop while this was prepared: `close` ended the sign-ins it knew, and wouldn't end this one.
+    if (this.closed) {
+      if (!again) await this.discard(kind, loginId);
+      throw new RunnerError("internal", "The runner is stopping");
+    }
     try {
       if (forAll && kind === "claude_code" && !cliShared) this.spawnInTerminal(login, ["setup-token"]);
       else if (kind === "antigravity") this.spawnInTerminal(login, LOGIN_ARGS.antigravity);
