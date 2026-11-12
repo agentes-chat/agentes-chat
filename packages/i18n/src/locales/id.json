@@ -17735,6 +17735,8 @@
     "invalidAccount": "Pilih akun OpenRouter aktif dari ruang kerja ini.",
     "invalidModel": "Masukkan ID model keputusan yang valid.",
     "checkFailed": "OpenRouter tidak dapat memverifikasi model keputusan ini. Periksa akun, saldo, dan ID model lalu coba lagi.",
-    "serverDefault": "Pengaturan bawaan server untuk ruang kerja tanpa model keputusan sendiri."
+    "serverDefault": "Pengaturan bawaan server untuk ruang kerja tanpa model keputusan sendiri.",
+    "provider": "Penyedia keputusan",
+    "jevManaged": "Pemilik server mengelola pengaturan Jev."
   }
 }

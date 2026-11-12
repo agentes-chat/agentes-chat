@@ -18839,6 +18839,8 @@
     "invalidAccount": "Scegli un account OpenRouter attivo di questo spazio.",
     "invalidModel": "Inserisci un ID di modello decisionale valido.",
     "checkFailed": "OpenRouter non ha potuto verificare questo modello decisionale. Controlla account, credito e ID del modello e riprova.",
-    "serverDefault": "Configurazione predefinita del server per gli spazi senza modelli decisionali propri."
+    "serverDefault": "Configurazione predefinita del server per gli spazi senza modelli decisionali propri.",
+    "provider": "Fornitore delle decisioni",
+    "jevManaged": "Il proprietario del server gestisce la configurazione di Jev."
   }
 }

@@ -1439,6 +1439,7 @@ provider keys and never sent back to a browser. TypeSafe bills your account: US$
 tokens read, about US$ 0.0001 per routed message. Without it, see https://agentes.chat/docs/jev#without.
 
 **Decision models on your OpenRouter account.** Open **Settings → AI and usage → Decision models**.
+Choose **OpenRouter** in **Decision provider** to reveal the account and model settings.
 Choose an OpenRouter API account already connected to this workspace, set the text decision model
 (for example, `typesafe/jev-1.14` or `jaredpalmer/kev-4b`) and, optionally, an image decision model.
 Choose **Test and save**. It makes small paid test requests for Noul, Choice and Score, plus an image
@@ -1451,8 +1452,10 @@ or leave the vision field empty to turn off image judgments. Ordinary chat model
 models. Evaluate calibration before switching models that make memory or screen decisions.
 
 The account stays encrypted in its original credential row. Changes, rotations and revocations are
-picked up without a restart. If the account is removed, the panel asks you to choose another or use
-**Use the default setup**. That action clears only the decision selection, keeping the account.
+picked up without a restart. If the account is removed, choose another account or choose **Jev**
+in the provider selector. That action clears only the workspace decision selection,
+keeping the OpenRouter account and returning to the server's Jev setup. A failed switch keeps the
+working OpenRouter selection. The Jev controls appear only when Jev is selected.
 Workspace decisions and their test calls are billed to that account and recorded with its credential
 ID and OpenRouter's reported cost, separately from the server's Jev monthly total and platform cap.
 Only people who can manage the workspace's credentials can read or change these settings.

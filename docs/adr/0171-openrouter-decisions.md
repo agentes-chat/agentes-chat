@@ -10,9 +10,14 @@ connected an OpenRouter account should be able to use it without changing Docker
 
 ## Decision
 
-Add **Decision models** in Settings → AI and usage, for people with `manage_credentials`. Store a
-nullable `organization_settings.decisions` value containing a credential ID, text model ID and optional
-vision model ID. The account must be active, be OpenRouter's and belong to that workspace. Validate at
+Add **Decision models** in Settings → AI and usage, for people with `manage_credentials`. Start with a
+**Jev / OpenRouter** provider selector. Jev shows the installation's setup (managed by its owner).
+OpenRouter expands the account, model and testing controls. Selecting Jev from a saved OpenRouter
+configuration resets the workspace override only after the server confirms success. A failed reset
+keeps OpenRouter selected. Merely opening the OpenRouter form makes no provider call.
+
+Store a nullable `organization_settings.decisions` value containing a credential ID, text model ID
+and optional vision model ID. The account must be active, be OpenRouter's and belong to that workspace. Validate at
 the route and engine boundaries. Saving tests Noul, Choice and Score and, when selected, a synthetic
 image with a Box question. Failures leave the old selection in place. Reset clears only the selection.
 

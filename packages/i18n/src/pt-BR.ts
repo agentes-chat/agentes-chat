@@ -9567,6 +9567,8 @@ export const ptBR = {
     discard: "Descartar",
   },
   decisions: {
+    provider: "Provedor de decisões",
+    jevManaged: "Quem configurou o servidor gerencia o Jev.",
     serverDefault: "Padrão do servidor para espaços sem seus próprios modelos de decisão.",
     title: "Modelos de decisão",
     description:

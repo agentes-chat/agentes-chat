@@ -19322,6 +19322,8 @@
     "invalidAccount": "Wybierz aktywne konto OpenRouter z tego obszaru.",
     "invalidModel": "Wpisz prawidłowy identyfikator modelu decyzyjnego.",
     "checkFailed": "OpenRouter nie mógł zweryfikować tego modelu decyzyjnego. Sprawdź konto, saldo i identyfikator modelu, a następnie spróbuj ponownie.",
-    "serverDefault": "Domyślna konfiguracja serwera dla obszarów bez własnych modeli decyzyjnych."
+    "serverDefault": "Domyślna konfiguracja serwera dla obszarów bez własnych modeli decyzyjnych.",
+    "provider": "Dostawca decyzji",
+    "jevManaged": "Właściciel serwera zarządza konfiguracją Jev."
   }
 }

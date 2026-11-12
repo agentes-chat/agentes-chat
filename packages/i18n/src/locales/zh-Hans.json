@@ -17809,6 +17809,8 @@
     "invalidAccount": "请选择本工作区中有效的 OpenRouter 账户。",
     "invalidModel": "请输入有效的决策模型 ID。",
     "checkFailed": "OpenRouter 无法验证此决策模型。请检查账户、余额和模型 ID 后重试。",
-    "serverDefault": "供未设置自有决策模型的工作区使用的服务器默认配置。"
+    "serverDefault": "供未设置自有决策模型的工作区使用的服务器默认配置。",
+    "provider": "决策服务提供方",
+    "jevManaged": "Jev 由服务器所有者配置和管理。"
   }
 }

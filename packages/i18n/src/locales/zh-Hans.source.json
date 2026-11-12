@@ -43989,5 +43989,11 @@
   },
   "decisions.serverDefault": {
     "value": "Server default for workspaces without their own decision models."
+  },
+  "decisions.provider": {
+    "value": "Decision provider"
+  },
+  "decisions.jevManaged": {
+    "value": "The server owner manages the Jev setup."
   }
 }

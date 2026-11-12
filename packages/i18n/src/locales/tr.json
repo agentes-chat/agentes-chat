@@ -18122,6 +18122,8 @@
     "invalidAccount": "Bu çalışma alanından etkin bir OpenRouter hesabı seçin.",
     "invalidModel": "Geçerli bir karar modeli kimliği girin.",
     "checkFailed": "OpenRouter bu karar modelini doğrulayamadı. Hesabı, bakiyeyi ve model kimliğini kontrol edip tekrar deneyin.",
-    "serverDefault": "Kendi karar modeli olmayan çalışma alanları için sunucunun varsayılan ayarları."
+    "serverDefault": "Kendi karar modeli olmayan çalışma alanları için sunucunun varsayılan ayarları.",
+    "provider": "Karar sağlayıcısı",
+    "jevManaged": "Jev ayarlarını sunucu sahibi yönetir."
   }
 }

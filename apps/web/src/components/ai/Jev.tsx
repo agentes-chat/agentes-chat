@@ -213,12 +213,19 @@ export function WhoPicksSection() {
       />
       {line && <p className="who-line">{t(line.key, line.params)}</p>}
       {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
-      {admin && <DecisionModels />}
-      {jev.data && (
-        <>
-          <p className="small muted">{t("decisions.serverDefault")}</p>
-          <JevCard routing={status.data?.routing?.by} />
-        </>
+      {admin ? (
+        <DecisionModels
+          jev={
+            jev.data ? (
+              <>
+                <p className="small muted">{t("decisions.serverDefault")}</p>
+                <JevCard routing={status.data?.routing?.by} />
+              </>
+            ) : null
+          }
+        />
+      ) : (
+        jev.data && <JevCard routing={status.data?.routing?.by} />
       )}
     </Card>
   );

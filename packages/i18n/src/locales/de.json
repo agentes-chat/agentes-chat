@@ -18193,6 +18193,8 @@
     "invalidAccount": "Wähle ein aktives OpenRouter-Konto dieses Arbeitsbereichs.",
     "invalidModel": "Gib eine gültige Entscheidungsmodell-ID ein.",
     "checkFailed": "OpenRouter konnte dieses Entscheidungsmodell nicht prüfen. Prüfe Konto, Guthaben und Modell-ID und versuche es erneut.",
-    "serverDefault": "Serverstandard für Arbeitsbereiche ohne eigene Entscheidungsmodelle."
+    "serverDefault": "Serverstandard für Arbeitsbereiche ohne eigene Entscheidungsmodelle.",
+    "provider": "Anbieter für Entscheidungen",
+    "jevManaged": "Die Serverkonfiguration von Jev verwaltet der Serverinhaber."
   }
 }

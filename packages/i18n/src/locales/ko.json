@@ -17625,6 +17625,8 @@
     "invalidAccount": "이 워크스페이스의 활성 OpenRouter 계정을 선택하세요.",
     "invalidModel": "올바른 판단 모델 ID를 입력하세요.",
     "checkFailed": "OpenRouter에서 이 판단 모델을 확인하지 못했어요. 계정, 잔액, 모델 ID를 확인하고 다시 시도하세요.",
-    "serverDefault": "자체 판단 모델을 설정하지 않은 워크스페이스의 서버 기본 설정이에요."
+    "serverDefault": "자체 판단 모델을 설정하지 않은 워크스페이스의 서버 기본 설정이에요.",
+    "provider": "판단 서비스 제공업체",
+    "jevManaged": "서버 소유자가 Jev 설정을 관리해요."
   }
 }
