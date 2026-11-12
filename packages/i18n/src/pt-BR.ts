@@ -2152,6 +2152,8 @@ export const ptBR = {
     replyingTo: "Respondendo a {{name}}",
     cancelReply: "Cancelar resposta",
     jumpMissing: "Não deu para chegar a essa mensagem aqui. Ela pode ter sido apagada ou estar muito para trás.",
+    clearHistoryText: "Ocultar mensagens anteriores neste dispositivo",
+    showPreviousMessages: "Mostrar mensagens anteriores",
     emoji: "Emoji",
     uploading: "enviando…",
     uploadFailed: "não foi enviado",

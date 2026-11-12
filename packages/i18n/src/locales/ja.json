@@ -2064,6 +2064,8 @@
     "replyingTo": "{{name}} に返信中",
     "cancelReply": "返信をキャンセル",
     "jumpMissing": "ここではそのメッセージまで移動できません。削除されたか、古すぎる可能性があります。",
+    "clearHistoryText": "このデバイスで以前のメッセージを非表示にする",
+    "showPreviousMessages": "以前のメッセージを表示",
     "emoji": "絵文字",
     "uploading": "アップロード中…",
     "uploadFailed": "アップロードされませんでした",

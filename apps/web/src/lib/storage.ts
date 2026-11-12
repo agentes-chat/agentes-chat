@@ -40,6 +40,8 @@ export function storedStrings(key: string): string[] {
 }
 
 export const STORAGE_KEYS = {
+  /** Prefix by person, workspace and conversation: the messages hidden by `/clear` on this device. */
+  chatHistory: "agentes.chat.history",
   theme: "agentes.theme",
   lastOrg: "agentes.lastOrg",
   /** The last page shown in each workspace (JSON, by workspace id): where "Onde você parou" opens (ADR 0108). */

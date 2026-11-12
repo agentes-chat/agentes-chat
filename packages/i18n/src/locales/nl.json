@@ -2130,6 +2130,8 @@
     "replyingTo": "Antwoord aan {{name}}",
     "cancelReply": "Antwoord annuleren",
     "jumpMissing": "Dat bericht is hier niet te bereiken. Het is misschien verwijderd of te oud.",
+    "clearHistoryText": "Eerdere berichten op dit apparaat verbergen",
+    "showPreviousMessages": "Eerdere berichten tonen",
     "emoji": "Emoji",
     "uploading": "uploaden…",
     "uploadFailed": "is niet geüpload",

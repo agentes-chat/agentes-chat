@@ -2130,6 +2130,8 @@
     "replyingTo": "Antwort an {{name}}",
     "cancelReply": "Antwort abbrechen",
     "jumpMissing": "Diese Nachricht ist hier nicht erreichbar. Sie wurde vielleicht gelöscht oder liegt zu weit zurück.",
+    "clearHistoryText": "Frühere Nachrichten auf diesem Gerät ausblenden",
+    "showPreviousMessages": "Frühere Nachrichten anzeigen",
     "emoji": "Emoji",
     "uploading": "wird hochgeladen…",
     "uploadFailed": "wurde nicht hochgeladen",

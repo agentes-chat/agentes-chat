@@ -5252,6 +5252,12 @@
   "channel.jumpMissing": {
     "value": "Couldn't reach that message here. It may be deleted or too far back."
   },
+  "channel.clearHistoryText": {
+    "value": "Hide earlier messages on this device"
+  },
+  "channel.showPreviousMessages": {
+    "value": "Show previous messages"
+  },
   "channel.emoji": {
     "value": "Emoji"
   },

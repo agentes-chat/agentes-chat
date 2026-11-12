@@ -2197,6 +2197,8 @@
     "replyingTo": "Respondiendo a {{name}}",
     "cancelReply": "Cancelar respuesta",
     "jumpMissing": "No se pudo llegar a ese mensaje aquí. Puede que se haya borrado o esté demasiado atrás.",
+    "clearHistoryText": "Ocultar mensajes anteriores en este dispositivo",
+    "showPreviousMessages": "Mostrar mensajes anteriores",
     "emoji": "Emoji",
     "uploading": "subiendo…",
     "uploadFailed": "no se subió",

@@ -2242,6 +2242,8 @@ export const en = {
     replyingTo: "Replying to {{name}}",
     cancelReply: "Cancel reply",
     jumpMissing: "Couldn't reach that message here. It may be deleted or too far back.",
+    clearHistoryText: "Hide earlier messages on this device",
+    showPreviousMessages: "Show previous messages",
     emoji: "Emoji",
     uploading: "uploading…",
     uploadFailed: "was not uploaded",

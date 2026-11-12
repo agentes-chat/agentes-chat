@@ -2130,6 +2130,8 @@
     "replyingTo": "{{name}} yanıtlanıyor",
     "cancelReply": "Yanıtı iptal et",
     "jumpMissing": "Bu mesaja buradan ulaşılamadı. Silinmiş veya çok eski olabilir.",
+    "clearHistoryText": "Bu cihazda önceki mesajları gizle",
+    "showPreviousMessages": "Önceki mesajları göster",
     "emoji": "Emoji",
     "uploading": "yükleniyor…",
     "uploadFailed": "yüklenmedi",
