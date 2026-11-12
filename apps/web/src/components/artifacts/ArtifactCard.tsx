@@ -1,7 +1,7 @@
 import type { Artifact, ArtifactContent, ArtifactFileContent, ArtifactRef } from "@agenteschat/client";
 import { useArtifact } from "@agenteschat/client";
 import { documentStart, KIND_ICON, parseDelimited, patchCounts } from "@agenteschat/client/lib/artifacts";
-import { fileIcon, formatBytes, previewKind, previewKindOfName } from "@agenteschat/client/lib/files";
+import { fileIcon, formatBytes, isMarkdownFile, previewKind, previewKindOfName } from "@agenteschat/client/lib/files";
 import { Button, Icon, type IconName, Menu, Tip } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type CSSProperties, type ReactNode, useEffect, useId, useRef, useState } from "react";
@@ -440,7 +440,7 @@ function FileCover({ content }: { content: ArtifactFileContent }) {
     const [head = [], ...rows] = parseDelimited(text, ext === "tsv" ? "\t" : ",", COVER_ROWS + 1);
     return <CoverTable columns={head} rows={rows} />;
   }
-  if (ext === "md" || ext === "markdown")
+  if (isMarkdownFile(content.name, content.contentType))
     return <Markdown source={documentStart(text, COVER_CHARS)} excerpt className="artifact-tile__doc" />;
   const lines = text.split("\n").slice(0, COVER_LINES).join("\n");
   return CODE_EXT.has(ext) ? (
