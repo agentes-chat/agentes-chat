@@ -239,6 +239,37 @@ describe("a board's page", () => {
     expect(screen().queryByRole("button", { name: "Compartilhar" })).toBeNull();
   });
 
+  test("Update all runs Update now on every widget not already updating, for whoever edits the board", async () => {
+    const ids: Record<string, string> = {};
+    const { state } = await open(`/org/${ORG_ID}/dashboards/dash-m`, (fake) => {
+      const board = fake.addBoard({ id: "dash-m", title: "Metas", audience: "workspace" });
+      const spec = { kind: "kpi", value: 1 } as const;
+      ids.sales = fake.addWidget(board.id, { agentId: ADA_ID, title: "Vendas", spec, status: "ok" }).id;
+      ids.orders = fake.addWidget(board.id, { agentId: ADA_ID, title: "Pedidos", spec, status: "failed" }).id;
+      ids.builds = fake.addWidget(board.id, { agentId: ADA_ID, title: "Builds", spec, status: "updating" }).id;
+    });
+    const all = () => screen().getByRole("button", { name: "Atualizar todos" }) as HTMLButtonElement;
+    expect(all().disabled).toBe(false);
+    await click(all());
+    await settle(4);
+    const asked = state.calls.filter((c) => c.method === "dashboards.refreshWidget").map((c) => c.args);
+    expect(asked).toEqual([
+      [ORG_ID, ids.sales],
+      [ORG_ID, ids.orders],
+    ]);
+    // Every widget is at it now: nothing left to update.
+    expect(all().disabled).toBe(true);
+  });
+
+  test("Update all is not there for whoever only sees the board", async () => {
+    await open(`/org/${ORG_ID}/dashboards/dash-m`, (fake) => {
+      const board = fake.addBoard({ id: "dash-m", title: "Metas", audience: "workspace", canEdit: false });
+      fake.addWidget(board.id, { agentId: ADA_ID, title: "Vendas", spec: { kind: "kpi", value: 1 }, status: "ok" });
+    });
+    expect(screen().getByRole("heading", { name: "Metas", level: 1 })).toBeTruthy();
+    expect(screen().queryByRole("button", { name: "Atualizar todos" })).toBeNull();
+  });
+
   test("the board's menu: rename, pin to the top and delete", async () => {
     const s = await open(`/org/${ORG_ID}/dashboards/dash-m`, (fake) => {
       fake.addBoard({ id: "dash-m", title: "Metas", owner: { kind: "person", id: "u-walter", name: "Walter" } });

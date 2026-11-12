@@ -1,8 +1,10 @@
 import type { Dashboard } from "@agenteschat/client";
 import {
+  idleWidgets,
   useDashboard,
   useDashboards,
   useDeleteDashboard,
+  useRefreshWidgets,
   useSetHomeDashboard,
   useUpdateDashboard,
 } from "@agenteschat/client";
@@ -124,9 +126,17 @@ function Board({
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const update = useUpdateDashboard(org.id);
+  const refreshAll = useRefreshWidgets(org.id);
   const toast = useToast();
   const count = board.widgets.length;
   const empty = count === 0;
+  // "Update all": "Update now" on every widget not already updating, for whoever may refresh them (ADR 0135 §8).
+  const idle = idleWidgets(board.widgets);
+  const updateAll = () =>
+    refreshAll.mutate(
+      idle.map((w) => w.id),
+      { onError: (error) => toast.show(errorText(t, error, i18n.language), "error") },
+    );
   // The empty state's agent: who made the board when an agent did, else the first one.
   const artAgent = dir.anyAgent(board.owner?.kind === "agent" ? board.owner.id : (dir.agents[0]?.id ?? ""));
   const setPinned = (pinned: boolean) =>
@@ -154,6 +164,17 @@ function Board({
           meta={board.about || t("dashboards.subtitle")}
           actions={
             <>
+              {board.canEdit && !empty && (
+                <Button
+                  size="sm"
+                  icon="refresh"
+                  disabled={idle.length === 0}
+                  loading={refreshAll.isPending}
+                  onClick={updateAll}
+                >
+                  {t("dashboards.updateAll")}
+                </Button>
+              )}
               {board.canManage && !isHome && (
                 <Button
                   size="sm"

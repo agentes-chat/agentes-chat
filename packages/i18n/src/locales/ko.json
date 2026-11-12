@@ -16812,6 +16812,7 @@
     "stopOnHome": "홈에서 빼기",
     "onHome": "홈에 표시 중",
     "onHomeDone": "이제 홈에 이 대시보드가 표시됩니다",
+    "updateAll": "모두 업데이트",
     "groups": {
       "workspace": "워크스페이스",
       "workspaceHint": "모두가 봐요",

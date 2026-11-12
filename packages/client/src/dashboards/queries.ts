@@ -394,6 +394,24 @@ export function useRefreshWidget(orgId: string) {
   });
 }
 
+/**
+ * "Update all" on a board: "Update now" on each of these widgets at once. One refused doesn't stop the others; the
+ * first refusal is thrown once every one has answered, so the board says why.
+ */
+export function useRefreshWidgets(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { silent: true },
+    mutationFn: async (widgetIds: readonly string[]) => {
+      const results = await Promise.allSettled(widgetIds.map((id) => api.dashboards.refreshWidget(orgId, id)));
+      for (const r of results) if (r.status === "fulfilled") cacheWidget(qc, orgId, r.value);
+      const refused = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+      if (refused) throw refused.reason;
+    },
+  });
+}
+
 /** "Ask for a change" (the widget panel's composer). */
 export function useAskWidgetChange(orgId: string) {
   const api = useApi();

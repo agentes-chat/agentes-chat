@@ -17301,6 +17301,7 @@
     "stopOnHome": "Ana sayfadan kaldır",
     "onHome": "Ana sayfada",
     "onHomeDone": "Ana sayfa artık bu panoyu gösteriyor",
+    "updateAll": "Tümünü güncelle",
     "groups": {
       "workspace": "Çalışma alanı",
       "workspaceHint": "herkes görür",

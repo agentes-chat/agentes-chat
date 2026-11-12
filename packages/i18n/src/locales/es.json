@@ -17866,6 +17866,7 @@
     "stopOnHome": "Quitar de Inicio",
     "onHome": "En Inicio",
     "onHomeDone": "Inicio ahora muestra este panel",
+    "updateAll": "Actualizar todos",
     "groups": {
       "workspace": "Espacio de trabajo",
       "workspaceHint": "todos lo ven",

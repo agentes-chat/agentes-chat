@@ -17372,6 +17372,7 @@
     "stopOnHome": "Von Start entfernen",
     "onHome": "Auf Start",
     "onHomeDone": "Start zeigt jetzt dieses Dashboard",
+    "updateAll": "Alle aktualisieren",
     "groups": {
       "workspace": "Workspace",
       "workspaceHint": "alle sehen es",

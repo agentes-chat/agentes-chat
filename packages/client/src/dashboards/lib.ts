@@ -248,6 +248,10 @@ export function widgetCostLine(
 export const busyWidgets = (widgets: readonly Widget[]) =>
   widgets.filter((w) => w.status === "updating" || w.status === "building");
 
+/** What "Update all" runs on a board: every widget not already at it (a draft is no board's). */
+export const idleWidgets = (widgets: readonly Widget[]) =>
+  widgets.filter((w) => !w.draft && w.status !== "updating" && w.status !== "building");
+
 /** A build that takes longer than this says it is still at it. */
 export const WIDGET_STILL_MS = 45_000;
 

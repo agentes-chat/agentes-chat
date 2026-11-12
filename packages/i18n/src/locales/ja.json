@@ -16820,6 +16820,7 @@
     "stopOnHome": "ホームから外す",
     "onHome": "ホームに表示中",
     "onHomeDone": "ホームにこのダッシュボードを表示します",
+    "updateAll": "すべて更新",
     "groups": {
       "workspace": "ワークスペース",
       "workspaceHint": "全員が見られます",

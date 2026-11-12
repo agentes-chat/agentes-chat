@@ -42124,6 +42124,9 @@
   "dashboards.onHomeDone": {
     "value": "Home now shows this dashboard"
   },
+  "dashboards.updateAll": {
+    "value": "Update all"
+  },
   "dashboards.groups.workspace": {
     "value": "Workspace"
   },

@@ -18009,6 +18009,7 @@
     "stopOnHome": "Retirer de l'accueil",
     "onHome": "Sur l'accueil",
     "onHomeDone": "L'accueil affiche maintenant ce tableau de bord",
+    "updateAll": "Tout mettre à jour",
     "groups": {
       "workspace": "Espace de travail",
       "workspaceHint": "visible par tous",
