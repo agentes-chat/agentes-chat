@@ -8,6 +8,22 @@ import type { Widen } from "./widen";
  */
 export const en = {
   sso: {
+    nameHelp: "The name people see on the sign-in button, for example Company SSO.",
+    issuerHelp:
+      "Copy the issuer or OpenID configuration URL from your identity provider. We use it to find the sign-in settings.",
+    clientIdHelp: "Copy the client ID from the web application you created at your identity provider.",
+    secretHelp: "Copy the client secret from that same application. It stays encrypted on the server.",
+    scopeSignIn: "Sign in",
+    scopeProfile: "Name",
+    scopeEmail: "Email address",
+    scopeHelp: "Only sign-in is required. Your provider must still return a verified email.",
+    noScopes:
+      "This provider doesn't publish a scope list. Keep the defaults, or add a scope named in its setup instructions.",
+    customScope: "Add a custom scope (optional)",
+    invalidScope: "Enter one scope name, without spaces or quotation marks.",
+    addScope: "Add scope",
+    checkProvider: "Check provider",
+    providerReady: "Provider found",
     trust:
       "This provider can sign in to your whole account, including other workspaces. Link only a provider you trust.",
     title: "Single sign-on",

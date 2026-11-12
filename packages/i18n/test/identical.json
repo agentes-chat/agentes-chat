@@ -926,6 +926,7 @@
       "devices.armBuild"
     ],
     "de": [
+      "sso.scopeProfile",
       "devices.iphone.steps.account",
       "devices.workspace",
       "devices.cpus",

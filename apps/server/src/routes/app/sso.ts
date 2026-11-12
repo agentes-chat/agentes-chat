@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { SSO_REQUIRED_SCOPES, SSO_SCOPE_PATTERN } from "@agenteschat/client/lib/sso";
 import { and, eq, ne, schema } from "@agenteschat/db";
 import {
   ConflictError,
@@ -6,6 +7,7 @@ import {
   recordAudit,
   requirePermission,
   sealSecret,
+  TooManyError,
   ValidationError,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
@@ -31,6 +33,7 @@ export function ssoRoutes(deps: AppDeps) {
   const { db, config, auth, adapters } = deps;
   const app = createAppRouter(deps);
   app.use("/organizations/:orgId/sso", requireSession(auth));
+  app.use("/organizations/:orgId/sso/*", requireSession(auth));
   const stored = async (orgId: string) =>
     (await db.select().from(schema.oidcProviders).where(eq(schema.oidcProviders.orgId, orgId)))[0];
   const view = async (orgId: string, userId: string) => {
@@ -82,6 +85,30 @@ export function ssoRoutes(deps: AppDeps) {
       responses: { 200: json(View), ...errors },
     }),
     async (c) => c.json(await view(c.req.valid("param").orgId, c.get("user").id), 200),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/sso/discover",
+      tags: ["Account"],
+      summary: "Check an OIDC provider and list the scopes it advertises (owner)",
+      security,
+      request: { params: OrgParams, body: body(z.object({ issuer: z.url().max(2048) })) },
+      responses: { 200: json(z.object({ issuer: z.string(), scopes: z.array(z.string()) })), ...errors },
+    }),
+    async (c) => {
+      const userId = c.get("user").id;
+      const member = await requirePermission(db, userId, c.req.valid("param").orgId, "read");
+      if (member.role !== "owner") throw new ForbiddenError("Only the workspace owner can configure SSO.");
+      if (!(await adapters.rateLimiter.consume(`sso-discover:${userId}`, { limit: 10, windowMs: 60_000 })).allowed)
+        throw new TooManyError("Try again in a minute.");
+      const metadata = await discoverSso(c.req.valid("json").issuer, ssoHttp(config, deps.extras?.http));
+      const scopes = [...new Set(metadata.scopes_supported ?? [])]
+        .filter((scope) => scope.length <= 200 && SSO_SCOPE_PATTERN.test(scope))
+        .slice(0, 100);
+      return c.json({ issuer: metadata.issuer, scopes }, 200);
+    },
   );
 
   app.openapi(
@@ -142,7 +169,7 @@ export function ssoRoutes(deps: AppDeps) {
         name: input.name,
         issuer: metadata.issuer,
         clientId: input.clientId,
-        scopes: [...new Set(["openid", "profile", "email", ...input.scopes])],
+        scopes: [...new Set([...SSO_REQUIRED_SCOPES, ...input.scopes])],
         enabled: input.enabled,
         ciphertext: sealed.ciphertext,
         wrappedDataKey: sealed.wrappedDataKey,

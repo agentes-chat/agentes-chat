@@ -407,6 +407,7 @@ export interface ApiClient {
   };
   account: {
     sso(orgId: string): Promise<import("./types").SsoSettings>;
+    discoverSso(orgId: string, issuer: string): Promise<{ issuer: string; scopes: string[] }>;
     saveSso(orgId: string, input: import("./types").SsoInput): Promise<import("./types").SsoSettings>;
     ssoProvider(id: string): Promise<{ id: `sso-${string}`; name: string }>;
 

@@ -28,6 +28,7 @@ function identityProvider() {
         userinfo_endpoint: `${issuer}/userinfo`,
         id_token_signing_alg_values_supported: ["RS256"],
         token_endpoint_auth_methods_supported: ["client_secret_post"],
+        scopes_supported: ["openid", "profile", "email", "groups", "groups", "bad scope", ""],
       });
     if (url === `${issuer}/keys`) return Response.json({ keys: [jwk] });
     if (url === `${issuer}/userinfo`) return Response.json(userinfo);
@@ -141,7 +142,23 @@ test("owner configures SSO through UI API; secrets are sealed, read-only to memb
     json: { name: "Work SSO", issuer, clientId: "client", scopes: ["openid"], enabled: true },
   });
   expect(edited.status).toBe(200);
+  expect(await edited.json()).toMatchObject({ provider: { scopes: ["openid"] } });
+  expect((await s.start(s.owner)).searchParams.get("scope")).toBe("openid");
   expect((await t.db.select().from(schema.oidcProviders))[0]?.ciphertext).toBe(stored?.ciphertext);
+  expect(
+    (
+      await s.owner(s.configPath, {
+        method: "PUT",
+        json: {
+          name: "Work SSO",
+          issuer,
+          clientId: "client",
+          scopes: Array.from({ length: 20 }, (_, i) => `extra:${i}`),
+          enabled: true,
+        },
+      })
+    ).status,
+  ).toBe(400);
   const stranger = browser(t);
   await signUp(stranger, "stranger@example.com");
   expect((await stranger(s.configPath)).status).toBe(403);
@@ -154,6 +171,29 @@ test("owner configures SSO through UI API; secrets are sealed, read-only to memb
     ).status,
   ).toBe(403);
   expect((await browser(t)(`/api/app/sso/${s.provider}`)).status).toBe(200);
+});
+
+test("provider discovery gives owners a safe, deduplicated scope list without saving configuration", async () => {
+  const s = await setup();
+  const before = await t.db.select().from(schema.oidcProviders);
+  const result = await s.owner(`${s.configPath}/discover`, {
+    json: { issuer: `${issuer}/.well-known/openid-configuration` },
+  });
+  expect(result.status).toBe(200);
+  expect(await result.json()).toEqual({ issuer, scopes: ["openid", "profile", "email", "groups"] });
+  expect(await t.db.select().from(schema.oidcProviders)).toEqual(before);
+  expect((await browser(t)(`${s.configPath}/discover`, { json: { issuer } })).status).toBe(401);
+  const outsider = browser(t);
+  await signUp(outsider, "outsider@example.com");
+  expect((await outsider(`${s.configPath}/discover`, { json: { issuer } })).status).toBe(403);
+  expect((await s.owner(`${s.configPath}/discover`, { json: { issuer: "http://localhost" } })).status).toBe(400);
+});
+
+test("provider discovery is rate limited before contacting the identity provider", async () => {
+  const s = await setup();
+  for (let i = 0; i < 10; i++)
+    expect((await s.owner(`${s.configPath}/discover`, { json: { issuer } })).status).toBe(200);
+  expect((await s.owner(`${s.configPath}/discover`, { json: { issuer } })).status).toBe(429);
 });
 
 test("explicit linking preserves account, memberships and roles; later OIDC login and local logout work", async () => {
@@ -251,6 +291,13 @@ test("discovery rejects a different issuer and HTTPS is required", async () => {
 
 test("the same UI configuration and explicit login work on agentes.chat Cloud", async () => {
   const s = await setup({ PUBLIC_URL: "https://app.agentes.chat" });
+  const edited = await s.owner(s.configPath, {
+    method: "PUT",
+    json: { name: "Company SSO", issuer, clientId: "client", scopes: [], enabled: true },
+  });
+  expect(edited.status).toBe(200);
+  expect(await edited.json()).toMatchObject({ provider: { scopes: ["openid"] } });
+  expect((await s.start(s.owner)).searchParams.get("scope")).toBe("openid");
   expect((await s.finish(s.owner, true)).headers.get("location")).toBe("/");
   const at = s.makeBrowser();
   expect((await s.finish(at)).headers.get("location")).toBe("/");

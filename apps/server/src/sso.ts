@@ -1,4 +1,5 @@
 import type { KeyWrapper } from "@agenteschat/adapters";
+import { SSO_REQUIRED_SCOPES, SSO_SCOPE_PATTERN } from "@agenteschat/client/lib/sso";
 import type { Config } from "@agenteschat/config";
 import { and, type Database, eq, gt, isNull, schema } from "@agenteschat/db";
 import {
@@ -29,13 +30,9 @@ export const SsoInput = z.object({
   clientId: z.string().trim().min(1).max(512),
   clientSecret: z.string().min(1).max(4096).optional(),
   scopes: z
-    .array(
-      z
-        .string()
-        .regex(/^[\x21\x23-\x5b\x5d-\x7e]+$/)
-        .max(200),
-    )
-    .max(20),
+    .array(z.string().regex(SSO_SCOPE_PATTERN).max(200))
+    .max(20)
+    .refine((scopes) => new Set([...SSO_REQUIRED_SCOPES, ...scopes]).size <= 20, "Use at most 20 scopes."),
   enabled: z.boolean(),
 });
 const HttpsUrl = z.url().refine((value) => {
@@ -50,6 +47,7 @@ const Discovery = z.object({
   userinfo_endpoint: HttpsUrl.optional(),
   id_token_signing_alg_values_supported: z.array(z.string()),
   token_endpoint_auth_methods_supported: z.array(z.string()).optional(),
+  scopes_supported: z.array(z.string()).optional().catch(undefined),
 });
 type SsoDeps = { db: Database; config: Config; keyWrappers: KeyWrapper[]; http?: typeof fetch };
 
@@ -139,7 +137,7 @@ export async function ssoProvider(deps: SsoDeps, providerId: string): Promise<OA
         codeVerifier: data.codeVerifier,
         nonce: data.idTokenNonce,
         redirectURI: data.redirectURI,
-        scopes: [...new Set(["openid", "profile", "email", ...row.scopes])],
+        scopes: [...new Set([...SSO_REQUIRED_SCOPES, ...row.scopes])],
       }),
     validateAuthorizationCode: async (data) => {
       const state = await getOAuthState();

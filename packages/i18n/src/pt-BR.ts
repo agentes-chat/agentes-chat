@@ -8,6 +8,22 @@ import type { LocaleStrings } from "./plurals";
  */
 export const ptBR = {
   sso: {
+    nameHelp: "O nome que aparece no botão de acesso, por exemplo SSO da empresa.",
+    issuerHelp:
+      "Copie a URL do emissor ou da configuração OpenID do seu provedor de identidade. Ela permite encontrar as configurações de acesso.",
+    clientIdHelp: "Copie o ID do cliente do aplicativo web que você criou no seu provedor de identidade.",
+    secretHelp: "Copie o segredo do cliente desse mesmo aplicativo. Ele fica criptografado no servidor.",
+    scopeSignIn: "Entrar",
+    scopeProfile: "Nome",
+    scopeEmail: "Endereço de e-mail",
+    scopeHelp: "Só o acesso é obrigatório. O provedor ainda precisa retornar um e-mail verificado.",
+    noScopes:
+      "Este provedor não publica uma lista de escopos. Mantenha os padrões ou adicione um escopo indicado nas instruções dele.",
+    customScope: "Adicionar um escopo personalizado (opcional)",
+    invalidScope: "Digite um único nome de escopo, sem espaços ou aspas.",
+    addScope: "Adicionar escopo",
+    checkProvider: "Verificar provedor",
+    providerReady: "Provedor encontrado",
     trust:
       "Este provedor pode entrar na sua conta inteira, incluindo outros workspaces. Vincule apenas um provedor em que você confia.",
     title: "Login único",

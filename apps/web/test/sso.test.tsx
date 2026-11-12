@@ -39,7 +39,7 @@ for (const cloud of [false, true])
     let saved: unknown;
     api.account.saveSso = async (orgId, input) => {
       saved = { orgId, input };
-      return { ...configured, provider: { ...configured.provider, enabled: input.enabled } };
+      return { ...configured, provider: { ...configured.provider, enabled: input.enabled, scopes: input.scopes } };
     };
     const rendered = await renderPage(<SsoSettingsCard />, { api, org: true });
     await showIn(rendered.services, "en");
@@ -52,6 +52,10 @@ for (const cloud of [false, true])
     await change("Issuer or discovery URL", "https://id.example.com");
     await change("Client ID", "acme-client");
     await change("Client secret", "synthetic-secret");
+    expect(screen().getByText("Sign in (openid)")).toBeTruthy();
+    expect(screen().queryByRole("button", { name: /Remove.*openid/ })).toBeNull();
+    await act(async () => fireEvent.click(screen().getByRole("button", { name: "Remove Name (profile)" })));
+    await act(async () => fireEvent.click(screen().getByRole("button", { name: "Remove Email address (email)" })));
     await act(async () =>
       fireEvent.submit(screen().getByRole("button", { name: "Save" }).closest("form") as HTMLFormElement),
     );
@@ -65,6 +69,7 @@ for (const cloud of [false, true])
         clientId: "acme-client",
         clientSecret: "synthetic-secret",
         enabled: true,
+        scopes: ["openid"],
       },
     });
     expect((screen().getByLabelText("Client secret") as HTMLInputElement).value).toBe("");
@@ -136,4 +141,99 @@ test("a shared sign-in link uses its configured name and starts the standard soc
   await settle();
   await act(async () => fireEvent.click(screen().getByRole("button", { name: "Continue with Acme SSO" })));
   expect(auth.calls.find((call) => call.method === "signInSocial")?.args.slice(0, 2)).toEqual([providerId, "/"]);
+});
+
+test("scopes have explained defaults, provider choices and individually added custom values", async () => {
+  const api = createFakeApi(seedState());
+  api.account.sso = async () => configured;
+  let requested: unknown;
+  api.account.discoverSso = async (orgId, issuer) => {
+    requested = { orgId, issuer };
+    return { issuer, scopes: ["openid", "profile", "email", "groups"] };
+  };
+  let saved: unknown;
+  api.account.saveSso = async (_orgId, input) => {
+    saved = input;
+    return { ...configured, provider: { ...configured.provider, scopes: input.scopes } };
+  };
+  const rendered = await renderPage(<SsoSettingsCard />, { api, org: true });
+  await showIn(rendered.services, "en");
+  expect(screen().getByText("Sign in (openid)")).toBeTruthy();
+  expect(screen().getByRole("button", { name: "Remove Name (profile)" })).toBeTruthy();
+  expect(screen().getByRole("button", { name: "Remove Email address (email)" })).toBeTruthy();
+  expect(screen().queryByRole("checkbox")).toBeNull();
+  expect(screen().queryByLabelText("Add a custom scope (optional)")).toBeNull();
+  expect(screen().queryByRole("textbox", { name: "Scopes" })).toBeNull();
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: "Check provider" })));
+  await settle();
+  expect(requested).toEqual({ orgId: ORG_ID, issuer: "https://id.example.com" });
+  await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Add scope" })));
+  await settle();
+  await act(async () => fireEvent.click(screen().getByRole("option", { name: /^groups$/ })));
+  expect(screen().getByRole("button", { name: "Remove groups" })).toBeTruthy();
+  await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Add scope" })));
+  await act(async () => fireEvent.click(screen().getByRole("option", { name: "Add a custom scope (optional)" })));
+  await change("Add a custom scope (optional)", "bad scope");
+  expect(screen().getByRole("button", { name: "Add scope" }).hasAttribute("disabled")).toBe(true);
+  await change("Add a custom scope (optional)", "custom:teams");
+  await act(async () => fireEvent.keyDown(screen().getByLabelText("Add a custom scope (optional)"), { key: "Enter" }));
+  expect(saved).toBeUndefined();
+  expect(screen().getByRole("button", { name: "Remove custom:teams" })).toBeTruthy();
+  expect(screen().queryByLabelText("Add a custom scope (optional)")).toBeNull();
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: "Remove groups" })));
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: "Remove Name (profile)" })));
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: "Remove Email address (email)" })));
+  await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Add scope" })));
+  await act(async () => fireEvent.click(screen().getByRole("option", { name: "Name (profile)" })));
+  await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Add scope" })));
+  await act(async () => fireEvent.click(screen().getByRole("option", { name: "Add a custom scope (optional)" })));
+  expect(screen().getByLabelText("Add a custom scope (optional)")).toBeTruthy();
+  await act(async () =>
+    fireEvent.submit(screen().getByRole("button", { name: "Save" }).closest("form") as HTMLFormElement),
+  );
+  await settle();
+  expect(saved).toMatchObject({ scopes: ["openid", "custom:teams", "profile"] });
+});
+
+test("provider changes never display stale scope choices from a slow discovery request", async () => {
+  const api = createFakeApi(seedState());
+  let finish: (data: { issuer: string; scopes: string[] }) => void = () => {};
+  api.account.discoverSso = () =>
+    new Promise((resolve) => {
+      finish = resolve;
+    });
+  const rendered = await renderPage(<SsoSettingsCard />, { api, org: true });
+  await showIn(rendered.services, "en");
+  await act(async () => fireEvent.click(screen().getByRole("switch", { name: "Single sign-on" })));
+  await change("Issuer or discovery URL", "https://old.example.com");
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: "Check provider" })));
+  await change("Issuer or discovery URL", "https://new.example.com");
+  await act(async () => finish({ issuer: "https://old.example.com", scopes: ["groups"] }));
+  await settle();
+  expect((screen().getByLabelText("Issuer or discovery URL") as HTMLInputElement).value).toBe(
+    "https://new.example.com",
+  );
+  expect(screen().queryByText("Provider found")).toBeNull();
+  await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Add scope" })));
+  expect(screen().queryByRole("option", { name: /^groups$/ })).toBeNull();
+});
+
+test("a provider without a scope list keeps custom entry, duplicate prevention and the scope limit", async () => {
+  const api = createFakeApi(seedState());
+  const scopes = ["openid", "profile", "email", ...Array.from({ length: 17 }, (_, i) => `extra:${i}`)];
+  api.account.sso = async () => ({ ...configured, provider: { ...configured.provider, scopes } });
+  api.account.discoverSso = async (_orgId, issuer) => ({ issuer, scopes: [] });
+  const rendered = await renderPage(<SsoSettingsCard />, { api, org: true });
+  await showIn(rendered.services, "en");
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: "Check provider" })));
+  await settle();
+  expect(screen().getByText(/doesn't publish a scope list/)).toBeTruthy();
+  expect(screen().getByRole("combobox", { name: "Add scope" }).hasAttribute("disabled")).toBe(true);
+  await act(async () => fireEvent.click(screen().getByRole("button", { name: "Remove extra:0" })));
+  await act(async () => fireEvent.click(screen().getByRole("combobox", { name: "Add scope" })));
+  await act(async () => fireEvent.click(screen().getByRole("option", { name: "Add a custom scope (optional)" })));
+  await change("Add a custom scope (optional)", "another");
+  expect(screen().getByRole("button", { name: "Add scope" }).hasAttribute("disabled")).toBe(false);
+  await change("Add a custom scope (optional)", "email");
+  expect(screen().getByRole("button", { name: "Add scope" }).hasAttribute("disabled")).toBe(true);
 });

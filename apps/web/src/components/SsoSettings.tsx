@@ -1,13 +1,16 @@
 import type { SsoInput, SsoSettings } from "@agenteschat/client";
 import { errorCode, errorText } from "@agenteschat/client/lib/errors";
-import { Alert, Button, Card, CardHeader, Field, Input, Switch } from "@agenteschat/ui";
+import { SSO_DEFAULT_SCOPES } from "@agenteschat/client/lib/sso";
+import { AffixInput, Alert, Button, Card, CardHeader, Field, Input, Switch } from "@agenteschat/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { useAuth } from "@/auth/context";
 import { useSignInAgain } from "@/hooks/useSignInAgain";
+import { useCopied } from "./invite/copied";
 import { useOrg } from "./org-context";
+import { SsoScopes } from "./SsoScopes";
 
 const ssoKey = (orgId: string) => ["sso", orgId] as const;
 function useSso() {
@@ -39,11 +42,17 @@ function SsoForm({ data }: { data: SsoSettings }) {
   const { org, me } = useOrg();
   const signInAgain = useSignInAgain(me.user.email);
   const qc = useQueryClient();
+  const [copied, copy] = useCopied();
   const [form, setForm] = useState<SsoInput>(
-    data.provider ?? { name: "SSO", issuer: "", clientId: "", scopes: ["openid", "profile", "email"], enabled: false },
+    data.provider ?? { name: "SSO", issuer: "", clientId: "", scopes: [...SSO_DEFAULT_SCOPES], enabled: false },
   );
   const [secret, setSecret] = useState("");
-  const [scopes, setScopes] = useState(form.scopes.join(" "));
+  const discover = useMutation({
+    mutationFn: (issuer: string) => api.account.discoverSso(org.id, issuer),
+    onSuccess: (next, requested) =>
+      setForm((current) => (current.issuer === requested ? { ...current, issuer: next.issuer } : current)),
+  });
+  const discovery = discover.data?.issuer === form.issuer ? discover.data : undefined;
   const save = useMutation({
     mutationFn: (input: SsoInput) => api.account.saveSso(org.id, input),
     onSuccess: (next) => {
@@ -51,6 +60,7 @@ function SsoForm({ data }: { data: SsoSettings }) {
       qc.setQueryData(ssoKey(org.id), next);
     },
   });
+  const busy = save.isPending;
   const toggle = (enabled: boolean) => {
     setForm({ ...form, enabled });
     if (data.provider)
@@ -62,13 +72,19 @@ function SsoForm({ data }: { data: SsoSettings }) {
       );
   };
   const field = (key: "name" | "issuer" | "clientId") => (
-    <Field label={t(`sso.${key}`)}>
+    <Field
+      label={t(`sso.${key}`)}
+      hint={{ name: t("common.about", { label: t(`sso.${key}`) }), text: t(`sso.${key}Help`) }}
+    >
       <Input
         required
         value={form[key]}
         maxLength={key === "name" ? 80 : key === "issuer" ? 2048 : 512}
-        disabled={save.isPending || (key === "issuer" && Boolean(data.provider))}
-        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+        disabled={busy || (key === "issuer" && Boolean(data.provider))}
+        onChange={(e) => {
+          if (key === "issuer") discover.reset();
+          setForm({ ...form, [key]: e.target.value });
+        }}
       />
     </Field>
   );
@@ -98,7 +114,6 @@ function SsoForm({ data }: { data: SsoSettings }) {
             e.preventDefault();
             save.mutate({
               ...form,
-              scopes: scopes.split(/\s+/).filter(Boolean),
               ...(secret ? { clientSecret: secret } : {}),
             });
           }}
@@ -106,8 +121,24 @@ function SsoForm({ data }: { data: SsoSettings }) {
           <p>{t("sso.access")}</p>
           {field("name")}
           {field("issuer")}
+          <div className="ac-form__actions">
+            <Button
+              type="button"
+              disabled={busy || !form.issuer}
+              loading={discover.isPending}
+              onClick={() => discover.mutate(form.issuer)}
+            >
+              {t("sso.checkProvider")}
+            </Button>
+            {discovery && <span role="status">{t("sso.providerReady")}</span>}
+          </div>
+          {discover.error && <Alert tone="danger">{errorText(t, discover.error)}</Alert>}
           {field("clientId")}
-          <Field label={t("sso.secret")} example={data.provider ? t("sso.keepSecret") : undefined}>
+          <Field
+            label={t("sso.secret")}
+            hint={{ name: t("common.about", { label: t("sso.secret") }), text: t("sso.secretHelp") }}
+            example={data.provider ? t("sso.keepSecret") : undefined}
+          >
             <Input
               type="password"
               disabled={save.isPending}
@@ -118,16 +149,47 @@ function SsoForm({ data }: { data: SsoSettings }) {
               onChange={(e) => setSecret(e.target.value)}
             />
           </Field>
-          <Field label={t("sso.scopes")}>
-            <Input disabled={save.isPending} value={scopes} onChange={(e) => setScopes(e.target.value)} />
-          </Field>
+          <SsoScopes
+            value={form.scopes}
+            onChange={(scopes) => setForm({ ...form, scopes })}
+            supported={discovery?.scopes}
+            disabled={busy}
+          />
           {data.provider ? (
             <>
               <Field label={t("sso.callback")}>
-                <Input readOnly value={data.callbackUrl} onFocus={(e) => e.target.select()} />
+                <AffixInput
+                  readOnly
+                  value={data.callbackUrl}
+                  onFocus={(e) => e.target.select()}
+                  action={
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      icon={copied === "callback" ? "check" : "copy"}
+                      aria-label={t("common.copy")}
+                      onClick={() => copy("callback", data.callbackUrl)}
+                    />
+                  }
+                />
               </Field>
               <Field label={t("sso.loginLink")}>
-                <Input readOnly value={data.loginUrl ?? ""} onFocus={(e) => e.target.select()} />
+                <AffixInput
+                  readOnly
+                  value={data.loginUrl ?? ""}
+                  onFocus={(e) => e.target.select()}
+                  action={
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      icon={copied === "login" ? "check" : "copy"}
+                      aria-label={t("common.copy")}
+                      onClick={() => copy("login", data.loginUrl ?? "")}
+                    />
+                  }
+                />
               </Field>
               {data.provider.enabled && (
                 <a href={data.loginUrl ?? ""} target="_blank" rel="noreferrer">

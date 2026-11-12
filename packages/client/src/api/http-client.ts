@@ -562,6 +562,10 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     account: {
       sso: (orgId) => request<import("./types").SsoSettings>(`/api/app/organizations/${orgId}/sso`),
+      discoverSso: (orgId, issuer) =>
+        request<{ issuer: string; scopes: string[] }>(`/api/app/organizations/${orgId}/sso/discover`, {
+          json: { issuer },
+        }),
       saveSso: (orgId, input) =>
         request<import("./types").SsoSettings>(`/api/app/organizations/${orgId}/sso`, { method: "PUT", json: input }),
       ssoProvider: (id) => request<{ id: `sso-${string}`; name: string }>(`/api/app/sso/${encodeURIComponent(id)}`),
