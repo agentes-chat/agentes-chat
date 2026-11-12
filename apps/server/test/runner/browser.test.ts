@@ -785,6 +785,86 @@ describe("a person takes control while the agent's pointer and keys are going", 
     expect((await going).error).toContain("A person took control");
     await control;
   });
+
+  test("a read hung on the page stops, what the agent queued never runs, and the person's input reaches the page", async () => {
+    const t = setup({ inputTimeoutMs: 200, ...(posix ? {} : { startPageDirectory: tempDir() }) });
+    // The daemon runs one command at a time, the relay's too, and finishes one whose client is gone: while the
+    // agent's read holds it, the person's input waits there.
+    let held: Promise<void> | null = null;
+    const relay = fakeRelay();
+    const daemon = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      async fetch(req) {
+        if (held) await held;
+        return fetch(`http://127.0.0.1:${relay.port}${new URL(req.url).pathname}`, {
+          method: "POST",
+          headers: req.headers,
+          body: await req.text(),
+        });
+      },
+    });
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      t.page({ port: daemon.port, hang: { command: "get", ms: 20_000 } });
+      await t.manager.streamStart(dev, "watch");
+      const before = t.logged().length;
+      const startedAt = performance.now();
+      // A batch: the read, then a look that tolerates failing.
+      const reading = t.manager.batch(dev, await t.folder(), {
+        op: "browser.batch",
+        commands: [
+          { command: "get", args: ["text", "@e3"], timeoutSeconds: 30 },
+          { command: "snapshot", args: [], timeoutSeconds: 30, tolerate: true },
+        ],
+      });
+      await waitFor(() =>
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("get")),
+      );
+      // The daemon finishes the cut-off read later than the relay's own timeout.
+      let release = () => {};
+      held = new Promise<void>((r) => {
+        release = () => {
+          held = null;
+          r();
+        };
+      });
+      setTimeout(() => release(), 600);
+      await t.manager.streamStart(dev, "control");
+      const { answers } = await reading;
+      expect(answers).toHaveLength(1);
+      expect(answers[0]?.error).toContain("A person took control");
+      expect(performance.now() - startedAt).toBeLessThan(5_000);
+      // The look after it never reached the browser.
+      expect(
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("snapshot")),
+      ).toBe(false);
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(relay.received.map((r) => r.body.type)).toEqual(["mousePressed", "mouseReleased"]);
+      // Once the daemon answered, an input that gets no answer fails at the relay's own timeout again.
+      held = new Promise<void>(() => {});
+      const waited = performance.now();
+      expect(await t.manager.input(dev, [{ kind: "key", type: "keyDown", key: "Enter" }])).toEqual({
+        accepted: 0,
+        failed: 1,
+      });
+      expect(performance.now() - waited).toBeLessThan(2_000);
+      held = null;
+    } finally {
+      daemon.stop(true);
+      relay.server.stop(true);
+    }
+  });
 });
 
 test("after a hover the pointer goes straight to the next element, and curves again once it left", async () => {

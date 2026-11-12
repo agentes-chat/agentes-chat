@@ -10,6 +10,7 @@
 // `get box <sel>` answers `boxes[sel]`; a script sees `viewport` as `window.innerWidth`/`innerHeight` and
 // `hit` (`{ tag, type, box: [left, top, right, bottom], ref }`) at any `document.elementFromPoint`; a
 // `mouse down` focuses that `ref`; `frames` (`[[width, height]]`) are the page's iframes.
+// `hang`: `{ command, ms }` makes that command take that long.
 // `typingMs`: a batch that presses keys or moves the pointer takes that long (a person can step in meanwhile).
 import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 
@@ -130,6 +131,8 @@ const markedField = (selector) => {
 
 // `delayMs`: every command takes that long (a page busy under it).
 if (state.delayMs) await new Promise((resolve) => setTimeout(resolve, state.delayMs));
+// `hang`: `{ command, ms }`: that command takes that long (an element the daemon waits for).
+if (state.hang && rest[0] === state.hang.command) await new Promise((resolve) => setTimeout(resolve, state.hang.ms));
 
 const [command, ...args] = rest;
 switch (command) {
