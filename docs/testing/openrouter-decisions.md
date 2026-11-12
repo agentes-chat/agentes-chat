@@ -20,11 +20,22 @@ and credential attribution, platform-cap separation, reset and the existing Type
 
 ## Screenshots
 
-### Choose an existing account
+### Full window — account selection
+
+The dark-theme views below include the workspace sidebar, Settings navigation and decision controls
+at a 1440 × 1000 viewport, so the feature can be reviewed in the surrounding app.
+
+![Full application window showing decision model setup](../images/openrouter-decisions-wide-setup.png)
+
+### Full window — saved selection
+
+![Full application window after saving the OpenRouter decision models](../images/openrouter-decisions-wide-saved.png)
+
+### Close-up — account selection
 
 ![Decision model setup using an existing OpenRouter account](../images/openrouter-decisions-setup.png)
 
-### Saved selection after reload
+### Close-up — saved selection after reload
 
 ![Saved Kev text model and Jev vision model](../images/openrouter-decisions-saved.png)
 
