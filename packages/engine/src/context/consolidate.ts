@@ -379,16 +379,23 @@ export async function enqueueIdleReflections(deps: ContextDeps, now = new Date()
     .having(sql`max(${messages.createdAt}) < ${idleBefore.toISOString()}::timestamptz and count(*) >= 2`)
     .limit(500);
   let queued = 0;
+  // Every thread's state in one read: most of a sweep's threads are already covered, and come back on each sweep for
+  // a week, so asking one at a time was up to 500 round trips every time to queue nothing.
+  const roots = threads.flatMap((t) => (t.threadId ? [t.threadId] : []));
+  const states = new Map(
+    roots.length === 0
+      ? []
+      : (await deps.db.select().from(threadReflections).where(inArray(threadReflections.threadRootId, roots))).map(
+          (s) => [s.threadRootId, s] as const,
+        ),
+  );
   // Per workspace, once a sweep: no model to reflect with, no job that would only fail (ADR 0167).
   const ready = new Map<string, boolean>();
   for (const t of threads) {
     if (!t.threadId) continue;
     if (!ready.has(t.orgId)) ready.set(t.orgId, await summaryModelReady(deps, t.orgId));
     if (!ready.get(t.orgId)) continue;
-    const [state] = await deps.db
-      .select()
-      .from(threadReflections)
-      .where(eq(threadReflections.threadRootId, t.threadId));
+    const state = states.get(t.threadId);
     if (state && (state.runs >= cfg.maxPerThread || (state.coveredUntil && state.coveredUntil >= new Date(t.last))))
       continue;
     await enqueue(deps.db, {
