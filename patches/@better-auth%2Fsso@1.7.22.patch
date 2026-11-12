@@ -1,0 +1,110 @@
+diff --git a/dist/index-CndkJEsk.d.mts b/dist/index-CndkJEsk.d.mts
+index f81f3bac4368d1c6b9a5360fd54994f0b7e0831c..c9a35ce2e025dcd80e2297a9b52f408f653c9d6d 100644
+--- a/dist/index-CndkJEsk.d.mts
++++ b/dist/index-CndkJEsk.d.mts
+@@ -320,6 +320,8 @@ interface SSOProviderMutationGuardContext {
+   database: DBTransactionAdapter;
+ }
+ interface SSOOptions {
++  /** Application-owned server-side OIDC transport, including its network policy. */
++  fetch?: typeof globalThis.fetch;
+   /**
+    * Resolve a verified provider identity to a Better Auth user.
+    *
+diff --git a/dist/index.mjs b/dist/index.mjs
+index b3b8f1ea9ea15d833f8f0ac0c5df570fc2f431f0..19a81e06418965923dc54d6eda3517de81433b15 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -5,7 +5,7 @@ import { X509Certificate } from "node:crypto";
+ import { getHostname } from "tldts";
+ import { generateRandomString } from "better-auth/crypto";
+ import * as z from "zod";
+-import { getCurrentAdapter, getCurrentDBAdapterAsyncLocalStorage, runWithTransaction } from "@better-auth/core/context";
++import { getCurrentAdapter, getCurrentDBAdapterAsyncLocalStorage, runWithTransaction, tryGetCurrentAuthEndpointContext } from "@better-auth/core/context";
+ import { filterOutputFields } from "@better-auth/core/utils/db";
+ import { verifyIdToken } from "@better-auth/core/oauth2/internal";
+ import { classifyHost, isPublicRoutableHost } from "@better-auth/core/utils/host";
+@@ -380,7 +380,7 @@ function computeDiscoveryUrl(issuer) {
+ */
+ function validateDiscoveryUrl(url, isTrustedOrigin) {
+ 	const discoveryEndpoint = parseURL("discoveryEndpoint", url).toString();
+-	if (!isTrustedOrigin(discoveryEndpoint)) throw new DiscoveryError("discovery_untrusted_origin", `The main discovery endpoint "${discoveryEndpoint}" is not trusted by your trusted origins configuration.`, { url: discoveryEndpoint });
++	if (!customOIDCFetch() && !isTrustedOrigin(discoveryEndpoint)) throw new DiscoveryError("discovery_untrusted_origin", `The main discovery endpoint "${discoveryEndpoint}" is not trusted by your trusted origins configuration.`, { url: discoveryEndpoint });
+ }
+ /**
+ * Validate that a user-supplied OIDC endpoint URL is safe to fetch.
+@@ -489,7 +489,12 @@ async function assertEndpointResolvesPublic(name, endpoint, isTrustedOrigin) {
+ /**
+ * Validate an OIDC endpoint immediately before a server-side fetch.
+ */
++function customOIDCFetch() {
++	return tryGetCurrentAuthEndpointContext()?.context.options.plugins?.find((plugin) => plugin.id === "sso")?.options?.fetch;
++}
+ async function assertOIDCEndpointAllowed(name, endpoint, isTrustedOrigin) {
++	// A supplied transport owns network policy (for example DNS-pinned HTTPS).
++	if (customOIDCFetch()) { parseURL(name, endpoint); return; }
+ 	validateOIDCEndpointUrl(name, endpoint, isTrustedOrigin);
+ 	await assertEndpointResolvesPublic(name, endpoint, isTrustedOrigin);
+ }
+@@ -533,6 +538,7 @@ async function fetchOIDCEndpoint(name, endpoint, options, isTrustedOrigin) {
+ 	let redirectLocation = null;
+ 	const { onError, ...fetchOptions } = options;
+ 	const response = await betterFetch(endpoint, {
++		customFetchImpl: customOIDCFetch(),
+ 		...fetchOptions,
+ 		redirect: "manual",
+ 		onError: async (context) => {
+@@ -549,7 +555,7 @@ async function fetchOIDCEndpoint(name, endpoint, options, isTrustedOrigin) {
+ */
+ async function fetchOIDCEndpointResponse(name, endpoint, init, isTrustedOrigin) {
+ 	await assertOIDCEndpointAllowed(name, endpoint, isTrustedOrigin);
+-	const response = await fetch(endpoint, {
++	const response = await (customOIDCFetch() ?? fetch)(endpoint, {
+ 		...init,
+ 		redirect: "manual"
+ 	});
+@@ -672,7 +678,7 @@ function normalizeDiscoveryUrls(document, issuer, isTrustedOrigin) {
+ */
+ function normalizeAndValidateUrl(name, endpoint, issuer, isTrustedOrigin) {
+ 	const url = normalizeUrl(name, endpoint, issuer);
+-	if (!isTrustedOrigin(url)) throw new DiscoveryError("discovery_untrusted_origin", `The ${name} "${url}" is not trusted by your trusted origins configuration.`, {
++	if (!customOIDCFetch() && !isTrustedOrigin(url)) throw new DiscoveryError("discovery_untrusted_origin", `The ${name} "${url}" is not trusted by your trusted origins configuration.`, {
+ 		endpoint: name,
+ 		url
+ 	});
+@@ -3684,7 +3690,8 @@ const signInSSO = (options) => {
+ 			}
+ 			if (!config.authorizationEndpoint) throw new APIError("BAD_REQUEST", { message: "Invalid OIDC configuration. Authorization URL not found." });
+ 			await addOAuthServerContext({ [SSO_PROVIDER_STATE_KEY]: await computeSSOProviderReference(provider) });
+-			const state = await generateState(ctx);
++			const idTokenNonce = generateRandomString(32);
++			const state = await generateState(ctx, { idTokenNonce });
+ 			const redirectURI = getOIDCRedirectURI(ctx.context.baseURL, provider.providerId, options);
+ 			const authorizationURL = await createAuthorizationURL({
+ 				id: provider.issuer,
+@@ -3695,6 +3702,7 @@ const signInSSO = (options) => {
+ 				redirectURI,
+ 				state: state.state,
+ 				codeVerifier: config.pkce ? state.codeVerifier : void 0,
++				nonce: idTokenNonce,
+ 				scopes: ctx.body.scopes || config.scopes || [
+ 					"openid",
+ 					"email",
+@@ -4113,7 +4121,8 @@ async function bounceIfIdpInitiated(ctx, options, providerId) {
+ 		return;
+ 	}
+ 	await addOAuthServerContext({ [SSO_PROVIDER_STATE_KEY]: await computeSSOProviderReference(provider) });
+-	const state = await generateState(ctx);
++	const idTokenNonce = generateRandomString(32);
++			const state = await generateState(ctx, { idTokenNonce });
+ 	const redirectURI = getOIDCRedirectURI(ctx.context.baseURL, provider.providerId, options);
+ 	const authorizationURL = await createAuthorizationURL({
+ 		id: provider.issuer,
+@@ -4124,6 +4133,7 @@ async function bounceIfIdpInitiated(ctx, options, providerId) {
+ 		redirectURI,
+ 		state: state.state,
+ 		codeVerifier: config.pkce ? state.codeVerifier : void 0,
++				nonce: idTokenNonce,
+ 		scopes: config.scopes || [
+ 			"openid",
+ 			"email",

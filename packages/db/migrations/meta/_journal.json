@@ -1765,6 +1765,13 @@
       "when": 1794655300001,
       "tag": "0253_oidc_sso",
       "breakpoints": true
+    },
+    {
+      "idx": 254,
+      "version": "7",
+      "when": 1794655300002,
+      "tag": "0254_sso_plugin",
+      "breakpoints": true
     }
   ]
 }

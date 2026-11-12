@@ -12,7 +12,7 @@ import { renderApp, renderPage, screen, settle, showIn } from "./render";
 
 afterEach(cleanup);
 const providerId = "sso-11111111-1111-4111-8111-111111111111" as const;
-const callbackUrl = `https://chat.example.com/api/auth/callback/${providerId}`;
+const callbackUrl = `https://chat.example.com/api/auth/sso/callback/${providerId}`;
 const loginUrl = `https://chat.example.com/login?sso=${providerId}`;
 const configured = {
   provider: {

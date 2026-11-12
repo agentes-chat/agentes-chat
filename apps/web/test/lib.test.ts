@@ -518,6 +518,45 @@ describe("the confirmation email", () => {
     }
   });
 
+  test("SSO uses the official plugin endpoint; linking carries an explicit request and social providers keep their route", async () => {
+    const sent: { path: string; link: string | null; body: unknown }[] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      sent.push({
+        path: new URL(String(url)).pathname,
+        link: new Headers(init?.headers).get("x-agentes-sso-link"),
+        body: JSON.parse(String(init?.body)),
+      });
+      return Response.json({ redirect: false });
+    }) as typeof fetch;
+    try {
+      const auth = createBetterAuthClient("http://localhost:3000");
+      const provider = "sso-11111111-1111-4111-8111-111111111111";
+      await auth.signInSocial(provider, "/chat");
+      await auth.linkSso(provider, "/settings");
+      await auth.signInSocial("github", "/chat");
+      expect(sent).toEqual([
+        {
+          path: "/api/auth/sign-in/sso",
+          link: null,
+          body: { providerId: provider, callbackURL: "/chat", errorCallbackURL: "/login" },
+        },
+        {
+          path: "/api/auth/sign-in/sso",
+          link: "1",
+          body: { providerId: provider, callbackURL: "/settings", errorCallbackURL: "/settings" },
+        },
+        {
+          path: "/api/auth/sign-in/social",
+          link: null,
+          body: { provider: "github", callbackURL: "/chat", errorCallbackURL: "/login" },
+        },
+      ]);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+
   test("the auth client settles when the request gets no answer: status 0, never a page spinning forever", async () => {
     const real = globalThis.fetch;
     globalThis.fetch = (async () => {

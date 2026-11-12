@@ -31,5 +31,6 @@ test("reviewed packages pass", () => {
   expect(licenseProblem({ name: "khroma" })).toBeNull();
   expect(licenseProblem({ name: "node-forge", license: "(BSD-3-Clause OR GPL-2.0)" })).toBeNull();
   expect(licenseProblem({ name: "@zone-eu/mailsplit", license: "(MIT OR EUPL-1.1+)" })).toBeNull();
+  expect(licenseProblem({ name: "xml-escape", license: "MIT License" })).toBeNull();
   expect(licenseProblem({ name: "khroma-fork" })).toBe("no SPDX license field");
 });

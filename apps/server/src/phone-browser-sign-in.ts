@@ -60,7 +60,8 @@ function isAppLink(context: TrustsOrigins, link: unknown): link is string {
 }
 
 const challengeOf = (state: object | null | undefined) => {
-  const challenge = (state as { challenge?: unknown } | null | undefined)?.challenge;
+  const kept = state as { challenge?: unknown; serverContext?: { phoneChallenge?: unknown } } | null | undefined;
+  const challenge = kept?.serverContext?.phoneChallenge ?? kept?.challenge;
   return typeof challenge === "string" && KEY.test(challenge) ? challenge : null;
 };
 
@@ -97,7 +98,8 @@ export function phoneBrowserSignIn() {
     hooks: {
       after: [
         {
-          matcher: (context) => Boolean(context.path?.startsWith("/callback")),
+          matcher: (context) =>
+            Boolean(context.path?.startsWith("/callback") || context.path?.startsWith("/sso/callback/")),
           handler: createAuthMiddleware(async (ctx) => {
             const headers = ctx.context.responseHeaders;
             if (!headers) return;

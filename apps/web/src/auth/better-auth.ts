@@ -5,6 +5,8 @@ import {
   INVITATION_TOKEN_HEADER,
 } from "@agenteschat/client/lib/guards";
 import { humanCheckHeaders } from "@agenteschat/client/lib/human-check";
+import { isSsoProvider } from "@agenteschat/client/lib/sso";
+import { ssoClient } from "@better-auth/sso/client";
 import { createAuthClient } from "better-auth/client";
 import type { AuthClient, AuthResult } from "./client";
 
@@ -48,6 +50,7 @@ export function createBetterAuthClient(origin = window.location.origin, language
   const client = createAuthClient({
     baseURL: origin,
     basePath: "/api/auth",
+    plugins: [ssoClient()],
     fetchOptions: {
       onRequest: (request) => {
         if (language) request.headers.set("accept-language", language());
@@ -77,12 +80,14 @@ export function createBetterAuthClient(origin = window.location.origin, language
     sendVerificationEmail: (email) => toResult(client.sendVerificationEmail({ email })),
     signInSocial: (provider, callbackURL, earlyAccess, errorCallbackURL = "/login") =>
       toResult(
-        client.signIn.social({
-          provider,
-          callbackURL,
-          errorCallbackURL,
-          ...earlyAccessState(earlyAccess),
-        }),
+        isSsoProvider(provider)
+          ? client.signIn.sso({ providerId: provider, callbackURL, errorCallbackURL })
+          : client.signIn.social({
+              provider,
+              callbackURL,
+              errorCallbackURL,
+              ...earlyAccessState(earlyAccess),
+            }),
       ),
     requestPasswordReset: ({ email, redirectTo }, humanCheck) =>
       toResult(
@@ -90,7 +95,14 @@ export function createBetterAuthClient(origin = window.location.origin, language
       ),
     resetPassword: ({ token, newPassword }) => toResult(client.resetPassword({ token, newPassword })),
     linkSso: (provider, callbackURL) =>
-      toResult(client.linkSocial({ provider, callbackURL, errorCallbackURL: callbackURL })),
+      toResult(
+        client.signIn.sso({
+          providerId: provider,
+          callbackURL,
+          errorCallbackURL: callbackURL,
+          fetchOptions: { headers: { "x-agentes-sso-link": "1" } },
+        }),
+      ),
     signOut: async () => {
       await client.signOut();
     },

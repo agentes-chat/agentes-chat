@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { eq, schema } from "@agenteschat/db";
-import { exportJWK, generateKeyPair, SignJWT } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { type Browser, browser, createTestServer, ORIGIN, seedOrg, signUp, type TestServer } from "./harness";
 
 const issuer = "https://id.example.com";
@@ -14,7 +14,8 @@ afterEach(async () => {
 
 function identityProvider() {
   let available = true;
-  let userinfo: Record<string, unknown> = {};
+  let userinfo: Record<string, unknown> | undefined;
+  let profile: Record<string, unknown> = {};
   const codes = new Map<string, { jwt: string; challenge: string; callback: string }>();
   const http = (async (input: string | URL | Request, init?: RequestInit) => {
     if (!available) throw new TypeError("IdP unavailable");
@@ -31,7 +32,7 @@ function identityProvider() {
         scopes_supported: ["openid", "profile", "email", "groups", "groups", "bad scope", ""],
       });
     if (url === `${issuer}/keys`) return Response.json({ keys: [jwk] });
-    if (url === `${issuer}/userinfo`) return Response.json(userinfo);
+    if (url === `${issuer}/userinfo`) return Response.json(userinfo ?? profile);
     if (url === `${issuer}/token`) {
       const body = new URLSearchParams(String(init?.body));
       const record = codes.get(body.get("code") ?? "");
@@ -74,7 +75,8 @@ function identityProvider() {
       challenge: url.searchParams.get("code_challenge") ?? "",
       callback: url.searchParams.get("redirect_uri") ?? "",
     });
-    return `/api/auth/callback/${new URL(url.searchParams.get("redirect_uri") ?? "").pathname.split("/").pop()}?${new URLSearchParams({ code, state: url.searchParams.get("state") ?? "" })}`;
+    profile = decodeJwt(jwt);
+    return `${new URL(url.searchParams.get("redirect_uri") ?? "").pathname}?${new URLSearchParams({ code, state: url.searchParams.get("state") ?? "" })}`;
   };
   return {
     http,
@@ -118,9 +120,9 @@ async function setup(env: Record<string, string> = {}) {
   const view = (await configured.json()) as { provider: { id: string }; callbackUrl: string; loginUrl: string };
   const provider = view.provider.id;
   const start = async (at: Browser, link = false, callbackURL = "/", headers?: Record<string, string>) => {
-    const response = await at(link ? "/api/auth/link-social" : "/api/auth/sign-in/social", {
-      json: { provider, callbackURL, errorCallbackURL: "/login" },
-      headers,
+    const response = await at("/api/auth/sign-in/sso", {
+      json: { providerId: provider, callbackURL, errorCallbackURL: "/login" },
+      headers: { ...headers, ...(link ? { "x-agentes-sso-link": "1" } : {}) },
     });
     if (response.status !== 200) throw new Error(`start: ${response.status} ${await response.text()}`);
     return new URL(((await response.json()) as { url: string }).url);
@@ -132,8 +134,10 @@ async function setup(env: Record<string, string> = {}) {
 
 test("owner configures SSO through UI API; secrets are sealed, read-only to members, and retained on edits", async () => {
   const s = await setup();
-  expect(s.view.callbackUrl).toBe(`${ORIGIN}/api/auth/callback/${s.provider}`);
+  expect(s.view.callbackUrl).toBe(`${ORIGIN}/api/auth/sso/callback/${s.provider}`);
   expect(s.view.loginUrl).toBe(`${ORIGIN}/login?sso=${s.provider}`);
+  expect((await s.owner("/api/auth/sso/register", { json: {} })).status).toBe(404);
+  expect((await s.owner(`/api/auth/sso/get-provider?providerId=${s.provider}`)).status).toBe(404);
   expect(JSON.stringify(s.view)).not.toContain('"secret"');
   const [stored] = await t.db.select().from(schema.oidcProviders);
   expect(stored?.ciphertext).not.toContain("secret");
@@ -196,13 +200,27 @@ test("provider discovery is rate limited before contacting the identity provider
   expect((await s.owner(`${s.configPath}/discover`, { json: { issuer } })).status).toBe(429);
 });
 
+test("migrated connections without cached endpoints use plugin discovery through the guarded transport", async () => {
+  const s = await setup();
+  const [row] = await t.db.select().from(schema.oidcProviders);
+  if (!row) throw new Error("missing connection");
+  await t.db.update(schema.oidcProviders).set({
+    oidcConfig: JSON.stringify({
+      id: row.id,
+      orgId: row.orgId,
+      config: { issuer, clientId: row.clientId, scopes: row.scopes, pkce: true },
+    }),
+  });
+  expect((await s.finish(s.owner, true)).headers.get("location")).toBe("/");
+});
+
 test("explicit linking preserves account, memberships and roles; later OIDC login and local logout work", async () => {
   const s = await setup();
   const before = await t.db.select().from(schema.organizationMembers);
   const linked = await s.finish(s.owner, true);
   expect(linked.headers.get("location")).toBe("/");
   const [account] = await t.db.select().from(schema.accounts).where(eq(schema.accounts.providerId, s.provider));
-  expect(account?.accountId).toBe(JSON.stringify([issuer, "owner-subject"]));
+  expect(account?.accountId).toBe("owner-subject");
   expect(await t.db.select().from(schema.organizationMembers)).toEqual(before);
   expect((await t.db.select().from(schema.users)).length).toBe(1);
   const at = browser(t);
@@ -242,11 +260,23 @@ test("rejects invalid signatures, issuer, audience, nonce, expiry, unverified em
   expect((await t.db.select().from(schema.accounts)).length).toBe(1);
 });
 
-test("unknown identity cannot bypass closed sign-up or join through an invitation for another workspace", async () => {
+test("an uninvited identity cannot bypass admission, even with requestSignUp", async () => {
   const s = await setup();
   const at = browser(t);
   const result = await s.finish(at, false, { sub: "outsider", email: "outsider@example.com" });
   expect(new URL(result.headers.get("location") ?? "", ORIGIN).searchParams.get("error")).toBe(
+    "sso_invitation_required",
+  );
+  expect((await t.db.select().from(schema.users)).length).toBe(1);
+  const forced = await at("/api/auth/sign-in/sso", {
+    json: { providerId: s.provider, callbackURL: "/", errorCallbackURL: "/login", requestSignUp: true },
+  });
+  expect(forced.status).toBe(200);
+  const forcedUrl = new URL(((await forced.json()) as { url: string }).url);
+  const refused = await at(await s.authorize(forcedUrl, { sub: "outsider", email: "outsider@example.com" }), {
+    origin: null,
+  });
+  expect(new URL(refused.headers.get("location") ?? "", ORIGIN).searchParams.get("error")).toBe(
     "sso_invitation_required",
   );
   expect((await t.db.select().from(schema.users)).length).toBe(1);
@@ -314,9 +344,10 @@ test("a closed server admits an invited OIDC identity, but grants membership onl
   const at = browser(t);
   const options = await at("/api/app/sign-in-options", { json: { email: "new@example.com" } });
   expect(await options.json()).toMatchObject({ account: false, canSignUp: true, providers: [s.provider] });
-  const result = await s.finish(at, false, { email: "new@example.com", sub: "new-subject" });
+  const result = await s.finish(at, false, { email: "new@example.com", sub: "new-subject", name: undefined });
   expect(result.headers.get("location")).toBe("/");
   const [user] = await t.db.select().from(schema.users).where(eq(schema.users.email, "new@example.com"));
+  expect(user?.name).toBe("new@example.com");
   const members = await t.db
     .select()
     .from(schema.organizationMembers)
@@ -362,10 +393,10 @@ test("mobile uses its browser challenge handoff without leaving a session in the
   const app = browser(t);
   const verifier = "v".repeat(43);
   const challenge = createHash("sha256").update(verifier).digest("base64url");
-  const started = await app("/api/auth/sign-in/social", {
+  const started = await app("/api/auth/sign-in/sso", {
     origin: null,
-    headers: { "expo-origin": "agenteschat://", "x-agentes-client": "mobile" },
-    json: { provider: s.provider, callbackURL: "agenteschat:///", additionalData: { challenge } },
+    headers: { "expo-origin": "agenteschat://", "x-agentes-client": "mobile", "x-agentes-phone-challenge": challenge },
+    json: { providerId: s.provider, callbackURL: "agenteschat:///" },
   });
   expect(started.status).toBe(200);
   const authorization = ((await started.json()) as { url: string }).url;
@@ -439,11 +470,18 @@ test("a callback cannot switch the provider bound to its state", async () => {
   const otherOrgId = crypto.randomUUID();
   await db.insert(schema.organizations).values({ id: otherOrgId, name: "Other" });
   const sealed = await sealSecret(t.adapters.keyWrapper, "secret", ssoAad(otherOrgId, id));
-  await db.insert(schema.oidcProviders).values({ ...first, ...sealed, id, orgId: otherOrgId });
+  await db.insert(schema.oidcProviders).values({
+    ...first,
+    ...sealed,
+    id,
+    orgId: otherOrgId,
+    providerId: `sso-${id}`,
+    oidcConfig: JSON.stringify({ id, orgId: otherOrgId, ...sealed, config: JSON.parse(first.oidcConfig).config }),
+  });
   const at = browser(t);
   const back = await s.authorize(await s.start(at));
   const result = await at(back.replace(s.provider, `sso-${id}`), { origin: null });
-  expect(new URL(result.headers.get("location") ?? "", ORIGIN).searchParams.get("error")).toBe("invalid_code");
+  expect(new URL(result.headers.get("location") ?? "", ORIGIN).searchParams.get("error")).toBe("invalid_state");
   expect((await at("/api/app/me")).status).toBe(401);
 });
 

@@ -10,15 +10,9 @@ import {
   publicHttpsFetch,
   ValidationError,
 } from "@agenteschat/engine";
-import type { BetterAuthOptions } from "better-auth";
+import { getCurrentAuthEndpointContext } from "@better-auth/core/context";
+import { type OIDCConfig, type SSOOptions, sso } from "@better-auth/sso";
 import { getAuthoritativeSessionFromCtx, getOAuthState } from "better-auth/api";
-import {
-  authorizationCodeRequest,
-  createAuthorizationURL,
-  getOAuth2Tokens,
-  type OAuthProvider,
-} from "better-auth/oauth2";
-import { createLocalJWKSet, jwtVerify } from "jose";
 import { z } from "zod";
 
 export const SSO_ID = /^sso-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -51,31 +45,48 @@ const Discovery = z.object({
 });
 type SsoDeps = { db: Database; config: Config; keyWrappers: KeyWrapper[]; http?: typeof fetch };
 
-/** Hosted tenants can reach only public HTTPS, including on every token and key request (DNS pinned). */
-export const ssoHttp = (config: Config, http?: typeof fetch) =>
-  http ?? (isAgentesCloud(config.PUBLIC_URL) || config.ALLOW_SIGNUP ? publicHttpsFetch() : fetch);
-
-async function readJson(http: typeof fetch, url: string, init?: RequestInit) {
-  const res = await http(url, { ...init, redirect: "error", signal: AbortSignal.timeout(10_000) });
-  if (!res.ok) throw new ValidationError("The identity provider didn't answer. Check its settings.", "sso_unavailable");
-  // Discovery, keys and tokens have no reason to be larger than this.
-  const reader = res.body?.getReader();
-  if (!reader) throw new ValidationError("The identity provider returned no data.", "sso_unavailable");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 256_000)
-        throw new ValidationError("The identity provider's response is too large.", "sso_unavailable");
-      chunks.push(value);
+/** Every plugin request keeps the app's HTTPS, DNS-pinning, redirect, timeout and response-size policy. */
+export function ssoHttp(config: Config, http?: typeof fetch): typeof fetch {
+  const request = http ?? (isAgentesCloud(config.PUBLIC_URL) || config.ALLOW_SIGNUP ? publicHttpsFetch() : fetch);
+  return (async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (!HttpsUrl.safeParse(url).success)
+      throw new ValidationError("Use an HTTPS identity provider URL.", "sso_issuer");
+    const res = await request(input, {
+      ...init,
+      redirect: "manual",
+      signal: AbortSignal.any([AbortSignal.timeout(10_000), ...(init?.signal ? [init.signal] : [])]),
+    });
+    if (res.status >= 300 && res.status < 400)
+      throw new ValidationError("Identity provider redirects aren't supported.", "sso_issuer");
+    const reader = res.body?.getReader();
+    if (!reader) return res;
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 256_000)
+          throw new ValidationError("The identity provider's response is too large.", "sso_unavailable");
+        chunks.push(value);
+      }
+    } finally {
+      await reader.cancel();
     }
-  } finally {
-    await reader.cancel();
-  }
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    return new Response(Buffer.concat(chunks), {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+    });
+  }) as typeof fetch;
+}
+
+async function readJson(http: typeof fetch, url: string) {
+  const res = await http(url);
+  if (!res.ok) throw new ValidationError("The identity provider didn't answer. Check its settings.", "sso_unavailable");
+  return res.json();
 }
 
 /** Accept an issuer or its exact discovery URL; the discovered issuer must match the configured one. */
@@ -112,150 +123,118 @@ export async function ssoForId(db: Database, providerId: string) {
   return row ?? null;
 }
 
-/** Resolve only the requested connection, so another tenant's IdP outage never blocks sign-in. */
-export async function ssoProvider(deps: SsoDeps, providerId: string): Promise<OAuthProvider | null> {
-  const row = await ssoForId(deps.db, providerId);
-  if (!row) return null;
-  const http = ssoHttp(deps.config, deps.http);
-  const metadata = await discoverSso(row.issuer, http);
-  const clientSecret = await openSecret(deps.keyWrappers, row, ssoAad(row.orgId, row.id));
-  const options = { clientId: row.clientId, clientSecret };
-  const algorithms = metadata.id_token_signing_alg_values_supported.filter((a) => /^(RS|PS|ES)\d+$|^EdDSA$/.test(a));
-  return {
-    id: providerId,
-    name: row.name,
-    issuer: row.issuer,
-    requiresIdTokenNonce: true,
-    // OIDC identity never follows an email address, display name, or a different issuer.
-    accountSubject: ({ profile }) => JSON.stringify([row.issuer, (profile as { sub: string }).sub]),
-    createAuthorizationURL: (data) =>
-      createAuthorizationURL({
-        id: providerId,
-        options,
-        authorizationEndpoint: metadata.authorization_endpoint,
-        state: data.state,
-        codeVerifier: data.codeVerifier,
-        nonce: data.idTokenNonce,
-        redirectURI: data.redirectURI,
-        scopes: [...new Set([...SSO_REQUIRED_SCOPES, ...row.scopes])],
-      }),
-    validateAuthorizationCode: async (data) => {
-      const state = await getOAuthState();
-      if (state?.serverContext?.ssoProvider !== providerId)
-        throw new Error("SSO provider doesn't match the sign-in request");
-      const request = await authorizationCodeRequest({
-        ...data,
-        options,
-        tokenEndpoint: metadata.token_endpoint,
-        authentication: metadata.token_endpoint_auth_methods_supported?.includes("client_secret_basic")
-          ? "basic"
-          : "post",
-      });
-      return getOAuth2Tokens(
-        await readJson(http, metadata.token_endpoint, {
-          method: "POST",
-          headers: request.headers,
-          body: request.body,
-        }),
-      );
+type StoredSsoConfig = { id: string; orgId: string; config: OIDCConfig };
+
+/** Better Auth owns OIDC; the app owns provider administration, encryption and admission. */
+export function ssoPlugin(deps: SsoDeps) {
+  const plugin = sso({
+    providersLimit: 0,
+    fetch: ssoHttp(deps.config, deps.http),
+    organizationProvisioning: { disabled: true },
+    guardProviderMutation: () => {
+      throw new Error("Manage SSO in workspace settings");
     },
-    getUserInfo: async (tokens) => {
-      if (!tokens.idToken || !tokens.expectedIdTokenNonce) return null;
-      try {
-        const jwks = await readJson(http, metadata.jwks_uri);
-        const { payload } = await jwtVerify(tokens.idToken, createLocalJWKSet(jwks), {
-          issuer: row.issuer,
-          audience: row.clientId,
-          algorithms,
-          requiredClaims: ["sub", "iss", "aud", "exp", "iat", "nonce"],
-          clockTolerance: 30,
-        });
-        if (
-          typeof payload.iat !== "number" ||
-          payload.iat > Date.now() / 1000 + 30 ||
-          payload.nonce !== tokens.expectedIdTokenNonce ||
-          typeof payload.sub !== "string" ||
-          !payload.sub ||
-          (Array.isArray(payload.aud) && payload.aud.length > 1 && payload.azp !== row.clientId) ||
-          (payload.azp !== undefined && payload.azp !== row.clientId)
-        )
-          return null;
-        let profile = payload;
-        if (
-          (!payload.email || !payload.name || payload.email_verified !== true) &&
-          metadata.userinfo_endpoint &&
-          tokens.accessToken
-        ) {
-          const info = await readJson(http, metadata.userinfo_endpoint, {
-            headers: { authorization: `Bearer ${tokens.accessToken}` },
-          });
-          if (info.sub !== payload.sub) return null;
-          if (payload.email && info.email && String(payload.email).toLowerCase() !== String(info.email).toLowerCase())
-            return null;
-          profile = { ...info, ...payload };
-        }
-        if (!z.email().safeParse(profile.email).success || profile.email_verified !== true) return null;
-        return {
-          user: {
-            email: String(profile.email).toLowerCase(),
-            emailVerified: true,
-            name: typeof profile.name === "string" ? profile.name : String(profile.email),
-          },
-          data: profile,
-        };
-      } catch {
-        return null;
-      }
+    fields: { organizationId: "orgId" },
+    schema: {
+      ssoProvider: {
+        additionalFields: {
+          enabled: { type: "boolean", input: false, returned: false },
+          name: { type: "string", required: true, input: false, returned: false },
+          clientId: { type: "string", required: true, input: false, returned: false },
+          scopes: { type: "string[]", required: true, input: false, returned: false },
+          ciphertext: { type: "string", required: true, input: false, returned: false },
+          wrappedDataKey: { type: "string", required: true, input: false, returned: false },
+          kekId: { type: "string", required: true, input: false, returned: false },
+        },
+      },
+    },
+    resolveUser: (input, context) => resolveSsoUser(deps, input, context),
+  });
+  const field = plugin.schema.ssoProvider.fields.oidcConfig;
+  if (!field) throw new Error("Better Auth SSO is missing its OIDC configuration field");
+  field.transform = {
+    output: async (value) => {
+      const stored = JSON.parse(String(value)) as StoredSsoConfig;
+      const row = await ssoForId(deps.db, ssoId(stored.id));
+      if (!row || row.orgId !== stored.orgId) throw new Error("SSO is disabled");
+      const clientSecret = await openSecret(deps.keyWrappers, row, ssoAad(row.orgId, row.id));
+      return JSON.stringify({ ...stored.config, clientSecret });
     },
   };
+  // Provider management stays behind workspace-owner permissions and encrypted storage.
+  return { ...plugin, endpoints: { signInSSO: plugin.endpoints.signInSSO, callbackSSO: plugin.endpoints.callbackSSO } };
 }
 
-/** Linking requires a fresh, live session at both ends; matching email alone is never ownership proof. */
-type ValidateUser = NonNullable<NonNullable<BetterAuthOptions["user"]>["validateUserInfo"]>;
-export async function validateSsoUser(
+type ResolveUser = NonNullable<SSOOptions["resolveUser"]>;
+async function resolveSsoUser(
   deps: SsoDeps,
-  data: Parameters<ValidateUser>[0],
-  context: Parameters<ValidateUser>[1],
-) {
-  const id = data.source.oauth?.providerId;
-  if (!id || !SSO_ID.test(id)) return;
-  const row = await ssoForId(deps.db, id);
-  if (!row) return { error: "sso_disabled" };
-  if (data.source.action === "link-account") {
-    const state = await getOAuthState().catch(() => null);
-    const session = await getAuthoritativeSessionFromCtx(context);
-    if (
-      !state?.link ||
-      state.link.userId !== data.user.id ||
-      session?.user.id !== data.user.id ||
-      state.serverContext?.ssoLinkSession !== session.session.id ||
-      Date.now() - new Date(session.session.createdAt).getTime() > 10 * 60_000
+  input: Parameters<ResolveUser>[0],
+  context: Parameters<ResolveUser>[1],
+): Promise<Awaited<ReturnType<ResolveUser>>> {
+  const reject = (code: string) => ({ action: "reject" as const, code });
+  if (input.protocol !== "oidc" || !SSO_ID.test(input.providerId)) return reject("sso_disabled");
+  const row = await ssoForId(deps.db, input.providerId);
+  if (!row || row.issuer !== input.accountKey.issuer) return reject("sso_disabled");
+  const state = await getOAuthState();
+  const claims = input.verifiedIdTokenClaims;
+  const profile = input.providerClaims;
+  const email = input.providerUser.email.toLowerCase();
+  if (
+    !state?.idTokenNonce ||
+    claims.nonce !== state.idTokenNonce ||
+    typeof claims.iat !== "number" ||
+    claims.iat > Date.now() / 1000 + 30 ||
+    typeof claims.exp !== "number" ||
+    !z.email().safeParse(email).success ||
+    claims.email_verified === false ||
+    (typeof claims.email === "string" && claims.email.toLowerCase() !== email) ||
+    !(
+      profile.email_verified === true ||
+      (claims.email_verified === true && typeof claims.email === "string" && claims.email.toLowerCase() === email)
     )
-      return {
-        error: "sso_link_required",
-        errorDescription: "Sign in to your existing account, then link SSO in Your account.",
-      };
-  }
-  const email = typeof data.user.email === "string" ? data.user.email.toLowerCase() : "";
-  const member = typeof data.user.id === "string" ? await getMembership(deps.db, data.user.id, row.orgId) : null;
-  if (member) {
-    assertActiveMembership(member);
-    return;
-  }
-  const [invitation] = await deps.db
-    .select({ id: schema.organizationInvitations.id })
-    .from(schema.organizationInvitations)
-    .where(
-      and(
-        eq(schema.organizationInvitations.orgId, row.orgId),
-        eq(schema.organizationInvitations.email, email),
-        isNull(schema.organizationInvitations.acceptedAt),
-        gt(schema.organizationInvitations.expiresAt, new Date()),
-      ),
+  )
+    return reject("sso_identity");
+  const existing = await context.database.findOne<{ userId: string }>({
+    model: "account",
+    where: [
+      { field: "providerId", value: input.providerId },
+      { field: "accountId", value: input.accountKey.accountId },
+    ],
+  });
+  let userId = existing?.userId;
+  if (state.serverContext?.ssoLinkSession) {
+    const session = await getAuthoritativeSessionFromCtx(
+      getCurrentAuthEndpointContext() as Parameters<typeof getAuthoritativeSessionFromCtx>[0],
     );
-  if (!invitation)
-    return {
-      error: "sso_invitation_required",
-      errorDescription: "Ask this workspace's owner for an email invitation.",
-    };
+    if (
+      !session ||
+      session.session.id !== state.serverContext.ssoLinkSession ||
+      session.user.id !== state.serverContext.ssoLinkUser ||
+      session.user.email.toLowerCase() !== email ||
+      Date.now() - new Date(session.session.createdAt).getTime() > 10 * 60_000 ||
+      (userId && userId !== session.user.id)
+    )
+      return reject("sso_link_required");
+    userId = session.user.id;
+  } else if (!userId) {
+    const local = await context.database.findOne({ model: "user", where: [{ field: "email", value: email }] });
+    if (local) return reject("sso_link_required");
+  }
+  const member = userId ? await getMembership(deps.db, userId, row.orgId) : null;
+  if (member) assertActiveMembership(member);
+  else {
+    const [invitation] = await deps.db
+      .select({ id: schema.organizationInvitations.id })
+      .from(schema.organizationInvitations)
+      .where(
+        and(
+          eq(schema.organizationInvitations.orgId, row.orgId),
+          eq(schema.organizationInvitations.email, email),
+          isNull(schema.organizationInvitations.acceptedAt),
+          gt(schema.organizationInvitations.expiresAt, new Date()),
+        ),
+      );
+    if (!invitation) return reject("sso_invitation_required");
+  }
+  return userId ? { action: "link", userId, profile: "preserve" } : { action: "continue" };
 }

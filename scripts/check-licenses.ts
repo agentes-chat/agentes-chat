@@ -34,6 +34,7 @@ const REVIEWED = new Set([
   "khroma", // no license field; its license file is MIT
   "node-forge", // "(BSD-3-Clause OR GPL-2.0)", used under BSD-3-Clause
   "@zone-eu/mailsplit", // "(MIT OR EUPL-1.1+)", used under MIT
+  "xml-escape", // "MIT License" is not SPDX; its license file contains the standard MIT terms
 ]);
 
 /** Why a package's `package.json` license is not acceptable, or null when it is. */

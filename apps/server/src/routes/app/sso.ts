@@ -51,7 +51,7 @@ export function ssoRoutes(deps: AppDeps) {
         row && id
           ? { id, name: row.name, issuer: row.issuer, clientId: row.clientId, scopes: row.scopes, enabled: row.enabled }
           : null,
-      callbackUrl: `${config.PUBLIC_URL.replace(/\/$/, "")}/api/auth/callback/${id ?? "sso-{provider-id}"}`,
+      callbackUrl: `${config.PUBLIC_URL.replace(/\/$/, "")}/api/auth/sso/callback/${id ?? "sso-{provider-id}"}`,
       loginUrl: id ? `${config.PUBLIC_URL.replace(/\/$/, "")}/login?sso=${id}` : null,
       linked: Boolean(linked),
       canManage: member.role === "owner",
@@ -174,6 +174,32 @@ export function ssoRoutes(deps: AppDeps) {
         ciphertext: sealed.ciphertext,
         wrappedDataKey: sealed.wrappedDataKey,
         kekId: sealed.kekId,
+        providerId: ssoId(id),
+        userId,
+        oidcConfig: JSON.stringify({
+          id,
+          orgId,
+          config: {
+            ...(before ? JSON.parse(before.oidcConfig).config : {}),
+            issuer: metadata.issuer,
+            clientId: input.clientId,
+            scopes: [...new Set([...SSO_REQUIRED_SCOPES, ...input.scopes])],
+            pkce: true,
+            ...("authorization_endpoint" in metadata
+              ? {
+                  authorizationEndpoint: metadata.authorization_endpoint,
+                  tokenEndpoint: metadata.token_endpoint,
+                  jwksEndpoint: metadata.jwks_uri,
+                  userInfoEndpoint: metadata.userinfo_endpoint,
+                  tokenEndpointAuthentication: metadata.token_endpoint_auth_methods_supported?.includes(
+                    "client_secret_basic",
+                  )
+                    ? "client_secret_basic"
+                    : "client_secret_post",
+                }
+              : {}),
+          },
+        }),
         updatedAt: new Date(),
       };
       await db.transaction(async (tx) => {

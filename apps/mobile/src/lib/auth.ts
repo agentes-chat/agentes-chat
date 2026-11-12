@@ -1,5 +1,7 @@
 import type { SignInProvider } from "@agenteschat/client";
+import { isSsoProvider } from "@agenteschat/client/lib/sso";
 import { expoClient } from "@better-auth/expo/client";
+import { ssoClient } from "@better-auth/sso/client";
 import { createAuthClient } from "better-auth/react";
 import { getRandomBytes } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
@@ -24,7 +26,7 @@ const createClient = (server: string, storagePrefix: string) =>
         if (i18n.language) request.headers.set("accept-language", i18n.language);
       },
     },
-    plugins: [expoClient({ scheme: SCHEME, storagePrefix, storage: SecureStore })],
+    plugins: [expoClient({ scheme: SCHEME, storagePrefix, storage: SecureStore }), ssoClient()],
   });
 
 type AuthClient = ReturnType<typeof createClient>;
@@ -82,10 +84,17 @@ export async function signInWithBrowser(
 ) {
   const client = authClient(server);
   const verifier = newVerifier(getRandomBytes);
-  const res = await client.signIn.social({
-    ...request,
-    additionalData: { ...request.additionalData, challenge: challengeOf(verifier) },
-  });
+  const res = await (isSsoProvider(request.provider)
+    ? client.signIn.sso({
+        providerId: request.provider,
+        callbackURL: request.callbackURL,
+        errorCallbackURL: request.errorCallbackURL,
+        fetchOptions: { headers: { "x-agentes-phone-challenge": challengeOf(verifier) } },
+      })
+    : client.signIn.social({
+        ...request,
+        additionalData: { ...request.additionalData, challenge: challengeOf(verifier) },
+      }));
   if (!res.error) await client.$fetch("/phone/redeem", { method: "POST", body: { verifier } }).catch(() => null);
   return res;
 }
