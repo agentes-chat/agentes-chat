@@ -342,6 +342,17 @@ function detectAntigravity(run: Run): Promise<Probe> {
   return detectWithModels(run, AGY_BIN, AGY_VERSION, parseAgyModels);
 }
 
+/** Muse Code's CLI (Meta's installer puts it at `~/.local/bin/muse`). */
+export const MUSE_BIN = "muse";
+
+/**
+ * Protocol 59 (ADR 0174): the Muse Code CLI. `muse --version` prints `Muse Code 1.4.18 (1.4.18-R8587.1)`; it lists no
+ * models from the command line, so only the version is read.
+ */
+function detectMuse(run: Run): Promise<Probe> {
+  return detectWithModels(run, MUSE_BIN, /^(?:Muse Code\s+)?\d+\.\d+\.\d+\b/, () => []);
+}
+
 /**
  * One CLI's look: what it found, and whether it couldn't tell (then the last good look stands). `exited`: unsure
  * because `--version` failed with an exit code, counted toward `EXECUTORS_EXIT_STRIKES`.
@@ -393,7 +404,7 @@ export async function detectExecutors(
   strikes: Partial<Record<string, number>> = {},
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
-  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "muse"] as const;
   const probes = await Promise.all([
     safe(() => detectVersion(run, "claude")),
     safe(() => detectVersion(run, "codex")),
@@ -401,6 +412,7 @@ export async function detectExecutors(
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),
     safe(() => detectAntigravity(run)),
+    safe(() => detectMuse(run)),
   ]);
   const found: Executors = {};
   let unsure = false;

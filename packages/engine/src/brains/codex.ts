@@ -9,6 +9,7 @@ import {
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
+  MUSE_PROTOCOL,
   OPENCODE_PROTOCOL,
   type PubSub,
   parseBrainEvent,
@@ -93,6 +94,7 @@ export interface ComputerBrainLink {
         opencode?: boolean;
         grok?: boolean;
         antigravity?: boolean;
+        muse?: boolean;
         commands: boolean;
       };
     } | null;
@@ -170,7 +172,7 @@ function channel<T>() {
  * protocol 36, no version gate, no live steering). Everything else, from the request to the events, is shared.
  */
 interface CliBrainSpec {
-  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
   name: string;
   /** The runner protocol it needs. */
   protocol: number;
@@ -181,6 +183,7 @@ interface CliBrainSpec {
     opencode?: { version: string };
     grok?: { version: string };
     antigravity?: { version: string };
+    muse?: { version: string };
   }): BrainEvent | null;
 }
 
@@ -254,6 +257,21 @@ const GROK_CLI: CliBrainSpec = {
         },
 };
 
+const MUSE_CLI: CliBrainSpec = {
+  kind: "muse",
+  name: "Muse Code",
+  protocol: MUSE_PROTOCOL,
+  check: ({ muse }) =>
+    muse
+      ? null
+      : {
+          type: "error",
+          code: "muse_missing",
+          message: "Muse Code, Meta's CLI, is not installed on the computer.",
+          retryable: true,
+        },
+};
+
 const ANTIGRAVITY_CLI: CliBrainSpec = {
   kind: "antigravity",
   name: "Antigravity CLI",
@@ -270,7 +288,7 @@ const ANTIGRAVITY_CLI: CliBrainSpec = {
 };
 
 export class CodexBrain implements Brain {
-  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
   constructor(
     private readonly deps: CodexBrainDeps,
@@ -500,6 +518,17 @@ export class GrokBrain extends CodexBrain {
 export class AntigravityBrain extends CodexBrain {
   constructor(deps: CodexBrainDeps) {
     super(deps, ANTIGRAVITY_CLI);
+  }
+}
+
+/**
+ * The Muse Code brain (ADR 0174): Meta's Muse CLI (`muse`) on the agent's computer with a person's Meta plan or key,
+ * through the same `brain.turn` as Codex (`kind: "muse"`, runner protocol 59, `brain-muse.ts` there). A person's
+ * messages wait for the turn's end.
+ */
+export class MuseBrain extends CodexBrain {
+  constructor(deps: CodexBrainDeps) {
+    super(deps, MUSE_CLI);
   }
 }
 

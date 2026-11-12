@@ -54,6 +54,7 @@ export const TOOL_LABELS: Record<keyof RunnerTools, string> = {
   claude: "Claude Code",
   codex: "Codex",
   cursor: "Cursor",
+  muse: "Muse Code",
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity CLI (Gemini)",

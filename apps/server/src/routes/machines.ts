@@ -93,6 +93,10 @@ export const MachineAccess = z
         .boolean()
         .optional()
         .openapi({ description: "Google's Antigravity CLI (protocol 44, ADR 0143); absent = follows `codex`." }),
+      muse: z
+        .boolean()
+        .optional()
+        .openapi({ description: "Meta's Muse Code CLI (protocol 59, ADR 0174); absent = follows `codex`." }),
       commands: z.boolean(),
       browser: z
         .boolean()
@@ -293,7 +297,7 @@ const DeviceCode = z
 
 const AgentParams = OrgParams.extend({ agentId: z.uuid() });
 
-const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]);
+const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "muse"]);
 const Platform = z.string().openapi({
   description: "`mac`, `windows`, `linux`, `other` (the workspace's own computer), or the runner's `os` as reported.",
 });
@@ -563,6 +567,7 @@ export function machineAppRoutes(deps: AppDeps) {
                   "opencode",
                   "grok",
                   "antigravity",
+                  "muse",
                   "commands",
                   "browser",
                   "desktop",

@@ -21,6 +21,7 @@ import {
   isLoginEmail,
   MAX_MACHINE_ACCOUNTS,
   type MachineReplies,
+  MUSE_KEY_PROVIDER,
   OPENCODE_KEY_PROVIDER,
   OWN_USAGE_ID,
   type OwnPlanUsage,
@@ -65,6 +66,7 @@ import {
   cliSpawn,
   GROK_BIN,
   isExecutable,
+  MUSE_BIN,
   OPENCODE_BIN,
   resolveCommand,
 } from "./executors";
@@ -158,6 +160,7 @@ const LABEL: Record<AccountKind, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "The Antigravity CLI",
+  muse: "Muse Code",
 };
 /** Cursor's CLI keeps its config in `CURSOR_CONFIG_DIR` (cursor.com/docs/cli/reference/configuration). */
 const ENV_VAR: Record<AccountKind, string> = {
@@ -170,6 +173,9 @@ const ENV_VAR: Record<AccountKind, string> = {
   grok: "GROK_HOME",
   // `agy` documents no config folder of its own (ADR 0143): the account's folder is its whole home.
   antigravity: "HOME",
+  // Muse keeps `settings.json` and its sessions in `$XDG_CONFIG_HOME/muse`; where the credential rests is
+  // undocumented, so the whole config folder is the account (ADR 0174).
+  muse: "XDG_CONFIG_HOME",
 };
 const LOGIN_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "login"],
@@ -181,6 +187,8 @@ const LOGIN_ARGS: Record<AccountKind, string[]> = {
   grok: ["login", "--device-auth"],
   // Google's sign-in by a pasted code, then it exits (antigravity.google/docs/ide/extensions/acp).
   antigravity: ["acp", "--login"],
+  // A Meta account is its key: `muse auth set` stores one, and a Meta Managed Account has no browser flow at all.
+  muse: ["auth", "set"],
 };
 const STATUS_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "status", "--json"],
@@ -191,6 +199,8 @@ const STATUS_ARGS: Record<AccountKind, string[]> = {
   grok: ["models"],
   // No status command either: `agy models` lists the account's models once it is signed in.
   antigravity: ["models"],
+  // `muse usage` answers without spending a turn, and says "not logged in" when the key is gone.
+  muse: ["usage"],
 };
 const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "logout"],
@@ -200,6 +210,7 @@ const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   grok: ["logout"],
   // `/logout`, answered by the CLI itself in print mode; deleting the folder ends the sign-in anyway.
   antigravity: ["-p", "/logout"],
+  muse: ["logout"],
 };
 /** Each CLI's executable (Cursor's was `cursor-agent` before it was renamed). */
 const COMMAND: Record<AccountKind, string> = {
@@ -209,6 +220,7 @@ const COMMAND: Record<AccountKind, string> = {
   opencode: OPENCODE_BIN,
   grok: GROK_BIN,
   antigravity: AGY_BIN,
+  muse: MUSE_BIN,
 };
 
 /** What a brain turn says when its account folder is gone (people read it). */
@@ -224,6 +236,7 @@ export const ACCOUNT_MISSING_MESSAGE: Record<AccountKind, string> = {
   grok: "The Grok account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
   antigravity:
     "The Gemini account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
+  muse: "The Meta account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
 };
 
 /**
@@ -272,6 +285,14 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
     env.XDG_CONFIG_HOME = dir;
     env.XDG_CACHE_HOME = dir;
     env.XDG_STATE_HOME = dir;
+  }
+  if (kind === "muse") {
+    // Its settings document, its sessions and its own sign-in stay in the account's folder.
+    env.XDG_CONFIG_HOME = dir;
+    env.XDG_CACHE_HOME = dir;
+    env.XDG_STATE_HOME = dir;
+    // The launcher would upgrade itself mid-turn.
+    env.MUSE_NO_AUTO_UPDATE = "1";
   }
   if (kind === "grok") Object.assign(env, GROK_QUIET_ENV);
   if (kind === "antigravity") {
@@ -345,6 +366,14 @@ export async function opencodeKeyOf(dir: string): Promise<string | null> {
   return keyIn(dir, OPENCODE_KEY_FILE);
 }
 
+/** A Muse Code account keeps its Meta key here (600): a Meta account is its key alone (ADR 0174). */
+const MUSE_KEY_FILE = "muse-key.json";
+
+/** A Muse Code account's key (`muse-key.json`); null when it has none. */
+export async function museKeyOf(dir: string): Promise<string | null> {
+  return keyIn(dir, MUSE_KEY_FILE);
+}
+
 function keyIn(dir: string, file: string): string | null {
   const o = readSmallJson(path.join(dir, file), 1000) as Record<string, unknown> | null;
   return typeof o?.key === "string" && CURSOR_KEY.test(o.key) ? o.key : null;
@@ -354,6 +383,7 @@ function keyIn(dir: string, file: string): string | null {
 const CLI_KEYS = {
   [CURSOR_KEY_PROVIDER]: { file: CURSOR_KEY_FILE, label: "a Cursor API key" },
   [OPENCODE_KEY_PROVIDER]: { file: OPENCODE_KEY_FILE, label: "an OpenCode API key" },
+  [MUSE_KEY_PROVIDER]: { file: MUSE_KEY_FILE, label: "a Meta API key" },
 } as const;
 type CliKeyProvider = keyof typeof CLI_KEYS;
 
@@ -1832,7 +1862,10 @@ export class AccountManager {
   /** The code the person pasted (Claude Code) or a plan's key, sealed to this sign-in's key: written to the CLI, or kept. */
   async code(loginId: string, aad: string, box: WireSecretBox): Promise<void> {
     const login = this.waiting(loginId);
-    const cliKey = login.provider === CURSOR_KEY_PROVIDER || login.provider === OPENCODE_KEY_PROVIDER;
+    const cliKey =
+      login.provider === CURSOR_KEY_PROVIDER ||
+      login.provider === OPENCODE_KEY_PROVIDER ||
+      login.provider === MUSE_KEY_PROVIDER;
     if ((login.kind !== "claude_code" && login.kind !== "antigravity" && !cliKey) || !login.privateKey) {
       throw new RunnerError("bad_request", "This sign-in doesn't take a code");
     }
@@ -1849,7 +1882,11 @@ export class AccountManager {
     } catch {
       throw new RunnerError("bad_request", "The code couldn't be opened (wrong key or altered on the way)");
     }
-    if (login.provider === CURSOR_KEY_PROVIDER || login.provider === OPENCODE_KEY_PROVIDER) {
+    if (
+      login.provider === CURSOR_KEY_PROVIDER ||
+      login.provider === OPENCODE_KEY_PROVIDER ||
+      login.provider === MUSE_KEY_PROVIDER
+    ) {
       return this.keepCliKey(login, login.provider, code);
     }
     if (login.provider) return this.keepKey(login, login.provider, code);

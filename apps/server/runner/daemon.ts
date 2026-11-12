@@ -1007,6 +1007,7 @@ export class RunnerDaemon implements RequestObserver {
       claude: "Claude Code",
       codex: "Codex",
       cursor: "Cursor",
+      muse: "Muse Code",
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",

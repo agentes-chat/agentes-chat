@@ -93,12 +93,12 @@ export const allowsInApp = (os: string | null | undefined) => os === "darwin" ||
  */
 export function toolOffReason(
   m: Pick<Machine, "os" | "mode"> | null | undefined,
-  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity",
+  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse",
 ) {
   if (!m || allowsInApp(m.os)) return { key: "brain.reasons.tool_off" as const, command: "" };
   return {
     key: "brain.reasons.tool_offLinux" as const,
-    command: toolOnCommand(m, kind === "claude_code" ? "claude" : kind),
+    command: toolOnCommand(m, kind === "claude_code" ? "claude" : kind === "muse" ? "claude" : kind),
   };
 }
 

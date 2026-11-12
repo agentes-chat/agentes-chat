@@ -5539,7 +5539,7 @@ export interface MissionSettings {
 }
 
 /** "Quem pensa" (ADR 0032): the API, or Claude Code / Codex on the agent's computer with a person's plan. */
-export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
 /** Why a computer brain can't be chosen now. */
 export type BrainUnavailable =
@@ -5655,7 +5655,7 @@ export type BrainEffortSetting = BrainEffort | "auto";
 
 export type BrainSpeed = "standard" | "fast";
 
-export type MachineAccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type MachineAccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
 /** ADR 0041 §3, ADR 0059: a Claude Code or Codex account signed in on a connected computer (metadata only). */
 export interface MachineAccount {
@@ -5714,6 +5714,7 @@ export interface AiComputer {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    muse?: boolean;
     key: boolean;
   };
   /** Why a CLI of `brains` can't think there (absent: an older server). */
@@ -5726,6 +5727,7 @@ export interface AiComputer {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    muse?: boolean;
   };
   /**
    * "Conta deste computador": each CLI's own sign-in there, on a computer the viewer connected (absent: a server
