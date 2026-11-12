@@ -115,6 +115,7 @@ export async function createTestServer(
     speechFetch?: typeof fetch;
     /** AI apps (ADR 0119): a fake fetch of apps' metadata documents (CIMD); absent = none answers. */
     appsFetchDocument?: FetchAppDocument;
+    ssoFetch?: typeof fetch;
   } = {},
 ) {
   const { db, close } = await createTestDatabase();
@@ -193,6 +194,8 @@ export async function createTestServer(
     rateLimiter: adapters.rateLimiter,
     humanCheck: adapters.humanCheck,
     pubsub: adapters.pubsub,
+    keyWrappers: [adapters.keyWrapper],
+    ssoFetch: options.ssoFetch,
   });
   const app = createApp({
     edition: "selfhost",

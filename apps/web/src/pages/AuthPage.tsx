@@ -16,6 +16,7 @@ import {
 import { signInFor } from "@agenteschat/client/lib/guards";
 import { type HumanAction, isHumanCheckRefusal, withHumanCheck } from "@agenteschat/client/lib/human-check";
 import { CLOUD_SERVER, serverHost } from "@agenteschat/client/lib/server";
+import { signInProviderNameKey } from "@agenteschat/client/lib/sso";
 import {
   emailTypoFix,
   isEmail,
@@ -35,6 +36,7 @@ import { AgentAvatar } from "@/components/AgentAvatar";
 import { AuthShell } from "@/components/AuthLayout";
 import { prepareBurst } from "@/components/Sky";
 import { rememberSignIn, SocialButtons, useSocialProviders } from "@/components/SocialButtons";
+import { SsoLoginButton } from "@/components/SsoSettings";
 import {
   browserSignInUrl,
   challengeOf,
@@ -127,10 +129,12 @@ export function AuthPage({
   start,
   redirect,
   email: initialEmail,
+  sso,
   access,
   refused,
 }: {
   start: "in" | "up";
+  sso?: `sso-${string}`;
   redirect?: string;
   email?: string;
   /** An early-access link's token (`/signup?access=`): it opens sign-up for the address it was sent to. */
@@ -257,7 +261,16 @@ export function AuthPage({
       setOptions(found);
       setPassword("");
       if (found.account) go(found.password ? "password" : found.providers.length > 0 ? "social" : "noPassword");
-      else go(found.canSignUp ? "name" : found.accessExpired ? "expired" : "closed");
+      else
+        go(
+          found.canSignUp
+            ? found.providers.length > 0
+              ? "social"
+              : "name"
+            : found.accessExpired
+              ? "expired"
+              : "closed",
+        );
     } catch (e) {
       fail(e);
     } finally {
@@ -407,7 +420,7 @@ export function AuthPage({
   const expression = wrong ? "cross" : wink ? "wink" : secret ? "closed" : step === "sent" ? "happy" : undefined;
 
   const first = name.trim().split(/\s+/)[0] ?? "";
-  const providerNames = linkedProviders.map((p) => t(`auth.provider.${p}`)).join(" · ");
+  const providerNames = linkedProviders.map((p) => t(signInProviderNameKey(p))).join(" · ");
   // A step with nothing to add under its question has no lead: the field and its help line say the rest.
   const bubble: Record<Step, [string, string?]> = {
     email: start === "up" ? [t("auth.flow.emailUp")] : [t("auth.flow.email"), purpose ?? t("auth.flow.emailLead")],
@@ -430,7 +443,7 @@ export function AuthPage({
     sent: [t("auth.flow.sent", { email: email.trim() }), t("auth.flow.sentLead")],
     browser: [
       t("auth.desktop.browser"),
-      t("auth.desktop.browserLead", { provider: browser ? t(`auth.provider.${browser.provider}`) : "" }),
+      t("auth.desktop.browserLead", { provider: browser ? t(signInProviderNameKey(browser.provider)) : "" }),
     ],
     ownerWaits: [t("auth.flow.ownerWaits"), t("auth.flow.ownerWaitsLead")],
   };
@@ -652,6 +665,15 @@ export function AuthPage({
                 </Button>
               )}
 
+              {step === "email" && sso && (
+                <SsoLoginButton
+                  id={sso}
+                  onSignIn={(id) => {
+                    if (desktop) void signInInBrowser(id);
+                    else void auth.signInSocial(id, redirect ?? "/");
+                  }}
+                />
+              )}
               {step === "email" && offeredProviders.length > 0 && (
                 <>
                   <div className="auth__or">{t("common.or")}</div>

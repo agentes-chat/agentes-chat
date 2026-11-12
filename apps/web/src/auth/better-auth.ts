@@ -89,6 +89,8 @@ export function createBetterAuthClient(origin = window.location.origin, language
         client.requestPasswordReset({ email, redirectTo, fetchOptions: { headers: humanCheckHeaders(humanCheck) } }),
       ),
     resetPassword: ({ token, newPassword }) => toResult(client.resetPassword({ token, newPassword })),
+    linkSso: (provider, callbackURL) =>
+      toResult(client.linkSocial({ provider, callbackURL, errorCallbackURL: callbackURL })),
     signOut: async () => {
       await client.signOut();
     },

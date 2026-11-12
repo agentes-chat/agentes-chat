@@ -199,7 +199,7 @@ export const socialReturnText = (
  */
 export function lookUpStep(found: SignInOptions, usable: boolean) {
   if (found.account) return found.password ? "password" : usable ? "social" : "noPassword";
-  return found.canSignUp ? "name" : found.accessExpired ? "expired" : "closed";
+  return found.canSignUp ? (usable ? "social" : "name") : found.accessExpired ? "expired" : "closed";
 }
 
 /**

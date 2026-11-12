@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "Penyedia ini dapat masuk ke seluruh akun Anda, termasuk ruang kerja lain. Tautkan hanya penyedia yang Anda percayai.",
+    "title": "Login terpadu",
+    "provider": "Penyedia SSO",
+    "signIn": "Masuk dengan SSO",
+    "continueWith": "Lanjutkan dengan {{name}}",
+    "name": "Nama tampilan",
+    "issuer": "URL penerbit atau penemuan",
+    "clientId": "ID klien",
+    "secret": "Rahasia klien",
+    "keepSecret": "Kosongkan untuk mempertahankan rahasia yang tersimpan",
+    "scopes": "Cakupan",
+    "enabled": "Aktifkan SSO",
+    "callback": "URL panggilan balik",
+    "loginLink": "Tautan masuk",
+    "saveFirst": "Simpan untuk mendapatkan URL panggilan balik, lalu daftarkan pada penyedia identitas sebelum masuk.",
+    "access": "SSO mempertahankan undangan dan izin ruang kerja. Akun yang sudah ada harus menautkan SSO saat masuk.",
+    "link": "Tautkan SSO ke akun Anda",
+    "linked": "SSO ditautkan ke akun Anda",
+    "failed": "SSO tidak dapat diselesaikan. Periksa pengaturan dan coba lagi.",
+    "reauth": "Masuk lagi sebelum mengubah SSO atau menautkan akun Anda.",
+    "saved": "Pengaturan SSO disimpan",
+    "loading": "Memuat pengaturan SSO…"
+  },
   "app": {
     "name": "agentes"
   },

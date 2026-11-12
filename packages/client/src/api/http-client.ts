@@ -561,6 +561,11 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       removeSpeechKey: () => request<SpeechKey>("/api/app/speech-key", { method: "DELETE" }),
     },
     account: {
+      sso: (orgId) => request<import("./types").SsoSettings>(`/api/app/organizations/${orgId}/sso`),
+      saveSso: (orgId, input) =>
+        request<import("./types").SsoSettings>(`/api/app/organizations/${orgId}/sso`, { method: "PUT", json: input }),
+      ssoProvider: (id) => request<{ id: `sso-${string}`; name: string }>(`/api/app/sso/${encodeURIComponent(id)}`),
+
       authConfig: () => request<AuthConfig>("/api/app/auth-config"),
       signInOptions: (input, humanCheck) =>
         request<SignInOptions>("/api/app/sign-in-options", { json: input, headers: humanCheckHeaders(humanCheck) }),

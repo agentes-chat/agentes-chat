@@ -92,6 +92,7 @@ import { MyFace, OrgLogoDialog, OrgMark } from "@/components/ProfilePhoto";
 import { KeyMismatch, KeyRefused, KeySite, ProviderKeySelect } from "@/components/ProviderKey";
 import { RolesSection } from "@/components/roles/RolesSection";
 import { SkillsSection } from "@/components/Skills";
+import { SsoSettingsCard } from "@/components/SsoSettings";
 import { StorageSection } from "@/components/StorageSettings";
 import { TeamMemoryCard } from "@/components/TeamMemory";
 import { VoiceSettingsSection } from "@/components/VoiceSettings";
@@ -636,6 +637,7 @@ function GeneralSection() {
 
       <TeamMemoryCard />
 
+      {org.role === "owner" && <SsoSettingsCard />}
       <UsageStatisticsCard />
       {org.role === "owner" && !org.deletion && <DeleteWorkspaceCard />}
       <OrgLogoDialog open={logo} onClose={() => setLogo(false)} />

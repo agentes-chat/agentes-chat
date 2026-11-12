@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "Ten dostawca może logować się do całego konta, w tym innych obszarów roboczych. Połącz tylko dostawcę, któremu ufasz.",
+    "title": "Logowanie jednokrotne",
+    "provider": "Dostawca SSO",
+    "signIn": "Zaloguj przez SSO",
+    "continueWith": "Kontynuuj z {{name}}",
+    "name": "Wyświetlana nazwa",
+    "issuer": "Adres wystawcy lub wykrywania",
+    "clientId": "Identyfikator klienta",
+    "secret": "Sekret klienta",
+    "keepSecret": "Pozostaw puste, aby zachować zapisany sekret",
+    "scopes": "Zakresy",
+    "enabled": "Włącz SSO",
+    "callback": "Adres zwrotny",
+    "loginLink": "Link logowania",
+    "saveFirst": "Zapisz, aby uzyskać adres zwrotny, a następnie zarejestruj go u dostawcy tożsamości przed zalogowaniem.",
+    "access": "SSO zachowuje zaproszenia i uprawnienia obszaru. Istniejące konta muszą połączyć SSO po zalogowaniu.",
+    "link": "Połącz SSO z kontem",
+    "linked": "SSO jest połączone z kontem",
+    "failed": "Nie udało się ukończyć SSO. Sprawdź ustawienia i spróbuj ponownie.",
+    "reauth": "Zaloguj się ponownie przed zmianą SSO lub połączeniem konta.",
+    "saved": "Ustawienia SSO zapisane",
+    "loading": "Wczytywanie ustawień SSO…"
+  },
   "app": {
     "name": "agentes"
   },

@@ -44,6 +44,7 @@ import { onSoundChoiceChange, type SoundChoice, setSoundChoice, soundChoice } fr
 import { type ThemePreference, useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
 import { LanguageSelect } from "./LanguageSelect";
+import { SsoAccountCard } from "./SsoSettings";
 
 /**
  * Configurações › Sua conta: your profile in this workspace, your time zone, whether agents' work shows under their replies,
@@ -77,6 +78,7 @@ export function AccountSection() {
   const zone = mine?.timezone || browserTimezone() || "UTC";
   return (
     <>
+      <SsoAccountCard />
       <Card aria-label={t("shell.profile")}>
         <div className="settings-rows">
           <PrefRow

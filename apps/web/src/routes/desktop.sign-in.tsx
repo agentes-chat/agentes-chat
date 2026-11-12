@@ -1,5 +1,6 @@
 import type { SignInProvider } from "@agenteschat/client";
 import { earlyAccessToken } from "@agenteschat/client/lib/guards";
+import { isSsoProvider } from "@agenteschat/client/lib/sso";
 import { createFileRoute } from "@tanstack/react-router";
 import { DesktopSignInPage } from "@/pages/DesktopSignInPage";
 
@@ -13,7 +14,9 @@ export const Route = createFileRoute("/desktop/sign-in")({
   validateSearch: (
     search: Record<string, unknown>,
   ): { provider?: SignInProvider; request?: string; done?: string; error?: string; access?: string } => ({
-    provider: PROVIDERS.find((p) => p === search.provider),
+    provider: isSsoProvider(search.provider)
+      ? (search.provider as SignInProvider)
+      : PROVIDERS.find((p) => p === search.provider),
     request:
       typeof search.request === "string" && /^[A-Za-z0-9_-]{43}$/.test(search.request) ? search.request : undefined,
     done: search.done === "1" || search.done === 1 ? "1" : undefined,

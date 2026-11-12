@@ -201,7 +201,7 @@ export type BillingFrom =
   | "upload_full"
   | "storage";
 
-export type SignInProvider = "google" | "github" | "apple";
+export type SignInProvider = "google" | "github" | "apple" | `sso-${string}`;
 
 /** How an e-mail signs in: the sign-in screen asks for the e-mail first (`account.signInOptions`). */
 export interface SignInOptions {
@@ -7690,4 +7690,28 @@ export interface ComputerDeviceInput {
 export interface PhoneDeviceInput {
   name?: string;
   audience?: DeviceAudience;
+}
+
+/** OIDC configuration is workspace-scoped in every edition. The secret is write-only. */
+export interface SsoSettings {
+  provider: {
+    id: `sso-${string}`;
+    name: string;
+    issuer: string;
+    clientId: string;
+    scopes: string[];
+    enabled: boolean;
+  } | null;
+  callbackUrl: string;
+  loginUrl: string | null;
+  linked: boolean;
+  canManage: boolean;
+}
+export interface SsoInput {
+  name: string;
+  issuer: string;
+  clientId: string;
+  clientSecret?: string;
+  scopes: string[];
+  enabled: boolean;
 }

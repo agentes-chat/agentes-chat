@@ -1,4 +1,5 @@
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 /**
  * Tables owned by Better Auth (people signing in). Columns mirror Better
@@ -83,7 +84,10 @@ export const accounts = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index().on(t.userId)],
+  (t) => [
+    index().on(t.userId),
+    uniqueIndex("accounts_oidc_identity").on(t.providerId, t.accountId).where(sql`${t.providerId} like 'sso-%'`),
+  ],
 );
 
 /** Short-lived tokens: email verification, password reset. */

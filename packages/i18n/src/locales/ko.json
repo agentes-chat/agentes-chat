@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "이 공급자는 다른 워크스페이스를 포함한 전체 계정에 로그인할 수 있습니다. 신뢰하는 공급자만 연결하세요.",
+    "title": "통합 로그인",
+    "provider": "SSO 공급자",
+    "signIn": "SSO로 로그인",
+    "continueWith": "{{name}}(으)로 계속",
+    "name": "표시 이름",
+    "issuer": "발급자 또는 검색 URL",
+    "clientId": "클라이언트 ID",
+    "secret": "클라이언트 비밀 키",
+    "keepSecret": "저장된 비밀 키를 유지하려면 비워 두세요",
+    "scopes": "범위",
+    "enabled": "SSO 사용",
+    "callback": "콜백 URL",
+    "loginLink": "로그인 링크",
+    "saveFirst": "저장해 콜백 URL을 받은 다음 로그인하기 전에 ID 공급자에 등록하세요.",
+    "access": "SSO는 워크스페이스 초대와 권한을 유지합니다. 기존 계정은 로그인한 상태에서 SSO를 연결해야 합니다.",
+    "link": "계정에 SSO 연결",
+    "linked": "SSO가 계정에 연결되었습니다",
+    "failed": "SSO를 완료하지 못했습니다. 설정을 확인하고 다시 시도하세요.",
+    "reauth": "SSO를 변경하거나 계정을 연결하기 전에 다시 로그인하세요.",
+    "saved": "SSO 설정을 저장했습니다",
+    "loading": "SSO 설정 불러오는 중…"
+  },
   "app": {
     "name": "agentes"
   },

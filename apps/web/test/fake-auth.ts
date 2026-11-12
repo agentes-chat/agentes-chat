@@ -58,6 +58,10 @@ export function createFakeAuth(
       calls.push({ method: "resetPassword", args: [input] });
       return options.reset ?? { ok: true };
     },
+    linkSso: async (provider, callbackURL) => {
+      calls.push({ method: "linkSso", args: [provider, callbackURL] });
+      return { ok: true };
+    },
     signOut: async () => {
       calls.push({ method: "signOut", args: [] });
     },

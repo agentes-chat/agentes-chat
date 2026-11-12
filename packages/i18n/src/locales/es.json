@@ -1,4 +1,28 @@
 {
+  "sso": {
+    "trust": "Este proveedor puede acceder a toda tu cuenta, incluidos otros espacios de trabajo. Vincula solo un proveedor de confianza.",
+    "title": "Inicio de sesión único",
+    "provider": "Proveedor de SSO",
+    "signIn": "Entrar con SSO",
+    "continueWith": "Continuar con {{name}}",
+    "name": "Nombre visible",
+    "issuer": "URL del emisor o de descubrimiento",
+    "clientId": "ID del cliente",
+    "secret": "Secreto del cliente",
+    "keepSecret": "Déjalo vacío para conservar el secreto guardado",
+    "scopes": "Ámbitos",
+    "enabled": "Activar SSO",
+    "callback": "URL de retorno",
+    "loginLink": "Enlace de acceso",
+    "saveFirst": "Guarda para obtener la URL de retorno y regístrala en tu proveedor de identidad antes de entrar.",
+    "access": "SSO conserva las invitaciones y los permisos del espacio. Las cuentas existentes deben vincular SSO con la sesión iniciada.",
+    "link": "Vincular SSO a tu cuenta",
+    "linked": "SSO está vinculado a tu cuenta",
+    "failed": "No se pudo completar SSO. Revisa los ajustes e inténtalo de nuevo.",
+    "reauth": "Vuelve a entrar antes de cambiar SSO o vincular tu cuenta.",
+    "saved": "Ajustes de SSO guardados",
+    "loading": "Cargando ajustes de SSO…"
+  },
   "app": {
     "name": "agentes"
   },

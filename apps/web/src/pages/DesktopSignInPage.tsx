@@ -1,5 +1,6 @@
 import { type SignInProvider, useAuthConfig } from "@agenteschat/client";
 import { signInRefusalText } from "@agenteschat/client/lib/errors";
+import { signInProviderNameKey } from "@agenteschat/client/lib/sso";
 import { Button } from "@agenteschat/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -74,7 +75,7 @@ export function DesktopSignInPage({
     setState(r.ok ? "done" : "expired");
   };
 
-  const name = provider ? t(`auth.provider.${provider}`) : "";
+  const name = provider ? t(signInProviderNameKey(provider)) : "";
   const [title, lead] =
     state === "done"
       ? [t("auth.desktop.done"), t("auth.desktop.doneLead")]

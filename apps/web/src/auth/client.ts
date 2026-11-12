@@ -45,7 +45,7 @@ export interface AuthClient {
    * through the provider's redirect.
    */
   signInSocial(
-    provider: "google" | "github" | "apple",
+    provider: import("@agenteschat/client").SignInProvider,
     callbackURL: string,
     earlyAccess?: string,
     errorCallbackURL?: string,
@@ -54,6 +54,7 @@ export interface AuthClient {
   requestPasswordReset(input: { email: string; redirectTo: string }, humanCheck?: string): Promise<AuthResult>;
   /** The new password for the link's token; signs out every other session. */
   resetPassword(input: { token: string; newPassword: string }): Promise<AuthResult>;
+  linkSso(provider: `sso-${string}`, callbackURL: string): Promise<AuthResult>;
   signOut(): Promise<void>;
   /** In the Mac app's window: opens a hand-over request for the window's challenge, returning its id and the code to show (ADR 0036). */
   desktopOpen(challenge: string): Promise<{ requestId: string; code: string } | null>;

@@ -7,6 +7,32 @@ import type { LocaleStrings } from "./plurals";
  * no exclamation marks, buttons start with a verb, "agentes" in lower case.
  */
 export const ptBR = {
+  sso: {
+    trust:
+      "Este provedor pode entrar na sua conta inteira, incluindo outros workspaces. Vincule apenas um provedor em que você confia.",
+    title: "Login único",
+    provider: "Provedor de SSO",
+    signIn: "Entrar com SSO",
+    continueWith: "Continuar com {{name}}",
+    name: "Nome de exibição",
+    issuer: "URL do emissor ou de descoberta",
+    clientId: "ID do cliente",
+    secret: "Segredo do cliente",
+    keepSecret: "Deixe vazio para manter o segredo salvo",
+    scopes: "Escopos",
+    enabled: "Ativar SSO",
+    callback: "URL de retorno",
+    loginLink: "Link de acesso",
+    saveFirst: "Salve para obter a URL de retorno e cadastre-a no seu provedor de identidade antes de entrar.",
+    access:
+      "O SSO mantém os convites e as permissões do workspace. Contas existentes precisam vincular o SSO enquanto estão conectadas.",
+    link: "Vincular SSO à sua conta",
+    linked: "O SSO está vinculado à sua conta",
+    failed: "Não foi possível concluir o SSO. Confira as configurações e tente de novo.",
+    reauth: "Entre de novo antes de alterar o SSO ou vincular sua conta.",
+    saved: "Configurações de SSO salvas",
+    loading: "Carregando configurações de SSO…",
+  },
   app: { name: "agentes" },
   common: {
     close: "Fechar",

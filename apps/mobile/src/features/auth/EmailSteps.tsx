@@ -1,6 +1,7 @@
 import { type InvitationPreview, useAuthConfig } from "@agenteschat/client";
 import { INVITATION_MAIL_HEADER, INVITATION_MAIL_PARAM, INVITATION_TOKEN_HEADER } from "@agenteschat/client/lib/guards";
 import { humanCheckHeaders, withHumanCheck } from "@agenteschat/client/lib/human-check";
+import { signInProviderNameKey } from "@agenteschat/client/lib/sso";
 import { nameIsPassword, passwordState, webmailOf } from "@agenteschat/client/lib/text";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -238,7 +239,7 @@ export function EmailSteps({
   const calledYou = by
     ? t(modeKey(preview, "invite.calledYou"), { name: by, org })
     : t(modeKey(preview, "invite.calledYouNoName"), { org });
-  const providerNames = linked.map((p) => t(`auth.provider.${p}`)).join(" · ");
+  const providerNames = linked.map((p) => t(signInProviderNameKey(p))).join(" · ");
   const mailApp = webmailOf(invited);
   const bubble: Record<EmailStep, [string, string?]> = {
     name: [

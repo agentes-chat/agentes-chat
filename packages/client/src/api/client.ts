@@ -406,6 +406,10 @@ export interface ApiClient {
     ): Promise<{ clipId: string }>;
   };
   account: {
+    sso(orgId: string): Promise<import("./types").SsoSettings>;
+    saveSso(orgId: string, input: import("./types").SsoInput): Promise<import("./types").SsoSettings>;
+    ssoProvider(id: string): Promise<{ id: `sso-${string}`; name: string }>;
+
     authConfig(): Promise<AuthConfig>;
     /**
      * Whether the e-mail has an account and how it signs in (rate limited: `rate_limited` 429). `access`: the
