@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { CodexBrainEvent } from "../../runner/brain-codex";
 import { CodexThreads } from "../../runner/brain-codex";
@@ -8,6 +8,8 @@ import {
   MUSE_KEY_ENV,
   MUSE_NO_AUTO_UPDATE,
   MuseEventMapper,
+  museApprovalVerdict,
+  museChoice,
   museHostEnv,
   museServeArgs,
   museSessionsFile,
@@ -22,7 +24,16 @@ import { removeDirs, tempDir } from "./helpers";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const name of ["FAKE_MUSE_TOOL", "FAKE_MUSE_ANSWER", "FAKE_MUSE_REFUSE", "FAKE_MUSE_LOST"])
+  for (const name of [
+    "FAKE_MUSE_TOOL",
+    "FAKE_MUSE_ANSWER",
+    "FAKE_MUSE_REFUSE",
+    "FAKE_MUSE_LOST",
+    "FAKE_MUSE_APPROVAL",
+    "FAKE_MUSE_APPROVAL_COMMAND",
+    "FAKE_MUSE_APPROVAL_LOG",
+    "FAKE_MUSE_APPROVAL_SILENT",
+  ])
     delete process.env[name];
   delete process.env[MUSE_KEY_ENV];
   removeDirs(dirs);
@@ -52,6 +63,42 @@ async function turn(extra: Partial<Parameters<typeof runMuseTurn>[0]> = {}, opts
   );
   return { events, sessions, home };
 }
+
+/** The approval decisions a turn put in its thread. */
+type ApprovalCall = Extract<CodexBrainEvent, { type: "tool_call" }>;
+const approvalCalls = (events: CodexBrainEvent[]) =>
+  events.filter((e): e is ApprovalCall => e.type === "tool_call" && e.name === "approval");
+
+/** What the fake host was asked and answered (`FAKE_MUSE_APPROVAL_LOG`), in order. */
+type FakeLog = {
+  session?: { mode?: string | null };
+  requested?: string;
+  offered?: string[];
+  decide?: { approvalId: string; choiceId: string; commandId: string };
+  accepted?: string;
+  rejected?: string;
+};
+
+function fakeLog(file: string): FakeLog[] {
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as FakeLog);
+}
+
+/** The fake host's ask, about `command`: what it is asked and answers lands in `file`. */
+function askAbout(command?: string) {
+  const home = tempDir();
+  dirs.push(home);
+  const file = path.join(home, "approval.log");
+  process.env.FAKE_MUSE_APPROVAL = "1";
+  process.env.FAKE_MUSE_APPROVAL_LOG = file;
+  if (command !== undefined) process.env.FAKE_MUSE_APPROVAL_COMMAND = command;
+  return { file };
+}
+
+const UUID7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 test("the host's argv: serve, never exec, and no approval flag to give", () => {
   expect(museServeArgs()).toEqual(["serve", "--trust-workspace"]);
@@ -159,6 +206,115 @@ test("a turn with a tool streams the call and its output", async () => {
   const { events } = await turn();
   expect(events.some((e) => e.type === "tool_started")).toBe(true);
   expect(events.some((e) => e.type === "tool_call" && e.executed?.content === "a.txt")).toBe(true);
+});
+
+test("the approval policy: a read and work inside the folder, nothing outside it, nothing from a plan turn", () => {
+  const home = tempDir();
+  dirs.push(home);
+  const verdict = (subject: { kind: string; command?: string; path?: string }, profile: "plan" | "work" = "work") =>
+    museApprovalVerdict({ subject, cwd: home, profile, home });
+
+  // What a `work` turn was asked for: a read at once, and the work that stays in its folder.
+  expect(verdict({ kind: "command", command: "ls -la" })).toMatchObject({ allow: true, always: false });
+  expect(verdict({ kind: "command", command: "echo hi > notes.txt" })).toMatchObject({ allow: true });
+  expect(verdict({ kind: "path", path: path.join(home, "notes.txt") })).toMatchObject({ allow: true });
+  // Its kind is one the agent's own computer may run for good (`bun test`), so the session offer is meant.
+  expect(verdict({ kind: "command", command: "bun test" })).toMatchObject({ allow: true, always: true });
+
+  // Outside the folder, a secret, a push: refused, in the policy's own words.
+  expect(verdict({ kind: "command", command: "echo hi > /etc/hosts" })).toMatchObject({
+    allow: false,
+    why: "it writes outside the mission folder",
+  });
+  expect(verdict({ kind: "path", path: "/etc/hosts" })).toMatchObject({
+    allow: false,
+    why: "it changes files outside the mission folder",
+  });
+  // Judged by the field the subject carries, not by the host's own name for its kind.
+  expect(verdict({ kind: "fileWrite", path: "/etc/hosts" }).allow).toBe(false);
+  expect(verdict({ kind: "shell", command: "rm -rf /etc" }).allow).toBe(false);
+  expect(verdict({ kind: "command", command: "cat ~/.ssh/id_rsa" }).allow).toBe(false);
+  expect(verdict({ kind: "command", command: "git push origin main" }).allow).toBe(false);
+
+  // A `plan` turn reads and nothing else; a subject the policy can't read is the profile's call.
+  const planned = verdict({ kind: "command", command: "echo hi > notes.txt" }, "plan");
+  expect(planned.allow).toBe(false);
+  expect(planned.why).toContain("may only read");
+  expect(verdict({ kind: "network" }, "plan").allow).toBe(false);
+  expect(verdict({ kind: "network" }, "work").allow).toBe(true);
+});
+
+test("the offer taken is the narrowest the host made: once by default, the session only when it is meant", () => {
+  const offers = [
+    { choiceId: "once", decision: "approved", scope: "once" },
+    { choiceId: "session", decision: "approvedForSession", scope: "session" },
+    { choiceId: "deny", decision: "denied", scope: "once" },
+    { choiceId: "abort", decision: "abort", scope: "once" },
+  ];
+  expect(museChoice(offers, { allow: true, always: false })?.choiceId).toBe("once");
+  expect(museChoice(offers, { allow: true, always: true })?.choiceId).toBe("session");
+  expect(museChoice(offers, { allow: false, always: false })?.choiceId).toBe("deny");
+  // A shell ask that offers no deny: `abort` is the refusal it does have.
+  const noDeny = offers.filter((o) => o.choiceId !== "deny");
+  expect(museChoice(noDeny, { allow: false, always: false })?.choiceId).toBe("abort");
+  // Never the other way round: a decision that only said "once" doesn't become the session's.
+  expect(
+    museChoice([{ choiceId: "session", decision: "approvedForSession", scope: "session" }], {
+      allow: true,
+      always: false,
+    }),
+  ).toBeUndefined();
+  expect(museChoice([], { allow: true, always: false })).toBeUndefined();
+});
+
+test("a read the host asks about is taken with the offer it made, on a UUIDv7 commandId", async () => {
+  const { file } = askAbout();
+  const { events } = await turn();
+  const [call] = approvalCalls(events);
+  const input = call?.input as Record<string, unknown>;
+  // The session asked the host for what its own policy doesn't match, and the subject landed as a call.
+  expect(fakeLog(file).find((l) => l.session)?.session?.mode).toBe("promptUnmatched");
+  expect(input).toMatchObject({ kind: "command", command: "ls", decision: "allow", scope: "once" });
+  expect(input.offered).toContain(input.choiceId);
+  expect(call?.executed?.content).toContain("allowed (once)");
+  // What the host heard: a choice of its own, on a command of its own kind of id.
+  const decide = fakeLog(file).find((l) => l.decide)?.decide;
+  expect(decide?.choiceId).toBe(input.choiceId as string);
+  expect(decide?.commandId).toMatch(UUID7);
+  expect(fakeLog(file).some((l) => l.accepted === input.choiceId)).toBe(true);
+  expect(events.at(-1)?.type).toBe("done");
+});
+
+test("a command outside the workspace is refused, and the refusal reaches the turn", async () => {
+  const { file } = askAbout("echo hi > /etc/hosts");
+  const { events } = await turn();
+  const [call] = approvalCalls(events);
+  const input = call?.input as Record<string, unknown>;
+  expect(input).toMatchObject({ command: "echo hi > /etc/hosts", decision: "deny" });
+  expect(call?.executed).toMatchObject({ isError: true });
+  expect(call?.executed?.content).toContain("denied (once)");
+  expect(input.offered).toContain(input.choiceId);
+  const log = fakeLog(file);
+  expect(log.find((l) => l.decide)?.decide?.choiceId).toBe(input.choiceId as string);
+  expect(log.some((l) => l.accepted === input.choiceId)).toBe(true);
+  expect(log.some((l) => l.rejected !== undefined)).toBe(false);
+  expect(events.at(-1)?.type).toBe("done");
+});
+
+test("the session offer is taken only for a kind the computer may keep", async () => {
+  askAbout("bun test");
+  const { events } = await turn();
+  const [call] = approvalCalls(events);
+  expect(call?.input).toMatchObject({ command: "bun test", decision: "allow", scope: "session" });
+  expect(events.at(-1)?.type).toBe("done");
+});
+
+test("a host that never answers the decide doesn't hold the turn", async () => {
+  const { file } = askAbout();
+  process.env.FAKE_MUSE_APPROVAL_SILENT = "1";
+  const { events } = await turn();
+  expect(fakeLog(file).some((l) => Boolean(l.decide?.choiceId))).toBe(true);
+  expect(events.at(-1)?.type).toBe("done");
 });
 
 test("a lost session starts a new one instead of failing", async () => {
