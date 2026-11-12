@@ -51,8 +51,21 @@ from the SDK — OpenMausBot's `stdioTransport` is the model for that.
 Arguments: `serve --trust-workspace`, plus `--disable-sandbox` at the `yolo` level and nothing else. The sandbox is a
 host-construction decision the wire cannot change ("neither is negotiable over the wire"); the approval mode is the
 other way round — "it is selected on the wire, so there is no approval flag here" — so `yolo` sets `allowAll` and
-every other level `promptUnmatched` on the request, not on the argv. Shell and write stay on: the agent's own command
-policy is the engine's (ADR 0053 §3), not Muse's.
+every other level `promptUnmatched` on the request, not on the argv.
+
+The levels are four, and only two of them are a posture:
+
+| Level | How |
+|---|---|
+| `plan` | `--disable-write --disable-shell` (measured: the run completes) |
+| `work` | the default: shell and write on, approval on |
+| `chat` | refused at first — no `--tools`/`--disallowed-tools` exists, so the right-hand guard (ADR 0137 §4) has nothing to bind to |
+| `yolo` | `--disable-sandbox` |
+
+A named profile (`--permission-profile`) is **not** the path: `read-only` is a display name, not an id — the binary
+answers "profile does not exist" — and `-c permissions.default_profile=…` refuses until the settings document carries
+`schema_version` ("Named permission profiles are unavailable: missing field `schema_version`"). Its values are JSON
+too: `-c permissions.default_profile="read-only"`, never a bare string.
 
 ### Approvals are the point
 
@@ -77,21 +90,46 @@ always: the runner owns the version, and Muse upgrades itself otherwise. Stored 
 
 - **Subagents and workflows.** One turn, one host. Its own children are its business until the mapping shows
   otherwise.
-- **`--output-schema`** on the route path (`brain.route`), and `session/compact`.
-- **Windows**: `serve` works, but the process and PATH handling needs its own pass.
+- **`session/compact`.**
+- **The route path.** `--output-schema` exists, contrary to the docs, but refuses under `--provider echo` ("the
+  provider does not send the text.format json_schema block") and is `meta`-only, so it needs a keyed account to test
+  at all.
+- **Windows**: `serve` works, but the process and PATH handling, PowerShell in place of Bash and the first-run UAC
+  prompt need their own pass.
+
+## Two defaults nobody asked for
+
+- **Contributor mode is on for subscriptions**: the workspace's code goes to Meta as training data. Every turn carries
+  `--contributor-mode off` (or `MUSE_CONTRIBUTOR_MODE=0`), and the switch is stated in the UI as ADR 0142 §7 does,
+  rather than living only in the CLI's docs.
+- **Four background observer agents are on by default** and make **their own model calls** — the docs say they add
+  token usage, so the person's allowance pays for advice nobody read. They come off in the account's settings, whose
+  document must carry `schema_version: 1` or every command fails.
 
 ## Consequences
 
 - **A long-lived host per run** is supervision the other brains do not have: shutdown ordinals, an idle bound, and a
   kill tree on the way out. It also means a turn can be steered and interrupted instead of only killed.
-- **The event vocabulary is versioned** (`schema_version`), and `muse schema` lets a runner check it instead of
-  guessing. A version is parsed from `muse --version` (`\d+\.\d+\.\d+-R\d+`) and reported; below a floor the brain
-  is refused, as with the other CLIs.
+- **The sandbox is a prerequisite, not a preference.** On Linux a working `bubblewrap` on a non-musl build is what
+  makes every shell command run at all; without it the turn dies on its first command. The runner image must have it
+  before the brain is offered anywhere.
+- **The installer does not pin.** It writes a launcher that upgrades itself, so a version can change under a running
+  parser: the image pins the binary and every host carries `MUSE_NO_AUTO_UPDATE=1`.
+- **Hooks run outside the sandbox.** A trusted workspace's `.muse/hooks.json` executes through the shell with only a
+  cleared environment, so the account's settings keep `hooks={}` and `managed_hooks_path=null`.
+- **`mode: required` on our own MCP server aborts the run** when the bridge does not come up, which is what we want
+  for the agent's tools — but it also means a bridge failure reads as a Muse failure, so the message has to say so.
+- **`muse usage` answers without a turn** (window, weekly use, reset, tier, since 1.4.13): the plan figures come from
+  it rather than from a learned table.
+- **Where the credential rests is undocumented**, only "stores the credential for you", with no config-directory
+  variable. So the account is a key in `META_API_KEY` under the account's own `XDG_CONFIG_HOME`, the variable is
+  dropped from an inherited environment, and its value is redacted on the way out — as `OPENCODE_KEY_ENV` already is.
+- **The event vocabulary is versioned** (`schema_version`), and `muse schema` exports it offline, so a runner checks
+  the surface instead of guessing. A version is parsed from `muse --version` (`\d+\.\d+\.\d+-R\d+`) and below a floor
+  the brain is refused, as with the other CLIs.
 - **Fourteen locale files** for the name and the switch, as with every brain.
 - **The account is a Meta account**, and Meta Managed Accounts cannot use the browser flow at all — an API key is
-  their only path, so the key form is not a fallback here, it is a supported first-class option.
-- **Cost is the person's**, with no plan table to learn from: the usage payload carries per-model call counts and
-  token counts, but nothing tells us the shape of a subscription window.
+  their only path, so the key form is not a fallback here, it is a first-class option.
 - **Skills are shared ground**: Muse reads `~/.claude/skills` and `~/.codex/skills` by default, so a machine with
   Claude Code already hands our skills to Muse for free — and `--no-foreign-personal-context` is what keeps a private
   rule from travelling when it must not.
