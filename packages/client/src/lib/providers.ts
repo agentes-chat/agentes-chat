@@ -1,3 +1,4 @@
+import { customModelId, parseCustomModel } from "@agenteschat/providers/catalog";
 import type { TFunction } from "i18next";
 import type { AiStatus, Credential, Model } from "../api/types";
 
@@ -205,6 +206,30 @@ export const keyRuns = (
   models.some(
     (m) => m.id === model && m.provider === key.provider && (!m.endpoint || m.endpoint.credentialId === key.id),
   );
+
+/** A key as the connect flows hold it: its endpoint's models, each with the last test of it (`custom` only). */
+type KeyWithEndpoint = Pick<Credential, "id" | "provider"> & Partial<Pick<Credential, "endpoint">>;
+
+/**
+ * What a connect flow saves as the agent's model with this key: nothing while the key runs the model it had, Automático
+ * for a catalog key, and for a workspace endpoint one of its own models — an endpoint has no tiers (ADR 0146), and
+ * Automático on its key fails every run as no AI. A pinned model stays when the endpoint being connected offers it too,
+ * so switching between endpoints doesn't lose it; otherwise the first model the admin checked `ok`, else its first.
+ */
+export function modelOnKey(key: KeyWithEndpoint, model: string | undefined, models: readonly Model[]) {
+  if (keyRuns(key, model, models)) return {};
+  if (key.provider !== "custom") return { model: AUTO };
+  const own = key.endpoint
+    ? key.endpoint.models.map((m) => ({ id: m.id, ok: m.check === "ok" }))
+    : models
+        .filter((m) => m.endpoint?.credentialId === key.id)
+        .map((m) => ({ id: parseCustomModel(m.id)?.model ?? m.id, ok: false }));
+  const pinned = model ? parseCustomModel(model)?.model : undefined;
+  // Nothing known of the endpoint's models: the model it had (the server pins one when it is Automático).
+  const id =
+    (pinned && own.some((m) => m.id === pinned) ? pinned : undefined) ?? own.find((m) => m.ok)?.id ?? own[0]?.id;
+  return id ? { model: customModelId(key.id, id) } : {};
+}
 
 /**
  * Whose API an agent's model runs on: the model's provider; for Automático, the one provider the workspace can use

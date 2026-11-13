@@ -14,7 +14,7 @@ import {
   withoutModel,
   withTypedModel,
 } from "../src/lib/endpoints";
-import { keyRuns, modelChoices } from "../src/lib/providers";
+import { keyRuns, modelChoices, modelOnKey } from "../src/lib/providers";
 
 describe("the endpoint form", () => {
   test("a model taken off leaves the others as they were", () => {
@@ -137,5 +137,35 @@ describe("endpoint models in the pickers", () => {
     expect(modelUnpriced(models, "custom:c1:llama")).toBe(true);
     expect(modelUnpriced(models, "custom:c2:other")).toBe(false);
     expect(modelUnpriced(undefined, "custom:c1:llama")).toBe(false);
+  });
+
+  test("the model a key saves with: an endpoint's own, never Automático, keeping a pinned one it offers", () => {
+    const endpointKey = (id: string, own: { id: string; check?: "ok" | "no_tools" | "failed" }[]): Credential => ({
+      ...cred(id),
+      endpoint: { style: "openai", baseURL: "https://gw.example/v1", models: own },
+    });
+    // A model that already runs on the key is left alone.
+    expect(modelOnKey(cred("c1"), "custom:c1:llama", models)).toEqual({});
+    expect(modelOnKey(cred("k", "anthropic"), "auto", models)).toEqual({});
+    // Another line's model: Automático on a catalog key (it follows the key), the endpoint's own on an endpoint key.
+    expect(modelOnKey(cred("k", "anthropic"), "custom:c1:llama", models)).toEqual({ model: "auto" });
+    expect(modelOnKey(endpointKey("c2", [{ id: "other" }]), "custom:c1:llama", models)).toEqual({
+      model: "custom:c2:other",
+    });
+    // A pinned model this endpoint offers too stays: switching between endpoints doesn't lose it.
+    expect(modelOnKey(endpointKey("c2", [{ id: "llama" }]), "custom:c1:llama", models)).toEqual({
+      model: "custom:c2:llama",
+    });
+    // The first model the admin checked `ok`, else the endpoint's first.
+    expect(
+      modelOnKey(
+        endpointKey("c2", [
+          { id: "slow", check: "failed" },
+          { id: "good", check: "ok" },
+        ]),
+        "auto",
+        models,
+      ),
+    ).toEqual({ model: "custom:c2:good" });
   });
 });

@@ -47,10 +47,11 @@ import { deciderName, publishApproval } from "./approvals";
 import { accountablePerson, fedByRoutine, personOfMessage, runAuthority } from "./authority";
 import {
   type AutoChoice,
+  type AutoLine,
   type AutoModelRecord,
   type AutoModels,
   autoApplied,
-  autoProvider,
+  autoLine,
   autoWanted,
   chooseAutoModel,
   fallbackChoice,
@@ -2893,16 +2894,17 @@ async function executeRunInner(
     const kept = t.autoModel;
     const choice: AutoModelRecord =
       kept ?? (await (autoAsked ?? (needsContext ? askAuto() : Promise.resolve(fallbackChoice("kept")))));
-    const provider =
+    const line: AutoLine =
       isAutoModel(agent.model) && !choice.apiModel
-        ? await autoProvider(db, agent).catch(() => "anthropic")
-        : "anthropic";
+        ? await autoLine(db, agent).catch((): AutoLine => ({ provider: "anthropic" }))
+        : { provider: "anthropic" };
+    const { provider, endpoint } = line;
     // OpenRouter's line is its list: in place before a tier maps onto it.
     if (provider === "openrouter") await ensureOpenRouterModels();
     const tiers = (await orgAutoModels(db, run.orgId).catch((): AutoModels => ({})))[provider];
-    const applied = autoApplied(agent, brainPlan, choice, provider, tiers);
-    // No model for the tier: OpenRouter's list couldn't be read. Waited out like a provider outage, with the
-    // choice kept for the next attempt.
+    const applied = autoApplied(agent, brainPlan, choice, provider, tiers, endpoint);
+    // No model for the tier: OpenRouter's list couldn't be read, or an endpoint offers none (never a call on the
+    // wrong provider's line). Waited out like a provider outage, with the choice kept for the next attempt.
     if (brainPlan.kind === "model" && isAutoModel(agent.model) && !applied.apiModel) {
       const outage = new ProviderError("could not reach provider", true);
       outage.provider = PROVIDERS[provider as keyof typeof PROVIDERS]?.label;

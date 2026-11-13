@@ -294,6 +294,12 @@ describe("the test call", () => {
             : { chunks: ["I can't call tools."] },
     });
     const cred = await addEndpoint(f, [{ id: "tools" }, { id: "chat" }, { id: "broken" }]);
+    // A key of an endpoint has no cheap catalog model to test it with: its own models' checks are the answer, so it is
+    // `unchecked` only while none of them has been tested (a connect flow toasts that, never a tested key).
+    expect(await f.gateway.verifyStoredKey(f.org.id, cred.id)).toMatchObject({
+      provider: "custom",
+      result: { state: "unchecked" },
+    });
     const checks = await checkEndpoint(f.db, f.gateway, f.owner.id, f.org.id, cred.id);
     expect(checks).toEqual([
       { model: "tools", check: "ok" },
@@ -305,6 +311,8 @@ describe("the test call", () => {
     );
     const [saved] = (await listCredentials(f.db, f.owner.id, f.org.id)).filter((c) => c.id === cred.id);
     expect(saved?.endpoint?.models.map((m) => m.check)).toEqual(["ok", "no_tools", "failed"]);
+    // Tested: the key answers, so nothing says it couldn't be checked.
+    expect(await f.gateway.verifyStoredKey(f.org.id, cred.id)).toMatchObject({ result: { state: "ok" } });
     const rows = await f.db.select().from(schema.usageRecords).where(eq(schema.usageRecords.credentialId, cred.id));
     expect(rows.map((r) => r.kind)).toEqual(["summary", "summary"]);
     // Prices change, the checks stay with their models.

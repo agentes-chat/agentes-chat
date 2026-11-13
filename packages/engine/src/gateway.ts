@@ -7,6 +7,7 @@ import {
   type EmbeddingResult,
   type Endpoint,
   embeddingCostNanoUsd,
+  endpointKeyCheck,
   ensureOpenRouterModels,
   estimateTokens,
   isCustomModel,
@@ -979,7 +980,13 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       const credential = await decryptCredential(db, deps.keyWrappers, orgId, credentialId);
       if (!credential) return null;
       const { provider, apiKey, workspaceId, options } = credential;
-      if (provider === "custom") return { provider, result: { state: "unchecked" } as KeyCheck };
+      // A workspace endpoint has no cheap catalog model to test its key with (`keyCheckRequest`): what its own models'
+      // last tests said of it is the answer (`endpointKeyCheck`), so a saved endpoint key isn't reported as unchecked.
+      if (provider === "custom")
+        return {
+          provider,
+          result: { state: endpointKeyCheck((options?.endpoint?.models ?? []).map((m) => m.check)) } as KeyCheck,
+        };
       const key = {
         apiKey,
         ...(workspaceId ? { workspaceId } : {}),
