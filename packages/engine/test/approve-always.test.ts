@@ -26,6 +26,7 @@ import {
   type McpConnect,
   mcpSessionOver,
   type RoutineBrief,
+  refreshCustomServer,
   removeApprovalRule,
   revokeConnection,
   saveCustomTools,
@@ -543,6 +544,27 @@ describe("Aprovar sempre", () => {
       expect(ask.approveAlways).toEqual({ tool, actions: [] });
     }
     expect(mcp.calls).toEqual([]);
+  });
+
+  test("the executor a plain server only warns about stays locked: it can never be set to run unasked", async () => {
+    f = await setup();
+    const { deps, serverId } = await connectServer(f, composioMcp(), "Tools", "https://tools.example.com/mcp");
+    const executor = async () => {
+      const [row] = await f.db
+        .select()
+        .from(schema.customTools)
+        .where(and(eq(schema.customTools.connectionId, serverId), eq(schema.customTools.name, COMPOSIO_EXECUTOR)));
+      return [row?.access, row?.sensitive];
+    };
+    expect(await executor()).toEqual(["approval", true]);
+    await refreshCustomServer(deps, f.owner.id, f.org.id, serverId);
+    expect(await executor()).toEqual(["approval", true]);
+    await expect(
+      saveCustomTools(deps, f.owner.id, f.org.id, serverId, {
+        label: "Tools",
+        tools: [{ name: COMPOSIO_EXECUTOR, access: "write", label: "Executor" }],
+      }),
+    ).rejects.toThrow("can only ask for approval or be off");
   });
 
   test("a plain tool of the server is one action: approved for good, that agent runs it with any values", async () => {

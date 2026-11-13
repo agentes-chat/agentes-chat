@@ -121,10 +121,10 @@ html:not([data-pointer]) .nt-item:focus-visible {
   color: var(--warn);
   font-weight: 600;
 }
-/* Remind me later and Done end the footer, after the time. */
+/* Remind me later and Done end the footer, after the time. The last one's plate ends 8 from the card's edge, its
+   glyph on the edge the card's words keep. */
 .rq__end > .nt-tail.ac-acts {
   display: flex;
-  margin-right: -6px;
 }
 
 /* ── What only points somewhere: a card of the requests' shape, opened by a click on it ── */

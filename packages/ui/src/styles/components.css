@@ -3031,6 +3031,14 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 .ac-dialog__close > .ac-btn--glyph {
   --glyph-air: calc(var(--control-icon-sm) * 5.2 / 20);
 }
+/* After the head's own actions the close is one more of them: a whole plate, 8 from the plate before it, as two icon
+   buttons stand in a row. */
+.ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close {
+  margin-inline-start: calc(var(--space-2) + 2 * var(--ghost-plate) - var(--space-3));
+}
+.ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close > .ac-btn--glyph {
+  --glyph-air: 0px;
+}
 /* Beside a title alone, they sit on its capitals' middle, as an `.ac-iconline` lead does. An app measures that middle
    for its title's face (`--title-cap-mid`): --cap-mid here would resolve in the actions' own font. */
 .ac-dialog__title + .ac-dialog__acts,

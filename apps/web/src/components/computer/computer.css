@@ -298,6 +298,13 @@
   height: auto;
   margin-top: calc((24px - var(--cmp-button)) / 2 - var(--title-cap-mid, var(--cap-mid)));
 }
+/* The window's head sets its own row (the arrows reach into the close's box): the close keeps its drawn air here. */
+.cmp-dialog .ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close {
+  margin-inline-start: 0;
+}
+.cmp-dialog .ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close > .ac-btn--glyph {
+  --glyph-air: calc(var(--control-icon-sm) * 5.2 / 20);
+}
 .cmp-dialog.is-screen-only :is(.ac-dialog__acts, .ac-dialog__close) {
   margin-top: calc((24px + 18px - var(--cmp-button)) / 2);
 }
