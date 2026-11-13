@@ -3631,6 +3631,16 @@ export interface Issue {
   updatedAt: string;
 }
 
+/** How many tasks I see with this stage, stored column, assignee and priority (`GET …/issue-counts`): not capped. */
+export interface IssueCount {
+  status: IssueStatus;
+  /** As stored: the board puts a task whose column is of another stage in its stage's first one (`columnIdOf`). */
+  columnId: string | null;
+  assignee: Actor | null;
+  priority: IssuePriority;
+  count: number;
+}
+
 /** Where a task's conversation lives (ADR 0145): the chat's routes read and post to this thread. */
 export interface IssueConversationRef {
   channelId: string;

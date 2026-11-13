@@ -168,6 +168,7 @@ import type {
   IssueActivity,
   IssueColumn,
   IssueConversationRef,
+  IssueCount,
   IssueInput,
   IssuePatch,
   IssueProject,
@@ -1289,8 +1290,16 @@ export interface ApiClient {
     saveToVault?(orgId: string, requestId: string, input: SecretToVaultInput): Promise<VaultItem>;
   };
   issues: {
-    /** `projectId`: only that project's tasks, or `none` for the ones with no project. */
-    list(orgId: string, filters?: { q?: string; projectId?: string }): Promise<Issue[]>;
+    /**
+     * `projectId`: only that project's tasks, or `none` for the ones with no project. Capped (`limit`, 200 when absent,
+     * at most 500), open ones first then the most recently updated: a board asks per stage with `status`.
+     */
+    list(
+      orgId: string,
+      filters?: { q?: string; projectId?: string; status?: IssueStatus; limit?: number },
+    ): Promise<Issue[]>;
+    /** How many tasks I see by stage, column, assignee and priority, not capped. Optional so older fakes type-check. */
+    counts?(orgId: string, filters?: { q?: string; projectId?: string }): Promise<IssueCount[]>;
     get(orgId: string, number: number): Promise<Issue>;
     create(orgId: string, input: IssueInput): Promise<Issue>;
     update(orgId: string, id: string, patch: IssuePatch): Promise<Issue>;

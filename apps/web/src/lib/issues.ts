@@ -1,4 +1,4 @@
-import type { Issue, IssueColumn, IssueStatus } from "@agenteschat/client";
+import type { Issue, IssueColumn, IssueCount, IssueStatus } from "@agenteschat/client";
 import { BOARD, STATUSES } from "@agenteschat/client/lib/issues";
 import { stepPhrase } from "@agenteschat/client/lib/work";
 import { useTranslation } from "react-i18next";
@@ -63,6 +63,34 @@ export function groupByColumn<T extends Pick<Issue, "columnId" | "status" | "boa
     if (id) out.get(id)?.push(i);
   }
   for (const list of out.values()) list.sort((a, b) => a.boardRank - b.boardRank || b.number - a.number);
+  return out;
+}
+
+type Counted = Pick<Issue, "status" | "columnId" | "assignee" | "priority">;
+
+/**
+ * What a group doesn't hold of a stage read only in part (Feito past its most recent cards): the server's count of
+ * those tasks less the ones loaded, per group. `groupOf` places a task (or a count's tasks) as the view groups them,
+ * `keep` is the view's filters. A stage read whole leaves nothing out, so a card moved there counts at once.
+ */
+export function unloadedByGroup(
+  counts: IssueCount[],
+  loaded: Counted[],
+  perStage: Record<IssueStatus, number>,
+  groupOf: (i: Counted) => string | null,
+  keep: (i: Counted) => boolean,
+) {
+  const totals = new Map<IssueStatus, number>();
+  for (const c of counts) totals.set(c.status, (totals.get(c.status) ?? 0) + c.count);
+  const out = new Map<string, number>();
+  const add = (i: Counted, n: number) => {
+    if ((totals.get(i.status) ?? 0) <= perStage[i.status] || !keep(i)) return;
+    const group = groupOf(i);
+    if (group) out.set(group, (out.get(group) ?? 0) + n);
+  };
+  for (const c of counts) add(c, c.count);
+  for (const i of loaded) add(i, -1);
+  for (const [group, n] of out) if (n <= 0) out.delete(group);
   return out;
 }
 

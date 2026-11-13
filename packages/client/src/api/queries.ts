@@ -4101,6 +4101,49 @@ export const useIssues = (orgId: string, q = "", project = "") => {
   });
 };
 
+/**
+ * The tasks for the board and the list of Tarefas: each stage read on its own, so a busy one can't push the others
+ * out of a capped list (683 tasks, 200 shown, Feito empty). Open stages up to the server's ceiling; Feito and
+ * Canceladas their most recently updated. A stage's real size comes from `useIssueCounts`.
+ */
+export const ISSUES_PER_STAGE: Record<IssueStatus, number> = {
+  todo: 500,
+  in_progress: 500,
+  in_review: 500,
+  done: 100,
+  canceled: 100,
+};
+const STAGES = Object.keys(ISSUES_PER_STAGE) as IssueStatus[];
+
+export const useIssuesByStage = (orgId: string, q = "", project = "") => {
+  const api = useApi();
+  const filters = { ...(q ? { q } : {}), ...(project ? { projectId: project } : {}) };
+  return useQuery({
+    queryKey: keys.issueStageList(orgId, q, project),
+    queryFn: async () =>
+      (
+        await Promise.all(
+          STAGES.map((status) => api.issues.list(orgId, { ...filters, status, limit: ISSUES_PER_STAGE[status] })),
+        )
+      ).flat(),
+    placeholderData: (prev) => prev,
+    refetchInterval: (query) => (query.state.data?.some((i) => i.work && i.work.state !== "stalled") ? 10_000 : false),
+  });
+};
+
+/** How many tasks I see by stage, column, assignee and priority, with the board's search and project: not capped. */
+export const useIssueCounts = (orgId: string, q = "", project = "") => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.issueCounts(orgId, q, project),
+    queryFn: () =>
+      api.issues.counts?.(orgId, { ...(q ? { q } : {}), ...(project ? { projectId: project } : {}) }) ??
+      Promise.resolve([]),
+    enabled: Boolean(api.issues.counts),
+    placeholderData: (prev) => prev,
+  });
+};
+
 export const useIssue = (orgId: string, number: number, enabled = true) => {
   const api = useApi();
   return useQuery({

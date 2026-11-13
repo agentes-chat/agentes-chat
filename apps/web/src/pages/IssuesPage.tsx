@@ -1,10 +1,20 @@
-import type { Actor, Issue, IssueColumn, IssuePriority, IssueStatus, IssuesView } from "@agenteschat/client";
+import type {
+  Actor,
+  Issue,
+  IssueColumn,
+  IssueCount,
+  IssuePriority,
+  IssueStatus,
+  IssuesView,
+} from "@agenteschat/client";
 import {
+  ISSUES_PER_STAGE,
   useIssue,
   useIssueColumns,
+  useIssueCounts,
   useIssueProjectAction,
   useIssueProjects,
-  useIssues,
+  useIssuesByStage,
   useIssuesView,
   useSetIssuesView,
   useTaskUnread,
@@ -55,6 +65,7 @@ import {
   cardState,
   cardStateText,
   cardWaits,
+  columnIdOf,
   groupByColumn,
   isCustomBoard,
   isOpen,
@@ -63,6 +74,7 @@ import {
   rankAt,
   STATUS_ICON,
   type CardState as TaskState,
+  unloadedByGroup,
   useAssigneeColor,
   useColumnTitle,
   useStageName,
@@ -147,7 +159,9 @@ export function IssuesPage() {
     setProjectDialog(null);
     setProjectParam(undefined);
   });
-  const issues = useIssues(org.id, search, projectParam);
+  // Each stage read on its own (a busy one can't push Feito off the board), and how many each really has.
+  const issues = useIssuesByStage(org.id, search, projectParam);
+  const counts = useIssueCounts(org.id, search, projectParam);
   const columnsQuery = useIssueColumns(org.id);
   const columns = columnsQuery.data;
   const all = issues.data ?? [];
@@ -377,6 +391,7 @@ export function IssuesPage() {
               columns={columns}
               issues={filtered.filter((i) => view.showCanceled || i.status !== "canceled")}
               all={all}
+              counts={counts.data ?? []}
               openNumber={openNumber}
               onOpen={toggle}
               onNew={adds ? (columnId) => setCreating({ columnId }) : undefined}
@@ -429,6 +444,7 @@ function IssuesBody({
   columns,
   issues,
   all,
+  counts,
   openNumber,
   onOpen,
   onNew,
@@ -439,6 +455,8 @@ function IssuesBody({
   issues: Issue[];
   /** Every task loaded: who has one gets a column when grouped by assignee. */
   all: Issue[];
+  /** How many tasks there are, not capped: a stage loaded in part still says its whole size. */
+  counts: IssueCount[];
   openNumber: number | null;
   onOpen: (n: number) => void;
   /** Who may create tasks: "+" in A fazer's columns. */
@@ -554,7 +572,18 @@ function IssuesBody({
     return { changed: true };
   };
   const nameOf = (group: string) => groups.find((g) => g.id === group)?.name ?? "";
-  const dnd = useIssueDrag<Issue>({
+  const unloaded = unloadedByGroup(
+    counts,
+    all,
+    ISSUES_PER_STAGE,
+    (i) =>
+      view.group === "stage" ? columnIdOf(i, columns) : view.group === "assignee" ? actorKey(i.assignee) : i.priority,
+    (i) =>
+      (view.showCanceled || i.status !== "canceled") &&
+      (view.assignees.length === 0 || view.assignees.includes(actorKey(i.assignee))) &&
+      (view.priorities.length === 0 || view.priorities.includes(i.priority)),
+  );
+  const drag = useIssueDrag<Issue>({
     groups,
     layout: view.layout,
     onDrop,
@@ -566,6 +595,8 @@ function IssuesBody({
       canceled: (i) => t("issues.drag.canceled", { number: i.number }),
     },
   });
+  // A group's count is what it holds on screen plus what its stage has beyond the cards loaded (Feito: 255, not 100).
+  const dnd = { ...drag, count: (group: string) => drag.count(group) + (unloaded.get(group) ?? 0) };
   const renderCard = (i: Issue, group: string, state: CardState) => (
     <IssueCard
       issue={i}

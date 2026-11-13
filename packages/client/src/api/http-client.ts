@@ -130,6 +130,7 @@ import type {
   IssueActivity,
   IssueColumn,
   IssueConversationRef,
+  IssueCount,
   IssueProject,
   IssueProjectRef,
   IssueProjects,
@@ -1471,9 +1472,20 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       list: async (orgId, filters = {}) =>
         (
           await request<{ issues: Issue[] }>(`${org(orgId)}/issues`, {
-            query: { q: filters.q, projectId: filters.projectId },
+            query: {
+              q: filters.q,
+              projectId: filters.projectId,
+              status: filters.status,
+              limit: filters.limit,
+            },
           })
         ).issues,
+      counts: async (orgId, filters = {}) =>
+        (
+          await request<{ counts: IssueCount[] }>(`${org(orgId)}/issue-counts`, {
+            query: { q: filters.q, projectId: filters.projectId },
+          })
+        ).counts,
       get: (orgId, number) => request<Issue>(`${org(orgId)}/issues/by-number/${number}`),
       create: (orgId, input) => request<Issue>(`${org(orgId)}/issues`, { json: input }),
       update: (orgId, id, patch) => request<Issue>(`${org(orgId)}/issues/${enc(id)}`, { method: "PATCH", json: patch }),

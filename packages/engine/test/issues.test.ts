@@ -7,6 +7,7 @@ import {
   askAgentToImplement,
   buildRunContext,
   commentIssue,
+  countIssues,
   createAgent,
   createAgentRuns,
   createChannel,
@@ -145,6 +146,44 @@ describe("issues", () => {
       "criteria_changed",
     ]);
     expect(activity.at(-1)).toMatchObject({ text: "edited the acceptance criteria", textCode: "criteria_changed" });
+  });
+
+  test("a busy board: past 200 open tasks a stage still reads on its own, and the counts are the whole of it", async () => {
+    f = await setup();
+    const ana = person(f.owner.id);
+    const at = (k: number) => new Date(Date.UTC(2026, 10, 1) + k * 60_000);
+    const row = (k: number, status: "todo" | "done") => ({
+      orgId: f.org.id,
+      number: k + 1,
+      title: `Tarefa ${k + 1}`,
+      status,
+      createdByType: "person",
+      createdById: f.owner.id,
+      updatedAt: at(k),
+    });
+    // 205 open, then 3 done; the done ones are the most recently updated of all.
+    await f.db
+      .insert(schema.issues)
+      .values([
+        ...Array.from({ length: 205 }, (_, k) => row(k, "todo")),
+        ...[205, 206, 207].map((k) => row(k, "done")),
+      ]);
+    // The whole list, capped, has no room left for Feito: the board must ask per stage.
+    expect((await listIssues(f.db, ana, f.org.id)).some((i) => i.status === "done")).toBe(false);
+    const done = await listIssues(f.db, ana, f.org.id, { status: "done", limit: 2 });
+    expect(done.map((i) => i.number)).toEqual([208, 207]);
+    const counts = await countIssues(f.db, ana, f.org.id);
+    const total = (status: string) => counts.filter((c) => c.status === status).reduce((n, c) => n + c.count, 0);
+    expect([total("todo"), total("done"), total("in_progress")]).toEqual([205, 3, 0]);
+    expect(counts.find((c) => c.status === "done")).toMatchObject({
+      columnId: null,
+      assignee: null,
+      priority: "normal",
+    });
+    // The same filters as the list: a search counts only what it finds.
+    expect(await countIssues(f.db, ana, f.org.id, { q: "#208" })).toEqual([
+      { status: "done", columnId: null, assignee: null, priority: "normal", count: 1 },
+    ]);
   });
 
   test('"Transformar em issue" keeps the visibility of a private channel', async () => {
