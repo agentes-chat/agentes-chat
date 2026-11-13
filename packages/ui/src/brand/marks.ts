@@ -316,9 +316,10 @@ export type MarkId = keyof typeof MARKS;
 export const PROVIDER_MARKS: Readonly<Record<MarkId, ProviderMark>> = MARKS;
 
 /**
- * Ids that draw another's mark: the computer brains (the Antigravity CLI Gemini's), Moonshot's API (Kimi), the
- * `anthropic` provider, which people know as Claude, and the accounts' own providers (`provider ?? kind` on the AI
- * accounts' rows): an OpenCode key (`zen`) and a Gemini Enterprise seat (`enterprise`).
+ * Ids that draw another's mark: the computer brains (the Antigravity CLI Gemini's), Moonshot's API (Kimi), Zhipu's
+ * domestic platform (BigModel, Z.ai's mark), the `anthropic` provider, which people know as Claude, and the accounts'
+ * own providers (`provider ?? kind` on the AI accounts' rows): an OpenCode key (`zen`) and a Gemini Enterprise seat
+ * (`enterprise`).
  */
 const ALIASES: Record<string, MarkId> = {
   anthropic: "claude",
@@ -326,6 +327,7 @@ const ALIASES: Record<string, MarkId> = {
   codex: "openai",
   antigravity: "gemini",
   moonshot: "kimi",
+  zhipu: "zai",
   zen: "opencode",
   enterprise: "gemini",
 };

@@ -11,9 +11,10 @@
  * Settings as each maker documents them for Claude Code (read 2026-10-24):
  * docs.z.ai/devpack/tool/claude, kimi.com/code/docs (third-party tools, Claude
  * Code), platform.minimax.io/docs/coding-plan/claude-code and
- * opencode.ai/v2/docs/console/harnesses/claude-code. Each plan's models as its
- * maker lists them (read 2026-10-30): docs.z.ai/devpack/overview,
- * kimi.com/code/docs/en/kimi-code/models.html,
+ * opencode.ai/v2/docs/console/harnesses/claude-code; Zhipu's domestic plan as
+ * docs.bigmodel.cn/cn/coding-plan/tool/claude documents them (read 2026-11-12).
+ * Each plan's models as its maker lists them (read 2026-10-30):
+ * docs.z.ai/devpack/overview, kimi.com/code/docs/en/kimi-code/models.html,
  * platform.minimax.io/docs/coding-plan/intro, and opencode.ai/v2/docs/console/go
  * with its live list (opencode.ai/inference/go/v1/models). Flagships in their
  * makers' words (read 2026-10-30): docs.z.ai/guides/llm/glm-5.3, Kimi's models
@@ -115,6 +116,24 @@ export const CODING_PLANS = {
       env: { API_TIMEOUT_MS: "3000000" },
     },
     usage: { url: "https://api.z.ai/api/monitor/usage/quota/limit", auth: "raw" },
+  },
+  // Zhipu's domestic platform (BigModel): same models and settings as Z.ai's plan, keys of one refused at the
+  // other. Its keys are region-locked, and its usage endpoint is left out here: none verified to read.
+  zhipu: {
+    label: "GLM Coding CN",
+    name: "GLM Coding Plan (China)",
+    maker: "Zhipu",
+    site: "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+    keyPattern: "^[A-Za-z0-9._-]{16,256}$",
+    claudeCode: {
+      baseUrl: "https://open.bigmodel.cn/api/anthropic",
+      tokenEnv: "ANTHROPIC_AUTH_TOKEN",
+      models: [
+        { id: "glm-5.3[1m]", label: "GLM-5.3", alias: "sonnet", tag: "smart" },
+        { id: "glm-5.3-flash[1m]", label: "GLM-5.3 Flash", alias: "haiku", tag: "cheap" },
+      ],
+      env: { API_TIMEOUT_MS: "3000000" },
+    },
   },
   kimi: {
     label: "Kimi Code",

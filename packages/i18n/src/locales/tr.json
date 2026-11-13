@@ -1307,6 +1307,7 @@
       "deepseek": "DeepSeek anahtarları sk- ile başlar. Kontrol edip tekrar yapıştırın.",
       "moonshot": "Kimi anahtarları sk- ile başlar. Kontrol edip tekrar yapıştırın.",
       "zai": "Z.ai anahtarının tamamını boşluksuz yapıştırın. Kontrol edip tekrar yapıştırın.",
+      "zhipu": "Zhipu anahtarının tamamını boşluksuz yapıştırın. Kontrol edip tekrar yapıştırın.",
       "minimax": "MiniMax anahtarının tamamını boşluksuz yapıştırın. sk-cp- ile başlayan anahtarlar plana aittir ve burada çalışmaz.",
       "openrouter": "OpenRouter anahtarları sk-or-v1- ile başlar. Kontrol edip tekrar yapıştırın."
     },
@@ -2969,6 +2970,9 @@
       },
       "zai": {
         "tiers": "Lite, Pro veya Max"
+      },
+      "zhipu": {
+        "tiers": "Kişisel veya ekip planları"
       },
       "kimi": {
         "tiers": "Plus, Pro, Max veya Ultra"

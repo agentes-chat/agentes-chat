@@ -1270,6 +1270,7 @@
       "deepseek": "Kunci DeepSeek diawali sk-. Periksa lalu tempel lagi.",
       "moonshot": "Kunci Kimi diawali sk-. Periksa lalu tempel lagi.",
       "zai": "Tempel seluruh kunci Z.ai, tanpa spasi. Periksa lalu tempel lagi.",
+      "zhipu": "Tempel seluruh kunci Zhipu, tanpa spasi. Periksa lalu tempel lagi.",
       "minimax": "Tempel seluruh kunci MiniMax, tanpa spasi. Kunci yang diawali sk-cp- milik paket dan tidak berfungsi di sini.",
       "openrouter": "Kunci OpenRouter diawali sk-or-v1-. Periksa lalu tempel lagi."
     },
@@ -2880,6 +2881,9 @@
       },
       "zai": {
         "tiers": "Lite, Pro, atau Max"
+      },
+      "zhipu": {
+        "tiers": "Paket pribadi atau tim"
       },
       "kimi": {
         "tiers": "Plus, Pro, Max, atau Ultra"

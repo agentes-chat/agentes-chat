@@ -1346,6 +1346,7 @@
       "deepseek": "Les clés DeepSeek commencent par sk-. Vérifiez-la et collez-la de nouveau.",
       "moonshot": "Les clés Kimi commencent par sk-. Vérifiez-la et collez-la de nouveau.",
       "zai": "Collez la clé Z.ai entière, sans espaces. Vérifiez-la et collez-la de nouveau.",
+      "zhipu": "Collez la clé Zhipu entière, sans espaces. Vérifiez-la et collez-la de nouveau.",
       "minimax": "Collez la clé MiniMax entière, sans espaces. Les clés qui commencent par sk-cp- appartiennent à l'abonnement et ne fonctionnent pas ici.",
       "openrouter": "Les clés OpenRouter commencent par sk-or-v1-. Vérifiez-la et collez-la de nouveau."
     },
@@ -3080,6 +3081,9 @@
       },
       "zai": {
         "tiers": "Lite, Pro ou Max"
+      },
+      "zhipu": {
+        "tiers": "Abonnements personnels ou d’équipe"
       },
       "kimi": {
         "tiers": "Plus, Pro, Max ou Ultra"

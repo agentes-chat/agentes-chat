@@ -1307,6 +1307,7 @@
       "deepseek": "DeepSeek-Schlüssel beginnen mit sk-. Prüfe ihn und füge ihn noch einmal ein.",
       "moonshot": "Kimi-Schlüssel beginnen mit sk-. Prüfe ihn und füge ihn noch einmal ein.",
       "zai": "Füge den ganzen Z.ai-Schlüssel ohne Leerzeichen ein. Prüfe ihn und füge ihn noch einmal ein.",
+      "zhipu": "Füge den ganzen Zhipu-Schlüssel ohne Leerzeichen ein. Prüfe ihn und füge ihn noch einmal ein.",
       "minimax": "Füge den ganzen MiniMax-Schlüssel ohne Leerzeichen ein. Schlüssel, die mit sk-cp- beginnen, gehören zum Abo und funktionieren hier nicht.",
       "openrouter": "OpenRouter-Schlüssel beginnen mit sk-or-v1-. Prüfe ihn und füge ihn noch einmal ein."
     },
@@ -2980,6 +2981,9 @@
       },
       "zai": {
         "tiers": "Lite, Pro oder Max"
+      },
+      "zhipu": {
+        "tiers": "Persönliche oder Team-Abos"
       },
       "kimi": {
         "tiers": "Plus, Pro, Max oder Ultra"

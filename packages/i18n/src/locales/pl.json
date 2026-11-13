@@ -1384,6 +1384,7 @@
       "deepseek": "Klucze DeepSeek zaczynają się od sk-. Sprawdź go i wklej ponownie.",
       "moonshot": "Klucze Kimi zaczynają się od sk-. Sprawdź go i wklej ponownie.",
       "zai": "Wklej cały klucz Z.ai, bez spacji. Sprawdź go i wklej ponownie.",
+      "zhipu": "Wklej cały klucz Zhipu, bez spacji. Sprawdź go i wklej ponownie.",
       "minimax": "Wklej cały klucz MiniMax, bez spacji. Klucze zaczynające się od sk-cp- należą do planu i tu nie działają.",
       "openrouter": "Klucze OpenRouter zaczynają się od sk-or-v1-. Sprawdź go i wklej ponownie."
     },
@@ -3180,6 +3181,9 @@
       },
       "zai": {
         "tiers": "Lite, Pro lub Max"
+      },
+      "zhipu": {
+        "tiers": "Plany osobiste lub zespołowe"
       },
       "kimi": {
         "tiers": "Plus, Pro, Max lub Ultra"

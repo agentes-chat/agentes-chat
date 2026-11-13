@@ -43,6 +43,9 @@ describe("coding plans' models", () => {
   test("each plan lists every model it runs through Claude Code; its aliases keep the documented defaults", () => {
     expect(ids("zai")).toEqual(["glm-5.3[1m]", "glm-5.3-flash[1m]"]);
     expect(aliases("zai")).toEqual({ opus: "glm-5.3[1m]", sonnet: "glm-5.3[1m]", haiku: "glm-5.3-flash[1m]" });
+    // Zhipu's domestic plan: the same models as Z.ai's, as docs.bigmodel.cn documents them for Claude Code.
+    expect(ids("zhipu")).toEqual(["glm-5.3[1m]", "glm-5.3-flash[1m]"]);
+    expect(aliases("zhipu")).toEqual({ opus: "glm-5.3[1m]", sonnet: "glm-5.3[1m]", haiku: "glm-5.3-flash[1m]" });
     expect(ids("kimi")).toEqual([
       "kimi-for-coding",
       "k3.1-pro",
@@ -140,7 +143,8 @@ describe("coding plans' models", () => {
       "Reflection",
       "OpenCode",
     ]);
-    for (const plan of ["zai", "kimi", "minimax"] as const) expect(models(plan).some((m) => m.maker)).toBe(false);
+    for (const plan of ["zai", "zhipu", "kimi", "minimax"] as const)
+      expect(models(plan).some((m) => m.maker)).toBe(false);
   });
 
   test("a stored value: one of the plan's models by id, an alias's model, else sonnet's", () => {

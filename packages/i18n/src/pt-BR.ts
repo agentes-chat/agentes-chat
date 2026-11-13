@@ -1334,6 +1334,7 @@ export const ptBR = {
       deepseek: "As chaves da DeepSeek começam com sk-. Confira e cole de novo.",
       moonshot: "As chaves da Kimi começam com sk-. Confira e cole de novo.",
       zai: "Cole a chave inteira da Z.ai, sem espaços. Confira e cole de novo.",
+      zhipu: "Cole a chave inteira da Zhipu, sem espaços. Confira e cole de novo.",
       minimax:
         "Cole a chave inteira da MiniMax, sem espaços. As que começam com sk-cp- são do plano e não servem aqui.",
       openrouter: "As chaves da OpenRouter começam com sk-or-v1-. Confira e cole de novo.",
@@ -3118,6 +3119,7 @@ export const ptBR = {
       },
       zen: { title: "OpenCode", tiers: "Modelos grátis, ou a sua chave do OpenCode" },
       zai: { tiers: "Lite, Pro ou Max" },
+      zhipu: { tiers: "Planos pessoais ou de equipe" },
       kimi: { tiers: "Plus, Pro, Max ou Ultra" },
       minimax: { tiers: "Go, Explore ou Build" },
       opencode: { tiers: "Go ou Go Plus" },

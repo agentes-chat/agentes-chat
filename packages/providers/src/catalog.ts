@@ -59,6 +59,14 @@ export const PROVIDERS = {
     baseURL: "https://api.z.ai/api/anthropic",
     compat: { toolChoiceAny: false },
   },
+  // Zhipu's domestic platform (open.bigmodel.cn) sells the same models under the same names, and a key of one
+  // platform is refused at the other. `tool_choice: any` untried here, so its tool isn't forced yet.
+  zhipu: {
+    label: "Zhipu",
+    protocol: "anthropic",
+    baseURL: "https://open.bigmodel.cn/api/anthropic",
+    compat: { toolChoiceAny: false },
+  },
   minimax: {
     label: "MiniMax",
     protocol: "anthropic",
@@ -331,6 +339,31 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     provider: "zai",
     label: "GLM-5.3 Flash",
     prices: { input: 150, output: 500, cacheRead: 30, cacheWrite: 150 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    cheap: true,
+    router: true,
+    tier: "small",
+  },
+  // The same two models on Zhipu's domestic platform. Their plain names are Z.ai's rows, so these carry Claude
+  // Code's `[1m]`, which the domestic endpoint answers (docs.bigmodel.cn/cn/coding-plan/tool/claude, tried with
+  // real calls 2026-11-12). Prices from open.bigmodel.cn/pricing (2026-11-12, in CNY, converted at that day's
+  // 6.667 to the dollar); a cache write costs the input rate. Flash's half-price intro has no published end, so
+  // its row keeps the standard rates: budgets err high, as they do on DeepSeek's peak rates.
+  "glm-5.3[1m]": {
+    provider: "zhipu",
+    label: "GLM-5.3",
+    prices: { input: 1200, output: 4200, cacheRead: 300, cacheWrite: 1200 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    recommended: true,
+    tier: "medium",
+  },
+  // Always thinks, as Z.ai's Flash does; still the line's fastest for routing.
+  "glm-5.3-flash[1m]": {
+    provider: "zhipu",
+    label: "GLM-5.3 Flash",
+    prices: { input: 120, output: 420, cacheRead: 34, cacheWrite: 120 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
     cheap: true,

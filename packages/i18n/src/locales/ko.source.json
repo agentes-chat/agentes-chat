@@ -3185,6 +3185,9 @@
   "onboarding.keyInvalid.zai": {
     "value": "Paste the whole Z.ai key, with no spaces. Check it and paste it again."
   },
+  "onboarding.keyInvalid.zhipu": {
+    "value": "Paste the whole Zhipu key, with no spaces. Check it and paste it again."
+  },
   "onboarding.keyInvalid.minimax": {
     "value": "Paste the whole MiniMax key, with no spaces. Keys starting with sk-cp- belong to the plan and don't work here."
   },
@@ -7329,6 +7332,9 @@
   },
   "connectAi.plan.zai.tiers": {
     "value": "Lite, Pro or Max"
+  },
+  "connectAi.plan.zhipu.tiers": {
+    "value": "Personal or team plans"
   },
   "connectAi.plan.kimi.tiers": {
     "value": "Plus, Pro, Max or Ultra"

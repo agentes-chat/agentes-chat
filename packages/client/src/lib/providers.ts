@@ -87,6 +87,13 @@ export const PROVIDERS = [
     plans: true,
   },
   {
+    id: "zhipu",
+    label: "Zhipu",
+    pattern: /^(?!sk-|AQ\.|AIza)[A-Za-z0-9._-]{16,}$/,
+    site: "bigmodel.cn/usercenter/proj-mgmt/apikeys",
+    plans: true,
+  },
+  {
     id: "minimax",
     label: "MiniMax",
     // `sk-cp-` keys are its coding plan's.

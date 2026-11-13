@@ -40,7 +40,8 @@ describe("whose key is it", () => {
   test("other keys keep their providers: any sk- key could be several, Claude's and the plans' are their own", () => {
     expect(ids("sk-0123456789abcdef0123456789abcdef")).toEqual(["openai", "deepseek", "moonshot", "minimax"]);
     expect(ids("sk-ant-api03-abcdefghijklmnop")).toEqual(["anthropic"]);
-    expect(ids("0123456789abcdef0123456789abcdef.AbCdEfGhIjKlMnOp")).toEqual(["zai", "minimax"]);
+    // A dotted key fits Z.ai's, Zhipu's (BigModel) and MiniMax's: the person says whose it is.
+    expect(ids("0123456789abcdef0123456789abcdef.AbCdEfGhIjKlMnOp")).toEqual(["zai", "zhipu", "minimax"]);
     // A MiniMax plan key (sk-cp-) never fits MiniMax.
     expect(ids("sk-cp-abcdefghijklmnopqrst")).toEqual(["openai"]);
   });

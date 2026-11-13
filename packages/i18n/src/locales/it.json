@@ -1346,6 +1346,7 @@
       "deepseek": "Le chiavi DeepSeek iniziano con sk-. Controllala e incollala di nuovo.",
       "moonshot": "Le chiavi Kimi iniziano con sk-. Controllala e incollala di nuovo.",
       "zai": "Incolla tutta la chiave Z.ai, senza spazi. Controllala e incollala di nuovo.",
+      "zhipu": "Incolla tutta la chiave Zhipu, senza spazi. Controllala e incollala di nuovo.",
       "minimax": "Incolla tutta la chiave MiniMax, senza spazi. Le chiavi che iniziano con sk-cp- sono del piano e qui non funzionano.",
       "openrouter": "Le chiavi OpenRouter iniziano con sk-or-v1-. Controllala e incollala di nuovo."
     },
@@ -3082,6 +3083,9 @@
       },
       "zai": {
         "tiers": "Lite, Pro o Max"
+      },
+      "zhipu": {
+        "tiers": "Piani personali o team"
       },
       "kimi": {
         "tiers": "Plus, Pro, Max o Ultra"

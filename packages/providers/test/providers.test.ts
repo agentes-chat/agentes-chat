@@ -126,6 +126,7 @@ describe("pricing", () => {
       ["deepseek-flash"],
       ["kimi-k3.1-pro"],
       ["glm-5.3"],
+      ["glm-5.3[1m]"],
       ["MiniMax-M3"],
       // OpenRouter's come from its list.
       [],
@@ -142,6 +143,10 @@ describe("pricing", () => {
     expect(perMTok("kimi-k3")).toEqual([3, 15, 0.3, 3]);
     expect(perMTok("glm-5.3")).toEqual([1.4, 4.4, 0.26, 1.4]);
     expect(perMTok("glm-5.3-flash")).toEqual([0.15, 0.5, 0.03, 0.15]);
+    // Zhipu's domestic list prices in CNY (¥8 / ¥2 / ¥28 for GLM-5.3, ¥0.80 / ¥0.23 / ¥2.80 for Flash),
+    // converted at 6.667 to the dollar (2026-11-12).
+    expect(perMTok("glm-5.3[1m]")).toEqual([1.2, 4.2, 0.3, 1.2]);
+    expect(perMTok("glm-5.3-flash[1m]")).toEqual([0.12, 0.42, 0.034, 0.12]);
     expect(perMTok("MiniMax-M3.1-Flash")).toEqual([0.15, 0.6, 0.015, 0.15]);
     // MiniMax M3: $0.30 / $1.20 / $0.06 up to 512K prompt tokens, double above.
     expect(costNanoUsd("MiniMax-M3", usage(500_000, 1000, 12_000))).toBe(500_000 * 300 + 1000 * 1200 + 12_000 * 60);
@@ -156,6 +161,7 @@ describe("pricing", () => {
       "deepseek-flash",
       "kimi-k3.1-pro",
       "glm-5.3-flash",
+      "glm-5.3-flash[1m]",
       "MiniMax-M3.1-Flash",
       null,
       null,
@@ -165,6 +171,7 @@ describe("pricing", () => {
     expect(line("deepseek")).toEqual(["deepseek-flash", "deepseek-flash", "deepseek-v4-pro"]);
     expect(line("moonshot")).toEqual(["kimi-k3.1-pro", "kimi-k3.1-pro", "kimi-k3.1-pro"]);
     expect(line("zai")).toEqual(["glm-5.3-flash", "glm-5.3", "glm-5.3"]);
+    expect(line("zhipu")).toEqual(["glm-5.3-flash[1m]", "glm-5.3[1m]", "glm-5.3[1m]"]);
     expect(line("minimax")).toEqual(["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M3"]);
   });
 
@@ -176,6 +183,7 @@ describe("pricing", () => {
       "deepseek-flash",
       null,
       "glm-5.3-flash",
+      "glm-5.3-flash[1m]",
       "MiniMax-M3",
       null,
       null,

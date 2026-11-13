@@ -1413,6 +1413,7 @@ export const en = {
       deepseek: "DeepSeek keys start with sk-. Check it and paste it again.",
       moonshot: "Kimi keys start with sk-. Check it and paste it again.",
       zai: "Paste the whole Z.ai key, with no spaces. Check it and paste it again.",
+      zhipu: "Paste the whole Zhipu key, with no spaces. Check it and paste it again.",
       minimax:
         "Paste the whole MiniMax key, with no spaces. Keys starting with sk-cp- belong to the plan and don't work here.",
       openrouter: "OpenRouter keys start with sk-or-v1-. Check it and paste it again.",
@@ -3201,6 +3202,7 @@ export const en = {
       /** OpenCode's CLI (ADR 0132): its free models with no sign-in, or a key from OpenCode's console. */
       zen: { title: "OpenCode", tiers: "Free models, or your OpenCode key" },
       zai: { tiers: "Lite, Pro or Max" },
+      zhipu: { tiers: "Personal or team plans" },
       kimi: { tiers: "Plus, Pro, Max or Ultra" },
       minimax: { tiers: "Go, Explore or Build" },
       opencode: { tiers: "Go or Go Plus" },

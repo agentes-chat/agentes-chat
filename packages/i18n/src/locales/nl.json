@@ -1307,6 +1307,7 @@
       "deepseek": "DeepSeek-sleutels beginnen met sk-. Controleer hem en plak hem opnieuw.",
       "moonshot": "Kimi-sleutels beginnen met sk-. Controleer hem en plak hem opnieuw.",
       "zai": "Plak de hele Z.ai-sleutel, zonder spaties. Controleer hem en plak hem opnieuw.",
+      "zhipu": "Plak de hele Zhipu-sleutel, zonder spaties. Controleer hem en plak hem opnieuw.",
       "minimax": "Plak de hele MiniMax-sleutel, zonder spaties. Sleutels die met sk-cp- beginnen horen bij het abonnement en werken hier niet.",
       "openrouter": "OpenRouter-sleutels beginnen met sk-or-v1-. Controleer hem en plak hem opnieuw."
     },
@@ -2981,6 +2982,9 @@
       },
       "zai": {
         "tiers": "Lite, Pro of Max"
+      },
+      "zhipu": {
+        "tiers": "Persoonlijke of teamabonnementen"
       },
       "kimi": {
         "tiers": "Plus, Pro, Max of Ultra"
