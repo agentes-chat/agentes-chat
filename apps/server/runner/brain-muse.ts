@@ -195,6 +195,13 @@ export function museMcpServer(input: {
   };
 }
 
+/**
+ * The host's own tools a `chat` turn keeps: the todos it keeps for itself, the way Grok keeps `search_tool`/`use_tool`
+ * and Claude keeps none. `muse.request_user_input` is refused — nobody is at that screen, and our own `ask_user`
+ * reaches the person through the thread instead.
+ */
+export const MUSE_CHAT_TOOLS: readonly string[] = ["muse.write_todos"];
+
 const USAGE_LIMIT = /usage limit|allowance (?:is )?(?:exhausted|used up)|out of (?:allowance|credits)/i;
 export const MUSE_AUTH = /not logged in|signed out|unauthori[sz]ed|invalid api key|401/i;
 
