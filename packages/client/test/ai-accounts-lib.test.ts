@@ -295,12 +295,15 @@ describe("the computers' own sign-ins", () => {
     const agent = { ownSignIn: false, brain: "opencode", account: null, canUsePlans: true } as const;
     // On a computer nobody connected, for anyone's agent.
     expect(ownSignInReady(agent, computer({ ...running, mine: false }), "opencode")).toBe(true);
-    // On someone else's computer, no.
+    // On someone else's computer, no: it doesn't take accounts.
     expect(ownSignInReady(agent, computer({ ...running, mine: false, canAdd: false }), "opencode")).toBe(false);
-    // On a computer the agent's owner connected, for that owner's agents.
+    // On a computer the agent's owner connected, for anyone's agent too: canAdd is the consent, not the owner
+    // (ADR 0132 §6), so the team's right hand gets the free models on someone else's computer.
     expect(ownSignInReady({ ownSignIn: true }, computer(running), "opencode")).toBe(true);
-    expect(ownSignInReady(agent, computer(running), "opencode")).toBe(false);
-    // Not where the CLI can't run.
+    expect(ownSignInReady(agent, computer(running), "opencode")).toBe(true);
+    expect(ownSignInListed(agent, computer(running), "opencode")).toBe(true);
+    // Not offline, and not where the CLI can't run.
+    expect(ownSignInReady(agent, computer({ ...running, online: false }), "opencode")).toBe(false);
     expect(ownSignInReady({ ownSignIn: true }, computer({ own: {} }), "opencode")).toBe(false);
     expect(ownSignInName(t, true, "Mac", "opencode")).toBe("connectAi.own.free");
     expect(ownSignInName(t, true, "Mac", "claude_code")).toBe("connectAi.own.shared");

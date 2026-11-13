@@ -359,18 +359,17 @@ export const ownSignInLower = (t: TFunction, kind: string | null) =>
  * The computer's own sign-in of `kind` can think for the agent (ADR 0041, ADR 0059 §3): whoever connected that
  * computer owns the agent, and its runner reported that CLI signed in there (`own`, the computer's `/ai-accounts`
  * row). On a computer nobody connected (the workspace's own) it never can. OpenCode signs in nowhere: its free tier
- * is a choice wherever its CLI runs, for the agents of whoever connected that computer and, on a computer nobody
- * connected (`canAdd` without `mine`), for anyone's (ADR 0132 §6). It is never listed as the person's AI.
+ * is a choice wherever its CLI runs and the computer takes accounts (`brains.opencode` with `canAdd`, ADR 0132 §6),
+ * for anyone's agent — `canAdd` is the consent, the agent's owner's computer not required. Offline, no. It is never
+ * listed as the person's AI.
  */
 export const ownSignInReady = (
   brain: Pick<AgentBrain, "ownSignIn"> | undefined,
-  row: (Pick<AiComputer, "own"> & Partial<Pick<AiComputer, "mine" | "brains" | "canAdd">>) | undefined,
+  row: (Pick<AiComputer, "own"> & Partial<Pick<AiComputer, "mine" | "brains" | "canAdd" | "online">>) | undefined,
   kind: MachineAccountKind,
 ) =>
   kind === "opencode"
-    ? row?.brains?.opencode === true &&
-      row.canAdd === true &&
-      (brain?.ownSignIn === true || (brain !== undefined && row.mine === false))
+    ? row?.brains?.opencode === true && row.canAdd === true && row.online !== false
     : brain?.ownSignIn === true && row?.own?.[kind] !== undefined;
 
 /**
