@@ -4,6 +4,7 @@
 // FAKE_MUSE_CATALOG: the `models` rows `model/list` answers with (JSON), default: two Meta rows.
 // FAKE_MUSE_PID: file the host writes its pid to, for the "left running" check.
 // FAKE_MUSE_SILENT: it never answers a thing (the runner's deadline has to give up on it).
+// FAKE_MUSE_ECHO_XDG: also answer one row named after `$XDG_CONFIG_HOME`, so a test can see which folder was read.
 import { writeFileSync } from "node:fs";
 
 const quiet = Boolean(process.env.FAKE_MUSE_SILENT);
@@ -13,6 +14,12 @@ const rows = process.env.FAKE_MUSE_CATALOG
       { modelId: "muse-spark-1.3", displayLabel: "Muse Spark 1.3" },
       { modelId: "muse-spark-1.2", displayLabel: "Muse Spark 1.2" },
     ];
+if (process.env.FAKE_MUSE_ECHO_XDG)
+  rows.push({
+    // Short enough for the id the parser accepts: the account folder the read happened under (`<root>/accounts/muse/<id>/config`).
+    modelId: `xdg-${(process.env.XDG_CONFIG_HOME ?? "none").split("/").at(-2)}`,
+    displayLabel: "xdg",
+  });
 const pidFile = process.env.FAKE_MUSE_PID;
 if (pidFile) writeFileSync(pidFile, String(process.pid));
 

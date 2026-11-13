@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { CursorModelInfo } from "@agenteschat/adapters/machine-protocol";
 import { detectExecutors, museModelCatalog, parseMuseModels } from "../../runner/executors";
@@ -131,6 +131,26 @@ describe("Muse Code's catalog", () => {
     const host = Number(readFileSync(pid, "utf8"));
     await waitFor(() => !alive(host), 3000);
   });
+
+  test.skipIf(!posix)(
+    "the catalog is read under a signed-in account, because a signed-out one answers nothing",
+    async () => {
+      // A runner home with one account that has a credential, and one that doesn't: only the first is borrowed.
+      const home = scratch("muse-home-");
+      const signed = path.join(home, "accounts", "muse", "aaaa", "config");
+      mkdirSync(path.join(signed, "muse"), { recursive: true });
+      writeFileSync(path.join(signed, "muse", "auth.json"), "{}");
+      mkdirSync(path.join(home, "accounts", "muse", "bbbb", "config", "muse"), { recursive: true });
+      const bin = fakeMuse(scratch("muse-catalog-xdg-"));
+      const models = await museModelCatalog({
+        bin,
+        timeoutMs: 5000,
+        accounts: home,
+        env: { ...process.env, FAKE_MUSE_ECHO_XDG: "1" },
+      });
+      expect(models.map((m) => m.id)).toContain("xdg-aaaa");
+    },
+  );
 
   test.skipIf(!posix)("a muse that isn't there is an empty catalog, never a throw", async () => {
     expect(await museModelCatalog({ bin: path.join(scratch("muse-missing-"), "muse"), timeoutMs: 1000 })).toEqual([]);
