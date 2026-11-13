@@ -7903,6 +7903,25 @@
     "removeDue": "Usuń termin",
     "links": "Powiązane",
     "prBy": "PR #{{number}} · otworzył(a): {{name}}",
+    "review": {
+      "title": "W przeglądzie: czego brakuje",
+      "what": {
+        "merge": "Zmerguj PR {{prs}}",
+        "reopen": "PR {{prs}} zamknięty bez merge'a",
+        "criterion": "Sprawdź: {{criterion}}",
+        "decide": "Zatwierdź lub odeślij",
+        "ready": "Wszystko zmergowane i sprawdzone"
+      },
+      "anyReviewer": "osoba, która przegląda",
+      "decides": "Decyduje {{name}}",
+      "approve": "Zatwierdź",
+      "approveMerged": "Zmergowane, zatwierdź",
+      "sendBack": "Odeślij",
+      "backPlaceholder": "Czego brakuje? (opcjonalnie)",
+      "backNote": "Odesłane z przeglądu: {{text}}",
+      "approved": "#{{number}} zatwierdzone",
+      "sentBack": "#{{number}} wróciło do w toku"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "Link do GitHub",
@@ -7950,6 +7969,9 @@
       "due_date_set": "ustawił(a) termin na {{date}}",
       "due_date_removed": "usunął(ęła) termin",
       "pr_linked": "powiązał(a) PR #{{number}}",
+      "pr_merged": "PR #{{number}} zmergowany na GitHubie",
+      "pr_closed": "PR #{{number}} zamknięty na GitHubie bez merge'a",
+      "pr_reopened": "PR #{{number}} ponownie otwarty na GitHubie",
       "github_linked": "połączono z GitHub",
       "github_unlinked": "usunięto link do GitHub",
       "project_set": "przeniósł(osła) do projektu {{project}}",

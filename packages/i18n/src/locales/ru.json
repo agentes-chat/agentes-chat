@@ -7870,6 +7870,25 @@
     "removeDue": "Убрать срок",
     "links": "Связанное",
     "prBy": "PR #{{number}} · открыл(а) {{name}}",
+    "review": {
+      "title": "На проверке: что осталось",
+      "what": {
+        "merge": "Смержить PR {{prs}}",
+        "reopen": "PR {{prs}} закрыт без мержа",
+        "criterion": "Проверить: {{criterion}}",
+        "decide": "Одобрить или вернуть",
+        "ready": "Всё смержено и проверено"
+      },
+      "anyReviewer": "тот, кто проверяет",
+      "decides": "Решает {{name}}",
+      "approve": "Одобрить",
+      "approveMerged": "Смержено, одобрить",
+      "sendBack": "Вернуть",
+      "backPlaceholder": "Чего не хватает? (необязательно)",
+      "backNote": "Возвращено с проверки: {{text}}",
+      "approved": "#{{number}} одобрена",
+      "sentBack": "#{{number}} возвращена в работу"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "Ссылка на GitHub",
@@ -7917,6 +7936,9 @@
       "due_date_set": "установил(а) срок {{date}}",
       "due_date_removed": "убрал(а) срок",
       "pr_linked": "привязал(а) PR #{{number}}",
+      "pr_merged": "PR #{{number}} смержен на GitHub",
+      "pr_closed": "PR #{{number}} закрыт на GitHub без мержа",
+      "pr_reopened": "PR #{{number}} снова открыт на GitHub",
       "github_linked": "связал с GitHub",
       "github_unlinked": "убрал ссылку на GitHub",
       "project_set": "перенёс(ла) в проект «{{project}}»",

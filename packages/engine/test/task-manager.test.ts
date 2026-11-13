@@ -18,7 +18,6 @@ import {
   taskSteps,
   ValidationError,
 } from "../src";
-import { addRunStep } from "../src/runs";
 import { addMember, type Fixture, setup } from "./fixtures";
 
 let f: Fixture;

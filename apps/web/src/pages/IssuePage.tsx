@@ -56,6 +56,7 @@ import { EditInPlace, useFocusAtEnd, useSavedFlash, useSent } from "@/components
 import { GitHubMark } from "@/components/GitHubMark";
 import { IssueFiles, useIssueFileEntries } from "@/components/IssueFiles";
 import { useOrg } from "@/components/org-context";
+import { ReviewBox } from "@/components/ReviewStep";
 import { SidePanel } from "@/components/SidePanel";
 import { TaskConversationButton, TaskConversationPanel, TaskConversationSummary } from "@/components/TaskConversation";
 import { IssueWhoSeesDialog, WhoSeesButton } from "@/components/WhoSees";
@@ -313,6 +314,7 @@ export function IssueDetails({
         ]}
       >
         <TabPanel value="details">
+          <ReviewBox issue={i} />
           <WorkBox issue={i} />
           <IssueWorkBlock issue={i} />
           {i.assignee?.type !== "agent" && isOpen(i) && <AskAgent issue={i} />}
@@ -979,6 +981,7 @@ function PropsLine({ issue: i }: { issue: Issue }) {
           rel="noopener noreferrer"
           className="issue-link"
           title={pr.openedBy ? t("issues.prBy", { number: pr.number, name: actors.name(pr.openedBy) }) : undefined}
+          data-pr-state={pr.state ?? "open"}
         >
           <GitHubMark />
           {t("issues.pr", { number: pr.number })}

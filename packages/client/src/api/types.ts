@@ -3616,7 +3616,10 @@ export interface Issue {
    * Absent on an older server: as `everyone`.
    */
   audience?: { mode: "everyone" | "people"; userIds: string[]; channelId: string | null };
-  pullRequests: { number: number; url: string; openedBy: Actor | null }[];
+  /** `state`: from the workspace's GitHub webhook; none heard yet: open. */
+  pullRequests: { number: number; url: string; openedBy: Actor | null; state?: "open" | "merged" | "closed" }[];
+  /** In review: the one thing it waits on and who moves it; null in any other stage (absent on an older server). */
+  review?: IssueReviewStep | null;
   /** The GitHub issue or pull request it is about: only a link, nothing syncs. */
   githubUrl: string | null;
   artifacts: { id: string; title: string; createdBy: Actor }[];
@@ -3633,6 +3636,17 @@ export interface Issue {
   subIssues?: { id: string; number: number; title: string; status: IssueStatus; assignee: Actor | null }[];
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * What a task in review waits on: a merge of `prs`, its PRs reopened (all closed unmerged), a `criterion`, a person's
+ * decision, or nothing (`ready`). `decider`: who moves it; a person with no id is whoever reviews.
+ */
+export interface IssueReviewStep {
+  kind: "merge" | "reopen" | "criterion" | "decide" | "ready";
+  prs: { number: number; url: string }[];
+  criterion: string | null;
+  decider: { type: "person" | "agent"; id: string | null };
 }
 
 /** Where a task's conversation lives (ADR 0145): the chat's routes read and post to this thread. */

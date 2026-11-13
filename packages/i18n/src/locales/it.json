@@ -7689,6 +7689,25 @@
     "removeDue": "Rimuovi la scadenza",
     "links": "Collegati",
     "prBy": "PR #{{number}} · aperta da {{name}}",
+    "review": {
+      "title": "In revisione: cosa manca",
+      "what": {
+        "merge": "Fare il merge della PR {{prs}}",
+        "reopen": "PR {{prs}} chiusa senza merge",
+        "criterion": "Verificare: {{criterion}}",
+        "decide": "Approvare o rimandare indietro",
+        "ready": "Tutto unito e verificato"
+      },
+      "anyReviewer": "chi revisiona",
+      "decides": "Decide {{name}}",
+      "approve": "Approva",
+      "approveMerged": "Merge fatto, approva",
+      "sendBack": "Rimanda indietro",
+      "backPlaceholder": "Cosa manca? (facoltativo)",
+      "backNote": "Rimandata dalla revisione: {{text}}",
+      "approved": "#{{number}} approvata",
+      "sentBack": "#{{number}} tornata in corso"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "Link GitHub",
@@ -7736,6 +7755,9 @@
       "due_date_set": "ha impostato la scadenza al {{date}}",
       "due_date_removed": "ha rimosso la scadenza",
       "pr_linked": "ha collegato la PR #{{number}}",
+      "pr_merged": "PR #{{number}} unita su GitHub",
+      "pr_closed": "PR #{{number}} chiusa su GitHub senza merge",
+      "pr_reopened": "PR #{{number}} riaperta su GitHub",
       "github_linked": "l'ha collegata a GitHub",
       "github_unlinked": "ha rimosso il link GitHub",
       "project_set": "l'ha spostata nel progetto {{project}}",

@@ -7389,6 +7389,25 @@
     "removeDue": "Son tarihi kaldır",
     "links": "Bağlantılı",
     "prBy": "PR #{{number}} · açan: {{name}}",
+    "review": {
+      "title": "İncelemede: eksik kalan",
+      "what": {
+        "merge": "PR {{prs}} birleştir",
+        "reopen": "PR {{prs}} birleştirilmeden kapatıldı",
+        "criterion": "Kontrol et: {{criterion}}",
+        "decide": "Onayla ya da geri gönder",
+        "ready": "Hepsi birleştirildi ve kontrol edildi"
+      },
+      "anyReviewer": "inceleyen kişi",
+      "decides": "Karar {{name}} kişisinde",
+      "approve": "Onayla",
+      "approveMerged": "Birleştirildi, onayla",
+      "sendBack": "Geri gönder",
+      "backPlaceholder": "Eksik olan ne? (isteğe bağlı)",
+      "backNote": "İncelemeden geri gönderildi: {{text}}",
+      "approved": "#{{number}} onaylandı",
+      "sentBack": "#{{number}} devam ediyor durumuna döndü"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "GitHub bağlantısı",
@@ -7436,6 +7455,9 @@
       "due_date_set": "son tarihi {{date}} olarak ayarladı",
       "due_date_removed": "son tarihi kaldırdı",
       "pr_linked": "PR #{{number}} bağladı",
+      "pr_merged": "PR #{{number}} GitHub'da birleştirildi",
+      "pr_closed": "PR #{{number}} GitHub'da birleştirilmeden kapatıldı",
+      "pr_reopened": "PR #{{number}} GitHub'da yeniden açıldı",
       "github_linked": "GitHub'a bağladı",
       "github_unlinked": "GitHub bağlantısını kaldırdı",
       "project_set": "{{project}} projesine taşıdı",

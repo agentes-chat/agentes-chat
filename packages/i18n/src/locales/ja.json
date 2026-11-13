@@ -7175,6 +7175,25 @@
     "removeDue": "期日を削除",
     "links": "リンク",
     "prBy": "PR #{{number}} · 作成者: {{name}}",
+    "review": {
+      "title": "レビュー中：残っていること",
+      "what": {
+        "merge": "PR {{prs}} をマージ",
+        "reopen": "PR {{prs}} はマージされずに閉じられました",
+        "criterion": "確認：{{criterion}}",
+        "decide": "承認するか差し戻す",
+        "ready": "すべてマージ・確認済み"
+      },
+      "anyReviewer": "レビューする人",
+      "decides": "{{name}} が判断",
+      "approve": "承認",
+      "approveMerged": "マージ済み、承認",
+      "sendBack": "差し戻す",
+      "backPlaceholder": "足りないものは？（任意）",
+      "backNote": "レビューから差し戻し：{{text}}",
+      "approved": "#{{number}} を承認しました",
+      "sentBack": "#{{number}} を進行中に戻しました"
+    },
     "artifactBy": "{{title}}（{{name}}）",
     "github": {
       "label": "GitHub リンク",
@@ -7222,6 +7241,9 @@
       "due_date_set": "期日を{{date}}に設定しました",
       "due_date_removed": "期日を削除しました",
       "pr_linked": "PR #{{number}}をリンクしました",
+      "pr_merged": "PR #{{number}} が GitHub でマージされました",
+      "pr_closed": "PR #{{number}} が GitHub でマージされずに閉じられました",
+      "pr_reopened": "PR #{{number}} が GitHub で再オープンされました",
       "github_linked": "GitHub にリンクしました",
       "github_unlinked": "GitHub リンクを削除しました",
       "project_set": "プロジェクト「{{project}}」に移動しました",

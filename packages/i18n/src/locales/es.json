@@ -7630,6 +7630,25 @@
     "removeDue": "Quitar la fecha límite",
     "links": "Vinculado",
     "prBy": "PR #{{number}} · abierto por {{name}}",
+    "review": {
+      "title": "En revisión: qué falta",
+      "what": {
+        "merge": "Hacer merge del PR {{prs}}",
+        "reopen": "PR {{prs}} cerrado sin merge",
+        "criterion": "Revisar: {{criterion}}",
+        "decide": "Aprobar o devolver",
+        "ready": "Todo con merge y revisado"
+      },
+      "anyReviewer": "quien revise",
+      "decides": "Decide {{name}}",
+      "approve": "Aprobar",
+      "approveMerged": "Ya hice merge, aprobar",
+      "sendBack": "Devolver",
+      "backPlaceholder": "¿Qué falta? (opcional)",
+      "backNote": "Devuelto desde revisión: {{text}}",
+      "approved": "#{{number}} aprobada",
+      "sentBack": "#{{number}} volvió a en curso"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "Enlace de GitHub",
@@ -7677,6 +7696,9 @@
       "due_date_set": "puso la fecha límite el {{date}}",
       "due_date_removed": "quitó la fecha límite",
       "pr_linked": "vinculó el PR #{{number}}",
+      "pr_merged": "PR #{{number}} con merge en GitHub",
+      "pr_closed": "PR #{{number}} cerrado en GitHub sin merge",
+      "pr_reopened": "PR #{{number}} reabierto en GitHub",
       "github_linked": "lo enlazó a GitHub",
       "github_unlinked": "quitó el enlace de GitHub",
       "project_set": "la movió al proyecto {{project}}",

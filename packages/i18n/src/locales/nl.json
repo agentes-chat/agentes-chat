@@ -7478,6 +7478,25 @@
     "removeDue": "De deadline verwijderen",
     "links": "Gekoppeld",
     "prBy": "PR #{{number}} · geopend door {{name}}",
+    "review": {
+      "title": "In review: wat er nog ontbreekt",
+      "what": {
+        "merge": "PR {{prs}} mergen",
+        "reopen": "PR {{prs}} gesloten zonder merge",
+        "criterion": "Controleren: {{criterion}}",
+        "decide": "Goedkeuren of terugsturen",
+        "ready": "Alles gemerged en gecontroleerd"
+      },
+      "anyReviewer": "wie reviewt",
+      "decides": "{{name}} beslist",
+      "approve": "Goedkeuren",
+      "approveMerged": "Gemerged, goedkeuren",
+      "sendBack": "Terugsturen",
+      "backPlaceholder": "Wat ontbreekt er? (optioneel)",
+      "backNote": "Teruggestuurd uit review: {{text}}",
+      "approved": "#{{number}} goedgekeurd",
+      "sentBack": "#{{number}} terug naar bezig"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "GitHub-link",
@@ -7525,6 +7544,9 @@
       "due_date_set": "heeft de deadline op {{date}} gezet",
       "due_date_removed": "heeft de deadline verwijderd",
       "pr_linked": "heeft PR #{{number}} gekoppeld",
+      "pr_merged": "PR #{{number}} gemerged op GitHub",
+      "pr_closed": "PR #{{number}} op GitHub gesloten zonder merge",
+      "pr_reopened": "PR #{{number}} op GitHub heropend",
       "github_linked": "heeft het aan GitHub gekoppeld",
       "github_unlinked": "heeft de GitHub-link verwijderd",
       "project_set": "heeft de taak naar het project {{project}} verplaatst",

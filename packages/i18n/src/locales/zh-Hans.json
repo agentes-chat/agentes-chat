@@ -7223,6 +7223,25 @@
     "removeDue": "移除截止日期",
     "links": "关联内容",
     "prBy": "PR #{{number}} · 由 {{name}} 创建",
+    "review": {
+      "title": "审核中：还差什么",
+      "what": {
+        "merge": "合并 PR {{prs}}",
+        "reopen": "PR {{prs}} 未合并就已关闭",
+        "criterion": "确认：{{criterion}}",
+        "decide": "批准或退回",
+        "ready": "已全部合并并确认"
+      },
+      "anyReviewer": "审核的人",
+      "decides": "由 {{name}} 决定",
+      "approve": "批准",
+      "approveMerged": "已合并，批准",
+      "sendBack": "退回",
+      "backPlaceholder": "还缺什么？（可选）",
+      "backNote": "从审核退回：{{text}}",
+      "approved": "#{{number}} 已批准",
+      "sentBack": "#{{number}} 已退回进行中"
+    },
     "artifactBy": "{{title}}（{{name}}）",
     "github": {
       "label": "GitHub 链接",
@@ -7270,6 +7289,9 @@
       "due_date_set": "将截止日期设为 {{date}}",
       "due_date_removed": "移除了截止日期",
       "pr_linked": "关联了 PR #{{number}}",
+      "pr_merged": "PR #{{number}} 已在 GitHub 合并",
+      "pr_closed": "PR #{{number}} 在 GitHub 未合并就已关闭",
+      "pr_reopened": "PR #{{number}} 已在 GitHub 重新打开",
       "github_linked": "已关联到 GitHub",
       "github_unlinked": "已移除 GitHub 链接",
       "project_set": "移到了项目「{{project}}」",

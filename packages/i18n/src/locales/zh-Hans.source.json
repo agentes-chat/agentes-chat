@@ -18002,6 +18002,51 @@
   "issues.prBy": {
     "value": "PR #{{number}} · opened by {{name}}"
   },
+  "issues.review.title": {
+    "value": "In review: what's left"
+  },
+  "issues.review.what.merge": {
+    "value": "Merge PR {{prs}}"
+  },
+  "issues.review.what.reopen": {
+    "value": "PR {{prs}} closed without a merge"
+  },
+  "issues.review.what.criterion": {
+    "value": "Check: {{criterion}}"
+  },
+  "issues.review.what.decide": {
+    "value": "Approve or send back"
+  },
+  "issues.review.what.ready": {
+    "value": "All merged and checked"
+  },
+  "issues.review.anyReviewer": {
+    "value": "whoever reviews"
+  },
+  "issues.review.decides": {
+    "value": "{{name}} decides"
+  },
+  "issues.review.approve": {
+    "value": "Approve"
+  },
+  "issues.review.approveMerged": {
+    "value": "Merged, approve"
+  },
+  "issues.review.sendBack": {
+    "value": "Send back"
+  },
+  "issues.review.backPlaceholder": {
+    "value": "What's missing? (optional)"
+  },
+  "issues.review.backNote": {
+    "value": "Sent back from review: {{text}}"
+  },
+  "issues.review.approved": {
+    "value": "#{{number}} approved"
+  },
+  "issues.review.sentBack": {
+    "value": "#{{number}} sent back to in progress"
+  },
   "issues.artifactBy": {
     "value": "{{title}} ({{name}})"
   },
@@ -18115,6 +18160,15 @@
   },
   "issues.event.pr_linked": {
     "value": "linked PR #{{number}}"
+  },
+  "issues.event.pr_merged": {
+    "value": "PR #{{number}} merged on GitHub"
+  },
+  "issues.event.pr_closed": {
+    "value": "PR #{{number}} closed on GitHub without a merge"
+  },
+  "issues.event.pr_reopened": {
+    "value": "PR #{{number}} reopened on GitHub"
   },
   "issues.event.github_linked": {
     "value": "linked it to GitHub"

@@ -7172,6 +7172,25 @@
     "removeDue": "마감일 삭제",
     "links": "연결됨",
     "prBy": "PR #{{number}} · {{name}}이(가) 엶",
+    "review": {
+      "title": "검토 중: 남은 일",
+      "what": {
+        "merge": "PR {{prs}} 병합하기",
+        "reopen": "PR {{prs}}이(가) 병합 없이 닫힘",
+        "criterion": "확인: {{criterion}}",
+        "decide": "승인 또는 되돌리기",
+        "ready": "모두 병합하고 확인함"
+      },
+      "anyReviewer": "검토하는 사람",
+      "decides": "{{name}} 님이 결정",
+      "approve": "승인",
+      "approveMerged": "병합함, 승인",
+      "sendBack": "되돌리기",
+      "backPlaceholder": "무엇이 부족한가요? (선택)",
+      "backNote": "검토에서 되돌림: {{text}}",
+      "approved": "#{{number}} 승인됨",
+      "sentBack": "#{{number}}을(를) 진행 중으로 되돌림"
+    },
     "artifactBy": "{{title}}({{name}})",
     "github": {
       "label": "GitHub 링크",
@@ -7219,6 +7238,9 @@
       "due_date_set": "마감일을 {{date}}(으)로 정했어요",
       "due_date_removed": "마감일을 없앴어요",
       "pr_linked": "PR #{{number}}을(를) 연결했어요",
+      "pr_merged": "GitHub에서 PR #{{number}} 병합됨",
+      "pr_closed": "GitHub에서 PR #{{number}}이(가) 병합 없이 닫힘",
+      "pr_reopened": "GitHub에서 PR #{{number}} 다시 열림",
       "github_linked": "GitHub에 연결했습니다",
       "github_unlinked": "GitHub 링크를 삭제했습니다",
       "project_set": "{{project}} 프로젝트로 옮겼어요",

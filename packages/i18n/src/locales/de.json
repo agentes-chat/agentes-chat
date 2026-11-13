@@ -7429,6 +7429,25 @@
     "removeDue": "Fälligkeitsdatum entfernen",
     "links": "Verknüpft",
     "prBy": "PR #{{number}} · geöffnet von {{name}}",
+    "review": {
+      "title": "In Prüfung: was noch fehlt",
+      "what": {
+        "merge": "PR {{prs}} mergen",
+        "reopen": "PR {{prs}} ohne Merge geschlossen",
+        "criterion": "Prüfen: {{criterion}}",
+        "decide": "Freigeben oder zurückgeben",
+        "ready": "Alles gemergt und geprüft"
+      },
+      "anyReviewer": "wer prüft",
+      "decides": "{{name}} entscheidet",
+      "approve": "Freigeben",
+      "approveMerged": "Gemergt, freigeben",
+      "sendBack": "Zurückgeben",
+      "backPlaceholder": "Was fehlt? (optional)",
+      "backNote": "Aus der Prüfung zurückgegeben: {{text}}",
+      "approved": "#{{number}} freigegeben",
+      "sentBack": "#{{number}} zurück in Bearbeitung"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "GitHub-Link",
@@ -7476,6 +7495,9 @@
       "due_date_set": "hat das Fälligkeitsdatum auf {{date}} gesetzt",
       "due_date_removed": "hat das Fälligkeitsdatum entfernt",
       "pr_linked": "hat PR #{{number}} verknüpft",
+      "pr_merged": "PR #{{number}} auf GitHub gemergt",
+      "pr_closed": "PR #{{number}} auf GitHub ohne Merge geschlossen",
+      "pr_reopened": "PR #{{number}} auf GitHub wieder geöffnet",
       "github_linked": "hat es mit GitHub verknüpft",
       "github_unlinked": "hat den GitHub-Link entfernt",
       "project_set": "hat sie in das Projekt {{project}} verschoben",

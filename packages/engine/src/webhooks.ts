@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { KeyWrapper } from "@agenteschat/adapters";
+import type { KeyWrapper, PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, isNull, schema } from "@agenteschat/db";
 import { recordAudit } from "./audit";
 import { activeConnections, type ConnectorDeps } from "./connectors/connections";
@@ -8,6 +8,7 @@ import { NotFoundError, ValidationError } from "./errors";
 import { connectionToken } from "./git/branches";
 import { appTokenForRepo, boundInstallations, type GitHubAppConfig, type GitHubHttp } from "./git/github-app";
 import { parseRepo } from "./git/repos";
+import { applyPullRequestEvent } from "./issues";
 import { can, requirePermission } from "./organizations";
 import { fireRoutineEvent, type RoutineEvent } from "./routines";
 
@@ -19,6 +20,8 @@ export const WEBHOOK_PROVIDERS: readonly WebhookProvider[] = ["github", "sentry"
 export interface WebhookDeps {
   db: Database;
   keyWrappers: KeyWrapper[];
+  /** VPS Zen: tells the board when a pull request event moves a task. */
+  pubsub?: PubSub;
   /** Adding the webhook to a GitHub repository from the app: our GitHub App's token, else the GitHub connection's. */
   github?: { app: GitHubAppConfig | null; http: GitHubHttp; connectors: ConnectorDeps };
 }
@@ -408,6 +411,10 @@ export async function handleWebhook(
     payload = JSON.parse(jsonOf(rawBody, headers)) as Record<string, unknown>;
   } catch {
     throw new ValidationError("The body is not JSON");
+  }
+  // VPS Zen: a pull request opened, merged or closed moves the tasks it belongs to (`applyPullRequestEvent`).
+  if (provider === "github" && headers.get("x-github-event") === "pull_request") {
+    await applyPullRequestEvent({ db: deps.db, pubsub: deps.pubsub }, endpoint.orgId, payload);
   }
   const what = webhookEvent(provider, headers, payload);
   if (!what) return { fired: 0, event: null };

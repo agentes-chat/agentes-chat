@@ -45,7 +45,11 @@ const HOOK_REFUSALS = {
  * signature-checked; no session), and the admin endpoint that creates one.
  */
 export function registerWebhookReceiver(api: OpenAPIHono, deps: AppDeps) {
-  const webhookDeps = { db: deps.db, keyWrappers: [deps.adapters.keyWrapper, ...deps.adapters.legacyKeyWrappers] };
+  const webhookDeps = {
+    db: deps.db,
+    keyWrappers: [deps.adapters.keyWrapper, ...deps.adapters.legacyKeyWrappers],
+    pubsub: deps.adapters.pubsub,
+  };
   // Composio (ADR 0038): new mail for routines, expired accounts. One endpoint for the whole server,
   // signed with the subscription's secret (checked by the Composio client). Before the generic route.
   api.post("/webhooks/composio", async (c) => {

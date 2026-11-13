@@ -7682,6 +7682,25 @@
     "removeDue": "Retirer l'échéance",
     "links": "Liés",
     "prBy": "PR #{{number}} · ouverte par {{name}}",
+    "review": {
+      "title": "En revue : ce qui reste",
+      "what": {
+        "merge": "Merger la PR {{prs}}",
+        "reopen": "PR {{prs}} fermée sans merge",
+        "criterion": "Vérifier : {{criterion}}",
+        "decide": "Approuver ou renvoyer",
+        "ready": "Tout est mergé et vérifié"
+      },
+      "anyReviewer": "la personne qui relit",
+      "decides": "{{name}} décide",
+      "approve": "Approuver",
+      "approveMerged": "Déjà mergé, approuver",
+      "sendBack": "Renvoyer",
+      "backPlaceholder": "Que manque-t-il ? (facultatif)",
+      "backNote": "Renvoyé depuis la revue : {{text}}",
+      "approved": "#{{number}} approuvée",
+      "sentBack": "#{{number}} renvoyée en cours"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "Lien GitHub",
@@ -7729,6 +7748,9 @@
       "due_date_set": "a fixé l'échéance au {{date}}",
       "due_date_removed": "a retiré l'échéance",
       "pr_linked": "a lié la PR #{{number}}",
+      "pr_merged": "PR #{{number}} mergée sur GitHub",
+      "pr_closed": "PR #{{number}} fermée sur GitHub sans merge",
+      "pr_reopened": "PR #{{number}} rouverte sur GitHub",
       "github_linked": "l'a lié à GitHub",
       "github_unlinked": "a retiré le lien GitHub",
       "project_set": "l'a déplacée dans le projet {{project}}",

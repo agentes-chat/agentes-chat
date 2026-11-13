@@ -7212,6 +7212,25 @@
     "removeDue": "Hapus tenggat",
     "links": "Tertaut",
     "prBy": "PR #{{number}} · dibuka oleh {{name}}",
+    "review": {
+      "title": "Dalam tinjauan: yang masih kurang",
+      "what": {
+        "merge": "Lakukan merge PR {{prs}}",
+        "reopen": "PR {{prs}} ditutup tanpa merge",
+        "criterion": "Periksa: {{criterion}}",
+        "decide": "Setujui atau kembalikan",
+        "ready": "Semua sudah di-merge dan diperiksa"
+      },
+      "anyReviewer": "yang meninjau",
+      "decides": "{{name}} yang memutuskan",
+      "approve": "Setujui",
+      "approveMerged": "Sudah di-merge, setujui",
+      "sendBack": "Kembalikan",
+      "backPlaceholder": "Apa yang kurang? (opsional)",
+      "backNote": "Dikembalikan dari tinjauan: {{text}}",
+      "approved": "#{{number}} disetujui",
+      "sentBack": "#{{number}} kembali ke sedang dikerjakan"
+    },
     "artifactBy": "{{title}} ({{name}})",
     "github": {
       "label": "Tautan GitHub",
@@ -7259,6 +7278,9 @@
       "due_date_set": "mengatur tenggat ke {{date}}",
       "due_date_removed": "menghapus tenggat",
       "pr_linked": "menautkan PR #{{number}}",
+      "pr_merged": "PR #{{number}} di-merge di GitHub",
+      "pr_closed": "PR #{{number}} ditutup di GitHub tanpa merge",
+      "pr_reopened": "PR #{{number}} dibuka lagi di GitHub",
       "github_linked": "menautkannya ke GitHub",
       "github_unlinked": "menghapus tautan GitHub",
       "project_set": "memindahkannya ke proyek {{project}}",

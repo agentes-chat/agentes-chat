@@ -13,6 +13,7 @@ This server runs `vps-zen`, the official `main` plus the patches below. Each one
 | A finished work closes its plan | `packages/engine/src/works.ts` (`endWork`) | A work done whole showed "0/5". |
 | Files dropped anywhere on the conversation | `apps/web/src/pages/ChannelPage.tsx`, `layout.css` | Only the composer's card took them. |
 | Faces in the channel list | `packages/engine/src/channels.ts` (`faces`, `memberCount`), `Sidebar.tsx`, `lib/sidebar-faces.ts` | A channel known by who is in it. On by default; Preferências, "Rostos nos canais". |
+| A task in review says what it waits on, and GitHub moves it | `packages/engine/src/review-step.ts`, `issues.ts` (`review`, `applyPullRequestEvent`), `webhooks.ts` (`handleWebhook`), `issue-tools.ts`, `components/ReviewStep.tsx`, `IssuesPage.tsx`, `IssuePage.tsx` | "Em revisão" was a parking spot. Each task there names one next step (merge PR X, a PR closed unmerged, criterion Y, approve or send back, ready) and who decides; the card shows it, the page adds Aprovar and Devolver. The workspace's GitHub webhook (the routines' one, `pull_request` events) links a PR naming `task #N`, records merged or closed, and moves a task to done once every PR is merged and every criterion checked. No migration: the state lives in `issues.pull_requests`. |
 
 Outside the repository: the Discord feed (`/opt/aurevia-agentes-feed`, reads Postgres) and the runner's
 systemd drop-in with `AGENTES_RUNNER_FULL_ACCESS=1`.
