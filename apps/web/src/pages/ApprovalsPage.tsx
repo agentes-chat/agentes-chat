@@ -1695,7 +1695,6 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
   const name = agent?.name ?? t("channel.unknownAgent");
   const g = agentGrammar(name);
   const p = usePhase(a);
-  const waitsOn = useLinePlace(a)?.waitsOn;
   // Kept from running: the request asked before it whose refusal or expiry did that.
   const earlier = useApprovals(org.id).data?.find((x) => x.id === a.result?.notRunAfter);
   if (p === "waiting") return null;
@@ -1711,12 +1710,9 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
       ? t("approvals.notRunRefused", { title: approvalTitle(t, earlier) })
       : t("approvals.notRunExpired", { title: approvalTitle(t, earlier) });
   const [icon, title, subtitle]: [IconName, string, string | undefined] =
+    // In line: the bar under the request says what it runs after.
     p === "queued"
-      ? [
-          "waiting",
-          waitsOn ? t("approvals.queuedLine", { title: approvalTitle(t, waitsOn) }) : t("approvals.status.queued"),
-          approvedBy,
-        ]
+      ? ["waiting", t("approvals.status.queued"), approvedBy]
       : p === "notRun"
         ? ["block", t("approvals.status.notRun"), notRunLine]
         : p === "running"
