@@ -13,10 +13,11 @@ live in GitHub's secrets or the stores.
 ## Android on GitHub Actions
 
 Run **Android build** (Actions → Run workflow) with `preview` (an arm64 APK to install directly, kept as the run's
-artifact) or `production` (an app bundle with every architecture; with `PLAY_SERVICE_ACCOUNT_JSON` set it also goes
-to the Play Store's internal track as a draft). It runs `expo prebuild --platform android --clean` and Gradle on a
-CI runner; `plugins/with-android-release-signing.js` signs the release with the upload key from the
-environment. Nothing goes through EAS.
+artifact) or `production` (an app bundle for arm64 and 32-bit ARM phones; with `PLAY_SERVICE_ACCOUNT_JSON` set it also
+goes to the Play Store's internal track as a draft). It runs `expo prebuild --platform android --clean` and Gradle on
+GitHub's standard runner (or `CI_RUNNER_XLARGE`), with extra swap and two Gradle workers so it fits in 16 GB;
+`plugins/with-android-release-signing.js` signs the release with the upload key from the environment. Nothing goes
+through EAS.
 
 One time, in GitHub → Settings → Secrets and variables → Actions:
 1. The upload key: make one once (`keytool -genkeypair -v -storetype PKCS12 -keystore upload.keystore -alias upload
