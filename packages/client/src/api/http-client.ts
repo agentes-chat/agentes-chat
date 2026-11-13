@@ -32,6 +32,7 @@ import type {
   AgentDetail,
   AgentForYou,
   AgentGroup,
+  AgentHolds,
   AgentLineChange,
   AgentMailbox,
   AgentPlanUsage,
@@ -188,6 +189,7 @@ import type {
   PersonUsage,
   PhoneDevice,
   PhoneSignIn,
+  PlanServes,
   Poll,
   Proposal,
   ReactionCount,
@@ -254,6 +256,7 @@ import type {
   WorkspaceActionCard,
   WorkspaceActionCardView,
   WorkspaceLimits,
+  XcodeFixView,
 } from "./types";
 
 /** Search filters as query parameters (lists comma-separated). */
@@ -443,11 +446,18 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           method: "PUT",
           json: { allowedDomains },
         }),
-      agentHandoff: async (orgId, agentId, screen = "browser") =>
-        (await request<{ handoff: BrowserHandoff | null }>(`${org(orgId)}/agents/${enc(agentId)}/${screen}/handoff`))
-          .handoff,
-      agentControl: async (orgId, agentId, screen = "browser") =>
-        (await request<{ canControl: boolean }>(`${org(orgId)}/agents/${enc(agentId)}/${screen}/control`)).canControl,
+      agentHandoff: async (orgId, agentId, screen = "browser", seat) =>
+        (
+          await request<{ handoff: BrowserHandoff | null }>(`${org(orgId)}/agents/${enc(agentId)}/${screen}/handoff`, {
+            query: seat ? { seat } : {},
+          })
+        ).handoff,
+      agentControl: async (orgId, agentId, screen = "browser", seat) =>
+        (
+          await request<{ canControl: boolean }>(`${org(orgId)}/agents/${enc(agentId)}/${screen}/control`, {
+            query: seat ? { seat } : {},
+          })
+        ).canControl,
       handoff: (orgId, handoffId) => request<BrowserHandoff>(`${org(orgId)}/browser/handoffs/${enc(handoffId)}`),
       takeControl: (orgId, handoffId) =>
         request<BrowserHandoff>(`${org(orgId)}/browser/handoffs/${enc(handoffId)}/control`, { json: {} }),
@@ -461,13 +471,14 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         }),
       cancel: (orgId, handoffId) =>
         request<BrowserHandoff>(`${org(orgId)}/browser/handoffs/${enc(handoffId)}/cancel`, { json: {} }),
-      takeover: (orgId, agentId, runId, screen = "browser") =>
+      takeover: (orgId, agentId, runId, screen = "browser", seat) =>
         request<BrowserHandoff>(`${org(orgId)}/agents/${enc(agentId)}/${screen}/takeover`, {
-          json: runId ? { runId } : {},
+          json: { ...(runId ? { runId } : {}), ...(seat ? { seat } : {}) },
         }),
       open: (orgId, agentId, to) =>
         request<void>(`${org(orgId)}/agents/${enc(agentId)}/browser/open`, { json: pageBody(to) }),
-      stop: (orgId, agentId) => request<void>(`${org(orgId)}/agents/${enc(agentId)}/browser/stop`, { json: {} }),
+      stop: (orgId, agentId, seat) =>
+        request<void>(`${org(orgId)}/agents/${enc(agentId)}/browser/stop`, { json: {}, query: seat ? { seat } : {} }),
       restart: (orgId, agentId) => request<void>(`${org(orgId)}/agents/${enc(agentId)}/browser/restart`, { json: {} }),
     },
     browserProfiles: {
@@ -494,8 +505,15 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<void>(`${org(orgId)}/agents/${enc(agentId)}/browser-profile/request`, { json: {} }),
     },
     desktop: {
-      status: (orgId, agentId) => request<DesktopStatus>(`${org(orgId)}/agents/${enc(agentId)}/desktop`),
-      picture: (orgId, agentId) => request<DesktopPictureView>(`${org(orgId)}/agents/${enc(agentId)}/desktop/picture`),
+      status: (orgId, agentId, seat) =>
+        request<DesktopStatus>(`${org(orgId)}/agents/${enc(agentId)}/desktop`, { query: seat ? { seat } : {} }),
+      picture: (orgId, agentId, seat) =>
+        request<DesktopPictureView>(`${org(orgId)}/agents/${enc(agentId)}/desktop/picture`, {
+          query: seat ? { seat } : {},
+        }),
+      holds: (orgId, agentId) => request<AgentHolds>(`${org(orgId)}/agents/${enc(agentId)}/holds`),
+      stopHold: (orgId, agentId, holdId) =>
+        request<void>(`${org(orgId)}/agents/${enc(agentId)}/holds/${enc(holdId)}`, { method: "DELETE" }),
     },
     vault: {
       overview: (orgId) => request<VaultOverview>(`${org(orgId)}/vault`),
@@ -1228,6 +1246,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           method: "PUT",
           json: {},
         }),
+      startXcodeFix: (orgId, machineId, kind) =>
+        request<XcodeFixView>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-fix`, { json: { kind } }),
+      xcodeFix: (orgId, machineId) =>
+        request<XcodeFixView>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-fix`),
+      cancelXcodeFix: (orgId, machineId) =>
+        request<XcodeFixView>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-fix`, { method: "DELETE" }),
     },
     machines: {
       list: async (orgId) => (await request<{ machines: Machine[] }>(`${org(orgId)}/machines`)).machines,
@@ -1251,6 +1275,15 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         );
         // The new access, bare or wrapped.
         return "access" in out ? out.access : out;
+      },
+      allowTool: async (orgId, machineId, tool) =>
+        (
+          await request<{ access: MachineAccess }>(`${org(orgId)}/machines/${enc(machineId)}/access/allow`, {
+            json: { tool },
+          })
+        ).access,
+      askTool: async (orgId, machineId, tool) => {
+        await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/access/ask`, { json: { tool } });
       },
       setPause: async (orgId, machineId, input) =>
         (
@@ -1291,6 +1324,11 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       takeBackPlan: (orgId, accountId, agentId) =>
         request<{ agentIds: string[] }>(`${org(orgId)}/ai-accounts/${enc(accountId)}/take-back`, {
           json: agentId ? { agentId } : {},
+        }),
+      setAccountServes: (orgId, accountId, serves) =>
+        request<{ serves: PlanServes; agentIds: string[] }>(`${org(orgId)}/ai-accounts/${enc(accountId)}/serves`, {
+          method: "PUT",
+          json: { serves },
         }),
       renameAccount: (orgId, machineId, accountId, label) =>
         request<MachineAccount>(`${org(orgId)}/machines/${enc(machineId)}/accounts/${enc(accountId)}`, {
@@ -1737,6 +1775,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<WikiPage>(`${org(orgId)}/wiki/pages/${enc(slug)}/context`, { json: { on } }),
       reads: (orgId) => request<WikiTopRead[]>(`${org(orgId)}/wiki/reads`),
       import: (orgId, input) => request<WikiImportResult>(`${org(orgId)}/wiki/import`, { json: input }),
+      githubNotes: (orgId, url) => files.blob(`${org(orgId)}/wiki/import/github?url=${enc(url)}`),
       append: (orgId, slug, input) =>
         request<WikiPage>(`${org(orgId)}/wiki/pages/${enc(slug)}/append`, { json: input }),
     },
@@ -1758,6 +1797,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       prefs: (orgId) => request<NoticePrefs>(`${org(orgId)}/notification-prefs`),
       setPref: (orgId, category, on) =>
         request<NoticePrefs>(`${org(orgId)}/notification-prefs`, { method: "PUT", json: { category, on } }),
+      askAdmins: (orgId, ask) => request<{ sent: number }>(`${org(orgId)}/admin-asks`, { json: ask }),
     },
     calendar: {
       range: (orgId, from, to) => request<CalendarRange>(`${org(orgId)}/calendar`, { query: { from, to } }),

@@ -36,6 +36,7 @@ import { serverBody } from "@agenteschat/client/lib/message-body";
 import { missionSetupOf } from "@agenteschat/client/lib/missions";
 import { isTalkerReply, routineReportText, talkerWaited } from "@agenteschat/client/lib/notices";
 import { can } from "@agenteschat/client/lib/permissions";
+import { modelStandInText } from "@agenteschat/client/lib/plan-usage";
 import { reachHandoffs } from "@agenteschat/client/lib/reach";
 import { replyOf } from "@agenteschat/client/lib/reply";
 import { isReminderMessage, reminderBody, routineReplyOf } from "@agenteschat/client/lib/routines";
@@ -84,6 +85,7 @@ import { HandoffCard } from "../browser/HandoffCard";
 import { TrailCard } from "../browser/TrailCard";
 import { DeviceWait } from "../devices/DeviceWait";
 import { deviceWaitOf } from "../devices/logic";
+import { WaitToolOffAction } from "../devices/ToolOneClick";
 import { MessageFiles } from "../files/MessageFiles";
 import { chatHref, consultationHref, routineHref } from "../links/logic";
 import { DecisionCard, MissionCard, PlanCard, ReviewCard, SetupFailedCard } from "../missions/cards";
@@ -96,7 +98,7 @@ import { useColors, useDirectory, useMeId, useMyHandle, useNamesComputers, useOr
 import { agentLook } from "../shared/logic";
 import { tapHaptic } from "../shared/parts";
 import { VoiceMessage } from "../voice/VoiceMessage";
-import { ReceiptMark } from "./AgentReceipts";
+import { FilesTextOnlyFix, ReceiptMark } from "./AgentReceipts";
 import { secretRequestOf } from "./ask-store";
 import { ChatMedia } from "./ChatMedia";
 import { ClippedMessage } from "./ClippedMessage";
@@ -134,8 +136,8 @@ import { QuoteAbove, QuotePlate } from "./QuoteLine";
 import { ReachLines } from "./ReachLines";
 import { Receipts } from "./Receipts";
 import { SecretCard } from "./SecretCard";
-import { SpeedFallbackLine, StopPill } from "./StoppedLine";
-import { useStoppedRun } from "./stopped-runs";
+import { ModelStandInLine, SpeedFallbackLine, StopPill } from "./StoppedLine";
+import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
 import { recentTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
@@ -209,6 +211,7 @@ export const MessageRow = memo(function MessageRow({
   const color = agentLook(agent).color;
   const name = dir.nameOf(m.author) || t("mobile.chat.someone");
   const meta = m.meta;
+  const standIn = modelStandInText(t, meta);
   // What a routine found, told by its agent (as on the web): a small tag, and the report it answers on demand
   // (that report's own line folds into this message).
   const routine = routineReplyOf(m);
@@ -774,7 +777,16 @@ export const MessageRow = memo(function MessageRow({
         ) : null}
         {look.faces ? (
           <View style={[styles.avslot, bubbled && lookRows.bubblesSlot, compact && lookRows.compactSlot]}>
-            {grouped ? null : <Face who={m.author} size={compact ? 18 : bubbled ? 30 : 34} live={false} />}
+            {grouped ? (
+              // A grouped row's receipt in its face's place, on its first line: a tap opens who it went to.
+              (receipt || seenBy) && !m.local && !inBubble ? (
+                <View style={[styles.slotMark, { height: look.text?.lineHeight ?? 24 }]}>
+                  <ReceiptMark message={m} mine={mine} receipt={receipt} seenBy={seenBy} />
+                </View>
+              ) : null
+            ) : (
+              <Face who={m.author} size={compact ? 18 : bubbled ? 30 : 34} live={false} />
+            )}
           </View>
         ) : null}
         <View style={[styles.body, { gap: rhythm.part }]}>
@@ -848,6 +860,7 @@ export const MessageRow = memo(function MessageRow({
             {media ? <ChatMedia media={media} liveId={m.id} /> : null}
             {voiceOf(meta) ? <VoiceMessage message={m} /> : null}
             {isAgent && meta?.speedFallback === true ? <SpeedFallbackLine message={m} /> : null}
+            {isAgent && standIn ? <ModelStandInLine message={m} text={standIn} /> : null}
             {(stopped || atLimit || providerCut) && m.agentRunId ? (
               <StoppedLine
                 message={m}
@@ -912,10 +925,12 @@ export const MessageRow = memo(function MessageRow({
             {isAgent ? <CostlyProposalCard message={m} /> : null}
             {isAgent ? <UsagePauseCard message={m} /> : null}
             {isAgent ? <UsageWaitCancel message={m} /> : null}
+            {isAgent ? <WaitToolOffAction message={m} /> : null}
             {isAgent ? <ProposalCard message={m} /> : null}
             {isAgent ? <TeamCard message={m} /> : null}
             {isAgent ? <ReplyChips message={m} /> : null}
             {isAgent ? <OfferCard message={m} /> : null}
+            {isAgent ? <FilesTextOnlyFix message={m} /> : null}
             {isAgent ? <InstructionProposals message={m} /> : null}
             {isAgent ? <SettingsProposals message={m} /> : null}
             {isAgent ? <TeamWeek message={m} /> : null}
@@ -1052,7 +1067,9 @@ function StoppedLine({
       { agentId: m.author.id ?? "", threadId: m.threadId ?? m.id, triggerMessageId: null },
       { meId, manageAgents: can(org, "manage_agents"), agentOwnerId: owner, messages: loaded },
     );
-  const open = may && !continued && !busy;
+  // The agent works here again, or wrote after the stop: it went on, the stop offers nothing.
+  const movedOn = useStopMovedOn(runId);
+  const open = may && !continued && !busy && !movedOn;
   const onContinue = () => {
     setBusy(true);
     api.agents
@@ -1346,6 +1363,8 @@ const styles = StyleSheet.create({
   // never wraps the line.
   whoRoom: { paddingRight: 40 },
   whoMark: { position: "absolute", top: 0, right: 0, height: 19, justifyContent: "center" },
+  // On the words' first line: the slot's 2 over the words' own 1.
+  slotMark: { marginTop: -1, justifyContent: "center" },
   whoTight: { marginBottom: 0 },
   // The time ends the words' line when it fits; a longer text pushes it to a line of its own, at the bubble's end.
   bubbleLine: {

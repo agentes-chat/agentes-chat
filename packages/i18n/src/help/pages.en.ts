@@ -8,6 +8,13 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       "The agentes.chat app can also run agentes.chat itself, on a Mac, a PC or a Linux computer, for you or a small team.",
     sections: [
       {
+        id: "download",
+        heading: "Download the app",
+        blocks: [
+          "[Download the agentes.chat app](/download) for your Mac, PC or Linux computer and open it. Pick **On your own server**, press **Continue on my server**, then **Run agentes.chat on this computer**.",
+        ],
+      },
+      {
         id: "how",
         heading: "How it runs",
         blocks: [
@@ -214,6 +221,15 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
           "Sign in to each workspace in the same app and press **Allow** for each one. Workspaces on agentes.chat Cloud and on your own servers can share a computer (app 0.6.1 and later). Each has its own agents and folders there, and disconnecting one doesn't touch the others.",
           "A server the app runs on this computer is connected already and needs nothing. To also lend that computer to a workspace somewhere else, see [Lend it to another workspace too](/help/run-on-your-computer#another-workspace).",
           "Using the app on a laptop only as a window onto your workspace? When it asks to let agents use the laptop, **Not now** keeps it a plain window.",
+          "A server connected with the terminal line works for one workspace. Connecting it from another workspace moves the server to that one, and the first no longer reaches it. For several workspaces on one computer, use the app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "When agents wait in line",
+        blocks: [
+          "Each piece of an agent's work uses the computer's memory. When free memory runs short, the next one waits in line until another ends. People go first. The number of CPUs doesn't change this.",
+          "A computer with 4 GB of memory runs two or three at once, one with 8 GB about nine. A Mac or a PC runs up to eight. Browsers and desktops the agents keep open use memory too. For a shorter line, use a computer with more memory, or connect another and split the agents between them in **Settings\u00a0›\u00a0Devices**. Workspaces that share a computer share its memory.",
         ],
       },
       {
@@ -369,9 +385,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       {
         id: "permissions",
         heading: "Memory grants no permission",
-        blocks: [
-          "Nothing in memory lets an agent do more. What it can do stays in its **Tools and access**, and sensitive actions always ask for approval.",
-        ],
+        blocks: ["Nothing in memory lets an agent do more. What it can do stays in its **Tools and access**."],
       },
       {
         id: "proposals",
@@ -390,7 +404,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "what",
         heading: "What asks first",
         blocks: [
-          "When an agent wants to merge, deploy, roll back, send something outside or delete data, it asks first, whatever access it has. The request shows up in **Approvals** and in the conversation, with the exact action and why.",
+          "When an agent wants to merge, deploy, roll back, send something outside or delete data, it asks first. That is **Only what is risky**, the level every agent starts at. On the agent's page, under **Approvals**, **Always ask** makes it ask before changing anything, and **Never ask** makes it ask for nothing, merge, deploy, payments and routines included. The request shows up in **Approvals** and in the conversation, with the exact action and why.",
         ],
       },
       {
@@ -398,7 +412,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "Once, or always",
         blocks: [
           "Approving covers one exact action, with its values. If the agent changes anything, it asks again.",
-          "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. Neither is offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
+          "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. **Always approve** is there for any kind of action, merge and deploy too, while the agent is at **Only what is risky**. **Always in this routine** is not offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
         ],
       },
       {

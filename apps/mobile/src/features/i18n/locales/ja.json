@@ -879,6 +879,9 @@
       "routine_finished_other": "ルーティンが完了しました",
       "routine_failed_other": "ルーティンが失敗しました",
       "run_failed_other": "完了できませんでした",
+      "admin_ask_channel_agent": "{{names}} が {{agent}} を #{{label}} に追加するよう求めています",
+      "admin_ask_create_agents": "{{names}} がエージェントを作成できるよう求めています",
+      "admin_ask_webhook": "{{names}} がルーティン用の {{service}} Webhook の設定を求めています",
       "routine_paused_other": "ルーティンが一時停止しました",
       "routine_stalled_other": "ルーティンがコンピューターを待っています",
       "agent_unreached_other": "ルーティンがエージェントを呼び出せませんでした",
@@ -912,6 +915,7 @@
       "desktop_taken_female_other": "{{names}}が{{agent}}のコンピューターの画面の操作を引き継ぎました",
       "plan_lent_other": "{{names}}があなたの {{plan}} プランを{{agent}}に接続しました",
       "plan_lent_female_other": "{{names}}があなたの {{plan}} プランを{{agent}}に接続しました",
+      "plan_serves_other": "あなたの{{plan}}は workspace 全体で使えるようになりました",
       "plan_model_dropped_other": "{{model}}が{{plan}}から外れました。{{names}}は当面{{runs}}を使います",
       "computer_disk_full_other": "コンピューターのディスクがほぼいっぱいです",
       "computer_no_chrome_other": "コンピューターにGoogle Chromeが必要です。google.com/chromeからダウンロードしてください",
@@ -1282,7 +1286,6 @@
     "agentLine_other": "{{count}}件のメモリ",
     "uses_other": "{{count}}回使用",
     "confirmed": "人が確認済み",
-    "unconfirmed": "未確認",
     "confirm": "確認する",
     "confirmedToast": "確認しました",
     "details": "技術的な詳細",
@@ -1488,9 +1491,9 @@
         "setup": "ワークスペースの設定",
         "desktop": "コンピューターの画面"
       },
-      "asksYou": "マージと公開は、どのレベルでも必ずあなたの承認を求めます。",
-      "asksOwner": "マージと公開は、どのレベルでも必ず{{name}}の承認を求めます。",
-      "asksAdmins": "マージと公開は、どのレベルでも必ず管理者の承認を求めます。",
+      "asksYou": "マージと公開は、エージェントが「確認しない」に設定されている場合を除き、あなたの承認を求めます。",
+      "asksOwner": "マージと公開は、エージェントが「確認しない」に設定されている場合を除き、{{name}}の承認を求めます。",
+      "asksAdmins": "マージと公開は、エージェントが「確認しない」に設定されている場合を除き、管理者の承認を求めます。",
       "empty": "今は会話だけです。"
     }
   },
@@ -1889,6 +1892,7 @@
       "access_requestFor": "{{names}}が{{person}}の依頼で{{device}}の使用を求めています",
       "waiting": "{{names}}が{{device}}を待っています",
       "waitingFor": "{{names}}が{{person}}の依頼で{{device}}を待っています",
+      "tool_request": "{{names}} があなたの {{device}} で{{tool}}をオンにするよう頼んでいます",
       "allowOnce": "今回のみ許可",
       "always": "{{name}}を常に許可",
       "no": "許可しない",
@@ -2145,7 +2149,8 @@
       "tooBig": "画像が大きすぎます。別の画像をお試しください。"
     },
     "machine": {
-      "toolsHow": "オンのツールをタップするとオフになります。再びオンにするには、そのコンピューター上で操作する必要があります。"
+      "toolsHow": "オンのツールをタップするとオフになります。再びオンにするには、そのコンピューター上で、またはここで接続した人が行います。",
+      "toolsHowOwner": "ツールをタップしてオン・オフを切り替えます。"
     },
     "roles": {
       "onComputer": "ロールの順番と各ロールのアイコンはコンピューターで変更します。",

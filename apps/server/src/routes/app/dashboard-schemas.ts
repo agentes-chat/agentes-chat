@@ -165,6 +165,10 @@ export const Widget = z
             "`agent_reported` (show `detail` as is), `no_update`, `error`, or a routine's code (`budget_exceeded`…).",
         }),
         detail: z.string().nullable(),
+        cause: z.string().optional().openapi({
+          description:
+            "With `failing` (it stopped after failing several times in a row): the code of the last of those failures, whose words and way out the apps show.",
+        }),
       })
       .nullable(),
     wait: z

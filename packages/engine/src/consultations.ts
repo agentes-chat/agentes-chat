@@ -35,6 +35,7 @@ import { notifyAgentUnreached } from "./notification-producers";
 import { runReadOutsideById } from "./outside";
 import { actingRoutineOfCall, personBehindCall, routineCreatorOf } from "./requester";
 import { isRoutineRoomKey } from "./routine-brief";
+import { stoppedToSend } from "./run-inbox";
 import { deliverNoticeToRun, resumeRunWithResult } from "./run-resume";
 import { tellAgentStopped } from "./run-stopped";
 import { type AgentRun, isTerminal, outageParkedSql, type RunStatus, replyThreadOf } from "./runs";
@@ -1106,10 +1107,14 @@ async function handBack(tx: Executor, asker: AgentRun, closed: AgentConsultation
 }
 
 /** Why a run that owed an answer ended, as the agent that asked reads it: a person's stop by name, and what it means. */
-async function endedWhy(db: Executor, status: string, error: string | undefined) {
+async function endedWhy(db: Executor, runId: string, status: string, error: string | undefined) {
   const by = canceledBy(error);
   if (!by) return error?.slice(0, 500) ?? status;
   const [person] = await db.select({ name: users.name }).from(users).where(eq(users.id, by));
+  // Stopped to read a message the person sent it: no stop on purpose, it goes on from that message.
+  const [run] = await db.select().from(agentRuns).where(eq(agentRuns.id, runId));
+  if (run && (await stoppedToSend(db, run)))
+    return `${person?.name || "A person"} sent it a message that it stopped to read, so it did not get to this`;
   return `${person?.name || "A person"} stopped it on purpose, so don't ask it again or hand it to anyone else unless a person asks you to`;
 }
 
@@ -1147,7 +1152,7 @@ async function settleOwed(
   if (first.rows.length === 0) return null;
   const closed: AgentConsultationRow[] = [];
   if (status !== "done") {
-    const why = await endedWhy(deps.db, status, error);
+    const why = await endedWhy(deps.db, run.id, status, error);
     for (const row of first.rows) {
       const c = await closeConsultation(deps, row, "failed", why);
       if (c) closed.push(c);

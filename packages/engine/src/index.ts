@@ -1,5 +1,6 @@
 export * from "./access";
 export * from "./account-contacts";
+export * from "./admin-asks";
 export * from "./agent-actions";
 export * from "./agent-audit";
 export * from "./agent-deletion";
@@ -125,11 +126,13 @@ export * from "./feedback";
 export * from "./feedback-offers";
 export * from "./feedback-tools";
 export * from "./file-pulls";
+export * from "./file-reader";
 export * from "./follow-through";
 export * from "./follows";
 export * from "./gateway";
 export * from "./gif-key";
 export * from "./git/branches";
+export * from "./git/co-author-tool";
 export * from "./git/credential";
 export * from "./git/github-app";
 export * from "./git/github-app-installs";
@@ -164,6 +167,7 @@ export * from "./limits";
 export * from "./machine-access";
 export * from "./machine-accounts";
 export * from "./machine-device";
+export * from "./machine-holds";
 export * from "./machine-hub";
 export * from "./machine-outages";
 export * from "./machine-pause";
@@ -211,7 +215,24 @@ export * from "./notifications";
 export * from "./open-requests";
 export * from "./operator";
 export * from "./operator-events";
+export {
+  OPERATOR_JOB_COUNTS,
+  OPERATOR_JOB_ERROR_MAX,
+  OPERATOR_JOB_STUCK_MS,
+  OPERATOR_USAGE_DAYS,
+  OPERATOR_USAGE_GROUPS,
+  OPERATOR_USAGE_MAX_DAYS,
+  operatorEmailJobs,
+  operatorJobSummary,
+  operatorJobs,
+  operatorUsage,
+} from "./operator-jobs";
+export * from "./operator-lookups";
+export * from "./operator-machines";
+export * from "./operator-people";
 export * from "./operator-review";
+export * from "./operator-runs";
+export * from "./operator-workspace";
 export * from "./organizations";
 export * from "./out-of-office";
 export * from "./outbound";
@@ -237,6 +258,7 @@ export * from "./reporting";
 export * from "./right-hand";
 export * from "./right-hand-approvals";
 export * from "./right-hand-prompt";
+export * from "./right-hand-seats";
 export * from "./roles";
 export * from "./router";
 export * from "./router-jev";
@@ -315,6 +337,7 @@ export * from "./web-tools";
 export * from "./webhooks";
 export * from "./wiki";
 export * from "./wiki-dm";
+export * from "./wiki-github";
 export * from "./wiki-links";
 export * from "./wiki-tools";
 export * from "./withdraw-request-tool";

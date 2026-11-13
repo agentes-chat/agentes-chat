@@ -103,7 +103,8 @@ function switchRows(el: HTMLElement) {
 describe("Run agentes.chat on this Mac", () => {
   test("the title, one sentence, the two fields alone, two one-line switches with their ⓘ, and Start", () =>
     firstRun("first", async ({ el, press, until, button }) => {
-      await press("Use your own server");
+      await press("On your own server");
+      await press("Continue on my server");
       await press("Run agentes.chat on this Mac");
       // Tailscale connected: the reach row has nothing under its label.
       await until(() => el.querySelector("form.dk-fr__here") && switchRows(el)[0]?.line === null);
@@ -147,7 +148,8 @@ describe("Run agentes.chat on this Mac", () => {
     firstRun(
       "here",
       async ({ el, press, until }) => {
-        await press("Use your own server");
+        await press("On your own server");
+        await press("Continue on my server");
         await press("Run agentes.chat on this Mac");
         await until(() => el.querySelector("form.dk-fr__here"));
         expect(el.querySelector(".dk-lead")?.textContent).toBe(
@@ -160,7 +162,8 @@ describe("Run agentes.chat on this Mac", () => {
 
   test("running here already: one sentence, never its address", () =>
     firstRun("here", async ({ el, press, until }) => {
-      await press("Use your own server");
+      await press("On your own server");
+      await press("Continue on my server");
       await press("Run agentes.chat on this Mac");
       await until(() => el.querySelector("h1")?.textContent === "agentes.chat already runs on this Mac");
       expect(el.querySelector(".dk-lead")?.textContent).toBe("This app runs it. Open it to sign in.");
@@ -170,7 +173,8 @@ describe("Run agentes.chat on this Mac", () => {
     await firstRun(
       "first",
       async ({ el, press, until, tailscale }) => {
-        await press("Use your own server");
+        await press("On your own server");
+        await press("Continue on my server");
         await press("Run agentes.chat on this Mac");
         await until(() => switchRows(el)[0]?.line?.startsWith("Needs"));
         const [reach] = switchRows(el);
@@ -185,7 +189,8 @@ describe("Run agentes.chat on this Mac", () => {
     await firstRun(
       "first",
       async ({ el, press, until, tailscale }) => {
-        await press("Use your own server");
+        await press("On your own server");
+        await press("Continue on my server");
         await press("Run agentes.chat on this Mac");
         await until(() => switchRows(el)[0]?.line?.startsWith("Tailscale"));
         expect(switchRows(el)[0]?.line).toBe("Tailscale isn't connected. Open Tailscale");
@@ -197,7 +202,8 @@ describe("Run agentes.chat on this Mac", () => {
     await firstRun(
       "linux",
       async ({ el, press, until }) => {
-        await press("Use your own server");
+        await press("On your own server");
+        await press("Continue on my server");
         await press("Run agentes.chat on this computer");
         await until(() => switchRows(el)[0]?.line?.startsWith("Tailscale"));
         const row = el.querySelector(".dk-card > .dk-crow");
@@ -213,7 +219,8 @@ describe("Run agentes.chat on this Mac", () => {
     await firstRun(
       "first",
       async ({ el, press, until }) => {
-        await press("Use your own server");
+        await press("On your own server");
+        await press("Continue on my server");
         await press("Run agentes.chat on this Mac");
         await until(() => switchRows(el)[0]?.line?.startsWith("Tailscale"));
         const row = el.querySelector(".dk-card > .dk-crow");
@@ -233,7 +240,8 @@ describe("Run agentes.chat on this Mac", () => {
     await firstRun(
       "windows",
       async ({ el, press, until }) => {
-        await press("Use your own server");
+        await press("On your own server");
+        await press("Continue on my server");
         await press("Run agentes.chat on this PC");
         await until(() => switchRows(el)[0]?.line?.startsWith("Tailscale"));
         const line = el.querySelector(".dk-card > .dk-crow small");
@@ -252,7 +260,8 @@ describe("Run here, while Tailscale is read", () => {
     await firstRun(
       "first",
       async ({ el, press, until }) => {
-        await press("Use your own server");
+        await press("On your own server");
+        await press("Continue on my server");
         await press("Run agentes.chat on this Mac");
         await until(() => el.querySelector("form.dk-fr__here"));
         expect(switchRows(el)[0]?.line).toBe("Checking whether Tailscale is connected…");
@@ -273,10 +282,47 @@ describe("Run here, while Tailscale is read", () => {
   });
 });
 
+describe("Where does your workspace live?", () => {
+  test("the Cloud chosen and recommended, one's own server free beside it, one button that follows the choice", () => {
+    const chosen: (string | undefined)[] = [];
+    return firstRun(
+      "first",
+      async ({ el, press, button }) => {
+        expect(el.querySelector("h1")?.textContent).toBe("Where does your workspace live?");
+        const cards = [...el.querySelectorAll<HTMLElement>('[role="radio"]')];
+        expect(cards.map((c) => c.getAttribute("aria-checked"))).toEqual(["true", "false"]);
+        expect(cards[0]?.textContent).toContain("Recommended");
+        expect(cards[0]?.textContent).toContain("The agents' computer always on");
+        expect(cards[1]?.textContent).toContain("Free · open source");
+        // No radio dot: the chosen card's border says it.
+        expect(el.querySelector(".ac-optrow__dot")).toBeNull();
+        // Day over the Cloud's server; night and the team asleep on one's own.
+        expect(el.querySelector(".ac-hosting")?.getAttribute("data-hosting")).toBe("cloud");
+        await press("On your own server");
+        expect(el.querySelector(".ac-hosting")?.getAttribute("data-hosting")).toBe("own");
+        expect(el.textContent).toContain("The agents stop when it's off");
+        expect(button("Continue on Cloud")).toBeUndefined();
+        await press("agentes.chat Cloud");
+        await press("Continue on Cloud");
+        expect(chosen).toEqual(["/login"]);
+      },
+      {
+        host: (host) => {
+          host.chooseServer = async (_server, page) => {
+            chosen.push(page);
+          };
+          host.hideWindow = async () => {};
+        },
+      },
+    );
+  });
+});
+
 describe("Your own server", () => {
   test("Which one to choose? opens the page's answer in the browser, in the app's language", async () => {
     await firstRun("first", async ({ el, press, button, opened }) => {
-      await press("Use your own server");
+      await press("On your own server");
+      await press("Continue on my server");
       expect(el.querySelector("h1")?.textContent).toBe("Your own server");
       expect(el.textContent).toContain("This Mac becomes the server, while it's on.");
       expect(button("Which one to choose?")?.className).toBe("ac-link ac-link--muted dk-link");
@@ -286,7 +332,8 @@ describe("Your own server", () => {
     await firstRun(
       "first",
       async ({ press, opened }) => {
-        await press("Usar o seu próprio servidor");
+        await press("No seu servidor");
+        await press("Continuar no meu servidor");
         await press("Qual escolher?");
         expect(opened).toEqual(["https://agentes.chat/pt/docs/run-on-your-computer#who"]);
       },
@@ -296,7 +343,8 @@ describe("Your own server", () => {
 
   test("on Windows it runs here too: the same card and its help", () =>
     firstRun("windows", async ({ el, press, button }) => {
-      await press("Use your own server");
+      await press("On your own server");
+      await press("Continue on my server");
       expect(el.textContent).toContain("This PC becomes the server, while it's on.");
       expect(button("Which one to choose?")).toBeDefined();
     }));
@@ -315,9 +363,15 @@ const pressEscape = () =>
 /** Run here's form with an email typed in, then Start (in the window's language). */
 async function startSetup(
   { el, press, until }: ReturnType<typeof screenOf>,
-  words = { own: "Use your own server", here: "Run agentes.chat on this Mac", start: "Start agentes.chat" },
+  words = {
+    own: "On your own server",
+    ownGo: "Continue on my server",
+    here: "Run agentes.chat on this Mac",
+    start: "Start agentes.chat",
+  },
 ) {
   await press(words.own);
+  await press(words.ownGo);
   await press(words.here);
   await until(() => el.querySelector("form.dk-fr__here"));
   await act(async () => typeInto(el.querySelector('input[type="email"]'), "ana@example.com"));
@@ -453,7 +507,8 @@ describe("Setting it up here", () => {
         "first",
         async (screen) => {
           const { el, until, button, press } = screen;
-          await press("Use your own server");
+          await press("On your own server");
+          await press("Continue on my server");
           await press("Run agentes.chat on this Mac");
           await until(() => el.querySelector("#here-reach:not([disabled])"));
           await act(async () => typeInto(el.querySelector('input[type="email"]'), "ana@example.com"));
@@ -508,7 +563,8 @@ describe("Setting it up here", () => {
       await firstRun(
         "first",
         async ({ el, until, button, press }) => {
-          await press("Use your own server");
+          await press("On your own server");
+          await press("Continue on my server");
           await press("Run agentes.chat on this Mac");
           await until(() => el.querySelector("#here-reach:not([disabled])"));
           await act(async () => typeInto(el.querySelector('input[type="email"]'), "ana@example.com"));
@@ -535,7 +591,8 @@ describe("Setting it up here", () => {
       async (screen) => {
         const { el, until, button, press } = screen;
         const switchOn = (id: string) => el.querySelector(`#${id}`)?.getAttribute("aria-checked");
-        await press("Use your own server");
+        await press("On your own server");
+        await press("Continue on my server");
         await press("Run agentes.chat on this Mac");
         await until(() => el.querySelector("#here-reach:not([disabled])"));
         await act(async () => typeInto(el.querySelector('input[type="email"]'), "ana@example.com"));
@@ -676,7 +733,8 @@ describe("Setting it up here", () => {
       async (screen) => {
         const { el, until } = screen;
         await startSetup(screen, {
-          own: "Use your own server",
+          own: "On your own server",
+          ownGo: "Continue on my server",
           here: "Run agentes.chat on this PC",
           start: "Start agentes.chat",
         });
@@ -692,7 +750,8 @@ describe("Setting it up here", () => {
       async (screen) => {
         const { el, until } = screen;
         await startSetup(screen, {
-          own: "Usar o seu próprio servidor",
+          own: "No seu servidor",
+          ownGo: "Continuar no meu servidor",
           here: "Rodar o agentes.chat neste Mac",
           start: "Iniciar o agentes.chat",
         });
@@ -722,7 +781,7 @@ describe("Add a workspace", () => {
       "first",
       async ({ press, until, button }) => {
         await until(() => button("Want a new workspace?") || button("Create one"));
-        await press("Sign in to agentes.chat");
+        await press("Continue on Cloud");
         await press("Create one");
         expect(chosen).toEqual(["/login", "/onboarding"]);
         expect(button("Create an account")).toBeUndefined();

@@ -1,5 +1,8 @@
 # Self-hosting agentes.chat
 
+Self-hosting is free and always will be: AGPL-3.0, no license key, no paid tier. agentes.chat Cloud
+is the paid, hosted option.
+
 agentes.chat runs as two containers: Postgres 18 with the pgvector extension, and the app, one Bun
 process that serves the web app, the API and the WebSockets and runs the background workers. A
 third, Tailscale, puts it on your private network with HTTPS. Migrations run when the app starts.
@@ -779,6 +782,7 @@ ones a self-hosted instance usually touches:
 | `RUN_MIGRATIONS_ON_BOOT` | `true` | `false` only if you run `docker compose run --rm agentes migrate` yourself before each start. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
 | `TELEMETRY` | `on` | `off` stops the anonymous usage report (Optional services and what they receive). |
+| `FEEDBACK_RELAY` | `true` | The apps' feedback form sends what a person writes to the agentes.chat team. `false`: no form (Optional services and what they receive). |
 | `TYPESAFE_API_KEY` | | Your TypeSafe key for Jev (AI: plans and keys). Wins over the key added in Settings → AI and usage. |
 | `COMPOSIO_API_KEY`, `COMPOSIO_WEBHOOK_SECRET` | | Your Composio project: Gmail and Outlook mailboxes and the services connected through Composio (below). |
 | `COMPOSIO_AUTH_CONFIGS`, `COMPOSIO_CALLS_PER_MONTH` | `0` for the cap (none) | Auth configs of your own per toolkit (`googledrive=ac_…`), and the Composio calls a workspace may make per month. |
@@ -885,6 +889,36 @@ then a second listener on `OPERATOR_API_PORT` (3001) serves `/api/operator/v1`, 
 `Authorization: Bearer <token>`, and its OpenAPI document is at `/api/operator/v1/openapi.json`. That
 port reaches every workspace, so never publish it or put it behind your proxy: the compose file
 doesn't publish it, and containers on the same Docker network reach it as `http://agentes:3001`.
+For a caller that only looks things up, set `OPERATOR_API_READ_TOKEN` too (a different value, same
+length): it is accepted for `GET` requests alone and never for `GET /review/...`, and anything else
+it asks for is refused (403). It still reads names, emails and IP addresses, so keep it as private.
+`GET /users?q=` finds an account by part of its address or name, `GET /resolve?ref=` says what a
+pasted link, an `@handle` or an id names, and `GET /orgs/{orgId}/members`, `/channels` and `/agents`
+list who and what is in a workspace, never what was written there.
+`GET /orgs/{orgId}/runs` lists a workspace's runs with what each waits for or failed with,
+`GET /runs/{runId}/trace` shows one run step by step, `GET /orgs/{orgId}/timeline` puts a conversation's
+messages, routing decisions and runs in order, and `GET /messages/{messageId}/explain` says why a message
+did or did not start a run: ids, codes, times and sizes, never a message's text or what a tool was given
+or answered. `GET /orgs/{orgId}/tool-calls` lists the tools a workspace's agents called (`?groupBy=tool`
+for counts): which tool, whether it is the server's own or a connected app's, and how each call ended.
+`GET /orgs/{orgId}/connections` lists what a workspace connected (apps, mailboxes, databases) with each
+one's state and last error, `GET /orgs/{orgId}/audit` its audit log without the entries' details,
+`GET /orgs/{orgId}/asks` what its agents asked of people and of each other (`?open=true` for what still
+waits) and `GET /orgs/{orgId}/routines` its routines with their latest firings: never a credential, what
+was asked or answered, or a routine's name or instructions. A connection's `label` is what its workspace
+calls it, which is a mailbox's address or a database's host when nobody named it; an audit entry's
+`targetId` is a name where the target has no id (a tool, a repository, a wiki folder).
+`GET /orgs/{orgId}/notifications?userId=` lists what one person was notified of and the pushes that
+carried it, never a notification's words; `GET /orgs/{orgId}/access?userId=&targetKind=&targetId=` says
+whether a person reaches an agent, a channel, a task, a file or a computer, and the rule that decides;
+`GET /orgs/{orgId}/unanswered` lists people's messages no run answered, each with why (`?summary=true`
+for counts); and `GET /email-jobs?to=` lists the emails queued to one address with their state, never
+the address, a subject or a link.
+`GET /jobs` lists the job queue without the jobs' payloads (`?stuck=true` for the ones nobody took,
+`?summary=true` for counts by kind and status), `GET /usage` adds up the tokens and cost of model calls
+for the instance, a workspace, an agent or a run, and `GET /orgs/{orgId}/machines` and
+`GET /machines/{machineId}` say what is on a computer and what waits for it: its runner and CLI versions,
+its AI accounts, open tasks and waiting runs, never a token, a hostname or an address.
 With the token set, the server also keeps 90 days of events for it to read (`GET /events`: sign-ups
 with their email, sign-ins with their IP address and browser, workspaces, invitations, agents, emails
 sent and runs finished, as metadata), and `GET /review/...` shows what one run or task did, with
@@ -958,6 +992,20 @@ either way:
   Docker, in `~/.agentes/.env`, then start it again. This wins over the switch below.
 - The switch in **Settings → General → Usage statistics**. Only the installation's first account (the
   person who set it up) sees it.
+
+**Feedback.** The apps have a feedback form (**Send feedback**, at the bottom of the sidebar), and an
+agent can send one when a person asks it to or agrees to its offer. Each one
+goes to the agentes.chat team, who make the app, and the form says so before the person sends it.
+Nothing goes by itself: only when someone presses **Send**, and only that message, as JSON in a POST to
+`FEEDBACK_URL` (`https://app.agentes.chat/api/feedback/inbox`), through Cloudflare like the usage
+report. It holds what the person wrote; their name and email address, to answer them; the workspace's
+name and their role in it; the thing they reported and its words, when they right-clicked one and left
+it in; the screen they were on (its path, with its ids), the agent open and what it thinks with, the
+language, the browser, the window, the app's build and its last errors; the server's version; and up
+to three pictures they added (a video isn't offered). Never a conversation, and nothing that says which
+server it came from beyond the request's own address. agentes.chat mails it to its team and keeps no
+copy on the server that received it. To turn it off, set `FEEDBACK_RELAY=false` in `.env` and start the
+server again: the apps show no form and agents can't send any.
 
 **Downloads and updates.** Installing and updating fetch files from agentes.chat, and those requests
 carry nothing about the instance beyond what any download does: the installer
@@ -1036,6 +1084,15 @@ GitHub App, they do it as the app: pull requests, issues, comments and commits c
 body ends with one line naming the agent and the person it works for, and commits credit that person
 (`Co-authored-by`) when they signed in with GitHub. Where the app isn't installed, the account connection is
 used, as before.
+
+Every commit an agent makes, through GitHub or with git on its computer, ends with its own line too:
+`Co-authored-by: <agent's name> <noreply@agentes.chat>`, next to the coding CLI's own (`Co-Authored-By: Claude …`)
+and the person's, never twice. It is on by default; to turn it off for the whole workspace, ask any agent ("stop
+adding your co-author line to commits"), and ask again to turn it back on. On a computer the runner adds it with git
+hooks of its own, handed only to the agents' processes through their environment: your own git, outside them, is
+never touched, each repository's own hooks (husky's included) still run first, and Git LFS still sends the files
+the agents push. That needs a runner from this release on (protocol 63); with an older one, only a chat turn's
+instruction asks the agent to add it.
 
 There are two ways to set the app up:
 
@@ -1235,6 +1292,23 @@ them, it goes on: each agent downloads `agent-browser` at its browser's first us
 Chrome is missing. Since its agents run as the
 person who connected it, a computer leaves the organization with them when they leave, are removed or
 delete their account; one installed with `--system` is the team's and stays.
+
+**Lodi's computer.** Lodi, the built-in agent every member talks to, works on the workspace's own computer (the
+server's own, set up with `--system`), where each person gets a place of their own: a separate user with its
+own files, browser, desktop and sign-ins, which only that person can watch or take control of, from Lodi's
+page. A computer that runs every agent as one user (the simple mode, a Mac, a computer a person connected)
+can't keep people's places apart, so Lodi has no computer there, and its page says so. Turn its commands,
+browser or desktop off for everyone on its page, under what it can use. The computer's shared folder is
+still shared: every agent and every person's Lodi reads and writes it.
+
+Where others read what Lodi does (a channel, a dashboard widget, a routine that reports to a channel) it works in
+one more place, shared by the whole workspace: one more user on that computer, "Lodi (shared)". Nothing of a
+person's own place reaches it. A person's own place is used only for what that person asks Lodi in their own
+conversation with it: a routine that reports there, or anything else nobody asked for there, has no computer.
+Whoever may open any agent's computer (the admins of computers) opens it from the computer's page in Settings,
+Computers. Turning all three of Lodi's computer permissions off ends that place and stops what runs there, and
+turning one back on starts an empty one. The ended place's files stay on the computer's disk under a user nothing
+runs as, until you delete that user.
 
 **What an agent reaches on its computer (`--system`).** Each agent reaches the local ports its own
 processes open (any port, port 0 included, on 127.0.0.1, ::1 or the computer's own addresses), and

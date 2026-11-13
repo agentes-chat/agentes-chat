@@ -219,6 +219,16 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         m.access = { folders, tools };
         return clone(m.access);
       },
+      allowTool: async (orgId, machineId, tool) => {
+        log("machines.allowTool", orgId, machineId, tool);
+        const m = find(machineId);
+        const access = m.access ?? { folders: [], tools: { claude: false, codex: false, commands: false } };
+        m.access = { ...access, tools: { ...access.tools, [tool]: true } };
+        return clone(m.access);
+      },
+      askTool: async (orgId, machineId, tool) => {
+        log("machines.askTool", orgId, machineId, tool);
+      },
       setPause: async (orgId, machineId, input) => {
         log("machines.setPause", orgId, machineId, input);
         const m = find(machineId);
@@ -308,6 +318,10 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
       takeBackPlan: async (orgId, accountId, agentId) => {
         log("machines.takeBackPlan", orgId, accountId, agentId);
         return { agentIds: agentId ? [agentId] : [] };
+      },
+      setAccountServes: async (orgId, accountId, serves) => {
+        log("machines.setAccountServes", orgId, accountId, serves);
+        return { serves, agentIds: [] };
       },
       renameAccount: async (orgId, machineId, accountId, label) => {
         log("machines.renameAccount", orgId, machineId, accountId, label);

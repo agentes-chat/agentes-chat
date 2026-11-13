@@ -968,6 +968,17 @@ export const envVars = {
     example: "<output of openssl rand -base64 48>",
     secret: true,
   },
+  OPERATOR_API_READ_TOKEN: {
+    schema: z
+      .string()
+      .min(32, "must be at least 32 characters. Generate one with `openssl rand -base64 48`")
+      .optional(),
+    description:
+      "A second token for the operator API that only reads, for a caller that looks things up and changes nothing: accepted for `GET` requests alone, and never under `/review` (what a run or task did). Anything else it asks for is refused (403). It still reads every workspace's and account's names, emails and IP addresses, so keep it as private as the other. Needs `OPERATOR_API_TOKEN` and must differ from it. Unset (default): only `OPERATOR_API_TOKEN` is accepted. Generate with `openssl rand -base64 48`.",
+    section: "Operator",
+    example: "<output of openssl rand -base64 48>",
+    secret: true,
+  },
   OPERATOR_API_PORT: {
     schema: z.coerce.number().int().min(1).max(65535).default(3001),
     description:
@@ -984,9 +995,26 @@ export const envVars = {
   FEEDBACK_EMAIL: {
     schema: z.email().optional(),
     description:
-      "Where the apps' feedback form sends what people write (the Beta mark beside their name): one email per message, with the person's name and address to answer them, the workspace's name and the app's version, never a conversation. Unset (default): the apps show no form.",
+      "For agentes.chat Cloud. Unset by default. The address the agentes.chat team reads feedback at: what people write in the apps' feedback form there, and what other servers send to its inbox (`POST /api/feedback/inbox`, there only), one email per message, nothing kept. A self-hosted server leaves it unset: its feedback goes to that team (`FEEDBACK_RELAY`).",
     section: "Operator",
     example: "feedback@example.com",
+  },
+  FEEDBACK_RELAY: {
+    schema: z.stringbool().default(true),
+    description:
+      "What a person writes in the feedback form goes to the agentes.chat team, who make the app (`FEEDBACK_URL`), and the form says so. Only when someone presses Send, and only that message: their text, their name and address to answer them, the workspace's name, the app's version and the pictures they added, never a conversation (https://agentes.chat/docs/install-on-a-server#data). `false`: the apps show no form.",
+    section: "Operator",
+  },
+  FEEDBACK_INBOX: {
+    schema: z.stringbool().default(true),
+    description:
+      "For agentes.chat Cloud. On agentes.chat's own servers, takes the feedback other servers send (`POST /api/feedback/inbox`) and mails each one to `FEEDBACK_EMAIL`, keeping nothing. `false` stops taking it. No other server has the route.",
+    section: "Operator",
+  },
+  FEEDBACK_URL: {
+    schema: z.url().default("https://app.agentes.chat/api/feedback/inbox"),
+    description: "Where `FEEDBACK_RELAY` sends a feedback (as JSON in a POST).",
+    section: "Operator",
   },
   OPS_REPORT_EMAIL: {
     schema: z

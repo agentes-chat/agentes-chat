@@ -83,7 +83,9 @@ export function MenuItem({
         icon && <Icon name={icon} />
       )}
       <span className="ac-menu__label">
-        {children}
+        {/* The name as an element: a list with faces lays name and description on one line, and a bare text node
+            there would give way to the description word by word. */}
+        {description ? <span>{children}</span> : children}
         {description && <span className="ac-menu__desc">{description}</span>}
       </span>
       {hint && <span className="ac-menu__hint">{hint}</span>}
@@ -213,7 +215,7 @@ export function MenuCheckboxItem({
         icon && <Icon name={icon} />
       )}
       <span className="ac-menu__label">
-        {children}
+        {description ? <span>{children}</span> : children}
         {description && <span className="ac-menu__desc">{description}</span>}
       </span>
       {hint && <span className="ac-menu__hint">{hint}</span>}

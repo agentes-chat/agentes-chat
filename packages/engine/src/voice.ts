@@ -1,5 +1,5 @@
 import type { BlobStoreResolver, PubSub, SpeechEngine } from "@agenteschat/adapters";
-import { SpeechError } from "@agenteschat/adapters";
+import { firstWords } from "@agenteschat/adapters";
 import { and, asc, count, type Database, desc, eq, gt, gte, isNull, lt, ne, schema, sql } from "@agenteschat/db";
 import { requireChannelAccess } from "./channels";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
@@ -259,47 +259,7 @@ async function wordsOf(
     orgId: clip.orgId,
     durationMs: clip.durationMs,
   };
-  const engines = deps.engines();
-  const alone = (deps.hedgeAfterMs ?? hedgeAfterMs)(clip.durationMs);
-  return new Promise((resolve, reject) => {
-    // The last failure that a retry may get past: one engine busy is worth a retry even when the others refused.
-    let last: unknown = null;
-    let refused = false;
-    let next = 0;
-    let working = 0;
-    let done = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const start = () => {
-      clearTimeout(timer);
-      if (done) return;
-      const engine = engines[next++];
-      if (!engine) {
-        if (working > 0) return;
-        done = true;
-        if (refused && !last) resolve(null);
-        else reject(last ?? new Error("no speech engine on this server"));
-        return;
-      }
-      working++;
-      engine.file(input).then(
-        ({ text }) => {
-          working--;
-          if (done) return;
-          done = true;
-          clearTimeout(timer);
-          resolve({ engine, text: text.trim() });
-        },
-        (error: unknown) => {
-          working--;
-          if (error instanceof SpeechError && error.reason === "refused") refused = true;
-          else last = error;
-          start();
-        },
-      );
-      if (next < engines.length) timer = setTimeout(start, alone);
-    };
-    start();
-  });
+  return firstWords(deps.engines(), input, (deps.hedgeAfterMs ?? hedgeAfterMs)(clip.durationMs));
 }
 
 const costOf = (engine: SpeechEngine, durationMs: number) =>

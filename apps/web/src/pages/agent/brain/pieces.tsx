@@ -231,8 +231,8 @@ export interface PickOption {
 const PICKS_SEARCHED = 10;
 
 /**
- * Choices as rows with a radio, the same rows as the accounts' without a mark: grouped under their maker where there
- * are several, a long list under a search.
+ * Choices as rows, the same rows as the accounts' without a mark (the border marks the one picked, no radio dot):
+ * grouped under their maker where there are several, a long list under a search.
  */
 export function PickList({
   options,

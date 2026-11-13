@@ -9,11 +9,11 @@ import { connectorKeyOf } from "../connector-usage";
 import { cutText } from "../format";
 import { type GitHubAppAccess, githubCallAuth, githubListingHeaders } from "../git/github-call";
 import { githubItemOfCall, recordGitHubItem } from "../git/github-events";
-import { creditedMessage, runCoAuthor, signatureLine, signedBody } from "../git/signature";
+import { creditedMessage, runCoAuthors, signatureLine, signedBody } from "../git/signature";
 import type { Judge } from "../judge";
 import { assertPublicHttpsUrl, outboundFetch, type ResolveHost } from "../net-guard";
 import { replyThreadOf } from "../runs";
-import { alwaysAsks, customAlwaysAsks, MAX_RESULT_CHARS } from "../tools/gateway";
+import { MAX_RESULT_CHARS } from "../tools/gateway";
 import type { ToolContext, ToolDefinition, ToolSource } from "../tools/types";
 import { CONNECTOR_CATALOG, type ConnectorTool, connectorScope, fillTitle } from "./catalog";
 import { sqlArgOf } from "./classify";
@@ -38,7 +38,7 @@ import {
   type ToolAccess,
 } from "./custom";
 import { applyToolPins } from "./pins";
-import { composioAction, presetForServer } from "./presets";
+import { presetForServer } from "./presets";
 import type { McpServerInfo } from "./server-icon";
 
 /** A tool as an MCP server lists it. */
@@ -236,7 +236,7 @@ const LIST_TTL_MS = 60_000;
 
 /** Read before Composio's own words in its executor's description: what asks a person and what doesn't. */
 const EXECUTOR_NOTE =
-  "Reads such as list, get and search run without asking a person. GraphQL and SQL actions ask every time. Keep sync_response_to_workbench false unless you must script over the output: the workbench and bash ask a person every time.";
+  "Reads such as list, get and search run without asking a person. GraphQL and SQL actions, the workbench and bash ask a person, unless you are set to never ask or a person approved that kind for good. Keep sync_response_to_workbench false unless you must script over the output.";
 
 /**
  * Tools of the organization's connected MCP servers (layer 2 of ADR 0016). Lists
@@ -305,7 +305,8 @@ export function createConnectorToolSource(
 
   /**
    * What the agent writes to GitHub, signed (ADR 0156): a body ends with its line naming the agent and the person it
-   * works for, a commit message credits that person. The approval card showed the agent's own words.
+   * works for, a commit message with the agent's own `Co-authored-by` and that person's. The approval card showed the
+   * agent's own words.
    */
   async function signed(
     input: Record<string, unknown>,
@@ -320,8 +321,8 @@ export function createConnectorToolSource(
       return { ...input, body: signedBody(typeof given === "string" ? given : "", line) };
     }
     if (typeof given !== "string") return input;
-    const trailer = await runCoAuthor({ db: at.db, http: github, token: at.token }, at);
-    return trailer ? { ...input, message: creditedMessage(given, trailer) } : input;
+    const lines = await runCoAuthors({ db: at.db, http: github, token: at.token }, at);
+    return lines.length > 0 ? { ...input, [sign.field]: creditedMessage(given, ...lines) } : input;
   }
 
   /** Which of a connection's tools are watched for changes (ADR 0117): not Composio's (pinned by toolkit version), not ours. */
@@ -336,9 +337,9 @@ export function createConnectorToolSource(
    * never shows). `approval` and sensitive tools ask a person for every call;
    * `write` tools run on their own and each call goes to the audit log.
    * Composio's executor says which actions each call runs: reads go as the
-   * server's reads, and "Aprovar sempre" may cover its other actions; its
-   * workbench, bash and proxy always ask. A tool that asks only because of its
-   * level may be approved for good for one agent (`customAlwaysAsks` aside).
+   * server's reads, and "Aprovar sempre" covers its other actions one by one;
+   * its workbench, bash and proxy ask whatever their stored level, and like
+   * any tool that asks may be approved for good for one agent.
    */
   async function customToolsOf(connection: ConnectorConnection): Promise<ToolDefinition[]> {
     // A sign-in that stopped working (a Composio account too) has no tools until it is reconnected.
@@ -364,7 +365,6 @@ export function createConnectorToolSource(
       if (!tool) return [];
       const executor = tool.name === COMPOSIO_EXECUTOR;
       const sqlArg = composio ? null : sqlArgOf(tool, preset);
-      const action = composio ? composioAction(composio.way, tool.name) : null;
       // Our rules for a Composio action as they are now (its entry's `ask`, its tags at the pinned version), not only
       // as the row stored them at the last sync: an action they make ask asks on every connection at once.
       const asks = composio !== null && tool.destructiveHint === true;
@@ -391,17 +391,10 @@ export function createConnectorToolSource(
           // Its exact call may be approved ahead, except a tool that runs whatever its input says.
           ahead: !COMPOSIO_ANY_ACTION.has(tool.name),
           external: true, // whatever the server returns is third-party text
-          // The executor names what each call does. A Composio action, and a custom server's own tool, is one action:
-          // approved for good when it asks only because of its level (never a sensitive one, nor one that runs
-          // whatever its arguments say), with any values.
-          ...(executor
-            ? { actions: composioActions, readScope: customScope(connection.id, "read"), rememberAs: tool.name }
-            : !row.sensitive &&
-                !asks &&
-                !COMPOSIO_ANY_ACTION.has(tool.name) &&
-                (action ? !alwaysAsks(action) : !composio && !customAlwaysAsks(tool.name))
-              ? { rememberAs: tool.name }
-              : {}),
+          // The executor names what each call does. A Composio action, and a custom server's own tool, is one action.
+          // "Aprovar sempre" keeps either by the server's own name.
+          rememberAs: tool.name,
+          ...(executor ? { actions: composioActions, readScope: customScope(connection.id, "read") } : {}),
           ...(sqlArg ? { sqlReads: { tool: tool.name, arg: sqlArg } } : {}),
           describe: (input) => {
             const actions = executor ? composioActions(input) : null;

@@ -121,6 +121,8 @@ export async function createTestServer(
   const config = testConfig({
     PUBLIC_URL: ORIGIN,
     AGENT_MAX_OUTPUT_TOKENS: "1000",
+    // Off unless a test asks: feedback would otherwise go to the agentes.chat team's inbox, over the network.
+    FEEDBACK_RELAY: "false",
     ...options.env,
   });
   const log = createLogger("error", options.errors);

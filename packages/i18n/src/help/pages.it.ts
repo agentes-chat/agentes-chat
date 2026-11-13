@@ -9,6 +9,13 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
       "L’app agentes.chat può anche far girare agentes.chat stesso, su un Mac, un PC o un computer Linux, per te o per un piccolo team.",
     sections: [
       {
+        id: "download",
+        heading: "Scarica l'app",
+        blocks: [
+          "[Scarica l'app di agentes.chat](/download) per il tuo Mac, PC o computer Linux e aprila. Scegli **Sul tuo server**, premi **Continua sul mio server** e poi **Esegui agentes.chat su questo computer**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Come funziona",
         blocks: [
@@ -215,6 +222,15 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
           "Accedi a ogni spazio di lavoro nella stessa app e premi **Consenti** per ognuno. Spazi di lavoro su agentes.chat Cloud e sui tuoi server possono condividere un computer (app 0.6.1 e successive). Ognuno ha lì i suoi agenti e le sue cartelle, e scollegarne uno non tocca gli altri.",
           "Un server che l’app fa girare su questo computer è già collegato e non serve altro. Per prestare quel computer anche a uno spazio di lavoro altrove, vedi [Prestalo anche a un altro spazio di lavoro](/help/run-on-your-computer#another-workspace).",
           "Usi l’app su un portatile solo come finestra sul tuo spazio di lavoro? Quando chiede di lasciare che gli agenti usino il portatile, **Non ora** la lascia una semplice finestra.",
+          "Un server connesso con la riga del terminale lavora per un solo workspace. Connetterlo da un altro workspace passa il server a quello, e il primo non lo raggiunge più. Per più workspace su un computer, usa l'app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Quando gli agenti aspettano in coda",
+        blocks: [
+          "Ogni lavoro di un agente usa la memoria del computer. Quando la memoria libera scarseggia, il successivo aspetta in coda finché un altro non finisce. Le persone passano per prime. Il numero di CPU non cambia nulla.",
+          "Un computer con 4 GB di memoria esegue due o tre lavori alla volta, uno con 8 GB circa nove. Un Mac o un PC ne esegue fino a otto. Anche i browser e i desktop che gli agenti lasciano aperti usano memoria. Per una coda più corta, usa un computer con più memoria, oppure connettine un altro e dividi gli agenti tra i due. I workspace che condividono un computer ne condividono la memoria.",
         ],
       },
       {
@@ -373,7 +389,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "La memoria non dà permessi",
         blocks: [
-          "Niente nella memoria permette a un agente di fare di più. Quello che può fare resta in **Strumenti e accesso**, e le azioni delicate chiedono sempre un’approvazione.",
+          "Niente nella memoria permette a un agente di fare di più. Quello che può fare resta in **Strumenti e accesso**.",
         ],
       },
       {
@@ -393,7 +409,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Cosa chiede prima",
         blocks: [
-          "Quando un agente vuole fare un merge, un deploy, un rollback, mandare qualcosa all’esterno o eliminare dati, chiede prima, qualunque accesso abbia. La richiesta compare in **Approvazioni** e nella conversazione, con l’azione esatta e il motivo.",
+          "Quando un agente vuole fare un merge, un deploy, un rollback, mandare qualcosa all’esterno o eliminare dati, chiede prima. È il livello **Solo ciò che è rischioso**, quello da cui parte ogni agente. Nella pagina dell’agente, in **Approvazioni**, **Chiedere sempre** gli fa chiedere prima di cambiare qualsiasi cosa, e con **Non chiedere mai** non chiede nulla, nemmeno per merge, deploy, pagamenti e routine. La richiesta compare in **Approvazioni** e nella conversazione, con l’azione esatta e il motivo.",
         ],
       },
       {
@@ -401,7 +417,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Una volta, o sempre",
         blocks: [
           "Approvare copre un’azione esatta, con i suoi valori. Se l’agente cambia qualcosa, chiede di nuovo.",
-          "**Approva sempre** lascia che l’agente faccia quel tipo di azione da ora in poi, con qualsiasi valore, senza chiedere. Nella richiesta di una routine, **Sempre in questa routine** fa lo stesso solo per quella routine. Nessuno dei due compare per merge, deploy, rollback e simili. Per annullare, vai in **Strumenti e accesso** nella pagina dell’agente, o nelle impostazioni della routine.",
+          "**Approva sempre** lascia che l’agente faccia quel tipo di azione da ora in poi, con qualsiasi valore, senza chiedere. Nella richiesta di una routine, **Sempre in questa routine** fa lo stesso solo per quella routine. **Approva sempre** compare per qualsiasi tipo di azione, anche merge e deploy, finché l’agente è al livello **Solo ciò che è rischioso**. **Sempre in questa routine** non compare per merge, deploy, rollback e simili. Per annullare, vai in **Strumenti e accesso** nella pagina dell’agente, o nelle impostazioni della routine.",
         ],
       },
       {

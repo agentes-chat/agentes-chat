@@ -61,6 +61,16 @@ describe("Importar agentes on the phone: which picked files are read", () => {
     expect(archive).toBe(false);
   });
 
+  test("a whole-team export is read past the 4 MB cap of other files", () => {
+    const big = 5 * 1024 * 1024;
+    expect(
+      phonePicks([
+        { name: "openbot-transfer.json", size: big },
+        { name: "huge.md", size: big },
+      ]).read,
+    ).toEqual([true, false]);
+  });
+
   test("only archives: the phone opens none, so it says so", () => {
     expect(phonePicks([{ name: "export.zip", size: 10 }]).archive).toBe(true);
     expect(phonePicks([{ name: "profile.tar.gz" }, { name: "b.tgz" }]).archive).toBe(true);

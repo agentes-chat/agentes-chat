@@ -544,7 +544,6 @@ const PERMISSION_AREAS = [
       "control_computers",
       "manage_connectors",
       "manage_credentials",
-      "use_others_plans",
     ],
   },
   {
@@ -4153,6 +4152,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
           mine: a.mine,
           email: a.email,
           signedOut: a.status === "signed_out",
+          ...(a.serves ? { serves: a.serves } : {}),
           usage: a.usage && { ...a.usage, windows: a.usage.windows.map((w) => ({ ...w, agents: [] })) },
           agents: a.usedBy.map((name) => ({
             agentId: state.agents.find((x) => x.name === name)?.id ?? name,

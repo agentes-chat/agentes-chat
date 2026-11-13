@@ -154,14 +154,14 @@ describe("About you", () => {
     expect(within(workspace).getByLabelText("Nome do workspace")).toBeTruthy();
     expect(within(workspace).getByRole("switch", { name: "Agentes conferem o que já foi feito" })).toBeTruthy();
     expect(within(workspace).getByText("Pessoal")).toBeTruthy();
-    expect(within(workspace).getByRole("button", { name: "Mudar para time…" })).toBeTruthy();
+    expect(within(workspace).getByRole("button", { name: "Mudar para time" })).toBeTruthy();
     expect(screen().queryByRole("region", { name: "Tudo do workspace" })).toBeNull();
     expect(within(workspace).queryByRole("button", { name: "Enviar logo" })).toBeNull();
   });
 
   test("Switch to team asks the workspace's name and switches it, with that name", async () => {
     const state = await go(personal(), "settings/general");
-    await click(screen().getByRole("button", { name: "Mudar para time…" }));
+    await click(screen().getByRole("button", { name: "Mudar para time" }));
     const dialog = screen().getByRole("dialog", { name: "Mudar para um workspace de time" });
     expect(dialog.querySelectorAll(".deletion-lines > li")).toHaveLength(3);
     expect(dialog.textContent).toContain("Seus agentes, conversas, rotinas e arquivos continuam como estão.");
@@ -177,7 +177,7 @@ describe("About you", () => {
 
   test("an empty name can't switch to team", async () => {
     await go(personal(), "settings/general");
-    await click(screen().getByRole("button", { name: "Mudar para time…" }));
+    await click(screen().getByRole("button", { name: "Mudar para time" }));
     const dialog = screen().getByRole("dialog", { name: "Mudar para um workspace de time" });
     await type(within(dialog).getByLabelText("Nome do workspace"), "  ");
     expect(within(dialog).getByRole("button", { name: "Mudar para time" }).hasAttribute("disabled")).toBe(true);
@@ -189,7 +189,7 @@ describe("a team's General", () => {
     const state = await go(seedState(), "settings/general");
     const workspace = screen().getByRole("region", { name: "Workspace" });
     expect(within(workspace).getByText("Time")).toBeTruthy();
-    await click(within(workspace).getByRole("button", { name: "Mudar para pessoal…" }));
+    await click(within(workspace).getByRole("button", { name: "Mudar para pessoal" }));
     const dialog = screen().getByRole("dialog", { name: "Mudar para um workspace pessoal" });
     expect(dialog.textContent).toContain("A outra pessoa daqui também vê assim");
     expect(within(dialog).queryByLabelText("Nome do workspace")).toBeNull();
@@ -203,7 +203,7 @@ describe("a team's General", () => {
     const state = seedState();
     state.members = state.members.filter((m) => m.userId === state.me?.user.id);
     await go(state, "settings/general");
-    await click(screen().getByRole("button", { name: "Mudar para pessoal…" }));
+    await click(screen().getByRole("button", { name: "Mudar para pessoal" }));
     const dialog = screen().getByRole("dialog", { name: "Mudar para um workspace pessoal" });
     expect(dialog.textContent).not.toContain("também vê");
     expect(dialog.querySelectorAll(".deletion-lines > li")).toHaveLength(4);

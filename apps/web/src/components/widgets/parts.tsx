@@ -1,7 +1,8 @@
-import type { Widget, WidgetFailure, WidgetKind, WidgetWait } from "@agenteschat/client";
+import type { Widget, WidgetKind, WidgetWait } from "@agenteschat/client";
 import {
   useDesktopStatus,
-  widgetFailureKey,
+  useWidgetLacksAi,
+  widgetFailureText,
   widgetNeedsAi,
   widgetWaitFix,
   widgetWaiting,
@@ -53,13 +54,8 @@ export function widgetTitle(t: TFunction, w: Pick<Widget, "title" | "prompt" | "
   return neutralWidgetTitle(t, w.kind ?? (w.format === "auto" ? null : w.format));
 }
 
-/** Why a widget stopped updating, in the reader's words (the agent's own when it said why). */
-export function failureText(t: TFunction, failure: WidgetFailure | null, name: string): string {
-  if (!failure) return t("widgets.failure.error");
-  if (failure.code === "agent_reported" && failure.detail) return failure.detail;
-  const key = widgetFailureKey(failure.code === "agent_reported" ? "error" : failure.code, failure.detail);
-  return t(key, { name, detail: failure.detail ?? "" });
-}
+/** Why a widget stopped updating, in the reader's words (`widgetFailureText`). */
+export const failureText = widgetFailureText;
 
 /** The words over a widget with no data yet: its agent building it, or waiting for an AI to build it with. */
 export const widgetBodyText = (t: TFunction, widget: Pick<Widget, "status" | "failure">, name: string) =>
@@ -67,9 +63,9 @@ export const widgetBodyText = (t: TFunction, widget: Pick<Widget, "status" | "fa
 
 /**
  * What a widget waiting for an AI offers the viewer (the board, its panel, its notice, New widget's test): Connect to
- * whoever may set its agent's AI (for the right hand the workspace's, since a build thinks with nobody's own; on a
- * plan that can't take it, `reason` a plan line, a key: `planKeyIntent`), else who can. Nothing on a billing hold (an
- * AI comes after the plan, which the hold's own banner says).
+ * whoever may set its agent's AI (for the right hand the workspace's, which a build falls back to when the AI of
+ * whoever made the widget can't think; on a plan that can't take it, `reason` a plan line, a key: `planKeyIntent`),
+ * else who can. Nothing on a billing hold (an AI comes after the plan, which the hold's own banner says).
  */
 export function useWidgetAiWay(
   agentId: string | null | undefined,
@@ -113,7 +109,7 @@ function NeedsAiWay({ agentId, reason }: { agentId: string; reason: string | nul
  * or updated, the agent at it, or what its run waits for, with Continue now on a pause near the limit (greyed for
  * anyone but Continuar agora's people) or what ends the wait sooner (`WaitFix`); failed, why, with Resolve (an update
  * asked now); waiting for an AI, why, with Connect or who can connect it (it builds by itself once one is there,
- * `useBuildOnceAi`).
+ * `useBuildOnceAi`); stopped for the lack of one, Connect while there is none, then Resolve (`useWidgetLacksAi`).
  */
 export function WidgetFoot({
   widget,
@@ -133,6 +129,8 @@ export function WidgetFoot({
   resolving?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const needsAi = useWidgetLacksAi(org.id, widget);
   const schedule = t(`widgets.schedulesInline.${widget.schedule}`);
   const waiting = resolving ? null : widgetWaiting(widget, now);
   if (waiting)
@@ -183,7 +181,6 @@ export function WidgetFoot({
       </>
     );
   if (widget.status === "failed") {
-    const needsAi = widgetNeedsAi(widget);
     return (
       <span className="wg__warn ac-iconline" role="status">
         <Icon name={needsAi ? "plug" : "alert"} size={14} />

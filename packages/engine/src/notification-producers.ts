@@ -1305,7 +1305,7 @@ export async function resolveDashboardProposal(deps: NotificationDeps, orgId: st
 }
 
 /** Who in the organization may `permission` (ADR 0085), or only its owners. */
-const adminsOf = async (deps: NotificationDeps, orgId: string, permission: RolePermission | "owners") =>
+export const adminsOf = async (deps: NotificationDeps, orgId: string, permission: RolePermission | "owners") =>
   (
     await deps.db
       .select({ userId: organizationMembers.userId })

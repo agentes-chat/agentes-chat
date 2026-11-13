@@ -34,3 +34,20 @@ test("the two agents' line wraps their names whole, never clipped at a narrow wi
   expect(pair).not.toContain('ellipsizeMode="clip"');
   expect(group).toContain('flexWrap: "wrap",\n    justifyContent: "center",');
 });
+
+test("two agents' conversation is a sheet over the one that asked, as the web's dialog", () => {
+  const layout = readFileSync(join(import.meta.dir, "../../app/(app)/_layout.tsx"), "utf8");
+  expect(layout).toContain('<Stack.Screen name="consultation/[id]" options={formSheet} />');
+  const screen = readFileSync(join(import.meta.dir, "../../src/features/chat/ConsultationScreen.tsx"), "utf8");
+  expect(screen).toContain("<SheetSurface>");
+  expect(screen).not.toContain("PushedHeader");
+});
+
+test("the composer names whom it writes to in its placeholder only: no face in an agent's field", () => {
+  const composer = readFileSync(join(import.meta.dir, "../../src/ui/Composer.tsx"), "utf8");
+  expect(composer).not.toMatch(/\bface\?:/);
+  for (const screen of ["chat/ChatScreen.tsx", "computer/AgentScreen.tsx"])
+    expect(readFileSync(join(import.meta.dir, "../../src/features", screen), "utf8")).not.toMatch(
+      /\bface[=:]\s*[{<]<?AgentFace/,
+    );
+});

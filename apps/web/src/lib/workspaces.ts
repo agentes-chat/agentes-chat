@@ -57,6 +57,14 @@ export interface WorkspaceGroup {
 export const serverLabel = (server: string) => (server === CLOUD_SERVER ? "agentes.chat" : serverHost(server));
 
 /**
+ * Whether the workspace menus offer New workspace, made on the server open now: when the person may make one there (on
+ * agentes.chat Cloud, while sign-up is by invitation, only an invitation does, ADR 0078). In the desktop app (`groups`)
+ * on agentes.chat, Add workspace makes one instead; its window can't make one on a server of one's own.
+ */
+export const offersNewWorkspace = (canCreateWorkspace: boolean | undefined, groups: WorkspaceGroup[] | null) =>
+  canCreateWorkspace !== false && !groups?.some((g) => g.here && g.cloud);
+
+/**
  * This server's group first (its workspaces from `me`, its counts from `/me/unread` when it answered), then each other
  * server of the app, in its order: signed in with workspaces, signed out there (to sign in again), or not answering
  * (its last workspaces, marked). One signed in with no workspace isn't listed. `thisComputer`: this page's server is

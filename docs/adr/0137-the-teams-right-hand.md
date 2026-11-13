@@ -1,6 +1,6 @@
 # 0137. The team's right hand
 
-- Status: Accepted; §6 and §7 amended 2026-11-06 by ADR 0079 §7 (built: engine, server, the shared client, the web and the phone app); amended 2026-11-03 (§5, a person alone with the team; §4 and §6 written as decided); amended 2026-11-04 (§8, agents act on agentes.chat through their tools, never by signing in to it); amended 2026-11-04 (§4, it starts everything a person does in the app, as cards); amended 2026-11-04 (§1, §4 and §7: it thinks with a person's plan through Claude Code or OpenCode, locked down and checked before each turn; then through Codex and Cursor too, the owner accepting their residual risk); amended 2026-11-04 (§4: through Grok Build too, checked on its `init` like Claude Code, ADR 0142); amended 2026-11-04 (§4: through the Antigravity CLI too, as an agent with no tool of its own, checked on its `init` and every step, ADR 0143); amended 2026-11-04 (§9, "Semana da equipe": a weekly card in each admin's DM, from stored data); amended 2026-11-04 (§10: the team set up from three questions, one team card, team templates); amended 2026-11-04 (§4: the team map's drag posts its settings card, ADR 0148); amended 2026-11-05 (§11, each person's own AI); amended 2026-11-06 (§12, it reads the Drive and the wiki for the person); amended 2026-11-06 (§13, the one you talk to: it sees the team and hands work on); amended 2026-11-11 (§4: a teammate's skills on its settings card); amended 2026-11-12 (§4: every agent asks for its own settings on the same card, always a click)
+- Status: Accepted; §6 and §7 amended 2026-11-06 by ADR 0079 §7 (built: engine, server, the shared client, the web and the phone app); amended 2026-11-03 (§5, a person alone with the team; §4 and §6 written as decided); amended 2026-11-04 (§8, agents act on agentes.chat through their tools, never by signing in to it); amended 2026-11-04 (§4, it starts everything a person does in the app, as cards); amended 2026-11-04 (§1, §4 and §7: it thinks with a person's plan through Claude Code or OpenCode, locked down and checked before each turn; then through Codex and Cursor too, the owner accepting their residual risk); amended 2026-11-04 (§4: through Grok Build too, checked on its `init` like Claude Code, ADR 0142); amended 2026-11-04 (§4: through the Antigravity CLI too, as an agent with no tool of its own, checked on its `init` and every step, ADR 0143); amended 2026-11-04 (§9, "Semana da equipe": a weekly card in each admin's DM, from stored data); amended 2026-11-04 (§10: the team set up from three questions, one team card, team templates); amended 2026-11-04 (§4: the team map's drag posts its settings card, ADR 0148); amended 2026-11-05 (§11, each person's own AI); amended 2026-11-06 (§12, it reads the Drive and the wiki for the person); amended 2026-11-06 (§13, the one you talk to: it sees the team and hands work on); amended 2026-11-11 (§4: a teammate's skills on its settings card); amended 2026-11-12 (§4: every agent asks for its own settings on the same card, always a click); amended 2026-11-12 (§4, §12, §13: it has a normal agent's tools); amended 2026-11-12 (§1, §4, §13: a computer of its own, a seat per person, ADR 0175); amended 2026-11-12 (§11: a routine or widget a person set up thinks with that person's AI)
 - Date: 2026-11-03
 - Supersedes: ADR 0093 (the team's coordinator)
 - Amends: ADR 0081 (one-click Criar and Criar e testar on the right hand's cards), ADR 0092 §5 (a teammate's settings, on the right hand's card)
@@ -414,3 +414,138 @@ it off for that agent. The owner decided that agents edit their own settings whe
   for itself), mailboxes, databases, computer access, Vault items, routines and instructions, each on its own screen
   or tool.
 - One more line in what every agent can do (about 150 characters); the tool's definition loads when a run needs it.
+
+## Amended 2026-11-12: it has a normal agent's tools (§4, §12, §13)
+
+### Context
+
+Its tools were a short list fixed in code (§4), so the one agent everybody talks to could not read the Vault, use a
+connected app, a mailbox, a database or a skill, search the web, remember anything or post outside its DM. Asked for
+any of these it refused or handed the work on, and a grant made for it on the server did nothing: `loadScopeKeys`
+threw its rows away. The owner decided it has every tool an agent can have, by default, the Vault included.
+
+### Decision
+
+- **Every built-in scope an agent can be given, in code** (`RIGHT_HAND_GRANTS`): context, memory, the Drive (reading
+  and writing), tasks, the calendar, skills, the wiki, routines, the Vault (seeing and editing) and the setup cards,
+  with what was denied by name gone (`request_permission`, `share_artifact`, the memory tools, `web_search`,
+  `web_fetch`, `post_message`, `send_dm`, `add_agent_to_channel`, long work's tools, `comment_issue`). A test fails
+  when a new built-in scope is left out of the list.
+- **Its grant rows count on top** (`loadScopeKeys` adds them to the list instead of replacing them): the apps every
+  new connection gives every agent (`grantToEveryAgent`), a server connected by address, a mailbox, a database, a tool
+  turned off (`deny:`). `request_permission` works for it as for any agent, and the refusal that said its tools were
+  fixed is gone.
+- **Its page shows and changes them.** `/agents/{id}` has two tabs for it: its settings (as before) and the agent
+  page's own "Ferramentas e acesso" (apps, mailboxes, databases, built-in areas, approvals, skills), saved with the
+  same bar. Its built-in scopes are held in code, so an area an admin turns off there is kept as denials of its tools
+  (`setAgentAccess`), lifted when the area is turned on again; that covers the tools with no row of their own on
+  the page (`UNLISTED_TOOLS`). Its setup cards are its job and have no area to turn off. The older save of scopes
+  as a list (`setAgentScopes`) is refused for it, since it can't carry those denials. A save made from its grants as a list
+  (`replaceableGrants`, an access proposal) carries the scopes it holds in code, so it turns none of them off. On the
+  phone its profile lists what it may use, and a mailbox's owner gives or takes it there. Changing an app's level for
+  it from the phone is not there yet.
+- **Skills.** It loads the skills turned on for it. Its own skill is a line of its settings card like any agent's own
+  (always a click), and an install from its card may turn the skill on for it. A skill's script needs a computer, so
+  it reads a skill's instructions and runs none.
+
+### What stays
+
+- **No archive, no delete**, its instructions the product's, its owner the workspace's (§1). It is still in no channel
+  and answers an @mention anywhere (§2): the router still never picks it. It posts with `post_message` where the
+  person behind the run may post, a private channel included, as it already answers there by name.
+- **Its workspace powers behind cards** (§4): the team, people, approvals and `workspace_action` are its alone, applied
+  as whoever clicks.
+- **No computer yet** (replaced the same day by the next amendment and ADR 0175)**.** `sandbox:run`, `browser:use` and `desktop:use` are not on its list, a row for one gives it
+  nothing, its access tree leaves them out, `request_permission` never offers them and refuses a card that asks, and a
+  call of one answers that it has no computer and to hand the work to an agent that has one. `agents.machine_id` stays
+  null (`machines.ts`). A separate change gives it a computer of its own.
+- **The locked turn on a plan** (`RIGHT_HAND_TURN`, §4) is unchanged: the CLI gets our bridge and nothing else. Every
+  tool above is ours, served by the Tool Gateway on the server (the web tools fetch from the server, with no browser
+  to fall back on), so the lock stops none of them. Long work is the same run going on in the background. Its turn on
+  a plan is no longer told of a computer's own tools, which it never had there: not by the turn-end judge's means
+  either, and its "What you can do" names no browser, no `git_clone` (left off its list) and no way to type a Vault
+  login or pass a key (`describeCapabilities` with `noComputer`).
+- **One person's things stay that person's.** One row answers everyone, each acting as the person behind the run, so
+  what is one person's is used only in that person's own DM with it (`rightHandReader`, null anywhere else). That DM
+  has one person and no agent but the right hand. A routine's own run there counts as its creator: only a routine's
+  creator sets what it does, and only they read that DM. A run a routine's report or work woke counts as nobody.
+  - **The Vault** (`vaultPersonOfRun`): a personal item for its owner, a team item for its audience, only in that DM.
+    Called in a channel, or by a routine that reports anywhere else, it reaches only team items open to everyone and
+    shared with it.
+  - **A mailbox** (`mailboxUserCheck`): only for the person who connected it, in that DM. Being in its audience opens
+    no one else's mailbox, since its audience is everyone. Its routine watches a mailbox only when the routine's
+    creator connected it (`watchesFor`, checked when the routine is saved and again as mail arrives, so a routine
+    taken over by someone else gets none), and `create_routine` names only that person's mailboxes. The mailbox's
+    row for it tells its owner that it uses the mailbox only for them (`mail.agent.onlyYou`).
+  - **Tasks** (§13): `comment_issue` joins `list_issues`, `create_issue` and `update_issue`: in that DM, on a task
+    the person sees.
+  - **Memory**: `remember`, `update_memory`, `forget` and `save_how_to` work only in that DM, and what they save is
+    that person's alone with fields that already existed (`scope_type = 'person'`, `scope_id` the person, and that
+    DM as its only channel, a rule's too): read back in that DM for that person, never in another person's DM or in
+    a channel, and changed or forgotten only by them there. A rule it keeps holds in the runs of the person who gave
+    it and nobody else's, whoever decides its approvals (`rulesForPerson`, which filters by person before its cut of
+    30). The DM as a rule's channel keeps it out of the lists of who reviews memory. One person's items never merge
+    into another's, when saved (`findCandidates`) or in the nightly pass (`consolidateOrg`). `for: "team"` still
+    asks to share with every agent, as the person's own choice, and is the one save it makes in a channel.
+    Reflection and learning still skip its conversations (§2), so nothing is written for the team from what people
+    tell it. Its page has a Memory tab on the web and the same lists on the phone, which show each viewer only
+    their own.
+  - **The Drive, the wiki and context** already read as the person behind the run (§12, §13), and writing follows
+    the same rule.
+- **Shared by nature, as for any agent open to everyone:** a connected app or a database is the workspace's, with one
+  sign-in, so whoever may talk to it reaches what an admin gave it there. An admin narrows it on its access tab.
+
+### Consequences
+
+- This replaces §2's "its memory tools are denied", §4's "its tools are fixed in code" and "`add_agent_to_channel` is
+  denied to it" (it is any agent's tool, with the rights of the person who asked and Undo), §12's "reading only" and
+  "`request_permission` is denied", and §13's "no web or file writing, no `post_message` or `send_dm`, no long work".
+- It also replaces, in the amendments of 2026-11-11 and 2026-11-12, "the right hand's own skills can't be changed"
+  and the install box and `turnOnFor` leaving it out.
+- Its prompt's "# Your tools" says what it has, that it has no computer yet, and that what is one person's stays in
+  their own conversation with it. Its first paragraph no longer says it does no hands-on work: small things it does
+  itself, work that is a teammate's job or needs a computer it hands on.
+- It may now read a web page or an email and then act. Outside content marks the run as before (ADR 0117), so a
+  change after it waits on a card, a send still asks a person, and its replies keep the scrub of §4.
+- Its one budget on an API key (§13) now also carries the turns that read the web, write files and do long work for
+  everyone who talks to it.
+
+## Amended 2026-11-12: a computer of its own, a seat per person (§1, §4, §13)
+
+ADR 0175 gives it a computer: on the workspace's own computer, where each agent is its own OS user, each person has a
+seat (a stored id the computer takes for an agent's), with its own Linux user, home, browser profile and sign-ins.
+
+- **§1 stands in the database, not in what it can do.** `agents.machine_id` stays null (it is still what its plan's
+  settings read) and it still can't be given a computer by hand. Its tools use the workspace's own computer
+  (`toolMachineId`), as the seat of the person behind the run.
+- **Its computer's scopes are rows** it is made with (`sandbox:run`, `browser:use`, `desktop:use`), so its access tab
+  and `request_permission` treat them like any agent's. This replaces "a row for one gives it nothing", the access
+  tree leaving them out and the refusal of a card that asks.
+- **A person's own seat only in that person's own DM.** Amended 2026-11-13 (ADR 0175's amendment): everywhere else (a
+  channel, a widget, a routine that reports where others read) it works in one shared seat of the workspace, and a
+  run nobody asked for in a person's own DM (a routine that reports there included) has no seat.
+- **The locked turn on a plan is unchanged.** The CLI still gets our bridge and nothing else. The computer's tools are
+  ours, and the server sends them to the seat. The hub refuses the agent's own id for anything but that turn.
+- **Its prompt** says which of the three it has: this person's own seat, the workspace's shared one, or none yet.
+- This replaces §1's "no computer tools, no desktop, no terminal as it", §4's and §13's "no computer", and the
+  amendment above's "No computer yet" and "a skill's script needs a computer, so it runs none".
+
+## Amendment (2026-11-12): work a person set up thinks with their AI (§11)
+
+### Context
+
+§11 gave a run with nobody behind it the workspace's AI and nothing else. A widget's build and a routine's run are such runs, so in a workspace where people brought their own plans and the workspace had none (or a plan that answers only its owner), every widget of the right hand read "no AI" although the person who made it had one, the same one that answered them in their DM.
+
+### Decision
+
+- **Whose AI.** A routine's run, a widget's build, and a run their work or report woke think for a person: of the people who set the work up, in order, the first still in the workspace for whom the right hand can think now (their own AI, else the workspace's as it would answer them in their DM), else the workspace's for nobody, as before. For a routine that is its creator. For a widget: who asked the change this run carries, then the widget's person (`dashboard_widgets.created_by_user_id`), then its routine's creator, each only while they still see its board. It is never "no AI" while one of these can think: a person whose own plan is signed out or away is passed over, not waited for.
+- **Picked as it fires, kept by the run.** `rightHandWorkAi` (`ai-status.ts`) picks; a widget's check before its build (`widgetAi`) and the routine's firing use it, and the firing writes the pick on the brief (`RoutineBrief.aiUserId`, null: the workspace's). `rightHandPerson` reads it, so `resolveBrain`, `agentAiState`, the plan's refusal and the executor agree with the check that let the run start. A brief with no pick reads the rows instead (`ownAiPerson`).
+- **A widget's person is who wrote its instructions.** An agent's `create_widget` records the person behind its run. Whoever rewrites a widget's instructions or moves it to another board becomes its person (`updateWidget`), and so does who asked a change that rewrote them (`update_widget`): one editor's words never spend another's plan. "Atualizar agora" by anyone builds the instructions as they are, on their person's AI. A change request thinks with its asker's.
+- **Taking over.** "Atualizar agora" and a change request make the routine ready first (one whose creator left becomes the presser's), then check for an AI, so the person who takes it over is counted.
+- **What the apps read.** `GET …/ai-status` keeps `background` as the workspace's for nobody, and adds `widgetsReady`: the right hand's widgets waiting for an AI, or stopped for the lack of one, whose build has one now, among the boards the viewer sees. The agent's state alone can't say it, since each widget has its own people.
+
+### Consequences
+
+- This replaces §11's "A run with no person behind it thinks with the workspace's" for runs a routine feeds. `plan_unattended` is left for work no person set up, or whose people are all gone.
+- A person's plan now pays for builds nobody is watching, on the schedule they chose, and for readers of a shared board. It stops when they leave the workspace, lose sight of the board, or someone else rewrites the instructions.
+- §11's consequence "a person's plan on a computer that is away doesn't fall to the workspace's" still holds in a DM. Unattended work does fall over, since nobody is there to read why it waits.

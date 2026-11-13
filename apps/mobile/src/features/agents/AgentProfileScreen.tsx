@@ -64,11 +64,12 @@ import {
 } from "@/ui";
 import { CoverParallax, useCoverScroll, useScrollFade } from "@/ui/cover";
 import { router } from "@/ui/navigation";
-import { openAgentAi } from "../ai/AgentAiScreen";
+import { ModelPickerSheet } from "../ai/ModelPickerSheet";
 import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
 import { LetMeTalkButton } from "../chat/ReachLines";
 import { AgentComputerButton, AgentComputerPicture } from "../computer/AgentComputerRow";
+import { KeptRunningList } from "../computer/KeptRunning";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { chatHref } from "../links/logic";
 import { UsageQueueSheet } from "../queue/UsageQueueSheet";
@@ -200,7 +201,7 @@ function Profile({ id }: { id: string }) {
   const usage = useUsage(orgId);
   const forYou = useAgentForYou(orgId, id);
   const knows = useMemoryAboutMe(orgId, id);
-  const mailboxes = useAgentMailboxes(id, details && !rightHand);
+  const mailboxes = useAgentMailboxes(id, details);
   const work = useWorkingNow().filter((w) => w.agentId === id);
   const asking = useWaitingApprovals().filter((a) => a.agentId === id);
   // On a billing hold an AI comes after the plan: no row to connect one.
@@ -478,6 +479,8 @@ function Profile({ id }: { id: string }) {
     <>
       {nowBlock}
       <AgentComputerPicture agentId={id} />
+      {/* What it keeps running there (ADR 0176), for whoever may watch its computer. */}
+      <KeptRunningList agentId={id} />
       {/* What it thinks with and how much of it is used this month, one row (ADR 0063 §5): the plan or key as its
           name, the usage under it. The usage page has the rest. */}
       <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
@@ -545,18 +548,22 @@ function Profile({ id }: { id: string }) {
       : uses.asks
         ? asksNote()
         : null;
+  // The right hand's AI is each person's, on its settings ("Sua IA"): its access shows only what it may use.
   const accessView = (
     <>
-      {thinks ? (
+      {thinks && !rightHand ? (
         <>
           <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
           <GroupedList>
-            {/* Its owner and admins open its AI: the account, the plan's usage, who it replies to. */}
+            {/* Its owner and admins change its AI and model in place (the DM header's sheet); its "Mais opções" opens
+                the AI screen. Anyone else reads it. */}
             <GroupedRow
               leading={thinks.mark ? <ProviderLogo id={thinks.mark} size="sm" /> : undefined}
               label={thinksPlan ?? thinks.text}
               {...(thinksUnder ? { sub: thinksUnder, subLines: 2 } : {})}
-              {...(decides ? { chevron: true, onPress: () => openAgentAi(id) } : {})}
+              {...(decides && agent
+                ? { chevron: true, onPress: () => sheet.open(<ModelPickerSheet agent={agent} />) }
+                : {})}
             />
           </GroupedList>
         </>
@@ -589,7 +596,7 @@ function Profile({ id }: { id: string }) {
                 />
               ),
             )}
-            {/* Its mailboxes beside its apps (ADR 0038): a tap on one's own changes the level. */}
+            {/* Its mailboxes beside its apps (ADR 0038): a tap on one's own picks the level. */}
             {mailboxes.map((m) =>
               m.remove ? (
                 <ButtonRow
@@ -616,8 +623,10 @@ function Profile({ id }: { id: string }) {
                   icon="mail"
                   label={m.address}
                   {...(m.sub ? { sub: m.sub, subLines: 2 } : {})}
+                  {...(m.hint ? { hint: m.hint } : {})}
                   value={m.level}
-                  {...(m.onPress ? { onPress: m.onPress } : {})}
+                  // The value changes in its row, through the app's picker: its mark, not a chevron to a screen.
+                  {...(m.onPress ? { menu: true, onPress: m.onPress } : {})}
                 />
               ),
             )}
@@ -698,7 +707,7 @@ function Profile({ id }: { id: string }) {
     <>
       {knows.data ? memoryKnows : null}
       {/* What people told it to always do, under what it learned, as the web's Memória. */}
-      <GivenRules agentId={id} name={name} />
+      <GivenRules agentId={id} name={name} rightHand={rightHand} />
     </>
   );
 
@@ -804,6 +813,9 @@ function Profile({ id }: { id: string }) {
                 )}
               />
             </GroupedList>
+            {details ? accessView : null}
+            {/* What it keeps for the viewer and the rules they gave it: theirs to see and take back. */}
+            {memoryView}
           </View>
         ) : details ? (
           <>
@@ -977,7 +989,7 @@ function ButtonRow({
  * giver, the agent's owner and admins take one back with a swipe, confirmed by a system alert (never a bare × that
  * deletes on the tap). Shown only when there is something.
  */
-function GivenRules({ agentId, name }: { agentId: string; name: string }) {
+function GivenRules({ agentId, name, rightHand }: { agentId: string; name: string; rightHand: boolean }) {
   const { t } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
@@ -1006,7 +1018,14 @@ function GivenRules({ agentId, name }: { agentId: string; name: string }) {
     ]);
   return (
     <>
-      <GroupedHeader>{t("agentPage.memory.rules")}</GroupedHeader>
+      <GroupedHeader
+        hint={{
+          name: t("common.about", { label: t("agentPage.memory.rules") }),
+          text: t(rightHand ? "agentPage.memory.rulesNoteRightHand" : "agentPage.memory.rulesNote"),
+        }}
+      >
+        {t("agentPage.memory.rules")}
+      </GroupedHeader>
       <GroupedList>
         {list.map((m) => {
           const row = (
@@ -1037,7 +1056,6 @@ function GivenRules({ agentId, name }: { agentId: string; name: string }) {
           );
         })}
       </GroupedList>
-      <GroupedFooter>{t("agentPage.memory.rulesNote")}</GroupedFooter>
     </>
   );
 }

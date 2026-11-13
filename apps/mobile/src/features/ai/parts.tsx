@@ -11,6 +11,7 @@ import type { TFunction } from "i18next";
 import type { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Linking, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { paysHere } from "@/lib/store";
 import {
   Button,
   fieldText,
@@ -42,7 +43,9 @@ export const usePlanHold = (orgId: string, org: OrgSummary | null | undefined) =
 export function PlanHoldNote({ org, keys }: { org: OrgSummary | null | undefined; keys?: boolean }) {
   const { t } = useTranslation();
   return (
-    <Note icon="pause">{planHoldPhoneLine(t, org ? can(org, "manage_billing") : false, keys ? "keys" : "plan")}</Note>
+    <Note icon="pause">
+      {planHoldPhoneLine(t, org ? paysHere(can(org, "manage_billing")) : false, keys ? "keys" : "plan")}
+    </Note>
   );
 }
 
@@ -90,11 +93,11 @@ export function Note({
   const c = useColors();
   return (
     <View style={styles.note} accessibilityLiveRegion={live ? "polite" : undefined}>
-      {/* On the words' first line, where the eye reads it, never at the line's top. */}
+      {/* On the words' first line, where the eye reads it, never at the line's top; a mark on its capitals. */}
       {typeof icon === "string" ? (
         <LineIcon name={icon} variant="small" size={15} color={icon === "x" ? c.danger : c.muted} />
       ) : (
-        <LineIcon variant="small" size={15}>
+        <LineIcon variant="small" size={15} mark>
           {icon}
         </LineIcon>
       )}

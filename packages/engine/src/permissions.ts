@@ -5,9 +5,10 @@ import { type SQL, sql } from "@agenteschat/db";
  * its people, agents and the channels open to them); only an owner may `manage_owners` (give and take ownership,
  * delete the workspace). Agents never hold these: what an agent may do comes from its own scopes (Tool Gateway).
  * The apps draw the roles screen from `PERMISSION_AREAS` (sent by `GET …/roles`) and name each key with i18n.
- * `use_others_plans`: give any agent one may manage a plan someone else connected (ADR 0059 §3); administrators and
- * owners hold it, `everyone` doesn't, so no migration backfills it. `mention_everyone` (Discord's "Mention @everyone"):
- * `@todos` in any conversation but a DM mentions all its members, people and agents; the same holds for it.
+ * `mention_everyone` (Discord's "Mention @everyone"): `@todos` in any conversation but a DM mentions all its members,
+ * people and agents; administrators and owners hold it, `everyone` doesn't, so no migration backfills it. Keys no
+ * longer listed here (`use_others_plans`, retired when plans began serving the whole workspace, ADR 0059 §3) may still
+ * sit in stored roles: every reader skips them (`isRolePermission`).
  */
 export const PERMISSION_AREAS = [
   {
@@ -31,7 +32,6 @@ export const PERMISSION_AREAS = [
       "control_computers",
       "manage_connectors",
       "manage_credentials",
-      "use_others_plans",
     ],
   },
   {

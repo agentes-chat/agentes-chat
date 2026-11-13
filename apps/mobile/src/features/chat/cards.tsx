@@ -28,12 +28,13 @@ import {
   approvalAskLine,
   approvalDetail,
   approvalGroupWaitsFor,
+  approvalLetter,
   approvalSummary,
   approvalWaitsFor,
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
-import { nextLabel, whenAt } from "@agenteschat/client/lib/format";
+import { formatTime, nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { type ReactNode, useRef, useState } from "react";
@@ -41,13 +42,14 @@ import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
-import { ACT_LINE, Button, Count, HoldButton, Icon, LineIcon, Text, useReducedMotion, useToast } from "@/ui";
+import { ACT_LINE, Button, Count, HoldButton, Icon, Text, useReducedMotion, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { approvalAction, approvalRisk, approveAlwaysToast } from "../approvals/logic";
 import {
   ApprovalAheadLine,
   ApprovalDetails,
   ApprovalEmailLetter,
+  ApprovalLetter,
   ApprovalMark,
   ApprovalPreview,
   ApprovalTraits,
@@ -446,8 +448,34 @@ function ApprovalGroupItem({
       : [source.name, approvalSummary(a, i18n.language)].filter(Boolean).join(" · ");
   const own = itemOwnWords(a, lead);
   const scheduled = aheadPhase(a) === "scheduled" && a.runAt;
+  const letter = approvalLetter(a);
   // "Recusar" asks once, in the system's alert, as the card of one request does.
   const { refuse, pending: refusing } = useRefuseApproval(a);
+  // Replaced by the agent's newer request for the same action, on the card under it: one quiet line.
+  if (a.status === "canceled" && a.supersededById) {
+    return (
+      <View style={[styles.item, divider && [styles.divided, { borderTopColor: c.line2 }], styles.itemDone]}>
+        <View style={styles.itemRow}>
+          <View style={styles.itemMark}>
+            <ApprovalMark approval={a} size={20} bare />
+          </View>
+          <View style={ACT_LINE.text}>
+            <Text variant="subhead" tone="muted">
+              {approvalTitleText(t, a)}
+            </Text>
+            <Text variant="footnote" tone="muted">
+              {[
+                decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
+                a.decidedAt && formatTime(i18n.language, a.decidedAt),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
   return (
     <ApproveAlwaysInfo approval={pending && a.canDecide && always ? a : undefined} name={name}>
       {(info) => (
@@ -469,6 +497,11 @@ function ApprovalGroupItem({
                   <Text variant="footnote" tone="muted">
                     <Spans inline={parseInline(detail)} />
                   </Text>
+                ) : null}
+                {letter ? (
+                  <View style={[styles.itemLetter, { backgroundColor: c.sunken, borderColor: c.line2 }]}>
+                    <ApprovalLetter letter={letter} />
+                  </View>
                 ) : null}
                 {own.why ? (
                   <Text variant="footnote" tone="ink">
@@ -555,7 +588,6 @@ function ApprovalGroupItem({
 function ApprovalAsk({ approval: a }: { approval: Approval }) {
   const { t, i18n } = useTranslation();
   const dir = useDirectory();
-  const c = useColors();
   const asks = useAskStore();
   const origin = useOriginShort(a);
   const { org } = useOrg();
@@ -605,12 +637,9 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
                 </>
               )}
               {origin ? (
-                <View style={styles.origin}>
-                  <LineIcon variant="footnote" name="clock" size={13} color={c.muted} />
-                  <Text variant="footnote" tone="muted" style={styles.grow}>
-                    {origin}
-                  </Text>
-                </View>
+                <Text variant="footnote" tone="muted">
+                  {origin}
+                </Text>
               ) : null}
               {requester ? (
                 <Text variant="footnote" tone="muted">
@@ -901,6 +930,14 @@ const styles = StyleSheet.create({
   item: { gap: 8 },
   divided: { paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth },
   itemDone: { opacity: 0.7 },
+  itemLetter: {
+    alignSelf: "stretch",
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   // The mark beside the title's first line.
   itemRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   itemMark: { width: 20, paddingTop: 1, alignItems: "center" },

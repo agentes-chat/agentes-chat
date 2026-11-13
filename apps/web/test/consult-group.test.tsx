@@ -76,7 +76,7 @@ function withAsk(list: RunConsultation[], notice = false) {
   return state;
 }
 
-/** What Ada and Atlas said for a question, as the panel loads it (`GET …/consultations/{id}`): in their DM. */
+/** What Ada and Atlas said for a question, as the dialog loads it (`GET …/consultations/{id}`): in their DM. */
 function withTalk(state: ReturnType<typeof seedState>, c: RunConsultation, extra: Message[] = []) {
   const said = (id: string, from: string, body: string, runId: string, at: string): Message => ({
     id,
@@ -101,7 +101,10 @@ function withTalk(state: ReturnType<typeof seedState>, c: RunConsultation, extra
   };
   return state;
 }
-const panel = () => document.querySelector("aside.thread-panel") as HTMLElement | null;
+/** The two agents' conversation, opened over the conversation in the kit's dialog. */
+const panel = () => document.querySelector(".ac-dialog.consult-dialog") as HTMLElement | null;
+/** Its list's name: "Conversa entre Ada e Atlas". */
+const panelLabel = () => panel()?.querySelector(".consult-dialog__list")?.getAttribute("aria-label");
 
 /** The conversation went on after the reply that asked: `count` people's messages, so it sits farther up. */
 function talkAfter(state: ReturnType<typeof seedState>, count: number) {
@@ -205,7 +208,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(row()?.querySelector(".consult-pair__row--live")).not.toBeNull();
   });
 
-  test("work handed off, its part done: 'esperando outros agentes', and the panel opens it as a request", async () => {
+  test("work handed off, its part done: 'esperando outros agentes', and the dialog opens it as a request", async () => {
     const c = consultation({ kind: "note", waiting: "agents" });
     await open(withTalk(withAsk([c]), c));
     expect(row()?.querySelector(".consult-pair__word")?.textContent).toBe("esperando outros agentes");
@@ -237,7 +240,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(r.querySelector(".consult-pair__time")).toBeNull();
   });
 
-  test("answered: how long it took, no answer in the channel; a click opens the conversation in the panel", async () => {
+  test("answered: how long it took, no answer in the channel; a click opens the conversation in the dialog", async () => {
     const c = consultation({ status: "answered", answer: ANSWER, answeredAt: ago(5) });
     await open(withTalk(withAsk([c], true), c));
     const r = row() as HTMLElement;
@@ -251,7 +254,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     await settle(3);
     expect(r.querySelector(".consult-pair__detail")).toBeNull();
     const side = panel() as HTMLElement;
-    expect(side.getAttribute("aria-label")).toBe("Conversa entre Ada e Atlas");
+    expect(panelLabel()).toBe("Conversa entre Ada e Atlas");
     expect(side.textContent).toContain(QUESTION);
     expect(side.textContent).toContain("subiu 6 pb");
     expect(rowButton().getAttribute("aria-pressed")).toBe("true");
@@ -260,7 +263,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(side.textContent).toContain("Só leitura.");
   });
 
-  test("still out: the panel says Atlas works on it; 'Falar com a Ada' closes it and mentions her", async () => {
+  test("still out: the dialog says Atlas works on it; 'Falar com a Ada' closes it and mentions her", async () => {
     const c = consultation({});
     await open(withTalk(withAsk([c]), c));
     await act(async () => fireEvent.click(rowButton()));
@@ -275,7 +278,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(box.value).toContain("@ada");
   });
 
-  test("a question card in the panel answers in place: 'Responder' opens its field there", async () => {
+  test("a question card in the dialog answers in place: 'Responder' opens its field there", async () => {
     const c = consultation({ waiting: "input" });
     const asks: Message = {
       id: "msg-atlas-question",
@@ -315,7 +318,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     await act(async () => fireEvent.change(field, { target: { value: "Pode usar" } }));
     await act(async () => fireEvent.keyDown(field, { key: "Enter" }));
     await settle(4);
-    // The answer goes to the question itself, from the panel (the fake keeps the agents' DM elsewhere).
+    // The answer goes to the question itself, from the dialog (the fake keeps the agents' DM elsewhere).
     expect(state.calls.find((call) => call.method === "questions.answer")?.args).toEqual([
       ORG_ID,
       "aq1",
@@ -344,9 +347,10 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(card.textContent).toContain("ajudando a Ada");
     await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Ver conversa" })));
     await settle(3);
-    expect(panel()?.getAttribute("aria-label")).toBe("Conversa entre Ada e Atlas");
-    // Over the conversation, like a thread: the whole window dimmed under it.
-    expect(panel()?.previousElementSibling?.className).toBe("thread-panel__scrim");
+    expect(panelLabel()).toBe("Conversa entre Ada e Atlas");
+    // Over the conversation, in the kit's modal dialog, as a long message opens whole.
+    expect(panel()?.getAttribute("role")).toBe("dialog");
+    expect(document.querySelector("aside.thread-panel")).toBeNull();
   });
 
   test("the answer far below its question: the same pair row where it arrived, opening the conversation", async () => {
@@ -382,7 +386,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(r.querySelector(".consult-pair__word")?.textContent).toBe("trabalhando");
     await act(async () => fireEvent.click(r.querySelector("button") as HTMLElement));
     await settle(3);
-    expect(panel()?.getAttribute("aria-label")).toBe("Conversa entre Ada e Atlas");
+    expect(panelLabel()).toBe("Conversa entre Ada e Atlas");
     expect(panel()?.textContent).not.toContain("mentioned you");
   });
 
@@ -427,7 +431,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(r.textContent).not.toContain("subiu 6 pb");
   });
 
-  test("the reply that asked isn't loaded here: the notice is a pair row that opens the panel, never in place", async () => {
+  test("the reply that asked isn't loaded here: the notice is a pair row that opens the dialog, never in place", async () => {
     const c = consultation({ status: "answered", answer: ANSWER, answeredAt: ago(5) });
     const state = withTalk(withAsk([c], true), c);
     // The asking reply is further up, not paged in: only the notice is here.
@@ -438,7 +442,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     await act(async () => fireEvent.click(rowButton()));
     await settle(3);
     expect(row()?.querySelector(".consult-pair__detail")).toBeNull();
-    expect(panel()?.getAttribute("aria-label")).toBe("Conversa entre Ada e Atlas");
+    expect(panelLabel()).toBe("Conversa entre Ada e Atlas");
     expect(panel()?.textContent).toContain("subiu 6 pb");
     expect(rowButton().getAttribute("aria-pressed")).toBe("true");
   });

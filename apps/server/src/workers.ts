@@ -33,6 +33,7 @@ import {
   type LaneLimits,
   LOOP_LATE_MS,
   listenForRunCancels,
+  type MachineCaller,
   type MailDeps,
   type OutboxJob,
   pollMailWatches,
@@ -47,6 +48,7 @@ import {
   purgeDeletedWikiPages,
   queueApprovalDigests,
   reapRoutineRuns,
+  recheckStuckPlans,
   reconcileComposioAccounts,
   reconcileComposioConnectors,
   reconcileWorks,
@@ -125,6 +127,8 @@ export interface WorkerDeps {
   mail?: { deps: MailDeps; pollSeconds: number };
   /** The agent browser's live view (ADR 0040): expired handoffs are told to its viewers. */
   browserLive?: BrowserLive;
+  /** Connected computers: plans stuck at their limit are read again there (`recheckStuckPlans`). */
+  machines?: Pick<MachineCaller, "call" | "status">;
   /** Agents' desktops (ADR 0058): the ones with an open handoff stay up. */
   desktops?: Pick<DesktopControl, "keepAlive">;
   /** The daily stall-and-noise report (`OPS_REPORT_EMAIL`); absent: none. */
@@ -192,6 +196,8 @@ export const WORKER_INTERVALS_MS = {
   teamWeek: 10 * 60_000,
   /** The coding plans' public lists of models, each replica for itself: also at boot. */
   planModels: 3600_000,
+  /** Plans stuck at their limit, read again on their computers (each at most every 5 or 10 minutes). */
+  planRechecks: 60_000,
 };
 
 /**
@@ -275,6 +281,11 @@ export function startWorkers(deps: WorkerDeps) {
 
   every("apps", WORKER_INTERVALS_MS.apps, () => purgeApps(db));
   every("planModels", WORKER_INTERVALS_MS.planModels, () => refreshPlanModels());
+  const machines = deps.machines;
+  if (machines)
+    every("planRechecks", WORKER_INTERVALS_MS.planRechecks, async () => {
+      await recheckStuckPlans({ db, hub: machines });
+    });
   every("skillUpdates", WORKER_INTERVALS_MS.skillUpdates, async () => {
     if ((await enqueueSkillUpdates(db)) > 0) void ticks.get("outbox")?.();
   });

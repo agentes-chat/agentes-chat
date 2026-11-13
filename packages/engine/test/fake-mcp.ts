@@ -20,7 +20,10 @@ export function fakeGithubMcp(options: { issueWrite?: boolean; writes?: boolean 
     });
     server.registerTool(
       "merge_pull_request",
-      { description: "Merge a pull request", inputSchema: { ...pr, merge_method: z.string().optional() } },
+      {
+        description: "Merge a pull request",
+        inputSchema: { ...pr, merge_method: z.string().optional(), commit_message: z.string().optional() },
+      },
       async (args) => {
         calls.push({ tool: "merge_pull_request", args });
         return { content: [{ type: "text", text: `Merged PR #${args.pullNumber}` }] };
@@ -71,6 +74,13 @@ export function fakeGithubMcp(options: { issueWrite?: boolean; writes?: boolean 
           body: z.string().optional(),
         },
         push_files: { ...repo, branch: z.string(), files: z.array(z.unknown()), message: z.string() },
+        create_or_update_file: {
+          ...repo,
+          branch: z.string(),
+          path: z.string(),
+          content: z.string(),
+          message: z.string(),
+        },
         list_issue_types: { owner: z.string() },
         projects_list: { owner: z.string() },
         label_write: { ...repo, method: z.string(), name: z.string() },

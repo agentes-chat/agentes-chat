@@ -29,6 +29,7 @@ import {
   providerOrgIdOf,
   providerOrgNameOf,
   type RunnerAccountInfo,
+  TOKEN_RECHECK_MS,
   type WireSecretBox,
 } from "@agenteschat/adapters/machine-protocol";
 import { cutAtWord, errorLineOf, redactCommon } from "@agenteschat/adapters/redact";
@@ -73,6 +74,7 @@ import {
 import { readSmallJson, writeJson } from "./json-file";
 import {
   antigravityUsage,
+  checkClaudeToken,
   codexUsage,
   fetchPlanKeyUsage,
   probeClaudeUsage,
@@ -1255,7 +1257,7 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
     let child: ChildProcess;
     try {
       child = spawn(run.file, run.args, {
-        env,
+        env: run.env ? { ...env, ...run.env } : env,
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
         windowsVerbatimArguments: run.windowsVerbatimArguments,
@@ -1282,9 +1284,8 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
       resolve({ status, stdout, stderr });
     };
     const timer = setTimeout(() => {
-      try {
-        child.kill("SIGKILL");
-      } catch {}
+      // The whole tree: on Windows the child is cmd.exe, and the CLI it started would stay.
+      killTree(child, "SIGKILL");
       finish(null);
     }, timeoutMs);
     timer.unref?.();
@@ -1314,6 +1315,8 @@ export interface AccountManagerOptions {
   listTtlMs?: number;
   /** Tests: `USAGE_TTL_MS`, `USAGE_NOTIFY_MS`, how long a probe may take, and the HTTP client of the key probes. */
   usageTtlMs?: number;
+  /** Tests: `TOKEN_RECHECK_MS`. */
+  tokenCheckTtlMs?: number;
   usageNotifyMs?: number;
   usageTimeoutMs?: number;
   /** Tests: how long a status look may take (`STATUS_TIMEOUT_MS`). */
@@ -1411,6 +1414,9 @@ export class AccountManager {
   private readonly usage = new Map<string, PlanUsage>();
   /** When each was last probed, and until when its provider asked us to wait. */
   private readonly probed = new Map<string, number>();
+  /** Setup-token accounts whose next probe is a check on the cheapest model (`list.recheck`). */
+  private readonly tokenChecks = new Set<string>();
+  private readonly tokenChecked = new Map<string, number>();
   private readonly backoff = new Map<string, number>();
   private readonly probeQueue: string[] = [];
   private readonly probing = new Set<string>();
@@ -1809,7 +1815,7 @@ export class AccountManager {
     const run = cliSpawn(command, [...LOGIN_ARGS[login.kind], ...(email ? ["--email", email] : [])], env.PATH);
     const child = spawn(run.file, run.args, {
       cwd,
-      env,
+      env: run.env ? { ...env, ...run.env } : env,
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       // Its own process group: a kill reaches what it started (posix).
@@ -2778,14 +2784,22 @@ export class AccountManager {
    * `USAGE_PROBES_AT_ONCE` at a time; one known for less than `USAGE_TTL_MS`, or whose provider asked us to
    * wait, isn't. Each result reaches the server at once (a person is looking).
    */
-  probeUsage(ids: readonly string[]) {
+  probeUsage(ids: readonly string[], recheck: readonly string[] = []) {
     const now = Date.now();
     const own = Object.values(OWN_USAGE_ID);
     for (const id of ids.slice(0, MAX_MACHINE_ACCOUNTS + own.length)) {
       if (!isAccountId(id) && !own.includes(id)) continue;
       if (this.probeQueue.includes(id) || this.probing.has(id) || (this.backoff.get(id) ?? 0) > now) continue;
-      const known = Math.max(Date.parse(this.usage.get(id)?.at ?? "") || 0, this.probed.get(id) ?? 0);
-      if (now - known < (this.opts.usageTtlMs ?? USAGE_TTL_MS)) continue;
+      const token = recheck.includes(id);
+      // A token's check goes by its own clock: a plain look at it (which reads nothing) doesn't put it off.
+      const asked = (token ? this.tokenChecked : this.probed).get(id) ?? 0;
+      const known = Math.max(Date.parse(this.usage.get(id)?.at ?? "") || 0, asked);
+      const ttl = token ? (this.opts.tokenCheckTtlMs ?? TOKEN_RECHECK_MS) : (this.opts.usageTtlMs ?? USAGE_TTL_MS);
+      if (now - known < ttl) continue;
+      if (token) {
+        this.tokenChecks.add(id);
+        this.tokenChecked.set(id, now);
+      }
       this.probeQueue.push(id);
     }
     this.nextProbes();
@@ -2834,8 +2848,24 @@ export class AccountManager {
         ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}),
       });
     }
-    // A token makes model requests only: its usage comes from its turns. Gemini's for all agents is its CLI's own.
+    // A token makes model requests only: its usage comes from its turns, or, stuck at its limit, from one check on the
+    // cheapest model the server asked for (`list.recheck`). Gemini's for all agents is its CLI's own.
     const shared = this.isShared(target.kind, id) && target.kind !== "antigravity";
+    const check = this.tokenChecks.delete(id);
+    if (!own && check && shared && target.kind === "claude_code" && this.lentTo(target.kind, id) === null) {
+      const token = await tokenOf(target.cwd);
+      if (!token) return null;
+      return checkClaudeToken(
+        {
+          command: this.command("claude_code"),
+          cwd: target.cwd,
+          env: { ...target.env, ...TOKEN_FD_ENV },
+          fd3: token,
+          ...limits,
+        },
+        this.usage.get(id),
+      );
+    }
     if (!own && (this.lentTo(target.kind, id) !== null || shared)) return null;
     const probe = { command: this.command(target.kind, Boolean(own)), cwd: target.cwd, env: target.env, ...limits };
     // Cursor's CLI reports no plan usage: its turns' `usage` is all there is.

@@ -161,7 +161,7 @@ describe("Criar agente: steps", () => {
     await proceed();
     expect(document.querySelector(".onb__lead")?.textContent).toBe("Escolha até onde a Iris vai em cada app.");
     expect(document.querySelector(".newag__note")?.textContent).toBe(
-      "Merge, deploy e rollback sempre pedem aprovação no chat. Quem aprova é Walter.",
+      "Merge, deploy e rollback pedem aprovação no chat, a não ser que o agente nunca pergunte. Quem aprova é Walter.",
     );
     await proceed(2);
     expect(title()).toBe("Modelo e orçamento");
@@ -518,7 +518,7 @@ describe("Criar agente: what gets created", () => {
     await click(within(github).getByRole("radio", { name: "Ler e escrever" }));
     // Writing: the sensitive action shows as asking for approval.
     expect(screen().getByRole("list", { name: "Conectores e níveis" }).textContent).toContain(
-      "Fazer merge pede aprovação",
+      "Pede aprovação: Fazer merge",
     );
     await proceed(3);
     await click(screen().getByRole("button", { name: "Criar Iris" }));

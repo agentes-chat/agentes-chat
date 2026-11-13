@@ -481,6 +481,64 @@ export async function personMentionAddressees(
   return new Map(input.targets.map((t, i) => [t.agentId, answers[`acts_${i}`]?.noul ?? 0]));
 }
 
+/** How the room should answer a person's mention of everyone (`everyoneShape`). */
+export type EveryoneAnswer = "one" | "each" | "none";
+
+/**
+ * A person's message mentions everyone (@todos): does one answer serve the room (a team rule, a question with one
+ * answer, a task), does each agent have its own answer ("say your name", "what's your usage"), or does it ask
+ * nothing of the agents (an announcement, a greeting)? Also which agent is best placed to give the one answer.
+ * Policy (who runs, the fail-open default) stays in `messages.ts`.
+ */
+export async function everyoneShape(
+  judge: Judge,
+  input: {
+    orgId: string;
+    body: string;
+    author: string;
+    targets: { agentId: string; handle: string; name: string; role: string | null }[];
+  },
+): Promise<{ answer: EveryoneAnswer | null; best: string | null }> {
+  const criteria: Record<string, string> = {};
+  for (const t of input.targets) criteria[t.handle] = `${t.name}${t.role ? `, ${t.role}` : ""}`;
+  const answers = await judge.ask({
+    orgId: input.orgId,
+    kind: "everyone_shape",
+    state: {
+      message: { from: input.author, from_a_person: true, mentions_everyone: true, text: cutText(input.body, 4000) },
+      agents_here: input.targets.map((t) => `@${t.handle}`),
+    },
+    questions: {
+      answer: {
+        type: "choice",
+        instructions:
+          "A person wrote `message` to everyone in the conversation (@everyone), people and AI agents. How should the agents answer it?",
+        criteria: {
+          one: "One answer serves everyone, so one agent answers for all: a rule or preference for all the agents, a question with one answer, a task or request one agent can do.",
+          each: "Each agent has its own answer about itself, so every agent answers: its name, its own usage or limit, its own status or opinion.",
+          none: "It asks nothing of the agents: an announcement, news, a greeting or something for the people here.",
+        },
+      },
+      ...(input.targets.length > 1
+        ? {
+            best: {
+              type: "choice" as const,
+              instructions: "Which agent is best placed to answer `message` for all the agents?",
+              criteria,
+            },
+          }
+        : {}),
+    },
+  });
+  const answer = answers.answer?.choice;
+  const best =
+    input.targets.length === 1 ? input.targets[0] : input.targets.find((t) => t.handle === answers.best?.choice);
+  return {
+    answer: answer === "one" || answer === "each" || answer === "none" ? answer : null,
+    best: best?.agentId ?? null,
+  };
+}
+
 /**
  * For tests: answers from `answer(kind, questionId, state, question)` (default: every
  * Noul 0, no Choice picked, level 0, a box at the top left). A whole `JudgeAnswer` is passed

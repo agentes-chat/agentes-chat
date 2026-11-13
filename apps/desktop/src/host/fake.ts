@@ -87,7 +87,7 @@ export interface FakeHost extends Host {
     disk: boolean;
     networkAsks: number;
     setup: SetupState | null;
-    panes: MacPermission[];
+    panes: (MacPermission | "microphone")[];
   };
   /** The site in the main window asks this computer (ADR 0036): resolves with the popover's reply. */
   askThisMac(request: ThisMacRequest): Promise<{ ok: boolean; data: unknown }>;

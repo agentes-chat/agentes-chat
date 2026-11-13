@@ -96,6 +96,8 @@ const FileContent = z
     size: z.number().openapi({ description: "Bytes." }),
     sha256: z.string(),
     text: z.string().optional().openapi({ description: "Small UTF-8 text files only (≤ 40k characters)." }),
+    width: z.number().int().optional().openapi({ description: "A picture's width in pixels, when known." }),
+    height: z.number().int().optional().openapi({ description: "A picture's height in pixels, when known." }),
   })
   .openapi("ArtifactFileContent", {
     description: "An uploaded file as is: metadata only; the bytes come from the download link.",

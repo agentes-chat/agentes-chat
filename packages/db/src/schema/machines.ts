@@ -35,6 +35,8 @@ export interface MachinePlanUsage {
   models?: Record<string, { at: string; until?: string; region?: true; off?: true; inactive?: true }>;
   /** The model that last answered with the account's key (`PlanUsage.answered`). */
   answered?: string;
+  /** Stuck at its limit: when the server last asked its computer to read it again (`recheckStuckPlans`). */
+  checkedAt?: string;
 }
 
 /**
@@ -236,6 +238,12 @@ export const machines = pgTable(
     audienceRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /** An admin marked it the workspace's: it stays when its pairer leaves (an `owner` rule then reads as everyone). */
     belongsToWorkspace: boolean().notNull().default(false),
+    /**
+     * Spill-over: while an agent's own computer is full, a turn a person waits on may think here instead, on a
+     * sign-in the agent may use. `spill_own`: turns for whoever connected it; `spill_others`: anyone else's.
+     */
+    spillOwn: boolean().notNull().default(true),
+    spillOthers: boolean().notNull().default(false),
     /** Last known; trust it only with a recent `last_seen_at` (a replica may have died). */
     online: boolean().notNull().default(false),
     /** The server process holding its socket. */
@@ -347,6 +355,11 @@ export const machineAccounts = pgTable(
      * login thinks for one agent.
      */
     shared: boolean().notNull().default(false),
+    /**
+     * Who it thinks for (ADR 0059 §3): `everyone` in the workspace (people's right hand and any agent), or only its
+     * `owner`'s. Only the person who connected it changes it, for every login of that account.
+     */
+    serves: text().notNull().default("everyone"),
     /**
      * How it signs in (protocol 50): `cli_login`, `setup_token` or `api_key`. Set when its sign-in starts and from
      * what the runner reports, never cleared by a report that doesn't say; null: unknown.

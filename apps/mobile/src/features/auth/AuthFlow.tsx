@@ -1,4 +1,4 @@
-import { invitationQuery, type SignInOptions, useApi, useAuthConfig } from "@agenteschat/client";
+import { invitationQuery, type SignInOptions, type SignInProvider, useApi, useAuthConfig } from "@agenteschat/client";
 import { type HumanAction, humanCheckHeaders, withHumanCheck } from "@agenteschat/client/lib/human-check";
 import {
   emailTypoFix,
@@ -13,21 +13,24 @@ import { useIsFocused } from "expo-router";
 import { openBrowserAsync } from "expo-web-browser";
 import { type ComponentRef, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Linking, Pressable, type TextInput, View } from "react-native";
+import { Linking, Platform, Pressable, type TextInput, View } from "react-native";
 import { PixelOrbit } from "@/agent/PixelOrbit";
 import { useLaunched } from "@/features/launch/launched";
 import { authClient } from "@/lib/auth";
 import { setServer, useServerToReturn } from "@/lib/server";
 import { readValueSync, writeValue } from "@/lib/storage";
+import { signUpHere } from "@/lib/store";
 import { AuthField } from "@/ui/auth/AuthField";
 import { AuthLink } from "@/ui/auth/AuthLink";
 import { AuthScaffold, CENTER } from "@/ui/auth/AuthScaffold";
 import { PasswordField } from "@/ui/auth/PasswordField";
+import { socialProvidersOn } from "@/ui/auth/providers-on";
 import { AuthFootLine } from "@/ui/auth/ServerLine";
 import { Shake } from "@/ui/auth/Shake";
-import { rememberSignIn, SocialButtons, useSocialProviders } from "@/ui/auth/SocialButtons";
+import { LastUsed, lastSignIn, rememberSignIn, SocialButtons, useSocialProviders } from "@/ui/auth/SocialButtons";
 import { Button } from "@/ui/Button";
 import { haptics } from "@/ui/haptics";
+import { LineIcon } from "@/ui/LineIcon";
 import { Locked } from "@/ui/Locked";
 import { router } from "@/ui/navigation";
 import { Text } from "@/ui/Text";
@@ -60,7 +63,7 @@ export const LAST_EMAIL = "last-email";
 /** How often the e-mail's lookup tries again while there is no connection. */
 const OFFLINE_RETRY_MS = 5000;
 /** The no-connection line: the orbit on the first line of its words. */
-const OFFLINE_LINE = { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 } as const;
+const OFFLINE_LINE = { flexDirection: "row", alignItems: "flex-start", justifyContent: "center", gap: 8 } as const;
 
 type Step =
   | "email"
@@ -114,6 +117,8 @@ export function AuthFlow({
   const api = useApi();
   const config = useAuthConfig();
   const [step, setStep] = useState<Step>("email");
+  // How this phone signed in last, read once: the e-mail's Continuar carries "Último usado" as a provider's button does.
+  const [lastWay] = useState(lastSignIn);
   const [email, setEmail] = useState(initialEmail ?? readValueSync(LAST_EMAIL) ?? "");
   // The e-mail takes the keyboard once the launch splash has left, not under it.
   const launched = useLaunched();
@@ -165,9 +170,9 @@ export function AuthFlow({
       setPassword("");
       // No password and no provider this server signs in with (the owner's account made by the desktop
       // app): the web's "noPassword" step says where to add one, instead of an empty provider list.
-      const on = config.data?.socialProviders as Partial<Record<string, boolean>> | undefined;
-      const usable = found.providers.some((p) => on?.[p] === true);
-      go(lookUpStep(found, usable));
+      const on = config.data?.socialProviders as Partial<Record<SignInProvider, boolean>> | undefined;
+      const usable = socialProvidersOn(on, Platform.OS, found.providers).length > 0;
+      go(lookUpStep(found, usable, signUpHere(config.data?.cloud)));
     } catch (e) {
       // No connection: the e-mail stays, a quiet line says so, and the lookup tries again by itself (below).
       if (e instanceof TypeError && /network|fetch/i.test(e.message)) setOffline(true);
@@ -528,7 +533,9 @@ export function AuthFlow({
 
       {offline && step === "email" ? (
         <View style={OFFLINE_LINE} accessibilityLiveRegion="polite">
-          <PixelOrbit color="sky" size={16} />
+          <LineIcon variant="subhead" size={16} mark>
+            <PixelOrbit color="sky" size={16} />
+          </LineIcon>
           <Text variant="subhead" tone="muted" style={{ flexShrink: 1 }}>
             {t("mobile.auth.errors.offlineRetry")}
           </Text>
@@ -546,7 +553,16 @@ export function AuthFlow({
       ) : null}
 
       {submitLabel[step] ? (
-        <Button variant="primary" wide label={submitLabel[step]} loading={pending} disabled={!ready} onPress={submit} />
+        <LastUsed on={step === "email" && lastWay === "email"}>
+          <Button
+            variant="primary"
+            wide
+            label={submitLabel[step]}
+            loading={pending}
+            disabled={!ready}
+            onPress={submit}
+          />
+        </LastUsed>
       ) : null}
 
       {step === "email" ? (

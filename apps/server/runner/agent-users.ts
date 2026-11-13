@@ -1123,11 +1123,13 @@ export class AccountUsers {
   }
 
   /**
-   * The agent was deleted: what every sign-in holds for it goes. Its transcripts are the `projects/` folders
-   * named after a path with its user in it; one on a path it shared stays. Only root and the sign-in's user write
-   * in these folders, and `rmSync` follows no link.
+   * The agent was deleted (or a person's seat of the right hand, when they left): every process of its own user is
+   * killed, so nothing a person started as it (a shell left running, a tunnel) outlives it, and what every sign-in
+   * holds for it goes. Its transcripts are the `projects/` folders named after a path with its user in it; one on a
+   * path it shared stays. Only root and the sign-in's user write in these folders, and `rmSync` follows no link.
    */
   sweepAgent(agent: Pick<AgentUser, "user" | "uid">) {
+    this.kill(agent.uid);
     this.stopScopes(agent.uid);
     const slug = new RegExp(`(^|-)${agent.user}(-|$)`);
     for (const { id } of readAccountUsers(this.opts.home)) {

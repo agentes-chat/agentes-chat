@@ -82,6 +82,14 @@ export const strings: Partial<PushStrings> = {
   deviceAccessTitle: (a, p, d) =>
     p ? `${a} (voor ${p}) vraagt om je ${d} te gebruiken` : `${a} vraagt om je ${d} te gebruiken`,
   deviceAccessBody: "Tik om één keer of altijd toe te staan, of om nee te zeggen.",
+  deviceToolTitle: (a, d) => `${a} vraagt je een tool aan te zetten op je ${d}`,
+  deviceToolBody: "Tik om hem met één klik aan te zetten.",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} vraagt je een agent toe te voegen aan #${l}`
+      : what === "create_agents"
+        ? `${a} vraagt om agents te mogen maken`
+        : `${a} vraagt je de ${l}-webhook voor routines in te stellen`,
   deviceWaitingTitle: (p, d) => `De agent van ${p} wacht op je ${d}`,
   deviceWaitingBody: "Hij begint zodra die terug is.",
   teamWeekReady: "De week van je team staat klaar",

@@ -976,6 +976,9 @@ export const featureKeysEn = {
       routine_failed_other: "Routine failed",
       run_failed_one: "Couldn't finish",
       run_failed_other: "Couldn't finish",
+      admin_ask_channel_agent: "{{names}} asks you to add {{agent}} to #{{label}}",
+      admin_ask_create_agents: "{{names}} asks to be able to create agents",
+      admin_ask_webhook: "{{names}} asks you to set up the {{service}} webhook for routines",
       routine_paused_one: "Routine paused",
       routine_paused_other: "Routine paused",
       routine_stalled_one: "Routine waiting for the computer",
@@ -1036,6 +1039,8 @@ export const featureKeysEn = {
       plan_lent_other: "{{names}} connected your {{plan}} plan to {{agent}}",
       plan_lent_female_one: "{{names}} connected your {{plan}} plan to {{agent}}",
       plan_lent_female_other: "{{names}} connected your {{plan}} plan to {{agent}}",
+      plan_serves_one: "Your {{plan}} now serves the whole workspace",
+      plan_serves_other: "Your {{plan}} now serves the whole workspace",
       /** An agent's model left its plan's list (`plan_model_dropped`): `runs` the model it uses now. */
       plan_model_dropped_one: "{{model}} left {{plan}}. {{names}} is using {{runs}} for now",
       plan_model_dropped_other: "{{model}} left {{plan}}. {{names}} is using {{runs}} for now",
@@ -1422,7 +1427,6 @@ export const featureKeysEn = {
     uses_one: "Used {{count}} time",
     uses_other: "Used {{count}} times",
     confirmed: "Confirmed by a person",
-    unconfirmed: "Not confirmed yet",
     confirm: "Confirm",
     confirmedToast: "Confirmed",
     details: "Technical details",
@@ -1651,9 +1655,9 @@ export const featureKeysEn = {
         setup: "Workspace setup",
         desktop: "Computer screen",
       },
-      asksYou: "Merging and publishing always ask for your approval, at any level.",
-      asksOwner: "Merging and publishing always ask for {{name}}'s approval, at any level.",
-      asksAdmins: "Merging and publishing always ask for an admin's approval, at any level.",
+      asksYou: "Merging and publishing ask for your approval, unless the agent never asks.",
+      asksOwner: "Merging and publishing ask for {{name}}'s approval, unless the agent never asks.",
+      asksAdmins: "Merging and publishing ask for an admin's approval, unless the agent never asks.",
       empty: "For now, only conversation.",
     },
   },
@@ -2080,6 +2084,7 @@ export const featureKeysEn = {
       access_requestFor: "{{names}} asks to use {{device}} for {{person}}",
       waiting: "{{names}} is waiting for {{device}}",
       waitingFor: "{{names}} is waiting for {{device}} for {{person}}",
+      tool_request: "{{names}} asks you to turn on {{tool}} on your {{device}}",
       allowOnce: "Allow once",
       always: "Always allow {{name}}",
       no: "No",
@@ -2369,7 +2374,10 @@ export const featureKeysEn = {
       tooBig: "That image is too big. Try another one.",
     },
     machine: {
-      toolsHow: "Tap a tool that's on to turn it off. Turning it back on happens only on the computer itself.",
+      toolsHow:
+        "Tap a tool that's on to turn it off. To turn it back on: on the computer itself, or here by whoever connected it.",
+      /** For whoever connected the computer: a tap turns an off tool on, and one that is on off. */
+      toolsHowOwner: "Tap a tool to turn it on or off.",
     },
     roles: {
       /** Under the roles and a role's name and color: what only the web changes. */

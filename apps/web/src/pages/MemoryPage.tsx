@@ -3,6 +3,7 @@ import { useMemory, useMemoryAction, useProposals } from "@agenteschat/client";
 import { daysBetween, relativeTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { memoryLine } from "@agenteschat/client/lib/proposals";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   Button,
@@ -146,7 +147,8 @@ export function NoMemories({
       title={t("memory.emptyTitle", { name: agent.name })}
       actions={<AskAgentButton agent={agent} variant="primary" />}
     >
-      {t(modeKey(org, "memory.emptyText"))}
+      {/* What the right hand keeps is one person's alone, in any workspace. */}
+      {t(isRightHand(agent) ? "memory.emptyTextPersonal" : modeKey(org, "memory.emptyText"))}
     </EmptyState>
   );
 }

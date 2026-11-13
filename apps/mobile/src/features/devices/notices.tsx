@@ -15,6 +15,7 @@ import { WaitingCard } from "../shared/WaitingCard";
 import { type DeviceNotice, deviceHref, deviceNoticeOf, deviceNoticeTitle, joinFacts } from "./logic";
 import { JoinButtons } from "./parts";
 import { useDeviceMutation, useDevices } from "./queries";
+import { ToolOneClickButton } from "./ToolOneClick";
 
 /** Whom the agent works for, by first name ("" when it's the viewer or nobody says). */
 export function useNoticePerson(n: Pick<AppNotification, "kind" | "source" | "latest">) {
@@ -30,7 +31,38 @@ export function useNoticePerson(n: Pick<AppNotification, "kind" | "source" | "la
 export function DeviceNoticeCard({ item: n, first }: { item: AppNotification; first: boolean }) {
   const d = deviceNoticeOf(n);
   if (!d) return null;
+  if (d.kind === "device.tool_request") return <ToolNotice n={n} d={d} />;
   return d.kind === "device.join_request" ? <JoinNotice n={n} d={d} /> : <AccessNotice n={n} d={d} first={first} />;
+}
+
+/** Someone asks the viewer to turn a tool on on their computer: the same one-click button as where it was needed. */
+function ToolNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
+  const { t } = useTranslation();
+  const when = useWhen();
+  const dir = useDirectory();
+  const done = useDone(n);
+  const asker = n.actors.find((a) => a.type === "user");
+  const name = dir.nameOf(asker ? { type: "person", id: asker.id } : null);
+  return (
+    <WaitingCard
+      name={name}
+      kind={{ icon: "laptop", label: t("mobile.devices.notice.kind") }}
+      title={deviceNoticeTitle(t, d, name, "", "")}
+      where={when.short(n.updatedAt)}
+      onPress={() => router.push(deviceHref(d))}
+      decision={
+        d.machineId && d.tool ? (
+          <ToolOneClickButton
+            machineId={d.machineId}
+            machineName={d.device}
+            oneClick={{ kind: "allow" }}
+            tool={d.tool}
+            onAllowed={done}
+          />
+        ) : undefined
+      }
+    />
+  );
 }
 
 function useDone(n: AppNotification) {

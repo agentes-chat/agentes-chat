@@ -9,6 +9,13 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
       "L’app agentes.chat peut aussi faire tourner agentes.chat lui-même, sur un Mac, un PC ou un ordinateur sous Linux, pour vous ou une petite équipe.",
     sections: [
       {
+        id: "download",
+        heading: "Téléchargez l'application",
+        blocks: [
+          "[Téléchargez l'application agentes.chat](/download) pour votre Mac, PC ou ordinateur Linux et ouvrez-la. Choisissez **Sur votre propre serveur**, appuyez sur **Continuer sur mon serveur**, puis sur **Faire tourner agentes.chat sur ce poste**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Comment ça fonctionne",
         blocks: [
@@ -217,6 +224,15 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
           "Connectez-vous à chaque espace de travail dans la même app et cliquez sur **Autoriser** pour chacun. Des espaces de travail sur agentes.chat Cloud et sur vos propres serveurs peuvent partager un ordinateur (app 0.6.1 et plus récente). Chacun y a ses propres agents et dossiers, et en déconnecter un ne touche pas aux autres.",
           "Un serveur que l’app fait tourner sur cet ordinateur est déjà connecté et n’a besoin de rien. Pour prêter aussi cet ordinateur à un espace de travail d’ailleurs, voir [Le prêter aussi à un autre espace de travail](/help/run-on-your-computer#another-workspace).",
           "Vous utilisez l’app sur un portable seulement comme fenêtre sur votre espace de travail\u00a0? Quand elle propose de laisser les agents utiliser le portable, **Plus tard** le garde comme simple fenêtre.",
+          "Un serveur connecté avec la ligne du terminal travaille pour un seul workspace. Le connecter depuis un autre workspace fait passer le serveur à celui-ci, et le premier ne l'atteint plus. Pour plusieurs workspaces sur un ordinateur, utilisez l'app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Quand les agents attendent dans la file",
+        blocks: [
+          "Chaque travail d'un agent utilise la mémoire de l'ordinateur. Quand la mémoire libre vient à manquer, le suivant attend dans la file jusqu'à ce qu'un autre se termine. Les personnes passent en premier. Le nombre de CPU n'y change rien.",
+          "Un ordinateur avec 4 Go de mémoire exécute deux ou trois travaux à la fois, un avec 8 Go environ neuf. Un Mac ou un PC en exécute jusqu'à huit. Les navigateurs et les bureaux que les agents laissent ouverts utilisent aussi de la mémoire. Pour une file plus courte, utilisez un ordinateur avec plus de mémoire, ou connectez-en un autre et répartissez les agents entre eux. Les workspaces qui partagent un ordinateur partagent sa mémoire.",
         ],
       },
       {
@@ -375,7 +391,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "La mémoire ne donne aucune permission",
         blocks: [
-          "Rien dans la mémoire ne permet à un agent d’en faire plus. Ce qu’il peut faire reste dans ses **Outils et accès**, et les actions sensibles demandent toujours une approbation.",
+          "Rien dans la mémoire ne permet à un agent d’en faire plus. Ce qu’il peut faire reste dans ses **Outils et accès**.",
         ],
       },
       {
@@ -395,7 +411,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Ce qui demande d’abord",
         blocks: [
-          "Quand un agent veut fusionner, déployer, revenir en arrière, envoyer quelque chose à l’extérieur ou supprimer des données, il demande d’abord, quels que soient ses accès. La demande apparaît dans **Approbations** et dans la conversation, avec l’action exacte et sa raison.",
+          "Quand un agent veut fusionner, déployer, revenir en arrière, envoyer quelque chose à l’extérieur ou supprimer des données, il demande d’abord. C’est le niveau **Seulement ce qui est risqué**, celui de tout nouvel agent. Sur la page de l’agent, dans **Approbations**, **Toujours demander** le fait demander avant de modifier quoi que ce soit, et avec **Ne jamais demander** il ne demande rien, même pour fusionner, déployer, payer ou dans une routine. La demande apparaît dans **Approbations** et dans la conversation, avec l’action exacte et sa raison.",
         ],
       },
       {
@@ -403,7 +419,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Une fois, ou toujours",
         blocks: [
           "Approuver couvre une action exacte, avec ses valeurs. Si l’agent change quoi que ce soit, il redemande.",
-          "**Toujours approuver** laisse l’agent faire ce type d’action à partir de maintenant, avec n’importe quelles valeurs, sans demander. Sur la demande d’une routine, **Toujours dans cette routine** fait de même pour cette routine seulement. Aucun des deux n’est proposé pour un merge, un déploiement, un retour arrière et autres. Pour annuler, allez dans **Outils et accès** sur la page de l’agent, ou dans les réglages de la routine.",
+          "**Toujours approuver** laisse l’agent faire ce type d’action à partir de maintenant, avec n’importe quelles valeurs, sans demander. Sur la demande d’une routine, **Toujours dans cette routine** fait de même pour cette routine seulement. **Toujours approuver** est proposé pour tout type d’action, merge et déploiement compris, tant que l’agent est au niveau **Seulement ce qui est risqué**. **Toujours dans cette routine** n’est pas proposé pour un merge, un déploiement, un retour arrière et autres. Pour annuler, allez dans **Outils et accès** sur la page de l’agent, ou dans les réglages de la routine.",
         ],
       },
       {

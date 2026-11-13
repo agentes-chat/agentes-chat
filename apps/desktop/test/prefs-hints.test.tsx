@@ -349,6 +349,30 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       },
     ));
 
+  test("Advanced on Linux: back to defaults keeps two conversations open for 20 minutes, as the runner does", () =>
+    pane(
+      "selfhost",
+      <Advanced />,
+      (el) =>
+        el.querySelectorAll(".dk-card").length === 3 && !el.querySelector(".dk-phead button")?.hasAttribute("disabled"),
+      async (el) => {
+        const defaults = el.querySelector<HTMLButtonElement>(".dk-phead button");
+        expect(defaults?.textContent).toBe("Back to defaults");
+        await act(async () => defaults?.click());
+        const idle = () =>
+          [...el.querySelectorAll('[role="radiogroup"]')]
+            .find((g) => g.textContent?.includes("min"))
+            ?.querySelector('[aria-checked="true"]')?.textContent;
+        await until(() => idle() === "20 min");
+        expect(el.querySelector('[aria-label="Open conversations"] output')?.textContent).toBe("2");
+      },
+      {
+        host: (h) => {
+          (h as { platform: string }).platform = "linux";
+        },
+      },
+    ));
+
   test("Advanced: each limit on one line with its ⓘ; the agents' folder explained once, by its title", () =>
     pane(
       "selfhost",

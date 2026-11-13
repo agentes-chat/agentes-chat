@@ -1,5 +1,12 @@
 import { afterEach, expect, test } from "bun:test";
-import { ACCOUNTS_PROTOCOL, channelTopic, MACHINE_PROTOCOL_VERSION, orgTopic } from "@agenteschat/adapters";
+import {
+  ACCOUNTS_PROTOCOL,
+  CODEX_WINDOWS_PROTOCOL,
+  channelTopic,
+  MACHINE_PROTOCOL_VERSION,
+  OPENCODE_ACP_PROTOCOL,
+  orgTopic,
+} from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
 import { systemText } from "@agenteschat/providers";
 import {
@@ -14,6 +21,7 @@ import {
   brainModelFor,
   brainSessionId,
   type ChannelEvent,
+  CODEX_IMAGE_NOTE,
   COMPUTER_BUSY_RETRY_MS,
   COMPUTER_QUEUE_NOTE_MS,
   COMPUTER_REACT_NOTE,
@@ -222,6 +230,31 @@ test("availability: no computer, offline, old runner, not logged in, Codex missi
   expect(computerBrainUnavailable("claude_code", "m1", statusOf("m1"))?.code).toBe("plan_limit");
   expect(
     computerBrainUnavailable("codex", "m1", statusOf("m1", { executors: { codex: { version: "0.163.0" } } })),
+  ).toBeNull();
+  // On Windows a runner before CODEX_WINDOWS_PROTOCOL refuses every Codex turn: too old there, not elsewhere.
+  const windows = (protocol: number) =>
+    statusOf("m2", { os: "windows", protocol, executors: { codex: { version: "0.170.0" } } });
+  expect(computerBrainUnavailable("codex", "m2", windows(CODEX_WINDOWS_PROTOCOL - 1))?.code).toBe("runner_outdated");
+  expect(computerBrainUnavailable("codex", "m2", windows(CODEX_WINDOWS_PROTOCOL))).toBeNull();
+  // The same for OpenCode before OPENCODE_ACP_PROTOCOL.
+  const opencodeOn = (os: string, protocol: number) =>
+    statusOf("m2", {
+      os,
+      protocol,
+      executors: { opencode: { version: "1.19.5" }, detectedAt: new Date().toISOString() },
+    });
+  expect(computerBrainUnavailable("opencode", "m2", opencodeOn("windows", OPENCODE_ACP_PROTOCOL - 1))).toMatchObject({
+    code: "runner_outdated",
+    message: expect.stringContaining("on Windows"),
+  });
+  expect(computerBrainUnavailable("opencode", "m2", opencodeOn("windows", OPENCODE_ACP_PROTOCOL))).toBeNull();
+  expect(computerBrainUnavailable("opencode", "m2", opencodeOn("linux", OPENCODE_ACP_PROTOCOL - 1))).toBeNull();
+  expect(
+    computerBrainUnavailable(
+      "codex",
+      "m2",
+      statusOf("m2", { protocol: CODEX_WINDOWS_PROTOCOL - 1, executors: { codex: { version: "0.170.0" } } }),
+    ),
   ).toBeNull();
 });
 
@@ -1159,6 +1192,57 @@ test("Fast: the turn of a conversation asks for it; refused, the reply says it c
   await drainOutbox(f.db, handlers);
   expect(seen[1]?.speed).toBeUndefined();
   expect((await timeline(f)).at(-1)?.meta.speedFallback).toBeUndefined();
+});
+
+test("a file a computer brain's own tool made goes to the Drive and is a card on the reply", async () => {
+  f = await setup({});
+  const machineId = await computerAgent(f, { brain: "codex" });
+  const systems: string[] = [];
+  const { brain } = scriptedComputerBrain((_n, turn) => {
+    systems.push(turn.system);
+    return [
+      { type: "tool_call", id: "ig-1", name: "image_generation", input: {}, executed: { content: "Saved." } },
+      { type: "file", path: "generated-images/image-1.png" },
+      { type: "file", path: "generated-images/image-2.png" },
+      { type: "done", text: "Aqui está." },
+    ];
+  });
+  const artifactId = crypto.randomUUID();
+  const shared: { machineId: string; path: string; channelId: string }[] = [];
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { codex: () => ({ ...brain, kind: "codex" }) },
+    machines: {
+      status: async (id) =>
+        statusOf(id, {
+          protocol: MACHINE_PROTOCOL_VERSION,
+          executors: { codex: { version: "codex-cli 0.166.0" }, detectedAt: new Date().toISOString() },
+        }),
+    },
+    shareFile: async (ctx, machine, path) => {
+      shared.push({ machineId: machine, path, channelId: ctx.channelId });
+      // The second one isn't shown (the agent may not make Drive files): no card, and the run says why.
+      return path.endsWith("image-1.png")
+        ? { content: "Shown.", data: { artifact: { id: artifactId, version: 1, title: "image-1.png" } } }
+        : { content: "It isn't shown in this conversation." };
+    },
+  });
+  await post(f, "@dev faz uma imagem de um farol");
+  await drainOutbox(f.db, handlers);
+
+  expect(shared).toEqual([
+    { machineId, path: "generated-images/image-1.png", channelId: f.general.id },
+    { machineId, path: "generated-images/image-2.png", channelId: f.general.id },
+  ]);
+  // Codex is told its pictures go with its reply, under its words.
+  expect(systems[0]).toContain(CODEX_IMAGE_NOTE);
+  const reply = (await timeline(f)).at(-1);
+  expect(reply).toMatchObject({ body: "Aqui está." });
+  expect(reply?.meta.artifacts).toEqual([{ id: artifactId, version: 1, title: "image-1.png" }]);
+  const steps = await f.db.select().from(schema.agentRunSteps);
+  expect(steps.map((s) => (s.data as { fileNotShown?: { path: string } }).fileNotShown?.path).filter(Boolean)).toEqual([
+    "generated-images/image-2.png",
+  ]);
 });
 
 test("a turn says a person waits on it only in the line's first rank: not for a routine, background work, an agent or a work", async () => {

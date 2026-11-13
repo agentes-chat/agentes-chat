@@ -2193,6 +2193,15 @@
       "other": "Couldn't finish"
     }
   },
+  "activity.kind.admin_ask_channel_agent": {
+    "value": "{{names}} asks you to add {{agent}} to #{{label}}"
+  },
+  "activity.kind.admin_ask_create_agents": {
+    "value": "{{names}} asks to be able to create agents"
+  },
+  "activity.kind.admin_ask_webhook": {
+    "value": "{{names}} asks you to set up the {{service}} webhook for routines"
+  },
   "activity.kind.routine_paused": {
     "value": {
       "one": "Routine paused",
@@ -2367,6 +2376,12 @@
     "female": {
       "one": "{{names}} connected your {{plan}} plan to {{agent}}",
       "other": "{{names}} connected your {{plan}} plan to {{agent}}"
+    }
+  },
+  "activity.kind.plan_serves": {
+    "value": {
+      "one": "Your {{plan}} now serves the whole workspace",
+      "other": "Your {{plan}} now serves the whole workspace"
     }
   },
   "activity.kind.plan_model_dropped": {
@@ -3350,9 +3365,6 @@
   "memory.confirmed": {
     "value": "Confirmed by a person"
   },
-  "memory.unconfirmed": {
-    "value": "Not confirmed yet"
-  },
   "memory.confirm": {
     "value": "Confirm"
   },
@@ -3858,13 +3870,13 @@
     "value": "Computer screen"
   },
   "intentAgents.uses.asksYou": {
-    "value": "Merging and publishing always ask for your approval, at any level."
+    "value": "Merging and publishing ask for your approval, unless the agent never asks."
   },
   "intentAgents.uses.asksOwner": {
-    "value": "Merging and publishing always ask for {{name}}'s approval, at any level."
+    "value": "Merging and publishing ask for {{name}}'s approval, unless the agent never asks."
   },
   "intentAgents.uses.asksAdmins": {
-    "value": "Merging and publishing always ask for an admin's approval, at any level."
+    "value": "Merging and publishing ask for an admin's approval, unless the agent never asks."
   },
   "intentAgents.uses.empty": {
     "value": "For now, only conversation."
@@ -4886,6 +4898,9 @@
   "devices.notice.waitingFor": {
     "value": "{{names}} is waiting for {{device}} for {{person}}"
   },
+  "devices.notice.tool_request": {
+    "value": "{{names}} asks you to turn on {{tool}} on your {{device}}"
+  },
   "devices.notice.allowOnce": {
     "value": "Allow once"
   },
@@ -5517,7 +5532,10 @@
     "value": "That image is too big. Try another one."
   },
   "settings.machine.toolsHow": {
-    "value": "Tap a tool that's on to turn it off. Turning it back on happens only on the computer itself."
+    "value": "Tap a tool that's on to turn it off. To turn it back on: on the computer itself, or here by whoever connected it."
+  },
+  "settings.machine.toolsHowOwner": {
+    "value": "Tap a tool to turn it on or off."
   },
   "settings.roles.onComputer": {
     "value": "The roles' order and each role's icon change on the computer."

@@ -97,6 +97,8 @@ export const COMPOSIO_ANY_ACTION: ReadonlySet<string> = new Set([
   "COMPOSIO_PROXY_EXECUTE",
 ]);
 
+const COMPOSIO_META: ReadonlySet<string> = new Set([COMPOSIO_EXECUTOR, ...COMPOSIO_ANY_ACTION]);
+
 const COMPOSIO_SLUG = /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/;
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
@@ -681,11 +683,16 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
       suggestedAccess: cls.level,
       suggestionSource: cls.source,
       suggestionReason: cls.reason,
-      sensitive: cls.sensitive,
+      // A Composio action's hint is our own rule for it (its words, its entry's `ask`), which the tool source
+      // enforces on every call, and Composio's meta tools run any action their input names: both stay locked.
+      sensitive:
+        cls.sensitive || (tool.destructiveHint === true && (composio !== null || COMPOSIO_META.has(tool.name))),
     };
     if (old) {
       const free = old.access === "read" || old.access === "write" ? old.access : null;
       const stricter = free && old.confirmedAt === null && ACCESS.indexOf(cls.level) > ACCESS.indexOf(free);
+      // A warning the server did not send when the level was chosen asks again, unlocked: the admin may set it back.
+      const warnedNow = tool.destructiveHint === true && old.destructiveHint !== true;
       await deps.db
         .update(customTools)
         .set({
@@ -693,7 +700,11 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
           readOnlyHint: tool.readOnlyHint ?? null,
           destructiveHint: tool.destructiveHint ?? null,
           ...suggestion,
-          ...(free && cls.sensitive ? { access: "approval" } : stricter ? { access: cls.level } : {}),
+          ...(free && (suggestion.sensitive || warnedNow)
+            ? { access: "approval" }
+            : stricter
+              ? { access: cls.level }
+              : {}),
           removedAt: null,
         })
         .where(eq(customTools.id, old.id));

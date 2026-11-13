@@ -1,6 +1,6 @@
 # 0055. Imports from other apps, and our own export, through one bundle
 
-- Status: Accepted (2026-10-21). Addendum 2026-10-31: an old id handle still reaches its agent
+- Status: Accepted (2026-10-21). Addendum 2026-10-31: an old id handle still reaches its agent. Addendum 2026-11-12: private repositories through the workspace's GitHub
 - Date: 2026-10-21
 - Extends: ADR 0020 (skills), ADR 0016 (connectors), ADR 0017 (context items), ADR 0019 (SSRF guard)
 - Out of scope for now: chat history, a CLI, a scan of `~/.openclaw` / `~/.hermes` on a connected computer, the Manus API, rollback
@@ -78,6 +78,8 @@ One apply creates or updates at most 200 items (`import.too_many_items`). A big 
 ### 5. GitHub links
 
 `POST …/agent-imports/github` reads one file, or a folder with one recursive trees request (`git/trees/{ref}?recursive=1`) and then the allowlisted files only, relative to the linked folder, in this order when the caps cut: its own Markdown/JSON/YAML, `agents/` (one level of folders), `skills/` and `.agents/skills/` (Markdown up to four folders deep), `cron/jobs.json`, then `memory/` and `memories/` (newest first). Files where other apps keep keys and sign-ins (`.env*`, `auth.json`, `auth-profiles.json`, `credentials.*`, `secrets.*`, `mcp-oauth*`, `mcp-tokens*`, `cursor-session.json`) and symbolic links are never read. Caps: 200 files, 8 MB in all, 4 MB a file (the parser's limit); what doesn't fit comes back in `skipped`, not read. A truncated tree is refused. Every request keeps the SSRF guard, no redirects and 15 s.
+
+A private repository (addendum 2026-11-12): when the public read answers 404 and github.com doesn't show the repository, it is read through the workspace's GitHub, as a skill's link is (ADR 0156): the GitHub App's token for that repository, else the GitHub connection's, one archive download (50 MB), the same allowlist, limits and exclusions applied to its files. Tokens never leave the server. Only who edits any agent (`manage_agents`) reads through them; when none reads it the answer is `github.repo_missing` with the connection's state, and the import screens offer "Conectar o GitHub" to who manages connectors, then read the link again. A repository github.com shows keeps the plain refusal (the link's file, folder or ref is missing).
 
 ### 6. Our own export
 

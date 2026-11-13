@@ -21,7 +21,9 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
   const { colors } = useTheme();
   const { orgId, org } = useOrg();
   const meId = useMeId();
-  const cloud = useAuthConfig().data?.cloud === true;
+  const auth = useAuthConfig().data;
+  // Read by the agentes.chat team: on its own servers, and from one whose operator gave no address.
+  const cloud = auth?.cloud === true || auth?.feedbackRelay === true;
   const offer = m.author.type === "agent" ? feedbackOfferFor(m.meta, meId) : null;
   const decide = useFeedbackOffer(orgId, { channelId: m.channelId, threadId: m.threadId, messageId: m.id });
   const prefs = useSetChatPrefs(orgId);

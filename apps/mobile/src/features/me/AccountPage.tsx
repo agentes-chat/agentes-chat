@@ -1,5 +1,7 @@
-import { ApiError, useApi, useMe, useSettings } from "@agenteschat/client";
+import { ApiError, keys, useApi, useMe, useSettings } from "@agenteschat/client";
+import { emailChangeErrorText } from "@agenteschat/client/lib/errors";
 import { browserTimezone, zoneDisplayName } from "@agenteschat/client/lib/routines";
+import { isEmail } from "@agenteschat/client/lib/text";
 import { filterZones, type ZoneOption, zoneOptions } from "@agenteschat/ui/timezones";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -149,8 +151,8 @@ export function AccountPage() {
             style={input}
           />
         </GroupedField>
-        <GroupedField label={t("mobile.me.account.email")}>
-          <Text variant="callout" tone="faint" numberOfLines={1}>
+        <GroupedField label={t("mobile.me.account.email")} onPress={() => router.push("/me/email")}>
+          <Text variant="callout" numberOfLines={1}>
             {me.data?.user.email ?? ""}
           </Text>
         </GroupedField>
@@ -219,6 +221,100 @@ export function AccountPage() {
           <GroupedFooter>{t("deleteOrg.card.text", { name: org.org.name })}</GroupedFooter>
         </>
       ) : null}
+    </Page>
+  );
+}
+
+/**
+ * E-mail, pushed over Conta: the same account under a new address, as on the web. A link to the new one confirms it;
+ * on a server that sends no e-mail it changes at once.
+ */
+export function EmailPage() {
+  const { t } = useTranslation();
+  const me = useMe();
+  const qc = useQueryClient();
+  const c = useColors();
+  const [value, setValue] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+  const current = me.data?.user.email ?? "";
+  const send = async () => {
+    if (sending || !isEmail(value)) return;
+    setSending(true);
+    setError(null);
+    try {
+      const res = await authClient().changeEmail({ newEmail: value.trim(), callbackURL: "/" });
+      if (res.error) {
+        setError(
+          emailChangeErrorText(t, {
+            status: res.error.status ?? 400,
+            message: res.error.message ?? "",
+            ...(res.error.code ? { code: res.error.code } : {}),
+          }),
+        );
+        return;
+      }
+      setSent(value.trim());
+      await qc.invalidateQueries({ queryKey: keys.me });
+    } catch {
+      setError(t("mobile.app.failed"));
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <Page
+      title={t("shell.email.title")}
+      {...(sent
+        ? {}
+        : {
+            action: {
+              label: t("shell.email.change"),
+              disabled: sending || !isEmail(value),
+              onPress: () => void send(),
+            },
+          })}
+      locked={sending}
+    >
+      {sent ? (
+        <Text variant="callout" style={styles.error} accessibilityLiveRegion="polite">
+          {t(current.toLowerCase() === sent.toLowerCase() ? "shell.email.changed" : "shell.email.sent", {
+            email: sent,
+          })}
+        </Text>
+      ) : (
+        <>
+          <GroupedList>
+            <GroupedField label={t("shell.email.new")}>
+              <TextInput
+                value={value}
+                onChangeText={(v) => {
+                  setValue(v);
+                  setError(null);
+                }}
+                placeholder={current}
+                placeholderTextColor={c.faint}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                returnKeyType="done"
+                onSubmitEditing={() => void send()}
+                accessibilityLabel={t("shell.email.new")}
+                style={[fieldText("callout"), styles.input, { color: c.ink }]}
+              />
+            </GroupedField>
+          </GroupedList>
+          <GroupedFooter>{t("shell.email.help")}</GroupedFooter>
+          {error ? (
+            <Text variant="footnote" tone="danger" style={styles.error} accessibilityLiveRegion="polite">
+              {error}
+            </Text>
+          ) : null}
+        </>
+      )}
     </Page>
   );
 }

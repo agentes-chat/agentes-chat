@@ -1,6 +1,7 @@
 import {
   type InvitationWithStatus,
   type Person,
+  type RemovalPreview,
   useAllInvitations,
   useApi,
   useCancelSuggestion,
@@ -25,6 +26,7 @@ import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Locked, PersonAvatar, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
+import { openAgentAi } from "../ai/AgentAiScreen";
 import { Page } from "../me/parts";
 import { useOpenDm } from "../new/useOpenDm";
 import { chooseAction } from "../settings/parts";
@@ -170,8 +172,9 @@ function useRemoveFlow() {
   return async (m: Person) => {
     const mine = m.userId === meId;
     let lines: string[];
+    let preview: RemovalPreview;
     try {
-      const preview = await qc.fetchQuery({
+      preview = await qc.fetchQuery({
         queryKey: ["org", orgId, "removal", m.userId],
         queryFn: () => api.orgs.removal(orgId, m.userId),
         staleTime: 0,
@@ -184,10 +187,12 @@ function useRemoveFlow() {
       try {
         await remove.mutateAsync(m.userId);
         successHaptic();
+        const lost = mine ? undefined : preview.losePlan[0];
         toast({
           title: mine
             ? t("members.remove.left", { org: orgName })
             : t("members.remove.done", { name: m.name, org: orgName }),
+          ...(lost ? { action: { label: t("usageCard.chooseBrain"), onPress: () => openAgentAi(lost.id) } } : {}),
         });
         if (mine) router.replace("/");
       } catch (e) {

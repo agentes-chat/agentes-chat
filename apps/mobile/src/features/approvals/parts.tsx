@@ -9,7 +9,13 @@ import {
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
 import { approvalOriginShort, approvalOriginWords } from "@agenteschat/client/lib/approval-origin";
 import { approvalEffects } from "@agenteschat/client/lib/approval-review";
-import { alwaysRoutineName, approvalDoing, approvalTitle } from "@agenteschat/client/lib/approval-words";
+import {
+  alwaysRoutineName,
+  approvalDoing,
+  approvalLetter,
+  approvalLetterTo,
+  approvalTitle,
+} from "@agenteschat/client/lib/approval-words";
 import { fromServer, itemName } from "@agenteschat/client/lib/connected";
 import { nextLabel } from "@agenteschat/client/lib/format";
 import { connectorName } from "@agenteschat/client/lib/scopes";
@@ -19,7 +25,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Button, Chip, Fuse, haptics, LineIcon, Text, useToast } from "@/ui";
+import { Button, Chip, Fuse, haptics, Text, useToast } from "@/ui";
 import { useInfoHint } from "@/ui/InfoHint";
 import { router } from "@/ui/navigation";
 import { parseInline } from "../chat/logic";
@@ -262,6 +268,8 @@ export function ApprovalMark({
  */
 export function ApprovalPreview({ approval: a }: { approval: Approval }) {
   const { t } = useTranslation();
+  const letter = approvalLetter(a);
+  if (letter) return <ApprovalLetter letter={letter} />;
   if (!a.email) return null;
   return (
     <View style={styles.previewMail}>
@@ -282,7 +290,33 @@ export function ApprovalPreview({ approval: a }: { approval: Approval }) {
   );
 }
 
-export const hasApprovalPreview = (a: Approval) => Boolean(a.email);
+export const hasApprovalPreview = (a: Approval) => Boolean(a.email || approvalLetter(a));
+
+/**
+ * A connector's message (`approvalLetter`): its subject, to whom, the first three lines of its text; the whole call
+ * under "Ver detalhes".
+ */
+export function ApprovalLetter({ letter }: { letter: NonNullable<ReturnType<typeof approvalLetter>> }) {
+  const { t } = useTranslation();
+  const to = approvalLetterTo(t, letter);
+  return (
+    <View style={styles.previewMail}>
+      {letter.subject ? (
+        <Text variant="subhead" tone="ink" style={styles.medium}>
+          {letter.subject}
+        </Text>
+      ) : null}
+      {to ? (
+        <Text variant="footnote" tone="muted">
+          {to}
+        </Text>
+      ) : null}
+      <Text variant="small" tone="ink2" style={[styles.said, styles.previewBody]} numberOfLines={3}>
+        {letter.body}
+      </Text>
+    </View>
+  );
+}
 
 /**
  * The email an approval writes, as it will be: its subject in bold, then De (the mailbox and its provider), Para,
@@ -370,7 +404,6 @@ export function ApprovalEmailLetter({
             !flat && { backgroundColor: c.sunken },
           ]}
         >
-          <LineIcon name="reply" size={13} color={c.muted} variant="footnote" />
           <Text variant="footnote" tone="muted" style={styles.grow}>
             {answers}
           </Text>
@@ -492,20 +525,17 @@ export function ApprovalWhy({
   name: string;
 }) {
   const { t } = useTranslation();
-  const c = useColors();
   const said = approvalSaid(a);
   const origin = approvalOriginWords(a);
   if (!said && !origin) return null;
   const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
   return (
     <View style={styles.why}>
+      {/* No icon before it: these words wrap, and an icon would set them in from the title and the quote. */}
       {origin ? (
-        <View style={styles.origin}>
-          <LineIcon name="clock" size={13} color={c.muted} variant="footnote" />
-          <Text variant="footnote" tone="muted" style={styles.grow}>
-            {tt(origin.key, origin.values)}
-          </Text>
-        </View>
+        <Text variant="footnote" tone="muted">
+          {tt(origin.key, origin.values)}
+        </Text>
       ) : null}
       {said ? (
         <Text variant="small" tone="ink2" style={styles.said}>
@@ -523,15 +553,12 @@ export function ApprovalAheadLine({
   approval: Pick<Approval, "runAt" | "status" | "executedAt" | "decidedAt">;
 }) {
   const { t, i18n } = useTranslation();
-  const c = useColors();
   if (aheadPhase(a) !== "asking" || !a.runAt) return null;
+  // No icon before it: the sentence wraps, and an icon would set it in from the words around it.
   return (
-    <View style={styles.origin}>
-      <LineIcon name="clock" size={15} color={c.ink2} variant="small" />
-      <Text variant="small" tone="ink" style={[styles.grow, styles.medium]}>
-        {t("approval.ahead.line", { when: nextLabel(i18n.language, a.runAt) })}
-      </Text>
-    </View>
+    <Text variant="small" tone="ink" style={styles.medium}>
+      {t("approval.ahead.line", { when: nextLabel(i18n.language, a.runAt) })}
+    </Text>
   );
 }
 
@@ -625,7 +652,6 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   said: { lineHeight: 20 },
   why: { gap: 4 },
-  origin: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   fuse: { flexDirection: "row", alignItems: "center", gap: 10 },
   letter: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, borderBottomLeftRadius: 6, overflow: "hidden" },
   letterHead: { gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },

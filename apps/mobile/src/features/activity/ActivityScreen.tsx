@@ -51,6 +51,7 @@ import { DeviceNoticeActions, DeviceNoticeCard } from "../devices/notices";
 import { notificationHref, notificationWebPath, routineHref } from "../links/logic";
 import { openWebPath } from "../links/open-web";
 import { ChangeRequestCard } from "../right-hand/SettingsCard";
+import { AdminAskAdd } from "../shared/AdminAsk";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useDirectory, useNow, useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
 import { Tile } from "../shared/parts";
@@ -556,6 +557,12 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
       {isDeviceNotice(n.kind) ? (
         <View style={styles.change}>
           <DeviceNoticeActions item={n} />
+        </View>
+      ) : null}
+      {/* Someone asks to add an agent to a channel: added right here. */}
+      {n.kind === "admin_ask" && n.latest.reason === "channel_agent" && !n.doneAt ? (
+        <View style={styles.change}>
+          <AdminAskAdd n={n} />
         </View>
       ) : null}
       {/* A person asks for more (ADR 0141): raised or refused right here. */}

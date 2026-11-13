@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { OrgSummary } from "@agenteschat/client";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { Me, OrgSummary } from "@agenteschat/client";
 import { workspacesBeyond } from "../src/features/me/logic";
 import { orderedServers, unreadElsewhere, workspacesOf } from "../src/features/me/workspaces-logic";
-import { newWorkspaceMade } from "../src/lib/new-workspace";
+import { newWorkspaceMade, offersNewWorkspaceHere } from "../src/lib/new-workspace";
 import { readPushData } from "../src/lib/push-payload";
 import {
   claimedPrefixes,
@@ -171,6 +173,21 @@ describe("Workspaces", () => {
     expect(newWorkspaceMade({ server: cloud, from: "a" }, "a")).toBe(false);
     expect(newWorkspaceMade({ server: cloud, from: "a" }, "new")).toBe(true);
     expect(newWorkspaceMade({ server: cloud, from: null }, "new")).toBe(true);
+  });
+
+  test("Adicionar workspace on a server of one's own makes one there first, when the person may", () => {
+    const me = (canCreateWorkspace?: boolean) => ({ user: { canCreateWorkspace } }) as Me;
+    expect(offersNewWorkspaceHere(box, me(true))).toBe(true);
+    // An older server doesn't say: it may.
+    expect(offersNewWorkspaceHere(box, me())).toBe(true);
+    expect(offersNewWorkspaceHere(box, me(false))).toBe(false);
+    expect(offersNewWorkspaceHere(box, undefined)).toBe(false);
+    // On agentes.chat its own row makes one there.
+    expect(offersNewWorkspaceHere(cloud, me(true))).toBe(false);
+    const sheet = readFileSync(join(import.meta.dir, "../src/features/me/WorkspacesPages.tsx"), "utf8");
+    expect(sheet).toContain("{offersNewWorkspaceHere(server, me) ? (");
+    expect(sheet).toContain('label={t("shell.newWorkspace")}');
+    expect(sheet).toContain("askNewWorkspace(server);");
   });
 });
 

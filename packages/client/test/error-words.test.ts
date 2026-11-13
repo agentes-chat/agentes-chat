@@ -397,6 +397,8 @@ const PLAIN_LINE = new Set([
   "account.invalid_kind",
   "account.invalid_label",
   "account.invalid_plan",
+  // "Quem usa" offers only Todos and Só eu: another value is a client fault.
+  "account.invalid_serves",
   // A workspace change's card offers Apply, Dismiss and Send on only to whom may (`mayApplyCard`).
   "action_card.not_allowed",
   "action_card.not_requester",

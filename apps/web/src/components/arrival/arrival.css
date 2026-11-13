@@ -577,16 +577,17 @@
   font-size: 14px;
 }
 
-/* What is already connected. A row: the radio, the mark, the name and how full the plan is on one line; who else
-   thinks with it and its state in words under the name. */
+/* What is already connected. A row: the mark, the name and how full the plan is on one line; who else thinks with it
+   and its state in words under the name. Its radio is hidden: the border alone marks the one picked. */
 .arrival-have {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .arrival-have__row {
+  position: relative;
   display: grid;
-  grid-template-columns: 18px 20px minmax(0, 1fr) auto;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
   column-gap: 12px;
   align-items: start;
   padding: 12px 14px;
@@ -596,20 +597,39 @@
   cursor: pointer;
 }
 .arrival-have__row[data-state="checked"] {
-  box-shadow: inset 0 0 0 2px var(--ink);
+  --have-chosen: inset 0 0 0 2px var(--ink);
+  box-shadow: var(--have-chosen);
 }
 .arrival-have__row[data-disabled] {
   opacity: 0.55;
   cursor: default;
 }
+/* Out of sight and out of the grid, still the row's keyboard stop and its state for screen readers. */
 .arrival-have__row > .ac-radio {
-  margin-top: 1px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+html:not([data-pointer]) .arrival-have__row:has(.ac-radio:focus-visible) {
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    var(--field-ring);
+}
+html:not([data-pointer]) .arrival-have__row[data-state="checked"]:has(.ac-radio:focus-visible) {
+  box-shadow: var(--have-chosen), var(--field-ring);
 }
 .arrival-have__row > .ac-brand,
 .arrival-have__mark {
   width: 20px;
   height: 20px;
 }
+/* A key's glyph drawn 16px inside the marks' 20px box: its icon is sized 20 (`ConnectHave`), the padding takes 2. */
 .arrival-have__mark {
   padding: 2px;
   box-sizing: border-box;

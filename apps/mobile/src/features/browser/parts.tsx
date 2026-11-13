@@ -355,6 +355,8 @@ export function AddressBar({
 export interface LiveState {
   frame: BrowserFrame | null;
   unavailable: Unavailable;
+  /** The computer's own words with `unavailable` (why it couldn't start the browser). */
+  message: string | null;
   controllerUserId: string | null;
   /** The handoff the last status carried (undefined until a status arrives). */
   handoff: { controllerUserId: string | null } | null | undefined;
@@ -380,6 +382,7 @@ export function useLiveConnection(agentId: string, enabled: boolean, maxFps?: nu
   const connection = useConnection();
   const [frame, setFrame] = useState<BrowserFrame | null>(null);
   const [unavailable, setUnavailable] = useState<Unavailable>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [controllerUserId, setControllerUserId] = useState<string | null>(null);
   const [handoff, setHandoff] = useState<{ controllerUserId: string | null } | null | undefined>(undefined);
   const [hidden, setHidden] = useState(false);
@@ -412,7 +415,10 @@ export function useLiveConnection(agentId: string, enabled: boolean, maxFps?: nu
         // What the person in control does isn't ours to keep on screen either.
         if (st.hidden) setFrame(null);
       },
-      onUnavailable: (reason) => setUnavailable(reason),
+      onUnavailable: (reason, words) => {
+        setUnavailable(reason);
+        setMessage(words ?? null);
+      },
       onEnded: () => setUnavailable("ended"),
       onError: (code) => {
         if (code === "forbidden" || code === "not_found") setUnavailable("forbidden");
@@ -457,7 +463,7 @@ export function useLiveConnection(agentId: string, enabled: boolean, maxFps?: nu
     liveRef.current?.sendInput(events);
   }, []);
   const retry = useCallback(() => liveRef.current?.retry(), []);
-  return { frame, unavailable, controllerUserId, handoff, hidden, sendInput, retry, online, lost };
+  return { frame, unavailable, message, controllerUserId, handoff, hidden, sendInput, retry, online, lost };
 }
 
 /** The field's height and its round buttons: the send button sits concentric in its pill end. */

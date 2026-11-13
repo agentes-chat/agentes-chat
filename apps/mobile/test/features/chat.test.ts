@@ -245,6 +245,10 @@ describe("what a message carries", () => {
       { id: "f1", version: 2, title: "Relatório", deleted: false },
       { id: "f2", title: "", deleted: true },
     ]);
+    // A picture's size, when the server read it, rides along.
+    expect(
+      artifactsOf({ artifacts: [{ id: "p1", version: 1, title: "farol.png", width: 1024, height: 1536 }] }),
+    ).toEqual([{ id: "p1", version: 1, title: "farol.png", deleted: false, width: 1024, height: 1536 }]);
   });
 });
 

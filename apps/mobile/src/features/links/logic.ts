@@ -254,6 +254,7 @@ export function notificationHref(
   if (n.kind === "plan_model_dropped") return isSafeId(s.agentId) ? `/agent-model/${s.agentId}` : null;
   // Someone gave an agent the person's plan: their AI accounts, where the agents on each plan are.
   if (n.kind === "plan_lent") return "/ai-accounts";
+  if (n.kind === "plan_serves") return "/usage";
   // What an AI app created as the person: the newest agent, else the newest routine.
   if (n.kind === "app_created")
     return isSafeId(s.agentId) ? `/agent/${s.agentId}` : s.routineId ? routineHref(s.routineId) : null;

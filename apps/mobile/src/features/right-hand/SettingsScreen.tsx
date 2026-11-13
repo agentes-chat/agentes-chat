@@ -5,7 +5,6 @@ import {
   keys,
   useAgentBrain,
   useApi,
-  useMachines,
   useModelLabel,
   usePlatformKey,
   useRoles,
@@ -18,9 +17,9 @@ import { agentsReach, audienceOf, audiencePatch } from "@agenteschat/client/lib/
 import { modelRows } from "@agenteschat/client/lib/brain-picker";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
-import { accountPlan, brainPlan, planReplies } from "@agenteschat/client/lib/plans";
+import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO } from "@agenteschat/client/lib/providers";
-import { mineStatus, RIGHT_HAND_POWERS, rightHandOf } from "@agenteschat/client/lib/right-hand";
+import { mineStatus, RIGHT_HAND_POWERS, rightHandNoComputer, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { dayText, hourText, teamWeekOn } from "@agenteschat/client/lib/team-week";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
@@ -69,9 +68,8 @@ export const openRightHandSettings = () => router.push("/settings/right-hand" as
  */
 export function RightHandSettingsScreen() {
   const { t } = useTranslation();
-  const { org, orgId } = useOrg();
+  const { org } = useOrg();
   const agent = rightHandOf(useDirectory().agents);
-  const hasComputer = (useMachines(orgId).data ?? []).some((m) => m.agents.some((a) => a.id === agent?.id));
   if (!agent)
     return (
       <SettingsPage title={t("settings.section.right_hand")}>
@@ -80,7 +78,7 @@ export function RightHandSettingsScreen() {
     );
   return (
     <SettingsPage title={agent.name} subtitle={t("rightHand.label")}>
-      {hasComputer ? <Computer agentId={agent.id} /> : null}
+      <Computer agentId={agent.id} />
       <GroupTitle>{t("rightHand.settings.groupMine")}</GroupTitle>
       <GroupedHeader>{t("rightHand.settings.mine")}</GroupedHeader>
       <RightHandMine agent={agent} />
@@ -121,25 +119,32 @@ function GroupTitle({ children, note }: { children: string; note?: string }) {
 }
 
 /**
- * "Computador", once the right hand has one of its own: the row opens the computer every agent's profile opens, for
- * whoever may watch it.
+ * "Computador": the row opens the computer every agent's profile opens, which for the right hand is the viewer's own
+ * seat on the workspace's computer and nobody else's. Where it has none for anyone (the workspace has no computer of
+ * its own, or one that can't keep people apart) the row stays and says why, with nothing to open.
  */
 function Computer({ agentId }: { agentId: string }) {
   const { t } = useTranslation();
   const view = useAgentComputer(agentId);
   if (view.forbidden || !view.ready || !view.facts) return null;
+  const none = rightHandNoComputer(view.desktopQ.data?.reason);
   return (
     <>
       <Gap />
       <GroupedList>
-        <GroupedRow
-          icon="laptop"
-          label={t("agentComputer.button")}
-          {...(view.machine ? { sub: view.machine.name } : {})}
-          chevron
-          onPress={() => openComputer(agentId)}
-        />
+        {none ? (
+          <GroupedRow icon="laptop" label={t("agentComputer.button")} />
+        ) : (
+          <GroupedRow
+            icon="laptop"
+            label={t("agentComputer.button")}
+            {...(view.machine ? { sub: view.machine.name } : {})}
+            chevron
+            onPress={() => openComputer(agentId)}
+          />
+        )}
       </GroupedList>
+      <GroupedFooter>{t(none ?? "rightHand.computerYours")}</GroupedFooter>
     </>
   );
 }
@@ -285,7 +290,6 @@ function WorkspaceAi({ agent, dir }: { agent: Agent; dir: Directory }) {
   const kind = agent.brain && agent.brain.kind !== "model" ? agent.brain.kind : null;
   const signIn = view?.accounts.find((a) => a.id === view.account);
   const key = view?.workspaceAi?.key;
-  const { solo } = usePersonalView();
   const [busy, setBusy] = useState(false);
   const set = (input: AgentBrainInput) => {
     setBusy(true);
@@ -339,11 +343,7 @@ function WorkspaceAi({ agent, dir }: { agent: Agent; dir: Directory }) {
     if (plan && plan.id !== view?.account) set({ brain: plan.kind, account: plan.id });
   };
   const owner = theirs(signIn?.ownerId);
-  const on = view ? !view.onlyOwner : false;
   const g = agentGrammar(agent.name);
-  const terms = kind
-    ? planReplies(t, { on: false, agent: null, brain: kind, plan: signIn?.plan, coding: accountPlan(signIn) })
-    : null;
   return (
     <>
       <GroupedList>
@@ -393,23 +393,6 @@ function WorkspaceAi({ agent, dir }: { agent: Agent; dir: Directory }) {
         <PlanHoldNote org={org} />
       ) : plans.length === 0 ? (
         <GroupedFooter>{t("rightHand.settings.noPlans", g)}</GroupedFooter>
-      ) : null}
-      {kind && view && !solo ? (
-        <>
-          <Gap />
-          <GroupedList>
-            <GroupedRow
-              icon="members"
-              label={t("rightHand.settings.lend")}
-              labelLines={2}
-              // The plan's own terms on lending it, as an agent's plan says them everywhere.
-              {...(terms ? { hint: { name: terms.about, text: terms.text } } : {})}
-              toggle={on}
-              disabled={!view.canEdit || busy}
-              onPress={() => set({ onlyOwner: on })}
-            />
-          </GroupedList>
-        </>
       ) : null}
     </>
   );

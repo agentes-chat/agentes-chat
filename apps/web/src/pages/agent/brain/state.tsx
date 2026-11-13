@@ -298,7 +298,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   const all = models.data?.models ?? [];
   const apiProvider = apiProviderOf(saved.model, all);
   const keyMark = (provider: string | undefined) =>
-    provider ? <ProviderLogo id={provider} size="xs" /> : <Icon name="key" size={16} className="arrival-have__mark" />;
+    provider ? <ProviderLogo id={provider} size="xs" /> : <Icon name="key" size={20} className="arrival-have__mark" />;
   const keysGroup = { key: "keys", label: t("connectAi.chat.keys") };
   const keyCurrent = saved.key ?? DEFAULT_KEY;
   const keyRow = (keyId: string | undefined, title: string, about: string | undefined, provider?: string): BrainRow => {
@@ -370,7 +370,11 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   });
   const planRows = cards.filter((c) => c !== "key" && !accountsOn(c) && homeOf(c)).map((c) => planRow(c));
 
-  const every = [...accountRows, ...ownRows, ...keyRows, ...planRows];
+  // Its AI, for the switch screen's groups ("Trocar a conta" by AI, not by person): a plan by its name, keys together.
+  const apiKeys = { key: "keys", label: t("connectAi.chat.apiKeys") };
+  const every = [...accountRows, ...ownRows, ...keyRows, ...planRows].map(
+    (r): BrainRow => ({ ...r, ai: r.choice === "key" ? apiKeys : { key: r.choice, label: planLabel(t, r.choice) } }),
+  );
   // What it thinks with now always has its row, even when nothing of that plan is listed (no sign-in there yet).
   const currentRow =
     every.find((r) => r.current) ??

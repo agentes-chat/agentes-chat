@@ -48,7 +48,8 @@ const MB = 1024 * 1024;
 /** How long the agent keeps taking notes after the last key, and its stars after the form is sent. */
 const NOTING_MS = 900;
 const STARS_MS = 1600;
-const ACCEPT = "image/png,image/jpeg,image/gif,image/webp,image/heic,video/mp4,video/quicktime,video/webm";
+const ACCEPT_PICTURES = "image/png,image/jpeg,image/gif,image/webp,image/heic";
+const ACCEPT = `${ACCEPT_PICTURES},video/mp4,video/quicktime,video/webm`;
 
 const ENVELOPE = [
   "###########",
@@ -106,7 +107,10 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
   const dir = useDirectory(org.id);
   const status = useAiStatus(org.id);
   const connection = useConnectionStatus();
-  const cloud = useAuthConfig().data?.cloud === true;
+  const config = useAuthConfig().data;
+  // Read by the agentes.chat team: on its own servers, and from one whose operator gave no address (pictures only).
+  const relay = config?.feedbackRelay === true;
+  const team = config?.cloud === true || relay;
   const where = useRouterState({ select: (s) => s.location.pathname });
   const route = useRouterState({ select: (s) => s.matches.at(-1)?.routeId ?? "" });
   const params = useRouterState({ select: (s) => JSON.stringify(s.matches.at(-1)?.params ?? {}) });
@@ -148,24 +152,30 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
     [api],
   );
 
-  const refuse = (key: "feedback.fileType" | "feedback.fileTooLarge" | "feedback.fileTooMany", file?: File, mb = 0) =>
-    toast.show(t(key, { name: file?.name ?? "", mb, images: FILE_LIMITS.images }), "error");
+  const refuse = (key: "type" | "large" | "many", file?: File, mb = 0) => {
+    const said = {
+      type: relay ? "feedback.photoType" : "feedback.fileType",
+      large: "feedback.fileTooLarge",
+      many: relay ? "feedback.photosTooMany" : "feedback.fileTooMany",
+    } as const;
+    toast.show(t(said[key], { name: file?.name ?? "", mb, images: FILE_LIMITS.images }), "error");
+  };
   const add = (list: File[]) => {
     let images = files.filter((f) => f.kind === "image").length;
     let videos = files.filter((f) => f.kind === "video").length;
     for (const file of list) {
       const kind = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null;
-      if (!kind) {
-        refuse("feedback.fileType");
+      if (!kind || (relay && kind === "video")) {
+        refuse("type");
         continue;
       }
       const mb = kind === "image" ? FILE_LIMITS.imageMb : FILE_LIMITS.videoMb;
       if (file.size > mb * MB) {
-        refuse("feedback.fileTooLarge", file, mb);
+        refuse("large", file, mb);
         continue;
       }
       if (kind === "image" ? images >= FILE_LIMITS.images : videos >= FILE_LIMITS.videos) {
-        refuse("feedback.fileTooMany");
+        refuse("many");
         break;
       }
       if (kind === "image") images++;
@@ -179,8 +189,8 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
           setFiles((all) => all.filter((f) => f.key !== key));
           if (preview) URL.revokeObjectURL(preview);
           const code = error instanceof ApiError ? error.code : "";
-          if (code === "feedback.file_type") refuse("feedback.fileType");
-          else if (code === "feedback.file_too_large") refuse("feedback.fileTooLarge", file, mb);
+          if (code === "feedback.file_type") refuse("type");
+          else if (code === "feedback.file_too_large") refuse("large", file, mb);
           else toast.show(errorText(t, error), "error");
         },
       );
@@ -281,7 +291,7 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
         <p className="arrival-lede__text">
           {sent
             ? t("feedback.reply", { email: me.user.email })
-            : t(cloud ? "feedback.goesCloud" : "feedback.goesServer")}
+            : t(team ? "feedback.goesCloud" : "feedback.goesServer")}
         </p>
       </div>
       {sent ? (
@@ -391,22 +401,24 @@ export function FeedbackDialog({ reported, onClose }: { reported: Reported | nul
                 type="file"
                 hidden
                 multiple
-                accept={ACCEPT}
+                accept={relay ? ACCEPT_PICTURES : ACCEPT}
                 onChange={(e) => {
                   add([...(e.target.files ?? [])]);
                   e.target.value = "";
                 }}
               />
               <Button type="button" variant="ghost" size="sm" icon="attach" onClick={() => picker.current?.click()}>
-                {t("feedback.attach")}
+                {t(relay ? "feedback.attachPhoto" : "feedback.attach")}
               </Button>
               <span className="arrival-feedback__limits">
-                {t("feedback.filesHint", {
-                  images: FILE_LIMITS.images,
-                  imageMb: FILE_LIMITS.imageMb,
-                  videoMb: FILE_LIMITS.videoMb,
-                  days: FILE_LIMITS.days,
-                })}
+                {relay
+                  ? t("feedback.photosHint", { images: FILE_LIMITS.images, imageMb: FILE_LIMITS.imageMb })
+                  : t("feedback.filesHint", {
+                      images: FILE_LIMITS.images,
+                      imageMb: FILE_LIMITS.imageMb,
+                      videoMb: FILE_LIMITS.videoMb,
+                      days: FILE_LIMITS.days,
+                    })}
               </span>
             </div>
           </DialogBody>

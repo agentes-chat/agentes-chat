@@ -367,7 +367,7 @@ describe("import", () => {
       forAgentId,
     });
     expect(await on()).toEqual(["deploy", "review"]);
-    // An agent gone, archived or the right hand: the install still stands, on for nobody, and nothing to hear.
+    // An agent gone or archived: the install still stands, on for nobody, and nothing to hear.
     const url = "https://github.com/acme/skills/tree/main/relatorio-semanal";
     const [lodi] = await f.db
       .select({ id: schema.agents.id })
@@ -375,13 +375,17 @@ describe("import", () => {
       .where(and(eq(schema.agents.orgId, f.org.id), eq(schema.agents.builtin, RIGHT_HAND)));
     await f.db.update(schema.agents).set({ archivedAt: new Date() }).where(eq(schema.agents.id, f.agent.id));
     told.length = 0;
-    for (const agentId of [crypto.randomUUID(), f.agent.id, lodi?.id ?? ""])
+    for (const agentId of [crypto.randomUUID(), f.agent.id])
       expect(await importSkillFromUrl(deps, f.owner.id, f.org.id, url, { forAgentId: agentId })).toMatchObject({
         name: "relatorio-semanal",
       });
     expect(await on()).toEqual(["deploy", "review"]);
     expect(await on(lodi?.id)).toEqual([]);
     expect(told).toEqual([]);
+    // The right hand loads skills like any agent: from its own card, what installs goes on for it.
+    await importSkillFromUrl(deps, f.owner.id, f.org.id, url, { forAgentId: lodi?.id });
+    expect(await on(lodi?.id)).toEqual(["relatorio-semanal"]);
+    expect(told).toEqual(["agents.changed"]);
   });
 
   test("from a link or a pick, a removed skill's name comes back on for none of its old agents; the list says so", async () => {

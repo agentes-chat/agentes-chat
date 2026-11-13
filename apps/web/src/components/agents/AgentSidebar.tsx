@@ -30,22 +30,13 @@ import { usageShown } from "@agenteschat/client/lib/plan-usage";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { siteHost } from "@agenteschat/client/lib/secret-requests";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
-import {
-  BrainIcon,
-  Button,
-  ComputerPortrait,
-  GroupHeading,
-  Icon,
-  InfoHint,
-  PresenceBadge,
-  ProviderLogo,
-  Switch,
-} from "@agenteschat/ui";
+import { Button, ComputerPortrait, GroupHeading, Icon, InfoHint, PresenceBadge, Switch } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { usd } from "@/components/AgentFields";
+import { ModelPickerButton } from "@/components/ai/ModelPicker";
 import { stepText } from "@/components/browser/BrowserCard";
 import { useAgentComputer } from "@/components/computer/facts";
 import { useOpenComputer } from "@/components/computer/open";
@@ -417,9 +408,8 @@ function ThinksSection({ agent }: { agent: Agent }) {
         {thinks?.text && (
           <div>
             <dt>{t("agentSide.thinksWith")}</dt>
-            <dd className="ac-iconline">
-              {thinks.mark ? <ProviderLogo id={thinks.mark} size="xs" /> : <BrainIcon kind={thinks.kind} size={14} />}
-              {thinks.text}
+            <dd>
+              <ModelPickerButton agent={agent} size="row" />
               {agent.brain?.speed && ` · ${t("agentPage.work.brain.speeds.fast")}`}
             </dd>
           </div>

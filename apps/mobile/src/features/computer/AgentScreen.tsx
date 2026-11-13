@@ -73,7 +73,6 @@ import { TypeBar } from "../browser/parts";
 import { useFinishHandoff } from "../browser/useFinishHandoff";
 import { AskButtons, AskCard, AskFoot, ExpiryLine } from "../chat/asks";
 import { mayStopRun } from "../chat/logic";
-import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { successHaptic, tapHaptic } from "../shared/parts";
@@ -1457,7 +1456,6 @@ function Watching({
           ) : (
             <Composer
               placeholder={t("agentComputer.phone.message", { name })}
-              face={<AgentFace agentId={agentId} size={22} live={false} />}
               working={
                 atWork ? (mayStop ? { stop: { label: t("mobile.chat.stopAgent", { name }), onStop: stop } } : {}) : null
               }

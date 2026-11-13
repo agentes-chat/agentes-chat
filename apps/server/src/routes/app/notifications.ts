@@ -1,5 +1,6 @@
 import { SCREEN_KINDS } from "@agenteschat/adapters";
 import {
+  askAdmins,
   listNotifications,
   markAllNotificationsRead,
   markNotificationDone,
@@ -324,6 +325,30 @@ export function notificationRoutes(deps: AppDeps) {
       const { category, on } = c.req.valid("json");
       return c.json(await setNoticePref(db, orgId, c.get("user").id, category, on), 200);
     },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/admin-asks",
+      tags,
+      security,
+      summary: '"Pedir a um admin": an inbox row for whoever may do it, which does it or opens where it is done',
+      description:
+        "`channel_agent` (`channelId`, `agentId`): who manages channels, an Adicionar on the row, done once the agent is added. `create_agents`: who gives roles. `webhook` (`provider`): who sets up connectors. Refused: `admin_ask.self` (409) to someone who may do it.",
+      request: {
+        params: OrgParams,
+        body: body(
+          z.discriminatedUnion("what", [
+            z.object({ what: z.literal("channel_agent"), channelId: z.uuid(), agentId: z.uuid() }),
+            z.object({ what: z.literal("create_agents") }),
+            z.object({ what: z.literal("webhook"), provider: z.enum(["github", "sentry"]) }),
+          ]),
+        ),
+      },
+      responses: { 200: json(z.object({ sent: z.number().int() })), ...errors },
+    }),
+    async (c) => c.json(await askAdmins(nd, c.get("user").id, c.req.valid("param").orgId, c.req.valid("json")), 200),
   );
 
   return app;

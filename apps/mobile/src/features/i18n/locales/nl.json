@@ -918,6 +918,9 @@
       "routine_failed_other": "Routines mislukt",
       "run_failed_one": "Kon niet afronden",
       "run_failed_other": "Kon niet afronden",
+      "admin_ask_channel_agent": "{{names}} vraagt je {{agent}} toe te voegen aan #{{label}}",
+      "admin_ask_create_agents": "{{names}} vraagt om agents te mogen maken",
+      "admin_ask_webhook": "{{names}} vraagt je de {{service}}-webhook voor routines in te stellen",
       "routine_paused_one": "Routine gepauzeerd",
       "routine_paused_other": "Routines gepauzeerd",
       "routine_stalled_one": "Routine wacht op de computer",
@@ -978,6 +981,8 @@
       "plan_lent_other": "{{names}} hebben je {{plan}}-abonnement aan {{agent}} gekoppeld",
       "plan_lent_female_one": "{{names}} heeft je {{plan}}-abonnement aan {{agent}} gekoppeld",
       "plan_lent_female_other": "{{names}} hebben je {{plan}}-abonnement aan {{agent}} gekoppeld",
+      "plan_serves_one": "Je {{plan}} bedient nu de hele workspace",
+      "plan_serves_other": "Je {{plan}} bedient nu de hele workspace",
       "plan_model_dropped_one": "{{model}} is uit {{plan}} gehaald. {{names}} gebruikt voorlopig {{runs}}",
       "plan_model_dropped_other": "{{model}} is uit {{plan}} gehaald. {{names}} gebruikt voorlopig {{runs}}",
       "computer_disk_full_one": "De schijf van een computer is bijna vol",
@@ -1362,7 +1367,6 @@
     "uses_one": "{{count}} keer gebruikt",
     "uses_other": "{{count}} keer gebruikt",
     "confirmed": "Bevestigd door een persoon",
-    "unconfirmed": "Nog niet bevestigd",
     "confirm": "Bevestigen",
     "confirmedToast": "Bevestigd",
     "details": "Technische details",
@@ -1575,9 +1579,9 @@
         "setup": "Werkruimte instellen",
         "desktop": "Scherm van de computer"
       },
-      "asksYou": "Mergen en publiceren vragen altijd om jouw goedkeuring, op elk niveau.",
-      "asksOwner": "Mergen en publiceren vragen altijd om goedkeuring van {{name}}, op elk niveau.",
-      "asksAdmins": "Mergen en publiceren vragen altijd om goedkeuring van een beheerder, op elk niveau.",
+      "asksYou": "Mergen en publiceren vragen om jouw goedkeuring, tenzij de agent nooit vraagt.",
+      "asksOwner": "Mergen en publiceren vragen om goedkeuring van {{name}}, tenzij de agent nooit vraagt.",
+      "asksAdmins": "Mergen en publiceren vragen om goedkeuring van een beheerder, tenzij de agent nooit vraagt.",
       "empty": "Voorlopig alleen gesprekken."
     }
   },
@@ -1986,6 +1990,7 @@
       "access_requestFor": "{{names}} vraagt om {{device}} te gebruiken voor {{person}}",
       "waiting": "{{names}} wacht op {{device}}",
       "waitingFor": "{{names}} wacht op {{device}} voor {{person}}",
+      "tool_request": "{{names}} vraagt je {{tool}} aan te zetten op je {{device}}",
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",
@@ -2248,7 +2253,8 @@
       "tooBig": "Die afbeelding is te groot. Probeer een andere."
     },
     "machine": {
-      "toolsHow": "Tik op een tool die aan staat om hem uit te zetten. Weer aanzetten kan alleen op de computer zelf."
+      "toolsHow": "Tik op een tool die aan staat om hem uit te zetten. Weer aanzetten: op de computer zelf, of hier door wie hem heeft gekoppeld.",
+      "toolsHowOwner": "Tik op een tool om hem aan of uit te zetten."
     },
     "roles": {
       "onComputer": "De volgorde van de rollen en het pictogram van elke rol wijzig je op de computer.",

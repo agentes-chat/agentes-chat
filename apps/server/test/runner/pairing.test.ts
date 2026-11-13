@@ -10,6 +10,7 @@ import {
   type FetchFn,
   formatUserCode,
   LINK_INVALID,
+  movedFrom,
   orgSlug,
   PairingError,
   pollDeviceToken,
@@ -480,6 +481,17 @@ test("a connect link: sent with the device, its maker and workspace read back; a
     { fetch: answer(json(400, { error: "machine.link_invalid" })) },
   ).catch((e: unknown) => e);
   expect(bare).toMatchObject({ code: "link_invalid", message: LINK_INVALID });
+});
+
+test("connecting from another workspace says which one the computer left", () => {
+  const org = { id: "o2", name: "Studio" };
+  expect(movedFrom({ token: "agm_x", orgId: "o1", orgName: "Atelier" }, org)).toBe(
+    "This computer was connected to Atelier. It works for Studio now, and Atelier no longer reaches it. One connection serves one workspace: for several, use the agentes.chat app.",
+  );
+  // Never connected, connected again to the same workspace, or one that left before: nothing to say.
+  expect(movedFrom(null, org)).toBeNull();
+  expect(movedFrom({ token: "agm_x", orgId: "o2", orgName: "Studio" }, org)).toBeNull();
+  expect(movedFrom({ orgId: "o1", orgName: "Atelier" }, org)).toBeNull();
 });
 
 test("the grant says who may use the computer and where to change it; the connection says it in a sentence", async () => {

@@ -81,30 +81,31 @@ test("Lodi's old settings address opens Lodi's page: two groups, the face opens 
   expect(ai.querySelector(".settings-row__chevron")).toBeTruthy();
   expect(ai.querySelector(".settings-row__value")).toBeNull();
   expect(screen().queryByRole("button", { name: "Usar uma chave de API" })).toBeNull();
-  // The switch says what it does once: its state is the switch.
-  const lend = screen().getByRole("switch", { name: "Emprestar este plano a quem não tem um" });
-  const lendRow = lend.closest(".settings-row") as HTMLElement;
-  expect(lendRow.querySelector(".settings-row__status")).toBeNull();
-  // The plan's terms on lending it stay one press away, beside the name.
-  expect(within(lendRow).getByRole("button", { name: "Sobre Emprestar este plano a quem não tem um" })).toBeTruthy();
+  // Who a plan serves is its owner's choice in IA e uso (ADR 0059 §3): no lending switch here.
+  expect(screen().queryByRole("switch", { name: /Emprestar/ })).toBeNull();
   // The row opens the choice in place, and choosing there changes the row.
   await act(async () => fireEvent.click(ai));
   await settle(4);
-  const dialog = screen().getByRole("dialog", { name: "IA de quem não tem plano próprio" });
-  const choices = within(dialog).getAllByRole("radio");
-  expect(choices.map((c) => c.getAttribute("aria-checked"))).toEqual(["false", "true"]);
-  expect(choices[1]?.textContent).toContain("Plano Trabalho");
-  await act(async () => fireEvent.click(choices[0] as HTMLElement));
+  // Drawn as any agent's "Who thinks": the account in use first, the others behind "Switch account".
+  const dialog = screen().getByRole("dialog", { name: "Quem pensa pelo Lodi no workspace" });
+  expect(dialog.querySelector(".bd-use .arrival-have__row")?.textContent).toContain("Trabalho");
+  expect(dialog.textContent).toContain("Vale para quem não tem plano próprio.");
+  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Trocar de conta" })));
+  await settle(4);
+  const switching = screen().getByRole("dialog", { name: "Trocar a conta do Lodi" });
+  // The plan in use under "In use", the key in its own group: each once.
+  expect(within(switching).getAllByRole("radio")).toHaveLength(2);
+  await act(async () => fireEvent.click(within(switching).getByRole("radio", { name: /Chave de API|OpenAI da Acme/ })));
+  await settle(2);
+  await act(async () => fireEvent.click(within(switching).getByRole("button", { name: /^Trocar para / })));
   await settle(8);
   expect(sent).toEqual([{ scope: "workspace", brain: "model" }]);
-  // The dialog stays for the key's model. Closed, the row behind it says the new value.
-  expect(within(dialog).getAllByRole("radio")[0]?.getAttribute("aria-checked")).toBe("true");
-  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Fechar" })));
+  // Back on the first screen for the key's model. Closed, the row behind it says the new value.
+  await act(async () => fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: "Fechar" })));
   await settle(4);
   expect(row(/^IA de quem não tem plano próprio/).querySelector(".settings-row__status")?.textContent).toBe(
     "OpenAI da Acme · Automático",
   );
-  expect(screen().queryByRole("switch", { name: "Emprestar este plano a quem não tem um" })).toBeNull();
 });
 
 test("a member's Lodi page is only Só para você: Sua IA is one row that opens, and connects their plan from its dialog", async () => {
@@ -130,12 +131,12 @@ test("a member's Lodi page is only Só para você: Sua IA is one row that opens,
   expect(screen().queryByRole("button", { name: "Conectar meu plano" })).toBeNull();
   await act(async () => fireEvent.click(mine));
   await settle(4);
-  const dialog = screen().getByRole("dialog", { name: "Sua IA" });
-  // Why it is theirs alone: the dialog's sentence.
-  expect(dialog.textContent).toContain("Sua conversa com o Lodi pensa com um plano seu");
-  await act(async () => fireEvent.click(within(dialog).getByRole("radio", { name: /Conectar meu plano/ })));
+  const dialog = screen().getByRole("dialog", { name: "Quem pensa pelo Lodi para você" });
+  // Who it is for: the footer's line.
+  expect(dialog.textContent).toContain("Vale só para a sua conversa com o Lodi.");
+  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Conectar meu plano" })));
   await settle(6);
-  expect(screen().queryByRole("dialog", { name: "Sua IA" })).toBeNull();
+  expect(screen().queryByRole("dialog", { name: "Quem pensa pelo Lodi para você" })).toBeNull();
   expect(screen().getByRole("dialog", { name: /Lodi/ })).toBeTruthy();
 });
 
@@ -164,28 +165,23 @@ test("Sua IA on a plan of mine: the dialog goes back to the workspace's AI, and 
   expect(row(/^Sua IA/).querySelector(".settings-row__status")?.textContent).toBe("Trabalho · seu plano · Sonnet");
   await act(async () => fireEvent.click(row(/^Sua IA/)));
   await settle(4);
-  const dialog = screen().getByRole("dialog", { name: "Sua IA" });
-  // Every way out is a choice of the list, the plan in use checked: no button stands loose among them.
-  expect(
-    within(dialog)
-      .getAllByRole("radio")
-      .map((r) => [r.textContent, r.getAttribute("aria-checked")]),
-  ).toEqual([
-    ["Trabalhoseu plano", "true"],
-    ["Conectar outro plano", "false"],
-    ["Usar a do workspace", "false"],
-  ]);
-  expect(within(dialog).queryByRole("button", { name: "Mudar" })).toBeNull();
-  await act(async () => fireEvent.click(within(dialog).getByRole("radio", { name: /Usar a do workspace/ })));
+  const dialog = screen().getByRole("dialog", { name: "Quem pensa pelo Lodi para você" });
+  // The plan in use as the account, then each way out as a line that leads somewhere: nothing to pick among them.
+  const inUse = dialog.querySelector(".bd-use .arrival-have__row");
+  expect(inUse?.textContent).toContain("Trabalho");
+  expect(inUse?.textContent).toContain("seu plano");
+  expect(within(dialog).queryAllByRole("radio")).toHaveLength(0);
+  expect(within(dialog).getByRole("button", { name: "Conectar outra IA" })).toBeTruthy();
+  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Usar a do workspace" })));
   await settle(8);
   expect(sent).toEqual([{ scope: "mine", brain: "model" }]);
-  expect(screen().queryByRole("dialog", { name: "Sua IA" })).toBeNull();
+  expect(screen().queryByRole("dialog", { name: "Quem pensa pelo Lodi para você" })).toBeNull();
   expect(row(/^Sua IA/).querySelector(".settings-row__status")?.textContent).toBe(
     "OpenAI da Acme · chave do workspace",
   );
 });
 
-test("a plan and its model are one choice: the model is picked under the plan in Sua IA and in the workspace's AI", async () => {
+test("a plan's model is a line that opens its list, in Sua IA and in the workspace's AI: picked, then used", async () => {
   const state = withRightHand(seedState(), { brain: { kind: "claude_code", model: "Sonnet" } });
   const api = createFakeApi(state);
   const model: Record<string, string | null> = { mine: null, workspace: null };
@@ -215,19 +211,21 @@ test("a plan and its model are one choice: the model is picked under the plan in
     await act(async () => fireEvent.click(row(name)));
     await settle(4);
     const dialog = screen().getByRole("dialog");
-    const select = within(dialog).getByRole("combobox", { name: "Modelo" });
-    // Under the plan in use, inside the list of choices: never a loose control beside it.
-    expect(select.closest(".ac-optrow__more")).toBeTruthy();
-    expect(select.textContent).toContain("Sonnet");
-    await act(async () => fireEvent.click(select));
+    // A line under the account in use, as on any agent's: it opens the plan's models.
+    const line = within(dialog).getByRole("button", { name: /^Modelo/ });
+    expect(line.closest(".bd-lines")).toBeTruthy();
+    expect(line.textContent).toContain("Sonnet");
+    await act(async () => fireEvent.click(line));
     await settle(3);
-    await act(async () => fireEvent.click(screen().getByRole("option", { name: /^Opus/ })));
+    await act(async () => fireEvent.click(within(screen().getByRole("dialog")).getByRole("radio", { name: /^Opus/ })));
+    await settle(2);
+    await act(async () =>
+      fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Usar Opus/ })),
+    );
     await settle(8);
     expect(sent.at(-1)).toEqual({ scope, model: "opus" });
-    // The dialog stays open on the new model, and the row behind it says it.
-    expect(within(screen().getByRole("dialog")).getByRole("combobox", { name: "Modelo" }).textContent).toContain(
-      "Opus",
-    );
+    // Back on the first screen with the new model on its line, and the row behind it says it.
+    expect(within(screen().getByRole("dialog")).getByRole("button", { name: /^Modelo/ }).textContent).toContain("Opus");
     await act(async () =>
       fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: "Fechar" })),
     );
@@ -236,13 +234,12 @@ test("a plan and its model are one choice: the model is picked under the plan in
   }
 });
 
-test("Poderes do workspace is one row for everyone that opens what only Lodi does, and no Computador row without a computer", async () => {
+test("Poderes do workspace is one row for everyone that opens what only Lodi does", async () => {
   const state = withRightHand(seedState());
   const me = state.me?.organizations[0];
   if (me) me.role = "member";
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api: createFakeApi(state) });
   await settle(8);
-  expect(screen().queryByRole("button", { name: /^Computador/ })).toBeNull();
   const powers = row(/^Poderes do workspace/);
   expect(powers.matches(".settings-row--open")).toBe(true);
   await act(async () => fireEvent.click(powers));
@@ -254,6 +251,31 @@ test("Poderes do workspace is one row for everyone that opens what only Lodi doe
     "Na sua conversa, lê o Drive, a wiki e as tarefas que você pode ver",
     "Responde a um @ em qualquer canal sem ser membro",
   ]);
+});
+
+test("Lodi's page has three tabs: its settings, what it may use on the agent page's own access tab, and what it keeps for the viewer", async () => {
+  const state = withRightHand(seedState());
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api: createFakeApi(state) });
+  await settle(8);
+  const tabs = () => within(screen().getByRole("tablist", { name: "Seções do Lodi" })).getAllByRole("tab");
+  expect(tabs().map((tab) => tab.textContent)).toEqual(["Configurações", "Ferramentas e acesso", "Memória"]);
+  expect(tabs()[0]?.getAttribute("aria-selected")).toBe("true");
+  expect(row(/^Poderes do workspace/)).toBeTruthy();
+  cleanup();
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}?tab=access`, { api: createFakeApi(state) });
+  await settle(8);
+  expect(tabs()[1]?.getAttribute("aria-selected")).toBe("true");
+  // The same cards as any agent's: its apps, mailboxes and skills. Its settings are the other tab.
+  for (const id of ["ac-connectors", "ac-builtin", "ac-skills"]) expect(document.getElementById(id)).toBeTruthy();
+  expect(screen().queryByRole("button", { name: /^Poderes do workspace/ })).toBeNull();
+  // No sky, tabs of an agent's own work or archive: it is part of the workspace.
+  expect(document.querySelector(".agp-hero")).toBeNull();
+  cleanup();
+  // What it keeps for the viewer, and the rules they gave it, on the agent page's own memory tab.
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}?tab=memory`, { api: createFakeApi(state) });
+  await settle(8);
+  expect(tabs()[2]?.getAttribute("aria-selected")).toBe("true");
+  expect(document.getElementById("mem-known")).toBeTruthy();
 });
 
 test("the worst case keeps its shape: a very long account and owner name stay under the row's name, whole", async () => {

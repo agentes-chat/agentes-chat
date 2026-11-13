@@ -556,15 +556,21 @@ html:not([data-pointer]) .rq__choice:focus-visible {
   white-space: pre-wrap;
 }
 
-/* Waiting for you: a pixel square outline in the warning tone, pulsing. */
+/* Waiting for you: a pixel square outline in the warning tone, pulsing. In a line of words, on their capitals' middle,
+   as the kit's pixel marks are (`.ac-pixspin`): the square is an absolute child, so the box's bottom is its
+   baseline. */
 .rq-wait {
   flex: none;
-  display: inline-grid;
-  place-items: center;
+  display: inline-block;
+  position: relative;
   width: 12px;
   height: 12px;
+  vertical-align: calc(var(--cap-top) - var(--cap-mid) - 6px);
 }
 .rq-wait > span {
+  position: absolute;
+  inset: 0;
+  margin: auto;
   width: 8px;
   height: 8px;
   border-radius: 2px;
@@ -692,6 +698,38 @@ html:not([data-pointer]) .rq__choice:focus-visible {
 }
 .rq__item--done .rq__logo {
   opacity: 0.6;
+}
+/* Replaced by the newer request under it: one quiet line, its title and how it ended. */
+.rq__item--replaced .rq__wt b {
+  color: var(--muted);
+}
+/* A connector's message on its item: subject, to whom, the first three lines of its text. */
+.rq__wt > .rq-letter {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rq-letter__body:not(:first-child) {
+  margin-top: var(--space-1);
+}
+.rq__wt .rq-letter__subject {
+  font-size: 13px;
+  line-height: 18px;
+}
+.rq-letter__body {
+  display: -webkit-box;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink2);
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .rq__item .ap-refuse {
   margin-top: 8px;

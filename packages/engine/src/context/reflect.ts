@@ -187,7 +187,8 @@ export async function reflectThread(
     .select({ id: agents.id, handle: agents.handle, builtin: agents.builtin })
     .from(agents)
     .where(and(eq(agents.orgId, input.orgId), isNull(agents.archivedAt)));
-  // What people tell the right hand stays with them (ADR 0137): no memory comes from its conversations.
+  // What people tell the right hand stays with them (ADR 0137): reflection, which writes for the team, never reads
+  // its conversations. What it keeps is what it saves itself, for that person alone (`rightHandKeeps`).
   if (orgAgents.some((a) => isRightHand(a) && agentIds.includes(a.id))) return { ...out, skipped: "right_hand" };
   const agentByHandle = new Map(orgAgents.map((a) => [a.handle, a.id]));
   const handleOf = new Map(orgAgents.map((a) => [a.id, a.handle]));

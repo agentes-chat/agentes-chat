@@ -585,7 +585,8 @@ export async function decideProposal(
     caches.agents.delete(`${orgId}:team`);
     caches.scopes.deletePrefix(`${orgId}:${decided.agentId}`);
   }
-  // The right hand keeps no memory (ADR 0137): a refusal teaches it nothing one person could carry to another.
+  // A refusal teaches the right hand nothing (ADR 0137): a lesson is the agent's, and it would carry one person's
+  // refusal to everyone else it answers.
   if (decided.status === "rejected" && !isRightHand(await proposerOf(db, decided)))
     await recordRefusal(db, actorId, decided);
   // Also for a row gone stale: it may be the card's last open one.

@@ -955,6 +955,9 @@ export const featureKeysPtBR = {
       run_failed_one: "Não conseguiu terminar",
       run_failed_other: "Não conseguiu terminar",
       routine_failed_other: "Rotina falhou",
+      admin_ask_channel_agent: "{{names}} pede para adicionar {{agent}} a #{{label}}",
+      admin_ask_create_agents: "{{names}} pede para poder criar agentes",
+      admin_ask_webhook: "{{names}} pede para ligar o webhook do {{service}} para rotinas",
       routine_paused_one: "Rotina pausada",
       routine_paused_other: "Rotina pausada",
       routine_stalled_one: "Rotina esperando o computador",
@@ -1015,6 +1018,8 @@ export const featureKeysPtBR = {
       plan_lent_other: "{{names}} conectaram o seu plano do {{plan}} ao\u00a0{{agent}}",
       plan_lent_female_one: "{{names}} conectou o seu plano do {{plan}} à\u00a0{{agent}}",
       plan_lent_female_other: "{{names}} conectaram o seu plano do {{plan}} à\u00a0{{agent}}",
+      plan_serves_one: "Seu {{plan}} agora atende o workspace todo",
+      plan_serves_other: "Seu {{plan}} agora atende o workspace todo",
       /** An agent's model left its plan's list (`plan_model_dropped`): `runs` the model it uses now. */
       plan_model_dropped_one: "O {{model}} saiu do {{plan}}. {{names}} está usando o {{runs}} por enquanto",
       plan_model_dropped_other: "O {{model}} saiu do {{plan}}. {{names}} está usando o {{runs}} por enquanto",
@@ -1386,7 +1391,6 @@ export const featureKeysPtBR = {
     uses_one: "Usada {{count}} vez",
     uses_other: "Usada {{count}} vezes",
     confirmed: "Confirmada por uma pessoa",
-    unconfirmed: "Ainda sem confirmação",
     confirm: "Confirmar",
     confirmedToast: "Confirmada",
     details: "Detalhes técnicos",
@@ -1606,9 +1610,9 @@ export const featureKeysPtBR = {
         setup: "Configurar o workspace",
         desktop: "Tela do computador",
       },
-      asksYou: "Merge e publicar sempre pedem sua aprovação, em qualquer nível.",
-      asksOwner: "Merge e publicar sempre pedem a aprovação de {{name}}, em qualquer nível.",
-      asksAdmins: "Merge e publicar sempre pedem a aprovação de quem administra, em qualquer nível.",
+      asksYou: "Merge e publicar pedem sua aprovação, a não ser que o agente nunca pergunte.",
+      asksOwner: "Merge e publicar pedem a aprovação de {{name}}, a não ser que o agente nunca pergunte.",
+      asksAdmins: "Merge e publicar pedem a aprovação de quem administra, a não ser que o agente nunca pergunte.",
       empty: "Por enquanto, só conversa.",
     },
   },
@@ -2019,6 +2023,7 @@ export const featureKeysPtBR = {
       access_requestFor: "{{names}} pede para usar o {{device}} para {{person}}",
       waiting: "{{names}} está esperando o {{device}}",
       waitingFor: "{{names}} está esperando o {{device}} para {{person}}",
+      tool_request: "{{names}} pede para ligar {{tool}} no seu {{device}}",
       allowOnce: "Permitir uma vez",
       always: "Sempre permitir {{name}}",
       no: "Não",
@@ -2293,7 +2298,10 @@ export const featureKeysPtBR = {
       tooBig: "Imagem grande demais. Tente outra.",
     },
     machine: {
-      toolsHow: "Toque numa ferramenta ligada para desligar. Para ligar de novo, só no próprio computador.",
+      toolsHow:
+        "Toque numa ferramenta ligada para desligar. Para ligar de novo: no próprio computador, ou aqui por quem o conectou.",
+      /** For whoever connected the computer: a tap turns an off tool on, and one that is on off. */
+      toolsHowOwner: "Toque numa ferramenta para ligar ou desligar.",
     },
     roles: {
       /** Under the roles and a role's name and color: what only the web changes. */

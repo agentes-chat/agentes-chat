@@ -356,6 +356,21 @@
   "tray.notifTitle": {
     "value": "{{agent}} wants to use the folder {{folder}}"
   },
+  "tray.allowedTitle": {
+    "value": "{{name}} turned on {{tool}} from agentes.chat"
+  },
+  "tray.allowedBody": {
+    "value": "If it wasn't you, undo it here."
+  },
+  "tray.allowedUndo": {
+    "value": "Undo"
+  },
+  "tray.allowedOk": {
+    "value": "OK"
+  },
+  "tray.allowedUndone": {
+    "value": "Off again: {{tool}}"
+  },
   "tray.quitTitle": {
     "value": "Quit agentes.chat?"
   },
@@ -367,24 +382,6 @@
   },
   "tray.quitConfirm": {
     "value": "Quit"
-  },
-  "first.title": {
-    "value": "Your team and your agents, together"
-  },
-  "first.lead": {
-    "value": "Chat, tasks and documents where people and AI agents work side by side."
-  },
-  "first.cloud": {
-    "value": "Sign in to agentes.chat"
-  },
-  "first.create": {
-    "value": "New here?"
-  },
-  "first.createLink": {
-    "value": "Create an account"
-  },
-  "first.own": {
-    "value": "Use your own server"
   },
   "first.addTitle": {
     "value": "Add a workspace"
@@ -1012,6 +1009,120 @@
   },
   "server.updateBackBody": {
     "value": "The new version is tried again with the app's next update."
+  },
+  "server.backups": {
+    "value": "Backups"
+  },
+  "server.nightly": {
+    "value": "Back up every night"
+  },
+  "server.nightlyLast": {
+    "value": "At {{at}} · last one {{time}}"
+  },
+  "server.nightlyNone": {
+    "value": "At {{at}} · no backup yet"
+  },
+  "server.lastBackup": {
+    "value": "Last one {{time}}"
+  },
+  "server.noBackup": {
+    "value": "No backup yet"
+  },
+  "server.backupFailed": {
+    "value": "The last backup didn't finish. Back up now to try again."
+  },
+  "server.copyTo": {
+    "value": "Copy to"
+  },
+  "server.copyToText": {
+    "value": "Each new backup is copied to this folder too, like a USB drive or iCloud Drive. The two newest stay there."
+  },
+  "server.copyToNone": {
+    "value": "Only on this {{device}}"
+  },
+  "server.copyToStop": {
+    "value": "Stop copying"
+  },
+  "server.choose": {
+    "value": "Choose…"
+  },
+  "server.change": {
+    "value": "Change…"
+  },
+  "server.copyFailed": {
+    "value": "The last backup didn't reach this folder. Check that it's still there, or choose another."
+  },
+  "server.restore": {
+    "value": "Restore…"
+  },
+  "server.restoreTitle": {
+    "value": "Restore a backup?"
+  },
+  "server.restoreBody": {
+    "value": "agentes.chat on this {{device}} goes back to that backup: messages, files and settings. It stops for a minute. What's there now is kept in the backups folder."
+  },
+  "server.restoreWhich": {
+    "value": "Backup to restore"
+  },
+  "server.backupOf": {
+    "value": "Backup from {{time}}"
+  },
+  "server.restoreConfirm": {
+    "value": "Restore"
+  },
+  "server.restored": {
+    "value": "Restored the backup from {{time}}"
+  },
+  "server.restoreFailed": {
+    "value": "That backup didn't start, so agentes.chat is back as it was. Try the other backup."
+  },
+  "server.restoreUnreadable": {
+    "value": "That backup can't be opened. Try the other one."
+  },
+  "server.noPassword": {
+    "value": "Add a password to sign in from your phone and other computers."
+  },
+  "server.addPassword": {
+    "value": "Add a password"
+  },
+  "server.keep": {
+    "value": "Keep it running"
+  },
+  "server.keepLogin": {
+    "value": "Opens at login"
+  },
+  "server.keepLoginOn": {
+    "value": "Turn on"
+  },
+  "server.keepAutoLogin": {
+    "value": "Signs in by itself after a restart"
+  },
+  "server.keepAutoLoginText": {
+    "value": "After a restart, this {{device}} waits at its sign-in screen and agentes.chat doesn't open. Turn on automatic login in Users & Groups."
+  },
+  "server.keepAutoLoginOpen": {
+    "value": "Open Users & Groups"
+  },
+  "server.keepPower": {
+    "value": "Starts after a power failure"
+  },
+  "server.keepPowerText": {
+    "value": "After a power cut, this {{device}} stays off until someone presses its button. Energy settings can start it by itself."
+  },
+  "server.keepPowerOpen": {
+    "value": "Open Energy settings"
+  },
+  "server.keepAwake": {
+    "value": "Doesn't sleep while serving"
+  },
+  "server.keepAwakeText": {
+    "value": "This {{device}} stays awake while agentes.chat runs here. Start agentes.chat to keep it awake."
+  },
+  "server.keepOn": {
+    "value": "Done"
+  },
+  "server.keepOff": {
+    "value": "Not yet"
   },
   "pair.title": {
     "value": "Let agents of {{org}} work on this {{device}}?"
@@ -1643,6 +1754,9 @@
   "prefs.accounts.ok": {
     "value": "OK"
   },
+  "prefs.accounts.chooseAgents": {
+    "value": "Choose agents"
+  },
   "prefs.accounts.failedTitle": {
     "value": "The account wasn't added"
   },
@@ -2200,119 +2314,5 @@
   },
   "menu.downloaded": {
     "value": "Download complete"
-  },
-  "server.backups": {
-    "value": "Backups"
-  },
-  "server.nightly": {
-    "value": "Back up every night"
-  },
-  "server.nightlyLast": {
-    "value": "At {{at}} · last one {{time}}"
-  },
-  "server.nightlyNone": {
-    "value": "At {{at}} · no backup yet"
-  },
-  "server.lastBackup": {
-    "value": "Last one {{time}}"
-  },
-  "server.noBackup": {
-    "value": "No backup yet"
-  },
-  "server.backupFailed": {
-    "value": "The last backup didn't finish. Back up now to try again."
-  },
-  "server.copyTo": {
-    "value": "Copy to"
-  },
-  "server.copyToText": {
-    "value": "Each new backup is copied to this folder too, like a USB drive or iCloud Drive. The two newest stay there."
-  },
-  "server.copyToNone": {
-    "value": "Only on this {{device}}"
-  },
-  "server.copyToStop": {
-    "value": "Stop copying"
-  },
-  "server.choose": {
-    "value": "Choose…"
-  },
-  "server.change": {
-    "value": "Change…"
-  },
-  "server.copyFailed": {
-    "value": "The last backup didn't reach this folder. Check that it's still there, or choose another."
-  },
-  "server.restore": {
-    "value": "Restore…"
-  },
-  "server.restoreTitle": {
-    "value": "Restore a backup?"
-  },
-  "server.restoreBody": {
-    "value": "agentes.chat on this {{device}} goes back to that backup: messages, files and settings. It stops for a minute. What's there now is kept in the backups folder."
-  },
-  "server.restoreWhich": {
-    "value": "Backup to restore"
-  },
-  "server.backupOf": {
-    "value": "Backup from {{time}}"
-  },
-  "server.restoreConfirm": {
-    "value": "Restore"
-  },
-  "server.restored": {
-    "value": "Restored the backup from {{time}}"
-  },
-  "server.restoreFailed": {
-    "value": "That backup didn't start, so agentes.chat is back as it was. Try the other backup."
-  },
-  "server.restoreUnreadable": {
-    "value": "That backup can't be opened. Try the other one."
-  },
-  "server.noPassword": {
-    "value": "Add a password to sign in from your phone and other computers."
-  },
-  "server.addPassword": {
-    "value": "Add a password"
-  },
-  "server.keep": {
-    "value": "Keep it running"
-  },
-  "server.keepLogin": {
-    "value": "Opens at login"
-  },
-  "server.keepLoginOn": {
-    "value": "Turn on"
-  },
-  "server.keepAutoLogin": {
-    "value": "Signs in by itself after a restart"
-  },
-  "server.keepAutoLoginText": {
-    "value": "After a restart, this {{device}} waits at its sign-in screen and agentes.chat doesn't open. Turn on automatic login in Users & Groups."
-  },
-  "server.keepAutoLoginOpen": {
-    "value": "Open Users & Groups"
-  },
-  "server.keepPower": {
-    "value": "Starts after a power failure"
-  },
-  "server.keepPowerText": {
-    "value": "After a power cut, this {{device}} stays off until someone presses its button. Energy settings can start it by itself."
-  },
-  "server.keepPowerOpen": {
-    "value": "Open Energy settings"
-  },
-  "server.keepAwake": {
-    "value": "Doesn't sleep while serving"
-  },
-  "server.keepAwakeText": {
-    "value": "This {{device}} stays awake while agentes.chat runs here. Start agentes.chat to keep it awake."
-  },
-  "server.keepOn": {
-    "value": "Done"
-  },
-  "server.keepOff": {
-    "value": "Not yet"
   }
 }

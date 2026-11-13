@@ -1,4 +1,4 @@
-import { DESKTOP_PROTOCOL, type PubSub } from "@agenteschat/adapters";
+import { type AgentScope, DESKTOP_PROTOCOL, type PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, gte, inArray, schema, sql } from "@agenteschat/db";
 import { announceAgentStatus } from "./agent-status";
 import { publishApproval } from "./approvals";
@@ -13,6 +13,8 @@ import { cancelOrgTasks, type TaskCall } from "./machine-tasks";
 import { resolveQuestionNotifications } from "./notification-producers";
 import { can, type Membership, requireActiveMembership } from "./organizations";
 import { type AgentQuestionRow, publishQuestion, syncQuestionMessage } from "./questions";
+import { isRightHandId } from "./right-hand";
+import { seatScopes } from "./right-hand-seats";
 import { closeRoutineRun } from "./routine-ledger";
 import { ACTIVE_RUN_STATUSES, releaseInbox } from "./run-inbox";
 import { tellAgentStopped } from "./run-stopped";
@@ -195,7 +197,7 @@ export { canceledBy } from "./runs";
  * - Waiting for an approval or an answer: it ends; the approval or question is canceled.
  * - Running: the worker aborts the model stream (usage so far is recorded),
  *   stops before the next tool, kills running code, and posts what the agent
- *   wrote so far with "Stopped by …".
+ *   wrote so far with "Stopped by …" (stopped to read a message, `sendMessageId`, it says no stop).
  * The UI hears `run.canceled` at once. Audited. Messages sent to it that it hasn't read get a run
  * of their own (`releaseInbox`), except `stopMessageId`: the message that asked it to stop.
  */
@@ -204,8 +206,11 @@ export async function cancelRun(
   userId: string,
   orgId: string,
   runId: string,
-  /** `chain`: what the run asked of other agents stops with it, all the way down (`stopHelpers`). */
-  options: { stopMessageId?: string; reason?: string; tell?: boolean; chain?: boolean } = {},
+  /**
+   * `chain`: what the run asked of other agents stops with it, all the way down (`stopHelpers`).
+   * `sendMessageId`: "Parar e mandar" to a computer brain: the message it is stopped to read (`stoppedToSend`).
+   */
+  options: { stopMessageId?: string; sendMessageId?: string; reason?: string; tell?: boolean; chain?: boolean } = {},
 ): Promise<{ id: string; status: RunStatus; previousStatus: RunStatus }> {
   const { db } = deps;
   const membership = await requireActiveMembership(db, userId, orgId);
@@ -249,7 +254,7 @@ export async function cancelRun(
   );
   // The agent is told (ADR 0128), unless the stop came with a message to it ("Parar e mandar": that message says it)
   // or the agent stopped it itself on a person's word (`tell: false`).
-  if (!options.stopMessageId && options.tell !== false) {
+  if (!options.stopMessageId && !options.sendMessageId && options.tell !== false) {
     await tellAgentStopped(deps, row.run, stopped.previousStatus, userId, options.reason, helpers).catch(() => null);
   }
   // Its usage note's "Don't run it" speaks for every turn that note took in, each for who may stop it.
@@ -273,7 +278,7 @@ export async function stopRun(
   channelKind: string | null,
   actor: { type: "person"; id: string } | { type: "system"; reason: string },
   /** `forAll`: the person stops a conversation's catch-up for everyone in it (the agent's owner, an admin). */
-  options: { stopMessageId?: string; forAll?: boolean } = {},
+  options: { stopMessageId?: string; sendMessageId?: string; forAll?: boolean } = {},
 ): Promise<{ id: string; status: RunStatus; previousStatus: RunStatus; joined?: string[] }> {
   const { db } = deps;
   const error = actor.type === "person" ? `canceled_by:${actor.id}` : actor.reason;
@@ -297,6 +302,22 @@ export async function stopRun(
           .update(agentRuns)
           .set({ pendingMessageIds: sql`array_remove(${agentRuns.pendingMessageIds}, ${options.stopMessageId}::uuid)` })
           .where(eq(agentRuns.id, run.id));
+        // A turn that took it live gives it back when it ends: marked, so it is not handed on then (`returnToInbox`).
+        await tx
+          .update(messages)
+          .set({
+            meta: sql`jsonb_set(${messages.meta}, '{stopOfRunIds}', coalesce(${messages.meta}->'stopOfRunIds', '[]'::jsonb) || to_jsonb(${run.id}::text))`,
+          })
+          .where(and(eq(messages.orgId, orgId), eq(messages.id, options.stopMessageId)));
+      }
+      // Stopped to read this message: the message says so, and the run's end posts no stop (`stoppedToSend`).
+      if (options.sendMessageId) {
+        await tx
+          .update(messages)
+          .set({
+            meta: sql`jsonb_set(${messages.meta}, '{stoppedRunIds}', coalesce(${messages.meta}->'stoppedRunIds', '[]'::jsonb) || to_jsonb(${run.id}::text))`,
+          })
+          .where(and(eq(messages.orgId, orgId), eq(messages.id, options.sendMessageId)));
       }
       const now = new Date();
       closedApprovals = await tx
@@ -351,7 +372,7 @@ export async function stopRun(
     run = fresh;
   }
 
-  // The worker running it (here or on another instance) aborts and posts what was written.
+  // The worker running it (here or on another instance) aborts and posts what was written (`stopCanceled`).
   abortLocalRun(run.id);
   if (deps.pubsub) await deps.pubsub.publish(RUN_CANCEL_TOPIC, { type: "run.cancel", runId: run.id }).catch(() => {});
   // Waiting on its plan or budget: its note or card says it won't run when the limit is back.
@@ -513,8 +534,15 @@ export async function stopOrgWork(
         agentId ? eq(agents.id, agentId) : undefined,
       ),
     );
+  // The right hand's desktops are its people's seats on the workspace's own computer (ADR 0175).
+  const seats = !agentId || (await isRightHandId(deps.db, orgId, agentId)) ? await seatScopes(deps.db, orgId) : null;
+  const stops: { machineId: string; agent: AgentScope }[] = desktops.map(({ machineId, ...agent }) => ({
+    machineId,
+    agent,
+  }));
+  if (seats) stops.push(...seats.agents.map((agent) => ({ machineId: seats.machineId, agent })));
   await Promise.all(
-    desktops.map(({ machineId, ...agent }) =>
+    stops.map(({ machineId, agent }) =>
       hub.call(machineId, { op: "desktop.session.stop", agent }, { timeoutMs: 15_000 }).catch(() => null),
     ),
   );

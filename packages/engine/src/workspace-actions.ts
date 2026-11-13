@@ -210,7 +210,7 @@ async function channelNamed(ctx: Pick<ToolContext, "db" | "orgId">, person: stri
 
 /** What each key lets a role's people do, for the model choosing them. */
 const KEY_WORDS =
-  "post: write in channels; create_channels; mention_everyone; manage_channels: rename, archive and arrange channels; talk_to_agents; assign_work: give agents long work; manage_routines: any agent's routines; approve_actions: decide agents' approvals (merges, deploys, emails); create_agents; manage_agents: change any agent; pair_computers; own_browsers, own_computers: their own agents' browser or computer; control_browsers, control_computers: every agent's; manage_connectors: connect apps; manage_credentials: AI keys; use_others_plans; edit_wiki; upload_files; review_memory: agents' memory and instructions; invite_people; view_usage; view_audit; configure: the workspace's settings; manage_members: people's roles and removing people; manage_roles; manage_billing; administrator: all of them.";
+  "post: write in channels; create_channels; mention_everyone; manage_channels: rename, archive and arrange channels; talk_to_agents; assign_work: give agents long work; manage_routines: any agent's routines; approve_actions: decide agents' approvals (merges, deploys, emails); create_agents; manage_agents: change any agent; pair_computers; own_browsers, own_computers: their own agents' browser or computer; control_browsers, control_computers: every agent's; manage_connectors: connect apps; manage_credentials: AI keys; edit_wiki; upload_files; review_memory: agents' memory and instructions; invite_people; view_usage; view_audit; configure: the workspace's settings; manage_members: people's roles and removing people; manage_roles; manage_billing; administrator: all of them.";
 
 const KEYS = { type: "array", items: { enum: [...ROLE_PERMISSIONS] }, maxItems: ROLE_PERMISSIONS.length };
 
@@ -1650,6 +1650,7 @@ export function workspaceActionTool(deps: { pubsub?: PubSub; server?: ServerLink
       },
       additionalProperties: false,
     },
+    looksOnly: (raw) => Boolean(str(raw.find)) && !str(raw.action),
     async execute(raw, ctx) {
       try {
         const person = await personBehindCall(ctx);

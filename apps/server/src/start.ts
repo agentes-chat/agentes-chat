@@ -477,6 +477,7 @@ async function boot(
     mail: { deps: engine.mail, pollSeconds: config.MAIL_POLL_SECONDS },
     browserLive: engine.browserLive,
     desktops: engine.desktops,
+    machines: engine.machineHub,
     ...(config.OPS_REPORT_EMAIL?.length
       ? { opsReport: { to: config.OPS_REPORT_EMAIL, publicUrl: config.PUBLIC_URL } }
       : {}),

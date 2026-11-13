@@ -19,6 +19,7 @@ import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { paysHere } from "@/lib/store";
 import { useOrg } from "@/providers/org";
 import { Button, EventPillAction, EventPillText, Text } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -97,7 +98,13 @@ export function NoAiCard({ message: m }: { message: Message }) {
   const title = answering
     ? t("noAi.card.answering", { name })
     : planLine
-      ? t(planLineKey(planLine, card.why), { name, model: card.model, why: card.why })
+      ? t(planLineKey(planLine, card.why), {
+          name,
+          model: card.model,
+          why: card.why,
+          owner: card.owner,
+          plan: card.plan,
+        })
       : ready
         ? t("noAi.card.connected", { name })
         : answer === "still_missing"
@@ -264,7 +271,7 @@ function KeptCard({ message: m, card, hold }: { message: Message; card: NoAiCard
         title={t("noAi.kept.title")}
         hint={t(code === "payment" ? "noAi.kept.plan" : "standing.billing.sub")}
         text={
-          can(org, "manage_billing")
+          paysHere(can(org, "manage_billing"))
             ? t("common.joinSentences", { a: t(`noAi.kept.wait.${code}`), b: t("connectAi.billingWeb") })
             : t("noAi.kept.askAdmin")
         }

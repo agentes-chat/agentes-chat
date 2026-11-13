@@ -15,6 +15,7 @@ import {
   picksOf,
 } from "@agenteschat/client/lib/import/flow";
 import { type ImportFile, parseImport } from "@agenteschat/client/lib/import/index";
+import { PASTED } from "@agenteschat/client/lib/import/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMeId } from "../shared/hooks";
@@ -90,7 +91,7 @@ export function useAgentImport(orgId: string) {
         files = res.files.map((f) => ({ name: f.path, text: f.text }));
         root = githubRoot(input.url);
       } else if ("text" in input) {
-        files = [{ name: "pasted", text: input.text }];
+        files = [{ name: PASTED, text: input.text }];
       } else {
         files = await input.files;
       }

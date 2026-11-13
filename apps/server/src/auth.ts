@@ -15,10 +15,12 @@ import {
   emailLocale,
   enqueueAccountContact,
   ForbiddenError,
+  feedbackDestination,
   holdsInvitation,
   INVITATION_MAIL_HEADER,
   INVITATION_TOKEN_HEADER,
   isAgentesCloud,
+  isFeedbackRelay,
   onUserCreated,
   queueEmail,
   recordSession,
@@ -150,6 +152,9 @@ export function createAuth(deps: {
     }),
     user: {
       additionalFields: { locale: { type: "string", required: false, input: false } },
+      // The same account under a new address (Sua conta › Perfil): a link to the new one confirms it; a server that
+      // sends no e-mail can't, so the address changes at once there.
+      changeEmail: { enabled: true, updateEmailWithoutVerification: !emailEnabled },
     },
     session: {
       additionalFields: { activeOrganizationId: { type: "string", required: false, input: false } },
@@ -664,7 +669,8 @@ export function authUiConfig(config: Config) {
     termsUrl: config.TERMS_URL ?? null,
     privacyUrl: config.PRIVACY_URL ?? null,
     supportEmail: config.SUPPORT_EMAIL ?? null,
-    feedback: Boolean(config.FEEDBACK_EMAIL),
+    feedback: Boolean(feedbackDestination(config)),
+    feedbackRelay: isFeedbackRelay(feedbackDestination(config)),
   };
 }
 

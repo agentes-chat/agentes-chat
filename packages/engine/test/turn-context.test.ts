@@ -324,7 +324,7 @@ describe("# This turn", () => {
     };
     const parts = [
       `[ana]: (replying to bia: "o deploy")\n@dev olha isso\n\nlong paste`,
-      `[ana]: @dev olha isso\n\nlong paste\n(attached files: "log.txt" (artifact 1))`,
+      `[ana]: @dev olha isso\n\nlong paste\n(attached files: "log.txt" (artifact 1); open each with read_artifact before you answer about it; if one is unreadable to you, give the reason and way out the tool gave)`,
       `[ana]: @dev olha isso\n\nlong paste\n(sent by ana through Phone, an app connected to agentes.chat; the reply is read there)`,
     ];
     for (const part of parts) {

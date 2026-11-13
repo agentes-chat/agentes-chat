@@ -27,9 +27,12 @@ import {
   widgetAiReady,
   widgetCardStatus,
   widgetCostLine,
+  widgetFailureCause,
   widgetFailureKey,
+  widgetFailureText,
   widgetNeedsAi,
   widgetStepWords,
+  widgetStoppedForAi,
   widgetWaitFix,
   widgetWaiting,
   widgetWaitOf,
@@ -273,6 +276,28 @@ describe("words", () => {
     expect(widgetNeedsAi(waiting)).toBe(true);
     expect(widgetNeedsAi(failed)).toBe(false);
     expect(widgetNeedsAi({ ...waiting, status: "building" })).toBe(false);
+    // Stopped after failing in a row: what the last failure needs.
+    const stopped = (cause?: string): Widget => ({
+      ...waiting,
+      failure: { code: "failing", detail: null, ...(cause ? { cause } : {}) },
+    });
+    // It waits for nothing (nothing builds it by itself): stopped for the lack of an AI is its own state.
+    expect(widgetNeedsAi(stopped("missing_credential"))).toBe(false);
+    expect(widgetStoppedForAi(stopped("missing_credential"))).toBe(true);
+    expect(widgetStoppedForAi(stopped("timeout"))).toBe(false);
+    expect(widgetStoppedForAi(stopped())).toBe(false);
+    expect(widgetStoppedForAi(waiting)).toBe(false);
+    expect(widgetFailureCause({ code: "failing", detail: null, cause: "failing" }).code).toBe("failing");
+    // Its line, as the web and the phone say it: that it stopped, then the last failure's own words.
+    const said = i18next.createInstance();
+    void said.init({ lng: "pt-BR", resources, initAsync: false });
+    expect(widgetFailureText(said.t, stopped("missing_credential").failure, "Lodi")).toBe(
+      "Parou depois de 5 falhas seguidas. A última: Lodi está sem chave ou plano de IA para trabalhar.",
+    );
+    expect(
+      widgetFailureText(said.t, { code: "failing", detail: "A loja não respondeu.", cause: "agent_reported" }, "Lodi"),
+    ).toBe("Parou depois de 5 falhas seguidas. A última: A loja não respondeu.");
+    expect(widgetFailureText(said.t, stopped().failure, "Lodi")).toBe("Falhou várias vezes seguidas e parou.");
     const status = (state: "ready" | "no_ai" | "waiting") => ({ any: true, agents: [{ agentId: "theo", state }] });
     expect(widgetAiReady(waiting, status("ready"))).toBe(true);
     // Its computer away is no missing AI: the build waits for it as any run does.
@@ -282,6 +307,12 @@ describe("words", () => {
     expect(widgetAiReady(waiting, undefined)).toBe(false);
     expect(widgetAiReady({ ...waiting, agentId: "ada" }, status("ready"))).toBe(false);
     expect(widgetAiReady(failed, status("ready"))).toBe(false);
+    // One stopped for the lack of an AI has one again: Resolve comes back.
+    expect(widgetAiReady(stopped("missing_credential"), status("ready"))).toBe(true);
+    expect(widgetAiReady(stopped("timeout"), status("ready"))).toBe(false);
+    // The right hand's: the server names the widgets whose own people's AI can build them, whatever its state reads.
+    expect(widgetAiReady(waiting, { ...status("no_ai"), widgetsReady: ["w"] })).toBe(true);
+    expect(widgetAiReady(waiting, { ...status("no_ai"), widgetsReady: ["other"] })).toBe(false);
     // What a build thinks with decides: ready for chat through the fallback is no AI for it, and the right hand
     // shown on someone's own AI may still build on the workspace's.
     const apart = (state: "ready" | "no_ai", background: "ready" | "no_ai") => ({

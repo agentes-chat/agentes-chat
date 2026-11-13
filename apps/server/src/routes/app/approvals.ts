@@ -78,6 +78,9 @@ export const Approval = z
       description: 'Decided by someone covering this person (ADR 0139): "Aprovado por Bruno, cobrindo Ana".',
     }),
     decidedAt: z.string().nullable(),
+    supersededById: z.string().nullable().openapi({
+      description: "Canceled because the agent asked for the same action again in a later turn: that newer request.",
+    }),
     reason: z.string().nullable(),
     canDecide: z.boolean().openapi({ description: "You are the agent's owner or an admin, and it is pending." }),
     ownerUserId: z.string().nullable().openapi({ description: "The agent's owner (they and admins may decide)." }),

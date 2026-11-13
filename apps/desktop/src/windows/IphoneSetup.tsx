@@ -14,6 +14,9 @@ import {
   reasonText,
   tooOldVersion,
   useStalled,
+  XCODE_FIX_COMMAND,
+  type XcodeFixStage,
+  xcodeFixStage,
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { Button, Icon, InfoHint, PixelSpinner, QrCode, SettingsPath } from "@agenteschat/ui";
@@ -45,6 +48,7 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const host = useHost();
   const store = useStore();
+  const toast = useToast();
   const local = useLocalServer();
   const home = pairedHomes(useSnapshot())[0];
   const homeId = home?.homeId;
@@ -101,6 +105,16 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
   const open = (app: "xcode" | "appStore") => {
     if (homeId) void store.request(homeId, { type: "iphone.open", app }).catch(() => {});
   };
+  const [terminal, setTerminal] = useState(false);
+  /** This Mac fixes its own Xcode (macOS asks for its password for `select`), or stops the fix. */
+  const fixXcode = (action: "start" | "cancel", kind: "select" | "update") => {
+    if (action === "start") setTerminal(false);
+    if (homeId)
+      void store
+        .request(homeId, { type: "iphone.fixXcode", action, kind })
+        .then(setSetup)
+        .catch((err: unknown) => toast(errorText(t, err), "alert"));
+  };
 
   const phone = iphoneHere(home?.status?.phones);
   const { states, current, done } = iphoneSteps(setup, phone);
@@ -129,7 +143,6 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
   );
   const [plugged, setPlugged] = useState(false);
   const looking = current === "connected" && !phone;
-  const toast = useToast();
   const near = useWifiIphones({ server, orgId: orgId ?? null, machineId: mac?.id ?? null }, looking);
   const pickOverWifi = (serial: string) => near.pick(serial).catch((err: unknown) => toast(errorText(t, err), "alert"));
   // iPhones on this Mac's Wi-Fi that trust it, under the step that waits for a cable.
@@ -174,13 +187,115 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
   };
   const tip = hintFor(t, t("desktop.iphone.tip"), t("desktop.iphone.tipHint"));
   const title = (step: IphoneSetupStep) =>
-    step === "account" ? t("desktop.iphone.account") : t(`devices.iphone.steps.${step}`);
+    step === "account"
+      ? t("desktop.iphone.account")
+      : step === "xcode" && setup?.xcodeBlocked
+        ? t("devices.iphone.xcodeBlockedTitle")
+        : t(`devices.iphone.steps.${step}`);
+
+  const fix = setup?.fix;
+  const fixLine = (stage: XcodeFixStage, kind: "select" | "update") =>
+    stage === "asking"
+      ? t("devices.iphone.xcodeFix.asking", { mac: macName })
+      : stage === "running"
+        ? t(kind === "update" ? "devices.iphone.xcodeFix.updating" : "devices.iphone.xcodeFix.running", {
+            mac: macName,
+          })
+        : stage === "done"
+          ? t("devices.iphone.xcodeFix.done", { mac: macName })
+          : stage === "missed"
+            ? t("devices.iphone.xcodeFix.missed", { mac: macName })
+            : stage === "still"
+              ? t(
+                  fix?.still === "license"
+                    ? "devices.iphone.xcodeFix.stillLicense"
+                    : "devices.iphone.xcodeFix.stillCommandLineTools",
+                  { mac: macName },
+                )
+              : fix?.message
+                ? t("devices.iphone.xcodeFix.failed", { mac: macName, message: fix.message })
+                : t("devices.iphone.xcodeFix.failedAny", { mac: macName });
+  /** Xcode installed but not in use: this Mac fixes it behind its own password window, or the Terminal way. */
+  const blockedLine = (blocked: "command_line_tools" | "license"): ReactNode => {
+    const stage = xcodeFixStage(fix, "select", { mayFix: true, terminal });
+    if (stage === "terminal")
+      return (
+        <>
+          {t(blocked === "license" ? "devices.iphone.xcodeLicense" : "devices.iphone.xcodeCommandLineTools", {
+            mac: macName,
+          })}
+          <pre className="dk-ip__cmd">{XCODE_FIX_COMMAND}</pre>
+          <span className="dk-ip__act">
+            <Button size="sm" onClick={() => fixXcode("start", "select")}>
+              {t("devices.iphone.xcodeFix.fix")}
+            </Button>
+          </span>
+        </>
+      );
+    if (stage === "still")
+      return (
+        <>
+          {fixLine(stage, "select")}
+          <pre className="dk-ip__cmd">{XCODE_FIX_COMMAND}</pre>
+          <span className="dk-ip__act">
+            <Button size="sm" variant="primary" onClick={() => fixXcode("start", "select")}>
+              {t("desktop.common.retry")}
+            </Button>
+          </span>
+        </>
+      );
+    if (stage === "asking")
+      return (
+        <Act text={fixLine(stage, "select")}>
+          <Button size="sm" onClick={() => fixXcode("cancel", "select")}>
+            {t("desktop.common.cancel")}
+          </Button>
+        </Act>
+      );
+    if (stage === "running" || stage === "done") {
+      const step = stage === "done" ? 3 : (fix?.step ?? 0);
+      return (
+        <Act text={fixLine(stage, "select")}>
+          {(["select", "license", "firstLaunch"] as const).map((phase, i) => (
+            <span key={phase} className="ac-iconline dk-ip__phase" data-done={i < step ? "" : undefined}>
+              <Icon name={i < step ? "check" : "dash"} size={14} />
+              <span>{t(`devices.iphone.xcodeFix.phases.${phase}`)}</span>
+            </span>
+          ))}
+        </Act>
+      );
+    }
+    return (
+      <Act
+        text={
+          stage === "offer"
+            ? t(
+                blocked === "license" ? "devices.iphone.xcodeFix.license" : "devices.iphone.xcodeFix.commandLineTools",
+                {
+                  mac: macName,
+                },
+              )
+            : fixLine(stage, "select")
+        }
+      >
+        <Button size="sm" variant="primary" onClick={() => fixXcode("start", "select")}>
+          {stage === "offer" ? t("devices.iphone.xcodeFix.fix") : t("desktop.common.retry")}
+        </Button>
+        <Button size="sm" onClick={() => setTerminal(true)}>
+          {t("devices.iphone.xcodeFix.terminal")}
+        </Button>
+      </Act>
+    );
+  };
+  const updating =
+    setup?.fix?.kind === "update" ? xcodeFixStage(fix, "update", { mayFix: true, terminal: false }) : null;
 
   /** What the step under way says, and its one action. */
   const line = (step: IphoneSetupStep): ReactNode => {
     switch (step) {
       case "xcode":
         if (!setup) return t("desktop.iphone.checking");
+        if (setup.xcodeBlocked && reason !== "xcode_too_old") return blockedLine(setup.xcodeBlocked);
         return reason === "xcode_too_old" && phone?.osVersion ? (
           <>
             {t(setup.sdk ? "devices.iphone.xcodeOld" : "devices.iphone.xcodeOldAny", {
@@ -195,7 +310,20 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
               <Button size="sm" icon="external" onClick={() => open("appStore")}>
                 {t("desktop.iphone.updateXcode")}
               </Button>
+              <Button
+                size="sm"
+                disabled={updating === "running"}
+                loading={updating === "running"}
+                onClick={() => fixXcode("start", "update")}
+              >
+                {t(
+                  updating === "missed" || updating === "failed"
+                    ? "desktop.common.retry"
+                    : "devices.iphone.xcodeFix.update",
+                )}
+              </Button>
             </span>
+            {updating && updating !== "offer" && <span>{fixLine(updating, "update")}</span>}
           </>
         ) : reason === "xcode_too_old" ? (
           <Act text={reasonText(t, reason)}>

@@ -9,6 +9,13 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
       "De agentes.chat-app kan ook agentes.chat zelf draaien, op een Mac, een pc of een Linux-computer, voor jou of een klein team.",
     sections: [
       {
+        id: "download",
+        heading: "Download de app",
+        blocks: [
+          "[Download de agentes.chat-app](/download) voor je Mac, pc of Linux-computer en open hem. Kies **Op je eigen server**, druk op **Verder met mijn server** en dan op **agentes.chat draaien op deze computer**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Hoe het draait",
         blocks: [
@@ -217,6 +224,15 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
           "Meld je in dezelfde app aan bij elke werkruimte en druk voor elk op **Toestaan**. Werkruimtes op agentes.chat Cloud en op je eigen servers kunnen een computer delen (app 0.6.1 en nieuwer). Elk heeft er eigen agents en mappen, en als je er een loskoppelt, blijven de andere ongemoeid.",
           "Een server die de app op deze computer draait, is al gekoppeld en heeft niets nodig. Om die computer ook uit te lenen aan een werkruimte ergens anders, zie [Leen hem ook uit aan een andere werkruimte](/help/run-on-your-computer#another-workspace).",
           "Gebruik je de app op een laptop alleen als venster op je werkruimte? Als hij vraagt of agents de laptop mogen gebruiken, houdt **Niet nu** het bij een gewoon venster.",
+          "Een server die met de terminalregel is verbonden, werkt voor één workspace. Verbind je hem vanuit een andere workspace, dan gaat de server naar die workspace en bereikt de eerste hem niet meer. Gebruik de app voor meerdere workspaces op één computer.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Als agenten in de rij wachten",
+        blocks: [
+          "Elk werk van een agent gebruikt geheugen van de computer. Als er weinig vrij geheugen is, wacht het volgende in de rij tot een ander klaar is. Mensen gaan voor. Het aantal CPU's verandert dit niet.",
+          "Een computer met 4 GB geheugen draait twee of drie tegelijk, een met 8 GB ongeveer negen. Een Mac of pc draait er tot acht. Browsers en bureaubladen die agenten open laten, gebruiken ook geheugen. Voor een kortere rij gebruik je een computer met meer geheugen, of verbind je er nog een en verdeel je de agenten over beide. Workspaces die een computer delen, delen het geheugen ervan.",
         ],
       },
       {
@@ -374,9 +390,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
       {
         id: "permissions",
         heading: "Geheugen geeft geen toestemming",
-        blocks: [
-          "Niets in het geheugen laat een agent meer doen. Wat hij mag, blijft in zijn **Tools en toegang**, en gevoelige acties vragen altijd om goedkeuring.",
-        ],
+        blocks: ["Niets in het geheugen laat een agent meer doen. Wat hij mag, blijft in zijn **Tools en toegang**."],
       },
       {
         id: "proposals",
@@ -395,7 +409,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Wat eerst vraagt",
         blocks: [
-          "Als een agent wil mergen, deployen, terugdraaien, iets naar buiten sturen of gegevens verwijderen, vraagt hij het eerst, welke toegang hij ook heeft. Het verzoek verschijnt in **Goedkeuringen** en in het gesprek, met de precieze actie en de reden.",
+          "Als een agent wil mergen, deployen, terugdraaien, iets naar buiten sturen of gegevens verwijderen, vraagt hij het eerst. Dat is het niveau **Alleen wat riskant is**, waarmee elke agent begint. Op de pagina van de agent, onder **Goedkeuringen**, laat **Altijd vragen** hem vragen voordat er iets verandert, en met **Nooit vragen** vraagt hij niets, ook niet bij merge, deploy, betalingen en routines. Het verzoek verschijnt in **Goedkeuringen** en in het gesprek, met de precieze actie en de reden.",
         ],
       },
       {
@@ -403,7 +417,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Eén keer, of altijd",
         blocks: [
           "Goedkeuren geldt voor één precieze actie, met haar waarden. Verandert de agent iets, dan vraagt hij het opnieuw.",
-          "**Altijd goedkeuren** laat de agent dat soort actie vanaf nu doen, met elke waarde, zonder te vragen. Bij het verzoek van een routine doet **Altijd in deze routine** hetzelfde, alleen voor die routine. Geen van beide wordt aangeboden voor mergen, deployen, terugdraaien en dergelijke. Ongedaan maken doe je in **Tools en toegang** op de pagina van de agent, of in de instellingen van de routine.",
+          "**Altijd goedkeuren** laat de agent dat soort actie vanaf nu doen, met elke waarde, zonder te vragen. Bij het verzoek van een routine doet **Altijd in deze routine** hetzelfde, alleen voor die routine. **Altijd goedkeuren** wordt aangeboden voor elk soort actie, ook mergen en deployen, zolang de agent op het niveau **Alleen wat riskant is** staat. **Altijd in deze routine** wordt niet aangeboden voor mergen, deployen, terugdraaien en dergelijke. Ongedaan maken doe je in **Tools en toegang** op de pagina van de agent, of in de instellingen van de routine.",
         ],
       },
       {

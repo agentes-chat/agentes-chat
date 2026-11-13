@@ -428,10 +428,11 @@ fn tell(app: &AppHandle, server: &str, org: &Org, count: u64) {
     main_window::notice(app, &title, &body, url);
 }
 
-/// Preferences › Servers: every server's workspaces (the app's own windows only).
+/// Preferences › Servers, the popover and the welcome window's "Add a workspace": every server's workspaces (the
+/// app's own windows only).
 #[tauri::command]
 pub fn workspaces_get(app: AppHandle, window: tauri::Window) -> Result<Vec<ServerWorkspaces>, String> {
-    if !matches!(window.label(), "prefs" | "popover") {
+    if !matches!(window.label(), "prefs" | "popover" | "welcome") {
         return Err("only the app's own windows ask this".into());
     }
     if stale(&app) {

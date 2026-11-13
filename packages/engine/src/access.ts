@@ -10,14 +10,17 @@ import { exposedToolName } from "./connectors/mcp";
 import { sha256 } from "./crypto";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { can, requirePermission } from "./organizations";
-import { ALWAYS_SENSITIVE } from "./tools/gateway";
+import { isRightHand, isRightHandId, RIGHT_HAND_COMPUTER_GRANTS, RIGHT_HAND_GRANTS } from "./right-hand";
+import { isSensitive } from "./tools/gateway";
 import {
   type AccessState,
   ALL_TOOLS,
   BUILTIN_SCOPES,
   CONNECTOR_ALL,
+  freshGrantedKeys,
   grantKey,
   impliedByWrite,
+  isAllowed,
   isBuiltinScope,
   mailConnectionIds,
   NOT_IN_ALL,
@@ -89,6 +92,26 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
   [BROWSER_SCOPE]: [...BROWSER_TOOLS],
   [DESKTOP_SCOPE]: Object.keys(DESKTOP_TOOL_INFO),
 };
+
+/**
+ * Tools a built-in scope carries with no row of their own on the access page: turned off with their scope.
+ */
+const UNLISTED_TOOLS: Record<string, string[]> = {
+  "context:read": ["read_conversation"],
+  "schedule:write": ["delete_routine", "run_routine_now"],
+};
+
+/**
+ * Whether any tool of a computer (commands, the browser, the desktop) is on with these grants: through its scope, or
+ * turned on by name with the rest of its scope off.
+ */
+const usesComputer = (granted: Set<string>) =>
+  RIGHT_HAND_COMPUTER_GRANTS.some((scope) =>
+    (BUILTIN_TOOLS[scope] ?? []).some((name) => isAllowed(toolAccess(granted, { name, scope }))),
+  );
+
+/** Setting the workspace up is the right hand's job (ADR 0137): never an area to turn off, so its page has no row for it. */
+const RIGHT_HAND_ALWAYS = "setup:write";
 
 export interface ToolRef {
   connectionId: string | null;
@@ -368,7 +391,7 @@ export async function orgToolCatalog(db: Database, orgId: string) {
               name: exposed,
               label: humanize(name),
               description: s.description,
-              sensitive: t.sensitive === true || ALWAYS_SENSITIVE.test(exposed),
+              sensitive: isSensitive({ name: exposed, scope: "", sensitive: t.sensitive }),
               readOnly: id.endsWith(".read"),
             };
           }),
@@ -376,14 +399,6 @@ export async function orgToolCatalog(db: Database, orgId: string) {
     });
   }
   return out;
-}
-
-async function grantsOf(db: Database, orgId: string, agentId: string) {
-  const rows = await db
-    .select({ connectionId: agentScopes.connectionId, scope: agentScopes.scope })
-    .from(agentScopes)
-    .where(and(eq(agentScopes.orgId, orgId), eq(agentScopes.agentId, agentId)));
-  return new Set(rows.map((r) => grantKey(r.connectionId, r.scope)));
 }
 
 /** Whether `next` gives the agent anything `current` doesn't: a grant it lacks, or a denial lifted. */
@@ -420,16 +435,25 @@ function builtinInfo(name: string, scope: string): Omit<AccessTool, "state"> {
   };
 }
 
-function treeFor(granted: Set<string>, catalog: Awaited<ReturnType<typeof orgToolCatalog>>): AccessTree {
-  const builtins: AccessScope[] = Object.entries(BUILTIN_TOOLS).map(([scope, names]) => ({
-    scope,
-    label: scope === "" ? "Ask the person" : (BUILTIN_SCOPES[scope]?.label ?? scope),
-    state: scope === "" ? "inherited" : scopeState(granted, null, scope),
-    tools: names.map((name) => ({
-      ...builtinInfo(name, scope),
-      state: toolAccess(granted, { name, scope, connectionId: null }),
-    })),
-  }));
+/**
+ * `rightHand`: its tree, which leaves out the setup tools it always has.
+ */
+function treeFor(
+  granted: Set<string>,
+  catalog: Awaited<ReturnType<typeof orgToolCatalog>>,
+  rightHand = false,
+): AccessTree {
+  const builtins: AccessScope[] = Object.entries(BUILTIN_TOOLS)
+    .filter(([scope]) => !(rightHand && scope === RIGHT_HAND_ALWAYS))
+    .map(([scope, names]) => ({
+      scope,
+      label: scope === "" ? "Ask the person" : (BUILTIN_SCOPES[scope]?.label ?? scope),
+      state: scope === "" ? "inherited" : scopeState(granted, null, scope),
+      tools: names.map((name) => ({
+        ...builtinInfo(name, scope),
+        state: toolAccess(granted, { name, scope, connectionId: null }),
+      })),
+    }));
   return {
     all: granted.has(grantKey(null, ALL_TOOLS)),
     builtins,
@@ -463,7 +487,7 @@ export async function getAgentAccess(db: Database, actorId: string, orgId: strin
   await requirePermission(db, actorId, orgId, "read");
   const agent = await getAgent(db, orgId, agentId);
   if (!agent) throw new NotFoundError("Agent not found");
-  return treeFor(await grantsOf(db, orgId, agentId), await orgToolCatalog(db, orgId));
+  return treeFor(await freshGrantedKeys(db, orgId, agentId), await orgToolCatalog(db, orgId), isRightHand(agent));
 }
 
 /**
@@ -521,11 +545,26 @@ export async function setAgentAccess(
   };
   for (const ref of input.tools?.allow ?? []) rows.push(toolRow(ref, false));
   for (const ref of input.tools?.deny ?? []) rows.push(toolRow(ref, true));
+  // The right hand holds its built-in scopes whatever its rows say (`RIGHT_HAND_GRANTS`): one this save leaves out is
+  // turned off tool by tool, and a later save that names the scope again lifts it.
+  if (isRightHand(agent)) {
+    const wanted = new Set(rows.map((r) => grantKey(r.connectionId, r.scope)));
+    for (const scope of RIGHT_HAND_GRANTS.filter((s) => s !== RIGHT_HAND_ALWAYS))
+      for (const name of [...(BUILTIN_TOOLS[scope] ?? []), ...(UNLISTED_TOOLS[scope] ?? [])])
+        if (toolAccess(wanted, { name, scope }) === "off")
+          rows.push({ connectionId: null, scope: toolDenyScope(name) });
+  }
   const unique = new Map(rows.map((r) => [grantKey(r.connectionId, r.scope), r]));
-  if (!admin && widens(await grantsOf(db, orgId, agentId), unique)) {
+  if (!admin && widens(await freshGrantedKeys(db, orgId, agentId), unique)) {
     throw new ForbiddenError("Only an admin can give an agent new access. Its owner can only take access away.");
   }
   await db.transaction(async (tx) => {
+    // The right hand's shared seat on the workspace's computer (ADR 0175) goes with its last computer grant: the
+    // computer stops what runs there, and a grant given again starts an empty one. A tool left on by name is a grant.
+    if (isRightHand(agent) && !usesComputer(new Set(unique.keys()))) {
+      const { removeSeat, SHARED_SEAT } = await import("./right-hand-seats");
+      await removeSeat(tx, orgId, SHARED_SEAT);
+    }
     // Mailbox grants are managed by the mail API (ADR 0038): kept as they are.
     await tx
       .delete(agentScopes)
@@ -556,16 +595,28 @@ export async function setAgentAccess(
     });
   });
   caches.scopes.deletePrefix(`${orgId}:${agentId}`);
-  return treeFor(await grantsOf(db, orgId, agentId), await orgToolCatalog(db, orgId));
+  return treeFor(await freshGrantedKeys(db, orgId, agentId), await orgToolCatalog(db, orgId), isRightHand(agent));
 }
 
-/** The grant rows `setAgentAccess` replaces (mailboxes and databases keep their own), oldest first. */
+/**
+ * The grants `setAgentAccess` replaces (mailboxes and databases keep their own), oldest first: the agent's rows, and
+ * for the right hand the scopes it holds in code too, so a save made from this list turns none of them off.
+ */
 export async function replaceableGrants(db: Executor, orgId: string, agentId: string): Promise<ScopeGrant[]> {
-  return db
+  const rows = await db
     .select({ connectionId: agentScopes.connectionId, scope: agentScopes.scope })
     .from(agentScopes)
     .where(and(eq(agentScopes.orgId, orgId), eq(agentScopes.agentId, agentId), notMailGrant(orgId)))
     .orderBy(asc(agentScopes.createdAt), asc(agentScopes.scope));
+  if (!(await isRightHandId(db, orgId, agentId))) return rows;
+  const held = new Set(rows.map((r) => grantKey(r.connectionId, r.scope)));
+  return [
+    ...rows,
+    ...RIGHT_HAND_GRANTS.filter((scope) => !held.has(grantKey(null, scope))).map((scope) => ({
+      connectionId: null,
+      scope,
+    })),
+  ];
 }
 
 /** What a proposal of access was made against: changes to the same grants, in any order, hash alike. */

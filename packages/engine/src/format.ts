@@ -154,3 +154,19 @@ export function percentile(values: readonly number[], p: number): number {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.min(sorted.length, Math.max(1, Math.ceil(p * sorted.length))) - 1] as number;
 }
+
+const XML_ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+
+/** The text of XML character data: the five named entities and numeric ones (`&#233;`, `&#xE9;`) decoded. */
+export const decodeXmlEntities = (s: string) =>
+  s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, e: string) => {
+    if (e[0] !== "#") return XML_ENTITIES[e] ?? whole;
+    const code = e[1] === "x" || e[1] === "X" ? Number.parseInt(e.slice(2), 16) : Number(e.slice(1));
+    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+  });
+
+/** CSV with RFC 4180 quoting. */
+export function tableToCsv(columns: string[], rows: string[][]): string {
+  const cell = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return [columns, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
+}

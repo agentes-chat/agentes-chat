@@ -72,6 +72,11 @@ export interface PushStrings {
   deviceInUseBody: string;
   deviceAccessTitle: (agent: string, person: string, device: string) => string;
   deviceAccessBody: string;
+  /** `device.tool_request`: someone needs a tool on the person's computer (`a` who, `d` the computer). */
+  deviceToolTitle: (a: string, d: string) => string;
+  deviceToolBody: string;
+  /** `admin_ask`: `a` asks who may do it (`what`: channel_agent, create_agents, webhook; `l` the channel or service). */
+  adminAskTitle: (a: string, what: string, l: string) => string;
   deviceWaitingTitle: (person: string, device: string) => string;
   deviceWaitingBody: string;
   teamWeekReady: string;
@@ -171,6 +176,14 @@ export const en: PushStrings = {
   deviceInUseBody: "Tap to stop it.",
   deviceAccessTitle: (a, p, d) => (p ? `${a} (for ${p}) asks to use your ${d}` : `${a} asks to use your ${d}`),
   deviceAccessBody: "Tap to allow once, always, or say no.",
+  deviceToolTitle: (a, d) => `${a} asks you to turn on a tool on your ${d}`,
+  deviceToolBody: "Tap to turn it on in one click.",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} asks you to add an agent to #${l}`
+      : what === "create_agents"
+        ? `${a} asks to be able to create agents`
+        : `${a} asks you to set up the ${l} webhook for routines`,
   deviceWaitingTitle: (p, d) => `${p}'s agent is waiting for your ${d}`,
   deviceWaitingBody: "It starts when it's back.",
   teamWeekReady: "Your team's week is ready",

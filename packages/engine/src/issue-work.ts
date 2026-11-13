@@ -69,7 +69,7 @@ export async function issueWorkBrief(
     criteria ? `## Acceptance criteria\n${criteria}` : "",
     prs ? `## Pull requests linked\n${prs}` : "",
     files.length
-      ? `## Files attached to the issue\n${files.map((f) => `- ${f.title} (artifact ${f.id})`).join("\n")}\nOpen one with \`read_artifact\` when it helps.`
+      ? `## Files attached to the issue\n${files.map((f) => `- ${f.title} (artifact ${f.id})`).join("\n")}\nOpen each with \`read_artifact\` before you work on it: pictures and PDFs are shown to you, documents, sheets and audio come as text.`
       : "",
     [
       "## How to work on it",
@@ -79,7 +79,7 @@ export async function issueWorkBrief(
       asked
         ? `- Refer to the issue as #${issue.number} in your tools. Check each criterion you meet with \`update_issue\` (\`done_criteria\`), and link the pull request with \`update_issue\`. The issue's status follows your work on its own: don't set it yourself.`
         : `- Refer to the task as #${issue.number} in your tools. Change it only when someone asks you to.`,
-      "- Sensitive actions (merge, deploy, rollback) still need a person's approval.",
+      "- Merge, deploy and rollback follow your approvals here as anywhere else.",
     ].join("\n"),
   ]
     .filter(Boolean)

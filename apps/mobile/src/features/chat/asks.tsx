@@ -560,7 +560,7 @@ export function AskCard({
               {kindNote ? `${kindWords} · ${kindNote}` : kindWords}
             </Text>
             {waitsFor && waitsFor !== "you" && !ended ? (
-              <Text variant="footnote" tone="muted" numberOfLines={1} style={styles.shrink}>
+              <Text variant="footnote" tone="muted" numberOfLines={1} style={styles.waits}>
                 {waitsFor}
               </Text>
             ) : null}
@@ -1069,6 +1069,8 @@ const styles = StyleSheet.create({
   medium: { fontWeight: "500" },
   grow: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1 },
+  // Who it waits for never takes the kind's room: at most half the line (long words left the kind none).
+  waits: { flexShrink: 1, maxWidth: "50%" },
   lead: { lineHeight: 22 },
   // Edge to edge across the card (its 16-point sides), a hairline above.
   edge: { marginHorizontal: -16, paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth },

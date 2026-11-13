@@ -83,6 +83,14 @@ export const strings: Partial<PushStrings> = {
   deviceAccessTitle: (a, p, d) =>
     p ? `${a} (untuk ${p}) minta izin memakai ${d} milikmu` : `${a} minta izin memakai ${d} milikmu`,
   deviceAccessBody: "Ketuk untuk mengizinkan sekali, selalu, atau menolak.",
+  deviceToolTitle: (a, d) => `${a} meminta kamu menyalakan alat di ${d} kamu`,
+  deviceToolBody: "Ketuk untuk menyalakannya dengan sekali klik.",
+  adminAskTitle: (a, what, l) =>
+    what === "channel_agent"
+      ? `${a} memintamu menambahkan agen ke #${l}`
+      : what === "create_agents"
+        ? `${a} meminta izin membuat agen`
+        : `${a} memintamu menyiapkan webhook ${l} untuk rutinitas`,
   deviceWaitingTitle: (p, d) => `Agen ${p} sedang menunggu ${d} milikmu`,
   deviceWaitingBody: "Mulai begitu perangkatnya kembali.",
   teamWeekReady: "Ringkasan minggu timmu sudah siap",

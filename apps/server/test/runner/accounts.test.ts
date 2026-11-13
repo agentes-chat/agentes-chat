@@ -1125,6 +1125,13 @@ test.if(posix)(
     m.probeUsage([id]);
     await new Promise((r) => setTimeout(r, 100));
     expect(runs().map((r) => r.args)).toEqual(["setup-token"]);
+    // Stuck at its limit, the server asks for a check (`list.recheck`): one turn on the cheapest model, once.
+    m.probeUsage([id], [id]);
+    await waitFor(() => runs().length > 1, 8000);
+    expect(runs()[1]?.args).toContain("--model haiku");
+    m.probeUsage([id], [id]);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(runs()).toHaveLength(2);
     // A turn's endpoint refused it: signed out for every agent, nothing to hand over, until it signs in again.
     await m.refused("claude_code", id);
     m.invalidate();
@@ -1140,7 +1147,11 @@ test.if(posix)(
     expect(lines.join("\n")).not.toContain("oat01");
     // Removed: nothing runs as root (only Claude's settings end a token), the folder and its markers go.
     expect(await m.remove("claude_code", id)).toBe(true);
-    expect(runs().map((r) => r.args)).toEqual(["setup-token", "setup-token"]);
+    expect(
+      runs()
+        .map((r) => r.args)
+        .filter((a) => a === "setup-token"),
+    ).toEqual(["setup-token", "setup-token"]);
     expect(existsSync(dir)).toBe(false);
     expect(existsSync(`${dir}.shared`)).toBe(false);
     expect(existsSync(`${dir}.invalid`)).toBe(false);

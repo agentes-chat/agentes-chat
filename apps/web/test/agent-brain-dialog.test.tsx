@@ -214,6 +214,10 @@ describe("Quem pensa (its dialog)", () => {
     const rows = brainRows(d);
     expect(rows.find(notInUse("Claude"))?.lines).toEqual(["Usa o plano do Claude de Walter"]);
     expect(rows.find(notInUse("ChatGPT"))?.lines).toEqual(["Usa o plano do ChatGPT de Walter"]);
+    // Grouped by AI, not by whose they are: where to switch provider is the group's name.
+    expect(rows.find(notInUse("Claude"))?.group).toBe("Claude");
+    expect(rows.find(notInUse("ChatGPT"))?.group).toBe("ChatGPT");
+    expect(rows.some((r) => r.group === "De Walter")).toBe(false);
     await pickRow(d, notInUse("Claude"));
     await confirmScreen(d);
     await settle(6);

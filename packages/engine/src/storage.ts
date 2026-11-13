@@ -27,6 +27,7 @@ import {
 import { recordAudit } from "./audit";
 import { openSecret, randomToken, sealSecret, sha256 } from "./crypto";
 import { NotFoundError, ValidationError } from "./errors";
+import { transcriptKey } from "./file-reader";
 import { assertStorageRoom } from "./limits";
 import { assertPublicHttpsUrl, outboundFetch, type ResolveHost } from "./net-guard";
 import { requirePermission } from "./organizations";
@@ -653,7 +654,10 @@ export async function runMigration(deps: StorageDeps, migrationId: string, optio
         // The row now points at the target copy. Drop the old object only when it was on our platform store,
         // so cycling off the platform frees our disk; a workspace's own bucket is theirs (and may be a backup),
         // so its copies stay. Never delete the key the row now holds (a store that overwrote in place).
-        if (v.storageConfigId === null && v.blobKey !== key) await source.delete(v.blobKey).catch(() => undefined);
+        if (v.storageConfigId === null && v.blobKey !== key) {
+          await source.delete(v.blobKey).catch(() => undefined);
+          await source.delete(transcriptKey(v.blobKey)).catch(() => undefined);
+        }
       } catch (error) {
         await db
           .update(storageMigrations)

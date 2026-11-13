@@ -89,6 +89,12 @@ function patchTargets(
  * Returns whether the event was one of these.
  */
 export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type: string }): boolean {
+  // What an agent keeps running (ADR 0176): only its list, nothing else about the computer changed.
+  if (event.type === "machine.holds") {
+    const agentId = (event as { agentId?: unknown }).agentId;
+    if (typeof agentId === "string") void qc.invalidateQueries({ queryKey: keys.agentHolds(orgId, agentId) });
+    return true;
+  }
   if (!isMachineEvent(event.type)) return false;
   // The devices list (`devices.changed`, and every computer's state, pause or name in it) is read again.
   void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
