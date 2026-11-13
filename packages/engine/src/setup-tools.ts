@@ -59,7 +59,7 @@ import {
 } from "./workspace-actions";
 import { isPersonalWorkspace } from "./workspace-mode";
 
-const { agentActions, agentRuns, channels, machineAccounts, messages, orgRoles, skills } = schema;
+const { agentActions, agentGroups, agentRuns, channels, machineAccounts, messages, orgRoles, skills } = schema;
 
 /** The setup tools' scope: a tool group of its own, loaded when a message is about setting up (ADR 0043). */
 export const SETUP_SCOPE = "setup:write";
@@ -1086,7 +1086,7 @@ const SETUP_TOOLS_PERSONAL: Record<string, string> = {
   [OFFER_INVITES_TOOL]:
     "Offer to invite someone the person trusts (family, a partner, someone who helps them) to this workspace with a card in this conversation: its button opens the app's invite dialog with these addresses filled in, as members. A person who may invite sends it there (and may change roles); you send nothing. Use it when they ask to invite or add someone by email, never on your own.",
   [PROPOSE_SETTINGS_TOOL]:
-    "Change agents' settings with one card in this conversation: the model, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+    "Change agents' settings with one card in this conversation: the model, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
   [OFFER_ANSWERS_TOOL]:
     "Ask the person one short question with answers to tap under it, in this conversation: each tap sends the answer as their own message (several at once with `multiple`), and they can always type instead. Use it for the questions that set their agents up (what they want help with, what takes most of their time, when they want to hear from their agents), one per turn, with `step` and `of` ('Pergunta 2 de 3'). The question shows as your message: write nothing else in this turn and end it. Their answer comes as their next message.",
   [PROPOSE_TEAM_TOOL]:
@@ -1485,6 +1485,7 @@ interface SettingsChangeInput {
   remove_skills?: unknown;
   name?: unknown;
   look?: unknown;
+  group?: unknown;
   reports_to?: unknown;
   archive?: unknown;
 }
@@ -1619,6 +1620,19 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
   if (typeof change.name === "string")
     lines.push({ field: "name", to: change.name.trim(), label: { to: change.name } });
   if (change.look) lines.push({ field: "look", to: change.look });
+  if (typeof change.group === "string") {
+    const wanted = change.group.trim();
+    // "none" takes the agent out of every sector; any other name is stored as the workspace writes it, so the card,
+    // its apply and Undo all find the same sector however the model typed its case.
+    const [group] =
+      wanted.toLowerCase() === "none"
+        ? []
+        : await ctx.db
+            .select({ name: agentGroups.name })
+            .from(agentGroups)
+            .where(and(eq(agentGroups.orgId, ctx.orgId), sql`lower(${agentGroups.name}) = ${wanted.toLowerCase()}`));
+    lines.push({ field: "group", to: group?.name ?? (wanted.toLowerCase() === "none" ? null : wanted) });
+  }
   if (typeof change.reports_to === "string") {
     const wanted = change.reports_to.trim().replace(/^@/, "").toLowerCase();
     if (wanted === "none") lines.push({ field: "reports_to", to: null });
@@ -1704,6 +1718,13 @@ const CHANGE_PROPERTIES = {
     description:
       'Responde a: the @handle of the agent it reports to, or "none". It says who it tells, never what it may do.',
   },
+  group: {
+    type: "string",
+    minLength: 1,
+    maxLength: 80,
+    description:
+      'Its department (setor), by the name the team screen shows, or "none" to take it out of its department. It says where it sits in the workspace, never what it may do.',
+  },
   archive: { type: "boolean", description: "True: archive it (it stops working; Undo brings it back)." },
 };
 
@@ -1729,8 +1750,8 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
   return {
     name: own ? REQUEST_SETTINGS_TOOL : PROPOSE_SETTINGS_TOOL,
     description: own
-      ? "Ask a person to change a setting of your own, with one card in this conversation: turn on or off a skill installed here, join or leave a channel or how you answer there, your model, the AI account you think with, your monthly budget, your owner, who may talk to you, your name, your look or who you report to. Use it whenever a request needs a setting of yours you don't have, instead of telling the person how to change it by hand or saying you can't ask. Nothing changes until a person clicks, even when the person who asked could change it: the card waits for whoever may (they send one they can't decide from there), and the result says which. Apps and permissions: request_permission. A skill not installed yet: offer_install_skill."
-      : "Change teammates' settings with one card in this conversation: the model, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
+      ? "Ask a person to change a setting of your own, with one card in this conversation: turn on or off a skill installed here, join or leave a channel or how you answer there, your model, the AI account you think with, your monthly budget, your owner, who may talk to you, your name, your look, the department you are in or who you report to. Use it whenever a request needs a setting of yours you don't have, instead of telling the person how to change it by hand or saying you can't ask. Nothing changes until a person clicks, even when the person who asked could change it: the card waits for whoever may (they send one they can't decide from there), and the result says which. Apps and permissions: request_permission. A skill not installed yet: offer_install_skill."
+      : "Change teammates' settings with one card in this conversation: the model, the AI account it thinks with, its monthly budget, its owner, who may talk to it, the channels it joins or leaves and whether it answers there without a mention, the skills it has on, its name, its look, its department, who it reports to, or archiving it. A change the person who asked may make, with nothing read from outside this turn, applies at once with Undo. Any other waits on the card for who may make it, and one they can't make they send from there. The result says which: never say it is done before it does. Instructions, a role or apps go through propose_instruction_change.",
     scope: own ? "" : SETUP_SCOPE,
     inputSchema: own
       ? {

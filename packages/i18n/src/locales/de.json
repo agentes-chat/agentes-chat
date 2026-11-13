@@ -2583,6 +2583,7 @@
         "ai_account": "Nur die Person, der das Konto gehört, vergibt es",
         "name": "Nur Admins benennen einen Agenten um",
         "look": "Nur Admins und sein Verantwortlicher ändern sein Aussehen",
+        "group": "Nur Admins versetzen einen Agenten in eine andere Abteilung",
         "reports_to": "Nur Admins ändern, an wen ein Agent berichtet",
         "many": "Nur Admins machen diese Änderungen"
       }
@@ -2597,6 +2598,7 @@
       "channel": "Kanal",
       "name": "Name",
       "look": "Aussehen",
+      "group": "Abteilung",
       "reports_to": "Berichtet an",
       "skill": "Skill {{name}}"
     },

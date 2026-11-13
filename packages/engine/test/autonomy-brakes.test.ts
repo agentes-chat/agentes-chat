@@ -578,7 +578,7 @@ describe("who an agent may call (§8)", () => {
       .set({ autonomyBrakes: { callAgents: "some", callAgentIds: [kai.id], otherProjects: true } })
       .where(eq(schema.agents.id, caller.id));
     expect(await callableAgents(f.db, f.org.id, caller.id, [ada.id, kai.id])).toEqual(new Set([kai.id]));
-    const team = await f.db.select().from(schema.agents);
+    const team = (await f.db.select().from(schema.agents)).map((a) => ({ ...a, groupName: null }));
     const listed = teammatesFor(team, caller.id, f.owner.id, new Set(), await speakerFor(f.db, f.org.id, f.owner.id));
     expect(listed.map((a) => a.handle)).toEqual(["kai"]);
   });

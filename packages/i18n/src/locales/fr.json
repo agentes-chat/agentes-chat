@@ -2672,6 +2672,7 @@
         "ai_account": "Seul le propriétaire du compte l’attribue",
         "name": "Seuls les admins renomment un agent",
         "look": "Seuls les admins et son responsable changent son apparence",
+        "group": "Seuls les admins changent un agent de service",
         "reports_to": "Seuls les admins changent à qui un agent rend compte",
         "many": "Seuls les admins font ces changements"
       }
@@ -2686,6 +2687,7 @@
       "channel": "Canal",
       "name": "Nom",
       "look": "Apparence",
+      "group": "Service",
       "reports_to": "Rend compte à",
       "skill": "Compétence {{name}}"
     },

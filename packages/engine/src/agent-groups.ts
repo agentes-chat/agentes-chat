@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
 import { getMembership, requirePermission } from "./organizations";
 import { ROLE_COLORS, ROLE_ICONS } from "./permissions";
+import { forgetTeam } from "./team";
 
 const { agentGroups, agents } = schema;
 
@@ -83,6 +84,8 @@ export async function agentGroupViews(db: Executor, orgId: string): Promise<Agen
  * The event carries no list: it grows with the agents, and Postgres NOTIFY refuses payloads near 8000 bytes.
  */
 async function announce(deps: AgentGroupDeps, orgId: string) {
+  // Team rows carry their department's name (`loadTeam`): a move or a rename changes them too.
+  forgetTeam(orgId);
   await publishOrgEvent(deps.pubsub, { type: "org.broadcast", orgId, event: { type: "agent.groups" } });
   return agentGroupViews(deps.db, orgId);
 }

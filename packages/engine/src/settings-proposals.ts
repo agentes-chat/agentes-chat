@@ -1,6 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, isNull, schema } from "@agenteschat/db";
 import { accessInputOf, replaceableGrants, setAgentAccess } from "./access";
+import { moveAgentToGroup } from "./agent-groups";
 import { type Agent, archiveAgent, getAgent, unarchiveAgent, updateAgent, validateAgentFields } from "./agents";
 import { setAgentAppearance, validateAppearance } from "./appearance";
 import { audienceOf, setAgentAudience } from "./audience";
@@ -21,6 +22,7 @@ import { canonicalJson } from "./tools/json-schema";
 
 const {
   agentActions,
+  agentGroups,
   agentSkills,
   agents,
   channelMembers,
@@ -61,6 +63,8 @@ export const SETTING_GROUP: Record<SettingField, "admin" | "admin_or_owner" | "a
   skill: "admin",
   name: "admin",
   look: "admin_or_owner",
+  // Who manages agents moves an agent between departments, as on the team screen (ADR 0148 addendum).
+  group: "admin",
   // Who manages agents sets a line, as on the page (ADR 0148 addendum).
   reports_to: "admin",
   ai_account: "account",
@@ -79,6 +83,7 @@ const ORDER: SettingField[] = [
   "skill",
   "name",
   "look",
+  "group",
   "reports_to",
   "archive",
   "delete",
@@ -116,6 +121,8 @@ async function valueNow(db: Executor, agent: Agent, line: Pick<ReceiptLine, "fie
       return agent.appearance;
     case "reports_to":
       return agent.reportsToAgentId ?? null;
+    case "group":
+      return departmentOf(db, agent);
     case "model":
       return isComputerBrain(agent.brain) ? agent.brainModel : agent.model;
     case "budget":
@@ -137,6 +144,16 @@ async function valueNow(db: Executor, agent: Agent, line: Pick<ReceiptLine, "fie
     default:
       return seatOf(db, agent.id, line.channelId ?? "");
   }
+}
+
+/** The department the agent is in, by name; null when it is in none. The card and the tool speak names, not ids. */
+async function departmentOf(db: Executor, agent: Agent) {
+  if (!agent.groupId) return null;
+  const [row] = await db
+    .select({ name: agentGroups.name })
+    .from(agentGroups)
+    .where(and(eq(agentGroups.orgId, agent.orgId), eq(agentGroups.id, agent.groupId)));
+  return row?.name ?? null;
 }
 
 async function skillOn(db: Executor, agent: Agent, skillId: string) {
@@ -207,6 +224,18 @@ async function setValue(
       return void (await setReportsTo(deps, actorId, orgId, [
         { agentId, reportsToAgentId: typeof value === "string" ? value : null },
       ]));
+    // A department: the editor resolves the name the card holds, and checks who may move an agent (ADR 0083).
+    case "group": {
+      const name = typeof value === "string" && value.trim() ? value.trim() : null;
+      const [group] = name
+        ? await db
+            .select({ id: agentGroups.id })
+            .from(agentGroups)
+            .where(and(eq(agentGroups.orgId, orgId), eq(agentGroups.name, name)))
+        : [];
+      if (name && !group) throw new NotFoundError("That department is gone", "agent_group.not_found");
+      return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: group?.id ?? null }));
+    }
     case "model": {
       const agent = await getAgent(db, orgId, agentId);
       if (agent && isComputerBrain(agent.brain))
@@ -369,7 +398,9 @@ export async function settingLines(
       skipped.push(
         w.field === "skill"
           ? `${who} ${to ? "already has" : "doesn't have"} the skill ${w.label?.to ?? ""}.`
-          : `${who} already has that ${w.field.replace("_", " ")}.`,
+          : w.field === "group"
+            ? `${who} ${to ? `already is in the department ${String(to)}` : "already is in no department"}.`
+            : `${who} already has that ${w.field.replace("_", " ")}.`,
       );
       continue;
     }
@@ -439,6 +470,16 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
     case "reports_to":
       if (w.to !== null && typeof w.to !== "string") return "say which agent, or none.";
       return reportsToRefusal(db, orgId, agent.id, w.to);
+    case "group": {
+      if (w.to === null) return null;
+      if (typeof w.to !== "string" || !w.to.trim()) return "say which department, or none.";
+      const name = w.to.trim();
+      const [group] = await db
+        .select({ id: agentGroups.id })
+        .from(agentGroups)
+        .where(and(eq(agentGroups.orgId, orgId), eq(agentGroups.name, name)));
+      return group ? null : `there is no department called "${name}" here.`;
+    }
     default: {
       const [channel] = await db
         .select()
