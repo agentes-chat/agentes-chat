@@ -2,16 +2,18 @@ name: iOS build
 
 # Builds the phone app for iPhone here, without EAS: `expo prebuild` makes the native project from app.config.ts
 # (it is never committed), xcodebuild archives it and exports it for the App Store, and the result goes to
-# TestFlight (or stays as the run's artifact). Signing is automatic: Xcode asks Apple for the certificate and the
-# profiles of the app and its share extension with the App Store Connect API key, so no certificate or profile is
-# kept anywhere. Production only: testers get builds through TestFlight.
+# TestFlight (or stays as the run's artifact). Signed by hand: the Apple Distribution certificate comes from a
+# secret into a keychain made for the run, the App Store provisioning profile of each target is read from App
+# Store Connect with the API key, and plugins/with-ios-manual-signing.js gives each target its own. Xcode never signs in to Apple. Production only: testers get builds through TestFlight.
 # Runs only by hand (Actions → Run workflow). See apps/mobile/README.md, "iOS on GitHub Actions".
 #
 # Secrets (repository settings, never in the repo):
 #   APPLE_TEAM_ID: the Apple Developer team that owns chat.agentes.app
+#   IOS_DIST_CERT_P12_BASE64, IOS_DIST_CERT_PASSWORD: the Apple Distribution certificate with its key (.p12)
 #   ASC_API_KEY_ID, ASC_API_ISSUER_ID, ASC_API_KEY_P8: an App Store Connect API key (its id, the issuer id and the
-#     .p8 file's text) with the Admin role, which automatic signing needs
-# Variable (optional): IOS_BUILD_NUMBER_BASE, added to the run number (above the last build in App Store Connect).
+#     .p8 file's text) that may read provisioning profiles and upload builds
+# Variables (optional): IOS_BUILD_NUMBER_BASE, added to the run number (above the last build in App Store
+#   Connect); IOS_XCODE_VERSION, the Xcode to build with ("26.6"), else the newest on the runner.
 # A secret still set to PLACEHOLDER (made so the names exist) counts as not set.
 on:
   workflow_dispatch:
@@ -39,22 +41,84 @@ jobs:
     timeout-minutes: 90
     env:
       APP_VARIANT: production
+      # The project's targets, the app and its share extension: each has an App Store provisioning profile.
+      IOS_BUNDLE_IDS: chat.agentes.app chat.agentes.app.share-extension
     steps:
-      # Fails in seconds, before anything is installed, when the key isn't there.
+      # Fails in seconds, before anything is installed, when a secret isn't there.
       - name: Apple secrets are set
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
           ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
         run: |
           missing=0
-          for name in APPLE_TEAM_ID ASC_API_KEY_ID ASC_API_ISSUER_ID ASC_API_KEY_P8; do
+          for name in APPLE_TEAM_ID IOS_DIST_CERT_P12_BASE64 IOS_DIST_CERT_PASSWORD \
+            ASC_API_KEY_ID ASC_API_ISSUER_ID ASC_API_KEY_P8; do
             value=$(printenv "$name" || true)
             if [ -z "$value" ] || [ "$value" = PLACEHOLDER ]; then echo "::error::Secret $name is not set"; missing=1; fi
           done
           if [ "$missing" = 1 ]; then echo "See apps/mobile/README.md, \"iOS on GitHub Actions\"."; exit 1; fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The certificate goes to a keychain of its own and the profiles to Xcode's folders, all outside the checkout
+      # and removed at the end. Before anything is installed: a key App Store Connect refuses, or a target with no
+      # profile, stops the run here in seconds, not at the archive a quarter of an hour in.
+      - name: Signing material
+        env:
+          CERT_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          export ASC_API_KEY_FILE="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s\n' "$ASC_API_KEY_P8" > "$ASC_API_KEY_FILE"
+          chmod 600 "$ASC_API_KEY_FILE"
+          source apps/mobile/scripts/app-store-connect.sh
+          status=$(asc_status)
+          if [ "$status" != 200 ]; then
+            echo "::error::App Store Connect answered $status to the API key: check ASC_API_KEY_ID, ASC_API_ISSUER_ID and ASC_API_KEY_P8 (the .p8 file's whole text)"
+            exit 1
+          fi
+
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password=$(openssl rand -hex 24)
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 7200 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          printf '%s' "$CERT_BASE64" | base64 -d > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -k "$keychain" -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security > /dev/null
+          rm -f "$RUNNER_TEMP/dist.p12"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain" > /dev/null
+          # shellcheck disable=SC2046
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          echo "SIGNING_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          # This log is public: the certificate's name (the company's) is masked wherever a later step prints it.
+          identity=$(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(.*\)".*/\1/p' | head -1)
+          if [ -n "$identity" ]; then
+            echo "::add-mask::$identity"
+            owner=$(printf '%s' "$identity" | sed -E 's/^[^:]*: //; s/ \([A-Z0-9]+\)$//')
+            if [ -n "$owner" ]; then echo "::add-mask::$owner"; fi
+          fi
+
+          # Each target's profile, by its name: Xcode finds it in its folders (the older one too).
+          profiles="$RUNNER_TEMP/profiles"
+          map='{}'
+          for id in $IOS_BUNDLE_IDS; do
+            name=$(asc_store_profile "$id" "$profiles")
+            echo "$id: $name"
+            map=$(python3 -c 'import json, sys; m = json.loads(sys.argv[1]); m[sys.argv[2]] = sys.argv[3]; print(json.dumps(m))' \
+              "$map" "$id" "$name")
+          done
+          for folder in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+            "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            mkdir -p "$folder"
+            cp "$profiles"/*.mobileprovision "$folder/"
+          done
+          echo "IOS_SIGNING_PROFILES=$map" >> "$GITHUB_ENV"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
@@ -62,10 +126,20 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      # The newest Xcode on the runner.
+      # The Xcode the variable names, so a build doesn't change with the runner's image; else the newest there.
       - name: Xcode
+        env:
+          WANTED: ${{ vars.IOS_XCODE_VERSION }}
         run: |
-          xcode=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          if [ -n "$WANTED" ]; then
+            xcode="/Applications/Xcode_$WANTED.app"
+            if [ ! -d "$xcode" ]; then
+              echo "::error::No Xcode $WANTED on this runner (IOS_XCODE_VERSION). Here:"; ls -d /Applications/Xcode*.app
+              exit 1
+            fi
+          else
+            xcode=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          fi
           sudo xcode-select -s "$xcode"
           xcodebuild -version
       - run: bun install --frozen-lockfile
@@ -73,7 +147,8 @@ jobs:
         env:
           BASE: ${{ vars.IOS_BUILD_NUMBER_BASE }}
         run: echo "IOS_BUILD_NUMBER=$(( ${BASE:-0} + GITHUB_RUN_NUMBER ))" >> "$GITHUB_ENV"
-      # app.config.ts reads the team and the build number; the share extension takes both from the app.
+      # app.config.ts reads the team and the build number, and the signing plugin the profiles' names; the share
+      # extension takes the team and the number from the app.
       - name: Native project
         working-directory: apps/mobile
         env:
@@ -81,65 +156,76 @@ jobs:
         run: |
           bunx expo prebuild --platform ios --clean --no-install
           cd ios
+          # Every target with a profile is signed by hand in both its configurations; fewer means the plugin ran
+          # before a target existed.
+          wanted=$(( $(echo "$IOS_BUNDLE_IDS" | wc -w) * 2 ))
+          found=$(grep -c 'PROVISIONING_PROFILE_SPECIFIER' ./*.xcodeproj/project.pbxproj || true)
+          if [ "$found" -lt "$wanted" ]; then
+            echo "::error::Manual signing reached $found build configurations, not $wanted: a target has no profile set"
+            exit 1
+          fi
           command -v pod > /dev/null || sudo gem install cocoapods --no-document
           pod install
-      # Written only now, after the dependencies' install scripts and CocoaPods ran: to the runner's temp folder,
-      # outside the checkout, and deleted at the end.
-      - name: App Store Connect key
-        env:
-          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
-        run: |
-          printf '%s\n' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
-          chmod 600 "$RUNNER_TEMP/AuthKey.p8"
       - name: Archive
         working-directory: apps/mobile/ios
-        env:
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
         run: |
           set -o pipefail
           workspace=$(ls -d *.xcworkspace | head -1)
           scheme="${workspace%.xcworkspace}"
-          # The whole log is long: only its end is shown, here in the run's log, where GitHub masks the secrets
-          # (an artifact of the file would carry the team id unmasked).
+          # This log is public and the build's is long and names the signing identity on every signed file: only
+          # its errors are shown, here, where GitHub masks the secrets and the certificate's name (an artifact of
+          # the file would carry them as they are).
           xcodebuild archive \
             -workspace "$workspace" -scheme "$scheme" -configuration Release \
             -destination generic/platform=iOS -archivePath "$RUNNER_TEMP/app.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
-            -authenticationKeyID "$ASC_API_KEY_ID" -authenticationKeyIssuerID "$ASC_API_ISSUER_ID" \
-            > "$RUNNER_TEMP/archive.log" 2>&1 || { tail -300 "$RUNNER_TEMP/archive.log"; exit 1; }
-          tail -20 "$RUNNER_TEMP/archive.log"
+            OTHER_CODE_SIGN_FLAGS="--keychain $SIGNING_KEYCHAIN" \
+            > "$RUNNER_TEMP/archive.log" 2>&1 || {
+              grep -E "(error|fatal error):|^\*\* |The following build commands failed|^\t" "$RUNNER_TEMP/archive.log" | tail -80
+              exit 1
+            }
+          grep -E "^\*\* " "$RUNNER_TEMP/archive.log" | tail -1
           test -d "$RUNNER_TEMP/app.xcarchive"
-      # With "Send to TestFlight", Xcode uploads the build itself; without it, the .ipa is written to the folder.
       - name: Export
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
-          UPLOAD: ${{ inputs.upload }}
         run: |
-          destination=export
-          if [ "$UPLOAD" = true ]; then destination=upload; fi
-          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>$destination</string>
-            <key>teamID</key><string>$APPLE_TEAM_ID</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>manageAppVersionAndBuildNumber</key><false/>
-          </dict></plist>
-          PLIST
+          python3 - "$RUNNER_TEMP/ExportOptions.plist" <<'PY'
+          import json, os, plistlib, sys
+          with open(sys.argv[1], "wb") as out:
+              plistlib.dump(
+                  {
+                      "method": "app-store-connect",
+                      "destination": "export",
+                      "teamID": os.environ["APPLE_TEAM_ID"],
+                      "signingStyle": "manual",
+                      "signingCertificate": "Apple Distribution",
+                      "provisioningProfiles": json.loads(os.environ["IOS_SIGNING_PROFILES"]),
+                      "manageAppVersionAndBuildNumber": False,
+                  },
+                  out,
+              )
+          PY
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/app.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
-            -authenticationKeyID "$ASC_API_KEY_ID" -authenticationKeyIssuerID "$ASC_API_ISSUER_ID"
-          if [ "$UPLOAD" = true ]; then
-            echo "::notice::Build $IOS_BUILD_NUMBER sent to App Store Connect; it shows in TestFlight once Apple processes it."
-          fi
+            > "$RUNNER_TEMP/export.log" 2>&1 || {
+              grep -E "error|^\*\* " "$RUNNER_TEMP/export.log" | tail -40
+              exit 1
+            }
+          grep -E "^\*\* " "$RUNNER_TEMP/export.log" | tail -1
+          ls "$RUNNER_TEMP/export" | grep -E "\.ipa$"
+      # Apple's own uploader, with the API key (it looks for the key by its id in a private_keys folder).
+      - name: TestFlight
+        if: ${{ inputs.upload }}
+        env:
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          cp "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/private_keys/AuthKey_$ASC_API_KEY_ID.p8"
+          ipa=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
+          API_PRIVATE_KEYS_DIR="$RUNNER_TEMP/private_keys" xcrun altool --upload-app --type ios --file "$ipa" \
+            --apiKey "$ASC_API_KEY_ID" --apiIssuer "$ASC_API_ISSUER_ID"
+          echo "::notice::Build $IOS_BUILD_NUMBER sent to App Store Connect; it shows in TestFlight once Apple processes it."
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !inputs.upload }}
         with:
@@ -149,6 +235,11 @@ jobs:
           retention-days: 14
           # An .ipa is already compressed.
           compression-level: 0
-      - name: Remove the key
+      - name: Remove the signing material
         if: always()
-        run: rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/ExportOptions.plist"
+        run: |
+          if [ -n "${SIGNING_KEYCHAIN:-}" ]; then security delete-keychain "$SIGNING_KEYCHAIN" || true; fi
+          rm -rf "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/private_keys" "$RUNNER_TEMP/dist.p12" \
+            "$RUNNER_TEMP/profiles" "$RUNNER_TEMP/ExportOptions.plist" "$RUNNER_TEMP/archive.log" "$RUNNER_TEMP/export.log"
+          rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"/*.mobileprovision \
+            "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision

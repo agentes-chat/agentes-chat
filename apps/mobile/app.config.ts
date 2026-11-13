@@ -11,6 +11,8 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
  * - `ANDROID_VERSION_CODE`: the build's version code, set by the Android workflow (EAS numbers its own builds).
  * - `APPLE_TEAM_ID`: the Apple team that signs the iOS app and its share extension (a build setting, never in the
  *   repo).
+ * - `IOS_SIGNING_PROFILES`: a JSON object of bundle id → provisioning profile name, for an iOS build signed by hand
+ *   (the iOS workflow); without it Xcode signs automatically, as in a local build.
  * - `IOS_BUILD_NUMBER`: the build's number on iOS, set by the iOS workflow.
  *
  * The New Architecture is the only one since SDK 55, so there is no `newArchEnabled` flag any more
@@ -201,6 +203,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     // Android release builds signed with the upload key from the environment (the Android build workflow).
     "./plugins/with-android-release-signing",
+    // The iOS app and its share extension signed by hand with the profiles the build names (the iOS build workflow).
+    // Before the plugins that add targets: a project's changes run from the last plugin to the first.
+    "./plugins/with-ios-manual-signing",
     [
       "expo-image-picker",
       {
@@ -223,13 +228,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         enableBackgroundPlayback: false,
       },
     ],
+    // The share extension reads as the app in the share sheet. Before expo-share-intent, so it runs once the
+    // extension's files are written (a project's changes run from the last plugin to the first).
+    "./plugins/with-share-extension-name",
     [
       // "Compartilhar com…": the app in the system's share sheet (an iOS share extension and Android's send intents),
       // for photos, videos, files, links and text; what arrives opens the agent picker (src/features/share). The
-      // extension takes the app's name and shares its URL scheme; it reaches phones only with a new native build.
+      // extension shares the app's URL scheme; it reaches phones only with a new native build. No
+      // `iosShareExtensionName`: it also names the extension's Xcode target, and the app's name there is the app's
+      // own target, so the extension was never made (plugins/with-share-extension-name.js gives it its name).
       "expo-share-intent",
       {
-        iosShareExtensionName: variant === "production" ? "agentes" : `agentes ${variant}`,
         iosActivationRules: {
           NSExtensionActivationSupportsText: true,
           NSExtensionActivationSupportsWebURLWithMaxCount: 1,
