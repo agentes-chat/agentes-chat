@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { accessSync, constants, readFileSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join, win32 } from "node:path";
 import {
@@ -454,7 +454,58 @@ const GROK_VERSION = /^grok \d+\.\d+\.\d+\b/;
 
 /** Protocol 43 (ADR 0142): Grok Build and the models it lists (`grok models`). */
 function detectGrok(run: Run): Promise<Probe> {
-  return detectWithModels(run, GROK_BIN, GROK_VERSION, parseGrokModels);
+  return detectWithModels(
+    run,
+    GROK_BIN,
+    GROK_VERSION,
+    parseGrokModels,
+    () => ["models"],
+    async () => {
+      const home = grokAccountWithSignIn(process.env.AGENTES_RUNNER_HOME);
+      return home ? grokModelCatalog({ home }) : undefined;
+    },
+  );
+}
+
+/** How long `grok models` may take, which is a shell command and not a protocol handshake. */
+const GROK_CATALOG_TIMEOUT_MS = 6_000;
+
+/**
+ * The folder of the first Grok Build account that carries a sign-in, under a runner home
+ * (`<root>/accounts/grok/<id>`, whose `GROK_HOME` is the folder itself). Signed out, `grok models` lists only what the
+ * build ships with (`grok-4.6`, `grok-4.5`); signed in, it also lists `grok-4.7` — so a look without an account
+ * caches a list no agent can use, and the picker never offers what every agent actually has.
+ */
+function grokAccountWithSignIn(root: string | undefined): string | undefined {
+  if (!root) return undefined;
+  try {
+    const base = join(root, "accounts", "grok");
+    for (const entry of readdirSync(base)) {
+      const folder = join(base, entry);
+      if (existsSync(join(folder, "auth.json"))) return folder;
+    }
+  } catch {
+    // No folder, no accounts: the look runs without one, as before.
+  }
+  return undefined;
+}
+
+/** `grok models` under a signed-in account's `GROK_HOME`: the list its subscription sees, not the build's own. */
+export function grokModelCatalog(opts: {
+  bin?: string;
+  home: string;
+  timeoutMs?: number;
+  env?: NodeJS.ProcessEnv;
+}): Promise<CursorModelInfo[]> {
+  const env = { ...(opts.env ?? process.env), GROK_HOME: opts.home };
+  return new Promise((resolve) => {
+    execFile(
+      resolveCommand(opts.bin ?? GROK_BIN),
+      ["models"],
+      { env, timeout: opts.timeoutMs ?? GROK_CATALOG_TIMEOUT_MS },
+      (err, stdout) => resolve(err ? [] : parseGrokModels(String(stdout))),
+    );
+  });
 }
 
 /** Google's Antigravity CLI (ADR 0143). */
@@ -502,16 +553,19 @@ async function detectWithModels(
   shape: RegExp,
   parse: (output: string) => CursorModelInfo[],
   modelsArgs: (version: string) => string[] = () => ["models"],
+  // A catalog read elsewhere (under an account's own sign-in): `undefined` keeps the plain look below.
+  catalog?: () => Promise<CursorModelInfo[] | undefined>,
 ): Promise<Probe> {
   const r = await run(bin, ["--version"]);
   if (r.error || r.status !== 0) return versionFailed(r);
   const version = firstLine(r);
   if (!shape.test(version)) return {};
-  const m = await run(bin, modelsArgs(version));
-  const models = !m.error && m.status === 0 ? parse(m.stdout) : [];
+  const borrowed = catalog ? await catalog() : undefined;
+  const listed = borrowed === undefined ? await run(bin, modelsArgs(version)) : null;
+  const models = borrowed ?? (!listed?.error && listed?.status === 0 ? parse(listed.stdout) : []);
   return {
     entry: { version, ...(models.length ? { models } : {}) },
-    ...(m.error && !missing(m) ? { unsure: true } : {}),
+    ...(listed?.error && !missing(listed) ? { unsure: true } : {}),
   };
 }
 
