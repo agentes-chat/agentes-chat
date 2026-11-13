@@ -62,7 +62,7 @@ The levels are four, and only two of them are a posture:
 |---|---|
 | `plan` | `--disable-write --disable-shell` (measured: the run completes) |
 | `work` | the default: shell and write on, approval on |
-| `chat` | refused at first — no `--tools`/`--disallowed-tools` exists, so the right-hand guard (ADR 0137 §4) has nothing to bind to |
+| `chat` | `--disable-write --disable-shell`, plus the guard below |
 | `yolo` | `--disable-sandbox` |
 
 A named profile (`--permission-profile`) is **not** the path: `read-only` is a display name, not an id — the binary
