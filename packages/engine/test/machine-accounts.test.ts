@@ -20,6 +20,7 @@ import {
   SHARED_ACCOUNTS_PROTOCOL,
   SHARED_CODEX_PROTOCOL,
   SHARED_GEMINI_PROTOCOL,
+  SHARED_GROK_PROTOCOL,
   sealSecret,
 } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
@@ -1552,6 +1553,34 @@ test("refreshing usage: the caller's own accounts, and their computers' own sign
   // Only members ask.
   const stranger = await addUser(f.db, "zed");
   expect(await refreshAiAccounts(live.deps, stranger.id, f.org.id).catch((e) => e)).toBeInstanceOf(ForbiddenError);
+});
+
+test("a Grok sign-in is asked for all agents only from protocol 65 (issue #319)", async () => {
+  f = await setup();
+  const ask = async (protocol: number) => {
+    const { machineId } = await ownedMachine(protocol);
+    const runner = fakeHub(
+      machineId,
+      (req) =>
+        req.action === "begin"
+          ? { url: "https://grok.com/device?user_code=KJ4D-9QRS" }
+          : req.action === "status"
+            ? { state: "waiting" }
+            : {},
+      { protocol },
+    );
+    await beginAccountLogin(runner.deps, f.owner.id, f.org.id, machineId, "grok");
+    return runner.calls[0] as unknown as Record<string, unknown>;
+  };
+  // An older runner lends the folder to one agent: no `shared` on the wire.
+  expect(await ask(SHARED_GROK_PROTOCOL - 1)).toEqual({
+    op: "account",
+    action: "begin",
+    kind: "grok",
+    loginId: expect.any(String),
+  });
+  // From 65: root keeps it and each agent's turn gets a copy.
+  expect(await ask(SHARED_GROK_PROTOCOL)).toMatchObject({ kind: "grok", shared: true });
 });
 
 test("one sign-in for all agents (protocol 29): asked for, it thinks for two agents, once; out and gone for both", async () => {

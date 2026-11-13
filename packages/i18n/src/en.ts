@@ -10484,6 +10484,11 @@ export const en = {
       removeCopies: "Remove",
       copiesRemoved_one: "{{count}} unused login removed.",
       copiesRemoved_other: "{{count}} unused logins removed.",
+      /** Every Grok login the viewer owns at once (issue #319): one sign-in per agent, removed together. */
+      removeAllGrok: "Remove all Grok logins",
+      removeAllTitle: "Remove all {{n}} Grok logins?",
+      removeAllText: "They stop thinking for their agents on {{computers}}. Nobody else's logins are touched.",
+      removeAllDone: "{{n}} Grok logins removed.",
       disconnect: "Disconnect",
       renameTitle: "Rename {{label}}",
       nameLabel: "Name",

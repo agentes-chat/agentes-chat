@@ -24657,6 +24657,18 @@
       "other": "{{count}} unused logins removed."
     }
   },
+  "aiAccounts.page.removeAllGrok": {
+    "value": "Remove all Grok logins"
+  },
+  "aiAccounts.page.removeAllTitle": {
+    "value": "Remove all {{n}} Grok logins?"
+  },
+  "aiAccounts.page.removeAllText": {
+    "value": "They stop thinking for their agents on {{computers}}. Nobody else's logins are touched."
+  },
+  "aiAccounts.page.removeAllDone": {
+    "value": "{{n}} Grok logins removed."
+  },
   "aiAccounts.page.disconnect": {
     "value": "Disconnect"
   },

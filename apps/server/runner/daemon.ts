@@ -1392,6 +1392,7 @@ export class RunnerDaemon implements RequestObserver {
             ? this.accounts.noteCodexRateLimits(accountId, info)
             : this.accounts.noteRateLimit(accountId, info),
         codexAuth: (accountId, auth) => this.accounts.keepCodexAuth(accountId, auth),
+        grokAuth: (accountId, auth) => this.accounts.keepGrokAuth(accountId, auth),
         desktop: (agent, use) => this.workerDesktop(agent, use),
         desktopViewers: (agentId) => this.desktops.status({ id: agentId }).streams,
         browserKept: (agentId) => this.holds?.kept(agentId) ?? false,

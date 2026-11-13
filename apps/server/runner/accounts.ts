@@ -438,6 +438,8 @@ export type AccountGrant =
   | { kind: "codex_auth"; auth: string }
   /** A Gemini sign-in for all agents: what root's Antigravity CLI keeps, copied in for each turn (`holdAgySignIn`). */
   | ({ kind: "agy_auth" } & AgySignIn)
+  /** A Grok Build sign-in for all agents: root's `auth.json`, copied in (`placeGrokAuth`), refreshed copies coming back. */
+  | { kind: "grok_auth"; auth: string }
   /** A Claude sign-in several agents share: its CLI is root's, so a task only prepares here (`tasks.ts`). */
   | { kind: "hosted" }
   | { kind: "none" };
@@ -455,6 +457,8 @@ export function grantOf(v: unknown): AccountGrant | null {
   }
   const agy = g?.kind === "agy_auth" ? agySignInFrom(g) : null;
   if (agy) return { kind: "agy_auth", ...agy };
+  const grok = g?.kind === "grok_auth" ? grokAuthOf(g.auth) : null;
+  if (grok) return { kind: "grok_auth", auth: grok.text };
   const auth = g?.kind === "codex_auth" ? codexAuthOf(g.auth) : null;
   return auth ? { kind: "codex_auth", auth: auth.text } : null;
 }
@@ -545,6 +549,123 @@ export function watchCodexAuth(home: string, granted: string, send: (auth: strin
 /** Beside the account folders: the models Grok Build lists to a signed-in account (`AccountManager.grokModels`). */
 const GROK_MODELS_FILE = "grok-models.json";
 
+/**
+ * Grok Build keeps its sign-in in `GROK_HOME/auth.json`, an entry per issuer: the grok.com one under
+ * `https://accounts.x.ai/sign-in`, with the session's bearer (`key`), its `refresh_token` and `expires_at` (RFC 3339).
+ * Its agent id (`GROK_HOME/agent_id`) goes in a header of its own and takes no part in signing in: the token works
+ * from any folder, which is what lending it to another agent rests on (probe: two fresh `GROK_HOME`s, one copied
+ * `auth.json`, both sent that bearer to the chat proxy; ADR 0142 §4, amended by ADR 0059 §2).
+ */
+const GROK_AUTH_FILE = "auth.json";
+const MAX_GROK_AUTH_CHARS = 64_000;
+/** How long an access token lasts (7 days, its docs say): a copy dated further ahead than this isn't one. */
+export const GROK_TOKEN_MAX_MS = 8 * 24 * 3600_000;
+
+export interface GrokAuth {
+  /** The whole store, as JSON: another issuer's entry in it (a key's) stays. */
+  text: string;
+  /** Where its session entry sits (`https://accounts.x.ai/sign-in` for a grok.com sign-in). */
+  issuer: string;
+  /** That entry, as it is. */
+  entry: Record<string, unknown>;
+  /** The account it signs in to: its `user_id`, else its email. */
+  userId: string;
+  email: string;
+  /** Its `expires_at` (0 when it says none). */
+  expiresAt: number;
+  refreshToken: string;
+}
+
+/** The two entries sign in to the same account (a `user_id` said by both, else the email). */
+const sameGrokAccount = (a: GrokAuth, b: GrokAuth) =>
+  a.userId && b.userId ? a.userId === b.userId : !!a.email && a.email.toLowerCase() === b.email.toLowerCase();
+
+/**
+ * A Grok Build `auth.json` (its text) that signs in to grok.com: the newest entry with a session token, a refresh
+ * token and no `auth_mode: "api_key"` (a key is the CLI's own auth, never an account's sign-in). Null otherwise.
+ */
+export function grokAuthOf(text: unknown): GrokAuth | null {
+  if (typeof text !== "string" || text.length > MAX_GROK_AUTH_CHARS) return null;
+  let o: unknown;
+  try {
+    o = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!o || typeof o !== "object" || Array.isArray(o)) return null;
+  const store = o as Record<string, unknown>;
+  let best: GrokAuth | null = null;
+  for (const [issuer, v] of Object.entries(store)) {
+    const e = (v && typeof v === "object" && !Array.isArray(v) ? v : null) as Record<string, unknown> | null;
+    if (!e || typeof e.key !== "string" || !e.key) continue;
+    if (typeof e.refresh_token !== "string" || !e.refresh_token) continue;
+    if (e.auth_mode === "api_key") continue;
+    const at = Date.parse(String(e.expires_at ?? ""));
+    const auth: GrokAuth = {
+      text: JSON.stringify(o),
+      issuer,
+      entry: e,
+      userId: typeof e.user_id === "string" ? e.user_id : "",
+      email: typeof e.email === "string" ? e.email : "",
+      expiresAt: Number.isFinite(at) ? at : 0,
+      refreshToken: e.refresh_token,
+    };
+    if (!best || auth.expiresAt > best.expiresAt) best = auth;
+  }
+  return best;
+}
+
+/** The store a folder holds (`{}` for none yet), read as root reads what an agent's user may have written. */
+const grokStoreOf = (dir: string) => {
+  const o = readSmallJson(path.join(dir, GROK_AUTH_FILE), MAX_GROK_AUTH_CHARS);
+  return o && typeof o === "object" && !Array.isArray(o) ? (o as Record<string, unknown>) : {};
+};
+
+/** A folder's Grok sign-in; null when it has none. Never through a link or a pipe. */
+export function readGrokAuth(dir: string): GrokAuth | null {
+  return grokAuthOf(JSON.stringify(grokStoreOf(dir)));
+}
+
+/**
+ * In an agent's worker: root's copy of a sign-in for all agents goes into the agent's own `GROK_HOME`, unless what
+ * is there is newer (a refresh this agent's Grok made, on its way back to root). Another issuer's entry in the store
+ * stays: only this account's is replaced.
+ */
+export function placeGrokAuth(home: string, auth: string) {
+  const granted = grokAuthOf(auth);
+  if (!granted) return;
+  const store = grokStoreOf(home);
+  const here = grokAuthOf(JSON.stringify(store));
+  if (here && here.issuer === granted.issuer && sameGrokAccount(here, granted) && here.expiresAt >= granted.expiresAt)
+    return;
+  store[granted.issuer] = granted.entry;
+  writeJson(path.join(home, GROK_AUTH_FILE), store);
+}
+
+/**
+ * In an agent's worker, while a request runs on a sign-in root keeps: the agent's copy, each time its Grok refreshed
+ * it (a later `expires_at`), goes back (`send`) so root hands the refreshed one to the next turn of any agent. A
+ * refresh rotates the refresh token, so the others need it soon — Grok Build's own store takes a lock per folder and
+ * adopts a sibling copy's rotated token (`auth.json.lock`), which is what makes copies of one sign-in safe.
+ */
+export function watchGrokAuth(home: string, granted: string, send: (auth: string) => void, everyMs = 2000) {
+  let last = grokAuthOf(granted)?.expiresAt ?? 0;
+  const look = () => {
+    const now = readGrokAuth(home);
+    if (!now || now.expiresAt <= last) return;
+    last = now.expiresAt;
+    send(now.text);
+  };
+  const timer = setInterval(look, everyMs);
+  timer.unref?.();
+  return {
+    stop() {
+      clearInterval(timer);
+      look();
+    },
+  };
+}
+
 /** System mode: the account folders, outside root's home (its parents 711) so an agent's user reaches the one lent to it. */
 export const SYSTEM_ACCOUNTS_ROOT = path.join(AGENT_WORKER_HOMES, "accounts");
 
@@ -629,6 +750,8 @@ export interface AccountFolders {
   agentHome?(kind: AccountKind, id: string): string | null;
   /** System mode, in a worker: a refreshed ChatGPT sign-in root keeps goes back to root (`watchCodexAuth`). */
   codexAuth?(id: string, auth: string): void;
+  /** System mode, in a worker: a refreshed Grok Build sign-in root keeps goes back to root (`watchGrokAuth`). */
+  grokAuth?(id: string, auth: string): void;
 }
 
 /** What a CLI signs in with on an account: the folder that is its home, and what root handed over for it. */
@@ -671,6 +794,11 @@ export async function accountSignIn(
   // ponytail: no copy comes back to root, since Google's refresh answers carry no new refresh token; take refreshed
   // copies back as Codex's are if they ever do.
   if (grant?.kind === "agy_auth") release = holdAgySignIn(home, grant);
+  if (grant?.kind === "grok_auth") {
+    placeGrokAuth(home, grant.auth);
+    const send = folders?.grokAuth?.bind(folders);
+    if (send) release = watchGrokAuth(home, grant.auth, (auth) => send(id, auth)).stop;
+  }
   const planKey =
     grant?.kind === "key" ? { provider: grant.provider, key: grant.key } : grant ? null : await planKeyOf(home);
   return {
@@ -1560,7 +1688,8 @@ export class AccountManager {
    * system mode): a sign-in for every agent of its owner here, which root
    * keeps: Claude's through `claude setup-token` (no login hint there), a
    * plan's key as it is, ChatGPT's through `codex login` as root (`grant` hands its `auth.json` to each turn),
-   * Gemini's through `agy acp --login` as root (each turn gets a copy of its sign-in file).
+   * Gemini's through `agy acp --login` as root (each turn gets a copy of its sign-in file), Grok Build's through
+   * `grok login --device-auth` as root (`grok_auth` hands each turn a copy of its `auth.json`, protocol 65).
    * `method` (protocol 50, a Claude subscription sign-in): the one to use, or a refusal; never another one. The method
    * a sign-in uses is kept beside its folder (`<id>.method`), and signing in again another way is refused.
    */
@@ -1637,7 +1766,7 @@ export class AccountManager {
     const forAll =
       this.opts.lending !== undefined &&
       shared &&
-      (kind === "claude_code" || kind === "codex" || kind === "antigravity");
+      (kind === "claude_code" || kind === "codex" || kind === "antigravity" || kind === "grok");
     const cliShared = forAll && canCliShare && (method === "cli_login" || keepsCliShare);
     const dir = this.dirOf(kind, loginId);
     if (again) {
@@ -2618,6 +2747,11 @@ export class AccountManager {
     if (this.isCliShared(kind, id)) return { kind: "hosted" };
     const dir = this.dirOf(kind, id);
     if (kind === "codex") return this.codexGrant(id, dir);
+    // Grok Build: its folder's whole store, another issuer's entries in it too (this folder is the account's).
+    if (kind === "grok") {
+      const auth = await this.serial(id, async () => readGrokAuth(dir), this.cliOps);
+      return auth ? { kind: "grok_auth", auth: auth.text } : { kind: "none" };
+    }
     if (kind === "antigravity") {
       const signIn = await this.agySignIn(id);
       return signIn ? { kind: "agy_auth", ...signIn } : { kind: "none" };
@@ -2679,6 +2813,28 @@ export class AccountManager {
     this.refreshing.delete(id);
     held?.resolve();
     this.log(`account ${id.slice(0, 8)} (codex, for all agents) refreshed`);
+    return true;
+  }
+
+  /**
+   * A refreshed copy of a Grok Build sign-in for all agents, from the worker of an agent whose turn thinks with it:
+   * kept when it signs in to the same grok.com account, under the same issuer, and looks like a refresh (a later
+   * `expires_at`, a rotated refresh token, and not dated years ahead). The agent's shell writes that file too, so a
+   * copy dated far ahead would otherwise stick and refuse every genuine refresh after it. Only this account's entry
+   * replaces; another issuer's in root's store stays. True when kept.
+   */
+  keepGrokAuth(id: string, text: unknown): boolean {
+    if (!isAccountId(id) || !this.isShared("grok", id)) return false;
+    const next = grokAuthOf(text);
+    const dir = this.dirOf("grok", id);
+    const now = readGrokAuth(dir);
+    if (!next || !now || next.issuer !== now.issuer || !sameGrokAccount(now, next)) return false;
+    if (next.expiresAt <= now.expiresAt || next.refreshToken === now.refreshToken) return false;
+    if (next.expiresAt > (this.opts.now ?? Date.now)() + GROK_TOKEN_MAX_MS) return false;
+    const store = grokStoreOf(dir);
+    store[next.issuer] = next.entry;
+    writeJson(path.join(dir, GROK_AUTH_FILE), store);
+    this.log(`account ${id.slice(0, 8)} (grok, for all agents) refreshed`);
     return true;
   }
 

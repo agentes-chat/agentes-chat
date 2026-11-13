@@ -581,12 +581,15 @@ describe("All agents: one login per agent, the key pasted once", () => {
     expect(set("zai", [{ id: "ada" }, { id: "bo" }])).toEqual([]);
   });
 
-  test("one sign-in for all of them where the computer says so: ChatGPT's and Gemini's too", () => {
-    // Where each agent is its own OS user, Claude's, ChatGPT's and Gemini's sign-ins and plans' keys think for all.
-    expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, antigravity: true, key: true });
+  test("one sign-in for all of them where the computer says so: ChatGPT's, Gemini's and Grok's too", () => {
+    // Where each agent is its own OS user, Claude's, ChatGPT's, Gemini's and Grok's sign-ins and plans' keys think for
+    // all of them.
+    expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, antigravity: true, grok: true, key: true });
     const sharing = { shares: { claude_code: true, codex: true, key: true } };
     expect(signsInOnce("chatgpt", sharing)).toBe(true);
     expect(signsInOnce("gemini", sharing)).toBe(false);
+    expect(signsInOnce("grok", sharing)).toBe(false);
+    expect(signsInOnce("grok", { shares: { ...sharing.shares, grok: true } })).toBe(true);
     expect(signsInOnce("gemini", { shares: { ...sharing.shares, antigravity: true } })).toBe(true);
     expect(signsInOnce("zai", { shares: { claude_code: true, codex: false, key: false } })).toBe(false);
     expect(signsInOnce("claude", undefined)).toBe(false);

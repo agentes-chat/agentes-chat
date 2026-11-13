@@ -273,6 +273,8 @@ export type WorkerLinkFrame =
   | { type: "usage"; kind: AccountKind; account: string; info: unknown }
   /** From the worker: its Codex refreshed the ChatGPT sign-in root keeps for all agents (`watchCodexAuth`). */
   | { type: "codex.auth"; account: string; auth: string }
+  /** From the worker: its Grok Build refreshed the sign-in root keeps for all agents (`watchGrokAuth`). */
+  | { type: "grok.auth"; account: string; auth: string }
   /** To the worker: a delegated CLI's bridge, again for each turn; a null `token` closes it (`delegated-tools.ts`). */
   | ({ type: "bridge.token" } & DelegatedBridge)
   /** From the worker: that bridge is open and the CLI's relay may dial, or why not. */
@@ -380,6 +382,8 @@ export interface SupervisorOptions {
   usage?: (kind: AccountKind, accountId: string, info: unknown) => void;
   /** A refreshed ChatGPT sign-in root keeps for all agents (`AccountManager.keepCodexAuth`). */
   codexAuth?: (accountId: string, auth: unknown) => void;
+  /** A refreshed Grok Build sign-in root keeps for all agents (`AccountManager.keepGrokAuth`). */
+  grokAuth?: (accountId: string, auth: unknown) => void;
   /** A background shell of a session root hosts (`AccountBrains.toolNotice`). */
   toolNotice?: (agentId: string, notice: ToolNotice) => void;
   /** The worker asked to stop the CLI of its task root hosts (`AccountBrains.stopTask`). */
@@ -454,6 +458,8 @@ interface Worker {
   browserLeaseAt: number;
   /** The ChatGPT sign-ins root handed it (`codex_auth` grants): only theirs may come back refreshed. */
   codexAuths: Set<string>;
+  /** The Grok Build sign-ins root handed it (`grok_auth` grants): only theirs may come back refreshed. */
+  grokAuths: Set<string>;
   /** When it asked for its processes to be moved, in the last minute (`scope.enter`). */
   enters: number[];
   /** Its clone slots, by its id (`release` once it has one): a worker that stops gives them back. */
@@ -579,6 +585,7 @@ export class Supervisor {
         );
       grant = (await this.opts.grant?.(kind, account).catch(failed)) ?? null;
       if (grant?.kind === "codex_auth") w.codexAuths.add(account);
+      if (grant?.kind === "grok_auth") w.grokAuths.add(account);
       if (!grant) await this.opts.lend?.(kind, account, w.user.uid).catch(failed);
     }
     await this.ready(w, scope.signal);
@@ -1105,6 +1112,7 @@ export class Supervisor {
         shows: new Map(),
         browserLeaseAt: 0,
         codexAuths: new Set(),
+        grokAuths: new Set(),
         enters: [],
         slots: new Map(),
         reclaims: new Map(),
@@ -1549,6 +1557,11 @@ export class Supervisor {
     if (f?.type === "codex.auth") {
       const account = typeof f.account === "string" ? f.account : "";
       if (w.codexAuths.has(account)) this.opts.codexAuth?.(account, f.auth);
+      return;
+    }
+    if (f?.type === "grok.auth") {
+      const account = typeof f.account === "string" ? f.account : "";
+      if (w.grokAuths.has(account)) this.opts.grokAuth?.(account, f.auth);
       return;
     }
     if (f?.type === "turn.context" || f?.type === "bridge.ready") {
