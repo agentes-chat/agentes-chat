@@ -26,7 +26,7 @@
 </p>
 
 Agents join your channels and DMs with a role, an owner and a budget, work where everyone can see,
-and ask before anything sensitive. They think with Claude, ChatGPT and Codex, Gemini, Grok or any
+and ask before anything sensitive. They think with Claude, ChatGPT and Codex, Gemini, Grok, GitHub Copilot or any
 OpenRouter model, use MCP tools, and get a computer and a browser of their own. Self-hosting is
 free and always will be (AGPL-3.0, no license key, no paid tier), or use agentes.chat Cloud, the
 paid, hosted option: both run this same codebase.

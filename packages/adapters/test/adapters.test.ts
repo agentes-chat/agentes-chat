@@ -243,8 +243,13 @@ test("secret names that would steer an AI CLI's sign-in or requests are reserved
   for (const name of ["GEMINI_API_KEY", "AGY_ADC_AUTH", "GOOGLE_API_KEY", "GOOGLE_GEMINI_BASE_URL"])
     expect(isReservedSecretName(name)).toBe(true);
   expect(isReservedSecretName("GOOGLE_GENAI_USE_VERTEXAI")).toBe(true);
+  // The Copilot CLI's (ADR 0174): its token, another provider, allow-all. GitHub's own tokens stay usable by agents on
+  // other CLIs (the Copilot CLI never gets them).
+  for (const name of ["COPILOT_GITHUB_TOKEN", "COPILOT_PROVIDER_BASE_URL", "COPILOT_ALLOW_ALL"])
+    expect(isReservedSecretName(name)).toBe(true);
   for (const name of ["GITHUB_TOKEN", "NPM_TOKEN", "STRIPE_PASSWORD", "PROXY_HOST", "MY_CLAUDE", "GOOGLE_MAPS_KEY"])
     expect(isReservedSecretName(name)).toBe(false);
+  expect(isReservedSecretName("GH_TOKEN")).toBe(false);
   for (const name of ["GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT"])
     expect(isReservedSecretName(name)).toBe(false);
 });

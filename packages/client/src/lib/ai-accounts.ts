@@ -299,7 +299,7 @@ export function existingAi<A extends MachineAccount>(
  */
 export const listsExisting = (agent: Pick<Agent, "builtin"> | undefined, noAi: boolean) => noAi || isRightHand(agent);
 
-export const ACCOUNT_KINDS = ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+export const ACCOUNT_KINDS = ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "copilot"] as const;
 
 /** A computer's own sign-in as "Seus planos" lists it ("Conta deste computador"). */
 export interface OwnSignInRow {

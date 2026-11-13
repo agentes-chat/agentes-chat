@@ -7,6 +7,7 @@ import {
   brainTopic,
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
+  COPILOT_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
@@ -86,6 +87,7 @@ export interface ComputerBrainLink {
       opencode?: { version: string };
       grok?: { version: string };
       antigravity?: { version: string };
+      copilot?: { version: string };
       /** Every agent as its own user (`runnerUpdateWay`). */
       mode?: "system";
     };
@@ -105,6 +107,7 @@ export interface ComputerBrainLink {
         opencode?: boolean;
         grok?: boolean;
         antigravity?: boolean;
+        copilot?: boolean;
         commands: boolean;
       };
     } | null;
@@ -182,7 +185,7 @@ function channel<T>() {
  * protocol 36, no version gate, no live steering). Everything else, from the request to the events, is shared.
  */
 interface CliBrainSpec {
-  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "copilot";
   name: string;
   /** The runner protocol it needs. */
   protocol: number;
@@ -195,6 +198,7 @@ interface CliBrainSpec {
     opencode?: { version: string };
     grok?: { version: string };
     antigravity?: { version: string };
+    copilot?: { version: string };
   }): BrainEvent | null;
 }
 
@@ -285,8 +289,23 @@ const ANTIGRAVITY_CLI: CliBrainSpec = {
         },
 };
 
+const COPILOT_CLI: CliBrainSpec = {
+  kind: "copilot",
+  name: "Copilot CLI",
+  protocol: COPILOT_PROTOCOL,
+  check: ({ copilot }) =>
+    copilot
+      ? null
+      : {
+          type: "error",
+          code: "copilot_missing",
+          message: "The Copilot CLI, GitHub's, is not installed on the computer.",
+          retryable: true,
+        },
+};
+
 export class CodexBrain implements Brain {
-  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "copilot";
 
   constructor(
     private readonly deps: CodexBrainDeps,
@@ -529,6 +548,17 @@ export class GrokBrain extends CodexBrain {
 export class AntigravityBrain extends CodexBrain {
   constructor(deps: CodexBrainDeps) {
     super(deps, ANTIGRAVITY_CLI);
+  }
+}
+
+/**
+ * The Copilot brain (ADR 0174): GitHub's Copilot CLI on the agent's computer with a person's GitHub Copilot plan,
+ * through the same `brain.turn` as Codex (`kind: "copilot"`, runner protocol 65, `brain-copilot.ts` there). A person's
+ * messages wait for the turn's end: the runner answers `brain.steer` with `unsupported`.
+ */
+export class CopilotBrain extends CodexBrain {
+  constructor(deps: CodexBrainDeps) {
+    super(deps, COPILOT_CLI);
   }
 }
 

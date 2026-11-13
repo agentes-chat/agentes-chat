@@ -55,10 +55,13 @@ import {
   placeAgySignIn,
   writeAgySettings,
 } from "./agy-home";
+import { COPILOT_LOOK_ARGS, copilotLook } from "./copilot-acp";
+import { COPILOT_NO_GH, prepareCopilotHome } from "./copilot-home";
 import { errnoCode, RunnerError } from "./errors";
 import { killTree } from "./exec";
 import {
   AGY_BIN,
+  COPILOT_BIN,
   CURSOR_BIN,
   claudeKeptPlan,
   claudePlan,
@@ -160,6 +163,7 @@ const LABEL: Record<AccountKind, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "The Antigravity CLI",
+  copilot: "The Copilot CLI",
 };
 /** Cursor's CLI keeps its config in `CURSOR_CONFIG_DIR` (cursor.com/docs/cli/reference/configuration). */
 const ENV_VAR: Record<AccountKind, string> = {
@@ -172,6 +176,8 @@ const ENV_VAR: Record<AccountKind, string> = {
   grok: "GROK_HOME",
   // `agy` documents no config folder of its own (ADR 0143): the account's folder is its whole home.
   antigravity: "HOME",
+  // Its sign-in, settings and sessions (`copilot help environment`).
+  copilot: "COPILOT_HOME",
 };
 const LOGIN_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "login"],
@@ -183,6 +189,8 @@ const LOGIN_ARGS: Record<AccountKind, string[]> = {
   grok: ["login", "--device-auth"],
   // Google's sign-in by a pasted code, then it exits (antigravity.google/docs/ide/extensions/acp).
   antigravity: ["acp", "--login"],
+  // The device code: the person signs in on GitHub's page from any device, nothing listens on the computer.
+  copilot: ["login", "--device-code"],
 };
 const STATUS_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "status", "--json"],
@@ -193,6 +201,9 @@ const STATUS_ARGS: Record<AccountKind, string[]> = {
   grok: ["models"],
   // No status command either: `agy models` lists the account's models once it is signed in.
   antigravity: ["models"],
+  // No status command: its ACP server says as a session opens (`copilotLook`, which sends its two requests on
+  // standard input; these are that run's arguments).
+  copilot: [...COPILOT_LOOK_ARGS],
 };
 const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "logout"],
@@ -202,6 +213,8 @@ const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   grok: ["logout"],
   // `/logout`, answered by the CLI itself in print mode; deleting the folder ends the sign-in anyway.
   antigravity: ["-p", "/logout"],
+  // Never run: the CLI has no sign-out command; the sign-in is a file in the folder, which goes with it.
+  copilot: [],
 };
 /** Each CLI's executable (Cursor's was `cursor-agent` before it was renamed). */
 const COMMAND: Record<AccountKind, string> = {
@@ -211,6 +224,7 @@ const COMMAND: Record<AccountKind, string> = {
   opencode: OPENCODE_BIN,
   grok: GROK_BIN,
   antigravity: AGY_BIN,
+  copilot: COPILOT_BIN,
 };
 
 /** What a brain turn says when its account folder is gone (people read it). */
@@ -226,21 +240,30 @@ export const ACCOUNT_MISSING_MESSAGE: Record<AccountKind, string> = {
   grok: "The Grok account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
   antigravity:
     "The Gemini account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
+  copilot:
+    "The GitHub Copilot account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
 };
 
 /**
  * What would make a CLI think with anything but its folder's sign-in: a key, a token, another endpoint or cloud. Every
  * `GROK_` switch too (folder trust, memory, managed config, sandbox…): Grok Build gets only `GROK_QUIET_ENV`'s. And a
  * Gemini or Google AI key, another Gemini endpoint, the Antigravity CLI's enterprise gateway (`AGY_LLM_GATEWAY_*`) and
- * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s).
+ * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s). And every `COPILOT_` variable: its token
+ * (`COPILOT_GITHUB_TOKEN`), another model provider (`COPILOT_PROVIDER_*`), allow-all (`COPILOT_ALLOW_ALL`, which as
+ * `true` also trusts the folder and runs its hooks); the Copilot CLI gets only `COPILOT_QUIET_ENV`'s.
  */
 const STRAY_SIGN_IN =
-  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+)$/;
+  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+|COPILOT_\w+)$/;
 /**
  * Google Cloud's own sign-ins (Application Default Credentials, gcloud's config, Vertex's project): kept out of the
  * Antigravity CLI only, since an agent on another CLI may deploy to Google Cloud with them.
  */
 const GOOGLE_CLOUD_SIGN_IN = /^(GOOGLE_APPLICATION_CREDENTIALS|GOOGLE_CLOUD_\w+|CLOUDSDK_\w+)$/;
+/**
+ * GitHub's own tokens, which the Copilot CLI takes over its folder's sign-in (`copilot help environment`): kept out
+ * of it only, since an agent on another CLI may use `gh` or git with them.
+ */
+const GITHUB_TOKEN_ENV = /^(GH_TOKEN|GITHUB_TOKEN)$/;
 
 /** `base` without any key, token, endpoint or cloud a CLI would think with instead of its own sign-in. */
 export function withoutSignIns(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -292,8 +315,19 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
     delete env.SSH_AUTH_SOCK;
     Object.assign(env, AGY_QUIET_ENV);
   }
+  if (kind === "copilot") {
+    for (const k of Object.keys(env)) if (GITHUB_TOKEN_ENV.test(k)) delete env[k];
+    // Nor `gh`'s own sign-in, which the CLI takes when its folder holds none: a turn and a look answer the same.
+    env.GH_CONFIG_DIR = path.join(dir, COPILOT_NO_GH);
+    Object.assign(env, COPILOT_QUIET_ENV);
+  }
   return env;
 }
+
+export const COPILOT_QUIET_ENV: Readonly<Record<string, string>> = {
+  COPILOT_AUTO_UPDATE: "false",
+  COPILOT_TELEMETRY_DISABLED: "true",
+};
 
 /**
  * What every Grok Build process gets (ADR 0142): none of the Claude Code and Cursor config it would otherwise read
@@ -1048,6 +1082,18 @@ export function parseGrokLogin(output: string, final = false): { url: string; us
   return final || /[?&](?:user_)?code=/i.test(first.url) ? { url: first.url } : null;
 }
 
+/**
+ * The Copilot CLI's device sign-in (`copilot login --device-code`): GitHub's device page, then its one-time code
+ * ("To authenticate, visit https://github.com/login/device and enter code 56AB-681F").
+ */
+export function parseCopilotLogin(output: string, final = false): { url: string; userCode: string } | null {
+  const text = stripAnsi(output);
+  const first = urlsIn(text, (h) => h === "github.com" || h.endsWith(".ghe.com"), final)[0];
+  if (!first) return null;
+  const m = (final ? CODE_AT_END : CODE).exec(text.slice(first.end));
+  return m?.[1] ? { url: first.url, userCode: m[1] } : null;
+}
+
 /** `grok models`: signed in unless it says it isn't, with a sign-in file in the folder. */
 export function parseGrokStatus(
   status: number | null,
@@ -1606,6 +1652,7 @@ export class AccountManager {
       return this.beginKey(kind, loginId, dir, provider as PlanId, pair, again, forAll);
     // Which Google sign-in the CLI asks for: a personal account's, or Gemini Enterprise's.
     if (kind === "antigravity") writeAgySettings(dir, enterprise ? "oauth-business" : "oauth-personal");
+    if (kind === "copilot") prepareCopilotHome(dir);
 
     const login: Login = {
       id: loginId,
@@ -1645,11 +1692,13 @@ export class AccountManager {
           ? parseCodexLogin(login.output, final)
           : kind === "grok"
             ? parseGrokLogin(login.output, final)
-            : kind === "antigravity"
-              ? toUrl(parseAgyLoginUrl(login.output, final))
-              : kind === "cursor"
-                ? toUrl(parseCursorLoginUrl(login.output, final))
-                : toUrl(parseClaudeLoginUrl(this.shown(login), final));
+            : kind === "copilot"
+              ? parseCopilotLogin(login.output, final)
+              : kind === "antigravity"
+                ? toUrl(parseAgyLoginUrl(login.output, final))
+                : kind === "cursor"
+                  ? toUrl(parseCursorLoginUrl(login.output, final))
+                  : toUrl(parseClaudeLoginUrl(this.shown(login), final));
       let done = false;
       const finish = (v: { url: string; userCode?: string } | null) => {
         if (done) return;
@@ -2268,6 +2317,25 @@ export class AccountManager {
       const kept = refused || kind !== "claude_code" ? undefined : claudeKeptPlan(dir);
       return { id, kind, loggedIn: !refused, ...(kept ? { plan: kept } : {}), ...shared };
     }
+    if (kind === "copilot") {
+      const seen = await this.serial(
+        id,
+        () => {
+          // What a turn left in the folder never loads in a look.
+          prepareCopilotHome(dir);
+          return copilotLook({
+            command: this.command(kind),
+            env: this.env(kind, dir),
+            home: dir,
+            timeoutMs: this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS,
+          });
+        },
+        this.cliOps,
+      ).catch(() => null);
+      if (out && seen?.said) out.said = saidIn(withoutTokens(seen.said));
+      const unknown = seen?.signedIn === true || seen?.signedIn === false ? {} : { statusUnknown: true as const };
+      return { id, kind, loggedIn: seen?.signedIn === true, ...unknown, ...shared };
+    }
     // With the switch off or the self-check failing, no CLI runs on its store: it stays as last known.
     if (cliShared && !this.opts.sharedLogin?.ready())
       return { id, kind, loggedIn: false, statusUnknown: true, ...shared };
@@ -2406,7 +2474,8 @@ export class AccountManager {
       !this.isShared(kind, id) &&
       !(kind === "claude_code" && (await planKeyOf(dir))) &&
       !(kind === "cursor" && (await cursorKeyOf(dir))) &&
-      kind !== "opencode"
+      kind !== "opencode" &&
+      kind !== "copilot"
     ) {
       const r = await runCli(this.command(kind), LOGOUT_ARGS[kind], this.env(kind, dir), STATUS_TIMEOUT_MS);
       if (r.status !== 0) this.log(`account ${id.slice(0, 8)} (${kind}): sign-out didn't finish; removing it anyway`);
@@ -2747,7 +2816,9 @@ export class AccountManager {
     const probe = { command: this.command(target.kind, Boolean(own)), cwd: target.cwd, env: target.env, ...limits };
     // Cursor's CLI reports no plan usage: its turns' `usage` is all there is.
     // Nor does OpenCode's: its key's usage is on OpenCode's console. Grok Build shows its plan's only in its TUI.
-    if (target.kind === "cursor" || target.kind === "opencode" || target.kind === "grok") return null;
+    // The Copilot CLI shows its plan's limits only in its TUI (`/usage`).
+    if (target.kind === "cursor" || target.kind === "opencode" || target.kind === "grok" || target.kind === "copilot")
+      return null;
     // The Antigravity CLI answers `/usage` itself in print mode: the plan's quotas and when they refresh.
     if (target.kind === "antigravity") {
       if (own) return null;

@@ -2786,6 +2786,7 @@
       "codex": "Codex bu bilgisayarda giriş yapmamış. {{name}} sayfasından bir ChatGPT hesabı bağlayın.",
       "cursor": "Cursor bu bilgisayarda giriş yapmamış. {{name}} sayfasından bir Cursor hesabı bağlayın.",
       "grok": "Grok bu bilgisayarda giriş yapmamış. {{name}} sayfasından bir Grok hesabı bağlayın.",
+      "copilot": "Copilot bu bilgisayarda giriş yapmamış. {{name}} sayfasından bir Copilot hesabı bağlayın.",
       "antigravity": "Gemini bu bilgisayarda giriş yapmamış. {{name}} sayfasından bir Gemini hesabı bağlayın.",
       "opencode": "OpenCode bu bilgisayarda düşünemiyor. {{name}} sayfasından bir OpenCode anahtarı bağlayın."
     },
@@ -2844,6 +2845,7 @@
       "chatgpt": "ChatGPT planınızı bağlayın",
       "cursor": "Cursor planınızı bağlayın",
       "grok": "Grok planınızı bağlayın",
+      "copilot": "GitHub Copilot planınızı bağlayın",
       "gemini": "Gemini planınızı bağlayın",
       "zen": "OpenCode'u bağlayın",
       "api_key": "API anahtarı ekleyin"
@@ -2958,6 +2960,10 @@
         "title": "Grok planınız",
         "tiers": "SuperGrok, SuperGrok Heavy veya X Premium+"
       },
+      "copilot": {
+        "title": "GitHub Copilot planınız",
+        "tiers": "Copilot Pro, Pro+, Business veya Enterprise"
+      },
       "gemini": {
         "title": "Gemini planınız",
         "tiers": "Google AI Pro, Google AI Ultra veya Gemini Enterprise",
@@ -3052,6 +3058,7 @@
       "codex": "ChatGPT'de {{account}} değil, {{email}} ile giriş yapılmış. ChatGPT sayfasında çıkış yapıp tekrar deneyin.",
       "cursor": "Cursor'da {{account}} değil, {{email}} ile giriş yapılmış. Cursor sayfasında çıkış yapıp tekrar deneyin.",
       "grok": "Grok'ta {{account}} değil, {{email}} ile giriş yapılmış. Grok sayfasında çıkış yapıp tekrar deneyin.",
+      "copilot": "Copilot'ta {{account}} değil, {{email}} ile giriş yapılmış. GitHub sayfasında çıkış yapıp tekrar deneyin.",
       "antigravity": "Gemini'de {{account}} değil, {{email}} ile giriş yapılmış. Google sayfasında çıkış yapıp tekrar deneyin.",
       "opencode": "OpenCode {{account}} değil, {{email}} olarak oturum açtı. Doğru anahtarla tekrar deneyin."
     },
@@ -5190,6 +5197,7 @@
             "codex": "ChatGPT hesabı ekle",
             "cursor": "Cursor hesabı ekle",
             "grok": "Grok hesabı ekle",
+            "copilot": "Copilot hesabı ekle",
             "antigravity": "Gemini hesabı ekle",
             "opencode": "OpenCode anahtarı ekleyin"
           },
@@ -5198,6 +5206,7 @@
             "codex": "Planınızın olduğu hesap",
             "cursor": "Planınızın olduğu hesap",
             "grok": "Planınızın olduğu hesap",
+            "copilot": "Planınızın olduğu hesap",
             "antigravity": "Planınızın olduğu Google hesabı",
             "antigravityEnterprise": "Gemini Enterprise hesabınız"
           },
@@ -5207,11 +5216,13 @@
             "codex": "ChatGPT ile giriş yap",
             "cursor": "Cursor ile giriş yap",
             "grok": "Grok ile giriş yap",
+            "copilot": "GitHub ile giriş yap",
             "antigravity": "Google ile giriş yap"
           },
           "opencodeFree": "OpenCode'un ücretsiz modelleri anahtar istemez. OpenCode konsolundan bir anahtar ücretli modelleri de ekler.",
           "cursorFinish": "Cursor sayfasında giriş yapın, giriş {{computer}} üzerinde kendiliğinden tamamlanır.",
           "grokFinish": "Grok sayfasında giriş yapın, giriş {{computer}} üzerinde kendiliğinden tamamlanır.",
+          "copilotFinish": "GitHub sayfasında giriş yapın, giriş {{computer}} üzerinde kendiliğinden tamamlanır.",
           "geminiEnterprise": "Bunun yerine Gemini Enterprise kullan",
           "geminiPersonal": "Bunun yerine kişisel bir Google hesabı kullan",
           "cursorKey": "Bunun yerine Cursor API anahtarı kullan",
@@ -5230,6 +5241,7 @@
           "local": "{{computer}} bilgisayarının başında mısınız? Tarayıcısı kendiliğinden açıldıysa orada yetki vermeniz yeterli.",
           "deviceCode": "ChatGPT kodu",
           "grokCode": "Grok kodu",
+          "copilotCode": "GitHub kodu",
           "deviceCodeText": "Bu kodu açılan sayfaya yazın.",
           "starting": "{{computer}} bilgisayarına soruluyor…",
           "waiting": "Bekleniyor",
@@ -5253,6 +5265,7 @@
             "codex": "ChatGPT, zaten bağladığınız {{account}} hesabıyla giriş yaptı. Başka bir hesap kullanmak için ChatGPT sayfasında çıkış yapıp tekrar deneyin.",
             "cursor": "Cursor, zaten bağladığınız {{account}} hesabıyla giriş yaptı. Başka bir hesap kullanmak için Cursor sayfasında çıkış yapıp tekrar deneyin.",
             "grok": "Grok, zaten bağladığınız {{account}} hesabıyla giriş yaptı. Başka bir hesap kullanmak için Grok sayfasında çıkış yapıp tekrar deneyin.",
+            "copilot": "Copilot, zaten bağladığınız {{account}} hesabıyla giriş yaptı. Başka bir hesap kullanmak için GitHub sayfasında çıkış yapıp tekrar deneyin.",
             "antigravity": "Gemini, zaten bağladığınız {{account}} hesabıyla giriş yaptı. Başka bir hesap kullanmak için Google sayfasında çıkış yapıp tekrar deneyin.",
             "opencode": "Bu OpenCode anahtarı zaten {{account}} olarak bağlı."
           },
@@ -9720,6 +9733,7 @@
       "codex": "ChatGPT",
       "cursor": "Cursor",
       "grok": "Grok",
+      "copilot": "Copilot",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
       "needs": {
@@ -10968,6 +10982,7 @@
       "chatgpt": "ChatGPT planında {{model}}",
       "cursor": "Cursor planında {{model}}",
       "grok": "Grok planında {{model}}",
+      "copilot": "GitHub Copilot planında {{model}}",
       "gemini": "Gemini planında {{model}}",
       "zen": "OpenCode ile {{model}}",
       "coding": "{{plan}} üzerinde {{model}}",
@@ -10975,6 +10990,7 @@
       "chatgptOf": "{{owner}} kişisinin ChatGPT planında {{model}}",
       "cursorOf": "{{owner}} kişisinin Cursor planında {{model}}",
       "grokOf": "{{owner}} kişisinin Grok planında {{model}}",
+      "copilotOf": "{{owner}} kişisinin GitHub Copilot planında {{model}}",
       "geminiOf": "{{owner}} kişisinin Gemini planında {{model}}",
       "zenOf": "{{owner}} adlı kişinin OpenCode'u ile {{model}}",
       "codingOf": "{{owner}} kişisinin {{plan}} planında {{model}}",
@@ -10982,6 +10998,7 @@
       "chatgptAuto": "ChatGPT planı",
       "cursorAuto": "Cursor planı",
       "grokAuto": "Grok planı",
+      "copilotAuto": "GitHub Copilot planı",
       "geminiAuto": "Gemini planı",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
@@ -10989,6 +11006,7 @@
       "chatgptAutoOf": "{{owner}} kişisinin ChatGPT planı",
       "cursorAutoOf": "{{owner}} kişisinin Cursor planı",
       "grokAutoOf": "{{owner}} kişisinin Grok planı",
+      "copilotAutoOf": "{{owner}} kişisinin GitHub Copilot planı",
       "geminiAutoOf": "{{owner}} kişisinin Gemini planı",
       "zenAutoOf": "{{owner}} adlı kişinin OpenCode'u",
       "codingAutoOf": "{{owner}} kişisinin {{plan}} planı",
@@ -11003,6 +11021,7 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
+      "copilot": "Copilot CLI",
       "antigravity": "Antigravity CLI"
     },
     "foot": {
@@ -11015,6 +11034,7 @@
     "codexText": "Bilgisayarı bağlayan kişinin ChatGPT planını kullanır.",
     "cursorText": "Bilgisayarı bağlayan kişinin Cursor planını kullanır.",
     "grokText": "Bilgisayarı bağlayan kişinin Grok planını kullanır.",
+    "copilotText": "Bilgisayarı bağlayan kişinin GitHub Copilot planını kullanır.",
     "antigravityText": "Bilgisayarı bağlayan kişinin Gemini planını kullanır.",
     "opencodeText": "OpenCode'un ücretsiz modelleri veya bilgisayarı bağlayan kişinin OpenCode anahtarı.",
     "cursorModel": {
@@ -11069,6 +11089,7 @@
       "codex": "Codex · {{model}}",
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
+      "copilot": "Copilot CLI · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
       "opencode": "OpenCode · {{model}}",
       "noFallback": "{{brain}}, API yedeği yok"
@@ -13666,6 +13687,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "copilot": "Copilot CLI",
         "commands": "komutları",
         "browser": "tarayıcıyı",
         "desktop": "ekranı",
@@ -13823,6 +13845,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "grok": "Grok Build",
+        "copilot": "Copilot CLI",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
         "commands": "Komutlar",
@@ -13833,6 +13856,7 @@
         "codex": "Claude Code gibi, bir ChatGPT hesabıyla. Yalnızca izin verilen klasörlerde.",
         "cursor": "Claude Code gibi, bir Cursor hesabıyla. Yalnızca izin verilen klasörlerde.",
         "grok": "Claude Code gibi, bir Grok hesabıyla. Yalnızca izin verilen klasörlerde.",
+        "copilot": "Claude Code gibi, bir GitHub Copilot hesabıyla. Yalnızca izin verilen klasörlerde.",
         "antigravity": "Claude Code gibi, bir Gemini hesabıyla. Yalnızca izin verilen klasörlerde.",
         "opencode": "Claude Code gibi, OpenCode'un ücretsiz modelleri veya bir OpenCode anahtarıyla. Yalnızca izin verilen klasörlerde.",
         "commands": "Test ve derleme gibi Terminal komutları çalıştırır."

@@ -530,7 +530,7 @@ export function KeySelect({
 
 /** A plan brain (Claude Code, Codex, Cursor, OpenCode, Grok Build, the Antigravity CLI) on a computer, chosen while creating an agent. */
 export interface PlanChoice {
-  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "copilot";
   machineId: string;
   /** One account there (an agent's proposal suggests a free one, ADR 0081); none: the computer's own sign-in. */
   accountId?: string;

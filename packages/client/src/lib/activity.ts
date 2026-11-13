@@ -287,7 +287,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   add_agent_to_channel: "addingAgent",
 };
 
-/** A computer brain's own tools (`agent.step`: Claude Code's, Codex's, OpenCode's, Grok Build's), lower-cased. */
+/** A computer brain's own tools (`agent.step`: Claude Code's, Codex's, OpenCode's, Grok Build's, Copilot CLI's), lower-cased. */
 const OWN_TOOLS: Record<string, ActivityKind> = {
   read: "pcFiles",
   write_file: "pcFiles",

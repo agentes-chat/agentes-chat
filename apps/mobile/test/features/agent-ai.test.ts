@@ -160,6 +160,12 @@ describe("the agent's AI", () => {
     expect(says(pt, false, { brain: "grok", plan: null }).text).toBe(
       "Os planos do Grok são para uso pessoal. Deixar outras pessoas usarem o seu é uma zona cinzenta nos termos do Grok.",
     );
+    // A Copilot plan (ADR 0174): the same note, in Copilot's name.
+    expect(says(en, false, { brain: "copilot", plan: null })).toEqual({
+      line: "Ada answers only you, on your Copilot plan.",
+      about: "About the plan's terms",
+      text: "Copilot plans are for personal use. Letting other people use yours is a gray area in Copilot's terms.",
+    });
     // A Gemini Enterprise seat (ADR 0143): a seat's usual words; a personal plan has Google's warning, said plainly.
     expect(says(en, false, { brain: "antigravity", plan: "enterprise" }).line).toBe(
       "Ada answers only you, on your Gemini seat.",

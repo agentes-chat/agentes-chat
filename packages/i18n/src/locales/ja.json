@@ -2692,6 +2692,7 @@
       "codex": "このコンピューターでCodexにログインしていません。{{name}}のページでChatGPTアカウントを接続してください。",
       "cursor": "このコンピューターでCursorにログインしていません。{{name}}のページでCursorアカウントを接続してください。",
       "grok": "このコンピューターでGrokにログインしていません。{{name}}のページでGrokアカウントを接続してください。",
+      "copilot": "このコンピューターでCopilotにログインしていません。{{name}}のページでCopilotアカウントを接続してください。",
       "antigravity": "このコンピューターでGeminiにログインしていません。{{name}}のページでGeminiアカウントを接続してください。",
       "opencode": "このコンピューターではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。"
     },
@@ -2750,6 +2751,7 @@
       "chatgpt": "ChatGPTのプランを接続",
       "cursor": "Cursorのプランを接続",
       "grok": "Grokのプランを接続",
+      "copilot": "GitHub Copilotのプランを接続",
       "gemini": "Geminiのプランを接続",
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
@@ -2861,6 +2863,10 @@
         "title": "あなたのGrokプラン",
         "tiers": "SuperGrok、SuperGrok Heavy、X Premium+"
       },
+      "copilot": {
+        "title": "あなたのGitHub Copilotプラン",
+        "tiers": "Copilot Pro、Pro+、Business、Enterprise"
+      },
       "gemini": {
         "title": "あなたのGeminiプラン",
         "tiers": "Google AI Pro、Google AI Ultra、またはGemini Enterprise",
@@ -2955,6 +2961,7 @@
       "codex": "ChatGPTは{{account}}ではなく{{email}}でログインしています。ChatGPTのページでログアウトして、もう一度お試しください。",
       "cursor": "Cursorは{{account}}ではなく{{email}}でログインしています。Cursorのページでログアウトして、もう一度お試しください。",
       "grok": "Grokは{{account}}ではなく{{email}}でログインしています。Grokのページでログアウトして、もう一度お試しください。",
+      "copilot": "Copilotは{{account}}ではなく{{email}}でログインしています。GitHubのページでログアウトして、もう一度お試しください。",
       "antigravity": "Geminiは{{account}}ではなく{{email}}でログインしています。Googleのページでログアウトして、もう一度お試しください。",
       "opencode": "OpenCodeは{{account}}ではなく{{email}}でログインしました。正しいキーでもう一度お試しください。"
     },
@@ -5031,6 +5038,7 @@
             "codex": "ChatGPTアカウントを追加",
             "cursor": "Cursorアカウントを追加",
             "grok": "Grokアカウントを追加",
+            "copilot": "Copilotアカウントを追加",
             "antigravity": "Geminiアカウントを追加",
             "opencode": "OpenCodeのキーを追加"
           },
@@ -5039,6 +5047,7 @@
             "codex": "プランを契約しているアカウント",
             "cursor": "プランを契約しているアカウント",
             "grok": "プランを契約しているアカウント",
+            "copilot": "プランを契約しているアカウント",
             "antigravity": "プランを契約しているGoogleアカウント",
             "antigravityEnterprise": "あなたのGemini Enterpriseアカウント"
           },
@@ -5048,11 +5057,13 @@
             "codex": "ChatGPTでログイン",
             "cursor": "Cursorでログイン",
             "grok": "Grokでログイン",
+            "copilot": "GitHubでログイン",
             "antigravity": "Googleでログイン"
           },
           "opencodeFree": "OpenCodeの無料モデルにキーは不要です。OpenCodeのコンソールのキーで有料モデルも使えます。",
           "cursorFinish": "Cursorのページでログインすると、{{computer}}でのログインは自動で完了します。",
           "grokFinish": "Grokのページでログインすると、{{computer}}でのログインは自動で完了します。",
+          "copilotFinish": "GitHubのページでログインすると、{{computer}}でのログインは自動で完了します。",
           "geminiEnterprise": "代わりにGemini Enterpriseを使う",
           "geminiPersonal": "代わりに個人のGoogleアカウントを使う",
           "cursorKey": "代わりにCursorのAPIキーを使う",
@@ -5071,6 +5082,7 @@
           "local": "{{computer}}本体で操作していますか？ ブラウザが自動で開いた場合は、そこで承認するだけです。",
           "deviceCode": "ChatGPT用のコード",
           "grokCode": "Grok用のコード",
+          "copilotCode": "GitHub用のコード",
           "deviceCodeText": "開いたページでこのコードを入力してください。",
           "starting": "{{computer}}に問い合わせています…",
           "waiting": "待機中",
@@ -5094,6 +5106,7 @@
             "codex": "ChatGPTは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、ChatGPTのページでログアウトしてからもう一度お試しください。",
             "cursor": "Cursorは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Cursorのページでログアウトしてからもう一度お試しください。",
             "grok": "Grokは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Grokのページでログアウトしてからもう一度お試しください。",
+            "copilot": "Copilotは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、GitHubのページでログアウトしてからもう一度お試しください。",
             "antigravity": "Geminiは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Googleのページでログアウトしてからもう一度お試しください。",
             "opencode": "そのOpenCodeキーは{{account}}としてすでに接続されています。"
           },
@@ -9403,6 +9416,7 @@
       "codex": "ChatGPT",
       "cursor": "Cursor",
       "grok": "Grok",
+      "copilot": "Copilot",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
       "needs": {
@@ -10595,6 +10609,7 @@
       "chatgpt": "ChatGPTプランの{{model}}",
       "cursor": "Cursorプランの{{model}}",
       "grok": "Grokプランの{{model}}",
+      "copilot": "GitHub Copilotプランの{{model}}",
       "gemini": "Geminiプランの{{model}}",
       "zen": "OpenCodeの{{model}}",
       "coding": "{{plan}}の{{model}}",
@@ -10602,6 +10617,7 @@
       "chatgptOf": "{{owner}}のChatGPTプランの{{model}}",
       "cursorOf": "{{owner}}のCursorプランの{{model}}",
       "grokOf": "{{owner}}のGrokプランの{{model}}",
+      "copilotOf": "{{owner}}のGitHub Copilotプランの{{model}}",
       "geminiOf": "{{owner}}のGeminiプランの{{model}}",
       "zenOf": "{{owner}}のOpenCodeの{{model}}",
       "codingOf": "{{owner}}の{{plan}}の{{model}}",
@@ -10609,6 +10625,7 @@
       "chatgptAuto": "ChatGPTプラン",
       "cursorAuto": "Cursorプラン",
       "grokAuto": "Grokプラン",
+      "copilotAuto": "GitHub Copilotプラン",
       "geminiAuto": "Geminiプラン",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
@@ -10616,6 +10633,7 @@
       "chatgptAutoOf": "{{owner}}のChatGPTプラン",
       "cursorAutoOf": "{{owner}}のCursorプラン",
       "grokAutoOf": "{{owner}}のGrokプラン",
+      "copilotAutoOf": "{{owner}}のGitHub Copilotプラン",
       "geminiAutoOf": "{{owner}}のGeminiプラン",
       "zenAutoOf": "{{owner}}のOpenCode",
       "codingAutoOf": "{{owner}}の{{plan}}",
@@ -10630,6 +10648,7 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
+      "copilot": "Copilot CLI",
       "antigravity": "Antigravity CLI"
     },
     "foot": {
@@ -10642,6 +10661,7 @@
     "codexText": "コンピューターを接続した人のChatGPTプランを使います。",
     "cursorText": "コンピューターを接続した人のCursorプランを使います。",
     "grokText": "コンピューターを接続した人のGrokプランを使います。",
+    "copilotText": "コンピューターを接続した人のGitHub Copilotプランを使います。",
     "antigravityText": "コンピューターを接続した人のGeminiプランを使います。",
     "opencodeText": "OpenCodeの無料モデル、またはコンピューターを接続した人のOpenCodeキーを使います。",
     "cursorModel": {
@@ -10696,6 +10716,7 @@
       "codex": "Codex · {{model}}",
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
+      "copilot": "Copilot CLI · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
       "opencode": "OpenCode · {{model}}",
       "noFallback": "{{brain}}、APIへの切り替えなし"
@@ -13227,6 +13248,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "copilot": "Copilot CLI",
         "commands": "コマンド",
         "browser": "ブラウザ",
         "desktop": "画面",
@@ -13384,6 +13406,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "grok": "Grok Build",
+        "copilot": "Copilot CLI",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
         "commands": "コマンド",
@@ -13394,6 +13417,7 @@
         "codex": "Claude Codeと同様で、ChatGPTアカウントを使います。許可されたフォルダ内のみです。",
         "cursor": "Claude Codeと同様で、Cursorアカウントを使います。許可されたフォルダ内のみです。",
         "grok": "Claude Codeと同様で、Grokアカウントを使います。許可されたフォルダ内のみです。",
+        "copilot": "Claude Codeと同様で、GitHub Copilotアカウントを使います。許可されたフォルダ内のみです。",
         "antigravity": "Claude Codeと同様で、Geminiアカウントを使います。許可されたフォルダ内のみです。",
         "opencode": "Claude Codeと同様で、OpenCodeの無料モデルかOpenCodeキーを使います。許可されたフォルダ内のみです。",
         "commands": "テストやビルドなど、ターミナルのコマンドを実行します。"

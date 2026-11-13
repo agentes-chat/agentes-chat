@@ -20,6 +20,7 @@ import {
   blockSpecAt,
   CodexBrain,
   type ContextDeps,
+  CopilotBrain,
   CursorBrain,
   composioConnectorsOf,
   connectOverHttp,
@@ -698,6 +699,15 @@ export function buildEngine(o: EngineOptions) {
     // ADR 0143: Google's Antigravity CLI, one process per turn like Grok's.
     antigravity: (_agent, _run, setup) =>
       new AntigravityBrain({
+        link: brainLink,
+        mcp: async () => ({ token: setup.mcpToken() }),
+        agent: agentScope,
+        permissions: turnPermissions,
+        prepare: prepareCode,
+      }),
+    // ADR 0174: GitHub's Copilot CLI, one process per turn like Grok's.
+    copilot: (_agent, _run, setup) =>
+      new CopilotBrain({
         link: brainLink,
         mcp: async () => ({ token: setup.mcpToken() }),
         agent: agentScope,

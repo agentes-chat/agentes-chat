@@ -98,7 +98,7 @@ test("Lodi's settings: the workspace's plan has no lending switch, since a plan 
   expect(model).toContain("api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input })");
   expect(screen).not.toContain("noAi.rightHand.useKey");
   expect(screen).not.toContain("workspacePlan");
-  // Any plan's CLI: Claude Code's, Codex's, Cursor's, OpenCode's, Grok Build's or the Antigravity CLI's.
+  // Any plan's CLI: Claude Code's, Codex's, Cursor's, OpenCode's, Grok Build's, the Antigravity CLI's or the Copilot CLI's.
   expect(screen).toContain('agent.brain && agent.brain.kind !== "model" ? agent.brain.kind : null');
   expect(screen).toContain("t(`aiAccounts.connect.$" + "{kind}`)");
 });

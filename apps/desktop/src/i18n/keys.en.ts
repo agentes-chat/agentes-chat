@@ -521,6 +521,8 @@ export const desktopEn = {
     opencodeDesc: "Writes and changes code in the allowed folders, with OpenCode's free models or your key.",
     grokName: "Grok Build",
     grokDesc: "Writes and changes code in the allowed folders, with your Grok account.",
+    copilotName: "Copilot CLI",
+    copilotDesc: "Writes and changes code in the allowed folders, with your GitHub Copilot account.",
     antigravityName: "Antigravity CLI",
     antigravityDesc: "Writes and changes code in the allowed folders, with your Gemini account.",
     found: "Found",

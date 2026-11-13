@@ -193,7 +193,12 @@ export function accountOf(req: MachineRequest): { kind: AccountKind; account: st
   if (cli === null || !("account" in req) || typeof req.account !== "string" || !req.account) return null;
   return {
     kind:
-      cli === "codex" || cli === "cursor" || cli === "opencode" || cli === "grok" || cli === "antigravity"
+      cli === "codex" ||
+      cli === "cursor" ||
+      cli === "opencode" ||
+      cli === "grok" ||
+      cli === "antigravity" ||
+      cli === "copilot"
         ? cli
         : "claude_code",
     account: req.account,

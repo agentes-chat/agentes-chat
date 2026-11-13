@@ -386,10 +386,11 @@ const AiAccounts = z
         z.object({
           provider: z.string().openapi({
             description:
-              "`anthropic`, `openai`, `xai`, `google`, `cursor`, `opencode`, a coding plan's id, or an API key's provider.",
+              "`anthropic`, `openai`, `xai`, `google`, `github`, `cursor`, `opencode`, a coding plan's id, or an API key's provider.",
           }),
           runtime: z.string().openapi({
-            description: "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, or `api` (an API key).",
+            description:
+              "`claude_code`, `codex`, `grok`, `antigravity`, `copilot`, `cursor`, `opencode`, or `api` (an API key).",
           }),
           authMethod: AuthMethodOrUnknown,
           billing: z.enum(["subscription", "coding_plan", "metered_api", "unknown"]).openapi({

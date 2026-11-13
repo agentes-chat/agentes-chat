@@ -484,6 +484,23 @@ function detectAntigravity(run: Run): Promise<Probe> {
   return detectWithModels(run, AGY_BIN, AGY_VERSION, parseAgyModels);
 }
 
+/** GitHub's Copilot CLI (ADR 0174). */
+export const COPILOT_BIN = "copilot";
+
+/** The Copilot CLI's version line: `GitHub Copilot CLI 1.0.109.`; a `copilot` that says anything else is skipped. */
+const COPILOT_VERSION = /^GitHub Copilot CLI \d+\.\d+\.\d+/;
+
+/**
+ * Protocol 65 (ADR 0174): the Copilot CLI. No models: it has no `models` command, and listing them takes a session of
+ * the computer's own sign-in, which no agent thinks with.
+ */
+async function detectCopilot(run: Run): Promise<Probe> {
+  const r = await run(COPILOT_BIN, ["--version"]);
+  if (r.error || r.status !== 0) return versionFailed(r);
+  const version = firstLine(r);
+  return COPILOT_VERSION.test(version) ? { entry: { version } } : {};
+}
+
 /**
  * One CLI's look: what it found, and whether it couldn't tell (then the last good look stands). `exited`: unsure
  * because `--version` failed with an exit code, counted toward `EXECUTORS_EXIT_STRIKES`.
@@ -536,7 +553,7 @@ export async function detectExecutors(
   strikes: Partial<Record<string, number>> = {},
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
-  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "copilot"] as const;
   const probes = await Promise.all([
     safe(() => detectVersion(run, "claude")),
     safe(() => detectVersion(run, "codex")),
@@ -544,6 +561,7 @@ export async function detectExecutors(
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),
     safe(() => detectAntigravity(run)),
+    safe(() => detectCopilot(run)),
   ]);
   const found: Executors = {};
   let unsure = false;

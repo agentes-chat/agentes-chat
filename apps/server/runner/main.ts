@@ -376,7 +376,16 @@ async function pair(p: Parsed): Promise<number> {
     grant,
     workspace: workspaceReal,
     ...(name ? { name } : {}),
-    tools: { claude: exec, codex: exec, cursor: exec, opencode: exec, grok: exec, antigravity: exec, commands: exec },
+    tools: {
+      claude: exec,
+      codex: exec,
+      cursor: exec,
+      opencode: exec,
+      grok: exec,
+      antigravity: exec,
+      copilot: exec,
+      commands: exec,
+    },
     desktop: false,
   });
   writeConfig(next, home);
@@ -1394,7 +1403,8 @@ async function main(argv: string[]): Promise<number> {
     case "mcp": {
       // `--task <taskId>`: a mission task's or a Claude Code brain process's server.
       // `--run <runId>`: a Codex brain turn's (its token only in the env). Neither: the run in `AGENTES_MCP_RUN`, for a
-      // CLI whose config can't name it per turn (Grok Build's and the Antigravity CLI's, shared by an account's turns).
+      // CLI whose config can't name it per turn (Grok Build's, the Antigravity CLI's and the Copilot CLI's, shared by
+      // an account's turns).
       const runId =
         flagString(p, "run") ?? (flagString(p, "task") ? undefined : process.env.AGENTES_MCP_RUN || undefined);
       const taskId = runId ?? flagString(p, "task");

@@ -139,7 +139,7 @@ const usePlanModelLabel = (view: AgentBrain | undefined) => {
   return view && view.brain !== "model" ? modelRows(t, view, brainPlan(view)).find((r) => r.checked)?.label : undefined;
 };
 
-type PlanKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+type PlanKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "copilot";
 const planKind = (kind: string | undefined): PlanKind | null => (kind && kind !== "model" ? (kind as PlanKind) : null);
 
 /**

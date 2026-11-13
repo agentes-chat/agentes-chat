@@ -2892,6 +2892,7 @@
       "codex": "Codex n'est pas connecté sur cet ordinateur. Connectez un compte ChatGPT sur la page de {{name}}.",
       "cursor": "Cursor n'est pas connecté sur cet ordinateur. Connectez un compte Cursor sur la page de {{name}}.",
       "grok": "Grok n'est pas connecté sur cet ordinateur. Connectez un compte Grok sur la page de {{name}}.",
+      "copilot": "Copilot n'est pas connecté sur cet ordinateur. Connectez un compte Copilot sur la page de {{name}}.",
       "antigravity": "Gemini n'est pas connecté sur cet ordinateur. Connectez un compte Gemini sur la page de {{name}}.",
       "opencode": "OpenCode ne peut pas réfléchir sur cet ordinateur. Connectez une clé OpenCode sur la page de {{name}}."
     },
@@ -2950,6 +2951,7 @@
       "chatgpt": "Connecter votre abonnement ChatGPT",
       "cursor": "Connecter votre abonnement Cursor",
       "grok": "Connecter votre abonnement Grok",
+      "copilot": "Connecter votre abonnement GitHub Copilot",
       "gemini": "Connecter votre abonnement Gemini",
       "zen": "Connecter OpenCode",
       "api_key": "Ajouter une clé API"
@@ -3069,6 +3071,10 @@
         "title": "Votre abonnement Grok",
         "tiers": "SuperGrok, SuperGrok Heavy ou X Premium+"
       },
+      "copilot": {
+        "title": "Votre abonnement GitHub Copilot",
+        "tiers": "Copilot Pro, Pro+, Business ou Enterprise"
+      },
       "gemini": {
         "title": "Votre abonnement Gemini",
         "tiers": "Google AI Pro, Google AI Ultra ou Gemini Enterprise",
@@ -3165,6 +3171,7 @@
       "codex": "ChatGPT est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de ChatGPT et réessayez.",
       "cursor": "Cursor est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Cursor et réessayez.",
       "grok": "Grok est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Grok et réessayez.",
+      "copilot": "Copilot est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de GitHub et réessayez.",
       "antigravity": "Gemini est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Google et réessayez.",
       "opencode": "OpenCode est connecté en tant que {{email}}, pas {{account}}. Réessayez avec la bonne clé."
     },
@@ -5376,6 +5383,7 @@
             "codex": "Ajouter un compte ChatGPT",
             "cursor": "Ajouter un compte Cursor",
             "grok": "Ajouter un compte Grok",
+            "copilot": "Ajouter un compte Copilot",
             "antigravity": "Ajouter un compte Gemini",
             "opencode": "Ajouter une clé OpenCode"
           },
@@ -5384,6 +5392,7 @@
             "codex": "Le compte avec votre abonnement",
             "cursor": "Le compte avec votre abonnement",
             "grok": "Le compte avec votre abonnement",
+            "copilot": "Le compte avec votre abonnement",
             "antigravity": "Le compte Google avec votre abonnement",
             "antigravityEnterprise": "Votre compte Gemini Enterprise"
           },
@@ -5393,11 +5402,13 @@
             "codex": "Se connecter avec ChatGPT",
             "cursor": "Se connecter avec Cursor",
             "grok": "Se connecter avec Grok",
+            "copilot": "Se connecter avec GitHub",
             "antigravity": "Se connecter avec Google"
           },
           "opencodeFree": "Les modèles gratuits d'OpenCode ne demandent aucune clé. Une clé de la console OpenCode ajoute les modèles payants.",
           "cursorFinish": "Connectez-vous sur la page de Cursor, et la connexion se termine toute seule sur {{computer}}.",
           "grokFinish": "Connectez-vous sur la page de Grok, et la connexion se termine toute seule sur {{computer}}.",
+          "copilotFinish": "Connectez-vous sur la page de GitHub, et la connexion se termine toute seule sur {{computer}}.",
           "geminiEnterprise": "Utiliser plutôt Gemini Enterprise",
           "geminiPersonal": "Utiliser plutôt un compte Google personnel",
           "cursorKey": "Utiliser plutôt une clé API Cursor",
@@ -5416,6 +5427,7 @@
           "local": "Sur {{computer}} lui-même ? Si son navigateur s'est ouvert tout seul, autorisez simplement là-bas.",
           "deviceCode": "Code pour ChatGPT",
           "grokCode": "Code pour Grok",
+          "copilotCode": "Code pour GitHub",
           "deviceCodeText": "Saisissez ce code sur la page qui s'ouvre.",
           "starting": "Demande à {{computer}}…",
           "waiting": "En attente",
@@ -5439,6 +5451,7 @@
             "codex": "ChatGPT s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de ChatGPT et réessayez.",
             "cursor": "Cursor s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Cursor et réessayez.",
             "grok": "Grok s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Grok et réessayez.",
+            "copilot": "Copilot s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de GitHub et réessayez.",
             "antigravity": "Gemini s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Google et réessayez.",
             "opencode": "Cette clé OpenCode est déjà connectée en tant que {{account}}."
           },
@@ -10128,6 +10141,7 @@
       "codex": "ChatGPT",
       "cursor": "Cursor",
       "grok": "Grok",
+      "copilot": "Copilot",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
       "needs": {
@@ -11432,6 +11446,7 @@
       "chatgpt": "{{model}} avec l'abonnement ChatGPT",
       "cursor": "{{model}} avec l'abonnement Cursor",
       "grok": "{{model}} avec l'abonnement Grok",
+      "copilot": "{{model}} avec l'abonnement GitHub Copilot",
       "gemini": "{{model}} avec l'abonnement Gemini",
       "zen": "{{model}} avec OpenCode",
       "coding": "{{model}} avec {{plan}}",
@@ -11439,6 +11454,7 @@
       "chatgptOf": "{{model}} avec l'abonnement ChatGPT de {{owner}}",
       "cursorOf": "{{model}} avec l'abonnement Cursor de {{owner}}",
       "grokOf": "{{model}} avec l'abonnement Grok de {{owner}}",
+      "copilotOf": "{{model}} avec l'abonnement GitHub Copilot de {{owner}}",
       "geminiOf": "{{model}} avec l'abonnement Gemini de {{owner}}",
       "zenOf": "{{model}} avec l'OpenCode de {{owner}}",
       "codingOf": "{{model}} avec {{plan}} de {{owner}}",
@@ -11446,6 +11462,7 @@
       "chatgptAuto": "Abonnement ChatGPT",
       "cursorAuto": "Abonnement Cursor",
       "grokAuto": "Abonnement Grok",
+      "copilotAuto": "Abonnement GitHub Copilot",
       "geminiAuto": "Abonnement Gemini",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
@@ -11453,6 +11470,7 @@
       "chatgptAutoOf": "Abonnement ChatGPT de {{owner}}",
       "cursorAutoOf": "Abonnement Cursor de {{owner}}",
       "grokAutoOf": "Abonnement Grok de {{owner}}",
+      "copilotAutoOf": "Abonnement GitHub Copilot de {{owner}}",
       "geminiAutoOf": "Abonnement Gemini de {{owner}}",
       "zenAutoOf": "OpenCode de {{owner}}",
       "codingAutoOf": "{{plan}} de {{owner}}",
@@ -11468,6 +11486,7 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
+      "copilot": "Copilot CLI",
       "antigravity": "Antigravity CLI"
     },
     "foot": {
@@ -11480,6 +11499,7 @@
     "codexText": "Utilise l'abonnement ChatGPT de la personne qui a connecté l'ordinateur.",
     "cursorText": "Utilise l'abonnement Cursor de la personne qui a connecté l'ordinateur.",
     "grokText": "Utilise l'abonnement Grok de la personne qui a connecté l'ordinateur.",
+    "copilotText": "Utilise l'abonnement GitHub Copilot de la personne qui a connecté l'ordinateur.",
     "antigravityText": "Utilise l'abonnement Gemini de la personne qui a connecté l'ordinateur.",
     "opencodeText": "Les modèles gratuits d'OpenCode, ou la clé OpenCode de la personne qui a connecté l'ordinateur.",
     "cursorModel": {
@@ -11534,6 +11554,7 @@
       "codex": "Codex · {{model}}",
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
+      "copilot": "Copilot CLI · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
       "opencode": "OpenCode · {{model}}",
       "noFallback": "{{brain}}, sans repli sur l'API"
@@ -14200,6 +14221,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "copilot": "Copilot CLI",
         "commands": "les commandes",
         "browser": "le navigateur",
         "desktop": "l'écran",
@@ -14357,6 +14379,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "grok": "Grok Build",
+        "copilot": "Copilot CLI",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
         "commands": "Commandes",
@@ -14367,6 +14390,7 @@
         "codex": "Comme Claude Code, avec un compte ChatGPT. Uniquement dans les dossiers autorisés.",
         "cursor": "Comme Claude Code, avec un compte Cursor. Uniquement dans les dossiers autorisés.",
         "grok": "Comme Claude Code, avec un compte Grok. Uniquement dans les dossiers autorisés.",
+        "copilot": "Comme Claude Code, avec un compte GitHub Copilot. Uniquement dans les dossiers autorisés.",
         "antigravity": "Comme Claude Code, avec un compte Gemini. Uniquement dans les dossiers autorisés.",
         "opencode": "Comme Claude Code, avec les modèles gratuits d'OpenCode ou une clé OpenCode. Uniquement dans les dossiers autorisés.",
         "commands": "Lance des commandes dans le Terminal, comme des tests et des builds."

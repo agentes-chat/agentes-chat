@@ -27,6 +27,7 @@ import { type BrainManager, brainKey } from "./brain";
 import { type AntigravityBrainTurnRequest, handleAntigravityBrainTurn } from "./brain-antigravity";
 import { type CodexBrainEvent, type CodexBrainTurnRequest, handleCodexBrainTurn } from "./brain-codex";
 import type { CodexAppServers } from "./brain-codex-app";
+import { type CopilotBrainTurnRequest, handleCopilotBrainTurn } from "./brain-copilot";
 import { type CursorBrainTurnRequest, handleCursorBrainTurn } from "./brain-cursor";
 import { type GrokBrainTurnRequest, handleGrokBrainTurn } from "./brain-grok";
 import { handleOpencodeBrainTurn, type OpencodeBrainTurnRequest, steerOpencodeTurn } from "./brain-opencode";
@@ -366,6 +367,7 @@ const TOOL_LABEL: Record<keyof RunnerTools, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity CLI",
+  copilot: "Copilot CLI",
   commands: "Commands",
   browser: "Browser",
   desktop: "The desktop",
@@ -1213,7 +1215,8 @@ async function doBrainTurn(
     req.kind === "cursor" ||
     req.kind === "opencode" ||
     req.kind === "grok" ||
-    req.kind === "antigravity"
+    req.kind === "antigravity" ||
+    req.kind === "copilot"
       ? req.kind
       : null;
   requireTool(ctx, cli ?? "claude");
@@ -1257,10 +1260,10 @@ async function doHostedTurn(
 }
 
 /**
- * Cursor, Grok and Antigravity turns in progress, by run: `brain.steer` answers `unsupported` for them (`agent -p`,
- * `grok -p` and `agy -p` take nothing mid-turn).
+ * Cursor, Grok, Antigravity and Copilot turns in progress, by run: `brain.steer` answers `unsupported` for them
+ * (`agent -p`, `grok -p`, `agy -p` and `copilot` take nothing mid-turn).
  */
-const turnOnlyRuns = new Map<string, "Cursor" | "Grok Build" | "Antigravity CLI">();
+const turnOnlyRuns = new Map<string, "Cursor" | "Grok Build" | "Antigravity CLI" | "Copilot CLI">();
 
 /** OpenCode turns in progress, by run: `no_turn` until the turn can take messages (`steerOpencodeTurn`). */
 const opencodeRuns = new Set<string>();
@@ -1323,7 +1326,8 @@ function signedOut(
     req.kind === "cursor" ||
     req.kind === "opencode" ||
     req.kind === "grok" ||
-    req.kind === "antigravity"
+    req.kind === "antigravity" ||
+    req.kind === "copilot"
       ? req.kind
       : "claude_code";
   void (final.code === "not_logged_in" ? accounts.refused(kind, req.account) : Promise.resolve())
@@ -1354,11 +1358,22 @@ async function doCodexTurn(
   const opencode = req.kind === "opencode";
   const grok = req.kind === "grok";
   const agy = req.kind === "antigravity";
-  const name = cursor ? "Cursor" : opencode ? "OpenCode" : grok ? "Grok Build" : agy ? "Antigravity CLI" : "Codex";
+  const copilot = req.kind === "copilot";
+  const name = cursor
+    ? "Cursor"
+    : opencode
+      ? "OpenCode"
+      : grok
+        ? "Grok Build"
+        : agy
+          ? "Antigravity CLI"
+          : copilot
+            ? "Copilot CLI"
+            : "Codex";
   if (!codex) throw new RunnerError("bad_request", `This runner runs no ${name} brain turns`);
   let final: CodexBrainEvent = {
     type: "error",
-    code: `${cursor ? "cursor" : opencode ? "opencode" : grok ? "grok" : agy ? "antigravity" : "codex"}_failed`,
+    code: `${cursor ? "cursor" : opencode ? "opencode" : grok ? "grok" : agy ? "antigravity" : copilot ? "copilot" : "codex"}_failed`,
     message: `${name} ended without an answer.`,
   };
   let ended = false;
@@ -1385,9 +1400,26 @@ async function doCodexTurn(
     scope.emit?.({ type: "brain.event", runId, event });
   };
   if (opencode) opencodeRuns.add(runId);
-  else if (cursor || grok || agy) turnOnlyRuns.set(runId, cursor ? "Cursor" : grok ? "Grok Build" : "Antigravity CLI");
+  else if (cursor || grok || agy || copilot) {
+    turnOnlyRuns.set(runId, cursor ? "Cursor" : grok ? "Grok Build" : agy ? "Antigravity CLI" : "Copilot CLI");
+  }
   try {
-    if (agy) {
+    if (copilot) {
+      await handleCopilotBrainTurn(
+        {
+          folder,
+          exec: toolOn(ctx, "copilot"),
+          runnerHome: codex.runnerHome,
+          ...(ctx.secretsDir && !chat ? { secretsDir: ctx.secretsDir } : {}),
+          ...(codex.mcp ? { mcp: codex.mcp } : {}),
+          ...(ctx.grants && !chat ? { grants: ctx.grants } : {}),
+          ...(ctx.accounts || codex.accounts ? { accounts: ctx.accounts ?? codex.accounts } : {}),
+          ...(codex.spawn ? { spawn: codex.spawn } : {}),
+        },
+        req as unknown as CopilotBrainTurnRequest,
+        { signal: scope.signal, emit },
+      );
+    } else if (agy) {
       await handleAntigravityBrainTurn(
         {
           folder,

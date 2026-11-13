@@ -409,7 +409,7 @@ function AddAccountFlow({
   // Where the account stays and what to do on the wrong one: the sign-in step's ⓘ.
   const signInHint = t("agentPage.work.brain.add.stepOneHint", { computer, brand: t(`aiAccounts.connect.${kind}`) });
   let steps: ReactNode;
-  // A device sign-in's one-time code (ChatGPT's, Grok's), to type on the provider's page.
+  // A device sign-in's one-time code (ChatGPT's, Grok's, Copilot's), to type on the provider's page.
   const deviceCode = (n: number, label: string, code: string) => (
     <Step n={n} divider title={label} side={waiting}>
       <View style={styles.code}>
@@ -552,6 +552,25 @@ function AddAccountFlow({
           deviceCode(2, t("agentPage.work.brain.add.grokCode"), login.userCode)
         ) : login && opened ? (
           <Step n={2} divider title={t("agentPage.work.brain.add.grokFinish", { computer })} side={waiting} />
+        ) : null}
+      </>
+    );
+  } else if (kind === "copilot") {
+    steps = (
+      <>
+        <Step
+          n={1}
+          state={login ? "done" : "now"}
+          title={t("agentPage.work.brain.add.stepOne.copilot")}
+          hint={signInHint}
+          side={login ? openAgain(login.url) : startButton(t("agentPage.work.brain.add.open.copilot"), !ready)}
+        >
+          {starting ? <StepText>{t("agentPage.work.brain.add.starting", { computer })}</StepText> : null}
+        </Step>
+        {login?.userCode ? (
+          deviceCode(2, t("agentPage.work.brain.add.copilotCode"), login.userCode)
+        ) : login && opened ? (
+          <Step n={2} divider title={t("agentPage.work.brain.add.copilotFinish", { computer })} side={waiting} />
         ) : null}
       </>
     );

@@ -55,7 +55,7 @@ export interface AgentAi {
    * With `not_signed_in`: the CLI whose own sign-in isn't there on the computer, the agent having no account of its
    * own (ADR 0041 §1).
    */
-  own?: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  own?: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "copilot";
   /**
    * Ready on an API key with Automático: the maker of the key it thinks with, which the apps name it by ("Claude"), as
    * the right hand's panel names its key. Asked with no run only (the apps' question).

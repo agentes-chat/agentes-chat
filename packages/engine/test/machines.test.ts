@@ -2299,7 +2299,7 @@ test("an agent whose brain's shell runs in its CLI's own sandbox has no containe
     await f.db.update(schema.agents).set({ brain }).where(eq(schema.agents.id, agent.id));
     return (await machineAgents(f.db, f.org.id, paired.machineId)).find((a) => a.id === agent.id)?.containers;
   };
-  for (const brain of ["model", "claude_code", "opencode"]) expect(await containers(brain)).toBe(true);
+  for (const brain of ["model", "claude_code", "opencode", "copilot"]) expect(await containers(brain)).toBe(true);
   for (const brain of ["codex", "cursor", "grok", "antigravity"]) expect(await containers(brain)).toBeUndefined();
 });
 

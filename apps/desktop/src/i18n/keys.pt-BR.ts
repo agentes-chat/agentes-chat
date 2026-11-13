@@ -504,6 +504,8 @@ export const desktopPtBR = {
     opencodeDesc: "Escreve e muda código nas pastas liberadas, com os modelos grátis do OpenCode ou a sua chave.",
     grokName: "Grok Build",
     grokDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Grok.",
+    copilotName: "Copilot CLI",
+    copilotDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do GitHub Copilot.",
     antigravityName: "Antigravity CLI",
     antigravityDesc: "Escreve e muda código nas pastas liberadas, com a sua conta do Gemini.",
     found: "Encontrado",

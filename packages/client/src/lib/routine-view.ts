@@ -421,7 +421,7 @@ export function busyOnComputer(
   if (
     !where.selfHost ||
     !brain ||
-    !["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"].includes(brain.kind)
+    !["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "copilot"].includes(brain.kind)
   )
     return null;
   if (perDay < BUSY_RUNS_PER_DAY) return null;

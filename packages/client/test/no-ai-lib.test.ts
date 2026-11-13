@@ -265,7 +265,7 @@ describe("the Cloud's plan gate tells the truth", () => {
     planGate({ choice: "chatgpt", edition: "cloud", setup: ready(ago), brain: noCodex, computer: MAC, now: NOW });
 
   test("a billing hold says so first, for every plan, and offers no sign-in", () => {
-    for (const choice of ["claude", "chatgpt", "cursor", "zen", "grok", "gemini", "zai"] as const) {
+    for (const choice of ["claude", "chatgpt", "cursor", "zen", "grok", "gemini", "copilot", "zai"] as const) {
       const standing = { state: "hold", reason: "payment" } as const;
       expect(gate({ choice, edition: "cloud", standing })).toEqual({ state: "billing", hold: "payment" });
       expect(
@@ -335,7 +335,7 @@ describe("the Cloud's plan gate tells the truth", () => {
   });
 
   test("every plan's program gets the same honest line", () => {
-    for (const kind of ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"] as const) {
+    for (const kind of ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "copilot"] as const) {
       const line = cloudLine({ state: "unsupported", reason: "not_installed", overdue: true }, kind);
       expect(line?.text).toContain("Acme");
       expect(line?.text).toContain("API key");
@@ -513,12 +513,13 @@ describe("the agent a plan starts on, and the order of the plans", () => {
     expect(firstAgent([], () => false)).toBeUndefined();
   });
 
-  test("Claude, ChatGPT, Gemini, Grok, Cursor, OpenCode, then the coding plans; ChatGPT signs in through Codex, the others through their own CLIs", () => {
+  test("Claude, ChatGPT, Gemini, Grok, Copilot, Cursor, OpenCode, then the coding plans; ChatGPT signs in through Codex, the others through their own CLIs", () => {
     expect(PLAN_CHOICES).toEqual([
       "claude",
       "chatgpt",
       "gemini",
       "grok",
+      "copilot",
       "cursor",
       "zen",
       "zai",
@@ -531,6 +532,7 @@ describe("the agent a plan starts on, and the order of the plans", () => {
       "codex",
       "antigravity",
       "grok",
+      "copilot",
       "cursor",
       "opencode",
       "claude_code",
@@ -548,6 +550,7 @@ describe("the agent a plan starts on, and the order of the plans", () => {
     expect(found("Gemini CLI")).toEqual(["gemini"]);
     expect(found("antigravity")).toEqual(["gemini"]);
     expect(found("grok build")).toEqual(["grok"]);
+    expect(found("copilot cli")).toEqual(["copilot"]);
   });
 });
 
@@ -663,6 +666,8 @@ describe("All agents: one login per agent, the key pasted once", () => {
     expect(agentAi({ brain: { kind: "model", model: null } }, "ready")).toBe("key");
     expect(agentAi({ brain: { kind: "grok", model: null } }, "ready")).toBe("grok");
     expect([planOfKind("grok"), planMark("grok")]).toEqual(["grok", "grok"]);
+    expect(agentAi({ brain: { kind: "copilot", model: null } }, "ready")).toBe("copilot");
+    expect([planOfKind("copilot"), planMark("copilot"), kindOf("copilot")]).toEqual(["copilot", "copilot", "copilot"]);
     expect(agentAi({ brain: { kind: "antigravity", model: null } }, "ready")).toBe("gemini");
     expect([planOfKind("antigravity"), planMark("gemini"), kindOf("gemini")]).toEqual([
       "gemini",

@@ -5,6 +5,7 @@ import {
   type Brain,
   BrainFailure,
   type BrainTurn,
+  createAgent,
   createAgentRuns,
   createClaudeCodeBrain,
   createJobHandlers,
@@ -25,6 +26,7 @@ import {
   rightHandNoAiReason,
   setAccountServes,
   setAgentBrain,
+  setAgentComputerTarget,
   UNAVAILABLE_CODES,
 } from "../src";
 import { agentAiState } from "../src/ai-status";
@@ -529,6 +531,52 @@ test("every plan qualifies: OpenCode's, Codex's and Cursor's like Claude's, each
   }
 });
 
+test("the Copilot CLI is never offered to Lodi, and a save naming it is refused as an unsupported brain", async () => {
+  const { fx, deps, machineId, lodi, account } = await world();
+  const id = (await lodi()).id;
+  const COPILOTS = "0193dddd-0000-4000-8000-0000000000a5";
+  await account(COPILOTS, fx.owner.id, "copilot");
+  await fx.db
+    .update(schema.machines)
+    .set({
+      protocol: MACHINE_PROTOCOL_VERSION,
+      executors: { copilot: { version: "GitHub Copilot CLI 1.0.109" }, detectedAt: new Date().toISOString() },
+    })
+    .where(eq(schema.machines.id, machineId));
+  // Neither its CLI nor an account of it is listed for Lodi, in the workspace's AI or a person's own.
+  for (const scope of [undefined, "mine"] as const) {
+    const view = await getAgentBrain(deps, fx.owner.id, fx.org.id, id, scope);
+    expect(view.options.map((o) => o.kind)).not.toContain("copilot");
+    expect(view.options.map((o) => o.kind)).toContain("codex");
+    expect(view.machines.flatMap((m) => m.options.map((o) => o.kind))).not.toContain("copilot");
+    expect(view.accounts.map((a) => a.kind)).not.toContain("copilot");
+    const refused = await codeOf(
+      setAgentBrain(deps, fx.owner.id, fx.org.id, id, {
+        ...(scope ? { scope } : {}),
+        brain: "copilot",
+        account: COPILOTS,
+      }),
+    );
+    expect(refused).toBe("brain.invalid");
+    // The account alone: in a person's own AI its kind names the brain, in the workspace's it is not the brain's.
+    expect(
+      await codeOf(setAgentBrain(deps, fx.owner.id, fx.org.id, id, { ...(scope ? { scope } : {}), account: COPILOTS })),
+    ).toBe(scope ? "brain.invalid" : "account.invalid");
+  }
+  expect(await lodi()).toMatchObject({ brain: "model", brainAccountId: null });
+  // Any other agent on that computer is offered it.
+  const other = await createAgent(
+    fx.db,
+    fx.owner.id,
+    fx.org.id,
+    { name: "Ada", handle: "ada-cp" },
+    { model: "claude-sonnet-5-5" },
+  );
+  await setAgentComputerTarget({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, other.id, machineId);
+  const view = await getAgentBrain(deps, fx.owner.id, fx.org.id, other.id);
+  expect(view.options.find((o) => o.kind === "copilot")).toMatchObject({ available: true });
+});
+
 test("its DM's line: a runner to update and a CLI with tools of its own each say so, never that it has no AI", () => {
   expect(rightHandNoAiReason("runner_outdated")).toBe("runner_outdated");
   expect(rightHandNoAiReason("tools_not_locked")).toBe("plan_tools");
@@ -546,12 +594,12 @@ test("its DM's line names the real cause: a model's own limit or region, command
   expect(rightHandNoAiReason("tool_off")).toBe("commands_off");
   expect(rightHandNoAiReason("plan_not_owner")).toBe("plan_not_shared");
   expect(rightHandNoAiReason("plan_unattended")).toBe("plan_unattended");
-  for (const code of ["cli_missing", "codex_missing", "opencode_missing", "antigravity_missing"])
+  for (const code of ["cli_missing", "codex_missing", "opencode_missing", "antigravity_missing", "copilot_missing"])
     expect(rightHandNoAiReason(code)).toBe("cli_missing");
   // A failure that may pass is a problem on the computer: never "no AI connected", nor that it's away.
   expect(rightHandNoAiReason("runner_error")).toBe("computer_failed");
   // The plan's CLI failing (a provider error through it, its own crash) is the plan's AI's, not its computer's.
-  for (const code of ["claude_failed", "codex_failed", "cursor_failed", "grok_failed"])
+  for (const code of ["claude_failed", "codex_failed", "cursor_failed", "grok_failed", "copilot_failed"])
     expect(rightHandNoAiReason(code)).toBe("cli_failed");
 });
 

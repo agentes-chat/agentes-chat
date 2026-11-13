@@ -28,6 +28,7 @@ const RUNTIME_PROVIDER: Record<string, string> = {
   codex: "openai",
   grok: "xai",
   antigravity: "google",
+  copilot: "github",
   cursor: "cursor",
   opencode: "opencode",
 };

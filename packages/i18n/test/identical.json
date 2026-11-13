@@ -11,6 +11,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.five_hour",
       "aiAccounts.usage.short.seven_day_opus",
@@ -32,6 +33,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.foot.offline",
       "brain.line.zenAuto",
@@ -40,6 +42,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.agent.sites",
       "browser.live.keys.Enter",
@@ -87,6 +90,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.offline",
@@ -317,6 +321,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -339,6 +344,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.line.zenAuto",
       "brain.summary.claude_code",
@@ -346,6 +352,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
       "browser.live.keys.Escape",
@@ -384,6 +391,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.os.darwin",
@@ -530,7 +538,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "fr": [
       "channel.tooLong.fileName",
@@ -578,6 +588,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -607,6 +618,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.line.zenAuto",
       "brain.summary.claude_code",
@@ -614,6 +626,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.agent.sites",
       "browser.live.keys.Tab",
@@ -670,6 +683,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.details",
       "machines.download.sha",
@@ -943,7 +957,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -998,6 +1014,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.page.nameLabel",
       "aiAccounts.usage.short.seven_day_opus",
@@ -1030,6 +1047,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.foot.offline",
       "brain.line.zenAuto",
@@ -1038,6 +1056,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
       "browser.live.keys.Escape",
@@ -1110,6 +1129,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.access.tools",
       "machines.download.version",
@@ -1379,7 +1399,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "it": [
       "shell.email.label",
@@ -1429,6 +1451,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.five_hour",
       "aiAccounts.usage.short.seven_day_opus",
@@ -1456,6 +1479,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.foot.offline",
       "brain.line.zenAuto",
@@ -1464,6 +1488,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.live.keys.Escape",
       "browser.live.keys.Tab",
@@ -1517,6 +1542,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.offline",
@@ -1734,7 +1760,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -1809,6 +1837,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day",
       "aiAccounts.usage.short.seven_day_opus",
@@ -1850,6 +1879,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.foot.offline",
       "brain.line.zenAuto",
@@ -1862,6 +1892,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.model",
       "brain.summary.opencode",
       "brakes.project",
@@ -1958,6 +1989,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.access.tools",
       "machines.download.sha",
@@ -2314,7 +2346,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2343,6 +2377,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -2359,6 +2394,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.line.zenAuto",
       "brain.summary.claude_code",
@@ -2366,6 +2402,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
       "browser.live.keys.Escape",
@@ -2388,6 +2425,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.os.darwin",
@@ -2479,7 +2517,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -2508,6 +2548,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -2522,6 +2563,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.line.zenAuto",
       "brain.summary.claude_code",
@@ -2529,6 +2571,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
       "browser.live.keys.Escape",
@@ -2553,6 +2596,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.os.darwin",
@@ -2638,7 +2682,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -2668,6 +2714,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -2682,6 +2729,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.line.zenAuto",
       "brain.summary.claude_code",
@@ -2689,6 +2737,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
       "browser.live.keys.Escape",
@@ -2711,6 +2760,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.os.darwin",
@@ -2788,7 +2838,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "id": [
       "shell.email.label",
@@ -2833,6 +2885,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -2856,6 +2909,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.foot.offline",
       "brain.line.zenAuto",
@@ -2868,6 +2922,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.model",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
@@ -2910,6 +2965,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.offline",
@@ -3084,6 +3140,8 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot",
       "machines.oneClick.tools.browser",
       "machines.oneClick.tools.terminal"
     ],
@@ -3116,6 +3174,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -3128,6 +3187,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.line.zenAuto",
       "brain.mission.modelLabel",
@@ -3139,6 +3199,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.model",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
@@ -3167,6 +3228,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.os.darwin",
@@ -3269,7 +3331,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "pl": [
       "devices.cpus",
@@ -3307,6 +3371,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -3326,6 +3391,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.foot.offline",
       "brain.line.zenAuto",
@@ -3338,6 +3404,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.model",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
@@ -3380,6 +3447,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.offline",
@@ -3554,7 +3622,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -3580,6 +3650,7 @@
       "aiAccounts.connect.cursor",
       "aiAccounts.connect.antigravity",
       "aiAccounts.connect.grok",
+      "aiAccounts.connect.copilot",
       "aiAccounts.connect.opencode",
       "aiAccounts.usage.short.seven_day_opus",
       "aiAccounts.usage.short.seven_day_sonnet",
@@ -3592,6 +3663,7 @@
       "brain.card.cursor",
       "brain.card.antigravity",
       "brain.card.grok",
+      "brain.card.copilot",
       "brain.card.opencode",
       "brain.line.zenAuto",
       "brain.summary.claude_code",
@@ -3599,6 +3671,7 @@
       "brain.summary.cursor",
       "brain.summary.antigravity",
       "brain.summary.grok",
+      "brain.summary.copilot",
       "brain.summary.opencode",
       "browser.live.keys.Enter",
       "browser.live.keys.Escape",
@@ -3618,6 +3691,7 @@
       "machines.access.tool.cursor",
       "machines.access.tool.antigravity",
       "machines.access.tool.grok",
+      "machines.access.tool.copilot",
       "machines.access.tool.opencode",
       "machines.download.sha",
       "machines.os.darwin",
@@ -3704,7 +3778,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+
+      "machines.oneClick.tools.copilot"
     ]
   },
   "mobile-base": {
@@ -4236,6 +4312,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "es": [
@@ -4255,6 +4332,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "fr": [
@@ -4277,6 +4355,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "de": [
@@ -4303,6 +4382,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "it": [
@@ -4325,6 +4405,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "nl": [
@@ -4355,6 +4436,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "ja": [
@@ -4370,6 +4452,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "ko": [
@@ -4384,6 +4467,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "zh-Hans": [
@@ -4398,6 +4482,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "id": [
@@ -4417,6 +4502,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "tr": [
@@ -4430,6 +4516,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "pl": [
@@ -4446,6 +4533,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ],
     "ru": [
@@ -4459,6 +4547,7 @@
       "tools.codexName",
       "tools.cursorName",
       "tools.grokName",
+      "tools.copilotName",
       "tools.opencodeName"
     ]
   }

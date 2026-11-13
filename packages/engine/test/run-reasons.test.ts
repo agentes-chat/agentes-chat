@@ -19,6 +19,7 @@ test("a failed run's reason: a CLI's failed turn is its CLI's, the computer's ow
     ["codex_failed", "Codex"],
     ["opencode_failed", "OpenCode"],
     ["antigravity_failed", "Antigravity CLI"],
+    ["copilot_failed", "Copilot CLI"],
   ] as const) {
     expect(runErrorDetail(code)).toEqual({ errorCode: "run.cli_stopped", errorParams: { brain } });
     expect(routineFailureCode(code)).toBe("cli_failed");

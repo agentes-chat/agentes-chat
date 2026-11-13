@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { schema } from "@agenteschat/db";
+import { eq, schema } from "@agenteschat/db";
 import { createLogger } from "../src/logger";
 import { createOperatorApp } from "../src/operator/app";
 import { createTestServer, type TestServer } from "./harness";
@@ -306,4 +306,39 @@ test("the list's filters and bounds", async () => {
   const bad = await get("/ai-accounts?cursor=nope");
   expect(bad.status).toBe(400);
   expect(await code(bad)).toBe("invalid_cursor");
+});
+
+test("a Copilot account is GitHub's, run by the Copilot CLI, and a sign-in like Grok's", async () => {
+  const [machine] = await t.db
+    .select({ id: schema.machines.id })
+    .from(schema.machines)
+    .where(eq(schema.machines.name, "Lia box"));
+  const copilot = id(11);
+  await t.db.insert(schema.machineAccounts).values({
+    id: copilot,
+    orgId: lia,
+    machineId: machine?.id ?? "",
+    kind: "copilot",
+    label: "GitHub Copilot",
+    status: "active",
+    authMethod: "cli_login",
+  });
+  try {
+    const a = await ok<{ byDimension: Record<string, unknown>[] }>(await get(`/analytics/ai-accounts?${RANGE}`));
+    expect(a.byDimension).toContainEqual({
+      provider: "github",
+      runtime: "copilot",
+      authMethod: "cli_login",
+      billing: "subscription",
+      connections: 1,
+      usable: 1,
+      signedOut: 0,
+      unknown: 0,
+      usedLast7d: 0,
+    });
+    const listed = await ok<{ accounts: { id: string }[] }>(await get("/ai-accounts?kind=copilot"));
+    expect(listed.accounts.map((x) => x.id)).toEqual([copilot]);
+  } finally {
+    await t.db.delete(schema.machineAccounts).where(eq(schema.machineAccounts.id, copilot));
+  }
 });

@@ -123,7 +123,7 @@ function connectionChecks(s: DoctorSources): Check[] {
 /** `2.1.4 (Claude Code)` → `2.1.4`. */
 const versionOf = (line: string) => /\d+(?:\.\d+)+/.exec(line)?.[0] ?? line;
 
-const APPS = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+const APPS = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "copilot"] as const;
 
 function appChecks(found: Executors): Check[] {
   const checks = APPS.flatMap((name): Check[] => {

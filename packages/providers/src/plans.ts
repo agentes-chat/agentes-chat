@@ -612,6 +612,23 @@ export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = [
 ];
 
 /**
+ * The Copilot CLI's models (ADR 0174): the runner reports none yet (the CLI has no `models` command), so these are
+ * what "Quem pensa" offers; any other id is taken as typed, and with none chosen the CLI's own default runs. Copilot's
+ * own `auto` is left out: it is the engine's word for no model chosen.
+ * ponytail: hand-copied list (some of what Copilot CLI 1.0.109 offered a GitHub Copilot plan, 2026-11-12); a
+ * listing the runner reports replaces it once an account's own models have a way to the server.
+ */
+export const COPILOT_CLI_MODELS: readonly { id: string; label: string }[] = [
+  { id: "claude-sonnet-5.5", label: "Claude Sonnet 5.5" },
+  { id: "claude-haiku-5.5", label: "Claude Haiku 5.5" },
+  { id: "gpt-6.1-terra", label: "GPT-6.1 Terra" },
+  { id: "gpt-6-luna", label: "GPT-6 Luna" },
+  { id: "gpt-5.3-codex", label: "GPT-5.3-Codex" },
+  { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash" },
+  { id: "grok-4.7", label: "Grok 4.7" },
+];
+
+/**
  * An Antigravity CLI account's `provider` when it signs in to Gemini Enterprise (`oauth-business`, ADR 0143); none:
  * a personal Google account (Google AI Pro or Ultra).
  */

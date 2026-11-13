@@ -2986,6 +2986,7 @@
       "codex": "На этом компьютере не выполнен вход в Codex. Подключите аккаунт ChatGPT на странице {{name}}.",
       "cursor": "На этом компьютере не выполнен вход в Cursor. Подключите аккаунт Cursor на странице {{name}}.",
       "grok": "На этом компьютере не выполнен вход в Grok. Подключите аккаунт Grok на странице {{name}}.",
+      "copilot": "На этом компьютере не выполнен вход в Copilot. Подключите аккаунт Copilot на странице {{name}}.",
       "antigravity": "На этом компьютере не выполнен вход в Gemini. Подключите аккаунт Gemini на странице {{name}}.",
       "opencode": "OpenCode не может думать на этом компьютере. Подключите ключ OpenCode на странице {{name}}."
     },
@@ -3044,6 +3045,7 @@
       "chatgpt": "Подключите тариф ChatGPT",
       "cursor": "Подключите тариф Cursor",
       "grok": "Подключите тариф Grok",
+      "copilot": "Подключите тариф GitHub Copilot",
       "gemini": "Подключите тариф Gemini",
       "zen": "Подключите OpenCode",
       "api_key": "Добавить API-ключ"
@@ -3167,6 +3169,10 @@
         "title": "Ваш тариф Grok",
         "tiers": "SuperGrok, SuperGrok Heavy или X Premium+"
       },
+      "copilot": {
+        "title": "Ваш тариф GitHub Copilot",
+        "tiers": "Copilot Pro, Pro+, Business или Enterprise"
+      },
       "gemini": {
         "title": "Ваш тариф Gemini",
         "tiers": "Google AI Pro, Google AI Ultra или Gemini Enterprise",
@@ -3263,6 +3269,7 @@
       "codex": "В ChatGPT выполнен вход как {{email}}, а не {{account}}. Выйдите на странице ChatGPT и попробуйте ещё раз.",
       "cursor": "В Cursor выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Cursor и попробуйте ещё раз.",
       "grok": "В Grok выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Grok и попробуйте ещё раз.",
+      "copilot": "В Copilot выполнен вход как {{email}}, а не {{account}}. Выйдите на странице GitHub и попробуйте ещё раз.",
       "antigravity": "В Gemini выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Google и попробуйте ещё раз.",
       "opencode": "OpenCode вошёл как {{email}}, а не {{account}}. Попробуйте ещё раз с правильным ключом."
     },
@@ -5533,6 +5540,7 @@
             "codex": "Добавить аккаунт ChatGPT",
             "cursor": "Добавить аккаунт Cursor",
             "grok": "Добавить аккаунт Grok",
+            "copilot": "Добавить аккаунт Copilot",
             "antigravity": "Добавить аккаунт Gemini",
             "opencode": "Добавить ключ OpenCode"
           },
@@ -5541,6 +5549,7 @@
             "codex": "Аккаунт с вашим тарифом",
             "cursor": "Аккаунт с вашим тарифом",
             "grok": "Аккаунт с вашим тарифом",
+            "copilot": "Аккаунт с вашим тарифом",
             "antigravity": "Аккаунт Google с вашим тарифом",
             "antigravityEnterprise": "Ваш аккаунт Gemini Enterprise"
           },
@@ -5550,11 +5559,13 @@
             "codex": "Войти через ChatGPT",
             "cursor": "Войти через Cursor",
             "grok": "Войти через Grok",
+            "copilot": "Войти через GitHub",
             "antigravity": "Войти через Google"
           },
           "opencodeFree": "Бесплатным моделям OpenCode ключ не нужен. Ключ из консоли OpenCode добавляет платные.",
           "cursorFinish": "Войдите на странице Cursor, и вход завершится на {{computer}} сам.",
           "grokFinish": "Войдите на странице Grok, и вход завершится на {{computer}} сам.",
+          "copilotFinish": "Войдите на странице GitHub, и вход завершится на {{computer}} сам.",
           "geminiEnterprise": "Использовать Gemini Enterprise",
           "geminiPersonal": "Использовать личный аккаунт Google",
           "cursorKey": "Использовать API-ключ Cursor",
@@ -5573,6 +5584,7 @@
           "local": "Вы за самим {{computer}}? Если браузер на нём открылся сам, просто разрешите доступ там.",
           "deviceCode": "Код для ChatGPT",
           "grokCode": "Код для Grok",
+          "copilotCode": "Код для GitHub",
           "deviceCodeText": "Введите этот код на открывшейся странице.",
           "starting": "Связываемся с {{computer}}…",
           "waiting": "Ожидание",
@@ -5596,6 +5608,7 @@
             "codex": "ChatGPT вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице ChatGPT и попробуйте снова.",
             "cursor": "Cursor вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Cursor и попробуйте снова.",
             "grok": "Grok вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Grok и попробуйте снова.",
+            "copilot": "Copilot вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице GitHub и попробуйте снова.",
             "antigravity": "Gemini вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Google и попробуйте снова.",
             "opencode": "Этот ключ OpenCode уже подключён как {{account}}."
           },
@@ -10414,6 +10427,7 @@
       "codex": "ChatGPT",
       "cursor": "Cursor",
       "grok": "Grok",
+      "copilot": "Copilot",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
       "needs": {
@@ -11785,6 +11799,7 @@
       "chatgpt": "{{model}} по тарифу ChatGPT",
       "cursor": "{{model}} по тарифу Cursor",
       "grok": "{{model}} по тарифу Grok",
+      "copilot": "{{model}} по тарифу GitHub Copilot",
       "gemini": "{{model}} по тарифу Gemini",
       "zen": "{{model}} через OpenCode",
       "coding": "{{model}} по тарифу {{plan}}",
@@ -11792,6 +11807,7 @@
       "chatgptOf": "{{model}} по тарифу ChatGPT пользователя {{owner}}",
       "cursorOf": "{{model}} по тарифу Cursor пользователя {{owner}}",
       "grokOf": "{{model}} по тарифу Grok пользователя {{owner}}",
+      "copilotOf": "{{model}} по тарифу GitHub Copilot пользователя {{owner}}",
       "geminiOf": "{{model}} по тарифу Gemini пользователя {{owner}}",
       "zenOf": "{{model}} через OpenCode пользователя {{owner}}",
       "codingOf": "{{model}} по тарифу {{plan}} пользователя {{owner}}",
@@ -11799,6 +11815,7 @@
       "chatgptAuto": "Тариф ChatGPT",
       "cursorAuto": "Тариф Cursor",
       "grokAuto": "Тариф Grok",
+      "copilotAuto": "Тариф GitHub Copilot",
       "geminiAuto": "Тариф Gemini",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
@@ -11806,6 +11823,7 @@
       "chatgptAutoOf": "Тариф ChatGPT пользователя {{owner}}",
       "cursorAutoOf": "Тариф Cursor пользователя {{owner}}",
       "grokAutoOf": "Тариф Grok пользователя {{owner}}",
+      "copilotAutoOf": "Тариф GitHub Copilot пользователя {{owner}}",
       "geminiAutoOf": "Тариф Gemini пользователя {{owner}}",
       "zenAutoOf": "OpenCode пользователя {{owner}}",
       "codingAutoOf": "{{plan}} пользователя {{owner}}",
@@ -11820,6 +11838,7 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
+      "copilot": "Copilot CLI",
       "antigravity": "Antigravity CLI"
     },
     "foot": {
@@ -11832,6 +11851,7 @@
     "codexText": "Использует тариф ChatGPT того, кто подключил компьютер.",
     "cursorText": "Использует тариф Cursor того, кто подключил компьютер.",
     "grokText": "Использует тариф Grok того, кто подключил компьютер.",
+    "copilotText": "Использует тариф GitHub Copilot того, кто подключил компьютер.",
     "antigravityText": "Использует тариф Gemini того, кто подключил компьютер.",
     "opencodeText": "Бесплатные модели OpenCode или ключ OpenCode того, кто подключил компьютер.",
     "cursorModel": {
@@ -11886,6 +11906,7 @@
       "codex": "Codex · {{model}}",
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
+      "copilot": "Copilot CLI · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
       "opencode": "OpenCode · {{model}}",
       "noFallback": "{{brain}}, без запасного API"
@@ -14624,6 +14645,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "copilot": "Copilot CLI",
         "commands": "команды",
         "browser": "браузер",
         "desktop": "экран",
@@ -14781,6 +14803,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "grok": "Grok Build",
+        "copilot": "Copilot CLI",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
         "commands": "Команды",
@@ -14791,6 +14814,7 @@
         "codex": "Как Claude Code, но с аккаунтом ChatGPT. Только в разрешённых папках.",
         "cursor": "Как Claude Code, но с аккаунтом Cursor. Только в разрешённых папках.",
         "grok": "Как Claude Code, но с аккаунтом Grok. Только в разрешённых папках.",
+        "copilot": "Как Claude Code, но с аккаунтом GitHub Copilot. Только в разрешённых папках.",
         "antigravity": "Как Claude Code, но с аккаунтом Gemini. Только в разрешённых папках.",
         "opencode": "Как Claude Code, но с бесплатными моделями OpenCode или ключом OpenCode. Только в разрешённых папках.",
         "commands": "Выполняет команды в Терминале, например тесты и сборки."

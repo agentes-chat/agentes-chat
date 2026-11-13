@@ -1271,8 +1271,14 @@
   "tools.grokName": {
     "value": "Grok Build"
   },
+  "tools.copilotName": {
+    "value": "Copilot CLI"
+  },
   "tools.grokDesc": {
     "value": "Writes and changes code in the allowed folders, with your Grok account."
+  },
+  "tools.copilotDesc": {
+    "value": "Writes and changes code in the allowed folders, with your GitHub Copilot account."
   },
   "tools.antigravityName": {
     "value": "Antigravity CLI"

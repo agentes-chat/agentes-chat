@@ -155,7 +155,7 @@ test("doctor: a connection that isn't running says how to start it; Linux shows 
   );
   expect(r.text).toContain("https://app.example.com · each agent works here as a user of its own");
   expect(r.text).toContain(
-    "○  No agent apps here (Claude Code, Codex, Cursor, OpenCode, Grok Build, Antigravity CLI (Gemini))\n",
+    "○  No agent apps here (Claude Code, Codex, Cursor, OpenCode, Grok Build, Antigravity CLI (Gemini), Copilot CLI (GitHub Copilot))\n",
   );
   expect(r.text).toContain("○  Not found: JDK, Android SDK, adb, Maestro, scrcpy, Node\n");
 
