@@ -621,7 +621,7 @@ export const SHARED_GEMINI_PROTOCOL = 58;
 
 /**
  * From this protocol on (ADR 0174): the Muse Code brain. `brain.turn` takes `kind: "muse"` (a `muse serve` host
- * driven over its session protocol; a `chat` turn runs read-only and stops at the first tool of the CLI's own), `account` takes
+ * driven over its session protocol; a `chat` turn is read-only with `denyUnmatched`, so only the bridge's tools run), `account` takes
  * `kind: "muse"` (a device-code sign-in in the account's own config folder, `META_API_KEY` kept out of the host's
  * environment so a key cannot answer for the person), `hello.executors.muse` reports the CLI, and `access.tools.muse`
  * turns it on or off.
