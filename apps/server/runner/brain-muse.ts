@@ -163,26 +163,32 @@ export function museSettings(input: { mcp: { token: string; url?: string }; mcpC
 }
 
 /** The bridge, as `session/start` takes it: a closed union where `transport` is required and typed. */
-export function museMcpServer(
-  mcp: { token: string; url?: string },
-  mcpCommand?: string[],
-): Record<string, unknown> | undefined {
+export function museMcpServer(input: {
+  mcp: { token: string; url?: string };
+  mcpCommand?: string[];
+  runId: string;
+  runnerHome: string;
+}): Record<string, unknown> | undefined {
+  const { mcp, mcpCommand } = input;
   if (mcp.url)
     return {
       transport: "streamableHttp",
       url: mcp.url,
-      headers: { Authorization: `Bearer \${${CODEX_MCP_ENV[0]}}` },
+      headers: { Authorization: `Bearer ${mcp.token}` },
     };
   const command = mcpCommand?.[0];
 
+  // Literal values, not `${VAR}`: the host only expands placeholders in the entry's `env`, never in `args`, so
+  // `--run ${AGENTES_MCP_RUN}` would reach the bridge as that very text — it prints its usage and exits, and the start
+  // fails as "the transport closed unexpectedly".
   return {
     transport: "stdio",
     ...(command ? { command } : {}),
-    args: [...(mcpCommand?.slice(1) ?? ["mcp"]), "--run", `\${${MUSE_RUN_ENV}}`],
+    args: [...(mcpCommand?.slice(1) ?? ["mcp"]), "--run", input.runId],
     env: {
-      [CODEX_MCP_ENV[0]]: `\${${CODEX_MCP_ENV[0]}}`,
-      [CODEX_MCP_ENV[2]]: `\${${CODEX_MCP_ENV[2]}}`,
-      [MUSE_RUN_ENV]: `\${${MUSE_RUN_ENV}}`,
+      [CODEX_MCP_ENV[0]]: mcp.token,
+      [CODEX_MCP_ENV[2]]: input.runnerHome,
+      [MUSE_RUN_ENV]: input.runId,
     },
   };
 }
@@ -678,7 +684,12 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     ...(opts.socketPath ? { [CODEX_MCP_ENV[1]]: opts.socketPath } : {}),
     [CODEX_MCP_ENV[2]]: opts.runnerHome,
   };
-  const mcpServer = museMcpServer(input.mcp, opts.mcpCommand);
+  const mcpServer = museMcpServer({
+    mcp: input.mcp,
+    mcpCommand: opts.mcpCommand,
+    runId: input.runId,
+    runnerHome: opts.runnerHome,
+  });
   const configDir = museConfigDir(input.account ? input.account.home : path.join(opts.runnerHome, "brain", "muse"));
   const env = input.account ? accountEnv("muse", configDir, base) : { ...base, XDG_CONFIG_HOME: configDir };
   // The agent's commands inherit XDG_CONFIG_HOME: gh keeps finding its sign-in where it was.

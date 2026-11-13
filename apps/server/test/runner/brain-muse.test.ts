@@ -139,12 +139,19 @@ test("the settings document keeps the account's ground, and the bridge travels o
   expect(doc.managed_hooks_path).toBeNull();
   expect(doc.mcpServers).toBeUndefined();
   // The wire: `session/start`'s `config.mcpServers`, which is where an MSP client adds one and where it is typed.
-  const stdio = museMcpServer({ token: "t" }, ["agentes-runner", "mcp"]);
+  const stdio = museMcpServer({
+    mcp: { token: "t" },
+    mcpCommand: ["agentes-runner", "mcp"],
+    runId: RUN,
+    runnerHome: "/r",
+  });
   expect(stdio).toMatchObject({ transport: "stdio", command: "agentes-runner" });
   // `agentes-runner mcp` needs the run, as an argument and in the child's environment.
-  expect(stdio?.args).toEqual(["mcp", "--run", "${AGENTES_MCP_RUN}"]);
-  expect((stdio?.env as Record<string, string> | undefined)?.AGENTES_MCP_RUN).toBe("${AGENTES_MCP_RUN}");
-  expect(museMcpServer({ token: "t", url: "https://x/mcp" })).toMatchObject({
+  // Literal, not `${AGENTES_MCP_RUN}`: the host expands placeholders in `env` only, so an argument placeholder
+  // reaches the bridge as that very text, which prints its usage and exits.
+  expect(stdio?.args).toEqual(["mcp", "--run", RUN]);
+  expect((stdio?.env as Record<string, string> | undefined)?.AGENTES_MCP_RUN).toBe(RUN);
+  expect(museMcpServer({ mcp: { token: "t", url: "https://x/mcp" }, runId: RUN, runnerHome: "/r" })).toMatchObject({
     transport: "streamableHttp",
     url: "https://x/mcp",
   });
