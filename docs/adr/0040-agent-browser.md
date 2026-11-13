@@ -234,6 +234,14 @@ A person in control saw "this didn't reach the page" on a Cloudflare check: each
 - The relay stays the fallback: no target known, or a socket that doesn't open within 1 s (tried again after 10 s). A call the tab's socket took isn't sent again on the relay.
 - The socket closes with the stream, once the input queued on it has run. Nothing else changes: the agent's commands, frames and pacing stay on `agent-browser`.
 
+### 18. A frame says the size of the page it shows (2026-11-13)
+
+A person in control could type but not click: the page looked enlarged and every click landed elsewhere on it. `agent-browser` labels every frame of its stream 1280×720, and says the same in the stream's status, whatever the page's size: a sign-in window 500 pixels wide went out as 1280 wide, and the apps map a click on the picture with that width, so each landed 2.5 times too far right and down (measured with 0.39.1: a 1264×726 tab's frames say 1280×720).
+
+- A frame goes out with the size of its own picture, which is the page's on a screen of density 1 that fits the stream (headless, and the agents' desktops). While a person drives, the tab says its size itself (`Page.getLayoutMetrics` on its own socket, section 17), read once per tab and picture size, for screens where the picture is scaled.
+- The first picture of an idle page (a screenshot) says the size the page answers (`Page.getLayoutMetrics` on the tab's socket, else `window.innerWidth`/`innerHeight`), not the stream's status.
+- A picture that can't be read keeps the stream's label.
+
 ## Order
 
 First version: stages 0–7. Difficulty: **easy** (known pattern, little risk), **medium** (new pieces on known patterns).

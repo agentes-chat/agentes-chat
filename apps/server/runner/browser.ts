@@ -1074,6 +1074,13 @@ const BATCH_STEP_MS = 8;
 const HELD_PRESS_MS = 33_000;
 const VIEWPORT = "[window.innerWidth, window.innerHeight]";
 
+/** A page's size in its own pixels, or null when what was read isn't one. */
+function pageSize(width: unknown, height: unknown): { width: number; height: number } | null {
+  const w = Math.round(Number(width));
+  const h = Math.round(Number(height));
+  return Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0 ? { width: w, height: h } : null;
+}
+
 /**
  * Run before every `snapshot`: a button or link with no words of its own (an icon, or an icon font's ligature such as
  * "content_copy") gets an `aria-label` from what names it to a person, so the snapshot shows its name. Chrome's
@@ -1627,6 +1634,13 @@ interface Stream {
   page?: PageLink;
   /** The page's size in CSS pixels, from the stream's status. */
   viewport?: { width: number; height: number };
+  /**
+   * The size of the page its frames show, read from the tab itself while a person drives it (`measureShown`), for the
+   * tab and picture size of `key`.
+   */
+  shown?: { key: string; width: number; height: number };
+  /** The `key` being read now. */
+  measuring?: string;
   /** A frame went out on this stream. */
   framed?: boolean;
   /** Closed by us (stop, mode off): no `ended` frame for an expected close. */
@@ -4239,6 +4253,7 @@ export class BrowserManager {
       return;
     }
     const scale = Number(m.pageScaleFactor);
+    const shown = this.shownSize(session, stream, msg.data) ?? { width, height };
     session.lastUsed = this.now();
     stream.framed = true;
     // Newest wins: the live view's window (`BrowserViews`) holds only the newest while the link is busy.
@@ -4248,8 +4263,8 @@ export class BrowserManager {
       seq,
       data: msg.data,
       metadata: {
-        deviceWidth: width,
-        deviceHeight: height,
+        deviceWidth: shown.width,
+        deviceHeight: shown.height,
         ...(Number.isFinite(scale) ? { pageScaleFactor: scale } : {}),
         capturedAt: captureTime(m.timestamp) ?? this.now(),
         ...pageMeta(session, stream),
@@ -4261,6 +4276,40 @@ export class BrowserManager {
     if (stream.owedTimer) return;
     stream.owedTimer = setTimeout(() => this.ackSource(stream), this.opts.sourceAckMs ?? SOURCE_ACK_MS);
     (stream.owedTimer as { unref?: () => void }).unref?.();
+  }
+
+  /**
+   * The size of the page a frame shows, which is where a person's click on it lands. `agent-browser` labels every
+   * frame 1280×720 whatever the page's size (a 500 pixel wide sign-in window, a 1264 pixel wide tab), so a click
+   * mapped with its label lands somewhere else on the page. The picture's own pixels are the page's on a screen of
+   * density 1 that fits the stream (headless and the agents' desktops); while a person drives, the tab says its
+   * size itself, read once per tab and picture size. Null when the picture can't be read: the label stays.
+   */
+  private shownSize(session: Session, stream: Stream, data: string): { width: number; height: number } | null {
+    // The start of the file holds its size: 64 KiB of it at most.
+    const picture = jpegSize(Buffer.from(data.slice(0, 87_380), "base64"));
+    if (!picture) return null;
+    const key = `${stream.targetId ?? ""}:${picture.width}x${picture.height}`;
+    if (stream.shown?.key === key) return stream.shown;
+    if (this.driving(session) && stream.measuring !== key) void this.measureShown(session, stream, key);
+    return picture;
+  }
+
+  private async measureShown(session: Session, stream: Stream, key: string) {
+    stream.measuring = key;
+    try {
+      const link = await this.pageLink(session, stream);
+      const metrics = link
+        ? await this.pageCall(link, { method: "Page.getLayoutMetrics", params: {} }, QUICK_TIMEOUT_MS)
+        : null;
+      const layout = metrics && isRecord(metrics.result) ? metrics.result.cssLayoutViewport : null;
+      const size = isRecord(layout) ? pageSize(layout.clientWidth, layout.clientHeight) : null;
+      if (size && session.stream === stream) stream.shown = { key, ...size };
+    } catch {
+      // not read: the picture's own size stays
+    } finally {
+      if (stream.measuring === key) stream.measuring = undefined;
+    }
   }
 
   /**
@@ -4308,8 +4357,11 @@ export class BrowserManager {
     });
     const waiting = () => session.stream === stream && !stream.framed && !this.closed && !!stream.viewport;
     if (!waiting()) return;
-    const sendShot = (data: string) => {
-      const size = stream.viewport;
+    // The picture is of the page as it is, so its size is the page's own: the stream's `status` says 1280×720 for a
+    // page of any size (a 500 pixel wide sign-in window among them), and a click on a picture labelled with a width
+    // the page doesn't have lands somewhere else on it.
+    const sendShot = (data: string, page: { width: number; height: number } | null) => {
+      const size = page ?? stream.viewport;
       if (!data || data.length > BROWSER_LIMITS.frameBytes || !size || !waiting()) return;
       stream.framed = true;
       this.opts.send({
@@ -4329,13 +4381,17 @@ export class BrowserManager {
     // in front of their input, nor holding that queue while they type.
     const link = this.driving(session) ? await this.pageLink(session, stream) : null;
     if (link) {
-      const shot = await this.pageCall(
-        link,
-        { method: "Page.captureScreenshot", params: { format: "jpeg", quality: 70 } },
-        QUICK_TIMEOUT_MS,
-      );
+      const [shot, metrics] = await Promise.all([
+        this.pageCall(
+          link,
+          { method: "Page.captureScreenshot", params: { format: "jpeg", quality: 70 } },
+          QUICK_TIMEOUT_MS,
+        ),
+        this.pageCall(link, { method: "Page.getLayoutMetrics", params: {} }, QUICK_TIMEOUT_MS),
+      ]);
       const data = shot && isRecord(shot.result) && typeof shot.result.data === "string" ? shot.result.data : "";
-      if (data) return sendShot(data);
+      const layout = metrics && isRecord(metrics.result) ? metrics.result.cssLayoutViewport : null;
+      if (data) return sendShot(data, isRecord(layout) ? pageSize(layout.clientWidth, layout.clientHeight) : null);
       if (!waiting()) return;
     }
     const file = path.join(this.opts.home, "browser", `${session.name}-frame.jpg`);
@@ -4347,7 +4403,11 @@ export class BrowserManager {
           ["screenshot", file, "--screenshot-format", "jpeg", "--screenshot-quality", "70"],
           { timeoutMs: QUICK_TIMEOUT_MS },
         );
-        sendShot(shot.success ? (await readFile(file)).toString("base64") : "");
+        if (!shot.success) return;
+        const seen = await this.run(session, ["eval", VIEWPORT], { timeoutMs: QUICK_TIMEOUT_MS });
+        const read = seen.success && isRecord(seen.data) ? seen.data.result : null;
+        const [width, height] = Array.isArray(read) ? read : [];
+        sendShot((await readFile(file)).toString("base64"), pageSize(width, height));
       } finally {
         await rm(file, { force: true }).catch(() => undefined);
       }

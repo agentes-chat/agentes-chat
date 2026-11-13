@@ -983,6 +983,15 @@ describe("a person takes control while the agent's pointer and keys are going", 
       });
       // An idle page sends no frame: its first picture comes from the tab's socket too, not the held daemon.
       await waitFor(() => t.frames.some((f) => f.type === "browser.frame" && f.seq === 0));
+      // It says the size the tab itself has (a narrow sign-in window), not the 1280 the stream's status says for
+      // any page: a click mapped with the wrong width lands elsewhere on the page.
+      expect(t.frames.find((f) => f.type === "browser.frame" && f.seq === 0)).toMatchObject({
+        metadata: { deviceWidth: 500, deviceHeight: 487 },
+      });
+      // So does a frame of the stream, which `agent-browser` labels 1280×720 whatever its picture shows.
+      const labelled = { deviceWidth: 1280, deviceHeight: 720 };
+      stream.push({ type: "frame", seq: 4, data: jpegOf(500, 487), metadata: labelled });
+      expect(t.frames.at(-1)).toMatchObject({ seq: 4, metadata: { deviceWidth: 500, deviceHeight: 487 } });
       const startedAt = performance.now();
       const res = await t.manager.input(dev, [
         { kind: "mouse", type: "mouseMoved", x: 40, y: 50 },
@@ -997,7 +1006,9 @@ describe("a person takes control while the agent's pointer and keys are going", 
       expect(took).toBeLessThan(300);
       expect(relayed).toBe(0);
       expect(pages.map((p) => p.url)).toEqual([`ws://127.0.0.1:${t.chromes[0]?.port}/devtools/page/AB12CD34`]);
-      const calls = (pages[0] as FakePage).calls.filter((c) => c.method !== "Page.captureScreenshot");
+      const calls = (pages[0] as FakePage).calls.filter(
+        (c) => c.method !== "Page.captureScreenshot" && c.method !== "Page.getLayoutMetrics",
+      );
       expect(calls).toEqual([
         {
           method: "Input.dispatchMouseEvent",
@@ -1084,6 +1095,12 @@ describe("a person takes control while the agent's pointer and keys are going", 
   });
 });
 
+/** The start of a JPEG of that size, in base64: all a frame's size is read from. */
+function jpegOf(width: number, height: number): string {
+  const head = [0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03];
+  return Buffer.from([...head, ...new Array(12).fill(0)]).toString("base64");
+}
+
 /** A tab's own DevTools socket (`connectPage`): records each call and answers it as Chrome does. */
 class FakePage extends FakeSocket {
   calls: { method: string; params: Record<string, unknown> }[] = [];
@@ -1095,7 +1112,9 @@ class FakePage extends FakeSocket {
         ? { result: { type: "boolean", value: true } }
         : msg.method === "Page.captureScreenshot"
           ? { data: Buffer.from("jpeg").toString("base64") }
-          : {};
+          : msg.method === "Page.getLayoutMetrics"
+            ? { cssLayoutViewport: { pageX: 0, pageY: 0, clientWidth: 500, clientHeight: 487 } }
+            : {};
     queueMicrotask(() => this.push({ id: msg.id, result }));
   }
 }
@@ -2774,8 +2793,9 @@ test.if(posix)(
       seq: 0,
       data: expect.stringMatching(/^\/9j\//), // the JPEG the fake writes for a .jpg
       metadata: {
+        // The page's own size (what it answers), not the 1280×720 the stream's status says.
         deviceWidth: 1280,
-        deviceHeight: 720,
+        deviceHeight: 800,
         capturedAt: expect.any(Number),
         url: "https://shop.example.com/",
         title: "Loja",
