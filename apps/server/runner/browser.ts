@@ -233,6 +233,16 @@ const INPUT_TIMEOUT_MS = 5_000;
  * would still run it afterwards, while the person had been told it never reached the page.
  */
 const DAEMON_HOLD_MS = 30_000;
+/**
+ * A person's input goes to the page straight from the runner, on its own DevTools socket to the tab (`PageLink`): the
+ * daemon's one lock, which its relay waits on too, is also held by its own upkeep (each cross-origin frame that
+ * attaches, a page that loads: measured 0.4 to 1.4 s per load of a Cloudflare check on a desktop, against 0 to 2 ms
+ * on the tab's own socket) and by any command of its own that waits on Chrome (up to 30 s). That socket opens within
+ * this, or the input goes on the relay as before.
+ */
+const PAGE_OPEN_MS = 1000;
+/** A tab whose socket didn't open is tried again after this; the relay carries the input meanwhile. */
+const PAGE_RETRY_MS = 10_000;
 /** After a failed download or install, wait this long before trying again. */
 const RETRY_FAILURE_MS = 10 * 60_000;
 const STREAM_OPEN_MS = 5000;
@@ -1352,6 +1362,166 @@ function releaseHeld(state: InputState, mask = ~0): Record<string, unknown>[] {
     .flatMap((button) => relayCommands({ kind: "mouse", type: "mouseReleased", x: at.x, y: at.y, button }, state));
 }
 
+/** One DevTools call on a tab's own socket (`PageLink`). */
+export interface PageCall {
+  method: string;
+  params: Record<string, unknown>;
+}
+
+/** Virtual key codes of the keys `press` names (`agent-browser`'s `named_key_info`, 0.39.1). */
+const NAMED_KEYS: Record<string, [key: string, code: string, keyCode: number]> = {
+  enter: ["Enter", "Enter", 13],
+  return: ["Enter", "Enter", 13],
+  tab: ["Tab", "Tab", 9],
+  escape: ["Escape", "Escape", 27],
+  esc: ["Escape", "Escape", 27],
+  backspace: ["Backspace", "Backspace", 8],
+  delete: ["Delete", "Delete", 46],
+  arrowup: ["ArrowUp", "ArrowUp", 38],
+  arrowdown: ["ArrowDown", "ArrowDown", 40],
+  arrowleft: ["ArrowLeft", "ArrowLeft", 37],
+  arrowright: ["ArrowRight", "ArrowRight", 39],
+  home: ["Home", "Home", 36],
+  end: ["End", "End", 35],
+  pageup: ["PageUp", "PageUp", 33],
+  pagedown: ["PageDown", "PageDown", 34],
+  space: [" ", "Space", 32],
+  " ": [" ", "Space", 32],
+};
+/** A US layout's punctuation keys: their `code` and virtual key code (as `agent-browser` and Playwright have them). */
+const PUNCTUATION: [chars: string, code: string, keyCode: number][] = [
+  [";:", "Semicolon", 186],
+  ["=+", "Equal", 187],
+  [",<", "Comma", 188],
+  ["-_", "Minus", 189],
+  [".>", "Period", 190],
+  ["/?", "Slash", 191],
+  ["`~", "Backquote", 192],
+  ["[{", "BracketLeft", 219],
+  ["\\|", "Backslash", 220],
+  ["]}", "BracketRight", 221],
+  ["'\"", "Quote", 222],
+];
+/** The modifier keys' own codes, for a modifier held down or let go on its own. */
+const MODIFIER_CODES: Record<string, number> = { Shift: 16, Control: 17, Alt: 18, Meta: 91 };
+/** The text a named key types (one character types itself). */
+const KEY_TEXT: Record<string, string> = { Enter: "\r", Tab: "\t" };
+const CHORD_BITS: Record<string, number> = { alt: 1, control: 2, ctrl: 2, meta: 4, cmd: 4, command: 4, shift: 8 };
+
+/** A key `press` names, as DevTools takes it: key, code, virtual key code. */
+function keyInfo(name: string): [key: string, code: string, keyCode: number] {
+  const named = NAMED_KEYS[name.toLowerCase()];
+  if (named) return named;
+  const chars = [...name];
+  if (chars.length !== 1) return [name, name, 0];
+  const ch = name;
+  if (/^[a-z]$/i.test(ch)) return [ch, `Key${ch.toUpperCase()}`, ch.toUpperCase().charCodeAt(0)];
+  if (/^[0-9]$/.test(ch)) return [ch, `Digit${ch}`, ch.charCodeAt(0)];
+  const p = PUNCTUATION.find(([set]) => set.includes(ch));
+  return [ch, p?.[1] ?? "", p?.[2] ?? 0];
+}
+
+/**
+ * The DevTools calls that do on the page what one relay command (`relayCommands`) asks `agent-browser` to do, the
+ * way its 0.39.1 does it (`input_mouse`, `input_keyboard`, `keyboard insertText`, `press` with a chord, `evaluate`),
+ * or null for anything else (it goes on the relay).
+ */
+export function pageCalls(command: Record<string, unknown>): PageCall[] | null {
+  const num = (v: unknown, d = 0) => (typeof v === "number" && Number.isFinite(v) ? v : d);
+  switch (command.action) {
+    case "input_mouse":
+      return [
+        {
+          method: "Input.dispatchMouseEvent",
+          params: {
+            type: command.type,
+            x: num(command.x),
+            y: num(command.y),
+            button: command.button,
+            buttons: num(command.buttons),
+            clickCount: num(command.clickCount),
+            deltaX: num(command.deltaX),
+            deltaY: num(command.deltaY),
+            modifiers: num(command.modifiers),
+          },
+        },
+      ];
+    case "keyboard":
+      if (command.subaction !== "insertText" || typeof command.text !== "string") return null;
+      return [{ method: "Input.insertText", params: { text: command.text } }];
+    case "input_keyboard": {
+      if (typeof command.key !== "string") return null;
+      const keyCode = MODIFIER_CODES[command.key];
+      return [
+        {
+          method: "Input.dispatchKeyEvent",
+          params: {
+            type: command.type,
+            key: command.key,
+            ...(typeof command.code === "string" ? { code: command.code } : {}),
+            ...(keyCode ? { windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode } : {}),
+          },
+        },
+      ];
+    }
+    case "press": {
+      if (typeof command.key !== "string" || !command.key) return null;
+      // "Control+a", "Shift+Enter": the modifiers, then what is left is the key ("+" alone is a key).
+      const parts = command.key.split("+");
+      let modifiers = 0;
+      const rest: string[] = [];
+      for (const part of parts) {
+        const bit = parts.length > 1 ? CHORD_BITS[part.toLowerCase()] : undefined;
+        if (bit) modifiers |= bit;
+        else rest.push(part);
+      }
+      const name = modifiers === 0 || rest.length === 0 ? command.key : rest.join("+");
+      const [key, code, keyCode] = keyInfo(name);
+      // Control or Meta make it a command (select all, copy), not text.
+      const typed = KEY_TEXT[key] ?? ([...key].length === 1 ? key : undefined);
+      const text = modifiers & 6 ? undefined : typed;
+      const base = {
+        key,
+        code,
+        windowsVirtualKeyCode: keyCode,
+        nativeVirtualKeyCode: keyCode,
+        ...(modifiers ? { modifiers } : {}),
+      };
+      return [
+        {
+          method: "Input.dispatchKeyEvent",
+          params: { type: "keyDown", ...base, ...(text ? { text, unmodifiedText: text } : {}) },
+        },
+        { method: "Input.dispatchKeyEvent", params: { type: "keyUp", ...base } },
+      ];
+    }
+    case "evaluate":
+      if (typeof command.script !== "string") return null;
+      return [{ method: "Runtime.evaluate", params: { expression: command.script, returnByValue: true } }];
+    default:
+      return null;
+  }
+}
+
+/**
+ * A tab's own DevTools socket while a person drives it (`ws://127.0.0.1:<port>/devtools/page/<target>`): their input
+ * goes there, beside `agent-browser`'s connection, never through its daemon (`PAGE_OPEN_MS`).
+ */
+interface PageLink {
+  targetId: string;
+  socket: StreamSocket;
+  /** True once open; false when it couldn't open or closed. */
+  ready: Promise<boolean>;
+  open: boolean;
+  /** When it failed to open (or closed): tried again only after `PAGE_RETRY_MS`. */
+  failedAt?: number;
+  nextId: number;
+  waiting: Map<number, (answer: Record<string, unknown> | null) => void>;
+}
+
+/** A DevTools target id as Chrome makes them: anything else never goes into a socket's address. */
+const TARGET_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
 /** The subset of a WebSocket the stream relay uses (a fake in tests). */
 export interface StreamSocket {
   send(data: string): void;
@@ -1404,6 +1574,8 @@ export interface BrowserManagerOptions {
   now?: () => number;
   /** Tests: opens the session's stream socket. */
   connectStream?: (url: string) => StreamSocket;
+  /** Tests: opens a tab's own DevTools socket, where a person's input goes (`PageLink`). */
+  connectPage?: (url: string) => StreamSocket;
   /** Tests: opens a Chrome's browser endpoint (its traffic and its pages that die). */
   connectDevtools?: (url: string) => StreamSocket;
   /**
@@ -1449,6 +1621,10 @@ interface Stream {
   url?: string;
   /** The active tab's title, from the stream's tab list (cleared when the URL moves on). */
   title?: string;
+  /** The active tab's DevTools target, from the stream's tab list: a person's input goes there (`page`). */
+  targetId?: string;
+  /** That tab's own DevTools socket, opened at the person's first input (`pageLink`). */
+  page?: PageLink;
   /** The page's size in CSS pixels, from the stream's status. */
   viewport?: { width: number; height: number };
   /** A frame went out on this stream. */
@@ -3851,7 +4027,7 @@ export class BrowserManager {
     while (session.streamOpening) await session.streamOpening.catch(() => undefined);
     if (session.stream) {
       if (session.stream.mode !== mode) {
-        if (mode === "watch") this.letGo(session.stream);
+        if (mode === "watch") this.letGo(session, session.stream);
         session.stream.mode = mode;
         // Pacing again too: a config that leaves it out may put the stream back on its default.
         session.stream.socket.send(JSON.stringify({ type: "config", pacing: "ack", maxFps: STREAM_FPS[mode] }));
@@ -3946,6 +4122,7 @@ export class BrowserManager {
     if (old) {
       old.closing = true;
       this.settleSource(old);
+      this.closePage(old);
       try {
         old.socket.close();
       } catch {
@@ -3959,6 +4136,7 @@ export class BrowserManager {
     socket.onerror = () => undefined;
     socket.onclose = () => {
       this.settleSource(stream);
+      this.closePageAfterInput(stream);
       if (session.stream !== stream) return;
       session.stream = undefined;
       this.changed();
@@ -4018,6 +4196,9 @@ export class BrowserManager {
     // Sent on connect and after every command: the active tab's address and title.
     if (msg.type === "tabs" && Array.isArray(msg.tabs)) {
       const active = msg.tabs.find((t) => isRecord(t) && t.active === true);
+      if (isRecord(active) && typeof active.targetId === "string" && TARGET_ID.test(active.targetId)) {
+        stream.targetId = active.targetId;
+      }
       if (isRecord(active) && typeof active.url === "string") {
         setUrl(active.url);
         if (typeof active.title === "string" && active.title) {
@@ -4127,6 +4308,36 @@ export class BrowserManager {
     });
     const waiting = () => session.stream === stream && !stream.framed && !this.closed && !!stream.viewport;
     if (!waiting()) return;
+    const sendShot = (data: string) => {
+      const size = stream.viewport;
+      if (!data || data.length > BROWSER_LIMITS.frameBytes || !size || !waiting()) return;
+      stream.framed = true;
+      this.opts.send({
+        type: "browser.frame",
+        agentId: session.agentId,
+        seq: 0,
+        data,
+        metadata: {
+          deviceWidth: size.width,
+          deviceHeight: size.height,
+          capturedAt: this.now(),
+          ...pageMeta(session, stream),
+        },
+      });
+    };
+    // A person drives it: the picture comes from the tab's own socket (`PageLink`), never held in the daemon's queue
+    // in front of their input, nor holding that queue while they type.
+    const link = this.driving(session) ? await this.pageLink(session, stream) : null;
+    if (link) {
+      const shot = await this.pageCall(
+        link,
+        { method: "Page.captureScreenshot", params: { format: "jpeg", quality: 70 } },
+        QUICK_TIMEOUT_MS,
+      );
+      const data = shot && isRecord(shot.result) && typeof shot.result.data === "string" ? shot.result.data : "";
+      if (data) return sendShot(data);
+      if (!waiting()) return;
+    }
     const file = path.join(this.opts.home, "browser", `${session.name}-frame.jpg`);
     await this.enqueue(session, async () => {
       if (!waiting()) return;
@@ -4136,22 +4347,7 @@ export class BrowserManager {
           ["screenshot", file, "--screenshot-format", "jpeg", "--screenshot-quality", "70"],
           { timeoutMs: QUICK_TIMEOUT_MS },
         );
-        const data = shot.success ? (await readFile(file)).toString("base64") : "";
-        const size = stream.viewport;
-        if (!data || data.length > BROWSER_LIMITS.frameBytes || !size || !waiting()) return;
-        stream.framed = true;
-        this.opts.send({
-          type: "browser.frame",
-          agentId: session.agentId,
-          seq: 0,
-          data,
-          metadata: {
-            deviceWidth: size.width,
-            deviceHeight: size.height,
-            capturedAt: this.now(),
-            ...pageMeta(session, stream),
-          },
-        });
+        sendShot(shot.success ? (await readFile(file)).toString("base64") : "");
       } finally {
         await rm(file, { force: true }).catch(() => undefined);
       }
@@ -4163,7 +4359,7 @@ export class BrowserManager {
     const session = this.sessions.get(String(agent.id ?? ""));
     while (session?.streamOpening) await session.streamOpening.catch(() => undefined);
     if (!session?.stream) return { stopped: false };
-    this.letGo(session.stream);
+    this.letGo(session, session.stream);
     this.endStream(session, "stopped");
     return { stopped: true };
   }
@@ -4174,6 +4370,7 @@ export class BrowserManager {
       if (!s.stream) continue;
       s.stream.closing = true;
       this.settleSource(s.stream);
+      this.closePageAfterInput(s.stream);
       s.stream.socket.close();
       s.stream = undefined;
     }
@@ -4185,6 +4382,7 @@ export class BrowserManager {
     if (!stream) return;
     stream.closing = true;
     this.settleSource(stream);
+    this.closePageAfterInput(stream);
     session.stream = undefined;
     try {
       stream.socket.close();
@@ -4196,9 +4394,9 @@ export class BrowserManager {
   }
 
   /**
-   * `browser.input`: a person's input during a take over, in order, through
-   * the daemon's command relay (the active tab, each one confirmed before the
-   * next), a drag with the gaps the person made (`dragDelay`), never more
+   * `browser.input`: a person's input during a take over, in order, on the
+   * active tab's own DevTools socket (`toPage`; the daemon's command relay
+   * when that can't open), each one confirmed before the next, a drag with the gaps the person made (`dragDelay`), never more
    * than `DRAG_LAG_MAX_MS` behind. The stream socket only carries frames. Text with nothing on the page to take it
    * is said (`nowhere`), and the picture taken again: an idle page may be showing what was there before.
    */
@@ -4229,11 +4427,11 @@ export class BrowserManager {
         }
         let ok = true;
         for (const command of relayCommands(e, stream.input)) {
-          if (!(await this.relay(stream.port, command, session))) ok = false;
+          if (!(await this.toPage(session, stream, command))) ok = false;
         }
         if (e.kind === "text" && !asked) {
           asked = true;
-          const seen = await this.relayAnswer(stream.port, { action: "evaluate", script: TAKES_TEXT }, session);
+          const seen = await this.toPage(session, stream, { action: "evaluate", script: TAKES_TEXT });
           nowhere = isRecord(seen?.data) && seen.data.result === false;
         }
         if (stream.input.pointer) session.pointer = stream.input.pointer;
@@ -4254,15 +4452,159 @@ export class BrowserManager {
    * The person's control ended (back to watching, or nobody watches): a button they still hold lets go where their
    * pointer was, after the input queued before, so the agent doesn't go on with it held.
    */
-  private letGo(stream: Stream) {
+  private letGo(session: Session, stream: Stream) {
     stream.inputQueue = stream.inputQueue.then(async () => {
-      for (const command of releaseHeld(stream.input)) await this.relay(stream.port, command);
+      for (const command of releaseHeld(stream.input)) await this.toPage(session, stream, command);
     });
   }
 
-  /** One command on the daemon's relay; true when it ran. */
-  private async relay(port: number, command: Record<string, unknown>, session?: Session): Promise<boolean> {
-    return (await this.relayAnswer(port, command, session)) !== null;
+  /**
+   * One of the person's commands on the page, and its answer (null: it didn't run). On the tab's own DevTools socket
+   * when it opens (`PageLink`), so nothing that holds `agent-browser`'s daemon holds it; on the daemon's relay
+   * otherwise. A command the socket took and that failed or timed out there isn't sent again on the relay: it may have
+   * reached the page.
+   */
+  private async toPage(
+    session: Session,
+    stream: Stream,
+    command: Record<string, unknown>,
+  ): Promise<Record<string, unknown> | null> {
+    const calls = pageCalls(command);
+    const link = calls ? await this.pageLink(session, stream) : null;
+    if (!calls || !link) return this.relayAnswer(stream.port, command, session);
+    let last: Record<string, unknown> = {};
+    for (const call of calls) {
+      const answer = await this.pageCall(link, call, this.opts.inputTimeoutMs ?? INPUT_TIMEOUT_MS);
+      if (!answer || answer.error !== undefined) return null;
+      last = isRecord(answer.result) ? answer.result : {};
+    }
+    if (command.action !== "evaluate") return { success: true };
+    // As the relay answers an `evaluate`: its value under `data.result`.
+    if (last.exceptionDetails !== undefined) return null;
+    return { success: true, data: { result: isRecord(last.result) ? last.result.value : undefined } };
+  }
+
+  /**
+   * The active tab's own DevTools socket (`PageLink`), opened (or opened again for another tab) as needed; null while
+   * there is none to open (no target known yet, no Chrome of ours) or one failed less than `PAGE_RETRY_MS` ago.
+   */
+  private async pageLink(session: Session, stream: Stream): Promise<PageLink | null> {
+    const targetId = stream.targetId;
+    const port = session.chrome?.port;
+    if (!targetId || !port || stream.closing || session.stream !== stream) return null;
+    let link = stream.page;
+    if (link && link.targetId !== targetId) link = this.closePage(stream);
+    if (link && link.failedAt !== undefined) {
+      if (this.now() - link.failedAt < PAGE_RETRY_MS) return null;
+      link = this.closePage(stream);
+    }
+    link ??= this.openPage(stream, port, targetId);
+    return (await link.ready) ? link : null;
+  }
+
+  private openPage(stream: Stream, port: number, targetId: string): PageLink {
+    const link: PageLink = {
+      targetId,
+      socket: null as unknown as StreamSocket,
+      ready: Promise.resolve(false),
+      open: false,
+      nextId: 1,
+      waiting: new Map(),
+    };
+    stream.page = link;
+    link.ready = new Promise<boolean>((resolve) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const fail = () => {
+        clearTimeout(timer);
+        link.open = false;
+        link.failedAt ??= this.now();
+        for (const done of [...link.waiting.values()]) done(null);
+        link.waiting.clear();
+        resolve(false);
+      };
+      try {
+        const url = `ws://127.0.0.1:${port}/devtools/page/${targetId}`;
+        link.socket = (this.opts.connectPage ?? ((u: string) => new WebSocket(u) as unknown as StreamSocket))(url);
+      } catch {
+        fail();
+        return;
+      }
+      const socket = link.socket;
+      timer = setTimeout(() => {
+        fail();
+        try {
+          socket.close();
+        } catch {
+          // already closed
+        }
+      }, PAGE_OPEN_MS);
+      (timer as { unref?: () => void }).unref?.();
+      socket.onopen = () => {
+        clearTimeout(timer);
+        if (link.failedAt !== undefined) return;
+        link.open = true;
+        resolve(true);
+      };
+      socket.onerror = fail;
+      socket.onclose = fail;
+      socket.onmessage = (event) => {
+        let msg: unknown;
+        try {
+          const raw = event.data;
+          msg = JSON.parse(typeof raw === "string" ? raw : Buffer.from(raw as ArrayBuffer).toString("utf8"));
+        } catch {
+          return;
+        }
+        // Answers carry the id they were asked under; events (none asked for) carry none.
+        if (isRecord(msg) && typeof msg.id === "number") link.waiting.get(msg.id)?.(msg);
+      };
+    });
+    return link;
+  }
+
+  /** One DevTools call on the tab's socket: Chrome's answer (`result` or `error`), null if none came in `timeoutMs`. */
+  private pageCall(link: PageLink, call: PageCall, timeoutMs: number): Promise<Record<string, unknown> | null> {
+    if (!link.open) return Promise.resolve(null);
+    const id = link.nextId++;
+    return new Promise((resolve) => {
+      const done = (answer: Record<string, unknown> | null) => {
+        clearTimeout(timer);
+        link.waiting.delete(id);
+        resolve(answer);
+      };
+      const timer = setTimeout(() => done(null), timeoutMs);
+      (timer as { unref?: () => void }).unref?.();
+      link.waiting.set(id, done);
+      try {
+        link.socket.send(JSON.stringify({ id, method: call.method, params: call.params }));
+      } catch {
+        done(null);
+      }
+    });
+  }
+
+  /** The tab's socket closes (the stream ended, or another tab is active): undefined, for `pageLink`. */
+  private closePage(stream: Stream): undefined {
+    const link = stream.page;
+    if (!link) return undefined;
+    stream.page = undefined;
+    link.failedAt ??= this.now();
+    link.open = false;
+    for (const done of [...link.waiting.values()]) done(null);
+    link.waiting.clear();
+    try {
+      link.socket.onclose = null;
+      link.socket.onerror = null;
+      link.socket.close();
+    } catch {
+      // already closed
+    }
+    return undefined;
+  }
+
+  /** Once the input queued on a stream that ended has run, its tab's socket closes. */
+  private closePageAfterInput(stream: Stream) {
+    void stream.inputQueue.then(() => this.closePage(stream));
   }
 
   /**

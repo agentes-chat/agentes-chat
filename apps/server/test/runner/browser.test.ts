@@ -942,7 +942,163 @@ describe("a person takes control while the agent's pointer and keys are going", 
       relay.server.stop(true);
     }
   });
+
+  test("with the daemon held (its own upkeep, a picture, a call hung on Chrome), the person's input still reaches the page at once", async () => {
+    // The daemon's one lock, which its relay waits on too, held for good: in production each input waited there 5 s
+    // and failed ("this didn't reach the page") on a Cloudflare check.
+    let relayed = 0;
+    const daemon = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      async fetch() {
+        relayed++;
+        await new Promise(() => {});
+        return new Response(null);
+      },
+    });
+    const pages: FakePage[] = [];
+    const t = setup({
+      inputTimeoutMs: 2_000,
+      firstFrameMs: 30,
+      connectPage: (url) => {
+        const p = new FakePage(url);
+        pages.push(p);
+        queueMicrotask(() => p.onopen?.());
+        return p;
+      },
+      ...(posix ? {} : { startPageDirectory: tempDir() }),
+    });
+    try {
+      await t.act("open", ["https://dash.example.com/login"]);
+      t.page({ port: daemon.port, viewport: [1280, 800] });
+      await t.manager.streamStart(dev, "control");
+      const stream = t.sockets.at(-1) as FakeSocket;
+      stream.push({ type: "status", viewportWidth: 1280, viewportHeight: 800 });
+      stream.push({
+        type: "tabs",
+        tabs: [
+          { targetId: "START0", url: "file:///start.html", active: false },
+          { targetId: "AB12CD34", url: "https://dash.example.com/login", active: true },
+        ],
+      });
+      // An idle page sends no frame: its first picture comes from the tab's socket too, not the held daemon.
+      await waitFor(() => t.frames.some((f) => f.type === "browser.frame" && f.seq === 0));
+      const startedAt = performance.now();
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mouseMoved", x: 40, y: 50 },
+        { kind: "mouse", type: "mousePressed", x: 40, y: 50, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 40, y: 50, button: "left", clickCount: 1 },
+        { kind: "text", text: "maria@example.com" },
+        { kind: "key", type: "keyDown", key: "Enter" },
+        { kind: "key", type: "keyDown", key: "a", modifiers: 2 },
+      ]);
+      const took = performance.now() - startedAt;
+      expect(res).toEqual({ accepted: 6 });
+      expect(took).toBeLessThan(300);
+      expect(relayed).toBe(0);
+      expect(pages.map((p) => p.url)).toEqual([`ws://127.0.0.1:${t.chromes[0]?.port}/devtools/page/AB12CD34`]);
+      const calls = (pages[0] as FakePage).calls.filter((c) => c.method !== "Page.captureScreenshot");
+      expect(calls).toEqual([
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mouseMoved", x: 40, y: 50, button: "none", buttons: 0 }),
+        },
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mousePressed", button: "left", buttons: 1, clickCount: 1 }),
+        },
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mouseReleased", button: "left", buttons: 0, clickCount: 1 }),
+        },
+        { method: "Input.insertText", params: { text: "maria@example.com" } },
+        // Whether a field took the text: asked on the tab, too.
+        { method: "Runtime.evaluate", params: expect.objectContaining({ returnByValue: true }) },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: expect.objectContaining({ type: "keyDown", key: "Enter", windowsVirtualKeyCode: 13, text: "\r" }),
+        },
+        { method: "Input.dispatchKeyEvent", params: expect.objectContaining({ type: "keyUp", key: "Enter" }) },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: {
+            type: "keyDown",
+            key: "a",
+            code: "KeyA",
+            windowsVirtualKeyCode: 65,
+            nativeVirtualKeyCode: 65,
+            modifiers: 2,
+          },
+        },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: {
+            type: "keyUp",
+            key: "a",
+            code: "KeyA",
+            windowsVirtualKeyCode: 65,
+            nativeVirtualKeyCode: 65,
+            modifiers: 2,
+          },
+        },
+      ]);
+      // Another tab becomes the active one (a popup the click opened): the input follows it there.
+      stream.push({ type: "tabs", tabs: [{ targetId: "EF56", url: "https://appleid.example.com/", active: true }] });
+      expect(await t.manager.input(dev, [{ kind: "mouse", type: "mouseMoved", x: 1, y: 2 }])).toEqual({ accepted: 1 });
+      expect(pages.map((p) => p.url.split("/").at(-1))).toEqual(["AB12CD34", "EF56"]);
+      expect((pages[0] as FakePage).closed).toBe(true);
+      // The stream ends: so does the tab's socket.
+      await t.manager.streamStop(dev);
+      await waitFor(() => (pages[1] as FakePage).closed);
+    } finally {
+      daemon.stop(true);
+    }
+  });
+
+  test.if(posix)("a tab whose socket can't open: the input goes on the daemon's relay as before", async () => {
+    const relay = fakeRelay();
+    const t = setup({
+      connectPage: (url) => {
+        const p = new FakePage(url);
+        queueMicrotask(() => p.onerror?.());
+        return p;
+      },
+    });
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      t.page({ port: relay.port });
+      await t.manager.streamStart(dev, "control");
+      (t.sockets.at(-1) as FakeSocket).push({
+        type: "tabs",
+        tabs: [{ targetId: "AB12CD34", url: "https://shop.example.com/", active: true }],
+      });
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(relay.received.map((r) => r.body.type)).toEqual(["mousePressed", "mouseReleased"]);
+    } finally {
+      relay.server.stop(true);
+    }
+  });
 });
+
+/** A tab's own DevTools socket (`connectPage`): records each call and answers it as Chrome does. */
+class FakePage extends FakeSocket {
+  calls: { method: string; params: Record<string, unknown> }[] = [];
+  override send(data: string) {
+    const msg = JSON.parse(data) as { id: number; method: string; params: Record<string, unknown> };
+    this.calls.push({ method: msg.method, params: msg.params });
+    const result =
+      msg.method === "Runtime.evaluate"
+        ? { result: { type: "boolean", value: true } }
+        : msg.method === "Page.captureScreenshot"
+          ? { data: Buffer.from("jpeg").toString("base64") }
+          : {};
+    queueMicrotask(() => this.push({ id: msg.id, result }));
+  }
+}
 
 test("after a hover the pointer goes straight to the next element, and curves again once it left", async () => {
   const t = setup();
