@@ -1,7 +1,6 @@
 import { DESKTOP_PROTOCOL, type PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, gte, inArray, schema, sql } from "@agenteschat/db";
 import { announceAgentStatus } from "./agent-status";
-import { wakeLineOfRun } from "./approval-order";
 import { publishApproval } from "./approvals";
 import { recordAudit } from "./audit";
 import { personOfMessage } from "./authority";
@@ -324,8 +323,6 @@ export async function stopRun(
         .set({ status: "canceled", decidedAt: now })
         .where(and(eq(approvals.runId, run.id), eq(approvals.status, "pending")))
         .returning();
-      // What the agent asked after this run's requests on their cards no longer waits for them (`approval-order.ts`).
-      await wakeLineOfRun(tx, run.id);
       // Their cards close too, or "Responder" would stay offered on a question nobody can answer anymore.
       closedQuestions = await tx
         .update(agentQuestions)

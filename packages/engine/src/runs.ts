@@ -1,5 +1,6 @@
 import { and, type Executor, eq, type SQL, schema, sql } from "@agenteschat/db";
 import { PROVIDERS, type ProviderCause, ProviderError, providerCause } from "@agenteschat/providers";
+import { wakeLineOfRun } from "./approval-order";
 import { BRAIN_NAMES, type ComputerBrainKind, planName } from "./brains/types";
 import { cutText, pgSafeJson } from "./format";
 import { recordRunFinished } from "./operator-events";
@@ -482,6 +483,9 @@ export async function transitionRun(
         : undefined,
     );
     await releaseProfileTurns(db, row.id);
+    // Failed or stopped, its requests no longer hold the agent's later actions on their cards (ADR 0179). A run that
+    // ends done settled its own on resuming (and woke the line there): no query on every reply.
+    if (to !== "done") await wakeLineOfRun(db, row.id);
   }
   return row ?? null;
 }

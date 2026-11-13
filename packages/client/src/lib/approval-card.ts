@@ -73,44 +73,40 @@ export interface LinePlace {
 /** When nothing more happens to a request: decided other than approved, or approved and done (null: not yet). */
 function settledAt(a: Approval): string | null {
   if (a.status === "pending") return null;
-  if (a.status === "approved") return a.executedAt ?? (a.result ? (a.decidedAt ?? a.createdAt) : null);
+  if (a.status === "approved") return a.result ? (a.executedAt ?? a.decidedAt ?? a.createdAt) : null;
   return a.decidedAt ?? (a.status === "expired" ? a.expiresAt : a.createdAt);
 }
 
 /**
- * The order on one card (ADR 0179, the server's `approval-order.ts`): the agent's actions run in the order it asked, whatever
- * the order they were decided in. An approved action waits for every request asked before it by another of its runs
- * until that one is settled, and for its own run's other requests (the run goes on once all of them are decided).
- * Actions approved ahead and a mission's requests stand outside the line.
+ * The order on one card (ADR 0179, the server's `approval-order.ts`): the agent's actions run in the order it asked,
+ * whatever the order they were decided in. An approved action still to do waits for its own run's requests still
+ * waiting for a person (the run goes on once all of them are decided), and for every request of another run asked
+ * before its run's place (its earliest action still to do) that isn't settled: waiting for a person, or approved with
+ * no result yet. Actions approved ahead and a mission's requests stand outside the line.
  */
-export function approvalLine(card: readonly Approval[], now = Date.now()): Map<string, LinePlace> {
+export function approvalLine(card: readonly Approval[]): Map<string, LinePlace> {
   const items = [...card].sort(byAsked);
   const lined = (a: Approval) => Boolean(a.runId) && !a.runAt;
+  const toDo = (a: Approval) => a.status === "approved" && !a.executedAt && !a.result && lined(a);
   const out = new Map<string, LinePlace>();
   items.forEach((a, i) => {
     let waitsOn: Approval | null = null;
     let freeSince: string | null = null;
-    if (a.status === "approved" && !a.executedAt && !a.result && lined(a)) {
-      for (const [j, b] of items.entries()) {
-        if (b.id === a.id || !lined(b)) continue;
-        const sameRun = b.runId === a.runId;
-        if (b.status === "pending" && (j < i || sameRun)) {
-          waitsOn = b;
-          break;
-        }
-        if (j < i && !sameRun && b.status === "approved" && !b.executedAt && !b.result) {
-          // Still on its way (waiting itself, or free to run a short while ago): this one goes after it.
-          const place = out.get(b.id);
-          const free = place?.freeSince ? Date.parse(place.freeSince) : Number.NaN;
-          if (place?.waitsOn || now - free < RUNNING_FOR_MS) {
-            waitsOn = b;
-            break;
-          }
-        }
-      }
+    if (toDo(a)) {
+      const place = items.findIndex((x) => x.runId === a.runId && toDo(x));
+      waitsOn =
+        items.find((b) => b.id !== a.id && lined(b) && b.runId === a.runId && b.status === "pending") ??
+        items.find(
+          (b, j) =>
+            j < place &&
+            lined(b) &&
+            b.runId !== a.runId &&
+            (b.status === "pending" || (b.status === "approved" && !b.result)),
+        ) ??
+        null;
       if (!waitsOn) {
         const times = items
-          .filter((b, j) => b.id !== a.id && lined(b) && (j < i || b.runId === a.runId))
+          .filter((b, j) => b.id !== a.id && lined(b) && (j < place || b.runId === a.runId))
           .map(settledAt)
           .filter((x): x is string => x !== null);
         freeSince = [a.decidedAt ?? a.createdAt, ...times].reduce((x, y) => (x > y ? x : y));
@@ -122,8 +118,8 @@ export function approvalLine(card: readonly Approval[], now = Date.now()): Map<s
 }
 
 /** `approvalLine` of every card in a list, by request id. */
-export function approvalLines(list: readonly Approval[], now = Date.now()): Map<string, LinePlace> {
-  return new Map(approvalCards(list).flatMap((card) => [...approvalLine(card, now)]));
+export function approvalLines(list: readonly Approval[]): Map<string, LinePlace> {
+  return new Map(approvalCards(list).flatMap((card) => [...approvalLine(card)]));
 }
 
 /**

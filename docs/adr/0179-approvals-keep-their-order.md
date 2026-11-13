@@ -25,24 +25,31 @@ what waits on the person by deadline too.
    were asked in (`created_at`, then the time-ordered id). Actions approved ahead (`run_at`) and a mission's requests
    (no run) stand outside any line.
 2. **Decide in any order, run in the order asked.** A run whose decisions are all in still waits while another run of
-   the agent has a request asked before its own on that card and not settled: waiting for a person, or approved and not
-   done while that run goes on (`heldBehind`, checked where the executor takes a waiting run back). A run's place is
-   its earliest approved action left on the card, so two runs whose requests interleave never wait on each other: the
-   one asked first goes, with all of its actions.
-3. **Waking.** A request settling wakes the agent's runs waiting behind it on its card (`wakeLine`), once per request:
-   refused, expired, canceled or replaced when decided; approved once its run has done it; every request of a run that
-   is stopped. The expiry worker also resumes, every minute, a run held this way whose blocker's run ended without a
-   word (a failure, a restart), within a day of its decision (`resumeHeldRuns`).
+   the agent has a request on the same card, asked before the run's place, that isn't settled: waiting for a person, or
+   approved without a result while that run goes on (`executed_at` is set when a run claims an action, before its tool
+   returns, so only the result says it is done). `heldBehind` checks this where the executor takes a waiting run back.
+   A run's place is its earliest approved action still to do, across its cards, so no two runs ever wait on each
+   other: when requests interleave, the run asked first goes, with all of its actions.
+3. **Waking.** A request settling wakes the agent's runs waiting behind it on its card (`wakeLine`), one job per run and
+   request settled: refused, expired, canceled or replaced when decided; approved once its run has done it (or kept it
+   from running); and every request of a run that fails or is stopped (`transitionRun`; one that ends done settled its
+   own on resuming). The expiry worker also resumes, every minute, a run still waiting although nothing holds it any
+   more: an approved action to do on a card shared with an earlier request of another run (decided within a week),
+   nothing of its own left to wait for, nothing before it and no job on its way (`resumeHeldRuns`, the longest waiting
+   first).
 4. **Approved before an earlier request was refused: not run.** When its run gets to it, an approved action whose card
    has a request asked before it that was refused, or expired unanswered, after this one was approved does not run. Its
    result says so and names that request (`result.notRunAfter`); the agent reads why and may ask again. One approved
    after the refusal was approved knowing it, and runs. This holds inside one run as well.
-5. **The apps.** The Approvals page and the phone list requests in the order asked, each card's together at its first.
+5. **The agent's other runs.** A run started while another waits reads what is already asked in the conversation
+   (`heldHere`): the requests waiting for a person, and now those approved and waiting their turn, so it neither asks
+   for them again nor does them itself.
+6. **The apps.** The Approvals page and the phone list requests in the order asked, each card's together at its first.
    A request on a card with others says its place ("2 of 3"). An approved action waiting its turn reads as in line
    ("Approved. Runs after …"), one kept from running as not run; the conversation's card says the same after the
    decision. J/K and the request opened beside the list follow the order drawn, and deciding the open request opens the
    next one waiting on that person. The header's warning still names the request closest to its deadline. The apps
-   work the line out from the card's requests (`approvalLine`), so it changes as each request does.
+   work the line out from the card's requests by the same rules (`approvalLine`), so it changes as each request does.
 
 ## Consequences
 

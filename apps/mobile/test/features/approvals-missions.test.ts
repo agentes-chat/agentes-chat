@@ -454,25 +454,39 @@ describe("several requests on one card", () => {
     const r1 = goal("g1", { runId: "r1" });
     const r2 = goal("g22", { runId: "r2", status: "approved", decidedAt: at(-1) });
     // Approved first, while the one asked before it still waits: in line behind it.
-    let line = approvalLine([r1, r2], now);
+    let line = approvalLine([r1, r2]);
     expect(line.get("g22")).toMatchObject({ position: 2, count: 2, freeSince: null });
     expect(line.get("g22")?.waitsOn?.id).toBe("g1");
     expect(line.get("g1")).toMatchObject({ position: 1, waitsOn: null });
-    // The earlier one approved and on its way: still behind it.
-    const running = goal("g1", { runId: "r1", status: "approved", decidedAt: at(-0.5) });
-    expect(approvalLine([running, r2], now).get("g22")?.waitsOn?.id).toBe("g1");
+    // The earlier one approved, or claimed by its run, but with no result yet: still before it.
+    const approved = goal("g1", { runId: "r1", status: "approved", decidedAt: at(-30) });
+    expect(approvalLine([approved, r2]).get("g22")?.waitsOn?.id).toBe("g1");
+    const claimed = goal("g1", { runId: "r1", status: "approved", decidedAt: at(-0.5), executedAt: at(-0.4) });
+    expect(approvalLine([claimed, r2]).get("g22")?.waitsOn?.id).toBe("g1");
     // Done: free since it ran.
-    const ran = goal("g1", { runId: "r1", status: "approved", decidedAt: at(-0.5), executedAt: at(-0.2) });
-    line = approvalLine([ran, r2], now);
+    const ran = goal("g1", {
+      runId: "r1",
+      status: "approved",
+      decidedAt: at(-0.5),
+      executedAt: at(-0.2),
+      result: { ok: true, text: "ok" },
+    });
+    line = approvalLine([ran, r2]);
     expect(line.get("g22")).toMatchObject({ waitsOn: null, freeSince: at(-0.2) });
     // Its own run's other request, wherever it sits, holds it too: the run goes on once all of its are decided.
     const sibling = goal("g333", { runId: "r2" });
-    expect(approvalLine([ran, r2, sibling], now).get("g22")?.waitsOn?.id).toBe("g333");
+    expect(approvalLine([ran, r2, sibling]).get("g22")?.waitsOn?.id).toBe("g333");
+    // Interleaved runs: a run's place is its earliest action still to do, so r1's later one goes with its first.
+    const a1 = goal("g1", { runId: "r1", status: "approved", decidedAt: at(-1) });
+    const a3 = goal("g333", { runId: "r1", status: "approved", decidedAt: at(-1) });
+    line = approvalLine([a1, r2, a3]);
+    expect(line.get("g333")?.waitsOn).toBeNull();
+    expect(line.get("g22")?.waitsOn?.id).toBe("g1");
     // Approved ahead and a mission's requests stand outside the line.
     const ahead = goal("g1", { runId: "r1", runAt: at(120) });
-    expect(approvalLine([ahead, r2], now).get("g22")?.waitsOn).toBeNull();
+    expect(approvalLine([ahead, r2]).get("g22")?.waitsOn).toBeNull();
     const mission = goal("g1", { runId: null });
-    expect(approvalLine([mission, r2], now).get("g22")?.waitsOn).toBeNull();
+    expect(approvalLine([mission, r2]).get("g22")?.waitsOn).toBeNull();
   });
 
   test("waiting requests of one kind in a row come together as one run, and Aprovar sempre takes the run's like ones", () => {
