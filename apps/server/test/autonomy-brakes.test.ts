@@ -10,7 +10,7 @@ afterEach(() => t.close());
 
 type Brakes = { costly: string; maxUnrequested: number; callAgents: string; callAgentIds: string[]; never: string[] };
 
-test("an agent's brakes: defaults on the agent, merged on PATCH, and a proposal decided only by who may", async () => {
+test("an agent's brakes: defaults on the agent, given on create, merged on PATCH, and a proposal decided only by who may", async () => {
   t = await createTestServer();
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
@@ -22,6 +22,12 @@ test("an agent's brakes: defaults on the agent, merged on PATCH, and a proposal 
     brakes: Brakes;
   };
   expect(created.brakes).toMatchObject({ costly: "go", maxUnrequested: 2, callAgents: "all" });
+  const braked = (await (
+    await owner(`${org}/agents`, {
+      json: { name: "Rui", handle: "rui", brakes: { callAgents: "some", callAgentIds: [created.id] } },
+    })
+  ).json()) as { brakes: Brakes };
+  expect(braked.brakes).toMatchObject({ callAgents: "some", callAgentIds: [created.id] });
 
   const patched = await owner(`${org}/agents/${created.id}`, {
     method: "PATCH",

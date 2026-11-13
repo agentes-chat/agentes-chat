@@ -13,6 +13,7 @@ import {
   decideCostlyProposal,
   endsAsking,
   FOLLOW_UP_JOB,
+  ForbiddenError,
   getMessage,
   insertMessage,
   type Judge,
@@ -635,5 +636,33 @@ describe("who an agent may call (§8)", () => {
       callAgents: "none",
       costly: "ask",
     });
+  });
+
+  test("brakes given at creation are stored as on an edit; only who manages agents sets them", async () => {
+    f = await setup();
+    const defaults = { model: f.agent.model };
+    const made = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      {
+        name: "Bia",
+        handle: "bia",
+        autonomyBrakes: { maxUnrequested: 99, callAgents: "some", callAgentIds: [f.agent.id] },
+      },
+      defaults,
+    );
+    expect(made.autonomyBrakes).toEqual({ maxUnrequested: 20, callAgents: "some", callAgentIds: [f.agent.id] });
+    const member = await addMember(f.db, f.org.id, "member", "Caio");
+    // Creating one's own agent is open to members; choosing whom it may call is not.
+    await expect(
+      createAgent(
+        f.db,
+        member.id,
+        f.org.id,
+        { name: "Edu", handle: "edu", autonomyBrakes: { callAgents: "none" } },
+        defaults,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
