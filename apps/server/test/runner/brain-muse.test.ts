@@ -540,6 +540,34 @@ test("a turn that is accepted and then goes quiet hits its deadline, and its hos
   expect(events.some((e) => e.type === "done")).toBe(false);
 });
 
+test("a resumed session is told about the bridge too", async () => {
+  // The first turn starts a session; the second resumes it. `config` is shared by both methods, and a resume that
+  // isn't told carries no server — the thread had tools on its first turn and none after it.
+  const home = tempDir();
+  dirs.push(home);
+  const { file } = askAbout();
+  const sessions = new CodexThreads(museSessionsFile(path.join(home, "brain")));
+  const run = () =>
+    runMuseTurn(
+      { runId: RUN, sessionId: SESSION, cwd: home, system: "S", prompt: "oi", mcp: { token: "t" } },
+      {
+        sessions,
+        emit: () => undefined,
+        signal: new AbortController().signal,
+        runnerHome: path.join(home, "brain"),
+        mcpCommand: ["bun", "agentes-runner.mjs"],
+        spawn: fakeSpawn,
+      },
+    );
+  await run();
+  await run();
+  const entries = fakeLog(file).filter((l) => l.session);
+  expect(entries.map((l) => l.session?.mcp)).toEqual([
+    [["agenteschat_agentes", "stdio", "bun"]],
+    [["agenteschat_agentes", "stdio", "bun"]],
+  ]);
+});
+
 test("a lost session starts a new one instead of failing", async () => {
   process.env.FAKE_MUSE_LOST = "1";
   const { events, sessions } = await turn();
