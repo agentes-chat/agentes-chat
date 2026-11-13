@@ -280,6 +280,8 @@ export type SidebarPins = Record<(typeof SIDEBAR_PIN_KINDS)[number], string[]>;
  */
 export interface SidebarView {
   agentSort: AgentSort;
+  /** One agent kept above the scrolling list. Unset or null: no featured agent. */
+  featuredAgentId?: string | null;
   showAllAgents: boolean;
   pins: SidebarPins | null;
 }
@@ -302,7 +304,15 @@ export function sidebarViewOf(raw: unknown): SidebarView {
           SIDEBAR_PIN_KINDS.map((k) => [k, ids((v.pins as Record<string, unknown>)[k])]),
         ) as SidebarPins)
       : null;
-  return { agentSort: sort, showAllAgents: v.showAllAgents === true, pins };
+  const featured = v.featuredAgentId;
+  return {
+    agentSort: sort,
+    showAllAgents: v.showAllAgents === true,
+    pins,
+    ...(typeof featured === "string" && featured.length > 0 && featured.length <= 64
+      ? { featuredAgentId: featured }
+      : {}),
+  };
 }
 
 /** The person's sidebar view in this workspace. */

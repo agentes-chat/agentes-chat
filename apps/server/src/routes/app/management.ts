@@ -989,6 +989,9 @@ export function managementRoutes(deps: AppDeps) {
   const PinIds = z.array(z.string().min(1).max(64)).max(SIDEBAR_PIN_LIMIT);
   const SidebarView = z
     .object({
+      featuredAgentId: z.string().min(1).max(64).nullable().optional().openapi({
+        description: "One agent kept in a larger card above the scrolling sidebar list. Unset or null: none.",
+      }),
       agentSort: z.enum(AGENT_SORTS).openapi({
         description: "How AGENTES orders each group: the workspace's order, your agents first, or working first.",
       }),

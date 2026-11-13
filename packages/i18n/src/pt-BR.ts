@@ -1971,6 +1971,9 @@ export const ptBR = {
     dmsEmpty: "Suas conversas com pessoas aparecem aqui.",
   },
   sidebarPins: {
+    feature: "Destacar na barra lateral",
+    unfeature: "Remover destaque da barra lateral",
+    featured: "Agente em destaque",
     pin: "Fixar no topo",
     unpin: "Tirar do topo",
     pinned: "Fixado no topo",

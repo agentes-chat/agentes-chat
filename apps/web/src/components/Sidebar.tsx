@@ -393,10 +393,16 @@ export function Sidebar() {
   const manages = can(org, "manage_agents");
   const team = dir.agents.filter((a) => !isRightHand(a));
   const shownAgents = team.filter((a) => (manages && view.showAllAgents) || canTalk(a));
+  // Resolve against the visible directory: a saved shortcut never reveals a removed or inaccessible agent.
+  const featuredAgent = shownAgents.find((a) => a.id === view.featuredAgentId);
   const busyKey = useStreams((st) => [...runningAgents(st)].sort().join());
   const busy = useMemo(() => new Set(busyKey ? busyKey.split(",") : []), [busyKey]);
   const groups = useAgentGroups(orgId).data ?? [];
-  const byGroup = agentSections(shownAgents, groups, (a) => a.id);
+  const byGroup = agentSections(
+    shownAgents.filter((a) => a.id !== featuredAgent?.id),
+    groups,
+    (a) => a.id,
+  );
   const ordered = (items: Agent[]) => {
     const { top, rest } = splitPinned(items, pins.agents, (a) => a.id);
     return { top, rest: sortAgents(rest, view.agentSort, me.user.id, busy) };
@@ -448,7 +454,7 @@ export function Sidebar() {
       },
     ];
   };
-  const agentRow = (a: Agent) => {
+  const agentRow = (a: Agent, featured = false) => {
     const dm = dmOf.get(a.id);
     const unread = dm?.unread ?? 0;
     return (
@@ -464,13 +470,14 @@ export function Sidebar() {
       >
         <AgentRow
           agent={a}
+          featured={featured}
           unread={unread}
           waitingFor={waitingFor.get(a.id)}
           live={busy.has(a.id) || waitingFor.has(a.id) || unread > 0}
           pinned={pins.agents.includes(a.id)}
           onPrefetch={() => dm && prefetch(dm.channelId)}
           onOpen={() => markOpen(dm?.channelId ?? a.id)}
-          drag={organize ? drag.row(a.id) : undefined}
+          drag={organize && !featured ? drag.row(a.id) : undefined}
           menuExtra={manages ? groupEntries(a) : undefined}
         />
       </ErrorBoundary>
@@ -560,11 +567,11 @@ export function Sidebar() {
         />
       )}
       {dir.loading && team.length === 0 && <SidebarSkeleton count={2} avatar label={t("common.loadingList")} />}
-      {loose.top.map(agentRow)}
+      {loose.top.map((a) => agentRow(a))}
       {loose.top.length > 0 && (loose.rest.length > 0 || agentGroups.length > 0) && (
         <hr className="sidebar__pins-end" />
       )}
-      {loose.rest.map(agentRow)}
+      {loose.rest.map((a) => agentRow(a))}
     </>
   );
   const blocks: Record<SectionKey, ReactNode> = {
@@ -897,6 +904,12 @@ export function Sidebar() {
           </>
         )}
       </div>
+
+      {featuredAgent && (
+        <section className="sidebar__featured" aria-label={t("sidebarPins.featured")}>
+          {agentRow(featuredAgent, true)}
+        </section>
+      )}
 
       {/* Space, not lines, between the tools, the channels, the agents and the people. A right click on the space
           between the rows (not on a row or a header, which have their own) opens the sidebar's menu; a link with no
@@ -1722,6 +1735,7 @@ function PinnedMark() {
  */
 function AgentRow({
   agent: a,
+  featured,
   unread,
   waitingFor,
   live,
@@ -1732,6 +1746,7 @@ function AgentRow({
   menuExtra,
 }: {
   agent: Agent;
+  featured?: boolean;
   unread: number;
   /** The offline computer it waits for (its brain runs there). */
   waitingFor?: string;
@@ -1806,6 +1821,11 @@ function AgentRow({
       >
         {busy && <AgentTrail color={color} />}
         {busy && <AgentGlow color={color} />}
+        {featured && (
+          <span className="sidebar__featured-label" aria-hidden="true">
+            {t("sidebarPins.featured")}
+          </span>
+        )}
         <AgentAvatar
           agentId={a.id}
           name={a.name}
