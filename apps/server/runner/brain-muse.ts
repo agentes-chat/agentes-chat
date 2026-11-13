@@ -693,16 +693,13 @@ export interface MuseTurnEnd {
 
 /** Runs one Muse turn and emits its events; ends with exactly one `done` or `error`. Never throws. */
 export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): Promise<void> {
-  const fail = (code: string, message: string, retryable?: boolean) => {
-    try {
-      require("node:fs").appendFileSync("/tmp/muse-fail.log", `${new Date().toISOString()} ${code}: ${message}\n`);
-    } catch {}
-    return opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
-  };
+  const fail = (code: string, message: string, retryable?: boolean) =>
+    opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
   if ((opts.platform ?? process.platform) === "win32")
     return fail("unsupported", "The Muse Code brain isn't supported on Windows yet.");
-  // A right-hand turn: the CLI has no tool allow/deny list, so the posture withholds the shell and the write, and a
-  // call that is not ours ends the turn (below). `chat` is a posture, not a profile: it wins over `work`.
+  // A right-hand turn: the CLI has no tool allow/deny list, so the posture withholds the shell and the write and the
+  // approval mode refuses the host's own calls — the same "our tools and nothing else" OpenCode gets from a deny-all
+  // permission with our server allowed. `chat` is a posture, not a profile: it wins over `work`.
 
   const key = input.account?.key;
   const sessionKey = codexThreadKey(input.sessionId, input.account?.id);
@@ -721,12 +718,6 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     runId: input.runId,
     runnerHome: opts.runnerHome,
   });
-  try {
-    require("node:fs").writeFileSync(
-      "/tmp/muse-entry.json",
-      JSON.stringify({ mcpServer, chat: input.chat, cwd: input.cwd }),
-    );
-  } catch {}
   const configDir = museConfigDir(input.account ? input.account.home : path.join(opts.runnerHome, "brain", "muse"));
   const env = input.account ? accountEnv("muse", configDir, base) : { ...base, XDG_CONFIG_HOME: configDir };
   // The agent's commands inherit XDG_CONFIG_HOME: gh keeps finding its sign-in where it was.
@@ -788,12 +779,6 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   });
 
   const host = new MuseHost(child, (method, params) => {
-    try {
-      require("node:fs").appendFileSync(
-        "/tmp/muse-events.log",
-        `${new Date().toISOString()} ${method} ${JSON.stringify(method === "approval/requested" ? params.subject : params).slice(0, 700)}\n`,
-      );
-    } catch {}
     if (method === "turn/completed") {
       // The status is read here, not after `turnOver` resolves: the notification also resolves it, and a failed or
       // cancelled turn would otherwise be decided as the success its `done` reports.
@@ -862,12 +847,6 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       return;
     }
     for (const event of mapper.event(method, params)) {
-      try {
-        require("node:fs").appendFileSync(
-          "/tmp/muse-emit.log",
-          `${new Date().toISOString()} ${event.type} ${JSON.stringify(event).slice(0, 120)}\n`,
-        );
-      } catch {}
       opts.emit(event);
     }
   });
@@ -918,7 +897,18 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     const stored = opts.sessions.get(sessionKey);
     const resumed = stored
       ? await host
-          .request("session/resume", { commandId: uuidv7(), sessionId: stored }, INIT_TIMEOUT_MS)
+          // The bridge goes with a resume too: `config` is shared by `session/start` and `session/resume`, and a
+          // resumed session that isn't told carries no server — the first turn of a thread had tools and every later
+          // one had none, which the model reported as "I only have conversation tools here".
+          .request(
+            "session/resume",
+            {
+              commandId: uuidv7(),
+              sessionId: stored,
+              ...(mcpServer ? { config: { mcpServers: { [CODEX_MCP_SERVER]: mcpServer } } } : {}),
+            },
+            INIT_TIMEOUT_MS,
+          )
           .catch(() => undefined)
       : undefined;
     const session = isRecord(resumed?.session) ? resumed?.session : undefined;
