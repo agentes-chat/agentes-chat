@@ -217,13 +217,17 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
  */
 export const MUSE_MODELS: readonly { id: string; label: string }[] = [
   { id: "muse-wonder-1.0", label: "Muse Wonder 1.0" },
+  { id: "muse-wonder-full-1.0", label: "Muse Wonder Full 1.0" },
+  { id: "muse-ember-1.0", label: "Muse Ember 1.0" },
   { id: "muse-spark-1.3", label: "Muse Spark 1.3" },
+  { id: "muse-spark-1.2", label: "Muse Spark 1.2" },
 ];
 
 /**
- * What Muse Code runs when nobody chose a model: `muse-wonder-1.0`, which is what the host picks on its own. Measured
- * on a signed-in account: `muse-spark-1.2` (the id Meta documents) is answered 503 on every attempt, and a turn on it
- * never starts, so it is not the fallback any more.
+ * What Muse Code runs when nobody chose a model: `muse-wonder-1.0`, which is what the host itself marks `isDefault` in
+ * its own catalog. `muse-spark-1.2` is answered 503 on every attempt on a signed-in account, so it is not the fallback
+ * any more. The five ids are what the host's `model/list` returns with a signed-in account, in its own order (newest
+ * release first), and it is only a fallback: a computer that reports a catalog replaces every one of them.
  */
 export const MUSE_DEFAULT_MODEL = "muse-wonder-1.0";
 

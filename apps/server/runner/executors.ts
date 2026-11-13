@@ -1,6 +1,6 @@
 import { type ChildProcess, execFile, spawn } from "node:child_process";
 import type { EventEmitter } from "node:events";
-import { accessSync, constants, readFileSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join, win32 } from "node:path";
 import {
@@ -537,14 +537,38 @@ export function parseMuseModels(output: string): CursorModelInfo[] {
  * A build that ships no catalog answers `[]` under `source: "bundledCatalog"` (a supported configuration), and a
  * signed-out host answers the same; empty is not a failure. The catalog read is the host's own (its build and its
  * settings), under the runner's home: what a particular sign-in's provider would add is a turn's business, not a
- * look's. No `META_API_KEY` goes in: a catalog needs no account, and a saved key must never answer in the person's
- * place. Windows is skipped (the brain refuses it there too).
+ * look's, so a signed-in account's own folder is borrowed when there is one. No `META_API_KEY` goes in: a catalog needs
+ * no account, and a saved key must never answer in the person's place. Windows is skipped (the brain refuses it there).
  */
+/** The config folder of the first Muse account that has a sign-in, under a runner home (`accounts/muse/<id>/config`). */
+function signedInMuse(root: string | undefined): string | undefined {
+  if (!root) return undefined;
+  try {
+    const base = join(root, "accounts", "muse");
+    for (const entry of readdirSync(base)) {
+      const config = join(base, entry, "config");
+      if (existsSync(join(config, "muse", "auth.json"))) return config;
+    }
+  } catch {
+    // No folder, no accounts: the read simply runs without one.
+  }
+  return undefined;
+}
+
 export function museModelCatalog(
-  opts: { bin?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv } = {},
+  opts: { bin?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv; accounts?: string } = {},
 ): Promise<CursorModelInfo[]> {
   if (process.platform === "win32") return Promise.resolve([]);
   const env = { ...(opts.env ?? process.env) };
+  // A signed-in account is what makes the catalog answer (`[]` is a supported answer, so a signed-out read is
+  // indistinguishable from a build with no models). The first one that has a credential is borrowed for the look:
+  // which account adds what is a turn's business, but *whether* there is a catalog is the look's.
+  const signed = signedInMuse(env.AGENTES_RUNNER_HOME ?? opts.accounts);
+  if (signed) {
+    env.XDG_CONFIG_HOME = signed;
+    env.XDG_DATA_HOME = signed;
+    env.XDG_STATE_HOME = signed;
+  }
   delete env.META_API_KEY;
   env.MUSE_NO_AUTO_UPDATE = "1";
   env.MUSE_CONTRIBUTOR_MODE = "0";
