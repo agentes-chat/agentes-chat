@@ -141,15 +141,15 @@ test("the settings document keeps the account's ground, and the bridge travels o
   // The wire: `session/start`'s `config.mcpServers`, which is where an MSP client adds one and where it is typed.
   const stdio = museMcpServer({
     mcp: { token: "t" },
-    mcpCommand: ["agentes-runner", "mcp"],
+    mcpCommand: ["bun", "agentes-runner.mjs"],
     runId: RUN,
     runnerHome: "/r",
   });
-  expect(stdio).toMatchObject({ transport: "stdio", command: "agentes-runner" });
+  expect(stdio).toMatchObject({ transport: "stdio", command: "bun" });
   // `agentes-runner mcp` needs the run, as an argument and in the child's environment.
   // Literal, not `${AGENTES_MCP_RUN}`: the host expands placeholders in `env` only, so an argument placeholder
   // reaches the bridge as that very text, which prints its usage and exits.
-  expect(stdio?.args).toEqual(["mcp", "--run", RUN]);
+  expect(stdio?.args).toEqual(["agentes-runner.mjs", "mcp", "--run", RUN]);
   expect((stdio?.env as Record<string, string> | undefined)?.AGENTES_MCP_RUN).toBe(RUN);
   expect(museMcpServer({ mcp: { token: "t", url: "https://x/mcp" }, runId: RUN, runnerHome: "/r" })).toMatchObject({
     transport: "streamableHttp",

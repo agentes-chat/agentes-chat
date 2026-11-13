@@ -184,7 +184,9 @@ export function museMcpServer(input: {
   return {
     transport: "stdio",
     ...(command ? { command } : {}),
-    args: [...(mcpCommand?.slice(1) ?? ["mcp"]), "--run", input.runId],
+    // `mcpCommand` is how to run *this* runner and carries no subcommand (`[bun, runner.mjs]`), so `mcp` is always
+    // added — the `?? ["mcp"]` fallback alone made the bridge run `runner.mjs --run <id>`, print its usage and exit.
+    args: [...(mcpCommand?.slice(1) ?? []), "mcp", "--run", input.runId],
     env: {
       [CODEX_MCP_ENV[0]]: mcp.token,
       [CODEX_MCP_ENV[2]]: input.runnerHome,
@@ -690,6 +692,12 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     runId: input.runId,
     runnerHome: opts.runnerHome,
   });
+  try {
+    require("node:fs").writeFileSync(
+      "/tmp/muse-entry.json",
+      JSON.stringify({ mcpServer, chat: input.chat, cwd: input.cwd }),
+    );
+  } catch {}
   const configDir = museConfigDir(input.account ? input.account.home : path.join(opts.runnerHome, "brain", "muse"));
   const env = input.account ? accountEnv("muse", configDir, base) : { ...base, XDG_CONFIG_HOME: configDir };
   // The agent's commands inherit XDG_CONFIG_HOME: gh keeps finding its sign-in where it was.
