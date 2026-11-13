@@ -624,10 +624,12 @@ function NewAgentDialog({
     ).finished.then(react, () => {});
   }, [sel, step]);
   // From scratch, the words come first (on a narrow screen, once its card is shown).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: again when the card comes into view
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only when entering or selecting the card, not while editing
   useEffect(() => {
-    if (sel === "zero" && !drafts.zero?.what) whatInput.current?.focus();
-  }, [sel, drafts.zero?.what, step]);
+    if (sel === "zero" && !drafts.zero?.what && document.activeElement !== nameInput.current) {
+      whatInput.current?.focus();
+    }
+  }, [sel, step]);
 
   const setLook = (patch: LookPatch) => {
     update({ look: { ...draft.look, ...patch } });

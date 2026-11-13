@@ -387,6 +387,21 @@ describe("a personal workspace's sidebar", () => {
     expect(input.setup).toMatchObject({ role: null, hello: "Cuidar da agenda do consultório" });
   });
 
+  test("from scratch, typing the name first does not lose focus to the description field (#362)", async () => {
+    const state = withRightHand(personal());
+    await go(state);
+    const agents = nav().querySelector('.sidebar__block[data-section="agents"]') as HTMLElement;
+    await click([...agents.querySelectorAll(".sidebar__item")].at(-1) as HTMLElement);
+    const dialog = screen().getByRole("dialog", { name: "Novo agente" });
+    await click(within(dialog).getByRole("option", { name: /Do zero/ }));
+    const nameInput = within(dialog).getByRole("textbox", { name: "Nome" });
+    nameInput.focus();
+    expect(document.activeElement).toBe(nameInput);
+    await act(async () => fireEvent.change(nameInput, { target: { value: "A" } }));
+    await settle(2);
+    expect(document.activeElement).toBe(nameInput);
+  });
+
   test("the agents come first; channels are Conversas em grupo; with someone else in, people and #general show", async () => {
     await go(personal());
     expect(blocks()).toEqual(["agents", "channels", "people"]);
