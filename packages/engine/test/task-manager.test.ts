@@ -78,8 +78,13 @@ describe("work agents asked of each other (ADR 0128)", () => {
       label: null,
       canStop: true,
       delegation: { agentId: f.agent.id, origin: { kind: "person", userId: f.owner.id } },
+      question: "Vê o log de ontem",
     });
-    expect(view.tasks.find((t) => t.runId === asker.id)).toMatchObject({ delegation: null, helpers: 1 });
+    expect(view.tasks.find((t) => t.runId === asker.id)).toMatchObject({
+      delegation: null,
+      helpers: 1,
+      question: null,
+    });
     expect(view.hidden).toEqual({ total: 0, working: 0, byAgent: {} });
     expect((await taskSteps(f.db, f.owner.id, f.org.id, helper.id)).steps).toEqual([]);
 

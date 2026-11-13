@@ -64,3 +64,29 @@ export function forPeople<C extends { question: string }, M extends { body: stri
 
 /** One line of an answer for the folded card: no Markdown marks, spaces collapsed. */
 export const previewOf = (text: string) => plainLine(withoutRelayLine(text));
+
+/** How much of a question fits in the subject its row shows. */
+export const CONSULT_SUBJECT_CHARS = 60;
+
+/** The text up to its first full stop, question mark or exclamation, or all of it. */
+const firstSentence = (text: string) => {
+  const end = text.search(/[.!?…](?:\s|$)/);
+  return end === -1 ? text : text.slice(0, end + 1);
+};
+
+/** `text` cut with an ellipsis, at the end of a word when one is near: a cut never passes for the whole. */
+const cutSubject = (text: string) => {
+  if (text.length <= CONSULT_SUBJECT_CHARS) return text;
+  const room = text.slice(0, CONSULT_SUBJECT_CHARS - 1);
+  const space = room.lastIndexOf(" ");
+  const head = space > CONSULT_SUBJECT_CHARS / 2 ? room.slice(0, space) : room;
+  return `${head.replace(/[\s,;:—–-]+$/, "")}…`;
+};
+
+/**
+ * What a question between two agents is about, in the few words a row has for it ("Investigate duplicate
+ * notifications"): its first sentence, without the relay line the server writes for the agent or its Markdown,
+ * cut with an ellipsis. Empty when there is no question to take it from.
+ */
+export const consultSubject = (question: string | null | undefined) =>
+  cutSubject(firstSentence(previewOf(question ?? "")));

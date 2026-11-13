@@ -128,6 +128,8 @@ export interface ManagedTask {
   requester: { userId: string; name: string } | null;
   /** Another agent asked it, in their private conversation. */
   delegation: TaskDelegation | null;
+  /** What that agent asked it, in their conversation: what its row is called by; null when nothing did. */
+  question: string | null;
   /** What it asked of other agents and is still on or not started, all the way down: they stop with it in one action. */
   helpers: number;
   /** The brain it thinks with (`model`, `claude_code`, `codex`, `cursor`); null before its first turn. */
@@ -187,6 +189,8 @@ export interface EndedTask {
   routine: { id: string; name: string } | null;
   startedAt: string | null;
   finishedAt: string;
+  /** What another agent asked it, when they worked in their own conversation. */
+  question: string | null;
   /** Stopped by a person: who. */
   stoppedBy: { userId: string; name: string } | null;
 }
@@ -239,6 +243,7 @@ type Row = {
   requester_id: string | null;
   requester_name: string | null;
   asker_agent_id: string | null;
+  question: string | null;
   routine_id: string | null;
   routine_name: string | null;
   work_title: string | null;
@@ -304,6 +309,7 @@ async function visibleRuns(
         array_to_json(r.pending_message_ids) as pending, r.background, r.brain,
         a.owner_user_id, a.machine_id, mc.name as machine_name,
         trig.author_user_id as requester_id, ru.name as requester_name, trig.author_agent_id as asker_agent_id,
+        consult.question,
         rt.id as routine_id, rt.name as routine_name, w.title as work_title, w.plan as work_plan,
         last.data as last_data, last.created_at as last_at,
         (select count(*) from ${agentRunSteps} s where s.run_id = r.id and s.kind = 'tool_call') as steps,
@@ -323,6 +329,11 @@ async function visibleRuns(
         where m.org_id = ${orgId}::uuid and m.id = r.trigger_message_id
         limit 1
       ) trig on true
+      left join lateral (
+        select ac.question from ${agentConsultations} ac
+        where ac.org_id = ${orgId}::uuid and ac.target_run_id = r.id
+        order by ac.created_at limit 1
+      ) consult on true
       left join ${users} ru on ru.id = trig.author_user_id
       left join ${users} su on r.error like 'canceled_by:%' and su.id = substring(r.error from 13)
       left join ${routineRuns} rr on rr.org_id = ${orgId}::uuid and rr.agent_run_id = r.id
@@ -587,6 +598,7 @@ export async function taskManager(
     plan: planOf(r.work_plan),
     requester: r.requester_id ? { userId: r.requester_id, name: r.requester_name ?? "" } : null,
     delegation: delegations.get(r.id) ?? null,
+    question: betweenAgents(r) ? r.question : null,
     helpers: [...runsBelow(edges, r.id)].filter((id) => on.has(id)).length,
     brain: r.brain,
     machine: r.machine_id ? { id: r.machine_id, name: r.machine_name ?? "" } : null,
@@ -634,6 +646,7 @@ export async function taskManager(
       label: labelOf(r),
       background: truthy(r.background),
       routine: routineOf(r),
+      question: betweenAgents(r) ? r.question : null,
       startedAt: iso(r.started_at),
       finishedAt: iso(r.finished_at) as string,
       stoppedBy: by ? { userId: by, name: r.stopper_name ?? "" } : null,

@@ -7085,6 +7085,8 @@ export interface ManagedTask {
   requester: { userId: string; name: string } | null;
   /** Another agent asked it, in their private conversation (absent on an older server). */
   delegation?: TaskDelegation | null;
+  /** What that agent asked it, in their conversation: what its row is called by (absent on an older server). */
+  question?: string | null;
   /** What it asked of other agents and is still on or not started, all the way down. */
   helpers?: number;
   /** `model`, `claude_code`, `codex`, `cursor`; null before its first turn. */
@@ -7155,6 +7157,8 @@ export interface EndedTask {
   label: string | null;
   background: boolean;
   routine: { id: string; name: string } | null;
+  /** What another agent asked it, when they worked in their own conversation (absent on an older server). */
+  question?: string | null;
   startedAt: string | null;
   finishedAt: string;
   /** Stopped by a person: who. */

@@ -8,6 +8,7 @@ import {
   hiddenCount,
   taskPlace,
   taskTime,
+  taskTitle,
   taskWaitGroups,
   taskWaitGroupText,
   taskWaitWords,
@@ -196,4 +197,20 @@ test("a task with no title of its own is called by its place, said once", () => 
   const base = { routine: null, channelKind: "channel" as const, channelName: "eng", betweenAgents: false };
   expect(taskPlace(t, { ...base, label: null })).toBeNull();
   expect(taskPlace(t, { ...base, label: "Release 8 na loja" })).toBe("#eng");
+});
+
+test("a task in another agent's conversation is called by what it was asked, its place after it", () => {
+  const asked = {
+    label: null,
+    routine: null,
+    channelKind: "dm" as const,
+    channelName: null,
+    betweenAgents: true,
+    question: "Investigate duplicate notifications. Then tell me who gets them.",
+  };
+  expect(taskTitle(t, asked)).toBe("Investigate duplicate notifications.");
+  expect(taskPlace(t, asked)).toBe("chat.consultPanel.whereDm");
+  // No question (an older server) keeps the generic label, said once.
+  expect(taskTitle(t, { ...asked, question: null })).toBe("chat.consultPanel.whereDm");
+  expect(taskPlace(t, { ...asked, question: null })).toBeNull();
 });
