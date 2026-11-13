@@ -22,6 +22,8 @@ mod runners;
 mod servers;
 mod tailscale;
 mod tray;
+#[cfg(target_os = "linux")]
+pub mod webkit_gpu;
 mod window_state;
 mod workspaces;
 
