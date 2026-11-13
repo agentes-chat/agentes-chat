@@ -94,9 +94,22 @@ test("MCP JSON-RPC: initialize, notifications, tools/list, tools/call and errors
   expect(
     await handleMcpMessage({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_context" } }, call),
   ).toMatchObject({ result: { content: [{ text: "Nope" }], isError: true } });
+  // What a host that namespaces another server's tools sends: the server hears the bare name it listed.
+  expect(
+    await handleMcpMessage(
+      {
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: { name: "mcp__agenteschat_agentes__report", arguments: { summary: "hi" } },
+      },
+      call,
+    ),
+  ).toMatchObject({ result: { isError: false } });
   expect(calls).toEqual([
     ["report", { summary: "hi" }],
     ["get_context", {}],
+    ["report", { summary: "hi" }],
   ]);
   expect(
     await handleMcpMessage({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "rm_rf" } }, call),
