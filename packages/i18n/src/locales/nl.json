@@ -4311,6 +4311,10 @@
   "approval": {
     "expiredChip": "Verlopen · {{when}}",
     "canceledChip": "Geannuleerd · {{when}}",
+    "line": {
+      "after": "wordt uitgevoerd na ‘{{title}}’",
+      "notRun": "niet uitgevoerd: het verzoek ervoor is niet goedgekeurd"
+    },
     "waitingFor": "Wacht op {{name}}",
     "waitingAdmin": "Wacht op een beheerder",
     "reasonLine": "Reden: {{reason}}",
@@ -4878,8 +4882,15 @@
       "canceled": "Geannuleerd",
       "failed": "Mislukt",
       "running": "Wordt uitgevoerd",
-      "scheduled": "Gepland"
+      "scheduled": "Gepland",
+      "queued": "In de wachtrij",
+      "notRun": "Niet uitgevoerd"
     },
+    "queuedLine": "Goedgekeurd. Wordt uitgevoerd na ‘{{title}}’, dat eerder is gevraagd.",
+    "notRunRefused": "‘{{title}}’, eerder gevraagd, is geweigerd nadat dit verzoek was goedgekeurd. Daarom is dit niet uitgevoerd.",
+    "notRunExpired": "‘{{title}}’, eerder gevraagd, is zonder beslissing verlopen nadat dit verzoek was goedgekeurd. Daarom is dit niet uitgevoerd.",
+    "notRunEarlier": "Een eerder verzoek is geweigerd of verlopen nadat dit was goedgekeurd. Daarom is dit niet uitgevoerd.",
+    "position": "{{n}} van {{total}}",
     "expiredLine": "Niemand besliste binnen 24 u, dus er is niets gedaan.",
     "canceledLine": "De run stopte vóór een besluit.",
     "supersededLine": "De agent vroeg het opnieuw met een nieuwere versie. Deze is niet uitgevoerd.",

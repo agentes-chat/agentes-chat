@@ -4573,6 +4573,10 @@
   "approval": {
     "expiredChip": "Wygasło · {{when}}",
     "canceledChip": "Anulowano · {{when}}",
+    "line": {
+      "after": "wykona się po „{{title}}”",
+      "notRun": "niewykonane: poprzednia prośba nie została zatwierdzona"
+    },
     "waitingFor": "Czeka na: {{name}}",
     "waitingAdmin": "Czeka na administratora",
     "reasonLine": "Powód: {{reason}}",
@@ -5188,8 +5192,15 @@
       "canceled": "Anulowane",
       "failed": "Błąd",
       "running": "W toku",
-      "scheduled": "Zaplanowane"
+      "scheduled": "Zaplanowane",
+      "queued": "W kolejce",
+      "notRun": "Niewykonane"
     },
+    "queuedLine": "Zatwierdzone. Wykona się po „{{title}}”, o które poproszono wcześniej.",
+    "notRunRefused": "„{{title}}”, o które poproszono wcześniej, zostało odrzucone po zatwierdzeniu tej prośby. Dlatego ta nie została wykonana.",
+    "notRunExpired": "„{{title}}”, o które poproszono wcześniej, wygasło bez decyzji po zatwierdzeniu tej prośby. Dlatego ta nie została wykonana.",
+    "notRunEarlier": "Wcześniejsza prośba została odrzucona lub wygasła po zatwierdzeniu tej. Dlatego ta nie została wykonana.",
+    "position": "{{n}} z {{total}}",
     "expiredLine": "Nikt nie zdecydował w ciągu 24 h, więc nic nie zrobiono.",
     "canceledLine": "Uruchomienie zatrzymało się przed decyzją.",
     "supersededLine": "Agent poprosił ponownie o nowszą wersję. Ta nie została wykonana.",

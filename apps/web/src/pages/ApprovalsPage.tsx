@@ -1049,7 +1049,7 @@ function ReqRow({ approval: a, selected, onOpen }: { approval: Approval; selecte
           {where && <span className="ap-li__where">{where}</span>}
           <span className="ap-li__when">
             {/* Its place on its card, in the order the agent asked, when it shares one. */}
-            {place && place.count > 1 && `${t("approvals.position", { n: place.position, count: place.count })} · `}
+            {place && place.count > 1 && `${t("approvals.position", { n: place.position, total: place.count })} · `}
             {live
               ? relativeTime(t, i18n.language, a.createdAt)
               : decisionLabel(t, i18n.language, a, me.user.id, dir.memberById)}
@@ -1149,7 +1149,7 @@ function ReviewHead({ approval: a, channel }: { approval: Approval; channel: str
     agent?.role,
     origin ? tt(origin.key, origin.values) : "",
     channel ? `#${channel}` : "",
-    place && place.count > 1 ? t("approvals.position", { n: place.position, count: place.count }) : "",
+    place && place.count > 1 ? t("approvals.position", { n: place.position, total: place.count }) : "",
     relativeTime(t, i18n.language, a.createdAt),
   ]
     .filter(Boolean)

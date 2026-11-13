@@ -5083,7 +5083,7 @@ export const ptBR = {
       "“{{title}}”, pedido antes, expirou sem decisão depois que este foi aprovado. Por isso este não rodou.",
     notRunEarlier: "Um pedido anterior foi recusado ou expirou depois que este foi aprovado. Por isso este não rodou.",
     /** Its place among the requests on its card, in the order the agent asked. */
-    position: "{{n}} de {{count}}",
+    position: "{{n}} de {{total}}",
     expiredLine: "Ninguém decidiu em 24 h, então nada foi feito.",
     canceledLine: "A execução parou antes da decisão.",
     /** Replaced by the agent's newer request for the same action (`supersededById`). */

@@ -5174,7 +5174,7 @@ export const en = {
     notRunExpired: "“{{title}}”, asked before this, expired undecided after this was approved, so this didn't run.",
     notRunEarlier: "A request asked before this was refused or expired after this was approved, so this didn't run.",
     /** Its place among the requests on its card, in the order the agent asked. */
-    position: "{{n}} of {{count}}",
+    position: "{{n}} of {{total}}",
     expiredLine: "Nobody decided within 24 h, so nothing was done.",
     canceledLine: "The run stopped before a decision.",
     /** Replaced by the agent's newer request for the same action (`supersededById`). */

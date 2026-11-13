@@ -4427,6 +4427,10 @@
   "approval": {
     "expiredChip": "Scaduta · {{when}}",
     "canceledChip": "Annullata · {{when}}",
+    "line": {
+      "after": "viene eseguita dopo “{{title}}”",
+      "notRun": "non eseguita: la richiesta precedente non è stata approvata"
+    },
     "waitingFor": "In attesa di {{name}}",
     "waitingAdmin": "In attesa di un admin",
     "reasonLine": "Motivo: {{reason}}",
@@ -5020,8 +5024,15 @@
       "canceled": "Annullata",
       "failed": "Non riuscita",
       "running": "In esecuzione",
-      "scheduled": "Programmata"
+      "scheduled": "Programmata",
+      "queued": "In coda",
+      "notRun": "Non eseguita"
     },
+    "queuedLine": "Approvata. Viene eseguita dopo “{{title}}”, chiesta prima.",
+    "notRunRefused": "“{{title}}”, chiesta prima, è stata rifiutata dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "notRunExpired": "“{{title}}”, chiesta prima, è scaduta senza decisione dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "notRunEarlier": "Una richiesta precedente è stata rifiutata o è scaduta dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "position": "{{n}} di {{total}}",
     "expiredLine": "Nessuno ha deciso entro 24 h, quindi non è stato fatto nulla.",
     "canceledLine": "L'esecuzione si è fermata prima di una decisione.",
     "supersededLine": "L'agente ha chiesto di nuovo con una versione più recente. Questa non è stata eseguita.",

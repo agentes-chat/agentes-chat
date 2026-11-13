@@ -78,7 +78,7 @@ function settledAt(a: Approval): string | null {
 }
 
 /**
- * The order on one card (the server's `approval-order.ts`): the agent's actions run in the order it asked, whatever
+ * The order on one card (ADR 0179, the server's `approval-order.ts`): the agent's actions run in the order it asked, whatever
  * the order they were decided in. An approved action waits for every request asked before it by another of its runs
  * until that one is settled, and for its own run's other requests (the run goes on once all of them are decided).
  * Actions approved ahead and a mission's requests stand outside the line.

@@ -4180,6 +4180,10 @@
   "approval": {
     "expiredChip": "Kedaluwarsa · {{when}}",
     "canceledChip": "Dibatalkan · {{when}}",
+    "line": {
+      "after": "berjalan setelah “{{title}}”",
+      "notRun": "tidak dijalankan: permintaan sebelumnya tidak disetujui"
+    },
     "waitingFor": "Menunggu {{name}}",
     "waitingAdmin": "Menunggu admin",
     "reasonLine": "Alasan: {{reason}}",
@@ -4718,8 +4722,15 @@
       "canceled": "Dibatalkan",
       "failed": "Gagal",
       "running": "Berjalan",
-      "scheduled": "Dijadwalkan"
+      "scheduled": "Dijadwalkan",
+      "queued": "Dalam antrean",
+      "notRun": "Tidak dijalankan"
     },
+    "queuedLine": "Disetujui. Berjalan setelah “{{title}}”, yang diminta lebih dulu.",
+    "notRunRefused": "“{{title}}”, yang diminta lebih dulu, ditolak setelah permintaan ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "notRunExpired": "“{{title}}”, yang diminta lebih dulu, kedaluwarsa tanpa keputusan setelah permintaan ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "notRunEarlier": "Permintaan sebelumnya ditolak atau kedaluwarsa setelah yang ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "position": "{{n}} dari {{total}}",
     "expiredLine": "Tidak ada yang memutuskan dalam 24 jam, jadi tidak ada yang dilakukan.",
     "canceledLine": "Proses berhenti sebelum ada keputusan.",
     "supersededLine": "Agen meminta lagi dengan versi yang lebih baru. Yang ini tidak dijalankan.",

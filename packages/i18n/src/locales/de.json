@@ -4311,6 +4311,10 @@
   "approval": {
     "expiredChip": "Abgelaufen · {{when}}",
     "canceledChip": "Abgebrochen · {{when}}",
+    "line": {
+      "after": "läuft nach „{{title}}“",
+      "notRun": "nicht ausgeführt: die Anfrage davor wurde nicht freigegeben"
+    },
     "waitingFor": "Wartet auf {{name}}",
     "waitingAdmin": "Wartet auf einen Admin",
     "reasonLine": "Grund: {{reason}}",
@@ -4873,8 +4877,15 @@
       "canceled": "Abgebrochen",
       "failed": "Fehlgeschlagen",
       "running": "Läuft",
-      "scheduled": "Geplant"
+      "scheduled": "Geplant",
+      "queued": "In der Warteschlange",
+      "notRun": "Nicht ausgeführt"
     },
+    "queuedLine": "Freigegeben. Läuft nach „{{title}}“, das vorher angefragt wurde.",
+    "notRunRefused": "„{{title}}“, vorher angefragt, wurde abgelehnt, nachdem diese Anfrage freigegeben war. Deshalb wurde sie nicht ausgeführt.",
+    "notRunExpired": "„{{title}}“, vorher angefragt, ist ohne Entscheidung abgelaufen, nachdem diese Anfrage freigegeben war. Deshalb wurde sie nicht ausgeführt.",
+    "notRunEarlier": "Eine vorherige Anfrage wurde abgelehnt oder ist abgelaufen, nachdem diese freigegeben war. Deshalb wurde sie nicht ausgeführt.",
+    "position": "{{n}} von {{total}}",
     "expiredLine": "Niemand hat innerhalb von 24 Std. entschieden, also ist nichts passiert.",
     "canceledLine": "Die Ausführung hat vor einer Entscheidung aufgehört.",
     "supersededLine": "Der Agent hat mit einer neueren Version erneut gefragt. Diese wurde nicht ausgeführt.",
