@@ -823,7 +823,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       resolved.add(str(params.approvalId));
       return;
     }
-    if (method === "approval/requested") {
+    if (method === "approval/requested" || method === "approval/updated") {
       // The ask answered here, by the policy every brain follows: the host hears one of its own `choiceId`s, and the
       // thread gets the subject and the decision as a call, so a refusal is visible instead of silent.
       const approvalId = str(params.approvalId);
@@ -834,8 +834,15 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       const toolName = str(subject.toolName);
       const access = str(subject.access);
       const offered = offersOf(params);
+      // `approval/decide` takes five fields, and two of them are the host's own: the requirement this decision answers
+      // (a shell approval has one per stage) and the session. Sent with three, the host answered "Invalid params" and
+      // the turn waited for a decision it never took — the silence every work run ended in.
+      const requirement = params.currentRequirementId;
+      const requirementIndex = isRecord(requirement) ? Number(requirement.sourceIndex) : Number.NaN;
+      const askedIn = str(params.sessionId) || sessionId || "";
+      const key = `${approvalId}:${Number.isFinite(requirementIndex) ? requirementIndex : 0}`;
       // Nothing to answer without an id, and one decision per ask: a host that repeats an approval gets no second.
-      if (!approvalId || answered.has(approvalId)) return;
+      if (!approvalId || answered.has(key)) return;
       const verdict = museApprovalVerdict({
         subject: {
           kind,
@@ -855,13 +862,19 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       // waiting; when not even a refusal was offered the ask is left to the host.
       const choice = museChoice(offered, verdict);
       if (!choice) return;
-      answered.add(approvalId);
+      answered.add(key);
       // A host that takes the decision answers `approval/resolved`; one that doesn't leaves the turn waiting. So the
       // reply is watched: the error is kept for the message a stuck turn ends with, and a decision the host didn't take
       // is sent once more before the watchdog has to close the turn.
       const decide = () =>
         host
-          .request("approval/decide", { approvalId, choiceId: choice.choiceId, commandId: uuidv7() })
+          .request("approval/decide", {
+            approvalId,
+            choiceId: choice.choiceId,
+            commandId: uuidv7(),
+            requirementId: requirement,
+            sessionId: askedIn,
+          })
           .catch((err: unknown) => {
             approvalError = err instanceof Error ? err.message : String(err);
           });

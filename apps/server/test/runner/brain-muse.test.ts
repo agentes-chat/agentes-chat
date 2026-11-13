@@ -89,6 +89,7 @@ type FakeLog = {
   offered?: string[];
   decide?: { approvalId: string; choiceId: string; commandId: string };
   capabilities?: { requestedCapabilities?: string[] };
+  invalid?: string[];
   accepted?: string;
   rejected?: string;
 };
@@ -477,6 +478,8 @@ test("a read the host asks about is taken with the offer it made, on a UUIDv7 co
   expect(input).toMatchObject({ kind: "command", command: "ls", decision: "allow", scope: "once" });
   expect(input.offered).toContain(input.choiceId);
   expect(call?.executed?.content).toContain("allowed (once)");
+  // Every field the wire requires, or the host answers "Invalid params" and keeps waiting for a decision.
+  expect(fakeLog(file).some((l) => l.invalid)).toBe(false);
   // What the host heard: a choice of its own, on a command of its own kind of id.
   const decide = fakeLog(file).find((l) => l.decide)?.decide;
   expect(decide?.choiceId).toBe(input.choiceId as string);

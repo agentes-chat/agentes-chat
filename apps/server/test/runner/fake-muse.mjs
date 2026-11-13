@@ -109,7 +109,8 @@ function finishTurn() {
 /** Parks an approval the turn waits on, as the host does mid-turn. */
 function askApproval() {
   const approvalId = v7();
-  approval = { approvalId, offered: OFFERS.map((o) => o.choiceId) };
+  const requirementId = { approvalId, sourceIndex: 0 };
+  approval = { approvalId, requirementId, offered: OFFERS.map((o) => o.choiceId) };
   // A subject is either a shell command or a file it writes: both are asks the policy has to read.
   const file = process.env.FAKE_MUSE_APPROVAL_PATH;
   notification("approval/requested", {
@@ -119,6 +120,8 @@ function askApproval() {
       ? { kind: "path", path: file }
       : { kind: "command", command: process.env.FAKE_MUSE_APPROVAL_COMMAND ?? "ls" },
     availableChoices: OFFERS,
+    // The two fields a client must echo back: the requirement this decision answers, and the session.
+    currentRequirementId: requirementId,
   });
   log({ requested: approvalId, offered: approval.offered });
   // A client that never answers: the host gives up and ends the turn, so a brain that waits on the reply shows up as
@@ -209,6 +212,15 @@ createInterface({ input: process.stdin })
     if (frame.method === "approval/decide") {
       const asked = frame.params ?? {};
       log({ decide: { approvalId: asked.approvalId, choiceId: asked.choiceId, commandId: asked.commandId } });
+      // The wire's own five, as 1.4.18 refuses a decision without them ("Invalid params: approval/decide params").
+      const missing = ["approvalId", "choiceId", "commandId", "requirementId", "sessionId"].filter(
+        (k) => asked[k] === undefined || asked[k] === null || asked[k] === "",
+      );
+      if (missing.length) {
+        log({ invalid: missing });
+        say({ id: frame.id, error: { code: -32602, message: "Invalid params: approval/decide params" } });
+        return;
+      }
       if (!approval || asked.approvalId !== approval.approvalId) {
         say({ id: frame.id, error: { code: -32602, message: "unknown approvalId" } });
         finishTurn();
