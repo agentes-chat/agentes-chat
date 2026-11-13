@@ -183,8 +183,10 @@ function fromResponse(response: Response): ModelResult {
       try {
         input = JSON.parse(item.arguments || "{}") as Record<string, unknown>;
       } catch {
-        input = {};
+        throw new ProviderError("could not read the model's reply: invalid tool arguments", true);
       }
+      if (!input || typeof input !== "object" || Array.isArray(input))
+        throw new ProviderError("could not read the model's reply: tool arguments must be an object", true);
       content.push({ type: "tool_use", id: item.call_id, name: item.name, input });
     } else if (item.type === "reasoning") {
       content.push({ type: "opaque", provider: "openai", data: item as unknown as Record<string, unknown> });
