@@ -84,6 +84,12 @@ const TURN_START_TIMEOUT_MS = 60_000;
  * catches a host that will never speak again — a run (and a person) waiting on a process that is already dead inside.
  */
 const TURN_DEADLINE_MS = 30 * 60_000;
+/**
+ * How long the host may say nothing at all before the turn is closed. A working turn speaks constantly (a delta, a
+ * status, an item), so silence is the only reliable sign that it is stuck — and a stuck host held a person's run for
+ * half an hour before the wall-clock deadline noticed.
+ */
+const SILENCE_MS = 4 * 60_000;
 
 /** Muse's key variable: an account may carry one, and it must not answer for the sign-in. */
 export const MUSE_KEY_ENV = "META_API_KEY";
@@ -426,6 +432,10 @@ export class MuseEventMapper {
   private readonly said = new Map<string, number>();
   /** The whole answer, in the order it was said: what a `done` carries, which is what the engine posts. */
   spoken = "";
+  /** A tool call the host opened and hasn't finished: silence with one of those is work, not a stall. */
+  get inFlight() {
+    return this.items.size > 0;
+  }
   usage = { input: 0, output: 0, cacheRead: 0, model: undefined as string | undefined };
   /** The turn called a tool: a failure after that loses work the API couldn't see, so a retry is the person's call. */
   worked = false;
@@ -689,6 +699,8 @@ export interface MuseTurnOptions {
   /** Tests: how long `turn/start` may go unanswered, and how long the whole turn may live. */
   turnStartMs?: number;
   deadlineMs?: number;
+  /** Tests: how long the host may say nothing before the turn is closed (`SILENCE_MS`). */
+  silenceMs?: number;
 }
 
 /** The turn's outcome, once its host is gone. */
@@ -785,7 +797,10 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     done = resolve;
   });
 
+  /** When the host last said anything (see `SILENCE_MS`). */
+  let heard = Date.now();
   const host = new MuseHost(child, (method, params) => {
+    heard = Date.now();
     if (method === "turn/completed") {
       // The status is read here, not after `turnOver` resolves: the notification also resolves it, and a failed or
       // cancelled turn would otherwise be decided as the success its `done` reports.
@@ -888,6 +903,20 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     killTree(child, "SIGKILL");
     done();
   }, deadlineMs);
+  const silenceMs = opts.silenceMs ?? SILENCE_MS;
+  const silence = setInterval(
+    () => {
+      if (finished) return;
+      // A long tool of its own (a build, a test run) says nothing for minutes and is not stuck.
+      if (mapper.inFlight) return;
+      if (Date.now() - heard < silenceMs) return;
+      finished = true;
+      failure = `The Muse host stopped answering: nothing for ${silenceMs >= 60_000 ? `${Math.round(silenceMs / 60_000)} minutes` : `${silenceMs}ms`}, so the turn was closed.`;
+      killTree(child, "SIGKILL");
+      done();
+    },
+    Math.min(15_000, Math.max(250, Math.floor(silenceMs / 4))),
+  );
 
   try {
     await host.request(
@@ -966,6 +995,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       const said = clean(host.stderr.trim()) || message;
       await host.close().catch(() => undefined);
       clearTimeout(deadline);
+      clearInterval(silence);
       const missing = /ENOENT|not installed/i.test(said);
       opts.emit({
         ...museProblem(missing ? "Muse Code's CLI is not installed on this computer." : said)[0],
@@ -979,6 +1009,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
 
   await turnOver;
   clearTimeout(deadline);
+  clearInterval(silence);
   await host.close().catch(() => undefined);
   if (opts.signal.aborted) return fail("canceled", "The turn was canceled.");
   if (missingHost) return fail("muse_missing", "Muse Code's CLI is not installed on this computer.", true);

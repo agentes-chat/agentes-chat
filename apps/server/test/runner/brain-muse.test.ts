@@ -568,6 +568,20 @@ test("a resumed session is told about the bridge too", async () => {
   ]);
 });
 
+test("a host that goes quiet after taking the turn is closed instead of holding the run", async () => {
+  // The host accepted the turn and then said nothing: without a watchdog the turn waited for the wall-clock deadline
+  // (half an hour) while a person watched a spinner.
+  // The host takes the turn (`turn/started`), then says nothing at all.
+  process.env.FAKE_MUSE_SILENT = "turn";
+  const started = Date.now();
+  const { events } = await turn({}, { silenceMs: 500 });
+  expect(Date.now() - started).toBeLessThan(10_000);
+  const last = events.at(-1) as { type: string; message?: string };
+  expect(last.type).toBe("error");
+  expect(last.message).toContain("stopped answering");
+  delete process.env.FAKE_MUSE_SILENT;
+});
+
 test("a lost session starts a new one instead of failing", async () => {
   process.env.FAKE_MUSE_LOST = "1";
   const { events, sessions } = await turn();
