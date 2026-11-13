@@ -46,6 +46,7 @@ const THIS_MONTH: Words = [
   "Ends in 9f2c · 1,240 decisions this month · $0.13",
 ];
 const REPLACE: Words = ["Trocar a chave", "Replace the key"];
+const CHECK_AGAIN: Words = ["Verificar de novo", "Check again"];
 const KEYS_PAGE: Words = ["Abrir as chaves de API", "Open API keys"];
 /** Each state of the card: its chip, its key's line, the note under it, its buttons after the ⓘ, its links before "How Jev works". */
 const STATES: {
@@ -348,6 +349,83 @@ describe("Jev's key in Configurações › IA e uso", () => {
     ).not.toContain("Trocar a chave");
     expect(within(card()).getByRole("link", { name: "Abrir as chaves de API" })).toBeTruthy();
   });
+
+  for (const [i, lang] of [
+    [0, "pt-BR"],
+    [1, "en"],
+  ] as const) {
+    test(`OpenCode stays server-managed with or without a key, in ${lang}`, async () => {
+      const cases: { key: JevKey; note: Words; chip: Words }[] = [
+        {
+          key: { ...OFF, provider: "opencode", model: "jev-1.13-free", supportsVision: false },
+          note: [
+            "Configure a chave do OpenCode nas configurações deste servidor.",
+            "Set up the OpenCode key in this server's settings.",
+          ],
+          chip: ["Desligado", "Off"],
+        },
+        {
+          key: {
+            ...ON,
+            provider: "opencode",
+            model: "jev-1.13-free",
+            supportsVision: false,
+            source: "env",
+            month: { decisions: 3, costUsd: 0 },
+          },
+          note: ["Configurado no servidor.", "Configured on the server."],
+          chip: ["Ligado", "On"],
+        },
+        {
+          key: { ...ON, provider: "opencode", source: "env", state: "invalid" },
+          note: [
+            "A chave do OpenCode foi recusada ou expirou. Atualize-a nas configurações deste servidor.",
+            "The OpenCode key was refused or expired. Update it in this server's settings.",
+          ],
+          chip: ["Chave recusada", "Key not accepted"],
+        },
+        {
+          key: { ...ON, provider: "opencode", source: "env", state: "no_credit" },
+          note: [
+            "O OpenCode não liberou o Jev. Confira o acesso nas configurações deste servidor.",
+            "OpenCode hasn't enabled Jev. Check access in this server's settings.",
+          ],
+          chip: ["Indisponível", "Unavailable"],
+        },
+      ];
+      for (const { key, note, chip } of cases) {
+        const { state, services } = await open({ aiStatus: routed(key.source ? "jev" : "rules"), jev: key });
+        if (lang === "en") {
+          await act(async () => services.i18n.changeLanguage("en"));
+          await settle(3);
+        }
+        expect(card().querySelector(".ac-brand")?.getAttribute("data-mark")).toBe("opencode");
+        expect(card().textContent).toContain("jev-1.13-free");
+        expect(card().querySelector(".ac-chip")?.textContent).toBe(chip[i]);
+        expect(card().textContent).toContain(note[i]);
+        expect(card().textContent).not.toMatch(/TypeSafe|Enxerga a tela|Sees the screen|TYPESAFE_API_KEY/);
+        expect(card().querySelector('input[type="password"]')).toBeNull();
+        expect(card().querySelector(".jev-steps")).toBeNull();
+        expect(
+          within(card())
+            .queryAllByRole("link")
+            .map((link) => link.getAttribute("href")),
+        ).toEqual([`https://agentes.chat/${lang === "en" ? "" : "pt/"}docs/jev`]);
+        expect(
+          within(card())
+            .queryAllByRole("button")
+            .map((button) => button.getAttribute("aria-label") ?? button.textContent),
+        ).toEqual([ABOUT[i], ...(key.source ? [CHECK_AGAIN[i]] : [])]);
+        if (key.source) {
+          await click(within(card()).getByRole("button", { name: CHECK_AGAIN[i] }));
+          expect(calls(state, "system.checkJev")).toEqual([[]]);
+        }
+        expect(calls(state, "system.saveJev")).toEqual([]);
+        expect(calls(state, "system.removeJev")).toEqual([]);
+        cleanup();
+      }
+    });
+  }
 
   for (const [i, lang] of [
     [0, "pt-BR"],

@@ -1,8 +1,9 @@
 import type { KeyWrapper } from "@agenteschat/adapters";
-import { and, type Database, type Executor, eq, gte, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, gte, or, schema, sql } from "@agenteschat/db";
 import { type AuditEntry, auditEveryOrg } from "./audit";
 import { openSecret, sealSecret } from "./crypto";
 import { ConflictError, ValidationError } from "./errors";
+import { type JevProvider, type JevProviderProfile, resolveJevProvider, validateJevResponse } from "./jev-provider";
 import { monthStartUtc } from "./usage";
 
 const { instanceSecrets, usageRecords } = schema;
@@ -72,13 +73,19 @@ const KEY_SHAPE = /^[\x21-\x7E]+$/;
  * 422, such as an image outside 280 to 1568 px a side), which says nothing about the key. TypeSafe documents no
  * status for an account out of credit, so both 402 and credit words in the body count.
  */
-export function jevStateOf(status: number, body?: unknown): JevState | null {
+export function jevStateOf(status: number, body?: unknown, provider: JevProvider = "typesafe"): JevState | null {
   if (status >= 200 && status < 300) return "ok";
   const detail = (body as { detail?: { error_type?: unknown; message?: unknown } | string } | null | undefined)?.detail;
   const words = typeof detail === "string" ? detail : `${detail?.error_type ?? ""} ${detail?.message ?? ""}`;
-  if (status === 402 || CREDIT_WORDS.test(words)) return "no_credit";
+  const error = (body as { error?: { code?: unknown; type?: unknown; message?: unknown } } | null)?.error;
+  const gatewayWords = `${error?.type ?? ""} ${error?.code ?? ""} ${error?.message ?? ""}`;
+  if (status === 402 || CREDIT_WORDS.test(provider === "opencode" ? gatewayWords : words)) return "no_credit";
   // 403 is TypeSafe's answer to a request without a key (probed 2026-10-26).
-  if (status === 401 || status === 403) return "invalid";
+  if (status === 401 || (status === 403 && provider === "typesafe")) return "invalid";
+  if (status === 403 && provider === "opencode")
+    return /^(api_key_expired|invalid_api_key|api_key_invalid|missing_api_key)$/.test(String(error?.code ?? ""))
+      ? "invalid"
+      : "down";
   if (status === 429) return "rate_limited";
   if (status >= 500) return "down";
   return null;
@@ -90,17 +97,29 @@ export interface JevCall {
   headers?: Record<string, string>;
   fetch?: typeof fetch;
   baseURL?: string;
+  profile?: JevProviderProfile;
 }
 
 /** One `POST /v1/systemone`. `state` is null when our own deadline passed or the answer is the request's fault. */
 async function systemOne(apiKey: string, call: JevCall) {
-  const base = (call.baseURL ?? "https://api.typesafe.ai").replace(/\/$/, "");
+  const profile = call.profile ?? resolveJevProvider();
+  const base = (profile.provider === "opencode" ? profile.baseURL : (call.baseURL ?? profile.baseURL)).replace(
+    /\/$/,
+    "",
+  );
+  const request = call.body as { assets?: unknown; questions?: Record<string, { type?: string }>; model?: string };
+  if (
+    profile.provider === "opencode" &&
+    (request.assets !== undefined || Object.values(request.questions ?? {}).some((q) => q.type === "box"))
+  )
+    throw new Error("OpenCode Jev: images and Box questions are not enabled");
+  const payload = profile.provider === "opencode" ? { ...request, model: profile.model } : call.body;
   let res: Response;
   try {
     res = await (call.fetch ?? fetch)(`${base}/v1/systemone`, {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json", ...call.headers },
-      body: JSON.stringify(call.body),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(call.timeoutMs),
     });
   } catch (error) {
@@ -111,7 +130,7 @@ async function systemOne(apiKey: string, call: JevCall) {
   const body: unknown = await res.json().catch(() => null);
   const seconds = Number(res.headers.get("retry-after"));
   return {
-    state: jevStateOf(res.status, body),
+    state: jevStateOf(res.status, body, profile.provider),
     status: res.status,
     body,
     retryAfterMs: seconds > 0 ? seconds * 1000 : undefined,
@@ -124,9 +143,26 @@ export async function callJev<T>(source: JevKeySource, call: JevCall): Promise<T
   const apiKey = await jev.key();
   if (!apiKey) throw new JevOffError();
   const r = await systemOne(apiKey, call);
+  const profile = call.profile ?? resolveJevProvider();
+  if (r.state === "ok" && profile.provider === "opencode") {
+    try {
+      const request = call.body as { questions?: Record<string, unknown> };
+      validateJevResponse(r.body, request.questions ?? {});
+      if ((r.body as { model?: unknown }).model !== profile.model)
+        throw new Error("OpenCode Jev returned an unexpected model");
+    } catch (error) {
+      // Malformed 200s are provider failures too: repeated ones use the same outage cooldown.
+      jev.report("down", undefined, apiKey);
+      throw error;
+    }
+  }
   if (r.state) jev.report(r.state, r.retryAfterMs, apiKey);
   if (r.state !== "ok" || r.body === null) {
-    throw new Error(r.status ? `TypeSafe answered ${r.status}` : "TypeSafe didn't answer");
+    const errorCode = (r.body as { error?: { code?: unknown } } | null)?.error?.code;
+    const code = typeof errorCode === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(errorCode) ? ` (${errorCode})` : "";
+    throw new Error(
+      r.status ? `${profile.displayName} answered ${r.status}${code}` : `${profile.displayName} didn't answer`,
+    );
   }
   return r.body as T;
 }
@@ -134,7 +170,7 @@ export async function callJev<T>(source: JevKeySource, call: JevCall): Promise<T
 /** A tiny real call (about 50 tokens): only a real call can say that a key has no credit. */
 export async function checkJevKey(
   apiKey: string,
-  o: { fetch?: typeof fetch; baseURL?: string } = {},
+  o: { fetch?: typeof fetch; baseURL?: string; profile?: JevProviderProfile } = {},
 ): Promise<JevState> {
   const question = {
     type: "noul",
@@ -144,8 +180,16 @@ export async function checkJevKey(
   const r = await systemOne(apiKey, {
     ...o,
     timeoutMs: CHECK_TIMEOUT_MS,
-    body: { model: "jev-latest", state: "ok", questions: { ok: question } },
+    body: { model: o.profile?.model ?? "jev-latest", state: "ok", questions: { ok: question } },
   });
+  if (r.state === "ok" && o.profile?.provider === "opencode") {
+    try {
+      validateJevResponse(r.body, { ok: question });
+      if ((r.body as { model?: unknown }).model !== o.profile.model) return "unchecked";
+    } catch {
+      return "unchecked";
+    }
+  }
   return r.state ?? "unchecked";
 }
 
@@ -155,7 +199,15 @@ export async function jevMonth(db: Database, now = new Date()) {
   const [row] = await db
     .select({ decisions: sql<number>`count(*)::int`, cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}), 0)` })
     .from(usageRecords)
-    .where(and(eq(usageRecords.provider, "typesafe"), gte(usageRecords.createdAt, monthStartUtc(now))));
+    .where(
+      and(
+        or(
+          eq(usageRecords.provider, "typesafe"),
+          and(eq(usageRecords.provider, "opencode"), eq(usageRecords.kind, "router")),
+        ),
+        gte(usageRecords.createdAt, monthStartUtc(now)),
+      ),
+    );
   return { decisions: row?.decisions ?? 0, costNanoUsd: Number(row?.cost ?? 0) };
 }
 
@@ -168,8 +220,8 @@ export async function deleteJevKey(tx: Executor, actor: AuditEntry["actor"]) {
   if (gone) await auditEveryOrg(tx, NAME, actor, "jev.key_removed", { hint: gone.hint });
 }
 
-const envError = () =>
-  new ConflictError("The Jev key is set in this server's settings (TYPESAFE_API_KEY).", "jev_key_env");
+const envError = (envName = "TYPESAFE_API_KEY") =>
+  new ConflictError(`The Jev key is set in this server's settings (${envName}).`, "jev_key_env");
 const invalidError = () => new ValidationError("TypeSafe didn't accept this key.", "jev_key_invalid");
 
 /**
@@ -183,13 +235,16 @@ export function createJevKey(deps: {
   envKey?: string;
   fetch?: typeof fetch;
   baseURL?: string;
+  profile?: JevProviderProfile;
   now?: () => number;
 }): JevKey {
+  const profile = deps.profile ?? resolveJevProvider();
+  const envOnly = profile.provider === "opencode";
   const now = deps.now ?? Date.now;
   const env = deps.envKey?.trim() || null;
   // An env key that can't be sent reads as not accepted, and nothing calls with it.
   const envKey = env && KEY_SHAPE.test(env) ? env : null;
-  const tsa = { fetch: deps.fetch, baseURL: deps.baseURL };
+  const tsa = { fetch: deps.fetch, baseURL: deps.baseURL, profile };
   /** The saved row as last read. `key` is null when it doesn't open (another `AGENTES_SECRET`). */
   let saved: { key: string | null; hint: string; at: number } | null = null;
   let readAt = Number.NEGATIVE_INFINITY;
@@ -220,7 +275,7 @@ export function createJevKey(deps: {
     restart(key ? "unchecked" : "invalid");
   }
   const refresh = () => {
-    if (env || now() - readAt < REREAD_MS) return Promise.resolve();
+    if (envOnly || env || now() - readAt < REREAD_MS) return Promise.resolve();
     reading ??= read().finally(() => {
       reading = null;
     });
@@ -261,7 +316,7 @@ export function createJevKey(deps: {
       return snapshot();
     },
     async save(apiKey, userId) {
-      if (env) throw envError();
+      if (envOnly || env) throw envError(profile.envName);
       const key = apiKey.trim();
       if (!KEY_SHAPE.test(key)) throw invalidError();
       const checked = await checkJevKey(key, tsa);
@@ -286,7 +341,7 @@ export function createJevKey(deps: {
       return snapshot();
     },
     async remove(userId) {
-      if (env) throw envError();
+      if (envOnly || env) throw envError(profile.envName);
       await deps.db.transaction((tx) => deleteJevKey(tx, { type: "person", id: userId }));
       saved = null;
       readAt = now();

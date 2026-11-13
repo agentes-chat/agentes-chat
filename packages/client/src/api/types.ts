@@ -28,11 +28,17 @@ export interface ServerTelemetry {
 
 /** The installation's Jev key, for its pinned owner on a self-hosted server (`GET /api/app/jev`, ADR 0073). */
 export interface JevKey {
-  /** `env`: `TYPESAFE_API_KEY`, read-only here. `settings`: added in Settings. Null: none. */
+  /** The decision provider; absent on servers using the original TypeSafe integration. */
+  provider?: "typesafe" | "opencode";
+  /** The server's selected Jev model. */
+  model?: string;
+  /** Whether this integration can judge screenshots, independently of whether its key works. */
+  supportsVision?: boolean;
+  /** `env`: the selected provider's server key, read-only here. `settings`: added in Settings. Null: none. */
   source: "env" | "settings" | null;
   /** The key's last 4 characters (the key itself is never returned). */
   hint: string | null;
-  /** What its owner can fix: TypeSafe refused the key, or its account is out of credit. Else `ok`. */
+  /** What its owner can fix: the provider refused the key, or access is blocked by billing. Else `ok`. */
   state: "off" | "ok" | "invalid" | "no_credit";
   /** Jev's calls this month (UTC), every workspace together. */
   month: { decisions: number; costUsd: number };

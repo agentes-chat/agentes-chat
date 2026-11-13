@@ -9684,6 +9684,15 @@
     "discard": "Weggooien"
   },
   "jev": {
+    "opencode": {
+      "about": "Jev neemt snel beslissingen via OpenCode. Deze integratie gebruikt alleen tekst. Beoordelingen van afbeeldingen staan uit.",
+      "lead": "{{model}} · Tekstbeslissingen via OpenCode.",
+      "serverConfigured": "Ingesteld op de server.",
+      "serverMissing": "Stel de OpenCode-sleutel in bij de instellingen van deze server.",
+      "envInvalid": "De OpenCode-sleutel is geweigerd of verlopen. Werk deze bij in de instellingen van deze server.",
+      "unavailable": "OpenCode heeft Jev niet ingeschakeld. Controleer de toegang in de instellingen van deze server.",
+      "unavailableState": "Niet beschikbaar"
+    },
     "title": "Jev",
     "about": "Een snel model van TypeSafe, gemaakt voor snelle beslissingen. agentes.chat stelt het kleine vragen, zoals wie moet antwoorden. Je betaalt TypeSafe rechtstreeks.",
     "lead": "Helpt je agents samen te werken als team.",

@@ -115,6 +115,7 @@ import {
   reauthorizeStream,
   recheckStream,
   releaseRunPhones,
+  resolveJevProvider,
   resolveSummaryModel,
   type SandboxDeps,
   type ScheduleReader,
@@ -245,12 +246,14 @@ export function buildEngine(o: EngineOptions) {
       skillAfter: config.LEARN_SKILL_AFTER,
     },
   };
-  // The installation's Jev key (ADR 0073): `TYPESAFE_API_KEY`, else the one its owner adds in Settings.
+  // The selected Jev provider owns its credential; OpenCode never inherits the saved TypeSafe key.
+  const jevProfile = resolveJevProvider(config.JEV_PROVIDER);
   const jevKey = createJevKey({
     db,
     keyWrapper: adapters.keyWrapper,
     keyWrappers,
-    envKey: config.TYPESAFE_API_KEY,
+    envKey: config.JEV_PROVIDER === "opencode" ? config.OPENCODE_JEV_API_KEY : config.TYPESAFE_API_KEY,
+    profile: jevProfile,
     fetch: o.jevFetch,
   });
   // The small model that routes and judges on an organization's keys (ADR 0074): the deployment's own on a
@@ -268,6 +271,7 @@ export function buildEngine(o: EngineOptions) {
         db,
         createJevJudge({
           key: jevKey,
+          profile: jevProfile,
           gateway,
           timeoutMs: config.JEV_TIMEOUT_MS,
           visionModel: config.JEV_VISION_MODEL,
@@ -279,7 +283,7 @@ export function buildEngine(o: EngineOptions) {
     );
   }
   // Screenshots go only to Jev's vision model: with a fake judge (tests) nothing looks at them.
-  const vision = o.judge ? undefined : () => jevKey.usable();
+  const vision = o.judge ? undefined : () => jevProfile.supportsVision && jevKey.usable();
   // Nothing is judged for a workspace on hold or suspended: Jev bills the server, not the workspace.
   context.judge = standingJudge(db, context.judge);
   // The agents' conversation layer: a fast reply on the org's cheap model while a task works or waits.
@@ -824,7 +828,7 @@ export function buildEngine(o: EngineOptions) {
       quietByTyping: true,
       // Jev first whenever the installation has its key, unless ROUTER_STRATEGY=llm.
       ...((config.ROUTER_STRATEGY ?? "jev") === "jev"
-        ? { jev: { key: jevKey, timeoutMs: config.JEV_TIMEOUT_MS, fetch: o.jevFetch } }
+        ? { jev: { key: jevKey, profile: jevProfile, timeoutMs: config.JEV_TIMEOUT_MS, fetch: o.jevFetch } }
         : {}),
     },
   };

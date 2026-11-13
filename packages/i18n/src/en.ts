@@ -9853,6 +9853,16 @@ export const en = {
   },
   jev: {
     title: "Jev",
+    opencode: {
+      about:
+        "Jev makes fast decisions through OpenCode. This integration uses text only. Image judgments are turned off.",
+      lead: "{{model}} · Text decisions through OpenCode.",
+      serverConfigured: "Configured on the server.",
+      serverMissing: "Set up the OpenCode key in this server's settings.",
+      envInvalid: "The OpenCode key was refused or expired. Update it in this server's settings.",
+      unavailable: "OpenCode hasn't enabled Jev. Check access in this server's settings.",
+      unavailableState: "Unavailable",
+    },
     about:
       "A fast model by TypeSafe, made for quick decisions. agentes.chat asks it small questions, like who should answer. You pay TypeSafe directly.",
     lead: "Helps your agents work as a team.",

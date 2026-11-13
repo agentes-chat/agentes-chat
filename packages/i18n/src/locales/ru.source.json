@@ -23395,6 +23395,27 @@
   "edit.discard": {
     "value": "Discard"
   },
+  "jev.opencode.about": {
+    "value": "Jev makes fast decisions through OpenCode. This integration uses text only. Image judgments are turned off."
+  },
+  "jev.opencode.lead": {
+    "value": "{{model}} · Text decisions through OpenCode."
+  },
+  "jev.opencode.serverConfigured": {
+    "value": "Configured on the server."
+  },
+  "jev.opencode.serverMissing": {
+    "value": "Set up the OpenCode key in this server's settings."
+  },
+  "jev.opencode.envInvalid": {
+    "value": "The OpenCode key was refused or expired. Update it in this server's settings."
+  },
+  "jev.opencode.unavailable": {
+    "value": "OpenCode hasn't enabled Jev. Check access in this server's settings."
+  },
+  "jev.opencode.unavailableState": {
+    "value": "Unavailable"
+  },
   "jev.title": {
     "value": "Jev"
   },

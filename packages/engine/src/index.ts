@@ -160,6 +160,7 @@ export * from "./issue-work";
 export * from "./issues";
 export * from "./issues-view";
 export * from "./jev-key";
+export * from "./jev-provider";
 export * from "./jobs";
 export * from "./judge";
 export * from "./key-line";

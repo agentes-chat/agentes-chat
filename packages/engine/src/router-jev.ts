@@ -1,5 +1,6 @@
 import { cutText } from "./format";
 import { callJev, type JevKeySource, JevOffError } from "./jev-key";
+import { type JevProvider, type JevProviderProfile, jevReportedCostNanoUsd, resolveJevProvider } from "./jev-provider";
 import {
   asksAddressee,
   ROUTER_MESSAGE_CHARS,
@@ -31,6 +32,8 @@ import {
  * conversation goes in as written.
  */
 export interface JevUsage {
+  provider?: JevProvider;
+  costNanoUsd?: number;
   orgId: string;
   model: string;
   inputTokens: number;
@@ -74,9 +77,12 @@ export function createJevRouterStrategy(options: {
   recordUsage(usage: JevUsage): Promise<void>;
   baseURL?: string;
   model?: string;
+  profile?: JevProviderProfile;
   timeoutMs?: number;
   fetch?: typeof fetch;
 }): RouterStrategy {
+  const profile = options.profile ?? resolveJevProvider();
+  const model = profile.provider === "opencode" ? profile.model : (options.model ?? profile.model);
   return {
     name: "jev",
     on: () => typeof options.key === "string" || options.key.usable(),
@@ -182,17 +188,21 @@ export function createJevRouterStrategy(options: {
       const body = await callJev<{
         model?: string;
         answers?: Record<string, JevAnswer>;
-        usage?: { input_tokens?: number; output_tokens?: number };
+        usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
       }>(options.key, {
         fetch: options.fetch,
         baseURL: options.baseURL,
-        body: { state, model: options.model ?? "jev-latest", questions },
+        profile,
+        body: { state, model, questions },
         timeoutMs: options.timeoutMs ?? 2000,
       });
       await options
         .recordUsage({
           orgId: input.orgId,
-          model: body.model ?? options.model ?? "jev-latest",
+          model: body.model ?? model,
+          ...(profile.provider === "opencode"
+            ? { provider: profile.provider, costNanoUsd: jevReportedCostNanoUsd(body.usage) }
+            : {}),
           inputTokens: body.usage?.input_tokens ?? 0,
           outputTokens: body.usage?.output_tokens ?? 0,
         })

@@ -339,6 +339,19 @@ export const envVars = {
     section: "Agents",
     secret: true,
   },
+  JEV_PROVIDER: {
+    schema: z.enum(["typesafe", "opencode"]).default("typesafe"),
+    description:
+      "Provider for the installation's Jev decisions. `typesafe` keeps the original key and model. `opencode` uses only `OPENCODE_JEV_API_KEY`, the OpenCode System One endpoint and `jev-1.13-free`; image judgments are disabled. No automatic switch to a paid Jev model.",
+    section: "Agents",
+  },
+  OPENCODE_JEV_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "OpenCode Console key used only for Jev when `JEV_PROVIDER=opencode`. Configured on the server, never saved through the TypeSafe key form or sent to a browser. Without it Jev is off. The free offer is temporary; the existing small-model fallback may still incur its own API charges.",
+    section: "Agents",
+    secret: true,
+  },
   JEV_TIMEOUT_MS: {
     schema: z.coerce.number().int().min(200).max(30_000).default(2000),
     description:

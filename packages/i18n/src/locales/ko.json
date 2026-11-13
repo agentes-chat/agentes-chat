@@ -9264,6 +9264,15 @@
     "discard": "버리기"
   },
   "jev": {
+    "opencode": {
+      "about": "Jev는 OpenCode를 통해 빠르게 판단해요. 이 연동은 텍스트만 사용하며 이미지 판단은 꺼져 있어요.",
+      "lead": "{{model}} · OpenCode를 통한 텍스트 판단.",
+      "serverConfigured": "서버에 설정되어 있어요.",
+      "serverMissing": "이 서버의 설정에서 OpenCode 키를 설정하세요.",
+      "envInvalid": "OpenCode 키가 거부되었거나 만료되었어요. 이 서버의 설정에서 업데이트하세요.",
+      "unavailable": "OpenCode에서 Jev를 활성화하지 않았어요. 이 서버의 설정에서 접근 권한을 확인하세요.",
+      "unavailableState": "사용할 수 없음"
+    },
     "title": "Jev",
     "about": "TypeSafe가 만든 빠른 모델로, 빠른 결정을 위해 만들어졌어요. agentes.chat은 누가 답할지 같은 작은 질문을 Jev에게 물어요. 비용은 TypeSafe에 직접 결제해요.",
     "lead": "에이전트들이 팀으로 일하도록 도와요.",

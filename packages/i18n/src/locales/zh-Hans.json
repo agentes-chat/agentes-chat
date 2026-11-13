@@ -9315,6 +9315,15 @@
     "discard": "放弃"
   },
   "jev": {
+    "opencode": {
+      "about": "Jev 通过 OpenCode 快速做出判断。此集成仅使用文本，图像判断已关闭。",
+      "lead": "{{model}} · 通过 OpenCode 进行文本判断。",
+      "serverConfigured": "已在服务器上配置。",
+      "serverMissing": "请在此服务器的设置中配置 OpenCode 密钥。",
+      "envInvalid": "OpenCode 密钥被拒绝或已过期。请在此服务器的设置中更新。",
+      "unavailable": "OpenCode 尚未启用 Jev。请在此服务器的设置中检查访问权限。",
+      "unavailableState": "不可用"
+    },
     "title": "Jev",
     "about": "TypeSafe 推出的快速模型，专为快速决策而生。agentes.chat 会问它一些小问题，比如该由谁来回复。费用直接付给 TypeSafe。",
     "lead": "帮你的智能体像团队一样协作。",

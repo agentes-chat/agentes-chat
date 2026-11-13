@@ -9980,6 +9980,15 @@
     "discard": "Abandonner"
   },
   "jev": {
+    "opencode": {
+      "about": "Jev prend des décisions rapides via OpenCode. Cette intégration utilise uniquement du texte. Les évaluations d’images sont désactivées.",
+      "lead": "{{model}} · Décisions textuelles via OpenCode.",
+      "serverConfigured": "Configuré sur le serveur.",
+      "serverMissing": "Configurez la clé OpenCode dans les paramètres de ce serveur.",
+      "envInvalid": "La clé OpenCode a été refusée ou a expiré. Mettez-la à jour dans les paramètres de ce serveur.",
+      "unavailable": "OpenCode n’a pas activé Jev. Vérifiez l’accès dans les paramètres de ce serveur.",
+      "unavailableState": "Indisponible"
+    },
     "title": "Jev",
     "about": "Un modèle rapide de TypeSafe, conçu pour les décisions rapides. agentes.chat lui pose de petites questions, comme qui doit répondre. Vous payez TypeSafe directement.",
     "lead": "Aide vos agents à travailler en équipe.",

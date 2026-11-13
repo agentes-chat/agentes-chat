@@ -75,6 +75,7 @@ import { GITHUB_EVENT_JOB, type GitHubAppEvent, handleGitHubAppEvent } from "./g
 import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
 import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
+import type { JevProviderProfile } from "./jev-provider";
 import { DEEP_MENTION_THRESHOLD, DEEP_WAKE_HOP, MENTION_WAKE_THRESHOLD, mentionNeedsNothing } from "./judge";
 import { platformCapReached } from "./limits";
 import { wakeForAccessDecision } from "./machine-access";
@@ -222,7 +223,13 @@ export interface JobDeps extends RunExecutorDeps {
     /** Replaces the core small-model step (e.g. an optional external classifier). */
     strategy?: RouterStrategy;
     /** TypeSafe Jev as the chain's first step (the installation's key, never per org). */
-    jev?: { key: JevKeySource; timeoutMs?: number; fetch?: typeof fetch; baseURL?: string };
+    jev?: {
+      key: JevKeySource;
+      timeoutMs?: number;
+      fetch?: typeof fetch;
+      baseURL?: string;
+      profile?: JevProviderProfile;
+    };
     /**
      * The author's own plan as a step (ADR 0074 §3): the computers it picks on, and this server's address. Off
      * on the Cloud (`isAgentesCloud`), where Jev is ours. Absent: no plan step.
@@ -261,15 +268,16 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
             timeoutMs: jev.timeoutMs,
             fetch: jev.fetch,
             baseURL: jev.baseURL,
+            profile: jev.profile,
             recordUsage: async (u) => {
               await deps.gateway.recordExternalUsage({
                 orgId: u.orgId,
                 kind: "router",
-                provider: "typesafe",
+                provider: u.provider ?? "typesafe",
                 model: u.model,
                 inputTokens: u.inputTokens,
                 outputTokens: u.outputTokens,
-                costNanoUsd: jevCostNanoUsd(u.inputTokens),
+                costNanoUsd: u.costNanoUsd ?? jevCostNanoUsd(u.inputTokens),
               });
             },
           }),

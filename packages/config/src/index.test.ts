@@ -27,6 +27,7 @@ describe("loadConfig", () => {
     expect(config.ALLOW_SIGNUP).toBe(false);
     expect(config.AGENT_DEFAULT_MODEL).toBe("claude-sonnet-5-5");
     expect(config.ROUTER_MODEL).toBe("claude-haiku-5-5");
+    expect(config.JEV_PROVIDER).toBe("typesafe");
     expect(config.AGENT_MAX_HOPS).toBe(100);
     expect(config.S3_PATH_STYLE).toBe(false);
     expect(config.MILLIONSEND_API_URL).toBe("https://api.millionsend.com");
@@ -47,6 +48,16 @@ describe("loadConfig", () => {
     expect(loadConfig({ ...valid, SMTP_URL: "smtp://u:abc%2Fdef@smtp.example.com:587" }).SMTP_URL).toBe(
       "smtp://u:abc%2Fdef@smtp.example.com:587",
     );
+  });
+
+  test("OpenCode Jev is opt-in and its dedicated key is redacted", () => {
+    const config = loadConfig({ ...valid, JEV_PROVIDER: "opencode", OPENCODE_JEV_API_KEY: "synthetic-secret" });
+    expect(config.JEV_PROVIDER).toBe("opencode");
+    expect(config.OPENCODE_JEV_API_KEY).toBe("synthetic-secret");
+    expect(redactConfig(config).OPENCODE_JEV_API_KEY).toBe("********");
+    // A missing key leaves Jev off; it must not prevent the application from starting.
+    expect(loadConfig({ ...valid, JEV_PROVIDER: "opencode" }).OPENCODE_JEV_API_KEY).toBeUndefined();
+    expect(() => loadConfig({ ...valid, JEV_PROVIDER: "unknown" })).toThrow(/JEV_PROVIDER/);
   });
 
   test("agentes.chat's own servers have their legal links without extra settings", () => {

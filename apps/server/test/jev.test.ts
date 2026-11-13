@@ -123,6 +123,57 @@ test("with TYPESAFE_API_KEY set: shown read-only, 409 on save and remove", async
   expect((await owner("/api/app/jev", { method: "DELETE" })).status).toBe(409);
 });
 
+test("OpenCode uses its own endpoint and free model, exposing only safe provider metadata", async () => {
+  const calls: { url: string; authorization: string | null; model: unknown }[] = [];
+  const fetch = (async (url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body));
+    calls.push({ url: String(url), authorization: new Headers(init.headers).get("authorization"), model: body.model });
+    return Response.json({ model: "jev-1.13-free", answers: { ok: { type: "noul", noul: 1 } }, usage: { cost: 0 } });
+  }) as unknown as typeof globalThis.fetch;
+  t = await createTestServer({
+    env: { ALLOW_SIGNUP: "true", JEV_PROVIDER: "opencode", OPENCODE_JEV_API_KEY: SECRET_KEY },
+    jevFetch: fetch,
+  });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const check = await owner("/api/app/jev/check", { json: {} });
+  expect(check.status).toBe(200);
+  const text = await check.text();
+  expect(text).not.toContain(SECRET_KEY);
+  expect(JSON.parse(text)).toMatchObject({
+    provider: "opencode",
+    model: "jev-1.13-free",
+    supportsVision: false,
+    source: "env",
+    state: "ok",
+  });
+  expect(calls).toEqual([
+    {
+      url: "https://opencode.ai/inference/systemone/v1/systemone",
+      authorization: `Bearer ${SECRET_KEY}`,
+      model: "jev-1.13-free",
+    },
+  ]);
+  expect((await owner("/api/app/jev", { method: "PUT", json: { apiKey: SECRET_KEY } })).status).toBe(409);
+  expect((await owner("/api/app/jev", { method: "DELETE" })).status).toBe(409);
+  expect(await t.db.select().from(schema.instanceSecrets)).toEqual([]);
+});
+
+test("OpenCode without its key is off and read-only, even if a TypeSafe env key exists", async () => {
+  const { owner, ts } = await server({ env: { JEV_PROVIDER: "opencode", TYPESAFE_API_KEY: SECRET_KEY } });
+  expect(await (await owner("/api/app/jev")).json()).toMatchObject({
+    provider: "opencode",
+    model: "jev-1.13-free",
+    supportsVision: false,
+    source: null,
+    hint: null,
+    state: "off",
+  });
+  expect((await owner("/api/app/jev", { method: "PUT", json: { apiKey: SECRET_KEY } })).status).toBe(409);
+  expect((await owner("/api/app/jev", { method: "DELETE" })).status).toBe(409);
+  expect(ts.calls).toEqual([]);
+});
+
 test("ten saves or checks a minute, then 429", async () => {
   const { owner } = await server();
   for (let i = 0; i < 10; i++) {
