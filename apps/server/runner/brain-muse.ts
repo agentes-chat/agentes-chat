@@ -66,9 +66,9 @@ import { agentSecrets } from "./secrets";
  *   brain needs nothing from the workspace (the engine's context leads the prompt), so the flag bought nothing and
  *   armed a hole: a cloned repo must not reach a hook.
  * - Contributor mode is on for subscriptions by default; every host turns it off, or the workspace's code trains Meta.
- * - A `chat` turn (the team's right hand) takes the read-only posture — no shell, no write — and a call that is not
- *   our bridge's (`mcp__…`) ends the turn with `tools_not_locked`, the guard an allow-list would give us. Windows is
- *   still refused.
+ * - Locked rather than refused: a `chat` turn (the team's right hand) is started read-only and with `denyUnmatched`,
+ *   and its own Bash and Write are refused at the wire while the bridge's tools — a subject this can't read — are
+ *   allowed. The same "our tools and nothing else" `--tools ""` gives Claude. Windows is still refused.
  */
 
 const KILL_GRACE_MS = 5000;
@@ -291,6 +291,7 @@ export function museApprovalVerdict(input: {
   subject: MuseApprovalSubject;
   cwd: string;
   profile: CommandProfile;
+  chat?: boolean;
   home?: string;
   runnerHome?: string;
   grants?: readonly string[];
@@ -308,6 +309,14 @@ export function museApprovalVerdict(input: {
   const file = (input.subject.path ?? "").trim();
   const tool = command ? "Bash" : file ? "Write" : "";
   const call = tool === "Bash" ? { command } : { file_path: file };
+  // A `chat` turn (the right hand) is our bridge's tools and nothing else, as `--tools ""` is for Claude: its own Bash
+  // and Write are refused, and the turn goes on with them out of the way.
+  if (input.chat && tool)
+    return {
+      allow: false,
+      always: false,
+      why: `\`${tool}\` is not of the bridge, and a right hand runs the bridge's tools only`,
+    };
   if (tool) {
     // Deny list, secrets and a `plan` turn's everything: the same first verdict the prompt tools ask (`localVerdict`).
     const verdict = localVerdict(tool, call, scope, input.profile, MUSE_ASK);
@@ -329,6 +338,7 @@ export function museApprovalVerdict(input: {
   }
   // A subject this can't read is the class the host asked about *because* nothing matched it (egress, a third-party
   // MCP server, a kind newer than this code): with nobody to look, it is refused rather than waved through.
+  if (input.chat) return { allow: true, always: false, why: "a bridge tool of ours, which a right hand runs" };
   if (input.profile === "plan") return { allow: false, always: false, why: PLAN_MESSAGE };
   return {
     allow: false,
@@ -705,18 +715,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     done = resolve;
   });
 
-  // A shared tool of the CLI's own in a `chat` turn: the guard the allow-list would give us elsewhere.
-  const OUR_TOOL = /^mcp__/;
-  let breach: string | undefined;
   const host = new MuseHost(child, (method, params) => {
-    if (input.chat && method === "item/completed") {
-      const item = isRecord(params.item) ? params.item : {};
-      const called = str(item.kind) === "toolCall" ? str(item.tool) : "";
-      if (called && !OUR_TOOL.test(called) && !breach) {
-        breach = `Muse Code ran a tool of its own (${called}), so the turn stopped.`;
-        killTree(child, "SIGKILL");
-      }
-    }
     if (method === "turn/completed") {
       // The status is read here, not after `turnOver` resolves: the notification also resolves it, and a failed or
       // cancelled turn would otherwise be decided as the success its `done` reports.
@@ -740,6 +739,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
         subject: { kind, ...(command ? { command } : {}), ...(file ? { path: file } : {}) },
         cwd: input.cwd,
         profile,
+        ...(input.chat ? { chat: true } : {}),
         ...(home ? { home } : {}),
         runnerHome: opts.runnerHome,
         ...(input.grants?.length ? { grants: input.grants } : {}),
@@ -827,7 +827,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       const started = await host.request("session/start", {
         commandId: uuidv7(),
         // The host asks for what its own policy doesn't match, and this turn answers every ask (ADR 0174).
-        approvalMode: "promptUnmatched",
+        approvalMode: input.chat ? "denyUnmatched" : "promptUnmatched",
         ...(input.model ? { modelId: input.model } : {}),
       });
       sessionId = str(isRecord(started.session) ? started.session.sessionId : "");
@@ -877,7 +877,6 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   clearTimeout(deadline);
   await host.close().catch(() => undefined);
   if (opts.signal.aborted) return fail("canceled", "The turn was canceled.");
-  if (breach) return fail("tools_not_locked", breach);
   if (missingHost) return fail("muse_missing", "Muse Code's CLI is not installed on this computer.", true);
   if (failure) {
     for (const event of museProblem(failure)) opts.emit(event);

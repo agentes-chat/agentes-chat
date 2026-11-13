@@ -62,7 +62,7 @@ The levels are four, and only two of them are a posture:
 |---|---|
 | `plan` | `--disable-write --disable-shell` (measured: the run completes) |
 | `work` | the default: shell and write on, approval on |
-| `chat` | `--disable-write --disable-shell`, plus the guard below |
+| `chat` | `--disable-write --disable-shell` and `denyUnmatched`: its own Bash and Write are refused, the bridge's tools run |
 | `yolo` | `--disable-sandbox` |
 
 A named profile (`--permission-profile`) is **not** the path: `read-only` is a display name, not an id — the binary

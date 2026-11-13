@@ -515,17 +515,28 @@ test("a host that refuses to start is `muse_missing` on ENOENT and carries its s
   expect((refused.events.at(-1) as { message: string }).message).toContain("muse login");
 });
 
-test("a right-hand turn runs read-only, and a tool of the CLI's own stops it", async () => {
-  // A `chat` turn takes the read-only posture whatever the profile says.
+test("a right-hand turn runs read-only, on our tools and nothing else", async () => {
+  // The posture it is started with, whatever the profile says.
   expect(museServeArgs({ chat: true })).toEqual(["serve", "--disable-write", "--disable-shell"]);
   expect(museServeArgs({ chat: true, profile: "work" })).toContain("--disable-shell");
-  // With no tool of its own it is a normal turn.
+  // Nobody is at the host to look at an ask, so what isn't ours is refused instead of waited on.
+  const base = { cwd: "/w", profile: "work" as const };
+  // Our bridge's calls arrive as a kind this can't read, and those are the ones a right hand runs.
+  expect(museApprovalVerdict({ ...base, chat: true, subject: { kind: "mcp" } })).toMatchObject({ allow: true });
+  // The CLI's own Bash and Write are refused, as `--tools ""` refuses every native tool for Claude.
+  expect(museApprovalVerdict({ ...base, chat: true, subject: { kind: "command", command: "ls" } })).toMatchObject({
+    allow: false,
+  });
+  expect(museApprovalVerdict({ ...base, chat: true, subject: { kind: "path", path: "/w/a.txt" } })).toMatchObject({
+    allow: false,
+  });
+  // And outside a right-hand turn the same calls are judged by the policy, as before.
+  expect(museApprovalVerdict({ ...base, subject: { kind: "command", command: "ls" } })).toMatchObject({
+    allow: true,
+  });
+  // The turn itself still completes.
   const clean = await turn({ chat: true });
   expect(clean.events.at(-1)?.type).toBe("done");
-  // Our bridge's tools are `mcp__…`; one of the CLI's own is a breach, and the turn stops.
-  process.env.FAKE_MUSE_TOOL = "1";
-  const breach = await turn({ chat: true });
-  expect(breach.events.at(-1)).toMatchObject({ type: "error", code: "tools_not_locked" });
 });
 
 test("Windows is refused before anything runs", async () => {
