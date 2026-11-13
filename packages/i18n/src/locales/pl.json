@@ -5354,6 +5354,7 @@
           "defaults": "Przywróć domyślne",
           "contents": {
             "model": "Okno kontekstu",
+            "modelFixed": "Wysiłek i okno kontekstu",
             "auto": "Okno kontekstu i komu odpowiada",
             "fixed": "Wysiłek, okno kontekstu i komu odpowiada",
             "autoSpeed": "Szybkość, okno kontekstu i komu odpowiada",

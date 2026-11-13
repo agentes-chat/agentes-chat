@@ -5159,6 +5159,7 @@
           "defaults": "Volver a los valores predeterminados",
           "contents": {
             "model": "Ventana de contexto",
+            "modelFixed": "Esfuerzo y ventana de contexto",
             "auto": "Ventana de contexto y a quién responde",
             "fixed": "Esfuerzo, ventana de contexto y a quién responde",
             "autoSpeed": "Velocidad, ventana de contexto y a quién responde",

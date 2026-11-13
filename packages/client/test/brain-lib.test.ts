@@ -5,6 +5,7 @@ import { brainLine, engineOfBrain, engineOfExecutor, engineStateOfOption, thinks
 import {
   ADVANCED_DEFAULTS,
   advancedContents,
+  advancedDefaults,
   advancedParts,
   isAdvancedDefault,
   viewSpeedFits,
@@ -140,5 +141,21 @@ describe("Velocidade (ADR 0149)", () => {
     expect(advancedContents(t, { kind: "codex", autoModel: false })).toBe(
       "agentPage.work.brain.advanced.contents.fixed",
     );
+  });
+
+  test("an API key with a fixed model has an effort; on Automático only its context", () => {
+    const high = { ...ADVANCED_DEFAULTS, effort: "high" as const };
+    expect(advancedContents(t, { kind: "model", autoModel: false })).toBe(
+      "agentPage.work.brain.advanced.contents.modelFixed",
+    );
+    expect(advancedContents(t, { kind: "model", autoModel: true })).toBe(
+      "agentPage.work.brain.advanced.contents.model",
+    );
+    expect(advancedParts(t, "pt-BR", { kind: "model", autoModel: false, apiKey: true, now: high })).toEqual([
+      "agentPage.work.brain.advanced.effort",
+    ]);
+    expect(advancedParts(t, "pt-BR", { kind: "model", autoModel: true, apiKey: true, now: high })).toEqual([]);
+    expect(isAdvancedDefault("model", high)).toBe(false);
+    expect(advancedDefaults("model", high).effort).toBe("medium");
   });
 });

@@ -4869,6 +4869,7 @@
           "defaults": "Kembali ke default",
           "contents": {
             "model": "Jendela konteks",
+            "modelFixed": "Upaya dan jendela konteks",
             "auto": "Jendela konteks dan siapa yang dijawabnya",
             "fixed": "Upaya, jendela konteks, dan siapa yang dijawabnya",
             "autoSpeed": "Kecepatan, jendela konteks, dan siapa yang dijawabnya",

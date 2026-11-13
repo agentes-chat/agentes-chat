@@ -129,7 +129,10 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
     void save({
       contextTokens: to.contextTokens,
       ...(view.brain === "model"
-        ? {}
+        ? // A key's `auto` or none shows as the default: only a level that differs is saved.
+          autoModel || to.effort === now.effort
+          ? {}
+          : { effort: to.effort }
         : {
             ...(autoModel ? {} : { effort: to.effort }),
             ...(to.speed !== now.speed ? { speed: to.speed } : {}),
@@ -152,16 +155,17 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
           <Note icon="x">{t("common.loadFailed")}</Note>
         ) : (
           <>
-            {kind ? (
+            {kind || view.brain === "model" ? (
               <View style={styles.gap}>
                 <GroupedList>
                   {autoModel ? (
-                    // "Automático" picks the effort too: the row says so and leads to a model, which brings the ramp.
+                    // "Automático" picks the effort too: the row says so and, on a plan, leads to a model, which
+                    // brings the ramp (a key's model is chosen on its AI's screen).
                     <GroupedRow
                       label={t("agentPage.work.brain.effort")}
                       sub={t("agentPage.work.brain.effortText.auto")}
-                      chevron
-                      onPress={() => router.push(`/agent-model/${agentId}` as never)}
+                      chevron={kind !== null}
+                      onPress={kind ? () => router.push(`/agent-model/${agentId}` as never) : undefined}
                     />
                   ) : (
                     <View style={styles.ramp}>

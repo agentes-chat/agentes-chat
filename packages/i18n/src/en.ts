@@ -5291,6 +5291,8 @@ export const en = {
           defaults: "Back to defaults",
           contents: {
             model: "Context window",
+            /** An API key with a fixed model: its effort too. */
+            modelFixed: "Effort and context window",
             auto: "Context window and who it answers",
             fixed: "Effort, context window and who it answers",
             autoSpeed: "Speed, context window and who it answers",

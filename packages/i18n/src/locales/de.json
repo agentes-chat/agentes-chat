@@ -5023,6 +5023,7 @@
           "defaults": "Auf Standard zurücksetzen",
           "contents": {
             "model": "Kontextfenster",
+            "modelFixed": "Aufwand und Kontextfenster",
             "auto": "Kontextfenster und wem er antwortet",
             "fixed": "Aufwand, Kontextfenster und wem er antwortet",
             "autoSpeed": "Geschwindigkeit, Kontextfenster und wem er antwortet",

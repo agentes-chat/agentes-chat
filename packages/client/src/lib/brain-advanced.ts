@@ -45,9 +45,9 @@ export const ADVANCED_DEFAULTS: Advanced = {
   fallback: true,
 };
 
-/** "Voltar ao padrão": the API brain has only the context limit there, so the rest stays as it is. */
+/** "Voltar ao padrão": the API brain has only the effort and the context limit there, so the rest stays as it is. */
 export const advancedDefaults = (kind: BrainKind, now: Advanced): Advanced =>
-  kind === "model" ? { ...now, contextTokens: null } : ADVANCED_DEFAULTS;
+  kind === "model" ? { ...now, effort: ADVANCED_DEFAULTS.effort, contextTokens: null } : ADVANCED_DEFAULTS;
 export const isAdvancedDefault = (kind: BrainKind, now: Advanced) =>
   JSON.stringify(advancedDefaults(kind, now)) === JSON.stringify(now);
 
@@ -59,7 +59,8 @@ export function advancedContents(
   o: Pick<AdvancedOf, "kind" | "autoModel"> & { speed?: boolean },
 ): string {
   const line = o.autoModel ? "auto" : "fixed";
-  const which = o.kind === "model" ? "model" : o.speed ? (`${line}Speed` as const) : line;
+  const which =
+    o.kind === "model" ? (o.autoModel ? "model" : "modelFixed") : o.speed ? (`${line}Speed` as const) : line;
   return t(`agentPage.work.brain.advanced.contents.${which}`);
 }
 
@@ -77,7 +78,7 @@ export function advancedParts(t: TFunction, _language: string, o: AdvancedOf): s
   const computer = o.kind !== "model";
   const { now } = o;
   return [
-    computer && !o.autoModel && now.effort !== ADVANCED_DEFAULTS.effort
+    !o.autoModel && now.effort !== ADVANCED_DEFAULTS.effort
       ? t("agentPage.work.brain.advanced.effort", {
           level: t(`agentPage.work.brain.effortsLower.${now.effort}`),
         })

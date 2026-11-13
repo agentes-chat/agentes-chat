@@ -239,8 +239,8 @@ export function autoModelFor(
  * Maps a choice onto the run's brain (the one place that does): the API model
  * for the tier on `provider`'s key (`autoModelFor`), Claude Code's alias,
  * Codex's model, and the effort where the agent left it to auto. The API brain
- * takes the effort only when its model is auto (it has no effort setting of its
- * own). `apiModel` from a resumed run's record wins, so the run keeps its model.
+ * takes the effort when its model is auto (a fixed model keeps the agent's own,
+ * `brainEffortFor`). `apiModel` from a resumed run's record wins, so the run keeps its model.
  */
 export function autoApplied(
   agent: AutoAgent,

@@ -229,9 +229,10 @@ export function WorkCard({
     ai === "key"
       ? t("brain.foot.api")
       : [accountWord, planWord(t, i18n.language, usage)].filter(Boolean).join(" · ") || null;
-  // Automático picks the effort with the model: only a fixed model says its effort.
+  // Automático picks the effort with the model: only a fixed model says its effort. On a key, only one chosen (none
+  // leaves it to the provider).
   const effort =
-    kind !== "model" && view && !isAuto(shownPlanModel)
+    view && (kind !== "model" ? !isAuto(shownPlanModel) : !isAuto(saved.model) && view.effort && !isAuto(view.effort))
       ? t("agentPage.work.cell.effort", {
           level: t(`agentPage.work.brain.effortsLower.${effortLevel(view.effort)}`),
         })
@@ -300,7 +301,7 @@ export function WorkCard({
                 : t("agentPage.work.cell.brainWith", { plan: planLabel(t, ai) })
             }
             value={ai === "key" ? orgModel : planModel}
-            more={ai === "key" ? null : [effort, speed].filter(Boolean).join(" · ")}
+            more={ai === "key" ? effort : [effort, speed].filter(Boolean).join(" · ")}
             sub={sub}
             open={open === "brain"}
             openLabel={t("agentPage.work.open.brain")}

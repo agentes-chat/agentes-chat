@@ -21,7 +21,7 @@ import {
   signInOf,
 } from "@agenteschat/client/lib/ai-accounts";
 import { thinksWith } from "@agenteschat/client/lib/brain";
-import { type Advanced, advancedParts } from "@agenteschat/client/lib/brain-advanced";
+import { ADVANCED_DEFAULTS, type Advanced, advancedParts } from "@agenteschat/client/lib/brain-advanced";
 import {
   type BrainPick,
   brainPickInput,
@@ -230,7 +230,8 @@ export function setupWords(
     kind: view.brain,
     autoModel: isAuto(view.effectiveModel),
     apiKey: o.apiKey,
-    now: o.now,
+    // The workspace's setup for a key carries no effort yet (ADR 0041, amended 2026-11-12): its words name none.
+    now: view.brain === "model" ? { ...o.now, effort: ADVANCED_DEFAULTS.effort } : o.now,
   });
   const autonomy = view.autonomy ? autonomyWords(t, view.autonomy) : null;
   return [thinksNow(t, view), ...parts, autonomy].filter(Boolean).join(" · ");

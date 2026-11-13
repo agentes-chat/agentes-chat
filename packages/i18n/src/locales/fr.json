@@ -5185,6 +5185,7 @@
           "defaults": "Revenir aux valeurs par défaut",
           "contents": {
             "model": "Fenêtre de contexte",
+            "modelFixed": "Effort et fenêtre de contexte",
             "auto": "Fenêtre de contexte et à qui il répond",
             "fixed": "Effort, fenêtre de contexte et à qui il répond",
             "autoSpeed": "Vitesse, fenêtre de contexte et à qui il répond",

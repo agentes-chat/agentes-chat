@@ -5220,6 +5220,7 @@ export const ptBR = {
           /** The row's line: what the dialog holds. The effort shows only with a fixed model on a plan. */
           contents: {
             model: "Janela de contexto",
+            modelFixed: "Esforço e janela de contexto",
             auto: "Janela de contexto e quem atende",
             fixed: "Esforço, janela de contexto e quem atende",
             autoSpeed: "Velocidade, janela de contexto e quem atende",

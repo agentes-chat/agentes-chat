@@ -5006,6 +5006,7 @@
           "defaults": "Varsayılanlara dön",
           "contents": {
             "model": "Bağlam penceresi",
+            "modelFixed": "Çaba ve bağlam penceresi",
             "auto": "Bağlam penceresi ve kime yanıt verdiği",
             "fixed": "Çaba, bağlam penceresi ve kime yanıt verdiği",
             "autoSpeed": "Hız, bağlam penceresi ve kime yanıt verdiği",

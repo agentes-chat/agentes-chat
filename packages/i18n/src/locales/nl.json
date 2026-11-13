@@ -5046,6 +5046,7 @@
           "defaults": "Terug naar standaard",
           "contents": {
             "model": "Contextvenster",
+            "modelFixed": "Inspanning en contextvenster",
             "auto": "Contextvenster en wie het antwoordt",
             "fixed": "Inspanning, contextvenster en wie het antwoordt",
             "autoSpeed": "Snelheid, contextvenster en wie het antwoordt",

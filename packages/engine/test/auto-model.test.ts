@@ -496,6 +496,17 @@ describe("a run of an agent on Automático", () => {
     expect(judge.calls.some((c) => c.kind === "auto_model")).toBe(false);
   });
 
+  test("a fixed model on a key thinks at the agent's effort, without asking the judge", async () => {
+    f = await setup({ judge: judgeAnswers({ current: "large" }), reply: () => ({ chunks: ["ok"] }) });
+    await f.db.update(schema.agents).set({ brainEffort: "max" }).where(eq(schema.agents.id, f.agent.id));
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
+    await drainOutbox(f.db, f.handlers);
+    // The API takes low, medium and high: max goes as high.
+    expect(f.provider.calls[0]?.request).toMatchObject({ model: "claude-sonnet-5-5", effort: "high" });
+    const judge = f.context.judge as ReturnType<typeof createFakeJudge>;
+    expect(judge.calls.some((c) => c.kind === "auto_model")).toBe(false);
+  });
+
   test("the agent's model takes auto, and still refuses a model outside the catalog", async () => {
     f = await setup();
     const saved = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: AUTO_MODEL });

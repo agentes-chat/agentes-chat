@@ -12333,6 +12333,9 @@
   "agentPage.work.brain.advanced.contents.model": {
     "value": "Context window"
   },
+  "agentPage.work.brain.advanced.contents.modelFixed": {
+    "value": "Effort and context window"
+  },
   "agentPage.work.brain.advanced.contents.auto": {
     "value": "Context window and who it answers"
   },
