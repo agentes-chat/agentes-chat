@@ -179,6 +179,44 @@ async function routineRun(fx: Fixture, routineId: string, creatorUserId = fx.own
   };
 }
 
+/**
+ * The run a routine's report woke: an agent's message handing the report off (`routine_handoff`) that answers it in
+ * the conversation it reports to. Nobody is behind it (`routine_report`), and it keeps the routine's brief.
+ */
+async function reportRun(fx: Fixture, routineRunId: string): Promise<ToolContext> {
+  const text = "Erro novo no checkout";
+  const msg = await insertMessage(fx.db, {
+    orgId: fx.org.id,
+    channelId: fx.general.id,
+    author: { type: "agent", agentId: fx.agent.id, runId: null, hop: 0, stretchId: null },
+    body: text,
+    meta: { notice: { kind: "routine_handoff", text, from: "Routine", refs: { runId: routineRunId } } },
+  });
+  const [run] = await fx.db
+    .insert(schema.agentRuns)
+    .values({
+      orgId: fx.org.id,
+      agentId: fx.agent.id,
+      channelId: fx.general.id,
+      threadRootId: msg.id,
+      triggerMessageId: msg.id,
+      trigger: "mention",
+      hop: 1,
+      status: "running",
+    })
+    .returning();
+  if (!run) throw new Error("no run");
+  return {
+    db: fx.db,
+    orgId: fx.org.id,
+    agentId: fx.agent.id,
+    runId: run.id,
+    channelId: fx.general.id,
+    threadRootId: msg.id,
+    triggerMessageId: msg.id,
+  };
+}
+
 const exec = (...slugs: string[]) => ({
   tools: slugs.map((tool_slug) => ({ tool_slug, arguments: { channel: "#time", text: "Resumo" } })),
   sync_response_to_workbench: false,
@@ -241,6 +279,25 @@ describe("a routine's own job (routines.own_actions)", () => {
       exec("SLACK_SEND_MESSAGE", "GMAIL_SEND_EMAIL"),
     ]);
     expect(await f.db.select().from(schema.approvals)).toEqual([]);
+  });
+
+  test("a run its report woke does the routine's own actions, and asks for the rest", async () => {
+    f = await setup();
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    // The answer to its report is the same job: the action the person set up runs, with no card.
+    const run = await reportRun(f, (await routineRun(f, id)).runId);
+    expect(answered(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY })).isError).toBeFalsy();
+    expect(mcp.calls.map((c) => c.args)).toEqual([exec("SLACK_SEND_MESSAGE")]);
+    expect(await f.db.select().from(schema.approvals)).toEqual([]);
+    // An action outside it still asks, as every other write of that run does.
+    asked(await invoke(gateway, run, EXEC, { ...exec("GMAIL_SEND_EMAIL"), why: WHY }));
+    expect(mcp.calls).toHaveLength(1);
+    // Read fresh: a creator who no longer decides the agent's approvals makes its own actions ask too.
+    const cora = await addMember(f.db, f.org.id, "member", "cora");
+    await f.db.update(schema.routines).set({ createdByUserId: cora.id }).where(eq(schema.routines.id, id));
+    asked(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
+    expect(mcp.calls).toHaveLength(1);
   });
 
   test("the Vault keys its commands use are its own too (`keys`), kept apart from its actions", async () => {

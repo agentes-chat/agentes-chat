@@ -1319,11 +1319,16 @@ export function createToolGateway(deps: {
       const remember = kinds[0] ?? null;
       if (await coveredBy(kinds)) approves = false;
       // The routine's own job: an action its creator allowed when they set it up runs like an allowed one, every run,
-      // unless its agent always asks.
+      // unless its agent always asks. A run the routine's report woke keeps its brief (ADR 0053 §4): the job it acts
+      // on is the one the person set up, so the same list covers it.
+      const ownJobBrief =
+        authority?.kind === "routine"
+          ? authority.brief
+          : authority?.kind === "unattended" && fedByRoutine(authority)
+            ? (authority.brief ?? null)
+            : null;
       const ownJob =
-        approves && level !== "always" && authority?.kind === "routine" && authority.brief
-          ? await ownJobCovers(ctx, authority.brief, tool, call.input)
-          : false;
+        approves && level !== "always" && ownJobBrief ? await ownJobCovers(ctx, ownJobBrief, tool, call.input) : false;
       if (ownJob) approves = false;
       // A routine's own run puts Vault keys in a command only where its creator allowed them, or its agent never asks
       // (ADR 0144 §2): else a person says yes first, and "Sempre nesta rotina" keeps those keys as the routine's own.
