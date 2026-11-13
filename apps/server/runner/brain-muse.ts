@@ -51,6 +51,9 @@ import { agentSecrets } from "./secrets";
  * - The session: our session → Muse's lives in `<runner home>/brain/muse-sessions.json`, per account. A stored one is
  *   resumed (`session/resume`), so the agent keeps its thread; a lost one starts a new session and the engine's
  *   context leads the prompt again, as every other brain does with a new session.
+ * - The bridge travels on `session/start` (`config.mcpServers`, `transport` typed on each arm) and needs the
+ *   `sessionMcp` capability asked for in `initialize` first; the settings document holds no server of ours (a name in
+ *   both places is a conflict) — and its own keys are `mcpServers` with `type`, not the wire's `transport`.
  * - The account is a **sign-in**, not a key: `META_API_KEY` is deleted from the host's environment, or a key would
  *   answer in the person's place, and the account's own `XDG_CONFIG_HOME` keeps its credential and sessions apart.
  * - Approvals are answered on the wire. The session's mode is `promptUnmatched` (the wire's own names are
@@ -143,7 +146,10 @@ export function museHostEnv(base: NodeJS.ProcessEnv = process.env): NodeJS.Proce
   return env;
 }
 
-/** The account's settings document: our MCP server in it, and none of the machine's hooks (they run unsandboxed). */
+/**
+ * The account's settings document: no server of ours in it (the bridge travels on `session/start` instead — a name in
+ * both places is rejected as a conflict), and none of the machine's hooks (they run unsandboxed).
+ */
 export function museSettings(input: { mcp: { token: string; url?: string }; mcpCommand?: string[] }): string {
   const env = (name: string) => `\${${name}}`;
   return JSON.stringify({
@@ -153,28 +159,32 @@ export function museSettings(input: { mcp: { token: string; url?: string }; mcpC
     managed_hooks_path: null,
     // `mcpServers` is the key the host reads; `mcp_servers` is silently ignored and the turn then has no tools at
     // all — `muse mcp list` answers "no MCP servers" and says nothing about the near miss.
-    mcpServers: {
-      [CODEX_MCP_SERVER]: input.mcp.url
-        ? {
-            transport: "streamable_http",
-            url: input.mcp.url,
-            headers: { Authorization: `Bearer ${env(CODEX_MCP_ENV[0])}` },
-            mode: "required",
-          }
-        : {
-            transport: "stdio",
-            command: input.mcpCommand?.[0] ?? "agentes-runner",
-            // `agentes-runner mcp` needs the run: it is an argument, not only the environment.
-            args: [...(input.mcpCommand?.slice(1) ?? ["mcp"]), "--run", env(MUSE_RUN_ENV)],
-            env: {
-              [CODEX_MCP_ENV[0]]: env(CODEX_MCP_ENV[0]),
-              [CODEX_MCP_ENV[2]]: env(CODEX_MCP_ENV[2]),
-              [MUSE_RUN_ENV]: env(MUSE_RUN_ENV),
-            },
-            mode: "required",
-          },
-    },
   });
+}
+
+/** The bridge, as `session/start` takes it: a closed union where `transport` is required and typed. */
+export function museMcpServer(
+  mcp: { token: string; url?: string },
+  mcpCommand?: string[],
+): Record<string, unknown> | undefined {
+  if (mcp.url)
+    return {
+      transport: "streamableHttp",
+      url: mcp.url,
+      headers: { Authorization: `Bearer \${${CODEX_MCP_ENV[0]}}` },
+    };
+  const command = mcpCommand?.[0];
+
+  return {
+    transport: "stdio",
+    ...(command ? { command } : {}),
+    args: [...(mcpCommand?.slice(1) ?? ["mcp"]), "--run", `\${${MUSE_RUN_ENV}}`],
+    env: {
+      [CODEX_MCP_ENV[0]]: `\${${CODEX_MCP_ENV[0]}}`,
+      [CODEX_MCP_ENV[2]]: `\${${CODEX_MCP_ENV[2]}}`,
+      [MUSE_RUN_ENV]: `\${${MUSE_RUN_ENV}}`,
+    },
+  };
 }
 
 const USAGE_LIMIT = /usage limit|allowance (?:is )?(?:exhausted|used up)|out of (?:allowance|credits)/i;
@@ -668,6 +678,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     ...(opts.socketPath ? { [CODEX_MCP_ENV[1]]: opts.socketPath } : {}),
     [CODEX_MCP_ENV[2]]: opts.runnerHome,
   };
+  const mcpServer = museMcpServer(input.mcp, opts.mcpCommand);
   const configDir = museConfigDir(input.account ? input.account.home : path.join(opts.runnerHome, "brain", "muse"));
   const env = input.account ? accountEnv("muse", configDir, base) : { ...base, XDG_CONFIG_HOME: configDir };
   // The agent's commands inherit XDG_CONFIG_HOME: gh keeps finding its sign-in where it was.
@@ -745,11 +756,19 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       const kind = str(subject.kind);
       const command = str(subject.command);
       const file = str(subject.path);
+      const toolName = str(subject.toolName);
+      const access = str(subject.access);
       const offered = offersOf(params);
       // Nothing to answer without an id, and one decision per ask: a host that repeats an approval gets no second.
       if (!approvalId || answered.has(approvalId)) return;
       const verdict = museApprovalVerdict({
-        subject: { kind, ...(command ? { command } : {}), ...(file ? { path: file } : {}) },
+        subject: {
+          kind,
+          ...(command ? { command } : {}),
+          ...(file ? { path: file } : {}),
+          ...(toolName ? { toolName } : {}),
+          ...(access ? { access } : {}),
+        },
         cwd: input.cwd,
         profile,
         ...(input.chat ? { chat: true } : {}),
@@ -823,7 +842,16 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   }, deadlineMs);
 
   try {
-    await host.request("initialize", { clientInfo: { name: "agentes_chat", version: "1" } }, INIT_TIMEOUT_MS);
+    await host.request(
+      "initialize",
+      {
+        clientInfo: { name: "agentes_chat", version: "1" },
+        // The bridge travels on `session/start`, and the host only admits it to a client that asked for the
+        // capability (`session MCP configuration requires the sessionMcp capability`).
+        capabilities: { requestedCapabilities: ["sessionMcp"] },
+      },
+      INIT_TIMEOUT_MS,
+    );
     host.notify("initialized");
     const stored = opts.sessions.get(sessionKey);
     const resumed = stored
@@ -842,6 +870,10 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
         // The host asks for what its own policy doesn't match, and this turn answers every ask (ADR 0174).
         approvalMode: input.chat ? "denyUnmatched" : "promptUnmatched",
         ...(input.model ? { modelId: input.model } : {}),
+        // The bridge is handed over **on the wire**, per session: `config.mcpServers` is what an MSP client adds a
+        // server with, and it is typed (`transport` is required and closed). The settings document keeps `hooks` and
+        // the login's own ground, but a server written only there is never handed to a session.
+        ...(mcpServer ? { config: { mcpServers: { [CODEX_MCP_SERVER]: mcpServer } } } : {}),
       });
       sessionId = str(isRecord(started.session) ? started.session.sessionId : "");
       if (!sessionId) throw new Error("The Muse host started no session.");

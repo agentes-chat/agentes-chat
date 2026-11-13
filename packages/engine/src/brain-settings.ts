@@ -216,12 +216,16 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
  * ponytail: hand-copied list, the host's own catalog replaces it wherever the runner reports one.
  */
 export const MUSE_MODELS: readonly { id: string; label: string }[] = [
+  { id: "muse-wonder-1.0", label: "Muse Wonder 1.0" },
   { id: "muse-spark-1.3", label: "Muse Spark 1.3" },
-  { id: "muse-spark-1.2", label: "Muse Spark 1.2" },
 ];
 
-/** What Muse Code runs when nobody chose a model: the id Meta documents (and the host's own default). */
-export const MUSE_DEFAULT_MODEL = "muse-spark-1.2";
+/**
+ * What Muse Code runs when nobody chose a model: `muse-wonder-1.0`, which is what the host picks on its own. Measured
+ * on a signed-in account: `muse-spark-1.2` (the id Meta documents) is answered 503 on every attempt, and a turn on it
+ * never starts, so it is not the fallback any more.
+ */
+export const MUSE_DEFAULT_MODEL = "muse-wonder-1.0";
 
 export const museModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] =>
   (listed.length ? listed : MUSE_MODELS).map((m) => ({ value: m.id, label: m.label || m.id }));
