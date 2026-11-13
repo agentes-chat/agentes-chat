@@ -1141,7 +1141,8 @@ through a Grok account added in Settings, AI and usage, never the computer's own
 bubblewrap, `sudo apt install -y bubblewrap`, or Grok Build refuses to start and every turn fails), Google's
 Antigravity CLI with
 `curl -fsSL https://antigravity.google/cli/install.sh | bash` (`agy` in `~/.local/bin`; Gemini accounts sign in on Linux
-computers only, each in a folder of its own, and a personal Google plan used this way is against Google's terms for
+computers only, each in a folder of its own; on Windows an agent with no Gemini account thinks on the computer's own
+sign-in instead, with no sandbox for its commands (they are refused), and a personal Google plan used this way is against Google's terms for
 consumer plans: Gemini Enterprise or an API key avoids that). A runner in system mode (each agent
 its own system user) needs the CLI where every agent's user can run it, not in one user's home: install it
 under a shared folder and link it into `/usr/local/bin`, for example

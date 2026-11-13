@@ -117,6 +117,20 @@ export function codexLaunch(
  */
 export const CODEX_WINDOWS_CONFIG = ['windows.sandbox="mxc"'];
 
+/**
+ * Opt-in fallback (AGENTES_CODEX_WINDOWS_UNELEVATED=1): where MXC can't hold Codex's commands (Windows before 24H2), use
+ * Codex's own `unelevated` sandbox (restricted token: writes stay in the agent's folders; the network is kept out only
+ * through proxy variables, so it is weaker than MXC). Off by default: the turn then fails closed (`windows_sandbox`).
+ */
+let windowsSandbox: "mxc" | "unelevated" = "mxc";
+export const setWindowsSandbox = (mode: "mxc" | "unelevated") => {
+  windowsSandbox = mode;
+};
+export const windowsUnelevatedAllowed = (env: NodeJS.ProcessEnv = process.env) =>
+  env.AGENTES_CODEX_WINDOWS_UNELEVATED === "1";
+/** The sandbox the current turns name in `-c`: MXC unless the opt-in fallback is in use. */
+export const codexWindowsConfig = () => [`windows.sandbox="${windowsSandbox}"`];
+
 /** What a `plan` or `work` turn says where Windows can't hold Codex's commands. */
 export const WINDOWS_SANDBOX_MESSAGE =
   "This computer can't isolate Codex's commands: agents that think with Codex on Windows need Windows 11 24H2 or newer, with Microsoft Execution Containers (MXC). Update Windows there, or choose another way for this agent to think.";

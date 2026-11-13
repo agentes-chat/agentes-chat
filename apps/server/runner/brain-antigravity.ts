@@ -241,9 +241,11 @@ export interface AntigravityTurnOptions {
 export async function runAntigravityTurn(input: AntigravityTurnInput, opts: AntigravityTurnOptions): Promise<void> {
   const fail = (code: string, message: string, retryable?: boolean) =>
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
-  // Elsewhere the CLI keeps its sign-in in the one keychain of the computer's user (ADR 0143).
-  if ((opts.platform ?? process.platform) !== "linux") {
-    return fail("unsupported", "Gemini plans think on Linux computers only, for now.");
+  // macOS keeps the CLI's sign-in in the one keychain of the computer's user (ADR 0143). Windows does too (Credential
+  // Manager) and works on that one sign-in: the computer's own (`antigravityOwnHome`).
+  const platform = opts.platform ?? process.platform;
+  if (platform !== "linux" && platform !== "win32") {
+    return fail("unsupported", "Gemini plans think on Linux and Windows computers only, for now.");
   }
   try {
     prepareAgyHome(input.account.home, opts.mcpCommand);
@@ -289,7 +291,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
         cwd: input.cwd,
         env,
         stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
+        detached: platform !== "win32",
+        windowsHide: true,
       });
     } catch (err) {
       return fail("antigravity_failed", err instanceof Error ? err.message : String(err));
@@ -461,6 +464,18 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   }
 }
 
+/**
+ * Windows: the folder an agent with no Gemini account runs the CLI in as its home. The sign-in itself is the computer
+ * user's, in Credential Manager (the same whatever the home), so everything else here is the runner's: our settings, our
+ * server's tools. The CLI's own sandbox isn't there on Windows, so a command is refused (headless mode can't ask) and its
+ * edits stay in the agent's folder (`allowNonWorkspaceAccess: false`).
+ */
+export const antigravityOwnHome = (runnerHome: string) => {
+  const home = path.join(runnerHome, "brain", "antigravity-windows");
+  mkdirSync(home, { recursive: true });
+  return home;
+};
+
 /** What the runner's `brain.turn` handler hands the Antigravity branch. */
 export interface AntigravityBrainContext {
   folder: string;
@@ -498,7 +513,10 @@ export async function handleAntigravityBrainTurn(
     throw new RunnerError("bad_request", "mcp.token is required");
   // ADR 0041: the account's folder or nothing (the computer's own sign-in would need our bridge in its config).
   const accountId: unknown = req.account;
-  if (accountId === undefined || accountId === null || accountId === "") {
+  const noAccount = accountId === undefined || accountId === null || accountId === "";
+  // Windows: an agent with no Gemini account thinks on the computer's own sign-in.
+  const ownSignIn = noAccount && (ctx.platform ?? process.platform) === "win32";
+  if (noAccount && !ownSignIn) {
     scope.emit({
       type: "error",
       code: "not_logged_in",
@@ -507,10 +525,12 @@ export async function handleAntigravityBrainTurn(
     });
     return;
   }
-  if (!isAccountId(accountId)) throw new RunnerError("bad_request", "Invalid account id");
+  if (!ownSignIn && !isAccountId(accountId)) throw new RunnerError("bad_request", "Invalid account id");
   let signIn: Awaited<ReturnType<typeof accountSignIn>>;
   try {
-    signIn = await accountSignIn(ctx.accounts, "antigravity", accountId, ctx.grant);
+    signIn = ownSignIn
+      ? { home: antigravityOwnHome(ctx.runnerHome) }
+      : await accountSignIn(ctx.accounts, "antigravity", accountId as string, ctx.grant);
   } catch (err) {
     scope.emit({
       type: "error",
@@ -557,7 +577,7 @@ export async function handleAntigravityBrainTurn(
         system: typeof req.system === "string" ? req.system : "",
         prompt: typeof req.prompt === "string" ? req.prompt : "",
         mcp: { token: req.mcp.token },
-        account: { id: accountId, home: signIn.home },
+        account: { id: ownSignIn ? "own" : (accountId as string), home: signIn.home },
         profile: codexProfileOf(req),
         ...(chat ? { chat } : {}),
       },

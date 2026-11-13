@@ -25,11 +25,13 @@ import {
 } from "./accounts";
 import { CODEX_ROUTE_OFF } from "./brain-route";
 import {
-  CODEX_WINDOWS_CONFIG,
   codexLaunch,
   codexStdinPrompt,
+  codexWindowsConfig,
+  setWindowsSandbox,
   WINDOWS_SANDBOX_MESSAGE,
   windowsMxcReady,
+  windowsUnelevatedAllowed,
 } from "./codex-windows";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
@@ -497,7 +499,7 @@ export function codexTurnArgs(input: {
     ...(sandbox === "workspace-write"
       ? ["-c", CODEX_NO_NETWORK, "-c", codexWritableRoots(input.writableRoots ?? [])]
       : []),
-    ...(input.windows && !input.chat ? CODEX_WINDOWS_CONFIG.flatMap((c) => ["-c", c]) : []),
+    ...(input.windows && !input.chat ? codexWindowsConfig().flatMap((c) => ["-c", c]) : []),
     ...(instructions && !input.thread ? ["-c", `developer_instructions=${JSON.stringify(instructions)}`] : []),
     ...(input.mcp ? codexBridgeOverrides({ runId: input.runId, ...input.mcp }).flatMap((o) => ["-c", o]) : []),
     ...(isBrainEffort(input.effort)
@@ -868,7 +870,10 @@ export async function runCodexTurn(input: CodexTurnInput, opts: CodexTurnOptions
         true,
       );
     }
-    if (!mxc) return fail("windows_sandbox", WINDOWS_SANDBOX_MESSAGE);
+    if (!mxc) {
+      if (!windowsUnelevatedAllowed()) return fail("windows_sandbox", WINDOWS_SANDBOX_MESSAGE);
+      setWindowsSandbox("unelevated");
+    } else setWindowsSandbox("mxc");
   }
   // A long-lived app-server takes messages mid-turn; exec runs the turns it can't (an older CLI, a failed handshake…).
   // A `chat` turn's flags exist only for `exec`, and so does leaving someone's own Codex rules out (`--ignore-rules`),
