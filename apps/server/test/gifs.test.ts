@@ -211,7 +211,7 @@ describe("posting a GIF or a sticker", () => {
   test("a DM of only a GIF pushes what it was, in the phone's language", async () => {
     const { owner, orgId } = await start({ env: { ALLOW_SIGNUP: "true" } });
     const bia = await joinByInvitation(t, owner, orgId, "bia@example.com");
-    const token = "ExponentPushToken[phone-of-bia-0001]";
+    const token = "b1a0c0de".repeat(8);
     const registered = await bia("/api/app/push/devices", {
       json: { token, platform: "ios", locale: "pt-BR" },
       origin: null,

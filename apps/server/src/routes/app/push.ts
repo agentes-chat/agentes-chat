@@ -1,5 +1,7 @@
 import {
-  EXPO_PUSH_TOKEN,
+  APNS_APP_ID_MAX,
+  APNS_PUSH_TOKEN,
+  apnsAppIdValid,
   FCM_PUSH_TOKEN,
   PUSH_STALE_MAX,
   registerPushDevice,
@@ -13,11 +15,11 @@ import { type AppDeps, body, createAppRouter, errors, json, noContent, requireSe
 
 const tags = ["Push"];
 
-/** An iPhone's Expo push token. */
+/** An iPhone's APNs device token (ADR 0178). */
 const IosToken = z
   .string()
-  .regex(EXPO_PUSH_TOKEN, "must be an Expo push token")
-  .openapi({ example: "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]" });
+  .regex(APNS_PUSH_TOKEN, "must be an APNs device token")
+  .openapi({ example: "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0" });
 
 /** An Android phone's FCM registration token (ADR 0152). */
 const AndroidToken = z
@@ -34,7 +36,21 @@ const base64url = (min: number, max: number) =>
 const bytesOf = (s: string) => Buffer.from(s.replace(/=+$/, ""), "base64url");
 
 const AndroidDevice = z.object({ token: AndroidToken, platform: z.literal("android"), locale: Locale });
-const IosDevice = z.object({ token: IosToken, platform: z.literal("ios"), locale: Locale });
+const IosDevice = z.object({
+  token: IosToken,
+  platform: z.literal("ios"),
+  locale: Locale,
+  appId: z
+    .string()
+    .max(APNS_APP_ID_MAX)
+    .refine(apnsAppIdValid, "must be a bundle id")
+    .optional()
+    .openapi({ description: "The app's bundle id: where Apple delivers its pushes.", example: "chat.agentes.app" }),
+  sandbox: z
+    .boolean()
+    .optional()
+    .openapi({ description: "A development build, whose token belongs to Apple's sandbox." }),
+});
 
 /** A browser's Web Push subscription (ADR 0071), as `PushSubscription.toJSON()` gives it. */
 const WebDevice = z.object({
@@ -55,8 +71,8 @@ const WebDevice = z.object({
 });
 
 /**
- * Push devices (ADR 0035, ADR 0071, ADR 0152): the phone app's tokens (Android's FCM token, the iPhone's Expo
- * token) and browsers' Web Push subscriptions.
+ * Push devices (ADR 0035, ADR 0071, ADR 0152, ADR 0178): the phone app's tokens (Android's FCM token, the iPhone's
+ * APNs token) and browsers' Web Push subscriptions.
  * Per person: one device hears every organization of its person.
  */
 export function pushRoutes(deps: AppDeps) {
@@ -91,7 +107,7 @@ export function pushRoutes(deps: AppDeps) {
       security,
       summary: "Register this phone or browser for push notifications",
       description:
-        "Upsert by token (a browser's endpoint): registering again refreshes it, and one registered by someone else moves to you. Android phones send their FCM registration token, iPhones their Expo push token; browsers their Web Push subscription, which then belongs to this session: signing out (everywhere too) or the session running out stops it. Call on every launch or page load after sign-in.",
+        "Upsert by token (a browser's endpoint): registering again refreshes it, and one registered by someone else moves to you. Android phones send their FCM registration token, iPhones their APNs device token with their app's id; browsers their Web Push subscription, which then belongs to this session: signing out (everywhere too) or the session running out stops it. Call on every launch or page load after sign-in.",
       request: { body: body(z.union([AndroidDevice, IosDevice, WebDevice])) },
       responses: { 204: noContent[204], 429: errorResponse("Too many registrations"), ...errors },
     }),

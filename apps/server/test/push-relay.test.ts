@@ -83,13 +83,16 @@ describe("push relay routes", () => {
     expect(((await res.json()) as { error: { code: string } }).error.code).toBe("blocked");
   });
 
-  test("bad bodies are 400; an iPhone's message is refused; too large is 413", async () => {
+  test("bad bodies are 400; an iPhone's message needs an iPhone's token; too large is 413", async () => {
     const { post, register } = relay();
     const { auth } = await register();
     expect((await post("/send", "not json", auth)).status).toBe(400);
     expect((await post("/send", { messages: "x" }, auth)).status).toBe(400);
     expect((await post("/send", { messages: [{ ...msg(1), to: "nope" }] }, auth)).status).toBe(400);
     expect((await post("/send", { messages: [{ ...msg(1), platform: "ios" }] }, auth)).status).toBe(400);
+    const iphone = { ...msg(1), platform: "ios", to: "0f".repeat(32), apns: { topic: "chat.agentes.app" } };
+    expect((await post("/send", { messages: [iphone] }, auth)).status).toBe(200);
+    expect((await post("/send", { messages: [{ ...iphone, apns: { topic: "nope" } }] }, auth)).status).toBe(400);
     const huge = { messages: [{ ...msg(1), body: "x".repeat(600 * 1024) }] };
     expect((await post("/send", huge, auth)).status).toBe(413);
   });
