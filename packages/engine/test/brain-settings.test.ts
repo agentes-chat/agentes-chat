@@ -113,8 +113,20 @@ describe("brain settings", () => {
   test("Muse Code's models: the host's `model/list`, else the documented ids, and the id it runs by default", () => {
     // What its CLI listed on the computer (`model/list`, ADR 0174) is the list; with none, the ids Meta documents.
     expect(brainModelOptions("muse")).toEqual(museModels());
-    expect(brainModelOptions("muse").map((o) => o.value)).toEqual(["muse-wonder-1.0", "muse-spark-1.3"]);
-    expect(brainModelOptions("muse").map((o) => o.label)).toEqual(["Muse Wonder 1.0", "Muse Spark 1.3"]);
+    expect(brainModelOptions("muse").map((o) => o.value)).toEqual([
+      "muse-wonder-1.0",
+      "muse-wonder-full-1.0",
+      "muse-ember-1.0",
+      "muse-spark-1.3",
+      "muse-spark-1.2",
+    ]);
+    expect(brainModelOptions("muse").map((o) => o.label)).toEqual([
+      "Muse Wonder 1.0",
+      "Muse Wonder Full 1.0",
+      "Muse Ember 1.0",
+      "Muse Spark 1.3",
+      "Muse Spark 1.2",
+    ]);
     const listed = { executors: { muse: { version: "Muse Code 1.4.18", models: [{ id: "muse-spark-9" }] } } };
     expect(brainModelOptions("muse", listed).map((o) => [o.value, o.label])).toEqual([
       ["muse-spark-9", "muse-spark-9"],
@@ -135,7 +147,13 @@ describe("brain settings", () => {
     });
     const muse = brainOptions(machine).find((o) => o.kind === "muse");
     expect(muse).toMatchObject({ available: true, defaultModel: "muse-wonder-1.0" });
-    expect(muse?.models.map((o) => o.value)).toEqual(["muse-wonder-1.0", "muse-spark-1.3"]);
+    expect(muse?.models.map((o) => o.value)).toEqual([
+      "muse-wonder-1.0",
+      "muse-wonder-full-1.0",
+      "muse-ember-1.0",
+      "muse-spark-1.3",
+      "muse-spark-1.2",
+    ]);
     const withList = mac({
       protocol: MUSE_PROTOCOL,
       executors: {
