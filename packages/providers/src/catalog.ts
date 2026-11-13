@@ -118,6 +118,8 @@ export interface ModelInfo {
   unpriced?: true;
   /** A workspace endpoint's name (ADR 0146), which the pickers group its models under. */
   endpoint?: string;
+  /** A workspace endpoint's model its admin said reads pictures (ADR 0146 §7): tool results' pictures are sent to it. */
+  images?: true;
 }
 
 /** The sizes "Automático" chooses between: a fast cheap model, the everyday one, the strongest. */

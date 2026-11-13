@@ -202,6 +202,10 @@ export const EndpointModel = z
       .enum(["ok", "no_tools", "failed"])
       .optional()
       .openapi({ description: "The last test call: it called a tool, answered without one, or failed." }),
+    images: z.literal(true).optional().openapi({
+      description:
+        "The model reads pictures: tool results' pictures (screenshots, images of files) are sent to it. Absent: they are left out with a note, except for Claude's ids. PDFs are never sent to a Chat Completions endpoint.",
+    }),
   })
   .openapi("EndpointModel");
 
