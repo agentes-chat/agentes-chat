@@ -658,7 +658,8 @@ describe("Configurações do workspace", () => {
     await click(screen().getByRole("button", { name: "Abrir plano e cobrança" }));
     await settle(4);
     expect(state.calls.find((c) => c.method === "orgs.billingLink")?.args).toEqual([ORG_ID, "settings"]);
-    expect(left).toEqual(["https://billing.example.com/link?t=settings"]);
+    // The app's theme rides along, outside the signed token, for the billing service's pages to open in.
+    expect(left).toEqual(["https://billing.example.com/link?t=settings&theme=light"]);
     cleanup();
 
     if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
