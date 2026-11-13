@@ -1845,6 +1845,8 @@
     "soundOff": "Disattivati",
     "typingSound": "Suono di digitazione",
     "typingSoundHint": "Un leggero clic dei tasti mentre scrivi un messaggio, nello stile qui sopra",
+    "sidebarFaces": "Volti nei canali",
+    "sidebarFacesHint": "Mostra nella barra laterale chi c'è in ogni canale al posto di #",
     "browserNoticesHint": "Anche con la scheda chiusa",
     "browserNoticesBlocked": "Il browser le ha bloccate. Per consentirle, fai clic sull'icona accanto all'indirizzo del sito e attiva le notifiche.",
     "browserNoticesFailed": "Al momento non è stato possibile attivare le notifiche. Riprova.",

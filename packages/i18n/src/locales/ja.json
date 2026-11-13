@@ -1759,6 +1759,8 @@
     "soundOff": "オフ",
     "typingSound": "タイピング音",
     "typingSoundHint": "メッセージを入力するときの小さなキーのクリック音（上のスタイルで）",
+    "sidebarFaces": "チャンネルの顔",
+    "sidebarFacesHint": "サイドバーで # の代わりに各チャンネルのメンバーを表示します",
     "browserNoticesHint": "タブを閉じていても",
     "browserNoticesBlocked": "ブラウザにブロックされています。許可するには、サイトのアドレスの横にあるアイコンをクリックして通知をオンにしてください。",
     "browserNoticesFailed": "今は通知をオンにできませんでした。もう一度お試しください。",

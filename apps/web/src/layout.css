@@ -14641,3 +14641,37 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
     min-width: 0;
   }
 }
+
+/* VPS Zen: files dragged over the conversation (not only the composer's card) go to the composer. */
+.channel__col[data-dropping] {
+  position: relative;
+}
+.channel__col[data-dropping]::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 2px dashed var(--accent, #6b8afd);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent, #6b8afd) 8%, transparent);
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* VPS Zen: a channel's faces in place of its "#" (Sidebar.tsx, `sidebar-faces.ts`): small and overlapped, so the
+   name keeps its room; the rail keeps the channel's initials. */
+.sidebar__faces {
+  flex: none;
+  --stack-ring: var(--sidebar-bg, var(--surface));
+}
+.sidebar__faces > .ac-avatar + .ac-avatar {
+  margin-left: -6px;
+}
+.sidebar__faces-more {
+  margin-left: 3px;
+  font-size: 10.5px;
+  line-height: 1;
+  color: var(--ink-muted);
+}
+.sidebar[data-rail="true"] .sidebar__item:has(> .sidebar__channel-abbr) > .sidebar__faces {
+  display: none;
+}

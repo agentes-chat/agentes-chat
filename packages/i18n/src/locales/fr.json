@@ -1845,6 +1845,8 @@
     "soundOff": "Désactivés",
     "typingSound": "Son de frappe",
     "typingSoundHint": "Un léger clic de touche quand vous écrivez un message, dans le style ci-dessus",
+    "sidebarFaces": "Visages dans les canaux",
+    "sidebarFacesHint": "Affiche dans la barre latérale qui est dans chaque canal au lieu de #",
     "browserNoticesHint": "Même onglet fermé",
     "browserNoticesBlocked": "Votre navigateur les a bloquées. Pour les autoriser, cliquez sur l'icône à côté de l'adresse du site et activez les notifications.",
     "browserNoticesFailed": "Impossible d'activer les notifications pour l'instant. Réessayez.",

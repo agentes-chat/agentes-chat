@@ -1801,6 +1801,8 @@
     "soundOff": "Kapalı",
     "typingSound": "Yazma sesi",
     "typingSoundHint": "Mesaj yazarken yumuşak bir tuş tıklaması, yukarıdaki stilde",
+    "sidebarFaces": "Kanallarda yüzler",
+    "sidebarFacesHint": "Kenar çubuğunda # yerine her kanalda kimlerin olduğunu gösterir",
     "browserNoticesHint": "Sekme kapalıyken bile",
     "browserNoticesBlocked": "Tarayıcınız bunları engelledi. İzin vermek için sitenin adresinin yanındaki simgeye tıklayın ve bildirimleri açın.",
     "browserNoticesFailed": "Bildirimler şu anda açılamadı. Yeniden deneyin.",

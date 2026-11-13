@@ -245,6 +245,7 @@ import { AgentPanel } from "@/components/AgentPanel";
 import { ApprovalAsk, ApprovalGroupAsk } from "@/components/ApprovalAsk";
 import { AgentPanelContext, AgentPanelShownContext, useOpenAgentPanel } from "@/components/agent-panel-context";
 import { AgentSidebar } from "@/components/agents/AgentSidebar";
+import { ComposerBrainChip } from "@/components/agents/ThinksPicker";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { ImageSet } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
@@ -1738,10 +1739,14 @@ function ChannelView({
           </span>
         )}
         {pillAgents.map((a) => (
-          <span key={a.id} className="ac-composer__agent">
-            <AgentAvatar agentId={a.id} channelId={channel.id} name={a.name} size="xs" />
-            <span className="ac-composer__pill-text">{a.name}</span>
-          </span>
+          <Fragment key={a.id}>
+            <span className="ac-composer__agent">
+              <AgentAvatar agentId={a.id} channelId={channel.id} name={a.name} size="xs" />
+              <span className="ac-composer__pill-text">{a.name}</span>
+            </span>
+            {/* VPS Zen: its model and effort, one click from the composer (ThinksPicker). */}
+            <ComposerBrainChip agent={a} />
+          </Fragment>
         ))}
       </>
     ) : undefined;
@@ -1956,6 +1961,9 @@ function ChannelView({
       urls.clear();
     };
   }, []);
+  // VPS Zen: files dragged over the whole conversation, not only the composer's card.
+  const [pageDrop, setPageDrop] = useState(false);
+  const dropOn = isMember && !chrome?.locked && channel.can?.post !== false;
   const addFiles = (list: File[]) => {
     const room = MAX_ATTACHMENTS - files.length;
     if (list.length > room) toast.show(t("channel.tooManyFiles", { max: MAX_ATTACHMENTS }), "error");
@@ -2418,7 +2426,30 @@ function ChannelView({
                 )}
                 {/* Under the header: the conversation, and the members beside it (the header spans both, as Discord's). */}
                 <div className="channel__body">
-                  <div className="channel__col">
+                  {/* biome-ignore lint/a11y/noStaticElementInteractions: VPS Zen, files dropped anywhere on the conversation go to the composer (the attach button is the accessible way) */}
+                  <div
+                    className="channel__col"
+                    data-dropping={pageDrop || undefined}
+                    onDragOver={(e) => {
+                      if (!dropOn || !Array.from(e.dataTransfer?.types ?? []).includes("Files")) return;
+                      e.preventDefault();
+                      if (!pageDrop) setPageDrop(true);
+                    }}
+                    onDragLeave={(e) => {
+                      if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))
+                        setPageDrop(false);
+                    }}
+                    onDrop={(e) => {
+                      setPageDrop(false);
+                      // The composer's own card took them already.
+                      if (e.defaultPrevented || !dropOn) return;
+                      const dropped = Array.from(e.dataTransfer?.files ?? []);
+                      if (dropped.length === 0) return;
+                      e.preventDefault();
+                      addFiles(dropped);
+                      composer.current?.focus();
+                    }}
+                  >
                     {isMember && (
                       <ChannelPinnedBar
                         channelId={channel.id}

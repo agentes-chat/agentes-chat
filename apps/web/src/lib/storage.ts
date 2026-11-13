@@ -101,6 +101,8 @@ export const STORAGE_KEYS = {
   sounds: "agentes.sounds",
   /** A soft key click as the person types in the message box: "on", or anything else for off (lib/sounds.ts). */
   typingSounds: "agentes.sounds.typing",
+  /** VPS Zen: the sidebar shows who is in each channel (faces) instead of "#": "off" turns it off. */
+  sidebarFaces: "agentes.sidebar.faces",
   /** In `sessionStore`, this tab's id; in `storage`, the tab the person used last (it plays sounds while hidden). */
   soundTab: "agentes.sounds.tab",
   /** How many times our notifications ask showed by itself in this browser (`usePushAsk`, ADR 0071). */

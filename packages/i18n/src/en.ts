@@ -1904,6 +1904,8 @@ export const en = {
     soundOff: "Off",
     typingSound: "Typing sound",
     typingSoundHint: "A soft key click as you type a message, in the style above",
+    sidebarFaces: "Faces in channels",
+    sidebarFacesHint: "Shows who is in each channel in the sidebar instead of #",
     browserNoticesHint: "Even with the tab closed",
     browserNoticesBlocked:
       "Your browser blocked them. To allow them, click the icon next to the site's address and turn notifications on.",

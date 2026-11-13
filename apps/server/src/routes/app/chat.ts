@@ -107,6 +107,8 @@ export function chatRoutes(deps: AppDeps) {
             position: r.position,
             unreadCount: r.unreadCount,
             mentionCount: r.mentionCount,
+            faces: r.faces,
+            memberCount: r.memberCount,
             lastReadAt: iso(r.lastReadAt),
             muted: r.muted,
             can: r.can,

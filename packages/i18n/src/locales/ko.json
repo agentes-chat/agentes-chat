@@ -1759,6 +1759,8 @@
     "soundOff": "끄기",
     "typingSound": "타이핑 소리",
     "typingSoundHint": "메시지를 입력할 때 나는 부드러운 키 클릭 소리(위의 스타일)",
+    "sidebarFaces": "채널의 얼굴",
+    "sidebarFacesHint": "사이드바에서 # 대신 각 채널에 누가 있는지 보여 줍니다",
     "browserNoticesHint": "탭을 닫아도 받아요",
     "browserNoticesBlocked": "브라우저에서 차단했어요. 허용하려면 사이트 주소 옆 아이콘을 클릭하고 알림을 켜세요.",
     "browserNoticesFailed": "지금은 알림을 켤 수 없어요. 다시 시도해 주세요.",

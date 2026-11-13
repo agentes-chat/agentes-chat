@@ -289,3 +289,13 @@ test("an agent's reply mode in a channel: the channel's creator or the agent's o
     bot: false,
   });
 });
+
+test("VPS Zen: the channel list carries up to 3 faces (agents first) and the member count, to members only", async () => {
+  const member = await addMember(f.db, f.org.id, "member", "bia");
+  const before = (await listChannels(f.db, member.id, f.org.id)).find((c) => c.id === f.general.id);
+  expect(before).toMatchObject({ isMember: false, faces: [], memberCount: 0 });
+  const mine = (await listChannels(f.db, f.owner.id, f.org.id)).find((c) => c.id === f.general.id);
+  expect(mine?.faces[0]).toEqual({ type: "agent", id: f.agent.id });
+  expect(mine?.faces.length).toBeLessThanOrEqual(3);
+  expect(mine?.memberCount).toBeGreaterThanOrEqual(2);
+});

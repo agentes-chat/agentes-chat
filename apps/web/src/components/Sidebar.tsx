@@ -55,6 +55,7 @@ import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   type AgentColor,
   Avatar,
+  AvatarStack,
   agentGradient,
   Button,
   CountBadge,
@@ -117,13 +118,14 @@ import { useOpenParam } from "@/lib/open-param";
 import { markOpen } from "@/lib/perf";
 import { ownPlanLines, planNearLimit, planWord } from "@/lib/plan-usage";
 import { useScrollEdges } from "@/lib/scroll-edges";
+import { onSidebarFacesChange, sidebarFacesOn } from "@/lib/sidebar-faces";
 import { rightHandSeen, STORAGE_KEYS, sessionStore, storage, storedStrings } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import type { SettingsSection } from "@/pages/settings-sections";
 import { useStreams } from "@/realtime/context";
 import { ProfileDialog } from "./AccountSettings";
 import { AddPasswordDialog } from "./AddPassword";
-import { AgentAvatar } from "./AgentAvatar";
+import { AgentAvatar, PersonAvatar } from "./AgentAvatar";
 import {
   DeleteGroupDialog,
   type GroupDialogFor,
@@ -1170,6 +1172,9 @@ function SidebarChannels({
   const toast = useToast();
   const navigate = useNavigate();
   const categories = useChannelCategories(orgId);
+  // VPS Zen: who is in each channel, in place of its "#" (Preferências, "Rostos nos canais").
+  const facesOn = useSyncExternalStore(onSidebarFacesChange, sidebarFacesOn, sidebarFacesOn);
+  const facesDir = useDirectory(orgId);
   const place = usePlaceChannel(orgId);
   const placeCategory = usePlaceChannelCategory(orgId);
   const removeCategory = useDeleteChannelCategory(orgId);
@@ -1414,7 +1419,22 @@ function SidebarChannels({
         onClick={() => markOpen(c.id)}
         {...channelMenu(c)}
       >
-        <Icon name="channel" className="sidebar__channel-icon" />
+        {facesOn && (c.faces?.length ?? 0) > 0 ? (
+          <AvatarStack className="sidebar__channel-icon sidebar__faces" aria-hidden="true">
+            {(c.faces ?? []).map((f) =>
+              f.type === "agent" ? (
+                <AgentAvatar key={f.id} agentId={f.id} name={facesDir.agentById.get(f.id)?.name ?? ""} size="xs" />
+              ) : (
+                <PersonAvatar key={f.id} id={f.id} name={facesDir.memberById.get(f.id)?.name ?? ""} size="xs" />
+              ),
+            )}
+            {(c.memberCount ?? 0) > (c.faces?.length ?? 0) && (
+              <span className="sidebar__faces-more">+{(c.memberCount ?? 0) - (c.faces?.length ?? 0)}</span>
+            )}
+          </AvatarStack>
+        ) : (
+          <Icon name="channel" className="sidebar__channel-icon" />
+        )}
         <span className="sidebar__channel-abbr" aria-hidden="true">
           {channelInitials(c.name)}
         </span>

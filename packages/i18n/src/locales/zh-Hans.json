@@ -1759,6 +1759,8 @@
     "soundOff": "关闭",
     "typingSound": "打字音效",
     "typingSoundHint": "输入消息时轻柔的按键声，使用上方的风格",
+    "sidebarFaces": "频道中的头像",
+    "sidebarFacesHint": "在侧边栏中显示每个频道的成员，而不是 #",
     "browserNoticesHint": "即使关闭了标签页",
     "browserNoticesBlocked": "你的浏览器阻止了通知。要允许通知，请点击网址旁边的图标并开启通知。",
     "browserNoticesFailed": "暂时无法开启通知，请重试。",

@@ -4460,6 +4460,12 @@
   "shell.typingSoundHint": {
     "value": "A soft key click as you type a message, in the style above"
   },
+  "shell.sidebarFaces": {
+    "value": "Faces in channels"
+  },
+  "shell.sidebarFacesHint": {
+    "value": "Shows who is in each channel in the sidebar instead of #"
+  },
   "shell.browserNoticesHint": {
     "value": "Even with the tab closed"
   },

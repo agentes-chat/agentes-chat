@@ -855,7 +855,18 @@ export async function endWork(
     const status = report && runStatus === "done" && posted?.status === "failed" ? "failed" : runStatus;
     const [work] = await tx
       .update(agentWorks)
-      .set({ status, finishedAt: now, nextUpdateAt: null, updatedAt: now })
+      .set({
+        status,
+        finishedAt: now,
+        nextUpdateAt: null,
+        updatedAt: now,
+        // VPS Zen: a work done whole leaves no step open ("0/5" on a finished work): what the agent didn't tick, it did.
+        ...(status === "done"
+          ? {
+              plan: sql`coalesce((select jsonb_agg(jsonb_set(e, '{state}', '"done"')) from jsonb_array_elements(${agentWorks.plan}) e), '[]'::jsonb)`,
+            }
+          : {}),
+      })
       .where(and(eq(agentWorks.id, run.workId as string), isNull(agentWorks.finishedAt)))
       .returning();
     if (!work) return null;

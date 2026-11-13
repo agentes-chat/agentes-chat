@@ -276,7 +276,16 @@ export interface ChannelListItem {
    * shows); null when I'm not a member (I can't read it) or it's empty.
    */
   lastMessage: ChannelLastMessage | null;
+  /**
+   * VPS Zen: who is in it, for the sidebar's faces: up to `CHANNEL_FACES` members (agents first, then people, the
+   * earliest in first) and how many in all. Only when I'm a member; else empty and 0.
+   */
+  faces: { type: "person" | "agent"; id: string }[];
+  memberCount: number;
 }
+
+/** VPS Zen: the most faces a channel shows in the sidebar. */
+export const CHANNEL_FACES = 3;
 
 interface ChannelListRow {
   id: string;
@@ -306,6 +315,8 @@ interface ChannelListRow {
   can_post: boolean;
   can_call: boolean;
   can_manage: boolean;
+  faces: { type: "person" | "agent"; id: string }[] | string | null;
+  member_count: number | string | null;
 }
 
 const asDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
@@ -345,7 +356,8 @@ export async function listChannels(db: Database, userId: string, orgId: string):
         ${channelCanSql(orgId, userId, "post")} as can_post,
         ${channelCanSql(orgId, userId, "talk_to_agents")} as can_call,
         (${maySql(sql`${orgId}::uuid`, sql`${userId}::text`, "manage_channels")} or (cm.id is not null
-          and (c.created_by_user_id = ${userId} or ${channelCanSql(orgId, userId, "manage_channels")}))) as can_manage
+          and (c.created_by_user_id = ${userId} or ${channelCanSql(orgId, userId, "manage_channels")}))) as can_manage,
+        fc.faces, fc.n as member_count
       from ${channels} c
       left join ${channelMembers} cm on cm.org_id = c.org_id and cm.channel_id = c.id and cm.user_id = ${userId}
       left join ${schema.channelReads} cr on cr.channel_id = c.id and cr.user_id = ${userId}
@@ -370,6 +382,17 @@ export async function listChannels(db: Database, userId: string, orgId: string):
           (select count(*)::int from (select 1 from ${schema.messages} u
             where ${unread} and ${userId} = any(u.mentioned_user_ids) limit ${MAX_CHANNEL_UNREAD}) y) as m
       ) un on true
+      left join lateral (
+        select
+          (select json_agg(json_build_object('type', f.t, 'id', f.id)) from (
+            select case when x.agent_id is null then 'person' else 'agent' end as t, coalesce(x.agent_id::text, x.user_id) as id
+            from ${channelMembers} x
+            where x.org_id = c.org_id and x.channel_id = c.id
+            order by (x.agent_id is null), x.created_at, x.id
+            limit ${CHANNEL_FACES}
+          ) f) as faces,
+          (select count(*)::int from ${channelMembers} y where y.org_id = c.org_id and y.channel_id = c.id) as n
+      ) fc on cm.id is not null
       where c.org_id = ${orgId}::uuid and c.archived_at is null and c.kind = 'channel'
         and (c.visibility = 'public' or cm.id is not null or ${channelAudienceSql("c", sql`${userId}`)}
           or ${maySql(sql`${orgId}::uuid`, sql`${userId}::text`, "administrator")})
@@ -396,6 +419,8 @@ export async function listChannels(db: Database, userId: string, orgId: string):
       lastReadAt: r.last_read_at ? asDate(r.last_read_at) : null,
       muted: r.muted === true,
       can: { post: r.can_post === true, callAgents: r.can_call === true, manage: r.can_manage === true },
+      faces: (typeof r.faces === "string" ? JSON.parse(r.faces) : r.faces) ?? [],
+      memberCount: Number(r.member_count ?? 0),
       lastMessage:
         r.last_id && r.last_at && r.last_author_type
           ? {

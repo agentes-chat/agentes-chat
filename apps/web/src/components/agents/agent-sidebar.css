@@ -303,3 +303,32 @@ html:not([data-pointer]) .dm-side__row--link:focus-visible {
     width: 130px;
   }
 }
+
+/* VPS Zen: the model chip in the composer (ComposerBrainChip): a pill like the agent's beside it, pressable. */
+.composer-brain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+}
+.composer-brain:hover,
+.composer-brain[data-state="open"] {
+  background: var(--hover, rgba(127, 127, 127, 0.08));
+}
+.composer-brain__effort {
+  color: var(--muted);
+  font-size: 12px;
+}
+.composer-brain__pop {
+  width: 300px;
+}
+.composer-brain__body {
+  padding: 12px;
+}
+.composer-brain__body .dm-side__pick {
+  margin: 0;
+}

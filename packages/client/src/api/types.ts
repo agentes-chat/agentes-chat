@@ -1151,6 +1151,10 @@ export interface Channel {
   unreadCount?: number;
   /** Channel list only: of `unreadCount`, the messages that mention you (counted even while muted). */
   mentionCount?: number;
+  /** Channel list only (VPS Zen): up to 3 members for the sidebar's faces, agents first; empty when not a member. */
+  faces?: { type: "person" | "agent"; id: string }[];
+  /** Channel list only (VPS Zen): how many are in it; 0 when not a member. */
+  memberCount?: number;
   /** Channel list only: where the unread starts (when you last read it, or joined); null when not a member. */
   lastReadAt?: string | null;
   /** Channel list only: you muted it, so it never looks unread. */

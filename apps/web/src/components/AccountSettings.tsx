@@ -41,6 +41,7 @@ import { type MenuLook, menuLook, onMenuLookChange, setMenuLook } from "@/lib/co
 import { inDesktopApp } from "@/lib/desktop";
 import { useOpenParam } from "@/lib/open-param";
 import { ownPlanLines, planMeterText } from "@/lib/plan-usage";
+import { onSidebarFacesChange, setSidebarFaces, sidebarFacesOn } from "@/lib/sidebar-faces";
 import {
   onSoundChoiceChange,
   type SoundChoice,
@@ -77,6 +78,7 @@ export function AccountSection() {
   const look = useSyncExternalStore(onMenuLookChange, menuLook, () => "ours" as const);
   const sounds = useSyncExternalStore(onSoundChoiceChange, soundChoice, soundChoice);
   const typing = useSyncExternalStore(onSoundChoiceChange, typingSoundOn, typingSoundOn);
+  const faces = useSyncExternalStore(onSidebarFacesChange, sidebarFacesOn, sidebarFacesOn);
   const [profile, setProfile] = useState<"name" | "timezone" | null>(null);
   const [phone, setPhone] = useState(false);
   // Adding a password and deleting the account: their dialogs are the account button's, kept in the address so a
@@ -248,6 +250,13 @@ export function AccountSection() {
                 aria-label={t("shell.typingSound")}
               />
             }
+          />
+          <PrefRow
+            id="account-sidebar-faces"
+            icon="members"
+            label={t("shell.sidebarFaces")}
+            hint={t("shell.sidebarFacesHint")}
+            control={<Switch checked={faces} onCheckedChange={setSidebarFaces} aria-label={t("shell.sidebarFaces")} />}
           />
           {inDesktopApp() && (
             <PrefRow

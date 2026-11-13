@@ -1801,6 +1801,8 @@
     "soundOff": "Aus",
     "typingSound": "Tippgeräusch",
     "typingSoundHint": "Ein leises Tastenklicken beim Schreiben einer Nachricht, im Stil oben",
+    "sidebarFaces": "Gesichter in Kanälen",
+    "sidebarFacesHint": "Zeigt in der Seitenleiste, wer in jedem Kanal ist, statt #",
     "browserNoticesHint": "Auch bei geschlossenem Tab",
     "browserNoticesBlocked": "Dein Browser hat sie blockiert. Um sie zu erlauben, klick auf das Symbol neben der Adresse der Website und schalte Benachrichtigungen ein.",
     "browserNoticesFailed": "Benachrichtigungen konnten gerade nicht eingeschaltet werden. Versuch es noch einmal.",

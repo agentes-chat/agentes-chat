@@ -1823,6 +1823,8 @@ export const ptBR = {
     soundOff: "Sem som",
     typingSound: "Som de digitação",
     typingSoundHint: "Um clique suave de tecla enquanto você escreve uma mensagem, no estilo acima",
+    sidebarFaces: "Rostos nos canais",
+    sidebarFacesHint: "Mostra na barra lateral quem está em cada canal, no lugar do #",
     browserNoticesHint: "Mesmo com a aba fechada",
     browserNoticesBlocked:
       "O navegador bloqueou os avisos. Para permitir, clique no ícone ao lado do endereço do site e ligue as notificações.",

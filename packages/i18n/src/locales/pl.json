@@ -1888,6 +1888,8 @@
     "soundOff": "Wyłączone",
     "typingSound": "Dźwięk pisania",
     "typingSoundHint": "Delikatne kliknięcie klawisza podczas pisania wiadomości, w stylu powyżej",
+    "sidebarFaces": "Twarze w kanałach",
+    "sidebarFacesHint": "Pokazuje na pasku bocznym, kto jest w każdym kanale, zamiast #",
     "browserNoticesHint": "Nawet przy zamkniętej karcie",
     "browserNoticesBlocked": "Twoja przeglądarka je zablokowała. Aby na nie pozwolić, kliknij ikonę obok adresu strony i włącz powiadomienia.",
     "browserNoticesFailed": "Nie udało się teraz włączyć powiadomień. Spróbuj ponownie.",

@@ -12,15 +12,17 @@ import {
 import { EFFORT_LEVELS, type EffortLevel, effortLevel } from "@agenteschat/client/lib/brain-advanced";
 import { modelInput, modelRowOptions, modelRows } from "@agenteschat/client/lib/brain-picker";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { shortModel } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO, isAuto, modelChoices } from "@agenteschat/client/lib/providers";
-import { Segmented } from "@agenteschat/ui";
+import { Icon, Popover, ProviderLogo, Segmented } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ModelSelect, modelOptions } from "@/components/AgentFields";
 import { useOrg } from "@/components/org-context";
+import { useAgentThinks } from "@/hooks/useAgentThinks";
 import { useToast } from "@/lib/toast";
 import { useStreams } from "@/realtime/context";
 
@@ -156,5 +158,49 @@ export function ThinksPicker({ agent, view }: { agent: Agent; view: AgentBrain }
       )}
       {busy && <p className="dm-side__pick-note">{t("agentSide.pickNextRun")}</p>}
     </div>
+  );
+}
+
+/*
+ * VPS Zen: the same picker from the composer of a DM with the agent (or of a draft that names it). The chip says
+ * what thinks now (the provider's mark, the model's short name and the effort); a click opens `ThinksPicker`.
+ * Only for whoever may change the agent, as in the side panel; nobody else sees a chip.
+ */
+export function ComposerBrainChip({ agent }: { agent: Agent }) {
+  const { t } = useTranslation();
+  const view = useEditableBrain(agent);
+  const thinks = useAgentThinks(agent);
+  const [open, setOpen] = useState(false);
+  if (!view) return null;
+  const model = view.brain === "model" ? (thinks?.text ?? agent.model) : (view.effectiveModel ?? thinks?.text ?? "");
+  const short = shortModel(model.replace(/^claude-/i, "").replace(/-\d{8}$/, ""));
+  const auto = isAuto(view.brain === "model" ? agent.model : (view.model ?? ""));
+  const effort = view.brain !== "model" && !auto ? effortLevel(view.effort) : null;
+  const mark = thinks?.mark ?? view.brain;
+  return (
+    <Popover
+      label={t("agentPage.work.brain.planModel")}
+      side="top"
+      align="start"
+      className="composer-brain__pop"
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button
+          type="button"
+          className="ac-composer__pill composer-brain"
+          aria-label={`${t("agentPage.work.brain.planModel")}: ${short}${effort ? `, ${t(`agentPage.work.brain.efforts.${effort}`)}` : ""}`}
+        >
+          <ProviderLogo id={mark} size="xs" />
+          <span className="ac-composer__pill-text">{auto ? t("brain.auto.label") : short}</span>
+          {effort && <span className="composer-brain__effort">{t(`agentPage.work.brain.effortsLower.${effort}`)}</span>}
+          <Icon name="chevronDown" size={14} />
+        </button>
+      }
+    >
+      <div className="composer-brain__body dm-side">
+        <ThinksPicker agent={agent} view={view} />
+      </div>
+    </Popover>
   );
 }

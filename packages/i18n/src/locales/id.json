@@ -1759,6 +1759,8 @@
     "soundOff": "Mati",
     "typingSound": "Suara mengetik",
     "typingSoundHint": "Bunyi klik tombol yang lembut saat kamu mengetik pesan, dengan gaya di atas",
+    "sidebarFaces": "Wajah di kanal",
+    "sidebarFacesHint": "Menampilkan siapa yang ada di setiap kanal di bilah samping, bukan #",
     "browserNoticesHint": "Bahkan saat tab ditutup",
     "browserNoticesBlocked": "Browsermu memblokirnya. Untuk mengizinkan, klik ikon di samping alamat situs dan aktifkan notifikasi.",
     "browserNoticesFailed": "Notifikasi tidak bisa diaktifkan sekarang. Coba lagi.",

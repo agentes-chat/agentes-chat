@@ -519,6 +519,11 @@ export const Channel = z
     mentionCount: z.number().int().optional().openapi({
       description: "Channel list only: of `unreadCount`, the messages that mention you (counted even while muted).",
     }),
+    faces: z
+      .array(z.object({ type: z.enum(["person", "agent"]), id: z.string() }))
+      .optional()
+      .openapi({ description: "Channel list only (VPS Zen): up to 3 members for the sidebar's faces, agents first." }),
+    memberCount: z.number().int().optional().openapi({ description: "Channel list only (VPS Zen): how many members." }),
     lastReadAt: z.string().nullable().optional().openapi({
       description:
         "Channel list only: where the unread starts (when you last read it, or joined); null when not a member.",

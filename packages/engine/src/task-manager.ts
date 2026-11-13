@@ -286,7 +286,7 @@ async function visibleRuns(
         trig.author_user_id as requester_id, ru.name as requester_name, trig.author_agent_id as asker_agent_id,
         rt.id as routine_id, rt.name as routine_name, w.title as work_title, w.plan as work_plan,
         last.data as last_data, last.created_at as last_at,
-        (select count(*) from ${agentRunSteps} s where s.run_id = r.id and s.kind = 'tool_call') as steps,
+        (select count(*) from ${agentRunSteps} s where s.run_id = r.id and ${CALL_STEP}) as steps,
         su.name as stopper_name,
         coalesce(r.transcript->'waitingForBrain', case when r.status = 'running' and r.waiting_machine_id is not null
           then '{"code":"busy"}'::jsonb end) as wait, pause.data as wait_pause, r.waiting_machine_id,
@@ -308,8 +308,8 @@ async function visibleRuns(
       left join ${routineRuns} rr on rr.org_id = ${orgId}::uuid and rr.agent_run_id = r.id
       left join ${routines} rt on rt.id = rr.routine_id
       left join lateral (
-        select s.data, s.created_at from ${agentRunSteps} s
-        where s.run_id = r.id and s.kind = 'tool_call'
+        select ${CALL_DATA} as data, s.created_at from ${agentRunSteps} s
+        where s.run_id = r.id and ${CALL_STEP}
         order by s.seq desc limit 1
       ) last on ${which.active ? sql`true` : sql`false`}
       left join lateral (
@@ -474,6 +474,14 @@ function nowOf(r: Row): TaskNow | null {
   };
 }
 
+/**
+ * VPS Zen: a step that is a call, ours (`tool_call`) or the computer brain's own (a `context` step's `ownTool`,
+ * `ownToolStep` in the executor), for the counts, the "now" line and the activity line.
+ */
+const CALL_STEP = sql.raw("(s.kind = 'tool_call' or (s.kind = 'context' and s.data ? 'ownTool'))");
+/** The call's own fields: `ownTool`'s for the brain's own calls. */
+const CALL_DATA = sql.raw("case when s.kind = 'context' then s.data->'ownTool' else s.data end");
+
 /** The caller's task manager. */
 export async function taskManager(
   db: Database,
@@ -624,7 +632,7 @@ export async function agentActivity(db: Database, orgId: string, now = new Date(
     await db.execute(sql`select r.agent_id,
         floor(extract(epoch from (${now.toISOString()}::timestamptz - s.created_at)) / 60)::int as ago, count(*) as n
       from ${agentRuns} r
-      join ${agentRunSteps} s on s.run_id = r.id and s.kind = 'tool_call'
+      join ${agentRunSteps} s on s.run_id = r.id and ${CALL_STEP}
         and s.created_at > ${from.toISOString()}::timestamptz
       where r.org_id = ${orgId}::uuid
         and r.created_at > ${new Date(now.getTime() - 24 * 3600_000).toISOString()}::timestamptz
@@ -678,17 +686,35 @@ export async function taskSteps(
   if (!run) throw new NotFoundError("Task not found");
   type StepRow = {
     seq: number;
-    kind: TaskStep["kind"];
+    kind: TaskStep["kind"] | "context";
     data: Record<string, unknown> | string;
     created_at: string | Date;
   };
   const rows = rowsOf<StepRow>(
     await db.execute(sql`select s.seq, s.kind, s.data, s.created_at from ${agentRunSteps} s
-      where s.run_id = ${runId}::uuid and s.kind in ('tool_call', 'tool_result', 'model_call')
+      where s.run_id = ${runId}::uuid and (s.kind in ('tool_call', 'tool_result', 'model_call') or ${CALL_STEP})
       order by s.seq limit ${TASK_STEPS_MAX}`),
   );
-  const steps = rows.map((r): TaskStep => {
-    const data = typeof r.data === "string" ? (JSON.parse(r.data) as Record<string, unknown>) : r.data;
+  const steps = rows.flatMap((r): TaskStep[] => {
+    const raw = typeof r.data === "string" ? (JSON.parse(r.data) as Record<string, unknown>) : r.data;
+    // VPS Zen: the computer brain's own call, as a call that ended (and failed, when it did).
+    if (r.kind === "context") {
+      const own = (raw.ownTool ?? {}) as Record<string, unknown>;
+      const at = iso(r.created_at) as string;
+      const began = typeof own.startedAt === "string" ? own.startedAt : at;
+      const id = typeof own.toolUseId === "string" ? own.toolUseId : `own:${r.seq}`;
+      const call = { toolUseId: id, name: own.name, ...(own.detail ? { detail: own.detail } : {}), own: true };
+      return [
+        { seq: Number(r.seq), kind: "tool_call", data: call, createdAt: began },
+        {
+          seq: Number(r.seq) + 0.5,
+          kind: "tool_result",
+          data: { toolUseId: id, name: own.name, ...(own.isError ? { isError: true } : {}) },
+          createdAt: at,
+        },
+      ];
+    }
+    const data = raw;
     const pick = (keys: string[]) =>
       Object.fromEntries(keys.filter((k) => data[k] !== undefined).map((k) => [k, data[k]]));
     const input = data.input as Record<string, unknown> | undefined;
@@ -703,7 +729,7 @@ export async function taskSteps(
         : r.kind === "tool_result"
           ? { ...pick(["toolUseId", "name", "isError"]), ...(data.name === PERMISSION_TOOL ? pick(["content"]) : {}) }
           : pick(["narration", "turn"]);
-    return { seq: Number(r.seq), kind: r.kind, data: shown, createdAt: iso(r.created_at) as string };
+    return [{ seq: Number(r.seq), kind: r.kind, data: shown, createdAt: iso(r.created_at) as string }];
   });
   return { run: { createdAt: iso(run.created_at) as string, finishedAt: iso(run.finished_at) }, steps };
 }

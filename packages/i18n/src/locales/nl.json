@@ -1801,6 +1801,8 @@
     "soundOff": "Uit",
     "typingSound": "Typgeluid",
     "typingSoundHint": "Een zachte toetsklik terwijl je een bericht typt, in de stijl hierboven",
+    "sidebarFaces": "Gezichten in kanalen",
+    "sidebarFacesHint": "Toont in de zijbalk wie er in elk kanaal zit in plaats van #",
     "browserNoticesHint": "Ook als het tabblad dicht is",
     "browserNoticesBlocked": "Je browser heeft ze geblokkeerd. Klik op het icoon naast het adres van de site en zet meldingen aan om ze toe te staan.",
     "browserNoticesFailed": "Kon meldingen nu niet aanzetten. Probeer het opnieuw.",

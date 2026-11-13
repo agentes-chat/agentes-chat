@@ -4240,6 +4240,8 @@ async function executeRunInner(
       const sharing: Promise<void>[] = [];
       /** Its own calls whose step line went out as they started (`tool_started`): not again as they end. */
       const stepTold = new Set<string>();
+      /** VPS Zen: when each of its own calls started (`tool_started`), for its step's duration. */
+      const ownStarted = new Map<string, number>();
       /** A call of its own (not ours through the bridge, which says its step as it starts) is the step line now. */
       const ownStep = (call: { id: string; name: string }) => {
         if (run.background || turnTools.some((t) => t.name === call.name)) return;
@@ -4356,10 +4358,24 @@ async function executeRunInner(
             ...(deps.planLimitGraceMs !== undefined ? { limitGraceMs: deps.planLimitGraceMs } : {}),
             onStarted: (call) => {
               stepTold.add(call.id);
+              ownStarted.set(call.id, Date.now());
               ownStep(call);
             },
             onExecuted: (call) => {
               executedNow.push(call);
+              // VPS Zen: a call of its own (Claude Code's Bash, Read, Edit; Codex's commands) leaves a step on the
+              // run, so the task manager's "Ver passos" shows what it really did (`ownToolStep`).
+              if (!turnTools.some((t) => t.name === call.name)) {
+                const own = ownToolStep(call);
+                const startedAt = ownStarted.get(call.id);
+                ownStarted.delete(call.id);
+                if (own)
+                  later(() =>
+                    addRunStep(db, run, "context", {
+                      ownTool: { ...own, ...(startedAt ? { startedAt: new Date(startedAt).toISOString() } : {}) },
+                    }),
+                  );
+              }
               // A brain that tells its calls only once they ended (Codex, an older runner) says the step now.
               if (!stepTold.delete(call.id)) ownStep(call);
               // The text it streams next is another model call's: never one reply with what it wrote before.
@@ -5690,6 +5706,36 @@ async function executedSince(
   }
   for (const c of reported) calls.set(c.id, { name: c.name, label: executedLabel(c.name, c.input) });
   return [...new Map([...calls.values()].map((c) => [c.label, c])).values()];
+}
+
+/** Claude Code's lookups of our tools: no step of their own, they say nothing of the work. */
+const QUIET_OWN_TOOLS = new Set(["ToolSearch", "TodoWrite"]);
+
+/**
+ * VPS Zen: a computer brain's own call as a `context` step's `ownTool` (never a `tool_call`, which recovery and
+ * continuation replay): its name and one line of what it ran on, the Bash call's own description first. No output.
+ */
+export function ownToolStep(call: {
+  id: string;
+  name: string;
+  input: unknown;
+  result?: { isError?: boolean };
+}): { toolUseId: string; name: string; detail: string; isError?: true } | null {
+  if (QUIET_OWN_TOOLS.has(call.name)) return null;
+  const i = (call.input && typeof call.input === "object" ? call.input : {}) as Record<string, unknown>;
+  const said = typeof i.description === "string" ? maskCredentials(i.description.trim().replace(/\s+/g, " ")) : "";
+  const label = executedLabel(call.name, call.input);
+  const detail = said
+    ? cutText(said, 160)
+    : label.startsWith(`${call.name} (`)
+      ? label.slice(call.name.length + 2, -1)
+      : "";
+  return {
+    toolUseId: call.id,
+    name: call.name,
+    detail,
+    ...(call.result?.isError ? { isError: true as const } : {}),
+  };
 }
 
 /**
