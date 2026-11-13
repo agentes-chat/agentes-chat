@@ -30,9 +30,10 @@ One time, in GitHub → Settings → Secrets and variables → Actions:
    file must list the variant's package (`chat.agentes.app`, `chat.agentes.app.preview`); otherwise that build is
    made without push and the run says so. The server sends those pushes to Firebase itself, with a service account of
    the same Firebase project (`FIREBASE_SERVICE_ACCOUNT`); other servers send through its push relay (ADR 0152).
-3. Optional: `PLAY_SERVICE_ACCOUNT_JSON` (a Play Console service account allowed to release; Play takes API uploads
-   only after the app's first bundle was uploaded by hand), and the variable `ANDROID_VERSION_CODE_BASE` (added to
-   the run number) above the last version code on Play, if any.
+3. The variable `ANDROID_VERSION_CODE_BASE` (Variables tab, not Secrets), added to the run number: the last version
+   code on Play, or `0` before the first upload. A production build stops at once without it.
+4. Optional: `PLAY_SERVICE_ACCOUNT_JSON` (a Play Console service account allowed to release; Play takes API uploads
+   only after the app's first bundle was uploaded by hand).
 
 A preview APK installs over an earlier one only when both were signed with the same key.
 

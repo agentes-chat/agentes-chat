@@ -9,7 +9,7 @@ name: Android build
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD: the upload key
 #   GOOGLE_SERVICES_JSON_BASE64: optional, Firebase's google-services.json (push on Android)
 #   PLAY_SERVICE_ACCOUNT_JSON: optional, a Google Play service account allowed to release
-# Variable (optional): ANDROID_VERSION_CODE_BASE, added to the run number (above the last version code on Play).
+# Variable: ANDROID_VERSION_CODE_BASE, added to the run number (the last version code on Play); production needs it.
 # A secret still set to PLACEHOLDER (made so the names exist) counts as not set.
 on:
   workflow_dispatch:
@@ -82,10 +82,18 @@ jobs:
           distribution: temurin
           java-version: 17
       - run: bun install --frozen-lockfile
+      # Production stops here without the base: the run number alone repeats version codes the Play Store already
+      # has, and it would refuse the bundle only after the whole build.
       - name: Version code
         env:
           BASE: ${{ vars.ANDROID_VERSION_CODE_BASE }}
-        run: echo "ANDROID_VERSION_CODE=$(( ${BASE:-0} + GITHUB_RUN_NUMBER ))" >> "$GITHUB_ENV"
+        run: |
+          if [ "$APP_VARIANT" = production ] && [ -z "$BASE" ]; then
+            echo "::error::Variable ANDROID_VERSION_CODE_BASE is not set (Settings → Secrets and variables → Actions → Variables)"
+            exit 1
+          fi
+          echo "ANDROID_VERSION_CODE=$(( ${BASE:-0} + GITHUB_RUN_NUMBER ))" >> "$GITHUB_ENV"
+          echo "Version code $(( ${BASE:-0} + GITHUB_RUN_NUMBER ))"
       # The key and Firebase's file go to the runner's temp folder, outside the checkout, and are deleted at the end.
       - name: Signing key and Firebase config
         env:
