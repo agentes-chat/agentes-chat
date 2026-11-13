@@ -1007,49 +1007,53 @@ export async function getIssueDetail(
   return { ...view, subIssues };
 }
 
+type IssueFilters = {
+  q?: string;
+  status?: IssueStatus;
+  assignee?: WorkActor;
+  parentIssueId?: string;
+  /** Only that project's tasks; `none`: the ones with no project. */
+  projectId?: string;
+};
+
+/** The rows `listIssues` and `countIssues` read: the org's, a person's only those they see (`taskSeenSql`). */
+function issueFilterSql(actor: IssueActor, orgId: string, filters: IssueFilters) {
+  const q = filters.q?.trim();
+  return and(
+    eq(issues.orgId, orgId),
+    actor.type === "person" ? taskSeenSql("issues", sql`${actor.userId}::text`) : undefined,
+    filters.status ? eq(issues.status, filters.status) : undefined,
+    filters.parentIssueId ? eq(issues.parentIssueId, filters.parentIssueId) : undefined,
+    filters.projectId === "none"
+      ? isNull(issues.projectId)
+      : filters.projectId
+        ? eq(issues.projectId, filters.projectId)
+        : undefined,
+    filters.assignee
+      ? and(eq(issues.assigneeType, filters.assignee.type), eq(issues.assigneeId, filters.assignee.id))
+      : undefined,
+    q
+      ? or(
+          sql`${issues.title} ilike ${`%${q}%`}`,
+          sql`${issues.description} ilike ${`%${q}%`}`,
+          /^#?\d+$/.test(q) ? eq(issues.number, Number(q.replace("#", ""))) : undefined,
+        )
+      : undefined,
+  );
+}
+
 /** Issues the actor can see, open first then by most recent update. */
 export async function listIssues(
   db: Database,
   actor: IssueActor,
   orgId: string,
-  filters: {
-    q?: string;
-    status?: IssueStatus;
-    assignee?: WorkActor;
-    parentIssueId?: string;
-    /** Only that project's tasks; `none`: the ones with no project. */
-    projectId?: string;
-    limit?: number;
-  } = {},
+  filters: IssueFilters & { limit?: number } = {},
 ): Promise<IssueView[]> {
   await requireOrgMember(db, actor, orgId);
-  const q = filters.q?.trim();
   const rows = await db
     .select()
     .from(issues)
-    .where(
-      and(
-        eq(issues.orgId, orgId),
-        actor.type === "person" ? taskSeenSql("issues", sql`${actor.userId}::text`) : undefined,
-        filters.status ? eq(issues.status, filters.status) : undefined,
-        filters.parentIssueId ? eq(issues.parentIssueId, filters.parentIssueId) : undefined,
-        filters.projectId === "none"
-          ? isNull(issues.projectId)
-          : filters.projectId
-            ? eq(issues.projectId, filters.projectId)
-            : undefined,
-        filters.assignee
-          ? and(eq(issues.assigneeType, filters.assignee.type), eq(issues.assigneeId, filters.assignee.id))
-          : undefined,
-        q
-          ? or(
-              sql`${issues.title} ilike ${`%${q}%`}`,
-              sql`${issues.description} ilike ${`%${q}%`}`,
-              /^#?\d+$/.test(q) ? eq(issues.number, Number(q.replace("#", ""))) : undefined,
-            )
-          : undefined,
-      ),
-    )
+    .where(issueFilterSql(actor, orgId, filters))
     .orderBy(sql`${issues.status} in ('done', 'canceled')`, desc(issues.updatedAt))
     .limit(Math.min(500, filters.limit ?? 200));
   if (actor.type === "person") return views(db, rows, actor.userId);
@@ -1065,6 +1069,48 @@ export async function listIssues(
   const visible: IssueRow[] = [];
   for (const r of rows) if (shared.has(r.id) || (await agentReaches(db, actor, orgId, r))) visible.push(r);
   return views(db, visible);
+}
+
+/** How many tasks a person sees, by what the board groups them on: the list is capped, these are not. */
+export interface IssueCount {
+  status: IssueStatus;
+  /** As stored: the board puts a task whose column is of another stage in its stage's first one. */
+  columnId: string | null;
+  assignee: WorkActor | null;
+  priority: IssuePriority;
+  count: number;
+}
+
+/**
+ * The person's tasks counted by stage, column, assignee and priority, with the same filters as `listIssues` and no
+ * cap: a board says a stage's real size even when it shows only its most recent cards.
+ */
+export async function countIssues(
+  db: Database,
+  actor: Extract<IssueActor, { type: "person" }>,
+  orgId: string,
+  filters: Omit<IssueFilters, "status" | "assignee"> = {},
+): Promise<IssueCount[]> {
+  await requireOrgMember(db, actor, orgId);
+  const rows = await db
+    .select({
+      status: issues.status,
+      columnId: issues.columnId,
+      assigneeType: issues.assigneeType,
+      assigneeId: issues.assigneeId,
+      priority: issues.priority,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(issues)
+    .where(issueFilterSql(actor, orgId, filters))
+    .groupBy(issues.status, issues.columnId, issues.assigneeType, issues.assigneeId, issues.priority);
+  return rows.map((r) => ({
+    status: r.status as IssueStatus,
+    columnId: r.columnId,
+    assignee: r.assigneeType && r.assigneeId ? { type: r.assigneeType as WorkActor["type"], id: r.assigneeId } : null,
+    priority: r.priority as IssuePriority,
+    count: Number(r.count),
+  }));
 }
 
 /** Mirrors `GITHUB_LINK`, packages/client/src/lib/github-link.ts. */

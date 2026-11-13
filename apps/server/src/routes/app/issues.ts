@@ -1,6 +1,7 @@
 import {
   askAgentToImplement,
   commentIssue,
+  countIssues,
   createIssue,
   createIssueColumn,
   createIssueProject,
@@ -212,6 +213,13 @@ export function issueRoutes(deps: AppDeps) {
             .union([z.uuid(), z.literal("none")])
             .optional()
             .openapi({ description: "Only that project's tasks. `none`: the ones with no project." }),
+          limit: z.coerce
+            .number()
+            .int()
+            .min(1)
+            .max(500)
+            .optional()
+            .openapi({ description: "At most this many (200 when absent). A board asks per stage, with `status`." }),
         }),
       },
       responses: { 200: json(z.object({ issues: z.array(Issue) })), ...errors },
@@ -224,8 +232,52 @@ export function issueRoutes(deps: AppDeps) {
         status: query.status,
         parentIssueId: query.parentIssueId,
         projectId: query.projectId,
+        limit: query.limit,
       });
       return c.json({ issues: list }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/issue-counts",
+      tags,
+      security,
+      summary:
+        "How many tasks you can see, by stage, column, assignee and priority (the list is capped, these are not)",
+      request: {
+        params: OrgParams,
+        query: z.object({
+          q: z.string().max(200).optional(),
+          projectId: z.union([z.uuid(), z.literal("none")]).optional(),
+        }),
+      },
+      responses: {
+        200: json(
+          z.object({
+            counts: z.array(
+              z.object({
+                status: Status,
+                columnId: z.string().nullable(),
+                assignee: Actor.nullable(),
+                priority: Priority,
+                count: z.number().int(),
+              }),
+            ),
+          }),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const query = c.req.valid("query");
+      const counts = await countIssues(db, person(c.get("user").id), orgId, {
+        q: query.q,
+        projectId: query.projectId,
+      });
+      return c.json({ counts }, 200);
     },
   );
 

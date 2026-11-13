@@ -259,6 +259,35 @@ describe("Tarefas: a card", () => {
   });
 });
 
+describe("Tarefas: a busy board", () => {
+  /** The seed's tasks plus `todo` more in A fazer and then `done` more in Feito (the newest numbers). */
+  const busy = async (todo: number, done: number) => {
+    const api = createFakeApi(seedState());
+    for (let k = 0; k < todo; k++) await api.issues.create(ORG_ID, { title: `Aberta ${k + 1}` });
+    for (let k = 0; k < done; k++) {
+      const made = await api.issues.create(ORG_ID, { title: `Feita ${k + 1}` });
+      await api.issues.update(ORG_ID, made.id, { status: "done" });
+    }
+    const every = await api.issues.list(ORG_ID, { limit: 500 });
+    const total = (status: Issue["status"]) => every.filter((i) => i.status === status).length;
+    return { api, total };
+  };
+  const headCount = (name: string) => column(name).querySelector("[data-count]")?.textContent;
+
+  test("more than 200 open tasks: Feito still shows its newest cards and says its whole size", async () => {
+    const { api, total } = await busy(210, 120);
+    await go(undefined, api);
+    const done = column("Feito");
+    // Its 100 newest cards, the newest first; its head says all of them.
+    expect(done.querySelectorAll("[data-card]")).toHaveLength(100);
+    expect(cardTitles(done)[0]).toBe("Feita 120");
+    expect(headCount("Feito")).toBe(String(total("done")));
+    // A fazer comes whole.
+    expect(column("A fazer").querySelectorAll("[data-card]")).toHaveLength(total("todo"));
+    expect(headCount("A fazer")).toBe(String(total("todo")));
+  });
+});
+
 describe("Tarefas: + in a column's head", () => {
   test("A fazer's head has + left of its ⋯, 8 apart; it opens Nova tarefa in that column; no button under the cards", async () => {
     await go();

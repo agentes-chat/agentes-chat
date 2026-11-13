@@ -169,6 +169,10 @@ export const keys = {
   issues: (orgId: string) => ["org", orgId, "issues"] as const,
   /** `project`: a project's id, `none`, or "" for every task. */
   issueList: (orgId: string, q: string, project = "") => ["org", orgId, "issues", "list", q, project] as const,
+  /** The board's read, one request per stage (`useIssuesByStage`): a list too, so a move lands on it at once. */
+  issueStageList: (orgId: string, q: string, project = "") =>
+    ["org", orgId, "issues", "list", q, project, "by-stage"] as const,
+  issueCounts: (orgId: string, q: string, project = "") => ["org", orgId, "issues", "counts", q, project] as const,
   issue: (orgId: string, number: number) => ["org", orgId, "issues", "one", number] as const,
   issueActivity: (orgId: string, id: string) => ["org", orgId, "issues", "activity", id] as const,
   issueColumns: (orgId: string) => ["org", orgId, "issues", "columns"] as const,

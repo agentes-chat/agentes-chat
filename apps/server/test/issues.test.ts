@@ -94,6 +94,32 @@ test("issues API: create, by number, patch, criteria, comments, activity, ask ag
   expect(list.issues.map((i) => i.number).sort()).toEqual([1, 2]);
 });
 
+test("a board reads per stage: status and limit on the list, and counts that aren't capped", async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const api = (path: string, init?: Parameters<typeof owner>[1]) =>
+    owner(`/api/app/organizations/${orgId}${path}`, init);
+  type Task = { id: string; number: number; status: string };
+  const made: Task[] = [];
+  for (const title of ["Uma", "Duas", "Três"])
+    made.push((await (await api("/issues", { json: { title } })).json()) as Task);
+  for (const task of made.slice(1))
+    expect((await api(`/issues/${task.id}`, { method: "PATCH", json: { status: "done" } })).status).toBe(200);
+
+  const done = (await (await api("/issues?status=done&limit=1")).json()) as { issues: Task[] };
+  expect(done.issues.map((i) => i.number)).toEqual([3]);
+  expect((await api("/issues?limit=501")).status).toBe(400);
+  const { counts } = (await (await api("/issue-counts")).json()) as { counts: { status: string; count: number }[] };
+  expect(counts.map((c) => [c.status, c.count]).sort()).toEqual([
+    ["done", 2],
+    ["todo", 1],
+  ]);
+  expect(await (await api("/issue-counts?q=Uma")).json()).toEqual({
+    counts: [{ status: "todo", columnId: null, assignee: null, priority: "normal", count: 1 }],
+  });
+});
+
 test("board columns API: list, add, rename, move a task, delete with a destination", async () => {
   const owner = browser(t);
   await signUp(owner, "owner@example.com");

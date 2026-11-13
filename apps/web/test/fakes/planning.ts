@@ -23,6 +23,7 @@ import type {
   Issue,
   IssueActivity,
   IssueColumn,
+  IssueCount,
   IssuePatch,
   IssueProjectRef,
   IssueStatus,
@@ -515,11 +516,35 @@ export function createMockPlanning(
         const q = filters.q?.trim().toLowerCase();
         const inProject = (i: Issue) =>
           !filters.projectId || (filters.projectId === "none" ? !i.project : i.project?.id === filters.projectId);
+        const closed = (i: Issue) => i.status === "done" || i.status === "canceled";
+        // As the server: open ones first, then the newest; capped at `limit` (200 when absent, at most 500).
         return clone(
           (await store(orgId)).issues
             .filter((i) => inProject(i) && (!q || `${i.title} #${i.number}`.toLowerCase().includes(q)))
-            .sort((a, b) => b.number - a.number),
+            .filter((i) => !filters.status || i.status === filters.status)
+            .sort((a, b) => Number(closed(a)) - Number(closed(b)) || b.number - a.number)
+            .slice(0, Math.min(500, filters.limit ?? 200)),
         );
+      },
+      counts: async (orgId, filters = {}) => {
+        const q = filters.q?.trim().toLowerCase();
+        const inProject = (i: Issue) =>
+          !filters.projectId || (filters.projectId === "none" ? !i.project : i.project?.id === filters.projectId);
+        const out = new Map<string, IssueCount>();
+        for (const i of (await store(orgId)).issues) {
+          if (!inProject(i) || (q && !`${i.title} #${i.number}`.toLowerCase().includes(q))) continue;
+          const key = [i.status, i.columnId, i.assignee?.type, i.assignee?.id, i.priority].join("|");
+          const row = out.get(key) ?? {
+            status: i.status,
+            columnId: i.columnId,
+            assignee: i.assignee,
+            priority: i.priority,
+            count: 0,
+          };
+          row.count += 1;
+          out.set(key, row);
+        }
+        return [...out.values()];
       },
       get: async (orgId, number) => {
         const i = (await store(orgId)).issues.find((x) => x.number === number);
