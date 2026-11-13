@@ -416,9 +416,11 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
     agent: {
       ...agent,
       brain: own.brain,
-      // The person's own choice first; none made there, the model saved on the agent still speaks for the turn
-      // (issue #221: `own.brainModel` empty used to wipe it and the turn fell to the brain's `sonnet` default).
-      brainModel: own.brainModel ?? agent.brainModel,
+      // The person's own choice first; none made there, the model saved on the agent still speaks for the turn when it
+      // can run where the turn will (issue #221: `own.brainModel` empty used to wipe it, and the turn fell to the
+      // brain's `sonnet` default). An agent on the API saves catalog ids, which the computer brain the person picked may
+      // still serve through its plan; a model saved for one computer brain means nothing to another.
+      brainModel: own.brainModel ?? (own.brain === agent.brain || agent.brain === "model" ? agent.brainModel : null),
       brainEffort: own.brainEffort,
       brainAccountId: own.brainAccountId,
       brainAccountLentBy: own.brainAccountLentBy,

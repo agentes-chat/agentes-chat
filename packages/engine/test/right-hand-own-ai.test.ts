@@ -31,6 +31,7 @@ import {
 } from "../src";
 import { agentAiState, backgroundAiState, orgAiStatus, orgHasAi } from "../src/ai-status";
 import { rightHandWidgetsReady, widgetAi } from "../src/dashboards/refresh-fire";
+import { withPersonalBrain } from "../src/right-hand";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 import { routineDeps } from "./routine-fixtures";
@@ -686,6 +687,27 @@ test("the model saved on the agent reaches the turn when the person's own brain 
   // It is one of the plan's models: nothing was kept off it, so the run records no `brainModel` step.
   const steps = await fx.db.select().from(schema.agentRunSteps);
   expect(steps.some((s) => (s.data as { brainModel?: unknown }).brainModel !== undefined)).toBe(false);
+});
+
+test("a model saved for one computer brain doesn't follow the person to another (issue #221)", async () => {
+  const { fx, bia, lodi } = await world();
+  // Bia's own DM runs Codex; the right hand is stored on Claude Code with a Claude model. An Opus is no Codex model.
+  await fx.db.insert(schema.rightHandBrains).values({
+    orgId: fx.org.id,
+    userId: bia.id,
+    brain: "codex",
+    brainModel: null,
+    brainAccountId: BIAS,
+  });
+  await fx.db
+    .update(schema.agents)
+    .set({ brain: "claude_code", brainModel: "claude-opus-5-5", brainAccountId: BIAS })
+    .where(eq(schema.agents.id, lodi.id));
+  const [stored] = await fx.db.select().from(schema.agents).where(eq(schema.agents.id, lodi.id));
+  if (!stored) throw new Error("no right hand");
+  const { agent } = await withPersonalBrain(fx.db, stored, bia.id);
+  expect(agent.brain).toBe("codex");
+  expect(agent.brainModel).toBeNull();
 });
 
 test("a model the person chose for their own DM wins over the agent's", async () => {
