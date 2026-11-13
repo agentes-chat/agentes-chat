@@ -515,9 +515,20 @@ test("a host that refuses to start is `muse_missing` on ENOENT and carries its s
   expect((refused.events.at(-1) as { message: string }).message).toContain("muse login");
 });
 
-test("a right-hand turn and Windows are refused before anything runs", async () => {
-  const chat = await turn({ chat: true });
-  expect(chat.events).toEqual([expect.objectContaining({ type: "error", code: "unsupported" })]);
+test("a right-hand turn runs read-only, and a tool of the CLI's own stops it", async () => {
+  // A `chat` turn takes the read-only posture whatever the profile says.
+  expect(museServeArgs({ chat: true })).toEqual(["serve", "--disable-write", "--disable-shell"]);
+  expect(museServeArgs({ chat: true, profile: "work" })).toContain("--disable-shell");
+  // With no tool of its own it is a normal turn.
+  const clean = await turn({ chat: true });
+  expect(clean.events.at(-1)?.type).toBe("done");
+  // Our bridge's tools are `mcp__…`; one of the CLI's own is a breach, and the turn stops.
+  process.env.FAKE_MUSE_TOOL = "1";
+  const breach = await turn({ chat: true });
+  expect(breach.events.at(-1)).toMatchObject({ type: "error", code: "tools_not_locked" });
+});
+
+test("Windows is refused before anything runs", async () => {
   const win = await turn({}, { platform: "win32" });
   expect(win.events).toEqual([expect.objectContaining({ type: "error", code: "unsupported" })]);
 });

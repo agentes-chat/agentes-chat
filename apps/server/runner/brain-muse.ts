@@ -66,7 +66,9 @@ import { agentSecrets } from "./secrets";
  *   brain needs nothing from the workspace (the engine's context leads the prompt), so the flag bought nothing and
  *   armed a hole: a cloned repo must not reach a hook.
  * - Contributor mode is on for subscriptions by default; every host turns it off, or the workspace's code trains Meta.
- * - Refused rather than faked: a `chat` turn (no tool allow/deny list on this CLI) and Windows.
+ * - A `chat` turn (the team's right hand) takes the read-only posture — no shell, no write — and a call that is not
+ *   our bridge's (`mcp__…`) ends the turn with `tools_not_locked`, the guard an allow-list would give us. Windows is
+ *   still refused.
  */
 
 const KILL_GRACE_MS = 5000;
@@ -127,8 +129,9 @@ export function uuidv7(now = Date.now()): string {
  * is deliberately absent: what it would load is a cloned repo's own `.muse/hooks.json`, which the host runs as itself
  * and outside the shell sandbox, and this brain never declares a workspace root, so the flag loads nothing today.
  */
-export function museServeArgs(input: { profile?: CommandProfile } = {}): string[] {
-  return ["serve", ...(input.profile === "plan" ? ["--disable-write", "--disable-shell"] : [])];
+export function museServeArgs(input: { profile?: CommandProfile; chat?: boolean } = {}): string[] {
+  const readOnly = input.chat === true || input.profile === "plan";
+  return ["serve", ...(readOnly ? ["--disable-write", "--disable-shell"] : [])];
 }
 
 /** The host's environment: no key to answer in the person's place, no self-upgrade, no contributor mode. */
@@ -628,8 +631,8 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
   if ((opts.platform ?? process.platform) === "win32")
     return fail("unsupported", "The Muse Code brain isn't supported on Windows yet.");
-  if (input.chat)
-    return fail("unsupported", "Muse Code can't hold a right hand yet: its CLI has no way to withhold its own tools.");
+  // A right-hand turn: the CLI has no tool allow/deny list, so the posture withholds the shell and the write, and a
+  // call that is not ours ends the turn (below). `chat` is a posture, not a profile: it wins over `work`.
 
   const key = input.account?.key;
   const sessionKey = codexThreadKey(input.sessionId, input.account?.id);
@@ -666,7 +669,10 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   try {
     child = (opts.spawn ?? spawn)(
       resolveCommand(opts.bin ?? MUSE_BIN, env.PATH),
-      museServeArgs({ ...(input.profile ? { profile: input.profile } : {}) }),
+      museServeArgs({
+        ...(input.profile ? { profile: input.profile } : {}),
+        ...(input.chat ? { chat: true } : {}),
+      }),
       { cwd: input.cwd, env, stdio: ["pipe", "pipe", "pipe"], detached: true },
     );
   } catch (err) {
@@ -699,7 +705,18 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     done = resolve;
   });
 
+  // A shared tool of the CLI's own in a `chat` turn: the guard the allow-list would give us elsewhere.
+  const OUR_TOOL = /^mcp__/;
+  let breach: string | undefined;
   const host = new MuseHost(child, (method, params) => {
+    if (input.chat && method === "item/completed") {
+      const item = isRecord(params.item) ? params.item : {};
+      const called = str(item.kind) === "toolCall" ? str(item.tool) : "";
+      if (called && !OUR_TOOL.test(called) && !breach) {
+        breach = `Muse Code ran a tool of its own (${called}), so the turn stopped.`;
+        killTree(child, "SIGKILL");
+      }
+    }
     if (method === "turn/completed") {
       // The status is read here, not after `turnOver` resolves: the notification also resolves it, and a failed or
       // cancelled turn would otherwise be decided as the success its `done` reports.
@@ -860,6 +877,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   clearTimeout(deadline);
   await host.close().catch(() => undefined);
   if (opts.signal.aborted) return fail("canceled", "The turn was canceled.");
+  if (breach) return fail("tools_not_locked", breach);
   if (missingHost) return fail("muse_missing", "Muse Code's CLI is not installed on this computer.", true);
   if (failure) {
     for (const event of museProblem(failure)) opts.emit(event);
