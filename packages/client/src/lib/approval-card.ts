@@ -94,16 +94,16 @@ export function approvalLine(card: readonly Approval[]): Map<string, LinePlace> 
     let freeSince: string | null = null;
     if (toDo(a)) {
       const place = items.findIndex((x) => x.runId === a.runId && toDo(x));
+      // The first in the line it waits for: its own run's request still waiting, or another run's asked before it.
       waitsOn =
-        items.find((b) => b.id !== a.id && lined(b) && b.runId === a.runId && b.status === "pending") ??
         items.find(
           (b, j) =>
-            j < place &&
+            b.id !== a.id &&
             lined(b) &&
-            b.runId !== a.runId &&
-            (b.status === "pending" || (b.status === "approved" && !b.result)),
-        ) ??
-        null;
+            (b.runId === a.runId
+              ? b.status === "pending"
+              : j < place && (b.status === "pending" || (b.status === "approved" && !b.result))),
+        ) ?? null;
       if (!waitsOn) {
         const times = items
           .filter((b, j) => b.id !== a.id && lined(b) && (j < place || b.runId === a.runId))

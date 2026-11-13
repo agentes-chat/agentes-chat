@@ -476,6 +476,8 @@ describe("several requests on one card", () => {
     // Its own run's other request, wherever it sits, holds it too: the run goes on once all of its are decided.
     const sibling = goal("g333", { runId: "r2" });
     expect(approvalLine([ran, r2, sibling]).get("g22")?.waitsOn?.id).toBe("g333");
+    // Held by both, it names the first in the line.
+    expect(approvalLine([r1, r2, sibling]).get("g22")?.waitsOn?.id).toBe("g1");
     // Interleaved runs: a run's place is its earliest action still to do, so r1's later one goes with its first.
     const a1 = goal("g1", { runId: "r1", status: "approved", decidedAt: at(-1) });
     const a3 = goal("g333", { runId: "r1", status: "approved", decidedAt: at(-1) });
