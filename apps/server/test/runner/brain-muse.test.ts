@@ -425,6 +425,36 @@ test("the offer taken is the narrowest the host made: once by default, the sessi
   expect(museChoice([], { allow: true, always: false })).toBeUndefined();
 });
 
+test("the done carries the whole answer, which is what the engine posts", () => {
+  // Deltas stream; the `done` is the reply. A `done` with an empty text is read as "the model said nothing" and the
+  // run dies as `empty_reply` however much the host wrote.
+  const mapper = new MuseEventMapper();
+  mapper.event("item/delta", { field: "text", itemId: "a1", delta: "Oi, " });
+  mapper.event("item/completed", { item: { kind: "agentMessage", itemId: "a1", text: "Oi, Diego." } });
+  const events = mapper.finish("s1");
+  expect(events.at(-1)).toMatchObject({ type: "done", text: "Oi, Diego." });
+});
+
+test("an answer's text lands even when the host sends no deltas", () => {
+  const mapper = new MuseEventMapper();
+  // The whole text on the completed item, nothing streamed before it.
+  expect(
+    mapper.event("item/completed", {
+      item: { kind: "agentMessage", itemId: "a1", status: "completed", text: "Oi, Diego." },
+    }),
+  ).toEqual([{ type: "text_delta", text: "Oi, Diego." }]);
+  // With deltas it says only what they didn't cover, never the sentence twice.
+  const streamed = new MuseEventMapper();
+  expect(streamed.event("item/delta", { field: "text", itemId: "a2", delta: "Oi, " })).toEqual([
+    { type: "text_delta", text: "Oi, " },
+  ]);
+  expect(
+    streamed.event("item/completed", { item: { kind: "agentMessage", itemId: "a2", text: "Oi, Diego." } }),
+  ).toEqual([{ type: "text_delta", text: "Diego." }]);
+  // Reasoning is not the answer.
+  expect(mapper.event("item/completed", { item: { kind: "reasoning", itemId: "r1", text: "thinking" } })).toEqual([]);
+});
+
 test("the bridge is handed over on session/start, to a host that granted the capability", async () => {
   const { file } = askAbout();
   await turn({}, { mcpCommand: ["agentes-runner", "mcp"] });

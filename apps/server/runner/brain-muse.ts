@@ -410,8 +410,15 @@ function offersOf(params: Record<string, unknown>): MuseApprovalChoice[] {
  * One MSP notification into brain events. Three families matter; everything else (task lifecycle, reminders, view
  * bookkeeping) is skipped by its method before its payload is read.
  */
+/** The kinds an answer's own text arrives as (the wire's `agentMessage`, and the older `assistantMessage`). */
+const isAnswer = (kind: string) => kind === "agentMessage" || kind === "assistantMessage";
+
 export class MuseEventMapper {
   private readonly items = new Map<string, { name: string; args: unknown }>();
+  /** What the answer has already said, per item: the completed one carries the whole text, deltas only the parts. */
+  private readonly said = new Map<string, number>();
+  /** The whole answer, in the order it was said: what a `done` carries, which is what the engine posts. */
+  spoken = "";
   usage = { input: 0, output: 0, cacheRead: 0, model: undefined as string | undefined };
   /** The turn called a tool: a failure after that loses work the API couldn't see, so a retry is the person's call. */
   worked = false;
@@ -429,11 +436,28 @@ export class MuseEventMapper {
         const field = str(p.field);
         if (field && field !== "text") return [];
         const text = this.clean(str(p.delta));
-        return text ? [{ type: "text_delta", text }] : [];
+        if (!text) return [];
+        const id = str(p.itemId);
+        if (id) this.said.set(id, (this.said.get(id) ?? 0) + text.length);
+        this.spoken += text;
+        return [{ type: "text_delta", text }];
       }
       case "item/started":
       case "item/completed": {
         const item = isRecord(p.item) ? p.item : {};
+        // An answer's whole text lives on the completed item, and a host may send no deltas at all (a client that
+        // didn't ask to stream them still gets the text this way): what the deltas didn't cover is said here, so a
+        // turn never ends "empty" while the host has words for it.
+        if (method === "item/completed" && isAnswer(str(item.kind))) {
+          const whole = this.clean(str(item.text));
+          const id = str(item.itemId);
+          const already = id ? (this.said.get(id) ?? 0) : 0;
+          if (id) this.said.delete(id);
+          const rest = whole.slice(already);
+          if (!rest) return [];
+          this.spoken += rest;
+          return [{ type: "text_delta", text: rest }];
+        }
         if (str(item.kind) !== "toolCall") return [];
         const id = str(item.itemId);
         const name = this.clean(str(item.tool) || "tool");
@@ -498,7 +522,8 @@ export class MuseEventMapper {
         ...(named ? { model: named } : {}),
         ...(cacheRead ? { cacheRead } : {}),
       },
-      { type: "done", text: "", session: { id: sessionId } },
+      // The whole answer, not an empty string: a `done` is what the engine posts, and the deltas only stream it.
+      { type: "done", text: this.spoken, session: { id: sessionId } },
     ];
   }
 }
@@ -668,8 +693,12 @@ export interface MuseTurnEnd {
 
 /** Runs one Muse turn and emits its events; ends with exactly one `done` or `error`. Never throws. */
 export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): Promise<void> {
-  const fail = (code: string, message: string, retryable?: boolean) =>
-    opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
+  const fail = (code: string, message: string, retryable?: boolean) => {
+    try {
+      require("node:fs").appendFileSync("/tmp/muse-fail.log", `${new Date().toISOString()} ${code}: ${message}\n`);
+    } catch {}
+    return opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
+  };
   if ((opts.platform ?? process.platform) === "win32")
     return fail("unsupported", "The Muse Code brain isn't supported on Windows yet.");
   // A right-hand turn: the CLI has no tool allow/deny list, so the posture withholds the shell and the write, and a
@@ -759,6 +788,12 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   });
 
   const host = new MuseHost(child, (method, params) => {
+    try {
+      require("node:fs").appendFileSync(
+        "/tmp/muse-events.log",
+        `${new Date().toISOString()} ${method} ${JSON.stringify(params).slice(0, 200)}\n`,
+      );
+    } catch {}
     if (method === "turn/completed") {
       // The status is read here, not after `turnOver` resolves: the notification also resolves it, and a failed or
       // cancelled turn would otherwise be decided as the success its `done` reports.
@@ -826,7 +861,15 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       });
       return;
     }
-    for (const event of mapper.event(method, params)) opts.emit(event);
+    for (const event of mapper.event(method, params)) {
+      try {
+        require("node:fs").appendFileSync(
+          "/tmp/muse-emit.log",
+          `${new Date().toISOString()} ${event.type} ${JSON.stringify(event).slice(0, 120)}\n`,
+        );
+      } catch {}
+      opts.emit(event);
+    }
   });
   (child as unknown as EventEmitter).on("error", (err: Error) => {
     if (finished) return;
