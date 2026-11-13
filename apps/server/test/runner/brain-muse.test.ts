@@ -134,14 +134,14 @@ test("the account's settings document carries our server and none of the machine
   expect(doc.schema_version).toBe(1);
   expect(doc.hooks).toEqual({});
   expect(doc.managed_hooks_path).toBeNull();
-  expect(doc.mcp_servers.agenteschat_agentes.transport).toBe("stdio");
-  expect(doc.mcp_servers.agenteschat_agentes.mode).toBe("required");
-  expect(doc.mcp_servers.agenteschat_agentes.command).toBe("agentes-runner");
+  expect(doc.mcpServers.agenteschat_agentes.transport).toBe("stdio");
+  expect(doc.mcpServers.agenteschat_agentes.mode).toBe("required");
+  expect(doc.mcpServers.agenteschat_agentes.command).toBe("agentes-runner");
   // `agentes-runner mcp` needs the run, and with `mode: required` a bridge that exits ends the turn.
-  expect(doc.mcp_servers.agenteschat_agentes.args).toEqual(["mcp", "--run", "${AGENTES_MCP_RUN}"]);
-  expect(doc.mcp_servers.agenteschat_agentes.env.AGENTES_MCP_RUN).toBe("${AGENTES_MCP_RUN}");
+  expect(doc.mcpServers.agenteschat_agentes.args).toEqual(["mcp", "--run", "${AGENTES_MCP_RUN}"]);
+  expect(doc.mcpServers.agenteschat_agentes.env.AGENTES_MCP_RUN).toBe("${AGENTES_MCP_RUN}");
   const overHttp = JSON.parse(museSettings({ mcp: { token: "t", url: "https://x/mcp" } }));
-  expect(overHttp.mcp_servers.agenteschat_agentes.transport).toBe("streamable_http");
+  expect(overHttp.mcpServers.agenteschat_agentes.transport).toBe("streamable_http");
 });
 
 test("every command carries a UUIDv7, which is what the host demands", () => {
@@ -521,8 +521,13 @@ test("a right-hand turn runs read-only, on our tools and nothing else", async ()
   expect(museServeArgs({ chat: true, profile: "work" })).toContain("--disable-shell");
   // Nobody is at the host to look at an ask, so what isn't ours is refused instead of waited on.
   const base = { cwd: "/w", profile: "work" as const };
-  // Our bridge's calls arrive as a kind this can't read, and those are the ones a right hand runs.
-  expect(museApprovalVerdict({ ...base, chat: true, subject: { kind: "mcp" } })).toMatchObject({ allow: true });
+  // Our bridge's calls arrive as a `tool` subject named `mcp__<server>__<tool>`, and those are the ones it runs.
+  const ours = { kind: "tool", toolName: "mcp__agenteschat_agentes__read_artifact" };
+  expect(museApprovalVerdict({ ...base, chat: true, subject: ours })).toMatchObject({ allow: true });
+  // A tool of the host's own is named without the prefix, and is refused.
+  expect(museApprovalVerdict({ ...base, chat: true, subject: { kind: "tool", toolName: "read_file" } })).toMatchObject({
+    allow: false,
+  });
   // The CLI's own Bash and Write are refused, as `--tools ""` refuses every native tool for Claude.
   expect(museApprovalVerdict({ ...base, chat: true, subject: { kind: "command", command: "ls" } })).toMatchObject({
     allow: false,
