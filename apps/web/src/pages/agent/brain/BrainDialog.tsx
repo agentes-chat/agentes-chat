@@ -52,10 +52,11 @@ import { TeamScene, useDawn } from "@/components/arrival/TeamScene";
 import { useConnectAi } from "@/components/ConnectAi";
 import { ToolOffNote, useToolOneClick } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
+import { NoQuotaReading } from "@/components/PlanModels";
 import { useWidenAsk } from "@/components/ReachLines";
 import { ToolsOffHereNote, useIsThisMac } from "@/components/ThisMac";
 import { useAdminsLock } from "@/hooks/usePersonalView";
-import { modelLimitText } from "@/lib/plan-usage";
+import { modelLimitText, noQuotaReading } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import { useAgentEdit } from "../context";
 import {
@@ -700,7 +701,11 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
           <div className="bd-use">
             <p className="arrival-opts__label">{t("agentPage.work.brain.account")}</p>
             {s.currentRow && <HaveRow item={s.currentRow} checked still />}
-            {s.usage && <PlanWindows usage={s.usage} />}
+            {s.usage ? (
+              <PlanWindows usage={s.usage} provider={s.currentAccount?.provider ?? null} />
+            ) : (
+              (s.savedCard === "key" || noQuotaReading(s.currentAccount?.provider)) && <NoQuotaReading />
+            )}
           </div>
           {arrived && (
             <SettingNote icon="check" live>

@@ -103,6 +103,70 @@ export function modelLimitText(
 }
 
 /**
+ * Where a model's own quota stands, in a few words for its line in an account's models (`modelLimitOf`'s): filled
+ * up and when it resets, the region it needs, its key's plan with no subscription, or the plan refusing it. Without
+ * the model's name: the line already has it.
+ */
+export function modelRemainingWords(
+  t: TFunction,
+  locale: string | undefined,
+  limit: { until: number | null; region: boolean; off: boolean; inactive: boolean },
+  now = new Date(),
+): string {
+  if (limit.region) return t("usageViews.models.region");
+  if (limit.inactive) return t("usageViews.models.inactive");
+  if (limit.off) return t("usageViews.models.off");
+  return limit.until === null
+    ? t("usageViews.models.exhaustedUnknown")
+    : t("usageViews.models.exhausted", { when: usageWhen(t, locale, new Date(limit.until).toISOString(), now) });
+}
+
+/** A plan model at a limit of its own, as the usage views list it: one line each, its name and where it stands. */
+export interface PlanModelUsageLine {
+  /** Its id in the plan (`PlanUsage.models`' key). */
+  id: string;
+  label: string;
+  /** `modelRemainingWords`: no quota left and when it resets, off, the region it needs, or no subscription. */
+  text: string;
+}
+
+/**
+ * The plan's models at a limit of their own that hold now (`PlanUsage.models`, `modelLimitOf`), one line each, in the
+ * plan's order: the quota per model that the account's windows can't show (OpenCode Go's caps for each model). Empty
+ * for a plan whose models share the account's windows, and until a reading says something about one.
+ */
+export function planModelUsage(
+  t: TFunction,
+  locale: string | undefined,
+  usage: Pick<PlanUsage, "models"> | null | undefined,
+  provider: string | null | undefined,
+  now = new Date(),
+): PlanModelUsageLine[] {
+  const plan = planOf(provider);
+  if (!plan?.limitsPerModel) return [];
+  const order = new Map(plan.claudeCode.models.map((m, i) => [m.id, i]));
+  return Object.keys(usage?.models ?? {})
+    .flatMap((id) => {
+      const limit = modelLimitOf(usage?.models, id, now.getTime());
+      const model = plan.claudeCode.models.find((m) => m.id === id);
+      return limit ? [{ id, label: model?.label ?? id, text: modelRemainingWords(t, locale, limit, now) }] : [];
+    })
+    .sort(
+      (a, b) => (order.get(a.id) ?? order.size) - (order.get(b.id) ?? order.size) || a.label.localeCompare(b.label),
+    );
+}
+
+/**
+ * Nothing reads this plan's quota: its maker has no usage endpoint we can read (`plans.ts` `usage`), as with MiniMax.
+ * The app says so rather than showing a number nobody read. False for a plan we read, and for no plan at all (a
+ * computer's own sign-in, which its CLI reports).
+ */
+export const noQuotaReading = (provider: string | null | undefined): boolean => {
+  const plan = planOf(provider);
+  return plan !== undefined && plan.usage === undefined;
+};
+
+/**
  * A model at a limit of its own, in words (`modelLimitOf`'s): the region it needs, its account with no subscription,
  * the plan refusing it, or when it resets. The brain card and a widget's wait say it alike.
  */
@@ -505,10 +569,10 @@ export const accountName = (t: TFunction, a: Pick<PlanAccountInfo, "label" | "ma
 export const brandOf = (a: Pick<PlanAccountInfo, "kind" | "provider">) =>
   planOf(a.provider)?.maker ?? brainName(a.kind);
 
-/** Why an account shows no windows: its maker doesn't tell them here, nobody used it yet, or nobody uses it. */
+/** Why an account shows no windows: nothing reads its plan's quota, nobody used it yet, or nobody uses it. */
 export function noWindowsText(t: TFunction, account: Pick<PlanAccountUsage, "provider" | "agents">) {
   const plan = planOf(account.provider);
-  if (plan && !plan.usage) return t("aiAccounts.usage.notShared", { maker: plan.maker });
+  if (plan && !plan.usage) return t("usageViews.models.noReading");
   return account.agents.length ? t("usageViews.noWindows") : t("usageViews.unused");
 }
 

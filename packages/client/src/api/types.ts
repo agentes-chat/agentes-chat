@@ -5830,7 +5830,7 @@ export interface PlanUsage {
   at: string;
   /**
    * Models at a limit of their own, by model id: until `until` (absent: unknown), `region` the model needs, or `off`
-   * the plan refused it for the key.
+   * the plan refused it for the key. The usage views list them, one line each, as the quota per model.
    */
   models?: Record<string, { at: string; until?: string; region?: true; off?: true; inactive?: true }>;
   /** On a plan whose models have their own limits: the model that last answered with this key. */

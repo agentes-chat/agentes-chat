@@ -15184,6 +15184,14 @@
     "logins_other": "{{count}} login",
     "noWindows": "Batasnya muncul setelah akun ini dipakai lagi.",
     "unused": "Tidak ada agen yang memakai akun ini.",
+    "models": {
+      "noReading": "Tidak ada pembacaan kuota",
+      "exhausted": "Kuota habis · direset {{when}}",
+      "exhaustedUnknown": "Kuota habis",
+      "off": "Dimatikan",
+      "region": "Butuh region Global",
+      "inactive": "Tidak ada langganan aktif"
+    },
     "usesNow": "sedang memakainya",
     "monthTokens": "{{tokens}} token bulan ini",
     "tokens": "{{tokens}} token",

@@ -16189,6 +16189,14 @@
     "logins_other": "{{count}} connexions",
     "noWindows": "La limite s'affiche une fois que ce compte est de nouveau utilisé.",
     "unused": "Aucun agent n'utilise ce compte.",
+    "models": {
+      "noReading": "Aucune lecture de quota",
+      "exhausted": "Quota épuisé · réinitialisé {{when}}",
+      "exhaustedUnknown": "Quota épuisé",
+      "off": "Désactivé",
+      "region": "Nécessite la région Global",
+      "inactive": "Aucun abonnement actif"
+    },
     "usesNow": "l'utilise en ce moment",
     "monthTokens": "{{tokens}} jetons ce mois-ci",
     "tokens": "{{tokens}} jetons",

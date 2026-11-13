@@ -16118,6 +16118,14 @@
     "logins_other": "{{count}} inicios de sesión",
     "noWindows": "El límite aparece cuando esta cuenta se vuelva a usar.",
     "unused": "Ningún agente usa esta cuenta.",
+    "models": {
+      "noReading": "Sin lectura de cuota",
+      "exhausted": "Sin cuota · se renueva {{when}}",
+      "exhaustedUnknown": "Sin cuota",
+      "off": "Desactivado",
+      "region": "Necesita la región Global",
+      "inactive": "Sin suscripción activa"
+    },
     "usesNow": "la usa ahora",
     "monthTokens": "{{tokens}} tokens este mes",
     "tokens": "{{tokens}} tokens",
