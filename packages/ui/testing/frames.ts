@@ -30,6 +30,7 @@ export function canvasPage({ width, height, reduced = false }: { width: number; 
       seen = cb;
     }
     observe() {}
+    unobserve() {}
     disconnect() {}
   };
   g.ResizeObserver = class {
@@ -37,6 +38,7 @@ export function canvasPage({ width, height, reduced = false }: { width: number; 
       resized.push(cb);
     }
     observe() {}
+    unobserve() {}
     disconnect() {}
   };
   const now = spyOn(performance, "now").mockImplementation(() => clock);

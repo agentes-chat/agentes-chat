@@ -3,6 +3,7 @@
  * ones in view (a picker full of them, or a long conversation, costs what is visible). With reduced motion the loop
  * stands still: each sticker is drawn once, at its still frame, and again when what it shows changes.
  */
+import { skiesHeld, watchSkiesHeld } from "../sky/engine";
 import { drawSticker, STICKER_STILL_T, type StickerLook, type StickerMood } from "./stickers";
 
 export interface LiveSticker {
@@ -26,13 +27,16 @@ let motionQuery: MediaQueryList | null | undefined;
 const reduced = () => {
   if (motionQuery === undefined) {
     motionQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
-    // Motion allowed again: the loop starts; asked to stop: every sticker stands at its still frame.
-    motionQuery?.addEventListener?.("change", () => {
-      if (!motionQuery?.matches) start();
+    // Motion allowed again: the loop starts; asked to stop, or the skies held (`holdSkies`, the Linux app): every
+    // sticker stands at its still frame.
+    const changed = () => {
+      if (!reduced()) start();
       else for (const s of stickers) drawLiveSticker(s, STICKER_STILL_T);
-    });
+    };
+    motionQuery?.addEventListener?.("change", changed);
+    watchSkiesHeld(changed);
   }
-  return motionQuery?.matches === true;
+  return skiesHeld() || motionQuery?.matches === true;
 };
 
 /** The loop's clock, in seconds. */

@@ -4,6 +4,8 @@
  * visible portraits are drawn; with reduced motion each one is drawn once,
  * still (and again when its kind or state changes).
  */
+
+import { skiesHeld, watchSkiesHeld } from "../sky/engine";
 import { COMPUTER_ART, type ComputerState, drawComputer, type PortraitKind } from "./portrait.js";
 
 export interface LiveComputer {
@@ -17,8 +19,9 @@ const visible = new WeakSet<Element>();
 let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let observer: IntersectionObserver | null = null;
 
+/** Still: the person asked for reduced motion, or the skies are held (`holdSkies`: the Linux app paints in software). */
 const reduced = () =>
-  typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches === true;
+  skiesHeld() || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches === true);
 const now = () => (typeof performance === "object" ? performance.now() : Date.now()) / 1000;
 const isDark = (el: Element) => el.closest("[data-theme]")?.getAttribute("data-theme") === "dark";
 
@@ -58,9 +61,20 @@ function schedule() {
   }, 90);
 }
 
+/** Held or freed while the page is open (`holdSkies`): each portrait stands still at once, or the loop starts again. */
+let hearsHold = false;
+const onHold = () => {
+  if (!reduced()) schedule();
+  else for (const x of computers) drawLiveComputer(x);
+};
+
 /** Starts drawing a portrait; returns the cleanup. */
 export function addLiveComputer(c: LiveComputer): () => void {
   computers.add(c);
+  if (!hearsHold) {
+    hearsHold = true;
+    watchSkiesHeld(onHold);
+  }
   if (typeof IntersectionObserver === "function") {
     observer ??= new IntersectionObserver((entries) => {
       for (const e of entries) {
