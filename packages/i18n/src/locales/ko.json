@@ -1614,7 +1614,12 @@
     "otherChannelsPersonal": "다른 그룹 대화",
     "titleBar": {
       "back": "뒤로",
-      "forward": "앞으로"
+      "forward": "앞으로",
+      "window": "창",
+      "minimize": "최소화",
+      "maximize": "최대화",
+      "restore": "원래 크기로",
+      "close": "닫기"
     },
     "unshown": "표시할 수 없어요",
     "more": "더 보기",

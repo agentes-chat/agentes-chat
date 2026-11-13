@@ -2,6 +2,7 @@ import { Button, Icon, Kbd, modKey } from "@agenteschat/ui";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { desktopPlatform, desktopWindowAction, useWindowMaximized } from "@/lib/desktop";
 import { openPalette } from "./CommandMenu";
 import { useMediaQuery } from "./NavDrawer";
 import { TABLET_QUERY, useSidebarCollapsed } from "./Sidebar";
@@ -85,4 +86,48 @@ export function DesktopTitleBar() {
 /** Outside the workspace (sign-in, onboarding): an empty strip on top that drags the window. */
 export function DesktopDragStrip() {
   return <div className="titlebar-strip" data-tauri-drag-region="deep" aria-hidden="true" />;
+}
+
+/**
+ * The Windows app's window buttons: the app builds its window without a system frame there (main_window.rs),
+ * so its bar is the title bar as a Mac's already is, and these three stand at the bar's right end — over the
+ * workspace bar's free right side, and over the strip's on every other page (desktop.css). The middle button
+ * puts the window at its largest or, drawn as restore, back.
+ */
+export function DesktopWindowControls() {
+  const { t } = useTranslation();
+  const maximized = useWindowMaximized();
+  if (desktopPlatform() !== "windows") return null;
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: a labelled group of window buttons, not a fieldset
+    <div className="titlebar__controls" role="group" aria-label={t("shell.titleBar.window")}>
+      <Button
+        variant="ghost"
+        size="sm"
+        iconOnly
+        icon="minimize"
+        aria-label={t("shell.titleBar.minimize")}
+        title={t("shell.titleBar.minimize")}
+        onClick={() => desktopWindowAction("minimize")}
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        iconOnly
+        icon={maximized ? "restore" : "maximize"}
+        aria-label={t(maximized ? "shell.titleBar.restore" : "shell.titleBar.maximize")}
+        title={t(maximized ? "shell.titleBar.restore" : "shell.titleBar.maximize")}
+        onClick={() => desktopWindowAction("maximize")}
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        iconOnly
+        icon="close"
+        aria-label={t("shell.titleBar.close")}
+        title={t("shell.titleBar.close")}
+        onClick={() => desktopWindowAction("close")}
+      />
+    </div>
+  );
 }

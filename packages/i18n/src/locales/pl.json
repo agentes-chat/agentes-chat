@@ -1737,7 +1737,12 @@
     "otherChannelsPersonal": "Inne rozmowy grupowe",
     "titleBar": {
       "back": "Wstecz",
-      "forward": "Dalej"
+      "forward": "Dalej",
+      "window": "Okno",
+      "minimize": "Minimalizuj",
+      "maximize": "Maksymalizuj",
+      "restore": "Przywróć",
+      "close": "Zamknij"
     },
     "unshown": "Nie udało się wyświetlić",
     "more": "Więcej",

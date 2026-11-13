@@ -84,6 +84,13 @@ export const extraIcons = {
   ],
   /** Onboarding / Agente dialogs: remove, close. */
   close: [["path", { d: "m6 6 8 8M14 6l-8 8" }]],
+  /** The Windows app's window buttons (its bar carries them, `DesktopWindowControls`): the system's caption glyphs on our grid. */
+  minimize: [["path", { d: "M5 10h10" }]],
+  maximize: [["rect", { x: "5.5", y: "5.5", width: "9", height: "9", rx: "1.5" }]],
+  restore: [
+    ["path", { d: "M8 4.5h7.5v7.5" }],
+    ["rect", { x: "4.5", y: "8", width: "7.5", height: "7.5", rx: "1.5" }],
+  ],
   /** Select: trigger chevron. */
   chevronDown: [["path", { d: "m6 8 4 4 4-4" }]],
   /** Channel: approved chip; select: selected option. */

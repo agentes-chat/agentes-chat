@@ -64,6 +64,7 @@ const COMMANDS: &[&str] = &[
     "welcome_add",
     "pair_link_info",
     "pair_ask",
+    "window_control",
     "screen_access",
     "screen_request",
     "disk_access",

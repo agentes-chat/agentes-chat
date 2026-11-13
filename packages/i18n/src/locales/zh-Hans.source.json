@@ -44358,5 +44358,10 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
-  }
+  },
+  "shell.titleBar.window": "Window",
+  "shell.titleBar.minimize": "Minimize",
+  "shell.titleBar.maximize": "Maximize",
+  "shell.titleBar.restore": "Restore",
+  "shell.titleBar.close": "Close"
 }

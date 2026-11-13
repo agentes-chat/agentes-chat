@@ -4,7 +4,7 @@ import { firstName } from "@agenteschat/client/lib/format";
 import { noticeLine } from "@agenteschat/client/lib/island";
 import { mediaWord } from "@agenteschat/client/lib/media";
 import type { i18n as I18n, TFunction } from "i18next";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { DesktopServerWorkspaces } from "./workspaces";
 
 /**
@@ -189,6 +189,34 @@ export function pageReady() {
 /** `pageReady` once the screen just rendered is on the glass (two frames on): a first screen's mount effect. */
 export function pageReadyAfterPaint() {
   if (inDesktopApp()) requestAnimationFrame(() => requestAnimationFrame(pageReady));
+}
+
+/**
+ * The main window's own buttons on Windows, drawn by the site's bar (`DesktopWindowControls`): minimize, at
+ * its largest or back from it, and close. The app answers only for this one window (`window_control`,
+ * main_window.rs), and elsewhere nothing happens — a browser tab has no window to move, and a Mac's bar
+ * carries its own buttons.
+ */
+export type DesktopWindowAction = "minimize" | "maximize" | "close";
+export function desktopWindowAction(action: DesktopWindowAction) {
+  const tauri = (window as { __TAURI_INTERNALS__?: { invoke?: Invoke } }).__TAURI_INTERNALS__;
+  if (desktopPlatform() !== "windows" || typeof tauri?.invoke !== "function") return;
+  void tauri.invoke("window_control", { action }).catch(() => {});
+}
+
+/**
+ * Whether the app's window is at its largest (`data-maximized` on <html>, main_window.rs `fit_page`, laid
+ * down again on every resize): the Windows bar's middle button draws restore instead of maximize.
+ */
+export function useWindowMaximized() {
+  const [maximized, setMaximized] = useState(() => document.documentElement.hasAttribute("data-maximized"));
+  useEffect(() => {
+    if (desktopPlatform() !== "windows") return;
+    const watch = new MutationObserver(() => setMaximized(document.documentElement.hasAttribute("data-maximized")));
+    watch.observe(document.documentElement, { attributeFilter: ["data-maximized"] });
+    return () => watch.disconnect();
+  }, []);
+  return maximized;
 }
 
 /**

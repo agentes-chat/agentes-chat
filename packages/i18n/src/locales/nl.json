@@ -1654,7 +1654,12 @@
     "otherChannelsPersonal": "Andere groepsgesprekken",
     "titleBar": {
       "back": "Terug",
-      "forward": "Vooruit"
+      "forward": "Vooruit",
+      "window": "Venster",
+      "minimize": "Minimaliseren",
+      "maximize": "Maximaliseren",
+      "restore": "Herstellen",
+      "close": "Sluiten"
     },
     "unshown": "Kon niet worden getoond",
     "more": "Meer",

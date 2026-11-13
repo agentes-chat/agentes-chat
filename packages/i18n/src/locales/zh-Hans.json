@@ -1614,7 +1614,12 @@
     "otherChannelsPersonal": "其他群组对话",
     "titleBar": {
       "back": "后退",
-      "forward": "前进"
+      "forward": "前进",
+      "window": "窗口",
+      "minimize": "最小化",
+      "maximize": "最大化",
+      "restore": "还原",
+      "close": "关闭"
     },
     "unshown": "无法显示",
     "more": "更多",

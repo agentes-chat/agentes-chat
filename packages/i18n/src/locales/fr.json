@@ -1696,7 +1696,12 @@
     "otherChannelsPersonal": "Autres conversations de groupe",
     "titleBar": {
       "back": "Retour",
-      "forward": "Suivant"
+      "forward": "Suivant",
+      "window": "Fenêtre",
+      "minimize": "Réduire",
+      "maximize": "Agrandir",
+      "restore": "Restaurer",
+      "close": "Fermer"
     },
     "unshown": "Affichage impossible",
     "more": "Plus",

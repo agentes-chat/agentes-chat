@@ -1746,8 +1746,17 @@ export const en = {
     otherChannels: "Other channels",
     /** A personal workspace's channels (ADR 0159). */
     otherChannelsPersonal: "Other group conversations",
-    // The Mac app's own title bar (ADR 0036).
-    titleBar: { back: "Back", forward: "Forward" },
+    // The Mac app's own title bar (ADR 0036); on Windows, the app's window buttons (the frame is gone there, main_window.rs).
+    titleBar: {
+      back: "Back",
+      forward: "Forward",
+      /** The Windows window buttons' group, and the buttons themselves. */
+      window: "Window",
+      minimize: "Minimize",
+      maximize: "Maximize",
+      restore: "Restore",
+      close: "Close",
+    },
     unshown: "Couldn't be shown",
     more: "More",
     moreWhat: {

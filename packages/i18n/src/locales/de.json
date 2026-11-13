@@ -1654,7 +1654,12 @@
     "otherChannelsPersonal": "Weitere Gruppenunterhaltungen",
     "titleBar": {
       "back": "Zurück",
-      "forward": "Vorwärts"
+      "forward": "Vorwärts",
+      "window": "Fenster",
+      "minimize": "Minimieren",
+      "maximize": "Maximieren",
+      "restore": "Wiederherstellen",
+      "close": "Schließen"
     },
     "unshown": "Konnte nicht angezeigt werden",
     "more": "Mehr",

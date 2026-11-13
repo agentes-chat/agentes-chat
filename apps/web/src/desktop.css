@@ -1,7 +1,8 @@
 /*
  * agentes for Mac (ADR 0036): the site in the app's window. `html[data-desktop]` is set
- * by main.tsx when the app loaded it. The window has no title bar of its own: its three buttons float over
- * the top-left corner (main_window.rs puts them in the middle of these 48px).
+ * by main.tsx when the app loaded it. The window has no title bar of its own: on a Mac its three buttons float over
+ * the top-left corner (main_window.rs puts them in the middle of these 48px), and on Windows the frame is gone too,
+ * with the page drawing the window's buttons at the bar's right end (DesktopWindowControls).
  */
 :root {
   /*
@@ -12,11 +13,20 @@
   /* The window's close, minimize and zoom buttons. */
   --titlebar-lights: calc(78px / var(--app-zoom, 1));
 }
-/* Full screen: the buttons hide, so does their room. Windows and Linux keep the system's own title bar. */
+/* Full screen: the buttons hide, so does their room. Linux keeps the system's own title bar; Windows's
+   buttons stand at the bar's right end (`--titlebar-controls`), so none keep room on its left. */
 html[data-fullscreen],
 html[data-desktop="windows"],
 html[data-desktop="linux"] {
   --titlebar-lights: 12px;
+}
+/* Windows's window buttons (DesktopWindowControls): three 32px buttons and their two 8px gaps at the bar's
+   right end. None in full screen, where the window's own buttons hide as a Mac's do. */
+html[data-desktop="windows"] {
+  --titlebar-controls: 0px;
+}
+html[data-desktop="windows"]:not([data-fullscreen]) {
+  --titlebar-controls: calc(3 * var(--control-h-sm) + 2 * var(--space-2));
 }
 
 .titlebar {
@@ -93,6 +103,14 @@ html[data-desktop="linux"] {
 .titlebar:has(> .titlebar__nav > :nth-child(3)) .titlebar__search {
   --titlebar-nav: calc(3 * var(--control-h-sm) + 2 * var(--space-2));
 }
+/* Windows: the bar's right end carries the window's buttons (--titlebar-controls, fixed, no part of the bar's
+   own flow). The centring counts their room too, and the field stops short of the buttons when the window is
+   tight (a zoomed app is narrow). */
+html[data-desktop="windows"] .titlebar__search {
+  --titlebar-half: calc((var(--titlebar-lights) + var(--titlebar-nav) + var(--titlebar-controls)) / 2);
+  --titlebar-room: max(0px, (100cqw - var(--titlebar-nav) - 12px - 460px - var(--titlebar-controls)) / 2);
+  max-width: calc(100cqw - 2 * (var(--titlebar-controls) + 12px));
+}
 .titlebar__search > .ac-icon {
   width: var(--control-icon-sm);
   height: var(--control-icon-sm);
@@ -125,10 +143,25 @@ html:not([data-pointer]) .titlebar__search:focus-visible {
   height: var(--titlebar-h);
   z-index: 50;
 }
-/* No strip where the page doesn't drag the window: a full-screen window doesn't move, and Windows and Linux move it by
+/* Windows's window buttons, over the bar's right end in the workspace and the strip's everywhere else. Above
+   the dialogs (they are the window's own buttons, not the page's). Full screen: gone, as a Mac's lights. */
+.titlebar__controls {
+  position: fixed;
+  inset: 0 0 auto auto;
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--titlebar-h);
+  padding-right: 12px;
+}
+html[data-fullscreen] .titlebar__controls {
+  display: none;
+}
+/* No strip where the page doesn't drag the window: a full-screen window doesn't move, and Linux moves it by
    the system's own title bar. There it would only take the clicks meant for what is under it (the onboarding's Back,
-   its step bar). */
-html:is([data-fullscreen], [data-desktop="windows"], [data-desktop="linux"]) .titlebar-strip {
+   its step bar). Windows's frame is gone: its strip drags, like the Mac's. */
+html:is([data-fullscreen], [data-desktop="linux"]) .titlebar-strip {
   display: none;
 }
 
@@ -146,15 +179,15 @@ html[data-desktop] :is(.sidebar__jump-row, .sidebar__head-collapse) {
 html[data-desktop] .auth__logo {
   top: calc(var(--titlebar-h) + 16px);
 }
-/* Onboarding and a new agent: the rail's logo starts under the Mac's buttons (Windows and Linux keep the
-   system's title bar above the page). */
-html[data-desktop="mac"]:not([data-fullscreen]) .onb__rail {
+/* Onboarding and a new agent: the rail's logo starts under the window's buttons (Linux keeps the system's
+   title bar above the page). */
+html[data-desktop]:not([data-fullscreen]) .onb__rail {
   padding-top: calc(var(--titlebar-h) + 8px);
 }
 /* The onboarding's step stays on the wordmark's line, 16px under the rail's padding (onboarding.css). A window
    narrow enough for the step bar keeps the phone's: the bar on top clears the buttons. */
 @media (min-width: 761px) {
-  html[data-desktop="mac"]:not([data-fullscreen]) .onb__body {
+  html[data-desktop]:not([data-fullscreen]) .onb__body {
     padding-top: calc(var(--titlebar-h) + 8px + 16px);
   }
 }
@@ -171,7 +204,7 @@ html[data-desktop="mac"]:not([data-fullscreen]) .onb__rail {
 /* The agent's computer at full size fills the window, title bar included, with the window's buttons drawn over its
    head. Unless the page really went full screen (the engine's, or the system's), it fills the room under the bar,
    as the computer's window already centres in it. */
-html[data-desktop="mac"]:not([data-fullscreen], :fullscreen) .ac-dialog.cmp-dialog.is-full {
+html[data-desktop]:not([data-fullscreen], :fullscreen) .ac-dialog.cmp-dialog.is-full {
   top: var(--titlebar-h);
   height: auto;
 }

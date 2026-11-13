@@ -1670,8 +1670,17 @@ export const ptBR = {
   shell: {
     otherChannels: "Outros canais",
     otherChannelsPersonal: "Outras conversas em grupo",
-    // The Mac app's own title bar (ADR 0036).
-    titleBar: { back: "Voltar", forward: "Avançar" },
+    // The Mac app's own title bar (ADR 0036); on Windows, the app's window buttons (the frame is gone there, main_window.rs).
+    titleBar: {
+      back: "Voltar",
+      forward: "Avançar",
+      /** The Windows window buttons' group, and the buttons themselves. */
+      window: "Janela",
+      minimize: "Minimizar",
+      maximize: "Maximizar",
+      restore: "Restaurar",
+      close: "Fechar",
+    },
     /** In place of a sidebar row (an agent, a person) that failed to draw. */
     unshown: "Não pôde ser exibido",
     more: "Mais",

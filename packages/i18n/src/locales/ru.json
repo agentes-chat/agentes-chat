@@ -1737,7 +1737,12 @@
     "otherChannelsPersonal": "Другие групповые беседы",
     "titleBar": {
       "back": "Назад",
-      "forward": "Вперёд"
+      "forward": "Вперёд",
+      "window": "Окно",
+      "minimize": "Свернуть",
+      "maximize": "Развернуть",
+      "restore": "Восстановить",
+      "close": "Закрыть"
     },
     "unshown": "Не удалось показать",
     "more": "Ещё",

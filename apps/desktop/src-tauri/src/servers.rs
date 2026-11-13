@@ -212,7 +212,8 @@ fn grant(app: &AppHandle, origin: &str) {
         .permission("core:window:allow-internal-toggle-maximize")
         .permission("allow-this-mac")
         .permission("allow-context-menu")
-        .permission("allow-page-ready");
+        .permission("allow-page-ready")
+        .permission("allow-window-control");
     if let Err(err) = app.add_capability(capability) {
         eprintln!("agentes.chat: no capability for {origin}: {err}");
         granted.remove(origin);

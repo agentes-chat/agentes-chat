@@ -1,6 +1,7 @@
 //! The main window: the server open now, inside the app (agentes.chat, or a server of the person's own,
 //! `servers.rs`). It loads the server's pages itself, so every change to the web shows here at once, and
-//! gets no access to this computer: no app command, only dragging the window by its title bar and `this_mac`
+//! gets no access to this computer: no app command, only dragging the window by its title bar, the window's
+//! own buttons on Windows (`window_control`), and `this_mac`
 //! (capabilities/main.json, and the same one added at runtime for another server's origin). Links to
 //! anywhere else open in the person's browser, and so does social sign-in (Google and Apple refuse embedded
 //! web views): the site hands the session back through `/desktop/sign-in` and `/desktop/signed-in`
@@ -301,6 +302,10 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         // The buttons are placed by `place_lights` (on every fit), not with `traffic_light_position`.
         .hidden_title(true);
+    // Windows's own bar (the site's, apps/web desktop.css): no system frame, its buttons drawn by the page
+    // at the bar's right end (`window_control`, DesktopWindowControls). The frame's shadow stays.
+    #[cfg(target_os = "windows")]
+    let builder = builder.decorations(false).shadow(true);
     let built = builder.build().map_err(|e| e.to_string())?;
     let window = built.as_ref().window();
     if saved.maximized {
@@ -336,11 +341,18 @@ pub fn fit_page(app: &AppHandle) {
     let _ = app.run_on_main_thread(move || {
         let window = handle.get_window(LABEL);
         let full = window.as_ref().is_some_and(in_full_screen);
+        // Windows's controls draw restore while the window is at its largest; a maximize is a resize, so
+        // every change of it passes here. Elsewhere nobody reads it (a Mac's own buttons don't change).
+        #[cfg(target_os = "windows")]
+        let maxed = window.as_ref().is_some_and(|w| w.is_maximized().unwrap_or(false));
+        #[cfg(not(target_os = "windows"))]
+        let maxed = false;
         let Some(page) = handle.get_webview(LABEL) else { return };
         let zoom = crate::menus::current_zoom(&handle);
         let _ = page.eval(format!(
             "document.documentElement.style.setProperty('--app-zoom','{zoom}');\
-             document.documentElement.toggleAttribute('data-fullscreen',{full});"
+             document.documentElement.toggleAttribute('data-fullscreen',{full});\
+             document.documentElement.toggleAttribute('data-maximized',{maxed});"
         ));
     });
 }
@@ -989,6 +1001,27 @@ pub fn notify_site_set(app: AppHandle, window: tauri::Window, on: bool) -> Resul
     }
     app.state::<Notices>().0.lock().unwrap_or_else(|e| e.into_inner()).on = on;
     Ok(())
+}
+
+/// The site's own title bar buttons on Windows (`DesktopWindowControls`, apps/web): the main window
+/// minimized, at its largest or back from it, and closed. Close goes through the window's own close
+/// (lib.rs `CloseRequested`): the app hides and the window is remembered as it was, the tray's way. Only
+/// the main window's page may ask, only these three, and only for its own window — the app's other
+/// windows, and everything else a window can do, stay out of the site's reach.
+#[tauri::command]
+pub fn window_control(app: AppHandle, webview: tauri::Webview, action: String) -> Result<(), String> {
+    if webview.label() != LABEL {
+        return Err("only the main window's bar asks this".into());
+    }
+    let window = app.get_window(LABEL).ok_or("window not found")?;
+    match action.as_str() {
+        "minimize" => window.minimize(),
+        "maximize" if window.is_maximized().unwrap_or(false) => window.unmaximize(),
+        "maximize" => window.maximize(),
+        "close" => window.close(),
+        _ => return Err("unknown action".into()),
+    }
+    .map_err(|e| e.to_string())
 }
 
 /// The page's own server, when it is one of the app's (the window shows only those).

@@ -5,10 +5,17 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { RouterContext } from "@/app/router-context";
 import { ContextMenuHost } from "@/components/DesktopMenus";
-import { DesktopDragStrip } from "@/components/DesktopTitleBar";
+import { DesktopDragStrip, DesktopWindowControls } from "@/components/DesktopTitleBar";
 import { ErrorScreen } from "@/components/ErrorScreen";
 import { AccountDeletingScreen } from "@/components/Standing";
-import { askForPhone, asksForPhone, inDesktopApp, pageReadyAfterPaint, routeNewWindowLinks } from "@/lib/desktop";
+import {
+  askForPhone,
+  asksForPhone,
+  desktopPlatform,
+  inDesktopApp,
+  pageReadyAfterPaint,
+  routeNewWindowLinks,
+} from "@/lib/desktop";
 import { dispatchPushOpen } from "@/lib/push-open";
 import { listenForPushOpens } from "@/lib/web-push";
 
@@ -56,6 +63,8 @@ function Root() {
   return (
     <>
       {inDesktopApp() && !inWorkspace && <DesktopDragStrip />}
+      {/* Windows: the window's own buttons over every page's top-right corner (the system frame is gone). */}
+      {desktopPlatform() === "windows" && <DesktopWindowControls />}
       <ContextMenuHost />
       {deletion ? <AccountDeletingScreen dueAt={deletion.dueAt} /> : <Outlet />}
     </>

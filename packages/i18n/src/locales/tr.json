@@ -1654,7 +1654,12 @@
     "otherChannelsPersonal": "Diğer grup sohbetleri",
     "titleBar": {
       "back": "Geri",
-      "forward": "İleri"
+      "forward": "İleri",
+      "window": "Pencere",
+      "minimize": "Simge durumuna küçült",
+      "maximize": "Ekranı kapla",
+      "restore": "Geri yükle",
+      "close": "Kapat"
     },
     "unshown": "Gösterilemedi",
     "more": "Daha fazla",

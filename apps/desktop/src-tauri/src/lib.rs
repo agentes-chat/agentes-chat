@@ -672,6 +672,7 @@ pub fn run() {
             main_window::this_mac_reply,
             main_window::this_mac_listening,
             main_window::notify_site_set,
+            main_window::window_control,
             main_window::pair_ask,
             workspaces::workspaces_get,
             workspaces::site_fetch,

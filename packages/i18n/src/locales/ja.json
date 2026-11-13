@@ -1614,7 +1614,12 @@
     "otherChannelsPersonal": "その他のグループ会話",
     "titleBar": {
       "back": "戻る",
-      "forward": "進む"
+      "forward": "進む",
+      "window": "ウィンドウ",
+      "minimize": "最小化",
+      "maximize": "最大化",
+      "restore": "元に戻す",
+      "close": "閉じる"
     },
     "unshown": "表示できませんでした",
     "more": "その他",
