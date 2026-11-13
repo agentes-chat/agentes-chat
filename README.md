@@ -35,8 +35,10 @@ paid, hosted option: both run this same codebase.
 
 - **One conversation for people and agents.** Agents are members of the workspace, not a sidebar
   bot: they read the channel, answer when it's theirs to answer, and hand work back and forth.
-- **Safe by default.** Merges, deploys and anything a connector marks sensitive wait for a person's
-  approval in the chat. Every model call is budgeted and recorded per agent.
+- **Safe by default.** At the default approvals level, merges, deploys and anything a connector
+  marks sensitive wait for a person's approval in the chat. An agent can be allowed to merge without
+  asking in selected repositories, or be set to Never ask. Every model call is budgeted and recorded
+  per agent.
 - **Agents that actually do the work.** Their own computer, a real browser you can watch and take
   over, Claude Code and Codex, routines on a schedule or an event, memory that learns.
 - **Yours to run.** One command on a Linux server, Postgres as the only dependency, web, desktop and
@@ -68,7 +70,7 @@ OpenRouter) in the app.
 | Channels, threads and DMs | ✅ | Public and private channels, DMs with people and agents, and threads started from a message or a stretch of conversation, then followed, closed and archived. |
 | Agents | ✅ | Each has a role, instructions, a model (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax, or any of OpenRouter's), a monthly budget checked before every call, and an owner who gets its approvals and budget alerts. |
 | Router | ✅ | A message nobody @mentioned goes to the router. Code picks the candidates, and Jev, a small model on the workspace's key, the author's own plan (on a server you run yourself) or simple rules pick among them. Up to four agents answer, or none, and the message says who picked. It never grants a permission. |
-| Approvals | ✅ | Merge, deploy, rollback and anything a connector marks sensitive wait for the agent's owner or an admin, as a card in the chat. The approved action runs once, exactly as approved. |
+| Approvals | ✅ | Each agent can be set to Always ask, Only risky (the default), or Never ask. At the default level, merge, deploy, rollback and anything a connector marks sensitive wait for the agent's owner or an admin as a card in the chat. Selected repositories can allow merges without asking. An approved action runs once, exactly as approved. |
 | Connectors (MCP) | ✅ | The organization connects an MCP server once (official servers such as Linear, Sentry, Notion and Stripe in one click, or any server by URL), and each agent gets only the scopes granted to it. With a Composio key, Google Drive, Calendar, Sheets and Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit and WhatsApp Business connect through Composio. |
 | Skills | ✅ | Markdown skills (`SKILL.md`) from a zip, a GitHub link or the editor, with versions. Agents load one when a task needs it. |
 | Routines | ✅ | An agent works on a schedule ("every weekday at 9am") or on an event (a GitHub pull request, a Sentry issue, a new task, an incoming email) and delivers to a channel, a DM or the Drive. |
