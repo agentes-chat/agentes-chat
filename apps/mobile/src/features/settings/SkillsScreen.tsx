@@ -23,7 +23,6 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { SKILL_ASSET_MB } from "@agenteschat/client/lib/files";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
-import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import {
   changedByText,
   changesSinceLink,
@@ -676,9 +675,8 @@ function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgen
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [turnOn, setTurnOn] = useState(true);
   const dir = useDirectory();
-  // Only a live agent the server would turn it on for: not one archived or gone since its card, nor the right hand.
-  const forAgent = forAgentId ? dir.agentById.get(forAgentId) : undefined;
-  const forName = forAgent && !isRightHand(forAgent) ? forAgent.name : undefined;
+  // Only a live agent the server would turn it on for: not one archived or gone since its card.
+  const forName = forAgentId ? dir.agentById.get(forAgentId)?.name : undefined;
   const cardLink = forAgentId && forName ? initialUrl?.trim() : undefined;
   const forCard = cardLink !== undefined && url.trim() === cardLink;
   /** The agent what installs from `link` goes on for, when the row shows it and is checked. */

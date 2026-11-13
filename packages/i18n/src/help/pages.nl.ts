@@ -374,9 +374,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
       {
         id: "permissions",
         heading: "Geheugen geeft geen toestemming",
-        blocks: [
-          "Niets in het geheugen laat een agent meer doen. Wat hij mag, blijft in zijn **Tools en toegang**, en gevoelige acties vragen altijd om goedkeuring.",
-        ],
+        blocks: ["Niets in het geheugen laat een agent meer doen. Wat hij mag, blijft in zijn **Tools en toegang**."],
       },
       {
         id: "proposals",
@@ -395,7 +393,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Wat eerst vraagt",
         blocks: [
-          "Als een agent wil mergen, deployen, terugdraaien, iets naar buiten sturen of gegevens verwijderen, vraagt hij het eerst, welke toegang hij ook heeft. Het verzoek verschijnt in **Goedkeuringen** en in het gesprek, met de precieze actie en de reden.",
+          "Als een agent wil mergen, deployen, terugdraaien, iets naar buiten sturen of gegevens verwijderen, vraagt hij het eerst. Dat is het niveau **Alleen wat riskant is**, waarmee elke agent begint. Op de pagina van de agent, onder **Goedkeuringen**, laat **Altijd vragen** hem vragen voordat er iets verandert, en met **Nooit vragen** vraagt hij niets, ook niet bij merge, deploy, betalingen en routines. Het verzoek verschijnt in **Goedkeuringen** en in het gesprek, met de precieze actie en de reden.",
         ],
       },
       {
@@ -403,7 +401,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Eén keer, of altijd",
         blocks: [
           "Goedkeuren geldt voor één precieze actie, met haar waarden. Verandert de agent iets, dan vraagt hij het opnieuw.",
-          "**Altijd goedkeuren** laat de agent dat soort actie vanaf nu doen, met elke waarde, zonder te vragen. Bij het verzoek van een routine doet **Altijd in deze routine** hetzelfde, alleen voor die routine. Geen van beide wordt aangeboden voor mergen, deployen, terugdraaien en dergelijke. Ongedaan maken doe je in **Tools en toegang** op de pagina van de agent, of in de instellingen van de routine.",
+          "**Altijd goedkeuren** laat de agent dat soort actie vanaf nu doen, met elke waarde, zonder te vragen. Bij het verzoek van een routine doet **Altijd in deze routine** hetzelfde, alleen voor die routine. **Altijd goedkeuren** wordt aangeboden voor elk soort actie, ook mergen en deployen, zolang de agent op het niveau **Alleen wat riskant is** staat. **Altijd in deze routine** wordt niet aangeboden voor mergen, deployen, terugdraaien en dergelijke. Ongedaan maken doe je in **Tools en toegang** op de pagina van de agent, of in de instellingen van de routine.",
         ],
       },
       {

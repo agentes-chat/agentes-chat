@@ -131,6 +131,8 @@ export interface WidgetFailure {
   /** `agent_reported` (show `detail` as is), `no_update`, `error`, or a routine's code (`budget_exceeded`…). */
   code: string;
   detail: string | null;
+  /** With `failing` (it stopped after failing in a row): the code of the last of those failures (`detail` is its). */
+  cause?: string;
 }
 
 /**

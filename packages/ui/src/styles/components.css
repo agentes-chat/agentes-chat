@@ -2996,6 +2996,14 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 .ac-dialog__close > .ac-btn--glyph {
   --glyph-air: calc(var(--control-icon-sm) * 5.2 / 20);
 }
+/* After the head's own actions the close is one more of them: a whole plate, 8 from the plate before it, as two icon
+   buttons stand in a row. */
+.ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close {
+  margin-inline-start: calc(var(--space-2) + 2 * var(--ghost-plate) - var(--space-3));
+}
+.ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close > .ac-btn--glyph {
+  --glyph-air: 0px;
+}
 /* Beside a title alone, they sit on its capitals' middle, as an `.ac-iconline` lead does. An app measures that middle
    for its title's face (`--title-cap-mid`): --cap-mid here would resolve in the actions' own font. */
 .ac-dialog__title + .ac-dialog__acts,
@@ -4671,6 +4679,10 @@ html:not([data-pointer]) .ac-switch:focus-visible {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* On and unavailable: dark enough that it never reads as a switch that is off. */
+.ac-switch:disabled[data-state="checked"] {
+  opacity: 0.7;
+}
 /* Off and unavailable: an outline, not a filled track, so it never reads as a switch that is just off (in dark
    mode dimming alone barely shows). */
 .ac-switch:disabled:not([data-state="checked"]) {
@@ -5480,6 +5492,8 @@ html:not([data-pointer]) .ac-btn--primary:focus-visible {
   --seg-h: var(--control-h-md);
   --seg-r: var(--control-r-md);
   --seg-in: 4px;
+  /* The chosen plate's edge, 3:1 against the track in both themes: the choice shows without reading the words. */
+  --seg-plate-ring: 0 0 0 1px color-mix(in srgb, var(--ink) 50%, transparent);
   position: relative;
   display: inline-flex;
   box-sizing: border-box;
@@ -5487,7 +5501,7 @@ html:not([data-pointer]) .ac-btn--primary:focus-visible {
   padding: var(--seg-in);
   border-radius: var(--seg-r);
   /* Stands off any surface (the page's own tone included): a darker track with a hairline. */
-  background: color-mix(in srgb, var(--ink) 6%, var(--bg));
+  background: color-mix(in srgb, var(--ink) 8%, var(--bg));
   box-shadow:
     inset 0 0 0 1px var(--line),
     inset 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -5610,7 +5624,8 @@ html:not([data-pointer]) .ac-btn--primary:focus-visible {
   border: 0;
   border-radius: calc(var(--seg-r) - var(--seg-in));
   background: transparent;
-  color: var(--ink2);
+  /* The choices not taken step back, so the chosen one reads by its words as well as by its plate. */
+  color: var(--muted);
   cursor: pointer;
   transition: color 0.2s;
   flex: none;
@@ -5684,7 +5699,7 @@ html:not([data-pointer]) .ac-btn--primary:focus-visible {
   margin-left: 6px;
   font-weight: 500;
   font-size: 12px;
-  color: var(--faint);
+  color: var(--muted);
 }
 html:not([data-pointer]) .ac-seg__item:focus-visible {
   outline: none;
@@ -5692,7 +5707,7 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 }
 /* Shown, not changed (a member reading an admin's setting): the choice stays readable, faded. */
 .ac-seg:has(.ac-seg__item:disabled) {
-  opacity: 0.55;
+  opacity: 0.65;
 }
 .ac-seg__item:disabled {
   cursor: default;
@@ -5706,11 +5721,15 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
   transform: translateX(var(--x));
   border-radius: calc(var(--seg-r) - var(--seg-in));
   background: var(--raised);
-  box-shadow: var(--e1), var(--top);
+  /* A ring and a drop of its own: on a white card the raised tone alone is too close to the track's. */
+  box-shadow:
+    var(--seg-plate-ring),
+    0 1px 2px rgba(23, 23, 22, 0.12),
+    var(--top);
 }
 /*
  * Dark: the raised tone and the track were the same near-black, so the chosen segment vanished. The track
- * sinks below the page and the pill lifts above it; the other segments step back to muted.
+ * sinks below the page and the pill lifts above it.
  */
 [data-theme="dark"] .ac-seg {
   background: color-mix(in srgb, #000 35%, var(--bg));
@@ -5719,15 +5738,9 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 [data-theme="dark"] .ac-seg__pill {
   background: color-mix(in srgb, var(--ink) 13%, var(--raised));
   box-shadow:
+    var(--seg-plate-ring),
     0 1px 2px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
     var(--top);
-}
-[data-theme="dark"] .ac-seg__item:not([data-on]) {
-  color: var(--muted);
-}
-[data-theme="dark"] .ac-seg__item:not([data-on]):hover {
-  color: var(--ink);
 }
 
 /* Tool review pixels: swatch, subject strip, proportion bar, marks. */
@@ -6007,16 +6020,20 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 .ac-card__head:has(> .ac-card__lead > .ac-card__key) > .ac-card__action {
   margin-inline-start: calc(22px + 10px);
 }
-/* A switch alone is the head's one small control: it keeps its place at the head's end and the words wrap beside it,
-   as in a row of settings. Buttons still go under words too long to share their line. */
-.ac-card__head:has(> .ac-card__action > .ac-switch:only-child) {
+/* A switch or a quiet link alone is the head's one small control: it keeps its place at the head's end and the words
+   wrap beside it, as in a row of settings. Buttons still go under words too long to share their line. */
+.ac-card__head:has(> .ac-card__action > :is(.ac-switch, .ac-link--action):only-child) {
   flex-wrap: nowrap;
 }
-.ac-card__head:has(> .ac-card__action > .ac-switch:only-child) > .ac-card__lead {
+.ac-card__head:has(> .ac-card__action > :is(.ac-switch, .ac-link--action):only-child) > .ac-card__lead {
   flex: 1 1 0%;
 }
-.ac-card__head:has(> .ac-card__action > .ac-switch:only-child) > .ac-card__action {
+.ac-card__head:has(> .ac-card__action > :is(.ac-switch, .ac-link--action):only-child) > .ac-card__action {
   margin-inline-start: 0;
+}
+/* The quiet link steps back from the title beside it. */
+.ac-card__action > .ac-link--action {
+  font-size: 13px;
 }
 /* Foot: help text in a well pressed into the bottom of the card (8px from its edges), its icon an `.ac-iconline`
    lead. */
@@ -7230,7 +7247,7 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
 }
 .ac-composer-choice .ac-seg__item[data-on] {
   background: var(--raised);
-  box-shadow: var(--e1), var(--top);
+  box-shadow: var(--seg-plate-ring), var(--top);
 }
 .ac-composer-choice__hint {
   display: inline-flex;

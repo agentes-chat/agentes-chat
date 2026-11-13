@@ -690,6 +690,7 @@
       "steps": {
         "name": "워크스페이스 이름",
         "business": "하는 일",
+        "you": "나에 대해",
         "team": "내 팀",
         "plan": "팀 켜기",
         "ai": "AI 연결",
@@ -708,8 +709,8 @@
         "teamMadePersonal": "에이전트가 이미 와 있어요. 준비되면 다음으로 넘어가요.",
         "plan": "요금제 다음에는 AI만 연결하면 돼요. 어디서 하는지 보여 드릴게요.",
         "planThen": "요금제가 켜지면 다음 화면에서 AI를 연결해요.",
-        "area": "팀 전에 마지막으로 하나만요.",
-        "areaPersonal": "에이전트 전에 마지막으로 하나만요.",
+        "you": "팀 전에, 당신에 대해 조금만요.",
+        "youPersonal": "에이전트 전에, 당신에 대해 조금만요.",
         "ask": "다른 곳에 이미 팀이 있나요? 통째로 여기로 데려올게요.",
         "start": "하시는 일에 맞춘 팀이 준비돼 있어요. 아니면 우리 둘이 시작해도 돼요.",
         "askPersonal": "다른 곳에서 이미 에이전트를 쓰고 있나요? 모두 여기로 데려올게요.",
@@ -727,10 +728,18 @@
         "people": "이제 사람 차례예요. 이메일을 알려 주시면 초대를 보낼게요.",
         "peopleLink": "이제 사람 차례예요. 링크를 보내 주세요. 요청을 하나씩 보여 드릴게요."
       },
+      "you": {
+        "title": "이제 당신에 대해",
+        "lead": "이름과 사진은 팀과 에이전트에게 보여요.",
+        "leadPersonal": "이름과 사진은 내 에이전트에게 보여요.",
+        "photo": "내 사진",
+        "build": "아바타 만들기",
+        "edit": "아바타 수정",
+        "upload": "사진 올리기",
+        "area": "어떤 일을 하세요?",
+        "areaHint": "선택 사항이에요. agentes.chat을 누가 쓰는지 알고 싶어서요."
+      },
       "area": {
-        "title": "당신은 어떤 일을 하세요?",
-        "lead": "agentes.chat을 누가 쓰는지 알고 싶어서요.",
-        "skip": "이 단계 건너뛰기",
         "options": {
           "dev": "개발",
           "marketing": "마케팅",
@@ -1907,6 +1916,7 @@
     },
     "map": {
       "lead": "에이전트를 맡은 사람, 에이전트가 있는 채널, 각자 스스로 하는 일, 사람을 기다리는 일을 보여줘요. 점선은 지난 하루 동안 서로 도움을 요청한 에이전트예요.",
+      "short": "각 에이전트를 맡은 사람과 일하는 곳을 보여줘요.",
       "lodi": "나와 함께 팀을 정리해요",
       "hint": "에이전트를 다른 채널로 끌어다 놓으면 {{name}}이(가) 변경을 준비하고, 내가 적용해요",
       "proposed": "{{name}}이(가) 대화에 변경을 준비했어요. 거기서 적용하세요.",
@@ -1921,8 +1931,7 @@
       "emptyViewer": "에이전트 관리자가 채널에 추가하면 여기에 지도가 표시돼요.",
       "others": "다른 채널",
       "band": "감독",
-      "reportsTo": "{{name}}에게 보고",
-      "short": "각 에이전트를 맡은 사람과 일하는 곳을 보여줘요."
+      "reportsTo": "{{name}}에게 보고"
     },
     "sectors": {
       "lead": "각 부서에는 담당자, 대리, 에이전트, 그리고 그 채널과 루틴이 있어요.",
@@ -2150,15 +2159,15 @@
     "sendCorrection": "정정 보내기",
     "correctionSent": "정정을 보냈어요. {{name}}이(가) 이걸로 배울 거예요.",
     "sending": "보내는 중…",
+    "notSentWhy": "전송되지 않았습니다. {{why}}",
+    "notSentUnknown": "문제가 발생했습니다.",
+    "editSend": "편집",
     "tooLong": {
       "text": "메시지가 {{length}}자이고 한도는 {{max}}자입니다.",
       "fix": "텍스트를 파일로 보내세요.",
       "asFile": "파일로 보내기",
       "fileName": "message.txt"
     },
-    "notSentWhy": "전송되지 않았습니다. {{why}}",
-    "notSentUnknown": "문제가 발생했습니다.",
-    "editSend": "편집",
     "long": {
       "more": "더 보기",
       "title": "{{name}}의 메시지"
@@ -2278,7 +2287,7 @@
     "profile": {
       "how": "작동 방식",
       "permissions": "당신의 권한으로 일해요",
-      "private": "당신의 DM에서 당신하고만 이야기해요",
+      "private": "당신의 것은 당신의 DM 안에서만 다뤄요",
       "channels": "부르면 채널에서 답해요",
       "model": "모델",
       "message": "메시지",
@@ -2305,6 +2314,8 @@
       "planOwner": "{{owner}}의 계정",
       "planName": "{{name}} 플랜",
       "mine": "내 AI",
+      "mineTitle": "내 대화에서 {{name}}의 생각하는 AI",
+      "mineOnly": "나와 {{name}}의 대화에만 적용돼요.",
       "mineHelp": "{{name}}과(와)의 내 대화는 내 플랜이나 나에게 공유된 플랜으로 생각해요. 내 대화만 그래요.",
       "connectMine": "내 플랜 연결",
       "useWorkspace": "워크스페이스 것 사용",
@@ -2322,6 +2333,8 @@
       "fallbackYours": "다른 플랜이 없으면 내 것인 워크스페이스 플랜을 사용해요.",
       "fallbackNone": "내 플랜이 없으면 {{name}}이(가) 답할 수 없어요. 워크스페이스 플랜은 {{owner}}에게만 답해요.",
       "workspace": "자기 플랜이 없는 사람의 AI",
+      "workspaceTitle": "워크스페이스에서 {{name}}의 생각하는 AI",
+      "workspaceOnly": "자기 플랜이 없는 사람에게 적용돼요.",
       "workspaceHelp": "자기 플랜이 없는 사람은 이 AI로 {{name}}과(와) 대화해요.",
       "noPlans": "여기서 쓰려면 AI와 사용량에서 플랜을 연결하세요.",
       "lend": "플랜이 없는 사람에게 이 플랜 빌려주기",
@@ -2878,7 +2891,7 @@
     "lead": "{{name}}이(가) 실행 전에 사람에게 묻는 경우.",
     "always": {
       "title": "항상 묻기",
-      "text": "앱에서 무언가를 바꾸기 전에 묻습니다."
+      "text": "여기서든, 컴퓨터에서든, 앱에서든 무언가를 바꾸기 전에 묻습니다."
     },
     "risky": {
       "title": "위험한 것만",
@@ -2886,7 +2899,7 @@
     },
     "never": {
       "title": "묻지 않기",
-      "text": "머지, 배포, 롤백은 계속 묻습니다."
+      "text": "머지, 배포, 결제, 루틴을 포함해 아무것도 묻지 않습니다."
     }
   },
   "brakes": {
@@ -3853,6 +3866,37 @@
       "another": "다른 파일 고르기",
       "close": "완료"
     },
+    "env": {
+      "open": ".env 가져오기",
+      "title": "키 가져오기",
+      "text": "키마다 이름=값 한 줄로 된 .env 파일이나, 이름과 값으로 된 JSON을 받아요.",
+      "paste": "또는 내용을 여기에 붙여넣기",
+      "review": "검토",
+      "none": "이름=값 줄을 찾지 못했어요. 파일을 확인하고 다시 시도하세요.",
+      "tooLarge": "이 파일은 너무 커요(최대 512 KB).",
+      "tooMany": "한 번에 가져올 키가 너무 많아요(최대 {{max}}개). 파일을 나눠 각각 가져오세요.",
+      "duplicates": "파일에 여러 번 나와서 마지막 값을 써요: {{names}}",
+      "new": "새 키",
+      "exists": "이미 있음",
+      "replace": "바꾸기",
+      "show": "{{name}}의 값 보기",
+      "hide": "{{name}}의 값 숨기기",
+      "problem": {
+        "name": "이름은 ACME_API_KEY 같은 형식이어야 해요",
+        "reserved": "예약된 이름",
+        "empty": "값 없음",
+        "tooLarge": "값이 너무 커요"
+      }
+    },
+    "move": {
+      "toTeam": "팀으로 옮기기",
+      "toTeamPersonal": "공유됨으로 옮기기",
+      "toPersonal": "개인으로 옮기기",
+      "title": "{{title}}을(를) 옮길까요?",
+      "toTeamText": "워크스페이스의 모든 사람이 이 항목을 보게 되고, 누구든 부탁하면 이 항목의 에이전트가 사용해요. Vault를 관리하는 사람은 편집할 수 있어요.",
+      "toPersonalText": "이 항목은 나만 보고 편집하게 되고, 에이전트는 내가 부탁할 때만 사용해요. 다른 사람에게는 더 이상 보이지 않아요.",
+      "moved": "옮겼어요"
+    },
     "connections": {
       "none": "여기서는 연결할 수 있는 비밀번호 관리자가 없어요.",
       "lead": "에이전트는 {{name}}에 보관된 {{kinds}}을(를) 사용해요.",
@@ -3974,37 +4018,6 @@
       "codeBox": "{{total}}자리 중 {{n}}번째 숫자",
       "codeShort_other": "숫자 {{count}}개를 모두 입력하세요.",
       "codeWhere": "{{host}}에서 {{agent}}의 브라우저만 입력해요."
-    },
-    "env": {
-      "open": ".env 가져오기",
-      "title": "키 가져오기",
-      "text": "키마다 이름=값 한 줄로 된 .env 파일이나, 이름과 값으로 된 JSON을 받아요.",
-      "paste": "또는 내용을 여기에 붙여넣기",
-      "review": "검토",
-      "none": "이름=값 줄을 찾지 못했어요. 파일을 확인하고 다시 시도하세요.",
-      "tooLarge": "이 파일은 너무 커요(최대 512 KB).",
-      "tooMany": "한 번에 가져올 키가 너무 많아요(최대 {{max}}개). 파일을 나눠 각각 가져오세요.",
-      "duplicates": "파일에 여러 번 나와서 마지막 값을 써요: {{names}}",
-      "new": "새 키",
-      "exists": "이미 있음",
-      "replace": "바꾸기",
-      "show": "{{name}}의 값 보기",
-      "hide": "{{name}}의 값 숨기기",
-      "problem": {
-        "name": "이름은 ACME_API_KEY 같은 형식이어야 해요",
-        "reserved": "예약된 이름",
-        "empty": "값 없음",
-        "tooLarge": "값이 너무 커요"
-      }
-    },
-    "move": {
-      "toTeam": "팀으로 옮기기",
-      "toTeamPersonal": "공유됨으로 옮기기",
-      "toPersonal": "개인으로 옮기기",
-      "title": "{{title}}을(를) 옮길까요?",
-      "toTeamText": "워크스페이스의 모든 사람이 이 항목을 보게 되고, 누구든 부탁하면 이 항목의 에이전트가 사용해요. Vault를 관리하는 사람은 편집할 수 있어요.",
-      "toPersonalText": "이 항목은 나만 보고 편집하게 되고, 에이전트는 내가 부탁할 때만 사용해요. 다른 사람에게는 더 이상 보이지 않아요.",
-      "moved": "옮겼어요"
     }
   },
   "question": {
@@ -5203,13 +5216,10 @@
         "on": "접근 가능",
         "ask": "승인 요청"
       },
-      "allConnectors": "커넥터:",
-      "onlyRead": "읽기 전용",
+      "setAll": "모두 변경",
       "connectors": "{{org}}의 커넥터",
       "connectorsPersonal": "내 커넥터",
-      "oneLevel": "앱마다 한 가지 수준",
       "builtin": "agentes 기본 제공",
-      "builtinHelp": "Drive, 작업, 메모리 등",
       "noMatch": "“{{q}}”와 일치하는 항목이 없어요",
       "noneHere": "이 필터에 해당하는 항목이 없어요",
       "library": "스킬 라이브러리",
@@ -5228,6 +5238,7 @@
       "verified_other": "{{count}}개 확인됨",
       "lessons": "교훈",
       "fromTeam": "팀에게서 배움",
+      "fromTeamRightHand": "당신에게서 배움",
       "proposals": "제안",
       "waiting": "결정 대기 중",
       "noneWaiting": "대기 중인 제안 없음",
@@ -5250,6 +5261,7 @@
       "saved": "저장했어요. 이제 확인된 항목이에요.",
       "rules": "사람들이 정한 규칙",
       "rulesNote": "규칙을 정한 사람을 위한 모든 작업에, 요청이 어디서 오든 적용돼요. 담당자나 관리자의 규칙은 모두에게 적용돼요.",
+      "rulesNoteRightHand": "당신의 DM에서 정한 규칙은 당신에게만 적용돼요. 당신만 볼 수 있어요.",
       "ruleBy": "{{name}} · {{date}}",
       "removeRule": "삭제",
       "ruleRemoved": "규칙을 삭제했어요. 되돌리고 싶다면 보관함에 있어요.",
@@ -5342,6 +5354,7 @@
         "cli_stopped": "오류로 {{brain}} 프로그램이 멈췄어요.",
         "cli_closed": "갑자기 {{brain}} 프로그램이 종료됐어요.",
         "account_missing": "이 에이전트에 고른 계정이 더 이상 컴퓨터에 없어요. 에이전트 설정에서 다른 계정을 고르거나 다시 추가하세요.",
+        "windows_sandbox": "이 Windows 컴퓨터에서는 Codex의 명령을 격리할 수 없어요. Windows 11 24H2 이상이 필요해요.",
         "our_error": "저희 쪽에서 문제가 생겨 작업이 멈췄어요. 잠시 후 다시 요청해 주세요.",
         "unknown": "실패했어요."
       }
@@ -6039,8 +6052,7 @@
     "all": "전체:",
     "connectorsLabel": "커넥터와 수준",
     "connectOther": "다른 앱 연결",
-    "opensConnectors": "커넥터 열기",
-    "approvalsNote": "머지, 배포, 롤백은 항상 채팅에서 승인을 요청해요.",
+    "approvalsNote": "머지, 배포, 롤백은 에이전트가 묻지 않기로 설정되어 있지 않다면 채팅에서 승인을 요청해요.",
     "approverOwner": "{{name}} 님이 승인해요.",
     "approverAdmins": "관리자가 승인해요.",
     "skillsTitle": "워크스페이스 스킬",
@@ -6305,8 +6317,8 @@
       "readDesc": "{{app}}에 있는 것을 봐요. 아무것도 바꾸지 않아요.",
       "write": "읽기와 쓰기",
       "writeDesc": "{{app}}에서 만들고 고치기도 해요.",
-      "asks": "{{actions}}은(는) 어느 단계에서든 항상 당신의 승인을 받아요.",
-      "asksAny": "보내기, 삭제, 결제는 어느 단계에서든 항상 당신의 승인을 받아요.",
+      "asks": "{{actions}}은(는) 에이전트가 묻지 않기로 설정되어 있지 않다면 당신의 승인을 받아요.",
+      "asksAny": "보내기, 삭제, 결제는 에이전트가 묻지 않기로 설정되어 있지 않다면 당신의 승인을 받아요.",
       "remove": "{{app}} 빼기",
       "done": "완료"
     },
@@ -7241,6 +7253,7 @@
       "waiting": "다음 호출을 기다려요",
       "every": "호출될 때마다 실행돼요. 한꺼번에 들어온 호출은 한 번의 실행으로 묶여요.",
       "newNote": "루틴에 전용 주소가 생겨요. 이 주소로 POST를 보낼 때마다 보낸 내용을 가지고 에이전트가 시작돼요. 주소는 루틴을 저장하면 루틴 페이지에 표시돼요.",
+      "newShort": "루틴에 전용 주소가 생겨요.",
       "hidden": "루틴을 변경할 수 있는 사람만 주소를 볼 수 있어요.",
       "methods": "허용 메서드",
       "methodsHelp": "이 주소는 선택한 메서드에만 응답합니다. GET이면 URL의 쿼리 매개변수가 호출 데이터가 됩니다.",
@@ -7279,8 +7292,7 @@
         "bad_signature": "거부됨: 잘못된 서명",
         "too_large": "거부됨: 256KB 초과",
         "rate_limited": "거부됨: 분당 호출이 너무 많음"
-      },
-      "newShort": "루틴에 전용 주소가 생겨요."
+      }
     },
     "setup": {
       "title": "{{provider}} 웹훅",
@@ -7412,6 +7424,12 @@
       "now": "지금",
       "lane": "{{name}}: 다음 실행 {{when}}",
       "laneNone": "{{name}}: 다음 몇 시간 동안 일정 없음",
+      "agentRoutines_other": "루틴 {{count}}개",
+      "andMore": "{{name}} 외 {{count}}개",
+      "pick": "{{name}}의 루틴 보기",
+      "restLater_other": "에이전트 {{count}}개는 나중에 실행",
+      "restIdle_other": "{{count}}개는 다음 {{hours}}시간 동안 일정 없음",
+      "showAll": "모두 보기",
       "legend": {
         "ok": "답함",
         "silent": "새 소식 없음",
@@ -7471,11 +7489,11 @@
       "ownActions": "직접 수행하는 작업"
     },
     "ownActions": {
-      "hint": "실행할 때마다 연결된 앱에서 이 작업을 묻지 않고 수행해요. 그 밖의 작업은 먼저 사람의 승인을 받고, 병합, 배포, 롤백은 항상 승인을 받아요.",
+      "hint": "실행할 때마다 연결된 앱에서 이 작업을 묻지 않고 수행해요. 그 밖의 작업은 에이전트가 묻지 않기로 설정되어 있지 않다면 먼저 사람의 승인을 받아요.",
       "none": "연결된 앱에서는 작업마다 먼저 사람의 승인을 받아요. 직접 일을 처리하게 하려면 채팅에서 에이전트에게 어떤 작업을 해도 되는지 알려 주세요.",
-      "remove": "다시 묻기: {{action}}",
       "hintShort": "실행할 때마다 이 작업을 묻지 않고 수행해요.",
-      "noneShort": "작업마다 먼저 사람의 승인을 받아요."
+      "noneShort": "작업마다 먼저 사람의 승인을 받아요.",
+      "remove": "다시 묻기: {{action}}"
     },
     "ahead": {
       "approved": "승인됨 · {{when}} 실행",
@@ -8297,7 +8315,7 @@
       "offline": "{{name}}이(가) 오프라인이에요. 다시 연결되면 계획이 시작돼요.",
       "needsMachine": "미션은 연결된 컴퓨터에서 실행돼요. 설정 › 기기에서 {{name}}에 컴퓨터를 연결하세요.",
       "commandHint": "어느 대화의 입력창에서든 이렇게 입력해서 시작할 수도 있어요:",
-      "approvals": "머지, 배포, 롤백은 항상 승인을 요청해요",
+      "approvals": "기본적으로 머지, 배포, 롤백은 승인을 요청해요",
       "start": "미션 시작",
       "created": "미션을 만들었어요. {{name}}이(가) 계획을 세우고 있어요.",
       "who": "프로그래밍 담당",
@@ -9333,6 +9351,8 @@
     "section": "대화할 수 있는 사람",
     "title": "{{name}}과(와) 대화할 수 있는 사람",
     "notListed": "목록에 없는 사람에게는 답하지 않아요.",
+    "agentsToo": "에이전트에게도 적용돼요.",
+    "peopleOnly": "사람에게만 적용돼요.",
     "consultable": "다른 에이전트가 {{name}}에게 물어볼 수 있어요",
     "consultableHint": "목록에 없는 사람의 경우, 물어본 에이전트에게만 답하고 그 사람에게 직접 답하지는 않아요. 민감한 작업은 여전히 담당자의 승인이 필요해요.",
     "consultableHint_female": "목록에 없는 사람의 경우, 물어본 에이전트에게만 답하고 그 사람에게 직접 답하지는 않아요. 민감한 작업은 여전히 담당자의 승인이 필요해요.",
@@ -9388,9 +9408,7 @@
       "only": "{{name}}은(는) {{names}}에게만 답해요.",
       "some": "{{name}}은(는) 일부 사람에게만 답해요.",
       "nobody": "{{name}}은(는) 지금 아무에게도 답하지 않아요."
-    },
-    "agentsToo": "에이전트에게도 적용돼요.",
-    "peopleOnly": "사람에게만 적용돼요."
+    }
   },
   "composer": {
     "commands": "명령어",
@@ -9995,13 +10013,20 @@
     "legend": {
       "people": "사람",
       "agents": "에이전트",
-      "obsidian": "Obsidian"
+      "imported": "가져온 페이지",
+      "obsidian": "Obsidian",
+      "github": "GitHub",
+      "files": "가져옴"
     },
     "blankPage": "빈 페이지",
     "newPage": "새 페이지",
     "emptyPage": "빈 페이지예요. E를 눌러 작성하세요.",
     "atRequestOf": "요청한 사람",
-    "fromObsidian": "Obsidian에서 가져옴",
+    "from": {
+      "obsidian": "Obsidian에서 가져옴",
+      "github": "GitHub에서 가져옴",
+      "files": "가져옴"
+    },
     "more": "작업 더 보기",
     "copyLink": "링크 복사",
     "linkCopied": "링크를 복사했어요. 어떤 페이지, 메시지, 작업에든 [[{{title}}]]을(를) 붙여넣으세요.",
@@ -10181,16 +10206,45 @@
       "message": "[[{{title}}]] 페이지에 대해:"
     },
     "import": {
-      "cta": "Obsidian에서 가져오기",
-      "ctaText": "보관함 .zip, 폴더 또는 .md 파일",
+      "cta": "가져오기",
       "short": "가져오기",
-      "title": "Obsidian에서 가져오기",
-      "text": "보관함 전체를 가져오세요. 폴더, 태그, 별칭, [[링크]]가 여기서도 그대로 작동해요.",
+      "title": "위키로 가져오기",
+      "text": "노트를 어디서 가져올지 고르세요.",
+      "titleFrom": {
+        "obsidian": "Obsidian에서 가져오기",
+        "github": "GitHub에서 가져오기",
+        "files": "파일 가져오기"
+      },
+      "textFrom": {
+        "obsidian": "보관함 전체를 가져오세요. 폴더, 태그, 별칭, [[링크]]가 여기서도 그대로 작동해요.",
+        "github": "저장소의 Markdown 노트가 폴더 구조 그대로 페이지가 돼요.",
+        "files": "어떤 앱의 Markdown 노트든 괜찮아요. .md 파일, 폴더, .zip 모두 돼요."
+      },
+      "from": "가져올 곳",
+      "source": {
+        "obsidian": "Obsidian",
+        "github": "GitHub",
+        "files": "파일"
+      },
+      "files": {
+        "dropTitle": "여기에 .md 파일을 놓으세요",
+        "dropText": "노트가 든 폴더나 .zip도 괜찮아요"
+      },
+      "github": {
+        "label": "GitHub 링크",
+        "help": "저장소, 폴더 또는 .md 파일의 링크예요. Markdown 노트는 페이지가 되고, 노트에 보이는 이미지는 Drive로 들어가요. 저장소의 나머지는 가져오지 않아요. 비공개 저장소는 워크스페이스의 GitHub로 읽어요.",
+        "read": "노트 읽기",
+        "error": {
+          "notGithub": "github.com 링크를 붙여 넣으세요."
+        }
+      },
+      "anotherLink": "링크 변경",
       "dropTitle": "보관함 .zip을 여기에 놓으세요",
       "dropText": "보관함 폴더나 .md 파일 몇 개도 괜찮아요",
       "pickZip": ".zip 또는 .md 선택",
       "pickFolder": "폴더 선택",
       "howTo": ".zip 만드는 방법: Finder에서 보관함 폴더를 오른쪽 클릭 → 압축. Windows에서는 보내기 → 압축(ZIP) 폴더. .obsidian 폴더(플러그인과 테마)는 제외돼요.",
+      "howToLabel": ".zip 만드는 방법",
       "nothingYet": "검토하기 전에는 아무것도 들어가지 않아요.",
       "readingText": "지금은 브라우저에서만 처리해요. 아직 아무것도 보내지 않았어요.",
       "notesRead": "읽은 노트",
@@ -10260,8 +10314,7 @@
         "empty": ".md 노트를 찾지 못했어요. 보관함 폴더의 .zip, 폴더 또는 .md 파일을 보내세요.",
         "too_big": "보관함이 500MB를 넘어요. 큰 첨부 파일을 빼거나 나눠서 보내세요.",
         "unreadable": "파일을 읽지 못했어요. 보관함의 .zip 파일이 맞나요?"
-      },
-      "howToLabel": ".zip 만드는 방법"
+      }
     },
     "save": "Wiki에 저장",
     "saveTitle": "Wiki에 저장",
@@ -10551,7 +10604,7 @@
   },
   "access": {
     "matrixTitle": "에이전트 접근 권한",
-    "matrixHint": "민감한 작업(머지, 배포, 공유, 결제)은 어떤 수준에서든 항상 승인을 요청해요. 도구별로 설정하려면 커넥터의 도구를 여세요.",
+    "matrixHint": "기본적으로 민감한 작업(머지, 배포, 공유, 결제)은 승인을 요청해요. 도구별로 설정하려면 커넥터의 도구를 여세요.",
     "matrixHow": "셀을 클릭해 변경하세요:",
     "kindLabel": "표시",
     "kind": {
@@ -10568,10 +10621,9 @@
     "levelOf": "{{name}}의 수준",
     "cell": "{{resource}}의 {{agent}}: {{level}}",
     "cellAsks": "{{resource}}의 {{agent}}: {{level}}, 민감한 작업은 승인을 요청해요",
-    "asks": "{{tool}}은(는) 승인을 요청해요",
+    "asksList": "승인 필요: {{tools}}",
     "asksMore_other": "외 {{count}}개",
     "asksLegend": "승인 요청",
-    "noneText": "접근 권한 없음.",
     "customText": "도구별로 허용돼 있어요. 수준을 고르면 간단해져요.",
     "noTools": "아직 도구가 없어요.",
     "toolsMore_other": "{{tools}} 외 {{count}}개",
@@ -10997,6 +11049,7 @@
     "notVisible": "내 GitHub 계정으로는 그 설치를 볼 수 없어요. 접근 권한이 있는 계정으로 설치하세요.",
     "otherWorkspace": "이 GitHub 계정은 이미 다른 워크스페이스에 연결돼 있어요. 거기서 앱을 제거한 뒤 여기서 설치하세요.",
     "installedOutside": "그 GitHub 계정의 앱은 agentes.chat 밖에서 설치됐어요. GitHub에서 제거한 뒤 커넥터 › GitHub에서 다시 설치하세요.",
+    "ownerUnknown": "GitHub가 그 조직의 소유자가 누구인지 알려 주지 않았어요. 서버를 운영하는 사람이 GitHub 앱에 조직 권한 Members(읽기 전용)를 추가해야 해요. 그런 다음 다시 설치하세요.",
     "misconfigured": "서버에 있는 GitHub 앱의 시크릿 키가 잘못돼서 설치를 끝낼 수 없어요. 서버를 운영하는 사람이 앱 설정에서 키를 바꿔야 해요.",
     "connectAccount": "GitHub 계정 연결",
     "ownerHint": "이 서버의 소유자가 여기 커넥터에서 GitHub 앱을 만들 수 있어요.",
@@ -11047,10 +11100,10 @@
     "merge": {
       "label": "묻지 않고 병합 가능",
       "none": "선택한 저장소가 없어요. 모든 병합은 승인을 요청해요.",
-      "help": "이 저장소에서는 병합이 승인 카드 없이 실행되고, 감사 기록에 남으며, 대화에 영수증을 남겨요. 그 밖의 민감한 작업은 계속 물어봐요.",
+      "help": "이 저장소에서는 병합이 승인 카드 없이 실행되고, 감사 기록에 남으며, 대화에 영수증을 남겨요. 항상 묻는 에이전트는 계속 물어봐요.",
+      "short": "이 저장소에서는 병합이 승인 카드 없이 실행돼요.",
       "dialogTitle": "{{name}}이 묻지 않고 병합하는 곳",
-      "dialogDesc": "이미 사용하는 저장소만 가능해요. 다른 곳의 병합은 승인을 요청해요.",
-      "short": "이 저장소에서는 병합이 승인 카드 없이 실행돼요."
+      "dialogDesc": "이미 사용하는 저장소만 가능해요. 다른 곳의 병합은 승인을 요청해요."
     },
     "label": "저장소",
     "all": "모든 저장소",
@@ -11178,7 +11231,7 @@
       "github": {
         "1": "코드, 이슈, 풀 리퀘스트 읽기",
         "2": "풀 리퀘스트 열기와 댓글 달기",
-        "ask": "병합과 배포는 항상 승인을 요청해요"
+        "ask": "기본적으로 병합과 배포는 승인을 요청해요"
       },
       "sentry": {
         "1": "오류와 이벤트 보기",
@@ -11212,7 +11265,7 @@
       "cloudflare_bindings": {
         "1": "Workers, KV, R2, D1 보기",
         "2": "Workers와 스토리지 변경",
-        "ask": "배포는 항상 승인을 요청해요"
+        "ask": "기본적으로 배포는 승인을 요청해요"
       },
       "cloudflare_observability": {
         "1": "Workers 로그와 지표 보기"
@@ -11220,7 +11273,7 @@
       "supabase": {
         "1": "프로젝트와 함수 보기",
         "2": "데이터베이스 조회와 변경",
-        "ask": "배포는 항상 승인을 요청해요"
+        "ask": "기본적으로 배포는 승인을 요청해요"
       },
       "supabase_readonly": {
         "1": "데이터베이스 조회(읽기 전용)",
@@ -11915,7 +11968,7 @@
     "see": "보기",
     "seeAsks": "승인을 요청하는 항목 보기",
     "agentTitle": "{{name}}이(가) 사용할 수 있는 것",
-    "agentSub": "커넥터와 주제별이에요. 민감한 작업은 항상 승인을 요청해요."
+    "agentSub": "커넥터와 주제별이에요. 기본적으로 민감한 작업은 승인을 요청해요."
   },
   "connectFlow": {
     "steps": "단계",
@@ -11948,12 +12001,12 @@
       "title": "연결된 조직",
       "none": "아직 조직이 없어요.",
       "lead": "GitHub는 처음 한 번만 조직을 물어봐요. 추가하려면 GitHub에서 앱 페이지를 열고 조직 옆의 Grant를 누르세요. 소유자가 아니면 버튼이 Request로 표시되고 소유자가 승인해요.",
+      "short": "GitHub는 처음 한 번만 조직을 물어봐요.",
       "open": "GitHub에서 조직 허용",
       "added": "이제 추가됨: {{names}}.",
       "removed": "더 이상 안 됨: {{names}}.",
       "same": "조직에 달라진 것이 없어요.",
-      "failed": "지금은 조직을 읽을 수 없어요.",
-      "short": "GitHub는 처음 한 번만 조직을 물어봐요."
+      "failed": "지금은 조직을 읽을 수 없어요."
     },
     "composioHelp": "Composio 페이지에서 영어로 로그인한 뒤 여기로 돌아와요. {{name}}에는 권한이 “Composio”로 표시돼요.",
     "or": "또는",
@@ -11983,7 +12036,7 @@
     "everyoneLevel": "모든 에이전트의 수준",
     "noAgents": "아직 에이전트가 없어요. “사용 대상”에서 언제든 접근 권한을 줄 수 있어요.",
     "asksCount_other": "작업 {{count}}개는 항상 채팅에서 승인을 요청해요.",
-    "asksDefault": "민감한 작업은 항상 채팅에서 승인을 요청해요.",
+    "asksDefault": "기본적으로 민감한 작업은 채팅에서 승인을 요청해요.",
     "grant": "권한 주기",
     "saved_other": "{{name}}: 에이전트 {{count}}명이 사용할 수 있어요.",
     "done": {
@@ -12141,6 +12194,7 @@
       "databasesHelp": "아래 규칙은 이 에이전트가 읽는 모든 데이터베이스에 적용됩니다.",
       "hidden": "절대 보지 않는 열",
       "hiddenHelp": "table.column 형식으로 입력하고, 대문자나 공백, 기호가 있는 이름은 큰따옴표로 감싸세요(customers.\"Tax ID\"). 개인정보나 비밀번호처럼 보이는 열은 이미 숨겼어요.",
+      "hiddenExample": "table.column 형식, 예: customers.\"Tax ID\"",
       "hiddenPlaceholder": "customers.cpf",
       "hiddenInvalid": "table.column(또는 schema.table.column)을 입력하고, 대문자나 공백, 기호가 있는 이름은 \"큰따옴표\"로 감싸세요.",
       "cap": "하루 쿼리 수",
@@ -12148,12 +12202,10 @@
       "capHelpAll": "비우면 제한 없음. 모든 데이터베이스를 합산합니다.",
       "timeout": "쿼리당 시간 제한",
       "timeoutHelp": "더 오래 걸리는 쿼리는 데이터베이스에 부담을 주지 않도록 취소돼요.",
-      "seconds_other": "{{count}}초",
-      "hiddenExample": "table.column 형식, 예: customers.\"Tax ID\""
+      "seconds_other": "{{count}}초"
     },
     "agent": {
       "title": "데이터베이스",
-      "help": "{{org}}에서 연결한 데이터베이스예요. 에이전트는 읽기만 해요.",
       "levelText": "규칙이 허용하는 테이블을 읽기 전용으로 조회해요.",
       "rulesOf": "{{name}}의 규칙",
       "saved": "{{name}}의 데이터베이스 접근 권한을 저장했어요.",
@@ -12249,6 +12301,7 @@
     "rulesRead": "읽는 것",
     "rulesSend": "보내는 것",
     "toolsLead": "{{name}}에서 에이전트가 할 수 있는 일이에요. 어떤 에이전트도 하면 안 되는 일은 끄고, 초안 작성과 정리에도 승인을 요청하게 할 수 있어요. 보내기, 답장, 전달은 항상 채팅에서 받는 사람과 내용을 보여 주며 승인을 요청해요.",
+    "toolsShort": "이 이메일로 에이전트가 할 일을 선택하세요.",
     "group": {
       "read": "읽기",
       "write": "쓰기",
@@ -12309,6 +12362,7 @@
       "buttonName": "{{name}}의 주소",
       "title": "{{address}}의 주소",
       "lead": "에이전트는 이메일을 받은 주소로 답장해요. 이 메일함이 내 도메인이나 별칭 같은 다른 주소로도 이메일을 받는다면 여기에 추가하세요.",
+      "short": "에이전트는 이메일을 받은 주소로 답장해요.",
       "main": "기본 주소: {{address}}",
       "others": "이 메일함의 다른 주소",
       "othersHelp": "별칭과 내 도메인(예: hello@yourcompany.com).",
@@ -12319,31 +12373,26 @@
       "newFrom": "새 이메일 발신 주소",
       "newFromHelp": "답장은 항상 이메일을 받은 주소로 나가요.",
       "later": "나중에 주소에서 바꿀 수 있어요.",
-      "saved": "{{address}}의 주소를 저장했어요.",
-      "short": "에이전트는 이메일을 받은 주소로 답장해요."
+      "saved": "{{address}}의 주소를 저장했어요."
     },
     "agent": {
       "title": "이메일",
-      "help": "{{org}} 메일함마다 한 줄씩 있어요.",
       "none": "{{org}}에 아직 연결된 이메일이 없어요.",
-      "levelText": {
-        "read": "이메일을 검색하고 읽어요. 메일함에서는 아무것도 바뀌지 않아요.",
-        "write": "읽고, 초안을 쓰고, 정리해요. 보내기, 답장, 전달은 승인을 요청해요."
-      },
       "canDelete": "이메일 삭제 가능",
       "canDeleteHelp": "켜 두어도 삭제할 때마다 승인을 요청해요.",
       "rules": "규칙",
       "rulesOf": "{{address}}의 규칙",
       "rulesCount_other": "규칙 {{count}}개",
-      "noRules": "추가 규칙 없음",
       "save": "저장",
       "saved": "{{name}}의 이메일 설정을 저장했어요.",
       "unsaved": "저장하지 않은 변경 사항",
       "warning": "누구의 이메일이든 읽고 묻지 않고 보내요. 악의적인 이메일이 에이전트를 속이려 할 수 있어요.",
       "pending": "아직 연결이 끝나지 않았어요.",
       "needsReconnect": "다시 연결하기 전까지 에이전트가 사용할 수 없어요.",
-      "ownerOnly": "접근 권한은 이 메일함을 연결한 {{name}} 님만 줄 수 있어요.",
+      "ownerOnly": "이 메일함의 접근 권한은 {{name}} 님만 줄 수 있어요.",
       "ownerOnlyUnknown": "접근 권한은 이 메일함을 연결한 사람만 줄 수 있어요.",
+      "onlyYou": "{{name}}은(는) 이 메일함을 당신의 DM에서 당신을 위해서만 써요.",
+      "onlyYouAll": "{{name}}은(는) 당신의 메일함을 당신의 DM에서 당신을 위해서만 써요.",
       "remove": "접근 권한 삭제",
       "removed": "{{name}}은(는) 이제 {{address}}에 접근할 수 없어요.",
       "saveError": {
@@ -12408,8 +12457,7 @@
       "every": "필터를 통과한 새 이메일마다 실행돼요.",
       "needsReconnect": "다시 연결 필요",
       "error": "실패 중"
-    },
-    "toolsShort": "이 이메일로 에이전트가 할 일을 선택하세요."
+    }
   },
   "searchPage": {
     "title": "워크스페이스 검색",
@@ -12525,6 +12573,7 @@
     "previewLoading": "미리보기를 불러오는 중…",
     "previewFailed": "미리보기를 표시하지 못했어요. 파일을 다운로드해서 여세요.",
     "imageAlt": "이미지: {{title}}",
+    "imageMaking": "이미지를 만드는 중…",
     "pdfFrame": "PDF: {{title}}",
     "tooBigToPreview": "너무 커서 미리 볼 수 없어요. 다운로드해서 여세요.",
     "downloadOnly": "이 유형의 파일은 미리보기가 없어요. 다운로드해서 여세요.",
@@ -12646,6 +12695,8 @@
       "misconfigured": "서버에서 {{provider}} 연결이 잘못 설정돼서 연결을 끝낼 수 없어요. 서버를 운영하는 사람이 앱 설정에서 키를 바꿔야 해요."
     },
     "wiki": {
+      "githubNoNotes": "이 링크에는 Markdown 노트가 없어요.",
+      "githubTooLarge": "링크로 읽기에는 노트가 너무 많아요. 저장소를 .zip으로 내려받아 파일에서 가져오세요.",
       "noAccess": "이 페이지에 접근할 수 없어요.",
       "audienceForbidden": "Wiki를 편집하고 역할을 관리하는 사람만 페이지를 볼 수 있는 대상을 정할 수 있어요.",
       "audienceExcludesYou": "계속 이 페이지를 보려면 나 자신(내 역할 중 하나나 내 이름)을 포함하세요.",
@@ -12760,6 +12811,7 @@
       "machineChanged": "미션의 컴퓨터가 바뀌었어요. 다시 시도하세요.",
       "executorUnavailable": "그 프로그래밍 방식은 미션의 컴퓨터에 설치되어 있지 않아요.",
       "executorOutdated": "그 컴퓨터의 Codex가 너무 오래됐어요. 그곳에서 업데이트하세요.",
+      "codexWindows": "Codex는 아직 Windows에서 미션을 프로그래밍하지 못해요. Claude Code, 에이전트 자신 또는 다른 컴퓨터를 고르세요.",
       "invalidExecutor": "프로그래밍할 주체를 고르세요: Claude Code, Codex 또는 에이전트.",
       "rateLimited": "미션이 지난 1시간 동안 너무 많은 작업을 했어요. 잠시 기다렸다가 다시 시도하세요.",
       "pausedStuck": "진행이 멈춰서 미션을 일시 중지했어요."
@@ -12915,6 +12967,7 @@
       "csvTooLarge": "파일이 너무 커요. 최대 2 MB까지예요.",
       "csvTooManyRows": "파일이 5,000행을 넘어요. 나눠서 하나씩 가져오세요.",
       "csvUnrecognized": "비밀번호 파일이 아닌 것 같아요. CSV로 다시 내보내세요.",
+      "unreadable": "저장된 값을 여기서 읽을 수 없어요. 다시 저장한 다음 옮기세요.",
       "requestNotDelivered": "먼저 보낸 다음 Vault에 저장하세요.",
       "requestNotSavable": "이 항목은 Vault에 저장할 수 없어요.",
       "sourceUnknown": "여기서는 이 비밀번호 관리자를 쓸 수 없어요.",
@@ -12931,8 +12984,7 @@
         "unsupported": "여기서는 이 비밀번호 관리자를 연결할 수 없어요.",
         "invalidInput": "입력란을 확인하고 다시 시도하세요.",
         "tooManyItems": "Vault가 가득 찼어요. 더 동기화하기 전에 항목을 삭제하세요."
-      },
-      "unreadable": "저장된 값을 여기서 읽을 수 없어요. 다시 저장한 다음 옮기세요."
+      }
     },
     "feedback": {
       "filesGone": "추가한 파일이 사라졌어요. 다시 추가해 주세요.",
@@ -14107,13 +14159,13 @@
         "item_created": "Vault에 항목을 저장했어요",
         "item_changed": "Vault 항목을 변경했어요",
         "item_deleted": "Vault 항목을 삭제했어요",
+        "item_moved": "Vault 항목을 개인과 팀 사이에서 옮겼어요",
         "item_used": "Vault 항목을 사용했어요",
         "imported": "Vault로 비밀번호를 가져왔어요",
+        "keys_imported": "Vault로 키를 가져왔어요",
         "connection_added": "Vault에 비밀번호 관리자를 연결했어요",
         "connection_changed": "비밀번호 관리자 연결을 변경했어요",
-        "connection_removed": "Vault에서 비밀번호 관리자 연결을 해제했어요",
-        "item_moved": "Vault 항목을 개인과 팀 사이에서 옮겼어요",
-        "keys_imported": "Vault로 키를 가져왔어요"
+        "connection_removed": "Vault에서 비밀번호 관리자 연결을 해제했어요"
       },
       "verb": {
         "created": "생성",
@@ -14389,8 +14441,8 @@
       "personal": "개인",
       "teamHelp": "채널, 사람, 역할로 함께 일하는 모드예요. 바꿔도 보이는 것만 달라져요.",
       "personalHelp": "나와, 초대하면 가족을 위한 더 간단한 모드예요. 바꿔도 보이는 것만 달라져요.",
-      "toTeam": "팀으로 바꾸기…",
-      "toPersonal": "개인으로 바꾸기…"
+      "toTeam": "팀으로 바꾸기",
+      "toPersonal": "개인으로 바꾸기"
     },
     "telemetry": {
       "title": "사용 통계",
@@ -14758,6 +14810,7 @@
       "part_female": "{{name}}의 몫: ≈ {{percent}}",
       "estimate": "각 막대에서 진한 부분이 {{name}}의 몫이에요. {{brand}}은(는) 계정 전체 사용량만 알려주기 때문에 에이전트별 몫은 각자 쓴 양으로 추정한 값이에요.",
       "estimate_female": "각 막대에서 진한 부분이 {{name}}의 몫이에요. {{brand}}은(는) 계정 전체 사용량만 알려주기 때문에 에이전트별 몫은 각자 쓴 양으로 추정한 값이에요.",
+      "estimateShort": "추정한 값이에요.",
       "byAccount": "이번 달 계정별",
       "until": "{{date}}까지",
       "nowTag": "지금",
@@ -14770,8 +14823,7 @@
       "old": "계정 도입 이전 {{brand}}",
       "oldSub": "계정이 기록되기 전의 사용량",
       "ofMonth": "이번 달의 {{percent}}",
-      "shareLabel": "{{source}}: 이번 달의 {{percent}}",
-      "estimateShort": "추정한 값이에요."
+      "shareLabel": "{{source}}: 이번 달의 {{percent}}"
     }
   },
   "budget": {
@@ -15019,6 +15071,7 @@
         "plan": "계획이 아직 승인되지 않았어요",
         "tooMany": "연달아 승인하기에는 너무 많아요",
         "off": "이 에이전트는 명령 실행이 꺼져 있어요",
+        "asks": "이 에이전트는 변경할 때마다 먼저 물어봐요",
         "team": "팀이 이미 했어요",
         "teamPersonal": "이미 한 일이에요",
         "unclear": "명확하게 읽을 수 없어요",
@@ -15065,6 +15118,7 @@
         "runningCode": "컴퓨터에서 코드를 실행했어요",
         "browsing": "브라우저를 사용했어요",
         "pcFiles": "컴퓨터의 파일로 작업했어요",
+        "creatingImage": "이미지를 만들었어요",
         "exportingFile": "파일을 Drive에 저장했어요",
         "importingFile": "Drive에서 파일을 가져왔어요",
         "runningSkillScript": "스킬 {{app}}의 스크립트를 실행했어요",
@@ -15081,6 +15135,7 @@
         "listingTasks": "작업을 살펴봤어요",
         "checkingTask": "작업을 확인했어요",
         "cancelingTask": "작업을 취소했어요",
+        "keepingRunning": "프로그램을 계속 실행했어요",
         "uploadingArtifact": "파일을 Drive로 보냈어요",
         "gettingContext": "컨텍스트를 찾아봤어요",
         "cancelingReminder": "리마인더를 취소했어요",
@@ -15179,6 +15234,7 @@
       "runningCode": "코드를 실행하는 중",
       "browsing": "브라우저를 사용하는 중",
       "pcFiles": "컴퓨터의 파일로 작업하는 중",
+      "creatingImage": "이미지를 만드는 중",
       "exportingFile": "파일을 Drive에 저장하는 중",
       "importingFile": "Drive에서 파일을 가져오는 중",
       "runningSkillScript": "스킬 {{app}}의 스크립트를 실행하는 중",
@@ -15195,6 +15251,7 @@
       "listingTasks": "작업을 살펴보는 중",
       "checkingTask": "작업을 확인하는 중",
       "cancelingTask": "작업을 취소하는 중",
+      "keepingRunning": "프로그램을 계속 실행 중",
       "uploadingArtifact": "파일을 Drive로 보내는 중",
       "gettingContext": "컨텍스트를 찾아보는 중",
       "cancelingReminder": "리마인더를 취소하는 중",
@@ -16600,6 +16657,18 @@
     },
     "closeAsk": "{{name}}은(는) 돌아오기를 2분 동안 기다려요.",
     "openAccess": "도구 및 접근 권한 열기",
+    "kept": {
+      "title": "계속 실행 중",
+      "meta": "{{name}} · {{since}}부터 · {{until}}",
+      "untilStops": "멈출 때까지",
+      "untilClosed": "브라우저가 닫힐 때까지",
+      "until": "{{time}}까지",
+      "stop": "중지",
+      "stopOf": "“{{what}}” 중지",
+      "actions": "“{{what}}” 작업",
+      "count_other": "계속 실행 중 · {{count}}",
+      "stopFailed": "중지할 수 없어요. 다시 시도하세요."
+    },
     "phone": {
       "now": "지금",
       "trackpad": "트랙패드",
@@ -16850,6 +16919,7 @@
       "agent_archived": "{{name}}이(가) 보관되었어요.",
       "audience": "설정한 사람이 더 이상 {{name}}와(과) 대화할 수 없어요.",
       "failing": "여러 번 연속으로 실패해서 멈췄어요.",
+      "failingLast": "5번 연속으로 실패해서 멈췄어요. 마지막 실패: {{cause}}",
       "stopped": "업데이트가 중지되었어요.",
       "missing_credential": "{{name}}에게 작업에 쓸 AI 키나 요금제가 없어요.",
       "timeout": "업데이트가 너무 오래 걸렸어요.",
@@ -16917,6 +16987,7 @@
       "unknown": "업데이트할 때마다 {{name}}의 예산을 사용해요"
     },
     "exposure": "대시보드를 보는 사람은 데이터가 나온 계정에 접근 권한이 없어도 에이전트가 가져온 내용을 볼 수 있어요. 에이전트도 대시보드를 만들어요. 요청한 사람보다 더 많은 사람에게 보여 주려면 먼저 “내 확인 대기”에서 물어봐요.",
+    "exposureShort": "대시보드를 보는 사람은 이 데이터를 볼 수 있어요.",
     "panel": {
       "caresFor": "{{name}}이(가) 이 위젯을 맡고 있어요",
       "caresForOn": "{{name}}이(가) 이 위젯을 맡고 있어요 · {{board}}",
@@ -16999,8 +17070,7 @@
       "textRoutine": "이것을 업데이트하는 {{name}}의 루틴이 멈추고, 업데이트 기록도 함께 사라져요.",
       "textManual": "업데이트 기록도 함께 사라져요.",
       "confirm": "제거"
-    },
-    "exposureShort": "대시보드를 보는 사람은 이 데이터를 볼 수 있어요."
+    }
   },
   "agentPicker": {
     "search": "에이전트 검색",
@@ -17723,6 +17793,10 @@
     "fileType": "사진과 동영상만 첨부할 수 있어요.",
     "fileTooLarge": "{{name}} 파일이 너무 커요. 한도는 {{mb}} MB예요.",
     "fileTooMany": "피드백 하나에는 사진 {{images}}장과 동영상 1개까지 넣을 수 있어요.",
+    "attachPhoto": "사진 첨부",
+    "photosHint": "사진은 {{imageMb}} MB까지 {{images}}장.",
+    "photoType": "사진만 첨부할 수 있어요.",
+    "photosTooMany": "피드백 하나에는 사진 {{images}}장까지 넣을 수 있어요.",
     "send": "보내기",
     "thanks": "전달됐어요. 감사합니다.",
     "reply": "모두 읽어요. 답변이 필요하면 {{email}}로 보내 드려요.",

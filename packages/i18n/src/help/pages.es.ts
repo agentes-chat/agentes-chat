@@ -375,7 +375,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "La memoria no da permisos",
         blocks: [
-          "Nada en la memoria le permite a un agente hacer más. Lo que puede hacer sigue en sus **Herramientas y acceso**, y las acciones sensibles siempre piden aprobación.",
+          "Nada en la memoria le permite a un agente hacer más. Lo que puede hacer sigue en sus **Herramientas y acceso**.",
         ],
       },
       {
@@ -395,7 +395,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Qué pide permiso antes",
         blocks: [
-          "Cuando un agente quiere hacer un merge, un deploy, revertir algo, enviar algo hacia afuera o borrar datos, primero pregunta, tenga el acceso que tenga. La solicitud aparece en **Aprobaciones** y en la conversación, con la acción exacta y el motivo.",
+          "Cuando un agente quiere hacer un merge, un deploy, revertir algo, enviar algo hacia afuera o borrar datos, primero pregunta. Ese es el nivel **Solo lo arriesgado**, con el que empieza todo agente. En la página del agente, en **Aprobaciones**, **Preguntar siempre** hace que pregunte antes de cambiar cualquier cosa, y **No preguntar nunca** hace que no pregunte nada, tampoco en merge, deploy, pagos y rutinas. La solicitud aparece en **Aprobaciones** y en la conversación, con la acción exacta y el motivo.",
         ],
       },
       {
@@ -403,7 +403,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Una vez, o siempre",
         blocks: [
           "Aprobar cubre una acción exacta, con sus valores. Si el agente cambia algo, vuelve a preguntar.",
-          "**Aprobar siempre** deja que el agente haga ese tipo de acción de ahora en adelante, con cualquier valor, sin preguntar. En la solicitud de una rutina, **Siempre en esta rutina** hace lo mismo solo para esa rutina. Ninguno de los dos aparece para merge, deploy, rollback y similares. Para deshacerlo, ve a **Herramientas y acceso** en la página del agente, o a los ajustes de la rutina.",
+          "**Aprobar siempre** deja que el agente haga ese tipo de acción de ahora en adelante, con cualquier valor, sin preguntar. En la solicitud de una rutina, **Siempre en esta rutina** hace lo mismo solo para esa rutina. **Aprobar siempre** aparece para cualquier tipo de acción, también merge y deploy, mientras el agente esté en **Solo lo arriesgado**. **Siempre en esta rutina** no aparece para merge, deploy, rollback y similares. Para deshacerlo, ve a **Herramientas y acceso** en la página del agente, o a los ajustes de la rutina.",
         ],
       },
       {

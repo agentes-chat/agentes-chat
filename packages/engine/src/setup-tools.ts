@@ -1450,10 +1450,7 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
       installed.find((k) => k.name === n.trim().toLowerCase()) ?? installed.find((k) => slug(k.name) === slug(n));
     const unknown = wantedSkills.filter((n) => !skillOf(n));
     if (unknown.length > 0) {
-      // The right hand has no skill tools: it opens the Skills screen, where any other agent offers the install card.
-      const install = isRightHand(await getAgentCached(ctx.db, ctx.orgId, ctx.agentId))
-        ? "someone who manages agents installs it on the Skills screen (offer_open_page, page skills)"
-        : "offer to install it with offer_install_skill, by its GitHub link";
+      const install = "offer to install it with offer_install_skill, by its GitHub link";
       const here = installed.map((k) => k.name);
       return installed.length
         ? `No skill ${firstOf(unknown, NAMES_SHOWN)}. Skills here: ${firstOf(here, NAMES_SHOWN)}. One not installed yet: ${install}.`

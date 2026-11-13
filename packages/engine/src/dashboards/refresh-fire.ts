@@ -1,15 +1,16 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, inArray, isNotNull, isNull, or, schema, sql } from "@agenteschat/db";
 import { getAgent } from "../agents";
-import { type AiStatusDeps, backgroundAiState } from "../ai-status";
+import { type AiStatusDeps, backgroundAiState, rightHandWorkAi } from "../ai-status";
 import type { ModelScope } from "../brains/select";
-import type { Membership } from "../organizations";
+import { getMembership, type Membership } from "../organizations";
+import { isRightHand, ownAiPerson, RIGHT_HAND } from "../right-hand";
 import { waitModel } from "../task-manager";
 import { mayContinuePause } from "../usage-pause";
 import { dashboardRights, viewerOf } from "./access";
 import { publishWidgetChanged, widgetEvent } from "./events";
 import { holdWidgetForAi } from "./refresh-ledger";
-import type { WidgetStatus, WidgetWaitView } from "./types";
+import type { DashboardRow, WidgetStatus, WidgetWaitView } from "./types";
 
 const { agentRuns, agents, dashboards, dashboardWidgets, routineRuns, routines } = schema;
 
@@ -156,32 +157,101 @@ export function isWidgetChangeRun(run: { event?: Record<string, unknown> | null 
 
 type FiringDeps = { db: Database; pubsub?: PubSub; ai?: Omit<AiStatusDeps, "db"> };
 
+/** Who set a widget's work up, beyond its own row: `asker` of a change request, the creator its routine has now. */
+type WidgetWorkPeople = { asker?: string | null; routineCreator?: string | null };
+
 /**
- * The widget's agent and why (`AgentAi.reason`) when it has no AI to think with for its build, else null (also when
- * nothing can tell: no `ai`). A build is background work (`backgroundAiState`), as the run's own check reads it.
+ * The widget's agent and whether it has an AI to think with for its build (`noAi`: why, `AgentAi.reason`, null while
+ * it has one or nothing can tell: no `ai`). A build is background work (`backgroundAiState`), as the run's own check
+ * reads it. The right hand's thinks for a person (`person`, ADR 0137 §11): who asks this change, then who made the
+ * widget or last wrote its instructions, then its routine's creator, the first of them still seeing its board whose
+ * AI can think (`rightHandWorkAi`), else the workspace's for nobody (null). Null: no agent to build it.
  */
-export async function widgetAgentWithoutAi(deps: FiringDeps, orgId: string, agentId: string) {
-  if (!deps.ai) return null;
-  const agent = await getAgent(deps.db, orgId, agentId);
+export async function widgetAi(
+  deps: FiringDeps,
+  widget: { orgId: string; agentId: string; createdByUserId: string | null; routineId: string | null },
+  board: DashboardRow,
+  who: WidgetWorkPeople = {},
+) {
+  const agent = await getAgent(deps.db, widget.orgId, widget.agentId);
   if (!agent || agent.archivedAt) return null;
-  const ai = await backgroundAiState({ ...deps.ai, db: deps.db }, agent);
-  return ai.state === "no_ai" ? { agent, reason: ai.reason ?? null } : null;
+  const ai = deps.ai ? { ...deps.ai, db: deps.db } : null;
+  if (!isRightHand(agent)) {
+    const state = ai ? await backgroundAiState(ai, agent) : null;
+    return { agent, noAi: state?.state === "no_ai" ? { reason: state.reason ?? null } : null };
+  }
+  const [routine] =
+    who.routineCreator === undefined && widget.routineId
+      ? await deps.db
+          .select({ creator: routines.createdByUserId })
+          .from(routines)
+          .where(and(eq(routines.orgId, widget.orgId), eq(routines.id, widget.routineId)))
+      : [];
+  const people: string[] = [];
+  for (const id of new Set([who.asker, widget.createdByUserId, who.routineCreator ?? routine?.creator])) {
+    const membership = id ? await getMembership(deps.db, id, widget.orgId) : null;
+    if (id && membership && dashboardRights(board, viewerOf(membership, id)).see) people.push(id);
+  }
+  if (!ai) return { agent, person: await ownAiPerson(deps.db, widget.orgId, people), noAi: null };
+  const picked = await rightHandWorkAi(ai, agent, people);
+  return {
+    agent,
+    person: picked.person,
+    noAi: picked.ai.state === "no_ai" ? { reason: picked.ai.reason ?? null } : null,
+  };
+}
+
+/**
+ * The right hand's widgets on boards `viewerId` sees that wait for an AI, or stopped after failing in a row, whose
+ * build has one now (`widgetAi`): the apps start the waiting ones and offer Resolve on the stopped ones. Whose AI its
+ * build thinks with is each widget's own people's, so the agent's state alone can't say it.
+ */
+export async function rightHandWidgetsReady(deps: FiringDeps, orgId: string, viewerId: string): Promise<string[]> {
+  const membership = deps.ai ? await getMembership(deps.db, viewerId, orgId) : null;
+  if (!membership) return [];
+  const rows = await deps.db
+    .select({ widget: dashboardWidgets, board: dashboards })
+    .from(dashboardWidgets)
+    .innerJoin(dashboards, eq(dashboards.id, dashboardWidgets.dashboardId))
+    .innerJoin(agents, eq(agents.id, dashboardWidgets.agentId))
+    .where(
+      and(
+        eq(dashboardWidgets.orgId, orgId),
+        eq(dashboardWidgets.status, "failed"),
+        inArray(dashboardWidgets.failureCode, ["missing_credential", "failing"]),
+        eq(agents.builtin, RIGHT_HAND),
+        isNull(dashboards.deletedAt),
+      ),
+    );
+  const viewer = viewerOf(membership, viewerId);
+  const ready: string[] = [];
+  for (const { widget, board } of rows) {
+    if (!dashboardRights(board, viewer).see) continue;
+    const ai = await widgetAi(deps, widget, board);
+    if (ai && !ai.noAi) ready.push(widget.id);
+  }
+  return ready;
 }
 
 export type WidgetFiring =
-  | { widget: { widgetId: string; dashboardId: string } }
+  /** `aiUserId`: whose AI the right hand's build thinks with (`widgetAi`), for its brief. */
+  | { widget: { widgetId: string; dashboardId: string }; aiUserId?: string | null }
   /** The widget or its board is gone, or its agent has no AI (the widget says so, `holdWidgetForAi`): the slot passes. */
   | { skip: "deleted" | "no_ai" }
   /** Its creator no longer sees the board: the routine pauses, the widget says why. */
   | { pause: "creator_no_access" };
 
-/** Whether a widget routine's slot runs, for its creator (`creatorId`, whose `membership` it is). */
+/**
+ * Whether a widget routine's slot runs, for its creator (`creatorId`, whose `membership` it is). `asker`: who asked
+ * the change this run carries.
+ */
 export async function widgetFiring(
   deps: FiringDeps,
   orgId: string,
   target: { widgetId: string; dashboardId: string },
   creatorId: string,
   membership: Membership,
+  asker?: string | null,
 ): Promise<WidgetFiring> {
   const [row] = await deps.db
     .select({ widget: dashboardWidgets, board: dashboards })
@@ -190,12 +260,15 @@ export async function widgetFiring(
     .where(and(eq(dashboardWidgets.orgId, orgId), eq(dashboardWidgets.id, target.widgetId)));
   if (!row || row.board.deletedAt) return { skip: "deleted" };
   if (!dashboardRights(row.board, viewerOf(membership, creatorId)).see) return { pause: "creator_no_access" };
-  const without = await widgetAgentWithoutAi(deps, orgId, row.widget.agentId);
-  if (without) {
-    await holdWidgetForAi(deps, row.widget, row.board, without.reason);
+  const ai = await widgetAi(deps, row.widget, row.board, { asker, routineCreator: creatorId });
+  if (ai?.noAi) {
+    await holdWidgetForAi(deps, row.widget, row.board, ai.noAi.reason);
     return { skip: "no_ai" };
   }
-  return { widget: { widgetId: row.widget.id, dashboardId: row.widget.dashboardId } };
+  return {
+    widget: { widgetId: row.widget.id, dashboardId: row.widget.dashboardId },
+    ...(ai && "person" in ai ? { aiUserId: ai.person } : {}),
+  };
 }
 
 /** The refresh starts: the widget is `updating` (its last data stays on screen), or `building` while it has none. */

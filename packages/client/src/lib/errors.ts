@@ -117,6 +117,7 @@ const KNOWN = {
   "mission.computer_offline": "errors.mission.computerOffline",
   "mission.exec_disabled": "errors.mission.execDisabled",
   "mission.runner_outdated": "errors.mission.runnerOutdated",
+  "mission.codex_windows": "errors.mission.codexWindows",
   "mission.exists": "errors.mission.exists",
   "mission.closed": "errors.mission.closed",
   "mission.wrong_status": "errors.mission.wrongStatus",
@@ -258,6 +259,8 @@ const KNOWN = {
   // `count`: minutes until GitHub stops limiting the server.
   "github.limited": "errors.github.limited",
   "github.unreachable": "errors.github.unreachable",
+  "wiki.github_no_notes": "errors.wiki.githubNoNotes",
+  "wiki.github_too_large": "errors.wiki.githubTooLarge",
   "skill.no_skill_md": "errors.skill.noSkillMd",
   "skill.too_many_skills": "errors.skill.tooManySkills",
   "skill.invalid_name": "errors.skill.invalidName",
@@ -536,6 +539,8 @@ const KNOWN = {
   "github_app.not_visible": "githubApp.notVisible",
   "github_app.other_workspace": "githubApp.otherWorkspace",
   "github_app.installed_outside": "githubApp.installedOutside",
+  "github_app.owner_required": "githubApp.requested",
+  "github_app.owner_unknown": "githubApp.ownerUnknown",
   "github_app.misconfigured": "githubApp.misconfigured",
   github_app_env: "githubApp.server.line.env",
 } as const;
@@ -923,6 +928,10 @@ const OAUTH_RETURNS = {
   "github_app.other_workspace": "githubApp.otherWorkspace",
   installed_outside: "githubApp.installedOutside",
   "github_app.installed_outside": "githubApp.installedOutside",
+  owner_required: "githubApp.requested",
+  "github_app.owner_required": "githubApp.requested",
+  owner_unknown: "githubApp.ownerUnknown",
+  "github_app.owner_unknown": "githubApp.ownerUnknown",
   "github_app.misconfigured": "githubApp.misconfigured",
   requested: "githubApp.requested",
 } as const;

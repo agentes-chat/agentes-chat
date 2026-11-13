@@ -342,7 +342,7 @@ export function workStepsOf(meta: Message["meta"]): number | null {
 /** `meta.artifacts`: the files on a message. */
 export function artifactsOf(
   meta: Message["meta"],
-): { id: string; version?: number; title: string; deleted: boolean }[] {
+): { id: string; version?: number; title: string; deleted: boolean; width?: number; height?: number }[] {
   const list = meta?.artifacts;
   if (!Array.isArray(list)) return [];
   return list.flatMap((r) => {
@@ -354,6 +354,8 @@ export function artifactsOf(
         ...(typeof o.version === "number" ? { version: o.version } : {}),
         title: str(o.title),
         deleted: o.deleted === true,
+        // A picture's size (when the server read it): its box has its shape before it loads.
+        ...(typeof o.width === "number" && typeof o.height === "number" ? { width: o.width, height: o.height } : {}),
       },
     ];
   });

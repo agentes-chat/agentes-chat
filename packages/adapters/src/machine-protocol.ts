@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 58;
+export const MACHINE_PROTOCOL_VERSION = 61;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -616,6 +616,19 @@ export const REMOTE_PAUSE_PROTOCOL = 57;
  * grant). Older runners lend it to one agent.
  */
 export const SHARED_GEMINI_PROTOCOL = 58;
+/**
+ * Codex brain turns on Windows (ADR 0032 "Codex"): the native `codex.exe`, a `plan` or `work` turn only inside MXC.
+ * A Windows runner before it refuses every Codex turn, so the server reads it as too old for Codex there.
+ */
+export const CODEX_WINDOWS_PROTOCOL = 60;
+/**
+ * `keep_running` (ADR 0176): `keep.start` and `keep.end` take and end an agent's hold, the computer's standard "don't go
+ * idle" lock, bound to one of its programs, its browser or a time; `hello.holds` says which live and which ended since,
+ * and `keep.ended` says one ended. The server asks no older runner.
+ */
+export const KEEP_RUNNING_PROTOCOL = 61;
+/** Why a hold ended on the computer: its program or browser went away (or its lock did), or its time ran out. */
+export type HoldEnd = "exited" | "expired";
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";
@@ -1839,7 +1852,12 @@ export type WireBrainEvent =
   /** Protocol 46: Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
   /** A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended. */
-  | { type: "tool_started"; id: string; name: string };
+  | { type: "tool_started"; id: string; name: string }
+  /**
+   * A file a tool of the brain's own made (Codex's image generation), kept in the agent's folder (`path`, relative
+   * to it): the server sends it to the Drive and its card goes with the reply. An older server drops the event.
+   */
+  | { type: "file"; path: string };
 
 /**
  * `brain.steer` (protocol 15): messages for the turn of `runId` in progress.
@@ -1908,7 +1926,18 @@ export interface BrainTurnRequest {
    * The turn's permission profile (ADR 0053 §3): `work` (default) edits and asks a person (or the server's
    * rules) for the rest; `plan` reads only. Codex honours it from `BRAIN_PROFILES_PROTOCOL` on.
    */
-  permissions?: { mode?: "plan" | "work" | "chat"; branchPrefix?: string; allow?: string[] };
+  permissions?: {
+    mode?: "plan" | "work" | "chat";
+    branchPrefix?: string;
+    allow?: string[];
+    /**
+     * Protocol 59 (`ASKS_PROTOCOL`): how much the agent asks, when it isn't the default. `always`: a Claude Code
+     * work turn lets only reads through on the computer, and every other call of its own tools reaches the server's
+     * prompt. `never`: a command the computer holds is refused with where it runs, never with a wait for a person.
+     * An older runner ignores it.
+     */
+    asks?: "always" | "never";
+  };
   /** Protocol 13: the account folder to run in (`accounts/<kind>/<id>`); absent: the machine's own sign-in. */
   account?: string;
   /** Protocol 13: how hard it thinks; absent: the CLI's default. */
@@ -1928,6 +1957,12 @@ export interface BrainTurnRequest {
    */
   personWaiting?: boolean;
 }
+
+/**
+ * From this protocol on the runner reads `BrainTurnRequest.permissions.asks`, and `exec` answers `merge` for an
+ * approved command that is one merge. The server sends an older runner a `plan` turn for an agent that always asks.
+ */
+export const ASKS_PROTOCOL = 59;
 
 /** Largest strings of a `brain.event` (tool inputs and results are cut, text deltas are small). */
 export const BRAIN_LIMITS = {
@@ -2200,6 +2235,13 @@ export interface RunnerInfo {
    * group, which the computer's egress rules may route apart from the rest of root.
    */
   authEgressGroup?: true;
+  /** `KEEP_RUNNING_PROTOCOL`: the holds that live here, and those that ended lately with why (the server may not know). */
+  holds?: RunnerHolds;
+}
+
+export interface RunnerHolds {
+  live: string[];
+  ended: { id: string; reason: HoldEnd }[];
 }
 
 export interface FileEntry {
@@ -2411,6 +2453,14 @@ export type MachineRequest = (
    * over Wi-Fi from now on (`allow`) or no longer (`forget`). Each answers the list as it is then.
    */
   | { op: "phone.wifi"; action: "list" | "allow" | "forget"; serial?: string }
+  /**
+   * `KEEP_RUNNING_PROTOCOL`: takes hold `holdId` for the request's agent, or again with these bounds: bound to its
+   * program `pid` (one of its own), to its browser (`browser`, open now, always with `until`), and with `until` (ISO)
+   * ending then at the latest; `until` alone binds it to that time.
+   */
+  | { op: "keep.start"; holdId: string; pid?: number; browser?: boolean; until?: string }
+  /** Ends hold `holdId`; with `stop`, what it holds too: its program (SIGTERM, SIGKILL 10 s later) or the browser. */
+  | { op: "keep.end"; holdId: string; stop?: boolean }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -2484,6 +2534,8 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "pause.set",
   "phone.look",
   "phone.wifi",
+  "keep.start",
+  "keep.end",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -2494,7 +2546,7 @@ export interface MachineReplies {
     stderr: string;
     timedOut: boolean;
     canceled?: { killed: boolean };
-    /** It ran as a merge the agent does without asking (`mergeRepos`). */
+    /** It ran as one merge with no card of its own: in `mergeRepos`, or approved (a saved rule, an agent that never asks). */
     merge?: MergeDone;
   };
   /** `base64: null`: no such file. */
@@ -2645,6 +2697,9 @@ export interface MachineReplies {
   "pause.set": { paused: RunnerPause };
   "phone.look": { looking: boolean };
   "phone.wifi": { available: WifiIphone[] };
+  "keep.start": { held: true };
+  /** `false`: no such hold lived here. */
+  "keep.end": { ended: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */
@@ -2853,7 +2908,9 @@ export type RunnerFrame =
   /** Protocol 12: one image of an agent's browser while its stream is on (newest wins; the server never stores it). */
   | { type: "browser.frame"; agentId: string; seq: number; data: string; metadata: BrowserFrameMetadata }
   /** Protocol 12: an agent's stream stopped on the machine (asked, session closed, error). */
-  | { type: "browser.stream.ended"; agentId: string; reason: "stopped" | "closed" | "error"; message?: string };
+  | { type: "browser.stream.ended"; agentId: string; reason: "stopped" | "closed" | "error"; message?: string }
+  /** `KEEP_RUNNING_PROTOCOL`: a hold ended on the computer by itself (the next `hello` says so again). */
+  | { type: "keep.ended"; holdId: string; reason: HoldEnd };
 
 /** A tool as `mcp.tools` lists it (what MCP `tools/list` returns). */
 export interface McpToolInfo {
@@ -2957,6 +3014,23 @@ export function parsePhones(v: unknown[]): RunnerPhone[] {
     });
   }
   return out;
+}
+
+const HOLD_ENDS: readonly HoldEnd[] = ["exited", "expired"];
+/** A hold's id (a UUID), as the server makes them. */
+export const isUuid = (v: unknown): v is string =>
+  isString(v) && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+/** Most holds one `hello` lists, live and ended alike. */
+const HELLO_HOLDS = 500;
+
+/** `hello.holds`: hold ids, each ended one with a reason we know; the rest dropped. */
+export function parseHolds(v: Record<string, unknown>): RunnerHolds {
+  const live = Array.isArray(v.live) ? v.live.filter(isUuid).slice(0, HELLO_HOLDS) : [];
+  const ended = (Array.isArray(v.ended) ? v.ended : []).slice(0, HELLO_HOLDS).flatMap((e) => {
+    const reason = isObject(e) ? HOLD_ENDS.find((r) => r === e.reason) : undefined;
+    return isObject(e) && isUuid(e.id) && reason ? [{ id: e.id, reason }] : [];
+  });
+  return { live, ended };
 }
 
 /** `hello.toolchains`: known tools only, each a short version string. */
@@ -3211,6 +3285,8 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
       return isString(v.id) && isString(v.name)
         ? { type: "tool_started", id: v.id.slice(0, 128), name: v.name.slice(0, BRAIN_LIMITS.toolName) }
         : null;
+    case "file":
+      return isString(v.path) && v.path.length > 0 && v.path.length <= 1024 ? { type: "file", path: v.path } : null;
     default:
       return null;
   }
@@ -3289,7 +3365,12 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(f.authEgressGroup === true ? { authEgressGroup: true as const } : {}),
         ...(Array.isArray(f.phones) ? { phones: parsePhones(f.phones) } : {}),
         ...(isObject(f.toolchains) ? { toolchains: parseToolchains(f.toolchains) } : {}),
+        ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),
       };
+    }
+    case "keep.ended": {
+      const reason = HOLD_ENDS.find((r) => r === f.reason);
+      return isUuid(f.holdId) && reason ? { type: "keep.ended", holdId: f.holdId, reason } : null;
     }
     case "phones.changed":
       return Array.isArray(f.phones) ? { type: "phones.changed", phones: parsePhones(f.phones) } : null;
@@ -3651,7 +3732,7 @@ export const MISSION_MCP_TOOLS: readonly MissionMcpTool[] = [
   {
     name: "request_approval",
     description:
-      "Ask a person to approve a merge, a deploy or a rollback before you do it. Never merge, deploy or roll back without an approval. Then stop and wait: you are resumed with the outcome.",
+      "Ask a person to approve a merge, a deploy or a rollback before you do it, whenever one is held for a person. Then stop and wait: you are resumed with the outcome.",
     inputSchema: {
       type: "object",
       properties: {

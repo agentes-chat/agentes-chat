@@ -14,6 +14,7 @@ import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { signOut } from "@/features/account";
 import { agentLook } from "@/features/shared/logic";
 import { authClient } from "@/lib/auth";
+import { paysHere } from "@/lib/store";
 import { useOrgGate } from "@/providers/org";
 import { Button, LineIcon, Locked, OptionTile, Text, useTheme } from "@/ui";
 import { AuthField } from "@/ui/auth/AuthField";
@@ -511,7 +512,7 @@ export function OnboardingFlow({ onLeave, another }: { onLeave?: () => void; ano
           <PlanStep
             orgId={orgId}
             team={team}
-            mayPay={can(mine, "manage_billing")}
+            mayPay={paysHere(can(mine, "manage_billing"))}
             leaving={pending}
             onEnter={() => void open("skipped")}
           />

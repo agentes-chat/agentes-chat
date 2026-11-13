@@ -113,6 +113,7 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
         paused,
         limits,
         desktopViewers: viewers,
+        ...(f.browserKept === true ? { browserKept: true } : {}),
         privateNetwork: f.privateNetwork === true,
         ...account,
         ...accounts,
@@ -693,6 +694,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
       status: () => ({ running: desktop !== null, streams: state.desktopViewers ?? 0 }),
     },
     onChange: () => queueMicrotask(lease),
+    kept: () => state.browserKept === true,
     ...(chrome ? { startChrome: (exe, args, profile, env) => launchChrome(exe, args, profile, env, chrome) } : {}),
     // The agents share their memory (`agentLimits`): the limit a page dies at is all of theirs.
     memoryEvents: {

@@ -12,6 +12,7 @@ import type {
 import { IMPORT_APP_CLIENTS } from "../app-clients";
 import { forbiddenText } from "../errors";
 import { joinNames } from "../format";
+import { hiddenRepoOf, hiddenRepoText } from "../skills";
 import {
   type AgentFile,
   type AgentFileSkip,
@@ -269,14 +270,18 @@ export function cardName(t: TFunction, card: ImportCard): string {
 
 /**
  * What went wrong reading or planning, and what to do next. `offline` tells a request that never got an answer
- * (each app knows its own way).
+ * (each app knows its own way). A private repository none of the workspace's GitHub reads is said as
+ * Skills says it (`hiddenRepoText`), `mayConnect`: whether this person may connect GitHub.
  */
 export function importFailureText(
   t: TFunction,
   { from, step, cause }: ImportFailure,
   offline: (e: unknown) => boolean,
+  mayConnect = false,
 ) {
   if (cause === NOT_GITHUB) return t("onboarding.import.errors.notGithub");
+  const hidden = hiddenRepoOf(cause);
+  if (hidden) return hiddenRepoText(t, hidden, mayConnect).text;
   if (cause instanceof ImportError) {
     return cause.code === "unknown" && from === "paste"
       ? t("onboarding.import.errors.unknownPasted")

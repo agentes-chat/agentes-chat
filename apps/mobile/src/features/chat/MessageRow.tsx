@@ -135,7 +135,7 @@ import { ReachLines } from "./ReachLines";
 import { Receipts } from "./Receipts";
 import { SecretCard } from "./SecretCard";
 import { SpeedFallbackLine, StopPill } from "./StoppedLine";
-import { useStoppedRun } from "./stopped-runs";
+import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
 import { recentTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
@@ -1052,7 +1052,9 @@ function StoppedLine({
       { agentId: m.author.id ?? "", threadId: m.threadId ?? m.id, triggerMessageId: null },
       { meId, manageAgents: can(org, "manage_agents"), agentOwnerId: owner, messages: loaded },
     );
-  const open = may && !continued && !busy;
+  // The agent works here again, or wrote after the stop: it went on, the stop offers nothing.
+  const movedOn = useStopMovedOn(runId);
+  const open = may && !continued && !busy && !movedOn;
   const onContinue = () => {
     setBusy(true);
     api.agents

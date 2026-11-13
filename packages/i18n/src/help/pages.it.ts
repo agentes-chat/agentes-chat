@@ -373,7 +373,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "La memoria non dà permessi",
         blocks: [
-          "Niente nella memoria permette a un agente di fare di più. Quello che può fare resta in **Strumenti e accesso**, e le azioni delicate chiedono sempre un’approvazione.",
+          "Niente nella memoria permette a un agente di fare di più. Quello che può fare resta in **Strumenti e accesso**.",
         ],
       },
       {
@@ -393,7 +393,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Cosa chiede prima",
         blocks: [
-          "Quando un agente vuole fare un merge, un deploy, un rollback, mandare qualcosa all’esterno o eliminare dati, chiede prima, qualunque accesso abbia. La richiesta compare in **Approvazioni** e nella conversazione, con l’azione esatta e il motivo.",
+          "Quando un agente vuole fare un merge, un deploy, un rollback, mandare qualcosa all’esterno o eliminare dati, chiede prima. È il livello **Solo ciò che è rischioso**, quello da cui parte ogni agente. Nella pagina dell’agente, in **Approvazioni**, **Chiedere sempre** gli fa chiedere prima di cambiare qualsiasi cosa, e con **Non chiedere mai** non chiede nulla, nemmeno per merge, deploy, pagamenti e routine. La richiesta compare in **Approvazioni** e nella conversazione, con l’azione esatta e il motivo.",
         ],
       },
       {
@@ -401,7 +401,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Una volta, o sempre",
         blocks: [
           "Approvare copre un’azione esatta, con i suoi valori. Se l’agente cambia qualcosa, chiede di nuovo.",
-          "**Approva sempre** lascia che l’agente faccia quel tipo di azione da ora in poi, con qualsiasi valore, senza chiedere. Nella richiesta di una routine, **Sempre in questa routine** fa lo stesso solo per quella routine. Nessuno dei due compare per merge, deploy, rollback e simili. Per annullare, vai in **Strumenti e accesso** nella pagina dell’agente, o nelle impostazioni della routine.",
+          "**Approva sempre** lascia che l’agente faccia quel tipo di azione da ora in poi, con qualsiasi valore, senza chiedere. Nella richiesta di una routine, **Sempre in questa routine** fa lo stesso solo per quella routine. **Approva sempre** compare per qualsiasi tipo di azione, anche merge e deploy, finché l’agente è al livello **Solo ciò che è rischioso**. **Sempre in questa routine** non compare per merge, deploy, rollback e simili. Per annullare, vai in **Strumenti e accesso** nella pagina dell’agente, o nelle impostazioni della routine.",
         ],
       },
       {

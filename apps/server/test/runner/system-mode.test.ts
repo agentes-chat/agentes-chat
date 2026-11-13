@@ -480,6 +480,9 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "phone.look",
     // The Mac's pick of iPhones on its Wi-Fi, kept beside the phones' locks.
     "phone.wifi",
+    // Root takes an agent's holds as that agent's own user, and checks its program is its own (ADR 0176).
+    "keep.start",
+    "keep.end",
   ]);
 
   if (posix) {

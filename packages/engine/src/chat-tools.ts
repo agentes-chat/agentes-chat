@@ -21,6 +21,7 @@ import {
 import { enqueue } from "./outbox";
 import { runReadOutsideById } from "./outside";
 import { actingRoutineOfCall, personBehindCall } from "./requester";
+import { isRightHandId } from "./right-hand";
 import { isRoutineRoomKey } from "./routine-brief";
 import { personCanPost } from "./routine-state";
 import type { ArtifactLink } from "./run-tools";
@@ -251,7 +252,12 @@ export function createChatToolSource(deps: {
           if (moving && !movable) {
             return { content: "This work stays where it is: post without `move_here`.", isError: true };
           }
-          if (channel.visibility !== "public" && !members.some((m) => m.agentId === ctx.agentId)) {
+          // The right hand is in no channel and answers in any (`rightHandReaches`): it posts where the person may.
+          if (
+            channel.visibility !== "public" &&
+            !members.some((m) => m.agentId === ctx.agentId) &&
+            !(await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))
+          ) {
             return {
               content: `You are not in #${channel.name} (private). Ask someone to add you to it, then try again.`,
               isError: true,

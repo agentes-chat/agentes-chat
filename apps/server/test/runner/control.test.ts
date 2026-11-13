@@ -11,6 +11,7 @@ import { RunnerDaemon } from "../../runner/daemon";
 import { RUNNER_VERSION } from "../../runner/errors";
 import { ORG_LOGO_MAX_BYTES, orgLogoPath } from "../../runner/org-logo";
 import type { FetchFn } from "../../runner/pairing";
+import { askStandby, standbyAcked } from "../../runner/standby";
 import { removeDirs, tempDir, waitFor } from "./helpers";
 
 const dirs: string[] = [];
@@ -366,6 +367,38 @@ test("a service with no app still looks for the CLIs on a new install, and tells
     type: "executors.changed",
     executors: { codex: { version: "codex-cli 0.164.0" } },
   });
+  await daemon.stop();
+});
+
+test("an operator's standby: the link drops and stays down with the rest running; resume dials at once", async () => {
+  const { home } = pairedHome();
+  const sockets: FakeSocket[] = [];
+  const daemon = new RunnerDaemon({
+    home,
+    mode: "start",
+    log: () => {},
+    print: () => {},
+    watch: false,
+    self: SELF,
+    caffeinate: false,
+    dial: (_url, handlers) => {
+      const s = new FakeSocket(handlers);
+      sockets.push(s);
+      return s;
+    },
+    fetch: async () => new Response(null, { status: 404 }),
+  });
+  void daemon.runStart();
+  await waitFor(() => sockets.length === 1);
+  const s = sockets[0] as FakeSocket;
+  s.handlers.onOpen();
+  s.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+  const ask = askStandby(home, 5);
+  await waitFor(() => s.closed && standbyAcked(home, ask.id), 3000);
+  await Bun.sleep(1500);
+  expect(sockets).toHaveLength(1);
+  const resume = askStandby(home, 0);
+  await waitFor(() => sockets.length === 2 && standbyAcked(home, resume.id), 3000);
   await daemon.stop();
 });
 

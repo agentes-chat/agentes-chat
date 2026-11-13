@@ -371,7 +371,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "Pamięć nie daje uprawnień",
         blocks: [
-          "Nic w pamięci nie pozwala agentowi zrobić więcej. To, co może robić, określają jego **Narzędzia i dostęp**, a działania wrażliwe zawsze wymagają zatwierdzenia.",
+          "Nic w pamięci nie pozwala agentowi zrobić więcej. To, co może robić, określają jego **Narzędzia i dostęp**.",
         ],
       },
       {
@@ -391,7 +391,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Co wymaga zatwierdzenia",
         blocks: [
-          "Gdy agent chce scalić zmiany, wdrożyć, wycofać wdrożenie, wysłać coś na zewnątrz albo usunąć dane, najpierw pyta, bez względu na to, jaki ma dostęp. Prośba pojawia się w **Zatwierdzenia** i w rozmowie, z dokładnym działaniem i powodem.",
+          "Gdy agent chce scalić zmiany, wdrożyć, wycofać wdrożenie, wysłać coś na zewnątrz albo usunąć dane, najpierw pyta. To poziom **Tylko to, co ryzykowne**, od którego zaczyna każdy agent. Na stronie agenta, w sekcji **Zatwierdzenia**, **Zawsze pytaj** sprawia, że pyta przed każdą zmianą, a przy **Nigdy nie pytaj** nie pyta o nic, także przy scalaniu, wdrożeniach, płatnościach i rutynach. Prośba pojawia się w **Zatwierdzenia** i w rozmowie, z dokładnym działaniem i powodem.",
         ],
       },
       {
@@ -399,7 +399,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Raz albo zawsze",
         blocks: [
           "Zatwierdzenie obejmuje jedno konkretne działanie, z jego wartościami. Jeśli agent cokolwiek zmieni, pyta ponownie.",
-          "**Zawsze zatwierdzaj** pozwala agentowi od teraz robić ten rodzaj działań z dowolnymi wartościami, bez pytania. Przy prośbie z rutyny **Zawsze w tej rutynie** robi to samo tylko dla tej rutyny. Żadna z tych opcji nie pojawia się przy scalaniu, wdrażaniu, wycofywaniu i podobnych. Aby to cofnąć, przejdź do **Narzędzia i dostęp** na stronie agenta albo do ustawień rutyny.",
+          "**Zawsze zatwierdzaj** pozwala agentowi od teraz robić ten rodzaj działań z dowolnymi wartościami, bez pytania. Przy prośbie z rutyny **Zawsze w tej rutynie** robi to samo tylko dla tej rutyny. **Zawsze zatwierdzaj** pojawia się przy każdym rodzaju działania, także przy scalaniu i wdrażaniu, dopóki agent jest na poziomie **Tylko to, co ryzykowne**. **Zawsze w tej rutynie** nie pojawia się przy scalaniu, wdrażaniu, wycofywaniu i podobnych. Aby to cofnąć, przejdź do **Narzędzia i dostęp** na stronie agenta albo do ustawień rutyny.",
         ],
       },
       {

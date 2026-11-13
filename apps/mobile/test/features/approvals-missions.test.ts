@@ -108,14 +108,14 @@ describe("Aprovar sempre on the phone", () => {
     approveAlways: { tool: "COMPOSIO_MULTI_EXECUTE_TOOL", actions: ["GITHUB_CREATE_AN_ISSUE_COMMENT"] },
   });
 
-  test("the quiet third button: only where the server offers it, to who decides, never on a hold", () => {
+  test("the quiet third button: only where the server offers it, to who decides, on a high-risk request too", () => {
     expect(approveAlwaysOffered(offered)).toBe(true);
     expect(approveAlwaysOffered({ ...offered, canDecide: false })).toBe(false);
     expect(approveAlwaysOffered({ ...offered, approveAlways: null })).toBe(false);
     expect(approveAlwaysOffered({ ...offered, approveAlways: undefined })).toBe(false);
     expect(approveAlwaysOffered({ ...offered, status: "approved" })).toBe(false);
-    // High risk takes a hold, never a tap: it isn't approved for good.
-    expect(approveAlwaysOffered({ ...offered, tool: "deploy_production", scope: "vercel:deploy" })).toBe(false);
+    // What the server offers shows, whatever the action: a deploy may be approved for good.
+    expect(approveAlwaysOffered({ ...offered, tool: "deploy_production", scope: "vercel:deploy" })).toBe(true);
   });
 
   test("under the button, before the tap: what it approves for good, with any values, and where to undo it", async () => {
@@ -229,11 +229,12 @@ describe("git requests on the phone", () => {
     expect(approvalRuleWords(en, rule)).toBe("push to ana/fix in acme/app");
   });
 
-  test("deleting takes a hold and is never approved for good; the push is a tap with Aprovar sempre; the branches show", () => {
+  test("deleting takes a hold; it and the push show Aprovar sempre where the server offers it; the branches show", () => {
     expect(approvalRisk(remove)).toBe("high");
     expect(approvalAction(remove)).toBe("delete");
     expect(approvalTraits(remove)).toEqual(["irreversible"]);
-    expect(approveAlwaysOffered({ ...remove, approveAlways: { tool: "delete_branches", actions: [] } })).toBe(false);
+    expect(approveAlwaysOffered({ ...remove, approveAlways: { tool: "delete_branches", actions: [] } })).toBe(true);
+    expect(approveAlwaysOffered(remove)).toBe(false);
     expect(approvalRisk(push)).toBe("normal");
     expect(approveAlwaysOffered(push)).toBe(true);
     // The card's rows carry the branch names (the phone shows values, never the detail).

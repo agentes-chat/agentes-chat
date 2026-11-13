@@ -690,6 +690,7 @@
       "steps": {
         "name": "工作区名称",
         "business": "你们做什么",
+        "you": "关于你",
         "team": "你的团队",
         "plan": "开启团队",
         "ai": "连接 AI",
@@ -708,8 +709,8 @@
         "teamMadePersonal": "你的智能体已经到了。准备好了我们就继续。",
         "plan": "有了套餐之后，只差连接一个 AI。我会告诉你在哪里连接。",
         "planThen": "套餐开通后，下一个界面就是连接你的 AI。",
-        "area": "在组建团队前，最后一个问题。",
-        "areaPersonal": "在你的智能体之前，最后一个问题。",
+        "you": "组建团队前，先简单了解一下你。",
+        "youPersonal": "在你的智能体之前，先简单了解一下你。",
         "ask": "在别处已经有团队了？我把它完整地搬过来。",
         "start": "我为你们的业务准备了一个现成的团队。也可以先从我们两个开始。",
         "askPersonal": "已经在别处使用智能体了？我把它们全部搬过来。",
@@ -727,10 +728,18 @@
         "people": "现在轮到成员了。把他们的邮箱告诉我，我来发送邀请。",
         "peopleLink": "现在轮到成员了。把链接发给他们，我会把每个申请展示给你。"
       },
+      "you": {
+        "title": "现在，说说你",
+        "lead": "你的名字和照片会显示给团队和智能体。",
+        "leadPersonal": "你的名字和照片会显示给你的智能体。",
+        "photo": "你的照片",
+        "build": "创建头像",
+        "edit": "编辑头像",
+        "upload": "上传照片",
+        "area": "你负责哪方面的工作？",
+        "areaHint": "可选。只是想了解谁在使用 agentes.chat。"
+      },
       "area": {
-        "title": "那你呢，负责哪方面的工作？",
-        "lead": "只是想了解谁在使用 agentes.chat。",
-        "skip": "跳过这一步",
         "options": {
           "dev": "开发",
           "marketing": "市场营销",
@@ -1907,6 +1916,7 @@
     },
     "map": {
       "lead": "谁负责这些智能体、它们在哪些频道、各自独立做什么、哪些在等人处理。虚线表示过去一天里互相求助过的智能体。",
+      "short": "谁负责每个智能体，以及它在哪里工作。",
       "lodi": "和你一起整理团队",
       "hint": "把智能体拖到另一个频道，{{name}} 会准备好更改，由你来应用",
       "proposed": "{{name}} 已在你们的对话中准备好更改。请在那里应用。",
@@ -1921,8 +1931,7 @@
       "emptyViewer": "管理智能体的成员把它们加入频道后，地图会显示在这里。",
       "others": "其他频道",
       "band": "主管",
-      "reportsTo": "向 {{name}} 汇报",
-      "short": "谁负责每个智能体，以及它在哪里工作。"
+      "reportsTo": "向 {{name}} 汇报"
     },
     "sectors": {
       "lead": "每个部门都有负责人、替补、智能体，以及它们的频道和例行工作。",
@@ -2153,15 +2162,15 @@
     "correctionSent": "纠正已发送。{{name}} 会从中学习。",
     "correctionSent_female": "纠正已发送。{{name}} 会从中学习。",
     "sending": "发送中…",
+    "notSentWhy": "未发送。{{why}}",
+    "notSentUnknown": "出了点问题。",
+    "editSend": "编辑",
     "tooLong": {
       "text": "消息有 {{length}} 个字符，上限为 {{max}} 个。",
       "fix": "请将文本作为文件发送。",
       "asFile": "作为文件发送",
       "fileName": "message.txt"
     },
-    "notSentWhy": "未发送。{{why}}",
-    "notSentUnknown": "出了点问题。",
-    "editSend": "编辑",
     "long": {
       "more": "查看更多",
       "title": "{{name}} 的消息"
@@ -2277,7 +2286,7 @@
     "profile": {
       "how": "运作方式",
       "permissions": "以你的权限行事",
-      "private": "只在你的私信里和你交谈",
+      "private": "属于你的内容只留在你的私信里",
       "channels": "被呼叫时在频道里回复",
       "model": "模型",
       "message": "发消息",
@@ -2304,6 +2313,8 @@
       "planOwner": "{{owner}}的账号",
       "planName": "{{name}} 套餐",
       "mine": "你的 AI",
+      "mineTitle": "与你对话时 {{name}} 的思考方式",
+      "mineOnly": "仅适用于你与 {{name}} 的对话。",
       "mineHelp": "你与{{name}}的对话使用你的套餐或共享给你的套餐思考，且仅限你的对话。",
       "connectMine": "连接我的套餐",
       "useWorkspace": "使用工作区的",
@@ -2321,6 +2332,8 @@
       "fallbackYours": "没有其他套餐时，使用工作区的套餐，它是你的。",
       "fallbackNone": "没有自己的套餐时，{{name}}无法回复你：工作区的套餐只回复{{owner}}。",
       "workspace": "没有自己套餐的人使用的 AI",
+      "workspaceTitle": "工作区中 {{name}} 的思考方式",
+      "workspaceOnly": "适用于没有自己套餐的人。",
       "workspaceHelp": "没有自己套餐的人通过这个 AI 与{{name}}交谈。",
       "noPlans": "请先在“AI 和用量”中连接套餐，才能在这里使用。",
       "lend": "把这个套餐借给没有套餐的人",
@@ -2883,7 +2896,7 @@
     "lead": "{{name}} 在行动前何时询问人。",
     "always": {
       "title": "始终询问",
-      "text": "在应用中更改任何内容前先询问。"
+      "text": "在这里、电脑上或应用中更改任何内容前先询问。"
     },
     "risky": {
       "title": "仅有风险的操作",
@@ -2891,7 +2904,7 @@
     },
     "never": {
       "title": "从不询问",
-      "text": "合并、部署和回滚仍会询问。"
+      "text": "从不询问，包括合并、部署、付款和例程。"
     }
   },
   "brakes": {
@@ -3856,6 +3869,37 @@
       "another": "选择其他文件",
       "close": "完成"
     },
+    "env": {
+      "open": "导入 .env",
+      "title": "导入密钥",
+      "text": "支持 .env 文件（每个密钥一行“名称=值”），或由名称和值组成的 JSON。",
+      "paste": "或将内容粘贴到这里",
+      "review": "检查",
+      "none": "没有找到“名称=值”的行。请检查文件后重试。",
+      "tooLarge": "此文件太大（最大 512 KB）。",
+      "tooMany": "一次导入的密钥太多（最多 {{max}} 个）。请拆分文件后分别导入。",
+      "duplicates": "在文件中重复出现，以最后一个值为准：{{names}}",
+      "new": "新增",
+      "exists": "已存在",
+      "replace": "替换",
+      "show": "显示 {{name}} 的值",
+      "hide": "隐藏 {{name}} 的值",
+      "problem": {
+        "name": "名称需类似 ACME_API_KEY",
+        "reserved": "保留名称",
+        "empty": "没有值",
+        "tooLarge": "值太大"
+      }
+    },
+    "move": {
+      "toTeam": "移到团队",
+      "toTeamPersonal": "移到共享",
+      "toPersonal": "移到个人",
+      "title": "要移动 {{title}} 吗？",
+      "toTeamText": "工作区所有成员都会看到此项目，任何人提出要求时，它的智能体都会使用它。管理 Vault 的人可以编辑。",
+      "toPersonalText": "只有你能看到和编辑此项目，它的智能体只在你要求时使用。其他人将不再看到它。",
+      "moved": "已移动"
+    },
     "connections": {
       "none": "这里无法连接任何密码管理器。",
       "lead": "你的智能体会使用你保存在 {{name}} 中的{{kinds}}。",
@@ -3977,37 +4021,6 @@
       "codeBox": "第 {{n}} 位，共 {{total}} 位",
       "codeShort_other": "请输入全部 {{count}} 位数字。",
       "codeWhere": "只有 {{agent}} 的浏览器会在 {{host}} 上输入它。"
-    },
-    "env": {
-      "open": "导入 .env",
-      "title": "导入密钥",
-      "text": "支持 .env 文件（每个密钥一行“名称=值”），或由名称和值组成的 JSON。",
-      "paste": "或将内容粘贴到这里",
-      "review": "检查",
-      "none": "没有找到“名称=值”的行。请检查文件后重试。",
-      "tooLarge": "此文件太大（最大 512 KB）。",
-      "tooMany": "一次导入的密钥太多（最多 {{max}} 个）。请拆分文件后分别导入。",
-      "duplicates": "在文件中重复出现，以最后一个值为准：{{names}}",
-      "new": "新增",
-      "exists": "已存在",
-      "replace": "替换",
-      "show": "显示 {{name}} 的值",
-      "hide": "隐藏 {{name}} 的值",
-      "problem": {
-        "name": "名称需类似 ACME_API_KEY",
-        "reserved": "保留名称",
-        "empty": "没有值",
-        "tooLarge": "值太大"
-      }
-    },
-    "move": {
-      "toTeam": "移到团队",
-      "toTeamPersonal": "移到共享",
-      "toPersonal": "移到个人",
-      "title": "要移动 {{title}} 吗？",
-      "toTeamText": "工作区所有成员都会看到此项目，任何人提出要求时，它的智能体都会使用它。管理 Vault 的人可以编辑。",
-      "toPersonalText": "只有你能看到和编辑此项目，它的智能体只在你要求时使用。其他人将不再看到它。",
-      "moved": "已移动"
     }
   },
   "question": {
@@ -5238,13 +5251,10 @@
         "on": "有权限",
         "ask": "需要审批"
       },
-      "allConnectors": "连接器：",
-      "onlyRead": "只读",
+      "setAll": "全部更改",
       "connectors": "{{org}} 的连接器",
       "connectorsPersonal": "你的连接器",
-      "oneLevel": "每个应用一个级别",
       "builtin": "agentes 内置",
-      "builtinHelp": "Drive、任务、记忆等",
       "noMatch": "没有与“{{q}}”匹配的内容",
       "noneHere": "此筛选下没有内容",
       "library": "技能库",
@@ -5263,6 +5273,7 @@
       "verified_other": "{{count}} 条已验证",
       "lessons": "经验",
       "fromTeam": "从团队中学到",
+      "fromTeamRightHand": "从你这里学到",
       "proposals": "提议",
       "waiting": "等待决定",
       "noneWaiting": "没有待处理的",
@@ -5286,6 +5297,7 @@
       "saved": "已保存，现在算作已验证。",
       "rules": "大家定下的规则",
       "rulesNote": "对定下规则的人的所有工作都适用，不论请求来自哪里。负责人或管理员的规则对所有人都适用。",
+      "rulesNoteRightHand": "你在私信里定下的规则只对你适用。只有你能看到。",
       "ruleBy": "{{name}} · {{date}}",
       "removeRule": "移除",
       "ruleRemoved": "规则已移除。如需恢复，可在“已归档”中找到。",
@@ -5379,6 +5391,7 @@
         "cli_stopped": "因为出错，{{brain}} 程序已停止。",
         "cli_closed": "程序 {{brain}} 意外关闭。",
         "account_missing": "为这个智能体选择的账号已不在它的电脑上。请在智能体设置中选择另一个账号，或重新添加。",
+        "windows_sandbox": "这台 Windows 电脑无法隔离 Codex 的命令：需要 Windows 11 24H2 或更高版本。",
         "our_error": "我们这边出了点问题，任务已停止。请稍后再提一次。",
         "unknown": "失败。"
       }
@@ -6080,8 +6093,7 @@
     "all": "全部：",
     "connectorsLabel": "连接器和权限级别",
     "connectOther": "连接其他应用",
-    "opensConnectors": "打开连接器",
-    "approvalsNote": "合并、部署和回滚始终会在聊天中请求审批。",
+    "approvalsNote": "合并、部署和回滚会在聊天中请求审批，除非智能体设为“从不询问”。",
     "approverOwner": "由 {{name}} 审批。",
     "approverAdmins": "由管理员审批。",
     "skillsTitle": "工作区的技能",
@@ -6347,8 +6359,8 @@
       "readDesc": "查看 {{app}} 里的内容，不做任何更改。",
       "write": "读写",
       "writeDesc": "也能在 {{app}} 里创建和编辑。",
-      "asks": "{{actions}} 在任何级别都会先征得你的同意。",
-      "asksAny": "发送、删除和付款在任何级别都会先征得你的同意。",
+      "asks": "{{actions}} 会先征得你的同意，除非智能体设为“从不询问”。",
+      "asksAny": "发送、删除和付款会先征得你的同意，除非智能体设为“从不询问”。",
       "remove": "移除 {{app}}",
       "done": "完成"
     },
@@ -7292,6 +7304,7 @@
       "waiting": "等待下一次调用",
       "every": "每次调用都会运行。同时到达的调用会合并为一次运行。",
       "newNote": "例行工作会获得一个专属地址。每次向它发送 POST，都会带着发送的内容启动智能体。保存后，地址会显示在例行工作页面上。",
+      "newShort": "例行工作会获得一个专属地址。",
       "hidden": "只有能修改此例行工作的人才能看到它的地址。",
       "methods": "接受的方法",
       "methodsHelp": "该地址只响应勾选的方法。使用 GET 时，URL 的查询参数就是这次调用的数据。",
@@ -7330,8 +7343,7 @@
         "bad_signature": "已拒绝：签名错误",
         "too_large": "已拒绝：超过 256 KB",
         "rate_limited": "已拒绝：每分钟调用次数过多"
-      },
-      "newShort": "例行工作会获得一个专属地址。"
+      }
     },
     "setup": {
       "title": "{{provider}} Webhook",
@@ -7462,6 +7474,12 @@
       "now": "现在",
       "lane": "{{name}}：下次 {{when}}",
       "laneNone": "{{name}}：接下来几小时没有安排",
+      "agentRoutines_other": "{{count}} 个例行工作",
+      "andMore": "{{name}} 等另外 {{count}} 个",
+      "pick": "查看 {{name}} 的例行工作",
+      "restLater_other": "另有 {{count}} 个智能体稍后运行",
+      "restIdle_other": "{{count}} 个在接下来 {{hours}} 小时内没有安排",
+      "showAll": "全部显示",
       "legend": {
         "ok": "已回答",
         "silent": "没有新内容",
@@ -7519,11 +7537,11 @@
       "ownActions": "自动执行"
     },
     "ownActions": {
-      "hint": "每次运行都会在你已连接的应用中直接执行这些操作，无需询问。其中的其他操作会先请人审批，合并、部署和回滚始终需要审批。",
+      "hint": "每次运行都会在你已连接的应用中直接执行这些操作，无需询问。其中的其他操作会先请人审批，除非智能体设为“从不询问”。",
       "none": "在已连接的应用中，每个操作前都会先请人审批。若要让它自动完成工作，请在聊天中告诉智能体可以执行哪些操作。",
-      "remove": "之前再次询问：{{action}}",
       "hintShort": "每次运行都会直接执行这些操作，无需询问。",
-      "noneShort": "每个操作前都会先请人审批。"
+      "noneShort": "每个操作前都会先请人审批。",
+      "remove": "之前再次询问：{{action}}"
     },
     "ahead": {
       "approved": "已批准 · {{when}}运行",
@@ -8347,7 +8365,7 @@
       "offline": "{{name}} 处于离线状态。它恢复在线后计划就会开始。",
       "needsMachine": "专项任务在已连接的电脑上运行。请在 设置 › 设备 中为 {{name}} 连接一台。",
       "commandHint": "你也可以在任意对话的输入框中输入以下命令来开始：",
-      "approvals": "合并、部署和回滚始终需要审批",
+      "approvals": "默认情况下，合并、部署和回滚需要审批",
       "start": "开始专项任务",
       "created": "专项任务已创建：{{name}} 正在制定计划。",
       "who": "由谁编程",
@@ -9394,6 +9412,8 @@
     "title": "谁可以和 {{name}} 对话",
     "title_female": "谁可以和 {{name}} 对话",
     "notListed": "不在名单上的人不会收到回复。",
+    "agentsToo": "这也适用于智能体。",
+    "peopleOnly": "这只适用于人。",
     "consultable": "其他智能体可以咨询 {{name}}",
     "consultable_female": "其他智能体可以咨询 {{name}}",
     "consultableHint": "对于不在名单上的人，他只回复发起询问的智能体，绝不直接回复他们。敏感操作仍需负责他的人审批。",
@@ -9458,9 +9478,7 @@
       "some_female": "{{name}} 只回复部分成员。",
       "nobody": "{{name}} 目前不回复任何人。",
       "nobody_female": "{{name}} 目前不回复任何人。"
-    },
-    "agentsToo": "这也适用于智能体。",
-    "peopleOnly": "这只适用于人。"
+    }
   },
   "composer": {
     "commands": "命令",
@@ -10068,13 +10086,20 @@
     "legend": {
       "people": "成员",
       "agents": "智能体",
-      "obsidian": "Obsidian"
+      "imported": "已导入",
+      "obsidian": "Obsidian",
+      "github": "GitHub",
+      "files": "已导入"
     },
     "blankPage": "空白页面",
     "newPage": "新页面",
     "emptyPage": "空页面。按 E 开始编写。",
     "atRequestOf": "应要求",
-    "fromObsidian": "来自 Obsidian",
+    "from": {
+      "obsidian": "来自 Obsidian",
+      "github": "来自 GitHub",
+      "files": "已导入"
+    },
     "more": "更多操作",
     "copyLink": "复制链接",
     "linkCopied": "链接已复制：在任何页面、消息或任务中粘贴 [[{{title}}]]。",
@@ -10254,16 +10279,45 @@
       "message": "关于页面 [[{{title}}]]："
     },
     "import": {
-      "cta": "从 Obsidian 导入",
-      "ctaText": "仓库 .zip、文件夹或 .md 文件",
+      "cta": "导入",
       "short": "导入",
-      "title": "从 Obsidian 导入",
-      "text": "导入整个仓库：文件夹、标签、别名和 [[链接]] 在这里都能继续使用。",
+      "title": "导入到 Wiki",
+      "text": "选择笔记的来源。",
+      "titleFrom": {
+        "obsidian": "从 Obsidian 导入",
+        "github": "从 GitHub 导入",
+        "files": "导入文件"
+      },
+      "textFrom": {
+        "obsidian": "导入整个仓库：文件夹、标签、别名和 [[链接]] 在这里都能继续使用。",
+        "github": "代码库中的 Markdown 笔记会变成页面，并保留它的文件夹。",
+        "files": "任何应用的 Markdown 笔记：.md 文件、文件夹或 .zip。"
+      },
+      "from": "从哪里导入",
+      "source": {
+        "obsidian": "Obsidian",
+        "github": "GitHub",
+        "files": "文件"
+      },
+      "files": {
+        "dropTitle": "将 .md 文件拖到这里",
+        "dropText": "也可以是包含笔记的文件夹或 .zip"
+      },
+      "github": {
+        "label": "GitHub 链接",
+        "help": "代码库、文件夹或 .md 文件的链接。Markdown 笔记会变成页面，笔记中显示的图片会进入 Drive。代码库的其余内容不会导入。私有代码库通过工作区的 GitHub 读取。",
+        "read": "读取笔记",
+        "error": {
+          "notGithub": "请粘贴 github.com 的链接。"
+        }
+      },
+      "anotherLink": "更换链接",
       "dropTitle": "将仓库 .zip 拖到这里",
       "dropText": "也可以是仓库文件夹或几个 .md 文件",
       "pickZip": "选择 .zip 或 .md",
       "pickFolder": "选择文件夹",
       "howTo": "制作 .zip：在访达中右键点击仓库文件夹 → 压缩。在 Windows 上，选择 发送到 → 压缩文件夹。.obsidian 文件夹（插件和主题）不会包含在内。",
+      "howToLabel": "如何制作 .zip",
       "nothingYet": "在你检查之前，不会导入任何内容。",
       "readingText": "目前只在你的浏览器中处理，还没有发送任何内容。",
       "notesRead": "篇笔记已读取",
@@ -10333,8 +10387,7 @@
         "empty": "没有找到 .md 笔记。请发送仓库文件夹的 .zip、文件夹本身或 .md 文件。",
         "too_big": "仓库超过 500 MB。请去掉大附件后再发送，或分批发送。",
         "unreadable": "无法读取文件。这是仓库的 .zip 吗？"
-      },
-      "howToLabel": "如何制作 .zip"
+      }
     },
     "save": "保存到 Wiki",
     "saveTitle": "保存到 Wiki",
@@ -10623,7 +10676,7 @@
   },
   "access": {
     "matrixTitle": "智能体权限",
-    "matrixHint": "敏感操作（合并、部署、分享、付款）在任何级别下都需要审批。如需逐个工具设置，请打开连接器的“工具”。",
+    "matrixHint": "默认情况下，敏感操作（合并、部署、分享、付款）需要审批。如需逐个工具设置，请打开连接器的“工具”。",
     "matrixHow": "点击单元格即可更改：",
     "kindLabel": "显示",
     "kind": {
@@ -10640,10 +10693,9 @@
     "levelOf": "在 {{name}} 中的级别",
     "cell": "{{agent}} 在 {{resource}}：{{level}}",
     "cellAsks": "{{agent}} 在 {{resource}}：{{level}}，敏感操作需要审批",
-    "asks": "{{tool}} 需要审批",
+    "asksList": "需要批准：{{tools}}",
     "asksMore_other": "等另外 {{count}} 项",
     "asksLegend": "需要审批",
-    "noneText": "无权限。",
     "customText": "已逐个工具授权。选择一个级别即可简化。",
     "noTools": "还没有工具。",
     "toolsMore_other": "{{tools}} 等另外 {{count}} 项",
@@ -11069,6 +11121,7 @@
     "notVisible": "你的 GitHub 账号看不到那个安装。请用有权访问它的账号安装。",
     "otherWorkspace": "这个 GitHub 账号已关联到另一个工作区。请先在那里移除应用，再在这里安装。",
     "installedOutside": "这个 GitHub 账号上的应用是在 agentes.chat 之外安装的。请在 GitHub 上移除它，再从 连接器 › GitHub 重新安装。",
+    "ownerUnknown": "GitHub 没有说明谁是这个组织的所有者。运行服务器的人需要给 GitHub 应用添加组织权限 Members（只读），然后你再重新安装。",
     "misconfigured": "服务器上的 GitHub 应用密钥不对，所以无法完成安装。运行服务器的人需要在应用的设置中更换密钥。",
     "connectAccount": "连接 GitHub 账号",
     "ownerHint": "这台服务器的所有者可以在这里的连接器中创建 GitHub 应用。",
@@ -11119,10 +11172,10 @@
     "merge": {
       "label": "可不经询问直接合并",
       "none": "未选择仓库。每次合并都需要审批。",
-      "help": "在这些仓库中，合并无需审批卡片，会记入审计，并在对话中留下回执。其他敏感操作仍会询问。",
+      "help": "在这些仓库中，合并无需审批卡片，会记入审计，并在对话中留下回执。设为“始终询问”的智能体仍会询问。",
+      "short": "在这些仓库中，合并无需审批卡片。",
       "dialogTitle": "{{name}}可不经询问直接合并的位置",
-      "dialogDesc": "仅限已在使用的仓库。在其他位置合并需要审批。",
-      "short": "在这些仓库中，合并无需审批卡片。"
+      "dialogDesc": "仅限已在使用的仓库。在其他位置合并需要审批。"
     },
     "label": "哪些仓库",
     "all": "所有仓库",
@@ -11246,7 +11299,7 @@
       "github": {
         "1": "读取代码、issue 和 pull request",
         "2": "创建 pull request 并发表评论",
-        "ask": "合并和部署始终需要你的审批"
+        "ask": "默认情况下，合并和部署需要你的审批"
       },
       "sentry": {
         "1": "查看错误和事件",
@@ -11280,7 +11333,7 @@
       "cloudflare_bindings": {
         "1": "查看 Workers、KV、R2 和 D1",
         "2": "更改 Workers 和存储",
-        "ask": "部署始终需要你的审批"
+        "ask": "默认情况下，部署需要你的审批"
       },
       "cloudflare_observability": {
         "1": "查看 Workers 日志和指标"
@@ -11288,7 +11341,7 @@
       "supabase": {
         "1": "查看项目和函数",
         "2": "查询和更改数据库",
-        "ask": "部署始终需要你的审批"
+        "ask": "默认情况下，部署需要你的审批"
       },
       "supabase_readonly": {
         "1": "查询数据库（只读）",
@@ -11983,7 +12036,7 @@
     "see": "查看",
     "seeAsks": "查看需要审批的操作",
     "agentTitle": "{{name}} 可以使用的内容",
-    "agentSub": "按连接器和主题分类。敏感操作始终需要审批。"
+    "agentSub": "按连接器和主题分类。默认情况下，敏感操作需要审批。"
   },
   "connectFlow": {
     "steps": "步骤",
@@ -12016,12 +12069,12 @@
       "title": "可访问的组织",
       "none": "还没有组织。",
       "lead": "GitHub 只在第一次询问组织。要添加其他组织，请在 GitHub 打开应用页面，然后点击组织旁边的 Grant。如果你不是所有者，按钮显示为 Request，由所有者批准。",
+      "short": "GitHub 只在第一次询问组织。",
       "open": "在 GitHub 上授权组织",
       "added": "现在还包括：{{names}}。",
       "removed": "不再包括：{{names}}。",
       "same": "组织没有变化。",
-      "failed": "现在无法读取组织。",
-      "short": "GitHub 只在第一次询问组织。"
+      "failed": "现在无法读取组织。"
     },
     "composioHelp": "你会在 Composio 的英文页面上登录，然后回到这里。{{name}} 会把这项权限显示为“Composio”。",
     "or": "或",
@@ -12051,7 +12104,7 @@
     "everyoneLevel": "所有智能体的权限级别",
     "noAgents": "还没有智能体。随时可以在“谁在使用”中授予访问权限。",
     "asksCount_other": "{{count}} 项操作始终会在聊天中请求审批。",
-    "asksDefault": "敏感操作始终会在聊天中请求审批。",
+    "asksDefault": "默认情况下，敏感操作会在聊天中请求审批。",
     "grant": "授予",
     "saved_other": "{{name}}：{{count}} 个智能体可以使用。",
     "done": {
@@ -12209,6 +12262,7 @@
       "databasesHelp": "以下规则适用于此智能体读取的每个数据库。",
       "hidden": "永远看不到的列",
       "hiddenHelp": "格式为“表.列”，名称含大写字母、空格或符号时用双引号括起来（customers.\"Tax ID\"）。看起来像个人数据或密码的列，我们已经隐藏了。",
+      "hiddenExample": "格式为“表.列”，例如 customers.\"Tax ID\"",
       "hiddenPlaceholder": "customers.cpf",
       "hiddenInvalid": "请输入 table.column（或 schema.table.column），名称含大写字母、空格或符号时用\"双引号\"括起来。",
       "cap": "每天查询次数",
@@ -12216,12 +12270,10 @@
       "capHelpAll": "留空 = 不限。按所有数据库合计。",
       "timeout": "每次查询的时间上限",
       "timeoutHelp": "超时的查询会被取消，以免给数据库造成负担。",
-      "seconds_other": "{{count}} 秒",
-      "hiddenExample": "格式为“表.列”，例如 customers.\"Tax ID\""
+      "seconds_other": "{{count}} 秒"
     },
     "agent": {
       "title": "数据库",
-      "help": "{{org}} 连接的数据库。智能体只读取。",
       "levelText": "在规则允许的范围内查询数据表，只读。",
       "rulesOf": "{{name}} 中的规则",
       "saved": "已保存 {{name}} 的数据库访问权限。",
@@ -12317,6 +12369,7 @@
     "rulesRead": "可读取的内容",
     "rulesSend": "可发送的对象",
     "toolsLead": "智能体在 {{name}} 中可以做的事。关闭任何智能体都不该做的操作，也可以让起草和整理同样需要审批。发送、回复和转发始终会在聊天中请求审批，并显示收件人和正文。",
+    "toolsShort": "选择智能体可以用这个邮箱做什么。",
     "group": {
       "read": "读取",
       "write": "写入",
@@ -12377,6 +12430,7 @@
       "buttonName": "{{name}} 的地址",
       "title": "{{address}} 的地址",
       "lead": "智能体会用收到邮件的那个地址回复。如果这个邮箱还会收到发往其他地址的邮件，比如你自己的域名或别名，请在这里添加。",
+      "short": "智能体会用收到邮件的那个地址回复。",
       "main": "主地址：{{address}}",
       "others": "这个邮箱的其他地址",
       "othersHelp": "别名和你自己的域名，比如 hello@yourcompany.com。",
@@ -12387,31 +12441,26 @@
       "newFrom": "新邮件的发件地址",
       "newFromHelp": "回复始终从收到邮件的那个地址发出。",
       "later": "之后你可以在“地址”中更改。",
-      "saved": "{{address}} 的地址已保存。",
-      "short": "智能体会用收到邮件的那个地址回复。"
+      "saved": "{{address}} 的地址已保存。"
     },
     "agent": {
       "title": "邮箱",
-      "help": "{{org}} 的每个邮箱一行。",
       "none": "{{org}} 还没有连接任何邮箱。",
-      "levelText": {
-        "read": "搜索和读取邮件。邮箱中的内容不会改变。",
-        "write": "读取、起草和整理。发送、回复和转发需要审批。"
-      },
       "canDelete": "可以删除邮件",
       "canDeleteHelp": "即使开启，每次删除也都需要审批。",
       "rules": "规则",
       "rulesOf": "{{address}} 的规则",
       "rulesCount_other": "{{count}} 条规则",
-      "noRules": "没有额外规则",
       "save": "保存",
       "saved": "{{name}} 的邮箱设置已保存。",
       "unsaved": "有未保存的更改",
       "warning": "会读取任何人的邮件，并且发送时不经询问：恶意邮件可能试图欺骗智能体。",
       "pending": "还没有完成连接。",
       "needsReconnect": "重新连接之前，智能体无法使用它。",
-      "ownerOnly": "只有 {{name}} 可以授予访问权限：这个邮箱是对方连接的。",
+      "ownerOnly": "只有 {{name}} 可以授予这个邮箱的访问权限。",
       "ownerOnlyUnknown": "只有连接这个邮箱的人可以授予访问权限。",
+      "onlyYou": "{{name}} 只在你的私信里为你使用这个邮箱。",
+      "onlyYouAll": "{{name}} 只在你的私信里为你使用你的邮箱。",
       "remove": "移除访问权限",
       "removed": "{{name}} 不再能访问 {{address}}。",
       "saveError": {
@@ -12476,8 +12525,7 @@
       "every": "每收到一封符合筛选条件的新邮件就运行一次。",
       "needsReconnect": "需要重新连接",
       "error": "运行失败"
-    },
-    "toolsShort": "选择智能体可以用这个邮箱做什么。"
+    }
   },
   "searchPage": {
     "title": "搜索工作区",
@@ -12593,6 +12641,7 @@
     "previewLoading": "正在加载预览…",
     "previewFailed": "无法显示预览，请下载文件后打开。",
     "imageAlt": "图片：{{title}}",
+    "imageMaking": "正在生成图片…",
     "pdfFrame": "PDF：{{title}}",
     "tooBigToPreview": "文件太大，无法预览，请下载后打开。",
     "downloadOnly": "这类文件无法预览，请下载后打开。",
@@ -12714,6 +12763,8 @@
       "misconfigured": "服务器上与 {{provider}} 的连接配置有误，所以无法完成连接。运行服务器的人需要在应用的设置中更换密钥。"
     },
     "wiki": {
+      "githubNoNotes": "此链接中没有 Markdown 笔记。",
+      "githubTooLarge": "笔记太多，无法通过链接读取。请将代码库下载为 .zip，然后在“文件”中导入。",
       "noAccess": "你无权访问此页面。",
       "audienceForbidden": "只有能编辑 Wiki 并管理角色的成员才能选择谁可以看到页面。",
       "audienceExcludesYou": "请把你自己（你的某个角色或你的名字）包括在内，才能继续看到此页面。",
@@ -12828,6 +12879,7 @@
       "machineChanged": "专项任务的电脑已更换，请重试。",
       "executorUnavailable": "专项任务的电脑上没有安装这种编程方式。",
       "executorOutdated": "那台电脑上的 Codex 版本过旧，请在那里更新。",
+      "codexWindows": "Codex 暂时还不能在 Windows 上为专项任务编程：请选择 Claude Code、智能体本身或另一台电脑。",
       "invalidExecutor": "请选择由谁编程：Claude Code、Codex 或智能体。",
       "rateLimited": "专项任务在过去一小时内操作过多，请稍等后重试。",
       "pausedStuck": "专项任务已暂停，因为它停止了进展。"
@@ -12983,6 +13035,7 @@
       "csvTooLarge": "文件太大。上限是 2 MB。",
       "csvTooManyRows": "文件超过 5,000 行。请拆分后分别导入。",
       "csvUnrecognized": "这看起来不是密码文件。请重新导出为 CSV。",
+      "unreadable": "这里无法读取已保存的值。请重新保存后再移动。",
       "requestNotDelivered": "请先发送，再保存到 Vault。",
       "requestNotSavable": "此项无法保存到 Vault。",
       "sourceUnknown": "这里无法使用这个密码管理器。",
@@ -12999,8 +13052,7 @@
         "unsupported": "这里无法连接这个密码管理器。",
         "invalidInput": "请检查各字段后重试。",
         "tooManyItems": "Vault 已满。请先删除项目，再同步更多。"
-      },
-      "unreadable": "这里无法读取已保存的值。请重新保存后再移动。"
+      }
     },
     "feedback": {
       "filesGone": "你添加的文件已经不在了。请重新添加。",
@@ -14177,13 +14229,13 @@
         "item_created": "在 Vault 中保存了一个项目",
         "item_changed": "修改了一个 Vault 项目",
         "item_deleted": "删除了一个 Vault 项目",
+        "item_moved": "在个人和团队之间移动了一个 Vault 项目",
         "item_used": "使用了一个 Vault 项目",
         "imported": "将密码导入了 Vault",
+        "keys_imported": "向 Vault 导入了密钥",
         "connection_added": "将密码管理器连接到了 Vault",
         "connection_changed": "修改了一个密码管理器的连接",
-        "connection_removed": "断开了一个密码管理器与 Vault 的连接",
-        "item_moved": "在个人和团队之间移动了一个 Vault 项目",
-        "keys_imported": "向 Vault 导入了密钥"
+        "connection_removed": "断开了一个密码管理器与 Vault 的连接"
       },
       "verb": {
         "created": "创建了",
@@ -14459,8 +14511,8 @@
       "personal": "个人",
       "teamHelp": "用频道、成员和角色一起工作。切换只会改变显示的内容。",
       "personalHelp": "更简单，适合你，以及你邀请的家人。切换只会改变显示的内容。",
-      "toTeam": "切换为团队…",
-      "toPersonal": "切换为个人…"
+      "toTeam": "切换为团队",
+      "toPersonal": "切换为个人"
     },
     "telemetry": {
       "title": "使用统计",
@@ -14823,6 +14875,7 @@
       "sharedWith": "与 {{names}} 共用",
       "part": "{{name}} 的部分：约 {{percent}}",
       "estimate": "每根柱子中颜色较深的部分是 {{name}} 的用量。{{brand}} 只显示整个账号的用量，所以每个智能体的部分是根据其花费估算的。",
+      "estimateShort": "这是估算值。",
       "byAccount": "按账号，本月",
       "until": "直到 {{date}}",
       "nowTag": "现在",
@@ -14834,8 +14887,7 @@
       "old": "{{brand}}，在启用账号之前",
       "oldSub": "记录账号之前的用量",
       "ofMonth": "本月的 {{percent}}",
-      "shareLabel": "{{source}}：本月的 {{percent}}",
-      "estimateShort": "这是估算值。"
+      "shareLabel": "{{source}}：本月的 {{percent}}"
     }
   },
   "budget": {
@@ -15094,6 +15146,7 @@
         "plan": "计划尚未获批",
         "tooMany": "连续需要批准的太多了",
         "off": "这个智能体的运行命令功能已关闭",
+        "asks": "这个智能体在每次更改前都会先询问",
         "team": "团队已经做过这件事了",
         "teamPersonal": "这件事已经做过了",
         "unclear": "无法清楚读懂",
@@ -15140,6 +15193,7 @@
         "runningCode": "在电脑上运行了代码",
         "browsing": "使用了浏览器",
         "pcFiles": "处理了电脑上的文件",
+        "creatingImage": "生成了一张图片",
         "exportingFile": "把文件保存到了 Drive",
         "importingFile": "从 Drive 获取了文件",
         "runningSkillScript": "运行了技能 {{app}} 的脚本",
@@ -15156,6 +15210,7 @@
         "listingTasks": "查看了任务",
         "checkingTask": "检查了一项任务",
         "cancelingTask": "取消了一项任务",
+        "keepingRunning": "让一个程序保持运行",
         "uploadingArtifact": "把文件发送到了 Drive",
         "gettingContext": "查阅了上下文",
         "cancelingReminder": "取消了提醒",
@@ -15254,6 +15309,7 @@
       "runningCode": "运行代码",
       "browsing": "使用浏览器",
       "pcFiles": "处理电脑上的文件",
+      "creatingImage": "生成图片",
       "exportingFile": "把文件保存到 Drive",
       "importingFile": "从 Drive 获取文件",
       "runningSkillScript": "运行技能 {{app}} 的脚本",
@@ -15270,6 +15326,7 @@
       "listingTasks": "查看任务",
       "checkingTask": "检查任务",
       "cancelingTask": "取消任务",
+      "keepingRunning": "正在让一个程序保持运行",
       "uploadingArtifact": "把文件发送到 Drive",
       "gettingContext": "查阅上下文",
       "cancelingReminder": "取消提醒",
@@ -16784,6 +16841,18 @@
     "closeAsk": "{{name}} 会等你 2 分钟。",
     "closeAsk_female": "{{name}} 会等你 2 分钟。",
     "openAccess": "打开“工具和权限”",
+    "kept": {
+      "title": "保持运行",
+      "meta": "{{name}} · 自 {{since}} 起 · {{until}}",
+      "untilStops": "直到它停止",
+      "untilClosed": "直到其浏览器关闭",
+      "until": "直到 {{time}}",
+      "stop": "停止",
+      "stopOf": "停止“{{what}}”",
+      "actions": "“{{what}}”的操作",
+      "count_other": "保持运行 · {{count}}",
+      "stopFailed": "无法停止，请重试。"
+    },
     "phone": {
       "now": "现在",
       "trackpad": "触控板",
@@ -17034,6 +17103,7 @@
       "agent_archived": "{{name}} 已归档。",
       "audience": "设置它的人已无法再与 {{name}} 对话。",
       "failing": "连续失败多次，已停止。",
+      "failingLast": "连续失败 5 次后已停止。最后一次：{{cause}}",
       "stopped": "更新已停止。",
       "missing_credential": "{{name}} 没有可用的 AI 密钥或套餐。",
       "timeout": "更新耗时太长。",
@@ -17101,6 +17171,7 @@
       "unknown": "每次更新都使用 {{name}} 的预算"
     },
     "exposure": "能看到仪表盘的人，就能看到智能体带来的内容，即使没有数据来源账号的权限。智能体也会创建仪表盘。要给比提出请求的人更多的人看时，它们会先在“等你处理”中征求同意。",
+    "exposureShort": "能看到仪表盘的人，就能看到这些数据。",
     "panel": {
       "caresFor": "{{name}} 负责这个小组件",
       "caresForOn": "{{name}} 负责这个小组件 · {{board}}",
@@ -17183,8 +17254,7 @@
       "textRoutine": "负责更新它的 {{name}} 的例行工作会停止，更新历史也会一起移除。",
       "textManual": "更新历史也会一起移除。",
       "confirm": "移除"
-    },
-    "exposureShort": "能看到仪表盘的人，就能看到这些数据。"
+    }
   },
   "agentPicker": {
     "search": "搜索智能体",
@@ -17907,6 +17977,10 @@
     "fileType": "只能添加照片和视频。",
     "fileTooLarge": "{{name}} 太大了：上限是 {{mb}} MB。",
     "fileTooMany": "一条反馈最多可带 {{images}} 张照片和一个视频。",
+    "attachPhoto": "添加照片",
+    "photosHint": "最多 {{images}} 张照片（每张 {{imageMb}} MB）。",
+    "photoType": "只能添加照片。",
+    "photosTooMany": "一条反馈最多可带 {{images}} 张照片。",
     "send": "发送",
     "thanks": "已送达，谢谢。",
     "reply": "每条都会有人看。如需回复，会发到 {{email}}。",

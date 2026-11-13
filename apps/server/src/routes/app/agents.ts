@@ -61,6 +61,7 @@ import {
   publishMachineAgentsChanged,
   requirePermission,
   revokeCredential,
+  rightHandWidgetsReady,
   SETUP_AGENTS_MAX,
   seesAgentDetails,
   setAgentAppearance,
@@ -720,6 +721,10 @@ export function agentRoutes(deps: AppDeps) {
             apiKey: z.boolean(),
             /** Memory reflects on finished conversations: a summary model it can call (ADR 0167). */
             reflection: z.boolean(),
+            widgetsReady: z.array(z.string()).openapi({
+              description:
+                "The right hand's widgets waiting for an AI, or stopped after failing in a row, whose build has one now, among those the viewer sees: whose AI its build thinks with is each widget's own people's (who made it, its routine's creator, else the workspace's).",
+            }),
           }),
         ),
         ...errors,
@@ -731,12 +736,13 @@ export function agentRoutes(deps: AppDeps) {
       await requirePermission(db, userId, orgId, "read");
       const status = aiStatusDeps(deps);
       const context = deps.extras?.context;
-      const [ai, routing, reflection] = await Promise.all([
+      const [ai, routing, reflection, widgetsReady] = await Promise.all([
         orgAiStatus(status, orgId, userId),
         orgRouting(status, deps.extras?.router?.routing ?? null, orgId, userId),
         context ? summaryModelReady(context, orgId) : false,
+        rightHandWidgetsReady({ db, ai: status }, orgId, userId),
       ]);
-      return c.json({ ...ai, ...routing, reflection }, 200);
+      return c.json({ ...ai, ...routing, reflection, widgetsReady }, 200);
     },
   );
 

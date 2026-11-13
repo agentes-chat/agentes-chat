@@ -205,7 +205,14 @@ export function absorbBrowserCall(
  * the conversation (context.ts `ownFilesNote`), from the meta written at post time, so "send it to Ana" finds that
  * file instead of a search. People's attachments carry the same shape (`attachmentRefsFor` in messages.ts).
  */
-export type ArtifactLink = { id: string; version: number; title: string };
+export type ArtifactLink = {
+  id: string;
+  version: number;
+  title: string;
+  /** A picture's size (`pictureSize`): its card's box before it loads. */
+  width?: number;
+  height?: number;
+};
 
 /** Adds files to the reply's cards: one per file, its newest version in the first one's place. */
 function withArtifacts(list: ArtifactLink[] | undefined, more: ArtifactLink[]): ArtifactLink[] {

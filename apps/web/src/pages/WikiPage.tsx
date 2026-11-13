@@ -2,7 +2,7 @@ import type { WikiPageSummary } from "@agenteschat/client";
 import { keys, useWikiPage, useWikiReads, useWikiTrash, useWikiTree } from "@agenteschat/client";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
-import { outlineOf, type WikiFolder, wikiSlug, wikiTree } from "@agenteschat/client/lib/wiki";
+import { isImportedPage, outlineOf, type WikiFolder, wikiSlug, wikiTree } from "@agenteschat/client/lib/wiki";
 import { Button, Checkbox, EmptyState, GroupHeading, Icon, Kbd, PageHeader, SearchField } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -11,6 +11,7 @@ import { Fragment, type ReactNode, useEffect, useId, useMemo, useState } from "r
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { GitHubMark } from "@/components/GitHubMark";
 import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingCards, LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
@@ -51,7 +52,7 @@ export function starterPages(t: TFunction) {
 
 /** Imported in the last day and not edited since: marked "novo" in the tree. */
 const isFresh = (p: WikiPageSummary) =>
-  p.sourceType === "obsidian" && (p.version ?? 1) === 1 && Date.now() - Date.parse(p.updatedAt) < 86_400_000;
+  isImportedPage(p.sourceType) && (p.version ?? 1) === 1 && Date.now() - Date.parse(p.updatedAt) < 86_400_000;
 
 type View = "home" | "graph" | "trash";
 
@@ -556,13 +557,9 @@ function WikiNav({
         </section>
       )}
       {can(org, "edit_wiki") && (
-        <button type="button" className="wiki-import-card ac-iconline" onClick={onImport}>
-          <ObsidianMark size={20} />
-          <span>
-            <b>{t("wiki.import.cta")}</b>
-            <small>{t("wiki.import.ctaText")}</small>
-          </span>
-        </button>
+        <Button icon="upload" className="wiki-import-btn" onClick={onImport}>
+          {t("wiki.import.cta")}
+        </Button>
       )}
     </aside>
   );
@@ -597,8 +594,7 @@ function HomeHead({
           </Button>
           {can(org, "edit_wiki") && !empty && (
             <>
-              <Button onClick={onImport}>
-                <ObsidianMark size={16} />
+              <Button icon="upload" onClick={onImport}>
                 {t("wiki.import.short")}
               </Button>
               <Button variant="primary" icon="plus" onClick={onNew}>
@@ -657,10 +653,16 @@ function WikiHome({
                 <span className="wiki-card__where">
                   <Icon name={p.locked ? "lock" : "drive"} size={14} />
                   <span className="wiki-card__folder">{p.folder || t("wiki.root")}</span>
-                  {p.sourceType === "obsidian" && (
+                  {isImportedPage(p.sourceType) && (
                     <span className="wiki-card__src">
-                      <ObsidianMark size={14} />
-                      {t("wiki.legend.obsidian")}
+                      {p.sourceType === "obsidian" ? (
+                        <ObsidianMark size={14} />
+                      ) : p.sourceType === "github" ? (
+                        <GitHubMark size={14} />
+                      ) : (
+                        <Icon name="upload" size={14} />
+                      )}
+                      {t(`wiki.legend.${p.sourceType}`)}
                     </span>
                   )}
                 </span>
@@ -806,8 +808,7 @@ function WikiEmpty({ onNew, onImport, onNav }: { onNew: () => void; onImport: ()
               >
                 {t("wiki.useStarter")}
               </Button>
-              <Button onClick={onImport}>
-                <ObsidianMark size={16} />
+              <Button icon="upload" onClick={onImport}>
                 {t("wiki.import.cta")}
               </Button>
               <Button variant="ghost" icon="plus" onClick={onNew}>

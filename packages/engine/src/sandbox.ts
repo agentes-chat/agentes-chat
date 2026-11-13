@@ -309,6 +309,8 @@ export async function agentComputerInfo(
       online: boolean;
       execAllowed: boolean;
       os: string;
+      /** Each agent works as its own OS user there (`hello.mode`, ADR 0058 §10). */
+      system: boolean;
       /** The runner's protocol (4+: background tasks; 10+: folders granted on the machine). */
       protocol: number;
       /** The owner paused it (protocol 9). */
@@ -332,6 +334,7 @@ export async function agentComputerInfo(
     online: status.online,
     execAllowed: status.execAllowed,
     os: status.os,
+    system: status.executors?.mode === "system",
     protocol: status.protocol,
     paused: status.paused ?? null,
     folders: status.access ? status.access.folders.filter((f) => f.agents.includes(agentId)).map((f) => f.path) : [],

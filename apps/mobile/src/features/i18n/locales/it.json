@@ -1439,7 +1439,6 @@
     "uses_many": "Usato {{count}} volte",
     "uses_other": "Usato {{count}} volte",
     "confirmed": "Confermato da una persona",
-    "unconfirmed": "Non ancora confermato",
     "confirm": "Conferma",
     "confirmedToast": "Confermata",
     "details": "Dettagli tecnici",
@@ -1657,9 +1656,9 @@
         "setup": "Configurazione dello spazio di lavoro",
         "desktop": "Schermo del computer"
       },
-      "asksYou": "Merge e pubblicazione chiedono sempre la tua approvazione, a qualsiasi livello.",
-      "asksOwner": "Merge e pubblicazione chiedono sempre l'approvazione di {{name}}, a qualsiasi livello.",
-      "asksAdmins": "Merge e pubblicazione chiedono sempre l'approvazione di un admin, a qualsiasi livello.",
+      "asksYou": "Merge e pubblicazione chiedono la tua approvazione, a meno che l'agente non chieda mai.",
+      "asksOwner": "Merge e pubblicazione chiedono l'approvazione di {{name}}, a meno che l'agente non chieda mai.",
+      "asksAdmins": "Merge e pubblicazione chiedono l'approvazione di un admin, a meno che l'agente non chieda mai.",
       "empty": "Per ora, solo conversazione."
     }
   },

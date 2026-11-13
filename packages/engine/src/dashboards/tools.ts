@@ -446,7 +446,8 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
           alert: { enabled: alertOn, condition: str(input.alert), userId: alertOn ? person.userId : null },
           spec,
           sources: strings(input.sources),
-          createdByUserId: null,
+          // The person behind the run, when one is: whose widget it is (an agent stays its author, `createdByRunId`).
+          createdByUserId: maker.personId,
           createdByRunId: ctx.runId,
           routineCreatorUserId: person.userId,
         });

@@ -30,6 +30,7 @@ import {
   prepareAgents,
 } from "../../runner/browser-bind-policy";
 import { browserBand, browserPortsForUid } from "../../runner/browser-ports";
+import { Holds } from "../../runner/holds";
 import { LoopbackGuard, RUNNER_NFT_TABLE } from "../../runner/loopback-guard";
 import {
   AGENT_RAM_ROOT,
@@ -819,6 +820,86 @@ describe.if(ROOT)("the agents' isolation on this computer, as root", () => {
       expect(abstractListeners(A)).toEqual([]);
     } finally {
       chrome.kill("SIGTERM");
+    }
+  });
+
+  test("an agent's hold (ADR 0176): root's idle lock in a scope in its slice named after it, gone with its program", async () => {
+    /** logind's locks of ours, each [what, who, why, mode, uid, pid]; null without logind. */
+    const ours = () => {
+      const r = spawnSync(
+        "busctl",
+        [
+          "--json=short",
+          "call",
+          "org.freedesktop.login1",
+          "/org/freedesktop/login1",
+          "org.freedesktop.login1.Manager",
+          "ListInhibitors",
+        ],
+        { encoding: "utf8" },
+      );
+      if (r.status !== 0) return null;
+      const out = JSON.parse(r.stdout) as { data: [[string, string, string, string, number, number][]] };
+      return out.data[0].filter(([, who]) => who === "agentes.chat");
+    };
+    if (!has("/usr/bin/systemd-inhibit") || ours() === null) {
+      console.log("no logind here");
+      return;
+    }
+    const uidOf = (pid: number) => {
+      try {
+        const status = readFileSync(`/proc/${pid}/status`, "utf8");
+        return /^State:\s+Z/m.test(status) ? null : (/^Uid:\s+(\d+)/m.exec(status)?.[1] ?? null);
+      } catch {
+        return null;
+      }
+    };
+    /** One of A's own programs, through its launcher: its pid. */
+    const program = async () => {
+      const lines = await hold(A, [PYTHON, "-u", "-c", "import os, time\nprint(os.getpid())\ntime.sleep(600)"], (l) =>
+        l.some((line) => /^\d+$/.test(line)),
+      );
+      return Number(lines.find((line) => /^\d+$/.test(line)));
+    };
+    const holds = new Holds({ home: HOME, log: (line) => console.log(`holds: ${line}`) });
+    const agent = { id: A.id, handle: "a" };
+    try {
+      const pid = await program();
+      const id = "c0000000-0000-4000-8000-0000000000a1";
+      expect(await holds.start(agent, A, { op: "keep.start", holdId: id, pid })).toEqual({ held: true });
+      const [lock] = ours() ?? [];
+      console.log(`a program's hold: ${JSON.stringify(lock)}`);
+      expect(lock?.slice(0, 5)).toEqual(["idle", "agentes.chat", "keep_running", "block", 0]);
+      const scope = `/sys/fs/cgroup/agents.slice/${agentSlice(A.uid)}/agentes-keep-${id}.scope`;
+      expect(readFileSync(`/proc/${lock?.[5]}/cgroup`, "utf8")).toContain(scope.slice("/sys/fs/cgroup".length));
+      // systemd-inhibit and its wait are root's: nothing of the agent's uid runs outside its own view.
+      const uids = readFileSync(`${scope}/cgroup.procs`, "utf8").trim().split("\n").map(Number).map(uidOf);
+      expect(uids.filter((uid) => uid !== null && uid !== "0")).toEqual([]);
+      process.kill(pid, "SIGKILL");
+      await until(() => uidOf(lock?.[5] ?? 0) === null, 10_000);
+      holds.sweep();
+      expect(holds.report()).toEqual({ live: [], ended: [{ id, reason: "exited" }] });
+      // logind lets go of a lock once it sees its holder gone, a moment later.
+      await until(() => ours()?.length === 0, 10_000);
+
+      // A person's Stop: the program signaled by root, its lock gone with it.
+      const stopped = await program();
+      const id2 = "c0000000-0000-4000-8000-0000000000a2";
+      await holds.start(agent, A, { op: "keep.start", holdId: id2, pid: stopped });
+      expect(await holds.end({ op: "keep.end", holdId: id2, stop: true })).toEqual({ ended: true });
+      await until(() => uidOf(stopped) === null && ours()?.length === 0, 10_000);
+
+      // A time's hold, changed to a later time (its lock taken again under the same scope), then ended.
+      const id3 = "c0000000-0000-4000-8000-0000000000a3";
+      const later = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
+      await holds.start(agent, A, { op: "keep.start", holdId: id3, until: later(1) });
+      await holds.start(agent, A, { op: "keep.start", holdId: id3, until: later(2) });
+      expect(holds.report().live).toEqual([id3]);
+      await until(() => ours()?.length === 1, 10_000);
+      await holds.end({ op: "keep.end", holdId: id3 });
+      await until(() => ours()?.length === 0, 10_000);
+    } finally {
+      holds.close();
     }
   });
 

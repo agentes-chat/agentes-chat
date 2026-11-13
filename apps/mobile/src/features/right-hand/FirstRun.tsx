@@ -48,6 +48,7 @@ import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
+import { paysHere } from "@/lib/store";
 import { useOrg } from "@/providers/org";
 import { Button, type IconName } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -210,7 +211,7 @@ export function FirstRunCard({ agent, channelId }: { agent: Agent; channelId: st
     apps: () => openSetupStep(agent.id, "apps"),
     people: () => router.push("/invite-people"),
   };
-  const mayPay = can(org, "manage_billing");
+  const mayPay = paysHere(can(org, "manage_billing"));
   const rows = steps.map((s) => {
     const state = stateOf(s);
     const words = firstRunRow(

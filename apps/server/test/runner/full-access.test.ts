@@ -101,9 +101,9 @@ test("Codex runs without a sandbox and asks nobody in a work turn with full acce
   expect(codexSandbox("work", false)).toBe("workspace-write");
   expect(codexSandbox("work", true)).toBe("danger-full-access");
   expect(codexSandbox("plan", true)).toBe("read-only");
-  expect(codexThreadPolicy("work", false)).toEqual({ sandbox: "workspace-write", approvalPolicy: "untrusted" });
-  expect(codexThreadPolicy("work", true)).toEqual({ sandbox: "danger-full-access", approvalPolicy: "never" });
-  expect(codexThreadPolicy("plan", true)).toEqual({ sandbox: "read-only", approvalPolicy: "untrusted" });
+  expect(codexThreadPolicy("work", false, false)).toEqual({ sandbox: "workspace-write", approvalPolicy: "untrusted" });
+  expect(codexThreadPolicy("work", false, true)).toEqual({ sandbox: "danger-full-access", approvalPolicy: "never" });
+  expect(codexThreadPolicy("plan", false, true)).toEqual({ sandbox: "read-only", approvalPolicy: "untrusted" });
 });
 
 test("codex exec gets the full-access sandbox and note only when the computer has it", () => {
@@ -139,4 +139,10 @@ test("only a work turn on a computer with full access is told so", () => {
   expect(withFullAccessNote("Hi.", false, on)).toBe("Hi.");
   expect(withFullAccessNote("Hi.", true, {})).toBe("Hi.");
   expect(FULL_ACCESS_NOTE).toContain("sudo");
+});
+
+test("an agent set to always ask still asks on a computer with full access (ADR 0173)", () => {
+  const settings = claudePermissionSettings("work", [], undefined, { fullAccess: true, asksFirst: true });
+  expect(settings.permissions.allow).not.toContain("Bash");
+  expect(claudePermissionSettings("work", [], undefined, { fullAccess: true }).permissions.allow).toContain("Bash");
 });

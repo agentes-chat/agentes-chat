@@ -18,6 +18,7 @@ import {
   todoLine,
 } from "@agenteschat/client/lib/import/flow";
 import { EXPORT_PROMPT } from "@agenteschat/client/lib/import/index";
+import { can } from "@agenteschat/client/lib/permissions";
 import { helpUrl } from "@agenteschat/client/lib/server";
 import * as Clipboard from "expo-clipboard";
 import * as DocumentPicker from "expo-document-picker";
@@ -99,7 +100,10 @@ function Picker({ imp, orgId }: { imp: AgentImport; orgId: string }) {
   const { t } = useTranslation();
   const { colors: c } = useTheme();
   const apps = useApps(orgId);
-  const standing = useMe().data?.organizations.find((o) => o.id === orgId)?.standing;
+  const mine = useMe().data?.organizations.find((o) => o.id === orgId);
+  const standing = mine?.standing;
+  // A private repository the workspace's GitHub can't read: connecting GitHub is in Connectors, for who may.
+  const mayConnect = Boolean(mine && can(mine, "manage_connectors"));
   const mcp = aiAppImport(t, apps.data, standing);
   // Prompt only for an app that takes no MCP, where MCP can't work now, or when this server's address couldn't be
   // read. Nothing to choose from while it loads, so the default never changes under the person.
@@ -251,7 +255,7 @@ function Picker({ imp, orgId }: { imp: AgentImport; orgId: string }) {
       {archive ? <ErrorText text={t("mobile.newAgent.import.archive")} /> : null}
       {imp.failure ? (
         <View style={styles.failure}>
-          <ErrorText text={importFailureText(t, imp.failure, phoneOffline)} />
+          <ErrorText text={importFailureText(t, imp.failure, phoneOffline, mayConnect)} />
           {retryable(imp.failure) ? (
             <Button variant="secondary" size="sm" label={t("common.retry")} onPress={() => void imp.retry()} />
           ) : null}
@@ -628,8 +632,8 @@ function Preview({ imp, orgId }: { imp: AgentImport; orgId: string }) {
           {bundle.todo.map((todo) => {
             const href = todoHref(todo.kind);
             return (
-              <View key={`${todo.kind}:${todo.label}`} style={styles.todo}>
-                <Text variant="footnote" tone="ink2" style={styles.fill}>
+              <View key={`${todo.kind}:${todo.label}`} style={[ACT_LINE.row, styles.todo]}>
+                <Text variant="footnote" tone="ink2" style={ACT_LINE.text}>
                   {todoLine(t, todo, nameOf)}
                 </Text>
                 {href ? (
@@ -721,5 +725,6 @@ const styles = StyleSheet.create({
   where: { paddingLeft: 14 + MARK + 12, paddingRight: 14, paddingBottom: 12 },
   note: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 6 },
   todos: { gap: 10, marginTop: 14 },
-  todo: { flexDirection: "row", alignItems: "center", gap: 12 },
+  // The action beside the words while they fit on one line, under them once they wrap (`ACT_LINE`).
+  todo: { alignItems: "center", columnGap: 12, rowGap: 8 },
 });

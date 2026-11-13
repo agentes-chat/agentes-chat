@@ -129,7 +129,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
   return (
     <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}>
       {sky}
-      <View style={[styles.head, styles.row]}>
+      <View style={[styles.head, styles.row, styles.top]}>
         <View style={styles.flex}>
           <Text variant="subhead" style={styles.bold}>
             {a.title}
@@ -145,6 +145,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
           accessibilityLabel={t("mobile.choices.close")}
           hitSlop={10}
           onPress={() => setClosed(true)}
+          style={styles.close}
         >
           <Icon name="x" size={16} color={c.faint} />
         </Pressable>
@@ -290,6 +291,9 @@ const styles = StyleSheet.create({
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 8, opacity: 0.7 },
   head: { gap: 1, paddingHorizontal: 14, paddingTop: 12 },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
+  // The head: its × on the title's first line, not between the title and the step under it.
+  top: { alignItems: "flex-start" },
+  close: { paddingTop: 2 },
   flex: { flex: 1, minWidth: 0 },
   bold: { fontWeight: "600" },
   question: { paddingHorizontal: 14, paddingTop: 6 },

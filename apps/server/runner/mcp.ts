@@ -17,6 +17,7 @@ import {
   PUSH_ASK_RULES,
   SECRET_BASH_DENY_RULES,
   SECRET_READ_DENY_RULES,
+  unaskedMessage,
 } from "@agenteschat/adapters/command-policy";
 import {
   isSafeRule,
@@ -105,6 +106,7 @@ export interface DelegatedSurface {
   profile: CommandProfile;
   branches?: readonly string[];
   /** `PromptContext`'s. */
+  asks?: "always" | "never";
   task?: boolean;
   local?: boolean;
   /** `id`: the JSON-RPC request's, for `cancel`. `ask`: the bridge, for the permission prompt. */
@@ -572,6 +574,7 @@ export class McpBridge {
       profile: delegated.profile,
       context: {
         ...(delegated.branches ? { branches: delegated.branches } : {}),
+        ...(delegated.asks ? { asks: delegated.asks } : {}),
         ...(delegated.task ? { task: true } : {}),
         ...(delegated.local ? { local: true } : {}),
         delegated,
@@ -883,6 +886,12 @@ export interface PromptContext {
   task?: boolean;
   /** Nobody answers beyond this computer (a background task outside a mission): an ordinary push goes through here. */
   local?: boolean;
+  /**
+   * How much the agent asks, when it isn't the default (`BrainTurnRequest.permissions.asks`). `always`: nothing but a
+   * read is decided here, a push to its own branches included. `never`: a held command is refused with where it
+   * runs (`unaskedMessage`).
+   */
+  asks?: "always" | "never";
 }
 
 /** What an MCP process serves besides the server's tools. */
@@ -928,23 +937,27 @@ export async function permissionPrompt(
       ? (args.input as Record<string, unknown>)
       : {};
   if (!toolName) return { behavior: "deny", message: "Unknown tool." };
-  // Full access on this computer (`full-access.ts`): every call of a work turn goes through, asked of nobody.
-  if ((opts.fullAccess ?? fullAccess()) && (opts.profile ?? "work") !== "plan") {
+  // Full access on this computer (`full-access.ts`): every call of a work turn goes through, asked of nobody
+  // (an agent a person set to always ask still asks: ADR 0173).
+  if ((opts.fullAccess ?? fullAccess()) && (opts.profile ?? "work") !== "plan" && opts.asks !== "always") {
     return { behavior: "allow", updatedInput: input };
   }
   const how = opts.task ? ASK_AFTER_TASK : ASK_IN_CHAT;
   const verdict = localVerdict(toolName, input, opts.scope, opts.profile ?? "work", how);
-  if (verdict?.behavior === "deny") return verdict;
+  // A background task's executor has no run_code to be pointed to: it keeps "stop and say so".
+  const said = (message: string) => (opts.asks === "never" && !opts.task ? unaskedMessage(message) : message);
+  if (verdict?.behavior === "deny") return { behavior: "deny", message: said(verdict.message) };
   if (verdict?.behavior === "allow") return { behavior: "allow", updatedInput: input };
   if (toolName === "Bash" && typeof input.command === "string") {
     const own = opts.branches ?? [];
     const cwd = opts.scope?.cwd ?? null;
     const held = await commandApproval(input.command, { cwd, own, how, script: true });
-    if (held) return { behavior: "deny", message: held.message };
+    if (held) return { behavior: "deny", message: held.never ? held.message : said(held.message) };
     // A push alone to its own branches, or through our git proxy (which decides someone else's branch with a
-    // person's grant, so no card here asks first).
+    // person's grant, so no card here asks first). An agent that always asks is asked for these too.
     const push = lonePush(input.command);
-    if (push && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
+    const alone = opts.local || opts.asks !== "always";
+    if (push && alone && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
       return { behavior: "allow", updatedInput: input };
     }
   }
@@ -1127,13 +1140,19 @@ export function mcpScopeFromEnv(env: NodeJS.ProcessEnv): CommandScope | undefine
   if (!cwd || !path.isAbsolute(cwd)) return undefined;
   const folders = (env.AGENTES_MCP_FOLDERS ?? "").split(path.delimiter).filter((f) => f && path.isAbsolute(f));
   const runnerHome = env.AGENTES_RUNNER_HOME?.trim();
+  // Windows has no HOME, as a rule: the home is USERPROFILE (without one, `~` would read as the agent's folder).
+  const home = env.HOME || (process.platform === "win32" ? env.USERPROFILE : undefined);
   return {
     cwd,
     folders: folders.length ? folders : [cwd],
-    ...(env.HOME ? { home: env.HOME } : {}),
+    ...(home ? { home } : {}),
     ...(runnerHome && path.isAbsolute(runnerHome) ? { runnerHome } : {}),
   };
 }
+
+/** `permissions.asks` of a turn, as the server sent it or as our MCP process's env carries it (`AGENTES_MCP_ASKS`). */
+export const turnAsks = (value: unknown): "always" | "never" | undefined =>
+  value === "always" || value === "never" ? value : undefined;
 
 /** The turn's permission profile for our MCP process (`AGENTES_MCP_PROFILE`): anything but `plan` is `work`. */
 export const mcpProfileFromEnv = (env: NodeJS.ProcessEnv): CommandProfile =>
@@ -1147,8 +1166,10 @@ export const mcpProfileFromEnv = (env: NodeJS.ProcessEnv): CommandProfile =>
 export function mcpContextFromEnv(env: NodeJS.ProcessEnv): PromptContext {
   const branches = (env.AGENTES_MCP_BRANCHES ?? "").split(",").filter((b) => /^[A-Za-z0-9/_.-]+\/$/.test(b));
   const task = env.AGENTES_MCP_TASK;
+  const asks = turnAsks(env.AGENTES_MCP_ASKS);
   return {
     ...(branches.length ? { branches } : {}),
+    ...(asks ? { asks } : {}),
     ...(task === "mission" || task === "local" ? { task: true } : {}),
     ...(task === "local" ? { local: true } : {}),
   };
@@ -1179,6 +1200,8 @@ export function claudeMcpConfig(input: {
   branches?: readonly string[];
   /** A background task's executor: a mission's, or one outside a mission (`local`: only the prompt, answered here). */
   task?: "mission" | "local";
+  /** `PromptContext.asks`. */
+  asks?: "always" | "never";
   /** A delegated CLI: the byte relay to the agent's worker, which serves MCP itself (`runMcpRelay`). */
   relay?: boolean;
 }) {
@@ -1199,6 +1222,7 @@ export function claudeMcpConfig(input: {
           ...(input.runnerHome ? { AGENTES_RUNNER_HOME: input.runnerHome } : {}),
           ...(input.branches?.length ? { AGENTES_MCP_BRANCHES: input.branches.join(",") } : {}),
           ...(input.task ? { AGENTES_MCP_TASK: input.task } : {}),
+          ...(input.asks ? { AGENTES_MCP_ASKS: input.asks } : {}),
           ...fullAccessEnv(),
         },
       },
@@ -1424,6 +1448,11 @@ export function claudePermissionSettings(
     promptReads?: boolean;
     /** The runner's home when it isn't under `.agentes-runner` (system mode): read by no tool or command either. */
     runnerHome?: string;
+    /**
+     * The agent always asks (ADR 0173): a `work` turn allows only what reads, so every edit and every other command
+     * reaches our prompt tool, and from there the server. It wins over the computer's full access.
+     */
+    asksFirst?: boolean;
     /** This computer gives its agents full access (`fullAccess`, default from the env). */
     fullAccess?: boolean;
   } = {},
@@ -1433,7 +1462,7 @@ export function claudePermissionSettings(
   const homeDeny = home ? [`Read(/${home}/**)`, `Bash(*${home}/*)`] : [];
   // Full access on this computer (`full-access.ts`): a work turn may use every tool, nothing kept for a person.
   // The runner's own home stays unread: its sign-ins and tokens aren't the agent's work.
-  if (mode === "work" && (opts.fullAccess ?? fullAccess())) {
+  if (mode === "work" && !opts.asksFirst && (opts.fullAccess ?? fullAccess())) {
     return { permissions: { allow: [...FULL_ACCESS_TOOLS], ask: [], deny: [...homeDeny] } };
   }
   // The team's right hand on a person's plan (protocol 41): our tools only, every tool of Claude Code's own refused.
@@ -1459,6 +1488,15 @@ export function claudePermissionSettings(
         ],
         ask: [...PUSH_ASK_RULES],
         deny: [...PLAN_DENY, ...ALWAYS_DENY_RULES, ...homeDeny],
+      },
+    };
+  }
+  if (opts.asksFirst) {
+    return {
+      permissions: {
+        allow: ["mcp__agentes", ...shellReads, ...missionFolderRules(missionFolder, ["Read"])],
+        ask: [...PUSH_ASK_RULES],
+        deny: [...ALWAYS_DENY_RULES, ...homeDeny],
       },
     };
   }

@@ -1143,7 +1143,7 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
     let child: ChildProcess;
     try {
       child = spawn(run.file, run.args, {
-        env,
+        env: run.env ? { ...env, ...run.env } : env,
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
         windowsVerbatimArguments: run.windowsVerbatimArguments,
@@ -1170,9 +1170,8 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
       resolve({ status, stdout, stderr });
     };
     const timer = setTimeout(() => {
-      try {
-        child.kill("SIGKILL");
-      } catch {}
+      // The whole tree: on Windows the child is cmd.exe, and the CLI it started would stay.
+      killTree(child, "SIGKILL");
       finish(null);
     }, timeoutMs);
     timer.unref?.();
@@ -1695,7 +1694,7 @@ export class AccountManager {
     const run = cliSpawn(command, [...LOGIN_ARGS[login.kind], ...(email ? ["--email", email] : [])], env.PATH);
     const child = spawn(run.file, run.args, {
       cwd,
-      env,
+      env: run.env ? { ...env, ...run.env } : env,
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       // Its own process group: a kill reaches what it started (posix).

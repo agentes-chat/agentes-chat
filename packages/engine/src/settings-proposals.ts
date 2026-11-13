@@ -316,7 +316,14 @@ export async function settingsDeciders(db: Database, p: Proposal): Promise<strin
 }
 
 /** What a card may change on the right hand: what its Settings let admins change. */
-const RIGHT_HAND_SETTINGS: ReadonlySet<SettingField> = new Set(["model", "budget", "audience", "name", "look"]);
+const RIGHT_HAND_SETTINGS: ReadonlySet<SettingField> = new Set([
+  "model",
+  "budget",
+  "audience",
+  "name",
+  "look",
+  "skill",
+]);
 
 /** What a target's lines ask for, before `from` is read: `to`, and the channel for a channel line. */
 export type WantedLine = Omit<SettingLine, "from">;

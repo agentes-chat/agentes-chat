@@ -5,7 +5,7 @@
 - Code: web `components/arrival/*` (`Arrival`, `BetaDialog`, `TeamScene`, `ConnectChoices`, `FeedbackDialog`,
   `FeedbackMark`), `components/ConnectAi.tsx` (`ConnectAiRequest.arrival`), `pages/OnboardingPage.tsx`
   (`?arrival=1`); server `routes/app/feedback.ts` (`POST /api/app/feedback`, `…/feedback/files`, `GET /api/feedback-files/{token}`), `auth.ts` (`auth-config.feedback`);
-  engine `feedback.ts` (jobs `feedback.send`, `feedback.file.purge`), `feedback-tools.ts` (`send_feedback`, `offer_feedback`), `feedback-offers.ts` (`decideFeedbackOffer`, `APP_FAULT_HINT`); server `POST …/feedback/offers/{messageId}`; web `components/FeedbackOffer.tsx`, phone `features/chat/FeedbackOffer.tsx`; config `FEEDBACK_EMAIL`; web
+  engine `feedback.ts` (jobs `feedback.send`, `feedback.file.purge`), `feedback-tools.ts` (`send_feedback`, `offer_feedback`), `feedback-offers.ts` (`decideFeedbackOffer`, `APP_FAULT_HINT`); server `POST …/feedback/offers/{messageId}`; web `components/FeedbackOffer.tsx`, phone `features/chat/FeedbackOffer.tsx`; config `FEEDBACK_EMAIL`, `FEEDBACK_RELAY`, `FEEDBACK_URL`, `FEEDBACK_INBOX`; the inbox `POST /api/feedback/inbox` (`registerFeedbackInbox`, `relayQueuedFeedback`, `sendRelayedFeedback`); web
   `lib/feedback.ts`, `lib/context-menu.ts` (`setMenuReporter`); table `feedback_files` (migration 0246)
 
 ## Context
@@ -42,7 +42,8 @@ with Postgres alone, and must not need a third-party widget in the apps.
 
 5. **Feedback is an email to whoever runs the server.** `FEEDBACK_EMAIL` names the address. Unset, which is the
    default, the apps show no form and the route answers 404: a self-hosted server sends nothing anywhere unless its
-   operator asks for it. agentes.chat sets it to its own address.
+   operator asks for it. agentes.chat sets it to its own address. (Superseded for the unset case by §13: it then
+   goes to the agentes.chat team, when a person sends one.)
 
 6. **What a feedback carries.** The text the person typed; their name and address (the email's reply-to, so the
    answer goes to them); the workspace's name and their role when they are a member of the one the app named; what
@@ -128,10 +129,40 @@ with Postgres alone, and must not need a third-party widget in the apps.
     - **Not here yet.** A run that dies before any reply (the server's own error) has no message for the row to ride
       on, so it offers nothing.
 
+13. **With no address, it goes to the agentes.chat team** (added 2026-11-12). Almost no self-hosted server set
+    `FEEDBACK_EMAIL`, and one that did also needed outgoing email, so the people most likely to hit a rough edge
+    had no way to say so. A feedback is not like a report the server sends by itself: a person writes it, reads who
+    will get it, and presses Send. So §5's default changes.
+    - **Where it goes.** To the agentes.chat team's inbox (`FEEDBACK_URL`), unless `FEEDBACK_RELAY=false`, which
+      is §5's old default (no form, no route, no tools). The feedback is about the app, so its makers read it:
+      `FEEDBACK_EMAIL` is no longer something a self-hosted server sets. It is the team's own address, on
+      agentes.chat's servers; a server that does set it still mails its feedback there and sends nothing out. `auth-config.feedbackRelay` tells the apps, which then say "to the
+      agentes.chat team" wherever they said "to whoever runs this server", in the form and on an agent's offer.
+    - **Same job, another way out.** The route still only queues `feedback.send`; where the destination is the
+      inbox the job posts the feedback as JSON instead of mailing it, so the server needs no email of its own. A
+      refusal fails the job; an inbox that can't be reached is tried again with the outbox's backoff, then dropped.
+    - **Pictures only, inside the message.** A link to a file on a server in someone's private network opens for
+      nobody outside it, so the pictures travel with the feedback, as many as fit an email together, and the form
+      there offers no video. The sending server keeps them only while the job may run again (six hours).
+    - **The inbox** is a route of the same image, on only on agentes.chat's own servers (the ones `isAgentesCloud`
+      names, which already read feedback at `FEEDBACK_EMAIL`). It needs no setting; `FEEDBACK_INBOX=false` turns it off. It needs no session, since its sender is a server it knows nothing of, so it
+      counts requests by where they come from (thirty an hour) and in all (sixty), reads at most what the
+      pictures of one email weigh, takes a picture by its own bytes as an upload is, and mails the feedback at
+      once to its own address, never one it was sent. It stores nothing: no row, no file. The email says it came
+      from another server and that who wrote it is not verified.
+    - **What is not sent.** Nothing that names the server: no address of its own, no installation id. The usage
+      report's random id (ADR 0060 §5) stays out on purpose, so a report that holds no names is never tied to a
+      person's.
+
 ## Consequences
 
-- A server with no `FEEDBACK_EMAIL` has no feedback channel in the apps; its people use whatever its operator gives
-  them.
+- A server with neither `FEEDBACK_EMAIL` nor the relay has no feedback channel in the apps; its people use whatever
+  its operator gives them.
+- A self-hosted server's feedback reaches agentes.chat by default, with the name and address of the person who sent
+  it. The form says so before they send, and `SELF_HOSTING.md` lists what it holds and how to turn it off.
+- Whoever can reach the inbox can write to the team's address, within its hourly limits; the email marks it as
+  unverified.
+- A feedback sent while the server has no way out for about forty minutes is lost, though the form said it went.
 - Whoever has a feedback's email can open its files for thirty days without signing in: the email is the key.
 - On a server with neither S3 nor a files folder, a 50 MB video sits in Postgres until it expires.
 - The phone app has neither the arrival nor the form yet.

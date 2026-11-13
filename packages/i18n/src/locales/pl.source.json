@@ -1733,6 +1733,9 @@
   "onboarding.flow.steps.business": {
     "value": "What you do"
   },
+  "onboarding.flow.steps.you": {
+    "value": "About you"
+  },
   "onboarding.flow.steps.team": {
     "value": "Your team"
   },
@@ -1781,11 +1784,11 @@
   "onboarding.flow.lodi.planThen": {
     "value": "Once the plan is on, the next screen is where you connect your AI."
   },
-  "onboarding.flow.lodi.area": {
-    "value": "One last thing before the team."
+  "onboarding.flow.lodi.you": {
+    "value": "Before the team, a little about you."
   },
-  "onboarding.flow.lodi.areaPersonal": {
-    "value": "One last thing before your agents."
+  "onboarding.flow.lodi.youPersonal": {
+    "value": "Before your agents, a little about you."
   },
   "onboarding.flow.lodi.ask": {
     "value": "Already have a team somewhere else? I'll bring all of it here."
@@ -1835,14 +1838,32 @@
   "onboarding.flow.lodi.peopleLink": {
     "value": "Now the people. Send them the link and I'll show you each request."
   },
-  "onboarding.flow.area.title": {
-    "value": "And you, what do you work on?"
+  "onboarding.flow.you.title": {
+    "value": "Now, about you"
   },
-  "onboarding.flow.area.lead": {
-    "value": "Just so we know who uses agentes.chat."
+  "onboarding.flow.you.lead": {
+    "value": "Your name and photo show to the team and to the agents."
   },
-  "onboarding.flow.area.skip": {
-    "value": "Skip this step"
+  "onboarding.flow.you.leadPersonal": {
+    "value": "Your name and photo show to your agents."
+  },
+  "onboarding.flow.you.photo": {
+    "value": "Your photo"
+  },
+  "onboarding.flow.you.build": {
+    "value": "Build an avatar"
+  },
+  "onboarding.flow.you.edit": {
+    "value": "Edit avatar"
+  },
+  "onboarding.flow.you.upload": {
+    "value": "Upload a photo"
+  },
+  "onboarding.flow.you.area": {
+    "value": "What do you work on?"
+  },
+  "onboarding.flow.you.areaHint": {
+    "value": "Optional. Just so we know who uses agentes.chat."
   },
   "onboarding.flow.area.options.dev": {
     "value": "Development"
@@ -4868,6 +4889,9 @@
   "team.map.lead": {
     "value": "Who looks after the agents, the channels they are in, what each one does on its own and what waits for a person. Dashed lines are agents that asked each other in the last day."
   },
+  "team.map.short": {
+    "value": "Who looks after each agent and where it works."
+  },
   "team.map.lodi": {
     "value": "Organizes the team with you"
   },
@@ -5865,7 +5889,7 @@
     "value": "Acts with your permissions"
   },
   "rightHand.profile.private": {
-    "value": "Talks only with you in your DM"
+    "value": "Keeps what is yours in your DM"
   },
   "rightHand.profile.channels": {
     "value": "Replies in channels when called"
@@ -5933,6 +5957,12 @@
   "rightHand.settings.mine": {
     "value": "Your AI"
   },
+  "rightHand.settings.mineTitle": {
+    "value": "Who thinks for {{name}} with you"
+  },
+  "rightHand.settings.mineOnly": {
+    "value": "Only for your conversation with {{name}}."
+  },
   "rightHand.settings.mineHelp": {
     "value": "Your conversation with {{name}} thinks with your plan or one shared with you, and only yours does."
   },
@@ -5983,6 +6013,12 @@
   },
   "rightHand.settings.workspace": {
     "value": "AI for people without their own plan"
+  },
+  "rightHand.settings.workspaceTitle": {
+    "value": "Who thinks for {{name}} in the workspace"
+  },
+  "rightHand.settings.workspaceOnly": {
+    "value": "For people without their own plan."
   },
   "rightHand.settings.workspaceHelp": {
     "value": "People without their own plan talk to {{name}} through this AI."
@@ -7307,7 +7343,7 @@
     "value": "Always ask"
   },
   "approvalsLevel.always.text": {
-    "value": "Asks before changing anything in an app."
+    "value": "Asks before changing anything, here, on its computer or in an app."
   },
   "approvalsLevel.risky.title": {
     "value": "Only what is risky"
@@ -7319,7 +7355,7 @@
     "value": "Never ask"
   },
   "approvalsLevel.never.text": {
-    "value": "Still asks for merge, deploy and rollback."
+    "value": "Never asks, merge, deploy, payments and routines included."
   },
   "brakes.title": {
     "value": "Work nobody asked for"
@@ -9779,6 +9815,81 @@
   },
   "vault.import.close": {
     "value": "Done"
+  },
+  "vault.env.open": {
+    "value": "Import .env"
+  },
+  "vault.env.title": {
+    "value": "Import keys"
+  },
+  "vault.env.text": {
+    "value": "Takes a .env file, with one NAME=value line per key, or a JSON object of names and values."
+  },
+  "vault.env.paste": {
+    "value": "Or paste its contents here"
+  },
+  "vault.env.review": {
+    "value": "Review"
+  },
+  "vault.env.none": {
+    "value": "No NAME=value line found. Check the file and try again."
+  },
+  "vault.env.tooLarge": {
+    "value": "This file is too large (512 KB at most)."
+  },
+  "vault.env.tooMany": {
+    "value": "Too many keys at once ({{max}} at most). Split the file and import each part."
+  },
+  "vault.env.duplicates": {
+    "value": "Written more than once, the last value counts: {{names}}"
+  },
+  "vault.env.new": {
+    "value": "New"
+  },
+  "vault.env.exists": {
+    "value": "Already saved"
+  },
+  "vault.env.replace": {
+    "value": "Replace"
+  },
+  "vault.env.show": {
+    "value": "Show the value of {{name}}"
+  },
+  "vault.env.hide": {
+    "value": "Hide the value of {{name}}"
+  },
+  "vault.env.problem.name": {
+    "value": "The name must look like ACME_API_KEY"
+  },
+  "vault.env.problem.reserved": {
+    "value": "Reserved name"
+  },
+  "vault.env.problem.empty": {
+    "value": "No value"
+  },
+  "vault.env.problem.tooLarge": {
+    "value": "Value too large"
+  },
+  "vault.move.toTeam": {
+    "value": "Move to Team"
+  },
+  "vault.move.toTeamPersonal": {
+    "value": "Move to Shared"
+  },
+  "vault.move.toPersonal": {
+    "value": "Move to Personal"
+  },
+  "vault.move.title": {
+    "value": "Move {{title}}?"
+  },
+  "vault.move.toTeamText": {
+    "value": "Everyone in the workspace will see this item, and its agents will use it when anyone asks. People who manage the Vault can edit it."
+  },
+  "vault.move.toPersonalText": {
+    "value": "Only you will see and edit this item, and its agents will use it only when you ask. Everyone else stops seeing it."
+  },
+  "vault.move.moved": {
+    "value": "Moved"
   },
   "vault.connections.none": {
     "value": "No password manager can be connected here."
@@ -13190,26 +13301,15 @@
   "agentPage.access.filters.ask": {
     "value": "Ask for approval"
   },
-  "agentPage.access.allConnectors": {
-    "value": "Connectors:"
-  },
-  "agentPage.access.onlyRead": {
-    "value": "Read only"
-  },
+  "agentPage.access.setAll": "Change all",
   "agentPage.access.connectors": {
     "value": "{{org}}'s connectors"
   },
   "agentPage.access.connectorsPersonal": {
     "value": "Your connectors"
   },
-  "agentPage.access.oneLevel": {
-    "value": "One level per app"
-  },
   "agentPage.access.builtin": {
     "value": "Built into agentes"
-  },
-  "agentPage.access.builtinHelp": {
-    "value": "Drive, tasks, memory and more"
   },
   "agentPage.access.noMatch": {
     "value": "Nothing matching “{{q}}”"
@@ -13255,6 +13355,9 @@
   },
   "agentPage.memory.fromTeam": {
     "value": "learned from the team"
+  },
+  "agentPage.memory.fromTeamRightHand": {
+    "value": "learned from you"
   },
   "agentPage.memory.proposals": {
     "value": "Proposals"
@@ -13324,6 +13427,9 @@
   },
   "agentPage.memory.rulesNote": {
     "value": "Followed in all its work for whoever gave each one, wherever the work comes from. Rules from its owner or an admin hold for everyone."
+  },
+  "agentPage.memory.rulesNoteRightHand": {
+    "value": "Rules you give in your DM hold only for you. Only you see them."
   },
   "agentPage.memory.ruleBy": {
     "value": "From {{name}} · {{date}}"
@@ -13598,6 +13704,9 @@
   },
   "agentPage.activity.errors.account_missing": {
     "value": "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again."
+  },
+  "agentPage.activity.errors.windows_sandbox": {
+    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer."
   },
   "agentPage.activity.errors.our_error": {
     "value": "Something went wrong on our side and it stopped. Ask again in a little while."
@@ -15207,11 +15316,8 @@
   "newAgent.connectOther": {
     "value": "Connect another app"
   },
-  "newAgent.opensConnectors": {
-    "value": "opens Connectors"
-  },
   "newAgent.approvalsNote": {
-    "value": "Merge, deploy and rollback always ask for approval in chat."
+    "value": "Merge, deploy and rollback ask for approval in chat, unless the agent never asks."
   },
   "newAgent.approverOwner": {
     "value": "{{name}} approves."
@@ -15848,10 +15954,10 @@
     "value": "Also creates and edits in {{app}}."
   },
   "newAgentCard.app.asks": {
-    "value": "{{actions}} always ask for your approval, at any level."
+    "value": "{{actions}} ask for your approval, unless the agent never asks."
   },
   "newAgentCard.app.asksAny": {
-    "value": "Sending, deleting and paying always ask for your approval, at any level."
+    "value": "Sending, deleting and paying ask for your approval, unless the agent never asks."
   },
   "newAgentCard.app.remove": {
     "value": "Remove {{app}}"
@@ -18100,6 +18206,9 @@
   "routines.webhook.newNote": {
     "value": "The routine gets an address of its own. Every POST to it starts the agent with what was sent. The address shows on the routine's page once it is saved."
   },
+  "routines.webhook.newShort": {
+    "value": "The routine gets an address of its own."
+  },
   "routines.webhook.hidden": {
     "value": "Only who can change the routine sees its address."
   },
@@ -18547,6 +18656,33 @@
   "routines.horizon.laneNone": {
     "value": "{{name}}: nothing in the next hours"
   },
+  "routines.horizon.agentRoutines": {
+    "value": {
+      "one": "{{count}} routine",
+      "other": "{{count}} routines"
+    }
+  },
+  "routines.horizon.andMore": {
+    "value": "{{name}} and {{count}} more"
+  },
+  "routines.horizon.pick": {
+    "value": "See {{name}}'s routines"
+  },
+  "routines.horizon.restLater": {
+    "value": {
+      "one": "{{count}} more agent runs later",
+      "other": "{{count}} more agents run later"
+    }
+  },
+  "routines.horizon.restIdle": {
+    "value": {
+      "one": "{{count}} with nothing in the next {{hours}} hours",
+      "other": "{{count}} with nothing in the next {{hours}} hours"
+    }
+  },
+  "routines.horizon.showAll": {
+    "value": "Show all"
+  },
   "routines.horizon.legend.ok": {
     "value": "answered"
   },
@@ -18677,10 +18813,16 @@
     "value": "Does on its own"
   },
   "routines.ownActions.hint": {
-    "value": "Every run does these in your connected apps without asking. Any other action there asks a person first, and merge, deploy and rollback always ask."
+    "value": "Every run does these in your connected apps without asking. Any other action there asks a person first, unless the agent never asks."
   },
   "routines.ownActions.none": {
     "value": "In connected apps it asks a person before each action. To let it do its job on its own, tell the agent in the chat which actions it may do."
+  },
+  "routines.ownActions.hintShort": {
+    "value": "Every run does these without asking."
+  },
+  "routines.ownActions.noneShort": {
+    "value": "It asks a person before each action."
   },
   "routines.ownActions.remove": {
     "value": "Ask again before: {{action}}"
@@ -20789,7 +20931,7 @@
     "value": "You can also start one by typing in any conversation's composer:"
   },
   "missions.new.approvals": {
-    "value": "Merge, deploy and rollback always ask for approval"
+    "value": "By default, merge, deploy and rollback ask for approval"
   },
   "missions.new.start": {
     "value": "Start mission"
@@ -23459,6 +23601,12 @@
   "audience.notListed": {
     "value": "People not on the list get no reply."
   },
+  "audience.agentsToo": {
+    "value": "This covers agents too."
+  },
+  "audience.peopleOnly": {
+    "value": "This covers people only."
+  },
   "audience.consultable": {
     "value": "Other agents can consult {{name}}"
   },
@@ -25137,8 +25285,17 @@
   "wiki.legend.agents": {
     "value": "Agents"
   },
+  "wiki.legend.imported": {
+    "value": "Imported"
+  },
   "wiki.legend.obsidian": {
     "value": "Obsidian"
+  },
+  "wiki.legend.github": {
+    "value": "GitHub"
+  },
+  "wiki.legend.files": {
+    "value": "Imported"
   },
   "wiki.blankPage": {
     "value": "Blank page"
@@ -25152,8 +25309,14 @@
   "wiki.atRequestOf": {
     "value": "at the request of"
   },
-  "wiki.fromObsidian": {
+  "wiki.from.obsidian": {
     "value": "From Obsidian"
+  },
+  "wiki.from.github": {
+    "value": "From GitHub"
+  },
+  "wiki.from.files": {
+    "value": "Imported"
   },
   "wiki.more": {
     "value": "More actions"
@@ -25690,19 +25853,67 @@
     "value": "About the page [[{{title}}]]:"
   },
   "wiki.import.cta": {
-    "value": "Import from Obsidian"
-  },
-  "wiki.import.ctaText": {
-    "value": "Vault .zip, folder or .md files"
+    "value": "Import"
   },
   "wiki.import.short": {
     "value": "Import"
   },
   "wiki.import.title": {
-    "value": "Import from Obsidian"
+    "value": "Import into the wiki"
   },
   "wiki.import.text": {
+    "value": "Choose where the notes come from."
+  },
+  "wiki.import.titleFrom.obsidian": {
+    "value": "Import from Obsidian"
+  },
+  "wiki.import.titleFrom.github": {
+    "value": "Import from GitHub"
+  },
+  "wiki.import.titleFrom.files": {
+    "value": "Import files"
+  },
+  "wiki.import.textFrom.obsidian": {
     "value": "Bring the whole vault: folders, tags, aliases and [[links]] keep working here."
+  },
+  "wiki.import.textFrom.github": {
+    "value": "The repository's Markdown notes become pages, in its folders."
+  },
+  "wiki.import.textFrom.files": {
+    "value": "Markdown notes from any app: .md files, a folder or a .zip."
+  },
+  "wiki.import.from": {
+    "value": "Where to import from"
+  },
+  "wiki.import.source.obsidian": {
+    "value": "Obsidian"
+  },
+  "wiki.import.source.github": {
+    "value": "GitHub"
+  },
+  "wiki.import.source.files": {
+    "value": "Files"
+  },
+  "wiki.import.files.dropTitle": {
+    "value": "Drop the .md files here"
+  },
+  "wiki.import.files.dropText": {
+    "value": "A folder or a .zip with the notes works too"
+  },
+  "wiki.import.github.label": {
+    "value": "GitHub link"
+  },
+  "wiki.import.github.help": {
+    "value": "The link of a repository, a folder or a .md file. Markdown notes become pages and the images they show go to the Drive. The rest of the repository stays out. A private repository is read through the workspace's GitHub."
+  },
+  "wiki.import.github.read": {
+    "value": "Read the notes"
+  },
+  "wiki.import.github.error.notGithub": {
+    "value": "Paste a github.com link."
+  },
+  "wiki.import.anotherLink": {
+    "value": "Change link"
   },
   "wiki.import.dropTitle": {
     "value": "Drop the vault .zip here"
@@ -25718,6 +25929,9 @@
   },
   "wiki.import.howTo": {
     "value": "To make the .zip: in Finder, right-click the vault folder → Compress. On Windows, Send to → Compressed folder. The .obsidian folder (plugins and themes) is left out."
+  },
+  "wiki.import.howToLabel": {
+    "value": "How to make the .zip"
   },
   "wiki.import.nothingYet": {
     "value": "Nothing goes in before you review it."
@@ -26683,7 +26897,7 @@
     "value": "Agent access"
   },
   "access.matrixHint": {
-    "value": "Sensitive actions (merge, deploy, share, pay) always ask for approval, at any level. To set it tool by tool, open the connector's Tools."
+    "value": "By default, sensitive actions (merge, deploy, share, pay) ask for approval. To set it tool by tool, open the connector's Tools."
   },
   "access.matrixHow": {
     "value": "Click a cell to change it:"
@@ -26721,9 +26935,7 @@
   "access.cellAsks": {
     "value": "{{agent}} in {{resource}}: {{level}}, sensitive actions ask for approval"
   },
-  "access.asks": {
-    "value": "{{tool}} asks for approval"
-  },
+  "access.asksList": "Asks for approval: {{tools}}",
   "access.asksMore": {
     "value": {
       "one": "and {{count}} more",
@@ -26732,9 +26944,6 @@
   },
   "access.asksLegend": {
     "value": "asks for approval"
-  },
-  "access.noneText": {
-    "value": "No access."
   },
   "access.customText": {
     "value": "Granted tool by tool. Pick a level to simplify it."
@@ -27879,6 +28088,9 @@
   "githubApp.installedOutside": {
     "value": "The app was installed on that GitHub account outside agentes.chat. Remove it on GitHub and install it again from Connectors › GitHub."
   },
+  "githubApp.ownerUnknown": {
+    "value": "GitHub didn't say who owns that organization. Whoever runs the server needs to add the organization permission Members (read-only) to the GitHub app, then you install it again."
+  },
   "githubApp.misconfigured": {
     "value": "The GitHub app has the wrong secret key on the server, so the install can't finish. Whoever runs the server needs to replace the key in the app's settings."
   },
@@ -27985,7 +28197,10 @@
     "value": "No repositories chosen. Every merge asks for approval."
   },
   "repos.merge.help": {
-    "value": "In these repositories a merge runs with no approval card, goes in the audit and leaves a receipt in the conversation. Everything else that's sensitive still asks."
+    "value": "In these repositories a merge runs with no approval card, goes in the audit and leaves a receipt in the conversation. An agent that always asks still asks."
+  },
+  "repos.merge.short": {
+    "value": "In these repositories a merge runs with no approval card."
   },
   "repos.merge.dialogTitle": {
     "value": "Where {{name}} merges without asking"
@@ -28328,7 +28543,7 @@
     "value": "Open pull requests and comment"
   },
   "connectors.can.github.ask": {
-    "value": "Merge and deploy always ask for your approval"
+    "value": "By default, merge and deploy ask for your approval"
   },
   "connectors.can.sentry.1": {
     "value": "See errors and events"
@@ -28382,7 +28597,7 @@
     "value": "Change Workers and storage"
   },
   "connectors.can.cloudflare_bindings.ask": {
-    "value": "Deploys always ask for your approval"
+    "value": "By default, deploys ask for your approval"
   },
   "connectors.can.cloudflare_observability.1": {
     "value": "See Workers logs and metrics"
@@ -28394,7 +28609,7 @@
     "value": "Query and change the database"
   },
   "connectors.can.supabase.ask": {
-    "value": "Deploys always ask for your approval"
+    "value": "By default, deploys ask for your approval"
   },
   "connectors.can.supabase_readonly.1": {
     "value": "Query the database (read only)"
@@ -29999,7 +30214,7 @@
     "value": "What {{name}} can use"
   },
   "toolReview.agentSub": {
-    "value": "By connector and subject. Sensitive actions always ask for approval."
+    "value": "By connector and subject. By default, sensitive actions ask for approval."
   },
   "connectFlow.steps": {
     "value": "Steps"
@@ -30075,6 +30290,9 @@
   },
   "connectFlow.githubOrgs.lead": {
     "value": "GitHub asks about organizations only the first time. To add one, open the app's page there and press Grant beside it. If you don't own it, the button says Request and an owner approves."
+  },
+  "connectFlow.githubOrgs.short": {
+    "value": "GitHub asks about organizations only the first time."
   },
   "connectFlow.githubOrgs.open": {
     "value": "Grant organizations on GitHub"
@@ -30182,7 +30400,7 @@
     }
   },
   "connectFlow.asksDefault": {
-    "value": "Sensitive actions always ask for approval in the chat."
+    "value": "By default, sensitive actions ask for approval in the chat."
   },
   "connectFlow.grant": {
     "value": "Grant"
@@ -30568,6 +30786,9 @@
   "database.rule.hiddenHelp": {
     "value": "table.column, with names that have capitals, spaces or symbols in double quotes (customers.\"Tax ID\"). We already hid the ones that look like personal data or passwords."
   },
+  "database.rule.hiddenExample": {
+    "value": "table.column, like customers.\"Tax ID\""
+  },
   "database.rule.hiddenPlaceholder": {
     "value": "customers.cpf"
   },
@@ -30597,9 +30818,6 @@
   },
   "database.agent.title": {
     "value": "Databases"
-  },
-  "database.agent.help": {
-    "value": "Databases {{org}} connected. The agent only reads."
   },
   "database.agent.levelText": {
     "value": "Queries the tables the rules allow, read-only."
@@ -30814,6 +31032,9 @@
   "mail.toolsLead": {
     "value": "What agents can do in {{name}}. Turn off what no agent should do, or ask for approval for drafts and organizing too. Sending, replying and forwarding always ask for approval in the chat, showing who it goes to and the text."
   },
+  "mail.toolsShort": {
+    "value": "Choose what agents do with this email."
+  },
   "mail.group.read": {
     "value": "Reads"
   },
@@ -30919,6 +31140,9 @@
   "mail.addresses.lead": {
     "value": "Agents reply from the address the email was sent to. If this mailbox also gets email at other addresses, like your own domain or an alias, add them here."
   },
+  "mail.addresses.short": {
+    "value": "Agents reply from the address the email was sent to."
+  },
   "mail.addresses.main": {
     "value": "Main address: {{address}}"
   },
@@ -30955,17 +31179,8 @@
   "mail.agent.title": {
     "value": "Email"
   },
-  "mail.agent.help": {
-    "value": "One row per {{org}} mailbox."
-  },
   "mail.agent.none": {
     "value": "{{org}} hasn't connected any email yet."
-  },
-  "mail.agent.levelText.read": {
-    "value": "Searches and reads email. Nothing changes in the mailbox."
-  },
-  "mail.agent.levelText.write": {
-    "value": "Reads, drafts and organizes. Sending, replying and forwarding ask for approval."
   },
   "mail.agent.canDelete": {
     "value": "Can delete email"
@@ -30984,9 +31199,6 @@
       "one": "{{count}} rule",
       "other": "{{count}} rules"
     }
-  },
-  "mail.agent.noRules": {
-    "value": "No extra rules"
   },
   "mail.agent.save": {
     "value": "Save"
@@ -31007,11 +31219,15 @@
     "value": "Agents can't use it until it's reconnected."
   },
   "mail.agent.ownerOnly": {
-    "value": "Only {{name}} can give access: they connected this mailbox."
+    "value": "Only {{name}} gives access to this mailbox."
   },
   "mail.agent.ownerOnlyUnknown": {
     "value": "Only the person who connected this mailbox can give access."
   },
+  "mail.agent.onlyYou": {
+    "value": "{{name}} uses this mailbox only for you, in your DM."
+  },
+  "mail.agent.onlyYouAll": "{{name}} uses your mailboxes only for you, in your DM.",
   "mail.agent.remove": {
     "value": "Remove access"
   },
@@ -31459,6 +31675,9 @@
   "files.imageAlt": {
     "value": "Image: {{title}}"
   },
+  "files.imageMaking": {
+    "value": "Making the image…"
+  },
   "files.pdfFrame": {
     "value": "PDF: {{title}}"
   },
@@ -31759,6 +31978,12 @@
   "errors.connector.misconfigured": {
     "value": "The connection to {{provider}} is set up wrong on the server, so it can't finish. Whoever runs the server needs to replace the key in the app's settings."
   },
+  "errors.wiki.githubNoNotes": {
+    "value": "No Markdown notes in this link."
+  },
+  "errors.wiki.githubTooLarge": {
+    "value": "Too many notes to read from a link. Download the repository as a .zip and import it in Files."
+  },
   "errors.wiki.noAccess": {
     "value": "You don't have access to this page."
   },
@@ -32028,6 +32253,9 @@
   },
   "errors.mission.executorOutdated": {
     "value": "Codex on that computer is too old: update it there."
+  },
+  "errors.mission.codexWindows": {
+    "value": "Codex doesn't program missions on Windows yet: choose Claude Code, the agent itself or another computer."
   },
   "errors.mission.invalidExecutor": {
     "value": "Choose who programs: Claude Code, Codex or the agent."
@@ -32406,6 +32634,9 @@
   },
   "errors.vault.csvUnrecognized": {
     "value": "This doesn't look like a passwords file. Export it again as CSV."
+  },
+  "errors.vault.unreadable": {
+    "value": "The saved value can't be read here. Save it again, then move it."
   },
   "errors.vault.requestNotDelivered": {
     "value": "Send it first, then save it to the Vault."
@@ -35433,11 +35664,17 @@
   "audit.change.vault.item_deleted": {
     "value": "Deleted a Vault item"
   },
+  "audit.change.vault.item_moved": {
+    "value": "Moved a Vault item between Personal and Team"
+  },
   "audit.change.vault.item_used": {
     "value": "Used a Vault item"
   },
   "audit.change.vault.imported": {
     "value": "Imported passwords into the Vault"
+  },
+  "audit.change.vault.keys_imported": {
+    "value": "Imported keys into the Vault"
   },
   "audit.change.vault.connection_added": {
     "value": "Connected a password manager to the Vault"
@@ -36181,10 +36418,10 @@
     "value": "Simpler, for you and your family if you invite them. Switching changes only what's in sight."
   },
   "settings.mode.toTeam": {
-    "value": "Switch to team…"
+    "value": "Switch to team"
   },
   "settings.mode.toPersonal": {
-    "value": "Switch to personal…"
+    "value": "Switch to personal"
   },
   "settings.telemetry.title": {
     "value": "Usage statistics"
@@ -37077,6 +37314,9 @@
   "usageViews.agent.estimate": {
     "value": "{{name}}'s part is the stronger stretch of each bar. {{brand}} only tells how much the whole account used, so each agent's part is an estimate from what it spent."
   },
+  "usageViews.agent.estimateShort": {
+    "value": "An estimate."
+  },
   "usageViews.agent.byAccount": {
     "value": "By account, this month"
   },
@@ -37736,6 +37976,9 @@
   "chat.work.refusal.off": {
     "value": "Running commands is off for this agent"
   },
+  "chat.work.refusal.asks": {
+    "value": "This agent asks before every change"
+  },
   "chat.work.refusal.team": {
     "value": "The team already did this"
   },
@@ -37868,6 +38111,9 @@
   "chat.work.step.pcFiles": {
     "value": "Worked on the PC files"
   },
+  "chat.work.step.creatingImage": {
+    "value": "Made an image"
+  },
   "chat.work.step.exportingFile": {
     "value": "Saved a file to the Drive"
   },
@@ -37915,6 +38161,9 @@
   },
   "chat.work.step.cancelingTask": {
     "value": "Canceled a task"
+  },
+  "chat.work.step.keepingRunning": {
+    "value": "Kept a program running"
   },
   "chat.work.step.uploadingArtifact": {
     "value": "Sent a file to the Drive"
@@ -38201,6 +38450,9 @@
   "chat.activity.pcFiles": {
     "value": "working with the PC's files"
   },
+  "chat.activity.creatingImage": {
+    "value": "making an image"
+  },
   "chat.activity.exportingFile": {
     "value": "saving a file to Drive"
   },
@@ -38248,6 +38500,9 @@
   },
   "chat.activity.cancelingTask": {
     "value": "canceling a task"
+  },
+  "chat.activity.keepingRunning": {
+    "value": "keeping a program running"
   },
   "chat.activity.uploadingArtifact": {
     "value": "sending a file to the Drive"
@@ -40614,6 +40869,9 @@
   "deleteAccount.card.button": {
     "value": "Delete account…"
   },
+  "deleteAccount.card.title": {
+    "value": "Delete"
+  },
   "deleteAccount.title": {
     "value": "Delete your whole account?"
   },
@@ -41458,6 +41716,39 @@
   "agentComputer.openAccess": {
     "value": "Open Tools and access"
   },
+  "agentComputer.kept.title": {
+    "value": "Kept running"
+  },
+  "agentComputer.kept.meta": {
+    "value": "{{name}} · since {{since}} · {{until}}"
+  },
+  "agentComputer.kept.untilStops": {
+    "value": "until it stops"
+  },
+  "agentComputer.kept.untilClosed": {
+    "value": "until its browser closes"
+  },
+  "agentComputer.kept.until": {
+    "value": "until {{time}}"
+  },
+  "agentComputer.kept.stop": {
+    "value": "Stop"
+  },
+  "agentComputer.kept.stopOf": {
+    "value": "Stop “{{what}}”"
+  },
+  "agentComputer.kept.actions": {
+    "value": "Actions for “{{what}}”"
+  },
+  "agentComputer.kept.count": {
+    "value": {
+      "one": "Kept running · {{count}}",
+      "other": "Kept running · {{count}}"
+    }
+  },
+  "agentComputer.kept.stopFailed": {
+    "value": "Couldn't stop it. Try again."
+  },
   "agentComputer.phone.now": {
     "value": "Now"
   },
@@ -42067,6 +42358,9 @@
   "widgets.failure.failing": {
     "value": "It failed several times in a row and stopped."
   },
+  "widgets.failure.failingLast": {
+    "value": "It stopped after 5 failures in a row. The last one: {{cause}}"
+  },
   "widgets.failure.stopped": {
     "value": "The update was stopped."
   },
@@ -42222,6 +42516,9 @@
   },
   "widgets.exposure": {
     "value": "Whoever sees the dashboard sees what the agents brought, even without access to the accounts it came from. Agents create dashboards too. To show one to more people than whoever asked, they ask first, in Waiting on you."
+  },
+  "widgets.exposureShort": {
+    "value": "Whoever sees the dashboard sees this data."
   },
   "widgets.panel.caresFor": {
     "value": "{{name}} looks after this widget"
@@ -44083,6 +44380,18 @@
   "feedback.fileTooMany": {
     "value": "One feedback takes up to {{images}} photos and one video."
   },
+  "feedback.attachPhoto": {
+    "value": "Add a photo"
+  },
+  "feedback.photosHint": {
+    "value": "Up to {{images}} photos of {{imageMb}} MB."
+  },
+  "feedback.photoType": {
+    "value": "Only photos can be attached."
+  },
+  "feedback.photosTooMany": {
+    "value": "One feedback takes up to {{images}} photos."
+  },
   "feedback.send": {
     "value": "Send"
   },
@@ -44142,134 +44451,5 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
-  },
-  "vault.env.open": {
-    "value": "Import .env"
-  },
-  "vault.env.title": {
-    "value": "Import keys"
-  },
-  "vault.env.text": {
-    "value": "Takes a .env file, with one NAME=value line per key, or a JSON object of names and values."
-  },
-  "vault.env.paste": {
-    "value": "Or paste its contents here"
-  },
-  "vault.env.review": {
-    "value": "Review"
-  },
-  "vault.env.none": {
-    "value": "No NAME=value line found. Check the file and try again."
-  },
-  "vault.env.tooLarge": {
-    "value": "This file is too large (512 KB at most)."
-  },
-  "vault.env.tooMany": {
-    "value": "Too many keys at once ({{max}} at most). Split the file and import each part."
-  },
-  "vault.env.duplicates": {
-    "value": "Written more than once, the last value counts: {{names}}"
-  },
-  "vault.env.new": {
-    "value": "New"
-  },
-  "vault.env.exists": {
-    "value": "Already saved"
-  },
-  "vault.env.replace": {
-    "value": "Replace"
-  },
-  "vault.env.show": {
-    "value": "Show the value of {{name}}"
-  },
-  "vault.env.hide": {
-    "value": "Hide the value of {{name}}"
-  },
-  "vault.env.problem.name": {
-    "value": "The name must look like ACME_API_KEY"
-  },
-  "vault.env.problem.reserved": {
-    "value": "Reserved name"
-  },
-  "vault.env.problem.empty": {
-    "value": "No value"
-  },
-  "vault.env.problem.tooLarge": {
-    "value": "Value too large"
-  },
-  "vault.move.toTeam": {
-    "value": "Move to Team"
-  },
-  "vault.move.toTeamPersonal": {
-    "value": "Move to Shared"
-  },
-  "vault.move.toPersonal": {
-    "value": "Move to Personal"
-  },
-  "vault.move.title": {
-    "value": "Move {{title}}?"
-  },
-  "vault.move.toTeamText": {
-    "value": "Everyone in the workspace will see this item, and its agents will use it when anyone asks. People who manage the Vault can edit it."
-  },
-  "vault.move.toPersonalText": {
-    "value": "Only you will see and edit this item, and its agents will use it only when you ask. Everyone else stops seeing it."
-  },
-  "vault.move.moved": {
-    "value": "Moved"
-  },
-  "errors.vault.unreadable": {
-    "value": "The saved value can't be read here. Save it again, then move it."
-  },
-  "audit.change.vault.item_moved": {
-    "value": "Moved a Vault item between Personal and Team"
-  },
-  "audit.change.vault.keys_imported": {
-    "value": "Imported keys into the Vault"
-  },
-  "team.map.short": {
-    "value": "Who looks after each agent and where it works."
-  },
-  "routines.webhook.newShort": {
-    "value": "The routine gets an address of its own."
-  },
-  "routines.ownActions.hintShort": {
-    "value": "Every run does these without asking."
-  },
-  "routines.ownActions.noneShort": {
-    "value": "It asks a person before each action."
-  },
-  "audience.agentsToo": {
-    "value": "This covers agents too."
-  },
-  "audience.peopleOnly": {
-    "value": "This covers people only."
-  },
-  "wiki.import.howToLabel": {
-    "value": "How to make the .zip"
-  },
-  "repos.merge.short": {
-    "value": "In these repositories a merge runs with no approval card."
-  },
-  "connectFlow.githubOrgs.short": {
-    "value": "GitHub asks about organizations only the first time."
-  },
-  "database.rule.hiddenExample": {
-    "value": "table.column, like customers.\"Tax ID\""
-  },
-  "mail.toolsShort": {
-    "value": "Choose what agents do with this email."
-  },
-  "mail.addresses.short": {
-    "value": "Agents reply from the address the email was sent to."
-  },
-  "usageViews.agent.estimateShort": {
-    "value": "An estimate."
-  },
-  "deleteAccount.card.title": {
-    "value": "Delete"
-  },
-  "widgets.exposureShort": {
-    "value": "Whoever sees the dashboard sees this data."
   }
 }

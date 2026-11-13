@@ -103,7 +103,7 @@ describe("Connect an AI, the rail's last step", () => {
     const state = madeTeam();
     await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
-    expect(eyebrow()).toBe("Passo 4 de 5");
+    expect(eyebrow()).toBe("Passo 5 de 6");
     expect(heading()).toBe(CONNECT);
     expect(document.querySelector(".onb__steps")?.textContent).toContain("Conectar uma IA");
     for (const name of ["Claude", "ChatGPT", "Outro plano", "Chave de API", "Começar grátis"])
@@ -226,7 +226,7 @@ describe("Connect an AI, the rail's last step", () => {
     const { router } = await renderApp("/onboarding", { api: createFakeApi(state) });
     await settle(16);
     expect(heading()).toBe("Ligue o time");
-    expect(eyebrow()).toBe("Passo 4 de 6");
+    expect(eyebrow()).toBe("Passo 5 de 7");
     const asked = arrivals(router);
     await click(button(/^Ligar depois/), 16);
     await settle(8);

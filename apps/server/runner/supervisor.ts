@@ -165,6 +165,8 @@ export interface WorkerState {
   limits: { maxConcurrentTasks: number; taskMaxSeconds: number; brainIdleMinutes: number; brainMaxProcesses: number };
   /** People watching or controlling its agent's desktop (root's): its Chrome there isn't idle meanwhile. */
   desktopViewers?: number;
+  /** Its agent holds its browser (`keep_running`, ADR 0176): it isn't closed as idle meanwhile. */
+  browserKept?: boolean;
   /** The account its agent thinks with now (null: none): its processes on any other close (`keepAccount`). */
   account?: string | null;
   /** The other accounts it thinks with (the right hand on people's own plans): kept too. */
@@ -384,6 +386,8 @@ export interface SupervisorOptions {
   desktop?: (agent: AgentScope, use: WorkerDesktopUse) => Promise<WorkerDesktop>;
   /** How many people watch or control the agent's desktop (`DesktopSessions.status`). */
   desktopViewers?: (agentId: string) => number;
+  /** The agent holds its browser (`keep_running`, ADR 0176): its worker keeps it open meanwhile. */
+  browserKept?: (agentId: string) => boolean;
   /** The account an agent thinks with now, still on this computer (the agents frame); null: none. */
   account?: (agentId: string) => string | null;
   /** The other accounts it thinks with now (`MachineAgent.accounts`). */
@@ -1280,6 +1284,7 @@ export class Supervisor {
         w.user.networkLauncher || w.user.networkMark ? true : s.privateNetwork === undefined ? undefined : false,
       access: { ...s.access, folders },
       ...(viewers > 0 ? { desktopViewers: viewers } : {}),
+      ...(this.opts.browserKept?.(w.user.id) ? { browserKept: true } : {}),
       ...(this.opts.account ? { account: this.opts.account(w.user.id) } : {}),
       ...(this.opts.accounts?.(w.user.id).length ? { accounts: this.opts.accounts(w.user.id) } : {}),
     };

@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import type { EventEmitter } from "node:events";
 import { constants } from "node:os";
+import path from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import type { MachineReplies } from "@agenteschat/adapters/machine-protocol";
 
@@ -98,13 +99,30 @@ export function shellCommand(command: string): { file: string; args: string[]; v
   return { file: "/bin/sh", args: ["-c", command], verbatim: false };
 }
 
+/** `taskkill` by its full path: a bare name is looked for in the current folder first. */
+export const windowsTaskkill = () =>
+  path.win32.join(process.env.SystemRoot || "C:\\Windows", "System32", "taskkill.exe");
+
 /** Kills the command and everything it started. */
-export function killTree(child: { pid?: number; kill(signal: NodeJS.Signals): unknown }, signal: NodeJS.Signals) {
+export function killTree(
+  child: {
+    pid?: number;
+    exitCode?: number | null;
+    signalCode?: NodeJS.Signals | null;
+    kill(signal: NodeJS.Signals): unknown;
+  },
+  signal: NodeJS.Signals,
+) {
   const pid = child.pid;
   if (pid === undefined) return;
   if (process.platform === "win32") {
+    // Already ended: its pid may be another process's now. (`taskkill /T` follows a tree only while its root lives.)
+    if (typeof child.exitCode === "number" || child.signalCode) return;
     try {
-      const killer = spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+      const killer = spawn(windowsTaskkill(), ["/pid", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
       (killer as unknown as EventEmitter).on("error", () => {});
     } catch {
       // already gone

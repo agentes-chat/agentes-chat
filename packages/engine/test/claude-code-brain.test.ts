@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import {
   ACCOUNTS_PROTOCOL,
+  ASKS_PROTOCOL,
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
   brainTopic,
@@ -324,6 +325,25 @@ test("a plan turn needs a runner that keeps plan to reading (ADR 0053 §3); a wo
   expect(current.calls[0]?.request).toMatchObject({ op: "brain.turn", permissions: { mode: "plan" } });
   const work = await sent(BRAIN_PROFILES_PROTOCOL - 1, "work");
   expect(work.calls[0]?.request).toMatchObject({ op: "brain.turn", permissions: { mode: "work" } });
+});
+
+test("an agent that always asks: a runner that reads the level gets it with a work turn, an older one a turn that only reads", async () => {
+  const sent = async (protocol: number, asks: "always" | "never") => {
+    const pubsub = createMemoryPubSub();
+    const { hub, calls } = fakeHub(pubsub, { status: status({ protocol }) });
+    const brain = createClaudeCodeBrain({
+      hub,
+      pubsub,
+      agentScope: async (t) => ({ id: t.agentId, handle: "dev" }),
+      permissions: async () => ({ mode: "work", branchPrefix: "agentes/dev/", asks }),
+      finalGraceMs: 20,
+    });
+    await collect(brain.run(turn(), io()));
+    return (calls[0]?.request as { permissions?: unknown } | undefined)?.permissions;
+  };
+  expect(await sent(ASKS_PROTOCOL, "always")).toMatchObject({ mode: "work", asks: "always" });
+  expect(await sent(ASKS_PROTOCOL - 1, "always")).toMatchObject({ mode: "plan", asks: "always" });
+  expect(await sent(ASKS_PROTOCOL - 1, "never")).toMatchObject({ mode: "work", asks: "never" });
 });
 
 test("accounts (ADR 0041): the account and effort go to a runner that knows them; a signed-out account ends the turn", async () => {

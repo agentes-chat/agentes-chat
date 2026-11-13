@@ -110,14 +110,13 @@ function KeptAnswer({ message, kept, children }: { message: Message; kept: boole
 }
 
 /**
- * What became of a message sent into a task at work: the reader's face once it read it, else the spinner while it
- * waits for the next pause, the bolt when it stopped to read, a check once handed over, the clock while an approval
- * holds it.
+ * What became of a message sent into a task at work: the double check every read message has once it was read (who
+ * read it is in the mark's description and its popover, never a face in the bubble), else the spinner while it waits
+ * for the next pause, the bolt when it stopped to read, a check once handed over, the clock while an approval holds it.
  */
-function SteerMark({ steer, name, size }: { steer: SteerState; name: string; size: 14 | 16 }) {
-  if (steer.state === "read" || steer.state === "resolved")
-    return <AgentAvatar agentId={steer.agentId} name={name} size="xs" state="idle" />;
-  if (steer.state === "waiting") return <PixelSpinner size={size} />;
+function SteerMark({ steer, size }: { steer: SteerState; size?: 14 }) {
+  if (steer.state === "read" || steer.state === "resolved") return <Icon name="checks" size={size} />;
+  if (steer.state === "waiting") return <PixelSpinner size={size ?? 16} />;
   return <Icon name={steer.state === "now" ? "bolt" : steer.state === "delivered" ? "check" : "waiting"} size={size} />;
 }
 
@@ -129,9 +128,9 @@ function SteerMark({ steer, name, size }: { steer: SteerState; name: string; siz
  * the rule that picked them. The mark is the clock, one tick or two (`receiptTicks`). While the author's own plan
  * picks, and when no agent will answer or every one it was for passed (an agent's reaction counts as acting), "Chamar
  * um agente" is in its popover: never a line in the timeline, which read as wrong beside an agent's reaction. A
- * message sent into a task at work wears what became of it there instead of the check ("Ada leu" is Ada's face), the
- * words said to screen readers as they change. Words only for what you can act on (a failure, no AI connected) or
- * what nobody can (the AI provider is down, it retries by itself; the plan or budget has to renew): then the whole
+ * message sent into a task at work wears what became of it there instead of the check ("Ada leu" is the double check,
+ * said in its description), the words said to screen readers as they change. Words only for what you can act on (a
+ * failure, no AI connected) or what nobody can (the AI provider is down, it retries by itself; the plan or budget has to renew): then the whole
  * receipt is a line under the message (`part="line"`), so the text still follows the name.
  */
 export function MessageReceipts({ message, part }: { message: Message; part: "check" | "line" }) {
@@ -238,8 +237,9 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
           data-steer={steered?.steer.state}
         >
           {steered ? (
-            // Keyed by the state: each new mark swaps in.
-            <SteerMark key={steered.steer.state} steer={steered.steer} name={steered.name} size={16} />
+            // Keyed by the state: each new mark swaps in. No size of its own: the receipt's CSS sizes it as it sizes
+            // the plain check (smaller in a bubble), so the two never differ.
+            <SteerMark key={steered.steer.state} steer={steered.steer} />
           ) : (
             <Icon name={held && status?.kind === "no_ai" ? "waiting" : receiptIcon(view, receipt)} />
           )}
@@ -271,7 +271,7 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
       )}
       {steered && (
         <div className="who-by ac-iconline">
-          <SteerMark steer={steered.steer} name={steered.name} size={14} />
+          <SteerMark steer={steered.steer} size={14} />
           <span>{steered.text}</span>
         </div>
       )}

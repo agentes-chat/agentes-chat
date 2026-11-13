@@ -1752,6 +1752,27 @@ test("a worker's word that its Chrome is in use on the desktop holds a while; it
   expect(t.sup.onDesktopInUse(ANA.id)).toBe(false);
 });
 
+test("a worker hears that its agent holds its browser (keep_running), and no other worker does", async () => {
+  const kept = new Set<string>();
+  const t = setup({ browserKept: (agentId) => kept.has(agentId) });
+  t.sup.boot();
+  t.sup.attach();
+  void handleRequest(t.ctx, exec(ANA), scope().scope).catch(() => undefined);
+  await waitFor(() => t.workers.length === 1);
+  const ana = t.last(ANA.id);
+  ana.hello();
+  await requestOn(ana);
+  kept.add(ANA.id);
+  kept.add(BIA.id);
+  t.sup.stateChanged();
+  await waitFor(() => ana.of("worker.state").length === 2);
+  expect(ana.of("worker.state")[1]).toEqual({ type: "worker.state", ...STATE, browserKept: true });
+  kept.clear();
+  t.sup.stateChanged();
+  await waitFor(() => ana.of("worker.state").length === 3);
+  expect(ana.of("worker.state")[2]).toEqual({ type: "worker.state", ...STATE });
+});
+
 /** A real worker (`runWorker`) on the other end of in-memory pipes; `at`: the homes of an earlier supervisor (a restart). */
 function realWorkers(over: Partial<SupervisorOptions> = {}, at?: { home: string; agentHome: string; ownHome: string }) {
   const agentHome = at?.agentHome ?? tempDir("agent-home-");

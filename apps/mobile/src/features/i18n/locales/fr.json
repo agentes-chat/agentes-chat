@@ -1439,7 +1439,6 @@
     "uses_many": "Utilisé {{count}} fois",
     "uses_other": "Utilisé {{count}} fois",
     "confirmed": "Confirmé par une personne",
-    "unconfirmed": "Pas encore confirmé",
     "confirm": "Confirmer",
     "confirmedToast": "Confirmée",
     "details": "Détails techniques",
@@ -1657,9 +1656,9 @@
         "setup": "Configuration de l'espace de travail",
         "desktop": "Écran de l'ordinateur"
       },
-      "asksYou": "Fusionner et publier demandent toujours votre approbation, quel que soit le niveau.",
-      "asksOwner": "Fusionner et publier demandent toujours l'approbation de {{name}}, quel que soit le niveau.",
-      "asksAdmins": "Fusionner et publier demandent toujours l'approbation d'un admin, quel que soit le niveau.",
+      "asksYou": "Fusionner et publier demandent votre approbation, sauf si l'agent ne demande jamais.",
+      "asksOwner": "Fusionner et publier demandent l'approbation de {{name}}, sauf si l'agent ne demande jamais.",
+      "asksAdmins": "Fusionner et publier demandent l'approbation d'un admin, sauf si l'agent ne demande jamais.",
       "empty": "Pour l'instant, seulement la conversation."
     }
   },

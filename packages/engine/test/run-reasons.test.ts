@@ -30,6 +30,8 @@ test("a failed run's reason: a CLI's failed turn is its CLI's, the computer's ow
   expect(runErrorDetail("bad_request")).toEqual({ errorCode: "run.our_error" });
   expect(routineFailureCode("timeout")).toBe("computer_timeout");
   expect(runErrorDetail("account_missing")).toEqual({ errorCode: "run.account_missing" });
+  // A Codex turn on a Windows computer where MXC can't hold its commands: its own words, never the bare code.
+  expect(runErrorDetail("windows_sandbox")).toEqual({ errorCode: "run.windows_sandbox" });
   expect(routineFailureCode("account_missing")).toBe("account_missing");
   for (const error of ["Stopped after an error: duplicate key value", "Stopped after an error that kept repeating."]) {
     expect(runErrorDetail(error)).toEqual({ errorCode: "run.our_error" });

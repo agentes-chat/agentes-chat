@@ -889,3 +889,38 @@ html:not([data-pointer]) .onb__logo:focus-visible {
     animation: none;
   }
 }
+
+/*
+ * The person's own step (ADR 0162, amended 2026-11-12): their face beside its label and its two ways in. The label's
+ * capitals start on the face's top (`.ac-captop` lifts its 18px line by half less its caps), and the face is as tall as
+ * the label and the buttons together, so its foot meets the buttons': half the label's line, its caps, the gap and a
+ * button. The face is measured in the label's 13px, so `--cap-top` is the label's; its initials keep their own size.
+ */
+.onb-you {
+  --onb-you-face: calc(9px + var(--cap-top) + var(--space-2) + var(--control-h-md));
+  display: flex;
+  /* Where the two buttons don't fit beside the face (a phone), the label and the buttons go under it, full width. */
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.onb-you__face.ac-avatar {
+  flex: none;
+  width: var(--onb-you-face);
+  height: var(--onb-you-face);
+  font-size: 13px;
+}
+.onb-you__face .ac-avatar__initials {
+  font-size: 24px;
+}
+.onb-you__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.onb-you__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

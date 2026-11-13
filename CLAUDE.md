@@ -17,7 +17,7 @@ Licensing: AGPL-3.0-only for everything public, contributions under the same lic
 - Provider credentials live at the organization level, encrypted; an agent points at one (or at the platform key).
 - Router: a cheap, fixed model decides who answers (0 to 2 agents). It never grants permissions.
 - Connectors in two layers: the organization connects an MCP server once; each agent gets a subset of its scopes.
-- Sensitive actions (merge, deploy, rollback) always become a human approval request in the chat.
+- Sensitive actions (merge, deploy, rollback) become a human approval request in the chat, except for an agent whose Approvals are set to "Nunca perguntar" (Never ask), which asks for nothing, and for a kind of action a person approved for good with "Aprovar sempre" (ADR 0173).
 - Issues, Drive (reports, org chart, tables, diffs) and routines through scheduled jobs.
 
 ## Non-negotiables

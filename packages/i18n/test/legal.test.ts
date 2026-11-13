@@ -19,16 +19,15 @@ describe("legal pages", () => {
   }
 });
 
-describe("the privacy policy names Cloudflare where Workspace Content goes and where it is handled", () => {
-  // agentes.chat Cloud is behind Cloudflare, which decrypts its traffic at the data center nearest to each device:
+describe("the privacy policy says where Workspace Content passes through our network provider", () => {
+  // agentes.chat Cloud is behind a network provider that decrypts its traffic at the data center nearest to each device:
   // the list of where Workspace Content leaves our servers ("and only in them") and the countries of §9 must say so.
-  for (const [locale, doc] of Object.entries(legalDocuments.privacy)) {
-    test(locale, () => {
-      const section = (id: string) => JSON.stringify(doc.sections.find((s) => s.id === id)?.blocks);
-      expect(section("agents")).toContain("Cloudflare");
-      expect(section("transfers")).toContain("Cloudflare");
-    });
-  }
+  // Product decision: the legal pages name no infrastructure provider (network, hosting), in any language.
+  test("en", () => {
+    const section = (id: string) => JSON.stringify(legalDocuments.privacy.en.sections.find((s) => s.id === id)?.blocks);
+    expect(section("agents")).toContain("our network provider");
+    expect(section("transfers")).toContain("our network provider");
+  });
 });
 
 describe("agentes.chat Cloud's restriction lines cite the Terms this server serves", () => {

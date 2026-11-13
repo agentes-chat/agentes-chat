@@ -42,6 +42,7 @@ import { SetupWait, useWaitReader } from "../WorkspaceComputer";
 import { CantShowCover, ScreenNotice, Stage } from "./covers";
 import { type AgentComputerView, useAgentComputer } from "./facts";
 import { DialogHead, DialogHeadContext, type DialogHeadSlots, type KeptPicture } from "./head";
+import { KeptRunningButton } from "./KeptRunning";
 import { OpenComputerContext, OpenedComputerContext, useOpenComputer } from "./open";
 import "./computer.css";
 
@@ -230,7 +231,13 @@ export function ComputerDialog({ agent, open, onClose }: { agent: Agent; open: b
           <span ref={setSub} className="cmp-sub" hidden={said !== null} />
         </>
       }
-      actions={<span ref={setActs} className="cmp-acts ac-acts" />}
+      actions={
+        <>
+          {/* What the agent keeps running there (ADR 0176), whatever the stage shows. */}
+          {view.ready && !view.forbidden && <KeptRunningButton agentId={agent.id} />}
+          <span ref={setActs} className="cmp-acts ac-acts" />
+        </>
+      }
       closeLabel={t("common.close")}
       width={1280}
       className={cx(

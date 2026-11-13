@@ -1002,6 +1002,10 @@ html:not([data-pointer]) .thread-line:focus-visible {
 .thread-panel--wide .agp-tabs .ac-tabs {
   padding-right: 48px;
 }
+/* A page header's title (PageHeader) starts at the ×'s height: a long one wraps 8px before it, not under it. */
+.thread-panel--wide .ac-pagehead__title {
+  padding-inline-end: calc(var(--control-h-sm) + var(--space-2));
+}
 /* Under the panel the whole window dims like under a dialog (`--scrim`, so both read the same in each theme), the
    sidebar too, and a click there closes the panel. */
 .thread-panel__scrim {

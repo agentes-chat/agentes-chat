@@ -375,7 +375,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "La mémoire ne donne aucune permission",
         blocks: [
-          "Rien dans la mémoire ne permet à un agent d’en faire plus. Ce qu’il peut faire reste dans ses **Outils et accès**, et les actions sensibles demandent toujours une approbation.",
+          "Rien dans la mémoire ne permet à un agent d’en faire plus. Ce qu’il peut faire reste dans ses **Outils et accès**.",
         ],
       },
       {
@@ -395,7 +395,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Ce qui demande d’abord",
         blocks: [
-          "Quand un agent veut fusionner, déployer, revenir en arrière, envoyer quelque chose à l’extérieur ou supprimer des données, il demande d’abord, quels que soient ses accès. La demande apparaît dans **Approbations** et dans la conversation, avec l’action exacte et sa raison.",
+          "Quand un agent veut fusionner, déployer, revenir en arrière, envoyer quelque chose à l’extérieur ou supprimer des données, il demande d’abord. C’est le niveau **Seulement ce qui est risqué**, celui de tout nouvel agent. Sur la page de l’agent, dans **Approbations**, **Toujours demander** le fait demander avant de modifier quoi que ce soit, et avec **Ne jamais demander** il ne demande rien, même pour fusionner, déployer, payer ou dans une routine. La demande apparaît dans **Approbations** et dans la conversation, avec l’action exacte et sa raison.",
         ],
       },
       {
@@ -403,7 +403,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Une fois, ou toujours",
         blocks: [
           "Approuver couvre une action exacte, avec ses valeurs. Si l’agent change quoi que ce soit, il redemande.",
-          "**Toujours approuver** laisse l’agent faire ce type d’action à partir de maintenant, avec n’importe quelles valeurs, sans demander. Sur la demande d’une routine, **Toujours dans cette routine** fait de même pour cette routine seulement. Aucun des deux n’est proposé pour un merge, un déploiement, un retour arrière et autres. Pour annuler, allez dans **Outils et accès** sur la page de l’agent, ou dans les réglages de la routine.",
+          "**Toujours approuver** laisse l’agent faire ce type d’action à partir de maintenant, avec n’importe quelles valeurs, sans demander. Sur la demande d’une routine, **Toujours dans cette routine** fait de même pour cette routine seulement. **Toujours approuver** est proposé pour tout type d’action, merge et déploiement compris, tant que l’agent est au niveau **Seulement ce qui est risqué**. **Toujours dans cette routine** n’est pas proposé pour un merge, un déploiement, un retour arrière et autres. Pour annuler, allez dans **Outils et accès** sur la page de l’agent, ou dans les réglages de la routine.",
         ],
       },
       {

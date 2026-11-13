@@ -61,6 +61,7 @@ import {
 import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { RunnerError } from "./errors";
+import { killTree } from "./exec";
 import { cliSpawn } from "./executors";
 import { withFullAccessNote } from "./full-access";
 import { HARDENED_GIT_ARGS } from "./git-guard";
@@ -75,6 +76,7 @@ import {
   missionBranchPrefix,
   newMcpToken,
   redactDeep,
+  turnAsks,
 } from "./mcp";
 import { isInside, resolveForAgent } from "./paths";
 import { resetIso } from "./plan-usage";
@@ -860,11 +862,13 @@ export function repoInstructions(cwd: string): string {
  * of Claude Code's own tools (`--tools ""`, each one denied too), no settings files, skills or slash commands, no
  * permission prompt (`dontAsk`: whatever isn't allowed is refused), whatever `personalMcp` says.
  * `delegated`: the same `plan` and `work` for a CLI whose tools the agent's worker serves.
+ * `asksFirst`: the agent always asks (ADR 0173), so a `work` turn accepts no edit by itself: each reaches the prompt.
  */
 export function brainProfileLaunch(
   mode: "plan" | "work" | "chat",
   personalMcp: boolean,
   delegated = false,
+  asksFirst = false,
 ): Pick<
   ClaudeLaunch,
   | "strictMcp"
@@ -890,7 +894,7 @@ export function brainProfileLaunch(
     return {
       strictMcp: true,
       promptTool: true,
-      permissionMode: mode === "plan" ? "default" : "acceptEdits",
+      permissionMode: mode === "plan" || asksFirst ? "default" : "acceptEdits",
       settingSources: "",
       builtinTools: DELEGATED_BUILTIN_TOOLS,
       noSlashCommands: true,
@@ -908,7 +912,7 @@ export function brainProfileLaunch(
   return {
     strictMcp: !personalMcp,
     promptTool: true,
-    permissionMode: "acceptEdits",
+    permissionMode: asksFirst ? "default" : "acceptEdits",
     // With the owner's own MCP servers the owner's settings stay, and so does every tool of Claude Code but the web.
     ...(personalMcp
       ? { disallowedTools: WEB_BUILTIN_TOOLS }
@@ -1030,12 +1034,14 @@ export class ClaudeProcess {
     /** A token root handed over, on its own descriptor (`TOKEN_FD_ENV`). */
     token?: string,
   ) {
-    // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, cmd.exe
-    // with every argument quoted (an empty `--setting-sources` stays one).
+    // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, found on
+    // the PATH (never in the agent's folder), a launcher through cmd.exe with every argument quoted (an empty
+    // `--setting-sources` stays one).
     const run = cliSpawn(command.length ? command : ["claude"], args, env.PATH);
+    const runEnv = run.env ? { ...env, ...run.env } : env;
     this.child = start(run.file, run.args, {
       cwd,
-      env: token ? { ...env, ...TOKEN_FD_ENV } : env,
+      env: token ? { ...runEnv, ...TOKEN_FD_ENV } : runEnv,
       stdio: token ? [...TOKEN_STDIO] : ["pipe", "pipe", "pipe"],
       windowsHide: true,
       windowsVerbatimArguments: run.windowsVerbatimArguments,
@@ -1092,8 +1098,17 @@ export class ClaudeProcess {
     if (this.breach) return;
     this.breach = reason;
     try {
-      this.child.kill("SIGKILL");
+      this.end("SIGKILL");
     } catch {}
+  }
+
+  /**
+   * Ends Claude Code. On Windows its whole tree: started through cmd.exe (npm's `claude.cmd`), killing the child alone
+   * would leave Claude Code running the turn.
+   */
+  private end(signal: NodeJS.Signals) {
+    if (process.platform === "win32") killTree(this.child, signal);
+    else this.child.kill(signal);
   }
 
   private refuseControl(line: string) {
@@ -1232,12 +1247,12 @@ export class ClaudeProcess {
   kill() {
     if (this.exited) return;
     try {
-      this.child.kill("SIGTERM");
+      this.end("SIGTERM");
     } catch {}
     const t = setTimeout(() => {
       if (!this.exited) {
         try {
-          this.child.kill("SIGKILL");
+          this.end("SIGKILL");
         } catch {}
       }
     }, 3000);
@@ -2204,9 +2219,10 @@ export class BrainManager {
     const fileMode = delegated ? 0o640 : 0o600;
     const systemFile = path.join(dir, "system.txt");
     const mode = req.permissions?.mode === "plan" || req.permissions?.mode === "chat" ? req.permissions.mode : "work";
-    const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined);
-    // A work turn on a computer with full access is told so (`full-access.ts`).
-    const system = withFullAccessNote(typeof req.system === "string" ? req.system : "", mode === "work");
+    const asks = mode === "work" ? turnAsks(req.permissions?.asks) : undefined;
+    const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined, asks === "always");
+    // A work turn on a computer with full access is told so (`full-access.ts`), unless its agent always asks.
+    const system = withFullAccessNote(typeof req.system === "string" ? req.system : "", mode === "work" && asks !== "always");
     const ranKey = ranKeyOf(req, session);
     // A `chat` turn reads nothing of the folder, its CLAUDE.md included.
     const withRepo = launch.settingSources === "" && mode !== "chat";
@@ -2279,6 +2295,7 @@ export class BrainManager {
         profile: mode === "work" ? "work" : "plan",
         branches: [...branches],
         allow,
+        ...(asks ? { asks } : {}),
         ...(mode === "chat" ? { chat: true } : {}),
         ...(delegated.task ? { task: delegated.task.kind } : {}),
         ...(persistent ? {} : { oneShot: true as const }),
@@ -2308,6 +2325,7 @@ export class BrainManager {
             ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}),
             // Its own branches: a push there needs nobody (ADR 0053 §3).
             branches,
+            ...(asks ? { asks } : {}),
           }),
         ),
         { mode: 0o600 },
@@ -2336,7 +2354,11 @@ export class BrainManager {
                 allow,
                 undefined,
                 // Every command reaches our prompt tool: plain reads pass there at once, secrets never.
-                { promptReads: true, ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}) },
+                {
+                  promptReads: true,
+                  ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}),
+                  ...(asks === "always" ? { asksFirst: true } : {}),
+                },
               ),
               // With the owner's own settings loaded (`personalMcp`), theirs decide the computer's own sign-in.
               ...(ctx.accountHome

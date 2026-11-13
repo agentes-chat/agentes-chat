@@ -52,6 +52,11 @@ describe("a receipt never changes a message's height", () => {
       said("p1", "Bom dia.", 20),
       said("j3", "Sobre o quê?", 19.8, { author: { type: "person", id: "u-joao" } }),
       said("p2", "Sobre a reunião.", 19.5),
+      said("j4", "Certo.", 19),
+      // An ordinary message Ada read and answered: the plain double check the read mark must equal.
+      said("p3", "Obrigado.", 18.5, {
+        receipts: { seenBy: [ADA_ID], pickedBy: [], handled: [{ agentId: ADA_ID, runId: "r0", status: "done" }] },
+      }),
     ];
     await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
     await settle(8);
@@ -72,13 +77,25 @@ describe("a receipt never changes a message's height", () => {
     const waiting = row("s1").querySelector(".ac-msg__own-foot .ac-receipt__check");
     expect(waiting?.getAttribute("data-steer")).toBe("waiting");
     expect(waiting?.querySelector("canvas.ac-pixspin")).not.toBeNull();
-    // Read: Ada's face, in the same place.
+    // Read: the double check every read message has, in the same place and size, and no face in the bubble. Who
+    // read it is in the mark's words.
     const read = row("s2").querySelector(".ac-msg__own-foot .ac-receipt__check");
     expect(read?.getAttribute("data-steer")).toBe("read");
-    expect(read?.querySelector(".ac-avatar")).not.toBeNull();
+    expect(read?.querySelector(".ac-avatar")).toBeNull();
+    const says = [
+      read?.getAttribute("aria-label"),
+      document.getElementById(read?.getAttribute("aria-describedby") ?? "")?.textContent,
+    ];
+    expect(says).toContain("Ada leu");
+    // The same drawing and no size of its own (an inline size would beat the CSS that sizes the plain check).
+    const plain = row("p3").querySelector(".ac-msg__own-foot .ac-receipt__check");
+    expect(plain?.querySelector("svg")).not.toBeNull();
+    expect(read?.querySelector("svg")?.outerHTML).toBe(plain?.querySelector("svg")?.outerHTML as string);
+    expect(read?.querySelector("svg")?.getAttribute("style")).toBeNull();
+    expect(read?.querySelectorAll("svg.ac-icon")).toHaveLength(1);
     // Nothing under the text: the same parts as the messages beside them that no task read.
     expect(parts("s1")).toEqual(parts("p1"));
-    expect(parts("s2")).toEqual(parts("p2"));
+    expect(parts("s2")).toEqual(parts("p3"));
     expect(document.querySelector(".msg-steer")).toBeNull();
   });
 

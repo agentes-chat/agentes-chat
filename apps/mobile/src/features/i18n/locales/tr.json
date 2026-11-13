@@ -1362,7 +1362,6 @@
     "uses_one": "{{count}} kez kullanıldı",
     "uses_other": "{{count}} kez kullanıldı",
     "confirmed": "Bir kişi tarafından onaylandı",
-    "unconfirmed": "Henüz onaylanmadı",
     "confirm": "Onayla",
     "confirmedToast": "Onaylandı",
     "details": "Teknik ayrıntılar",
@@ -1575,9 +1574,9 @@
         "setup": "Çalışma alanı kurulumu",
         "desktop": "Bilgisayar ekranı"
       },
-      "asksYou": "Birleştirme ve yayınlama, hangi düzeyde olursa olsun her zaman onayınızı ister.",
-      "asksOwner": "Birleştirme ve yayınlama, hangi düzeyde olursa olsun her zaman {{name}} kişisinin onayını ister.",
-      "asksAdmins": "Birleştirme ve yayınlama, hangi düzeyde olursa olsun her zaman bir yöneticinin onayını ister.",
+      "asksYou": "Birleştirme ve yayınlama, ajan hiç sormayacak şekilde ayarlanmadıkça onayınızı ister.",
+      "asksOwner": "Birleştirme ve yayınlama, ajan hiç sormayacak şekilde ayarlanmadıkça {{name}} kişisinin onayını ister.",
+      "asksAdmins": "Birleştirme ve yayınlama, ajan hiç sormayacak şekilde ayarlanmadıkça bir yöneticinin onayını ister.",
       "empty": "Şimdilik yalnızca sohbet."
     }
   },

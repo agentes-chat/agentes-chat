@@ -700,6 +700,7 @@
       "steps": {
         "name": "Name des Workspace",
         "business": "Was ihr macht",
+        "you": "Über dich",
         "team": "Dein Team",
         "plan": "Team einschalten",
         "ai": "KI verbinden",
@@ -718,8 +719,8 @@
         "teamMadePersonal": "Deine Agenten sind schon da. Wir machen weiter, wann immer du bereit bist.",
         "plan": "Nach dem Tarif fehlt nur noch eine KI. Ich zeige dir, wo.",
         "planThen": "Sobald der Tarif läuft, verbindest du auf dem nächsten Bildschirm deine KI.",
-        "area": "Noch eine letzte Frage vor dem Team.",
-        "areaPersonal": "Noch eine letzte Frage vor deinen Agenten.",
+        "you": "Vor dem Team ein bisschen über dich.",
+        "youPersonal": "Vor deinen Agenten ein bisschen über dich.",
         "ask": "Du hast schon ein Team woanders? Ich hole es komplett hierher.",
         "start": "Ich habe ein Team, das zu dem passt, was ihr macht. Oder wir fangen zu zweit an.",
         "askPersonal": "Du nutzt schon Agenten woanders? Ich hole sie alle hierher.",
@@ -737,10 +738,18 @@
         "people": "Jetzt die Leute. Gib mir ihre E-Mail-Adressen, und ich schicke die Einladungen.",
         "peopleLink": "Jetzt die Leute. Schick ihnen den Link, und ich zeige dir jede Anfrage."
       },
+      "you": {
+        "title": "Jetzt zu dir",
+        "lead": "Dein Name und dein Foto erscheinen für das Team und die Agenten.",
+        "leadPersonal": "Dein Name und dein Foto erscheinen für deine Agenten.",
+        "photo": "Dein Foto",
+        "build": "Avatar erstellen",
+        "edit": "Avatar bearbeiten",
+        "upload": "Foto hochladen",
+        "area": "Woran arbeitest du?",
+        "areaHint": "Optional. Nur damit wir wissen, wer agentes.chat nutzt."
+      },
       "area": {
-        "title": "Und du, woran arbeitest du?",
-        "lead": "Nur damit wir wissen, wer agentes.chat nutzt.",
-        "skip": "Diesen Schritt überspringen",
         "options": {
           "dev": "Entwicklung",
           "marketing": "Marketing",
@@ -1962,6 +1971,7 @@
     },
     "map": {
       "lead": "Wer sich um die Agenten kümmert, in welchen Kanälen sie sind, was jeder selbstständig macht und was auf eine Person wartet. Gestrichelte Linien verbinden Agenten, die sich am letzten Tag um Hilfe gebeten haben.",
+      "short": "Wer sich um jeden Agenten kümmert und wo er arbeitet.",
       "lodi": "Organisiert das Team mit dir",
       "hint": "Zieh einen Agenten in einen anderen Kanal und {{name}} bereitet die Änderung vor, die du anwendest",
       "proposed": "{{name}} hat die Änderung in deiner Unterhaltung vorbereitet. Wende sie dort an.",
@@ -1978,8 +1988,7 @@
       "emptyViewer": "Wer die Agenten verwaltet, fügt sie zu Kanälen hinzu, und die Karte erscheint hier.",
       "others": "Andere Kanäle",
       "band": "Supervisoren",
-      "reportsTo": "Berichtet an {{name}}",
-      "short": "Wer sich um jeden Agenten kümmert und wo er arbeitet."
+      "reportsTo": "Berichtet an {{name}}"
     },
     "sectors": {
       "lead": "Jede Abteilung hat eine Leitung, eine Vertretung, ihre Agenten und deren Kanäle und Routinen.",
@@ -2217,15 +2226,15 @@
     "sendCorrection": "Korrektur senden",
     "correctionSent": "Korrektur gesendet. {{name}} lernt daraus.",
     "sending": "wird gesendet…",
+    "notSentWhy": "Nicht gesendet. {{why}}",
+    "notSentUnknown": "Etwas ist schiefgelaufen.",
+    "editSend": "Bearbeiten",
     "tooLong": {
       "text": "Die Nachricht hat {{length}} Zeichen, das Limit liegt bei {{max}}.",
       "fix": "Sende den Text als Datei.",
       "asFile": "Als Datei senden",
       "fileName": "nachricht.txt"
     },
-    "notSentWhy": "Nicht gesendet. {{why}}",
-    "notSentUnknown": "Etwas ist schiefgelaufen.",
-    "editSend": "Bearbeiten",
     "long": {
       "more": "Mehr anzeigen",
       "title": "Nachricht von {{name}}"
@@ -2361,7 +2370,7 @@
     "profile": {
       "how": "So funktioniert es",
       "permissions": "Handelt mit deinen Berechtigungen",
-      "private": "Spricht nur mit dir in deiner DM",
+      "private": "Behält, was dir gehört, in deiner DM",
       "channels": "Antwortet in Kanälen, wenn man ihn ruft",
       "model": "Modell",
       "message": "Nachricht",
@@ -2388,6 +2397,8 @@
       "planOwner": "Konto von {{owner}}",
       "planName": "{{name}}-Abo",
       "mine": "Deine KI",
+      "mineTitle": "Wer für {{name}} denkt, wenn du schreibst",
+      "mineOnly": "Gilt nur für dein Gespräch mit {{name}}.",
       "mineHelp": "Dein Gespräch mit {{name}} denkt mit deinem Abo oder einem, das mit dir geteilt wurde, und nur deins.",
       "connectMine": "Mein Abo verbinden",
       "useWorkspace": "Die des Workspace nutzen",
@@ -2405,6 +2416,8 @@
       "fallbackYours": "Ohne anderes Abo nutzt es das des Workspace, das dir gehört.",
       "fallbackNone": "Ohne eigenes Abo kann {{name}} dir nicht antworten: Das Abo des Workspace antwortet nur {{owner}}.",
       "workspace": "KI für alle ohne eigenes Abo",
+      "workspaceTitle": "Wer im Workspace für {{name}} denkt",
+      "workspaceOnly": "Gilt für alle ohne eigenes Abo.",
       "workspaceHelp": "Wer kein eigenes Abo hat, spricht über diese KI mit {{name}}.",
       "noPlans": "Verbinde unter KI und Verbrauch ein Abo, um es hier zu nutzen.",
       "lend": "Dieses Abo an alle ohne eigenes verleihen",
@@ -2986,7 +2999,7 @@
     "lead": "Wann {{name}} vor dem Handeln eine Person fragt.",
     "always": {
       "title": "Immer fragen",
-      "text": "Fragt, bevor in einer App etwas geändert wird."
+      "text": "Fragt vor jeder Änderung, hier, auf seinem Computer oder in einer App."
     },
     "risky": {
       "title": "Nur Riskantes",
@@ -2994,7 +3007,7 @@
     },
     "never": {
       "title": "Nie fragen",
-      "text": "Fragt weiterhin bei Merge, Deploy und Rollback."
+      "text": "Fragt nie, auch nicht bei Merge, Deploy, Zahlungen und Routinen."
     }
   },
   "brakes": {
@@ -3990,6 +4003,37 @@
       "another": "Andere Datei wählen",
       "close": "Fertig"
     },
+    "env": {
+      "open": ".env importieren",
+      "title": "Schlüssel importieren",
+      "text": "Nimmt eine .env-Datei mit einer Zeile NAME=Wert pro Schlüssel oder ein JSON mit Namen und Werten.",
+      "paste": "Oder füg den Inhalt hier ein",
+      "review": "Prüfen",
+      "none": "Keine Zeile NAME=Wert gefunden. Prüf die Datei und versuch es noch einmal.",
+      "tooLarge": "Diese Datei ist zu groß (höchstens 512 KB).",
+      "tooMany": "Zu viele Schlüssel auf einmal (höchstens {{max}}). Teil die Datei und importier jeden Teil.",
+      "duplicates": "Mehrfach in der Datei, der letzte Wert zählt: {{names}}",
+      "new": "Neu",
+      "exists": "Schon gespeichert",
+      "replace": "Ersetzen",
+      "show": "Wert von {{name}} anzeigen",
+      "hide": "Wert von {{name}} verbergen",
+      "problem": {
+        "name": "Der Name muss wie ACME_API_KEY aussehen",
+        "reserved": "Reservierter Name",
+        "empty": "Kein Wert",
+        "tooLarge": "Wert zu groß"
+      }
+    },
+    "move": {
+      "toTeam": "Zu Team verschieben",
+      "toTeamPersonal": "Zu Geteilt verschieben",
+      "toPersonal": "Zu Persönlich verschieben",
+      "title": "{{title}} verschieben?",
+      "toTeamText": "Alle im Workspace sehen diesen Eintrag, und seine Agenten verwenden ihn, wenn jemand darum bittet. Wer den Vault verwaltet, kann ihn bearbeiten.",
+      "toPersonalText": "Nur du siehst und bearbeitest diesen Eintrag, und seine Agenten verwenden ihn nur, wenn du darum bittest. Alle anderen sehen ihn nicht mehr.",
+      "moved": "Verschoben"
+    },
     "connections": {
       "none": "Hier lässt sich kein Passwort-Manager verbinden.",
       "lead": "Deine Agenten verwenden die {{kinds}}, die du in {{name}} aufbewahrst.",
@@ -4115,37 +4159,6 @@
       "codeShort_one": "Gib die Ziffer ein.",
       "codeShort_other": "Gib alle {{count}} Ziffern ein.",
       "codeWhere": "Nur der Browser von {{agent}} gibt es ein, auf {{host}}."
-    },
-    "env": {
-      "open": ".env importieren",
-      "title": "Schlüssel importieren",
-      "text": "Nimmt eine .env-Datei mit einer Zeile NAME=Wert pro Schlüssel oder ein JSON mit Namen und Werten.",
-      "paste": "Oder füg den Inhalt hier ein",
-      "review": "Prüfen",
-      "none": "Keine Zeile NAME=Wert gefunden. Prüf die Datei und versuch es noch einmal.",
-      "tooLarge": "Diese Datei ist zu groß (höchstens 512 KB).",
-      "tooMany": "Zu viele Schlüssel auf einmal (höchstens {{max}}). Teil die Datei und importier jeden Teil.",
-      "duplicates": "Mehrfach in der Datei, der letzte Wert zählt: {{names}}",
-      "new": "Neu",
-      "exists": "Schon gespeichert",
-      "replace": "Ersetzen",
-      "show": "Wert von {{name}} anzeigen",
-      "hide": "Wert von {{name}} verbergen",
-      "problem": {
-        "name": "Der Name muss wie ACME_API_KEY aussehen",
-        "reserved": "Reservierter Name",
-        "empty": "Kein Wert",
-        "tooLarge": "Wert zu groß"
-      }
-    },
-    "move": {
-      "toTeam": "Zu Team verschieben",
-      "toTeamPersonal": "Zu Geteilt verschieben",
-      "toPersonal": "Zu Persönlich verschieben",
-      "title": "{{title}} verschieben?",
-      "toTeamText": "Alle im Workspace sehen diesen Eintrag, und seine Agenten verwenden ihn, wenn jemand darum bittet. Wer den Vault verwaltet, kann ihn bearbeiten.",
-      "toPersonalText": "Nur du siehst und bearbeitest diesen Eintrag, und seine Agenten verwenden ihn nur, wenn du darum bittest. Alle anderen sehen ihn nicht mehr.",
-      "moved": "Verschoben"
     }
   },
   "question": {
@@ -5392,13 +5405,10 @@
         "on": "Mit Zugriff",
         "ask": "Fragt nach Freigabe"
       },
-      "allConnectors": "Konnektoren:",
-      "onlyRead": "Nur lesen",
+      "setAll": "Alle ändern",
       "connectors": "Konnektoren von {{org}}",
       "connectorsPersonal": "Deine Konnektoren",
-      "oneLevel": "Eine Stufe pro App",
       "builtin": "In agentes integriert",
-      "builtinHelp": "Drive, Aufgaben, Gedächtnis und mehr",
       "noMatch": "Nichts zu „{{q}}“",
       "noneHere": "Nichts in diesem Filter",
       "library": "Skill-Bibliothek",
@@ -5418,6 +5428,7 @@
       "verified_other": "{{count}} bestätigt",
       "lessons": "Lektionen",
       "fromTeam": "vom Team gelernt",
+      "fromTeamRightHand": "von dir gelernt",
       "proposals": "Vorschläge",
       "waiting": "warten auf eine Entscheidung",
       "noneWaiting": "keine warten",
@@ -5441,6 +5452,7 @@
       "saved": "Gespeichert. Es gilt jetzt als bestätigt.",
       "rules": "Regeln von Personen",
       "rulesNote": "Gilt bei aller Arbeit für die Person, die die Regel gegeben hat, egal woher der Auftrag kommt. Regeln des Verantwortlichen oder eines Admins gelten für alle.",
+      "rulesNoteRightHand": "Regeln, die du in deiner DM gibst, gelten nur für dich. Nur du siehst sie.",
       "ruleBy": "Von {{name}} · {{date}}",
       "removeRule": "Entfernen",
       "ruleRemoved": "Regel entfernt. Sie liegt im Archiv, falls du sie zurückwillst.",
@@ -5537,6 +5549,7 @@
         "cli_stopped": "Das Programm {{brain}} wurde mit einem Fehler beendet.",
         "cli_closed": "Das Programm {{brain}} wurde unerwartet beendet.",
         "account_missing": "Das für diesen Agenten gewählte Konto ist nicht mehr auf seinem Computer. Wähl in den Einstellungen des Agenten ein anderes oder füg es erneut hinzu.",
+        "windows_sandbox": "Dieser Windows-Computer kann die Befehle von Codex nicht isolieren: Er braucht Windows 11 24H2 oder neuer.",
         "our_error": "Bei uns ist etwas schiefgelaufen, und die Aufgabe wurde angehalten. Frag gleich noch einmal.",
         "unknown": "Fehlgeschlagen."
       }
@@ -6260,8 +6273,7 @@
     "all": "Alle:",
     "connectorsLabel": "Konnektoren und Stufen",
     "connectOther": "Weitere App verbinden",
-    "opensConnectors": "öffnet Konnektoren",
-    "approvalsNote": "Merge, Deploy und Rollback fragen im Chat immer nach Freigabe.",
+    "approvalsNote": "Merge, Deploy und Rollback fragen im Chat nach Freigabe, außer der Agent fragt nie.",
     "approverOwner": "{{name}} gibt frei.",
     "approverAdmins": "Ein Admin gibt frei.",
     "skillsTitle": "Skills des Workspace",
@@ -6533,8 +6545,8 @@
       "readDesc": "Sieht, was in {{app}} ist. Ändert nichts.",
       "write": "Lesen und schreiben",
       "writeDesc": "Erstellt und bearbeitet auch in {{app}}.",
-      "asks": "{{actions}} fragen immer nach deiner Freigabe, auf jeder Stufe.",
-      "asksAny": "Senden, Löschen und Bezahlen fragen immer nach deiner Freigabe, auf jeder Stufe.",
+      "asks": "{{actions}} fragen nach deiner Freigabe, außer der Agent fragt nie.",
+      "asksAny": "Senden, Löschen und Bezahlen fragen nach deiner Freigabe, außer der Agent fragt nie.",
       "remove": "{{app}} entfernen",
       "done": "Fertig"
     },
@@ -7498,6 +7510,7 @@
       "waiting": "Wartet auf den nächsten Aufruf",
       "every": "Läuft bei jedem Aufruf. Aufrufe, die gleichzeitig ankommen, werden zu einer Ausführung.",
       "newNote": "Die Routine bekommt eine eigene Adresse. Jeder POST dorthin startet den Agenten mit dem, was gesendet wurde. Die Adresse erscheint auf der Seite der Routine, sobald sie gespeichert ist.",
+      "newShort": "Die Routine bekommt eine eigene Adresse.",
       "hidden": "Nur wer die Routine ändern darf, sieht ihre Adresse.",
       "methods": "Akzeptierte Methoden",
       "methodsHelp": "Die Adresse antwortet nur auf die markierten Methoden. Bei GET sind die Query-Parameter der URL die Daten des Aufrufs.",
@@ -7536,8 +7549,7 @@
         "bad_signature": "Abgelehnt: falsche Signatur",
         "too_large": "Abgelehnt: über 256 KB",
         "rate_limited": "Abgelehnt: zu viele Aufrufe pro Minute"
-      },
-      "newShort": "Die Routine bekommt eine eigene Adresse."
+      }
     },
     "setup": {
       "title": "{{provider}}-Webhook",
@@ -7671,6 +7683,15 @@
       "now": "jetzt",
       "lane": "{{name}}: nächste {{when}}",
       "laneNone": "{{name}}: nichts in den nächsten Stunden",
+      "agentRoutines_one": "{{count}} Routine",
+      "agentRoutines_other": "{{count}} Routinen",
+      "andMore": "{{name}} und {{count}} weitere",
+      "pick": "Routinen von {{name}} ansehen",
+      "restLater_one": "{{count}} weiterer Agent läuft später",
+      "restLater_other": "{{count}} weitere Agenten laufen später",
+      "restIdle_one": "{{count}} ohne Lauf in den nächsten {{hours}} Stunden",
+      "restIdle_other": "{{count}} ohne Lauf in den nächsten {{hours}} Stunden",
+      "showAll": "Alle anzeigen",
       "legend": {
         "ok": "geantwortet",
         "silent": "nichts Neues",
@@ -7730,11 +7751,11 @@
       "ownActions": "Macht selbst"
     },
     "ownActions": {
-      "hint": "Jeder Lauf erledigt das in deinen verbundenen Apps, ohne zu fragen. Jede andere Aktion dort fragt zuerst eine Person, und Merge, Deploy und Rollback fragen immer.",
+      "hint": "Jeder Lauf erledigt das in deinen verbundenen Apps, ohne zu fragen. Jede andere Aktion dort fragt zuerst eine Person, außer der Agent fragt nie.",
       "none": "In verbundenen Apps fragt sie vor jeder Aktion eine Person. Damit sie ihre Aufgabe selbst erledigt, sag dem Agenten im Chat, welche Aktionen sie ausführen darf.",
-      "remove": "Wieder vorher fragen: {{action}}",
       "hintShort": "Jeder Lauf erledigt das, ohne zu fragen.",
-      "noneShort": "Sie fragt vor jeder Aktion eine Person."
+      "noneShort": "Sie fragt vor jeder Aktion eine Person.",
+      "remove": "Wieder vorher fragen: {{action}}"
     },
     "ahead": {
       "approved": "Freigegeben · läuft {{when}}",
@@ -8617,7 +8638,7 @@
       "offline": "{{name}} ist offline. Der Plan startet, sobald er wieder da ist.",
       "needsMachine": "Missionen laufen auf einem verbundenen Computer. Verbinde einen mit {{name}} unter Einstellungen › Geräte.",
       "commandHint": "Du kannst auch eine starten, indem du in einer beliebigen Unterhaltung im Eingabefeld tippst:",
-      "approvals": "Merge, Deploy und Rollback fragen immer nach Freigabe",
+      "approvals": "Standardmäßig fragen Merge, Deploy und Rollback nach Freigabe",
       "start": "Mission starten",
       "created": "Mission erstellt: {{name}} stellt den Plan zusammen.",
       "who": "Wer programmiert",
@@ -9709,6 +9730,8 @@
     "section": "Wer schreiben darf",
     "title": "Wer mit {{name}} schreiben darf",
     "notListed": "Personen, die nicht auf der Liste stehen, bekommen keine Antwort.",
+    "agentsToo": "Gilt auch für Agenten.",
+    "peopleOnly": "Gilt nur für Personen.",
     "consultable": "Andere Agenten können {{name}} um Rat fragen",
     "consultableHint": "Personen, die nicht auf der Liste stehen, antwortet er nie direkt, sondern nur dem Agenten, der gefragt hat. Sensible Aktionen brauchen weiterhin die Freigabe der Personen, die sich um ihn kümmern.",
     "consultableHint_female": "Personen, die nicht auf der Liste stehen, antwortet sie nie direkt, sondern nur dem Agenten, der gefragt hat. Sensible Aktionen brauchen weiterhin die Freigabe der Personen, die sich um sie kümmern.",
@@ -9766,9 +9789,7 @@
       "only": "{{name}} antwortet nur {{names}}.",
       "some": "{{name}} antwortet nur einigen Personen.",
       "nobody": "{{name}} antwortet gerade niemandem."
-    },
-    "agentsToo": "Gilt auch für Agenten.",
-    "peopleOnly": "Gilt nur für Personen."
+    }
   },
   "composer": {
     "commands": "Befehle",
@@ -10379,13 +10400,20 @@
     "legend": {
       "people": "Personen",
       "agents": "Agenten",
-      "obsidian": "Obsidian"
+      "imported": "Importiert",
+      "obsidian": "Obsidian",
+      "github": "GitHub",
+      "files": "Importiert"
     },
     "blankPage": "Leere Seite",
     "newPage": "Neue Seite",
     "emptyPage": "Leere Seite. Drück E zum Schreiben.",
     "atRequestOf": "auf Wunsch von",
-    "fromObsidian": "Aus Obsidian",
+    "from": {
+      "obsidian": "Aus Obsidian",
+      "github": "Aus GitHub",
+      "files": "Importiert"
+    },
     "more": "Weitere Aktionen",
     "copyLink": "Link kopieren",
     "linkCopied": "Link kopiert: Füge [[{{title}}]] in jede Seite, Nachricht oder Aufgabe ein.",
@@ -10583,16 +10611,45 @@
       "message": "Zur Seite [[{{title}}]]:"
     },
     "import": {
-      "cta": "Aus Obsidian importieren",
-      "ctaText": "Vault als .zip, Ordner oder .md-Dateien",
+      "cta": "Importieren",
       "short": "Importieren",
-      "title": "Aus Obsidian importieren",
-      "text": "Hol den ganzen Vault: Ordner, Tags, Aliase und [[Links]] funktionieren hier weiter.",
+      "title": "In das Wiki importieren",
+      "text": "Wähle, woher die Notizen kommen.",
+      "titleFrom": {
+        "obsidian": "Aus Obsidian importieren",
+        "github": "Aus GitHub importieren",
+        "files": "Dateien importieren"
+      },
+      "textFrom": {
+        "obsidian": "Hol den ganzen Vault: Ordner, Tags, Aliase und [[Links]] funktionieren hier weiter.",
+        "github": "Die Markdown-Notizen des Repositorys werden zu Seiten, in seinen Ordnern.",
+        "files": "Markdown-Notizen aus jeder App: .md-Dateien, ein Ordner oder eine .zip."
+      },
+      "from": "Woher importieren",
+      "source": {
+        "obsidian": "Obsidian",
+        "github": "GitHub",
+        "files": "Dateien"
+      },
+      "files": {
+        "dropTitle": "Leg die .md-Dateien hier ab",
+        "dropText": "Ein Ordner oder eine .zip mit den Notizen geht auch"
+      },
+      "github": {
+        "label": "GitHub-Link",
+        "help": "Der Link zu einem Repository, einem Ordner oder einer .md-Datei. Markdown-Notizen werden zu Seiten, und die Bilder darin kommen ins Drive. Der Rest des Repositorys bleibt draußen. Ein privates Repository wird über das GitHub des Workspace gelesen.",
+        "read": "Notizen lesen",
+        "error": {
+          "notGithub": "Füge einen Link von github.com ein."
+        }
+      },
+      "anotherLink": "Link wechseln",
       "dropTitle": "Leg die .zip des Vaults hier ab",
       "dropText": "Der Vault-Ordner oder ein paar .md-Dateien gehen auch",
       "pickZip": ".zip oder .md auswählen",
       "pickFolder": "Ordner auswählen",
       "howTo": "So erstellst du die .zip: Im Finder Rechtsklick auf den Vault-Ordner → Komprimieren. Unter Windows Senden an → ZIP-komprimierter Ordner. Der Ordner .obsidian (Plugins und Designs) bleibt außen vor.",
+      "howToLabel": "So erstellst du die .zip",
       "nothingYet": "Nichts kommt hinein, bevor du es geprüft hast.",
       "readingText": "Vorerst nur in deinem Browser. Es wurde noch nichts gesendet.",
       "notesRead": "Notizen gelesen",
@@ -10686,8 +10743,7 @@
         "empty": "Keine .md-Notizen gefunden. Sende die .zip des Vault-Ordners, den Ordner oder .md-Dateien.",
         "too_big": "Der Vault ist größer als 500 MB. Sende ihn ohne die großen Anhänge oder in Teilen.",
         "unreadable": "Die Datei konnte nicht gelesen werden. Ist es eine .zip des Vaults?"
-      },
-      "howToLabel": "So erstellst du die .zip"
+      }
     },
     "save": "Im Wiki speichern",
     "saveTitle": "Im Wiki speichern",
@@ -10988,7 +11044,7 @@
   },
   "access": {
     "matrixTitle": "Zugriff der Agenten",
-    "matrixHint": "Sensible Aktionen (Merge, Deploy, Teilen, Bezahlen) fragen immer nach einer Freigabe, auf jeder Stufe. Um es pro Tool festzulegen, öffne die Tools des Konnektors.",
+    "matrixHint": "Standardmäßig fragen sensible Aktionen (Merge, Deploy, Teilen, Bezahlen) nach einer Freigabe. Um es pro Tool festzulegen, öffne die Tools des Konnektors.",
     "matrixHow": "Klicke auf eine Zelle, um sie zu ändern:",
     "kindLabel": "Anzeigen",
     "kind": {
@@ -11005,11 +11061,10 @@
     "levelOf": "Stufe in {{name}}",
     "cell": "{{agent}} in {{resource}}: {{level}}",
     "cellAsks": "{{agent}} in {{resource}}: {{level}}, sensible Aktionen fragen nach einer Freigabe",
-    "asks": "{{tool}} fragt nach einer Freigabe",
+    "asksList": "Fragt nach einer Freigabe: {{tools}}",
     "asksMore_one": "und {{count}} weiteres",
     "asksMore_other": "und {{count}} weitere",
     "asksLegend": "fragt nach einer Freigabe",
-    "noneText": "Kein Zugriff.",
     "customText": "Pro Tool vergeben. Wähle eine Stufe, um es zu vereinfachen.",
     "noTools": "Noch keine Tools.",
     "toolsMore_one": "{{tools}} und {{count}} weiteres",
@@ -11451,6 +11506,7 @@
     "notVisible": "Dein GitHub-Konto kann diese Installation nicht sehen. Installier sie mit einem Konto, das Zugriff darauf hat.",
     "otherWorkspace": "Dieses GitHub-Konto ist schon mit einem anderen Workspace verbunden. Entferne die App dort, bevor du sie hier installierst.",
     "installedOutside": "Die App wurde auf diesem GitHub-Konto außerhalb von agentes.chat installiert. Entferne sie auf GitHub und installier sie noch einmal über Konnektoren › GitHub.",
+    "ownerUnknown": "GitHub hat nicht gesagt, wem diese Organisation gehört. Die Person, die den Server betreibt, muss der GitHub-App die Organisationsberechtigung Members (nur Lesen) geben, danach installierst du sie noch einmal.",
     "misconfigured": "Die GitHub-App hat auf dem Server den falschen geheimen Schlüssel, deshalb kann die Installation nicht abgeschlossen werden. Die Person, die den Server betreibt, muss den Schlüssel in den Einstellungen der App ersetzen.",
     "connectAccount": "GitHub-Konto verbinden",
     "ownerHint": "Der Inhaber dieses Servers kann die GitHub-App hier unter Konnektoren erstellen.",
@@ -11501,10 +11557,10 @@
     "merge": {
       "label": "Darf ohne Nachfrage mergen",
       "none": "Keine Repositorys ausgewählt. Jeder Merge fragt nach Freigabe.",
-      "help": "In diesen Repositorys läuft ein Merge ohne Freigabekarte, steht im Audit und hinterlässt einen Beleg in der Unterhaltung. Alles andere Sensible fragt weiter nach.",
+      "help": "In diesen Repositorys läuft ein Merge ohne Freigabekarte, steht im Audit und hinterlässt einen Beleg in der Unterhaltung. Ein Agent, der immer fragt, fragt weiter nach.",
+      "short": "In diesen Repositorys läuft ein Merge ohne Freigabekarte.",
       "dialogTitle": "Wo {{name}} ohne Nachfrage mergt",
-      "dialogDesc": "Nur Repositorys, die bereits genutzt werden. Ein Merge an jedem anderen Ort fragt nach Freigabe.",
-      "short": "In diesen Repositorys läuft ein Merge ohne Freigabekarte."
+      "dialogDesc": "Nur Repositorys, die bereits genutzt werden. Ein Merge an jedem anderen Ort fragt nach Freigabe."
     },
     "label": "Welche Repositorys",
     "all": "Alle Repositorys",
@@ -11636,7 +11692,7 @@
       "github": {
         "1": "Code, Issues und Pull Requests lesen",
         "2": "Pull Requests öffnen und kommentieren",
-        "ask": "Merge und Deploy fragen immer nach deiner Freigabe"
+        "ask": "Standardmäßig fragen Merge und Deploy nach deiner Freigabe"
       },
       "sentry": {
         "1": "Fehler und Events ansehen",
@@ -11670,7 +11726,7 @@
       "cloudflare_bindings": {
         "1": "Workers, KV, R2 und D1 ansehen",
         "2": "Workers und Speicher ändern",
-        "ask": "Deploys fragen immer nach deiner Freigabe"
+        "ask": "Standardmäßig fragen Deploys nach deiner Freigabe"
       },
       "cloudflare_observability": {
         "1": "Logs und Metriken der Workers ansehen"
@@ -11678,7 +11734,7 @@
       "supabase": {
         "1": "Projekte und Funktionen ansehen",
         "2": "Datenbank abfragen und ändern",
-        "ask": "Deploys fragen immer nach deiner Freigabe"
+        "ask": "Standardmäßig fragen Deploys nach deiner Freigabe"
       },
       "supabase_readonly": {
         "1": "Datenbank abfragen (nur lesen)",
@@ -12393,7 +12449,7 @@
     "see": "Ansehen",
     "seeAsks": "Ansehen, was nach Freigabe fragt",
     "agentTitle": "Was {{name}} nutzen kann",
-    "agentSub": "Nach Konnektor und Thema. Sensible Aktionen fragen immer nach Freigabe."
+    "agentSub": "Nach Konnektor und Thema. Standardmäßig fragen sensible Aktionen nach Freigabe."
   },
   "connectFlow": {
     "steps": "Schritte",
@@ -12426,12 +12482,12 @@
       "title": "Erreichte Organisationen",
       "none": "Noch keine Organisation.",
       "lead": "GitHub fragt nur beim ersten Mal nach Organisationen. Um eine weitere freizugeben, öffne dort die Seite der App und klicke daneben auf Grant. Wenn sie dir nicht gehört, steht dort Request und ein Inhaber bestätigt es.",
+      "short": "GitHub fragt nur beim ersten Mal nach Organisationen.",
       "open": "Organisationen auf GitHub freigeben",
       "added": "Jetzt auch: {{names}}.",
       "removed": "Nicht mehr: {{names}}.",
       "same": "Bei den Organisationen hat sich nichts geändert.",
-      "failed": "Die Organisationen konnten gerade nicht gelesen werden.",
-      "short": "GitHub fragt nur beim ersten Mal nach Organisationen."
+      "failed": "Die Organisationen konnten gerade nicht gelesen werden."
     },
     "composioHelp": "Du meldest dich auf der Seite von Composio an, auf Englisch, und kommst hierher zurück. {{name}} zeigt die Berechtigung als „Composio“ an.",
     "or": "oder",
@@ -12463,7 +12519,7 @@
     "noAgents": "Noch keine Agenten. Gib jederzeit Zugriff unter „Wer ihn nutzt“.",
     "asksCount_one": "{{count}} Aktion fragt im Chat immer nach Freigabe.",
     "asksCount_other": "{{count}} Aktionen fragen im Chat immer nach Freigabe.",
-    "asksDefault": "Sensible Aktionen fragen im Chat immer nach Freigabe.",
+    "asksDefault": "Standardmäßig fragen sensible Aktionen im Chat nach Freigabe.",
     "grant": "Zugriff geben",
     "saved_one": "{{name}}: {{count}} Agent kann ihn nutzen.",
     "saved_other": "{{name}}: {{count}} Agenten können ihn nutzen.",
@@ -12627,6 +12683,7 @@
       "databasesHelp": "Die Regeln unten gelten für jede Datenbank, die dieser Agent liest.",
       "hidden": "Spalten, die er nie sieht",
       "hiddenHelp": "tabelle.spalte, Namen mit Großbuchstaben, Leerzeichen oder Symbolen in doppelten Anführungszeichen (kunden.\"Steuer-ID\"). Spalten, die nach persönlichen Daten oder Passwörtern aussehen, haben wir schon versteckt.",
+      "hiddenExample": "tabelle.spalte, zum Beispiel kunden.\"Steuer-ID\"",
       "hiddenPlaceholder": "kunden.steuer_id",
       "hiddenInvalid": "Gib tabelle.spalte (oder schema.tabelle.spalte) ein, mit \"doppelten Anführungszeichen\" um Namen mit Großbuchstaben, Leerzeichen oder Symbolen.",
       "cap": "Abfragen pro Tag",
@@ -12635,12 +12692,10 @@
       "timeout": "Zeitlimit pro Abfrage",
       "timeoutHelp": "Eine Abfrage, die länger dauert, wird abgebrochen, damit sie die Datenbank nicht belastet.",
       "seconds_one": "{{count}} Sekunde",
-      "seconds_other": "{{count}} Sekunden",
-      "hiddenExample": "tabelle.spalte, zum Beispiel kunden.\"Steuer-ID\""
+      "seconds_other": "{{count}} Sekunden"
     },
     "agent": {
       "title": "Datenbanken",
-      "help": "Datenbanken, die {{org}} verbunden hat. Der Agent liest nur.",
       "levelText": "Fragt die Tabellen ab, die die Regeln erlauben, nur lesend.",
       "rulesOf": "Regeln in {{name}}",
       "saved": "Datenbankzugriff von {{name}} gespeichert.",
@@ -12737,6 +12792,7 @@
     "rulesRead": "Was er liest",
     "rulesSend": "Was er sendet",
     "toolsLead": "Was Agenten in {{name}} tun dürfen. Schalte aus, was kein Agent tun soll, oder verlange auch für Entwürfe und das Ordnen eine Freigabe. Senden, Antworten und Weiterleiten fragen immer im Chat nach Freigabe und zeigen Empfänger und Text.",
+    "toolsShort": "Wähle, was Agenten mit diesem Postfach tun.",
     "group": {
       "read": "Lesen",
       "write": "Schreiben",
@@ -12797,6 +12853,7 @@
       "buttonName": "Adressen von {{name}}",
       "title": "Adressen von {{address}}",
       "lead": "Agenten antworten von der Adresse, an die die E-Mail ging. Wenn dieses Postfach auch E-Mails an andere Adressen bekommt, etwa an deine eigene Domain oder einen Alias, füge sie hier hinzu.",
+      "short": "Agenten antworten von der Adresse, an die die E-Mail ging.",
       "main": "Hauptadresse: {{address}}",
       "others": "Weitere Adressen dieses Postfachs",
       "othersHelp": "Aliasse und deine eigenen Domains, etwa hallo@deinefirma.de.",
@@ -12807,32 +12864,27 @@
       "newFrom": "Neue E-Mails gehen raus von",
       "newFromHelp": "Antworten gehen immer von der Adresse raus, an die die E-Mail ging.",
       "later": "Du kannst das später unter Adressen ändern.",
-      "saved": "Adressen von {{address}} gespeichert.",
-      "short": "Agenten antworten von der Adresse, an die die E-Mail ging."
+      "saved": "Adressen von {{address}} gespeichert."
     },
     "agent": {
       "title": "E-Mail",
-      "help": "Eine Zeile pro Postfach von {{org}}.",
       "none": "{{org}} hat noch keine E-Mail verbunden.",
-      "levelText": {
-        "read": "Sucht und liest E-Mails. Im Postfach ändert sich nichts.",
-        "write": "Liest, entwirft und ordnet. Senden, Antworten und Weiterleiten fragen nach Freigabe."
-      },
       "canDelete": "Darf E-Mails löschen",
       "canDeleteHelp": "Auch wenn das an ist, fragt jedes Löschen nach Freigabe.",
       "rules": "Regeln",
       "rulesOf": "Regeln für {{address}}",
       "rulesCount_one": "{{count}} Regel",
       "rulesCount_other": "{{count}} Regeln",
-      "noRules": "Keine zusätzlichen Regeln",
       "save": "Speichern",
       "saved": "E-Mail von {{name}} gespeichert.",
       "unsaved": "Ungespeicherte Änderungen",
       "warning": "Liest E-Mails von allen und sendet ohne Nachfrage: Eine bösartige E-Mail könnte versuchen, den Agenten zu täuschen.",
       "pending": "Die Verbindung ist noch nicht fertig.",
       "needsReconnect": "Agenten können es erst nutzen, wenn es neu verbunden ist.",
-      "ownerOnly": "Nur {{name}} kann Zugriff geben: Diese Person hat das Postfach verbunden.",
+      "ownerOnly": "Nur {{name}} gibt Zugriff auf dieses Postfach.",
       "ownerOnlyUnknown": "Nur die Person, die dieses Postfach verbunden hat, kann Zugriff geben.",
+      "onlyYou": "{{name}} nutzt dieses Postfach nur für dich, in deiner DM.",
+      "onlyYouAll": "{{name}} nutzt deine Postfächer nur für dich, in deiner DM.",
       "remove": "Zugriff entfernen",
       "removed": "{{name}} hat keinen Zugriff mehr auf {{address}}.",
       "saveError": {
@@ -12899,8 +12951,7 @@
       "every": "Läuft für jede neue E-Mail, die durch die Filter kommt.",
       "needsReconnect": "Muss neu verbunden werden",
       "error": "Schlägt fehl"
-    },
-    "toolsShort": "Wähle, was Agenten mit diesem Postfach tun."
+    }
   },
   "searchPage": {
     "title": "Workspace durchsuchen",
@@ -13020,6 +13071,7 @@
     "previewLoading": "Vorschau wird geladen…",
     "previewFailed": "Die Vorschau konnte nicht angezeigt werden. Lad die Datei herunter, um sie zu öffnen.",
     "imageAlt": "Bild: {{title}}",
+    "imageMaking": "Bild wird erstellt…",
     "pdfFrame": "PDF: {{title}}",
     "tooBigToPreview": "Zu groß für eine Vorschau. Lad sie herunter, um sie zu öffnen.",
     "downloadOnly": "Keine Vorschau für diesen Dateityp. Lad sie herunter, um sie zu öffnen.",
@@ -13141,6 +13193,8 @@
       "misconfigured": "Die Verbindung zu {{provider}} ist auf dem Server falsch eingerichtet, deshalb kann sie nicht abgeschlossen werden. Die Person, die den Server betreibt, muss den Schlüssel in den Einstellungen der App ersetzen."
     },
     "wiki": {
+      "githubNoNotes": "Unter diesem Link gibt es keine Markdown-Notizen.",
+      "githubTooLarge": "Zu viele Notizen, um sie über einen Link zu lesen. Lade das Repository als .zip herunter und importiere es unter Dateien.",
       "noAccess": "Du hast keinen Zugriff auf diese Seite.",
       "audienceForbidden": "Nur Personen, die das Wiki bearbeiten und Rollen verwalten, legen fest, wer eine Seite sieht.",
       "audienceExcludesYou": "Schließ dich selbst ein (eine deiner Rollen oder deinen Namen), um die Seite weiter zu sehen.",
@@ -13255,6 +13309,7 @@
       "machineChanged": "Der Computer der Mission hat sich geändert. Versuch es noch einmal.",
       "executorUnavailable": "Diese Art zu programmieren ist auf dem Computer der Mission nicht installiert.",
       "executorOutdated": "Codex auf diesem Computer ist zu alt: Aktualisiere es dort.",
+      "codexWindows": "Codex programmiert Missionen unter Windows noch nicht: Wähl Claude Code, den Agenten selbst oder einen anderen Computer.",
       "invalidExecutor": "Wähl, wer programmiert: Claude Code, Codex oder der Agent.",
       "rateLimited": "Die Mission hat in der letzten Stunde zu viel gemacht. Warte kurz und versuch es noch einmal.",
       "pausedStuck": "Die Mission wurde pausiert, weil sie nicht mehr vorankam."
@@ -13411,6 +13466,7 @@
       "csvTooLarge": "Die Datei ist zu groß. Die Grenze ist 2 MB.",
       "csvTooManyRows": "Die Datei hat mehr als 5.000 Zeilen. Teil sie auf und importiere jeden Teil.",
       "csvUnrecognized": "Das sieht nicht nach einer Passwortdatei aus. Exportiere sie noch einmal als CSV.",
+      "unreadable": "Der gespeicherte Wert lässt sich hier nicht lesen. Speicher ihn neu und verschieb ihn dann.",
       "requestNotDelivered": "Schick es zuerst und speichere es dann im Vault.",
       "requestNotSavable": "Das lässt sich nicht im Vault speichern.",
       "sourceUnknown": "Dieser Passwort-Manager ist hier nicht verfügbar.",
@@ -13427,8 +13483,7 @@
         "unsupported": "Dieser Passwort-Manager lässt sich hier nicht verbinden.",
         "invalidInput": "Prüf die Felder und versuch es noch einmal.",
         "tooManyItems": "Der Vault ist voll. Lösch Einträge, bevor du mehr synchronisierst."
-      },
-      "unreadable": "Der gespeicherte Wert lässt sich hier nicht lesen. Speicher ihn neu und verschieb ihn dann."
+      }
     },
     "feedback": {
       "filesGone": "Eine Datei, die du hinzugefügt hast, ist weg. Füg sie noch einmal hinzu.",
@@ -14623,13 +14678,13 @@
         "item_created": "Hat einen Eintrag im Vault gespeichert",
         "item_changed": "Hat einen Vault-Eintrag geändert",
         "item_deleted": "Hat einen Vault-Eintrag gelöscht",
+        "item_moved": "Hat einen Vault-Eintrag zwischen Persönlich und Team verschoben",
         "item_used": "Hat einen Vault-Eintrag verwendet",
         "imported": "Hat Passwörter in den Vault importiert",
+        "keys_imported": "Hat Schlüssel in den Vault importiert",
         "connection_added": "Hat einen Passwort-Manager mit dem Vault verbunden",
         "connection_changed": "Hat die Verbindung eines Passwort-Managers geändert",
-        "connection_removed": "Hat einen Passwort-Manager vom Vault getrennt",
-        "item_moved": "Hat einen Vault-Eintrag zwischen Persönlich und Team verschoben",
-        "keys_imported": "Hat Schlüssel in den Vault importiert"
+        "connection_removed": "Hat einen Passwort-Manager vom Vault getrennt"
       },
       "verb": {
         "created": "Erstellt",
@@ -14905,8 +14960,8 @@
       "personal": "Persönlich",
       "teamHelp": "Kanäle, Personen und Rollen für die Zusammenarbeit. Ein Wechsel ändert nur, was zu sehen ist.",
       "personalHelp": "Einfacher, für dich und deine Familie, wenn du sie einlädst. Ein Wechsel ändert nur, was zu sehen ist.",
-      "toTeam": "Zu Team wechseln…",
-      "toPersonal": "Zu persönlich wechseln…"
+      "toTeam": "Zu Team wechseln",
+      "toPersonal": "Zu persönlich wechseln"
     },
     "telemetry": {
       "title": "Nutzungsstatistiken",
@@ -15283,6 +15338,7 @@
       "part_female": "Anteil von {{name}}: ≈ {{percent}}",
       "estimate": "Der Anteil von {{name}} ist der kräftigere Teil jedes Balkens. {{brand}} sagt nur, wie viel das ganze Konto verbraucht hat, daher ist der Anteil jedes Agenten eine Schätzung aus dem, was er verbraucht hat.",
       "estimate_female": "Der Anteil von {{name}} ist der kräftigere Teil jedes Balkens. {{brand}} sagt nur, wie viel das ganze Konto verbraucht hat, daher ist der Anteil jedes Agenten eine Schätzung aus dem, was er verbraucht hat.",
+      "estimateShort": "Eine Schätzung.",
       "byAccount": "Nach Konto, diesen Monat",
       "until": "bis {{date}}",
       "nowTag": "jetzt",
@@ -15295,8 +15351,7 @@
       "old": "{{brand}}, aus der Zeit vor den Konten",
       "oldSub": "Verbrauch von vor der Erfassung des Kontos",
       "ofMonth": "{{percent}} des Monats",
-      "shareLabel": "{{source}}: {{percent}} des Monats",
-      "estimateShort": "Eine Schätzung."
+      "shareLabel": "{{source}}: {{percent}} des Monats"
     }
   },
   "budget": {
@@ -15553,6 +15608,7 @@
         "plan": "Der Plan ist noch nicht freigegeben",
         "tooMany": "Zu viele Freigaben hintereinander",
         "off": "Befehle ausführen ist für diesen Agenten aus",
+        "asks": "Dieser Agent fragt vor jeder Änderung",
         "team": "Das Team hat das schon gemacht",
         "teamPersonal": "Das wurde schon gemacht",
         "unclear": "Es lässt sich nicht eindeutig lesen",
@@ -15599,6 +15655,7 @@
         "runningCode": "Code auf dem PC ausgeführt",
         "browsing": "Den Browser genutzt",
         "pcFiles": "An den Dateien auf dem PC gearbeitet",
+        "creatingImage": "Ein Bild erstellt",
         "exportingFile": "Eine Datei in Drive gespeichert",
         "importingFile": "Eine Datei aus Drive geholt",
         "runningSkillScript": "Ein Skript des Skills {{app}} ausgeführt",
@@ -15615,6 +15672,7 @@
         "listingTasks": "Die Aufgaben angesehen",
         "checkingTask": "Eine Aufgabe geprüft",
         "cancelingTask": "Eine Aufgabe abgebrochen",
+        "keepingRunning": "Ein Programm weiterlaufen lassen",
         "uploadingArtifact": "Eine Datei an Drive gesendet",
         "gettingContext": "Den Kontext nachgeschlagen",
         "cancelingReminder": "Eine Erinnerung abgebrochen",
@@ -15713,6 +15771,7 @@
       "runningCode": "Ausführen von Code",
       "browsing": "Nutzen des Browsers",
       "pcFiles": "Arbeiten mit den Dateien des PCs",
+      "creatingImage": "Erstellen eines Bildes",
       "exportingFile": "Speichern einer Datei in Drive",
       "importingFile": "Holen einer Datei aus Drive",
       "runningSkillScript": "Ausführen eines Skripts des Skills {{app}}",
@@ -15729,6 +15788,7 @@
       "listingTasks": "Ansehen der Aufgaben",
       "checkingTask": "Prüfen einer Aufgabe",
       "cancelingTask": "Abbrechen einer Aufgabe",
+      "keepingRunning": "Weiterlaufenlassen eines Programms",
       "uploadingArtifact": "Senden einer Datei an Drive",
       "gettingContext": "Nachschlagen des Kontexts",
       "cancelingReminder": "Abbrechen einer Erinnerung",
@@ -17146,6 +17206,19 @@
     },
     "closeAsk": "{{name}} wartet 2 Min., bis du zurückkommst.",
     "openAccess": "Tools und Zugriff öffnen",
+    "kept": {
+      "title": "Läuft weiter",
+      "meta": "{{name}} · seit {{since}} · {{until}}",
+      "untilStops": "bis es endet",
+      "untilClosed": "bis sein Browser schließt",
+      "until": "bis {{time}}",
+      "stop": "Beenden",
+      "stopOf": "„{{what}}“ beenden",
+      "actions": "Aktionen für „{{what}}“",
+      "count_one": "Läuft weiter · {{count}}",
+      "count_other": "Laufen weiter · {{count}}",
+      "stopFailed": "Konnte nicht beendet werden. Versuch es noch einmal."
+    },
     "phone": {
       "now": "Jetzt",
       "trackpad": "Trackpad",
@@ -17410,6 +17483,7 @@
       "agent_archived": "{{name}} wurde archiviert.",
       "audience": "Wer es eingerichtet hat, kann nicht mehr mit {{name}} sprechen.",
       "failing": "Es ist mehrmals hintereinander fehlgeschlagen und wurde gestoppt.",
+      "failingLast": "Nach 5 Fehlern in Folge gestoppt. Der letzte: {{cause}}",
       "stopped": "Die Aktualisierung wurde gestoppt.",
       "missing_credential": "{{name}} hat keinen KI-Schlüssel und kein Abo zum Arbeiten.",
       "timeout": "Die Aktualisierung hat zu lange gedauert.",
@@ -17477,6 +17551,7 @@
       "unknown": "Jede Aktualisierung nutzt das Budget von {{name}}"
     },
     "exposure": "Wer das Dashboard sieht, sieht, was die Agenten geholt haben, auch ohne Zugriff auf die Konten, aus denen es stammt. Agenten erstellen auch Dashboards. Um eines mehr Personen zu zeigen als der Person, die es angefragt hat, fragen sie zuerst, in „Wartet auf dich“.",
+    "exposureShort": "Wer das Dashboard sieht, sieht diese Daten.",
     "panel": {
       "caresFor": "{{name}} kümmert sich um dieses Widget",
       "caresForOn": "{{name}} kümmert sich um dieses Widget · {{board}}",
@@ -17560,8 +17635,7 @@
       "textRoutine": "Die Routine von {{name}}, die es aktualisiert, stoppt, und sein Aktualisierungsverlauf verschwindet mit ihm.",
       "textManual": "Sein Aktualisierungsverlauf verschwindet mit ihm.",
       "confirm": "Entfernen"
-    },
-    "exposureShort": "Wer das Dashboard sieht, sieht diese Daten."
+    }
   },
   "agentPicker": {
     "search": "Agenten suchen",
@@ -18292,6 +18366,10 @@
     "fileType": "Es lassen sich nur Fotos und Videos anhängen.",
     "fileTooLarge": "{{name}} ist zu groß: Das Limit liegt bei {{mb}} MB.",
     "fileTooMany": "Ein Feedback fasst bis zu {{images}} Fotos und ein Video.",
+    "attachPhoto": "Foto anhängen",
+    "photosHint": "Bis zu {{images}} Fotos mit {{imageMb}} MB.",
+    "photoType": "Es lassen sich nur Fotos anhängen.",
+    "photosTooMany": "Ein Feedback fasst bis zu {{images}} Fotos.",
     "send": "Senden",
     "thanks": "Zugestellt. Danke.",
     "reply": "Alles wird gelesen. Eine Antwort, falls nötig, kommt an {{email}}.",

@@ -375,7 +375,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "Das Gedächtnis gibt keine Berechtigungen",
         blocks: [
-          "Nichts im Gedächtnis erlaubt einem Agenten mehr. Was er darf, steht weiter unter **Tools und Zugriff**, und heikle Aktionen fragen immer nach einer Freigabe.",
+          "Nichts im Gedächtnis erlaubt einem Agenten mehr. Was er darf, steht weiter unter **Tools und Zugriff**.",
         ],
       },
       {
@@ -395,7 +395,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Was vorher fragt",
         blocks: [
-          "Wenn ein Agent mergen, deployen, zurückrollen, etwas nach außen senden oder Daten löschen will, fragt er vorher, egal welchen Zugriff er hat. Die Anfrage erscheint unter **Freigaben** und in der Unterhaltung, mit der genauen Aktion und dem Grund.",
+          "Wenn ein Agent mergen, deployen, zurückrollen, etwas nach außen senden oder Daten löschen will, fragt er vorher. Das ist die Stufe **Nur Riskantes**, mit der jeder Agent startet. Auf der Seite des Agenten, unter **Freigaben**, lässt **Immer fragen** ihn vor jeder Änderung fragen, und mit **Nie fragen** fragt er gar nicht, auch nicht bei Merge, Deploy, Zahlungen und Routinen. Die Anfrage erscheint unter **Freigaben** und in der Unterhaltung, mit der genauen Aktion und dem Grund.",
         ],
       },
       {
@@ -403,7 +403,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Einmal oder immer",
         blocks: [
           "Eine Freigabe gilt für genau eine Aktion, mit ihren Werten. Ändert der Agent irgendetwas, fragt er erneut.",
-          "**Immer freigeben** lässt den Agenten diese Art von Aktion ab jetzt mit beliebigen Werten tun, ohne zu fragen. Bei der Anfrage einer Routine macht **Immer in dieser Routine** dasselbe nur für diese Routine. Beides gibt es nie für Merge, Deploy, Rollback und Ähnliches. Rückgängig machen kannst du es unter **Tools und Zugriff** auf der Seite des Agenten oder in den Einstellungen der Routine.",
+          "**Immer freigeben** lässt den Agenten diese Art von Aktion ab jetzt mit beliebigen Werten tun, ohne zu fragen. Bei der Anfrage einer Routine macht **Immer in dieser Routine** dasselbe nur für diese Routine. **Immer freigeben** gibt es für jede Art von Aktion, auch für Merge und Deploy, solange der Agent auf der Stufe **Nur Riskantes** steht. **Immer in dieser Routine** gibt es nicht für Merge, Deploy, Rollback und Ähnliches. Rückgängig machen kannst du es unter **Tools und Zugriff** auf der Seite des Agenten oder in den Einstellungen der Routine.",
         ],
       },
       {

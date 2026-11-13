@@ -15,10 +15,12 @@ import {
   emailLocale,
   enqueueAccountContact,
   ForbiddenError,
+  feedbackDestination,
   holdsInvitation,
   INVITATION_MAIL_HEADER,
   INVITATION_TOKEN_HEADER,
   isAgentesCloud,
+  isFeedbackRelay,
   onUserCreated,
   queueEmail,
   recordSession,
@@ -664,7 +666,8 @@ export function authUiConfig(config: Config) {
     termsUrl: config.TERMS_URL ?? null,
     privacyUrl: config.PRIVACY_URL ?? null,
     supportEmail: config.SUPPORT_EMAIL ?? null,
-    feedback: Boolean(config.FEEDBACK_EMAIL),
+    feedback: Boolean(feedbackDestination(config)),
+    feedbackRelay: isFeedbackRelay(feedbackDestination(config)),
   };
 }
 

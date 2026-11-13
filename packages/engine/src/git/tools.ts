@@ -5,6 +5,7 @@ import { activeConnections, type ConnectorDeps } from "../connectors/connections
 import { publishChannelEvent } from "../events";
 import { computerPreparing } from "../machine-provisioning";
 import { missionOfRun } from "../mission-context";
+import { isRightHandId, RIGHT_HAND_NO_COMPUTER } from "../right-hand";
 import { replyThreadOf } from "../runs";
 import { NO_COMPUTER_MESSAGE, PREPARING_COMPUTER_MESSAGE, type SandboxDeps } from "../sandbox";
 import { APPROVAL_DETAIL_CHARS } from "../tools/gateway";
@@ -174,12 +175,14 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
         if (block) {
           return {
             ok: false,
-            message: `${branch} is ${BLOCKED[block]}: push to agentes/${handle}/<topic> and open a pull request; merging asks a person.`,
+            message: `${branch} is ${BLOCKED[block]}: push to agentes/${handle}/<topic> and open a pull request; merging is a separate step.`,
           };
         }
         return { ok: true };
       };
-      return [
+      // Cloning takes a computer, which the right hand never has (ADR 0137): it isn't offered what can't run.
+      const rightHand = await isRightHandId(ctx.db, ctx.orgId, ctx.agentId);
+      const all: ToolDefinition[] = [
         {
           name: "git_clone",
           description:
@@ -260,6 +263,8 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
                   isError: true,
                 };
               }
+              if (await isRightHandId(c.db, c.orgId, c.agentId))
+                return { content: `Not cloned: ${RIGHT_HAND_NO_COMPUTER}.`, isError: true };
               const preparing = await computerPreparing({ ...deps.sandbox, db: c.db }, c.orgId);
               return { content: preparing ? PREPARING_COMPUTER_MESSAGE : NO_COMPUTER_MESSAGE, isError: true };
             } catch (error) {
@@ -270,7 +275,7 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
         {
           name: "open_pull_request",
           description:
-            "Open a pull request on GitHub from a branch you pushed (agentes/<your handle>/…). Merging is separate and always needs a person's approval.",
+            "Open a pull request on GitHub from a branch you pushed (agentes/<your handle>/…). Merging is a separate step.",
           scope: connectorScope("github", "pr.write"),
           connectionId: connection.id,
           connector: { key: "github", via: "native", tool: "open_pull_request" },
@@ -346,7 +351,7 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
         {
           name: DELETE_BRANCHES_TOOL,
           description:
-            "Delete branches on GitHub, your own included: the only way agents delete branches (git push --delete is refused). A person approves the whole list on one card, then they're deleted. Never tags, the default branch or a protected branch.",
+            "Delete branches on GitHub, your own included: the only way agents delete branches (git push --delete is refused). The whole list goes to a person on one card, unless you never ask, then they're deleted. Never tags, the default branch or a protected branch.",
           scope: connectorScope("github", "git.write"),
           connectionId: connection.id,
           connector: { key: "github", via: "native", tool: DELETE_BRANCHES_TOOL },
@@ -428,6 +433,7 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           }),
         },
       ];
+      return rightHand ? all.filter((t) => t.name !== "git_clone") : all;
     },
   };
 }

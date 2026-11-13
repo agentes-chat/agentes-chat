@@ -647,6 +647,7 @@ const LABELS: Record<string, readonly [en: string, ptBR: string]> = {
   run_code: ["Run code", "Rodar código"],
   run_skill_script: ["Run skill script", "Rodar script da skill"],
   start_task: ["Start task on the computer", "Iniciar tarefa no computador"],
+  keep_running: ["Keep running on the computer", "Manter rodando no computador"],
   web_search: ["Search the web", "Buscar na web"],
   web_fetch: ["Read web page", "Ler página da web"],
   create_routine: ["Create routine", "Criar rotina"],

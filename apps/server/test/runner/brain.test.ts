@@ -568,6 +568,12 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   // Every tool of Claude Code but its web: ours read it.
   expect(at(personal, "--disallowedTools")).toBe("WebFetch,WebSearch");
   expect(work).not.toContain("--disallowedTools");
+  // An agent that always asks: no edit is accepted by the CLI itself, so each reaches the prompt tool.
+  const asks = claudeBrainArgs({ ...base, ...brainProfileLaunch("work", false, false, true) });
+  expect(at(asks, "--permission-mode")).toBe("default");
+  expect(asks).toContain("--permission-prompt-tool");
+  expect(brainProfileLaunch("work", false, true, true).permissionMode).toBe("default");
+  expect(brainProfileLaunch("work", false, true).permissionMode).toBe("acceptEdits");
 });
 
 test("protocol 41: a chat turn (the team's right hand on a plan) gets our MCP tools and nothing else", () => {

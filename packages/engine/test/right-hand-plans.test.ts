@@ -315,6 +315,34 @@ test("its CLI killed at a tool of its own after a bridge call: nothing of the tu
   expect(said.some((m) => m.body.includes("Looking it up"))).toBe(false);
 });
 
+test("its locked turn is never told of a computer's own tools: it has only ours, and no computer", async () => {
+  const { fx, deps, lodi } = await world();
+  await setAgentBrain(deps, fx.owner.id, fx.org.id, (await lodi()).id, { brain: "claude_code", account: ANAS });
+  const agent = await lodi();
+  const systems: string[] = [];
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(turn) {
+      systems.push(turn.system);
+      yield { type: "done", text: "Oi!" };
+    },
+  };
+  const handlers = createJobHandlers({
+    ...fx.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const dm = await openPersonAgentDm(fx.db, fx.org.id, fx.owner.id, agent.id);
+  await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, dm.id, { body: "oi" });
+  await drainOutbox(fx.db, handlers);
+  expect(systems).toHaveLength(1);
+  expect(systems[0]).toContain("You have no computer yet");
+  expect(systems[0]).not.toContain("# Your computer's tools");
+  expect(systems[0]).not.toContain("your computer's own tools");
+  // What changes per turn still reaches it in its messages, as for any computer brain.
+  expect(systems[0]).toContain('"# This turn" and "# This conversation" in your messages');
+});
+
 test("its plan's CLI failing: its line says so, and what the CLI said stays in the run's steps and is reported", async () => {
   const { fx, deps, lodi } = await world();
   await setAgentBrain(deps, fx.owner.id, fx.org.id, (await lodi()).id, { brain: "claude_code", account: ANAS });

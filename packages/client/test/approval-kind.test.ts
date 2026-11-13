@@ -384,8 +384,9 @@ describe('"Sempre nesta rotina" on a routine\'s card', () => {
     expect(approveAlwaysOffered(card)).toBe(true);
     expect(approveAlwaysOffered({ ...card, canDecide: false })).toBe(false);
     expect(approveAlwaysOffered({ ...card, status: "approved" })).toBe(false);
-    // Plain "Aprovar sempre" keeps its rule: what is high risk is never approved for good.
-    expect(approveAlwaysOffered({ ...card, approveAlways: { tool: "t", actions: [] } })).toBe(false);
+    // Plain "Aprovar sempre" shows wherever the server offers it, on a send too.
+    expect(approveAlwaysOffered({ ...card, approveAlways: { tool: "t", actions: [] } })).toBe(true);
+    expect(approveAlwaysOffered({ ...card, approveAlways: null })).toBe(false);
   });
 });
 

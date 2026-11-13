@@ -9,6 +9,7 @@ import {
   HEARTBEAT_MS,
   HELLO_TIMEOUT_MS,
   IPHONE_WIFI_PROTOCOL,
+  KEEP_RUNNING_PROTOCOL,
   type MachineErrorCode,
   type MachineOp,
   type MachineReplies,
@@ -48,6 +49,7 @@ import {
   storeOwnUsage,
   syncMachineAccounts,
 } from "./machine-accounts";
+import { holdEndedOnComputer, reconcileHolds } from "./machine-holds";
 import { onManagedMachineHello, type ReadyEmailDeps } from "./machine-provisioning";
 import {
   applyTaskDone,
@@ -372,6 +374,8 @@ export function isNewWork(request: MachineRequest) {
     // A person's guide asking the computer to look for a phone, or its owner picking an iPhone on its Wi-Fi.
     case "phone.look":
     case "phone.wifi":
+    // Letting go of what an agent kept running (its end, a person's Stop) must reach a paused computer too.
+    case "keep.end":
       return false;
     case "secret":
       return request.action !== "discard" && request.action !== "remove" && request.action !== "activate";
@@ -779,6 +783,17 @@ export function createMachineHub(deps: MachineHubDeps) {
       );
     }
     if (frame.protocol >= PHONES_PROTOCOL && frame.phones) await phonesReported(machine, frame.phones);
+    // ADR 0176: what it holds now, against what people see (not in this frame's path: it may call the computer).
+    const holdCall = (<Op extends "keep.start" | "keep.end">(_: string, request: Extract<MachineRequest, { op: Op }>) =>
+      callLocal(conn, request)) as Parameters<typeof reconcileHolds>[0]["call"];
+    queueMicrotask(
+      () =>
+        void reconcileHolds(
+          { db, pubsub, call: frame.protocol >= KEEP_RUNNING_PROTOCOL ? holdCall : null },
+          machine.id,
+          frame.holds,
+        ).catch((error) => deps.log?.warn("hold reconcile failed", { machineId: machine.id, error: String(error) })),
+    );
     // Missions on this machine: queued messages and `.agentes/` files go out now (not in this frame's path).
     if (hooks.online) {
       const online = hooks.online;
@@ -1473,6 +1488,10 @@ export function createMachineHub(deps: MachineHubDeps) {
           const row = await getMachineById(db, conn.machineId).catch(() => null);
           if (row && !row.deletedAt) await phonesReported(row, frame.phones);
         }
+      } else if (frame.type === "keep.ended") {
+        await holdEndedOnComputer({ db, pubsub }, conn.machineId, frame).catch((error) =>
+          deps.log?.warn("keep.ended failed", { holdId: frame.holdId, error: String(error) }),
+        );
       } else if (frame.type === "access.decided") {
         await applyAccessDecided({ db, pubsub }, conn.machineId, frame).catch((error) =>
           deps.log?.warn("access.decided failed", { requestId: frame.requestId, error: String(error) }),

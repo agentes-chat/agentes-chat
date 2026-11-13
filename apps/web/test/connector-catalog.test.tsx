@@ -251,7 +251,7 @@ describe("Adicionar conector: one catalog", () => {
     const github = service("GitHub");
     // What always asks for approval is marked.
     const asks = github.querySelector("[data-asks]");
-    expect(asks?.textContent).toBe("Merge e deploy sempre pedem sua aprovação");
+    expect(asks?.textContent).toBe("Por padrão, merge e deploy pedem sua aprovação");
     expect(github.textContent).toContain("Você autoriza na página do serviço, ou usa uma chave de API");
     // Esc: the service closes, the catalog stays; again: the catalog closes.
     await pressEsc(github);

@@ -515,12 +515,10 @@ function NewWidget({ dashboardId }: { dashboardId: string }) {
   } else if (phase === "failed" && draft && needsAi) {
     body = (
       <View style={styles.failed}>
-        <View style={styles.failedLine}>
-          <LineIcon variant="footnote" name="bolt" size={16} color={c.warn} />
-          <Text variant="footnote" style={[styles.grow, { color: c.warn }]}>
-            {widgetWords.failure(draft)}
-          </Text>
-        </View>
+        {/* No icon before it: it wraps, and would start in from the lines under it. */}
+        <Text variant="footnote" style={{ color: c.warn }}>
+          {widgetWords.failure(draft)}
+        </Text>
         <Text variant="footnote" tone="muted">
           {t("widgets.needsAi.body", { name: look.name })}
         </Text>

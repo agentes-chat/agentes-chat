@@ -79,6 +79,13 @@ describe("run policy table", () => {
     expect(toolKind(app("mail_support_read", "mail:read")).kind).toBe("read");
     expect(toolKind(app("git_clone", "github:git.read"))).toEqual({ kind: "internal", area: "code" });
     expect(toolKind(app("open_pull_request", "github:pr.write"))).toEqual({ kind: "internal", area: "code" });
+    // The connector's own way to open one is the same work; what else it writes to a pull request is the app's.
+    expect(toolKind(app("github_create_pull_request", "github:pr.write"))).toEqual({ kind: "internal", area: "code" });
+    expect(toolKind(app("github_update_pull_request", "github:pr.write")).kind).toBe("external");
+    expect(toolKind(app("github_merge_pull_request", "github:pr.merge", true)).kind).toBe("external");
+    // Rewriting a skill is a change, whatever its scope is called.
+    expect(toolKind(builtIn("update_skill", "skills:read"))).toEqual({ kind: "internal", area: "skills" });
+    expect(toolKind(builtIn("load_skill", "skills:read")).kind).toBe("read");
     // The computer's own background task is code work; the mission's (no scope) is the mission's.
     expect(toolKind(builtIn("start_task", "sandbox:run"))).toEqual({ kind: "internal", area: "code" });
     expect(toolKind(builtIn("start_task")).kind).toBe("mission");

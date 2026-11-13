@@ -1297,23 +1297,35 @@ export const useChannelCard = (orgId: string, channelId: string, enabled = true)
   });
 };
 
-/** A pasted message link's pill: where the message is and who wrote it (an error: one I can't see). */
+/**
+ * The server's "not for you" (403) or "no such thing" (404) as an answer, `null`, instead of an error. A query that
+ * fails keeps no data, so every refetch (a row coming back on screen, the app coming forward, an invalidation
+ * while an agent writes) puts it back in `pending`: a pill fed by it would switch between its loading mark and its
+ * words each time, and the message around it would change height.
+ */
+const orNothing = <T>(ask: Promise<T>): Promise<T | null> =>
+  ask.catch((e: unknown) => {
+    if (e instanceof ApiError && (e.status === 403 || e.status === 404)) return null;
+    throw e;
+  });
+
+/** A pasted message link's pill: where the message is and who wrote it (`null`: one I can't see). */
 export const useMessageCard = (orgId: string, messageId: string) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.messageCard(orgId, messageId),
-    queryFn: () => api.chat.messageCard(orgId, messageId),
+    queryFn: () => orNothing(api.chat.messageCard(orgId, messageId)),
     staleTime: 60_000,
     retry: false,
   });
 };
 
-/** What an internal id in a text names (`IdRef`), for its pill; an error (404) leaves the text as written. */
+/** What an internal id in a text names (`IdRef`), for its pill; `null` (404) leaves the text as written. */
 export const useIdRef = (orgId: string, id: string) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.idRef(orgId, id),
-    queryFn: () => api.chat.idRef(orgId, id),
+    queryFn: () => orNothing(api.chat.idRef(orgId, id)),
     staleTime: 5 * 60_000,
     retry: false,
   });

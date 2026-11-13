@@ -33,6 +33,7 @@ import { SheetHostProvider } from "../shared/SheetHost";
 import { AgentScreen } from "./AgentScreen";
 import { Cover } from "./Cover";
 import { DockText } from "./EdgeDock";
+import { KeptRunningButton } from "./KeptRunning";
 import { LiveTrail } from "./LiveTrail";
 import { offersSwitch, type PhoneStage, phoneStage, setupSub } from "./logic";
 import { SetupWait } from "./SetupWait";
@@ -166,6 +167,8 @@ function ComputerView({ agentId, onLeave }: { agentId: string; onLeave: (held: B
         label={[title, line].filter(Boolean).join(", ")}
       />
       {info ? <View style={styles.info}>{info}</View> : null}
+      {/* What the agent keeps running there (ADR 0176): its list in a sheet. */}
+      <KeptRunningButton agentId={agentId} />
       {action}
     </View>
   );

@@ -1282,7 +1282,6 @@
     "agentLine_other": "{{count}} 条记忆",
     "uses_other": "已使用 {{count}} 次",
     "confirmed": "已由成员确认",
-    "unconfirmed": "尚未确认",
     "confirm": "确认",
     "confirmedToast": "已确认",
     "details": "技术细节",
@@ -1488,9 +1487,9 @@
         "setup": "工作区设置",
         "desktop": "电脑屏幕"
       },
-      "asksYou": "无论哪个级别，合并和发布都会请你审批。",
-      "asksOwner": "无论哪个级别，合并和发布都会请 {{name}} 审批。",
-      "asksAdmins": "无论哪个级别，合并和发布都会请管理员审批。",
+      "asksYou": "合并和发布会请你审批，除非智能体设为“从不询问”。",
+      "asksOwner": "合并和发布会请 {{name}} 审批，除非智能体设为“从不询问”。",
+      "asksAdmins": "合并和发布会请管理员审批，除非智能体设为“从不询问”。",
       "empty": "目前只能对话。"
     }
   },

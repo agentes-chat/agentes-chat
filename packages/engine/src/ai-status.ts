@@ -9,7 +9,7 @@ import type { ModelGateway } from "./gateway";
 import type { MachineStatus } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
 import { missionTurnFor } from "./missions-engine";
-import { isRightHand, rightHandNoAiReason, rightHandPerson, thinkingAgent } from "./right-hand";
+import { isRightHand, membersAmong, rightHandNoAiReason, rightHandPerson, thinkingAgent } from "./right-hand";
 import { orgKeyProviders, orgModelProvider, type RoutingSetup } from "./router";
 import { planSignInsOf } from "./router-plan";
 import type { AgentRun } from "./runs";
@@ -156,10 +156,31 @@ export async function agentAiState(
 /**
  * What an agent's background work (a routine, a widget's build) thinks with: never the model brain standing in for its
  * computer brain (ADR 0053 §6.4), and for the right hand the workspace's own AI, nobody's (ADR 0137 §11), which
- * neither answers work nobody asked for while it serves only its owner nor waits for its computer.
+ * neither answers work nobody asked for while it serves only its owner nor waits for its computer. Work a person set
+ * up thinks for them first (`rightHandWorkAi`).
  */
 export const backgroundAiState = (deps: AiStatusDeps, agent: AiAgent) =>
   agentAiState(deps, agent, undefined, undefined, true);
+
+/**
+ * Whose AI the right hand's work nobody is behind thinks with (ADR 0137 §11): of the people who set it up, first to
+ * last, the first still in the workspace for whom it can think (their own AI, else the workspace's as it answers
+ * them), else the workspace's for nobody (`person` null). No AI at all: the first person's state, who it is for.
+ */
+export async function rightHandWorkAi(
+  deps: AiStatusDeps,
+  agent: AiAgent,
+  people: readonly (string | null | undefined)[],
+): Promise<{ person: string | null; ai: AgentAi }> {
+  const named = await membersAmong(deps.db, agent.orgId, people);
+  let first: { person: string | null; ai: AgentAi } | null = null;
+  for (const person of [...named, null]) {
+    const ai = await agentAiState(deps, agent, undefined, person ?? undefined, true);
+    if (ai.state !== "no_ai") return { person, ai };
+    first ??= { person, ai };
+  }
+  return first as { person: string | null; ai: AgentAi };
+}
 
 const agentFields = {
   id: schema.agents.id,

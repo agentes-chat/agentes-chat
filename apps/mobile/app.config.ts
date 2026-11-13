@@ -1,7 +1,7 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 /**
- * The app's Expo config. Builds: Android on the "Android build" workflow on GitHub Actions, or EAS (see
+ * The app's Expo config. Builds: the "Android build" and "iOS build" workflows on GitHub Actions, or EAS (see
  * README.md). The native projects are made from this file by `expo prebuild` and never committed.
  * - `EXPO_PUBLIC_API_URL`: the server the app talks to by default (production); people can pick their own.
  * - `EAS_PROJECT_ID`: overrides the EAS project (the iPhone's Expo push tokens need it); defaults to ours on expo.dev.
@@ -9,6 +9,9 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
  *   side by side.
  * - `GOOGLE_SERVICES_JSON`: path to Firebase's google-services.json, for push on Android (FCM).
  * - `ANDROID_VERSION_CODE`: the build's version code, set by the Android workflow (EAS numbers its own builds).
+ * - `APPLE_TEAM_ID`: the Apple team that signs the iOS app and its share extension (a build setting, never in the
+ *   repo).
+ * - `IOS_BUILD_NUMBER`: the build's number on iOS, set by the iOS workflow.
  *
  * The New Architecture is the only one since SDK 55, so there is no `newArchEnabled` flag any more
  * (the SDK 58 config type no longer has it). Edge-to-edge on Android is likewise always on.
@@ -103,6 +106,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: `chat.agentes.app${suffix}`,
+    ...(process.env.APPLE_TEAM_ID ? { appleTeamId: process.env.APPLE_TEAM_ID } : {}),
+    ...(process.env.IOS_BUILD_NUMBER ? { buildNumber: process.env.IOS_BUILD_NUMBER } : {}),
     supportsTablet: false,
     usesAppleSignIn: true,
     associatedDomains: [`applinks:${linkHost}`],
@@ -121,6 +126,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#02060f",
     },
     predictiveBackGestureEnabled: false,
+    // Never read the phone's photos or play in the background: the image picker is Android's photo picker, Salvar em
+    // Fotos only adds (MediaStore needs no permission for it) and voice messages stop when the app leaves. Google
+    // Play asks a justification for the media reads and a video for a media-playback foreground service, so keep
+    // them out even if a library's manifest brings them.
+    blockedPermissions: [
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+      "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+    ],
     intentFilters: [
       {
         action: "VIEW",
@@ -201,7 +216,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       // Mensagens de voz (ADR 0100): the app records only while the person holds or locks the button.
       "expo-audio",
-      { microphonePermission: "To record voice messages in your conversations.", recordAudioAndroid: true },
+      // No background playback (the plugin's default is on): it would add a media-playback foreground service.
+      {
+        microphonePermission: "To record voice messages in your conversations.",
+        recordAudioAndroid: true,
+        enableBackgroundPlayback: false,
+      },
     ],
     [
       // "Compartilhar com…": the app in the system's share sheet (an iOS share extension and Android's send intents),
@@ -223,12 +243,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
-      // Salvar em Fotos: add-only access (the read text matches expo-image-picker's).
+      // Salvar em Fotos: add-only access (the read text matches expo-image-picker's). No granular reads on Android:
+      // saveToPhotos asks write-only, which needs none from Android 13 on.
       "expo-media-library",
       {
         photosPermission: "To send pictures in your conversations.",
         savePhotosPermission: "To save pictures from your conversations to Photos.",
-        granularPermissions: ["photo"],
+        granularPermissions: [],
       },
     ],
   ],

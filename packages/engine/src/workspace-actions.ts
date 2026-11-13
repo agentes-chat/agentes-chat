@@ -1650,6 +1650,7 @@ export function workspaceActionTool(deps: { pubsub?: PubSub; server?: ServerLink
       },
       additionalProperties: false,
     },
+    looksOnly: (raw) => Boolean(str(raw.find)) && !str(raw.action),
     async execute(raw, ctx) {
       try {
         const person = await personBehindCall(ctx);

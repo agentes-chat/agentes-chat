@@ -369,9 +369,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       {
         id: "permissions",
         heading: "Memory grants no permission",
-        blocks: [
-          "Nothing in memory lets an agent do more. What it can do stays in its **Tools and access**, and sensitive actions always ask for approval.",
-        ],
+        blocks: ["Nothing in memory lets an agent do more. What it can do stays in its **Tools and access**."],
       },
       {
         id: "proposals",
@@ -390,7 +388,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "what",
         heading: "What asks first",
         blocks: [
-          "When an agent wants to merge, deploy, roll back, send something outside or delete data, it asks first, whatever access it has. The request shows up in **Approvals** and in the conversation, with the exact action and why.",
+          "When an agent wants to merge, deploy, roll back, send something outside or delete data, it asks first. That is **Only what is risky**, the level every agent starts at. On the agent's page, under **Approvals**, **Always ask** makes it ask before changing anything, and **Never ask** makes it ask for nothing, merge, deploy, payments and routines included. The request shows up in **Approvals** and in the conversation, with the exact action and why.",
         ],
       },
       {
@@ -398,7 +396,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "Once, or always",
         blocks: [
           "Approving covers one exact action, with its values. If the agent changes anything, it asks again.",
-          "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. Neither is offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
+          "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. **Always approve** is there for any kind of action, merge and deploy too, while the agent is at **Only what is risky**. **Always in this routine** is not offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
         ],
       },
       {

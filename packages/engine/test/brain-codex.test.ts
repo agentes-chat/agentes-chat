@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { CODEX_FOLDER_PROTOCOL } from "@agenteschat/adapters";
+import { CODEX_FOLDER_PROTOCOL, CODEX_WINDOWS_PROTOCOL, MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters";
 import { type BrainTurnRequest, CodexBrain, type ComputerBrainLink, codexVersionOk } from "../src/brains/codex";
 import { computerPrompt } from "../src/brains/prompt";
 import type { BrainEvent, BrainTurn } from "../src/brains/types";
@@ -34,6 +34,7 @@ function link(opts: {
   events?: BrainEvent[];
   fail?: Error;
   protocol?: number;
+  os?: string;
 }): ComputerBrainLink & { sent: BrainTurnRequest[] } {
   const sent: BrainTurnRequest[] = [];
   return {
@@ -43,6 +44,7 @@ function link(opts: {
         online: opts.online ?? true,
         execAllowed: true,
         ...(opts.protocol !== undefined ? { protocol: opts.protocol } : {}),
+        ...(opts.os ? { os: opts.os } : {}),
         executors: opts.version === null ? {} : { codex: { version: opts.version ?? "codex-cli 0.163.0" } },
       };
     },
@@ -74,6 +76,27 @@ test("version gate: 0.163.0 and newer only", () => {
   expect(codexVersionOk("codex-cli 0.162.9")).toBe(false);
   expect(codexVersionOk("codex")).toBe(false);
   expect(codexVersionOk(undefined)).toBe(false);
+});
+
+test("on Windows a runner before CODEX_WINDOWS_PROTOCOL refuses every Codex turn: too old there, nothing sent", async () => {
+  const brain = (l: ComputerBrainLink) => new CodexBrain({ link: l, mcp: async () => ({ token: "t" }) });
+  const done: BrainEvent[] = [{ type: "done", text: "ok" }];
+  const old = link({ os: "windows", protocol: CODEX_WINDOWS_PROTOCOL - 1 });
+  expect(await collect(brain(old).run(turn(), io()))).toMatchObject([
+    { type: "error", code: "runner_outdated", retryable: true },
+  ]);
+  expect(old.sent).toEqual([]);
+  // A Windows runner that didn't say its protocol: too old as well.
+  const unknown = link({ os: "windows" });
+  expect(await collect(brain(unknown).run(turn(), io()))).toMatchObject([{ type: "error", code: "runner_outdated" }]);
+  expect(unknown.sent).toEqual([]);
+  const current = link({ os: "windows", protocol: CODEX_WINDOWS_PROTOCOL, events: done });
+  await collect(brain(current).run(turn(), io()));
+  expect(current.sent).toHaveLength(1);
+  // Elsewhere that runner is new enough.
+  const mac = link({ os: "darwin", protocol: CODEX_WINDOWS_PROTOCOL - 1, events: done });
+  await collect(brain(mac).run(turn(), io()));
+  expect(mac.sent).toHaveLength(1);
 });
 
 test("a first turn sends the context and the conversation; events pass through; done carries our session", async () => {
@@ -276,6 +299,21 @@ test("live steering (protocol 15): the turn on its way takes messages through br
     }).run(turn(), { ...io(), steerable: (s) => old.push(s) }),
   );
   expect(old).toEqual([]);
+});
+
+test("an agent that always asks: Codex's own tools can't each ask, so its turn only reads", async () => {
+  const sent = async (asks: "always" | "never") => {
+    const l = link({ protocol: MACHINE_PROTOCOL_VERSION, events: [{ type: "done", text: "ok" }] });
+    const brain = new CodexBrain({
+      link: l,
+      mcp: async () => ({ token: "t" }),
+      permissions: async () => ({ mode: "work", asks }),
+    });
+    await collect(brain.run(turn(), io()));
+    return (l.sent[0] as { permissions?: unknown } | undefined)?.permissions;
+  };
+  expect(await sent("always")).toEqual({ mode: "plan", asks: "always" });
+  expect(await sent("never")).toEqual({ mode: "work", asks: "never" });
 });
 
 test("a runner before CODEX_FOLDER_PROTOCOL: the turn stays in the agent's folder and its session, no checkout", async () => {

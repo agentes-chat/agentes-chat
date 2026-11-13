@@ -423,7 +423,7 @@ async function proxyGit(
             ? ["not on GitHub", `${branch} isn't on GitHub: an approval covers updating a branch, never creating one`]
             : [
                 block === "default" ? "the default branch" : "protected",
-                `${branch} is ${block === "default" ? "the default branch" : "protected"}: push to agentes/${agent.handle}/<topic> and open a pull request; merging asks a person`,
+                `${branch} is ${block === "default" ? "the default branch" : "protected"}: push to agentes/${agent.handle}/<topic> and open a pull request; merging is a separate step`,
               ];
       reasons.set(ref, short);
       told.add(long);

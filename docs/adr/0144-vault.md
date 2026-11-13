@@ -327,7 +327,8 @@ empty answer was the same in both cases. The product's defaults are open, and ad
 - **Who changes it.** Unchanged: its owner for a personal one, `manage_credentials` for a team one, checked on the
   server. Anyone else gets "not found".
 - The right hand has no Vault tools (`vault:read` is not among its fixed grants), so it gets this only once that
-  scope is granted to it.
+  scope is granted to it. Amended 2026-11-12 (ADR 0137): it holds `vault:read` and `vault:write` like any agent, and
+  uses a person's own items and the team items of their audience only in that person's own DM with it.
 
 ### 11. Keys from a .env file, and moving an item between Personal and Team
 

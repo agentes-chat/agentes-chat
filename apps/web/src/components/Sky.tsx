@@ -9,6 +9,7 @@ import {
   cx,
   drawSprite,
   EYE,
+  formingField,
   HEADER_AREA,
   headerField,
   Icon,
@@ -395,6 +396,25 @@ export function ActivitySky({ color }: { color: AgentColor }) {
         }}
       />
     </span>
+  );
+}
+
+/**
+ * Where a picture an agent is making will show (`ImageMaking`): the picture forming out of the agent's sky, in its
+ * soft tones over the conversation's background (`formingField`); whole and still with reduced motion.
+ */
+export function ImageSky({ color }: { color: AgentColor }) {
+  const reduced = usePrefersReducedMotion();
+  return (
+    <PixelSky
+      options={{
+        pixel: 4,
+        surface: "--bg",
+        palette: (bg) => softTones(color, bg),
+        light: 0,
+        base: (u, v, t) => formingField(u, v, reduced ? null : t),
+      }}
+    />
   );
 }
 

@@ -307,6 +307,28 @@ describe("costly work an agent starts on its own, set to ask first, needs a go (
     expect(cards).toHaveLength(1);
   });
 
+  test("an agent that never asks gets no proposal card; what a person refused and the hourly cap still hold", async () => {
+    f = await setup();
+    await f.db
+      .update(schema.agents)
+      .set({ autonomyBrakes: { costly: "ask", never: ["install"], maxPrsPerHour: 1 } })
+      .where(eq(schema.agents.id, f.agent.id));
+    const trigger = await alert(f.agent.id, "Erro novo em produção");
+    const run = await working(f.agent.id, trigger.id);
+    const at = {
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      runId: run.id,
+      channelId: f.general.id,
+      threadRootId: trigger.id,
+    };
+    expect(await costlyGate(f, at, UNATTENDED, "long", "step 41", true)).toBeNull();
+    expect(await costlyGate(f, at, UNATTENDED, "pr", "gh pr create a", true)).toBeNull();
+    expect((await costlyGate(f, at, UNATTENDED, "pr", "gh pr create b", true))?.code).toBe("autonomy.pr_limit");
+    expect((await costlyGate(f, at, UNATTENDED, "install", "npm install", true))?.code).toBe("autonomy.never");
+    expect(await signalsOf("proposal")).toHaveLength(0);
+  });
+
   test("the person a card is for says go or not now; only the agent's owner or an admin says always or never", async () => {
     f = await setup();
     await askFirst();

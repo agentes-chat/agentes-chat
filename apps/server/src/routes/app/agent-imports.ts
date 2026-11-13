@@ -1,3 +1,4 @@
+import { connectorOAuthApps } from "@agenteschat/config";
 import {
   ARTIFACT_LIMITS,
   applyImport,
@@ -15,6 +16,7 @@ import {
 import { createRoute, z } from "@hono/zod-openapi";
 import { bodyLimit } from "hono/body-limit";
 import { apiError, errorResponse } from "../../http/errors";
+import { githubAppOf } from "../github-app";
 import {
   type AppDeps,
   body,
@@ -243,6 +245,21 @@ export function agentImportRoutes(deps: AppDeps) {
     }),
   );
 
+  // A private repository is read with the workspace's GitHub: the GitHub App's token for it, else the GitHub
+  // connection's. Tokens stay here.
+  const github = {
+    connectors: {
+      db: deps.db,
+      keyWrappers: [deps.adapters.keyWrapper, ...deps.adapters.legacyKeyWrappers],
+      oauthApps: connectorOAuthApps(deps.config),
+      publicUrl: deps.config.PUBLIC_URL,
+      http: deps.extras?.http,
+    },
+    get app() {
+      return githubAppOf(deps);
+    },
+  };
+
   app.openapi(
     createRoute({
       method: "post",
@@ -251,7 +268,7 @@ export function agentImportRoutes(deps: AppDeps) {
       security,
       summary: "Read the files behind a GitHub link to import (nothing is saved)",
       description:
-        "A file link reads that file. A folder link reads, relative to the folder: its Markdown/JSON/YAML, `agents/` (one level of folders), `skills/` (SKILL.md and other Markdown), `cron/jobs.json` and `memory/*.md` (newest first), up to 200 files and 8 MB (4 MB per file).",
+        "A file link reads that file. A folder link reads, relative to the folder: its Markdown/JSON/YAML, `agents/` (one level of folders), `skills/` (SKILL.md and other Markdown), `cron/jobs.json` and `memory/*.md` (newest first), up to 200 files and 8 MB (4 MB per file). A private repository (github.com answers 404) is read through the workspace's GitHub for who edits any agent: the GitHub App's token for it, else the GitHub connection's, never sent to the app. `github.repo_missing` says in `connection` how the GitHub connection fared (`none`, `refused`, `ok`) and in `app` whether the GitHub App is installed on some account for the workspace.",
       request: {
         params: OrgParams,
         body: body(
@@ -274,7 +291,7 @@ export function agentImportRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const result = await readGithubImport(
-        { db: deps.db, fetch: deps.extras?.http, resolveHost: deps.extras?.resolveHost },
+        { db: deps.db, fetch: deps.extras?.http, resolveHost: deps.extras?.resolveHost, github },
         c.get("user").id,
         c.req.valid("param").orgId,
         c.req.valid("json").url,

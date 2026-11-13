@@ -1,4 +1,4 @@
-import type { BrainEffort, BrainSpeed, ProviderFailureCause } from "@agenteschat/adapters";
+import type { BrainEffort, BrainSpeed, BrainTurnRequest, ProviderFailureCause } from "@agenteschat/adapters";
 import { planOf } from "@agenteschat/providers/plans";
 import type { CodeSetup } from "../git/machine";
 
@@ -26,6 +26,19 @@ export const BRAIN_PLAN_NAMES: Readonly<Record<ComputerBrainKind, string>> = {
   grok: "Grok",
   antigravity: "Gemini",
 };
+
+/**
+ * A turn's permissions as its brain can keep them for an agent that always asks (ADR 0173). `prompts`: every call of
+ * the CLI's own tools can reach our prompt (Claude Code on a runner that reads `permissions.asks`). Any other brain,
+ * and an older runner, gets a `plan` turn: its own tools only read, so every change goes through our tools, which ask.
+ */
+export function askingPermissions(
+  permissions: BrainTurnRequest["permissions"],
+  prompts: boolean,
+): BrainTurnRequest["permissions"] {
+  if (permissions?.asks !== "always" || prompts || (permissions.mode ?? "work") !== "work") return permissions;
+  return { ...permissions, mode: "plan" };
+}
 
 /** Brains that run on the agent's computer with a person's plan. */
 export const isComputerBrain = (v: unknown): v is ComputerBrainKind =>
@@ -199,7 +212,9 @@ export type BrainEvent =
   /** Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
   /** A computer brain started a call of its own: shown only, its `tool_call` with `executed` follows. */
-  | { type: "tool_started"; id: string; name: string };
+  | { type: "tool_started"; id: string; name: string }
+  /** A file a tool of the brain's own made, in the agent's folder (Codex's image generation): shown with the reply. */
+  | { type: "file"; path: string };
 
 export interface Brain {
   kind: BrainKind;

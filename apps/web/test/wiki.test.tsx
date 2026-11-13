@@ -809,8 +809,11 @@ describe("Obsidian vaults", () => {
 
   test("import: pick .md files → review → import sends the notes; done opens the home note", async () => {
     const { state, router } = await go("wiki");
-    await click(screen().getByRole("button", { name: /^Importar$/ }));
-    const dialog = screen().getByRole("dialog", { name: "Importar do Obsidian" });
+    // "Import" is in the header and at the foot of the side column: either opens the dialog.
+    const [open] = screen().getAllByRole("button", { name: /^Importar$/ });
+    await click(open as HTMLElement);
+    const dialog = screen().getByRole("dialog", { name: "Importar para a wiki" });
+    await click(within(dialog).getByRole("button", { name: "Obsidian" }));
     const input = within(dialog).getByLabelText("Escolher .zip ou .md") as HTMLInputElement;
     await act(async () => {
       fireEvent.change(input, {

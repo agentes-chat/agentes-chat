@@ -79,7 +79,7 @@ export async function issueWorkBrief(
       asked
         ? `- Refer to the issue as #${issue.number} in your tools. Check each criterion you meet with \`update_issue\` (\`done_criteria\`), and link the pull request with \`update_issue\`. The issue's status follows your work on its own: don't set it yourself.`
         : `- Refer to the task as #${issue.number} in your tools. Change it only when someone asks you to.`,
-      "- Sensitive actions (merge, deploy, rollback) still need a person's approval.",
+      "- Merge, deploy and rollback follow your approvals here as anywhere else.",
     ].join("\n"),
   ]
     .filter(Boolean)

@@ -1362,7 +1362,6 @@
     "uses_one": "{{count}}-mal genutzt",
     "uses_other": "{{count}}-mal genutzt",
     "confirmed": "Von einer Person bestätigt",
-    "unconfirmed": "Noch nicht bestätigt",
     "confirm": "Bestätigen",
     "confirmedToast": "Bestätigt",
     "details": "Technische Details",
@@ -1575,9 +1574,9 @@
         "setup": "Workspace-Einrichtung",
         "desktop": "Computerbildschirm"
       },
-      "asksYou": "Mergen und Veröffentlichen fragen immer nach deiner Freigabe, auf jeder Stufe.",
-      "asksOwner": "Mergen und Veröffentlichen fragen immer nach der Freigabe von {{name}}, auf jeder Stufe.",
-      "asksAdmins": "Mergen und Veröffentlichen fragen immer nach der Freigabe eines Admins, auf jeder Stufe.",
+      "asksYou": "Mergen und Veröffentlichen fragen nach deiner Freigabe, außer der Agent fragt nie.",
+      "asksOwner": "Mergen und Veröffentlichen fragen nach der Freigabe von {{name}}, außer der Agent fragt nie.",
+      "asksAdmins": "Mergen und Veröffentlichen fragen nach der Freigabe eines Admins, außer der Agent fragt nie.",
       "empty": "Vorerst nur Unterhaltung."
     }
   },

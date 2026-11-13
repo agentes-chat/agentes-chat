@@ -473,7 +473,7 @@ describe("Perfil: agora, cada coisa uma vez", () => {
     expect(screen).toContain("      {nowBlock}\n      <AgentComputerPicture agentId={id} />");
     expect(computer).toContain("asksPicture(focused, view.desktopQ.data ?? null)");
     expect(screen).toContain(
-      "      {knows.data ? memoryKnows : null}\n      {/* What people told it to always do, under what it learned, as the web's Memória. */}\n      <GivenRules agentId={id} name={name} />",
+      "      {knows.data ? memoryKnows : null}\n      {/* What people told it to always do, under what it learned, as the web's Memória. */}\n      <GivenRules agentId={id} name={name} rightHand={rightHand} />",
     );
     expect(screen).toContain(
       '<MergeReposSection agentId={id} name={name} mayEdit={mine || can(org, "manage_agents")} />',

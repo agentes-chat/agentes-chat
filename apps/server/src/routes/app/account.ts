@@ -336,7 +336,12 @@ export function accountRoutes(deps: AppDeps) {
               description: "Where people write to whoever runs this server (SUPPORT_EMAIL): hold, suspension.",
             }),
             feedback: z.boolean().openapi({
-              description: "The apps offer the feedback form (FEEDBACK_EMAIL is set): `POST /api/app/feedback`.",
+              description:
+                "The apps offer the feedback form (FEEDBACK_EMAIL is set, or FEEDBACK_RELAY is on): `POST /api/app/feedback`.",
+            }),
+            feedbackRelay: z.boolean().openapi({
+              description:
+                "Feedback goes to the agentes.chat team rather than to whoever runs this server (no FEEDBACK_EMAIL): the form says so and takes pictures only.",
             }),
             workspaceComputer: z.boolean().openapi({
               description:

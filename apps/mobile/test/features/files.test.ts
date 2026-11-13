@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ArtifactDetail } from "@agenteschat/client";
+import { pictureRatio } from "@agenteschat/client/lib/files";
 import {
   decodeFileList,
   driveWebUrl,
@@ -13,6 +14,7 @@ import {
   resolveDownloadUrl,
   safeFileName,
   shareSource,
+  singleImageBox,
   singleImageHeight,
   utf8Bytes,
   videoClock,
@@ -100,8 +102,17 @@ describe("file kind, tile and size", () => {
 });
 
 describe("pictures in a message", () => {
-  test("a lone picture has one box whatever its shape, so nothing moves once it loads", () => {
+  test("a lone picture of unknown size has one box whatever its shape, so nothing moves once it loads", () => {
     expect(singleImageHeight(300)).toBe(225);
+    expect(singleImageBox(300, undefined)).toEqual({ width: 300, height: 225 });
+  });
+
+  test("one whose size the server read has its own shape from the first frame, no taller than 400", () => {
+    expect(singleImageBox(300, pictureRatio({ width: 1024, height: 1024 }))).toEqual({ width: 300, height: 300 });
+    expect(singleImageBox(300, pictureRatio({ width: 1536, height: 1024 }))).toEqual({ width: 300, height: 200 });
+    // A portrait one narrows to stay 400 high.
+    expect(singleImageBox(300, pictureRatio({ width: 1024, height: 1536 }))).toEqual({ width: 267, height: 400 });
+    expect(pictureRatio({ width: 1024 })).toBeUndefined();
   });
 });
 

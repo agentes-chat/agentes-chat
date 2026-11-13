@@ -32,6 +32,7 @@ import { markdownToDocx } from "./docx";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishListChanged } from "./events";
 import { textOfBytes } from "./format";
+import { imageSize } from "./image-size";
 import { assertStorageRoom } from "./limits";
 import { can, getMembership, requireActiveMembership } from "./organizations";
 import { runItselfReadOutside } from "./outside";
@@ -86,6 +87,9 @@ export interface FileContent {
   size: number;
   sha256: string;
   text?: string;
+  /** A picture's own size, read from its header when it was stored (`imageSize`); absent for older files. */
+  width?: number;
+  height?: number;
 }
 
 export type ArtifactContent =
@@ -511,13 +515,17 @@ const isTextFile = (name: string, contentType: string) =>
 
 /** A `file` version as content: metadata, plus its text when it is a small UTF-8 text file. */
 function fileContent(
-  v: Pick<VersionRow, "fileName" | "contentType" | "size" | "sha256">,
+  v: Pick<VersionRow, "fileName" | "contentType" | "size" | "sha256"> & Partial<Pick<VersionRow, "width" | "height">>,
   body: Uint8Array | null,
 ): FileContent {
   const name = v.fileName ?? "file";
   // By its name first (a picture stored as plain bytes before uploads were typed by name reads as a picture).
   const contentType = fileContentType(name, v.contentType);
   const content: FileContent = { kind: "file", name, contentType, size: v.size, sha256: v.sha256 };
+  if (v.width && v.height) {
+    content.width = v.width;
+    content.height = v.height;
+  }
   if (body && isTextFile(name, v.contentType)) {
     try {
       const text = new TextDecoder("utf-8", { fatal: true }).decode(body);
@@ -536,10 +544,17 @@ const wantsFileText = (v: Pick<VersionRow, "fileName" | "contentType" | "size">)
 /** The content of a `file` version just written from `body`. */
 const storedFileContent = (
   name: string,
-  blob: { contentType: string; size: number; sha: string },
+  blob: { contentType: string; size: number; sha: string; width: number | null; height: number | null },
   body: Uint8Array,
 ) => {
-  const v = { fileName: name, contentType: blob.contentType, size: blob.size, sha256: blob.sha };
+  const v = {
+    fileName: name,
+    contentType: blob.contentType,
+    size: blob.size,
+    sha256: blob.sha,
+    width: blob.width,
+    height: blob.height,
+  };
   return fileContent(v, wantsFileText(v) ? body : null);
 };
 
@@ -886,7 +901,17 @@ async function writeBlob(deps: ArtifactDeps, orgId: string, artifactId: string, 
   // loser's put overwrites the winner's committed bytes, leaving the row's size and sha not matching disk.
   const key = `${location.prefix}artifacts/${artifactId}/v${version}-${Bun.randomUUIDv7()}`;
   await location.store.put(key, body, { contentType });
-  return { storageConfigId: location.storageConfigId, key, contentType, size: body.byteLength, sha: sha256Hex(body) };
+  // A picture keeps its size, so a conversation draws its box before it loads.
+  const size = stored.fileName !== undefined && stored.fileName !== null ? imageSize(body) : null;
+  return {
+    storageConfigId: location.storageConfigId,
+    key,
+    contentType,
+    size: body.byteLength,
+    sha: sha256Hex(body),
+    width: size?.width ?? null,
+    height: size?.height ?? null,
+  };
 }
 
 /** Who may create, and where: people in the Drive or a channel they see; agents in their run's channel and thread. */
@@ -989,6 +1014,8 @@ async function insertArtifact(
       size: blob.size,
       sha256: blob.sha,
       fileName: input.stored.fileName ?? null,
+      width: blob.width,
+      height: blob.height,
       note: input.note?.trim().slice(0, 500) || null,
       authorType: author.type,
       authorId: author.id,
@@ -1051,6 +1078,8 @@ export async function insertVersion(
       size: blob.size,
       sha256: blob.sha,
       fileName: input.stored.fileName ?? null,
+      width: blob.width,
+      height: blob.height,
       note,
       authorType: author.type,
       authorId: author.id,

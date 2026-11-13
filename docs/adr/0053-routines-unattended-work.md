@@ -253,3 +253,20 @@ It stays a computer's switch, not a server's, and off by default: the server kee
 `plan` turn stays read only, the team's right hand keeps its tools off, and a push through our git proxy is still the
 server's to decide. Nothing the server stores changes, so no migration. What the agents can do there is what that
 Linux user can do: the switch is for computers whose owner decided exactly that.
+
+## Addendum 2026-11-12: Codex on Windows (§3)
+
+Codex runs on Windows from runner protocol 60 (ADR 0032, "Codex"). There §3 holds through Windows' own isolation, not the command policy:
+
+1. **The sandbox is MXC** (Microsoft Execution Containers, Windows 11 24H2 and later), named on every Codex process of a `plan` or `work` turn. It keeps the network out and writes to the turn's folders, with no setup. Codex picks no sandbox on Windows by itself, and its other two don't do: `unelevated` keeps the network out only through proxy variables, and `elevated` needs an administrator's setup that several Codex homes (each AI account's folder, ADR 0041) can't share. Codex's own MXC check (a command run inside MXC) decides; a computer where it fails runs no `plan` or `work` Codex turn: it fails with `windows_sandbox`, worded as what Windows needs.
+2. **Nothing asks** (`approvalPolicy: never`, as `codex exec` everywhere). Codex runs its commands in PowerShell there, which the command policy doesn't read: answering its approvals with POSIX rules would let through what they can't see, and an approved command that its sandbox refuses runs again outside it. So whatever MXC refuses stays refused, and an approval Codex asks all the same is declined. So on Windows, what needs the network (a push, an install) doesn't run from Codex's own shell. Nothing else lifts MXC either, as on every system (the next addendum): no one's own Codex rules, no network and no folder beyond the agent's, whatever the Codex home's config says.
+3. **The right hand** (`chat`) needs no sandbox: with none, Codex refuses every command of its own, and the turn stops at the first one anyway.
+4. **Not reached yet.** MXC lets a command reach services on the computer's own loopback (Codex's documentation says so): whatever listens there, the agent browser's debugging port included, is reachable from a turn, which POSIX sandboxes refuse. The agent browser on a pipe instead of a port would close that. Background Codex tasks are refused on Windows until they run inside the same sandbox.
+
+## Addendum 2026-11-12: a Codex home's own rules (§3)
+
+Found while bringing Codex to Windows, and true on every system: a Codex rule could lift §3. Codex keeps rules in its home (`rules/*.rules`, written when someone picks "don't ask again") and reads a project's (`.codex/rules`) when its home trusts that project. A command every part of which an allow rule matches runs outside the sandbox, with the network, and Codex asks nobody, so the command policy never sees it. On the computer's own sign-in, a person's `git push` allow could push to the default branch with no hold, in a `work` turn and in a routine's `plan` turn alike.
+
+1. **No one's own rules.** Every `codex exec` turn and background task passes `--ignore-rules` (Codex 0.122.0 and later), as the right hand's turns already did. The app-server can't leave them out, so a turn where Codex would load some (in its home, or in a folder at or above the turn's when that home trusts a project: an AI account's home trusts none) runs on exec instead: no messages mid-turn and no approvals there, its sandbox the limit.
+2. **The sandbox is ours.** Its network (off in a turn) and its writable roots (the agent's folders, an empty list when there are none) are the runner's, whatever the home's config says.
+3. **The command policy reads lines as the shell does.** A `#` opening a word is a comment to its line's end, and a backslash before a newline joins two lines, so neither hides a line: a quote opened after either can't swallow the commands below it. Pushes and lone merges are read from the lines the shell runs (a newline inside quotes ends none), and a merge with a comment after it or a line continuation waits for a person.

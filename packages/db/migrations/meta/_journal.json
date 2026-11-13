@@ -1772,6 +1772,34 @@
       "when": 1794675300000,
       "tag": "0254_agent_approvals_level",
       "breakpoints": true
+    },
+    {
+      "idx": 255,
+      "version": "7",
+      "when": 1794685300000,
+      "tag": "0255_destructive_hint_suggests",
+      "breakpoints": true
+    },
+    {
+      "idx": 256,
+      "version": "7",
+      "when": 1794695300000,
+      "tag": "0256_machine_holds",
+      "breakpoints": true
+    },
+    {
+      "idx": 257,
+      "version": "7",
+      "when": 1794695400000,
+      "tag": "0257_widget_creator_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 258,
+      "version": "7",
+      "when": 1794705400000,
+      "tag": "0258_picture_size",
+      "breakpoints": true
     }
   ]
 }

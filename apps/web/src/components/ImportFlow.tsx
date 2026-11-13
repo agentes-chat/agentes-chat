@@ -55,6 +55,7 @@ import { failedOffline } from "@/chat/offline";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ClientSteps } from "@/components/AiApps";
 import { HelpLink } from "@/components/HelpLink";
+import { ImportFailureNote } from "@/components/ImportFailure";
 import { useOrg } from "@/components/org-context";
 import {
   type AgentFile,
@@ -87,7 +88,6 @@ import {
   type ImportFailure,
   type ImportMethod,
   importApplyErrorText,
-  importFailureText,
   isGithubLink,
   isRequestCard,
   itemId,
@@ -97,7 +97,6 @@ import {
   NOT_GITHUB,
   picksOf,
   type RequestCard,
-  retryable,
   todoLine,
 } from "@/lib/import-flow";
 import { hasFiles } from "@/lib/obsidian";
@@ -456,7 +455,6 @@ function useFocusOn<T extends HTMLElement>(
   return el;
 }
 
-const failureText = (t: TFunction, failure: ImportFailure) => importFailureText(t, failure, failedOffline);
 const applyErrorText = (t: TFunction, error: unknown) => importApplyErrorText(t, error, failedOffline);
 
 /** Why an item doesn't come, in plain words (an existing skill or channel says which). */
@@ -692,16 +690,7 @@ function Picker({ flow, orgId, linked }: { flow: ImportFlowState; orgId: string;
         </Field>
       )}
 
-      {flow.failure && (
-        <div className="imp-failure">
-          <Alert>{failureText(t, flow.failure)}</Alert>
-          {retryable(flow.failure) && (
-            <Button size="sm" icon="refresh" onClick={() => void flow.retry()}>
-              {t("common.retry")}
-            </Button>
-          )}
-        </div>
-      )}
+      {flow.failure && <ImportFailureNote failure={flow.failure} retry={flow.retry} />}
       {/* What a person needs before dropping a folder that holds keys: said on the line, the rest in its ⓘ. */}
       {method === "prompt" && (
         <p className="imp-note ac-iconline">

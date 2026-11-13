@@ -86,7 +86,7 @@ export function ChoiceChip({
       ]}
     >
       {on ? <Icon name="check" size={15} color={c.bg} /> : null}
-      <Text variant="small" style={on ? { color: c.bg } : undefined}>
+      <Text variant="small" style={[styles.chipText, on ? { color: c.bg } : undefined]}>
         {label}
       </Text>
     </Pressable>
@@ -868,7 +868,7 @@ export function TeamTemplatesSheet({
                   { borderColor: c.line2, backgroundColor: pressed ? c.sunken : c.raised },
                 ]}
               >
-                <View style={styles.faces}>
+                <View style={[styles.faces, styles.pen]}>
                   <Icon name="pen" size={16} color={c.muted} />
                 </View>
                 <View style={styles.fill}>
@@ -921,6 +921,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 3,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  // The words give way inside the chip: with the check before them, a long answer ran past its edge.
+  chipText: { flexShrink: 1 },
   rows: { gap: 8 },
   // 12 above the hairline (with the rows' gap) and 12 under it.
   divided: { marginTop: 4, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
@@ -939,11 +941,14 @@ const styles = StyleSheet.create({
   mapCol: { gap: 8, padding: 12, borderRadius: 14, borderWidth: 1, borderStyle: "dashed" },
   template: {
     flexDirection: "row",
-    alignItems: "center",
+    // From the top: the faces stay on the name's line when the line under it wraps.
+    alignItems: "flex-start",
     gap: 12,
     padding: 12,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
   },
   faces: { flexDirection: "row", gap: 2, width: 72, justifyContent: "center" },
+  // The 16-point pen at the middle of the name's 22-point line.
+  pen: { paddingTop: 3 },
 });

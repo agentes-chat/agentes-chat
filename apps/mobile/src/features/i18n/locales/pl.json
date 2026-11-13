@@ -1522,7 +1522,6 @@
     "uses_many": "Użyte {{count}} razy",
     "uses_other": "Użyte {{count}} razy",
     "confirmed": "Potwierdzone przez osobę",
-    "unconfirmed": "Jeszcze niepotwierdzone",
     "confirm": "Potwierdź",
     "confirmedToast": "Potwierdzono",
     "details": "Szczegóły techniczne",
@@ -1749,9 +1748,9 @@
         "setup": "Konfiguracja przestrzeni roboczej",
         "desktop": "Ekran komputera"
       },
-      "asksYou": "Merge i publikacja zawsze wymagają twojego zatwierdzenia, na każdym poziomie.",
-      "asksOwner": "Na każdym poziomie merge i publikacja wymagają zatwierdzenia, które daje {{name}}.",
-      "asksAdmins": "Merge i publikacja zawsze wymagają zatwierdzenia przez administratora, na każdym poziomie.",
+      "asksYou": "Merge i publikacja wymagają twojego zatwierdzenia, chyba że agent nigdy nie pyta.",
+      "asksOwner": "Merge i publikacja wymagają zatwierdzenia, które daje {{name}}, chyba że agent nigdy nie pyta.",
+      "asksAdmins": "Merge i publikacja wymagają zatwierdzenia przez administratora, chyba że agent nigdy nie pyta.",
       "empty": "Na razie tylko rozmowa."
     }
   },

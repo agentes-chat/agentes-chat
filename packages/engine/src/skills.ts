@@ -12,7 +12,6 @@ import { appTokenForRepo, boundInstallations, type GitHubAppConfig, type GitHubH
 import { assertStorageRoom } from "./limits";
 import { assertPublicHttpsUrl, type ResolveHost } from "./net-guard";
 import { can, requirePermission } from "./organizations";
-import { isRightHand } from "./right-hand";
 import { inflateZipEntry, listZip, type ZipListing } from "./zip";
 
 const { skills, skillFiles, agentSkills } = schema;
@@ -715,8 +714,12 @@ async function githubGet(
   }
 }
 
+/** GitHub answered 404: what the URL names is missing, or hidden from a request without credentials. */
+export class GithubMissingError extends ValidationError {}
+
 /** A success's body, refused past `maxBytes` while it streams (codeload sends no length). */
 async function githubBody(res: Response, at: URL, options: GithubFetchOptions) {
+  if (res.status === 404) throw new GithubMissingError(`GitHub answered 404 for ${at.pathname}`);
   if (!res.ok) throw new ValidationError(`GitHub answered ${res.status} for ${at.pathname}`);
   const tooLarge = () => new ValidationError(options.tooLarge, options.tooLargeCode, options.tooLargeParams);
   if (Number(res.headers.get("content-length") ?? 0) > options.maxBytes) throw tooLarge();
@@ -779,6 +782,9 @@ export function parseGithubUrl(url: string) {
 
 type GithubTarget = ReturnType<typeof parseGithubUrl>;
 
+/** What reading a repository with the workspace's GitHub needs: no `github`, public repositories only. */
+export type GithubReadDeps = Pick<SkillDeps, "db" | "fetch" | "resolveHost" | "github">;
+
 /** A repository's archive is downloaded whole: past this size a link into it can't be read. */
 const ARCHIVE: GithubFetchOptions = {
   maxBytes: 50 * 1024 * 1024,
@@ -833,7 +839,7 @@ type GithubRepository = ReturnType<typeof repositoryOf>;
  * address (60 an hour) that every workspace's imports would spend. Null when github.com hides it (private, or
  * missing).
  */
-async function publicRepository(deps: SkillDeps, target: GithubTarget) {
+async function publicRepository(deps: GithubReadDeps, target: GithubTarget) {
   const archive = `https://github.com/${encodePath(`${target.owner}/${target.repo}`)}/archive/${encodePath(target.ref)}.zip`;
   const { res, at } = await githubGet(deps, archive, "application/zip", ARCHIVE);
   if (res.status === 404) {
@@ -851,7 +857,7 @@ async function publicRepository(deps: SkillDeps, target: GithubTarget) {
  * `refused` when GitHub no longer takes it (401). The API answers 404 alike for a ref the repository lacks and for a
  * repository the token can't see: asking for the repository tells them apart.
  */
-async function tokenRepository(deps: SkillDeps, target: GithubTarget, token: string) {
+async function tokenRepository(deps: GithubReadDeps, target: GithubTarget, token: string) {
   const repo = `${GITHUB_API}/repos/${encodePath(target.owner)}/${encodePath(target.repo)}`;
   const ref = target.ref === "HEAD" ? "" : `/${encodePath(target.ref)}`;
   const { res, at } = await githubGet(deps, `${repo}/zipball${ref}`, "application/vnd.github+json", ARCHIVE, token);
@@ -880,7 +886,7 @@ const tokenSafe = (target: GithubTarget) =>
  * The GitHub App's token for the repository (only from an installation on its account bound to this workspace), and
  * whether GitHub left one of the requests for it unanswered (no answer, or a 5xx).
  */
-async function appToken(deps: SkillDeps, orgId: string, app: GitHubAppConfig, target: GithubTarget) {
+async function appToken(deps: GithubReadDeps, orgId: string, app: GitHubAppConfig, target: GithubTarget) {
   const seen = { unanswered: false };
   const send = deps.fetch ?? fetch;
   const http: GitHubHttp = {
@@ -914,12 +920,22 @@ type GithubConnectionState = "none" | "refused" | "ok";
  * workspace no longer has the connection `through` names, else `github.repo_missing` with the connection's state and
  * whether the GitHub App is installed on some account (`app`).
  */
-async function readRepository(deps: SkillDeps, orgId: string, target: GithubTarget, through: SkillVia | null) {
-  const repo = `${target.owner}/${target.repo}`;
+async function readRepository(deps: GithubReadDeps, orgId: string, target: GithubTarget, through: SkillVia | null) {
   if (!through) {
     const open = await publicRepository(deps, target);
     if (open) return { ...open, via: null };
   }
+  return workspaceRepository(deps, orgId, target, through);
+}
+
+/** The repository read with the workspace's tokens alone, as `readRepository` says: which one read it, or why none. */
+async function workspaceRepository(
+  deps: GithubReadDeps,
+  orgId: string,
+  target: GithubTarget,
+  through: SkillVia | null,
+) {
+  const repo = `${target.owner}/${target.repo}`;
   const github = deps.github;
   const connection = github && (await activeConnections(deps.db, orgId)).find((c) => c.connector === "github");
   let state: GithubConnectionState = connection ? "ok" : "none";
@@ -964,6 +980,31 @@ async function readRepository(deps: SkillDeps, orgId: string, target: GithubTarg
     connection: state,
     app: installations.length > 0,
   });
+}
+
+/**
+ * The repository a GitHub link points into, whole, and where in it the link points: public, else through the
+ * workspace's GitHub (`deps.github`), with `readRepository`'s refusals.
+ */
+export async function linkedRepository(deps: GithubReadDeps, orgId: string, url: string) {
+  const target = parseGithubUrl(url);
+  return { target, ...(await readRepository(deps, orgId, target, null)) };
+}
+
+/** github.com's page of a repository: a renamed one redirects to its new name. */
+const REPOSITORY_PAGE: GithubFetchOptions = { maxBytes: 0, tooLarge: "", redirects: 3 };
+
+/**
+ * The repository of a link whose public read answered 404, read with the workspace's tokens: null when github.com
+ * shows the repository (the link's file, folder or ref is what is missing), else as `readRepository` reads a hidden
+ * one, with its refusals.
+ */
+export async function hiddenRepository(deps: GithubReadDeps, orgId: string, target: GithubTarget) {
+  const page = `https://github.com/${encodePath(`${target.owner}/${target.repo}`)}`;
+  const { res } = await githubGet(deps, page, "text/html", REPOSITORY_PAGE);
+  await res.body?.cancel();
+  if (res.ok) return null;
+  return workspaceRepository(deps, orgId, target, null);
 }
 
 /**
@@ -1147,13 +1188,13 @@ export async function importSkillFromUrl(
 
 /**
  * Skills installed from an agent's card (`offer_install_skill`), the installer's box checked, go on for that agent when
- * the installer may change its skills, as on its page. Not for an agent archived or gone, nor the right hand (it has
- * no skill tools): the install still stands, and an agent asks for them on its own settings card.
+ * the installer may change its skills, as on its page. Not for an agent archived or gone: the install still stands,
+ * and an agent asks for them on its own settings card.
  */
 async function turnOnFor(deps: SkillDeps, actorId: string, orgId: string, agentId: string | undefined, ids: string[]) {
   if (!agentId || ids.length === 0) return;
   const agent = await getAgent(deps.db, orgId, agentId);
-  if (!agent || agent.archivedAt || isRightHand(agent)) return;
+  if (!agent || agent.archivedAt) return;
   try {
     await setAgentSkills(
       deps.db,

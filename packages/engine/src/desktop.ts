@@ -28,6 +28,7 @@ import { HANDOFF_KEEPALIVE_MS } from "./browser/live";
 import { TtlCache } from "./cache";
 import { auditPhoneStream, authorizePhoneStream, recheckPhoneStream } from "./devices";
 import { ForbiddenError, NotFoundError } from "./errors";
+import { agentHolds, type HoldView, holdView, liveHold, releaseHold } from "./machine-holds";
 import type { MachineCaller, MachineHub } from "./machine-hub";
 import {
   computerDriving,
@@ -37,6 +38,7 @@ import {
   mayDriveComputer,
   requireComputerDriver,
 } from "./machines";
+import { can, requireActiveMembership } from "./organizations";
 import { closedRefusal, OrgDeletingError, orgStanding, standingRefusal } from "./standing";
 import type { Stream, StreamBroker, StreamInput, StreamTarget } from "./streams";
 
@@ -569,3 +571,66 @@ export function createDesktopControl(deps: DesktopControlDeps) {
 }
 
 export type DesktopControl = ReturnType<typeof createDesktopControl>;
+
+// ── What the agent keeps running (ADR 0176) ───────────────────────────────────
+
+export interface AgentHolds {
+  holds: HoldView[];
+  /** This person may stop them: who may use the agent's computer, and the admins of computers. */
+  canStop: boolean;
+}
+
+/** Who may stop what the agent keeps running: whoever may use its computer as the agent, and computers' admins. */
+async function mayStopHolds(db: Database, userId: string, orgId: string, agentId: string) {
+  const membership = await requireActiveMembership(db, userId, orgId);
+  return can(membership, "control_computers") || (await mayDriveComputer(db, userId, orgId, agentId));
+}
+
+/** `GET …/agents/{agentId}/holds`: for whoever may watch the agent's computer (its screen or its browser). */
+export async function agentHoldsFor(
+  deps: { db: Database; pubsub?: PubSub },
+  userId: string,
+  orgId: string,
+  agentId: string,
+): Promise<AgentHolds> {
+  const { db } = deps;
+  if ((await screenAccess(db, userId, orgId, agentId, undefined, "desktop")).refusal) {
+    await requireBrowserAccess(db, userId, orgId, agentId);
+  }
+  const [rows, canStop] = await Promise.all([
+    agentHolds(deps, orgId, agentId),
+    mayStopHolds(db, userId, orgId, agentId),
+  ]);
+  return { holds: rows.map(holdView), canStop };
+}
+
+/** `DELETE …/agents/{agentId}/holds/{holdId}`: a person's Stop, which ends the program (or closes the browser) too. */
+export async function stopAgentHold(
+  deps: { db: Database; pubsub?: PubSub; hub?: MachineCaller },
+  userId: string,
+  orgId: string,
+  agentId: string,
+  holdId: string,
+): Promise<void> {
+  const { db } = deps;
+  if (!(await mayStopHolds(db, userId, orgId, agentId))) {
+    throw new ForbiddenError(
+      "Only people who may use this agent's computer, and admins, can stop what it keeps running",
+    );
+  }
+  const row = await liveHold(deps, orgId, agentId, holdId);
+  if (!row) throw new NotFoundError("Nothing of this agent's runs under that hold now");
+  const hub = deps.hub;
+  await releaseHold(
+    {
+      db,
+      ...(deps.pubsub ? { pubsub: deps.pubsub } : {}),
+      call: (machineId, request) => {
+        if (!hub) throw new NotFoundError("Connected computers are not available on this server");
+        return hub.call(machineId, request);
+      },
+    },
+    row,
+    { reason: "stopped_by_person", userId },
+  );
+}

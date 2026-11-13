@@ -110,6 +110,7 @@ import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun } from "./executors";
 import { systemGitCache } from "./git";
 import type { HandlerContext, RequestObserver, RequestOutcome } from "./handlers";
+import { Holds } from "./holds";
 import { IphoneSetup, type IphoneSetupOptions } from "./iphone-setup";
 import { currentProcess, isCompiled, selfCommand } from "./launch";
 import { tailLines } from "./logfile";
@@ -134,7 +135,7 @@ import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, un
 import { agentId8, agentWorkspace } from "./paths";
 import { iphonesWifiFileOf, PhoneManager, type PhoneManagerOptions } from "./phones";
 import { agentSecrets, dropStoredSiteSecrets, secretValue } from "./secrets";
-import { AGENTS_CGROUP } from "./service";
+import { AGENTS_CGROUP, systemdBooted } from "./service";
 import {
   ensureSingleShared,
   ensureSystemShared,
@@ -144,6 +145,7 @@ import {
   systemShared,
   withShared,
 } from "./shared-folder";
+import { ackStandby, readStandby, STANDBY_POLL_MS, standbyOn } from "./standby";
 import { prepareSystemStartPage } from "./start-page";
 import { DataSockets, RELAYED_FILE, RelayCount } from "./streams";
 import {
@@ -478,6 +480,12 @@ export class RunnerDaemon implements RequestObserver {
   private toolchains: { get(): RunnerToolchains | undefined; stop(): void } | null = null;
   /** The Mac's side of an iPhone's setup (the desktop app asks), made on its first request. */
   private iphone: IphoneSetup | null = null;
+  /** System mode under systemd: the agents' holds (ADR 0176), which outlive sessions and this process. */
+  private holds: Holds | null = null;
+  /** An operator's standby is in force (ADR 0176): no link to the server, everything else runs. */
+  private standby = false;
+  /** The last standby ask answered (`standby-ack.json`). */
+  private standbyAsk: string | null = null;
 
   constructor(private readonly opts: DaemonOptions) {
     this.uidNetworks = new AgentNetworks({}, readNetworkPins(opts.home));
@@ -766,6 +774,10 @@ export class RunnerDaemon implements RequestObserver {
     sizes.unref?.();
     this.timers.push(sizes);
     // System mode: for an operator's network guard, at most once a minute.
+    this.checkStandby();
+    const standby = setInterval(() => this.checkStandby(), STANDBY_POLL_MS);
+    standby.unref?.();
+    this.timers.push(standby);
     const relayed = setInterval(() => {
       if (!this.session?.supervisor) return;
       try {
@@ -807,6 +819,7 @@ export class RunnerDaemon implements RequestObserver {
     const s = this.session;
     this.session = null;
     if (s) await this.closeSession(s);
+    this.holds?.close();
     await this.phones?.stop();
     this.iphone?.stop();
     this.toolchains?.stop();
@@ -1349,6 +1362,7 @@ export class RunnerDaemon implements RequestObserver {
         codexAuth: (accountId, auth) => this.accounts.keepCodexAuth(accountId, auth),
         desktop: (agent, use) => this.workerDesktop(agent, use),
         desktopViewers: (agentId) => this.desktops.status({ id: agentId }).streams,
+        browserKept: (agentId) => this.holds?.kept(agentId) ?? false,
         account: (agentId) => this.agentAccount(agentId),
         accounts: (agentId) => this.agentAccounts(agentId),
         ...(this.opts.workers ? { start: this.opts.workers.start } : { gitCache: rootGitCache() }),
@@ -1361,6 +1375,21 @@ export class RunnerDaemon implements RequestObserver {
         relayed: this.relayed,
         log,
       });
+      // The locks need logind (systemd), and each agent its own user to take them as.
+      if (!this.opts.workers && systemdBooted()) {
+        this.holds ??= new Holds({
+          home,
+          log,
+          onEnded: (holdId, reason) => this.send({ type: "keep.ended", holdId, reason }),
+          onBrowser: () => this.session?.supervisor?.stateChanged(),
+          closeBrowser: (agent) =>
+            this.session?.supervisor?.run(
+              { op: "browser.stop", agent },
+              { signal: new AbortController().signal, output: () => {} },
+            ) ?? Promise.resolve(),
+        });
+        this.holds.watch();
+      }
       if (this.accountUsers) {
         accountBrains = new AccountBrains({
           root: path.join(home, "account-brains"),
@@ -1458,6 +1487,7 @@ export class RunnerDaemon implements RequestObserver {
         }
       },
       ...(this.phones ? { phones: this.phones } : {}),
+      ...(this.holds && agentUser ? { keep: this.keepOps(this.holds, agentUser) } : {}),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
     // it lands in `hello` if it finishes first, else comes after as `accounts.changed`. Nothing reaches the
@@ -1487,6 +1517,7 @@ export class RunnerDaemon implements RequestObserver {
           ...usage,
           // Who may control a desktop or open a terminal follows it (ADR 0058 §4).
           ...(agentUser ? { mode: "system" as const } : {}),
+          ...(this.holds ? { holds: this.holds.report() } : {}),
         };
       },
       executors: () => this.helloExecutors(),
@@ -1564,12 +1595,48 @@ export class RunnerDaemon implements RequestObserver {
       agentUser,
     };
     this.session = session;
+    // Asked before this session started (a runner started again mid-standby): it stays off the server.
+    if (this.standby) connection.standby();
     supervisor?.boot();
     this.observeNetwork();
     log(
       `agentes-runner ${RUNNER_VERSION}: connecting to ${config.server} (workspace ${workspaceReal}${this.access().tools.commands ? "" : ", commands off"})`,
     );
     void connection.run().then((outcome) => this.sessionEnded(session, outcome));
+  }
+
+  /** `keep.*` (ADR 0176): each hold in the agent's slice, its program checked against the agent's user. */
+  private keepOps(holds: Holds, user: (agent: AgentScope) => AgentUser): NonNullable<HandlerContext["keep"]> {
+    return {
+      start: (agent, req) => holds.start(agent, user(agent), req),
+      end: (req) => holds.end(req),
+    };
+  }
+
+  /** An operator's standby (ADR 0176), asked in `standby.json`: while it is in force, no link to the server. */
+  private checkStandby() {
+    const ask = readStandby(this.opts.home);
+    const on = standbyOn(ask);
+    if (on !== this.standby) {
+      this.standby = on;
+      const s = this.session;
+      if (on) {
+        this.opts.log("standby: the link to the server is down; everything else runs on");
+        s?.connection.standby();
+        s?.streams.closeAll();
+      } else {
+        this.opts.log("standby is over: connecting");
+        s?.connection.resume();
+      }
+    }
+    if (ask && ask.id !== this.standbyAsk) {
+      this.standbyAsk = ask.id;
+      try {
+        ackStandby(this.opts.home, ask.id);
+      } catch (err) {
+        this.opts.log(`standby: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
   }
 
   private networkScopesBusy(agentId: string): boolean {

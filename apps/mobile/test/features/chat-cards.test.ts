@@ -483,9 +483,8 @@ describe("an agent's offer card is done for everyone once it's done", () => {
       "input: list ? { url: link, list } : { url: link, ...(forAgent ? { forAgentId: forAgent } : {}) }",
     );
     expect(screen).toContain("forAgentId: sendFor(url)");
-    // Its row only for a live agent the server would turn it on for: not archived or gone, never the right hand.
-    expect(screen).toContain("const forAgent = forAgentId ? dir.agentById.get(forAgentId) : undefined;");
-    expect(screen).toContain("const forName = forAgent && !isRightHand(forAgent) ? forAgent.name : undefined;");
+    // Its row only for a live agent the server would turn it on for: not archived or gone.
+    expect(screen).toContain("const forName = forAgentId ? dir.agentById.get(forAgentId)?.name : undefined;");
     // What a pick replaces, as the server marks it: an installed skill, or a removed one.
     expect(screen).toContain('c.replaces === "removed" ? "skills.pickReplacesRemoved" : "skills.pickReplaces"');
     expect(screen).toContain("turnOn && cardLink !== undefined && link.trim() === cardLink ? forAgentId : undefined");

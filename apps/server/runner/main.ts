@@ -85,6 +85,7 @@ import {
 import { agentWorkspace } from "./paths";
 import { connectVnc, type VncConnection, vncInit } from "./rfb";
 import { installService, installSystemService, serviceStatus, uninstallService } from "./service";
+import { askStandby, STANDBY_DEFAULT_MINUTES, STANDBY_MAX_MINUTES, standbyAcked } from "./standby";
 import type { DataListener, DataSocket } from "./streams";
 import { runTaskWrapper } from "./tasks";
 import { runnerTerminalUser, systemTerminalUser, Terminals, type TerminalsOptions } from "./terminal";
@@ -130,6 +131,12 @@ Usage:
       Runs host as this computer's service: the root unit from boot on Linux, at login on macOS.
   agentes-runner update
       Downloads the latest runner from the server and restarts the service (keeps the pairing).
+  agentes-runner standby [--minutes <n>]
+      For whoever pauses this computer: the running runner drops its link to the server and keeps
+      everything else running (tasks, the agents' browsers and desktops, their programs). It ends after
+      n minutes the computer is running (default 5), or with resume; ask again to keep it.
+  agentes-runner resume
+      Ends standby: the runner connects again at once.
   agentes-runner status
       The connection, the service, and whether the agents' desktops and the terminal can run here.
   agentes-runner doctor [--wait | --no-wait] [--json]
@@ -195,6 +202,7 @@ const VALUE_FLAGS = new Set([
   "enroll-file",
   "rotate",
   "link",
+  "minutes",
 ]);
 const LIST_FLAGS = new Set(["agent", "rotate"]);
 
@@ -738,6 +746,41 @@ function printed(
     }
   }
   return code;
+}
+
+/** How long `standby` and `resume` wait for the running runner to answer. */
+const STANDBY_ANSWER_MS = 20_000;
+
+/**
+ * `agentes-runner standby` / `resume` (ADR 0176): the ask goes in the runner's home, and the running runner answers
+ * once it applied it. Exits 0 once nothing here links to the server (in standby, or no runner running), or the
+ * runner took the resume.
+ */
+async function standby(p: Parsed, on: boolean): Promise<number> {
+  const home = runnerHome();
+  const given = flagString(p, "minutes");
+  const minutes = on ? (given === undefined ? STANDBY_DEFAULT_MINUTES : Number(given)) : 0;
+  if (on && (!Number.isInteger(minutes) || minutes < 1 || minutes > STANDBY_MAX_MINUTES)) {
+    console.error(`--minutes takes a whole number from 1 to ${STANDBY_MAX_MINUTES}`);
+    return 1;
+  }
+  const ask = askStandby(home, minutes);
+  const holder = readLock(home);
+  if (!holder || !pidAlive(holder.pid)) {
+    console.log(on ? "No runner is running here: one that starts now stays in standby." : "No runner is running here.");
+    return 0;
+  }
+  for (const until = Date.now() + STANDBY_ANSWER_MS; Date.now() < until; await sleep(100)) {
+    if (!standbyAcked(home, ask.id)) continue;
+    console.log(
+      on
+        ? `In standby for ${minutes} min of running time: no link to the server, everything else runs.`
+        : "Standby is over: connecting to the server.",
+    );
+    return 0;
+  }
+  console.error("The runner didn't answer in time.");
+  return 1;
 }
 
 /** Replaces this script with the server's latest bundle; the pairing and the workspace stay. */
@@ -1380,6 +1423,9 @@ async function main(argv: string[]): Promise<number> {
     }
     case "update":
       return update();
+    case "standby":
+    case "resume":
+      return standby(p, command === "standby");
     case "service": {
       const stored = storedOrNull();
       const hostService = p.flags.has("host");

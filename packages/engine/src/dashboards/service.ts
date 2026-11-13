@@ -277,6 +277,7 @@ function toWidgetView(
   nextRunAt: Date | null,
   lastCostNano: number | null,
   wait: WidgetWaitView | null,
+  lastFailureCode: string | null = null,
 ): WidgetView {
   const schedule: WidgetSchedule = isWidgetSchedule(row.schedule) ? row.schedule : "manual";
   const status: WidgetStatus = isStatus(row.status) ? row.status : "building";
@@ -296,17 +297,22 @@ function toWidgetView(
     status,
     failure:
       status === "failed"
-        ? { code: row.failureCode ?? WIDGET_FAILURES.error, detail: row.failureDetail ?? null }
+        ? {
+            code: row.failureCode ?? WIDGET_FAILURES.error,
+            detail: row.failureDetail ?? null,
+            ...(row.failureCode === "failing" && lastFailureCode ? { cause: lastFailureCode } : {}),
+          }
         : null,
     wait: status === "building" || status === "updating" ? wait : null,
     refreshedAt: row.refreshedAt?.toISOString() ?? null,
     nextRunAt: schedule !== "manual" && nextRunAt ? nextRunAt.toISOString() : null,
     routineId: row.routineId,
     sourceMessageId: row.sourceMessageId,
-    createdBy: row.createdByUserId
-      ? { kind: "person", id: row.createdByUserId }
-      : row.createdByRunId
-        ? { kind: "agent", id: row.agentId }
+    // An agent's `create_widget` keeps the person it made it for too: its author is still the agent.
+    createdBy: row.createdByRunId
+      ? { kind: "agent", id: row.agentId }
+      : row.createdByUserId
+        ? { kind: "person", id: row.createdByUserId }
         : null,
     draft: row.draft,
     lastCostUsd: lastCostNano && lastCostNano > 0 ? lastCostNano / 1e9 : null,
@@ -340,6 +346,7 @@ export async function widgetViews(
       next.set(r.id, r.nextRunAt);
   }
   const cost = new Map<string, number>();
+  const lastFailure = new Map<string, string | null>();
   const ids = rows.map((r) => r.id);
   if (ids.length > 0) {
     const latest = await db
@@ -355,6 +362,28 @@ export async function widgetViews(
         desc(dashboardWidgetUpdates.id),
       );
     for (const u of latest) cost.set(u.widgetId, Number(u.costNanoUsd));
+  }
+  // What stopped a widget that failed in a row: its history's latest row that isn't the stop itself.
+  const stopped = rows.flatMap((r) => (r.status === "failed" && r.failureCode === "failing" ? [r.id] : []));
+  if (stopped.length > 0) {
+    const last = await db
+      .selectDistinctOn([dashboardWidgetUpdates.widgetId], {
+        widgetId: dashboardWidgetUpdates.widgetId,
+        failureCode: dashboardWidgetUpdates.failureCode,
+      })
+      .from(dashboardWidgetUpdates)
+      .where(
+        and(
+          inArray(dashboardWidgetUpdates.widgetId, stopped),
+          sql`${dashboardWidgetUpdates.failureCode} is distinct from 'failing'`,
+        ),
+      )
+      .orderBy(
+        dashboardWidgetUpdates.widgetId,
+        desc(dashboardWidgetUpdates.createdAt),
+        desc(dashboardWidgetUpdates.id),
+      );
+    for (const u of last) lastFailure.set(u.widgetId, u.failureCode);
   }
   const busy = rows.flatMap((r) =>
     r.routineId && (r.status === "building" || r.status === "updating") ? [r.routineId] : [],
@@ -378,7 +407,13 @@ export async function widgetViews(
               (await mayContinueWidgetWait(db, who.userId, who.membership, run)),
           }
         : null;
-      return toWidgetView(r, r.routineId ? (next.get(r.routineId) ?? null) : null, cost.get(r.id) ?? null, wait);
+      return toWidgetView(
+        r,
+        r.routineId ? (next.get(r.routineId) ?? null) : null,
+        cost.get(r.id) ?? null,
+        wait,
+        lastFailure.get(r.id) ?? null,
+      );
     }),
   );
 }
@@ -1065,7 +1100,8 @@ export async function insertWidget(
 
 /**
  * Title, instructions, schedule, alert (its recipient becomes the person who changed it), size, or another board the
- * person edits (editors). A schedule change goes through `syncWidgetRoutine`.
+ * person edits (editors). A schedule change goes through `syncWidgetRoutine`. Whoever writes its instructions or
+ * moves it becomes its person (`createdByUserId`).
  */
 export async function updateWidget(
   deps: DashboardDeps,
@@ -1128,6 +1164,9 @@ export async function updateWidget(
     routineChanged = true;
   }
   if (Object.keys(set).length === 0) return widgetView(deps.db, widget, viewer);
+  // New instructions, or a board its people may not see, are this person's: the widget is theirs from now on, so its
+  // right hand builds think with their AI, never with the AI of who made it (ADR 0137 §11).
+  if ((set.prompt !== undefined || target) && widget.createdByUserId !== actorId) set.createdByUserId = actorId;
   const at = nowOf(deps);
   const [updated] = await deps.db
     .update(dashboardWidgets)

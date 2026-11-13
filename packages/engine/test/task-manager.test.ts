@@ -384,6 +384,17 @@ describe("the task manager", () => {
     expect(after.ended[0]).toMatchObject({ runId: run.id, status: "canceled", stoppedBy: { userId: f.owner.id } });
   });
 
+  test("a task stopped to read a message its person sent is no ended task: it goes on in the next run", async () => {
+    f = await setup();
+    await ask("@dev compara os preços dos concorrentes");
+    const [run] = await runs();
+    if (!run) throw new Error("no run");
+    const said = await ask("só os três maiores");
+    await cancelRun(deps(), f.owner.id, f.org.id, run.id, { sendMessageId: said.id });
+    const view = await taskManager(f.db, f.owner.id, f.org.id);
+    expect(view.ended.some((e) => e.runId === run.id)).toBe(false);
+  });
+
   test("a member who isn't in the conversation doesn't see its task", async () => {
     f = await setup();
     await ask("@dev arruma o link");

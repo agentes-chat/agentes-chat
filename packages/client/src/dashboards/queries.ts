@@ -4,7 +4,7 @@ import { useApi } from "../api/context";
 import { ApiError } from "../api/http";
 import { keys } from "../api/keys";
 import { useAiStatusSince } from "../api/queries";
-import { busyWidgets, widgetAiReady, widgetNeedsAi } from "./lib";
+import { busyWidgets, widgetAiReady, widgetNeedsAi, widgetStoppedForAi } from "./lib";
 import type {
   ConfirmWidgetInput,
   CreateDashboardInput,
@@ -411,7 +411,7 @@ export function useBuildOnceAi(orgId: string, widget: Widget | null | undefined,
   const api = useApi();
   const qc = useQueryClient();
   const status = useAiStatusSince(orgId, Boolean(canEdit && widget && widgetNeedsAi(widget)));
-  const id = canEdit && widget && widgetAiReady(widget, status) ? widget.id : null;
+  const id = canEdit && widget && widgetNeedsAi(widget) && widgetAiReady(widget, status) ? widget.id : null;
   useEffect(() => {
     if (!id || builtOnceAi.has(id)) return;
     builtOnceAi.add(id);
@@ -422,6 +422,17 @@ export function useBuildOnceAi(orgId: string, widget: Widget | null | undefined,
       },
     );
   }, [id, api, qc, orgId]);
+}
+
+/**
+ * Whether a failed widget's way out is connecting an AI, never Resolve: one waiting for an AI, or one that stopped for
+ * the lack of one while its build still has none (the AI status read since, `widgetAiReady`). Once it has, Resolve
+ * starts it again.
+ */
+export function useWidgetLacksAi(orgId: string, widget: Widget | null | undefined): boolean {
+  const stopped = Boolean(widget && widgetStoppedForAi(widget));
+  const status = useAiStatusSince(orgId, stopped);
+  return Boolean(widget && (widgetNeedsAi(widget) || (stopped && !widgetAiReady(widget, status))));
 }
 
 /** "Ask for a change" (the widget panel's composer). */

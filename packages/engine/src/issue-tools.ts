@@ -235,7 +235,7 @@ const PRIORITIES = ["low", "normal", "high"];
 
 /**
  * Why the right hand can't make this task for `person` (ADR 0137 §13): it acts as them, so not what they couldn't, it
- * does no work of its own, and it reaches nobody else: who sees the task is theirs to widen, on the task.
+ * takes no task itself, and it reaches nobody else: who sees the task is theirs to widen, on the task.
  */
 async function rightHandTaskRefusal(
   deps: IssueDeps,
@@ -249,7 +249,7 @@ async function rightHandTaskRefusal(
     return "A task you make stays with the person who asked: they open it to others on the task.";
   if (assignee?.type !== "agent") return null;
   const [agent] = await deps.db.select().from(schema.agents).where(eq(schema.agents.id, assignee.id));
-  if (!agent || isRightHand(agent)) return "You do no hands-on work: assign it to the agent whose job it is.";
+  if (!agent || isRightHand(agent)) return "A task isn't yours to take: assign it to the agent whose job it is.";
   // It starts on it at once, in the task's conversation the person reads: only an agent they may talk to.
   if (!canTalkTo(agent, person, await speakerFor(deps.db, ctx.orgId, person)))
     return `@${agent.handle} only works with some people, and this person isn't one of them. Tell them; its owner or an admin can let them in.`;
@@ -697,6 +697,11 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
       },
       async execute(input, ctx) {
         try {
+          // The right hand comments for the person in their DM, on a task they see (ADR 0137 §13).
+          if (await rightHandAway(ctx)) return ONLY_IN_DM;
+          const reader = await rightHandReader(ctx);
+          if (reader)
+            await getIssue(deps.db, { type: "person", userId: reader }, ctx.orgId, issueKey(str(input.issue)));
           const current = await find(deps, ctx, str(input.issue));
           const files = await bringToTask(deps, ctx, current.id, givenFiles(input) ?? []);
           await commentIssue(deps, actorOf(ctx), ctx.orgId, current.id, str(input.text), {

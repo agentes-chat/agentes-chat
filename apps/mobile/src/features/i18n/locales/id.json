@@ -1282,7 +1282,6 @@
     "agentLine_other": "{{count}} memori",
     "uses_other": "Dipakai {{count}} kali",
     "confirmed": "Dikonfirmasi oleh seseorang",
-    "unconfirmed": "Belum dikonfirmasi",
     "confirm": "Konfirmasi",
     "confirmedToast": "Dikonfirmasi",
     "details": "Detail teknis",
@@ -1488,9 +1487,9 @@
         "setup": "Pengaturan ruang kerja",
         "desktop": "Layar komputer"
       },
-      "asksYou": "Merge dan publikasi selalu meminta persetujuanmu, di level apa pun.",
-      "asksOwner": "Merge dan publikasi selalu meminta persetujuan {{name}}, di level apa pun.",
-      "asksAdmins": "Merge dan publikasi selalu meminta persetujuan admin, di level apa pun.",
+      "asksYou": "Merge dan publikasi meminta persetujuanmu, kecuali agen diatur untuk tidak pernah bertanya.",
+      "asksOwner": "Merge dan publikasi meminta persetujuan {{name}}, kecuali agen diatur untuk tidak pernah bertanya.",
+      "asksAdmins": "Merge dan publikasi meminta persetujuan admin, kecuali agen diatur untuk tidak pernah bertanya.",
       "empty": "Untuk sekarang, hanya percakapan."
     }
   },

@@ -20,6 +20,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, type TextInputInstance, View } from "react-native";
+import { paysHere } from "@/lib/store";
 import { useOrg } from "@/providers/org";
 import {
   Button,
@@ -199,7 +200,7 @@ function InvitePeople() {
         <GroupedFooter>
           {t("common.joinSentences", {
             a: t("standing.billing.invites"),
-            b: t(can(org, "manage_billing") ? "connectAi.billingWeb" : "standing.billing.askAdmin"),
+            b: t(paysHere(can(org, "manage_billing")) ? "connectAi.billingWeb" : "standing.billing.askAdmin"),
           })}
         </GroupedFooter>
       </Page>

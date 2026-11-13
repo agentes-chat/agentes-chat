@@ -27,7 +27,6 @@ import {
 import { finishOnboarding, isRightHand, RIGHT_HAND_DEFAULT } from "@agenteschat/client/lib/right-hand";
 import { browserTimezone, timezoneName } from "@agenteschat/client/lib/routines";
 import { aboutOf, type BusinessType } from "@agenteschat/client/lib/team-plan";
-import type { WorkAreaAnswer } from "@agenteschat/client/lib/work-area";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   AgentSticker,
@@ -70,13 +69,13 @@ import { returnPlace } from "@/lib/return-to";
 import { STORAGE_KEYS, sessionStore, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import { AiHost, AiStage, AiStep } from "./onboarding/AiStep";
-import { AreaStep } from "./onboarding/AreaStep";
 import { OnboardingPreview, type PreviewAgent } from "./onboarding/OnboardingPreview";
 import { PeopleStep } from "./onboarding/PeopleStep";
 import { PurposeCards } from "./onboarding/PurposeCards";
 import { BusinessStep, PlanStep, TeamStep, useTemplate } from "./onboarding/steps";
 import { TeamSource, useTeamSource } from "./onboarding/TeamSource";
 import { TeamStart } from "./onboarding/TeamStart";
+import { YouStep } from "./onboarding/YouStep";
 import "./onboarding.css";
 
 /** Back from paying, `/me` is asked again this often until the hold lifts (as the hold's banner does). */
@@ -228,15 +227,10 @@ export function OnboardingPage() {
       team: team.length,
       picked: pick,
       personal: personalNow,
-      funnel: { thinks, passed },
+      // The person's own step is answered once per account: their area said, or skipped (amended 2026-11-12).
+      funnel: { thinks, passed, about: (me.data?.user.workArea ?? null) !== null },
     });
   const reachedRail = railAt(picked);
-  // The person's own area, asked once per account (no step of its own on the rail): right before the team step, on the
-  // step before it, a team's "What you do" or a personal workspace's purpose. Stored as an area or `skipped`, so a
-  // reload before either asks again and one after never does.
-  const [areaDone, setAreaDone] = useState(false);
-  const areaAsked = (me.data?.user.workArea ?? null) !== null || areaDone;
-  const asksArea = !areaAsked && orgId !== null && picked === null && reachedRail.at === "team" && team.length === 0;
   // Connected on its step in this visit, a team's AI step stays on screen (what was connected, the Connect dialog still
   // over it) until its Continuar: the people step never takes its place under the person (ADR 0162, amended 2026-11-11).
   const keepAi =
@@ -246,7 +240,7 @@ export function OnboardingPage() {
     reachedRail.thinks &&
     reachedRail.at !== "ai" &&
     reachedRail.steps.includes("people");
-  const rail = asksArea ? railAt(personalNow ? "name" : "business") : keepAi ? railAt("ai") : reachedRail;
+  const rail = keepAi ? railAt("ai") : reachedRail;
   // The server's billing too: a plan step passed on the way to the people step is listed only where there is billing.
   const loaded =
     orgId === null ||
@@ -296,7 +290,12 @@ export function OnboardingPage() {
   const zoneNow = zone ?? settings.data?.timezone ?? browserTimezone() ?? "UTC";
   const kind = business ?? aboutOf(t, context).business;
   // A personal workspace never gets a template in the rail (ADR 0159): its card makes its agents later.
-  const template = useTemplate(orgId, kind, step === "business" || (step === "team" && !personalNow));
+  // Read from what it does on, so the team step has it when it opens past the person's own step.
+  const template = useTemplate(
+    orgId,
+    kind,
+    step === "business" || ((step === "you" || step === "team") && !personalNow),
+  );
 
   // The AI step shown from a read that lists every agent: from then on, the team thinking shows its done screen.
   useEffect(() => {
@@ -373,17 +372,6 @@ export function OnboardingPage() {
     if (verified) sessionStore.remove(STORAGE_KEYS.confirmationSent);
   }, [verified]);
   const resend = useMutation({ mutationFn: () => sendNewLink({ auth, t, show: toast.show }, email) });
-  // The area goes on at once, kept in `/me` as answered; a save that fails never holds the onboarding.
-  const saveArea = useMutation({
-    meta: { silent: true },
-    mutationFn: (area: WorkAreaAnswer) => api.account.setWorkArea(area),
-  });
-  const answerArea = (area: WorkAreaAnswer) => {
-    setAreaDone(true);
-    const now = qc.getQueryData<Me>(keys.me);
-    if (now) qc.setQueryData<Me>(keys.me, { ...now, user: { ...now.user, workArea: area } });
-    saveArea.mutate(area);
-  };
 
   // Someone who already has a workspace can give up on a new one: back to the one they were in (or any other).
   const others = (me.data?.organizations ?? []).filter((o) => o.id !== orgId && !settingUp(o));
@@ -481,9 +469,7 @@ export function OnboardingPage() {
   // A new step, or a step's own new view (the team step's question, bringing, what was found, its report or its list;
   // the AI step's connected screen), replaces the pressed button under the focus: the focus goes to the new heading,
   // which is read out, and where Enter still reaches the step's action.
-  const shownView = asksArea
-    ? "area"
-    : `${step}:${step === "team" ? (teamList ? "list" : view) : step === "ai" ? String(aiDone) : ""}`;
+  const shownView = `${step}:${step === "team" ? (teamList ? "list" : view) : step === "ai" ? String(aiDone) : ""}`;
   const shown = useRef<string | null>(null);
   useEffect(() => {
     if (!known || shown.current === shownView) return;
@@ -547,79 +533,86 @@ export function OnboardingPage() {
   // exists (back from a later step), never the template's.
   const teamHead = step === "team" && !teamList ? source.head(t, name) : null;
   const aiLabel = aiNamed && aiNamed !== "key" ? planLabel(t, aiNamed) : null;
-  const say = asksArea
-    ? t(personalNow ? "onboarding.flow.lodi.areaPersonal" : "onboarding.flow.lodi.area")
-    : step === "name"
-      ? t("onboarding.flow.lodi.name", lodiWords)
-      : step === "business"
-        ? t("onboarding.flow.lodi.business", lodiWords)
-        : step === "team"
-          ? (teamHead?.say ??
-            t(personalNow ? "onboarding.flow.lodi.teamMadePersonal" : "onboarding.flow.lodi.teamMade", lodiWords))
-          : step === "plan"
-            ? t("onboarding.flow.lodi.planThen", lodiWords)
-            : step === "people"
-              ? t(emails ? "onboarding.flow.lodi.people" : "onboarding.flow.lodi.peopleLink", lodiWords)
-              : aiDone
-                ? t(hasPeople ? "onboarding.flow.lodi.connectedThen" : "onboarding.flow.lodi.connected", lodiWords)
-                : hasPeople
-                  ? // Not the last step: the people come after it.
-                    t(alone ? "onboarding.flow.lodi.aiThenAlone" : "onboarding.flow.lodi.aiThen", lodiWords)
-                  : t(personalNow || alone ? "onboarding.flow.lodi.aiPersonal" : "onboarding.flow.lodi.ai", lodiWords);
-  const title = asksArea
-    ? t("onboarding.flow.area.title")
-    : asking
-      ? t("onboarding.purpose.title")
+  const say =
+    step === "you"
+      ? t(personalNow ? "onboarding.flow.lodi.youPersonal" : "onboarding.flow.lodi.you")
       : step === "name"
-        ? t("onboarding.workspace.title")
+        ? t("onboarding.flow.lodi.name", lodiWords)
         : step === "business"
-          ? t("agentSetup.firstRun.about.title", { org: name })
+          ? t("onboarding.flow.lodi.business", lodiWords)
           : step === "team"
-            ? (teamHead?.title ?? t(personalNow ? "onboarding.flow.steps.teamPersonal" : "onboarding.flow.team.title"))
+            ? (teamHead?.say ??
+              t(personalNow ? "onboarding.flow.lodi.teamMadePersonal" : "onboarding.flow.lodi.teamMade", lodiWords))
             : step === "plan"
-              ? t(personalNow ? "onboarding.flow.plan.titlePersonal" : "onboarding.flow.plan.title")
+              ? t("onboarding.flow.lodi.planThen", lodiWords)
               : step === "people"
-                ? t("onboarding.flow.people.title")
+                ? t(emails ? "onboarding.flow.lodi.people" : "onboarding.flow.lodi.peopleLink", lodiWords)
                 : aiDone
-                  ? personalNow || alone
-                    ? t("onboarding.flow.ai.doneTitlePersonal", agentGrammar(lodiName))
-                    : t("onboarding.flow.ai.doneTitle", { org: name })
-                  : personalNow
-                    ? t("onboarding.flow.ai.titlePersonal")
-                    : alone
-                      ? // The right hand alone (the team step left with no agents): by its name, as its stage says it.
-                        t("onboarding.flow.ai.titleAlone", agentGrammar(lodiName))
-                      : t("arrival.connect.title");
-  const lead = asksArea
-    ? t("onboarding.flow.area.lead")
-    : asking
-      ? t("onboarding.purpose.lead")
-      : step === "name"
-        ? t("onboarding.workspace.lead")
-        : step === "business"
-          ? t("agentSetup.firstRun.about.desc")
-          : step === "team"
-            ? (teamHead?.lead ?? t("onboarding.flow.team.madeLead"))
-            : step === "plan"
-              ? t(
-                  personalNow
-                    ? "onboarding.flow.plan.leadPersonal"
-                    : alone
-                      ? "onboarding.flow.plan.leadAlone"
-                      : "onboarding.flow.plan.lead",
-                )
-              : step === "people"
-                ? // A server that sends no email invites through its link only (ADR 0090).
-                  t(emails ? "onboarding.flow.people.lead" : "members.dialog.linkStep.lead")
-                : aiDone
-                  ? aiLabel
-                    ? t("onboarding.flow.ai.doneLead", { label: aiLabel })
-                    : t("onboarding.flow.ai.doneLeadAny")
-                  : t("arrival.connect.text");
+                  ? t(hasPeople ? "onboarding.flow.lodi.connectedThen" : "onboarding.flow.lodi.connected", lodiWords)
+                  : hasPeople
+                    ? // Not the last step: the people come after it.
+                      t(alone ? "onboarding.flow.lodi.aiThenAlone" : "onboarding.flow.lodi.aiThen", lodiWords)
+                    : t(
+                        personalNow || alone ? "onboarding.flow.lodi.aiPersonal" : "onboarding.flow.lodi.ai",
+                        lodiWords,
+                      );
+  const title =
+    step === "you"
+      ? t("onboarding.flow.you.title")
+      : asking
+        ? t("onboarding.purpose.title")
+        : step === "name"
+          ? t("onboarding.workspace.title")
+          : step === "business"
+            ? t("agentSetup.firstRun.about.title", { org: name })
+            : step === "team"
+              ? (teamHead?.title ??
+                t(personalNow ? "onboarding.flow.steps.teamPersonal" : "onboarding.flow.team.title"))
+              : step === "plan"
+                ? t(personalNow ? "onboarding.flow.plan.titlePersonal" : "onboarding.flow.plan.title")
+                : step === "people"
+                  ? t("onboarding.flow.people.title")
+                  : aiDone
+                    ? personalNow || alone
+                      ? t("onboarding.flow.ai.doneTitlePersonal", agentGrammar(lodiName))
+                      : t("onboarding.flow.ai.doneTitle", { org: name })
+                    : personalNow
+                      ? t("onboarding.flow.ai.titlePersonal")
+                      : alone
+                        ? // The right hand alone (the team step left with no agents): by its name, as its stage says it.
+                          t("onboarding.flow.ai.titleAlone", agentGrammar(lodiName))
+                        : t("arrival.connect.title");
+  const lead =
+    step === "you"
+      ? t(personalNow ? "onboarding.flow.you.leadPersonal" : "onboarding.flow.you.lead")
+      : asking
+        ? t("onboarding.purpose.lead")
+        : step === "name"
+          ? t("onboarding.workspace.lead")
+          : step === "business"
+            ? t("agentSetup.firstRun.about.desc")
+            : step === "team"
+              ? (teamHead?.lead ?? t("onboarding.flow.team.madeLead"))
+              : step === "plan"
+                ? t(
+                    personalNow
+                      ? "onboarding.flow.plan.leadPersonal"
+                      : alone
+                        ? "onboarding.flow.plan.leadAlone"
+                        : "onboarding.flow.plan.lead",
+                  )
+                : step === "people"
+                  ? // A server that sends no email invites through its link only (ADR 0090).
+                    t(emails ? "onboarding.flow.people.lead" : "members.dialog.linkStep.lead")
+                  : aiDone
+                    ? aiLabel
+                      ? t("onboarding.flow.ai.doneLead", { label: aiLabel })
+                      : t("onboarding.flow.ai.doneLeadAny")
+                    : t("arrival.connect.text");
   // Its own back: the first question from the name, the workspace the person came from, the team step's previous
   // view, the team from the AI step (nothing to go back to once it thinks), the AI step from the people step.
   let back: { label: string; go: () => void } | null = null;
-  if (asksArea) {
+  if (step === "you") {
     // A team's goes back to what it does, its answers kept; a personal workspace's purpose is never asked again.
     if (!personalNow) back = { label: t("onboarding.back"), go: () => setPicked("business") };
   } else if (step === "name" && orgId === null && forTeam) {
@@ -637,7 +630,7 @@ export function OnboardingPage() {
   const answered = Math.min(reached, steps.length);
   // A personal workspace's own words for its steps (ADR 0159), from the first question on; it never invites here.
   const stepName = (s: RailStep) =>
-    personalNow && s !== "business" && s !== "people"
+    personalNow && s !== "business" && s !== "you" && s !== "people"
       ? t(`onboarding.flow.steps.${s}Personal`)
       : t(`onboarding.flow.steps.${s}`);
   const values: Partial<Record<RailStep, string>> = {
@@ -649,6 +642,8 @@ export function OnboardingPage() {
         : context
           ? t("onboarding.railValue.context")
           : undefined,
+    // The person's own step: the name they go by.
+    you: me.data.user.name || undefined,
     // Answered with no agents (shown only once answered): they come later.
     team: team.length
       ? joinNames(
@@ -837,7 +832,7 @@ export function OnboardingPage() {
             </div>
           )}
           <StepHost step={step} org={mine} me={me.data}>
-            <div className="onb__body" key={asksArea ? "area" : asking ? "purpose" : step}>
+            <div className="onb__body" key={asking ? "purpose" : step}>
               {back && (
                 <button type="button" className="onb__back" onClick={back.go} disabled={busy}>
                   <Icon name="chevronLeft" size={16} />
@@ -855,8 +850,7 @@ export function OnboardingPage() {
                 <p className="onb__lead">{lead}</p>
               </header>
 
-              {asksArea && <AreaStep onAnswer={answerArea} />}
-              {step === "name" && !asksArea && (
+              {step === "name" && (
                 <>
                   <Locked when={busy}>
                     {asking ? (
@@ -1002,7 +996,7 @@ export function OnboardingPage() {
                   </div>
                 </>
               )}
-              {step === "business" && orgId && !asksArea && (
+              {step === "business" && orgId && (
                 <BusinessStep
                   orgId={orgId}
                   context={context}
@@ -1015,6 +1009,7 @@ export function OnboardingPage() {
                   }}
                 />
               )}
+              {step === "you" && orgId && <YouStep me={me.data} onDone={() => setPicked(null)} />}
               {step === "team" &&
                 orgId &&
                 (teamList || view === "template" ? (
@@ -1107,7 +1102,9 @@ export function OnboardingPage() {
 
 /**
  * The AI step and its stage inside the workspace's context and Connect an AI (ADR 0160), which the onboarding has
- * nowhere else; the people step inside the workspace's context, which the invite link's panel reads; any other step
+ * nowhere else; the people step inside the workspace's context, which the invite link's panel reads, the team
+ * step, where a private repository to bring agents from offers to connect GitHub, and the person's own step, whose
+ * avatar builder and photo save to the person's account through it; any other step
  * as it is, so the earlier steps ask the server for nothing more.
  */
 function StepHost({
@@ -1127,7 +1124,7 @@ function StepHost({
         {children}
       </AiHost>
     );
-  if (org && step === "people")
+  if (org && (step === "people" || step === "team" || step === "you"))
     return (
       <OrgProvider org={org} me={me}>
         {children}

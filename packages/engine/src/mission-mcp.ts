@@ -54,6 +54,7 @@ import { agentSearchChannels, searchVisible } from "./search";
 import { standingRefusal } from "./standing";
 import { maskSecrets } from "./tool-detail";
 import { createToolGateway, type ToolGateway } from "./tools/gateway";
+import { approvalsLevelOf } from "./tools/run-policy";
 import { toBrainSchema } from "./tools/schema-compat";
 import { grantedScopeKeys, grantKey } from "./tools/scopes";
 import type { ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
@@ -284,7 +285,9 @@ export function createMissionRunToolSource(deps: Omit<MissionDeps, "db">): ToolS
           if (tool === PERMISSION_TOOL) {
             if (live) return { content: await handlePermissionPrompt(d, live, asTask(live), masked(input) as never) };
             const granted = await grantedScopeKeys(c.db, c.orgId, c.agentId).catch(() => new Set<string>());
-            return { content: runPermissionPrompt(input, { canRun: granted.has(grantKey(null, SANDBOX_SCOPE)) }) };
+            const asksFirst = (await approvalsLevelOf(c.db, c.orgId, c.agentId)) === "always";
+            const canRun = granted.has(grantKey(null, SANDBOX_SCOPE));
+            return { content: runPermissionPrompt(input, { canRun, asksFirst }) };
           }
           if (!live) return refused("mission.not_allowed", "This conversation has no open mission.");
           // Like its other tools: only a run its owner or a decider is behind, or one it woke, makes the mission act.

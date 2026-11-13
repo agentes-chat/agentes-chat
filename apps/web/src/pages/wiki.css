@@ -375,41 +375,9 @@ html:not([data-pointer]) .wiki-tag:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
-/* An .ac-iconline: the mark on the title's line, however the text under it wraps. */
-.wiki-import-card {
-  gap: 10px;
+/* "Importar", at the foot of the wiki's side column. */
+.wiki-import-btn {
   margin-top: auto;
-  padding: 12px;
-  border: 0;
-  border-radius: 14px;
-  background: var(--raised);
-  box-shadow: var(--e1), var(--top);
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    box-shadow 0.15s,
-    transform 0.18s var(--spring);
-}
-.wiki-import-card:hover {
-  box-shadow: var(--e2), var(--top);
-}
-.wiki-import-card:active {
-  transform: scale(0.98);
-}
-html:not([data-pointer]) .wiki-import-card:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-.wiki-import-card b {
-  display: block;
-  font-size: 13px;
-}
-.wiki-import-card small {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
 }
 .obsidian-mark {
   flex: none;

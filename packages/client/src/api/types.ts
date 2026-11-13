@@ -152,6 +152,8 @@ export interface AuthConfig {
   supportEmail?: string | null;
   /** The server takes feedback (`POST /api/app/feedback`): the apps show the form; absent: a server too old to. */
   feedback?: boolean;
+  /** It goes to the agentes.chat team, not to whoever runs this server: the form says so and takes pictures only. */
+  feedbackRelay?: boolean;
   /** Every workspace gets a computer of its own (the Cloud); absent: a server too old to say. */
   workspaceComputer?: boolean;
   /** The billing service (ADR 0079): owners and admins open a workspace's plan there; null or absent: no billing. */
@@ -1396,6 +1398,11 @@ export interface AiStatus {
   apiKey?: boolean;
   /** Memory reflects on finished conversations: there is a summary model it can call (absent from an older server). */
   reflection?: boolean;
+  /**
+   * The right hand's widgets waiting for an AI, or stopped for the lack of one, whose build has one now, among those
+   * the viewer sees (`widgetAiReady`). Absent from an older server.
+   */
+  widgetsReady?: string[];
   agents: {
     agentId: string;
     /** `waiting`: its computer is away for now (not "no AI"). */
@@ -3334,6 +3341,9 @@ export interface ArtifactFileContent {
   size: number;
   sha256: string;
   text?: string;
+  /** A picture's own size (pixels), when the server read it: its box has its proportions before it loads. */
+  width?: number;
+  height?: number;
 }
 
 export interface ArtifactAuthor {
@@ -3499,6 +3509,9 @@ export interface ArtifactRef {
   /** The file was deleted: the card shows "Arquivo removido". */
   deleted?: boolean;
   title?: string;
+  /** A picture's size (pixels), when the server knew it: its card has its box before the file's details load. */
+  width?: number;
+  height?: number;
 }
 
 export interface ArtifactFilters {
@@ -4875,9 +4888,9 @@ export interface WikiPageSummary {
   audienceFolder?: string | null;
   /** The start of the text, plain, for cards. */
   excerpt?: string;
-  /** `obsidian` for an imported page. */
+  /** An imported page: `obsidian`, `github` or `files` (`WikiImportSource`). */
   sourceType?: string | null;
-  /** An imported page: the vault's name. */
+  /** An imported page: the name of what was imported (the vault, the repository, the folder). */
   sourceName?: string | null;
   /** The import that brought it (null for pages imported before imports had ids). */
   importId?: string | null;
@@ -4910,8 +4923,11 @@ export interface WikiImportNote {
   attachments?: Record<string, string>;
 }
 
+/** Where an import's notes came from: an Obsidian vault, a GitHub link, or Markdown files. */
+export type WikiImportSource = "obsidian" | "github" | "files";
+
 export interface WikiImportInput {
-  source: { type: "obsidian"; name: string };
+  source: { type: WikiImportSource; name: string };
   notes: WikiImportNote[];
   folder?: string;
   onConflict: "keep_both" | "skip";
@@ -7258,6 +7274,30 @@ export interface DesktopStatus {
   held: boolean;
   /** The agent's browser runs on this desktop (ADR 0058 §7). Absent from older servers. */
   browserOnDesktop?: boolean;
+}
+
+/**
+ * What an agent keeps running on its computer (`keep_running`, ADR 0176): one of its programs (it ends with it), its
+ * browser, or a time alone.
+ */
+export interface Hold {
+  id: string;
+  agentId: string;
+  machineId: string;
+  /** In the agent's words, for people. */
+  what: string;
+  why: string;
+  kind: "program" | "browser" | "time";
+  since: string;
+  /** When it ends at the latest; null: when its program stops (or its browser closes). */
+  until: string | null;
+}
+
+/** `GET …/agents/{id}/holds`: for whoever may watch the agent's computer. */
+export interface AgentHolds {
+  holds: Hold[];
+  /** This person may stop them: who may use the agent's computer, and the admins of computers. */
+  canStop: boolean;
 }
 
 /** `GET …/desktop/picture`: a recent picture of the agent's screen, or why there is none. */

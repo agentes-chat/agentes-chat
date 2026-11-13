@@ -375,7 +375,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "Bellek izin vermez",
         blocks: [
-          "Bellekteki hiçbir şey bir ajanın daha fazlasını yapmasına izin vermez. Neler yapabileceği **Araçlar ve erişim** bölümünde kalır ve hassas işlemler her zaman onay ister.",
+          "Bellekteki hiçbir şey bir ajanın daha fazlasını yapmasına izin vermez. Neler yapabileceği **Araçlar ve erişim** bölümünde kalır.",
         ],
       },
       {
@@ -395,7 +395,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Neler önce sorar",
         blocks: [
-          "Bir ajan merge, deploy ya da geri alma yapmak, dışarıya bir şey göndermek veya veri silmek istediğinde, erişimi ne olursa olsun önce sorar. İstek, tam işlem ve nedeniyle birlikte **Onaylar** bölümünde ve konuşmada görünür.",
+          "Bir ajan merge, deploy ya da geri alma yapmak, dışarıya bir şey göndermek veya veri silmek istediğinde, önce sorar. Bu, her ajanın başladığı **Yalnızca riskli olanlar** düzeyidir. Ajanın sayfasındaki **Onaylar** bölümünde **Her zaman sor** bir şeyi değiştirmeden önce sormasını sağlar, **Hiç sorma** ise merge, deploy, ödemeler ve rutinler dahil hiçbir şey sormamasını sağlar. İstek, tam işlem ve nedeniyle birlikte **Onaylar** bölümünde ve konuşmada görünür.",
         ],
       },
       {
@@ -403,7 +403,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Bir kez ya da her zaman",
         blocks: [
           "Onaylamak, değerleriyle birlikte tek bir işlemi kapsar. Ajan herhangi bir şeyi değiştirirse yeniden sorar.",
-          "**Her zaman onayla**, ajanın bu tür bir işlemi bundan sonra her değerle, sormadan yapmasına izin verir. Bir rutinin isteğinde **Bu rutinde her zaman** aynısını yalnızca o rutin için yapar. İkisi de merge, deploy, geri alma ve benzerleri için sunulmaz. Geri almak için ajanın sayfasındaki **Araçlar ve erişim** bölümüne ya da rutinin ayarlarına gidin.",
+          "**Her zaman onayla**, ajanın bu tür bir işlemi bundan sonra her değerle, sormadan yapmasına izin verir. Bir rutinin isteğinde **Bu rutinde her zaman** aynısını yalnızca o rutin için yapar. **Her zaman onayla**, ajan **Yalnızca riskli olanlar** düzeyindeyken merge ve deploy dahil her tür işlem için sunulur. **Bu rutinde her zaman** merge, deploy, geri alma ve benzerleri için sunulmaz. Geri almak için ajanın sayfasındaki **Araçlar ve erişim** bölümüne ya da rutinin ayarlarına gidin.",
         ],
       },
       {

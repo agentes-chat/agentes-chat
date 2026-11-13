@@ -2,7 +2,7 @@ import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { NativeTabs } from "expo-router/native-tabs";
 import { useTranslation } from "react-i18next";
 import { Platform } from "react-native";
-import { useWaitingItems } from "@/features/chats/WaitingStrip";
+import { useWaitingItems } from "@/features/chats/useWaitingItems";
 import { useNow } from "@/features/shared/hooks";
 import { useActiveWork, useUnreadConversations, useUnreadThreads, useWaitingCount } from "@/features/shared/queries";
 import { alongWork, WorkAlongLine, workAlong } from "@/features/work-along/WorkAlong";

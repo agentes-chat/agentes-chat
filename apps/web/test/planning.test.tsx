@@ -741,8 +741,33 @@ describe("Rotinas", () => {
     expect(monthly.getAttribute("data-paused")).toBe("true");
     expect(within(monthly).getByText("Pausada")).toBeTruthy();
     expect(within(monthly).queryByRole("checkbox")).toBeNull();
-    // The horizon: one lane per scheduled, active routine.
+    // The horizon: one lane per agent with a scheduled, active routine.
     expect(screen().getByRole("region", { name: "Próximas horas" })).toBeTruthy();
+  });
+
+  test("the horizon has one lane per agent, and a lane's label filters the list by its agent", async () => {
+    const api = createFakeApi(seedState());
+    const list = api.routines.list;
+    const soon = new Date(Date.now() + 10 * 60_000).toISOString();
+    api.routines.list = (async (...args: Parameters<typeof list>) =>
+      (await list(...args)).map((r) => ({ ...r, active: true, nextRunAt: soon }))) as typeof list;
+    await go("routines", api);
+    const horizon = screen().getByRole("region", { name: "Próximas horas" });
+    const labels = () => [...horizon.querySelectorAll<HTMLButtonElement>(".routines-horizon__label")];
+    const names = labels().map((b) => b.querySelector("b")?.textContent ?? "");
+    // An agent with several routines has one lane, and no more lanes than the page shows at once.
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.length).toBeLessThanOrEqual(5);
+    expect(new Set(names).size).toBe(names.length);
+    expect(labels()[0]?.getAttribute("aria-pressed")).toBe("false");
+    await click(labels()[0] as HTMLElement);
+    await settle(4);
+    expect(labels()[0]?.getAttribute("aria-pressed")).toBe("true");
+    for (const row of screen().getAllByRole("article")) expect(row.textContent).toContain(names[0] as string);
+    // Again: the filter goes away.
+    await click(labels()[0] as HTMLElement);
+    await settle(4);
+    expect(labels()[0]?.getAttribute("aria-pressed")).toBe("false");
   });
 
   test("pause with the switch, run now, stop, and see runs in the details", async () => {

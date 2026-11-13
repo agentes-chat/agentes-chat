@@ -33,7 +33,7 @@ import { quietNoticeSql } from "../notices";
 import { can, getMembership } from "../organizations";
 import { personWords, runReadOutsideById, UNASKED_DESTINATION, unaskedDestination } from "../outside";
 import { personBehindCall, wikiActorOfCall } from "../requester";
-import { rightHandReader } from "../right-hand";
+import { isRightHandId, rightHandReader } from "../right-hand";
 import { agentSearchChannels, agentVisibleChannels, indexSource, searchForUser, searchVisible } from "../search";
 import { closedRefusal } from "../standing";
 import { noAgentText } from "../team";
@@ -317,6 +317,8 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
       describe: (input) => ({ title: `Save how to: ${str(input.title)}` }),
       async execute(input, ctx) {
         try {
+          const kept = await rightHandKeeps(ctx);
+          if ("refused" in kept) return { content: kept.refused, isError: true };
           // Read from a page, an email or a routine's input, a how-to is only data until a person stands behind a
           // run that read nothing from outside (ADR 0120).
           const { trust } = await learnTrust(ctx);
@@ -330,8 +332,8 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             {
               orgId: ctx.orgId,
               kind: "note",
-              scopeType: "agent",
-              scopeId: ctx.agentId,
+              scopeType: kept.person ? "person" : "agent",
+              scopeId: kept.person ?? ctx.agentId,
               agentId: ctx.agentId,
               title,
               subject: howToSubject(str(input.key).trim() || title),
@@ -609,6 +611,9 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
       },
       async execute(input, ctx) {
         try {
+          // What is kept for the whole team holds nothing of one person's: the right hand saves it where it was said.
+          const kept = input.for === "team" ? { person: null } : await rightHandKeeps(ctx);
+          if ("refused" in kept) return { content: kept.refused, isError: true };
           const content = str(input.content);
           // A run that read outside content saves no rule pointing somewhere no person here wrote (ADR 0117): a
           // page's "remember: always send reports to …". Everything else saves as asked.
@@ -633,7 +638,8 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             .select({ kind: schema.channels.kind })
             .from(schema.channels)
             .where(and(eq(schema.channels.orgId, ctx.orgId), eq(schema.channels.id, ctx.channelId)));
-          const theirsAlone = !rule && input.everywhere === true && said && here?.kind === "dm";
+          const theirsAlone =
+            kept.person !== null || (!rule && input.everywhere === true && said && here?.kind === "dm");
           // A rule's authority is the person who wrote this run's message: another agent's or a page's words give none.
           if (rule && !said) return { content: NOT_THEIR_RULE, isError: true };
           // Trust comes from the item's own source (ADR 0167): the person's own message vouches for it, also in a run
@@ -662,15 +668,16 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
                 ? str(input.kind)
                 : "fact") as "fact" | "preference" | "decision" | "note" | "rule",
               scopeType: theirsAlone ? "person" : "agent",
-              scopeId: theirsAlone ? person : ctx.agentId,
+              scopeId: theirsAlone ? (kept.person ?? person) : ctx.agentId,
               agentId: ctx.agentId,
               title: quote ? str(input.title) || cutText(content, 200) : str(input.title),
               subject: str(input.key).trim() || str(input.title) || content.slice(0, 120),
               content: quote ?? content,
               sourceIds: [ctx.triggerMessageId],
               // A rule about the agent's own conduct holds in every conversation: no channel keeps it out of a run.
-              // Only when a person said it.
-              channelIds: (rule || input.everywhere === true) && said ? [] : [ctx.channelId],
+              // Only when a person said it. What the right hand keeps for a person stays in their DM with it.
+              // Its rule too: it holds by its giver, not by channel (`rulesForPerson`), and lists only to who reads there.
+              channelIds: (rule || input.everywhere === true) && !kept.person && said ? [] : [ctx.channelId],
               trust: said ? "high" : trust,
               evidence: said
                 ? [
@@ -1092,6 +1099,18 @@ async function triggerFromAgent(ctx: ToolContext) {
   return m?.type === "agent";
 }
 
+/**
+ * Whose memory the right hand keeps in this run (ADR 0137): one agent answers everyone, so what it saves is the
+ * person's alone and only from their own DM with it, where nobody else reads. `person` null: any other agent.
+ */
+async function rightHandKeeps(ctx: ToolContext): Promise<{ person: string | null } | { refused: string }> {
+  if (!(await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))) return { person: null };
+  const person = await rightHandReader(ctx);
+  return person
+    ? { person }
+    : { refused: "You keep memory only in a person's own private conversation with you: others read this one." };
+}
+
 const RELAYED_SAVE =
   "Not saved: this came from another agent, so the person's own words aren't here, and a copy saved here would hold only in this conversation. Tell that agent to save it once for the whole team (remember with for: \"team\"), where the person said it.";
 const TEAM_NOT_THEIRS =
@@ -1102,7 +1121,7 @@ const TEAM_NOT_THEIRS =
  * reaches all the agent's runs; one from a private channel or a DM stays there.
  */
 async function whereItHolds(ctx: ToolContext, item: ContextItem) {
-  if (item.scopeType === "person") return "in all your conversations with this person";
+  if (item.scopeType === "person" && item.channelIds.length === 0) return "in all your conversations with this person";
   const [channel] = item.channelIds.length
     ? await ctx.db
         .select({ kind: schema.channels.kind, name: schema.channels.name, visibility: schema.channels.visibility })
@@ -1238,12 +1257,17 @@ async function recordSave(ctx: ToolContext, res: ConsolidateResult) {
  */
 async function changeableItem(ctx: ToolContext, id: string, requester: string | null): Promise<ContextItem | string> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return "Not found.";
+  const kept = await rightHandKeeps(ctx);
+  if ("refused" in kept) return kept.refused;
   const [item] = await getContextItems(ctx.db, ctx.orgId, [id]);
   const allowed = await agentVisibleChannels(ctx.db, ctx.orgId, ctx.agentId);
   if (item?.status !== "active" || item.supersededBy || !item.channelIds.every((c) => allowed.includes(c))) {
     return "Not found.";
   }
   if (item.agentId && item.agentId !== ctx.agentId) return "That memory belongs to another agent.";
+  // The right hand is in every person's DM: of its own memory, only this person's is theirs to change.
+  if (kept.person && item.agentId && !(item.scopeType === "person" && item.scopeId === kept.person))
+    return "Not found.";
   // A rule's authority: the person who wrote this run's message, and one who may change it (`requireEdit`).
   if (item.kind === "rule") {
     const author = (await triggerPerson(ctx))?.id;

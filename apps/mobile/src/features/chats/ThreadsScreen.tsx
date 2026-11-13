@@ -19,7 +19,7 @@ const LIVE_ROWS = 8;
  * Threads, the second tab, named as its tab is: like the home, under the native large title with Você and "+" in
  * the bar, the sections Missões and Threads (collapsible, remembered) in Conversas' rows, each with its faint line
  * ("Missão · #produto") over the name and its state as words (amber for what waits on you, the orbit for who
- * works); what is closed sits at the end of its section. What waits on you is on Conversas' strip and in Atividade,
+ * works); what is closed sits at the end of its section. What waits on you is in Atividade,
  * not repeated here. Loading: rows of its own shape. Empty: the sky with the team, and the way to the conversations.
  * `pushed`: the same list pushed from You › Work, with the back button in its bar, where a personal workspace
  * (ADR 0159) keeps it instead of a tab.

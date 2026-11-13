@@ -58,7 +58,11 @@ export async function consolidateOrg(deps: ContextDeps, orgId: string, now = new
   const groups = new Map<string, typeof active>();
   for (const item of active) {
     if (item.kind === "thread_summary" || item.kind === "period_summary" || item.kind === "entity_profile") continue;
-    const key = `${item.kind}|${item.agentId ?? ""}|${item.scopeType}`;
+    // What is kept for one person, or a rule one person gave, never merges into another person's: the survivor
+    // reads only in its own person's runs, so the other would lose theirs.
+    const person = item.scopeType === "person" ? item.scopeId : "";
+    const giver = item.kind === "rule" ? item.createdById : "";
+    const key = `${item.kind}|${item.agentId ?? ""}|${item.scopeType}|${person ?? ""}|${giver ?? ""}`;
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
   const archived = new Set<string>();

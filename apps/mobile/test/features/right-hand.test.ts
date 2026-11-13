@@ -185,6 +185,12 @@ test("its DM, cards and profile treat it apart through the one shared helper", (
   expect(chat).toMatch(/dmComputer = dmAgentId && !isThread && !rightHand/);
   // Never archived or deleted from the phone.
   expect(src("agents/AgentEditScreen.tsx")).toContain("admin && !rightHand");
+  // Its profile shows what it may use like any agent's (apps, built-in areas, mailboxes), without the AI row: its AI
+  // is each person's, on its settings.
+  const profile = src("agents/AgentProfileScreen.tsx");
+  expect(profile).toContain("{details ? accessView : null}");
+  expect(profile).toContain("const mailboxes = useAgentMailboxes(id, details);");
+  expect(profile).toContain("{thinks && !rightHand ? (");
   // No coordinator anywhere on the phone (ADR 0093, superseded by 0137).
   for (const f of [
     "agents/AgentEditScreen.tsx",
