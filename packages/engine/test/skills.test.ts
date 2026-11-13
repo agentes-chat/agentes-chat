@@ -574,6 +574,38 @@ describe("import", () => {
     expect(await refusal("https://github.com/acme/skills", spent)).toMatchObject({ params: { count: 5 } });
   });
 
+  test("a read without credentials is limited by a 403 even with no header saying so, and by a 429", async () => {
+    f = await setup();
+    const refusal = async (github: ReturnType<typeof fakeGithub>) => {
+      const err = await importSkillFromUrl(
+        { ...skillDeps(), fetch: github.fetch },
+        f.owner.id,
+        f.org.id,
+        "https://github.com/acme/skills",
+      ).then(
+        () => null,
+        (e: unknown) => e as { constructor: { name: string }; code?: string; params?: unknown },
+      );
+      return { kind: err?.constructor.name, code: err?.code, params: err?.params };
+    };
+    // None remaining until the reset.
+    const reset = String(Math.floor(Date.now() / 1000) + 290);
+    expect(
+      await refusal(fakeGithub({ limited: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": reset }, status: 403 })),
+    ).toEqual({ kind: "TooManyError", code: "github.limited", params: { count: 5 } });
+    // The secondary limit's way: a 403 with no headers at all, which an address shared with other servers gets.
+    expect(await refusal(fakeGithub({ limited: {}, status: 403 }))).toEqual({
+      kind: "TooManyError",
+      code: "github.limited",
+      params: { count: 1 },
+    });
+    expect(await refusal(fakeGithub({ limited: {} }))).toEqual({
+      kind: "TooManyError",
+      code: "github.limited",
+      params: { count: 1 },
+    });
+  });
+
   test("images and videos are kept apart from the text's limit, up to their own; past it they are only listed", async () => {
     f = await setup();
     // A repository shaped like a real one: a video and screenshots past 2 MB next to a little Markdown.
@@ -647,6 +679,36 @@ const PRIVATE = {
   "acme-private-0123abc/team/review/SKILL.md": "---\nname: review\ndescription: Revisa um pull request.\n---\n# Review",
 };
 
+/** A public repository with one skill, as its archive holds it. */
+const PUBLIC_ONE = {
+  "skills-main/relatorio-semanal/SKILL.md": SKILL_MD,
+  "skills-main/relatorio-semanal/templates/relatorio.md": "# Semana {{n}}",
+};
+
+/**
+ * Fake GitHub that limits this server's reads without credentials: every one is a 403 with no headers, the way the
+ * secondary limit answers an address shared with other servers. The API takes the workspace's token, which `sees`
+ * says whether it can read the repository (a test changes it as GitHub's side changes), and sends the archive from
+ * codeload.
+ */
+function limitedPublicGithub() {
+  const requests: { url: string; auth: string | null }[] = [];
+  const sees = new Set([CONNECTION_TOKEN]);
+  const fetch = async (url: string, init?: RequestInit) => {
+    const auth = new Headers(init?.headers).get("authorization");
+    requests.push({ url, auth });
+    if (url === "https://github.com/acme/skills/archive/HEAD.zip") return new Response("slow down", { status: 403 });
+    if (url === "https://codeload.github.com/acme/skills/legacy.zip/token") return new Response(zip(PUBLIC_ONE));
+    const token = auth?.replace(/^Bearer /, "") ?? "";
+    if (sees.has(token) && url === "https://api.github.com/repos/acme/skills/zipball") {
+      const location = "https://codeload.github.com/acme/skills/legacy.zip/token";
+      return new Response(null, { status: 302, headers: { location } });
+    }
+    return new Response("403: Forbidden", { status: 403 });
+  };
+  return { fetch, requests, sees };
+}
+
 /**
  * Fake GitHub where acme/private is private: github.com answers 404 for it, and the API's zipball answers a token that
  * sees it with a redirect to codeload carrying a short-lived link of its own. A token GitHub doesn't take is answered
@@ -710,6 +772,30 @@ describe("private repositories", () => {
   const connectors = () => ({ db: f.db, keyWrappers: [f.keyWrapper], publicUrl: "https://agentes.test" });
   const connectGithub = () =>
     createApiKeyConnection(connectors(), f.owner.id, f.org.id, { connector: "github", apiKey: CONNECTION_TOKEN });
+
+  test("a public read GitHub limits reads through the workspace's token, and the install concludes", async () => {
+    f = await setup();
+    await connectGithub();
+    const github = limitedPublicGithub();
+    const deps = { ...skillDeps(), fetch: github.fetch, github: { connectors: connectors() } };
+    const url = "https://github.com/acme/skills";
+    const skill = (await importSkillFromUrl(deps, f.owner.id, f.org.id, url)) as SkillDetail;
+    expect(skill).toMatchObject({ name: "relatorio-semanal", version: 1, sourceVia: "github" });
+    expect(await listSkills(f.db, f.owner.id, f.org.id)).toMatchObject([{ name: "relatorio-semanal", version: 1 }]);
+    // The public read first, limited; then the token, sent to the API only, and the archive from codeload.
+    expect(github.requests).toEqual([
+      { url: "https://github.com/acme/skills/archive/HEAD.zip", auth: null },
+      { url: "https://api.github.com/repos/acme/skills/zipball", auth: `Bearer ${CONNECTION_TOKEN}` },
+      { url: "https://codeload.github.com/acme/skills/legacy.zip/token", auth: null },
+    ]);
+
+    // A 403 to the token is the token's own lack of access, never a limit: the repository is what it can't see.
+    github.sees.delete(CONNECTION_TOKEN);
+    expect(await importSkillFromUrl(deps, f.owner.id, f.org.id, url).catch((e) => e)).toMatchObject({
+      code: "github.repo_missing",
+      params: { repo: "acme/skills", connection: "ok", app: false },
+    });
+  });
 
   test("read with the workspace's GitHub connection, its token sent to api.github.com only; updating reads through it", async () => {
     f = await setup();
