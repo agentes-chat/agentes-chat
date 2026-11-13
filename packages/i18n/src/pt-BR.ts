@@ -9611,6 +9611,7 @@ export const ptBR = {
     style: "API",
     styles: {
       openai: "OpenAI (Chat Completions)",
+      "openai-responses": "OpenAI (Responses)",
       anthropic: "Claude (Messages)",
     },
     address: "Endereço",

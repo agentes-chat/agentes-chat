@@ -1,11 +1,12 @@
 import { createAnthropicProvider } from "./anthropic";
 import { parseCustomModel } from "./catalog";
+import { createOpenAIProvider } from "./openai";
 import { createOpenRouterProvider } from "./openrouter";
 import { type Endpoint, type ModelProvider, type ModelResult, ProviderError } from "./types";
 
 /** The APIs a workspace's own endpoint may speak (a gateway, Ollama, vLLM, LM Studio, LiteLLM…). */
 export type EndpointStyle = Endpoint["style"];
-export const ENDPOINT_STYLES = ["openai", "anthropic"] as const satisfies readonly EndpointStyle[];
+export const ENDPOINT_STYLES = ["openai", "openai-responses", "anthropic"] as const satisfies readonly EndpointStyle[];
 
 const LIST_TIMEOUT_MS = 10_000;
 const LIST_MAX_BYTES = 2_000_000;
@@ -57,9 +58,9 @@ async function cappedJson(res: Response, max: number): Promise<unknown> {
 }
 
 /**
- * An endpoint's model list, with the key: `GET {baseURL}/models` for Chat Completions, `GET {baseURL}/v1/models` for
- * Anthropic Messages. Ten seconds and 2 MB at most. A refusal or an unreadable answer throws a `ProviderError` whose
- * message the admin reads.
+ * An endpoint's model list, with the key: `GET {baseURL}/models` for Chat Completions and for the Responses API (the
+ * same base serves both), `GET {baseURL}/v1/models` for Anthropic Messages. Ten seconds and 2 MB at most. A refusal or
+ * an unreadable answer throws a `ProviderError` whose message the admin reads.
  */
 export async function listEndpointModels(
   endpoint: Endpoint,
@@ -152,11 +153,12 @@ const readsImages = (model: string) => /claude/i.test(model);
 
 /**
  * The adapter for every workspace endpoint, registered once as `custom`: each call names its endpoint
- * (`StreamOptions.endpoint`) and goes through the catalog's own adapters with that address, Anthropic's in its
- * compatible mode or the Chat Completions one OpenRouter uses. The endpoint's model id is sent, the full
- * `custom:` id comes back (so a catalog id it may share is never priced at the catalog's prices), and a cost the
- * server reports is ignored: the admin's prices count. `version`: this server's, in the User-Agent an endpoint that
- * asks for one gets (`endpointHeaders`).
+ * (`StreamOptions.endpoint`) and goes through the catalog's own adapters with that address: Anthropic's in its
+ * compatible mode, OpenAI's Responses one (`openai-responses`, for the models that accept tools with reasoning only
+ * there, such as Amazon Bedrock Mantle's GPT-6.x), or the Chat Completions one OpenRouter uses. The endpoint's model id
+ * is sent, the full `custom:` id comes back (so a catalog id it may share is never priced at the catalog's prices), and
+ * a cost the server reports is ignored: the admin's prices count. `version`: this server's, in the User-Agent an
+ * endpoint that asks for one gets (`endpointHeaders`).
  */
 export function createCustomProvider(
   options: { fetch?: typeof fetch; maxRetries?: number; version?: string } = {},
@@ -170,21 +172,32 @@ export function createCustomProvider(
       if (!endpoint || !parsed) throw new ProviderError("this model has no endpoint", false);
       const extra = endpointHeaders(endpoint.baseURL, streamOptions.session ?? crypto.randomUUID(), options.version);
       const http = extra ? withHeaders(bounded, extra) : bounded;
-      const inner =
-        endpoint.style === "anthropic"
-          ? createAnthropicProvider({
+      // One arm per API of ADR 0146, exhaustive over `Endpoint["style"]`.
+      const adapter = (): ModelProvider => {
+        switch (endpoint.style) {
+          case "anthropic":
+            return createAnthropicProvider({
               id: "custom",
               baseURL: endpoint.baseURL,
               compat: { toolChoiceAny: false, images: readsImages(parsed.model) },
               fetch: http,
               maxRetries: options.maxRetries,
-            })
-          : createOpenRouterProvider({
+            });
+          case "openai-responses":
+            return createOpenAIProvider({
+              baseURL: endpoint.baseURL,
+              fetch: http,
+              maxRetries: options.maxRetries,
+            });
+          case "openai":
+            return createOpenRouterProvider({
               compatible: { id: "custom", baseURL: endpoint.baseURL },
               fetch: http,
               maxRetries: options.maxRetries,
             });
-      const { costNanoUsd: _reported, ...result } = await inner.stream(
+        }
+      };
+      const { costNanoUsd: _reported, ...result } = await adapter().stream(
         { ...request, model: parsed.model },
         streamOptions,
       );

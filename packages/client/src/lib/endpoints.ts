@@ -1,12 +1,13 @@
 import type { EndpointCheck, EndpointCheckResult, EndpointModel, EndpointStyle } from "../api/types";
 
 /**
- * "Outro provedor" (ADR 0146), web and phone: a workspace's own OpenAI- or Anthropic-compatible endpoint (a gateway,
- * Ollama, vLLM, LM Studio, LiteLLM) as the form holds it while an admin fills it in.
+ * "Outro provedor" (ADR 0146), web and phone: a workspace's own OpenAI- (Chat Completions or Responses) or
+ * Anthropic-compatible endpoint (a gateway, Ollama, vLLM, LM Studio, LiteLLM) as the form holds it while an admin
+ * fills it in.
  */
 export const CUSTOM_PROVIDER = "custom";
 
-export const ENDPOINT_STYLES: readonly EndpointStyle[] = ["openai", "anthropic"];
+export const ENDPOINT_STYLES: readonly EndpointStyle[] = ["openai", "openai-responses", "anthropic"];
 
 /** One model of the form: on or off, with its prices as typed (US dollars per million tokens). */
 export interface EndpointModelDraft {
@@ -32,7 +33,10 @@ export const emptyEndpointDraft = (): EndpointDraft => ({
   models: [],
 });
 
-/** The address field's example, as each API's SDK takes it. */
+/**
+ * The address field's example, as each API's SDK takes it. The Responses API is served at `{base}/responses`, so it
+ * shares Chat Completions' base address.
+ */
 export const endpointBaseExample = (style: EndpointStyle) =>
   style === "anthropic" ? "https://api.example.com/anthropic" : "https://api.example.com/v1";
 

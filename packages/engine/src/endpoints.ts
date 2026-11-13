@@ -59,8 +59,9 @@ export const endpointFetch = (net: EndpointNet): typeof fetch =>
 
 /**
  * An endpoint's address as its API's SDK takes it: no query, no trailing slash, and the path the SDK adds left out
- * (`/chat/completions`; `/v1` or `/v1/messages` for Anthropic's). Without `allowPrivate`, https only and every
- * address the host resolves to public (`assertPublicHttpsUrl`; each call is checked again when it connects).
+ * (`/chat/completions`, or `/responses` for the Responses API; `/v1` or `/v1/messages` for Anthropic's). Without
+ * `allowPrivate`, https only and every address the host resolves to public (`assertPublicHttpsUrl`; each call is
+ * checked again when it connects).
  */
 export async function endpointAddress(raw: string, style: EndpointStyle, net: EndpointNet): Promise<string> {
   if (!ENDPOINT_STYLES.includes(style)) throw new ValidationError("Pick the API the server speaks", "endpoint.style");
@@ -77,9 +78,13 @@ export async function endpointAddress(raw: string, style: EndpointStyle, net: En
       throw new ValidationError("The address can't have a user or password", "url.credentials");
   } else url = await assertPublicHttpsUrl(raw.trim(), net.resolveHost);
   const path = url.pathname.replace(/\/+$/, "");
-  const base =
-    style === "anthropic" ? path.replace(/\/v1(\/messages)?$/, "") : path.replace(/\/chat\/completions$/, "");
-  return `${url.origin}${base}`;
+  const added =
+    style === "anthropic"
+      ? /\/v1(\/messages)?$/
+      : style === "openai-responses"
+        ? /\/responses$/
+        : /\/chat\/completions$/;
+  return `${url.origin}${path.replace(added, "")}`;
 }
 
 /** The models an admin chose, checked: ids that look like one, names and prices that make sense, at most 30. */

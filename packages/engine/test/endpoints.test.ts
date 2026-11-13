@@ -70,6 +70,32 @@ describe("the address", () => {
     expect(await endpointAddress("https://gw.example/anthropic/v1/messages", "anthropic", cloud)).toBe(
       "https://gw.example/anthropic",
     );
+    // The Responses API: the base the SDK adds `/responses` to, whether the person pasted it or not.
+    expect(await endpointAddress("https://gw.example/openai/v1/responses?x=1", "openai-responses", cloud)).toBe(
+      "https://gw.example/openai/v1",
+    );
+    expect(await endpointAddress("https://gw.example/openai/v1/", "openai-responses", cloud)).toBe(
+      "https://gw.example/openai/v1",
+    );
+  });
+
+  test("a style cuts only the path its own SDK adds: the other APIs' paths stay in the address", async () => {
+    expect(await endpointAddress("https://gw.example/v1/responses", "openai", cloud)).toBe(
+      "https://gw.example/v1/responses",
+    );
+    expect(await endpointAddress("https://gw.example/v1/chat/completions", "openai-responses", cloud)).toBe(
+      "https://gw.example/v1/chat/completions",
+    );
+    // What the two existing styles meant before the third one: unchanged.
+    expect(await endpointAddress("https://gw.example/v1/chat/completions", "openai", cloud)).toBe(
+      "https://gw.example/v1",
+    );
+    expect(await endpointAddress("https://gw.example/anthropic/v1/messages", "anthropic", cloud)).toBe(
+      "https://gw.example/anthropic",
+    );
+    expect(await endpointAddress("https://gw.example/anthropic", "anthropic", cloud)).toBe(
+      "https://gw.example/anthropic",
+    );
   });
 
   test("private addresses: on by default, off on agentes.chat Cloud, the flag wins", () => {
