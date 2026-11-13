@@ -127,3 +127,28 @@ test("a title's `code` and **bold**, the rest as typed: no link or mention, noth
   expect(codeAndBoldParts("vazio: ``")).toEqual([{ text: "vazio: ``" }]);
   expect(codeAndBoldParts("")).toEqual([]);
 });
+
+describe("lines that look like a block's start but open none", () => {
+  test("are read as prose instead of stopping the parser for good", () => {
+    for (const text of [
+      "```foo``` no começo",
+      "Veja:\n```foo```\nfim",
+      "````\ncódigo\n````",
+      "# Título\u2028continua",
+    ]) {
+      const blocks = parseMarkdown(text, { breaks: true, details: true });
+      expect(blocks.length > 0 && blocks.every((b) => b.type === "paragraph")).toBe(true);
+    }
+  });
+
+  test("a fence with more after its language is still code", () => {
+    for (const [open, lang] of [
+      ['```ts title="a.ts"', "ts"],
+      ["```c#", "c#"],
+      ["```ts:src/a.ts", "ts"],
+    ] as const) {
+      const [block] = parseMarkdown(`${open}\nconst a = 1\n\`\`\``);
+      expect(block?.type === "code" && block.lang).toBe(lang);
+    }
+  });
+});
