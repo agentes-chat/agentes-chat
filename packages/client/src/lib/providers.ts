@@ -207,6 +207,21 @@ export const keyRuns = (
   );
 
 /**
+ * The model an agent gets when it moves onto `key`: undefined keeps its own (the key runs it), else what the key can
+ * run. A maker's key: Automático, which follows it. A workspace's own endpoint (`custom`, ADR 0146) has no
+ * Automático, so there it is the endpoint's first model, as the endpoint's form lists them.
+ */
+export function modelOnKey(
+  key: Pick<Credential, "id" | "provider">,
+  model: string | undefined,
+  models: readonly Model[],
+): string | undefined {
+  if (keyRuns(key, model, models)) return undefined;
+  if (key.provider !== "custom") return AUTO;
+  return models.find((m) => m.endpoint?.credentialId === key.id)?.id ?? AUTO;
+}
+
+/**
  * Whose API an agent's model runs on: the model's provider; for Automático, the one provider the workspace can use
  * (undefined when it can use several, or the model is unknown).
  */

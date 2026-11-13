@@ -50,10 +50,9 @@ import {
 import { can } from "@agenteschat/client/lib/permissions";
 import { geminiPersonal, isPlanId, planOf, providerFitsChoice, signInProviderOf } from "@agenteschat/client/lib/plans";
 import {
-  AUTO,
   keyLooksValid,
-  keyRuns,
   keyStepHint,
+  modelOnKey,
   PROVIDERS,
   providerLabel,
   providerOf,
@@ -345,7 +344,7 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
       // The workspace's model on that key: the agent's model where the key runs it, else Automático.
       // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true.
       const agentRow = agentRows.data?.find((a) => a.id === forAgent.id);
-      const fits = keyRuns(k, agentRow?.model, models.data?.models ?? []);
+      const model = modelOnKey(k, agentRow?.model, models.data?.models ?? []);
       const rightHand = gates.view?.scope === "mine" && agentRow;
       return void save(
         forAgent,
@@ -357,7 +356,7 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
           // The team's right hand: a key is the workspace's AI, so everyone without their own thinks with it.
           if (rightHand) return rightHandOnKey(api, orgId, rightHand, k, models.data?.models ?? []);
           if (brain !== "model") await api.agents.setBrain(orgId, forAgent.id, { brain: "model" });
-          await api.agents.update(orgId, forAgent.id, { credentialId: k.id, ...(fits ? {} : { model: AUTO }) });
+          await api.agents.update(orgId, forAgent.id, { credentialId: k.id, ...(model ? { model } : {}) });
         },
         rightHand ? "workspace" : undefined,
       );
