@@ -151,7 +151,9 @@ export function museSettings(input: { mcp: { token: string; url?: string }; mcpC
     schema_version: 1,
     hooks: {},
     managed_hooks_path: null,
-    mcp_servers: {
+    // `mcpServers` is the key the host reads; `mcp_servers` is silently ignored and the turn then has no tools at
+    // all — `muse mcp list` answers "no MCP servers" and says nothing about the near miss.
+    mcpServers: {
       [CODEX_MCP_SERVER]: input.mcp.url
         ? {
             transport: "streamable_http",
@@ -260,6 +262,8 @@ export interface MuseApprovalSubject {
   kind: string;
   command?: string;
   path?: string;
+  access?: string;
+  toolName?: string;
 }
 
 /** One offer of `availableChoices`: the host's own `decision` and `scope` words, and the `choiceId` it answers with. */
@@ -307,15 +311,25 @@ export function museApprovalVerdict(input: {
   // `path` a write, whatever the wire calls them, and one that names neither is a kind this can't read.
   const command = (input.subject.command ?? "").trim();
   const file = (input.subject.path ?? "").trim();
-  const tool = command ? "Bash" : file ? "Write" : "";
+  const called = (input.subject.toolName ?? "").trim();
+  const tool = kind === "shell" || command ? "Bash" : kind === "fileAccess" || file ? "Write" : "";
   const call = tool === "Bash" ? { command } : { file_path: file };
-  // A `chat` turn (the right hand) is our bridge's tools and nothing else, as `--tools ""` is for Claude: its own Bash
-  // and Write are refused, and the turn goes on with them out of the way.
+  // A `chat` turn (the right hand) is our bridge's tools and nothing else, as `--tools ""` is for Claude: a `tool`
+  // subject is one of ours and runs, and its own Bash and Write are refused with the turn going on without them. The
+  // bridge's servers are all named for this install, so the name is the test, not a guess about the kind.
+  if (input.chat && !tool)
+    return called.startsWith("mcp__")
+      ? { allow: true, always: false, why: "a tool of our bridge, which a right hand runs" }
+      : {
+          allow: false,
+          always: false,
+          why: `\`${called || kind}\` is not of the bridge, and a right hand runs its own tools only`,
+        };
   if (input.chat && tool)
     return {
       allow: false,
       always: false,
-      why: `\`${tool}\` is not of the bridge, and a right hand runs the bridge's tools only`,
+      why: `\`${tool}\` is the host's own, and a right hand runs the bridge's tools only`,
     };
   if (tool) {
     // Deny list, secrets and a `plan` turn's everything: the same first verdict the prompt tools ask (`localVerdict`).
@@ -338,7 +352,6 @@ export function museApprovalVerdict(input: {
   }
   // A subject this can't read is the class the host asked about *because* nothing matched it (egress, a third-party
   // MCP server, a kind newer than this code): with nobody to look, it is refused rather than waved through.
-  if (input.chat) return { allow: true, always: false, why: "a bridge tool of ours, which a right hand runs" };
   if (input.profile === "plan") return { allow: false, always: false, why: PLAN_MESSAGE };
   return {
     allow: false,
