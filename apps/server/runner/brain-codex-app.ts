@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
@@ -410,6 +410,40 @@ export class CodexAppClient {
 /** Where an image Codex made is kept in the agent's folder, for the server to fetch. */
 export const CODEX_IMAGES_FOLDER = "generated-images";
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+const CODEX_ACCOUNT_IMAGE = /^exec-[a-z0-9._-]+\.(?:png|jpe?g|webp)$/i;
+const CODEX_THREAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Imagegen tool outputs are saved under this thread's selected Codex account instead of as imageGeneration items. */
+function accountGeneratedImages(accountHome: string | undefined, threadId: string): Set<string> {
+  if (!accountHome || !CODEX_THREAD_ID.test(threadId)) return new Set();
+  try {
+    const account = realpathSync(accountHome);
+    const root = path.join(account, "generated_images");
+    const rootStat = lstatSync(root);
+    if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) return new Set();
+    const rootReal = realpathSync(root);
+    if (rootReal !== root || path.dirname(rootReal) !== account) return new Set();
+
+    const dir = path.join(rootReal, threadId);
+    const dirStat = lstatSync(dir);
+    if (!dirStat.isDirectory() || dirStat.isSymbolicLink()) return new Set();
+    const dirReal = realpathSync(dir);
+    if (dirReal !== dir || path.dirname(dirReal) !== rootReal) return new Set();
+
+    const files = new Set<string>();
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile() || !CODEX_ACCOUNT_IMAGE.test(entry.name)) continue;
+      const file = path.join(dir, entry.name);
+      const stat = lstatSync(file);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size === 0) continue;
+      const real = realpathSync(file);
+      if (real === file && path.dirname(real) === dirReal) files.add(real);
+    }
+    return files;
+  } catch {
+    return new Set();
+  }
+}
 
 /**
  * An image Codex's own tool made (`imageGeneration`). Codex keeps it in its sign-in's folder, which the conversation
@@ -489,16 +523,46 @@ export class CodexAppMapper {
   lastError?: string;
   /** The turn ran a command, changed a file or called our bridge: a cut now loses work the API couldn't see. */
   private worked = false;
+  /** Account-folder images that already existed when the current turn started. */
+  private accountImagesBefore = new Set<string>();
+  /** Source images already attached through Codex's native `imageGeneration` event. */
+  private readonly nativeImages = new Set<string>();
 
   constructor(
     private readonly opts: {
       cwd: string;
       /** The agent's folder: where an image Codex makes is kept. */
       folder?: string;
+      /** The selected Codex sign-in; code-mode imagegen outputs live under its generated_images folder. */
+      accountHome?: string;
+      /** Codex app-server thread id; generated image folders are scoped to this id. */
+      threadId?: string;
+      log?: (line: string) => void;
       model?: string;
       redact?: (text: string) => string;
     },
   ) {}
+
+  /** Called immediately before each `turn/start`, so only files created in that turn are attached. */
+  beginTurn() {
+    this.accountImagesBefore = accountGeneratedImages(this.opts.accountHome, this.opts.threadId ?? "");
+  }
+
+  /** Attach imagegen tool outputs saved under the sign-in rather than emitted as `imageGeneration`. */
+  generatedImages(): CodexBrainEvent[] {
+    const current = accountGeneratedImages(this.opts.accountHome, this.opts.threadId ?? "");
+    const fresh = [...current].filter((file) => !this.accountImagesBefore.has(file) && !this.nativeImages.has(file));
+    const events: CodexBrainEvent[] = [];
+    for (const [index, savedPath] of fresh.entries()) {
+      if (!this.opts.folder) continue;
+      const kept = keepCodexImage({ savedPath }, `${path.basename(savedPath)}-${index}`, this.opts.folder);
+      if (kept) events.push({ type: "file", path: kept });
+      else this.opts.log?.("codex imagegen found a new image but could not copy it for attachment");
+    }
+    this.accountImagesBefore = current;
+    if (events.length) this.opts.log?.(`codex imagegen attached ${events.length} image(s) from this turn`);
+    return events;
+  }
 
   private clean(t: string) {
     return this.opts.redact ? this.opts.redact(t) : t;
@@ -570,8 +634,18 @@ export class CodexAppMapper {
         const status = str(item.status);
         return { events: [codexFileChangeCall({ id, changes, failed: status === "failed" || status === "declined" })] };
       }
-      case "imageGeneration":
-        return { events: codexImageEvents(item, id, this.opts.folder, (t) => this.clean(t)) };
+      case "imageGeneration": {
+        const events = codexImageEvents(item, id, this.opts.folder, (t) => this.clean(t));
+        const saved = str(item.savedPath);
+        if (saved && events.some((event) => event.type === "file")) {
+          try {
+            this.nativeImages.add(realpathSync(saved));
+          } catch {
+            this.nativeImages.add(path.resolve(saved));
+          }
+        }
+        return { events };
+      }
       default:
         // Our bridge's calls (`mcpToolCall`) aren't repeated (the engine ran them); the rest isn't a tool call.
         return { events: [] };
@@ -1139,6 +1213,9 @@ export class CodexAppServers implements CodexAppRunner {
     const mapper = new CodexAppMapper({
       cwd: input.cwd,
       ...(input.folder ? { folder: input.folder } : {}),
+      ...(input.account?.home ? { accountHome: input.account.home } : {}),
+      threadId,
+      log: this.log,
       ...(input.model ? { model: input.model } : {}),
       ...(opts.redact ? { redact: opts.redact } : {}),
     });
@@ -1209,6 +1286,7 @@ export class CodexAppServers implements CodexAppRunner {
         client.request("turn/interrupt", { threadId, turnId: id }, STEER_RPC_MS).catch(() => undefined);
       const startTurn = (clientId: string, texts: string[]) => {
         turnId = null;
+        mapper.beginTurn();
         client
           .request<TurnStartResponse>("turn/start", {
             threadId,
@@ -1281,6 +1359,7 @@ export class CodexAppServers implements CodexAppRunner {
       const completed = (turn: Turn) => {
         if (turnId && turn.id !== turnId) return;
         flush();
+        for (const event of mapper.generatedImages()) emit(event);
         if (restart && turn.status !== "failed") {
           // The next Codex turn starts with the urgent messages (and any that came while it stopped).
           const answer = mapper.nextTurn();

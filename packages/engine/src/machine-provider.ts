@@ -281,6 +281,7 @@ export function createMachineSandboxProvider(hub: MachineCaller, agent: AgentSco
               url: target.url,
               uploadId: target.uploadId,
               maxBytes: target.maxBytes,
+              ...(target.generatedImage ? { generatedImage: target.generatedImage } : {}),
             })
             .catch((error: unknown) => {
               if (!(error instanceof MachineRequestError) || error.code !== "too_large") throw error;

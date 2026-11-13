@@ -45,6 +45,8 @@ export interface PushTarget {
   url: string;
   uploadId: string;
   maxBytes: number;
+  /** Narrow reference to one Codex image-generation output; the runner resolves it inside its account home. */
+  generatedImage?: { accountId: string; generationId: string; fileName: string };
 }
 
 /** What a computer fetches (`pullFile`): a one-use URL of ours, authenticated by the computer's own token. */

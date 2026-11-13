@@ -8,6 +8,8 @@ import type { MergeDone } from "./command-policy";
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
 export const MACHINE_PROTOCOL_VERSION = 63;
+/** From this protocol on, upload_file can attach one image from the selected Codex account's generated_images. */
+export const CODEX_GENERATED_IMAGE_PROTOCOL = 61;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -2405,6 +2407,8 @@ export type MachineRequest = (
   | {
       op: "push";
       path: string;
+      /** Protocol 61: a single generated image, resolved by the runner inside the selected Codex account. */
+      generatedImage?: { accountId: string; generationId: string; fileName: string };
       /** Absolute URL of our upload endpoint (`PUT`, machine token as bearer). */
       url: string;
       uploadId: string;

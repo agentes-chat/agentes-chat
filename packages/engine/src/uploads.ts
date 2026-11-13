@@ -324,7 +324,12 @@ export async function uploadFromComputer(
   ctx: ToolContext,
   computer: ComputerHandle,
   path: string,
-  input: { title: string | null; note: string | null; targetArtifactId: string | null },
+  input: {
+    title: string | null;
+    note: string | null;
+    targetArtifactId: string | null;
+    generatedImage?: { accountId: string; generationId: string; fileName: string };
+  },
 ): Promise<UploadRow> {
   const upload = await createUpload(deps.db, {
     orgId: ctx.orgId,
@@ -343,6 +348,7 @@ export async function uploadFromComputer(
       url: `${base}/api/machines/uploads/${upload.id}`,
       uploadId: upload.id,
       maxBytes: upload.maxBytes,
+      ...(input.generatedImage ? { generatedImage: input.generatedImage } : {}),
     });
   } catch (error) {
     // The answer may be what got lost (the link dropped after the bytes arrived): what landed is the file.

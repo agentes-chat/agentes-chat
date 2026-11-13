@@ -797,6 +797,72 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     case "list":
       return doList(ctx, req);
     case "push":
+      if (req.generatedImage) {
+        const { accountId, generationId, fileName } = req.generatedImage;
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (
+          !uuid.test(accountId) ||
+          !uuid.test(generationId) ||
+          !/^[A-Za-z0-9._-]+\.(?:png|jpe?g|webp|gif)$/i.test(fileName)
+        ) {
+          throw new RunnerError("bad_request", "Invalid Codex generated image reference.");
+        }
+        const accountHome =
+          ctx.codex?.accounts?.accountDir("codex", accountId) ??
+          ctx.accounts?.accountDir("codex", accountId) ??
+          path.join(ctx.codex?.runnerHome ?? "", "accounts", "codex", accountId);
+        if (!ctx.codex?.runnerHome || !accountHome) {
+          throw new RunnerError("not_allowed", "The selected Codex account folder is unavailable on this computer.");
+        }
+        const generatedRoot = path.join(accountHome, "generated_images");
+        const requestedDir = path.join(generatedRoot, generationId);
+        const requestedFile = path.join(requestedDir, fileName);
+        let imageDir: string;
+        let imageFile: string;
+        try {
+          const [accountReal, rootReal, rootStat, dirStat] = await Promise.all([
+            realpath(accountHome),
+            realpath(generatedRoot),
+            lstat(generatedRoot),
+            lstat(requestedDir),
+          ]);
+          if (
+            !rootStat.isDirectory() ||
+            rootStat.isSymbolicLink() ||
+            !isInside(accountReal, rootReal) ||
+            !dirStat.isDirectory() ||
+            dirStat.isSymbolicLink()
+          ) {
+            throw new Error("generated_images directory is not a real directory inside the Codex account");
+          }
+          imageDir = await realpath(requestedDir);
+          if (imageDir !== requestedDir || path.dirname(imageDir) !== rootReal) {
+            throw new Error("image generation directory is not a direct child of generated_images");
+          }
+          const [fileStat, fileReal] = await Promise.all([lstat(requestedFile), realpath(requestedFile)]);
+          if (!fileStat.isFile() || fileStat.isSymbolicLink() || path.dirname(fileReal) !== imageDir) {
+            throw new Error("generated image is not a regular file in its generation directory");
+          }
+          imageFile = fileReal;
+        } catch (error) {
+          throw new RunnerError(
+            "not_allowed",
+            `That Codex-generated image is unavailable or outside its generation folder: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+        return pushPath({
+          workspaceReal: ctx.workspaceReal,
+          token: ctx.token,
+          ...(ctx.server ? { server: ctx.server } : {}),
+          path: requestedFile,
+          url: requireString(req.url, "url"),
+          uploadId: requireString(req.uploadId, "uploadId"),
+          maxBytes: clampInt(req.maxBytes, 0, Number.MAX_SAFE_INTEGER, 0),
+          fetch: ctx.fetch,
+          signal: scope.signal,
+          resolve: async () => ({ rel: fileName, abs: imageFile, exists: true, root: imageDir }),
+        });
+      }
       await refuseSecretFile(ctx, secrets, requireString(req.path, "path"));
       return pushPath({
         workspaceReal: ctx.workspaceReal,

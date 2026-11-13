@@ -1,5 +1,6 @@
 import {
   ACCESS_PROTOCOL,
+  CODEX_GENERATED_IMAGE_PROTOCOL,
   type ExecRequest,
   type ExecResult,
   isReservedSecretName,
@@ -461,6 +462,19 @@ export function computerSentence(info: ComputerInfo) {
  */
 export function toolPath(raw: string, info: ComputerInfo): string {
   return (info.kind === "machine" && info.protocol >= ACCESS_PROTOCOL && fullMachinePath(raw)) || workspacePath(raw);
+}
+
+function codexGeneratedImageRef(raw: string) {
+  if (!fullMachinePath(raw)) return null;
+  const match = raw
+    .replace(/\\/g, "/")
+    .match(
+      /(?:^|\/)accounts\/codex\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/generated_images\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/([A-Za-z0-9._-]+\.(?:png|jpe?g|webp|gif))$/i,
+    );
+  const accountId = match?.[1];
+  const generationId = match?.[2];
+  const fileName = match?.[3];
+  return accountId && generationId && fileName ? { accountId, generationId, fileName } : null;
 }
 
 /** What the model sees from a command: exit code first (it is the line kept in "Recent actions"). */
@@ -1145,12 +1159,15 @@ export function createSandboxToolSource(
     },
     {
       name: "upload_file",
-      description: `Share a file from your computer in this conversation: it goes to the Drive as is and is attached to your reply, so people in the channel or chat see it. Send or attach any file this way (an image, a screenshot, a PDF, a zip, Office files, anything), up to ${ARTIFACT_LIMITS.fileBytes / 1024 / 1024} MB; a folder goes as a .zip. The bytes go straight to the Drive and never through you. With artifact_id, saves a new version of that uploaded file (not of an image, a video or a recording, which have no versions: share a new one without artifact_id). The path is relative to your workspace; a file elsewhere on the machine must be copied into the workspace first (run_code, e.g. \`cp ~/x/report.pdf .\`). To turn a text file into a native document, table, page or diagram, use export_file instead.`,
+      description: `Share a file from your computer in this conversation: it goes to the Drive as is and is attached to your reply, so people in the channel or chat see it. Send or attach any file this way (an image, a screenshot, a PDF, a zip, Office files, anything), up to ${ARTIFACT_LIMITS.fileBytes / 1024 / 1024} MB; a folder goes as a .zip. The bytes go straight to the Drive and never through you. With artifact_id, saves a new version of that uploaded file (not of an image, a video or a recording, which have no versions: share a new one without artifact_id). The path is relative to your workspace; a file elsewhere on the machine must be copied into the workspace first (run_code, e.g. \`cp ~/x/report.pdf .\`). Exception: when Codex returns a generated image path under its \`generated_images\` folder, pass that exact path to upload_file; the runner attaches that one image directly, without asking to allow a folder or copying it into the workspace. To turn a text file into a native document, table, page or diagram, use export_file instead.`,
       scope: SANDBOX_SCOPE,
       inputSchema: {
         type: "object",
         properties: {
-          path: { ...pathProp, description: "File or folder inside the workspace" },
+          path: {
+            ...pathProp,
+            description: "File or folder inside the workspace, or the exact path of a Codex-generated image",
+          },
           title: { type: "string", maxLength: 200 },
           artifact_id: { type: "string", minLength: 36, maxLength: 36 },
           note: { type: "string", maxLength: 500 },
@@ -1163,7 +1180,10 @@ export function createSandboxToolSource(
       describe: (input) => ({ title: `Send ${str(input.path)} to the Drive` }),
       async execute(input, ctx) {
         try {
-          const path = toolPath(str(input.path), computerInfo);
+          const requestedPath = str(input.path);
+          const imageRef = codexGeneratedImageRef(requestedPath);
+          const path = toolPath(requestedPath, computerInfo);
+          const displayPath = imageRef ? `generated_images/${imageRef.generationId}/${imageRef.fileName}` : path;
           if (!path) return { content: "path is required (a file or folder inside the workspace)", isError: true };
           const targetArtifactId = str(input.artifact_id) || null;
           if (targetArtifactId) {
@@ -1184,11 +1204,43 @@ export function createSandboxToolSource(
           const row = await run(
             ctx,
             async (c) => {
-              await refuseSecretPath(ctx, c, path);
-              return uploadFromComputer(deps, ctx, c, path, {
+              let uploadPath = path;
+              if (imageRef) {
+                if (computerInfo.kind !== "machine" || computerInfo.protocol < CODEX_GENERATED_IMAGE_PROTOCOL) {
+                  throw new Error(
+                    "The connected computer's runner must be updated before Codex images can be attached here.",
+                  );
+                }
+                const agent = await getAgentCached(deps.db, ctx.orgId, ctx.agentId);
+                const [account] = await deps.db
+                  .select({ id: schema.machineAccounts.id })
+                  .from(schema.machineAccounts)
+                  .where(
+                    and(
+                      eq(schema.machineAccounts.orgId, ctx.orgId),
+                      eq(schema.machineAccounts.id, imageRef.accountId),
+                      eq(schema.machineAccounts.machineId, c.machineId),
+                      eq(schema.machineAccounts.kind, "codex"),
+                      eq(schema.machineAccounts.status, "active"),
+                    ),
+                  );
+                if (
+                  !agent ||
+                  !account ||
+                  agent.brainAccountId !== imageRef.accountId ||
+                  agent.machineId !== c.machineId
+                ) {
+                  throw new Error("This Codex image is outside the account selected for this agent.");
+                }
+                uploadPath = displayPath;
+              } else {
+                await refuseSecretPath(ctx, c, path);
+              }
+              return uploadFromComputer(deps, ctx, c, uploadPath, {
                 title: str(input.title) || null,
                 note: str(input.note) || null,
                 targetArtifactId,
+                ...(imageRef ? { generatedImage: imageRef } : {}),
               });
             },
             input,
@@ -1196,7 +1248,7 @@ export function createSandboxToolSource(
           const done = await uploadedFile(deps.db, row);
           if (!done) return { content: `Failed: ${row.error ?? "the upload did not finish"}`, isError: true };
           return {
-            content: `Uploaded ${path} as "${done.title}" (file, ${formatBytes(done.size)}), artifact ${done.id}, version ${done.version}. ${await fileLanded(deps.artifacts, ctx, done.id, input.shared_drive)}`,
+            content: `Uploaded ${displayPath} as "${done.title}" (file, ${formatBytes(done.size)}), artifact ${done.id}, version ${done.version}. ${await fileLanded(deps.artifacts, ctx, done.id, input.shared_drive)}`,
             data: { artifact: { id: done.id, version: done.version, title: done.title } },
           };
         } catch (error) {
