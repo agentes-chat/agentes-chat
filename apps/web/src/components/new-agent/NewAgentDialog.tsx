@@ -624,10 +624,11 @@ function NewAgentDialog({
     ).finished.then(react, () => {});
   }, [sel, step]);
   // From scratch, the words come first (on a narrow screen, once its card is shown).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: again when the card comes into view
+  // The draft's first write must not pull the focus from a name being typed (issue 362).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: again when the card comes into view, never per keystroke
   useEffect(() => {
     if (sel === "zero" && !drafts.zero?.what) whatInput.current?.focus();
-  }, [sel, drafts.zero?.what, step]);
+  }, [sel, step]);
 
   const setLook = (patch: LookPatch) => {
     update({ look: { ...draft.look, ...patch } });

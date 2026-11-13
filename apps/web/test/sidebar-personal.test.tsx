@@ -387,6 +387,25 @@ describe("a personal workspace's sidebar", () => {
     expect(input.setup).toMatchObject({ role: null, hello: "Cuidar da agenda do consultório" });
   });
 
+  test("from scratch, the first letter of the name keeps the focus in it (issue 362)", async () => {
+    const state = withRightHand(personal());
+    await go(state);
+    const agents = nav().querySelector('.sidebar__block[data-section="agents"]') as HTMLElement;
+    await click([...agents.querySelectorAll(".sidebar__item")].at(-1) as HTMLElement);
+    const dialog = screen().getByRole("dialog", { name: "Novo agente" });
+    // From scratch its words come first: the card opens on "O que faz".
+    await click(within(dialog).getByRole("option", { name: /Do zero/ }));
+    within(dialog).getByRole("textbox", { name: "O que faz" });
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("O que faz");
+    // Then a letter typed into the name stays there: the draft's first write never pulls the focus back to the words.
+    const name = within(dialog).getByRole("textbox", { name: "Nome" }) as HTMLInputElement;
+    name.focus();
+    await act(async () => fireEvent.change(name, { target: { value: "L" } }));
+    await settle(2);
+    expect(name.value).toBe("L");
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Nome");
+  });
+
   test("the agents come first; channels are Conversas em grupo; with someone else in, people and #general show", async () => {
     await go(personal());
     expect(blocks()).toEqual(["agents", "channels", "people"]);
