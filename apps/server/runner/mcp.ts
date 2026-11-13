@@ -481,8 +481,7 @@ export class McpBridge {
     }
     // A host hands another server's tools to us with its own naming (`mcp__<server>__<tool>`, and `.` for the last
     // part in some builds): what our server lists, and answers to, is the bare name.
-    const asked = typeof req.tool === "string" ? req.tool.slice(0, 96) : "";
-    const tool = asked.replace(/^mcp__[A-Za-z0-9_]+?(?:__|\.)/, "").slice(0, 64);
+    const tool = bareToolName(typeof req.tool === "string" ? req.tool.slice(0, 96) : "").slice(0, 64);
     // A bridge (server token): any tool the server lists; the server decides. Else the fixed mission tools.
     const known = info.serverToken ? TOOL_NAME.test(tool) : MISSION_MCP_TOOLS.some((t) => t.name === tool);
     if (!known) return { ok: false, error: `Unknown tool ${tool}` };
@@ -803,6 +802,13 @@ const rpcError = (id: JsonRpcId, code: number, message: string) => ({
  * One JSON-RPC message from the executor; the response, or null for a
  * notification. Only what an MCP client needs from a tools-only server.
  */
+/**
+ * The bare tool name from what a host calls it: another server's tools arrive as `mcp__<server>__<tool>` (and
+ * `mcp__<server>.<tool>` in one build), while our server lists and answers to `tool`. Sent through as that text, every
+ * call came back "Unknown tool mcp__agenteschat_agentes__find_tools. The exact name is find_tools."
+ */
+export const bareToolName = (name: string) => name.replace(/^mcp__[A-Za-z0-9_]+?(?:__|\.)/, "");
+
 export async function handleMcpMessage(
   message: unknown,
   call: ToolCaller,
@@ -869,7 +875,7 @@ export async function handleMcpMessage(
         },
       };
     case "tools/call": {
-      const name = typeof params.name === "string" ? params.name : "";
+      const name = bareToolName(typeof params.name === "string" ? params.name.slice(0, 96) : "");
       if (delegated?.tools.some((t) => t.name === name)) {
         const given = params.arguments;
         const input = typeof given === "object" && given !== null && !Array.isArray(given) ? given : {};
