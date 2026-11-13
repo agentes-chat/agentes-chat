@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
@@ -406,6 +407,61 @@ export class CodexAppClient {
 
 // ── Notifications → brain events ─────────────────────────────────────────────
 
+/** Where an image Codex made is kept in the agent's folder, for the server to fetch. */
+export const CODEX_IMAGES_FOLDER = "generated-images";
+const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+
+/**
+ * An image Codex's own tool made (`imageGeneration`). Codex keeps it in its sign-in's folder, which the conversation
+ * never sees: a copy goes to the agent's folder and a `file` event tells the server to show it with the reply.
+ * Returns the copy's path relative to `folder`, or null when there is no image to keep.
+ */
+function keepCodexImage(item: Record<string, unknown>, id: string, folder: string): string | null {
+  try {
+    const saved = str(item.savedPath);
+    const fromFile = saved !== "" && existsSync(saved);
+    // No file it could reach (another user's folder, an older Codex): the item carries the image itself.
+    const bytes = fromFile ? null : Buffer.from(str(item.result), "base64");
+    if (bytes && bytes.byteLength === 0) return null;
+    const ext = IMAGE_EXTENSIONS.has(path.extname(saved).toLowerCase()) ? path.extname(saved).toLowerCase() : ".png";
+    const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
+    const name = `image-${stamp}-${id.replace(/[^a-zA-Z0-9]/g, "").slice(-6) || "codex"}${ext}`;
+    const dir = path.join(folder, CODEX_IMAGES_FOLDER);
+    mkdirSync(dir, { recursive: true });
+    if (bytes) writeFileSync(path.join(dir, name), bytes);
+    else copyFileSync(saved, path.join(dir, name));
+    return `${CODEX_IMAGES_FOLDER}/${name}`;
+  } catch {
+    return null;
+  }
+}
+
+/** `imageGeneration` as an executed `tool_call`, and the `file` event of the image it made. */
+export function codexImageEvents(
+  item: Record<string, unknown>,
+  id: string,
+  folder: string | undefined,
+  clean: (text: string) => string,
+): CodexBrainEvent[] {
+  const prompt = clean(str(item.revisedPrompt)).slice(0, 500);
+  const call = (content: string, isError = false): CodexBrainEvent => ({
+    type: "tool_call",
+    id,
+    name: "image_generation",
+    input: prompt ? { prompt } : {},
+    executed: { content, ...(isError ? { isError: true } : {}) },
+  });
+  if (isObj(item.failure)) {
+    // Seconds since the epoch, as Codex's other limits say theirs.
+    const resets = typeof item.failure.resetsAt === "number" ? new Date(item.failure.resetsAt * 1000) : null;
+    const until = resets && !Number.isNaN(resets.getTime()) ? ` until ${resets.toISOString()}` : "";
+    return [call(`The plan's image limit was reached${until}.`, true)];
+  }
+  const kept = folder ? keepCodexImage(item, id, folder) : null;
+  if (!kept) return [call("Codex made no image.", true)];
+  return [call(`Saved ${kept} in your folder.`), { type: "file", path: kept }];
+}
+
 const usageDiff = (a: TokenUsageBreakdown, b: TokenUsageBreakdown): TokenUsageBreakdown => ({
   totalTokens: Math.max(0, num(a.totalTokens) - num(b.totalTokens)),
   inputTokens: Math.max(0, num(a.inputTokens) - num(b.inputTokens)),
@@ -434,7 +490,15 @@ export class CodexAppMapper {
   /** The turn ran a command, changed a file or called our bridge: a cut now loses work the API couldn't see. */
   private worked = false;
 
-  constructor(private readonly opts: { cwd: string; model?: string; redact?: (text: string) => string }) {}
+  constructor(
+    private readonly opts: {
+      cwd: string;
+      /** The agent's folder: where an image Codex makes is kept. */
+      folder?: string;
+      model?: string;
+      redact?: (text: string) => string;
+    },
+  ) {}
 
   private clean(t: string) {
     return this.opts.redact ? this.opts.redact(t) : t;
@@ -466,7 +530,12 @@ export class CodexAppMapper {
   /** `item/completed`: executed tool calls, the answer, and the text of a message that wasn't streamed. */
   completed(item: Record<string, unknown>): { events: CodexBrainEvent[]; text?: string } {
     const id = str(item.id) || `codex-${randomUUID()}`;
-    if (item.type === "commandExecution" || item.type === "fileChange" || item.type === "mcpToolCall")
+    if (
+      item.type === "commandExecution" ||
+      item.type === "fileChange" ||
+      item.type === "mcpToolCall" ||
+      item.type === "imageGeneration"
+    )
       this.worked = true;
     switch (item.type) {
       case "agentMessage": {
@@ -501,6 +570,8 @@ export class CodexAppMapper {
         const status = str(item.status);
         return { events: [codexFileChangeCall({ id, changes, failed: status === "failed" || status === "declined" })] };
       }
+      case "imageGeneration":
+        return { events: codexImageEvents(item, id, this.opts.folder, (t) => this.clean(t)) };
       default:
         // Our bridge's calls (`mcpToolCall`) aren't repeated (the engine ran them); the rest isn't a tool call.
         return { events: [] };
@@ -1067,6 +1138,7 @@ export class CodexAppServers implements CodexAppRunner {
     const deltaMs = this.opts.deltaMs ?? CODEX_APP_DELTA_MS;
     const mapper = new CodexAppMapper({
       cwd: input.cwd,
+      ...(input.folder ? { folder: input.folder } : {}),
       ...(input.model ? { model: input.model } : {}),
       ...(opts.redact ? { redact: opts.redact } : {}),
     });
@@ -1254,6 +1326,11 @@ export class CodexAppServers implements CodexAppRunner {
                 unread.delete(str(item.clientId));
                 emit({ type: "steer_read", uuids: ours });
               }
+              return;
+            }
+            // An image takes a while and says nothing until it is done: its call starts now (the chat shows its place).
+            if (method === "item/started" && item.type === "imageGeneration" && str(item.id)) {
+              emit({ type: "tool_started", id: str(item.id), name: "image_generation" });
               return;
             }
             if (method !== "item/completed") return;

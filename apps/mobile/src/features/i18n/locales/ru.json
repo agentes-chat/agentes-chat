@@ -996,6 +996,9 @@
       "run_failed_few": "Не удалось завершить",
       "run_failed_many": "Не удалось завершить",
       "run_failed_other": "Не удалось завершить",
+      "admin_ask_channel_agent": "{{names}} просит добавить {{agent}} в #{{label}}",
+      "admin_ask_create_agents": "{{names}} просит разрешить создавать агентов",
+      "admin_ask_webhook": "{{names}} просит настроить вебхук {{service}} для рутин",
       "routine_paused_one": "Регулярная задача на паузе",
       "routine_paused_few": "Регулярные задачи на паузе",
       "routine_paused_many": "Регулярные задачи на паузе",
@@ -1110,6 +1113,10 @@
       "plan_lent_female_few": "Ваш план {{plan}} подключён к агенту {{agent}}: {{names}}",
       "plan_lent_female_many": "Ваш план {{plan}} подключён к агенту {{agent}}: {{names}}",
       "plan_lent_female_other": "Ваш план {{plan}} подключён к агенту {{agent}}: {{names}}",
+      "plan_serves_one": "Ваш {{plan}} теперь работает на весь workspace",
+      "plan_serves_few": "Ваш {{plan}} теперь работает на весь workspace",
+      "plan_serves_many": "Ваш {{plan}} теперь работает на весь workspace",
+      "plan_serves_other": "Ваш {{plan}} теперь работает на весь workspace",
       "plan_model_dropped_one": "{{model}} больше нет в {{plan}}. {{names}} пока использует {{runs}}",
       "plan_model_dropped_few": "{{model}} больше нет в {{plan}}. {{names}} пока использует {{runs}}",
       "plan_model_dropped_many": "{{model}} больше нет в {{plan}}. {{names}} пока использует {{runs}}",
@@ -2179,6 +2186,7 @@
       "access_requestFor": "{{names}} просит доступ к устройству {{device}} для {{person}}",
       "waiting": "{{names}} ждёт устройство {{device}}",
       "waitingFor": "{{names}} ждёт устройство {{device}} для {{person}}",
+      "tool_request": "{{names}} просит вас включить {{tool}} на вашем {{device}}",
       "allowOnce": "Разрешить один раз",
       "always": "Всегда разрешать {{name}}",
       "no": "Нет",
@@ -2453,7 +2461,8 @@
       "tooBig": "Изображение слишком большое. Попробуйте другое."
     },
     "machine": {
-      "toolsHow": "Нажмите на включённый инструмент, чтобы выключить его. Снова включить его можно только на самом компьютере."
+      "toolsHow": "Коснитесь включённого инструмента, чтобы выключить его. Чтобы включить снова: на самом компьютере или здесь, тем, кто его подключил.",
+      "toolsHowOwner": "Коснитесь инструмента, чтобы включить или выключить его."
     },
     "roles": {
       "onComputer": "Порядок ролей и значок каждой роли меняются на компьютере.",

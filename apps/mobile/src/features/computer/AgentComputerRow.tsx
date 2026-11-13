@@ -8,6 +8,7 @@ import {
 import { entryLine, entryState, pictureWhen } from "@agenteschat/client/lib/agent-computer";
 import { computerName } from "@agenteschat/client/lib/computer";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import type { Seat } from "@agenteschat/client/lib/seat";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { Image } from "expo-image";
 import { useIsFocused } from "expo-router";
@@ -21,8 +22,12 @@ import { phoneEntryButton } from "./logic";
 import { useSetupWait } from "./SetupWait";
 import { useAgentComputer } from "./useAgentComputer";
 
-/** Opens an agent's computer full screen. */
-export const openComputer = (agentId: string) => router.push(`/computer/${agentId}`);
+/**
+ * Opens an agent's computer full screen. `seat`: the right hand's shared place on the workspace's computer instead
+ * of the viewer's own (ADR 0175).
+ */
+export const openComputer = (agentId: string, seat?: Seat) =>
+  router.push(seat ? { pathname: "/computer/[agentId]", params: { agentId, seat } } : `/computer/${agentId}`);
 
 /**
  * The agent's computer on its profile, beside Chat: a named secondary button as wide as Chat ("Computador"), so what

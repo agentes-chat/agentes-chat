@@ -15,6 +15,7 @@ import { fieldText, GroupedField, GroupedFooter, GroupedHeader, GroupedList, Gro
 import { openPage } from "../ai/parts";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { CommandBlock } from "../settings/parts";
+import { AskAdminRow } from "../shared/AdminAsk";
 import { useColors, useOrgId } from "../shared/hooks";
 
 /** Repositories offered to pick before typing one: the ones pushed to last. */
@@ -97,6 +98,12 @@ export function EventWebhookSetup({ provider }: { provider: WebhookProvider }) {
         ) : (
           <SentrySteps setup={setup} />
         )
+      ) : null}
+      {setup && !setup.canManage && state !== "working" && state !== "waiting" ? (
+        <>
+          <View style={styles.gap} />
+          <AskAdminRow ask={{ what: "webhook", provider }} />
+        </>
       ) : null}
       {setup?.canManage ? (
         <>

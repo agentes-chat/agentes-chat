@@ -315,6 +315,7 @@ export function toolKind(tool: PolicyTool): ToolKind {
     tool.name === "set_status" ||
     tool.name === "withdraw_request" ||
     tool.name === "set_reply_style" ||
+    tool.name === "commit_co_author" ||
     tool.name === "wait_for_device"
   )
     return { kind: "self" };

@@ -957,6 +957,9 @@
       "run_failed_one": "Non è stato possibile finire",
       "run_failed_many": "Non è stato possibile finire",
       "run_failed_other": "Non è stato possibile finire",
+      "admin_ask_channel_agent": "{{names}} ti chiede di aggiungere {{agent}} a #{{label}}",
+      "admin_ask_create_agents": "{{names}} chiede di poter creare agenti",
+      "admin_ask_webhook": "{{names}} ti chiede di configurare il webhook di {{service}} per le routine",
       "routine_paused_one": "Routine in pausa",
       "routine_paused_many": "Routine in pausa",
       "routine_paused_other": "Routine in pausa",
@@ -1044,6 +1047,9 @@
       "plan_lent_female_one": "{{names}} ha collegato il tuo piano {{plan}} a {{agent}}",
       "plan_lent_female_many": "{{names}} hanno collegato il tuo piano {{plan}} a {{agent}}",
       "plan_lent_female_other": "{{names}} hanno collegato il tuo piano {{plan}} a {{agent}}",
+      "plan_serves_one": "Il tuo {{plan}} ora serve tutto il workspace",
+      "plan_serves_many": "Il tuo {{plan}} ora serve tutto il workspace",
+      "plan_serves_other": "Il tuo {{plan}} ora serve tutto il workspace",
       "plan_model_dropped_one": "{{model}} è uscito da {{plan}}. {{names}} usa {{runs}} per ora",
       "plan_model_dropped_many": "{{model}} è uscito da {{plan}}. {{names}} usa {{runs}} per ora",
       "plan_model_dropped_other": "{{model}} è uscito da {{plan}}. {{names}} usa {{runs}} per ora",
@@ -2077,6 +2083,7 @@
       "access_requestFor": "{{names}} chiede di usare {{device}} per {{person}}",
       "waiting": "{{names}} sta aspettando {{device}}",
       "waitingFor": "{{names}} sta aspettando {{device}} per {{person}}",
+      "tool_request": "{{names}} ti chiede di attivare {{tool}} sul tuo {{device}}",
       "allowOnce": "Consenti una volta",
       "always": "Consenti sempre a {{name}}",
       "no": "No",
@@ -2343,7 +2350,8 @@
       "tooBig": "L'immagine è troppo grande. Provane un'altra."
     },
     "machine": {
-      "toolsHow": "Tocca uno strumento attivo per disattivarlo. Si riattiva solo dal computer stesso."
+      "toolsHow": "Tocca uno strumento attivo per disattivarlo. Per riattivarlo: sul computer stesso, o qui da chi lo ha collegato.",
+      "toolsHowOwner": "Tocca uno strumento per attivarlo o disattivarlo."
     },
     "roles": {
       "onComputer": "L'ordine dei ruoli e l'icona di ciascuno si cambiano dal computer.",

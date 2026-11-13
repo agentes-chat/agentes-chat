@@ -35,6 +35,7 @@ import { type BrowserLink, type BrowserReply, browserSurface } from "../../../..
 import { reduceAccess, setTool, TOOL_NAMES, widens } from "../../runner/access";
 import {
   agentBrowserTarget,
+  BROWSER_RECLAIM_IDLE_MS,
   type BrowserAnswer,
   BrowserManager,
   type BrowserManagerOptions,
@@ -1724,6 +1725,50 @@ test.if(posix)("an idle browser's Chrome stops, but not while someone watches or
 });
 
 test.if(posix)(
+  "a browser its agent holds (keep_running) stays open however idle, and closes as idle once let go",
+  async () => {
+    let now = 1_000_000;
+    const kept = new Set([ops.id]);
+    const t = setup({ now: () => now, idleMs: 60_000, kept: (agentId) => kept.has(agentId) });
+    await t.act("open", ["https://a.example"]);
+    await t.act("open", ["https://b.example"], { agent: ops });
+    now += 61_000;
+    await t.manager.sweep();
+    expect(t.chromes[0]?.killed).toBe(true);
+    expect(t.chromes[1]?.killed).toBe(false);
+    kept.clear();
+    await t.manager.sweep();
+    expect(t.chromes[1]?.killed).toBe(true);
+  },
+);
+
+test.if(posix)(
+  "a turn short of memory closes the least recently used idle browser, never one held or just used",
+  async () => {
+    let now = 1_000_000;
+    const t = setup({ now: () => now });
+    await t.act("open", ["https://a.example"]);
+    now += 30_000;
+    await t.act("open", ["https://b.example"], { agent: ops });
+    // Used within the last two minutes: nothing closes yet.
+    now += BROWSER_RECLAIM_IDLE_MS - 60_000;
+    expect(t.manager.reclaimCandidate()).toBeNull();
+    expect(await t.manager.reclaimIdle()).toBe(false);
+    // Both idle: the older one goes first, and a help request keeps the other.
+    now += 60_000;
+    t.manager.setHandoff(ops.id, { status: "pending" });
+    expect(t.manager.reclaimCandidate()).toBe(1_000_000);
+    expect(await t.manager.reclaimIdle()).toBe(true);
+    expect(t.chromes[0]?.killed).toBe(true);
+    expect(t.chromes[1]?.killed).toBe(false);
+    expect(await t.manager.reclaimIdle()).toBe(false);
+    // Its next command starts it again on the same profile.
+    await t.act("open", ["https://a.example"]);
+    expect(t.chromes[2]?.profile).toBe(t.chromes[0]?.profile);
+  },
+);
+
+test.if(posix)(
   "a Chrome that updated itself restarts on the new version once idle, on the same page, once; never mid-task",
   async () => {
     let now = 1_000_000;
@@ -1773,6 +1818,39 @@ test.if(posix)(
     await Bun.sleep(50);
     expect(of(ops)).toHaveLength(1);
     expect(of(ops)[0]?.killed || of(ops)[0]?.closed).toBe(false);
+  },
+);
+
+test.if(posix)(
+  "a browser its agent holds waits a day at most for a newer Chrome, then restarts on it, on its page, unwatched",
+  async () => {
+    let now = 1_000_000;
+    let version = CHROME_VERSION;
+    const t = setup({ now: () => now, chromeVersion: () => version, kept: () => true });
+    await t.act("open", ["https://shop.example/cart"]);
+    // The update lands and is read 6 minutes on; the hold keeps Chrome as it is for the day after.
+    version = "157.0.8100.10";
+    now += 6 * 60_000;
+    await t.manager.sweep();
+    now += 23 * 3600_000;
+    await t.manager.sweep();
+    await Bun.sleep(50);
+    expect(t.chromes).toHaveLength(1);
+    // Past the day, a person's turn on it still holds it off, and so does its end for a while.
+    now += 3600_000;
+    t.manager.setHandoff(dev.id, { status: "pending" });
+    await t.manager.sweep();
+    t.manager.setHandoff(dev.id, null);
+    await t.manager.sweep();
+    await Bun.sleep(50);
+    expect(t.chromes).toHaveLength(1);
+    now += 11 * 60_000;
+    await t.manager.sweep();
+    await waitFor(() => t.chromes.length === 2);
+    const [before, after] = t.chromes;
+    expect(before?.killed || before?.closed).toBe(true);
+    expect(after?.args.at(-1)).toBe("https://shop.example/cart");
+    expect(after?.profile).toBe(before?.profile);
   },
 );
 

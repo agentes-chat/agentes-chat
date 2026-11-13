@@ -1,10 +1,28 @@
-import type { HumanAction, HumanCheck, HumanCheckRefusal } from "@agenteschat/adapters";
-import { ConfigError } from "@agenteschat/config";
+import { createTurnstileCheck, type HumanAction, type HumanCheck, type HumanCheckRefusal } from "@agenteschat/adapters";
+import { type Config, ConfigError } from "@agenteschat/config";
 import type { Logger } from "../logger";
 import { requestIp } from "./client-ip";
 
 /** Where pages send the bot check's token: Better Auth's captcha plugin reads the same header. */
 export const HUMAN_CHECK_HEADER = "x-captcha-response";
+
+/**
+ * agentes.chat Cloud's bot check (ADR 0075), only with both keys: without them nothing reaches Cloudflare. Tokens
+ * count when made on `PUBLIC_URL`'s host, and for the waiting lists also on `LANDING_URL`'s.
+ */
+export function createHumanCheck(
+  config: Pick<Config, "PUBLIC_URL" | "LANDING_URL" | "TURNSTILE_SITE_KEY" | "TURNSTILE_SECRET_KEY">,
+  options: { log?: Logger; fetch?: typeof fetch } = {},
+): HumanCheck | null {
+  if (!config.TURNSTILE_SITE_KEY || !config.TURNSTILE_SECRET_KEY) return null;
+  return createTurnstileCheck({
+    siteKey: config.TURNSTILE_SITE_KEY,
+    secretKey: config.TURNSTILE_SECRET_KEY,
+    hostnames: [new URL(config.PUBLIC_URL).hostname],
+    landingHostnames: config.LANDING_URL ? [new URL(config.LANDING_URL).hostname] : [],
+    ...options,
+  });
+}
 
 const REFUSALS: Record<HumanCheckRefusal, string> = {
   human_check: "Couldn't confirm a person is asking. Try again.",

@@ -25,7 +25,7 @@ import {
   useRuleDescribe,
   useRuleParse,
 } from "@agenteschat/client";
-import { approvalTitle, ownActionName } from "@agenteschat/client/lib/approval-words";
+import { approvalTitle, ownActionName, routineVaultKey, splitOwnActions } from "@agenteschat/client/lib/approval-words";
 import type { RunStatus } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatBytes } from "@agenteschat/client/lib/files";
@@ -1460,6 +1460,7 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
                 <OwnActions routine={r} />
               </DetailsSection>
             )}
+            {r.canSeeDetails && <VaultKeys routine={r} />}
             <DetailsSection title={t("routines.panel.nexts")}>
               {mailTrouble(r) && (
                 <Chip icon="alert" tone="waiting">
@@ -2100,7 +2101,9 @@ function WebhookPanel({ routine: r, runs }: { routine: Routine; runs: RoutineRun
       <LoadingList count={1} avatar={false} />
     );
   }
-  const busy = (what: "address" | "secret" | "unsign" | "test") => action.isPending && action.variables === what;
+  const busy = (what: "address" | "secret" | "unsign" | "test" | "onAndTest") =>
+    action.isPending && action.variables === what;
+  const test = r.active ? "test" : "onAndTest";
   const change = (what: "address" | "secret" | "unsign") =>
     action.mutate(what, {
       onSuccess: (done) => {
@@ -2195,10 +2198,11 @@ function WebhookPanel({ routine: r, runs }: { routine: Routine; runs: RoutineRun
             type="button"
             size="sm"
             icon="send"
-            loading={busy("test")}
-            onClick={() => action.mutate("test", { onSuccess: () => toast.show(t("routines.webhook.tested")) })}
+            disabled={action.isPending}
+            loading={busy(test)}
+            onClick={() => action.mutate(test, { onSuccess: () => toast.show(t("routines.webhook.tested")) })}
           >
-            {t("routines.webhook.test")}
+            {t(r.active ? "routines.webhook.test" : "routines.webhook.turnOnAndTest")}
           </Button>
         </div>
       </div>
@@ -2952,7 +2956,8 @@ function OwnActions({
   const { t } = useTranslation();
   const { org } = useOrg();
   const action = useRoutineAction(org.id);
-  const own = routine?.ownActions ?? [];
+  const all = routine?.ownActions ?? [];
+  const own = splitOwnActions(all).apps;
   const about = t("common.about", { label: t("routines.panel.ownActions") });
   const line = (short: string, hint: string) => (
     <p className="small muted">
@@ -2984,7 +2989,7 @@ function OwnActions({
                   action.mutate({
                     type: "update",
                     id: routine.id,
-                    patch: { ownActions: own.filter((a) => a !== name) },
+                    patch: { ownActions: all.filter((a) => a !== name) },
                   })
                 }
               />
@@ -2994,6 +2999,45 @@ function OwnActions({
       </ul>
       {line(t("routines.ownActions.hintShort"), t("routines.ownActions.hint"))}
     </>
+  );
+}
+
+/** "Chaves do Vault que usa": the keys its commands use without asking, each taken out with its ×. */
+function VaultKeys({ routine }: { routine: Routine }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const action = useRoutineAction(org.id);
+  const all = routine.ownActions ?? [];
+  const keys = splitOwnActions(all).keys;
+  if (keys.length === 0) return null;
+  return (
+    <DetailsSection title={t("routines.vaultKeys.title")}>
+      <ul className="routine-own" aria-label={t("routines.vaultKeys.title")}>
+        {keys.map((key) => (
+          <li key={key}>
+            <code>{key}</code>
+            {routine.canManage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon="close"
+                aria-label={t("routines.vaultKeys.remove", { key })}
+                disabled={action.isPending}
+                onClick={() =>
+                  action.mutate({
+                    type: "update",
+                    id: routine.id,
+                    patch: { ownActions: all.filter((a) => routineVaultKey(a) !== key) },
+                  })
+                }
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="small muted">{t("routines.vaultKeys.hint")}</p>
+    </DetailsSection>
   );
 }
 

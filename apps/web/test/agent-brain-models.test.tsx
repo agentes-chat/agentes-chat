@@ -308,9 +308,9 @@ describe("Quem pensa: a coding plan's models", () => {
     // never someone else's key.
     expect(rows.map((r) => [r.group, r.title, r.lines[0] ?? null, r.mark])).toEqual([
       ["Em uso", "Plano", "chave …4f2a", "opencode"],
-      ["Suas", "Plano 2", "chave …9f3c", "opencode"],
-      ["Suas", "Pessoal · Max", null, "claude"],
-      ["Chave do workspace", "Chave padrão do workspace", "Claude · termina em 7f2a", "claude"],
+      ["OpenCode Go", "Plano 2", "chave …9f3c", "opencode"],
+      ["Claude", "Pessoal · Max", "Sua", "claude"],
+      ["Chaves de API", "Chave padrão do workspace", "Claude · termina em 7f2a", "claude"],
     ]);
     // One more key of the same plan: the model it has stays.
     await pickRow(d, (r) => r.group !== "Em uso" && r.title === "Plano 2");

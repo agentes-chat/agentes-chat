@@ -399,6 +399,17 @@ describe("Perfil: o mês, com os limites do plano (ADR 0063 §5)", () => {
     expect(screen).toContain("label={thinksPlan ?? thinks.text}");
     expect(screen).toContain("{...(thinksUnder ? { sub: thinksUnder, subLines: 2 } : {})}");
     expect(screen).toContain("!isAuto(effortView.effectiveModel)");
+    // Its owner and admins change it in place, in the DM header's sheet; the header shows its maker's logo to all.
+    expect(screen).toContain("sheet.open(<ModelPickerSheet agent={agent} />)");
+    const sheet = await Bun.file(
+      new URL("../../src/features/ai/ModelPickerSheet.tsx", import.meta.url).pathname,
+    ).text();
+    const button = sheet.slice(
+      sheet.indexOf("export function DmModelButton("),
+      sheet.indexOf("export function ModelPickerSheet("),
+    );
+    expect(button).toContain('<ProviderLogo id={thinks.mark} size="sm" />');
+    expect(button).toContain('t("brain.picker.readOnly")');
     const t = await translator("pt-BR");
     expect(t("agentPage.work.cell.effort", { level: "médio" })).toBe("esforço médio");
   });

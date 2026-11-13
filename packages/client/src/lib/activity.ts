@@ -32,6 +32,7 @@ export type ActivityKind =
   | "runningCode"
   | "browsing"
   | "pcFiles"
+  | "creatingImage"
   | "exportingFile"
   | "importingFile"
   | "runningSkillScript"
@@ -51,6 +52,7 @@ export type ActivityKind =
   | "listingTasks"
   | "checkingTask"
   | "cancelingTask"
+  | "keepingRunning"
   | "uploadingArtifact"
   | "gettingContext"
   | "cancelingReminder"
@@ -107,6 +109,7 @@ export type ActivityKind =
   | "sendingDm"
   | "settingStatus"
   | "settingReplyStyle"
+  | "settingCommitLine"
   | "sendingFeedback"
   | "offeringFeedback"
   | "deletingRoutine"
@@ -195,6 +198,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   list_tasks: "listingTasks",
   task_status: "checkingTask",
   cancel_task: "cancelingTask",
+  keep_running: "keepingRunning",
   upload_artifact: "uploadingArtifact",
   get_context: "gettingContext",
   cancel_reminder: "cancelingReminder",
@@ -267,6 +271,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   send_dm: "sendingDm",
   set_status: "settingStatus",
   set_reply_style: "settingReplyStyle",
+  commit_co_author: "settingCommitLine",
   send_feedback: "sendingFeedback",
   offer_feedback: "offeringFeedback",
   delete_routine: "deletingRoutine",
@@ -298,6 +303,7 @@ const OWN_TOOLS: Record<string, ActivityKind> = {
   grep: "pcFiles",
   ls: "pcFiles",
   file_change: "pcFiles",
+  image_generation: "creatingImage",
   bash: "runningCommandAny",
   shell: "runningCommandAny",
   toolsearch: "findingTools",

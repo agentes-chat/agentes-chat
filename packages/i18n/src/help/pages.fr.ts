@@ -9,6 +9,13 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
       "L’app agentes.chat peut aussi faire tourner agentes.chat lui-même, sur un Mac, un PC ou un ordinateur sous Linux, pour vous ou une petite équipe.",
     sections: [
       {
+        id: "download",
+        heading: "Téléchargez l'application",
+        blocks: [
+          "[Téléchargez l'application agentes.chat](/download) pour votre Mac, PC ou ordinateur Linux et ouvrez-la. Choisissez **Sur votre propre serveur**, appuyez sur **Continuer sur mon serveur**, puis sur **Faire tourner agentes.chat sur ce poste**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Comment ça fonctionne",
         blocks: [
@@ -217,6 +224,15 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
           "Connectez-vous à chaque espace de travail dans la même app et cliquez sur **Autoriser** pour chacun. Des espaces de travail sur agentes.chat Cloud et sur vos propres serveurs peuvent partager un ordinateur (app 0.6.1 et plus récente). Chacun y a ses propres agents et dossiers, et en déconnecter un ne touche pas aux autres.",
           "Un serveur que l’app fait tourner sur cet ordinateur est déjà connecté et n’a besoin de rien. Pour prêter aussi cet ordinateur à un espace de travail d’ailleurs, voir [Le prêter aussi à un autre espace de travail](/help/run-on-your-computer#another-workspace).",
           "Vous utilisez l’app sur un portable seulement comme fenêtre sur votre espace de travail\u00a0? Quand elle propose de laisser les agents utiliser le portable, **Plus tard** le garde comme simple fenêtre.",
+          "Un serveur connecté avec la ligne du terminal travaille pour un seul workspace. Le connecter depuis un autre workspace fait passer le serveur à celui-ci, et le premier ne l'atteint plus. Pour plusieurs workspaces sur un ordinateur, utilisez l'app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Quand les agents attendent dans la file",
+        blocks: [
+          "Chaque travail d'un agent utilise la mémoire de l'ordinateur. Quand la mémoire libre vient à manquer, le suivant attend dans la file jusqu'à ce qu'un autre se termine. Les personnes passent en premier. Le nombre de CPU n'y change rien.",
+          "Un ordinateur avec 4 Go de mémoire exécute deux ou trois travaux à la fois, un avec 8 Go environ neuf. Un Mac ou un PC en exécute jusqu'à huit. Les navigateurs et les bureaux que les agents laissent ouverts utilisent aussi de la mémoire. Pour une file plus courte, utilisez un ordinateur avec plus de mémoire, ou connectez-en un autre et répartissez les agents entre eux. Les workspaces qui partagent un ordinateur partagent sa mémoire.",
         ],
       },
       {

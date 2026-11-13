@@ -17,7 +17,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { getAgent } from "./agents";
-import type { AiStatusDeps } from "./ai-status";
+import { type AiStatusDeps, rightHandWorkAi } from "./ai-status";
 import { decidesAgentApprovals, MAX_OWN_ACTIONS, OWN_ACTION_NAME } from "./approval-rules";
 import { cancelRoutineAhead, type RoutineAheadView, routinesAhead } from "./approvals";
 import { audienceError, audienceSql, canTalkTo, speakerFor, speakerOf } from "./audience";
@@ -41,7 +41,7 @@ import { type ContextDeps, schedulesOf } from "./context/summaries";
 import { nextCronTime, zonedTimeForward } from "./cron";
 import { dashboardRights, viewerOf } from "./dashboards/access";
 import { isWidgetChangeRun, widgetFiring, widgetRunStarting } from "./dashboards/refresh-fire";
-import { widgetRoutineGone, widgetRoutineHeld } from "./dashboards/refresh-ledger";
+import { widgetChangeOf, widgetRoutineGone, widgetRoutineHeld } from "./dashboards/refresh-ledger";
 import { openDm } from "./dms";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishListChanged, publishMessageCreated, publishRoutineRuns, publishUserEvent } from "./events";
@@ -61,6 +61,7 @@ import { resolveRoutinePaused } from "./notification-producers";
 import { can, getMembership, requirePermission } from "./organizations";
 import { PermanentJobError } from "./outbox";
 import { maySql } from "./permissions";
+import { isRightHand } from "./right-hand";
 import {
   type RoutineAccess,
   type RoutineBrief,
@@ -1920,6 +1921,50 @@ export async function setRoutineActive(
 }
 
 /**
+ * A resume nobody clicked: a scheduled routine that paused itself as `failing` runs again from its next slot, its
+ * failure streak cleared and its pause notice done, with `actor` in the audit log. Only that pause: one for who made
+ * it, its agent or its audience is a person's to decide. False when it was not paused so.
+ */
+export async function resumeRoutineBySystem(
+  deps: { db: Database; pubsub?: PubSub },
+  orgId: string,
+  id: string,
+  actor: { type: "agent" | "system"; id: string | null },
+): Promise<boolean> {
+  const current = await loadRoutine(deps.db, orgId, id);
+  if (current.triggerType !== "schedule") return false;
+  const [row] = await deps.db
+    .update(routines)
+    .set({
+      active: true,
+      nextRunAt: nextRoutineTime(current, new Date()),
+      updatedAt: new Date(),
+      pausedReason: null,
+      failuresInRow: 0,
+    })
+    .where(
+      and(
+        eq(routines.id, id),
+        eq(routines.orgId, orgId),
+        eq(routines.active, false),
+        eq(routines.pausedReason, "failing"),
+      ),
+    )
+    .returning({ id: routines.id });
+  if (!row) return false;
+  await recordAudit(deps.db, {
+    orgId,
+    actor,
+    action: "routine.resumed",
+    target: { type: "routine", id },
+    details: { name: current.name, after: "failing" },
+  });
+  await resolveRoutinePaused(deps, orgId, id).catch(() => {});
+  await publishListChanged(deps.pubsub, orgId, "routines");
+  return true;
+}
+
+/**
  * Queues one slot or manual run of a routine (`routine.run` job); null when that slot already ran.
  * Events go through `fireRoutineEvent` (deduplicated and coalesced).
  */
@@ -1947,6 +1992,26 @@ export async function runRoutineNow(deps: RoutineDeps, actorId: string, orgId: s
   await requireRoutineManager(deps.db, actorId, orgId, routine.agentId);
   // A person is waiting on this one: told now, where a scheduled slot just passes.
   await assertCanWork(deps.db, orgId, routine.agentId);
+  // A try queued for later after a failure (`retryOutsideFailure`, the only scheduled run queued ahead of its time)
+  // gives way: the person's run is that try, now. Left queued, it would have this one skipped as "the previous one
+  // was still running".
+  const ahead = await deps.db
+    .select({ id: routineRuns.id })
+    .from(routineRuns)
+    .where(
+      and(
+        eq(routineRuns.routineId, routine.id),
+        eq(routineRuns.status, "queued"),
+        eq(routineRuns.trigger, "schedule"),
+        sql`${routineRuns.at} > now()`,
+      ),
+    );
+  for (const r of ahead)
+    await endRoutineRun(
+      deps,
+      { orgId, routineId: routine.id, routineRunId: r.id },
+      { status: "superseded", code: "superseded" },
+    );
   await queueRoutineRun(deps, routine, new Date(), "manual");
   await publishRoutineRuns(deps.pubsub, orgId, routine.id);
   const [view] = await views(deps.db, [routine], actorId, deps.hooks);
@@ -2215,11 +2280,17 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
   // A widget's refresh (ADR 0135 §4): its widget and board are still there, its creator still sees the board and its
   // agent has an AI.
   let widget: RoutineBrief["widget"];
+  // The right hand's: whose AI this firing thinks with (ADR 0137 §11), its creator's when it can, else the workspace's.
+  let aiUserId: string | null | undefined;
   if (target.type === "widget") {
-    const firing = await widgetFiring(deps, routine.orgId, target, creator, membership);
+    const asker = widgetChangeOf(run.event)?.byUserId;
+    const firing = await widgetFiring(deps, routine.orgId, target, creator, membership, asker);
     if ("skip" in firing) return skip(firing.skip);
     if ("pause" in firing) return paused(firing.pause);
     widget = firing.widget;
+    aiUserId = firing.aiUserId;
+  } else if (deps.ai && isRightHand(agent)) {
+    aiUserId = (await rightHandWorkAi({ ...deps.ai, db }, agent, [creator])).person;
   }
 
   // Where it reports: its channel or the conversation it was asked in, else the creator's DM with the agent.
@@ -2266,6 +2337,7 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
     trigger: run.trigger,
     dueAt: run.at.toISOString(),
     ...(widget ? { widget } : {}),
+    ...(aiUserId !== undefined ? { aiUserId } : {}),
   };
   // The widget shows it is being redone (its last data stays on screen).
   if (widget) await widgetRunStarting(deps, routine.orgId, widget.widgetId);

@@ -957,6 +957,9 @@
       "run_failed_one": "N'a pas pu terminer",
       "run_failed_many": "N'ont pas pu terminer",
       "run_failed_other": "N'ont pas pu terminer",
+      "admin_ask_channel_agent": "{{names}} vous demande d'ajouter {{agent}} à #{{label}}",
+      "admin_ask_create_agents": "{{names}} demande à pouvoir créer des agents",
+      "admin_ask_webhook": "{{names}} vous demande de configurer le webhook {{service}} pour les routines",
       "routine_paused_one": "Routine en pause",
       "routine_paused_many": "Routines en pause",
       "routine_paused_other": "Routines en pause",
@@ -1044,6 +1047,9 @@
       "plan_lent_female_one": "{{names}} a connecté votre forfait {{plan}} à {{agent}}",
       "plan_lent_female_many": "{{names}} ont connecté votre forfait {{plan}} à {{agent}}",
       "plan_lent_female_other": "{{names}} ont connecté votre forfait {{plan}} à {{agent}}",
+      "plan_serves_one": "Votre {{plan}} sert désormais tout le workspace",
+      "plan_serves_many": "Votre {{plan}} sert désormais tout le workspace",
+      "plan_serves_other": "Votre {{plan}} sert désormais tout le workspace",
       "plan_model_dropped_one": "{{model}} a quitté {{plan}}. {{names}} utilise {{runs}} pour l’instant",
       "plan_model_dropped_many": "{{model}} a quitté {{plan}}. {{names}} utilise {{runs}} pour l’instant",
       "plan_model_dropped_other": "{{model}} a quitté {{plan}}. {{names}} utilise {{runs}} pour l’instant",
@@ -2077,6 +2083,7 @@
       "access_requestFor": "{{names}} demande à utiliser {{device}} pour {{person}}",
       "waiting": "{{names}} attend {{device}}",
       "waitingFor": "{{names}} attend {{device}} pour {{person}}",
+      "tool_request": "{{names}} vous demande d'activer {{tool}} sur votre {{device}}",
       "allowOnce": "Autoriser une fois",
       "always": "Toujours autoriser {{name}}",
       "no": "Non",
@@ -2343,7 +2350,8 @@
       "tooBig": "Cette image est trop lourde. Essayez-en une autre."
     },
     "machine": {
-      "toolsHow": "Touchez un outil activé pour le désactiver. Le réactiver ne se fait que sur l'ordinateur lui-même."
+      "toolsHow": "Touchez un outil activé pour le désactiver. Pour le réactiver : sur l'ordinateur lui-même, ou ici par la personne qui l'a connecté.",
+      "toolsHowOwner": "Touchez un outil pour l'activer ou le désactiver."
     },
     "roles": {
       "onComputer": "L'ordre des rôles et l'icône de chacun se changent sur l'ordinateur.",

@@ -8,8 +8,9 @@ import {
 import { and, type Database, eq, gte, inArray, isNull, or, schema, sql } from "@agenteschat/db";
 import { catalogModelOf, nanoUsdToUsd, summedCostNanoUsd } from "@agenteschat/providers";
 import { agentIdsWithDetails } from "./audience";
+import { sha256 } from "./crypto";
 import { NotFoundError } from "./errors";
-import { LISTED_ACCOUNT_STATUSES } from "./machine-accounts";
+import { LISTED_ACCOUNT_STATUSES, type PlanServes, servesOf } from "./machine-accounts";
 import { requirePermission } from "./organizations";
 import { agentBudgetsThisMonth, budgetPercent, canViewCost, monthStartUtc } from "./usage";
 import { WEB_USAGE_PROVIDER } from "./web-tools";
@@ -71,6 +72,14 @@ export interface PlanAccountInfo {
   /** Its owner's eyes only. */
   email: string | null;
   signedOut: boolean;
+  /** Who it thinks for (ADR 0059 §3); null for the computer's own sign-in, which thinks for its pairer's agents. */
+  serves: PlanServes | null;
+  /**
+   * The same seat signed in on one computer by anyone in the workspace (its maker, plan and email, opaque): logins with
+   * one `seat` are one account, whoever connected them. Per computer, as "Quem usa" changes a computer's logins
+   * (`sameLogins`). Null where that isn't known (a key, or no email yet).
+   */
+  seat: string | null;
 }
 
 export interface PlanAccountUsage extends PlanAccountInfo {
@@ -316,6 +325,8 @@ function accountOf(ctx: Context, key: string, viewerId: string | null): FoundAcc
         mine: viewerId !== null && machine.pairer === viewerId,
         email: null,
         signedOut: kind === "claude_code" && machine.claudeOut,
+        serves: null,
+        seat: null,
       },
       usage: machine.own[kind] ?? null,
     };
@@ -338,6 +349,13 @@ function accountOf(ctx: Context, key: string, viewerId: string | null): FoundAcc
       mine,
       email: mine ? row.email : null,
       signedOut: row.status === "signed_out",
+      serves: servesOf(row.serves),
+      seat:
+        row.email && !row.provider
+          ? sha256(
+              `${row.orgId}:${row.machineId}:${row.kind}:${row.email.toLowerCase()}:${row.providerOrgId ?? ""}`,
+            ).slice(0, 24)
+          : null,
     },
     usage: row.usage ?? null,
   };

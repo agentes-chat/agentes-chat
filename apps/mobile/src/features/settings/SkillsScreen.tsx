@@ -30,6 +30,7 @@ import {
   hiddenRepoOf,
   hiddenRepoText,
   pickSkills,
+  relightsSkillUpdate,
   SKILL_FILES_SHOWN,
   SKILL_UPDATE_TOAST,
   type SkillText,
@@ -502,6 +503,18 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
         <View style={styles.note}>
           <Note icon="x">{skillUpdateErrorText(t, s.updateError)}</Note>
         </View>
+      ) : null}
+      {s.updateError && relightsSkillUpdate(s.updateError) ? (
+        <GroupedList>
+          <GroupedRow
+            icon="replay"
+            label={t("skills.updateFailed.relight")}
+            disabled={action.isPending}
+            onPress={() =>
+              action.mutate({ type: "update", id: s.id, patch: { autoUpdate: true } }, { onError: failed })
+            }
+          />
+        </GroupedList>
       ) : null}
       <Gap />
       <GroupedList>

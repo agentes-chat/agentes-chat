@@ -996,6 +996,9 @@
       "run_failed_few": "Nie udało się dokończyć",
       "run_failed_many": "Nie udało się dokończyć",
       "run_failed_other": "Nie udało się dokończyć",
+      "admin_ask_channel_agent": "{{names}} prosi o dodanie {{agent}} do #{{label}}",
+      "admin_ask_create_agents": "{{names}} prosi o możliwość tworzenia agentów",
+      "admin_ask_webhook": "{{names}} prosi o skonfigurowanie webhooka {{service}} dla rutyn",
       "routine_paused_one": "Rutyna wstrzymana",
       "routine_paused_few": "Rutyny wstrzymane",
       "routine_paused_many": "Rutyny wstrzymane",
@@ -1110,6 +1113,10 @@
       "plan_lent_female_few": "Twój plan {{plan}} połączony z agentem {{agent}} przez {{names}}",
       "plan_lent_female_many": "Twój plan {{plan}} połączony z agentem {{agent}} przez {{names}}",
       "plan_lent_female_other": "Twój plan {{plan}} połączony z agentem {{agent}} przez {{names}}",
+      "plan_serves_one": "Twój {{plan}} obsługuje teraz cały workspace",
+      "plan_serves_few": "Twój {{plan}} obsługuje teraz cały workspace",
+      "plan_serves_many": "Twój {{plan}} obsługuje teraz cały workspace",
+      "plan_serves_other": "Twój {{plan}} obsługuje teraz cały workspace",
       "plan_model_dropped_one": "{{model}} zniknął z {{plan}}. {{names}} na razie używa {{runs}}",
       "plan_model_dropped_few": "{{model}} zniknął z {{plan}}. {{names}} na razie używa {{runs}}",
       "plan_model_dropped_many": "{{model}} zniknął z {{plan}}. {{names}} na razie używa {{runs}}",
@@ -2179,6 +2186,7 @@
       "access_requestFor": "{{names}} prosi o dostęp do urządzenia {{device}} dla {{person}}",
       "waiting": "{{names}} czeka na urządzenie {{device}}",
       "waitingFor": "{{names}} czeka na urządzenie {{device}} dla {{person}}",
+      "tool_request": "{{names}} prosi Cię o włączenie: {{tool}} na {{device}}",
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",
@@ -2453,7 +2461,8 @@
       "tooBig": "Ten obraz jest za duży. Spróbuj innego."
     },
     "machine": {
-      "toolsHow": "Stuknij włączone narzędzie, aby je wyłączyć. Ponowne włączenie jest możliwe tylko na samym komputerze."
+      "toolsHow": "Dotknij włączonego narzędzia, żeby je wyłączyć. Żeby włączyć ponownie: na samym komputerze albo tutaj przez osobę, która go podłączyła.",
+      "toolsHowOwner": "Dotknij narzędzia, żeby je włączyć lub wyłączyć."
     },
     "roles": {
       "onComputer": "Kolejność ról i ikonę każdej z nich zmienisz na komputerze.",

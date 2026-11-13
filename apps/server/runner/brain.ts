@@ -58,6 +58,7 @@ import {
   withSignIn,
   yieldRoute,
 } from "./accounts";
+import { coAuthorLines } from "./co-authors";
 import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { RunnerError } from "./errors";
@@ -989,6 +990,8 @@ export class ClaudeProcess {
   stderr = "";
   /** Claude Code said `system` `init` (its version, when it has one, is known from then on). */
   initSeen = false;
+  /** When Claude Code said `system/init`: how long a cold start took. */
+  initAt: number | null = null;
   /** Claude Code's version, from its `system` `init` line (absent: not said yet, or an old CLI). Logs only. */
   cliVersion?: string;
   /** What it can do (`system` `init` `capabilities`): live steering is decided by these (`steerSupport`). */
@@ -1082,6 +1085,7 @@ export class ClaudeProcess {
       const ev = JSON.parse(line) as Record<string, unknown>;
       if (ev.type !== "system" || ev.subtype !== "init") return;
       this.initSeen = true;
+      this.initAt ??= Date.now();
       if (typeof ev.claude_code_version === "string") this.cliVersion = ev.claude_code_version.slice(0, 40);
       this.capabilities = claudeCapabilities(ev);
       if (!this.lock) return;
@@ -1932,6 +1936,8 @@ export class BrainManager {
       effort: isBrainEffort(req.effort) ? req.effort : null,
       // Another context limit: a new process (resumed), started with it.
       context: isContextTokens(req.contextTokens) ? req.contextTokens : null,
+      // Its commits' lines are in its env (`co-authors.ts`): turned off or the agent renamed, a new one (resumed).
+      coAuthors: coAuthorLines(ctx.agent),
     });
   }
 
@@ -1943,6 +1949,31 @@ export class BrainManager {
     ctx: BrainTurnContext,
   ): Promise<WireBrainEvent> {
     if (ctx.signal?.aborted) return errorEvent("canceled", "The turn was canceled.", false);
+    // The turn's own timings go back on its `done` (the engine stores them with the run's profile).
+    const startedAt = Date.now();
+    let firstEventMs: number | undefined;
+    const emit = ctx.emit;
+    ctx = {
+      ...ctx,
+      emit: (e) => {
+        firstEventMs ??= Date.now() - startedAt;
+        emit(e);
+      },
+    };
+    let warm = false;
+    let started: Live | undefined;
+    const timed = (final: WireBrainEvent): WireBrainEvent => {
+      if (final.type !== "done") return final;
+      const initAt = started?.proc.initAt;
+      return {
+        ...final,
+        timings: {
+          warm,
+          ...(initAt != null && initAt >= startedAt ? { initMs: initAt - startedAt } : {}),
+          ...(firstEventMs !== undefined ? { firstEventMs } : {}),
+        },
+      };
+    };
     // A route on this sign-in stops first: two processes on one sign-in race on its refresh token. Kept right
     // before the process starts, since a route may begin during any await before it.
     await yieldRoute("claude_code", ctx.accountHome);
@@ -1956,17 +1987,19 @@ export class BrainManager {
       live = undefined;
     }
     const keepAlive = req.keepAlive !== false;
+    warm = Boolean(live);
     if (!live && keepAlive) {
       if (this.alive(ctx.agent.id) >= this.max) this.closeIdle(this.lruIdle(ctx.agent.id));
       // Over the cap when every process is busy or holds work: the turn still gets its own (the agent works on
       // several conversations at once); `trim` closes the extra as turns end.
       live = await this.spawn(key, session, cwd, req, ctx, sig, true, this.resumeFor(cwd, session, req, ctx));
+      started = live;
     }
     if (live) {
       const out = await this.onLive(live, req, ctx);
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live);
-      if (out.final) return out.final;
+      if (out.final) return timed(out.final);
       // Died mid-turn: the same turn again, one-shot, resuming the session. Why it died is logged, and kept for the
       // error should the one-shot die without a word.
       const line = redactedLine(live.proc.stderr, ctx);

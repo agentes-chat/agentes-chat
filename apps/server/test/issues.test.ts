@@ -76,7 +76,8 @@ test("issues API: create, by number, patch, criteria, comments, activity, ask ag
   const card = (await (await api(`/issues/${issue.id}`)).json()) as {
     conversation: { channelId: string; count: number; participants: { type: string }[]; working: boolean };
   };
-  expect(card.conversation).toMatchObject({ channelId: at.channelId, count: 4, working: false });
+  // The task's agent answers an unmentioned message in its conversation, as in a DM: it's working on "Valeu".
+  expect(card.conversation).toMatchObject({ channelId: at.channelId, count: 4, working: true });
   expect(card.conversation.participants.map((p) => p.type)).toEqual(["person", "agent"]);
   // The agent's reply is unread for the task's creator, who follows its conversation, until they read the thread.
   expect(await (await api("/unread-tasks")).json()).toEqual({ tasks: [{ issueId: issue.id, unread: 1, mentions: 0 }] });

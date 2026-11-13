@@ -97,6 +97,8 @@ export const STORAGE_KEYS = {
   flowReturn: "agentes.flow.return",
   /** In `sessionStore`: my messages waiting for the connection (the shared `outbox`), kept through a reload. */
   outbox: "agentes.outbox",
+  /** The app icon this browser's tabs show (lib/app-icon.ts, ADR 0179); the desktop app keeps its own. */
+  appIcon: "agentes.appIcon",
   /** The app's sounds on this device: "tactile" (default), "sky", "pixel" or "off" (lib/sounds.ts). */
   sounds: "agentes.sounds",
   /** In `sessionStore`, this tab's id; in `storage`, the tab the person used last (it plays sounds while hidden). */

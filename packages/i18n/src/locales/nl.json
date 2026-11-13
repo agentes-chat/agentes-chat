@@ -309,12 +309,6 @@
       "short": "AI-sleutels",
       "say": "beheert AI-sleutels"
     },
-    "use_others_plans": {
-      "title": "Abonnementen van anderen gebruiken",
-      "desc": "De agents die je mag bewerken een abonnement geven dat iemand anders heeft gekoppeld. De eigenaar krijgt een e-mail en kan het terugnemen.",
-      "short": "abonnementen van anderen gebruiken",
-      "say": "gebruikt abonnementen van anderen"
-    },
     "edit_wiki": {
       "title": "De wiki bewerken",
       "desc": "Pagina's maken en wijzigen.",
@@ -375,6 +369,56 @@
       "short": "facturatie",
       "say": "beheert de facturatie"
     }
+  },
+  "hosting": {
+    "title": "Waar staat je werkruimte?",
+    "lead": "De app is dezelfde. Alleen wie de server beheert verandert.",
+    "recommended": "Aanbevolen",
+    "free": "Gratis · open source",
+    "cloud": {
+      "name": "agentes.chat Cloud",
+      "short": "Altijd aan, niets te installeren.",
+      "on": "De computer van de agents staat altijd aan",
+      "care": "Updates en back-ups regelen wij",
+      "ready": "Binnen minuten klaar, zonder iets te installeren",
+      "price": "Maandelijks abonnement per werkruimte",
+      "continue": "Verder met Cloud",
+      "enter": "Inloggen bij Cloud"
+    },
+    "own": {
+      "name": "Op je eigen server",
+      "short": "Jij installeert, werkt bij en maakt de back-ups.",
+      "server": "Jij beheert de server en Postgres",
+      "care": "Updates en back-ups liggen bij jou",
+      "off": "De agents stoppen als hij uit staat",
+      "license": "Voor altijd gratis, AGPL-licentie",
+      "continue": "Verder met mijn server",
+      "address": "Serveradres",
+      "connect": "Verbinden",
+      "invalid": "Dat is geen adres. Schrijf het zoals in de browser, bijvoorbeeld agentes.example.com.",
+      "unreachable": "We hebben agentes.chat niet gevonden op {{host}}. Controleer het adres en of de server aan staat.",
+      "none": "Heb je er nog geen?",
+      "noneLink": "Zie hoe je er een krijgt, gratis"
+    },
+    "get": {
+      "title": "Je eigen server",
+      "server": "Op een server installeren",
+      "serverText": "Voor een team, altijd aan",
+      "serverAction": "Bekijk de stappen",
+      "here": "Op je eigen computer draaien",
+      "hereText": "Voor jou of een klein team, zonder Docker",
+      "download": "App downloaden",
+      "how": "Hoe het werkt",
+      "foot": "Liever niets beheren?",
+      "footLink": "Gebruik Cloud"
+    },
+    "badge": {
+      "cloud": "Cloud",
+      "own": "Je server",
+      "here": "Op deze computer"
+    },
+    "whyPaid": "Waarom betalen?",
+    "whyPaidText": "Cloud omvat de altijd aanstaande computer van de agents en iemand die de server onderhoudt. Op je eigen server draaien is gratis."
   },
   "auth": {
     "email": "E-mail",
@@ -502,7 +546,9 @@
     },
     "server": {
       "into": "Aanmelden bij <b>{{server}}</b>",
-      "intoHere": "Aanmelden bij agentes.chat <b>op deze {{device}}</b>"
+      "intoHere": "Aanmelden bij agentes.chat <b>op deze {{device}}</b>",
+      "intoCloud": "Inloggen bij <b>agentes.chat Cloud</b>",
+      "change": "Andere server"
     },
     "forgotHere": {
       "ownerTitle": "Hier heb je geen wachtwoord nodig.",
@@ -700,6 +746,7 @@
       "steps": {
         "name": "Naam van de werkruimte",
         "business": "Wat jullie doen",
+        "you": "Over jou",
         "team": "Je team",
         "plan": "Team aanzetten",
         "ai": "Een AI koppelen",
@@ -718,8 +765,8 @@
         "teamMadePersonal": "Je agents zijn er al. We gaan verder wanneer je wilt.",
         "plan": "Na het abonnement hoef je alleen nog een AI te koppelen. Ik laat je zien waar.",
         "planThen": "Zodra het abonnement aanstaat, koppel je op het volgende scherm je AI.",
-        "area": "Nog één laatste vraag voor het team.",
-        "areaPersonal": "Nog één laatste vraag voor je agents.",
+        "you": "Voor het team, eerst iets over jou.",
+        "youPersonal": "Voor je agents, eerst iets over jou.",
         "ask": "Heb je al een team ergens anders? Ik haal het in zijn geheel hierheen.",
         "start": "Ik heb een team klaar voor wat jullie doen. Of we beginnen met z'n tweeën.",
         "askPersonal": "Gebruik je al agents ergens anders? Ik haal ze allemaal hierheen.",
@@ -737,10 +784,18 @@
         "people": "Nu de mensen. Geef me hun e-mailadressen en ik stuur de uitnodigingen.",
         "peopleLink": "Nu de mensen. Stuur ze de link en ik laat je elk verzoek zien."
       },
+      "you": {
+        "title": "Nu over jou",
+        "lead": "Je naam en je foto zijn zichtbaar voor het team en de agents.",
+        "leadPersonal": "Je naam en je foto zijn zichtbaar voor je agents.",
+        "photo": "Je foto",
+        "build": "Avatar maken",
+        "edit": "Avatar bewerken",
+        "upload": "Foto uploaden",
+        "area": "Waar werk je aan?",
+        "areaHint": "Optioneel. Alleen zodat we weten wie agentes.chat gebruikt."
+      },
       "area": {
-        "title": "En jij, waar werk je aan?",
-        "lead": "Alleen zodat we weten wie agentes.chat gebruikt.",
-        "skip": "Deze stap overslaan",
         "options": {
           "dev": "Ontwikkeling",
           "marketing": "Marketing",
@@ -1100,6 +1155,9 @@
       "linkSkipped_one": "{{count}} bestand voorbij de limiet van de link",
       "linkSkipped_other": "{{count}} bestanden voorbij de limiet van de link",
       "linkSkippedHelp": "Een link leest maximaal 200 bestanden en 8 MB. Download de map en sleep hem hierheen om de rest mee te nemen.",
+      "systemFiles_one": "{{count}} systeembestand weggelaten",
+      "systemFiles_other": "{{count}} systeembestanden weggelaten",
+      "systemFilesHelp": "Afhankelijkheden, caches en mappen zoals node_modules en .git. We lezen alleen wat van de agents is.",
       "never": "Sleutels, wachtwoorden en chatgeschiedenis komen nooit mee.",
       "go_one": "{{count}} item importeren",
       "go_other": "{{count}} items importeren",
@@ -1164,6 +1222,13 @@
       "errors": {
         "empty": "Daar valt niets te lezen. Controleer of je de juiste map of het juiste bestand hebt gekozen.",
         "tooLarge": "Het is te groot om hier te lezen. Probeer alleen de map van de agents, zonder de rest.",
+        "limit": {
+          "files": "Zonder systeembestanden zijn het {{have}} bestanden. Eén import leest er tot {{max}}. Sleep alleen de map van de agents, zonder de rest.",
+          "bytes": "{{name}} is {{have}}. Eén import opent tot {{max}}. Sleep alleen de map van de agents, zonder de rest.",
+          "unpacked": "Uitgepakt is het {{have}}. Eén import leest tot {{max}}. Sleep alleen de map van de agents, zonder de rest.",
+          "text": "De geplakte tekst is {{have}}. Eén import leest tot {{max}}. Vraag de export in delen, één agent tegelijk.",
+          "file": "{{name}} is {{have}}. Eén import leest tot {{max}} per bestand. Vraag de export in delen, één agent tegelijk."
+        },
         "unknown": "We herkennen deze bestanden niet. Kies de app waar ze vandaan komen om te zien waar het juiste bestand staat, of gebruik Een andere app.",
         "newerVersion": "Dit bestand komt uit een nieuwere versie van de app, die we nog niet kunnen lezen. Je kunt intussen Een andere app gebruiken.",
         "noAgents": "We hebben de bestanden gelezen maar er geen agent in gevonden. Controleer of het de map of het bestand van het hele team is.",
@@ -1412,6 +1477,22 @@
     "moveDown": "Omlaag",
     "restoreOrder": "Standaardvolgorde herstellen"
   },
+  "appIcon": {
+    "title": "App-icoon",
+    "hintWeb": "Het icoon op de tabbladen van deze browser.",
+    "hintMac": "Het Dock-icoon zolang de app open is. Finder en Launchpad houden het standaardicoon.",
+    "hintDesktop": "Het taakbalkicoon zolang de app open is.",
+    "hintAndroid": "Sommige startschermen doen er een paar seconden over om het nieuwe icoon te tonen.",
+    "failed": "Kon het icoon niet wijzigen. Probeer het opnieuw.",
+    "agentsOf": "Agents van {{org}}",
+    "names": {
+      "night": "Nacht",
+      "moon": "Maan",
+      "sky": "Lucht",
+      "peekNight": "Gluren in de nacht",
+      "peekSky": "Gluren in de lucht"
+    }
+  },
   "install": {
     "frames": "Zo installeer je het op {{system}}",
     "step": "Stap {{n}}",
@@ -1637,7 +1718,7 @@
     "on": "Meldingen aanzetten",
     "later": "Niet nu",
     "done": "Meldingen aan in deze browser",
-    "failed": "Kon meldingen niet aanzetten. Probeer het opnieuw via Instellingen › Meldingen.",
+    "failed": "Meldingen aanzetten lukte niet in deze browser.",
     "someone": "Een agent",
     "now": "nu",
     "finished": {
@@ -1710,6 +1791,17 @@
     },
     "inviteHint": "Via e-mail of link",
     "profileHint": "Naam, foto en @",
+    "email": {
+      "label": "E-mail",
+      "title": "E-mail wijzigen",
+      "new": "Nieuw e-mailadres",
+      "help": "Je houdt hetzelfde account, in dezelfde workspaces en met dezelfde abonnementen.",
+      "change": "E-mail wijzigen",
+      "sent": "We hebben een link naar {{email}} gestuurd. Je e-mailadres verandert zodra je hem opent.",
+      "changed": "Klaar: je logt nu in met {{email}}.",
+      "same": "Dat is al je e-mailadres.",
+      "noMail": "Deze server verstuurt geen e-mail, dus het nieuwe adres kan niet worden bevestigd. Vraag wie de server beheert om e-mail in te stellen."
+    },
     "openOnPhone": "Openen op je telefoon",
     "openOnPhoneHint": "Log in op de app met een QR-code",
     "addPassword": "Een wachtwoord toevoegen",
@@ -2305,7 +2397,19 @@
     },
     "failedShort": "Kon niet antwoorden",
     "popoverTitle": "Agents",
+    "sentToday": "Vandaag om {{time}} verzonden",
+    "sentYesterday": "Gisteren om {{time}} verzonden",
+    "sentOn": "Op {{date}} om {{time}} verzonden",
     "seenBy": "Gezien door {{names}}",
+    "everyone": {
+      "seen_one": "{{count}} agent zag het",
+      "seen_other": "{{count}} agents zagen het",
+      "answering": "{{name}} antwoordt voor iedereen",
+      "answered": "{{name}} antwoordde voor iedereen",
+      "who": "wie antwoordde",
+      "hintOne": "Eén antwoord was genoeg voor iedereen, dus alleen {{name}} antwoordde. De andere agents lazen het bericht.",
+      "hintNone": "Het bericht vroeg niets van de agents, dus niemand antwoordde. Ze hebben het allemaal gelezen."
+    },
     "retry": "Opnieuw proberen",
     "retrying": "Opnieuw proberen…",
     "platformCap": "Noem een agent met @ om hem te laten antwoorden.",
@@ -2378,13 +2482,26 @@
       "budgetHelp": "Bij de limiet stopt hij en laat het weten, zoals elke agent.",
       "audience": "Wie het mag gebruiken",
       "audienceHelp": "Wie erbuiten valt, ziet {{name}} niet in de zijbalk.",
-      "lock": "{{name}} kan niet gearchiveerd of verwijderd worden. Ongevraagd plaatst hij alleen de Teamweek, voor admins.",
+      "lock": "{{name}} kan niet gearchiveerd of verwijderd worden.",
+      "own": {
+        "title": "Wat {{name}} uit zichzelf doet",
+        "digest": "Wachtende goedkeuringen samenvatten",
+        "digestHelp": "Als er meerdere goedkeuringen op je wachten, stuurt {{name}} je één kaart in je DM die de alledaagse van de riskante scheidt.",
+        "reminders": "Onthouden wat we afspraken",
+        "remindersHelp": "{{name}} volgt de taken die zijn overgedragen tot het einde en herinnert je aan wat jullie met een tijdstip afspraken.",
+        "teamWatch": "Op het team letten",
+        "teamWatchHelp": "{{name}} merkt wat het team ophoudt, zoals een verlopen AI-login of een app die opnieuw verbonden moet worden, en zegt het tegen de persoon die het kan oplossen.",
+        "welcome": "Nieuwe mensen verwelkomen",
+        "welcomeHelp": "{{name}} begroet iedereen die erbij komt en helpt bij het instellen van de eerste agent."
+      },
       "audit": "Bekijk wat {{name}} deed",
       "planHelp": "De eigenaar van het abonnement betaalt. Is de computer ervan niet bereikbaar, dan zegt het gesprek dat en biedt het een API-sleutel aan.",
       "lookEdit": "Uiterlijk van {{name}} wijzigen",
       "planOwner": "account van {{owner}}",
       "planName": "{{name}}-abonnement",
       "mine": "Jouw AI",
+      "mineTitle": "Wie denkt voor {{name}}, voor jou",
+      "mineOnly": "Alleen voor jouw gesprek met {{name}}.",
       "mineHelp": "Jouw gesprek met {{name}} denkt met jouw abonnement of een abonnement dat met je gedeeld is, en alleen dat van jou.",
       "connectMine": "Mijn abonnement koppelen",
       "useWorkspace": "Die van de workspace gebruiken",
@@ -2402,13 +2519,19 @@
       "fallbackYours": "Zonder ander abonnement gebruikt het dat van de workspace, dat van jou is.",
       "fallbackNone": "Zonder eigen abonnement kan {{name}} je niet antwoorden: het abonnement van de workspace antwoordt alleen {{owner}}.",
       "workspace": "AI voor wie geen eigen abonnement heeft",
+      "workspaceTitle": "Wie denkt voor {{name}} in de workspace",
+      "workspaceOnly": "Voor wie geen eigen abonnement heeft.",
       "workspaceHelp": "Wie geen eigen abonnement heeft, praat via deze AI met {{name}}.",
       "noPlans": "Koppel een abonnement onder AI en gebruik om het hier te gebruiken.",
-      "lend": "Dit abonnement uitlenen aan wie er geen heeft",
       "groupMine": "Alleen voor jou",
       "groupWorkspace": "Voor de hele workspace",
       "groupAdmins": "alleen admins"
     },
+    "computerYours": "Je eigen plek op de computer van de workspace. Alleen jij kunt meekijken of de besturing overnemen.",
+    "sharedName": "{{name}} (gedeeld)",
+    "sharedPlace": "Wordt gebruikt in kanalen en bij werk dat vanzelf draait. De hele workspace deelt deze plek. Bewaar hier niets privés.",
+    "computerNoHome": "Nog geen computer. Die komt er zodra deze workspace een eigen computer heeft, toegevoegd in Instellingen, Computers.",
+    "computerOneUser": "Hier geen computer. De computer van de workspace draait alle agents als één gebruiker en kan de plek van elke persoon dus niet gescheiden houden. Een Linux-server die met de optie --system van het installatieprogramma is ingericht, kan dat wel.",
     "powers": {
       "title": "Bevoegdheden in de workspace",
       "help": "Alleen je rechterhand doet dit.",
@@ -2420,6 +2543,7 @@
     "card": {
       "settings": "{{name}} · Instellingen",
       "apply": "Toepassen",
+      "delete": "Verwijderen",
       "dismiss": "Negeren",
       "decline": "Weigeren",
       "askAdmin": "Een admin vragen",
@@ -2512,6 +2636,20 @@
       "title": "Goedkeuringen die op jou wachten",
       "done": "Besloten"
     },
+    "digest": {
+      "waiting_one": "{{count}} goedkeuring wacht.",
+      "waiting_other": "{{count}} goedkeuringen wachten.",
+      "split": "{{routine}} routine, {{careful}} om rustig te bekijken.",
+      "allRoutine": "Allemaal routine.",
+      "more_one": "Nog {{count}} tonen",
+      "more_other": "De andere {{count}} tonen",
+      "routine_one": "{{count}} routineverzoek",
+      "routine_other": "{{count}} routineverzoeken",
+      "help": "Een actie in een gekoppelde app die niets verstuurt, verwijdert, betaalt, merget of deployt. Elk ander verzoek houdt zijn eigen kaart.",
+      "approve_one": "{{count}} verzoek goedkeuren",
+      "approve_other": "Deze {{count}} goedkeuren",
+      "each": "Een voor een"
+    },
     "open": {
       "open": "Openen",
       "web": "Openen op de website",
@@ -2547,7 +2685,13 @@
       "continue_work": "<b>{{agent}}</b> laten doorgaan",
       "update_workspace": "Werkruimte <b>{{name}}</b> wijzigen",
       "set_action_check_on": "De check van wat het team al deed aanzetten",
-      "set_action_check_off": "De check van wat het team al deed uitzetten"
+      "set_action_check_off": "De check van wat het team al deed uitzetten",
+      "invite_people": "<b>{{emails}}</b> uitnodigen voor de werkruimte.",
+      "invite_roles_one": "Met de rol {{roles}}.",
+      "invite_roles_other": "Met de rollen {{roles}}.",
+      "invite_people_sent_one": "Uitnodiging verstuurd naar <b>{{emails}}</b>.",
+      "invite_people_sent_other": "Uitnodigingen verstuurd naar <b>{{emails}}</b>.",
+      "remove_ai_key": "API-sleutel \"{{name}}\" verwijderen."
     }
   },
   "teamWeek": {
@@ -2567,6 +2711,7 @@
     "workedTasks_one": "{{name}} sloot {{count}} taak",
     "workedTasks_other": "{{name}} sloot {{count}} taken",
     "improve": "Te verbeteren",
+    "needsYou": "Heeft jou nodig",
     "approvals": {
       "title_one": "{{count}} verzoek van {{name}} wacht op jou",
       "title_other": "{{count}} verzoeken van {{name}} wachten op jou",
@@ -2613,6 +2758,43 @@
       "messageNoAgent": "De stappen {{steps}} hoeven niet op #{{on}} te wachten. Ze kunnen parallel verder.",
       "done": "Bericht verstuurd"
     },
+    "waiting": {
+      "title_one": "{{count}} ding wacht op jou",
+      "title_other": "{{count}} dingen wachten op jou",
+      "line_one": "Wacht sinds {{since}}.",
+      "line_other": "De oudste sinds {{since}}.",
+      "action": "Openen",
+      "done": "Er wacht niets meer"
+    },
+    "stuck": {
+      "title_one": "{{name}} stopte met een fout",
+      "title_other": "{{name}} stopte {{count}} keer met een fout",
+      "heldTitle": "{{name}} stopte en wacht om verder te gaan",
+      "why": {
+        "budget": "Het maandbudget is op.",
+        "plan": "Het abonnement heeft zijn limiet bereikt.",
+        "computer": "De computer gaf geen antwoord.",
+        "key": "De AI-sleutel of aanmelding is geweigerd.",
+        "ai": "De AI gaf geen antwoord.",
+        "other": "Er ging iets mis. Het gesprek laat zien wat."
+      },
+      "action": "Gesprek openen"
+    },
+    "retire": {
+      "title": "{{name}} archiveren",
+      "line": "Al 4 weken geen werk, geen routine en geen open taak.",
+      "action": "Archiveren"
+    },
+    "model": {
+      "title": "{{name}} kan {{to}} gebruiken.",
+      "line": "Gebruikt nu {{from}}."
+    },
+    "skip": "Negeren",
+    "skipped": "Genegeerd",
+    "why": {
+      "idle": "Al 4 weken geen werk, geen routine en geen open taak.",
+      "lightWork": "Het werk is licht genoeg voor een kleiner model."
+    },
     "applied": "Toegepast",
     "undo": "Ongedaan maken",
     "gone": "Geldt niet meer",
@@ -2644,7 +2826,7 @@
       "label": "Teamweek",
       "help": "Elke week vertelt {{name}} je in je DM hoe het team het deed en wat beter kan. Alleen admins krijgen hem.",
       "dayLabel": "Dagoverzicht",
-      "dayHelp": "Elke dag vertelt {{name}} je in je DM wat het team deed en wat op je wacht, alleen op dagen met iets te zeggen."
+      "dayHelp": "Elke dag vertelt {{name}} je in je DM wat op je wacht, wat je agents hebben afgerond en wat vastzit, alleen op dagen met iets nieuws."
     }
   },
   "routing": {
@@ -2703,6 +2885,7 @@
       "cli_failedWhy": "{{name}} kan nu niet antwoorden: de AI van het abonnement is gestopt met een fout ({{why}}).",
       "plan_limit": "{{name}} kan nu niet antwoorden: het abonnement heeft zijn limiet bereikt.",
       "plan_not_shared": "Koppel je eigen abonnement om met {{name}} te praten: het abonnement van de workspace antwoordt alleen de eigenaar.",
+      "plans_not_yours": "De {{plan}} hier is alleen van {{owner}}. Koppel je eigen en ik antwoord.",
       "plan_unattended": "{{name}} heeft niet geantwoord: het verzoek kwam niet van een persoon, en het abonnement van de workspace antwoordt alleen de eigenaar.",
       "runner_outdated": "{{name}} kan nu niet antwoorden: het programma op de computer van het abonnement heeft een update nodig.",
       "plan_tools": "{{name}} stopte voordat het antwoordde: de AI van het abonnement op die computer bleef niet binnen de tools van agentes.chat.",
@@ -2728,6 +2911,9 @@
       "channel": "Bewaard. De agents antwoorden zodra de workspace een agentes.chat-abonnement heeft."
     },
     "receipt": "Niemand antwoordt: geen AI gekoppeld",
+    "notYours": {
+      "receipt": "Niemand antwoordt: de {{plan}} is alleen van {{owner}}"
+    },
     "chip": "Geen AI"
   },
   "connectAi": {
@@ -2742,7 +2928,7 @@
       "api_key": "Een API-sleutel toevoegen"
     },
     "toolOff": {
-      "text": "{{computer}} is verbonden, maar {{program}} staat daar uit. Voor de veiligheid kan het alleen op de computer zelf worden aangezet.",
+      "text": "{{computer}} is gekoppeld, maar {{program}} staat er uit. Alleen wie de computer heeft gekoppeld zet het aan.",
       "where": "Op {{computer}}",
       "one": "Klik op het agentes.chat-icoon <mark/> bij de klok",
       "oneWindows": "In Windows kan het achter de pijl ^ van de taakbalk zitten.",
@@ -2750,6 +2936,8 @@
       "three": "Zet onder <b>Tools</b> <b>{{program}}</b> aan",
       "terminal": "Voer in de terminal van de computer uit:",
       "here": "Zet <b>{{program}}</b> aan onder <b>Tools</b>.",
+      "oneClick": "<b>{{program}}</b> staat uit op deze computer.",
+      "oneClickOther": "<b>{{program}}</b> staat uit op de computer van {{name}}.",
       "waiting": "Wachten tot je het aanzet. Dit scherm verandert vanzelf."
     },
     "titleFor": "Een AI koppelen voor {{name}}",
@@ -2765,6 +2953,7 @@
       "mine": "Van jou",
       "yours": "Van jou",
       "keys": "Werkruimtesleutel",
+      "apiKeys": "API-sleutels",
       "best": "Nu met de meeste ruimte",
       "atLimit": "Op hun limiet",
       "seeAll": "Alle {{count}} accounts bekijken",
@@ -3034,6 +3223,7 @@
     "continuedByYou": "Jij liet ze doorgaan · {{time}}"
   },
   "usageCard": {
+    "checked": "Gecontroleerd {{when}}",
     "window": {
       "five_hour": "van zijn 5 uur",
       "seven_day": "van zijn week",
@@ -3043,6 +3233,8 @@
     },
     "line": "Gaat {{when}} verder, als het abonnement opnieuw begint. Snelle antwoorden gaan door.",
     "changeModel": "Model wijzigen",
+    "changeAccount": "Ander account kiezen",
+    "chooseBrain": "Kiezen wie denkt",
     "raiseBudget": "Budget verhogen",
     "lineUnknown": "Gaat verder zodra het abonnement opnieuw begint. Snelle antwoorden gaan door.",
     "lineBudget": "Gaat {{when}} verder, of eerder als het budget omhoog gaat. Snelle antwoorden gaan door.",
@@ -3231,6 +3423,8 @@
     "memory": {
       "saved": "Opgeslagen in <b>geheugen</b>: {{text}}",
       "saved_rule": "Opgeslagen in <b>mijn regels</b>: {{text}}",
+      "saved_team_rule": "Opgeslagen in de <b>regels van het team</b>: {{text}}",
+      "saved_team": "Opgeslagen in het <b>geheugen van het team</b>: {{text}}",
       "updated": "<b>Geheugen</b> bijgewerkt: {{text}}",
       "forgotten": "Uit <b>geheugen</b> verwijderd: {{text}}"
     },
@@ -3297,7 +3491,9 @@
       "changed_continue_work": "<b>{{agent}}</b> laten doorgaan",
       "changed_update_workspace": "Werkruimte <b>{{name}}</b> gewijzigd",
       "changed_set_action_check_on": "De check van wat het team al deed aangezet",
-      "changed_set_action_check_off": "De check van wat het team al deed uitgezet"
+      "changed_set_action_check_off": "De check van wat het team al deed uitgezet",
+      "changed_invite_people": "<b>{{invited}}</b> uitgenodigd voor de werkruimte",
+      "changed_remove_ai_key": "API-sleutel <b>{{name}}</b> verwijderd"
     },
     "other": "Iets gewijzigd",
     "copyWebhook": "Webhookadres kopiëren",
@@ -3645,8 +3841,11 @@
     "offer": "{{name}} zit niet in het kanaal en ziet de vermelding niet.",
     "add": "Toevoegen aan kanaal",
     "dismiss": "Niet nu",
-    "added": "{{name}} is bij het kanaal gekomen.",
-    "askAdmin": "Vraag een beheerder om die persoon toe te voegen."
+    "added": "{{name}} is bij het kanaal gekomen."
+  },
+  "adminAsk": {
+    "ask": "Een admin vragen",
+    "sent": "Verstuurd naar wie het kan doen."
   },
   "channelRefs": {
     "list": "Kanalen",
@@ -4268,6 +4467,8 @@
       "bcc": "Bcc",
       "subject": "Onderwerp",
       "noSubject": "(geen onderwerp)",
+      "toSender": "Aan de afzender van het bericht",
+      "toList": "Aan {{to}}",
       "more": "Alles lezen",
       "less": "Minder tonen",
       "answers": "Beantwoordt <b>“{{subject}}”</b>",
@@ -4316,6 +4517,7 @@
     "outcomeApprovedByYou": "Goedgekeurd door jou",
     "outcomeRefusedBy": "Geweigerd door {{name}}",
     "outcomeRefusedByYou": "Geweigerd door jou",
+    "outcomeSuperseded": "Vervangen door de versie hieronder",
     "outcomeApprovedCovering": "Goedgekeurd door {{name}}, namens {{for}}",
     "outcomeRefusedCovering": "Geweigerd door {{name}}, namens {{for}}",
     "outcomeApprovedByYouCovering": "Goedgekeurd door jou, namens {{for}}",
@@ -4436,6 +4638,32 @@
     "planModelDropped": {
       "choose": "Ander model kiezen"
     },
+    "planServes": {
+      "onlyMe": "Wijzig naar Alleen ik",
+      "done": "Nu gebruik alleen jij dit abonnement."
+    },
+    "teamWatch": {
+      "sign_in_one": "De aanmelding van {{names}} is beëindigd.",
+      "sign_in_other": "De aanmeldingen van {{names}} zijn beëindigd.",
+      "connector_one": "{{names}} moet opnieuw verbonden worden.",
+      "connector_other": "{{names}} moeten opnieuw verbonden worden.",
+      "mailbox_one": "De mailbox {{names}} moet opnieuw verbonden worden.",
+      "mailbox_other": "De mailboxen {{names}} moeten opnieuw verbonden worden.",
+      "database_one": "De database {{names}} moet opnieuw verbonden worden.",
+      "database_other": "De databases {{names}} moeten opnieuw verbonden worden.",
+      "budget_out_one": "Het budget van {{names}} is op.",
+      "budget_out_other": "De budgetten van {{names}} zijn op.",
+      "budget_low_one": "Het budget van {{names}} is bijna op.",
+      "budget_low_other": "De budgetten van {{names}} zijn bijna op.",
+      "computer_one": "{{names}} is offline terwijl agents wachten.",
+      "computer_other": "{{names}} zijn offline terwijl agents wachten.",
+      "act": {
+        "sign_in": "Opnieuw aanmelden",
+        "reconnect": "Opnieuw verbinden",
+        "budget": "Budget verhogen",
+        "computer": "Van computer wisselen"
+      }
+    },
     "docTitleUnread": "({{count}}) Meldingen",
     "summaryWaiting_one": "{{count}} ding wacht op jou",
     "summaryWaiting_other": "{{count}} dingen wachten op jou",
@@ -4536,6 +4764,7 @@
       "browserProfileRequest": "<b>{{name}}</b> vraagt om nog een browserprofiel voor <b>{{agent}}</b>",
       "desktopTaken": "<b>{{name}}</b> heeft het scherm van de computer van <b>{{agent}}</b> overgenomen",
       "planLent": "<b>{{name}}</b> heeft je {{plan}}-abonnement aan <b>{{agent}}</b> gekoppeld",
+      "planServes": "Je {{plan}} bedient nu de hele workspace",
       "planModelDropped": "{{model}} is uit {{plan}} gehaald. <b>{{name}}</b> gebruikt {{runs}} tot je een ander model kiest.",
       "routineWaitingPlan": "<b>{{name}}</b> wacht tot zijn abonnement wordt gereset om een routine uit te voeren",
       "planResetUnknown": "{{plan}} heeft niet gezegd wanneer de limiet wordt gereset. Het werk van <b>{{name}}</b> wacht nog.",
@@ -4556,11 +4785,15 @@
       "changeRequest": "<b>{{name}}</b> vraagt een wijziging voor <b>{{agent}}</b>",
       "proposalWaiting": "Verbetervoorstellen van <b>{{names}}</b>",
       "changeRequestAgent": "<b>{{name}}</b> vraagt een nieuwe agent: <b>{{agent}}</b>",
+      "changeRequestAction": "<b>{{name}}</b> vraagt een wijziging in de werkruimte",
       "approvalCover": "<b>{{name}}</b> koos je bij Wie keurt voor mij goed",
       "approvalCoverDeclined": "<b>{{name}}</b> keurt niet meer voor je goed",
       "approvalCoverEnded": "<b>{{name}}</b> heeft gestopt wie voor je goedkeurt",
       "rightHandDecided": "Verzoeken die <b>{{name}}</b> vandaag voor je goedkeurde: {{count}}",
       "rightHandPaused": "<b>{{name}}</b> keurt niet meer voor je goed: je hebt deze week 3 beslissingen ongedaan gemaakt",
+      "adminAskChannel": "<b>{{name}}</b> vraagt je <b>{{agent}}</b> toe te voegen aan #{{label}}",
+      "adminAskCreate": "<b>{{name}}</b> vraagt om agents te mogen maken",
+      "adminAskWebhook": "<b>{{name}}</b> vraagt je de {{service}}-webhook voor routines in te stellen",
       "invitationAccepted": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd en doet mee in {{org}}",
       "invitationAcceptedAny": "<b>{{name}}</b> heeft je uitnodiging geaccepteerd",
       "reaction_one": "<b>{{names}}</b> heeft op je bericht gereageerd",
@@ -4765,6 +4998,7 @@
     },
     "expiredLine": "Niemand besliste binnen 24 u, dus er is niets gedaan.",
     "canceledLine": "De run stopte vóór een besluit.",
+    "supersededLine": "De agent vroeg het opnieuw met een nieuwere versie. Deze is niet uitgevoerd.",
     "lesson": "{{name}} houdt hier rekening mee: {{reason}}",
     "again": "Opnieuw vragen",
     "againBody": "@{{handle}} het verzoek “{{title}}” is verlopen zonder besluit. Als het nog zin heeft, vraag het opnieuw.",
@@ -4980,7 +5214,7 @@
         "accountMove": "In gebruik door {{agents}} · Hierheen verplaatsen",
         "accountAlso": "Ook gebruikt door {{agents}}",
         "accountOf": "Van {{name}}",
-        "accountOthers": "Abonnementen van anderen laten zien van wie ze zijn. De eigenaar krijgt een e-mail en kan het terugnemen.",
+        "accountOthers": "Abonnementen voor de hele workspace laten zien van wie ze zijn.",
         "addAccount": "Account toevoegen",
         "signInAgain": "Opnieuw inloggen",
         "connectPlan": "Ander abonnement koppelen",
@@ -6885,6 +7119,7 @@
     "batch": {
       "already_member": "{{email}} zit al in de werkruimte.",
       "already_invited": "{{email}} heeft al een openstaande uitnodiging. Gebruik Opnieuw versturen.",
+      "had_invite": "{{email}} had al een openstaande uitnodiging.",
       "invalid_email": "{{email}} lijkt geen geldig e-mailadres."
     },
     "activeNow": "Nu actief",
@@ -7303,9 +7538,26 @@
     "auto": "automatisch",
     "autoHint": "Is vanzelf van kolom gewisseld, door het werk van de agent.",
     "now": {
-      "title": "Agents die nu bezig zijn",
-      "stalled_one": "{{count}} vastgelopen",
-      "stalled_other": "{{count}} vastgelopen"
+      "stalledCount_one": "{{count}} vastgelopen taak",
+      "stalledCount_other": "{{count}} vastgelopen taken",
+      "viewStalled": "Vastgelopen bekijken",
+      "continue": "Doorgaan",
+      "continueAll": "Alles doorzetten",
+      "continueAllCount": "Alles doorzetten ({{count}})",
+      "sent_one": "Gevraagd. {{names}} gaat verder waar het stopte.",
+      "sent_other": "Gevraagd. {{names}} gaan verder waar ze stopten.",
+      "rowSent": "Gevraagd: gaat verder waar het stopte.",
+      "stalledTitle": "Vastgelopen taken",
+      "stalledSub": "{{tasks}} · {{agents}}",
+      "tasks_one": "{{count}} taak",
+      "tasks_other": "{{count}} taken",
+      "agents_one": "{{count}} agent",
+      "agents_other": "{{count}} agents",
+      "stalledText": "De agents stopten voordat ze klaar waren. Doorgaan vraagt ze verder te gaan waar ze stopten.",
+      "stoppedNow": "Net gestopt",
+      "stoppedAgo": "{{ago}} gestopt",
+      "stoppedYesterday": "Gisteren gestopt",
+      "stoppedOn": "Gestopt op {{date}}"
     },
     "work": {
       "label": "Werk van {{name}}",
@@ -7321,8 +7573,6 @@
       "started": "begonnen {{when}}",
       "starting": "Beginnen…",
       "stalled": "Vastgelopen {{when}}",
-      "noRun": "Er loopt geen run.",
-      "noRunStep": "Er loopt geen run. Laatste stap: {{step}}",
       "lastStep": "Laatste stap: {{step}}",
       "waitingApproval": "Vraagt om goedkeuring",
       "waitingInput": "Heeft een vraag",
@@ -7573,6 +7823,7 @@
       "example": "Voorbeeld",
       "exampleCopied": "Voorbeeld gekopieerd.",
       "test": "Testen",
+      "turnOnAndTest": "Aanzetten en testen",
       "tested": "Test gestuurd. De agent krijgt een voorbeeld en zegt wat hij met een echte aanroep zou doen.",
       "calls": "Laatste aanroepen",
       "noCalls": "Nog geen aanroepen.",
@@ -7787,6 +8038,12 @@
       "hintShort": "Elke run doet dit zonder te vragen.",
       "noneShort": "Ze vraagt voor elke actie eerst een persoon om goedkeuring.",
       "remove": "Weer vragen vóór: {{action}}"
+    },
+    "vaultKeys": {
+      "title": "Vault-sleutels die ze gebruikt",
+      "hint": "Alleen in deze routine, alleen in haar commando's.",
+      "named": "de Vault-sleutel {{key}}",
+      "remove": "Weer vragen voordat {{key}} wordt gebruikt"
     },
     "ahead": {
       "approved": "Goedgekeurd · draait {{when}}",
@@ -9530,8 +9787,9 @@
       "connection_gone": "Bijwerken lukte niet: de GitHub-koppeling die het las, bestaat niet meer.",
       "link_holds_several": "Bijwerken lukte niet: de link bevat nu meerdere skills.",
       "link_renamed": "Bijwerken lukte niet: de link bevat nu een andere skill.",
-      "owner_gone": "Bijwerken lukte niet: wie zelf bijwerken aanzette, kan geen skills meer beheren. Zet het opnieuw aan.",
-      "other": "Bijwerken vanaf de link lukte niet."
+      "owner_gone": "Bijwerken lukte niet: wie automatisch bijwerken aanzette, beheert geen skills meer.",
+      "other": "Bijwerken vanaf de link lukte niet.",
+      "relight": "Weer aanzetten"
     },
     "notice": {
       "updated": "{{name}} is bijgewerkt vanaf de link",
@@ -9730,6 +9988,29 @@
       "useFor": "Ook gebruiken voor {{name}}",
       "useFor_female": "Ook gebruiken voor {{name}}",
       "useForMenu": "Gebruiken voor…",
+      "useAll": "Voor alle agents gebruiken",
+      "useAllTitle": "{{plan}} voor alle agents gebruiken",
+      "useAllSub": "Kies het model dat ze met deze sleutel gebruiken.",
+      "useAllWorks": "Werken met deze sleutel",
+      "useAllRefused": "Geweigerd voor deze sleutel",
+      "useAllAnswered": "Heeft met deze sleutel geantwoord",
+      "useAllOff": "Uitgeschakeld in {{maker}}",
+      "useAllRegion": "Heeft de regio Global nodig in {{maker}}",
+      "useAllUntested_one": "{{count}} model nog niet getest",
+      "useAllUntested_other": "{{count}} modellen nog niet getest",
+      "textOnly": "Leest alleen tekst",
+      "useAllTextOnly": "{{model}} ziet geen afbeeldingen of pdf's. Een agent die screenshots moet zien, is beter af met een ander model.",
+      "useAllAgents": "Alle agents",
+      "useAllAgentsLine_one": "{{count}} agent gaat dit model gebruiken",
+      "useAllAgentsLine_other": "{{count}} agents gaan dit model gebruiken",
+      "useAllNone": "Geen agent kan deze sleutel nu gebruiken.",
+      "useAllGo_one": "Voor {{count}} agent gebruiken",
+      "useAllGo_other": "Voor {{count}} agents gebruiken",
+      "useAllPick": "Kies een model",
+      "useAllDone_one": "{{count}} agent denkt nu met {{model}}.",
+      "useAllDone_other": "{{count}} agents denken nu met {{model}}.",
+      "useAllMissed_one": "{{count}} agent is niet veranderd. Open de pagina om te zien waarom.",
+      "useAllMissed_other": "{{count}} agents zijn niet veranderd. Open de pagina van elk om te zien waarom.",
       "revokeOnClaude": "Wil je het ook bij Claude beëindigen? Trek het dan in bij de instellingen van Claude."
     },
     "usage": {
@@ -9923,6 +10204,7 @@
     "notUnderstood": "De audio was niet te verstaan. Er is niets verstuurd.",
     "refused": "De audio kon niet in dit gesprek worden verstuurd.",
     "blockedMac": "De microfoon is geblokkeerd. Op een Mac: Systeeminstellingen › Privacy en beveiliging › Microfoon.",
+    "openMacSettings": "Mac-instellingen openen",
     "blockedWeb": "De microfoon is geblokkeerd. Sta hem toe via het slotje naast het adres van de site.",
     "noMic": "Geen microfoon gevonden.",
     "failed": "Kon de microfoon niet openen. Probeer het opnieuw.",
@@ -10879,6 +11161,22 @@
     }
   },
   "brain": {
+    "picker": {
+      "open": "Model van {{agent}} wijzigen",
+      "ownSignIn": "Account van deze computer",
+      "apiKey": "{{provider}} met een API-sleutel",
+      "default": "standaard",
+      "refused": "Geweigerd voor deze sleutel",
+      "textOnly": "Leest alleen tekst",
+      "search": "Modellen zoeken",
+      "account": "Gebruikersaccount",
+      "connect": "Een AI koppelen",
+      "applies": "Geldt vanaf het volgende antwoord.",
+      "more": "Meer opties",
+      "undo": "Ongedaan maken",
+      "saved": "{{agent}} denkt nu met {{model}}.",
+      "readOnly": "Alleen beheerders en de eigenaar van de agent wijzigen het model."
+    },
     "title": "Wie denkt",
     "auto": {
       "label": "Automatisch",
@@ -10951,9 +11249,11 @@
       "runner_old": "Werk het agentes.chat-programma op de computer bij om dit te gebruiken.",
       "tool_off": "{{program}} staat uit op {{computer}}. Zet het daar aan, in de agentes.chat-app: Voorkeuren → Tools.",
       "tool_offLinux": "{{program}} staat uit op {{computer}}. Zet het daar aan, in de agentes.chat-app of met {{command}}.",
+      "tool_offOne": "{{program}} staat uit op {{computer}}.",
       "not_installed": "{{program}} is niet geïnstalleerd op {{computer}}.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
       "outdated": "De versie op {{computer}} is oud. Werk Codex bij om het te gebruiken.",
+      "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
     },
     "notAvailableNow": "Gekozen, maar nu niet beschikbaar.",
@@ -11026,7 +11326,19 @@
     "inLine": "In de wachtrij · {{n}}",
     "allStarted": "allemaal gestart over ~{{n}} min",
     "nothingWorking": "Er draait nu niets",
-    "rule": "Mensen gaan voor. Agenten die samen genoemd worden starten een voor een.",
+    "rule": "Nieuw werk start als de computer vrij geheugen heeft. Mensen gaan voor. Samen genoemde agenten starten een voor een.",
+    "cause_one": "Computer vol: {{count}} taak gebruikt nu zijn geheugen ({{fill}}).",
+    "cause_other": "Computer vol: {{count}} taken gebruiken nu zijn geheugen ({{fill}}).",
+    "spill": {
+      "title": "Meer computers, kortere wachtrij",
+      "text": "Als deze computer vol is, kunnen antwoorden voor jou op een van jouw computers starten. Lange taken en de bestanden van de agenten blijven hier.",
+      "plan": "je {{plan}}-abonnement"
+    },
+    "stopFill": {
+      "routine": "Routine stoppen",
+      "work": "Lange taak stoppen",
+      "agent": "{{name}} stoppen"
+    },
     "youFirst": "Jij bent eerst",
     "startsIn": "start over ~{{n}} min",
     "startsAfter": "start zodra {{after}} klaar is",
@@ -13118,6 +13430,7 @@
     "previewLoading": "Het voorbeeld laden…",
     "previewFailed": "Kon het voorbeeld niet tonen. Download het bestand om het te openen.",
     "imageAlt": "Afbeelding: {{title}}",
+    "imageMaking": "De afbeelding maken…",
     "pdfFrame": "PDF: {{title}}",
     "tooBigToPreview": "Te groot voor een voorbeeld. Download het om het te openen.",
     "downloadOnly": "Geen voorbeeld voor dit soort bestand. Download het om het te openen.",
@@ -13417,6 +13730,7 @@
     "device": {
       "notLinkMaker": "Alleen wie de link heeft gemaakt, kan deze computer laten deelnemen.",
       "widenForbidden": "Admins kunnen alleen beperken wie iemands eigen apparaat mag gebruiken.",
+      "spillOwnerOnly": "Alleen wie deze computer heeft gekoppeld, kan antwoorden hier laten denken. Uitzetten kan wel.",
       "notHome": "Agents wonen op de computer van de workspace en gebruiken deze als ze hem bij naam noemen."
     },
     "machine": {
@@ -13430,6 +13744,9 @@
       "targetSame": "De agents staan al op die computer.",
       "targetPaused": "Die computer is gepauzeerd. Kies een andere.",
       "pausePast": "Kies een tijd in de toekomst.",
+      "notOwner": "Alleen wie deze computer heeft gekoppeld zet de tools aan. Vraag het die persoon.",
+      "askSelf": "Het is jouw computer: zet het aan met de knop.",
+      "adminAskSelf": "Dat kun je hier zelf doen.",
       "accountMethodUnsupported": "Deze computer kan Claude nog niet op deze manier koppelen. Werk het agentes.chat-programma erop bij, of gebruik een API-sleutel.",
       "offline": "{{name}} is nu offline. Probeer het opnieuw zodra hij terug is.",
       "paused": "{{name}} is gepauzeerd: er start niets nieuws op tot hij wordt hervat.",
@@ -13466,7 +13783,9 @@
       "tooMany": "Deze werkruimte heeft al {{max}} afdelingen. Verwijder er eerst een."
     },
     "rightHand": {
-      "permanent": "De rechterhand hoort bij de werkruimte en blijft buiten de kanalen. Een @vermelding bereikt hem in elk kanaal."
+      "permanent": "De rechterhand hoort bij de werkruimte en blijft buiten de kanalen. Een @vermelding bereikt hem in elk kanaal.",
+      "updateApp": "Deze app is te oud om deze kaart toe te passen. Werk de app bij of maak de wijziging in Instellingen.",
+      "nobodyNew": "Iedereen op deze kaart is er al of is al uitgenodigd. Negeer de kaart of stuur een uitnodiging opnieuw in Leden en uitnodigingen."
     },
     "agent": {
       "ownerOrAdmin": "Alleen de eigenaar van de agent of een beheerder kan dit doen.",
@@ -13564,6 +13883,25 @@
     "paused": "Gepauzeerd",
     "pausedUntil": "Gepauzeerd tot {{time}}",
     "pausedHint": "Gepauzeerd op de computer zelf door degene die hem heeft gekoppeld.",
+    "oneClick": {
+      "tools": {
+        "claude": "Claude Code",
+        "codex": "Codex",
+        "cursor": "Cursor",
+        "opencode": "OpenCode",
+        "grok": "Grok Build",
+        "antigravity": "Antigravity CLI",
+        "commands": "de commando's",
+        "browser": "de browser",
+        "desktop": "het scherm",
+        "terminal": "de terminal"
+      },
+      "allow": "{{tool}} aanzetten",
+      "ask": "{{name}} vragen",
+      "asked": "Gevraagd. {{name}} krijgt een knop om het aan te zetten.",
+      "done": "Aan op {{machine}}.",
+      "outdated": "Werk de agentes.chat-app op {{machine}} bij om het hier aan te zetten."
+    },
     "remotePause": {
       "button": "Pauzeren",
       "menu": "{{name}} pauzeren",
@@ -13727,16 +14065,19 @@
       "commandsWarn": "Opdrachten kunnen ook andere delen van de computer bereiken, niet alleen de toegestane mappen.",
       "on": "Aan",
       "off": "Uit",
+      "enable": "Aanzetten",
+      "enableLabel": "{{tool}} aanzetten",
       "disable": "Uitzetten",
       "disableLabel": "{{tool}} uitzetten",
       "disableTitle": "{{tool}} uitzetten?",
-      "disableText": "Agents gebruiken {{tool}} niet meer op deze computer. Weer aanzetten kan alleen op de computer zelf.",
+      "disableText": "Agents gebruiken {{tool}} niet meer op deze computer. Weer aanzetten: op de computer zelf, of hier door wie hem heeft gekoppeld.",
       "disabled": "{{tool}} uitgezet.",
       "grantTitle": "Om meer toe te staan",
       "grantText": "Toestaan gebeurt op de computer zelf: open daar de agentes.chat-app (Voorkeuren → Mappen).",
       "grantTextTerminal": "Toestaan gebeurt op de computer zelf, in de Terminal:",
       "grantTextAdmin": "Toestaan gebeurt op de computer zelf, in de Terminal, als beheerder van die computer:",
       "grantTerminal": "Geen app? In de terminal van de computer:",
+      "preferTerminal": "Liever in de Terminal",
       "grantOnlyOwner": "Alleen {{name}} kan meer toestaan, op de computer zelf. Heb je iets nodig, vraag het dan aan die persoon.",
       "pathPlaceholder": "<map>",
       "agentPlaceholder": "<agent>"
@@ -13805,6 +14146,10 @@
     "maxTasksHint": "Hoeveel achtergrondtaken agents hier tegelijk uitvoeren. De rest wacht op zijn beurt.",
     "belongs": "Hoort bij de werkruimte",
     "belongsHint": "Het blijft als de persoon die het koppelde vertrekt, en iedereen kan het gebruiken zolang niemand de eigenaar is.",
+    "spillOwn": "Jouw antwoorden kunnen hier denken",
+    "spillOwnHint": "Als de computer van een agent vol is, starten zijn antwoorden voor jou hier.",
+    "spillOthers": "Agenten van anderen kunnen hier denken",
+    "spillOthersHint": "Als de computer van een agent vol is, kunnen zijn antwoorden voor andere mensen ook hier starten.",
     "connectedBy": "Gekoppeld door {{name}}",
     "downloadFor": "Downloaden voor {{system}}",
     "downloadApp": "De app downloaden",
@@ -14169,8 +14514,36 @@
         "uiAutomation": "Zet UI-automatisering aan",
         "helper": "Testhelper"
       },
+      "xcodeBlockedTitle": "Xcode is geïnstalleerd, maar niet in gebruik",
       "xcodeDone": "Versie {{version}}",
       "xcodeText": "Installeer Xcode uit de App Store op {{mac}}. De installatie gaat verder zodra het er is.",
+      "xcodeCommandLineTools": "De Mac gebruikt nog de Command Line Tools. Voer dit uit in Terminal, het vraagt om het wachtwoord van de Mac.",
+      "xcodeLicense": "Xcode op {{mac}} wacht tot de licentie is geaccepteerd. Voer dit uit in Terminal, het vraagt om het wachtwoord van de Mac.",
+      "xcodeFix": {
+        "commandLineTools": "De Mac gebruikt nog de Command Line Tools. Herstellen vraagt het wachtwoord van de Mac, in een venster dat op die Mac opent.",
+        "license": "Xcode op {{mac}} wacht tot de licentie is geaccepteerd. Herstellen vraagt het wachtwoord van de Mac, in een venster dat op die Mac opent.",
+        "fix": "Herstel het voor me",
+        "update": "Werk het voor me bij",
+        "terminal": "Liever via Terminal",
+        "asking": "Typ het wachtwoord op {{mac}}. macOS heeft zijn venster op het scherm van die Mac geopend.",
+        "running": "Xcode wordt hersteld op {{mac}}. Dat duurt ongeveer een minuut.",
+        "updating": "Xcode wordt bijgewerkt op {{mac}}.",
+        "phases": {
+          "select": "Xcode in gebruik",
+          "license": "Licentie geaccepteerd",
+          "firstLaunch": "Onderdelen geïnstalleerd"
+        },
+        "done": "Klaar. {{mac}} controleert Xcode opnieuw.",
+        "missed": "Het wachtwoord is niet getypt op {{mac}}. Er is niets veranderd. Probeer het opnieuw als je bij die Mac bent.",
+        "failed": "Herstellen lukte niet op {{mac}}: {{message}}",
+        "failedAny": "Herstellen lukte niet op {{mac}}.",
+        "stillCommandLineTools": "Het herstel is uitgevoerd, maar de Mac gebruikt nog de Command Line Tools. Probeer het opnieuw, of voer dit uit in Terminal, het vraagt om het wachtwoord van de Mac.",
+        "stillLicense": "Het herstel is uitgevoerd, maar Xcode op {{mac}} wacht nog tot de licentie is geaccepteerd. Probeer het opnieuw, of voer dit uit in Terminal, het vraagt om het wachtwoord van de Mac.",
+        "outdated": "Werk de agentes.chat-app op {{mac}} bij om het met één klik te herstellen. Of voer dit uit in de Terminal ervan, die vraagt het wachtwoord van de Mac.",
+        "follows": "Dit venster gaat vanzelf verder zodra de Mac klaar is.",
+        "window": "agentes.chat wil Xcode in gebruik nemen om iPhones te verbinden.",
+        "ok": "OK"
+      },
       "getXcode": "Xcode downloaden",
       "toolsDone": "Gedownload door de Mac",
       "toolsText": "De Mac downloadt ze, ongeveer 8 GB.",
@@ -14267,6 +14640,7 @@
       "inUse": "<b>{{who}}</b> gebruikt <b>{{deviceName}}</b>",
       "access": "<b>{{who}}</b> vraagt om <b>{{deviceName}}</b> te gebruiken",
       "waiting": "<b>{{who}}</b> wacht op <b>{{deviceName}}</b>",
+      "toolRequest": "<b>{{who}}</b> vraagt je {{tool}} aan te zetten op je <b>{{deviceName}}</b>",
       "once": "Eén keer toestaan",
       "always": "Altijd",
       "no": "Nee",
@@ -15006,8 +15380,8 @@
       "personal": "Persoonlijk",
       "teamHelp": "Kanalen, mensen en rollen om samen te werken. Wisselen verandert alleen wat je ziet.",
       "personalHelp": "Eenvoudiger, voor jou en je gezin als je ze uitnodigt. Wisselen verandert alleen wat je ziet.",
-      "toTeam": "Naar team wisselen…",
-      "toPersonal": "Naar persoonlijk wisselen…"
+      "toTeam": "Naar team wisselen",
+      "toPersonal": "Naar persoonlijk wisselen"
     },
     "telemetry": {
       "title": "Gebruiksstatistieken",
@@ -15343,6 +15717,19 @@
   "usageViews": {
     "signedOut": "Uitgelogd",
     "whose": "Van {{name}}",
+    "serves": {
+      "everyone": "Iedereen gebruikt het",
+      "onlyYou": "Alleen jij gebruikt het",
+      "only": "Alleen {{name}} gebruikt het",
+      "someone": "de eigenaar",
+      "label": "Wie het gebruikt",
+      "all": "Hele workspace",
+      "me": "Alleen ik",
+      "savedEveryone": "Nu gebruikt de hele workspace dit abonnement.",
+      "savedOwner": "Nu gebruik alleen jij dit abonnement."
+    },
+    "logins_one": "{{count}} aanmelding",
+    "logins_other": "{{count}} aanmeldingen",
     "noWindows": "De limiet verschijnt zodra dit account weer wordt gebruikt.",
     "unused": "Geen agent gebruikt dit account.",
     "usesNow": "gebruikt het nu",
@@ -15501,6 +15888,11 @@
     "speedFallback": {
       "text": "ChatGPT weigerde de snelheid Snel voor dit account of model, dus dit antwoord kwam op standaardsnelheid.",
       "action": "Agent openen"
+    },
+    "modelStandIn": {
+      "text": "{{plan}} heeft {{from}} met deze sleutel geweigerd. Ik heb geantwoord met {{to}}, dat er wel mee werkt.",
+      "useAll": "{{model}} voor iedereen gebruiken",
+      "pick": "Model kiezen"
     },
     "usageWhen": {
       "at": "om {{time}}",
@@ -15706,6 +16098,7 @@
         "runningCode": "Code uitgevoerd op de pc",
         "browsing": "De browser gebruikt",
         "pcFiles": "Aan bestanden op de pc gewerkt",
+        "creatingImage": "Een afbeelding gemaakt",
         "exportingFile": "Een bestand in Drive opgeslagen",
         "importingFile": "Een bestand uit Drive gehaald",
         "runningSkillScript": "Een script van de skill {{app}} uitgevoerd",
@@ -15722,6 +16115,7 @@
         "listingTasks": "De taken bekeken",
         "checkingTask": "Een taak gecontroleerd",
         "cancelingTask": "Een taak geannuleerd",
+        "keepingRunning": "Hield een programma draaiende",
         "uploadingArtifact": "Een bestand naar Drive gestuurd",
         "gettingContext": "De context opgezocht",
         "cancelingReminder": "Een herinnering geannuleerd",
@@ -15778,6 +16172,7 @@
         "sendingDm": "Een direct bericht verstuurd",
         "settingStatus": "De eigen status bijgewerkt",
         "settingReplyStyle": "Aangepast hoe er wordt geantwoord",
+        "settingCommitLine": "De regel van de agents in commits aangepast",
         "sendingFeedback": "Gevraagd om feedback te versturen",
         "offeringFeedback": "Aangeboden om een probleem te melden",
         "deletingRoutine": "Een routine verwijderd",
@@ -15820,6 +16215,7 @@
       "runningCode": "code aan het uitvoeren",
       "browsing": "de browser aan het gebruiken",
       "pcFiles": "met de bestanden op de pc aan het werk",
+      "creatingImage": "een afbeelding aan het maken",
       "exportingFile": "een bestand in Drive aan het opslaan",
       "importingFile": "een bestand uit Drive aan het halen",
       "runningSkillScript": "een script van de skill {{app}} aan het uitvoeren",
@@ -15836,6 +16232,7 @@
       "listingTasks": "de taken aan het bekijken",
       "checkingTask": "een taak aan het controleren",
       "cancelingTask": "een taak aan het annuleren",
+      "keepingRunning": "houdt een programma draaiende",
       "uploadingArtifact": "een bestand naar Drive aan het sturen",
       "gettingContext": "de context aan het opzoeken",
       "cancelingReminder": "een herinnering aan het annuleren",
@@ -15892,6 +16289,7 @@
       "sendingDm": "een direct bericht aan het versturen",
       "settingStatus": "de eigen status aan het bijwerken",
       "settingReplyStyle": "aan het aanpassen hoe er wordt geantwoord",
+      "settingCommitLine": "aan het aanpassen van de regel van de agents in commits",
       "sendingFeedback": "feedback aan het voorbereiden",
       "offeringFeedback": "een melding aan het voorbereiden",
       "deletingRoutine": "een routine aan het verwijderen",
@@ -15989,11 +16387,11 @@
       "provider_wait_ours": "Iets aan onze kant blokkeert mijn AI, niet jouw account. Ik antwoord zodra het is opgelost.",
       "provider_back": "Mijn AI is terug.",
       "brain_busy": "Mijn computer is nu bezig met andere taken. Ik antwoord zodra hij vrij is.",
-      "brain_queued": "Ik sta nog in de rij voor de computer. Ik antwoord zodra hij ruimte heeft.",
+      "brain_queued": "Ik sta nog in de wachtrij van de computer. Ik antwoord zodra hij vrij geheugen heeft.",
       "brain_interrupted": "{{brain}} stopte voordat het klaar was. Al gedaan, niet herhaald: {{tools}}.",
       "plan_limit_cut": "Ik ben gestopt bij de limiet van het {{plan}}-abonnement. Ik ga {{when}} verder waar ik was, als de limiet reset.",
       "plan_limit_cut_unknown": "Ik ben gestopt bij de limiet van het {{plan}}-abonnement. Ik ga verder waar ik was zodra de limiet reset.",
-      "plan_limit_wait": "Het {{plan}}-abonnement heeft de limiet bereikt. Ik antwoord {{when}}, als de limiet is gereset.",
+      "plan_limit_wait": "Het {{plan}}-abonnement heeft de limiet bereikt. Ik antwoord {{when}}, als de limiet is gereset. Wordt het eerder vrijgegeven in {{plan}}, dan merk ik dat en antwoord ik meteen.",
       "plan_limit_wait_unknown": "Het {{plan}}-abonnement heeft de limiet bereikt. Ik antwoord zodra de limiet reset.",
       "plan_model_limit_wait": "{{model}} heeft zijn eigen limiet bij {{plan}} bereikt. De andere modellen van het abonnement blijven werken: kies een ander model voor {{agent}} of wacht tot het {{when}} wordt gereset.",
       "plan_model_limit_wait_unknown": "{{model}} heeft zijn eigen limiet bij {{plan}} bereikt. De andere modellen van het abonnement blijven werken: kies een ander model voor {{agent}} of wacht tot het wordt gereset.",
@@ -16028,6 +16426,7 @@
       "no_ai_cli_failedWhy": "Ik kan nu niet antwoorden: de AI van mijn abonnement is gestopt met een fout ({{why}}).",
       "no_ai_plan_limit": "Ik kan nu niet antwoorden: het abonnement waarmee ik denk heeft zijn limiet bereikt.",
       "no_ai_plan_not_shared": "Ik kan je niet antwoorden via het abonnement van de workspace: het antwoordt alleen de eigenaar. Koppel je eigen abonnement, dan antwoord ik.",
+      "no_ai_plans_not_yours": "De {{plan}} hier is alleen van {{owner}}. Koppel je eigen en ik antwoord.",
       "no_ai_plan_unattended": "Ik heb niet geantwoord: het verzoek kwam niet van een persoon, en het abonnement van de workspace antwoordt alleen de eigenaar.",
       "no_ai_runner_outdated": "Ik kan nu niet antwoorden: het programma op de computer van mijn abonnement heeft een update nodig.",
       "no_ai_plan_tools": "Ik stopte voordat ik antwoordde: de AI van mijn abonnement op die computer bleef niet binnen de tools van agentes.chat.",
@@ -16047,6 +16446,7 @@
       "action_install_skill": "Een skill installeren",
       "action_update_skills": "Skills bijwerken",
       "action_approvals": "Goedkeuringen die op jou wachten",
+      "welcome_member": "Je bent net bij {{org}} gekomen. **Waar houd je je hier mee bezig?** Vertel het me en ik stel samen met jou je eerste agent in.",
       "action_open_page": "Een scherm openen",
       "calendar_proposal": "Voorstel voor een afspraak: {{title}}",
       "action_workspace": "Stelde een wijziging in de werkruimte voor",
@@ -16513,6 +16913,18 @@
       "waitingNext": "<who/> gaat vanzelf verder als {{holder}} klaar is",
       "waitingNext_female": "<who/> gaat vanzelf verder als {{holder}} klaar is",
       "controlSub": "Browserprofiel · jij hebt de controle · de agents wachten",
+      "controlSubOn": "Op {{machine}} · jij hebt de controle · de agents wachten",
+      "loginTitle": "Inloggen in het profiel {{name}}",
+      "opening": "Profiel {{name}} openen…",
+      "backWhen_one": "Als je klaar bent, gebruikt {{count}} agent dit profiel.",
+      "backWhen_other": "Als je klaar bent, gebruiken {{count}} agents dit profiel.",
+      "backWhenNone": "Als je klaar bent, geef het profiel terug.",
+      "handBack": "Teruggeven aan de agents",
+      "toolOff": "De browser staat uit op deze computer.",
+      "toolOffOther": "De browser staat uit op de computer van {{name}}.",
+      "loginOn": "Aanzetten en inloggen",
+      "turningOn": "Browser aan op {{machine}}. Profiel openen…",
+      "notOpened": "De browser ging niet open op {{machine}}.",
       "backTitle": "{{name}} teruggeven aan de agents",
       "done": "Klaar. <names/> kunnen dit profiel nu gebruiken",
       "doneOne": "Klaar. <names/> kan dit profiel nu gebruiken",
@@ -16521,7 +16933,7 @@
     "machine": {
       "ready": "Klaar",
       "off": "Uit",
-      "offHelp": "Alleen iemand bij de computer zet het aan, in de agentes.chat-app: Voorkeuren → Tools.",
+      "offHelp": "Wie de computer heeft gekoppeld zet het hier aan of in de agentes.chat-app daarop: Voorkeuren → Tools.",
       "needsCommand": "Heeft een opdracht nodig",
       "notReady": "Nog niet klaar",
       "turnOff": "Uitzetten",
@@ -17251,6 +17663,7 @@
       "off": "Uit",
       "unavailable": "Niet beschikbaar",
       "offHelp": "Zet de schermen en opdrachten op deze computer aan:",
+      "offOne": "Deze computer heeft het scherm en de commando's aan nodig.",
       "linuxOnly": "Agents gebruiken apps op hun eigen scherm alleen op Linux-computers.",
       "agent": "{{name}} kan nog geen apps op zijn scherm gebruiken op {{computer}}.",
       "agent_female": "{{name}} kan nog geen apps op haar scherm gebruiken op {{computer}}."
@@ -17345,6 +17758,7 @@
       "unavailable_female": "Het scherm van {{name}} kan nu niet getoond worden",
       "unavailableHelp": "Probeer het zo opnieuw.",
       "screensOff": "Schermen staan uit op {{computer}}. Zet ze daar aan:",
+      "screensOffOne": "De schermen staan uit op {{computer}}.",
       "screensMissing": "{{computer}} kan nog geen schermen tonen. Doe daar dit:",
       "outdated": "Werk agentes bij op {{computer}} om het scherm van {{name}} te zien.",
       "outdated_female": "Werk agentes bij op {{computer}} om het scherm van {{name}} te zien.",
@@ -17361,6 +17775,19 @@
     "closeAsk": "{{name}} wacht 2 min tot je terug bent.",
     "closeAsk_female": "{{name}} wacht 2 min tot je terug bent.",
     "openAccess": "Tools en toegang openen",
+    "kept": {
+      "title": "Blijft draaien",
+      "meta": "{{name}} · sinds {{since}} · {{until}}",
+      "untilStops": "tot het stopt",
+      "untilClosed": "tot de browser sluit",
+      "until": "tot {{time}}",
+      "stop": "Stoppen",
+      "stopOf": "“{{what}}” stoppen",
+      "actions": "Acties voor “{{what}}”",
+      "count_one": "Blijft draaien · {{count}}",
+      "count_other": "Blijven draaien · {{count}}",
+      "stopFailed": "Kon het niet stoppen. Probeer het opnieuw."
+    },
     "phone": {
       "now": "Nu",
       "trackpad": "Trackpad",
@@ -17439,7 +17866,7 @@
       "computerWait": "Wacht op de computer",
       "computerWaitNext": "Gaat verder als hij klaar is",
       "computerOfflineNext": "Gaat verder als hij aanstaat",
-      "computerBusyNext": "Begint als er ruimte is",
+      "computerBusyNext": "Start als er vrij geheugen is",
       "okNext": "Gaat verder zodra iemand goedkeurt",
       "answerNext": "Gaat verder zodra iemand antwoordt",
       "back": "Gaat {{when}} verder",
@@ -17625,6 +18052,7 @@
       "agent_archived": "{{name}} is gearchiveerd.",
       "audience": "Wie hem heeft ingesteld, kan niet meer met {{name}} praten.",
       "failing": "Hij is meerdere keren achter elkaar mislukt en gestopt.",
+      "failingLast": "Gestopt na 5 mislukkingen achter elkaar. De laatste: {{cause}}",
       "stopped": "De update is gestopt.",
       "missing_credential": "{{name}} heeft geen AI-sleutel of abonnement om mee te werken.",
       "timeout": "De update duurde te lang.",

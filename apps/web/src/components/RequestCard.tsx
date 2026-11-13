@@ -161,6 +161,7 @@ export function RequestCard({
   who,
   source,
   lead,
+  headless = false,
   preview,
   object,
   details,
@@ -189,8 +190,10 @@ export function RequestCard({
   who?: ReactNode;
   /** Where it was asked, after the kind ("Thread · #eng"), where the card stands away from its conversation. */
   source?: ReactNode;
-  /** The agent's own words: what it asks. */
-  lead: ReactNode;
+  /** The agent's own words: what it asks. None on a card whose object says it all (one of a summary's). */
+  lead?: ReactNode;
+  /** One of several cards under a line that already says what they are: no header of its own. */
+  headless?: boolean;
   /**
    * What will happen, drawn edge to edge between hairlines above the object's line (an email as it will go out, an
    * action's values): its start, fading at the foot. "Ver …" replaces it with the whole thing.
@@ -288,6 +291,7 @@ export function RequestCard({
       </div>
     )
   );
+  const waitsOnOther = !mine && !ended && Boolean(waitingFor);
   const fill = (
     <Locked when={locked}>
       {body}
@@ -297,21 +301,25 @@ export function RequestCard({
   const inner = (
     <>
       <CardSky color={colorOf(agent)} />
-      <div className="rq__head">
-        <span className="rq__kind">
-          {who && (
-            <>
-              <span className="rq__who">{who}</span>
-              {" · "}
-            </>
+      {(!headless || waitsOnOther) && (
+        <div className="rq__head">
+          {!headless && (
+            <span className="rq__kind">
+              {who && (
+                <>
+                  <span className="rq__who">{who}</span>
+                  {" · "}
+                </>
+              )}
+              {askKindWords(t, kind, Boolean(mine))}
+              {source && <span className="rq__source"> · {source}</span>}
+            </span>
           )}
-          {askKindWords(t, kind, Boolean(mine))}
-          {source && <span className="rq__source"> · {source}</span>}
-        </span>
-        {/* Who else it waits for; waiting for me needs no words (the buttons say it). */}
-        {!mine && !ended && waitingFor && <span className="rq__state rq__state--other">{waitingFor}</span>}
-      </div>
-      <p className="rq__lead">{inlineWords(lead, "rq")}</p>
+          {/* Who else it waits for; waiting for me needs no words (the buttons say it). */}
+          {waitsOnOther && <span className="rq__state rq__state--other">{waitingFor}</span>}
+        </div>
+      )}
+      {lead != null && lead !== "" && <p className="rq__lead">{inlineWords(lead, "rq")}</p>}
       {preview && !(open && details) && <div className="rq__preview">{preview}</div>}
       {object && (
         <div className="rq__well">
@@ -366,7 +374,7 @@ export function RequestCard({
 }
 
 /** "Ver …": opens what a request holds back; its arrow turns while it is open. */
-function RequestMore({ open, onClick, children }: { open: boolean; onClick: () => void; children: ReactNode }) {
+export function RequestMore({ open, onClick, children }: { open: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button type="button" className="rq__more" aria-expanded={open} onClick={onClick}>
       {children}

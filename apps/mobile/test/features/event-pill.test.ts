@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { stoppedRunsKey, stoppedRunsOf } from "../../src/features/chat/stopped-runs";
+import { movedOnKey, stoppedRunsKey, stoppedRunsOf } from "../../src/features/chat/stopped-runs";
 import { message } from "./fixtures";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
@@ -46,6 +46,15 @@ describe("one stop, one pill", () => {
     const said = stoppedRunsKey(stoppedRunsOf([reply("m1", "r1"), notice("n1", "r1", "why")]));
     expect(more).toBe(before);
     expect(said).not.toBe(before);
+  });
+
+  test("a stop whose agent went on offers no Continue: the list provides which, the row reads it", () => {
+    expect(movedOnKey(new Set(["r2", "r1"]))).toBe(movedOnKey(new Set(["r1", "r2"])));
+    expect(movedOnKey(new Set(["r1"]))).not.toBe(movedOnKey(new Set()));
+    const screen = src("features/chat/ChatScreen.tsx");
+    expect(screen).toContain("<StopsMovedOnContext.Provider value={stopsMoved}>");
+    expect(screen).toContain("stopsMovedOn(");
+    expect(src("features/chat/MessageRow.tsx")).toContain("const open = may && !continued && !busy && !movedOn;");
   });
 
   test("the conversation's list provides the stops; the notice draws nothing while its reply has them", () => {

@@ -270,7 +270,13 @@ async function visibleRuns(
 ): Promise<Row[]> {
   const status = which.active
     ? sql`r.status in ('queued', 'running', 'waiting_approval', 'waiting_input')`
-    : sql`r.status in ('done', 'failed', 'canceled') and r.finished_at >= ${which.since.toISOString()}::timestamptz`;
+    : // Stopped to read a message a person sent it (`stoppedToSend`): the task goes on in the run that message
+      // started, so this half of it is no task that ended.
+      sql`r.status in ('done', 'failed', 'canceled') and r.finished_at >= ${which.since.toISOString()}::timestamptz
+        and not (r.status = 'canceled' and exists (
+          select 1 from ${messages} sm
+          where sm.org_id = r.org_id and sm.channel_id = r.channel_id and sm.created_at >= r.created_at
+            and sm.meta->'stoppedRunIds' @> to_jsonb(r.id::text)))`;
   const limit = which.active ? TASK_MANAGER_MAX : TASK_MANAGER_ENDED_MAX;
   return rowsOf<Row>(
     await db.execute(sql`select r.id, r.agent_id, r.channel_id, ${shownStatusSql} as status, r.thread_root_id, r.trigger_message_id,

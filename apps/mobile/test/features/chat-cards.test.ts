@@ -356,9 +356,11 @@ describe("an approval card's layout", () => {
     // A grouped request: its words and its buttons on one line while the words fit theirs, the buttons under the
     // words otherwise (the action line), its words whole and their code drawn as code.
     const item = fn("ApprovalGroupItem");
+    // A replaced request returns its one quiet line first; the line with buttons is the main return.
+    const live = item.slice(item.indexOf("<ApproveAlwaysInfo"));
     expect(
       ascending(
-        at(item, [
+        at(live, [
           "<View style={[ACT_LINE.row, styles.itemWrap]}>",
           "<View style={ACT_LINE.text}>",
           "<View style={styles.itemActs}>",

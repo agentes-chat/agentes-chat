@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { MachineRequest } from "@agenteschat/adapters/machine-protocol";
+import { type MachineRequest, parseBrainEvent } from "@agenteschat/adapters/machine-protocol";
 import { sealSecret, secretAad } from "@agenteschat/adapters/secret-box";
 import {
   type CodexBrainEvent,
@@ -215,6 +215,26 @@ test.skipIf(!posix)(
     // The computer's own sign-in has a process open: a plan's route there waits (`brain-route.ts`).
     expect(t.app.holds(null)).toBe(true);
     expect(t.app.holds("0193aaaa-bbbb-7ccc-8ddd-eeeeffff0001")).toBe(false);
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "an image Codex makes: its call starts when Codex starts it, and the picture lands in the agent's folder as a file",
+  async () => {
+    const t = await setup();
+    const turn = start(t.ctx, request(1, "IMAGE please"));
+    await turn.done;
+    const events = notDeltas(turn.events);
+    const started = events.findIndex((e) => e.type === "tool_started");
+    expect(events[started]).toEqual({ type: "tool_started", id: "ig_1", name: "image_generation" });
+    const call = events.findIndex((e) => e.type === "tool_call" && e.name === "image_generation");
+    expect(call).toBeGreaterThan(started);
+    expect(events[call]).toMatchObject({ id: "ig_1", input: { prompt: "A lighthouse at dusk" } });
+    const file = events.find((e) => e.type === "file");
+    expect(file?.type === "file" && file.path).toMatch(/^generated-images\/image-\d{14}-ig1\.png$/);
+    expect(readFileSync(path.join(t.folder, file?.type === "file" ? file.path : ""), "utf8")).toBe("png bytes");
+    expect(events.at(-1)).toMatchObject({ type: "done", text: "Here it is." });
   },
   20_000,
 );
@@ -795,6 +815,81 @@ test("a refusal known by its words after a command says the turn worked", () => 
     message,
     worked: true,
   });
+});
+
+const fileOf = (events: CodexBrainEvent[]) => events.flatMap((e) => (e.type === "file" ? [e] : []))[0];
+
+test("an image Codex made is copied to the agent's folder and told to the server as a file", () => {
+  const folder = tempDir("brain-codex-app-img-");
+  const home = tempDir("brain-codex-app-home-");
+  dirs.push(folder, home);
+  const saved = path.join(home, "exec-1.png");
+  writeFileSync(saved, "png bytes");
+  const m = new CodexAppMapper({ cwd: folder, folder });
+  const { events } = m.completed({
+    id: "ig_abc123",
+    type: "imageGeneration",
+    status: "completed",
+    revisedPrompt: "A lighthouse at dusk",
+    result: "",
+    failure: null,
+    savedPath: saved,
+  });
+  const file = fileOf(events);
+  expect(file?.path).toMatch(/^generated-images\/image-\d{14}-abc123\.png$/);
+  expect(readFileSync(path.join(folder, file?.path ?? ""), "utf8")).toBe("png bytes");
+  expect(parseBrainEvent(file)).toEqual(file as never);
+  expect(events[0]).toMatchObject({
+    type: "tool_call",
+    name: "image_generation",
+    input: { prompt: "A lighthouse at dusk" },
+    executed: { content: `Saved ${file?.path} in your folder.` },
+  });
+
+  // No file Codex kept that this process can read: the image comes in the item itself.
+  const inline = m.completed({
+    id: "ig_inline",
+    type: "imageGeneration",
+    status: "completed",
+    revisedPrompt: null,
+    result: Buffer.from("inline bytes").toString("base64"),
+    failure: null,
+    savedPath: path.join(home, "gone.png"),
+  }).events;
+  const second = fileOf(inline);
+  expect(readFileSync(path.join(folder, second?.path ?? ""), "utf8")).toBe("inline bytes");
+});
+
+test("an image Codex couldn't make says why and names no file", () => {
+  const folder = tempDir("brain-codex-app-img-");
+  dirs.push(folder);
+  const m = new CodexAppMapper({ cwd: folder, folder });
+  const limit = m.completed({
+    id: "ig_1",
+    type: "imageGeneration",
+    status: "failed",
+    revisedPrompt: null,
+    result: "",
+    failure: { type: "usageLimitExceeded", limitId: "images", resetsAt: 1794528000 },
+  }).events;
+  expect(limit).toEqual([
+    {
+      type: "tool_call",
+      id: "ig_1",
+      name: "image_generation",
+      input: {},
+      executed: { content: "The plan's image limit was reached until 2026-11-13T00:00:00.000Z.", isError: true },
+    },
+  ]);
+  const empty = m.completed({
+    id: "ig_2",
+    type: "imageGeneration",
+    status: "failed",
+    result: "",
+    failure: null,
+  }).events;
+  expect(empty).toMatchObject([{ type: "tool_call", executed: { content: "Codex made no image.", isError: true } }]);
+  expect(existsSync(path.join(folder, "generated-images"))).toBe(false);
 });
 
 test("an agent message completed twice is sent once", () => {

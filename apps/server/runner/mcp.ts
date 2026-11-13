@@ -95,7 +95,30 @@ export interface McpTaskInfo {
 }
 
 /** One block of a tool's result (MCP `content`). */
-export type McpContent = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
+export type McpContent =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string }
+  /** A PDF a tool returned, as an embedded resource: the CLIs keep it as a file their own reader opens. */
+  | { type: "resource"; resource: { uri: string; mimeType: string; blob: string } };
+
+/** A picture or a PDF in a server tool's answer (`MCP_IMAGES_PROTOCOL`), base64. */
+export type McpImage = { mediaType: string; data: string; name?: string };
+
+/** A server tool's pictures as MCP content: images as `image`, a PDF as an embedded `resource`. */
+export function mcpImageContent(images: readonly McpImage[]): McpContent[] {
+  return images.map((i) =>
+    i.mediaType === "application/pdf"
+      ? {
+          type: "resource" as const,
+          resource: {
+            uri: `agentes://file/${encodeURIComponent(i.name ?? "file.pdf")}`,
+            mimeType: i.mediaType,
+            blob: i.data,
+          },
+        }
+      : { type: "image" as const, data: i.data, mimeType: i.mediaType },
+  );
+}
 export type McpToolResult = { content: McpContent[]; isError: boolean };
 
 /** What `delegated-tools.ts` serves on a session. */
@@ -180,8 +203,14 @@ export interface IpcRequest {
  * answer. `memo`: a list the daemon answers again by itself for the same run (`LIST_MEMO_MS`), so asking often is free.
  */
 export type IpcReply =
-  | { ok: true; text: string; tools?: McpToolInfo[]; memo?: boolean }
+  | { ok: true; text: string; images?: McpImage[]; tools?: McpToolInfo[]; memo?: boolean }
   | { ok: false; error: string; transient?: boolean; idle?: boolean };
+
+/** A frame's pictures, when each is one (anything else in their place is dropped). */
+const validImages = (v: unknown): v is McpImage[] =>
+  Array.isArray(v) &&
+  v.length > 0 &&
+  v.every((i) => typeof i === "object" && i !== null && typeof i.mediaType === "string" && typeof i.data === "string");
 
 /** What a tool name may look like (the Tool Gateway's rule). */
 const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -395,7 +424,11 @@ export class McpBridge {
     if (!p) return;
     clearTimeout(p.timer);
     this.pending.delete(frame.callId);
-    p.resolve(frame.ok ? { ok: true, text: String(frame.text ?? "") } : { ok: false, error: frame.error.message });
+    p.resolve(
+      frame.ok
+        ? { ok: true, text: String(frame.text ?? ""), ...(validImages(frame.images) ? { images: frame.images } : {}) }
+        : { ok: false, error: frame.error.message },
+    );
   }
 
   /** The server's answer to a list (protocol 8). */
@@ -862,7 +895,10 @@ export async function handleMcpMessage(
         jsonrpc: "2.0",
         id,
         result: {
-          content: [{ type: "text", text: reply.ok ? reply.text : reply.error }],
+          content: [
+            { type: "text", text: reply.ok ? reply.text : reply.error },
+            ...(reply.ok && reply.images ? mcpImageContent(reply.images) : []),
+          ],
           isError: !reply.ok,
         },
       };

@@ -1,6 +1,7 @@
 {
   "app": {
     "pt-BR": [
+      "usageViews.logins",
       "chat.wait.said",
       "access.area.skills",
       "agent.builtinName",
@@ -283,7 +284,8 @@
       "install.page.beta",
       "install.scene.finder",
       "install.scene.downloads",
-      "devices.armBuild"
+      "devices.armBuild",
+      "devices.iphone.xcodeFix.ok"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -522,7 +524,13 @@
       "install.page.beta",
       "install.scene.finder",
       "install.scene.general",
-      "devices.armBuild"
+      "devices.armBuild",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "fr": [
       "channel.tooLong.fileName",
@@ -645,6 +653,7 @@
       "format.inMinutes",
       "home.ask.agent",
       "issues.agentRole",
+      "issues.now.agents",
       "issues.conversation.button",
       "issues.conversation.messages",
       "issues.conversation.toggle",
@@ -927,7 +936,14 @@
       "install.page.version",
       "install.page.versionSize",
       "devices.armBuild",
-      "routines.horizon.agentRoutines"
+      "routines.horizon.agentRoutines",
+      "devices.iphone.xcodeFix.ok",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1356,9 +1372,17 @@
       "install.scene.account",
       "install.scene.appLabel",
       "install.scene.downloads",
-      "devices.armBuild"
+      "devices.armBuild",
+      "devices.iphone.xcodeFix.ok",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "it": [
+      "shell.email.label",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
       "devices.cpus",
@@ -1703,7 +1727,14 @@
       "install.scene.finder",
       "install.scene.password",
       "devices.armBuild",
-      "routines.horizon.agentRoutines"
+      "routines.horizon.agentRoutines",
+      "devices.iphone.xcodeFix.ok",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -1909,6 +1940,7 @@
       "format.usd",
       "home.ask.agent",
       "issues.agentRole",
+      "issues.now.agents",
       "issues.columns.createdDetail",
       "issues.display.field.label",
       "issues.display.field.pullRequest",
@@ -2275,7 +2307,14 @@
       "devices.armBuild",
       "issues.projects.label",
       "issues.display.field.project",
-      "routines.horizon.agentRoutines"
+      "routines.horizon.agentRoutines",
+      "devices.iphone.xcodeFix.ok",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2433,7 +2472,14 @@
       "devices.android.drivers.samsung",
       "install.page.beta",
       "install.scene.finder",
-      "devices.armBuild"
+      "devices.armBuild",
+      "devices.iphone.xcodeFix.ok",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -2586,7 +2632,13 @@
       "feedback.mark",
       "install.page.beta",
       "install.scene.finder",
-      "devices.armBuild"
+      "devices.armBuild",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -2730,9 +2782,16 @@
       "arrival.beta.word",
       "feedback.mark",
       "install.page.beta",
-      "devices.armBuild"
+      "devices.armBuild",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "id": [
+      "shell.email.label",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",
@@ -3017,7 +3076,16 @@
       "install.scene.finder",
       "install.scene.edit",
       "install.scene.desktopDock",
-      "devices.armBuild"
+      "devices.armBuild",
+      "devices.iphone.xcodeFix.ok",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity",
+      "machines.oneClick.tools.browser",
+      "machines.oneClick.tools.terminal"
     ],
     "tr": [
       "devices.cpus",
@@ -3195,7 +3263,13 @@
       "devices.android.drivers.samsung",
       "install.page.beta",
       "install.scene.finder",
-      "devices.armBuild"
+      "devices.armBuild",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "pl": [
       "devices.cpus",
@@ -3296,6 +3370,7 @@
       "format.inMinutes",
       "home.ask.agent",
       "issues.agentRole",
+      "issues.now.agents",
       "issues.display.field.pullRequest",
       "issues.pr",
       "issues.statusLabel",
@@ -3472,7 +3547,14 @@
       "install.page.beta",
       "install.page.system",
       "install.scene.finder",
-      "devices.armBuild"
+      "devices.armBuild",
+      "devices.iphone.xcodeFix.ok",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -3616,7 +3698,13 @@
       "devices.android.drivers.samsung",
       "install.page.beta",
       "install.scene.finder",
-      "devices.armBuild"
+      "devices.armBuild",
+      "machines.oneClick.tools.claude",
+      "machines.oneClick.tools.codex",
+      "machines.oneClick.tools.cursor",
+      "machines.oneClick.tools.opencode",
+      "machines.oneClick.tools.grok",
+      "machines.oneClick.tools.antigravity"
     ]
   },
   "mobile-base": {

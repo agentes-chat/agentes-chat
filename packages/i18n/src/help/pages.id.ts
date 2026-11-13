@@ -9,6 +9,13 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
       "Aplikasi agentes.chat juga bisa menjalankan agentes.chat sendiri, di Mac, PC, atau komputer Linux, untukmu atau tim kecil.",
     sections: [
       {
+        id: "download",
+        heading: "Unduh aplikasinya",
+        blocks: [
+          "[Unduh aplikasi agentes.chat](/download) untuk Mac, PC, atau komputer Linux-mu, lalu buka. Pilih **Di server sendiri**, tekan **Lanjut di server saya**, lalu **Jalankan agentes.chat di komputer ini**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Cara kerjanya",
         blocks: [
@@ -177,6 +184,15 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
           "Masuk ke tiap ruang kerja di aplikasi yang sama lalu tekan **Izinkan** untuk masing-masing. Ruang kerja di agentes.chat Cloud dan di server milikmu sendiri bisa berbagi satu komputer (aplikasi 0.6.1 ke atas). Masing-masing punya agen dan foldernya sendiri di sana, dan memutuskan satu ruang kerja tidak memengaruhi yang lain.",
           "Server yang dijalankan aplikasi di komputer ini sudah terhubung dan tidak perlu apa-apa. Untuk meminjamkan komputer itu juga ke ruang kerja di tempat lain, lihat [Pinjamkan juga ke ruang kerja lain](/help/run-on-your-computer#another-workspace).",
           "Memakai aplikasi di laptop hanya sebagai jendela ke ruang kerjamu? Saat aplikasi meminta izin agar agen memakai laptop itu, **Nanti saja** membuatnya tetap jadi jendela biasa.",
+          "Server yang dihubungkan dengan baris terminal bekerja untuk satu workspace. Menghubungkannya dari workspace lain memindahkan server ke workspace itu, dan workspace pertama tidak lagi menjangkaunya. Untuk beberapa workspace di satu komputer, gunakan aplikasi.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Saat agen menunggu dalam antrean",
+        blocks: [
+          "Setiap pekerjaan agen memakai memori komputer. Saat memori kosong menipis, pekerjaan berikutnya menunggu dalam antrean sampai yang lain selesai. Orang didahulukan. Jumlah CPU tidak mengubah hal ini.",
+          "Komputer dengan memori 4 GB menjalankan dua atau tiga pekerjaan sekaligus, yang 8 GB sekitar sembilan. Mac atau PC menjalankan hingga delapan. Browser dan desktop yang dibiarkan terbuka oleh agen juga memakai memori. Agar antrean lebih pendek, gunakan komputer dengan memori lebih besar, atau hubungkan satu lagi dan bagi agen di antara keduanya. Workspace yang berbagi satu komputer berbagi memorinya.",
         ],
       },
       {

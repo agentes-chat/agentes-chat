@@ -1,40 +1,28 @@
 import { afterEach, expect, test } from "bun:test";
-import { createTurnstileCheck, TURNSTILE_SCRIPT_URL } from "@agenteschat/adapters";
+import type { HumanAction, HumanCheck } from "@agenteschat/adapters";
 import { ConfigError } from "@agenteschat/config";
+import { schema } from "@agenteschat/db";
 import { checkHumanCheckAtBoot } from "../src/http/human-check";
 import { createLogger } from "../src/logger";
-import { type Browser, browser, createTestServer, seedOrg, type TestServer } from "./harness";
+import {
+  type Browser,
+  browser,
+  createTestServer,
+  fakeCloudflare,
+  seedOrg,
+  type TestServer,
+  TURNSTILE_TEST_TOKEN,
+  tokenMadeOn,
+  turnstileCheck,
+} from "./harness";
 
-/** What Cloudflare's test site keys hand out, and its test secret passes. */
-const TOKEN = "XXXX.DUMMY.TOKEN.XXXX";
+/** The landing page's own site (`LANDING_URL`), and the host its widget runs on. */
+const LANDING = "https://agentes.example";
+const LANDING_HOST = "agentes.example";
+/** `PUBLIC_URL`'s host here (the harness's `ORIGIN`). */
+const APP_HOST = "localhost";
 
-/**
- * Cloudflare as its test secret answers: the dummy token passes on any host, anything else is refused. Without
- * `testSecret`, as a real secret answers the dummy token: refused.
- */
-function cloudflare() {
-  const state = { up: true, secretRefused: false, testSecret: true };
-  const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => {
-    if (!state.up) throw new Error("connect ECONNREFUSED");
-    if (String(input) === TURNSTILE_SCRIPT_URL) return new Response("/* api.js */");
-    const { response } = JSON.parse(String(init?.body)) as { response: string };
-    if (state.secretRefused) return Response.json({ success: false, "error-codes": ["invalid-input-secret"] });
-    return Response.json(
-      response === TOKEN && state.testSecret
-        ? { success: true, hostname: "example.com", metadata: { result_with_testing_key: true } }
-        : { success: false, "error-codes": ["invalid-input-response"] },
-    );
-  }) as typeof globalThis.fetch;
-  return { state, fetch: fakeFetch };
-}
-
-const turnstile = (fetch: typeof globalThis.fetch) =>
-  createTurnstileCheck({
-    siteKey: "1x00000000000000000000AA",
-    secretKey: "1x0000000000000000000000000000000AA",
-    hostnames: ["localhost"],
-    fetch,
-  });
+const turnstile = (fetch: typeof globalThis.fetch) => turnstileCheck(fetch, { LANDING_URL: LANDING });
 
 let t: TestServer;
 afterEach(async () => {
@@ -47,34 +35,55 @@ const codeOf = async (res: Response) => {
   const body = (await res.json()) as { code?: string; error?: { code: string } };
   return body.error?.code ?? body.code;
 };
-const passing = { "x-captcha-response": TOKEN };
+const passing = { "x-captcha-response": TURNSTILE_TEST_TOKEN };
 const signUpPassing = (b: Browser, email: string) =>
   b("/api/auth/sign-up/email", {
     json: { email, password: "correct horse battery", name: email.split("@")[0] },
     headers: passing,
   });
 
-/** The six guarded calls, each from a fresh browser, with `headers`. */
-async function sixCalls(token: string, headers: Record<string, string>) {
-  const call = (path: string, json: unknown) => browser(t)(path, { json, headers });
+/**
+ * The guarded calls, each from a fresh browser with the `headers` for its action: one per action, and the partner
+ * list's, which takes the waiting list's.
+ */
+async function guardedCalls(token: string, headers: (action: HumanAction) => Record<string, string>) {
+  const call = (action: HumanAction, path: string, json: unknown) =>
+    browser(t)(path, { json, headers: headers(action) });
   return {
-    "email-lookup": await call("/api/app/sign-in-options", { email: "owner@example.com" }),
-    "sign-in": await call("/api/auth/sign-in/email", { email: "owner@example.com", password: "correct horse battery" }),
-    "sign-up": await call("/api/auth/sign-up/email", {
+    "email-lookup": await call("email-lookup", "/api/app/sign-in-options", { email: "owner@example.com" }),
+    "sign-in": await call("sign-in", "/api/auth/sign-in/email", {
+      email: "owner@example.com",
+      password: "correct horse battery",
+    }),
+    "sign-up": await call("sign-up", "/api/auth/sign-up/email", {
       email: "new@example.com",
       password: "correct horse battery",
       name: "New",
     }),
-    "password-reset": await call("/api/auth/request-password-reset", {
+    "password-reset": await call("password-reset", "/api/auth/request-password-reset", {
       email: "owner@example.com",
       redirectTo: "/reset-password",
     }),
-    "ask-code": await call(`/api/app/invitations/${token}/code`, { email: "ana@example.com" }),
-    waitlist: await call("/api/waitlist", { email: "ana@example.com" }),
+    "ask-code": await call("ask-code", `/api/app/invitations/${token}/code`, { email: "ana@example.com" }),
+    waitlist: await call("waitlist", "/api/waitlist", { email: "ana@example.com" }),
+    partners: await call("waitlist", "/api/partners/waitlist", {
+      email: "ana@example.com",
+      name: "Ana",
+      whatsapp: "+5511912345678",
+    }),
   };
 }
-const statuses = (calls: Record<string, Response>) =>
-  Object.fromEntries(Object.entries(calls).map(([action, res]) => [action, res.status]));
+/** The same headers on every call. */
+const every = (headers: Record<string, string>) => () => headers;
+/** On each call, a token made on `host` for its own action. */
+const madeOn = (host: string) => (action: HumanAction) => ({ "x-captcha-response": tokenMadeOn(host, action) });
+/** Each call's status, or its refusal's code. */
+const outcomes = async (calls: Record<string, Response>) =>
+  Object.fromEntries(
+    await Promise.all(
+      Object.entries(calls).map(async ([call, res]) => [call, res.ok ? res.status : await codeOf(res)]),
+    ),
+  );
 const THROUGH = {
   "email-lookup": 200,
   "sign-in": 200,
@@ -82,14 +91,13 @@ const THROUGH = {
   "password-reset": 200,
   "ask-code": 202,
   waitlist: 202,
+  partners: 202,
 };
+const REFUSED = Object.fromEntries(Object.keys(THROUGH).map((call) => [call, "human_check"]));
 
-/** An owner with a workspace and its invitation link, on a server with `check` (none: no keys). */
-async function start(check?: ReturnType<typeof turnstile>) {
-  t = await createTestServer({
-    env: { LANDING_URL: "https://agentes.example", ALLOW_SIGNUP: "true" },
-    humanCheck: check,
-  });
+/** An owner with a workspace and its invitation link, on a server with `check` (none: no keys) and `env`. */
+async function start(check?: HumanCheck | null, env: Record<string, string> = { LANDING_URL: LANDING }) {
+  t = await createTestServer({ env: { ...env, ALLOW_SIGNUP: "true" }, humanCheck: check });
   const owner = browser(t);
   expect((await signUpPassing(owner, "owner@example.com")).status).toBe(200);
   const { orgId } = await seedOrg(owner);
@@ -102,33 +110,72 @@ async function start(check?: ReturnType<typeof turnstile>) {
 test("without the keys: no site key for pages, and every form works without a token", async () => {
   const { token } = await start();
   expect(await (await browser(t)("/api/app/auth-config")).json()).toMatchObject({ turnstileSiteKey: null });
-  expect(statuses(await sixCalls(token, {}))).toEqual(THROUGH);
+  expect(await outcomes(await guardedCalls(token, every({})))).toEqual(THROUGH);
 });
 
-test("with the keys: each of the six forms needs a token Cloudflare passes, and nothing else changes", async () => {
-  const { token } = await start(turnstile(cloudflare().fetch));
+test("with the keys: each guarded form needs a token Cloudflare passes, and nothing else changes", async () => {
+  const { token } = await start(turnstile(fakeCloudflare().fetch));
   expect(await (await browser(t)("/api/app/auth-config")).json()).toMatchObject({
     turnstileSiteKey: "1x00000000000000000000AA",
   });
 
   for (const headers of [{}, { "x-captcha-response": "a-made-up-token" }] as Record<string, string>[]) {
-    for (const [action, res] of Object.entries(await sixCalls(token, headers))) {
-      expect({ action, status: res.status, code: await codeOf(res) }).toEqual({
-        action,
-        status: 403,
-        code: "human_check",
-      });
-    }
+    expect(await outcomes(await guardedCalls(token, every(headers)))).toEqual(REFUSED);
   }
-  // Nothing went through: no email, no code, no place on the list.
+  // Nothing went through: no email, no code, no place on either list, no contact.
   await t.drain();
   expect(t.email.sent.filter((m) => m.to.includes("ana@example.com"))).toEqual([]);
+  expect(await t.db.select().from(schema.waitlistEntries)).toEqual([]);
+  expect(await t.db.select().from(schema.partnerWaitlistEntries)).toEqual([]);
+  expect(t.email.contacts.filter((c) => c.email === "ana@example.com")).toEqual([]);
 
-  expect(statuses(await sixCalls(token, passing))).toEqual(THROUGH);
+  expect(await outcomes(await guardedCalls(token, every(passing)))).toEqual(THROUGH);
+});
+
+test("a token made on the landing page counts for its waiting lists only; one made on any other host, for nothing", async () => {
+  const { token } = await start(turnstile(fakeCloudflare().fetch));
+  expect(await outcomes(await guardedCalls(token, madeOn(LANDING_HOST)))).toEqual({
+    ...REFUSED,
+    waitlist: 202,
+    partners: 202,
+  });
+  for (const host of ["elsewhere.example", `${LANDING_HOST}.evil.example`, `app.${LANDING_HOST}`]) {
+    expect(await outcomes(await guardedCalls(token, madeOn(host)))).toEqual(REFUSED);
+  }
+  expect(await outcomes(await guardedCalls(token, madeOn(APP_HOST)))).toEqual(THROUGH);
+
+  // As the landing page sends it: from its own origin, reading each answer through CORS, a refusal too.
+  for (const [action, outcome] of [
+    ["sign-in", "human_check"],
+    ["waitlist", 202],
+  ] as const) {
+    const res = await browser(t)("/api/waitlist", {
+      json: { email: "bia@example.com" },
+      origin: LANDING,
+      headers: madeOn(LANDING_HOST)(action),
+    });
+    const cors = res.headers.get("access-control-allow-origin");
+    expect({ action, outcome: res.ok ? res.status : await codeOf(res), cors }).toEqual({
+      action,
+      outcome,
+      cors: LANDING,
+    });
+  }
+});
+
+test("without LANDING_URL, only a token made on PUBLIC_URL's host counts, and there is no waiting list to join", async () => {
+  const check = turnstileCheck(fakeCloudflare().fetch);
+  const { token } = await start(check, {});
+  const noLists = { waitlist: "not_found", partners: "not_found" };
+  expect(await outcomes(await guardedCalls(token, madeOn(LANDING_HOST)))).toEqual({ ...REFUSED, ...noLists });
+  expect(await outcomes(await guardedCalls(token, madeOn(APP_HOST)))).toEqual({ ...THROUGH, ...noLists });
+  // The waiting list's own action, asked of the check itself.
+  expect(await check?.verify(tokenMadeOn(LANDING_HOST, "waitlist"), "waitlist", "203.0.113.7")).toBe("human_check");
+  expect(await check?.verify(tokenMadeOn(APP_HOST, "waitlist"), "waitlist", "203.0.113.7")).toBeNull();
 });
 
 test("sign-up's refusal by the check says so by its code, not as a closed sign-up", async () => {
-  t = await createTestServer({ humanCheck: turnstile(cloudflare().fetch) });
+  t = await createTestServer({ humanCheck: turnstile(fakeCloudflare().fetch) });
   // The first account; then sign-up is closed (ALLOW_SIGNUP off).
   expect((await signUpPassing(browser(t), "owner@example.com")).status).toBe(200);
   const res = await browser(t)("/api/auth/sign-up/email", {
@@ -141,7 +188,7 @@ test("sign-up's refusal by the check says so by its code, not as a closed sign-u
 });
 
 test("a page that couldn't make a token: blocked while Cloudflare answers this server, through while it doesn't", async () => {
-  const cf = cloudflare();
+  const cf = fakeCloudflare();
   const { token } = await start(turnstile(cf.fetch));
   const ask = (headers: Record<string, string>) =>
     browser(t)(`/api/app/invitations/${token}/code`, { json: { email: "ana@example.com" }, headers });
@@ -177,7 +224,7 @@ test("at boot, a secret Cloudflare refuses stops the server; Cloudflare out of r
   await expect(checkHumanCheckAtBoot(null, log)).resolves.toBeUndefined();
   expect(lines).toEqual([]);
 
-  const cf = cloudflare();
+  const cf = fakeCloudflare();
   cf.state.secretRefused = true;
   const refused = checkHumanCheckAtBoot(turnstile(cf.fetch), log);
   await expect(refused).rejects.toBeInstanceOf(ConfigError);
@@ -197,7 +244,7 @@ test("at boot, a secret Cloudflare refuses stops the server; Cloudflare out of r
 });
 
 test("refused bots don't spend a link's codes: a person asking through it still gets one", async () => {
-  const { token } = await start(turnstile(cloudflare().fetch));
+  const { token } = await start(turnstile(fakeCloudflare().fetch));
   const ask = (ip: string, headers: Record<string, string> = {}) =>
     browser(t)(`/api/app/invitations/${token}/code`, {
       json: { email: `${ip}@example.com` },

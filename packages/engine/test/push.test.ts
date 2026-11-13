@@ -25,6 +25,7 @@ import {
   drainOutbox,
   listMembers,
   listPushDevices,
+  markChannelRead,
   markNotificationRead,
   noticeCategoryOf,
   noticePrefsOf,
@@ -40,6 +41,7 @@ import {
   pushStrings,
   pushTicketsOf,
   registerPushDevice,
+  remindNotifications,
   renderPush,
   sealSecret,
   setNoticePref,
@@ -52,6 +54,7 @@ import {
   vapidSubject,
   wakeSnoozedNotifications,
 } from "../src";
+import { postWelcome } from "../src/right-hand-welcome";
 import { addMember, type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
@@ -248,6 +251,38 @@ describe("push delivery", () => {
     expect(push.sent).toHaveLength(1);
   });
 
+  test("what the right hand writes by itself pushes its own words under its name, never as a reply", async () => {
+    f = await setup({ rightHand: true });
+    const { bia, push, drain } = await withPhone();
+    const eve = await addMember(f.db, f.org.id, "member", "eve");
+    await f.db.update(schema.users).set({ locale: "en" }).where(eq(schema.users.id, eve.id));
+    await registerPushDevice(f.db, eve.id, { token: TOKEN_BIA_EN, platform: "ios", locale: "en" });
+    await postWelcome(f.jobDeps, f.org.id, { userId: bia.id });
+    await postWelcome(f.jobDeps, f.org.id, { userId: eve.id });
+    await drain();
+    const sent = (to: string) => push.sent.filter((p) => p.to === to).map((p) => [p.title, p.body, p.data?.kind]);
+    expect(sent(TOKEN_BIA)).toEqual([
+      [
+        "Lodi",
+        "Você acabou de entrar na Acme. Do que você cuida por aqui? Me conta e eu monto seu primeiro agente com você.",
+        "dm",
+      ],
+    ]);
+    expect(sent(TOKEN_BIA_EN)).toEqual([
+      [
+        "Lodi",
+        "You just joined Acme. What do you look after here? Tell me and I set up your first agent with you.",
+        "dm",
+      ],
+    ]);
+    // Reading the conversation takes it out of the inbox, as it does an agent's reply there.
+    const [row] = await f.db.select().from(schema.notifications).where(eq(schema.notifications.userId, bia.id));
+    expect(row?.doneAt).toBeNull();
+    await markChannelRead(f.db, bia.id, f.org.id, String(row?.source.channelId));
+    const [read] = await f.db.select().from(schema.notifications).where(eq(schema.notifications.userId, bia.id));
+    expect(read?.doneAt).not.toBeNull();
+  });
+
   test("each push names the server it came from, so a phone on several servers opens the right one", async () => {
     f = await setup();
     const { push, drain } = await withPhone({ pushServer: "https://agentes.exemplo.com.br" });
@@ -399,6 +434,29 @@ describe("push delivery", () => {
       priority: "high",
       data: { kind: "agent_question", notificationId: question?.id },
     });
+  });
+
+  test("the day's one reminder reaches the phone saying how many things still wait", async () => {
+    f = await setup();
+    const { bia, push, drain } = await withPhone();
+    await notify(deps(), {
+      orgId: f.org.id,
+      userIds: [bia.id],
+      kind: "agent_question",
+      groupKey: "agent_question:q1",
+      waiting: true,
+      actor: { type: "agent", id: f.agent.id },
+      source: { channelId: f.general.id },
+      latest: { text: "Qual branch?" },
+    });
+    await drain();
+    expect(
+      await remindNotifications(deps(), f.org.id, "agent_question:q1", { reminder: true, still: 3 }, "day-1", [bia.id]),
+    ).toBe(1);
+    await drain();
+    expect(push.sent).toHaveLength(2);
+    expect(push.sent[1]?.title).toBe(renderPush("pt-BR", { kind: "agent_question", waiting: true, still: 3 }).title);
+    expect(push.sent[1]?.title).toContain("3");
   });
 
   test("an approval a routine asked: its why and origin in the inbox, the routine's name in the push", async () => {

@@ -207,13 +207,92 @@ describe("Entrar (e-mail primeiro)", () => {
     expect(calls[0]).toEqual({ method: "signInSocial", args: ["github", "/"] });
   });
 
-  test("the provider used last is marked on a line under its button, which keeps only its mark and words", async () => {
+  test("the way used last is marked on its button's corner: a provider's, or the e-mail's Continuar", async () => {
     rememberSignIn("github");
     try {
       await renderApp("/login", { api: authApi(ACCOUNT).api, auth: createFakeAuth().auth });
       expect(screen().getByRole("button", { name: "Continuar com GitHub", description: "Último usado" })).toBeTruthy();
+      expect(
+        document.querySelector(".auth-last")?.closest(".auth-last-host")?.querySelector("button")?.textContent,
+      ).toBe("Continuar com GitHub");
+      cleanup();
+      rememberSignIn("email");
+      await renderApp("/login", { api: authApi(ACCOUNT).api, auth: createFakeAuth().auth });
+      expect(screen().getByRole("button", { name: /^Continuar(?! com)/, description: "Último usado" })).toBeTruthy();
+      expect(screen().queryByRole("button", { name: "Continuar com GitHub", description: "Último usado" })).toBeNull();
     } finally {
       storage.remove(STORAGE_KEYS.lastSignIn);
+    }
+  });
+
+  test("every sign-in says which server it goes to, and Trocar picks another: the Cloud or one's own", async () => {
+    const asked: string[] = [];
+    const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: string) => {
+      asked.push(String(url));
+      if (String(url).startsWith("https://agentes.example.com/"))
+        return new Response(JSON.stringify({ name: "agentes.chat", api: 1, minApi: 1 }), { status: 200 });
+      throw new TypeError("Failed to fetch");
+    }) as unknown as typeof fetch);
+    const went: string[] = [];
+    const assign = spyOn(window.location, "assign").mockImplementation((to: string | URL) => {
+      went.push(String(to));
+    });
+    try {
+      await renderApp("/login", { api: authApi(ACCOUNT).api, auth: createFakeAuth().auth });
+      await settle(4);
+      const line = document.querySelector(".auth__place") as HTMLElement;
+      expect(line.textContent).toContain("Entrando no agentes.chat Cloud");
+      await act(async () => fireEvent.click(within(line).getByRole("button", { name: "Trocar de servidor" })));
+      await settle(2);
+      const sheet = screen().getByRole("dialog", { name: "Onde fica o seu workspace?" });
+      const cloud = within(sheet).getByRole("radio", { name: /agentes\.chat Cloud/ });
+      expect(cloud.getAttribute("aria-checked")).toBe("true");
+      expect(cloud.textContent).toContain("Recomendado");
+      expect(cloud.textContent).toContain("Computador dos agentes sempre ligado");
+      // No radio dot: the chosen card's border says it.
+      expect(sheet.querySelector(".ac-optrow__dot")).toBeNull();
+      await act(async () => fireEvent.click(within(sheet).getByRole("radio", { name: /No seu servidor/ })));
+      expect(sheet.textContent).toContain("Os agentes param quando ele desliga");
+      expect(sheet.textContent).toContain("Grátis · código aberto");
+      // "Ainda não tem um?": a server for a team, or the app on one's own computer.
+      await act(async () =>
+        fireEvent.click(within(sheet).getByRole("button", { name: "Veja como ter o seu, grátis" })),
+      );
+      await settle(2);
+      const get = screen().getByRole("dialog", { name: "Ter o seu próprio servidor" });
+      expect(within(get).getByRole("link", { name: "Baixar o app" }).getAttribute("href")).toBe(
+        "https://agentes.chat/download",
+      );
+      expect(within(get).getByRole("link", { name: "Como funciona" }).getAttribute("href")).toBe(
+        "https://agentes.chat/pt/docs/run-on-your-computer",
+      );
+      expect(within(get).getByRole("link", { name: "Ver o passo a passo" }).getAttribute("href")).toBe(
+        "https://agentes.chat/pt/docs/install-on-a-server",
+      );
+      await act(async () => fireEvent.click(within(get).getByRole("button", { name: "Use o Cloud" })));
+      await settle(2);
+      expect(
+        within(sheet)
+          .getByRole("radio", { name: /agentes\.chat Cloud/ })
+          .getAttribute("aria-checked"),
+      ).toBe("true");
+      await act(async () => fireEvent.click(within(sheet).getByRole("radio", { name: /No seu servidor/ })));
+      const field = within(sheet).getByLabelText("Endereço do servidor");
+      await act(async () => fireEvent.change(field, { target: { value: "not an address" } }));
+      await act(async () => fireEvent.click(within(sheet).getByRole("button", { name: "Conectar" })));
+      await settle(2);
+      expect(sheet.textContent).toContain("Isso não é um endereço.");
+      await act(async () => fireEvent.change(field, { target: { value: "nowhere.example.org" } }));
+      await act(async () => fireEvent.click(within(sheet).getByRole("button", { name: "Conectar" })));
+      await settle(4);
+      expect(sheet.textContent).toContain("Não achamos o agentes.chat em nowhere.example.org.");
+      await act(async () => fireEvent.change(field, { target: { value: "agentes.example.com" } }));
+      await act(async () => fireEvent.click(within(sheet).getByRole("button", { name: "Conectar" })));
+      await settle(4);
+      expect(went).toEqual(["https://agentes.example.com/login"]);
+    } finally {
+      fetchSpy.mockRestore();
+      assign.mockRestore();
     }
   });
 
@@ -1321,7 +1400,13 @@ describe("Onboarding: the workspace's name", () => {
       "padding: var(--space-1) var(--onb-gutter) calc(env(safe-area-inset-bottom, 0px) + var(--space-6))",
     );
     expect(rule("\n.onb__actions")).toContain("background: var(--pane)");
-    expect(rule("\nhtml:has(.onb)")).toContain("scroll-padding-bottom: 104px");
+    // The onboarding scrolls itself, never the document (the Linux app doesn't wheel-scroll the document there).
+    const layout = readFileSync(join(import.meta.dir, "../src/layout.css"), "utf8");
+    const onb = layout.slice(layout.indexOf("\n.onb {")).split("}")[0] ?? "";
+    expect(onb).toContain("height: var(--onb-h, 100dvh)");
+    expect(onb).toContain("overflow-y: auto");
+    expect(onb).toContain("scroll-padding-bottom: 104px");
+    expect(css).not.toContain("100vw - 100%");
   });
 
   test("Sair: the account signs out, to sign-in", async () => {

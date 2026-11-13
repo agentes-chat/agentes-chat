@@ -74,7 +74,7 @@ export const envVars = {
   LANDING_URL: {
     schema: z.url().optional(),
     description:
-      "Public URL of the agentes.chat landing page (its own site), without a trailing slash. Turns on the waiting list: that origin may call it (CORS on `/api/waitlist` only), and the confirmation email links there. Unset: no waiting list.",
+      "Public URL of the agentes.chat landing page (its own site), without a trailing slash. Turns on the waiting lists, the product's and the partner program's: that origin may call them (CORS on `/api/waitlist` and `/api/partners/waitlist` only), and the confirmation email links there. With the bot check on, a token its page makes on this host counts for these lists and nothing else. Unset: no waiting lists.",
     section: "Server",
     example: "https://agentes.chat",
   },
@@ -221,13 +221,13 @@ export const envVars = {
   TURNSTILE_SITE_KEY: {
     schema: z.string().optional(),
     description:
-      "For agentes.chat Cloud. Unset by default. Cloudflare Turnstile's site key. With `TURNSTILE_SECRET_KEY`, a bot check runs before email lookup, sign-in, sign-up, password reset, the code to ask to join and the waiting list. Unset: no check, and no page loads anything from Cloudflare.",
+      "For agentes.chat Cloud. Unset by default. Cloudflare Turnstile's site key. With `TURNSTILE_SECRET_KEY`, a bot check runs before email lookup, sign-in, sign-up, password reset, the code to ask to join and the waiting lists. The widget's hostnames in Cloudflare hold `PUBLIC_URL`'s host, and `LANDING_URL`'s when it is set. Unset: no check, and no page loads anything from Cloudflare.",
     section: "Sign-in",
   },
   TURNSTILE_SECRET_KEY: {
     schema: z.string().optional(),
     description:
-      "For agentes.chat Cloud. Unset by default. Cloudflare Turnstile's secret key, which this server uses to check each answer with Cloudflare. Set both keys or neither. A secret Cloudflare refuses stops the server at boot.",
+      "For agentes.chat Cloud. Unset by default. Cloudflare Turnstile's secret key, which this server uses to check each answer with Cloudflare. A token counts only for the form it was made for, on `PUBLIC_URL`'s host. One made on `LANDING_URL`'s host counts only for the waiting lists. Set both keys or neither. A secret Cloudflare refuses stops the server at boot.",
     section: "Sign-in",
     secret: true,
   },
@@ -964,6 +964,17 @@ export const envVars = {
       .optional(),
     description:
       "Turns on the operator API (ADR 0056): a second listener on `OPERATOR_API_PORT` that serves `/api/operator/v1` to your own automation, called with this value as `Authorization: Bearer`. It reaches every workspace and account on the instance, so never publish that port or put it behind your reverse proxy. While it is set the server also keeps 90 days of events for it (sign-ups, sign-ins with their IP address, workspaces, agents, runs; metadata only). Unset (default): nothing listens there and nothing is recorded. Generate with `openssl rand -base64 48`.",
+    section: "Operator",
+    example: "<output of openssl rand -base64 48>",
+    secret: true,
+  },
+  OPERATOR_API_READ_TOKEN: {
+    schema: z
+      .string()
+      .min(32, "must be at least 32 characters. Generate one with `openssl rand -base64 48`")
+      .optional(),
+    description:
+      "A second token for the operator API that only reads, for a caller that looks things up and changes nothing: accepted for `GET` requests alone, and never under `/review` (what a run or task did). Anything else it asks for is refused (403). It still reads every workspace's and account's names, emails and IP addresses, so keep it as private as the other. Needs `OPERATOR_API_TOKEN` and must differ from it. Unset (default): only `OPERATOR_API_TOKEN` is accepted. Generate with `openssl rand -base64 48`.",
     section: "Operator",
     example: "<output of openssl rand -base64 48>",
     secret: true,

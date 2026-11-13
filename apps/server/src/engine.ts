@@ -37,6 +37,7 @@ import {
   createCalendarToolSource,
   createChatToolSource,
   createClaudeCodeBrain,
+  createCoAuthorToolSource,
   createConnectorToolSource,
   createContextToolSource,
   createDashboardToolSource,
@@ -114,12 +115,14 @@ import {
   reauthorizeStream,
   recheckStream,
   releaseRunPhones,
+  reportLodiLaneErrors,
   resolveSummaryModel,
   type SandboxDeps,
   type ScheduleReader,
   type SkillDeps,
   type StorageDeps,
   setWorkOrgCap,
+  shareSavedFile,
   smallModelFor,
   standingJudge,
   streamClosed,
@@ -418,6 +421,8 @@ export function buildEngine(o: EngineOptions) {
       createSetStatusToolSource({ pubsub: adapters.pubsub }),
       // How the person asked agents to talk to them (ADR 0147).
       createAgentStyleToolSource(),
+      // The agents' own line on their commits, off or on again when a person asks any agent (ADR 0156).
+      createCoAuthorToolSource(),
       // A person's feedback, sent by the agent they asked or offered by it when the app fails, where the server takes
       // feedback (ADR 0160 §11, §12).
       createFeedbackToolSource({
@@ -727,6 +732,8 @@ export function buildEngine(o: EngineOptions) {
       { fetch: o.speechFetch },
     ),
   });
+  // An audio file an agent opens is heard by the same engines as a voice message.
+  artifacts.speech = speech.chain;
   const voice: VoiceDeps = {
     db,
     pubsub: adapters.pubsub,
@@ -788,6 +795,15 @@ export function buildEngine(o: EngineOptions) {
     warmBrowser,
     brains,
     prepareCode,
+    // An image Codex's own tool made on the agent's computer goes to the Drive, as a shared screenshot does.
+    shareFile: (ctx, machineId, path) =>
+      shareSavedFile(
+        { machines: { hub: machineHub }, pubsub: adapters.pubsub, publicUrl: config.PUBLIC_URL },
+        ctx,
+        machineId,
+        path,
+        { content: `Saved ${path} in your folder.` },
+      ),
     machines: machineHub,
     workspaceComputer,
     releaseRunPhones: (run) => releaseRunPhones({ db, hub: machineHub }, run),
@@ -814,6 +830,11 @@ export function buildEngine(o: EngineOptions) {
     },
   };
   const handlers = createJobHandlers(jobDeps);
+  // A failing block of one of the right hand's lanes is left out of its prompt: it shows here.
+  reportLodiLaneErrors((lane, error) => {
+    o.log?.warn("right hand lane failed", { lane, error: String(error) });
+    o.errors?.capture(error, { lane });
+  });
   // Mail accounts, inbound mail and polling (routes and workers).
   const mail: MailDeps = {
     db,

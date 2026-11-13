@@ -13,10 +13,11 @@ live in GitHub's secrets or the stores.
 ## Android on GitHub Actions
 
 Run **Android build** (Actions → Run workflow) with `preview` (an arm64 APK to install directly, kept as the run's
-artifact) or `production` (an app bundle with every architecture; with `PLAY_SERVICE_ACCOUNT_JSON` set it also goes
-to the Play Store's internal track as a draft). It runs `expo prebuild --platform android --clean` and Gradle on a
-CI runner; `plugins/with-android-release-signing.js` signs the release with the upload key from the
-environment. Nothing goes through EAS.
+artifact) or `production` (an app bundle for arm64 and 32-bit ARM phones; with `PLAY_SERVICE_ACCOUNT_JSON` set it also
+goes to the Play Store's internal track as a draft). It runs `expo prebuild --platform android --clean` and Gradle on
+GitHub's standard runner (or `CI_RUNNER_XLARGE`), with extra swap and two Gradle workers so it fits in 16 GB;
+`plugins/with-android-release-signing.js` signs the release with the upload key from the environment. Nothing goes
+through EAS.
 
 One time, in GitHub → Settings → Secrets and variables → Actions:
 1. The upload key: make one once (`keytool -genkeypair -v -storetype PKCS12 -keystore upload.keystore -alias upload
@@ -29,9 +30,10 @@ One time, in GitHub → Settings → Secrets and variables → Actions:
    file must list the variant's package (`chat.agentes.app`, `chat.agentes.app.preview`); otherwise that build is
    made without push and the run says so. The server sends those pushes to Firebase itself, with a service account of
    the same Firebase project (`FIREBASE_SERVICE_ACCOUNT`); other servers send through its push relay (ADR 0152).
-3. Optional: `PLAY_SERVICE_ACCOUNT_JSON` (a Play Console service account allowed to release; Play takes API uploads
-   only after the app's first bundle was uploaded by hand), and the variable `ANDROID_VERSION_CODE_BASE` (added to
-   the run number) above the last version code on Play, if any.
+3. The variable `ANDROID_VERSION_CODE_BASE` (Variables tab, not Secrets), added to the run number: the last version
+   code on Play, or `0` before the first upload. A production build stops at once without it.
+4. Optional: `PLAY_SERVICE_ACCOUNT_JSON` (a Play Console service account allowed to release; Play takes API uploads
+   only after the app's first bundle was uploaded by hand).
 
 A preview APK installs over an earlier one only when both were signed with the same key.
 

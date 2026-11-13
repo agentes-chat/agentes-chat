@@ -9,7 +9,13 @@ import {
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
 import { approvalOriginShort, approvalOriginWords } from "@agenteschat/client/lib/approval-origin";
 import { approvalEffects } from "@agenteschat/client/lib/approval-review";
-import { alwaysRoutineName, approvalDoing, approvalTitle } from "@agenteschat/client/lib/approval-words";
+import {
+  alwaysRoutineName,
+  approvalDoing,
+  approvalLetter,
+  approvalLetterTo,
+  approvalTitle,
+} from "@agenteschat/client/lib/approval-words";
 import { fromServer, itemName } from "@agenteschat/client/lib/connected";
 import { nextLabel } from "@agenteschat/client/lib/format";
 import { connectorName } from "@agenteschat/client/lib/scopes";
@@ -262,6 +268,8 @@ export function ApprovalMark({
  */
 export function ApprovalPreview({ approval: a }: { approval: Approval }) {
   const { t } = useTranslation();
+  const letter = approvalLetter(a);
+  if (letter) return <ApprovalLetter letter={letter} />;
   if (!a.email) return null;
   return (
     <View style={styles.previewMail}>
@@ -282,7 +290,33 @@ export function ApprovalPreview({ approval: a }: { approval: Approval }) {
   );
 }
 
-export const hasApprovalPreview = (a: Approval) => Boolean(a.email);
+export const hasApprovalPreview = (a: Approval) => Boolean(a.email || approvalLetter(a));
+
+/**
+ * A connector's message (`approvalLetter`): its subject, to whom, the first three lines of its text; the whole call
+ * under "Ver detalhes".
+ */
+export function ApprovalLetter({ letter }: { letter: NonNullable<ReturnType<typeof approvalLetter>> }) {
+  const { t } = useTranslation();
+  const to = approvalLetterTo(t, letter);
+  return (
+    <View style={styles.previewMail}>
+      {letter.subject ? (
+        <Text variant="subhead" tone="ink" style={styles.medium}>
+          {letter.subject}
+        </Text>
+      ) : null}
+      {to ? (
+        <Text variant="footnote" tone="muted">
+          {to}
+        </Text>
+      ) : null}
+      <Text variant="small" tone="ink2" style={[styles.said, styles.previewBody]} numberOfLines={3}>
+        {letter.body}
+      </Text>
+    </View>
+  );
+}
 
 /**
  * The email an approval writes, as it will be: its subject in bold, then De (the mailbox and its provider), Para,

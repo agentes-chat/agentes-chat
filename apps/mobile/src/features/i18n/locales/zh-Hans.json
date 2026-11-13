@@ -879,6 +879,9 @@
       "routine_finished_other": "例行工作已完成",
       "routine_failed_other": "例行工作失败",
       "run_failed_other": "无法完成",
+      "admin_ask_channel_agent": "{{names}} 请你把 {{agent}} 加入 #{{label}}",
+      "admin_ask_create_agents": "{{names}} 请求获得创建智能体的权限",
+      "admin_ask_webhook": "{{names}} 请你为例行任务设置 {{service}} Webhook",
       "routine_paused_other": "例行工作已暂停",
       "routine_stalled_other": "例行工作正在等待电脑",
       "agent_unreached_other": "一项例行工作无法呼叫智能体",
@@ -912,6 +915,7 @@
       "desktop_taken_female_other": "{{names}} 接管了 {{agent}} 的电脑屏幕",
       "plan_lent_other": "{{names}} 把你的 {{plan}} 套餐连接到了 {{agent}}",
       "plan_lent_female_other": "{{names}} 把你的 {{plan}} 套餐连接到了 {{agent}}",
+      "plan_serves_other": "你的 {{plan}} 现在服务整个 workspace",
       "plan_model_dropped_other": "{{model}} 已从 {{plan}} 下架。{{names}} 暂时使用 {{runs}}",
       "computer_disk_full_other": "一台电脑的磁盘快满了",
       "computer_no_chrome_other": "电脑需要 Google Chrome。请在 google.com/chrome 下载",
@@ -1888,6 +1892,7 @@
       "access_requestFor": "{{names}} 请求为 {{person}} 使用 {{device}}",
       "waiting": "{{names}} 正在等待 {{device}}",
       "waitingFor": "{{names}} 正在为 {{person}} 等待 {{device}}",
+      "tool_request": "{{names}} 请你在你的 {{device}} 上打开{{tool}}",
       "allowOnce": "允许一次",
       "always": "始终允许 {{name}}",
       "no": "不允许",
@@ -2144,7 +2149,8 @@
       "tooBig": "图片太大了，请换一张。"
     },
     "machine": {
-      "toolsHow": "点按已开启的工具可将其关闭。重新开启只能在电脑本机上操作。"
+      "toolsHow": "点按已打开的工具即可关闭。要重新打开：在那台电脑上，或由连接它的人在这里打开。",
+      "toolsHowOwner": "点按工具即可打开或关闭。"
     },
     "roles": {
       "onComputer": "角色的顺序和每个角色的图标需在电脑上更改。",

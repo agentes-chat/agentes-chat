@@ -16,6 +16,7 @@ export function createFakeAuth(
     claim?: AuthResult;
     verification?: AuthResult;
     updateName?: AuthResult;
+    changeEmail?: AuthResult;
     onSignIn?: () => void;
   } = {},
 ) {
@@ -34,6 +35,10 @@ export function createFakeAuth(
     updateName: async (name) => {
       calls.push({ method: "updateName", args: [name] });
       return options.updateName ?? { ok: true };
+    },
+    changeEmail: async (email) => {
+      calls.push({ method: "changeEmail", args: [email] });
+      return options.changeEmail ?? { ok: true };
     },
     sendVerificationEmail: async (email) => {
       calls.push({ method: "sendVerificationEmail", args: [email] });

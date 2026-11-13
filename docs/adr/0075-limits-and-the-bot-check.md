@@ -33,3 +33,13 @@ Every route a signed-out person reaches has a limit per IP, but the key was the 
 - Turnstile's invisible mode: a person Cloudflare doubts would have no way through.
 - Exempting the phone app: every bot would claim to be it.
 - Siteverify in a private Cloud service: it hides about 50 lines and adds a hop that can fail, and the widget's code stays public anyway, in the web and phone apps.
+
+## Addendum (2026-11-13): tokens made on the landing page
+
+The landing page is a site of its own (`LANDING_URL`). Its forms, the waiting list and the partner program's (`/api/partners/waitlist`), both check the action `waitlist`. Point 6 counted a token only when Cloudflare saw it on `PUBLIC_URL`'s host, so every token the landing page made was refused, and with the check on nobody could join from there.
+
+A token made on `LANDING_URL`'s host now counts too, for `waitlist` only. One made there for email lookup, sign-in, sign-up, password reset or the code to ask to join is refused: the landing page is other code on another site, and its tokens never stand for the app's forms. Without `LANDING_URL`, only `PUBLIC_URL`'s host counts, as before, and there is no waiting list. The widget in Cloudflare's dashboard lists both hosts. A host it doesn't list fails on the page with 110200, logged as point 7 says.
+
+The landing page runs the widget as point 9 says for the web: `api.js?render=explicit` once, on a field's first focus, Managed with `appearance: interaction-only`, the token in `x-captcha-response` (its CORS allows that header), a reset after every call, one more try on `human_check` and never on `human_check_blocked`, and `unavailable`, with Turnstile's error code, when no token comes within 30 s.
+
+Not chosen: one list of hosts for every action. A token made on the landing page would then count for a sign-in too.

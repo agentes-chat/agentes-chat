@@ -1779,6 +1779,76 @@
       "when": 1794685300000,
       "tag": "0255_destructive_hint_suggests",
       "breakpoints": true
+    },
+    {
+      "idx": 256,
+      "version": "7",
+      "when": 1794695300000,
+      "tag": "0256_machine_holds",
+      "breakpoints": true
+    },
+    {
+      "idx": 257,
+      "version": "7",
+      "when": 1794695400000,
+      "tag": "0257_widget_creator_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 258,
+      "version": "7",
+      "when": 1794705400000,
+      "tag": "0258_picture_size",
+      "breakpoints": true
+    },
+    {
+      "idx": 259,
+      "version": "7",
+      "when": 1794715400000,
+      "tag": "0259_approval_superseded_by",
+      "breakpoints": true
+    },
+    {
+      "idx": 260,
+      "version": "7",
+      "when": 1794725400000,
+      "tag": "0260_plans_serve_everyone",
+      "breakpoints": true
+    },
+    {
+      "idx": 261,
+      "version": "7",
+      "when": 1794735400000,
+      "tag": "0261_machine_spill",
+      "breakpoints": true
+    },
+    {
+      "idx": 262,
+      "version": "7",
+      "when": 1794745400000,
+      "tag": "0262_agent_co_author",
+      "breakpoints": true
+    },
+    {
+      "idx": 263,
+      "version": "7",
+      "when": 1794745500000,
+      "tag": "0263_right_hand_seats",
+      "breakpoints": true
+    },
+    {
+      "idx": 264,
+      "version": "7",
+      "when": 1794745600000,
+      "tag": "0264_partner_waitlist",
+      "breakpoints": true
+    },
+    {
+      "idx": 265,
+      "version": "7",
+      "when": 1794755500000,
+      "tag": "0265_right_hand_proactive",
+      "breakpoints": true
     }
   ]
 }

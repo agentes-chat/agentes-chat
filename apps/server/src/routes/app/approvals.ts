@@ -78,6 +78,9 @@ export const Approval = z
       description: 'Decided by someone covering this person (ADR 0139): "Aprovado por Bruno, cobrindo Ana".',
     }),
     decidedAt: z.string().nullable(),
+    supersededById: z.string().nullable().openapi({
+      description: "Canceled because the agent asked for the same action again in a later turn: that newer request.",
+    }),
     reason: z.string().nullable(),
     canDecide: z.boolean().openapi({ description: "You are the agent's owner or an admin, and it is pending." }),
     ownerUserId: z.string().nullable().openapi({ description: "The agent's owner (they and admins may decide)." }),
@@ -132,6 +135,10 @@ export const Approval = z
         description:
           "Asked with `request_approval` (ADR 0126): who decides instead of the agent's owner and admins. Null: any other approval.",
       }),
+    routine: z.boolean().openapi({
+      description:
+        "Still waiting, and plain enough to approve along with others in one tap: a connected app's named action that is no merge, deploy, send, delete or payment and runs nothing its input says. The server alone decides it (`…/approvals/decide` with `only`).",
+    }),
   })
   .openapi("Approval");
 
@@ -263,6 +270,10 @@ export function approvalRoutes(deps: AppDeps) {
             decision: z.enum(["approve", "refuse"]),
             reason: z.string().max(1000).optional(),
             via: Via,
+            only: z.literal("routine").optional().openapi({
+              description:
+                "Decide only the ones the server calls `routine` among these ids. Every other stays waiting and comes back in `skipped`.",
+            }),
           }),
         ),
       },
@@ -270,9 +281,10 @@ export function approvalRoutes(deps: AppDeps) {
         200: json(
           z.object({
             approvals: z.array(Approval),
-            skipped: z
-              .array(z.uuid())
-              .openapi({ description: "Not decided: already decided, not found, or not yours to decide." }),
+            skipped: z.array(z.uuid()).openapi({
+              description:
+                "Not decided: already decided, not found, not yours to decide, or not `routine` with `only`.",
+            }),
           }),
         ),
         ...errors,

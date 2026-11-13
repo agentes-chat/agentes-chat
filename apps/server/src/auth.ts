@@ -152,6 +152,9 @@ export function createAuth(deps: {
     }),
     user: {
       additionalFields: { locale: { type: "string", required: false, input: false } },
+      // The same account under a new address (Sua conta › Perfil): a link to the new one confirms it; a server that
+      // sends no e-mail can't, so the address changes at once there.
+      changeEmail: { enabled: true, updateEmailWithoutVerification: !emailEnabled },
     },
     session: {
       additionalFields: { activeOrganizationId: { type: "string", required: false, input: false } },

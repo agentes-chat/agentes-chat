@@ -9,7 +9,7 @@ import { connectorKeyOf } from "../connector-usage";
 import { cutText } from "../format";
 import { type GitHubAppAccess, githubCallAuth, githubListingHeaders } from "../git/github-call";
 import { githubItemOfCall, recordGitHubItem } from "../git/github-events";
-import { creditedMessage, runCoAuthor, signatureLine, signedBody } from "../git/signature";
+import { creditedMessage, runCoAuthors, signatureLine, signedBody } from "../git/signature";
 import type { Judge } from "../judge";
 import { assertPublicHttpsUrl, outboundFetch, type ResolveHost } from "../net-guard";
 import { replyThreadOf } from "../runs";
@@ -305,7 +305,8 @@ export function createConnectorToolSource(
 
   /**
    * What the agent writes to GitHub, signed (ADR 0156): a body ends with its line naming the agent and the person it
-   * works for, a commit message credits that person. The approval card showed the agent's own words.
+   * works for, a commit message with the agent's own `Co-authored-by` and that person's. The approval card showed the
+   * agent's own words.
    */
   async function signed(
     input: Record<string, unknown>,
@@ -320,8 +321,8 @@ export function createConnectorToolSource(
       return { ...input, body: signedBody(typeof given === "string" ? given : "", line) };
     }
     if (typeof given !== "string") return input;
-    const trailer = await runCoAuthor({ db: at.db, http: github, token: at.token }, at);
-    return trailer ? { ...input, message: creditedMessage(given, trailer) } : input;
+    const lines = await runCoAuthors({ db: at.db, http: github, token: at.token }, at);
+    return lines.length > 0 ? { ...input, [sign.field]: creditedMessage(given, ...lines) } : input;
   }
 
   /** Which of a connection's tools are watched for changes (ADR 0117): not Composio's (pinned by toolkit version), not ours. */

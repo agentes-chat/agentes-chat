@@ -346,7 +346,9 @@ export function createFollowUpToolSource(deps: { pubsub?: PubSub }): ToolSource 
           return refused("Say when: `minutes` from now, or `at` as an ISO 8601 time with its offset.");
         if (due < now + 30_000) return refused("That time has passed: pick one at least a minute ahead.");
         if (due > now + FOLLOW_UP_LIMITS.maxMinutes * 60_000)
-          return refused("At most 24 hours ahead. For later or recurring checks, ask the person for a routine.");
+          return refused(
+            "At most 24 hours ahead. For later, schedule_reminder: a plain reminder to the person, or with ask_agent when they asked you to do something then. For recurring checks, a routine.",
+          );
         const note = str(input.note).trim();
         const about = str(input.about).trim();
         const at = new Date(due).toISOString();

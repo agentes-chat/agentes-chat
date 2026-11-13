@@ -501,7 +501,7 @@ describe("composer", () => {
         label="Mensagem para Theo"
         sendLabel="Enviar"
         sendText="Enviar"
-        pills={<span className="ac-composer__agent">Theo</span>}
+        pills={<span className="ac-composer__pill">Theo</span>}
         commands={{
           listLabel: "Comandos",
           list: [

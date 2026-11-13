@@ -450,6 +450,7 @@ export interface AskAnswer {
 export function AskCard({
   id,
   kind,
+  headless = false,
   kindNote,
   agentId,
   waitsFor,
@@ -464,6 +465,8 @@ export function AskCard({
 }: {
   id: string;
   kind: AskKind;
+  /** No kind line over it: its words already say what happened (an applied invite card's "Convites enviados"). */
+  headless?: boolean;
   /** Said after the kind on the top line ("sai da empresa" for a request that leaves the workspace). */
   kindNote?: string | undefined;
   agentId: string;
@@ -554,17 +557,19 @@ export function AskCard({
       >
         <View style={styles.clip}>
           <Sky color={sky} depth={0.55} fade={0.15} surface="raised" style={styles.sky} />
-          <View style={styles.head}>
-            <Icon name={ASK_ICON[kind]} size={13} color={c.muted} />
-            <Text variant="footnote" tone="muted" numberOfLines={1} style={[styles.medium, styles.grow]}>
-              {kindNote ? `${kindWords} · ${kindNote}` : kindWords}
-            </Text>
-            {waitsFor && waitsFor !== "you" && !ended ? (
-              <Text variant="footnote" tone="muted" numberOfLines={1} style={styles.waits}>
-                {waitsFor}
+          {headless ? null : (
+            <View style={styles.head}>
+              <Icon name={ASK_ICON[kind]} size={13} color={c.muted} />
+              <Text variant="footnote" tone="muted" numberOfLines={1} style={[styles.medium, styles.grow]}>
+                {kindNote ? `${kindWords} · ${kindNote}` : kindWords}
               </Text>
-            ) : null}
-          </View>
+              {waitsFor && waitsFor !== "you" && !ended ? (
+                <Text variant="footnote" tone="muted" numberOfLines={1} style={styles.waits}>
+                  {waitsFor}
+                </Text>
+              ) : null}
+            </View>
+          )}
           {lead ? (
             <Text variant={well ? "body" : "title"} tone="ink" style={well ? styles.lead : undefined}>
               <Spans inline={parseInline(lead)} />

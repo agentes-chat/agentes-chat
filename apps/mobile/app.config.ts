@@ -79,6 +79,8 @@ export const APP_LINK_PATTERNS = [
   "/org/*/settings/computers/*",
   "/org/*/settings/devices/*",
 ];
+/** The app icons (ADR 0179), one folder each: packages/ui/scripts/app-icons.mjs writes them. */
+const ICONS = "./assets/app-icons";
 // Our EAS project on expo.dev (not a secret: it only names the project).
 const projectId = process.env.EAS_PROJECT_ID ?? "8514d5b3-87e0-4980-89a0-4c692f6f4702";
 // expo-image-picker and expo-camera both set iOS's camera text: one text for both uses.
@@ -102,12 +104,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: "0.1.0",
   // Upright everywhere (the plugin below); only the agent's screen, in control, lies down (`useSideways`).
   orientation: "default",
-  icon: "./assets/images/icon.png",
+  // The icon the app ships with (ADR 0179); the others a person may pick are added by ./plugins/with-app-icons.
+  // All of them come from packages/ui/scripts/app-icons.mjs.
+  icon: `${ICONS}/night/ios.png`,
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: `chat.agentes.app${suffix}`,
     ...(process.env.APPLE_TEAM_ID ? { appleTeamId: process.env.APPLE_TEAM_ID } : {}),
     ...(process.env.IOS_BUILD_NUMBER ? { buildNumber: process.env.IOS_BUILD_NUMBER } : {}),
+    // Light, dark and tinted (iOS 18).
+    icon: {
+      light: `${ICONS}/night/ios.png`,
+      dark: `${ICONS}/night/ios-dark.png`,
+      tinted: `${ICONS}/night/ios-tinted.png`,
+    },
     supportsTablet: false,
     usesAppleSignIn: true,
     associatedDomains: [`applinks:${linkHost}`],
@@ -119,13 +129,25 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // brings its own Firebase project.
     ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
     ...(process.env.ANDROID_VERSION_CODE ? { versionCode: Number(process.env.ANDROID_VERSION_CODE) } : {}),
-    // Two layers (the night sky, the tilted agent), so the launcher's mask and motion cut them like the iOS icon.
+    // Two layers (the night sky, the agent), so the launcher's mask and motion cut them like the iOS icon, and the
+    // agent alone in one color for Android 13's themed icons.
     adaptiveIcon: {
-      foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundImage: "./assets/images/adaptive-icon-background.png",
-      backgroundColor: "#02060f",
+      foregroundImage: `${ICONS}/night/android-foreground.png`,
+      backgroundImage: `${ICONS}/night/android-background.png`,
+      monochromeImage: `${ICONS}/night/android-monochrome.png`,
+      backgroundColor: "#03101f",
     },
     predictiveBackGestureEnabled: false,
+    // Never read the phone's photos or play in the background: the image picker is Android's photo picker, Salvar em
+    // Fotos only adds (MediaStore needs no permission for it) and voice messages stop when the app leaves. Google
+    // Play asks a justification for the media reads and a video for a media-playback foreground service, so keep
+    // them out even if a library's manifest brings them.
+    blockedPermissions: [
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+      "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+    ],
     intentFilters: [
       {
         action: "VIEW",
@@ -191,6 +213,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     // Android release builds signed with the upload key from the environment (the Android build workflow).
     "./plugins/with-android-release-signing",
+    // The app icons a person may pick (ADR 0179): iOS's alternate icons and Android's launcher aliases.
+    "./plugins/with-app-icons",
     [
       "expo-image-picker",
       {
@@ -206,7 +230,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       // Mensagens de voz (ADR 0100): the app records only while the person holds or locks the button.
       "expo-audio",
-      { microphonePermission: "To record voice messages in your conversations.", recordAudioAndroid: true },
+      // No background playback (the plugin's default is on): it would add a media-playback foreground service.
+      {
+        microphonePermission: "To record voice messages in your conversations.",
+        recordAudioAndroid: true,
+        enableBackgroundPlayback: false,
+      },
     ],
     [
       // "Compartilhar com…": the app in the system's share sheet (an iOS share extension and Android's send intents),
@@ -228,12 +257,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
-      // Salvar em Fotos: add-only access (the read text matches expo-image-picker's).
+      // Salvar em Fotos: add-only access (the read text matches expo-image-picker's). No granular reads on Android:
+      // saveToPhotos asks write-only, which needs none from Android 13 on.
       "expo-media-library",
       {
         photosPermission: "To send pictures in your conversations.",
         savePhotosPermission: "To save pictures from your conversations to Photos.",
-        granularPermissions: ["photo"],
+        granularPermissions: [],
       },
     ],
   ],

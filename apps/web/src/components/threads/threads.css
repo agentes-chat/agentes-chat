@@ -239,6 +239,13 @@ html:not([data-pointer]) .pins-pop__item:has(> .thread-pop__row:focus-visible) {
   margin-inline: 6px;
   color: var(--faint);
 }
+/* Two agents' conversation in its dialog: the list is the dialog's scroll area between its head and its read-only
+   foot, as tall as its messages up to the dialog's own cap. */
+.consult-dialog__list {
+  flex: 0 1 auto;
+  min-height: 120px;
+  padding-top: 4px;
+}
 /* The answer on its own, when the consulted agent's words in the DM are left out: under the messages, at their text. */
 .consult-answer {
   margin: 4px 12px 8px var(--thread-indent, calc(16px + var(--name-face) + var(--space-3)));

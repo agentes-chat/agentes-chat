@@ -243,6 +243,28 @@ describe("a routine's own job (routines.own_actions)", () => {
     expect(await f.db.select().from(schema.approvals)).toEqual([]);
   });
 
+  test("the Vault keys its commands use are its own too (`keys`), kept apart from its actions", async () => {
+    f = await setup();
+    const { gateway } = await world(f);
+    const ctx = await personRun(f);
+    const out = answered(
+      await invoke(gateway, ctx, "create_routine", {
+        prompt: "Baixa as vendas de ontem da Stripe e manda no Slack.",
+        schedule: "toda segunda às 9h",
+        own_actions: ["SLACK_SEND_MESSAGE"],
+        keys: ["STRIPE_KEY"],
+      }),
+    );
+    const id = (out.data?.routine as { id: string } | undefined)?.id ?? "";
+    expect(out.content).toContain("Its commands may use these Vault keys: STRIPE_KEY");
+    expect((await routineRow(id))?.ownActions).toEqual(["SLACK_SEND_MESSAGE", "vault:STRIPE_KEY"]);
+    // Its actions changed alone keep its keys; its keys changed alone keep its actions.
+    answered(await invoke(gateway, ctx, "update_routine", { id, own_actions: [] }));
+    expect((await routineRow(id))?.ownActions).toEqual(["vault:STRIPE_KEY"]);
+    answered(await invoke(gateway, ctx, "update_routine", { id, own_actions: ["SLACK_SEND_MESSAGE"], keys: [] }));
+    expect((await routineRow(id))?.ownActions).toEqual(["SLACK_SEND_MESSAGE"]);
+  });
+
   test("an action outside its job still asks, alone or beside one of its own", async () => {
     f = await setup();
     const { mcp, gateway } = await world(f);

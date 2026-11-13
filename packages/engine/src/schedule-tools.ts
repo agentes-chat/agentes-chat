@@ -14,6 +14,7 @@ import { watchesFor } from "./mail/watches";
 import { isRightHand } from "./right-hand";
 import { ROUTINE_REPORT, routineReportOf } from "./routine-brief";
 import { HOOK_METHODS, routineHookKeys } from "./routine-hooks";
+import { vaultAction, vaultKeyOf } from "./routine-keys";
 import {
   cancelReminder,
   createReminder,
@@ -518,6 +519,26 @@ const OWN_ACTIONS_SCHEMA = {
     "Connected-app actions the routine's job needs, which every run then does without asking a person: the exact tool names you call (for Composio's multi-execute tool, each action's slug, like SLACK_SEND_MESSAGE). Only what the person asked the routine to do (the Slack post, the email they want sent). Any other write to a connected app follows the agent's approvals, and merge, deploy, rollback and the like can't be listed. Only the agent's owner or someone who approves its actions can set this. On update it replaces the list; [] makes every action ask again.",
 };
 
+/** `keys` of `create_routine` and `update_routine`: Vault keys its runs' commands may use (`vault:NAME` own actions). */
+const KEYS_SCHEMA = {
+  type: "array",
+  maxItems: 10,
+  items: { type: "string", minLength: 1, maxLength: 64 },
+  description:
+    "Vault keys the routine's commands use (`run_code`'s `keys`), by variable name as vault_list shows them: only the ones its job needs and the person asked for. Any other key asks a person first. Only the agent's owner or someone who approves its actions can set this. On update it replaces the list; [] makes every key ask again.",
+};
+
+/** A routine's own actions as sent: connected-app actions (`own_actions`) and Vault keys (`keys`, as `vault:NAME`). */
+function routineOwnActions(input: Record<string, unknown>, current: readonly string[] = []): string[] {
+  const apps = Array.isArray(input.own_actions)
+    ? stringsOf(input.own_actions).filter((a) => !vaultKeyOf(a))
+    : current.filter((a) => !vaultKeyOf(a));
+  const keys = Array.isArray(input.keys)
+    ? stringsOf(input.keys).map((k) => vaultAction(k.trim()))
+    : current.filter((a) => vaultKeyOf(a));
+  return [...apps, ...keys];
+}
+
 /** What the routine does without asking, for the agent to tell the person: by its agent's approvals level (ADR 0173). */
 async function ownActionsText(ctx: ToolContext, r: RoutineView) {
   const level = await approvalsLevelOf(ctx.db, ctx.orgId, r.agentId);
@@ -525,9 +546,15 @@ async function ownActionsText(ctx: ToolContext, r: RoutineView) {
     return " Its agent is set to never ask: every run does what its instructions say, in connected apps too, with no approval. Tell the person exactly this.";
   }
   if (level === "always") return " Its agent is set to always ask: every change a run makes asks a person first.";
-  return r.ownActions.length > 0
-    ? ` On its own, without asking, every run may: ${r.ownActions.join(", ")}. Any other action in a connected app asks a person first, unless a person approved its kind for good. Tell the person exactly this.`
-    : " Every action in a connected app asks a person first.";
+  const apps = r.ownActions.filter((a) => !vaultKeyOf(a));
+  const keys = r.ownActions.flatMap((a) => vaultKeyOf(a) ?? []);
+  const keysText =
+    keys.length > 0
+      ? ` Its commands may use these Vault keys: ${keys.join(", ")}; any other key asks a person first.`
+      : "";
+  return apps.length > 0
+    ? ` On its own, without asking, every run may: ${apps.join(", ")}. Any other action in a connected app asks a person first, unless a person approved its kind for good.${keysText} Tell the person exactly this.`
+    : ` Every action in a connected app asks a person first.${keysText}`;
 }
 
 /**
@@ -634,6 +661,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
               "The agent that does it (its handle, e.g. @theo) when it isn't you; it reports in a direct message with the person when it isn't in this conversation and no `channel` is set",
           },
           own_actions: OWN_ACTIONS_SCHEMA,
+          keys: KEYS_SCHEMA,
         },
         required: ["prompt"],
         additionalProperties: false,
@@ -683,7 +711,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
                 : { type: "conversation", ...conv, reminder: false },
             trigger,
             report: routineReportOf(input.report),
-            ownActions: stringsOf(input.own_actions),
+            ownActions: routineOwnActions(input),
           }).catch((error) => {
             if (performer.handle && notManager(error)) return notTheirs(performer.handle, error);
             throw error;
@@ -827,6 +855,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
           title: { type: "string", minLength: 1, maxLength: 120 },
           report: REPORT_SCHEMA,
           own_actions: OWN_ACTIONS_SCHEMA,
+          keys: KEYS_SCHEMA,
           active: { type: "boolean" },
           agent: { type: "string", maxLength: 40, description: "Hand it to this agent (its handle)" },
         },
@@ -865,7 +894,9 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
             ...(trigger ? { trigger } : {}),
             ...(input.report !== undefined ? { report: routineReportOf(input.report) } : {}),
             ...(typeof input.active === "boolean" ? { active: input.active } : {}),
-            ...(Array.isArray(input.own_actions) ? { ownActions: stringsOf(input.own_actions) } : {}),
+            ...(Array.isArray(input.own_actions) || Array.isArray(input.keys)
+              ? { ownActions: routineOwnActions(input, own.row.ownActions) }
+              : {}),
           }).catch(async (error) => {
             if (!notManager(error)) throw error;
             const [other] =
@@ -926,7 +957,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
           }
           return {
             content: `Updated routine ${routine.id} ${await summaryOf(ctx, routine)}. Tell the person what changed.${
-              Array.isArray(input.own_actions) ? await ownActionsText(ctx, routine) : ""
+              Array.isArray(input.own_actions) || Array.isArray(input.keys) ? await ownActionsText(ctx, routine) : ""
             }${needsText(routine)}${trigger?.type === "webhook" && receipt ? WEBHOOK_HINT : ""}`,
             data: { routine: { id: routine.id } },
           };

@@ -49,7 +49,7 @@ export interface ConsultGroups {
   nearEnd: ReadonlySet<string>;
   /** Runs at work: their questions wait for their reply (a message they already posted leaves them to it). */
   live: ReadonlySet<string>;
-  /** The question open in the panel beside the conversation: its line shows pressed. */
+  /** The question open in its dialog over the conversation: its line shows pressed. */
   open: string | null;
   /** By the consulted agent's run: the question it answers, so its cards here say whom it helps. */
   helping: ReadonlyMap<string, RunConsultation>;
@@ -66,7 +66,7 @@ const EMPTY: ConsultGroups = {
 };
 const ConsultGroupsContext = createContext<ConsultGroups>(EMPTY);
 export const ConsultGroupsProvider = ConsultGroupsContext.Provider;
-/** The question open in the panel beside the conversation, if any (a card or a line that opens it shows pressed). */
+/** The question open in its dialog over the conversation, if any (a card or a line that opens it shows pressed). */
 export const useOpenConsultation = () => useContext(ConsultGroupsContext).open;
 
 const RELOAD_ON = new Set(["agent.consulting", "agent.consulted", "agent.consultation"]);
@@ -112,7 +112,7 @@ export function useConsultGroups(
   }, [list.data, rows, live, open, helping]);
 }
 
-/** A question's state in words, in the panel and in place ("A Iris espera uma aprovação"). */
+/** A question's state in words, in the dialog and in place ("A Iris espera uma aprovação"). */
 export const consultLineLabel = (
   t: TFunction,
   state: ConsultLineState,
@@ -160,15 +160,16 @@ export function useConsultById(channelId: string, id: string | undefined): RunCo
  * The slim row right before a reply whose agent asked other agents first (`ask_agent`) or handed them work
  * (`tell_agent`): the asker's face and name, ⇄, the consulted agent's (several fold into stacked faces, "Atlas e
  * mais 2"), then how long it took, or while it runs "perguntando 42 s", or "não respondeu". Never what they said: in a
- * channel or a DM a click opens the two agents' conversation in the panel; in a thread view and inside that panel
- * (no panel to open) the question and the answer open under the row. The same row stands for an answer whose reply
- * is farther up or not here, and for a hand-off by direct message on a reach line.
+ * conversation (a channel, a DM, a thread, a task's) a click opens the two agents' conversation in a dialog; inside
+ * that dialog, and for an old question with no id of its own, the question and the answer open under the row. The
+ * same row stands for an answer whose reply is farther up or not here, and for a hand-off by direct message on a
+ * reach line.
  */
 export function ConsultPairRow({ askerId, items }: { askerId: string; items: readonly ConsultPairItem[] }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
-  const panel = useChannelActions()?.openConsultation;
+  const dialog = useChannelActions()?.openConsultation;
   const openId = useOpenConsultation();
   const [open, setOpen] = useState(false);
   const live = items.some((c) => c.status === "open");
@@ -176,7 +177,7 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   const pair = consultPair(items, now, askerId);
   if (!pair) return null;
   // An old reply's question with no id of its own has no conversation to open: it opens in place.
-  const openConsultation = openableConsultation(pair.opens) ? panel : undefined;
+  const openConsultation = openableConsultation(pair.opens) ? dialog : undefined;
   const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("channel.unknownAgent");
   const from = nameOf(askerId);
   const names = pair.faces.map((f) => nameOf(f.agentId));
@@ -240,7 +241,7 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   );
 }
 
-/** One question opened under its row where no panel opens: what was asked or handed, and the answer or its state. */
+/** One question opened under its row where no dialog opens: what was asked or handed, and the answer or its state. */
 function ConsultInPlace({
   consultation: c,
   askerId,

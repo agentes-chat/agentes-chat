@@ -9,6 +9,13 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
       "agentes.chat uygulaması, agentes.chat'in kendisini de bir Mac, PC ya da Linux bilgisayarda, sizin ya da küçük bir ekip için çalıştırabilir.",
     sections: [
       {
+        id: "download",
+        heading: "Uygulamayı indirin",
+        blocks: [
+          "Mac, PC veya Linux bilgisayarınız için [agentes.chat uygulamasını indirin](/download) ve açın. **Kendi sunucunuzda** seçeneğini seçin, **Kendi sunucumla devam et**'e ve ardından **agentes.chat'i bu bilgisayar üzerinde çalıştır**'a basın.",
+        ],
+      },
+      {
         id: "how",
         heading: "Nasıl çalışır",
         blocks: [
@@ -177,6 +184,15 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
           "Aynı uygulamada her çalışma alanında oturum açın ve her biri için **İzin ver** düğmesine basın. agentes.chat Cloud'daki ve kendi sunucularınızdaki çalışma alanları aynı bilgisayarı paylaşabilir (uygulama 0.6.1 ve sonrası). Her birinin orada kendi ajanları ve klasörleri olur ve birinin bağlantısını kesmek diğerlerini etkilemez.",
           "Uygulamanın bu bilgisayarda çalıştırdığı bir sunucu zaten bağlıdır ve hiçbir şey gerektirmez. Bu bilgisayarı başka bir yerdeki bir çalışma alanına da açmak için [Başka bir çalışma alanına da açın](/help/run-on-your-computer#another-workspace) bölümüne bakın.",
           "Uygulamayı bir dizüstünde yalnızca çalışma alanınıza açılan bir pencere olarak mı kullanıyorsunuz? Ajanların dizüstünü kullanması için izin istediğinde **Şimdi değil** derseniz uygulama sade bir pencere olarak kalır.",
+          "Terminal satırıyla bağlanan bir sunucu tek bir çalışma alanı için çalışır. Onu başka bir çalışma alanından bağlamak sunucuyu o alana taşır ve ilki artık ona ulaşamaz. Bir bilgisayarda birden çok çalışma alanı için uygulamayı kullanın.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Ajanlar sırada beklediğinde",
+        blocks: [
+          "Bir ajanın her işi bilgisayarın belleğini kullanır. Boş bellek azaldığında sıradaki iş, bir başkası bitene kadar sırada bekler. Önce insanlar gelir. CPU sayısı bunu değiştirmez.",
+          "4 GB belleği olan bir bilgisayar aynı anda iki ya da üç iş çalıştırır, 8 GB olan yaklaşık dokuz. Bir Mac ya da PC en fazla sekiz iş çalıştırır. Ajanların açık bıraktığı tarayıcılar ve masaüstleri de bellek kullanır. Daha kısa bir sıra için daha fazla belleği olan bir bilgisayar kullanın ya da bir tane daha bağlayıp ajanları aralarında paylaştırın. Bir bilgisayarı paylaşan çalışma alanları belleğini de paylaşır.",
         ],
       },
       {

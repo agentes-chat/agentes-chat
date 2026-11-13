@@ -32,6 +32,7 @@ import {
   hiddenRepoOf,
   hiddenRepoText,
   pickSkills,
+  relightsSkillUpdate,
   SKILL_FILES_SHOWN,
   SKILL_UPDATE_TOAST,
   type SkillPendingView,
@@ -1024,7 +1025,23 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
           </Button>
         </p>
       )}
-      {s.updateError && <Alert>{skillUpdateErrorText(t, s.updateError)}</Alert>}
+      {s.updateError &&
+        (relightsSkillUpdate(s.updateError) ? (
+          <div className="skill-line">
+            <Alert>{skillUpdateErrorText(t, s.updateError)}</Alert>
+            <Button
+              size="sm"
+              icon="refresh"
+              disabled={action.isPending}
+              loading={action.isPending && action.variables?.type === "update"}
+              onClick={() => action.mutate({ type: "update", id: s.id, patch: { autoUpdate: true } })}
+            >
+              {t("skills.updateFailed.relight")}
+            </Button>
+          </div>
+        ) : (
+          <Alert>{skillUpdateErrorText(t, s.updateError)}</Alert>
+        ))}
       {words.last && (
         <p className="small muted skill-line">
           <span>{words.last.line}</span>

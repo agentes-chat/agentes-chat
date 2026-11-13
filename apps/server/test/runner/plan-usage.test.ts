@@ -12,6 +12,8 @@ import {
 import { AccountManager, type AccountManagerOptions } from "../../runner/accounts";
 import {
   CLAUDE_PROBE_ARGS,
+  CLAUDE_TOKEN_CHECK_ARGS,
+  checkClaudeToken,
   claudeUsage,
   codexUsage,
   fetchPlanKeyUsage,
@@ -393,6 +395,68 @@ test.if(posix)(
     // Not installed: null, at once.
     expect(
       await probeClaudeUsage({ command: [path.join(home, "no-such-cli")], cwd: home, env: process.env }),
+    ).toBeNull();
+  },
+);
+
+test.if(posix)(
+  "a setup token's check: one turn on the cheapest model, the token on descriptor 3, the reading from its rate limit event",
+  async () => {
+    const { home, log } = probeSetup();
+    const token = "sk-ant-oat01-fake-token-for-tests-only";
+    const env = { ...process.env, CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR: "3" };
+    const prev: PlanUsage = {
+      windows: [{ kind: "seven_day", usedPercent: 100, resetsAt: "2030-01-05T00:00:00.000Z" }],
+      limited: true,
+      source: "turn",
+      at: "2030-01-01T00:00:00.000Z",
+    };
+    try {
+      process.env.FAKE_CLAUDE_RATE_INFO = JSON.stringify({
+        status: "allowed",
+        unifiedWindows: {
+          seven_day: { utilization: 0.1, resetsAt: RESET },
+          five_hour: { utilization: 0, resetsAt: RESET },
+        },
+      });
+      const room = await checkClaudeToken(
+        {
+          command: [process.execPath, FAKE_CLAUDE],
+          cwd: home,
+          env: { ...env, ...{ FAKE_CLAUDE_RATE_INFO: process.env.FAKE_CLAUDE_RATE_INFO } },
+          fd3: token,
+        },
+        prev,
+      );
+      expect(room?.limited).toBeUndefined();
+      expect(room?.windows.find((w) => w.kind === "seven_day")?.usedPercent).toBe(10);
+      const [run] = logged(log);
+      expect(run?.args).toEqual(CLAUDE_TOKEN_CHECK_ARGS);
+      expect(run?.args).toEqual(expect.arrayContaining(["--model", "haiku", "--tools", ""]));
+      expect(run?.oauthToken).toBe(token);
+      expect(run?.oauthEnv).toBeNull();
+      expect(JSON.stringify(run?.args)).not.toContain(token);
+
+      const refused = (before: PlanUsage) =>
+        checkClaudeToken(
+          {
+            command: [process.execPath, FAKE_CLAUDE],
+            cwd: home,
+            env: { ...env, FAKE_CLAUDE_RATE_INFO: JSON.stringify({ status: "rejected", resetsAt: RESET }) },
+            fd3: token,
+          },
+          before,
+        );
+      // Still full, as last read: nothing new to say.
+      expect(await refused(prev)).toBeNull();
+      // Read with room before, refused now: at the limit.
+      expect((await refused({ ...prev, limited: undefined }))?.limited).toBe(true);
+    } finally {
+      delete process.env.FAKE_CLAUDE_RATE_INFO;
+    }
+    // Nothing said (no rate limit event): no reading.
+    expect(
+      await checkClaudeToken({ command: [process.execPath, FAKE_CLAUDE], cwd: home, env, fd3: token }, prev),
     ).toBeNull();
   },
 );

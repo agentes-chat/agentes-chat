@@ -1636,7 +1636,13 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
                 ]
               : p === "expired"
                 ? ["clock", t("approvals.status.expired"), aheadEndLine(t, a) ?? t("approvals.expiredLine")]
-                : ["block", t("approvals.status.canceled"), aheadEndLine(t, a) ?? t("approvals.canceledLine")];
+                : [
+                    "block",
+                    t("approvals.status.canceled"),
+                    a.supersededById
+                      ? t("approvals.supersededLine")
+                      : (aheadEndLine(t, a) ?? t("approvals.canceledLine")),
+                  ];
   const action =
     p === "scheduled" && a.canCancel ? (
       <CancelAhead id={a.id} />

@@ -1,8 +1,10 @@
 import { useMachines } from "@agenteschat/client";
-import { allowsInApp, toolOnCommand } from "@agenteschat/client/lib/machines";
+import { firstName } from "@agenteschat/client/lib/format";
+import { allowsInApp, oneClickTerminal, toolOnCommand } from "@agenteschat/client/lib/machines";
 import { Icon, LogoMark } from "@agenteschat/ui";
 import { Trans, useTranslation } from "react-i18next";
-import { CommandBlock } from "@/components/machine-bits";
+import { MachineToolButton, useToolOneClick } from "@/components/devices/ToolOneClick";
+import { CommandBlock, TerminalFallback } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { OpenPrefsButton, useIsThisMac } from "@/components/ThisMac";
 
@@ -30,6 +32,7 @@ export function ToolOffSteps({
   const { org } = useOrg();
   const here = useIsThisMac(org.id, machineId ?? "");
   const row = useMachines(org.id).data?.find((m) => m.id === machineId);
+  const oneClick = useToolOneClick(row);
   const b = { b: <b /> };
   return (
     <>
@@ -38,7 +41,22 @@ export function ToolOffSteps({
           <Icon name="computer" size={16} />
           <span>{t("connectAi.toolOff.where", { computer })}</span>
         </p>
-        {here ? (
+        {row && oneClick && oneClick.kind !== "outdated" ? (
+          // Whoever connected it turns it on from here; anyone else asks them. The app's steps stay for an old app.
+          <>
+            <div className="tool-off__row">
+              <span>
+                <Trans
+                  i18nKey={oneClick.kind === "ask" ? "connectAi.toolOff.oneClickOther" : "connectAi.toolOff.oneClick"}
+                  values={{ program, ...(oneClick.kind === "ask" ? { name: firstName(oneClick.ownerName) } : {}) }}
+                  components={b}
+                />
+              </span>
+              <MachineToolButton machine={row} tool={kind} />
+            </div>
+            <TerminalFallback command={oneClickTerminal(row, oneClick, [kind])} />
+          </>
+        ) : here ? (
           <div className="tool-off__row">
             <span>
               <Trans i18nKey="connectAi.toolOff.here" values={{ program }} components={b} />

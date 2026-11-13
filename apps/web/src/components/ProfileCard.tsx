@@ -27,7 +27,6 @@ import { brainLine, engineOfBrain } from "@agenteschat/client/lib/brain";
 import { errorText } from "@agenteschat/client/lib/errors";
 import {
   clockHour,
-  firstName,
   formatMonthYear,
   formatPercent,
   formatTime,
@@ -64,6 +63,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AudienceChoice, audienceValid } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { ModelPickerButton } from "@/components/ai/ModelPicker";
 import { useOpensComputer } from "@/components/computer/facts";
 import { useOpenComputer } from "@/components/computer/open";
 import { MenuEntries } from "@/components/DesktopMenus";
@@ -577,7 +577,6 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const models = useModels();
   const roles = useRoles(org.id).data?.roles ?? [];
   const channels = useChannels(org.id).data;
   const agentEntries = useAgentMenu();
@@ -587,17 +586,6 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
   const details = seesDetails(agent);
   const g = agentGrammar(agent.name);
   const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name : null;
-  const ai = useAiStatus(org.id).data;
-  const model = apiModelName(
-    t,
-    agent.model,
-    models.data?.models.find((m) => m.id === agent.model)?.label,
-    autoMakerOf(ai, agent.id),
-  );
-  const thinks =
-    agent.brain && agent.brain.kind !== "model"
-      ? brainLine(t, agent.brain, model, { owner: owner ? firstName(owner) : undefined, agents: dir.agents })
-      : null;
   // Its presence from its work and its line (ADR 0084): its own words or what it is doing now, and where.
   const shown = useAgentPresence(agent.id);
   const line = agentLine(t, shown?.line ?? null, i18n.language);
@@ -719,14 +707,7 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
           <>
             <dt>{t("profile.model")}</dt>
             <dd>
-              {thinks ? (
-                <span className="profile-card__brain ac-iconline">
-                  {thinks.mark && <ProviderLogo id={thinks.mark} size="xs" />}
-                  {thinks.text}
-                </span>
-              ) : (
-                shortModel(model)
-              )}
+              <ModelPickerButton agent={agent} size="row" className="profile-card__brain" />
             </dd>
           </>
         )}

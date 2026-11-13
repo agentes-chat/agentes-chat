@@ -26,6 +26,9 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const mark = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { belongsToWorkspace: on }),
   );
+  const spill = useDeviceMutation((api, orgId, input: { own?: boolean; others?: boolean }) =>
+    api.devices.updateComputer(orgId, d.id, { spill: input }),
+  );
   const brought = d.machineKind === "connected";
   const admin = can(org, "configure");
   const wifi = useWifiIphones(
@@ -49,6 +52,31 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   }
                 : {})}
             />
+            {/* Spill-over: its owner turns these on; an admin may only turn them off. */}
+            {brought && d.mayManage && !d.systemMode
+              ? (["own", "others"] as const).map((key) => {
+                  const label = t(key === "own" ? "devices.spillOwn" : "devices.spillOthers");
+                  return (
+                    <GroupedRow
+                      key={key}
+                      label={label}
+                      labelLines={2}
+                      hint={{
+                        name: t("common.about", { label }),
+                        text: t(key === "own" ? "devices.spillOwnHint" : "devices.spillOthersHint"),
+                      }}
+                      toggle={d.spill[key]}
+                      disabled={spill.isPending || (d.ownerUserId !== meId && !d.spill[key])}
+                      onPress={() =>
+                        spill.mutate(
+                          { [key]: !d.spill[key] },
+                          { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) },
+                        )
+                      }
+                    />
+                  );
+                })
+              : null}
             {brought && admin ? (
               <GroupedRow
                 label={t("mobile.devices.page.belongs")}

@@ -9,6 +9,7 @@ import {
   workspacePath,
 } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
+import type { ToolImage } from "@agenteschat/providers";
 import { getAgentCached } from "./agents";
 import { recordAudit } from "./audit";
 import { getContextItems, personMayRead } from "./context/items";
@@ -71,7 +72,9 @@ const { machineTasks } = schema;
  * task's own MCP process). Every answer is the text the executor reads.
  */
 export type McpCallFrame = Extract<RunnerFrame, { type: "mcp.call" }>;
-export type McpOutcome = { ok: true; text: string } | { ok: false; error: { code: string; message: string } };
+export type McpOutcome =
+  | { ok: true; text: string; images?: ToolImage[] }
+  | { ok: false; error: { code: string; message: string } };
 export type McpListFrame = Extract<RunnerFrame, { type: "mcp.list" }>;
 export type McpListOutcome =
   | { ok: true; tools: McpToolInfo[] }
@@ -385,7 +388,9 @@ export async function handleMissionMcpCall(
       name: frame.tool,
       input: frame.args,
     });
-    if (!out.result.isError) return { ok: true, text: out.result.content };
+    if (!out.result.isError) {
+      return { ok: true, text: out.result.content, ...(out.result.images ? { images: out.result.images } : {}) };
+    }
     const code = out.code ?? "tool.failed";
     return refuse((id.taskId && TASK_CODES[code]) || code, out.result.content);
   } catch (error) {

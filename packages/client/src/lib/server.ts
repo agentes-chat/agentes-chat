@@ -202,3 +202,33 @@ export async function checkServer(server: string, fetchFn: FetchLike = fetch, ti
   const own = normalizeServer(here.instance.url ?? "", { allowHttp: isLoopback(server) ? "loopback" : false });
   return own && own !== server ? askInstance(own, fetchFn, timeoutMs) : here;
 }
+
+/** Where a workspace lives, said before its counts: the Cloud, the server the desktop app runs here, or one's own. */
+export type ServerPlace = "cloud" | "here" | "own";
+
+/** The place of a server from `GET /api/instance`'s `cloud` (and, in the desktop app, whether it is the app's own). */
+export const serverPlace = (cloud: boolean, thisComputer = false): ServerPlace =>
+  cloud ? "cloud" : thisComputer ? "here" : "own";
+
+/** Each place's line icon, the same on every surface. */
+export const SERVER_PLACE_ICON = { cloud: "cloud", here: "computer", own: "globe" } as const;
+
+/**
+ * "Onde fica o seu workspace?": what each option's chosen card says, with its line icon. The Cloud's are what it
+ * takes on, one's own server's what it leaves to you: the same axes, so the two read side by side.
+ */
+export const HOSTING_POINTS = {
+  cloud: [
+    ["hosting.cloud.on", "check"],
+    ["hosting.cloud.care", "check"],
+    ["hosting.cloud.ready", "check"],
+  ],
+  own: [
+    ["hosting.own.server", "database"],
+    ["hosting.own.care", "refresh"],
+    ["hosting.own.off", "power"],
+  ],
+} as const;
+
+/** The quiet line under the chosen card's points. */
+export const HOSTING_FOOT = { cloud: "hosting.cloud.price", own: "hosting.own.license" } as const;

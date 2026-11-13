@@ -89,7 +89,7 @@ export function summarizeGrants(rows: { scope: string; connectionLabel: string |
 export function describeCapabilities(
   tools: Pick<ToolDefinition, "name" | "description" | "scope" | "sensitive" | "connectionId" | "connectorLabel">[],
   pending: { label: string; reason: string }[] = [],
-  /** The right hand (ADR 0137), which never has a computer: no line sends it to a browser, a shell or a clone. */
+  /** The right hand (ADR 0137) with no computer at all (ADR 0175): no line sends it to a browser, a shell or a clone. */
   noComputer = false,
 ) {
   const lines = ["# What you can do"];
@@ -190,6 +190,7 @@ export function describeCapabilities(
         "- You can schedule reminders and routines: `schedule_reminder` (once, in the time zone of whoever asked) and `create_routine` (recurring; with `channel` it posts straight to that channel, not to this conversation). To change a routine that already exists (instructions, time, where it answers), use `list_routines` and `update_routine`, also when the person describes the change as how you handle something a routine does ('quando entrar um erro…'); never say it can't be changed. Confirm the time with the words the tool returns; if the time is ambiguous, ask first with `ask_user`. A routine works while nobody watches, with everything you can use, and speaks only when there is news (`report` when_new); set `report` always when people want a report every time.",
       );
     }
+    if (loaded.has("keep_running")) lines.push(KEEP_RUNNING_GUIDANCE);
     if (loaded.has("schedule_action")) {
       lines.push(
         "- A connected app's action for later (a post at a set time, a message to send tomorrow): prepare it with `schedule_action`, with its exact tool and full content. The person approves that exact action now and it goes out by itself at its time; a reminder or routine would only ask them then. To change its content or time, call it again with `replaces`. Merge, deploy and rollback can't be approved ahead.",
@@ -259,6 +260,13 @@ export function describeCapabilities(
 export const GITHUB_GUIDANCE =
   "- GitHub: use the GitHub connector's tools and git through `git_clone`; read-only gh (gh pr view, gh run view…) runs without asking only where gh is already signed in. Never sign the person in to gh (gh auth login) nor ask for a GitHub token. When the connector lacks something, say what, and that an admin can reconnect GitHub in Connectors to add it.";
 
+/**
+ * ADR 0176: what an agent leaves running is declared, so people see what runs for them. True in every workspace,
+ * whatever its computer does while nobody uses it: never a word about computers going to sleep or turning off.
+ */
+export const KEEP_RUNNING_GUIDANCE =
+  "- A program you leave running that must keep working while nobody uses the computer (a bot, a tunnel, a server called from outside, a job on its own timer, a page in your browser that must stay live): call `keep_running` with its pid (or `browser` with `until`), so it is kept running and people see what runs for them. Jobs that end go in `start_task`, schedules in a routine; end a hold (`end`) once it's no longer needed.";
+
 /** GitHub for an agent with no computer to clone onto: the connector's tools alone. */
 export const GITHUB_TOOLS_GUIDANCE =
   "- GitHub: use the GitHub connector's tools. Never ask for a GitHub token. When the connector lacks something, say what, and that an admin can reconnect GitHub in Connectors to add it.";
@@ -282,9 +290,13 @@ export const CAPABILITIES_LIMIT =
 const COMPUTER_CAPABILITIES_LIMIT =
   "Beyond this list and your computer's own tools, you can't. Never say you did or can do, offer or promise something that isn't on this list or among those tools, and don't deny what is. Say something is made, sent or done only when a call of yours did it. A step needing a person (a sign-in, a QR code, an approval) is not a can't: hand it to them. If you can't do something or a part of it, say so once, clearly, do the rest and suggest who can: a person in the channel or another agent (mention them with @).";
 
-/** What a computer brain (Claude Code, Codex) is told about its own tools. */
+/**
+ * What a computer brain (Claude Code, Codex) is told about its own tools. Its git's `core.hooksPath` is the runner's
+ * hooks folder (ADR 0156, `co-authors.ts`): a hook installer that writes where it points would leave a repository's
+ * hooks there.
+ */
 export const COMPUTER_TOOLS_NOTE =
-  "# Your computer's tools\nYou also have your computer's own tools (read files, search, shell and git in your folder and allowed folders). They are among your means too. Use them freely to read and investigate; that needs no approval. Actions that change things for others (push, merge, deploy) still follow the rules above.";
+  "# Your computer's tools\nYou also have your computer's own tools (read files, search, shell and git in your folder and allowed folders). They are among your means too. Use them freely to read and investigate; that needs no approval. Actions that change things for others (push, merge, deploy) still follow the rules above. Your git's `core.hooksPath` is the computer's own hooks folder (it adds your Co-authored-by line, then runs each repository's own hooks): run a hook installer (pre-commit install, lefthook install, simple-git-hooks, git lfs install or update) with `GIT_CONFIG_PARAMETERS=` before it.";
 
 /**
  * The system prompt as a computer brain reads it (ADR 0037): the limit line

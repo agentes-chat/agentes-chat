@@ -1,6 +1,7 @@
 import { type AgentStyle, keys, useAiAccounts, useSetAgentStyle, useSetShowActivity } from "@agenteschat/client";
-import { authErrorText, errorText } from "@agenteschat/client/lib/errors";
+import { authErrorText, emailChangeErrorText, errorText } from "@agenteschat/client/lib/errors";
 import { browserTimezone, isTimeZone, timezoneName, zoneDisplayName } from "@agenteschat/client/lib/routines";
+import { isEmail } from "@agenteschat/client/lib/text";
 import {
   AffixInput,
   Alert,
@@ -27,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import type { AuthResult } from "@/auth/client";
 import { useAuth } from "@/auth/context";
+import { AppIconDialog, AppIconPicture, useAppIcon, useAppIconName } from "@/components/AppIconPicker";
 import { ChangeAvatarDialog } from "@/components/AvatarBuilder";
 import { ChatLookSettings } from "@/components/ChatLookSettings";
 import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
@@ -37,6 +39,7 @@ import { MyFace } from "@/components/ProfilePhoto";
 import { ZoneSelect } from "@/components/ZoneSelect";
 import { useDirectory } from "@/hooks/useDirectory";
 import { localePatch, rememberLocale } from "@/i18n";
+import { picksAppIcon } from "@/lib/app-icon";
 import { type MenuLook, menuLook, onMenuLookChange, setMenuLook } from "@/lib/context-menu";
 import { inDesktopApp } from "@/lib/desktop";
 import { useOpenParam } from "@/lib/open-param";
@@ -50,7 +53,7 @@ import { LanguageSelect } from "./LanguageSelect";
  * Configurações › Sua conta: your profile in this workspace, your time zone, whether agents' work shows under their replies,
  * how agents talk to you (ADR 0147), opening the phone app and a password
  * for an account without one, your plans' limits (ADR 0063 §5), how conversations look to you, then what this device keeps for itself (theme,
- * language, sounds, the desktop app's menus), and last, deleting the account.
+ * the app icon (ADR 0179), language, sounds, the desktop app's menus), and last, deleting the account.
  */
 export function AccountSection() {
   const { t, i18n } = useTranslation();
@@ -70,7 +73,11 @@ export function AccountSection() {
   const look = useSyncExternalStore(onMenuLookChange, menuLook, () => "ours" as const);
   const sounds = useSyncExternalStore(onSoundChoiceChange, soundChoice, soundChoice);
   const [profile, setProfile] = useState<"name" | "timezone" | null>(null);
+  const [email, setEmail] = useState(false);
   const [phone, setPhone] = useState(false);
+  const icon = useAppIcon();
+  const iconName = useAppIconName(icon);
+  const [iconPicker, setIconPicker] = useState(false);
   // Adding a password and deleting the account: their dialogs are the account button's, kept in the address so a
   // sign-in again comes back to them.
   const [, setAccount] = useOpenParam("account");
@@ -88,6 +95,13 @@ export function AccountSection() {
             label={t("shell.profile")}
             status={t("shell.profileHint")}
             onOpen={() => setProfile("name")}
+          />
+          <PrefRow
+            id="account-email"
+            icon="mail"
+            label={t("shell.email.label")}
+            status={me.user.email}
+            onOpen={() => setEmail(true)}
           />
           <PrefRow
             id="account-zone"
@@ -194,6 +208,15 @@ export function AccountSection() {
               />
             }
           />
+          {picksAppIcon() && (
+            <PrefRow
+              id="account-app-icon"
+              lead={<AppIconPicture pick={icon} className="settings-row__app-icon" />}
+              label={t("appIcon.title")}
+              status={iconName}
+              onOpen={() => setIconPicker(true)}
+            />
+          )}
           <PrefRow
             id="account-language"
             icon="globe"
@@ -247,6 +270,7 @@ export function AccountSection() {
             />
           )}
         </div>
+        <AppIconDialog open={iconPicker} onClose={() => setIconPicker(false)} />
       </Card>
       <Card aria-labelledby="account-delete" className="settings-danger">
         <CardHeader
@@ -273,15 +297,115 @@ export function AccountSection() {
         {owner && <DeleteWorkspaceDialog org={org} open={deletingOrg} onClose={() => setDeletingOrg(false)} />}
       </Card>
       <ProfileDialog focus={profile} onClose={() => setProfile(null)} />
+      <EmailDialog open={email} onClose={() => setEmail(false)} />
       <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />
     </>
   );
 }
 
-class NameRefused extends Error {
+class AuthRefused extends Error {
   constructor(readonly result: Extract<AuthResult, { ok: false }>) {
     super(result.code);
   }
+}
+
+/**
+ * "E-mail": the same account under a new address. A link to the new one confirms it (the address changes once it is
+ * opened); on a server that sends no e-mail it changes at once.
+ */
+function EmailDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { me } = useOrg();
+  const auth = useAuth();
+  const qc = useQueryClient();
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    setValue("");
+    setError(null);
+    setSent(null);
+  }, [open]);
+  const valid = isEmail(value);
+  const change = useMutation({
+    mutationFn: async () => {
+      const result = await auth.changeEmail(value.trim());
+      if (!result.ok) throw new AuthRefused(result);
+    },
+    meta: { silent: true },
+    onSuccess: () => {
+      setSent(value.trim());
+      void qc.invalidateQueries({ queryKey: keys.me });
+    },
+    onError: (e) => setError(e instanceof AuthRefused ? emailChangeErrorText(t, e.result) : errorText(t, e)),
+  });
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={t("shell.email.title")}
+      closeLabel={t("common.close")}
+      width={440}
+    >
+      {sent ? (
+        <>
+          <DialogBody>
+            {/* A server that sends no e-mail changes it at once: the address is already the new one. */}
+            <p>
+              {t(me.user.email.toLowerCase() === sent.toLowerCase() ? "shell.email.changed" : "shell.email.sent", {
+                email: sent,
+              })}
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="primary" onClick={onClose}>
+              {t("common.close")}
+            </Button>
+          </DialogFooter>
+        </>
+      ) : (
+        <form
+          style={{ display: "contents" }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valid && !change.isPending) change.mutate();
+          }}
+        >
+          <Locked when={change.isPending}>
+            <DialogBody>
+              <Field
+                label={t("shell.email.new")}
+                id="me-email"
+                hint={{ name: t("common.about", { label: t("shell.email.label") }), text: t("shell.email.help") }}
+              >
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  placeholder={me.user.email}
+                  value={value}
+                  onChange={(e) => {
+                    setValue(e.target.value);
+                    setError(null);
+                  }}
+                  autoFocus
+                />
+              </Field>
+              {error && <Alert>{error}</Alert>}
+            </DialogBody>
+          </Locked>
+          <DialogFooter>
+            <Button type="button" onClick={onClose}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" variant="primary" disabled={!valid || change.isPending} loading={change.isPending}>
+              {t("shell.email.change")}
+            </Button>
+          </DialogFooter>
+        </form>
+      )}
+    </Dialog>
+  );
 }
 
 /** "Perfil" and "Fuso horário": my name (the account's, the same in every workspace), photo, handle and time zone here. */
@@ -314,7 +438,7 @@ export function ProfileDialog({ focus, onClose }: { focus: "name" | "timezone" |
     mutationFn: async () => {
       if (name.trim() !== me.user.name) {
         const result = await auth.updateName(name.trim());
-        if (!result.ok) throw new NameRefused(result);
+        if (!result.ok) throw new AuthRefused(result);
       }
       await api.orgs.updateMe(org.id, {
         handle: handle.trim() || undefined,
@@ -329,7 +453,7 @@ export function ProfileDialog({ focus, onClose }: { focus: "name" | "timezone" |
       toast.show(t("shell.profileSaved"));
       onClose();
     },
-    onError: (e) => setError(e instanceof NameRefused ? authErrorText(t, e.result) : errorText(t, e)),
+    onError: (e) => setError(e instanceof AuthRefused ? authErrorText(t, e.result) : errorText(t, e)),
   });
   return (
     <Dialog

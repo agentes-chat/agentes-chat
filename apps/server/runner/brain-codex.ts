@@ -118,7 +118,9 @@ export type CodexBrainEvent =
   | { type: "error"; code: string; message: string; retryable?: boolean; worked?: boolean }
   /** Protocol 15 (app-server only): messages handed with `brain.steer` that the turn read. */
   | { type: "steer_read"; uuids: string[] }
-  | { type: "speed_fallback"; message: string };
+  | { type: "speed_fallback"; message: string }
+  /** A file a tool of Codex's own made (an image), kept in the agent's folder: the server shows it with the reply. */
+  | { type: "file"; path: string };
 
 /** `brain.turn` with `kind: "codex"` (contract: "Runner"). */
 export interface CodexBrainTurnRequest {

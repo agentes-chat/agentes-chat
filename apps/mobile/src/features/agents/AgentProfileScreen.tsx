@@ -64,11 +64,12 @@ import {
 } from "@/ui";
 import { CoverParallax, useCoverScroll, useScrollFade } from "@/ui/cover";
 import { router } from "@/ui/navigation";
-import { openAgentAi } from "../ai/AgentAiScreen";
+import { ModelPickerSheet } from "../ai/ModelPickerSheet";
 import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
 import { LetMeTalkButton } from "../chat/ReachLines";
 import { AgentComputerButton, AgentComputerPicture } from "../computer/AgentComputerRow";
+import { KeptRunningList } from "../computer/KeptRunning";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { chatHref } from "../links/logic";
 import { UsageQueueSheet } from "../queue/UsageQueueSheet";
@@ -478,6 +479,8 @@ function Profile({ id }: { id: string }) {
     <>
       {nowBlock}
       <AgentComputerPicture agentId={id} />
+      {/* What it keeps running there (ADR 0176), for whoever may watch its computer. */}
+      <KeptRunningList agentId={id} />
       {/* What it thinks with and how much of it is used this month, one row (ADR 0063 §5): the plan or key as its
           name, the usage under it. The usage page has the rest. */}
       <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
@@ -552,12 +555,15 @@ function Profile({ id }: { id: string }) {
         <>
           <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
           <GroupedList>
-            {/* Its owner and admins open its AI: the account, the plan's usage, who it replies to. */}
+            {/* Its owner and admins change its AI and model in place (the DM header's sheet); its "Mais opções" opens
+                the AI screen. Anyone else reads it. */}
             <GroupedRow
               leading={thinks.mark ? <ProviderLogo id={thinks.mark} size="sm" /> : undefined}
               label={thinksPlan ?? thinks.text}
               {...(thinksUnder ? { sub: thinksUnder, subLines: 2 } : {})}
-              {...(decides ? { chevron: true, onPress: () => openAgentAi(id) } : {})}
+              {...(decides && agent
+                ? { chevron: true, onPress: () => sheet.open(<ModelPickerSheet agent={agent} />) }
+                : {})}
             />
           </GroupedList>
         </>

@@ -13,6 +13,7 @@ import type {
   HomeTile,
   Widget,
   WidgetCostEstimate,
+  WidgetFailure,
   WidgetSchedule,
   WidgetStatus,
   WidgetStep,
@@ -244,6 +245,8 @@ const NEEDS_AI_WORDS = {
   plan_not_shared: "widgets.needsAi.plan_not_shared",
   // Its run's word for the same: no person is behind a build.
   plan_unattended: "widgets.needsAi.plan_not_shared",
+  // Whoever set it up has no plan that serves them: for a build, the same plan kept to its owner.
+  plans_not_yours: "widgets.needsAi.plan_not_shared",
   computer_away: "widgets.failure.waiting_computer",
   plan_limit: "widgets.failure.waiting_plan",
   model_limit: "widgets.failure.waiting_plan",
@@ -265,6 +268,23 @@ export function widgetFailureKey(code: string, detail?: string | null) {
   return `widgets.failure.${known}` as const;
 }
 
+/** What a failure is about: for a widget that stopped after failing in a row, the last of those failures. */
+export const widgetFailureCause = (f: WidgetFailure): WidgetFailure =>
+  f.code === "failing" && f.cause && f.cause !== "failing" ? { code: f.cause, detail: f.detail } : f;
+
+/**
+ * Why a widget stopped updating, in the reader's words (the agent's own when it said why). One that stopped after
+ * failing in a row says so, then the last failure's words.
+ */
+export function widgetFailureText(t: TFunction, failure: WidgetFailure | null, name: string): string {
+  if (!failure) return t("widgets.failure.error");
+  const last = widgetFailureCause(failure);
+  if (last !== failure) return t("widgets.failure.failingLast", { cause: widgetFailureText(t, last, name) });
+  if (failure.code === "agent_reported" && failure.detail) return failure.detail;
+  const key = widgetFailureKey(failure.code === "agent_reported" ? "error" : failure.code, failure.detail);
+  return t(key, { name, detail: failure.detail ?? "" });
+}
+
 /**
  * The widget waits for its agent to have an AI (ADR 0135 §20): no build starts until then, so its way out is
  * connecting one (it builds by itself after), never Resolve. The server's `widgetNeedsAi`.
@@ -273,13 +293,24 @@ export const widgetNeedsAi = (w: Pick<Widget, "status" | "failure">) =>
   w.status === "failed" && w.failure?.code === "missing_credential";
 
 /**
- * A widget waiting for an AI whose agent has one for background work now (the AI status's `background`, else its
- * `state`): its build can start. Its computer away is no missing AI: the build waits for it as any run does.
+ * The widget stopped after failing in a row for the lack of an AI: nothing starts it again by itself, so its way out
+ * is connecting one while there is none, then Resolve (`useWidgetLacksAi`).
  */
-export function widgetAiReady(w: Pick<Widget, "status" | "failure" | "agentId">, status: AiStatus | undefined) {
+export const widgetStoppedForAi = (w: Pick<Widget, "status" | "failure">) =>
+  w.status === "failed" && w.failure?.code === "failing" && w.failure.cause === "missing_credential";
+
+/**
+ * A widget waiting for an AI, or stopped for the lack of one, whose build has one now: the server says so for the
+ * right hand's (the AI status's `widgetsReady`: whose AI its build thinks with is its own people's), and for any
+ * agent's its state for background work does (`background`, else `state`). Its computer away is no missing AI: the
+ * build waits for it as any run does.
+ */
+export function widgetAiReady(w: Pick<Widget, "id" | "status" | "failure" | "agentId">, status: AiStatus | undefined) {
+  if (!widgetNeedsAi(w) && !widgetStoppedForAi(w)) return false;
+  if (status?.widgetsReady?.includes(w.id)) return true;
   const agent = status?.agents.find((a) => a.agentId === w.agentId);
   const state = agent?.background ?? agent?.state;
-  return widgetNeedsAi(w) && state !== undefined && state !== "no_ai";
+  return state !== undefined && state !== "no_ai";
 }
 
 /** The cost line of "New widget": a day, a week, only when asked, on a plan, or nothing known. */
