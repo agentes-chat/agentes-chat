@@ -53,7 +53,10 @@ const mac = (patch: Record<string, unknown> = {}) => ({
 
 describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
-    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus", "Sonnet", "Haiku"]);
+    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Fable", "Opus", "Sonnet", "Haiku"]);
+    // Fable is an alias of Claude Code's own (`claude --help`), so it is stored as one; Sonnet stays the default.
+    expect(normalizeBrainModel("claude_code", "fable")).toBe("fable");
+    expect(defaultBrainModel("claude_code")).toBe("sonnet");
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
     // Codex offers the catalog's OpenAI rows, GPT-6.1 Terra and GPT-6 Astra among them; GPT-6.1 Sol stays its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([

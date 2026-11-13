@@ -135,8 +135,16 @@ export const isAutoModel = (model: string | null | undefined) => model === AUTO_
 export const DEFAULT_CONTEXT_WINDOW = 200_000;
 
 export const MODEL_CATALOG: Record<string, ModelInfo> = {
-  // Its 1M-token window from platform.claude.com/docs/en/about-claude/models/overview, all of it at these prices
-  // (2026-11-09). No tier and no pick for routing or system tasks: "Automático" never chooses it, people do.
+  // Fable's 1M-token window from platform.claude.com/docs/en/about-claude/models/overview, all of it at these prices
+  // (5.1: 2026-11-09; 5.2: platform.claude.com/docs/en/about-claude/pricing, 2026-11-13). No tier and no pick for
+  // routing or system tasks: "Automático" never chooses it, people do.
+  "claude-fable-5-2": {
+    provider: "anthropic",
+    label: "Claude Fable 5.2",
+    prices: { input: 8000, output: 40000, cacheRead: 200, cacheWrite: 10000 },
+    contextWindow: 1_000_000,
+    serverSideFallback: true,
+  },
   "claude-fable-5-1": {
     provider: "anthropic",
     label: "Claude Fable 5.1",

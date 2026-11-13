@@ -207,8 +207,9 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
     return { value: m.id, label: m.label || m.id, ...(catalogModelOf(base) ? { modelId: base } : {}) };
   });
 
-/** Claude Code's aliases (`--model opus|sonnet|haiku`), mapped to today's ids in the catalog. */
+/** Claude Code's aliases (`--model fable|opus|sonnet|haiku`, its `--help`), mapped to today's ids in the catalog. */
 export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = [
+  { value: "fable", label: "Fable", modelId: "claude-fable-5-2" },
   { value: "opus", label: "Opus", modelId: "claude-opus-5-5" },
   { value: "sonnet", label: "Sonnet", modelId: "claude-sonnet-5-5", recommended: true },
   { value: "haiku", label: "Haiku", modelId: "claude-haiku-5-5" },
