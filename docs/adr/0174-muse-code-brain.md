@@ -153,7 +153,9 @@ always: the runner owns the version, and Muse upgrades itself otherwise. Stored 
   `transport` and typed on each arm, and it is what an MSP client adds a server with; a `capabilities.requestedCapabilities`
   of `sessionMcp` in `initialize` is required first, or the start is refused. The settings document keeps the account's
   ground (`schema_version`, `hooks`), and a server declared in *both* is a name conflict, so ours lives only on the wire.
-  Two near-misses cost a lot to find and are worth writing down: the settings key is `mcpServers` (not Codex's
+  The entry's fields are literal — a `${VAR}` placeholder is expanded in its `env` but **not** in its `args`, so a
+  `--run ${AGENTES_MCP_RUN}` reaches the bridge as that text, which prints its usage and exits and is reported as
+  "the transport closed unexpectedly". Two near-misses cost a lot to find and are worth writing down: the settings key is `mcpServers` (not Codex's
   `mcp_servers`) and the settings arm is tagged `type` while the wire arm is tagged `transport`, with neither spelling
   valid in the other place. Measured: the wire form spawns the server (`initialize`, `tools/list`) and a call runs.
 - **`muse usage` answers without a turn** (window, weekly use, reset, tier, since 1.4.13): the plan figures come from
