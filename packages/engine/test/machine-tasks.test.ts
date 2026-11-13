@@ -219,9 +219,11 @@ describe("background tasks (ADR 0029)", () => {
     expect(wake).toContain(`[Background task ${start.taskId}]`);
     expect(wake).toContain("Built. Tests pass.");
     expect(wake).toContain("Tell the people what came of it");
+    // People read the chat's own line in their language; the agent reads the English one, with how long it took.
+    expect(wake).toContain('Task \\"Build the app\\" finished on MacBook after 13 min.');
     const main = await listMessages(f.db, f.owner.id, f.org.id, f.general.id);
     const notice = main.find((m) => m.meta.machineTask);
-    expect(notice?.body).toBe('Task "Build the app" finished on MacBook after 13 min.');
+    expect(notice?.body).toBe("“Build the app” terminou no MacBook.");
     expect(notice?.meta).toMatchObject({ bodyCode: "machine_task_done", machineTask: { status: "done" } });
     expect(main.at(-1)?.body).toBe("The app builds and the tests pass.");
     const runs = await f.db.select().from(schema.agentRuns);
@@ -542,10 +544,9 @@ describe("background tasks (ADR 0029)", () => {
     const thread = await listMessages(f.db, f.owner.id, f.org.id, f.general.id, { threadId: root.id });
     const notices = thread.filter((m) => m.meta.bodyCode === "machine_offline");
     expect(notices).toHaveLength(1);
-    expect(notices[0]?.body).toContain("The computer MacBook went offline");
     // Claude Code with a session: they run on through a network drop, and resume after a restart.
-    expect(notices[0]?.body).toContain(
-      "2 tasks here keep running there if only the connection dropped, and resume where they stopped if the computer restarted.",
+    expect(notices[0]?.body).toBe(
+      "MacBook ficou offline: 2 tarefas continuam rodando lá se só a conexão caiu, e retomam de onde pararam se o computador reiniciou.",
     );
     expect(notices[0]?.meta.bodyParams).toMatchObject({ count: "2", context: "resumes" });
 
@@ -580,17 +581,14 @@ describe("background tasks (ADR 0029)", () => {
     expect((await taskRow(a.id))?.resumedTaskId).toBe(back.started[1]?.taskId ?? "");
   });
 
-  test("an interrupted shell task can't resume: the agent is woken to tell the people", async () => {
-    f = await setup({
-      machines: true,
-      reply: () => ({ chunks: ["The build was interrupted; want me to restart it?"] }),
-    });
+  test("an interrupted shell command starts again where it ran once its computer is back: the thread hears it, nobody is woken", async () => {
+    f = await setup({ machines: true, reply: () => ({ chunks: ["ok"] }) });
     const paired = await pairedMachine();
     const hub = f.machineHub as MachineHub;
     const runner = taskRunner(hub);
     await runner.hello(paired.token);
     const root = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
-      body: "build it please",
+      body: "serve the site please",
     });
     const task = await startMachineTask(
       { db: f.db, pubsub: f.pubsub, call: hub.call },
@@ -604,28 +602,146 @@ describe("background tasks (ADR 0029)", () => {
         threadRootId: root.id,
         runId: null,
         requestedByUserId: f.owner.id,
-        title: "Build",
+        title: "Dev server",
         executor: "shell",
-        command: "make",
+        command: "npm run dev -- --port 4321",
+        branch: "feat/site",
       },
     );
+    expect(await taskRow(task.id)).toMatchObject({ cwd: `.worktrees/${task.id}`, branch: "feat/site" });
+    // The computer restarted (or moved): its journal no longer has the task.
     await runner.disconnect();
-    const again = taskRunner(hub);
-    await again.hello(paired.token, { tasks: [] });
-    expect(again.started).toEqual([]);
+    const back = taskRunner(hub);
+    await back.hello(paired.token, { tasks: [] });
     expect(await taskRow(task.id)).toMatchObject({ status: "interrupted" });
+    // The same command in the worktree it ran in, with no new branch.
+    expect(back.started).toHaveLength(1);
+    expect(back.started[0]).toMatchObject({
+      executor: "shell",
+      command: "npm run dev -- --port 4321",
+      cwd: `.worktrees/${task.id}`,
+    });
+    expect(back.started[0]).not.toHaveProperty("branch");
+    expect(back.started[0]).not.toHaveProperty("approved");
+    const again = await taskRow(back.started[0]?.taskId ?? "");
+    expect(again).toMatchObject({ status: "running", resumedFromId: task.id, resumeCount: 1, title: "Dev server" });
+    expect((await taskRow(task.id))?.resumedTaskId).toBe(again?.id ?? "");
     await drainOutbox(f.db, f.handlers);
     const thread = await listMessages(f.db, f.owner.id, f.org.id, f.general.id, { threadId: root.id });
-    expect(thread.find((m) => m.meta.machineTask)?.body).toContain("was interrupted on MacBook");
-    expect(thread.at(-1)?.body).toBe("The build was interrupted; want me to restart it?");
-    const woken = await f.db
-      .select()
-      .from(schema.agentRuns)
-      .where(and(eq(schema.agentRuns.agentId, f.agent.id), eq(schema.agentRuns.status, "done")));
-    expect(woken).toHaveLength(1);
+    const notice = thread.find((m) => m.meta.bodyCode === "machine_task_restarted");
+    expect(notice?.body).toBe("MacBook voltou: “Dev server” começou de novo.");
+    expect(notice?.meta.bodyParams).toEqual({ title: "Dev server", computer: "MacBook" });
+    // Starting again is not an end: nobody is woken.
+    expect(await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "machine.task_done"))).toEqual([]);
   });
 
-  test("a shell task's offline notice says it won't resume after a restart; the grace's end tells open apps", async () => {
+  test("a shell command that can't start again by itself wakes the agent to tell the people: held, resuming off, or stopped by a person", async () => {
+    f = await setup({
+      machines: true,
+      reply: () => ({ chunks: ["The deploy was interrupted; want me to run it again?"] }),
+    });
+    const paired = await pairedMachine();
+    const hub = f.machineHub as MachineHub;
+    const runner = taskRunner(hub, {
+      holds: (command) => (command.startsWith("./deploy") ? "A deploy waits for a person" : null),
+    });
+    await runner.hello(paired.token);
+    const root = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "deploy it please",
+    });
+    const start = (title: string, command: string, approved = false) =>
+      startMachineTask(
+        { db: f.db, pubsub: f.pubsub, call: hub.call },
+        {
+          orgId: f.org.id,
+          agent: { id: f.agent.id, handle: "dev" },
+          machineId: paired.machineId,
+          protocol: 4,
+          machineName: "MacBook",
+          channelId: f.general.id,
+          threadRootId: root.id,
+          runId: null,
+          requestedByUserId: f.owner.id,
+          title,
+          executor: "shell",
+          command,
+          ...(approved ? { approved: true } : {}),
+        },
+      );
+    // A person approved this deploy once: that approval isn't its second start's.
+    const deploy = await start("Deploy", "./deploy.sh", true);
+    await runner.disconnect();
+    const back = taskRunner(hub, {
+      holds: (command) => (command.startsWith("./deploy") ? "A deploy waits for a person" : null),
+    });
+    await back.hello(paired.token, { tasks: [] });
+    expect(back.started).toEqual([]);
+    expect(await taskRow(deploy.id)).toMatchObject({ status: "interrupted", resumedTaskId: null });
+    await drainOutbox(f.db, f.handlers);
+    let thread = await listMessages(f.db, f.owner.id, f.org.id, f.general.id, { threadId: root.id });
+    expect(thread.find((m) => m.meta.machineTask)?.body).toBe("“Deploy” foi interrompida no MacBook.");
+    expect(thread.at(-1)?.body).toBe("The deploy was interrupted; want me to run it again?");
+
+    // Resuming turned off on that computer.
+    await f.db.update(schema.machines).set({ resumeTasks: false }).where(eq(schema.machines.id, paired.machineId));
+    const build = await start("Build", "make");
+    await back.disconnect();
+    const third = taskRunner(hub);
+    await third.hello(paired.token, { tasks: [] });
+    expect(third.started).toEqual([]);
+    expect(await taskRow(build.id)).toMatchObject({ status: "interrupted", resumedTaskId: null });
+
+    // Stopped by a person before the computer went: never started again.
+    await f.db.update(schema.machines).set({ resumeTasks: true }).where(eq(schema.machines.id, paired.machineId));
+    const watch = await start("Watch", "npm run watch");
+    await f.db.update(schema.machineTasks).set({ canceledBy: f.owner.id }).where(eq(schema.machineTasks.id, watch.id));
+    await third.disconnect();
+    const fourth = taskRunner(hub);
+    await fourth.hello(paired.token, { tasks: [] });
+    expect(fourth.started).toEqual([]);
+    await drainOutbox(f.db, f.handlers);
+    thread = await listMessages(f.db, f.owner.id, f.org.id, f.general.id, { threadId: root.id });
+    expect(thread.filter((m) => m.meta.bodyCode === "machine_task_restarted")).toEqual([]);
+  });
+
+  test("a task's end reads in the language of whom it is for, and in English when nobody is behind it", async () => {
+    f = await setup({ machines: true, reply: () => ({ chunks: ["ok"] }) });
+    const paired = await pairedMachine();
+    const hub = f.machineHub as MachineHub;
+    const runner = taskRunner(hub);
+    await runner.hello(paired.token);
+    const start = (title: string, requestedByUserId: string | null) =>
+      startMachineTask(
+        { db: f.db, pubsub: f.pubsub, call: hub.call },
+        {
+          orgId: f.org.id,
+          agent: { id: f.agent.id, handle: "dev" },
+          machineId: paired.machineId,
+          protocol: 4,
+          machineName: "MacBook",
+          channelId: f.general.id,
+          threadRootId: null,
+          runId: null,
+          requestedByUserId,
+          title,
+          executor: "shell",
+          command: "make",
+        },
+      );
+    const mine = await start("Build", f.owner.id);
+    const nobody = await start("Lint", null);
+    for (const task of [mine, nobody]) {
+      await runner.frame({ type: "task.done", taskId: task.id, exitCode: 0, seconds: 23 });
+    }
+    await drainOutbox(f.db, f.handlers);
+    const main = await listMessages(f.db, f.owner.id, f.org.id, f.general.id);
+    const ended = (title: string) => main.find((m) => (m.meta.machineTask as { title?: string })?.title === title);
+    expect(ended("Build")?.body).toBe("“Build” terminou no MacBook.");
+    expect(ended("Build")?.meta.machineTask).toMatchObject({ locale: "pt-BR" });
+    expect(ended("Lint")?.body).toBe("“Lint” finished on MacBook.");
+  });
+
+  test("a shell task's offline notice says it comes back after a restart; the grace's end tells open apps", async () => {
     f = await setup({ machines: true, reply: () => ({ chunks: ["ok"] }) });
     const paired = await pairedMachine();
     const hub = createMachineHub({ db: f.db, pubsub: f.pubsub, replicaId: "replica-g", taskOfflineGraceMs: 0 });
@@ -658,10 +774,10 @@ describe("background tasks (ADR 0029)", () => {
     await drainOutbox(f.db, f.handlers);
     const thread = await listMessages(f.db, f.owner.id, f.org.id, f.general.id, { threadId: root.id });
     const notice = thread.find((m) => m.meta.bodyCode === "machine_offline");
-    expect(notice?.body).toContain(
-      '"Build" keeps running there if only the connection dropped. If the computer restarted, it stopped and won\'t resume by itself.',
+    expect(notice?.body).toBe(
+      "MacBook ficou offline: “Build” continua rodando lá se só a conexão caiu, e retoma de onde parou se o computador reiniciou.",
     );
-    expect(notice?.meta.bodyParams).not.toHaveProperty("context");
+    expect(notice?.meta.bodyParams).toMatchObject({ context: "resumes" });
     // Still away past the grace: open apps look again (it is an outage now).
     expect(statuses).toContainEqual({ type: "machine.status", machineId: paired.machineId, online: false });
   });

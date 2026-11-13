@@ -205,6 +205,16 @@ describe("answering and opening", () => {
       to: "/org/$orgId/approvals",
       search: { open: "a" },
     });
+    // The right hand paused what it does without asking: its own page, by the address that leads there. Who approves
+    // for whom stays in the person's settings.
+    expect(openTarget(notification({ id: "7", kind: "right_hand_paused", source: {} }))).toEqual({
+      to: "/org/$orgId/settings/$section",
+      params: { section: "right_hand" },
+    });
+    expect(openTarget(notification({ id: "8", kind: "approval_cover", source: {} }))).toEqual({
+      to: "/org/$orgId/settings/$section",
+      params: { section: "approvals" },
+    });
   });
 
   test("at the message itself: in a thread, a DM, a channel", () => {
@@ -319,7 +329,15 @@ describe("a board's notices (ADR 0135)", () => {
     expect(widgetNoticeOf(alert)).toMatchObject({ kind: "alert", widgetId: "w1", agentId: "ada", text: "Caiu 24%." });
     expect(
       widgetNoticeOf(notification({ id: "f", kind: "widget_failed", latest: { reason: "budget_exceeded" } })),
-    ).toMatchObject({ kind: "failed", reason: "budget_exceeded", text: null });
+    ).toMatchObject({ kind: "failed", reason: "budget_exceeded", detail: null });
+    // The failure's detail as the widget keeps it: the agent's words, or why its agent has no AI.
+    const failedWith = (latest: AppNotification["latest"]) =>
+      widgetNoticeOf(notification({ id: "d", kind: "widget_failed", latest }));
+    expect(failedWith({ reason: "agent_reported", text: "Sem dados." })).toMatchObject({ detail: "Sem dados." });
+    expect(failedWith({ reason: "missing_credential", detail: "not_signed_in" })).toMatchObject({
+      reason: "missing_credential",
+      detail: "not_signed_in",
+    });
     expect(
       widgetNoticeOf(
         notification({ id: "p", kind: "dashboard_proposal", latest: { statusTo: "roles", names: ["Vendas"] } }),

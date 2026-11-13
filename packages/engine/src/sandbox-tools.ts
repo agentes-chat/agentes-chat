@@ -3,7 +3,9 @@ import {
   type ExecRequest,
   type ExecResult,
   isReservedSecretName,
+  KEEP_RUNNING_PROTOCOL,
   MAX_INLINE_FILE_BYTES,
+  type MachineRequest,
   PASSWORD_CLASSES,
   PASSWORD_LENGTH,
   type PubSub,
@@ -36,12 +38,23 @@ import {
 import { recordAudit } from "./audit";
 import { fedByRoutine, runAuthorityById } from "./authority";
 import { sniffModelImage } from "./avatars";
+import { deviceRoster, devicesForRequester, rosterFacts, secretsMayGo } from "./device-resolve";
 import { publishChannelEvent } from "./events";
 import { copyToComputer } from "./file-pulls";
 import { cutText, formatBytes, textOfBytes } from "./format";
 import { mergeReposOfCall } from "./git/repos";
 import { fullMachinePath, pathInOwnFolder, requestFolderAccess } from "./machine-access";
-import { MachineRequestError } from "./machine-hub";
+import {
+  HOLD_MAX_MS,
+  type HoldRow,
+  holdsText,
+  holdView,
+  liveHold,
+  MAX_HOLDS_PER_AGENT,
+  releaseHold,
+  takeHold,
+} from "./machine-holds";
+import { callWhenBack, MachineRequestError, type MachineStatus } from "./machine-hub";
 import {
   foldersFixedMessage,
   notAllowedMessage,
@@ -129,6 +142,7 @@ const WRITE_TOOLS = new Set([
   "run_skill_script",
   "import_file",
   "cancel_task",
+  "keep_running",
   MAKE_KEY_TOOL,
 ]);
 
@@ -351,6 +365,28 @@ export function claudeCodeSentence(sessionId: string, tasks = false, managed = f
     : `${run} Give it a long timeout_seconds (real tasks take minutes) and pass on what it reports.`;
 }
 
+/**
+ * Where `keep_running` can hold (ADR 0176): a Linux computer whose runner knows it, each agent its own user there
+ * (elsewhere every call would be refused).
+ */
+const keepsRunning = (info: ComputerInfo): info is Extract<ComputerInfo, { kind: "machine" }> =>
+  info.kind === "machine" && info.os === "linux" && info.system && info.protocol >= KEEP_RUNNING_PROTOCOL;
+
+/** A `keep_running` call that takes or changes a hold: not a listing (no arguments) and not an `end`. */
+const keepChanges = (input: Record<string, unknown>) =>
+  !str(input.end).trim() &&
+  (["hold", "what", "why", "until"].some((k) => str(input[k]).trim() !== "") ||
+    typeof input.pid === "number" ||
+    input.browser === true);
+
+/** How long a hold lasts, for its agent. */
+const holdUntil = (row: HoldRow) => {
+  const at = row.until?.toISOString();
+  if (row.pid !== null) return at ? `until it stops, ${at} at the latest` : "until it stops";
+  if (row.browser) return at ? `while your browser is open, ${at} at the latest` : "while your browser is open";
+  return `until ${at}`;
+};
+
 /** A connected machine that can run background tasks: commands allowed and a runner of protocol 4+. */
 const tasksOn = (info: ComputerInfo) => info.kind === "machine" && info.execAllowed && info.protocol >= TASKS_PROTOCOL;
 
@@ -392,6 +428,7 @@ export function computerSentence(info: ComputerInfo) {
       ? `${pausedMessage(info.name, info.paused.until, info.paused.timezone)} Tell the people when they ask for work there.`
       : "",
     info.execAllowed ? "" : "Commands are turned off on it (files and uploads only).",
+    info.execAllowed && info.os === "windows" ? "Commands run in cmd.exe there: use Windows commands." : "",
     info.folders.length > 0
       ? `Besides your own folder, its owner allowed you these folders (use their absolute paths): ${info.folders.slice(0, 20).join(", ")}.`
       : "",
@@ -608,7 +645,12 @@ export function createSandboxToolSource(
       await publish();
     }
   };
-  const run = <T>(ctx: ToolContext, fn: (computer: ComputerHandle) => Promise<T>) => withSandbox(deps, ctx, fn);
+  /** On the agent's computer, or on the device the call names (`computer`, bring your own devices). */
+  const run = <T>(
+    ctx: ToolContext,
+    fn: (computer: ComputerHandle) => Promise<T>,
+    target: { computer?: unknown; label?: string } = {},
+  ) => withSandbox(deps, ctx, fn, { computer: str(target.computer), ...(target.label ? { label: target.label } : {}) });
   const skillDeps = (ctx: ToolContext): SkillDeps => ({ db: ctx.db, blobs: deps.skills.blobs });
   /** A file that holds a secret (or a folder with one) never leaves the computer through the file tools. */
   const refuseSecretPath = async (ctx: ToolContext, computer: ComputerHandle, path: string) => {
@@ -619,6 +661,18 @@ export function createSandboxToolSource(
   };
 
   const pathProp = { type: "string", minLength: 1, maxLength: 300, description: "Path inside the workspace" };
+  /** `computer` where the workspace has devices besides the agent's own (bring your own devices). */
+  const computerProp = (devices: boolean) =>
+    devices
+      ? {
+          computer: {
+            type: "string",
+            maxLength: 120,
+            description:
+              "Another device to do this on, by its name as computer_status lists it. Leave it out for your own computer.",
+          },
+        }
+      : {};
 
   /**
    * Vault keys for one command (ADR 0144): released for the person behind the run, then sealed, each bound to its
@@ -775,6 +829,7 @@ export function createSandboxToolSource(
     execTimeout: number,
     computerInfo: ComputerInfo = { kind: "none", preparing: false },
     sessionId?: string,
+    devices = false,
     maxTimeout = SANDBOX_LIMITS.machineMaxTimeoutSeconds,
   ): ToolDefinition[] => [
     {
@@ -790,6 +845,7 @@ export function createSandboxToolSource(
           language: { enum: Object.keys(RUNNERS) },
           code: { type: "string", minLength: 1, maxLength: SANDBOX_LIMITS.codeChars },
           timeout_seconds: { type: "integer", minimum: 1, maximum: maxTimeout },
+          ...computerProp(devices),
           ...(deps.vault
             ? {
                 keys: {
@@ -822,31 +878,40 @@ export function createSandboxToolSource(
           if (typeof names === "string") return { content: names, isError: true };
           const file = `.agentes/run-${Date.now()}.${runner.ext}`;
           const started = Date.now();
-          const result = await run(ctx, async (computer) => {
-            await computer.provider.writeFile(computer.id, file, new TextEncoder().encode(str(input.code)));
-            // Sealed right before the command: the computer's one-use key lives two minutes (ADR 0144).
-            const keys = names.length > 0 ? await vaultKeysFor(ctx, computer, names) : null;
-            let r: ExecResult;
-            try {
-              r = await execLive(ctx, computer, {
-                command: scriptCommand(runner.bin, file),
-                timeoutSeconds: timeout,
-                ...(ctx.approved ? { approved: true } : {}),
-                ...(keys ? { vault: keys.vault } : {}),
-              });
-            } catch (error) {
-              // The command may have run with the keys though no answer came back (the link dropped, no answer in
-              // time): their use is recorded. Not when it never reached the computer or the runner refused it before
-              // opening them (ADR 0144 §4).
-              if (keysMayHaveRun(error)) await keys?.used();
-              if (keys && runnerCode(error) === "not_found") throw new Error(VAULT_KEY_EXPIRED, { cause: error });
-              throw error;
-            }
-            // It ran, whatever its exit code, its timeout or a cancel said.
-            await keys?.used();
-            await auditMachineExec(ctx, computer, `${lang}: ${str(input.code)}`, r, names);
-            return r;
-          });
+          const result = await run(
+            ctx,
+            async (computer) => {
+              await computer.provider.writeFile(computer.id, file, new TextEncoder().encode(str(input.code)));
+              if (names.length > 0 && !(await secretsMayGo(ctx, computer.machineId)))
+                throw new VaultRefusal(
+                  "not_allowed",
+                  "Vault keys never go to someone else's device: its owner could read them. Run it without `keys` there, or on your own computer.",
+                );
+              // Sealed right before the command: the computer's one-use key lives two minutes (ADR 0144).
+              const keys = names.length > 0 ? await vaultKeysFor(ctx, computer, names) : null;
+              let r: ExecResult;
+              try {
+                r = await execLive(ctx, computer, {
+                  command: scriptCommand(runner.bin, file),
+                  timeoutSeconds: timeout,
+                  ...(ctx.approved ? { approved: true } : {}),
+                  ...(keys ? { vault: keys.vault } : {}),
+                });
+              } catch (error) {
+                // The command may have run with the keys though no answer came back (the link dropped, no answer in
+                // time): their use is recorded. Not when it never reached the computer or the runner refused it before
+                // opening them (ADR 0144 §4).
+                if (keysMayHaveRun(error)) await keys?.used();
+                if (keys && runnerCode(error) === "not_found") throw new Error(VAULT_KEY_EXPIRED, { cause: error });
+                throw error;
+              }
+              // It ran, whatever its exit code, its timeout or a cancel said.
+              await keys?.used();
+              await auditMachineExec(ctx, computer, `${lang}: ${str(input.code)}`, r, names);
+              return r;
+            },
+            { computer: input.computer, label: `Running ${lang} code` },
+          );
           return execOutput(`run_code ${lang}`, result, Math.round((Date.now() - started) / 1000), timeout);
         } catch (error) {
           return vaultRefusalOutput(error) ?? heldForApproval(error, "Not run") ?? failed(error);
@@ -863,14 +928,19 @@ export function createSandboxToolSource(
     }),
     {
       name: "computer_status",
-      description: "Which computer you work on and whether it is online.",
+      description: devices
+        ? "Which computer you work on and whether it is online, and every other device you may use for the person you work for (people's computers and the phones they reach): name, owner, system, size, tools, phones and whether each is ready. With `computer`, one of them in detail."
+        : "Which computer you work on and whether it is online.",
       scope: SANDBOX_SCOPE,
-      inputSchema: { type: "object", properties: {}, additionalProperties: false },
-      async execute(_input, ctx) {
+      inputSchema: { type: "object", properties: { ...computerProp(devices) }, additionalProperties: false },
+      async execute(input, ctx) {
         try {
+          const others = devices ? await devicesForRequester(ctx, str(input.computer)) : null;
+          if (others?.only) return others.only;
           const target = await agentComputerInfo(deps, ctx.orgId, ctx.agentId);
+          const more = others?.text ? `\n\n${others.text}` : "";
           if (target.kind !== "none") {
-            if (target.kind === "removed") return { content: computerSentence(target), isError: true };
+            if (target.kind === "removed") return { content: `${computerSentence(target)}${more}`, isError: !more };
             const os =
               target.os === "darwin"
                 ? "macOS"
@@ -883,7 +953,7 @@ export function createSandboxToolSource(
               ? `You are on "${target.name}", this workspace's own computer (${os}), always on: ${target.online ? "answering now" : "not answering right now (it usually comes back within minutes; tell the people)"}.`
               : `You are on the connected computer "${target.name}" (${os}), ${target.online ? "online" : "offline (ask its owner to start the runner)"}.`;
             return {
-              content: `${where} Paths are relative to its workspace folder. Commands: ${target.execAllowed ? "allowed" : "turned off (files and uploads only)"}. Network: the machine's own.`,
+              content: `${where} Paths are relative to its workspace folder. Commands: ${target.execAllowed ? "allowed" : "turned off (files and uploads only)"}. Network: the machine's own.${more}`,
               data: {
                 computer: {
                   kind: "machine",
@@ -896,7 +966,10 @@ export function createSandboxToolSource(
               },
             };
           }
-          return { content: target.preparing ? PREPARING_COMPUTER_MESSAGE : NO_COMPUTER_MESSAGE, isError: true };
+          return {
+            content: `${target.preparing ? PREPARING_COMPUTER_MESSAGE : NO_COMPUTER_MESSAGE}${more}`,
+            isError: !more,
+          };
         } catch (error) {
           return failed(error);
         }
@@ -908,7 +981,7 @@ export function createSandboxToolSource(
       scope: SANDBOX_SCOPE,
       inputSchema: {
         type: "object",
-        properties: { path: pathProp, content: { type: "string", maxLength: 1_000_000 } },
+        properties: { path: pathProp, content: { type: "string", maxLength: 1_000_000 }, ...computerProp(devices) },
         required: ["path", "content"],
         additionalProperties: false,
       },
@@ -917,7 +990,7 @@ export function createSandboxToolSource(
           const path = toolPath(str(input.path), computerInfo);
           if (!path) return { content: "path is required", isError: true };
           const data = new TextEncoder().encode(str(input.content));
-          await run(ctx, (c) => c.provider.writeFile(c.id, path, data));
+          await run(ctx, (c) => c.provider.writeFile(c.id, path, data), input);
           return { content: `Wrote ${path} (${data.byteLength} bytes).` };
         } catch (error) {
           return failed(error);
@@ -931,17 +1004,21 @@ export function createSandboxToolSource(
       readsOutside: true,
       inputSchema: {
         type: "object",
-        properties: { path: pathProp },
+        properties: { path: pathProp, ...computerProp(devices) },
         required: ["path"],
         additionalProperties: false,
       },
       async execute(input, ctx) {
         try {
           const path = toolPath(str(input.path), computerInfo);
-          const data = await run(ctx, async (c) => {
-            await refuseSecretPath(ctx, c, path);
-            return c.provider.readFile(c.id, path);
-          });
+          const data = await run(
+            ctx,
+            async (c) => {
+              await refuseSecretPath(ctx, c, path);
+              return c.provider.readFile(c.id, path);
+            },
+            input,
+          );
           if (!data) return { content: `No file ${path}.`, isError: true };
           const text = textOfBytes(data.slice(0, SANDBOX_LIMITS.maxFileBytes));
           if (text === null) return { content: binaryFileNote(path, data) };
@@ -960,13 +1037,13 @@ export function createSandboxToolSource(
       scope: SANDBOX_SCOPE,
       inputSchema: {
         type: "object",
-        properties: { path: { type: "string", maxLength: 300 } },
+        properties: { path: { type: "string", maxLength: 300 }, ...computerProp(devices) },
         additionalProperties: false,
       },
       async execute(input, ctx) {
         try {
           const path = toolPath(str(input.path), computerInfo);
-          const files = await run(ctx, (c) => c.provider.listFiles(c.id, path, 3));
+          const files = await run(ctx, (c) => c.provider.listFiles(c.id, path, 3), input);
           const shown = files.filter((f) => !f.path.startsWith(".agentes/") && f.path !== ".agentes").slice(0, 300);
           if (shown.length === 0) return { content: `${path || "workspace"}: empty.` };
           return {
@@ -999,10 +1076,14 @@ export function createSandboxToolSource(
       async execute(input, ctx) {
         try {
           const path = toolPath(str(input.path), computerInfo);
-          const data = await run(ctx, async (c) => {
-            await refuseSecretPath(ctx, c, path);
-            return c.provider.readFile(c.id, path);
-          });
+          const data = await run(
+            ctx,
+            async (c) => {
+              await refuseSecretPath(ctx, c, path);
+              return c.provider.readFile(c.id, path);
+            },
+            input,
+          );
           if (!data) return { content: `No file ${path}.`, isError: true };
           if (data.byteLength > SANDBOX_LIMITS.maxFileBytes) {
             return { content: "The file is too large (max 5 MB).", isError: true };
@@ -1047,6 +1128,7 @@ export function createSandboxToolSource(
           artifact_id: { type: "string", minLength: 36, maxLength: 36 },
           note: { type: "string", maxLength: 500 },
           shared_drive: SHARED_DRIVE_INPUT,
+          ...computerProp(devices),
         },
         required: ["path"],
         additionalProperties: false,
@@ -1072,14 +1154,18 @@ export function createSandboxToolSource(
               };
             }
           }
-          const row = await run(ctx, async (c) => {
-            await refuseSecretPath(ctx, c, path);
-            return uploadFromComputer(deps, ctx, c, path, {
-              title: str(input.title) || null,
-              note: str(input.note) || null,
-              targetArtifactId,
-            });
-          });
+          const row = await run(
+            ctx,
+            async (c) => {
+              await refuseSecretPath(ctx, c, path);
+              return uploadFromComputer(deps, ctx, c, path, {
+                title: str(input.title) || null,
+                note: str(input.note) || null,
+                targetArtifactId,
+              });
+            },
+            input,
+          );
           const done = await uploadedFile(deps.db, row);
           if (!done) return { content: `Failed: ${row.error ?? "the upload did not finish"}`, isError: true };
           return {
@@ -1102,6 +1188,7 @@ export function createSandboxToolSource(
         properties: {
           artifact_id: { type: "string", minLength: 36, maxLength: 36 },
           path: { type: "string", maxLength: 300 },
+          ...computerProp(devices),
         },
         required: ["artifact_id"],
         additionalProperties: false,
@@ -1114,14 +1201,18 @@ export function createSandboxToolSource(
             // An uploaded file: its bytes as they are, under its original name.
             const raw = await storedFileOfArtifact(deps.artifacts, actorOf(ctx), ctx.orgId, a.id);
             const path = toolPath(str(input.path), computerInfo) || `imports/${cleanFileName(raw.name)}`;
-            await run(ctx, (c) => copyToComputer({ ...deps.artifacts, publicUrl: deps.publicUrl }, ctx, c, path, raw));
+            await run(
+              ctx,
+              (c) => copyToComputer({ ...deps.artifacts, publicUrl: deps.publicUrl }, ctx, c, path, raw),
+              input,
+            );
             return {
               content: `Copied "${a.title}" (v${raw.version}, ${raw.name}) to ${path} (${formatBytes(raw.size)}).`,
             };
           }
           const path = toolPath(str(input.path), computerInfo) || `imports/${slug(a.title)}.${file.ext}`;
           const data = new TextEncoder().encode(file.text);
-          await run(ctx, (c) => c.provider.writeFile(c.id, path, data));
+          await run(ctx, (c) => c.provider.writeFile(c.id, path, data), input);
           return { content: `Copied "${a.title}" (v${a.version}) to ${path} (${data.byteLength} bytes).` };
         } catch (error) {
           return failed(error);
@@ -1229,10 +1320,14 @@ export function createSandboxToolSource(
   const taskIdProp = { type: "string", minLength: 36, maxLength: 36, description: "The task id start_task returned" };
 
   /** Background tasks on a connected computer (ADR 0029): start, list, look at, cancel. */
-  const taskTools = (requireApproval: boolean, info: Extract<ComputerInfo, { kind: "machine" }>): ToolDefinition[] => [
+  const taskTools = (
+    requireApproval: boolean,
+    info: Extract<ComputerInfo, { kind: "machine" }>,
+    devices = false,
+  ): ToolDefinition[] => [
     {
       name: "start_task",
-      description: `Start a detached command or a parallel CLI job on the computer "${info.name}" (a build, a dev server, a second Claude Code or Codex on its own task) and return at once with its id. To step out of this conversation while you keep working yourself, use work_in_background instead. With executor "claude" (the default when you give a prompt) Claude Code works on \`prompt\` in your folder, in this conversation's session (it remembers earlier turns), editing files on its own; "codex" runs Codex the same way; "shell" runs \`command\`. With \`branch\` it works in its own git worktree on that new branch; when your folder isn't a git repository, claude and codex work in their own subfolder work/<branch>/ instead (no branch; shell needs a repository). It keeps running if the connection drops. If the computer itself restarts, a "claude" task resumes where it stopped once it's back (unless resuming is turned off on that computer); "codex" and "shell" tasks stop, and you are woken to tell the people. You are woken in this conversation when it finishes, with its result: don't poll it with task_status, don't wait; tell the people it started and end your turn. Use run_code for short commands.`,
+      description: `Start a detached command or a parallel CLI job on the computer "${info.name}" (a build, a dev server, a second Claude Code or Codex on its own task) and return at once with its id. To step out of this conversation while you keep working yourself, use work_in_background instead. With executor "claude" (the default when you give a prompt) Claude Code works on \`prompt\` in your folder, in this conversation's session (it remembers earlier turns), editing files on its own; "codex" runs Codex the same way; "shell" runs \`command\`. With \`branch\` it works in its own git worktree on that new branch; when your folder isn't a git repository, claude and codex work in their own subfolder work/<branch>/ instead (no branch; shell needs a repository). It keeps running if the connection drops. If the computer itself restarts or moves, once it's back a "claude" task resumes where it stopped and a "shell" command starts again in its folder (unless resuming is turned off on that computer); "codex" tasks stop, and you are woken to tell the people. You are woken in this conversation when it finishes, with its result: don't poll it with task_status, don't wait; tell the people it started and end your turn. Use run_code for short commands.`,
       scope: SANDBOX_SCOPE,
       sensitive: requireApproval,
       whyAsks: true,
@@ -1244,6 +1339,7 @@ export function createSandboxToolSource(
           command: { type: "string", minLength: 1, maxLength: 2000, description: "With executor shell: the command" },
           executor: { enum: [...TASK_EXECUTORS] },
           branch: { type: "string", minLength: 1, maxLength: 120, description: "Work on this new git branch" },
+          ...computerProp(devices),
           ...whyAsks(requireApproval),
         },
         required: ["title"],
@@ -1258,6 +1354,9 @@ export function createSandboxToolSource(
         detail: (str(input.prompt) || str(input.command)).slice(0, 500),
       }),
       async execute(input, ctx) {
+        let where = info.name;
+        // A person's computer named with `computer`: its refusals point to that person, not to request_folder_access.
+        let device = null as MachineStatus | null;
         try {
           const prompt = str(input.prompt).trim();
           const command = str(input.command).trim();
@@ -1271,48 +1370,57 @@ export function createSandboxToolSource(
           if (executor !== "shell" && !prompt)
             return { content: `A ${executor} task needs \`prompt\`.`, isError: true };
           const hub = hubOf();
-          const row = await run(ctx, async (computer) => {
-            const status = await hub.status(computer.machineId);
-            const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
-            // One session per conversation for Claude Code and Codex (the runner maps Codex's own thread id).
-            const session = executor === "claude" || executor === "codex" ? ctx.threadRootId : null;
-            const [before] = session
-              ? await ctx.db
-                  .select({ id: schema.machineTasks.id })
-                  .from(schema.machineTasks)
-                  .where(
-                    and(
-                      eq(schema.machineTasks.orgId, ctx.orgId),
-                      eq(schema.machineTasks.agentId, ctx.agentId),
-                      eq(schema.machineTasks.sessionId, session),
-                    ),
-                  )
-                  .limit(1)
-              : [];
-            return startMachineTask(
-              { db: ctx.db, pubsub: deps.pubsub, call: hub.call },
-              {
-                orgId: ctx.orgId,
-                agent: { id: ctx.agentId, handle: agent?.handle ?? "agent" },
-                machineId: computer.machineId,
-                protocol: status?.protocol ?? 0,
-                machineName: status?.name ?? info.name,
-                channelId: ctx.channelId,
-                threadRootId: replyThreadOf(ctx),
-                runId: ctx.runId,
-                requestedByUserId: await taskRequester(ctx),
-                title: str(input.title),
-                executor,
-                ...(executor === "shell" ? { command } : { prompt }),
-                sessionId: session,
-                resume: Boolean(before),
-                branch: str(input.branch).trim() || null,
-                // In a mission's thread the task is the mission's (its end, pause, stop and close).
-                missionId: (await missionOfRun(ctx))?.id ?? null,
-                ...(ctx.approved ? { approved: true } : {}),
-              },
-            );
-          });
+          // On another device (`computer`), a full one keeps the task in its line instead of refusing it.
+          const elsewhere = str(input.computer).trim() !== "";
+          const row = await run(
+            ctx,
+            async (computer) => {
+              const status = await hub.status(computer.machineId);
+              where = status?.name ?? info.name;
+              if (computer.machineId !== info.machineId) device = status;
+              const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
+              // One session per conversation for Claude Code and Codex (the runner maps Codex's own thread id).
+              const session = executor === "claude" || executor === "codex" ? ctx.threadRootId : null;
+              const [before] = session
+                ? await ctx.db
+                    .select({ id: schema.machineTasks.id })
+                    .from(schema.machineTasks)
+                    .where(
+                      and(
+                        eq(schema.machineTasks.orgId, ctx.orgId),
+                        eq(schema.machineTasks.agentId, ctx.agentId),
+                        eq(schema.machineTasks.sessionId, session),
+                      ),
+                    )
+                    .limit(1)
+                : [];
+              return startMachineTask(
+                { db: ctx.db, pubsub: deps.pubsub, call: hub.call },
+                {
+                  orgId: ctx.orgId,
+                  agent: { id: ctx.agentId, handle: agent?.handle ?? "agent" },
+                  machineId: computer.machineId,
+                  protocol: status?.protocol ?? 0,
+                  machineName: status?.name ?? info.name,
+                  channelId: ctx.channelId,
+                  threadRootId: replyThreadOf(ctx),
+                  runId: ctx.runId,
+                  requestedByUserId: await taskRequester(ctx),
+                  title: str(input.title),
+                  executor,
+                  ...(executor === "shell" ? { command } : { prompt }),
+                  sessionId: session,
+                  resume: Boolean(before),
+                  branch: str(input.branch).trim() || null,
+                  // In a mission's thread the task is the mission's (its end, pause, stop and close).
+                  missionId: (await missionOfRun(ctx))?.id ?? null,
+                  ...(ctx.approved ? { approved: true } : {}),
+                },
+                elsewhere ? { requeue: true } : {},
+              );
+            },
+            { computer: input.computer, label: str(input.title) },
+          );
           await recordAudit(deps.db, {
             orgId: ctx.orgId,
             actor: { type: "agent", id: ctx.agentId },
@@ -1328,15 +1436,21 @@ export function createSandboxToolSource(
             },
           }).catch(() => undefined);
           // The link dropped while it started: it may run there; its computer's journal settles it.
+          if (row.status === "queued" && row.startRequest) {
+            return {
+              content: `${where} has no room for it right now: task ${row.id} ("${row.title}") waits in its line and starts by itself when there is room. You will be woken in this conversation when it finishes. Tell the people it is queued there and end your turn.`,
+              data: { task: machineTaskView(row) },
+            };
+          }
           if (row.status === "interrupted") {
             return {
-              content: `The connection to ${info.name} dropped while starting task ${row.id} ("${row.title}"): it may have started there. Its computer tells within minutes whether it did: you are woken in this conversation when it finishes, or if it didn't start. Don't start it again; tell the people.`,
+              content: `The connection to ${where} dropped while starting task ${row.id} ("${row.title}"): it may have started there. Its computer tells within minutes whether it did: you are woken in this conversation when it finishes, or if it didn't start. Don't start it again; tell the people.`,
               data: { task: machineTaskView(row) },
             };
           }
           const what = executor === "claude" ? "Claude Code" : executor === "codex" ? "Codex" : "the command";
           return {
-            content: `Started background task ${row.id} ("${row.title}") on ${info.name}: ${what} in ${row.cwd ? row.cwd : "your folder"}${row.branch ? ` on branch ${row.branch}` : ""}. It runs on its own and you will be woken in this conversation when it finishes, with its result. Don't poll it or wait for it: tell the people it started and what it is doing, then end your turn.`,
+            content: `Started background task ${row.id} ("${row.title}") on ${where}: ${what} in ${row.cwd ? row.cwd : "your folder"}${row.branch ? ` on branch ${row.branch}` : ""}. It runs on its own and you will be woken in this conversation when it finishes, with its result. Don't poll it or wait for it: tell the people it started and what it is doing, then end your turn.`,
             data: { task: machineTaskView(row) },
           };
         } catch (error) {
@@ -1350,7 +1464,7 @@ export function createSandboxToolSource(
           }
           if (error instanceof MachineRequestError && error.code === "not_allowed") {
             return {
-              content: `Not started: ${notAllowedMessage(info.name, error.message, undefined, info.managed)}`,
+              content: `Not started: ${notAllowedMessage(where, error.message, undefined, device ? device.kind === "managed" : info.managed, device ?? undefined)}`,
               isError: true,
               data: { code: "machine.not_allowed" },
             };
@@ -1403,7 +1517,9 @@ export function createSandboxToolSource(
               ? [
                   `Its computer dropped off: it keeps running there if only the connection dropped. If the computer restarted, ${
                     (await taskResumesByItself(ctx.db, row))
-                      ? "Claude Code resumes it where it stopped once the computer is back."
+                      ? row.executor === "shell"
+                        ? "it starts again in its folder once the computer is back."
+                        : "Claude Code resumes it where it stopped once the computer is back."
                       : "it stopped and won't resume by itself; you are woken then."
                   }`,
                 ]
@@ -1540,17 +1656,153 @@ export function createSandboxToolSource(
     },
   });
 
+  /**
+   * `keep_running` (ADR 0176): a program the agent left running, its browser or a time, kept running on its own
+   * computer and shown to people, who may stop it. `holds`: what it keeps now and what ended lately, for its turn.
+   */
+  const keepTool = (
+    requireApproval: boolean,
+    info: Extract<ComputerInfo, { kind: "machine" }>,
+    holds: string,
+  ): ToolDefinition => ({
+    name: "keep_running",
+    description: `Keep a program you started on your computer running while nobody uses it (a bot, a tunnel, a server called from outside, a job on its own timer), or a page in your browser that must stay live (\`browser\`), and show people what runs for them: they see it on your computer and can stop it. Give \`what\` (a few words people read) and \`why\`, with the program's \`pid\` (the hold ends when it exits), \`browser: true\` with \`until\`, or \`until\` alone (an ISO date and time, at most 7 days ahead). To keep a hold longer, call with \`hold\` (its id) and a new \`until\` before then; the same pid or the browser again changes that hold too. \`end\` with a hold's id ends it (the program keeps running until you stop it); no arguments lists them. At most ${MAX_HOLDS_PER_AGENT} at once.${holds ? `\n${holds}` : ""}`,
+    scope: SANDBOX_SCOPE,
+    sensitive: requireApproval,
+    // Listing its holds or ending one asks nobody, as `list_tasks` and `cancel_task` never do.
+    asksNobody: (input) => !keepChanges(input),
+    inputSchema: {
+      type: "object",
+      properties: {
+        what: { type: "string", minLength: 1, maxLength: 80, description: "What is kept, as people will read it" },
+        why: { type: "string", minLength: 1, maxLength: 200, description: "Why it must keep running" },
+        pid: {
+          type: "integer",
+          minimum: 2,
+          maximum: 4_194_304,
+          description: "The program's process id on your computer",
+        },
+        browser: { type: "boolean", description: "Your browser, with the page it shows (with `until`)" },
+        until: { type: "string", maxLength: 40, description: "When it ends at the latest, ISO (2026-11-20T18:00:00Z)" },
+        hold: {
+          type: "string",
+          minLength: 36,
+          maxLength: 36,
+          description: "A hold's id, to change it (a new `until` keeps it longer)",
+        },
+        end: { type: "string", minLength: 36, maxLength: 36, description: "A hold's id, to end it now" },
+      },
+      additionalProperties: false,
+    },
+    describe: (input) =>
+      str(input.end)
+        ? { title: "End what it keeps running" }
+        : { title: `Keep ${str(input.what) || "a program"} running`, detail: str(input.why).slice(0, 500) },
+    async execute(input, ctx) {
+      try {
+        const hub = hubOf();
+        const call = (<Op extends "keep.start" | "keep.end">(
+          machineId: string,
+          request: Extract<MachineRequest, { op: Op }>,
+        ) => callWhenBack(hub, machineId, () => hub.call<Op>(machineId, request), ctx.signal)) as Parameters<
+          typeof takeHold
+        >[0]["call"];
+        const holdDeps = { db: ctx.db, ...(deps.pubsub ? { pubsub: deps.pubsub } : {}), call };
+        const end = str(input.end).trim();
+        if (end) {
+          const row = await liveHold(holdDeps, ctx.orgId, ctx.agentId, end);
+          if (!row) return { content: "No hold of yours with that id is live.", isError: true };
+          await releaseHold(holdDeps, row, { reason: "ended_by_agent", ...(ctx.runId ? { runId: ctx.runId } : {}) });
+          return {
+            content: `Ended hold ${row.id} ("${row.what}").${row.pid !== null ? " Its program runs on until you stop it." : ""}`,
+          };
+        }
+        if (!keepChanges(input)) {
+          const text = await holdsText(holdDeps, ctx.orgId, ctx.agentId);
+          return { content: text || "You keep nothing running." };
+        }
+        const holdId = str(input.hold).trim();
+        // Changed by its id: it stays on what it holds, with its words unless new ones are given.
+        const kept = holdId ? await liveHold(holdDeps, ctx.orgId, ctx.agentId, holdId) : null;
+        if (holdId && kept?.machineId !== info.machineId) {
+          return { content: "No hold of yours with that id is live on this computer.", isError: true };
+        }
+        if (kept && typeof input.pid === "number" && input.pid !== kept.pid) {
+          return { content: "A hold stays on its program: end it and keep the other one.", isError: true };
+        }
+        const what = str(input.what).trim() || kept?.what || "";
+        const why = str(input.why).trim() || kept?.why || "";
+        const pid = typeof input.pid === "number" ? input.pid : (kept?.pid ?? undefined);
+        const browser = input.browser === true || kept?.browser === true;
+        const untilText = str(input.until).trim();
+        if (!what || !why) return { content: "Give `what` and `why`: people read both.", isError: true };
+        if (pid !== undefined && browser)
+          return { content: "One hold is for a program or your browser.", isError: true };
+        // A browser's hold always ends: meanwhile it never closes as idle, and a newer Chrome waits up to a day for it.
+        if (pid === undefined && !untilText) {
+          return {
+            content: browser
+              ? "Your browser's hold needs `until` too, at most 7 days ahead: call again with `hold` before then to keep it."
+              : "Give the program's `pid`, `browser: true` with `until`, or `until`.",
+            isError: true,
+          };
+        }
+        const until = untilText ? new Date(Date.parse(untilText)) : undefined;
+        if (until && Number.isNaN(until.getTime())) {
+          return { content: "`until` is an ISO date and time, like 2026-11-20T18:00:00Z.", isError: true };
+        }
+        if (until && until.getTime() <= Date.now()) return { content: "That time has passed.", isError: true };
+        if (until && until.getTime() > Date.now() + HOLD_MAX_MS + 60_000) {
+          return { content: "At most 7 days ahead: call again with `hold` before then to keep it.", isError: true };
+        }
+        const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
+        const out = await takeHold(holdDeps, {
+          orgId: ctx.orgId,
+          agent: { id: ctx.agentId, handle: agent?.handle ?? "agent" },
+          machineId: info.machineId,
+          ...(kept ? { holdId: kept.id } : {}),
+          runId: ctx.runId ?? null,
+          what,
+          why,
+          ...(pid !== undefined ? { pid } : {}),
+          ...(browser ? { browser } : {}),
+          ...(until ? { until } : {}),
+        });
+        if ("full" in out) {
+          return {
+            content: `You already keep ${MAX_HOLDS_PER_AGENT} things running: end one first (\`end\` with its id).`,
+            isError: true,
+          };
+        }
+        return {
+          content: `${out.updated ? "Changed" : "Holding"} "${what}" (hold ${out.row.id}) ${holdUntil(out.row)}. People see it on your computer and can stop it.`,
+          data: { hold: holdView(out.row) },
+        };
+      } catch (error) {
+        if (error instanceof MachineRequestError && error.code !== "timeout" && error.code !== "canceled") {
+          return { content: `Not held: ${error.message}.`, isError: true, data: { code: `keep.${error.code}` } };
+        }
+        return failed(error);
+      }
+    },
+  });
+
   const build = (
     requireApproval: boolean,
     execTimeout: number,
     computerInfo: ComputerInfo = { kind: "none", preparing: false },
     sessionId?: string,
+    devices = false,
+    holds = "",
   ): ToolDefinition[] => [
-    ...baseTools(requireApproval, execTimeout, computerInfo, sessionId),
-    ...(computerInfo.kind === "machine" && tasksOn(computerInfo) ? taskTools(requireApproval, computerInfo) : []),
+    ...baseTools(requireApproval, execTimeout, computerInfo, sessionId, devices),
+    ...(computerInfo.kind === "machine" && tasksOn(computerInfo)
+      ? taskTools(requireApproval, computerInfo, devices)
+      : []),
     ...(computerInfo.kind === "machine" && computerInfo.protocol >= ACCESS_PROTOCOL
       ? [folderAccessTool(computerInfo)]
       : []),
+    ...(keepsRunning(computerInfo) ? [keepTool(requireApproval, computerInfo, holds)] : []),
   ];
 
   return {
@@ -1577,6 +1829,7 @@ export function createSandboxToolSource(
           "task_status",
           "cancel_task",
           "request_folder_access",
+          "keep_running",
         ].some((n) => keys.has(grantKey(null, toolAllowScope(n))));
       // `request_secret` only when it is this agent's to use here; otherwise the browser offers its own (ADR 0040).
       const secretsHere = isAllowed(toolAccess(keys, { name: REQUEST_SECRET_TOOL, scope: SANDBOX_SCOPE }));
@@ -1593,7 +1846,16 @@ export function createSandboxToolSource(
         ctx.agentId,
         mission ? { machineId: mission.machineId } : null,
       );
-      const tools = keep(build(settings.requireApproval, settings.execTimeoutSeconds, computer, ctx.threadRootId));
+      const { others: devices } = rosterFacts(
+        await deviceRoster(ctx.db, ctx.orgId),
+        computer.kind === "machine" ? computer.machineId : null,
+      );
+      const holds = keepsRunning(computer)
+        ? await holdsText({ db: ctx.db, ...(deps.pubsub ? { pubsub: deps.pubsub } : {}) }, ctx.orgId, ctx.agentId)
+        : "";
+      const tools = keep(
+        build(settings.requireApproval, settings.execTimeoutSeconds, computer, ctx.threadRootId, devices, holds),
+      );
       if (!mission) return tools;
       return tools.map((t) => ({
         ...t,

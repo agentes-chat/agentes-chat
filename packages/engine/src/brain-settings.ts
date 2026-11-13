@@ -5,6 +5,7 @@ import {
   BRAIN_PROTOCOL,
   type BrainEffort,
   type BrainSpeed,
+  CODEX_WINDOWS_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   isBrainEffort,
@@ -75,7 +76,7 @@ import {
   releaseAgents,
   sharesSignIns,
 } from "./machine-accounts";
-import { getMachine, type MachineRow, machineOnline, publishMachineAgentsChanged } from "./machines";
+import { getMachine, type MachineRow, machineOnline, mayBeHome, publishMachineAgentsChanged } from "./machines";
 import {
   agentMissionApproval,
   type CommandApproval,
@@ -95,7 +96,7 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import { isRightHand, personalBrain } from "./right-hand";
 import { orgModelProvider } from "./router";
-import { closedRefusal } from "./standing";
+import { readRefusal } from "./standing";
 import { wakeAgentUsageWaits } from "./usage-pause";
 
 /*
@@ -310,6 +311,8 @@ export interface BrainOption {
 type MachineLike = Parameters<typeof machineExecutors>[0] & {
   id: string;
   name: string;
+  /** Its system (`hello.os`): a Windows runner before `CODEX_WINDOWS_PROTOCOL` can't think with Codex. */
+  os?: string;
   /** Protocol 10: what the machine allows (the app's Ferramentas); absent on older runners. */
   access?: {
     tools?: {
@@ -334,13 +337,18 @@ const missingCli = (machine: MachineLike): BrainUnavailable =>
  * (Missions' legacy executor tasks keep their own check, `machineExecutors`.)
  */
 export function brainOptions(machine: MachineLike | null): BrainOption[] {
-  const found = machine ? machineExecutors(machine) : null;
+  // Only which CLIs are installed: `machineExecutors` lists none with commands off, but commands are judged below.
+  const found = machine ? machineExecutors({ ...machine, execAllowed: true }) : null;
   const computer = (kind: "claude_code" | "codex", executor: "claude" | "codex"): BrainOption => {
     let reason: BrainUnavailable | undefined;
+    // A runner that reports its tools (protocol 10) runs a coding CLI by that CLI's own switch, commands off or not
+    // (`toolOff` in brains/claude-code.ts, `toolOn` on the runner); only an older one follows commands (`exec`).
     if (!machine) reason = "no_computer";
-    else if (!machine.execAllowed) reason = "exec_off";
+    else if (!machine.access?.tools && !machine.execAllowed) reason = "exec_off";
     else if (machine.protocol < BRAIN_PROTOCOL) reason = "runner_old";
-    else if (machine.access?.tools && machine.access.tools[executor] === false) reason = "tool_off";
+    else if (executor === "codex" && machine.os === "windows" && machine.protocol < CODEX_WINDOWS_PROTOCOL)
+      reason = "runner_old";
+    else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     else if (!found?.available.includes(executor))
       reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine);
     return {
@@ -370,7 +378,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
   const tools = machine?.access?.tools;
   let reason: BrainUnavailable | undefined;
   if (!machine) reason = "no_computer";
-  else if (!machine.execAllowed) reason = "exec_off";
+  else if (!tools && !machine.execAllowed) reason = "exec_off";
   else if (
     machine.protocol <
     {
@@ -381,7 +389,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
     }[kind]
   )
     reason = "runner_old";
-  else if (tools && (tools[kind] ?? tools.codex) === false) reason = "tool_off";
+  else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
   else if (!machine.executors?.[kind]) reason = missingCli(machine);
   return {
     kind,
@@ -580,7 +588,7 @@ async function candidateMachines(
     .from(schema.machines)
     .where(and(eq(schema.machines.orgId, orgId), isNull(schema.machines.deletedAt)));
   return rows
-    .filter((m) => admin || m.pairedByUserId === userId || m.id === current)
+    .filter((m) => (admin || m.pairedByUserId === userId || m.id === current) && (mayBeHome(m) || m.id === current))
     .map((m) => ({ machineId: m.id, name: m.name, online: machineOnline(m), options: brainOptions(m) }));
 }
 
@@ -957,12 +965,15 @@ export interface AgentBrainInput {
 
 const EVERYONE: AgentAudience = { mode: "everyone", userIds: [], roleIds: [] };
 
-/** Who it answers after this change: a switch onto a plan makes it its owner's only (ADR 0059 §5). */
-function nextAudience(agent: Agent, brain: BrainKind, changed: boolean, onlyOwner: boolean | undefined): AgentAudience {
+/**
+ * Who it answers after this change: a switch onto a plan (`ontoPlan`) makes it its owner's only (ADR 0059 §5). From
+ * one of its owner's plans to another it keeps whoever its owner already let in.
+ */
+function nextAudience(agent: Agent, ontoPlan: boolean, onlyOwner: boolean | undefined): AgentAudience {
   const current = audienceOf(agent);
   // One that already answers its owner alone keeps its mode: "Só algumas pessoas" with nobody picked stays that.
   const narrow = (a: AgentAudience) => (answersOthers(a, agent.ownerUserId) ? OWNER_ONLY : a);
-  const base = changed && isComputerBrain(brain) ? narrow(current) : current;
+  const base = ontoPlan ? narrow(current) : current;
   if (onlyOwner === undefined) return base;
   if (onlyOwner) return narrow(base);
   if (answersOthers(base, agent.ownerUserId)) return base;
@@ -1093,9 +1104,10 @@ export async function setAgentBrain(
     input.contextTokens === undefined ? agent.contextTokens : (input.contextTokens as number | null);
   // The right hand keeps its audience: "Atende outras pessoas" is its own switch, off when it moves onto a plan.
   // Onto someone else's plan it starts on its owner alone, as onto a plan (ADR 0059 §5).
-  const to = rightHand
-    ? audienceOf(agent)
-    : nextAudience(agent, brain, changed || ownerSwitch, input.onlyOwner as boolean | undefined);
+  // Already on a plan, another kind of plan (Claude to ChatGPT) is not a move onto one: whoever its owner let in
+  // stays, as when only the account or the model changes. A plan that changes hands still starts on its owner alone.
+  const ontoPlan = isComputerBrain(brain) && (ownerSwitch || (changed && !isComputerBrain(from)));
+  const to = rightHand ? audienceOf(agent) : nextAudience(agent, ontoPlan, input.onlyOwner as boolean | undefined);
   const audience = to.mode === agent.audienceMode ? null : to;
   const planForOthers = !rightHand
     ? agent.planForOthers
@@ -1603,6 +1615,8 @@ export interface AgentBrainSummary {
   usage?: PlanUsage;
   /** Set to Rápida where that applies to what it thinks with (ADR 0149); absent: standard speed. */
   speed?: "fast";
+  /** An API brain on Automático: the maker its models come from (`agentBrainLines`), whose logo the app shows. */
+  maker?: string;
 }
 
 /**
@@ -1676,7 +1690,7 @@ export async function agentBrainSummaries(
   ]);
   const live = new Map(machines.filter((m) => !m.deletedAt).map((m) => [m.id, m]));
   const accountById = new Map(accounts.map((r) => [r.id, r]));
-  const manages = membership !== null && !closedRefusal(membership.standing) && can(membership, "manage_agents");
+  const manages = membership !== null && !readRefusal(membership.standing) && can(membership, "manage_agents");
   for (const a of agents) {
     const kind = brainOf(a.brain);
     const machine = a.machineId ? live.get(a.machineId) : undefined;

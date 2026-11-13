@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { BatchInviteResult, InvitationWithStatus, OrgRole } from "@agenteschat/client";
 import {
   addressesLeft,
@@ -9,6 +11,8 @@ import {
   invitationRoles,
   invitationSender,
   invitersOf,
+  joinRoleWord,
+  memberActions,
   memberLine,
   offeredChannels,
   pendingInvitations,
@@ -115,6 +119,13 @@ describe("Membros e convites (ADR 0090)", () => {
     expect(pt(`members.invitations.${sentWords(false).resent}`, { email, date })).not.toContain("Mandei");
     expect(sentWords(true).newLink).toBe("newLink");
     expect(sentWords(false).copied).toBe("copiedNoEmail");
+  });
+
+  test("a person's menu: a message to anyone but oneself, removing or leaving only when allowed, none when empty", () => {
+    expect(memberActions(false, true)).toEqual(["dm", "remove"]);
+    expect(memberActions(false, false)).toEqual(["dm"]);
+    expect(memberActions(true, true)).toEqual(["leave"]);
+    expect(memberActions(true, false)).toEqual([]);
   });
 
   test("a person's line: their @handle, their role, or Membro, then when they were here", async () => {
@@ -231,5 +242,48 @@ describe("Convidar pessoas (ADR 0090 §5)", () => {
     ]);
     expect(general?.id).toBe("c1");
     expect(others.map((c) => c.name)).toEqual(["produto", "diretoria"]);
+  });
+});
+
+describe("Invite people in a personal workspace (ADR 0159 §4)", () => {
+  const src = (file: string) =>
+    readFileSync(join(import.meta.dir, "..", "..", "src", "features", "members", file), "utf8");
+
+  test("each address's role in plain words: uses the agents, helps run it, any other role by its name", async () => {
+    const pt = await translator("pt-BR");
+    expect(joinRoleWord(pt, ROLES, null, true)).toBe("Usa os agentes");
+    expect(joinRoleWord(pt, ROLES, ADMIN.id, true)).toBe("Ajuda a cuidar daqui");
+    expect(joinRoleWord(pt, ROLES, SALES.id, true)).toBe("Vendas");
+    // A role no longer there reads as no role.
+    expect(joinRoleWord(pt, ROLES, "r-gone", true)).toBe("Usa os agentes");
+    // A team's workspace: Membro, or the role's own name.
+    expect(joinRoleWord(pt, ROLES, null, false)).toBe("Membro");
+    expect(joinRoleWord(pt, ROLES, ADMIN.id, false)).toBe("Admin");
+  });
+
+  test("it asks first who they are: family goes on, work switches it on the mode screen, locked for the rest", () => {
+    const invite = src("InvitePeople.tsx");
+    expect(invite).toContain("if (personal && !family) return <WhoQuestion onFamily={() => setFamily(true)} />;");
+    expect(invite).toContain('router.push("/settings/mode")');
+    expect(invite).toContain('t(switches ? "personalMode.invite.workText" : "personalMode.invite.workLocked")');
+    expect(invite).toContain("joinRoleWord(t, roles, a.roleId, personal)");
+  });
+
+  test("the role sheet offers the two plain choices first, then every other role this person may give", () => {
+    const sheets = src("InviteSheets.tsx");
+    expect(sheets).toContain('label: personal ? t("members.dialog.role.uses") : t("roles.member"),');
+    expect(sheets).toContain("...givable.filter((r) => r.key !== helper.id),");
+  });
+});
+
+describe("Convidar pessoas while it sends", () => {
+  test("whoever is being invited never reads as invited already: the rows keep the lists from before Convidar", () => {
+    const invite = readFileSync(join(import.meta.dir, "../../src/features/members/InvitePeople.tsx"), "utf8");
+    expect(invite).toContain(
+      "const members = useHeldWhile(new Set(people.map((m) => m.email.toLowerCase())), inviteMany.isPending);",
+    );
+    expect(invite).toMatch(
+      /const invited = useHeldWhile\(\s*new Set\(pendingInvitations\(invitations\)[^;]*\),\s*inviteMany\.isPending,\s*\);/,
+    );
   });
 });

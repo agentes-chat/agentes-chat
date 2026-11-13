@@ -12,21 +12,46 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "How it runs",
         blocks: [
           "It runs inside the app, with its own database built in, and keeps everything in one folder on this computer, `.agentes` in your home folder. Nothing else to install: no Docker, no database to set up.",
-          "It starts with the app and stops when you quit it. Quitting asks first, because nobody can use agentes.chat until the app opens again.",
+          "It starts with the app and stops when you quit it. Quitting asks first, because nobody can use agentes.chat until the app opens again. To stop it for a while without quitting, click the agentes.chat icon by the clock and choose **Stop** in the **⋯** menu of its card.",
         ],
       },
       {
         id: "who",
         heading: "Who it's for",
         blocks: [
-          "Made for you or a small team, while this computer is on. For a bigger team, or a server that's always on, [install agentes.chat on a server](/help/install-on-a-server) and choose **Connect to my server** in the app. Your data can move there later.",
+          "You or a small team. A Mac mini, a spare PC or a laptop that stays on makes a good home: set it up as in [Keep it on](#keep-on). On a Mac or a PC, the app is the way to run agentes.chat without Docker.",
+          "For a bigger team, see [Which setup to pick](/help/install-on-a-server#choose). Your data can move to a server later.",
+        ],
+      },
+      {
+        id: "keep-on",
+        heading: "Keep it on",
+        blocks: [
+          "On a computer that others use, set it up once. **Keep it running**, in **Preferences\u00a0›\u00a0Servers**, shows what's still missing and opens the right settings:",
+          {
+            list: [
+              "**Open at login** turns on by itself after the setup.",
+              "On a Mac, turn on **Automatic login** in **System Settings\u00a0›\u00a0Users & Groups**, so the app opens after a restart. FileVault turns automatic login off.",
+              "On a Mac, turn on **Start up automatically after a power failure** in **System Settings\u00a0›\u00a0Energy**.",
+              "A Mac stays awake while the server runs and **Reach it from your phone and teammates** is on. On Windows and Linux, turn sleep off in the system's power settings.",
+            ],
+          },
         ],
       },
       {
         id: "agents",
         heading: "Your agents work here too",
         blocks: [
-          "Your agents work on this computer too, in folders of their own, with a browser, and with Claude Code or Codex when they're installed here. Commands stay off until you turn them on in **Preferences\u00a0›\u00a0Tools**.",
+          "Your agents work on this computer too, in folders of their own, with a browser, and with Claude Code or Codex when they're installed here.",
+          "Agents here run as you. **Commands** are on by default, and with them the agents of every workspace that uses this computer can reach everything on it, the server's data included. Turn them off in **Preferences\u00a0›\u00a0Tools**. See [What agents can reach](/help/computers#reach).",
+        ],
+      },
+      {
+        id: "another-workspace",
+        heading: "Lend it to another workspace too",
+        blocks: [
+          "The workspaces of the server you run here use this computer by themselves. To let a workspace somewhere else use it too, such as one on agentes.chat Cloud, press **Add a workspace…** at the bottom of the first card in **Preferences\u00a0›\u00a0General**, or **Add a server…** in **Preferences\u00a0›\u00a0Servers**. Sign in to that workspace and press **Allow** when the app asks.",
+          "Each workspace gets its own agents and folders here. **Commands** are on by default for it too. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where each workspace has its own switch and the app asks before turning one back on.",
         ],
       },
       {
@@ -34,55 +59,55 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "From your phone and your team",
         blocks: [
           "**Reach it from your phone and teammates** puts agentes.chat on Tailscale, a private network for your devices: your phone and the people you invite join it, and nobody else can reach agentes.chat. Tailscale is free: https://tailscale.com/download. With it off, agentes.chat works only on this computer.",
+          "If this computer already shares something else on Tailscale's port 443, agentes.chat takes 8443, and its address ends in `:8443`.",
+        ],
+      },
+      {
+        id: "password",
+        heading: "Signing in from other devices",
+        blocks: [
+          "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. Until you do, **Preferences\u00a0›\u00a0Servers** says so, and **Add a password** opens that page. The phone app connects by scanning the QR code under **On your phone**, in **Preferences\u00a0›\u00a0Servers**. The QR code needs **Reach it from your phone and teammates** on.",
+        ],
+      },
+      {
+        id: "updates",
+        heading: "Updates",
+        blocks: [
+          "The app looks for updates by itself. With **Install updates by itself, at night** on, in **Preferences\u00a0›\u00a0Updates**, it installs them between 3:00 and 5:00 while the app is open. It's on by default when the server runs here. Otherwise, press **Update and reopen**. The server and every agent restart with it. The database is copied first, and if the new version doesn't answer within 3 minutes, the app goes back to the previous version and its data by itself.",
         ],
       },
       {
         id: "backups",
-        heading: "Backups and moving",
+        heading: "Backups",
         blocks: [
-          "**Back up now**, in **Preferences\u00a0›\u00a0Servers**, saves the database, the files and the settings in `.agentes/backups`, in your home folder.",
-        ],
-      },
-    ],
-  },
-  computers: {
-    title: "Computers for your agents",
-    summary:
-      "Agents run code and work with files on computers you connect: a Mac or a PC with the agentes.chat app, or a server.",
-    sections: [
-      {
-        id: "mac",
-        heading: "A Mac or a PC, with the app",
-        blocks: [
-          "The agentes.chat app opens your server in a window of its own, and with one click its agents work on that computer, in folders of their own. Install the app, open it, choose **Use your own server\u00a0›\u00a0Connect to my server** and type your server's address. Then, signed in, click **Use this Mac** (**Use this PC** on Windows, **Use this computer** on Linux) in **Settings\u00a0›\u00a0Computers**.",
+          "With **Back up every night** on (app 0.8.1 and later), in **Preferences\u00a0›\u00a0Servers**, the app saves the database, the files and `.env` in `.agentes/backups`, in your home folder, every night at 3:00. A computer that was asleep then backs up once it's awake. **Back up now** does the same at once. Each backup stops the server for a moment, and the two newest stay.",
+          "**Copy to** also puts each new backup in a folder you pick, like a USB drive or iCloud Drive, where the two newest stay. They hold your keys: keep them private. **Restore…** takes agentes.chat back to a backup: messages, files and settings. It stops for a minute, and what was there before is kept in the backups folder.",
         ],
       },
       {
-        id: "server",
-        heading: "A server or a Linux computer",
+        id: "ai-programs",
+        heading: "Claude Code and Codex",
         blocks: [
-          "In **Settings\u00a0›\u00a0Computers**, copy the command under **Other ways** and run it in that computer's terminal. It shows a code and a link: open the link, check that the code matches and confirm with your account. There's nothing to install first.",
+          "The app finds Claude Code and Codex through your login shell's `PATH`, plus the usual folders such as `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. If **Preferences\u00a0›\u00a0Tools** says **Not found**, it shows the line that installs it. Run that line in Terminal, then press **Check again**.",
         ],
       },
       {
-        id: "folders",
-        heading: "Folders",
+        id: "moving",
+        heading: "Moving to a server",
         blocks: [
-          "Each agent always has its own folder, in `~/agentes/<workspace>`. More folders are allowed on the computer itself, never from the website: in the app, **Preferences\u00a0›\u00a0Folders**, or with `agentes-runner folders allow` on a server. Each workspace allows its own folders: what you allow for one only counts for its agents. Removing a folder deletes nothing. It only takes the access away.",
-        ],
-      },
-      {
-        id: "pausing",
-        heading: "Pausing",
-        blocks: [
-          "With the app, whoever connected a computer can pause its agents there, from the agentes.chat icon by the clock. Nothing new starts until they resume. What was running finishes.",
-        ],
-      },
-      {
-        id: "organizations",
-        heading: "Several workspaces",
-        blocks: [
-          "One computer can work for several workspaces. Each one has its own agents, folders and tasks there, and disconnecting one doesn't touch the others.",
+          {
+            list: ["Quit the app, then dump the database with the app's own copy of the server. On a Mac:"],
+          },
+          {
+            code: "BUN_BE_BUN=1 /Applications/agentes.chat.app/Contents/MacOS/agentes-runner \\\n  ~/.agentes/app/current/server/native.js db dump --data ~/.agentes --out agentes.sql",
+          },
+          {
+            list: [
+              "[Install agentes.chat on a server](/help/install-on-a-server), but don't start it yet. In its `.env`, put the `AGENTES_SECRET` from `~/.agentes/.env`, then start only the database: `docker compose up -d postgres`.",
+              "Load the dump: `docker compose exec -T postgres psql -U agentes -d agentes -v ON_ERROR_STOP=1 < agentes.sql`.",
+              "Start it with `docker compose up -d`, copy `~/.agentes/files` into it as the full guide shows, and sign in as before.",
+            ],
+          },
         ],
       },
     ],
@@ -99,6 +124,13 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         ],
       },
       {
+        id: "own",
+        heading: "Your own computers and phones",
+        blocks: [
+          "Agents can also work on computers and phones you bring: a Mac or a PC with the agentes.chat app, a server, an Android phone or an iPhone. See [Computers and phones you bring](/help/computers).",
+        ],
+      },
+      {
         id: "plans",
         heading: "Your AI plans",
         blocks: [
@@ -109,12 +141,104 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       {
         id: "size",
         heading: "Its size",
-        blocks: ["Its CPUs, memory and disk show in **Settings\u00a0›\u00a0Computers**."],
+        blocks: ["Its CPUs, memory and disk show in **Settings\u00a0›\u00a0Devices**."],
       },
       {
         id: "trouble",
         heading: "If it stops answering",
         blocks: ["It usually comes back within a few minutes, and we're on it: there's nothing to do on your side."],
+      },
+    ],
+  },
+  computers: {
+    title: "Your computers and phones",
+    summary:
+      "Bring a Mac, a PC, a Linux computer, a server or a phone, and your agents work on it. On agentes.chat Cloud and on a server of your own alike.",
+    sections: [
+      {
+        id: "app",
+        heading: "From the agentes.chat app",
+        blocks: [
+          "Install the app on the computer, open it and sign in to your workspace. It asks **Let <workspace>'s agents use this Mac?** (this PC on Windows, this computer on Linux). Choose who can use it and press **Allow**. That's all.",
+          "Already signed in? Open **Preferences\u00a0›\u00a0General** and press **Allow** on the workspace's row in the first card. Not there? Press **Add a workspace…** at the bottom of that card and sign in.",
+        ],
+      },
+      {
+        id: "web",
+        heading: "From the website",
+        blocks: [
+          "In **Settings\u00a0›\u00a0Devices**, press **Connect a device**:",
+          {
+            list: [
+              "**This Mac** or **This PC**: opens the app, which asks you first.",
+              "**Another computer**: install the app there, sign in as yourself and press **Allow**. It shows up here by itself.",
+              "**A server or VPS**: run one line in its terminal, then let it join. The line works once, for 10 minutes.",
+            ],
+          },
+          "The app connects in one click only to an address with https, such as a Tailscale one ending in `.ts.net`. On a plain http address, use the terminal line.",
+        ],
+      },
+      {
+        id: "phones",
+        heading: "Phones",
+        blocks: [
+          "An Android phone connects through any computer that's already connected: by cable, or over Wi-Fi on Android 14 or newer with the May 2026 security update. An iPhone connects through a Mac that has the app and Xcode, and the app sets up the rest. Both start from **Connect a device**.",
+        ],
+      },
+      {
+        id: "who",
+        heading: "Who can use it",
+        blocks: [
+          "A new device is for you alone: **Only me** means you and the agents working for you. Open it to everyone in the workspace, or to some people and roles, when you allow it or later on its page in **Settings\u00a0›\u00a0Devices**.",
+        ],
+      },
+      {
+        id: "open",
+        heading: "While the app is open",
+        blocks: [
+          "Agents work on a computer only while the app runs there and the computer is awake. When the app asks, leave **Keep it ready: open agentes.chat at login** checked. A computer that's off or asleep shows **Offline**, and agents wait for it to come back.",
+        ],
+      },
+      {
+        id: "pausing",
+        heading: "Pausing and disconnecting",
+        blocks: [
+          "On the computer, the agentes.chat icon by the clock pauses the agents of every workspace, or of just one. In **Preferences\u00a0›\u00a0General**, each workspace's switch pauses just that one, and **Leave**, in its **⋯** menu, disconnects it. Nothing new starts while paused, and what was running finishes. Disconnecting keeps the agents' folders on disk.",
+          "From the website, **Remove** on the device's page disconnects it.",
+        ],
+      },
+      {
+        id: "organizations",
+        heading: "Several workspaces, one computer",
+        blocks: [
+          "Sign in to each workspace in the same app and press **Allow** for each one. Workspaces on agentes.chat Cloud and on your own servers can share a computer (app 0.6.1 and later). Each has its own agents and folders there, and disconnecting one doesn't touch the others.",
+          "A server the app runs on this computer is connected already and needs nothing. To also lend that computer to a workspace somewhere else, see [Lend it to another workspace too](/help/run-on-your-computer#another-workspace).",
+          "Using the app on a laptop only as a window onto your workspace? When it asks to let agents use the laptop, **Not now** keeps it a plain window.",
+        ],
+      },
+      {
+        id: "folders",
+        heading: "Folders",
+        blocks: [
+          "Each agent always has its own folder, in `~/agentes/<workspace>`. More folders are allowed on the computer itself, never from the website: in the app, **Preferences\u00a0›\u00a0Folders**, or with `agentes-runner folders allow` on a server. Each workspace allows its own folders: what you allow for one only counts for its agents. Removing a folder deletes nothing. It only takes the access away.",
+        ],
+      },
+      {
+        id: "reach",
+        heading: "What agents can reach",
+        blocks: [
+          "Agents run as you, the computer's user. Their file tools stay in their folders, but a command can read anything you can:",
+          {
+            list: [
+              "your files and sign-ins",
+              "other agents' folders, other workspaces' included, and the logins their browsers keep",
+              "the token that connects this computer",
+              "on a computer that also runs agentes.chat, its database and keys in `.agentes`",
+            ],
+          },
+          "agentes.chat refuses commands that name its keys, tokens and sign-ins, but that's a rule, not a wall. **Commands** are on by default. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where each workspace has its own switch (app 0.8.1 and later) and the app asks before turning one back on. Claude Code and Codex run their own commands in the agent's folder, under their own rules, even with Commands off.",
+          "For a real wall, use a Linux server. On Debian 13, installed with `--system`, each agent is a user of its own. On Ubuntu, agents share one user, `agentes`: they see each other's folders, not yours or the server's. Or give the agents a computer of their own.",
+        ],
       },
     ],
   },
@@ -145,6 +269,21 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         blocks: [
           "Keys, passwords, logins and chat history never come along: the agents think with the workspace's AI. Some things have no equivalent here yet, or should never travel in a file. You can recreate them later.",
           "Files and folders are read in your browser. A GitHub link goes through the workspace's server. Key and login files are never opened, and nothing changes until you confirm.",
+        ],
+      },
+      {
+        id: "mcp",
+        heading: "Connect with MCP",
+        blocks: [
+          "MCP lets your AI app reach this workspace, so it creates the agents here itself, with their instructions, skills and routines. Choose your app, pick **Connect with MCP**, then:",
+          {
+            list: [
+              "Connect the address the step shows, in that app's own steps. [How to connect, app by app](/help/apps-de-ia#connect)",
+              "On the sign-in page, pick **Create and edit agents, routines and skills**.",
+              "Paste the request into the app. The agents show up on the step as they arrive.",
+            ],
+          },
+          "When an app can't connect, choose **From a file** or **Prompt only**, whichever the step shows. [From another app](/help/import#other-apps) covers the request.",
         ],
       },
       {
@@ -230,9 +369,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       {
         id: "permissions",
         heading: "Memory grants no permission",
-        blocks: [
-          "Nothing in memory lets an agent do more. What it can do stays in its **Tools and access**, and sensitive actions always ask for approval.",
-        ],
+        blocks: ["Nothing in memory lets an agent do more. What it can do stays in its **Tools and access**."],
       },
       {
         id: "proposals",
@@ -251,7 +388,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "what",
         heading: "What asks first",
         blocks: [
-          "When an agent wants to merge, deploy, roll back, send something outside or delete data, it asks first, whatever access it has. The request shows up in **Approvals** and in the conversation, with the exact action and why.",
+          "When an agent wants to merge, deploy, roll back, send something outside or delete data, it asks first. That is **Only what is risky**, the level every agent starts at. On the agent's page, under **Approvals**, **Always ask** makes it ask before changing anything, and **Never ask** makes it ask for nothing, merge, deploy, payments and routines included. The request shows up in **Approvals** and in the conversation, with the exact action and why.",
         ],
       },
       {
@@ -259,7 +396,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "Once, or always",
         blocks: [
           "Approving covers one exact action, with its values. If the agent changes anything, it asks again.",
-          "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. Neither is offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
+          "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. **Always approve** is there for any kind of action, merge and deploy too, while the agent is at **Only what is risky**. **Always in this routine** is not offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
         ],
       },
       {
@@ -371,7 +508,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
               "Open https://console.typesafe.ai and sign in with Google or your email. A new account is made the same way.",
               "Add credit in the console. Jev is prepaid.",
               "Open https://console.typesafe.ai/keys, create a key and copy it right away.",
-              "In agentes.chat, open **Settings\u00a0›\u00a0AI accounts** and paste it under **Jev**. Only the person who set up this server sees it.",
+              "In agentes.chat, open **Settings\u00a0›\u00a0AI and usage** and paste it under **Jev**. Only the person who set up this server sees it.",
             ],
           },
           "On a server you run with Docker, you can put the key in `.env` as `TYPESAFE_API_KEY` instead. That one wins over the one in Settings.",
@@ -385,7 +522,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
             list: [
               "US$ 0.042 per million tokens Jev reads. Its answers are free. Picking who answers reads about 2,500 tokens, so about US$ 0.0001. A screenshot is about 3,900 tokens.",
               "Credits you buy last 12 months. Turn on automatic refills in the console so Jev doesn't run out.",
-              "**Settings\u00a0›\u00a0AI accounts** shows how many decisions Jev made this month, and what they cost.",
+              "**Settings\u00a0›\u00a0AI and usage** shows how many decisions Jev made this month, and what they cost.",
             ],
           },
         ],
@@ -416,7 +553,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         blocks: [
           {
             list: [
-              "**Key not accepted:** create a new key and paste it in **Settings\u00a0›\u00a0AI accounts**.",
+              "**Key not accepted:** create a new key and paste it in **Settings\u00a0›\u00a0AI and usage**.",
               "**Out of credit:** add credit in the console. Jev tries again within 30 minutes, or click **Check again**.",
               "**Busy or unreachable:** TypeSafe may limit requests per second, or stop answering for a while. Jev picks up again by itself. Your limits: https://console.typesafe.ai/rate-limits. For higher ones, write to sales@typesafe.ai.",
             ],
@@ -529,12 +666,26 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
     summary: "Run agentes.chat on a server of your own, free, for your whole team. One command sets it up.",
     sections: [
       {
+        id: "choose",
+        heading: "Which setup to pick",
+        blocks: [
+          {
+            list: [
+              "**agentes.chat Cloud**: for any team, reachable from anywhere. We run it, update it and back it up. Each workspace gets its own computer, where each agent is a user of its own.",
+              "**Your computer, with the app**: for you or a small team, reachable while that computer is on. A Mac mini that stays on works well. You update it with one click and back it up by hand. Agents run as you on that computer.",
+              "**A server**: for a bigger team, up all the time. You update it with three commands, and it can back up every day by itself. On Debian 13, each agent is a user of its own.",
+            ],
+          },
+          "From your computer to a server: [Moving to a server](/help/run-on-your-computer#moving). Any of them can bring agents from another with [Bring your agents](/help/import).",
+        ],
+      },
+      {
         id: "need",
         heading: "What you need",
         blocks: [
           {
             list: [
-              "A server or VPS with 64-bit Linux, on x64 or arm64. For a small team, 2 CPUs, 4 GB of memory and 20 GB of disk are a good start. To try it, a Mac with Docker Desktop, OrbStack or Colima works too.",
+              "A server or VPS with 64-bit Linux, on x64 or arm64. For a small team, 2 CPUs, 4 GB of memory and 20 GB of disk are a good start. On a Mac or a PC, [the app runs agentes.chat](/help/run-on-your-computer) without Docker.",
               "Docker with Compose. On Linux the installer adds them when they're missing, after asking.",
               "A way in: a free Tailscale account (the default, private, with no domain and no open port), or a domain that points at the server, with ports 80 and 443 open.",
             ],
@@ -608,11 +759,11 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "computers",
         heading: "Your agents' computers",
         blocks: [
-          "The setup can make this server your agents' computer too, where they run commands, use a browser and keep their files. It asks, and suggests yes where the server can do it well. On Linux each agent gets a user of its own, with a screen. If you said no, run the install again with `--computer yes`:",
+          "The setup can make this server your agents' computer too, where they run commands, use a browser and keep their files. It asks, and suggests yes where the server can do it well. On Debian 13 each agent gets a user of its own, with a screen. On Ubuntu, agents share one user, `agentes`. If you said no, run the install again with `--computer yes`:",
           {
             code: "curl -fsSL https://agentes.chat/install | sh -s -- --computer yes",
           },
-          "More computers, such as a Mac with the agentes.chat app or another server, connect from **Settings\u00a0›\u00a0Computers**, as in [Computers for your agents](/help/computers). On Tailscale, they join your tailnet first.",
+          "More computers, such as a Mac with the agentes.chat app or another server, connect from **Settings\u00a0›\u00a0Devices**, as in [Your computers and phones](/help/computers). On Tailscale, they join your tailnet first.",
         ],
       },
       {

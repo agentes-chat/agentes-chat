@@ -460,9 +460,15 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
                 />
               ))}
               <Block>
-                <Text variant="footnote" tone="muted">
-                  {t(r.ownActions?.length ? "routines.ownActions.hint" : "routines.ownActions.none")}
-                </Text>
+                <InfoHint
+                  name={t("common.about", { label: t("routines.panel.ownActions") })}
+                  text={t(r.ownActions?.length ? "routines.ownActions.hint" : "routines.ownActions.none")}
+                  variant="footnote"
+                >
+                  <Text variant="footnote" tone="muted">
+                    {t(r.ownActions?.length ? "routines.ownActions.hintShort" : "routines.ownActions.noneShort")}
+                  </Text>
+                </InfoHint>
               </Block>
             </Section>
           ) : null}
@@ -473,6 +479,7 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
               label={r.widget?.title ?? targetLabel(r.target)}
               sub={t(`routines.panel.whereHint.${whereHint}`)}
               subLines={2}
+              media
               chevron={Boolean(whereHref)}
               {...(whereHref ? { onPress: () => router.push(whereHref) } : {})}
             />

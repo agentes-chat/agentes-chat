@@ -1,4 +1,5 @@
 import { useArtifact } from "@agenteschat/client";
+import { keepWhole } from "@agenteschat/client/lib/format";
 import { StatusBar } from "expo-status-bar";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,7 +15,7 @@ import {
 import { ScrollView } from "react-native-gesture-handler";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Icon, type IconName, PressScale, Text, ToastHost, useReducedMotion } from "@/ui";
+import { Icon, type IconName, PressScale, SCREEN_X, Text, ToastHost, useReducedMotion } from "@/ui";
 import { useDirectory, useOrgId } from "../shared/hooks";
 import { goBack } from "../shared/parts";
 import { savedAt, useFileActions, useSavedWhen } from "./actions";
@@ -105,7 +106,9 @@ function Viewer({
   const info = detail ? fileInfo(detail) : null;
   const author = detail ? dir.nameOf(detail.createdBy) : "";
   const place = files.length > 1 ? t("mobile.files.place", { index: index + 1, count: files.length }) : "";
-  const sub = detail ? [place, author, savedWhen(savedAt(detail))].filter(Boolean).join(" · ") : place;
+  const sub = detail
+    ? [place, author, savedWhen(savedAt(detail))].filter(Boolean).map(keepWhole).join(" · ")
+    : keepWhole(place);
 
   return (
     <View style={styles.screen}>
@@ -139,15 +142,17 @@ function Viewer({
 
       <Chrome visible={chrome} drag={drag} style={[styles.top, { paddingTop: insets.top + 8 }]}>
         <Round icon="x" label={t("mobile.common.close")} onPress={close} />
+        <View style={styles.spacer} />
+        <Round icon="more" label={t("mobile.files.more")} onPress={() => actions.more(true)} disabled={!detail} />
+        {/* The name and its line on a row of their own under the buttons, the screen's width: never cut beside them. */}
         <View style={styles.title}>
-          <Text variant="subhead" style={[styles.bold, { color: WHITE }]} numberOfLines={1}>
+          <Text variant="subhead" style={[styles.bold, { color: WHITE }]} numberOfLines={3}>
             {info?.name ?? ""}
           </Text>
-          <Text variant="footnote" style={{ color: DIM }} numberOfLines={1}>
+          <Text variant="footnote" style={{ color: DIM }}>
             {sub}
           </Text>
         </View>
-        <Round icon="more" label={t("mobile.files.more")} onPress={() => actions.more(true)} disabled={!detail} />
       </Chrome>
 
       {/* Gone while zoomed, as the swipe is: the fingers move the picture then. */}
@@ -337,19 +342,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 10,
     paddingHorizontal: 14,
     paddingBottom: 10,
   },
-  title: { flex: 1, minWidth: 0, alignItems: "center" },
+  spacer: { flex: 1 },
+  title: { flexBasis: "100%", gap: 2 },
   bold: { fontWeight: "600" },
   round: { width: ROUND, height: ROUND, borderRadius: ROUND / 2 },
   center: { alignItems: "center", justifyContent: "center" },
   sides: { position: "absolute", left: 0, right: 0, height: ROUND },
   side: { position: "absolute", top: 0 },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 6 },
-  actions: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 20, paddingTop: 10 },
+  actions: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: SCREEN_X, paddingTop: 10 },
   action: { minWidth: 88 },
   actionIn: { alignItems: "center", gap: 6 },
   circle: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center" },

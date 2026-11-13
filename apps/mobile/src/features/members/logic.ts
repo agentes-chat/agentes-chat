@@ -16,6 +16,7 @@ import {
   timeLeft,
 } from "@agenteschat/client/lib/format";
 import { askedLabel } from "@agenteschat/client/lib/join-requests";
+import { personalRoleKey } from "@agenteschat/client/lib/personal-view";
 import { grants, rolesOf } from "@agenteschat/client/lib/roles";
 import { addressesIn } from "@agenteschat/client/lib/text";
 import type { TFunction } from "i18next";
@@ -102,6 +103,14 @@ export function memberLine(
   return `${handle}${roleLine(t, person, roles) ?? t("roles.member")} · ${lowerFirst(seen, locale)}`;
 }
 
+/**
+ * What a person's row offers in its menu, in order: a message to anyone but oneself, then removing them (or leaving,
+ * on one's own row) when the viewer may. Empty: the row has no menu.
+ */
+export function memberActions(mine: boolean, removable: boolean): ("dm" | "remove" | "leave")[] {
+  return [...(mine ? [] : (["dm"] as const)), ...(removable ? ([mine ? "leave" : "remove"] as const) : [])];
+}
+
 /** The people who may invite here (ADR 0085): the owners, and whoever holds a role that gives it. */
 export function invitersOf(people: readonly Pick<Person, "name" | "role" | "roleIds">[], roles: readonly OrgRole[]) {
   return people
@@ -165,6 +174,17 @@ export const sentWords = (emails: boolean) =>
   emails
     ? ({ copied: "copied", resent: "resent", newLink: "newLink" } as const)
     : ({ copied: "copiedNoEmail", resent: "resentNoEmail", newLink: "newLinkNoEmail" } as const);
+
+/**
+ * The role an address joins with, in Invite people's words: its name, or Member with none. A personal workspace says
+ * its two plain choices instead (ADR 0159 §4, `personalRoleKey`): "Uses the agents" for none (or a role no longer
+ * there) and "Helps you run it" for its helper role; any other role still by its name. Only the words: the same role.
+ */
+export function joinRoleWord(t: TFunction, roles: readonly OrgRole[], roleId: string | null, personal: boolean) {
+  const role = roles.find((r) => r.id === roleId) ?? null;
+  const plain = personal ? personalRoleKey(roles, role?.id ?? null) : null;
+  return plain ? t(plain) : (role?.name ?? t("roles.member"));
+}
 
 /** An address on Convidar pessoas and the role it joins with (`null`: a member, no role past everyone's). */
 export interface InviteAddress {

@@ -169,8 +169,16 @@ export const agents = pgTable(
     /**
      * The setup checklist at the top of its chat (ADR 0155 §2): the ready-made role it started from (null: from
      * scratch or made elsewhere) and the steps a person confirmed. Null = made before the checklist: none shows.
+     * No migration for its extras (jsonb).
      */
-    setup: jsonb().$type<{ role: string | null; done: string[] }>(),
+    setup: jsonb().$type<{
+      role: string | null;
+      done: string[];
+      /** ADR 0164: how it introduced itself on its card, its personal starter, its apps at their levels. */
+      hello?: string;
+      starter?: string;
+      apps?: Record<string, "read" | "write">;
+    }>(),
     /**
      * Its computer (ADR 0025): the connected machine it works on; null = none yet (the workspace's own computer
      * takes the agents with none once it connects).
@@ -181,6 +189,12 @@ export const agents = pgTable(
      * never`, validated in code; "Usar como padrão"). Null = `low_risk_auto`.
      */
     missionCommandApproval: text(),
+    /**
+     * How much it asks before acting (ADR 0173): `always` (before every change), `risky` (what is marked sensitive,
+     * the default) or `never` (nothing, merge, deploy and routines included). Validated in code
+     * (`APPROVALS_LEVELS`). It never widens what the agent may use.
+     */
+    approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
     /**
      * Who thinks for it (ADR 0032): `model` (the API, default), `claude_code`
      * or `codex` on its computer; validated in code (`brain-settings.ts`).
@@ -372,6 +386,11 @@ export const organizationSettings = pgTable("organization_settings", {
    * `skills.agents_improve` wins.
    */
   agentsImproveSkills: boolean().notNull().default(true),
+  /**
+   * Who the workspace is for (ADR 0159): `team` or `personal`. It changes defaults, words and what is in sight, never
+   * what exists or who may do what.
+   */
+  mode: text().$type<"team" | "personal">().notNull().default("team"),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

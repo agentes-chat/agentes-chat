@@ -3,17 +3,13 @@ import { and, type Database, type Executor, eq, inArray, isNull, type SQL, schem
 import { linkRunActions, publishMessageActions } from "./agent-actions";
 import { followWork } from "./agent-status";
 import { openApprovalCard, publishApproval } from "./approvals";
+import { runAuthorityById } from "./authority";
 import type { BrainTool, ToolResult } from "./brains/types";
 import { readableChannelIds } from "./channels";
 import { consultationCardThread, consultationOrigin } from "./consultations";
 import { NotFoundError } from "./errors";
-import {
-  liveTurnToolStarted,
-  type MemoryUpdate,
-  publishChannelEvent,
-  publishMessageCreated,
-  takeStepWords,
-} from "./events";
+import { type MemoryUpdate, publishChannelEvent, publishMessageCreated, takeStepWords } from "./events";
+import { type PendingFeedbackOffer, pendingFeedbackOfferOf } from "./feedback-offers";
 import { pgSafeStringify } from "./format";
 import type { Judge } from "./judge";
 import { insertMessage, type Message, messageView } from "./messages";
@@ -36,11 +32,11 @@ import { publishSecret, type SecretRequestRow, secretLabelOf, secretRequestView,
 import { artifactToolDetail, promptAnswer, promptPoll, toolCode, toolCommand, toolDetail } from "./tool-detail";
 import { directoryRole, HARNESS_PREFIX, ON_DEMAND_USE, resolveDirectoryTool } from "./tools/directory";
 import { type Approval, type InvokeResult, isSensitive, type ToolGateway } from "./tools/gateway";
-import { withWhy } from "./tools/run-policy";
+import { WIDGET_UP_FRONT_MAX, widgetUpFront, withWhy } from "./tools/run-policy";
 import type { ToolContext, ToolDefinition, ToolOutput } from "./tools/types";
 import { withWikiLinks } from "./wiki-links";
 
-const { agentRuns, agents, approvals, agentQuestions, secretRequests, machineTasks, messages } = schema;
+const { agentRuns, agents, agentWorks, approvals, agentQuestions, secretRequests, machineTasks, messages } = schema;
 
 /**
  * Tool access for runs, shared by the engine loop and the runner's `agentes`
@@ -132,6 +128,8 @@ export interface ToolSideEffects {
   desktop?: BrowserTrailStep[];
   /** Tasks the right hand handed to an agent (`create_issue`), shown as chips on its reply (`meta.tasks`). */
   tasks?: HandedTask[];
+  /** A report it offered about the app (`offer_feedback`, ADR 0160 §12), for its next reply (`meta.feedbackOffer`). */
+  feedbackOffer?: PendingFeedbackOffer;
 }
 
 /** A task handed on, as a reply's chip reads it: the task, its agent and its conversation's root (the thread). */
@@ -267,6 +265,8 @@ export function absorbToolData(t: ToolSideEffects, data: Record<string, unknown>
   const task = data.handedTask as HandedTask | undefined;
   if (task && typeof task.issueId === "string" && typeof task.rootId === "string")
     t.tasks = [...(t.tasks ?? []).filter((x) => x.issueId !== task.issueId), task];
+  const offer = pendingFeedbackOfferOf(data.feedbackOffer);
+  if (offer) t.feedbackOffer = offer;
   const update = data.memoryUpdate as MemoryUpdate | undefined;
   if (update) t.memoryUpdates = [...(t.memoryUpdates ?? []), update];
   return update ?? null;
@@ -287,6 +287,7 @@ export function mergeToolEffects(t: ToolSideEffects, e: ToolSideEffects | null |
   if (e.browser?.length) t.browser = withTrail(t.browser, e.browser);
   if (e.desktop?.length) t.desktop = withTrail(t.desktop, e.desktop);
   if (e.tasks?.length) t.tasks = [...(t.tasks ?? []), ...e.tasks];
+  if (e.feedbackOffer) t.feedbackOffer = e.feedbackOffer;
 }
 
 const hasEffects = (e: ToolSideEffects) =>
@@ -302,7 +303,8 @@ const hasEffects = (e: ToolSideEffects) =>
       e.deniedRepo ||
       e.browser?.length ||
       e.desktop?.length ||
-      e.tasks?.length,
+      e.tasks?.length ||
+      e.feedbackOffer,
   );
 
 /** The transcript key where the bridge leaves a computer-brain turn's side effects for the engine. */
@@ -495,7 +497,6 @@ export async function invokeWithChip(
   const command = toolCommand(use.name, input);
   // The agent's line follows what it does now (ADR 0084 §10), beside the call, never in its way.
   if (def) void followWork(deps, ctx, def).catch(() => {});
-  liveTurnToolStarted(where.runId);
   const said = takeStepWords(where.runId);
   await publishChannelEvent(deps.pubsub, {
     type: "agent.tool",
@@ -615,10 +616,15 @@ const loadedGroupsOf = (transcript: unknown): string[] | null => {
  */
 export async function bridgeToolsFor(deps: RunToolsDeps, id: BridgeIdentity): Promise<BrainTool[]> {
   if (!deps.tools) return [];
-  const { ctx } = await locate(deps.db, id);
+  const { ctx, run } = await locate(deps.db, id);
   const tools = await deps.tools.list(ctx);
   // Our own tools before the connectors': a cap on the list (`MCP_TOOLS_MAX`) only ever drops connector tools.
-  return [...tools.filter((t) => !t.connectionId), ...tools.filter((t) => t.connectionId)].map(brainToolOf);
+  const ordered = [...tools.filter((t) => !t.connectionId), ...tools.filter((t) => t.connectionId)];
+  const authority = run ? await runAuthorityById(deps.db, run.orgId, run.id) : null;
+  if (!(authority?.kind === "routine" && authority.brief?.widget)) return ordered.map(brainToolOf);
+  // A widget's refresh (ADR 0135 §5): what it reads with and answers through, in hand from the first round.
+  let room = WIDGET_UP_FRONT_MAX;
+  return ordered.map((t) => (widgetUpFront(t) && room-- > 0 ? { ...brainToolOf(t), upFront: true } : brainToolOf(t)));
 }
 
 /** The gateway's own refusals, as codes (the gateway returns them as plain error text). */
@@ -846,13 +852,18 @@ export async function postPauseCards(tx: Executor, run: AgentRun, requests: Paus
     }
   }
 
+  // A work's question names no one: it is its asker's, or another person's answer would move it on their access.
+  const [work] = run.workId
+    ? await tx.select({ asker: agentWorks.requestedByUserId }).from(agentWorks).where(eq(agentWorks.id, run.workId))
+    : [];
+  // Someone who can't read where the card goes could never answer it: it waits on the room instead.
+  const reader = async (userId: string | null | undefined) =>
+    userId && (await readableChannelIds(tx, run.orgId, userId, [asked.channelId])).size > 0 ? userId : null;
   for (const ask of requests.questions) {
-    // Someone who can't read where the card goes could never answer it: it waits on the room instead.
     const requestedForUserId =
-      ask.requestedForUserId &&
-      (await readableChannelIds(tx, run.orgId, ask.requestedForUserId, [asked.channelId])).size > 0
-        ? ask.requestedForUserId
-        : await impliedAddressee(tx, run, asked, ask.text);
+      (await reader(ask.requestedForUserId)) ??
+      (await impliedAddressee(tx, run, asked, ask.text)) ??
+      (await reader(work?.asker));
     const [inserted] = await tx
       .insert(agentQuestions)
       .values({

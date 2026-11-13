@@ -1,5 +1,6 @@
 import { useVault, type VaultConnection, type VaultItem, type VaultOverview } from "@agenteschat/client";
 import { joinNames, relativeTime } from "@agenteschat/client/lib/format";
+import { vaultNoAgents } from "@agenteschat/client/lib/vault";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
@@ -197,11 +198,20 @@ function Items({ data, tab, onNew }: { data: VaultOverview; tab: "team" | "perso
       )}
       <Gap />
       <GroupedList>
+        {mayAdd ? (
+          <GroupedRow
+            icon="key"
+            label={t("vault.env.open")}
+            chevron
+            onPress={() => router.push(vaultHref.env(tab) as never)}
+          />
+        ) : null}
         <GroupedRow
           icon="laptop"
           label={t("mobile.vault.import.title")}
           sub={t("mobile.vault.import.text")}
           subLines={4}
+          media
         />
       </GroupedList>
     </>
@@ -230,6 +240,7 @@ function ItemRow({ icon, item, now }: { icon: IconName; item: VaultItem; now: nu
       label={item.title}
       {...(line ? { sub: line } : {})}
       belowText={facts}
+      media
       below={
         <>
           {item.kind === "key" && item.keyName ? (
@@ -268,7 +279,14 @@ function Connections({ data }: { data: VaultOverview }) {
           </GroupedList>
         </>
       ) : null}
-      <GroupedHeader>{t("mobile.vault.connections.add")}</GroupedHeader>
+      <GroupedHeader
+        hint={{
+          name: t("common.about", { label: t("mobile.vault.connections.add") }),
+          text: t("mobile.vault.connections.help"),
+        }}
+      >
+        {t("mobile.vault.connections.add")}
+      </GroupedHeader>
       {data.sources.length === 0 ? (
         <GroupedFooter>{t("mobile.vault.connections.none")}</GroupedFooter>
       ) : (
@@ -288,7 +306,6 @@ function Connections({ data }: { data: VaultOverview }) {
           ))}
         </GroupedList>
       )}
-      <GroupedFooter>{t("mobile.vault.connections.help")}</GroupedFooter>
     </>
   );
 }
@@ -302,14 +319,22 @@ function ConnectionRow({ icon, conn, now }: { icon: IconName; conn: VaultConnect
       label={conn.name}
       sub={connectionLine(t, i18n.language, conn, new Date(now))}
       subLines={2}
+      media
       below={
-        <View style={styles.chips}>
-          <Chip icon={state.icon} label={t(state.key)} />
-          <Chip
-            icon={conn.scope === "personal" ? "lock" : "members"}
-            label={conn.scope === "personal" ? t("mobile.vault.tab.personal") : t("mobile.vault.tab.team")}
-          />
-        </View>
+        <>
+          <View style={styles.chips}>
+            <Chip icon={state.icon} label={t(state.key)} />
+            <Chip
+              icon={conn.scope === "personal" ? "lock" : "members"}
+              label={conn.scope === "personal" ? t("mobile.vault.tab.personal") : t("mobile.vault.tab.team")}
+            />
+          </View>
+          {vaultNoAgents(conn.access) ? (
+            <Text variant="small" tone="muted">
+              {t("vault.connections.noAgents")}
+            </Text>
+          ) : null}
+        </>
       }
       chevron
       onPress={() => router.push(vaultHref.connection(conn.id) as never)}

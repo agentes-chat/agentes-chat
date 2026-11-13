@@ -1,18 +1,29 @@
-import { type Agent, useAiStatus, useComputerSetup, useMessages, useSetAgentStyle } from "@agenteschat/client";
+import {
+  type Agent,
+  type AgentStyle,
+  useAiStatus,
+  useComputerSetup,
+  useMessages,
+  useSetAgentStyle,
+  useTeamAnswered,
+} from "@agenteschat/client";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { aiStateOf, noAiCardOf } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { introCards, introLeadKey, isRightHand, offersTeamSetup } from "@agenteschat/client/lib/right-hand";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { WAVE_SECONDS } from "@agenteschat/ui/agent/stickers";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
+import Animated, { Easing, FadeIn, FadeInUp, useReducedMotion } from "react-native-reanimated";
 import { StickerCanvas } from "@/agent/StickerCanvas";
 import { useOrg } from "@/providers/org";
-import { Button, EventPillAction, EventPillText, type IconName, LineIcon, Text } from "@/ui";
+import { WorkspaceSky } from "@/sky/Sky";
+import { Button, type IconName, LineIcon, Text } from "@/ui";
 import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
-import { AskWaiting } from "../chat/asks";
+import { AskButtons, AskFoot, AskNote } from "../chat/asks";
 import { MESSAGE_STICKER } from "../chat/media";
 import { useFailed } from "../routines/hooks";
 import { AgentFace, OpensAgent } from "../shared/Face";
@@ -26,23 +37,28 @@ import { useSendAnswer } from "./TeamCard";
  * The top of the right hand's DM (ADR 0137), drawn by the app and never stored, so it costs nothing and works before
  * any AI is connected, as on the web: its greeting, then, for the workspace's owners, the first-run checklist (ADR
  * 0155 §6). Anyone else gets one card at a time (`introCards`): a waiting pill with "Connect" (tinted) while there is
- * no AI, then how agents talk to them (ADR 0147); the owner gets that question once the checklist is complete. With
- * no card left, a line to build the team with it, at any time. On the person's first visit (`waveFrom`, when its wave
- * started), its waving sticker under the greeting, drawn as a sticker message is and decorative.
+ * no AI, then how agents talk to them (ADR 0147); the owner gets that question once the checklist is complete and the
+ * team answered them once, so it never stands beside the first task. With no card left, a line to build the team with
+ * it, at any time; a personal workspace's words speak of one person's agents (ADR 0159). On the person's first visit
+ * (`waveFrom`, when its wave started), its waving sticker under the greeting, drawn as a sticker message is and
+ * decorative.
  */
 export function RightHandIntro({ agent, channelId, waveFrom }: { agent: Agent; channelId: string; waveFrom?: number }) {
   const { t } = useTranslation();
+  const reduced = useReducedMotion();
   const { orgId, org } = useOrg();
   const dir = useDirectory();
   const status = useAiStatus(orgId);
   const team = dir.agents.filter((a) => !isRightHand(a));
   const held = usePlanHold(orgId, org) !== null;
   const setup = useComputerSetup(orgId);
-  const checklist = useFirstRun(agent, channelId).state;
+  const checklist = useFirstRun(agent).state;
   // A hold is known with the edition: until then no card, so Connect doesn't flash before the checklist.
   const noAi = aiStateOf(status.data, agent.id) === "no_ai";
   const aiKnown = Boolean(status.data) && !setup.isPending;
   const createsAgents = can(org, "create_agents");
+  // Picked here: its card stays where it was, answered, instead of leaving the moment the workspace has a style.
+  const [styled, setStyled] = useState<AgentStyle | null>(null);
   const cards = introCards({
     noAi: noAi && aiKnown,
     aiKnown,
@@ -50,10 +66,34 @@ export function RightHandIntro({ agent, channelId, waveFrom }: { agent: Agent; c
     held,
     noAiCard: useMessages(orgId, channelId).data?.some((m) => noAiCardOf(m.meta)),
     checklist,
+    answered: useTeamAnswered(orgId, team),
   });
   const send = useSendAnswer(channelId);
   return (
     <View style={styles.intro}>
+      {/* The first visit: the sign-in's sky goes on at the top of the conversation and the right hand wakes on its
+          horizon, so arriving reads as one moment, not a new screen (the face leads, the sky is decoration). */}
+      {waveFrom !== undefined ? (
+        <View style={styles.arrival} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Animated.View
+            entering={reduced ? FadeIn.duration(200) : FadeIn.duration(400)}
+            style={StyleSheet.absoluteFill}
+          >
+            <WorkspaceSky fadeTop={0.35} fade={0.6} style={StyleSheet.absoluteFill} />
+          </Animated.View>
+          <Animated.View
+            entering={
+              reduced
+                ? FadeIn.duration(200)
+                : FadeInUp.duration(420)
+                    .delay(120)
+                    .easing(Easing.bezier(0.23, 1, 0.32, 1))
+            }
+          >
+            <AgentFace agentId={agent.id} size={72} framed={false} expression="happy" />
+          </Animated.View>
+        </View>
+      ) : null}
       <View style={styles.head}>
         <OpensAgent agentId={agent.id}>
           <AgentFace agentId={agent.id} size={36} />
@@ -64,10 +104,10 @@ export function RightHandIntro({ agent, channelId, waveFrom }: { agent: Agent; c
       </View>
       <View style={styles.text}>
         <Text variant="body" style={styles.bold}>
-          {t("rightHand.intro.greeting", agentGrammar(agent.name))}
+          {t(modeKey(org, "rightHand.intro.greeting"), agentGrammar(agent.name))}
         </Text>
         <Text variant="body" tone="ink2">
-          {t(introLeadKey(held, team.length > 0))}
+          {t(modeKey(org, introLeadKey(held, team.length > 0)))}
         </Text>
         {waveFrom !== undefined ? (
           <View style={styles.sticker} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
@@ -83,39 +123,40 @@ export function RightHandIntro({ agent, channelId, waveFrom }: { agent: Agent; c
           </View>
         ) : null}
         {cards.includes("connect") && (
-          <AskWaiting
-            forMe
-            mark="brain"
-            words={t("rightHand.intro.connect.title")}
-            actions={
-              <EventPillAction
-                key="connect"
-                primary
-                label={t("rightHand.intro.connect.action")}
-                onPress={() => openConnectAi({ agentId: agent.id })}
-              />
-            }
-            below={
-              <EventPillText>
-                <Text variant="footnote" tone="muted">
-                  {t("rightHand.intro.connect.text")}
-                </Text>
-              </EventPillText>
+          <AskNote
+            agentId={agent.id}
+            title={t(modeKey(org, "rightHand.intro.connect.title"))}
+            hint={t(modeKey(org, "rightHand.intro.connect.hint"))}
+            text={t("rightHand.intro.connect.text")}
+            foot={
+              <AskFoot>
+                <AskButtons
+                  primary={
+                    <Button
+                      variant="primary"
+                      size="card"
+                      wide
+                      label={t("rightHand.intro.connect.action")}
+                      onPress={() => openConnectAi({ agentId: agent.id })}
+                    />
+                  }
+                />
+              </AskFoot>
             }
           />
         )}
         <FirstRunCard agent={agent} channelId={channelId} />
-        {cards.includes("style") && <StyleCard />}
+        {(cards.includes("style") || styled) && <StyleCard picked={styled} onPicked={setStyled} />}
         {offersTeamSetup({ noAi, aiKnown, createsAgents, hasTeam: team.length > 0, cards, held, checklist }) ? (
           <View>
             <Text variant="small" tone="muted">
-              {t("rightHand.intro.again.question")}
+              {t(modeKey(org, "rightHand.intro.again.question"))}
             </Text>
             <Button
               variant="text"
               size="sm"
-              label={t("rightHand.intro.again.action")}
-              onPress={() => send(t("rightHand.intro.again.message"))}
+              label={t(modeKey(org, "rightHand.intro.again.action"))}
+              onPress={() => send(t(modeKey(org, "rightHand.intro.again.message")))}
             />
           </View>
         ) : null}
@@ -124,30 +165,46 @@ export function RightHandIntro({ agent, channelId, waveFrom }: { agent: Agent; c
   );
 }
 
-/** "Como prefere que eu fale com você?": two answers, saved for every agent here; gone once the person picks. */
-function StyleCard() {
+/**
+ * "Como prefere que eu fale com você?": two answers, saved for every agent here. Once the person picks (`picked`),
+ * the same card says what they answered where the answers were.
+ */
+function StyleCard({ picked, onPicked }: { picked: AgentStyle | null; onPicked: (style: AgentStyle) => void }) {
   const { t } = useTranslation();
   const { orgId } = useOrg();
+  const c = useColors();
   const failed = useFailed();
   const save = useSetAgentStyle(orgId);
+  const pick = (style: AgentStyle) => save.mutate(style, { onSuccess: () => onPicked(style), onError: failed });
   return (
     <IntroCard icon="chat" title={t("rightHand.intro.style.question")} text={t("rightHand.intro.style.text")}>
-      <Button
-        variant="primary"
-        size="card"
-        wide
-        label={t("rightHand.intro.style.simple")}
-        disabled={save.isPending}
-        onPress={() => save.mutate("simple", { onError: failed })}
-      />
-      <Button
-        variant="secondary"
-        size="card"
-        wide
-        label={t("rightHand.intro.style.technical")}
-        disabled={save.isPending}
-        onPress={() => save.mutate("technical", { onError: failed })}
-      />
+      {picked ? (
+        <View style={styles.cardHead}>
+          <LineIcon name="check" size={14} color={c.ok} variant="footnote" />
+          <Text variant="footnote" tone="ink2" style={styles.fill}>
+            {t("mobile.chat.question.answeredByYou", { answer: t(`rightHand.intro.style.${picked}`) })}
+          </Text>
+        </View>
+      ) : (
+        <>
+          <Button
+            variant="primary"
+            size="card"
+            wide
+            label={t("rightHand.intro.style.simple")}
+            disabled={save.isPending}
+            onPress={() => pick("simple")}
+          />
+          <Button
+            variant="secondary"
+            size="card"
+            wide
+            label={t("rightHand.intro.style.technical")}
+            disabled={save.isPending}
+            onPress={() => pick("technical")}
+          />
+        </>
+      )}
     </IntroCard>
   );
 }
@@ -185,6 +242,16 @@ function IntroCard({
 
 const styles = StyleSheet.create({
   intro: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, gap: 6 },
+  // The arrival's band: full width past the intro's margin, the face's feet on its lower third.
+  arrival: {
+    height: 160,
+    marginHorizontal: -16,
+    marginTop: -16,
+    marginBottom: 8,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 16,
+  },
   head: { flexDirection: "row", alignItems: "center", gap: 10 },
   text: { gap: 8 },
   bold: { fontWeight: "600" },

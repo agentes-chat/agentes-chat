@@ -152,7 +152,8 @@ describe("my own messages sit on the right", () => {
       said("w2", "u-walter", "E o link", 0, { local: "pending", clientId: "c-2" }),
     ]);
     expect(row("w1").classList.contains("ac-msg--failed")).toBe(true);
-    expect(row("w1").textContent).toContain("Não enviada");
+    // No reason kept (a row from before a reload): it still says more than "Não enviada".
+    expect(row("w1").textContent).toContain("Não enviada. Algo deu errado.");
     expect(within(row("w1")).getByRole("button", { name: "Tentar de novo" })).toBeTruthy();
     expect(row("w2").classList.contains("ac-msg--pending")).toBe(true);
     const status = row("w2").querySelector(".ac-msg__own-time");
@@ -171,20 +172,21 @@ describe("own message styles", () => {
     const mouse =
       css
         .split(
-          "@media not ((hover: none) or (pointer: coarse)) {\n  .ac-msg--own > .ac-msg__body > .ac-msg__actions,",
+          "@media not ((hover: none) or (pointer: coarse)) {\n  .ac-msg--own > .ac-msg__body > .ac-msg__actions {",
         )[1]
         ?.split("\n}")[0] ?? "";
     expect(mouse).toContain("right: calc(100% + 2px);");
-    for (const sel of [
-      ".ac-msg--own > .ac-msg__body > .ac-msg__actions",
-      ".ac-msg--own:has(> .ac-msg__body .ac-msg__aside:not(:empty)) > .ac-msg__body > .ac-msg__actions",
-    ]) {
-      const bar = r.get(sel) ?? "";
-      expect(bar).toContain("right: calc(100% + 2px)");
-      expect(bar).toContain("top: calc(7px + var(--msg-line) / 2 - var(--cap-mid) - 14px)");
-      expect(bar).toMatch(/background: transparent;\s*box-shadow: none;\s*transform: none;/);
-      expect(bar).not.toContain("top: 0");
-    }
+    const bar = r.get(".ac-msg--own > .ac-msg__body > .ac-msg__actions") ?? "";
+    expect(bar).toContain("right: calc(100% + 2px)");
+    expect(bar).toContain("top: calc(7px + var(--msg-line) / 2 - var(--cap-mid) - 14px)");
+    expect(bar).toMatch(/background: transparent;\s*box-shadow: none;\s*transform: none;/);
+    expect(bar).not.toContain("top: 0");
+    // A check at a row's end moves no row's bar, so mine needs no rule of its own to stay put beside one.
+    expect(
+      [...r.keys()].filter(
+        (sel) => sel.includes(".ac-msg__actions") && sel.includes(":has(> .ac-msg__body .ac-msg__aside"),
+      ),
+    ).toEqual([]);
     // Three 28px square icons fit the row's 96px left padding beside a full-width bubble.
     expect(mouse).toMatch(/\.ac-msg__actions \.ac-btn--sm \{\s*min-width: 28px;\s*width: 28px;\s*height: 28px;/);
     // The bubble's padding and line, which the bar's top is computed from.
@@ -349,12 +351,7 @@ describe("the bar hugs my message, a GIF or a picture too", () => {
     const block = (selector: string) => app.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
     expect(block(".artifact-tile")).toContain("--tile-w: 206px;");
     expect(block(".artifact-cards > .artifact-tile:only-child")).toContain("--tile-w: 320px;");
-    expect(block(".artifact-cards > .artifact-tile[data-media]:only-child")).toContain("max-width: 420px;");
-    for (const sel of [
-      ".artifact-tile",
-      ".artifact-cards > .artifact-tile:only-child",
-      ".artifact-cards > .artifact-tile[data-media]:only-child",
-    ])
+    for (const sel of [".artifact-tile", ".artifact-cards > .artifact-tile:only-child"])
       expect(block(sel)).not.toContain("min(100%");
     // Others' rows keep their bar on the row's right, a keyboard's focus shows it too.
     expect(r.get(".ac-msg__actions")).toContain("right: 12px");
@@ -373,8 +370,11 @@ describe("a message I send keeps its size when the server has it", () => {
       .filter((c) => !c.matches(".ac-msg__actions") && c.childNodes.length > 0)
       .map((c) => c.className),
   });
+  // By the message's own words: a row's hidden head also reads its day ("segunda-feira, 9 de novembro").
   const rowWith = (text: string) =>
-    [...document.querySelectorAll<HTMLElement>("article")].find((a) => a.textContent?.includes(text)) as HTMLElement;
+    [...document.querySelectorAll<HTMLElement>("article")].find((a) =>
+      a.querySelector(".ac-msg__text")?.textContent?.includes(text),
+    ) as HTMLElement;
 
   test("sending and sent: the same row, the same parts, the time in the sending state's box; nothing scrolls", async () => {
     let release = () => {};

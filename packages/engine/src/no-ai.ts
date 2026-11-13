@@ -41,6 +41,7 @@ const REASON_TEXT: Partial<Record<NoAiCardReason, string>> = {
   no_computer: "I can't answer yet: my AI needs a computer and I have none.",
   computer_away: "I can't answer now: the computer my plan is signed in on is away.",
   computer_failed: "I can't answer now: the computer my plan is signed in on had a problem.",
+  cli_failed: "I can't answer now: my plan's AI stopped with an error.",
   plan_limit: "I can't answer now: the plan I think with reached its limit.",
   model_limit: "I can't answer now: the model I think with reached its own limit on my plan.",
   model_region: "I can't answer: the model I think with needs the Global region on in OpenCode (Settings › Privacy).",
@@ -50,13 +51,21 @@ const REASON_TEXT: Partial<Record<NoAiCardReason, string>> = {
   commands_off: "I can't answer now: commands are turned off on my plan's computer.",
   plan_not_shared:
     "I can't answer you on the workspace's plan: it serves only its owner. Connect your own plan and I will.",
+  plan_unattended:
+    "I didn't answer: the request didn't come from a person, and the workspace's plan serves only its owner.",
   runner_outdated: "I can't answer now: the program on my plan's computer needs an update.",
   plan_tools: "I stopped before answering: my plan's AI on that computer offers tools of its own.",
   plan_hold: "I kept your message. I'll answer here once the workspace has an agentes.chat plan and an AI connected.",
 };
+/** `cli_failed` with what the plan's CLI said (`NoAiCard.why`). */
+const cliFailedText = (why: string) => `I can't answer now: my plan's AI stopped with an error (${why}).`;
 
-/** `plan_hold`: no word on its AI: a billing hold stopped the run, and the card keeps the message for after the plan. */
-export type NoAiCardReason = NoAiReason | "plan_hold";
+/**
+ * `plan_hold`: no word on its AI: a billing hold stopped the run, and the card keeps the message for after the plan.
+ * `plan_unattended`: the right hand's run nobody is behind, on a plan that answers only its owner: no one's own plan
+ * would answer it, so the card never says to connect one.
+ */
+export type NoAiCardReason = NoAiReason | "plan_hold" | "plan_unattended";
 
 /** A conversation gets the card again only after this long (per agent; once while the organization has no AI). */
 export const NO_AI_CARD_EVERY_MS = 6 * 3600_000;
@@ -70,6 +79,8 @@ export interface NoAiCard extends ConnectIntent {
   own?: AgentAi["own"];
   /** With `model_limit`, `model_region` and `model_off`: the model's name the line says ("Kimi K2"). */
   model?: string;
+  /** With `cli_failed`: what the plan's CLI said (`cliWords`), the cause the line names. */
+  why?: string;
   /** The run that couldn't think (deleted when "Responder agora" starts it again). */
   runId: string;
 }
@@ -109,6 +120,7 @@ export async function postNoAiCard(
   reason: NoAiCardReason,
   own?: AgentAi["own"],
   model?: string,
+  why?: string,
 ): Promise<Message | null> {
   const { db } = deps;
   const threadId = replyThreadOf(run);
@@ -135,6 +147,7 @@ export async function postNoAiCard(
       reason,
       ...(own ? { own } : {}),
       ...(model ? { model } : {}),
+      ...(why && reason === "cli_failed" ? { why } : {}),
       ...intent,
       runId: run.id,
     };
@@ -145,7 +158,9 @@ export async function postNoAiCard(
       author: { type: "agent", agentId: run.agentId, runId: run.id, hop: run.hop },
       body: own
         ? noAiNotSignedInText(own)
-        : (REASON_TEXT[reason] ?? (reason === "not_signed_in" ? NO_AI_SIGNED_OUT_TEXT : NO_AI_TEXT)),
+        : noAi.why
+          ? cliFailedText(noAi.why)
+          : (REASON_TEXT[reason] ?? (reason === "not_signed_in" ? NO_AI_SIGNED_OUT_TEXT : NO_AI_TEXT)),
       meta: { ...bodyCode(NO_AI), noAi },
     });
   });
@@ -259,14 +274,36 @@ async function restartFailedRun(deps: AnswerNowDeps, userId: string, failed: Age
     return { runId, created: "created" in next ? next.created : null };
   });
   if (!started) return current(deps.db, failed);
+  // The message's receipt follows the new run at once, on every device: until a worker claims it, nothing else names
+  // the message, and the line under it would still say the old run failed.
+  const who = { agentId: failed.agentId, runId: started.runId };
   if (started.created) {
+    const { channelId } = started.created;
     await publishChannelEvent(deps.pubsub, {
       type: "agent.thinking",
-      channelId: started.created.channelId,
+      channelId,
       threadId: replyThreadOf(started.created),
-      agentId: failed.agentId,
-      runId: started.runId,
+      ...who,
     });
+    await publishChannelEvent(deps.pubsub, { type: "message.claimed", channelId, messageId: trigger.id, ...who });
+  } else {
+    // Into the agent's task already at work: said as a message sent into it is.
+    const [task] = await deps.db
+      .select({
+        channelId: agentRuns.channelId,
+        threadRootId: agentRuns.threadRootId,
+        triggerMessageId: agentRuns.triggerMessageId,
+      })
+      .from(agentRuns)
+      .where(and(eq(agentRuns.orgId, failed.orgId), eq(agentRuns.id, started.runId)));
+    if (task)
+      await publishChannelEvent(deps.pubsub, {
+        type: "agent.run.steered",
+        channelId: task.channelId,
+        threadId: replyThreadOf(task),
+        messageId: trigger.id,
+        ...who,
+      });
   }
   return { agentId: failed.agentId, runId: started.runId };
 }

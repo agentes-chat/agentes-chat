@@ -9,11 +9,21 @@ import {
   useRenameChannelCategory,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, StyleSheet, TextInput } from "react-native";
 import { useOrg } from "@/providers/org";
-import { GroupedField, GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Text, useToast } from "@/ui";
+import {
+  GroupedField,
+  GroupedFooter,
+  GroupedHeader,
+  GroupedList,
+  GroupedRow,
+  Text,
+  useFieldText,
+  useToast,
+} from "@/ui";
 import { router } from "@/ui/navigation";
 import { Gap, SettingsPage } from "../settings/parts";
 import { useColors, useMeId, useOrgId } from "../shared/hooks";
@@ -68,7 +78,14 @@ export function PickCategoryScreen({ channelId }: { channelId: string }) {
   };
   return (
     <SettingsPage title={t("channelCategories.category")} {...(channel ? { subtitle: `#${channel.name}` } : {})}>
-      <GroupedHeader>{t("mobile.categories.where", { channel: channel?.name ?? "" })}</GroupedHeader>
+      <GroupedHeader
+        hint={{
+          name: t("common.about", { label: t("mobile.categories.where", { channel: channel?.name ?? "" }) }),
+          text: t("mobile.categories.whereHelp"),
+        }}
+      >
+        {t("mobile.categories.where", { channel: channel?.name ?? "" })}
+      </GroupedHeader>
       <GroupedList>
         <GroupedRow
           label={t("channelCategories.noCategory")}
@@ -100,7 +117,6 @@ export function PickCategoryScreen({ channelId }: { channelId: string }) {
           </GroupedList>
         </>
       ) : null}
-      <GroupedFooter>{t("mobile.categories.whereHelp")}</GroupedFooter>
       {channel ? (
         <>
           <GroupedHeader>{t("mobile.categories.order")}</GroupedHeader>
@@ -130,6 +146,7 @@ export function NewCategoryScreen({ channelId }: { channelId?: string }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const c = useColors();
+  const words = useFieldText("body");
   const toast = useToast();
   const channels = useChannels(orgId);
   const categories = useChannelCategories(orgId);
@@ -137,7 +154,10 @@ export function NewCategoryScreen({ channelId }: { channelId?: string }) {
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<Set<string>>(() => new Set(channelId ? [channelId] : []));
   const categoryName = new Map((categories.data ?? []).map((x) => [x.id, x.name]));
-  const taken = (categories.data ?? []).some((x) => x.name.trim().toLowerCase() === name.trim().toLowerCase());
+  const taken = useHeldWhile(
+    (categories.data ?? []).some((x) => x.name.trim().toLowerCase() === name.trim().toLowerCase()),
+    create.isPending || create.isSuccess,
+  );
   const save = () => {
     if (!name.trim()) return toast({ title: t("channelCategories.nameEmpty"), icon: "x" });
     if (taken) return toast({ title: t("channelCategories.nameTaken", { name: name.trim() }), icon: "x" });
@@ -179,7 +199,7 @@ export function NewCategoryScreen({ channelId }: { channelId?: string }) {
             autoCapitalize="words"
             returnKeyType="done"
             onSubmitEditing={save}
-            style={[styles.input, { color: c.ink }]}
+            style={[styles.input, words, { color: c.ink }]}
           />
         </GroupedField>
       </GroupedList>
@@ -258,6 +278,7 @@ export function EditCategoryScreen({ categoryId }: { categoryId: string }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const c = useColors();
+  const words = useFieldText("body");
   const toast = useToast();
   const channels = useChannels(orgId);
   const categories = useChannelCategories(orgId);
@@ -334,7 +355,7 @@ export function EditCategoryScreen({ categoryId }: { categoryId: string }) {
             autoCapitalize="words"
             returnKeyType="done"
             onSubmitEditing={save}
-            style={[styles.input, { color: c.ink }]}
+            style={[styles.input, words, { color: c.ink }]}
           />
         </GroupedField>
       </GroupedList>
@@ -381,6 +402,6 @@ export function useMovesChannel(channelId: string) {
 }
 
 const styles = StyleSheet.create({
-  input: { flex: 1, paddingVertical: 12, paddingHorizontal: 0, fontSize: 17 },
+  input: { flex: 1, paddingVertical: 12, paddingHorizontal: 0 },
   empty: { textAlign: "center", paddingVertical: 24 },
 });

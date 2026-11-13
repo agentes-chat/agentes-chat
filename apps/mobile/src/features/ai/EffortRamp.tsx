@@ -1,4 +1,4 @@
-import { type AgentBrainInput, keys, useApi } from "@agenteschat/client";
+import { type AgentBrainInput, type BrainScope, keys, useApi } from "@agenteschat/client";
 import { EFFORT_LEVELS, type EffortLevel } from "@agenteschat/client/lib/brain-advanced";
 import { bodyTones } from "@agenteschat/ui/agent/engine";
 import { Canvas, Fill, Shader, Skia, useClock } from "@shopify/react-native-skia";
@@ -217,14 +217,14 @@ export function EffortRamp({
  * The ramp's choice, saved when let go: it stays on the ramp while the server answers, and a change made in the
  * meantime goes next, so the last one wins. Only a failure speaks.
  */
-export const useEffortChoice = (agentId: string, saved: EffortLevel | undefined) =>
-  useBrainChoice<EffortLevel>(agentId, saved ?? "medium", (effort) => ({ effort }));
+export const useEffortChoice = (agentId: string, saved: EffortLevel | undefined, scope?: BrainScope) =>
+  useBrainChoice<EffortLevel>(agentId, saved ?? "medium", (effort) => ({ effort }), scope);
 
 /**
  * One choice of the agent's brain that shows at once and saves in the background: the last one wins, and a save that
- * fails goes back to what is saved and says so.
+ * fails goes back to what is saved and says so. `scope`: which of the right hand's two AIs (its own cache entry).
  */
-export function useBrainChoice<V>(agentId: string, saved: V, input: (value: V) => AgentBrainInput) {
+export function useBrainChoice<V>(agentId: string, saved: V, input: (value: V) => AgentBrainInput, scope?: BrainScope) {
   const { t } = useTranslation();
   const { orgId } = useOrg();
   const api = useApi();
@@ -236,7 +236,10 @@ export function useBrainChoice<V>(agentId: string, saved: V, input: (value: V) =
   const send = async (value: V) => {
     sending.current = true;
     try {
-      qc.setQueryData(keys.agentBrain(orgId, agentId), await api.agents.setBrain(orgId, agentId, input(value)));
+      qc.setQueryData(
+        scope ? [...keys.agentBrain(orgId, agentId), scope] : keys.agentBrain(orgId, agentId),
+        await api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input(value) }),
+      );
     } catch {
       toast({ title: t("agentPage.work.failed"), icon: "x" });
     }

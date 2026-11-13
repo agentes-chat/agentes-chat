@@ -1,9 +1,11 @@
 import { previewBody } from "@agenteschat/client/lib/message-body";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Link } from "expo-router";
 import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
 import { TAB_BADGE } from "@/lib/nav";
+import { useOrg } from "@/providers/org";
 import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Text } from "@/ui";
 import { router } from "@/ui/navigation";
 import { workTitle } from "../agents/work";
@@ -20,11 +22,14 @@ import type { AgentRowState } from "./now";
 
 /** The avatar column. */
 const AVATAR = LIST_AVATAR;
+/** The orbit before what an agent does: the preview line's own height, so it reads as a word of it. */
+const ORBIT = 16;
 
 /**
  * One conversation in the list, in the shared
  * `ListRow`: the agent's living body (moving while it works), a person's face, or the tile of a channel;
- * the name and the time; the last line ("Nome: …", two lines). An agent's row says what matters instead
+ * the name and the time; the last line ("Nome: …", one line, cut where it runs out: the conversation has the
+ * rest, and the list stays one row per conversation). An agent's row says what matters instead
  * (`agent`): it waits on your ok (amber, "espera seu ok · PR #128"), it waits for its offline computer
  * (dozing, "Esperando o MacBook Air"), or what it is doing with the pixel orbit. Unread: bold name, darker time and preview, the count. Threads and missions
  * add a faint line with what and where ("Missão · #canal"): a mission shows its agent, its state
@@ -74,13 +79,17 @@ export const ConversationRowView = memo(function ConversationRowView({
   const c = useColors();
   const when = useWhen();
   const presenceOf = usePresenceOf();
+  const { org } = useOrg();
   const lastText = (last: LastLine | null) => {
     if (!last) return { who: "", text: "" };
     const who = last.name || (last.author ? dir.nameOf(last.author) : "");
     return { who, text: previewBody(t, last.text, last.meta ?? null, last.mediaKind) };
   };
   const agentDm = r.kind === "dm" && r.with.type === "agent";
-  /** A DM with nothing in it yet: who the agent is (as its first conversation says), or a word to start. */
+  /**
+   * A DM with nothing in it yet: who the agent is (as its first conversation says), or a word to start. A personal
+   * workspace's agent is there for its person, not on a team (ADR 0159).
+   */
   const introLine = (): string => {
     if (r.kind !== "dm") return "";
     const a = agentDm ? dir.agentById.get(r.with.id) : undefined;
@@ -89,7 +98,7 @@ export const ConversationRowView = memo(function ConversationRowView({
     return intro.kind === "what"
       ? intro.text
       : intro.kind === "role"
-        ? t("mobile.chat.intent.roleIntro", { role: intro.role })
+        ? t(modeKey(org, "mobile.chat.intent.roleIntro"), { role: intro.role })
         : t("mobile.chat.intent.noIntro");
   };
   const agentState = agentDm ? (agent ?? null) : null;
@@ -150,10 +159,8 @@ export const ConversationRowView = memo(function ConversationRowView({
     label = `${state} · ${progress}`;
     line = (
       <View style={styles.work}>
-        {lines.state === "working" ? <PixelOrbit color={orbitColor} size={13} /> : null}
-        {lines.state === "waiting" ? (
-          <LineIcon name="wait" size={15} color={c.amber} variant="small" text={LIST_PREVIEW} />
-        ) : null}
+        {/* The state is words in the state's color: the orbit for work, amber for what waits on you; no icon. */}
+        {lines.state === "working" ? <PixelOrbit color={orbitColor} size={ORBIT} /> : null}
         <Text variant="small" tone="muted" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
           <Text
             variant="small"
@@ -171,7 +178,6 @@ export const ConversationRowView = memo(function ConversationRowView({
     label = [verb, agentState.title].filter(Boolean).join(" · ");
     line = (
       <View style={styles.work}>
-        <LineIcon name="wait" size={15} color={c.amber} variant="small" text={LIST_PREVIEW} />
         <Text variant="small" tone="muted" numberOfLines={1} style={[LIST_PREVIEW, styles.shrink]}>
           <Text variant="small" style={[LIST_PREVIEW, styles.em, { color: c.amber }]}>
             {verb}
@@ -196,7 +202,7 @@ export const ConversationRowView = memo(function ConversationRowView({
     label = agentLine.text;
     line = (
       <View style={styles.work}>
-        {working ? <PixelOrbit color={orbitColor} size={13} /> : null}
+        {working ? <PixelOrbit color={orbitColor} size={ORBIT} /> : null}
         <Text variant="small" tone="ink2" numberOfLines={1} style={[LIST_PREVIEW, styles.em, styles.shrink]}>
           {agentLine.text}
         </Text>
@@ -207,7 +213,7 @@ export const ConversationRowView = memo(function ConversationRowView({
     label = doing ? t("mobile.homeNow.doingLabel", { what: doing }) : t("mobile.chats.working");
     line = (
       <View style={styles.work}>
-        <PixelOrbit color={orbitColor} size={13} />
+        <PixelOrbit color={orbitColor} size={ORBIT} />
         <Text variant="small" tone="ink2" numberOfLines={1} style={[LIST_PREVIEW, styles.em, styles.shrink]}>
           {doing || t("mobile.chats.working")}
         </Text>
@@ -222,7 +228,7 @@ export const ConversationRowView = memo(function ConversationRowView({
     const lead = theirs ? "" : last.who;
     label = lead ? `${lead}: ${text}` : text;
     line = (
-      <Text variant="small" tone={r.unread > 0 ? "ink2" : "muted"} numberOfLines={lines ? 1 : 2} style={LIST_PREVIEW}>
+      <Text variant="small" tone={r.unread > 0 ? "ink2" : "muted"} numberOfLines={1} style={LIST_PREVIEW}>
         {lead ? (
           <Text variant="small" tone="ink2" style={[LIST_PREVIEW, styles.em]}>
             {`${lead}: `}
@@ -287,11 +293,13 @@ export const ConversationRowView = memo(function ConversationRowView({
       leading={leading}
       title={name}
       time={meta ?? (r.at ? when.short(r.at) : null)}
+      pinned={pinned}
       dot={fresh && badge === 0}
       over={
+        // A closed thread isn't marked here: it goes to the end of its list, and screen readers hear it.
         placeLine ? (
-          <Text variant="caption" tone="faint" numberOfLines={1}>
-            {r.kind === "thread" && r.closed ? `${placeLine} · ${t("mobile.chats.closed")}` : placeLine}
+          <Text variant="footnote" tone="faint" numberOfLines={1}>
+            {placeLine}
           </Text>
         ) : null
       }
@@ -361,6 +369,6 @@ function RowTrigger({
 
 const styles = StyleSheet.create({
   shrink: { flexShrink: 1 },
-  work: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
+  work: { flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 },
   em: { fontWeight: "500" },
 });

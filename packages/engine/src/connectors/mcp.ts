@@ -1,16 +1,19 @@
-import { type ComposioClient, composioFile, FileTooLargeError, type PubSub } from "@agenteschat/adapters";
+import { type ComposioClient, composioFile, FileTooLargeError } from "@agenteschat/adapters";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { FetchLike, Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import type { jsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/types.js";
 import { ARTIFACT_LIMITS, type ArtifactDeps, createFileArtifact, fileReach } from "../artifacts";
 import { recordAudit } from "../audit";
 import { connectorKeyOf } from "../connector-usage";
 import { cutText } from "../format";
 import { type GitHubAppAccess, githubCallAuth, githubListingHeaders } from "../git/github-call";
+import { githubItemOfCall, recordGitHubItem } from "../git/github-events";
 import { creditedMessage, runCoAuthor, signatureLine, signedBody } from "../git/signature";
-import { assertPublicHttpsUrl, type ResolveHost } from "../net-guard";
+import type { Judge } from "../judge";
+import { assertPublicHttpsUrl, outboundFetch, type ResolveHost } from "../net-guard";
 import { replyThreadOf } from "../runs";
-import { alwaysAsks, customAlwaysAsks, MAX_RESULT_CHARS } from "../tools/gateway";
+import { MAX_RESULT_CHARS } from "../tools/gateway";
 import type { ToolContext, ToolDefinition, ToolSource } from "../tools/types";
 import { CONNECTOR_CATALOG, type ConnectorTool, connectorScope, fillTitle } from "./catalog";
 import { sqlArgOf } from "./classify";
@@ -31,10 +34,11 @@ import {
   composioActions,
   customScope,
   isCustom,
+  syncCustomTools,
   type ToolAccess,
 } from "./custom";
 import { applyToolPins } from "./pins";
-import { composioAction, presetForServer } from "./presets";
+import { presetForServer } from "./presets";
 import type { McpServerInfo } from "./server-icon";
 
 /** A tool as an MCP server lists it. */
@@ -74,9 +78,18 @@ export type McpConnect = (
   headers: Record<string, string>,
 ) => Promise<McpSession>;
 
+/**
+ * Every tool result passes. The SDK's default compiles each listed tool's `outputSchema` with a new Ajv for every
+ * client, so for every listing, on the main thread: a second or more and tens of MB for a server with large schemas.
+ * Nothing here checks a result against its schema; it reaches the model as untrusted text either way.
+ */
+const NO_OUTPUT_VALIDATION: jsonSchemaValidator = {
+  getValidator: () => (input) => ({ valid: true, data: input as never, errorMessage: undefined }),
+};
+
 /** Wraps an official MCP SDK client over any transport. */
 export async function mcpSessionOver(transport: Transport): Promise<McpSession> {
-  const client = new Client({ name: "agentes.chat", version: "1" });
+  const client = new Client({ name: "agentes.chat", version: "1" }, { jsonSchemaValidator: NO_OUTPUT_VALIDATION });
   await client.connect(transport);
   return {
     async listTools() {
@@ -100,11 +113,18 @@ export async function mcpSessionOver(transport: Transport): Promise<McpSession> 
     },
     async callTool(name, args) {
       const res = (await client.callTool({ name, arguments: args })) as {
-        content?: { type: string; text?: string }[];
+        content?: { type: string; text?: string; resource?: { text?: unknown } }[];
         isError?: boolean;
         structuredContent?: unknown;
       };
-      const parts = (res.content ?? []).map((c) => (c.type === "text" ? (c.text ?? "") : `[${c.type}]`));
+      // GitHub's `get_file_contents` sends the file itself as an embedded resource next to a one-line text block.
+      const parts = (res.content ?? []).map((c) =>
+        c.type === "text"
+          ? (c.text ?? "")
+          : c.type === "resource" && typeof c.resource?.text === "string"
+            ? c.resource.text
+            : `[${c.type}]`,
+      );
       if (parts.length === 0 && res.structuredContent !== undefined) parts.push(JSON.stringify(res.structuredContent));
       return { content: parts.join("\n"), isError: res.isError === true };
     },
@@ -117,7 +137,7 @@ export const connectOverHttp: McpConnect = (connection, headers) =>
   mcpSessionOver(
     new StreamableHTTPClientTransport(new URL(connection.serverUrl), {
       requestInit: { headers },
-      fetch: tolerantMcpFetch(),
+      fetch: tolerantMcpFetch(outboundFetch({ ownRedirects: true })),
     }),
   );
 
@@ -216,7 +236,7 @@ const LIST_TTL_MS = 60_000;
 
 /** Read before Composio's own words in its executor's description: what asks a person and what doesn't. */
 const EXECUTOR_NOTE =
-  "Reads such as list, get and search run without asking a person. GraphQL and SQL actions ask every time. Keep sync_response_to_workbench false unless you must script over the output: the workbench and bash ask a person every time.";
+  "Reads such as list, get and search run without asking a person. GraphQL and SQL actions, the workbench and bash ask a person, unless you are set to never ask or a person approved that kind for good. Keep sync_response_to_workbench false unless you must script over the output.";
 
 /**
  * Tools of the organization's connected MCP servers (layer 2 of ADR 0016). Lists
@@ -231,14 +251,16 @@ export function createConnectorToolSource(
     /** Where files a Composio action returns are kept (the workspace's Drive); none: they aren't kept. */
     artifacts?: ArtifactDeps;
     log?: { warn(message: string, data?: Record<string, unknown>): void };
-    /** Tells connector admins live when a server changes an approved tool. */
-    pubsub?: PubSub;
+    /** Reads a changed tool whose name doesn't say its level (none: such a tool asks first). */
+    judge?: Judge;
     /** The server's GitHub App (ADR 0156): GitHub's tools act as it wherever the workspace installed it. */
     githubApp?: GitHubAppAccess;
   },
 ): ToolSource {
   const connect = deps.connect ?? connectOverHttp;
   const cache = new Map<string, { at: number; tools: McpTool[] }>();
+  /** How many times a listing found changed tools and worked out a custom server's levels again. */
+  let reclassified = 0;
   const github = { fetch: deps.http ?? fetch, apiUrl: "https://api.github.com", ...deps.githubApp?.http };
 
   /** A session with the connection's own sign-in, or `auth` when the call goes as someone else (the GitHub App). */
@@ -263,6 +285,7 @@ export function createConnectorToolSource(
   }
 
   async function serverTools(connection: ConnectorConnection) {
+    // A change to the connection lists again at once; a token refresh isn't one (it leaves `updatedAt` as it was).
     const key = `${connection.id}:${connection.updatedAt.getTime()}`;
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < LIST_TTL_MS) return hit.tools;
@@ -272,7 +295,10 @@ export function createConnectorToolSource(
         : undefined;
     if (auth === null) throw new Error("no installation of the GitHub App to list GitHub's tools with");
     const listed = await withSession(connection, (s) => s.listTools(), auth);
-    const tools = await applyToolPins(deps, connection, listed, pinnedTool(connection));
+    const reclassify = isCustom(connection)
+      ? () => syncCustomTools({ ...deps, connect }, connection).finally(() => reclassified++)
+      : undefined;
+    const tools = await applyToolPins({ ...deps, reclassify }, connection, listed, pinnedTool(connection));
     cache.set(key, { at: Date.now(), tools });
     return tools;
   }
@@ -298,7 +324,7 @@ export function createConnectorToolSource(
     return trailer ? { ...input, message: creditedMessage(given, trailer) } : input;
   }
 
-  /** Which of a connection's tools keep their approved text (ADR 0117): not Composio's (pinned by toolkit version), not ours. */
+  /** Which of a connection's tools are watched for changes (ADR 0117): not Composio's (pinned by toolkit version), not ours. */
   function pinnedTool(connection: ConnectorConnection): (name: string) => boolean {
     if (isCustom(connection)) return composioServiceOf(connection.serverUrl) ? () => false : () => true;
     const def = CONNECTOR_CATALOG[connection.connector];
@@ -310,21 +336,24 @@ export function createConnectorToolSource(
    * never shows). `approval` and sensitive tools ask a person for every call;
    * `write` tools run on their own and each call goes to the audit log.
    * Composio's executor says which actions each call runs: reads go as the
-   * server's reads, and "Aprovar sempre" may cover its other actions; its
-   * workbench, bash and proxy always ask. A tool that asks only because of its
-   * level may be approved for good for one agent (`customAlwaysAsks` aside).
+   * server's reads, and "Aprovar sempre" covers its other actions one by one;
+   * its workbench, bash and proxy ask whatever their stored level, and like
+   * any tool that asks may be approved for good for one agent.
    */
   async function customToolsOf(connection: ConnectorConnection): Promise<ToolDefinition[]> {
     // A sign-in that stopped working (a Composio account too) has no tools until it is reconnected.
     if (connection.status === "needs_reconnect") return [];
-    const classified = await classifiedTools(deps.db, connection.id);
+    let classified = await classifiedTools(deps.db, connection.id);
     if (classified.length === 0) return [];
+    const before = reclassified;
     let listed: McpTool[];
     try {
       listed = await serverTools(connection);
     } catch {
       return [];
     }
+    // The listing found changed tools: their levels are the ones worked out from the new version.
+    if (reclassified !== before) classified = await classifiedTools(deps.db, connection.id);
     const byName = new Map(listed.map((t) => [t.name, t]));
     const preset = presetForServer(connection.serverUrl)?.id;
     const composio = composioServiceOf(connection.serverUrl);
@@ -335,7 +364,6 @@ export function createConnectorToolSource(
       if (!tool) return [];
       const executor = tool.name === COMPOSIO_EXECUTOR;
       const sqlArg = composio ? null : sqlArgOf(tool, preset);
-      const action = composio ? composioAction(composio.way, tool.name) : null;
       // Our rules for a Composio action as they are now (its entry's `ask`, its tags at the pinned version), not only
       // as the row stored them at the last sync: an action they make ask asks on every connection at once.
       const asks = composio !== null && tool.destructiveHint === true;
@@ -362,17 +390,10 @@ export function createConnectorToolSource(
           // Its exact call may be approved ahead, except a tool that runs whatever its input says.
           ahead: !COMPOSIO_ANY_ACTION.has(tool.name),
           external: true, // whatever the server returns is third-party text
-          // The executor names what each call does. A Composio action, and a custom server's own tool, is one action:
-          // approved for good when it asks only because of its level (never a sensitive one, nor one that runs
-          // whatever its arguments say), with any values.
-          ...(executor
-            ? { actions: composioActions, readScope: customScope(connection.id, "read"), rememberAs: tool.name }
-            : !row.sensitive &&
-                !asks &&
-                !COMPOSIO_ANY_ACTION.has(tool.name) &&
-                (action ? !alwaysAsks(action) : !composio && !customAlwaysAsks(tool.name))
-              ? { rememberAs: tool.name }
-              : {}),
+          // The executor names what each call does. A Composio action, and a custom server's own tool, is one action.
+          // "Aprovar sempre" keeps either by the server's own name.
+          rememberAs: tool.name,
+          ...(executor ? { actions: composioActions, readScope: customScope(connection.id, "read") } : {}),
           ...(sqlArg ? { sqlReads: { tool: tool.name, arg: sqlArg } } : {}),
           describe: (input) => {
             const actions = executor ? composioActions(input) : null;
@@ -478,6 +499,12 @@ export function createConnectorToolSource(
                 args = await signed(input, mapped.sign, { ...ctx, token: how.token });
               }
               const result = await withSession(connection, (s) => s.callTool(tool.name, args), auth);
+              // Where the agent's words went on GitHub: what people answer there comes back to it here.
+              const item =
+                def.id === "github" && mapped.sign?.field === "body" && !result.isError
+                  ? githubItemOfCall(tool.name, input, result.content)
+                  : null;
+              if (item) await recordGitHubItem(ctx, item).catch(() => {});
               return {
                 content: result.content,
                 isError: result.isError,

@@ -2,18 +2,23 @@ import { mixHex } from "@agenteschat/ui/agent/engine";
 import { LinearGradient } from "expo-linear-gradient";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Text as RNText, StyleSheet, View } from "react-native";
-import { Icon, type IconName } from "./Icon";
+import type { IconName } from "./Icon";
 import { PressScale } from "./PressScale";
+import { TOOL_H, TOUCH } from "./rhythm";
 import { systemText } from "./Text";
 import { type Theme, useTheme } from "./theme";
 import { CHROME_MAX_SCALE, weights } from "./type-scale";
 
-/** `text`: the ghost's words with no side padding, so its icon starts where the text above does (under a message). */
+/** `text`: the ghost's words with no side padding, so they start where the text above does (under a message). */
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "text";
 
 export interface ButtonProps {
   variant: ButtonVariant;
   size?: ButtonSize;
+  /**
+   * Kept for callers, never drawn: a button is its words (the design language has no icons inside buttons; a brand's
+   * mark, which is a name and not a picture, goes in `leading`).
+   */
   icon?: IconName;
   /** Drawn before the label instead of an icon (a brand's mark), given the label's color. */
   leading?: (color: string) => ReactNode;
@@ -24,16 +29,27 @@ export interface ButtonProps {
   disabled?: boolean;
   /** Working on it: a spinner in the icon's place, and it can't be pressed again meanwhile. */
   loading?: boolean;
+  /** What a screen reader hears after the label: the state the label is too short to say. */
+  hint?: string;
 }
+
+/** In a card or a row: the web's small button, 32 tall, its target grown to 44 past it (`slopOf`). */
+const SMALL = { height: TOOL_H, radius: 10, padding: 12, text: "subhead", icon: 16 } as const;
 
 export const BUTTON_SIZES = {
   md: { height: 48, radius: 15, padding: 20, text: "headline", icon: 18 },
-  // A request's footer in the conversation: wide enough to hit, short enough that the card stays a message.
-  card: { height: 40, radius: 12, padding: 14, text: "subhead", icon: 16 },
-  sm: { height: 36, radius: 12, padding: 14, text: "subhead", icon: 16 },
+  // A request's footer in the conversation: the in-card small button, so the card stays a message.
+  card: SMALL,
+  sm: SMALL,
 } as const;
 
 export type ButtonSize = keyof typeof BUTTON_SIZES;
+
+/** A button shorter than a finger's target grows it above and below, never sideways: two 8 apart never share one. */
+export function slopOf(height: number) {
+  const grow = (TOUCH - height) / 2;
+  return grow > 0 ? { top: grow, bottom: grow } : undefined;
+}
 
 /** Primary's tonal gradient (ink 82% → ink) and its shadow, as on the web (`.b1`). */
 export function primaryLook(theme: Pick<Theme, "colors">) {
@@ -51,13 +67,13 @@ export function primaryLook(theme: Pick<Theme, "colors">) {
 export function Button({
   variant,
   size = "md",
-  icon,
   leading,
   label,
   onPress,
   wide = false,
   disabled = false,
   loading = false,
+  hint,
 }: ButtonProps) {
   const theme = useTheme();
   const { colors, shadows } = theme;
@@ -73,7 +89,9 @@ export function Button({
       fill={false}
       accessibilityRole="button"
       accessibilityLabel={label}
+      {...(hint ? { accessibilityHint: hint } : {})}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      hitSlop={slopOf(s.height)}
       style={[
         {
           borderRadius: s.radius,
@@ -104,13 +122,7 @@ export function Button({
             ]}
           />
         ) : null}
-        {loading ? (
-          <ActivityIndicator size="small" color={textColor} />
-        ) : leading ? (
-          leading(textColor)
-        ) : icon ? (
-          <Icon name={icon} size={s.icon} color={textColor} />
-        ) : null}
+        {loading ? <ActivityIndicator size="small" color={textColor} /> : leading ? leading(textColor) : null}
         <RNText
           numberOfLines={1}
           maxFontSizeMultiplier={CHROME_MAX_SCALE}

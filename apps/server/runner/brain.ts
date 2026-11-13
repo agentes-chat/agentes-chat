@@ -36,6 +36,7 @@ import {
   type TurnContext,
   type WireBrainEvent,
 } from "@agenteschat/adapters/machine-protocol";
+import { errorLineOf } from "@agenteschat/adapters/redact";
 import {
   claudeCodeModel,
   PLAN_FORBIDDEN_TEXT,
@@ -60,7 +61,8 @@ import {
 import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { RunnerError } from "./errors";
-import { resolveCommand } from "./executors";
+import { killTree } from "./exec";
+import { cliSpawn } from "./executors";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
 import {
@@ -73,6 +75,7 @@ import {
   missionBranchPrefix,
   newMcpToken,
   redactDeep,
+  turnAsks,
 } from "./mcp";
 import { isInside, resolveForAgent } from "./paths";
 import { resetIso } from "./plan-usage";
@@ -858,11 +861,13 @@ export function repoInstructions(cwd: string): string {
  * of Claude Code's own tools (`--tools ""`, each one denied too), no settings files, skills or slash commands, no
  * permission prompt (`dontAsk`: whatever isn't allowed is refused), whatever `personalMcp` says.
  * `delegated`: the same `plan` and `work` for a CLI whose tools the agent's worker serves.
+ * `asksFirst`: the agent always asks (ADR 0173), so a `work` turn accepts no edit by itself: each reaches the prompt.
  */
 export function brainProfileLaunch(
   mode: "plan" | "work" | "chat",
   personalMcp: boolean,
   delegated = false,
+  asksFirst = false,
 ): Pick<
   ClaudeLaunch,
   | "strictMcp"
@@ -888,7 +893,7 @@ export function brainProfileLaunch(
     return {
       strictMcp: true,
       promptTool: true,
-      permissionMode: mode === "plan" ? "default" : "acceptEdits",
+      permissionMode: mode === "plan" || asksFirst ? "default" : "acceptEdits",
       settingSources: "",
       builtinTools: DELEGATED_BUILTIN_TOOLS,
       noSlashCommands: true,
@@ -906,7 +911,7 @@ export function brainProfileLaunch(
   return {
     strictMcp: !personalMcp,
     promptTool: true,
-    permissionMode: "acceptEdits",
+    permissionMode: asksFirst ? "default" : "acceptEdits",
     // With the owner's own MCP servers the owner's settings stay, and so does every tool of Claude Code but the web.
     ...(personalMcp
       ? { disallowedTools: WEB_BUILTIN_TOOLS }
@@ -917,7 +922,7 @@ export function brainProfileLaunch(
 /** Claude Code under opus falls back to sonnet when opus is overloaded or out of the plan. */
 export const fallbackModelFor = (model: string | undefined) => (model && /opus/i.test(model) ? "sonnet" : undefined);
 
-/** The argv of a brain turn's Claude Code (spawned without a shell: nothing needs quoting). */
+/** The argv of a brain turn's Claude Code (on Windows `cliSpawn` quotes each for cmd.exe). */
 export function claudeBrainArgs(l: ClaudeLaunch): string[] {
   const model = l.model && MODEL.test(l.model) ? l.model : undefined;
   const fallback = l.noFallback ? undefined : fallbackModelFor(model);
@@ -979,6 +984,8 @@ export class ClaudeProcess {
   readonly startedAt = Date.now();
   exited = false;
   exitCode: number | null = null;
+  /** The signal that ended it, when one did (an out-of-memory kill is `SIGKILL`). */
+  exitSignal: NodeJS.Signals | null = null;
   stderr = "";
   /** Claude Code said `system` `init` (its version, when it has one, is known from then on). */
   initSeen = false;
@@ -1026,15 +1033,17 @@ export class ClaudeProcess {
     /** A token root handed over, on its own descriptor (`TOKEN_FD_ENV`). */
     token?: string,
   ) {
-    const [file, ...pre] = command;
-    // A full path: the compiled runner would look the bare name up on the PATH it started with.
-    this.child = start(resolveCommand(file ?? "claude", env.PATH), [...pre, ...args], {
+    // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, found on
+    // the PATH (never in the agent's folder), a launcher through cmd.exe with every argument quoted (an empty
+    // `--setting-sources` stays one).
+    const run = cliSpawn(command.length ? command : ["claude"], args, env.PATH);
+    const runEnv = run.env ? { ...env, ...run.env } : env;
+    this.child = start(run.file, run.args, {
       cwd,
-      env: token ? { ...env, ...TOKEN_FD_ENV } : env,
+      env: token ? { ...runEnv, ...TOKEN_FD_ENV } : runEnv,
       stdio: token ? [...TOKEN_STDIO] : ["pipe", "pipe", "pipe"],
       windowsHide: true,
-      // Windows finds `claude.cmd` only through the shell (argv stays plain: files, ids, flags).
-      shell: process.platform === "win32" && command.length === 1,
+      windowsVerbatimArguments: run.windowsVerbatimArguments,
     });
     if (token) handToken(this.child, token);
     const events = this.child as unknown as EventEmitter;
@@ -1043,7 +1052,7 @@ export class ClaudeProcess {
       if ((err as { code?: string }).code === "ENOENT") this.stderr = `ENOENT ${this.stderr}`;
       this.markExit(null);
     });
-    events.on("exit", (code: number | null) => this.markExit(code));
+    events.on("exit", (code: number | null, signal: NodeJS.Signals | null) => this.markExit(code, signal));
     this.child.stdin?.on("error", () => {});
     if (this.child.stdout) {
       const rl = createInterface({ input: this.child.stdout, crlfDelay: Number.POSITIVE_INFINITY });
@@ -1088,8 +1097,17 @@ export class ClaudeProcess {
     if (this.breach) return;
     this.breach = reason;
     try {
-      this.child.kill("SIGKILL");
+      this.end("SIGKILL");
     } catch {}
+  }
+
+  /**
+   * Ends Claude Code. On Windows its whole tree: started through cmd.exe (npm's `claude.cmd`), killing the child alone
+   * would leave Claude Code running the turn.
+   */
+  private end(signal: NodeJS.Signals) {
+    if (process.platform === "win32") killTree(this.child, signal);
+    else this.child.kill(signal);
   }
 
   private refuseControl(line: string) {
@@ -1181,15 +1199,21 @@ export class ClaudeProcess {
     for (const w of [...this.ownTurnWaiters]) w();
   }
 
-  private markExit(code: number | null) {
+  private markExit(code: number | null, signal: NodeJS.Signals | null = null) {
     if (this.exited) return;
     this.exited = true;
     this.exitCode = code;
+    this.exitSignal = signal;
     // Lines still buffered in readline arrive first.
     setImmediate(() => {
       this.wakeOwnTurnWaiters();
       for (const h of [...this.exitHandlers]) h();
     });
+  }
+
+  /** How it ended, for the error and the log: `exit 1`, `signal SIGKILL`, `exit ?` while it runs. */
+  ended() {
+    return this.exitCode === null && this.exitSignal ? `signal ${this.exitSignal}` : `exit ${this.exitCode ?? "?"}`;
   }
 
   onLine(handler: ((line: string) => void) | null) {
@@ -1222,12 +1246,12 @@ export class ClaudeProcess {
   kill() {
     if (this.exited) return;
     try {
-      this.child.kill("SIGTERM");
+      this.end("SIGTERM");
     } catch {}
     const t = setTimeout(() => {
       if (!this.exited) {
         try {
-          this.child.kill("SIGKILL");
+          this.end("SIGKILL");
         } catch {}
       }
     }, 3000);
@@ -1584,6 +1608,8 @@ interface Live {
   lastUsed: number;
   idleTimer: ReturnType<typeof setTimeout> | null;
   persistent: boolean;
+  /** `drop` ran: a process closed while idle exits after, and its exit handler drops it again. */
+  dropped?: boolean;
 }
 
 /** What the bridge needs for one process's MCP server: its local token, and the run it works for now. */
@@ -1691,6 +1717,12 @@ const errorEvent = (code: string, message: string, retryable: boolean): WireBrai
   message: message.slice(0, BRAIN_LIMITS.message),
   retryable,
 });
+
+/** What a dead process's stderr says went wrong (`errorLineOf`), with the turn's secrets masked. */
+const redactedLine = (stderr: string, ctx: BrainTurnContext) => {
+  const line = errorLineOf(stderr).slice(0, 500);
+  return ctx.secrets?.redact ? ctx.secrets.redact(line) : line;
+};
 
 export class BrainManager {
   private readonly live = new Map<string, Live>();
@@ -1935,10 +1967,16 @@ export class BrainManager {
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live);
       if (out.final) return out.final;
-      // Died mid-turn: the same turn again, one-shot, resuming the session.
-      this.log(`[${ctx.agent.handle}] brain process for ${session.slice(0, 8)} died mid-turn; resuming one-shot`);
+      // Died mid-turn: the same turn again, one-shot, resuming the session. Why it died is logged, and kept for the
+      // error should the one-shot die without a word.
+      const line = redactedLine(live.proc.stderr, ctx);
+      const died = `${live.proc.ended()}${line ? `: ${line}` : ""}`;
+      this.log(
+        `[${ctx.agent.handle}] brain process for ${session.slice(0, 8)} died mid-turn (${died}); resuming one-shot`,
+      );
       if (live.proc.stderr.startsWith("ENOENT")) return this.cliMissing();
-      return this.oneShot(key, session, cwd, req, ctx, sig, this.resumeFor(cwd, session, req, ctx, true), true);
+      const resume = this.resumeFor(cwd, session, req, ctx, true);
+      return this.oneShot(key, session, cwd, req, ctx, sig, resume, true, line);
     }
     return this.oneShot(key, session, cwd, req, ctx, sig, this.resumeFor(cwd, session, req, ctx), true);
   }
@@ -2113,6 +2151,8 @@ export class BrainManager {
     sig: string,
     resume: boolean,
     mayRetryFlag: boolean,
+    /** The error line of a process that died on this turn before: said when this one dies without a word. */
+    earlier = "",
   ): Promise<WireBrainEvent> {
     const live = await this.spawn(key, session, cwd, req, ctx, sig, false, resume);
     const out = await this.onLive(live, req, ctx);
@@ -2122,16 +2162,18 @@ export class BrainManager {
     const fast = Date.now() - live.proc.startedAt <= FAST_FAIL_MS;
     // Never into `--resume` on a delegated CLI: a transcript it doesn't own is what that answer may mean.
     if (mayRetryFlag && fast && WRONG_SESSION_FLAG.test(live.proc.stderr) && (resume || !ctx.delegated)) {
-      return this.oneShot(key, session, cwd, req, ctx, sig, !resume, false);
+      return this.oneShot(key, session, cwd, req, ctx, sig, !resume, false, earlier);
     }
     const said = live.proc.stderr.trim().split("\n").slice(-3).join(" ").trim();
-    const tail = ctx.secrets?.redact ? ctx.secrets.redact(said) : said;
     if (/not logged in|\/login/i.test(said)) {
+      const tail = ctx.secrets?.redact ? ctx.secrets.redact(said) : said;
       return errorEvent("not_logged_in", tail || "Claude Code is not logged in on this computer.", true);
     }
+    // The line that says what went wrong, not the stack frames and the Node.js version a crash ends with.
+    const line = redactedLine(live.proc.stderr, ctx) || earlier;
     return errorEvent(
       "claude_failed",
-      `Claude Code ended without an answer (exit ${live.proc.exitCode ?? "?"})${tail ? `: ${tail}` : ""}`,
+      `Claude Code ended without an answer (${live.proc.ended()})${line ? `: ${line}` : ""}`,
       false,
     );
   }
@@ -2176,7 +2218,8 @@ export class BrainManager {
     const fileMode = delegated ? 0o640 : 0o600;
     const systemFile = path.join(dir, "system.txt");
     const mode = req.permissions?.mode === "plan" || req.permissions?.mode === "chat" ? req.permissions.mode : "work";
-    const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined);
+    const asks = mode === "work" ? turnAsks(req.permissions?.asks) : undefined;
+    const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined, asks === "always");
     const system = typeof req.system === "string" ? req.system : "";
     const ranKey = ranKeyOf(req, session);
     // A `chat` turn reads nothing of the folder, its CLAUDE.md included.
@@ -2250,6 +2293,7 @@ export class BrainManager {
         profile: mode === "work" ? "work" : "plan",
         branches: [...branches],
         allow,
+        ...(asks ? { asks } : {}),
         ...(mode === "chat" ? { chat: true } : {}),
         ...(delegated.task ? { task: delegated.task.kind } : {}),
         ...(persistent ? {} : { oneShot: true as const }),
@@ -2279,6 +2323,7 @@ export class BrainManager {
             ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}),
             // Its own branches: a push there needs nobody (ADR 0053 §3).
             branches,
+            ...(asks ? { asks } : {}),
           }),
         ),
         { mode: 0o600 },
@@ -2307,7 +2352,11 @@ export class BrainManager {
                 allow,
                 undefined,
                 // Every command reaches our prompt tool: plain reads pass there at once, secrets never.
-                { promptReads: true, ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}) },
+                {
+                  promptReads: true,
+                  ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}),
+                  ...(asks === "always" ? { asksFirst: true } : {}),
+                },
               ),
               // With the owner's own settings loaded (`personalMcp`), theirs decide the computer's own sign-in.
               ...(ctx.accountHome
@@ -2522,6 +2571,9 @@ export class BrainManager {
   }
 
   private drop(live: Live) {
+    // Once per process: a second pass at its exit would date the kept system text from the exit, not the close.
+    if (live.dropped) return;
+    live.dropped = true;
     if (live.idleTimer) clearTimeout(live.idleTimer);
     live.idleTimer = null;
     if (this.live.get(live.key) === live) this.live.delete(live.key);

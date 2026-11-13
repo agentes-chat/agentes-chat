@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   ACCOUNTS_PROTOCOL,
   BRAIN_PROTOCOL,
+  CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
   MISSION_PROTOCOL,
   SPEED_PROTOCOL,
@@ -54,13 +55,20 @@ describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
     expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus", "Sonnet", "Haiku"]);
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
-    // Codex offers the catalog's OpenAI rows, GPT-6.1 Terra among them.
+    // Codex offers the catalog's OpenAI rows, GPT-6.1 Terra and GPT-6 Astra among them; GPT-6.1 Sol stays its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([
+      "GPT-6 Astra",
       "GPT-6.1 Sol",
       "GPT-6.1 Terra",
       "GPT-6 Sol",
       "GPT-6 Luna",
     ]);
+    expect(brainModelOptions("codex")[0]).toMatchObject({
+      value: "gpt-6-astra",
+      modelId: "gpt-6-astra",
+      contextWindow: 1_050_000,
+    });
+    expect(normalizeBrainModel("codex", "gpt-6-astra")).toBe("gpt-6-astra");
     // An alias the plan leaves out, or "Automático", is its main model; the value stays an alias.
     expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.3");
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
@@ -98,6 +106,28 @@ describe("brain settings", () => {
     expect(brainModelId("claude_code", "opus")).toBe("claude-opus-5-5");
     expect(brainModelId("claude_code", null)).toBe("claude-sonnet-5-5");
     expect(brainModelId("codex", "gpt-6.1-codex")).toBe("gpt-6.1-codex");
+  });
+
+  test("options: on Windows, Codex needs a runner that runs its turns there", () => {
+    const reasons = (m: ReturnType<typeof mac>) =>
+      brainOptions(m)
+        .slice(1, 3)
+        .map((o) => [o.kind, o.available, o.reason ?? null]);
+    const executors = { claude: { version: "2" }, codex: { version: "codex-cli 0.170.0" }, detectedAt: "x" };
+    // An older Windows runner refuses every Codex turn: "update the agentes.chat program", not "update Codex".
+    expect(reasons(mac({ os: "windows", protocol: CODEX_WINDOWS_PROTOCOL - 1, executors }))).toEqual([
+      ["claude_code", true, null],
+      ["codex", false, "runner_old"],
+    ]);
+    expect(reasons(mac({ os: "windows", protocol: CODEX_WINDOWS_PROTOCOL, executors }))).toEqual([
+      ["claude_code", true, null],
+      ["codex", true, null],
+    ]);
+    expect(reasons(mac({ os: "darwin", protocol: CODEX_WINDOWS_PROTOCOL - 1, executors }))[1]).toEqual([
+      "codex",
+      true,
+      null,
+    ]);
   });
 
   test("options: only what the computer has; why the rest can't be chosen", () => {
@@ -155,6 +185,17 @@ describe("brain settings", () => {
       ["codex", true, null],
     ]);
     expect(reasons(mac({ access: { tools: { claude: true } } }))[1]).toEqual(["claude_code", true, null]);
+    // Commands off (the app's default for a new workspace) with Claude Code on: the plan still thinks there, as the
+    // runner runs it; "no permission to run programs" is only for a runner that reports no tools.
+    const commandsOff = mac({
+      ...both,
+      execAllowed: false,
+      access: { tools: { claude: true, codex: true, commands: false } },
+    });
+    expect(reasons(commandsOff).slice(1, 3)).toEqual([
+      ["claude_code", true, null],
+      ["codex", true, null],
+    ]);
   });
 });
 
@@ -423,6 +464,36 @@ describe("a plan answers its owner until it answers other people (Atende outras 
     expect((await setAgentBrain(deps, caio.id, fx.org.id, fx.agent.id, { onlyOwner: true })).onlyOwner).toBe(true);
     expect((await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { onlyOwner: false })).onlyOwner).toBe(
       false,
+    );
+  });
+
+  test("from one plan to another kind of plan it keeps answering whoever its owner let in", async () => {
+    const { fx, deps, machineId, bia, caio, row, audits } = await world();
+    await fx.db
+      .update(schema.machines)
+      .set({
+        executors: {
+          claude: { version: "2.1.304", loggedIn: true },
+          codex: { version: "0.170.0" },
+          detectedAt: new Date().toISOString(),
+        },
+      })
+      .where(eq(schema.machines.id, machineId));
+    await setAgentAudience(fx.db, fx.owner.id, fx.org.id, fx.agent.id, { mode: "people", userIds: [bia.id] });
+    await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "claude_code", onlyOwner: false });
+    const changes = (await audits("agent.audience_changed")).length;
+    // Another model on the same plan, then another plan: neither is a move onto a plan.
+    await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "claude_code", model: "opus" });
+    const moved = await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "codex" });
+    expect(moved).toMatchObject({ brain: "codex", onlyOwner: false });
+    const after = await row();
+    expect(after).toMatchObject({ audienceMode: "people", audienceUserIds: [bia.id] });
+    expect([canTalkTo(after, bia.id, NO_PERSON), canTalkTo(after, caio.id, NO_PERSON)]).toEqual([true, false]);
+    expect(await audits("agent.audience_changed")).toHaveLength(changes);
+    // One that answered only its owner still does on the other plan.
+    await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { onlyOwner: true });
+    expect((await setAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id, { brain: "claude_code" })).onlyOwner).toBe(
+      true,
     );
   });
 

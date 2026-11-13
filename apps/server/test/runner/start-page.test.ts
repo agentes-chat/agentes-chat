@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { isStartPage, START_FILE } from "@agenteschat/adapters/browser-start";
 import { chromeLaunchArgs, domainAllowed, isWebPage } from "../../runner/browser";
-import { prepareStartPage, startLocale } from "../../runner/start-page";
+import { prepareStartPage, startLocale, unsafeStartFolder } from "../../runner/start-page";
 import { removeDirs, tempDir } from "./helpers";
 
 const dirs: string[] = [];
@@ -50,6 +50,20 @@ test("the start page is one self-contained file: no network, no other file, the 
   prepareStartPage(dir, { name: "Ada", handle: "ada" }, { locale: "en", egress: null });
   expect(pageData(readFileSync(file, "utf8"))).toEqual({ name: "Ada", locale: "en", egress: null, flag: null });
   expect(readFileSync(file, "utf8")).toContain('<html lang="en" translate="no">');
+});
+
+test("the start page's folder: this user's and closed to others; on Windows the mode says nothing, so it isn't read", () => {
+  const folder = (mode: number, uid = 501, directory = true) => ({ isDirectory: () => directory, uid, mode });
+  expect(unsafeStartFolder(folder(0o755), "linux", 501)).toBe(false);
+  expect(unsafeStartFolder(folder(0o750), "darwin", 501)).toBe(false);
+  // Writable by the group or by everyone, someone else's, or not a folder at all.
+  expect(unsafeStartFolder(folder(0o775), "linux", 501)).toBe(true);
+  expect(unsafeStartFolder(folder(0o757), "linux", 501)).toBe(true);
+  expect(unsafeStartFolder(folder(0o755, 0), "linux", 501)).toBe(true);
+  expect(unsafeStartFolder(folder(0o755, 501, false), "linux", 501)).toBe(true);
+  // Windows gives every ordinary folder 0o666 and no owner id.
+  expect(unsafeStartFolder(folder(0o666, 0), "win32", undefined)).toBe(false);
+  expect(unsafeStartFolder(folder(0o666, 0, false), "win32", undefined)).toBe(true);
 });
 
 test("Chrome opens on the start page file; it and Chrome's new tab page are the only pages the allowlist lets by", () => {

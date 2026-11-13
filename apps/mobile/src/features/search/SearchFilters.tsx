@@ -19,9 +19,21 @@ import {
   typingOperator,
 } from "@agenteschat/client/lib/search-filters";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
-import { Button, EmptyState, Filters, Icon, PressScale, SectionHeader, Text, useReducedMotion } from "@/ui";
+import {
+  Button,
+  EmptyState,
+  Filters,
+  Icon,
+  PressScale,
+  SCREEN_X,
+  SectionHeader,
+  SkeletonList,
+  Text,
+  TOOL_H,
+  useReducedMotion,
+} from "@/ui";
 import { router } from "@/ui/navigation";
 import { Note } from "../ai/parts";
 import { Face } from "../shared/Face";
@@ -75,9 +87,65 @@ export function FilterChips({ chips, onRemove }: { chips: SearchChip[]; onRemove
   );
 }
 
+/** With nothing typed: the recent searches first (what was looked for last is what is looked for again). */
+export function RecentSearches({
+  recent,
+  onPick,
+  onClear,
+}: {
+  recent: string[];
+  onPick: (search: string) => void;
+  onClear: () => void;
+}) {
+  const { t } = useTranslation();
+  if (recent.length === 0) return null;
+  return (
+    <View>
+      <SectionHeader
+        title={t("mobile.find.recent")}
+        action={{ label: t("searchPage.clearRecent"), onPress: onClear, chevron: false }}
+      />
+      <View style={styles.list}>
+        <ActionList
+          items={recent.map((r) => ({ key: r, icon: "clock", label: r, oneLine: true, onPress: () => onPick(r) }))}
+        />
+      </View>
+    </View>
+  );
+}
+
 /**
- * With nothing typed: the operators to start a filter with (`from:`, `in:`…; `ops`, all by default), and the recent
- * searches.
+ * The filters in words over the search (ADR 0123 operators, said plainly): De, Em, Com arquivo, Data. Each starts
+ * its operator in the field; the picker under the field takes it from there. "Data" starts `before:` (the picker says
+ * how a date is written).
+ */
+const FILTER_WORDS: { key: "from" | "in" | "has" | "date"; op: SearchOp }[] = [
+  { key: "from", op: "from" },
+  { key: "in", op: "in" },
+  { key: "has", op: "has" },
+  { key: "date", op: "before" },
+];
+
+export function FilterWords({ onPick }: { onPick: (op: SearchOp) => void }) {
+  const { t } = useTranslation();
+  return (
+    <View>
+      <SectionHeader title={t("mobile.find.filters")} />
+      <Filters
+        items={FILTER_WORDS.map((f) => ({ key: f.key, label: t(`mobile.find.filterWord.${f.key}`) }))}
+        value=""
+        onChange={(key) => {
+          const f = FILTER_WORDS.find((x) => x.key === key);
+          if (f) onPick(f.op);
+        }}
+      />
+    </View>
+  );
+}
+
+/**
+ * With nothing typed inside one conversation's search: the operators to start a filter with (`from:`, `in:`…; `ops`,
+ * all by default), and the recent searches.
  */
 export function SearchOptions({
   words,
@@ -97,25 +165,13 @@ export function SearchOptions({
   const { t } = useTranslation();
   return (
     <View>
+      <RecentSearches recent={recent} onPick={onPickRecent} onClear={onClearRecent} />
       <SectionHeader title={t("searchPage.options")} />
       <Filters
         items={ops.map((op) => ({ key: op, label: `${words.ops[op]}:` }))}
         value=""
         onChange={(op) => onInsert(`${words.ops[op as keyof SearchWords["ops"]]}:`)}
       />
-      {recent.length > 0 ? (
-        <View>
-          <SectionHeader
-            title={t("searchPage.recent")}
-            action={{ label: t("searchPage.clearRecent"), onPress: onClearRecent, chevron: false }}
-          />
-          <View style={styles.list}>
-            <ActionList
-              items={recent.map((r) => ({ key: r, icon: "clock", label: r, onPress: () => onPickRecent(r) }))}
-            />
-          </View>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -268,7 +324,8 @@ export function FilteredResults({
             </Pressable>
           ) : null}
         </View>
-        {hits.isLoading ? <ActivityIndicator color={c.muted} style={styles.empty} /> : null}
+        {/* The results' own shape while they come, never a spinner. */}
+        {hits.isLoading ? <SkeletonList rows={3} /> : null}
         {hits.isError && !hits.data ? (
           <View style={[styles.list, styles.failed]}>
             <Note icon="x">{t("common.loadFailed")}</Note>
@@ -317,11 +374,17 @@ export function FilteredResults({
 }
 
 const styles = StyleSheet.create({
-  chips: { gap: 6, paddingHorizontal: 16, paddingBottom: 8 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 32, paddingHorizontal: 12, borderRadius: 999 },
+  chips: { gap: 8, paddingHorizontal: SCREEN_X, paddingBottom: 8 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: TOOL_H,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
   // The operator's empty state, at the headers' text column.
-  hint: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6 },
-  // The section headers run edge to edge (their text at 20); the lists under them keep the 16-point margin.
+  hint: { paddingHorizontal: SCREEN_X, paddingTop: 8, paddingBottom: 6 },
   res: { paddingTop: 2 },
   list: { paddingHorizontal: 16 },
   failed: { marginTop: 14, gap: 8 },
@@ -330,10 +393,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: SCREEN_X,
     paddingTop: 8,
   },
   clear: { flexDirection: "row", alignItems: "center", gap: 4 },
   pressed: { opacity: 0.6 },
-  empty: { textAlign: "center", paddingVertical: 40, paddingHorizontal: 16 },
 });

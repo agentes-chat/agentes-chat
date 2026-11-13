@@ -1,28 +1,25 @@
 import type { AgentAction, Message } from "@agenteschat/client";
-import { ApiError, useAgentActions, useApi, useIssue } from "@agenteschat/client";
+import { ApiError, useApi } from "@agenteschat/client";
 import { actionCardOf } from "@agenteschat/client/lib/action-cards";
 import {
   actionErrorKey,
-  actionPhase,
-  actionTextKey,
-  actionTextValues,
-  actionTimeLeft,
-  canUndoAction,
-  formatTimeLeft,
   hookToCopy,
-  receiptFiles,
-  routineOwnActions,
-  undoableNow,
+  type ReceiptRow,
+  receiptLines,
+  receiptPieces,
+  receiptRows,
+  receiptTip,
+  receiptUnder,
 } from "@agenteschat/client/lib/actions";
-import { ownActionName } from "@agenteschat/client/lib/approval-words";
-import { joinNames, relativeTime, toYmd } from "@agenteschat/client/lib/format";
+import { relativeTime, toYmd } from "@agenteschat/client/lib/format";
 import { handedTasksOf } from "@agenteschat/client/lib/issues";
 import { can } from "@agenteschat/client/lib/permissions";
-import { cx, Icon, type IconName, onScreenNow } from "@agenteschat/ui";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
+import { cx, HOVERLESS, Icon, type IconName, Popover, useMatchMedia } from "@agenteschat/ui";
 import { Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { type KeyboardEvent, type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useOpenAgentPanel } from "@/components/agent-panel-context";
 import { useChannelActions } from "@/components/channel-actions";
 import { useInPlace } from "@/components/InPlace";
@@ -33,17 +30,14 @@ import { fromApiRule, ruleSentence } from "@/lib/recurrence";
 import { useToast } from "@/lib/toast";
 import { DetailsLink } from "./details-link";
 import { useOrg } from "./org-context";
-import { IssueWhoSeesDialog } from "./WhoSees";
 import "./agent-actions.css";
 
 /**
- * Act with undo (ADR 0037 round 2): what an
- * agent changed with this reply, under the message. One change: a quiet
- * sunken row with Desfazer and the time left (A). Several: "3 mudanças · há
- * 1 min" with Desfazer tudo and one row each (B). Undone: struck through,
- * "Desfeito por …" and Refazer while the window lasts; after it, plain
- * history. Buttons only for who may undo (`canUndoAction`; the server checks
- * again). Optimistic, rolled back with a toast on error.
+ * What an agent changed with this reply (ADR 0037 round 2), under the message. One change: a quiet row (A). Several:
+ * "3 mudanças · há 1 min" and a row each, those of one kind said once ("Criei as tarefas #58, #59 e #60") (B). Every
+ * row and every line under it is one line, cut with "…": its whole words are its tip, and on a touch screen a tap on
+ * its words lists each change whole. The bold target opens the thing itself, where it is fixed or removed. One undone
+ * elsewhere stays as history: struck through, "Desfeito por …".
  */
 export function AgentActionReceipts({ message }: { message: Message }) {
   // The right hand's settings card says what was applied and has its own Desfazer (ADR 0137).
@@ -61,8 +55,6 @@ export function AgentActionReceipts({ message }: { message: Message }) {
   if (message.author.type !== "agent" || list.length === 0) return null;
   return <Receipts message={message} list={list} />;
 }
-
-type Override = Pick<AgentAction, "undoneAt" | "undoneByUserId">;
 
 export const RECEIPT_ICONS: Record<AgentAction["kind"], IconName> = {
   "issue.created": "issues",
@@ -88,259 +80,172 @@ export const RECEIPT_ICONS: Record<AgentAction["kind"], IconName> = {
 };
 
 /** A kind a newer server sends that this build doesn't know yet gets the plain check. */
-const iconOf = (a: AgentAction): IconName =>
-  a.kind === "issue.updated" && Array.isArray(a.params.fields) && a.params.fields.join() === "priority"
+const iconOf = ({ actions: [a], refs }: ReceiptRow): IconName =>
+  !refs && a?.kind === "issue.updated" && Array.isArray(a.params.fields) && a.params.fields.join() === "priority"
     ? "flag"
-    : (RECEIPT_ICONS[a.kind] ?? "check");
+    : ((a && RECEIPT_ICONS[a.kind]) ?? "check");
 
-/** The clock for the countdowns: ticks each second only while the receipts are on screen and some can still change. */
-function useVisibleNow(ref: RefObject<HTMLElement | null>, live: boolean) {
-  const [now, setNow] = useState(() => Date.now());
-  const [visible, setVisible] = useState(true);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver((entries) => setVisible(onScreenNow(entries) === true));
-    io.observe(el);
-    return () => io.disconnect();
-  }, [ref]);
-  useEffect(() => {
-    if (!live || !visible) return;
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [live, visible]);
-  return now;
-}
+/** A memory's words in its row, opening that memory: a link in the sentence's own weight. */
+const WORDS_LINK = { className: "ag-rc__target ag-rc__target--words", plain: true } as const;
 
 function errorMessage(t: TFunction, error: unknown) {
   const generic = t("agentActions.errors.generic");
   return error instanceof ApiError ? t(actionErrorKey(error.code), { defaultValue: generic }) : generic;
 }
 
-function Receipts({ message, list: server }: { message: Message; list: AgentAction[] }) {
+function Receipts({ message, list }: { message: Message; list: AgentAction[] }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const toast = useToast();
-  const mutations = useAgentActions(org.id, message.channelId);
-  const ref = useRef<HTMLDivElement>(null);
-  // Optimistic undo/redo until the server answers (an error rolls back).
-  const [pending, setPending] = useState<Record<string, Override>>({});
-  const list = server.map((a) => (pending[a.id] ? { ...a, ...pending[a.id] } : a));
-  const live = server.some((a) => actionPhase(a) !== "settled");
-  const now = useVisibleNow(ref, live);
-  const agent = dir.agentById.get(message.author.id ?? "");
-  const viewer = {
-    userId: me.user.id,
-    managesAgents: can(org, "manage_agents"),
-    ownsAgent: agent?.ownerUserId === me.user.id,
-  };
-
-  const hold = (ids: string[], o: Override | null) =>
-    setPending((p) => {
-      const next = { ...p };
-      for (const id of ids) {
-        if (o) next[id] = o;
-        else delete next[id];
-      }
-      return next;
-    });
-  const undone: Override = { undoneAt: new Date().toISOString(), undoneByUserId: me.user.id };
-  const undo = (a: AgentAction) => {
-    hold([a.id], undone);
-    mutations.undo.mutate(a.id, {
-      onSettled: () => hold([a.id], null),
-      onError: (error) => toast.show(errorMessage(t, error), "error"),
-    });
-  };
-  const redo = (a: AgentAction) => {
-    hold([a.id], { undoneAt: null, undoneByUserId: null });
-    mutations.redo.mutate(a.id, {
-      onSettled: () => hold([a.id], null),
-      onError: (error) => toast.show(errorMessage(t, error), "error"),
-    });
-  };
-  const undoAll = () => {
-    const ids = undoableNow(list, now).map((a) => a.id);
-    hold(ids, undone);
-    mutations.undoAll.mutate(message.id, {
-      onSettled: () => hold(ids, null),
-      onSuccess: (result) => {
-        if (result.failed.length) toast.show(t("agentActions.partial", { count: result.failed.length }), "error");
-      },
-      onError: (error) => toast.show(errorMessage(t, error), "error"),
-    });
-  };
 
   const byName = (a: AgentAction) =>
     a.undoneByUserId === me.user.id
       ? t("agentActions.you")
       : (dir.memberById.get(a.undoneByUserId ?? "")?.name ?? t("agentActions.someone"));
-
-  const row = (a: AgentAction, single: boolean) => {
-    const phase = actionPhase(a, now);
-    const canAct = phase !== "settled" && canUndoAction(a, viewer);
-    const busy = Boolean(pending[a.id]);
-    return (
-      <Receipt
-        key={a.id}
-        action={a}
-        single={single}
-        phase={phase}
-        undoneBy={a.undoneAt ? byName(a) : null}
-        button={
-          !canAct ? null : phase === "undo" ? (
-            <button type="button" className="ag-rc__btn" disabled={busy} onClick={() => undo(a)}>
-              {single && <Icon name="undo" size={14} />}
-              {t("agentActions.undo")}
-              {single && (
-                <span
-                  className="ag-rc__time ac-num"
-                  title={t("agentActions.timeLeft", { time: formatTimeLeft(actionTimeLeft(a, now)) })}
-                >
-                  {formatTimeLeft(actionTimeLeft(a, now))}
-                </span>
-              )}
-            </button>
-          ) : (
-            <button type="button" className="ag-rc__btn" disabled={busy} onClick={() => redo(a)}>
-              {t("agentActions.redo")}
-            </button>
-          )
-        }
-      />
-    );
+  const rows = receiptRows(list, t, me.user.id);
+  const row = (r: ReceiptRow, single: boolean) => {
+    const a = r.actions[0] as AgentAction;
+    return <Receipt key={a.id} row={r} single={single} undoneBy={a.undoneAt ? byName(a) : null} label={label} />;
   };
 
-  const agentName = agent?.name ?? dir.authorName(message.author);
+  const agentName = dir.agentById.get(message.author.id ?? "")?.name ?? dir.authorName(message.author);
+  const label = t("agentActions.group", { name: agentName });
   if (list.length === 1) {
-    const only = list[0] as AgentAction;
     return (
       // biome-ignore lint/a11y/useSemanticElements: a labelled group inside a message, not a fieldset
-      <div ref={ref} className="ag-rcs" role="group" aria-label={t("agentActions.group", { name: agentName })}>
-        {row(only, true)}
+      <div className="ag-rcs" role="group" aria-label={label}>
+        {rows.map((r) => row(r, true))}
       </div>
     );
   }
   const first = list.reduce((min, a) => (a.createdAt < min ? a.createdAt : min), list[0]?.createdAt ?? "");
-  const canUndoAll = undoableNow(list, now).some((a) => canUndoAction(a, viewer));
   return (
     // biome-ignore lint/a11y/useSemanticElements: a labelled group inside a message, not a fieldset
-    <div ref={ref} className="ag-rcg" role="group" aria-label={t("agentActions.group", { name: agentName })}>
+    <div className="ag-rcg" role="group" aria-label={label}>
       <div className="ag-rcg__hd">
         <span>
-          <b>{t("agentActions.changes", { count: list.length })}</b> ·{" "}
-          {relativeTime(t, i18n.language, first, new Date(now))}
+          <b>{t("agentActions.changes", { count: list.length })}</b> · {relativeTime(t, i18n.language, first)}
         </span>
-        <span className="ag-rcg__grow" />
-        {canUndoAll && (
-          <button type="button" className="ag-rc__btn" disabled={mutations.undoAll.isPending} onClick={undoAll}>
-            {t("agentActions.undoAll")}
-          </button>
-        )}
       </div>
-      {list.map((a) => row(a, false))}
+      {rows.map((r) => row(r, false))}
     </div>
   );
 }
 
 function Receipt({
-  action: a,
+  row,
   single,
-  phase,
   undoneBy,
-  button,
+  label,
 }: {
-  action: AgentAction;
+  row: ReceiptRow;
   single: boolean;
-  phase: ReturnType<typeof actionPhase>;
   undoneBy: string | null;
-  button: ReactNode;
+  /** The receipts' name ("Mudanças de Ada"), the list's on a touch screen. */
+  label: string;
 }) {
   const { t, i18n } = useTranslation();
   const { me } = useOrg();
+  // A screen with no hover shows no tip: a tap on the words lists each change whole instead.
+  const touch = useMatchMedia(HOVERLESS);
+  const [listed, setListed] = useState(false);
+  const a = row.actions[0] as AgentAction;
   // A routine's schedule from its rule, in the person's language (the server's words are English).
-  const { context, ...values } = actionTextValues(a, t, me.user.id, {
+  const words: Parameters<typeof receiptPieces>[3] = {
     schedule: (rule) => ruleSentence(t, i18n.language, fromApiRule(rule, toYmd(new Date())), new Date()),
-  });
+  };
   const struck = Boolean(a.undoneAt);
-  const ownActions = routineOwnActions(a);
-  const files = struck ? [] : receiptFiles(a);
-  // Once it had a button, its room stays: Desfazer turning into Refazer, or leaving when its time is up, never
-  // rewraps the sentence.
-  const hadButton = useRef(false);
-  if (button) hadButton.current = true;
+  const lines = receiptUnder(row, t, undoneBy);
+  const under = [lines.files, lines.own, lines.undone].filter((line): line is string => line !== null);
+  const sentence = (
+    <span
+      className="ag-rc__sentence ag-rc__line"
+      title={touch ? undefined : receiptTip(row, t, me.user.id, words)}
+      // On a screen with no hover the words are the list's button: reached with Tab, opened with Enter or Space.
+      {...(touch
+        ? {
+            role: "button",
+            tabIndex: 0,
+            onKeyDown: (e: KeyboardEvent) => {
+              // A link inside the words keeps its own Enter.
+              if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+              e.preventDefault();
+              setListed(true);
+            },
+          }
+        : {})}
+    >
+      {receiptPieces(row, t, me.user.id, words).map((p, i) =>
+        p.opens ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: the parts of one sentence, in order
+          <ReceiptTarget key={i} action={p.opens} {...(p.bold ? null : WORDS_LINK)}>
+            {p.text}
+          </ReceiptTarget>
+        ) : p.bold ? (
+          // biome-ignore lint/suspicious/noArrayIndexKey: same
+          <b key={i}>{p.text}</b>
+        ) : (
+          p.text
+        ),
+      )}
+    </span>
+  );
   return (
-    <div className={cx(single ? "ag-rc" : "ag-rcg__it", "ac-actrow", struck && "is-undone")} data-phase={phase}>
+    <div className={cx(single ? "ag-rc" : "ag-rcg__it", struck && "is-undone")}>
       {single ? (
         <span className="ag-rc__ic" aria-hidden="true">
-          <Icon name={iconOf(a)} size={16} />
+          <Icon name={iconOf(row)} size={16} />
         </span>
       ) : (
-        <Icon name={iconOf(a)} size={14} className="ag-rcg__ic" />
+        <Icon name={iconOf(row)} size={14} className="ag-rcg__ic" />
       )}
-      <span className="ag-rc__tx ac-actrow__text">
-        <span className="ag-rc__sentence">
-          <Trans
-            // i18next contexts: `issue.assigned_self`, `routine.updated_paused`…
-            i18nKey={`${actionTextKey(a)}${context ? `_${context}` : ""}` as "agentActions.issue.created"}
-            values={values}
-            components={{ b: <ReceiptTarget action={a} /> }}
-          />
-        </span>
-        {ownActions.length > 0 && (
-          <span className="ag-rc__by">
-            {t("agentActions.routine.ownActions", {
-              actions: joinNames(
-                ownActions.map((name) => ownActionName(t, name)),
-                t,
-              ),
-            })}
-          </span>
+      <span className="ag-rc__tx">
+        {touch ? (
+          <Popover
+            label={label}
+            trigger={sentence}
+            side="top"
+            align="start"
+            className="ag-rcpop-card"
+            open={listed}
+            onOpenChange={setListed}
+          >
+            <div className="ac-popover__title">{label}</div>
+            {receiptLines(row, t, me.user.id, words).map((l) => (
+              // What a line opens (a task's dialog, the memory beside the conversation) takes the list's place.
+              // biome-ignore lint/a11y/useKeyWithClickEvents: the link inside is the keyboard's way, this only closes the list
+              // biome-ignore lint/a11y/noStaticElementInteractions: same
+              <div key={l.action.id} className="ac-popover__row ag-rcpop" onClick={() => setListed(false)}>
+                <ReceiptTarget
+                  action={l.action}
+                  className="ag-rcpop__words"
+                  plain
+                  cue={<Icon name="chevronRight" size={14} className="ag-rcpop__cue" />}
+                >
+                  <span className="ag-rcpop__text">{l.text}</span>
+                </ReceiptTarget>
+                {l.files && <span className="ag-rcpop__by">{l.files}</span>}
+              </div>
+            ))}
+            {[lines.own, lines.undone]
+              .flatMap((line) => (line ? [line] : []))
+              .map((line) => (
+                <div key={line} className="ac-popover__row ag-rcpop">
+                  <span className="ag-rcpop__by">{line}</span>
+                </div>
+              ))}
+          </Popover>
+        ) : (
+          sentence
         )}
-        {files.length > 0 && (
-          <span className="ag-rc__by ag-rc__files">
-            {t("agentActions.issue.files", { names: joinNames(files, t) })}
+        {under.map((line) => (
+          <span key={line} className="ag-rc__by ag-rc__line" title={touch ? undefined : line}>
+            {line}
           </span>
-        )}
-        {undoneBy && <span className="ag-rc__by">{t("agentActions.undoneBy", { name: undoneBy })}</span>}
-        {a.kind === "issue.created" && !struck && <ReceiptWhoSees action={a} />}
-        <CopyHookButton action={a} />
+        ))}
+        {!row.refs && <CopyHookButton action={a} />}
       </span>
-      {hadButton.current && (
-        <span className="ag-rc__act">
-          {button}
-          <span className="ag-rc__room" aria-hidden="true">
-            <span className="ag-rc__btn">
-              {single && <Icon name="undo" size={14} />}
-              {t("agentActions.undo")}
-              {single && <span className="ag-rc__time ac-num">{formatTimeLeft(0)}</span>}
-            </span>
-            <span className="ag-rc__btn">{t("agentActions.redo")}</span>
-          </span>
-        </span>
-      )}
     </div>
-  );
-}
-
-/** Who sees the task the agent just made, and the way to change it in place (ADR 0151). */
-function ReceiptWhoSees({ action: a }: { action: AgentAction }) {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const [open, setOpen] = useState(false);
-  const number = typeof a.params.number === "number" ? a.params.number : 0;
-  const issue = useIssue(org.id, number, open);
-  const mode = a.params.audience;
-  if (mode !== "everyone" && mode !== "people") return null;
-  return (
-    <span className="ag-rc__by">
-      <button type="button" className="ac-link" onClick={() => setOpen(true)}>
-        {t("whoSees.receipt", { who: t(mode === "everyone" ? "whoSees.everyone" : "whoSees.some") })}
-      </button>
-      {open && issue.data && <IssueWhoSeesDialog issue={issue.data} onClose={() => setOpen(false)} />}
-    </span>
   );
 }
 
@@ -378,14 +283,32 @@ function CopyHookButton({ action: a }: { action: AgentAction }) {
 }
 
 /**
- * The bold target in the sentence opens it: the issue, the routine, the wiki page, the channel, the thread, the memory.
- * In a conversation the task and the routine open in their dialog over it, the thread and the memory in the panel
- * beside it; the link still goes to their page (a new tab, a middle click).
+ * The bold target in the sentence opens the thing itself, where it is fixed or removed: the issue, the routine, the
+ * wiki page, the channel, the thread, the memory, the skill. In a conversation the task and the routine open in their
+ * dialog over it, the thread and the memory in the panel beside it; the link still goes to their page (a new tab, a
+ * middle click).
  */
-function ReceiptTarget({ action: a, children }: { action: AgentAction; children?: ReactNode }) {
+function ReceiptTarget({
+  action: a,
+  children,
+  className = "ag-rc__target",
+  plain = false,
+  cue,
+}: {
+  action: AgentAction;
+  children?: ReactNode;
+  className?: string;
+  /** With nothing to open, the words as they are (a change's whole sentence), not in bold. */
+  plain?: boolean;
+  /** After the words, only when they open something (the list's chevron). */
+  cue?: ReactNode;
+}) {
   const { org } = useOrg();
   const orgId = org.id;
+  const managesAgents = can(org, "manage_agents");
   const inPlace = useInPlace();
+  // The right hand's page has no Memória: its memory opens as its own page.
+  const rightHand = isRightHand(useDirectory(orgId).agentById.get(a.agentId));
   const openPanel = useOpenAgentPanel();
   const openThread = useChannelActions()?.openThread;
   const tg = a.target;
@@ -395,17 +318,19 @@ function ReceiptTarget({ action: a, children }: { action: AgentAction; children?
       <Link
         to="/org/$orgId/issues/$number"
         params={{ orgId, number: String(number) }}
-        className="ag-rc__target"
+        className={className}
         onClick={inPlace ? (e) => inPlaceClick(e, () => inPlace.issue(number)) : undefined}
       >
         {children}
+        {cue}
       </Link>
     );
   }
   if (tg.type === "routine")
     return (
-      <DetailsLink item={{ kind: "routine", id: tg.id }} className="ag-rc__target">
+      <DetailsLink item={{ kind: "routine", id: tg.id }} className={className}>
         {children}
+        {cue}
       </DetailsLink>
     );
   if (tg.type === "wiki_page" && (tg.slug || typeof a.params.slug === "string"))
@@ -413,15 +338,17 @@ function ReceiptTarget({ action: a, children }: { action: AgentAction; children?
       <Link
         to="/org/$orgId/wiki/$slug"
         params={{ orgId, slug: tg.slug ?? String(a.params.slug) }}
-        className="ag-rc__target"
+        className={className}
       >
         {children}
+        {cue}
       </Link>
     );
   if (tg.type === "channel")
     return (
-      <Link to="/org/$orgId/c/$channelId" params={{ orgId, channelId: tg.id }} className="ag-rc__target">
+      <Link to="/org/$orgId/c/$channelId" params={{ orgId, channelId: tg.id }} className={className}>
         {children}
+        {cue}
       </Link>
     );
   if (tg.type === "thread")
@@ -429,22 +356,40 @@ function ReceiptTarget({ action: a, children }: { action: AgentAction; children?
       <Link
         to="/org/$orgId/threads/$threadId"
         params={{ orgId, threadId: tg.id }}
-        className="ag-rc__target"
+        className={className}
         onClick={openThread ? (e) => inPlaceClick(e, () => openThread(tg.id)) : undefined}
       >
         {children}
+        {cue}
       </Link>
     );
-  if (tg.type === "memory")
+  // A skill has its own view in Skills, for who manages agents; anyone else finds it in the agent's Memória.
+  if (tg.type === "skill" && managesAgents)
+    return (
+      <Link
+        to="/org/$orgId/settings/$section"
+        params={{ orgId, section: "skills" }}
+        search={{ skill: tg.id }}
+        className={className}
+      >
+        {children}
+        {cue}
+      </Link>
+    );
+  if (tg.type === "memory" || tg.type === "skill")
     return (
       <Link
         to="/org/$orgId/agents/$agentId/memory"
         params={{ orgId, agentId: a.agentId }}
-        className="ag-rc__target"
-        onClick={openPanel ? (e) => inPlaceClick(e, () => openPanel(a.agentId, "memory")) : undefined}
+        search={{ item: tg.id }}
+        className={className}
+        onClick={
+          openPanel && !rightHand ? (e) => inPlaceClick(e, () => openPanel(a.agentId, "memory", tg.id)) : undefined
+        }
       >
         {children}
+        {cue}
       </Link>
     );
-  return <b>{children}</b>;
+  return plain ? <span className={className}>{children}</span> : <b>{children}</b>;
 }

@@ -6,6 +6,7 @@ setupDom();
 import type {
   Agent,
   AgentBrowserSettings,
+  AgentHolds,
   BrowserHandoff,
   ComputerSetup,
   DesktopStatus,
@@ -79,6 +80,8 @@ interface Options {
   settings?: AgentBrowserSettings;
   handoff?: BrowserHandoff;
   forbidden?: boolean;
+  /** What Ada keeps running there (ADR 0176). */
+  holds?: AgentHolds;
 }
 
 /** Walter (an owner of Acme) opens Ada's computer. */
@@ -100,6 +103,7 @@ async function backend(o: Options = {}) {
   fake.desktops.set(ADA_ID, o.desktop ?? RUNNING);
   if (o.handoff) fake.handoffs.set(o.handoff.id, o.handoff);
   if (o.forbidden) fake.forbidden.add(ADA_ID);
+  if (o.holds) fake.holds.set(ADA_ID, o.holds);
   if (o.browser)
     fake.settings.set(ADA_ID, { allowedDomains: null, available: true, reason: null, detail: null, machine: null });
   if (o.settings) fake.settings.set(ADA_ID, o.settings);
@@ -761,5 +765,35 @@ describe("the profile card's computer button", () => {
   test("the Cloud's agents have the workspace's computer: the button shows with no computer of their own", async () => {
     const { card: c } = await card({ setup: {}, machine: null });
     expect(within(c).getByRole("button", { name: "Abrir o computador da Ada" })).toBeTruthy();
+  });
+});
+
+describe("what the agent keeps running (keep_running), in the dialog's head", () => {
+  const HOLD = {
+    id: "0193f6b4-1111-7000-8000-000000000001",
+    agentId: ADA_ID,
+    machineId: "machine-1",
+    what: "Bot do Telegram",
+    why: "responde o suporte",
+    kind: "program" as const,
+    since: new Date().toISOString(),
+    until: null,
+  };
+
+  test("its count, then each line and its Stop in the menu; nothing when there is none", async () => {
+    const d = await dialog({ holds: { holds: [HOLD], canStop: true } });
+    const button = view().getByRole("button", { name: "Mantido rodando · 1" });
+    // Radix menus open on pointer down.
+    await act(async () => fireEvent.pointerDown(button, { button: 0, ctrlKey: false }));
+    await settle(2);
+    // Radix names the menu after its trigger.
+    const menu = screen().getByRole("menu", { name: "Mantido rodando · 1" });
+    expect(menu.textContent).toContain("Bot do Telegram");
+    expect(menu.textContent).toMatch(/Ada · desde .+ · até parar/);
+    await click(within(menu).getByRole("menuitem", { name: "Parar “Bot do Telegram”" }));
+    expect(calls(d, "desktop.stopHold")).toEqual([[ORG_ID, ADA_ID, HOLD.id]]);
+    cleanup();
+    await dialog();
+    expect(view().queryByRole("button", { name: /Mantido rodando/ })).toBeNull();
   });
 });

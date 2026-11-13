@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import type { OrgRole } from "@agenteschat/client";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
+import { COMPACT_QUERY } from "@/components/NavDrawer";
 import {
   ADA_ID,
   ADMIN_ROLE_ID,
@@ -18,6 +19,7 @@ import {
   seedState,
 } from "./fake-api";
 import type { FakeDashboards } from "./fakes/dashboards";
+import { shownText } from "./hint";
 import { pick } from "./new-agent-flow";
 import { renderApp, screen, settle } from "./render";
 
@@ -103,6 +105,8 @@ describe("New dashboard (ADR 0135 §8, §10)", () => {
     expect(dialog.textContent).toContain("Você também pode pedir a um agente, numa conversa, que monte um.");
     expect(editorsShown(dialog)).toBe("Só você e a administração");
     // What whoever sees it sees, said where the audience is chosen (ADR 0135 §12).
+    expect(shownText(dialog)).toContain("Quem vê o painel vê estes dados.");
+    expect(shownText(dialog)).not.toContain("Quem vê o painel vê o que os agentes trouxeram");
     expect(dialog.textContent).toContain("Quem vê o painel vê o que os agentes trouxeram");
     await type(within(dialog).getByLabelText("Nome"), "Metas do trimestre");
     await click(create);
@@ -251,8 +255,11 @@ describe("New widget (ADR 0135 §3)", () => {
       ],
     });
   };
-  const start = async (prepare: (fake: FakeDashboards) => void = withSuggestions) => {
-    const opened = await open(`/org/${ORG_ID}/dashboards/dash-m`, prepare);
+  const start = async (
+    prepare: (fake: FakeDashboards) => void = withSuggestions,
+    prepareState?: (state: FakeState) => void,
+  ) => {
+    const opened = await open(`/org/${ORG_ID}/dashboards/dash-m`, prepare, prepareState);
     await click(screen().getAllByRole("button", { name: "Adicionar widget" })[0] as Element);
     await settle(6);
     return { ...opened, dialog: screen().getByRole("dialog", { name: "Novo widget" }) };
@@ -284,6 +291,24 @@ describe("New widget (ADR 0135 §3)", () => {
       .getAllByRole("button")
       .find((b) => b.classList.contains("apk-row") && b.querySelector("b")?.textContent === name) as HTMLElement;
 
+  test("on a phone the title's placeholder is the field's name alone, never a cut hint", async () => {
+    const media = spyOn(window, "matchMedia").mockImplementation(
+      (q: string) =>
+        ({
+          matches: q === COMPACT_QUERY,
+          media: q,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+    try {
+      const { dialog } = await start();
+      expect((within(card(dialog)).getByLabelText("Título") as HTMLInputElement).placeholder).toBe("Título");
+    } finally {
+      media.mockRestore();
+    }
+  });
+
   test("the card is the form: the ask in its body, suggestions, the format and the schedule as dropdowns", async () => {
     const { dialog } = await start();
     // Nothing asked yet: nothing to test, and the other way to make one under the card.
@@ -294,6 +319,10 @@ describe("New widget (ADR 0135 §3)", () => {
     expect((within(card(dialog)).getByLabelText("Título") as HTMLInputElement).placeholder).toBe(
       "Título · Ada sugere ao testar",
     );
+    // The small card has no room for the hint beside the face and the bell: the field's own name, whole.
+    await pick(combo(dialog, "Tamanho"), /^Pequeno/);
+    expect((within(card(dialog)).getByLabelText("Título") as HTMLInputElement).placeholder).toBe("Título");
+    await pick(combo(dialog, "Tamanho"), /^Médio/);
 
     // A suggestion fills the ask (and the alert's condition); the suggestions go once something is asked.
     await click(within(dialog).getByRole("button", { name: "PRs esperando revisão" }));
@@ -456,8 +485,9 @@ describe("New widget (ADR 0135 §3)", () => {
     await click(button(dialog, "Testar") as HTMLElement);
     await settle(6);
     const building = card(dialog);
-    expect(building.textContent).toContain("Ada está montando com os dados de verdade…");
-    expect(building.querySelector(".wg__foot")?.textContent).toBe("Ada montando…");
+    // Between calls it is thinking; who is at it, for how long and the way out sit in the card's footer.
+    expect(within(building).getByRole("status").textContent).toBe("Pensando");
+    expect(building.querySelector(".wg__foot")?.textContent).toBe("Ada montando…0:00Parar");
     expect((button(dialog, "Testando…") as HTMLButtonElement).disabled).toBe(true);
     expect(button(dialog, "Criar widget")).toBeNull();
     // Unnamed while the agent hasn't named it: never the ask.
@@ -473,6 +503,127 @@ describe("New widget (ADR 0135 §3)", () => {
     expect(within(card(dialog)).getByRole("img", { name: /^Dados de verdade/ })).toBeTruthy();
     expect(card(dialog).getAttribute("aria-label")).toBe("Erros hoje");
     expect(button(dialog, "Criar widget")).toBeTruthy();
+  });
+
+  test("while its run waits: what for and until when, the card still, Stop and Cancel as ever, nothing spins", async () => {
+    const { fake, services, dialog } = await start((fake) => {
+      withSuggestions(fake);
+      fake.holdDrafts = true;
+    });
+    await type(ask(dialog), "erros em produção hoje");
+    await click(button(dialog, "Testar") as HTMLElement);
+    await settle(6);
+    const resetsAt = new Date(Date.now() + 90 * 60_000).toISOString();
+    Object.assign(fake.drafts[0] ?? {}, { wait: { code: "plan_limit", source: "plan", resetsAt } });
+    await act(async () => services.queryClient.invalidateQueries());
+    await settle(6);
+    const waiting = card(dialog);
+    expect(within(waiting).getByRole("status").textContent).toContain("Esperando o plano de Ada renovar");
+    expect(waiting.getAttribute("data-state")).toBe("ok");
+    expect(waiting.getAttribute("aria-busy")).toBeNull();
+    expect(waiting.querySelector(".nw-build__still")?.getAttribute("data-on")).toBeNull();
+    // The ways out stay: Stop in the card, Cancel beside the main button, which no longer spins.
+    expect(within(waiting).getByRole("button", { name: "Parar" })).toBeTruthy();
+    expect(button(dialog, "Cancelar")).toBeTruthy();
+    expect(button(dialog, "Testando…")).toBeNull();
+    const create = button(dialog, "Criar widget") as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+    expect(create.getAttribute("aria-busy")).toBeNull();
+  });
+
+  test("while it builds: the step its agent is in, in words, the time it takes, and one more line past 45 s", async () => {
+    const began = Date.now();
+    setSystemTime(new Date(began));
+    try {
+      const { fake, services, dialog } = await start((fake) => {
+        withSuggestions(fake);
+        fake.holdDrafts = true;
+      });
+      await type(ask(dialog), "MRR em real");
+      await click(button(dialog, "Testar") as HTMLElement);
+      await settle(6);
+      const draftId = fake.drafts[0]?.id as string;
+      const line = () => within(card(dialog)).getByRole("status").textContent;
+      const step = async (tool: string, connector: string | null) => {
+        fake.steps.set(draftId, { tool, connector, service: null, at: new Date().toISOString() });
+        // What a `dashboard.widget` event does to the draft (and the 2 s poll, without one).
+        await act(async () => services.queryClient.invalidateQueries());
+        await settle(6);
+      };
+      expect(line()).toBe("Pensando");
+      // The connected app by its name, our own tools by what they do: never a tool's name.
+      await step("stripe_list_subscriptions", "Stripe");
+      expect(line()).toBe("Consultando o Stripe");
+      await step("web_fetch", null);
+      expect(line()).toBe("Lendo uma página da web");
+      await step("update_widget", null);
+      expect(line()).toBe("Montando o widget");
+      expect(card(dialog).textContent).not.toMatch(/update_widget|web_fetch|stripe_list/);
+      // The worst case: a server connected by address with a long name, whole, wrapping inside the card.
+      const long = "Painel Financeiro Consolidado da Controladoria Regional Sul";
+      await step("custom_abc_query_everything", long);
+      expect(line()).toBe(`Consultando o ${long}`);
+      fake.steps.delete(draftId);
+      await act(async () => services.queryClient.invalidateQueries());
+      await settle(6);
+      expect(line()).toBe("Pensando");
+
+      const still = card(dialog).querySelector(".nw-build__still") as HTMLElement;
+      const clock = () => within(card(dialog)).getByRole("timer").textContent;
+      const tick = async (seconds: number) => {
+        setSystemTime(new Date(began + seconds * 1000));
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 1100));
+        });
+      };
+      expect(still.hasAttribute("data-on")).toBe(false);
+      expect(still.getAttribute("aria-hidden")).toBe("true");
+      await tick(40);
+      expect(clock()).toMatch(/^0:4[0-2]$/);
+      expect(still.hasAttribute("data-on")).toBe(false);
+      await tick(106);
+      expect(clock()).toMatch(/^1:4[6-8]$/);
+      expect(still.hasAttribute("data-on")).toBe(true);
+      expect(still.getAttribute("aria-hidden")).toBe("false");
+      expect(still.textContent).toBe("Ainda trabalhando. Dados de verdade podem levar um ou dois minutos.");
+    } finally {
+      setSystemTime();
+    }
+  });
+
+  test("Parar stops the build: the draft goes, what was typed stays to change and test again", async () => {
+    const { state, fake, dialog } = await start((fake) => {
+      withSuggestions(fake);
+      fake.holdDrafts = true;
+    });
+    await type(ask(dialog), "MRR em real");
+    await click(button(dialog, "Testar") as HTMLElement);
+    await settle(6);
+    const draftId = fake.drafts[0]?.id as string;
+    await click(within(card(dialog)).getByRole("button", { name: "Parar" }));
+    await settle(6);
+    expect(callsOf(state, "dashboards.removeWidget").map((c) => c.args)).toEqual([[ORG_ID, draftId]]);
+    expect(fake.drafts).toHaveLength(0);
+    // The dialog stays, with the ask as written, in focus, ready to test again.
+    expect((ask(dialog) as HTMLTextAreaElement).value).toBe("MRR em real");
+    expect(document.activeElement).toBe(ask(dialog));
+    expect(within(card(dialog)).queryByRole("status")).toBeNull();
+    expect(button(dialog, "Parar")).toBeNull();
+    await type(ask(dialog), "MRR em dólar");
+    const again = button(dialog, "Testar") as HTMLButtonElement;
+    expect(again.disabled).toBe(false);
+    await click(again);
+    await settle(6);
+    expect(callsOf(state, "dashboards.testWidget")).toHaveLength(2);
+    expect(within(card(dialog)).getByRole("status").textContent).toBe("Pensando");
+    // Closing drops the second draft only: the stopped one is already gone.
+    const second = fake.drafts[0]?.id as string;
+    await click(within(dialog).getByRole("button", { name: "Cancelar" }));
+    await settle(6);
+    expect(callsOf(state, "dashboards.removeWidget").map((c) => c.args)).toEqual([
+      [ORG_ID, draftId],
+      [ORG_ID, second],
+    ]);
   });
 
   test("a changed ask, agent or format makes the test stale; a new test drops the old draft", async () => {
@@ -561,6 +712,43 @@ describe("New widget (ADR 0135 §3)", () => {
     expect(fake.drafts).toHaveLength(0);
   });
 
+  test("a test for an agent with no AI waits for one, with Conectar, and runs again once the agent has one", async () => {
+    const aiOf = (state: FakeState, ai: "ready" | "no_ai") => {
+      state.aiStatus = {
+        any: ai === "ready",
+        agents: state.agents.map((a) => ({
+          agentId: a.id,
+          state: ai,
+          ...(ai === "no_ai" ? { reason: "no_key" as const } : {}),
+        })),
+      };
+    };
+    const { state, fake, dialog, services } = await start(
+      (f) => {
+        withSuggestions(f);
+        f.agentsWithoutAi.add(ADA_ID);
+      },
+      (s) => aiOf(s, "no_ai"),
+    );
+    await type(ask(dialog), "visitas do site");
+    await click(button(dialog, "Testar") as HTMLElement);
+    await settle(6);
+    const waiting = card(dialog);
+    expect(waiting.textContent).toContain("Ada está sem chave ou plano de IA para trabalhar.");
+    expect(waiting.textContent).toContain("Ada monta o widget assim que uma IA for conectada.");
+    expect(within(waiting).queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+    expect((button(dialog, "Criar widget") as HTMLButtonElement).disabled).toBe(true);
+    await click(within(waiting).getByRole("button", { name: "Conectar" }));
+    expect(screen().getByRole("dialog", { name: /Conectar uma IA/ })).toBeTruthy();
+    // Connected, there or anywhere else: once the AI status says so, the ask is tested again by itself, once.
+    fake.agentsWithoutAi.clear();
+    aiOf(state, "ready");
+    await act(() => services.queryClient.invalidateQueries({ queryKey: ["org", ORG_ID, "credentials", "ai-status"] }));
+    await settle(8);
+    expect(callsOf(state, "dashboards.testWidget")).toHaveLength(2);
+    expect(card(dialog).textContent).not.toContain("sem chave");
+  });
+
   test("pinning a chart from the chat: pick it in the card, keep it updated or not, Pin", async () => {
     const { state, dialog } = await start((fake) => {
       myBoard(fake);
@@ -589,6 +777,8 @@ describe("New widget (ADR 0135 §3)", () => {
     const pin = within(dialog).getByRole("button", { name: "Fixar" }) as HTMLButtonElement;
     expect(pin.disabled).toBe(true);
     expect(dialog.textContent).toContain("Escolha um bloco que um agente já mandou:");
+    // No block picked, so nobody before the schedule: no separator opens the card's foot.
+    expect(card(dialog).querySelector(".wg__foot .wg__dot")).toBeNull();
     const block = segment(dialog, "Blocos que os agentes mandaram no chat", /Deploys da semana/);
     expect(block.textContent).toContain("Ada em #eng");
     await click(block);
@@ -597,6 +787,7 @@ describe("New widget (ADR 0135 §3)", () => {
     expect((within(pinned).getByLabelText("Título") as HTMLInputElement).value).toBe("Deploys da semana");
     expect([...pinned.querySelectorAll(".wk-bar__v")].map((v) => v.textContent)).toEqual(["3", "5", "2"]);
     expect(within(pinned).queryByRole("button", { name: "Aviso" })).toBeNull();
+    expect(pinned.querySelector(".wg__foot .nwc-who + .wg__dot")).toBeTruthy();
     await pick(combo(dialog, "Atualiza"), "Não atualizar");
     expect(dialog.textContent).toContain("Fica como está, sem rotina");
     await click(pin);

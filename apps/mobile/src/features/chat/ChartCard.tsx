@@ -20,16 +20,13 @@ import { useTranslation } from "react-i18next";
 import { type LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { Easing, FadeIn, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Icon, IconButton, PixelOrbit, PressScale, Text, useReducedMotion, useTheme } from "@/ui";
+import { Icon, IconButton, PressScale, Text, useReducedMotion, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useColors } from "../shared/hooks";
 import type { Inline } from "./logic";
 import { Table } from "./MessageSpans";
 
-/**
- * Charts already drawn once (by their data): when an answer stops streaming, its live row gives way to the
- * message row and the chart mounts again; it shouldn't grow in twice.
- */
+/** Charts already drawn once (by their data): a row the list mounts again doesn't grow its chart in twice. */
 const drawn = new Set<string>();
 const keyOf = (spec: ChartSpec) => JSON.stringify([spec.type, spec.title, spec.labels, spec.series, spec.value]);
 
@@ -110,24 +107,6 @@ export const ChartCard = memo(function ChartCard({
   );
 });
 
-/** A ```chart block still being written: a quiet card until its data is complete. */
-export function ChartPending({ accent = "sky" }: { accent?: AgentColorName }) {
-  const { t } = useTranslation();
-  const c = useColors();
-  return (
-    <View
-      style={[styles.card, styles.pending, { backgroundColor: c.sunken, borderColor: c.line }]}
-      accessibilityRole="progressbar"
-      accessibilityLabel={t("mobile.chart.pending")}
-    >
-      <PixelOrbit color={accent} size={14} />
-      <Text variant="footnote" tone="faint">
-        {t("mobile.chart.pending")}
-      </Text>
-    </View>
-  );
-}
-
 /** The full screen chart (`/chart`, a native form sheet): the chart big, its table under it. */
 export function ChartSheet() {
   const { t } = useTranslation();
@@ -146,11 +125,11 @@ export function ChartSheet() {
     <View style={styles.sheet}>
       <View style={styles.sheetTop}>
         <IconButton icon="x" plate label={t("mobile.common.close")} onPress={() => router.back()} />
-        <Text variant="title" style={styles.sheetTitle} numberOfLines={2}>
-          {chart.spec.title}
-        </Text>
-        <View style={styles.sheetSpacer} />
       </View>
+      {/* The title on a row of its own under the bar, the sheet's whole width: never cut beside its buttons. */}
+      <Text variant="title" style={styles.sheetTitle}>
+        {chart.spec.title}
+      </Text>
       <ScrollView contentContainerStyle={[styles.sheetBody, { paddingBottom: 24 + insets.bottom }]}>
         {chart.spec.subtitle ? (
           <Text variant="footnote" tone="faint">
@@ -565,7 +544,6 @@ function BigNumber({
 
 const styles = StyleSheet.create({
   card: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  pending: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 14 },
   top: { flexDirection: "row", alignItems: "flex-start", gap: 4, paddingLeft: 14, paddingRight: 4, paddingTop: 10 },
   titles: { flex: 1, gap: 2, paddingTop: 4 },
   pill: { minHeight: 30, paddingHorizontal: 10, borderRadius: 15 },
@@ -595,7 +573,6 @@ const styles = StyleSheet.create({
   sheet: { flex: 1, paddingTop: 14 },
   gone: { alignItems: "center", justifyContent: "center", padding: 24 },
   sheetTop: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14 },
-  sheetTitle: { flex: 1, textAlign: "center" },
-  sheetSpacer: { width: 40 },
+  sheetTitle: { paddingHorizontal: 16, paddingTop: 8 },
   sheetBody: { paddingHorizontal: 16, paddingTop: 14, gap: 20 },
 });

@@ -28,7 +28,8 @@ import { allItems, waitingCardOf, widgetNoticeOf } from "@agenteschat/client/lib
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { dayPart } from "@agenteschat/client/lib/welcome";
 import { WORKING_POLL_MS, type WorkItem, workByAgent, workingNow } from "@agenteschat/client/lib/working";
-import { Composer, EmptyState, Icon, PageHeader, Select } from "@agenteschat/ui";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
+import { Composer, EmptyState, GroupHeading, Icon, PageHeader, Select } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -82,7 +83,8 @@ export function HomePage() {
   const working = workByAgent(
     workingNow(runs.data, active.data?.missions).filter((w) => !w.waiting && listed(w.agentId)),
   );
-  const upcoming = upcomingRoutines(routines.data ?? [], now);
+  // Being deleted, its routines' slots pass: none is ahead (the server says so too, once the list is read again).
+  const upcoming = org.deletion ? [] : upcomingRoutines(routines.data ?? [], now);
   const waitingCount = waiting.length + failures.length + missions.length + mentions.length;
 
   // Who I may ask, the one I talked to last first.
@@ -93,14 +95,14 @@ export function HomePage() {
 
   // The right hand's first-run checklist (ADR 0155 §6), while a row is left: one line back to it, never a second list.
   const lodi = dir.agents.find(isRightHand);
-  const firstRun = useFirstRun(lodi, null);
+  const firstRun = useFirstRun(lodi);
   const showSteps = firstRun.ready && firstRun.state === "open";
   const loaded = waitingList.isSuccess && inbox.isSuccess && missionList.isSuccess && !runs.isLoading;
   const calm = loaded && !showSteps && waitingCount === 0 && working.length === 0 && done.length === 0;
 
   const summary =
     waitingCount === 0 && working.length === 0
-      ? t(showSteps ? "home.summary.new" : "home.summary.calm")
+      ? t(showSteps ? modeKey(org, "home.summary.new") : "home.summary.calm")
       : [
           waitingCount > 0 ? t("home.summary.waiting", { count: waitingCount }) : "",
           working.length > 0 ? t("sky.working", { count: working.length }) : "",
@@ -137,7 +139,8 @@ export function HomePage() {
         </Link>
       )}
 
-      {askable.length > 0 && <AskAgent agents={askable} composer={composer} />}
+      {/* Being deleted, the workspace takes no message: the line on top says why. */}
+      {askable.length > 0 && !org.deletion && <AskAgent agents={askable} composer={composer} />}
 
       <HomeMural
         orgId={org.id}
@@ -337,23 +340,25 @@ function Section({
   const { org } = useOrg();
   return (
     <section className="home-sec" aria-label={title}>
-      <div className="list-group-head">
-        <h2>{title}</h2>
-        {count !== undefined && <span className="list-group-head__count">{count}</span>}
-        {to === "taskManager" ? (
-          <Link className="home-sec__more" to="/org/$orgId/task-manager" params={{ orgId: org.id }}>
-            {t("taskManager.actions.openManager")}
-          </Link>
-        ) : to === "routines" ? (
-          <Link className="home-sec__more" to="/org/$orgId/routines" params={{ orgId: org.id }}>
-            {t("home.seeAll")}
-          </Link>
-        ) : more ? (
-          <Link className="home-sec__more" to="/org/$orgId/notifications" params={{ orgId: org.id }}>
-            {t("home.seeAll")}
-          </Link>
-        ) : null}
-      </div>
+      <GroupHeading
+        title={title}
+        count={count}
+        aside={
+          to === "taskManager" ? (
+            <Link className="home-sec__more" to="/org/$orgId/task-manager" params={{ orgId: org.id }}>
+              {t("taskManager.actions.openManager")}
+            </Link>
+          ) : to === "routines" ? (
+            <Link className="home-sec__more" to="/org/$orgId/routines" params={{ orgId: org.id }}>
+              {t("home.seeAll")}
+            </Link>
+          ) : more ? (
+            <Link className="home-sec__more" to="/org/$orgId/notifications" params={{ orgId: org.id }}>
+              {t("home.seeAll")}
+            </Link>
+          ) : null
+        }
+      />
       <ul className="list-card home-list">{children}</ul>
     </section>
   );

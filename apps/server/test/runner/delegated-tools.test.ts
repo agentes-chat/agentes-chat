@@ -429,6 +429,32 @@ test("reads and what the turn's rules allow go on without asking", async () => {
   expect(asked).toEqual([]);
 });
 
+test("an agent that always asks: only a read goes on here, an edit and an allowed command go to the prompt", async () => {
+  const { call, asked, folder } = setup({ asks: "always" });
+  writeFileSync(path.join(folder, "a.txt"), "hello\n");
+  expect(textOf(await call("Bash", { command: "cat a.txt" }))).toBe("hello");
+  expect(asked).toEqual([]);
+  expect(textOf(await call("Bash", { command: "mkdir -p lib && touch lib/x" }))).toBe("Lia said no.");
+  expect(existsSync(path.join(folder, "lib"))).toBe(false);
+  expect((await call("Write", { file_path: path.join(folder, "b.txt"), content: "x" })).isError).toBe(true);
+  expect(existsSync(path.join(folder, "b.txt"))).toBe(false);
+  expect(asked.map((a) => (a.args as { tool_name: string }).tool_name)).toEqual(["Bash", "Write"]);
+});
+
+test("an agent that never asks: a held command names where it runs, and nobody is asked", async () => {
+  const { call, asked } = setup({ asks: "never" });
+  const merge = textOf(await call("Bash", { command: "git merge main" }));
+  expect(merge).toContain("This is a merge");
+  expect(merge).toContain("Run the same command with run_code");
+  expect(merge).not.toContain("a person approves it first");
+  expect(asked).toEqual([]);
+  // A background task's executor has no run_code to go to.
+  const task = setup({ asks: "never", task: "local" });
+  const inTask = textOf(await task.call("Bash", { command: "git merge main" }));
+  expect(inTask).toContain("stop and say so in your result");
+  expect(inTask).not.toContain("run_code");
+});
+
 test("anything else goes to the prompt, and the person's word decides", async () => {
   const { call, asked, state, folder } = setup();
   const mark = path.join(folder, "mark");

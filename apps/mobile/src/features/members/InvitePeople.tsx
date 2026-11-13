@@ -10,16 +10,29 @@ import {
   useWorkspaceLimits,
 } from "@agenteschat/client";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
+import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { INVITE_NOTE_MAX, sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { membersFull } from "@agenteschat/client/lib/limits";
 import { aiStateOf, onlyOwnerReplies } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, type TextInputInstance, View } from "react-native";
+import { paysHere } from "@/lib/store";
 import { useOrg } from "@/providers/org";
-import { Button, fieldText, GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Text, useToast } from "@/ui";
+import {
+  Button,
+  fieldText,
+  GROUPED_ROW,
+  GroupedFooter,
+  GroupedHeader,
+  GroupedList,
+  GroupedRow,
+  Text,
+  useToast,
+} from "@/ui";
 import { router } from "@/ui/navigation";
 import { usePlanHold } from "../ai/parts";
 import { Page } from "../me/parts";
@@ -35,6 +48,7 @@ import {
   addressState,
   batchNews,
   type InviteAddress,
+  joinRoleWord,
   offeredChannels,
   pendingInvitations,
   readTyped,
@@ -45,7 +59,8 @@ import { MembersFullNote } from "./MembersFullNote";
 /**
  * Convidar pessoas (ADR 0090 §5), the web's invite dialog as a pushed screen: an address a row with its role, the
  * channels they also join and a note in the email on screens of their own, then the workspace's link. A server that
- * sends no email invites through the link only.
+ * sends no email invites through the link only. A personal workspace first asks who they are (ADR 0159 §4,
+ * `WhoQuestion`) and says each role in its plain words.
  */
 export function InvitePeopleScreen() {
   return (
@@ -72,6 +87,9 @@ function InvitePeople() {
   const inviteMany = useInviteMany(orgId);
   const input = useRef<TextInputInstance | null>(null);
   const [typed, setTyped] = useState("");
+  const personal = isPersonal(org);
+  // Family or friends, in a personal workspace: asked once each time this screen opens (ADR 0159 §4).
+  const [family, setFamily] = useState(false);
   // An agent's invite card opens it with its addresses (`?emails=a@x,b@y`), a channel's add sheet with that channel.
   const { emails, channel } = useLocalSearchParams<{ emails?: string; channel?: string }>();
   useEffect(() => {
@@ -85,8 +103,11 @@ function InvitePeople() {
   const draft = useInviteDraft() ?? EMPTY_INVITE;
 
   // Who is in already, and who has an invitation waiting: said on their row and left out of the send.
-  const members = new Set(people.map((m) => m.email.toLowerCase()));
-  const invited = new Set(pendingInvitations(invitations).map((i) => i.email.toLowerCase()));
+  const members = useHeldWhile(new Set(people.map((m) => m.email.toLowerCase())), inviteMany.isPending);
+  const invited = useHeldWhile(
+    new Set(pendingInvitations(invitations).map((i) => i.email.toLowerCase())),
+    inviteMany.isPending,
+  );
   const stateOf = (a: InviteAddress) => addressState(a, members, invited);
   // What's still in the field counts: the button is pressed with the keyboard up, so the field never lost focus.
   const all = withAddresses(draft.addresses, typed);
@@ -179,11 +200,12 @@ function InvitePeople() {
         <GroupedFooter>
           {t("common.joinSentences", {
             a: t("standing.billing.invites"),
-            b: t(can(org, "manage_billing") ? "connectAi.billingWeb" : "standing.billing.askAdmin"),
+            b: t(paysHere(can(org, "manage_billing")) ? "connectAi.billingWeb" : "standing.billing.askAdmin"),
           })}
         </GroupedFooter>
       </Page>
     );
+  if (personal && !family) return <WhoQuestion onFamily={() => setFamily(true)} />;
   return (
     <Page
       title={t("members.inviteTitle")}
@@ -222,7 +244,7 @@ function InvitePeople() {
                         ? t("mobile.invitePeople.here")
                         : state === "invited"
                           ? t("mobile.invitePeople.invited")
-                          : (roles.find((r) => r.id === a.roleId)?.name ?? t("roles.member"))
+                          : joinRoleWord(t, roles, a.roleId, personal)
                   }
                   danger={state === "bad"}
                   faint={state === "member" || state === "invited"}
@@ -264,12 +286,15 @@ function InvitePeople() {
           </GroupedFooter>
           <View style={styles.gap} />
           <GroupedList>
-            <GroupedRow
-              label={t("mobile.invitePeople.channels")}
-              {...(extraNames.length > 0 ? { value: extraNames.join(", ") } : {})}
-              chevron
-              onPress={() => router.push("/invite-channels")}
-            />
+            {/* A personal workspace with no group conversation besides #general has nothing to pick (ADR 0159). */}
+            {personal && others.length === 0 ? null : (
+              <GroupedRow
+                label={personal ? t("shell.channelsPersonal") : t("mobile.invitePeople.channels")}
+                {...(extraNames.length > 0 ? { value: extraNames.join(", ") } : {})}
+                chevron
+                onPress={() => router.push("/invite-channels")}
+              />
+            )}
             <GroupedRow
               label={t("members.dialog.note")}
               value={note ? t("members.dialog.withNote") : t("mobile.invitePeople.optional")}
@@ -281,6 +306,41 @@ function InvitePeople() {
       )}
       <GroupedHeader>{byLink ? t("members.link.title") : t("members.dialog.or")}</GroupedHeader>
       <InviteLinkRows />
+    </Page>
+  );
+}
+
+/**
+ * Before inviting to a personal workspace (ADR 0159 §4), the web's question: family or friends join and it stays
+ * personal; people from work switch it to a team's first, on the mode screen (only who configures it can; for anyone
+ * else that choice is off and says why), which comes back here in a team's words. Who may invite, and the roles,
+ * stay as they are.
+ */
+function WhoQuestion({ onFamily }: { onFamily: () => void }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const switches = can(org, "configure");
+  return (
+    <Page title={t("members.inviteTitle")}>
+      <GroupedHeader>{t("personalMode.invite.title")}</GroupedHeader>
+      <GroupedList>
+        <GroupedRow
+          icon="members"
+          label={t("personalMode.invite.family")}
+          sub={t("personalMode.invite.familyText")}
+          subLines={3}
+          chevron
+          onPress={onFamily}
+        />
+        <GroupedRow
+          icon="laptop"
+          label={t("personalMode.invite.work")}
+          sub={t(switches ? "personalMode.invite.workText" : "personalMode.invite.workLocked")}
+          subLines={3}
+          {...(switches ? { chevron: true, onPress: () => router.push("/settings/mode") } : { disabled: true })}
+        />
+      </GroupedList>
+      <GroupedFooter>{t("personalMode.invite.lead")}</GroupedFooter>
     </Page>
   );
 }
@@ -304,7 +364,7 @@ function OnlyYouNote() {
 /** Canais, pushed over Convidar pessoas: what they also join, #general always (ADR 0090 §5). */
 export function InviteChannelsScreen() {
   const { t } = useTranslation();
-  const { orgId } = useOrg();
+  const { orgId, org } = useOrg();
   const channels = useChannels(orgId).data ?? [];
   const draft = useInviteDraft();
   const chosen = draft?.channelIds ?? [];
@@ -315,7 +375,10 @@ export function InviteChannelsScreen() {
       channelIds: d.channelIds.includes(id) ? d.channelIds.filter((x) => x !== id) : [...d.channelIds, id],
     }));
   return (
-    <Page title={t("mobile.invitePeople.channels")} action={{ label: t("mobile.invitePeople.ok"), onPress: goBack }}>
+    <Page
+      title={isPersonal(org) ? t("shell.channelsPersonal") : t("mobile.invitePeople.channels")}
+      action={{ label: t("mobile.invitePeople.ok"), onPress: goBack }}
+    >
       <GroupedHeader>{t("members.dialog.alsoJoin")}</GroupedHeader>
       <GroupedList>
         {others.map((ch) => (
@@ -345,7 +408,7 @@ export function InviteNoteScreen() {
       <TextArea
         value={draft?.note ?? ""}
         onChangeText={(note) => updateInviteDraft((d) => ({ ...d, note }))}
-        placeholder={t("members.dialog.notePlaceholder", { org: org?.name ?? "" })}
+        placeholder={t(modeKey(org, "members.dialog.notePlaceholder"), { org: org?.name ?? "" })}
         accessibilityLabel={t("members.dialog.note")}
         maxLength={INVITE_NOTE_MAX}
         autoFocus
@@ -356,7 +419,7 @@ export function InviteNoteScreen() {
 }
 
 const styles = StyleSheet.create({
-  field: { minHeight: 50, paddingHorizontal: 14, justifyContent: "center" },
-  input: { paddingVertical: 12, paddingHorizontal: 0 },
+  field: { minHeight: GROUPED_ROW.minHeight, paddingHorizontal: GROUPED_ROW.padX, justifyContent: "center" },
+  input: { paddingVertical: GROUPED_ROW.tallPadY, paddingHorizontal: 0 },
   gap: { height: 14 },
 });

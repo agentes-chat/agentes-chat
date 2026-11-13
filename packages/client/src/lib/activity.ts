@@ -51,6 +51,7 @@ export type ActivityKind =
   | "listingTasks"
   | "checkingTask"
   | "cancelingTask"
+  | "keepingRunning"
   | "uploadingArtifact"
   | "gettingContext"
   | "cancelingReminder"
@@ -95,8 +96,11 @@ export type ActivityKind =
   | "startingWork"
   | "updatingWork"
   | "withdrawingRequest"
+  | "releasingAgent"
   | "schedulingAction"
   | "updatingDashboard"
+  | "testingOnPhone"
+  | "waitingForDevice"
   | "readingDashboards"
   | "pushingBranch"
   | "deletingBranches"
@@ -104,6 +108,8 @@ export type ActivityKind =
   | "sendingDm"
   | "settingStatus"
   | "settingReplyStyle"
+  | "sendingFeedback"
+  | "offeringFeedback"
   | "deletingRoutine"
   | "runningRoutine"
   | "proposingTeam"
@@ -190,12 +196,14 @@ const BUILTIN: Record<string, ActivityKind> = {
   list_tasks: "listingTasks",
   task_status: "checkingTask",
   cancel_task: "cancelingTask",
+  keep_running: "keepingRunning",
   upload_artifact: "uploadingArtifact",
   get_context: "gettingContext",
   cancel_reminder: "cancelingReminder",
   list_reminders: "listingReminders",
   list_routines: "listingRoutines",
   computer_status: "checkingComputer",
+  wait_for_device: "waitingForDevice",
   create_wiki_page: "writingWiki",
   update_wiki_page: "writingWiki",
   read_wiki_page: "readingWiki",
@@ -248,6 +256,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   stop_work: "updatingWork",
   post_update: "updatingWork",
   withdraw_request: "withdrawingRequest",
+  release_waiting_agent: "releasingAgent",
   schedule_action: "schedulingAction",
   create_dashboard: "updatingDashboard",
   create_widget: "updatingDashboard",
@@ -260,10 +269,13 @@ const BUILTIN: Record<string, ActivityKind> = {
   send_dm: "sendingDm",
   set_status: "settingStatus",
   set_reply_style: "settingReplyStyle",
+  send_feedback: "sendingFeedback",
+  offer_feedback: "offeringFeedback",
   delete_routine: "deletingRoutine",
   run_routine_now: "runningRoutine",
   propose_team: "proposingTeam",
   propose_settings_change: "proposingChange",
+  request_settings_change: "proposingChange",
   propose_member_changes: "proposingChange",
   propose_remove_agents: "proposingChange",
   // The right hand's catalog of what a person can do: a look for the action, the change at once, or its card.
@@ -367,6 +379,7 @@ function activityOf(tool: string | null | undefined, connector?: string | null, 
   // The agent's own browser (ADR 0040) and screen (ADR 0062): not apps called "browser" and "desktop".
   if (name.startsWith("browser_")) return { kind: "browsing" };
   if (name.startsWith("desktop_")) return { kind: "usingScreen" };
+  if (name.startsWith("phone_")) return { kind: "testingOnPhone" };
   const label = connector?.trim();
   if (label) {
     if (isDrive(serviceKey(label))) return { kind: "readingDrive" };
@@ -380,18 +393,6 @@ function activityOf(tool: string | null | undefined, connector?: string | null, 
   // Only a catalog connector's own prefix names an app: any other first word is a word of the tool's name.
   return known ? { kind: "consulting", app: known } : { kind: "usingTool" };
 }
-
-/** An agent's run is in the timeline (its first words arrived, or it failed): not in the bar. */
-/**
- * The run has its own row in the timeline: it wrote something, ended badly,
- * or read a message sent while it worked (`agent.run.read`: the row stays put
- * with "Leu seu recado" even though its text so far became narration).
- */
-export const isWriting = (r: LiveRun) =>
-  r.status === "failed" ||
-  r.status === "canceled" ||
-  r.text.length > 0 ||
-  (r.work ?? []).some((w) => w.kind === "steer");
 
 export interface ActivityEntry {
   id: string;
@@ -411,38 +412,34 @@ export interface EntryConsult {
   since: number;
 }
 
-/**
- * Who shows in the bar, in order: agents asking another agent (`consults`),
- * agents about to answer (not yet writing), then people typing.
- */
 /** Live statuses the working bar shows (the ones "Parar" can stop; a provisional row is about to be one). */
 const BAR_STATUSES: ReadonlySet<string> = new Set(["thinking", "queued", "running"]);
 
 /**
- * At work with no words of its own yet (nothing written, said or read): its row in the conversation is the waiting
- * row (face, dots, step line), with no name or time until words arrive.
+ * At work: its words wait for its message, which shows them whole once posted. Its row in the conversation draws only
+ * for something to show meanwhile (its browser card), and the bar says who works, on what and for how long.
  */
-export const waitsForWords = (r: Pick<LiveRun, "status" | "text" | "work">) =>
+export const waitsForWords = (r: Pick<LiveRun, "status">) =>
   // Waiting on an approval keeps the waiting row: a header for that moment would jump in and out again.
-  (BAR_STATUSES.has(r.status) || r.status === "waiting_approval") &&
-  r.text.length === 0 &&
-  !(r.work ?? []).some((w) => w.kind === "say" || w.kind === "steer");
+  BAR_STATUSES.has(r.status) || r.status === "waiting_approval";
 
+/**
+ * Who shows in the bar, in order: agents asking another agent (`consults`), agents at work (thinking, at a tool or
+ * writing: their words show whole once posted), then people typing.
+ */
 export function barEntries(
   runs: LiveRun[],
   typingUserIds: string[],
   agentName: (id: string) => string,
   personName: (id: string) => string | undefined,
   consults: LiveConsult[] = [],
-  /** Agents already writing stay in ("Theo está escrevendo…"): the card above the box is always on. */
-  withWriting = false,
 ): ActivityEntry[] {
   const out: ActivityEntry[] = [];
   const seen = new Set<string>();
   for (const c of consults) {
     if (seen.has(c.agentId)) continue;
-    // Its words are on screen already: the reply's row says it.
-    if (runs.some((r) => r.runId === c.runId && isWriting(r))) continue;
+    // Its run failed: its row in the conversation says so.
+    if (runs.some((r) => r.runId === c.runId && r.status === "failed")) continue;
     seen.add(c.agentId);
     out.push({
       id: c.agentId,
@@ -455,14 +452,14 @@ export function barEntries(
   for (const r of runs) {
     // Only work in progress: a run waiting (an approval, an answer, its computer) or ended isn't "working".
     if (!BAR_STATUSES.has(r.status) || seen.has(r.agentId)) continue;
-    const writing = isWriting(r);
-    if (writing && !withWriting) continue;
     seen.add(r.agentId);
     out.push({
       id: r.agentId,
       type: "agent",
       name: agentName(r.agentId),
-      activity: writing ? { kind: "writing" } : toolActivity(r.tool, r.connector, r.toolDetail, r),
+      // `running` with no call out: its words are on their way (they show whole, once posted).
+      activity:
+        r.status === "running" && !r.tool ? { kind: "writing" } : toolActivity(r.tool, r.connector, r.toolDetail, r),
     });
   }
   for (const id of typingUserIds) {
@@ -498,15 +495,16 @@ export function elapsedParts(ms: number): { m: number; s: number } | null {
 }
 
 /**
- * The turn the bar tells for one agent on its own, its phrase and its time alike: a turn it stopped, or one that
- * failed, can still be listed beside the one at work.
+ * The turn the bar tells for one agent on its own, its phrase and its time alike: a turn that failed can still be
+ * listed beside the one at work.
  */
 const turnAtWork = (runs: LiveRun[], agentId: string) =>
-  runs.find((r) => r.agentId === agentId && r.status !== "failed" && r.status !== "canceled");
+  runs.find((r) => r.agentId === agentId && r.status !== "failed");
 
 /** How long a run has been at it ("16 s", "1 min 5 s"), from 2 s on: the bar's time and its live row's alike. */
-export function runElapsed(t: TFunction, run: Pick<LiveRun, "startedAt">, now: number): string | null {
-  const took = elapsedParts(now - (run.startedAt ?? now));
+export function runElapsed(t: TFunction, run: Pick<LiveRun, "startedAt" | "workingSince">, now: number): string | null {
+  // The work it is doing now (`workingSince`), not the run's first start: a run that posted or waited counts again.
+  const took = elapsedParts(now - (run.workingSince ?? run.startedAt ?? now));
   if (!took) return null;
   return took.m > 0 ? t("run.elapsedMinutes", { m: took.m, s: took.s }) : t("run.elapsedSeconds", { n: took.s });
 }

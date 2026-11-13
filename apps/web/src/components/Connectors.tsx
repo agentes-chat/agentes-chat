@@ -33,8 +33,8 @@ import { appAccountsText, githubDisconnectNote } from "@agenteschat/client/lib/g
 import { choiceOf, newestAccount } from "@agenteschat/client/lib/mail";
 import { can } from "@agenteschat/client/lib/permissions";
 import { connectorBrand } from "@agenteschat/client/lib/scopes";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
-  AvatarStack,
   Button,
   Card,
   CardHeader,
@@ -54,7 +54,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AgentAvatar } from "@/components/AgentAvatar";
+import { ConnectedRow } from "@/components/ConnectedRow";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
 import { ConnectorCatalogDialog, ConnectorIcon } from "@/components/ConnectorCatalog";
 import {
@@ -77,7 +77,6 @@ import {
   mailChoices,
 } from "@/components/MailConnect";
 import { useOrg } from "@/components/org-context";
-import { ToolChanges } from "@/components/ToolChanges";
 import { useAgentsAccess } from "@/hooks/useAgentsAccess";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { takesConnectorReturn } from "@/lib/desktop";
@@ -173,7 +172,7 @@ export function ConnectorsSection({
   const using = (item: ConnectedItem) =>
     agentList.filter((a) => levelIn(access.byAgent.get(a.id), `connector:${item.id}`) !== "none");
 
-  // Back from OAuth: open "O que faz" for the connection that just came in.
+  // Back from OAuth: the confirmation for the connection that just came in.
   const returned = useRef(false);
   const listsFetching = connections.isFetching || servers.isFetching;
   useEffect(() => {
@@ -190,14 +189,15 @@ export function ConnectorsSection({
         ? latest(all.filter((i) => !i.custom && i.def?.id === connected))
         : latest(all.filter((i) => i.custom && i.needsReview));
     const done = outcome === "reconnected" || outcome === "same_account" ? outcome : "connected";
-    // Signing in elsewhere ends here: say what happened, as connecting with a key does.
-    if (item && connected) toast.show(outcomeText(t, done, item));
-    // Only a new account goes on to its tools; another account of a server the provider didn't name, to its name.
+    // Signing in elsewhere ends here: say what happened, as connecting with a key does (a toast, or the confirmation).
+    const confirms = admin && done === "connected";
+    if (item && connected && !confirms) toast.show(outcomeText(t, done, item));
+    // Only a new account gets the confirmation; "Ajustar" there names another account its provider didn't name.
     const url = item?.server?.serverUrl;
     const naming =
       Boolean(url && !item?.server?.accountLabel) &&
       all.filter((i) => i.server && url && sameServer(i.server.serverUrl, url)).length > 1;
-    if (item && admin && done === "connected") setFlow({ step: 1, item, naming });
+    if (item && confirms) setFlow({ step: "done", item, naming });
     // GitHub comes straight back when nothing is left to ask: the dialog says what it reaches now and where to add more.
     if (item?.def?.id === "github" && admin && done === "reconnected")
       setFlow({ step: 0, def: item.def, mode: "reconnect", item });
@@ -205,7 +205,7 @@ export function ConnectorsSection({
   }, [connected, outcome, review, connections.data, servers.data, catalog.data, listsFetching, admin, t, toast]);
 
   const row = (item: ConnectedItem) => (
-    <ConnectedRow
+    <ServiceRow
       key={item.id}
       item={item}
       using={using(item)}
@@ -249,13 +249,12 @@ export function ConnectorsSection({
         {composio.data && nearComposioLimit(composio.data) && (
           <p className="small muted">{composioUsageText(t, i18n.language, composio.data)}</p>
         )}
-        {admin && <ToolChanges orgId={org.id} />}
         {(connections.isLoading || servers.isLoading) && <LoadingList count={2} trailing />}
         {noneYet && (
           <EmptyState
             size="panel"
             agent={look}
-            title={t(admin ? "connectors.noneTitle" : "access.noConnectorsViewerTitle")}
+            title={t(admin ? modeKey(org, "connectors.noneTitle") : "access.noConnectorsViewerTitle")}
             actions={
               admin && (
                 <Button variant="primary" icon="plus" onClick={() => setAdding(true)}>
@@ -385,10 +384,10 @@ export function ConnectorsSection({
 }
 
 /**
- * One connected account: icon, name, state, account, who uses it, and what you can do (Quem usa, Ferramentas, and
- * in ⋯ Renomear, Reconectar, another account of an MCP server, Desconectar).
+ * One connected account: on its line the icon, name, state and who uses it; inside, the account and what you can do
+ * (Quem usa, Ferramentas, and in ⋯ Renomear, Reconectar, another account of an MCP server, Desconectar).
  */
-function ConnectedRow({
+function ServiceRow({
   item,
   using,
   total,
@@ -422,93 +421,71 @@ function ConnectedRow({
     t("connectors.toolsCount", { count: item.tools }),
   ].filter(Boolean);
   const adds = reconnectAddsText(t, item);
+  const name = itemName(t, item);
   return (
-    <div className="ac-list__row connected-row ac-mediarow">
-      <span className="ac-mediarow__face">
-        <ConnectorIcon def={item.def} image={item.image} label={itemName(t, item)} />
-      </span>
-      <span className="ac-mediarow__head">
-        <span className="list-title">
-          <span>{itemName(t, item)}</span>
-          {item.needsReconnect ? (
-            <Chip icon="alert" tone="waiting">
-              {t("connectors.composio.needsReconnect")}
-            </Chip>
-          ) : item.toolsError ? (
-            <Chip icon="alert" tone="waiting">
-              {t("connectors.noToolsNow")}
-            </Chip>
-          ) : item.pending > 0 && item.server?.reviewedAt ? (
-            <Chip icon="waiting" tone="waiting">
-              {t("connectors.toReview", { count: item.pending })}
-            </Chip>
-          ) : item.needsReview ? (
-            <Chip icon="waiting" tone="waiting">
-              {t("connectors.notReviewed")}
-            </Chip>
-          ) : (
-            <Chip icon="check" tone="done">
-              {t("connectors.active")}
-            </Chip>
-          )}
-        </span>
-      </span>
-      <div className="ac-mediarow__body">
-        <span className="small muted">{meta.join(" · ")}</span>
-        {adds && !item.needsReconnect && <span className="small muted">{adds}</span>}
-        <span className="connected-row__who small muted">
-          {using.length > 0 && (
-            <AvatarStack>
-              {using.slice(0, 5).map((a) => (
-                <AgentAvatar key={a.id} agentId={a.id} name={a.name} size="xs" />
-              ))}
-            </AvatarStack>
-          )}
-          {using.length > 0 ? t("connectors.usedBy", { count: using.length, total }) : t("connectors.usedByNone")}
-        </span>
-        {admin && (
-          <div className="connected-row__actions">
+    <ConnectedRow
+      icon={<ConnectorIcon def={item.def} image={item.image} label={name} />}
+      name={name}
+      chips={
+        item.needsReconnect ? (
+          <Chip icon="alert" tone="waiting">
+            {t("connectors.composio.needsReconnect")}
+          </Chip>
+        ) : item.toolsError ? (
+          <Chip icon="alert" tone="waiting">
+            {t("connectors.noToolsNow")}
+          </Chip>
+        ) : item.pending > 0 && item.server?.reviewedAt ? (
+          <Chip icon="waiting" tone="waiting">
+            {t("connectors.toReview", { count: item.pending })}
+          </Chip>
+        ) : item.needsReview ? (
+          <Chip icon="waiting" tone="waiting">
+            {t("connectors.notReviewed")}
+          </Chip>
+        ) : (
+          <Chip icon="check" tone="done">
+            {t("connectors.active")}
+          </Chip>
+        )
+      }
+      using={using}
+      total={total}
+      details={[meta.join(" · "), !item.needsReconnect && adds]}
+      actions={
+        admin && (
+          <>
             {(item.needsReconnect || adds) && (
               <Button
                 size="sm"
                 variant="primary"
-                aria-label={t("connectors.reconnectName", { name: itemName(t, item) })}
+                aria-label={t("connectors.reconnectName", { name })}
                 onClick={onReconnect}
               >
                 {t("connectors.detail.reconnect")}
               </Button>
             )}
             {item.needsReview && !item.needsReconnect && !adds && (
-              <Button
-                size="sm"
-                variant="primary"
-                aria-label={t("connectors.reviewName", { name: itemName(t, item) })}
-                onClick={onTools}
-              >
+              <Button size="sm" variant="primary" aria-label={t("connectors.reviewName", { name })} onClick={onTools}>
                 {t("connectors.review")}
               </Button>
             )}
-            <Button size="sm" aria-label={t("connectors.whoName", { name: itemName(t, item) })} onClick={onWho}>
+            <Button variant="link" aria-label={t("connectors.whoName", { name })} onClick={onWho}>
               {t("connectors.who")}
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={t("connectors.toolsName", { name: itemName(t, item) })}
-              onClick={onTools}
-            >
+            <Button variant="link" aria-label={t("connectors.toolsName", { name })} onClick={onTools}>
               {t("connectors.tools")}
             </Button>
             <Menu
               align="end"
-              label={t("connectors.actionsName", { name: itemName(t, item) })}
+              label={t("connectors.actionsName", { name })}
               trigger={
                 <Button
                   size="sm"
                   variant="ghost"
                   iconOnly
                   icon="more"
-                  aria-label={t("connectors.actionsName", { name: itemName(t, item) })}
+                  aria-label={t("connectors.actionsName", { name })}
                 />
               }
             >
@@ -531,10 +508,10 @@ function ConnectedRow({
                 {t("connectors.disconnect")}
               </MenuItem>
             </Menu>
-          </div>
-        )}
-      </div>
-    </div>
+          </>
+        )
+      }
+    />
   );
 }
 
@@ -585,7 +562,7 @@ function RenameDialog({ item, onClose }: { item: ConnectedItem | null; onClose: 
             <Field
               label={t("connectFlow.name")}
               id="connector-rename"
-              help={t("connectors.renameHelp")}
+              hint={{ name: t("common.about", { label: t("connectFlow.name") }), text: t("connectors.renameHelp") }}
               error={error ?? undefined}
             >
               <Input

@@ -5,6 +5,7 @@ import { joinNames, lowerFirst } from "./format";
 import { autoUpdateText, talkerStatusText, workEndBody } from "./long-work";
 import { mediaKindOf, mediaWord } from "./media";
 import { RIGHT_HAND_PLAN_LINES } from "./no-ai";
+import { githubLineKey } from "./notices";
 import { brainName } from "./outages";
 import { usageWhen } from "./plan-usage";
 import { weekDay } from "./team-week";
@@ -24,6 +25,8 @@ const USAGE_NOTES = new Set([
   "plan_model_off_wait",
   "plan_inactive_wait",
   "budget_wait",
+  // A skipped ask's note where its run had none of its own to say it on: always `usageWait.closed`.
+  "catch_up_closed",
 ]);
 
 type Meta = Record<string, unknown> | undefined;
@@ -92,7 +95,9 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
     code === "brain_unavailable" ? (m.brainUnavailable as { code?: unknown; long?: unknown } | undefined) : undefined;
   const busy = waitNote?.code === "busy";
   const noAi =
-    code === "no_ai" ? (m.noAi as { reason?: unknown; own?: unknown; model?: unknown } | undefined) : undefined;
+    code === "no_ai"
+      ? (m.noAi as { reason?: unknown; own?: unknown; model?: unknown; why?: unknown } | undefined)
+      : undefined;
   const signedOut = noAi?.reason === "not_signed_in";
   // The team's right hand on a plan (ADR 0137 §7): why its plan can't think now (`RIGHT_HAND_PLAN_LINES`); any agent's
   // computer with no such CLI, or no computer at all.
@@ -104,6 +109,8 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
       noAi.reason === "plan_hold")
       ? `no_ai_${noAi.reason}`
       : null;
+  // The plan's CLI failed: the line says what it said.
+  const cliSaid = noAi?.reason === "cli_failed" && typeof noAi.why === "string" && noAi.why ? noAi.why : null;
   const own =
     signedOut &&
     (noAi?.own === "codex" ||
@@ -160,7 +167,7 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
   // Long work's own update of a silent work (ADR 0121): what it does now, in the reader's words.
   if (code === "work_auto_update") return autoUpdateText(t, params);
   // The autonomy brakes (ADR 0131): a working agent's status line, a proposal of costly work, the noise digest.
-  if (code === "talker_status") return talkerStatusText(t, params);
+  if (code === "talker_status") return talkerStatusText(t, params, locale);
   if (code === "autonomy_proposal")
     return t(
       `chat.body.autonomy_proposal.${params.cost === "install" || params.cost === "long" ? params.cost : "pr"}`,
@@ -190,7 +197,7 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
     : signedOut
       ? "no_ai_signed_out"
       : planLine
-        ? planLine
+        ? `${planLine}${cliSaid ? "Why" : ""}`
         : anon
           ? "secret_requestAnon"
           : code;
@@ -200,6 +207,7 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
   return t(params.computer && !namesComputer ? [`${key}NoComputer`, key] : key, {
     ...params,
     ...model,
+    ...(cliSaid ? { why: cliSaid } : {}),
     defaultValue: body,
   });
 }
@@ -212,6 +220,13 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
 export function previewBody(t: TFunction, text: string, meta: Meta | null, mediaKind?: unknown): string {
   // Never a voice message's words, even from a server that sent them (ADR 0100).
   if (isVoiceMeta(meta) || mediaKindOf(mediaKind) === "voice") return voiceWord(t, voiceLength(meta));
+  // What happened on GitHub, as the chat's line says it: someone's words alone, under the agent's name, would read as
+  // the agent's.
+  if (meta?.bodyCode === "github_event") {
+    const p = (meta.bodyParams ?? {}) as Record<string, string>;
+    const line = t(p.answerFor ? "chat.notice.github.asked" : githubLineKey(p), { ...p, name: p.agent ?? "" });
+    return previewOf(p.said ? `${line}: ${p.said}` : line);
+  }
   if (!text.trim()) {
     const kind = mediaKindOf(mediaKind) ?? mediaKindOf(meta?.mediaKind) ?? mediaKindOf(meta?.media);
     if (kind) return mediaWord(t, kind);

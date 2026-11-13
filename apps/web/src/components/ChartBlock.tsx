@@ -4,7 +4,6 @@ import {
   Button,
   Dialog,
   DialogBody,
-  PixelSpinner,
   paintCells,
   paintLineArea,
   useElementWidth,
@@ -42,38 +41,21 @@ export const ChartAccent = createContext<AgentColor>("sky");
 
 /**
  * The agent's message a chart is in, where it can be pinned to a board as a widget (ADR 0135): its "Pin" button.
- * Null elsewhere (a live answer, a notice, a consultation): no button.
+ * Null elsewhere (a notice, a consultation): no button.
  */
 export const ChartMessage = createContext<{ messageId: string; agentId: string } | null>(null);
 
-/**
- * Charts already drawn once (by their data): when an answer stops streaming, the live row gives way to the
- * message and the chart mounts again; it shouldn't grow in twice.
- */
+/** Charts already drawn once (by their data): one mounted again (its row drawn again) shouldn't grow in twice. */
 const drawn = new Set<string>();
 const ChartStill = createContext(false);
 
 const reduceMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/**
- * A ```chart block: the chart when its JSON reads as one, else the code (while an answer is still being
- * written, a "montando o gráfico" card instead of half a JSON).
- */
-export function ChartOrCode({ text, writing }: { text: string; writing?: boolean }) {
+/** A ```chart block: the chart when its JSON reads as one, else the code. */
+export function ChartOrCode({ text }: { text: string }) {
   const spec = useMemo(() => parseChart(text), [text]);
   if (spec) return <ChartBlock spec={spec} source={text} />;
-  if (writing) return <ChartPending />;
   return <CodeBlock lang="json" text={text} />;
-}
-
-function ChartPending() {
-  const { t } = useTranslation();
-  return (
-    <div className="chart-card chart-card--pending" role="status">
-      <PixelSpinner size={16} />
-      <span>{t("common.chartPending")}</span>
-    </div>
-  );
 }
 
 /**
@@ -105,37 +87,39 @@ export function ChartBlock({
   const remember = useGrowFrom(open, card, ".chart-viewer");
   return (
     <figure className="chart-card" ref={card}>
-      <figcaption className="chart-card__top">
+      <figcaption className="chart-card__top ac-actline">
         <span className="chart-card__titles">
           <b>{spec.title}</b>
           {spec.subtitle && <small>{spec.subtitle}</small>}
         </span>
-        {pinnable && (
+        <span className="ac-acts">
+          {pinnable && (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon="pin"
+              aria-label={t("widgets.pin.label")}
+              title={t("widgets.pin.label")}
+              onClick={() => setPinning(true)}
+            />
+          )}
+          <Button variant="ghost" size="sm" aria-pressed={table} onClick={() => setTable((v) => !v)}>
+            {t("common.table")}
+          </Button>
           <Button
             variant="ghost"
             size="sm"
             iconOnly
-            icon="pin"
-            aria-label={t("widgets.pin.label")}
-            title={t("widgets.pin.label")}
-            onClick={() => setPinning(true)}
+            icon="expand"
+            aria-label={t("common.fullScreen")}
+            title={t("common.fullScreen")}
+            onClick={() => {
+              remember();
+              setOpen(true);
+            }}
           />
-        )}
-        <Button variant="ghost" size="sm" aria-pressed={table} onClick={() => setTable((v) => !v)}>
-          {t("common.table")}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon="expand"
-          aria-label={t("common.fullScreen")}
-          title={t("common.fullScreen")}
-          onClick={() => {
-            remember();
-            setOpen(true);
-          }}
-        />
+        </span>
       </figcaption>
       <div className="chart-card__body">
         <ChartStill.Provider value={still}>

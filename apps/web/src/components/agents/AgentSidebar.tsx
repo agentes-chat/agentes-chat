@@ -29,7 +29,18 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { usageShown } from "@agenteschat/client/lib/plan-usage";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { siteHost } from "@agenteschat/client/lib/secret-requests";
-import { BrainIcon, Button, ComputerPortrait, Icon, InfoHint, ProviderLogo, Switch } from "@agenteschat/ui";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
+import {
+  BrainIcon,
+  Button,
+  ComputerPortrait,
+  GroupHeading,
+  Icon,
+  InfoHint,
+  PresenceBadge,
+  ProviderLogo,
+  Switch,
+} from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -90,7 +101,7 @@ export function AgentSidebar({ agent, onClose }: { agent: Agent; onClose?: () =>
   if (!onClose) {
     return (
       <aside className="members-side dm-side" aria-label={t("agentSide.label")}>
-        {body}
+        <div className="dm-side__scroll">{body}</div>
       </aside>
     );
   }
@@ -132,18 +143,21 @@ function Section({
 }) {
   return (
     <section className="dm-side__sec" aria-label={title}>
-      <h3 className="dm-side__title">
-        {hint ? (
-          <span className="ac-hintline">
-            <span>{title}</span>
-            <InfoHint name={hint.name}>{hint.text}</InfoHint>
-          </span>
-        ) : (
-          <span>{title}</span>
-        )}
-        {count !== undefined && <span className="dm-side__count ac-num">{count}</span>}
-        {action}
-      </h3>
+      <GroupHeading
+        level={3}
+        title={
+          hint ? (
+            <span className="ac-hintline">
+              <span>{title}</span>
+              <InfoHint name={hint.name}>{hint.text}</InfoHint>
+            </span>
+          ) : (
+            title
+          )
+        }
+        count={count}
+        aside={action}
+      />
       {children}
     </section>
   );
@@ -155,7 +169,8 @@ function AgentHead({ agent }: { agent: Agent }) {
   const busy = useStreams((s) => agentStateIn(s, agent.id) !== "idle");
   const line = agentLine(t, shown?.line ?? null, i18n.language);
   const word = busy ? t("team.workingNow") : shown ? t(`presence.${shown.presence}`) : null;
-  const role = isRightHand(agent) ? t("rightHand.role") : agent.role || `@${agent.handle}`;
+  // The right hand's one role name, as the sidebar and its DM's header say it.
+  const role = isRightHand(agent) ? t("rightHand.labelCapitalized") : agent.role || `@${agent.handle}`;
   return (
     <header className="dm-side__head">
       <div className="agp-cover dm-side__cover">
@@ -172,8 +187,9 @@ function AgentHead({ agent }: { agent: Agent }) {
         <StatusLine {...line} className="dm-side__status" />
       ) : (
         word && (
-          <p className="dm-side__status" data-offline={(!busy && shown?.presence === "offline") || undefined}>
-            <span className="dm-side__dot" aria-hidden="true" />
+          <p className="dm-side__status">
+            {/* The presence's own badge, as beside its face everywhere: away wears its clock, offline its outline. */}
+            <PresenceBadge presence={busy ? "online" : (shown?.presence ?? "offline")} ring={false} />
             {word}
           </p>
         )
@@ -217,7 +233,7 @@ function ComputerSection({ agent }: { agent: Agent }) {
   const line = entryLine(t, state, {
     edition: f.edition,
     locale: i18n.language,
-    computer: computerName(t, org.name, view.machine),
+    computer: computerName(t, org.name, view.machine, isPersonal(org)),
     lastSeenAt: view.machine?.lastSeenAt ?? null,
     person: (id) => dir.memberById.get(id)?.name ?? t("channel.unknownPerson"),
     step: last ? stepText(t, last, last.screen) : null,

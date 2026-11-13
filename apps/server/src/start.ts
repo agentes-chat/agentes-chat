@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { freemem, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import {
   type Adapters,
@@ -50,8 +51,11 @@ import {
   MigrationMismatchError,
 } from "@agenteschat/db";
 import {
+  APP_JOB_KINDS,
   adoptRestoredOperatorEvents,
+  allowPrivateOutbound,
   allowsPrivateEndpoints,
+  backfillMemoryTrust,
   composioUsageHook,
   createGifKey,
   createLocalKeyWrapper,
@@ -66,18 +70,24 @@ import {
   type GifKey,
   isAgentesCloud,
   isBlockedAddress,
+  laneLimits,
+  memoryBudget,
   meterComposio,
   moveIssueComments,
   publicHttpsFetch,
+  queueEmbeddingBackfill,
   relayCredentials,
   resolveHostDns,
   retireHostTokens,
   retireMillionSendMailboxes,
   setMessageLinkBase,
   setRestrictionNotices,
+  setWorkspaceComputers,
+  shareCacheInvalidations,
   surfaceRoomFiles,
   vapidKeys,
   vapidSubject,
+  widenDmHowTos,
 } from "@agenteschat/engine";
 
 import { type AgentesModule, type Edition, type ModuleContext, resolveAdapters } from "@agenteschat/modules";
@@ -85,12 +95,14 @@ import { createModelProviders, enableOpenRouterModels } from "@agenteschat/provi
 import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { buildEngine } from "./engine";
+import { startFreezeWatch } from "./freeze-watch";
 import { checkHumanCheckAtBoot } from "./http/human-check";
 import { createLogger, type Logger } from "./logger";
 import { OPERATOR_API_PREFIX, serveOperatorApi } from "./operator/app";
 import { createMachineSockets } from "./realtime/machines";
 import { createStreamSockets } from "./realtime/streams";
 import { createRealtime, type SocketData } from "./realtime/ws";
+import { workerHealth } from "./routes/health";
 import { startTelemetry } from "./telemetry";
 import { releaseOf, version } from "./version";
 import { startWorkers } from "./workers";
@@ -128,6 +140,8 @@ export function applyBootSwitches(config: Config) {
   setMessageLinkBase(config.PUBLIC_URL);
   // The operator API's events feed records only while that API is on (ADR 0056).
   enableOperatorEvents(Boolean(config.OPERATOR_API_TOKEN));
+  // Where each workspace gets its own computer, the computers people bring are targets, never agents' homes.
+  setWorkspaceComputers(config.MACHINE_PROVISIONING === "external");
 }
 
 /**
@@ -157,7 +171,18 @@ export async function startServer(options: StartOptions) {
   });
   const log = createLogger(config.LOG_LEVEL, errors);
   try {
-    return await boot(options, config, log, release, errors);
+    const started = await boot(options, config, log, release, errors);
+    // Once it serves: a boot's own long steps (migrations, the built-in database's start) aren't what it is for.
+    startFreezeWatch(
+      {
+        logLevel: config.LOG_LEVEL,
+        ...(config.SENTRY_DSN
+          ? { reports: { dsn: config.SENTRY_DSN, environment: config.SENTRY_ENVIRONMENT, release } }
+          : {}),
+      },
+      log,
+    );
+    return started;
   } catch (error) {
     log.error("startup failed", { error, unhandled: true });
     await log.flush(EXIT_FLUSH_MS);
@@ -316,8 +341,13 @@ async function boot(
   }
   const ctx: ModuleContext = { ...base, adapters };
 
+  // Addresses a workspace names (custom MCP servers, its own bucket, pages agents read) are pinned to public ones at
+  // every request, except where the operator lets workspaces reach this server's network.
+  allowPrivateOutbound(allowsPrivateEndpoints(config));
   // Per-process caches for agent/org/channel config, scopes, connections, credential rows (30 s TTL).
   enableCaches();
+  // A write in any process (the app, a worker) clears what every process cached of it.
+  shareCacheInvalidations(adapters.pubsub);
   // OpenRouter's public model list (ADR 0087): read only while a workspace has an OpenRouter key.
   enableOpenRouterModels(fetch);
   applyBootSwitches(config);
@@ -375,6 +405,30 @@ async function boot(
       if (made > 0) log.info("right hands created", { made });
     })
     .catch((error: unknown) => log.warn("right hands backfill failed", { error: String(error) }));
+  // Off the boot path, once (ADR 0167): untrusted memories saved from a person's own words are trusted again, and
+  // how-tos agents worked out between themselves that name nobody reach their other work.
+  void backfillMemoryTrust(database.db)
+    .then(async (r) => {
+      if (Object.keys(r.changed).length > 0) log.info("memory trust re-derived", { ...r });
+      const widened = await widenDmHowTos(database.db);
+      if (widened > 0) log.info("how-tos out of agents' DMs", { widened });
+    })
+    .catch((error: unknown) => log.warn("memory backfill failed", { error: String(error) }));
+  // Off the boot path (ADR 0167): what this model hasn't embedded yet gets its vectors, a reindex per workspace.
+  const vectors = engine.embeddings;
+  if (config.EMBEDDINGS_PROVIDER !== "none" && !vectors) {
+    const missing = config.EMBEDDINGS_PROVIDER === "voyage" ? "VOYAGE_API_KEY" : "EMBEDDINGS_URL";
+    log.warn("search goes on words alone", {
+      because: `EMBEDDINGS_PROVIDER=${config.EMBEDDINGS_PROVIDER} needs ${missing}`,
+    });
+  }
+  if (vectors?.kinds) {
+    void queueEmbeddingBackfill(database.db, { model: vectors.provider.model, kinds: vectors.kinds })
+      .then((queued) => {
+        if (queued > 0) log.info("embeddings backfill queued", { workspaces: queued, model: vectors.provider.model });
+      })
+      .catch((error: unknown) => log.warn("embeddings backfill failed", { error: String(error) }));
+  }
   // Off the boot path: tasks' comments from before their conversations move into them once (ADR 0145).
   void moveIssueComments(database.db)
     .then((moved) => {
@@ -387,12 +441,37 @@ async function boot(
       if (moved > 0) log.info("files moved out of agent rooms", { moved });
     })
     .catch((error: unknown) => log.warn("files move out of agent rooms failed", { error: String(error) }));
+  // A worker (`SERVER_ROLE=worker`) runs jobs only: no app, API, sockets or usage report, its health check alone. Its
+  // runs reach computers through the process that holds their socket (`machine_rpc`).
+  const worker = config.SERVER_ROLE === "worker";
+  const slots = { quick: config.OUTBOX_QUICK_SLOTS, long: config.OUTBOX_MAX_IN_FLIGHT - config.OUTBOX_QUICK_SLOTS };
+  const memoryBytes = memoryBudget({
+    limitBytes: process.constrainedMemory() || totalmem(),
+    rssBytes: process.memoryUsage().rss,
+    freeBytes: freemem(),
+  });
+  const outbox = {
+    maxInFlight: config.OUTBOX_MAX_IN_FLIGHT,
+    quickSlots: config.OUTBOX_QUICK_SLOTS,
+    ...(worker && { skipKinds: APP_JOB_KINDS }),
+    // The built-in database is one process's, on one computer: its slots stay where they start.
+    ...(database.client && {
+      limits: laneLimits(
+        slots,
+        { memoryBytes, rssBytes: process.memoryUsage().rss, dbConnections: config.DATABASE_POOL_MAX },
+        config.OUTBOX_MAX_IN_FLIGHT_CEILING,
+      ),
+      memoryBytes,
+    }),
+  };
+  log.info("job slots", { start: slots, upTo: outbox.limits ?? "fixed", memoryBytes, role: config.SERVER_ROLE });
   const workers = startWorkers({
     db: database.db,
     handlers: engine.handlers,
     pubsub: adapters.pubsub,
     context: engine.context,
     artifacts: engine.artifacts,
+    feedbackFiles: { db: database.db, blobs: adapters.platformBlobs },
     voice: engine.voice,
     approvalDigest: { publicUrl: config.PUBLIC_URL, afterHours: config.APPROVAL_REMINDER_HOURS },
     mail: { deps: engine.mail, pollSeconds: config.MAIL_POLL_SECONDS },
@@ -401,9 +480,11 @@ async function boot(
     ...(config.OPS_REPORT_EMAIL?.length
       ? { opsReport: { to: config.OPS_REPORT_EMAIL, publicUrl: config.PUBLIC_URL } }
       : {}),
+    outbox,
+    builtInDatabase: !database.client,
     log,
   });
-  const telemetry = startTelemetry({ db: database.db, config, log });
+  const telemetry = worker ? null : startTelemetry({ db: database.db, config, log });
 
   const auth = createAuth({
     db: database.db,
@@ -450,7 +531,7 @@ async function boot(
     pingDatabase: database.ping,
     webDir: existsSync(webDir) ? webDir : undefined,
   });
-  if (!existsSync(webDir)) log.warn("web app not found; serving API only", { webDir });
+  if (!worker && !existsSync(webDir)) log.warn("web app not found; serving API only", { webDir });
 
   const realtime = createRealtime({
     db: database.db,
@@ -478,32 +559,49 @@ async function boot(
     const { pathname, search } = new URL(req.url);
     return Response.redirect(new URL(pathname + search, publicUrl).href, 302);
   };
-  const server = Bun.serve<SocketData>({
-    hostname: config.HOST,
-    port: config.PORT,
-    // Bun's default (10 s) cuts a request still waiting on its answer: opening a site in an agent's
-    // browser waits for the page, and a closed browser starts first (up to 90 s on the computer).
-    idleTimeout: 120,
-    fetch: (req, srv) => ownHostAnswer(req) ?? realtime.fetch(req, srv, (r) => app.fetch(r)),
-    websocket: realtime.websocket,
-    // What the HTTP app doesn't answer itself: a WebSocket upgrade that failed before the socket opened.
-    error(error) {
-      log.error("request failed", { error, stack: error.stack });
-      return new Response("Something went wrong on our side\n", { status: 500 });
-    },
+  // A worker answers its health check alone: the image's check reads it, and a deploy waits for it.
+  const server = worker
+    ? Bun.serve({
+        hostname: config.HOST,
+        port: config.PORT,
+        fetch: workerHealth({
+          version,
+          edition,
+          modules: modules.map((m) => m.name),
+          pingDatabase: database.ping,
+          draining: () => stopping,
+        }),
+      })
+    : Bun.serve<SocketData>({
+        hostname: config.HOST,
+        port: config.PORT,
+        // Bun's default (10 s) cuts a request still waiting on its answer: opening a site in an agent's
+        // browser waits for the page, and a closed browser starts first (up to 90 s on the computer).
+        idleTimeout: 120,
+        fetch: (req, srv) => ownHostAnswer(req) ?? realtime.fetch(req, srv, (r) => app.fetch(r)),
+        websocket: realtime.websocket,
+        // What the HTTP app doesn't answer itself: a WebSocket upgrade that failed before the socket opened.
+        error(error) {
+          log.error("request failed", { error, stack: error.stack });
+          return new Response("Something went wrong on our side\n", { status: 500 });
+        },
+      });
+  log.info(worker ? "running jobs only, answering /api/health alone (SERVER_ROLE=worker)" : "listening", {
+    url: `http://${config.HOST}:${config.PORT}`,
   });
-  log.info("listening", { url: `http://${config.HOST}:${config.PORT}` });
-  const operator = serveOperatorApi({
-    db: database.db,
-    config,
-    version: release,
-    log,
-    pubsub: adapters.pubsub,
-    hub: engine.machineHub,
-    emails: adapters.email.delivers,
-    humanCheck: adapters.humanCheck,
-    sessions: engine.sessions,
-  });
+  const operator = worker
+    ? null
+    : serveOperatorApi({
+        db: database.db,
+        config,
+        version: release,
+        log,
+        pubsub: adapters.pubsub,
+        hub: engine.machineHub,
+        emails: adapters.email.delivers,
+        humanCheck: adapters.humanCheck,
+        sessions: engine.sessions,
+      });
   if (operator) {
     log.info("operator API listening", { url: `http://${config.HOST}:${operator.port}${OPERATOR_API_PREFIX}` });
   }
@@ -517,13 +615,15 @@ async function boot(
     log.info("shutting down", { signal });
     // No new jobs, from now on: one started during the delay below would be cut by the drain.
     workers.stop();
+    // The switch is the process's: a server started after this one sets its own.
+    allowPrivateOutbound(false);
     // `/api/health` answers 503 from now on: the proxy's health check takes this instance out before it stops
     // listening, and holds new requests for the next one instead of failing them.
     if (config.SHUTDOWN_DELAY_MS > 0) await Bun.sleep(config.SHUTDOWN_DELAY_MS);
     // HTTP stops taking requests (the new deploy serves them). Not awaited: the
     // promise resolves only once every socket is closed, and browser tabs never close theirs.
-    telemetry.stop();
-    void server.stop();
+    telemetry?.stop();
+    void server?.stop();
     void operator?.stop();
     // Runners reconnect to the next instance, and people's desktops and terminals open again there.
     await engine.machineHub.stop();
@@ -547,7 +647,7 @@ async function boot(
     if (interrupted.length > 0) log.info("runs handed back for the next instance", { runs: interrupted });
     if (handed > 0) log.info("jobs handed back for the next instance", { jobs: handed });
     // Browser tabs, left open so they saw those runs finish, reconnect to the next instance.
-    await server.stop(true);
+    await server?.stop(true);
     for (const module of modules) await module.onStop?.();
     await adapters.pubsub.close?.();
     await database.close();

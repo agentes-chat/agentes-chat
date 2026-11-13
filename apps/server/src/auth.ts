@@ -3,7 +3,7 @@ import { randomBytes, sign as signWithKey } from "node:crypto";
 import type { HumanAction, HumanCheck, PubSub, RateLimiter } from "@agenteschat/adapters";
 import { nameIsPassword } from "@agenteschat/client/lib/text";
 import type { Config } from "@agenteschat/config";
-import { type Database, eq, schema } from "@agenteschat/db";
+import { and, type Database, eq, ne, schema } from "@agenteschat/db";
 import {
   accountBlock,
   announceProfile,
@@ -15,10 +15,12 @@ import {
   emailLocale,
   enqueueAccountContact,
   ForbiddenError,
+  feedbackDestination,
   holdsInvitation,
   INVITATION_MAIL_HEADER,
   INVITATION_TOKEN_HEADER,
   isAgentesCloud,
+  isFeedbackRelay,
   onUserCreated,
   queueEmail,
   recordSession,
@@ -52,6 +54,7 @@ import { desktopSignIn, FRESH_SIGN_IN_MS } from "./desktop-sign-in";
 import { humanCheckRefusal } from "./http/human-check";
 import type { Logger } from "./logger";
 import { ownerSignIn } from "./owner-claim";
+import { phoneBrowserSignIn, phoneFlowStarted } from "./phone-browser-sign-in";
 
 /**
  * Sign-in for people, built on Better Auth (ADR 0006):
@@ -134,6 +137,7 @@ export function createAuth(deps: {
     plugins: [
       expo(),
       phoneSignIn,
+      phoneBrowserSignIn(),
       desktopSignIn(),
       ownerSignIn({ db, config, log, mint: (adapter, userId) => mintSignIn(adapter, `${FOR_USER}${userId}`) }),
     ],
@@ -190,15 +194,18 @@ export function createAuth(deps: {
                 template: { kind: "password_reset", locale, url },
               });
             },
-            // The link reached the mailbox, as a confirmation link would, and the password nobody proved is gone with
-            // every session: the address counts as confirmed, so a provider can join the account (ADR 0006).
-            onPasswordReset: async ({ user }: { user: { id: string } }) => {
-              await db.update(schema.users).set({ emailVerified: true }).where(eq(schema.users.id, user.id));
-              // A new password cuts off every AI app and personal token the old one let in (ADR 0119).
-              await revokeUserApps(db, user.id);
-            },
           }
         : {}),
+      onPasswordReset: async ({ user }: { user: { id: string } }) => {
+        // An emailed link reached the mailbox, as a confirmation link would, and the password nobody proved is gone
+        // with every session: the address counts as confirmed, so a provider can join the account (ADR 0006). A link
+        // an owner made on a server without email proves nothing about the mailbox (ADR 0158).
+        if (emailEnabled) {
+          await db.update(schema.users).set({ emailVerified: true }).where(eq(schema.users.id, user.id));
+        }
+        // A new password cuts off every AI app and personal token the old one let in (ADR 0119).
+        await revokeUserApps(db, user.id);
+      },
     },
     ...(emailEnabled
       ? {
@@ -272,6 +279,8 @@ export function createAuth(deps: {
         // The app's window asks every 2 s while the browser signs in.
         "/desktop/redeem": { window: 60, max: 40 },
         "/desktop/handoff": { window: 60, max: 10 },
+        // The phone app trades once per sign-in through the browser.
+        "/phone/redeem": { window: 60, max: 10 },
         "/owner-claim": { window: 60, max: 10 },
         "/owner-key": { window: 60, max: 10 },
       },
@@ -298,7 +307,10 @@ export function createAuth(deps: {
           const target =
             (ctx.query as { authorizationURL?: unknown } | undefined)?.authorizationURL ??
             (ctx.request ? new URL(ctx.request.url).searchParams.get("authorizationURL") : undefined);
-          if (!expoProxyAllowed(target, authorizations, ctx.context.baseURL)) {
+          if (
+            !expoProxyAllowed(target, authorizations, ctx.context.baseURL) ||
+            !(await phoneFlowStarted(ctx.context, target))
+          ) {
             throw new APIError("BAD_REQUEST", { message: "Invalid authorizationURL" });
           }
         }
@@ -501,8 +513,10 @@ export async function deletionProof(
 /**
  * The Expo plugin's `/expo-authorization-proxy` (the phone app's social sign-in, ADR 0035) redirects to any
  * https address and signs that address's `state` into the visitor's state cookie: an open redirect, and a way
- * to plant someone else's sign-in on a victim. It only goes on to a configured provider's own authorization
- * endpoint, for our client id and our callback, so the provider sends the person nowhere but back here.
+ * to move someone else's sign-in into the visitor's browser. It only goes on to a configured provider's own
+ * authorization endpoint, for our client id and our callback, so the provider sends the person nowhere but back
+ * here (`expoProxyAllowed`), and only with the state of a sign-in a phone app started, which leaves no session in
+ * the browser (`phoneFlowStarted`, phone-browser-sign-in.ts).
  */
 const EXPO_PROXY_PATH = "/expo-authorization-proxy";
 
@@ -530,7 +544,11 @@ function socialAuthorizations(config: Config, appleClientId: string | null): Soc
 }
 
 /** Whether the proxy may go on to `target` (`EXPO_PROXY_PATH`). `authBaseURL`: Better Auth's, with its path. */
-export function expoProxyAllowed(target: unknown, allowed: SocialAuthorization[], authBaseURL: string): boolean {
+export function expoProxyAllowed(
+  target: unknown,
+  allowed: SocialAuthorization[],
+  authBaseURL: string,
+): target is string {
   if (typeof target !== "string" || target.includes("#")) return false;
   let url: URL;
   try {
@@ -648,6 +666,8 @@ export function authUiConfig(config: Config) {
     termsUrl: config.TERMS_URL ?? null,
     privacyUrl: config.PRIVACY_URL ?? null,
     supportEmail: config.SUPPORT_EMAIL ?? null,
+    feedback: Boolean(feedbackDestination(config)),
+    feedbackRelay: isFeedbackRelay(feedbackDestination(config)),
   };
 }
 
@@ -690,6 +710,18 @@ export async function mintUserSignIn(auth: Auth, userId: string) {
 export async function hashPassword(auth: Auth, password: string) {
   const context = await auth.$context;
   return context.password.hash(password);
+}
+
+/**
+ * A new password in place of the account's own, after a fresh sign-in (ADR 0158 §4: the server's owner after
+ * Continue on this Mac, or anyone who just signed in). As a reset does: every other session ends and every AI app
+ * and personal token the old password let in is cut off (ADR 0119); the session that asked stays.
+ */
+export async function replacePassword(auth: Auth, db: Database, userId: string, password: string, keepToken: string) {
+  const context = await auth.$context;
+  await context.internalAdapter.updatePassword(userId, await context.password.hash(password));
+  await db.delete(schema.sessions).where(and(eq(schema.sessions.userId, userId), ne(schema.sessions.token, keepToken)));
+  await revokeUserApps(db, userId);
 }
 
 /**

@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { en } from "@agenteschat/i18n";
 import type { TFunction } from "i18next";
 import type { Proposal } from "../src/api/types";
 import {
   appLabel,
+  cardDecidedBy,
   cardHead,
   cardOutcome,
   cardProposalIds,
@@ -13,6 +15,8 @@ import {
   onlyKey,
   pendingOnAgent,
   proposalSections,
+  proposalTarget,
+  proposalTitle,
   proposalWhy,
   proposerOf,
   removalOf,
@@ -126,6 +130,27 @@ describe("a name and a look on a settings card", () => {
   });
 });
 
+describe("a skill line on a settings card", () => {
+  const names = { model: (id: string) => id, person: () => undefined, channel: () => undefined, role: () => undefined };
+  test("reads as the skill by its name, off to on, and only admins change it, as on the agent's page", () => {
+    expect(
+      settingLineText(
+        t,
+        "pt-BR",
+        { field: "skill", skillId: "s-excel", from: false, to: true, label: { to: "excel" } },
+        names,
+      ),
+    ).toEqual({
+      field: 'rightHand.field.skill {"name":"excel"}',
+      from: "rightHand.value.skillOff",
+      to: "rightHand.value.skillOn",
+    });
+    const key = onlyKey({ settings: [{ field: "skill", skillId: "s-excel", from: true, to: false }] });
+    expect(key).toBe("rightHand.card.only.skill");
+    expect(en.rightHand.card.only.skill).toBe("Only admins change an agent's skills");
+  });
+});
+
 describe("a card of proposals", () => {
   test("its rows: every id, else the one an older server sent; its proposer, else the agent it changes", () => {
     expect(cardProposalIds({ proposalId: "a", proposalIds: ["a", "b"] })).toEqual(["a", "b"]);
@@ -208,6 +233,26 @@ describe("a card of proposals", () => {
     expect(one.key).toBe("proposals.proposes");
     expect(String(one.values.target)).toContain('proposals.targetChanges {"name":"Ada"');
   });
+
+  test("the context: the workspace's by its name, a personal workspace's as what its agents know (ADR 0159)", () => {
+    const name = () => "Ada";
+    const context = row("1", { target: { type: "org_context" }, title: "Update the context" });
+    // By name only, as before; a team's workspace reads the same.
+    expect(proposalTarget(t, context, name, "Acme")).toBe('proposals.targetContext {"org":"Acme"}');
+    expect(proposalTarget(t, context, name, { name: "Acme", mode: "team" })).toBe(
+      'proposals.targetContext {"org":"Acme"}',
+    );
+    expect(proposalTitle(t, context, "Acme", name)).toBe("proposals.titleContext=Update the context");
+    // A personal workspace's never reads "Personal context".
+    const personal = { name: "Personal", mode: "personal" as const };
+    expect(proposalTarget(t, context, name, personal)).toBe('proposals.targetContextPersonal {"org":"Personal"}');
+    expect(proposalTitle(t, context, personal, name)).toBe("proposals.titleContextPersonal=Update the context");
+    expect(cardHead(t, [context], "Theo", name, personal).values.target).toBe(
+      'proposals.targetContextPersonal {"org":"Personal"}',
+    );
+    // An agent's own changes read the same in either mode.
+    expect(proposalTarget(t, role("1"), name, personal)).toContain("proposals.targetRole");
+  });
 });
 
 describe("how a decided card ended", () => {
@@ -228,6 +273,35 @@ describe("how a decided card ended", () => {
       accepted: true,
       label: 'proposals.acceptedSome {"done":1,"total":2}',
     });
+  });
+});
+
+describe("who decided a card", () => {
+  const ana = { userId: "u-ana", name: "Ana" };
+
+  test("one person deciding every row the same way is named, the viewer as you", () => {
+    const rows = [row("1", { status: "accepted", decidedBy: ana }), row("2", { status: "accepted", decidedBy: ana })];
+    expect(cardDecidedBy(t, rows, "u-me")).toBe('rightHand.card.appliedBy {"name":"Ana"}');
+    expect(cardDecidedBy(t, rows, "u-ana")).toBe("rightHand.card.appliedByYou");
+    expect(cardDecidedBy(t, [row("1", { status: "refused", decidedBy: ana })], "u-me")).toBe(
+      'rightHand.card.declinedBy {"name":"Ana"}',
+    );
+    expect(cardDecidedBy(t, [row("1", { status: "refused", decidedBy: ana })], "u-ana")).toBe(
+      "rightHand.card.declinedByYou",
+    );
+  });
+
+  test("rows that ended apart, a newer text or nobody on record say only how the card ended", () => {
+    const bia = { userId: "u-bia", name: "Bia" };
+    expect(
+      cardDecidedBy(
+        t,
+        [row("1", { status: "accepted", decidedBy: ana }), row("2", { status: "accepted", decidedBy: bia })],
+        "u-me",
+      ),
+    ).toBe("proposals.accepted");
+    expect(cardDecidedBy(t, [row("1", { stale: true })], "u-me")).toBe("proposals.stale");
+    expect(cardDecidedBy(t, [row("1", { status: "accepted" })], "u-me")).toBe("proposals.accepted");
   });
 });
 

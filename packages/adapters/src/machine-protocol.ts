@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 52;
+export const MACHINE_PROTOCOL_VERSION = 61;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -358,9 +358,24 @@ export const BROWSER_WARM_PROTOCOL = 27;
  * (contents: read). The checkout then fetches straight from github.com with it and pushes through our proxy
  * (`remote.origin.pushurl`). A clone outlives its request: past `timeoutSeconds` the answer is `cloning` and the
  * download goes on (at most two at once per computer, the rest wait); a later `git.sync` of the same folder waits
- * for it again. The server sends `github` only to these runners and gives older ones the full clone deadline.
+ * for it again. The server gives older runners the full clone deadline, and sends `github` only from
+ * `GIT_STATELESS_TOKEN_PROTOCOL` on.
  */
 export const GIT_DIRECT_PROTOCOL = 35;
+
+/**
+ * Protocol 53: `git.sync`'s `github` may also be GitHub's stateless installation token (`ghs_<app id>_<JWT>`, about
+ * 520 characters, with dots and dashes), the only kind GitHub mints since its rollout ended on 2026-10-02 (GitHub
+ * changelog, "Stateless GitHub App installation tokens rolled out"). Runners 35 to 52 take only the old 40-character
+ * kind and refuse the whole `git.sync` on any other, so the server sends them no `github`: their checkouts fetch
+ * through the proxy.
+ */
+export const GIT_STATELESS_TOKEN_PROTOCOL = 53;
+/**
+ * A GitHub App installation token of either kind (GitHub's own pattern, `ghs_[A-Za-z0-9._-]{36,}`, bounded). Never a
+ * person's: OAuth (`gho_`), personal (`ghp_`, `github_pat_`) and user-to-server (`ghu_`) tokens don't match.
+ */
+export const GITHUB_APP_TOKEN = /^ghs_[A-Za-z0-9._-]{36,4096}$/;
 
 /**
  * Protocol 34: browser profiles (ADR 0110). Every `browser.*` op may carry `profile: { id }`: it runs in that
@@ -568,6 +583,245 @@ export const CLAUDE_SHARED_PROTOCOL = 51;
  * command ("The browser doesn't take agentes:viewport"): the server asks no older runner.
  */
 export const BROWSER_VIEWPORT_PROTOCOL = 52;
+/**
+ * Bring your own devices: `hello.phones` and `phones.changed` (the phones this computer reaches: Android over adb, an
+ * iPhone through `devicectl`, its own emulators and simulators), `hello.toolchains`, and the `phone.*` ops. Each phone
+ * op names one phone and the holder it runs for; the runner keeps the phone's lock and answers `phone_busy` for
+ * another holder. Older runners report no phones, so nothing asks them.
+ */
+export const PHONES_PROTOCOL = 54;
+/**
+ * A phone's screen live, a stream (`stream.open` with `kind: "phone"`): the runner sends its pictures as binary frames
+ * (a PNG or a JPEG each, at most `PHONE_VIEW.window` the viewer hasn't acknowledged), and a viewer in control sends
+ * `tap`, `swipe`, `text` and `key` text frames. Control takes the phone for the person (`phone.holder`); an agent
+ * holding it waits until they give it back, and what it was doing on the phone stops. Older runners don't know the
+ * stream: the server refuses it as `runner_outdated`.
+ */
+export const PHONE_SCREEN_PROTOCOL = 55;
+/** Pairing an Android phone over Wi-Fi (`phone.pair.*`): the server asks no older runner. */
+export const PHONE_PAIRING_PROTOCOL = 55;
+/**
+ * iPhones over Wi-Fi (`phone.wifi`): a Mac lists the iPhones on its network that already trust it, and uses one only
+ * once its owner picks it (`allow`), through CoreDevice's own tunnel. The server asks no older runner.
+ */
+export const IPHONE_WIFI_PROTOCOL = 56;
+/**
+ * `pause.set`: a person who may manage the computer pauses or resumes it from the apps. The runner applies it as its
+ * own pause (stored, `runner.state` sent) and keeps `by`, the person who did it, until the next local change.
+ */
+export const REMOTE_PAUSE_PROTOCOL = 57;
+/**
+ * From this protocol on, in system mode a Gemini sign-in is made for all of its owner's agents there too (`begin`'s
+ * `shared` for `antigravity`): root's Antigravity CLI keeps the Google sign-in and each turn gets a copy (`agy_auth`
+ * grant). Older runners lend it to one agent.
+ */
+export const SHARED_GEMINI_PROTOCOL = 58;
+/**
+ * Codex brain turns on Windows (ADR 0032 "Codex"): the native `codex.exe`, a `plan` or `work` turn only inside MXC.
+ * A Windows runner before it refuses every Codex turn, so the server reads it as too old for Codex there.
+ */
+export const CODEX_WINDOWS_PROTOCOL = 60;
+/**
+ * `keep_running` (ADR 0176): `keep.start` and `keep.end` take and end an agent's hold, the computer's standard "don't go
+ * idle" lock, bound to one of its programs, its browser or a time; `hello.holds` says which live and which ended since,
+ * and `keep.ended` says one ended. The server asks no older runner.
+ */
+export const KEEP_RUNNING_PROTOCOL = 61;
+/** Why a hold ended on the computer: its program or browser went away (or its lock did), or its time ran out. */
+export type HoldEnd = "exited" | "expired";
+
+export type PhonePlatform = "android" | "ios";
+export type PhoneKind = "device" | "emulator" | "simulator";
+/** A phone the host sees; one it doesn't see isn't reported (the server marks it offline). */
+export type PhoneState = "ready" | "needs_you" | "preparing" | "unsupported";
+/** Why a phone isn't ready, as a code the apps word. */
+export type PhoneReason =
+  /** The screen is locked (iPhone), or the phone asks to be unlocked to trust the computer. */
+  | "locked"
+  /** Android: USB debugging isn't allowed for this computer yet (tap Allow on the phone). */
+  | "unauthorized"
+  /** iPhone: the phone doesn't trust this Mac yet (tap Trust on the phone). */
+  | "untrusted"
+  /** iPhone: Developer Mode is off (Settings › Privacy & Security › Developer Mode). */
+  | "developer_mode_off"
+  /** iPhone: Settings › Developer › Enable UI Automation is off. */
+  | "ui_automation_off"
+  /** iPhone: no Xcode on the Mac, or its iPhone SDK is older than the phone's iOS (`xcode_too_old`). */
+  | "xcode_missing"
+  | "xcode_too_old"
+  /** iPhone: the Mac is preparing the phone (device support download, needs internet). */
+  | "device_support"
+  /** iPhone: the test helper isn't built yet, or its free signature ran out (`helper_expired`). */
+  | "helper_missing"
+  | "helper_expired"
+  /** iPhone: Xcode on the Mac is signed in to no Apple Account (Xcode › Settings › Apple Accounts), so nothing signs the helper. */
+  | "apple_account_missing"
+  /** iPhone: Xcode lists an Apple Account but no team yet (it shows one after its first build for an iPhone). */
+  | "apple_team_missing"
+  /** iPhone: the phone refused UI actions (unlocked, so its daily passcode grant or UI Automation). */
+  | "ui_not_authorized"
+  /** iPhone: a free Apple Account's limit (3 apps of its own per phone, 10 app ids a week) stops the helper. */
+  | "team_limit"
+  /** iPhone: the phone doesn't trust the helper's developer yet (Settings › General › VPN & Device Management). */
+  | "helper_untrusted"
+  /** An emulator or simulator still starting. */
+  | "booting"
+  /** Windows sees no driver for this phone (install its maker's USB driver). */
+  | "no_driver"
+  /** Too old an OS for the tools (`unsupported`): Android before 5, iOS before 17. */
+  | "os_too_old"
+  /** adb reports the phone `offline` (replug it, or it is restarting). */
+  | "adb_offline"
+  /** iPhone over Wi-Fi: not on the Mac's network now. */
+  | "wifi_away"
+  /** iPhone over Wi-Fi: on the network, but its tunnel didn't come up (locked or asleep). */
+  | "wifi_asleep"
+  /** iPhone over Wi-Fi: its tunnel dropped, or its address couldn't be read for certain. */
+  | "tunnel_down"
+  /** iPhone over Wi-Fi: it doesn't trust this Mac (it never did over a cable, or the pairing was removed). */
+  | "wifi_untrusted";
+
+/** `IPHONE_WIFI_PROTOCOL`: an iPhone on the Mac's network that trusts it, not used until its owner picks it. */
+export interface WifiIphone {
+  /** Its UDID, as `RunnerPhone.serial` once picked. */
+  serial: string;
+  model: string;
+  name?: string;
+  osVersion: string;
+}
+
+/** Who holds a phone: the run and agent, and the person it works for. */
+export interface PhoneHolder {
+  runId: string | null;
+  agentId: string | null;
+  userId: string | null;
+  /** What it is doing, in the agent's words ("Recording a test video"). */
+  label?: string;
+  /** ISO; when it first took the phone. */
+  since: string;
+}
+
+/** One phone in `hello.phones` / `phones.changed`. */
+export interface RunnerPhone {
+  platform: PhonePlatform;
+  /** adb's serial, or the UDID. */
+  serial: string;
+  kind: PhoneKind;
+  /** The maker's model name ("Pixel 8", "iPhone 16"). */
+  model: string;
+  /** The name the phone itself carries, when it has one ("Sam's iPhone"). */
+  name?: string;
+  osVersion: string;
+  state: PhoneState;
+  reason?: PhoneReason;
+  transport?: "usb" | "wifi" | "local";
+  screen?: { width: number; height: number };
+  abi?: string;
+  power?: "ac" | "battery";
+  battery?: number;
+  /** Who holds it now; null or absent: free. */
+  holder?: PhoneHolder | null;
+}
+
+/** `PHONES_PROTOCOL`: where pairing an Android phone over Wi-Fi (Wireless debugging) stands on its computer. */
+export type PhonePairState = "waiting" | "pairing" | "connecting" | "connected" | "failed";
+/** Why a Wi-Fi pairing failed, as a code the apps word. */
+export type PhonePairFailure =
+  /** adb's mDNS is off on the computer, so it can't find phones on the network. */
+  | "mdns_off"
+  /** The phone couldn't be reached (another network, or one that keeps devices apart). */
+  | "same_wifi"
+  /** The phone didn't take the pairing (a wrong code, or its pairing screen closed). */
+  | "refused"
+  /** Nothing scanned the code, or nothing answered, in 2 minutes. */
+  | "timed_out"
+  /** Under Android 14, or a security patch before 2026-05-01 (CVE-2026-0073): disconnected again. */
+  | "outdated"
+  | "adb_missing"
+  | "canceled"
+  | "failed";
+
+export interface PhonePairing {
+  id: string;
+  way: "qr" | "code";
+  state: PhonePairState;
+  reason?: PhonePairFailure;
+  /** Only in `phone.pair.start`'s answer: the QR text, `WIFI:T:ADB;S:<service>;P:<password>;;`. */
+  qr?: string;
+  /** Connected: the phone's own serial, as `phones.changed` reports it. */
+  serial?: string;
+  /** ISO: when it stops waiting for the phone. */
+  expiresAt: string;
+}
+
+/** `192.168.1.20:37099` (or `[fe80::1]:37099`) as the phone shows it under Pair device with pairing code. */
+export function pairAddress(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const text = input.trim();
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}):(\d{1,5})$/.exec(text);
+  const v6 = /^\[([0-9a-fA-F:%.\w]{2,60})\]:(\d{1,5})$/.exec(text);
+  const port = Number((v4 ? v4[5] : v6?.[2]) ?? 0);
+  if (port < 1 || port > 65535) return null;
+  if (v4?.slice(1, 5).every((o) => Number(o) <= 255)) return text;
+  return v6?.[1]?.includes(":") ? text : null;
+}
+
+/** What this computer can build and drive with (versions found, best effort; absent: not found). */
+export interface RunnerToolchains {
+  git?: string;
+  java?: string;
+  /** The Android SDK's folder was found (`ANDROID_HOME`, the usual places). */
+  androidSdk?: string;
+  adb?: string;
+  scrcpy?: string;
+  maestro?: string;
+  /** Xcode's version (macOS). */
+  xcode?: string;
+  /** The Apple Account team that signs the iPhone test helper, as Xcode names it ("Sam Rivera (Personal Team)"). */
+  appleTeam?: string;
+  /** What Xcode's Apple Accounts give: a team, an account with no team yet, or no account. */
+  appleAccount?: "team" | "no_team" | "none";
+  /** The iPhone SDK's version (`xcrun --sdk iphoneos --show-sdk-version`, "26.2"): the newest iOS it drives. */
+  xcodeSdk?: string;
+  node?: string;
+  /** Podman's version: with the runner in system mode, the agents' containers (ADR 0169). */
+  podman?: string;
+}
+
+/** The phone a `phone.*` op is for. */
+export interface PhoneTarget {
+  platform: PhonePlatform;
+  serial: string;
+  /** Whom it runs for: the call takes the phone, or renews the lock, as this holder. */
+  holder: PhoneHolder;
+}
+
+/** The keys a person presses on a phone's screen from the apps. */
+export const PHONE_KEYS = [
+  "home",
+  "back",
+  "enter",
+  "delete",
+  "app_switch",
+  "volume_up",
+  "volume_down",
+  "power",
+] as const;
+export type PhoneKey = (typeof PHONE_KEYS)[number];
+
+/** A phone's screen live (`stream.open` with `kind: "phone"`). */
+export const PHONE_VIEW = {
+  /** Pictures on their way that the viewer hasn't acknowledged (`{"type":"ack"}` once it drew one). */
+  window: 2,
+  /** The shortest time between two pictures: about 8 a second at most. */
+  frameMs: 120,
+  /** How often an unchanged screen is looked at again. */
+  idleMs: 400,
+  /** A swipe's length, in milliseconds. */
+  swipeMs: [1, 5000] as [number, number],
+  /** Characters typed in one `text` frame. */
+  text: 2000,
+} as const;
 export const BROWSER_DEVICES = ["phone", "tablet", "desktop"] as const;
 export type BrowserDevice = (typeof BROWSER_DEVICES)[number];
 /** A phone's and a tablet's size when none is given, in CSS pixels, and their pixel ratio. */
@@ -860,6 +1114,41 @@ export const PLAN_USAGE_LIMITS = { windows: 8, label: 40 } as const;
 export type AccountLoginState = "waiting" | "done" | "failed" | "expired";
 
 /**
+ * Why a sign-in ended without signing in (`status`'s `code`, beside `error`), for the apps to say in their own words.
+ * An older runner sends none.
+ */
+export const ACCOUNT_LOGIN_FAILURES = [
+  /** The CLI isn't installed on the computer. */
+  "not_installed",
+  /** The CLI found no terminal to read the pasted code from. */
+  "no_tty",
+  /** The CLI couldn't reach the provider. */
+  "network",
+  /** The provider refused the pasted code: not the page's, already used, or too old. */
+  "bad_code",
+  /** The CLI stopped with an error of its own (its words in `message`). */
+  "cli_exit",
+  /** The CLI finished, but its status says the account isn't signed in (its words in `message`). */
+  "not_signed_in_after_login",
+  /**
+   * The CLI finished, but its status didn't answer in time; or a Gemini sign-in for all agents' copy said nothing for
+   * sure (its words, if any, in `message`).
+   */
+  "status_unknown",
+  /** `claude setup-token` finished without showing its token. */
+  "no_token",
+  /** It signed in, but the computer couldn't keep the sign-in. */
+  "not_kept",
+  /** Nobody finished it within `ACCOUNT_LOGIN_TTL_MS` (`expired`). */
+  "timeout",
+  /** The person canceled it. */
+  "canceled",
+] as const;
+export type AccountLoginFailure = (typeof ACCOUNT_LOGIN_FAILURES)[number];
+export const isAccountLoginFailure = (v: unknown): v is AccountLoginFailure =>
+  (ACCOUNT_LOGIN_FAILURES as readonly unknown[]).includes(v);
+
+/**
  * `op: "account"` (protocol 13, ADR 0041 §2). `begin` starts the CLI's sign-in
  * in a new folder named `loginId` (it becomes the account id). Claude Code
  * answers the URL it printed and an ephemeral public key; the browser seals the
@@ -1124,7 +1413,11 @@ export const STREAM_CLOSE = {
  * server may add a desktop's `keyboard` (a layout): it is ignored, as Xvnc types what the person's own layout made
  * (ADR 0058 §16).
  */
-export type StreamRequest = { kind: "desktop"; mode: DesktopMode } | { kind: "terminal"; cols: number; rows: number };
+export type StreamRequest =
+  | { kind: "desktop"; mode: DesktopMode }
+  | { kind: "terminal"; cols: number; rows: number }
+  /** A phone's screen (`PHONES_PROTOCOL`): `stream.open` carries the phone itself as `phone`, its holder the person. */
+  | { kind: "phone"; mode: DesktopMode; phoneId: string };
 
 /** A desktop stream's mode: `watch` logs in with the view-only password, `control` with the full one. */
 export type DesktopMode = "watch" | "control";
@@ -1137,7 +1430,7 @@ export type DesktopMode = "watch" | "control";
  * starts first; without it the runner refuses `desktop_off`, as runners before
  * it did. The server leaves it out while the agent may start nothing (held).
  */
-export type StreamOpenRequest = StreamRequest & { streamId: string; start?: boolean };
+export type StreamOpenRequest = StreamRequest & { streamId: string; start?: boolean; phone?: PhoneTarget };
 
 /**
  * A data socket's first frame (runner → server, text): the machine's token
@@ -1159,8 +1452,13 @@ export type StreamControl =
   | { type: "resize"; cols: number; rows: number }
   | { type: "exit"; code: number | null }
   | { type: "mode"; mode: DesktopMode }
-  /** Protocol 49: a browser view's frame arrived (server → runner): one more may go (`BROWSER_VIEW`). */
-  | { type: "ack" };
+  /** Protocol 49: a browser view's frame arrived (server → runner), or a phone's picture was drawn (viewer → runner). */
+  | { type: "ack" }
+  /** A person in control of a phone's screen (viewer → runner), at fractions (0 to 1) of its width and height. */
+  | { type: "tap"; x: number; y: number }
+  | { type: "swipe"; x1: number; y1: number; x2: number; y2: number; ms: number }
+  | { type: "text"; text: string }
+  | { type: "key"; key: PhoneKey };
 
 /**
  * A person's turn in an agent's browser (`browser.handoff`, ADR 0040 §6), as
@@ -1309,7 +1607,8 @@ export interface GitSyncRequest {
   author: { name: string; email: string };
   /**
    * `clone: false`: update it only when it is already there. `dir` is relative to the agent's folder. `github`
-   * (protocol 35): a GitHub App installation token for this repository only (contents: read, 1 hour).
+   * (protocol 35; GitHub's stateless kind from protocol 53, `GITHUB_APP_TOKEN`): a GitHub App installation token for
+   * this repository only (contents: read, 1 hour).
    */
   repos: { repo: string; dir: string; clone: boolean; github?: string }[];
   /** Also update every checkout already under `repos/` (one `owner/name` level). */
@@ -1553,7 +1852,12 @@ export type WireBrainEvent =
   /** Protocol 46: Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
   /** A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended. */
-  | { type: "tool_started"; id: string; name: string };
+  | { type: "tool_started"; id: string; name: string }
+  /**
+   * A file a tool of the brain's own made (Codex's image generation), kept in the agent's folder (`path`, relative
+   * to it): the server sends it to the Drive and its card goes with the reply. An older server drops the event.
+   */
+  | { type: "file"; path: string };
 
 /**
  * `brain.steer` (protocol 15): messages for the turn of `runId` in progress.
@@ -1622,7 +1926,18 @@ export interface BrainTurnRequest {
    * The turn's permission profile (ADR 0053 §3): `work` (default) edits and asks a person (or the server's
    * rules) for the rest; `plan` reads only. Codex honours it from `BRAIN_PROFILES_PROTOCOL` on.
    */
-  permissions?: { mode?: "plan" | "work" | "chat"; branchPrefix?: string; allow?: string[] };
+  permissions?: {
+    mode?: "plan" | "work" | "chat";
+    branchPrefix?: string;
+    allow?: string[];
+    /**
+     * Protocol 59 (`ASKS_PROTOCOL`): how much the agent asks, when it isn't the default. `always`: a Claude Code
+     * work turn lets only reads through on the computer, and every other call of its own tools reaches the server's
+     * prompt. `never`: a command the computer holds is refused with where it runs, never with a wait for a person.
+     * An older runner ignores it.
+     */
+    asks?: "always" | "never";
+  };
   /** Protocol 13: the account folder to run in (`accounts/<kind>/<id>`); absent: the machine's own sign-in. */
   account?: string;
   /** Protocol 13: how hard it thinks; absent: the CLI's default. */
@@ -1642,6 +1957,12 @@ export interface BrainTurnRequest {
    */
   personWaiting?: boolean;
 }
+
+/**
+ * From this protocol on the runner reads `BrainTurnRequest.permissions.asks`, and `exec` answers `merge` for an
+ * approved command that is one merge. The server sends an older runner a `plan` turn for an agent that always asks.
+ */
+export const ASKS_PROTOCOL = 59;
 
 /** Largest strings of a `brain.event` (tool inputs and results are cut, text deltas are small). */
 export const BRAIN_LIMITS = {
@@ -1784,6 +2105,11 @@ export interface MachineAgent {
   account?: string;
   /** The other accounts here it thinks with: the team's right hand on people's own plans (ADR 0137 §11). */
   accounts?: string[];
+  /**
+   * Its containers service may run here (ADR 0169). Absent for a brain whose shell runs in a sandbox of the CLI's own,
+   * which that service, outside it, would be a way out of, and for the team's right hand, which thinks on several.
+   */
+  containers?: boolean;
 }
 
 /** The pause state (protocol 9). `until` null: paused until the owner resumes. */
@@ -1791,6 +2117,8 @@ export interface RunnerPause {
   paused: boolean;
   /** ISO time; absent or null with `paused: true` means "until resumed". */
   until?: string | null;
+  /** `REMOTE_PAUSE_PROTOCOL`: the user id of the person who paused it from the apps; absent when paused on it. */
+  by?: string | null;
 }
 
 /** The tools a person turns on or off on the machine (protocol 10). */
@@ -1895,6 +2223,9 @@ export interface RunnerInfo {
   ownUsage?: OwnPlanUsage;
   /** Protocol 22: how big the computer is. */
   size?: MachineSize;
+  /** `PHONES_PROTOCOL`: the phones it reaches, and what it can build with. */
+  phones?: RunnerPhone[];
+  toolchains?: RunnerToolchains;
   /** Protocol 50: the methods a new Claude sign-in for all agents can use here (`claudeLoginMethodsOf`). */
   claudeLoginMethods?: AuthMethod[];
   /** Why this computer doesn't list `cli_login` for all agents though it was switched on (its self-check's answer). */
@@ -1904,6 +2235,13 @@ export interface RunnerInfo {
    * group, which the computer's egress rules may route apart from the rest of root.
    */
   authEgressGroup?: true;
+  /** `KEEP_RUNNING_PROTOCOL`: the holds that live here, and those that ended lately with why (the server may not know). */
+  holds?: RunnerHolds;
+}
+
+export interface RunnerHolds {
+  live: string[];
+  ended: { id: string; reason: HoldEnd }[];
 }
 
 export interface FileEntry {
@@ -2069,6 +2407,60 @@ export type MachineRequest = (
   | { op: "vault.key" }
   /** `requestId` and `publicKey`: what the answer is sealed to (`madePasswordAad`). */
   | { op: "vault.password"; requestId: string; publicKey: string; rules: PasswordRules }
+  /** `PHONES_PROTOCOL`: take the phone (or renew the lock) for `holder`, doing nothing else. */
+  | ({ op: "phone.claim" } & PhoneTarget)
+  /** Let the phone go: `holder.runId`'s lock only, or anyone's with `force` (its owner pressed Stop). */
+  | ({ op: "phone.release" } & PhoneTarget & { force?: boolean })
+  /** Install an app from `path` (an `.apk`, `.aab`, `.app` or `.ipa` in the agent's folder) and say its id. */
+  | ({ op: "phone.install" } & PhoneTarget & { path: string })
+  /** Start an installed app by its id (Android package, iOS bundle id). */
+  | ({ op: "phone.launch" } & PhoneTarget & { app: string })
+  /**
+   * Run a Maestro flow (YAML text) on the phone, recording the screen around it with `record`. The video and the
+   * log land in the agent's folder (`.agentes/phone/`).
+   */
+  | ({ op: "phone.flow" } & PhoneTarget & {
+        flow: string;
+        record?: boolean;
+        timeoutSeconds: number;
+        env?: Record<string, string>;
+      })
+  /** Record the screen for `seconds` (at most 170) into the agent's folder. */
+  | ({ op: "phone.record" } & PhoneTarget & { seconds: number })
+  /** A PNG of the screen into the agent's folder. */
+  | ({ op: "phone.screenshot" } & PhoneTarget)
+  /** The phone's log: the last `lines`, only `app`'s when given. */
+  | ({ op: "phone.logs" } & PhoneTarget & { app?: string; lines: number })
+  /**
+   * `PHONES_PROTOCOL`: pair an Android phone over Wi-Fi. `start` answers the QR the phone scans (Wireless debugging ›
+   * Pair device with QR code); `code` pairs with the six digits and the address the phone shows instead. Either goes
+   * on by itself until connected, failed or 2 minutes; `status` says where it is. One at a time: a new one ends the last.
+   */
+  | { op: "phone.pair.start" }
+  | { op: "phone.pair.code"; address: string; code: string }
+  | { op: "phone.pair.status"; pairingId: string }
+  | { op: "phone.pair.cancel"; pairingId: string }
+  /** `REMOTE_PAUSE_PROTOCOL`: pause (until `until`, null: until resumed) or resume, for the person `by`. */
+  | { op: "pause.set"; paused: boolean; until?: string | null; by: string }
+  /**
+   * A phone guide is open and waits for a phone: for the next minute, a Windows runner also looks for a plugged phone
+   * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. Older runners answer
+   * `bad_request`, which the server ignores.
+   */
+  | { op: "phone.look" }
+  /**
+   * `IPHONE_WIFI_PROTOCOL`: the iPhones on this Mac's network that trust it and aren't used yet (`list`), or use one
+   * over Wi-Fi from now on (`allow`) or no longer (`forget`). Each answers the list as it is then.
+   */
+  | { op: "phone.wifi"; action: "list" | "allow" | "forget"; serial?: string }
+  /**
+   * `KEEP_RUNNING_PROTOCOL`: takes hold `holdId` for the request's agent, or again with these bounds: bound to its
+   * program `pid` (one of its own), to its browser (`browser`, open now, always with `until`), and with `until` (ISO)
+   * ending then at the latest; `until` alone binds it to that time.
+   */
+  | { op: "keep.start"; holdId: string; pid?: number; browser?: boolean; until?: string }
+  /** Ends hold `holdId`; with `stop`, what it holds too: its program (SIGTERM, SIGKILL 10 s later) or the browser. */
+  | { op: "keep.end"; holdId: string; stop?: boolean }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -2127,6 +2519,23 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "desktop.text",
   "vault.key",
   "vault.password",
+  "phone.claim",
+  "phone.release",
+  "phone.install",
+  "phone.launch",
+  "phone.flow",
+  "phone.record",
+  "phone.screenshot",
+  "phone.logs",
+  "phone.pair.start",
+  "phone.pair.code",
+  "phone.pair.status",
+  "phone.pair.cancel",
+  "pause.set",
+  "phone.look",
+  "phone.wifi",
+  "keep.start",
+  "keep.end",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -2137,7 +2546,7 @@ export interface MachineReplies {
     stderr: string;
     timedOut: boolean;
     canceled?: { killed: boolean };
-    /** It ran as a merge the agent does without asking (`mergeRepos`). */
+    /** It ran as one merge with no card of its own: in `mergeRepos`, or approved (a saved rule, an agent that never asks). */
     merge?: MergeDone;
   };
   /** `base64: null`: no such file. */
@@ -2166,6 +2575,10 @@ export interface MachineReplies {
     accounts?: RunnerAccountInfo[];
     /** `failed`: why, for people. */
     error?: string;
+    /** `failed` or `expired`: why, as a code (`ACCOUNT_LOGIN_FAILURES`). */
+    code?: AccountLoginFailure;
+    /** With `code`: what the CLI itself said, without tokens or the pasted code, cut at a word. */
+    message?: string;
   };
   /** `cwd`: where it runs, relative to the agent's folder (`.worktrees/<taskId>` with a branch). */
   "task.start": {
@@ -2267,6 +2680,26 @@ export interface MachineReplies {
   /** Protocol 45: the key's id, its public key (raw P-256, base64) and when it stops opening anything (ISO). */
   "vault.key": { vaultKey: { keyId: string; publicKey: string; expiresAt: string } };
   "vault.password": { box: WireSecretBox };
+  "phone.claim": { holder: PhoneHolder };
+  "phone.release": { released: boolean };
+  /** `app`: the installed app's id, when the runner could read it. */
+  "phone.install": { app?: string; output: string };
+  "phone.launch": { output: string };
+  /** Paths are relative to the agent's folder. `video`: with `record`, when the recording held. */
+  "phone.flow": { passed: boolean; output: string; seconds: number; video?: string; log?: string };
+  "phone.record": { path: string; seconds: number; bytes: number };
+  "phone.screenshot": { path: string; width?: number; height?: number };
+  "phone.logs": { text: string };
+  "phone.pair.start": PhonePairing;
+  "phone.pair.code": PhonePairing;
+  "phone.pair.status": PhonePairing;
+  "phone.pair.cancel": { canceled: boolean };
+  "pause.set": { paused: RunnerPause };
+  "phone.look": { looking: boolean };
+  "phone.wifi": { available: WifiIphone[] };
+  "keep.start": { held: true };
+  /** `false`: no such hold lived here. */
+  "keep.end": { ended: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */
@@ -2343,6 +2776,14 @@ export type MachineErrorCode =
    * message says why. Older servers read it like `internal`.
    */
   | "unsupported"
+  /** `PHONES_PROTOCOL`: the host doesn't see this phone now (unplugged, adb restarted). */
+  | "phone_missing"
+  /** Another holder has the phone; the message names it. */
+  | "phone_busy"
+  /** The phone needs its person first (locked, not trusted, Developer Mode off); the message says what to do. */
+  | "phone_not_ready"
+  /** A tool the op needs isn't on the computer and couldn't be fetched (adb, Maestro, scrcpy, Xcode); the message says which. */
+  | "tool_missing"
   | "bad_request"
   | "internal";
 
@@ -2449,6 +2890,10 @@ export type RunnerFrame =
   | { type: "accounts.changed"; accounts: RunnerAccountInfo[]; ownUsage?: OwnPlanUsage }
   /** Protocol 41: the coding CLIs found changed since `hello` (`hello.executors`, whole). */
   | { type: "executors.changed"; executors: NonNullable<RunnerInfo["executors"]> }
+  /** What `hello.toolchains` said changed (an Apple team found, Xcode updated), whole. An older server drops it. */
+  | { type: "toolchains.changed"; toolchains: RunnerToolchains }
+  /** `PHONES_PROTOCOL`: the phones it reaches changed (one came or went, a state or a holder changed), whole. */
+  | { type: "phones.changed"; phones: RunnerPhone[] }
   /**
    * Protocol 10: the person answered an `access.request` on the machine (or it
    * expired). `granted` also comes with an `access.changed`.
@@ -2463,20 +2908,33 @@ export type RunnerFrame =
   /** Protocol 12: one image of an agent's browser while its stream is on (newest wins; the server never stores it). */
   | { type: "browser.frame"; agentId: string; seq: number; data: string; metadata: BrowserFrameMetadata }
   /** Protocol 12: an agent's stream stopped on the machine (asked, session closed, error). */
-  | { type: "browser.stream.ended"; agentId: string; reason: "stopped" | "closed" | "error"; message?: string };
+  | { type: "browser.stream.ended"; agentId: string; reason: "stopped" | "closed" | "error"; message?: string }
+  /** `KEEP_RUNNING_PROTOCOL`: a hold ended on the computer by itself (the next `hello` says so again). */
+  | { type: "keep.ended"; holdId: string; reason: HoldEnd };
 
 /** A tool as `mcp.tools` lists it (what MCP `tools/list` returns). */
 export interface McpToolInfo {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** MCP's own `_meta`, passed to the CLI as is (`MCP_ALWAYS_LOAD`). */
+  _meta?: Record<string, unknown>;
 }
+
+/**
+ * A tool's `_meta` key Claude Code reads: listed with its schema from the first round, never behind its ToolSearch.
+ * The runner sets it on the tools every run reaches for; the server on what one kind of run needs at once.
+ */
+export const MCP_ALWAYS_LOAD = "anthropic/alwaysLoad";
 
 /** Most tools one `mcp.tools` frame carries. */
 export const MCP_TOOLS_MAX = 200;
 
-/** Largest `mcp.call` arguments (JSON characters). */
-export const MCP_ARGS_MAX_CHARS = 64 * 1024;
+/**
+ * Largest `mcp.call` arguments (JSON characters): a source file written whole through a connector's tool
+ * (`create_or_update_file`) fits. At most 3 MB in UTF-8, so the frame stays inside `MAX_FRAME_BYTES`.
+ */
+export const MCP_ARGS_MAX_CHARS = 1024 * 1024;
 
 export const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 const isString = (v: unknown): v is string => typeof v === "string";
@@ -2491,6 +2949,100 @@ const fileList = (v: unknown) =>
 const finite = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
 /** A full or short git commit id (lowercase hex). */
 export const isSha = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f]{7,64}$/.test(v);
+
+/** What a phones report may carry: the host's own word only, so each field is bounded here. */
+export const PHONE_LIMITS = { phones: 32, serial: 200, model: 100, name: 80, osVersion: 40, label: 200 };
+const PHONE_STATES: readonly PhoneState[] = ["ready", "needs_you", "preparing", "unsupported"];
+const PHONE_KINDS: readonly PhoneKind[] = ["device", "emulator", "simulator"];
+const TOOLCHAINS: readonly (keyof RunnerToolchains)[] = [
+  "git",
+  "java",
+  "androidSdk",
+  "adb",
+  "scrcpy",
+  "maestro",
+  "xcode",
+  "appleTeam",
+  "appleAccount",
+  "xcodeSdk",
+  "node",
+  "podman",
+];
+const idOrNull = (v: unknown) => (isString(v) && v.length <= 64 ? v : null);
+
+function parsePhoneHolder(v: unknown): PhoneHolder | null {
+  if (!isObject(v) || !isString(v.since) || !Number.isFinite(Date.parse(v.since))) return null;
+  const label = cut(v.label, PHONE_LIMITS.label);
+  return {
+    runId: idOrNull(v.runId),
+    agentId: idOrNull(v.agentId),
+    userId: idOrNull(v.userId),
+    ...(label ? { label } : {}),
+    since: v.since.slice(0, 40),
+  };
+}
+
+/** `hello.phones` / `phones.changed`: each phone checked, the rest dropped. */
+export function parsePhones(v: unknown[]): RunnerPhone[] {
+  const out: RunnerPhone[] = [];
+  for (const p of v.slice(0, PHONE_LIMITS.phones)) {
+    if (!isObject(p) || (p.platform !== "android" && p.platform !== "ios")) continue;
+    if (!isString(p.serial) || !p.serial || p.serial.length > PHONE_LIMITS.serial) continue;
+    const state = PHONE_STATES.find((s) => s === p.state);
+    if (!state) continue;
+    const name = cut(p.name, PHONE_LIMITS.name);
+    const width = finite(isObject(p.screen) ? p.screen.width : undefined);
+    const height = finite(isObject(p.screen) ? p.screen.height : undefined);
+    const battery = finite(p.battery);
+    const transport = (["usb", "wifi", "local"] as const).find((t) => t === p.transport);
+    const power = (["ac", "battery"] as const).find((t) => t === p.power);
+    out.push({
+      platform: p.platform,
+      serial: p.serial,
+      kind: PHONE_KINDS.find((k) => k === p.kind) ?? "device",
+      model: cut(p.model, PHONE_LIMITS.model) ?? "",
+      ...(name ? { name } : {}),
+      osVersion: cut(p.osVersion, PHONE_LIMITS.osVersion) ?? "",
+      state,
+      ...(isString(p.reason) && /^[a-z_]{1,40}$/.test(p.reason) ? { reason: p.reason as PhoneReason } : {}),
+      ...(transport ? { transport } : {}),
+      ...(width !== undefined && height !== undefined ? { screen: { width, height } } : {}),
+      ...(isString(p.abi) ? { abi: p.abi.slice(0, 40) } : {}),
+      ...(power ? { power } : {}),
+      ...(battery !== undefined && battery >= 0 && battery <= 100 ? { battery } : {}),
+      holder: parsePhoneHolder(p.holder),
+    });
+  }
+  return out;
+}
+
+const HOLD_ENDS: readonly HoldEnd[] = ["exited", "expired"];
+/** A hold's id (a UUID), as the server makes them. */
+export const isUuid = (v: unknown): v is string =>
+  isString(v) && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+/** Most holds one `hello` lists, live and ended alike. */
+const HELLO_HOLDS = 500;
+
+/** `hello.holds`: hold ids, each ended one with a reason we know; the rest dropped. */
+export function parseHolds(v: Record<string, unknown>): RunnerHolds {
+  const live = Array.isArray(v.live) ? v.live.filter(isUuid).slice(0, HELLO_HOLDS) : [];
+  const ended = (Array.isArray(v.ended) ? v.ended : []).slice(0, HELLO_HOLDS).flatMap((e) => {
+    const reason = isObject(e) ? HOLD_ENDS.find((r) => r === e.reason) : undefined;
+    return isObject(e) && isUuid(e.id) && reason ? [{ id: e.id, reason }] : [];
+  });
+  return { live, ended };
+}
+
+/** `hello.toolchains`: known tools only, each a short version string. */
+export function parseToolchains(v: Record<string, unknown>): RunnerToolchains {
+  const out: RunnerToolchains = {};
+  for (const key of TOOLCHAINS) {
+    const value = cut(v[key], 100);
+    if (value) (out as Record<string, string>)[key] = value;
+  }
+  if (out.appleAccount && !["team", "no_team", "none"].includes(out.appleAccount)) delete out.appleAccount;
+  return out;
+}
 
 /** Protocol 14: `task.start`'s `baseBehind` (a count of commits; absent when the runner couldn't tell). */
 export function parseBaseBehind(data: unknown): number | undefined {
@@ -2733,6 +3285,8 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
       return isString(v.id) && isString(v.name)
         ? { type: "tool_started", id: v.id.slice(0, 128), name: v.name.slice(0, BRAIN_LIMITS.toolName) }
         : null;
+    case "file":
+      return isString(v.path) && v.path.length > 0 && v.path.length <= 1024 ? { type: "file", path: v.path } : null;
     default:
       return null;
   }
@@ -2809,8 +3363,17 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
           : {}),
         ...(isString(f.claudeLoginBlocked) ? { claudeLoginBlocked: f.claudeLoginBlocked.slice(0, 300) } : {}),
         ...(f.authEgressGroup === true ? { authEgressGroup: true as const } : {}),
+        ...(Array.isArray(f.phones) ? { phones: parsePhones(f.phones) } : {}),
+        ...(isObject(f.toolchains) ? { toolchains: parseToolchains(f.toolchains) } : {}),
+        ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),
       };
     }
+    case "keep.ended": {
+      const reason = HOLD_ENDS.find((r) => r === f.reason);
+      return isUuid(f.holdId) && reason ? { type: "keep.ended", holdId: f.holdId, reason } : null;
+    }
+    case "phones.changed":
+      return Array.isArray(f.phones) ? { type: "phones.changed", phones: parsePhones(f.phones) } : null;
     case "browser.frame": {
       if (!isString(f.agentId) || !isString(f.data) || f.data.length > BROWSER_LIMITS.frameBytes) return null;
       const seq = finite(f.seq);
@@ -2865,6 +3428,8 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
     }
     case "executors.changed":
       return isObject(f.executors) ? { type: "executors.changed", executors: parseExecutors(f.executors) } : null;
+    case "toolchains.changed":
+      return isObject(f.toolchains) ? { type: "toolchains.changed", toolchains: parseToolchains(f.toolchains) } : null;
     case "access.decided": {
       if (!isString(f.requestId)) return null;
       const decision = (["granted", "denied", "expired"] as const).find((d) => d === f.decision);
@@ -3167,7 +3732,7 @@ export const MISSION_MCP_TOOLS: readonly MissionMcpTool[] = [
   {
     name: "request_approval",
     description:
-      "Ask a person to approve a merge, a deploy or a rollback before you do it. Never merge, deploy or roll back without an approval. Then stop and wait: you are resumed with the outcome.",
+      "Ask a person to approve a merge, a deploy or a rollback before you do it, whenever one is held for a person. Then stop and wait: you are resumed with the outcome.",
     inputSchema: {
       type: "object",
       properties: {
@@ -3419,7 +3984,8 @@ export const isSafeRule = (rule: string) =>
 export function parsePause(v: unknown): RunnerPause | undefined {
   if (!isObject(v) || typeof v.paused !== "boolean") return undefined;
   const until = isString(v.until) && !Number.isNaN(Date.parse(v.until)) ? new Date(v.until).toISOString() : null;
-  return v.paused ? { paused: true, until } : { paused: false };
+  if (!v.paused) return { paused: false };
+  return isString(v.by) && v.by.length <= 64 ? { paused: true, until, by: v.by } : { paused: true, until };
 }
 
 /** `hello.access` / `access.changed.access`, checked and cut. */
@@ -3565,8 +4131,22 @@ export const isTerminalSize = (cols: unknown, rows: unknown) =>
 
 /** A text frame on a ready stream (either side); null when it isn't one or a size is out of bounds. */
 export function parseStreamControl(raw: string): StreamControl | null {
-  const f = smallJson(raw, 200);
-  if (!isObject(f)) return null;
+  // A phone's `text` may carry a pasted line (JSON escapes take up to 6 characters each); every other frame is short.
+  const f = smallJson(raw, PHONE_VIEW.text * 6 + 100);
+  if (!isObject(f) || (f.type !== "text" && raw.length > 200)) return null;
+  const share = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1;
+  if (f.type === "tap") return share(f.x) && share(f.y) ? { type: "tap", x: f.x, y: f.y } : null;
+  if (f.type === "swipe") {
+    const { x1, y1, x2, y2, ms } = f;
+    if (!share(x1) || !share(y1) || !share(x2) || !share(y2) || !inRange(ms, PHONE_VIEW.swipeMs)) return null;
+    return { type: "swipe", x1, y1, x2, y2, ms };
+  }
+  if (f.type === "text") {
+    return isString(f.text) && f.text !== "" && f.text.length <= PHONE_VIEW.text
+      ? { type: "text", text: f.text }
+      : null;
+  }
+  if (f.type === "key") return PHONE_KEYS.includes(f.key as PhoneKey) ? { type: "key", key: f.key as PhoneKey } : null;
   if (f.type === "resize") {
     return isTerminalSize(f.cols, f.rows) ? { type: "resize", cols: f.cols as number, rows: f.rows as number } : null;
   }

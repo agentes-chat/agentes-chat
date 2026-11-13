@@ -1,5 +1,6 @@
 import type { Agent, AgentMediaLevel, GifRating, OrgSettings } from "@agenteschat/client";
 import { useAgents, useSettings, useUpdateAgent, useUpdateSettings } from "@agenteschat/client";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { shownMediaSettings } from "@agenteschat/client/lib/media";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useTranslation } from "react-i18next";
@@ -62,7 +63,7 @@ export function MediaSettingsScreen() {
         : null;
 
   return (
-    <SettingsPage title={title}>
+    <SettingsPage title={title} frozen={settingsFrozen(org, "media")}>
       <Loaded>
         <GroupedFooter>{t("settings.sectionText.media")}</GroupedFooter>
         {!editable ? (
@@ -75,8 +76,14 @@ export function MediaSettingsScreen() {
           <GroupedRow
             icon="image"
             label={t("settings.media.gifs")}
-            sub={shown.gifsAvailable ? t("settings.media.gifsHelp") : t("settings.media.gifsUnavailable")}
-            subLines={3}
+            {...(shown.gifsAvailable
+              ? {
+                  hint: {
+                    name: t("common.about", { label: t("settings.media.gifs") }),
+                    text: t("settings.media.gifsHelp"),
+                  },
+                }
+              : { sub: t("settings.media.gifsUnavailable"), subLines: 2 })}
             toggle={gifsOn}
             disabled={!editable || !shown.gifsAvailable}
             onPress={() => save({ gifs: !gifsOn })}
@@ -84,14 +91,23 @@ export function MediaSettingsScreen() {
           <GroupedRow
             icon="smile"
             label={t("settings.media.stickers")}
-            sub={t("settings.media.stickersHelp")}
-            subLines={2}
+            hint={{
+              name: t("common.about", { label: t("settings.media.stickers") }),
+              text: t("settings.media.stickersHelp"),
+            }}
             toggle={shown.agentStickers}
             disabled={!editable}
             onPress={() => save({ agentStickers: !shown.agentStickers })}
           />
         </GroupedList>
-        <GroupedHeader>{t("settings.media.rating")}</GroupedHeader>
+        <GroupedHeader
+          hint={{
+            name: t("common.about", { label: t("settings.media.rating") }),
+            text: t("settings.media.ratingHelp"),
+          }}
+        >
+          {t("settings.media.rating")}
+        </GroupedHeader>
         <GroupedList>
           {RATINGS.map((rating) => (
             <GroupedRow
@@ -103,8 +119,18 @@ export function MediaSettingsScreen() {
             />
           ))}
         </GroupedList>
-        <GroupedFooter>{t("settings.media.ratingHelp")}</GroupedFooter>
-        <GroupedHeader>{t("settings.media.level")}</GroupedHeader>
+        <GroupedHeader
+          {...(shown.agentMediaAvailable
+            ? {
+                hint: {
+                  name: t("common.about", { label: t("settings.media.level") }),
+                  text: t("settings.media.levelHelp"),
+                },
+              }
+            : {})}
+        >
+          {t("settings.media.level")}
+        </GroupedHeader>
         <GroupedList>
           {LEVELS.map((option) => (
             <GroupedRow
@@ -116,9 +142,7 @@ export function MediaSettingsScreen() {
             />
           ))}
         </GroupedList>
-        <GroupedFooter>
-          {shown.agentMediaAvailable ? t("settings.media.levelHelp") : t("settings.media.levelUnavailable")}
-        </GroupedFooter>
+        {shown.agentMediaAvailable ? null : <GroupedFooter>{t("settings.media.levelUnavailable")}</GroupedFooter>}
         <GroupedHeader>{t("settings.media.agentsTitle")}</GroupedHeader>
         <GroupedList>
           {team.map((agent) => (

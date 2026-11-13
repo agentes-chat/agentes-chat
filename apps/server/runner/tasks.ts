@@ -49,13 +49,15 @@ import {
   accountSignIn,
   handToken,
   TOKEN_FD_ENV,
+  withoutContainers,
   withSignIn,
   yieldRoute,
 } from "./accounts";
-import { codexThreadKey } from "./brain-codex";
+import { codexThreadKey, unwrapShell } from "./brain-codex";
 import { commandApproval, ownBranches } from "./command-gate";
 import { RunnerError } from "./errors";
-import { shellCommand } from "./exec";
+import { shellCommand, windowsTaskkill } from "./exec";
+import { envValue, findOnWindowsPath, NO_CWD_LOOKUP, winQuote } from "./executors";
 import { readJson, writeJson } from "./json-file";
 import {
   CODEX_MCP_ENV,
@@ -271,6 +273,8 @@ export interface TaskManagerOptions {
   wrapperCommand?: string[];
   /** A task ended (once per task, after `task.done` was queued): the desktop app's jobs and activity log. */
   onSettled?: (task: SettledTask) => void;
+  /** The server's host, for `commitChanges`' fallback author. */
+  commitHost?: () => string | undefined;
   /** Tests: shorter intervals. */
   watchMs?: number;
   eventEveryMs?: number;
@@ -358,7 +362,8 @@ writeFileSync(file("child.pid"), String(child.pid ?? ""));
 const kill = (signal) => {
   if (!child.pid) return;
   if (process.platform === "win32") {
-    try { spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true }).on("error", () => {}); } catch {}
+    // By its full path: a bare name is looked for in the task's folder first.
+    try { spawn(path.win32.join(process.env.SystemRoot || "C:/Windows", "System32", "taskkill.exe"), ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true }).on("error", () => {}); } catch {}
     return;
   }
   try { process.kill(-child.pid, signal); } catch { try { child.kill(signal); } catch {} }
@@ -490,6 +495,8 @@ export function executorCommand(
     extra?: string[];
     /** Claude Code's permission mode (default `acceptEdits`; a mission's plan turn runs `dontAsk`). */
     permissionMode?: "acceptEdits" | "dontAsk";
+    /** Claude Code as the line starts it (default `claude`; on Windows its full path, quoted). */
+    program?: string;
     /** Codex: where it works (`-C`), its sandbox, the file for its last message, the thread to resume. */
     codex?: { cwd: string; sandbox: "read-only" | "workspace-write"; lastFile: string; thread?: string };
     /**
@@ -510,7 +517,8 @@ export function executorCommand(
   if (executor === "codex") {
     // `codex exec` (JSONL events) runs unattended with approval_policy=never: the sandbox is the limit, so
     // workspace-write with network (git push, installs) for work, read-only for a plan. No `--full-auto` (removed).
-    // Global options go before `resume`; the prompt comes on stdin (`-`). Always resumed by id, never `--last`.
+    // Nothing in the Codex home lifts it: no one's own rules (an allow there runs a command outside it), no folder
+    // but the agent's. Global options go before `resume`; the prompt comes on stdin (`-`). Always resumed by id.
     const q = (v: string) => shellArg(v, options.platform);
     const c = options.codex;
     return [
@@ -518,9 +526,11 @@ export function executorCommand(
       "exec",
       "--json",
       "--skip-git-repo-check",
+      "--ignore-rules",
       ...(c ? ["-C", q(c.cwd), "--sandbox", c.sandbox] : []),
-      ...(c?.sandbox === "workspace-write" ? ["-c", q("sandbox_workspace_write.network_access=true")] : []),
-      ...(c?.sandbox === "workspace-write" && addDirs.length ? ["-c", q(codexWritableRoots(addDirs))] : []),
+      ...(c?.sandbox === "workspace-write"
+        ? ["-c", q("sandbox_workspace_write.network_access=true"), "-c", q(codexWritableRoots(addDirs))]
+        : []),
       ...(options.extra ?? []),
       ...(c ? ["-o", q(c.lastFile)] : []),
       ...(c?.thread ? ["resume", c.thread] : []),
@@ -528,7 +538,7 @@ export function executorCommand(
     ].join(" ");
   }
   const parts = [
-    "claude",
+    options.program ?? "claude",
     "-p",
     "--output-format",
     "stream-json",
@@ -759,12 +769,6 @@ export function parseCodexEvent(
     default:
       return {};
   }
-}
-
-/** `/bin/zsh -lc "npm test"` → `npm test` (Codex wraps every command in the login shell). */
-function unwrapShell(command: string) {
-  const m = /^\S*(?:sh|bash|zsh)\s+-l?c\s+(["'])([\s\S]*)\1$/.exec(command.trim());
-  return (m ? (m[2] ?? "") : command).replace(/\s+/g, " ").trim();
 }
 
 /** The end of a log (at most `max` bytes) and whether there was more before it. */
@@ -1007,9 +1011,11 @@ export class TaskManager {
     }
     const [file, ...args] = command;
     const start = (executor !== "shell" && this.opts.spawnCli) || spawn;
+    // On Windows nothing a CLI task starts is looked for in its folder: cmd.exe's lookups, npm's launcher's bare `node`.
+    const taskEnv = process.platform === "win32" && executor !== "shell" ? { ...env, ...NO_CWD_LOOKUP } : env;
     const child = start(file as string, [...args, dir], {
       cwd: dir,
-      env,
+      env: taskEnv,
       stdio: token ? ["ignore", "ignore", "ignore", "pipe"] : "ignore",
       detached: true,
       windowsHide: true,
@@ -1056,11 +1062,27 @@ export class TaskManager {
       );
     }
     const executor: TaskExecutor = req.executor === "claude" || req.executor === "codex" ? req.executor : "shell";
+    // A Codex task is `codex exec` with the network for its work, on a line cmd.exe would read: none of the Windows
+    // sandbox its turns run in (`codex-windows.ts`, ADR 0053 §3) holds it yet.
+    if (executor === "codex" && process.platform === "win32") {
+      throw new RunnerError(
+        "not_allowed",
+        "Background Codex tasks don't run on Windows yet. Do this work in your own turn instead (run_code).",
+      );
+    }
     const session = typeof req.session === "string" && SESSION_ID.test(req.session) ? req.session : undefined;
     const prompt = typeof req.prompt === "string" ? req.prompt : "";
     if (executor !== "shell" && !prompt.trim())
       throw new RunnerError("bad_request", `A ${executor} task needs a prompt`);
     const hosted = executor === "claude" && grant?.kind === "hosted";
+    // On Windows Claude Code by its full path: cmd.exe looks for a bare name in the task's folder first (the agent's,
+    // where it writes), so a `claude.cmd` left there would run as the person.
+    let program: string | undefined;
+    if (executor === "claude" && !hosted && process.platform === "win32") {
+      const found = findOnWindowsPath("claude", envValue(process.env, "PATH") ?? "", envValue(process.env, "PATHEXT"));
+      if (!found) throw new RunnerError("not_found", "Claude Code is not installed on this computer.");
+      program = winQuote(found);
+    }
     const signIn = executor === "shell" || hosted ? null : await this.signIn(executor, req.account, grant);
     if (signIn?.release) this.releases.set(taskId, signIn.release);
     const keyPlan = executor === "claude" && signIn?.planKey ? planOf(signIn.planKey.provider) : undefined;
@@ -1260,6 +1282,7 @@ export class TaskManager {
       : executorCommand(executor, {
           command: req.command,
           ...(readOnly && executor === "claude" ? { permissionMode: "dontAsk" as const } : {}),
+          ...(program ? { program } : {}),
           session,
           resume,
           extra,
@@ -1294,7 +1317,9 @@ export class TaskManager {
         ...(signIn?.token ? { tokenFd: true } : {}),
       });
       if (executor !== "shell") writeFileSync(path.join(dir, "stdin.txt"), input, { mode: 0o600 });
-      const base: NodeJS.ProcessEnv = { ...process.env, ...(secrets?.env ?? {}) };
+      // A Codex task's sandbox is what holds it: no way out through the agent's containers service (ADR 0169).
+      const own = executor === "codex" ? withoutContainers(process.env) : process.env;
+      const base: NodeJS.ProcessEnv = { ...own, ...(secrets?.env ?? {}) };
       // As a turn's (ADR 0041 §5): the account's folder is the CLI's home and nothing else signs it in; a plan's key
       // goes in the env under the plan's name, a token only on descriptor 3 (`spawnWrapper`).
       const env = signIn ? accountEnv(signIn.kind, signIn.home, base) : base;
@@ -1549,7 +1574,7 @@ export class TaskManager {
       for (const pid of [childPid, t.pid]) {
         if (!pid) continue;
         try {
-          spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+          spawn(windowsTaskkill(), ["/pid", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
         } catch {}
       }
       return;
@@ -1722,6 +1747,7 @@ export class TaskManager {
           env: secrets?.env ?? {},
           handle: t.agentHandle,
           startSha: t.startSha as string,
+          host: this.opts.commitHost?.(),
         });
       } catch (err) {
         commit = { startSha: t.startSha as string, endSha: t.startSha as string, error: String(err) };
@@ -1881,12 +1907,13 @@ export function commitsBehind(cwd: string, check: { branch?: unknown; sha?: unkn
  * there (`commitPathspecs`). Nothing when the tree is clean. Hooks run (never
  * `--no-verify`); when the commit fails the changes stay and `error` says why.
  * The author is whoever the checkout has (`git.sync` sets the agent), else
- * the agent by its handle.
+ * the agent by its handle at `agents.<host>`, the server's host as the engine's
+ * `agentCommitEmail` has it (`invalid`, a reserved name, when it isn't known).
  */
 export async function commitChanges(
   cwd: string,
   message: string,
-  opts: { env: Record<string, string>; handle: string; startSha: string },
+  opts: { env: Record<string, string>; handle: string; startSha: string; host?: string | undefined },
 ): Promise<{ startSha: string; endSha: string; error?: string }> {
   const { env } = opts;
   const end = async () => {
@@ -1908,7 +1935,7 @@ export async function commitChanges(
   const author =
     email.code === 0 && email.stdout.trim()
       ? []
-      : ["-c", `user.name=${handle} (agentes)`, "-c", `user.email=${handle}@agents.agentes.chat`];
+      : ["-c", `user.name=${handle} (agentes)`, "-c", `user.email=${handle}@agents.${opts.host ?? "invalid"}`];
   const commit = await git(cwd, [...author, "commit", "-q", "-m", message], { env, timeoutMs: COMMIT_TIMEOUT_MS });
   return {
     startSha: opts.startSha,

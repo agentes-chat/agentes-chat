@@ -4,15 +4,14 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { join } from "node:path";
-import type { Approval, Message } from "@agenteschat/client";
+import type { Message } from "@agenteschat/client";
 import { markedPieces, markFaced, markInk } from "@agenteschat/client/lib/activity";
 import { mentionsHandle } from "@agenteschat/client/lib/markdown";
 import { apiProviderOf } from "@agenteschat/client/lib/providers";
 import { splitAtNames, wordIndex } from "@agenteschat/client/lib/text";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { withAgentFace, withAgentFaces } from "@/components/AgentAvatar";
-import { InlineApproval } from "@/components/ApprovalItem";
+import { ActorWho, withAgentFace, withAgentFaces } from "@/components/AgentAvatar";
 import { SidebarHorizon } from "@/components/Sky";
 import { boldNames } from "@/components/WorkingLine";
 import { atRule, declarations, topLevel } from "./built-css";
@@ -283,13 +282,43 @@ describe("official provider logos", () => {
 });
 
 describe("agent faces in a line of text", () => {
-  test(".ac-who: a face at the text's size, centred on the capitals", async () => {
+  test(".ac-who: a face at the text's size (or `--who-face`), centred on the capitals", async () => {
     const css = await sheet("packages/ui/src/styles/components.css");
     const face = ".ac-who > .ac-avatar";
     expect(value(css, face, "font-size")).toBe("inherit");
-    expect(value(css, face, "width")).toBe("1.15em");
-    expect(value(css, face, "height")).toBe("1.15em");
+    expect(value(css, face, "width")).toBe("var(--who-face, 1.15em)");
+    expect(value(css, face, "height")).toBe("var(--who-face, 1.15em)");
+    // Its middle on the capitals' middle, whatever its size.
+    expect(value(css, face, "vertical-align")).toBe(
+      "calc(var(--cap-top) - var(--cap-mid) - var(--who-face, 1.15em) / 2)",
+    );
     expect(value(css, ".ac-who", "white-space")).toBe("nowrap");
+    // A long name wraps between its words, its first word staying with the face.
+    expect(value(css, ".ac-who > b", "white-space")).toBe("normal");
+  });
+
+  test(".ac-who: a person's letters out of the flow, so the face's bottom is its baseline as an agent's canvas is", async () => {
+    const css = await sheet("packages/ui/src/styles/components.css");
+    expect(value(css, ".ac-who > .ac-avatar > :is(img, .ac-avatar__initials)", "position")).toBe("absolute");
+    const letters = ".ac-who > .ac-avatar > .ac-avatar__initials";
+    // Centred in the tile, still trimmed to their capitals by the tile's own rule.
+    expect(value(css, letters, "margin")).toBe("auto");
+    expect(value(css, letters, "height")).toBe("fit-content");
+    expect(value(css, ".ac-avatar__initials", "text-box")).toBe("trim-both cap alphabetic");
+    await renderPage(
+      <p>
+        <ActorWho actor={{ type: "person", id: "u-joao" }} name="João" /> e{" "}
+        <ActorWho actor={{ type: "agent", id: ADA_ID }} name="Ada" />
+      </p>,
+      { api: createFakeApi(seedState()), org: true },
+    );
+    await settle(2);
+    const [person, agent] = [...document.querySelectorAll<HTMLElement>("p .ac-who")];
+    expect(person?.querySelector(".ac-avatar[data-kind='person'] .ac-avatar__initials")?.textContent).toBe("J");
+    expect(person?.querySelector("b")?.textContent).toBe("João");
+    expect(person?.hasAttribute("data-lead")).toBe(true);
+    expect(agent?.querySelector(".ac-avatar--agent canvas")).not.toBeNull();
+    expect(agent?.hasAttribute("data-lead")).toBe(false);
   });
 
   test(".ac-who: the face sits a word's space apart on both sides, none before it where it opens the line", async () => {
@@ -307,19 +336,6 @@ describe("agent faces in a line of text", () => {
     const [mid, lead] = [...document.querySelectorAll("p .ac-who")];
     expect(mid?.hasAttribute("data-lead")).toBe(false);
     expect(lead?.hasAttribute("data-lead")).toBe(true);
-  });
-
-  test("an approval's 'Ada pede aprovação' carries Ada's face before her name", async () => {
-    const state = seedState();
-    const api = createFakeApi(state);
-    const approval = state.approvals.find((a) => a.id === "ap-merge") as Approval;
-    const agent = (await api.agents.list(ORG_ID)).find((a) => a.id === ADA_ID);
-    await renderPage(<InlineApproval approval={approval} agent={agent} members={new Map()} />, { api, org: true });
-    await settle(4);
-    const who = document.querySelector(".ac-who") as HTMLElement;
-    expect(who.querySelector(".ac-avatar--xs")).toBeTruthy();
-    expect(who.querySelector("b")?.textContent).toBe("Ada");
-    expect(document.body.textContent).toContain("Ada pede aprovação");
   });
 
   test("the face goes before the name as a word, never inside another word", async () => {
@@ -340,25 +356,24 @@ describe("agent faces in a line of text", () => {
 describe("the agent page's cards and the chat's", () => {
   test("agent cards: 12px above and below, the head pulled into the padding", async () => {
     const css = await sheet("apps/web/src/layout.css");
-    expect(value(css, ".agp-card.ac-card", "padding-block")).toBe("12px");
+    expect(value(css, ".agp-card.ac-card", "--agp-card-py")).toBe("12px");
+    expect(value(css, ".agp-card.ac-card", "padding-block")).toBe("var(--agp-card-py)");
     // Only a head with a button (32px) reaches into the padding; a title alone (22px) stays 12px in.
     expect(declarations(css, ".agp-card>.ac-card__head:first-child")).toEqual([]);
-    expect(value(css, ".agp-card>.ac-card__head:first-child:has(.ac-card__action .ac-btn)", "margin-block")).toBe(
-      "calc(var(--action-clear) - var(--row-py)) -2px",
-    );
-    // The foot reaches the card's bottom edge (12px), not past it (--card-pad is 20px).
+    expect(
+      value(css, ".agp-card>.ac-card__head:first-child:has(.ac-card__action :is(.ac-btn, .ac-seg))", "margin-block"),
+    ).toBe("calc(var(--action-clear) - var(--agp-card-py)) calc(-1 * var(--space-1))");
+    // The foot reaches the card's bottom edge (12px), not past it (--card-pad is 16px).
     expect(value(css, ".agp-card>.ac-card__foot", "margin-bottom")).toBe("-12px");
   });
 
   test("the cards beside them use the same 12px", async () => {
     const css = await sheet(
       "apps/web/src/pages/approvals.css",
-      "apps/web/src/pages/wiki.css",
       "apps/web/src/pages/drive.css",
       "apps/web/src/components/computer/computer.css",
     );
     expect(value(css, ".ap-waiters", "padding")).toBe("12px 16px");
-    expect(value(css, ".wiki-import-card", "padding")).toBe("12px");
     expect(value(css, ".drive-note", "padding")).toBe("12px 14px");
     expect(value(css, ".cmp-entry__row", "padding")).toBe("12px 14px");
   });
@@ -367,7 +382,7 @@ describe("the agent page's cards and the chat's", () => {
     const css = await sheet("apps/web/src/components/computer/computer.css");
     expect(value(css, ".cmp-entry__row", "align-items")).toBe("center");
     expect(declarations(css, ".cmp-entry__row>.ac-computer")).toEqual([]);
-    const lead = ".cmp-dialog .ac-dialog__lead:has(+ .ac-dialog__titles)";
+    const lead = ".cmp-dialog .ac-dialog__lead:has(+ .ac-actline > .ac-dialog__titles)";
     expect(value(css, lead, "align-self")).toBe("center");
     expect(value(css, lead, "translate")).toBe("none");
   });

@@ -1,6 +1,6 @@
 import type { ReactionCount } from "@agenteschat/client";
 import { useReactions, useToggleReaction } from "@agenteschat/client";
-import { joinNames } from "@agenteschat/client/lib/format";
+import { formatInt, joinNames, keepWhole } from "@agenteschat/client/lib/format";
 import {
   Button,
   EMOJI_CATEGORIES,
@@ -11,7 +11,7 @@ import {
   Reaction,
   Reactions,
 } from "@agenteschat/ui";
-import { type ReactNode, useMemo } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDirectory } from "@/hooks/useDirectory";
 import { AgentAvatar } from "./AgentAvatar";
@@ -108,42 +108,38 @@ export function MessageReactions({
   messageId,
   initial,
   feedback,
-  extra,
 }: {
   messageId: string;
   initial?: ReactionCount[];
   /** An agent's reply: 👍/👎 replace each other (they teach the agent). */
   feedback?: boolean;
-  /** After the pills (the memory mark): the row shows even without reactions. */
-  extra?: ReactNode;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const labels = useEmojiLabels();
   const { list, toggle, userId } = useMessageReactions(messageId, initial, { feedback });
   const shown = list.filter((r) => r.count > 0);
-  if (shown.length === 0 && !extra) return null;
+  if (shown.length === 0) return null;
   const nameOf = (id: string) =>
     id === userId ? t("reactions.you") : (dir.memberById.get(id)?.name ?? t("reactions.someone"));
   const agentName = (id: string) => dir.anyAgent(id)?.name ?? t("reactions.someone");
   return (
     <Reactions label={t("channel.reactions")}>
-      {/* No pills: the memory mark starts the row (no divider before it), "+" after it. */}
-      {shown.length === 0 && extra}
       {shown.map((r) => {
         const emoji = reactionEmoji(r.reaction);
         const agentIds = r.agentIds ?? [];
         const who = t("reactions.who", {
           count: r.count,
-          names: joinNames([...r.userIds.map(nameOf), ...agentIds.map(agentName)], t),
+          // In the chip's tip a line breaks between names, never inside one.
+          names: joinNames([...r.userIds.map(nameOf), ...agentIds.map(agentName)].map(keepWhole), t),
           emoji,
         });
         return (
           <Reaction
             key={r.reaction}
             pressed={r.userIds.includes(userId)}
-            count={r.count}
+            count={formatInt(i18n.language, r.count)}
             label={who}
             title={who}
             onClick={() => toggle(r.reaction)}
@@ -174,7 +170,6 @@ export function MessageReactions({
           </button>
         }
       />
-      {shown.length > 0 && extra}
     </Reactions>
   );
 }

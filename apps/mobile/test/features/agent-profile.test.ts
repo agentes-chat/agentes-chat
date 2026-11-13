@@ -11,6 +11,7 @@ import {
   freeSections,
   knownAboutMe,
   memoryOrigin,
+  modelRow,
   plainRole,
   statusCardShown,
   teamLines,
@@ -86,11 +87,12 @@ describe("Agentes: esperando você, trabalhando, livres", () => {
     expect(working.map((l) => l.agent.id)).toEqual(["nina"]);
     // No groups: Livres alone, as before.
     expect(freeSections(free, []).map((s) => [s.group, s.lines.length])).toEqual([[null, free.length]]);
-    // Pinned ("Fixar no topo", the web's pins): on top of Livres in their order, out of their groups.
+    // Pinned ("Fixar no topo", the web's pins): first in their own section, so a setor keeps every agent in it.
     const pinned = freeSections(free, groups, ["theo", "nina", "ana"]);
     expect(pinned.map((s) => [s.group?.name ?? null, s.lines.map((l) => l.agent.id), s.pinnedCount])).toEqual([
-      [null, ["theo", "ana", "iris"], 2],
-      ["Integrations", ["zoe"], 0],
+      [null, ["iris"], 0],
+      ["Integrations", ["theo", "zoe"], 1],
+      ["Lumen | Gestão e Financeiro", ["ana"], 1],
     ]);
   });
 });
@@ -453,22 +455,26 @@ describe("Perfil: agora, cada coisa uma vez", () => {
     expect(screen).toContain('{ key: "today", label: t("common.today") }');
     expect(screen).toContain('{ key: "access", label: t("agentPage.fields.levels") }');
     expect(screen).toContain('{ key: "memory", label: t("agentPage.tabs.memory") }');
-    expect(screen).toContain('kind={{ icon: "shield", label: t("ask.kind.approval") }}');
+    expect(screen).toContain('kind={{ icon: "shield", label: t("mobile.intentAgents.asksApproval") }}');
     expect(screen).toContain('!(waitingNow && l.href?.kind === "approval" && l.href.id === waitingNow.id)');
     expect(screen).toContain("statusCardShown(statusLine, { working: busy, asking: asking.length > 0 })");
     expect(screen).toContain("<PixelOrbit color={look.color} size={14} />");
     // One surface level: grouped lists on the gray, no pills, sections or cards of its own.
     expect(screen).not.toContain("NowPill");
     expect(screen).not.toMatch(/<(Section|Card|Row)\b/);
-    // Mailboxes are rows of "Can use"; the computer is a square beside Chat.
+    // Mailboxes are rows of "Can use"; the computer is a named button beside Chat, as wide as it.
     expect(mail).toContain("export function useAgentMailboxes(agentId: string, enabled = true): MailboxLine[]");
-    expect(screen).toContain("{details && !rightHand ? <AgentComputerButton agentId={id} /> : null}");
-    expect(computer).toContain("const SIZE = BUTTON_SIZES.md.height;");
-    // The screen's recent picture on Today; the rules people gave on Memory; where it merges on Access; the right
-    // hand's own AI above how it works: each in the grouped lists, none a section of its own.
+    expect(screen).toContain(
+      "{details && !rightHand ? (\n              <View style={styles.grow}>\n                <AgentComputerButton agentId={id} />",
+    );
+    expect(computer).toContain('wide\n      label={helps ? t("agentComputer.help") : t("agentComputer.button")}');
+    // The screen's recent picture on Today; the rules people gave on Memory, under what it learned; where it merges on
+    // Access; the right hand's own AI above how it works: each in the grouped lists, none a section of its own.
     expect(screen).toContain("      {nowBlock}\n      <AgentComputerPicture agentId={id} />");
     expect(computer).toContain("asksPicture(focused, view.desktopQ.data ?? null)");
-    expect(screen).toContain("      <GivenRules agentId={id} />\n      {knows.data ? memoryKnows : null}");
+    expect(screen).toContain(
+      "      {knows.data ? memoryKnows : null}\n      {/* What people told it to always do, under what it learned, as the web's Memória. */}\n      <GivenRules agentId={id} name={name} rightHand={rightHand} />",
+    );
     expect(screen).toContain(
       '<MergeReposSection agentId={id} name={name} mayEdit={mine || can(org, "manage_agents")} />',
     );
@@ -479,6 +485,7 @@ describe("Perfil: agora, cada coisa uma vez", () => {
     const tabs = [t("common.today"), t("agentPage.fields.levels"), t("agentPage.tabs.memory")];
     expect(tabs).toEqual(["Hoje", "Acesso", "Memória"]);
     expect(t("ask.kind.approval")).toBe("Pede sua aprovação");
+    expect(t("mobile.intentAgents.asksApproval")).toBe("Pede sua aprovação");
     expect(t("mobile.agent.canUse")).toBe("Pode usar");
   });
 });
@@ -526,5 +533,28 @@ describe("an agent that doesn't answer me", () => {
     );
     const screen = await Bun.file(new URL("../../src/features/chat/ReachLines.tsx", import.meta.url).pathname).text();
     expect(screen.match(/ask\(audience\)/g)).toHaveLength(2);
+  });
+});
+
+describe("Perfil: the Modelo row says how it thinks on the value's line (#44)", () => {
+  test("through the API: the model, then Pela API; on a plan: the plan's model, then the plan", async () => {
+    const pt = await translator("pt-BR");
+    expect(modelRow(pt, undefined, "Claude Sonnet 4.5")).toEqual({ value: "Claude Sonnet 4.5", valueNote: "Pela API" });
+    expect(modelRow(pt, { kind: "model", model: null }, "Automático")).toEqual({
+      value: "Automático",
+      valueNote: "Pela API",
+    });
+    expect(modelRow(pt, { kind: "claude_code", model: "Sonnet" }, "Claude Sonnet 4.5")).toEqual({
+      value: "Sonnet",
+      valueNote: "Claude",
+    });
+    expect(modelRow(pt, { kind: "claude_code", model: "auto" }, "Claude Sonnet 4.5").value).toBe("Automático");
+    // Automático through the API: the maker its models come from, then Automático.
+    expect(modelRow(pt, { kind: "model", model: null, maker: "anthropic" }, "Automático")).toEqual({
+      value: "Claude",
+      valueNote: "Automático",
+    });
+    // The profile names Automático by its key's maker already (`apiModelName`): the note still says Automático.
+    expect(modelRow(pt, { kind: "model", model: null, maker: "anthropic" }, "Claude").valueNote).toBe("Automático");
   });
 });

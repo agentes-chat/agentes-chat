@@ -131,9 +131,8 @@ export const NOTIFICATION_KINDS = [
    */
   "browser_profile_request",
   /**
-   * A connected MCP server changed the description or input of tools an admin approved (ADR 0117): who manages
-   * connectors, once per change, `source.label` the connection's name and `latest.title` the tools. Agents keep the
-   * approved text until it is accepted in Settings › Conectores, which resolves it. Waiting.
+   * A connected MCP server changed a tool's description or input. Never created: a changed tool applies itself
+   * (ADR 0117, addendum), and rows of this kind are never listed or counted (`listed`).
    */
   "connector_tool_changed",
   /**
@@ -236,6 +235,27 @@ export const NOTIFICATION_KINDS = [
    * until they turn it back on, so it reaches their devices.
    */
   "right_hand_paused",
+  /**
+   * A computer ran a connect link this person made and asks to join (bring your own devices): its maker, waiting, one
+   * row per request (`source.requestId`), the computer's name in `source.label`, the workspace's in `latest.title`
+   * and its OS, address and rough location in `latest.text`. Done once let in or denied.
+   */
+  "device.join_request",
+  /**
+   * Bring your own devices, to a device's owner; for all three the agent is the actor, whom it works for is
+   * `source.userId` (their first name in `latest.title`), the device is `source.machineId` (and `phoneId` for a phone)
+   * with its name in `source.label`, and the run is `source.runId`.
+   * `device.in_use`: someone else's agent is using it, once per run and device; what it does in `latest.text`. Stop
+   * ends it (`POST …/devices/phones/{id}/stop`).
+   */
+  "device.in_use",
+  /**
+   * An agent asks to use the device for someone its rule leaves out: waiting, one per request
+   * (`source.requestId`), the agent's reason in `latest.text`. Allow once, Always or No; done once answered.
+   */
+  "device.access_request",
+  /** Someone else's agent waits for the device to be back or free, one per wait; done once the wait ends. */
+  "device.waiting",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -282,8 +302,15 @@ export interface NotificationSource {
   skillId?: string;
   /** A plan's account (`plan_lent`). */
   accountId?: string;
-  /** The connected MCP server whose approved tools changed (`connector_tool_changed`, ADR 0117). */
-  connectionId?: string;
+  /**
+   * `device.join_request`: the computer asking to join (`POST …/devices/requests/{id}/approve`);
+   * `device.access_request`: the agent's request to use a device (`POST …/devices/access-requests/{id}/decide`).
+   */
+  requestId?: string;
+  /** A phone reached through a connected computer (bring your own devices). */
+  phoneId?: string;
+  /** `device.in_use`, `device.waiting`, `device.access_request`: the agent's run on the device. */
+  runId?: string;
   /** Channel name, thread title, issue title, topic title, mission or routine name, widget or board title. */
   label?: string;
 }
@@ -312,6 +339,11 @@ export interface NotificationLatest {
    * translates).
    */
   reason?: string;
+  /**
+   * `widget_failed` with `missing_credential`: why its agent has no AI (`AgentAi.reason`, coded), kept apart from
+   * `text`, which the island, the push and the phone show as it is.
+   */
+  detail?: string;
   /** `approval`: asked while nobody watched, by a routine (its name) or an unattended run (ADR 0053 §8). */
   origin?: ApprovalOrigin;
   /** `org_standing` to `agent_hold`: the hold's kind, `network` or `operator`, never its reason. */
@@ -330,6 +362,10 @@ export interface NotificationLatest {
   /** `computer_disk_full`: the share of the disk in use (0 to 1) and the GB left. */
   diskUse?: number;
   diskFreeGb?: number;
+  /** `device.join_request`: the computer's system (`darwin`, `windows`, `linux`), address and rough place. */
+  os?: string;
+  ip?: string;
+  location?: string;
   /** `app_created`: how many of each kind (`agent`, `routine`, `skill`, `memory`, `channel`), summed as rows merge. */
   created?: Record<string, number>;
   /** `browser_handoff` still unanswered an hour later (`remindNotifications`): its push says the agent still needs them. */
@@ -974,9 +1010,13 @@ function stillDecides(orgId: string, userId: string): SQL {
   ) as SQL;
 }
 
+/** Rows the inbox may show: a `connector_tool_changed` row asks for a review that no longer exists. */
+const listed = ne(notifications.kind, "connector_tool_changed");
+
 /** Not done, not snoozed into the future, and still the person's to see. */
 function visible(orgId: string, userId: string, now: Date): SQL {
   return and(
+    listed,
     eq(notifications.orgId, orgId),
     eq(notifications.userId, userId),
     isNull(notifications.doneAt),
@@ -984,6 +1024,9 @@ function visible(orgId: string, userId: string, now: Date): SQL {
     stillDecides(orgId, userId),
   ) as SQL;
 }
+
+/** The inbox's own rule for what a person sees, for the lists built on it (`waiting.ts`). */
+export const inboxVisible = visible;
 
 function filterSql(filter: NotificationFilter): SQL | undefined {
   switch (filter) {
@@ -1005,6 +1048,7 @@ function filterSql(filter: NotificationFilter): SQL | undefined {
 /** Marked done by the person, recently enough to list. */
 function doneByMe(orgId: string, userId: string, now: Date): SQL {
   return and(
+    listed,
     eq(notifications.orgId, orgId),
     eq(notifications.userId, userId),
     eq(notifications.doneByUser, true),

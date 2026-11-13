@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { connectLink, parseConnectLink, readInstance, type ServerCheck } from "@agenteschat/client/lib/server";
+import { LOCALES } from "@agenteschat/i18n/locale";
 import { menuBarShown } from "../src/control/dock";
 import {
   connectOutcome,
@@ -7,13 +8,15 @@ import {
   foundServers,
   INSTALL_COMMAND,
   linkView,
+  ownAddresses,
   ownServerScreen,
   PROBLEM_TEXT,
+  terminalStartCommand,
   typedServer,
 } from "../src/control/first-run";
 import { MAX_MENU_LABEL, menuLabels } from "../src/control/menu-labels";
 import { platformOf } from "../src/control/platform";
-import { createDesktopI18n } from "../src/i18n";
+import { createDesktopI18n, loadDesktopI18n } from "../src/i18n";
 
 const BOX = "https://agentes.tail1234.ts.net";
 const TOKEN = "Qm9vdHN0cmFwLXRva2VuLTEyMzQ1Njc4OTBhYmNkZWY";
@@ -71,6 +74,24 @@ describe("discovery", () => {
     expect(foundServers(candidates, checks)).toEqual([{ server: BOX, where: "here" }]);
     expect(foundServers(candidates, [])).toEqual([]);
   });
+
+  test("one that answered with a problem is listed with it, never hidden; one that isn't agentes.chat isn't", () => {
+    const mini = "https://agentes-mini.tail1234.ts.net";
+    const candidates = [
+      { server: "http://127.0.0.1:4310", where: "here" as const },
+      { server: mini, where: "tailnet" as const },
+      { server: "https://other.tail1234.ts.net", where: "tailnet" as const },
+    ];
+    const checks: ServerCheck[] = [
+      ok("http://127.0.0.1:4310", { ownerClaim: true }),
+      { ok: false, server: mini, problem: "server-too-old" },
+      { ok: false, server: "https://other.tail1234.ts.net", problem: "not-agentes" },
+    ];
+    expect(foundServers(candidates, checks)).toEqual([
+      { server: "http://127.0.0.1:4310", where: "here", problem: "no-owner" },
+      { server: mini, where: "tailnet", problem: "server-too-old" },
+    ]);
+  });
 });
 
 describe("a typed address", () => {
@@ -86,7 +107,7 @@ describe("a typed address", () => {
     expect(connectOutcome("https://192-168-1-2.sslip.io", ok(BOX))).toEqual({ kind: "confirm", server: BOX });
     expect(connectOutcome(BOX, down(BOX))).toEqual({
       kind: "problem",
-      problem: "unreachable",
+      problem: "unreachable-tailnet",
       host: "agentes.tail1234.ts.net",
     });
     expect(connectOutcome(BOX, ok(BOX, { ownerClaim: true }))).toEqual({
@@ -94,6 +115,36 @@ describe("a typed address", () => {
       problem: "no-owner",
       host: "agentes.tail1234.ts.net",
     });
+  });
+
+  test("this computer's own agentes.chat opens at once at the address people use, never a sheet about another host", () => {
+    const own = ownAddresses({ url: "http://127.0.0.1:4310", publicUrl: BOX });
+    expect(own).toEqual(["http://127.0.0.1:4310", BOX]);
+    expect(connectOutcome("http://127.0.0.1:4310", ok(BOX), own)).toEqual({ kind: "use", server: BOX });
+    expect(connectOutcome("http://127.0.0.1:4310", ok(BOX))).toEqual({ kind: "confirm", server: BOX });
+    expect(ownAddresses(null)).toEqual([]);
+  });
+
+  test("Tailscale is named only for a server on a Tailscale network", () => {
+    const elsewhere = "https://chat.example.com";
+    expect(connectOutcome(elsewhere, down(elsewhere))).toEqual({
+      kind: "problem",
+      problem: "unreachable",
+      host: "chat.example.com",
+    });
+    for (const lng of ["en", "pt-BR"] as const) {
+      const i18n = createDesktopI18n(lng, "mac");
+      expect(i18n.t(PROBLEM_TEXT.unreachable, { host: "chat.example.com" })).not.toContain("Tailscale");
+      expect(i18n.t(PROBLEM_TEXT["unreachable-tailnet"], { host: "box.tail1234.ts.net" })).toContain("Tailscale");
+      expect(i18n.t(PROBLEM_TEXT["no-owner"], { host: "box" })).not.toContain("#claim");
+    }
+  });
+
+  test("starting one installed from the terminal: its folder only when it isn't the default one", () => {
+    expect(terminalStartCommand("/Users/ana/.agentes")).toBe("agentes-server");
+    expect(terminalStartCommand("/home/ana/.agentes")).toBe("agentes-server");
+    expect(terminalStartCommand("C:\\Users\\ana\\.agentes")).toBe("agentes-server");
+    expect(terminalStartCommand("/srv/agentes")).toBe('agentes-server --data "/srv/agentes"');
   });
 
   test("nothing answering on this computer is said as such, not as a Tailscale problem", () => {
@@ -164,7 +215,7 @@ describe("a link to a server", () => {
   });
 
   test("a problem keeps its words; junk is no link", () => {
-    expect(linkView(link(), down(BOX), null)).toEqual({ kind: "problem", server: BOX, problem: "unreachable" });
+    expect(linkView(link(), down(BOX), null)).toEqual({ kind: "problem", server: BOX, problem: "unreachable-tailnet" });
     expect(linkView(parseConnectLink("agenteschat://chat/123"), "checking", null)).toEqual({ kind: "notALink" });
   });
 });
@@ -178,10 +229,11 @@ describe("the menu bar and the labels Rust shows", () => {
     expect(menuBarShown(false, false, false)).toBe(true);
   });
 
-  test("every label fits what Rust takes, in both languages and on every system", () => {
-    for (const lng of ["pt-BR", "en"] as const) {
+  // Rust refuses the whole set when one label is too long, so every language counts, not only the two written here.
+  test("every label fits what Rust takes, in every language and on every system", async () => {
+    for (const { code: lng } of LOCALES) {
       for (const platform of ["mac", "windows", "linux"] as const) {
-        const labels = menuLabels(createDesktopI18n(lng, platform).t);
+        const labels = menuLabels((await loadDesktopI18n(lng, platform)).t);
         expect(Object.keys(labels).length).toBeLessThanOrEqual(100);
         for (const [key, value] of Object.entries(labels)) {
           expect({ key, ok: key.length <= 40 && value.length > 0 && [...value].length <= MAX_MENU_LABEL }).toEqual({

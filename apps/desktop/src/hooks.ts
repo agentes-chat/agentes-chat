@@ -1,7 +1,11 @@
 import type { ControlAgent } from "@agenteschat/adapters/runner-control";
+import type { WifiIphone } from "@agenteschat/client";
+import { WIFI_IPHONES_POLL_MS } from "@agenteschat/client/lib/devices";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useHost } from "./app";
+import { siteApi } from "./control/devices";
 import { type LocalServerStatus, NO_SERVER, type Tailnet } from "./control/local-server";
+import type { ServerWorkspaces } from "./control/server";
 import type { Home } from "./control/store";
 import {
   CHECK_EVERY_MS,
@@ -12,6 +16,49 @@ import {
   updateStateOf,
 } from "./control/version";
 import type { AppInfo, WindowName } from "./host/types";
+
+/**
+ * The iPhones on this Mac's Wi-Fi that trust it, from its server (`GET …/wifi-iphones`, for who may manage the Mac),
+ * asked every `WIFI_IPHONES_POLL_MS` while `on`. `pick` picks one (and throws what the server said); `using` is the one
+ * being picked.
+ */
+export function useWifiIphones(
+  at: { server: string | null; orgId: string | null; machineId: string | null },
+  on: boolean,
+) {
+  const host = useHost();
+  const { server, orgId, machineId } = at;
+  const [available, setAvailable] = useState<WifiIphone[]>([]);
+  const [using, setUsing] = useState<string | null>(null);
+  useEffect(() => {
+    if (!on || !server || !orgId || !machineId) {
+      setAvailable([]);
+      return;
+    }
+    let live = true;
+    const ask = () =>
+      siteApi(host, server)
+        .devices.wifiIphones(orgId, machineId)
+        .then((r) => live && setAvailable(r.available))
+        .catch(() => live && setAvailable([]));
+    void ask();
+    const timer = setInterval(() => void ask(), WIFI_IPHONES_POLL_MS);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [host, server, orgId, machineId, on]);
+  const pick = async (serial: string) => {
+    if (!server || !orgId || !machineId) return;
+    setUsing(serial);
+    try {
+      setAvailable((await siteApi(host, server).devices.pickIphoneOverWifi(orgId, machineId, serial)).available);
+    } finally {
+      setUsing(null);
+    }
+  };
+  return { available, pick, using };
+}
 
 /** The app's version and the Mac's arch (from the shell). */
 export function useAppInfo(): AppInfo | null {
@@ -104,6 +151,27 @@ export function useLocalServer(): LocalServerStatus {
     };
   }, [host]);
   return local;
+}
+
+/** Every server's workspaces as the app last read them, again whenever they change. */
+export function useWorkspaces(): ServerWorkspaces[] {
+  const host = useHost();
+  const [list, setList] = useState<ServerWorkspaces[]>([]);
+  useEffect(() => {
+    let live = true;
+    const read = () =>
+      void host
+        .workspaces()
+        .then((l) => live && setList(l))
+        .catch(() => {});
+    read();
+    const off = host.onWorkspaces(read);
+    return () => {
+      live = false;
+      off();
+    };
+  }, [host]);
+  return list;
 }
 
 /**

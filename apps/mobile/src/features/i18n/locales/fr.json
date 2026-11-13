@@ -59,7 +59,6 @@
     "failed": "Votre choix n'a pas été envoyé. Réessayez."
   },
   "chart": {
-    "pending": "Création du graphique…",
     "table": "Tableau",
     "item": "Élément",
     "share": "Partager",
@@ -87,7 +86,13 @@
     "hoursAgo_other": "il y a {{count}} h",
     "daysAgo_one": "il y a {{count}} jour",
     "daysAgo_many": "il y a {{count}} jours",
-    "daysAgo_other": "il y a {{count}} jours"
+    "daysAgo_other": "il y a {{count}} jours",
+    "short": {
+      "now": "maintenant",
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "days": "{{count}} j"
+    }
   },
   "names": {
     "two": "{{first}} et {{second}}",
@@ -130,6 +135,18 @@
     "tapNote": "Approuver lance l'action tout de suite.",
     "tapNoteAhead": "Approuver maintenant couvre {{when}}.",
     "refuseTitle": "Refuser la demande",
+    "refuseAsk": "Refuser la demande ?",
+    "leaves": "sort de l'entreprise",
+    "leavesPersonal": "sort de votre espace de travail",
+    "refuseWhyF": "{{name}} tire des leçons du motif. Facultatif.",
+    "refuseWhyM": "{{name}} tire des leçons du motif. Facultatif.",
+    "sheet": {
+      "title": "Demande",
+      "request": "La demande",
+      "why": "Pourquoi",
+      "service": "Service",
+      "nextTime": "La prochaine fois"
+    },
     "whyPlaceholderF": "Pourquoi ? Facultatif, mais {{name}} en tire des leçons",
     "whyPlaceholderM": "Pourquoi ? Facultatif, mais {{name}} en tire des leçons",
     "approved": "Approuvé",
@@ -156,6 +173,7 @@
       "irreversible": "Irréversible",
       "reversible": "Réversible",
       "external": "Sort de l'entreprise",
+      "externalPersonal": "Sort de votre espace de travail",
       "unsent": "Rien n'est envoyé",
       "deletable": "Peut être supprimé"
     },
@@ -228,11 +246,21 @@
     "newChannelHint": "Pour une équipe ou un sujet",
     "channelPlaceholder": "Nom du canal, par ex. marketing",
     "createChannel": "Créer le canal",
+    "newChannelHintPersonal": "Pour un sujet, avec plusieurs agents",
+    "channelPlaceholderPersonal": "Nom, par ex. voyage",
+    "createChannelPersonal": "Créer la conversation de groupe",
     "waitIn": "dans {{where}}",
     "workingNowLine_one": "{{count}} agent au travail",
     "workingNowLine_many": "{{count}} agents au travail",
     "workingNowLine_other": "{{count}} agents au travail",
     "nobodyWorking": "Aucun agent au travail pour le moment",
+    "workingOne": "{{name}} travaille",
+    "swipe": {
+      "mute": "Sourdine",
+      "unmute": "Réactiver"
+    },
+    "firstRunLine": "{{name}} constitue l'équipe · {{done}} sur {{total}}",
+    "firstRunLinePersonal": "{{name}} prépare vos agents · {{done}} sur {{total}}",
     "first": {
       "title": "Commencez par votre premier agent",
       "subtitle": "Donnez-lui un nom et dites ce qu'il fait. Il apparaît ici, comme une discussion.",
@@ -261,7 +289,10 @@
     "chat": "Discuter avec…",
     "name": "Nom",
     "channelFine": "Pour une équipe ou un sujet.",
+    "channelPersonal": "Conversation de groupe",
+    "channelFinePersonal": "Pour un sujet, avec plusieurs agents.",
     "chatSearch": "Chercher une personne ou un agent",
+    "to": "À :",
     "people": "Personnes",
     "search": "Personne ou agent",
     "create": "Créer",
@@ -272,10 +303,42 @@
     "routineHint": "Un agent s'en charge seul, à l'heure prévue",
     "wikiPage": "Page du wiki",
     "wikiHint": "À lire pour l'équipe et les agents",
+    "wikiHintPersonal": "À lire pour vos agents",
     "inviteHint": "Par e-mail ou lien",
     "agent": {
       "question": "Que va-t-il faire ?"
     }
+  },
+  "along": {
+    "agent": "Un agent",
+    "waits": "{{name}} attend votre accord",
+    "on": "{{name}} · {{what}}",
+    "working": "{{name}} travaille",
+    "more": "+{{count}}"
+  },
+  "share": {
+    "title": "Partager",
+    "to": "À qui",
+    "line": "Ajoutez un mot, si vous voulez",
+    "send": "Envoyer à {{name}}",
+    "pick": "Choisissez un agent",
+    "more": "+{{count}}",
+    "firstTen": "Les {{count}} premiers partent dans ce message.",
+    "waiting": "Réception…",
+    "nothing": "Rien à partager",
+    "nothingHint": "Ouvrez ce que vous voulez envoyer et touchez Partager.",
+    "noAgents": "Aucun agent pour l'instant",
+    "noAgentsHint": "Créez-en un et il apparaît ici, prêt à recevoir.",
+    "createAgent": "Créer un agent"
+  },
+  "voice": {
+    "slideToCancel": "glissez pour annuler",
+    "slideUpToLock": "glissez vers le haut pour verrouiller",
+    "locked": "Verrouillé",
+    "recording": "Enregistrement",
+    "discard": "Supprimer",
+    "send": "Envoyer",
+    "seeAll": "Tout voir"
   },
   "chat": {
     "someone": "Quelqu'un",
@@ -321,18 +384,10 @@
     "switchWorking": "au travail",
     "join": "Rejoindre le canal",
     "sending": "Envoi…",
-    "failed": "Non envoyé · Réessayer",
-    "notSent": "Le message n'a pas été envoyé.",
     "toLatest": "Aller aux derniers messages",
     "toLatestNew": "Aller aux derniers messages : {{text}}",
     "stopAgent": "Arrêter {{name}}",
     "offlineWait": "Partira au retour de la connexion",
-    "turn": {
-      "thinking": "réfléchit",
-      "working": "travaille",
-      "writing": "écrit",
-      "stopped": "arrêté"
-    },
     "steer": {
       "waiting": "{{name}} le lira à la prochaine pause",
       "computer": "{{name}} le lira dès qu'il aura l'ordinateur",
@@ -399,6 +454,16 @@
     },
     "uploading": "Envoi du fichier…",
     "uploadFailed": "Impossible d'envoyer le fichier.",
+    "doubleTapHint": "Toucher deux fois = 👍",
+    "react": "Réagir",
+    "attach": {
+      "more": "Ajouter une autre photo ou un fichier",
+      "remove": "Retirer {{name}}",
+      "waiting": "{{name}}, en attente d'envoi",
+      "sending": "{{name}}, envoi en cours",
+      "tooMany": "Jusqu'à {{count}} fichiers par message."
+    },
+    "swipeReply": "Balayez vers la droite pour répondre",
     "intent": {
       "suggest": {
         "merge": "Vas-y, fais le merge",
@@ -410,9 +475,63 @@
       "arrived": "{{name}} a rejoint l'équipe",
       "meet": "Votre première conversation avec {{name}}",
       "roleIntro": "{{role}} dans votre équipe. Demandez avec des mots simples.",
+      "roleIntroPersonal": "{{role}}, là pour vous. Demandez avec des mots simples.",
       "noIntro": "Demandez ce dont vous avez besoin, avec des mots simples.",
       "firstTitle": "Pour commencer",
       "sendHint": "Touchez pour envoyer",
+      "hello": "Bonjour, {{person}} ! Je suis {{name}}.",
+      "helloNoName": "Bonjour ! Je suis {{name}}.",
+      "helloRole": "{{role}} dans l'équipe.",
+      "helloRolePersonal": "{{role}}, là pour vous.",
+      "helloAsk": "Par où commencer ?",
+      "now": "maintenant",
+      "start": {
+        "support": {
+          "how": "Ce qui est urgent pour toi",
+          "task": "Réponds au sujet du délai",
+          "routine": "Les urgences, chaque matin"
+        },
+        "ops": {
+          "how": "Comment tu repères une panne",
+          "task": "Vérifie que tout fonctionne",
+          "routine": "La nuit, chaque matin"
+        },
+        "qa": {
+          "how": "Ce que tu testes en premier",
+          "task": "Cas de test de la connexion",
+          "routine": "Ce qui a cassé, chaque semaine"
+        },
+        "dev": {
+          "how": "Ce que tu fais dans notre code",
+          "task": "Relis la dernière pull request",
+          "routine": "Ce qui a changé, chaque vendredi"
+        },
+        "research": {
+          "how": "La recherche que tu fais le mieux",
+          "task": "Compare trois concurrents",
+          "routine": "Le marché, chaque lundi"
+        },
+        "writing": {
+          "how": "Ce que tu écris le mieux",
+          "task": "Améliore un de mes textes",
+          "routine": "Tes écrits de la semaine"
+        },
+        "product": {
+          "how": "Comment tu fixes les priorités",
+          "task": "Ce qui est en retard dans les tâches",
+          "routine": "Le plan, chaque lundi"
+        },
+        "sales": {
+          "how": "Comment tu trouves de bons prospects",
+          "task": "Un e-mail sur le produit",
+          "routine": "Les nouveaux prospects, chaque lundi"
+        },
+        "general": {
+          "how": "Ce que tu peux faire pour moi",
+          "task": "Montre-moi un exemple",
+          "routine": "Ta semaine, chaque lundi"
+        }
+      },
       "first": {
         "support": {
           "how": "Comment décides-tu de ce qui est urgent ?",
@@ -466,6 +585,7 @@
     "camera": "Appareil photo",
     "photos": "Photos",
     "file": "Fichier",
+    "media": "GIFs",
     "noCamera": "Pas d'accès à l'appareil photo. Autorisez-le dans les Réglages du téléphone.",
     "mission": "Lancer une mission",
     "missionHint": "Un travail long, avec un plan, du début à la fin",
@@ -520,7 +640,9 @@
     "bar_one": "Messages épinglés ({{count}})",
     "bar_many": "Messages épinglés ({{count}})",
     "bar_other": "Messages épinglés ({{count}})",
-    "unpinOf": "Désépingler le message de {{name}}"
+    "unpinOf": "Désépingler le message de {{name}}",
+    "peek": "Épinglés",
+    "peekHint": "Tirez vers le bas pour voir les messages épinglés"
   },
   "thread": {
     "threadIn": "Fil dans #{{channel}}",
@@ -667,7 +789,7 @@
     }
   },
   "threads": {
-    "title": "Fils et missions",
+    "title": "Fils",
     "section": {
       "missions": "Missions",
       "threads": "Fils"
@@ -687,10 +809,25 @@
     "created": "{{name}} a rejoint l'équipe",
     "createFailed": "Impossible de créer l'agent. Ce nom est peut-être déjà pris.",
     "freeSection": "Libres",
-    "noGroupSection": "Sans service"
+    "noGroupSection": "Sans service",
+    "workingSection": "Au travail",
+    "teamSection": "Équipe",
+    "teamSectionPersonal": "Vos agents",
+    "managerQuiet": "Rien en cours",
+    "state": {
+      "waitsYou": "attend votre accord",
+      "noAi": "Aucune IA connectée",
+      "connect": "Connecter",
+      "archived": "Archivé",
+      "routine": "Routine en cours · {{time}}",
+      "routineShort": "routine en cours"
+    },
+    "thinksWith": "Réfléchit avec {{label}}"
   },
   "team": {
-    "entry": "Liste, organigramme et carte",
+    "entry": "Organigramme et canaux",
+    "sectorLead": "{{name}} dirige",
+    "sectorBackup": "{{name}} supplée",
     "mapHint": "Pour changer un agent de canal, utilisez la carte sur le web ou parlez à {{name}}."
   },
   "agentEdit": {
@@ -706,6 +843,13 @@
     "leaveTitle": "Partir sans créer ?",
     "leaveText": "L'agent commencé ne sera pas créé.",
     "keepGoing": "Continuer la création",
+    "identityQuestion": "Qui est l'agent ?",
+    "identityLead": "Son nom, comment l'appeler dans la discussion et son visage.",
+    "handleMention": "Mentionnez @{{handle}} pour l'appeler.",
+    "handleFromName": "Dans la discussion : @{{handle}}. Il vient du nom. Vous pouvez le changer.",
+    "handleFromNameEmpty": "Son @ dans la discussion vient du nom.",
+    "reviewLead": "Touchez une ligne pour la modifier.",
+    "planHint": "Ou connectez votre abonnement IA : {{name}} s'en servira pour réfléchir, sans utiliser la clé.",
     "partly": "L'agent a été créé, mais une partie de ce qu'apporte son rôle n'est pas passée. Ajustez-le sur son profil.",
     "import": {
       "where": {
@@ -756,9 +900,11 @@
     "chooseModel": "Choisir un autre modèle",
     "filter": {
       "all": "Tout",
-      "waiting": "Vous attend",
+      "waiting": "Demandes",
       "done": "Terminées"
     },
+    "doneToast": "Terminé",
+    "undo": "Annuler",
     "day": {
       "today": "Aujourd'hui",
       "yesterday": "Hier",
@@ -901,9 +1047,6 @@
       "plan_model_dropped_one": "{{model}} a quitté {{plan}}. {{names}} utilise {{runs}} pour l’instant",
       "plan_model_dropped_many": "{{model}} a quitté {{plan}}. {{names}} utilise {{runs}} pour l’instant",
       "plan_model_dropped_other": "{{model}} a quitté {{plan}}. {{names}} utilise {{runs}} pour l’instant",
-      "connector_tool_changed_one": "Un serveur connecté a modifié des outils que vous aviez approuvés",
-      "connector_tool_changed_many": "Un serveur connecté a modifié des outils que vous aviez approuvés",
-      "connector_tool_changed_other": "Un serveur connecté a modifié des outils que vous aviez approuvés",
       "computer_disk_full_one": "Le disque d'un ordinateur est presque plein",
       "computer_disk_full_many": "Le disque d'un ordinateur est presque plein",
       "computer_disk_full_other": "Le disque d'un ordinateur est presque plein",
@@ -937,6 +1080,13 @@
       "all": "Tout"
     },
     "nothing": "Rien pour « {{q}} ».",
+    "filters": "Filtres",
+    "filterWord": {
+      "from": "De",
+      "in": "Dans",
+      "has": "Avec un fichier",
+      "date": "Date"
+    },
     "action": {
       "newConversation": "Nouvelle discussion",
       "newTask": "Demander une tâche",
@@ -964,7 +1114,9 @@
     "title": "Vous",
     "role": {
       "owner": "propriétaire",
-      "member": "membre"
+      "member": "membre",
+      "ownerPersonal": "votre espace personnel",
+      "memberPersonal": "un espace personnel partagé avec vous"
     },
     "appearance": "Apparence",
     "notifications": "Notifications",
@@ -1009,7 +1161,6 @@
     "proposalsWaiting_other": "{{count}} en attente",
     "drive": "Drive",
     "connectors": "Connecteurs et MCP",
-    "usage": "Consommation",
     "preferences": "Préférences",
     "editProfile": "Modifier le profil",
     "switchWorkspace": "Changer d'espace de travail",
@@ -1020,10 +1171,24 @@
     "on": "Activé",
     "off": "Désactivé",
     "notificationsPhone": "Notifications sur ce téléphone",
+    "chatOpenAtHelp": "Là où vous vous êtes arrêté, une ligne « Nouveau » marque ce qui est arrivé ensuite.",
     "notificationsOnHint": "Elles arrivent aussi dans le navigateur et l'app de bureau, si elles y sont activées.",
     "notificationsOffHint": "Activez-les pour recevoir les notifications ici. Les types ci-dessous s'appliquent à tous vos appareils.",
     "notificationsKindsHint": "L'activité garde tout. Ceci s'applique à cet espace de travail, sur tous vos appareils.",
     "version": "agentes.chat · version {{version}}",
+    "edit": "Modifier",
+    "status": "Statut",
+    "workspace": "Espace de travail",
+    "workspaceMore_one": "{{count}} de plus",
+    "workspaceMore_other": "{{count}} de plus",
+    "workspaceMoreElsewhere_one": "{{count}} de plus, sur un autre serveur",
+    "workspaceMoreElsewhere_other": "{{count}} de plus, sur un autre serveur",
+    "workspaceMoreServers_one": "{{count}} de plus, sur d'autres serveurs",
+    "workspaceMoreServers_other": "{{count}} de plus, sur d'autres serveurs",
+    "allAgents": "Tout voir",
+    "work": "Travail",
+    "dashboards": "Tableaux de bord",
+    "agentStyle": "Comment parlent les agents",
     "workspaces": "Espaces de travail",
     "workspacesIn": "Vous êtes dans",
     "workspacesFoot": "Vous restez connecté à chacun et recevez les notifications de tous. Touchez un workspace pour l’ouvrir.",
@@ -1036,6 +1201,13 @@
     "teamServer": "Serveur de l’équipe",
     "teamServerLead": "L’adresse agentes.chat de votre équipe, la même que dans le navigateur.",
     "teamServerFoot": "Vous ne quittez aucun workspace : le serveur de votre équipe rejoint votre liste, avec votre compte là-bas.",
+    "workspacesHoldHint": "Maintenez pour changer d'espace de travail",
+    "workspacesSheetFoot": "Vous restez connecté à tous. Les notifications de chacun vous arrivent ici.",
+    "addWorkspaceTeamShort": "Rejoindre le serveur de l'équipe",
+    "addWorkspaceTeamSubShort": "Adresse ou QR code de l'ordinateur",
+    "addWorkspaceFoot": "Vous ne quittez aucun espace de travail.",
+    "teamServerLeadShort": "Ce que votre équipe ouvre dans le navigateur.",
+    "teamServerQuestion": "Quelle est l'adresse de votre équipe ?",
     "account": {
       "title": "Compte",
       "save": "OK",
@@ -1131,6 +1303,17 @@
   "issues": {
     "title": "Tâches",
     "new": "Nouvelle tâche",
+    "viewList": "Liste",
+    "viewBoard": "Tableau",
+    "search": "Rechercher des tâches",
+    "noMatch": "Aucune tâche à ce nom.",
+    "list": {
+      "mine": "Pour vous",
+      "in_progress": "En cours",
+      "in_review": "En revue",
+      "todo": "À faire",
+      "doneToday": "Terminées aujourd'hui"
+    },
     "filters": "Filtrer les tâches",
     "section": {
       "todo": "À faire",
@@ -1256,7 +1439,8 @@
     "uses_many": "Utilisé {{count}} fois",
     "uses_other": "Utilisé {{count}} fois",
     "confirmed": "Confirmé par une personne",
-    "unconfirmed": "Pas encore confirmé",
+    "confirm": "Confirmer",
+    "confirmedToast": "Confirmée",
     "details": "Détails techniques",
     "before": "Avant, c'était : {{text}}",
     "fix": "Corriger",
@@ -1265,6 +1449,12 @@
   },
   "wiki": {
     "map": "Carte des pages",
+    "graph": "Connexions",
+    "links_one": "{{count}} lien",
+    "links_other": "{{count}} liens",
+    "linksOut": "Renvoie vers",
+    "continue": "Continuer la lecture",
+    "more": "Plus d'options",
     "mapAgent": "Agent qui a lu des pages cette semaine",
     "usedBy": "Agents qui l'utilisent",
     "readsWeek_one": "{{count}} lecture cette semaine",
@@ -1294,11 +1484,24 @@
   "routines": {
     "loadFailed": "Impossible de charger les routines.",
     "anyAgent": "Tous les agents",
-    "create": "Créer"
+    "create": "Créer",
+    "when": {
+      "custom": "À votre façon",
+      "write": "L'écrire à votre façon…",
+      "day": "Jour",
+      "monthDay": "Le {{day}}",
+      "lastDay": "Dernier jour"
+    }
   },
   "taskManager": {
     "loadFailed": "Impossible de charger les tâches.",
-    "gone": "Cette tâche n'est plus là."
+    "gone": "Cette tâche n'est plus là.",
+    "quiet": "Rien en cours",
+    "doneToday_one": "{{count}} terminée aujourd'hui",
+    "doneToday_other": "{{count}} terminées aujourd'hui",
+    "request": "Demande",
+    "stopTitle": "Arrêter « {{title}} » ?",
+    "stopBody": "{{name}} s'arrête maintenant et dit dans la conversation ce qui a déjà été fait."
   },
   "homeNow": {
     "working_one": "{{count}} au travail",
@@ -1329,15 +1532,11 @@
       "browser": "Navigateur",
       "secret": "Secret",
       "join": "Membres",
-      "tools": "Outils",
       "limit": "Limite"
     },
     "review": "Examiner",
     "answer": "Répondre",
     "open": "Ouvrir",
-    "toolsTitle": "A modifié des outils que tu as approuvés",
-    "toolsWhy": "Les agents gardent la version approuvée jusqu'à ce que tu acceptes la nouvelle.",
-    "reviewChanges": "Revoir les changements",
     "clear": {
       "title": "Rien ne vous attend",
       "text": "Quand un agent a besoin de vous, ça apparaît d'abord ici."
@@ -1402,6 +1601,13 @@
       "title_female": "Ce qu'elle sait de vous",
       "footF": "Touchez pour corriger ou oublier.",
       "footM": "Touchez pour corriger ou oublier.",
+      "footSwipe": "Touchez pour corriger. Balayez pour oublier.",
+      "forgetTitle": "Oublier ceci ?",
+      "forgetBody": "{{name}} cesse d'utiliser ce souvenir. Les messages restent.",
+      "forget": "Oublier",
+      "ruleTitle": "Retirer cette règle ?",
+      "ruleBody": "{{name}} cesse de suivre cette règle. Qui l'a donnée peut la redonner.",
+      "ruleRemove": "Retirer",
       "footOwner": "Seul {{name}} ou un admin peut les corriger.",
       "footAdmins": "Seul un admin peut les corriger.",
       "emptyF": "{{name}} n'a encore rien enregistré sur vous.",
@@ -1428,6 +1634,7 @@
       "forgotten": "Oublié"
     },
     "thinks": "Réfléchit avec",
+    "asksApproval": "Demande votre approbation",
     "uses": {
       "title": "Ce qu'il peut utiliser",
       "title_female": "Ce qu'elle peut utiliser",
@@ -1449,9 +1656,9 @@
         "setup": "Configuration de l'espace de travail",
         "desktop": "Écran de l'ordinateur"
       },
-      "asksYou": "Fusionner et publier demandent toujours votre approbation, quel que soit le niveau.",
-      "asksOwner": "Fusionner et publier demandent toujours l'approbation de {{name}}, quel que soit le niveau.",
-      "asksAdmins": "Fusionner et publier demandent toujours l'approbation d'un admin, quel que soit le niveau.",
+      "asksYou": "Fusionner et publier demandent votre approbation, sauf si l'agent ne demande jamais.",
+      "asksOwner": "Fusionner et publier demandent l'approbation de {{name}}, sauf si l'agent ne demande jamais.",
+      "asksAdmins": "Fusionner et publier demandent l'approbation d'un admin, sauf si l'agent ne demande jamais.",
       "empty": "Pour l'instant, seulement la conversation."
     }
   },
@@ -1559,13 +1766,7 @@
       "open": "Ouvrir",
       "expandHint": "Touchez pour agrandir",
       "stop": "Arrêter",
-      "giveUp": "Abandonner",
-      "done": "Fait : {{title}}",
-      "failed": "Pas réussi : {{title}}",
-      "failedNote": "Pas réussi : {{note}}",
-      "expired": "Personne ne l'a ouvert à temps : {{title}}",
-      "cancelled": "Annulé : {{title}}",
-      "withdrawn": "{{name}} n'en a plus besoin : {{title}}"
+      "giveUp": "Abandonner"
     },
     "live": {
       "inControl": "Vous avez la main",
@@ -1645,12 +1846,265 @@
       }
     }
   },
+  "computer": {
+    "pick": "Choisir un ordinateur",
+    "pickHelp": "Choisissez un des ordinateurs allumés."
+  },
+  "devices": {
+    "title": "Appareils",
+    "empty": {
+      "title": "Aucun appareil pour l'instant",
+      "text": "Connectez un ordinateur, puis branchez-y un téléphone."
+    },
+    "status": {
+      "ready": "Prêt",
+      "inUse": "Utilisé par {{name}}",
+      "inUseFor": "pour {{person}} depuis {{time}}",
+      "since": "depuis {{time}}",
+      "busy": "Occupé {{running}}/{{max}}",
+      "needsYou": "Action requise",
+      "preparing": "Préparation en cours",
+      "paused": "En pause",
+      "until": "jusqu'à {{time}}",
+      "offline": "Hors ligne",
+      "seen": "vu pour la dernière fois {{when}}",
+      "withHost": "avec {{host}}",
+      "unsupported": "Inutilisable"
+    },
+    "reason": {
+      "locked": "L'écran est verrouillé",
+      "unauthorized": "Touchez Autoriser sur le téléphone",
+      "untrusted": "Touchez Se fier sur l'iPhone",
+      "developer_mode_off": "Le mode développeur est désactivé",
+      "ui_automation_off": "L'automatisation de l'IU est désactivée",
+      "xcode_missing": "Le Mac a besoin de Xcode",
+      "xcode_too_old": "Xcode est trop ancien pour cet iPhone",
+      "device_support": "Le Mac prépare cet iPhone",
+      "helper_missing": "L'app de test n'est pas encore configurée",
+      "helper_expired": "L'app de test doit être renouvelée",
+      "apple_account_missing": "Xcode sur le Mac a besoin d'un Apple Account",
+      "apple_team_missing": "Xcode sur le Mac n'affiche pas encore d'équipe",
+      "ui_not_authorized": "Cet iPhone a refusé les touchers de l'app de test",
+      "team_limit": "Supprimez de cet iPhone une app que vous avez créée",
+      "helper_untrusted": "Faites confiance à l'app de test sur cet iPhone",
+      "booting": "Démarrage en cours",
+      "no_driver": "Windows a besoin du pilote USB du fabricant du téléphone",
+      "no_driverLinux": "Linux a besoin de règles udev pour ce téléphone",
+      "os_too_old": "Le système de ce téléphone est trop ancien",
+      "adb_offline": "Débranchez le câble et rebranchez-le",
+      "wifi_away": "Rejoignez le Wi-Fi du Mac sur cet iPhone ou branchez-le",
+      "wifi_asleep": "Réveillez et déverrouillez cet iPhone, et gardez-le près du Mac",
+      "tunnel_down": "La liaison Wi-Fi a été coupée. Gardez cet iPhone près du Mac ou branchez-le",
+      "wifi_untrusted": "Branchez-le une fois et touchez Se fier",
+      "other": "Pas encore prêt"
+    },
+    "os": {
+      "android": "Android {{version}}",
+      "ios": "iOS {{version}}"
+    },
+    "onHost": "sur {{host}}",
+    "cpus_one": "{{count}} CPU",
+    "cpus_many": "{{count}} CPU",
+    "cpus_other": "{{count}} CPU",
+    "memory": "{{gb}} Go",
+    "audience": {
+      "label": "Qui peut l'utiliser",
+      "me": "Moi seulement",
+      "only": "Seulement {{name}}",
+      "everyone": "Tout le monde",
+      "sameAs": "Comme {{host}}",
+      "mode": {
+        "owner": "Moi seulement",
+        "ownerOf": "Seulement {{name}}",
+        "everyone": "Tout l'espace de travail",
+        "people": "Seulement certaines personnes ou certains rôles"
+      },
+      "modeText": {
+        "owner": "Vous, et les agents qui travaillent pour vous.",
+        "ownerOf": "{{name}}, et les agents qui travaillent pour cette personne.",
+        "everyone": "Les agents de toutes les personnes de l'espace de travail peuvent l'utiliser.",
+        "people": "Choisissez les personnes et les rôles dont les agents peuvent l'utiliser."
+      },
+      "people": "Personnes et rôles",
+      "pickSomeone": "Choisissez au moins une personne ou un rôle.",
+      "narrowOnly": "Vous pouvez restreindre qui utilise l'appareil de {{name}}, jamais l'élargir.",
+      "runsAs": "Les agents des autres personnes y tourneront en votre nom et pourront lire vos fichiers.",
+      "phoneOnly": "Cela partage seulement le téléphone, jamais {{host}}.",
+      "saved": "Enregistré"
+    },
+    "page": {
+      "belongs": "Appartient à l'espace de travail",
+      "belongsHint": "Il reste quand son propriétaire quitte l'espace de travail, et Moi seulement vaut alors pour tout le monde.",
+      "phones": "Téléphones",
+      "ownerReads": "Son propriétaire peut lire le code, les fichiers et les builds que votre agent y dépose.",
+      "followsHost": "Un iPhone suit la règle de son Mac.",
+      "shareNote": "Partager un téléphone ne partage jamais {{host}}.",
+      "showHow": "Montrez-moi comment",
+      "name": "Nom",
+      "renamed": "Il s'appelle maintenant {{name}}",
+      "stop": "Arrêter {{name}}",
+      "stopped": "{{device}} est revenu de {{name}}",
+      "forget": "Oublier ce téléphone",
+      "forgetTitle": "Oublier {{name}} ?",
+      "forgetText": "Il reviendra si {{host}} le détecte à nouveau.",
+      "forgotten": "{{name}} a été oublié",
+      "notFound": "Cet appareil n'est plus là",
+      "notFoundText": "Il a été retiré, ou il est parti avec son propriétaire."
+    },
+    "join": {
+      "header": "Demandent à rejoindre",
+      "title": "{{name}} veut rejoindre {{org}}",
+      "allow": "Accepter",
+      "deny": "Refuser",
+      "joined": "{{name}} a été ajouté",
+      "denied": "{{name}} a été refusé"
+    },
+    "connect": {
+      "title": "Connecter un appareil",
+      "thisPhone": "Ce téléphone",
+      "computers": "Ordinateurs",
+      "androidText": "Via un ordinateur auquel il est branché",
+      "iphoneText": "Via un Mac",
+      "server": "Un serveur ou un VPS",
+      "serverText": "Une ligne à coller dans son terminal",
+      "computer": "Un autre ordinateur",
+      "computerText": "Installez l'app dessus",
+      "appNote": "Sur un Mac ou un PC que vous utilisez, l'app de bureau agentes.chat le connecte aussi.",
+      "appStep1": "Installez l'app agentes.chat dessus",
+      "appStep2": "Ouvrez-la et connectez-vous avec votre compte",
+      "appStep3": "Cliquez sur Autoriser quand elle demande de laisser les agents de {{org}} l'utiliser",
+      "appShows": "Il apparaît ici tout seul, pour vous seul jusqu'à ce que vous le partagiez.",
+      "appWaiting": "En attente d'un de vos ordinateurs…",
+      "appConnected": "Connecté : {{name}}",
+      "appLine": "Impossible d'y installer l'app ? Utilisez une ligne de terminal",
+      "unix": "Linux et macOS",
+      "windows": "Windows",
+      "once": "Fonctionne une fois, pendant 10 minutes. Exécutez-la sur l'ordinateur, puis acceptez-le ici.",
+      "copied": "Commande copiée. Collez-la dans le terminal de l'ordinateur.",
+      "waiting": "En attente de l'exécution sur l'ordinateur",
+      "joined": "{{name}} est connecté",
+      "denied": "Vous n'avez pas accepté {{name}}.",
+      "expired": "Ce lien a expiré.",
+      "again": "Créer un nouveau lien"
+    },
+    "android": {
+      "entry": "Utiliser ce téléphone avec des agents",
+      "title": "Laisser les agents utiliser ce téléphone",
+      "connecting": "Connexion à {{host}}",
+      "computer": "Ordinateur",
+      "noHost": "Ce téléphone fonctionne via l'un de vos ordinateurs. Connectez-en un d'abord.",
+      "hostOffline": "{{host}} est hors ligne. Allumez-le et ouvrez agentes.chat dessus.",
+      "step1": "Activez les Options pour les développeurs",
+      "step1Text": "Touchez 7 fois Numéro de build, puis saisissez votre code PIN. Sur Samsung : Informations sur le logiciel › Numéro de version.",
+      "openAbout": "Ouvrir À propos du téléphone",
+      "step2": "Activez le Débogage USB",
+      "openDev": "Ouvrir Options pour les développeurs",
+      "step3": "Branchez-le sur {{host}}",
+      "looking": "Recherche de ce téléphone",
+      "step4": "Touchez Autoriser sur ce téléphone",
+      "step4Text": "Cochez d'abord Toujours autoriser cet ordinateur.",
+      "prompt": {
+        "a11y": "Android demande : Autoriser le débogage USB ? Cochez Toujours autoriser cet ordinateur, puis touchez Autoriser.",
+        "title": "Autoriser le débogage USB ?",
+        "fingerprint": "Empreinte de la clé RSA de l'ordinateur :",
+        "always": "Toujours autoriser cet ordinateur",
+        "cancel": "Annuler",
+        "allow": "Autoriser"
+      },
+      "wifi": "Pas de câble ? Associez-le par Wi-Fi",
+      "wifiText": "Téléphone et ordinateur sur le même Wi-Fi",
+      "cable": "Utiliser plutôt un câble",
+      "wifi1": "Activez le Débogage sans fil",
+      "wifi1Text": "Cochez Toujours autoriser sur ce réseau, puis touchez Autoriser.",
+      "wifi2": "Scannez le code sur un ordinateur",
+      "wifi2Text": "Depuis Débogage sans fil › Associer l'appareil avec un code QR. N'utilisez pas l'appareil photo : il lit le code comme un réseau Wi-Fi et sort le téléphone de votre Wi-Fi.",
+      "wifi2Hint": "Dans agentes.chat sur un ordinateur, ouvrez Connecter un appareil › Téléphone Android › Par Wi-Fi et choisissez {{host}}.",
+      "codeHead": "Associer avec un code d'association",
+      "codeNote": "Depuis Débogage sans fil › Associer l'appareil avec un code d'association. Ouvrez Paramètres et agentes.chat côte à côte pour garder le code à l'écran.",
+      "wifiNote": "Le Wi-Fi peut se couper après un redémarrage. Un câble est plus fiable.",
+      "done": "{{name}} est connecté",
+      "openFailed": "Ce téléphone n'a pas ouvert cet écran. Cherchez-le dans Paramètres."
+    },
+    "iphone": {
+      "title": "Connecter cet iPhone",
+      "with": "Avec {{host}}",
+      "noHost": "Un iPhone se connecte via l'un de vos Mac. Connectez-en un d'abord.",
+      "step1": "Branchez-le sur {{host}}",
+      "step2": "Touchez Se fier sur cet iPhone",
+      "step2Text": "Puis saisissez votre code.",
+      "step3": "Activer le mode développeur",
+      "step3Hint": "Les apps iPhone ne peuvent pas ouvrir les réglages d'une autre app, voici donc le chemin.",
+      "path": {
+        "settings": "Réglages",
+        "privacy": "Confidentialité et sécurité",
+        "devMode": "Mode développeur"
+      },
+      "pathA11y": "Sur cet iPhone : Réglages, puis Confidentialité et sécurité, puis Mode développeur",
+      "switchA11y": "L'interrupteur Mode développeur, désactivé",
+      "step3Text": "Activez-le et touchez Redémarrer. Après le redémarrage, touchez Activer et saisissez votre code.",
+      "step4": "Activer l'automatisation de l'IU",
+      "step4Text": "Réglages › Développeur › Activer l'automatisation de l'IU",
+      "step5": "Faites confiance à l'app de test",
+      "step5Hint": "L'app que {{host}} installe pour que les agents puissent toucher et écrire sur cet iPhone. Elle apparaît dans cette liste une fois installée.",
+      "step5Text": "Réglages › Général › VPN et gestion de l'appareil. Touchez le nom du développeur, puis Se fier.",
+      "waiting": "En attente que {{host}} le détecte",
+      "footer": "Votre Mac fait le reste, et renouvelle l'app de test tous les 7 jours tant qu'il est allumé.",
+      "tooOld": "Cet iPhone est sous iOS {{version}}, et les agents ont besoin d'iOS 17 ou plus récent. Mettez-le à jour s'il le peut, ou utilisez un iPhone plus récent.",
+      "xcodeOld": "Cet iPhone est sous iOS {{version}}, plus récent que ce que connaît Xcode sur {{host}}. Installez-y Xcode {{major}}, puis lancez xcrun devicectl manage ddis update dans Terminal.",
+      "teamMissing": "Xcode est connecté mais n'affiche pas encore d'équipe. Dans Xcode, créez n'importe quelle app iOS, choisissez votre équipe dans Signing & Capabilities et lancez-la une fois sur cet iPhone.",
+      "uiRefused": "Cet iPhone a refusé les touchers de l'app de test. Déverrouillez-le et saisissez votre code s'il le demande. Si cela continue, désactivez puis réactivez Réglages › Développeur › Activer l'automatisation de l'IU.",
+      "pluggedIn": "Il est branché",
+      "wifi": {
+        "also": "Aussi sur le Wi-Fi de {{host}} : {{name}}",
+        "use": "Utiliser en Wi-Fi",
+        "hint": "Seul un iPhone qui a déjà fait confiance au Mac par câble apparaît ici. Le Mac le joint par la liaison chiffrée d'Apple, celle qu'utilise Xcode.",
+        "stop": "Ne plus utiliser en Wi-Fi",
+        "stopTitle": "Ne plus utiliser {{name}} en Wi-Fi ?",
+        "stopText": "Les agents ne peuvent plus l'atteindre. Choisissez-le à nouveau avec {{host}} pour l'utiliser.",
+        "stopped": "{{name}} n'est plus utilisé en Wi-Fi"
+      },
+      "stall": {
+        "plug": "{{host}} ne voit pas encore cet iPhone. Utilisez un câble qui transmet les données, pas seulement la charge, gardez cet iPhone déverrouillé et touchez Se fier s'il le demande.",
+        "devmode": "Le Mode développeur ne s'active qu'après le redémarrage de cet iPhone. Touchez Redémarrer, puis Activer une fois qu'il a redémarré. Pas d'interrupteur ? Débranchez cet iPhone et rebranchez-le."
+      }
+    },
+    "notice": {
+      "kind": "Appareils",
+      "join_request": "{{device}} veut rejoindre {{org}}",
+      "in_use": "{{names}} utilise {{device}}",
+      "in_useFor": "{{names}} utilise {{device}} pour {{person}}",
+      "access_request": "{{names}} demande à utiliser {{device}}",
+      "access_requestFor": "{{names}} demande à utiliser {{device}} pour {{person}}",
+      "waiting": "{{names}} attend {{device}}",
+      "waitingFor": "{{names}} attend {{device}} pour {{person}}",
+      "allowOnce": "Autoriser une fois",
+      "always": "Toujours autoriser {{name}}",
+      "no": "Non",
+      "stop": "Arrêter"
+    },
+    "wait": {
+      "waiting": "En attente de {{device}}",
+      "back": "{{device}} est de retour",
+      "tryNow": "Réessayer maintenant",
+      "other": "Utiliser un autre appareil",
+      "stop": "Arrêter d'attendre",
+      "useInstead": "Utiliser plutôt {{name}}",
+      "none": "Aucun autre appareil que vous pouvez utiliser n'est prêt."
+    }
+  },
   "connectors": {
-    "title": "Connecteurs et MCP",
-    "search": "Rechercher un service",
+    "title": "Connecteurs",
+    "search": "Rechercher ou coller une adresse",
     "mcps": "MCP",
     "mcpsNone": "Les serveurs MCP que vous connectez par leur adresse s'affichent ici.",
     "addMcp": "Ajouter un MCP",
+    "add": "Ajouter",
+    "allServices": "Tous les services",
+    "waitLine_one": "{{count}} outil a besoin de vous",
+    "waitLine_other": "{{count}} outils ont besoin de vous",
+    "toolsWait_one": "{{count}} a besoin de vous",
+    "toolsWait_other": "{{count}} ont besoin de vous",
+    "connectedState": "Connecté",
     "connected": "Connectés",
     "suggested": "Suggérés pour {{org}}",
     "all": "Tous",
@@ -1659,6 +2113,7 @@
     "loadFailed": "Impossible de charger les connecteurs.",
     "connectedCheck": "{{name}}, connecté",
     "adminsOnly": "Seul un admin de {{org}} connecte des services. Demandez à l'un d'eux.",
+    "adminsOnlyPersonal": "Seule la personne qui gère cet espace de travail connecte des applications. Demandez-lui.",
     "canTitle": "Les agents pourront",
     "asks": "{{text}} · demande votre approbation",
     "connect": "Connecter",
@@ -1678,23 +2133,22 @@
     "failed": "Impossible de se connecter. Réessayez.",
     "refused": "{{name}} n'a pas autorisé. Rien n'a été connecté.",
     "connectedTitle": "{{name}} connecté",
-    "connectedSub": "Vérifiez maintenant ce que les agents peuvent faire seuls.",
     "connectedDone": "Service connecté.",
     "levelFailed": "Impossible de modifier l'accès de {{name}}. Réessayez.",
     "everyoneFailed": "Impossible de modifier l'accès de tout le monde. Réessayez.",
     "disconnectFailed": "Impossible de déconnecter {{name}}. Réessayez.",
     "needsReconnect": "Le compte {{name}} ne fonctionne plus. Les agents ne peuvent pas l'utiliser tant que quelqu'un ne l'a pas reconnecté.",
     "noTools": "Les outils de {{name}} n’ont pas pu être lus. Les agents s’en passent jusqu’à une nouvelle lecture, dans Outils.",
-    "accountTitle": "Ce compte",
+    "accountTitle": "Compte",
     "renameFailed": "Impossible de le renommer. Réessayez.",
-    "whoTitle": "Qui l'utilise et jusqu'où",
+    "whoTitle": "Qui l'utilise",
     "level": {
       "none": "N'utilise pas",
       "read": "Regarde seulement",
       "write": "Peut modifier",
       "custom": "À votre façon"
     },
-    "safe": "Supprimer, publier et répondre aux clients demandent toujours votre approbation.",
+    "safe": "Supprimer et publier demandent toujours votre accord d'abord.",
     "done": "Terminé",
     "step": "Étape {{n}} sur {{total}} : {{label}}",
     "disconnect": "Déconnecter",
@@ -1727,10 +2181,27 @@
     "wrongAccount": "Cette invitation est pour {{email}}.",
     "otherAccount": "Utiliser un autre compte",
     "failed": "Impossible d'accepter l'invitation. Réessayez.",
+    "askNewOf": "En demander une autre à {{name}}",
+    "ask": {
+      "called": "{{name}} vous invite dans {{org}}.",
+      "calledNoName": "Voici l'invitation de {{org}}.",
+      "approves": "Quelqu'un chez {{org}} approuve votre arrivée.",
+      "youTitle": "Il ne manque plus que vous.",
+      "emailConfirmed": "E-mail confirmé",
+      "stepOf": "{{n}} sur {{total}} · {{name}}",
+      "step": {
+        "email": "Votre e-mail",
+        "code": "Code",
+        "you": "Vous"
+      },
+      "haveAccount": "J'ai déjà un compte",
+      "notePlaceholder": "Un mot pour la personne qui approuve ? Facultatif"
+    },
     "join": {
       "skip": "Passer",
       "sharedBy": "{{name}} a partagé ce lien",
       "waitLead": "Vous entrez dès qu'un admin approuve. Vous pouvez fermer l'app : on vous préviendra par e-mail.",
+      "waitLeadOpen": "App ouverte, vous entrez automatiquement dès l'approbation. App fermée, on vous prévient par e-mail.",
       "passwordLead": "Votre mot de passe, et vous y êtes."
     }
   },
@@ -1775,7 +2246,8 @@
   "entering": {
     "title": "Entrée dans {{org}}…",
     "titleNew": "Entrée…",
-    "lead": "Vos conversations arrivent."
+    "lead": "Vos conversations arrivent.",
+    "team": "L'équipe est déjà là."
   },
   "splash": {
     "slow": "Connexion…",
@@ -1786,6 +2258,14 @@
     "logoHelp": "Facultatif.",
     "logoPick": "Choisir",
     "zone": "Fuseau horaire : {{zone}}",
+    "zoneChange": "Changer",
+    "zoneTitle": "Fuseau horaire",
+    "anotherTitle": "Comment s'appelle le nouvel espace de travail ?",
+    "anotherPurpose": "À quoi servira le nouvel espace de travail ?",
+    "anotherLead": "Sur agentes.chat. Vous restez dans {{org}} et pouvez changer à tout moment.",
+    "suggested": "D'après votre e-mail {{domain}}, j'ai suggéré {{org}}.",
+    "create": "Créer",
+    "enter": "Entrer dans l'espace de travail",
     "shareMessage": "Rejoignez {{org}} sur agentes.chat : {{url}}",
     "failed": "Impossible d'enregistrer. Réessayez."
   },
@@ -1813,7 +2293,16 @@
     "moveHere": "Le déplacer ici",
     "audience": "À qui il répond",
     "audience_female": "À qui elle répond",
-    "another": "Une autre IA"
+    "another": "Une autre IA",
+    "question": "Comment réfléchira {{name}} ?",
+    "questionAny": "Comment réfléchiront les agents ?",
+    "questionLead": "Vous pourrez le changer plus tard, sur le profil.",
+    "planRow": "Mon abonnement IA",
+    "planRowSub": "Se connecte sur l'ordinateur de l'agent, sans clé",
+    "keyRow": "Une clé",
+    "keyRowSub": "Vous payez à l'usage, directement au fournisseur",
+    "already": "Déjà dans {{org}}",
+    "stepOf": "{{step}} sur {{total}}"
   },
   "crash": {
     "title": "Un problème est survenu sur cet écran",
@@ -1827,6 +2316,25 @@
   },
   "settings": {
     "edit": "Modifier l'espace de travail",
+    "editSub": "Nom, logo, fuseau horaire et ce que savent les agents",
+    "group": {
+      "org": "Espace de travail",
+      "people": "Personnes"
+    },
+    "section": {
+      "members": "Membres",
+      "roles": "Rôles",
+      "access": "Accès des agents",
+      "connectors": "Connecteurs"
+    },
+    "ofOnline": "{{online}} sur {{count}}",
+    "deleteName": "Supprimer {{name}}",
+    "deleteFoot": "Vous avez 7 jours pour changer d'avis.",
+    "deleteAlert": "Dès maintenant, tout le monde peut seulement le lire. Vous pouvez le restaurer pendant 7 jours.",
+    "deleteAction": "Supprimer",
+    "deleteIntro": "{{name}} passe tout de suite en lecture seule pour tout le monde et sera supprimé définitivement dans 7 jours.",
+    "holdDelete": "Maintenir pour supprimer",
+    "deleteFailed": "Impossible de supprimer l'espace de travail. Réessayez.",
     "access": {
       "how": "Touchez une ligne pour changer son niveau : Aucun accès, Lecture, Lecture et écriture."
     },
@@ -1901,7 +2409,7 @@
       "guide": "Ouvrir le guide de {{name}}",
       "fields": "Informations",
       "private": "Ces informations sont gardées chiffrées et ne sont plus jamais affichées.",
-      "teamHelp": "Ses éléments sont d'abord visibles par tout l'espace de travail et utilisés par aucun agent. Vous choisissez les agents ensuite.",
+      "teamHelp": "Tout l'espace de travail voit ses éléments et tous les agents peuvent les utiliser. Vous pouvez ajuster cela ensuite.",
       "personalHelp": "Vous seul voyez ses éléments, et vos agents les utilisent quand vous le demandez.",
       "checking": "Vérification avec {{name}}…",
       "connected": "{{name}} connecté",
@@ -1912,6 +2420,7 @@
       "ready": "Connecté",
       "syncing": "Synchronisation…",
       "reads": "Lit {{label}}",
+      "noWrites": "lecture seule",
       "items_one": "{{count}} élément",
       "items_other": "{{count}} éléments",
       "synced": "synchronisé {{when}}",
@@ -2083,7 +2592,6 @@
   "dashboards": {
     "homeRow": "Vous seul · vos propres widgets",
     "loadFailed": "Impossible de charger les tableaux de bord.",
-    "onlyHome": "Les tableaux de bord de l'espace de travail ou de vos rôles apparaissent ici.",
     "create": "Créer",
     "routineTarget": "son widget",
     "pin": {
@@ -2121,7 +2629,6 @@
     },
     "formatAuto": "{{name}} choisit le meilleur",
     "newWidget": {
-      "titleHint": "Titre · {{name}} en propose un au test",
       "alerts": "Alerte activée",
       "realData": "Vraies données",
       "editAsk": "Modifier la demande",
@@ -2157,7 +2664,11 @@
       "title": "Composez votre équipe d'agents",
       "text": "Chaque agent prend un rôle et travaille avec vous dans la discussion.",
       "viewerTitle": "Votre équipe d'agents se trouve ici",
-      "viewerText": "La personne qui crée les agents de cet espace ajoute le premier, et il apparaît ici."
+      "viewerText": "La personne qui crée les agents de cet espace ajoute le premier, et il apparaît ici.",
+      "titlePersonal": "Faites-vous aider par vos propres agents",
+      "textPersonal": "Chaque agent s'occupe d'une chose pour vous, directement dans la discussion.",
+      "viewerTitlePersonal": "Vos agents se trouvent ici",
+      "viewerTextPersonal": "La personne qui crée des agents ici ajoute le premier, et il apparaît ici."
     },
     "agentsForYou": {
       "title": "Vos agents apparaissent ici",
@@ -2167,13 +2678,20 @@
       "title": "Tout ce que l'équipe crée, au même endroit",
       "text": "Rapports, tableaux et fichiers des agents et des personnes restent ici, faciles à retrouver.",
       "viewerTitle": "Retrouvez ce que l'équipe crée",
-      "viewerText": "Ce que les agents et les personnes créent dans les discussions apparaît ici."
+      "viewerText": "Ce que les agents et les personnes créent dans les discussions apparaît ici.",
+      "titlePersonal": "Tout ce que vos agents créent, au même endroit",
+      "textPersonal": "Les rapports, tableaux et fichiers de vos agents restent ici, faciles à retrouver.",
+      "viewerTitlePersonal": "Retrouvez ce que vos agents créent",
+      "viewerTextPersonal": "Ce que les agents créent dans vos discussions apparaît ici."
     },
     "tasks": {
       "title": "Confiez du travail à l'équipe",
       "text": "Créez une tâche pour un agent ou une personne et suivez-la jusqu'au bout.",
       "viewerTitle": "Suivez le travail de l'équipe",
-      "viewerText": "Les tâches apparaissent ici dès que quelqu'un crée la première."
+      "viewerText": "Les tâches apparaissent ici dès que quelqu'un crée la première.",
+      "titlePersonal": "Confiez vos tâches à vos agents",
+      "textPersonal": "Créez une tâche pour un agent et suivez-la jusqu'au bout.",
+      "viewerTitlePersonal": "Suivez le travail de vos agents"
     },
     "routines": {
       "title": "Laissez le travail répétitif à vos agents",
@@ -2185,7 +2703,10 @@
       "title": "Gardez ce que l'équipe doit savoir",
       "text": "Les personnes et les agents lisent ces pages, et tout le monde travaille avec les mêmes informations.",
       "viewerTitle": "Consultez ce que l'équipe sait",
-      "viewerText": "La personne qui modifie le wiki écrit la première page, et elle apparaît ici."
+      "viewerText": "La personne qui modifie le wiki écrit la première page, et elle apparaît ici.",
+      "titlePersonal": "Gardez des notes que vos agents peuvent lire",
+      "textPersonal": "Vos agents lisent ces pages et travaillent à partir de ce que vous avez écrit.",
+      "viewerTitlePersonal": "Consultez ce qui est écrit ici"
     },
     "memory": {
       "title": "Vos agents apprennent en travaillant",
@@ -2208,13 +2729,21 @@
       "text": "Chaque canal réunit celles et ceux qui s'occupent d'un sujet.",
       "viewerTitle": "Les canaux de l'équipe se trouvent ici",
       "viewerText": "La personne qui crée les canaux ouvre le premier, et il apparaît ici.",
-      "action": "Créer un canal"
+      "action": "Créer un canal",
+      "titlePersonal": "Parlez à plusieurs agents à la fois",
+      "textPersonal": "Chaque conversation de groupe réunit les agents et les personnes autour d'un sujet.",
+      "viewerTitlePersonal": "Les conversations de groupe se trouvent ici",
+      "viewerTextPersonal": "La personne qui crée des conversations de groupe ouvre la première, et elle apparaît ici."
     },
     "people": {
       "title": "Travaillez avec votre équipe ici",
       "text": "Invitez des personnes pour leur parler, ainsi qu'à vos agents, au même endroit.",
       "viewerTitle": "Votre équipe apparaît ici",
-      "viewerText": "La personne qui invite fait venir le reste de l'équipe, et ces personnes apparaissent ici."
+      "viewerText": "La personne qui invite fait venir le reste de l'équipe, et ces personnes apparaissent ici.",
+      "titlePersonal": "Faites venir votre famille ou vos amis",
+      "textPersonal": "Invitez quelqu'un pour discuter avec vous et vos agents au même endroit.",
+      "viewerTitlePersonal": "La famille et les amis apparaissent ici",
+      "viewerTextPersonal": "Quand quelqu'un vous rejoint, cette personne apparaît ici."
     },
     "chat": {
       "title": "Tout commence par un message",
@@ -2234,7 +2763,11 @@
       "title": "Partagez des accès sans faire circuler de mots de passe",
       "text": "Enregistrez les identifiants et les clés que vos agents utilisent pour l'équipe.",
       "viewerTitle": "Les accès de l'équipe apparaissent ici",
-      "viewerText": "Quand quelqu'un partage un identifiant ou une clé avec vous, ils apparaissent ici."
+      "viewerText": "Quand quelqu'un partage un identifiant ou une clé avec vous, ils apparaissent ici.",
+      "titlePersonal": "Gardez les accès partagés au même endroit",
+      "textPersonal": "Enregistrez les identifiants et les clés que vos agents utilisent pour tout le monde ici.",
+      "viewerTitlePersonal": "Les accès partagés apparaissent ici",
+      "viewerTextPersonal": "Quand quelqu'un d'ici partage un identifiant ou une clé avec vous, ils apparaissent ici."
     },
     "skills": {
       "title": "Apprenez à vos agents comment vous faites",

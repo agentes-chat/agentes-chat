@@ -18,13 +18,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { type ActiveCover, activeCoversFrom, activeCoversTo } from "./approval-covers";
-import {
-  addApprovalRules,
-  addRoutineOwnActions,
-  COMMAND_RULE_TOOL,
-  type RememberedKind,
-  rememberedKindOf,
-} from "./approval-rules";
+import { addApprovalRules, addRoutineOwnActions, type RememberedKind, rememberedKindOf } from "./approval-rules";
 import { recordAudit } from "./audit";
 import { approvalCardVia } from "./card-via";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
@@ -434,11 +428,8 @@ export const approvalView = (a: Approval, canDecide = false): ApprovalView => ({
     : null,
 });
 
-/** What "Aprovar sempre" would keep for an approval: a connector's kind, or with no connection only a command's. */
-function alwaysKindOf(a: Pick<Approval, "connectionId" | "approveAlways">): RememberedKind | null {
-  const kind = rememberedKindOf(a.approveAlways);
-  return kind && (a.connectionId || (kind.tool === COMMAND_RULE_TOOL && kind.actions.length === 1)) ? kind : null;
-}
+/** What "Aprovar sempre" would keep for an approval: the kind the gateway offered on it (`rememberKinds`). */
+const alwaysKindOf = (a: Pick<Approval, "approveAlways">): RememberedKind | null => rememberedKindOf(a.approveAlways);
 
 /** An approval ahead that may still run: waiting for a person, or approved and not run yet. */
 const aheadLive = (a: Pick<Approval, "runAt" | "status" | "executedAt">) =>
@@ -769,8 +760,11 @@ export async function decideApproval(
   }
   const via = await approvalCardVia(db, orgId, input.via, approvalId);
   const kind = input.always ? alwaysKindOf(current) : null;
-  // Approving for good outlives the cover and changes the agent for everyone: never in someone else's name.
-  if (input.always && (input.decision !== "approve" || !kind || forUserId)) {
+  // Approving for good outlives the cover and changes the agent for everyone: never in someone else's name. A card
+  // that names who decides (someone's own mailbox) is kept for good by them alone: an admin's rule would take their
+  // say away on every later call.
+  const namedElsewhere = current.approvers ? !current.approvers.userIds.includes(actorId) : false;
+  if (input.always && (input.decision !== "approve" || !kind || forUserId || namedElsewhere)) {
     throw new ConflictError("This request can't be approved for good", "approval.always_unavailable");
   }
 

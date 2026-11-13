@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
 import {
   addsAgentsTo,
+  addsConnectors,
   editsMemory,
   leavesChannel,
+  makesAgents,
   managesChannel,
   setsAutoReply,
-  undoesMemoryChange,
 } from "../src/lib/permissions";
 
 const member = { permissions: ["read", "post"] };
@@ -43,23 +44,12 @@ test("an agent goes in or out of a channel its person is in and may post in, or 
   expect(addsAgentsTo(undefined, "caio", member)).toBe(false);
 });
 
-test("a memory change is undone by who may edit the memory, or its requester within the window", () => {
+test("an agent's memory is edited by its owner or who reviews memory", () => {
   const bot = { ownerUserId: "caio" };
   const reviewer = { permissions: ["read", "review_memory"] };
-  const asked = { requestedByUserId: "bia" };
-  const now = Date.parse("2026-01-01T12:00:00Z");
-  const fresh = "2026-01-01T11:58:00Z";
-  const old = "2026-01-01T11:50:00Z";
   expect(editsMemory(bot, "caio", member)).toBe(true);
   expect(editsMemory(bot, "davi", reviewer)).toBe(true);
   expect(editsMemory(bot, "davi", member)).toBe(false);
-  expect(undoesMemoryChange(asked, bot, "davi", member, fresh, now)).toBe(false);
-  expect(undoesMemoryChange(asked, bot, "bia", member, fresh, now)).toBe(true);
-  expect(undoesMemoryChange(asked, bot, "bia", member, undefined, now)).toBe(true);
-  expect(undoesMemoryChange(asked, bot, "bia", member, old, now)).toBe(false);
-  expect(undoesMemoryChange(asked, bot, "caio", member, old, now)).toBe(true);
-  expect(undoesMemoryChange(asked, bot, "davi", reviewer, old, now)).toBe(true);
-  expect(undoesMemoryChange({ requestedByUserId: "" }, bot, "", member)).toBe(false);
 });
 
 test("a channel's exceptions (ADR 0134): the list's `can` decides managing when the server sends it", () => {
@@ -78,4 +68,19 @@ test("anyone in a channel may leave it, except #general, where everyone stays", 
   expect(leavesChannel({ name: "eng", isMember: true })).toBe(true);
   expect(leavesChannel({ name: "eng", isMember: false })).toBe(false);
   expect(leavesChannel({ name: "general", isMember: true })).toBe(false);
+});
+
+test("a way into a new agent shows for who creates agents, never in a workspace being deleted", () => {
+  const maker = { permissions: ["read", "create_agents"] };
+  expect(makesAgents(maker)).toBe(true);
+  expect(makesAgents(member)).toBe(false);
+  expect(makesAgents({ ...maker, deletion: { dueAt: null, requestedAt: null, requestedBy: null } })).toBe(false);
+  expect(makesAgents(null)).toBe(false);
+});
+
+test("a way into connecting a service shows for who manages connectors, never in a workspace being deleted", () => {
+  const admin = { permissions: ["read", "manage_connectors"] };
+  expect(addsConnectors(admin)).toBe(true);
+  expect(addsConnectors(member)).toBe(false);
+  expect(addsConnectors({ ...admin, deletion: { dueAt: null, requestedAt: null, requestedBy: null } })).toBe(false);
 });

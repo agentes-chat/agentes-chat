@@ -92,32 +92,16 @@ html:not([data-pointer]) .roles-row:focus-visible {
   margin: 0;
   padding-inline: 20px;
 }
+/* The hint and "Mudar ordem" in an `.ac-actline`: under the hint when it doesn't fit beside it, its words at the
+   hint's start. */
 .roles-foot {
   flex: 1;
-  display: flex;
   align-items: center;
-  gap: 8px;
-}
-.roles-foot > span {
-  flex: 1;
 }
 /* "Reordenar" stays on the foot's one 17px line (negative margins, as the ⓘ of a hint does), so the foot's own ⓘ,
    placed from the line's top, keeps level with the text. */
-.roles-foot > .ac-btn {
+.roles-foot .ac-btn {
   margin-block: -5.5px;
-}
-/* An ActionRow: in a card under 480px the action goes under the hint, its words at the hint's start. */
-@container (max-width: 479px) {
-  .roles-foot {
-    flex-wrap: wrap;
-    row-gap: 8px;
-  }
-  .roles-foot > span {
-    flex-basis: 100%;
-  }
-  .roles-foot > .ac-btn--ghost {
-    margin-left: calc(-1 * var(--ghost-plate));
-  }
 }
 
 /* A role's page: its mark, name and how many hold it, on one axis with the actions. */
@@ -200,9 +184,11 @@ html:not([data-pointer]) .roles-back:focus-visible {
   gap: 10px;
   flex-wrap: wrap;
 }
+/* On the name's line (a 22px line, the icon's height), never in the middle of the name and its description. */
 .roles-area__icon {
   display: grid;
   flex: none;
+  align-self: flex-start;
   place-items: center;
   width: 22px;
   height: 22px;
@@ -218,6 +204,7 @@ html:not([data-pointer]) .roles-back:focus-visible {
 .roles-area__text b {
   font-size: 14.5px;
   font-weight: 650;
+  line-height: 22px;
 }
 .roles-area__text span {
   font-size: 13px;
@@ -300,32 +287,10 @@ html:not([data-pointer]) .roles-back:focus-visible {
   list-style: none;
 }
 /* A role's people: a MediaRow each (the face, the name and the email on one line, Remover at its end, their other
-   roles under them); a pick's row a plain line. */
+   roles under them); a pick's row the same after its check. */
 .roles-person {
   padding: 10px 0;
   border-top: 1px solid var(--line);
-}
-.roles-pick__row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
-}
-.roles-person__text {
-  flex: 1 1 200px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.roles-person__text b {
-  font-size: 14px;
-  font-weight: 600;
-}
-.roles-person__text span {
-  font-size: 12.5px;
-  color: var(--muted);
-  overflow-wrap: anywhere;
 }
 .roles-person:first-child,
 .roles-pick li:first-child .roles-pick__row {
@@ -348,12 +313,20 @@ html:not([data-pointer]) .roles-back:focus-visible {
   all: unset;
   box-sizing: border-box;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   width: 100%;
-  padding: 10px 4px;
+  padding: var(--row-py) 4px;
   border-top: 1px solid var(--line);
   cursor: pointer;
+}
+/* On the name's line: the middle of the row's 24px face. */
+.roles-pick__row > .ac-check {
+  margin-block-start: 3px;
+}
+.roles-pick__who {
+  flex: 1;
+  min-width: 0;
 }
 html:not([data-pointer]) .roles-pick__row:focus-visible {
   border-radius: 8px;
@@ -387,7 +360,8 @@ html:not([data-pointer]) .roles-pick__row:focus-visible {
   font-size: 14px;
   font-weight: 600;
 }
-.roles-look__text span {
+/* Why a row can't change (Todos keeps its name): in sight under the label. */
+.roles-look__status {
   font-size: 13px;
   color: var(--muted);
 }

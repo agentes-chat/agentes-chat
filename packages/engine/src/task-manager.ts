@@ -72,6 +72,8 @@ export interface TaskWait {
   window: string | null;
   /** When the limit resets; null when unknown. */
   resetsAt: string | null;
+  /** When it began waiting on its plan or budget (`usageWait.since`, across its re-parks); null when unknown. */
+  since: string | null;
   /** The caller may press Continuar agora (`mayContinuePause`; the server checks again). */
   canContinue: boolean;
 }
@@ -240,6 +242,8 @@ interface StoredWait {
   scope?: ModelScope;
   resetsAt?: string;
   waitKey?: string;
+  /** Ms. */
+  since?: number;
 }
 
 const iso = (v: string | Date | null) => (v === null ? null : new Date(v).toISOString());
@@ -266,7 +270,13 @@ async function visibleRuns(
 ): Promise<Row[]> {
   const status = which.active
     ? sql`r.status in ('queued', 'running', 'waiting_approval', 'waiting_input')`
-    : sql`r.status in ('done', 'failed', 'canceled') and r.finished_at >= ${which.since.toISOString()}::timestamptz`;
+    : // Stopped to read a message a person sent it (`stoppedToSend`): the task goes on in the run that message
+      // started, so this half of it is no task that ended.
+      sql`r.status in ('done', 'failed', 'canceled') and r.finished_at >= ${which.since.toISOString()}::timestamptz
+        and not (r.status = 'canceled' and exists (
+          select 1 from ${messages} sm
+          where sm.org_id = r.org_id and sm.channel_id = r.channel_id and sm.created_at >= r.created_at
+            and sm.meta->'stoppedRunIds' @> to_jsonb(r.id::text)))`;
   const limit = which.active ? TASK_MANAGER_MAX : TASK_MANAGER_ENDED_MAX;
   return rowsOf<Row>(
     await db.execute(sql`select r.id, r.agent_id, r.channel_id, ${shownStatusSql} as status, r.thread_root_id, r.trigger_message_id,
@@ -412,7 +422,7 @@ function heldOf(r: Row): ManagedTask["held"] {
 }
 
 /** The model of a wait on a model's own limit, by the name its plan gives it. */
-function waitModel(wait: StoredWait) {
+export function waitModel(wait: Pick<StoredWait, "scope" | "plan" | "model">) {
   if (!wait.scope) return null;
   const plan = PLAN_IDS.map(codingPlan).find((p) => p?.name === wait.plan);
   return plan ? planModel(plan, wait.model).label : (wait.model ?? null);
@@ -432,6 +442,7 @@ function waitOf(r: Row): TaskWait | null {
     percent: pause?.used ?? null,
     window: str(pause?.window),
     resetsAt: str(wait.resetsAt),
+    since: typeof wait.since === "number" ? new Date(wait.since).toISOString() : null,
     canContinue: false,
   };
 }

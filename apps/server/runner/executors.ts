@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
-import { accessSync, constants } from "node:fs";
+import { accessSync, constants, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join } from "node:path";
+import { delimiter, join, win32 } from "node:path";
 import {
   type CursorModelInfo,
   parseExecutors,
@@ -74,19 +74,146 @@ export function resolveCommand(
   return sharedBin && dirs[0] ? join(dirs[0], command) : command;
 }
 
+/**
+ * One argument on cmd.exe's command line, read back by the program as it was: in quotes, so an empty one stays an
+ * argument and a space, `&` or `|` stays text; backslashes doubled only where they come before a quote; a quote
+ * doubled. `%NAME%` still expands there, so what a person typed goes through its own check first.
+ */
+export const winQuote = (arg: string) => `"${arg.replace(/(\\*)"/g, '$1$1""').replace(/(\\+)$/, "$1$1")}"`;
+
+/** A file that is there (a folder isn't). */
+export const isFile = (file: string) => {
+  try {
+    return statSync(file).isFile();
+  } catch {
+    return false;
+  }
+};
+
+/** An environment variable as Windows reads it, whatever its case (`Path` is how Windows spells `PATH`); elsewhere exactly. */
+export function envValue(
+  env: Record<string, string | undefined>,
+  name: string,
+  platform: NodeJS.Platform = process.platform,
+): string | undefined {
+  if (env[name] !== undefined || platform !== "win32") return env[name];
+  const upper = name.toUpperCase();
+  const key = Object.keys(env).find((k) => k.toUpperCase() === upper);
+  return key === undefined ? undefined : env[key];
+}
+
+/** The extensions of a program the runner starts on Windows, in PATHEXT's order (never a script host's `.js` or `.vbs`). */
+const RUNNABLE = [".com", ".exe", ".bat", ".cmd"];
+
+/**
+ * A program's full path on Windows: each PATH folder in order, the name with each PATHEXT extension (`claude.exe`,
+ * `codex.cmd`…). Never the current folder, which cmd.exe and a bare name's spawn search before the PATH: a turn's is
+ * the agent's own folder, where the agent writes, so a `claude.cmd` there would run in place of the CLI, as the person
+ * and outside every policy. Nor a PATH entry that isn't a full path (it reads from the current folder too). A name
+ * with a folder is checked as given. Null: not there.
+ */
+export function findOnWindowsPath(
+  name: string,
+  pathList: string,
+  pathExt = "",
+  exists: (file: string) => boolean = isFile,
+): string | null {
+  const listed = (pathExt || ".COM;.EXE;.BAT;.CMD").split(";").map((e) => e.trim().toLowerCase());
+  const exts = [...new Set(listed.filter((e) => RUNNABLE.includes(e)))];
+  const own = win32.extname(name).toLowerCase();
+  const candidates = (base: string) => [...(RUNNABLE.includes(own) ? [base] : []), ...exts.map((e) => base + e)];
+  if (/[\\/]/.test(name)) return candidates(name).find((file) => exists(file)) ?? null;
+  for (const entry of pathList.split(";")) {
+    const dir = entry.trim().replace(/^"(.*)"$/, "$1");
+    if (!/^(?:[a-zA-Z]:[\\/]|\\\\)/.test(dir)) continue;
+    const hit = candidates(win32.join(dir, name)).find((file) => exists(file));
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * In a Windows program's env: neither cmd.exe nor CreateProcess looks for a program in the current folder (a launcher's
+ * bare `node`, npm's and Bun's alike), which they search before the PATH otherwise.
+ */
+export const NO_CWD_LOOKUP: Readonly<Record<string, string>> = { NoDefaultCurrentDirectoryInExePath: "1" };
+
+/** cmd.exe by its full path (`ComSpec`, else System32's): a bare `cmd.exe` would be looked for in the current folder first. */
+export function windowsShell(env: Record<string, string | undefined> = process.env): string {
+  const spec = envValue(env, "ComSpec", "win32");
+  if (spec && win32.isAbsolute(spec) && /^(?:[a-zA-Z]:|\\\\)/.test(spec)) return spec;
+  return win32.join(envValue(env, "SystemRoot", "win32") || "C:\\Windows", "System32", "cmd.exe");
+}
+
+/**
+ * `program` and `args` as one cmd.exe line (a `.cmd` or `.bat` launcher runs only there): every argument quoted
+ * (`winQuote`), delayed expansion off (`/v:off`, whatever the registry says), no AutoRun (`/d`), and `NO_CWD_LOOKUP`
+ * in its env.
+ */
+export function windowsShellLine(
+  program: string,
+  args: readonly string[],
+): { file: string; args: string[]; windowsVerbatimArguments: true; env: Record<string, string> } {
+  const line = [program, ...args].map(winQuote).join(" ");
+  return {
+    file: windowsShell(),
+    args: ["/d", "/v:off", "/s", "/c", `"${line}"`],
+    windowsVerbatimArguments: true,
+    env: { ...NO_CWD_LOOKUP },
+  };
+}
+
+/** How a CLI starts: the file, its argv, and what to add to its env (Windows: `windowsShellLine`'s). */
+export interface CliRun {
+  file: string;
+  args: string[];
+  windowsVerbatimArguments?: true;
+  env?: Record<string, string>;
+}
+
+/**
+ * How a CLI (`command`: a bare name, or a launcher and what it runs) starts with `args`. On Windows a bare name is
+ * found on the PATH (`findOnWindowsPath`, never the current folder): an `.exe` starts as it is, with its argv (and
+ * `NO_CWD_LOOKUP`: it may be a launcher too, as Bun's are); a
+ * `.cmd` launcher (npm's `claude.cmd`) through cmd.exe with every argument quoted (`windowsShellLine`), since Node's own
+ * `shell: true` joins them as they are, so an empty one (`--setting-sources ""`) vanished and the next flag became its
+ * value, and a path with a space split in two. One not found still goes to cmd.exe, which says it isn't there (exit
+ * 9009). Elsewhere, and for a launcher: the file and its argv, no shell.
+ */
+export function cliSpawn(
+  command: readonly string[],
+  args: readonly string[],
+  pathList?: string,
+  platform: NodeJS.Platform = process.platform,
+  lookup: { pathExt?: string; exists?: (file: string) => boolean } = {},
+): CliRun {
+  const [file = "", ...pre] = command;
+  if (platform === "win32" && command.length === 1) {
+    const found = findOnWindowsPath(
+      file,
+      pathList ?? envValue(process.env, "PATH", platform) ?? "",
+      lookup.pathExt ?? envValue(process.env, "PATHEXT", platform),
+      lookup.exists,
+    );
+    if (found && /\.(?:exe|com)$/i.test(found)) return { file: found, args: [...args], env: { ...NO_CWD_LOOKUP } };
+    return windowsShellLine(found ?? file, args);
+  }
+  return { file: resolveCommand(file, pathList), args: [...pre, ...args] };
+}
+
 const defaultRun: Run = (command, args) =>
   new Promise((resolve) => {
+    const run = cliSpawn([command], args);
     execFile(
-      resolveCommand(command),
-      args,
+      run.file,
+      run.args,
       {
         encoding: "utf8",
         timeout: 8000,
         maxBuffer: 1024 * 1024,
         windowsHide: true,
-        env: process.env,
-        // Windows finds `claude.cmd` / `codex.cmd` only through the shell.
-        shell: process.platform === "win32",
+        env: run.env ? { ...process.env, ...run.env } : process.env,
+        windowsVerbatimArguments: run.windowsVerbatimArguments,
       },
       (err, stdout, stderr) => {
         const code = (err as { code?: unknown } | null)?.code;
@@ -240,12 +367,20 @@ export function parseOpencodeModels(output: string): CursorModelInfo[] {
   return out;
 }
 
-/** OpenCode's versions are plain semver (`1.19.5`): an `opencode` on the PATH that says anything else is skipped. */
-const OPENCODE_VERSION = /^v?\d+\.\d+\.\d+\b/;
+/**
+ * OpenCode's versions are plain semver (`1.19.5`), behind its name since 2.2 (`opencode v2.2.7`): an `opencode` on the
+ * PATH that says anything else is skipped.
+ */
+const OPENCODE_VERSION = /^(?:opencode\s+)?v?\d+\.\d+\.\d+\b/;
 
-/** Protocol 39 (ADR 0132): OpenCode's CLI and the models it lists (`opencode models`: the free tier with no key). */
-function detectOpencode(run: Run): Promise<Probe> {
-  return detectWithModels(run, OPENCODE_BIN, OPENCODE_VERSION, parseOpencodeModels);
+/**
+ * Protocol 39 (ADR 0132): OpenCode's CLI and the models it lists (`opencode models`: the free tier with no key). Its
+ * version is kept without the name.
+ */
+async function detectOpencode(run: Run): Promise<Probe> {
+  const probe = await detectWithModels(run, OPENCODE_BIN, OPENCODE_VERSION, parseOpencodeModels);
+  if (probe.entry) probe.entry = { ...probe.entry, version: probe.entry.version.replace(/^opencode\s+/, "") };
+  return probe;
 }
 
 /** xAI's Grok Build CLI. Always `grok`: its installer also makes `~/.local/bin/agent`, which is Cursor's name. */
@@ -279,15 +414,14 @@ function detectGrok(run: Run): Promise<Probe> {
 export const AGY_BIN = "agy";
 
 /**
- * `agy models` → its slugs and names, one per line: `gemini-4-argon-high       Gemini 4 Argon (High)`
- * (antigravity.google/docs/cli/headless, read 2026-11-04). A line without a slug and a name (a sign-in notice, `...`)
- * is skipped.
+ * `agy models` → its slugs and names, one per line, split by a tab in 1.5.0 (`gemini-4-argon-high\tGemini 4 Argon
+ * (High)`) or by spaces. A line without a slug and a name (a sign-in notice, `...`) is skipped.
  */
 export function parseAgyModels(output: string): CursorModelInfo[] {
   const out: CursorModelInfo[] = [];
   // biome-ignore lint/suspicious/noControlCharactersInRegex: the CLI's colors
   for (const raw of output.replace(/\u001b\[[0-9;]*m/g, "").split("\n")) {
-    const m = /^\s*([a-z0-9][\w.:/-]{0,79})\s{2,}(\S.{0,79}?)\s*$/i.exec(raw);
+    const m = /^\s*([a-z0-9][\w.:/-]{0,79})(?:\t\s*| {2,})(\S.{0,79}?)\s*$/i.exec(raw);
     if (!m?.[1] || !m[2] || out.some((x) => x.id === m[1])) continue;
     out.push({ id: m[1], label: m[2] });
     if (out.length >= 60) break;
@@ -391,6 +525,8 @@ export interface ExecutorsCache {
   readonly known: boolean;
   /** The list, waiting for the first look when none is known yet. */
   ready(): Promise<Executors>;
+  /** A look now, whatever the TTL says (the app's "Check again" after an install). */
+  fresh(): Promise<Executors>;
 }
 
 /**
@@ -440,6 +576,7 @@ export function cachedExecutors(
     return value;
   }) as ExecutorsCache;
   get.ready = () => (known ? Promise.resolve(get()) : look());
+  get.fresh = look;
   Object.defineProperty(get, "known", { get: () => known });
   return get;
 }

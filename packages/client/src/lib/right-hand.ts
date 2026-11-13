@@ -1,8 +1,8 @@
 import type { TFunction } from "i18next";
 import type { ApiClient } from "../api/client";
-import type { Agent, AgentBrain, BrainScope, Credential, DirectMessage, Model } from "../api/types";
+import type { Agent, AgentBrain, AgentStatus, BrainScope, Credential, DirectMessage, Me, Model } from "../api/types";
 import { agentGrammar } from "./grammar";
-import { AUTO, keyRuns } from "./providers";
+import { AUTO, keyRuns, providerLabel } from "./providers";
 
 /** The workspace's right hand (ADR 0137): every surface that treats it apart asks here. */
 export const isRightHand = (agent: Pick<Agent, "builtin"> | null | undefined) => agent?.builtin === "right_hand";
@@ -42,8 +42,8 @@ export function rightHandFallback(
 /**
  * "Sua IA" as one status, web and phone alike: what answers the person in their own DM with the right hand. `own`: a
  * plan of theirs or one shared with them (`ownerId` when it isn't theirs); `key`: the workspace's API key, or this
- * server's own where the workspace has none (`label` absent); `plan`: the workspace's plan, which serves them;
- * `nobody`: nothing does yet. Null while the view loads.
+ * server's own where the workspace has none (by its maker, the right hand's brain line's `maker`, when known); `plan`:
+ * the workspace's plan, which serves them; `nobody`: nothing does yet. Null while the view loads.
  */
 export type MineStatus =
   | { kind: "own"; brain: AgentBrain["brain"]; label?: string; ownerId?: string }
@@ -51,7 +51,12 @@ export type MineStatus =
   | { kind: "plan"; brain: AgentBrain["brain"] }
   | { kind: "nobody" };
 
-export function mineStatus(view: AgentBrain | undefined, meId: string, platform: boolean): MineStatus | null {
+export function mineStatus(
+  view: AgentBrain | undefined,
+  meId: string,
+  platform: boolean,
+  maker?: string,
+): MineStatus | null {
   if (!view) return null;
   if (view.brain !== "model") {
     const signIn = view.accounts.find((a) => a.id === view.account);
@@ -62,7 +67,8 @@ export function mineStatus(view: AgentBrain | undefined, meId: string, platform:
   if (!ai) return { kind: "nobody" };
   if (ai.brain === "model") {
     if (ai.key) return { kind: "key", label: ai.key.label, provider: ai.key.provider };
-    return ai.key === null && !platform ? { kind: "nobody" } : { kind: "key" };
+    if (ai.key === null && !platform) return { kind: "nobody" };
+    return maker ? { kind: "key", label: providerLabel(maker), provider: maker } : { kind: "key" };
   }
   return ai.servesYou ? { kind: "plan", brain: ai.brain } : { kind: "nobody" };
 }
@@ -109,6 +115,13 @@ export function firstVisitOf(dms: readonly DirectMessage[] | undefined, agentId:
 /** The workspace's right hand among its agents, when this person may see it. */
 export const rightHandOf = <A extends Pick<Agent, "builtin">>(agents: readonly A[]) => agents.find(isRightHand);
 
+/** The agents a scene of the team shows: the right hand in front (second in the row), then the others, four at most. */
+export function sceneTeam<A extends { id: string }>(agents: readonly A[], lead: A | undefined): A[] {
+  const rest = agents.filter((a) => a.id !== lead?.id).slice(0, lead ? 3 : 4);
+  if (!lead) return rest;
+  return rest.length > 1 ? [rest[0] as A, lead, ...rest.slice(1)] : [lead, ...rest];
+}
+
 /**
  * Its name and look before the workspace exists (the onboarding's first question): the server's
  * `RIGHT_HAND_DEFAULTS` (packages/engine/src/right-hand.ts).
@@ -122,19 +135,41 @@ export const RIGHT_HAND_DEFAULT = {
 export const tellsNameStory = (agent: Pick<Agent, "builtin" | "name"> | null | undefined) =>
   isRightHand(agent) && agent?.name === RIGHT_HAND_DEFAULT.name;
 
-/**
- * Ends a workspace's onboarding, for good, and says where it opens: its right hand's DM (ADR 0137), which takes the
- * setup on from there; the workspace itself (`agentId` null) when there is none to open.
- */
-export async function finishOnboarding(api: ApiClient, orgId: string) {
-  await api.orgs.saveOnboarding(orgId, { finished: true });
-  const rightHand = rightHandOf(await api.agents.list(orgId).catch(() => []));
-  return { orgId, agentId: rightHand?.id ?? null };
+/** Where a workspace whose onboarding just ended opens, and `/me` as it is now (null: ask for it). */
+export interface OpenedAt {
+  orgId: string;
+  agentId: string | null;
+  me: Me | null;
 }
 
 /**
+ * Ends a workspace's onboarding, for good, in one call, and says where it opens: its right hand's DM (ADR 0137), which
+ * takes the setup on from there; the workspace itself (`agentId` null) when there is none to open. An older server
+ * doesn't say: its agents do.
+ */
+export async function finishOnboarding(api: ApiClient, orgId: string): Promise<OpenedAt> {
+  const done = await api.orgs.saveOnboarding(orgId, { finished: true });
+  const agentId =
+    done?.rightHandId !== undefined
+      ? done.rightHandId
+      : (rightHandOf(await api.agents.list(orgId).catch(() => []))?.id ?? null);
+  return { orgId, agentId, me: done?.me ?? null };
+}
+
+/**
+ * Whether its first-run card leads with the plan for this person (the card's plan row, `firstRunSteps`, ADR 0162):
+ * the card still up, the workspace waiting for its first agentes.chat plan, and an owner who may pay. Here, apart from
+ * the card's rows, for the hold's banner, which every page loads.
+ */
+export const leadsWithPlan = (
+  agent: Pick<Agent, "setup" | "builtin">,
+  may: { owner: boolean; pay: boolean; waitsForPlan?: boolean },
+) => agent.builtin === "right_hand" && Boolean(agent.setup) && may.owner && Boolean(may.waitsForPlan) && may.pay;
+
+/**
  * The line under its greeting: on a billing hold with no team yet, how the team comes and that it works with the
- * plan; otherwise what it does (the hold's banner and the checklist's AI row already say the plan once a team is here).
+ * plan; otherwise what it does (once a team is here, the checklist's plan row, which leads it while the workspace
+ * waits for its first plan, and the hold's banner already say the plan; ADR 0162).
  */
 export const introLeadKey = (held: boolean, hasTeam: boolean) =>
   held && !hasTeam ? ("rightHand.intro.heldLead" as const) : ("rightHand.intro.lead" as const);
@@ -162,8 +197,9 @@ export const offersTeamSetup = (s: {
 /**
  * The cards under the right hand's greeting at the top of its DM besides the first-run checklist (ADR 0137, ADR 0155
  * §6), one question at a time. The owner's checklist has the setup in its rows: while it is open nothing else asks,
- * and once complete, how the person wants agents to talk to them (ADR 0147) until they pick. Anyone else: Connect AI
- * while there is none, then that question. On a billing hold neither: an AI comes after the plan.
+ * and once complete, how the person wants agents to talk to them (ADR 0147) until they pick, asked only once the team
+ * answered them (`answered`), so it never stands beside the first task. Anyone else: Connect AI while there is none,
+ * then that question. On a billing hold neither: an AI comes after the plan.
  */
 export function introCards(s: {
   noAi: boolean;
@@ -176,9 +212,32 @@ export function introCards(s: {
   /** A no-AI card already answered them in this conversation: its Connect is the one to press. */
   noAiCard?: boolean;
   checklist?: FirstRunState;
+  /** `teamAnswered`; absent, nothing to wait for. */
+  answered?: boolean;
 }): ("connect" | "style")[] {
   if (s.checklist === "open") return [];
   if (s.noAi && !s.held && s.checklist !== "complete") return s.noAiCard ? [] : ["connect"];
-  if (s.askStyle && s.aiKnown && !s.held) return ["style"];
+  if (s.askStyle && s.aiKnown && !s.held && s.answered !== false) return ["style"];
   return [];
 }
+
+/**
+ * A team agent has worked (`activeAt`: its last run's end, null while it never did): the person's first task had its
+ * answer, or a routine ran. With no team there is no first task to wait for; before the statuses load, it waits.
+ */
+export const teamAnswered = (
+  team: readonly Pick<Agent, "id">[],
+  statuses: readonly Pick<AgentStatus, "agentId" | "activeAt">[] | undefined,
+) => team.length === 0 || (statuses?.some((s) => s.activeAt !== null && team.some((a) => a.id === s.agentId)) ?? false);
+
+/**
+ * What only the right hand does, in the order its page lists them (`rightHand.powers.<id>`), each with the server's
+ * grants behind it (`RIGHT_HAND_GRANTS` in the engine's `right-hand.ts`). `mentions` is no grant: the server's
+ * `rightHandReaches`.
+ */
+export const RIGHT_HAND_POWERS = [
+  { id: "team", grants: ["setup:write"] },
+  { id: "routines", grants: ["schedule:write"] },
+  { id: "asYou", grants: ["drive:read", "wiki:read", "issues:read"] },
+  { id: "mentions", grants: [] },
+] as const;

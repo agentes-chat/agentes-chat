@@ -17,7 +17,6 @@ import {
   seedOrg,
   signUp,
   type TestServer,
-  upgradeStatus,
 } from "./harness";
 
 let t: TestServer;
@@ -56,21 +55,29 @@ const pastDue = (userId: string) =>
 /** A code that isn't `code`. */
 const otherThan = (code: string) => (code === "000000" ? "111111" : "000000");
 
-test("a workspace being deleted: its sockets close and none opens; who you are and leaving still answer", async () => {
+test("a workspace being deleted reads as ever, its sockets open; any other change answers why, to its members only", async () => {
+  // Open sign-up: someone from outside signs up too.
+  await t.close();
+  t = await createTestServer({ env: { ALLOW_SIGNUP: "true" } });
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
   const { orgId, channelId } = await seedOrg(owner);
   const ana = await joinByInvitation(t, owner, orgId, "ana@example.com");
   const ownerId = (await meOf(owner)).user.id;
   const anaId = (await meOf(ana)).user.id;
-  const server = listen(t);
-  const url = `ws://127.0.0.1:${server.port}/api/ws?orgId=${orgId}`;
-  const socket = new WebSocket(url, { headers: { origin: ORIGIN, cookie: owner.cookie() } } as unknown as string[]);
   const dueAt = new Date(Date.now() + 7 * 86_400_000);
+  await t.db.update(schema.organizations).set({ deletionDueAt: dueAt }).where(eq(schema.organizations.id, orgId));
+  const server = listen(t);
+  const socket = new WebSocket(`ws://127.0.0.1:${server.port}/api/ws?orgId=${orgId}`, {
+    headers: { origin: ORIGIN, cookie: owner.cookie() },
+  } as unknown as string[]);
   try {
+    const frames: { type?: string; event?: { type?: string } }[] = [];
     await new Promise<void>((resolve, reject) => {
       socket.addEventListener("message", (event) => {
-        if ((JSON.parse(String(event.data)) as { type?: string }).type === "ready") resolve();
+        const frame = JSON.parse(String(event.data)) as (typeof frames)[number];
+        frames.push(frame);
+        if (frame.type === "ready") resolve();
       });
       socket.addEventListener("error", () => reject(new Error("socket did not open")), { once: true });
     });
@@ -78,29 +85,69 @@ test("a workspace being deleted: its sockets close and none opens; who you are a
       socket.addEventListener("close", (event) => resolve(event.code), { once: true }),
     );
     expect(await currentSubscriptions(t.db, ownerId, orgId, [channelId])).toEqual(new Set([channelId]));
-
-    await t.db.update(schema.organizations).set({ deletionDueAt: dueAt }).where(eq(schema.organizations.id, orgId));
-    expect(await currentSubscriptions(t.db, ownerId, orgId, [channelId])).toBeNull();
-    expect(await upgradeStatus(url, { origin: ORIGIN, cookie: owner.cookie() })).toBe(403);
     await publishOrgEvent(t.adapters.pubsub, {
       type: "org.broadcast",
       orgId,
       event: { type: "org.deleting", orgId, dueAt: dueAt.toISOString() },
     });
-    expect(await Promise.race([closed, Bun.sleep(2000).then(() => -1)])).toBe(4403);
+    // The app hears it, and the socket stays.
+    expect(await Promise.race([closed, Bun.sleep(500).then(() => -1)])).toBe(-1);
+    expect(frames.some((f) => f.event?.type === "org.deleting")).toBe(true);
   } finally {
     socket.close();
     await Promise.race([server.stop(true), Bun.sleep(500)]);
   }
 
-  const refused = await owner(`/api/app/organizations/${orgId}/issues`);
+  const app = `/api/app/organizations/${orgId}`;
+  expect((await owner(`${app}/issues`)).status).toBe(200);
+  expect((await owner(`${app}/channels/${channelId}/messages`)).status).toBe(200);
+  const refused = await owner(`${app}/channels/${channelId}/messages`, { json: { body: "still here?" } });
   expect(refused.status).toBe(403);
   expect(await refused.json()).toMatchObject({
     error: { code: "org.deleting", params: { dueAt: dueAt.toISOString() } },
   });
+  expect(await answer(await owner(app, { method: "PATCH", json: { name: "Acme 2" } }))).toEqual([403, "org.deleting"]);
+  expect(await answer(await owner(`${app}/members/${anaId}`, { method: "DELETE" }))).toEqual([403, "org.deleting"]);
+  // What stays open: what they read, their own settings there.
+  expect((await owner(`${app}/channels/${channelId}/read`, { json: {} })).status).toBe(204);
+  expect((await owner(`${app}/me/status`, { method: "PUT", json: { availability: "away" } })).status).toBe(200);
+  // Someone outside never hears it's being deleted.
+  const zoe = browser(t);
+  await signUp(zoe, "zoe@example.com");
+  expect(await answer(await zoe(`${app}/channels/${channelId}/messages`, { json: { body: "hi" } }))).toEqual([
+    403,
+    "forbidden",
+  ]);
+  // Leaving, and who you are, still answer.
   expect((await meOf(ana)).organizations.map((o) => o.id)).toEqual([orgId]);
-  expect((await ana(`/api/app/organizations/${orgId}/members/${anaId}`, { method: "DELETE" })).status).toBe(204);
+  expect((await ana(`${app}/members/${anaId}`, { method: "DELETE" })).status).toBe(204);
   expect((await meOf(ana)).organizations).toEqual([]);
+});
+
+test("being deleted, a DM it has opens as it is and none starts; its payer still opens billing", async () => {
+  await t.close();
+  t = await createTestServer({
+    env: { BILLING_URL: "https://billing.example.com", BILLING_LINK_SECRET: "b".repeat(32) },
+  });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId, agentId } = await seedOrg(owner);
+  const ana = await joinByInvitation(t, owner, orgId, "ana@example.com");
+  const anaId = (await meOf(ana)).user.id;
+  const app = `/api/app/organizations/${orgId}`;
+  const opened = await owner(`${app}/dms`, { json: { agentId } });
+  expect(opened.status).toBe(200);
+  const { channelId } = (await opened.json()) as { channelId: string };
+  await t.db
+    .update(schema.organizations)
+    .set({ deletionDueAt: new Date(Date.now() + 7 * 86_400_000) })
+    .where(eq(schema.organizations.id, orgId));
+
+  const again = await owner(`${app}/dms`, { json: { agentId } });
+  expect(again.status).toBe(200);
+  expect(await again.json()).toMatchObject({ channelId, dm: { channelId } });
+  expect(await answer(await owner(`${app}/dms`, { json: { userId: anaId } }))).toEqual([403, "org.deleting"]);
+  expect((await owner(`${app}/billing-link`, { json: { from: "settings" } })).status).toBe(200);
 });
 
 describe("proof that it's you: a code emailed to you", () => {
@@ -186,13 +233,13 @@ describe("proof that it's you: a code emailed to you", () => {
     expect((await owner("/api/auth/change-password", { json: change })).status).toBe(404);
   });
 
-  test("adding a password takes a sign-in in the last 10 minutes; one minted from an old session, for the phone or the desktop app, is just as old", async () => {
+  test("setting a password takes a sign-in in the last 10 minutes; one minted from an old session, for the phone or the desktop app, is just as old", async () => {
     const owner = browser(t);
     await signUp(owner, "owner@example.com");
     const ownerId = (await meOf(owner)).user.id;
     const password = { password: "another fake password" };
-    // Signed in just now: past the sign-in, to the account's own check (it has one).
-    expect(await answer(await owner("/api/app/me/password", { json: password }))).toEqual([409, "password_set"]);
+    // Signed in just now: a new password in place of its own (the same one here, so the sign-in below keeps working).
+    expect((await owner("/api/app/me/password", { json: { password: "correct horse battery" } })).status).toBe(204);
     await signedInAnHourAgo(ownerId);
     expect(await answer(await owner("/api/app/me/password", { json: password }))).toEqual([403, "reauth.sign_in"]);
 

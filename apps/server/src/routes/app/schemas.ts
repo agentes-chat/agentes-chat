@@ -9,6 +9,7 @@ import {
   ONBOARDING_STEPS,
   STANDING_STATES,
   START_PAGES,
+  WORKSPACE_MODES,
 } from "@agenteschat/engine";
 import { CONTEXT_LIMITS, ENDPOINT_STYLES, MODEL_TIERS, PROVIDER_IDS } from "@agenteschat/providers";
 import { z } from "@hono/zod-openapi";
@@ -73,6 +74,10 @@ export const ChatPrefs = z
       .enum(CHAT_TEXT_SIZES)
       .optional()
       .openapi({ description: "Tamanho do texto of the messages, smallest first; absent: `md`." }),
+    feedbackAuto: z.boolean().optional().openapi({
+      description:
+        "Always send: a report an agent offers about the app goes with its reply, without asking; absent: it asks.",
+    }),
   })
   .openapi("ChatPrefs");
 
@@ -133,7 +138,7 @@ export const Organization = z
       .optional()
       .openapi({
         description:
-          "In `GET /me`, while an owner's deletion is pending: the workspace is closed (`org.deleting`), and any owner can restore it until `dueAt` (`DELETE …/deletion`). Absent: not being deleted.",
+          "In `GET /me`, while an owner's deletion is pending: the workspace is read-only (its changes answer `org.deleting`), and any owner can restore it until `dueAt` (`DELETE …/deletion`). Absent: not being deleted.",
       }),
     start: StartChoice.optional().openapi({
       description: "In `GET /me`: what opens when the app starts here (`PUT …/me/start`). Absent elsewhere.",
@@ -149,6 +154,10 @@ export const Organization = z
     chatPrefs: ChatPrefs.optional().openapi({
       description:
         "In `GET /me`: how conversations look to you here (`PUT …/me/chat`). Only what you chose: a key not here keeps the app's default. Absent elsewhere.",
+    }),
+    mode: z.enum(WORKSPACE_MODES).optional().openapi({
+      description:
+        "Who the workspace is for (ADR 0159): `team` or `personal`. It changes the apps' defaults and words, never what anyone may do. Changed with `PATCH …/settings`.",
     }),
   })
   .openapi("Organization");
@@ -260,6 +269,12 @@ export const AgentAudience = z
   })
   .openapi("AgentAudience");
 
+/** How much an agent asks before acting (ADR 0173). */
+export const ApprovalsLevel = z.enum(["always", "risky", "never"]).openapi("ApprovalsLevel", {
+  description:
+    "`always`: every write to a connected app asks a person. `risky` (the default): what is marked sensitive asks. `never`: only merge, deploy, rollback and the like ask. A routine's run, and one a routine's reading feeds, ask for every write to a connected app at any level. Scopes, connector access and the budget bind at every level.",
+});
+
 /** An agent's autonomy brakes (ADR 0131): what it may start that nobody asked for directly, and whom it may call. */
 export const AgentBrakes = z
   .object({
@@ -369,6 +384,16 @@ export const AgentSetupChecklist = z
       description: "The ready-made role it started from (`support`); null: from scratch or made elsewhere.",
     }),
     done: z.array(SetupStep).openapi({ description: "The steps a person confirmed (chose or skipped)." }),
+    hello: z.string().optional().openapi({
+      description: "How it introduced itself on its card, in its own voice (ADR 0164): its first message says it.",
+    }),
+    starter: z.string().optional().openapi({ description: "The personal starter it began as (ADR 0159 §3)." }),
+    apps: z
+      .record(z.string(), z.enum(["read", "write"]))
+      .optional()
+      .openapi({
+        description: "The apps it was made to use (catalog connector ids) at their levels (ADR 0164).",
+      }),
   })
   .openapi("AgentSetupChecklist");
 
@@ -408,6 +433,7 @@ export const Agent = z
       description:
         "It may send a sticker or a GIF (ADR 0091): when someone asks for one, and after a light reply as often as the workspace's `agentMedia` allows.",
     }),
+    approvalsLevel: ApprovalsLevel,
     builtin: z.enum(["right_hand"]).nullable().openapi({
       description:
         "A built-in agent the product ships (ADR 0137): `right_hand`, the team's right hand, one per workspace, never archived, deleted or exported. Null for the agents people make.",
@@ -441,6 +467,10 @@ export const Agent = z
         }),
         speed: z.literal("fast").optional().openapi({
           description: "Set to `fast` where that applies to what it thinks with (ADR 0149); absent: standard speed.",
+        }),
+        maker: z.string().optional().openapi({
+          description:
+            "An API brain on Automático: the maker its models come from (its own key's, else the workspace's), whose logo shows beside it.",
         }),
       })
       .optional()

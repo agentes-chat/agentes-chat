@@ -3,6 +3,7 @@ import type {
   Memory,
   MemoryUpdate,
   OrgRole,
+  OrgSummary,
   Person,
   Proposal,
   ProposalAccessLine,
@@ -12,6 +13,18 @@ import { formatTime, formatUsd, joinNames } from "./format";
 import { agentGrammar } from "./grammar";
 import { holdersOf } from "./roles";
 import { scopeText } from "./scopes";
+import { modeKey } from "./workspace-mode";
+
+/**
+ * The workspace a proposal is in, for its context's words: its name, or the workspace itself, whose mode says them. A
+ * personal workspace's context is what its person's agents know about them (ADR 0159), never "Personal context".
+ */
+export type ProposalWorkspace = string | Pick<OrgSummary, "name" | "mode">;
+
+/** The key of the context's words and the name they carry, for `ws`. */
+function contextWords<K extends string>(ws: ProposalWorkspace, key: K) {
+  return typeof ws === "string" ? { key, org: ws } : { key: modeKey(ws, key), org: ws.name };
+}
 
 /*
  * A card of proposed changes in the chat (`memory.updated`, `proposed`, ADR 0092): an agent asked to change its own
@@ -142,6 +155,21 @@ export function cardOutcome(t: TFunction, rows: Proposal[]): { accepted: boolean
   return { accepted: done > 0, label };
 }
 
+/**
+ * How a decided card ended and who did it: "Aplicado por você", "Recusado por Ana" when one person decided every row
+ * the same way, else how it ended (`cardOutcome`: a newer text took its place, or the rows ended apart).
+ */
+export function cardDecidedBy(t: TFunction, rows: Proposal[], meId: string): string {
+  const [first] = rows;
+  const by = first?.decidedBy;
+  const alike = rows.every((p) => !p.stale && p.status === first?.status && p.decidedBy?.userId === by?.userId);
+  if (!first || !by || !alike || first.status === "pending") return cardOutcome(t, rows).label;
+  const mine = by.userId === meId;
+  if (first.status === "accepted")
+    return mine ? t("rightHand.card.appliedByYou") : t("rightHand.card.appliedBy", { name: by.name });
+  return mine ? t("rightHand.card.declinedByYou") : t("rightHand.card.declinedBy", { name: by.name });
+}
+
 /** Rows a decision couldn't apply because what they were made against changed since (409). */
 export const staleCount = (failed: { error: unknown }[]) =>
   failed.filter((f) => (f.error as { status?: unknown } | null)?.status === 409).length;
@@ -153,8 +181,16 @@ export const appLabel = (t: TFunction, line: ProposalAccessLine) =>
     : scopeText(t, { id: line.id, label: line.label, description: "", sensitive: false }).label;
 
 /** What one proposal changes, after "propõe ·": "instruções da Ada", "papel do Theo", "contexto da Acme". */
-export function proposalTarget(t: TFunction, p: Proposal, agentName: (id: string) => string, orgName: string) {
-  if (p.target.type === "org_context") return t("proposals.targetContext", { org: orgName });
+export function proposalTarget(
+  t: TFunction,
+  p: Proposal,
+  agentName: (id: string) => string,
+  orgName: ProposalWorkspace,
+) {
+  if (p.target.type === "org_context") {
+    const { key, org } = contextWords(orgName, "proposals.targetContext");
+    return t(key, { org });
+  }
   const g = agentGrammar(agentName(p.target.agentId));
   if (p.target.type === "agent_role") return t("proposals.targetRole", g);
   if (p.target.type === "agent_access") return t("proposals.targetAccess", g);
@@ -172,7 +208,7 @@ export function cardHead(
   rows: Proposal[],
   proposer: string,
   agentName: (id: string) => string,
-  orgName: string,
+  orgName: ProposalWorkspace,
 ): {
   key: "proposals.proposes" | "proposals.proposesMany" | "proposals.proposesManyChanges";
   values: Record<string, string | number>;
@@ -232,9 +268,17 @@ const TITLE_KEY = {
 } as const;
 
 /** Its title in the person's language (the server's is English). */
-export function proposalTitle(t: TFunction, p: Proposal, orgName: string, agentName: (id: string) => string) {
+export function proposalTitle(
+  t: TFunction,
+  p: Proposal,
+  orgName: ProposalWorkspace,
+  agentName: (id: string) => string,
+) {
   const tt = t as unknown as (key: string, options: Record<string, string | undefined>) => string;
-  if (p.target.type === "org_context") return tt("proposals.titleContext", { org: orgName, defaultValue: p.title });
+  if (p.target.type === "org_context") {
+    const { key, org } = contextWords(orgName, "proposals.titleContext");
+    return tt(key, { org, defaultValue: p.title });
+  }
   return tt(TITLE_KEY[p.target.type], {
     ...agentGrammar(agentName(p.target.agentId)),
     skill: p.target.type === "skill" ? p.target.name : "",
@@ -264,8 +308,8 @@ function lookWords(t: TFunction, value: unknown) {
 
 /**
  * One line of the right hand's settings card (ADR 0137) in the person's language: what it changes ("Modelo",
- * "#suporte") and the value then and proposed ("Haiku 4.5" → "Sonnet 4.5"). A seat in a channel reads as how the
- * agent answers there, or that it isn't in it.
+ * "#suporte", "Skill excel") and the value then and proposed ("Haiku 4.5" → "Sonnet 4.5"). A seat in a channel reads
+ * as how the agent answers there, or that it isn't in it.
  */
 export function settingLineText(
   t: TFunction,
@@ -301,6 +345,8 @@ export function settingLineText(
         return v === true ? t("rightHand.value.archived") : t("rightHand.value.active");
       case "delete":
         return v === true ? t("rightHand.value.deleted") : t("rightHand.value.active");
+      case "skill":
+        return v === true ? t("rightHand.value.skillOn") : t("rightHand.value.skillOff");
       default:
         return v === null || v === undefined
           ? t("rightHand.value.notIn")
@@ -313,9 +359,11 @@ export function settingLineText(
       ? channel
         ? `#${channel}`
         : (line.label?.to ?? t("rightHand.field.channel"))
-      : (t as unknown as (key: string) => string)(
-          `rightHand.field.${line.field === "delete" ? "archive" : line.field}`,
-        );
+      : line.field === "skill"
+        ? t("rightHand.field.skill", { name: line.label?.to ?? "" })
+        : (t as unknown as (key: string) => string)(
+            `rightHand.field.${line.field === "delete" ? "archive" : line.field}`,
+          );
   return { field, from: value(line.from, "from"), to: value(line.to, "to") };
 }
 

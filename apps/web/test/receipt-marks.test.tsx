@@ -52,6 +52,11 @@ describe("a receipt never changes a message's height", () => {
       said("p1", "Bom dia.", 20),
       said("j3", "Sobre o quê?", 19.8, { author: { type: "person", id: "u-joao" } }),
       said("p2", "Sobre a reunião.", 19.5),
+      said("j4", "Certo.", 19),
+      // An ordinary message Ada read and answered: the plain double check the read mark must equal.
+      said("p3", "Obrigado.", 18.5, {
+        receipts: { seenBy: [ADA_ID], pickedBy: [], handled: [{ agentId: ADA_ID, runId: "r0", status: "done" }] },
+      }),
     ];
     await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
     await settle(8);
@@ -72,13 +77,25 @@ describe("a receipt never changes a message's height", () => {
     const waiting = row("s1").querySelector(".ac-msg__own-foot .ac-receipt__check");
     expect(waiting?.getAttribute("data-steer")).toBe("waiting");
     expect(waiting?.querySelector("canvas.ac-pixspin")).not.toBeNull();
-    // Read: Ada's face, in the same place.
+    // Read: the double check every read message has, in the same place and size, and no face in the bubble. Who
+    // read it is in the mark's words.
     const read = row("s2").querySelector(".ac-msg__own-foot .ac-receipt__check");
     expect(read?.getAttribute("data-steer")).toBe("read");
-    expect(read?.querySelector(".ac-avatar")).not.toBeNull();
+    expect(read?.querySelector(".ac-avatar")).toBeNull();
+    const says = [
+      read?.getAttribute("aria-label"),
+      document.getElementById(read?.getAttribute("aria-describedby") ?? "")?.textContent,
+    ];
+    expect(says).toContain("Ada leu");
+    // The same drawing and no size of its own (an inline size would beat the CSS that sizes the plain check).
+    const plain = row("p3").querySelector(".ac-msg__own-foot .ac-receipt__check");
+    expect(plain?.querySelector("svg")).not.toBeNull();
+    expect(read?.querySelector("svg")?.outerHTML).toBe(plain?.querySelector("svg")?.outerHTML as string);
+    expect(read?.querySelector("svg")?.getAttribute("style")).toBeNull();
+    expect(read?.querySelectorAll("svg.ac-icon")).toHaveLength(1);
     // Nothing under the text: the same parts as the messages beside them that no task read.
     expect(parts("s1")).toEqual(parts("p1"));
-    expect(parts("s2")).toEqual(parts("p2"));
+    expect(parts("s2")).toEqual(parts("p3"));
     expect(document.querySelector(".msg-steer")).toBeNull();
   });
 
@@ -164,7 +181,7 @@ describe("a receipt never changes a message's height", () => {
         .map((m) => new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`).exec(m[2] ?? "")?.[1]?.trim())
         .findLast(Boolean);
     const px = (v: string | undefined) => Number.parseFloat(v ?? "");
-    // The check: a 16px icon with 2px each side, which the action bar stands 8px left of.
+    // The check: a 16px icon with 2px each side. The action bar keeps its one place over it (components.test.tsx).
     const check = px(value(kit, ".ac-receipt__check .ac-icon", "width")) + 2 * 2;
     expect(value(kit, ".ac-receipt__check", "padding")).toBe("0 2px");
     expect(
@@ -173,7 +190,7 @@ describe("a receipt never changes a message's height", () => {
         ".ac-msg:has(> .ac-msg__body > .ac-msg__aside--floating:not(:empty)) > .ac-msg__body > .ac-msg__actions",
         "right",
       ),
-    ).toBe(`calc(var(--msg-inline) + ${check + 8}px)`);
+    ).toBeUndefined();
     // The reader's face (18px) with 1px each side: the same 20px, and no taller than the name's line.
     const face = px(value(kit, ".ac-avatar--xs", "width"));
     expect(value(app, ".ac-receipt__check:has(> .ac-avatar)", "padding")).toBe("0 1px");

@@ -16,6 +16,7 @@ import type {
   RunnerAccountInfo,
   RunnerExecutorInfo,
   RunnerPause,
+  RunnerPhone,
   RunnerTools,
 } from "./machine-protocol";
 
@@ -92,7 +93,8 @@ export interface ControlStatus {
   version: string;
   protocol: number;
   paused: RunnerPause;
-  executors: { claude?: RunnerExecutorInfo; codex?: RunnerExecutorInfo };
+  /** The coding CLIs found here, as `hello.executors` lists them. */
+  executors: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity", RunnerExecutorInfo>>;
   /** Absolute path of the workspace (the agents' folders live inside it). */
   workspace?: string;
   /** Agents of the organization that use this computer. */
@@ -101,6 +103,10 @@ export interface ControlStatus {
   access?: RunnerAccess;
   /** The agents' browsers that are open or have a person's turn (absent: older runner). */
   browsers?: ControlBrowser[];
+  /** The phones this computer reaches now, as the server hears them (absent: older runner, or no phones looked for). */
+  phones?: RunnerPhone[];
+  /** The OS user agents' commands run as here (absent: older runner). */
+  user?: string;
   /**
    * Grows by one for every status the runner reports (events and `status` replies alike), from 1
    * when the process starts; the app keeps the newest and drops anything older. Absent: older runner.
@@ -173,6 +179,28 @@ export interface ControlConfig extends Required<ControlConfigPatch> {
   managedBy?: "desktop";
 }
 
+/**
+ * What a Mac needs before agents can use an iPhone through it, as the desktop app's iPhone setup shows it: Xcode, the
+ * iOS platform Xcode builds for an iPhone with, and an Apple Account in Xcode. The iPhone's own steps (plugged in,
+ * trusted, Developer Mode, UI Automation, the test helper) are its reason in `ControlStatus.phones`.
+ */
+export interface ControlIphoneSetup {
+  /** Xcode's version ("26.3"); null: no Xcode (or only the command line tools). */
+  xcode: string | null;
+  /** The iOS platform: installed (its version), being downloaded (`iphone.download`), missing, or a download failed. */
+  platform:
+    | { state: "installed"; version: string }
+    | { state: "missing" }
+    | { state: "downloading"; percent: number | null; done?: string; total?: string }
+    | { state: "failed"; message: string };
+  /** The Apple Account in Xcode › Settings › Apple Accounts, by its team (a free one is a Personal Team); null: none. */
+  account: { name: string; personal: boolean } | null;
+  /** With `account: null`: Xcode lists an Apple Account that shows no team yet (an older app shows it missing). */
+  noTeam?: true;
+  /** The iPhone SDK's version ("26.2"): an iPhone on a newer iOS needs a newer Xcode. */
+  sdk?: string;
+}
+
 /** App → runner requests. Every request is answered by exactly one `reply` with the same `id`. */
 export type ControlRequest =
   | { type: "status" }
@@ -197,6 +225,11 @@ export type ControlRequest =
        * unless chosen). Commands always start off from the app. Absent: both off.
        */
       tools?: { claude?: boolean; codex?: boolean };
+      /**
+       * A connect link's code (`agenteschat://pair`): the server asks the link's maker to let this computer in, as
+       * `agentes-runner pair --link` does, and nobody confirms the device code. `pair.code` still comes first.
+       */
+      link?: string;
     }
   | { type: "pair.cancel" }
   /** Forgets the pairing (the token is deleted; the server side is the site's "Desconectar"). */
@@ -210,6 +243,8 @@ export type ControlRequest =
   | { type: "folders.remove"; path: string; agentId?: string }
   | { type: "folders.setAgents"; path: string; agents: string[] }
   | { type: "tools.set"; tool: keyof RunnerTools; on: boolean }
+  /** Looks for Claude Code and Codex now, not at the next scheduled look. An older runner answers `bad_request`. */
+  | { type: "executors.check" }
   | { type: "access.pending" }
   | { type: "access.answer"; requestId: string; decision: "granted" | "denied"; scope: "agent" | "all" }
   /**
@@ -231,6 +266,12 @@ export type ControlRequest =
   | { type: "account.status"; loginId: string }
   | { type: "account.cancel"; loginId: string }
   | { type: "account.remove"; kind: AccountKind; accountId: string }
+  /** The Mac's side of setting up an iPhone (macOS; elsewhere nothing is found). */
+  | { type: "iphone.setup" }
+  /** Starts downloading the iOS platform when Xcode lacks it; the reply and `iphone.setup` show its progress. */
+  | { type: "iphone.download" }
+  /** Opens Xcode (its Accounts are only there), or Xcode's page in the App Store. */
+  | { type: "iphone.open"; app: "xcode" | "appStore" }
   /** Finish what's running briefly, then exit 0 (the app quits). */
   | { type: "shutdown" };
 
@@ -257,6 +298,7 @@ export interface ControlReplies {
   "folders.remove": RunnerAccess;
   "folders.setAgents": RunnerAccess;
   "tools.set": RunnerAccess;
+  "executors.check": ControlStatus;
   "access.pending": { requests: ControlAccessRequest[] };
   "access.answer": { access: RunnerAccess };
   reconnect: { reconnecting: boolean };
@@ -267,6 +309,9 @@ export interface ControlReplies {
   "account.status": { state: AccountLoginState; account?: RunnerAccountInfo; error?: string };
   "account.cancel": { canceled: boolean };
   "account.remove": { removed: boolean };
+  "iphone.setup": ControlIphoneSetup;
+  "iphone.download": ControlIphoneSetup;
+  "iphone.open": { opened: boolean };
   shutdown: { stopping: true };
 }
 
@@ -287,7 +332,8 @@ export type ControlEvent =
   | { kind: "activity"; entry: ActivityEntry }
   | { kind: "pair.code"; userCode: string; verificationUrl: string; expiresAt: string }
   | { kind: "pair.done"; org: { id: string; name: string }; machine: { id: string; name: string } }
-  | { kind: "pair.failed"; code: "expired" | "denied" | "network" | "internal"; message: string }
+  /** `link_invalid`: the link expired or was used (an older runner says `internal`). */
+  | { kind: "pair.failed"; code: "expired" | "denied" | "network" | "internal" | "link_invalid"; message: string }
   | { kind: "access.requested"; request: ControlAccessRequest }
   | { kind: "access.resolved"; requestId: string; decision: "granted" | "denied" | "expired" }
   | { kind: "access.changed"; access: RunnerAccess };

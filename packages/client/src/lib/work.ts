@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { ConnectorDef, OrgSummary, Run, RunStep } from "../api/types";
+import type { ConnectorDef, Message, OrgSummary, Run, RunStep } from "../api/types";
 import type { LiveCode, LiveOutput, LiveRun, LiveStep, LiveWork } from "../realtime/streams";
 import { type Activity, type ActivityKind, activityVerb, appLabel, PERMISSION_TOOL, toolActivity } from "./activity";
 import { appConnector } from "./connected";
@@ -401,6 +401,32 @@ export function splitCanceled(body: string, meta: Record<string, unknown> | unde
   };
 }
 
+/**
+ * The stopped replies (`meta.canceled`) with nothing left to pick up, by run: their agent works in the conversation
+ * now (`working`, agent ids), or wrote again after them in the same thread. "Continuar" leaves those: the agent went
+ * on, and an ended stop never looks live. `messages` in any order.
+ */
+export function stopsMovedOn(
+  messages: readonly Pick<Message, "author" | "agentRunId" | "threadId" | "createdAt" | "meta">[],
+  working: Iterable<string> = [],
+): Set<string> {
+  const busy = new Set(working);
+  const moved = new Set<string>();
+  const stops = messages.filter((m) => m.author.type === "agent" && m.agentRunId && m.meta?.canceled);
+  for (const stop of stops) {
+    const wroteAgain = (m: (typeof messages)[number]) =>
+      m.author.type === "agent" &&
+      m.author.id === stop.author.id &&
+      (m.threadId ?? null) === (stop.threadId ?? null) &&
+      Boolean(m.agentRunId) &&
+      m.agentRunId !== stop.agentRunId &&
+      !m.meta?.notice &&
+      m.createdAt > stop.createdAt;
+    if (busy.has(stop.author.id ?? "") || messages.some(wroteAgain)) moved.add(stop.agentRunId as string);
+  }
+  return moved;
+}
+
 // ───────────────────────────── the tool block (one per reply) ─────────────────────────────
 
 /** How long a line's open view shows of what a tool was given and answered. */
@@ -432,11 +458,17 @@ const plainWhy = (text: string) => {
 /**
  * Why a line failed, under it, for people: a refusal's reason in their words (`chat.work.refusal.<code>`), else
  * nothing. What the tool said is its own text (often English, a connector's JSON): the line's open view shows it.
+ * `personal`: a personal workspace's (ADR 0159), whose reasons say no team where it has its own words for one.
  */
-export function toolWhy(t: TFunction, l: { why?: string | null; refusal?: string | null }): string | null {
+export function toolWhy(
+  t: TFunction,
+  l: { why?: string | null; refusal?: string | null },
+  personal = false,
+): string | null {
   if (!l.refusal) return null;
   const say = t as unknown as (key: string, options: { defaultValue: string }) => string;
-  return say(`chat.work.refusal.${l.refusal}`, { defaultValue: "" }) || null;
+  const key = `chat.work.refusal.${l.refusal}`;
+  return (personal && say(`${key}Personal`, { defaultValue: "" })) || say(key, { defaultValue: "" }) || null;
 }
 
 /** The Tool Gateway's own refusal of a call (`tool_result` step `data.refusal`): a word `toolWhy` says. */
@@ -539,11 +571,7 @@ export function toolItemsLive(work: LiveWork[], stopped = false): ToolItem[] {
   const listed = work.flatMap((w) =>
     w.kind === "call" && !UNLISTED.has(toolActivity(w.tool, w.connector, w.detail, w).kind) ? [w] : [],
   );
-  work.forEach((w, i) => {
-    if (w.kind === "say") {
-      items.push({ kind: "say", key: `say-${i}`, text: w.text });
-      return;
-    }
+  work.forEach((w) => {
     if (w.kind === "steer") {
       items.push({ kind: "steer", key: `steer-${w.messageId}`, messageId: w.messageId, now: w.now === true });
       return;
@@ -743,19 +771,19 @@ export function waitStep(t: TFunction, work: LiveWork[] | undefined, step?: Live
 }
 
 /**
- * The bar's words for one agent whose row is out of view: the row's step with a lower-case start, after its name
- * ("Nina consultando o Email · …"), or "escrevendo…" while its words arrive and no call runs. Its own words only once
- * the turn has gone on for `STEP_WORDS_AFTER_MS`.
+ * The bar's words for one agent at work: its step with a lower-case start, after its name ("Nina consultando o Email ·
+ * …"), or "escrevendo…" while it writes (`running`: its words show whole once posted) and no call runs. Its own words
+ * only once the turn has gone on for `STEP_WORDS_AFTER_MS`.
  */
 export function barStep(
   t: TFunction,
-  run: Pick<LiveRun, "text" | "work" | "step" | "startedAt">,
+  run: Pick<LiveRun, "status" | "work" | "step" | "startedAt" | "workingSince">,
   locale?: string,
   now = Date.now(),
 ): string {
   const calling = (run.work ?? []).some((w) => w.kind === "call" && w.running);
-  if (!calling && run.text.length > 0) return `${activityVerb(t, { kind: "writing" })}…`;
-  const long = now - (run.startedAt ?? now) >= STEP_WORDS_AFTER_MS;
+  if (!calling && run.status === "running") return `${activityVerb(t, { kind: "writing" })}…`;
+  const long = now - (run.workingSince ?? run.startedAt ?? now) >= STEP_WORDS_AFTER_MS;
   return lowerFirst(waitStep(t, run.work, long ? run.step : undefined), locale);
 }
 

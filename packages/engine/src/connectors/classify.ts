@@ -8,7 +8,8 @@ import { ALWAYS_SENSITIVE } from "../tools/gateway";
  * suggestion must be right on its own:
  *
  * 1. The server's annotations: `readOnlyHint` → read; `destructiveHint` →
- *    approval (and sensitive).
+ *    approval, as a suggestion an admin may change (a server's word alone
+ *    never locks a tool: only our own verbs below do).
  * 2. The verb in the tool's name: get/list/search… → read;
  *    create/update/add… → write; delete/remove/send/pay… → approval (and
  *    sensitive: such a tool may only ask for approval or be off).
@@ -166,22 +167,45 @@ export function verbIndex(words: string[], known: (w: string) => boolean = isVer
 
 const ruleVerb = (w: string) => READ_VERBS.has(w) || WRITE_VERBS.has(w) || SENSITIVE_VERBS.has(w);
 
-/** Annotations, a preset's read-only list, then the verb. Null = ambiguous (the judge decides). */
-export function classifyByRules(tool: ToolToClassify, readTools: readonly string[] = []): ToolClass | null {
+/**
+ * Annotations, a preset's read-only list, its posts (`writeTools`, writes whatever their name), then the verb. Null =
+ * ambiguous (the judge decides).
+ */
+export function classifyByRules(
+  tool: ToolToClassify,
+  readTools: readonly string[] = [],
+  writeTools: readonly string[] = [],
+): ToolClass | null {
   if (tool.readOnlyHint === true)
     return { level: "read", source: "annotation", reason: "read_only_hint", sensitive: false };
-  if (tool.destructiveHint === true)
-    return { level: "approval", source: "annotation", reason: "destructive_hint", sensitive: true };
-  if (readTools.includes(tool.name))
-    return { level: "read", source: "preset", reason: "preset_read", sensitive: false };
   const words = nameWords(tool.name);
   const verb = words[verbIndex(words, ruleVerb)];
+  const locked: ToolClass = { level: "approval", source: "verb", reason: "verb_sensitive", sensitive: true };
+  const byVerb = verb && SENSITIVE_VERBS.has(verb) ? locked : null;
+  // The server's warning only suggests asking: the lock comes from our own words. With the warning, one of them
+  // anywhere in the name locks (`create_and_send_invoice`), not only in the verb's place.
+  if (tool.destructiveHint === true)
+    return words.some((w) => SENSITIVE_VERBS.has(w))
+      ? locked
+      : { level: "approval", source: "annotation", reason: "destructive_hint", sensitive: false };
+  if (readTools.includes(tool.name))
+    return { level: "read", source: "preset", reason: "preset_read", sensitive: false };
+  if (writeTools.includes(tool.name))
+    return { level: "write", source: "preset", reason: "verb_write", sensitive: false };
   if (!verb) return null;
-  if (SENSITIVE_VERBS.has(verb))
-    return { level: "approval", source: "verb", reason: "verb_sensitive", sensitive: true };
+  if (byVerb) return byVerb;
   if (WRITE_VERBS.has(verb)) return { level: "write", source: "verb", reason: "verb_write", sensitive: false };
   return { level: "read", source: "verb", reason: "verb_read", sensitive: false };
 }
+
+/**
+ * Composio actions that publish a person's own post, as writes: posting doesn't ask (product decision), and admins
+ * can still make them ask like any write. Every other action whose words publish or share stays sensitive.
+ */
+export const POSTING_ACTIONS: ReadonlySet<string> = new Set([
+  "INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH",
+  "LINKEDIN_CREATE_ARTICLE_OR_URL_SHARE",
+]);
 
 /** Sends, deletes and payments that actions name with other words (`GMAIL_REPLY_TO_THREAD`, `VERCEL_BUY_DOMAINS`). */
 const SENSITIVE_ACTIONS = new Set([
@@ -273,9 +297,11 @@ export function sqlArgOf(
  * executor), by every word rather than the first verb: `sensitive` when any word sends, deletes or pays, in any
  * form (`SLACK_DELETES_A_MESSAGE_FROM_A_CHAT`); `read` only when the verb right after the app reads, no other word
  * is a verb (`GITHUB_LIST_OPEN_ISSUES` opens nothing, but "open" keeps it a write), and nothing in it is open-ended
- * or always asks; anything else, a slug without a verb too, is a `write`. A wrong guess only asks a person.
+ * or always asks; anything else, a slug without a verb too, is a `write`, as is a post (`POSTING_ACTIONS`). A wrong
+ * guess only asks a person.
  */
 export function actionLevel(slug: string): "read" | "write" | "sensitive" {
+  if (POSTING_ACTIONS.has(slug)) return "write";
   const words = nameWords(slug);
   const posts = words.some((w) => w === "post" || w === "schedule") && words.some((w) => MESSAGE.test(w));
   if (posts || words.some(sensitiveWord)) return "sensitive";
@@ -387,6 +413,7 @@ export async function classifyTools(
     server: string;
     judge?: Judge;
     readTools?: readonly string[];
+    writeTools?: readonly string[];
     /** Earlier judge answers for this connection, by tool name. */
     cached?: Map<string, ToolClass>;
   },
@@ -394,7 +421,7 @@ export async function classifyTools(
   const out = new Map<string, ToolClass>();
   const ask: ToolToClassify[] = [];
   for (const tool of tools) {
-    const byRules = classifyByRules(tool, options.readTools);
+    const byRules = classifyByRules(tool, options.readTools, options.writeTools);
     const hit = options.cached?.get(tool.name);
     if (byRules) out.set(tool.name, byRules);
     else if (hit && hit.source === "judge") out.set(tool.name, hit);

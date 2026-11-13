@@ -9,8 +9,10 @@ import type {
   ImportSkipReason,
   MigrationBundle,
 } from "../../api/types";
+import { IMPORT_APP_CLIENTS } from "../app-clients";
 import { forbiddenText } from "../errors";
 import { joinNames } from "../format";
+import { hiddenRepoOf, hiddenRepoText } from "../skills";
 import {
   type AgentFile,
   type AgentFileSkip,
@@ -78,14 +80,43 @@ export const IMPORT_CARDS = [
 export type ImportCard = (typeof IMPORT_CARDS)[number];
 /** The cards that show the export request to copy. */
 export type RequestCard = Extract<ImportCard, PromptApp | "other">;
+/** The cards whose app answers the export request (pasted back), not a file. */
+export const isRequestCard = (card: ImportCard | null): card is RequestCard =>
+  card === "grok-bot" || card === "chatgpt-dots" || card === "other";
+
+/** How a source's agents come: the app creates them here through this server's MCP, or the request and its reply. */
+export type ImportMethod = "mcp" | "prompt";
+
+/** A source's steps to connect it to this server's MCP; none for one that can't take an MCP server. */
+export const mcpClient = (card: ImportCard) => IMPORT_APP_CLIENTS.find((c) => c.id === card);
+
+/**
+ * Offered, but not the default: no document says a dot calls a custom plugin, and custom MCP on some ChatGPT plans is
+ * read-only, which can't create agents.
+ */
+const MCP_UNCONFIRMED: ReadonlySet<ImportCard> = new Set(["chatgpt-dots"]);
+
+/** MCP wherever the app takes it and apps on the internet reach this server (`aiAppImport`'s `available`). */
+export const defaultMethod = (card: ImportCard, reachable: boolean): ImportMethod =>
+  reachable && mcpClient(card) && !MCP_UNCONFIRMED.has(card) ? "mcp" : "prompt";
+
+/**
+ * The agents that arrived through MCP: not among `seen` (the ids there when its steps first showed, so the server's
+ * clock is never compared with the device's) and the person's own, made by them or by their app.
+ */
+export const agentsSince = <A extends { id: string; ownerUserId: string | null }>(
+  list: readonly A[],
+  seen: ReadonlySet<string>,
+  userId: string,
+) => list.filter((a) => !seen.has(a.id) && a.ownerUserId === userId);
 
 /** An app's own card, else any other app's. */
 const cardOf = (app: string): ImportCard => IMPORT_CARDS.find((c) => c === app) ?? "other";
 
 /**
  * The card and app name of a bundle (or of what one brought, `imports.sources`). One in our format names its app in
- * `source.ref` ("agenteschat:<org>" for our own export, "grok-bot:…" for a
- * reply to `EXPORT_PROMPT`); `app` is null for an app we don't know.
+ * `source.ref` ("agenteschat:<org>" for our own export, "grok-bot" for a
+ * reply to `EXPORT_PROMPT`, "grok-bot:…" for one imported before); `app` is null for an app we don't know.
  */
 export function bundleOrigin(bundle: { source: Pick<MigrationBundle["source"], "app" | "ref"> }): {
   card: ImportCard;
@@ -239,14 +270,18 @@ export function cardName(t: TFunction, card: ImportCard): string {
 
 /**
  * What went wrong reading or planning, and what to do next. `offline` tells a request that never got an answer
- * (each app knows its own way).
+ * (each app knows its own way). A private repository none of the workspace's GitHub reads is said as
+ * Skills says it (`hiddenRepoText`), `mayConnect`: whether this person may connect GitHub.
  */
 export function importFailureText(
   t: TFunction,
   { from, step, cause }: ImportFailure,
   offline: (e: unknown) => boolean,
+  mayConnect = false,
 ) {
   if (cause === NOT_GITHUB) return t("onboarding.import.errors.notGithub");
+  const hidden = hiddenRepoOf(cause);
+  if (hidden) return hiddenRepoText(t, hidden, mayConnect).text;
   if (cause instanceof ImportError) {
     return cause.code === "unknown" && from === "paste"
       ? t("onboarding.import.errors.unknownPasted")

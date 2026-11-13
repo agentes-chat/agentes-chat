@@ -1,9 +1,10 @@
-import { keys, useMe } from "@agenteschat/client";
+import { meQuery, useMe } from "@agenteschat/client";
 import { isPaidReturn } from "@agenteschat/client/lib/billing";
-import { finishOnboarding } from "@agenteschat/client/lib/right-hand";
+import { settingUp } from "@agenteschat/client/lib/guards";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { requireUser } from "@/app/guards";
 import { useServerLocale } from "@/i18n";
+import { ARRIVAL_PARAM } from "@/lib/arrival";
 import { OnboardingPage } from "@/pages/OnboardingPage";
 
 export const Route = createFileRoute("/onboarding")({
@@ -16,16 +17,21 @@ export const Route = createFileRoute("/onboarding")({
   }),
   beforeLoad: ({ context, location }) => requireUser(context, location.href),
   loaderDeps: ({ search }) => ({ resume: search.resume, paid: search.paid }),
-  // Back from its plan, the workspace is set up already: its right hand's DM opens (ADR 0137), the payment still
-  // said as being confirmed there. One that can't be finished from here opens as it is.
+  // Back from the billing page, paid or not, the onboarding resumes where its data is: paid, on its plan step, the
+  // payment said as received until the hold lifts, then on connecting an AI (ADR 0162, amended 2026-11-10). A
+  // workspace set up meanwhile (another tab) opens as it is, on its arrival when it was paid for.
   loader: async ({ context, deps: { resume, paid } }) => {
     if (!resume) return;
-    const at = await finishOnboarding(context.api, resume).catch(() => null);
-    await context.queryClient.refetchQueries({ queryKey: keys.me });
-    const search = paid ? { paid: true as const } : {};
-    if (at?.agentId)
-      throw redirect({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId: resume, agentId: at.agentId }, search });
-    throw redirect({ to: "/org/$orgId", params: { orgId: resume }, search });
+    const me = await context.queryClient.fetchQuery(meQuery(context.api)).catch(() => null);
+    const org = me?.organizations.find((o) => o.id === resume);
+    if (!org || settingUp(org)) return;
+    if (paid)
+      throw redirect({
+        to: "/org/$orgId",
+        params: { orgId: resume },
+        search: { paid: true as const, [ARRIVAL_PARAM]: 1 } as never,
+      });
+    throw redirect({ to: "/org/$orgId", params: { orgId: resume } });
   },
   component: function Onboarding() {
     useServerLocale(useMe().data?.user);

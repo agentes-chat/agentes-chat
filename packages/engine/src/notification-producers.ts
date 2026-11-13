@@ -1,11 +1,12 @@
-import { and, asc, eq, inArray, isNotNull, isNull, ne, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, asc, eq, inArray, isNotNull, isNull, rowsOf, schema, sql } from "@agenteschat/db";
+import { appLocale } from "@agenteschat/i18n/locale";
 import type { PlanModel } from "@agenteschat/providers/plans";
 import { approvalCardThreads, approvalOriginOf, notifiedIds } from "./approvals";
 import { accountablePerson, runAuthorityById } from "./authority";
 import { autonomyNoteFor, proposalCardOf } from "./brakes";
 import { readableChannelIds } from "./channels";
 import { threadFollowChoices } from "./follows";
-import { type TaskEnd, taskEndText } from "./machine-task-text";
+import { type TaskEnd, taskEndLine } from "./machine-task-text";
 import { isMediaAfterReply } from "./media";
 import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
 import { isQuietNotice } from "./notices";
@@ -306,17 +307,22 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
 
 /**
  * What a notification quotes of a message: its body, but a task's end (`meta.machineTask`) names its computer only
- * where the workspace has more than one, the apps' rule (`namesComputers`). The agent still reads where it ran.
+ * where the workspace has more than one, the apps' rule (`namesComputers`), in the body's language. The agent still
+ * reads where it ran.
  */
 async function quotedBody(deps: NotificationDeps, orgId: string, message: typeof messages.$inferSelect) {
-  const task = message.meta.machineTask as (TaskEnd & { computer?: string }) | undefined;
+  const task = message.meta.machineTask as (TaskEnd & { computer?: string; locale?: string }) | undefined;
   if (typeof task?.title !== "string") return message.body;
   const computers = await deps.db
     .select({ id: machines.id })
     .from(machines)
     .where(and(eq(machines.orgId, orgId), isNull(machines.deletedAt)))
     .limit(2);
-  return taskEndText(task, computers.length > 1 ? (task.computer ?? null) : null);
+  return taskEndLine(
+    appLocale([task.locale], true) ?? "en",
+    task,
+    computers.length > 1 ? (task.computer ?? null) : null,
+  );
 }
 
 async function threadTitle(deps: NotificationDeps, orgId: string, rootId: string) {
@@ -780,10 +786,19 @@ export async function notifyMissionEnded(
 
 // ── Routines (ADR 0053) ─────────────────────────────────────────────────────────
 
-/** A routine's name, creator and agent, and the agent's owner: who hears about it. */
+/**
+ * A routine's name, creator and agent, and the agent's owner: who hears about it. `draft`: it is a widget's test before
+ * the widget is made (ADR 0135 §16), which raises no notice and is deleted with its routine, so nothing would resolve one.
+ */
 async function routineAudience(deps: Pick<NotificationDeps, "db">, orgId: string, routineId: string) {
   const [r] = await deps.db
-    .select({ name: routines.name, creator: routines.createdByUserId, agentId: routines.agentId })
+    .select({
+      name: routines.name,
+      creator: routines.createdByUserId,
+      agentId: routines.agentId,
+      // Written out: Drizzle drops a column's table in a one-table select, and `id` would read the widget's.
+      draft: sql<boolean>`exists (select 1 from ${schema.dashboardWidgets} w where w.routine_id = routines.id and w.draft)`,
+    })
     .from(routines)
     .where(and(eq(routines.id, routineId), eq(routines.orgId, orgId)));
   if (!r) return null;
@@ -895,7 +910,7 @@ export async function notifyRoutineStalled(
   input: { orgId: string; routineId: string; machineId: string; machineName: string; outageKey: string },
 ) {
   const r = await routineAudience(deps, input.orgId, input.routineId);
-  if (!r) return;
+  if (!r || r.draft) return;
   await notify(deps, {
     orgId: input.orgId,
     userIds: [r.creator, r.owner],
@@ -916,7 +931,7 @@ export async function notifyRoutineWaitingPlan(
   input: { orgId: string; routineId: string; outageKey: string },
 ) {
   const r = await routineAudience(deps, input.orgId, input.routineId);
-  if (!r) return;
+  if (!r || r.draft) return;
   await notify(deps, {
     orgId: input.orgId,
     userIds: [r.creator, r.owner],
@@ -1204,8 +1219,8 @@ export async function notifyWidgetAlert(
 
 /**
  * A widget stopped updating (ADR 0135 §6): `userId` (its creator, else who looks after its routine) hears it once per
- * failure streak (`streakKey`), with the coded reason (`agent_reported`: the agent's words in `latest.text`). Inbox
- * only; resolved by its next good update.
+ * failure streak (`streakKey`), with the coded reason (`agent_reported`: the agent's words in `latest.text`;
+ * `missing_credential`: why its agent has no AI in `latest.detail`). Inbox only; resolved by its next good update.
  */
 export async function notifyWidgetFailed(
   deps: NotificationDeps,
@@ -1219,6 +1234,7 @@ export async function notifyWidgetFailed(
     streakKey: string;
     reason: string;
     text?: string | null;
+    detail?: string | null;
   },
 ) {
   await notify(deps, {
@@ -1232,6 +1248,7 @@ export async function notifyWidgetFailed(
       title: input.title,
       reason: input.reason,
       ...(input.text ? { text: notificationSnippet(input.text) } : {}),
+      ...(input.detail ? { detail: input.detail } : {}),
     },
   });
 }
@@ -1325,6 +1342,42 @@ export async function notifyMachineConnected(
     latest: { title: machine.name, ...(machine.hostname ? { text: notificationSnippet(machine.hostname) } : {}) },
   });
 }
+
+/** A computer ran a connect link and asks to join: the link's maker decides, in the app (`device-links.ts`). */
+export async function notifyDeviceJoinRequest(
+  deps: NotificationDeps,
+  request: { id: string; name: string },
+  to: {
+    orgId: string;
+    orgName: string;
+    makerId: string;
+    facts: string;
+    os: string;
+    ip: string;
+    location: string | null;
+  },
+) {
+  await notify(deps, {
+    orgId: to.orgId,
+    userIds: [to.makerId],
+    kind: "device.join_request",
+    groupKey: `device.join_request:${request.id}`,
+    waiting: true,
+    source: { requestId: request.id, label: request.name },
+    // The workspace's name: the push says "build-box wants to join Acme".
+    latest: {
+      title: to.orgName,
+      ...(to.facts ? { text: notificationSnippet(to.facts) } : {}),
+      // The app draws the system's mark and says its words in the person's language; `text` is for pushes and emails.
+      os: to.os,
+      ...(to.ip ? { ip: to.ip } : {}),
+      ...(to.location ? { location: to.location } : {}),
+    },
+  });
+}
+
+export const resolveDeviceJoinRequest = (deps: NotificationDeps, orgId: string, requestId: string) =>
+  resolveNotifications(deps, orgId, { groupKey: `device.join_request:${requestId}` });
 
 /** The share of a computer's workspace disk in use past which its admins hear it (ADR 0115). */
 export const DISK_WARN_USE = 0.85;
@@ -1454,48 +1507,6 @@ export async function notifyComposioLimit(deps: NotificationDeps, orgId: string,
     latest: { title: month, calls },
   });
 }
-
-const toolChangedGroup = (connectionId: string) => `connector_tool_changed:${connectionId}:`;
-
-/**
- * A connected MCP server changed tools an admin approved (ADR 0117): who manages connectors hears it once per change,
- * `source.label` the connection's name and `latest.title` the tools. Resolved when nothing of it waits any more.
- * One waiting row per server: its review lists every pending change, so a newer change replaces the older row
- * (two "TikTok changed tools" cards opened the same review).
- */
-export async function notifyToolChanged(
-  deps: NotificationDeps,
-  connection: { id: string; orgId: string; label: string },
-  tools: { name: string; fingerprint: string }[],
-) {
-  const prefix = toolChangedGroup(connection.id);
-  const groupKey = `${prefix}${tools[0]?.fingerprint ?? ""}`;
-  // The same change again (a retried job) keeps its row; only older changes of this server give way.
-  const older = await deps.db
-    .select({ id: schema.notifications.id })
-    .from(schema.notifications)
-    .where(
-      and(
-        eq(schema.notifications.orgId, connection.orgId),
-        isNull(schema.notifications.doneAt),
-        sql`${schema.notifications.groupKey} like ${`${prefix}%`}`,
-        ne(schema.notifications.groupKey, groupKey),
-      ),
-    );
-  if (older.length) await resolveNotifications(deps, connection.orgId, { ids: older.map((r) => r.id) });
-  await notify(deps, {
-    orgId: connection.orgId,
-    userIds: await adminsOf(deps, connection.orgId, "manage_connectors"),
-    kind: "connector_tool_changed",
-    groupKey,
-    waiting: true,
-    source: { label: connection.label, connectionId: connection.id },
-    latest: { title: tools.map((t) => t.name).join(", ") },
-  });
-}
-
-export const resolveToolChanged = (deps: NotificationDeps, orgId: string, connectionId: string) =>
-  resolveNotifications(deps, orgId, { groupKeyPrefix: toolChangedGroup(connectionId) });
 
 const skillWaitingGroup = (skillId: string) => `skill_update:waiting:${skillId}:`;
 

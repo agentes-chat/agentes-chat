@@ -9,7 +9,7 @@
 
 1. A person posts a message. `insertMessage` resolves `@handle` mentions to active agents that are members of the channel and, in the same transaction, enqueues `message.posted`.
 2. `dispatchMentions` (job `message.posted`) creates one `agent_runs` row per mentioned agent (`unique (trigger_message_id, agent_id)`) and enqueues `agent_run.execute` (dedupe key per run).
-3. `executeRun` moves the run `queued → running`, builds the context, streams through the Model Gateway publishing `agent.delta` events, then in one transaction persists the agent's reply (in the trigger's thread), the steps and `running → done`, and publishes `message.created`.
+3. `executeRun` moves the run `queued → running`, builds the context, streams through the Model Gateway (`agent.typing` once it writes, its words kept on the server, amended 2026-11-10: ADR 0010), then in one transaction persists the agent's reply (in the trigger's thread), the steps and `running → done`, and publishes `message.created`.
 
 **State machine** (`agent_runs.status`): `queued → running → (waiting_approval → running)* → done | failed`. Transitions are compare-and-set (`UPDATE … WHERE status = from`); illegal ones throw. `waiting_approval` is reserved for the approvals flow: suspending is a status change, resuming is enqueueing a new execute job.
 
@@ -78,3 +78,26 @@ Someone else's message answers nothing and doesn't wait behind the question: it 
 (`holdsMessages` with the writer). If the person leaves the conversation or the workspace, or deletes their account, the
 question goes back to the room and to the person behind the run (`releaseQuestionsOf`), since nobody could answer it
 otherwise.
+
+## Addendum (2026-11-10): how long the work it is doing now has taken
+
+The conversation's "thinking for …" counted from two things that are not the same. Live, each app counted from the
+moment it saw the run's row open, and again each time the row reopened (the run posted and went on, came back from an
+answer, an approval or its computer). On every read of the server (opening the conversation again, a reload, a
+reconnect) it took `agent_runs.started_at`, the run's first start, which never moves: a run that had posted or waited
+on the way jumped to minutes, as if it had been thinking all along.
+
+- **The server keeps the moment.** `agent_runs.working_since` (migration 0249): set when the run goes back to work
+  from a wait (`transitionRun` into `running` from anything but `queued`), when it leaves its computer's line, and
+  when it posts and goes on (written with the run's next save, never in a statement of its own). Null until then: its
+  first stretch counts from its creation, which is when the person who wrote to it started waiting. `started_at`
+  keeps its meaning.
+- **A length, not a time.** `GET …/active-runs` answers `workingMs`, how long that work has taken by the server's
+  clock. The app turns it into its own clock at the middle of the read, so a device whose clock is minutes off still
+  counts right.
+- **A row already on screen keeps its count** (`reconcileRuns`, `LiveRun.workingSince`). A read of the server never
+  moves it back. It takes the server's only when that is more than 5 s later than its own (`WORK_MISSED_MS`) and it
+  heard nothing from the run since that moment: a new stretch began while the device wasn't listening (an app
+  listens to a conversation only while it is open). A row made from the read counts from `workingMs`; a server from
+  before it gives only the first start, as before.
+- `startedAt` on a live row still places it in the timeline, and a read of the server still corrects it.

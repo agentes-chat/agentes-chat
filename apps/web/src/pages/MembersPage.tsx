@@ -30,9 +30,11 @@ import {
 } from "@agenteschat/client/lib/format";
 import { approvalNews, JOIN_NOTE_MAX, JOIN_REASON_MAX, sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { membersFull } from "@agenteschat/client/lib/limits";
-import { can } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
+import { settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
 import { grants, rolesOf } from "@agenteschat/client/lib/roles";
 import { isEmail } from "@agenteschat/client/lib/text";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   Alert,
   Avatar,
@@ -40,13 +42,14 @@ import {
   Card,
   CardHeader,
   Chip,
-  CountChip,
   Dialog,
   DialogBody,
   DialogFooter,
   Field,
   FilterBar,
   FilterChip,
+  FoldRow,
+  GroupHeading,
   Icon,
   type IconName,
   Input,
@@ -55,17 +58,23 @@ import {
   Menu,
   MenuItem,
   MenuNote,
+  MenuSeparator,
+  MenuSub,
   PageHeader,
   PlanMeter,
+  planAttention,
   SwapLabel,
   Textarea,
 } from "@agenteschat/ui";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
+import { Link, useSearch } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useApi } from "@/api/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { MenuEntries } from "@/components/DesktopMenus";
 import { usePersonMenu } from "@/components/entity-menus";
 import { useFilterCopy } from "@/components/filters";
 import { useCopied } from "@/components/invite/copied";
@@ -74,20 +83,23 @@ import { MembersFull } from "@/components/Limits";
 import { LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
 import { ProfileTrigger } from "@/components/ProfileCard";
-import { RolesPicker } from "@/components/roles/RolesPicker";
+import { RoleChoices, RolesPicker } from "@/components/roles/RolesPicker";
 import { RoleChip } from "@/components/roles/RolesSection";
 import { useDirectory } from "@/hooks/useDirectory";
-import { copyText } from "@/lib/context-menu";
+import { copyText, type MenuEntry } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
 import { planMeterText, usageShown } from "@/lib/plan-usage";
 import { TOAST_MS, useToast } from "@/lib/toast";
 import "./members.css";
+import { CreateAgentLink } from "@/components/new-agent/NewAgentDialog";
 
 /**
  * How long a cancelled invitation waits for Desfazer before it's revoked: as long as the toast that offers it stays
  * (tests shorten it).
  */
 export const undoWindow = { ms: TOAST_MS };
+
+type MenuItemEntry = Extract<MenuEntry, { kind: "item" }>;
 
 /** "agora", "há 2 h", "ontem", "em 22 out": when something happened, to follow a verb. */
 function whenWords(t: TFunction, locale: string, iso: string, now = new Date()) {
@@ -145,23 +157,30 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
   const month = formatMonth(i18n.language, new Date());
   const [roles, setRoles] = useState<string[]>([]);
   const personEntries = usePersonMenu();
-  const navigate = useNavigate();
+  const meterText = planMeterText(t, i18n.language);
   const allPeople = peopleQuery.data ?? [];
   // `?request=…&do=approve|deny`: the admins' email opens that request here.
   const search = useSearch({ strict: false }) as { request?: string; do?: string };
   const filterCopy = useFilterCopy();
+  const authConfig = useAuthConfig();
+  // On a server that sends no email, an owner makes the link for a member who forgot their password (ADR 0158).
+  const makesPasswordLinks = org.role === "owner" && authConfig.data !== undefined && !authConfig.data.passwordReset;
+  const [passwordLinkFor, setPasswordLinkFor] = useState<{ userId: string; name: string } | null>(null);
   // The filter's values: `owner`, or a role's id.
   const people = allPeople.filter(
     (m) =>
       roles.length === 0 || roles.some((r) => (r === "owner" ? m.role === "owner" : (m.roleIds ?? []).includes(r))),
   );
+  // A personal workspace (ADR 0159): a few people need no filter by role, and its owner's own row leaves their roles
+  // out (they say nothing to them); everyone else's keep theirs, and their menu gives one.
+  const personal = isPersonal(org);
 
   return (
-    <div className={`${embedded ? "settings__section" : "page"} members-page`} style={{ gap: 28 }}>
+    <div className={`${embedded ? "settings__section" : "page"} members-page`}>
       <PageHeader
         level={embedded ? 2 : 1}
-        title={t("settings.section.members")}
-        meta={t("members.subtitle", {
+        title={t(settingsSectionNameKey(org, "members"))}
+        meta={t(modeKey(org, "members.subtitle"), {
           count: people.length,
           people: people.length,
           agents: dir.agents.length,
@@ -170,207 +189,300 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
         actions={invites && <InviteActions />}
       />
 
-      {invites && <WaitingRequests focus={search.request} action={search.do} />}
-      {invites && <SentInvitations />}
-      {!invites && <Suggestions />}
+      <div className="ac-groups">
+        {invites && <WaitingRequests focus={search.request} action={search.do} />}
+        {invites && <SentInvitations />}
+        {!invites && <Suggestions />}
 
-      <section aria-labelledby="sec-people" className="section section--tight">
-        <h2 id="sec-people" className="section-title">
-          {t("members.people")}
-        </h2>
-        <FilterBar
-          label={t("members.filters")}
-          clearText={filterCopy.clearAll}
-          onClear={() => setRoles([])}
-          filters={[
-            {
-              key: "role",
-              active: roles.length > 0,
-              node: (
-                <FilterChip
-                  label={t("members.roleFilter")}
-                  icon="members"
-                  multiple
-                  options={[
-                    { value: "owner", label: t("roles.owner") },
-                    ...orgRoles.filter((r) => r.kind === "custom").map((r) => ({ value: r.id, label: r.name })),
-                  ]}
-                  value={roles}
-                  onChange={setRoles}
-                  valueText={(o) => o.label}
-                  countText={(count) => t("members.rolesCount", { count })}
-                  clearLabel={filterCopy.clearOf(t("members.roleFilter"))}
-                />
-              ),
-            },
-          ]}
-        />
-        {peopleQuery.isLoading && <LoadingList count={3} trailing />}
-        <List>
-          {people.map((m) => {
-            const isMe = m.userId === me.user.id;
-            const held = rolesOf(m, orgRoles);
-            // The server says who is below whom; here the "+" shows when there's anything to give.
-            const gives = manage && (m.role !== "owner" || org.role === "owner") && orgRoles.some((r) => r.givable);
-            return (
-              <div key={m.userId} className="ac-list__row members-person" {...entityMenu(() => personEntries(m))}>
-                <ProfileTrigger
-                  actor={{ type: "person", id: m.userId }}
-                  label={t("profile.of", { name: m.name })}
-                  decorative
-                >
-                  <Avatar
-                    size="md"
-                    name={m.name}
-                    imageUrl={m.image}
-                    presence={m.presence}
-                    presenceLabel={t(`presence.${m.presence}`)}
-                  />
-                </ProfileTrigger>
-                <span className="list-col">
+        <section aria-labelledby="sec-people" className="section section--tight">
+          <GroupHeading id="sec-people" title={t("members.people")} />
+          {!personal && (
+            <FilterBar
+              label={t("members.filters")}
+              clearText={filterCopy.clearAll}
+              onClear={() => setRoles([])}
+              filters={[
+                {
+                  key: "role",
+                  active: roles.length > 0,
+                  node: (
+                    <FilterChip
+                      label={t("members.roleFilter")}
+                      icon="members"
+                      multiple
+                      options={[
+                        { value: "owner", label: t("roles.owner") },
+                        ...orgRoles.filter((r) => r.kind === "custom").map((r) => ({ value: r.id, label: r.name })),
+                      ]}
+                      value={roles}
+                      onChange={setRoles}
+                      valueText={(o) => o.label}
+                      countText={(count) => t("members.rolesCount", { count })}
+                      clearLabel={filterCopy.clearOf(t("members.roleFilter"))}
+                    />
+                  ),
+                },
+              ]}
+            />
+          )}
+          {peopleQuery.isLoading && <LoadingList count={3} trailing />}
+          <List>
+            {people.map((m) => {
+              const isMe = m.userId === me.user.id;
+              const held = rolesOf(m, orgRoles);
+              // The server says who is below whom; here the roles show in the menu when there's anything to give.
+              const gives = manage && (m.role !== "owner" || org.role === "owner") && orgRoles.some((r) => r.givable);
+              const ownRoles = personal && isMe && m.role === "owner";
+              const linksPassword = !isMe && makesPasswordLinks;
+              // The row's own menu: of the person's right-click menu, what acts on them here.
+              const acts = personEntries(m).filter(
+                (e): e is MenuItemEntry => e.kind === "item" && (e.id === "dm" || e.id === "remove"),
+              );
+              const out = acts.filter((e) => e.id === "remove");
+              return (
+                <div key={m.userId} className="ac-list__row members-person" {...entityMenu(() => personEntries(m))}>
                   <ProfileTrigger
                     actor={{ type: "person", id: m.userId }}
                     label={t("profile.of", { name: m.name })}
-                    className="profile-trigger--name members-person__name ac-captop"
+                    decorative
                   >
-                    {m.name}
-                    {isMe ? t("common.youSuffix") : ""}
+                    <Avatar
+                      size="md"
+                      name={m.name}
+                      imageUrl={m.image}
+                      presence={m.presence}
+                      presenceLabel={t(`presence.${m.presence}`)}
+                    />
                   </ProfileTrigger>
-                  <span className="small muted members-person__ids">
-                    {m.handle && <span>@{m.handle}</span>}
-                    <span>{m.email}</span>
+                  <span className="list-col">
+                    <ProfileTrigger
+                      actor={{ type: "person", id: m.userId }}
+                      label={t("profile.of", { name: m.name })}
+                      className="profile-trigger--name members-person__name ac-captop"
+                    >
+                      {m.name}
+                      {isMe ? t("common.youSuffix") : ""}
+                    </ProfileTrigger>
+                    <span className="small muted members-person__ids">
+                      {m.handle && <span>@{m.handle}</span>}
+                      <span>{m.email}</span>
+                    </span>
                   </span>
-                </span>
-                <span className="members-person__end ac-captail ac-captop">
-                  <span className="small muted members-person__seen">
-                    {m.online
-                      ? t("members.activeNow")
-                      : m.lastSeenAt
-                        ? t("members.seen", { when: relativeTime(t, i18n.language, m.lastSeenAt) })
-                        : t("members.joined", { when: formatShortDate(i18n.language, m.joinedAt) })}
+                  {!ownRoles && (m.role === "owner" || held.length > 0) && (
+                    <span className="members-roles">
+                      {m.role === "owner" && (
+                        <Chip icon="audienceOwner" title={t("roles.ownerTitle")}>
+                          {t("roles.owner")}
+                        </Chip>
+                      )}
+                      {held.map((r) => (
+                        <RoleChip key={r.id} role={r} />
+                      ))}
+                    </span>
+                  )}
+                  <span className="members-person__seen ac-captail ac-captop">
+                    <span className="small muted">
+                      {m.online
+                        ? t("members.activeNow")
+                        : m.lastSeenAt
+                          ? t("members.seen", { when: relativeTime(t, i18n.language, m.lastSeenAt) })
+                          : t("members.joined", { when: formatShortDate(i18n.language, m.joinedAt) })}
+                    </span>
                   </span>
-                  {!isMe && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      iconOnly
-                      icon="message"
-                      aria-label={t("profile.messageTo", { name: m.name })}
-                      title={t("profile.messageTo", { name: m.name })}
-                      onClick={() =>
-                        void navigate({
-                          to: "/org/$orgId/dm/person/$userId",
-                          params: { orgId: org.id, userId: m.userId },
-                        })
-                      }
-                    />
-                  )}
-                </span>
-                <span className="members-roles">
-                  {m.role === "owner" && (
-                    <Chip icon="audienceOwner" title={t("roles.ownerTitle")}>
-                      {t("roles.owner")}
-                    </Chip>
-                  )}
-                  {held.map((r) => (
-                    <RoleChip key={r.id} role={r} />
-                  ))}
-                  {gives && (
-                    <RolesPicker
-                      roles={orgRoles}
-                      value={m.roleIds ?? []}
-                      onChange={(roleIds) =>
-                        setRolesOf.mutate(
-                          { userId: m.userId, roleIds },
-                          { onError: (e) => toast.show(errorText(t, e), "error") },
-                        )
-                      }
-                      label={t("members.rolesOf", { name: m.name })}
-                      trigger={
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          iconOnly
-                          icon="plus"
-                          aria-label={t("members.rolesOf", { name: m.name })}
-                        />
-                      }
-                    />
-                  )}
-                </span>
-              </div>
-            );
-          })}
-        </List>
-      </section>
+                  <span className="members-person__menu ac-captail ac-captop">
+                    {(acts.length > 0 || gives || linksPassword) && (
+                      <Menu
+                        align="end"
+                        label={t("members.moreOf", { name: m.name })}
+                        trigger={
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            iconOnly
+                            icon="more"
+                            aria-label={t("members.moreOf", { name: m.name })}
+                          />
+                        }
+                      >
+                        <MenuEntries entries={acts.filter((e) => e.id === "dm")} />
+                        {gives && (
+                          <MenuSub
+                            icon="shield"
+                            label={t(
+                              m.role === "owner" || held.length > 0 ? "members.rolesChange" : "members.rolesAdd",
+                            )}
+                          >
+                            <RoleChoices
+                              roles={orgRoles}
+                              value={m.roleIds ?? []}
+                              onChange={(roleIds) =>
+                                setRolesOf.mutate(
+                                  { userId: m.userId, roleIds },
+                                  { onError: (e) => toast.show(errorText(t, e), "error") },
+                                )
+                              }
+                            />
+                          </MenuSub>
+                        )}
+                        {linksPassword && (
+                          <MenuItem
+                            icon="key"
+                            description={t("members.passwordLink.hint")}
+                            onSelect={() => setPasswordLinkFor({ userId: m.userId, name: m.name })}
+                          >
+                            {t("members.passwordLink.item")}
+                          </MenuItem>
+                        )}
+                        {out.length > 0 && (acts.length > out.length || gives || linksPassword) && <MenuSeparator />}
+                        <MenuEntries entries={out} />
+                      </Menu>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+          </List>
+          <PasswordLinkDialog person={passwordLinkFor} onClose={() => setPasswordLinkFor(null)} />
+        </section>
 
-      <section aria-labelledby="sec-agents" className="section section--tight">
-        <div className="section__head">
-          <h2 id="sec-agents" className="section-title">
-            {t("members.agents")}
-          </h2>
-          {can(org, "create_agents") && (
-            <Link to="/org/$orgId/agents/new" params={{ orgId: org.id }} className="ac-link" style={{ fontSize: 14 }}>
-              {t("shell.createAgent")}
-            </Link>
-          )}
-        </div>
-        <List>
-          {dir.agents.length === 0 && <div className="ac-list__row muted">{t("members.noAgents")}</div>}
-          {dir.agents.map((a) => {
-            const owner = a.ownerUserId ? dir.memberById.get(a.ownerUserId) : undefined;
-            // Its plan's limits, the budget under them only once it spent through the API (ADR 0063 §5).
-            const shown = usageShown(a.brain, a.budgetUsedPercent ?? 0);
-            const budget = shown.budget && a.budgetUsedPercent !== undefined;
-            return (
-              <Link
-                key={a.id}
-                to="/org/$orgId/agents/$agentId"
-                params={{ orgId: org.id, agentId: a.id }}
-                className="ac-list__row"
-              >
-                <AgentAvatar agentId={a.id} size="md" name={a.name} />
-                <span className="list-col">
-                  <span style={{ fontWeight: 600 }}>
-                    {a.name}
-                    {a.role ? ` · ${a.role}` : ""}
-                  </span>
-                  <span className="small muted">
-                    {owner ? t("members.ownerLine", { name: owner.name }) : t("members.noOwner")}
-                  </span>
-                </span>
-                {(shown.plan || budget) && (
-                  <div className="list-col" style={{ flex: "0 1 220px", gap: 4 }}>
-                    {shown.plan && (
-                      <PlanMeter
-                        compact
-                        usage={shown.plan.usage}
-                        text={planMeterText(t, i18n.language)}
-                        label={shown.plan.account}
-                      />
-                    )}
-                    {budget && (
-                      <span className="small muted tabular">
-                        {t("members.budgetLine", {
-                          percent: formatPercent(i18n.language, a.budgetUsedPercent ?? 0),
-                          month,
-                        })}
+        <section aria-labelledby="sec-agents" className="section section--tight">
+          <GroupHeading id="sec-agents" title={t("members.agents")} aside={makesAgents(org) && <CreateAgentLink />} />
+          <List>
+            {dir.agents.length === 0 && <div className="ac-list__row muted">{t("members.noAgents")}</div>}
+            {dir.agents.map((a) => {
+              const owner = a.ownerUserId ? dir.memberById.get(a.ownerUserId) : undefined;
+              // Its plan's limits, the budget under them only once it spent through the API (ADR 0063 §5).
+              const shown = usageShown(a.brain, a.budgetUsedPercent ?? 0);
+              const budget = shown.budget && a.budgetUsedPercent !== undefined;
+              const attention = shown.plan && planAttention(shown.plan.usage, meterText);
+              return (
+                <FoldRow
+                  key={a.id}
+                  className="members-agent"
+                  face={<AgentAvatar agentId={a.id} size="md" name={a.name} />}
+                  title={
+                    <>
+                      <b>
+                        {a.name}
+                        {a.role ? ` · ${a.role}` : ""}
+                      </b>
+                      <span className="ac-mediarow__meta">
+                        {owner ? t("members.ownerLine", { name: owner.name }) : t("members.noOwner")}
                       </span>
-                    )}
+                    </>
+                  }
+                  end={
+                    attention && (
+                      <span className="ac-planword" data-level={attention.level}>
+                        {attention.word}
+                      </span>
+                    )
+                  }
+                >
+                  {shown.plan && (
+                    <PlanMeter
+                      compact
+                      className="members-agent__usage"
+                      usage={shown.plan.usage}
+                      text={meterText}
+                      label={shown.plan.account}
+                    />
+                  )}
+                  {budget && (
+                    <span className="small muted tabular">
+                      {t("members.budgetLine", {
+                        percent: formatPercent(i18n.language, a.budgetUsedPercent ?? 0),
+                        month,
+                      })}
+                    </span>
+                  )}
+                  {!shown.plan && !budget && (
+                    <span className="small muted">{a.brain?.account ?? t("presence.agentWhy.noAi")}</span>
+                  )}
+                  <div className="ac-acts">
+                    <Button asChild variant="link">
+                      <Link to="/org/$orgId/agents/$agentId" params={{ orgId: org.id, agentId: a.id }}>
+                        {t("profile.viewProfile")}
+                      </Link>
+                    </Button>
                   </div>
-                )}
-              </Link>
-            );
-          })}
-        </List>
-      </section>
+                </FoldRow>
+              );
+            })}
+          </List>
+        </section>
+      </div>
     </div>
   );
 }
 
 /**
+ * Members › the person › "Make a new-password link" (ADR 0158): made when it opens, shown to copy and send where the
+ * team talks. It works once, for an hour; making another ends this one.
+ */
+function PasswordLinkDialog({
+  person,
+  onClose,
+}: {
+  person: { userId: string; name: string } | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const { org } = useOrg();
+  const [copied, copy] = useCopied();
+  const make = useMutation({
+    mutationFn: (userId: string) => api.orgs.passwordLink(org.id, userId),
+    meta: { silent: true },
+  });
+  const { mutate, reset } = make;
+  useEffect(() => {
+    if (person) mutate(person.userId);
+    else reset();
+  }, [person, mutate, reset]);
+  const url = make.data?.url;
+  return (
+    <Dialog
+      open={person !== null}
+      onOpenChange={(o) => !o && onClose()}
+      title={t("members.passwordLink.title", { name: person?.name ?? "" })}
+      description={t("members.passwordLink.lead")}
+      closeLabel={t("common.close")}
+      width={460}
+    >
+      <DialogBody>
+        {make.isError ? (
+          <Alert>{errorText(t, make.error)}</Alert>
+        ) : (
+          <Field label={t("members.passwordLink.label")} id="password-link">
+            <Input readOnly value={url ?? ""} placeholder={t("members.passwordLink.making")} />
+          </Field>
+        )}
+      </DialogBody>
+      <DialogFooter>
+        <Button onClick={onClose}>{t("common.close")}</Button>
+        <Button
+          variant="primary"
+          disabled={!url}
+          loading={make.isPending}
+          onClick={() => url && copy("password-link", url)}
+        >
+          <SwapLabel
+            icon="copy"
+            altIcon="check"
+            label={t("members.passwordLink.copy")}
+            alt={t("common.copied")}
+            showAlt={copied !== null}
+          />
+        </Button>
+      </DialogFooter>
+    </Dialog>
+  );
+}
+
+/**
  * The page's own actions for whoever may invite: copy the workspace's link (made the first time, ADR 0068) and open
- * the invite dialog.
+ * the invite dialog. In a personal workspace both ask first who is invited (ADR 0159 §4).
  */
 function InviteActions() {
   const { t } = useTranslation();
@@ -386,10 +498,14 @@ function InviteActions() {
     const url = shown ?? (await make.mutateAsync().catch(() => null))?.url;
     if (url) copy("link", url);
   };
+  const copyAsked = () => {
+    if (invite) invite.ask(() => void copyLink());
+    else void copyLink();
+  };
   return (
     <>
       {!held && (
-        <Button loading={make.isPending} onClick={() => void copyLink()}>
+        <Button loading={make.isPending} onClick={copyAsked}>
           <SwapLabel
             icon="link"
             altIcon="check"
@@ -481,13 +597,8 @@ function WaitingRequests({ focus, action }: { focus?: string; action?: string })
     <>
       {gone && <Alert tone="neutral">{t("members.requests.gone")}</Alert>}
       {requests.length > 0 && (
-        <section aria-labelledby="sec-waiting" className="section section--tight">
-          <div className="members-head">
-            <h2 id="sec-waiting" className="section-title">
-              {t("members.waitingTitle")}
-            </h2>
-            <CountChip strong>{requests.length}</CountChip>
-          </div>
+        <section aria-label={t("members.waitingTitle")} className="section section--tight">
+          <GroupHeading title={t("members.waitingTitle")} count={requests.length} />
           <MembersFull />
           <List>
             {requests.map((r) => {
@@ -574,7 +685,14 @@ function WaitingRequests({ focus, action }: { focus?: string; action?: string })
       >
         <Locked when={deny.isPending}>
           <DialogBody>
-            <Field label={t("members.requests.reason")} id="join-deny-reason" help={t("members.requests.reasonHelp")}>
+            <Field
+              label={t("members.requests.reason")}
+              id="join-deny-reason"
+              hint={{
+                name: t("common.about", { label: t("members.requests.reason") }),
+                text: t("members.requests.reasonHelp"),
+              }}
+            >
               <Textarea
                 rows={3}
                 maxLength={JOIN_REASON_MAX}
@@ -708,9 +826,7 @@ function SentInvitations() {
 
   return (
     <section aria-labelledby="sec-sent" className="section section--tight">
-      <h2 id="sec-sent" className="section-title">
-        {t("members.invitations.title")}
-      </h2>
+      <GroupHeading id="sec-sent" title={t("members.invitations.title")} />
       {list.isLoading && <LoadingList count={2} trailing />}
       <List>
         {list.isSuccess && shown.length === 0 && (
@@ -959,7 +1075,7 @@ function Suggestions() {
               : t("members.suggest.leadNoNames")
           }
         />
-        <div>
+        <div className="ac-acts">
           <Button
             variant="primary"
             icon="plus"
@@ -974,9 +1090,7 @@ function Suggestions() {
       </Card>
       {waiting.length > 0 && (
         <section aria-labelledby="sec-mine" className="section section--tight">
-          <h2 id="sec-mine" className="section-title">
-            {t("members.suggest.mine")}
-          </h2>
+          <GroupHeading id="sec-mine" title={t("members.suggest.mine")} />
           <List>
             {waiting.map((s: MySuggestion) => (
               // biome-ignore lint/a11y/useSemanticElements: a row of the list, named for whom it suggests

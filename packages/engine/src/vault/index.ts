@@ -6,7 +6,9 @@ export { type VaultRunPerson, type VaultViewer, vaultPersonOfRun } from "./acces
 export {
   checkVaultLogin,
   deleteVaultItemByAgent,
+  listUnreachedConnections,
   listUsableVault,
+  listVaultPlaces,
   releaseVaultKeys,
   releaseVaultLogin,
   restoreMadePassword,
@@ -19,8 +21,22 @@ export {
 } from "./agents";
 export { connectVaultSource, deleteVaultConnection, syncVaultConnection, updateVaultConnection } from "./connections";
 export { importVaultCsv } from "./csv";
-export { createVaultItem, deleteVaultItem, getVaultItem, listVault, updateVaultItem } from "./items";
-export { VaultRefusal, type VaultRefusalCode, vaultItemName, vaultRefusalOutput } from "./refusals";
+export {
+  createVaultItem,
+  deleteVaultItem,
+  getVaultItem,
+  listVault,
+  moveVaultItem,
+  updateVaultItem,
+} from "./items";
+export { importVaultKeys } from "./keys";
+export {
+  VaultRefusal,
+  type VaultRefusalCode,
+  vaultItemName,
+  vaultPlaceName,
+  vaultRefusalOutput,
+} from "./refusals";
 export { saveSecretRequestToVault } from "./requests";
 export * from "./service";
 export { enqueueVaultSyncs, runVaultSync, VAULT_SYNC_EVERY_MS, VAULT_SYNC_JOB } from "./sync";

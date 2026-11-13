@@ -9,16 +9,11 @@
   display: flex;
   flex-direction: column;
 }
-.db-group__hint {
-  margin-left: 8px;
-  font-weight: 500;
-  color: var(--muted);
-}
-/* With only "My Home": one muted line under it, pointing at "New dashboard". */
-.db-group__only {
-  margin: 10px 2px 0;
-  font-size: 13px;
-  color: var(--muted);
+/* With only "My Home": the first-dashboard empty state right under it, not centred in the rest of the window. */
+.db-empty {
+  flex: none;
+  min-height: 0;
+  padding: var(--space-4) var(--space-4) var(--space-6);
 }
 .db-list {
   display: grid;
@@ -129,14 +124,12 @@ html:not([data-pointer]) .db-card:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 20px;
 }
 .db-crumb {
   display: inline-flex;
   align-items: center;
   gap: 2px;
   align-self: flex-start;
-  margin-left: -4px;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--muted);
@@ -385,7 +378,6 @@ html:not([data-pointer]) :is(.db-role, .db-sug, .db-pick):focus-visible {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  margin-right: auto;
   font-size: 13.5px;
   color: var(--muted);
 }
@@ -470,13 +462,57 @@ html:not([data-pointer]) .nw-quiet:focus-visible {
 .nwc .nw-build .wk-build__dither {
   height: 96px;
 }
-/* The title, written on the card: quiet text until the pointer or the keys reach it. */
+/* What its agent is at, under the dither; past a while, one quiet line more opens under it. */
+.nw-build__words {
+  align-self: stretch;
+  min-width: 0;
+}
+.nw-build__step {
+  overflow-wrap: anywhere;
+}
+.nw-build__step > span {
+  animation: ac-fade-in 200ms ease-out both;
+}
+.nw-build__still {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.25s ease,
+    margin-top 0.25s ease,
+    opacity 0.25s ease;
+}
+.nw-build__still[data-on] {
+  grid-template-rows: 1fr;
+  margin-top: var(--space-1);
+  opacity: 1;
+}
+.nw-build__still > p {
+  min-height: 0;
+  overflow: hidden;
+  color: var(--muted);
+}
+/* The build's footer: who is at it, for how long, and the way out at its end. */
+.nwc-clock {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.nwc-stop {
+  flex: none;
+  margin-left: auto;
+}
+.nwc[data-size="s"] .nwc-building {
+  display: none;
+}
+/* The title, written on the card: quiet text until the pointer or the keys reach it. Its box stands a step further
+   from the face and from what follows than the head's gap, so the focus ring drawn outside it still keeps that gap,
+   and grows only up and down past its line. */
 .nwc__title {
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  margin: -3px -6px;
-  padding: 3px 6px;
+  margin: calc(-1 * var(--space-1)) var(--space-1);
+  padding: var(--space-1);
   border: 0;
   border-radius: 7px;
   background: none;
@@ -487,6 +523,10 @@ html:not([data-pointer]) .nw-quiet:focus-visible {
   color: var(--ink2);
   outline: none;
   text-overflow: ellipsis;
+}
+/* No face before it (a pin with no block picked yet): its words start on the card's text edge. */
+.nwc__title:first-child {
+  margin-inline-start: calc(-1 * var(--space-1));
 }
 .nwc__title:hover {
   box-shadow: inset 0 0 0 1px var(--line2);
@@ -513,9 +553,7 @@ html:not([data-pointer]) .nw-quiet:focus-visible {
 }
 /* The ask changed since the test: what Create would make isn't what shows. */
 .nwc__stale {
-  display: flex;
   align-items: center;
-  gap: var(--icon-gap);
   margin: 8px 12px 0;
   padding: 8px 12px;
   border-radius: 12px;
@@ -524,12 +562,13 @@ html:not([data-pointer]) .nw-quiet:focus-visible {
   line-height: 18px;
   color: var(--ink);
 }
-/* Its icon on the first line of the words (`.ac-iconline`), which take the ActionRow's width. */
+/* Its icon on the first line of the words (`.ac-iconline`), an `.ac-actline`: Testar de novo goes under them when they
+   don't fit beside it, from the words' edge (past the icon). */
 .nwc__stale .ac-iconline > .ac-icon {
   color: var(--warn);
 }
-.nwc__stale .ac-btn {
-  flex: none;
+.nwc__stale > .ac-btn {
+  margin-inline-start: calc(16px + var(--icon-gap));
 }
 /* The ask, written in the card's body. */
 .nwc-ask {
@@ -568,7 +607,7 @@ html:not([data-pointer]) .nwc-ask:focus-visible {
 /* After the test: the ask as one line that opens it again. */
 .nwc-asked {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
   margin: -3px -6px;
@@ -583,12 +622,21 @@ html:not([data-pointer]) .nwc-ask:focus-visible {
 }
 .nwc-asked > span {
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  text-align: start;
 }
+/* The ask is shown whole: when it and the row's choices don't fit side by side, the choices go under it. */
+.nwc-row:has(> .nwc-asked) {
+  flex-wrap: wrap;
+}
+.nwc-row > .nwc-asked {
+  flex: 1 1 200px;
+}
+/* An icon is a box one line tall, so it stays on the ask's first line when the ask wraps. */
 .nwc-asked .ac-icon {
   flex: none;
+  box-sizing: content-box;
+  padding-block: 4px;
 }
 .nwc-asked:hover {
   background: var(--plate);
@@ -954,6 +1002,12 @@ html:not([data-pointer]) :is(.nw-sug, .nw-pick, .nw-alert__sugs button):focus-vi
 }
 @media (prefers-reduced-motion: reduce) {
   .nwc.wg {
+    transition: none;
+  }
+  .nw-build__step > span {
+    animation: none;
+  }
+  .nw-build__still {
     transition: none;
   }
   .db-card,

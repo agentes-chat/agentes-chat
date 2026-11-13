@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { stoppedRunsKey, stoppedRunsOf } from "../../src/features/chat/stopped-runs";
+import { movedOnKey, stoppedRunsKey, stoppedRunsOf } from "../../src/features/chat/stopped-runs";
 import { message } from "./fixtures";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
@@ -48,6 +48,15 @@ describe("one stop, one pill", () => {
     expect(said).not.toBe(before);
   });
 
+  test("a stop whose agent went on offers no Continue: the list provides which, the row reads it", () => {
+    expect(movedOnKey(new Set(["r2", "r1"]))).toBe(movedOnKey(new Set(["r1", "r2"])));
+    expect(movedOnKey(new Set(["r1"]))).not.toBe(movedOnKey(new Set()));
+    const screen = src("features/chat/ChatScreen.tsx");
+    expect(screen).toContain("<StopsMovedOnContext.Provider value={stopsMoved}>");
+    expect(screen).toContain("stopsMovedOn(");
+    expect(src("features/chat/MessageRow.tsx")).toContain("const open = may && !continued && !busy && !movedOn;");
+  });
+
   test("the conversation's list provides the stops; the notice draws nothing while its reply has them", () => {
     expect(src("features/chat/ChatScreen.tsx")).toContain("<StoppedRunsContext.Provider value={stoppedRuns}>");
     const line = src("features/chat/StoppedLine.tsx");
@@ -69,12 +78,31 @@ describe("the event pill", () => {
     expect(src("ui/index.ts")).toContain('} from "./EventPill";');
   });
 
+  test("actions under the sentence keep the room the sentence has over it: 7 from the frame's edge (#8)", () => {
+    const pill = src("ui/EventPill.tsx");
+    expect(pill).toMatch(/main: \{[^}]*paddingVertical: 6,/);
+    expect(pill).toMatch(/under: \{[^}]*paddingBottom: 1,/);
+    expect(pill).toContain("actionUnder: { paddingHorizontal: 0, minHeight: 28,");
+    // No hairline before an action under the sentence, so the frame's edge is never doubled.
+    expect(pill).toContain("{stacked ? null : <View style={[styles.rule, { backgroundColor: c.line }]} />}");
+  });
+
   test("a sentence that wraps keeps its mark and its time on its first line, not between two lines (#8)", () => {
     const pill = src("ui/EventPill.tsx");
     // The row tops its parts; the mark sits where the eye reads the words' first line, the time is one such line.
     expect(pill).toMatch(/main: \{\s*flexDirection: "row",\s*alignItems: "flex-start",/);
-    expect(pill).toContain('variant="small" text={WORDS} />');
-    expect(pill).toContain("time: { lineHeight: WORDS.lineHeight,");
+    // The words are the small variant with no size of their own, so they grow with the person's text size.
+    expect(pill).toContain('color={markColor ?? c.faint} variant="small" />');
+    expect(pill).toContain("time: { lineHeight: WORDS_LINE,");
+    expect(pill).not.toContain("fontSize");
+  });
+
+  test("a sentence that takes more than a line puts its actions under it, on its column, with no rule", () => {
+    const pill = src("ui/EventPill.tsx");
+    expect(pill).toContain("e.nativeEvent.lines.length > 1");
+    expect(pill).toContain("list.length > 0 && (wraps ||");
+    expect(pill).toContain("{stacked ? null : <View style={[styles.rule");
+    expect(pill).toContain("paddingLeft: 12 + MARK + 8");
   });
 
   test("the automatic lines use it: notices, stops, decided requests, the task taken, the speed fallback", () => {
@@ -92,14 +120,26 @@ describe("the event pill", () => {
     expect(line).not.toContain('" · "');
   });
 
-  test("a decided approval: outcome and title, its date in the time slot, Cancel as an action, the values under it", () => {
+  test("a decided approval keeps its card: who decided, its date in the time slot, Cancel as an action, the reason under it", () => {
     const cards = src("features/chat/cards.tsx");
-    const done = cards.slice(cards.indexOf("function ApprovalDone("), cards.indexOf("function ApprovalGroupAsk("));
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: the component's own template, read as source text
-    expect(done).toContain("words={`${outcome}: ${markName(approvalHeadline(t, a, i18n.language))}`}");
-    expect(done).toContain("time={a.decidedAt ? when.short(a.decidedAt) : undefined}");
-    expect(done).toContain('label={t("approval.ahead.cancel")}');
-    expect(done).toContain("approvalSummary(a, i18n.language)");
+    const answer = cards.slice(
+      cards.indexOf("function useApprovalAnswer("),
+      cards.indexOf("function ApprovalGroupAsk("),
+    );
+    expect(answer).toContain("words: decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name)");
+    expect(answer).toContain("time: a.decidedAt ? when.short(a.decidedAt) : undefined");
+    expect(answer).toContain('label={t("approval.ahead.cancel")}');
+    expect(answer).toContain('t("approval.reasonLine", { reason: a.reason })');
+    // The same card waiting and decided, alone or with others: no pill takes its place.
+    expect(cards).not.toContain("<AskDone");
+    expect(cards).toContain(
+      "if (items.length > 1) return <ApprovalGroupAsk items={items} />;\n  return <ApprovalAsk approval={a} />;",
+    );
+    // The card says it where its decision was, and stops telling the conversation it waits.
+    const asks = src("features/chat/asks.tsx");
+    expect(asks).toContain("{pillWords(answer.words, c.ink)}");
+    expect(asks).toContain("if (!store || !card || ended) return;");
+    expect(asks).toContain("layout={reduced ? undefined : LinearTransition.duration(220)}");
   });
 });
 
@@ -131,12 +171,15 @@ describe("a request still waiting, as a pill", () => {
       "features/ai/UsagePauseCard.tsx",
       "features/usage/people.tsx",
       "features/outages/WaitCard.tsx",
-      "features/right-hand/Intro.tsx",
     ]) {
       const text = src(file);
       expect([file, text.includes("<AskWaiting")]).toEqual([file, true]);
-      expect([file, text.includes("<AskDone")]).toEqual([file, !file.endsWith("Intro.tsx")]);
+      expect([file, text.includes("<AskDone")]).toEqual([file, true]);
     }
+    // The right hand's connect card is the request card's note, with a kit button.
+    const intro = src("features/right-hand/Intro.tsx");
+    expect(intro).toContain("<AskNote");
+    expect(intro).not.toContain("<AskWaiting");
     // A computer coming back waits for no one here: never the viewer's mark, never a tinted action.
     const outage = src("features/outages/WaitCard.tsx");
     expect(outage).toContain("forMe={false}");

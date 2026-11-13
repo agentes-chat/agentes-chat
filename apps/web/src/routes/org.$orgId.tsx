@@ -7,6 +7,8 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { requireUserIn } from "@/app/guards";
 import { usePageTextSize } from "@/chat/look";
+import { Arrival } from "@/components/arrival/Arrival";
+import { FeedbackHost } from "@/components/arrival/FeedbackDialog";
 import { ArtifactViewerProvider } from "@/components/artifacts/ArtifactViewer";
 import { CommandMenu } from "@/components/CommandMenu";
 import { ConnectAiProvider } from "@/components/ConnectAi";
@@ -21,12 +23,13 @@ import { OutageNotices } from "@/components/MachineOutages";
 import { NavDrawerProvider, NavScrim, ShellBar } from "@/components/NavDrawer";
 import { NoticeIsland } from "@/components/NoticeIsland";
 import { PushOpens } from "@/components/NotificationOpen";
+import { NewAgentProvider } from "@/components/new-agent/NewAgentDialog";
 import { OrgProvider } from "@/components/org-context";
 import { RemoveMemberProvider } from "@/components/RemoveMember";
 import { Sidebar } from "@/components/Sidebar";
 import { BootSplash } from "@/components/Sky";
-import { DeletingScreen, HoldBanner, SuspendedScreen } from "@/components/Standing";
-import { useWebPushClear, useWebPushRefresh, WebPushAsk } from "@/components/WebPush";
+import { DeletingBanner, HoldBanner, SuspendedScreen } from "@/components/Standing";
+import { useWebPushClear, useWebPushRefresh } from "@/components/WebPush";
 import { ComputerSetupNotice } from "@/components/WorkspaceComputer";
 import { HeaderSearchProvider } from "@/hooks/useWorkspaceSearch";
 import { useServerLocale } from "@/i18n";
@@ -128,17 +131,6 @@ function OrgLayout() {
     );
   }
 
-  // Being deleted: its own screen, after the suspension, the stronger fact. Its socket is refused, so the screen asks
-  // `GET /me` again instead.
-  if (membership.deletion) {
-    return (
-      <>
-        {strip}
-        <DeletingScreen org={membership} me={me} />
-      </>
-    );
-  }
-
   return (
     <OrgProvider org={membership} me={me}>
       <RealtimeProvider orgId={membership.id}>
@@ -150,38 +142,49 @@ function OrgLayout() {
               {/* One invite dialog for the workspace (ADR 0090): the menu, ⌘K, Members and a channel open it. */}
               <InviteDialogProvider>
                 <RemoveMemberProvider>
-                  <div className="shell">
-                    <RefetchBar />
-                    <CommandMenu />
-                    <LeaveChannelDialog />
-                    {!focused && (
-                      <>
-                        <NavScrim />
-                        <Sidebar />
-                        <ShellBar />
-                      </>
-                    )}
-                    {/* The work area: notices on top (agents paused, the workspace's computer on its way, a computer
-                    the agents run on went offline), then the page. */}
-                    <div className="shell__work">
-                      {!focused && <HoldBanner />}
-                      {!focused && <ComputerSetupNotice />}
-                      {!focused && <OutageNotices />}
-                      <div className="shell__pages">
-                        <ConnectAiProvider>
-                          <ComputerDialogProvider>
-                            <DetailsHost>
-                              <PushOpens />
-                              {/* What reaches me while I'm here, at the top of the work area (ADR 0071 §9). */}
-                              {!focused && <NoticeIsland />}
-                              <WebPushAsk />
-                              <Outlet />
-                            </DetailsHost>
-                          </ComputerDialogProvider>
-                        </ConnectAiProvider>
+                  {/* Connect AI for every page, and over the new agent's dialog (ADR 0164), which sits under it. */}
+                  <ConnectAiProvider>
+                    {/* One new agent's dialog for every way in (ADR 0164): the sidebar, the pages and the menus. */}
+                    <NewAgentProvider>
+                      <div className="shell">
+                        <RefetchBar />
+                        <CommandMenu />
+                        <LeaveChannelDialog />
+                        {!focused && (
+                          <>
+                            <NavScrim />
+                            <Sidebar />
+                            <ShellBar />
+                          </>
+                        )}
+                        {/* The work area: notices on top (agents paused, the workspace's computer on its way, a computer
+                    the agents run on went offline), then the page. Being deleted, it reads as ever under one line that
+                    says so (ADR 0088 §7), in the Criar agente flow too: its work stopped, nothing else is news. */}
+                        <div className={focused ? "shell__work shell__work--bare" : "shell__work"}>
+                          {membership.deletion && <DeletingBanner />}
+                          {!focused && !membership.deletion && (
+                            <>
+                              <HoldBanner />
+                              <ComputerSetupNotice />
+                              <OutageNotices />
+                            </>
+                          )}
+                          <div className="shell__pages">
+                            <ComputerDialogProvider>
+                              <DetailsHost>
+                                <PushOpens />
+                                {/* What reaches me while I'm here, at the top of the work area (ADR 0071 §9). */}
+                                {!focused && <NoticeIsland />}
+                                <Arrival />
+                                <FeedbackHost />
+                                <Outlet />
+                              </DetailsHost>
+                            </ComputerDialogProvider>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </NewAgentProvider>
+                  </ConnectAiProvider>
                 </RemoveMemberProvider>
               </InviteDialogProvider>
             </NavDrawerProvider>

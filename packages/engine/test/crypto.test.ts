@@ -18,8 +18,11 @@ test("AES-GCM round-trips and authenticates the associated data", () => {
   expect(sealed.startsWith("v1.")).toBe(true);
   expect(aesGcmDecrypt(key, sealed, "org-a").toString()).toBe("hello");
   expect(() => aesGcmDecrypt(key, sealed, "org-b")).toThrow();
-  const [v, iv, ct, tag] = sealed.split(".");
-  const tampered = [v, iv, `${ct?.slice(0, -2)}AA`, tag].join(".");
+  const [v, iv, ct = "", tag] = sealed.split(".");
+  // One bit flipped in the bytes: rewriting the text's last characters leaves them unchanged about once in 1,000 runs.
+  const bytes = Buffer.from(ct, "base64url");
+  bytes.writeUInt8(bytes.readUInt8(0) ^ 1, 0);
+  const tampered = [v, iv, bytes.toString("base64url"), tag].join(".");
   expect(() => aesGcmDecrypt(key, tampered, "org-a")).toThrow();
 });
 

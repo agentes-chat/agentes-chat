@@ -3,10 +3,9 @@ import { waitsForWords } from "@agenteschat/client/lib/activity";
 import { isMediaAfterReply } from "@agenteschat/client/lib/media";
 
 /**
- * One block per agent answer, from "pensando" to the final message:
- * the live blocks sit at the end of the conversation (your new messages go above them), each under a key
- * that never changes while it lives. A "pensando…" guessed on send hands its key to the real run that
- * replaces it, and the final message is rendered under the same key, so React keeps the element: no
+ * One block per agent answer, from "pensando" to the final message, at the end of the conversation, where its message
+ * is posted. Each lives under a key that never changes. A "pensando…" guessed on send hands its key to the real run that
+ * replaces it, and the final message is rendered under the same key, so React keeps a drawn block's element: no
  * remount, no flash, no height jump.
  */
 export interface RunSlot {
@@ -108,8 +107,8 @@ export const sameSlots = (a: RunSlot[], b: RunSlot[]) =>
   a.every((s, i) => s.key === b[i]?.key && s.runId === b[i]?.runId && s.goneAt === b[i]?.goneAt);
 
 /**
- * The blocks in the order they draw: every agent at work has its own, and the ones still waiting for their first
- * words (`waiting`) stay last, so an answer that starts goes above them; each group keeps its order.
+ * The blocks in the order they draw: every agent at work has its own, and the ones still at work (`waiting`) stay last,
+ * after one that ended badly; each group keeps its order.
  */
 export function waitingLast<S extends Pick<RunSlot, "runId">>(
   slots: readonly S[],
@@ -119,17 +118,9 @@ export function waitingLast<S extends Pick<RunSlot, "runId">>(
 }
 
 /**
- * Its block is in the conversation: words of its own, or something to show while it waits for them (its browser
- * card, "sem notícias · Atualizar" on a run gone quiet). Until then the bar above the composer speaks for it: its
- * face, what it does now, for how long, and its stop.
+ * Its block is in the conversation: it ended badly, or it has something to show while it works (its browser card, "sem
+ * notícias · Atualizar" on a run gone quiet). Otherwise the bar above the composer speaks for it: its face, what it
+ * does now, for how long, and its stop. Its words show whole, once its message is posted.
  */
 export const rowShows = (r: LiveRun, now: number) =>
   !waitsForWords(r) || browserSteps(r.work).length > 0 || isQuiet(r, now);
-
-/** The first thing it said, out of its work list (the line its block opens with, above its tools). */
-export function openerOf(r: Pick<LiveRun, "work">): { said: string | null; work: NonNullable<LiveRun["work"]> } {
-  const work = r.work ?? [];
-  const first = work.find((w) => w.kind === "say");
-  if (first?.kind === "say") return { said: first.text, work: work.filter((w) => w !== first) };
-  return { said: null, work };
-}

@@ -3,8 +3,10 @@ import {
   announceMessageMemories,
   askProposal,
   type ContextItem,
+  can,
   decideProposal,
   editContextItem,
+  ForbiddenError,
   getAgent,
   isHowTo,
   isPlaybook,
@@ -13,7 +15,10 @@ import {
   listAgentMemoryRows,
   listOrgMemoryRows,
   listProposals,
+  listTeamMemories,
+  makeTeamMemory,
   mayEditItem,
+  memoryScorecard,
   NotFoundError,
   ownerDecides,
   type Proposal as ProposalRow,
@@ -142,13 +147,14 @@ const Proposal = z
           from: z.unknown(),
           to: z.unknown(),
           channelId: z.string().optional(),
+          skillId: z.string().optional(),
           label: z.object({ from: z.string().optional(), to: z.string().optional() }).optional(),
         }),
       )
       .nullable()
       .openapi({
         description:
-          "`agent_settings`: each setting then (`from`) and proposed (`to`): `model` a model id; `ai_account` `{ brain, accountId }`; `budget` nano-USD a month or null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` / `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a mention); `archive` / `delete` true (deleting is for good, ADR 0082). `label`: names for ids.",
+          "`agent_settings`: each setting then (`from`) and proposed (`to`): `model` a model id; `ai_account` `{ brain, accountId }`; `budget` nano-USD a month or null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` / `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a mention); `skill` whether it has the skill in `skillId` on; `archive` / `delete` true (deleting is for good, ADR 0082). `label`: names for ids.",
       }),
     requestedBy: z
       .object({ userId: z.string(), name: z.string() })
@@ -505,6 +511,86 @@ export function memoryRoutes(deps: AppDeps) {
   app.openapi(
     createRoute({
       method: "get",
+      path: "/organizations/{orgId}/agents/{agentId}/memory-scorecard",
+      tags,
+      security,
+      summary:
+        "One agent's memory over the last `days` (ADR 0167): how-to reuse cost, repeated preferences, corrections, what it opened, and the holdout's two arms (the agent's owner or who reviews memory)",
+      request: {
+        params: OrgParams.extend({ agentId: z.uuid() }),
+        query: z.object({ days: z.coerce.number().int().min(1).max(90).optional() }),
+      },
+      responses: {
+        200: json(
+          z.object({
+            days: z.number(),
+            runs: z.number(),
+            howTos: z.object({ runs: z.number(), costNanoUsd: z.number(), writersCostNanoUsd: z.number() }),
+            repeatedPreferences: z.number(),
+            correctionsPer100: z.number(),
+            sent: z.number(),
+            opened: z.number(),
+            arms: z.object({
+              with: z.object({ runs: z.number(), refusedPer100: z.number() }),
+              without: z.object({ runs: z.number(), refusedPer100: z.number() }),
+            }),
+          }),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, agentId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const membership = await requirePermission(db, userId, orgId, "read");
+      const agent = await getAgent(db, orgId, agentId);
+      if (!agent) throw new NotFoundError("Agent not found");
+      if (!can(membership, "review_memory") && agent.ownerUserId !== userId)
+        throw new ForbiddenError("Only the agent's owner or who reviews memory sees this");
+      return c.json(await memoryScorecard(db, orgId, agentId, c.req.valid("query").days ?? 7), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/team-memories",
+      tags,
+      security,
+      summary:
+        "Memória do time (ADR 0167): what people asked every agent to keep, newest first, where the viewer reads it",
+      request: { params: OrgParams },
+      responses: { 200: json(z.object({ memories: z.array(Memory) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { items, visible } = await listTeamMemories(db, c.get("user").id, orgId);
+      return c.json({ memories: await memoryViews(db, items, visible) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/memories/{memoryId}/team",
+      tags,
+      security,
+      summary:
+        "Tornar do time (ADR 0167): an agent's memory becomes the team's, and the copies agents kept of it are archived (who reviews memory)",
+      request: { params: OrgParams.extend({ memoryId: z.uuid() }), body: body(z.object({})) },
+      responses: { 200: json(Memory), ...errors },
+    }),
+    async (c) => {
+      const { orgId, memoryId } = c.req.valid("param");
+      const row = await makeTeamMemory(db, c.get("user").id, orgId, memoryId);
+      const [view] = await memoryViews(db, [row], await userVisibleChannels(db, orgId, c.get("user").id));
+      return c.json(view, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
       path: "/organizations/{orgId}/agents/{agentId}/memories",
       tags,
       security,
@@ -556,7 +642,7 @@ export function memoryRoutes(deps: AppDeps) {
       tags,
       security,
       summary:
-        "Edit (keeps history), pin or archive a memory (agent owner or admin; a rule people gave: its giver too)",
+        "Edit (keeps history), pin or archive a memory (agent owner or admin; a rule people gave: its giver too), or confirm it (`confirmed`: trusted and verified, ADR 0167; also the person who said it)",
       request: {
         params: OrgParams.extend({ memoryId: z.uuid() }),
         body: body(
@@ -564,6 +650,7 @@ export function memoryRoutes(deps: AppDeps) {
             text: z.string().min(1).max(8000).optional(),
             pinned: z.boolean().optional(),
             archived: z.boolean().optional(),
+            confirmed: z.literal(true).optional(),
           }),
         ),
       },
@@ -576,6 +663,7 @@ export function memoryRoutes(deps: AppDeps) {
         content: input.text,
         pinned: input.pinned,
         archived: input.archived,
+        confirmed: input.confirmed,
       });
       // The memory mark on the message it came from changes for everyone in the channel.
       await announceMessageMemories({ db, pubsub: deps.adapters.pubsub }, orgId, row).catch(() => {});

@@ -38,10 +38,8 @@ describe("videos", () => {
     expect(fileInfo(upload("antigo.avi", "video/x-msvideo")).view).toBe("other");
   });
 
-  test("its shape once known (16:9 before), kept between 9:16 and 2:1; its time as a clock", () => {
-    expect(videoHeight(320, null)).toBe(180);
-    expect(videoHeight(300, { width: 720, height: 1280 })).toBe(533);
-    expect(videoHeight(300, { width: 3000, height: 500 })).toBe(150);
+  test("one box in a message whatever its shape, so nothing moves once it loads; its time as a clock", () => {
+    expect(videoHeight(320)).toBe(180);
     expect(videoClock(7.9)).toBe("0:07");
     expect(videoClock(725)).toBe("12:05");
     expect(videoClock(3729)).toBe("1:02:09");
@@ -102,11 +100,8 @@ describe("file kind, tile and size", () => {
 });
 
 describe("pictures in a message", () => {
-  test("a lone picture keeps its shape, within limits", () => {
-    expect(singleImageHeight(300, null)).toBe(225);
-    expect(singleImageHeight(300, { width: 1000, height: 1000 })).toBe(300);
-    expect(singleImageHeight(300, { width: 1170, height: 2532 })).toBe(533); // a phone screenshot: 9:16 at most
-    expect(singleImageHeight(300, { width: 4000, height: 500 })).toBe(150); // a panorama: 2:1 at most
+  test("a lone picture has one box whatever its shape, so nothing moves once it loads", () => {
+    expect(singleImageHeight(300)).toBe(225);
   });
 });
 
@@ -223,5 +218,71 @@ describe("viewer", () => {
     expect(containSize(0, 0, 400, 800)).toEqual({ w: 400, h: 800 });
     expect(doubleTapZoom(400, 100, 400, 800)).toBe(MAX_ZOOM);
     expect(doubleTapZoom(400, 600, 400, 800)).toBe(2.5);
+  });
+});
+
+describe("a document's head", () => {
+  test("the bar keeps ×, Copiar texto and ⋯; the name and its line take a row of their own under it, never cut", () => {
+    const viewer = readFileSync(join(import.meta.dir, "../../src/features/files/DocumentViewer.tsx"), "utf8");
+    const bar = viewer.slice(
+      viewer.indexOf("<View style={[styles.top,"),
+      viewer.indexOf("<View style={styles.heading}>"),
+    );
+    expect(bar).not.toContain("info?.name");
+    expect(bar).not.toContain("styles.balance");
+    const heading = viewer.slice(
+      viewer.indexOf("<View style={styles.heading}>"),
+      viewer.indexOf("<View style={styles.body}>"),
+    );
+    expect(heading).toContain("numberOfLines={3}");
+    expect(heading).toContain("{info?.name");
+    expect(heading).not.toContain("numberOfLines={1}");
+  });
+
+  test("a picture's head too: × and ⋯ on the first row, the name and its line on the row under them", () => {
+    const viewer = readFileSync(join(import.meta.dir, "../../src/features/files/ImageViewer.tsx"), "utf8");
+    const top = viewer.slice(viewer.indexOf("style={[styles.top,"), viewer.indexOf("</Chrome>"));
+    expect(top.indexOf('icon="more"')).toBeLessThan(top.indexOf("{info?.name"));
+    expect(top).toContain("numberOfLines={3}");
+    expect(top).not.toContain("numberOfLines={1}");
+    expect(viewer).toContain('title: { flexBasis: "100%", gap: 2 }');
+  });
+
+  test("among files a picture is only the picture, two to a row; a file takes the row, its name whole", () => {
+    const tile = src("features/files/AttachmentTile.tsx");
+    // The foot (icon, name, kind and size) only under a file; a picture's name and size are what VoiceOver says.
+    expect(tile).toMatch(/\{picture \? null : \(\s*<View style=\{styles\.foot\}>/);
+    expect(tile).toMatch(/accessibilityLabel=\{`\$\{name\}, \$\{meta\}`\}/);
+    // Known to be a picture by its name before it loads, so it never sheds a foot once it does.
+    expect(tile).toContain('const picture = info ? info.view === "image" : seen;');
+    const foot = tile.slice(tile.indexOf("<View style={styles.foot}>"), tile.indexOf("function fileIconOf("));
+    expect(foot).not.toContain("numberOfLines");
+    expect(foot).toContain('<LineIcon name={icon} size={14} color={c.faint} variant="footnote" />');
+    const files = src("features/files/MessageFiles.tsx");
+    expect(files).toContain("width={picture ? halfWidth : blockWidth}");
+    expect(files).toContain("...images.map((i) => ({ ...i, failed: false, picture: true }))");
+  });
+
+  test("the line under a file's name breaks between its facts, never inside one", () => {
+    const files = readFileSync(join(import.meta.dir, "../../src/features/files/MessageFiles.tsx"), "utf8");
+    expect(files.slice(files.indexOf("export function useFileLine("))).toMatch(
+      /\]\s*\.map\(keepWhole\)\s*\.join\(" · "\)/,
+    );
+    const image = readFileSync(join(import.meta.dir, "../../src/features/files/ImageViewer.tsx"), "utf8");
+    expect(image).toContain('[place, author, savedWhen(savedAt(detail))].filter(Boolean).map(keepWhole).join(" · ")');
+  });
+
+  test("a chart opened whole: × alone on the bar, its title on a row of its own under it, never cut", () => {
+    const chart = readFileSync(join(import.meta.dir, "../../src/features/chat/ChartCard.tsx"), "utf8");
+    const bar = chart.slice(chart.indexOf("<View style={styles.sheetTop}>"), chart.indexOf("{chart.spec.title}"));
+    expect(bar.indexOf("</View>")).toBeLessThan(bar.indexOf("<Text"));
+    expect(bar).not.toContain("numberOfLines");
+    expect(chart).not.toContain("sheetSpacer");
+  });
+
+  test("a browser profile's sign-in screen keeps its name and line whole beside ×", () => {
+    const screen = readFileSync(join(import.meta.dir, "../../src/features/browser/ProfileLoginScreen.tsx"), "utf8");
+    const top = screen.slice(screen.indexOf("<View style={[styles.top,"), screen.indexOf("<ScrollView"));
+    expect(top).not.toContain("numberOfLines");
   });
 });

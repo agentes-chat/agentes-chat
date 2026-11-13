@@ -7,7 +7,6 @@ import {
   useModels,
   usePeople,
   useRoles,
-  useRoster,
   useSendDm,
   useSetMemberRoles,
   useSettings,
@@ -39,11 +38,11 @@ import {
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isOutOfOffice, statusEndNote } from "@agenteschat/client/lib/presence";
-import { isAuto } from "@agenteschat/client/lib/providers";
+import { apiModelName, autoMakerOf } from "@agenteschat/client/lib/providers";
 import { isRightHand, tellsNameStory } from "@agenteschat/client/lib/right-hand";
 import { rolesOf } from "@agenteschat/client/lib/roles";
 import { timezoneName } from "@agenteschat/client/lib/routines";
-import { picksForMe } from "@agenteschat/client/lib/routing";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   Avatar,
   Button,
@@ -59,7 +58,7 @@ import {
   Token,
   useHoverCard,
 } from "@agenteschat/ui";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -81,7 +80,6 @@ import { type AgentShown, agentLine, personLine, useAgentPresence, usePersonPres
 import { type MenuEntry, tidy } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
 import { planMeterText, usageShown } from "@/lib/plan-usage";
-import { channelOfPath } from "@/lib/start";
 import { useToast } from "@/lib/toast";
 import { AskAccessButton } from "@/pages/agent/PublicCard";
 import { useStreams } from "@/realtime/context";
@@ -258,6 +256,14 @@ function MessageBox({ target, label, onSent }: { target: DmTarget; label: string
       },
     );
   };
+  // Being deleted, the workspace takes no message (ADR 0088 §7): why, where the box would be.
+  if (org.deletion)
+    return (
+      <p className="small muted ac-iconline" role="status">
+        <Icon name="lock" size={16} />
+        <span>{t("deleting.composer")}</span>
+      </p>
+    );
   return (
     <div className="mcard__foot">
       <Locked when={send.isPending}>
@@ -326,6 +332,9 @@ function PersonCard({ userId, onDone }: { userId: string; onDone: () => void }) 
   const roleIds = person?.roleIds ?? member?.roleIds ?? [];
   const held = rolesOf({ roleIds }, roles);
   const gives = can(org, "manage_members") && (!owner || org.role === "owner") && roles.some((r) => r.givable);
+  // A personal workspace's owner learns nothing from their own roles (ADR 0159): their card leaves them out; anyone
+  // else's keeps them, and the "+" to give one.
+  const ownRoles = isPersonal(org) && owner && userId === me.user.id;
   const setTo = (next: string[]) =>
     setRoles.mutate({ userId, roleIds: next }, { onError: (e) => toast.show(errorText(t, e), "error") });
   // The person's own zone (the API falls back to the workspace's).
@@ -371,7 +380,7 @@ function PersonCard({ userId, onDone }: { userId: string; onDone: () => void }) 
           </span>
         </div>
       )}
-      {(owner || held.length > 0 || gives) && (
+      {(owner || held.length > 0 || gives) && !ownRoles && (
         <section className="mcard__section" aria-label={t("profile.roles")}>
           <span className="mcard__label">{t("profile.roles")}</span>
           <div className="mcard__roles">
@@ -480,8 +489,8 @@ function AgentCard({ agentId, onDone }: { agentId: string; onDone: () => void })
 }
 
 /**
- * The team's right hand (ADR 0137): who it is ("Assistente do workspace · seu braço direito"), how it works (acts with
- * your permissions, talks only with you in your DM, replies in channels when called), what thinks for it, then
+ * The team's right hand (ADR 0137): who it is ("seu braço direito", its one role name everywhere), how it works (acts
+ * with your permissions, talks only with you in your DM, replies in channels when called), what thinks for it, then
  * Mensagem, and Configurar for who manages agents.
  */
 function RightHandCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) {
@@ -489,11 +498,11 @@ function RightHandCardBody({ agent, onDone }: { agent: Agent; onDone: () => void
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const models = useModels();
+  const maker = autoMakerOf(useAiStatus(org.id).data, agent.id);
   const navigate = useNavigate();
-  const model = isAuto(agent.model)
-    ? t("brain.auto.label")
-    : (models.data?.models.find((m) => m.id === agent.model)?.label ?? agent.model);
+  const model = apiModelName(t, agent.model, models.data?.models.find((m) => m.id === agent.model)?.label, maker);
   const thinks = brainLine(t, agent.brain, model, { agents: dir.agents });
+  const mark = thinks.mark ?? maker;
   const go = (to: () => Promise<void>) => {
     onDone();
     void to();
@@ -510,9 +519,7 @@ function RightHandCardBody({ agent, onDone }: { agent: Agent; onDone: () => void
     >
       <div className="list-col mcard__names">
         <span className="profile-card__name">{agent.name}</span>
-        <span className="small muted">
-          {[`@${agent.handle}`, t("rightHand.role"), t("rightHand.label")].join(" · ")}
-        </span>
+        <span className="small muted">{[`@${agent.handle}`, t("rightHand.label")].join(" · ")}</span>
         {tellsNameStory(agent) && <span className="small muted">{t("rightHand.profile.nameStory")}</span>}
       </div>
       <section className="mcard__section" aria-label={t("rightHand.profile.how")}>
@@ -536,7 +543,7 @@ function RightHandCardBody({ agent, onDone }: { agent: Agent; onDone: () => void
         <dt>{t("rightHand.profile.model")}</dt>
         <dd>
           <span className="profile-card__brain ac-iconline">
-            {thinks.mark && <ProviderLogo id={thinks.mark} size="xs" />}
+            {mark && <ProviderLogo id={mark} size="xs" />}
             {thinks.text || shortModel(model)}
           </span>
         </dd>
@@ -555,9 +562,7 @@ function RightHandCardBody({ agent, onDone }: { agent: Agent; onDone: () => void
           <Button
             icon="cog"
             onClick={() =>
-              go(() =>
-                navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "right_hand" } }),
-              )
+              go(() => navigate({ to: "/org/$orgId/agents/$agentId", params: { orgId: org.id, agentId: agent.id } }))
             }
           >
             {t("rightHand.profile.configure")}
@@ -582,9 +587,13 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
   const details = seesDetails(agent);
   const g = agentGrammar(agent.name);
   const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name : null;
-  const model = isAuto(agent.model)
-    ? t("brain.auto.label")
-    : (models.data?.models.find((m) => m.id === agent.model)?.label ?? agent.model);
+  const ai = useAiStatus(org.id).data;
+  const model = apiModelName(
+    t,
+    agent.model,
+    models.data?.models.find((m) => m.id === agent.model)?.label,
+    autoMakerOf(ai, agent.id),
+  );
   const thinks =
     agent.brain && agent.brain.kind !== "model"
       ? brainLine(t, agent.brain, model, { owner: owner ? firstName(owner) : undefined, agents: dir.agents })
@@ -596,12 +605,6 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
   const busy = workingIn !== null;
   const here = workingIn ? channels?.find((c) => c.id === workingIn)?.name : undefined;
   const lines = audienceLines(agent, roles, dir.members);
-  // Opened in a channel where it answers without being mentioned, while something reads my unmentioned messages.
-  const channelHere = channelOfPath(useRouterState({ select: (st) => st.location.pathname }));
-  const roster = useRoster(org.id, channelHere ?? "", channelHere !== null);
-  const routing = useAiStatus(org.id).data?.routing;
-  const answersHere =
-    picksForMe(routing) && (roster.data ?? []).some((r) => r.type === "agent" && r.id === agent.id && r.autoReply);
   const toComputer = opensComputer
     ? () => {
         onDone();
@@ -651,7 +654,6 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
             .filter(Boolean)
             .join(" · ")}
         </span>
-        {answersHere && <span className="small muted">{t("profile.answersHere")}</span>}
       </div>
       <NoAiChip agentId={agent.id} />
       {line && shown?.line && (

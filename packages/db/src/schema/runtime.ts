@@ -137,6 +137,12 @@ export const agentRuns = pgTable(
     /** Bumped by the worker while it executes the run; a stale one means the worker died (recovered on boot). */
     heartbeatAt: timestamp({ withTimezone: true }),
     /**
+     * When the work it is doing now began, for the conversation's "thinking for …": set each time it goes back to
+     * work (after waiting for a person, an approval or its computer) and each time it posts and goes on. Null until
+     * then: its first stretch began when it was created. Never `startedAt`, which stays at its first start.
+     */
+    workingSince: timestamp({ withTimezone: true }),
+    /**
      * The computer this run waits for (`waiting_input` with a computer brain
      * and nothing to fall back on, ADR 0032 §5): queued again when it comes
      * back (`resumeRunsWaitingForMachine`). Null otherwise.
@@ -1121,6 +1127,44 @@ export const machineTasks = pgTable(
     uniqueIndex("machine_tasks_live_session")
       .on(t.missionId, t.sessionId)
       .where(sql`${t.missionId} is not null and ${t.sessionId} is not null and ${t.endedAt} is null`),
+  ],
+);
+
+/**
+ * What an agent keeps running on its computer (`keep_running`, ADR 0176): a hold the runner takes as the computer's
+ * standard "don't go idle" lock, bound to one of its programs (`pid`), its browser, or a time (`until`). The words
+ * people read are here only, never on the computer. Live while `ended_at` is null and `until` hasn't passed.
+ */
+export const machineHolds = pgTable(
+  "machine_holds",
+  {
+    /** Also the runner's hold id. */
+    id: uuid()
+      .primaryKey()
+      .$defaultFn(() => Bun.randomUUIDv7()),
+    orgId: uuid().notNull(),
+    agentId: uuid().notNull(),
+    machineId: uuid()
+      .notNull()
+      .references(() => machines.id, { onDelete: "cascade" }),
+    /** The run whose `keep_running` took or last changed it. */
+    runId: uuid().references(() => agentRuns.id, { onDelete: "set null" }),
+    /** What is kept, as people read it ("Telegram bot for the support group"). */
+    what: text().notNull(),
+    why: text().notNull(),
+    pid: integer(),
+    browser: boolean().notNull().default(false),
+    until: timestamp({ withTimezone: true }),
+    endedAt: timestamp({ withTimezone: true }),
+    endReason: text().$type<"exited" | "expired" | "stopped_by_person" | "ended_by_agent" | "restarted">(),
+    endedByUserId: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({ columns: [t.orgId, t.agentId], foreignColumns: [agents.orgId, agents.id] }).onDelete("cascade"),
+    index().on(t.orgId, t.agentId, t.createdAt),
+    index().on(t.machineId).where(sql`${t.endedAt} is null`),
   ],
 );
 

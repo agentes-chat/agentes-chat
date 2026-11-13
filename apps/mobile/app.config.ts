@@ -1,7 +1,7 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 /**
- * The app's Expo config. Builds: Android on the "Android build" workflow on GitHub Actions, or EAS (see
+ * The app's Expo config. Builds: the "Android build" and "iOS build" workflows on GitHub Actions, or EAS (see
  * README.md). The native projects are made from this file by `expo prebuild` and never committed.
  * - `EXPO_PUBLIC_API_URL`: the server the app talks to by default (production); people can pick their own.
  * - `EAS_PROJECT_ID`: overrides the EAS project (the iPhone's Expo push tokens need it); defaults to ours on expo.dev.
@@ -9,6 +9,9 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
  *   side by side.
  * - `GOOGLE_SERVICES_JSON`: path to Firebase's google-services.json, for push on Android (FCM).
  * - `ANDROID_VERSION_CODE`: the build's version code, set by the Android workflow (EAS numbers its own builds).
+ * - `APPLE_TEAM_ID`: the Apple team that signs the iOS app and its share extension (a build setting, never in the
+ *   repo).
+ * - `IOS_BUILD_NUMBER`: the build's number on iOS, set by the iOS workflow.
  *
  * The New Architecture is the only one since SDK 55, so there is no `newArchEnabled` flag any more
  * (the SDK 58 config type no longer has it). Edge-to-edge on Android is likewise always on.
@@ -64,6 +67,7 @@ export const APP_LINK_PATTERNS = [
   "/org/*/settings/keys",
   "/org/*/settings/storage",
   "/org/*/settings/computers",
+  "/org/*/settings/devices",
   "/org/*/settings/usage",
   "/org/*/settings/import",
   "/org/*/settings/media",
@@ -73,6 +77,7 @@ export const APP_LINK_PATTERNS = [
   "/org/*/settings/vault",
   "/org/*/settings/about",
   "/org/*/settings/computers/*",
+  "/org/*/settings/devices/*",
 ];
 // Our EAS project on expo.dev (not a secret: it only names the project).
 const projectId = process.env.EAS_PROJECT_ID ?? "8514d5b3-87e0-4980-89a0-4c692f6f4702";
@@ -101,6 +106,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: `chat.agentes.app${suffix}`,
+    ...(process.env.APPLE_TEAM_ID ? { appleTeamId: process.env.APPLE_TEAM_ID } : {}),
+    ...(process.env.IOS_BUILD_NUMBER ? { buildNumber: process.env.IOS_BUILD_NUMBER } : {}),
     supportsTablet: false,
     usesAppleSignIn: true,
     associatedDomains: [`applinks:${linkHost}`],
@@ -214,6 +221,25 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         microphonePermission: "To record voice messages in your conversations.",
         recordAudioAndroid: true,
         enableBackgroundPlayback: false,
+      },
+    ],
+    [
+      // "Compartilhar com…": the app in the system's share sheet (an iOS share extension and Android's send intents),
+      // for photos, videos, files, links and text; what arrives opens the agent picker (src/features/share). The
+      // extension takes the app's name and shares its URL scheme; it reaches phones only with a new native build.
+      "expo-share-intent",
+      {
+        iosShareExtensionName: variant === "production" ? "agentes" : `agentes ${variant}`,
+        iosActivationRules: {
+          NSExtensionActivationSupportsText: true,
+          NSExtensionActivationSupportsWebURLWithMaxCount: 1,
+          NSExtensionActivationSupportsWebPageWithMaxCount: 1,
+          NSExtensionActivationSupportsImageWithMaxCount: 10,
+          NSExtensionActivationSupportsMovieWithMaxCount: 10,
+          NSExtensionActivationSupportsFileWithMaxCount: 10,
+        },
+        androidIntentFilters: ["text/*", "image/*", "video/*", "application/*"],
+        androidMultiIntentFilters: ["image/*", "video/*", "*/*"],
       },
     ],
     [

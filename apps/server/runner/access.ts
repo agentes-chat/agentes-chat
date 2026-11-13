@@ -49,6 +49,20 @@ export const TOOL_NAMES: readonly (keyof RunnerTools)[] = [
   "terminal",
 ];
 
+/** What each tool is, as the CLI names it (`tools list`, `doctor`). */
+export const TOOL_LABELS: Record<keyof RunnerTools, string> = {
+  claude: "Claude Code",
+  codex: "Codex",
+  cursor: "Cursor",
+  opencode: "OpenCode",
+  grok: "Grok Build",
+  antigravity: "Antigravity CLI (Gemini)",
+  commands: "Commands",
+  browser: "Browser",
+  desktop: "Desktops (each agent's own screen, watched and controlled from the app)",
+  terminal: "Terminal (a shell as the agent, opened from the app)",
+};
+
 const caseless = process.platform === "win32" || process.platform === "darwin";
 const samePath = (a: string, b: string) => (caseless ? a.toLowerCase() === b.toLowerCase() : a === b);
 
@@ -450,6 +464,7 @@ export function parseAgents(v: unknown): MachineAgent[] {
         ? { accounts: o.accounts.filter(isAccountId).slice(0, 500) }
         : {}),
       ...(str(o.locale, 32) ? { locale: str(o.locale, 32) } : {}),
+      ...(o.containers === true ? { containers: true } : {}),
     });
   }
   return out;

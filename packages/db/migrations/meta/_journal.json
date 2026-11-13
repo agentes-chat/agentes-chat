@@ -1695,6 +1695,104 @@
       "when": 1794601000000,
       "tag": "0243_file_sharing",
       "breakpoints": true
+    },
+    {
+      "idx": 244,
+      "version": "7",
+      "when": 1794603000000,
+      "tag": "0244_devices",
+      "breakpoints": true
+    },
+    {
+      "idx": 245,
+      "version": "7",
+      "when": 1794603300000,
+      "tag": "0245_workspace_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 246,
+      "version": "7",
+      "when": 1794613300000,
+      "tag": "0246_feedback_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 247,
+      "version": "7",
+      "when": 1794614300000,
+      "tag": "0247_github_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 248,
+      "version": "7",
+      "when": 1794615300000,
+      "tag": "0248_machine_standby",
+      "breakpoints": true
+    },
+    {
+      "idx": 249,
+      "version": "7",
+      "when": 1794625300000,
+      "tag": "0249_run_working_since",
+      "breakpoints": true
+    },
+    {
+      "idx": 250,
+      "version": "7",
+      "when": 1794635300000,
+      "tag": "0250_machine_egress_waiting",
+      "breakpoints": true
+    },
+    {
+      "idx": 251,
+      "version": "7",
+      "when": 1794645300000,
+      "tag": "0251_user_work_area",
+      "breakpoints": true
+    },
+    {
+      "idx": 252,
+      "version": "7",
+      "when": 1794655300000,
+      "tag": "0252_machine_paused_by",
+      "breakpoints": true
+    },
+    {
+      "idx": 253,
+      "version": "7",
+      "when": 1794665300000,
+      "tag": "0253_task_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 254,
+      "version": "7",
+      "when": 1794675300000,
+      "tag": "0254_agent_approvals_level",
+      "breakpoints": true
+    },
+    {
+      "idx": 255,
+      "version": "7",
+      "when": 1794685300000,
+      "tag": "0255_destructive_hint_suggests",
+      "breakpoints": true
+    },
+    {
+      "idx": 256,
+      "version": "7",
+      "when": 1794695300000,
+      "tag": "0256_machine_holds",
+      "breakpoints": true
+    },
+    {
+      "idx": 257,
+      "version": "7",
+      "when": 1794695400000,
+      "tag": "0257_widget_creator_backfill",
+      "breakpoints": true
     }
   ]
 }

@@ -64,7 +64,7 @@
 /* One step, a MediaRow (the kit's `.ac-mediarow`): its icon (a check once done) in the face's place, what it is on the
    name's line with its button at the end, what the agent says of it under them. */
 .setup-row {
-  padding: 12px 16px;
+  padding: var(--row-py) 16px;
   border-top: 1px solid var(--line);
 }
 .setup-row > .ac-mediarow__face > .ac-icon {
@@ -121,6 +121,41 @@ html:not([data-pointer]) .setup-row__link:focus-visible {
 .setup-row__act .ac-btn {
   min-width: 104px;
   justify-content: center;
+}
+/* A row's own field ends as far from the row's edge as its name's line starts: the head's own offset, mirrored. */
+.setup-row__form {
+  padding-block-end: max(0px, calc((var(--mediarow-axis) - 20px) / 2));
+}
+/* A row's own field (the people row's address and Enviar): one height side by side, the dialog's link under them. */
+.setup-invite {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-1);
+}
+.setup-invite__line {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+}
+.setup-invite__email.ac-input {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-h-sm);
+  font-size: 14px;
+}
+.setup-invite__error {
+  font-size: 13px;
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+.setup-invite__more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  font-size: 13px;
 }
 @keyframes setup-row-pop {
   from {

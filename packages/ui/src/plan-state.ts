@@ -107,6 +107,22 @@ export function planState(
 
 /** How many windows the compact line names; every window is in its title and in the full meter. */
 const LINE_WINDOWS = 2;
+
+/**
+ * A plan's state as the one word a closed row has room for ("No limite", "Quase no limite"), with the level its bar
+ * is colored by. Null while it is fine: a row says nothing then.
+ */
+export function planAttention(
+  usage: PlanMeterUsage,
+  text: Pick<PlanMeterText, "almost" | "limited">,
+  now = Date.now(),
+): { word: string; level: Exclude<PlanLevel, "ok"> } | null {
+  const { state, used } = planState(usage, now);
+  if (state === "ok") return null;
+  const level = planLevel(used, state === "limited");
+  return { word: state === "limited" ? text.limited(null) : text.almost, level: level === "ok" ? "almost" : level };
+}
+
 /** From this age the compact line says how old its numbers are. */
 export const PLAN_AGE_SHOWN_MS = 10 * 60_000;
 /** Numbers older than this read as out of date. */

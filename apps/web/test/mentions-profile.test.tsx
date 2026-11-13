@@ -108,6 +108,18 @@ describe("@mention autocomplete", () => {
     expect(screen().getByText("Atlas entrou no canal.")).toBeTruthy();
   });
 
+  test("in a DM the list has no channel note or sections, and picking an agent outside it offers nothing to add", async () => {
+    const { state } = await go(`dm/agent/${ADA_ID}`);
+    await typeIn(composer(), "@atl");
+    const list = screen().getByRole("listbox", { name: "Pessoas e agentes" });
+    expect(list.textContent).not.toContain("não está no canal");
+    expect(list.textContent).not.toContain("No workspace");
+    await click(within(list).getByRole("option", { name: /Atlas/ }));
+    expect(composer().value).toBe("@atlas ");
+    expect(document.querySelector(".mention-offer")).toBeNull();
+    expect(state.calls.some((c) => c.method === "chat.addMember")).toBe(false);
+  });
+
   test("the right hand is in every channel: no note, and picking it offers nothing to add", async () => {
     const { state } = await go(`c/${GENERAL_ID}`, withRightHand(seedState()));
     await typeIn(composer(), "@lod");

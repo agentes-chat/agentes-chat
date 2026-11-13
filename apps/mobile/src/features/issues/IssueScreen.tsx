@@ -15,7 +15,7 @@ import {
   useTaskUnread,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { capitalize, relativeTime } from "@agenteschat/client/lib/format";
+import { capitalize, dueLabel, relativeTime } from "@agenteschat/client/lib/format";
 import { githubLinkLabel, isGithubLink } from "@agenteschat/client/lib/github-link";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { webUrl } from "@agenteschat/client/lib/guards";
@@ -45,7 +45,7 @@ import Animated, { FadeIn, LayoutAnimationConfig, LinearTransition } from "react
 import { useOrg } from "@/providers/org";
 import {
   Button,
-  Chip,
+  GroupedHeader,
   Icon,
   IconButton,
   type IconName,
@@ -53,6 +53,7 @@ import {
   Locked,
   OPTION_ROW,
   PixelOrbit,
+  SCREEN_X,
   Text,
   useReducedMotion,
   useToast,
@@ -61,7 +62,7 @@ import { SocialMark } from "@/ui/auth/SocialMarks";
 import { router } from "@/ui/navigation";
 import { openConnectAi } from "../ai/NoAiCard";
 import { MessageText } from "../chat/MessageText";
-import { IssueWorkLine } from "../chat/WorkLine";
+import { IssueWorkLine, useShareWork } from "../chat/WorkLine";
 import { chatHref } from "../links/logic";
 import { confirmAction } from "../settings/parts";
 import { Face } from "../shared/Face";
@@ -87,13 +88,15 @@ import {
   columnChoices,
   columnOfIssue,
   criteriaProgress,
+  DUE_CHOICES,
+  dueDateOf,
   issueState,
   minutesSince,
   stageCustomized,
   taskConversationHref,
   workLines,
 } from "./logic";
-import { GithubChip, StateChip, useColumnLabel, useStepText } from "./parts";
+import { GithubChip, ProjectDot, PropChip, useColumnLabel, useProjectItems, useStepText } from "./parts";
 import { useStartAgent } from "./useStartAgent";
 
 /**
@@ -179,7 +182,7 @@ function IssueView({ number, focusId }: { number: number; focusId: string | null
         >
           <Head issue={i} />
           <WorkCard issue={i} />
-          <IssueWorkLine issue={i} />
+          <IssueWorkLine issue={i} style={styles.section} />
           <ConversationRow issue={i} onOpen={() => openConversation(i)} />
           <Description issue={i} />
           <Criteria issue={i} />
@@ -266,7 +269,10 @@ function ConversationRow({ issue, onOpen }: { issue: Issue; onOpen: () => void }
   );
 }
 
-/** "#134" and the title on one row, "Criada pelo Atlas a partir do Sentry · #tech" under it, the chips. */
+/**
+ * "#134" and the title on one row, "Criada pelo Atlas a partir do Sentry · #tech" under it, then its fields as the
+ * web's strip, in its order: Coluna, Responsável, Prioridade, Prazo, Quem vê, each opening its picker; its GitHub link.
+ */
 function Head({ issue: i }: { issue: Issue }) {
   const { t, i18n } = useTranslation();
   const dir = useDirectory();
@@ -294,6 +300,8 @@ function Head({ issue: i }: { issue: Issue }) {
   );
   const assignee = i.assignee;
   const whoSees = useWhoSeesLabel();
+  const pickers = useIssuePickers(i);
+  const audience = i.audience ?? { mode: "everyone" as const };
   return (
     <View style={styles.head}>
       <Text variant="display2" accessibilityRole="header" style={styles.bigTitle} maxFontSizeMultiplier={1.4}>
@@ -308,14 +316,42 @@ function Head({ issue: i }: { issue: Issue }) {
         </Text>
       ) : null}
       <View style={styles.chips}>
-        <StateChip issue={i} />
-        {i.priority === "high" ? <Chip icon="flag" label={t("issues.priority.high")} /> : null}
-        {i.audience?.mode === "people" ? <Chip icon="lock" label={whoSees(i.audience)} /> : null}
-        {assignee ? (
-          <Chip label={dir.nameOf(assignee)} leading={<Face who={assignee} size={14} live={false} />} />
-        ) : (
-          <Chip icon="circle" label={t("issues.noAssignee")} />
-        )}
+        <PropChip
+          label={t("issues.projects.label")}
+          value={i.project?.name ?? t("issues.projects.none")}
+          leading={<ProjectDot color={i.project?.color} />}
+          onPress={pickers.pickProject}
+        />
+        <PropChip
+          label={t("issues.column")}
+          value={pickers.column ? pickers.columnLabel(pickers.column) : t(`issues.status.${i.status}`)}
+          icon={STAGE_ICON[i.status]}
+          onPress={pickers.pickColumn}
+        />
+        <PropChip
+          label={t("issues.form.assignee")}
+          value={assignee ? dir.nameOf(assignee) : t("issues.noAssignee")}
+          {...(assignee ? { leading: <Face who={assignee} size={20} live={false} /> } : { icon: "person" as const })}
+          onPress={pickers.pickAssignee}
+        />
+        <PropChip
+          label={t("issues.form.priority")}
+          value={t(`issues.priority.${i.priority}`)}
+          icon="flag"
+          onPress={pickers.pickPriority}
+        />
+        <PropChip
+          label={t("issues.due")}
+          value={i.dueDate ? dueLabel(t, i18n.language, i.dueDate) : t("issues.noDue")}
+          icon="clock"
+          onPress={pickers.pickDue}
+        />
+        <PropChip
+          label={t("whoSees.label")}
+          value={whoSees(audience)}
+          icon={audience.mode === "people" ? "lock" : "globe"}
+          onPress={pickers.pickWhoSees}
+        />
         {i.githubUrl ? (
           <Pressable
             accessibilityRole="link"
@@ -332,6 +368,15 @@ function Head({ issue: i }: { issue: Issue }) {
     </View>
   );
 }
+
+/** The stage's mark on the strip's Coluna. */
+const STAGE_ICON: Record<IssueStatus, IconName> = {
+  todo: "circle",
+  in_progress: "clock",
+  in_review: "code",
+  done: "checkc",
+  canceled: "x",
+};
 
 /** Pastes, changes or removes the task's GitHub link. */
 function GithubLinkForm({ issue: i }: { issue: Issue }) {
@@ -530,9 +575,7 @@ function WorkCard({ issue: i }: { issue: Issue }) {
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View>
-      <Text variant="footnote" tone="faint" accessibilityRole="header" style={styles.groupTitle}>
-        {title.toLocaleUpperCase()}
-      </Text>
+      <GroupedHeader>{title}</GroupedHeader>
       {children}
     </View>
   );
@@ -795,27 +838,21 @@ function ColumnPicker({
   );
 }
 
-/** "…": its column, priority, who does it (an agent is asked and starts), stop the agent, cancel. */
-function IssueMenu({ issue: i }: { issue: Issue }) {
+/**
+ * What changes a task's fields, one sheet each: its project, its column (or its stage while the board's columns load), who does
+ * it (an agent is asked and starts), its priority, its due date and who sees it. The head's strip and "…" share them.
+ */
+function useIssuePickers(i: Issue) {
   const { t } = useTranslation();
-  const c = useColors();
   const sheet = useSheet();
   const orgId = useOrgId();
-  const api = useApi();
-  const qc = useQueryClient();
   const dir = useDirectory();
   const meId = useMeId();
-  const { org } = useOrg();
   const action = useIssueAction(orgId);
   const start = useStartAgent();
   const columns = useIssueColumns(orgId);
   const columnLabel = useColumnLabel();
   const toast = useToast();
-  const openConversation = useOpenConversation();
-  const stop = useMutation({
-    mutationFn: (runId: string) => api.agents.cancelRun(orgId, runId),
-    onSettled: () => void qc.invalidateQueries({ queryKey: keys.issues(orgId) }),
-  });
   const failed = () => toast({ title: t("mobile.app.failed"), icon: "x" });
   const update = (patch: Parameters<typeof action.mutate>[0], done?: string) => {
     sheet.close();
@@ -830,61 +867,115 @@ function IssueMenu({ issue: i }: { issue: Issue }) {
       start.run(i, who.id, { done: t("mobile.issues.changed") });
     } else update({ type: "update", id: i.id, patch: { assignee: who } });
   };
-  const whoSees = useWhoSeesLabel();
   const same = (a: Actor | null, b: Actor | null) => (a?.type ?? null) === (b?.type ?? null) && a?.id === b?.id;
   const pick = (items: ActionItem[]) => sheet.open(<ActionList items={items} />);
+  const checked = (on: boolean) => (on ? { trailing: <Icon name="check" size={18} /> } : {});
   const statusItems = (): ActionItem[] =>
     STATUSES.map((s) => ({
       key: s,
       label: t(`issues.status.${s}`),
-      ...(s === i.status ? { trailing: <Icon name="check" size={18} /> } : {}),
+      ...checked(s === i.status),
       onPress: () => update({ type: "update", id: i.id, patch: { status: s } }),
-    }));
-  const priorityItems = (): ActionItem[] =>
-    PRIORITIES.map((p: IssuePriority) => ({
-      key: p,
-      label: t(`issues.priority.${p}`),
-      ...(p === i.priority ? { trailing: <Icon name="check" size={18} /> } : {}),
-      onPress: () => update({ type: "update", id: i.id, patch: { priority: p } }),
     }));
   const people: Actor[] = [
     ...dir.agents.filter((a) => a.canTalk !== false).map((a) => ({ type: "agent" as const, id: a.id })),
     ...(meId ? [{ type: "person" as const, id: meId }] : []),
   ];
-  const assigneeItems = (): ActionItem[] => [
-    ...people.map((who) => ({
-      key: `${who.type}:${who.id}`,
-      label: who.type === "person" && who.id === meId ? t("mobile.issues.you") : dir.nameOf(who),
-      leading: <Face who={who} size={OPTION_ROW.face} live={false} />,
-      ...(same(who, i.assignee) ? { trailing: <Icon name="check" size={18} /> } : {}),
-      onPress: () => assign(who),
-    })),
-    {
-      key: "nobody",
-      icon: "circle" as const,
-      label: t("mobile.issues.nobody"),
-      ...(i.assignee === null ? { trailing: <Icon name="check" size={18} /> } : {}),
-      onPress: () => assign(null),
-    },
-  ];
   const board = columns.data ?? [];
   const column = columnOfIssue(i, board);
-  // Columns not loaded (or failed): the stages, as before the board had columns.
-  const openColumns = () =>
-    board.length > 0
-      ? sheet.open(
-          <ColumnPicker
-            issue={i}
-            columns={board}
-            onPick={(c) =>
-              update(
-                { type: "update", id: i.id, patch: { columnId: c.id } },
-                t("mobile.issues.moved", { number: i.number, column: columnLabel(c) }),
-              )
-            }
-          />,
-        )
-      : pick(statusItems());
+  const projectItems = useProjectItems();
+  return {
+    column,
+    columnLabel,
+    // Columns not loaded (or failed): the stages, as before the board had columns.
+    pickColumn: () =>
+      board.length > 0
+        ? sheet.open(
+            <ColumnPicker
+              issue={i}
+              columns={board}
+              onPick={(c) =>
+                update(
+                  { type: "update", id: i.id, patch: { columnId: c.id } },
+                  t("mobile.issues.moved", { number: i.number, column: columnLabel(c) }),
+                )
+              }
+            />,
+          )
+        : pick(statusItems()),
+    pickAssignee: () =>
+      pick([
+        ...people.map((who) => ({
+          key: `${who.type}:${who.id}`,
+          label: who.type === "person" && who.id === meId ? t("mobile.issues.you") : dir.nameOf(who),
+          leading: <Face who={who} size={OPTION_ROW.face} live={false} />,
+          ...checked(same(who, i.assignee)),
+          onPress: () => assign(who),
+        })),
+        {
+          key: "nobody",
+          icon: "circle" as const,
+          label: t("mobile.issues.nobody"),
+          ...checked(i.assignee === null),
+          onPress: () => assign(null),
+        },
+      ]),
+    pickProject: () =>
+      pick(projectItems(i.project, (projectId) => update({ type: "update", id: i.id, patch: { projectId } }))),
+    pickPriority: () =>
+      pick(
+        PRIORITIES.map((p: IssuePriority) => ({
+          key: p,
+          label: t(`issues.priority.${p}`),
+          ...checked(p === i.priority),
+          onPress: () => update({ type: "update", id: i.id, patch: { priority: p } }),
+        })),
+      ),
+    pickDue: () =>
+      pick(
+        DUE_CHOICES.map((d) => ({
+          key: d,
+          label: t(`mobile.issues.form.dueChoice.${d}`),
+          ...checked(dueDateOf(d) === i.dueDate),
+          onPress: () => update({ type: "update", id: i.id, patch: { dueDate: dueDateOf(d) } }),
+        })),
+      ),
+    pickWhoSees: () => {
+      sheet.close();
+      router.push({ pathname: "/who-sees", params: { number: i.number } });
+    },
+  };
+}
+
+/** "…": its column, priority, who does it (an agent is asked and starts), stop the agent, cancel. */
+function IssueMenu({ issue: i }: { issue: Issue }) {
+  const { t } = useTranslation();
+  const c = useColors();
+  const sheet = useSheet();
+  const orgId = useOrgId();
+  const api = useApi();
+  const qc = useQueryClient();
+  const dir = useDirectory();
+  const meId = useMeId();
+  const { org } = useOrg();
+  const action = useIssueAction(orgId);
+  const toast = useToast();
+  const openConversation = useOpenConversation();
+  const shareWork = useShareWork(i);
+  const pickers = useIssuePickers(i);
+  const stop = useMutation({
+    mutationFn: (runId: string) => api.agents.cancelRun(orgId, runId),
+    onSettled: () => void qc.invalidateQueries({ queryKey: keys.issues(orgId) }),
+  });
+  const failed = () => toast({ title: t("mobile.app.failed"), icon: "x" });
+  const update = (patch: Parameters<typeof action.mutate>[0], done?: string) => {
+    sheet.close();
+    action.mutate(patch, {
+      onSuccess: () => toast({ title: done ?? t("mobile.issues.changed") }),
+      onError: failed,
+    });
+  };
+  const whoSees = useWhoSeesLabel();
   const w = i.work;
   const items: ActionItem[] = [
     {
@@ -900,15 +991,15 @@ function IssueMenu({ issue: i }: { issue: Issue }) {
       key: "column",
       icon: "circle",
       label: t("mobile.issues.actions.status"),
-      hint: column ? columnLabel(column) : t(`issues.status.${i.status}`),
-      onPress: openColumns,
+      hint: pickers.column ? pickers.columnLabel(pickers.column) : t(`issues.status.${i.status}`),
+      onPress: pickers.pickColumn,
     },
     {
       key: "priority",
       icon: "flag",
       label: t("mobile.issues.actions.priority"),
       hint: t(`issues.priority.${i.priority}`),
-      onPress: () => pick(priorityItems()),
+      onPress: pickers.pickPriority,
     },
     {
       key: "assignee",
@@ -918,7 +1009,7 @@ function IssueMenu({ issue: i }: { issue: Issue }) {
         : { icon: "agent" as const }),
       label: t("mobile.issues.actions.assignee"),
       hint: i.assignee ? dir.nameOf(i.assignee) : t("mobile.issues.nobody"),
-      onPress: () => pick(assigneeItems()),
+      onPress: pickers.pickAssignee,
     },
     {
       key: "github",
@@ -932,12 +1023,20 @@ function IssueMenu({ issue: i }: { issue: Issue }) {
       icon: i.audience?.mode === "people" ? "lock" : "globe",
       label: t("whoSees.label"),
       hint: whoSees(i.audience ?? { mode: "everyone" }),
-      onPress: () => {
-        sheet.close();
-        router.push({ pathname: "/who-sees", params: { number: i.number } });
-      },
+      onPress: pickers.pickWhoSees,
     },
   ];
+  // Mostrar para todos lives here, not as a fourth action on the work's card (one row of actions there).
+  if (shareWork)
+    items.push({
+      key: "share",
+      icon: "globe",
+      label: t("work.shareEveryone"),
+      onPress: () => {
+        sheet.close();
+        if (!shareWork.pending) shareWork.share();
+      },
+    });
   if (w?.state === "running" && w.runId) {
     const runId = w.runId;
     items.push({
@@ -1002,11 +1101,22 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   centerText: { textAlign: "center" },
-  head: { paddingHorizontal: 20, paddingTop: 6, gap: 6, marginBottom: 14 },
+  head: { paddingHorizontal: SCREEN_X, paddingTop: 6, gap: 6, marginBottom: 14 },
   bigTitle: { marginVertical: 4 },
   number: { fontWeight: "500" },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  work: { marginHorizontal: 16, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
+  chips: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  // The screen's cards: on the 16 margin, 12 apart (the conversation's card gap, CHAT_RHYTHM.card), radius 20 with the
+  // cut corner. Measured: work card 16 → 16 from the edges, text at 16 + 14 + 24 face + 8 = 62; the work line's card on
+  // the same 16 edges, its text at 16 + 40 = 56.
+  work: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    borderBottomLeftRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  section: { marginHorizontal: 16, marginTop: 12 },
   workHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   steps: { gap: 6 },
   stepRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
@@ -1014,8 +1124,7 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   // A long name gives way to the state after it rather than pushing it off the card.
   shrink: { flexShrink: 1 },
-  groupTitle: { paddingTop: 24, paddingBottom: 8, paddingHorizontal: 20, letterSpacing: 0.4 },
-  desc: { paddingHorizontal: 20 },
+  desc: { paddingHorizontal: SCREEN_X },
   card: { marginHorizontal: 16, borderRadius: 14, overflow: "hidden" },
   crit: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   // Each list's hairline starts at its words: past the box, or the tile, and the row's gap.
@@ -1038,7 +1147,7 @@ const styles = StyleSheet.create({
   scroll: { paddingBottom: 40 },
   talk: {
     marginHorizontal: 16,
-    marginTop: 10,
+    marginTop: 12,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,

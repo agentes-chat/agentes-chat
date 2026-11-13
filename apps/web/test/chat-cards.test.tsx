@@ -330,8 +330,8 @@ const order = (row: HTMLElement) =>
     el.classList.contains("ac-msg__text") ? "text" : el.classList.contains("ag-rcs") ? "receipts" : "tools",
   );
 
-describe("the tools sit last, live, right after and once reloaded", () => {
-  test("while it works, the moment it lands and when opened later: its words, what it changed, its tools", async () => {
+describe("the tools sit last, the moment it lands and once reloaded", () => {
+  test("nothing while it works; the moment it lands and when opened later: its words, what it changed, its tools", async () => {
     const { socket, routine } = await openChannel(() => []);
     const ids = { threadId: null, runId: "r-answer", agentId: ADA_ID };
     const ev = (event: Record<string, unknown>) =>
@@ -339,10 +339,9 @@ describe("the tools sit last, live, right after and once reloaded", () => {
     await ev({ type: "agent.run", ...ids, status: "running" });
     await ev({ type: "agent.tool", ...ids, tool: "create_routine", toolUseId: "t1" });
     await ev({ type: "agent.tool", ...ids, tool: null, toolUseId: "t1" });
-    await ev({ type: "agent.delta", ...ids, seq: 0, text: ANSWER });
+    await ev({ type: "agent.typing", ...ids });
     await settle(3);
-    const live = document.querySelector(".ac-msg--streaming") as HTMLElement;
-    expect(order(live)).toEqual(["text", "tools"]);
+    expect(document.querySelector(".ac-msg--streaming")).toBeNull();
     const saved = answer(routine.id);
     await ev({ type: "message.created", messageId: saved.id, message: saved });
     await ev({ type: "run.finished", ...ids, status: "done" });
@@ -366,7 +365,7 @@ describe("what waits for a person's click comes last", () => {
     await ev({ type: "agent.run", ...ids, status: "running" });
     await ev({ type: "agent.tool", ...ids, tool: "create_routine", toolUseId: "t1" });
     await ev({ type: "agent.tool", ...ids, tool: null, toolUseId: "t1" });
-    await ev({ type: "agent.delta", ...ids, seq: 0, text: ANSWER });
+    await ev({ type: "agent.typing", ...ids });
     await settle(3);
     const m = answer(routine.id, []);
     const asking = {
@@ -446,25 +445,11 @@ describe("a question for one person", () => {
 });
 
 describe("a receipt's words stay whole", () => {
-  test("Desfazer leaving with its time keeps its room: the sentence never rewraps", async () => {
-    await openChannel((id) => [answer(id, [{ undoableUntil: inMs(1_200) }])]);
+  test("a receipt is its sentence alone: no Desfazer, no time, no room kept for one", async () => {
+    await openChannel((id) => [answer(id, [{ undoableUntil: inMs(200_000) }])]);
     const receipt = document.querySelector(".ag-rc") as HTMLElement;
-    const room = () => receipt.querySelector(".ag-rc__act");
-    expect(within(receipt).getByRole("button", { name: /^Desfazer/ })).toBeTruthy();
-    expect(room()).not.toBeNull();
-    await act(() => new Promise((r) => setTimeout(r, 2_100)));
-    await settle(2);
     expect(within(receipt).queryByRole("button")).toBeNull();
-    // Gone, its room stays, as wide as Desfazer with its time and as Refazer: hidden, and read by no one.
-    expect(room()).not.toBeNull();
-    const kept = room()?.querySelector(".ag-rc__room") as HTMLElement;
-    expect(kept.getAttribute("aria-hidden")).toBe("true");
-    expect([...kept.children].map((c) => c.textContent)).toEqual(["Desfazer0:00", "Refazer"]);
-    cleanup();
-    // One nobody could undo any more when it was drawn never had the room.
-    await openChannel((id) => [answer(id, [{ undoableUntil: inMs(-1_000) }])]);
-    expect(document.querySelector(".ag-rc")).not.toBeNull();
-    expect(document.querySelector(".ag-rc__act")).toBeNull();
+    expect(receipt.querySelector(".ag-rc__sentence")?.children).toHaveLength(1);
   });
 });
 

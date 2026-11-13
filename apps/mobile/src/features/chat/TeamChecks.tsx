@@ -2,12 +2,13 @@ import type { Message, TeamCheck } from "@agenteschat/client";
 import { targetKind, teamChecksOf } from "@agenteschat/client/lib/team-checks";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { ACT_ROW, type IconName, LineIcon, ROW_CARD_INSET, RowAction, Text, useTheme } from "@/ui";
+import { ACT_LINE, type IconName, LineIcon, ROW_CARD_INSET, RowAction, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
 import { agoOf } from "../agents/logic";
 import { agoText } from "../agents/work";
 import { chatHref } from "../links/logic";
 import { boldRuns } from "./actions";
+import { useCardTop } from "./look";
 
 const ICONS: Record<ReturnType<typeof targetKind>, IconName> = {
   email: "mail",
@@ -24,9 +25,11 @@ const ICONS: Record<ReturnType<typeof targetKind>, IconName> = {
  */
 export function TeamChecks({ message: m }: { message: Message }) {
   const list = teamChecksOf(m.meta);
+  // Cards under the message's words: the body's card gap above them, as every card in a message.
+  const cardTop = useCardTop();
   if (m.author.type !== "agent" || list.length === 0) return null;
   return (
-    <View style={styles.list}>
+    <View style={[styles.list, cardTop]}>
       {list.map((c) => (
         <Row key={c.id} check={c} selfId={m.author.id} />
       ))}
@@ -52,35 +55,38 @@ function Row({ check, selfId }: { check: TeamCheck; selfId: string | null }) {
     .join(" · ");
   const channelId = match.channelId;
   return (
-    <View style={[styles.one, ACT_ROW.row, { backgroundColor: colors.raised, borderColor: colors.line2 }]}>
+    <View style={[styles.one, { backgroundColor: colors.raised, borderColor: colors.line2 }]}>
       <View style={styles.tx}>
         <LineIcon name={ICONS[targetKind(target)]} size={15} color={colors.muted} variant="small" />
       </View>
-      <View style={[ACT_ROW.text, styles.tx]}>
-        <Text variant="small" tone="ink2">
-          {runs.map((r, i) =>
-            r.bold ? (
-              <Text key={String(i)} variant="small" tone="ink" style={styles.bold}>
-                {r.text}
-              </Text>
-            ) : (
-              r.text
-            ),
-          )}
-        </Text>
-        {detail ? (
-          <Text variant="caption" tone="faint" style={styles.detail}>
-            {detail}
+      {/* The words and Abrir in one line past the icon: Abrir under them, from their edge, once they wrap. */}
+      <View style={[ACT_LINE.row, styles.line]}>
+        <View style={[ACT_LINE.text, styles.tx]}>
+          <Text variant="small" tone="ink2">
+            {runs.map((r, i) =>
+              r.bold ? (
+                <Text key={String(i)} variant="small" tone="ink" style={styles.bold}>
+                  {r.text}
+                </Text>
+              ) : (
+                r.text
+              ),
+            )}
           </Text>
+          {detail ? (
+            <Text variant="caption" tone="faint" style={styles.detail}>
+              {detail}
+            </Text>
+          ) : null}
+        </View>
+        {channelId ? (
+          <RowAction
+            label={t("teamChecks.open")}
+            accessibilityRole="link"
+            onPress={() => router.push(chatHref(channelId))}
+          />
         ) : null}
       </View>
-      {channelId ? (
-        <RowAction
-          label={t("teamChecks.open")}
-          accessibilityRole="link"
-          onPress={() => router.push(chatHref(channelId))}
-        />
-      ) : null}
     </View>
   );
 }
@@ -105,5 +111,6 @@ const styles = StyleSheet.create({
   },
   // The "small" line (20) on the action's middle.
   tx: { paddingTop: (32 - 20) / 2 },
+  line: { flex: 1, minWidth: 0, alignItems: "flex-start", columnGap: 8 },
   detail: { marginTop: 2 },
 });

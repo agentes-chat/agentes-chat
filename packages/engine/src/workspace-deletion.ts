@@ -23,7 +23,7 @@ import { caches } from "./cache";
 import { stopOrgWork } from "./cancel";
 import { type ConnectorDeps, revokeAtProvider } from "./connectors/connections";
 import { sha256 } from "./crypto";
-import { emailLocale, queueEmail } from "./email";
+import { emailLocale, modeStamp, queueEmail } from "./email";
 import {
   CODE_LIMITS,
   CODE_RESEND_SECONDS,
@@ -90,6 +90,7 @@ const {
   usageRecords,
   wikiLinks,
   contextUsage,
+  feedbackFiles,
   mailAccounts,
   mailWatches,
   connectorConnections,
@@ -103,14 +104,15 @@ const {
 
 /*
  * Deleting a workspace: an owner asks, with proof that it's them (a code emailed to them, `spendDeletionCode`), and
- * the workspace closes to everyone at once, like a suspended one (`closedRefusal`). Any owner may restore it until its
+ * the workspace turns read-only for everyone at once: its people still read it, but every change and all its work are
+ * refused (`closedRefusal`, `readRefusal`). Any owner may restore it until its
  * date. At the date the `org.delete` job deletes it for good: its computers' AI sign-ins first, then the grants it
  * holds at Composio and GitHub, then its rows in one transaction. The date is the point of no return, by the database's clock: restoring
  * works only before it and the purge only after it, each checked under the workspace's `org-members` lock once it has
  * it, so neither can undo the other.
  */
 
-/** Days a deleted workspace stays closed, and restorable by any owner, before it goes for good. */
+/** Days a deleted workspace stays read-only, and restorable by any owner, before it goes for good. */
 export const WORKSPACE_DELETION_DAYS = 7;
 /** The job that deletes a workspace at its date (`purgeWorkspace`). */
 export const ORG_DELETE_JOB = "org.delete";
@@ -125,6 +127,7 @@ export const PURGED_BY_HAND = [
   "usage_records",
   "wiki_links",
   "context_usage",
+  "feedback_files",
 ] as const;
 /** How long the purge waits for a workspace's online computers to sign its AI accounts out. */
 const ACCOUNTS_WAIT_MS = 60_000;
@@ -134,8 +137,8 @@ export type DeletionVia = "owner" | "account";
 
 /**
  * A deletion past its date still waits while the workspace is suspended, on a hold that isn't billing's, or under the
- * operator's deletion hold (a legal hold), so evidence outlives a deletion. It never refuses one: the workspace closes
- * at once either way.
+ * operator's deletion hold (a legal hold), so evidence outlives a deletion. It never refuses one: the workspace turns
+ * read-only at once either way.
  */
 export const keptFromDeletion = (
   org: Pick<OrgStanding, "state" | "reason" | "notice"> & { deletionHoldAt: Date | null },
@@ -298,7 +301,7 @@ export async function sendDeletionCode(
         locale: emailLocale(account.locale),
         code,
         email: account.email,
-        ...(org ? { orgName: org.name } : {}),
+        ...(org ? { orgName: org.name, ...(await modeStamp(tx, org.id)) } : {}),
         support: deps.emails.support ?? null,
         url: deps.emails.publicUrl.replace(/\/$/, ""),
       },
@@ -365,8 +368,8 @@ export async function pruneDeletionCodes(db: Database, now = new Date()) {
 }
 
 /**
- * Deletes a workspace after `WORKSPACE_DELETION_DAYS` (`org.delete` then): it closes to everyone now, and its work
- * stops. `owner`: an owner asked (read again under the lock), refused while it is suspended, and its members are
+ * Deletes a workspace after `WORKSPACE_DELETION_DAYS` (`org.delete` then): it turns read-only for everyone now, and
+ * its work stops. `owner`: an owner asked (read again under the lock), refused while it is suspended, and its members are
  * emailed. `account`: its only member deleted their account, whatever its standing. Already being deleted, it keeps
  * its date (`scheduled` false) and nobody is told again.
  */
@@ -439,6 +442,7 @@ export async function closeForDeletion(
   const by = { id: actorId, name: await nameOf(tx, actorId) };
   if (input.emails && via === "owner") {
     const url = workspaceUrl(input.emails.publicUrl, orgId);
+    const mode = await modeStamp(tx, orgId);
     for (const member of await membersToTell(tx, orgId)) {
       await queueEmail(tx, {
         orgId: null,
@@ -453,6 +457,7 @@ export async function closeForDeletion(
           timeZone: member.timeZone,
           owner: member.role === "owner",
           url,
+          ...mode,
         },
       });
     }
@@ -467,7 +472,10 @@ export async function closeForDeletion(
   return { dueAt, closed: { orgId, dueAt, by } };
 }
 
-/** What follows a deletion's commit: the cached standing goes, its people's apps hear it and close, and its work stops. */
+/**
+ * What follows a deletion's commit: the cached standing goes, its people's apps hear it and turn read-only, and its
+ * work stops.
+ */
 export async function afterClosing(deps: DeletionDeps, closed: Closed) {
   caches.standing.delete(`${closed.orgId}:`);
   const event: OrgDeletingEvent = {
@@ -559,6 +567,7 @@ export async function restoreWorkspace(
     if (!deps.emails || options.account) return;
     const url = workspaceUrl(deps.emails.publicUrl, orgId);
     const byName = await nameOf(tx, actorId);
+    const mode = await modeStamp(tx, orgId);
     for (const member of await membersToTell(tx, orgId)) {
       await queueEmail(tx, {
         orgId: null,
@@ -570,6 +579,7 @@ export async function restoreWorkspace(
           orgName: org.name,
           byName,
           url,
+          ...mode,
         },
       });
     }
@@ -665,6 +675,8 @@ export async function purgeWorkspace(deps: PurgeDeps, orgId: string, options: { 
     // By its org_id, not through the runs: a run deleted earlier (a restarted one) leaves its rows behind.
     // ponytail: no index on context_usage.org_id, one scan per purge; index it if purges get slow.
     await tx.delete(contextUsage).where(eq(contextUsage.orgId, orgId));
+    // Its row only: the feedback sweep removes bytes with no row left (`sweepFeedbackFiles`).
+    await tx.delete(feedbackFiles).where(eq(feedbackFiles.orgId, orgId));
     const via = await requestedVia(tx, orgId);
     await recordOperatorEvent(tx, {
       type: "organization.deleted",
@@ -1207,8 +1219,8 @@ export async function scheduleAccountDeletion(deps: DeletionDeps, userId: string
  * Brings back an account waiting for its deletion: only before its date (`account.not_restorable` after), by the same
  * clock and under the same lock as `deleteAccount`, so neither can undo the other. No proof: it destroys nothing, and
  * only its own session gets here. Workspaces that closed with it (same date, asked by them) come back; one that can't
- * yet (suspended, or waiting for a plan another of theirs waits for) stays on its closing screen, where its Restaurar
- * says why. Plans that stopped renewing stay stopped: nothing charges until the person turns one on.
+ * yet stays as it was: suspended, on its screen, or waiting for a plan another of theirs waits for, read-only under its
+ * line, where its Restaurar says why. Plans that stopped renewing stay stopped: nothing charges until the person turns one on.
  */
 export async function restoreAccount(deps: DeletionDeps, userId: string) {
   const { closed, mine } = await deps.db.transaction(async (tx) => {

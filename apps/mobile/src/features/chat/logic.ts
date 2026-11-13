@@ -84,15 +84,15 @@ export const quietInset = (look: InsetLook) => (look.faces ? MSG_TEXT : rowBodyI
 /**
  * A message's words per Tamanho do texto (`textSize`, packages/client/src/lib/chat-look.ts), in points, both systems
  * alike. The system's own text size (Dynamic Type, Android's font scale) multiplies them, up to `CHAT_TEXT_MAX_SCALE`.
- * `md`, the default, is under the system body the words had before (17 on 24 on iOS, 16 on 24 on Android); `lg` is
- * iOS's again. Lines about 1.4 times the size.
+ * `md`, the default, is iOS's body (17 on 24), the size people read comfortably in a chat on the phone; the steps
+ * around it go two points each way. Lines about 1.4 times the size.
  */
 export const CHAT_TEXT: Record<ChatTextSize, { fontSize: number; lineHeight: number }> = {
   xs: { fontSize: 13, lineHeight: 18 },
-  sm: { fontSize: 14, lineHeight: 20 },
-  md: { fontSize: 15, lineHeight: 21 },
-  lg: { fontSize: 17, lineHeight: 24 },
-  xl: { fontSize: 19, lineHeight: 27 },
+  sm: { fontSize: 15, lineHeight: 21 },
+  md: { fontSize: 17, lineHeight: 24 },
+  lg: { fontSize: 19, lineHeight: 27 },
+  xl: { fontSize: 21, lineHeight: 29 },
 };
 /**
  * How far the system's text size may grow a message's words and the name over them: every Android scale (up to 2) and
@@ -100,17 +100,17 @@ export const CHAT_TEXT: Record<ChatTextSize, { fontSize: number; lineHeight: num
  */
 export const CHAT_TEXT_MAX_SCALE = 2;
 export type ChatText = (typeof CHAT_TEXT)[ChatTextSize];
-/** The name over the words: a step under them, on a line that holds it (14 on 19 at the default, as before). */
+/** The name over the words: a step under them, on a line that holds it (16 on 22 at the default). */
 export const chatNameOf = (text: ChatText) => ({
   fontSize: text.fontSize - 1,
   lineHeight: text.lineHeight - 2,
 });
-/** The time beside the name, on its line: 13 at the default (iOS's footnote), never under 11. */
+/** The time beside the name, on its line: two points under the words (15 at the default), never under 11. */
 export const chatTimeOf = (text: ChatText) => ({
   fontSize: Math.max(11, text.fontSize - 2),
   lineHeight: text.lineHeight - 2,
 });
-/** Code, inline or in its card: the mono face runs wide, so two points under the words (13 on 20 at the default). */
+/** Code, inline or in its card: the mono face runs wide, so two points under the words (15 on 23 at the default). */
 export const chatCodeOf = (text: ChatText) => ({
   fontSize: text.fontSize - 2,
   lineHeight: text.lineHeight - 1,
@@ -375,6 +375,7 @@ export function questionOf(meta: Message["meta"]): AgentQuestion | null {
     status: q.status === "answered" ? "answered" : "open",
     answer: str(q.answer) || null,
     answeredByUserId: str(q.answeredByUserId) || null,
+    answeredAt: str(q.answeredAt) || null,
     ...(str(q.requestedForUserId) ? { requestedForUserId: str(q.requestedForUserId) } : {}),
     ...(q.withdrawn === true ? { withdrawn: true as const } : {}),
     ...(q.dismissed === true ? { dismissed: true as const } : {}),
@@ -414,8 +415,7 @@ export function workingEntries(
   typing: string[] = [],
   personName: (id: string) => string | undefined = () => undefined,
 ): ActivityEntry[] {
-  // Writing agents stay in: the line above the box is on while they work.
-  return barEntries(runs, typing, agentName, personName, consults, true);
+  return barEntries(runs, typing, agentName, personName, consults);
 }
 
 /**
@@ -427,39 +427,24 @@ export const stoppableInLine = (runs: LiveRun[]) =>
 
 /**
  * What the line above the composer stops with its own "Parar" (the working line, or the requests' line while it
- * takes its place): the runs I may stop of the one agent at work here, whose live rows are out of view (a row on
- * screen carries its own stop). With several, the line can't say whose (the box's own stop stops them all).
+ * takes its place): the runs I may stop of the one agent at work here. With several, the line can't say whose (the
+ * box's own stop stops them all).
  */
-export function lineStops(
-  entries: ActivityEntry[],
-  runs: LiveRun[],
-  canStop: (run: LiveRun) => boolean,
-  rowInView: (run: LiveRun) => boolean = () => false,
-): LiveRun[] {
+export function lineStops(entries: ActivityEntry[], runs: LiveRun[], canStop: (run: LiveRun) => boolean): LiveRun[] {
   const agents = entries.filter((e) => e.type === "agent");
   const solo = agents.length === 1 ? agents[0] : undefined;
-  return solo ? stoppableInLine(runs).filter((r) => r.agentId === solo.id && canStop(r) && !rowInView(r)) : [];
+  return solo ? stoppableInLine(runs).filter((r) => r.agentId === solo.id && canStop(r)) : [];
 }
 
 /**
- * The one agent the working line speaks for while its live row is out of view (`entriesOffScreen` left it in): its
- * run, for the row's step, its time, "Ver" and its stop. None with several agents, or while its row is on screen
- * (a question it asks keeps its phrase in the line; the row says the rest).
+ * The one agent the working line speaks for: its run, for its step, its time and its stop. None with several agents
+ * (a question it asks keeps its phrase in the line).
  */
-export function awayRun(
-  entries: ActivityEntry[],
-  runs: LiveRun[],
-  rowInView: (run: LiveRun) => boolean,
-): LiveRun | undefined {
+export function awayRun(entries: ActivityEntry[], runs: LiveRun[]): LiveRun | undefined {
   const agents = entries.filter((e) => e.type === "agent");
   const solo = agents.length === 1 ? agents[0] : undefined;
-  const run = solo ? runs.find((r) => r.agentId === solo.id) : undefined;
-  return run && !rowInView(run) ? run : undefined;
+  return solo ? runs.find((r) => r.agentId === solo.id) : undefined;
 }
-
-/** The run whose live row offers its stop (the web's rule): the latest one here I may stop. */
-export const rowStopOf = (runs: LiveRun[], canStop: (run: LiveRun) => boolean): LiveRun | undefined =>
-  stoppableInLine(runs).findLast((r) => canStop(r));
 
 /**
  * Who may press "Parar" (the web's `useStopRun`): admins, the agent's owner,
@@ -609,7 +594,6 @@ export const hangsUnder = (
   thread ||
   Boolean(m.meta?.missionStart) ||
   reactionPills(reactions ?? m.reactions, meId).length > 0 ||
-  (m.memories?.length ?? 0) > 0 ||
   artifactsOf(m.meta).length > 0 ||
   Boolean(messageMediaOf(m.meta)) ||
   Boolean(issueWorkOf(m.meta));
@@ -694,7 +678,7 @@ export type Block =
   | { kind: "heading"; inline: Inline[] }
   | { kind: "bullet"; inline: Inline[]; ordinal: string | null }
   | { kind: "quote"; inline: Inline[] }
-  | { kind: "code"; lang: string; text: string; open?: boolean }
+  | { kind: "code"; lang: string; text: string }
   | { kind: "table"; header: Inline[][]; rows: Inline[][][]; align: TableAlign[] }
   /** Closed until tapped (the shared `detailsAt`, ADR 0147): `body` is Markdown of its own. */
   | { kind: "details"; summary: Inline[]; body: string };
@@ -863,14 +847,13 @@ function plainBlocks(body: string): Block[] {
   const parts = body.split(/```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g);
   for (let i = 0; i < parts.length; i += 3) {
     const text = parts[i] ?? "";
-    // The last part may hold a block still being written (no closing fence yet): the web's rule, so an
-    // answer that is still streaming shows its code (or "Montando o gráfico…") instead of the raw text.
+    // The last part may hold a block without its closing fence: it runs to the end of the text, as code.
     const last = i + 3 >= parts.length;
     const open = last ? /```([a-zA-Z0-9_+-]*)\n([\s\S]*)$/.exec(text) : null;
     if (open) {
       textBlocks(text.slice(0, open.index), out);
       const code = (open[2] ?? "").replace(/`{1,2}$/, "").replace(/\n$/, "");
-      out.push({ kind: "code", lang: open[1] ?? "", text: code, open: true });
+      out.push({ kind: "code", lang: open[1] ?? "", text: code });
     } else textBlocks(last ? text.replace(/```[a-zA-Z0-9_+-]*$/, "") : text, out); // a fence still opening
     if (i + 2 < parts.length)
       out.push({ kind: "code", lang: parts[i + 1] ?? "", text: (parts[i + 2] ?? "").replace(/\n$/, "") });
@@ -923,13 +906,16 @@ function textBlocks(chunk: string, out: Block[]) {
 
 /**
  * The day of the topmost row in view that has one (a day line, a message), for the floating date while the list
- * scrolls; null with none. `prev` comes back unchanged while the day is the same, so the screen's state only changes
- * when the day does (a new timestamp per row reaching the top would re-render the whole chat during a fling).
+ * scrolls; null with none, and while the list's first row is in view: above it is the conversation's start (its
+ * greeting, the setup card, the pins), which has no day for a date to float over. `prev` comes back unchanged while
+ * the day is the same, so the screen's state only changes when the day does (a new timestamp per row reaching the top
+ * would re-render the whole chat during a fling).
  */
 export function dayInView(
   rows: readonly { index: number; item: { kind: string; iso?: string; message?: Pick<Message, "createdAt"> } }[],
   prev: string | null = null,
 ): string | null {
+  if (rows.some((r) => r.index === 0)) return null;
   const top = [...rows]
     .sort((a, b) => a.index - b.index)
     .find(({ item }) => (item.kind === "day" && item.iso) || (item.kind === "message" && item.message));
@@ -950,3 +936,6 @@ export const readMark = (channelId: string, threadId: string | null | undefined)
  */
 export const messageRefWords = (t: TFunction, card: MessageCard) =>
   `${card.kind === "dm" ? `@${card.name}` : `#${card.name}`}${card.threadId ? ` › ${t("messageRefs.thread")}` : ""} › `;
+
+/** Two taps this close on a message are its double tap (the thumbs up), on its words or on a receipt under them. */
+export const DOUBLE_TAP_MS = 300;

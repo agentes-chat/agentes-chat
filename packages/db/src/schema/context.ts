@@ -89,6 +89,11 @@ export interface ContextEvidence {
   /** For `agent`/`self`: the agent that made the claim. */
   agentId?: string;
   at: string;
+  /**
+   * `human` only: the item's content is this message's exact words, saved in a run that read outside content (ADR
+   * 0167). Its title is the agent's wording, for people only: a model reads the quote alone.
+   */
+  quote?: boolean;
 }
 
 /**
@@ -191,8 +196,9 @@ export interface ProposedAccessLine {
 
 /**
  * One setting of an agent the team's right hand proposes to change (ADR 0137): its value then (`from`) and the one
- * proposed (`to`). `channel_add` / `channel_remove` / `reply_mode` name their channel in `channelId`; `label` is
- * what the card shows for a value that is an id (a model's, an account's, a person's or a channel's name).
+ * proposed (`to`). `channel_add` / `channel_remove` / `reply_mode` name their channel in `channelId`, `skill` (on or
+ * off) its skill in `skillId`; `label` is what the card shows for a value that is an id (a model's, an account's, a
+ * person's or a channel's name, the skill's).
  */
 export interface ProposedSettingLine {
   field:
@@ -204,6 +210,7 @@ export interface ProposedSettingLine {
     | "channel_add"
     | "channel_remove"
     | "reply_mode"
+    | "skill"
     | "name"
     | "look"
     | "reports_to"
@@ -212,6 +219,7 @@ export interface ProposedSettingLine {
   from: unknown;
   to: unknown;
   channelId?: string;
+  skillId?: string;
   label?: { from?: string; to?: string };
 }
 

@@ -2,6 +2,7 @@ import type { ServerCheck } from "@agenteschat/client/lib/server";
 import type { HelloLine } from "../control/client";
 import type { Candidate } from "../control/first-run";
 import type {
+  KeepRunning,
   LocalChoice,
   LocalServerStatus,
   ReachResult,
@@ -9,6 +10,8 @@ import type {
   StepChange,
   Tailnet,
 } from "../control/local-server";
+import type { LinkInfo } from "../control/pair";
+import type { MacPermission, SetupState } from "../control/permissions";
 import type { Platform } from "../control/platform";
 import type { ServerList, ServerWorkspaces } from "../control/server";
 import type { ThisMacRequest } from "../control/this-mac";
@@ -45,6 +48,14 @@ export interface AppInfo {
   os: string;
   /** Rust's name: `aarch64` or `x86_64`. */
   arch: string;
+  /** The system's own version where the app reads it (macOS: `15.1`). */
+  system?: string | null;
+}
+
+/** A server's answer to `siteFetch`: its status and body as text. */
+export interface SiteAnswer {
+  status: number;
+  body: string;
 }
 
 /** What the site last put on the Dock's badge (`this_mac` `badge`). */
@@ -87,10 +98,29 @@ export interface Host {
   chooseServer(server: string, page?: string): Promise<void>;
   /** Every server's workspaces, as the app last read them with each one's session (ADR 0154). */
   workspaces(): Promise<ServerWorkspaces[]>;
+  /** The app read the workspaces again and something changed. */
+  onWorkspaces(cb: () => void): () => void;
+  /**
+   * A pair link's workspace and maker, asked of its server by the app without a session (the welcome window only);
+   * rejects with `link_expired` (unknown, used or expired) or `unreachable`.
+   */
+  pairLinkInfo(server: string, code: string): Promise<LinkInfo>;
+  /** The system's own dialog before Preferences pairs this computer with `org` on `server`: false when declined. */
+  askToPair(server: string, org: string): Promise<boolean>;
+  /**
+   * One request to a server of the app's list with the main window's session there (Preferences and the welcome
+   * window): this computer's devices, who can use them, a phone's Stop and confirming this computer's own pairing
+   * code (`site_fetch` in workspaces.rs allows only those).
+   */
+  siteFetch(server: string, method: string, path: string, body?: string): Promise<SiteAnswer>;
   /** How the welcome window opens, taken once: `add` from the site's "Add a workspace", else null. */
   welcomeMode(): Promise<"add" | null>;
+  /** The welcome window in its adding mode ("Add a workspace", from Preferences). */
+  addWorkspace(): Promise<void>;
   /** Takes `server` out of the list (the server and the account there stay as they are). */
   removeServer(server: string): Promise<void>;
+  /** Signs the app out of `server`, which stays in the list (signed out); a window on it goes to its sign-in. */
+  signOutServer(server: string): Promise<void>;
   /** Where a server may be: this computer and the person's Tailscale network, not checked yet. */
   discover(): Promise<Candidate[]>;
   /** Whether `server` is an agentes.chat server this app can use (`GET /api/instance`). */
@@ -160,8 +190,11 @@ export interface Host {
   cancelLocalSetup(): Promise<void>;
   onSetupStep(cb: (change: StepChange) => void): () => void;
   startLocalServer(): Promise<void>;
-  /** Stops it; `forget`: it no longer starts with the app (its data stays). */
-  stopLocalServer(forget: boolean): Promise<void>;
+  /**
+   * Stops it, and it stays stopped (also when the app opens again) until Start, or for `minutes` and then it starts
+   * by itself. `forget`: the app no longer runs it here (its data stays).
+   */
+  stopLocalServer(forget: boolean, minutes?: number): Promise<void>;
   restartLocalServer(): Promise<void>;
   /** Reach from the person's other devices (Tailscale), on or off; the main window follows the address. */
   setLocalReach(on: boolean): Promise<ReachResult>;
@@ -173,6 +206,14 @@ export interface Host {
   setLocalUsage(on: boolean): Promise<void>;
   /** "Back up now": the file it wrote. */
   backupLocalServer(): Promise<string>;
+  /** The nightly backup's switch and the "Copy to" folder (null: none). */
+  setLocalBackups(nightly: boolean, copyTo: string | null): Promise<void>;
+  /** The server here goes back to one of its backups; rejects with `start` when that backup didn't start. */
+  restoreLocalServer(file: string): Promise<void>;
+  /** Automatic login and start after a power failure (macOS). */
+  keepRunning(): Promise<KeepRunning>;
+  /** System Settings at Users & Groups or Energy (macOS). */
+  openSystemSettings(page: "users" | "energy"): Promise<void>;
   /** What "Copy details" copies. */
   localDiagnostics(): Promise<string>;
   /** The server here's homes again, with new tokens for the organizations in `rotate`. */
@@ -183,6 +224,20 @@ export interface Host {
   openTailscale(page: "app" | "download" | "https"): Promise<void>;
   /** A home the server here's sync just made (its first tools go on, `firstTools`). */
   onNewHostHome(cb: (homeId: string) => void): () => void;
+  /** macOS: whether the app may record the screen (asks nothing). True elsewhere. */
+  screenAccess(): Promise<boolean>;
+  /** macOS: the system's Screen Recording prompt, the first time; it takes effect once the app opens again. */
+  requestScreenAccess(): Promise<boolean>;
+  /** macOS: whether the app has Full Disk Access (asks nothing, and no prompt can ask for it). True elsewhere. */
+  diskAccess(): Promise<boolean>;
+  /** macOS: a short Bonjour browse, which raises the Local Network prompt the first time. Nothing says the answer. */
+  askLocalNetwork(): Promise<void>;
+  /** System Settings › Privacy & Security on the permission's own list. */
+  openPrivacy(pane: MacPermission): Promise<void>;
+  /** The setup macOS may quit the app in the middle of, kept until it is finished (`prepare.rs`). */
+  setupState(): Promise<SetupState | null>;
+  /** Keeps it (with the main window's page, to open there again) or, null, forgets it. */
+  setSetupState(state: SetupState | null): Promise<void>;
 }
 
 export type MenuAction =
@@ -194,4 +249,6 @@ export type MenuAction =
   | "pause1h"
   | "pauseTomorrow"
   | "pauseManual"
-  | "resume";
+  | "resume"
+  // The Mac's Servers › this computer's server › Restart (menus.rs `here_menu`).
+  | "hereRestart";

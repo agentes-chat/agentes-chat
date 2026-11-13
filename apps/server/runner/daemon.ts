@@ -27,6 +27,7 @@ import {
   type RunnerFrame,
   type RunnerInfo,
   type RunnerPause,
+  type RunnerToolchains,
   type RunnerTools,
 } from "@agenteschat/adapters/machine-protocol";
 import { redactCommon } from "@agenteschat/adapters/redact";
@@ -72,7 +73,10 @@ import {
   ensureGitCacheUser,
   GIT_CACHE_DIR,
   grantGitCache,
+  keepContainers,
   readAgentUsers,
+  rootlessContainers,
+  stopContainers,
   systemLauncher,
   trustedNetworkLauncher,
 } from "./agent-users";
@@ -106,6 +110,8 @@ import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun } from "./executors";
 import { systemGitCache } from "./git";
 import type { HandlerContext, RequestObserver, RequestOutcome } from "./handlers";
+import { Holds } from "./holds";
+import { IphoneSetup, type IphoneSetupOptions } from "./iphone-setup";
 import { currentProcess, isCompiled, selfCommand } from "./launch";
 import { tailLines } from "./logfile";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
@@ -125,10 +131,11 @@ import {
   writeNetworkState,
 } from "./network-state";
 import { type CachedLogo, logoDataUrl, readCachedLogo, removeCachedLogo, syncOrgLogo } from "./org-logo";
-import { type DeviceGrant, devicePair, type FetchFn, PairingError, uniqueWorkspace } from "./pairing";
+import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, uniqueWorkspace } from "./pairing";
 import { agentId8, agentWorkspace } from "./paths";
+import { iphonesWifiFileOf, PhoneManager, type PhoneManagerOptions } from "./phones";
 import { agentSecrets, dropStoredSiteSecrets, secretValue } from "./secrets";
-import { AGENTS_CGROUP } from "./service";
+import { AGENTS_CGROUP, systemdBooted } from "./service";
 import {
   ensureSingleShared,
   ensureSystemShared,
@@ -138,6 +145,7 @@ import {
   systemShared,
   withShared,
 } from "./shared-folder";
+import { ackStandby, readStandby, STANDBY_POLL_MS, standbyOn } from "./standby";
 import { prepareSystemStartPage } from "./start-page";
 import { DataSockets, RELAYED_FILE, RelayCount } from "./streams";
 import {
@@ -150,6 +158,7 @@ import {
 } from "./supervisor";
 import { type SettledTask, TaskManager } from "./tasks";
 import { runnerTerminalUser, systemTerminalUser, Terminals, type TerminalUser } from "./terminal";
+import { appleToolchains, cachedToolchains, TOOLCHAINS_FILE } from "./toolchains";
 
 /**
  * The runner's long-lived core, shared by `agentes-runner start` (terminal,
@@ -210,7 +219,9 @@ export function prepareWorkspace(dir: string): string {
 /**
  * The config after a device-code pairing. Limits of an earlier pairing of
  * this home stay; access starts from `tools` with no folders, except when
- * the server gave back the same machine (a reconnect): its folders and tools stay.
+ * the server gave back the same machine (a reconnect, or a workspace's computer
+ * moved to new hardware with its files): its folders, tools, allowed services
+ * and pause stay.
  * The mode always stays: a system home paired again must never become a
  * root runner that does agents' work itself.
  */
@@ -243,6 +254,8 @@ export function configFromGrant(
     ...(grant.org.id ? { orgId: grant.org.id } : {}),
     ...(grant.org.name ? { orgName: grant.org.name } : {}),
     access: same && prev?.access ? prev.access : { folders: [], tools },
+    ...(same && prev?.services?.length ? { services: prev.services } : {}),
+    ...(same && prev?.paused ? { paused: prev.paused } : {}),
   };
 }
 
@@ -274,13 +287,22 @@ export function deviceInfo(name?: string, previous?: { machineId: string; token:
 }
 
 /** `16:24`, or `Oct 18 16:24` when not today (local time; the person's own computer). */
-function shortTime(iso: string, now = Date.now()) {
+export function shortTime(iso: string, now = Date.now()) {
   const d = new Date(iso);
   const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   const today = new Date(now);
   if (d.toDateString() === today.toDateString()) return hm;
   return `${d.toLocaleString("en", { month: "short" })} ${d.getDate()} ${hm}`;
 }
+
+/** Who agents' commands run as on this computer (`os.userInfo` throws for a uid with no passwd entry). */
+const OS_USER = (() => {
+  try {
+    return os.userInfo().username;
+  } catch {
+    return "";
+  }
+})();
 
 const firstLine = (s: string, max = 120) => {
   const t = s.replace(/\s+/g, " ").trim();
@@ -330,6 +352,8 @@ export interface DaemonOptions {
   /** Tests: an address observation without network or a real agent process. */
   probeEgress?: typeof probeEgress;
   executors?: () => RunnerInfo["executors"];
+  /** App mode: takes the login shell's PATH again before "Check again" looks for the coding CLIs. */
+  refreshPath?: () => void;
   /** Tests: how the coding CLIs' looks run (the background cache stays real). */
   executorRun?: ExecutorRun;
   /** How the accounts' CLIs start (default `claude` / `codex`). */
@@ -357,6 +381,12 @@ export interface DaemonOptions {
   selfCheck?: () => Promise<string | null>;
   /** Tests: how soon a failed self-check runs again (`SELF_CHECK_RETRY_MS`). */
   selfCheckRetryMs?: number;
+  /** Tests: what `hello.toolchains` says instead of a look at the computer's tools. */
+  toolchains?: () => RunnerToolchains | undefined;
+  /** Tests: the phones' tools and folders, or `false` for none (a single-user runner looks for phones). */
+  phones?: Partial<PhoneManagerOptions> | false;
+  /** Tests: the iPhone setup's tools and folders. */
+  iphone?: Partial<IphoneSetupOptions>;
 }
 
 /** What a task is in its activity words: a shell task's command, or the CLI that works it (the app names it). */
@@ -425,6 +455,7 @@ export class RunnerDaemon implements RequestObserver {
   private readonly executors: () => NonNullable<RunnerInfo["executors"]>;
   /** False until the first look on a new install: `hello` then leaves the CLIs out, so the server keeps "unknown". */
   private readonly executorsKnown: () => boolean;
+  private readonly executorsFresh: () => Promise<unknown>;
   private readonly now: () => number;
   /** The computer brains' accounts (ADR 0041): machine-wide, kept across pairings and sessions. */
   readonly accounts: AccountManager;
@@ -441,6 +472,20 @@ export class RunnerDaemon implements RequestObserver {
   readonly terminals: Terminals;
   /** The refs each agent's desktop use gave out, across sessions: a number never comes back for another element. */
   private readonly desktopRefsGiven = new Map<string, { last: number }>();
+  /** The phones this computer reaches (single-user runners): their locks outlive a reconnect. */
+  private phones: PhoneManager | null = null;
+  /** The phones the last `hello` carried (JSON). */
+  private toldPhones = "[]";
+  /** What this computer builds with, cached (`hello.toolchains`); looked at from the first session on. */
+  private toolchains: { get(): RunnerToolchains | undefined; stop(): void } | null = null;
+  /** The Mac's side of an iPhone's setup (the desktop app asks), made on its first request. */
+  private iphone: IphoneSetup | null = null;
+  /** System mode under systemd: the agents' holds (ADR 0176), which outlive sessions and this process. */
+  private holds: Holds | null = null;
+  /** An operator's standby is in force (ADR 0176): no link to the server, everything else runs. */
+  private standby = false;
+  /** The last standby ask answered (`standby-ack.json`). */
+  private standbyAsk: string | null = null;
 
   constructor(private readonly opts: DaemonOptions) {
     this.uidNetworks = new AgentNetworks({}, readNetworkPins(opts.home));
@@ -459,6 +504,7 @@ export class RunnerDaemon implements RequestObserver {
       });
     this.executors = () => exec() ?? {};
     this.executorsKnown = () => !("known" in exec) || exec.known === true;
+    this.executorsFresh = (exec as { fresh?: () => Promise<unknown> }).fresh ?? (async () => this.executors());
     // System mode is set at install and kept through pairings: account folders are lent to agents' users.
     let system = false;
     try {
@@ -525,7 +571,20 @@ export class RunnerDaemon implements RequestObserver {
     const agentUser = this.session?.agentUser;
     if (!agentUser) return runnerUser(this.opts.home, await this.agentFolder(agent), agent);
     const u = agentUser(agent);
+    this.startContainers(u);
     return systemDesktopUser(systemLauncher(u), { uid: u.uid, gid: agentGid(u.user) });
+  }
+
+  /** Its containers service (ADR 0169), as before its worker: a desktop's or a terminal's docker finds it. */
+  private startContainers(u: AgentUser) {
+    if (this.opts.workers || !rootlessContainers()) return;
+    const problem = keepContainers(u, this.containersAllowed(u.id));
+    if (problem) this.opts.log(`[${u.user}] containers unavailable: ${problem}`);
+  }
+
+  /** The agents frame lets it have a containers service (`MachineAgent.containers`). */
+  private containersAllowed(agentId: string) {
+    return this.agents.find((a) => a.id === agentId)?.containers === true;
   }
 
   /** Its switch is on, and the last check made under that switch passed. */
@@ -624,7 +683,9 @@ export class RunnerDaemon implements RequestObserver {
   private async terminalUser(agent: AgentScope): Promise<TerminalUser> {
     const agentUser = this.session?.agentUser;
     if (!agentUser) return runnerTerminalUser(await this.agentFolder(agent));
-    return systemTerminalUser(systemLauncher(agentUser(agent)), agent);
+    const u = agentUser(agent);
+    this.startContainers(u);
+    return systemTerminalUser(systemLauncher(u), agent);
   }
 
   /** The agent's folder in the connected workspace. */
@@ -712,7 +773,11 @@ export class RunnerDaemon implements RequestObserver {
     const sizes = setInterval(() => this.measureShared(), SHARED_SIZE_MS);
     sizes.unref?.();
     this.timers.push(sizes);
-    // System mode: for the Cloud's guard, at most once a minute.
+    // System mode: for an operator's network guard, at most once a minute.
+    this.checkStandby();
+    const standby = setInterval(() => this.checkStandby(), STANDBY_POLL_MS);
+    standby.unref?.();
+    this.timers.push(standby);
     const relayed = setInterval(() => {
       if (!this.session?.supervisor) return;
       try {
@@ -754,6 +819,10 @@ export class RunnerDaemon implements RequestObserver {
     const s = this.session;
     this.session = null;
     if (s) await this.closeSession(s);
+    this.holds?.close();
+    await this.phones?.stop();
+    this.iphone?.stop();
+    this.toolchains?.stop();
     await this.accounts.close().catch(() => undefined);
     await this.chain.catch(() => undefined);
     this.startWaiter?.({ exitCode: 0, reason: "stopped", message: "stopped" });
@@ -911,6 +980,7 @@ export class RunnerDaemon implements RequestObserver {
       privateNetwork: Boolean(
         (this.session?.network ?? c)?.networkLauncher || (this.session?.network ?? c)?.networkMark,
       ),
+      ...(c ? { commitHost: new URL(c.server).hostname } : {}),
       limits: {
         maxConcurrentTasks: c?.maxConcurrentTasks ?? DEFAULT_LIMITS.maxConcurrentTasks,
         taskMaxSeconds: c?.taskMaxSeconds ?? DEFAULT_LIMITS.taskMaxSeconds,
@@ -1087,6 +1157,7 @@ export class RunnerDaemon implements RequestObserver {
       accounts: this.accounts,
       ...(this.self.compiled ? { wrapperCommand: [...this.self.command, "task-wrapper"] } : {}),
       onSettled: (t) => this.taskSettled(t),
+      commitHost: () => this.workerState().commitHost,
       ...(this.opts.caffeinate !== undefined ? { caffeinate: this.opts.caffeinate } : {}),
     });
     await tasks.init();
@@ -1167,7 +1238,7 @@ export class RunnerDaemon implements RequestObserver {
     let accountBrains: AccountBrains | null = null;
     if (config.mode === "system") {
       const range = config.agentUidRange ?? DEFAULT_AGENT_UID_RANGE;
-      const users = new AgentUsers({ home, range, ...(sharedSpec && this.shared ? { shared: sharedSpec, log } : {}) });
+      const users = new AgentUsers({ home, range, log, ...(sharedSpec && this.shared ? { shared: sharedSpec } : {}) });
       for (const user of readAgentUsers(home)) {
         this.networkUsers.set(user.uid, user);
         // Keep already-running users out of cron/at even when their network must drain before preparation.
@@ -1270,13 +1341,16 @@ export class RunnerDaemon implements RequestObserver {
           return this.networkScopesBusy(agentId) || (!!user && this.networkProcessesBusy(user));
         },
         user: agentUser,
-        start: launchWorker(this.self.command, policy),
+        start: launchWorker(this.self.command, policy, undefined, log, (id) => this.containersAllowed(id)),
         ...(this.opts.workers || config.managedBy === "host"
           ? {}
           : {
               prepareExisting: (existing: AgentUser[]) => prepareAgents(existing, prepare, policy, log),
             }),
         stopAccountScopes: (uid) => this.accountUsers?.stopScopes(uid),
+        ...(this.opts.workers || !rootlessContainers()
+          ? {}
+          : { stopContainers: (uid: number) => void stopContainers(uid) }),
         toolNotice: (agentId, notice) => accountBrains?.toolNotice(agentId, notice),
         taskStop: (agentId, taskId) => accountBrains?.stopTask(agentId, taskId),
         lend: (kind, accountId, uid) => this.accounts.lendTo(kind, accountId, uid),
@@ -1288,6 +1362,7 @@ export class RunnerDaemon implements RequestObserver {
         codexAuth: (accountId, auth) => this.accounts.keepCodexAuth(accountId, auth),
         desktop: (agent, use) => this.workerDesktop(agent, use),
         desktopViewers: (agentId) => this.desktops.status({ id: agentId }).streams,
+        browserKept: (agentId) => this.holds?.kept(agentId) ?? false,
         account: (agentId) => this.agentAccount(agentId),
         accounts: (agentId) => this.agentAccounts(agentId),
         ...(this.opts.workers ? { start: this.opts.workers.start } : { gitCache: rootGitCache() }),
@@ -1300,6 +1375,21 @@ export class RunnerDaemon implements RequestObserver {
         relayed: this.relayed,
         log,
       });
+      // The locks need logind (systemd), and each agent its own user to take them as.
+      if (!this.opts.workers && systemdBooted()) {
+        this.holds ??= new Holds({
+          home,
+          log,
+          onEnded: (holdId, reason) => this.send({ type: "keep.ended", holdId, reason }),
+          onBrowser: () => this.session?.supervisor?.stateChanged(),
+          closeBrowser: (agent) =>
+            this.session?.supervisor?.run(
+              { op: "browser.stop", agent },
+              { signal: new AbortController().signal, output: () => {} },
+            ) ?? Promise.resolve(),
+        });
+        this.holds.watch();
+      }
       if (this.accountUsers) {
         accountBrains = new AccountBrains({
           root: path.join(home, "account-brains"),
@@ -1323,6 +1413,33 @@ export class RunnerDaemon implements RequestObserver {
     // Agents working as this runner's user: what their browsers' first command would install is installed now (in
     // system mode, the installer shares it with every agent).
     if (!supervisor && this.access().tools.browser === true) void browser.prepareInBackground();
+    this.toolchains ??= this.opts.toolchains
+      ? { get: this.opts.toolchains, stop: () => {} }
+      : cachedToolchains(
+          path.join(home, TOOLCHAINS_FILE),
+          undefined,
+          process.platform === "darwin"
+            ? {
+                look: () => appleToolchains(),
+                // An older server drops the frame: its next hello carries the same.
+                onChange: (toolchains) => this.send({ type: "toolchains.changed", toolchains }),
+              }
+            : null,
+        );
+    // Phones are reached as the person (adb's key, the Mac's pairing with the iPhone): a system-mode runner has none.
+    if (!this.phones && config.mode !== "system" && this.opts.phones !== false) {
+      this.phones = new PhoneManager({
+        log,
+        onChange: (phones) => {
+          this.send({ type: "phones.changed", phones });
+          this.queueStatus();
+        },
+        iphonesWifiFile: () => iphonesWifiFileOf(home, this.stored?.machineId),
+        ...(this.opts.caffeinate !== undefined ? { caffeinate: this.opts.caffeinate } : {}),
+        ...this.opts.phones,
+      });
+      this.phones.start();
+    }
     const context: HandlerContext = {
       workspaceReal,
       get exec() {
@@ -1346,6 +1463,7 @@ export class RunnerDaemon implements RequestObserver {
         : async (spare) => brains.warm(spare),
       codex: { runnerHome: home, mcp: mcpCommand, runs: codexRuns, app: codexApp },
       paused: () => this.stopping || this.pauseState().paused,
+      setPause: (paused, until, by) => (paused ? this.pause(until, by) : this.resume()),
       // A config written later without the mode never turns a system session back into one that does agents' work.
       systemMode: () => config.mode === "system" || this.stored?.mode === "system",
       ...(supervisor ? { workers: supervisor } : {}),
@@ -1368,6 +1486,8 @@ export class RunnerDaemon implements RequestObserver {
           browser.stopInput(agentId);
         }
       },
+      ...(this.phones ? { phones: this.phones } : {}),
+      ...(this.holds && agentUser ? { keep: this.keepOps(this.holds, agentUser) } : {}),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
     // it lands in `hello` if it finishes first, else comes after as `accounts.changed`. Nothing reaches the
@@ -1382,7 +1502,12 @@ export class RunnerDaemon implements RequestObserver {
         const accounts = this.accounts.snapshot();
         const usage = this.ownUsage();
         told = JSON.stringify([accounts, usage]);
+        const phones = this.phones?.list();
+        if (phones) this.toldPhones = JSON.stringify(phones);
+        const toolchains = this.toolchains?.get();
         return {
+          ...(phones ? { phones } : {}),
+          ...(toolchains ? { toolchains } : {}),
           ...this.info(workspaceReal),
           browser: browser.info(),
           desktop: this.desktops.info(),
@@ -1392,6 +1517,7 @@ export class RunnerDaemon implements RequestObserver {
           ...usage,
           // Who may control a desktop or open a terminal follows it (ADR 0058 §4).
           ...(agentUser ? { mode: "system" as const } : {}),
+          ...(this.holds ? { holds: this.holds.report() } : {}),
         };
       },
       executors: () => this.helloExecutors(),
@@ -1433,6 +1559,8 @@ export class RunnerDaemon implements RequestObserver {
         if (accounts && JSON.stringify([accounts, usage]) !== told) {
           this.send({ type: "accounts.changed", accounts, ...usage });
         }
+        const phones = this.phones?.list();
+        if (phones && JSON.stringify(phones) !== this.toldPhones) this.send({ type: "phones.changed", phones });
       },
       ...(this.opts.dial ? { dial: this.opts.dial } : {}),
     });
@@ -1467,12 +1595,48 @@ export class RunnerDaemon implements RequestObserver {
       agentUser,
     };
     this.session = session;
+    // Asked before this session started (a runner started again mid-standby): it stays off the server.
+    if (this.standby) connection.standby();
     supervisor?.boot();
     this.observeNetwork();
     log(
       `agentes-runner ${RUNNER_VERSION}: connecting to ${config.server} (workspace ${workspaceReal}${this.access().tools.commands ? "" : ", commands off"})`,
     );
     void connection.run().then((outcome) => this.sessionEnded(session, outcome));
+  }
+
+  /** `keep.*` (ADR 0176): each hold in the agent's slice, its program checked against the agent's user. */
+  private keepOps(holds: Holds, user: (agent: AgentScope) => AgentUser): NonNullable<HandlerContext["keep"]> {
+    return {
+      start: (agent, req) => holds.start(agent, user(agent), req),
+      end: (req) => holds.end(req),
+    };
+  }
+
+  /** An operator's standby (ADR 0176), asked in `standby.json`: while it is in force, no link to the server. */
+  private checkStandby() {
+    const ask = readStandby(this.opts.home);
+    const on = standbyOn(ask);
+    if (on !== this.standby) {
+      this.standby = on;
+      const s = this.session;
+      if (on) {
+        this.opts.log("standby: the link to the server is down; everything else runs on");
+        s?.connection.standby();
+        s?.streams.closeAll();
+      } else {
+        this.opts.log("standby is over: connecting");
+        s?.connection.resume();
+      }
+    }
+    if (ask && ask.id !== this.standbyAsk) {
+      this.standbyAsk = ask.id;
+      try {
+        ackStandby(this.opts.home, ask.id);
+      } catch (err) {
+        this.opts.log(`standby: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
   }
 
   private networkScopesBusy(agentId: string): boolean {
@@ -1861,6 +2025,8 @@ export class RunnerDaemon implements RequestObserver {
         const clear = deleted.has(u.id) && !here.has(u.id) && !this.swept.has(u.id);
         if (!clear && !gone.includes(u.id)) continue;
         hosted?.dropTurns(new RunnerError("dropped", "The agent left this computer."), u.id);
+        // Its containers stop with it; back, its `restart: always` ones start again with its containers service.
+        if (!this.opts.workers && rootlessContainers()) stopContainers(u.uid);
         // Archived or moved, it may come back: what the sign-ins hold for it stays until it is deleted.
         if (!clear) {
           this.accountUsers?.stopScopes(u.uid);
@@ -1871,6 +2037,27 @@ export class RunnerDaemon implements RequestObserver {
           this.accountUsers?.sweepAgent(u);
         } catch (err) {
           this.opts.log(`${u.user}: couldn't clear it from its sign-ins (${err instanceof Error ? err.message : err})`);
+        }
+      }
+      // Its brain changed (ADR 0169): a sandboxed one's containers service stops before its next turn; one let have it
+      // again gets it now while its worker runs, else with its worker's next start.
+      if (!this.opts.workers && rootlessContainers()) {
+        const had = new Set(this.agents.filter((a) => a.containers).map((a) => a.id));
+        for (const a of list) {
+          const uid = uids.get(a.id);
+          if (uid === undefined || Boolean(a.containers) === had.has(a.id)) continue;
+          const agentUser = this.session?.agentUser;
+          if (!a.containers) stopContainers(uid);
+          else if (agentUser && this.session?.supervisor?.runningPid(a.id) !== undefined) {
+            try {
+              const u = agentUser(a);
+              const problem = keepContainers(u, true);
+              if (problem) this.opts.log(`[${u.user}] containers unavailable: ${problem}`);
+            } catch (err) {
+              // Its network is switching, say: its worker's next start brings the service.
+              this.opts.log(`${a.handle}: its containers service waits (${err instanceof Error ? err.message : err})`);
+            }
+          }
         }
       }
     }
@@ -1918,6 +2105,13 @@ export class RunnerDaemon implements RequestObserver {
     return pauseOf(this.stored, this.now());
   }
 
+  /** The app's "Check again": the PATH and the coding CLIs looked up now, then the status with what was found. */
+  async executorsCheck(): Promise<ControlStatus> {
+    this.opts.refreshPath?.();
+    await this.executorsFresh();
+    return this.status();
+  }
+
   status(): ControlStatus {
     const c = this.config;
     const s = this.stored;
@@ -1942,6 +2136,9 @@ export class RunnerDaemon implements RequestObserver {
       agents: this.agents.map((a) => ({ ...a })),
       access: this.access(),
       browsers,
+      ...(this.phones ? { phones: this.phones.list() } : {}),
+      // In system mode each agent runs as a user of its own, not as the runner's.
+      ...(OS_USER && c?.mode !== "system" && s?.mode !== "system" ? { user: OS_USER } : {}),
       seq: ++this.statusSeq,
     };
   }
@@ -1994,6 +2191,12 @@ export class RunnerDaemon implements RequestObserver {
     return out;
   }
 
+  /** The desktop app's iPhone setup: what the Mac has, a download of the iOS platform, Xcode opened. */
+  iphoneSetup(): IphoneSetup {
+    this.iphone ??= new IphoneSetup({ log: this.opts.log, ...this.opts.iphone });
+    return this.iphone;
+  }
+
   // ── Accounts (ADR 0041) ────────────────────────────────────────────────────
 
   /** The app's account list: every account on this computer with its CLI's status. */
@@ -2032,7 +2235,8 @@ export class RunnerDaemon implements RequestObserver {
 
   // ── Pause ──────────────────────────────────────────────────────────────────
 
-  pause(until: string | null): RunnerPause {
+  /** `by`: the person who paused it from the apps (`pause.set`); a pause on the computer itself has none. */
+  pause(until: string | null, by?: string): RunnerPause {
     this.requirePaired();
     let value: string | null = null;
     if (until !== null && until !== undefined) {
@@ -2041,7 +2245,7 @@ export class RunnerDaemon implements RequestObserver {
       if (t <= this.now()) throw new ControlError("bad_request", "until is in the past");
       value = new Date(t).toISOString();
     }
-    this.write({ ...(this.stored ?? {}), paused: { until: value } });
+    this.write({ ...(this.stored ?? {}), paused: { until: value, ...(by ? { by } : {}) } });
     return this.pauseState();
   }
 
@@ -2096,9 +2300,15 @@ export class RunnerDaemon implements RequestObserver {
    * "Reconectar este Mac" on a home the server refused: the same server's
    * previous machine id goes along, so the site brings that machine back.
    */
-  pairStart(server: string, name?: string, tools?: { claude?: boolean; codex?: boolean }): { started: true } {
+  pairStart(
+    server: string,
+    name?: string,
+    tools?: { claude?: boolean; codex?: boolean },
+    link?: string,
+  ): { started: true } {
     if (this.config && this.connState !== "refused")
       throw new ControlError("already_paired", "This computer is already connected. Disconnect it first.");
+    if (link !== undefined && !LINK_CODE.test(link)) throw new ControlError("bad_request", "Not a connect link's code");
     let url: string;
     try {
       url = normalizeServerUrl(String(server ?? ""));
@@ -2111,7 +2321,7 @@ export class RunnerDaemon implements RequestObserver {
     this.pairing = ac;
     void devicePair(
       url,
-      deviceInfo(label, previousMachineFor(this.stored, url)),
+      { ...deviceInfo(label, previousMachineFor(this.stored, url)), ...(link ? { link } : {}) },
       (code) =>
         this.emit({
           kind: "pair.code",

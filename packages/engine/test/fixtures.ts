@@ -4,6 +4,7 @@ import {
   createMemoryBlobStore,
   createMemoryPubSub,
   createPostgresSearchResolver,
+  type ErrorReporter,
   type GifProvider,
   type KeyWrapper,
   noPlatformCredentials,
@@ -55,6 +56,7 @@ import {
   createWorkToolSource,
   type FakeScheduleAnswer,
   type FakeScheduleAnswers,
+  type GatewayEmbeddings,
   localDateTimeOf,
   type RunExecutorDeps,
   type SandboxDeps,
@@ -65,7 +67,7 @@ import {
   type WorkspaceComputer,
   zonedParts,
 } from "../src";
-import { listenLiveSteering } from "../src/live-steer";
+import { type LiveSteeringHooks, listenLiveSteering } from "../src/live-steer";
 
 export const SECRET = "test-secret-".padEnd(48, "x");
 
@@ -199,8 +201,13 @@ export async function setup(
     calendarTools?: boolean;
     /** Add the skill tools (load_skill, read_skill_file). */
     skillTools?: boolean;
-    /** Fake embeddings (hybrid search). Off: full-text only, no embedding usage rows. */
-    embeddings?: boolean;
+    /**
+     * Embeddings (hybrid search): `true`, the fake for every kind; an object sets the provider (the fake when left
+     * out), the kinds that get vectors and the query's timeout. Off: full-text only, no embedding usage rows.
+     */
+    embeddings?: boolean | Partial<Omit<GatewayEmbeddings, "apiKey">>;
+    /** Where the gateway reports an embeddings outage. */
+    errors?: ErrorReporter;
     /** Add the scheduling tools (schedule_reminder, create_routine…). */
     scheduleTools?: boolean;
     /** Keep the workspace's right hand (ADR 0137). Off: its only agent is `@dev`. */
@@ -286,7 +293,10 @@ export async function setup(
     // Every provider but OpenAI answers through `provider`.
     providers: { ...Object.fromEntries(PROVIDER_IDS.map((id) => [id, provider])), openai: openaiProvider },
     platformCredentials: options.platform ?? noPlatformCredentials,
-    embeddings: options.embeddings ? { provider: embeddings, apiKey: "test" } : undefined,
+    embeddings: options.embeddings
+      ? { provider: embeddings, apiKey: "test", ...(options.embeddings === true ? {} : options.embeddings) }
+      : undefined,
+    errors: options.errors,
   });
   const search = createPostgresSearchResolver(db);
   const context: ContextDeps = {
@@ -345,7 +355,14 @@ export async function setup(
     ...(options.followUps ? [createFollowUpToolSource({ pubsub })] : []),
     ...(options.workTools ? [createWorkToolSource({ pubsub })] : []),
     ...(options.handOff
-      ? [createHandOffToolSource({ pubsub, judge: context.judge, tools: (): ToolGateway | undefined => tools })]
+      ? [
+          createHandOffToolSource({
+            pubsub,
+            judge: context.judge,
+            tools: (): ToolGateway | undefined => tools,
+            gif: createAgentGifPoster(options.gifs),
+          }),
+        ]
       : []),
     ...(options.artifactTools ? [createArtifactToolSource(artifactDeps)] : []),
     ...(options.blockTools ? [createBlockToolSource(artifactDeps)] : []),
@@ -391,7 +408,6 @@ export async function setup(
     contextMessages: 30,
     workspaceComputer: options.workspaceComputer,
     maxHops: 100,
-    deltaFlushMs: 0,
     tools,
     context,
     search,
@@ -451,7 +467,8 @@ export type Fixture = Awaited<ReturnType<typeof setup>>;
 /**
  * What the executor of a run set to `running` by hand would do: answer a message steered into the run at once
  * (no turn takes it here, so it stays in the run's inbox). Unanswered, posting that message waits out
- * `LIVE_STEER_WAIT_MS`, 3 s of real time.
+ * `LIVE_STEER_WAIT_MS`, 3 s of real time. `hooks`: the executor's own (its inbox, its background work), for a test
+ * that hands it a turn.
  */
-export const answerSteering = (f: Fixture, run: AgentRun) =>
-  listenLiveSteering(f, run, null, { take: async () => [], onRead: () => {} });
+export const answerSteering = (f: Fixture, run: AgentRun, hooks: Partial<LiveSteeringHooks> = {}) =>
+  listenLiveSteering(f, run, null, { take: async () => [], onRead: () => {}, ...hooks });

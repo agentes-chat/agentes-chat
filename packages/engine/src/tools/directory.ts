@@ -385,6 +385,8 @@ const CORE_TOOLS: ReadonlySet<string> = new Set(["read_wiki_page", "search_wiki"
  */
 export const RARE_TOOLS: ReadonlySet<string> = new Set([
   "propose_instruction_change",
+  // Its schema is the whole settings card: up front in every run it outweighs what it saves (ADR 0137, 2026-11-12).
+  "request_settings_change",
   "send_sticker",
   "read_skill_file",
   "find_agent",
@@ -397,6 +399,8 @@ export const RARE_TOOLS: ReadonlySet<string> = new Set([
   "offer_install_skill",
   "update_skill_from_source",
   "read_conversation",
+  "send_feedback",
+  "offer_feedback",
 ]);
 const RARE_GROUP = "more";
 
@@ -425,7 +429,7 @@ export const isStableTool = (tool: Pick<ToolDefinition, "name" | "scope" | "conn
 /** How a group is named for the model and the judge ("Browser", "GitHub", a connector's label). */
 const GROUP_LABELS: Record<string, string> = {
   [RARE_GROUP]:
-    "More of the conversation (reading a channel or a message by its link, stickers, your status, reply style, threads, adding agents to channels, the agents' directory, your usage, instruction changes)",
+    "More of the conversation (reading a channel or a message by its link, stickers, your status, reply style, threads, adding agents to channels, the agents' directory, your usage, instruction changes, your own settings, feedback on this app)",
   drive: "Files (Drive)",
   [DASHBOARD_GROUP]: "Dashboards and widgets (numbers and charts kept up to date, boards to share)",
   issues: "Issues",
@@ -538,7 +542,10 @@ function onDemandTools(
           const teammates = reachesTeammates(names)
             ? await import("../team").then((m) => m.teammateMeans(ctx)).catch(() => [])
             : [];
-          return turnMeans(names, teammates);
+          const personal = await import("../workspace-mode")
+            .then((m) => m.isPersonalWorkspace(ctx.db, ctx.orgId))
+            .catch(() => false);
+          return turnMeans(names, teammates, personal);
         })(),
         every ? EVERY_INPUTS : 0,
       ),
@@ -769,7 +776,8 @@ export const HAND_OVER_TOOLS = [
 export const HAND_OVER_STEP =
   "A step only a person can do (sign in, scan a QR code, type a code sent to them, a captcha, approve, grant a permission, a key, a file or a fact only they have, something done by hand) is never a blocker or a reason to say you can't: do everything up to it, hand it over with its request (on a page or app: `browser_ask_person` or `desktop_ask_person` once at that step; a key: `request_secret`; an approval only someone else can give: `request_approval`; a permission: `request_permission`; else `ask_user`), then go on.";
 
-export function turnMeans(names: ReadonlySet<string>, teammates: string[] = []): string[] {
+/** The run's general means; `personal`: a personal workspace's words (ADR 0159), its other agents not "teammates". */
+export function turnMeans(names: ReadonlySet<string>, teammates: string[] = [], personal = false): string[] {
   const out: string[] = [];
   if (names.has("web_search")) out.push("the web: `web_search` to search it, `web_fetch` to read any public page");
   if (names.has("browser_open") || names.has("browser_do"))
@@ -791,7 +799,7 @@ export function turnMeans(names: ReadonlySet<string>, teammates: string[] = []):
     );
   if (reachesTeammates(names))
     out.push(
-      `teammates (\`ask_agent\`, \`tell_agent\`)${teammates.length > 0 ? `: ${teammates.join("; ")}` : ": the ones whose role covers it"}`,
+      `${personal ? "your fellow agents" : "teammates"} (\`ask_agent\`, \`tell_agent\`)${teammates.length > 0 ? `: ${teammates.join("; ")}` : ": the ones whose role covers it"}`,
     );
   return out;
 }

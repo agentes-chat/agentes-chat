@@ -192,15 +192,15 @@ export function useTargetLabel() {
  * error haptic, so a write that didn't take is felt as well as read.
  */
 export function useFailed() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   return useCallback(
     (error: unknown) => {
       errorHaptic();
-      const known = knownErrorText(t, error);
+      const known = knownErrorText(t, error, i18n.language);
       toast({ title: t("mobile.app.failed"), ...(known ? { subtitle: known } : {}), icon: "x" });
     },
-    [t, toast],
+    [t, i18n.language, toast],
   );
 }
 

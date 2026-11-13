@@ -15,6 +15,7 @@ import {
   noAiStatusKey,
   opensByItself,
   planLineFix,
+  planLineKey,
   planLinePasses,
   planOfKind,
   type RightHandPlanLine,
@@ -22,6 +23,7 @@ import {
 } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Button, Chip, Dialog, DialogFooter, EventPillAction, Icon, InfoHint } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -31,7 +33,7 @@ import { usePlanHold } from "@/components/ai/ConnectAiSteps";
 import { useOpenBilling } from "@/components/BillingLinkButton";
 import { type ConnectAiRequest, useConnectAi } from "@/components/ConnectAi";
 import { useOrg } from "@/components/org-context";
-import { RequestDone, RequestOpen } from "@/components/RequestCard";
+import { RequestDone, RequestNote, RequestOpen } from "@/components/RequestCard";
 import { TeamTemplatesDialog } from "@/components/TeamPlan";
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePaidReturn } from "@/lib/paid-return";
@@ -62,13 +64,13 @@ export function NoAiBanner({ agentIds, dmAgentId }: { agentIds: string[]; dmAgen
     const agent = dir.agentById.get(dmAgentId);
     const name = agent?.name ?? t("channel.unknownAgent");
     return (
-      <div className="noai-banner ac-actrow" role="status">
-        <span className="noai-banner__text ac-iconline ac-actrow__text">
+      <div className="noai-banner ac-actline" role="status">
+        <span className="noai-banner__text ac-iconline">
           <Icon name="plug" size={16} />
           <b>{t(noAiStatusKey(status.data, dmAgentId), agentGrammar(name))}</b>
         </span>
         {mayConnectAi(agent, me.user.id, org) && (
-          <Button size="sm" onClick={() => connect.open({ agentId: dmAgentId })}>
+          <Button size="sm" onClick={() => connect.open({ agentId: dmAgentId, chat: true })}>
             {t("noAi.action")}
           </Button>
         )}
@@ -77,9 +79,13 @@ export function NoAiBanner({ agentIds, dmAgentId }: { agentIds: string[]; dmAgen
   }
   if (status.data.any || agentIds.length === 0) return null;
   const action = t("noAi.banner.orgAction");
+  // The workspace has no AI at all: Connect for the whole team, whoever is in the channel (ADR 0160, "For the whole
+  // team"). Only someone else's agent alone in it opens its own dialog, which says who connects it.
+  const lone = agentIds.length === 1 ? dir.agentById.get(agentIds[0] ?? "") : undefined;
+  const theirs = lone !== undefined && lone.ownerUserId !== me.user.id && !isRightHand(lone);
   return (
-    <div className="noai-banner ac-actrow" role="status">
-      <span className="noai-banner__text ac-iconline ac-actrow__text">
+    <div className="noai-banner ac-actline" role="status">
+      <span className="noai-banner__text ac-iconline">
         <Icon name="plug" size={16} />
         {/* Asking in the chat is understood only where Jev reads the message (`ai-intent.ts`). */}
         {status.data.routing?.by === "jev" ? (
@@ -92,7 +98,7 @@ export function NoAiBanner({ agentIds, dmAgentId }: { agentIds: string[]; dmAgen
           <b>{t("noAi.banner.org")}</b>
         )}
       </span>
-      <Button size="sm" onClick={() => connect.open({ agentId: agentIds.length === 1 ? agentIds[0] : undefined })}>
+      <Button size="sm" onClick={() => connect.open(theirs ? { agentId: lone.id } : {})}>
         {action}
       </Button>
     </div>
@@ -116,7 +122,9 @@ export function NoAiCard({ message }: { message: Message }) {
   // Any card on a billing hold is the wall: a Connect or a key from before it leads nowhere until the plan.
   if (card.held || hold) return <KeptCard message={message} card={card} hold={hold} />;
   if (card.planLine)
-    return <PlanLineCard message={message} agentId={card.agentId} line={card.planLine} model={card.model} />;
+    return (
+      <PlanLineCard message={message} agentId={card.agentId} line={card.planLine} model={card.model} why={card.why} />
+    );
   const agent = dir.agentById.get(card.agentId);
   const name = agent?.name ?? t("channel.unknownAgent");
   const again = signInAgainPlan(card, agent);
@@ -188,8 +196,8 @@ export function NoAiCard({ message }: { message: Message }) {
 
 /**
  * The wall (ADR 0079 §6): an agent kept the person's message for after the plan. It follows the message from there
- * (`keptCardState`): the way to the plans, then Connect for the whole team, and once an AI is there, from wherever it
- * was connected, opening the conversation starts the answer with no click.
+ * (`keptCardState`): a note with the way to the plans, then one with Connect for the whole team, and once an AI is
+ * there, from wherever it was connected, opening the conversation starts the answer with no click.
  */
 function KeptCard({ message, card, hold }: { message: Message; card: NoAiCardMeta; hold: BillingHold | null }) {
   const { t } = useTranslation();
@@ -246,55 +254,56 @@ function KeptCard({ message, card, hold }: { message: Message; card: NoAiCardMet
   if (state === "connect") {
     const mine = connect !== null && mayConnectAi(agent, me.user.id, org);
     return (
-      <RequestOpen
-        mine={mine}
-        icon="plug"
-        action={
+      <RequestNote
+        agent={agent}
+        title={t("noAi.kept.activeTitle")}
+        actions={
           connect && mine ? (
-            <EventPillAction primary onClick={() => connect.open({ from: message.id })}>
+            <Button size="sm" variant="primary" onClick={() => connect.open({ from: message.id })}>
               {t("noAi.action")}
-            </EventPillAction>
+            </Button>
           ) : undefined
         }
-        below={connect && !mine ? <span>{t("noAi.lockedAdmins")}</span> : undefined}
       >
-        {t("noAi.kept.active", { name })}
-      </RequestOpen>
+        {connect && !mine ? t("noAi.lockedAdmins") : t("noAi.kept.activeLine", { name })}
+      </RequestNote>
     );
   }
   const code = hold ?? "payment";
   const canPay = can(org, "manage_billing") && Boolean(billingUrl);
   // With no team yet, the way to one needs no model.
   const noTeam = state === "held" && isRightHand(agent) && can(org, "create_agents") && dir.agents.every(isRightHand);
+  const pays = state === "held" && canPay;
   return (
     <>
-      <RequestOpen
-        mine={state === "held" && canPay}
-        icon="waiting"
-        action={
-          state === "held" && (canPay || noTeam) ? (
+      <RequestNote
+        agent={agent}
+        title={t("noAi.kept.title")}
+        hint={t(code === "payment" ? "noAi.kept.plan" : "standing.billing.sub")}
+        actions={
+          pays || noTeam ? (
             <>
-              {canPay && (
-                <EventPillAction primary disabled={billing.isPending} onClick={() => billing.mutate()}>
+              {pays && (
+                <Button size="sm" variant="primary" loading={billing.isPending} onClick={() => billing.mutate()}>
                   {t(`standing.billing.cta.${code}`)}
-                </EventPillAction>
+                </Button>
               )}
               {noTeam && (
-                <EventPillAction onClick={() => setTemplates(true)}>{t("teamPlan.start.templates")}</EventPillAction>
+                <Button
+                  size="sm"
+                  variant={pays ? "ghost" : "primary"}
+                  disabled={billing.isPending}
+                  onClick={() => setTemplates(true)}
+                >
+                  {t(modeKey(org, "teamPlan.start.templates"))}
+                </Button>
               )}
             </>
           ) : undefined
         }
-        below={
-          <>
-            <p>{code === "payment" ? t("noAi.kept.line") : t(`standing.billing.${code}`)}</p>
-            {code === "payment" && <p>{t("noAi.kept.plan")}</p>}
-            {state === "held" && !canPay && <p>{t("standing.billing.askAdmin")}</p>}
-          </>
-        }
       >
-        {t("noAi.kept.title")}
-      </RequestOpen>
+        {state === "held" && !canPay ? t("noAi.kept.askAdmin") : t(`noAi.kept.wait.${code}`)}
+      </RequestNote>
       {noTeam && <TeamTemplatesDialog open={templates} onClose={() => setTemplates(false)} />}
     </>
   );
@@ -310,11 +319,13 @@ function PlanLineCard({
   agentId,
   line,
   model,
+  why,
 }: {
   message: Message;
   agentId: string;
   line: RightHandPlanLine;
   model?: string;
+  why?: string;
 }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
@@ -340,7 +351,7 @@ function PlanLineCard({
         {t("noAi.card.connected", { name })}
       </RequestDone>
     );
-  const sentence = t(`noAi.rightHand.${line}`, { name, model });
+  const sentence = t(planLineKey(line, why), { name, model, why });
   const mine = connect !== null && (fix === "connectMine" || fix === "useKey");
   return (
     <RequestOpen

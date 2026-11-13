@@ -21,7 +21,7 @@ import {
   TaskManager,
   type TaskManagerOptions,
 } from "../../runner/tasks";
-import { errorCode, gitRepo, hasGit, removeDirs, tempDir, waitFor } from "./helpers";
+import { errorCode, gitRepo, hasGit, removeDirs, tempDir, waitFor, withContainersClient } from "./helpers";
 
 const dirs: string[] = [];
 const managers: TaskManager[] = [];
@@ -123,8 +123,8 @@ test("executor commands: Claude Code with stream-json and its session; prompts n
   );
   expect(executorCommand("claude", { session: "s-1234567890", resume: true })).toContain("--resume s-1234567890");
   expect(executorCommand("shell", { command: " make test " })).toBe("make test");
-  // No `--full-auto` any more (removed from Codex): exec is unattended, the sandbox is the limit.
-  expect(executorCommand("codex", {})).toBe("codex exec --json --skip-git-repo-check -");
+  // No `--full-auto` any more (removed from Codex): exec is unattended, the sandbox is the limit, no rule lifts it.
+  expect(executorCommand("codex", {})).toBe("codex exec --json --skip-git-repo-check --ignore-rules -");
   expect(() => executorCommand("shell", {})).toThrow("needs a command");
   expect(claudeSessionFile("/h/.claude", "/Users/me/agentes/dev-0193aaaa", "abc")).toBe(
     "/h/.claude/projects/-Users-me-agentes-dev-0193aaaa/abc.jsonl",
@@ -740,10 +740,14 @@ test.skipIf(!posix)(
     const tasks = make(cli.options);
     await tasks.init();
     tasks.attach(send);
-    await tasks.start(AGENT, { taskId: id(46), executor: "codex", prompt: "Port it", account: FOLDER_ACCOUNT });
-    await waitFor(() => Boolean(done(id(46))), 8000);
+    await withContainersClient(async () => {
+      await tasks.start(AGENT, { taskId: id(46), executor: "codex", prompt: "Port it", account: FOLDER_ACCOUNT });
+      await waitFor(() => Boolean(done(id(46))), 8000);
+    });
     expect(done(id(46))).toMatchObject({ exitCode: 0, result: "done: Port it" });
     expect(cli.codexRuns()[0]?.codexHome).toBe(cli.folder("codex", FOLDER_ACCOUNT));
+    // Its sandbox holds it, so the agent's containers service isn't named to it (ADR 0169).
+    expect(cli.codexRuns()[0]?.containers).toEqual([]);
 
     await tasks.start(AGENT, { taskId: id(47), executor: "codex", prompt: "Port it" });
     await waitFor(() => Boolean(done(id(47))), 8000);

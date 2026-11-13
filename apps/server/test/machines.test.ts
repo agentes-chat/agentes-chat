@@ -3,12 +3,29 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { createDiskBlobStore } from "@agenteschat/adapters";
-import type { MachineRequest } from "@agenteschat/adapters/machine-protocol";
+import {
+  MACHINE_PROTOCOL_VERSION,
+  type MachineRequest,
+  type RunnerPause,
+  type ServerFrame,
+} from "@agenteschat/adapters/machine-protocol";
+import { testConfig } from "@agenteschat/config";
 import { schema } from "@agenteschat/db";
 import { ARTIFACT_LIMITS, createUpload, issueManagedMachine, setProvisioning } from "@agenteschat/engine";
 import { type ModelRequest, systemText } from "@agenteschat/providers";
 import { handleRequest } from "../runner/handlers";
-import { browser, createTestServer, listen, ORIGIN, pairComputer, seedOrg, signUp, type TestServer } from "./harness";
+import { applyBootSwitches } from "../src/start";
+import {
+  browser,
+  createTestServer,
+  joinByInvitation,
+  listen,
+  ORIGIN,
+  pairComputer,
+  seedOrg,
+  signUp,
+  type TestServer,
+} from "./harness";
 import { removeDirs, tempDir } from "./runner/helpers";
 
 let t: TestServer;
@@ -114,27 +131,29 @@ test("where each workspace gets its own computer the agents read so, and one wit
   expect(runCode?.description).not.toContain("connect one");
 });
 
-test("a server that gives each workspace its own computer refuses people's pairing; that computer still enrolls", async () => {
+test("a server that gives each workspace its own computer lets people bring theirs as targets, never homes; that computer still enrolls", async () => {
   t = await createTestServer({
     env: { ALLOW_SIGNUP: "true", MACHINE_PROVISIONING: "external", OPERATOR_API_TOKEN: "o".repeat(40) },
   });
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
-  const { orgId } = await seedOrg(owner);
-  const refusal = { code: "machine.pairing_off", message: expect.stringContaining("its own computer") };
+  const { orgId, agentId } = await seedOrg(owner);
+  const api = (path: string, init?: Parameters<typeof owner>[1]) =>
+    owner(`/api/app/organizations/${orgId}${path}`, init);
 
-  // `curl …/install.sh | sh` against it stops at once: no code nobody could confirm.
-  const asked = await runnerPost("/api/machines/device", { name: "Build box", ...RUNNER });
-  expect(asked.status).toBe(403);
-  expect(await asked.json()).toEqual({ error: refusal });
-  const confirm = await owner(`/api/app/organizations/${orgId}/machines/device/K7Q4ZP/confirm`, { json: {} });
-  expect(confirm.status).toBe(403);
-  expect(await confirm.json()).toEqual({
-    error: {
-      code: "machine.pairing_off",
-      message: "This workspace has its own computer: other computers can't be connected to it.",
-    },
-  });
+  // Someone's own computer connects through the usual code; booted as the Cloud boots, it can't be an agent's home.
+  const brought = await pairComputer(t, api, { ...RUNNER, exec: true }, { name: "Build box" });
+  applyBootSwitches(t.config);
+  try {
+    const home = await api(`/agents/${agentId}/computer/target`, {
+      method: "PUT",
+      json: { machineId: brought.machineId },
+    });
+    expect(home.status).toBe(403);
+    expect(((await home.json()) as { error: { code: string } }).error.code).toBe("device.not_home");
+  } finally {
+    applyBootSwitches(testConfig());
+  }
 
   // The workspace's own computer redeems the code it was issued.
   const issued = await issueManagedMachine({ db: t.db }, orgId);
@@ -507,3 +526,65 @@ test("the IP echo ignores a spoofed leftmost hop and a trusted reverse proxy", a
   });
   expect(await res.json()).toEqual({ ip: "8.8.8.8", country: null });
 });
+
+test("pause from the apps: whoever connected it and admins, through the hub; anyone else 403", async () => {
+  const { owner, orgId } = await start();
+  const orgApi = (b: typeof owner) => (path: string, init?: Parameters<typeof owner>[1]) =>
+    b(`/api/app/organizations/${orgId}${path}`, init);
+  const bia = await joinByInvitation(t, owner, orgId, "bia@example.com");
+  const caio = await joinByInvitation(t, owner, orgId, "caio@example.com");
+  const runner = { ...RUNNER, protocol: MACHINE_PROTOCOL_VERSION };
+  const paired = await pairComputer(t, orgApi(bia), { ...runner, exec: true }, { name: "Bia's Mac" });
+  const hub = t.engine.machineHub;
+  const sent: Extract<MachineRequest, { op: "pause.set" }>[] = [];
+  let state: RunnerPause = { paused: false };
+  const conn = hub.open({
+    send(text: string) {
+      const frame = JSON.parse(text) as ServerFrame;
+      if (frame.type !== "request" || frame.op !== "pause.set") return;
+      sent.push(frame);
+      state = frame.paused ? { paused: true, until: frame.until ?? null, by: frame.by } : { paused: false };
+      const result = JSON.stringify({ type: "result", id: frame.id, ok: true, data: { paused: state } });
+      setTimeout(() => void hub.message(conn, result), 1);
+    },
+    close() {},
+  });
+  await hub.message(conn, JSON.stringify({ type: "hello", token: paired.token, ...runner, exec: true }));
+  const me = async (b: typeof owner) => ((await (await b("/api/app/me")).json()) as { user: { id: string } }).user.id;
+  const path = `/machines/${paired.machineId}`;
+
+  const listed = (await (await orgApi(owner)("/machines")).json()) as { machines: { remotePause: boolean }[] };
+  expect(listed.machines[0]?.remotePause).toBe(true);
+
+  // Someone who neither connected it nor administers the workspace.
+  expect((await orgApi(caio)(`${path}/pause`, { json: { until: null } })).status).toBe(403);
+  expect((await orgApi(caio)(`${path}/resume`, { json: {} })).status).toBe(403);
+  expect(sent).toHaveLength(0);
+
+  // Whoever connected it: the computer applies the pause, and the row says who did it.
+  const until = new Date(Date.now() + 3600_000).toISOString();
+  const byBia = await orgApi(bia)(`${path}/pause`, { json: { until } });
+  expect(byBia.status).toBe(200);
+  const biaId = await me(bia);
+  expect(await byBia.json()).toEqual({ paused: { until, by: { id: biaId, name: expect.any(String) } } });
+  expect(sent[0]).toMatchObject({ op: "pause.set", paused: true, until, by: biaId });
+  const view = (await (await orgApi(caio)("/machines")).json()) as {
+    machines: { paused: { until: string | null; by: { id: string } | null } | null }[];
+  };
+  expect(view.machines[0]?.paused).toMatchObject({ until, by: { id: biaId } });
+  expect((await orgApi(bia)(`${path}/pause`, { json: { until: "2001-01-01T00:00:00Z" } })).status).toBe(400);
+
+  // A runner naming someone outside the workspace: the pause stands, nobody is named, and the row stays writable.
+  await hub.message(
+    conn,
+    JSON.stringify({ type: "runner.state", paused: { paused: true, until, by: "not-a-member" } }),
+  );
+  const outsider = (await (await orgApi(owner)("/machines")).json()) as typeof view;
+  expect(outsider.machines[0]?.paused).toMatchObject({ until, by: null });
+
+  // An admin resumes it; a paused computer still takes the resume.
+  const resumed = await orgApi(owner)(`${path}/resume`, { json: {} });
+  expect(resumed.status).toBe(200);
+  expect(await resumed.json()).toEqual({ paused: null });
+  expect(sent.at(-1)).toMatchObject({ op: "pause.set", paused: false, by: await me(owner) });
+}, 30_000);

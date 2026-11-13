@@ -1,6 +1,7 @@
 import { type Memory, useMemoryAction, useOrgMemories } from "@agenteschat/client";
 import { canTalk } from "@agenteschat/client/lib/audience";
 import { relativeTime } from "@agenteschat/client/lib/format";
+import { can } from "@agenteschat/client/lib/permissions";
 import { memoryLine } from "@agenteschat/client/lib/proposals";
 import { rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { useDeferredValue, useMemo, useState } from "react";
@@ -15,6 +16,7 @@ import {
   EmptyState,
   Filters,
   Row,
+  SCREEN_X,
   SearchField,
   SectionHeader,
   Text,
@@ -245,6 +247,33 @@ function MemoryDetail({ id }: { id: string }) {
           ),
       },
     ]);
+  const confirm = () =>
+    action.mutate(
+      { type: "confirm", id: m.id },
+      {
+        onSuccess: () => {
+          successHaptic();
+          toast({ title: t("mobile.memory.confirmedToast"), agentId });
+        },
+        onError: failed,
+      },
+    );
+  // Confirmar (ADR 0167): who may edit it, or the person who said it.
+  const confirms = (editable || m.editedByUserId === meId) && (m.lowTrust || !m.verified);
+  // Tornar do time (ADR 0167): who reviews memory makes it every agent's, its copies archived.
+  const teams = can(org, "review_memory") && !m.howTo && !m.playbook && m.kind !== "lesson";
+  const makeTeam = () =>
+    action.mutate(
+      { type: "team", id: m.id },
+      {
+        onSuccess: () => {
+          successHaptic();
+          toast({ title: t("teamMemory.made"), agentId });
+          goBack();
+        },
+        onError: failed,
+      },
+    );
   const fix = () =>
     sheet.open(
       <MemoryFix
@@ -296,10 +325,8 @@ function MemoryDetail({ id }: { id: string }) {
             </Pressable>
           ) : null}
           <View style={styles.chips}>
-            <Chip
-              icon={m.verified ? "check" : "sparkle"}
-              label={t(m.verified ? "mobile.memory.confirmed" : "mobile.memory.unconfirmed")}
-            />
+            {/* Only the state that says something: an unconfirmed memory shows its Confirmar button instead. */}
+            {m.verified ? <Chip icon="check" label={t("mobile.memory.confirmed")} /> : null}
             <Chip icon="clock" label={t("mobile.memory.uses", { count: m.uses })} />
           </View>
           <Text variant="subhead" tone="muted">
@@ -313,16 +340,40 @@ function MemoryDetail({ id }: { id: string }) {
             </View>
           ) : null}
         </View>
-        {editable ? (
+        {editable || confirms || teams ? (
           <View style={styles.actions}>
-            <Button variant="secondary" wide icon="pen" label={t("mobile.memory.fix")} onPress={fix} />
-            <Button
-              variant="ghost"
-              wide
-              label={t("mobile.intentAgents.fix.forget")}
-              disabled={action.isPending}
-              onPress={forget}
-            />
+            {confirms ? (
+              <Button
+                variant="secondary"
+                wide
+                icon="check"
+                label={t("mobile.memory.confirm")}
+                disabled={action.isPending}
+                onPress={confirm}
+              />
+            ) : null}
+            {teams ? (
+              <Button
+                variant="secondary"
+                wide
+                icon="members"
+                label={t("teamMemory.make")}
+                disabled={action.isPending}
+                onPress={makeTeam}
+              />
+            ) : null}
+            {editable ? (
+              <>
+                <Button variant="secondary" wide icon="pen" label={t("mobile.memory.fix")} onPress={fix} />
+                <Button
+                  variant="ghost"
+                  wide
+                  label={t("mobile.intentAgents.fix.forget")}
+                  disabled={action.isPending}
+                  onPress={forget}
+                />
+              </>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -333,15 +384,15 @@ function MemoryDetail({ id }: { id: string }) {
 const styles = StyleSheet.create({
   shrink: { flexShrink: 1 },
   fill: { flex: 1 },
-  lead: { paddingHorizontal: 20, marginTop: -4 },
+  lead: { paddingHorizontal: SCREEN_X, marginTop: -4 },
   search: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   loading: { marginVertical: 24 },
   center: { alignItems: "center", gap: 12, paddingVertical: 48, paddingHorizontal: 24 },
-  body: { paddingHorizontal: 20, paddingTop: 14, gap: 10 },
+  body: { paddingHorizontal: SCREEN_X, paddingTop: 14, gap: 10 },
   who: { flexDirection: "row", alignItems: "center", gap: 6 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   before: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 },
-  actions: { paddingHorizontal: 20, paddingTop: 20, gap: 8 },
+  actions: { paddingHorizontal: SCREEN_X, paddingTop: 20, gap: 8 },
   details: { gap: 6 },
   pressed: { opacity: 0.6 },
   bold: { fontWeight: "600" },

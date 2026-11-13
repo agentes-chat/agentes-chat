@@ -13,7 +13,8 @@
 // change of that file), "RATE" (the plan's windows moved:
 // `account/rateLimits/updated`), "LEAK" (quotes $FAKE_SECRET in two deltas apart), "FAST_REFUSED" (a turn with
 // `serviceTier: "fast"` fails as the provider's refusal comes back); anything else answers "pong".
-// `account/rateLimits/read` answers the 5 hours at 12% and the week at 55%.
+// `account/rateLimits/read` answers the 5 hours at 12% and the week at 55%. `sandbox … echo MXC_OK` (Codex's MXC
+// check) prints MXC_OK when $FAKE_CODEX_MXC is 1, else fails as Codex does without MXC.
 import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
@@ -36,7 +37,14 @@ log({
   openaiKey: process.env.OPENAI_API_KEY ?? null,
 });
 
-if (args[0] === "exec") {
+if (args.includes("sandbox")) {
+  if (process.env.FAKE_CODEX_MXC === "1") {
+    console.log("MXC_OK");
+    process.exit(0);
+  }
+  process.stderr.write("native MXC is unavailable on this executor\n");
+  process.exit(1);
+} else if (args[0] === "exec") {
   let prompt = "";
   process.stdin.on("data", (c) => {
     prompt += c.toString("utf8");

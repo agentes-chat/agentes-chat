@@ -10,7 +10,7 @@
  *   team connections.
  *
  * Agents: the person behind the run (the one who asked, else a routine's creator, else nobody), counted only while
- * an active member.
+ * an active member; for the team's right hand, only in that person's own DM with it.
  * - Every item: the agent is one it is shared with (`allAgents`, or in `agentIds`).
  * - Personal: that person is its owner.
  * - Team: that person is in its audience, or nobody is behind the run and it is shared with everyone.
@@ -20,6 +20,7 @@ import { runAuthorityById, UUID } from "../authority";
 import { ValidationError } from "../errors";
 import { can, getMembership } from "../organizations";
 import { routineCreatorOf } from "../requester";
+import { rightHandAwayRun } from "../right-hand";
 import { VAULT_LIMITS, type VaultAccess, type VaultRun, type VaultScope } from "./service";
 
 const { agents, orgRoles, organizationMembers } = schema;
@@ -42,6 +43,15 @@ export const scopeOf = (ownerUserId: string | null): VaultScope => (ownerUserId 
 export const DEFAULT_ACCESS: Record<VaultScope, VaultAccess> = {
   personal: { everyone: false, roleIds: [], userIds: [], allAgents: true, agentIds: [] },
   team: { everyone: true, roleIds: [], userIds: [], allAgents: false, agentIds: [] },
+};
+
+/**
+ * A connection made now: every agent, its owner's for a personal one. A standing choice (`allAgents`), so an agent
+ * created later is in. Connections made before this keep what they had.
+ */
+export const DEFAULT_CONNECTION_ACCESS: Record<VaultScope, VaultAccess> = {
+  personal: DEFAULT_ACCESS.personal,
+  team: { ...DEFAULT_ACCESS.team, allAgents: true },
 };
 
 /** The columns that decide an item's access now: its own, or its connection's while it follows it. */
@@ -107,6 +117,9 @@ export async function vaultPersonOfRun(db: Executor, run: VaultRun): Promise<Vau
   const candidate = authority.personId ?? routineCreatorOf(authority);
   const nobody = { personId: null, roleIds: [], manages: false, routineId };
   if (!candidate) return nobody;
+  // One right hand answers everyone, and others read its reply in a channel: a person's own things and the team
+  // items of their audience only in their own DM with it (ADR 0137).
+  if (await rightHandAwayRun(db, run)) return nobody;
   const membership = await getMembership(db, candidate, run.orgId);
   if (!membership) return nobody;
   return {

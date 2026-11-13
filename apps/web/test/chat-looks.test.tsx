@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
 import { keys, type Message } from "@agenteschat/client";
 import type { ChatPrefs } from "@agenteschat/client/lib/chat-look";
+import { MessageLookContext, MessageText, Message as Row } from "@agenteschat/ui";
 import { act, cleanup, fireEvent, render, within } from "@testing-library/react";
-import { useLayoutEffect } from "react";
+import { type ReactNode, useLayoutEffect } from "react";
 import { usePageTextSize } from "@/chat/look";
 import {
   ADA_ID,
@@ -43,13 +46,17 @@ const row = (id: string) => {
   return el;
 };
 
-async function openChannel(prefs?: ChatPrefs) {
+/** #eng with João, me and Ada; `personal`: in a personal workspace (ADR 0159). */
+async function openChannel(prefs?: ChatPrefs, personal = false) {
   const messages = [
     said(ENG_ID, "j1", "u-joao", "Bom dia!", 30),
     said(ENG_ID, "w1", "u-walter", "Vi o alerta", 20),
     said(ENG_ID, "a1", ADA_ID, "Olhando.", 10),
   ];
-  await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(withChatPrefs(seedState({ messages }), prefs)) });
+  const state = withChatPrefs(seedState({ messages }), prefs);
+  const org = state.me?.organizations[0];
+  if (personal && org) org.mode = "personal";
+  await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
   await settle(10);
 }
 
@@ -76,6 +83,16 @@ describe("the defaults", () => {
     expect(mine.querySelector(".ac-msg__own-foot")).toBeNull();
   });
 
+  test("in a personal workspace a channel opens in bubbles too, mine on the right; a choice still wins", async () => {
+    await openChannel(undefined, true);
+    expect(row("w1").dataset.look).toBe("bubbles");
+    expect(row("w1").dataset.tone).toBe("light");
+    expect(row("w1").classList.contains("ac-msg--own")).toBe(true);
+    cleanup();
+    await openChannel({ channelStyle: "left" }, true);
+    expect(row("w1").dataset.look).toBe("left");
+  });
+
   test("a DM is in bubbles with the light tone: mine on the right in the agent's color, no name, the time inside", async () => {
     await openDm();
     const mine = row("w1");
@@ -85,6 +102,9 @@ describe("the defaults", () => {
     expect(mine.style.getPropertyValue("--msg-mine")).not.toBe("");
     expect(mine.querySelector(".ac-msg__own-foot")).toBeNull();
     expect(mine.querySelector(".ac-msg__text .ac-msg__stamp")?.textContent).toContain(":");
+    expect(mine.style.getPropertyValue("--stamp-text")).toBe(
+      JSON.stringify(mine.querySelector(".ac-msg__stamp .ac-msg__time")?.textContent),
+    );
     const theirs = row("a1");
     expect(theirs.dataset.names).toBe("false");
     expect(theirs.querySelector(".ac-msg__head")).toBeNull();
@@ -179,6 +199,46 @@ describe("Tamanho do texto in a conversation", () => {
   });
 });
 
+describe("The room a bubble's last line keeps for its time", () => {
+  const bubble = (time: ReactNode, own = false) =>
+    render(
+      <MessageLookContext.Provider value={{ style: "bubbles", tone: "light", mine: "#0a7", names: true, faces: true }}>
+        <Row avatar={null} author="Ada" time={time} own={own}>
+          <MessageText>B</MessageText>
+        </Row>
+      </MessageLookContext.Provider>,
+    ).container.querySelector<HTMLElement>(".ac-msg");
+
+  test("is the time's own words, a 12-hour one as a 24-hour one, mine as anyone's", () => {
+    for (const words of ["23:43", "11:08 PM", "오후 11:08"]) {
+      for (const own of [false, true]) {
+        const row = bubble(<time dateTime="2026-01-01T23:08:00Z">{words}</time>, own);
+        expect(row?.style.getPropertyValue("--stamp-text")).toBe(JSON.stringify(words));
+        expect(row?.querySelector(".ac-msg__text > .ac-msg__stamp")?.textContent).toBe(words);
+        cleanup();
+      }
+    }
+    expect(bubble("9:05 AM")?.style.getPropertyValue("--stamp-text")).toBe('"9:05 AM"');
+  });
+
+  test("a time that isn't plain words names none: the sheet keeps the widest clock's room", () => {
+    const row = bubble(
+      <span>
+        <b>23</b>:43
+      </span>,
+    );
+    expect(row?.style.getPropertyValue("--stamp-text")).toBe("");
+  });
+
+  test("the sheet reads those words, and keeps the mark's room on a row of mine before the mark is there", () => {
+    const css = readFileSync(join(import.meta.dir, "../src/chat/looks.css"), "utf8");
+    expect(css).toContain('content: var(--stamp-text, "00:00 PM");');
+    expect(css).toContain(
+      '.ac-msg--own[data-look="bubbles"],\n.ac-msg[data-look="bubbles"]:has(.ac-msg__stamp .ac-msg__aside) {',
+    );
+  });
+});
+
 describe("a row with no bubble in a DM", () => {
   test("keeps its name ahead of its time, as in a channel: a time alone beside a face reads as a broken line", async () => {
     const state = seedState();
@@ -202,7 +262,7 @@ describe("a row with no bubble in a DM", () => {
 });
 
 describe("a reply being written in Bolhas", () => {
-  test("its time stays in the bubble, ahead of how long it has been at work", async () => {
+  test("no bubble while it works: the bar says it writes, and how long it has been at it", async () => {
     const state = seedState();
     const channelId = seedDm(state, { type: "agent", id: ADA_ID }, { body: "x" });
     const r = await renderApp(`/org/${ORG_ID}/dm/agent/${ADA_ID}`, { api: createFakeApi(withChatPrefs(state)) });
@@ -217,9 +277,10 @@ describe("a reply being written in Bolhas", () => {
     await push({ type: "agent.typing" });
     await push({ type: "agent.delta", seq: 1, text: "Escrevendo" });
     await settle(4);
-    const stamp = document.querySelector('article[data-run-id="r-live"] .ac-msg__text > .ac-msg__stamp');
-    expect(stamp?.querySelector(".ac-msg__time")?.textContent).toContain(":");
-    expect(stamp?.querySelector(".run-tail__clock")).not.toBeNull();
+    expect(document.querySelector('article[data-run-id="r-live"]')).toBeNull();
+    const bar = document.querySelector('.ac-typing[data-active="true"]') as HTMLElement;
+    expect(bar.querySelector(".ac-typing__text")?.textContent).toBe("Ada escrevendo…");
+    expect(bar.querySelector(".ac-typing__elapsed")?.textContent).toMatch(/\d s$/);
   });
 });
 
@@ -251,15 +312,25 @@ describe("Sua conta › Conversa", () => {
     expect(state.me?.organizations[0]?.chatPrefs).toEqual({ channelStyle: "compact", dmTone: "strong" });
   });
 
-  test("where a conversation opens: the newest message until the person picks", async () => {
+  test("where a conversation opens: the last read message until the person picks", async () => {
     const state = withChatPrefs(seedState());
     await openSettings(state);
+    const open = screen().getByRole("radiogroup", { name: "Ao abrir uma conversa, me leve para" });
+    const checked = (name: string) => within(open).getByRole("radio", { name }).getAttribute("aria-checked");
+    expect(checked("Última mensagem lida")).toBe("true");
+    expect(checked("Mensagem mais recente")).toBe("false");
+    await click(within(open).getByRole("radio", { name: "Mensagem mais recente" }));
+    expect(state.calls).toContainEqual({ method: "orgs.setChatPrefs", args: [ORG_ID, { openAt: "latest" }] });
+    expect(state.me?.organizations[0]?.chatPrefs).toEqual({ openAt: "latest" });
+    expect(checked("Mensagem mais recente")).toBe("true");
+  });
+
+  test("whoever picked the newest message keeps it", async () => {
+    await openSettings(withChatPrefs(seedState(), { openAt: "latest" }));
     const open = screen().getByRole("radiogroup", { name: "Ao abrir uma conversa, me leve para" });
     expect(within(open).getByRole("radio", { name: "Mensagem mais recente" }).getAttribute("aria-checked")).toBe(
       "true",
     );
-    await click(within(open).getByRole("radio", { name: "Última mensagem lida" }));
-    expect(state.calls).toContainEqual({ method: "orgs.setChatPrefs", args: [ORG_ID, { openAt: "read" }] });
   });
 
   test("Tamanho do texto: five steps, Padrão until the person picks, and a pick shows at once on the page", async () => {
@@ -360,8 +431,13 @@ describe("opening at the last read message", () => {
     expect(document.querySelector(".channel__unread")?.nextElementSibling).toBe(row("a1"));
   });
 
-  test("by default it opens at the end, with no line", async () => {
+  test("by default it opens there too: the line before the first unread message", async () => {
     await openUnread({});
+    expect(document.querySelector(".channel__unread")?.nextElementSibling).toBe(row("a1"));
+  });
+
+  test("whoever picked the newest message opens at the end, with no line", async () => {
+    await openUnread({ openAt: "latest" });
     expect(document.querySelector(".channel__unread")).toBeNull();
   });
 });

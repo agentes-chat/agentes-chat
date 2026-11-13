@@ -5,7 +5,8 @@ import { LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GroupedList, GroupedRow, Locked, Text, useToast } from "@/ui";
 import { useColors } from "../shared/hooks";
-import { copyText, type HeaderWordAction, MONO, PushedHeader, successHaptic } from "../shared/parts";
+import { showActionSheet } from "../shared/PickerSheet";
+import { BottomBar, copyText, type HeaderWordAction, MONO, PushedHeader, successHaptic } from "../shared/parts";
 
 /**
  * What the workspace's settings screens share (each one a screen pushed with the platform's push, as Você's): the
@@ -25,6 +26,8 @@ export function SettingsPage({
   subtitle,
   action,
   locked = false,
+  frozen = false,
+  bottom,
   children,
 }: {
   title: string;
@@ -32,6 +35,10 @@ export function SettingsPage({
   action?: HeaderWordAction;
   /** The page's form is sending: its controls are off, the page still scrolls. */
   locked?: boolean;
+  /** The workspace is being deleted and this page would change it (`settingsFrozen`): greyed out, as on the web. */
+  frozen?: boolean;
+  /** The page's one main action, docked under it ("Done" at the end of a guide). */
+  bottom?: ReactNode;
   children?: ReactNode;
 }) {
   const c = useColors();
@@ -53,10 +60,11 @@ export function SettingsPage({
         contentContainerStyle={[styles.body, { paddingBottom: 24 + insets.bottom }]}
       >
         {/* What is there as the screen opens doesn't fade in; what loads while it is watched does (`Loaded`). */}
-        <Locked when={locked}>
+        <Locked when={locked || frozen} readable={frozen && !locked}>
           <LayoutAnimationConfig skipEntering>{children}</LayoutAnimationConfig>
         </Locked>
       </ScrollView>
+      {bottom ? <BottomBar bottom={insets.bottom}>{bottom}</BottomBar> : null}
     </View>
   );
 }
@@ -69,10 +77,16 @@ export function Gap() {
 export interface ActionChoice {
   label: string;
   destructive?: boolean;
+  /** The one in use: checked in Android's sheet (iOS's action sheet draws no checks). */
+  checked?: boolean;
   onPress: () => void;
 }
 
-/** A choice in the system's action list (the web's "…" menus). */
+/**
+ * A short menu of actions (the web's "…" menus: Sair / Apagar conta, Tirar foto / Escolher da galeria): the system's
+ * action sheet on iOS, the app's sheet on Android. Picking a value (a person, a level, a language, a time) is
+ * `pickOne`'s, with faces, checks and a search.
+ */
 export function chooseAction(title: string, options: ActionChoice[], cancel: string) {
   if (Platform.OS === "ios") {
     const destructive = options.findIndex((o) => o.destructive);
@@ -86,6 +100,8 @@ export function chooseAction(title: string, options: ActionChoice[], cancel: str
       (i) => options[i]?.onPress(),
     );
   } else {
+    // Any number of options in the app's sheet; the dialog below only where no host is mounted.
+    if (showActionSheet(title, options)) return;
     const buttons = options.map((o) => ({
       text: o.label,
       style: o.destructive ? ("destructive" as const) : undefined,

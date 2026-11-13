@@ -241,9 +241,11 @@ pub fn loopback_url(port: u16) -> String {
 
 // ───────────────────────────── secrets and files ─────────────────────────────
 
+/// `n` bytes from the system's secure random source (`/dev/urandom` doesn't exist on Windows: reading it there
+/// failed the setup, or read whatever file someone put at `C:\dev\urandom`).
 fn random(n: usize) -> io::Result<Vec<u8>> {
     let mut bytes = vec![0u8; n];
-    fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;
+    getrandom::fill(&mut bytes)?;
     Ok(bytes)
 }
 
@@ -522,6 +524,48 @@ fn dechunk(mut rest: &[u8]) -> Vec<u8> {
 
 pub fn healthy(port: u16) -> bool {
     matches!(http(port, "GET", "/api/health", None), Some((200, _)))
+}
+
+/// A one-time sign-in for the owner, and the owner's account id when the server says it (newer servers do).
+pub fn owner_sign_in_as(folder: &Folder, port: u16) -> Result<(String, Option<String>), u16> {
+    let key = fs::read_to_string(folder.owner_key()).map_err(|_| 0u16)?;
+    match http(port, "POST", "/api/auth/owner-key", Some(&json!({ "key": key.trim() }))) {
+        Some((200, text)) => {
+            let body = serde_json::from_str::<Value>(&text).map_err(|_| 0u16)?;
+            let token = body["token"]
+                .as_str()
+                .filter(|t| crate::servers::page_path(&format!("/desktop/handover#token={t}")))
+                .ok_or(0u16)?;
+            Ok((token.to_string(), body["userId"].as_str().map(str::to_string)))
+        }
+        Some((status, _)) => Err(status),
+        None => Err(0),
+    }
+}
+
+/// Whether the window, signed in there as `was`, goes on signed in as the owner: only when that is who it was (or the
+/// server doesn't say who its owner is, as before). Signed out, or someone else: the sign-in page instead, where
+/// the owner still continues on this computer in one click.
+pub fn sign_in_owner(was: Option<&str>, owner: Option<&str>) -> bool {
+    match (was, owner) {
+        (None, _) => false,
+        (Some(_), None) => true,
+        (Some(was), Some(owner)) => was == owner,
+    }
+}
+
+/// The window follows the server to `url`: signed in as the owner when it was the owner (`sign_in_owner`), else on
+/// that address's sign-in page.
+fn follow_window(app: &AppHandle, folder: &Folder, port: u16, url: &str, was: Option<String>) -> Result<(), String> {
+    if was.is_some() {
+        if let Ok((token, owner)) = owner_sign_in_as(folder, port) {
+            if sign_in_owner(was.as_deref(), owner.as_deref()) {
+                return open_signed_in(app, url, &token);
+            }
+        }
+    }
+    let page: Url = url.parse().map_err(|_| "not a URL")?;
+    crate::main_window::show_url(app, page)
 }
 
 /// A one-time sign-in for the owner (`POST /api/auth/owner-key`, ADR 0060 §6); with `who`, the owner is made
@@ -826,8 +870,10 @@ pub enum Phase {
     /// A new version's first start (it migrates).
     Updating,
     Running,
-    /// Stopped: by the person, or crashed (it starts again by itself then).
+    /// Stopped: by the person, or crashed and not starting again.
     Stopped,
+    /// It stopped by itself and starts again in a moment (or moves its database, its port, its version first).
+    Restarting,
     /// Starts keep failing.
     Failing,
 }
@@ -840,6 +886,48 @@ struct HereFile {
     owner: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     skip: Option<String>,
+    /// Stopped by the person to stay stopped: the app doesn't start it (not even when it opens again) until Start,
+    /// or until `until` (Unix seconds) when it was "for an hour".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    hold: Option<Hold>,
+    /// A new version's first start hasn't answered yet: the version it updates from. Kept here, so an update cut
+    /// short by quitting the app still moves the database or goes back to that version at the next start.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    updating_from: Option<String>,
+    /// The nightly backup's switch; None is on, the default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    nightly: Option<bool>,
+    /// A folder each new backup is copied to as well ("Copy to").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    backup_copy: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+struct Hold {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    until: Option<u64>,
+}
+
+fn now_secs() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+/// What a saved hold means at `now`: it stays stopped (until Start, or until a time still ahead), or the hold is
+/// over (a time gone by, while the app was closed too).
+pub fn hold_left(until: Option<u64>, now: u64) -> HoldLeft {
+    match until {
+        None => HoldLeft::UntilStart,
+        Some(t) if t > now => HoldLeft::For(t - now),
+        Some(_) => HoldLeft::Over,
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum HoldLeft {
+    UntilStart,
+    /// Seconds still to wait.
+    For(u64),
+    Over,
 }
 
 #[derive(Default)]
@@ -863,8 +951,17 @@ struct Inner {
     https_url: Option<String>,
     /// Tailscale shares it now (with reach on); false once the server stopped here.
     served: bool,
+    /// With reach on, Tailscale isn't connected on this computer (the last share or check said so): its devices can't
+    /// reach it, whatever the address says.
+    tailnet_down: bool,
+    /// `caffeinate`'s process while it keeps this Mac awake for the people reaching the server through Tailscale.
+    awake: Option<u32>,
     /// It is being set up, since then (Copy details' timeline counts from it).
     setting_up: Option<Instant>,
+    /// The last backup didn't finish (`backup`), or its copy didn't reach the "Copy to" folder (`copy`).
+    backup_problem: Option<&'static str>,
+    /// The night (`YYYY-MM-DD`) a nightly backup was last tried: once a night, even when it fails.
+    nightly_tried: Option<String>,
 }
 
 #[derive(Default)]
@@ -968,7 +1065,7 @@ pub fn answers_within(app: &AppHandle, origin: &str, wait: Duration) -> bool {
     loop {
         match phase(app) {
             Phase::Running if !via_tailnet || state(app).served => return true,
-            Phase::Running | Phase::Starting | Phase::Updating if Instant::now() < deadline => {
+            Phase::Running | Phase::Starting | Phase::Updating | Phase::Restarting if Instant::now() < deadline => {
                 std::thread::sleep(Duration::from_millis(100))
             }
             _ => return false,
@@ -1035,6 +1132,32 @@ pub struct Status {
     /// A terminal install still waiting for its owner, and running: its claim (the welcome window only).
     claim: Option<String>,
     back_to: Option<String>,
+    /// Stopped by the person to stay stopped (Stop): until Start, or until `held_until`.
+    held: bool,
+    /// When a stop "for an hour" ends and it starts again by itself (Unix milliseconds).
+    held_until: Option<u64>,
+    /// Reach is on but Tailscale isn't connected on this computer: nobody else can reach it now.
+    tailnet_down: bool,
+    backups: Backups,
+    /// `caffeinate` keeps this Mac awake for it now.
+    awake: bool,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Backups {
+    nightly: bool,
+    copy_to: Option<String>,
+    /// Its backups in `backups/`, newest first.
+    files: Vec<BackupFile>,
+    problem: Option<&'static str>,
+}
+
+#[derive(Clone, Serialize)]
+pub struct BackupFile {
+    path: String,
+    /// Unix milliseconds.
+    at: u64,
 }
 
 fn system_name() -> Option<String> {
@@ -1060,9 +1183,9 @@ fn system_name() -> Option<String> {
 }
 
 pub fn status(app: &AppHandle, welcome: bool) -> Status {
-    let (here, phase, back_to) = {
+    let (here, phase, back_to, tailnet_down, backup_problem, awake) = {
         let inner = state(app);
-        (inner.here.clone(), inner.phase, inner.back_to.clone())
+        (inner.here.clone(), inner.phase, inner.back_to.clone(), inner.tailnet_down, inner.backup_problem, inner.awake.is_some())
     };
     let folder = folder(app);
     let env = folder.as_ref().map(read_env).unwrap_or_default();
@@ -1070,6 +1193,7 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
     let run = here.run && installed == Installed::App;
     let port = env_get(&env, "PORT").and_then(|p| p.parse::<u16>().ok());
     let public = env_get(&env, "PUBLIC_URL").and_then(|u| crate::servers::origin_of(&u));
+    let reach = public.as_deref().is_some_and(|p| p.starts_with("https://"));
     let ready: Option<Value> = folder
         .as_ref()
         .and_then(|f| fs::read_to_string(f.ready()).ok())
@@ -1091,18 +1215,37 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
         owner: here.owner,
         phase: if run { phase.unwrap_or(Phase::Stopped) } else { Phase::Off },
         url: port.map(loopback_url).or_else(|| ready.as_ref().and_then(|r| r["url"].as_str().map(str::to_string))),
-        reach: public.as_deref().is_some_and(|p| p.starts_with("https://")),
+        reach,
         public_url: public,
         usage: telemetry_on(env_get(&env, "TELEMETRY").as_deref()),
         version: ready
             .as_ref()
             .and_then(|r| r["version"].as_str().map(str::to_string))
             .or_else(|| folder.as_ref().and_then(current_version)),
-        dir: folder.map(|f| f.0.to_string_lossy().into_owned()).unwrap_or_default(),
+        dir: folder.as_ref().map(|f| f.0.to_string_lossy().into_owned()).unwrap_or_default(),
         system_name: (welcome && installed != Installed::App).then(system_name).flatten(),
         serving,
         claim,
         back_to,
+        held: run && here.hold.is_some(),
+        held_until: here.hold.and_then(|h| h.until).map(|t| t * 1000),
+        tailnet_down: tailnet_down && reach,
+        backups: Backups {
+            nightly: here.nightly.unwrap_or(true),
+            files: folder
+                .as_ref()
+                .map(|f| backup_files(&f.backups()))
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(at, path)| BackupFile {
+                    path: path.to_string_lossy().into_owned(),
+                    at: at.duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0),
+                })
+                .collect(),
+            copy_to: here.backup_copy,
+            problem: backup_problem,
+        },
+        awake,
     }
 }
 
@@ -1114,6 +1257,15 @@ fn emit_status(app: &AppHandle) {
 fn set_phase(app: &AppHandle, phase: Phase) {
     state(app).phase = Some(phase);
     emit_status(app);
+}
+
+/// It can't start: every way there says so the same, on screen and with the system's notification (not only after
+/// the tries ran out), since nobody can use it meanwhile.
+fn failed(app: &AppHandle) {
+    set_phase(app, Phase::Failing);
+    notify(app, "hereFailing", "hereFailingBody", None);
+    // A page of it already on screen gets the cover back, with Try again and Copy details.
+    crate::cover::over_server_here(app);
 }
 
 fn note(app: &AppHandle, line: String) {
@@ -1146,7 +1298,7 @@ pub fn start(app: &AppHandle) {
         state(&app).launching = false;
         if let Err(err) = result {
             note(&app, format!("start: {err}"));
-            set_phase(&app, Phase::Failing);
+            failed(&app);
         }
     });
 }
@@ -1170,10 +1322,34 @@ fn start_now(app: &AppHandle) -> Result<(), String> {
     stop_leftover(app, &folder);
     let bundle = bundle(app).ok_or("this build doesn't carry the server")?;
     let copied = install_version(&folder, &bundle, &version).map_err(|e| e.to_string())?;
-    if let Copied::Update { from } = &copied {
-        state(app).update_from = Some(from.clone());
+    let saved = state(app).here.updating_from.clone();
+    let from = update_from_after(&copied, saved.as_deref(), &version, |v| folder.entry(v).is_file());
+    set_update_from(app, from.clone());
+    spawn(app, if from.is_some() { Phase::Updating } else { Phase::Starting })
+}
+
+/// The version this start updates from: a new copy's previous one, or, when this version's copy was already in place,
+/// the update a quit cut short (its previous copy still there), so its database still moves or goes back.
+pub fn update_from_after(copied: &Copied, saved: Option<&str>, version: &str, has_copy: impl Fn(&str) -> bool) -> Option<String> {
+    match copied {
+        Copied::Update { from } => Some(from.clone()),
+        Copied::Same => saved.filter(|f| *f != version && has_copy(f)).map(str::to_string),
+        Copied::First => None,
     }
-    spawn(app, if matches!(copied, Copied::Update { .. }) { Phase::Updating } else { Phase::Starting })
+}
+
+/// The update under way, in memory and in the app's record (None once it answered or went back).
+fn set_update_from(app: &AppHandle, from: Option<String>) {
+    let here = {
+        let mut inner = state(app);
+        inner.update_from = from.clone();
+        if inner.here.updating_from == from {
+            return;
+        }
+        inner.here.updating_from = from;
+        inner.here.clone()
+    };
+    save_here(app, &here);
 }
 
 /// The folder's port, or, when another program listens there now, the next free one (its address moves with
@@ -1236,9 +1412,10 @@ fn watch(app: &AppHandle, mut child: Child, generation: u64, port: u16, folder: 
                     let mut inner = state(app);
                     inner.answered = true;
                     inner.failed = 0;
-                    inner.update_from = None;
                 }
+                set_update_from(app, None);
                 set_phase(app, Phase::Running);
+                keep_awake(app, pid);
                 crate::host_sync::trigger(app);
                 crate::cover::server_here_ready(app);
                 let app = app.clone();
@@ -1272,6 +1449,10 @@ fn watch(app: &AppHandle, mut child: Child, generation: u64, port: u16, folder: 
             }
         }
         let next = next_after(inner.on_purpose, code, answered, inner.failed, inner.update_from.as_deref());
+        // Starting again by itself is never "stopped": nobody has to start it.
+        if !matches!(next, Next::Nothing | Next::GiveUp) {
+            inner.phase = Some(Phase::Restarting);
+        }
         (next, answered)
     };
     if answered {
@@ -1285,14 +1466,14 @@ fn watch(app: &AppHandle, mut child: Child, generation: u64, port: u16, folder: 
     match next {
         Next::Nothing => set_phase(app, Phase::Stopped),
         Next::Restart(delay) => {
-            set_phase(app, Phase::Stopped);
+            set_phase(app, Phase::Restarting);
             // Refused because a server left from before still holds the folder: that one goes first.
             if code == Some(exit::LOCKED) {
                 stop_leftover(app, folder);
             }
             if answered && state(app).stops.len() >= 3 {
                 state(app).stops.clear();
-                notify(app, "hereStopped", "hereStoppedBody", None);
+                notify(app, "hereRestarted", "hereRestartedBody", None);
             }
             std::thread::sleep(delay);
             let wanted = {
@@ -1302,21 +1483,21 @@ fn watch(app: &AppHandle, mut child: Child, generation: u64, port: u16, folder: 
             if wanted {
                 if let Err(err) = spawn(app, Phase::Starting) {
                     note(app, format!("restart: {err}"));
-                    set_phase(app, Phase::Failing);
+                    failed(app);
                 }
             }
         }
         Next::Upgrade { from } => {
             if let Err(err) = upgrade(app, from.as_deref()) {
                 note(app, format!("database upgrade: {err}"));
-                set_phase(app, Phase::Failing);
+                failed(app);
             }
         }
         // Its port was taken meanwhile: the start moves to a free one.
         Next::NewPort => {
             if let Err(err) = spawn(app, Phase::Starting) {
                 note(app, format!("port: {err}"));
-                set_phase(app, Phase::Failing);
+                failed(app);
             }
         }
         Next::GoBack { to } => {
@@ -1325,6 +1506,7 @@ fn watch(app: &AppHandle, mut child: Child, generation: u64, port: u16, folder: 
             let here = {
                 let mut inner = state(app);
                 inner.update_from = None;
+                inner.here.updating_from = None;
                 inner.failed = 0;
                 if back.is_ok() {
                     inner.back_to = Some(to.clone());
@@ -1334,16 +1516,15 @@ fn watch(app: &AppHandle, mut child: Child, generation: u64, port: u16, folder: 
             };
             save_here(app, &here);
             match back.and_then(|_| spawn(app, Phase::Starting)) {
-                Ok(()) => notify(app, "hereBack", "", Some(&to)),
+                Ok(()) => notify(app, "hereBack", "hereBackBody", Some(&to)),
                 Err(err) => {
                     note(app, format!("going back: {err}"));
-                    set_phase(app, Phase::Failing);
+                    failed(app);
                 }
             }
         }
         Next::GiveUp => {
-            set_phase(app, Phase::Failing);
-            notify(app, "hereFailing", "", None);
+            failed(app);
         }
     }
 }
@@ -1406,15 +1587,105 @@ pub fn ensure_served(app: &AppHandle) {
     if !is_running(app) || state(app).served {
         return;
     }
-    let Some(port) = folder(app).and_then(|f| port_of(&f)) else { return };
+    let Some(folder) = folder(app) else { return };
+    let Some(port) = port_of(&folder) else { return };
     // Nobody is there to allow HTTPS now: asked for it, it stops (reach turned on again asks the person).
     let asked = std::cell::Cell::new(false);
-    if crate::tailscale::serve(port, &mut |_| asked.set(true), &|| asked.get()).is_ok_and(|now| now == url)
-        && is_running(app)
-    {
-        state(app).served = true;
-        crate::cover::server_here_ready(app);
+    let shared = crate::tailscale::serve(port, &mut |_| asked.set(true), &|| asked.get());
+    let down = matches!(shared, Err(crate::tailscale::ServeError::NotConnected { .. }));
+    if state(app).tailnet_down != down {
+        state(app).tailnet_down = down;
+        emit_status(app);
     }
+    let Ok(now) = shared else { return };
+    if !is_running(app) {
+        return;
+    }
+    if now != url {
+        // Tailscale shares it at another address now (this device was renamed, or another share took 443): it
+        // moves there instead of sharing at an address nobody can open. Not while a reach change or a setup runs.
+        let server = app.state::<LocalServer>();
+        let Ok(_busy) = server.busy.try_lock() else { return };
+        note(app, format!("Tailscale shares it at {now}, not {url}: moving there"));
+        let was = crate::workspaces::window_user(app, &url);
+        let showing = crate::servers::current(app).is_some_and(|c| c.origin().ascii_serialization() == url);
+        if move_address(app, &folder, Some(&url), &now).is_ok() {
+            emit_status(app);
+            if showing {
+                let _ = follow_window(app, &folder, port, &now, was);
+            }
+        }
+        return;
+    }
+    state(app).served = true;
+    crate::cover::server_here_ready(app);
+}
+
+/// Tailscale's state, read again every minute while reach is on and the server runs (`host_sync.rs`): Tailscale
+/// turned off on this computer means nobody else reaches it, and its line says so; back on, it is shared again.
+pub fn check_tailnet(app: &AppHandle) {
+    if !reached(app) || !is_running(app) {
+        return;
+    }
+    let down = !matches!(crate::tailscale::tailnet(), crate::tailscale::Tailnet::On { .. });
+    let changed = {
+        let mut inner = state(app);
+        let changed = inner.tailnet_down != down;
+        inner.tailnet_down = down;
+        if down {
+            // Shared again once it is back (`ensure_served`).
+            inner.served = false;
+        }
+        changed
+    };
+    if changed {
+        emit_status(app);
+    }
+}
+
+/// This Mac stays awake while the server runs here, for the agents' work and its nightly backup, and for people
+/// reaching it from their phones and computers (`caffeinate -i -w <the server>`, which ends by itself when the
+/// server does). Other systems: nothing.
+fn keep_awake(app: &AppHandle, server_pid: u32) {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+    let_sleep(app);
+    let spawned = Command::new("/usr/bin/caffeinate")
+        .args(["-i", "-w", &server_pid.to_string()])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+    if let Ok(mut child) = spawned {
+        let id = child.id();
+        state(app).awake = Some(id);
+        // Reaped when it ends (with the server, or `let_sleep`), and forgotten then: its pid is never signalled
+        // again once another process may have it.
+        let app = app.clone();
+        std::thread::spawn(move || {
+            let _ = child.wait();
+            let mut inner = state(&app);
+            if inner.awake == Some(id) {
+                inner.awake = None;
+            }
+        });
+    }
+}
+
+/// This Mac may sleep again (reach turned off; the server stopping ends `caffeinate` by itself).
+fn let_sleep(app: &AppHandle) {
+    let Some(pid) = state(app).awake.take() else { return };
+    // A function per platform: an attribute on an `if` statement isn't stable Rust.
+    #[cfg(unix)]
+    fn end(pid: u32) {
+        if pid_alive(pid) {
+            stop_pid(pid, Duration::from_millis(500), || !pid_alive(pid));
+        }
+    }
+    #[cfg(not(unix))]
+    fn end(_pid: u32) {}
+    end(pid);
 }
 
 /// Tailscale stops sharing the server here (it stopped here, or the app quits).
@@ -1432,6 +1703,7 @@ pub fn stop(app: &AppHandle, forget: bool) {
         inner.on_purpose = true;
         if forget {
             inner.here.run = false;
+            inner.here.hold = None;
         }
         (inner.pid, inner.here.clone())
     };
@@ -1484,10 +1756,68 @@ pub fn load(app: &AppHandle) {
         .and_then(|p| fs::read_to_string(p).ok())
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or_default();
+    let hold = here.hold;
     state(app).here = here;
-    if runs(app) {
-        start(app);
+    nightly(app);
+    if !runs(app) {
+        return;
     }
+    match hold.map(|h| hold_left(h.until, now_secs())) {
+        Some(HoldLeft::UntilStart) => emit_status(app),
+        Some(HoldLeft::For(_)) => release_at(app, hold.and_then(|h| h.until).unwrap_or_default()),
+        Some(HoldLeft::Over) | None => {
+            if hold.is_some() {
+                set_hold(app, None);
+            }
+            start(app);
+        }
+    }
+}
+
+fn set_hold(app: &AppHandle, hold: Option<Hold>) {
+    let here = {
+        let mut inner = state(app);
+        inner.here.hold = hold;
+        inner.here.clone()
+    };
+    save_here(app, &here);
+    emit_status(app);
+}
+
+/// Stop, by the person: it stays stopped until Start (`minutes` None), or starts again by itself after `minutes`.
+/// Tailscale stops sharing it and the agents of its workspaces stop working here meanwhile, as with any stop.
+pub fn hold_stopped(app: &AppHandle, minutes: Option<u64>) {
+    let until = minutes.map(|m| now_secs() + m * 60);
+    stop_by_hand(app, false);
+    set_hold(app, Some(Hold { until }));
+    // A page of it on screen: the cover says it is stopped, until when, and offers Start now or another server.
+    crate::cover::over_server_here(app);
+    if let Some(until) = until {
+        release_at(app, until);
+    }
+}
+
+/// Start, by the person (the popover, Preferences, the menus): any hold ends.
+pub fn start_by_hand(app: &AppHandle) {
+    if state(app).here.hold.is_some() {
+        set_hold(app, None);
+    }
+    start(app);
+}
+
+/// At `until`, a stop "for an hour" ends: it starts again, unless the person changed it meanwhile (started it,
+/// stopped it again, stopped running it here).
+fn release_at(app: &AppHandle, until: u64) {
+    emit_status(app);
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(until.saturating_sub(now_secs())));
+        let still = state(&app).here.hold == Some(Hold { until: Some(until) });
+        if still && runs(&app) {
+            set_hold(&app, None);
+            start(&app);
+        }
+    });
 }
 
 /// The person stopped it (Stop, "Stop running it here…"): Tailscale stops sharing it too, and the agents of its
@@ -1539,7 +1869,20 @@ fn notify(app: &AppHandle, title: &str, body: &str, version: Option<&str>) {
     let Some(title) = labels.get(title) else { return };
     let body = labels.get(body).cloned().unwrap_or_default();
     let fill = |s: &str| s.replace("{version}", version.unwrap_or(""));
+    *NOTICE_AT.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
     let _ = app.notification().builder().title(fill(title)).body(fill(&body)).show();
+}
+
+/// When the server here last told something with the system's notification.
+static NOTICE_AT: Mutex<Option<Instant>> = Mutex::new(None);
+/// A click on that notification brings the app forward within this long: the popover opens, where its banner
+/// says what happened and how to fix it.
+const NOTICE_OPENS_FOR: Duration = Duration::from_secs(30);
+
+/// The app came forward (its Dock icon, its window): true once, within `NOTICE_OPENS_FOR` of a notification of the
+/// server here, and the caller opens the popover.
+pub fn take_notice_click() -> bool {
+    NOTICE_AT.lock().unwrap_or_else(|e| e.into_inner()).take().is_some_and(|at| at.elapsed() <= NOTICE_OPENS_FOR)
 }
 
 // ───────────────────────────── setting it up ─────────────────────────────
@@ -1628,6 +1971,7 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
     {
         let mut inner = state(app);
         inner.here.run = true;
+        inner.here.hold = None;
         inner.failed = 0;
         inner.back_to = None;
         inner.on_purpose = false;
@@ -1739,18 +2083,44 @@ fn reach_on(app: &AppHandle) -> Result<String, crate::tailscale::ServeError> {
         }
     })?;
     let old = public_url(app);
-    state(app).served = true;
+    let pid = {
+        let mut inner = state(app);
+        inner.served = true;
+        inner.tailnet_down = false;
+        inner.pid
+    };
     // Already its address (reach was on before): the server has it, no restart.
     if old.as_deref() == Some(url.as_str()) {
+        if let Some(pid) = pid {
+            keep_awake(app, pid);
+        }
         return Ok(url);
     }
-    write_env(&folder, &[("PUBLIC_URL", url.clone())]).map_err(|_| crate::tailscale::ServeError::Serve)?;
-    if let Some(old) = old {
-        crate::servers::replace(app, &old, &url);
-    }
     reach_stage(app, "restarting", None);
-    restart(app).map_err(|_| crate::tailscale::ServeError::Start)?;
+    move_address(app, &folder, old.as_deref(), &url).map_err(|_| crate::tailscale::ServeError::Start)?;
     Ok(url)
+}
+
+/// Its address moves from `old` to `new` (its settings, the app's list) and it starts again there. When it doesn't
+/// answer there, back to `old`, so the switch, the list and the window never point where it doesn't answer.
+fn move_address(app: &AppHandle, folder: &Folder, old: Option<&str>, new: &str) -> Result<(), ()> {
+    write_env(folder, &[("PUBLIC_URL", new.to_string())]).map_err(|_| ())?;
+    if let Some(old) = old {
+        crate::servers::replace(app, old, new);
+    }
+    if restart(app).is_ok() {
+        return Ok(());
+    }
+    if let Some(old) = old {
+        let _ = write_env(folder, &[("PUBLIC_URL", old.to_string())]);
+        crate::servers::replace(app, new, old);
+        if crate::servers::is_loopback(old) {
+            crate::tailscale::unserve(new);
+            state(app).served = false;
+        }
+        let _ = restart(app);
+    }
+    Err(())
 }
 
 /// Its address back to this computer's loopback, and Tailscale stops sharing it; the server reads it at start.
@@ -1761,7 +2131,12 @@ fn address_here(app: &AppHandle, folder: &Folder) -> Result<String, String> {
         crate::tailscale::unserve(&old);
         crate::servers::replace(app, &old, &local);
     }
-    state(app).served = false;
+    {
+        let mut inner = state(app);
+        inner.served = false;
+        inner.tailnet_down = false;
+    }
+    let_sleep(app);
     write_env(folder, &[("PUBLIC_URL", local.clone())]).map_err(|e| e.to_string())?;
     Ok(local)
 }
@@ -1780,20 +2155,21 @@ fn backup(app: &AppHandle) -> Result<String, String> {
     let folder = folder(app).ok_or("no folder")?;
     let was_running = state(app).pid.is_some();
     make_private_dir(&folder.backups()).map_err(|e| e.to_string())?;
-    // Windows has no `date` program: the stamp then.
-    #[cfg(unix)]
-    let date = Command::new("date").arg("+%Y-%m-%d-%H%M%S").output().ok();
-    #[cfg(not(unix))]
-    let date: Option<std::process::Output> = None;
-    let date = date.map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).filter(|d| !d.is_empty());
-    let name = format!("agentes-{}.tar.gz", date.unwrap_or_else(stamp));
+    let name = format!("agentes-{}.tar.gz", local_stamp().unwrap_or_else(stamp));
     let out = folder.backups().join(&name);
     if was_running {
         stop(app, false);
     }
     let parts: Vec<&str> = ["db", "files", ".env"].into_iter().filter(|p| folder.0.join(p).exists()).collect();
     // Windows 10 and later carry `tar` too.
-    let tar = crate::no_console(&mut Command::new("tar")).arg("-czf").arg(&out).arg("-C").arg(&folder.0).args(&parts).status();
+    // Under a temporary name until it's whole: a quit in the middle (the night's update) never leaves a cut file
+    // that lists as the newest backup.
+    let tmp = folder.backups().join(format!("{name}.tmp"));
+    let tar = crate::no_console(&mut Command::new("tar")).arg("-czf").arg(&tmp).arg("-C").arg(&folder.0).args(&parts).status();
+    let tar = tar.and_then(|s| if s.success() { fs::rename(&tmp, &out).map(|()| s) } else { Ok(s) });
+    if !tar.as_ref().is_ok_and(|s| s.success()) {
+        let _ = fs::remove_file(&tmp);
+    }
     if was_running {
         fresh_start(app);
         let _ = spawn(app, Phase::Starting);
@@ -1805,11 +2181,187 @@ fn backup(app: &AppHandle) -> Result<String, String> {
                 use std::os::unix::fs::PermissionsExt;
                 let _ = fs::set_permissions(&out, fs::Permissions::from_mode(0o600));
             }
-            prune(&folder.backups(), "agentes-", 2, &[]);
+            prune(&folder.backups(), "agentes-", KEEP_BACKUPS, &[]);
+            let copied = copy_out(app, &out);
+            state(app).backup_problem = (!copied).then_some("copy");
+            emit_status(app);
             Ok(out.to_string_lossy().into_owned())
         }
-        _ => Err("the copy didn't finish".into()),
+        _ => {
+            state(app).backup_problem = Some("backup");
+            emit_status(app);
+            Err("the copy didn't finish".into())
+        }
     }
+}
+
+/// Backups kept, here and in the "Copy to" folder.
+const KEEP_BACKUPS: usize = 2;
+/// The nightly backup's hour, local time.
+const NIGHTLY_HOUR: &str = "030000";
+
+/// Now on this computer's clock as `YYYY-MM-DD-HHMMSS` (backups' names); None where there is no `date` program
+/// (Windows, whose builds don't carry the server).
+fn local_stamp() -> Option<String> {
+    #[cfg(unix)]
+    let date = Command::new("date").arg("+%Y-%m-%d-%H%M%S").output().ok();
+    #[cfg(not(unix))]
+    let date: Option<std::process::Output> = None;
+    date.map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).filter(|d| d.len() == 17)
+}
+
+/// The backups `backup` wrote in `dir` (`agentes-*.tar.gz`), newest first. Only those: the "Copy to" folder is the
+/// person's own and may hold anything else.
+fn backup_files(dir: &Path) -> Vec<(SystemTime, PathBuf)> {
+    let Ok(entries) = fs::read_dir(dir) else { return Vec::new() };
+    let mut files: Vec<(SystemTime, PathBuf)> = entries
+        .flatten()
+        .filter(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+            name.starts_with("agentes-") && name.ends_with(".tar.gz") && e.path().is_file()
+        })
+        .map(|e| (e.metadata().and_then(|m| m.modified()).unwrap_or(UNIX_EPOCH), e.path()))
+        .collect();
+    files.sort_by(|a, b| b.0.cmp(&a.0));
+    files
+}
+
+/// The new backup copied to the "Copy to" folder too (under a temporary name until it's whole), where the two
+/// newest stay. False when it didn't get there; true with no such folder.
+fn copy_out(app: &AppHandle, file: &Path) -> bool {
+    let Some(dir) = state(app).here.backup_copy.clone().map(PathBuf::from) else { return true };
+    let Some(name) = file.file_name() else { return false };
+    let tmp = dir.join(format!("{}.tmp", name.to_string_lossy()));
+    let copied = dir.is_dir() && fs::copy(file, &tmp).is_ok() && fs::rename(&tmp, dir.join(name)).is_ok();
+    if !copied {
+        let _ = fs::remove_file(&tmp);
+        note(app, format!("backup: it didn't reach {}", dir.display()));
+        return false;
+    }
+    for (_, old) in backup_files(&dir).into_iter().skip(KEEP_BACKUPS) {
+        let _ = fs::remove_file(old);
+    }
+    true
+}
+
+/// Whether the nightly backup is due at `now` (both `YYYY-MM-DD-HHMMSS`, local time): past 3:00 and no backup since
+/// 3:00 today, and not tried yet tonight. A computer that slept or was off at 3:00 backs up when it's back.
+pub fn nightly_due(now: &str, last: Option<&str>, tried: Option<&str>) -> bool {
+    let (Some(today), Some(time)) = (now.get(..10), now.get(11..)) else { return false };
+    let since = format!("{today}-{NIGHTLY_HOUR}");
+    time >= NIGHTLY_HOUR && tried != Some(today) && last.map_or(true, |l| l < since.as_str())
+}
+
+/// Once a minute while the app is open: the nightly backup when it's due, the switch is on and the server runs
+/// here. A minute's sleep that lasted a night (the computer slept) is caught up at the next check.
+pub fn nightly(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(60));
+        let wanted = {
+            let inner = state(&app);
+            inner.here.nightly.unwrap_or(true) && inner.setting_up.is_none()
+        };
+        if !wanted || !runs(&app) {
+            continue;
+        }
+        let Some(now) = local_stamp() else { continue };
+        let Some(folder) = folder(&app) else { continue };
+        let last = backup_files(&folder.backups())
+            .first()
+            .and_then(|(_, p)| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+            .and_then(|n| n.strip_prefix("agentes-").and_then(|n| n.strip_suffix(".tar.gz")).map(str::to_string));
+        let tried = state(&app).nightly_tried.clone();
+        if !nightly_due(&now, last.as_deref(), tried.as_deref()) {
+            continue;
+        }
+        // Not under another long operation (a restart, reach, a backup by hand): the next minute then.
+        let server = app.state::<LocalServer>();
+        let Ok(_busy) = server.busy.try_lock() else { continue };
+        state(&app).nightly_tried = now.get(..10).map(str::to_string);
+        if let Err(err) = backup(&app) {
+            note(&app, format!("nightly backup: {err}"));
+        }
+    });
+}
+
+/// "Restore…": the server goes back to one of its backups in `backups/`. It stops, what the folder holds now moves
+/// aside to `backups/before-restore-<time>` (never deleted), the backup takes its place and it starts again. A
+/// backup that doesn't start puts the folder back as it was. Its address and port stay this computer's.
+fn restore(app: &AppHandle, file: &str) -> Result<(), String> {
+    let folder = folder(app).ok_or("no folder")?;
+    let file = PathBuf::from(file);
+    if !backup_files(&folder.backups()).iter().any(|(_, p)| *p == file) {
+        return Err("not one of its backups".into());
+    }
+    let at = stamp();
+    let unpacked = folder.backups().join(format!("restore-{at}.tmp"));
+    make_private_dir(&unpacked).map_err(|e| e.to_string())?;
+    let tar = crate::no_console(&mut Command::new("tar")).arg("-xzf").arg(&file).arg("-C").arg(&unpacked).status();
+    if !tar.is_ok_and(|s| s.success()) || !unpacked.join("db").is_dir() {
+        let _ = fs::remove_dir_all(&unpacked);
+        return Err("unreadable".into());
+    }
+    let env_now = read_env(&folder);
+    let kept: Vec<(&str, String)> =
+        ["PORT", "PUBLIC_URL"].into_iter().filter_map(|k| env_get(&env_now, k).map(|v| (k, v))).collect();
+    let aside = folder.backups().join(format!("before-restore-{at}"));
+    let had: Vec<&str> = DATA_PARTS.into_iter().filter(|p| folder.0.join(p).exists()).collect();
+    let started = |app: &AppHandle| {
+        fresh_start(app);
+        spawn(app, Phase::Starting).is_ok() && wait_running(app) == Phase::Running
+    };
+    stop(app, false);
+    let swapped = make_private_dir(&aside)
+        .and_then(|()| move_parts(&folder.0, &aside))
+        .and_then(|()| move_parts(&unpacked, &folder.0))
+        .and_then(|()| write_env(&folder, &kept));
+    if swapped.is_ok() && started(app) {
+        let _ = fs::remove_dir_all(&unpacked);
+        return Ok(());
+    }
+    note(app, format!("restore: it didn't start ({swapped:?}), putting back what was there"));
+    stop(app, false);
+    let failed = folder.backups().join(format!("failed-restore-{at}"));
+    let back = make_private_dir(&failed).and_then(|()| put_back(&folder.0, &aside, &failed, &had));
+    let _ = fs::remove_dir_all(&unpacked);
+    if back.is_err() {
+        note(app, format!("restore: putting it back failed, the old data is in {}", aside.display()));
+    }
+    let _ = started(app);
+    Err("start".into())
+}
+
+/// The folder's data, as a backup holds it: database, files, settings.
+const DATA_PARTS: [&str; 3] = ["db", "files", ".env"];
+
+/// Moves the folder's data from `from` to `to`, each part only when `from` has it, never over one `to` has.
+fn move_parts(from: &Path, to: &Path) -> io::Result<()> {
+    for part in DATA_PARTS {
+        if !from.join(part).exists() {
+            continue;
+        }
+        if to.join(part).exists() {
+            return Err(io::Error::new(io::ErrorKind::AlreadyExists, part));
+        }
+        fs::rename(from.join(part), to.join(part))?;
+    }
+    Ok(())
+}
+
+/// After a restore that didn't start: what the backup brought goes to `failed`, and what was set aside comes back.
+/// A part the folder `had` that never moved aside stays where it is.
+fn put_back(folder: &Path, aside: &Path, failed: &Path, had: &[&str]) -> io::Result<()> {
+    for part in DATA_PARTS {
+        let set_aside = aside.join(part).exists();
+        if folder.join(part).exists() && (set_aside || !had.contains(&part)) {
+            fs::rename(folder.join(part), failed.join(part))?;
+        }
+        if set_aside {
+            fs::rename(aside.join(part), folder.join(part))?;
+        }
+    }
+    Ok(())
 }
 
 /// What "Copy details" copies: versions and state, what the server and the setup said, the end of its log. No
@@ -1933,6 +2485,8 @@ pub fn local_server_start(app: AppHandle, webview: tauri::Webview) -> Result<(),
     {
         let mut inner = state(&app);
         inner.here.run = true;
+        // Start ends a stop the person asked to keep.
+        inner.here.hold = None;
         inner.failed = 0;
         inner.back_to = None;
         let here = inner.here.clone();
@@ -1943,15 +2497,28 @@ pub fn local_server_start(app: AppHandle, webview: tauri::Webview) -> Result<(),
     Ok(())
 }
 
+/// Stop: `forget` stops running it here; otherwise it stays stopped until Start, or for `minutes` (an hour, from
+/// the popover's choices) and then starts again by itself. Either way it no longer starts when the app opens again.
 #[tauri::command]
-pub async fn local_server_stop(app: AppHandle, webview: tauri::Webview, forget: bool) -> Result<(), String> {
+pub async fn local_server_stop(
+    app: AppHandle,
+    webview: tauri::Webview,
+    forget: bool,
+    minutes: Option<u64>,
+) -> Result<(), String> {
     app_window(&webview, &["popover", "prefs"])?;
     // The popover's Stop during a setup is its Cancel.
     if setting_up(&app) {
         app.state::<LocalServer>().cancel.store(true, SeqCst);
     }
+    // At most a day: a longer stop is "until Start".
+    let minutes = minutes.filter(|m| (1..=24 * 60).contains(m));
     tauri::async_runtime::spawn_blocking(move || {
-        stop_by_hand(&app, forget);
+        if forget {
+            stop_by_hand(&app, true);
+        } else {
+            hold_stopped(&app, minutes);
+        }
         if forget {
             if let Some(origin) = public_url(&app) {
                 crate::servers::remove(&app, &origin);
@@ -1996,11 +2563,13 @@ pub async fn local_server_reach(app: AppHandle, webview: tauri::Webview, on: boo
         let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
         let shown = crate::servers::current(&app).map(|u| u.origin().ascii_serialization());
         let was_here = shown.as_deref().is_some_and(|o| is_here(&app, o));
+        // Who the window was signed in as there, asked before its address changes (the old one may stop answering).
+        let was = shown.as_deref().filter(|_| was_here).and_then(|o| crate::workspaces::window_user(&app, o));
         let result = if on {
             reach_on(&app).map_err(|reason| json!(reason))
         } else {
             // Turning it off asks nothing of Tailscale that can fail: what fails is the start at the address here.
-            reach_off(&app).map_err(|_| json!(crate::tailscale::ServeError::Start))
+            reach_off(&app).map_err(|_| json!(crate::tailscale::ServeError::Back))
         };
         emit_status(&app);
         let url = match result {
@@ -2011,9 +2580,7 @@ pub async fn local_server_reach(app: AppHandle, webview: tauri::Webview, on: boo
             let folder = folder(&app).ok_or("no folder")?;
             let port = port_of(&folder).ok_or("no port")?;
             reach_stage(&app, "signingIn", None);
-            if let Ok(token) = owner_sign_in(&folder, port, None) {
-                open_signed_in(&app, &url, &token)?;
-            }
+            follow_window(&app, &folder, port, &url, was)?;
         }
         Ok(json!({ "ok": true, "url": url }))
     })
@@ -2059,6 +2626,101 @@ pub async fn local_server_backup(app: AppHandle, webview: tauri::Webview) -> Res
     .map_err(|e| e.to_string())?
 }
 
+/// Async: a "Copy to" folder on a drive that went away can keep `is_dir` waiting, never on the main thread.
+#[tauri::command]
+pub async fn local_server_backups_set(
+    app: AppHandle,
+    webview: tauri::Webview,
+    nightly: bool,
+    copy_to: Option<String>,
+) -> Result<(), String> {
+    app_window(&webview, &["prefs"])?;
+    if copy_to.as_deref().is_some_and(|d| !Path::new(d).is_absolute() || !Path::new(d).is_dir()) {
+        return Err("not a folder".into());
+    }
+    let here = {
+        let mut inner = state(&app);
+        if inner.here.backup_copy != copy_to {
+            inner.backup_problem = inner.backup_problem.filter(|p| *p != "copy");
+        }
+        inner.here.nightly = (!nightly).then_some(false);
+        inner.here.backup_copy = copy_to;
+        inner.here.clone()
+    };
+    save_here(&app, &here);
+    emit_status(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn local_server_restore(app: AppHandle, webview: tauri::Webview, file: String) -> Result<(), String> {
+    app_window(&webview, &["prefs"])?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let server = app.state::<LocalServer>();
+        let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
+        let result = restore(&app, &file);
+        emit_status(&app);
+        result
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// What keeps the server here up after a restart or a power cut (macOS; None where the app can't tell): automatic
+/// login, and starting up again after a power failure (`pmset`; None on a Mac without that setting, a laptop).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeepRunning {
+    auto_login: Option<bool>,
+    auto_restart: Option<bool>,
+}
+
+/// `pmset -g`'s `autorestart` line, when it has one.
+pub fn auto_restart_in(pmset: &str) -> Option<bool> {
+    pmset.lines().find_map(|l| {
+        let mut words = l.split_whitespace();
+        (words.next() == Some("autorestart")).then(|| words.next().is_some_and(|v| v != "0"))
+    })
+}
+
+#[tauri::command]
+pub async fn keep_running(webview: tauri::Webview) -> Result<KeepRunning, String> {
+    app_window(&webview, &["prefs"])?;
+    if !cfg!(target_os = "macos") {
+        return Ok(KeepRunning { auto_login: None, auto_restart: None });
+    }
+    tauri::async_runtime::spawn_blocking(|| {
+        let auto_login = Command::new("/usr/bin/defaults")
+            .args(["read", "/Library/Preferences/com.apple.loginwindow", "autoLoginUser"])
+            .output()
+            .map(|o| o.status.success() && !String::from_utf8_lossy(&o.stdout).trim().is_empty())
+            .ok();
+        let auto_restart = Command::new("/usr/bin/pmset")
+            .arg("-g")
+            .output()
+            .ok()
+            .and_then(|o| auto_restart_in(&String::from_utf8_lossy(&o.stdout)));
+        KeepRunning { auto_login, auto_restart }
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// System Settings at Users & Groups (automatic login) or Energy (start after a power failure). macOS only.
+#[tauri::command]
+pub fn open_system_settings(webview: tauri::Webview, page: String) -> Result<(), String> {
+    app_window(&webview, &["prefs"])?;
+    if !cfg!(target_os = "macos") {
+        return Err("macOS only".into());
+    }
+    let url = match page.as_str() {
+        "users" => "x-apple.systempreferences:com.apple.preferences.users",
+        "energy" => "x-apple.systempreferences:com.apple.preference.energysaver",
+        _ => return Err("unknown page".into()),
+    };
+    Command::new("/usr/bin/open").arg(url).status().map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn local_server_diagnostics(app: AppHandle, webview: tauri::Webview) -> Result<String, String> {
     app_window(&webview, ANY)?;
@@ -2081,6 +2743,89 @@ pub async fn local_server_sync(app: AppHandle, webview: tauri::Webview, rotate: 
 mod tests {
     use super::*;
     use std::sync::Arc;
+
+    #[test]
+    fn an_update_cut_short_is_still_an_update() {
+        let has = |v: &str| v == "0.6.0";
+        let update = Copied::Update { from: "0.6.0".into() };
+        assert_eq!(update_from_after(&update, None, "0.7.0", has).as_deref(), Some("0.6.0"));
+        // Quit before it answered: the copy is in place now, the record still names where it came from.
+        assert_eq!(update_from_after(&Copied::Same, Some("0.6.0"), "0.7.0", has).as_deref(), Some("0.6.0"));
+        // Nothing under way, that copy gone, or a record naming this very version: no update.
+        assert_eq!(update_from_after(&Copied::Same, None, "0.7.0", has), None);
+        assert_eq!(update_from_after(&Copied::Same, Some("0.5.0"), "0.7.0", has), None);
+        assert_eq!(update_from_after(&Copied::Same, Some("0.7.0"), "0.7.0", |_| true), None);
+        assert_eq!(update_from_after(&Copied::First, Some("0.6.0"), "0.7.0", has), None);
+        let older: HereFile = serde_json::from_str(r#"{"run":true,"owner":true}"#).unwrap();
+        assert_eq!(older.updating_from, None);
+    }
+
+    #[test]
+    fn the_window_follows_as_the_owner_only_when_it_was() {
+        assert!(sign_in_owner(Some("u-1"), Some("u-1")));
+        assert!(!sign_in_owner(Some("u-2"), Some("u-1")), "a teammate signed in there gets the sign-in page");
+        assert!(!sign_in_owner(None, Some("u-1")), "signed out there: the sign-in page");
+        assert!(sign_in_owner(Some("u-1"), None), "an older server that doesn't say: as before");
+    }
+
+    #[test]
+    fn the_nightly_backup_once_a_night_after_three() {
+        let due = |now, last, tried| nightly_due(now, last, tried);
+        assert!(!due("2026-11-11-025900", None, None));
+        assert!(due("2026-11-11-030000", None, None));
+        assert!(due("2026-11-11-030100", Some("2026-11-10-030012"), None));
+        // Back up now at 1:00 isn't tonight's; one after 3:00 is.
+        assert!(due("2026-11-11-091500", Some("2026-11-11-010000"), None));
+        assert!(!due("2026-11-11-091500", Some("2026-11-11-030005"), None));
+        // Tried tonight already (it failed): tomorrow.
+        assert!(!due("2026-11-11-091500", Some("2026-11-10-030012"), Some("2026-11-11")));
+        assert!(!due("nonsense", None, None));
+    }
+
+    #[test]
+    fn power_failure_restart_from_pmset() {
+        assert_eq!(auto_restart_in("System-wide power settings:\n Sleep On Power Button 1\n autorestart          1\n"), Some(true));
+        assert_eq!(auto_restart_in(" autorestart          0\n"), Some(false));
+        assert_eq!(auto_restart_in(" womp                 1\n"), None);
+    }
+
+    #[test]
+    fn a_restore_that_failed_puts_back_what_was_there() {
+        let root = temp("put-back");
+        let (folder, aside, failed) = (root.join("f"), root.join("aside"), root.join("failed"));
+        for d in [&folder, &aside, &failed] {
+            fs::create_dir_all(d).unwrap();
+        }
+        // It had a database and settings; the database moved aside, the settings didn't, and the backup brought
+        // its database and files.
+        fs::create_dir_all(aside.join("db")).unwrap();
+        fs::write(aside.join("db/mark"), "old").unwrap();
+        fs::write(folder.join(".env"), "old").unwrap();
+        fs::create_dir_all(folder.join("db")).unwrap();
+        fs::create_dir_all(folder.join("files")).unwrap();
+        assert!(move_parts(&aside, &folder).is_err(), "never over a part that is there");
+        put_back(&folder, &aside, &failed, &["db", ".env"]).unwrap();
+        assert_eq!(fs::read_to_string(folder.join("db/mark")).unwrap(), "old");
+        assert_eq!(fs::read_to_string(folder.join(".env")).unwrap(), "old");
+        assert!(!folder.join("files").exists() && failed.join("files").is_dir() && failed.join("db").is_dir());
+    }
+
+    #[test]
+    fn a_kept_stop_and_its_end() {
+        assert_eq!(hold_left(None, 1_000), HoldLeft::UntilStart);
+        assert_eq!(hold_left(Some(1_060), 1_000), HoldLeft::For(60));
+        // The hour ended while the app was closed: it starts as the app opens.
+        assert_eq!(hold_left(Some(1_000), 1_000), HoldLeft::Over);
+        assert_eq!(hold_left(Some(900), 1_000), HoldLeft::Over);
+        // Saved and read back; a record from before holds existed reads as none.
+        let here = HereFile { run: true, owner: true, hold: Some(Hold { until: Some(1_060) }), ..Default::default() };
+        let back: HereFile = serde_json::from_str(&serde_json::to_string(&here).unwrap()).unwrap();
+        assert_eq!(back.hold, Some(Hold { until: Some(1_060) }));
+        let until_start: HereFile = serde_json::from_str(r#"{"run":true,"owner":true,"hold":{}}"#).unwrap();
+        assert_eq!(until_start.hold, Some(Hold { until: None }));
+        let older: HereFile = serde_json::from_str(r#"{"run":true,"owner":true}"#).unwrap();
+        assert_eq!(older.hold, None);
+    }
 
     /// A new temporary folder for one test.
     fn temp(name: &str) -> PathBuf {

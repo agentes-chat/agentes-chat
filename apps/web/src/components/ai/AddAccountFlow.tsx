@@ -5,8 +5,11 @@ import { knownErrorText } from "@agenteschat/client/lib/errors";
 import {
   beginLogin,
   freeDuplicate,
+  geminiNotShared,
   isSignInCode,
+  isUrlWithoutCode,
   type LoginRead,
+  loginFailureLine,
   loginRead,
   loginReadPasses,
   otherThanHint,
@@ -16,6 +19,7 @@ import { accountCodeAad, sealSecret } from "@agenteschat/client/lib/secret-box";
 import { AffixInput, Button, cx, Icon, InfoHint, Locked, ProviderLogo, SettingNote, SwapLabel } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
 import { inDesktopApp } from "@/lib/desktop";
@@ -33,7 +37,8 @@ import { openPopup, openWaitingPopup, sendPopup } from "@/lib/popup";
  * its own key page, then the key, sealed the same way; it never reaches our
  * server. Cursor (ADR 0114): its sign-in page, and the computer finishes by
  * itself; or, chosen under it, a Cursor API key, sent like a plan's key. Gemini (ADR 0143): Google's sign-in page,
- * then the code it shows, pasted like Claude's; a personal Google account under the plain warning about Google's
+ * then the code it shows, pasted like Claude's (its page's address, which carries no code, is never sent); a
+ * personal Google account under the plain warning about Google's
  * terms, or (chosen under it) Gemini Enterprise. "Paste" shows only while the field is empty. Every start is a click,
  * never the block showing. The page asks every 2 s; Back or closing stops
  * the sign-in on the computer. "Copy link" beside a sign-in's button copies
@@ -96,6 +101,21 @@ export interface AddAccountProps {
    * is offline keeps it meanwhile, so the same sign-in goes on once it's back.
    */
   onSigningIn?: (on: boolean) => void;
+  /**
+   * A dialog's footer: the buttons that start a sign-in (sign in and copy its link, sign in again or another account)
+   * go there, as the dialog's main action and the one beside it, instead of under their step.
+   */
+  actionsAt?: HTMLElement | null;
+  /**
+   * The place above it says what this sign-in is (one agent's turn of several: whose turn it is): the first step's
+   * title stays out, and with `actionsAt` a sign-in that didn't end says why only through `onEnd`, its way on in the
+   * footer.
+   */
+  quiet?: boolean;
+  /** Why the sign-in ended without signing in, in words; null while it goes on or starts over. */
+  onEnd?: (why: string | null) => void;
+  /** With `quiet` and `actionsAt`: what goes beside "Try again" once a sign-in didn't end (skip that agent). */
+  endActions?: ReactNode;
 }
 
 export function AddAccount(props: AddAccountProps) {
@@ -128,6 +148,21 @@ export function AddAccount(props: AddAccountProps) {
       {t("connectAi.another")}
     </Button>
   );
+  if (reuse && chosen === undefined && props.actionsAt)
+    return (
+      <>
+        <SettingNote icon="repeat">{t("connectAi.reuse.active", { label })}</SettingNote>
+        {createPortal(
+          <>
+            <Button onClick={() => setPick("new")}>{t("connectAi.another")}</Button>
+            <Button variant="primary" onClick={() => setPick("again")}>
+              {t("aiAccounts.page.signInAgain")}
+            </Button>
+          </>,
+          props.actionsAt,
+        )}
+      </>
+    );
   if (reuse && chosen === undefined)
     return (
       <div className="ai-panel__row">
@@ -256,6 +291,10 @@ function AddAccountFlow({
   onSent,
   onFailed,
   onSigningIn,
+  actionsAt,
+  quiet = false,
+  onEnd,
+  endActions,
   onRetry,
 }: AddAccountProps & { onRetry: () => void }) {
   const { t } = useTranslation();
@@ -388,7 +427,14 @@ function AddAccountFlow({
   const reads = [read, ...Object.values(fanReads)];
   const shown = fanFailed ?? result;
   const noAnswer = startFailed !== null || reads.includes("noAnswer");
-  const ended = noAnswer || reads.includes("failed") || shown?.state === "failed" || shown?.state === "expired";
+  const failure = loginFailureLine(shown?.code);
+  // Canceled from somewhere else: nothing went wrong, so no line; the sign-in starts over.
+  const canceled = (shown?.state === "failed" || shown?.state === "expired") && failure.key === null;
+  useEffect(() => {
+    if (canceled) onRetry();
+  }, [canceled, onRetry]);
+  const ended =
+    noAnswer || reads.includes("failed") || (!canceled && (shown?.state === "failed" || shown?.state === "expired"));
   // The code or the key on its way to the computer, then the computer signing in with it: a line stands in for the
   // field and its buttons until the sign-in ends.
   const busy = (sending || sent) && !(other || ended);
@@ -552,7 +598,7 @@ function AddAccountFlow({
             spellCheck={false}
             placeholder={placeholder}
             aria-label={label}
-            aria-describedby={plan ? keyHintId : undefined}
+            aria-describedby={plan || kind === "antigravity" ? keyHintId : undefined}
             onChange={(e) => take(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -590,6 +636,10 @@ function AddAccountFlow({
 
   // Not the account it was for: one that came back done (`other`), or signing in again, which the server refuses.
   const otherEmail = other?.email ?? (hint ? shown?.signedInAs : undefined);
+  // The computer's own reason is the line only when nothing nearer the person explains it.
+  const byCode = !otherEmail && !noAnswer && shown?.state !== "expired" && !shown?.duplicate;
+  // Trying again would end the same way: no Try again, the words say what to use instead.
+  const notShared = geminiNotShared(kind, shown);
   const why = otherEmail
     ? t(`connectAi.otherAccount.${kind}`, { email: otherEmail, account: hint })
     : noAnswer
@@ -602,7 +652,19 @@ function AddAccountFlow({
             : t(`agentPage.work.brain.add.duplicate.${kind}`, {
                 account: shown.duplicate.account?.email ?? shown.duplicate.label,
               })
-          : t("agentPage.work.brain.add.failed");
+          : notShared
+            ? t("agentPage.work.brain.add.geminiNotShared", { computer })
+            : t(failure.key ?? "agentPage.work.brain.add.failed", {
+                brand: plan?.label ?? t(`aiAccounts.connect.${kind}`),
+                computer,
+              });
+  // What the provider's own program said, under the line about it.
+  const said = byCode && !notShared && failure.detail ? shown?.message?.trim() || null : null;
+
+  const endWhy = other || ended ? why : null;
+  useEffect(() => {
+    onEnd?.(endWhy);
+  }, [endWhy, onEnd]);
 
   const title = plan ? t("aiAccounts.add.titleKey", { plan: plan.label }) : t(`agentPage.work.brain.add.title.${kind}`);
   const key = code.trim();
@@ -645,24 +707,27 @@ function AddAccountFlow({
     </OpenPage>
   );
   /** The sign-in's button (or "Open again" once begun) with "Copy link" beside it. */
-  const signIn = (label: string) => (
-    <span className="agp-addacct__acts">
-      {login ? (
-        openAgain(login.url)
-      ) : (
-        <Button
-          size="sm"
-          variant="primary"
-          icon="external"
-          loading={(starting && !copyingLink) || loading}
-          disabled={!ready || starting}
-          onClick={start}
-        >
-          {label}
-        </Button>
-      )}
+  const signIn = (label: string) => {
+    // The footer's size where the footer holds them; under the step (and once begun, beside "Open again", always small)
+    // the small one, so the two stand as tall as each other.
+    const size = actionsAt && !login ? undefined : "sm";
+    const main = login ? (
+      openAgain(login.url)
+    ) : (
       <Button
-        size="sm"
+        {...(size ? { size } : {})}
+        variant="primary"
+        icon="external"
+        loading={(starting && !copyingLink) || loading}
+        disabled={!ready || starting}
+        onClick={start}
+      >
+        {label}
+      </Button>
+    );
+    const copy = (
+      <Button
+        {...(size ? { size } : {})}
         loading={starting && copyingLink}
         disabled={!ready || loading || (starting && !copyingLink)}
         onClick={copyLink}
@@ -675,10 +740,45 @@ function AddAccountFlow({
           showAlt={linkCopied}
         />
       </Button>
-    </span>
-  );
+    );
+    // In a dialog's footer the main action ends the row; under its step it starts it.
+    return actionsAt && !login ? (
+      createPortal(
+        <>
+          {copy}
+          {main}
+        </>,
+        actionsAt,
+      )
+    ) : (
+      <span className="agp-addacct__acts">
+        {main}
+        {copy}
+      </span>
+    );
+  };
 
+  /**
+   * The step that starts a sign-in: its button (or the footer's) beside its title, and "Asking…" while it starts. With
+   * `quiet` the place above says what it is, so only the button and that wait are left.
+   */
+  const firstStep = (label: string, heading: ReactNode, n?: number) =>
+    quiet ? (
+      <>
+        {signIn(label)}
+        {starting && (
+          <span className="agp-addacct__starting">{t("agentPage.work.brain.add.starting", { computer })}</span>
+        )}
+      </>
+    ) : (
+      <Step n={n} side={signIn(label)}>
+        {heading}
+        {starting && <span>{t("agentPage.work.brain.add.starting", { computer })}</span>}
+      </Step>
+    );
   const signInHint = t("agentPage.work.brain.add.stepOneHint", { computer, brand: t(`aiAccounts.connect.${kind}`) });
+  // Under `quiet` the step that starts the sign-in shows no number of its own, so the steps after it count one less.
+  const after = (n: number) => (quiet ? n - 1 : n);
   let steps: ReactNode;
   // A device sign-in's one-time code (ChatGPT's, Grok's), to type on the provider's page.
   const deviceCode = (n: number, label: string, code: string) => (
@@ -735,10 +835,10 @@ function AddAccountFlow({
   } else if (kind === "cursor") {
     steps = (
       <>
-        <Step side={signIn(signInLabel ?? t("agentPage.work.brain.add.open.cursor"))}>
-          <StepTitle title={t("agentPage.work.brain.add.stepOne.cursor")} hint={signInHint} />
-          {starting && <span>{t("agentPage.work.brain.add.starting", { computer })}</span>}
-        </Step>
+        {firstStep(
+          signInLabel ?? t("agentPage.work.brain.add.open.cursor"),
+          <StepTitle title={t("agentPage.work.brain.add.stepOne.cursor")} hint={signInHint} />,
+        )}
         {login && opened && <Step side={waiting}>{t("agentPage.work.brain.add.cursorFinish", { computer })}</Step>}
         {!login && !again && (
           <Button size="sm" variant="ghost" icon="key" onClick={() => setCursorKey(true)}>
@@ -751,7 +851,8 @@ function AddAccountFlow({
     steps = (
       <>
         {!enterprise && <SettingNote icon="alert">{t("connectAi.plan.gemini.warning")}</SettingNote>}
-        <Step side={signIn(signInLabel ?? t("agentPage.work.brain.add.open.antigravity"))}>
+        {firstStep(
+          signInLabel ?? t("agentPage.work.brain.add.open.antigravity"),
           <StepTitle
             title={t(
               enterprise
@@ -759,22 +860,27 @@ function AddAccountFlow({
                 : "agentPage.work.brain.add.stepOne.antigravity",
             )}
             hint={signInHint}
-          />
-          {starting && <span>{t("agentPage.work.brain.add.starting", { computer })}</span>}
-        </Step>
+          />,
+        )}
         {login && opened && (
           <Step side={busy && !reads.includes("reconnecting") ? undefined : waiting}>
-            <label htmlFor={codeId}>
-              <b>{t("agentPage.work.brain.add.stepTwoGoogle")}</b>
-            </label>
+            <StepTitle
+              title={t("agentPage.work.brain.add.stepTwoGoogle")}
+              hint={t("agentPage.work.brain.add.codeHintGoogle")}
+              htmlFor={codeId}
+              hintId={keyHintId}
+            />
             {busy
               ? busyLine
               : pasteRow(
                   t("agentPage.work.brain.add.codeLabelGoogle"),
                   t("agentPage.work.brain.add.codeLabelGoogle"),
                   false,
-                  key.length > 0,
+                  key.length > 0 && !isUrlWithoutCode(key),
                 )}
+            {!busy && isUrlWithoutCode(key) && (
+              <SettingNote icon="alert">{t("agentPage.work.brain.add.notCodeGoogle")}</SettingNote>
+            )}
           </Step>
         )}
         {!login && !again && (
@@ -787,12 +893,13 @@ function AddAccountFlow({
   } else if (kind === "grok") {
     steps = (
       <>
-        <Step n={1} side={signIn(signInLabel ?? t("agentPage.work.brain.add.open.grok"))}>
-          <StepTitle title={t("agentPage.work.brain.add.stepOne.grok")} hint={signInHint} />
-          {starting && <span>{t("agentPage.work.brain.add.starting", { computer })}</span>}
-        </Step>
+        {firstStep(
+          signInLabel ?? t("agentPage.work.brain.add.open.grok"),
+          <StepTitle title={t("agentPage.work.brain.add.stepOne.grok")} hint={signInHint} />,
+          1,
+        )}
         {login?.userCode
-          ? deviceCode(2, t("agentPage.work.brain.add.grokCode"), login.userCode)
+          ? deviceCode(after(2), t("agentPage.work.brain.add.grokCode"), login.userCode)
           : login && opened && <Step side={waiting}>{t("agentPage.work.brain.add.grokFinish", { computer })}</Step>}
       </>
     );
@@ -803,20 +910,21 @@ function AddAccountFlow({
           <b>{t("connectAi.chatgptCode.title")}</b>
           <span>{t("connectAi.chatgptCode.text")}</span>
         </Step>
-        <Step n={2} side={signIn(signInLabel ?? t("agentPage.work.brain.add.open.codex"))}>
-          <StepTitle title={t("agentPage.work.brain.add.stepOne.codex")} hint={signInHint} />
-          {starting && <span>{t("agentPage.work.brain.add.starting", { computer })}</span>}
-        </Step>
-        {login?.userCode && deviceCode(3, t("agentPage.work.brain.add.deviceCode"), login.userCode)}
+        {firstStep(
+          signInLabel ?? t("agentPage.work.brain.add.open.codex"),
+          <StepTitle title={t("agentPage.work.brain.add.stepOne.codex")} hint={signInHint} />,
+          2,
+        )}
+        {login?.userCode && deviceCode(after(3), t("agentPage.work.brain.add.deviceCode"), login.userCode)}
       </>
     );
   } else {
     steps = (
       <>
-        <Step side={signIn(signInLabel ?? t("agentPage.work.brain.add.open.claude_code"))}>
-          <StepTitle title={t("agentPage.work.brain.add.stepOne.claude_code")} hint={signInHint} />
-          {starting && <span>{t("agentPage.work.brain.add.starting", { computer })}</span>}
-        </Step>
+        {firstStep(
+          signInLabel ?? t("agentPage.work.brain.add.open.claude_code"),
+          <StepTitle title={t("agentPage.work.brain.add.stepOne.claude_code")} hint={signInHint} />,
+        )}
         {login && opened && (
           <Step side={busy && !reads.includes("reconnecting") ? undefined : waiting}>
             <label htmlFor={codeId}>
@@ -859,11 +967,40 @@ function AddAccountFlow({
           </b>
         </div>
       )}
-      {other || ended ? (
+      {(other || ended) && quiet && actionsAt ? (
+        // The place above says why; its way on is the dialog's footer: skipping, the account that came back, again.
+        createPortal(
+          <>
+            {endActions}
+            {instead && (
+              <Button onClick={instead.use}>
+                <span className="ai-panel__use">
+                  {t("connectAi.useAnyway", { email: instead.account.email ?? instead.account.label })}
+                </span>
+              </Button>
+            )}
+            {!notShared && (
+              <Button
+                variant="primary"
+                icon="refresh"
+                onClick={() => {
+                  if (other && !again)
+                    void api.machines.removeAccount(org.id, machineId, other.id).catch(() => undefined);
+                  onRetry();
+                }}
+              >
+                {t("common.retry")}
+              </Button>
+            )}
+          </>,
+          actionsAt,
+        )
+      ) : other || ended ? (
         <div className="ai-panel__row">
           <SettingNote icon="alert" live>
             {why}
           </SettingNote>
+          {said && <pre className="ac-tools__io agp-addacct__said">{said}</pre>}
           {instead ? (
             <span className="ac-acts">
               {retry}
@@ -874,7 +1011,7 @@ function AddAccountFlow({
               </Button>
             </span>
           ) : (
-            retry
+            !notShared && retry
           )}
         </div>
       ) : (

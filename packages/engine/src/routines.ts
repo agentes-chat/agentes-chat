@@ -17,6 +17,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { getAgent } from "./agents";
+import { type AiStatusDeps, rightHandWorkAi } from "./ai-status";
 import { decidesAgentApprovals, MAX_OWN_ACTIONS, OWN_ACTION_NAME } from "./approval-rules";
 import { cancelRoutineAhead, type RoutineAheadView, routinesAhead } from "./approvals";
 import { audienceError, audienceSql, canTalkTo, speakerFor, speakerOf } from "./audience";
@@ -40,7 +41,7 @@ import { type ContextDeps, schedulesOf } from "./context/summaries";
 import { nextCronTime, zonedTimeForward } from "./cron";
 import { dashboardRights, viewerOf } from "./dashboards/access";
 import { isWidgetChangeRun, widgetFiring, widgetRunStarting } from "./dashboards/refresh-fire";
-import { widgetRoutineGone, widgetRoutineHeld } from "./dashboards/refresh-ledger";
+import { widgetChangeOf, widgetRoutineGone, widgetRoutineHeld } from "./dashboards/refresh-ledger";
 import { openDm } from "./dms";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishListChanged, publishMessageCreated, publishRoutineRuns, publishUserEvent } from "./events";
@@ -60,6 +61,7 @@ import { resolveRoutinePaused } from "./notification-producers";
 import { can, getMembership, requirePermission } from "./organizations";
 import { PermanentJobError } from "./outbox";
 import { maySql } from "./permissions";
+import { isRightHand } from "./right-hand";
 import {
   type RoutineAccess,
   type RoutineBrief,
@@ -92,7 +94,7 @@ import {
 } from "./rrule";
 import { providerFailure } from "./runs";
 import { describeWhen, parseSchedule, readSchedule, type ScheduleParse } from "./schedule";
-import { assertCanWork, deletionPending, standingRefusal } from "./standing";
+import { assertCanWork, closedRefusal, deletionPending, orgStanding, standingRefusal } from "./standing";
 import { alwaysAsks } from "./tools/gateway";
 import {
   assertMayContinuePause,
@@ -403,6 +405,8 @@ export interface RoutineDeps {
   hooks?: RoutineHookConfig;
   /** Connector events' webhooks are registered at the provider through the connection (ADR 0130). */
   connectors?: ConnectorTriggerDeps;
+  /** Whether a widget's agent can think before its refresh starts (`widgetFiring`); absent: the run's own check. */
+  ai?: Omit<AiStatusDeps, "db">;
 }
 
 type RoutineRow = typeof routines.$inferSelect;
@@ -801,7 +805,8 @@ function billedTo(
 
 /**
  * Routines as `viewerId` sees them (see `viewerRights`), with their state, last week's health and usage; a webhook
- * routine's address only for who manages it, and only with `hooks`.
+ * routine's address only for who manages it, and only with `hooks`. In a workspace closed to work (suspended, or
+ * being deleted) none has a next run: its slots pass.
  */
 async function views(
   db: Database,
@@ -813,6 +818,7 @@ async function views(
   const first = rows[0];
   if (!first) return [];
   const orgId = first.orgId;
+  const closed = closedRefusal(await orgStanding(db, orgId)) !== null;
   const ids = rows.map((r) => r.id);
   const since = new Date(now.getTime() - ROUTINE_WEEK_MS);
   // The last RECENT_RUNS of each routine (one query, ranked per routine).
@@ -1024,7 +1030,7 @@ async function views(
         },
       ),
       active: r.active,
-      nextRunAt: r.active && r.nextRunAt ? r.nextRunAt.toISOString() : null,
+      nextRunAt: r.active && r.nextRunAt && !closed ? r.nextRunAt.toISOString() : null,
       createdAt: r.createdAt.toISOString(),
       access: routineAccessOf(r.access),
       report: routineReportOf(r.report),
@@ -1322,7 +1328,7 @@ export function ownActionsOf(list: readonly string[]): string[] {
     }
     if (alwaysAsks(action)) {
       throw new ValidationError(
-        `${action} always asks a person at the time (merge, deploy, rollback and the like): leave it out`,
+        `${action} can't be one of a routine's own actions (merge, deploy, rollback and the like): leave it out`,
         "routine.action_always_asks",
         { action },
       );
@@ -1364,7 +1370,7 @@ export async function createRoutine(
   const trigger = await resolveTrigger(deps, actorId, orgId, input.trigger);
   checkFrequency(trigger, input.target);
   if (!input.paused && startsRuns(trigger.triggerType, input.target)) await checkRoutineCap(db, orgId, agent.id);
-  if (input.trigger.type === "email") await checkWatchable(db, orgId, agent.id, input.trigger.accountId);
+  if (input.trigger.type === "email") await checkWatchable(db, orgId, agent.id, input.trigger.accountId, actorId);
   if (input.trigger.type === "connector") await checkConnectorTrigger(db, orgId, agent.id, input.trigger);
   const hooks = input.trigger.type === "webhook" || input.trigger.type === "connector" ? hooksOf(deps) : null;
   const ownActions = ownActionsOf(input.ownActions ?? []);
@@ -1679,7 +1685,7 @@ export async function updateRoutine(
         ? (({ accountId, folder, filter }) => ({ accountId, folder, filter }))(watched.get(current.id) as MailWatchRow)
         : null;
   if (mailTrigger && (patch.trigger?.type === "email" || set.agentId)) {
-    await checkWatchable(db, orgId, agentId, mailTrigger.accountId);
+    await checkWatchable(db, orgId, agentId, mailTrigger.accountId, current.createdByUserId);
   }
   // A connector routine's agent must be able to read the connection it waits on (ADR 0130).
   const hadConnector = await connectorOf(db, current.id);
@@ -1973,7 +1979,14 @@ export async function listRoutineRuns(
 }
 
 /**
- * Worker tick: fires every scheduled routine whose slot has come. Each
+ * When a due routine fires: its slot plus a stable offset into that minute, from its id (0 to 59 s), so the
+ * routines of one minute fire as a ramp instead of all at once. Its slot stays what it shows and records
+ * (`next_run_at`, the run's `at`): the minute is right.
+ */
+const firesAt = sql`${routines.nextRunAt} + ((hashtext(${routines.id}::text) & 2147483647) % 60) * interval '1 second'`;
+
+/**
+ * Worker tick: fires every scheduled routine whose slot has come (`firesAt`). Each
  * routine is taken with `FOR UPDATE SKIP LOCKED` and a transaction-level
  * advisory lock, and `(routine_id, at)` is unique, so two replicas never
  * fire the same slot. The next slot is computed from now: a routine that
@@ -1990,9 +2003,10 @@ export async function fireDueRoutines(deps: RoutineDeps, now = new Date()) {
           inArray(routines.triggerType, ["schedule", "once"]),
           isNotNull(routines.nextRunAt),
           lte(routines.nextRunAt, now),
+          sql`${firesAt} <= ${now.toISOString()}::timestamptz`,
         ),
       )
-      .orderBy(routines.nextRunAt)
+      .orderBy(firesAt)
       .limit(100)
       .for("update", { skipLocked: true });
     let fired = 0;
@@ -2199,13 +2213,20 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
     return;
   }
 
-  // A widget's refresh (ADR 0135 §4): its widget and board are still there and its creator still sees the board.
+  // A widget's refresh (ADR 0135 §4): its widget and board are still there, its creator still sees the board and its
+  // agent has an AI.
   let widget: RoutineBrief["widget"];
+  // The right hand's: whose AI this firing thinks with (ADR 0137 §11), its creator's when it can, else the workspace's.
+  let aiUserId: string | null | undefined;
   if (target.type === "widget") {
-    const firing = await widgetFiring(db, routine.orgId, target, creator, membership);
+    const asker = widgetChangeOf(run.event)?.byUserId;
+    const firing = await widgetFiring(deps, routine.orgId, target, creator, membership, asker);
     if ("skip" in firing) return skip(firing.skip);
     if ("pause" in firing) return paused(firing.pause);
     widget = firing.widget;
+    aiUserId = firing.aiUserId;
+  } else if (deps.ai && isRightHand(agent)) {
+    aiUserId = (await rightHandWorkAi({ ...deps.ai, db }, agent, [creator])).person;
   }
 
   // Where it reports: its channel or the conversation it was asked in, else the creator's DM with the agent.
@@ -2252,6 +2273,7 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
     trigger: run.trigger,
     dueAt: run.at.toISOString(),
     ...(widget ? { widget } : {}),
+    ...(aiUserId !== undefined ? { aiUserId } : {}),
   };
   // The widget shows it is being redone (its last data stays on screen).
   if (widget) await widgetRunStarting(deps, routine.orgId, widget.widgetId);

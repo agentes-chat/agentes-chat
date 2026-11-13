@@ -115,6 +115,7 @@ export {
 } from "./components/Checkbox";
 export { AttentionNote, Chip, type ChipProps, type ChipTone, CountBadge, CountChip } from "./components/Chip";
 export { CodeInput, type CodeInputProps } from "./components/CodeInput";
+export { ColorDot, dotTone } from "./components/ColorDot";
 export { ColorPicker, type ColorPickerLabels } from "./components/ColorPicker";
 export { CommandPalette, filterPalette, type PaletteItem } from "./components/CommandPalette";
 export {
@@ -140,6 +141,8 @@ export {
   ComputerPortrait,
   type ComputerPortraitProps,
   type ComputerState,
+  type PhoneKind,
+  type PortraitKind,
 } from "./components/Computer";
 export { DatePicker, type DatePickerProps, monthGrid, parseYmd, ymd } from "./components/DatePicker";
 export {
@@ -156,7 +159,7 @@ export {
   DialogSearchList,
   useUnsavedInDialog,
 } from "./components/Dialog";
-export { Diff, type DiffKind, type DiffLine, diffLines } from "./components/Diff";
+export { Diff, type DiffBlock, type DiffKind, type DiffLine, diffBlocks, diffLines } from "./components/Diff";
 export { drawEffort, EffortPixels, type EffortStep } from "./components/EffortPixels";
 export {
   EMOJI_COLUMNS,
@@ -174,6 +177,7 @@ export {
   EventPillMore,
   type EventPillProps,
 } from "./components/EventPill";
+export { FactLine, type LineFact, type LineFactTone } from "./components/FactLine";
 export { type Fact, FactStrip, type FactTone } from "./components/FactStrip";
 export {
   AffixInput,
@@ -197,7 +201,9 @@ export {
   type FilterChipProps,
   type FilterOption,
 } from "./components/FilterChip";
-export { InfoHint, type InfoHintProps } from "./components/InfoHint";
+export { FoldRow } from "./components/FoldRow";
+export { GroupHeading } from "./components/GroupHeading";
+export { HintLine, type HintLineProps, InfoHint, type InfoHintProps } from "./components/InfoHint";
 export { isApple, Kbd, modKey, shortcut } from "./components/Kbd";
 export { Logo, LogoMark, type LogoProps } from "./components/Logo";
 export {
@@ -210,12 +216,12 @@ export {
   type StickerPickerLabels,
   stickerMoodsFor,
 } from "./components/MediaPicker";
-export { AgentReadingBook } from "./components/MemoryPixels";
 export { Mention } from "./components/Mention";
 export {
   Menu,
   MenuAt,
   MenuCheckboxItem,
+  MenuFace,
   MenuHeading,
   MenuItem,
   MenuNote,
@@ -270,6 +276,7 @@ export {
   type PlanMeterUsage,
   type PlanMeterWindow,
   type PlanState,
+  planAttention,
   planLevel,
   planLine,
   planState,
@@ -283,6 +290,7 @@ export {
   ProviderStack,
   type ProviderStackProps,
 } from "./components/ProviderLogo";
+export { QrCode } from "./components/QrCode";
 export {
   modeOf,
   monthlyKindOf,
@@ -320,6 +328,7 @@ export { SearchSelect, type SearchSelectLabels, type SearchSelectProps } from ".
 export { Segmented, type SegmentedOption, SplitButton } from "./components/Segmented";
 export { ChosenValue, Select, type SelectOption, type SelectProps } from "./components/Select";
 export { SettingNote, SettingRow, SettingsMore, SettingsSection } from "./components/Settings";
+export { SettingsPath } from "./components/SettingsPath";
 export {
   SKELETON_DELAY_MS,
   Skeleton,
@@ -397,7 +406,7 @@ export {
 } from "./components/voice-recorder";
 export { Reaction, Reactions, type WorkStep, WorkSummary } from "./components/Work";
 export { WorkLine, WorkLineAction, type WorkLineTone, WorkPlan } from "./components/WorkLine";
-export { COMPUTER_GRID, COMPUTER_KINDS, COMPUTER_STATES, drawComputer } from "./computer/portrait.js";
+export { COMPUTER_GRID, COMPUTER_KINDS, COMPUTER_STATES, drawComputer, PHONE_KINDS } from "./computer/portrait.js";
 export { cx } from "./cx";
 export { hoverPointer, movesByKeys, onScreenKeyboard, onScreenNow, trackInput } from "./device";
 export {
@@ -430,11 +439,30 @@ export {
   type HoverCardOpen,
   useHoverCard,
 } from "./hooks/useHoverCard";
-export { matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMedia";
+export { HOVERLESS, matchesNow, TOUCH, useMatchMedia } from "./hooks/useMatchMedia";
 export { useNow } from "./hooks/useNow";
 export { type ScrollSides, useScrollSides } from "./hooks/useScrollSides";
 export { Icon, type IconName, type IconProps, iconNames, icons } from "./icons/Icon";
 export { driveFolder, initialsOf, isIdHandle } from "./names";
+export {
+  BGS as PERSON_BACKGROUNDS,
+  CATALOG as PERSON_CATALOG,
+  cleanRecipe,
+  cropFor as personCropFor,
+  DEFAULT as PERSON_DEFAULT,
+  decodeRecipe,
+  encodeRecipe,
+  FIELDS as PERSON_FIELDS,
+  type PersonBuild,
+  type PersonField,
+  type PersonRecipe,
+  PORTRAIT_MARK,
+  randomPerson,
+  recipeOfUrl,
+  renderPerson,
+  swatchOf as personSwatchOf,
+} from "./person/engine.js";
+export { PersonPortrait } from "./person/PersonPortrait";
 export {
   BUSINESS_DAYS,
   nextOccurrences,
@@ -453,6 +481,7 @@ export { pixelBurst, pixelConfetti } from "./sky/burst";
 export { ditherCells, ditherSvg, ditherTones, ditherUrl } from "./sky/dither";
 export {
   drawSprite,
+  holdSkies,
   prefersReducedMotion,
   redrawSkies,
   type SkyBlob,
@@ -462,7 +491,18 @@ export {
   startSky,
 } from "./sky/engine";
 export { selectionSkyUrl } from "./sky/selection";
-export { agentTones, EYE, glowTones, mix, parseColor, pixelOf, SKY_TONES, softTones, spriteTone } from "./sky/tones";
+export {
+  agentTones,
+  EYE,
+  glowTones,
+  mix,
+  parseColor,
+  pixelOf,
+  SKY_TONES,
+  softTones,
+  spriteTone,
+  TEAM_NIGHT,
+} from "./sky/tones";
 export {
   cloudAt,
   HEADER_AREA,
@@ -489,6 +529,7 @@ export {
   zoneOption,
   zoneOptions,
 } from "./timezones";
+export { installTitleTips, TITLE_TIP_GRACE_MS, TITLE_TIP_ID, TITLE_TIP_OPEN_MS } from "./title-tips";
 export { DitherLine, fillEnds, paintCells, paintLineArea, useElementWidth } from "./widgets/ChartPieces";
 export { formatWidgetNumber, formatWithUnit, useCountUp, widgetDigits } from "./widgets/format";
 export { ditherTile, WIDGET_CELL, widgetTileVars, widgetTones } from "./widgets/tiles";

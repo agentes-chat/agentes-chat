@@ -29,12 +29,20 @@ import type { CommandApproval } from "./missions";
 import { recordOperatorEvent } from "./operator-events";
 import { can, getMembership, type Membership, requirePermission } from "./organizations";
 import { isRightHand, RIGHT_HAND_EDITABLE, refuseRightHand, rightHandPermanent } from "./right-hand";
-import { newSetup, setupOf } from "./setup-checklist";
-import { DEFAULT_AGENT_SCOPES, dropForeignMailGrants, grantScopes } from "./tools/scopes";
+import { newSetup, type SetupExtras, setupOf } from "./setup-checklist";
+import { APPROVALS_LEVELS, type ApprovalsLevel } from "./tools/run-policy";
+import {
+  CONNECTOR_ALL,
+  DEFAULT_AGENT_SCOPES,
+  dropForeignMailGrants,
+  grantScopes,
+  PERSONAL_AGENT_SCOPES,
+} from "./tools/scopes";
 import { resyncBudgetCounter } from "./usage";
 import { resumeBudgetWaits } from "./usage-pause";
+import { isPersonalWorkspace } from "./workspace-mode";
 
-const { agents, importItems, machines, organizationMembers, providerCredentials } = schema;
+const { agents, connectorConnections, importItems, machines, organizationMembers, providerCredentials } = schema;
 
 export type Agent = typeof agents.$inferSelect;
 
@@ -88,6 +96,8 @@ export interface AgentInput {
   mediaReplies?: boolean;
   /** Its autonomy brakes (ADR 0131), stored as `autonomySettings` reads them. */
   autonomyBrakes?: Partial<AutonomySettings>;
+  /** How much it asks before acting (ADR 0173). */
+  approvalsLevel?: ApprovalsLevel;
 }
 
 /** An agent's fields as the API takes them: its handle, model, key (of the model's provider), budget and owner. */
@@ -108,6 +118,9 @@ export async function validateAgentFields(db: Database, orgId: string, input: Pa
   }
   if (input.monthlyBudgetNanoUsd != null && input.monthlyBudgetNanoUsd < 0) {
     throw new ValidationError("budget can't be negative");
+  }
+  if (input.approvalsLevel !== undefined && !APPROVALS_LEVELS.includes(input.approvalsLevel)) {
+    throw new ValidationError(`approvalsLevel must be one of: ${APPROVALS_LEVELS.join(", ")}`);
   }
   if (input.credentialId) {
     const [cred] = await db
@@ -181,8 +194,11 @@ export async function createAgent(
   input: AgentInput & {
     autonomy?: CommandApproval;
     audienceMode?: Agent["audienceMode"];
-    /** The ready-made role it starts from, for its setup checklist's suggestions (ADR 0155 §2); null: none. */
-    setup?: { role: string | null };
+    /**
+     * The ready-made role it starts from, for its setup checklist's suggestions (ADR 0155 §2); null: none. From its
+     * card (ADR 0164): how it introduced itself, the personal starter it began as and the apps it was made to use.
+     */
+    setup?: { role: string | null } & SetupExtras;
   },
   defaults: { model: string },
   /** `via`: the agent whose card it was created from (the audit's "via"). */
@@ -195,9 +211,19 @@ export async function createAgent(
   if (input.ownerUserId !== undefined && input.ownerUserId !== actorId && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only an admin can create an agent for someone else or with no owner");
   }
+  // How much it asks (ADR 0173) is for who edits any agent, at its creation too.
+  if (input.approvalsLevel !== undefined && !can(membership, "manage_agents")) {
+    throw new ForbiddenError("Only who manages agents can set how much an agent asks");
+  }
   const values = { ...fields, handle: fields.handle.toLowerCase(), model: fields.model ?? defaults.model };
   await validateAgentFields(db, orgId, values);
   const ownerUserId = input.ownerUserId === undefined ? actorId : input.ownerUserId;
+  // A personal workspace's new agent answers only its owner until someone says otherwise (ADR 0159): who joins later
+  // (family) isn't answered, nor shown its details, by every agent made while the person was alone. Only a default:
+  // an audience given wins (the apps send theirs), agents already there keep theirs, and the right hand, made
+  // elsewhere, answers everyone. With no owner nobody would be answered: everyone, as in a team's.
+  const personal = await isPersonalWorkspace(db, orgId);
+  const audience = audienceMode ?? (ownerUserId && personal ? ("owner" as const) : undefined);
   // Another agent's old handle still names that agent.
   const [held] = await db
     .select({ id: agents.id })
@@ -232,9 +258,12 @@ export async function createAgent(
         orgId,
         ownerUserId,
         // Every new agent starts with its setup checklist, whichever way it was made (ADR 0155 §2).
-        setup: newSetup(setup?.role),
+        setup: newSetup(setup?.role, setup),
         ...(autonomy ? { missionCommandApproval: autonomy } : {}),
-        ...(audienceMode ? { audienceMode } : {}),
+        ...(audience ? { audienceMode: audience } : {}),
+        // The moment of this insert, not its transaction's start (`now()`): agents made together (a template team)
+        // keep the order they were made in, which the agents' list and every screen after it follow.
+        createdAt: sql`clock_timestamp()`,
       })
       .returning();
     if (!agent) throw new Error("agent insert returned nothing");
@@ -245,6 +274,26 @@ export async function createAgent(
       agent.id,
       DEFAULT_AGENT_SCOPES.map((scope) => ({ connectionId: null, scope })),
     );
+    // A personal workspace's agent starts with broad access (ADR 0159 §3a): every app connected there and its
+    // calendar. Only from someone who may give access, so a family member's own agent starts as a team's does.
+    // Sensitive tools still ask a person on every call; mail, databases and the computer keep their own switches.
+    const broad = personal && can(membership, "manage_agents");
+    if (broad) {
+      const apps = await db
+        .select({ id: connectorConnections.id })
+        .from(connectorConnections)
+        .where(eq(connectorConnections.orgId, orgId));
+      await grantScopes(
+        db,
+        orgId,
+        agent.id,
+        [
+          ...PERSONAL_AGENT_SCOPES.map((scope) => ({ connectionId: null, scope })),
+          ...apps.map((c) => ({ connectionId: c.id, scope: CONNECTOR_ALL })),
+        ],
+        actorId,
+      );
+    }
     // Skills the org marked "default for new agents".
     const defaults = await db
       .select({ id: schema.skills.id })
@@ -277,6 +326,7 @@ export async function createAgent(
         handle: agent.handle,
         model: agent.model,
         ...(autonomy ? { autonomy } : {}),
+        ...(broad ? { access: "broad" } : {}),
         ...(options.via ? { via: options.via } : {}),
       },
     });
@@ -520,11 +570,12 @@ export async function unarchiveAgent(
 
 export async function listAgents(db: Database, actorId: string, orgId: string): Promise<Agent[]> {
   await requirePermission(db, actorId, orgId, "read");
+  // As they were made. A team made before each insert had its own time shares one: by name among them.
   return db
     .select()
     .from(agents)
     .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)))
-    .orderBy(asc(agents.createdAt));
+    .orderBy(asc(agents.createdAt), asc(agents.name));
 }
 
 /** An agent, archived or not; null for a deleted one (its tombstone only names what it left, `listFormerAgents`). */
@@ -586,6 +637,8 @@ export const agentView = (a: Agent) => ({
   setup: setupOf(a.setup),
   /** Its autonomy brakes (ADR 0131), with the defaults filled in. */
   brakes: autonomySettings(a.autonomyBrakes),
+  /** How much it asks before acting (ADR 0173). */
+  approvalsLevel: a.approvalsLevel,
   createdAt: a.createdAt,
 });
 

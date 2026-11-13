@@ -18,7 +18,7 @@ use tauri::webview::{DownloadEvent, NewWindowResponse, PageLoadEvent};
 use tauri::window::Color;
 use tauri::{AppHandle, Emitter, Manager, Theme, Url, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
-use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_notification::{Action, ActionType, NotificationExt};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::servers;
@@ -59,12 +59,12 @@ pub const PLATFORM: &str = if cfg!(target_os = "macos") {
     "linux"
 };
 
-/// Whether agents may work on this computer for `origin`: never for agentes.chat (each workspace has a
-/// computer of its own) or a server on this computer itself, the server here included at its Tailscale address
-/// (`server_here`: its own computer is set up with it).
+/// Whether agents may work on this computer for `origin`: any server elsewhere, agentes.chat included (people bring
+/// their own computers there too), never a server on this computer itself, the server here included at its
+/// Tailscale address (`server_here`: its own computer is set up with it).
 /// Another server on this computer at its address for people is `discover::served_here`, which asks it.
 pub fn agents_here(origin: &str, server_here: bool) -> bool {
-    origin != servers::CLOUD && !servers::is_loopback(origin) && !server_here
+    !servers::is_loopback(origin) && !server_here
 }
 
 /// What a navigation in the window does.
@@ -327,7 +327,7 @@ fn window_title(title: &str) -> &str {
     }
 }
 
-/// Tells the page the zoom (`--app-zoom`: its title bar stays 40pt and level with the window's buttons) and
+/// Tells the page the zoom (`--app-zoom`: its title bar stays 48pt and level with the window's buttons) and
 /// whether the window is full screen (no room kept for the buttons then), and puts the buttons back in the
 /// bar's middle (a resize or full screen lays them out anew). AppKit is touched on the main thread.
 pub fn fit_page(app: &AppHandle) {
@@ -582,7 +582,7 @@ thread_local! {
 
 /// The site's title bar (apps/web desktop.css), in points.
 #[cfg(target_os = "macos")]
-const TITLE_BAR: f64 = 40.0;
+const TITLE_BAR: f64 = 48.0;
 /// The close button's left edge, in points.
 #[cfg(target_os = "macos")]
 const LIGHTS_LEFT: f64 = 16.0;
@@ -590,7 +590,7 @@ const LIGHTS_LEFT: f64 = 16.0;
 /// The window's close, minimize and zoom buttons in the middle of the site's title bar, as Electron places
 /// them (`WindowButtonsProxy`): the title bar's container as tall as the bar, each button centred in it.
 /// `traffic_light_position` only makes the container taller, and macOS 26 keeps the buttons at its top (their
-/// middle at ~15pt on macOS 27, under the bar's icons at 20pt).
+/// middle at ~15pt on macOS 27, under the bar's icons at 24pt).
 #[cfg(target_os = "macos")]
 fn place_lights(window: &tauri::Window) {
     use crate::notch::native::{CGPoint, CGRect};
@@ -752,6 +752,14 @@ fn checked(request: &Value) -> Result<Value, String> {
         // Every server's workspaces (ADR 0154): the app reads them; the page asks nothing of its own.
         Some("workspaces") => Ok(json!({ "kind": "workspaces" })),
         Some("addWorkspace") => Ok(json!({ "kind": "addWorkspace" })),
+        // A server of the app's list: only its origin.
+        Some("openServer") => {
+            let server = text("server").unwrap_or_default();
+            if servers::origin_of(server).as_deref() != Some(server) {
+                return Err("bad server".into());
+            }
+            Ok(json!({ "kind": "openServer", "server": server }))
+        }
         // A workspace of another server of the app's list: only its origin and the workspace's id.
         Some("openWorkspace") => {
             let server = text("server").unwrap_or_default();
@@ -811,7 +819,15 @@ fn checked(request: &Value) -> Result<Value, String> {
             if !fits || !local {
                 return Err("bad notification".into());
             }
-            Ok(json!({ "kind": "notify", "title": title, "body": body, "path": path }))
+            let mut out = json!({ "kind": "notify", "title": title, "body": body, "path": path });
+            // Someone's agent uses a phone here: the web's Stop, as the notification's button.
+            if let Some(phone) = text("phoneId") {
+                if !crate::workspaces::good_id(phone) {
+                    return Err("bad notification".into());
+                }
+                out["stop"] = json!({ "orgId": org()?, "phoneId": phone });
+            }
+            Ok(out)
         }
         _ => Err("unknown request".into()),
     }
@@ -864,12 +880,25 @@ fn notice_fits(sent: &mut VecDeque<Instant>, now: Instant) -> bool {
 
 fn notify(app: &AppHandle, request: &Value, site: &Url) {
     let Ok(url) = site.join(request["path"].as_str().unwrap_or("/")) else { return };
-    notice(app, request["title"].as_str().unwrap_or_default(), request["body"].as_str().unwrap_or_default(), url);
+    let stop = request.get("stop").map(|stop| {
+        json!({ "server": site.origin().ascii_serialization(), "orgId": stop["orgId"], "phoneId": stop["phoneId"] })
+    });
+    let (title, body) = (request["title"].as_str().unwrap_or_default(), request["body"].as_str().unwrap_or_default());
+    show_notice(app, title, body, url, stop);
 }
 
 /// A notification with the site's limits: `url` (a page of a server of the app's list, the one open or another,
 /// ADR 0154) opens when the app comes back within 30 seconds.
 pub fn notice(app: &AppHandle, title: &str, body: &str, url: Url) {
+    show_notice(app, title, body, url, None);
+}
+
+/// The notifications' Stop button (`stop_from_notices`).
+const STOP_ACTIONS: &str = "device-stop";
+
+/// `stop`: the server, workspace and phone a Stop button takes back, labelled in the app's language (none before
+/// the labels arrived).
+fn show_notice(app: &AppHandle, title: &str, body: &str, url: Url, stop: Option<Value>) {
     let in_front = app.get_window(LABEL).and_then(|w| w.is_focused().ok()).unwrap_or(false);
     {
         let notices = app.state::<Notices>();
@@ -877,9 +906,53 @@ pub fn notice(app: &AppHandle, title: &str, body: &str, url: Url) {
         if in_front || !state.on || !notice_fits(&mut state.sent, Instant::now()) {
             return;
         }
-        state.pending = Some((url, Instant::now()));
+        state.pending = Some((url.clone(), Instant::now()));
     }
-    let _ = app.notification().builder().title(title).body(body).show();
+    let mut builder = app.notification().builder().title(title).body(body).extra("url", url.as_str());
+    if let (Some(stop), Some(label)) = (stop, crate::menus::labels(app).get("notifyStop").cloned()) {
+        let stop_type = ActionType::builder(STOP_ACTIONS).actions(vec![Action::builder("stop", label).build()]).build();
+        let _ = app.notification().register_action_types(vec![stop_type]);
+        builder = builder.action_type_id(STOP_ACTIONS).extra("stop", stop);
+    }
+    let _ = builder.show();
+}
+
+/// A notification's click and its Stop. With a handler registered the plugin reports every click here, and the app
+/// may not come forward by itself (`focused` would not see it): the click opens its own page. Stop: the stop the
+/// web's button makes, with the window's session for that server. When it can't (signed out, offline, no longer
+/// allowed), the phone's page opens, where Stop is.
+pub fn stop_from_notices(app: &AppHandle) {
+    let handle = app.clone();
+    let _ = app.notification().on_action(move |performed| {
+        let action = performed.action_id();
+        if action != "tap" && action != "stop" {
+            return;
+        }
+        let extra = |key: &str| performed.notification().and_then(|n| n.extra().get(key)).cloned();
+        let app = handle.clone();
+        // Handled here: the app coming forward from this click opens nothing more.
+        app.state::<Notices>().0.lock().unwrap_or_else(|e| e.into_inner()).pending = None;
+        if action == "tap" {
+            let Some(url) = extra("url").and_then(|u| u.as_str().and_then(|u| u.parse::<Url>().ok())) else { return };
+            std::thread::spawn(move || {
+                let _ = show_url(&app, url);
+            });
+            return;
+        }
+        let Some(stop) = extra("stop") else { return };
+        std::thread::spawn(move || {
+            let text = |key: &str| stop[key].as_str().unwrap_or_default().to_string();
+            let (server, org, phone) = (text("server"), text("orgId"), text("phoneId"));
+            let path = format!("/api/app/organizations/{org}/devices/phones/{phone}/stop");
+            let stopped = crate::workspaces::with_session(&app, &server, "POST", &path, Some("{}"))
+                .is_ok_and(|answer| (200..300).contains(&answer.status));
+            if !stopped {
+                if let Ok(url) = format!("{server}/org/{org}/settings/devices/phones/{phone}").parse::<Url>() {
+                    let _ = show_url(&app, url);
+                }
+            }
+        });
+    });
 }
 
 /// The main window came to the front: within 30 seconds of a notification, its page (on its server, which
@@ -887,6 +960,11 @@ pub fn notice(app: &AppHandle, title: &str, body: &str, url: Url) {
 pub fn focused(app: &AppHandle) {
     keep_lights(app);
     crate::workspaces::on_focus(app);
+    // Brought forward by a notification of the server here: the popover says what happened and how to fix it.
+    if crate::local_server::take_notice_click() {
+        let _ = crate::present(app, "popover");
+        return;
+    }
     let pending = {
         let notices = app.state::<Notices>();
         let mut state = notices.0.lock().unwrap_or_else(|e| e.into_inner());
@@ -936,6 +1014,21 @@ fn ask_to_pair(app: &AppHandle, org: &str, host: &str) -> bool {
         .blocking_show()
 }
 
+/// Preferences › This Mac's switch for a workspace this computer doesn't work for yet: the same system dialog as the
+/// site's "This Mac", for a server of the app's list. False when declined.
+#[tauri::command]
+pub async fn pair_ask(app: AppHandle, window: tauri::Window, server: String, org: String) -> Result<bool, String> {
+    if window.label() != "prefs" {
+        return Err("only Preferences asks this".into());
+    }
+    if !servers::get(&app).servers.contains(&server) {
+        return Err("not a server of this app".into());
+    }
+    let org = display_name(Some(&json!(org))).ok_or("bad organization name")?;
+    let host = server.parse::<Url>().ok().and_then(|u| u.host_str().map(str::to_string)).unwrap_or_default();
+    tauri::async_runtime::spawn_blocking(move || ask_to_pair(&app, &org, &host)).await.map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -> Result<Value, String> {
     // The site itself, not the cover that shares its window.
@@ -966,9 +1059,13 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             return Ok(json!({}));
         }
         Some("orgs") => {
-            // A new organization on the server here: this computer works for it within seconds.
-            if crate::menus::set_orgs(&app, &request["orgs"]) && server_here {
-                crate::host_sync::trigger(&app);
+            // A new organization on the server here: this computer works for it within seconds. Signed in or a new
+            // workspace anywhere: the workspaces are read again, so the app offers this computer to it at once.
+            if crate::menus::set_orgs(&app, &request["orgs"]) {
+                if server_here {
+                    crate::host_sync::trigger(&app);
+                }
+                crate::workspaces::trigger(&app);
             }
             return Ok(json!({}));
         }
@@ -1003,7 +1100,12 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
         }
         // The other servers' workspaces, as last read (the page's own server lists its own).
         Some("workspaces") => {
-            if crate::workspaces::stale(&app) {
+            // Never read yet (the app's first check ran before this window existed): read now and answer with it,
+            // so the site's menu never starts empty for a minute.
+            if crate::workspaces::never_read(&app) {
+                let reader = app.clone();
+                let _ = tauri::async_runtime::spawn_blocking(move || crate::workspaces::refresh_now(&reader)).await;
+            } else if crate::workspaces::stale(&app) {
                 crate::workspaces::trigger(&app);
             }
             let others: Vec<_> = crate::workspaces::list(&app).into_iter().filter(|s| s.server != origin).collect();
@@ -1024,6 +1126,16 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             let url: Url = format!("{server}/org/{}", request["orgId"].as_str().unwrap_or_default())
                 .parse()
                 .map_err(|_| "not a URL")?;
+            show_url(&app, url)?;
+            return Ok(json!({}));
+        }
+        // Another server of the list on its first page: its sign-in when the window has no session there.
+        Some("openServer") => {
+            let server = request["server"].as_str().unwrap_or_default();
+            if !servers::get(&app).servers.iter().any(|s| s == server) {
+                return Err("not a server of this app".into());
+            }
+            let url: Url = server.parse().map_err(|_| "not a URL")?;
             show_url(&app, url)?;
             return Ok(json!({}));
         }
@@ -1200,7 +1312,7 @@ mod tests {
 
     #[test]
     fn agents_work_here_only_for_a_server_elsewhere() {
-        assert!(!agents_here("https://app.agentes.chat", false));
+        assert!(agents_here("https://app.agentes.chat", false), "agentes.chat too");
         assert!(!agents_here("http://127.0.0.1:4310", false));
         assert!(!agents_here("http://localhost:3000", false));
         assert!(agents_here("https://agentes.tail1234.ts.net", false));
@@ -1248,6 +1360,11 @@ mod tests {
         assert_eq!(checked(&json!({ "kind": "workspaces", "server": "x" })), Ok(json!({ "kind": "workspaces" })));
         assert_eq!(checked(&json!({ "kind": "addWorkspace", "page": "/x" })), Ok(json!({ "kind": "addWorkspace" })));
         assert_eq!(
+            checked(&json!({ "kind": "openServer", "server": "https://agentes.exemplo.com.br", "path": "/x" })),
+            Ok(json!({ "kind": "openServer", "server": "https://agentes.exemplo.com.br" }))
+        );
+        assert!(checked(&json!({ "kind": "openServer", "server": "https://agentes.exemplo.com.br/login" })).is_err());
+        assert_eq!(
             checked(&json!({ "kind": "openWorkspace", "server": "https://agentes.exemplo.com.br", "orgId": "o-1", "path": "/x" })),
             Ok(json!({ "kind": "openWorkspace", "server": "https://agentes.exemplo.com.br", "orgId": "o-1" }))
         );
@@ -1276,6 +1393,8 @@ mod tests {
             ok,
             Ok(json!({ "kind": "notify", "title": "Ana mentioned you", "body": "in #general", "path": "/org/o1/c/c1" }))
         );
+        let in_use = json!({ "kind": "notify", "title": "Lia is using Pixel 8", "body": "", "orgId": "o1", "phoneId": "p-1" });
+        assert_eq!(checked(&in_use).map(|r| r["stop"].clone()), Ok(json!({ "orgId": "o1", "phoneId": "p-1" })));
         for bad in [
             json!({ "kind": "notify", "title": "", "body": "x" }),
             json!({ "kind": "notify", "title": "a".repeat(81), "body": "x" }),
@@ -1283,6 +1402,8 @@ mod tests {
             json!({ "kind": "notify", "title": "x", "body": "", "path": "//evil.example/x" }),
             json!({ "kind": "notify", "title": "x", "body": "", "path": "https://evil.example/x" }),
             json!({ "kind": "notify", "title": "x\u{7}", "body": "" }),
+            json!({ "kind": "notify", "title": "x", "body": "", "phoneId": "p-1" }),
+            json!({ "kind": "notify", "title": "x", "body": "", "orgId": "o1", "phoneId": "../p" }),
         ] {
             assert!(checked(&bad).is_err(), "{bad}");
         }

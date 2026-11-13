@@ -1,6 +1,7 @@
 import type { Message, TeamCheck } from "@agenteschat/client";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { targetKind, teamChecksOf } from "@agenteschat/client/lib/team-checks";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Icon, type IconName } from "@agenteschat/ui";
 import { Link } from "@tanstack/react-router";
 import { Trans, useTranslation } from "react-i18next";
@@ -43,8 +44,9 @@ function TeamCheckRow({ check, selfId }: { check: TeamCheck; selfId: string | nu
   if (!match) return null;
   const when = relativeTime(t, i18n.language, match.at);
   const values = { target, when, who: match.agentName ?? "" };
+  // Whoever it was can't be shown: a personal workspace (ADR 0159) has no team to name.
   const key = !match.agentId
-    ? "teamChecks.someone"
+    ? modeKey(org, "teamChecks.someone")
     : match.agentId === selfId
       ? "teamChecks.self"
       : "teamChecks.teammate";
@@ -52,25 +54,27 @@ function TeamCheckRow({ check, selfId }: { check: TeamCheck; selfId: string | nu
     .filter(Boolean)
     .join(" · ");
   return (
-    <div className="ag-rc ac-actrow">
+    <div className="ag-rc">
       <span className="ag-rc__ic" aria-hidden="true">
         <Icon name={ICONS[targetKind(target)]} size={16} />
       </span>
-      <span className="ag-rc__tx ac-actrow__text">
-        <span className="ag-rc__sentence" title={check.targets.join(", ")}>
-          <Trans i18nKey={key as "teamChecks.teammate"} values={values} components={{ b: <b /> }} />
+      <span className="ac-actline">
+        <span className="ag-rc__tx">
+          <span className="ag-rc__sentence" title={check.targets.join(", ")}>
+            <Trans i18nKey={key as "teamChecks.teammate"} values={values} components={{ b: <b /> }} />
+          </span>
+          {detail && <span className="ag-rc__by">{detail}</span>}
         </span>
-        {detail && <span className="ag-rc__by">{detail}</span>}
+        {match.channelId && (
+          <Link
+            to="/org/$orgId/c/$channelId"
+            params={{ orgId: org.id, channelId: match.channelId }}
+            className="ag-rc__btn"
+          >
+            {t("teamChecks.open")}
+          </Link>
+        )}
       </span>
-      {match.channelId && (
-        <Link
-          to="/org/$orgId/c/$channelId"
-          params={{ orgId: org.id, channelId: match.channelId }}
-          className="ag-rc__btn"
-        >
-          {t("teamChecks.open")}
-        </Link>
-      )}
     </div>
   );
 }

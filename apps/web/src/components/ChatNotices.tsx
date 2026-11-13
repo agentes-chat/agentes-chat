@@ -3,6 +3,7 @@ import { keys } from "@agenteschat/client";
 import { APP_BRANDS } from "@agenteschat/client/lib/apps";
 import { seesDetails } from "@agenteschat/client/lib/audience";
 import { pairItemOf } from "@agenteschat/client/lib/consult-group";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@agenteschat/client/lib/notices";
 import type { RoutineReply } from "@agenteschat/client/lib/routines";
 import type { AppVia } from "@agenteschat/client/lib/via";
+import { stopsMovedOn } from "@agenteschat/client/lib/work";
 import {
   cx,
   EventPill,
@@ -36,6 +38,7 @@ import { DetailsLink } from "@/components/details-link";
 import { useOrg } from "@/components/org-context";
 import { SayWhy } from "@/components/tasks/TaskBits";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useToast } from "@/lib/toast";
 import "./chat-notices.css";
 
 const NOTICE_ICON: Record<string, IconName> = {
@@ -52,14 +55,15 @@ const NOTICE_ICON: Record<string, IconName> = {
  */
 function EventLine({
   message,
-  icon,
+  mark,
   label,
   detail,
   labels,
   action,
 }: {
   message: Message;
-  icon: IconName;
+  /** Its icon, or the service's own logo (GitHub's). */
+  mark: ReactNode;
   label: ReactNode;
   /** What "Ver" opens (`noticeView`): never the words written for the agent. */
   detail: NoticeView["detail"];
@@ -80,7 +84,7 @@ function EventLine({
     <EventPill
       className="cn-pill"
       data-message-id={message.id}
-      mark={<Icon name={icon} size={14} />}
+      mark={mark}
       time={formatTime(i18n.language, message.createdAt)}
       actions={
         action || text ? (
@@ -156,11 +160,23 @@ export function NoticeLine({ message }: { message: Message }) {
   return (
     <EventLine
       message={message}
-      icon={NOTICE_ICON[notice.kind] ?? "info"}
+      mark={
+        notice.kind === "github_event" ? (
+          <ProviderLogo id="github" size="xs" />
+        ) : (
+          <Icon name={NOTICE_ICON[notice.kind] ?? "info"} size={14} />
+        )
+      }
       label={t(view.key as "chat.notice.other", view.values as { name: string })}
       detail={view.detail}
       labels={{ show: t("chat.notice.show"), hide: t("chat.notice.hide") }}
-      action={view.pending ? <CancelFollowUp messageId={message.id} /> : undefined}
+      action={
+        view.pending ? (
+          <CancelFollowUp messageId={message.id} />
+        ) : view.answer ? (
+          <AnswerGitHub messageId={message.id} />
+        ) : undefined
+      }
     />
   );
 }
@@ -273,28 +289,43 @@ export function StopPill({
   );
 }
 
-/** The stopped tasks of a conversation: each notice by run, and the runs whose stopped reply is drawn here. */
+/**
+ * The stopped tasks of a conversation: each notice by run, the runs whose stopped reply is drawn here, and the
+ * stopped runs with nothing left to continue (`stopsMovedOn`).
+ */
 export interface StopsHere {
   notices: ReadonlyMap<string, { notice: StoppedNotice; at: string }>;
   replied: ReadonlySet<string>;
+  movedOn: ReadonlySet<string>;
 }
 
-const StopsContext = createContext<StopsHere>({ notices: new Map(), replied: new Set() });
+const StopsContext = createContext<StopsHere>({ notices: new Map(), replied: new Set(), movedOn: new Set() });
 export const StopsProvider = StopsContext.Provider;
 
 /**
  * One stop, one pill: a notice whose stopped reply is here (a saved reply that says it was canceled, or the run's live
  * block) is drawn in that reply's pill, never as a line of its own.
  */
-export function stopsOf(messages: readonly Message[], liveRunIds: Iterable<string>): StopsHere {
+export function stopsOf(
+  messages: readonly Message[],
+  live: readonly { runId: string; agentId: string; provisional?: boolean; goneAt?: number | null }[],
+): StopsHere {
   const notices = new Map<string, { notice: StoppedNotice; at: string }>();
-  const replied = new Set<string>(liveRunIds);
+  const replied = new Set<string>(live.map((r) => r.runId));
   for (const m of messages) {
     const notice = stoppedNoticeOf(m.meta);
     if (notice) notices.set(notice.runId, { notice, at: m.createdAt });
     else if (m.author.type === "agent" && m.agentRunId && m.meta?.canceled) replied.add(m.agentRunId);
   }
-  return { notices, replied };
+  return {
+    notices,
+    replied,
+    // At work for real: not a guess at who will answer, nor a block that ended and waits for its message.
+    movedOn: stopsMovedOn(
+      messages,
+      live.filter((r) => !r.provisional && !r.goneAt).map((r) => r.agentId),
+    ),
+  };
 }
 
 /** The notice of the run a stopped reply belongs to, when the conversation has it. */
@@ -302,6 +333,9 @@ export const useStopNotice = (runId: string | null | undefined) => {
   const stops = useContext(StopsContext);
   return runId ? stops.notices.get(runId) : undefined;
 };
+
+/** Whether a stopped run's agent went on here (it works now, or wrote again): nothing left for "Continuar". */
+export const useStopMovedOn = (runId: string | null | undefined) => useContext(StopsContext).movedOn.has(runId ?? "");
 
 /** Whether a stopped task's notice has its reply's pill here, so draws nothing. */
 export const useStopShownInReply = (runId: string) => useContext(StopsContext).replied.has(runId);
@@ -343,6 +377,32 @@ function CancelFollowUp({ messageId }: { messageId: string }) {
       }}
     >
       {t("chat.notice.followUpCancel")}
+    </EventPillAction>
+  );
+}
+
+/**
+ * "Pedir resposta" on what someone the agent doesn't answer wrote on GitHub: the agent answers them there, with this
+ * person behind it. The line changes in place once the server has it; a refusal says why.
+ */
+function AnswerGitHub({ messageId }: { messageId: string }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const { org } = useOrg();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  return (
+    <EventPillAction
+      disabled={busy}
+      onClick={() => {
+        setBusy(true);
+        void api.chat
+          .answerGitHub(org.id, messageId)
+          .catch((error: unknown) => toast.show(errorText(t, error), "error"))
+          .finally(() => setBusy(false));
+      }}
+    >
+      {t("chat.notice.github.ask")}
     </EventPillAction>
   );
 }

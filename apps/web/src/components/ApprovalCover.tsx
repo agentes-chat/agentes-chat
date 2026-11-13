@@ -9,6 +9,7 @@ import {
 } from "@agenteschat/client";
 import { coveringLine } from "@agenteschat/client/lib/approval-words";
 import { endOfDay, toYmd } from "@agenteschat/client/lib/format";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import {
   AffixInput,
   Avatar,
@@ -18,16 +19,20 @@ import {
   CardHeader,
   Checkbox,
   DatePicker,
+  InfoHint,
   Select,
   Switch,
   Textarea,
 } from "@agenteschat/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { LoadingLine } from "@/components/Loading";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
+import { usePersonalView } from "@/hooks/usePersonalView";
 import { useToast } from "@/lib/toast";
 
 /** "Ninguém" in the person list (Radix lists take no empty value). */
@@ -36,7 +41,9 @@ const NOBODY = "none";
 /**
  * Configurações › Você › Aprovações (ADR 0139): "Quem aprova por mim" (one person, always or only while my status
  * says out, until a day, risky actions off unless turned on), each change saved at once; then the people I approve
- * for, each with "Não quero cobrir".
+ * for, each with "Não quero cobrir". Alone in a personal workspace there is nobody to approve for you: the card waits
+ * until someone joins or while a cover is set (ADR 0159). What the right hand does for the person is on its own page,
+ * a row away.
  */
 export function ApprovalsSection() {
   const { t, i18n } = useTranslation();
@@ -45,8 +52,10 @@ export function ApprovalsSection() {
   const meId = useMe().data?.user.id ?? "";
   const dir = useDirectory(org.id);
   const covers = useApprovalCovers(org.id);
-  const rightHand = useRightHandApprovals(org.id).data;
   const set = useSetApprovalCover(org.id, meId);
+  const { solo } = usePersonalView();
+  const navigate = useNavigate();
+  const rightHand = dir.agents.find(isRightHand);
   const decline = useDeclineApprovalCover(org.id);
   const failed = () => toast.show(t("approvalCover.failed"), "error");
   if (!covers.data) return covers.isError ? <p className="muted">{t("approvalCover.failed")}</p> : <LoadingLine />;
@@ -68,94 +77,110 @@ export function ApprovalsSection() {
   const people = dir.members
     .filter((m) => m.userId !== meId)
     .map((m) => ({ value: m.userId, label: m.name, leading: face(m.userId) }));
+  // A cover goes with its person's membership: one still read after they left shows Ninguém, never an empty box.
+  const coverPerson = cover && people.some((p) => p.value === cover.userId) ? cover.userId : NOBODY;
 
   return (
     <>
-      <Card aria-labelledby="cover-title">
-        <CardHeader
-          id="cover-title"
-          icon="audiencePeople"
-          title={t("approvalCover.title")}
-          subtitle={t("approvalCover.subtitle")}
-        />
-        <div className="settings-rows">
-          <PrefRow
-            id="cover-person"
-            icon="person"
-            label={t("approvalCover.person")}
-            control={
-              <Select
-                value={cover?.userId ?? NOBODY}
-                onValueChange={(userId) => save({ userId: userId === NOBODY ? "" : userId })}
-                aria-label={t("approvalCover.person")}
-                align="end"
-                options={[{ value: NOBODY, label: t("approvalCover.nobody") }, ...people]}
-              />
-            }
+      {(!solo || cover) && (
+        <Card aria-labelledby="cover-title">
+          <CardHeader
+            id="cover-title"
+            icon="audiencePeople"
+            title={t("approvalCover.title")}
+            subtitle={t("approvalCover.subtitle")}
           />
-          {cover && (
-            <>
-              <PrefRow
-                id="cover-when"
-                icon="clock"
-                label={t("approvalCover.when")}
-                help={t("approvalCover.whenHelp")}
-                control={
-                  <Select
-                    value={cover.mode}
-                    onValueChange={(mode) => save({ mode })}
-                    aria-label={t("approvalCover.when")}
-                    align="end"
-                    options={[
-                      { value: "while_out", label: t("approvalCover.whileOut") },
-                      { value: "always", label: t("approvalCover.always") },
-                    ]}
-                  />
-                }
-              />
-              <PrefRow
-                id="cover-until"
-                icon="calendar"
-                label={t("approvalCover.until")}
-                control={
-                  <DatePicker
-                    value={cover.endsAt ? toYmd(new Date(cover.endsAt)) : null}
-                    onChange={(day) => save({ endsAt: endOfDay(day) })}
-                    onClear={() => save({ endsAt: null })}
-                    min={toYmd(new Date())}
-                    placeholder={t("approvalCover.noDate")}
-                    aria-label={t("approvalCover.until")}
-                    locale={i18n.language}
-                    labels={{
-                      previousMonth: t("common.previousMonth"),
-                      nextMonth: t("common.nextMonth"),
-                      choose: t("common.chooseDate"),
-                      clear: t("approvalCover.clearDate"),
-                    }}
-                  />
-                }
-              />
-              <PrefRow
-                id="cover-risky"
-                icon="alert"
-                label={t("approvalCover.risky")}
-                help={t(cover.risky ? "approvalCover.riskyOn" : "approvalCover.riskyOff")}
-                control={
-                  <Switch
-                    checked={cover.risky}
-                    onCheckedChange={(risky) => save({ risky })}
-                    aria-label={t("approvalCover.risky")}
-                    aria-describedby="cover-risky-help"
-                  />
-                }
-              />
-            </>
-          )}
-        </div>
-        {!rightHand?.rightHand && <CardFooter icon="lock">{t("approvalCover.lock")}</CardFooter>}
-      </Card>
+          <div className="settings-rows">
+            <PrefRow
+              id="cover-person"
+              icon="person"
+              label={t("approvalCover.person")}
+              control={
+                <Select
+                  value={coverPerson}
+                  onValueChange={(userId) => save({ userId: userId === NOBODY ? "" : userId })}
+                  aria-label={t("approvalCover.person")}
+                  align="end"
+                  options={[{ value: NOBODY, label: t("approvalCover.nobody") }, ...people]}
+                />
+              }
+            />
+            {cover && (
+              <>
+                <PrefRow
+                  id="cover-when"
+                  icon="clock"
+                  label={t("approvalCover.when")}
+                  hint={t("approvalCover.whenHelp")}
+                  control={
+                    <Select
+                      value={cover.mode}
+                      onValueChange={(mode) => save({ mode })}
+                      aria-label={t("approvalCover.when")}
+                      align="end"
+                      options={[
+                        { value: "while_out", label: t("approvalCover.whileOut") },
+                        { value: "always", label: t("approvalCover.always") },
+                      ]}
+                    />
+                  }
+                />
+                <PrefRow
+                  id="cover-until"
+                  icon="calendar"
+                  label={t("approvalCover.until")}
+                  control={
+                    <DatePicker
+                      value={cover.endsAt ? toYmd(new Date(cover.endsAt)) : null}
+                      onChange={(day) => save({ endsAt: endOfDay(day) })}
+                      onClear={() => save({ endsAt: null })}
+                      min={toYmd(new Date())}
+                      placeholder={t("approvalCover.noDate")}
+                      aria-label={t("approvalCover.until")}
+                      locale={i18n.language}
+                      labels={{
+                        previousMonth: t("common.previousMonth"),
+                        nextMonth: t("common.nextMonth"),
+                        choose: t("common.chooseDate"),
+                        clear: t("approvalCover.clearDate"),
+                      }}
+                    />
+                  }
+                />
+                <PrefRow
+                  id="cover-risky"
+                  icon="alert"
+                  label={t("approvalCover.risky")}
+                  hint={t("approvalCover.riskyOn")}
+                  control={
+                    <Switch
+                      checked={cover.risky}
+                      onCheckedChange={(risky) => save({ risky })}
+                      aria-label={t("approvalCover.risky")}
+                    />
+                  }
+                />
+              </>
+            )}
+          </div>
+          <CardFooter icon="lock">{t("approvalCover.lock")}</CardFooter>
+        </Card>
+      )}
 
-      {rightHand?.rightHand && <RightHandCard view={rightHand} name={rightHand.rightHand.name} />}
+      {rightHand && (
+        <Card>
+          <div className="settings-rows">
+            <PrefRow
+              id="rh-approvals"
+              lead={<AgentAvatar agentId={rightHand.id} name={rightHand.name} size="sm" />}
+              label={t("rightHandApprovals.title", { name: rightHand.name })}
+              onOpen={() =>
+                void navigate({ to: "/org/$orgId/agents/$agentId", params: { orgId: org.id, agentId: rightHand.id } })
+              }
+            />
+          </div>
+        </Card>
+      )}
 
       {covers.data.covering.length > 0 && (
         <Card aria-labelledby="covering-title">
@@ -172,7 +197,7 @@ export function ApprovalsSection() {
                 id={`covering-${c.userId}`}
                 lead={face(c.userId)}
                 label={dir.memberById.get(c.userId)?.name ?? ""}
-                help={coveringLine(t, i18n.language, c)}
+                status={coveringLine(t, i18n.language, c)}
                 control={
                   <Button
                     size="sm"
@@ -193,22 +218,25 @@ export function ApprovalsSection() {
 
 const USD = 1_000_000_000;
 
-/** A row whose box is the choice: the box on the label's first line, its help under it. */
+/** A row whose box is the choice: the box, then the label with an ⓘ for what it does, or why it is off under it. */
 function CheckRow({
   id,
   label,
-  help,
+  hint,
+  status,
   checked,
   disabled,
   onChange,
 }: {
   id: string;
   label: string;
-  help: ReactNode;
+  hint?: ReactNode;
+  status?: ReactNode;
   checked: boolean;
   disabled?: boolean;
   onChange: (on: boolean) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="settings-row ac-actrow rh-check">
       <Checkbox
@@ -219,19 +247,35 @@ function CheckRow({
         aria-describedby={`${id}-help`}
       />
       <span className="settings-row__text ac-actrow__text">
-        <label className="settings-row__label" htmlFor={id}>
-          {label}
-        </label>
-        <span className="settings-row__help" id={`${id}-help`}>
-          {help}
+        <span className="ac-hintline">
+          <label className="settings-row__label" htmlFor={id}>
+            {label}
+          </label>
+          {hint && (
+            <InfoHint id={`${id}-help`} name={t("common.about", { label })}>
+              {hint}
+            </InfoHint>
+          )}
         </span>
+        {status && (
+          <span className="settings-row__status" id={`${id}-help`}>
+            {status}
+          </span>
+        )}
       </span>
     </div>
   );
 }
 
+/** What the right hand creates and adjusts for the viewer without asking, on its own page; nothing while it loads. */
+export function RightHandApprovalsCard() {
+  const { org } = useOrg();
+  const view = useRightHandApprovals(org.id).data;
+  return view?.rightHand ? <RightHandCard view={view} name={view.rightHand.name} /> : null;
+}
+
 /**
- * "O Gerente aprova por você" (ADR 0139 §2), under the workspace's name for its right hand: one switch, the two kinds
+ * What the right hand does for the person without asking (ADR 0139 §2), under the workspace's name for it: one switch, the two kinds
  * (greyed when the person can't decide that themselves), the budget it may add per agent and their own guidance. The
  * day and month caps are code, not fields. What never leaves the person closes the card.
  */
@@ -268,6 +312,7 @@ function RightHandCard({ view, name }: { view: RightHandApprovals; name: string 
         action={
           <Switch
             checked={view.enabled && !view.pausedAt}
+            disabled={set.isPending}
             onCheckedChange={(enabled) => save({ enabled })}
             aria-label={title}
           />
@@ -278,7 +323,8 @@ function RightHandCard({ view, name }: { view: RightHandApprovals; name: string 
           <CheckRow
             id="rh-new"
             label={t("rightHandApprovals.newAgents")}
-            help={t(view.mayDecide.newAgents ? "rightHandApprovals.newAgentsHelp" : "rightHandApprovals.cantDecide")}
+            hint={view.mayDecide.newAgents ? t("rightHandApprovals.newAgentsHelp") : undefined}
+            status={view.mayDecide.newAgents ? undefined : t("rightHandApprovals.cantDecide")}
             checked={view.newAgents && view.mayDecide.newAgents}
             disabled={!view.mayDecide.newAgents}
             onChange={(newAgents) => save({ newAgents })}
@@ -286,20 +332,21 @@ function RightHandCard({ view, name }: { view: RightHandApprovals; name: string 
           <CheckRow
             id="rh-changes"
             label={t("rightHandApprovals.agentChanges")}
-            help={t(
-              view.mayDecide.agentChanges ? "rightHandApprovals.agentChangesHelp" : "rightHandApprovals.cantDecide",
-            )}
+            hint={view.mayDecide.agentChanges ? t("rightHandApprovals.agentChangesHelp") : undefined}
+            status={view.mayDecide.agentChanges ? undefined : t("rightHandApprovals.cantDecide")}
             checked={view.agentChanges && view.mayDecide.agentChanges}
             disabled={!view.mayDecide.agentChanges}
             onChange={(agentChanges) => save({ agentChanges })}
           />
           <div className="settings-row ac-actrow">
             <span className="settings-row__text ac-actrow__text">
-              <label className="settings-row__label" htmlFor="rh-budget">
-                {t("rightHandApprovals.budget")}
-              </label>
-              <span className="settings-row__help" id="rh-budget-help">
-                {t("rightHandApprovals.budgetHelp")}
+              <span className="ac-hintline">
+                <label className="settings-row__label" htmlFor="rh-budget">
+                  {t("rightHandApprovals.budget")}
+                </label>
+                <InfoHint id="rh-budget-help" name={t("common.about", { label: t("rightHandApprovals.budget") })}>
+                  {t("rightHandApprovals.budgetHelp")}
+                </InfoHint>
               </span>
             </span>
             <span className="settings-row__end rh-money">
@@ -318,11 +365,16 @@ function RightHandCard({ view, name }: { view: RightHandApprovals; name: string 
           </div>
           <div className="settings-row ac-actrow rh-guidance">
             <span className="settings-row__text ac-actrow__text">
-              <label className="settings-row__label" htmlFor="rh-guidance">
-                {t("rightHandApprovals.guidanceLabel", { name })}
-              </label>
-              <span className="settings-row__help" id="rh-guidance-help">
-                {t("rightHandApprovals.guidanceHelp", { name })}
+              <span className="ac-hintline">
+                <label className="settings-row__label" htmlFor="rh-guidance">
+                  {t("rightHandApprovals.guidanceLabel", { name })}
+                </label>
+                <InfoHint
+                  id="rh-guidance-help"
+                  name={t("common.about", { label: t("rightHandApprovals.guidanceLabel", { name }) })}
+                >
+                  {t("rightHandApprovals.guidanceHelp", { name })}
+                </InfoHint>
               </span>
             </span>
             <Textarea

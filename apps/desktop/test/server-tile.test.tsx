@@ -14,6 +14,7 @@ import { ServerTile } from "../src/ui/here";
 import { ToastProvider } from "../src/ui/Toast";
 import { FirstRun } from "../src/windows/FirstRun";
 import { Servers } from "../src/windows/prefs/Servers";
+import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -43,8 +44,7 @@ async function servers(
         </I18nextProvider>,
       ),
     );
-    for (let i = 0; i < 50 && !ready(el); i++) await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-    expect(Boolean(ready(el))).toBe(true);
+    await until(() => ready(el));
     await check(el, opened);
   } finally {
     await act(async () => root.unmount());
@@ -119,11 +119,9 @@ test("Preferences › Servers: the server here leads to Jev's key in its Setting
   const openOf = (el: HTMLElement) => jev(el)?.querySelector<HTMLButtonElement>(".dk-crow__end button");
   await servers(createFakeHost("prefs", "here", { here: { reach: true } }), jev, async (el, opened) => {
     const row = jev(el);
-    // Its title's ⓘ says what Jev is, the line where its key goes, and only Open at the end.
+    // Its title's ⓘ says what Jev is and where its key goes, no line under it, and only Open at the end.
     expect(row?.querySelector("button.ac-hint")?.getAttribute("aria-label")).toBe("About Jev");
-    expect(row?.querySelector(".dk-crow__text > small")?.textContent).toBe(
-      "In agentes.chat\u00a0›\u00a0Settings\u00a0›\u00a0AI accounts.",
-    );
+    expect(row?.querySelector(".dk-crow__text > small")).toBeNull();
     expect(row?.querySelector(".ac-chip")).toBeNull();
     expect([openOf(el)?.textContent, openOf(el)?.disabled]).toEqual(["Open", false]);
     await act(async () => openOf(el)?.click());
@@ -171,7 +169,8 @@ test("Connect to my server: what it finds on the Tailscale network by Tailscale'
     );
     await act(async () => button("Use your own server")?.click());
     await act(async () => button("Connect to my server")?.click());
-    for (let i = 0; i < 100 && !el.querySelector(".dk-fr__foundrow"); i++) {
+    // Each found server shows as soon as its own check answers: both, then.
+    for (let i = 0; i < 100 && el.querySelectorAll(".dk-fr__foundrow").length < 2; i++) {
       await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
     }
     const rows = [...el.querySelectorAll(".dk-fr__foundrow")].map((row) => [

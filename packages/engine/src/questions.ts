@@ -7,6 +7,7 @@ import { consultedFor, NO_PERSON_READS } from "./consultations";
 import { isAgentOnlyDm } from "./dms";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent } from "./events";
+import { hasQuestionMark } from "./format";
 import type { ResourcefulDeps } from "./hand-off";
 import { notifyQuestion, resolveQuestionNotifications } from "./notification-producers";
 import { enqueue } from "./outbox";
@@ -23,6 +24,9 @@ export const ASK_USER_TOOL = "ask_user";
 export const QUESTION_MAX_CHARS = 300;
 export const questionTooLong = (length: number) =>
   `Not asked: this question is ${length} characters, and a card holds one short question (at most ${QUESTION_MAX_CHARS}). Write what you found and your plan in your text first (it is posted above the card), then call ask_user again with one short question, with choices when they fit (e.g. "Can I start filling in the form?" with Yes and Not yet, in the people's language).`;
+/** What the run reads when its card would ask nothing: no question mark (`hasQuestionMark`) and no choices. */
+export const NOT_A_QUESTION =
+  "Not asked: this asks nothing, with no question mark and no choices to pick from. Put it in your reply, or end your turn if your reply already says it: nobody waits on a note. If you need an answer to go on, call ask_user again with one direct question.";
 
 /** The shape the app renders (`meta.question`, `question.asked` / `question.answered`). */
 export interface AgentQuestion {
@@ -40,6 +44,8 @@ export interface AgentQuestion {
   status: "open" | "answered";
   answer: string | null;
   answeredByUserId: string | null;
+  /** When a person answered or skipped it. */
+  answeredAt: string | null;
   /** The agent took it back (`withdraw_request`): it no longer needs an answer. Kept on the card by later syncs. */
   withdrawn?: true;
   /** A person skipped it (`answeredByUserId`): the agent went on without an answer. */
@@ -61,6 +67,7 @@ export function questionView(q: AgentQuestionRow): AgentQuestion {
     status: q.status === "open" ? "open" : "answered",
     answer: q.answer,
     answeredByUserId: q.answeredByUserId,
+    answeredAt: q.answeredAt?.toISOString() ?? null,
     ...(q.status === "dismissed" ? { dismissed: true as const } : {}),
   };
 }
@@ -82,14 +89,15 @@ export const questionCardMeta = (q: AgentQuestionRow, why: string) => ({
  * to the executor, which posts it in the thread and suspends the run
  * (`waiting_input`). A consulted agent asks from the agents' DM, which no
  * person reads: its card goes where the person behind it asked (ADR 0034).
- * With a judge, a question for something the run could find, a secret asked in the chat, or one that asks for
- * nothing the run needs, is held first (`holdAsk`, ADR 0109 addendum).
+ * Text that asks nothing (no question mark, no choices) is refused with no judgment (`NOT_A_QUESTION`). With a
+ * judge, a question for something the run could find, a secret asked in the chat, or one that asks for nothing the
+ * run needs, is held first (`holdAsk`, ADR 0109 addendum).
  */
 export function createAskUserToolSource(deps: ResourcefulDeps = {}): ToolSource {
   const tool: ToolDefinition = {
     name: ASK_USER_TOOL,
     description:
-      "Ask the person one short question and wait for the answer, only when you can't go on without it: the request is still ambiguous after you looked with your tools, a decision is really theirs, or a sensitive or irreversible action is next. Never a status note or an offer of optional extra work: those go in your reply, nobody waits on them. A way to do what was asked is never optional: do it, handing the person their step with its own request. Don't ask before what you can just do and undo: issues, memories, routines, a form you fill and save before submitting. Not for choosing between fixes: recommend one. `question` is the question alone, at most 300 characters: anything longer goes in your text before the call, posted above the card. The card shows the choices and your `why`: never write them in your text; after calling, write nothing else and end your turn. Offer 2 to 4 short choices when the answer is one of a few options.",
+      "Ask the person one short question and wait for the answer, only when you can't go on without it: the request is still ambiguous after you looked with your tools, or a decision is really theirs. Never to approve an action whose own card asks: call it. Never a status note or an offer of optional extra work: those go in your reply, nobody waits on them. A way to do what was asked is never optional: do it, handing the person their step with its own request. Don't ask before what you can just do and undo: issues, memories, routines, a form you fill and save before submitting. Not for choosing between fixes: recommend one. `question` is the question alone, at most 300 characters: anything longer goes in your text before the call, posted above the card. The card shows the question, its choices and your `why`: never write any of them in your text too; after calling, write nothing else and end your turn. Offer 2 to 4 short choices when the answer is one of a few options.",
     scope: "",
     inputSchema: {
       type: "object",
@@ -138,12 +146,13 @@ export function createAskUserToolSource(deps: ResourcefulDeps = {}): ToolSource 
       }
       const text = typeof input.question === "string" ? input.question.trim() : "";
       if (text.length > QUESTION_MAX_CHARS) return { content: questionTooLong(text.length), isError: true };
-      // Loaded here: the check pulls in the controller, which imports most of the engine.
-      const held = await (await import("./hand-off")).holdAsk(deps, ctx, text);
-      if (held) return { content: held, data: { held: true } };
       const choices = Array.isArray(input.choices)
         ? [...new Set((input.choices as unknown[]).map((c) => String(c).trim()).filter(Boolean))]
         : [];
+      if (!hasQuestionMark(text) && choices.length < 2) return { content: NOT_A_QUESTION, isError: true };
+      // Loaded here: the check pulls in the controller, which imports most of the engine.
+      const held = await (await import("./hand-off")).holdAsk(deps, ctx, text);
+      if (held) return { content: held, data: { held: true } };
       return {
         content: "",
         waitForAnswer: { text, choices: choices.length >= 2 ? choices.slice(0, 4) : null, requestedForUserId },

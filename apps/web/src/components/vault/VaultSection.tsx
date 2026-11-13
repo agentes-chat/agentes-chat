@@ -1,7 +1,20 @@
 import type { VaultItem, VaultItemKind, VaultScope } from "@agenteschat/client";
 import { useVault } from "@agenteschat/client";
 import { relativeTime } from "@agenteschat/client/lib/format";
-import { Button, EmptyState, Icon, List, PageHeader, SearchField, Segmented, Select, Toolbar } from "@agenteschat/ui";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
+import {
+  Button,
+  EmptyState,
+  Icon,
+  List,
+  Menu,
+  MenuItem,
+  PageHeader,
+  SearchField,
+  Segmented,
+  Select,
+  Toolbar,
+} from "@agenteschat/ui";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingList } from "@/components/Loading";
@@ -11,6 +24,7 @@ import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { hostOf, matchesQuery, sortItems } from "./lib";
 import { AgentFaces } from "./VaultAccess";
 import { VaultConnections } from "./VaultConnections";
+import { VaultEnvDialog } from "./VaultEnvDialog";
 import { VaultImportDialog } from "./VaultImportDialog";
 import { ItemChips, VaultItemDialog, VaultTile } from "./VaultItemDialog";
 import { VaultNewDialog } from "./VaultNewDialog";
@@ -112,7 +126,7 @@ export function VaultSection() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<null | "new" | "import">(null);
+  const [dialog, setDialog] = useState<null | "new" | "import" | "env">(null);
   const data = vault.data;
   const items = data?.items ?? [];
   const team = items.filter((i) => i.scope === "team");
@@ -121,6 +135,8 @@ export function VaultSection() {
   const current: Tab = tab ?? (data && !data.canManageTeam && team.length === 0 ? "personal" : "team");
   const scope: VaultScope = current === "personal" ? "personal" : "team";
   const canManageTeam = data?.canManageTeam ?? false;
+  // The team's items are the shared ones in a personal workspace (ADR 0159): the same items, its own word.
+  const teamTab = t(modeKey(org, "vault.tab.team"));
   const inTab = current === "personal" ? personal : team;
   const shown = sortItems(
     inTab.filter((i) => (kind === "all" || i.kind === kind) && matchesQuery(i, query)),
@@ -129,7 +145,7 @@ export function VaultSection() {
   const filtered = query.trim() !== "" || kind !== "all";
   // The kind filter only where it can narrow something: a view that holds more than one kind.
   const kinds = new Set(inTab.map((i) => i.kind)).size;
-  const open = (which: "new" | "import") => () => setDialog(which);
+  const open = (which: "new" | "import" | "env") => () => setDialog(which);
   const addsInList =
     !!data && current !== "connections" && inTab.length === 0 && (current === "personal" || canManageTeam);
   const pickTab = (next: Tab) => {
@@ -142,7 +158,7 @@ export function VaultSection() {
   const list = () => {
     if (shown.length > 0)
       return (
-        <List className="vlt-list" aria-label={t(`vault.tab.${scope}`)}>
+        <List className="vlt-list" aria-label={scope === "team" ? teamTab : t("vault.tab.personal")}>
           {shown.map((item) => (
             <VaultRow key={item.id} item={item} onOpen={() => setOpenId(item.id)} />
           ))}
@@ -181,10 +197,10 @@ export function VaultSection() {
       <EmptyState
         size="page"
         agent={look}
-        title={canManageTeam ? t("vault.list.teamEmpty") : t("vault.list.sharedEmpty")}
+        title={canManageTeam ? t(modeKey(org, "vault.list.teamEmpty")) : t("vault.list.sharedEmpty")}
         actions={canManageTeam && adds}
       >
-        {canManageTeam ? t("vault.list.teamEmptyText") : t("vault.list.sharedEmptyText")}
+        {canManageTeam ? t("vault.list.teamEmptyText") : t(modeKey(org, "vault.list.sharedEmptyText"))}
       </EmptyState>
     );
   };
@@ -197,9 +213,19 @@ export function VaultSection() {
         meta={t("settings.sectionText.vault")}
         actions={
           <>
-            <Button icon="upload" onClick={open("import")}>
-              {t("vault.import.open")}
-            </Button>
+            {/* Two things come from a file: a passwords export (logins) and a .env (keys). */}
+            <Menu
+              align="end"
+              label={t("vault.import.open")}
+              trigger={<Button icon="upload">{t("vault.import.open")}</Button>}
+            >
+              <MenuItem icon="globe" onSelect={open("import")}>
+                {t("vault.import.title")}
+              </MenuItem>
+              <MenuItem icon="key" onSelect={open("env")}>
+                {t("vault.env.open")}
+              </MenuItem>
+            </Menu>
             {/* The empty list takes over this button: one way in, in the middle of the page. */}
             {!addsInList && (
               <Button variant="primary" icon="plus" onClick={open("new")}>
@@ -220,7 +246,7 @@ export function VaultSection() {
             value={current}
             onValueChange={pickTab}
             options={[
-              { value: "team", label: t("vault.tab.team"), count: team.length },
+              { value: "team", label: teamTab, count: team.length },
               { value: "personal", label: t("vault.tab.personal"), count: personal.length },
               { value: "connections", label: t("vault.tab.connections"), count: data.connections.length },
             ]}
@@ -278,6 +304,7 @@ export function VaultSection() {
           canManageTeam={canManageTeam}
           scope={scope}
           onClose={() => setDialog(null)}
+          onImportEnv={open("env")}
           onCreated={(item) => {
             setDialog(null);
             setTab(item.scope);
@@ -286,6 +313,17 @@ export function VaultSection() {
       )}
       {dialog === "import" && (
         <VaultImportDialog canManageTeam={canManageTeam} scope={scope} onClose={() => setDialog(null)} />
+      )}
+      {dialog === "env" && data && (
+        <VaultEnvDialog
+          overview={data}
+          scope={scope}
+          onClose={() => setDialog(null)}
+          onSaved={(saved) => {
+            setDialog(null);
+            pickTab(saved);
+          }}
+        />
       )}
     </div>
   );

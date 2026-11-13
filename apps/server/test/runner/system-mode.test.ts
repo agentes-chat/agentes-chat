@@ -123,6 +123,29 @@ test("config: Claude's own login for all agents is off unless its switch is whol
   expect(paired.claudeSharedLogin).toEqual(on as never);
 });
 
+test("pairing the same machine again keeps its allowed services and pause; another machine starts without them", () => {
+  const prev = {
+    mode: "system",
+    server: "https://app.example.com",
+    machineId: "m",
+    services: ["tcp/11434"],
+    paused: { until: null },
+  } as never;
+  const input = (machineId: string) => ({
+    server: "https://app.example.com",
+    grant: { machineId, token: "t", name: "n", org: { id: "o", name: "O" } } as never,
+    workspace: "/w",
+    tools: { commands: true } as never,
+    desktop: false,
+  });
+  const again = configFromGrant(prev, input("m"));
+  expect(again.services).toEqual(["tcp/11434"]);
+  expect(again.paused).toEqual({ until: null });
+  const other = configFromGrant(prev, input("m2"));
+  expect(other.services).toBeUndefined();
+  expect(other.paused).toBeUndefined();
+});
+
 test("config: the auth route is only ever the guard's true, and a new pairing keeps it", () => {
   expect(normalizeStored({ networkAuthRoute: true }).networkAuthRoute).toBe(true);
   expect(normalizeStored({ networkAuthRoute: "true" })).toEqual({});
@@ -242,7 +265,7 @@ test.if(posix)("service install --system: a system home, and it starts only when
   expect(agentTmpCleanupPath()).toBe("/etc/tmpfiles.d/agentes-runner.conf");
   expect(agentTmp(21003)).toBe("/run/agentes-runner-tmp/21003/tmp");
   expect(readFileSync(agentTmpCleanupPath(unitPath), "utf8")).toBe(
-    "# agentes.chat runner: each agent's own temporary folders\ne /run/agentes-runner-tmp/*/* - - - 10d\ne /var/lib/agentes-runner-tmp/*/* - - - 30d\n",
+    "# agentes.chat runner: each agent's own temporary folders\ne /run/agentes-runner-tmp/*/* - - - 10d\nx /run/agentes-runner-tmp/*/run\ne /var/lib/agentes-runner-tmp/*/* - - - 30d\n",
   );
 
   // Not connected yet: an unpaired runner would only restart in a loop.
@@ -438,6 +461,28 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "stream.open",
     // The live view's data socket needs the machine token, which only root holds (ADR 0040 §7.1).
     "browser.view.open",
+    // The phones belong to the computer, not to one agent: their lock and adb, simctl and devicectl stay with root.
+    "phone.claim",
+    "phone.release",
+    "phone.install",
+    "phone.launch",
+    "phone.flow",
+    "phone.record",
+    "phone.screenshot",
+    "phone.logs",
+    // Pairing over Wi-Fi puts the phone on the person's adb, like the rest.
+    "phone.pair.start",
+    "phone.pair.code",
+    "phone.pair.status",
+    "phone.pair.cancel",
+    // Pausing is the whole computer's, set by whoever runs it, not by one agent.
+    "pause.set",
+    "phone.look",
+    // The Mac's pick of iPhones on its Wi-Fi, kept beside the phones' locks.
+    "phone.wifi",
+    // Root takes an agent's holds as that agent's own user, and checks its program is its own (ADR 0176).
+    "keep.start",
+    "keep.end",
   ]);
 
   if (posix) {
@@ -599,7 +644,8 @@ test.if(posix)(
   () => {
     const fake = home();
     const tools = home();
-    for (const tool of ["sed", "grep", "dirname"]) symlinkSync(Bun.which(tool) as string, path.join(tools, tool));
+    for (const tool of ["sed", "grep", "dirname", "date"])
+      symlinkSync(Bun.which(tool) as string, path.join(tools, tool));
     // Root on Linux, as far as the script can tell, with Debian's systemd.
     writeFileSync(path.join(tools, "id"), "#!/bin/sh\necho 0\n", { mode: 0o755 });
     writeFileSync(path.join(tools, "uname"), "#!/bin/sh\necho Linux\n", { mode: 0o755 });

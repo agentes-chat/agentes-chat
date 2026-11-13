@@ -17,6 +17,7 @@ import {
 import { approvalCardItems } from "@agenteschat/client/lib/approval-card";
 import { approvalOriginWords } from "@agenteschat/client/lib/approval-origin";
 import { appCreatedLine } from "@agenteschat/client/lib/apps";
+import { deviceNoticeOf } from "@agenteschat/client/lib/devices";
 import { errorText, restrictionLine } from "@agenteschat/client/lib/errors";
 import { daysBetween, formatShortDate, formatTime, namesText, timeLeft } from "@agenteschat/client/lib/format";
 import { agentGrammar, isFeminineName } from "@agenteschat/client/lib/grammar";
@@ -52,6 +53,7 @@ import {
   cx,
   EmptyState,
   ExpiryFuse,
+  GroupHeading,
   Icon,
   type IconName,
   Kbd,
@@ -82,6 +84,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { ApprovalAsk, ApprovalGroupAsk } from "@/components/ApprovalAsk";
 import { useConnectAi } from "@/components/ConnectAi";
+import { DeviceNoticeActions, deviceNoticeLine } from "@/components/devices/DeviceNotice";
 import { ErrorState, LoadingCards } from "@/components/Loading";
 import { useNotificationHref, useNotificationOpener } from "@/components/NotificationOpen";
 import { type Dir, Face, Headline, joinerOf, nameOf, SystemFace, sayWords } from "@/components/NotificationParts";
@@ -169,14 +172,15 @@ function sourceOf(t: TFunction, n: AppNotification, channelName: (id: string) =>
   if (runFailedGroupOf(n) || (n.kind === "catch_up_closed" && n.count > 1)) return null;
   let icon: IconName = "channel";
   let label = "";
-  if (WIDGET_NOTICES.has(n.kind)) [icon, label] = ["grid", t("notifications.source.dashboard")];
+  const device = deviceNoticeOf(n);
+  if (device) [icon, label] = [device.phoneId ? "phone" : "computer", t("devices.notice.source")];
+  else if (WIDGET_NOTICES.has(n.kind)) [icon, label] = ["grid", t("notifications.source.dashboard")];
   else if (n.kind === "approval") [icon, label] = ["shield", t("notifications.source.approval")];
   else if (n.kind === "approval_cover" || n.kind === "right_hand_paused")
     [icon, label] = ["approve", t("settings.section.approvals")];
   else if (n.kind === "join_request" || n.kind === "invitation_accepted")
     [icon, label] = ["members", t("notifications.source.members")];
   else if (n.kind === "composio_limit") [icon, label] = ["wallet", t("notifications.source.usage")];
-  else if (n.kind === "connector_tool_changed") [icon, label] = ["plug", t("notifications.source.connectors")];
   else if (n.kind === "skill_update") [icon, label] = ["book", t("skills.title")];
   else if (
     n.kind === "machine_connected" ||
@@ -187,7 +191,7 @@ function sourceOf(t: TFunction, n: AppNotification, channelName: (id: string) =>
     (n.kind === "browser_handoff" && s.screen === "desktop")
   )
     [icon, label] = ["computer", t("notifications.source.machine")];
-  else if (n.kind === "plan_lent") [icon, label] = ["bulb", t("settings.section.keys")];
+  else if (n.kind === "plan_lent") [icon, label] = ["bulb", t("settings.section.usage")];
   else if (n.kind === "plan_model_dropped") [icon, label] = ["bulb", t("brain.title")];
   else if (n.kind === "browser_handoff") [icon, label] = ["globe", t("notifications.source.browser")];
   else if (s.issueNumber != null)
@@ -222,9 +226,18 @@ function SourceChip({
   const { t } = useTranslation();
   const source = sourceOf(t, n, channelName);
   if (!source) return null;
+  const channel = channelOf(n);
   return (
     <Chip icon={source[0]} className={className}>
-      {source[1]}
+      {/* The channel's icon is its #: the words show its bare name, a screen reader still hears the #. */}
+      {source[0] === "channel" && channel ? (
+        <>
+          <span className="ac-visually-hidden">#</span>
+          {channelName(channel)}
+        </>
+      ) : (
+        source[1]
+      )}
     </Chip>
   );
 }
@@ -268,7 +281,10 @@ function placeholderFor(t: TFunction, n: AppNotification, dir: Dir, channelName:
   return channel ? t("notifications.composer.channel", { channel }) : t("notifications.composer.reply");
 }
 
-/** The mini composer, opened in place (⌘↵ sends, esc closes). */
+/**
+ * The mini composer, opened in place (⌘↵ sends, esc closes). While the workspace is being deleted it says why it takes
+ * nothing, with Cancel (ADR 0088 §7).
+ */
 function Composer({
   id,
   placeholder,
@@ -287,6 +303,7 @@ function Composer({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
+  const deleting = Boolean(useOrg().org.deletion);
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const ta = ref.current;
@@ -302,6 +319,22 @@ function Composer({
     ta.style.height = "auto";
     ta.style.height = `${Math.min(180, ta.scrollHeight)}px`;
   }, [draft]);
+  if (deleting)
+    return (
+      // biome-ignore lint/a11y/noStaticElementInteractions: clicks inside the composer stay out of the row
+      <div className="nt-cmp" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <p className="nt-cmp__readonly ac-iconline" role="status">
+          <Icon name="lock" size={16} />
+          <span>{t("deleting.composer")}</span>
+        </p>
+        <div className="nt-cmp__row">
+          <span className="nt-grow" />
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            {t("notifications.composer.cancel")}
+          </Button>
+        </div>
+      </div>
+    );
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: clicks inside the composer stay out of the row
     <div className="nt-cmp" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
@@ -509,7 +542,7 @@ function RowActions({ n, h }: { n: AppNotification; h: RowHandlers }) {
       type="button"
       className="nt-nb"
       data-act={key}
-      data-tip={tip}
+      title={tip}
       aria-label={label}
       onClick={(e) => {
         e.stopPropagation();
@@ -730,8 +763,9 @@ function Row({
         {tags && (
           <span className="nt-tags">
             <SourceChip n={n} channelName={channelName} />
+            {/* The arrow is in its words: no icon to say it again. */}
             {statusMove && (
-              <Chip icon="arrowRight" className="nt-chip-ink">
+              <Chip className="nt-chip-ink">
                 {t("notifications.status", { from: statusName(t, l.statusFrom), to: statusName(t, l.statusTo) })}
               </Chip>
             )}
@@ -787,6 +821,7 @@ function Row({
               </div>
             )}
             {n.kind === "usage_limit" && <UsageLimitActions n={n} />}
+            <DeviceNoticeActions n={n} />
             {n.kind === "agent_unreached" && n.source.agentId && n.source.userId && (
               <UnreachedAllow agentId={n.source.agentId} userId={n.source.userId} />
             )}
@@ -1181,7 +1216,9 @@ function WaitRow({
         ? secretNoticeLine(n)
         : n.kind === "usage_limit"
           ? usageLimitLine(t, n)
-          : (widgetNoticeLine(t, n, dir) ?? n.latest.title ?? n.latest.text);
+          : deviceNoticeOf(n)
+            ? deviceNoticeLine(t, n)
+            : (widgetNoticeLine(t, n, dir) ?? n.latest.title ?? n.latest.text);
   const source = sourceOf(t, n, channelName);
   const when = whenText(t, i18n.language, n.createdAt);
   return (
@@ -1231,6 +1268,7 @@ function WaitRow({
         <div className="rq__foot nt-wr__acts">
           {/* A board's notice is decided or resolved right here (ADR 0135). */}
           <WidgetNoticeActions n={n} onOpen={() => h.onOpen(n)} open={false} />
+          <DeviceNoticeActions n={n} inline />
           <Button size="sm" className="nt-wr__open" title={t("notifications.openTip")} onClick={() => h.onOpen(n)}>
             {t("notifications.open")}
           </Button>
@@ -1294,8 +1332,11 @@ function useArrivals(items: AppNotification[], filter: NotificationFilter, ready
   return { fresh, pulse };
 }
 
-/** Notificações: what waits on me on top, the rest by day, grouped by conversation. */
-export function NotificationsPage() {
+/**
+ * Notificações: what waits on me on top, the rest by day, grouped by conversation. `waitingOnly`: "Esperando você"
+ * (ADR 0172), the same inbox showing only what waits, each card answered in place as here.
+ */
+export function NotificationsPage({ waitingOnly = false }: { waitingOnly?: boolean }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
@@ -1303,8 +1344,9 @@ export function NotificationsPage() {
   const toast = useToast();
   const qc = useQueryClient();
   const live = useLiveStore();
-  const [filter, setFilter] = useState<NotificationFilter>("all");
+  const [filter, setFilter] = useState<NotificationFilter>(waitingOnly ? "waiting" : "all");
   const list = useNotifications(org.id, filter);
+  const title = waitingOnly ? t("shell.waiting") : t("notifications.title");
   const badge = useNotificationCount(org.id);
   const action = useNotificationAction(org.id);
   const reply = useNotificationReply(org.id);
@@ -1335,11 +1377,15 @@ export function NotificationsPage() {
   // The tab says how many are unread.
   useEffect(() => {
     const previous = document.title;
-    document.title = unreadTotal ? t("notifications.docTitleUnread", { count: unreadTotal }) : t("notifications.title");
+    document.title = waitingOnly
+      ? title
+      : unreadTotal
+        ? t("notifications.docTitleUnread", { count: unreadTotal })
+        : title;
     return () => {
       document.title = previous;
     };
-  }, [unreadTotal, t]);
+  }, [unreadTotal, t, title, waitingOnly]);
 
   const markRead = (n: AppNotification) => {
     if (n.readAt === null) action.mutate({ type: "read", item: n, read: true });
@@ -1616,14 +1662,16 @@ export function NotificationsPage() {
     leaving: leaving.has(n.id),
   });
 
-  const summary = nothing
-    ? t("notifications.summaryNothing")
-    : [
-        waitingTotal ? t("notifications.summaryWaiting", { count: waitingTotal }) : "",
-        unreadTotal ? t("notifications.summaryUnread", { count: unreadTotal }) : t("notifications.summaryAllRead"),
-      ]
-        .filter(Boolean)
-        .join(" · ");
+  const summary = waitingOnly
+    ? waitingTotal > 0 && t("notifications.summaryWaiting", { count: waitingTotal })
+    : nothing
+      ? t("notifications.summaryNothing")
+      : [
+          waitingTotal ? t("notifications.summaryWaiting", { count: waitingTotal }) : "",
+          unreadTotal ? t("notifications.summaryUnread", { count: unreadTotal }) : t("notifications.summaryAllRead"),
+        ]
+          .filter(Boolean)
+          .join(" · ");
   const calmLook = lookOf(dir.agents[0]) ?? true;
   // What the keys act on: Atalhos' rows other than moving wait for one.
   const onCur = cur !== null && items.some((x) => x.id === cur);
@@ -1631,9 +1679,9 @@ export function NotificationsPage() {
   return (
     <div className="page page--list nt">
       <PageHeader
-        title={t("notifications.title")}
-        // The counts the sidebar already has show at once; the list's own replace them when it arrives.
-        meta={(list.isSuccess || badge.isSuccess) && summary}
+        title={title}
+        // On the title's row: the counts the sidebar already has show at once, the list's own replace them.
+        count={(list.isSuccess || badge.isSuccess) && summary}
         actions={
           <>
             <Menu
@@ -1664,33 +1712,37 @@ export function NotificationsPage() {
                 {t("notifications.keys.open")}
               </MenuItem>
             </Menu>
-            <Button disabled={doneView || !counts?.unread || action.isPending} onClick={readAll}>
-              {t("notifications.readAll")}
-            </Button>
+            {!waitingOnly && (
+              <Button disabled={doneView || !counts?.unread || action.isPending} onClick={readAll}>
+                {t("notifications.readAll")}
+              </Button>
+            )}
           </>
         }
       />
 
-      <div className="nt-tb">
-        <div className="nt-segwrap">
-          <Segmented
-            label={t("notifications.filters")}
-            value={filter}
-            onValueChange={(f) => {
-              setFilter(f);
-              setCur(null);
-            }}
-            options={[
-              ...NOTIFICATION_FILTERS.map((f) => ({
-                value: f,
-                label: t(`notifications.filter.${f}`),
-                hint: counts?.[f] ? counts[f] : undefined,
-              })),
-              { value: "done" as const, label: t("notifications.filter.done"), hint: undefined },
-            ]}
-          />
+      {!waitingOnly && (
+        <div className="nt-tb">
+          <div className="nt-segwrap">
+            <Segmented
+              label={t("notifications.filters")}
+              value={filter}
+              onValueChange={(f) => {
+                setFilter(f);
+                setCur(null);
+              }}
+              options={[
+                ...NOTIFICATION_FILTERS.map((f) => ({
+                  value: f,
+                  label: t(`notifications.filter.${f}`),
+                  hint: counts?.[f] ? counts[f] : undefined,
+                })),
+                { value: "done" as const, label: t("notifications.filter.done"), hint: undefined },
+              ]}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {list.isPending && <LoadingCards count={3} />}
       {list.isError && !list.data && <ErrorState error={list.error} onRetry={() => void list.refetch()} />}
@@ -1730,45 +1782,45 @@ export function NotificationsPage() {
         </EmptyState>
       )}
 
-      {waiting.length > 0 && (
-        <section className="nt-wait" aria-label={t("notifications.wait.title")}>
-          <div className="list-group-head">
-            <h2>{t("notifications.wait.title")}</h2>
-            <span className="list-group-head__count">{waiting.length}</span>
-          </div>
-          {waiting.map((n) => (
-            <WaitCard
-              key={n.id}
-              n={n}
-              s={stateOf(n)}
-              h={handlers}
-              dir={dir}
-              mine={mine}
-              resolving={resolving === n.id}
-              channelName={channelName}
-            />
-          ))}
-        </section>
-      )}
-
-      {days.map(([day, rows]) => {
-        const unread = rows.filter((n) => n.readAt === null).length;
-        return (
-          <section key={day} className="nt-day" aria-label={t(`notifications.day.${day}`)}>
-            <div className="list-group-head">
-              <h2>{t(`notifications.day.${day}`)}</h2>
-              <span className="list-group-head__count">
-                {unread ? t("notifications.dayUnread", { count: unread }) : rows.length}
-              </span>
-            </div>
-            <div className="list-card nt-list">
-              {rows.map((n) => (
-                <Row key={n.id} n={n} s={stateOf(n)} h={handlers} dir={dir} mine={mine} channelName={channelName} />
+      <div className="ac-groups">
+        {waiting.length > 0 && (
+          <section className="nt-wait" aria-label={t("notifications.wait.title")}>
+            {/* The page's own title says it there. */}
+            {!waitingOnly && <GroupHeading title={t("notifications.wait.title")} count={waiting.length} />}
+            <div className="nt-wait__cards">
+              {waiting.map((n) => (
+                <WaitCard
+                  key={n.id}
+                  n={n}
+                  s={stateOf(n)}
+                  h={handlers}
+                  dir={dir}
+                  mine={mine}
+                  resolving={resolving === n.id}
+                  channelName={channelName}
+                />
               ))}
             </div>
           </section>
-        );
-      })}
+        )}
+
+        {days.map(([day, rows]) => {
+          const unread = rows.filter((n) => n.readAt === null).length;
+          return (
+            <section key={day} className="nt-day" aria-label={t(`notifications.day.${day}`)}>
+              <GroupHeading
+                title={t(`notifications.day.${day}`)}
+                count={unread ? t("notifications.dayUnread", { count: unread }) : rows.length}
+              />
+              <div className="list-card nt-list">
+                {rows.map((n) => (
+                  <Row key={n.id} n={n} s={stateOf(n)} h={handlers} dir={dir} mine={mine} channelName={channelName} />
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
 
       {list.hasNextPage && (
         <div className="nt-more-pages">

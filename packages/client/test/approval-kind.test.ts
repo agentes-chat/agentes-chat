@@ -94,7 +94,7 @@ describe("Aprovar sempre in words", () => {
   test("an action's slug without its articles, its app after it; the tool itself when it wraps none", () => {
     expect(actionName(t, "GITHUB_CREATE_AN_ISSUE_COMMENT")).toBe("Create issue comment (GitHub)");
     // A slug leads with its verb, even when its last word could be one too.
-    expect(actionName(t, "LINKEDIN_PUBLISH_POST")).toBe("Publish post (Linkedin)");
+    expect(actionName(t, "LINKEDIN_PUBLISH_POST")).toBe("Publish post (LinkedIn)");
     expect(approveAlwaysWords(t, { approveAlways: { tool: "X", actions: ["GITHUB_ADD_A_LABEL", "SLACK_X"] } })).toBe(
       "Add label (GitHub), X (Slack)",
     );
@@ -384,8 +384,9 @@ describe('"Sempre nesta rotina" on a routine\'s card', () => {
     expect(approveAlwaysOffered(card)).toBe(true);
     expect(approveAlwaysOffered({ ...card, canDecide: false })).toBe(false);
     expect(approveAlwaysOffered({ ...card, status: "approved" })).toBe(false);
-    // Plain "Aprovar sempre" keeps its rule: what is high risk is never approved for good.
-    expect(approveAlwaysOffered({ ...card, approveAlways: { tool: "t", actions: [] } })).toBe(false);
+    // Plain "Aprovar sempre" shows wherever the server offers it, on a send too.
+    expect(approveAlwaysOffered({ ...card, approveAlways: { tool: "t", actions: [] } })).toBe(true);
+    expect(approveAlwaysOffered({ ...card, approveAlways: null })).toBe(false);
   });
 });
 

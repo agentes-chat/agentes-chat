@@ -4,9 +4,10 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { localMeta, quoteExcerpt, replyOf } from "@agenteschat/client/lib/reply";
+import { installTitleTips, TITLE_TIP_ID, TITLE_TIP_OPEN_MS } from "@agenteschat/ui";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { objectUrls } from "@/components/artifacts/FileView";
-import { createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => {
@@ -37,12 +38,40 @@ const pickEmoji = async (trigger: HTMLElement, name: string) => {
   await settle(3);
 };
 
-describe("composer toolbar", () => {
+/** The buttons and the text box of a composer's one row, by name, in the order they are drawn. */
+const rowOf = (box: HTMLElement) =>
+  Array.from((box.closest(".ac-composer__row") as HTMLElement).querySelectorAll("button, textarea")).map((el) =>
+    el.getAttribute("aria-label"),
+  );
+
+describe("composer row and formatting", () => {
+  test("a channel, a thread and a DM: attach, emoji, the text and send, and no formatting bar at rest", async () => {
+    await open();
+    expect(rowOf(composer())).toEqual(["Anexar arquivo", "Emojis, GIFs e figurinhas", "Mensagem para #eng", "Enviar"]);
+    expect(screen().queryByRole("toolbar", { name: "Formatação" })).toBeNull();
+    const bar = within(article("o login está devolvendo 401")).getByRole("toolbar");
+    await act(async () => fireEvent.click(within(bar).getByRole("button", { name: "Responder" })));
+    await settle(6);
+    const reply = screen().getByRole("combobox", { name: "Responder na thread" });
+    expect(rowOf(reply)).toEqual(["Anexar arquivo", "Emojis, GIFs e figurinhas", "Responder na thread", "Enviar"]);
+    cleanup();
+    await renderApp(`/org/${ORG_ID}/dm/agent/${ADA_ID}`, { api: createFakeApi(seedState()) });
+    await settle(8);
+    const dm = screen().getByRole("combobox", { name: "Mensagem para Ada" });
+    expect(rowOf(dm)).toEqual(["Anexar arquivo", "Emojis, GIFs e figurinhas", "Mensagem para Ada", "Enviar"]);
+    // Who answers stays: the agent's chip opens the row.
+    const row = dm.closest(".ac-composer__row") as HTMLElement;
+    expect(row.firstElementChild?.querySelector(".ac-composer__agent")?.textContent).toContain("Ada");
+    expect(screen().queryByRole("toolbar", { name: "Formatação" })).toBeNull();
+  });
+
   test("Negrito wraps the selection in the channel composer; ⌘K makes a link, not the palette", async () => {
     await open();
     const box = composer();
     await act(async () => fireEvent.change(box, { target: { value: "olha o deploy" } }));
+    box.focus();
     box.setSelectionRange(7, 13);
+    await act(async () => fireEvent.select(box));
     const toolbar = screen().getByRole("toolbar", { name: "Formatação" });
     await act(async () => fireEvent.click(within(toolbar).getByRole("button", { name: "Negrito" })));
     expect(composer().value).toBe("olha o **deploy**");
@@ -127,6 +156,53 @@ describe("reactions on any message", () => {
     expect(pill.getAttribute("aria-pressed")).toBe("false");
     // "+" adds another.
     expect(within(pills).getByRole("button", { name: "Adicionar reação" })).toBeTruthy();
+  });
+
+  test("the pill's hover text is the product's tip: every name whole, você first", async () => {
+    const state = seedState();
+    const joao = state.members.find((m) => m.userId === "u-joao");
+    if (joao) joao.name = "João Pedro Lima";
+    const { socket } = await open(state);
+    const off = installTitleTips();
+    try {
+      await act(async () =>
+        socket.push({
+          type: "event",
+          channelId: ENG_ID,
+          event: {
+            type: "message.reactions",
+            channelId: ENG_ID,
+            messageId: "m-1",
+            reactions: [{ reaction: "🚀", count: 3, userIds: ["u-walter", "u-joao"], agentIds: [ADA_ID] }],
+          },
+        }),
+      );
+      await settle(2);
+      // No line breaks inside a name: its spaces are no-break ones.
+      const who = "você, João\u00a0Pedro\u00a0Lima e Ada reagiram com 🚀";
+      const pills = within(article("o login está devolvendo 401")).getByRole("group", { name: "Reações" });
+      const pill = within(pills).getByRole("button", { name: who });
+      expect(pill.getAttribute("title")).toBe(who);
+      await act(async () => fireEvent.pointerOver(pill, { pointerType: "mouse" }));
+      // Held while the pointer is on it: the browser's own tooltip has nothing to show.
+      expect(pill.getAttribute("title")).toBe("");
+      await act(() => new Promise((r) => setTimeout(r, TITLE_TIP_OPEN_MS + 20)));
+      expect(document.getElementById(TITLE_TIP_ID)?.textContent).toBe(who);
+      expect(pill.getAttribute("aria-label")).toBe(who);
+      expect(pill.hasAttribute("aria-describedby")).toBe(false);
+      // "+" has no title: an icon-only control says its label.
+      const add = within(pills).getByRole("button", { name: "Adicionar reação" });
+      await act(async () => {
+        fireEvent.pointerOut(pill, { pointerType: "mouse", relatedTarget: add });
+        fireEvent.pointerOver(add, { pointerType: "mouse" });
+      });
+      expect(document.getElementById(TITLE_TIP_ID)?.textContent).toBe("Adicionar reação");
+      expect(pill.getAttribute("title")).toBe(who);
+      await act(async () => fireEvent.pointerOut(add, { pointerType: "mouse" }));
+      expect(document.getElementById(TITLE_TIP_ID)).toBeNull();
+    } finally {
+      off();
+    }
   });
 });
 

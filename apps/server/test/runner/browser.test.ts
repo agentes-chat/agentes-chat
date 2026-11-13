@@ -1724,6 +1724,24 @@ test.if(posix)("an idle browser's Chrome stops, but not while someone watches or
 });
 
 test.if(posix)(
+  "a browser its agent holds (keep_running) stays open however idle, and closes as idle once let go",
+  async () => {
+    let now = 1_000_000;
+    const kept = new Set([ops.id]);
+    const t = setup({ now: () => now, idleMs: 60_000, kept: (agentId) => kept.has(agentId) });
+    await t.act("open", ["https://a.example"]);
+    await t.act("open", ["https://b.example"], { agent: ops });
+    now += 61_000;
+    await t.manager.sweep();
+    expect(t.chromes[0]?.killed).toBe(true);
+    expect(t.chromes[1]?.killed).toBe(false);
+    kept.clear();
+    await t.manager.sweep();
+    expect(t.chromes[1]?.killed).toBe(true);
+  },
+);
+
+test.if(posix)(
   "a Chrome that updated itself restarts on the new version once idle, on the same page, once; never mid-task",
   async () => {
     let now = 1_000_000;
@@ -1764,7 +1782,7 @@ test.if(posix)(
     t.manager.setHandoff(ops.id, { status: "pending" });
     now += 11 * 60_000;
     await t.manager.sweep();
-    await waitFor(() => (of(dev)[1]?.killed || of(dev)[1]?.closed) === true);
+    expect(of(dev)[1]?.killed || of(dev)[1]?.closed).toBe(true);
     expect(of(dev)).toHaveLength(2);
     expect(of(ops)).toHaveLength(1);
     // Their turn just over: the agent may carry on where they left it, so it doesn't restart then.
@@ -1773,6 +1791,39 @@ test.if(posix)(
     await Bun.sleep(50);
     expect(of(ops)).toHaveLength(1);
     expect(of(ops)[0]?.killed || of(ops)[0]?.closed).toBe(false);
+  },
+);
+
+test.if(posix)(
+  "a browser its agent holds waits a day at most for a newer Chrome, then restarts on it, on its page, unwatched",
+  async () => {
+    let now = 1_000_000;
+    let version = CHROME_VERSION;
+    const t = setup({ now: () => now, chromeVersion: () => version, kept: () => true });
+    await t.act("open", ["https://shop.example/cart"]);
+    // The update lands and is read 6 minutes on; the hold keeps Chrome as it is for the day after.
+    version = "157.0.8100.10";
+    now += 6 * 60_000;
+    await t.manager.sweep();
+    now += 23 * 3600_000;
+    await t.manager.sweep();
+    await Bun.sleep(50);
+    expect(t.chromes).toHaveLength(1);
+    // Past the day, a person's turn on it still holds it off, and so does its end for a while.
+    now += 3600_000;
+    t.manager.setHandoff(dev.id, { status: "pending" });
+    await t.manager.sweep();
+    t.manager.setHandoff(dev.id, null);
+    await t.manager.sweep();
+    await Bun.sleep(50);
+    expect(t.chromes).toHaveLength(1);
+    now += 11 * 60_000;
+    await t.manager.sweep();
+    await waitFor(() => t.chromes.length === 2);
+    const [before, after] = t.chromes;
+    expect(before?.killed || before?.closed).toBe(true);
+    expect(after?.args.at(-1)).toBe("https://shop.example/cart");
+    expect(after?.profile).toBe(before?.profile);
   },
 );
 
@@ -3230,6 +3281,42 @@ test.if(posix)(
     await handleRequest(ctx, { agent: dev, profile: { id: PROFILE }, op: "browser.warm" }, profileScope);
     expect(t.chromes).toHaveLength(1);
     expect(readdirSync(folder).filter((f) => f.startsWith("Singleton"))).toEqual([]);
+  },
+);
+
+test.if(posix)(
+  "a start never hands its start page to a Chrome still running on the profile: that leftover stops first",
+  async () => {
+    // What an overlapping runner left: a Chrome it recorded on the agent's profile, still running, that no session
+    // holds. Started beside it, Chrome would open its start page there as one more tab and exit.
+    const leftover = Bun.spawn(["sleep", "60"]);
+    const gone = () => leftover.exitCode !== null || leftover.signalCode !== null;
+    try {
+      const chromes = fakeChromes();
+      const leftoverAtStart: boolean[] = [];
+      const t = setup({
+        isOurChrome: async (pid) => pid === leftover.pid && !gone(),
+        startChrome: (exe, args, profile) => {
+          leftoverAtStart.push(!gone());
+          return chromes.start(exe, args, profile);
+        },
+      });
+      const profile = path.join(await t.folder(), ".agentes", "browser");
+      mkdirSync(profile, { recursive: true });
+      writeFileSync(path.join(profile, "SingletonLock"), `computer-${leftover.pid}`);
+      mkdirSync(path.join(t.home, "browser"), { recursive: true });
+      writeFileSync(path.join(t.home, "browser", "chromes.json"), JSON.stringify([{ pid: leftover.pid, profile }]));
+
+      expect(await t.act("open", ["https://shop.example.com"])).toMatchObject({ success: true });
+      expect(leftoverAtStart).toEqual([false]);
+      expect(chromes.started.map((c) => c.tabs)).toEqual([[expect.stringMatching(/\/agentes-start\.html$/)]]);
+      const recorded = JSON.parse(readFileSync(path.join(t.home, "browser", "chromes.json"), "utf8")) as {
+        pid: number;
+      }[];
+      expect(recorded.map((c) => c.pid)).not.toContain(leftover.pid);
+    } finally {
+      leftover.kill("SIGKILL");
+    }
   },
 );
 

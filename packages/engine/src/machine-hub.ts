@@ -8,6 +8,8 @@ import {
   type ErrorReporter,
   HEARTBEAT_MS,
   HELLO_TIMEOUT_MS,
+  IPHONE_WIFI_PROTOCOL,
+  KEEP_RUNNING_PROTOCOL,
   type MachineErrorCode,
   type MachineOp,
   type MachineReplies,
@@ -17,19 +19,29 @@ import {
   machineRpcReplyTopic,
   machineRpcTopic,
   PAUSE_PROTOCOL,
+  PHONE_PAIRING_PROTOCOL,
+  PHONES_PROTOCOL,
   type PubSub,
   parseRunnerFrame,
   type RunnerAccess,
   type RunnerFrame,
   type RunnerPause,
+  type RunnerPhone,
   type ServerFrame,
   TASKS_PROTOCOL,
   type Unsubscribe,
 } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, lt, schema } from "@agenteschat/db";
 import { getAgentCached } from "./agents";
+import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
-import { applyAccessDecided, storedExecutors, storeMachineAccess, storeMachineExecutors } from "./machine-access";
+import {
+  applyAccessDecided,
+  storedExecutors,
+  storeMachineAccess,
+  storeMachineExecutors,
+  storeMachineToolchains,
+} from "./machine-access";
 import {
   accountsToRemove,
   forgetRemovedAccount,
@@ -37,6 +49,7 @@ import {
   storeOwnUsage,
   syncMachineAccounts,
 } from "./machine-accounts";
+import { holdEndedOnComputer, reconcileHolds } from "./machine-holds";
 import { onManagedMachineHello, type ReadyEmailDeps } from "./machine-provisioning";
 import {
   applyTaskDone,
@@ -49,11 +62,13 @@ import {
   TASK_OFFLINE_GRACE_MS,
   type TaskCall,
 } from "./machine-tasks";
+import { type WakeWhy, wantMachine } from "./machine-wake";
 import {
   assertNotPaused,
   authenticateMachine,
   deletedAgentIds,
   getMachineById,
+  inStandby,
   MACHINE_CONTROL_TOPIC,
   MachineDroppedError,
   MachineOfflineError,
@@ -62,6 +77,8 @@ import {
   machineOnline,
   machineOwnerTimezone,
   machinePause,
+  memberPause,
+  pauseForApps,
   publishMachineStatus,
   publishMachineUpdated,
 } from "./machines";
@@ -158,6 +175,8 @@ export interface MachineStatus {
   paused?: { until: string | null; timezone: string | null } | null;
   /** Folders and tools the machine allows (protocol 10); null when it doesn't report them. */
   access?: RunnerAccess | null;
+  /** The operator put the workspace's own computer in standby (ADR 0161): asleep, it is woken when wanted. */
+  standby?: boolean;
 }
 
 /** What the machine provider needs from the hub. */
@@ -168,38 +187,56 @@ export interface MachineCaller {
     options?: MachineCallOptions,
   ): Promise<MachineReplies[Op]>;
   status(machineId: string): Promise<MachineStatus | null>;
+  /** Something wants the computer now (`wantMachine`): one in standby is asked to wake. */
+  wake?(machineId: string, why: WakeWhy): Promise<void>;
 }
 
 /** How long a run waits, still working, for a computer just gone: a runner dialing again is back within seconds. */
 export const COMPUTER_BLIP_WAIT_MS = 30_000;
+/** How long a run waits, still working, for a computer in standby it asked to wake. */
+export const COMPUTER_WAKE_WAIT_MS = 60_000;
 
 /**
- * Waits for a computer gone less than the outage grace (`TASK_OFFLINE_GRACE_MS`: its runner dialing again, our
- * own restart) to come back, up to `waitMs`. The run stays `running` meanwhile (its heartbeat and its job's lease
- * go on) and nothing is posted or stored. True: it is back. Null: `canceled` said so.
+ * Waits for a computer to come back: one gone less than the outage grace (`TASK_OFFLINE_GRACE_MS`: its runner dialing
+ * again, our own restart) up to `waitMs`, unless `justGone` is false; one in standby, asked to wake, up to `wakeWaitMs`
+ * however long it has slept. The run stays `running` meanwhile (its heartbeat and its job's lease go on) and nothing is
+ * posted or stored. True: it is back. Null: `canceled` said so.
  */
 export async function computerBackSoon(
-  machines: Pick<MachineCaller, "status"> | undefined,
+  machines: Pick<MachineCaller, "status" | "wake"> | undefined,
   machineId: string,
-  options: { waitMs?: number; signal?: AbortSignal; canceled?: () => boolean | Promise<boolean> } = {},
+  options: {
+    waitMs?: number;
+    wakeWaitMs?: number;
+    justGone?: boolean;
+    signal?: AbortSignal;
+    canceled?: () => boolean | Promise<boolean>;
+  } = {},
 ): Promise<boolean | null> {
-  const until = Date.now() + (options.waitMs ?? COMPUTER_BLIP_WAIT_MS);
+  let until = Date.now() + (options.waitMs ?? COMPUTER_BLIP_WAIT_MS);
+  let waking = false;
   for (;;) {
     const status = await machines?.status(machineId).catch(() => null);
     if (status?.online) return true;
+    if (status?.standby && !waking) {
+      waking = true;
+      until = Date.now() + (options.wakeWaitMs ?? COMPUTER_WAKE_WAIT_MS);
+      void machines?.wake?.(machineId, "run").catch(() => {});
+    }
     const gone = status?.lastSeenAt ? Date.now() - Date.parse(status.lastSeenAt) : Number.POSITIVE_INFINITY;
-    if (gone >= TASK_OFFLINE_GRACE_MS || Date.now() >= until) return false;
+    if (!waking && (options.justGone === false || gone >= TASK_OFFLINE_GRACE_MS)) return false;
+    if (Date.now() >= until) return false;
     await sleep(Math.min(1_000, until - Date.now()), undefined, { signal: options.signal }).catch(() => {});
     if (await options.canceled?.()) return null;
   }
 }
 
 /**
- * `send`, and once more when it found the computer just gone (`computerBackSoon`): that request never left. One
- * cut midway (`MachineDroppedError`) may have run, so it is never sent again.
+ * `send`, and once more when it found the computer just gone or asleep (`computerBackSoon`): that request never left.
+ * One cut midway (`MachineDroppedError`) may have run, so it is never sent again.
  */
 export async function callWhenBack<T>(
-  machines: Pick<MachineCaller, "status">,
+  machines: Pick<MachineCaller, "status" | "wake">,
   machineId: string,
   send: () => Promise<T>,
   signal?: AbortSignal,
@@ -241,8 +278,8 @@ export interface MachineConnection {
   pingTimer: ReturnType<typeof setInterval> | null;
   /** The runner's protocol (from its hello). */
   protocol: number;
-  /** The pause the runner last reported (protocol 9); null = not paused. */
-  pause: { until: string | null } | null;
+  /** The pause the runner last reported (protocol 9); null = not paused. `by`: who paused it from the apps. */
+  pause: { until: string | null; by?: string | null } | null;
 }
 
 export interface MachineHubDeps {
@@ -292,6 +329,12 @@ export function requestTimeoutMs(request: MachineRequest) {
   if (request.op === "git.sync") return (Math.max(1, request.timeoutSeconds) + 30) * 1000;
   // A brain turn may wait on a person (a command approval) for up to 30 minutes, more than once.
   if (request.op === "brain.turn") return 3 * 3600_000;
+  // A Maestro flow (with its recording) runs to its own deadline, at most 10 minutes; a recording to its length; an
+  // install pushes a big build over USB.
+  if (request.op === "phone.flow") return (Math.min(Math.max(1, request.timeoutSeconds), 600) + 120) * 1000;
+  if (request.op === "phone.record") return (Math.min(Math.max(1, request.seconds), 170) + 90) * 1000;
+  if (request.op === "phone.install") return 300_000;
+  if (request.op.startsWith("phone.")) return 60_000;
   return 120_000;
 }
 
@@ -319,6 +362,20 @@ export function isNewWork(request: MachineRequest) {
     case "desktop.session.status":
     // Screening a person still in control after a hold or a pause began (ADR 0076).
     case "desktop.text":
+    // Letting a phone go (a run ended, its owner pressed Stop).
+    case "phone.release":
+    // A person pairing a phone with the computer isn't agent work.
+    case "phone.pair.start":
+    case "phone.pair.code":
+    case "phone.pair.status":
+    case "phone.pair.cancel":
+    // Pausing or resuming the computer itself: a resume must reach a paused one.
+    case "pause.set":
+    // A person's guide asking the computer to look for a phone, or its owner picking an iPhone on its Wi-Fi.
+    case "phone.look":
+    case "phone.wifi":
+    // Letting go of what an agent kept running (its end, a person's Stop) must reach a paused computer too.
+    case "keep.end":
       return false;
     case "secret":
       return request.action !== "discard" && request.action !== "remove" && request.action !== "activate";
@@ -331,12 +388,16 @@ export function isNewWork(request: MachineRequest) {
   }
 }
 
+/** A computer whose app predates phones gets no `phone.*` op: it would answer an unknown op. */
+const phonesTooOld = (name: string) =>
+  new MachineRequestError("unsupported", `The computer ${name} needs an update before agents can use its phones.`);
+
 /** The pause in force (a past `until` is over). */
 const pauseActive = (pause: { until: string | null } | null, now = Date.now()) =>
   Boolean(pause && (!pause.until || Date.parse(pause.until) > now));
 
-const pauseOf = (p: RunnerPause | undefined): { until: string | null } | null =>
-  p?.paused ? { until: p.until ?? null } : null;
+const pauseOf = (p: RunnerPause | undefined): { until: string | null; by: string | null } | null =>
+  p?.paused ? { until: p.until ?? null, by: p.by ?? null } : null;
 
 /** `machine_rpc` rows older than this are deleted (opportunistically). */
 export const MACHINE_RPC_KEEP_MS = 60 * 60_000;
@@ -370,6 +431,8 @@ export interface MachineMissionHooks {
     frame: Extract<RunnerFrame, { type: "mcp.list" }>,
   ): Promise<{ ok: true; tools: McpToolInfo[] } | { ok: false; error: { code: string; message: string } }>;
   online?(machineId: string): Promise<void>;
+  /** The phones a computer reports changed (one came, went, got ready or was let go): its phones as stored now. */
+  phonesChanged?(machine: { id: string; orgId: string }, phones: MachinePhoneRow[]): Promise<void>;
   /** Starts what may start in the machine's queue of mission tasks (ADR 0044; a resumed item waits there). */
   queue?(machineId: string): Promise<unknown>;
 }
@@ -545,6 +608,9 @@ export function createMachineHub(deps: MachineHubDeps) {
         MACHINE_CLOSE.invalidToken,
       );
     }
+    // Protocol 9: a runner that says nothing about the pause isn't paused.
+    const reported =
+      frame.protocol >= PAUSE_PROTOCOL ? await memberPause(db, machine.orgId, pauseOf(frame.paused)) : null;
     if (conn.closed) return;
     if (conn.helloTimer) clearTimeout(conn.helloTimer);
     conn.helloTimer = null;
@@ -553,8 +619,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     conn.name = machine.name;
     conn.kind = machine.kind;
     conn.protocol = frame.protocol;
-    // Protocol 9: a runner that says nothing about the pause isn't paused.
-    conn.pause = frame.protocol >= PAUSE_PROTOCOL ? pauseOf(frame.paused) : null;
+    conn.pause = reported;
     const old = local.get(machine.id);
     local.set(machine.id, conn);
     if (old && old !== conn) {
@@ -581,6 +646,8 @@ export function createMachineHub(deps: MachineHubDeps) {
         egress: null,
         connectedReplica: replicaId,
         lastSeenAt: now,
+        // Awake: whatever put it in standby is over (ADR 0161).
+        standbyAt: null,
         hostname: frame.hostname,
         os: frame.os,
         arch: frame.arch,
@@ -598,7 +665,8 @@ export function createMachineHub(deps: MachineHubDeps) {
         frame.desktop ||
         frame.terminal ||
         frame.desktopUse ||
-        frame.claudeLoginMethods
+        frame.claudeLoginMethods ||
+        frame.toolchains
           ? {
               executors: {
                 // A runner that hasn't looked yet leaves the CLIs out: the last ones stored stand.
@@ -614,11 +682,16 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(loginBlocked ? { claudeLoginBlocked: loginBlocked } : {}),
                 ...(frame.authEgressGroup ? { authEgressGroup: true as const } : {}),
                 ...(Object.keys(ownUsage).length > 0 ? { ownUsage } : {}),
+                // A runner whose probe hasn't finished says none: the last ones stored stand.
+                ...((frame.toolchains ?? machine.executors?.toolchains)
+                  ? { toolchains: { ...(frame.toolchains ?? machine.executors?.toolchains) } }
+                  : {}),
               },
             }
           : {}),
         paused: conn.pause !== null,
         pausedUntil: conn.pause?.until ? new Date(conn.pause.until) : null,
+        pausedByUserId: conn.pause?.by ?? null,
         // Protocol 10: what the machine allows (an older runner reports nothing: unknown).
         access: frame.access ?? null,
         // Protocol 22: its size (an older runner says nothing: kept, unknown if it never did).
@@ -698,7 +771,10 @@ export function createMachineHub(deps: MachineHubDeps) {
     }, heartbeatMs);
     await publishMachineStatus(pubsub, machine.orgId, machine.id, true);
     if (frame.protocol >= PAUSE_PROTOCOL) {
-      await publishMachineUpdated(pubsub, machine.orgId, machine.id, { paused: conn.pause, access: true });
+      await publishMachineUpdated(pubsub, machine.orgId, machine.id, {
+        paused: await pauseForApps(db, machine.orgId, conn.pause),
+        access: true,
+      });
     }
     removeAccounts(conn, removed);
     if (frame.protocol >= TASKS_PROTOCOL) {
@@ -706,6 +782,18 @@ export function createMachineHub(deps: MachineHubDeps) {
         (error) => deps.log?.warn("task reconcile failed", { machineId: machine.id, error: String(error) }),
       );
     }
+    if (frame.protocol >= PHONES_PROTOCOL && frame.phones) await phonesReported(machine, frame.phones);
+    // ADR 0176: what it holds now, against what people see (not in this frame's path: it may call the computer).
+    const holdCall = (<Op extends "keep.start" | "keep.end">(_: string, request: Extract<MachineRequest, { op: Op }>) =>
+      callLocal(conn, request)) as Parameters<typeof reconcileHolds>[0]["call"];
+    queueMicrotask(
+      () =>
+        void reconcileHolds(
+          { db, pubsub, call: frame.protocol >= KEEP_RUNNING_PROTOCOL ? holdCall : null },
+          machine.id,
+          frame.holds,
+        ).catch((error) => deps.log?.warn("hold reconcile failed", { machineId: machine.id, error: String(error) })),
+    );
     // Missions on this machine: queued messages and `.agentes/` files go out now (not in this frame's path).
     if (hooks.online) {
       const online = hooks.online;
@@ -716,6 +804,24 @@ export function createMachineHub(deps: MachineHubDeps) {
           ),
       );
     }
+  }
+
+  /** `hello.phones` and `phones.changed`: stored, told to the org, and to whatever waits for a phone there. */
+  async function phonesReported(machine: Pick<MachineRow, "id" | "orgId" | "pairedByUserId">, reported: RunnerPhone[]) {
+    const phones = await syncMachinePhones(db, machine, reported).catch((error) => {
+      deps.log?.warn("phone sync failed", { machineId: machine.id, error: String(error) });
+      return null;
+    });
+    if (!phones) return;
+    await publishDevicesChanged(pubsub, machine.orgId);
+    const changed = hooks.phonesChanged;
+    if (!changed) return;
+    queueMicrotask(
+      () =>
+        void changed({ id: machine.id, orgId: machine.orgId }, phones).catch((error) =>
+          deps.log?.warn("phones hook failed", { machineId: machine.id, error: String(error) }),
+        ),
+    );
   }
 
   /**
@@ -747,18 +853,22 @@ export function createMachineHub(deps: MachineHubDeps) {
   async function runnerState(conn: MachineConnection, frame: Extract<RunnerFrame, { type: "runner.state" }>) {
     const machineId = conn.machineId as string;
     const wasPaused = pauseActive(conn.pause);
-    conn.pause = pauseOf(frame.paused);
+    const said = pauseOf(frame.paused);
+    conn.pause = conn.orgId ? await memberPause(db, conn.orgId, said) : said && { ...said, by: null };
     const [row] = await db
       .update(machines)
       .set({
         paused: conn.pause !== null,
         pausedUntil: conn.pause?.until ? new Date(conn.pause.until) : null,
+        pausedByUserId: conn.pause?.by ?? null,
         updatedAt: new Date(),
       })
       .where(eq(machines.id, machineId))
       .returning({ orgId: machines.orgId });
     if (!row) return;
-    await publishMachineUpdated(pubsub, row.orgId, machineId, { paused: conn.pause });
+    await publishMachineUpdated(pubsub, row.orgId, machineId, {
+      paused: await pauseForApps(db, row.orgId, conn.pause),
+    });
     // Resumed: what waited for this computer goes on (runs waiting for its brain, missions' queued work).
     if (wasPaused && !pauseActive(conn.pause) && hooks.online) {
       const online = hooks.online;
@@ -1369,6 +1479,19 @@ export function createMachineHub(deps: MachineHubDeps) {
               ),
           );
         }
+      } else if (frame.type === "toolchains.changed") {
+        await storeMachineToolchains({ db, pubsub }, conn.machineId, frame.toolchains).catch((error) =>
+          deps.log?.warn("toolchains.changed failed", { machineId: conn.machineId, error: String(error) }),
+        );
+      } else if (frame.type === "phones.changed") {
+        if (conn.protocol >= PHONES_PROTOCOL && conn.orgId) {
+          const row = await getMachineById(db, conn.machineId).catch(() => null);
+          if (row && !row.deletedAt) await phonesReported(row, frame.phones);
+        }
+      } else if (frame.type === "keep.ended") {
+        await holdEndedOnComputer({ db, pubsub }, conn.machineId, frame).catch((error) =>
+          deps.log?.warn("keep.ended failed", { holdId: frame.holdId, error: String(error) }),
+        );
       } else if (frame.type === "access.decided") {
         await applyAccessDecided({ db, pubsub }, conn.machineId, frame).catch((error) =>
           deps.log?.warn("access.decided failed", { requestId: frame.requestId, error: String(error) }),
@@ -1386,7 +1509,14 @@ export function createMachineHub(deps: MachineHubDeps) {
       options: MachineCallOptions = {},
     ): Promise<MachineReplies[Op]> {
       const conn = local.get(machineId);
+      const phoneOp = request.op.startsWith("phone.");
+      const phonesNeed = request.op.startsWith("phone.pair.")
+        ? PHONE_PAIRING_PROTOCOL
+        : request.op === "phone.wifi"
+          ? IPHONE_WIFI_PROTOCOL
+          : PHONES_PROTOCOL;
       if (conn) {
+        if (phoneOp && conn.protocol < phonesNeed) throw phonesTooOld(conn.name);
         if (isNewWork(request)) {
           // A workspace on hold or suspended, or a held agent, starts nothing (`standing.ts`).
           if (conn.orgId) await assertCanWork(db, conn.orgId, request.agent?.id);
@@ -1401,8 +1531,11 @@ export function createMachineHub(deps: MachineHubDeps) {
       const row = await getMachineById(db, machineId);
       if (!row || row.deletedAt) throw new MachineOfflineError(row?.name ?? "computer", row?.kind);
       if (!machineOnline(row) || !row.connectedReplica || row.connectedReplica === replicaId) {
+        // Asleep by design: whatever asks for it wakes it (`callWhenBack` waits for that).
+        if (inStandby(row)) void wantMachine(db, machineId, "call").catch(() => {});
         throw new MachineOfflineError(row.name, row.kind);
       }
+      if (phoneOp && row.protocol < phonesNeed) throw phonesTooOld(row.name);
       if (isNewWork(request)) {
         await assertCanWork(db, row.orgId, request.agent?.id);
         await assertNotPaused(db, row);
@@ -1431,8 +1564,12 @@ export function createMachineHub(deps: MachineHubDeps) {
         executors: row.executors ?? {},
         paused: pause ? { until: pause.until, timezone: await machineOwnerTimezone(db, row).catch(() => null) } : null,
         access: row.access ?? null,
+        standby: inStandby(row),
       };
     },
+
+    /** Something wants the computer now: the workspace's own one keeps when, and asks to wake from standby. */
+    wake: (machineId: string, why: WakeWhy) => wantMachine(db, machineId, why),
 
     /** Missions plug in their MCP tools and their reconnect follow-up (set once the engine is built). */
     setMissionHooks(next: MachineMissionHooks) {

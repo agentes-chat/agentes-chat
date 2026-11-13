@@ -24,10 +24,9 @@ import { pendingOnAgent } from "@agenteschat/client/lib/proposals";
 import { isAuto } from "@agenteschat/client/lib/providers";
 import { type RepoChoice, repoChoiceOf, repoListOf, reposText } from "@agenteschat/client/lib/repos";
 import { isRightHand, tellsNameStory } from "@agenteschat/client/lib/right-hand";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   Button,
-  Card,
-  CardHeader,
   colorKey,
   cx,
   Dialog,
@@ -54,12 +53,13 @@ import { DeleteAgentDialog } from "@/components/DeleteAgentDialog";
 import { LoadingPage } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
 import { useWidenAsk } from "@/components/ReachLines";
-import { RightHandMineRow, RightHandSettingsSection, useRightHandMineHint } from "@/components/RightHandSettings";
+import { RightHandSettingsSection } from "@/components/RightHandSettings";
 import { useDirectory } from "@/hooks/useDirectory";
 import {
   AGENT_TABS,
   type AgentSection,
   type AgentTab,
+  type BrainScreen,
   budgetValue,
   canEdit,
   changedKeys,
@@ -70,8 +70,10 @@ import {
   type Field,
   type Look,
   lineChanges,
+  PERSONAL_AGENT_TABS,
   revertKey,
   type Saved,
+  shownAgentTab,
   thisMonth,
   type Viewer,
 } from "@/lib/agent-edit";
@@ -80,6 +82,7 @@ import { handleAfterRename, handleProblemText, readBudget, takenHandles } from "
 import { useToast } from "@/lib/toast";
 import { AccessTab } from "./agent/AccessTab";
 import { ActivityTab } from "./agent/ActivityTab";
+import { AdvancedTab } from "./agent/AdvancedTab";
 import { type AgentEdit, AgentEditProvider, type Change, type Draft } from "./agent/context";
 import { FilesTab } from "./agent/FilesTab";
 import { AgentHero } from "./agent/Hero";
@@ -96,9 +99,14 @@ import { type WorkDialog, WorkDialogs } from "./agent/Work";
 
 const sortIds = (ids: string[]) => [...ids].sort();
 
-/** The tabs always in the bar; the rest live in its "More" menu, and the one open from there shows in the bar. */
+/**
+ * The tabs always in the bar; the rest live in its "More" menu, and the one open from there shows in the bar. A
+ * personal workspace's bar (ADR 0159 §3) is `PERSONAL_AGENT_TABS`, with Advanced instead of "More".
+ */
 const MAIN_TABS: AgentTab[] = ["overview", "instructions", "memory", "activity"];
-const MORE_TABS = AGENT_TABS.filter((id) => !MAIN_TABS.includes(id));
+const MORE_TABS = AGENT_TABS.filter((id) => !MAIN_TABS.includes(id) && id !== "advanced");
+const PERSONAL_TABS: readonly AgentTab[] = PERSONAL_AGENT_TABS;
+const RIGHT_HAND_TABS: readonly AgentTab[] = ["settings", "access", "memory"];
 const MORE_ICON: Partial<Record<AgentTab, IconName>> = {
   access: "plug",
   files: "file",
@@ -110,6 +118,10 @@ export interface AgentPageProps {
   agentId: string;
   tab: AgentTab;
   section?: AgentSection;
+  /** With the section "brain": the screen "Quem pensa" opens on (a notification's "Escolher outro modelo"). */
+  brainAt?: BrainScreen;
+  /** The memory or skill a link opened Memória at. */
+  item?: string;
   /** Changes the tab (and section) in the URL. */
   onNavigate: (tab: AgentTab, section?: AgentSection) => void;
   /** Shown in the panel beside its DM (like a thread's), not as a page: closes the panel. */
@@ -125,7 +137,7 @@ export function AgentPage(props: AgentPageProps) {
   const dir = useDirectory(org.id);
   const agent = dir.agentById.get(props.agentId);
   // Only the full profile edits, so only it asks before closing; every other view here closes on the request.
-  const full = Boolean(agent && !dir.loading && seesDetails(agent) && !isRightHand(agent));
+  const full = Boolean(agent && !dir.loading && seesDetails(agent));
   const closeRef = useRef(props.onClose);
   closeRef.current = full ? undefined : props.onClose;
   useEffect(() => {
@@ -145,41 +157,30 @@ export function AgentPage(props: AgentPageProps) {
       </div>
     );
   }
-  // The right hand (ADR 0137) has no tabs: its instructions are the product's. Admins get its short form here too.
-  if (isRightHand(agent) && can(org, "manage_agents")) {
+  // The right hand (ADR 0137) to someone who sees only its card: its settings, each person's own.
+  if (isRightHand(agent) && !seesDetails(agent)) {
     return (
       <div className="page page--full">
         <PageHeader title={agent.name} meta={t("settings.sectionText.right_hand")} />
-        {tellsNameStory(agent) && <p className="small muted">{t("rightHand.profile.nameStory")}</p>}
-        <RightHandSettingsSection />
+        {tellsNameStory(agent) && <p className="page__note">{t("rightHand.profile.nameStory")}</p>}
+        <RightHandSettingsSection agent={agent} />
       </div>
-    );
-  }
-  // Everyone else gives their own DM with it their plan (ADR 0137 §11).
-  if (isRightHand(agent)) {
-    return (
-      <AgentPublicCard agent={agent}>
-        <RightHandMineCard agent={agent} />
-      </AgentPublicCard>
     );
   }
   if (!seesDetails(agent)) return <AgentPublicCard agent={agent} />;
   return <AgentProfile key={agent.id} agent={agent} {...props} />;
 }
 
-/** "Sua IA" on the right hand's page: why it is the viewer's alone behind the title's ⓘ, the status under it. */
-function RightHandMineCard({ agent }: { agent: Agent }) {
-  const { t } = useTranslation();
-  const hint = useRightHandMineHint(agent);
-  return (
-    <Card as="section" className="agp-card" aria-labelledby="rh-mine-title">
-      <CardHeader id="rh-mine-title" title={t("rightHand.settings.mine")} hint={hint} />
-      <RightHandMineRow agent={agent} />
-    </Card>
-  );
-}
-
-function AgentProfile({ agent, tab, section, onNavigate, onClose, closeRequest }: AgentPageProps & { agent: Agent }) {
+function AgentProfile({
+  agent,
+  tab,
+  section,
+  brainAt,
+  item,
+  onNavigate,
+  onClose,
+  closeRequest,
+}: AgentPageProps & { agent: Agent }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const api = useApi();
@@ -189,6 +190,13 @@ function AgentProfile({ agent, tab, section, onNavigate, onClose, closeRequest }
   const dir = useDirectory(org.id);
   const admin = can(org, "manage_agents");
   const viewer: Viewer = admin ? "admin" : agent.ownerUserId === me.user.id ? "owner" : "member";
+  // A personal workspace's page (ADR 0159 §3): a shorter bar, the hard parts in Advanced; every address still works.
+  const personal = isPersonal(org);
+  // The right hand's page (ADR 0137): its settings, what it may use and what it keeps for the viewer. Its
+  // instructions are the product's, and it is in no channel and on no computer, so the other tabs have nothing of
+  // its own.
+  const rightHand = isRightHand(agent);
+  const view = rightHand ? (RIGHT_HAND_TABS.includes(tab) ? tab : "settings") : shownAgentTab(tab, section, personal);
   const models = useModels();
   const detail = useAgentDetail(org.id, agent.id);
   const settings = useSettings(org.id);
@@ -312,7 +320,19 @@ function AgentProfile({ agent, tab, section, onNavigate, onClose, closeRequest }
 
   const changes: Change[] = changedKeys(saved, edits).map(({ key, field, resource }) => {
     const place = FIELD_PLACE[field];
-    const base = { key, field, tab: place.tab, sec: place.sec };
+    // In a personal workspace the built-in areas' levels and the skills are in Advanced, as Configurações' advanced
+    // sections are; the apps' levels stay in "Can use".
+    const advanced =
+      personal &&
+      // The right hand's page has no Advanced: all of what it may use is on one tab.
+      !rightHand &&
+      (field === "skills" || (field === "levels" && resourceById.get(resource ?? "")?.kind !== "connector"));
+    const base = {
+      key,
+      field,
+      tab: advanced ? ("advanced" as const) : shownAgentTab(place.tab, place.sec, personal),
+      sec: place.sec,
+    };
     const label = (f: Field) => t(`agentPage.fields.${f}`);
     switch (field) {
       case "name":
@@ -445,12 +465,12 @@ function AgentProfile({ agent, tab, section, onNavigate, onClose, closeRequest }
   }, [section]);
   // A section in the URL: scroll to it once Configurações shows.
   useEffect(() => {
-    if (tab !== "settings" || !section) return;
+    if ((view !== "settings" && view !== "advanced") || !section) return;
     const timer = setTimeout(() =>
       document.getElementById(`agp-sec-${section}`)?.scrollIntoView?.({ block: "start", behavior: "smooth" }),
     );
     return () => clearTimeout(timer);
-  }, [tab, section]);
+  }, [view, section]);
 
   /* ---------- Saving ---------- */
 
@@ -675,7 +695,7 @@ function AgentProfile({ agent, tab, section, onNavigate, onClose, closeRequest }
           {pending}
         </span>
       );
-    else if (id === "activity" && failures > 0)
+    else if ((id === "activity" || (personal && id === "advanced" && view !== "activity")) && failures > 0)
       badge = (
         <span className="agp-badge ac-num" title={t("agentPage.activity.failuresCount", { count: failures })}>
           {failures}
@@ -683,14 +703,16 @@ function AgentProfile({ agent, tab, section, onNavigate, onClose, closeRequest }
       );
     return (
       <>
-        {t(`agentPage.tabs.${id}`)}
+        {t(
+          personal && (id === "access" || id === "settings") ? `agentPage.tabs.${id}Personal` : `agentPage.tabs.${id}`,
+        )}
         {badge}
       </>
     );
   };
 
   // Unsaved changes on a tab inside "More": its trigger counts them.
-  const moreChanges = changes.filter((c) => MORE_TABS.includes(c.tab) && c.tab !== tab).length;
+  const moreChanges = changes.filter((c) => MORE_TABS.includes(c.tab) && c.tab !== view).length;
 
   const value: AgentEdit = {
     agent,
@@ -722,80 +744,120 @@ function AgentProfile({ agent, tab, section, onNavigate, onClose, closeRequest }
 
   return (
     <AgentEditProvider value={value}>
-      <div className={cx("page page--full agp", onClose && "agp--panel")} data-dirty={dirty || undefined}>
-        <AgentHero
-          onArchive={() => setArchiving(true)}
-          panel={Boolean(onClose)}
-          onExpand={
-            onClose &&
-            (() =>
-              void navigate({
-                to: "/org/$orgId/agents/$agentId",
-                params: { orgId: org.id, agentId: agent.id },
-                search: { tab: tab === "overview" ? undefined : tab, sec: section },
-              }))
-          }
-        />
-        <div className="agp-tabs" ref={top}>
-          <Tabs
-            label={t("agentPage.tabsLabel", g)}
-            value={tab}
-            onValueChange={(next) => goTo(next)}
-            items={[...MAIN_TABS, ...(MORE_TABS.includes(tab) ? [tab] : [])].map((id) => ({
-              value: id,
-              label: tabLabel(id),
-            }))}
-            after={
-              <Menu
-                align="end"
-                label={t("agentPage.tabs.more")}
-                trigger={
-                  <button type="button" className="ac-tab agp-more">
-                    {t("agentPage.tabs.more")}
-                    {moreChanges > 0 && (
-                      <span
-                        className="agp-badge agp-badge--edit ac-num"
-                        title={t("agentPage.changesCount", { count: moreChanges })}
-                      >
-                        <Icon name="edit" size={14} />
-                        {moreChanges}
-                      </span>
-                    )}
-                    <Icon name="chevronDown" size={14} />
-                  </button>
-                }
-              >
-                {MORE_TABS.filter((id) => id !== tab).map((id) => (
-                  <MenuItem key={id} icon={MORE_ICON[id]} onSelect={() => goTo(id)}>
-                    {tabLabel(id)}
-                  </MenuItem>
-                ))}
-              </Menu>
-            }
-          >
-            <TabPanel value={tab}>
-              <div className="agp-view" key={tab}>
-                {tab === "overview" && <OverviewTab />}
-                {tab === "instructions" && <InstructionsTab />}
-                {tab === "access" && <AccessTab />}
-                {tab === "memory" && <MemoryTab />}
-                {tab === "files" && <FilesTab />}
-                {tab === "usage" && <UsageTab />}
-                {tab === "activity" && <ActivityTab />}
-                {tab === "settings" && (
-                  <SettingsTab
-                    section={section}
-                    onSection={(sec) => goTo("settings", sec)}
-                    onArchive={() => setArchiving(true)}
-                    onDelete={() => setDeleting(true)}
-                  />
-                )}
-              </div>
-            </TabPanel>
-          </Tabs>
+      {rightHand ? (
+        <div className="page page--full" data-dirty={dirty || undefined}>
+          <PageHeader title={agent.name} meta={t("settings.sectionText.right_hand")} />
+          {tellsNameStory(agent) && <p className="page__note">{t("rightHand.profile.nameStory")}</p>}
+          <div className="tabs-bar">
+            <Tabs
+              label={t("agentPage.tabsLabel", g)}
+              value={view}
+              onValueChange={(next) => goTo(next)}
+              items={RIGHT_HAND_TABS.map((id) => ({ value: id, label: tabLabel(id) }))}
+            >
+              {null}
+            </Tabs>
+          </div>
+          {view === "access" ? (
+            <AccessTab />
+          ) : view === "memory" ? (
+            <MemoryTab item={item} />
+          ) : (
+            <RightHandSettingsSection agent={agent} />
+          )}
+          <SaveBar saving={saving} onSave={() => void save()} onDiscard={discard} onJump={(c) => goTo(c.tab, c.sec)} />
         </div>
-        <SaveBar saving={saving} onSave={() => void save()} onDiscard={discard} onJump={(c) => goTo(c.tab, c.sec)} />
-      </div>
+      ) : (
+        <div className={cx("page page--full agp", onClose && "agp--panel")} data-dirty={dirty || undefined}>
+          <AgentHero
+            onArchive={() => setArchiving(true)}
+            panel={Boolean(onClose)}
+            onExpand={
+              onClose &&
+              (() =>
+                void navigate({
+                  to: "/org/$orgId/agents/$agentId",
+                  params: { orgId: org.id, agentId: agent.id },
+                  search: { tab: tab === "overview" ? undefined : tab, sec: section },
+                }))
+            }
+          />
+          <div className="agp-tabs" ref={top}>
+            <Tabs
+              label={t("agentPage.tabsLabel", g)}
+              value={view}
+              onValueChange={(next) => goTo(next)}
+              items={(personal
+                ? [...PERSONAL_TABS, ...(PERSONAL_TABS.includes(view) ? [] : [view])]
+                : [...MAIN_TABS, ...(MORE_TABS.includes(view) ? [view] : [])]
+              ).map((id) => ({
+                value: id,
+                label: tabLabel(id),
+              }))}
+              after={
+                personal ? undefined : (
+                  <Menu
+                    align="end"
+                    label={t("agentPage.tabs.more")}
+                    trigger={
+                      <button type="button" className="ac-tab agp-more">
+                        {t("agentPage.tabs.more")}
+                        {moreChanges > 0 && (
+                          <span
+                            className="agp-badge agp-badge--edit ac-num"
+                            title={t("agentPage.changesCount", { count: moreChanges })}
+                          >
+                            <Icon name="edit" size={14} />
+                            {moreChanges}
+                          </span>
+                        )}
+                        <Icon name="chevronDown" size={14} />
+                      </button>
+                    }
+                  >
+                    {MORE_TABS.filter((id) => id !== view).map((id) => (
+                      <MenuItem key={id} icon={MORE_ICON[id]} onSelect={() => goTo(id)}>
+                        {tabLabel(id)}
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                )
+              }
+            >
+              <TabPanel value={view}>
+                <div className="agp-view" key={view}>
+                  {view === "overview" && <OverviewTab />}
+                  {view === "instructions" && <InstructionsTab />}
+                  {view === "access" && <AccessTab part={personal ? "basic" : "all"} />}
+                  {view === "memory" && <MemoryTab item={item} />}
+                  {view === "files" && <FilesTab />}
+                  {view === "usage" && <UsageTab />}
+                  {view === "activity" && <ActivityTab />}
+                  {view === "settings" && (
+                    <SettingsTab
+                      part={personal ? "basic" : "all"}
+                      section={section}
+                      onSection={(sec) => goTo("settings", sec)}
+                      onArchive={() => setArchiving(true)}
+                      onDelete={() => setDeleting(true)}
+                    />
+                  )}
+                  {view === "advanced" && (
+                    <AdvancedTab
+                      section={section}
+                      onSection={(sec) => goTo("settings", sec)}
+                      onOpen={(next) => goTo(next)}
+                      onArchive={() => setArchiving(true)}
+                      onDelete={() => setDeleting(true)}
+                    />
+                  )}
+                </div>
+              </TabPanel>
+            </Tabs>
+          </div>
+          <SaveBar saving={saving} onSave={() => void save()} onDiscard={discard} onJump={(c) => goTo(c.tab, c.sec)} />
+        </div>
+      )}
       {picking && (
         <RepoDialog
           add={picking.add}
@@ -809,6 +871,7 @@ function AgentProfile({ agent, tab, section, onNavigate, onClose, closeRequest }
 
       <WorkDialogs
         open={work}
+        brainAt={section === "brain" ? brainAt : undefined}
         onClose={() => {
           setWork(null);
           if (section === "brain") onNavigate(tab);

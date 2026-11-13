@@ -20,16 +20,19 @@ test("ai-status per agent; a mention with no key gets the card; answer-now 409, 
   const status = async () => (await (await owner(`${org}/ai-status`)).json()) as Record<string, unknown>;
   // Who picks the agents for a message nobody mentioned: the workspace's small model, on its own key.
   const byModel = { by: "model", mine: "model", model: "claude-haiku-5-5", noSmallModel: null };
-  // The workspace's right hand (ADR 0137) comes first, on the same key.
+  // The workspace's right hand (ADR 0137) comes first, on the same key: on Automático, it names the key's maker.
   const lodi = expect.any(String);
   expect(await status()).toEqual({
     any: true,
     agents: [
-      { agentId: lodi, state: "ready" },
+      { agentId: lodi, state: "ready", provider: "anthropic" },
       { agentId, state: "ready" },
     ],
     routing: byModel,
     apiKey: true,
+    // Memory reflects with the same key (ADR 0167).
+    reflection: true,
+    widgetsReady: [],
   });
 
   await t.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
@@ -41,6 +44,8 @@ test("ai-status per agent; a mention with no key gets the card; answer-now 409, 
     ],
     routing: { by: "rules", mine: "rules", model: null, noSmallModel: null },
     apiKey: false,
+    reflection: false,
+    widgetsReady: [],
   });
   const asked = await owner(`${org}/channels/${channelId}/messages`, { json: { body: "@dev resume o canal" } });
   const { id: askedId } = (await asked.json()) as { id: string };

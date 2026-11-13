@@ -1,6 +1,8 @@
 import { rightHandOf } from "@agenteschat/client/lib/right-hand";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import type { StickerLook, StickerMood } from "@agenteschat/ui/agent/stickers";
 import { useTranslation } from "react-i18next";
+import { useOrgMaybe } from "@/providers/org";
 import { Button, EmptyState, type EmptyStateProps, type IconName } from "@/ui";
 import { type EmptyPlace, firstUseCopy } from "./first-use";
 import { useDirectory } from "./hooks";
@@ -33,7 +35,7 @@ export function FirstUse({
   acts,
   label,
   onPress,
-  icon = "plus",
+  icon,
   busy = false,
   size = "page",
   look,
@@ -43,6 +45,7 @@ export function FirstUse({
   acts: boolean;
   label?: string | undefined;
   onPress?: (() => void) | undefined;
+  /** The button's words stand alone (no icon by default): the button ruler's one primary, at its full 48 height. */
   icon?: IconName;
   busy?: boolean;
   size?: EmptyStateProps["size"];
@@ -51,7 +54,8 @@ export function FirstUse({
 }) {
   const { t } = useTranslation();
   const fallback = useEmptyLook();
-  const copy = firstUseCopy(place, acts);
+  // A personal workspace's places speak to one person (ADR 0159).
+  const copy = firstUseCopy(place, acts, isPersonal(useOrgMaybe()?.org));
   return (
     <EmptyState
       size={size}
@@ -61,7 +65,16 @@ export function FirstUse({
       subtitle={t(copy.text)}
       {...(acts && label && onPress
         ? {
-            action: <Button variant="primary" size="sm" icon={icon} label={label} loading={busy} onPress={onPress} />,
+            action: (
+              <Button
+                variant="primary"
+                size="md"
+                {...(icon ? { icon } : {})}
+                label={label}
+                loading={busy}
+                onPress={onPress}
+              />
+            ),
           }
         : {})}
     />

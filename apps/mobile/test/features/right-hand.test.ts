@@ -8,12 +8,13 @@ import {
   introLeadKey,
   offersTeamSetup,
   rightHandOf,
+  teamAnswered,
   tellsNameStory,
 } from "@agenteschat/client/lib/right-hand";
 import { STICKER_STILL_T, WAVE_SECONDS } from "@agenteschat/ui/agent/stickers";
 import { stickerFrame } from "../../src/agent/sticker";
 import { agentStarters, buildConversations, homeLayout, rightHandPin } from "../../src/features/chats/logic";
-import { SETTINGS_SECTIONS, visibleSections } from "../../src/features/settings/logic";
+import { SETTINGS_SECTIONS } from "../../src/features/settings/logic";
 import { agent, at } from "./fixtures";
 
 const lodi = agent({ id: "a-lodi", name: "Lodi", builtin: "right_hand" });
@@ -36,7 +37,10 @@ test("the right hand is its own row, its DM's unread kept, never one of Agentes'
 test("Conversas asks the right hand from its own field under the greeting, never one of Agentes' rows", () => {
   const src = (f: string) => readFileSync(new URL(`../../src/features/${f}`, import.meta.url), "utf8");
   const chats = src("chats/ChatsScreen.tsx");
-  expect(chats).toContain("<RightHandAsk row={pinned.pin} onStart={startDm} />");
+  // Its face wakes as Conversas arrives after the splash (once per launch).
+  expect(chats).toContain(
+    "<RightHandAsk row={pinned.pin} onStart={startDm} faceMode={wake.mode} faceStyle={wake.style} />",
+  );
   expect(chats).toContain("after={ask}");
   expect(chats).not.toContain("kept: lead");
   expect(src("right-hand/Pin.tsx")).toContain('t("mobile.chat.messageTo", { name: row.with.name })');
@@ -99,35 +103,77 @@ test("its greeting's cards beside the checklist: one question at a time (ADR 015
   expect(introLeadKey(true, true)).toBe("rightHand.intro.lead");
   expect(introLeadKey(false, false)).toBe("rightHand.intro.lead");
   const src = (f: string) => readFileSync(new URL(f, import.meta.url), "utf8");
+  // A personal workspace reads its own sibling (ADR 0159), on both.
   for (const f of ["../../src/features/right-hand/Intro.tsx", "../../../web/src/components/RightHandIntro.tsx"])
-    expect(src(f)).toContain("t(introLeadKey(held, team.length > 0))");
+    expect(src(f)).toContain("t(modeKey(org, introLeadKey(held, team.length > 0)))");
+});
+
+test("how agents should talk waits for the team's first answer, so it never stands beside the first task", () => {
+  const base = { noAi: false, aiKnown: true, askStyle: true, checklist: "complete" as const };
+  expect(introCards({ ...base, answered: false })).toEqual([]);
+  expect(introCards({ ...base, answered: true })).toEqual(["style"]);
+  const iara = agent({ id: "a-iara", name: "Iara" });
+  const status = (agentId: string, activeAt: string | null) => ({ agentId, activeAt });
+  // The team made, nobody of it worked yet (the right hand's own runs don't count): it waits.
+  expect(teamAnswered([iara], [status("a-iara", null), status("a-lodi", at(0))])).toBe(false);
+  expect(teamAnswered([iara], undefined)).toBe(false);
+  // Iara answered the first task.
+  expect(teamAnswered([iara], [status("a-iara", at(0))])).toBe(true);
+  // No team: no first task to wait for.
+  expect(teamAnswered([], undefined)).toBe(true);
+  const src = (f: string) => readFileSync(new URL(f, import.meta.url), "utf8");
+  for (const f of ["../../src/features/right-hand/Intro.tsx", "../../../web/src/components/RightHandIntro.tsx"])
+    expect(src(f)).toContain("answered: useTeamAnswered(");
 });
 
 test("the phone's greeting draws the checklist and Conversas has one line back to it, not a second list", () => {
   const src = (f: string) => readFileSync(new URL(`../../src/features/${f}`, import.meta.url), "utf8");
   expect(src("right-hand/Intro.tsx")).toContain("<FirstRunCard agent={agent} channelId={channelId} />");
   expect(src("chats/ChatsScreen.tsx")).toContain("<FirstRunLine />");
-  expect(src("chats/FirstRunLine.tsx")).toContain('t("home.firstRun"');
-  // The apps row names what it reads, as the web's does, never "Sem apps" with apps connected.
+  // One line that says who is setting up the team and how far ("Atlas is setting up the team · 1 of 3"); a personal
+  // workspace's says "your agents" (ADR 0159).
+  expect(src("chats/FirstRunLine.tsx")).toContain('t(modeKey(org, "mobile.chats.firstRunLine")');
+  // The apps row names what it reads, as the web's does, never "Sem apps" with apps connected; an invitation waiting
+  // finishes the people row, saying who; a personal workspace's rows read its own words (ADR 0159).
   const card = src("right-hand/FirstRun.tsx");
-  expect(card).toContain('{ org: org?.name ?? "", agents: team.length, label, apps: appNames, members: run.members }');
-  // As on the web: row 3 connects the whole team, row 4 is its own screen of suggested apps, row 1 comes filled with
-  // what was typed.
+  expect(card).toContain("apps: appNames,");
+  expect(card).toContain("invited: run.invited.length ? joinNames(run.invited, t) : null,");
+  // As on the web: the AI row connects the whole team, the apps row is its own screen of suggested apps, a skip says
+  // nothing, and an invitation only sent says so, the welcome kept for someone joining (ADR 0162).
   expect(card).toContain("openConnectAi(team.length > 0 ? {} : { agentId: agent.id })");
   expect(card).toContain('apps: () => openSetupStep(agent.id, "apps")');
-  expect(card).toContain('about: () => openSetupStep(agent.id, "about", run.typed)');
+  expect(card).toContain("firstRunBeats(doneHere, { members: run.members, invited: run.invited.length })");
+  expect(card).toContain('? t("agentSetup.firstRun.say.invited")');
+  expect(card).toContain(
+    ": firstRunFact(facts, beat)\n          ? t(firstRunSayKey(beat, personal), agentGrammar(agent.name))",
+  );
+  // One first task, the team card's: the card's asks offer none.
+  expect(card).not.toContain("firstTask");
   const steps = src("agents/setup/SetupStepScreen.tsx");
   expect(steps).toContain("firstRun ? <FirstRunAppsStep /> : <AppsStep agent={agent} />");
   expect(steps).toContain("firstRunAppList(");
   expect(steps).toContain('router.push({ pathname: "/connectors", params: { connect: def.id } })');
 });
 
-test("Configurações has its section for who manages agents, at its own screen", () => {
-  const ids = (permissions: string[]) =>
-    visibleSections({ id: "o", name: "Acme", role: "member", permissions }).map((s) => s.id);
-  expect(ids(["read", "manage_agents"])).toContain("right_hand");
-  expect(ids(["read"])).not.toContain("right_hand");
-  expect(SETTINGS_SECTIONS.find((s) => s.id === "right_hand")?.href).toBe("/settings/right-hand");
+test("on a hold for its first plan the phone's card leads with the plan row: where to choose it, in words only", () => {
+  const card = readFileSync(new URL("../../src/features/right-hand/FirstRun.tsx", import.meta.url), "utf8");
+  // The row comes only while the workspace waits for its first plan (ADR 0162, amended 2026-11-10).
+  expect(card).toContain('waitsForPlan: hold === "payment",');
+  expect(card).toContain('plan: "play",');
+  // No button and no way to pay from the phone (App Store 3.1.1): its line says where the plan is chosen, or who can.
+  expect(card).toContain("plan: () => undefined,");
+  expect(card).toContain('...(words.action && s !== "plan" && !(s === "about" && next === "about")');
+  expect(card).toContain('b: t(mayPay ? "connectAi.billingWeb" : "standing.billing.askAdmin"),');
+  // Any other hold has no plan row: the AI row says it, as before.
+  expect(card).toContain('const holdLine = s === "ai" && state === "afterPlan" && !steps.includes("plan");');
+  for (const banned of ["billingLink", "BillingLink", "planOffer", "plans.json"]) expect(card).not.toContain(banned);
+});
+
+test("Configurações lists no section for it: its settings open from its own profile, on their screen", () => {
+  const src = (f: string) => readFileSync(new URL(`../../src/features/${f}`, import.meta.url), "utf8");
+  expect(SETTINGS_SECTIONS.map((s) => s.id as string)).not.toContain("right_hand");
+  expect(src("right-hand/SettingsScreen.tsx")).toContain('router.push("/settings/right-hand" as never)');
+  expect(src("agents/AgentProfileScreen.tsx")).toContain("onPress: openRightHandSettings");
 });
 
 test("its DM, cards and profile treat it apart through the one shared helper", () => {
@@ -139,6 +185,12 @@ test("its DM, cards and profile treat it apart through the one shared helper", (
   expect(chat).toMatch(/dmComputer = dmAgentId && !isThread && !rightHand/);
   // Never archived or deleted from the phone.
   expect(src("agents/AgentEditScreen.tsx")).toContain("admin && !rightHand");
+  // Its profile shows what it may use like any agent's (apps, built-in areas, mailboxes), without the AI row: its AI
+  // is each person's, on its settings.
+  const profile = src("agents/AgentProfileScreen.tsx");
+  expect(profile).toContain("{details ? accessView : null}");
+  expect(profile).toContain("const mailboxes = useAgentMailboxes(id, details);");
+  expect(profile).toContain("{thinks && !rightHand ? (");
   // No coordinator anywhere on the phone (ADR 0093, superseded by 0137).
   for (const f of [
     "agents/AgentEditScreen.tsx",

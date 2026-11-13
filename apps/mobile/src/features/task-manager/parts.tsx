@@ -1,14 +1,5 @@
-import { type ManagedTask, useCatalog, useContinueTasks } from "@agenteschat/client";
-import {
-  type TaskWaitGroup,
-  taskClock,
-  taskProgram,
-  taskSince,
-  taskState,
-  taskWaitGroups,
-  taskWaitGroupText,
-} from "@agenteschat/client/lib/task-manager";
-import { callLogo } from "@agenteschat/client/lib/work";
+import { type ManagedTask, useContinueTasks } from "@agenteschat/client";
+import { type TaskWaitGroup, taskTime, taskWaitGroups, taskWaitGroupText } from "@agenteschat/client/lib/task-manager";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,21 +14,19 @@ import {
   PixelOrbit,
   PixelStop,
   PixelStopped,
-  ProviderLogo,
   Text,
   useReducedMotion,
   weights,
 } from "@/ui";
-import { useCallLogo } from "../chat/ToolCalls";
 import { useFailed } from "../routines/hooks";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { isHeld, type RowState, taskStateWords, usingNow } from "./logic";
+import { isHeld, type RowState, taskStateWords } from "./logic";
 
 /**
  * The pieces the task manager's list, a task's screen and an agent's tasks share (ADR 0128): a task's mark and state,
- * what it uses now, its "Parar", and the confirmation that stopping several asks for.
+ * its "Parar", and the confirmation that stopping several asks for.
  */
 
 /** A reason's length at most: the server's (ADR 0128). */
@@ -70,7 +59,7 @@ export function useAgentColor(agentId: string): AgentColorName {
 }
 
 /**
- * "Trabalhando · 6:12", "Espera seu ok · 18:03" (amber: it waits on a person), "Parando…"; a wait wraps whole, with
+ * "Trabalhando · 6:12", "Espera seu ok · 18 min" (amber: it waits on a person), "Parando…"; a wait wraps whole, with
  * what comes next under it ("Volta sáb às 18:00", or when it should start in the computer's line).
  */
 export function StateLine({ task, state, now }: { task: ManagedTask; state: RowState; now: number }) {
@@ -87,7 +76,7 @@ export function StateLine({ task, state, now }: { task: ManagedTask; state: RowS
       </Text>
       {state === "stopping" ? null : (
         <Text variant="caption" tone="faint" style={styles.num}>
-          · {taskClock(now - taskSince(task))}
+          · {taskTime(t, task, now)}
         </Text>
       )}
     </View>
@@ -114,13 +103,12 @@ export function WaitLines({ tasks, now }: { tasks: ManagedTask[]; now: number })
  */
 function WaitLine({ group, now }: { group: TaskWaitGroup; now: number }) {
   const { t, i18n } = useTranslation();
-  const c = useColors();
   const orgId = useOrgId();
   const failed = useFailed();
   const go = useContinueTasks(orgId);
   return (
-    <View style={[styles.waitLine, { backgroundColor: c.sunken }]}>
-      <Text variant="footnote" tone="ink2">
+    <View style={styles.waitLine}>
+      <Text variant="subhead" tone="muted">
         {taskWaitGroupText(t, i18n.language, group, now)}
       </Text>
       {group.continuable.length > 0 ? (
@@ -132,41 +120,6 @@ function WaitLine({ group, now }: { group: TaskWaitGroup; now: number }) {
           onPress={() => go.mutate(group.continuable, { onError: failed })}
         />
       ) : null}
-    </View>
-  );
-}
-
-/**
- * "Usando agora": the program's logo, its name and what it does there, on one line ("Claude Code · Navegador ·
- * página de cancelar", "GitHub · PR #231"); "Pensando" while it works with nothing open yet.
- */
-export function UsingLine({ task }: { task: ManagedTask }) {
-  const { t, i18n } = useTranslation();
-  const logo = useCallLogo();
-  const catalog = useCatalog();
-  const using = usingNow(t, taskProgram(task), {
-    locale: i18n.language,
-    appName: (a) => {
-      const mark = callLogo(a, catalog.data?.connectors ?? []);
-      return mark.kind === "service" ? mark.label : "";
-    },
-  });
-  if (!using)
-    return taskState(task) === "working" ? (
-      <Text variant="footnote" tone="faint" numberOfLines={1}>
-        {t("taskManager.program.thinking")}
-      </Text>
-    ) : null;
-  const said = [using.name, using.detail].filter(Boolean).join(" · ");
-  return (
-    <View style={styles.row} accessible accessibilityLabel={`${t("taskManager.columns.using")}: ${said}`}>
-      {using.brain ? <ProviderLogo id={using.brain} size="chip" /> : using.activity ? logo(using.activity, 20) : null}
-      <Text variant="footnote" tone="muted" numberOfLines={1} style={styles.shrink}>
-        <Text variant="footnote" tone="ink2" style={styles.semibold}>
-          {using.name}
-        </Text>
-        {using.detail ? ` · ${using.detail}` : ""}
-      </Text>
     </View>
   );
 }
@@ -318,15 +271,8 @@ const styles = StyleSheet.create({
   stack: { gap: 2, minWidth: 0 },
   // Under the state's words: past its mark's box and the row's gap.
   starts: { marginLeft: MARK + 4 + 6 },
-  waitLine: {
-    gap: 8,
-    alignItems: "flex-start",
-    marginTop: 4,
-    marginBottom: 8,
-    marginHorizontal: 16,
-    padding: 12,
-    borderRadius: 14,
-  },
+  // Said once over the tasks it holds: a line on the 16 margin, never a plate.
+  waitLine: { gap: 8, alignItems: "flex-start", paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 },
   // As tall as the button it stands in for, so the row doesn't move.
   stopping: { minWidth: 36, height: 36, alignItems: "center", justifyContent: "center" },
   stopCompact: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
@@ -335,5 +281,5 @@ const styles = StyleSheet.create({
   field: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 10, minHeight: 36 },
   input: { paddingVertical: 8 },
   confirm: { gap: 10 },
-  confirmRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  confirmRow: { flexDirection: "row", alignItems: "center", gap: 8 },
 });

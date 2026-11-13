@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ImportItemResult, MigrationBundle } from "@agenteschat/client";
-import { cardName, IMPORT_CARDS } from "@agenteschat/client/lib/import/flow";
+import { cardName, defaultMethod, IMPORT_CARDS, mcpClient } from "@agenteschat/client/lib/import/flow";
 import { parseImport } from "@agenteschat/client/lib/import/index";
 import {
   agentRows,
@@ -70,6 +70,28 @@ describe("Importar agentes on the phone: which picked files are read", () => {
 
   test("the request cards are the apps that answer the export request", () => {
     expect(IMPORT_CARDS.filter(isRequestCard)).toEqual(["grok-bot", "chatgpt-dots", "other"]);
+  });
+
+  test("each source's way in on the phone, as on the web: MCP where the app takes it and the server is reachable", () => {
+    expect(IMPORT_CARDS.map((c) => [c, defaultMethod(c, true), defaultMethod(c, false)])).toEqual([
+      ["grok-bot", "mcp", "prompt"],
+      ["chatgpt-dots", "prompt", "prompt"],
+      ["openbotrun", "mcp", "prompt"],
+      ["openmausbot", "mcp", "prompt"],
+      ["hermes", "mcp", "prompt"],
+      ["openclaw", "mcp", "prompt"],
+      ["paperclip", "prompt", "prompt"],
+      ["agenteschat", "prompt", "prompt"],
+      ["other", "mcp", "prompt"],
+    ]);
+    // Everything the steps need is copied or opened from the phone: no step hands out a token.
+    const url = "https://agentes.example/mcp";
+    for (const c of IMPORT_CARDS)
+      expect(
+        mcpClient(c)
+          ?.guide(url)
+          .steps.some((s) => s.token) ?? false,
+      ).toBe(false);
   });
 
   test("Choose files is hidden only for Grok Bot, which answers in chat (ChatGPT dots makes a file)", () => {

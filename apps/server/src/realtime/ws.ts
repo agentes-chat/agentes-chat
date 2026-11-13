@@ -3,6 +3,7 @@ import {
   BROWSER_VIEW,
   channelTopic,
   chatActivityTopic,
+  listenResumedTopic,
   MAX_FRAME_BYTES,
   orgTopic,
   type Presence,
@@ -23,7 +24,6 @@ import {
   type BrowserLive,
   browserFrameBase64,
   browserFrameBytes,
-  closedRefusal,
   closesWorkspace,
   ForbiddenError,
   getMembership,
@@ -32,6 +32,7 @@ import {
   NotFoundError,
   type OrgEvent,
   profileIdOfKey,
+  readRefusal,
   requireBrowserAccess,
   requireChannelAccess,
   requireProfileWatcher,
@@ -73,7 +74,7 @@ import type { StreamSocketData, StreamSockets } from "./streams";
  *   valid for `ttlMs` (5 s).
  * - Server → client frames: `ready`, `subscribed`, `unsubscribed` (with a
  *   `reason` when the server dropped it: `revoked`, `archived`), `error`, and
- *   channel events (`message.created`, `agent.delta`, `agent.run`,
+ *   channel events (`message.created`, `agent.run`, `agent.typing`,
  *   `approval.*`) wrapped as `{"type":"event","channelId":…,"event":{…}}`.
  *   Events for this person only (approvals waiting for them, DMs) arrive as
  *   `{"type":"event","scope":"user","event":{…}}`.
@@ -176,7 +177,8 @@ const MEMBERSHIP_CHECK_TIMEOUT_MS = 5_000;
  * The checks before a person's socket opens (`/api/ws`, and the desktop and
  * terminal streams): our Origin, or the phone app without one (cross-site
  * WebSocket hijacking); a session from the cookie; membership of `orgId`,
- * a workspace that isn't closed (`closedRefusal`). The person, or the refusal.
+ * a workspace its people can read (`readRefusal`: one being deleted still
+ * reads, the streams refuse it on their own). The person, or the refusal.
  */
 export async function personUpgrade(
   deps: Pick<RealtimeDeps, "auth" | "db">,
@@ -194,7 +196,7 @@ export async function personUpgrade(
   if (!session) return new Response("Sign in to continue", { status: 401 });
   const user = session.user as SessionUser;
   const membership = await getMembership(deps.db, user.id, orgId);
-  if (!membership || closedRefusal(membership.standing)) {
+  if (!membership || readRefusal(membership.standing)) {
     return new Response("Not a member of this organization", { status: 403 });
   }
   return { ...user, sessionToken: session.session.token };
@@ -248,7 +250,7 @@ export async function currentSubscriptions(
   channelIds: string[],
 ): Promise<Set<string> | null> {
   const member = await getMembership(db, userId, orgId);
-  if (!member || closedRefusal(member.standing)) return null;
+  if (!member || readRefusal(member.standing)) return null;
   if (channelIds.length === 0) return new Set();
   const rows = await db
     .select({ id: schema.channels.id })
@@ -280,7 +282,9 @@ export async function currentSubscriptions(
 export function createRealtime(deps: RealtimeDeps) {
   const origins = allowedOrigins(deps.config);
   const send = (ws: BrowserSocket, frame: unknown): void => {
-    ws.send(JSON.stringify(frame));
+    // 0: Bun dropped it, past its backpressure limit (a frozen tab that stopped reading). The app would never learn
+    // what it missed; closed, it reconnects and reads it.
+    if (ws.send(JSON.stringify(frame)) === 0 && ws.readyState === 1) ws.close(1013, "too far behind");
   };
   // A new message reaches its members' sockets on this replica as `channel.activity` (no content): their lists
   // count it as unread without subscribing to every channel. The author's own sockets never hear it.
@@ -312,6 +316,11 @@ export function createRealtime(deps: RealtimeDeps) {
             send(ws, { type: "event", scope: "user", event });
       })
       .catch(() => {});
+  });
+  // This replica's LISTEN came back after a gap: its sockets stayed open while what was said meanwhile never reached
+  // them. Closed as a service restart, their apps reconnect, which subscribes again and reads what they missed.
+  deps.pubsub.subscribe(listenResumedTopic, () => {
+    for (const ws of browsers) if (ws.readyState === 1) ws.close(1012, "events were missed");
   });
 
   async function liveSession(ws: BrowserSocket, force = false): Promise<boolean> {
@@ -851,6 +860,9 @@ export function createRealtime(deps: RealtimeDeps) {
           return send(ws, { type: "unsubscribed", channelId });
         }
         if (ws.data.subscriptions.has(channelId)) return send(ws, { type: "subscribed", channelId });
+        // One check per channel at a time: a second would take the first's place in `pending`, and a removal that
+        // lands meanwhile would mark only one of them. The check in flight answers for both.
+        if (ws.data.pending.has(channelId)) return;
         if (ws.data.subscriptions.size >= MAX_SUBSCRIPTIONS)
           return send(ws, { type: "error", code: "too_many_subscriptions", channelId });
         const check = { revoked: false };
@@ -866,7 +878,7 @@ export function createRealtime(deps: RealtimeDeps) {
           ws.close(1011, "try again");
           return;
         } finally {
-          ws.data.pending.delete(channelId);
+          if (ws.data.pending.get(channelId) === check) ws.data.pending.delete(channelId);
         }
         // A revocation that arrived while we were checking wins over a stale "allowed".
         if (!denied && check.revoked) denied = "forbidden";

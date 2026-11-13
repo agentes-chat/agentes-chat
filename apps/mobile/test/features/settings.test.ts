@@ -8,9 +8,12 @@ import { changedByText, changesSinceLink, skillPendingViews, skillUpdateWords } 
 import { storageUsageLine } from "@agenteschat/client/lib/storage";
 import {
   agentComputerPick,
+  areaValues,
   exportFileName,
+  GROUP_LABEL,
   grantCommand,
   isGithubSkillLink,
+  MODE_LINE_ICON,
   machineFacts,
   missingIdeas,
   NO_COMPUTER,
@@ -18,9 +21,12 @@ import {
   noComputerKey,
   pauseText,
   peoplesMachines,
+  personalAiParts,
+  personalSections,
   platformText,
   reduceTexts,
   type S3Form,
+  SETTINGS_GROUPS,
   SETTINGS_SECTIONS,
   s3FormOf,
   s3Missing,
@@ -30,7 +36,6 @@ import {
   skillSourceKey,
   stepAt,
   storageKey,
-  tileStates,
   toS3Input,
   visibleSections,
   withIdea,
@@ -78,25 +83,32 @@ const preparing = (): SetupView =>
   ) as SetupView;
 
 describe("the workspace's settings on the phone: who opens what (the web's sub-nav)", () => {
-  test("in the web's order and groups", () => {
+  test("in the web's entries as groups, each thing once, and no section for the right hand", () => {
     expect(SETTINGS_SECTIONS.map((s) => `${s.group}:${s.id}`)).toEqual([
-      "you:apps",
       "org:general",
-      "org:right_hand",
-      "org:members",
-      "org:roles",
-      "org:vault",
-      "org:audit",
       "org:media",
-      "agents:access",
-      "agents:connectors",
-      "agents:skills",
-      "agents:computers",
-      "costs:usage",
-      "costs:keys",
-      "costs:storage",
-      "costs:import",
+      "people:members",
+      "people:roles",
+      "ai:usage",
+      "connectors:connectors",
+      "connectors:skills",
+      "connectors:vault",
+      "connectors:access",
+      "connectors:apps",
+      "advanced:computers",
+      "advanced:storage",
+      "advanced:import",
+      "advanced:audit",
     ]);
+    expect(SETTINGS_GROUPS).toEqual(["org", "people", "ai", "connectors", "advanced"]);
+    // A group goes by the words the web's list shows for that entry.
+    expect(GROUP_LABEL).toEqual({
+      org: "mobile.settings.group.org",
+      people: "mobile.settings.group.people",
+      ai: "settings.section.usage",
+      connectors: "access.kind.connectors",
+      advanced: "settings.advanced",
+    });
   });
 
   test("each section opens with its permission (ADR 0085); a member keeps only their own and what they use", () => {
@@ -116,23 +128,21 @@ describe("the workspace's settings on the phone: who opens what (the web's sub-n
     // No Geral (what the agents know of the workspace) or GIFs: those are the workspace's, for admins. Uso stays:
     // their own plans' meters, in percentages (ADR 0063).
     // The Vault is every member's (ADR 0144): their own items, and the team's shared with them.
-    expect(ids(["read", "post"])).toEqual(["apps", "members", "vault", "connectors", "computers", "usage", "keys"]);
+    expect(ids(["read", "post"])).toEqual(["members", "usage", "connectors", "vault", "apps", "computers"]);
     expect(ids(["read", "manage_agents"])).toEqual([
-      "apps",
-      "right_hand",
       "members",
-      "vault",
-      "access",
+      "usage",
       "connectors",
       "skills",
+      "vault",
+      "access",
+      "apps",
       "computers",
-      "usage",
-      "keys",
     ]);
     expect(ids(["read", "configure"])).toEqual(expect.arrayContaining(["general", "media", "storage"]));
     expect(ids(["read", "view_audit"])).toContain("audit");
     expect(ids(["read", "create_agents"])).toContain("import");
-    expect(visibleSections(undefined).map((s) => s.id)).toEqual(["apps", "connectors", "usage"]);
+    expect(visibleSections(undefined).map((s) => s.id)).toEqual(["usage", "connectors", "apps"]);
   });
 
   test("each section opens a screen the app has", () => {
@@ -148,66 +158,146 @@ describe("the workspace's settings on the phone: who opens what (the web's sub-n
       .filter((f) => f.endsWith(".tsx"))
       .map((f) => `settings/${f.replace(/\\/g, "/").replace(/\.tsx$/, "")}`);
     expect(routes.length).toBeGreaterThan(10);
-    // The workspace's settings page wears the cover bar, like Você's; the screens it opens scroll under the bar.
-    expect(layout).toContain(`name="settings/index" options={{ ...pushed, ...coverBarOptions }}`);
-    for (const route of routes.filter((r) => r !== "settings/index"))
-      expect(layout).toContain(`name="${route}" options={{ ...pushed, ...scrollUnder }}`);
+    // The workspace's settings page sits on the grouped gray like the screens it opens: all scroll under the bar.
+    for (const route of routes) expect(layout).toContain(`name="${route}" options={{ ...pushed, ...scrollUnder }}`);
+  });
+});
+
+describe("a personal workspace's settings on the phone (ADR 0159 §3): one short list, the rest under Advanced", () => {
+  const ALL = ["read", "invite_people", "view_audit", "view_usage", "manage_agents", "configure", "create_agents"];
+  const owner = (mode?: "personal" | "team", permissions = [...ALL, "manage_roles"]) => ({
+    id: "o",
+    name: "Pessoal",
+    role: "owner" as const,
+    permissions,
+    ...(mode ? { mode } : {}),
+  });
+  const ids = (entries: readonly { id: string }[]) => entries.map((s) => s.id);
+  const src = (file: string) => readFileSync(join(import.meta.dir, "..", "..", "src", "features", file), "utf8");
+
+  test("alone: About you, AI and usage, Connectors, Vault, Computers; every other section under Advanced", () => {
+    const { main, advanced } = personalSections(owner("personal"), 0);
+    expect(ids(main)).toEqual(["general", "usage", "connectors", "vault", "computers"]);
+    expect(ids(advanced)).toEqual([
+      "media",
+      "members",
+      "roles",
+      "skills",
+      "access",
+      "apps",
+      "storage",
+      "import",
+      "audit",
+    ]);
+    // Every section is in one list or the other: the AI accounts screen holds none.
+    expect([...main, ...advanced].length).toBe(visibleSections(owner("personal")).length);
+    expect(ids(personalAiParts(owner("personal")))).toEqual([]);
+  });
+
+  test("People joins the short list after About you once someone else is a member, never while that loads", () => {
+    expect(ids(personalSections(owner("personal"), 2).main)).toEqual([
+      "general",
+      "members",
+      "usage",
+      "connectors",
+      "vault",
+      "computers",
+    ]);
+    expect(ids(personalSections(owner("personal"), 2).advanced)).not.toContain("members");
+    expect(ids(personalSections(owner("personal"), undefined).main)).not.toContain("members");
+  });
+
+  test("only where a section is listed changes: a family member opens the same sections as in a team's", () => {
+    const member = { id: "o", name: "Pessoal", role: "member" as const, permissions: ["read", "post"] };
+    const { main, advanced } = personalSections({ ...member, mode: "personal" }, 1);
+    // No About you (the workspace's context is who configures it), and Skills isn't theirs.
+    expect(ids(main)).toEqual(["members", "usage", "connectors", "vault", "computers"]);
+    expect(ids(advanced)).toEqual(["apps"]);
+    expect(new Set([...ids(main), ...ids(advanced)])).toEqual(
+      new Set(ids(visibleSections({ ...member, mode: "personal" }))),
+    );
+  });
+
+  test("the settings screen picks the short list in a personal workspace; a team's keeps its groups", () => {
+    const screen = src("settings/WorkspaceScreen.tsx");
+    expect(screen).toContain("return personal ? <PersonalSettingsList others={others} /> : <TeamSettingsList />;");
+    // Your account first (the person's own page), then the sections in a personal workspace's names, then Advanced.
+    expect(screen).toContain('onPress={() => router.push("/me/account")}');
+    expect(screen).toContain("label={t(settingsSectionNameKey(org, s.id))}");
+    expect(screen).toContain('onPress={() => router.push("/settings/advanced")}');
+    const advanced = src("settings/AdvancedScreen.tsx");
+    expect(advanced).toContain("<SectionGroups");
+    // Its own group is the screen's title, never a header saying "Avançado" again under it.
+    expect(advanced).toContain('untitled="advanced"');
+    expect(advanced).toContain('onPress={() => router.push("/me/approvals")}');
+    expect(advanced).toContain("<DeleteWorkspaceRow />");
+    // AI and apps ends with Connectors and Skills in a personal workspace.
+    expect(src("ai/AiAccountsScreen.tsx")).toContain("<PersonalParts />");
+  });
+
+  test("About you and General have the mode row, which opens the switch for who configures the workspace", () => {
+    const general = src("settings/GeneralScreen.tsx");
+    expect(general).toContain('label={t("settings.mode.label")}');
+    expect(general).toContain('{...(editable ? { chevron: true, onPress: () => router.push("/settings/mode") } : {})}');
+    const mode = src("settings/ModeScreen.tsx");
+    expect(mode).toContain("modeSwitchLines(to, others ?? 0)");
+    // Going to a team's asks the name; only a changed one is sent with the mode.
+    expect(mode).toContain("{ mode: to, ...(named !== org?.name ? { name: named } : {}) }");
+    // Every line of the switch has an icon of the phone's set.
+    expect(Object.keys(MODE_LINE_ICON).sort()).toEqual(
+      ["channel", "members", "message", "personAdd", "settings", "shield", "sidebar"].sort(),
+    );
+  });
+
+  test("alone, what has nobody else to be for waits until someone joins, unless it was set", () => {
+    // Who approves for you: only the right hand's part while alone with no cover set.
+    expect(src("me/ApprovalsPage.tsx")).toContain("{solo && !cover ? null : (");
+    // Answers other people on a plan: hidden while off, but on the agent's Advanced, where the switch always is.
+    expect(src("ai/parts.tsx")).toContain("if (solo && !on && !keep) return null;");
+    expect(src("ai/AgentAdvancedScreen.tsx")).toMatch(/disabled=\{busy\}\s+keep\s+\/>/);
+    // Delegated approvals move from You to Advanced in a personal workspace.
+    expect(src("me/MeScreen.tsx")).toMatch(/\{personal \? null : \(\s+<GroupedRow\s+key="approvals"/);
+  });
+
+  test("with family, an agent's Edit opens who talks to it, for whoever may change it", () => {
+    const edit = src("agents/AgentEditScreen.tsx");
+    expect(edit).toContain("personal && (others ?? 0) > 0 && !rightHand && agent.setup && (admin || owner)");
+    expect(edit).toContain('onPress={() => openSetupStep(id, "who")}');
+  });
+
+  test("the switch says what changes in the person's language", async () => {
+    const t = await translator("pt-BR");
+    expect(t("settings.section.generalPersonal")).toBe("Sobre você");
+    expect(t("personalMode.toPersonal.others", { count: 2 })).toBe("As outras 2 pessoas daqui também veem assim");
+    expect(t("personalMode.toTeam.name")).toBe("Nome do workspace");
+  });
+});
+
+describe("the workspace's page: one short value per row", () => {
+  test("a count or a state, never a sentence; nothing while an area loads or has nothing to count", async () => {
+    const t = await translator("pt-BR");
+    expect(
+      areaValues(t, "pt-BR", {
+        overview: { people: 5, agents: 4, budgetUsedPercent: 40 },
+        usesApi: true,
+        connectors: ["Planilhas", "E-mail"],
+        skills: 0,
+        computers: { count: 2, online: 1 },
+      }),
+    ).toEqual({ members: "5", access: "4", usage: "40%", connectors: "2", computers: "1 de 2" });
+    // On plans alone the budget says nothing; nothing connected, no computer: no value at all.
+    expect(
+      areaValues(t, "pt-BR", {
+        overview: { people: 1, agents: 0, budgetUsedPercent: 0 },
+        usesApi: false,
+        connectors: [],
+        computers: { count: 0, online: 0 },
+      }),
+    ).toEqual({ members: "1", access: "0" });
   });
 });
 
 describe("Geral", () => {
-  test("each area's line, as the web's tiles", async () => {
-    const t = await translator("pt-BR");
-    expect(
-      tileStates(t, "pt-BR", {
-        overview: { people: 3, agents: 2, budgetUsedPercent: 42 },
-        usesApi: true,
-        invitations: 1,
-        connectors: ["GitHub", "Slack", "Linear", "Sentry"],
-        skills: 5,
-        computers: { count: 2, online: 1 },
-        keys: { manages: true, live: 2, platform: false },
-        storage: { kind: "agentes", edition: "selfhost" },
-      }),
-    ).toEqual({
-      members: "3 membros · 1 convite esperando",
-      access: "2 agentes",
-      usage: "42% do orçamento usado este mês",
-      connectors: "4 conectados · GitHub, Slack, Linear",
-      skills: "5 skills",
-      computers: "1 de 2 ligados",
-      keys: "2 chaves",
-      storage: "Este servidor",
-    });
-  });
-
-  test("the empty states, a member's plans, and nothing while an area loads", async () => {
-    const t = await translator("pt-BR");
-    expect(
-      tileStates(t, "pt-BR", {
-        connectors: [],
-        computers: { count: 0, online: 0 },
-        keys: { manages: false, plans: 0 },
-        storage: { kind: "s3", edition: "cloud" },
-      }),
-    ).toEqual({
-      connectors: "Nenhum app conectado ainda",
-      computers: "Nenhum computador ainda",
-      keys: "Nenhum plano ainda",
-      storage: "Seu próprio bucket",
-    });
-    expect(tileStates(t, "pt-BR", { keys: { manages: true, live: 0, platform: true } })).toEqual({
-      keys: "Usando a chave deste servidor",
-    });
-    expect(tileStates(t, "pt-BR", {})).toEqual({});
-    // A workspace on plans alone (ADR 0063 §5): Uso says no 0% budget.
-    expect(
-      tileStates(t, "pt-BR", { overview: { people: 3, agents: 2, budgetUsedPercent: 0 }, usesApi: false }),
-    ).toEqual({ members: "3 membros", access: "2 agentes" });
-    const en = await translator("en");
-    expect(tileStates(en, "en", { computers: { count: 3, online: 2 } }).computers).toBe("2 of 3 on");
-  });
-
   test("the context's ideas: the ones still missing, and one started on a paragraph of its own", () => {
     const ideas = ["Para quem", "O que importa agora", "O que nunca fazer"];
     expect(missingIdeas("", ideas)).toEqual(ideas);
@@ -511,7 +601,7 @@ describe("Armazenamento", () => {
   test("VoiceOver reads the line with its option: it is part of the row's label", () => {
     const src = (path: string) => readFileSync(join(import.meta.dir, "..", "..", "src", path), "utf8");
     expect(src("ui/Grouped.tsx")).toContain(
-      'accessibilityLabel={[label, belowText, said, value].filter(Boolean).join(", ")}',
+      'accessibilityLabel={[label, belowText, said, value, valueNote].filter(Boolean).join(", ")}',
     );
     expect(src("features/settings/StorageScreen.tsx")).toContain("belowText: usage ?? undefined");
   });
@@ -563,9 +653,8 @@ test("Sobre o agentes.chat in Você: on every self-hosted server, old ones too; 
   expect(showsAbout(undefined)).toBe(false);
   const me = readFileSync(join(import.meta.dir, "..", "..", "src", "features", "me", "MeScreen.tsx"), "utf8");
   expect(me).toContain("const about = showsAbout(useAuthConfig().data);");
-  expect(me).toContain(
-    '...(about ? [{ icon: "info" as const, label: t("settings.section.about"), href: "/me/about" }] : [])',
-  );
+  expect(me).toContain("{about ? (");
+  expect(me).toContain('onPress={() => open("/me/about")}');
 });
 
 test("Auditoria's row screen: the call's title in words, and what the tool said only in the technical group", () => {
@@ -573,4 +662,33 @@ test("Auditoria's row screen: the call's title in words, and what the tool said 
   expect(src).toContain("title={auditHint(t, row) ?? auditPhrase(t, row)}");
   const tech = src.slice(src.indexOf('t("audit.panel.tech")'));
   expect(tech).toContain('label={t("audit.panel.techSaid")} sub={said}');
+});
+
+test("my photo on Você changes it with a tap, through Conta's own Alterar foto", () => {
+  const read = (file: string) => readFileSync(join(import.meta.dir, "..", "..", "src", "features", "me", file), "utf8");
+  const me = read("MeScreen.tsx");
+  // One button around the photo and its presence badge, named as Conta's link, off while a photo uploads.
+  const button = me.slice(me.indexOf("onPress={changePhoto}"), me.indexOf("</Pressable>"));
+  expect(button).toContain("disabled={uploading}");
+  expect(button).toContain('accessibilityRole="button"');
+  expect(button).toContain('accessibilityLabel={t("mobile.me.account.changePhoto")}');
+  expect(button).toContain('<PersonAvatar name={name || "?"} size={PHOTO} photo={photo} />');
+  // A touch screen has no hover: the photo badge always says the face changes it, on the top corner, ringed in the
+  // page as the photo is, and for the eyes only (the button already says what it does).
+  expect(button).toContain("styles.photoBadge, { backgroundColor: c.action, borderColor: c.grouped }");
+  expect(button).toContain('pointerEvents="none"');
+  expect(button).toContain('<Icon name="image" size={PHOTO_BADGE_ICON} color={c.onAction} />');
+  expect(me).toContain("const PHOTO_BADGE_AT = ((PHOTO + 6) / 2) * (1 - Math.SQRT1_2) - PHOTO_BADGE / 2;");
+  // My name and the @ under it wrap whole, never cut to a line or two.
+  const cover = me.slice(me.indexOf("</Pressable>"), me.indexOf("<View style={styles.groups}>"));
+  expect(cover).toContain('<Text variant="display2" style={styles.center}>');
+  expect(cover).not.toContain("numberOfLines");
+  // One flow: the sheet, the upload and the refresh live in `useChangePhoto`, which Conta's link opens too.
+  expect(me).toContain("const { changePhoto, uploading } = useChangePhoto();");
+  const account = read("AccountPage.tsx");
+  expect(account).toContain("const { changePhoto, uploading } = useChangePhoto();");
+  expect(account).not.toContain("ImagePicker");
+  const parts = read("parts.tsx");
+  expect(parts).toContain("export function useChangePhoto()");
+  expect(parts).toContain('...(hasPhoto ? [t("mobile.me.account.removePhoto")] : [])');
 });

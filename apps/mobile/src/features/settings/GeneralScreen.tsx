@@ -1,13 +1,18 @@
 import type { OrgSettings } from "@agenteschat/client";
 import {
   keys,
+  type Memory,
   useApi,
   useServerTelemetry,
   useSetServerTelemetry,
   useSettings,
+  useTeamMemories,
   useUpdateSettings,
 } from "@agenteschat/client";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { can } from "@agenteschat/client/lib/permissions";
+import { memoryLine } from "@agenteschat/client/lib/proposals";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -35,13 +40,15 @@ import {
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { MemoryFix } from "../agents/AgentProfileScreen";
+import { useMemoryOriginText } from "../agents/useMemoryOriginText";
 import { Note } from "../ai/parts";
-import { openWebPath } from "../links/open-web";
 import { ZoneList } from "../me/AccountPage";
 import { PHOTO_MAX_BASE64, photoContentType } from "../me/logic";
 import { useColors } from "../shared/hooks";
 import { OrgAvatar } from "../shared/OrgAvatar";
 import { errorHaptic, goBack, MONO, successHaptic } from "../shared/parts";
+import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { TextArea } from "../shared/TextArea";
 import { missingIdeas, nameOnLeave, withIdea, zoneLabel } from "./logic";
 import { chooseAction, Gap, SettingsPage } from "./parts";
@@ -74,10 +81,13 @@ function useZonePick(): string | null {
 
 /**
  * "Editar workspace" (the web's Geral), from the workspace's settings: its logo, name and time zone, whether agents
- * check what the team already did, the context every agent reads, and the usage report's switch for the
- * installation's owner. Every change saves by itself (the name when its field is left, the zone when picked,
- * the context while typing), and "Salvo" shows under the title; who can't change them reads them. Its owners
- * delete it on the website, in Geral's dialog.
+ * check what the team already did, the context every agent reads, the workspace's mode (ADR 0159 §4: who configures
+ * it switches it on a screen of its own), and the usage report's switch for the installation's owner. Every change
+ * saves by itself (the name when its field is left, the zone when picked, the context while typing), and "Salvo"
+ * shows under the title; who can't change them reads them. Its owners delete it from the workspace's page
+ * (`WorkspaceScreen`), the last row there. In a personal workspace it is About you (ADR 0159 §3): what the agents know
+ * about the person first, in its own words, then the workspace's zone, name, check and mode, and no logo (switching
+ * to team brings it back).
  */
 export function GeneralScreen() {
   const { t, i18n } = useTranslation();
@@ -89,6 +99,7 @@ export function GeneralScreen() {
   const settings = useSettings(orgId);
   const update = useUpdateSettings(orgId);
   const editable = can(org, "configure");
+  const personal = isPersonal(org);
   const [name, setName] = useState("");
   const [context, setContext] = useState("");
   const [timezone, setTimezone] = useState("");
@@ -221,7 +232,10 @@ export function GeneralScreen() {
     }
     setUploading(true);
     try {
-      await api.orgs.setLogo(orgId, { imageBase64: a.base64, contentType: photoContentType(a.mimeType, a.fileName) });
+      await api.orgs.setLogo(orgId, {
+        imageBase64: a.base64,
+        contentType: photoContentType(a.mimeType, a.fileName, a.base64),
+      });
       refreshOrg();
       successHaptic();
       toast({ title: t("orgLogo.saved") });
@@ -254,81 +268,93 @@ export function GeneralScreen() {
       t("mobile.common.cancel"),
     );
 
-  const ideas = (["who", "now", "never"] as const).map((k) => t(`settings.contextIdeas.${k}`));
+  const ideas = (["who", "now", "never"] as const).map((k) => t(modeKey(org, `settings.contextIdeas.${k}` as const)));
   const orgName = name.trim() || org?.name || "";
-  const contextTitle = t("settings.contextTitle", { name: orgName });
+  const contextTitle = t(modeKey(org, "settings.contextTitle"), { name: orgName });
   const missing = missingIdeas(context, ideas);
   const input = [fieldText("callout"), styles.input, { color: c.ink }];
 
-  return (
-    <SettingsPage
-      title={editable ? t("mobile.settings.edit") : t("settings.section.general")}
-      subtitle={saved ? t("settings.savedShort") : undefined}
-    >
-      {!editable ? (
-        <View style={styles.note}>
-          <Note icon="lock">{t("settings.readOnly")}</Note>
-        </View>
-      ) : null}
-      <View style={styles.logo}>
-        <OrgAvatar logo={org?.logo} size={84} />
-        {editable ? (
-          <Pressable
-            onPress={changeLogo}
-            disabled={uploading}
-            accessibilityRole="button"
-            hitSlop={12}
-            style={({ pressed }) => (pressed ? styles.pressed : null)}
-          >
-            <Text variant="subhead" tone={uploading ? "faint" : "ink2"} style={styles.semibold}>
-              {org?.logo ? t("orgLogo.change") : t("orgLogo.add")}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-      <GroupedList>
-        <GroupedField label={t("settings.name")}>
-          <TextInput
-            value={name}
-            onChangeText={changeName}
-            onBlur={leaveName}
-            editable={editable}
-            autoCapitalize="words"
-            autoCorrect={false}
-            spellCheck={false}
-            returnKeyType="done"
-            accessibilityLabel={t("settings.name")}
-            style={input}
-          />
-        </GroupedField>
-        <GroupedField
-          label={t("settings.timezone")}
-          {...(editable ? { onPress: () => router.push("/settings/zone") } : {})}
+  const logo = (
+    <View style={styles.logo}>
+      <OrgAvatar logo={org?.logo} size={84} />
+      {editable ? (
+        <Pressable
+          onPress={changeLogo}
+          disabled={uploading}
+          accessibilityRole="button"
+          hitSlop={12}
+          style={({ pressed }) => (pressed ? styles.pressed : null)}
         >
-          <Text variant="callout" numberOfLines={1}>
-            {zoneLabel(timezone || "UTC", i18n.language)}
+          <Text variant="subhead" tone={uploading ? "faint" : "ink2"} style={styles.semibold}>
+            {org?.logo ? t("orgLogo.change") : t("orgLogo.add")}
           </Text>
-        </GroupedField>
-      </GroupedList>
-      <GroupedFooter>{t("settings.timezoneHelp")}</GroupedFooter>
-      <Gap />
-      <GroupedList>
-        <GroupedRow
-          label={t("settings.actionCheck")}
-          labelLines={2}
-          toggle={settings.data?.actionCheck ?? true}
-          disabled={!editable || !settings.data}
-          onPress={() => save({ actionCheck: !(settings.data?.actionCheck ?? true) })}
-        />
-      </GroupedList>
-      <GroupedFooter>{t("settings.actionCheckHelp")}</GroupedFooter>
-
+        </Pressable>
+      ) : null}
+    </View>
+  );
+  const nameField = (
+    <GroupedField key="name" label={t(modeKey(org, "settings.name"))}>
+      <TextInput
+        value={name}
+        onChangeText={changeName}
+        onBlur={leaveName}
+        editable={editable}
+        autoCapitalize="words"
+        autoCorrect={false}
+        spellCheck={false}
+        returnKeyType="done"
+        accessibilityLabel={t(modeKey(org, "settings.name"))}
+        style={input}
+      />
+    </GroupedField>
+  );
+  const zoneField = (
+    <GroupedField
+      key="zone"
+      label={t("settings.timezone")}
+      hint={{ name: t("common.about", { label: t("settings.timezone") }), text: t("settings.timezoneHelp") }}
+      {...(editable ? { onPress: () => router.push("/settings/zone") } : {})}
+    >
+      <Text variant="callout" numberOfLines={1}>
+        {zoneLabel(timezone || "UTC", i18n.language)}
+      </Text>
+    </GroupedField>
+  );
+  const actionCheck = t(modeKey(org, "settings.actionCheck"));
+  const checks = (
+    <GroupedList>
+      <GroupedRow
+        label={actionCheck}
+        labelLines={2}
+        hint={{ name: t("common.about", { label: actionCheck }), text: t(modeKey(org, "settings.actionCheckHelp")) }}
+        toggle={settings.data?.actionCheck ?? true}
+        disabled={!editable || !settings.data}
+        onPress={() => save({ actionCheck: !(settings.data?.actionCheck ?? true) })}
+      />
+    </GroupedList>
+  );
+  // Who the workspace is for (ADR 0159 §4): the mode it is in, and for who configures it the screen that switches it.
+  const mode = (
+    <GroupedList>
+      <GroupedRow
+        label={t("settings.mode.label")}
+        hint={{
+          name: t("common.about", { label: t("settings.mode.label") }),
+          text: t(personal ? "settings.mode.personalHelp" : "settings.mode.teamHelp"),
+        }}
+        value={t(personal ? "settings.mode.personal" : "settings.mode.team")}
+        {...(editable ? { chevron: true, onPress: () => router.push("/settings/mode") } : {})}
+      />
+    </GroupedList>
+  );
+  const contextPart = (
+    <>
       <View style={styles.contextHead}>
         <InfoHint
           name={t("common.about", { label: contextTitle })}
           text={t("common.joinSentences", {
             a: t("settings.contextSubtitle"),
-            b: t("settings.contextHelp", { name: orgName }),
+            b: t(modeKey(org, "settings.contextHelp"), { name: orgName }),
           })}
           variant="title"
         >
@@ -344,8 +370,8 @@ export function GeneralScreen() {
         onChangeText={changeContext}
         onBlur={flushContext}
         editable={editable}
-        placeholder={t("settings.contextPlaceholder")}
-        accessibilityLabel={t("settings.context")}
+        placeholder={t(modeKey(org, "settings.contextPlaceholder"))}
+        accessibilityLabel={t(modeKey(org, "settings.context"))}
         minHeight={168}
       />
       {editable && missing.length > 0 ? (
@@ -367,23 +393,116 @@ export function GeneralScreen() {
           </View>
         </View>
       ) : null}
+    </>
+  );
 
-      <UsageStatistics />
-      {org?.role === "owner" ? (
-        <>
-          <Gap />
-          <GroupedList>
-            <GroupedRow
-              label={t("deleteOrg.card.title")}
-              danger
-              chevron
-              onPress={() => openWebPath(`/org/${orgId}/settings/general?delete=1`)}
-            />
-          </GroupedList>
-          <GroupedFooter>{t("deleteOrg.card.text", { name: org.name })}</GroupedFooter>
-        </>
+  return (
+    <SettingsPage
+      title={
+        personal
+          ? t("settings.section.generalPersonal")
+          : editable
+            ? t("mobile.settings.edit")
+            : t("settings.section.general")
+      }
+      subtitle={saved ? t("settings.savedShort") : undefined}
+      frozen={settingsFrozen(org, "general")}
+    >
+      {!editable ? (
+        <View style={styles.note}>
+          <Note icon="lock">{t("settings.readOnly")}</Note>
+        </View>
       ) : null}
+      {personal ? (
+        // About you: what the agents know about the person first; the workspace's own rows under "This workspace".
+        <>
+          {contextPart}
+          <GroupedHeader>{t("settings.orgTitlePersonal")}</GroupedHeader>
+          <GroupedList>
+            {zoneField}
+            {nameField}
+          </GroupedList>
+          <Gap />
+          {checks}
+          <Gap />
+          {mode}
+        </>
+      ) : (
+        <>
+          {logo}
+          <GroupedList>
+            {nameField}
+            {zoneField}
+          </GroupedList>
+          <Gap />
+          {checks}
+          <Gap />
+          {mode}
+          {contextPart}
+        </>
+      )}
+
+      <TeamMemory />
+      <UsageStatistics />
     </SettingsPage>
+  );
+}
+
+/**
+ * Memória do time (ADR 0167): what people asked every agent to keep, with who and when, under the context every agent
+ * reads. Who reviews memory taps one to change or forget it.
+ */
+function TeamMemory() {
+  return (
+    <SheetHostProvider>
+      <TeamMemoryList />
+    </SheetHostProvider>
+  );
+}
+
+function TeamMemoryList() {
+  const { t } = useTranslation();
+  const { orgId, org } = useOrg();
+  const sheet = useSheet();
+  const list = useTeamMemories(orgId);
+  const originText = useMemoryOriginText();
+  const reviews = can(org, "review_memory");
+  if (!list.data) return null;
+  const fix = (m: Memory) =>
+    sheet.open(
+      <MemoryFix
+        memory={m}
+        agentId=""
+        agentName=""
+        g=""
+        source={originText(m)}
+        title={t("teamMemory.title")}
+        onSee={undefined}
+        onDone={sheet.close}
+      />,
+    );
+  return (
+    <>
+      <Gap />
+      <GroupedHeader>{t("teamMemory.title")}</GroupedHeader>
+      <GroupedList>
+        {list.data.length === 0 ? (
+          <GroupedRow label={t("teamMemory.empty")} labelLines={4} faint />
+        ) : (
+          list.data.map((m) => (
+            <GroupedRow
+              key={m.id}
+              label={m.summary ?? memoryLine(t, m)}
+              labelLines={6}
+              sub={originText(m)}
+              subLines={2}
+              {...(reviews ? { chevron: true, onPress: () => fix(m) } : {})}
+            />
+          ))
+        )}
+      </GroupedList>
+      <GroupedFooter>{t("teamMemory.help")}</GroupedFooter>
+    </>
   );
 }
 
@@ -409,13 +528,17 @@ function UsageStatistics() {
         <GroupedRow
           label={t("settings.telemetry.label")}
           labelLines={3}
+          hint={{
+            name: t("common.about", { label: t("settings.telemetry.label") }),
+            text: t("settings.telemetry.help"),
+          }}
           toggle={on}
           disabled={data.envOff || set.isPending}
           onPress={() => set.mutate(!on, { onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }) })}
         />
         <GroupedRow label={t("settings.telemetry.see")} chevron onPress={() => router.push("/settings/telemetry")} />
       </GroupedList>
-      <GroupedFooter>{[t("settings.telemetry.help"), envOff].filter(Boolean).join(" ")}</GroupedFooter>
+      {envOff ? <GroupedFooter>{envOff}</GroupedFooter> : null}
     </>
   );
 }

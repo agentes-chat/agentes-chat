@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CenteredLayout } from "@/components/AuthLayout";
 import { LoadingLine } from "@/components/Loading";
-import { osOf } from "@/components/Machines";
+import { osOf } from "@/components/machine-bits";
 
 /** A code the server no longer knows: expired, used, denied or never made. */
 export const isGoneCode = (error: unknown) =>
@@ -97,8 +97,8 @@ export function ConnectPage({ code }: { code: string }) {
             actions={
               <Button asChild variant="primary">
                 <Link
-                  to="/org/$orgId/settings/computers/$machineId"
-                  params={{ orgId: outcome.orgId, machineId: outcome.machine.id }}
+                  to="/org/$orgId/settings/devices/$deviceId"
+                  params={{ orgId: outcome.orgId, deviceId: outcome.machine.id }}
                 >
                   {t("connect.openComputer")}
                 </Link>
@@ -235,14 +235,22 @@ export function ConnectPage({ code }: { code: string }) {
             </p>
           ) : (
             <Locked when={busy}>
-              <Field label={t("connect.org")} id="connect-org" help={t("connect.orgHelp")}>
+              <Field
+                label={t("connect.org")}
+                id="connect-org"
+                hint={{ name: t("common.about", { label: t("connect.org") }), text: t("connect.orgHelp") }}
+              >
                 <Select
                   value={orgId}
                   onValueChange={setOrgId}
                   options={orgs.map((o) => ({ value: o.id, label: workspaceLabel(o.name, notes.get(o.id)) }))}
                 />
               </Field>
-              <Field label={t("machines.name")} id="connect-name" help={t("machines.nameHelp")}>
+              <Field
+                label={t("machines.name")}
+                id="connect-name"
+                hint={{ name: t("common.about", { label: t("machines.name") }), text: t("machines.nameHelp") }}
+              >
                 <Input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
               </Field>
             </Locked>

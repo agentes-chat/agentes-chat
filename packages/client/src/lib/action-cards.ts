@@ -22,7 +22,7 @@ import type { Level } from "./access-levels";
 import { workspaceActionContext, workspaceActionWords } from "./actions";
 import { type AppPage, isAppPage } from "./app-pages";
 import type { ConnectedItem } from "./connected";
-import { isHttpsUrl, sameServer } from "./custom-tools";
+import { isHttpsUrl, serverCovers } from "./custom-tools";
 import { formatUsd, joinNames } from "./format";
 import { aiStateOf, PLAN_BRAIN } from "./no-ai";
 import type { Permission } from "./permissions";
@@ -325,6 +325,34 @@ export function proposalStatus(
   return Date.parse(card.expiresAt) <= now ? "expired" : "open";
 }
 
+/**
+ * How a proposal of a new agent ended and who did it, for its card: "Criado por você", "Recusado por Ana", "Expirou"
+ * (nobody decided one that ran out), or that a newer card took its place. `decider`: the name of who decided, when
+ * the viewer can read it; without one it says only how it ended.
+ */
+export function agentProposalEnd(
+  t: TFunction,
+  card: AgentProposalCard,
+  status: Exclude<ReturnType<typeof proposalStatus>, "open">,
+  meId: string | null,
+  decider: string | undefined,
+): string {
+  if (status === "expired") return t("approval.expired");
+  if (status === "superseded") return t("rightHand.card.superseded");
+  const mine = card.decidedByUserId !== null && card.decidedByUserId === meId;
+  if (status === "created")
+    return mine
+      ? t("actionCard.agentProposal.createdByYou")
+      : decider
+        ? t("actionCard.agentProposal.createdBy", { name: decider })
+        : t("actionCard.agentProposal.created");
+  return mine
+    ? t("rightHand.card.declinedByYou")
+    : decider
+      ? t("rightHand.card.declinedBy", { name: decider })
+      : t("proposals.refused");
+}
+
 /** "Pensa com Claude Max", "Pensa pela API", "Sem IA ainda…": the AI a proposal suggests. */
 export const suggestedAiText = (t: TFunction, ai: SuggestedAi) =>
   ai.kind === "account"
@@ -537,7 +565,7 @@ export const connectAppDone = (
   const working = items.filter((i) => !i.needsReconnect);
   return card.connector
     ? working.some((i) => i.def?.id === card.connector)
-    : Boolean(card.url) && working.some((i) => sameServer(i.server?.serverUrl, card.url));
+    : Boolean(card.url) && working.some((i) => serverCovers(i.server?.serverUrl, card.url));
 };
 
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
@@ -569,6 +597,30 @@ export const inviteDone = (card: InviteCard, invited: readonly string[]) => {
 /** Done once the library has a skill installed from the card's link. */
 export const installSkillDone = (card: InstallSkillCard, skills: readonly Pick<Skill, "sourceUrl">[]) =>
   skills.some((s) => s.sourceUrl === card.url);
+
+/** The install an agent's card opened: its own link and the agent that posted it (kept by the app that opened it). */
+export interface CardInstall {
+  url: string;
+  agentId: string;
+}
+
+/** A kept `CardInstall` read back (JSON), or null when it isn't one. */
+export function cardInstallOf(raw: string | null | undefined): CardInstall | null {
+  try {
+    const v = JSON.parse(raw ?? "null") as Partial<CardInstall> | null;
+    return typeof v?.url === "string" && typeof v.agentId === "string" ? { url: v.url, agentId: v.agentId } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The agent that what installs may go on for: only the one whose card opened the install, named by the screen it
+ * opened (`agent`), and only for that card's own link. A link typed over it or a repository picked instead goes on for
+ * nobody, and so does a link to the screen that merely names an agent.
+ */
+export const cardInstallAgent = (from: CardInstall | null | undefined, url?: string, agent?: string) =>
+  from && agent && from.agentId === agent && from.url === url?.trim() ? agent : undefined;
 
 /**
  * Where a skill of an update card stands: `waiting` (its update changes files that run), `done` (its link was read

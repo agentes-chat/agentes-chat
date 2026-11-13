@@ -9,12 +9,13 @@ import { ConflictError, isUniqueViolation, NotFoundError, ValidationError } from
 import type { Judge } from "../judge";
 import { oneLine } from "../mail/text";
 import { assertPublicHttpsUrl } from "../net-guard";
-import { requirePermission } from "../organizations";
+import { can, requirePermission } from "../organizations";
 import { isAgentesCloud } from "../telemetry";
 import {
   classifyByRules,
   classifyTools,
   describeToolName,
+  POSTING_ACTIONS,
   type ReasonCode,
   type SuggestionSource,
   sharedPrefix,
@@ -52,7 +53,7 @@ import {
 } from "./oauth-mcp";
 import { oauthReturnTo } from "./oauth-return";
 import { seedToolPins } from "./pins";
-import { composioToolkitOf, type McpPreset, presetForServer } from "./presets";
+import { composioToolkitOf, composioToolName, type McpPreset, presetForServer, serverUrlShown } from "./presets";
 import { type McpServerInfo, refreshServerIcon } from "./server-icon";
 
 const { connectorConnections, customTools, oauthStates, agentScopes, agents } = schema;
@@ -95,6 +96,8 @@ export const COMPOSIO_ANY_ACTION: ReadonlySet<string> = new Set([
   "COMPOSIO_REMOTE_BASH_TOOL",
   "COMPOSIO_PROXY_EXECUTE",
 ]);
+
+const COMPOSIO_META: ReadonlySet<string> = new Set([COMPOSIO_EXECUTOR, ...COMPOSIO_ANY_ACTION]);
 
 const COMPOSIO_SLUG = /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/;
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -246,12 +249,13 @@ function toolView(t: ToolRow, prefix: string | null): CustomToolView {
   };
 }
 
-function view(c: ConnectorConnection, tools: ToolRow[]): CustomServerView {
+/** `whole`: the reader manages connectors, so sees the address as it was typed. */
+function view(c: ConnectorConnection, tools: ToolRow[], whole = true): CustomServerView {
   const mine = tools.filter((t) => t.connectionId === c.id);
   const prefix = sharedPrefix(mine.map((t) => t.name));
   return {
     id: c.id,
-    serverUrl: c.serverUrl,
+    serverUrl: whole ? c.serverUrl : serverUrlShown(c.serverUrl),
     label: c.label,
     accountLabel: c.accountLabel,
     authType: c.authType === "oauth" ? "oauth" : "api_key",
@@ -283,7 +287,7 @@ async function loadCustom(db: Database, orgId: string, id: string) {
 }
 
 export async function listCustomServers(db: Database, actorId: string, orgId: string): Promise<CustomServerView[]> {
-  await requirePermission(db, actorId, orgId, "read");
+  const whole = can(await requirePermission(db, actorId, orgId, "read"), "manage_connectors");
   const rows = await db
     .select()
     .from(connectorConnections)
@@ -299,7 +303,7 @@ export async function listCustomServers(db: Database, actorId: string, orgId: st
     db,
     rows.map((r) => r.id),
   );
-  return rows.map((r) => view(r, tools));
+  return rows.map((r) => view(r, tools, whole));
 }
 
 type AccountSpec = NonNullable<McpPreset["account"]>;
@@ -387,8 +391,8 @@ export async function reconnectTarget(db: Database, orgId: string, connectionId:
  * ("Reconectar") gives that account a new sign-in in place, so its name, tools and grants stay; signing in to
  * another account there is refused (`connector.other_account`), the grants were given for that one. Without it a
  * new account comes in, except when the provider says it is one already connected (its sign-in is refreshed,
- * `same_account`) or the server has no sign-in at all (the one connection it has). Only a server's first account
- * is every agent's (`grantToEveryAgent`); the others start with no agent. Addresses match as the apps match them
+ * `same_account`) or the server has no sign-in at all (the one connection it has). Every new account
+ * is every agent's (`grantToEveryAgent`). Addresses match as the apps match them
  * (`serverKey`). A service through Composio (ADR 0107) keeps Composio's account and no secret; the account it
  * replaces goes away at Composio.
  */
@@ -478,7 +482,7 @@ export async function storeCustomConnection(
       action: "connector.custom_reconnected",
       target: { type: "connector_connection", id: row.id },
       details: {
-        serverUrl: input.serverUrl,
+        serverUrl: serverUrlShown(input.serverUrl),
         authType: input.authType,
         label: row.label,
         account: row.accountLabel,
@@ -501,7 +505,6 @@ export async function storeCustomConnection(
             ? live[0]
             : null;
         if (twin) return { twin, row: null };
-        const first = live.length === 0;
         // The service's name, not the account's: `stripe`, then `stripe_2`; a later account goes by the server's
         // oldest one, whatever it is called now.
         const base = live[0] ? prefixService(toolPrefixOfConnection(live[0])) : toolPrefixOf(service);
@@ -527,14 +530,14 @@ export async function storeCustomConnection(
           action: "connector.custom_connected",
           target: { type: "connector_connection", id: row.id },
           details: {
-            serverUrl: input.serverUrl,
+            serverUrl: serverUrlShown(input.serverUrl),
             authType: input.authType,
             label,
             account: named,
-            everyAgent: first,
+            everyAgent: true,
           },
         });
-        if (first) await grantToEveryAgent(tx, input.orgId, input.actorId, row);
+        await grantToEveryAgent(tx, input.orgId, input.actorId, row);
         return { twin: null, row };
       });
       if (!done.row) {
@@ -607,8 +610,10 @@ export class ToolsUnreadable extends Error {}
  * Lists the server's tools again: new ones come in unclassified (hidden from
  * agents until an admin classifies them), gone ones are marked removed. Each
  * gets a suggestion (annotations, the verb, else the judge: its answers are
- * kept per tool name and not asked again). A tool that turns out sensitive
- * can't stay free: its read/write decision becomes approval.
+ * kept per tool name and asked again only when its description changed). A tool
+ * that turns out sensitive can't stay free: its read/write decision becomes
+ * approval. A level nobody set by hand follows a stricter suggestion (a read
+ * that became a write); no level ever gets looser here.
  */
 export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) {
   const preset = presetForServer(c.serverUrl);
@@ -639,11 +644,18 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
     throw new ToolsUnreadable(reason, { cause: error });
   }
   if (account) await keepAccount(deps.db, c, account);
-  if (!composioServiceOf(c.serverUrl)) await seedToolPins(deps.db, c, listed);
+  const composio = composioServiceOf(c.serverUrl);
+  if (!composio) await seedToolPins(deps.db, c, listed);
+  const writeTools = composio
+    ? composio.way.actions.filter((a) => POSTING_ACTIONS.has(a)).map((a) => composioToolName(composio.way, a))
+    : [];
   const existing = await deps.db.select().from(customTools).where(eq(customTools.connectionId, c.id));
   const byName = new Map(existing.map((t) => [t.name, t]));
   const cached = new Map<string, ToolClass>();
+  const said = new Map(listed.map((t) => [t.name, (t.description ?? "").slice(0, 2000)]));
   for (const t of existing) {
+    // The judge read the description: its answer holds only for that text.
+    if (said.get(t.name) !== t.description) continue;
     if (t.suggestionSource === "judge" && ACCESS.includes(t.suggestedAccess as ToolAccess)) {
       cached.set(t.name, {
         level: t.suggestedAccess as ToolAccess,
@@ -658,6 +670,7 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
     server: c.label,
     judge: deps.judge,
     readTools: preset?.readTools,
+    writeTools,
     cached,
   });
   const seen = new Set<string>();
@@ -665,15 +678,21 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
     seen.add(tool.name);
     const old = byName.get(tool.name);
     const description = (tool.description ?? "").slice(0, 2000);
-    const cls = classes.get(tool.name) ?? classifyByRules(tool, preset?.readTools) ?? UNKNOWN_CLASS;
+    const cls = classes.get(tool.name) ?? classifyByRules(tool, preset?.readTools, writeTools) ?? UNKNOWN_CLASS;
     const suggestion = {
       suggestedAccess: cls.level,
       suggestionSource: cls.source,
       suggestionReason: cls.reason,
-      sensitive: cls.sensitive,
+      // A Composio action's hint is our own rule for it (its words, its entry's `ask`), which the tool source
+      // enforces on every call, and Composio's meta tools run any action their input names: both stay locked.
+      sensitive:
+        cls.sensitive || (tool.destructiveHint === true && (composio !== null || COMPOSIO_META.has(tool.name))),
     };
     if (old) {
-      const unsafe = cls.sensitive && (old.access === "read" || old.access === "write");
+      const free = old.access === "read" || old.access === "write" ? old.access : null;
+      const stricter = free && old.confirmedAt === null && ACCESS.indexOf(cls.level) > ACCESS.indexOf(free);
+      // A warning the server did not send when the level was chosen asks again, unlocked: the admin may set it back.
+      const warnedNow = tool.destructiveHint === true && old.destructiveHint !== true;
       await deps.db
         .update(customTools)
         .set({
@@ -681,7 +700,11 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
           readOnlyHint: tool.readOnlyHint ?? null,
           destructiveHint: tool.destructiveHint ?? null,
           ...suggestion,
-          ...(unsafe ? { access: "approval" } : {}),
+          ...(free && (suggestion.sensitive || warnedNow)
+            ? { access: "approval" }
+            : stricter
+              ? { access: cls.level }
+              : {}),
           removedAt: null,
         })
         .where(eq(customTools.id, old.id));

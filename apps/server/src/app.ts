@@ -11,6 +11,7 @@ import composeFile from "../../../docker-compose.yml" with { type: "text" };
 import installScript from "../../../install.sh" with { type: "text" };
 import { registerAppLinks } from "./app-links";
 import { authHandler, signInPageUrl } from "./auth";
+import { apiBodyLimit } from "./http/body-limit";
 import { errorPages } from "./http/error-page";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "./http/errors";
 import { createLogger, type Logger, loggedPath } from "./logger";
@@ -31,11 +32,13 @@ import { channelRoutes } from "./routes/app/channels";
 import { chatRoutes } from "./routes/app/chat";
 import { connectorRoutes } from "./routes/app/connectors";
 import { customConnectorRoutes } from "./routes/app/connectors-custom";
-import { type AppDeps, agentDetailsGate } from "./routes/app/context";
+import { type AppDeps, agentDetailsGate, readOnlyWhileDeleting } from "./routes/app/context";
 import { dashboardRoutes } from "./routes/app/dashboards";
 import { databaseRoutes } from "./routes/app/databases";
 import { desktopRoutes } from "./routes/app/desktop";
+import { deviceWaitRoutes } from "./routes/app/device-waits";
 import { dmRoutes } from "./routes/app/dms";
+import { feedbackRoutes, registerFeedbackFiles, registerFeedbackInbox } from "./routes/app/feedback";
 import { gifKeyRoutes } from "./routes/app/gif-key";
 import { gifRoutes } from "./routes/app/gifs";
 import { inviteRoutes } from "./routes/app/invites";
@@ -63,6 +66,7 @@ import { telemetryRoutes } from "./routes/app/telemetry";
 import { threadRoutes } from "./routes/app/threads";
 import { vaultRoutes } from "./routes/app/vault";
 import { speechKeyRoutes, voiceRoutes } from "./routes/app/voice";
+import { waitingRoutes } from "./routes/app/waiting";
 import { wikiRoutes } from "./routes/app/wiki";
 import {
   createDesktopReleases,
@@ -70,6 +74,7 @@ import {
   registerDesktopRoutes,
   registerNativeRoutes,
 } from "./routes/desktop";
+import { deviceAppRoutes, registerConnectLinkInfo, registerConnectScripts } from "./routes/devices";
 import { registerGitProxy } from "./routes/git";
 import { githubAppRoutes, registerGitHubAppWebhook } from "./routes/github-app";
 import { registerHealth } from "./routes/health";
@@ -112,7 +117,7 @@ export interface AppOptions {
  * - `/api/webhooks/*`     incoming webhooks (GitHub, Sentry), signature-checked
  * - `/api/github-app/webhook` our GitHub App's events (installs, suspensions), signature-checked
  * - `/api/git/*`          git proxy for agents' computers (their own credential, ADR 0024)
- * - `/api/machines/*`     connected computers' runner: device-code connection, uploads, install.sh (ADR 0025, 0036)
+ * - `/api/machines/*`     connected computers' runner: device-code connection, uploads, install.sh, a connect link's info (ADR 0025, 0036)
  * - `/api/desktop/*`      public: the desktop app's latest build and its download (ADR 0036)
  * - `/api/native/*`       public: the packages that run agentes.chat without Docker, for the installer (ADR 0060)
  * - `/api/hooks/*`        public: a webhook routine's own address (its chosen methods, ADR 0106)
@@ -123,6 +128,7 @@ export interface AppOptions {
  * - `/api/ws`             WebSocket (real-time)
  * - `/api/openapi.json`   OpenAPI 3.1 document; `/api/reference` interactive docs
  * - `/install`            the self-host installer, `install.sh` (`curl -fsSL <server>/install | sh`)
+ * - `/i/<code>`           a new computer's installer with a connect link baked in (`/i/<code>/ps` for Windows)
  * - `/install/docker-compose.yml` the compose file of this release, which the setup downloads
  * - `/sw.js`              the web app's service worker (browser push, ADR 0071)
  * - everything else       web app (single-page app), when built
@@ -164,7 +170,10 @@ export function createApp(options: AppOptions) {
     });
     const deps: AppDeps = { log, ...options.services };
     registerInstance(api, deps, version);
+    registerFeedbackFiles(api, deps);
+    registerFeedbackInbox(api, deps);
     api.use("/app/organizations/:orgId/agents/:agentId/:part", agentDetailsGate(deps));
+    api.use("/app/organizations/:orgId/*", readOnlyWhileDeleting(deps));
     api.route("/app", accountRoutes(deps));
     api.route("/app", accessRoutes(deps));
     api.route("/app", agentRoutes(deps));
@@ -188,6 +197,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", browserProfileRoutes(deps));
     api.route("/app", desktopRoutes(deps));
     api.route("/app", notificationRoutes(deps));
+    api.route("/app", waitingRoutes(deps));
     api.route("/app", pushRoutes(deps));
     api.route("/app", secretRoutes(deps));
     api.route("/app", vaultRoutes(deps));
@@ -206,6 +216,8 @@ export function createApp(options: AppOptions) {
     api.route("/app", agentImportRoutes(deps));
     api.route("/app", sandboxRoutes(deps));
     api.route("/app", machineAppRoutes(deps));
+    api.route("/app", deviceWaitRoutes(deps));
+    api.route("/app", deviceAppRoutes(deps));
     api.route("/app", machineAccountRoutes(deps));
     api.route("/app", planUsageRoutes(deps));
     api.route("/app", personUsageRoutes(deps));
@@ -213,6 +225,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", dashboardRoutes(deps));
     api.route("/app", telemetryRoutes(deps));
     api.route("/app", jevRoutes(deps));
+    api.route("/app", feedbackRoutes(deps));
     api.route("/app", gifKeyRoutes(deps));
     api.route("/app", speechKeyRoutes(deps));
     api.route("/app", voiceRoutes(deps));
@@ -223,6 +236,7 @@ export function createApp(options: AppOptions) {
     registerRoutineHooks(api, deps);
     registerGitHubAppWebhook(api, deps);
     registerMachinePublicRoutes(api, deps);
+    registerConnectLinkInfo(api, deps);
     registerDesktopRoutes(
       api,
       deps,
@@ -305,6 +319,7 @@ export function createApp(options: AppOptions) {
   });
   // Ties a request's failure in the log to its report, and to what the client saw (`X-Request-Id`).
   app.use("/api/*", requestId());
+  app.use("/api/*", apiBodyLimit);
   // Security headers on every response: the app may not be framed (clickjacking of approval, merge and deploy
   // cards), <base> is pinned to our own origin, and HSTS is sent where the instance is served over TLS. `frame-src`
   // keeps a frame on our pages from navigating itself to another site with what it holds: an agent's page has no
@@ -328,6 +343,7 @@ export function createApp(options: AppOptions) {
   app.use("/api/*", errorPages(options.services?.config.PUBLIC_URL));
   app.route("/api", api);
   if (options.services) {
+    registerConnectScripts(app, { log, ...options.services });
     registerAppLinks(app, options.services.config);
     registerAppsRoot(app, { log, ...options.services }, { version, fetchDocument: options.appsFetchDocument });
   }
@@ -349,7 +365,7 @@ export function createApp(options: AppOptions) {
       return c.redirect(helpDocsUrl(c.req.param("slug"), locale), 301);
     });
   }
-  // The setup downloads it into a folder that has none: this release's, from any instance.
+  // The setup downloads it into a folder that has none: this build's, from any instance.
   app.get("/install/docker-compose.yml", (c) =>
     c.body(composeFile, 200, { "content-type": "application/yaml; charset=utf-8", "cache-control": "no-store" }),
   );

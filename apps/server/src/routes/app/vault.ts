@@ -6,12 +6,15 @@ import {
   deleteVaultItem,
   getVaultItem,
   importVaultCsv,
+  importVaultKeys,
   listVault,
+  moveVaultItem,
   NotFoundError,
   syncVaultConnection,
   TooManyError,
   updateVaultConnection,
   updateVaultItem,
+  VAULT_LIMITS,
   ValidationError,
   type VaultDeps,
   VaultRefusal,
@@ -168,6 +171,9 @@ const VaultConnection = z
     id: z.uuid(),
     kind: z.string(),
     name: z.string().openapi({ description: "Brand name (`1Password`)." }),
+    readOnly: z.boolean().openapi({
+      description: "Its credential may only read: agents save no new login there until it is connected again.",
+    }),
     scope: Scope,
     ownerUserId: z.string().nullable(),
     label: z.string().openapi({ description: "What it reads (a vault's or a folder's name)." }),
@@ -299,6 +305,35 @@ const ImportResult = z
   })
   .openapi("VaultImportResult");
 
+const KeysImportInput = z
+  .object({
+    scope: Scope,
+    access: VaultAccess.optional().openapi({ description: "For the new keys. A key already saved keeps its own." }),
+    keys: z
+      .array(
+        z.object({
+          keyName: KeyName,
+          secret: SecretValue.openapi({ description: "The key's value. Never sent back." }),
+          replace: z.boolean().openapi({
+            description: "A key already saved under this name here: `true` gives it this value, `false` leaves it.",
+          }),
+        }),
+      )
+      .min(1)
+      .max(VAULT_LIMITS.importKeys),
+  })
+  .openapi("VaultKeysImportInput");
+
+const KeysImportResult = z
+  .object({
+    added: z.number().int(),
+    replaced: z.number().int(),
+    skipped: z.number().int().openapi({ description: "Already saved, and not asked to be replaced." }),
+  })
+  .openapi("VaultKeysImportResult");
+
+const MoveInput = z.object({ scope: Scope }).openapi("VaultMoveInput");
+
 /**
  * "Save to the Vault" on a secret request's card (ADR 0144): the value once more, sent after its sealed box went to
  * the computer, so the server can seal it for the Vault.
@@ -372,6 +407,14 @@ const noStore = (c: Context) => c.header("Cache-Control", "no-store");
 export function vaultRoutes(deps: AppDeps) {
   const app = createAppRouter(deps);
   app.use("/organizations/*", requireSession(deps.auth));
+  app.use(
+    "/organizations/:orgId/vault/keys",
+    bodyLimit({
+      maxSize: IMPORT_BODY_BYTES,
+      onError: (c) =>
+        apiError(c, 413, "vault.too_many_keys", "Too many keys at once", { max: VAULT_LIMITS.importKeys }),
+    }),
+  );
   app.use(
     "/organizations/:orgId/vault/import",
     bodyLimit({
@@ -500,6 +543,45 @@ export function vaultRoutes(deps: AppDeps) {
       const userId = c.get("user").id;
       await limited(`vault-import:${userId}`, IMPORTS);
       return c.json(await importVaultCsv(vaultDepsOf(deps), userId, orgId, c.req.valid("json")), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/vault/keys",
+      tags,
+      security,
+      summary: "Save several keys at once (what an imported .env file becomes)",
+      description:
+        "All or none, each checked as a single key is: personal for any member, the team's with `manage_credentials` (403 `vault.team_needs_permission`). A name already saved in the scope is left unless `replace`, and then only its value changes. 400 `vault.key_name_invalid`, `vault.key_name_reserved`, `vault.too_many_keys`, `vault.agents_invalid`; 409 `vault.too_many_items`. 10 a minute per person.",
+      request: { params: OrgParams, body: body(KeysImportInput) },
+      responses: { 200: json(KeysImportResult), ...errors, ...tooMany },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      await limited(`vault-import:${userId}`, IMPORTS);
+      return c.json(await importVaultKeys(vaultDepsOf(deps), userId, orgId, c.req.valid("json")), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/vault/items/{itemId}/move",
+      tags,
+      security,
+      summary: "Move an item between Personal and Team",
+      description:
+        "Only an item kept here (400 `vault.external_read_only` for a password manager's), by who edits it and holds `manage_credentials` (403 otherwise). To `personal` it becomes the mover's own. Its agents stay; a team item starts seen by everyone. 409 `vault.key_name_taken` when a key of that name is already there, `vault.unreadable` when its saved value doesn't open on this server.",
+      request: { params: ItemParams, body: body(MoveInput) },
+      responses: { 200: json(VaultItem), ...errors },
+    }),
+    async (c) => {
+      const { orgId, itemId } = c.req.valid("param");
+      const { scope } = c.req.valid("json");
+      return c.json(await moveVaultItem(vaultDepsOf(deps), c.get("user").id, orgId, itemId, scope), 200);
     },
   );
 

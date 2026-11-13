@@ -72,14 +72,16 @@ describe("optimistic send", () => {
     expect(rowsWith("bom dia")).toHaveLength(1);
   });
 
-  test("failure says 'Não enviada · Tentar de novo'; retry sends the same text", async () => {
-    const state = seedState({ failPosts: true });
+  test("failure says 'Não enviada' with the cause and Tentar de novo; retry sends the same text", async () => {
+    const state = seedState({ failPosts: new ApiError(500, "internal_error", "Something went wrong on our side") });
     await open(state);
     await sendText("vai falhar");
     await settle(4);
     const row = rowsWith("vai falhar")[0] as HTMLElement;
     expect(row.className).toContain("ac-msg--failed");
-    expect(within(row).getByRole("alert").textContent).toBe("Não enviada·Tentar de novo");
+    expect(within(row).getByRole("alert").textContent).toBe(
+      "Não enviada. Algo deu errado do nosso lado. Tente de novo daqui a pouco.Tentar de novo",
+    );
     state.failPosts = false;
     await act(async () => fireEvent.click(within(row).getByRole("button", { name: "Tentar de novo" })));
     await settle(4);
@@ -150,7 +152,7 @@ const bar = () => ({ textContent: typingBar().querySelector(".ac-typing__text")?
 const lastPerson = (state: ReturnType<typeof seedState>) => state.messages[state.messages.length - 1];
 
 describe("typing bar above the composer", () => {
-  test("mention → the bar says 'Atlas pensando…' while its row is out of view; its block, last in the timeline", async () => {
+  test("mention → the bar says 'Atlas pensando…', then 'escrevendo…'; none of its words in the conversation until its reply", async () => {
     const { socket } = await open();
     await sendText("@atlas olha o deploy");
     expect(bar().textContent).toBe("Atlas pensando…");
@@ -168,17 +170,14 @@ describe("typing bar above the composer", () => {
     await push(socket, { type: "agent.typing", ...run });
     await push(socket, { type: "agent.delta", ...run, seq: 1, text: "Deploy ok" });
     await settle();
-    const streaming = document.querySelector(".ac-msg--streaming") as HTMLElement;
-    expect(streaming.textContent).toContain("Deploy ok");
-    // It's the last row of the timeline; with no layout here the row counts as out of view, so the card above the box
-    // speaks for it (its face and what it does now).
-    const rows = screen().getAllByRole("article");
-    expect(rows[rows.length - 1]).toBe(streaming);
+    // Nothing of it in the conversation: the card above the box speaks for it (its face and what it does now).
+    expect(document.querySelector(".ac-msg--streaming")).toBeNull();
+    expect(rowsWith("Deploy ok")).toHaveLength(0);
     expect(bar().textContent).toBe("Atlas escrevendo…");
     expect(typingBar().querySelector(".ac-avatar--agent")).not.toBeNull();
     await push(socket, { type: "agent.idle", ...run });
     await settle();
-    expect(document.querySelector(".ac-msg--streaming")).toBeNull();
+    expect(bar().textContent).toBe("");
   });
 
   test("an agent out of view and people: 'Atlas pensando… · João digitando…'; our typing frames are throttled", async () => {
@@ -188,17 +187,9 @@ describe("typing bar above the composer", () => {
     await push(socket, { type: "user.typing", userId: "u-joao", threadId: null, ttlMs: 6000 });
     await settle();
     expect(bar().textContent).toBe("Atlas pensando…");
-    // Who is typing comes after the agent's own words and time; the pill widens for both.
+    // Who is typing comes after the agent's own words and time, on the pill as wide as the composer.
     expect(typingBar().querySelector(".ac-typing__also")?.textContent).toBe("João digitando…");
-    expect(typingBar().dataset.wide).toBe("true");
-    await push(socket, {
-      type: "agent.delta",
-      threadId: null,
-      runId: "r-g",
-      agentId: ATLAS_ID,
-      seq: 1,
-      text: "Sim",
-    });
+    await push(socket, { type: "agent.typing", threadId: null, runId: "r-g", agentId: ATLAS_ID });
     await settle();
     // Atlas writes now; it stays on the card while it works.
     expect(bar().textContent).toBe("Atlas escrevendo…");
@@ -987,7 +978,7 @@ describe("regression: the router picks nobody (production #general, 'oi' after '
     const first = lastPerson(state);
     expect(bar().textContent).toBe("Ada pensando…");
     const run = { threadId: first?.id, runId: "r-1st", agentId: ADA_ID };
-    await pushG({ type: "agent.delta", ...run, seq: 1, text: "Oi!" });
+    await pushG({ type: "agent.typing", ...run });
     await pushG({
       type: "message.created",
       messageId: "reply-1",
@@ -1094,7 +1085,11 @@ test("a DM's head: the name with a line under it rises to the face's top, a pers
   cleanup();
   await open(seedState(), `dm/agent/${ADA_ID}`);
   await settle(4);
-  expect(screen().getByRole("heading", { level: 1, name: "Ada" }).className).toBe("channel__title ac-captop");
+  const ada = screen().getByRole("heading", { level: 1, name: "Ada" });
+  expect(ada.className).toBe("channel__title ac-captop");
+  // The name in a span of its own, so a phone's title keeps its line and a pill goes under it when both don't fit.
+  expect(ada.firstElementChild?.className).toBe("channel__name");
+  expect(ada.firstElementChild?.textContent).toBe("Ada");
 });
 
 describe("direct messages with an agent", () => {
@@ -1159,8 +1154,8 @@ describe("direct messages with an agent", () => {
 });
 
 describe("memory changes and proposals in the chat", () => {
-  test("'memória atualizada' card (memory.updated) with a link to what Ada knows, and Desfazer", async () => {
-    const { socket, state } = await open();
+  test("'memória atualizada' card (memory.updated) with a link to that memory, and nothing to undo", async () => {
+    const { socket } = await open();
     await push(socket, {
       type: "memory.updated",
       threadId: "m-1",
@@ -1179,13 +1174,9 @@ describe("memory changes and proposals in the chat", () => {
     expect(card.textContent).toContain("Ada lembrou");
     expect(card.textContent).toContain("O login usa tokens de 15 minutos.");
     expect(within(card).getByRole("link", { name: "O que a Ada sabe" }).getAttribute("href")).toBe(
-      `/org/${ORG_ID}/agents/${ADA_ID}/memory`,
+      `/org/${ORG_ID}/agents/${ADA_ID}/memory?item=mem-5`,
     );
-    await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Desfazer" })));
-    await settle(4);
-    expect(state.calls.find((c) => c.method === "memory.revert")?.args).toEqual([ORG_ID, "mem-5"]);
-    expect(card.textContent).toContain("Desfeito");
-    expect(within(card).queryByRole("button", { name: "Desfazer" })).toBeNull();
+    expect(within(card).queryAllByRole("button")).toHaveLength(0);
   });
 
   test("after a reload, cards come from meta.memoryUpdates on the agent's message", async () => {
@@ -1215,7 +1206,7 @@ describe("memory changes and proposals in the chat", () => {
     const card = screen().getByRole("group", { name: "Memória atualizada por Ada" });
     expect(card.textContent).toContain("Ada esqueceu");
     expect(card.querySelector(".struck")?.textContent).toBe("O staging fica em staging.acme.com.br.");
-    expect(within(card).getByRole("button", { name: "Desfazer" })).toBeTruthy();
+    expect(within(card).queryAllByRole("button")).toHaveLength(0);
   });
 
   test("a proposed change (memory.updated, proposed) shows the proposal inline", async () => {
@@ -1254,10 +1245,10 @@ describe("memory changes and proposals in the chat", () => {
     await open(state);
     const card = screen().getByRole("group", { name: "Proposta de mudança de Ada" });
     expect(card.getAttribute("data-ask-kind")).toBe("proposal");
-    // The change is behind "Ver a mudança"; Editar lives there too.
-    expect(card.querySelector(".ac-diff__line--add")).toBeNull();
+    // The change is behind "Ver a mudança", drawn as its Markdown in green and red blocks; Editar lives there too.
+    expect(card.querySelector(".ac-diff__block--add")).toBeNull();
     await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Ver a mudança" })));
-    expect(card.querySelectorAll(".ac-diff__line--add").length).toBeGreaterThan(0);
+    expect(card.querySelectorAll(".ac-diff__block--add").length).toBeGreaterThan(0);
     await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Editar" })));
     await act(async () =>
       fireEvent.change(within(card).getByLabelText("Texto final das instruções"), {
@@ -1271,10 +1262,13 @@ describe("memory changes and proposals in the chat", () => {
       "prop-1",
       "Só PRs pequenos.",
     ]);
-    // Decided: one line takes its place (another element).
+    // Decided: the same card, who accepted where the buttons were, and nothing left to edit.
     const done = screen().getByRole("group", { name: "Proposta de mudança de Ada" });
+    expect(done.classList.contains("rq--ended")).toBe(true);
     expect(done.querySelector(".rq-done__mark[data-done]")).not.toBeNull();
-    expect(done.textContent).toContain("Aceita");
+    expect(done.querySelector(".rq__answer-text")?.textContent).toBe("Aplicado por você");
+    expect(within(done).queryByRole("textbox")).toBeNull();
+    expect(within(done).queryByRole("button", { name: "Aceitar com ajustes" })).toBeNull();
   });
 });
 

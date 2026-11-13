@@ -108,6 +108,8 @@ export interface VaultConnection {
   kind: string;
   /** Brand name (`1Password`). */
   name: string;
+  /** Its credential may only read: agents save no new login there until it is connected again with one that writes. */
+  readOnly?: boolean;
   scope: VaultScope;
   ownerUserId: string | null;
   /** What it reads (a vault's or a folder's name). */
@@ -188,6 +190,21 @@ export interface VaultImportResult {
   skipped: { reason: "duplicate" | "not_https" | "no_password" | "invalid"; count: number }[];
   /** The file's format, as recognized. */
   format: "chrome" | "1password" | "bitwarden" | "generic";
+}
+
+/** Several keys at once (an imported .env): one access for the new ones. A saved key keeps its own. */
+export interface VaultKeysImportInput {
+  scope: VaultScope;
+  access?: VaultAccess;
+  /** `replace`: a key already saved under this name in this scope takes the new value. Otherwise it is left. */
+  keys: { keyName: string; secret: string; replace: boolean }[];
+}
+
+export interface VaultKeysImportResult {
+  added: number;
+  replaced: number;
+  /** Already saved, and not asked to be replaced. */
+  skipped: number;
 }
 
 export interface VaultConnectInput {

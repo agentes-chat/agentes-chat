@@ -1,6 +1,7 @@
 import type { PlanAccountInfo } from "@agenteschat/client";
 import {
   accountName,
+  accountOwner,
   brandOf,
   type MeterSegment,
   type MeterWindow,
@@ -21,7 +22,7 @@ import { Canvas, createPicture, Picture, Skia } from "@shopify/react-native-skia
 import { type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { type IconName, LineIcon, ProviderLogo, Text, useTheme } from "@/ui";
+import { type IconName, InfoHint, LineIcon, ProviderLogo, Text, useTheme } from "@/ui";
 import { useColors } from "../shared/hooks";
 
 /*
@@ -96,11 +97,14 @@ export function Meter({
 export function PlanMeter({
   usage,
   compact = false,
+  plain = false,
   label,
   children,
 }: {
   usage: MeterUsage;
   compact?: boolean;
+  /** No words above the bars on where the plan stands: what holds the meter already says it. */
+  plain?: boolean;
   label?: string;
   /** An account's agents: between the bars and when they renew, which then shows once under them. */
   children?: ReactNode;
@@ -134,7 +138,7 @@ export function PlanMeter({
   }
   const rows = planWindows(usage, now);
   const { state, until, used } = planState(usage, now);
-  const headline = state === "limited" ? text.limited(until) : state === "almost" ? text.almost : null;
+  const headline = plain ? null : state === "limited" ? text.limited(until) : state === "almost" ? text.almost : null;
   const passed = (iso: string | undefined) => iso !== undefined && Date.parse(iso) <= now;
   const renews = children ? renewals(rows, text, now) : null;
   return (
@@ -198,29 +202,29 @@ export function PlanMeter({
 export function AccountHead({ account, extra }: { account: PlanAccountInfo; extra?: string | null }) {
   const { t } = useTranslation();
   const c = useColors();
-  const whose =
-    account.email ?? (account.ownerName ? t("usageViews.whose", { name: account.ownerName.split(" ")[0] }) : null);
+  const whose = account.email ?? accountOwner(t, account);
+  // The maker's logo, the account and its plan on one line, whose it is under them at the row's width.
   return (
-    <View style={styles.acct}>
-      <ProviderLogo id={account.provider ?? account.kind} size="sm" off={account.signedOut} />
-      <View style={styles.grow}>
-        <View style={styles.acctName}>
+    <View style={styles.acctBox}>
+      <View style={styles.acct}>
+        <ProviderLogo id={account.provider ?? account.kind} size="sm" off={account.signedOut} />
+        <View style={[styles.grow, styles.acctName]}>
           <Text variant="callout" tone="ink" style={styles.bold}>
             {accountName(t, account)}
           </Text>
           {account.plan ? <Tag text={planName(account.plan)} color={c.muted} /> : null}
           {account.signedOut ? <Tag text={t("usageViews.signedOut")} color={c.warn} /> : null}
         </View>
-        <Text variant="small" tone="muted">
-          {[brandOf(account), whose, extra].filter(Boolean).join(" · ")}
-        </Text>
       </View>
+      <Text variant="small" tone="muted">
+        {[brandOf(account), whose, extra].filter(Boolean).join(" · ")}
+      </Text>
     </View>
   );
 }
 
 /** The small plate beside an account's name (its plan, "saiu da conta"). */
-function Tag({ text, color }: { text: string; color: string }) {
+export function Tag({ text, color }: { text: string; color: string }) {
   const c = useColors();
   return (
     <View style={[styles.tag, { backgroundColor: c.plate }]}>
@@ -231,35 +235,62 @@ function Tag({ text, color }: { text: string; color: string }) {
   );
 }
 
-/** A card of the usage views: its icon and title (and a line under it), then its body, then an optional footer. */
+/**
+ * A card of the usage views: its icon and title (an ⓘ after it with what the card's numbers mean), then its body, then
+ * an optional footer.
+ */
 export function UsageCard({
   icon,
   title,
+  hint,
   footer,
+  footerHint,
   children,
 }: {
   icon: IconName;
   title: string;
+  hint?: { name: string; text: string };
   footer?: string;
+  /** An ⓘ after the footer's words, with the rest of the explanation. */
+  footerHint?: { name: string; text: string };
   children: ReactNode;
 }) {
   const { colors: c, shadows } = useTheme();
+  const heading = (
+    <Text variant="callout" tone="ink" accessibilityRole="header" style={[styles.grow, styles.heavy]}>
+      {title}
+    </Text>
+  );
   return (
     // The kit's card surface (e1 and the lit top edge), as the other cards on these screens.
     <View style={[styles.card, { backgroundColor: c.raised, boxShadow: `${shadows.e1}, ${shadows.top}` }]}>
       <View style={styles.cardHead}>
         {/* On the title's line: a 16-point icon at the top of a 21-point line sat above its letters. */}
         <LineIcon variant="callout" name={icon} size={16} color={c.muted} />
-        <Text variant="callout" tone="ink" accessibilityRole="header" style={[styles.grow, styles.heavy]}>
-          {title}
-        </Text>
+        {hint ? (
+          <View style={styles.grow}>
+            <InfoHint {...hint} variant="callout">
+              {heading}
+            </InfoHint>
+          </View>
+        ) : (
+          heading
+        )}
       </View>
       {children}
       {footer ? (
         <View style={[styles.cardFoot, { borderTopColor: c.line }]}>
-          <Text variant="caption" tone="muted">
-            {footer}
-          </Text>
+          {footerHint ? (
+            <InfoHint {...footerHint} variant="caption">
+              <Text variant="caption" tone="muted">
+                {footer}
+              </Text>
+            </InfoHint>
+          ) : (
+            <Text variant="caption" tone="muted">
+              {footer}
+            </Text>
+          )}
         </View>
       ) : null}
     </View>
@@ -383,6 +414,7 @@ const styles = StyleSheet.create({
   meterCompact: { gap: 4 },
   window: { gap: 4 },
   windowLine: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  acctBox: { gap: 4 },
   acct: { flexDirection: "row", alignItems: "center", gap: 12 },
   // The name wraps instead of losing its end, the plan's tag after it, on the next line when there's no room.
   acctName: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 7, rowGap: 4 },

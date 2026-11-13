@@ -15,6 +15,7 @@ import {
   type MachineRequest,
   type RunnerAccess,
   type RunnerFrame,
+  type RunnerPause,
   type RunnerTools,
   STEER_LIMITS,
 } from "@agenteschat/adapters/machine-protocol";
@@ -32,7 +33,7 @@ import { handleOpencodeBrainTurn, type OpencodeBrainTurnRequest } from "./brain-
 import { routeWithPlan } from "./brain-route";
 import { type BrowserManager, browserSetupText } from "./browser";
 import type { BrowserViews } from "./browser-views";
-import { allowedMerge, commandApproval, ownBranches } from "./command-gate";
+import { allowedMerge, commandApproval, mergeOf, ownBranches } from "./command-gate";
 import type { DesktopManager } from "./desktop";
 import { type DesktopSessions, hostMemAvailable, MIN_FREE_BYTES } from "./desktop-session";
 import { RunnerError, toMachineError } from "./errors";
@@ -42,6 +43,7 @@ import { isGitInternalPath, touchesGitInternals } from "./git-guard";
 import { type McpTaskInfo, redactDeep } from "./mcp";
 import { missionWorktree } from "./mission-worktree";
 import { agentWorkspace, hiddenIn, isInside, resolveForAgent } from "./paths";
+import type { PhoneManager, PhoneRequest } from "./phones";
 import { pullFile } from "./pull";
 import { type FetchLike, pushPath } from "./push";
 import { openDesktopStream } from "./rfb";
@@ -51,6 +53,7 @@ import type { DataSockets } from "./streams";
 import type { TaskManager } from "./tasks";
 import type { Terminals } from "./terminal";
 import { openExecKeys, parseExecVault, runnerVault, sealMadePassword } from "./vault";
+import type { PairRequest } from "./wifi-pair";
 
 /**
  * Requests one connection runs at once, whatever they are: a bound on a flood, far above what room allows
@@ -122,6 +125,13 @@ export const NEW_WORK_OPS: ReadonlySet<string> = new Set([
   "desktop.apps",
   "vault.key",
   "vault.password",
+  "phone.claim",
+  "phone.install",
+  "phone.launch",
+  "phone.flow",
+  "phone.record",
+  "phone.screenshot",
+  "phone.logs",
 ]);
 
 /**
@@ -181,6 +191,28 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "vault.key": "agent",
   // The password is made and sealed where the Vault's values open: root relays only the box.
   "vault.password": "agent",
+  // The process that sees the phones and keeps their locks (a system-mode runner reaches none).
+  "phone.claim": "machine",
+  "phone.release": "machine",
+  "phone.install": "machine",
+  "phone.launch": "machine",
+  "phone.flow": "machine",
+  "phone.record": "machine",
+  "phone.screenshot": "machine",
+  "phone.logs": "machine",
+  // adb's pairing keys are the person's, like its phones.
+  "phone.pair.start": "machine",
+  "phone.pair.code": "machine",
+  "phone.pair.status": "machine",
+  "phone.pair.cancel": "machine",
+  // The computer's own pause lives in its config, root's.
+  "pause.set": "machine",
+  "phone.look": "machine",
+  // The Mac's own pick of iPhones on its Wi-Fi, kept beside its phones' locks.
+  "phone.wifi": "machine",
+  // Root takes each hold in the agent's slice (`holds.ts`), and checks its program is the agent's.
+  "keep.start": "machine",
+  "keep.end": "machine",
 };
 
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
@@ -247,6 +279,8 @@ export interface HandlerContext {
   };
   /** Protocol 9: whether the owner paused this computer (new work is refused with `paused`). */
   paused?: () => boolean;
+  /** `REMOTE_PAUSE_PROTOCOL`: pause (`until` null: until resumed) or resume as asked from the apps; absent: refused. */
+  setPause?: (paused: boolean, until: string | null, by: string) => RunnerPause;
   /** System mode: this process is root and answers only the `machine` ops of `OP_ROUTES` itself. */
   systemMode?: () => boolean;
   /** System mode: runs an `agent` op in its agent's worker; without it those ops are refused. */
@@ -287,6 +321,13 @@ export interface HandlerContext {
   desktopUse?: DesktopManager;
   /** A person takes control of the agent's desktop: what the agent's pointer and keys are doing stops. */
   desktopTaken?: (agentId: string) => void;
+  /** The phones this computer reaches (`PHONES_PROTOCOL`); without it every phone op answers `phone_missing`. */
+  phones?: PhoneManager;
+  /** `KEEP_RUNNING_PROTOCOL` (system mode under systemd): the agents' holds; without it `keep.*` is `unsupported`. */
+  keep?: {
+    start(agent: AgentScope, req: Extract<MachineRequest, { op: "keep.start" }>): Promise<MachineReplies["keep.start"]>;
+    end(req: Extract<MachineRequest, { op: "keep.end" }>): Promise<MachineReplies["keep.end"]>;
+  };
 }
 
 export interface RequestScope {
@@ -379,8 +420,12 @@ async function doExec(
   // our git proxy would refuse it anyway (`never`).
   const held = await commandApproval(command, { cwd, own: ownBranches(req.agent), how: ASK_AGAIN, script: true });
   if (held?.never) throw new RunnerError("not_allowed", held.message);
-  const merge =
-    held && req.approved !== true ? await allowedMerge(command, { cwd, repos: req.mergeRepos ?? [] }) : null;
+  // An approved merge is named too: one a saved rule or an agent that never asks let through leaves the same receipt.
+  const merge = !held
+    ? null
+    : req.approved === true
+      ? await mergeOf(command, cwd)
+      : await allowedMerge(command, { cwd, repos: req.mergeRepos ?? [] });
   if (held && req.approved !== true && !merge) throw new RunnerError("approval_needed", held.message);
   let env = secrets?.env;
   let redact = secrets;
@@ -536,6 +581,10 @@ export const PAUSED = "The owner paused this computer. Nothing new starts here u
 const workStream = (req: MachineRequest) =>
   req.op === "stream.open" && (req.kind === "terminal" || req.mode === "control");
 
+/** Where `keep_running` has no lock to take: anywhere but a Linux computer under systemd, each agent its own user. */
+export const KEEP_UNSUPPORTED =
+  "This computer can't keep programs running for agents: that needs Linux with systemd, each agent as its own user.";
+
 /**
  * Runs one request; throws RunnerError (or fs errors) on failure. An error's text leaves redacted like an answer
  * (ADR 0144): a page's error can quote what was just typed.
@@ -562,6 +611,12 @@ async function scrubbed(ctx: HandlerContext, req: MachineRequest, err: unknown):
 async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: RequestScope): Promise<unknown> {
   // Protocol 9: paused by the owner. What already runs finishes; status, output and cancel still answer.
   if ((NEW_WORK_OPS.has(req.op) || workStream(req)) && ctx.paused?.()) throw new RunnerError("paused", PAUSED);
+  if (req.op === "pause.set") {
+    if (!ctx.setPause) throw new RunnerError("unsupported", "This runner can't be paused from the apps.");
+    const by = requireString(req.by, "by");
+    const until = req.paused && typeof req.until === "string" ? req.until : null;
+    return { paused: ctx.setPause(req.paused === true, until, by) } satisfies MachineReplies["pause.set"];
+  }
   // Protocol 49: an agent's (or a profile's) live view socket, this process's in every mode (ADR 0040 §7.1).
   if (req.op === "browser.view.open") return openBrowserView(ctx, req);
   // Protocol 34: a browser profile's session, never an agent's worker or folder (ADR 0110).
@@ -602,6 +657,12 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     return out;
   }
   if (req.op === "access.request" || req.op === "access.reduce") return handleAccess(ctx, req);
+  if (req.op === "keep.start" || req.op === "keep.end") {
+    if (!ctx.keep) throw new RunnerError("unsupported", KEEP_UNSUPPORTED);
+    if (req.op === "keep.end") return ctx.keep.end(req);
+    if (!req.agent) throw new RunnerError("bad_request", "A hold belongs to an agent");
+    return ctx.keep.start(req.agent, req);
+  }
   // Protocol 13: accounts belong to the machine, not to an agent.
   if (req.op === "account") return handleAccount(ctx, req);
   // Protocol 15: messages for a turn already running (never new work: a paused computer still takes them).
@@ -630,6 +691,14 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
   if (req.op === "task.start" || req.op === "task.status" || req.op === "task.cancel" || req.op === "task.output") {
     return handleTask(ctx, req);
   }
+  if (isPairOp(req)) {
+    if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
+    return ctx.phones.pair(req);
+  }
+  if (req.op === "phone.look") return { looking: ctx.phones?.look() ?? false } satisfies MachineReplies["phone.look"];
+  if (req.op === "phone.wifi")
+    return ctx.phones ? ctx.phones.wifi(req) : ({ available: [] } satisfies MachineReplies["phone.wifi"]);
+  if (isPhoneOp(req)) return handlePhone(ctx, req, scope);
   // Each agent works in its own folder: that folder is its workspace.
   if (req.agent) ctx = { ...ctx, workspaceReal: await agentWorkspace(ctx.workspaceReal, req.agent) };
   if (req.op === "secret") {
@@ -739,6 +808,29 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
   }
 }
 
+const isPhoneOp = (req: MachineRequest): req is PhoneRequest => req.op.startsWith("phone.");
+const isPairOp = (req: MachineRequest): req is PairRequest => req.op.startsWith("phone.pair.");
+
+/**
+ * `PHONES_PROTOCOL`: the phone ops. They run with the computer's commands off (sharing a phone grants only these);
+ * the files they make and take are the agent's: its folder and the folders it may use.
+ */
+async function handlePhone(ctx: HandlerContext, req: PhoneRequest, scope: RequestScope) {
+  const phones = ctx.phones;
+  if (!phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
+  const folder = req.agent ? await agentWorkspace(ctx.workspaceReal, req.agent) : null;
+  return phones.handle(req, {
+    folder,
+    resolve: async (input) => {
+      if (!folder) throw new RunnerError("bad_request", "A phone's files come from an agent's folder");
+      const target = await resolveToRead({ ...ctx, workspaceReal: folder }, input);
+      if (!target.exists) throw new RunnerError("not_found", `${input} doesn't exist`);
+      return target.abs;
+    },
+    signal: scope.signal,
+  });
+}
+
 /**
  * Protocol 18: the agent's desktop (ADR 0058). Starting it needs the
  * machine's desktop switch; stopping it and asking about it always go.
@@ -807,9 +899,16 @@ async function handleStream(
 ): Promise<MachineReplies["stream.open"]> {
   const { agent, streamId } = req;
   const streams = ctx.streams;
-  if (!agent || !isStreamId(streamId)) throw new RunnerError("bad_request", "A stream needs an agent and its id");
+  if (!isStreamId(streamId)) throw new RunnerError("bad_request", "A stream needs its id");
   if (!streams) throw new RunnerError("bad_request", "This runner opens no streams");
   const dial = () => streams.dial(streamId, req.kind, scope.signal);
+  // A phone's screen (bring your own devices) is no agent's: it goes with the phone, commands on or off.
+  if (req.kind === "phone") {
+    if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
+    await ctx.phones.view(req.phone, req.mode, dial);
+    return { opened: true };
+  }
+  if (!agent) throw new RunnerError("bad_request", "A stream needs an agent");
   if (req.kind === "desktop") {
     requireTool(ctx, "desktop");
     if (!ctx.desktops) throw new RunnerError("desktop_unavailable", "This runner runs no desktops");
@@ -834,7 +933,7 @@ async function handleStream(
       throw new RunnerError("bad_request", "The terminal's size is out of bounds");
     await ctx.terminals.open(agent, { cols: req.cols, rows: req.rows }, dial);
   } else {
-    throw new RunnerError("bad_request", "A stream shows a desktop or a terminal");
+    throw new RunnerError("bad_request", "A stream shows a desktop, a terminal or a phone");
   }
   return { opened: true };
 }
@@ -1264,6 +1363,7 @@ async function doCodexTurn(
           ...(ctx.grants && !chat ? { grants: ctx.grants } : {}),
           ...(ctx.accounts || codex.accounts ? { accounts: ctx.accounts ?? codex.accounts } : {}),
           ...(codex.spawn ? { spawn: codex.spawn } : {}),
+          ...(ctx.grant ? { grant: ctx.grant } : {}),
         },
         req as unknown as AntigravityBrainTurnRequest,
         { signal: scope.signal, emit },
@@ -1443,7 +1543,7 @@ function describeOp(req: MachineRequest): string {
     case "stream.open":
       return req.kind === "terminal"
         ? `stream.open terminal ${String(req.cols)}×${String(req.rows)}`
-        : `stream.open desktop (${String(req.mode)})`;
+        : `stream.open ${req.kind === "phone" ? `phone ${String(req.phone?.platform)}/${String(req.phone?.serial)}` : "desktop"} (${String(req.mode)})`;
     case "desktop.act": {
       // The kind and where it lands, its key, app or path; never typed text.
       const a: Record<string, unknown> = isRecordLike(req.action) ? req.action : {};
@@ -1454,6 +1554,16 @@ function describeOp(req: MachineRequest): string {
     }
     case "desktop.capture":
       return `desktop.capture${req.region ? " (a region)" : ""}`;
+    case "phone.claim":
+    case "phone.release":
+    case "phone.install":
+    case "phone.launch":
+    case "phone.flow":
+    case "phone.record":
+    case "phone.screenshot":
+    case "phone.logs":
+      // The phone and the app; never the flow's text or its variables.
+      return `${req.op} ${String(req.platform)}/${String(req.serial)}${"app" in req && req.app ? ` ${String(req.app)}` : ""}`;
     case "access.reduce":
       return `access.reduce${req.removeFolder ? ` folder ${String(req.removeFolder.path ?? "")}` : ""}${req.disableTool ? ` tool ${String(req.disableTool)}` : ""}`;
     default:

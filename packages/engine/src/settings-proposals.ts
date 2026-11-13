@@ -4,7 +4,7 @@ import { accessInputOf, replaceableGrants, setAgentAccess } from "./access";
 import { type Agent, archiveAgent, getAgent, unarchiveAgent, updateAgent, validateAgentFields } from "./agents";
 import { setAgentAppearance, validateAppearance } from "./appearance";
 import { audienceOf, setAgentAudience } from "./audience";
-import { setAgentBrain } from "./brain-settings";
+import { normalizeBrainModel, setAgentBrain } from "./brain-settings";
 import { isComputerBrain } from "./brains/types";
 import { invalidateOrg } from "./cache";
 import { addChannelMember, removeChannelMember, setChannelAgentAutoReply } from "./channels";
@@ -16,10 +16,20 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { maySql } from "./permissions";
 import { reportsToRefusal, setReportsTo } from "./reporting";
 import { isRightHand } from "./right-hand";
+import { setAgentSkills } from "./skills";
 import { canonicalJson } from "./tools/json-schema";
 
-const { agentActions, agents, channelMembers, channels, contextProposals, machineAccounts, organizationMembers } =
-  schema;
+const {
+  agentActions,
+  agentSkills,
+  agents,
+  channelMembers,
+  channels,
+  contextProposals,
+  machineAccounts,
+  organizationMembers,
+  skills,
+} = schema;
 
 export type SettingLine = schema.ProposedSettingLine;
 export type SettingField = SettingLine["field"];
@@ -32,10 +42,10 @@ type Proposal = typeof contextProposals.$inferSelect;
 
 /**
  * Who decides a line (ADR 0137, amending 0092 §5): whoever may make that change on the agent's page. `admin`: who
- * manages agents (model, budget, owner, archive, delete); `admin_or_owner`: they or the agent's owner (who talks to it, its
- * channels and how it replies there); `account`: only the owner of the AI account, who must own the agent too
- * (a personal plan is assigned by its owner alone, ADR 0059 §3). One row per agent and group, so a row is decided
- * by one rule.
+ * manages agents (model, budget, owner, archive, delete, its skills); `admin_or_owner`: they or the agent's owner (who
+ * talks to it, its channels and how it replies there); `account`: only the owner of the AI account, who must own the
+ * agent too (a personal plan is assigned by its owner alone, ADR 0059 §3). One row per agent and group, so a row is
+ * decided by one rule.
  */
 export const SETTING_GROUP: Record<SettingField, "admin" | "admin_or_owner" | "account"> = {
   model: "admin",
@@ -47,6 +57,8 @@ export const SETTING_GROUP: Record<SettingField, "admin" | "admin_or_owner" | "a
   channel_add: "admin_or_owner",
   channel_remove: "admin_or_owner",
   reply_mode: "admin_or_owner",
+  // The page keeps skills for who manages agents, though `setAgentSkills` takes the owner too.
+  skill: "admin",
   name: "admin",
   look: "admin_or_owner",
   // Who manages agents sets a line, as on the page (ADR 0148 addendum).
@@ -64,6 +76,7 @@ const ORDER: SettingField[] = [
   "channel_add",
   "channel_remove",
   "reply_mode",
+  "skill",
   "name",
   "look",
   "reports_to",
@@ -85,9 +98,11 @@ export const agentApps = async (db: Executor, orgId: string, agentId: string) =>
 
 /**
  * A setting's value now. A channel line's value is the agent's seat there: null when it isn't in it, else whether it
- * answers without a mention (`autoReply`), so adding, removing and the reply mode read and write the same thing.
+ * answers without a mention (`autoReply`), so adding, removing and the reply mode read and write the same thing. The
+ * model of an agent that thinks on a computer is its brain's ("Quem pensa"), null for its CLI's default. A skill's is
+ * whether the agent has it on, null once the skill is gone.
  */
-async function valueNow(db: Executor, agent: Agent, line: Pick<ReceiptLine, "field" | "channelId">) {
+async function valueNow(db: Executor, agent: Agent, line: Pick<ReceiptLine, "field" | "channelId" | "skillId">) {
   switch (line.field) {
     case "instructions":
       return agent.instructions;
@@ -102,7 +117,7 @@ async function valueNow(db: Executor, agent: Agent, line: Pick<ReceiptLine, "fie
     case "reports_to":
       return agent.reportsToAgentId ?? null;
     case "model":
-      return agent.model;
+      return isComputerBrain(agent.brain) ? agent.brainModel : agent.model;
     case "budget":
       return agent.monthlyBudgetNanoUsd;
     case "owner":
@@ -117,9 +132,21 @@ async function valueNow(db: Executor, agent: Agent, line: Pick<ReceiptLine, "fie
     }
     case "ai_account":
       return { brain: agent.brain, accountId: agent.brainAccountId } satisfies AccountValue;
+    case "skill":
+      return skillOn(db, agent, line.skillId ?? "");
     default:
       return seatOf(db, agent.id, line.channelId ?? "");
   }
+}
+
+async function skillOn(db: Executor, agent: Agent, skillId: string) {
+  if (!skillId) return null;
+  const [row] = await db
+    .select({ enabled: agentSkills.enabled })
+    .from(skills)
+    .leftJoin(agentSkills, and(eq(agentSkills.skillId, skills.id), eq(agentSkills.agentId, agent.id)))
+    .where(and(eq(skills.orgId, agent.orgId), eq(skills.id, skillId), isNull(skills.deletedAt)));
+  return row ? row.enabled === true : null;
 }
 
 async function seatOf(db: Executor, agentId: string, channelId: string) {
@@ -136,7 +163,7 @@ async function setValue(
   actorId: string,
   orgId: string,
   agentId: string,
-  line: Pick<ReceiptLine, "field" | "channelId">,
+  line: Pick<ReceiptLine, "field" | "channelId" | "skillId">,
   value: unknown,
 ) {
   const { db, pubsub } = deps;
@@ -180,8 +207,12 @@ async function setValue(
       return void (await setReportsTo(deps, actorId, orgId, [
         { agentId, reportsToAgentId: typeof value === "string" ? value : null },
       ]));
-    case "model":
+    case "model": {
+      const agent = await getAgent(db, orgId, agentId);
+      if (agent && isComputerBrain(agent.brain))
+        return void (await setAgentBrain(deps, actorId, orgId, agentId, { model: value }));
       return void (await updateAgent(db, actorId, orgId, agentId, { model: String(value) }, { pubsub }));
+    }
     case "budget":
       return void (await updateAgent(
         db,
@@ -222,6 +253,10 @@ async function setValue(
         await setAgentComputerTarget(deps, actorId, orgId, agentId, account.machineId);
       return void (await setAgentBrain(deps, actorId, orgId, agentId, { brain: to.brain, account: to.accountId }));
     }
+    case "skill":
+      return void (await setAgentSkills(db, actorId, orgId, agentId, [
+        { skillId: line.skillId ?? "", enabled: value === true },
+      ]));
     default: {
       const channelId = line.channelId ?? "";
       const now = await seatOf(db, agentId, channelId);
@@ -281,7 +316,14 @@ export async function settingsDeciders(db: Database, p: Proposal): Promise<strin
 }
 
 /** What a card may change on the right hand: what its Settings let admins change. */
-const RIGHT_HAND_SETTINGS: ReadonlySet<SettingField> = new Set(["model", "budget", "audience", "name", "look"]);
+const RIGHT_HAND_SETTINGS: ReadonlySet<SettingField> = new Set([
+  "model",
+  "budget",
+  "audience",
+  "name",
+  "look",
+  "skill",
+]);
 
 /** What a target's lines ask for, before `from` is read: `to`, and the channel for a channel line. */
 export type WantedLine = Omit<SettingLine, "from">;
@@ -303,7 +345,7 @@ export async function settingLines(
   const skipped: string[] = [];
   const seen = new Set<string>();
   for (const w of wanted) {
-    const key = `${w.field}:${w.channelId ?? ""}`;
+    const key = `${w.field}:${w.channelId ?? w.skillId ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
     if (isRightHand(agent) && !RIGHT_HAND_SETTINGS.has(w.field)) {
@@ -317,9 +359,18 @@ export async function settingLines(
     }
     const from = await valueNow(db, agent, w);
     // As it is stored, so Undo finds what it left.
-    const to = w.field === "look" ? validateAppearance(w.to as Parameters<typeof validateAppearance>[0]) : w.to;
+    const to =
+      w.field === "look"
+        ? validateAppearance(w.to as Parameters<typeof validateAppearance>[0])
+        : w.field === "model" && isComputerBrain(agent.brain)
+          ? normalizeBrainModel(agent.brain, w.to, agent.brainModel)
+          : w.to;
     if (same(from, to)) {
-      skipped.push(`${who} already has that ${w.field.replace("_", " ")}.`);
+      skipped.push(
+        w.field === "skill"
+          ? `${who} ${to ? "already has" : "doesn't have"} the skill ${w.label?.to ?? ""}.`
+          : `${who} already has that ${w.field.replace("_", " ")}.`,
+      );
       continue;
     }
     // The card names who it reported to: the agent's page knows only ids.
@@ -345,9 +396,10 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
       }
       return null;
     case "model":
-      if (isComputerBrain(agent.brain)) return "it thinks on a computer, whose model is picked under Quem pensa.";
       try {
-        await validateAgentFields(db, orgId, { model: String(w.to) });
+        // On a computer any name its CLI may take goes, as under Quem pensa: the vendor answers for the person's plan.
+        if (isComputerBrain(agent.brain)) normalizeBrainModel(agent.brain, w.to, agent.brainModel);
+        else await validateAgentFields(db, orgId, { model: String(w.to) });
       } catch (error) {
         return error instanceof Error ? error.message : "unknown model";
       }
@@ -381,6 +433,9 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
     }
     case "audience":
       return null;
+    case "skill":
+      if (typeof w.to !== "boolean") return "say whether the skill goes on or off.";
+      return (await skillOn(db, agent, w.skillId ?? "")) === null ? "no such skill is installed." : null;
     case "reports_to":
       if (w.to !== null && typeof w.to !== "string") return "say which agent, or none.";
       return reportsToRefusal(db, orgId, agent.id, w.to);
@@ -421,7 +476,7 @@ export function settingsRows(lines: SettingLine[]) {
     groups.set(SETTING_GROUP[l.field], [...(groups.get(SETTING_GROUP[l.field]) ?? []), l]);
   return [...groups.values()].map((settings) => ({
     settings,
-    baseHash: sha256(canonicalJson(settings.map((l) => [l.field, l.channelId ?? null, l.from]))),
+    baseHash: sha256(canonicalJson(settings.map((l) => [l.field, l.channelId ?? l.skillId ?? null, l.from]))),
   }));
 }
 

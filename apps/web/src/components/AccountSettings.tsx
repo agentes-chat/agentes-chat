@@ -21,17 +21,19 @@ import {
   Switch,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import type { AuthResult } from "@/auth/client";
 import { useAuth } from "@/auth/context";
+import { ChangeAvatarDialog } from "@/components/AvatarBuilder";
 import { ChatLookSettings } from "@/components/ChatLookSettings";
+import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
 import { PrefRow } from "@/components/NoticePrefs";
 import { OpenOnPhoneDialog } from "@/components/OpenOnPhone";
 import { useOrg } from "@/components/org-context";
-import { MyFace, ProfilePhotoDialog } from "@/components/ProfilePhoto";
+import { MyFace } from "@/components/ProfilePhoto";
 import { ZoneSelect } from "@/components/ZoneSelect";
 import { useDirectory } from "@/hooks/useDirectory";
 import { localePatch, rememberLocale } from "@/i18n";
@@ -72,6 +74,8 @@ export function AccountSection() {
   // Adding a password and deleting the account: their dialogs are the account button's, kept in the address so a
   // sign-in again comes back to them.
   const [, setAccount] = useOpenParam("account");
+  const owner = org.role === "owner";
+  const [deletingOrg, setDeletingOrg] = useState(false);
   const mine = dir.memberById.get(me.user.id);
   const zone = mine?.timezone || browserTimezone() || "UTC";
   return (
@@ -82,21 +86,21 @@ export function AccountSection() {
             id="account-profile"
             lead={<MyFace className="settings-row__face" />}
             label={t("shell.profile")}
-            help={t("shell.profileHint")}
+            status={t("shell.profileHint")}
             onOpen={() => setProfile("name")}
           />
           <PrefRow
             id="account-zone"
             icon="clock"
             label={t("shell.timezone")}
-            help={zoneDisplayName(zone, i18n.language) ?? timezoneName(zone, i18n.language)}
+            status={zoneDisplayName(zone, i18n.language) ?? timezoneName(zone, i18n.language)}
             onOpen={() => setProfile("timezone")}
           />
           <PrefRow
             id="account-activity"
             icon="layers"
             label={t("settings.account.activity")}
-            help={t("settings.account.activityHelp")}
+            hint={t("settings.account.activityHelp")}
             control={
               <Switch
                 checked={org.showActivity === true}
@@ -104,7 +108,6 @@ export function AccountSection() {
                   showActivity.mutate(on, { onError: () => toast.show(t("settings.account.activityFailed")) })
                 }
                 aria-label={t("settings.account.activity")}
-                aria-describedby="account-activity-help"
               />
             }
           />
@@ -114,7 +117,7 @@ export function AccountSection() {
               id="account-agent-style"
               icon="message"
               label={t("settings.account.agentStyle")}
-              help={t("settings.account.agentStyleHelp")}
+              hint={t("settings.account.agentStyleHelp")}
               control={
                 <Segmented
                   size="sm"
@@ -137,18 +140,16 @@ export function AccountSection() {
             id="account-phone"
             icon="phone"
             label={t("shell.openOnPhone")}
-            help={t("shell.openOnPhoneHint")}
+            status={t("shell.openOnPhoneHint")}
             onOpen={() => setPhone(true)}
           />
-          {me.user.hasPassword === false && (
-            <PrefRow
-              id="account-password"
-              icon="key"
-              label={t("shell.addPassword")}
-              help={t("shell.addPasswordHint")}
-              onOpen={() => setAccount("password")}
-            />
-          )}
+          <PrefRow
+            id="account-password"
+            icon="key"
+            label={t(me.user.hasPassword === false ? "shell.addPassword" : "shell.newPassword")}
+            status={t(me.user.hasPassword === false ? "shell.addPasswordHint" : "shell.newPasswordRow")}
+            onOpen={() => setAccount("password")}
+          />
         </div>
       </Card>
       {plans.length > 0 && (
@@ -161,7 +162,7 @@ export function AccountSection() {
                 id={`account-plan-${p.key}`}
                 lead={<ProviderLogo id={p.logo} size="sm" />}
                 label={p.name}
-                help={<PlanMeter compact usage={p.usage} text={planMeterText(t, i18n.language)} />}
+                status={<PlanMeter compact usage={p.usage} text={planMeterText(t, i18n.language)} />}
                 onOpen={() =>
                   void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "usage" } })
                 }
@@ -251,25 +252,25 @@ export function AccountSection() {
         <CardHeader
           id="account-delete"
           icon="trash"
-          title={t("deleteAccount.menu")}
-          subtitle={
-            <>
-              {t("deleteAccount.card.text")}{" "}
-              <Link
-                className="ac-link"
-                to="/org/$orgId/settings/$section"
-                params={{ orgId: org.id, section: org.role === "owner" ? "general" : "members" }}
-              >
-                {t(org.role === "owner" ? "deleteAccount.card.oneWorkspace" : "deleteAccount.card.leaveWorkspace")}
-              </Link>
-            </>
-          }
-          action={
-            <Button size="sm" variant="danger" onClick={() => setAccount("delete")}>
-              {t("deleteAccount.card.button")}
-            </Button>
-          }
+          title={t(owner ? "deleteAccount.card.title" : "deleteAccount.menu")}
         />
+        <div className="danger-pair">
+          <div className="danger-pair__way">
+            <p className="small muted">{t("deleteAccount.card.text")}</p>
+            <Button size="sm" variant="danger" onClick={() => setAccount("delete")}>
+              {t("deleteAccount.menu")}
+            </Button>
+          </div>
+          {owner && (
+            <div className="danger-pair__way">
+              <p className="small muted">{t("deleteOrg.card.text", { name: org.name })}</p>
+              <Button size="sm" variant="danger" onClick={() => setDeletingOrg(true)}>
+                {t("deleteOrg.card.title")}
+              </Button>
+            </div>
+          )}
+        </div>
+        {owner && <DeleteWorkspaceDialog org={org} open={deletingOrg} onClose={() => setDeletingOrg(false)} />}
       </Card>
       <ProfileDialog focus={profile} onClose={() => setProfile(null)} />
       <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />
@@ -298,7 +299,7 @@ export function ProfileDialog({ focus, onClose }: { focus: "name" | "timezone" |
   const [zone, setZone] = useState("");
   const [useOrgZone, setUseOrgZone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [photo, setPhoto] = useState(false);
+  const [ask, setAsk] = useState(false);
   useEffect(() => {
     if (!focus) return;
     setName(me.user.name);
@@ -350,7 +351,7 @@ export function ProfileDialog({ focus, onClose }: { focus: "name" | "timezone" |
             <div className="row" style={{ gap: 12, alignItems: "center" }}>
               <Avatar name={me.user.name} size="lg" imageUrl={mine?.image ?? me.user.image} />
               <span style={{ fontWeight: 600, flex: 1 }}>{t("photo.label")}</span>
-              <Button size="sm" type="button" onClick={() => setPhoto(true)}>
+              <Button size="sm" type="button" onClick={() => setAsk(true)}>
                 {t("photo.change")}
               </Button>
             </div>
@@ -394,7 +395,7 @@ export function ProfileDialog({ focus, onClose }: { focus: "name" | "timezone" |
           </Button>
         </DialogFooter>
       </form>
-      <ProfilePhotoDialog open={photo} onClose={() => setPhoto(false)} />
+      <ChangeAvatarDialog open={ask} onClose={() => setAsk(false)} />
     </Dialog>
   );
 }

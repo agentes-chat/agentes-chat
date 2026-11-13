@@ -10,7 +10,8 @@ import { openBrowserAsync } from "expo-web-browser";
 import type { TFunction } from "i18next";
 import type { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Linking, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Linking, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { paysHere } from "@/lib/store";
 import {
   Button,
   fieldText,
@@ -19,6 +20,7 @@ import {
   Icon,
   type IconName,
   InfoHint,
+  InkOrbit,
   LineIcon,
   ProviderLogo,
   Text,
@@ -26,6 +28,7 @@ import {
   useTheme,
 } from "@/ui";
 import { BUTTON_SIZES } from "@/ui/Button";
+import { usePersonalView } from "../settings/hooks";
 import { useColors } from "../shared/hooks";
 
 /**
@@ -39,7 +42,11 @@ export const usePlanHold = (orgId: string, org: OrgSummary | null | undefined) =
 /** A plan this workspace's billing hold stops, said where it would sign in (`planHoldPhoneLine`). */
 export function PlanHoldNote({ org, keys }: { org: OrgSummary | null | undefined; keys?: boolean }) {
   const { t } = useTranslation();
-  return <Note icon="pause">{planHoldPhoneLine(t, org ? can(org, "manage_billing") : false, keys)}</Note>;
+  return (
+    <Note icon="pause">
+      {planHoldPhoneLine(t, org ? paysHere(can(org, "manage_billing")) : false, keys ? "keys" : "plan")}
+    </Note>
+  );
 }
 
 /**
@@ -105,7 +112,9 @@ export function Note({
  * "Atende outras pessoas" (ADR 0059 §5), the web's `PlanReplies`: off, an agent on its owner's plan answers only them;
  * on, everyone who may talk to it. Under it, a line saying which, on which plan (whose, to an admin), and the plan's
  * terms behind its ⓘ.
- * A plan's page and the agent's AI draw the same.
+ * A plan's page and the agent's AI draw the same. Alone in a personal workspace (ADR 0159) it waits while off, there
+ * being nobody else to answer, but where `keep` asks (the agent's Advanced): it comes back as someone joins, and shows
+ * whenever it is on.
  */
 export function PlanReplies({
   on,
@@ -116,6 +125,7 @@ export function PlanReplies({
   plan,
   coding,
   disabled,
+  keep = false,
 }: {
   on: boolean;
   onChange: (on: boolean) => void;
@@ -129,8 +139,12 @@ export function PlanReplies({
   /** A coding plan, named by the line, its maker's words behind the ⓘ. */
   coding?: CodingPlan;
   disabled?: boolean;
+  /** Shown even while off and alone in a personal workspace: the agent's Advanced, where the switch always is. */
+  keep?: boolean;
 }) {
   const { t } = useTranslation();
+  const { solo } = usePersonalView();
+  if (solo && !on && !keep) return null;
   const says = planReplies(t, { on, agent, owner, brain, plan, coding });
   return (
     <View>
@@ -171,7 +185,7 @@ export function StepsCard({ children }: { children: ReactNode }) {
 /**
  * A numbered step, one row of the steps' card: its number (a check once `done`, faint while it waits), the title
  * (with an ⓘ when it has a `hint`), the words under it and its buttons under them. `divider`: a hairline above it,
- * inset to the words.
+ * inset to the words. `onPress`: a folded step, its title alone, that opens when tapped.
  */
 export function Step({
   n,
@@ -181,6 +195,7 @@ export function Step({
   side,
   divider = false,
   state = "now",
+  onPress,
 }: {
   n: number;
   title: string;
@@ -189,6 +204,7 @@ export function Step({
   side?: ReactNode;
   divider?: boolean;
   state?: "now" | "done" | "later";
+  onPress?: (() => void) | undefined;
 }) {
   const { t } = useTranslation();
   const c = useColors();
@@ -197,8 +213,8 @@ export function Step({
       {title}
     </Text>
   );
-  return (
-    <View style={styles.step}>
+  const row = (
+    <>
       {divider ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
       <View style={[styles.n, { backgroundColor: state === "done" ? c.ok : state === "later" ? c.plate : c.ink }]}>
         {state === "done" ? (
@@ -220,7 +236,19 @@ export function Step({
         {children}
         {side ? <View style={styles.side}>{side}</View> : null}
       </View>
-    </View>
+    </>
+  );
+  return onPress ? (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: false, checked: state === "done" }}
+      style={({ pressed }) => [styles.step, pressed && styles.pressed]}
+    >
+      {row}
+    </Pressable>
+  ) : (
+    <View style={styles.step}>{row}</View>
   );
 }
 
@@ -353,12 +381,12 @@ export function PasteField({
   );
 }
 
-/** "Esperando…" beside a step that waits on the computer. */
+/** "Esperando…" beside a step that waits on the computer, after the pixel loader as on the web. */
 export function Waiting({ label }: { label: string }) {
   const c = useColors();
   return (
     <View style={styles.wait} accessibilityLiveRegion="polite">
-      <Icon name="clock" size={13} color={c.faint} />
+      <InkOrbit size={13} color={c.faint} />
       <Text variant="caption" tone="faint" style={styles.bold}>
         {label}
       </Text>
@@ -393,6 +421,7 @@ const styles = StyleSheet.create({
   text: { flex: 1, minWidth: 0, gap: 4 },
   bold: { fontWeight: "600" },
   side: { marginTop: 6, flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  pressed: { opacity: 0.6 },
   wait: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
   inset: {
     flexDirection: "row",

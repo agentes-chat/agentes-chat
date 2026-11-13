@@ -1,6 +1,6 @@
 [package]
 name = "agentes-desktop"
-version = "0.5.6"
+version = "0.8.4"
 description = "agentes.chat for macOS, Windows and Linux: the Cloud, your own server, and agents on this computer"
 license = "AGPL-3.0-only"
 edition = "2021"
@@ -21,7 +21,8 @@ tauri-plugin-autostart = "2"
 # A second launch (a link on Windows and Linux arrives as one) reaches the running app.
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-deep-link = "2"
-tauri-plugin-notification = "2"
+# 2.8 shows a notification's buttons on desktop too (`on_action`): the Stop of a phone someone's agent uses.
+tauri-plugin-notification = "2.8"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 # 2.10 names the bundle the app came in (`{{bundle_type}}` in the update address): a Linux deb isn't sent the AppImage.
@@ -32,6 +33,8 @@ serde_json = "1"
 # The server here's secrets (local_server.rs): the owner key's SHA-256, base64 for the generated values.
 sha2 = "0.10"
 base64 = "0.22"
+# Random bytes for those secrets and for home ids from the system's own source, Windows included.
+getrandom = { version = "0.3", features = ["std"] }
 # Every server's workspaces with its own session (workspaces.rs, ADR 0154): a small blocking client, rustls.
 ureq = { version = "2", default-features = false, features = ["tls"] }
 

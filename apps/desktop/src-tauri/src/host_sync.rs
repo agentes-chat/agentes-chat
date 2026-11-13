@@ -30,7 +30,7 @@ pub struct HostSync {
 }
 
 /// This computer's name for the server (Settings › Computers): the Mac's own, else its host name.
-fn computer_name() -> Option<String> {
+pub(crate) fn computer_name() -> Option<String> {
     #[cfg(target_os = "macos")]
     {
         let out = Command::new("scutil").args(["--get", "ComputerName"]).output().ok()?;
@@ -122,6 +122,8 @@ pub fn start(app: &AppHandle) {
         if app.state::<crate::runners::Runners>().is_quitting() {
             return;
         }
+        // Tailscale turned off here since: its line says nobody else reaches it, until it is shared again.
+        local_server::check_tailnet(&app);
         local_server::ensure_served(&app);
         sync_now(&app, &[]);
     });

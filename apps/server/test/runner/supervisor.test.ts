@@ -20,6 +20,7 @@ import { sealSecret, secretAad, vaultAad } from "@agenteschat/adapters/secret-bo
 import { AccountBrains, type AccountBrainsOptions, SHARED_LOGIN_OFF } from "../../runner/account-brains";
 import { AccountManager } from "../../runner/accounts";
 import { AGENT_USERS_FILE, type AgentUser, systemLauncher } from "../../runner/agent-users";
+import { AGY_SIGN_IN_FILE } from "../../runner/agy-home";
 import { BrainManager, PERSONAL_MCP_REFUSED } from "../../runner/brain";
 import { BrowserManager } from "../../runner/browser";
 import { type StoredConfig, writeConfig } from "../../runner/config";
@@ -1751,6 +1752,27 @@ test("a worker's word that its Chrome is in use on the desktop holds a while; it
   expect(t.sup.onDesktopInUse(ANA.id)).toBe(false);
 });
 
+test("a worker hears that its agent holds its browser (keep_running), and no other worker does", async () => {
+  const kept = new Set<string>();
+  const t = setup({ browserKept: (agentId) => kept.has(agentId) });
+  t.sup.boot();
+  t.sup.attach();
+  void handleRequest(t.ctx, exec(ANA), scope().scope).catch(() => undefined);
+  await waitFor(() => t.workers.length === 1);
+  const ana = t.last(ANA.id);
+  ana.hello();
+  await requestOn(ana);
+  kept.add(ANA.id);
+  kept.add(BIA.id);
+  t.sup.stateChanged();
+  await waitFor(() => ana.of("worker.state").length === 2);
+  expect(ana.of("worker.state")[1]).toEqual({ type: "worker.state", ...STATE, browserKept: true });
+  kept.clear();
+  t.sup.stateChanged();
+  await waitFor(() => ana.of("worker.state").length === 3);
+  expect(ana.of("worker.state")[2]).toEqual({ type: "worker.state", ...STATE });
+});
+
 /** A real worker (`runWorker`) on the other end of in-memory pipes; `at`: the homes of an earlier supervisor (a restart). */
 function realWorkers(over: Partial<SupervisorOptions> = {}, at?: { home: string; agentHome: string; ownHome: string }) {
   const agentHome = at?.agentHome ?? tempDir("agent-home-");
@@ -2415,6 +2437,16 @@ test.if(posix)(
     const agentHome = tempDir("agent-home-");
     const ownHome = tempDir("worker-home-");
     dirs.push(agentHome, ownHome);
+    // The copy of a Gemini sign-in root keeps that its last worker, killed mid-turn, left behind.
+    const left = path.join(
+      ownHome,
+      "accounts",
+      "antigravity",
+      "0193eeee-0000-7000-8000-0000000000a1",
+      AGY_SIGN_IN_FILE,
+    );
+    mkdirSync(path.dirname(left), { recursive: true });
+    writeFileSync(left, "{}");
     const input = new PassThrough();
     const output = new PassThrough();
     const frames: Got[] = [];
@@ -2432,6 +2464,7 @@ test.if(posix)(
     };
     await waitFor(() => frames.length === 1);
     expect(frames[0]).toMatchObject({ type: "hello", token: "", exec: false, workspace: realpathSync(agentHome) });
+    expect(existsSync(left)).toBe(false);
     send({ type: "welcome", machineId: ANA.id, name: "ag-a1b2c3d4", heartbeatMs: 25_000 });
     // Nothing is allowed until the supervisor says what the computer allows.
     send({ type: "request", id: "1", ...exec(ANA, "pwd") });
@@ -3163,10 +3196,10 @@ test("the launch line: the agent's launcher, then this runner's worker with the 
   const ana = USERS[0] as AgentUser;
   const runner = ["/opt/agentes-runner/bin/bun", "/opt/agentes-runner/agentes-runner.mjs"];
   const home = "/var/lib/agentes-runner-agents/ag-a1b2c3d4";
-  // A systemd older than 253 (no OOMPolicy on scopes): the same on any computer the test runs on.
-  const cmd = workerCommand(ana, runner, home, true, false);
+  // A systemd older than 253 (no OOMPolicy on scopes), and no Podman: the same on any computer the test runs on.
+  const cmd = workerCommand(ana, runner, home, true, false, false);
   expect(cmd.argv).toEqual([
-    ...systemLauncher(ana, true, false).prefix,
+    ...systemLauncher(ana, true, false, false).prefix,
     ...runner,
     "worker",
     "--agent",
@@ -3196,6 +3229,12 @@ test("the launch line: the agent's launcher, then this runner's worker with the 
     "SHELL",
     "USER",
   ]);
+  // With rootless containers (ADR 0169): its runtime dir, and Podman's socket for docker and podman alike.
+  expect(workerCommand(ana, runner, home, true, false, true).env).toMatchObject({
+    XDG_RUNTIME_DIR: "/run/user/21000",
+    CONTAINER_HOST: "unix:///run/user/21000/podman/podman.sock",
+    DOCKER_HOST: "unix:///run/user/21000/podman/podman.sock",
+  });
   expect(workerCommand(ana, runner, home, false).argv.slice(0, 4)).toEqual([
     "/usr/sbin/runuser",
     "-u",
@@ -4256,6 +4295,8 @@ test.if(posix)("a turn dropped on purpose ends now: its CLI isn't taken for cras
   expect(await errorCode(() => run)).toBe("dropped");
   await sleep(100);
   stop();
+  // The fake CLI may still be writing its last line when the turn ends: read the log once every line is whole.
+  await waitFor(() => readFileSync(h.log, "utf8").endsWith("\n"));
   const started = readFileSync(h.log, "utf8")
     .trim()
     .split("\n")

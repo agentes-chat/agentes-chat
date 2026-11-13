@@ -18,7 +18,7 @@ import {
   usePlatformKey,
   useSkills,
 } from "@agenteschat/client";
-import { LEVELS, type Level, saveLevels } from "@agenteschat/client/lib/access-levels";
+import { type Level, saveLevels } from "@agenteschat/client/lib/access-levels";
 import { draftLevels, draftMailLevels, suggestedAiText } from "@agenteschat/client/lib/action-cards";
 import { newAgentStart, newAgentStartText } from "@agenteschat/client/lib/agent-setup";
 import {
@@ -35,6 +35,8 @@ import {
   freeHandle,
   handleForName,
   handleProblem,
+  PERSONAL_STARTERS,
+  type PersonalStarter,
   presetChannels,
   presetLevels,
   ROLE_DEFAULTS,
@@ -45,17 +47,22 @@ import {
 } from "@agenteschat/client/lib/new-agent";
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
 import { AUTO, modelChoices, usableModels } from "@agenteschat/client/lib/providers";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
+import { Image } from "expo-image";
 import { usePreventRemove } from "expo-router";
 import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, TextInput, View } from "react-native";
+import { Alert, ScrollView, type ScrollViewInstance, StyleSheet, TextInput, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSequence, withSpring } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
 import {
+  ACT_LINE,
   AgentAvatar,
   Button,
   fieldText,
+  GROUPED_ROW,
   GroupedFooter,
   GroupedHeader,
   GroupedList,
@@ -65,6 +72,8 @@ import {
   ProviderLogo,
   Sky,
   Text,
+  useReducedMotion,
+  useTheme,
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -72,6 +81,7 @@ import { newAgentAi, pickedAi } from "../ai/logic";
 import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
+import { pickLevel } from "../connectors/pick-level";
 import { suggestAgentName } from "../new/logic";
 import { useOpenDm } from "../new/useOpenDm";
 import { useFailed } from "../routines/hooks";
@@ -80,13 +90,22 @@ import { chooseAction } from "../settings/parts";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack, PushedHeader, successHaptic, Tile, tapHaptic, useSurface } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
+import { markArrived } from "./arrival";
 import { BrainPickSheet } from "./BrainPickSheet";
 import { type FullLook, fullLook } from "./edit";
 import { ErrorLine, HandleInput } from "./HandleInput";
 import { ImportAgents } from "./ImportAgents";
 import { arrivedAgents, landingOf, reportCounts } from "./import";
+import { IMPORT_LOGO } from "./import-logos";
 import { LookList } from "./LookPicker";
-import { firstBlockedStep, NEW_AGENT_PHONE_STEPS, type PhoneStep, roleLine, stepBlocked } from "./new-agent";
+import {
+  firstBlockedStep,
+  importMarkCards,
+  NEW_AGENT_PHONE_STEPS,
+  type PhoneStep,
+  roleLine,
+  stepBlocked,
+} from "./new-agent";
 import { RoleInput } from "./RoleInput";
 import { useAgentImport } from "./useAgentImport";
 
@@ -194,6 +213,9 @@ function NewAgentForm({
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const [role, setRole] = useState<RoleId | null>(proposed || initialWhat ? "custom" : null);
+  // A personal workspace's starting point (one of the right hand's personal agents), on top of "custom" (ADR 0159 §3).
+  const [starter, setStarter] = useState<PersonalStarter["id"] | null>(null);
+  const personal = isPersonal(org);
   const [roleText, setRoleText] = useState(proposed?.role ?? "");
   const [name, setName] = useState(proposed?.name ?? (initialWhat ? suggested : ""));
   const [handle, setHandle] = useState(proposed?.handle ?? (initialWhat ? handleForName(suggested) : ""));
@@ -260,6 +282,24 @@ function NewAgentForm({
   }, []);
   const [importing, setImporting] = useState(startImport && mayImport && !proposed);
   const deny = useDenyAgentProposal(orgId);
+  // The face answers the name (a first-time moment): it looks down at the field while the name is typed and, when the
+  // field is left (the keyboard's Next), smiles and hops 4 points on a spring. Transform only, on the UI thread.
+  const [naming, setNaming] = useState(false);
+  const [cheer, setCheer] = useState(false);
+  const reduced = useReducedMotion();
+  const hop = useSharedValue(0);
+  const hopStyle = useAnimatedStyle(() => ({ transform: [{ translateY: hop.get() }] }));
+  const nameDone = () => {
+    setNaming(false);
+    if (!name.trim()) return;
+    setCheer(true);
+    if (!reduced) {
+      const up = withSpring(-4, { duration: 220, dampingRatio: 0.6 });
+      const down = withSpring(0, { duration: 300, dampingRatio: 0.8 });
+      hop.set(withSequence(up, down));
+    }
+    setTimeout(() => setCheer(false), 900);
+  };
 
   const step: PhoneStep = NEW_AGENT_PHONE_STEPS[index] ?? "role";
   const total = NEW_AGENT_PHONE_STEPS.length;
@@ -269,8 +309,8 @@ function NewAgentForm({
   );
   const levels = useMemo(
     // A proposal's levels (the reviewer's, in Revisar) over the role's; the apps it doesn't name open as any role's.
-    () => (managesAgents ? { ...presetLevels(role ?? "custom", items), ...proposedLevels } : {}),
-    [proposedLevels, role, items, managesAgents],
+    () => (managesAgents ? { ...presetLevels(role ?? "custom", items, isPersonal(org)), ...proposedLevels } : {}),
+    [proposedLevels, role, items, managesAgents, org],
   );
   const granted = items.filter((i) => (levels[i.id] ?? "none") !== "none");
   const myMail = (proposed?.mail ?? []).filter((m) => m.accountId in mailLevels);
@@ -317,8 +357,9 @@ function NewAgentForm({
   const pickRole = (id: RoleId) => {
     tapHaptic();
     setRole(id);
+    setStarter(null);
     // A new role fills in the rest. The role it already has keeps what was typed, and a proposal keeps its draft.
-    if (id !== role && !proposed) {
+    if ((id !== role || starter) && !proposed) {
       const agentName = id === "custom" ? "" : t(`newAgent.roles.${id}.agent`);
       setRoleText("");
       setName(agentName);
@@ -329,6 +370,22 @@ function NewAgentForm({
       setChannelIds(new Set([...asked, ...presetChannels(id, myChannels)]));
     }
     // A tap is the answer: on to the next step, or back to Revisar on a proposal.
+    setTimeout(() => goTo(proposed ? total - 1 : 1), 180);
+  };
+  /** A personal workspace's starting point: from scratch, with its agent's name, look, role and line filled in. */
+  const pickStarter = (s: PersonalStarter) => {
+    tapHaptic();
+    setRole("custom");
+    setStarter(s.id);
+    if (starter !== s.id && !proposed) {
+      setRoleText(t(`teamTemplates.agents.${s.id}.role`));
+      setName(s.name);
+      setHandle(handleForName(s.name));
+      setHandleTouched(false);
+      setLook(fullLook(s.look));
+      setInstructions(t(`teamTemplates.agents.${s.id}.line`));
+      setChannelIds(new Set(asked));
+    }
     setTimeout(() => goTo(proposed ? total - 1 : 1), 180);
   };
   const refuse = () => {
@@ -364,7 +421,9 @@ function NewAgentForm({
         // Its setup checklist suggests from the ready-made role it started from (ADR 0155 §2).
         setup: { role: role && role !== "custom" ? role : null },
         ownerUserId: meId ?? null,
-        audience: { mode: "everyone", userIds: [] },
+        // A personal workspace's new agent answers its owner only (ADR 0159 §3a): someone who joins later is not
+        // answered by every agent made while the person was alone.
+        audience: { mode: isPersonal(org) ? "owner" : "everyone", userIds: [] },
         credentialId: thinks.credentialId,
         monthlyBudgetUsd: null,
         appearance: look,
@@ -431,7 +490,20 @@ function NewAgentForm({
       if (failures.length > 0) toast({ title: t("mobile.newAgent.partly"), icon: "x" });
       else {
         successHaptic();
-        toast({ title: t("mobile.agents.created", { name: agent.name }), agentId: agent.id });
+        // Agentes greets it once when it is next on screen (its row comes in, the others look at it).
+        markArrived(agent.id);
+        // It joined (a personal workspace has no team to join: it is here, ADR 0159), and what it thinks with, under
+        // its face: the one note before its conversation opens.
+        const thinksLabel = chosen?.title ?? (start && useLast ? startText : t("brain.auto.label"));
+        toast({
+          title: isPersonal(org)
+            ? t("newAgent.createdTitlePersonal", { name: agent.name })
+            : t("mobile.agents.created", { name: agent.name }),
+          subtitle: t("mobile.agents.thinksWith", { label: thinksLabel }),
+          agentId: agent.id,
+          // Its profile one tap away while its conversation opens under the toast.
+          action: { label: t("mobile.chat.profile"), onPress: () => router.push(`/agent/${agent.id}`) },
+        });
       }
       if (from) {
         // From its card: back to that conversation as it was, Connect over it when it has nothing to think with.
@@ -439,13 +511,13 @@ function NewAgentForm({
         if (ai?.kind === "none" && !held) openConnectAi({ agentId: agent.id });
         return;
       }
-      // It exists either way (Criar again would only find its @ taken): on to its conversation, where Connect opens
-      // when it has nothing to think with yet (ADR 0061 §6).
+      // It exists either way (Criar again would only find its @ taken): on to its conversation. Only a plan the person
+      // chose to connect here opens over it; with nothing to think with yet, the conversation's own line says so and
+      // connects from there (ADR 0061 §6), so nothing jumps in front of its first message.
       void openDm({ agentId: agent.id }).then(() => {
         // On a billing hold nothing connects before the plan.
         if (held) return;
         if (thinks.connect) openConnectAi({ agentId: agent.id, plan: thinks.connect });
-        else if (ai?.kind === "none" || (!thinks.plan && usable.size === 0)) openConnectAi({ agentId: agent.id });
       });
     } catch (e) {
       failed(e);
@@ -516,13 +588,11 @@ function NewAgentForm({
     review: t("actionCard.agentProposal.review"),
   };
   const roleName = role && role !== "custom" ? t(`newAgent.roles.${role}.name`) : roleText.trim();
-  // A level is chosen among the three, as everywhere else on the phone (the system's list), never cycled by taps.
-  const pickLevel = (title: string, choose: (level: Level) => void) =>
-    chooseAction(
-      title,
-      LEVELS.map((l) => ({ label: t(`access.level.${l}`), onPress: () => choose(l) })),
-      t("common.cancel"),
-    );
+  // A level is chosen among the three in the app's picker, as everywhere else on the phone, never cycled by taps.
+  const chooseLevel = (title: string, current: string, choose: (level: Level) => void) =>
+    void pickLevel(t, title, current).then((level) => {
+      if (level) choose(level);
+    });
 
   const views: Record<PhoneStep, () => ReactNode> = {
     role: () => (
@@ -534,14 +604,56 @@ function NewAgentForm({
             label={t("newAgent.roles.custom.name")}
             sub={t("newAgent.roles.custom.desc")}
             subLines={2}
-            checked={role === "custom"}
+            checked={role === "custom" && !starter}
             onPress={() => pickRole("custom")}
           />
         </GroupedList>
-        {role === "custom" ? (
+        {role === "custom" && !starter ? (
           <RoleInput value={roleText} onChangeText={setRoleText} placeholder={t("agent.roleHelp")} grouped />
         ) : null}
-        {ROLE_GROUPS.map((group) => (
+        {/* Right under "Do zero", a card of its own: the other way to start, before the presets. */}
+        {mayImport && !proposed ? (
+          <View style={styles.other}>
+            <GroupedList>
+              <GroupedRow
+                leading={<ImportMarks />}
+                label={t("newAgent.importCard")}
+                sub={t("newAgent.importCardLine")}
+                subLines={2}
+                chevron
+                onPress={() => {
+                  setImporting(true);
+                  scroll.current?.scrollTo({ y: 0, animated: false });
+                }}
+              />
+            </GroupedList>
+          </View>
+        ) : null}
+        {personal ? (
+          // One person's agents (ADR 0159 §3): the right hand's personal ones, not a company's roles.
+          <>
+            <GroupedHeader>{t("newAgent.roleGroups.personal")}</GroupedHeader>
+            <GroupedList>
+              {PERSONAL_STARTERS.map((s) => (
+                <GroupedRow
+                  key={s.id}
+                  leading={<AgentAvatar agent={fullLook(s.look)} size={36} live={false} />}
+                  label={t(`teamTemplates.agents.${s.id}.role`)}
+                  sub={roleLine(
+                    t(`teamTemplates.agents.${s.id}.line`),
+                    t("newAgent.startsAs", { name: s.name }),
+                    s.name,
+                    i18n.language,
+                  )}
+                  subLines={2}
+                  checked={starter === s.id}
+                  onPress={() => pickStarter(s)}
+                />
+              ))}
+            </GroupedList>
+          </>
+        ) : null}
+        {(personal ? [] : ROLE_GROUPS).map((group) => (
           <Fragment key={group.id}>
             <GroupedHeader>{t(`newAgent.roleGroups.${group.id}`)}</GroupedHeader>
             <GroupedList>
@@ -572,32 +684,25 @@ function NewAgentForm({
             <ErrorLine text={t("newAgent.errors.roleRequired")} />
           </View>
         ) : null}
-        {mayImport && !proposed ? (
-          <>
-            <View style={styles.gap} />
-            <GroupedList>
-              <GroupedRow
-                leading={<RowTile icon="archive" />}
-                label={t("shell.importAgents")}
-                sub={t("onboarding.import.lead")}
-                subLines={2}
-                chevron
-                onPress={() => {
-                  setImporting(true);
-                  scroll.current?.scrollTo({ y: 0, animated: false });
-                }}
-              />
-            </GroupedList>
-          </>
-        ) : null}
       </>
     ),
     identity: () => (
       <>
-        {/* The agent standing in its own sky, as on its page: what the fields below change. */}
+        {head(t("mobile.newAgent.identityQuestion"), t("mobile.newAgent.identityLead"))}
+        {/* The agent standing in its own sky, as on its page: what the fields below change. Its sky is the step's
+            one color; the face is the one on its profile (96, unframed). */}
         <View style={[styles.stage, surface]}>
           <Sky color={look.color} surface="raised" style={StyleSheet.absoluteFill} />
-          <AgentAvatar agent={look} size={92} name={shownName} framed={false} />
+          <Animated.View style={hopStyle}>
+            <AgentAvatar
+              agent={look}
+              size={96}
+              name={shownName}
+              framed={false}
+              {...(naming ? { gaze: "down" as const } : {})}
+              {...(cheer ? { expression: "happy" as const } : {})}
+            />
+          </Animated.View>
         </View>
         <GroupedHeader>{t("newAgent.name")}</GroupedHeader>
         <GroupedList>
@@ -610,35 +715,48 @@ function NewAgentForm({
             placeholderTextColor={c.faint}
             accessibilityLabel={t("newAgent.name")}
             style={field}
+            onFocus={() => setNaming(true)}
+            onBlur={nameDone}
+            returnKeyType="next"
           />
         </GroupedList>
         {tried && !name.trim() ? (
           <View style={styles.foot}>
             <ErrorLine text={t("newAgent.errors.nameRequired")} />
           </View>
+        ) : naming ? (
+          // While the name is typed: only the stage, the name and where its @ comes from. The rest comes back with Next.
+          <GroupedFooter>
+            {handle ? t("mobile.newAgent.handleFromName", { handle }) : t("mobile.newAgent.handleFromNameEmpty")}
+          </GroupedFooter>
         ) : null}
-        <GroupedHeader>{t("newAgent.handle")}</GroupedHeader>
-        <GroupedList>
-          <HandleInput
-            value={handle}
-            onChangeText={(v) => {
-              setHandleTouched(true);
-              setHandle(cleanHandle(v));
-            }}
-            label={t("newAgent.handle")}
-            placeholder={t("newAgent.handlePlaceholder")}
-            grouped
-            ok={Boolean(handle) && !handleIssue}
-          />
-        </GroupedList>
-        {handleIssue ? (
-          <View style={styles.foot}>
-            <ErrorLine text={handleText} />
-          </View>
-        ) : (
-          <GroupedFooter>{handleText}</GroupedFooter>
+        {naming ? null : (
+          <Animated.View entering={reduced ? undefined : REST_IN}>
+            <GroupedHeader>{t("newAgent.handle")}</GroupedHeader>
+            <GroupedList>
+              <HandleInput
+                value={handle}
+                onChangeText={(v) => {
+                  setHandleTouched(true);
+                  setHandle(cleanHandle(v));
+                }}
+                label={t("newAgent.handle")}
+                placeholder={t("newAgent.handlePlaceholder")}
+                grouped
+                ok={Boolean(handle) && !handleIssue}
+              />
+            </GroupedList>
+            {handleIssue ? (
+              <View style={styles.foot}>
+                <ErrorLine text={handleText} />
+              </View>
+            ) : (
+              // What the @ is for, in one line: how to call it in the chat.
+              <GroupedFooter>{handle ? t("mobile.newAgent.handleMention", { handle }) : handleText}</GroupedFooter>
+            )}
+            <LookList look={look} onChange={setLook} />
+          </Animated.View>
         )}
-        <LookList look={look} onChange={setLook} />
       </>
     ),
     instructions: () => (
@@ -658,8 +776,8 @@ function NewAgentForm({
           />
         </GroupedList>
         {role && role !== "custom" && instructions !== t(`newAgent.roles.${role}.instructions`) ? (
-          <View style={styles.restore}>
-            <Text variant="footnote" tone="faint" style={styles.fill}>
+          <View style={[ACT_LINE.row, styles.restore]}>
+            <Text variant="footnote" tone="faint" style={ACT_LINE.text}>
               {t("newAgent.startedFrom", { role: t(`newAgent.roles.${role}.name`) })}
             </Text>
             <Button
@@ -675,23 +793,17 @@ function NewAgentForm({
     ),
     review: () => (
       <>
-        {/* Who it is, as its head: a tap goes back to its name, @ and look. */}
-        <Pressable
-          onPress={() => goTo(1)}
-          accessibilityRole="button"
-          accessibilityLabel={[shownName, `@${handle}`, roleName].filter(Boolean).join(", ")}
-          style={({ pressed }) => [styles.who, pressed && styles.pressed]}
-        >
-          <AgentAvatar agent={look} size={52} name={shownName} />
-          <View style={styles.fill}>
-            <Text variant="title2" numberOfLines={1}>
-              {shownName}
-            </Text>
-            <Text variant="small" tone="muted" numberOfLines={1}>
-              {[`@${handle}`, roleName].filter(Boolean).join(" · ")}
-            </Text>
-          </View>
-        </Pressable>
+        {head(t("actionCard.agentProposal.review"), t("mobile.newAgent.reviewLead"))}
+        {/* Who it is, first row: a tap goes back to its name, @ and look. */}
+        <GroupedList>
+          <GroupedRow
+            leading={<AgentAvatar agent={look} size={36} name={shownName} live={false} />}
+            label={shownName}
+            sub={[`@${handle}`, roleName].filter(Boolean).join(" · ")}
+            chevron
+            onPress={() => goTo(1)}
+          />
+        </GroupedList>
 
         <GroupedHeader>{t("mobile.agent.does")}</GroupedHeader>
         <GroupedList>
@@ -717,7 +829,7 @@ function NewAgentForm({
               <GroupedRow
                 {...(chosen?.mark
                   ? { leading: <ProviderLogo id={chosen.mark} size="sm" /> }
-                  : { icon: "brain" as const })}
+                  : { icon: "key" as const })}
                 label={
                   chosen
                     ? chosen.title
@@ -759,6 +871,9 @@ function NewAgentForm({
             </GroupedList>
             {picked?.pick.kind === "connect" && picked.description ? (
               <GroupedFooter>{picked.description}</GroupedFooter>
+            ) : !held && !thinks.plan ? (
+              // On a key or the workspace's model: the plan is the other way, said once.
+              <GroupedFooter>{t("mobile.newAgent.planHint", g)}</GroupedFooter>
             ) : null}
           </>
         )}
@@ -784,6 +899,7 @@ function NewAgentForm({
                 key={i.id}
                 leading={<ConnectorIcon def={i.def} image={i.image} label={app} size={32} />}
                 label={app}
+                {...(i.account ? { sub: i.account } : {})}
                 value={
                   proposed
                     ? t(`access.level.${level}`)
@@ -791,8 +907,9 @@ function NewAgentForm({
                 }
                 {...(proposed
                   ? {
-                      chevron: true,
-                      onPress: () => pickLevel(app, (l) => setProposedLevels((p) => ({ ...p, [i.id]: l }))),
+                      // Chosen in place (the app's picker), not on a screen: the value's up-down mark.
+                      menu: true,
+                      onPress: () => chooseLevel(app, level, (l) => setProposedLevels((p) => ({ ...p, [i.id]: l }))),
                     }
                   : {})}
               />
@@ -804,8 +921,12 @@ function NewAgentForm({
               icon="mail"
               label={box.address}
               value={t(`access.level.${mailLevels[box.accountId] ?? "none"}`)}
-              chevron
-              onPress={() => pickLevel(box.address, (l) => setMailLevels((p) => ({ ...p, [box.accountId]: l })))}
+              menu
+              onPress={() =>
+                chooseLevel(box.address, mailLevels[box.accountId] ?? "none", (l) =>
+                  setMailLevels((p) => ({ ...p, [box.accountId]: l })),
+                )
+              }
             />
           ))}
           {listedApps.length + myMail.length === 0 ? (
@@ -844,7 +965,7 @@ function NewAgentForm({
           </>
         ) : null}
 
-        <GroupedHeader>{t("newAgent.channels")}</GroupedHeader>
+        <GroupedHeader>{t("newAgent.channelsJoin")}</GroupedHeader>
         <GroupedList>
           {myChannels.map((ch) => (
             <GroupedRow
@@ -910,7 +1031,7 @@ function NewAgentForm({
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             {importing ? (
               <>
-                <Button variant="secondary" label={t("common.back")} disabled={busy} onPress={closeImport} />
+                <Button variant="text" label={t("common.back")} disabled={busy} onPress={closeImport} />
                 {imp.planned && imp.picks.length > 0 ? (
                   <View style={styles.fill}>
                     <Button
@@ -926,7 +1047,8 @@ function NewAgentForm({
               </>
             ) : null}
             {backs ? (
-              <Button variant="secondary" label={t("common.back")} disabled={busy} onPress={() => goTo(index - 1)} />
+              // Back is a word; Continue is the step's one primary.
+              <Button variant="text" label={t("common.back")} disabled={busy} onPress={() => goTo(index - 1)} />
             ) : null}
             {goes ? (
               <View style={styles.fill}>
@@ -980,6 +1102,37 @@ function RowTile({ icon }: { icon: IconName }) {
   return <Tile icon={icon} size={36} />;
 }
 
+/** The @ field and the look list come back under the name once it is done. */
+const REST_IN = FadeIn.duration(200);
+
+const MARK = 36;
+const MARK_OVERLAP = 12;
+const hasLogo = (card: string): card is keyof typeof IMPORT_LOGO => card in IMPORT_LOGO;
+
+/** Up to three of the apps agents come from, their logos overlapping, each ringed in the row's colour. */
+function ImportMarks() {
+  const { colors: c, scheme } = useTheme();
+  return (
+    <View style={styles.marks} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {importMarkCards(hasLogo).map((card, i) => {
+        const logo = IMPORT_LOGO[card];
+        return (
+          <View
+            key={card}
+            style={[styles.mark, i > 0 && styles.markAfter, { backgroundColor: c.sunken, borderColor: c.raised }]}
+          >
+            <Image
+              source={scheme === "dark" ? (logo.dark ?? logo.light) : logo.light}
+              contentFit="contain"
+              style={styles.markLogo}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   closed: { paddingHorizontal: 16, gap: 8 },
@@ -991,10 +1144,21 @@ const styles = StyleSheet.create({
   head: { gap: 2, paddingHorizontal: 4, paddingTop: 10, paddingBottom: 16 },
   stack: { gap: 8 },
   gap: { height: 24 },
+  other: { paddingTop: 12 },
+  marks: { flexDirection: "row" },
+  mark: {
+    width: MARK,
+    height: MARK,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markAfter: { marginLeft: -MARK_OVERLAP },
+  markLogo: { width: 22, height: 22 },
   foot: { paddingTop: 7, paddingHorizontal: 16 },
   stage: {
     height: 150,
-    marginTop: 14,
     borderRadius: 20,
     borderBottomLeftRadius: 6,
     overflow: "hidden",
@@ -1002,11 +1166,14 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     paddingBottom: 12,
   },
-  field: { minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
+  field: {
+    minHeight: GROUPED_ROW.minHeight,
+    paddingHorizontal: GROUPED_ROW.padX,
+    paddingVertical: GROUPED_ROW.tallPadY,
+  },
   bare: { borderWidth: 0, borderRadius: 0, backgroundColor: "transparent" },
-  restore: { flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 7, paddingLeft: 16 },
-  who: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 4, paddingTop: 16, paddingBottom: 4 },
-  pressed: { opacity: 0.6 },
+  restore: { alignItems: "center", columnGap: 16, rowGap: 8, paddingTop: 7, paddingLeft: 16 },
   refuse: { marginTop: 24 },
-  footer: { flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingTop: 12 },
+  // Back as a word at the left, 16 from the primary that takes the rest.
+  footer: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 16, paddingTop: 12 },
 });

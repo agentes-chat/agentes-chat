@@ -24,7 +24,7 @@ test("a menu's rows have the same room at its ends as at its sides, a select's t
   // A row's top and bottom are one value; a row with a description is as deep as its sides, and a row led by a face
   // (OptionRow) keeps the face 6 from its top and bottom (10 on touch) and the rows' 8 from its start.
   expect(last(kit, ".ac-menu__item", "padding")).toBe("calc((var(--menu-item-h) - 20px) / 2) var(--menu-item-px)");
-  expect(last(kit, ".ac-menu__item:has(>.ac-menu__label>.ac-menu__desc)", "padding-block")).toBe("var(--menu-item-px)");
+  expect(last(kit, ".ac-menu__item:has(>.ac-menu__label>.ac-menu__desc)", "padding-block")).toBeUndefined();
   expect(last(kit, ":is(.ac-menu,.ac-palette__list):has(.ac-menu__leading>.ac-avatar) .ac-menu__item", "padding")).toBe(
     "calc((var(--option-h) - var(--option-face)) / 2) var(--menu-item-px)",
   );
@@ -53,7 +53,16 @@ test("a rounded thing near a rounded box's edge has the box's radius less the ro
   expect(last(top, ".ac-msg__actions", "border-radius")).toBe("var(--bar-r)");
   const inBar = "calc(var(--bar-r) - var(--bar-pad))";
   expect(last(top, ".ac-msg__actions .ac-btn--sm", "border-radius")).toBe(inBar);
-  expect(last(atRule(kit, "@media (pointer: coarse)"), ".ac-msg__actions .ac-btn--sm", "border-radius")).toBe(inBar);
+  // Under a finger the plates grow through the bar's own size, so their corner stays the bar's less its room.
+  expect(last(atRule(kit, "@media (pointer: coarse)"), ".ac-msg__actions", "--bar-btn")).toBe("var(--control-h-sm)");
+  // A plate with a count (👍 1) is one plate around the icon and the count, the icon as far in as in a square one.
+  expect(last(top, ".ac-msg__actions .ac-btn--sm", "width")).toBe("var(--bar-btn)");
+  expect(last(top, ".ac-msg__actions .ac-btn--sm:not(.ac-btn--icon)", "width")).toBe("auto");
+  expect(last(top, ".ac-msg__actions .ac-btn--sm:not(.ac-btn--icon)", "padding-inline")).toBe(
+    "calc((var(--bar-btn) - var(--bar-icon)) / 2)",
+  );
+  // Pressed, it keeps the ghost's plate: no fill of the bar's own over it.
+  expect(kit).not.toContain('.ac-msg__actions .ac-btn[aria-pressed="true"]');
   // Segmented controls, and the command palette's rows in its list.
   expect(last(top, ".ac-seg__item", "border-radius")).toBe("calc(var(--seg-r) - var(--seg-in))");
   expect(last(top, ".ac-palette__list", "padding")).toBe("var(--palette-pad)");
@@ -65,8 +74,9 @@ test("a rounded thing near a rounded box's edge has the box's radius less the ro
   }
   for (const inner of [".ac-tz__searchrow", ".ac-tz__list", ".ac-filter__list"])
     expect(last(top, inner, "padding")).toBe("var(--menu-pad)");
-  // The phone-style menu overlay: 8px of room inside a section's corner.
-  expect(last(top, ".ac-mo__group", "padding")).toBe("var(--space-2)");
+  // The phone-style menu overlay: 8px of room inside a section's corner, said as its menu's room.
+  expect(last(top, ".ac-mo__group", "--menu-pad")).toBe("var(--space-2)");
+  expect(last(top, ".ac-mo__group", "padding")).toBe("var(--menu-pad)");
   expect(last(top, ".ac-mo__item", "border-radius")).toBe("calc(var(--radius-section) - var(--space-2))");
   // Popovers with their own room set it as the menu's, so their corner follows.
   const layout = topLevel(await read(join(SRC, "layout.css")));
@@ -94,7 +104,7 @@ test("a popover with words and controls of its own has the menu's room, its word
     ["tasks", ".tm-confirm.ac-popover"],
     ["dashboards", ".nw-alert.ac-popover"],
     ["issues", ".issues-display.ac-popover"],
-    ["layout", ".msg-mem__pop"],
+    ["issues", ".issue-github__pop.ac-popover"],
     ["layout", ".profile-card"],
     ["card", ".mcard-audience.ac-popover"],
   ];
@@ -115,11 +125,10 @@ test("a popover with words and controls of its own has the menu's room, its word
   expect(last(sheets.dashboards, ".nw-alert__row", "padding")).toBe("var(--popover-in) var(--popover-in) 0");
   expect(last(sheets.issues, ".issues-display__row", "padding-inline")).toBe("var(--popover-in)");
   expect(last(sheets.issues, ".issues-display__foot", "padding")).toBe("14px var(--popover-in) var(--popover-in)");
+  expect(last(sheets.issues, ".issue-github__field", "margin")).toBe("var(--popover-in) var(--popover-in) 0");
   expect(last(sheets.issues, ".issues-layout", "border-radius")).toBe(
     "var(--radius-item) var(--radius-item) var(--radius-item) 4px",
   );
-  expect(last(sheets.layout, ".msg-mem__card", "padding")).toBe("var(--popover-in)");
-  expect(last(sheets.layout, ".msg-mem__card .msg-mem__actions", "margin-bottom")).toBe(neg);
   expect(last(sheets.layout, ".channel-card>div", "padding")).toBe("var(--popover-in)");
   expect(last(sheets.layout, ".channel-card .profile-card__actions", "margin-bottom")).toBe(neg);
   expect(last(sheets.card, ".mcard-audience.ac-popover>:not(.mcard-audience__acts)", "margin-inline")).toBe(
@@ -155,8 +164,8 @@ test("a button inside a field is as far from its end as from its top and bottom,
   expect(last(kit, ".ac-token--sm", "--token-x-spare")).toBe("5px");
   expect(last(kit, ".ac-token--sm", "border-radius")).toBe("var(--radius-xs)");
   expect(last(kit, ".ac-token--sm .ac-token__remove", "border-radius")).toBe("var(--radius-cut)");
-  // The composer's tools: one room at both ends and under them, its send button the card's corner less it.
-  expect(last(kit, ".ac-composer__tools", "padding")).toBe("4px var(--space-2) var(--space-2)");
+  // The composer's row: one room on every side, its send button the card's corner less it.
+  expect(last(kit, ".ac-composer__row", "padding")).toBe("var(--space-2)");
   expect(last(kit, ".ac-composer__send", "border-radius")).toBe("var(--control-r-sm)");
   // The password field's eye: a 32px button in the ruler's 48px field, as far from its end as from its top and
   // bottom, its corner the field's less that room.
@@ -172,9 +181,9 @@ test("a button inside a field is as far from its end as from its top and bottom,
 test("every hairline between a card's rows, and over its foot, has one step of room on each side", async () => {
   const kit = topLevel(await read(join(UI, "components.css")));
   const tokens = topLevel(await read(join(UI, "tokens.css")));
-  expect(last(tokens, ":root", "--row-py")).toBe("var(--space-3)");
+  expect(last(tokens, ":root", "--row-py")).toBe("var(--space-2)");
   expect(last(kit, ".ac-card", "gap")).toBe("var(--space-3)");
-  expect(last(kit, ".ac-card__foot", "padding")).toBe("var(--row-py) var(--card-pad, 20px)");
+  expect(last(kit, ".ac-card__foot", "padding")).toBe("var(--row-py) var(--card-pad, 16px)");
   const layout = topLevel(await read(join(SRC, "layout.css")));
   expect(last(layout, ".settings-row", "padding")).toBe("var(--row-py) var(--card-pad)");
   expect(last(layout, ".voice-engine__body", "padding")).toBe("var(--row-py) var(--card-pad)");
@@ -184,15 +193,20 @@ test("every hairline between a card's rows, and over its foot, has one step of r
   expect(last(roles, ".roles-row", "padding")).toBe("var(--row-py) 20px");
   expect(last(roles, ".roles-area", "padding")).toBe("var(--row-py) 0");
   expect(last(roles, ".roles-look__row", "padding")).toBe("var(--row-py) 0");
+  // Limites are settings rows: every select on one right edge.
   const people = topLevel(await read(join(SRC, "components/people-usage.css")));
-  expect(last(people, ".pu-limits__row", "padding")).toBe("var(--row-py) 0");
+  expect(declarations(people, ".pu-limits__row")).toEqual([]);
+  expect(last(people, ".pu-pick__select", "width")).toBe("200px");
   const plan = topLevel(await read(join(SRC, "components/plan-usage.css")));
-  expect(last(plan, ".plan-block", "padding")).toBe("var(--row-py) 0");
+  // An account's row: one step above and below its words, the list's 16 at its sides, what it folds on the same sides.
+  expect(last(plan, ".plan-row__head", "padding")).toBe("var(--space-3) var(--space-4)");
+  expect(last(plan, ".plan-row__body", "padding")).toBe("0 var(--space-4)");
+  expect(last(plan, ".plan-row__body", "gap")).toBe("var(--space-3)");
 });
 
-test("Seus planos and the API keys: each row has the same room at its top and bottom as at its sides", async () => {
+test("the API keys: each row has the rows' room above and below, 16 at its sides", async () => {
   const layout = topLevel(await read(join(SRC, "layout.css")));
-  for (const row of [".ai-accounts__row", ".key-row"]) expect(last(layout, row, "padding")).toBe("var(--space-4)");
+  expect(last(layout, ".key-row", "padding")).toBe("var(--row-py) var(--space-4)");
 });
 
 test("the settings sidebar's links are the ruler's compact step, the default one under a finger", async () => {
@@ -200,6 +214,9 @@ test("the settings sidebar's links are the ruler's compact step, the default one
   const top = topLevel(css);
   expect(last(top, ".settings__link", "min-height")).toBe("var(--control-h-sm)");
   expect(last(top, ".settings__link", "border-radius")).toBe("var(--control-r-sm)");
+  // A name that wraps (a long translation) keeps its icon on its first line, the words padded to one line's middle.
+  expect(last(top, ".settings__link", "align-items")).toBe("flex-start");
+  expect(last(top, ".settings__link", "padding")).toBe("calc((var(--control-h-sm) - 22px) / 2) 10px");
   expect(last(top, ".settings__groups", "gap")).toBe("var(--space-4)");
   const touch = atRule(css, "@media (pointer: coarse)");
   expect(last(touch, ".settings__link", "min-height")).toBe("var(--control-h-md)");

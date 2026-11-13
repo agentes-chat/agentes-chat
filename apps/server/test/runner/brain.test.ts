@@ -568,6 +568,12 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   // Every tool of Claude Code but its web: ours read it.
   expect(at(personal, "--disallowedTools")).toBe("WebFetch,WebSearch");
   expect(work).not.toContain("--disallowedTools");
+  // An agent that always asks: no edit is accepted by the CLI itself, so each reaches the prompt tool.
+  const asks = claudeBrainArgs({ ...base, ...brainProfileLaunch("work", false, false, true) });
+  expect(at(asks, "--permission-mode")).toBe("default");
+  expect(asks).toContain("--permission-prompt-tool");
+  expect(brainProfileLaunch("work", false, true, true).permissionMode).toBe("default");
+  expect(brainProfileLaunch("work", false, true).permissionMode).toBe("acceptEdits");
 });
 
 test("protocol 41: a chat turn (the team's right hand on a plan) gets our MCP tools and nothing else", () => {
@@ -868,6 +874,34 @@ test.if(posix)(
 );
 
 test.if(posix)(
+  "an idle close dates the session's kept text once: the process's exit after it doesn't again",
+  async () => {
+    const expired = new Date(Date.now() - SESSION_SYSTEM_KEEP_MS - 60_000);
+    let kept = "";
+    const age = () => {
+      for (const f of readdirSync(kept)) utimesSync(path.join(kept, f), expired, expired);
+    };
+    // Just after the idle close's drop (its log line comes right before it), before the process exits and its exit
+    // handler drops it again.
+    const { m, home, turn } = setup({
+      idleMs: 50,
+      log: (l) => {
+        if (l.includes("idle; closing")) queueMicrotask(age);
+      },
+    });
+    kept = path.join(home, "brains", "sessions");
+    await turn(1, "hi", { system: "S1" });
+    const proc = m.process(AGENT.id, SESSION(1));
+    await waitFor(() => m.size === 0 && proc?.exited === true, 4000);
+    // The exit handlers run on the loop's next turn after the exit.
+    await new Promise((resolve) => setImmediate(resolve));
+    const dated = readdirSync(kept).map((f) => statSync(path.join(kept, f)).mtimeMs);
+    expect(dated.length).toBeGreaterThan(0);
+    for (const t of dated) expect(t).toBeLessThan(Date.now() - SESSION_SYSTEM_KEEP_MS);
+  },
+);
+
+test.if(posix)(
   "protocol 40: the system text is the agent's with the folder's CLAUDE.md; the conversation opens the session once, and again after it compacted",
   async () => {
     const { m, home, ws, spawns, turn } = setup({ idleMs: 50 });
@@ -1108,6 +1142,25 @@ test.if(posix)(
     expect(m.idleCandidate(own)).toMatchObject({ spare: true });
     expect(await m.reclaimIdle(own)).toBe(true);
     expect(m.size).toBe(0);
+  },
+);
+
+test.if(posix)(
+  "a turn whose processes all die: the error says how the last ended and the line that said why",
+  async () => {
+    const { turn } = setup();
+    const why = "TypeError: Cannot read properties of undefined (reading 'x')";
+    expect((await turn(1, "DIES please")).final).toEqual({
+      type: "error",
+      code: "claude_failed",
+      message: `Claude Code ended without an answer (exit 3): ${why}`,
+      retryable: false,
+    });
+    // Killed without a word the second time: the signal, and what the process before it said.
+    expect((await turn(2, "KILLED please")).final).toMatchObject({
+      code: "claude_failed",
+      message: `Claude Code ended without an answer (signal SIGKILL): ${why}`,
+    });
   },
 );
 

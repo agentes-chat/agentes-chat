@@ -33,11 +33,9 @@ import {
   freePlanAccount,
   gateDims,
   gateLine,
-  KEY_MARKS,
   kindOf,
   ownSignInFor,
   PLAN_CHOICES,
-  PLAN_MARKS,
   type PlanChoice,
   type PlanGate,
   planGate,
@@ -62,10 +60,12 @@ import {
   providersForKey,
 } from "@agenteschat/client/lib/providers";
 import { rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionSheetIOS, ActivityIndicator, Alert, Platform, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from "react-native";
+import { paysHere } from "@/lib/store";
 import {
   Button,
   GroupedFooter,
@@ -76,7 +76,6 @@ import {
   type IconName,
   Locked,
   ProviderLogo,
-  ProviderQuad,
   Text,
   useTheme,
   useToast,
@@ -85,6 +84,7 @@ import { router } from "@/ui/navigation";
 import { SetupWait } from "../computer/SetupWait";
 import { SheetHeader } from "../new/parts";
 import { AgentFace } from "../shared/Face";
+import { pickOne } from "../shared/PickerSheet";
 import { PickList } from "../shared/PickList";
 import { AddAccount } from "./AddAccount";
 import type { ConnectKey } from "./ConnectAi";
@@ -250,6 +250,11 @@ export interface ConnectAiFlowProps {
   onPlanDone: (agentId: string) => void;
   /** A sheet: its own head (close on the first page, back on the others). Inline (the first run): a back row. */
   sheetTitle?: string;
+  /**
+   * A pushed screen (Connect an AI on its own route): the flow draws no head of its own and hands the screen its
+   * title and, past the first page, the way back inside the flow, which the screen puts on the native bar.
+   */
+  onChrome?: (chrome: { title: string; back: (() => void) | null }) => void;
 }
 
 /**
@@ -400,9 +405,20 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
           : view.page === "makers"
             ? t("mobile.ai.whose")
             : planLabel(t, view.choice);
+  // On its own screen the bar is the screen's: it gets the title and the way back whenever the page changes.
+  const { onChrome } = props;
+  const goRef = useRef(go);
+  goRef.current = go;
+  // `to` is a new object each render: the effect follows what it points at.
+  const toKey = to ? (to.page === "plan" ? `plan:${to.choice}` : to.page) : "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `to` is read through `toKey`, its identity changes each render
+  useEffect(() => {
+    if (!onChrome) return;
+    onChrome({ title, back: to ? () => goRef.current(to) : null });
+  }, [onChrome, title, toKey]);
   return (
     <>
-      {sheetTitle !== undefined ? (
+      {onChrome ? null : sheetTitle !== undefined ? (
         <SheetHeader title={title} icon={to ? "back" : "x"} {...(to ? { onPress: () => go(to) } : {})} />
       ) : to ? (
         <Pressable
@@ -432,6 +448,7 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
                 t,
                 org?.name ?? "",
                 managedNamed(gates.view?.computer ?? bareGates.at(choice).computer),
+                isPersonal(org),
               ),
             })
           }
@@ -464,8 +481,9 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
 }
 
 /**
- * The first page: what the person already has (`have`), your AI plan, then pay as you go. A plan that can't sign in
- * on the agent's computer is dimmed, its rows of what they have too.
+ * The first page: the two ways, one list ("Meu plano de IA", "Uma chave"), then what the workspace already has
+ * (`have`), used in one tap. Neutral tiles: the makers' marks come on the pages that pick one. A plan that can't sign
+ * in on the agent's computer says why under the rows, its rows of what they have dimmed too.
  */
 function Home({
   onView,
@@ -481,21 +499,27 @@ function Home({
   /** Why a plan is dimmed, said once under the rows it dims. */
   dimmedWhy: (choice: PlanChoice) => string;
   have: ReturnType<typeof existingRows>;
-  /** The agent they are for, where the sheet's title doesn't say it. */
+  /** The agent they are for, where the screen's title doesn't say it. */
   haveFor?: string;
   busy: boolean;
   onHave: (row: ExistingAi) => void;
 }) {
   const { t } = useTranslation();
+  const { org } = useAiOrg();
   const dimmed = have.flatMap((r) =>
     r.row.kind === "account" && dims(planOfAccount(r.row.choice.login)) ? [planOfAccount(r.row.choice.login)] : [],
   )[0];
+  const noPlan = PLAN_CHOICES.every(dims);
   return (
     <View>
       {have.length > 0 ? (
         <>
           <GroupedHeader>
-            {haveFor ? t("connectAi.have.titleFor", agentGrammar(haveFor)) : t("connectAi.have.title")}
+            {haveFor
+              ? t("connectAi.have.titleFor", agentGrammar(haveFor))
+              : org?.name
+                ? t("mobile.ai.already", { org: org.name })
+                : t("connectAi.have.title")}
           </GroupedHeader>
           <GroupedList>
             {have.map((r) => (
@@ -518,31 +542,28 @@ function Home({
               />
             ) : null}
           </GroupedList>
-          {dimmed ? <GroupedFooter>{dimmedWhy(dimmed)}</GroupedFooter> : null}
+          {dimmed && !noPlan ? <GroupedFooter>{dimmedWhy(dimmed)}</GroupedFooter> : null}
+          <GroupedHeader>{t("connectAi.have.other")}</GroupedHeader>
         </>
       ) : null}
-      <GroupedHeader>{t("mobile.ai.yourPlan")}</GroupedHeader>
       <GroupedList>
         <GroupedRow
-          leading={<ProviderQuad ids={PLAN_MARKS} off={PLAN_CHOICES.every(dims)} />}
-          label={t("connectAi.pick.placeholder")}
-          sub={t("mobile.ai.plansSub")}
+          icon="sparkle"
+          label={t("mobile.ai.planRow")}
+          sub={t("mobile.ai.planRowSub")}
+          faint={noPlan}
           chevron
           onPress={() => onView({ page: "plans" })}
         />
-      </GroupedList>
-      <GroupedFooter>{t("mobile.ai.plansFoot")}</GroupedFooter>
-      <GroupedHeader>{t("connectAi.orPayGo")}</GroupedHeader>
-      <GroupedList>
         <GroupedRow
-          leading={<ProviderQuad ids={KEY_MARKS} />}
-          label={t("connectAi.key.title")}
-          sub={t("connectAi.key.makers")}
-          subLines={2}
+          icon="key"
+          label={t("mobile.ai.keyRow")}
+          sub={t("mobile.ai.keyRowSub")}
           chevron
           onPress={() => onView({ page: "key" })}
         />
       </GroupedList>
+      {noPlan ? <GroupedFooter>{dimmedWhy("claude")}</GroupedFooter> : null}
     </View>
   );
 }
@@ -709,28 +730,20 @@ function PlanPage(
         disabled={replies.busy}
       />
     );
-  const pick = () => {
-    const names = agents.map((a) => a.name);
-    const choose = (i: number) => {
-      const a = agents[i];
-      if (a) onAgent(a.id);
-    };
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { title: t("connectAi.agent"), options: [...names, t("common.cancel")], cancelButtonIndex: names.length },
-        choose,
-      );
-    } else {
-      Alert.alert(t("connectAi.agent"), undefined, [
-        ...agents.map((a, i) => ({ text: a.name, onPress: () => choose(i) })),
-        { text: t("common.cancel"), style: "cancel" as const },
-      ]);
-    }
-  };
+  // Which agent the account is for, in the app's picker: each agent with its face.
+  const pick = () =>
+    void pickOne({
+      title: t("connectAi.agent"),
+      value: agentId ?? null,
+      options: agents.map((a) => ({ key: a.id, label: a.name, leading: { kind: "agent" as const, agentId: a.id } })),
+    }).then((key) => {
+      if (key) onAgent(key);
+    });
   if (done) {
     return (
       <View style={styles.done}>
-        <AgentFace agentId={done.agentId} size={64} live={false} />
+        {/* Alive, and glad: the agent can think now (a rare moment). */}
+        <AgentFace agentId={done.agentId} size={64} expression="happy" />
         <Text variant="title2" tone="ink" style={styles.center}>
           {t("aiAccounts.done.savedAgent", { agent: done.agent, label: done.label })}
         </Text>
@@ -825,7 +838,7 @@ function PlanWithoutAgent({
   const has = added ?? freePlanAccount(gates.accounts, choice);
   const cloud = gates.edition === "cloud";
   const managed = machines.data?.find((m) => m.kind === "managed");
-  const name = cloud ? computerName(t, org?.name ?? "", managed) : (computer?.name ?? "");
+  const name = cloud ? computerName(t, org?.name ?? "", managed, isPersonal(org)) : (computer?.name ?? "");
   const steps = gate.state === "ready" || gate.state === "preparing" || (gate.state === "offline" && signingIn);
   // Only whoever connected the computers there signs a plan in on them: a computer of their own is the way on.
   const elsewhere = gate.state === "locked" && !cloud;
@@ -930,7 +943,8 @@ function PlanSteps({
   const waited = gates.waited || justReady === true;
 
   const managed = machines.data?.find((m) => m.kind === "managed");
-  const computer = edition === "cloud" ? computerName(t, org?.name ?? "", managed) : (view?.computer?.name ?? "");
+  const computer =
+    edition === "cloud" ? computerName(t, org?.name ?? "", managed, isPersonal(org)) : (view?.computer?.name ?? "");
   const refresh = () => {
     for (const key of [
       keys.agentBrain(orgId, agentId),
@@ -1148,7 +1162,7 @@ function GateWait({
   if (gate.state === "loading") wait = <ActivityIndicator color={c.muted} style={styles.loading} />;
   else if (gate.state === "billing") {
     // A hold stops the Model Gateway for keys too, and paying happens on the web.
-    wait = <InfoCard icon="pause">{planHoldPhoneLine(t, org ? can(org, "manage_billing") : false)}</InfoCard>;
+    wait = <InfoCard icon="pause">{planHoldPhoneLine(t, org ? paysHere(can(org, "manage_billing")) : false)}</InfoCard>;
   } else if (gate.state === "preparing") {
     const setup = gate.view;
     // A hold decides when anything runs there: it speaks alone. The wait is the app's own (its steps, the time left,

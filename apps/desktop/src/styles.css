@@ -111,6 +111,7 @@ p {
   color: var(--muted);
   font-size: 14px;
   max-width: 54ch;
+  text-wrap: pretty;
 }
 .dk-path,
 .dk-code-inline {
@@ -1006,6 +1007,17 @@ body[data-window="popover"] {
   display: flex;
   gap: 8px;
 }
+/* Pairing this computer (Pair.tsx): its facts and choices in a card as wide as the words around it. */
+.dk-pair .dk-card,
+.dk-pair__group {
+  width: 100%;
+  max-width: 60ch;
+  text-align: start;
+}
+/* A card with its title and the line under it: the sheet's gap above, the title on the card's edge, 8 over it. */
+.dk-pair__group > .dk-ctitle {
+  margin: 0 0 8px;
+}
 /* Run agentes.chat here. The window is 600 px tall: a smaller title on one line (the Portuguese one is
    longer), and two fields side by side. */
 .dk-fr__body h1.dk-fr__h1sm {
@@ -1156,6 +1168,114 @@ body[data-window="popover"] {
 .dk-fr__steps .dk-fr__problem {
   margin: 0;
 }
+/* The iPhone setup (IphoneSetup.tsx): the steps, and beside them the QR, the tip and the way out. */
+.dk-ip {
+  flex: 1;
+  margin-top: var(--space-6);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: var(--space-8);
+}
+.dk-ip__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dk-ip__main > .dk-bar {
+  margin-top: var(--space-6);
+}
+.dk-ip__ready {
+  margin-top: var(--space-4);
+  gap: var(--space-2);
+  color: var(--ink2);
+}
+.dk-ip__ready .ac-icon {
+  color: var(--ok);
+}
+.dk-ip .dk-fr__stepline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.dk-ip__download {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+.dk-ip__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.dk-ip__qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+.dk-ip__qr p {
+  margin-top: var(--space-3);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--ink2);
+  text-wrap: balance;
+}
+.dk-ip__tip {
+  padding-inline: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--ink2);
+}
+.dk-ip__tip b {
+  font-weight: 600;
+}
+/* An iPhone on this Mac's Wi-Fi: its line, then Use over Wi-Fi, side by side while they fit. */
+.dk-ip__wifi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.dk-ip__acts {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Preferences' "Specific people or roles": the search, then people and roles to tick. */
+.dk-pick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.dk-pick .dk-ctitle {
+  margin-top: var(--space-2);
+}
+.dk-pick__list {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.dk-pick__row {
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.dk-pick__row > label {
+  flex: 1;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+.dk-pick__row:hover {
+  background: var(--plate);
+}
+
 /* A progress bar (setting it up, an update's download), placed by its context. */
 .dk-bar {
   height: 6px;
@@ -1255,24 +1375,51 @@ body[data-window="popover"] {
 .dk-under-card {
   margin-top: 12px;
 }
-/* A server's workspaces under its row in Preferences › Servers (ADR 0154): a chip each, logo and unread count. */
-.dk-ws-list {
+/* A server's workspaces under its row in Preferences › Servers (ADR 0154), when it has several: a line each, logo,
+   name and unread count. One workspace is named in the subtitle instead. */
+.dk-ws-rows {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.dk-ws-logo {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  object-fit: cover;
-  margin-right: 6px;
-  vertical-align: -3px;
+.dk-ws-rows li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dk-ws-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* A server that doesn't answer: its last workspaces dimmed, its state in the waiting color (ADR 0158). */
+.dk-ws-rows[data-dim] {
+  opacity: 0.5;
+}
+.dk-state-waiting {
+  color: var(--warn);
 }
 .dk-ws-count {
-  margin-left: 6px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+/* Preferences › Servers › Keep it running: a green check when it's set, an amber dot when it's not, in a tile's place. */
+.dk-keep {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  color: var(--ok);
+}
+.dk-keep__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
 }
 /* The server here: Restart and Stop under its card, "Stop running it here…" at the far end. */
 .dk-here__acts {
@@ -1291,6 +1438,14 @@ body[data-window="popover"] {
 }
 .dk-here__more {
   margin-top: 0;
+}
+/* "Also works for …" under it: on the same left edge as the rows below (.dk-psec plus .dk-ohead). */
+.dk-here__also {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 2px 10px 4px;
 }
 
 .dk-prefs {
@@ -1502,6 +1657,10 @@ body[data-window="popover"] {
 .dk-crow__under {
   flex-basis: 100%;
   padding-left: 44px;
+}
+/* A row without a picture: the line under it starts with its words. */
+.dk-crow > .dk-crow__text:first-child ~ .dk-crow__under {
+  padding-left: 0;
 }
 .dk-inline-form {
   display: flex;
@@ -1963,4 +2122,9 @@ body[data-window="notch"] {
     /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat every component's own transition */
     transition: none !important;
   }
+}
+/* What most likely holds a step that sat unchanged, and the one way out. */
+.dk-ip__stall {
+  gap: var(--space-2);
+  color: var(--ink2);
 }

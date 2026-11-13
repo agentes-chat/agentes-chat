@@ -1,6 +1,7 @@
 import type { Credential, Member } from "@agenteschat/client";
 import { apiPickOptions, type BrainPickOption, brainPickText } from "@agenteschat/client/lib/brain-picker";
 import { keyLine, type ModelChoice, providerLabel } from "@agenteschat/client/lib/providers";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   AffixInput,
   AGENT_ACCESSORIES,
@@ -39,6 +40,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { useOrg } from "@/components/org-context";
 import { QUICK_BUDGETS, ROLE_IDS, ROLE_PRESETS, readBudget } from "@/lib/new-agent";
 
 /*
@@ -134,12 +136,14 @@ export function ModelSelect({
   onChange,
   options,
   className,
+  disabled,
   "aria-label": label,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: SelectOption[];
   className?: string;
+  disabled?: boolean;
   "aria-label"?: string;
 }) {
   const { t } = useTranslation();
@@ -147,6 +151,7 @@ export function ModelSelect({
     <SearchSelect
       className={className}
       aria-label={label}
+      disabled={disabled}
       value={value}
       onValueChange={onChange}
       options={options}
@@ -211,7 +216,18 @@ export function keyOptions(
 
 type LookPatch = Partial<Required<AgentAppearance>>;
 
-type LookPickProps = { look: Required<AgentAppearance>; onPick: (patch: LookPatch) => void };
+type LookPickProps = {
+  look: Required<AgentAppearance>;
+  onPick: (patch: LookPatch) => void;
+  /** Pointing at an option tries it on the agent; null takes it off again (a new agent's card, ADR 0164). */
+  onPreview?: (patch: LookPatch | null) => void;
+};
+
+/** Pointing at an option previews it, leaving takes it off (only when the picker asks for previews). */
+const tryOn = (onPreview: LookPickProps["onPreview"], patch: LookPatch) =>
+  onPreview
+    ? { onPointerEnter: () => onPreview(patch), onPointerLeave: () => onPreview(null) }
+    : ({} as Record<string, never>);
 
 /** The choices of a look row: wrapping ("Criar agente") or one sliding row (the agent's settings). */
 function ChoiceRow({
@@ -241,7 +257,7 @@ function ChoiceRow({
 }
 
 /** Color swatches, eyes and an accessory, each a live symbol. `onPick` gets what changed. */
-export function LookPicker({ look, onPick }: LookPickProps) {
+export function LookPicker({ look, onPick, onPreview }: LookPickProps) {
   const { t } = useTranslation();
   return (
     <>
@@ -249,23 +265,23 @@ export function LookPicker({ look, onPick }: LookPickProps) {
         <span className="newag__label">
           {t("look.color")} <span className="newag__opt-label">{t(`look.colors.${colorKey(look.color)}`)}</span>
         </span>
-        <ColorChoices look={look} onPick={onPick} />
+        <ColorChoices look={look} onPick={onPick} onPreview={onPreview} />
       </div>
       <div className="newag__look-row">
         <span className="newag__label">{t("look.eyes")}</span>
-        <EyesChoices look={look} onPick={onPick} />
+        <EyesChoices look={look} onPick={onPick} onPreview={onPreview} />
       </div>
       <div className="newag__look-row">
         <span className="newag__label">
           {t("look.accessory")} <span className="newag__opt-label">{t("newAgent.optional")}</span>
         </span>
-        <AccessoryChoices look={look} onPick={onPick} />
+        <AccessoryChoices look={look} onPick={onPick} onPreview={onPreview} />
       </div>
     </>
   );
 }
 
-function ColorChoices({ look, onPick }: LookPickProps) {
+function ColorChoices({ look, onPick, onPreview }: LookPickProps) {
   const { t } = useTranslation();
   return (
     // biome-ignore lint/a11y/useSemanticElements: pressable swatches, not a native fieldset
@@ -282,6 +298,7 @@ function ColorChoices({ look, onPick }: LookPickProps) {
             aria-pressed={look.color === c}
             style={{ "--a": top, "--b": bottom } as CSSProperties}
             onClick={() => onPick({ color: c })}
+            {...tryOn(onPreview, { color: c })}
           />
         );
       })}
@@ -323,7 +340,7 @@ function CustomColor({ look, onPick }: LookPickProps) {
   );
 }
 
-function EyesChoices({ look, onPick, carousel }: LookPickProps & { carousel?: boolean }) {
+function EyesChoices({ look, onPick, onPreview, carousel }: LookPickProps & { carousel?: boolean }) {
   const { t } = useTranslation();
   return (
     <ChoiceRow label={t("look.eyes")} carousel={carousel}>
@@ -334,6 +351,7 @@ function EyesChoices({ look, onPick, carousel }: LookPickProps & { carousel?: bo
           className="newag__opt"
           aria-pressed={look.eyes === e}
           onClick={() => onPick({ eyes: e })}
+          {...tryOn(onPreview, { eyes: e })}
         >
           <span className="newag__stage">
             <AgentAvatar
@@ -349,7 +367,7 @@ function EyesChoices({ look, onPick, carousel }: LookPickProps & { carousel?: bo
   );
 }
 
-function AccessoryChoices({ look, onPick, carousel }: LookPickProps & { carousel?: boolean }) {
+function AccessoryChoices({ look, onPick, onPreview, carousel }: LookPickProps & { carousel?: boolean }) {
   const { t } = useTranslation();
   return (
     <ChoiceRow label={t("look.accessory")} carousel={carousel} acc>
@@ -360,6 +378,7 @@ function AccessoryChoices({ look, onPick, carousel }: LookPickProps & { carousel
           className="newag__opt"
           aria-pressed={look.accessory === a}
           onClick={() => onPick({ accessory: a })}
+          {...tryOn(onPreview, { accessory: a })}
         >
           <span className="newag__stage">
             {a === "none" ? (
@@ -411,25 +430,26 @@ export function LookRows({
   );
 }
 
-/** "Responsável": a member (you marked) or "Sem responsável". */
+/**
+ * "Responsável": a member (you marked) or "Sem responsável". Each with their role under the name, which a personal
+ * workspace leaves out (ADR 0159): a family knows who is who.
+ */
 export function OwnerSelect({
   value,
   onChange,
   members,
   meId,
-  card = true,
 }: {
   value: string;
   onChange: (value: string) => void;
   members: Member[];
   meId: string;
-  /** The agent forms' card-like picker; `false` in a stack of plain fields (a dialog), drawn as its selects are. */
-  card?: boolean;
 }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
+  const roles = !isPersonal(org);
   return (
     <Select
-      className={card ? "newag__sel" : undefined}
       aria-label={t("newAgent.owner")}
       value={value}
       onValueChange={onChange}
@@ -437,7 +457,7 @@ export function OwnerSelect({
         ...members.map((m) => ({
           value: m.userId,
           label: m.userId === meId ? t("newAgent.you", { name: m.name }) : m.name,
-          description: t(`roles.${m.role}`),
+          ...(roles ? { description: t(`roles.${m.role}`) } : {}),
           leading: <Avatar kind="person" size="sm" name={m.name} imageUrl={m.image} />,
         })),
         {
@@ -455,9 +475,13 @@ export function OwnerSelect({
   );
 }
 
-/** "Responsável" where it can't be changed: the person and their role, or "Sem responsável". */
+/**
+ * "Responsável" where it can't be changed: the person and their role (a team's workspace), or "Sem responsável".
+ */
 export function OwnerValue({ member, meId }: { member: Member | undefined; meId: string }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
+  const role = member && !isPersonal(org) ? t(`roles.${member.role}`) : null;
   return (
     <div className="agp-person">
       {member ? (
@@ -469,14 +493,14 @@ export function OwnerValue({ member, meId }: { member: Member | undefined; meId:
       )}
       <span className="agp-person__t">
         {/* With the role under it the name takes the face's top; alone, it centres on the tile. */}
-        <b className={member ? "ac-captop" : undefined}>
+        <b className={role ? "ac-captop" : undefined}>
           {member
             ? member.userId === meId
               ? t("newAgent.you", { name: member.name })
               : member.name
             : t("newAgent.noOwnerOption")}
         </b>
-        {member && <span>{t(`roles.${member.role}`)}</span>}
+        {role && <span>{role}</span>}
       </span>
     </div>
   );
@@ -495,7 +519,6 @@ export function KeySelect({
   const { t } = useTranslation();
   return (
     <Select
-      className="newag__sel"
       aria-label={t("newAgent.key")}
       value={value}
       onValueChange={onChange}

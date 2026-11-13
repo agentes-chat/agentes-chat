@@ -1,5 +1,14 @@
-import { ASK_AGAIN, commandKind, loneMerge, type MergeDone, PERMISSION_TOOL, type PubSub } from "@agenteschat/adapters";
-import { and, desc, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
+import {
+  ASK_AGAIN,
+  commandKind,
+  heldForPerson as heldMessage,
+  loneMerge,
+  type MergeDone,
+  PERMISSION_TOOL,
+  type PubSub,
+} from "@agenteschat/adapters";
+import { startInFlight } from "@agenteschat/adapters/in-flight";
+import { and, desc, eq, inArray, isNotNull, isNull, or, schema, sql } from "@agenteschat/db";
 import { auditsCall, callSubject, callTitle, recordToolCall, type ToolCallSubject } from "../agent-audit";
 import {
   COMMAND_RULE_TOOL,
@@ -21,11 +30,12 @@ import { answersAgentsOnly, consultationOrigin } from "../consultations";
 import { recordOutcome } from "../context/outcomes";
 import { sha256 } from "../crypto";
 import { provenReadOnly } from "../databases/guard";
+import { isUnexpectedError } from "../errors";
 import { cutMarked, cutText, pgSafeJson, pgSafeText } from "../format";
 import { mergeReposOfCall, recordMergeDone, reposOfGithubCall } from "../git/repos";
 import { recordRead } from "../outbound";
 import { routineCreatorOf } from "../requester";
-import { FIXED_GRANTS, RIGHT_HAND_REFUSAL } from "../right-hand";
+import { isRightHandId, RIGHT_HAND_NO_COMPUTER } from "../right-hand";
 import type { RoutineBrief } from "../routine-brief";
 import { addRunStep } from "../runs";
 import { describeWhen } from "../schedule";
@@ -47,13 +57,25 @@ import { connectorFirst } from "./connector-first";
 import { type BlockedTool, compactSchema, presentTools, resolveCall } from "./directory";
 import { canonicalJson, validateJson } from "./json-schema";
 import { missingPermissions, REQUEST_PERMISSION_TOOL } from "./permission";
-import { approvalOrigin, type PolicyDecision, takeWhy, toolKind, toolPolicy, WHY_REFUSAL, withWhy } from "./run-policy";
+import {
+  type ApprovalsLevel,
+  approvalOrigin,
+  approvalsLevelOf,
+  DEFAULT_APPROVALS_LEVEL,
+  opensPullRequest,
+  opensPullRequestName,
+  type PolicyDecision,
+  takeWhy,
+  toolKind,
+  toolPolicy,
+  WHY_REFUSAL,
+  withWhy,
+} from "./run-policy";
 import {
   accessWithNeeds,
   BUILTIN_SCOPES,
   freshGrantedKeys,
   grantedScopeKeys,
-  grantKey,
   holdsConnection,
   isAllowed,
   NOT_IN_ALL,
@@ -64,15 +86,22 @@ import type { AheadOutcome, AheadRequest, ToolContext, ToolDefinition, ToolOutpu
 const { approvals, agents, agentRunSteps, routines } = schema;
 type AuditOutcome = schema.AuditOutcome;
 
-/** Merge, deploy and rollback always need a person, whatever a connector says. */
+/** Merge, deploy and rollback need a person whatever a connector says, unless the agent never asks (ADR 0173). */
 export const ALWAYS_SENSITIVE = /(^|[^a-z])(merge|deploy|rollback|revert_deploy|promote)([^a-z]|$)/i;
 
-export const isSensitive = (tool: Pick<ToolDefinition, "name" | "scope" | "sensitive">) =>
-  tool.sensitive === true || ALWAYS_SENSITIVE.test(tool.name) || ALWAYS_SENSITIVE.test(tool.scope);
+/**
+ * Sensitive by a word of its name or scope. Not a tool that opens a pull request (`create_merge_request`): the word
+ * names what it opens, and merging it is another tool.
+ */
+const sensitiveByName = (name: string, scope = "") =>
+  !opensPullRequestName(name) && (ALWAYS_SENSITIVE.test(name) || ALWAYS_SENSITIVE.test(scope));
+
+export const isSensitive = (tool: Pick<ToolDefinition, "name" | "scope" | "sensitive" | "unasked">) =>
+  !tool.unasked && (tool.sensitive === true || sensitiveByName(tool.name, tool.scope));
 
 /**
  * Also as a noun or under another name: a deployment, a build, a dispatch or a release (they start workflows), a
- * branch's reference, an alias or a rolling release (production traffic), a re-run, a restore. Never approved for good.
+ * branch's reference, an alias or a rolling release (production traffic), a re-run, a restore.
  */
 const NEVER_FOR_GOOD =
   /^(merge|deploy|redeploy|rollback|revert|restore|promote|workflow|build|dispatch|reference|release|alias|rolling|rerun|rerequest)/;
@@ -81,8 +110,12 @@ const NEVER_FOR_GOOD =
  * run whatever their arguments say (`VERCEL_EXECUTE_SANDBOX_COMMAND`).
  */
 const NEVER_LEADS = new Set(["commit", "trigger", "run", "execute", "invoke"]);
-/** An action slug (`VERCEL_CREATE_NEW_DEPLOYMENT`) or tool name that "Aprovar sempre" never covers. */
+/**
+ * An action slug (`VERCEL_CREATE_NEW_DEPLOYMENT`) or tool name that is never approved ahead, never a routine's own
+ * action, and high risk.
+ */
 export const alwaysAsks = (name: string) => {
+  if (opensPullRequestName(name)) return false;
   const words = nameWords(name);
   return (
     ALWAYS_SENSITIVE.test(name) ||
@@ -92,71 +125,82 @@ export const alwaysAsks = (name: string) => {
   );
 };
 
-/** Words of a tool that runs whatever its arguments say: a script, a shell, code, a raw request. */
-const RUNS_ANYTHING = new Set([
-  "exec",
-  "eval",
-  "bash",
-  "shell",
-  "script",
-  "command",
-  "code",
-  "request",
-  "http",
-  "curl",
-]);
-/**
- * A custom server's own tool name, its verb first with no app before it (`run_script`), that "Aprovar sempre" never
- * covers: what `alwaysAsks` says, a leading verb that runs on its own, or a word that runs anything.
- */
-export const customAlwaysAsks = (name: string) => {
-  const words = nameWords(name);
-  return alwaysAsks(name) || NEVER_LEADS.has(words[0] ?? "") || words.some((w) => RUNS_ANYTHING.has(w));
-};
-
 /** What a mailbox's scopes say is not high risk: a draft stays in the mailbox, reading and filing change nothing. */
 const MAIL_QUIET = new Set(["mail:draft", "mail:read", "mail:organize"]);
 /** Production, can't be undone, or leaves the company; mirrors the client's `approvalRisk` (`approval-kind.ts`). */
 const RISKY_WORDS =
   /deploy|rollback|workflow|actions\.run|delete|remove|destroy|drop|purge|send|email|mail\b|sms|share|publish/i;
 /**
- * Merge, deploy, rollback, sends, deletes and whatever "Aprovar sempre" never covers by its name (`alwaysAsks`): a
- * person covering someone decides these only when that person turned it on (`approval_covers.risky`).
+ * Merge, deploy, rollback, sends, deletes and whatever else `alwaysAsks` names: a person covering someone decides
+ * these only when that person turned it on (`approval_covers.risky`).
  */
 export const highRisk = (tool: string, scope: string) =>
   !MAIL_QUIET.has(scope) && (alwaysAsks(tool) || ALWAYS_SENSITIVE.test(scope) || RISKY_WORDS.test(`${tool} ${scope}`));
 
 /**
- * The kind "Aprovar sempre" would cover for this call (`approval_rules`), or null when it is never offered: only
- * on a run that isn't a routine's, whose policy didn't make the call ask, for a tool its source lets be
- * remembered (`rememberAs`), whose wrapped actions, when it runs others, are a shape we know with none sensitive,
- * and with nothing in its names that always asks (merge, deploy, rollback and the rest above, GraphQL, SQL, a raw
- * request). A tool that names one exact target per call (`rememberTarget`) is remembered by that target, without
- * the name checks: they read connector actions, and a branch named release-x is still only that branch. A tool that
- * runs one shell command on the agent's computer (`rememberCommand`) is remembered by the command's kind
- * (`commandKind`, which never offers the deny list, pushes or anything sensitive), for that agent alone.
+ * The kinds "Aprovar sempre" keeps for this call (`approval_rules`), the narrowest first: a saved rule of any of them
+ * lets the call run without asking, and the first is what its card offers. Every call that asks has one (ADR 0173,
+ * amended 2026-11-12), on every run a person, the agent, a routine or a routine's reading is behind: a merge, a
+ * deploy and a tool that runs whatever its input says too. Only at the level that asks for some things: an agent that
+ * always asks keeps no rule, and one that never asks needs none.
+ *
+ * - A mailbox's tools are never kept: a rule belongs to a connector's connection and theirs is the mail account, and
+ *   whether a send asks is the mailbox's own setting, with its owner the one who decides.
+ * - A tool that names one exact target per call (`rememberTarget`) is kept by that target alone.
+ * - Our tools whose job is asking (`asksByChoice`) are never kept: the agent chose to ask.
+ * - A tool that runs one shell command on the agent's computer (`rememberCommand`) is kept by the command's kind
+ *   (`commandKind`: `gh pr merge`), for that agent alone. Only a command with no kind (a script, a pipeline) is kept
+ *   by the tool itself, and that rule covers no command that has a kind.
+ * - A tool that runs SQL (`sqlReads`) is kept by the reads of its project when the Postgres guard proves the call
+ *   read-only, then by the tool itself.
+ * - Any other is kept by its name and, when it runs other actions, by each action (none: the tool itself).
  */
-export function rememberable(
+export async function rememberKinds(
   tool: ToolDefinition,
   input: Record<string, unknown>,
   authority: RunAuthority | null,
-  decision: PolicyDecision,
-): RememberedKind | null {
-  if (!authority || authority.kind === "routine" || decision.action === "approve") return null;
-  if (tool.rememberCommand && !tool.connectionId) {
-    const command = tool.rememberCommand(input);
-    const kind = command ? commandKind(command) : null;
-    return kind ? { tool: COMMAND_RULE_TOOL, actions: [kind] } : null;
-  }
+  level: ApprovalsLevel,
+): Promise<RememberedKind[]> {
+  if (!authority || level !== "risky" || tool.scope.startsWith("mail:")) return [];
   if (tool.rememberTarget && tool.connectionId) {
     const target = tool.rememberTarget(input);
-    return target ? { tool: tool.name, actions: [target] } : null;
+    return target ? [{ tool: tool.name, actions: [target] }] : [];
   }
-  if (!tool.rememberAs || !tool.connectionId) return null;
-  const actions = tool.actions ? tool.actions(input) : [];
-  if (!actions || actions.some((a) => actionLevel(a) === "sensitive")) return null;
-  if ([tool.name, tool.rememberAs, tool.scope, ...actions].some(alwaysAsks)) return null;
-  return { tool: tool.rememberAs, actions };
+  if (asksByChoice(tool)) return [];
+  const kinds: RememberedKind[] = [];
+  if (tool.rememberCommand && !tool.connectionId) {
+    const command = tool.rememberCommand(input);
+    const kind = command ? (commandKind(command) ?? commandKind(command, true)) : null;
+    // A command with a kind of its own is kept by that kind alone: the whole-tool rule someone kept on a script's
+    // card must not also cover a merge or a deploy the computer holds.
+    if (kind) return [{ tool: COMMAND_RULE_TOOL, actions: [kind] }];
+  }
+  if (tool.sqlReads && tool.connectionId) {
+    const sql = input[tool.sqlReads.arg];
+    if (typeof sql === "string" && (await provenReadOnly(sql))) {
+      kinds.push({ tool: tool.sqlReads.tool, actions: [`${SQL_READS}${sqlReadsTarget(input, tool.sqlReads.arg)}`] });
+    }
+  }
+  kinds.push({ tool: tool.rememberAs ?? tool.name, actions: tool.actions?.(input) ?? [] });
+  return kinds;
+}
+
+/** Our own tools whose job is asking a person: the agent chose to ask, so one that never asks still does. */
+const ASKING_TOOLS = new Set(["request_approval", REQUEST_PERMISSION_TOOL, "send_feedback"]);
+const asksByChoice = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
+  tool.connectionId ? tool.name === "request_branch_push" && serverGitTool(tool) : ASKING_TOOLS.has(tool.name);
+
+/**
+ * "Nunca perguntar" (`agents.approvals_level` = `never`, ADR 0173 as amended 2026-11-12): whether a call of this tool
+ * runs without any card, on every run that has one (a person's, the agent's own, a routine's, one a routine's reading
+ * feeds). Everything the agent may already use: merge, deploy, rollback, a tool that runs whatever its arguments say,
+ * someone's mailbox, a command the computer holds, a workspace where every command asks. Only our tools whose job is
+ * asking keep their card. It is the one place that says so: the call, the listing, a held command and the autonomy
+ * brakes all read it. It lifts asking and nothing else: the policy's refusals, scopes, a tool turned off, the budget
+ * and the tools' own checks all come before or apart from it. A call outside a run (a mission task's) has no level.
+ */
+export function unaskedAtNever(level: ApprovalsLevel, tool: ToolDefinition, authority: RunAuthority | null): boolean {
+  return level === "never" && authority !== null && !asksByChoice(tool);
 }
 
 /**
@@ -169,24 +213,6 @@ const neverInRoutine = (name: string) => nameWords(name).some((w) => NEVER_IN_RO
 
 /** The scope of the GitHub connector's `merge_pull_request`. */
 const GITHUB_MERGE_SCOPE = "github:pr.merge";
-
-/**
- * The kind "Aprovar sempre leituras" covers for a call of a tool that runs SQL (`sqlReads`), or null: the same runs
- * as `rememberable`, and only SQL the Postgres guard proves read-only, kept by the call's other arguments (its
- * project or database). A write is never offered and never covered: it asks every time.
- */
-export async function rememberableSqlRead(
-  tool: ToolDefinition,
-  input: Record<string, unknown>,
-  authority: RunAuthority | null,
-  decision: PolicyDecision,
-): Promise<RememberedKind | null> {
-  if (!tool.sqlReads || !tool.connectionId || ALWAYS_SENSITIVE.test(tool.name)) return null;
-  if (!authority || authority.kind === "routine" || decision.action === "approve") return null;
-  const sql = input[tool.sqlReads.arg];
-  if (typeof sql !== "string" || !(await provenReadOnly(sql))) return null;
-  return { tool: tool.sqlReads.tool, actions: [`${SQL_READS}${sqlReadsTarget(input, tool.sqlReads.arg)}`] };
-}
 
 /**
  * Approved ahead (ADR 0015 addendum, 2026-10-31): how long after its time the routine's run may still do an action
@@ -211,7 +237,7 @@ export function aheadRefusal(tool: ToolDefinition, input: Record<string, unknown
   const actions = tool.actions ? tool.actions(input) : [];
   if (!actions) return "This call doesn't say which actions it runs, so it can't be approved ahead.";
   if ([tool.name, tool.rememberAs ?? "", tool.scope, ...actions].some((name) => name && alwaysAsks(name))) {
-    return "Merge, deploy, rollback and the like always ask a person at the time: they can't be approved ahead.";
+    return "Merge, deploy, rollback and the like can't be approved ahead.";
   }
   return null;
 }
@@ -231,7 +257,7 @@ const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 /** The most of a tool's output the model gets. */
 export const MAX_RESULT_CHARS = 50_000;
 /** Server-owned Git tools have a connection ID only to use that connection's credential. */
-const serverGitTool = (tool: ToolDefinition) =>
+const serverGitTool = (tool: Pick<ToolDefinition, "name" | "scope">) =>
   (tool.name === "git_clone" && tool.scope === "github:git.read") ||
   (tool.name === "open_pull_request" && tool.scope === "github:pr.write") ||
   ((tool.name === "delete_branches" || tool.name === "request_branch_push") && tool.scope === "github:git.write");
@@ -291,9 +317,13 @@ const INPUT_ALIASES = new Map<string, (input: Record<string, unknown>) => Record
   ],
 ]);
 
+/** Whether a call of this tool opens an approval card, by the policy's answer or the tool's own marks. */
+const needsApproval = (tool: ToolDefinition, decision: PolicyDecision) =>
+  decision.action === "approve" || isSensitive(tool);
+
 /** Whether a call of this tool waits for a person: an approval, or a built-in question. */
 const asksPerson = (tool: ToolDefinition, decision: PolicyDecision) =>
-  decision.action === "approve" || isSensitive(tool) || (tool.name === ASK_USER && isBuiltIn(tool));
+  needsApproval(tool, decision) || (tool.name === ASK_USER && isBuiltIn(tool));
 
 /** A call that asks a person's approval because it says why (`whyAsks`: a command the computer held). */
 const asksWithWhy = (tool: ToolDefinition, input: Record<string, unknown>) =>
@@ -311,6 +341,13 @@ function heldCommandReason(output: ToolOutput): string | null {
   if (!held?.[1] || held[2]?.trim() !== ASK_AGAIN) return null;
   return `${held[1].trim()}, so the computer waits for a person's approval before running it.`;
 }
+
+/**
+ * Whether the computer held a command for a person's approval, whatever else it offered: what an agent that never
+ * asks runs again as approved. Not a secret read, which carries the same code but is refused, never asked.
+ */
+const heldForPerson = (output: ToolOutput) =>
+  output.data?.code === "command.approval_needed" && heldMessage(output.content);
 
 /** A check that failed for any reason never stops the action (ADR 0064): it only misses a notice. */
 const UNCHECKED: TeamCheck = { proceed: true, reason: null };
@@ -331,7 +368,7 @@ async function refusalOf(
   granted: Set<string>,
 ) {
   const of = access.of;
-  if (granted.has(grantKey(null, FIXED_GRANTS))) return RIGHT_HAND_REFUSAL;
+  if (NOT_IN_ALL.has(of.scope) && (await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))) return RIGHT_HAND_NO_COMPUTER;
   if (access.state === "denied") {
     return `${of === tool ? "this tool" : of.name} is turned off for this agent, not for good: an admin can turn it back on, on the agent's page in Tools and access (in Portuguese, Ferramentas e acesso). Say so in plain words (the person asking may be that admin), never that it can't be done`;
   }
@@ -390,20 +427,23 @@ const authorityOf = (ctx: ToolContext): Promise<RunAuthority | null> =>
   ctx.runId ? runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : Promise.resolve(null);
 
 const ALLOWED: PolicyDecision = { action: "allow" };
-const policyFor = (authority: RunAuthority | null, tool: ToolDefinition) =>
-  authority ? toolPolicy(authority, tool) : ALLOWED;
+const policyFor = (authority: RunAuthority | null, tool: ToolDefinition, level = DEFAULT_APPROVALS_LEVEL) =>
+  authority ? toolPolicy(authority, tool, level) : ALLOWED;
 
 /**
  * A tool as a run sees it: one the policy says asks a person becomes sensitive (its card, and the
  * "asks a person's approval" in a directory), and every tool that asks a person takes the required
  * `why` the card shows. The same list goes to the model loop and to the bridge.
  */
-function asListed(tool: ToolDefinition, decision: PolicyDecision): ToolDefinition {
+function asListed(tool: ToolDefinition, decision: PolicyDecision, never = false): ToolDefinition {
+  // An agent that never asks sees the tool as it runs for it: no card, no `why`.
+  if (never && needsApproval(tool, decision)) return { ...tool, sensitive: false, unasked: true };
   if (!asksPerson(tool, decision)) return tool;
   return {
     ...tool,
     ...(decision.action === "approve" ? { sensitive: true } : {}),
-    inputSchema: withWhy(tool.inputSchema),
+    // A tool whose own `why` is only for a command the computer held: when every call asks, the reason is required.
+    inputSchema: withWhy(tool.inputSchema, tool.whyAsks === true && needsApproval(tool, decision)),
   };
 }
 
@@ -452,6 +492,11 @@ export function createToolGateway(deps: {
   now?: () => Date;
   /** What this server can connect: `find_tools` names each connector a search asks for that the agent lacks. */
   catalog?: ServerCatalog;
+  /**
+   * Said after one of our own tools breaks with an error nobody wrote for the model (`isUnexpectedError`): where the
+   * server takes feedback, that the agent may offer a report (`APP_FAULT_HINT`, ADR 0160 §12).
+   */
+  faultHint?: string;
   /** Live events (the autonomy brakes' proposal card, ADR 0131). */
   pubsub?: PubSub;
 }) {
@@ -488,12 +533,16 @@ export function createToolGateway(deps: {
     known?: Map<string, ToolDefinition>,
     heldBack?: string[],
   ): Promise<ToolDefinition[]> {
-    const [keys, all] = await Promise.all([grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId), known ?? allTools(ctx)]);
+    const [keys, all, level] = await Promise.all([
+      grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId),
+      known ?? allTools(ctx),
+      approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+    ]);
     return [...all.values()]
       .filter((t) => isAllowed(accessWithNeeds(keys, t).state))
       .flatMap((t) => {
-        const decision = policyFor(authority, t);
-        if (decision.action !== "refuse") return [asListed(t, decision)];
+        const decision = policyFor(authority, t, level);
+        if (decision.action !== "refuse") return [asListed(t, decision, unaskedAtNever(level, t, authority))];
         heldBack?.push(t.name);
         return [];
       })
@@ -568,6 +617,7 @@ export function createToolGateway(deps: {
   }
 
   async function outputOf(tool: ToolDefinition, input: Record<string, unknown>, ctx: ToolContext): Promise<ToolOutput> {
+    const done = startInFlight(`tool ${tool.name}`, ctx.runId);
     try {
       const output = await tool.execute(input, ctx);
       if (output.outcome) {
@@ -590,8 +640,16 @@ export function createToolGateway(deps: {
       return tool.external ? { ...capped, content: wrapExternal(tool.name, capped.content) } : capped;
     } catch (error) {
       const message = pgSafeText(error instanceof Error ? error.message : String(error));
+      // Our own tool breaking in a way nobody foresaw is the app's fault, not the agent's nor an outside service's.
+      const hint =
+        deps.faultHint && !tool.external && !tool.connectionId && isUnexpectedError(error) ? deps.faultHint : "";
       // An MCP server's error text is its own words too.
-      return { content: `Tool failed: ${tool.external ? wrapExternal(tool.name, message) : message}`, isError: true };
+      return {
+        content: `Tool failed: ${tool.external ? wrapExternal(tool.name, message) : message}${hint && `\n${hint}`}`,
+        isError: true,
+      };
+    } finally {
+      done();
     }
   }
 
@@ -631,10 +689,13 @@ export function createToolGateway(deps: {
     const check = await checkToolCall(tool, input, ctx);
     if (!check.ok) return no(check.message);
     const slot = await request.slot();
-    const [owner, origin] = await Promise.all([
+    const [owner, origin, level] = await Promise.all([
       ownerOf(ctx),
       ctx.runId ? consultationOrigin(ctx.db, ctx.orgId, ctx.runId) : null,
+      approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
     ]);
+    // An agent that never asks: nothing waits for approval, so the stored call is the run's to do at its time.
+    const unasked = unaskedAtNever(level, tool, authority);
     const described = tool.describe?.(input) ?? { title: tool.name, detail: canonicalJson(input) };
     const connectionId = tool.connectionId ?? null;
     const [approval] = await ctx.db
@@ -661,9 +722,22 @@ export function createToolGateway(deps: {
         expiresAt: new Date(Math.min(slot.runAt.getTime(), now().getTime() + APPROVAL_TTL_MS)),
         routineId: slot.routineId,
         runAt: slot.runAt,
+        ...(unasked ? { status: "approved" as const, decidedAt: now() } : {}),
       })
       .returning();
     if (!approval) throw new Error("approval insert returned nothing");
+    if (unasked) {
+      const [routine] = await ctx.db
+        .select({ timezone: routines.timezone })
+        .from(routines)
+        .where(and(eq(routines.id, slot.routineId), eq(routines.orgId, ctx.orgId)));
+      const when = describeWhen(slot.runAt, routine?.timezone ?? "UTC");
+      return {
+        ok: true,
+        approval,
+        scheduled: `Set, with nobody asked since you never ask: «${approval.title}» goes out by itself ${when}. Tell the person it's set, with that day and time in their words. To change its content or time, call schedule_action again with replaces set to ${approval.id}.`,
+      };
+    }
     if (tool.connector) {
       const { orgId, agentId } = ctx;
       await countToolCall(ctx.db, { orgId, agentId, connector: tool.connector, approvalsAsked: 1 });
@@ -674,9 +748,11 @@ export function createToolGateway(deps: {
   /**
    * What a person last decided ahead about this exact call (its hash) for this routine run's slot, while that slot
    * is within its grace: approved and not run yet, or refused. The latest decision wins: the same post refused and
-   * then prepared again and approved goes out, and one approved and then refused on another card doesn't.
+   * then prepared again and approved goes out, and one approved and then refused on another card doesn't. One the
+   * agent set by itself while it never asked (approved, with nobody deciding) counts only while it still never asks:
+   * narrowed since, the call asks.
    */
-  async function aheadFor(ctx: ToolContext, brief: RoutineBrief, hash: string) {
+  async function aheadFor(ctx: ToolContext, brief: RoutineBrief, hash: string, level: ApprovalsLevel) {
     const slot = new Date(brief.dueAt);
     if (!UUID.test(brief.routineId) || Number.isNaN(slot.getTime())) return null;
     if (slot.getTime() < now().getTime() - AHEAD_GRACE_MS) return null;
@@ -691,6 +767,7 @@ export function createToolGateway(deps: {
           eq(approvals.runAt, slot),
           eq(approvals.actionHash, hash),
           inArray(approvals.status, ["approved", "refused"]),
+          level === "never" ? undefined : or(eq(approvals.status, "refused"), isNotNull(approvals.decidedByUserId)),
           isNull(approvals.executedAt),
         ),
       )
@@ -768,17 +845,24 @@ export function createToolGateway(deps: {
     return { tool: tool.name, actions: names, routineId: brief.routineId };
   }
 
+  /** The one merge a call of the GitHub connector makes, or null. */
+  function mergeOfCall(tool: ToolDefinition, input: Record<string, unknown>): MergeDone | null {
+    if (tool.scope !== GITHUB_MERGE_SCOPE) return null;
+    const [repo, ...others] = reposOfGithubCall(input) ?? [];
+    const pr = Number(input.pullNumber);
+    if (!repo || others.length > 0 || !Number.isInteger(pr) || pr <= 0) return null;
+    return { repo, pr, ref: null };
+  }
+
   /**
    * "Pode fazer merge sem perguntar": the merge a call of the GitHub connector makes, when it is in a repository this
    * agent merges in without asking. A command on the computer is told the same list and decides there (`mergeRepos`).
    */
   async function connectorMerge(ctx: ToolContext, tool: ToolDefinition, input: Record<string, unknown>) {
-    if (tool.scope !== GITHUB_MERGE_SCOPE) return null;
-    const [repo, ...others] = reposOfGithubCall(input) ?? [];
-    const pr = Number(input.pullNumber);
-    if (!repo || others.length > 0 || !Number.isInteger(pr) || pr <= 0) return null;
+    const merge = mergeOfCall(tool, input);
+    if (!merge) return null;
     const allowed = await mergeReposOfCall(ctx);
-    return allowed.some((r) => r.toLowerCase() === repo.toLowerCase()) ? { repo, pr, ref: null } : null;
+    return allowed.some((r) => r.toLowerCase() === merge.repo.toLowerCase()) ? merge : null;
   }
 
   /** The call an action approved ahead stores, by its id (`run_approved_action`), when it is this agent's. */
@@ -916,7 +1000,11 @@ export function createToolGateway(deps: {
       // The model's arguments land in jsonb and text columns (steps, approvals, the audit): a NUL would fail them.
       const requested = { ...raw, input: pgSafeJson(raw.input) };
       // Who is behind the run decides what it may do: listing already hid refused tools, this is the call.
-      const [all, authority] = await Promise.all([allTools(ctx), authorityOf(ctx)]);
+      const [all, authority, level] = await Promise.all([
+        allTools(ctx),
+        authorityOf(ctx),
+        approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+      ]);
       // A directory (tools/directory.ts): `use_tool` runs the tool it names by that tool's own name, so everything
       // below (steps, policy, scope, schema, checks, approval) is that tool's; `find_tools` runs as is. Any tool goes
       // through any `use_tool`, a directory's own and one already listed too: a computer brain's harness may still
@@ -977,6 +1065,8 @@ export function createToolGateway(deps: {
       let approvedBy: string[] | null = null;
       /** What the call's line in the chat says of it: approved by a rule, whose person, a read-only SQL one or not. */
       let autoApproved: { by: string | null; reads: boolean } | null = null;
+      /** It ran without the card it would have opened, because its agent never asks (`unaskedAtNever`). */
+      let unasked = false;
       // The audit (agent-audit.ts): every call that matters, with how it ended. A routine's belongs where it
       // delivers, never to its room.
       const actionChannel =
@@ -1007,6 +1097,7 @@ export function createToolGateway(deps: {
           input: call.input,
           outcome,
           approvalRules: approvedBy,
+          unasked: unasked && outcome !== "refused",
           ...extra,
         });
       };
@@ -1054,8 +1145,15 @@ export function createToolGateway(deps: {
           }
         }
       }
+      // The same tool running only actions that open a pull request is judged as a connected app's own tool for it.
+      if (tool.actions && !opensPullRequest(tool)) {
+        const actions = tool.actions(takeWhy(tool.inputSchema, call.input).input);
+        if (actions?.length && actions.every(opensPullRequestName)) tool = { ...tool, opensPullRequest: true };
+      }
+      if (tool.sensitive && tool.asksNobody?.(call.input)) tool = { ...tool, sensitive: false };
       const builtIn = isBuiltIn(tool);
-      const decision = policyFor(authority, tool);
+      // A call that only looks is judged as at the default level: an agent that always asks asks for changes.
+      const decision = policyFor(authority, tool, tool.looksOnly?.(call.input) ? DEFAULT_APPROVALS_LEVEL : level);
       if (decision.action === "refuse") {
         return finish(
           { content: decision.reason, isError: true, data: { code: "tool.not_allowed", refusal: "policy" } },
@@ -1077,7 +1175,10 @@ export function createToolGateway(deps: {
       // A call that asks a person says why (shown on its card); the tool itself never sees it. It is
       // asked for last: a call refused for any other reason (its input, a repository outside the agent's
       // list) gets that reason first.
-      let approves = decision.action === "approve" || isSensitive(tool) || asksWithWhy(tool, call.input);
+      const never = unaskedAtNever(level, tool, authority);
+      const wouldAsk = needsApproval(tool, decision) || asksWithWhy(tool, call.input);
+      unasked = never && wouldAsk;
+      let approves = wouldAsk && !never;
       // Only its `why` makes it ask: a command the computer holds, or (a merge this agent does alone) doesn't.
       const askedByWhy = approves && decision.action !== "approve" && !isSensitive(tool);
       let why = "";
@@ -1085,7 +1186,7 @@ export function createToolGateway(deps: {
       if (asksPerson(tool, decision) || asksWithWhy(tool, call.input)) {
         const taken = takeWhy(tool.inputSchema, call.input);
         why = taken.why ?? "";
-        whyMissing = !taken.why;
+        whyMissing = !taken.why && !unasked;
         call = { ...call, input: taken.input };
       }
       // Team actions (ADR 0064): an outside call repeated after the agent was told the team already did it
@@ -1112,7 +1213,7 @@ export function createToolGateway(deps: {
       const problems = validateJson(tool.inputSchema, call.input);
       if (problems.length > 0) {
         // Through a directory the model never saw the schema up front: show it, so the next call can be right.
-        const listed = asListed(tool, decision);
+        const listed = asListed(tool, decision, never);
         const schemaHint = viaDirectory ? `\nInput schema of ${tool.name}: ${compactSchema(listed.inputSchema)}` : "";
         // Everything the call lacks in one answer: told one field at a time, a model swaps one for the other.
         const needsWhy = whyMissing ? `. ${WHY_REFUSAL}` : "";
@@ -1136,35 +1237,44 @@ export function createToolGateway(deps: {
       const computerDecides = Boolean(script && loneMerge(script)) && (await mergeReposOfCall(ctx)).length > 0;
       if (computerDecides) approves = false;
       // "Aprovar sempre": a call of a kind someone approved for good runs like an allowed one, why or not.
-      const remember = !approves
-        ? null
-        : tool.sqlReads
-          ? await rememberableSqlRead(tool, call.input, authority, decision)
-          : rememberable(tool, call.input, authority, decision);
-      if (remember) {
-        const at = { orgId: ctx.orgId, agentId: ctx.agentId, connectionId: tool.connectionId ?? null };
-        approvedBy = await coveringRules(ctx.db, at, remember);
-        if (approvedBy) {
-          approves = false;
+      const ruled = tool;
+      /** The first saved rule that covers the call, kept for its line in the chat and the audit. */
+      const coveredBy = async (kinds: RememberedKind[]) => {
+        const at = { orgId: ctx.orgId, agentId: ctx.agentId, connectionId: ruled.connectionId ?? null };
+        for (const kind of kinds) {
+          const rules = await coveringRules(ctx.db, at, kind);
+          if (!rules) continue;
+          approvedBy = rules;
           autoApproved = {
-            by: await rulesApprover(ctx.db, approvedBy),
-            reads: remember.actions.some((a) => a.startsWith(SQL_READS)),
+            by: await rulesApprover(ctx.db, rules),
+            reads: kind.actions.some((a) => a.startsWith(SQL_READS)),
           };
+          return true;
         }
-      }
-      // The routine's own job: an action its creator allowed when they set it up runs like an allowed one, every run.
+        return false;
+      };
+      const kinds = approves ? await rememberKinds(tool, call.input, authority, level) : [];
+      const remember = kinds[0] ?? null;
+      if (await coveredBy(kinds)) approves = false;
+      // The routine's own job: an action its creator allowed when they set it up runs like an allowed one, every run,
+      // unless its agent always asks.
       const ownJob =
-        approves && authority?.kind === "routine" && authority.brief
+        approves && level !== "always" && authority?.kind === "routine" && authority.brief
           ? await ownJobCovers(ctx, authority.brief, tool, call.input)
           : false;
       if (ownJob) approves = false;
-      // "Pode fazer merge sem perguntar": a merge in a repository its owner or an admin chose, with no card.
-      const mergeAlone: MergeDone | null = approves ? await connectorMerge(ctx, tool, call.input) : null;
+      // "Pode fazer merge sem perguntar": a merge in a repository its owner or an admin chose, with no card. An agent
+      // that never asks merges anywhere it may, and leaves the same receipt.
+      const mergeAlone: MergeDone | null = approves
+        ? await connectorMerge(ctx, tool, call.input)
+        : unasked
+          ? mergeOfCall(tool, call.input)
+          : null;
       if (mergeAlone) approves = false;
       // Approved ahead: the exact call a person approved for this routine run's slot runs like an allowed one, why
-      // or not; the one they refused never runs.
+      // or not; the one they refused never runs, whatever the agent's level.
       const ahead =
-        approves && authority?.kind === "routine" && authority.brief
+        (approves || unasked) && authority?.kind === "routine" && authority.brief
           ? await aheadFor(
               ctx,
               authority.brief,
@@ -1174,6 +1284,7 @@ export function createToolGateway(deps: {
                 connectionId: tool.connectionId ?? null,
                 params: call.input,
               }),
+              level,
             )
           : null;
       if (ahead?.status === "refused") {
@@ -1197,6 +1308,7 @@ export function createToolGateway(deps: {
           authority,
           cost,
           toolCommand(call.name, call.input) ?? callTitle(tool, call.input) ?? tool.name,
+          never,
         );
         if (refusal) {
           const content = isPrompt
@@ -1249,7 +1361,7 @@ export function createToolGateway(deps: {
         const [ran] = await ctx.db.select().from(approvals).where(eq(approvals.id, ahead.id));
         return { type: "result", output, ...(ran ? { ran } : {}) };
       }
-      const askPerson = async (why: string, remember: ReturnType<typeof rememberable>): Promise<InvokeResult> => {
+      const askPerson = async (why: string, remember: RememberedKind | null): Promise<InvokeResult> => {
         const owner = await ownerOf(ctx);
         // A routine's request goes to the conversation it reports to, never its room; one asked by another
         // agent (ADR 0034) where the person is, not in the agents' DM.
@@ -1320,23 +1432,36 @@ export function createToolGateway(deps: {
         return { type: "approval", approval: row };
       };
       if (approves) {
-        // A routine's card offers "Sempre nesta rotina" instead: `rememberable` keeps "Aprovar sempre" off its runs.
-        const kept =
-          remember ??
-          (authority?.kind === "routine" && authority.brief
+        // A routine's card offers "Sempre nesta rotina" where the action can be its own: the narrower word for the
+        // same run. Not for an agent that always asks: its routine's own actions ask too.
+        const own =
+          level !== "always" && authority?.kind === "routine" && authority.brief
             ? await routineKind(ctx, authority.brief, tool, call.input)
-            : null);
-        return askPerson(why, kept);
+            : null;
+        return askPerson(why, own ?? remember);
       }
       const runCtx: ToolContext = { ...ctx, toolUseId: call.toolUseId };
       // Our own tools only (`schedule_action`), never a connected server's.
       if (!tool.connectionId) runCtx.prepareAhead = (request) => prepareAhead(runCtx, authority, request);
-      const output = withRepo(await run(tool, call.input, runCtx));
+      let output = withRepo(await run(tool, call.input, runCtx));
       // The computer held a command for a person (a merge, a deploy): the card goes out now, as a call with `why`
       // would have asked, so it never rests on the agent calling again. Approved, it runs the approved way.
       const held = tool.whyAsks && ctx.runId && !ctx.approved ? heldCommandReason(output) : null;
       const stillAsks = computerDecides && output.data?.code === "command.approval_needed";
-      if (held || stillAsks) return askPerson(why || (held ?? ""), rememberable(tool, call.input, authority, decision));
+      if (tool.whyAsks && !ctx.approved && heldForPerson(output)) {
+        // An agent that never asks, or a kind someone approved for good ("Aprovar sempre"): the computer ran nothing
+        // when it held the command, so running it again the approved way does it once. What it never runs (a push
+        // our git proxy refuses) comes back refused again.
+        const heldKinds = never ? [] : await rememberKinds(tool, call.input, authority, level);
+        if (never || (await coveredBy(heldKinds))) {
+          output = withRepo(await run(tool, call.input, { ...runCtx, approved: true }));
+          unasked = never;
+        } else if (held || stillAsks) {
+          return askPerson(why || (held ?? ""), heldKinds[0] ?? null);
+        }
+      } else if (held || stillAsks) {
+        return askPerson(why || (held ?? ""), (await rememberKinds(tool, call.input, authority, level))[0] ?? null);
+      }
       const merged = mergeAlone ?? (tool.whyAsks ? (output.data?.merge as MergeDone | undefined) : null);
       if (merged && !output.isError) await recordMergeDone(ctx, merged, tool.name).catch(() => {});
       if (outside && !output.isError) {

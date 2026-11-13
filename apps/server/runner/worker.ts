@@ -15,7 +15,8 @@ import {
   type TurnContext,
 } from "@agenteschat/adapters/machine-protocol";
 import { realFoldersFor } from "./access";
-import { agentAccountHome, grantOf, lentAccounts } from "./accounts";
+import { agentAccountHome, agentAccountsDir, grantOf, lentAccounts } from "./accounts";
+import { dropAgySignIns } from "./agy-home";
 import { BrainManager, turnContext } from "./brain";
 import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager, type BrowserManagerOptions, launchChrome } from "./browser";
@@ -104,15 +105,19 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
   const viewers = Number.isSafeInteger(f.desktopViewers) ? Math.max(0, f.desktopViewers as number) : 0;
   const account = f.account === null || isAccountId(f.account) ? { account: f.account } : {};
   const accounts = Array.isArray(f.accounts) ? { accounts: f.accounts.filter(isAccountId) } : {};
+  const host = typeof f.commitHost === "string" && /^[a-z0-9.-]{1,253}$/i.test(f.commitHost) ? f.commitHost : null;
+  const commitHost = host ? { commitHost: host } : {};
   return access && paused
     ? {
         access,
         paused,
         limits,
         desktopViewers: viewers,
+        ...(f.browserKept === true ? { browserKept: true } : {}),
         privateNetwork: f.privateNetwork === true,
         ...account,
         ...accounts,
+        ...commitHost,
       }
     : null;
 }
@@ -546,6 +551,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     systemdBooted() ? (file, args, options) => spawnGated(kind, file, args, options, link.enterScope) : undefined;
   const cli = gated("cli");
   const chrome = gated("browser");
+  dropAgySignIns(agentAccountsDir(home, "antigravity"));
   // The account folders root lends to this agent's user for its turns and tasks (`AccountManager.lendTo`), and its
   // own folder for an account root keeps, whose credential comes with each turn and task (`AccountManager.grant`).
   // What the turns say about the plan's usage goes to root, which keeps the accounts.
@@ -568,6 +574,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     ...(self.compiled ? { wrapperCommand: [...self.command, "task-wrapper"] } : {}),
     ...(cli ? { spawnCli: cli } : {}),
     hostedStop: (taskId) => link.taskStop(taskId),
+    commitHost: () => state.commitHost,
   });
   link.onTaskOut = (taskId, stream, line) => tasks.hostedOutput(taskId, stream, line);
   await tasks.init();
@@ -687,6 +694,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
       status: () => ({ running: desktop !== null, streams: state.desktopViewers ?? 0 }),
     },
     onChange: () => queueMicrotask(lease),
+    kept: () => state.browserKept === true,
     ...(chrome ? { startChrome: (exe, args, profile, env) => launchChrome(exe, args, profile, env, chrome) } : {}),
     // The agents share their memory (`agentLimits`): the limit a page dies at is all of theirs.
     memoryEvents: {

@@ -9,8 +9,9 @@ import {
   runKeys,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
-import { approvalOriginShort, approvalWhy } from "@agenteschat/client/lib/approval-origin";
+import { approvalOriginShort, approvalWords } from "@agenteschat/client/lib/approval-origin";
 import {
+  aheadEndLine,
   approvalAskLine,
   approvalDetail,
   approvalGroupWaitsFor,
@@ -19,13 +20,14 @@ import {
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
-import { nextLabel } from "@agenteschat/client/lib/format";
+import { nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { Button } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AheadLine, ApproveAlways, CancelAhead } from "@/components/ApprovalItem";
 import { useOrg } from "@/components/org-context";
+import { inlineWords } from "@/lib/markdown";
 import {
   ApproveAll,
   ApproveButton,
@@ -35,7 +37,7 @@ import {
   expiryText,
   RefuseBox,
 } from "@/pages/ApprovalsPage";
-import { RequestCard, RequestFuse, useExpired } from "./RequestCard";
+import { type RequestAnswer, RequestCard, RequestFuse, useExpired } from "./RequestCard";
 
 /** The whole time a request has (24 h when the row doesn't say): the fuse burns down over it. */
 const DAY_MS = 24 * 3_600_000;
@@ -46,9 +48,10 @@ const DAY_MS = 24 * 3_600_000;
  * mark, "Ver o e-mail" / "Ver detalhes" opening it whole in the preview's place (with where it came from), then Approve
  * (held for high risk), "Aprovar sempre" where offered (what it covers on a line under the buttons) and "Agora não"
  * (which asks why, kept as a lesson), in one row under the text, and the fuse to its expiry. Who can't decide sees who it waits for.
+ * Decided, expired or canceled, it is the same card: who decided and when where the buttons were.
  */
 export function ApprovalAsk({
-  approval,
+  approval: row,
   agent,
   members,
   who,
@@ -63,12 +66,14 @@ export function ApprovalAsk({
   tail?: ReactNode;
 }) {
   const { t, i18n } = useTranslation();
-  const { org } = useOrg();
-  const deciding = useApprovalsDeciding(org.id, [approval.id]);
-  // It stops being decidable the moment it expires, even before the server's event says so.
-  const expired = useExpired(approval.expiresAt);
+  const { org, me } = useOrg();
+  const deciding = useApprovalsDeciding(org.id, [row.id]);
+  // Past its deadline it has expired, even before the server's event says so.
+  const expired = useExpired(row.status === "pending" ? row.expiresAt : null);
+  const approval: Approval = expired && row.status === "pending" ? { ...row, status: "expired" } : row;
+  const pending = approval.status === "pending";
   const [refusing, setRefusing] = useState(false);
-  const why = approvalWhy(approval);
+  const why = approvalWords(approval);
   const origin = approvalOriginShort(approval);
   const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
   const span = Math.max(1, new Date(approval.expiresAt).getTime() - new Date(approval.createdAt).getTime() || DAY_MS);
@@ -88,10 +93,21 @@ export function ApprovalAsk({
       kind="approval"
       agent={agent}
       who={who}
-      label={t("approval.group")}
+      label={t(
+        pending
+          ? "approval.group"
+          : approval.status === "approved"
+            ? "approval.groupDone"
+            : approval.status === "expired"
+              ? "approval.groupExpired"
+              : approval.status === "canceled"
+                ? "approval.groupCanceled"
+                : "approval.groupRefused",
+      )}
       mine={approval.canDecide}
       waitingFor={waits ? t("ask.waitingFor", { name: waits }) : t("approval.waitingAdmin")}
-      lead={why ?? approvalAskLine(t, approval.canDecide)}
+      answer={pending ? undefined : approvalAnswer(t, i18n.language, approval, me.user.id, members)}
+      lead={why ?? approvalAskLine(t, pending && approval.canDecide)}
       preview={previewed ? <ApprovalPreview approval={approval} /> : undefined}
       object={{
         logo: <ConnectorMark approval={approval} />,
@@ -104,11 +120,14 @@ export function ApprovalAsk({
           <ExactAction approval={approval} />
           {origin && <p className="rq__origin">{tt(origin.key, origin.values)}</p>}
           {requester && <p className="rq__origin">{requester}</p>}
+          {!pending && approval.reason && (
+            <p className="rq__origin">{t("approval.reasonLine", { reason: approval.reason })}</p>
+          )}
         </>
       }
       body={<AheadLine approval={approval} className="ap-ask__ahead" />}
       actions={
-        !approval.canDecide ? undefined : refusing ? (
+        !pending || !approval.canDecide ? undefined : refusing ? (
           <RefuseBox approval={approval} agent={agent} onCancel={() => setRefusing(false)} />
         ) : (
           <>
@@ -131,9 +150,40 @@ export function ApprovalAsk({
         )
       }
       what={title}
-      locked={deciding || expired}
+      locked={deciding}
     />
   );
+}
+
+/**
+ * How a request ended, for its card's footer: who decided ("Aprovado por você", "Recusado por Ana, cobrindo Bia"),
+ * when, when one approved ahead runs or ran, and Cancelar while that can still be withdrawn.
+ */
+function approvalAnswer(
+  t: TFunction,
+  locale: string,
+  approval: Approval,
+  meId: string,
+  members: Map<string, Member>,
+): RequestAnswer {
+  const ahead = aheadPhase(approval);
+  // No one decided one that ran out: it expired at its deadline (one approved ahead, at its time).
+  const ended =
+    approval.decidedAt ??
+    (approval.status !== "expired" ? null : ahead === "lapsed" ? approval.runAt : approval.expiresAt);
+  const note =
+    ahead === "scheduled" && approval.runAt
+      ? t("approval.ahead.scheduled", { when: nextLabel(locale, approval.runAt) })
+      : ahead === "ran" && approval.executedAt
+        ? t("approval.ahead.ran", { when: whenAt(t, locale, approval.executedAt) })
+        : aheadEndLine(t, approval);
+  return {
+    done: approval.status === "approved",
+    text: decisionOutcome(t, approval, meId, (id) => members.get(id)?.name),
+    time: ended ? whenAt(t, locale, ended) : undefined,
+    note: note || undefined,
+    action: ahead === "scheduled" && approval.canCancel ? <CancelAhead id={approval.id} /> : undefined,
+  };
 }
 
 /**
@@ -168,7 +218,8 @@ const runHead = (t: TFunction, run: Approval[], agent: Agent | undefined) =>
  * a card that is one run is that run, its buttons in the footer. Otherwise each item (or run) is one row: its values
  * and its own buttons at the row's right end, decided ones folded into the list with how they ended, and "Aprovar tudo" /
  * "Agora não para todos" over the ones listed now in the footer, with the earliest deadline's fuse. Someone who may
- * decide only some reads that "Aprovar tudo" covers only those.
+ * decide only some reads that "Aprovar tudo" covers only those. With every request decided it is the same card, each
+ * row saying how it ended, and no footer.
  */
 export function ApprovalGroupAsk({
   items,
@@ -200,7 +251,7 @@ export function ApprovalGroupAsk({
   const owner = members.get(first.ownerUserId ?? agent?.ownerUserId ?? "");
   const waits = approvalGroupWaitsFor(items, owner?.name);
   const leadItem = waiting[0] ?? first;
-  const why = approvalWhy(leadItem);
+  const why = approvalWords(leadItem);
   const always = approveAlwaysOn(items);
   const deadline = cardDeadline(items);
   const left = deadline ? Math.max(0, new Date(deadline).getTime() - Date.now()) / DAY_MS : 0;
@@ -236,8 +287,9 @@ export function ApprovalGroupAsk({
       who={who}
       label={t("approval.group")}
       mine={mine}
+      ended={waiting.length === 0}
       waitingFor={waits ? t("ask.waitingFor", { name: waits }) : t("approval.waitingAdmin")}
-      lead={why ?? approvalAskLine(t, mine, waiting.length)}
+      lead={why ?? approvalAskLine(t, mine, waiting.length || items.length)}
       object={
         one
           ? { logo: <ConnectorMark approval={first} />, title: runHead(t, one, agent), more: t("approval.run.show") }
@@ -337,7 +389,7 @@ function RunItem({
   const first = run[0];
   if (!first) return null;
   return (
-    <li className="rq__item rq__run" data-status="pending">
+    <li className="rq__item rq__run ac-actline" data-status="pending">
       <div className="rq__well">
         <span className="rq__logo">
           <ConnectorMark approval={first} />
@@ -391,15 +443,18 @@ function GroupItem({
   const runAt = approval.runAt ? nextLabel(i18n.language, approval.runAt) : "";
   const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
   return (
-    <li className={pending ? "rq__item" : "rq__item rq__item--done"} data-status={approval.status}>
+    <li
+      className={pending ? "rq__item ac-actline" : "rq__item rq__item--done ac-actline"}
+      data-status={approval.status}
+    >
       <div className="rq__well">
         <span className="rq__logo">
           <ConnectorMark approval={approval} />
         </span>
         <span className="rq__wt">
           <b>{approvalTitle(t, approval)}</b>
-          {detail && <small>{detail}</small>}
-          {own.why && <small className="rq__item-why">{own.why}</small>}
+          {detail && <small>{inlineWords(detail, "it-d")}</small>}
+          {own.why && <small className="rq__item-why">{inlineWords(own.why, "it-w")}</small>}
           {own.origin && <small className="rq__item-why">{tt(own.origin.key, own.origin.values)}</small>}
           {runAt && (ahead === "asking" || ahead === "scheduled") && (
             <small className="rq__item-why">

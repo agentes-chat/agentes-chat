@@ -63,6 +63,8 @@ interface Machine {
   bun?: string;
   sudo?: boolean;
   musl?: boolean;
+  /** Other commands this machine has (colima, brew): stubs that only note their call. */
+  has?: string[];
 }
 
 /** What the installer asks the machine, as `command args` lines. Anything else it runs is a change. */
@@ -101,6 +103,7 @@ async function plan(machine: Machine, args: string[] = [], o: RunOptions = {}) {
     stub("bun", `case "$1" in --version) echo ${machine.bun} ;; *) ${setup} ;; esac`);
   }
   if (machine.musl) stub("ldd", `echo "musl libc (x86_64)" >&2; exit 1`);
+  for (const name of machine.has ?? []) stub(name);
   for (const name of [
     "curl",
     "unzip",
@@ -369,10 +372,10 @@ describe("install.sh", () => {
     expect(run.out).toContain("◇  Docker 26.1.5\n◇  Compose 2.26.1\n");
     expect(run.out).not.toContain("$ ");
     expect(run.out).toEndWith(
-      `\n◇  The setup, in ${dir}:\n     ${run.bin}/bun x --bun @agenteschat/setup@0.1.0 --network local\n\n`,
+      `\n◇  The setup, in ${dir}:\n     ${run.bin}/bun x --bun @agenteschat/setup@0.1.1 --network local\n\n`,
     );
     // The setup draws in the installer's frame: no logo or badge of its own.
-    expect(run.calls).toContain("bun x --bun @agenteschat/setup@0.1.0 --network local");
+    expect(run.calls).toContain("bun x --bun @agenteschat/setup@0.1.1 --network local");
     expect(run.calls).toContain("frame 1 stdin none");
   });
 
@@ -382,7 +385,7 @@ describe("install.sh", () => {
     const run = await plan(machine, ["--dir", dir], { real: true, tty: true });
     expect(run.code).toBe(0);
     expect(plain(run.out)).toContain(
-      `◇  The setup, in ${dir}:\n│    ${run.bin}/bun x --bun @agenteschat/setup@0.1.0\n│\n`,
+      `◇  The setup, in ${dir}:\n│    ${run.bin}/bun x --bun @agenteschat/setup@0.1.1\n│\n`,
     );
     expect(run.calls.find((call) => call.startsWith("frame "))).toMatch(/^frame 1 stdin \/dev\/(pts\/\d+|ttys\d+)$/);
   });
@@ -429,7 +432,7 @@ describe("install.sh", () => {
     expect(run.out).toContain("$ mv <tmp>/bun-linux-x64-baseline/bun /opt/agentes/.runtime/bun");
     expect(run.out).toContain("$ cd /opt/agentes");
     expect(run.out).toContain(
-      "$ /opt/agentes/.runtime/bun x --bun @agenteschat/setup@0.1.0 --network local </dev/null",
+      "$ /opt/agentes/.runtime/bun x --bun @agenteschat/setup@0.1.1 --network local </dev/null",
     );
     expect(run.changes).toEqual([]);
   });
@@ -488,6 +491,51 @@ describe("install.sh", () => {
     expect(noSudo.err).toContain("Docker needs root here, and this computer has no sudo.");
   });
 
+  test("--computer yes as a user other than root on Linux: the same install again with sudo before anything else, else stopped; as root and on a Mac it goes on", async () => {
+    // A user who can use Docker: only the agents' computer needs root.
+    const user: Machine = { os: "Linux", arch: "x86_64", uid: 1000, docker: "27.3.1", compose: "2.26.1" };
+    const why = "Making this machine your agents' computer (--computer yes) needs root";
+    expect((await plan(user, ["--computer", "yes", "--network", "local"])).out).toBe(
+      [
+        "agentes.chat install plan (--plan: nothing runs)",
+        "◇  Linux on x64",
+        "◇  No terminal: the setup takes its defaults and the options given",
+        `●  ${why}: running this installer again as root`,
+        `   $ sudo sh ${SCRIPT} --computer yes --network local`,
+        "",
+        "With --plan it stops here. As root, --plan shows the rest.",
+        "",
+      ].join("\n"),
+    );
+    // Run for real: sudo comes first, with nothing downloaded or written before it.
+    const real = await plan(user, ["--computer=yes"], { real: true });
+    expect(real.code).toBe(0);
+    expect(real.changes).toEqual([`sudo sh ${SCRIPT} --computer=yes`]);
+    // An install of this user's keeps its folder: as root, the default is /opt/agentes.
+    const installed = await plan(user, ["--computer", "yes"], {
+      before: '/bin/mkdir -p "$HOME/agentes" && : > "$HOME/agentes/.env"',
+    });
+    expect(installed.out).toContain(`$ sudo sh ${SCRIPT} --dir ${installed.home}/agentes --computer yes\n`);
+    const noSudo = await plan({ ...user, sudo: false }, ["--computer", "yes"], { real: true });
+    expect(noSudo.code).toBe(1);
+    expect(noSudo.err).toContain(`${why}, and this computer has no sudo.`);
+    expect(noSudo.err).toContain(
+      "Run this as root, or leave out --computer yes and connect a computer later in Settings › Devices.",
+    );
+    expect(noSudo.changes).toEqual([]);
+
+    // The last --computer given wins, as in the setup. Root, and a Mac, need no sudo for it.
+    for (const run of [
+      await plan(user, ["--computer", "yes", "--computer", "no"]),
+      await plan({ ...linuxRoot, docker: "26.1.5", compose: "2.26.1" }, ["--computer", "yes"]),
+      await plan({ ...mac, docker: "28.5.1", bun: "1.4.4" }, ["--computer", "yes"]),
+    ]) {
+      expect(run.code).toBe(0);
+      expect(run.out).not.toContain("sudo");
+      expect(run.out).toContain("@agenteschat/setup@0.1.1 --computer ");
+    }
+  });
+
   test("a user who can use Docker installs in their home, Compose in their own plugins", async () => {
     const run = await plan({ os: "Linux", arch: "x86_64", uid: 1000, docker: "27.3.1" });
     expect(run.code).toBe(0);
@@ -503,7 +551,7 @@ describe("install.sh", () => {
     expect(run.out).toContain("◇  Docker 28.5.1");
     expect(run.out).toContain(`◇  Bun 1.4.4 (${run.bin}/bun)`);
     expect(run.out).toContain(`$ cd ${run.home}/agentes`);
-    expect(run.out).toContain(`$ ${run.bin}/bun x --bun @agenteschat/setup@0.1.0 --network local </dev/null`);
+    expect(run.out).toContain(`$ ${run.bin}/bun x --bun @agenteschat/setup@0.1.1 --network local </dev/null`);
     expect(run.out).not.toContain("--native");
     expect(run.out).not.toContain("Compose");
     expect(run.changes).toEqual([]);
@@ -522,12 +570,55 @@ describe("install.sh", () => {
     expect(stopped.code).toBe(1);
     expect(stopped.err).toContain("Docker is on this Mac, but it doesn't answer.");
 
+    // With no terminal to ask and no --yes, it starts and installs nothing.
+    const colima = await plan({ ...mac, docker: "down", has: ["colima"] });
+    expect(colima.code).toBe(1);
+    expect(colima.err).toContain("pass --yes to start it");
+    expect(colima.changes).toEqual([]);
+
     for (const machine of [mac, linuxRoot]) {
       const native = await plan(machine, ["--native"]);
       expect(native.code).toBe(1);
       expect(native.err).toContain("can't run agentes.chat without Docker yet (--native)");
       expect(native.calls).toEqual([]);
     }
+  });
+
+  test("a Mac with Colima stopped: started (--yes), then the wait for Docker to answer", async () => {
+    const run = await plan({ ...mac, docker: "down", has: ["colima"], bun: "1.4.4" }, ["--yes"]);
+    expect(run.code).toBe(0);
+    expect(run.out).toContain("◇  Colima isn't running: starting it, once you say yes (--yes doesn't ask)");
+    expect(run.out).toContain("$ colima start");
+    expect(run.out).toContain("◇  Then waits for Docker to answer");
+    expect(run.changes).toEqual([]);
+  });
+
+  test("a Mac with no Docker: Colima with Homebrew (--yes), and Homebrew first only on a terminal", async () => {
+    const brew = await plan({ ...mac, has: ["brew"], bun: "1.4.4" }, ["--yes"]);
+    expect(brew.code).toBe(0);
+    expect(brew.out).toContain("◇  No Docker: installing Colima with Homebrew and starting it");
+    expect(brew.out).toContain(`$ ${brew.bin}/brew install colima docker docker-compose`);
+    expect(brew.out).toContain("$ colima start");
+    expect(brew.changes).toEqual([]);
+
+    // Homebrew's own installer asks for a password: without a terminal it stops before it.
+    const noBrew = await plan(mac, ["--yes"]);
+    expect(noBrew.code).toBe(1);
+    expect(noBrew.err).toContain("Homebrew's installer needs a terminal");
+    expect(noBrew.changes).toEqual([]);
+  });
+
+  test("Linux with Docker stopped: started (--yes), else told how without a terminal", async () => {
+    const run = await plan({ ...linuxRoot, docker: "down", compose: "2.26.1" }, ["--yes"]);
+    expect(run.code).toBe(0);
+    expect(run.out).toContain("$ systemctl enable --now docker");
+    expect(run.out).toContain("◇  Then waits for Docker to answer");
+    expect(run.changes).toEqual([]);
+
+    const stopped = await plan({ ...linuxRoot, docker: "down" });
+    expect(stopped.code).toBe(1);
+    expect(stopped.err).toContain("Docker is installed, but its engine doesn't answer.");
+    expect(stopped.err).toContain("pass --yes to start it");
   });
 
   test("every option it hands the setup is one the setup knows", async () => {
@@ -540,7 +631,7 @@ describe("install.sh", () => {
     ];
     for (const run of runs) {
       const line = `${run.out}${run.err}`.split("\n").find((l) => l.includes("@agenteschat/setup@"));
-      const args = line?.split("@agenteschat/setup@0.1.0")[1]?.replace("</dev/null", "").trim().split(" ");
+      const args = line?.split("@agenteschat/setup@0.1.1")[1]?.replace("</dev/null", "").trim().split(" ");
       expect(args).toBeDefined();
       expect(parseOptions((args ?? []).filter(Boolean), {})).not.toHaveProperty("error");
     }
@@ -580,7 +671,7 @@ describe("install.sh", () => {
       piped: text,
     });
     expect(piped.code).toBe(0);
-    expect(piped.out).toContain("@agenteschat/setup@0.1.0 --email skip </dev/null");
+    expect(piped.out).toContain("@agenteschat/setup@0.1.1 --email skip </dev/null");
   });
 
   test("a local build of the setup, and --json output kept off stdout", async () => {

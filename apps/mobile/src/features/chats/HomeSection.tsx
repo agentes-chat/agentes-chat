@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { readValueSync, STORED, writeValue } from "@/lib/storage";
-import { Count, Icon, LIST_INSET, Text, useReducedMotion, weights } from "@/ui";
+import { Count, Icon, IconButton, LIST_INSET, SCREEN_X, Text, useReducedMotion, weights } from "@/ui";
 import { useColors } from "../shared/hooks";
 import {
   HOME_SECTIONS,
@@ -58,8 +58,7 @@ export function CollapsibleSection({
   count,
   collapsed,
   onToggle,
-  onLongPress,
-  holdLabel,
+  menu,
   kept,
   children,
 }: {
@@ -67,10 +66,11 @@ export function CollapsibleSection({
   count: number;
   collapsed: boolean;
   onToggle: () => void;
-  /** A channel category's header: its menu (admins). */
-  onLongPress?: () => void;
-  /** What the long press does, for screen readers. */
-  holdLabel?: string;
+  /**
+   * A channel category's or a setor's menu, for who may change it: a long press on the header, and a "…" before the
+   * chevron, so it is found without knowing the long press.
+   */
+  menu?: { label: string; onPress: () => void };
   /** Shown while closed (a category's unread channels). */
   kept?: ReactNode;
   children: ReactNode;
@@ -84,13 +84,13 @@ export function CollapsibleSection({
     <View>
       <Pressable
         onPress={onToggle}
-        {...(onLongPress
+        {...(menu
           ? {
-              onLongPress,
+              onLongPress: menu.onPress,
               delayLongPress: 380,
-              accessibilityActions: [{ name: "menu", label: holdLabel ?? title }],
+              accessibilityActions: [{ name: "menu", label: menu.label }],
               onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => {
-                if (e.nativeEvent.actionName === "menu") onLongPress();
+                if (e.nativeEvent.actionName === "menu") menu.onPress();
               },
             }
           : {})}
@@ -104,6 +104,11 @@ export function CollapsibleSection({
         </Text>
         <Count value={count} size={15} weight={weights.medium} color={c.faint} />
         <View style={styles.grow} />
+        {menu ? (
+          <View style={styles.menu}>
+            <IconButton icon="more" small label={menu.label} onPress={menu.onPress} />
+          </View>
+        ) : null}
         <Animated.View style={chevron}>
           <Icon name="chev" size={15} color={c.faint} />
         </Animated.View>
@@ -137,17 +142,26 @@ export function SeeAllRow({ label, onPress }: { label: string; onPress: () => vo
 }
 
 const styles = StyleSheet.create({
-  // The kit's `SectionHeader` and the widgets' head on the same screen leave 8 under the title, not 6.
-  head: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 20, paddingHorizontal: 20, paddingBottom: 8 },
+  // The kit's `SectionHeader` box: the screen's sides (SCREEN_X), 24 above and 8 below (the rhythm in eights).
+  head: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingTop: 24,
+    paddingHorizontal: SCREEN_X,
+    paddingBottom: 8,
+  },
   pressed: { opacity: 0.6 },
   title: { fontWeight: "600", flexShrink: 1 },
+  // The toolbar's 32 over the title's 20-point line: the header keeps its height.
+  menu: { marginVertical: -6 },
   grow: { flex: 1 },
   more: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingVertical: 12,
-    paddingLeft: LIST_INSET + 2,
+    paddingLeft: LIST_INSET,
     paddingRight: 16,
   },
   medium: { fontWeight: "500" },

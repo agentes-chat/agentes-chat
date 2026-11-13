@@ -14,7 +14,7 @@ import { mayConnectAi } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { deciderOf } from "@agenteschat/client/lib/routing";
 import { helpUrl } from "@agenteschat/client/lib/server";
-import { memo, useEffect } from "react";
+import { memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -68,7 +68,8 @@ export const AgentReceiptLine = memo(function AgentReceiptLine({
   mine: boolean;
   /** "Conectar" on the line itself (not while the banner above the box offers it already). */
   connectInline: boolean;
-  onRetry: (m: Message) => void;
+  /** Its promise settles when the retry did what it could (the line shows it is trying until then). */
+  onRetry: (m: Message) => Promise<unknown> | undefined;
 }) {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
@@ -79,6 +80,7 @@ export const AgentReceiptLine = memo(function AgentReceiptLine({
   const sheet = useSheet();
   const steer = useSteerState(orgId, m.channelId, m.id);
   const inset = useQuietInset();
+  const [retrying, setRetrying] = useState(false);
   const held = usePlanHold(orgId, org) !== null;
   const line = held ? keptLine(receiptLine(receipt)) : receiptLine(receipt);
   if (!receiptShows(line, Boolean(steer))) return null;
@@ -117,7 +119,11 @@ export const AgentReceiptLine = memo(function AgentReceiptLine({
       ...(only ? { agentId: only } : {}),
     });
   };
-  const act = action === "retry" ? () => onRetry(m) : action === "connect" ? connect : null;
+  const retry = () => {
+    setRetrying(true);
+    void Promise.resolve(onRetry(m)).finally(() => setRetrying(false));
+  };
+  const act = action === "retry" ? retry : action === "connect" ? connect : null;
   const hasAgents = receiptRows(receipt).length > 0;
   const openSheet = () =>
     sheet.open(
@@ -175,7 +181,8 @@ export const AgentReceiptLine = memo(function AgentReceiptLine({
         <Button
           variant="ghost"
           size="sm"
-          label={action === "retry" ? t("receipts.retry") : t("noAi.action")}
+          label={action === "retry" ? t(retrying ? "receipts.retrying" : "receipts.retry") : t("noAi.action")}
+          loading={action === "retry" && retrying}
           onPress={act}
         />
       ) : null}
@@ -273,22 +280,21 @@ export const ReceiptMark = memo(function ReceiptMark({
         {view.kind === "seen" ? (
           <Face who={{ type: "person", id: view.personId }} size={16} live={false} />
         ) : view.kind === "steer" ? (
+          // Beside the time, a 12 check: two once the agent read it, one while it waits; who read it is in the
+          // words a tap shows, never a face crowding the line.
           view.state === "read" || view.state === "resolved" ? (
-            <AgentFace agentId={view.agentId} size={16} live={false} framed={false} />
-          ) : view.state === "now" ? (
-            <Icon name="bolt" size={12} color={tint} />
-          ) : view.state === "delivered" ? (
+            <Icon name="checks" size={12} color={tint} />
+          ) : view.state === "now" || view.state === "delivered" ? (
             <Icon name="check" size={12} color={tint} />
           ) : view.state === "held" ? (
             <Icon name="pause" size={12} color={tint} />
           ) : (
             <InkOrbit size={10} color={tint} />
           )
+        ) : view.mark === "none" && view.agentId ? (
+          <Icon name="checks" size={12} color={tint} />
         ) : (
-          <>
-            {view.agentId ? <AgentFace agentId={view.agentId} size={16} live={false} framed={false} /> : null}
-            <Mark mark={view.mark} color={tint} />
-          </>
+          <Mark mark={view.mark} color={tint} />
         )}
       </Pressable>
     </Animated.View>
@@ -405,8 +411,9 @@ function ReceiptsSheet({
 }
 
 const styles = StyleSheet.create({
-  // Right under the message, on its side: mine at the right edge (as "Visto"), anyone else's under the text.
-  line: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, minHeight: 20 },
+  // Right under the message, on its side: mine at the right edge (as "Visto"), anyone else's under the text. Its
+  // buttons go under words that leave them no room: beside a failure's full reason they squeezed it to a word a line.
+  line: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 4, minHeight: 20 },
   end: { alignSelf: "flex-end", paddingRight: 16, paddingLeft: 64 },
   start: { alignSelf: "flex-start", paddingRight: 16 },
   row: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },

@@ -5,24 +5,25 @@ import { useTheme } from "./theme";
 import { CHROME_MAX_SCALE, weights } from "./type-scale";
 
 /**
- * A row's action beside a line (Desfazer under an agent's change, Abrir on a team check): words only, as the web's
- * `.ag-rc__btn`, as tall as the line's first row so they share a middle, quiet figures after them when it has a
- * `detail` (the time left to undo). `onPress` brings its own haptic, if any.
+ * A row's action beside a line (Abrir on a team check, "Deixar Ana falar com ela" under a mention's reach): words
+ * only, as tall as the line's first row so they share a middle. `onPress` brings its own haptic, if any.
  */
 export function RowAction({
   label,
-  detail,
   onPress,
   accessibilityLabel,
   accessibilityRole = "button",
+  strong = false,
+  disabled = false,
 }: {
   label: string;
-  /** After the word, quieter, in tabular figures ("4:31"). */
-  detail?: string;
   onPress: () => void;
-  /** Read aloud instead of the label (the time left to undo). */
+  /** Read aloud instead of the label. */
   accessibilityLabel?: string;
   accessibilityRole?: AccessibilityRole;
+  /** The row's main action among several (Send beside Not now): its word in ink. */
+  strong?: boolean;
+  disabled?: boolean;
 }) {
   const { colors } = useTheme();
   return (
@@ -30,6 +31,7 @@ export function RowAction({
       to={0.95}
       haptic={false}
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel ?? label}
       hitSlop={6}
@@ -39,12 +41,9 @@ export function RowAction({
       <View style={styles.face}>
         <RNText
           maxFontSizeMultiplier={CHROME_MAX_SCALE}
-          style={[systemText("footnote", weights.semibold), styles.word, { color: colors.muted }]}
+          style={[systemText("footnote", weights.semibold), { color: strong ? colors.ink : colors.muted }]}
         >
           {label}
-          {detail ? (
-            <RNText style={[systemText("caption"), styles.detail, { color: colors.faint }]}>{` ${detail}`}</RNText>
-          ) : null}
         </RNText>
       </View>
     </PressScale>
@@ -55,14 +54,12 @@ export function RowAction({
 const FACE_PAD = 4;
 
 /**
- * The side padding of a card whose row can end in a `RowAction` (a receipt, a team check, a mention's reach): its
- * first icon and the action's word as far from the card's edges, 12 each.
+ * The side padding of a card whose row can end in a `RowAction` (a team check, a mention's reach): its first icon and
+ * the action's word as far from the card's edges, 12 each.
  */
 export const ROW_CARD_INSET = { paddingLeft: 12, paddingRight: 12 - FACE_PAD } as const;
 
 const styles = StyleSheet.create({
   row: { height: 32 },
   face: { flexGrow: 1, paddingHorizontal: FACE_PAD, alignItems: "center", justifyContent: "center" },
-  word: { fontSize: 14 },
-  detail: { fontVariant: ["tabular-nums"] },
 });

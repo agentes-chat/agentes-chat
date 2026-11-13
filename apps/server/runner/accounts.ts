@@ -9,6 +9,7 @@ import {
   ACCOUNT_KINDS,
   ACCOUNT_LOGIN_TTL_MS,
   type AccountKind,
+  type AccountLoginFailure,
   type AccountLoginState,
   type AuthMethod,
   accountCodeAad,
@@ -29,6 +30,7 @@ import {
   type RunnerAccountInfo,
   type WireSecretBox,
 } from "@agenteschat/adapters/machine-protocol";
+import { cutAtWord, errorLineOf, redactCommon } from "@agenteschat/adapters/redact";
 import { generateSecretKeyPair, openSecret, redactSecrets } from "@agenteschat/adapters/secret-box";
 import {
   type CodingPlan,
@@ -41,7 +43,17 @@ import {
   planOf,
 } from "@agenteschat/providers/plans";
 import type { Launcher } from "./agent-users";
-import { agyAuthOf, agyRuntimeDir, writeAgySettings } from "./agy-home";
+import {
+  AGY_SIGN_IN_FILE,
+  type AgySignIn,
+  agyAuthOf,
+  agyRuntimeDir,
+  agySignInFrom,
+  agySignInOf,
+  holdAgySignIn,
+  placeAgySignIn,
+  writeAgySettings,
+} from "./agy-home";
 import { errnoCode, RunnerError } from "./errors";
 import { killTree } from "./exec";
 import {
@@ -50,6 +62,7 @@ import {
   claudeKeptPlan,
   claudePlan,
   claudeTier,
+  cliSpawn,
   GROK_BIN,
   isExecutable,
   OPENCODE_BIN,
@@ -106,8 +119,10 @@ import type { TaskSecrets } from "./tasks";
  *   several processes of one user). In system mode, a sign-in made `shared`
  *   (`<id>.shared` beside its folder) is root's alone and never lent: a
  *   Claude one is `claude setup-token`'s token (`token.json`, 600), signed in
- *   in a terminal of its own (`spawnInTerminal`), a coding plan's is its key, and
- *   `grant` hands what a turn needs to the agent's worker.
+ *   in a terminal of its own (`spawnInTerminal`), a coding plan's is its key, a
+ *   ChatGPT or Gemini one is its CLI's own sign-in there, and `grant` hands what
+ *   a turn needs to the agent's worker (protocol 58: a copy of Gemini's, tried
+ *   once as the sign-in ends, `agyCopyFails`).
  * - Claude's own login for all agents (`sharedLogin`; `<id>.method` says
  *   `cli_shared`, read as `cli_login` by everything outside this file): the
  *   folder here stays root's and empty; the CLI's store is the sign-in's OS
@@ -229,6 +244,15 @@ const GOOGLE_CLOUD_SIGN_IN = /^(GOOGLE_APPLICATION_CREDENTIALS|GOOGLE_CLOUD_\w+|
 export function withoutSignIns(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const [k, v] of Object.entries(base)) if (!STRAY_SIGN_IN.test(k)) env[k] = v;
+  return env;
+}
+
+/**
+ * `base` without the agent's containers service (`systemLauncher`'s runtime dir and Podman's socket), for a CLI whose
+ * shell runs in a sandbox of its own: that service, outside it, would be a way out (ADR 0169).
+ */
+export function withoutContainers(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const { CONTAINER_HOST: _podman, DOCKER_HOST: _docker, XDG_RUNTIME_DIR: _runtime, ...env } = base;
   return env;
 }
 
@@ -396,6 +420,8 @@ export type AccountGrant =
   | { kind: "key"; provider: PlanId; key: string }
   /** A ChatGPT sign-in for all agents: root's newest `auth.json`, refreshed copies coming back (`watchCodexAuth`). */
   | { kind: "codex_auth"; auth: string }
+  /** A Gemini sign-in for all agents: what root's Antigravity CLI keeps, copied in for each turn (`holdAgySignIn`). */
+  | ({ kind: "agy_auth" } & AgySignIn)
   /** A Claude sign-in several agents share: its CLI is root's, so a task only prepares here (`tasks.ts`). */
   | { kind: "hosted" }
   | { kind: "none" };
@@ -411,6 +437,8 @@ export function grantOf(v: unknown): AccountGrant | null {
   if (g?.kind === "key" && isPlanId(g.provider) && typeof g.key === "string" && g.key) {
     return { kind: "key", provider: g.provider, key: g.key };
   }
+  const agy = g?.kind === "agy_auth" ? agySignInFrom(g) : null;
+  if (agy) return { kind: "agy_auth", ...agy };
   const auth = g?.kind === "codex_auth" ? codexAuthOf(g.auth) : null;
   return auth ? { kind: "codex_auth", auth: auth.text } : null;
 }
@@ -516,13 +544,25 @@ export async function tokenOf(dir: string): Promise<string | null> {
 /** Tokens out of what people read (a CLI's error, a screen). */
 const withoutTokens = (text: string) => text.replace(OAUTH_TOKENS, "…");
 
+/** The most of a CLI's own words a sign-in that failed keeps. */
+const SAID_CHARS = 300;
+
+/** What a CLI's output says went wrong (`errorLineOf`), credentials masked, cut at a word; undefined when nothing. */
+function saidIn(text: string): string | undefined {
+  const line = redactCommon(errorLineOf(text));
+  return line ? cutAtWord(line, SAID_CHARS) : undefined;
+}
+
+/** System mode, in an agent's worker: where its own folders for the accounts of that kind root keeps are. */
+export const agentAccountsDir = (home: string, kind: AccountKind) => path.join(home, "accounts", kind);
+
 /**
  * System mode, in an agent's worker: that agent's own folder for an account root keeps (`AccountGrant`), its
  * CLI's home for it there (sessions, settings), never a sign-in. Made on first use (700).
  */
 export function agentAccountHome(home: string, kind: AccountKind, id: string): string | null {
   if (!isAccountKind(kind) || !isAccountId(id)) return null;
-  const dir = path.join(home, "accounts", kind, id);
+  const dir = path.join(agentAccountsDir(home, kind), id);
   try {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     return dir;
@@ -565,7 +605,10 @@ export interface AccountSignIn {
   planKey?: { provider: PlanId; key: string };
   /** A token root keeps (protocol 29): on descriptor 3 only (`TOKEN_FD_ENV`), never in an env. */
   token?: string;
-  /** A ChatGPT sign-in root keeps: stops sending its refreshed copies back, once the turn or task ends. */
+  /**
+   * Once the turn or task ends: a ChatGPT sign-in root keeps stops sending its refreshed copies back; a Gemini one's
+   * copy goes with the agent's last turn on it.
+   */
   release?: () => void;
 }
 
@@ -592,6 +635,9 @@ export async function accountSignIn(
     const send = folders?.codexAuth?.bind(folders);
     if (send) release = watchCodexAuth(home, grant.auth, (auth) => send(id, auth)).stop;
   }
+  // ponytail: no copy comes back to root, since Google's refresh answers carry no new refresh token; take refreshed
+  // copies back as Codex's are if they ever do.
+  if (grant?.kind === "agy_auth") release = holdAgySignIn(home, grant);
   const planKey =
     grant?.kind === "key" ? { provider: grant.provider, key: grant.key } : grant ? null : await planKeyOf(home);
   return {
@@ -1017,9 +1063,13 @@ export function parseAgyLoginUrl(output: string, final = false): string | null {
   return urlsIn(stripAnsi(output), (h) => hostIs(h, "accounts.google.com"), final)[0]?.url ?? null;
 }
 
+/** What the Antigravity CLI says when it has no sign-in to think with. */
+const AGY_SIGN_IN_WORDS = /auth(?:entication)? required|not (?:authenticated|logged in|signed in)|sign in/i;
+
 /**
  * `agy models`: signed in when it lists models and says nothing about signing in. An Enterprise sign-in says so in its
- * settings (`provider: "enterprise"`).
+ * settings (`provider: "enterprise"`). Signed out, 1.5.0 exits 1 with "Please sign in to view available models"; an
+ * account Google won't serve, "Eligibility check failed: …".
  */
 export function parseAgyStatus(
   status: number | null,
@@ -1027,10 +1077,8 @@ export function parseAgyStatus(
   auth: string | null,
 ): Omit<RunnerAccountInfo, "id" | "kind"> {
   const text = stripAnsi(output);
-  const loggedIn =
-    status === 0 &&
-    /^\s*gemini-[\w.-]+\s{2,}\S/im.test(text) &&
-    !/auth(?:entication)? required|not (?:authenticated|logged in|signed in)|sign in/i.test(text);
+  // 1.5.0 lists one model a line, its slug and its name split by a tab (`gemini-4-argon-high\tGemini 4 Argon (High)`).
+  const loggedIn = status === 0 && /^[ \t]*gemini-[\w.-]+[ \t]+\S/im.test(text) && !AGY_SIGN_IN_WORDS.test(text);
   // A seat: "Atende outras pessoas" says a seat's words for it.
   return {
     loggedIn,
@@ -1061,6 +1109,25 @@ export function parseCodexStatus(status: number | null, output: string): Omit<Ru
   return { loggedIn: status === 0 && /logged in/i.test(text) && !/not logged in/i.test(text) };
 }
 
+/**
+ * Why a sign-in's CLI stopped with an error, by what it printed. A pasted code the provider refused reads like
+ * Antigravity CLI 1.5.0's `couldn't log in: token exchange failed: oauth2: "invalid_grant" "Bad Request"`.
+ */
+export function loginFailureOf(output: string): AccountLoginFailure {
+  if (/no controlling terminal|cannot open \/dev\/tty|not a (?:tty|terminal)\b/i.test(output)) return "no_tty";
+  if (
+    /dial tcp|no such host|connection (?:refused|reset)|network is unreachable|i\/o timeout|tls handshake|timeout awaiting|context deadline exceeded|getaddrinfo|could not resolve|\bE(?:CONNREFUSED|CONNRESET|NOTFOUND|TIMEDOUT|AI_AGAIN)\b/i.test(
+      output,
+    )
+  ) {
+    return "network";
+  }
+  if (/invalid_grant|invalid (?:authorization )?code|code (?:is |has )?(?:invalid|expired)/i.test(output)) {
+    return "bad_code";
+  }
+  return "cli_exit";
+}
+
 // ── Running the CLIs ─────────────────────────────────────────────────────────
 
 interface CliResult {
@@ -1072,15 +1139,14 @@ interface CliResult {
 /** Runs a CLI to the end (killed after `timeoutMs`); never throws. */
 function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeoutMs: number): Promise<CliResult> {
   return new Promise((resolve) => {
-    const [file, ...pre] = command;
+    const run = cliSpawn(command, args, env.PATH);
     let child: ChildProcess;
     try {
-      child = spawn(resolveCommand(file ?? "", env.PATH), [...pre, ...args], {
-        env,
+      child = spawn(run.file, run.args, {
+        env: run.env ? { ...env, ...run.env } : env,
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
-        // Windows finds `claude.cmd` / `codex.cmd` only through the shell (argv: fixed words).
-        shell: process.platform === "win32" && command.length === 1,
+        windowsVerbatimArguments: run.windowsVerbatimArguments,
       });
     } catch (err) {
       resolve({ status: null, stdout: "", stderr: err instanceof Error ? err.message : String(err) });
@@ -1104,9 +1170,8 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
       resolve({ status, stdout, stderr });
     };
     const timer = setTimeout(() => {
-      try {
-        child.kill("SIGKILL");
-      } catch {}
+      // The whole tree: on Windows the child is cmd.exe, and the CLI it started would stay.
+      killTree(child, "SIGKILL");
       finish(null);
     }, timeoutMs);
     timer.unref?.();
@@ -1138,6 +1203,8 @@ export interface AccountManagerOptions {
   usageTtlMs?: number;
   usageNotifyMs?: number;
   usageTimeoutMs?: number;
+  /** Tests: how long a status look may take (`STATUS_TIMEOUT_MS`). */
+  statusTimeoutMs?: number;
   fetch?: typeof fetch;
   log?: (line: string) => void;
   /** An account was added or removed, a fresh look changed the list (`hello`, the app's status), or usage moved. */
@@ -1207,6 +1274,9 @@ interface Login {
   exited: boolean;
   account?: RunnerAccountInfo;
   error?: string;
+  /** Why it ended without signing in, and what the CLI said about it (`failWith`). */
+  failure?: AccountLoginFailure;
+  said?: string;
   startedAt: number;
   timer: ReturnType<typeof setTimeout> | null;
   /** Signing in again to an existing account: its folder is never removed by this sign-in. */
@@ -1393,7 +1463,8 @@ export class AccountManager {
    * the account to sign in to, as the CLI's login hint. `shared` (protocol 29,
    * system mode): a sign-in for every agent of its owner here, which root
    * keeps: Claude's through `claude setup-token` (no login hint there), a
-   * plan's key as it is, ChatGPT's through `codex login` as root (`grant` hands its `auth.json` to each turn).
+   * plan's key as it is, ChatGPT's through `codex login` as root (`grant` hands its `auth.json` to each turn),
+   * Gemini's through `agy acp --login` as root (each turn gets a copy of its sign-in file).
    * `method` (protocol 50, a Claude subscription sign-in): the one to use, or a refusal; never another one. The method
    * a sign-in uses is kept beside its folder (`<id>.method`), and signing in again another way is refused.
    */
@@ -1467,7 +1538,10 @@ export class AccountManager {
       );
     }
     // Elsewhere every folder thinks for all of its owner's agents anyway.
-    const forAll = this.opts.lending !== undefined && shared && (kind === "claude_code" || kind === "codex");
+    const forAll =
+      this.opts.lending !== undefined &&
+      shared &&
+      (kind === "claude_code" || kind === "codex" || kind === "antigravity");
     const cliShared = forAll && canCliShare && (method === "cli_login" || keepsCliShare);
     const dir = this.dirOf(kind, loginId);
     if (again) {
@@ -1617,20 +1691,16 @@ export class AccountManager {
     const { command, env, cwd } = login.cliShared
       ? this.sharedCli(login.id)
       : { command: this.command(login.kind), env: this.env(login.kind, login.dir), cwd: login.dir };
-    const [file, ...pre] = command;
-    const child = spawn(
-      resolveCommand(file ?? "", env.PATH),
-      [...pre, ...LOGIN_ARGS[login.kind], ...(email ? ["--email", email] : [])],
-      {
-        cwd,
-        env,
-        stdio: ["pipe", "pipe", "pipe"],
-        windowsHide: true,
-        // Its own process group: a kill reaches what it started (posix).
-        detached: process.platform !== "win32",
-        shell: process.platform === "win32" && command.length === 1,
-      },
-    );
+    const run = cliSpawn(command, [...LOGIN_ARGS[login.kind], ...(email ? ["--email", email] : [])], env.PATH);
+    const child = spawn(run.file, run.args, {
+      cwd,
+      env: run.env ? { ...env, ...run.env } : env,
+      stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
+      // Its own process group: a kill reaches what it started (posix).
+      detached: process.platform !== "win32",
+      windowsVerbatimArguments: run.windowsVerbatimArguments,
+    });
     login.child = child;
     const onData = (chunk: string) => {
       login.output = (login.output + chunk).slice(-OUTPUT_KEEP);
@@ -1862,7 +1932,7 @@ export class AccountManager {
     this.log(`account ${login.id.slice(0, 8)} (${provider} key) kept`);
   }
 
-  /** Where a sign-in is: `waiting`, `done` (with the account), `failed` or `expired`. */
+  /** Where a sign-in is: `waiting`, `done` (with the account), `failed` or `expired` (why: `code`, the CLI's words). */
   status(loginId: string): MachineReplies["account"] {
     const login = this.logins.get(loginId);
     if (!login) throw new RunnerError("not_found", "This sign-in is gone (it expired or was canceled)");
@@ -1873,6 +1943,8 @@ export class AccountManager {
       state: login.state,
       ...(login.account ? { account: login.account } : {}),
       ...(login.error ? { error: login.error } : {}),
+      ...(login.failure ? { code: login.failure } : {}),
+      ...(login.said ? { message: login.said } : {}),
     };
   }
 
@@ -1881,9 +1953,8 @@ export class AccountManager {
     const login = this.logins.get(loginId);
     if (!login) return false;
     if (login.state !== "waiting") return false;
-    this.settle(login, "failed", "Canceled");
+    this.failWith(login, "failed", "canceled", "Canceled");
     await this.drop(login);
-    this.log(`account sign-in ${loginId.slice(0, 8)} canceled`);
     return true;
   }
 
@@ -1896,9 +1967,8 @@ export class AccountManager {
 
   private expire(login: Login) {
     if (login.state !== "waiting") return;
-    this.settle(login, "expired", "The sign-in took too long. Start again.");
+    this.failWith(login, "expired", "timeout", "The sign-in took too long. Start again.");
     void this.drop(login);
-    this.log(`account sign-in ${login.id.slice(0, 8)} expired`);
   }
 
   /**
@@ -1915,56 +1985,129 @@ export class AccountManager {
         const token = parseSetupToken(this.shown(login), true) ?? login.token;
         if (code === 0 && token && (await this.keepToken(login, token))) return;
         if (code === 0 && login.state === "waiting") {
-          this.settle(
+          this.failWith(
             login,
             "failed",
+            "no_token",
             `${LABEL[login.kind]} finished, but didn't show its token. Update it, or try again.`,
           );
         }
       } else if (code === 0) {
         // Signed in anew: a turn refused before (`refused`) says nothing about this sign-in.
         await rm(this.marker(login.kind, login.id, "invalid"), { force: true }).catch(() => undefined);
-        const info = await this.lookUp(login.kind, login.id);
+        const status: { said?: string } = {};
+        const info = await this.lookUp(login.kind, login.id, status);
         if (login.state !== "waiting") return;
         if (info.loggedIn && !info.statusUnknown) {
-          await rm(path.join(login.dir, SIGNING_IN), { force: true }).catch(() => undefined);
-          // A ChatGPT sign-in for all agents: root's alone from now on (`grant`).
-          if (login.shared) {
-            await writeFile(this.marker(login.kind, login.id, "shared"), "", { mode: 0o600 });
-            info.shared = true;
+          const unshared =
+            login.shared && login.kind === "antigravity" ? await this.agyCopyFails(login.id, login.dir) : null;
+          // Signed in again, the folder now holds that sign-in, which no agent can think with: signed out for all.
+          if (unshared && !unshared.unsure && login.again) await this.refused(login.kind, login.id);
+          if (login.state !== "waiting") return;
+          if (!unshared) {
+            await rm(path.join(login.dir, SIGNING_IN), { force: true }).catch(() => undefined);
+            // A ChatGPT or Gemini sign-in for all agents: root's alone from now on (`grant`).
+            if (login.shared) {
+              await writeFile(this.marker(login.kind, login.id, "shared"), "", { mode: 0o600 });
+              info.shared = true;
+            }
+            this.settle(login, "done");
+            login.account = info;
+            this.added(info);
+            this.log(`account ${login.id.slice(0, 8)} (${login.kind}) signed in`);
+            return;
           }
-          this.settle(login, "done");
-          login.account = info;
-          this.added(info);
-          this.log(`account ${login.id.slice(0, 8)} (${login.kind}) signed in`);
-          return;
+          if (unshared.unsure) {
+            this.failWith(
+              login,
+              "failed",
+              "status_unknown",
+              `${LABEL[login.kind]} signed in, but ${unshared.why}, so this computer couldn't tell whether it can think for every agent here. Try again.`,
+              unshared.said,
+            );
+          } else {
+            this.failWith(
+              login,
+              "failed",
+              "not_kept",
+              `${LABEL[login.kind]} signed in, but ${unshared.why}, so it can't think for every agent here. Use a Gemini API key instead.`,
+              unshared.said,
+            );
+            // The server hears it now: the list it has may still say signed in.
+            if (login.again) {
+              this.invalidate();
+              void this.refresh(true).catch(() => undefined);
+            }
+          }
+        } else if (info.statusUnknown) {
+          this.failWith(
+            login,
+            "failed",
+            "status_unknown",
+            `${LABEL[login.kind]} finished, but didn't say whether the account is signed in. Try again.`,
+          );
+        } else {
+          this.failWith(
+            login,
+            "failed",
+            "not_signed_in_after_login",
+            `${LABEL[login.kind]} finished, but the account isn't signed in. Try again.`,
+            status.said,
+          );
         }
-        this.settle(
-          login,
-          "failed",
-          info.statusUnknown
-            ? `${LABEL[login.kind]} finished, but didn't say whether the account is signed in. Try again.`
-            : `${LABEL[login.kind]} finished, but the account isn't signed in. Try again.`,
-        );
       }
       if (login.state === "waiting") {
-        const tail = withoutTokens(stripAnsi(this.shown(login)))
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean)
-          .at(-1);
-        // Never the pasted code back (a CLI may repeat what it refused, and a screen shows it in its field).
-        const safe = tail && !(login.code && tail.includes(login.code)) ? tail.slice(0, 200) : "";
-        this.settle(
-          login,
-          "failed",
-          login.spawnError === "ENOENT"
-            ? `${LABEL[login.kind]} is not installed on this computer.`
-            : `${LABEL[login.kind]} couldn't sign in${login.code ? " with that code" : ""}${safe ? `: ${safe}` : ""}`,
-        );
+        const printed = this.printed(login);
+        const said = saidIn(printed);
+        if (login.spawnError === "ENOENT") {
+          this.failWith(login, "failed", "not_installed", `${LABEL[login.kind]} is not installed on this computer.`);
+        } else {
+          this.failWith(
+            login,
+            "failed",
+            loginFailureOf(printed),
+            `${LABEL[login.kind]} couldn't sign in${login.code ? " with that code" : ""}${said ? `: ${said}` : ""}`,
+            said,
+          );
+        }
       }
       if (!login.again && login.started) await this.discard(login.kind, login.id).catch(() => undefined);
     })();
+  }
+
+  /**
+   * A Gemini sign-in for all agents, tried the way each turn gets it: a copy in an empty home (`.check` in root's
+   * folder) that the CLI lists models with. Null when it does; otherwise why not, and the CLI's words. `unsure`: the
+   * try said nothing for sure (no answer in time, a copy that couldn't be written, an error that isn't the CLI asking
+   * for a sign-in), so another try may pass.
+   */
+  private async agyCopyFails(id: string, dir: string): Promise<{ why: string; said?: string; unsure?: true } | null> {
+    const signIn = await this.agySignIn(id);
+    if (!signIn) return { why: `kept that sign-in where this computer can't copy it (no ${AGY_SIGN_IN_FILE})` };
+    const check = path.join(dir, ".check");
+    try {
+      await rm(check, { recursive: true, force: true });
+      placeAgySignIn(check, signIn);
+      const r = await runCli(
+        this.command("antigravity"),
+        STATUS_ARGS.antigravity,
+        this.env("antigravity", check),
+        this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS,
+      );
+      if (r.status === null) return { why: "a copy of that sign-in didn't answer in time", unsure: true };
+      const text = stripAnsi(`${r.stdout}\n${r.stderr}`);
+      if (parseAgyStatus(r.status, text, signIn.type).loggedIn) return null;
+      const said = saidIn(withoutTokens(text));
+      const words = said ? { said } : {};
+      if (!AGY_SIGN_IN_WORDS.test(text)) {
+        return { why: "a copy of that sign-in didn't say whether it signs in", unsure: true, ...words };
+      }
+      return { why: "a copy of that sign-in doesn't sign in", ...words };
+    } catch (err) {
+      return { why: `a copy of that sign-in couldn't be made (${errnoCode(err) ?? "error"})`, unsure: true };
+    } finally {
+      await rm(check, { recursive: true, force: true }).catch(() => undefined);
+    }
   }
 
   /**
@@ -1977,9 +2120,10 @@ export class AccountManager {
       await writeFile(this.marker(login.kind, login.id, "shared"), "", { mode: 0o600 });
     } catch (err) {
       if (login.state === "waiting") {
-        this.settle(
+        this.failWith(
           login,
           "failed",
+          "not_kept",
           `${LABEL[login.kind]} signed in, but this computer couldn't keep it (${errnoCode(err) ?? "error"}).`,
         );
       }
@@ -2001,6 +2145,32 @@ export class AccountManager {
     this.added(info);
     this.log(`account ${login.id.slice(0, 8)} (${login.kind}, for all agents) signed in`);
     return true;
+  }
+
+  /**
+   * What a sign-in's CLI printed, without tokens or the pasted code: a CLI may repeat what it refused, and a screen
+   * shows it in its field.
+   */
+  private printed(login: Login): string {
+    const code = login.code;
+    return withoutTokens(stripAnsi(this.shown(login)))
+      .split("\n")
+      .filter((l) => !code || !(l.includes(code) || l.includes(encodeURIComponent(code))))
+      .join("\n");
+  }
+
+  /** A sign-in that ended without signing in: why (`failure`, the CLI's own words), for people (`error`), logged. */
+  private failWith(
+    login: Login,
+    state: "failed" | "expired",
+    failure: AccountLoginFailure,
+    error: string,
+    said?: string,
+  ) {
+    this.settle(login, state, error);
+    login.failure = failure;
+    if (said) login.said = said;
+    this.log(`account sign-in ${login.id.slice(0, 8)} (${login.kind}) ${state}: ${failure}${said ? `: ${said}` : ""}`);
   }
 
   private settle(login: Login, state: AccountLoginState, error?: string) {
@@ -2045,10 +2215,10 @@ export class AccountManager {
   /**
    * One account's status and how it signs in (never throws). A look that says nothing for sure keeps the last
    * conclusive answer, else signed in when a sign-in finished in its folder: only the CLI saying so, or a refusal,
-   * signs it out.
+   * signs it out. `status.said`: what its CLI said, when one ran.
    */
-  private async lookUp(kind: AccountKind, id: string): Promise<RunnerAccountInfo> {
-    const looked = await this.look(kind, id);
+  private async lookUp(kind: AccountKind, id: string, status?: { said?: string }): Promise<RunnerAccountInfo> {
+    const looked = await this.look(kind, id, status);
     const info = { ...looked, ...this.authMethodOf(kind, id, looked) };
     if (!info.statusUnknown) {
       this.knownLoggedIn.set(id, info.loggedIn);
@@ -2064,7 +2234,7 @@ export class AccountManager {
    * while it has one; a folder an agent's user had, as its turns last said, with the plan Claude Code keeps there
    * (that user could write it, so it is only ever one of the plans' words); any other, as its CLI says.
    */
-  private async look(kind: AccountKind, id: string): Promise<RunnerAccountInfo> {
+  private async look(kind: AccountKind, id: string, out?: { said?: string }): Promise<RunnerAccountInfo> {
     const dir = this.dirOf(kind, id);
     const refused = existsSync(this.marker(kind, id, "invalid"));
     const shared = this.sharedFlag(kind, id);
@@ -2082,8 +2252,9 @@ export class AccountManager {
         : { id, kind, loggedIn: false, ...shared };
     }
     const cliShared = this.isCliShared(kind, id);
-    // A ChatGPT one for all agents holds only what root wrote there (`keepCodexAuth`): its CLI says, below.
-    if (this.isShared(kind, id) && kind !== "codex" && !cliShared) {
+    // ChatGPT's and Gemini's for all agents hold only what root and its CLI wrote there (`keepCodexAuth`): their CLI
+    // says, below.
+    if (this.isShared(kind, id) && kind === "claude_code" && !cliShared) {
       return { id, kind, loggedIn: !refused && (await tokenOf(dir)) !== null, ...shared };
     }
     if (refused || this.lentTo(kind, id) !== null) {
@@ -2099,10 +2270,11 @@ export class AccountManager {
         const { command, env } = cliShared
           ? this.sharedCli(id)
           : { command: this.command(kind), env: this.env(kind, dir) };
-        return runCli(command, STATUS_ARGS[kind], env, STATUS_TIMEOUT_MS);
+        return runCli(command, STATUS_ARGS[kind], env, this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS);
       },
       this.cliOps,
     ).catch((err: unknown): CliResult => ({ status: null, stdout: "", stderr: String(err) }));
+    if (out) out.said = saidIn(withoutTokens(stripAnsi(`${r.stdout}\n${r.stderr}`)));
     // Codex says it on stderr.
     const status =
       kind === "claude_code"
@@ -2185,9 +2357,13 @@ export class AccountManager {
     return this.cache ? this.withUsage(this.cache.value) : undefined;
   }
 
-  /** The next `list` asks the CLIs again (an account turned out signed out in a turn). */
+  /**
+   * The next `list` asks the CLIs again (an account turned out signed out in a turn). A look still running may have read
+   * before the change, so its answer is never kept (nor announced) for the list's whole TTL.
+   */
   invalidate() {
     if (this.cache) this.cache = { ...this.cache, at: 0 };
+    this.listing = null;
   }
 
   private added(info: RunnerAccountInfo) {
@@ -2296,8 +2472,8 @@ export class AccountManager {
 
   /**
    * System mode (protocol 29): what a turn of any agent thinking with this account gets from root, over its
-   * worker link: its token or its key, or `none` while it has neither or a turn's endpoint refused it. Null for an
-   * account made for one agent, whose folder is lent instead (`lendTo`).
+   * worker link: its token, its key or a copy of its CLI's sign-in, or `none` while it has none or a turn's endpoint
+   * refused it. Null for an account made for one agent, whose folder is lent instead (`lendTo`).
    */
   async grant(kind: AccountKind, id: string): Promise<AccountGrant | null> {
     if (!isAccountKind(kind) || !isAccountId(id) || !this.isShared(kind, id)) return null;
@@ -2306,10 +2482,22 @@ export class AccountManager {
     if (this.isCliShared(kind, id)) return { kind: "hosted" };
     const dir = this.dirOf(kind, id);
     if (kind === "codex") return this.codexGrant(id, dir);
+    if (kind === "antigravity") {
+      const signIn = await this.agySignIn(id);
+      return signIn ? { kind: "agy_auth", ...signIn } : { kind: "none" };
+    }
     const plan = await planKeyOf(dir);
     if (plan) return { kind: "key", provider: plan.provider, key: plan.key };
     const token = await tokenOf(dir);
     return token ? { kind: "token", token } : { kind: "none" };
+  }
+
+  /**
+   * Root's Gemini sign-in for all agents, read once root's own CLI is done in its folder (`cliOps`): the status look and
+   * `/usage` refresh the file in place, and a read meanwhile could find half of it.
+   */
+  private agySignIn(id: string): Promise<AgySignIn | null> {
+    return this.serial(id, async () => agySignInOf(this.dirOf("antigravity", id)), this.cliOps);
   }
 
   /**
@@ -2522,8 +2710,9 @@ export class AccountManager {
         ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}),
       });
     }
-    // A token makes model requests only: its usage comes from its turns.
-    if (!own && (this.lentTo(target.kind, id) !== null || this.isShared(target.kind, id))) return null;
+    // A token makes model requests only: its usage comes from its turns. Gemini's for all agents is its CLI's own.
+    const shared = this.isShared(target.kind, id) && target.kind !== "antigravity";
+    if (!own && (this.lentTo(target.kind, id) !== null || shared)) return null;
     const probe = { command: this.command(target.kind, Boolean(own)), cwd: target.cwd, env: target.env, ...limits };
     // Cursor's CLI reports no plan usage: its turns' `usage` is all there is.
     // Nor does OpenCode's: its key's usage is on OpenCode's console. Grok Build shows its plan's only in its TUI.

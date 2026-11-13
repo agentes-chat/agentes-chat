@@ -6,6 +6,7 @@ import type { OnboardingStepId } from "../lib/onboarding";
 import type { TeamWeekAct, TeamWeekPrefs } from "../lib/team-week";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
+import type { WorkAreaAnswer } from "../lib/work-area";
 import type {
   SecretToVaultInput,
   VaultConnectInput,
@@ -16,6 +17,8 @@ import type {
   VaultItemDetail,
   VaultItemInput,
   VaultItemPatch,
+  VaultKeysImportInput,
+  VaultKeysImportResult,
   VaultOverview,
   VaultScope,
 } from "../vault/types";
@@ -40,6 +43,7 @@ import type {
   AgentForYou,
   AgentGroup,
   AgentGroupPatch,
+  AgentHolds,
   AgentInput,
   AgentLineChange,
   AgentMailbox,
@@ -99,10 +103,14 @@ import type {
   CodeSent,
   CommandApproval,
   ComposioUsage,
+  ComputerDevice,
+  ComputerDeviceInput,
   ComputerQueue,
   ComputerSetup,
   ComputerTarget,
   Connection,
+  ConnectLink,
+  ConnectLinkState,
   ConnectOutcome,
   ConnectorCatalog,
   ConsultationConversation,
@@ -119,13 +127,18 @@ import type {
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
+  DeviceAudience,
   DeviceRequest,
+  DevicesList,
   DirectMessage,
   DmRead,
   DmTarget,
   EndpointCheck,
   EndpointModel,
   EndpointStyle,
+  FeedbackFile,
+  FeedbackInput,
+  FeedbackOffer,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -157,6 +170,9 @@ import type {
   IssueConversationRef,
   IssueInput,
   IssuePatch,
+  IssueProject,
+  IssueProjectRef,
+  IssueProjects,
   IssueStatus,
   IssuesView,
   JevKey,
@@ -170,6 +186,7 @@ import type {
   MachineAccount,
   MachineAccountKind,
   MachineOutages,
+  MachinePause,
   MachineTask,
   MailAccount,
   MailAccountUpdate,
@@ -225,6 +242,8 @@ import type {
   PersonalTokenInput,
   PersonLimits,
   PersonUsage,
+  PhoneDevice,
+  PhoneDeviceInput,
   PhoneSignIn,
   Poll,
   PostMedia,
@@ -299,15 +318,17 @@ import type {
   ThreadInfo,
   ThreadPage,
   ThreadPatch,
-  ToolChange,
   ToolDecision,
   TrashedArtifact,
   UndoAllResult,
   UnreadTask,
   UsageQueue,
   UsageReport,
+  WaitingList,
   WebhookProvider,
   WebhookSetup,
+  WifiIphones,
+  WifiPairing,
   WikiBulkFailed,
   WikiBulkTarget,
   WikiFolderAudience,
@@ -324,6 +345,7 @@ import type {
   WorkspaceActionCard,
   WorkspaceActionCardView,
   WorkspaceLimits,
+  WorkspaceMode,
 } from "./types";
 
 /**
@@ -331,6 +353,12 @@ import type {
  * wires the HTTP implementation (./http-client.ts); tests pass a fake
  * (test/fake-api.ts). Components never call `fetch` directly.
  */
+/** Where a workspace whose onboarding just ended opens (its right hand's DM) and `/me` as it is now. */
+export interface OpenedWorkspace {
+  rightHandId?: string | null;
+  me?: Me;
+}
+
 export interface ApiClient {
   system: {
     health(): Promise<Health>;
@@ -338,6 +366,16 @@ export interface ApiClient {
     /** `null` unless I am the installation's owner (and not on agentes.chat itself). */
     telemetry(): Promise<ServerTelemetry | null>;
     setTelemetry(enabled: boolean): Promise<ServerTelemetry>;
+    /** By email to whoever runs the server; only where it takes feedback (`AuthConfig.feedback`). */
+    sendFeedback(input: FeedbackInput): Promise<void>;
+    /** A picture or a video for the feedback being written: kept an hour unless it is sent. */
+    uploadFeedbackFile(file: File): Promise<FeedbackFile>;
+    dropFeedbackFile(id: string): Promise<void>;
+    /**
+     * A report an agent offered under its reply (`meta.feedbackOffer`): I send it or put it away, once. Answers with
+     * the offer as it stands.
+     */
+    decideFeedbackOffer(orgId: string, messageId: string, decision: "send" | "dismiss"): Promise<FeedbackOffer>;
     /** `null` unless I am the installation's owner on a self-hosted server. */
     jev(): Promise<JevKey | null>;
     /** Checked with TypeSafe first: `jev_key_invalid` (422) when it refuses, `jev_key_env` (409) with an env key. */
@@ -388,11 +426,13 @@ export interface ApiClient {
     unread(): Promise<{ organizations: { orgId: string; unread: number; waiting: number }[] } | null>;
     /** My app language (emails and pushes are written in it). */
     updateMe(input: { locale: AppLocale; auto?: boolean }): Promise<void>;
+    /** My own area, asked once during the onboarding, or `skipped` (`PUT /me/work-area`). */
+    setWorkArea(area: WorkAreaAnswer): Promise<void>;
     /** A one-time sign-in for the phone app, shown as a QR code. */
     phoneSignIn(): Promise<PhoneSignIn>;
     /**
-     * A password for an account that has none (`password_set` 409 when it has one). `reauth.sign_in` (403) without a
-     * sign-in in the last 10 minutes.
+     * A password for an account that has none, or a new one in place of its own (ADR 0158: every other session ends).
+     * `reauth.sign_in` (403) without a sign-in in the last 10 minutes.
      */
     addPassword(password: string): Promise<void>;
     /** What deleting my account would close, leave and remove. */
@@ -428,18 +468,27 @@ export interface ApiClient {
     stale(ids: string[]): Promise<string[]>;
   };
   orgs: {
+    /**
+     * `timezone`: the workspace's; `memberTimezone`: the owner's own in it; `finished`: its onboarding over at once.
+     * The answer says where it opens (`rightHandId`) and carries `/me` as it is now; neither from an older server.
+     */
     create(input: {
       name: string;
       context?: string;
-    }): Promise<{ organization: Organization; generalChannelId: string }>;
+      timezone?: string;
+      memberTimezone?: string;
+      finished?: true;
+      /** Who it is for (ADR 0159); a team's when left out. */
+      mode?: WorkspaceMode;
+    }): Promise<{ organization: Organization; generalChannelId: string } & OpenedWorkspace>;
     /**
-     * Its owner's progress in setting it up: the furthest step reached (it only moves forward), or `finished`. Null
-     * from a server that doesn't keep it.
+     * Its owner's progress in setting it up: the furthest step reached (it only moves forward), or `finished`, whose
+     * answer says where it opens and carries `/me`. Null from a server that doesn't keep it.
      */
     saveOnboarding(
       orgId: string,
       input: { step: OnboardingStepId } | { finished: true },
-    ): Promise<{ step: OnboardingStepId; finished: boolean } | null>;
+    ): Promise<({ step: OnboardingStepId; finished: boolean } & OpenedWorkspace) | null>;
     get(orgId: string): Promise<Organization>;
     update(orgId: string, input: { name?: string; context?: string }): Promise<void>;
     /** Owners: emails me the code that deleting this workspace takes (as `account.deletionCode`). */
@@ -485,7 +534,11 @@ export interface ApiClient {
     /** Replaces my sidebar view here; answers with what the server kept. */
     setSidebarView(orgId: string, view: SidebarView): Promise<SidebarView>;
     /** My profile photo: a square image (JSON only: base64), already cropped. */
-    setAvatar(orgId: string, input: { imageBase64: string; contentType: string }): Promise<{ avatarUrl: string }>;
+    /** `portrait`: the recipe of a portrait drawn in the app; it comes back on the address as a `#px=` fragment. */
+    setAvatar(
+      orgId: string,
+      input: { imageBase64: string; contentType: string; portrait?: string },
+    ): Promise<{ avatarUrl: string }>;
     removeAvatar(orgId: string): Promise<void>;
     /** The workspace logo (admins): a square image (JSON only: base64), already cropped. */
     setLogo(orgId: string, input: { imageBase64: string; contentType: string }): Promise<{ logo: string }>;
@@ -494,9 +547,14 @@ export interface ApiClient {
      * A signed link that opens the workspace's plan and billing on the billing service (owners and admins; ADR
      * 0079). Navigate to it at once and keep it nowhere else: it lasts 5 minutes and opens once. `billing.off` 404
      * on a server without billing. `returnTo`: the page it was opened from, where the billing service sends the
-     * person back.
+     * person back. `plan`: the plan picked in the app (the billing service's key), whose Checkout it opens.
      */
-    billingLink(orgId: string, from: BillingFrom, returnTo?: string): Promise<{ url: string; expiresAt: string }>;
+    billingLink(
+      orgId: string,
+      from: BillingFrom,
+      returnTo?: string,
+      plan?: string,
+    ): Promise<{ url: string; expiresAt: string }>;
     /** People, files and today's uploads against the workspace's limits (any member; ADR 0079). */
     limits(orgId: string): Promise<WorkspaceLimits>;
     members(orgId: string): Promise<Member[]>;
@@ -506,6 +564,12 @@ export interface ApiClient {
     /** What removing them (or leaving) does; refused as the removal would be. */
     removal(orgId: string, userId: string): Promise<RemovalPreview>;
     removeMember(orgId: string, userId: string, via?: string): Promise<void>;
+    /**
+     * A one-time new-password link for a member, on a server that sends no email (owners only, ADR 0158): it works
+     * once, for an hour, and ends the earlier one. Refused (403) for oneself, the server's owner and someone in a
+     * workspace the caller doesn't own; 409 `password_link.email` where the server emails the person their own.
+     */
+    passwordLink(orgId: string, userId: string): Promise<{ url: string; expiresAt: string }>;
     invitations(orgId: string): Promise<Invitation[]>;
     invite(
       orgId: string,
@@ -875,6 +939,11 @@ export interface ApiClient {
     answerNow(orgId: string, messageId: string): Promise<{ runs: { agentId: string; runId: string }[] }>;
     /** Cancels an agent's follow-up from its line (`messageId`); 409 `follow_up.not_pending` once it came. */
     cancelFollowUp(orgId: string, messageId: string): Promise<void>;
+    /**
+     * "Pedir resposta" on a GitHub notice of someone the agent doesn't answer (`messageId`): the agent answers them
+     * there, with this person behind it. 409 `github_event.answered` once someone asked.
+     */
+    answerGitHub(orgId: string, messageId: string): Promise<void>;
   };
 
   approvals: {
@@ -973,6 +1042,41 @@ export interface ApiClient {
     /** Which computer the agent uses: a connected machine, or `null` for none. */
     setTarget(orgId: string, agentId: string, machineId: string | null): Promise<ComputerTarget>;
   };
+  /** Bring your own devices: computers people connect and the phones they reach, as agents' targets. */
+  devices: {
+    list(orgId: string): Promise<DevicesList>;
+    updateComputer(orgId: string, machineId: string, input: ComputerDeviceInput): Promise<ComputerDevice>;
+    removeComputer(orgId: string, machineId: string): Promise<void>;
+    updatePhone(orgId: string, phoneId: string, input: PhoneDeviceInput): Promise<PhoneDevice>;
+    /** Forgets it; it comes back if its host sees it again. */
+    forgetPhone(orgId: string, phoneId: string): Promise<void>;
+    /** Takes the phone back from the agent using it. */
+    stopPhone(orgId: string, phoneId: string): Promise<void>;
+    createLink(orgId: string, kind: "server" | "computer"): Promise<ConnectLink>;
+    link(orgId: string, linkId: string): Promise<ConnectLinkState>;
+    approveRequest(
+      orgId: string,
+      requestId: string,
+      input: { name?: string; audience?: DeviceAudience },
+    ): Promise<{ machineId: string }>;
+    denyRequest(orgId: string, requestId: string): Promise<void>;
+    decideAccess(orgId: string, requestId: string, decision: "once" | "always" | "no"): Promise<void>;
+    deviceWait(orgId: string, runId: string, action: "retry" | "stop"): Promise<void>;
+    /** Pairs an Android phone with the computer over Wi-Fi: the QR way, or the six-digit `code` and its `address`. */
+    startWifiPairing(
+      orgId: string,
+      machineId: string,
+      input: { address?: string; code?: string },
+    ): Promise<WifiPairing>;
+    wifiPairing(orgId: string, machineId: string, pairingId: string): Promise<WifiPairing>;
+    cancelWifiPairing(orgId: string, machineId: string, pairingId: string): Promise<void>;
+    /** Asks the computer to also look for a plugged phone it has no driver for, which adb never lists (Windows). */
+    lookForPhones(orgId: string, machineId: string): Promise<void>;
+    /** The iPhones on this Mac's Wi-Fi that trust it and aren't used yet (its owner or an admin). */
+    wifiIphones(orgId: string, machineId: string): Promise<WifiIphones>;
+    /** Uses that iPhone over Wi-Fi from now on; forgetting the phone stops it. */
+    pickIphoneOverWifi(orgId: string, machineId: string, serial: string): Promise<WifiIphones>;
+  };
   /** Connected computers (ADR 0025): machines running `agentes-runner`. */
   machines: {
     list(orgId: string): Promise<Machine[]>;
@@ -996,6 +1100,12 @@ export interface ApiClient {
     denyDevice(userCode: string): Promise<void>;
     /** ADR 0036 §8: the site only takes away (a folder, for everyone or one agent; a tool). The new access. */
     reduceAccess(orgId: string, machineId: string, input: MachineAccessReduce): Promise<MachineAccess>;
+    /** Pauses it (`until` null: until resumed) or resumes it (`resume`); the pause as it stands then. */
+    setPause(
+      orgId: string,
+      machineId: string,
+      input: { until: string | null } | "resume",
+    ): Promise<MachinePause | null>;
     /** ADR 0036 §9: the newest desktop app build; `null` when there is none (404). */
     desktopLatest(target: string, arch: string): Promise<DesktopRelease | null>;
     /** Offline computers that agents wait for, and where they could move. */
@@ -1043,14 +1153,15 @@ export interface ApiClient {
      * A GitHub link (a skill's folder or a file in it) or the folder as a zip in base64 (writes are JSON only). A link
      * holding several skills (or any, with `list`) installs nothing and answers with them to pick from
      * (`importPicked`), those that can't be installed apart. A private repository is read through the workspace's
-     * GitHub, on the server.
+     * GitHub, on the server. `forAgentId`: the agent whose card opened the install, which gets what installs turned on
+     * when the installer may change its skills.
      */
     import(
       orgId: string,
-      input: { url: string; list?: boolean } | { zipBase64: string },
+      input: { url: string; list?: boolean; forAgentId?: string } | { zipBase64: string },
     ): Promise<SkillDetail | SkillPick>;
-    /** Installs the skills picked among a link's choices (their `path`). */
-    importPicked(orgId: string, url: string, paths: string[]): Promise<SkillDetail[]>;
+    /** Installs the skills picked among a link's choices (their `path`), on for `forAgentId` as `import` does. */
+    importPicked(orgId: string, url: string, paths: string[], forAgentId?: string): Promise<SkillDetail[]>;
     update(orgId: string, id: string, patch: SkillPatch): Promise<SkillDetail>;
     /** Fetch the link again (`url` skills). */
     reimport(orgId: string, id: string): Promise<SkillDetail>;
@@ -1100,9 +1211,15 @@ export interface ApiClient {
     /** `about: "me"`: only what came from the viewer, each with `from` (the message). */
     list(orgId: string, agentId: string, filter?: { about?: "me" }): Promise<Memory[]>;
     listAll(orgId: string): Promise<Memory[]>;
+    /** Memória do time (ADR 0167): what people asked every agent to keep. */
+    listTeam(orgId: string): Promise<Memory[]>;
+    /** Tornar do time (ADR 0167): an agent's memory becomes the team's; its copies are archived. */
+    makeTeam(orgId: string, memoryId: string): Promise<Memory>;
     edit(orgId: string, memoryId: string, text: string): Promise<Memory>;
     setPinned(orgId: string, memoryId: string, pinned: boolean): Promise<Memory>;
     setArchived(orgId: string, memoryId: string, archived: boolean): Promise<Memory>;
+    /** Confirmar (ADR 0167): trusted and verified, by who may edit it or the person who said it. */
+    confirm(orgId: string, memoryId: string): Promise<Memory>;
     /** Undoes a change the agent made from the chat (`update.undo.path`). */
     revert(orgId: string, memoryId: string): Promise<void>;
   };
@@ -1135,18 +1252,15 @@ export interface ApiClient {
       input: { label: string; tools: { name: string; access: ToolDecision; label: string; confirmed?: boolean }[] },
     ): Promise<CustomServer>;
     disconnect(orgId: string, serverId: string): Promise<void>;
-    /** Approved tools whose server changed them (ADR 0117), for connector admins. */
-    toolChanges(orgId: string): Promise<ToolChange[]>;
-    /** Accepts a tool's new description and input: agents get them now. */
-    acceptToolChange(orgId: string, connectionId: string, toolName: string): Promise<void>;
-    /** "Aceitar todas": every change waiting on one connection's tools, at once. */
-    acceptConnectionToolChanges(orgId: string, connectionId: string): Promise<{ accepted: number }>;
   };
   dms: {
     /** My direct conversations, with unread counts. */
     list(orgId: string): Promise<DirectMessage[]>;
-    /** The DM channel with a person or an agent, created on first use. */
-    open(orgId: string, target: DmTarget): Promise<{ channelId: string }>;
+    /**
+     * The DM channel with a person or an agent, created on first use; `dm`: it as the list has it (none from an older
+     * server, or while it isn't in the list yet).
+     */
+    open(orgId: string, target: DmTarget): Promise<{ channelId: string; dm?: DirectMessage }>;
     /** Marks a channel or DM read up to now. */
     markRead(orgId: string, channelId: string): Promise<void>;
     /** Where the other people of a DM stopped reading ("Visto"); empty for any other channel. */
@@ -1175,7 +1289,8 @@ export interface ApiClient {
     saveToVault?(orgId: string, requestId: string, input: SecretToVaultInput): Promise<VaultItem>;
   };
   issues: {
-    list(orgId: string, filters?: { q?: string }): Promise<Issue[]>;
+    /** `projectId`: only that project's tasks, or `none` for the ones with no project. */
+    list(orgId: string, filters?: { q?: string; projectId?: string }): Promise<Issue[]>;
     get(orgId: string, number: number): Promise<Issue>;
     create(orgId: string, input: IssueInput): Promise<Issue>;
     update(orgId: string, id: string, patch: IssuePatch): Promise<Issue>;
@@ -1203,6 +1318,16 @@ export interface ApiClient {
     updateColumn(orgId: string, columnId: string, patch: { name?: string; index?: number }): Promise<IssueColumn[]>;
     /** Deletes a column; its tasks go to `moveTo`. A stage keeps at least one column. */
     deleteColumn(orgId: string, columnId: string, moveTo: string): Promise<IssueColumn[]>;
+    projects(orgId: string): Promise<IssueProjects>;
+    createProject(orgId: string, input: { name: string; color?: string }): Promise<IssueProject>;
+    /** Rename, recolour, archive or bring back. */
+    updateProject(
+      orgId: string,
+      projectId: string,
+      patch: { name?: string; color?: string; archived?: boolean },
+    ): Promise<IssueProjectRef>;
+    /** Its tasks stay, with no project. */
+    deleteProject(orgId: string, projectId: string): Promise<void>;
   };
   /** Threads (ADR 0029): the Threads page, a thread from a range, moving it, closing and archiving. */
   threads: {
@@ -1455,8 +1580,10 @@ export interface ApiClient {
     context(orgId: string, slug: string, on: boolean): Promise<WikiPage>;
     /** What the agents read most in the last 7 days. */
     reads(orgId: string): Promise<WikiTopRead[]>;
-    /** Notes of an Obsidian vault (≤ 500 per call; the app batches). */
+    /** Notes read by the app from a vault, a GitHub link or files (≤ 500 per call; the app batches). */
     import(orgId: string, input: WikiImportInput): Promise<WikiImportResult>;
+    /** The Markdown notes behind a GitHub link and the files they may embed, as a zip (nothing is saved). */
+    githubNotes(orgId: string, url: string): Promise<Blob>;
     /** Appends a block (e.g. a chat message) with a link back to where it came from. */
     append(
       orgId: string,
@@ -1476,6 +1603,8 @@ export interface ApiClient {
     ): Promise<NotificationPage>;
     /** The sidebar badge. */
     count(orgId: string): Promise<NotificationCount>;
+    /** "Esperando você": what waits on me, oldest first; `channelId` for one conversation's. */
+    waiting(orgId: string, channelId?: string): Promise<WaitingList>;
     read(orgId: string, id: string, read: boolean): Promise<AppNotification>;
     /** "Feito" (`false` undoes it). */
     done(orgId: string, id: string, done: boolean): Promise<AppNotification>;
@@ -1826,6 +1955,13 @@ export interface ApiClient {
     remove(orgId: string, itemId: string): Promise<void>;
     /** A passwords file's text; `dryRun` only counts. 413 `vault.csv_too_large` past 2 MB. */
     importCsv(orgId: string, input: { csv: string; scope: VaultScope; dryRun: boolean }): Promise<VaultImportResult>;
+    /** Several keys in one save (an imported .env). 403 `vault.team_needs_permission` for the team's without it. */
+    importKeys(orgId: string, input: VaultKeysImportInput): Promise<VaultKeysImportResult>;
+    /**
+     * Moves an item kept here between Personal and Team. Either way takes `manage_credentials`; to Personal it
+     * becomes the mover's. 409 `vault.key_name_taken` when a key of that name is already there.
+     */
+    move(orgId: string, itemId: string, scope: VaultScope): Promise<VaultItem>;
     /** Checked with the password manager first: 400 `vault.source.<code>` when it refuses. */
     connect(orgId: string, input: VaultConnectInput): Promise<VaultConnection>;
     updateConnection(orgId: string, connectionId: string, patch: VaultConnectionPatch): Promise<VaultConnection>;
@@ -1840,6 +1976,10 @@ export interface ApiClient {
     status(orgId: string, agentId: string): Promise<DesktopStatus>;
     /** A recent picture of the agent's screen; never starts a stopped one. 403 for who may not watch it. */
     picture(orgId: string, agentId: string): Promise<DesktopPictureView>;
+    /** What the agent keeps running there (ADR 0176); 403 for who may not watch its computer. */
+    holds(orgId: string, agentId: string): Promise<AgentHolds>;
+    /** Stop: the hold ends, and its program stops or its browser closes. 403 for who may not (`canStop`). */
+    stopHold(orgId: string, agentId: string, holdId: string): Promise<void>;
   };
   /**
    * GIF search (ADR 0091), through our server: the browser and the phone never talk to the provider. Every member;

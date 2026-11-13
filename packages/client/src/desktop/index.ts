@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useApi } from "../api/context";
 import { ApiError } from "../api/http";
@@ -237,6 +237,31 @@ export const useDesktopStatus = (
     refetchInterval: options.poll ?? false,
   });
 };
+
+/**
+ * What the agent keeps running on its computer (ADR 0176), for whoever may watch it (403 otherwise); a `machine.holds`
+ * event asks again.
+ */
+export const useAgentHolds = (orgId: string, agentId: string, options: { enabled?: boolean } = {}) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.agentHolds(orgId, agentId),
+    queryFn: () => api.desktop.holds(orgId, agentId),
+    enabled: options.enabled ?? true,
+    retry: false,
+  });
+};
+
+/** A person's Stop on one of them: the list is read again however it went. Its caller says a failure. */
+export function useStopHold(orgId: string, agentId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { silent: true },
+    mutationFn: (holdId: string) => api.desktop.stopHold(orgId, agentId, holdId),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.agentHolds(orgId, agentId) }),
+  });
+}
 
 /** How often the picture of an agent's screen is asked again while it works there. */
 export const PICTURE_WORKING_MS = 5_000;

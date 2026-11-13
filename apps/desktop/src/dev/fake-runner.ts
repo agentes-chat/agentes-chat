@@ -4,7 +4,7 @@
  * (two organizations, one with a logo, agents at work, a folder request), so every screen can be seen
  * without the Tauri shell. Never part of the real app's behaviour: the host picks it only outside Tauri.
  */
-import type { RunnerAccess, RunnerAccountInfo, RunnerPause } from "@agenteschat/adapters/machine-protocol";
+import type { RunnerAccess, RunnerAccountInfo, RunnerPause, RunnerPhone } from "@agenteschat/adapters/machine-protocol";
 import {
   type ActivityEntry,
   CONTROL_PROTOCOL_VERSION,
@@ -12,13 +12,14 @@ import {
   type ControlAgent,
   type ControlConfig,
   type ControlEvent,
+  type ControlIphoneSetup,
   type ControlJob,
   type ControlOut,
   type ControlStatus,
   parseControlIn,
 } from "@agenteschat/adapters/runner-control";
 
-/** Agents work here only for a server of the person's own (the Cloud has a computer of its own). */
+/** The fake runners' server: one of the person's own, on a Tailscale network. */
 export const FAKE_SERVER = "https://agentes.tail1234.ts.net";
 const VERSION = "0.1.0";
 const MACHINE_PROTOCOL = 10;
@@ -198,19 +199,26 @@ export function horizonteSeed(): FakeOrgSeed {
   };
 }
 
+/** A workspace this computer just joined, with nothing in it yet. */
+const joinedSeed = (org: { id: string; name: string }): FakeOrgSeed => ({
+  org,
+  slug: org.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+  agents: [agent("ag_iris", "Íris", "violet", "round", "bow")],
+  jobs: [],
+  access: { folders: [], tools: { claude: false, codex: false, commands: false } },
+  activity: [],
+  requests: [],
+});
+
+/** Pair links the fake knows: the live one joins Estúdio Norte, the other one's maker says no. */
+export const FAKE_LINKS = { live: "ABCDEFGH", denied: "HGFEDCBA" } as const;
+const LINK_ORG = { id: "o-norte", name: "Estúdio Norte" };
+
 /** Organizations a fake sign-in can land in, in order. */
 const SIGN_IN_POOL: (() => FakeOrgSeed)[] = [
   acmeSeed,
   horizonteSeed,
-  () => ({
-    org: { id: `org_${rid()}`, name: "Estúdio Norte" },
-    slug: "estudio-norte",
-    agents: [agent("ag_iris", "Íris", "violet", "round", "bow")],
-    jobs: [],
-    access: { folders: [], tools: { claude: false, codex: false, commands: false } },
-    activity: [],
-    requests: [],
-  }),
+  () => joinedSeed({ id: `org_${rid()}`, name: "Estúdio Norte" }),
 ];
 
 const DEFAULT_CONFIG = { maxConcurrentTasks: 3, taskMaxSeconds: 4 * 3600, brainIdleMinutes: 3, brainMaxProcesses: 1 };
@@ -238,6 +246,44 @@ export class FakeRunner {
 
   /** The server this home is paired with (the server here's homes point at its loopback address). */
   server = FAKE_SERVER;
+  /** The code of a pairing in progress, for the fake site's confirm. */
+  pendingCode: string | null = null;
+  /** The phones plugged into this computer: a Pixel an agent uses, an iPhone that needs Developer Mode. */
+  phones: RunnerPhone[] = [
+    {
+      platform: "android",
+      serial: "38021FDH2000AB",
+      kind: "device",
+      model: "Pixel 8",
+      osVersion: "16",
+      state: "ready",
+      transport: "usb",
+      holder: {
+        runId: "run_1",
+        agentId: "ag_ada",
+        userId: "u_rui",
+        label: "Recording a test video",
+        since: minutesAgo(10),
+      },
+    },
+    {
+      platform: "ios",
+      serial: "00008110-000A1B2C3D4E5F60",
+      kind: "device",
+      model: "iPhone 16",
+      name: "Sam's iPhone 16",
+      osVersion: "27.1",
+      state: "needs_you",
+      reason: "developer_mode_off",
+      transport: "usb",
+    },
+  ];
+  /** The Mac's side of an iPhone's setup; `iphone.download` fills the platform in about a second. */
+  iphone: ControlIphoneSetup = {
+    xcode: "27.0",
+    platform: { state: "missing" },
+    account: { name: "Sam Rivera", personal: true },
+  };
 
   constructor(
     readonly homeId: string,
@@ -306,6 +352,7 @@ export class FakeRunner {
     const s = this.seed;
     switch (msg.type) {
       case "status":
+      case "executors.check":
         return reply(this.status());
       case "jobs":
         return reply({ jobs: s?.jobs ?? [] });
@@ -344,31 +391,28 @@ export class FakeRunner {
           () => "ABCDEFGHJKMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 31)],
         ).join("");
         this.pairTimers.push(
-          setTimeout(
-            () =>
-              this.emit({
-                kind: "pair.code",
-                userCode: code,
-                verificationUrl: `${FAKE_SERVER}/conectar?code=${code}`,
-                expiresAt: new Date(Date.now() + 600_000).toISOString(),
-              }),
-            500,
-          ),
           setTimeout(() => {
-            const make = SIGN_IN_POOL[Math.min(this.signInIndex(), SIGN_IN_POOL.length - 1)] ?? acmeSeed;
-            const seed = make();
-            seed.jobs = [];
-            seed.requests = [];
-            this.seed = seed;
-            this.connection = "online";
-            this.config.workspace = `/Users/voce/agentes/${seed.slug}`;
+            this.pendingCode = code;
             this.emit({
-              kind: "pair.done",
-              org: seed.org,
-              machine: { id: `m_${this.homeId}`, name: this.machineName },
+              kind: "pair.code",
+              userCode: code,
+              verificationUrl: `${FAKE_SERVER}/conectar?code=${code}`,
+              expiresAt: new Date(Date.now() + 600_000).toISOString(),
             });
-            this.emit({ kind: "status", status: this.status() });
-          }, 5500),
+          }, 500),
+          // A link's maker answers; a plain code is confirmed by the site, or by nobody here (the fake signs in alone).
+          setTimeout(
+            () => {
+              if (msg.link === FAKE_LINKS.denied) {
+                this.pendingCode = null;
+                this.emit({ kind: "pair.failed", code: "denied", message: "The connection was refused on the site" });
+                return;
+              }
+              const make = SIGN_IN_POOL[Math.min(this.signInIndex(), SIGN_IN_POOL.length - 1)] ?? acmeSeed;
+              this.join(msg.link ? joinedSeed(LINK_ORG) : make());
+            },
+            msg.link ? 1500 : 5500,
+          ),
         );
         return;
       }
@@ -376,6 +420,7 @@ export class FakeRunner {
         const had = this.pairTimers.length > 0;
         for (const t of this.pairTimers) clearTimeout(t);
         this.pairTimers = [];
+        this.pendingCode = null;
         return reply({ canceled: had });
       }
       case "unpair":
@@ -474,9 +519,58 @@ export class FakeRunner {
         this.accounts = this.accounts.filter((a) => !(a.id === msg.accountId && a.kind === msg.kind));
         return reply({ removed: this.accounts.length < before });
       }
+      case "iphone.setup":
+        return reply(this.iphone);
+      case "iphone.download":
+        if (this.iphone.platform.state === "missing" || this.iphone.platform.state === "failed") this.download();
+        return reply(this.iphone);
+      case "iphone.open":
+        console.info("[fake] open", msg.app);
+        return reply({ opened: true });
       case "shutdown":
         return reply({ stopping: true });
     }
+  }
+
+  /** The site confirmed this runner's code for `org`: it joins now. */
+  confirm(org: { id: string; name: string }) {
+    for (const t of this.pairTimers) clearTimeout(t);
+    this.pairTimers = [];
+    this.join(joinedSeed(org));
+    return { machineId: `m_${this.homeId}`, name: this.machineName };
+  }
+
+  private join(seed: FakeOrgSeed) {
+    seed.jobs = [];
+    seed.requests = [];
+    this.pendingCode = null;
+    this.seed = seed;
+    this.connection = "online";
+    this.config.workspace = `/Users/voce/agentes/${seed.slug}`;
+    this.emit({ kind: "pair.done", org: seed.org, machine: { id: `m_${this.homeId}`, name: this.machineName } });
+    this.emit({ kind: "status", status: this.status() });
+  }
+
+  /** The workspace and machine this home is paired as (the fake server's devices list names them). */
+  ids(): { orgId: string; machineId: string; name: string } | null {
+    return this.seed ? { orgId: this.seed.org.id, machineId: `m_${this.homeId}`, name: this.machineName } : null;
+  }
+
+  private download() {
+    let percent = 0;
+    const step = () => {
+      percent += 25;
+      this.iphone = {
+        ...this.iphone,
+        platform:
+          percent >= 100
+            ? { state: "installed", version: "27.1" }
+            : { state: "downloading", percent, done: `${((8.4 * percent) / 100).toFixed(1)} GB`, total: "8.4 GB" },
+      };
+      if (percent < 100) this.later(step, 300);
+    };
+    this.iphone = { ...this.iphone, platform: { state: "downloading", percent: null } };
+    this.later(step, 300);
   }
 
   private accessChanged(reply: (data: unknown) => void) {
@@ -504,6 +598,7 @@ export class FakeRunner {
       workspace: this.config.workspace,
       agents: s?.agents ?? [],
       access: s?.access,
+      ...(s ? { phones: this.phones, user: "sam" } : {}),
     };
   }
 
@@ -552,6 +647,12 @@ export class FakeRunner {
     };
     s.jobs.push(job);
     this.emit({ kind: "job.started", job });
+  }
+
+  /** The phones change (plugged in, unplugged, a step further): the app hears a new status, as the runner sends. */
+  setPhones(phones: RunnerPhone[]) {
+    this.phones = phones;
+    this.emit({ kind: "status", status: this.status() });
   }
 
   private emit(event: ControlEvent) {

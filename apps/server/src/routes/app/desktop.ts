@@ -1,4 +1,4 @@
-import { desktopPicture, desktopStatus, TooManyError } from "@agenteschat/engine";
+import { agentHoldsFor, desktopPicture, desktopStatus, stopAgentHold, TooManyError } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { BrowserHandoff } from "./browser";
 import { type AppDeps, createAppRouter, errors, json, OrgParams, requireSession, security } from "./context";
@@ -54,6 +54,30 @@ const DesktopPicture = z
   })
   .openapi("DesktopPicture");
 
+const Hold = z
+  .object({
+    id: z.uuid(),
+    agentId: z.uuid(),
+    machineId: z.uuid(),
+    what: z.string().openapi({ description: "What is kept, in the agent's words for people." }),
+    why: z.string(),
+    kind: z.enum(["program", "browser", "time"]).openapi({
+      description: "What it is bound to: one of the agent's programs (it ends with it), its browser, or a time alone.",
+    }),
+    since: z.string(),
+    until: z.string().nullable().openapi({ description: "When it ends at the latest; null: when its program stops." }),
+  })
+  .openapi("Hold");
+
+const AgentHolds = z
+  .object({
+    holds: z.array(Hold),
+    canStop: z.boolean().openapi({
+      description: "This person may stop them: who may use the agent's computer, and the admins of computers.",
+    }),
+  })
+  .openapi("AgentHolds");
+
 /** A person's refreshes, every agent together: a few tabs on the slowest computers stay under it. */
 const PICTURES_PER_MINUTE = { limit: 120, windowMs: 60_000 };
 
@@ -100,6 +124,45 @@ export function desktopRoutes(deps: AppDeps) {
       const limit = await deps.adapters.rateLimiter.consume(`desktop-picture:${userId}`, PICTURES_PER_MINUTE);
       if (!limit.allowed) throw new TooManyError("Slow down");
       return c.json(await desktopPicture(desktopDeps(), userId, orgId, agentId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/agents/{agentId}/holds",
+      tags,
+      security,
+      summary: "What the agent keeps running on its computer (keep_running, ADR 0176), for whoever may watch it",
+      request: { params: AgentParams },
+      responses: { 200: json(AgentHolds), ...errors },
+    }),
+    async (c) => {
+      const { orgId, agentId } = c.req.valid("param");
+      return c.json(await agentHoldsFor({ db, pubsub: deps.adapters.pubsub }, c.get("user").id, orgId, agentId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path: "/organizations/{orgId}/agents/{agentId}/holds/{holdId}",
+      tags,
+      security,
+      summary: "Stop what the agent keeps running: the hold ends, and its program stops (or its browser closes)",
+      request: { params: AgentParams.extend({ holdId: z.uuid() }) },
+      responses: { 204: { description: "Stopped" }, ...errors },
+    }),
+    async (c) => {
+      const { orgId, agentId, holdId } = c.req.valid("param");
+      await stopAgentHold(
+        { db, pubsub: deps.adapters.pubsub, hub: deps.extras?.sandbox?.machines?.hub },
+        c.get("user").id,
+        orgId,
+        agentId,
+        holdId,
+      );
+      return c.body(null, 204);
     },
   );
 

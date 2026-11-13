@@ -4,7 +4,8 @@
  * - Issues: `GET …/issues?q`, `GET …/issues/{number}`, `POST …/issues`, `PATCH …/issues/{id}`,
  *   `PUT …/issues/{id}/criteria/{criterionId} { done }`, `GET|POST …/issues/{id}/activity`,
  *   `POST …/issues/{id}/ask-agent { agentId }` (assigns, moves to "Em andamento", starts the run);
- *   board columns: `GET|POST …/issue-columns`, `PATCH|DELETE …/issue-columns/{id}`.
+ *   board columns: `GET|POST …/issue-columns`, `PATCH|DELETE …/issue-columns/{id}`;
+ *   projects: `GET|POST …/issue-projects`, `PATCH|DELETE …/issue-projects/{id}`, `GET …/issues?projectId`.
  * - Routines: `GET|POST …/routines`, `POST …/routines/parse-schedule|parse-rule { phrase }` → cron, rule and
  *   description in the workspace time zone (phrases looked up in a table, standing in for the model),
  *   `PATCH …/routines/{id} { active }`, `POST …/routines/{id}/run`, `GET …/routines/{id}/runs`.
@@ -23,6 +24,7 @@ import type {
   IssueActivity,
   IssueColumn,
   IssuePatch,
+  IssueProjectRef,
   IssueStatus,
   Routine,
   RoutineHook,
@@ -195,6 +197,8 @@ const boardOrder = (cols: IssueColumn[]) =>
 interface Store {
   issues: Issue[];
   columns: IssueColumn[];
+  /** None until a test makes one, as a workspace that never used projects. */
+  projects: IssueProjectRef[];
   activity: Map<string, IssueActivity[]>;
   routines: Routine[];
   runs: Map<string, RoutineRun[]>;
@@ -215,6 +219,7 @@ export function createMockPlanning(
     const s: Store = {
       issues: [],
       columns: defaultColumns(),
+      projects: [],
       activity: new Map(),
       routines: [],
       runs: new Map(),
@@ -235,6 +240,9 @@ export function createMockPlanning(
       type: "person",
       id: members[i % Math.max(1, members.length)]?.userId ?? "me",
     });
+    /** These members, none past the last: a list of people names each one once, as the server keeps them. */
+    const people = (...at: number[]): Actor[] =>
+      at.flatMap((i) => members[i] ?? []).map((m) => ({ type: "person" as const, id: m.userId }));
     const day = (offset: number) => {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -430,14 +438,20 @@ export function createMockPlanning(
         start: at(0, 10),
         end: at(0, 11),
         description: "Pauta preparada no canal.",
-        participants: [person(0), person(1), agent(3)],
+        participants: [...people(0, 1), agent(3)],
       }),
-      event({ title: "Revisão de design", start: at(1, 14), end: at(1, 15, 30), participants: [person(1), person(2)] }),
+      event({
+        title: "Revisão de design",
+        start: at(1, 14),
+        end: at(1, 15, 30),
+        participants: people(1, 0),
+        createdBy: person(1),
+      }),
       event({
         title: "Retro da sprint",
         start: at(4, 11),
         end: at(4, 12),
-        participants: [person(0), person(2), agent(0)],
+        participants: [...people(0, 2), agent(0)],
       }),
     );
     s.proposals.push({
@@ -446,7 +460,7 @@ export function createMockPlanning(
       title: "Revisão do roadmap",
       start: at(3, 15),
       end: at(3, 15, 45),
-      participants: [person(0), person(1), person(2)],
+      participants: people(0, 1, 2),
       note: "livre para todos",
       status: "pending",
     });
@@ -499,9 +513,11 @@ export function createMockPlanning(
     issues: {
       list: async (orgId, filters = {}) => {
         const q = filters.q?.trim().toLowerCase();
+        const inProject = (i: Issue) =>
+          !filters.projectId || (filters.projectId === "none" ? !i.project : i.project?.id === filters.projectId);
         return clone(
           (await store(orgId)).issues
-            .filter((i) => !q || `${i.title} #${i.number}`.toLowerCase().includes(q))
+            .filter((i) => inProject(i) && (!q || `${i.title} #${i.number}`.toLowerCase().includes(q)))
             .sort((a, b) => b.number - a.number),
         );
       },
@@ -523,6 +539,7 @@ export function createMockPlanning(
           columnId: boardOrder(s.columns).find((c) => c.stage === "todo")?.id ?? null,
           boardRank: -ctx.now().getTime(),
           priority: input.priority ?? "normal",
+          project: s.projects.find((p) => p.id === input.projectId) ?? null,
           assignee: input.assignee ?? null,
           labels: input.labels ?? [],
           dueDate: input.dueDate ?? null,
@@ -552,8 +569,9 @@ export function createMockPlanning(
         const i = await findIssue(orgId, id);
         const author = await me();
         const s = await columnsOf(orgId);
-        const { columnId, criteria, ...rest } = patch;
-        let change: Omit<IssuePatch, "columnId" | "criteria"> = rest;
+        const { columnId, criteria, projectId, ...rest } = patch;
+        let change: Omit<IssuePatch, "columnId" | "criteria" | "projectId"> = rest;
+        if (projectId !== undefined) i.project = (await store(orgId)).projects.find((p) => p.id === projectId) ?? null;
         // The whole list, as the backend takes it: an id keeps that criterion (and its check), none is a new one.
         if (criteria) {
           const list = criteria.filter((c) => c.text.trim());
@@ -712,6 +730,45 @@ export function createMockPlanning(
           s.columns = boardOrder(s.columns);
         }
         return clone(s.columns);
+      },
+      projects: async (orgId) => {
+        const s = await store(orgId);
+        const open = (id: string | null) =>
+          s.issues.filter((i) => (i.project?.id ?? null) === id && i.status !== "done" && i.status !== "canceled")
+            .length;
+        const byName = [...s.projects].sort(
+          (a, b) => Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name),
+        );
+        return clone({ projects: byName.map((p) => ({ ...p, open: open(p.id) })), unfiled: open(null) });
+      },
+      createProject: async (orgId, input) => {
+        record("issues.createProject", input);
+        const s = await store(orgId);
+        // A real id: the board keeps only a project's id in its address.
+        const project = {
+          id: crypto.randomUUID(),
+          name: input.name.trim(),
+          color: input.color ?? "graphite",
+          archived: false,
+        };
+        s.projects.push(project);
+        return clone({ ...project, open: 0 });
+      },
+      updateProject: async (orgId, projectId, patch) => {
+        record("issues.updateProject", projectId, patch);
+        const s = await store(orgId);
+        const project = s.projects.find((p) => p.id === projectId);
+        if (!project) throw new MockNotFoundError("Projeto não encontrado.");
+        Object.assign(project, patch);
+        // The tasks carry their project as the server sends it.
+        for (const i of s.issues) if (i.project?.id === projectId) i.project = { ...project };
+        return clone(project);
+      },
+      deleteProject: async (orgId, projectId) => {
+        record("issues.deleteProject", projectId);
+        const s = await store(orgId);
+        s.projects = s.projects.filter((p) => p.id !== projectId);
+        for (const i of s.issues) if (i.project?.id === projectId) i.project = null;
       },
       delete: async (orgId, id) => {
         record("issues.delete", orgId, id);
@@ -975,7 +1032,13 @@ export function createMockPlanning(
                 day(i.dueDate) >= a &&
                 day(i.dueDate) < b,
             )
-            .map((i) => ({ issueId: i.id, number: i.number, title: i.title, date: i.dueDate as string })),
+            .map((i) => ({
+              issueId: i.id,
+              number: i.number,
+              title: i.title,
+              date: i.dueDate as string,
+              assignee: i.assignee,
+            })),
           proposals: s.proposals.filter((p) => inRange(p.start)),
         });
       },

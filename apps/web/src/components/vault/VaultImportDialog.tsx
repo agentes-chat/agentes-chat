@@ -1,4 +1,5 @@
 import type { VaultImportResult, VaultScope } from "@agenteschat/client";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Button, Dialog, DialogBody, DialogFooter, Icon, Locked, Segmented, SettingNote } from "@agenteschat/ui";
 import { type DragEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -192,10 +193,10 @@ export function VaultImportDialog({
                     onValueChange={pickScope}
                     options={[
                       { value: "personal", label: t("vault.scope.personal") },
-                      { value: "team", label: t("vault.scope.team") },
+                      { value: "team", label: t(modeKey(org, "vault.scope.team")) },
                     ]}
                   />
-                  <span className="ac-field__help">
+                  <span className="ac-field__example">
                     {scope === "team" ? t("vault.import.asTeam") : t("vault.import.asPersonal")}
                   </span>
                 </div>
@@ -215,28 +216,30 @@ export function VaultImportDialog({
           )}
         </DialogBody>
       </Locked>
-      <DialogFooter>
+      <DialogFooter
+        // As a note, so a narrow dialog puts it over Cancel and Import instead of splitting those two.
+        note={
+          stage === "review" ? (
+            <Button
+              variant="ghost"
+              disabled={importer.busy}
+              onClick={() => {
+                setStage("pick");
+                setCsv(null);
+                setPreview(null);
+              }}
+            >
+              {t("vault.import.another")}
+            </Button>
+          ) : undefined
+        }
+      >
         {stage === "done" ? (
           <Button variant="primary" onClick={onClose}>
             {t("vault.import.close")}
           </Button>
         ) : (
           <>
-            {stage === "review" && (
-              <Locked when={importer.busy}>
-                <Button
-                  variant="ghost"
-                  className="vlt-foot__start"
-                  onClick={() => {
-                    setStage("pick");
-                    setCsv(null);
-                    setPreview(null);
-                  }}
-                >
-                  {t("vault.import.another")}
-                </Button>
-              </Locked>
-            )}
             <Button onClick={onClose}>{t("common.cancel")}</Button>
             {stage === "review" && (
               <Button

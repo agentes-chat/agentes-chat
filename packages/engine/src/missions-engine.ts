@@ -1,5 +1,6 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, desc, type Executor, eq, gte, inArray, rowsOf, schema, sql } from "@agenteschat/db";
+import { publishApproval } from "./approvals";
 import type { BrainKind, BrainSession, BrainTurn, ToolResult } from "./brains/types";
 import { abortLocalRun, RUN_CANCEL_TOPIC } from "./cancel";
 import { publishChannelEvent, publishMessageCreated } from "./events";
@@ -673,10 +674,11 @@ async function cancelThreadRuns(
       });
       if (!row) return null;
       const now = new Date();
-      await tx
+      const closed = await tx
         .update(approvals)
         .set({ status: "canceled", decidedAt: now })
-        .where(and(eq(approvals.runId, run.id), eq(approvals.status, "pending")));
+        .where(and(eq(approvals.runId, run.id), eq(approvals.status, "pending")))
+        .returning();
       await tx
         .update(agentQuestions)
         .set({ status: "canceled" })
@@ -690,8 +692,10 @@ async function cancelThreadRuns(
             sql`${outbox.payload}->>'runId' = ${run.id}`,
           ),
         );
-      return row;
+      return { row, closed };
     });
+    // Their cards say canceled and they leave the inbox of whoever they waited on.
+    for (const a of moved?.closed ?? []) await publishApproval(deps, a, "approval.decided").catch(() => {});
     if (!moved) continue;
     ids.push(run.id);
     abortLocalRun(run.id);

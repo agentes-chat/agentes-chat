@@ -1,4 +1,5 @@
 import type {
+  BlobStore,
   EmailSender,
   GifProvider,
   MailAdapters,
@@ -31,8 +32,9 @@ import { consolidateOrg } from "./context/consolidate";
 import { applyReactionFeedback } from "./context/feedback";
 import { LEARN_JOB, learnRun } from "./context/learn";
 import { REFLECT_DEFAULTS, reflectThread } from "./context/reflect";
-import { judgeOf } from "./context/summaries";
+import { judgeOf, summaryModelReady } from "./context/summaries";
 import { reportDroppedMentions, tellWakeSkipped } from "./continuation";
+import { DEVICE_WAIT_EXPIRED_JOB, expireDeviceWait } from "./device-waits";
 import {
   deferMentionReport,
   deliverParked,
@@ -57,9 +59,19 @@ import {
 import { forgetCodeEmail } from "./email-codes";
 import { type DecidedBy, publishListChanged, publishRouted } from "./events";
 import { executeRun, type RunExecutorDeps } from "./executor";
+import {
+  FEEDBACK_FILE_PURGE_JOB,
+  FEEDBACK_JOB,
+  type Feedback,
+  isFeedbackRelay,
+  purgeFeedbackFile,
+  relayQueuedFeedback,
+  sendQueuedFeedback,
+} from "./feedback";
 import { FOLLOW_UP_JOB, wakeFollowUp } from "./follow-through";
 import { cutText } from "./format";
 import type { GitHubAppAccess } from "./git/github-call";
+import { GITHUB_EVENT_JOB, type GitHubAppEvent, handleGitHubAppEvent } from "./git/github-events";
 import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
 import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
@@ -85,6 +97,7 @@ import { notifyMessage } from "./notification-producers";
 import { ORG_FILES_PURGE_ATTEMPTS, ORG_FILES_PURGE_JOB, USER_FILES_PURGE_JOB } from "./organizations";
 import { outOfOfficeIds } from "./out-of-office";
 import { enqueue, type JobHandlers, type OutboxJob, PermanentJobError } from "./outbox";
+import { checkParkedRun, EARLY_CHECK_JOB, scheduleParkedChecks } from "./parked-asks";
 import { notifyPersonLimit, PERSON_LIMIT_JOB } from "./person-usage";
 import { checkPushReceipts, deliverPush, pushTicketsOf } from "./push";
 import { reachOf, settleReach } from "./reach";
@@ -107,15 +120,17 @@ import { indexSource, reindexOrg } from "./search";
 import { activateDeliveredSecret, discardClosedSecret } from "./secrets";
 import { runSkillUpdates, SKILL_UPDATES_JOB } from "./skill-updates";
 import type { SkillDeps } from "./skills";
+import { TEAM_HELLO_JOB } from "./standing";
 import { purgeOrgFiles, purgeUserFiles, runMigration, type StorageDeps } from "./storage";
 import { postStretchCard, STRETCH_JOB, type StretchHold } from "./stretch";
+import { sayTeamHello } from "./team-templates";
 import { postTeamWeek, TEAM_WEEK_JOB } from "./team-week";
 import { isAgentesCloud } from "./telemetry";
 import { assessThread } from "./thread-assess";
 import { runVaultSync, VAULT_SYNC_JOB, type VaultDeps } from "./vault";
 import { transcribeVoiceClip, VOICE_JOB, type VoiceDeps } from "./voice";
 import { saveWaitlistContact } from "./waitlist";
-import { checkInWork, WORK_CHECK_IN_JOB } from "./works";
+import { checkInWork, followUpWork, WORK_CHECK_IN_JOB, WORK_FOLLOW_UP_JOB } from "./works";
 import {
   ACCOUNT_DELETE_JOB,
   type DeletionDeps,
@@ -133,6 +148,8 @@ async function maybeEnqueueReflection(deps: JobDeps, orgId: string, threadId: st
     .where(and(eq(schema.messages.orgId, orgId), eq(schema.messages.threadId, threadId)));
   const n = Number(row?.n ?? 0);
   if (n === 0 || n % every !== 0) return;
+  // No model to reflect with: a job would only fail (ADR 0167).
+  if (deps.context && !(await summaryModelReady(deps.context, orgId))) return;
   await enqueue(deps.db, {
     orgId,
     kind: "context.reflect",
@@ -147,6 +164,10 @@ export interface JobDeps extends RunExecutorDeps {
   search?: SearchIndexResolver;
   /** Transactional email (job `email.send`). */
   email?: EmailSender;
+  /** Where feedback's pictures and videos are kept (jobs `feedback.send`, `feedback.file.purge`). */
+  feedbackBlobs?: BlobStore;
+  /** How a feedback reaches the agentes.chat team's inbox (ADR 0160 §13); the network's own by default. */
+  feedbackFetch?: typeof fetch;
   /** Where emails get their pictures (`emailArtFor`); absent: from each link's own server. */
   emailArt?: EmailArt;
   /** Push to the phone app (job `push.send`); absent = push off. */
@@ -196,7 +217,7 @@ export interface JobDeps extends RunExecutorDeps {
     /** The small model on another provider's key (e.g. `{ openai: "gpt-6-luna" }`); else its catalog pick. */
     cheapModels?: Record<string, string>;
     minScore?: number;
-    /** Probability that an agent's @mention needs the agent it names for it to wake (`MENTION_WAKE_THRESHOLD`). */
+    /** Probability that an agent's @mention asks the agent it names to act, for it to wake (`MENTION_WAKE_THRESHOLD`). */
     mentionThreshold?: number;
     /** Replaces the core small-model step (e.g. an optional external classifier). */
     strategy?: RouterStrategy;
@@ -290,14 +311,15 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
   if (deps.quietByTyping || deps.router?.quietByTyping) typingLogFor(deps.pubsub);
   const routing = messageRouter(deps);
 
-  // An agent's @mention wakes the other agent unless the judge is sure it needs nothing from it.
+  // An agent's @mention is credit or a reference: it wakes the other agent only when it plainly asks it something.
   const mentionThreshold = deps.router?.mentionThreshold ?? MENTION_WAKE_THRESHOLD;
   /**
-   * Which agents an agent's @mentions wake (ADR 0089): the judge asks, per mentioned agent, whether the message
-   * needs nothing from it, in any language, reading the message being answered too; it wakes unless the judge is
-   * sure (`MENTION_WAKE_THRESHOLD`). Thanks, an "ok", a sign-off or a quote need nothing. Without a judge, or when it
-   * fails, only a message that opens with "@handle" wakes that agent. Each decision goes in
-   * `routing_decisions`, its score the chance the message needs the agent (1 − the judge's "nothing").
+   * Which agents an agent's @mentions wake (ADR 0089, addendum 2026-11-10): the judge asks, per mentioned agent,
+   * whether the message leaves it nothing to do, in any language, reading the message being answered too; it wakes
+   * only when the judge reads a plain request to it (`MENTION_WAKE_THRESHOLD`). A name, a source, a thanks or a
+   * correction asks nothing. Without a judge, or when it fails, only a message that opens with "@handle" wakes that
+   * agent. Each decision goes in `routing_decisions`, its score the chance the message asks the agent (1 − the
+   * judge's "nothing").
    */
   async function delegatedAgents(
     message: NonNullable<Awaited<ReturnType<typeof getMessage>>>,
@@ -531,7 +553,7 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     missionEngine: deps.missionEngine ?? null,
   };
 
-  return {
+  const handlers: JobHandlers = {
     // A wake the brakes deferred (its agent at its cap of unrequested work, or its computer full) looks again.
     [LATER_JOB]: async (job) => {
       const orgId = orgOf(job);
@@ -629,8 +651,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         if (message.mentionedAgentIds.length > 0) {
           // No cap on hand-offs between agents: the stretch's limits hold a run agents start (`startOrJoinRun`).
           const handed = await delegatedAgents(message, outside, { wakeAll: Boolean(actingRoutine) });
-          // An agent the routine's run already handed this to (tell_agent) has it: the mention doesn't wake it again.
-          const told = routineRun ? await consultedBy(message.orgId, routineRun) : [];
+          // An agent the run already asked or handed this to (ask_agent, tell_agent) has it: the mention doesn't wake it
+          // again, or it would answer the person here too, besides the agent that asked.
+          const askerRun = routineRun ?? message.agentRunId;
+          const told = askerRun ? await consultedBy(message.orgId, askerRun) : [];
           let allowed = handed.allowed.filter((id) => !told.includes(id));
           // In an open mission's thread, another agent acts for the person behind it: only the
           // mission's owner and deciders make the mission's agent work (ADR 0029).
@@ -797,6 +821,14 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       if (!deps.artifacts) throw new Error("Files are unavailable");
       await closePoll(deps.artifacts, orgOf(job), String(job.payload.artifactId));
     },
+    // Something landed where a waiting run would read it: its asks, or its own requests, are checked now.
+    [EARLY_CHECK_JOB]: async (job) => {
+      await checkParkedRun(
+        { db: deps.db, pubsub: deps.pubsub, judge: deps.context?.judge },
+        String(job.payload.runId),
+        job.id,
+      );
+    },
     // A follow-up's time came: the agent is woken in its conversation (follow-through.ts).
     [FOLLOW_UP_JOB]: async (job) => {
       await wakeFollowUp(deps, orgOf(job), String(job.payload.messageId));
@@ -808,6 +840,16 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         seq: Number(job.payload.seq),
         phase: job.payload.phase === "fallback" ? "fallback" : job.payload.phase === "card" ? "card" : "nudge",
         ...(typeof job.payload.due === "number" ? { due: job.payload.due } : {}),
+      });
+    },
+    // A long work ended after people passed messages on to it: its agent follows each one's up, once (ADR 0121).
+    [WORK_FOLLOW_UP_JOB]: async (job) => {
+      const ids = Array.isArray(job.payload.messageIds) ? job.payload.messageIds : [];
+      await followUpWork(deps, orgOf(job), {
+        workId: String(job.payload.workId),
+        runId: String(job.payload.runId),
+        messageIds: ids.filter((id): id is string => typeof id === "string"),
+        stopped: job.payload.stopped === true,
       });
     },
     "secret.activate": async (job) => {
@@ -831,7 +873,9 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     "search.reindex": async (job) => {
       if (!deps.search) return;
-      await reindexOrg({ db: deps.db, search: deps.search, gateway: deps.gateway }, orgOf(job));
+      // The boot backfill's reindex names the kinds that get vectors (`queueEmbeddingBackfill`); a person's has none.
+      const kinds = Array.isArray(job.payload.kinds) ? (job.payload.kinds as SearchKind[]) : undefined;
+      await reindexOrg({ db: deps.db, search: deps.search, gateway: deps.gateway }, orgOf(job), { kinds });
     },
     "context.reflect": async (job) => {
       if (!deps.context) return;
@@ -866,7 +910,12 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     "routine.run": async (job) => {
       await executeRoutineRun(
-        { db: deps.db, pubsub: deps.pubsub, context: deps.context },
+        {
+          db: deps.db,
+          pubsub: deps.pubsub,
+          context: deps.context,
+          ai: { gateway: deps.gateway, machines: deps.machines ?? null },
+        },
         String(job.payload.routineRunId),
       );
     },
@@ -941,6 +990,22 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       }
       await forgetCodeEmail(deps.db, job);
     },
+    // The team says hi in #general once it can work (ADR 0162).
+    [TEAM_HELLO_JOB]: async (job) => {
+      await sayTeamHello(deps, orgOf(job), job.payload);
+    },
+    [FEEDBACK_JOB]: async (job) => {
+      if (isFeedbackRelay((job.payload.feedback as Feedback | undefined)?.to)) {
+        await relayQueuedFeedback(deps.feedbackFetch ?? fetch, job.payload, deps.feedbackBlobs);
+        return;
+      }
+      if (!deps.email) throw new PermanentJobError("no email sender configured");
+      await sendQueuedFeedback(deps.email, job.payload, deps.feedbackBlobs);
+    },
+    [FEEDBACK_FILE_PURGE_JOB]: async (job) => {
+      if (!deps.feedbackBlobs) throw new PermanentJobError("no file store configured");
+      await purgeFeedbackFile({ db: deps.db, blobs: deps.feedbackBlobs }, String(job.payload.id));
+    },
     [PLAN_WAITING_JOB]: async (job) => {
       if (deps.emailArt) await sendPlanWaitingEmail(deps.db, deps.emailArt.home, orgOf(job), job.payload.step);
     },
@@ -999,6 +1064,14 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       await wakeForAccessDecision({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.requestId), {
         maxHops: deps.maxHops,
       });
+    },
+    // A run waited a day for a device (`wait_for_device`): still waiting, it stops and says so.
+    [DEVICE_WAIT_EXPIRED_JOB]: async (job) => {
+      await expireDeviceWait(
+        { db: deps.db, pubsub: deps.pubsub },
+        String(job.payload.runId),
+        String(job.payload.waitId),
+      );
     },
     // A machine went offline a grace ago: if still offline, its running tasks are interrupted (one notice per thread).
     "machine.tasks_offline": async (job) => {
@@ -1093,7 +1166,24 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     [AUTONOMY_REPORT_JOB]: async (job) => {
       await queueAutonomyEmail(deps.db, job.payload, { router: deps.router?.enabled ?? false });
     },
+    // What happened on GitHub to an item an agent worked on, or naming the app (ADR 0156).
+    [GITHUB_EVENT_JOB]: async (job) => {
+      await handleGitHubAppEvent({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), job.payload.event as GitHubAppEvent);
+    },
   };
+  // A waiting run whose ask may have just been handled here checks early (`parked-asks.ts`). After the routing, not
+  // before it: ahead of the routing, that statement delays the walk to the message's root (`messageRoot`), which the
+  // run the message starts shares, and that run's reads then do the walk themselves.
+  const posted = handlers["message.posted"];
+  handlers["message.posted"] = async (job, ctx) => {
+    try {
+      await posted?.(job, ctx);
+    } finally {
+      const message = await getMessage(deps.db, orgOf(job), String(job.payload.messageId)).catch(() => null);
+      if (message) await scheduleParkedChecks(deps.db, message).catch(() => {});
+    }
+  };
+  return handlers;
 }
 
 /** The message opens by addressing `handle` ("@ada …", after any other leading mentions). */

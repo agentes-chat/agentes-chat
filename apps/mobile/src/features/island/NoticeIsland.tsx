@@ -2,7 +2,7 @@ import type { AppNotification } from "@agenteschat/client";
 import { useNotificationAction, useNotificationReply } from "@agenteschat/client";
 import { type IslandItem, islandLead, noticeLine } from "@agenteschat/client/lib/island";
 import { mediaWord } from "@agenteschat/client/lib/media";
-import { replyTarget, waitingCardOf } from "@agenteschat/client/lib/notifications";
+import { quickReply, waitingCardOf } from "@agenteschat/client/lib/notifications";
 import { StatusBar } from "expo-status-bar";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring, with
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { setIslandLive } from "@/lib/push";
+import { useOrg } from "@/providers/org";
 import { useRealtime } from "@/providers/realtime";
 import { haptics, Icon, type IconName, LineIcon, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -44,8 +45,9 @@ const SMALL_FACE = 27;
 /** Open: until its height is measured. */
 const OPEN_GUESS = 260;
 const TICK_MS = 250;
-/** Swiped up this far, it's put away. */
+/** Swiped up this far, or flicked up this fast (points per second), it's put away. */
 const PUT_AWAY = -24;
+const FLICK_AWAY = -600;
 /** "Enviado" stays this long before the notice leaves. */
 const SENT_MS = 1400;
 const OPEN_MAX = 3;
@@ -54,6 +56,12 @@ const MUTED = "rgba(255,255,255,0.64)";
 const LINE = "rgba(255,255,255,0.12)";
 
 type Shape = "none" | "pill" | "small" | "open";
+
+/** Pulled past its edge, the island follows less the further it goes (a boundary that resists, not a wall). */
+function rubberband(overshoot: number, dimension: number, constant = 0.55) {
+  "worklet";
+  return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
+}
 
 /**
  * The island on the phone (ADR 0071 §9): what reaches me while the app is open grows out of the camera's island (on
@@ -143,7 +151,9 @@ export function NoticeIsland() {
     }
   }, [shape, size.w, size.h, corner, reducedMotion, motion.pop, w, h, r, fade, content]);
 
-  // Swiped up: what isn't waiting leaves, what is shrinks beside the camera.
+  // Swiped up: what isn't waiting leaves, what is shrinks beside the camera. The island is the finger while it is
+  // down (up freely; pulled down it resists, it lives at the top), and lets go on distance or on a flick, the spring
+  // home seeded with the finger's speed.
   const putAway = useCallback(() => {
     setOpen(false);
     island.putAway();
@@ -155,11 +165,12 @@ export function NoticeIsland() {
         .enabled(!scrolls)
         .activeOffsetY([-8, 8])
         .onChange((e) => {
-          drag.value = Math.min(0, drag.value + e.changeY);
+          const next = drag.value + e.changeY;
+          drag.value = next <= 0 ? next : rubberband(next, PILL_HEIGHT);
         })
-        .onEnd(() => {
-          if (drag.value < PUT_AWAY) scheduleOnRN(putAway);
-          drag.value = withSpring(0, { damping: 18, stiffness: 260 });
+        .onEnd((e) => {
+          if (drag.value < PUT_AWAY || e.velocityY < FLICK_AWAY) scheduleOnRN(putAway);
+          drag.value = withSpring(0, { duration: 400, dampingRatio: 0.8, velocity: e.velocityY });
         }),
     [drag, putAway, scrolls],
   );
@@ -393,9 +404,8 @@ function IslandRow({ n, onOpened }: { n: AppNotification; onOpened: () => void }
     return () => island.pause(`typing:${n.id}`, false);
   }, [typing, n.id]);
 
-  const target = replyTarget(n);
+  const { target, suggestions, readOnly } = quickReply(n, Boolean(useOrg().org?.deletion));
   const waiting = n.waiting ? waitingCardOf(n) : null;
-  const suggestions = n.kind === "agent_question" ? (n.latest.suggestions ?? []) : [];
   const { canOpen, open } = useOpenNotice(n, onOpened);
 
   const read = () => {
@@ -465,26 +475,36 @@ function IslandRow({ n, onOpened }: { n: AppNotification; onOpened: () => void }
             />
           </View>
         ) : (
-          <View style={styles.acts}>
-            {suggestions.map((s) => (
-              <Chip key={s} label={s} outline disabled={reply.isPending} onPress={() => answer(s, true)} />
-            ))}
-            {primary ? (
-              <Chip
-                label={waiting?.action === "review" ? t("island.review") : t("island.open")}
-                primary
-                onPress={open}
-              />
+          <>
+            {readOnly ? (
+              <View style={styles.done}>
+                <LineIcon name="lock" size={13} color={MUTED} variant="footnote" />
+                <Text variant="footnote" style={[styles.readonly, styles.grow]}>
+                  {t("deleting.composer")}
+                </Text>
+              </View>
             ) : null}
-            {target ? (
-              <Chip
-                icon="reply"
-                label={suggestions.length ? t("island.otherAnswer") : t("island.reply")}
-                onPress={() => setTyping(true)}
-              />
-            ) : null}
-            {!primary && canOpen ? <Chip label={t("island.open")} onPress={open} /> : null}
-          </View>
+            <View style={styles.acts}>
+              {suggestions.map((s) => (
+                <Chip key={s} label={s} outline disabled={reply.isPending} onPress={() => answer(s, true)} />
+              ))}
+              {primary ? (
+                <Chip
+                  label={waiting?.action === "review" ? t("island.review") : t("island.open")}
+                  primary
+                  onPress={open}
+                />
+              ) : null}
+              {target ? (
+                <Chip
+                  icon="reply"
+                  label={suggestions.length ? t("island.otherAnswer") : t("island.reply")}
+                  onPress={() => setTyping(true)}
+                />
+              ) : null}
+              {!primary && canOpen ? <Chip label={t("island.open")} onPress={open} /> : null}
+            </View>
+          </>
         )}
         {failed ? (
           <Text variant="footnote" style={styles.failed}>
@@ -557,7 +577,7 @@ const faceOf = (n: AppNotification) => {
 };
 
 /**
- * Who it is from; with nobody behind it (a connected server changed tools, the workspace itself), what it is about as
+ * Who it is from; with nobody behind it (the workspace itself), what it is about as
  * an icon on a soft tile, never an unknown face.
  */
 function IslandFace({ n, size }: { n: AppNotification; size: number }) {
@@ -565,7 +585,7 @@ function IslandFace({ n, size }: { n: AppNotification; size: number }) {
   if (who) return <Face who={who} size={size} />;
   return (
     <View style={[styles.sysFace, { width: size, height: size, borderRadius: size * 0.3 }]}>
-      <Icon name={n.kind === "connector_tool_changed" ? "bolt" : "bell"} size={Math.round(size * 0.48)} color={WHITE} />
+      <Icon name="bell" size={Math.round(size * 0.48)} color={WHITE} />
     </View>
   );
 }
@@ -638,6 +658,7 @@ const styles = StyleSheet.create({
   // The check on the first line when an answer's words wrap.
   done: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 10 },
   doneText: { color: "#7ee2a8", fontWeight: "600" },
+  readonly: { color: MUTED },
   failed: { color: "#ff8a80", marginTop: 6 },
   x: { position: "absolute", top: 12, right: 12, padding: 4 },
   pressed: { opacity: 0.7 },

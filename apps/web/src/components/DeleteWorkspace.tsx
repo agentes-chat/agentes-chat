@@ -23,14 +23,14 @@ import { useMutation } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AddPasswordDialog } from "@/components/AddPassword";
-import { saveExport } from "@/components/ImportFlow";
 import { useNow } from "@/hooks/useNow";
+import { saveExport } from "@/lib/workspace-export";
 import "./deletion.css";
 
 /**
  * Deleting a workspace (owners): what goes, until when any owner can restore it, its export, its name typed to
- * confirm, then the code emailed to them (or their password, where no email goes). It closes for everyone at once and
- * goes for good 7 days later; `onDeleted` follows (the closing screen takes the workspace's place by itself).
+ * confirm, then the code emailed to them (or their password, where no email goes). It turns read-only for everyone at
+ * once and goes for good 7 days later; `onDeleted` follows (the line on top of the workspace shows by itself).
  */
 export function DeleteWorkspaceDialog({
   org,
@@ -253,7 +253,7 @@ export function DeletionProofField({ proof }: { proof: DeletionProofState }) {
   return (
     <Field
       label={t("proof.code")}
-      help={t("proof.sent", { email: proof.sent.email })}
+      example={t("proof.sent", { email: proof.sent.email })}
       error={said}
       labelAside={
         <button

@@ -2,6 +2,7 @@ import { type InvitationPreview, useAuthConfig } from "@agenteschat/client";
 import { INVITATION_MAIL_HEADER, INVITATION_MAIL_PARAM, INVITATION_TOKEN_HEADER } from "@agenteschat/client/lib/guards";
 import { humanCheckHeaders, withHumanCheck } from "@agenteschat/client/lib/human-check";
 import { nameIsPassword, passwordState, webmailOf } from "@agenteschat/client/lib/text";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Linking, View } from "react-native";
@@ -19,7 +20,15 @@ import { rememberConfirmationSent } from "./confirmation";
 import { useHumanCheck } from "./HumanCheck";
 import { CheckCancelled, refusalOf, refusalText, signUpClosed } from "./human-check";
 import { forgetInvite, rememberInvite } from "./invite";
-import { ErrorLine, InviteTerms, LockedEmail, OrgLine, useAgentsLine, useLeaveInvite } from "./invite-parts";
+import {
+  ErrorLine,
+  InviteCrew,
+  InviteTerms,
+  LockedEmail,
+  OrgLine,
+  useAgentsLine,
+  useLeaveInvite,
+} from "./invite-parts";
 import { EMAIL_ACTIONS, type EmailStep, emailBack, emailStart } from "./invite-steps";
 
 /**
@@ -225,14 +234,20 @@ export function EmailSteps({
   };
 
   const first = firstName(name);
-  const calledYou = by ? t("invite.calledYou", { name: by, org }) : t("invite.calledYouNoName", { org });
+  // A personal workspace's words (ADR 0159): never its name ("Personal"), who invited instead.
+  const calledYou = by
+    ? t(modeKey(preview, "invite.calledYou"), { name: by, org })
+    : t(modeKey(preview, "invite.calledYouNoName"), { org });
   const providerNames = linked.map((p) => t(`auth.provider.${p}`)).join(" · ");
   const mailApp = webmailOf(invited);
   const bubble: Record<EmailStep, [string, string?]> = {
-    name: [by ? t("invite.hello", { name: by, org }) : t("invite.helloNoName", { org }), t("invite.nameLead")],
+    name: [
+      by ? t(modeKey(preview, "invite.hello"), { name: by, org }) : t(modeKey(preview, "invite.helloNoName"), { org }),
+      t(modeKey(preview, "invite.nameLead")),
+    ],
     newPassword: [
       first ? t("auth.flow.newPasswordNamed", { name: first }) : t("auth.flow.newPassword"),
-      t("invite.newPasswordLead", { org }),
+      t(modeKey(preview, "invite.newPasswordLead"), { org }),
     ],
     password: wrong ? [t("auth.flow.wrong")] : [calledYou, t("mobile.invite.join.passwordLead")],
     social:
@@ -244,9 +259,9 @@ export function EmailSteps({
   };
   const [title, lead] = bubble[step];
   const expression = wrong ? "cross" : wink ? "wink" : secret ? "closed" : step === "sent" ? "happy" : undefined;
-  const enterLabel = t("invite.enter", { org });
+  const enterLabel = t(modeKey(preview, "invite.enter"), { org });
   const passwordField = (fresh: boolean) => (
-    <Locked when={pending}>
+    <Locked when={pending} keepKeyboard>
       <PasswordField
         value={password}
         onChangeText={(value) => {
@@ -276,7 +291,15 @@ export function EmailSteps({
           <LockedEmail email={invited} />
           <OrgLine
             agent={preview.agents?.[0]}
-            strong={preview.invitedBy ? t("invite.from", { name: preview.invitedBy }) : org}
+            strong={
+              isPersonal(preview)
+                ? preview.invitedBy
+                  ? t("invite.personalName", { name: preview.invitedBy })
+                  : t("invite.personalNameNoName")
+                : preview.invitedBy
+                  ? t("invite.from", { name: preview.invitedBy })
+                  : org
+            }
             text={crew ?? undefined}
           />
           <AuthField
@@ -287,7 +310,8 @@ export function EmailSteps({
             autoCapitalize="words"
             autoComplete="name"
             textContentType="name"
-            returnKeyType="next"
+            returnKeyType="go"
+            enablesReturnKeyAutomatically
             onSubmitEditing={submit}
             autoFocus
           />
@@ -319,7 +343,7 @@ export function EmailSteps({
           <ErrorLine error={error} />
           {enterButton}
           {canReset ? (
-            <Locked when={pending}>
+            <Locked when={pending} keepKeyboard>
               <Quiet label={t("auth.forgotPassword")} onPress={() => go("forgot")} />
             </Locked>
           ) : null}
@@ -377,6 +401,10 @@ export function EmailSteps({
       expression={expression}
       overlay={human.view}
       footer={step === "name" || step === "newPassword" ? <InviteTerms /> : null}
+      // The team you're invited to, on the sky, before any field; later steps keep the app's agent.
+      hero={
+        step === start && (preview.agents?.length ?? 0) > 0 ? <InviteCrew agents={preview.agents ?? []} /> : undefined
+      }
     >
       {body}
     </AuthScaffold>

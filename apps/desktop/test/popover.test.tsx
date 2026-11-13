@@ -7,11 +7,16 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { AppProvider } from "../src/app";
-import { DesktopStore } from "../src/control/store";
+import { siteApi } from "../src/control/devices";
+import { PREPARE_PREF } from "../src/control/permissions";
+import { DesktopStore, pairedHomes } from "../src/control/store";
+import { FAKE_SERVER } from "../src/dev/fake-runner";
+import { readPref, writePref } from "../src/hooks";
 import { createFakeHost, type FakeHost } from "../src/host/fake";
 import { createDesktopI18n } from "../src/i18n";
 import { ToastProvider } from "../src/ui/Toast";
 import { Popover } from "../src/windows/Popover";
+import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -69,11 +74,6 @@ async function withMenu(
     stop();
     for (const runner of host.runners.values()) runner.stop();
   }
-}
-
-async function until(ready: () => unknown) {
-  for (let i = 0; i < 100 && !ready(); i++) await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-  expect(Boolean(ready())).toBe(true);
 }
 
 /** Each banner on the menu: its title, the line under it (null without one) and its buttons. */
@@ -156,13 +156,13 @@ describe("the menu's banners say only what matters there", () => {
       );
     }));
 
-  test("agentes.chat not starting here: its title, Copy details and Try again", () =>
+  test("agentes.chat not starting here: its title, why and where to look, Copy details, the logs and Try again", () =>
     withMenu(
       (el) =>
         expect(banners(el)).toContainEqual({
           title: "agentes.chat isn't starting on this Mac",
-          line: null,
-          actions: ["Copy details", "Try again"],
+          line: "The details say why: copy them for whoever helps you, or look at the logs. Help",
+          actions: ["Copy details", "Show the logs", "Try again"],
         }),
       createFakeHost("popover", "here", { here: { phase: "failing" } }),
       (el) => banners(el).length > 0,
@@ -244,4 +244,101 @@ describe("the menu's banners say only what matters there", () => {
       ),
     );
   });
+});
+
+describe("the server here's Stop (ADR 0158)", () => {
+  test("in its ··· menu, with how long and what it cuts off; an hour says when it's back", () =>
+    withMenu(async (el) => {
+      expect([...el.querySelectorAll(".dk-ph button")].some((b) => b.textContent === "Stop")).toBe(false);
+      await act(async () => (el.querySelector(".dk-ph .dk-iconbtn") as HTMLElement).click());
+      const menu = () => [...el.querySelectorAll(".dk-here__more > button")].map((b) => b.textContent);
+      expect(menu()).toEqual(["Restart", "Stop", "Preferences…"]);
+      const stop = [...el.querySelectorAll(".dk-here__more > button")].find((b) => b.textContent === "Stop");
+      await act(async () => (stop as HTMLElement).click());
+      const rows = [...el.querySelectorAll(".dk-here__stop button")].map((b) => b.textContent);
+      expect(rows).toEqual(["Stop for 1 hour", "Stop until I start it", "Don't start it with the app…"]);
+      expect(el.querySelector(".dk-here__stop .dk-sub__hint")?.textContent).toBe(
+        "Stopping cuts everyone off, the phone included.",
+      );
+      await act(async () => (el.querySelector(".dk-here__stop button") as HTMLElement).click());
+      await until(() => el.querySelector(".dk-ph small")?.textContent?.startsWith("Stopped · back at"));
+      const start = [...el.querySelectorAll(".dk-ph button")].find((b) => b.textContent === "Start it");
+      expect(start).toBeTruthy();
+    }));
+});
+
+describe("several workspaces on this Mac", () => {
+  const menuRows = (el: HTMLElement, sel: string) => [...el.querySelectorAll(sel)].map((b) => b.textContent);
+  const press = async (el: HTMLElement, text: string) => {
+    const button = [...el.querySelectorAll<HTMLButtonElement>("button.dk-mi")].find((b) => b.textContent === text);
+    await act(async () => button?.click());
+  };
+
+  test("under the server here's card: the other servers' workspaces using this Mac too", () => {
+    const host = createFakeHost("popover", "here");
+    for (const runner of host.runners.values()) runner.server = FAKE_SERVER;
+    return withMenu(
+      (el) => expect(el.querySelector(".dk-here__also")?.textContent).toBe("Also works for Acme"),
+      host,
+      (el) => el.querySelector(".dk-here__also"),
+    );
+  });
+
+  test("Pause the agents: all of them, or one workspace with the same choices", () =>
+    withMenu(
+      async (el, store) => {
+        await press(el, "Pause the agents");
+        expect(menuRows(el, ".dk-pop__foot .dk-sub > button.dk-mi")).toEqual(["All workspaces", "Acme", "Horizonte"]);
+        await press(el, "Acme");
+        expect(menuRows(el, ".dk-sub .dk-sub > button.dk-mi")).toEqual([
+          "For 1 hour",
+          "Until tomorrow at 9 AM",
+          "Until I resume",
+        ]);
+        await press(el, "Until I resume");
+        await until(() => banners(el).some((b) => b.title === "Paused until you resume"));
+        expect(banners(el).find((b) => b.title === "Paused until you resume")?.line).toBe(
+          "On hold: Acme. The other workspaces' agents keep working.",
+        );
+        const paused = store
+          .getSnapshot()
+          .homes.filter((h) => h.status?.paused?.paused)
+          .map((h) => h.status?.org?.name);
+        expect(paused).toEqual(["Acme"]);
+      },
+      createFakeHost("popover", "selfhost"),
+      (el) => el.querySelectorAll(".dk-ohead").length === 2,
+    ));
+});
+
+test("the site's This computer: the Mac pairs with commands on, then the welcome window prepares it", async () => {
+  const host = createFakeHost("popover", "selfhost");
+  try {
+    await withMenu(
+      async (_el, store) => {
+        let userCode = "";
+        await act(async () => {
+          const reply = await host.askThisMac({
+            kind: "connect",
+            orgId: "o-norte",
+            origin: FAKE_SERVER,
+            agentsHere: true,
+          });
+          userCode = (reply.data as { userCode: string }).userCode;
+        });
+        await act(async () => {
+          await siteApi(host, FAKE_SERVER).machines.confirmDevice("o-norte", userCode, {});
+        });
+        const norte = () => pairedHomes(store.getSnapshot()).find((h) => h.status?.org?.id === "o-norte");
+        await until(() => norte()?.access?.tools.commands === true);
+        await until(() => host.window === "welcome");
+        expect(readPref<unknown>(PREPARE_PREF, null)).toEqual({ org: "Estúdio Norte", server: FAKE_SERVER });
+        expect(await host.autostart()).toBe(true);
+      },
+      host,
+      (el) => el.querySelector(".dk-pop__foot"),
+    );
+  } finally {
+    writePref(PREPARE_PREF, null);
+  }
 });

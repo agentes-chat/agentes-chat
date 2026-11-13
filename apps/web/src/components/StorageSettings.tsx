@@ -20,6 +20,7 @@ import {
   Field,
   Icon,
   type IconName,
+  InfoHint,
   Input,
   List,
   Locked,
@@ -27,7 +28,7 @@ import {
   RadioCard,
   RadioGroup,
 } from "@agenteschat/ui";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { StorageMeter } from "@/components/Limits";
 import { LoadingCards } from "@/components/Loading";
@@ -35,6 +36,7 @@ import { useOrg } from "@/components/org-context";
 import { useRevealsFiles } from "@/components/ThisMac";
 import { useComputerEdition } from "@/components/WorkspaceComputer";
 import { thisMac } from "@/lib/desktop";
+import { softBreaks } from "@/lib/soft-breaks";
 import { useToast } from "@/lib/toast";
 
 type Choice = "agentes" | "s3";
@@ -96,19 +98,7 @@ function PlatformLine({ platform }: { platform: StoragePlatform }) {
 
 /** A path in code style that wraps after its separators, never inside a folder's name unless it must. */
 function PathCode({ path }: { path: string }) {
-  // After each separator but the root's, so "/Users/" stays whole.
-  const parts = path.split(/(?<=.[\\/])/);
-  return (
-    <code style={{ fontSize: 12.5, overflowWrap: "anywhere" }}>
-      {parts.map((part, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: the parts of one path, in order
-        <Fragment key={i}>
-          {i > 0 && <wbr />}
-          {part}
-        </Fragment>
-      ))}
-    </code>
-  );
+  return <code style={{ fontSize: 12.5, overflowWrap: "anywhere" }}>{softBreaks(path)}</code>;
 }
 
 /**
@@ -337,7 +327,7 @@ function BucketForm({ config }: { config: StorageConfig }) {
           <Field
             label={t("storage.endpoint")}
             id="st-endpoint"
-            help={t("storage.endpointHelp")}
+            example={t("storage.endpointHelp")}
             error={missing(form.endpoint) ? t("storage.required") : undefined}
           >
             <Input
@@ -361,13 +351,13 @@ function BucketForm({ config }: { config: StorageConfig }) {
           >
             <Input value={form.bucket} onChange={(e) => set("bucket", e.target.value)} autoComplete="off" />
           </Field>
-          <Field label={t("storage.prefix")} id="st-prefix" help={t("storage.prefixHelp")}>
+          <Field label={t("storage.prefix")} id="st-prefix" example={t("storage.prefixHelp")}>
             <Input value={form.prefix} onChange={(e) => set("prefix", e.target.value)} autoComplete="off" />
           </Field>
           <Field
             label={t("storage.accessKey")}
             id="st-access"
-            help={saved ? t("storage.savedHint", { hint: saved.accessKeyIdHint }) : undefined}
+            example={saved ? t("storage.savedHint", { hint: saved.accessKeyIdHint }) : undefined}
             error={touched && keysMissing && !input.accessKeyId ? t("storage.keysRequired") : undefined}
           >
             <Input
@@ -380,7 +370,7 @@ function BucketForm({ config }: { config: StorageConfig }) {
           <Field
             label={t("storage.secret")}
             id="st-secret"
-            help={saved ? t("storage.savedHint", { hint: saved.secretHint }) : undefined}
+            example={saved ? t("storage.savedHint", { hint: saved.secretHint }) : undefined}
             error={touched && keysMissing && !input.secretAccessKey ? t("storage.keysRequired") : undefined}
           >
             <Input
@@ -391,18 +381,18 @@ function BucketForm({ config }: { config: StorageConfig }) {
             />
           </Field>
         </div>
-        <div className="row" style={{ alignItems: "flex-start", gap: 8 }}>
+        <div className="row" style={{ alignItems: "center", gap: 8 }}>
           <Checkbox
             id="st-path"
             checked={form.pathStyle}
             onCheckedChange={(v) => set("pathStyle", v)}
-            aria-describedby="st-path-help"
+            aria-describedby="st-path-hint"
           />
-          <span className="list-col" style={{ gap: 2 }}>
+          <span className="ac-hintline">
             <label htmlFor="st-path">{t("storage.pathStyle")}</label>
-            <span id="st-path-help" className="small muted">
+            <InfoHint id="st-path-hint" name={t("common.about", { label: t("storage.pathStyle") })}>
               {t("storage.pathStyleHelp")}
-            </span>
+            </InfoHint>
           </span>
         </div>
       </Locked>

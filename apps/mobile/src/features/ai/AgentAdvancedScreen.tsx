@@ -16,13 +16,14 @@ import { type ContextLimit, contextChoices, contextSize, isContextLimit } from "
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { planOf } from "@agenteschat/client/lib/plans";
 import { isAuto } from "@agenteschat/client/lib/providers";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useOrg } from "@/providers/org";
-import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, useToast } from "@/ui";
+import { GroupedHeader, GroupedList, GroupedRow, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useWidenAsk } from "../chat/ReachLines";
 import { useColors, useDirectory } from "../shared/hooks";
@@ -97,6 +98,9 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
   const may = !busy && view?.canEdit === true;
   const effort = useEffortChoice(agentId, now?.effort);
   const speed = useBrainChoice<BrainSpeed>(agentId, now?.speed ?? "standard", (value) => ({ speed: value }));
+  const fallbackLabel = t("agentPage.work.brain.fallbackTitle", {
+    computer: computerNameOf(t, org?.name ?? "", view?.computer?.name ?? "", isPersonal(org)),
+  });
 
   /** Saves at once and says what the row on "Pensa com" will say now (or `done`). */
   const save = async (input: AgentBrainInput, done?: string) => {
@@ -174,7 +178,14 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
             ) : null}
             {viewSpeedFits(view) ? (
               <>
-                <GroupedHeader>{t("agentPage.work.brain.speed")}</GroupedHeader>
+                <GroupedHeader
+                  hint={{
+                    name: t("common.about", { label: t("agentPage.work.brain.speed") }),
+                    text: t("agentPage.work.brain.speedText"),
+                  }}
+                >
+                  {t("agentPage.work.brain.speed")}
+                </GroupedHeader>
                 <GroupedList>
                   {SPEEDS.map((s) => (
                     <GroupedRow
@@ -186,7 +197,6 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                     />
                   ))}
                 </GroupedList>
-                <GroupedFooter>{t("agentPage.work.brain.speedText")}</GroupedFooter>
               </>
             ) : null}
             <GroupedHeader>{t("agentPage.work.brain.context")}</GroupedHeader>
@@ -235,22 +245,24 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                     plan={signInPlan(view, row, kind)}
                     coding={planOf(current?.provider)}
                     disabled={busy}
+                    keep
                   />
                 ) : null}
                 {apiKey ? (
                   <View style={styles.gap}>
                     <GroupedList>
                       <GroupedRow
-                        label={t("agentPage.work.brain.fallbackTitle", {
-                          computer: computerNameOf(t, org?.name ?? "", view.computer?.name ?? ""),
-                        })}
+                        label={fallbackLabel}
                         labelLines={2}
+                        hint={{
+                          name: t("common.about", { label: fallbackLabel }),
+                          text: t("agentPage.work.brain.fallbackHint", g),
+                        }}
                         toggle={view.fallback}
                         disabled={!may}
                         onPress={() => void save({ fallback: !view.fallback })}
                       />
                     </GroupedList>
-                    <GroupedFooter>{t("agentPage.work.brain.fallbackHint", g)}</GroupedFooter>
                   </View>
                 ) : null}
               </>

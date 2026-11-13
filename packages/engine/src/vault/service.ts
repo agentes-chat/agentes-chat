@@ -138,6 +138,8 @@ export interface VaultConnection {
   id: string;
   kind: string;
   name: string;
+  /** Its credential may only read: agents save nothing there until a person connects it again with one that writes. */
+  readOnly: boolean;
   scope: VaultScope;
   ownerUserId: string | null;
   label: string;
@@ -218,6 +220,21 @@ export interface VaultImportResult {
   format: VaultCsvFormat;
 }
 
+/** Several keys at once (an imported .env): one access for the new ones. A saved key keeps its own. */
+export interface VaultKeysImportInput {
+  scope: VaultScope;
+  access?: VaultAccess;
+  /** `replace`: a key already saved under this name in this scope takes the new value. Otherwise it is left. */
+  keys: { keyName: string; secret: string; replace: boolean }[];
+}
+
+export interface VaultKeysImportResult {
+  added: number;
+  replaced: number;
+  /** Already saved, and not asked to be replaced. */
+  skipped: number;
+}
+
 export interface VaultConnectInput {
   kind: string;
   scope: VaultScope;
@@ -244,6 +261,29 @@ export interface SecretToVaultInput {
   agentIds: string[];
 }
 
+/**
+ * Where an item is kept, as an agent reads it: this workspace's own Vault, or a connected password manager by its
+ * brand name and what the connection reads (a vault's or a folder's name).
+ */
+export interface VaultPlace {
+  /** `the Vault`, or the password manager's brand name (`1Password`). */
+  name: string;
+  connectionId: string | null;
+  label: string | null;
+  /**
+   * Whether an agent's new login can be kept there: `read_only` when the connection's credential may only read, `no`
+   * when the source never takes one.
+   */
+  writes: "yes" | "read_only" | "no";
+}
+
+/** A connected password manager an agent is told of without using it: where it is, whose, and whether it holds items. */
+export interface VaultUnreached {
+  place: VaultPlace;
+  scope: VaultScope;
+  hasItems: boolean;
+}
+
 /** An item as an agent sees it: never a value. `contact` only for contacts (their fields are meant for agents). */
 export interface VaultItemForAgent {
   id: string;
@@ -256,6 +296,7 @@ export interface VaultItemForAgent {
   username: string | null;
   keyName: string | null;
   contact: VaultContactFields | null;
+  place: VaultPlace;
   /** Values a made password replaced, kept for `undo`. */
   earlier?: number;
 }
@@ -278,6 +319,8 @@ export interface VaultAgentChange {
 export interface VaultAgentResult {
   outcome: "created" | "updated" | "deleted";
   item: VaultItemForAgent;
+  /** Why it is kept where it is (`item.place`), when a rule chose the place: an English clause for the agent. */
+  why?: string;
 }
 
 /** What `releaseVaultLogin` gives the tool that seals it for the computer. */
@@ -301,6 +344,7 @@ export const VAULT_LIMITS = {
   agents: 200,
   csvBytes: 2 * 1024 * 1024,
   csvRows: 5000,
+  importKeys: 200,
 } as const;
 
 export const vaultNow = (deps: Pick<VaultDeps, "now">) => deps.now?.() ?? new Date();

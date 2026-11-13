@@ -3,7 +3,7 @@ import { and, type Database, type Executor, eq, gte, inArray, isNull, lte, or, s
 import { localeInfo } from "@agenteschat/i18n/locale";
 import { currentHandles, getAgent } from "./agents";
 import { zonedParts, zonedTime } from "./cron";
-import { type EmailLocale, emailLocale, queueEmail } from "./email";
+import { type EmailLocale, emailLocale, modeStamp, queueEmail } from "./email";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishListChanged, publishMessageCreated, publishUserEvent } from "./events";
 import { getOrgSettings } from "./management";
@@ -14,6 +14,7 @@ import { endRuleBefore, localDate, normalizeRule, ruleOccurrences, type Schedule
 import { bodyCode } from "./run-tools";
 import { replyThreadOf } from "./runs";
 import { userVisibleChannels } from "./search";
+import { closedRefusal } from "./standing";
 import { taskSeenSql } from "./task-access";
 
 const {
@@ -251,6 +252,17 @@ function view(
   };
 }
 
+/** Each person and agent once, in the order first named: a list an agent wrote may name someone twice. */
+export function uniqueActors(list: CalendarActor[]): CalendarActor[] {
+  const seen = new Set<string>();
+  return list.filter((a) => {
+    const key = `${a.type}:${a.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 const proposalView = (p: ProposalRow): CalendarProposalView => ({
   id: p.id,
   agentId: p.agentId,
@@ -258,7 +270,8 @@ const proposalView = (p: ProposalRow): CalendarProposalView => ({
   title: p.title,
   start: p.startAt.toISOString(),
   end: p.endAt.toISOString(),
-  participants: p.participants as CalendarActor[],
+  // A stored row may still name someone twice: whoever reads it sees each once.
+  participants: uniqueActors(p.participants as CalendarActor[]),
   note: p.note,
   status: p.status as CalendarProposalView["status"],
   rule: (p.rule as EventRule | null) ?? null,
@@ -315,6 +328,7 @@ async function notifyInvited(deps: CalendarDeps, e: EventRow, inviterId: string,
       and(eq(organizationMembers.userId, users.id), eq(organizationMembers.orgId, e.orgId)),
     )
     .where(inArray(users.id, people));
+  const mode = await modeStamp(deps.db, e.orgId);
   for (const r of rows) {
     const zone = r.tz ?? e.timezone;
     await publishUserEvent(deps.pubsub, e.orgId, r.id, { type: "calendar.invited", eventId: e.id, title: e.title });
@@ -331,6 +345,7 @@ async function notifyInvited(deps: CalendarDeps, e: EventRow, inviterId: string,
         when: formatWhen(e.startAt, zone, emailLocale(r.locale)),
         // Its day puts the calendar on the event's week, where `open` finds it.
         url: `${(deps.publicUrl ?? "").replace(/\/$/, "")}/org/${e.orgId}/calendar?open=${e.id}&day=${localDate(e.startAt, zone)}`,
+        ...mode,
       },
     });
   }
@@ -457,13 +472,7 @@ export async function createCalendarEvent(
       })
       .returning();
     if (!row) throw new Error("event insert returned nothing");
-    const seen = new Set<string>();
-    const list = [{ type: "person" as const, id: userId }, ...participants].filter((p) => {
-      const key = `${p.type}:${p.id}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    const list = uniqueActors([{ type: "person", id: userId }, ...participants]);
     await tx.insert(calendarAttendees).values(
       list.map((p) => ({
         orgId,
@@ -896,7 +905,7 @@ async function visibleEvents(db: Database, userId: string, orgId: string, from: 
 /** The calendar view: events (with recurrences expanded), routine runs, reminders, issue deadlines and my pending proposals. */
 export async function calendarRange(deps: CalendarDeps, userId: string, orgId: string, fromIso: string, toIso: string) {
   const { db } = deps;
-  await requirePermission(db, userId, orgId, "read");
+  const membership = await requirePermission(db, userId, orgId, "read");
   const from = new Date(fromIso);
   const to = new Date(toIso);
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from) {
@@ -912,18 +921,22 @@ export async function calendarRange(deps: CalendarDeps, userId: string, orgId: s
     .map((o) => view(o.row, attendees, o))
     .sort((a, b) => a.start.localeCompare(b.start));
 
-  const routineRows = await db
-    .select()
-    .from(routines)
-    .where(
-      and(
-        eq(routines.orgId, orgId),
-        eq(routines.active, true),
-        eq(routines.triggerType, "schedule"),
-        // A widget's refreshes aren't slots on a calendar (every 30 minutes would fill it; ADR 0135 §4).
-        sql`coalesce(${routines.target}->>'type', '') <> 'widget'`,
-      ),
-    );
+  // Being deleted, its routines and reminders run at none of their times, so none shows (ADR 0088 §7).
+  const closed = closedRefusal(membership.standing) !== null;
+  const routineRows = closed
+    ? []
+    : await db
+        .select()
+        .from(routines)
+        .where(
+          and(
+            eq(routines.orgId, orgId),
+            eq(routines.active, true),
+            eq(routines.triggerType, "schedule"),
+            // A widget's refreshes aren't slots on a calendar (every 30 minutes would fill it; ADR 0135 §4).
+            sql`coalesce(${routines.target}->>'type', '') <> 'widget'`,
+          ),
+        );
   const routineRuns: { routineId: string; name: string; agentId: string; at: string; target: unknown }[] = [];
   const sees = await routineSeer(db, orgId, userId);
   for (const r of routineRows) {
@@ -941,6 +954,8 @@ export async function calendarRange(deps: CalendarDeps, userId: string, orgId: s
       number: issues.number,
       title: issues.title,
       date: issues.dueDate,
+      assigneeType: issues.assigneeType,
+      assigneeId: issues.assigneeId,
     })
     .from(issues)
     .where(
@@ -951,8 +966,19 @@ export async function calendarRange(deps: CalendarDeps, userId: string, orgId: s
         sql`${issues.status} not in ('done', 'canceled')`,
         taskSeenSql("issues", sql`${userId}::text`),
       ),
-    );
-  const deadlines = due.map((d) => ({ issueId: d.id, number: d.number, title: d.title, date: d.date ?? "" }));
+    )
+    .orderBy(issues.dueDate, issues.number);
+  // Who has each task: the calendar opens its due date with their face.
+  const deadlines = due.map((d) => ({
+    issueId: d.id,
+    number: d.number,
+    title: d.title,
+    date: d.date ?? "",
+    assignee:
+      d.assigneeType && d.assigneeId
+        ? { type: d.assigneeType as CalendarActor["type"], id: d.assigneeId }
+        : (null as CalendarActor | null),
+  }));
 
   const proposals = (
     await db
@@ -967,7 +993,7 @@ export async function calendarRange(deps: CalendarDeps, userId: string, orgId: s
       )
   ).map(proposalView);
   const mine = new Set(await userVisibleChannels(db, orgId, userId, { archived: true }));
-  const reminders = await calendarReminders(db, userId, orgId, from, to, mine, sees);
+  const reminders = closed ? [] : await calendarReminders(db, userId, orgId, from, to, mine, sees);
   return { events, routines: routineRuns, reminders, deadlines, proposals };
 }
 
@@ -1084,7 +1110,7 @@ export async function proposeCalendarEvent(
         description: (input.description ?? "").slice(0, 10_000),
         startAt: start,
         endAt: end,
-        participants: input.participants,
+        participants: uniqueActors(input.participants),
         rule: rule as Record<string, unknown> | null,
         note: input.note?.slice(0, 300) ?? null,
       })

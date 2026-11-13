@@ -40,6 +40,57 @@ test("the closed island ends in 'Ver', which opens the message where it happened
   expect(island.get().items.map((i) => i.n.id)).toEqual([]);
 });
 
+test("in a workspace being deleted the open island takes no answer: its quick reply's place says why", async () => {
+  const opened = async (state: ReturnType<typeof seedState>) => {
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
+    await act(async () => island.arrive(reply));
+    await settle(3);
+    await act(async () => fireEvent.click(document.querySelector(".ni__pill") as HTMLElement));
+    await settle(3);
+    return document.querySelector(".ni__item") as HTMLElement;
+  };
+  expect(within(await opened(seedState())).getByRole("button", { name: "Responder" })).toBeTruthy();
+  cleanup();
+  island.clear();
+
+  const state = seedState();
+  for (const org of state.me?.organizations ?? [])
+    org.deletion = { dueAt: new Date(Date.now() + 6 * 86_400_000).toISOString(), requestedAt: null, requestedBy: null };
+  const row = await opened(state);
+  expect(within(row).queryByRole("button", { name: "Responder" })).toBeNull();
+  expect(within(row).getByRole("status").textContent).toBe(
+    "Você não pode enviar mensagens enquanto este workspace está sendo apagado",
+  );
+  await act(async () => island.clear());
+});
+
+test("over a thread open in the panel the island stays in reach: its 'Ver' is the island's, never the panel's", async () => {
+  const state = seedState();
+  state.messages.push({
+    id: "m-reply",
+    channelId: ENG_ID,
+    threadId: "m-1",
+    author: { type: "agent", id: ADA_ID },
+    body: "Olhei o refresh.",
+    mentionedAgentIds: [],
+    agentRunId: null,
+    createdAt: new Date().toISOString(),
+  });
+  const r = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}?thread=m-1`, { api: createFakeApi(state) });
+  await settle(6);
+  expect(document.querySelector(".thread-panel")).toBeTruthy();
+  await act(async () => island.arrive(reply));
+  await settle(3);
+  // In <body> beside the panel, never in the page the panel makes inert behind it.
+  const wrap = document.querySelector(".ni-wrap") as HTMLElement;
+  expect(wrap.parentElement).toBe(document.body);
+  expect(wrap.closest("[inert]")).toBeNull();
+  await act(async () => fireEvent.click(within(wrap).getByRole("button", { name: "Ver" })));
+  await settle(4);
+  expect(r.router.state.location.pathname).toBe(`/org/${ORG_ID}/c/${GENERAL_ID}`);
+  expect(r.router.state.location.search).toMatchObject({ m: "m-1" });
+});
+
 test("the island is centered on the window, not the work area beside the sidebar", async () => {
   const css = topLevel(await builtCss("src/styles.css", "src/components/notice-island.css"));
   const last = (selector: string, property: string) =>

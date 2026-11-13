@@ -10,8 +10,11 @@ import { type Config, connectorOAuthApps, githubAppConfig } from "@agenteschat/c
 import type { Database } from "@agenteschat/db";
 import {
   AntigravityBrain,
+  APP_FAULT_HINT,
   type ArtifactDeps,
   agentScopeFromDb,
+  approvalsLevelOf,
+  asksOf,
   authorizeStream,
   type BrainTurn,
   blockSpecAt,
@@ -40,6 +43,8 @@ import {
   createDatabaseToolSource,
   createDesktopControl,
   createDesktopToolSource,
+  createDeviceToolSource,
+  createFeedbackToolSource,
   createFindAgentToolSource,
   createFollowUpToolSource,
   createGitHubAppSettings,
@@ -60,6 +65,7 @@ import {
   createPassToolSource,
   createPermissionToolSource,
   createReactToolSource,
+  createReleaseAsksToolSource,
   createSandboxToolSource,
   createScheduleToolSource,
   createSessionScreening,
@@ -78,9 +84,12 @@ import {
   createWithdrawRequestToolSource,
   createWorkspaceToolSource,
   createWorkToolSource,
+  deviceWaitHooks,
   type EmailArt,
   emailArtAt,
   envSpeechEngines,
+  feedbackDestination,
+  type GatewayEmbeddings,
   type GitProxyDeps,
   GrokBrain,
   getAgentCached,
@@ -104,12 +113,14 @@ import {
   type RunExecutorDeps,
   reauthorizeStream,
   recheckStream,
+  releaseRunPhones,
   resolveSummaryModel,
   type SandboxDeps,
   type ScheduleReader,
   type SkillDeps,
   type StorageDeps,
   setWorkOrgCap,
+  shareSavedFile,
   smallModelFor,
   standingJudge,
   streamClosed,
@@ -120,9 +131,10 @@ import {
   withComposio,
   withJudgeFallback,
 } from "@agenteschat/engine";
-import { createVoyageEmbeddings, type EmbeddingProvider, type ModelProvider } from "@agenteschat/providers";
+import { createOpenAIEmbeddings, createVoyageEmbeddings, type ModelProvider } from "@agenteschat/providers";
 import { type AppleTokenRevoker, appleTokenRevoker } from "./auth";
 import { hookConfig } from "./routes/app/context";
+import { version } from "./version";
 
 /** Why `/api/terminal` closes (with 4404) where sessions are screened (ADR 0076 §7). */
 export const NO_TERMINAL = "no_terminal";
@@ -138,8 +150,7 @@ export interface EngineOptions {
   /** Revokes Apple tokens at an account's deletion (ADR 0035); absent: from `config`. */
   appleRevoke?: AppleTokenRevoker;
   http?: typeof fetch;
-  embeddings?: { provider: EmbeddingProvider; apiKey: string };
-  deltaFlushMs?: number;
+  embeddings?: GatewayEmbeddings;
   /** Latency measurements from runs (logged by the server). */
   onTiming?(name: string, ms: number, attrs: Record<string, unknown>): void;
   /** Tests: fake TypeSafe transport. */
@@ -184,11 +195,22 @@ export interface EngineOptions {
 export function buildEngine(o: EngineOptions) {
   const { db, config, adapters } = o;
   const keyWrappers = [adapters.keyWrapper, ...adapters.legacyKeyWrappers];
-  const embeddings =
+  const tuning = { kinds: config.EMBEDDINGS_KINDS, queryTimeoutMs: config.EMBEDDINGS_QUERY_TIMEOUT_MS };
+  const embeddings: GatewayEmbeddings | undefined =
     o.embeddings ??
     (config.EMBEDDINGS_PROVIDER === "voyage" && config.VOYAGE_API_KEY
-      ? { provider: createVoyageEmbeddings({ model: config.EMBEDDING_MODEL }), apiKey: config.VOYAGE_API_KEY }
-      : undefined);
+      ? {
+          provider: createVoyageEmbeddings({ model: config.EMBEDDING_MODEL }),
+          apiKey: config.VOYAGE_API_KEY,
+          ...tuning,
+        }
+      : config.EMBEDDINGS_PROVIDER === "openai" && config.EMBEDDINGS_URL
+        ? {
+            provider: createOpenAIEmbeddings({ url: config.EMBEDDINGS_URL, model: config.EMBEDDING_MODEL }),
+            apiKey: config.EMBEDDINGS_API_KEY ?? "",
+            ...tuning,
+          }
+        : undefined);
   const gateway = createModelGateway({
     db,
     keyWrappers,
@@ -199,6 +221,7 @@ export function buildEngine(o: EngineOptions) {
       await queueBudgetEmail(db, config.PUBLIC_URL, e);
     },
     embeddings,
+    errors: o.errors,
   });
   const context: ContextDeps = {
     db,
@@ -380,6 +403,8 @@ export function buildEngine(o: EngineOptions) {
       createBrowserHandoffToolSource({ pubsub: adapters.pubsub, machines: { hub: machineHub } }),
       // The agent takes back a request for a person it no longer needs (listed while it has one open).
       createWithdrawRequestToolSource({ pubsub: adapters.pubsub }),
+      // An agent that handled what another waits to answer (its plan, budget or computer) lets it go.
+      createReleaseAsksToolSource({ pubsub: adapters.pubsub }),
       // An agent with no AI connected is refused at once: its answer would never come.
       createAskAgentToolSource({
         pubsub: adapters.pubsub,
@@ -394,6 +419,13 @@ export function buildEngine(o: EngineOptions) {
       createSetStatusToolSource({ pubsub: adapters.pubsub }),
       // How the person asked agents to talk to them (ADR 0147).
       createAgentStyleToolSource(),
+      // A person's feedback, sent by the agent they asked or offered by it when the app fails, where the server takes
+      // feedback (ADR 0160 §11, §12).
+      createFeedbackToolSource({
+        to: feedbackDestination(config),
+        version,
+        rateLimiter: adapters.rateLimiter,
+      }),
       createReactToolSource({ pubsub: adapters.pubsub }),
       // A GIF or the agent's sticker when asked (ADR 0091): listed by the workspace's switches and the agent's.
       createMediaToolSource({ pubsub: adapters.pubsub, gifs: adapters.gifs ?? null }),
@@ -403,8 +435,13 @@ export function buildEngine(o: EngineOptions) {
       createFollowUpToolSource({ pubsub: adapters.pubsub }),
       // The right hand sees what the team is doing, with no model call (ADR 0137 §13).
       createTeamStatusToolSource(),
-      // Background runs (routines) speak only through it.
-      createHandOffToolSource({ pubsub: adapters.pubsub, judge: context.judge, tools: () => tools }),
+      // Background runs (routines) speak only through it, with a GIF where the agent may send one (ADR 0091).
+      createHandOffToolSource({
+        pubsub: adapters.pubsub,
+        judge: context.judge,
+        tools: () => tools,
+        gif: createAgentGifPoster(adapters.gifs),
+      }),
       // Runs nobody called by name may stay quiet (reply-policy.ts): listed only for them.
       createPassToolSource(),
       createArtifactToolSource(artifacts),
@@ -422,7 +459,7 @@ export function buildEngine(o: EngineOptions) {
       }),
       createIssueToolSource(artifacts),
       // Dashboards and widgets (ADR 0135 §10): boards for the person, and a widget run's only voice (`update_widget`).
-      createDashboardToolSource({ db, pubsub: adapters.pubsub, context }),
+      createDashboardToolSource({ db, pubsub: adapters.pubsub, context, ai: { gateway, machines: machineHub } }),
       createSkillToolSource({
         ...skillDeps,
         judge: context.judge,
@@ -442,7 +479,7 @@ export function buildEngine(o: EngineOptions) {
         ...connectorDeps,
         artifacts,
         log: o.log,
-        pubsub: adapters.pubsub,
+        judge: context.judge,
         githubApp: githubAppAccess,
       }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
@@ -469,6 +506,14 @@ export function buildEngine(o: EngineOptions) {
         pubsub: adapters.pubsub,
         // Saved keys for one command (`run_code` with `keys`, ADR 0144).
         vault,
+      }),
+      // Phones through connected computers and waiting for a device (bring your own devices).
+      createDeviceToolSource({
+        db,
+        machines: { hub: machineHub },
+        pubsub: adapters.pubsub,
+        artifacts,
+        publicUrl: config.PUBLIC_URL,
       }),
       browserTools,
       // Reading the web, for every agent and run (ADR 0109): a search service when configured, else the agent's
@@ -503,9 +548,22 @@ export function buildEngine(o: EngineOptions) {
     ],
     catalog: { oauthApps: connectorDeps.oauthApps, mail: adapters.mail, composio },
     pubsub: adapters.pubsub,
+    // One of our own tools broke: where the server takes feedback, the agent may offer a report (ADR 0160 §12).
+    ...(feedbackDestination(config) ? { faultHint: APP_FAULT_HINT } : {}),
   });
   // Mission tasks' tools and computer-brain runs' tools come through the hub's MCP bridge (ADR 0032).
-  machineHub.setMissionHooks(createMissionHooks({ db, ...missionDeps, tools }));
+  // Runs waiting for a device (bring your own devices) go on when its computer is back or its phones report it free.
+  const missionHooks = createMissionHooks({ db, ...missionDeps, tools });
+  const deviceWaits = deviceWaitHooks({ db, pubsub: adapters.pubsub });
+  const hooks = {
+    ...missionHooks,
+    online: async (machineId: string) => {
+      await missionHooks.online?.(machineId);
+      await deviceWaits.online(machineId).catch(() => undefined);
+    },
+    phonesChanged: deviceWaits.phonesChanged,
+  };
+  machineHub.setMissionHooks(hooks);
   // The agent's Chrome started ahead of its first command (ADR 0040 §11): a head start, so a refusal costs nothing.
   const warmBrowser = (at: Parameters<typeof warmAgentBrowser>[2]) =>
     void warmAgentBrowser(db, machineHub, at).catch(() => {});
@@ -557,7 +615,8 @@ export function buildEngine(o: EngineOptions) {
    * A computer turn's permission profile (ADR 0053 §3), the same for Claude Code and Codex: a mission run
    * keeps its own (plan before Start and while a write item is live, work otherwise; ADR 0044); every other
    * run works, whoever woke it (ADR 0109: one permission model, the agent's own). Its own branches are
-   * agentes/<handle>/… (what the git proxy accepts).
+   * agentes/<handle>/… (what the git proxy accepts). It carries how much the agent asks when that isn't the default
+   * (ADR 0173); a mission's turn follows the mission's own setting.
    */
   const turnPermissions = async (turn: BrainTurn): Promise<BrainTurnRequest["permissions"]> =>
     // The team's right hand on a plan: our tools and nothing else (ADR 0137 §4).
@@ -566,6 +625,7 @@ export function buildEngine(o: EngineOptions) {
       : ((await missionTurnPermissions(db, turn)) ?? {
           mode: "work",
           branchPrefix: `agentes/${(await agentScope(turn)).handle}/`,
+          ...asksOf(await approvalsLevelOf(db, turn.orgId, turn.agentId)),
         });
   // Before a chat turn on a connected machine: the agent's checkouts updated through the git proxy, the turn
   // started in the repository it is about, and the "# Your code" block (ADR 0024 addendum).
@@ -685,6 +745,8 @@ export function buildEngine(o: EngineOptions) {
       : null,
   };
   const jobDeps: JobDeps = {
+    feedbackBlobs: adapters.platformBlobs,
+    feedbackFetch: o.http,
     accountEmails: adapters.email.delivers ? { publicUrl: config.PUBLIC_URL, support: config.SUPPORT_EMAIL } : null,
     appleRevoke: o.appleRevoke ?? appleTokenRevoker(config),
     voice,
@@ -727,13 +789,22 @@ export function buildEngine(o: EngineOptions) {
     warmBrowser,
     brains,
     prepareCode,
+    // An image Codex's own tool made on the agent's computer goes to the Drive, as a shared screenshot does.
+    shareFile: (ctx, machineId, path) =>
+      shareSavedFile(
+        { machines: { hub: machineHub }, pubsub: adapters.pubsub, publicUrl: config.PUBLIC_URL },
+        ctx,
+        machineId,
+        path,
+        { content: `Saved ${path} in your folder.` },
+      ),
     machines: machineHub,
     workspaceComputer,
+    releaseRunPhones: (run) => releaseRunPhones({ db, hub: machineHub }, run),
     maxOutputTokens: config.AGENT_MAX_OUTPUT_TOKENS,
     contextMessages: config.AGENT_CONTEXT_MESSAGES,
     blockSpec: (orgId, artifactId, version) => blockSpecAt(artifacts, orgId, artifactId, version),
     maxHops: config.AGENT_MAX_HOPS,
-    deltaFlushMs: o.deltaFlushMs,
     onTiming: o.onTiming,
     onRunProfile: o.onRunProfile,
     router: {
@@ -763,6 +834,8 @@ export function buildEngine(o: EngineOptions) {
   };
   return {
     gateway,
+    /** The search index's vectors (undefined: words alone), for the boot backfill (`queueEmbeddingBackfill`). */
+    embeddings,
     tools,
     context,
     handlers,

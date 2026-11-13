@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { ApiError } from "@agenteschat/client";
 import {
   ASK_STEPS,
@@ -27,22 +29,20 @@ const ASKED: Asked = {
 };
 
 describe("asking through a link", () => {
-  test("five questions, one per screen, in the approved order", () => {
-    expect(ASK_STEPS).toEqual(["email", "code", "name", "password", "note"]);
-    expect(ASK_STEPS.map((step) => askProgress(step).n)).toEqual([1, 2, 3, 4, 5]);
-    expect(askProgress("note")).toEqual({ n: 5, total: 5 });
+  test("three screens: the e-mail, its code, then the person, in that order", () => {
+    expect(ASK_STEPS).toEqual(["email", "code", "you"]);
+    expect(ASK_STEPS.map((step) => askProgress(step).n)).toEqual([1, 2, 3]);
+    expect(askProgress("you")).toEqual({ n: 3, total: 3 });
   });
 
   test("Back never lands on a code already typed, and the first step leaves", () => {
     expect(askBack("email")).toBeNull();
     expect(askBack("code")).toBe("email");
-    expect(askBack("name")).toBe("email");
-    expect(askBack("password")).toBe("name");
-    expect(askBack("note")).toBe("password");
+    expect(askBack("you")).toBe("email");
   });
 
   test("only sending the code is bot-checked", () => {
-    expect(ASK_STEPS.map(askAction)).toEqual(["ask-code", "ask-code", null, null, null]);
+    expect(ASK_STEPS.map(askAction)).toEqual(["ask-code", "ask-code", null]);
   });
 });
 
@@ -133,5 +133,22 @@ describe("waiting for the answer", () => {
     expect(resumesAsk(`/invite/${TOKEN}`)).toBe(false);
     expect(resumesAsk("/reset-password")).toBe(false);
     expect(resumesAsk("/connect")).toBe(false);
+  });
+});
+
+describe("an invitation to a personal workspace (ADR 0159): never its name, who invited instead", () => {
+  const src = (file: string) =>
+    readFileSync(join(import.meta.dir, "..", "..", "src", "features", "auth", file), "utf8");
+
+  test("each screen of the way in reads the invitation's mode", () => {
+    const screen = src("InviteScreen.tsx");
+    expect(screen).toContain('? t("invite.calledYouPersonal", { name: by })');
+    expect(screen).toContain('label={personal ? t("invite.enterPersonal") : t("mobile.invite.accept", { org })}');
+    expect(screen).toContain('title = t(modeKey(preview, "invite.ask.title"), { org });');
+    const email = src("EmailSteps.tsx");
+    expect(email).toContain('const enterLabel = t(modeKey(preview, "invite.enter"), { org });');
+    expect(email).toContain('t("invite.personalName", { name: preview.invitedBy })');
+    expect(src("LinkSteps.tsx")).toContain("email: isPersonal(preview)");
+    expect(src("AskWaiting.tsx")).toContain('t(modeKey(words, "invite.ask.waitTitle"), { org })');
   });
 });

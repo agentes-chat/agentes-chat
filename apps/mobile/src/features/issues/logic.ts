@@ -1,6 +1,6 @@
 import type { Issue, IssueColumn, IssueConversationRef, IssueStatus, IssueWork } from "@agenteschat/client";
 import { toYmd } from "@agenteschat/client/lib/format";
-import { isOpen, STATUSES } from "@agenteschat/client/lib/issues";
+import { BOARD, isOpen, STATUSES } from "@agenteschat/client/lib/issues";
 import { foldSteps, stepPhrase } from "@agenteschat/client/lib/work";
 import type { TFunction } from "i18next";
 import { chatHref } from "../links/logic";
@@ -131,8 +131,37 @@ export function issueSections(
   return out;
 }
 
-/** The board's columns on the phone, always these four, so a swipe lands in the same place. */
-export const BOARD_STAGES: readonly IssueStatus[] = ["in_progress", "in_review", "todo", "done"];
+/** The list's sections on the phone, in order: what waits on you, what moves, what waits to start, done today. */
+export type TaskListKey = "mine" | "in_progress" | "in_review" | "todo" | "doneToday";
+
+/**
+ * Tarefas as one list (the board is the other view): "Para você" first (what waits on you, then what is yours), then
+ * each open stage without what is already above, then what was finished today; each task once, empty sections left
+ * out. In a section, what waits on someone comes first, then what moves, then the board's order.
+ */
+export function taskListSections(
+  list: Issue[],
+  meId: string | null,
+  now = new Date(),
+): { key: TaskListKey; items: Issue[] }[] {
+  const mine = list.filter((i) => passesFilter(i, "mine", meId));
+  const taken = new Set(mine.map((i) => i.id));
+  const rank = (a: Issue, b: Issue) => urgency(a) - urgency(b) || byBoard(a, b);
+  const stage = (status: IssueStatus) => list.filter((i) => i.status === status && !taken.has(i.id)).sort(rank);
+  const today = toYmd(now);
+  const doneToday = list.filter((i) => i.status === "done" && toYmd(new Date(i.updatedAt)) === today);
+  const out: { key: TaskListKey; items: Issue[] }[] = [
+    { key: "mine", items: mine.sort(rank) },
+    { key: "in_progress", items: stage("in_progress") },
+    { key: "in_review", items: stage("in_review") },
+    { key: "todo", items: stage("todo") },
+    { key: "doneToday", items: doneToday },
+  ];
+  return out.filter((s) => s.items.length > 0);
+}
+
+/** The board's columns on the phone, always these four in the web's order (`BOARD`), so a swipe lands in the same place. */
+export const BOARD_STAGES: readonly IssueStatus[] = BOARD;
 
 /** What needs someone comes first in a column, then what is moving. */
 const urgency = (i: Issue) => {
@@ -147,21 +176,33 @@ export interface BoardColumn {
   groups: IssueColumnGroup<Issue>[];
 }
 
-/** The board: each stage with its tasks, canceled ones in "Feito"; a stage with nothing stays as an empty column. */
+/**
+ * The board: each stage with its tasks, canceled ones in "Feito"; a stage with nothing stays as an empty column. A
+ * customized A fazer shows each of its columns, empty ones too, since each takes a new task from its "+".
+ */
 export function issueBoard(list: Issue[], columns: IssueColumn[] = []): BoardColumn[] {
   const sections = [...issueSections(list, "open", null, columns), ...issueSections(list, "done", null, columns)];
+  const todo = stageColumns(columns, "todo");
   return BOARD_STAGES.map((stage) => {
     const here = sections.filter((s) => s.key === stage || (stage === "done" && s.key === "canceled"));
+    const count = here.reduce((n, s) => n + s.count, 0);
+    const groups = here.flatMap((s) =>
+      s.groups.map((g) => ({
+        ...g,
+        items: [...g.items].sort((x, y) => urgency(x) - urgency(y)),
+      })),
+    );
+    if (stage !== "todo" || !stageCustomized(todo))
+      return { stage, count, showColumns: here.some((s) => s.showColumns), groups };
+    const byColumn = new Map(groups.map((g) => [g.column?.id ?? null, g]));
     return {
       stage,
-      count: here.reduce((n, s) => n + s.count, 0),
-      showColumns: here.some((s) => s.showColumns),
-      groups: here.flatMap((s) =>
-        s.groups.map((g) => ({
-          ...g,
-          items: [...g.items].sort((x, y) => urgency(x) - urgency(y)),
-        })),
-      ),
+      count,
+      showColumns: true,
+      groups: [
+        ...groups.filter((g) => g.column === null),
+        ...todo.map((c) => byColumn.get(c.id) ?? { key: c.id, column: c, items: [] }),
+      ],
     };
   });
 }

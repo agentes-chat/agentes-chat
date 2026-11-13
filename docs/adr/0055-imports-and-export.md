@@ -1,6 +1,6 @@
 # 0055. Imports from other apps, and our own export, through one bundle
 
-- Status: Accepted (2026-10-21). Addendum 2026-10-31: an old id handle still reaches its agent
+- Status: Accepted (2026-10-21). Addendum 2026-10-31: an old id handle still reaches its agent. Addendum 2026-11-12: private repositories through the workspace's GitHub
 - Date: 2026-10-21
 - Extends: ADR 0020 (skills), ADR 0016 (connectors), ADR 0017 (context items), ADR 0019 (SSRF guard)
 - Out of scope for now: chat history, a CLI, a scan of `~/.openclaw` / `~/.hermes` on a connected computer, the Manus API, rollback
@@ -79,6 +79,8 @@ One apply creates or updates at most 200 items (`import.too_many_items`). A big 
 
 `POST …/agent-imports/github` reads one file, or a folder with one recursive trees request (`git/trees/{ref}?recursive=1`) and then the allowlisted files only, relative to the linked folder, in this order when the caps cut: its own Markdown/JSON/YAML, `agents/` (one level of folders), `skills/` and `.agents/skills/` (Markdown up to four folders deep), `cron/jobs.json`, then `memory/` and `memories/` (newest first). Files where other apps keep keys and sign-ins (`.env*`, `auth.json`, `auth-profiles.json`, `credentials.*`, `secrets.*`, `mcp-oauth*`, `mcp-tokens*`, `cursor-session.json`) and symbolic links are never read. Caps: 200 files, 8 MB in all, 4 MB a file (the parser's limit); what doesn't fit comes back in `skipped`, not read. A truncated tree is refused. Every request keeps the SSRF guard, no redirects and 15 s.
 
+A private repository (addendum 2026-11-12): when the public read answers 404 and github.com doesn't show the repository, it is read through the workspace's GitHub, as a skill's link is (ADR 0156): the GitHub App's token for that repository, else the GitHub connection's, one archive download (50 MB), the same allowlist, limits and exclusions applied to its files. Tokens never leave the server. Only who edits any agent (`manage_agents`) reads through them; when none reads it the answer is `github.repo_missing` with the connection's state, and the import screens offer "Conectar o GitHub" to who manages connectors, then read the link again. A repository github.com shows keeps the plain refusal (the link's file, folder or ref is missing).
+
 ### 6. Our own export
 
 `GET …/export` (admins) downloads this workspace as a bundle (`source.app: "agenteschat"`, `ref`: the org id):
@@ -128,3 +130,17 @@ The old handle is read again from what the import kept (`import_items.key`, cut 
 ## Addendum (2026-11-01): skills arrive on, routines arrive active
 
 Imported skills now arrive on for the agents that had them, and imported routines arrive active, with their next run set as when someone makes one by hand. `enableSkills` is gone from the request (an old client that still sends it is ignored). A skill is turned on only where the agent or the skill is new in that apply, so a re-import never turns back on what someone turned off. Routines still count against an agent's active-routine cap: one past it arrives paused instead, with the note `too_many_routines` on its create, and the report says how many did. An MCP connection to set up is named by its server (else its host), without the host and header names, since the name reads inside that sentence. The preview no longer says that skills arrive off or routines paused, and it no longer lists what doesn't come along; what to set up afterwards reads as one line each ("Ada usa o HubSpot. Conectar"). The rules for skills and routines in §4 above are superseded by this.
+
+## Addendum (2026-11-10): another app's reply asks for every agent and never makes one twice
+
+Two things people hit bringing agents from another app with `EXPORT_PROMPT`: the bot exported only itself, and asking a second time made the same agent again.
+
+- The request now opens by asking for all of the person's agents in one file, not only the one in the chat, and says an export with only that one is wrong when there are others. An agent the bot can't read is still listed, with its name, its role and empty instructions.
+- Every reply from one app is one package: `source.ref` is the app (`grok-bot`), not the `ref` the model writes, which changes from one export to the next and made each reply a new package. Our own export keeps `agenteschat:<org>`. The cost: two accounts of one app, imported by the same person, share a package, and the preview shows the second as updates.
+- A reply's keys are a model's guesses too, so the parser gives its own: an agent goes by its name (two with one name keep the model's key after it), a routine by its agent and name, a note by what it says. Channels, routines, notes and to-dos may name an agent by key, handle or name; with a single agent, any name means it.
+- An agent that comes back with no instructions never clears what an earlier import brought (`unchanged`): each bot's reply fills in what it can read.
+- Replies imported before this were kept as `<app>:<the model's ref>`. `loadImportState` reads those rows as the app's package too, so asking again updates what they made.
+
+## Addendum (2026-11-10): the onboarding's team step brings the agents (§3, §4)
+
+The onboarding no longer sends a person who has agents elsewhere to Settings › Import after it ends: its team step asks first whether they have agents in another app, and brings them there (ADR 0162, amended 2026-11-10). The step uses the same flow as the import page: an app that answers `EXPORT_PROMPT` is asked from the step, a file or a folder goes through the picker, the preview shows what was found and applying it makes the team. Agents brought there arrive with no model (`model: null`), so they take the new agent's default and think with the AI connected in the next step: a model kept from the other app (§4) could be one the workspace never connects. A step that brought no agent goes on as if the person had none.

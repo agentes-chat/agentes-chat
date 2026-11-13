@@ -9,7 +9,7 @@ import {
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { can } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { Button, Card, EmptyState, Icon, PageHeader, Segmented } from "@agenteschat/ui";
 import { Link } from "@tanstack/react-router";
@@ -29,6 +29,7 @@ import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import "./team.css";
+import { CreateAgentButton } from "@/components/new-agent/NewAgentDialog";
 
 const VIEWS = ["list", "chart", "map", "sectors", "usage"] as const;
 type TeamView = (typeof VIEWS)[number];
@@ -77,7 +78,8 @@ export function TeamPage() {
   const shown = view !== "usage" && data && agents.length > 0 && lookups.every((q) => q.data) ? data : null;
   const noAgents = view !== "usage" && !!data && agents.length === 0;
   const look = useRightHandLook();
-  const maker = can(org, "create_agents");
+  // Its words match its button: one who may not make agents now (a workspace being deleted) reads a viewer's.
+  const maker = makesAgents(org);
   // The empty state takes over the head's buttons: one way in, in the middle of the page.
   const makes = maker && (
     <>
@@ -86,19 +88,15 @@ export function TeamPage() {
           {t("shell.importAgents")}
         </Link>
       </Button>
-      <Button asChild variant="primary" icon="plus">
-        <Link to="/org/$orgId/agents/new" params={{ orgId: org.id }}>
-          {t("shell.createAgent")}
-        </Link>
-      </Button>
+      <CreateAgentButton />
     </>
   );
   return (
     <div className="page team">
       <PageHeader
         title={t("team.title")}
-        meta={
-          data &&
+        count={
+          !!data &&
           [
             t("team.people", { count: dir.members.length }),
             t("team.agents", { count: agents.length }),

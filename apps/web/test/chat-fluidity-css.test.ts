@@ -8,22 +8,53 @@ const last = (sheet: string, selector: string, property: string) =>
     .filter(([p]) => p === property)
     .at(-1)?.[1];
 
-test("the activity bar's room opens and closes in a glide (from 0, not from auto), still with reduced motion", () => {
+test("the activity bar's room opens and closes in a glide (by its cap, from 0), still with reduced motion", () => {
   const idle = '.channel__composer > .ac-typing:not([data-active="true"])';
-  expect(last(topLevel(css), idle, "height")).toBe("0");
-  expect(last(topLevel(css), '.ac-typing[data-active="true"]', "height")).toBe("28px");
+  expect(last(topLevel(css), idle, "max-height")).toBe("0");
+  // Open, at least its one low line and room for a name on a second (`max-height`, what the glide runs to).
+  expect(last(topLevel(css), '.ac-typing[data-active="true"]', "min-height")).toBe("28px");
+  expect(last(topLevel(css), '.ac-typing[data-active="true"]', "max-height")).toBe("64px");
+  expect(last(topLevel(css), '.ac-typing[data-active="true"]', "height")).toBeUndefined();
   const motion = atRule(css, "@media (prefers-reduced-motion: no-preference)");
   const glide = last(motion, ".channel__composer > .ac-typing", "transition") ?? "";
-  expect(glide).toContain("height 180ms");
+  expect(glide).toContain("max-height 180ms");
   expect(glide).toContain("margin 180ms");
   expect(last(topLevel(css), ".channel__composer > .ac-typing", "transition")).toBeUndefined();
 });
 
-test("an image alone on a message keeps its loading size too (the lone tile's height: auto doesn't win)", () => {
-  // The lone picture's `height: auto` would collapse it until the picture decodes: it needs its own loading rule.
-  const lone = ".artifact-cards > .artifact-tile[data-media]:only-child .artifact-tile__picture[data-loading]";
-  expect(last(topLevel(css), lone, "height")).toBe("180px");
-  expect(last(topLevel(css), lone, "width")).toBe("240px");
+test("an attachment's box is the same before and after what it holds loads: nothing under it moves", async () => {
+  const sheet = topLevel(css);
+  // A tile still loading is the cover and the name it will keep (`LoadingTile`), never a height of its own.
+  expect(last(sheet, ".artifact-tile--loading", "height")).toBeUndefined();
+  expect(last(sheet, ".artifact-tile__cover", "height")).toBe("var(--tile-cover)");
+  // A picture alone is whole inside the lone tile's box: no rule sizes the tile, its cover or its picture by the
+  // picture's own proportions, which are known only once it decodes.
+  const lone = ".artifact-cards > .artifact-tile[data-media]:only-child";
+  expect(last(sheet, `${lone} .artifact-tile__picture img`, "object-fit")).toBe("contain");
+  expect(declarations(sheet, lone)).toEqual([]);
+  expect(declarations(sheet, `${lone} .artifact-tile__cover`)).toEqual([]);
+  for (const size of ["width", "height", "max-height", "min-height"])
+    expect(last(sheet, `${lone} .artifact-tile__picture img`, size)).toBeUndefined();
+  expect(css).not.toContain(".artifact-tile__picture[data-loading]");
+  // A video: one box before and after its metadata.
+  const kit = topLevel(await Bun.file(join(import.meta.dir, "../../../packages/ui/src/styles/components.css")).text());
+  expect(last(kit, ".ac-video--tile .ac-video__media", "width")).toBe("320px");
+  expect(last(kit, ".ac-video--tile .ac-video__media", "height")).toBe("180px");
+  expect(last(kit, ".ac-video--tile .ac-video__media", "max-width")).toBe("100%");
+  expect(kit).not.toContain(".ac-video--tile[data-tall]");
+  expect(kit).not.toContain(".ac-video--tile:not([data-ready])");
+});
+
+test("a file's name wraps whole, never ending in …; on a phone a file takes the row, pictures two to a row (#51)", () => {
+  for (const part of [".artifact-tile__title", ".artifact-tile__meta"]) {
+    expect(last(topLevel(css), part, "overflow-wrap")).toBe("anywhere");
+    expect(last(topLevel(css), part, "text-overflow")).toBeUndefined();
+    expect(last(topLevel(css), part, "white-space")).toBeUndefined();
+  }
+  const phone = atRule(css, "@media (max-width: 640px)");
+  expect(last(phone, ".artifact-tile", "--tile-w")).toBe("calc(50% - 5px)");
+  // A tile still loading too: it knows whether it is a picture, so it has its row before its details arrive.
+  expect(last(phone, ".artifact-tile:not([data-media])", "--tile-w")).toBe("100%");
 });
 
 test("two tiles to a row on a small phone: a document's cover is drawn smaller, its lines keeping their words", () => {

@@ -1,6 +1,13 @@
 import { keys, useApi, useMailAccounts, useMailAction } from "@agenteschat/client";
-import { LEVELS, type Level } from "@agenteschat/client/lib/access-levels";
-import { choiceOf, fromMailLevel, MAIL_BRANDS, mailReviewTools, setMailLevel } from "@agenteschat/client/lib/mail";
+import type { Level } from "@agenteschat/client/lib/access-levels";
+import {
+  choiceOf,
+  fromMailLevel,
+  MAIL_BRANDS,
+  mailReviewTools,
+  onlyForOwner,
+  setMailLevel,
+} from "@agenteschat/client/lib/mail";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
@@ -8,13 +15,14 @@ import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { Button, GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Text, useToast } from "@/ui";
-import { chooseAction, confirmAction } from "../settings/parts";
+import { confirmAction } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
-import { useColors, useDirectory, useOrgId } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { errorHaptic, successHaptic, Tile } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { Problem } from "./Problem";
+import { pickLevel } from "./pick-level";
 import { MailReview } from "./ToolReview";
 
 /**
@@ -141,6 +149,7 @@ function AgentMailLevel({ agentId, accountId, leading }: { agentId: string; acco
   const orgId = useOrgId();
   const toast = useToast();
   const { org } = useOrg();
+  const meId = useMeId();
   const dir = useDirectory();
   const accounts = useMailAccounts(orgId);
   const agent = dir.agentById.get(agentId);
@@ -164,18 +173,25 @@ function AgentMailLevel({ agentId, accountId, leading }: { agentId: string; acco
       .finally(() => setSaving(null));
   };
   const open = () =>
-    chooseAction(
-      agent?.name ?? "",
-      LEVELS.map((l) => ({ label: t(`access.level.${l}`), onPress: () => choose(l) })),
-      t("common.cancel"),
-    );
+    void pickLevel(t, agent?.name ?? "", current).then((level) => {
+      if (level) choose(level);
+    });
   return (
     <GroupedRow
       leading={leading}
       label={agent?.name ?? ""}
       {...(agent?.role ? { sub: agent.role } : {})}
+      {...(account && onlyForOwner(account, agent, meId)
+        ? {
+            hint: {
+              name: t("common.about", { label: agent?.name ?? "" }),
+              text: t("mail.agent.onlyYou", { name: agent?.name ?? "" }),
+            },
+          }
+        : {})}
       value={t(`access.level.${current}`)}
-      chevron={mayChange}
+      // The value changes in its row, through the app's picker: its mark, not a chevron to a screen.
+      menu={mayChange}
       disabled={Boolean(saving)}
       {...(mayChange ? { onPress: open } : {})}
     />

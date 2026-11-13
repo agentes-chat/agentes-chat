@@ -1,11 +1,14 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, type Database, type Executor, eq, isNull, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, type Database, desc, type Executor, eq, gte, isNull, rowsOf, schema, sql } from "@agenteschat/db";
 import { listApprovals } from "./approvals";
 import { canTalkTo, speakerFor } from "./audience";
+import { editContextItem, howToSql } from "./context/items";
+import { LEARN_DEFAULTS } from "./context/learn";
 import { NO_CHANNEL_REASON, OVER_BUDGET_REASON, proposeSettings } from "./context/proposals";
 import { openPersonAgentDm } from "./dms";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishMessageCreated } from "./events";
+import { cutText } from "./format";
 import { commentIssue } from "./issues";
 import { getMessage, insertMessage, messageView, postPersonMessage } from "./messages";
 import { enqueue } from "./outbox";
@@ -14,7 +17,7 @@ import { pushLocale, pushStrings } from "./push-messages";
 import { isRightHand } from "./right-hand";
 import { createRoutine, type RoutineDeps } from "./routines";
 import { localDate, nextOccurrence, type ScheduleRule } from "./rrule";
-import { openOrg } from "./standing";
+import { closedRefusal, openOrg, orgStanding } from "./standing";
 import { taskSeenSql } from "./task-access";
 
 /**
@@ -24,7 +27,7 @@ import { taskSeenSql } from "./task-access";
  * proposal (budget, a channel), the approvals list, a routine, a message to Lodi or to a task's conversation.
  */
 
-const { agents, contextProposals, organizationMembers, organizationSettings } = schema;
+const { agents, contextItems, contextProposals, organizationMembers, organizationSettings } = schema;
 
 export const TEAM_WEEK_JOB = "team_week.post";
 export const TEAM_WEEK_CARD = "team_week";
@@ -122,6 +125,11 @@ export type TeamWeekRow =
       count: number;
       hour: number;
     }
+  /**
+   * A how-to of the person's own agent reused past the bar that no person vouched for yet (ADR 0167): "Virar skill?"
+   * confirms it (`editContextItem` confirmed), and the day's pass makes it a skill.
+   */
+  | { id: string; kind: "howto"; agentId: string; itemId: string; title: string; uses: number }
   /** Steps of a task waiting on another step for hours: its agent is told to go on with them in parallel. */
   | {
       id: string;
@@ -371,6 +379,7 @@ export async function buildTeamWeek(
 
   const stalled = await stalledSteps(db, w);
   if (stalled) rows.push(stalled);
+  rows.push(...(await provenHowTos(db, w)));
 
   const stats = {
     done: Number(counts?.done ?? 0),
@@ -556,6 +565,49 @@ async function stalledSteps(db: Database, w: Window): Promise<TeamWeekRow | null
   };
 }
 
+/** How many proven how-tos one card offers to make skills, at most. */
+const HOWTOS_SHOWN = 3;
+
+/**
+ * The person's own agents' how-tos reused at least `LEARN_DEFAULTS.skillAfter` times that are still untrusted, so the
+ * day's pass can't make them skills (ADR 0167), the most reused first.
+ */
+async function provenHowTos(db: Database, w: Window): Promise<TeamWeekRow[]> {
+  const rows = await db
+    .select({
+      id: contextItems.id,
+      agentId: contextItems.agentId,
+      title: contextItems.title,
+      content: contextItems.content,
+      uses: contextItems.recurrence,
+    })
+    .from(contextItems)
+    .innerJoin(agents, eq(agents.id, contextItems.agentId))
+    .where(
+      and(
+        eq(contextItems.orgId, w.orgId),
+        eq(agents.ownerUserId, w.userId),
+        isNull(agents.archivedAt),
+        eq(contextItems.status, "active"),
+        isNull(contextItems.supersededBy),
+        howToSql(),
+        eq(contextItems.trust, "low"),
+        eq(contextItems.disputed, false),
+        gte(contextItems.recurrence, LEARN_DEFAULTS.skillAfter),
+      ),
+    )
+    .orderBy(desc(contextItems.recurrence))
+    .limit(HOWTOS_SHOWN);
+  return rows.map((r) => ({
+    id: `howto:${r.id}`,
+    kind: "howto" as const,
+    agentId: r.agentId ?? "",
+    itemId: r.id,
+    title: cutText(r.title || r.content, 120),
+    uses: r.uses,
+  }));
+}
+
 // --- When it goes out ------------------------------------------------------------------------------------------
 
 /**
@@ -593,7 +645,10 @@ export async function enqueueTeamWeeks(db: Database, now = new Date()) {
   return n;
 }
 
-/** The job: builds this person's card and posts it in their DM with Lodi. Returns the message id, or null. */
+/**
+ * The job: builds this person's card and posts it in their DM with Lodi. Returns the message id, or null (none in a
+ * workspace closed to changes since it was queued).
+ */
 export async function postTeamWeek(
   deps: { db: Database; pubsub?: PubSub },
   orgId: string,
@@ -603,9 +658,16 @@ export async function postTeamWeek(
   const userId = typeof payload.userId === "string" ? payload.userId : null;
   const slot = typeof payload.slot === "string" ? new Date(payload.slot) : null;
   if (!userId || !slot || Number.isNaN(slot.getTime())) return null;
-  const [member] = rowsOf<{ team_week: unknown; admin: boolean; tz: string | null; locale: string | null }>(
+  if (closedRefusal(await orgStanding(db, orgId))) return null;
+  const [member] = rowsOf<{
+    team_week: unknown;
+    admin: boolean;
+    tz: string | null;
+    locale: string | null;
+    mode: string | null;
+  }>(
     await db.execute(sql`select m.team_week, ${maySql(sql`m.org_id`, sql`m.user_id`, "administrator")} as admin,
-        s.timezone as tz, u.locale
+        s.timezone as tz, u.locale, s.mode
       from organization_members m left join organization_settings s on s.org_id = m.org_id
       join users u on u.id = m.user_id
       where m.org_id = ${orgId} and m.user_id = ${userId}`),
@@ -640,6 +702,8 @@ export async function postTeamWeek(
   });
   if (!built) return null;
   const card: TeamWeekCard = { ...built, period, done: {}, dismissedAt: null };
+  // A personal workspace's week is the person's own with their agents (ADR 0159), not a team's.
+  const week = member.mode === "personal" ? "teamWeekReadyPersonal" : "teamWeekReady";
   const message = await db.transaction(async (tx) => {
     const dm = await openPersonAgentDm(tx, orgId, userId, lodi.id);
     if (await posted(tx)) return null;
@@ -648,7 +712,7 @@ export async function postTeamWeek(
       channelId: dm.id,
       author: { type: "agent", agentId: lodi.id, runId: null, hop: 1, stretchId: null },
       // Only this person reads it: the push and the conversation list say it in their language.
-      body: pushStrings(pushLocale(member.locale))[prefs.daily ? "teamDayReady" : "teamWeekReady"],
+      body: pushStrings(pushLocale(member.locale))[prefs.daily ? "teamDayReady" : week],
       meta: {
         bodyCode: TEAM_WEEK_CARD,
         bodyParams: { from: card.from, to: card.to, ...(prefs.daily ? { period: "day" } : {}) },
@@ -736,6 +800,9 @@ export async function actOnTeamWeek(
     } else if (row.kind === "stalled") {
       if (!text) throw new ValidationError("Say what to tell its agent");
       await commentIssue({ db, pubsub: deps.pubsub }, { type: "person", userId: actorId }, orgId, row.issueId, text);
+    } else if (row.kind === "howto") {
+      // The person vouches for it (ADR 0167): trusted and verified, the day's pass makes it the agent's skill.
+      await editContextItem(db, actorId, orgId, row.itemId, { confirmed: true });
     } else throw new ValidationError("This row is applied on its own card", "team_week.own_path");
     next.done[row.id] = done;
   }

@@ -1,4 +1,5 @@
 import type { VaultAccess, VaultItem, VaultItemKind, VaultScope } from "@agenteschat/client";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   Button,
   DetailsDialog,
@@ -43,12 +44,15 @@ export function VaultNewDialog({
   canManageTeam,
   scope: startScope,
   onClose,
+  onImportEnv,
   onCreated,
 }: {
   canManageTeam: boolean;
   /** The tab it was opened from. */
   scope: VaultScope;
   onClose: () => void;
+  /** Leaves this form for "Import .env", offered while the item is a key. */
+  onImportEnv: () => void;
   onCreated: (item: VaultItem) => void;
 }) {
   const { t } = useTranslation();
@@ -118,11 +122,11 @@ export function VaultNewDialog({
         </>
       }
     >
-      <div className="issue-layout">
+      <div className="vlt-layout">
         <Locked when={actions.creating}>
           <form
             id={formId}
-            className="issue-layout__main vlt-details__main"
+            className="vlt-details__main"
             onSubmit={(e) => {
               e.preventDefault();
               void save();
@@ -150,6 +154,11 @@ export function VaultNewDialog({
                 )}
               />
             </Field>
+            {kind === "key" && (
+              <Button size="sm" icon="upload" className="vlt-new__env" onClick={onImportEnv}>
+                {t("vault.env.open")}
+              </Button>
+            )}
             <ItemFields
               kind={kind}
               draft={draft}
@@ -176,7 +185,7 @@ export function VaultNewDialog({
             />
           </form>
           {/* Who may use it, where an item's page shows who has access (ADR 0144 §7): Personal or Team first. */}
-          <aside className="issue-aside vlt-aside">
+          <aside className="vlt-aside">
             <DetailsSection title={t("vault.access.title")}>
               <Segmented<VaultScope>
                 block
@@ -186,10 +195,10 @@ export function VaultNewDialog({
                 onValueChange={pickScope}
                 options={[
                   { value: "personal", label: t("vault.scope.personal") },
-                  { value: "team", label: t("vault.scope.team") },
+                  { value: "team", label: t(modeKey(org, "vault.scope.team")) },
                 ]}
               />
-              {!canManageTeam && <SettingNote icon="lock">{t("vault.new.teamLocked")}</SettingNote>}
+              {!canManageTeam && <SettingNote icon="lock">{t(modeKey(org, "vault.new.teamLocked"))}</SettingNote>}
               <AccessBlock
                 scope={scope}
                 access={access}

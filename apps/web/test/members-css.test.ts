@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { atRule, builtCss, declarations, topLevel } from "./built-css";
 
-test("the members column: 264px on the sidebar's surface, offline rows quieter, round role marks, a sheet on a phone", async () => {
+test("the members column: 264px on the work's sheet, group titles in normal case, offline rows quieter, round role marks, a sheet on a phone", async () => {
   const css = await builtCss(
     "src/styles.css",
     "src/components/members/members.css",
@@ -15,7 +15,18 @@ test("the members column: 264px on the sidebar's surface, offline rows quieter, 
       .at(-1)?.[1];
 
   expect(last(shipped, ".members-side", "width")).toBe("264px");
-  expect(last(shipped, ".members-side", "background")).toBe("var(--side)");
+  // On the work's sheet, not the sidebar's paper: the presence rings cut the faces from the same surface.
+  expect(last(shipped, ".members-side", "background")).toBe("var(--pane)");
+  expect(last(shipped, ".members-side", "--presence-ring")).toBe("var(--pane)");
+  // Each group's title in normal case, as the sidebar's.
+  expect(last(shipped, ".members-side__head", "text-transform")).toBe("none");
+  expect(last(shipped, ".members-side__head", "font-size")).toBe("13px");
+  // A face the size of a message's and the sidebar's (`--name-face`).
+  expect(last(shipped, ".members-side__inner > .ac-avatar", "width")).toBe("var(--name-face)");
+  expect(last(shipped, ".members-side__inner > .ac-avatar", "height")).toBe("var(--name-face)");
+  // An agent's role is a tag, as in the sidebar.
+  expect(last(shipped, ".members-side__line.ac-tag", "display")).toBe("inline-block");
+  expect(last(shipped, ".members-side__line.ac-tag", "align-self")).toBe("flex-start");
   // Inside the chat's main, beside the conversation's column and under the header (whose line spans both).
   expect(last(shipped, ".members-side", "height")).toBeUndefined();
   expect(last(shipped, ".channel__body", "display")).toBe("flex");
@@ -50,16 +61,16 @@ test("the column's add row: a 24px plus tile and 13px text, so it fits one line 
   expect(last(".member-row__plus", "width")).toBe("32px");
 });
 
-test("a DM's sidebar: a settings row's words keep the column, and its buttons wrap under them", async () => {
+test("a DM's sidebar: the row that opens its AI is a plate like the panel's other rows, its icon 8 inside it", async () => {
   const css = await Bun.file(new URL("../src/components/agents/agent-sidebar.css", import.meta.url).pathname).text();
-  const rule = (selector: string) => css.slice(css.indexOf(`${selector} {`)).split("}")[0];
-  expect(rule(".dm-side__sec .settings-row")).toContain("flex-wrap: wrap");
-  expect(rule(".dm-side__sec .settings-row > .settings-row__text")).toContain("flex: 1 1 0");
-  const buttons = rule(".dm-side .dm-side__sec .settings-row.settings-row--lead > .settings-row__end");
-  expect(buttons).toContain("flex-basis: 100%");
-  // Raised to the name's line beside the words, never under them.
-  expect(buttons).toContain("translate: none");
-  expect(rule(".dm-side__sec .rh-set__acts")).toContain("flex-wrap: wrap");
+  const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
+  const row = rule(".dm-side__sec .settings-row--open");
+  // The plate reaches 8 past the section's sides and pads 8, so the icon starts on the heading's edge.
+  expect(row).toContain("margin: 0 calc(-1 * var(--space-2)) var(--space-2)");
+  expect(row).toContain("padding: var(--space-2)");
+  expect(row).toContain("width: calc(100% + 2 * var(--space-2))");
+  expect(row).toContain("border-top: 0");
+  expect(rule(".dm-side__sec .settings-row--open:hover")).toContain("background: var(--side-hover)");
   // Only there: Settings' rows keep their layout.
   expect(css.match(/^[^\n]*settings-row[^\n]*\{$/gm)?.every((line) => /^(\.dm-side )?\.dm-side__sec/.test(line))).toBe(
     true,

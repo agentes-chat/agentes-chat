@@ -67,9 +67,12 @@ export function ReportsToField({ agentId, id }: { agentId: string; id: string })
   return (
     <div className="agp-field">
       {manages ? (
-        <Field label={t("team.reportsTo.label")} id={id} help={t("team.reportsTo.help")}>
+        <Field
+          label={t("team.reportsTo.label")}
+          id={id}
+          hint={{ name: t("common.about", { label: t("team.reportsTo.label") }), text: t("team.reportsTo.help") }}
+        >
           <Select
-            className="newag__sel"
             value={current?.id ?? NOBODY}
             onValueChange={(v) => setReportsTo([{ agentId, reportsToAgentId: v || null }])}
             // A list of agents shows their faces (the empty choice a glyph in a face's room), the trigger the chosen one's.

@@ -1,5 +1,13 @@
 import { useUpdateAgent } from "@agenteschat/client";
-import { agentsReach, audienceOf, consultableLocked, offersConsultable } from "@agenteschat/client/lib/audience";
+import {
+  agentsReach,
+  audienceModeKey,
+  audienceOf,
+  consultableLocked,
+  modeOf,
+  offersConsultable,
+  reachShortKey,
+} from "@agenteschat/client/lib/audience";
 import { engineOfBrain } from "@agenteschat/client/lib/brain";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { cleanHandle, handleAfterRename, handleProblemText, takenHandles } from "@agenteschat/client/lib/new-agent";
@@ -15,6 +23,7 @@ import {
   AgentAvatar,
   EmptyState,
   fieldText,
+  GROUPED_ROW,
   GroupedFooter,
   GroupedHeader,
   GroupedList,
@@ -27,6 +36,7 @@ import { router } from "@/ui/navigation";
 import { MessageText } from "../chat/MessageText";
 import { useWidenAsk } from "../chat/ReachLines";
 import { useFailed } from "../routines/hooks";
+import { usePersonalView } from "../settings/hooks";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { PushedHeader, successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
@@ -36,8 +46,10 @@ import { openAgentDelete } from "./DeleteAgentScreen";
 import { type AgentDraft, agentChanges, editableFields, fullLook } from "./edit";
 import { ErrorLine, HandleInput } from "./HandleInput";
 import { LookList } from "./LookPicker";
+import { openAgentMore } from "./more-link";
 import { ReportsToSection } from "./ReportsToSection";
 import { RoleInput } from "./RoleInput";
+import { openSetupStep } from "./setup/SetupStepScreen";
 
 /** Opens "Editar" for an agent. */
 export const openAgentEdit = (id: string) => router.push({ pathname: "/agent-edit", params: { id } });
@@ -65,6 +77,7 @@ export function AgentEditScreen({ id }: { id: string }) {
   const owner = Boolean(meId && agent?.ownerUserId === meId);
   const fields = editableFields({ admin, owner });
   const onPlan = engineOfBrain(agent?.brain?.kind) !== "agent";
+  const { personal, others } = usePersonalView();
   const saved = useMemo<AgentDraft | null>(
     () =>
       agent
@@ -167,7 +180,11 @@ export function AgentEditScreen({ id }: { id: string }) {
 
           {fields.has("name") ? (
             <>
-              <GroupedHeader>{t("agent.nameLabel")}</GroupedHeader>
+              <GroupedHeader
+                hint={{ name: t("common.about", { label: t("agent.nameLabel") }), text: t("agent.identityHelp") }}
+              >
+                {t("agent.nameLabel")}
+              </GroupedHeader>
               <GroupedList>
                 <TextInput
                   value={draft.name}
@@ -184,13 +201,9 @@ export function AgentEditScreen({ id }: { id: string }) {
                 <View style={styles.foot}>
                   <ErrorLine text={t("newAgent.errors.nameRequired")} />
                 </View>
-              ) : (
-                <GroupedFooter>
-                  {moved && !handleIssue
-                    ? t("agent.handleMoves", { handle: draft.handle, old: agent.handle })
-                    : t("agent.identityHelp")}
-                </GroupedFooter>
-              )}
+              ) : moved && !handleIssue ? (
+                <GroupedFooter>{t("agent.handleMoves", { handle: draft.handle, old: agent.handle })}</GroupedFooter>
+              ) : null}
               <GroupedHeader>{t("agent.handleLabel")}</GroupedHeader>
               <GroupedList>
                 <HandleInput
@@ -223,6 +236,23 @@ export function AgentEditScreen({ id }: { id: string }) {
 
           {fields.has("look") ? <LookList look={draft.look} onChange={(look) => set("look", look)} /> : null}
 
+          {/* With family in a personal workspace (ADR 0159), who talks to it is a row here for whoever may change
+              it, to its step's screen (otherwise only the setup card opens it). The same audience, one more way in. */}
+          {personal && (others ?? 0) > 0 && !rightHand && agent.setup && (admin || owner) ? (
+            <>
+              <View style={styles.gap} />
+              <GroupedList>
+                <GroupedRow
+                  icon="members"
+                  label={t("audience.title", agentGrammar(agent.name))}
+                  value={t(audienceModeKey(org, modeOf(agent)))}
+                  chevron
+                  onPress={() => openSetupStep(id, "who")}
+                />
+              </GroupedList>
+            </>
+          ) : null}
+
           {/* Only an audience that leaves someone out has anyone to be consulted for, and says whether it holds for agents. */}
           {!rightHand && reach ? (
             <>
@@ -233,8 +263,10 @@ export function AgentEditScreen({ id }: { id: string }) {
                     icon="agent"
                     label={t("audience.consultable", agentGrammar(agent.name))}
                     labelLines={2}
-                    sub={t("audience.consultableHint", agentGrammar(agent.name))}
-                    subLines={4}
+                    hint={{
+                      name: t("common.about", { label: t("audience.consultable", agentGrammar(agent.name)) }),
+                      text: t("audience.consultableHint", agentGrammar(agent.name)),
+                    }}
                     toggle={draft.audience.consultable !== false}
                     disabled={
                       !fields.has("consultable") || (!!saved && consultableLocked(saved.audience, { owner, onPlan }))
@@ -245,7 +277,14 @@ export function AgentEditScreen({ id }: { id: string }) {
                   />
                 </GroupedList>
               ) : null}
-              <GroupedFooter>{t(`audience.agents.${reach}`, agentGrammar(agent.name))}</GroupedFooter>
+              <GroupedFooter
+                hint={{
+                  name: t("common.about", { label: t("audience.title", agentGrammar(agent.name)) }),
+                  text: t(`audience.agents.${reach}`, agentGrammar(agent.name)),
+                }}
+              >
+                {t(reachShortKey(reach))}
+              </GroupedFooter>
             </>
           ) : null}
 
@@ -257,8 +296,13 @@ export function AgentEditScreen({ id }: { id: string }) {
           ) : (
             <>
               {admin ? <BudgetSection agent={agent} /> : null}
-              <BrakesSection agent={agent} />
-              <ReportsToSection agentId={id} />
+              {/* A personal workspace keeps these in Advanced (ADR 0159 §3): each saves on its own, as here. */}
+              {personal ? null : (
+                <>
+                  <BrakesSection agent={agent} />
+                  <ReportsToSection agentId={id} />
+                </>
+              )}
 
               <GroupedHeader>{t("agent.instructions")}</GroupedHeader>
               {/* The list draws the field's surface (radius 14, raised), as on "Create agent". */}
@@ -289,8 +333,23 @@ export function AgentEditScreen({ id }: { id: string }) {
             </>
           )}
 
+          {/* A personal workspace's Advanced (ADR 0159 §3): its brakes, who it reports to, its rules, deleting it. */}
+          {personal && !rightHand ? (
+            <>
+              <View style={styles.gap} />
+              <GroupedList>
+                <GroupedRow
+                  icon="more"
+                  label={t("agentPage.tabs.advanced")}
+                  chevron
+                  onPress={() => openAgentMore(id)}
+                />
+              </GroupedList>
+            </>
+          ) : null}
+
           {/* Deleting for good asks for its name on a screen of its own (ADR 0082). */}
-          {admin && !rightHand ? (
+          {admin && !rightHand && !personal ? (
             <>
               <View style={styles.gap} />
               <GroupedList>
@@ -317,7 +376,11 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   form: { paddingHorizontal: 16, paddingBottom: 48 },
   hero: { alignItems: "center", gap: 6, paddingVertical: 12 },
-  field: { minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
+  field: {
+    minHeight: GROUPED_ROW.minHeight,
+    paddingHorizontal: GROUPED_ROW.padX,
+    paddingVertical: GROUPED_ROW.tallPadY,
+  },
   bare: { borderWidth: 0, borderRadius: 0, backgroundColor: "transparent" },
   foot: { paddingTop: 7, paddingHorizontal: 16 },
   gap: { height: 24 },

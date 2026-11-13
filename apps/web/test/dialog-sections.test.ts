@@ -31,6 +31,7 @@ const OWN_INSET =
 /** Components from other files that render sections (checked where they are defined). */
 const SECTION_COMPONENTS = new Set([
   "ConnectFlow",
+  "ConnectedDone",
   "ConnectedRepos",
   "ConnectorSky",
   "EndpointForm",
@@ -38,6 +39,10 @@ const SECTION_COMPONENTS = new Set([
   "SkyStrip",
   "ComputerStage",
   "ProfilePhotoDialog",
+  "AndroidFlow",
+  "IphoneFlow",
+  "FlowFooter",
+  "JoinRequestForm",
 ]);
 
 // biome-ignore lint/suspicious/noExplicitAny: Babel's AST, walked by node type

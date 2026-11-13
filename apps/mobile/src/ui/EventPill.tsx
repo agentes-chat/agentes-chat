@@ -1,4 +1,4 @@
-import { Children, Fragment, isValidElement, type ReactNode, useState } from "react";
+import { Children, createContext, Fragment, isValidElement, type ReactNode, useContext, useState } from "react";
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
@@ -8,7 +8,7 @@ import {
   View,
   type ViewStyle,
 } from "react-native";
-import { ACT_TEXT_MIN } from "./ActRow";
+import { ACT_TEXT_MIN } from "./ActLine";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
 import { LineIcon } from "./LineIcon";
@@ -17,8 +17,13 @@ import { Text } from "./Text";
 import { useTheme } from "./theme";
 import { CHROME_MAX_SCALE } from "./type-scale";
 
-/** The sentence's size: a hair under the messages' words, so the event reads as the conversation's, not a voice. */
-const WORDS = { fontSize: 14, lineHeight: 19 } as const;
+/**
+ * The sentence is the `small` variant (15/20): a hair under the messages' words (17), so the event reads as the
+ * conversation's, not a voice, and it grows with the person's text size as they do. Its line, for the time beside it.
+ */
+const WORDS_LINE = 20;
+/** Under the sentence (it took more than a line, or the phone is too narrow): the actions are words on its column. */
+const UnderContext = createContext(false);
 const MARK = 14;
 /** The small controls' corner, cut at the bottom left (the app's "cut corner"). */
 const RADIUS = 10;
@@ -57,12 +62,15 @@ export function EventPill({ mark, markColor, children, time, actions, below, wai
   const [room, setRoom] = useState(0);
   const [actionsWidth, setActionsWidth] = useState(0);
   const list = actionsOf(actions);
-  const stacked = list.length > 0 && room > 0 && actionsWidth > 0 && room - actionsWidth < ACT_TEXT_MIN;
+  // A sentence that takes more than one line beside its actions puts them under it: a tall column with one word in it
+  // reads as a table. Once under, they stay (with the room they leave, the sentence might fit one line again).
+  const [wraps, setWraps] = useState(false);
+  const stacked = list.length > 0 && (wraps || (room > 0 && actionsWidth > 0 && room - actionsWidth < ACT_TEXT_MIN));
   const markNode =
     typeof mark === "string" ? (
-      <LineIcon name={mark as IconName} size={MARK} color={markColor ?? c.faint} variant="small" text={WORDS} />
+      <LineIcon name={mark as IconName} size={MARK} color={markColor ?? c.faint} variant="small" />
     ) : (
-      <LineIcon size={MARK} variant="small" text={WORDS}>
+      <LineIcon size={MARK} variant="small">
         {mark}
       </LineIcon>
     );
@@ -71,7 +79,14 @@ export function EventPill({ mark, markColor, children, time, actions, below, wai
       <View style={[styles.frame, stacked ? styles.frameStacked : null, { borderColor: c.line2 }]}>
         <View style={[styles.main, stacked ? null : styles.mainBeside]}>
           {markNode}
-          <Text variant="small" tone={waiting ? "ink" : "ink2"} style={[WORDS, styles.words]}>
+          <Text
+            variant="small"
+            tone={waiting ? "ink" : "ink2"}
+            style={styles.words}
+            onTextLayout={(e) => {
+              if (!wraps && list.length > 0 && e.nativeEvent.lines.length > 1) setWraps(true);
+            }}
+          >
             {children}
           </Text>
           {time ? (
@@ -81,7 +96,7 @@ export function EventPill({ mark, markColor, children, time, actions, below, wai
           ) : null}
         </View>
         {list.length > 0 ? (
-          <View style={stacked ? [styles.under, { borderTopColor: c.line }] : styles.beside}>
+          <View style={stacked ? styles.under : styles.beside}>
             <View
               // Under the sentence, more actions than a phone's width (a request's four answers) wrap to a new line.
               style={[styles.actions, stacked ? styles.actionsWrap : null]}
@@ -90,10 +105,10 @@ export function EventPill({ mark, markColor, children, time, actions, below, wai
             >
               {list.map((action, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: the actions in order, each after its hairline
-                <View key={i} style={styles.slot}>
-                  {/* A hairline before each; under the sentence, the first starts at the frame's edge. */}
-                  {stacked && i === 0 ? null : <View style={[styles.rule, { backgroundColor: c.line }]} />}
-                  {action}
+                <View key={i} style={stacked ? styles.slotUnder : styles.slot}>
+                  {/* Beside the sentence, a hairline before each; under it, words on its column with no rule. */}
+                  {stacked ? null : <View style={[styles.rule, { backgroundColor: c.line }]} />}
+                  <UnderContext.Provider value={stacked}>{action}</UnderContext.Provider>
                 </View>
               ))}
             </View>
@@ -142,6 +157,7 @@ export function EventPillAction({
   accessibilityHint,
 }: EventPillActionProps) {
   const { colors: c } = useTheme();
+  const under = useContext(UnderContext);
   const opens = expanded !== undefined;
   // The attention color at 10%, 18% while pressed: the web's `--attention` mixed into nothing.
   const tint = (pressed: boolean) => withAlpha(c.amber, pressed ? 0.18 : 0.1);
@@ -160,26 +176,27 @@ export function EventPillAction({
       hitSlop={{ top: 6, bottom: 6 }}
       style={({ pressed }) => [
         styles.action,
+        // Under the sentence a word on its column; the primary keeps its tint, as a small plate.
+        under ? (primary ? styles.actionUnderPrimary : styles.actionUnder) : null,
         primary ? { backgroundColor: tint(pressed) } : pressed ? { backgroundColor: c.plate } : null,
         disabled || loading ? styles.dim : null,
       ]}
     >
+      {/* Each glyph in a box of the word's line, so it stays on the word's middle when the action sits on top. */}
       {loading ? (
-        <ActivityIndicator size="small" color={primary ? c.ink : c.ink2} style={styles.spinner} />
+        <View style={styles.onLine}>
+          <ActivityIndicator size="small" color={primary ? c.ink : c.ink2} style={styles.spinner} />
+        </View>
       ) : lead ? (
-        <Icon name={lead} size={12} color={primary ? c.ink : c.ink2} />
+        <View style={styles.onLine}>
+          <Icon name={lead} size={12} color={primary ? c.ink : c.ink2} />
+        </View>
       ) : null}
-      <Text
-        variant="footnote"
-        tone={primary ? "ink" : "ink2"}
-        numberOfLines={1}
-        maxFontSizeMultiplier={CHROME_MAX_SCALE}
-        style={styles.label}
-      >
+      <Text variant="label" tone={primary ? "ink" : "ink2"} numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
         {label}
       </Text>
       {opens ? (
-        <View style={expanded ? styles.turned : undefined}>
+        <View style={[styles.onLine, expanded ? styles.turned : undefined]}>
           <Icon name="right" size={12} color={c.faint} />
         </View>
       ) : null}
@@ -220,17 +237,22 @@ const styles = StyleSheet.create({
   },
   mainBeside: { flexShrink: 1, minWidth: 0 },
   words: { flexShrink: 1, minWidth: 0 },
-  time: { lineHeight: WORDS.lineHeight, fontVariant: ["tabular-nums"] },
+  time: { lineHeight: WORDS_LINE, fontVariant: ["tabular-nums"] },
   beside: { flexShrink: 0, flexDirection: "row" },
-  // Under the sentence: a hairline across the frame, the actions from its left.
-  under: { borderTopWidth: 1, alignItems: "flex-start" },
+  // Under the sentence: on its column (the frame's 12, the mark, the 8 after it), no hairline. Its label's line ends 7
+  // from the frame's outer edge (1 + 5 of the 28 + the border), as the sentence's line starts 7 from the top (6 + 1).
+  under: { alignItems: "flex-start", paddingLeft: 12 + MARK + 8, paddingBottom: 1, marginTop: -2 },
   actions: { flexDirection: "row", alignItems: "stretch", minHeight: 30 },
   actionsWrap: { flexWrap: "wrap" },
   // An action with the hairline before it: one piece, so a wrap never leaves a hairline alone at a line's end.
   slot: { flexDirection: "row", alignItems: "stretch", minHeight: 30 },
   rule: { width: 1 },
   action: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12 },
-  label: { fontSize: 13, fontWeight: "600" },
+  // A word on the sentence's column: no plate of its own but the press, 16 between two.
+  actionUnder: { paddingHorizontal: 0, minHeight: 28, borderRadius: 6 },
+  slotUnder: { flexDirection: "row", marginRight: 16 },
+  actionUnderPrimary: { paddingHorizontal: 10, minHeight: 28, borderRadius: 8 },
+  onLine: { height: 18, justifyContent: "center" },
   spinner: { transform: [{ scale: 0.7 }] },
   dim: { opacity: 0.6 },
   turned: { transform: [{ rotate: "90deg" }] },

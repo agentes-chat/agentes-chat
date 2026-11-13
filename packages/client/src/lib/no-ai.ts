@@ -48,11 +48,14 @@ export interface NoAiCard {
   /**
    * The team's right hand on a plan (ADR 0137 §7): why that plan can't think now, said as one line with the way to an
    * API key (its computer away or with a problem, the plan at its limit or its model's own, the region that model needs, commands off
-   * there, a plan that answers only its owner, a runner to update there, the plan's CLI offering tools of its own).
+   * there, a plan that answers only its owner, to someone else or to a request no person made, a runner to update
+   * there, the plan's CLI offering tools of its own).
    */
   planLine?: RightHandPlanLine;
   /** With `model_limit`, `model_region` and `model_off`: the model's name. */
   model?: string;
+  /** With `planLine` `cli_failed`: what the plan's CLI said, the cause its line names. */
+  why?: string;
   /** Not "no AI": its computer has no such CLI installed, or it has no computer at all. */
   missing?: "cli_missing" | "no_computer";
   /** A billing hold stopped the run: the message is kept for after the plan (`keptCardState`). */
@@ -63,6 +66,7 @@ export interface NoAiCard {
 export type RightHandPlanLine =
   | "computer_away"
   | "computer_failed"
+  | "cli_failed"
   | "plan_limit"
   | "model_limit"
   | "model_region"
@@ -70,11 +74,13 @@ export type RightHandPlanLine =
   | "plan_inactive"
   | "commands_off"
   | "plan_not_shared"
+  | "plan_unattended"
   | "runner_outdated"
   | "plan_tools";
 export const RIGHT_HAND_PLAN_LINES: ReadonlySet<string> = new Set<RightHandPlanLine>([
   "computer_away",
   "computer_failed",
+  "cli_failed",
   "plan_limit",
   "model_limit",
   "model_region",
@@ -82,6 +88,7 @@ export const RIGHT_HAND_PLAN_LINES: ReadonlySet<string> = new Set<RightHandPlanL
   "plan_inactive",
   "commands_off",
   "plan_not_shared",
+  "plan_unattended",
   "runner_outdated",
   "plan_tools",
 ]);
@@ -116,6 +123,7 @@ export function noAiCardOf(meta: Record<string, unknown> | null | undefined): No
       ? { planLine: o.reason as RightHandPlanLine }
       : {}),
     ...(typeof o.model === "string" && o.model ? { model: o.model } : {}),
+    ...(o.reason === "cli_failed" && typeof o.why === "string" && o.why ? { why: o.why } : {}),
     ...(o.reason === "cli_missing" || o.reason === "no_computer" ? { missing: o.reason } : {}),
     ...(o.reason === "plan_hold" ? { held: true } : {}),
   };
@@ -131,9 +139,13 @@ export function keptCardState(s: { hold: BillingHold | null; paid: boolean; read
   return s.ready ? ("answer" as const) : ("connect" as const);
 }
 
+/** The key of a plan line's sentence (`name`, `model` and `why` fill it): the CLI's failure with what it said. */
+export const planLineKey = (line: RightHandPlanLine, why?: string) =>
+  line === "cli_failed" && why ? ("noAi.rightHand.cli_failedWhy" as const) : (`noAi.rightHand.${line}` as const);
+
 /** A plan line that passes by itself: once the agent can think again, its card offers "Responder agora". */
 export const planLinePasses = (line: RightHandPlanLine | undefined) =>
-  line === "computer_away" || line === "computer_failed";
+  line === "computer_away" || line === "computer_failed" || line === "cli_failed";
 
 /**
  * The key of a card's line while the agent still can't think (`agentGrammar(name)` fills it): the computer's own
@@ -152,12 +164,19 @@ export const noAiLineKey = (card: Pick<NoAiCard, "own" | "signedOut" | "missing"
 
 type ConnectingAgent = { ownerUserId?: string | null; builtin?: "right_hand" | null };
 
-/** Who can set an agent's own AI: its owner (a plan), who manages agents (a workspace key) or keys. */
-const maySetAgentAi = (
+/**
+ * Who can set an agent's own AI: its owner (a plan), who manages agents (a workspace key) or keys. On the right hand
+ * that is the workspace's AI, the one its background work (a widget's build) thinks with.
+ */
+export const maySetAgentAi = (
   agent: ConnectingAgent | null | undefined,
   meId: string | null | undefined,
   org: Parameters<typeof can>[0],
 ) => (!!meId && agent?.ownerUserId === meId) || can(org, "manage_agents") || can(org, "manage_credentials");
+
+/** Who connects an agent's AI, for a person who may not: its owner (`owner`, by first name) or an admin. */
+export const noAiLockedLine = (t: TFunction, name: string, owner: string | null | undefined) =>
+  owner ? t("noAi.locked", { name, owner: owner.split(" ")[0] }) : t("noAi.lockedAdmins");
 
 /**
  * Who can do something about an agent with no AI: who sets its AI, and on the right hand any member, for their own
@@ -172,7 +191,8 @@ export const mayConnectAi = (
 
 /**
  * The way out of a plan line for this person: their own plan when the workspace's doesn't serve them, or when a key
- * isn't theirs to set (an API key is always the workspace's, §11), else an API key. Null: neither is theirs to do.
+ * isn't theirs to set (an API key is always the workspace's, §11), else an API key. A request no person made thinks
+ * with no one's own plan: only a key helps there. Null: neither is theirs to do.
  */
 export function planLineFix(
   line: RightHandPlanLine,
@@ -180,9 +200,17 @@ export function planLineFix(
   meId: string | null | undefined,
   org: Parameters<typeof can>[0],
 ): "connectMine" | "useKey" | null {
+  if (line === "plan_unattended") return maySetAgentAi(agent, meId, org) ? "useKey" : null;
   if (!mayConnectAi(agent, meId, org)) return null;
   return line === "plan_not_shared" || !maySetAgentAi(agent, meId, org) ? "connectMine" : "useKey";
 }
+
+/**
+ * Where Connect opens for a widget waiting on the right hand's plan (`reason` one of its plan lines): the key step,
+ * since a build is nobody's ask and that plan never waits, so only a key builds it (`planLineFix`'s `useKey`).
+ */
+export const planKeyIntent = (agent: ConnectingAgent | null | undefined, reason: string | null | undefined) =>
+  isRightHand(agent) && reason && RIGHT_HAND_PLAN_LINES.has(reason) ? { intent: "api_key" as const } : {};
 
 /** The key of an agent's line from its AI status, for a banner with no card (`noAiLineKey`). */
 export function noAiStatusKey(status: AiStatus | undefined, agentId: string) {
@@ -251,6 +279,8 @@ export const PLAN_CHOICES: readonly PlanChoice[] = [
   "zen",
   ...PLAN_IDS,
 ];
+/** The plans whose marks stand on the scene over "Conectar uma IA": the three most used. */
+export const SCENE_PLANS = ["claude", "chatgpt", "gemini"] as const satisfies readonly PlanChoice[];
 /** The account a plan signs in as: ChatGPT's through Codex, Cursor's and OpenCode's through their CLIs; the rest through Claude Code. */
 export const kindOf = (choice: PlanChoice): MachineAccountKind =>
   choice === "chatgpt" || choice === "cursor" || choice === "zen" || choice === "grok" || choice === "gemini"
@@ -287,9 +317,24 @@ export const planLabel = (t: TFunction, choice: PlanChoice) =>
 /** A plan's name in its panel, as its maker sells it: "Your Claude plan", "GLM Coding Plan"… */
 export const planTitle = (t: TFunction, choice: PlanChoice) =>
   isPlanId(choice) ? CODING_PLANS[choice].name : t(`connectAi.plan.${choice}.title`);
-/** What a search for a plan finds it by: its name, its maker, what it is sold as and its tiers. */
+/** Other names people search a plan by: the CLIs it goes by ("codex" finds ChatGPT). Product names, not translated. */
+const PLAN_SEARCH_NAMES: Partial<Record<PlanChoice, string>> = {
+  claude: "Claude Code",
+  chatgpt: "Codex",
+  gemini: "Gemini CLI Antigravity",
+  grok: "Grok Build",
+  zen: "OpenCode Zen",
+};
+export const planSearchNames = (choice: PlanChoice) => PLAN_SEARCH_NAMES[choice] ?? "";
+/** What a search for a plan finds it by: its name, its maker, what it is sold as, its tiers and its CLIs. */
 export const planPickText = (t: TFunction, choice: PlanChoice) =>
-  [planLabel(t, choice), planMark(choice), planTitle(t, choice), t(`connectAi.plan.${choice}.tiers`)].join(" ");
+  [
+    planLabel(t, choice),
+    planMark(choice),
+    planTitle(t, choice),
+    t(`connectAi.plan.${choice}.tiers`),
+    planSearchNames(choice),
+  ].join(" ");
 /** The marks overlapped on the computer's plan line, and on the API key row. */
 export const PLAN_MARKS = ["claude", "openai", "zai", "kimi"] as const;
 export const KEY_MARKS = ["claude", "openai", "gemini", "openrouter"] as const;
@@ -562,13 +607,20 @@ export function dimmedLine(
   return gateLine(t, { gate, ...where })?.text ?? t("aiAccounts.connect.noComputer");
 }
 
+/** What a hold stops, said first on the phone: a plan's sign-in, the keys, or the team the onboarding just made. */
+const HOLD_LEAD = {
+  plan: "connectAi.billing",
+  keys: "connectAi.key.closed",
+  team: "standing.billing.teamReady",
+} as const;
+
 /**
- * The phone's words for a plan a billing hold stops: paying has no button or link there (ADR 0079 §6, App Store 3.1.1),
+ * The phone's words for what a billing hold stops: paying has no button or link there (ADR 0079 §6, App Store 3.1.1),
  * so whoever pays reads where, and anyone else who can.
  */
-export const planHoldPhoneLine = (t: TFunction, mayPay: boolean, keys = false) =>
+export const planHoldPhoneLine = (t: TFunction, mayPay: boolean, lead: keyof typeof HOLD_LEAD = "plan") =>
   t("common.joinSentences", {
-    a: t(keys ? "connectAi.key.closed" : "connectAi.billing"),
+    a: t(HOLD_LEAD[lead]),
     b: t(mayPay ? "connectAi.billingWeb" : "standing.billing.askAdmin"),
   });
 
@@ -745,3 +797,16 @@ export function onlyOwnerReplies(agents: readonly Agent[], hasAi: (agentId: stri
     thinking.every((a) => a.ownerUserId === viewerId && !answersOthers(audienceOf(a), a.ownerUserId))
   );
 }
+
+/**
+ * Whether every one of these agents thinks (ready, or waiting for its computer: anything but "no AI"), read alike by
+ * the onboarding's AI step and the arrival (ADR 0162, ADR 0160). Undefined while the status loads, and while it
+ * doesn't list one of them yet: a status read before an agent was made says nothing about that agent, so the caller
+ * waits for a fresh read instead of taking it as unanswered.
+ */
+export const teamThinks = (agentIds: readonly string[], status: AiStatus | undefined): boolean | undefined => {
+  if (status === undefined) return undefined;
+  const states = agentIds.map((id) => aiStateOf(status, id));
+  if (states.some((s) => s === undefined)) return undefined;
+  return states.length > 0 && states.every((s) => s !== "no_ai");
+};

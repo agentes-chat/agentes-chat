@@ -1,16 +1,17 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, type Database, desc, type Executor, eq, gt, inArray, isNull, ne, schema, sql } from "@agenteschat/db";
+import { and, type Database, desc, type Executor, eq, inArray, isNull, ne, schema, sql } from "@agenteschat/db";
 import type { Agent } from "./agents";
 import { audienceError, canTalkTo, speakerOf } from "./audience";
 import { caches } from "./cache";
 import { sha256 } from "./crypto";
 import { NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishUserEvent } from "./events";
+import { landedAfterSql } from "./message-place";
 import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
 import { quietNoticeSql } from "./notices";
 import { resolveNotifications } from "./notifications";
 import { can, getMembership, requirePermission } from "./organizations";
-import { accountInUse } from "./standing";
+import { accountInUse, closedRefusal } from "./standing";
 
 const { channels, channelMembers, channelReads, messages, agents, users, organizationMembers } = schema;
 
@@ -132,6 +133,12 @@ export async function openDm(
         .where(and(eq(channels.orgId, orgId), eq(channels.dmKey, dmKey)))
     )[0];
   const found = await existing();
+  // Being deleted, the workspace opens the DMs it has as they are, bringing nobody back, and starts none (ADR 0088 §7).
+  const closed = closedRefusal(membership.standing);
+  if (closed) {
+    if (!found) throw closed;
+    return found;
+  }
   // A new DM with an agent this person can't talk to isn't started (unless they manage agents); an old one stays readable.
   if (!found && blockedAgent) throw await audienceError(db, blockedAgent);
   if (found) await reopenDm(db, orgId, found);
@@ -292,15 +299,22 @@ export interface DmSummary {
 /**
  * My direct conversations, newest activity first (one with no message yet sorts by when it began, so a new one is on
  * top), with unread counts. An empty DM the other person opened isn't one yet: it shows with its first message, or
- * once I open it myself. A DM with an agent always shows.
+ * once I open it myself. A DM with an agent always shows. `only`: that one DM, as the list has it (`POST /dms`).
  */
-export async function listDms(db: Database, actorId: string, orgId: string): Promise<DmSummary[]> {
+export async function listDms(db: Database, actorId: string, orgId: string, only?: string): Promise<DmSummary[]> {
   await requirePermission(db, actorId, orgId, "read");
   const mine = await db
     .select({ id: channels.id, createdAt: channels.createdAt, createdByUserId: channels.createdByUserId })
     .from(channels)
     .innerJoin(channelMembers, and(eq(channelMembers.channelId, channels.id), eq(channelMembers.userId, actorId)))
-    .where(and(eq(channels.orgId, orgId), eq(channels.kind, "dm"), isNull(channels.archivedAt)));
+    .where(
+      and(
+        eq(channels.orgId, orgId),
+        eq(channels.kind, "dm"),
+        isNull(channels.archivedAt),
+        only ? eq(channels.id, only) : undefined,
+      ),
+    );
   if (mine.length === 0) return [];
   const ids = mine.map((c) => c.id);
   const [others, reads, last] = await Promise.all([
@@ -364,7 +378,7 @@ export async function listDms(db: Database, actorId: string, orgId: string): Pro
             isNull(messages.deletedAt),
             sql`(${messages.authorUserId} is null or ${messages.authorUserId} <> ${actorId})`,
             sql`not ${quietNoticeSql(sql`${messages.meta}`)}`,
-            gt(messages.createdAt, readAt.get(id) ?? new Date(0)),
+            landedAfterSql(messages, readAt.get(id) ?? new Date(0)),
             // Nor one more unread (ADR 0091): it is silent.
             sql`${messages.meta}->>'mediaAfter' is null`,
           ),

@@ -38,7 +38,7 @@ describe("profile photo", () => {
     expect(out).toEqual({ imageBase64: btoa("png-bytes"), contentType: "image/png" });
   });
 
-  test("Editar perfil → Trocar foto: pick an image, save; my avatar uses it", async () => {
+  test("Edit profile → Change photo → Upload a photo: pick an image, save; my avatar uses it", async () => {
     const state = seedState();
     await renderApp(`/org/${ORG_ID}/issues`, { api: createFakeApi(state) });
     await settle(6);
@@ -46,11 +46,27 @@ describe("profile photo", () => {
     await settle(2);
     const profile = screen().getByRole("dialog", { name: "Seu perfil neste workspace" });
     // Photo and @ need no line; the time zone's use is its ⓘ, which also describes the picker.
-    expect(profile.querySelectorAll(".ac-field__help, .small.muted")).toHaveLength(0);
+    expect(profile.querySelectorAll(".ac-field__example, .small.muted")).toHaveLength(0);
     const zone = within(profile).getByRole("button", { name: "Sobre Fuso horário" });
     const zoneHint = document.getElementById(zone.getAttribute("aria-describedby") ?? "");
     expect(zoneHint?.textContent).toBe("Mostra a sua hora local no seu cartão de perfil.");
     await click(within(profile).getByRole("button", { name: "Trocar foto" }));
+    await settle(2);
+    // The question comes first: build an avatar or upload a photo.
+    const ask = screen().getByRole("dialog", { name: "Como você quer aparecer?" });
+    expect(within(ask).getByRole("button", { name: /^Enviar uma foto/ })).toBeTruthy();
+    await click(within(ask).getByRole("button", { name: /^Criar um avatar/ }));
+    await settle(2);
+    // The builder: Masculine or Feminine, its tabs, and the photo one link away.
+    const builder = screen().getByRole("dialog", { name: "Seu avatar" });
+    expect(within(builder).getByRole("radio", { name: "Masculino" })).toBeTruthy();
+    expect(
+      within(builder)
+        .getAllByRole("tab")
+        .map((el) => el.textContent),
+    ).toEqual(["Rosto", "Cabelo", "Barba", "Marcas", "Acessórios", "Roupa", "Fundo"]);
+    await click(within(builder).getByRole("button", { name: "Enviar foto" }));
+    await settle(2);
     const dialog = screen().getByRole("dialog", { name: "Foto do perfil" });
     expect(within(dialog).getByRole("button", { name: /Solte uma imagem aqui/ })).toBeTruthy();
     expect((within(dialog).getByRole("button", { name: "Salvar" }) as HTMLButtonElement).disabled).toBe(true);

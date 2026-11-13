@@ -22,65 +22,26 @@ const open = async (state = seedState()) => {
   return { ...r, ev, state };
 };
 
-describe("a streaming answer keeps its spacing", () => {
-  const answer = "Primeiro parágrafo.\n\nSegundo parágrafo.\n\nTerceiro, ainda escrevendo";
-
-  test("settled blocks and the tail share one wrapper: the gap between blocks is the same live and final", () => {
-    const view = render(<MessageBody body={answer} live />);
-    const wrappers = () => view.container.querySelectorAll(".md");
-    expect(wrappers()).toHaveLength(1);
-    const wrapper = wrappers()[0] as HTMLElement;
+describe("a reply shows whole, once", () => {
+  test("its blocks are siblings in one wrapper, drawn once", () => {
+    const view = render(<MessageBody body={"Primeiro parágrafo.\n\nSegundo parágrafo.\n\nTerceiro."} />);
+    const wrappers = view.container.querySelectorAll(".md");
+    expect(wrappers).toHaveLength(1);
+    const wrapper = wrappers[0] as HTMLElement;
     expect(wrapper.classList.contains("md--message")).toBe(true);
-    // Every block is a sibling of the others (the `> * + *` gap applies between the settled ones and the tail).
     expect([...wrapper.children].map((c) => c.tagName)).toEqual(["P", "P", "P"]);
-    expect(wrapper.lastElementChild?.querySelector(".ac-word")).not.toBeNull();
-    expect(wrapper.firstElementChild?.querySelector(".ac-word")).toBeNull();
-    // The final message: the same wrapper element, the same blocks, no fading words.
-    view.rerender(<MessageBody body={answer} />);
-    expect(wrappers()).toHaveLength(1);
-    expect(wrappers()[0]).toBe(wrapper);
-    expect(wrapper.children).toHaveLength(3);
-    expect(wrapper.querySelector(".ac-word")).toBeNull();
-  });
-});
-
-describe("a streaming answer's done paragraphs stay put", () => {
-  test("a paragraph ending (the text ends on a blank line) doesn't redraw the ones above it or fade them in again", () => {
-    const view = render(<MessageBody body={"Um.\n\nDois.\n\nTres"} live />);
-    const blocks = () => [...view.container.querySelectorAll(".md--message > p")];
-    const [um, dois] = blocks();
-    for (const body of ["Um.\n\nDois.\n\nTres.\n\n", "Um.\n\nDois.\n\nTres.\n\nQuatro"]) {
-      view.rerender(<MessageBody body={body} live />);
-      expect(blocks()[0]).toBe(um as Element);
-      expect(blocks()[1]).toBe(dois as Element);
-      expect(um?.querySelector(".ac-word")).toBeNull();
-      expect(dois?.querySelector(".ac-word")).toBeNull();
-    }
   });
 
-  test("the final message keeps every block the live answer drew (not only the wrapper)", () => {
-    const body = "Um.\n\nDois.\n\nTres.\n\nQuatro.";
-    const view = render(<MessageBody body={body} live />);
-    const before = [...view.container.querySelectorAll(".md--message > *")];
-    view.rerender(<MessageBody body={body} />);
-    const after = [...view.container.querySelectorAll(".md--message > *")];
-    expect(after).toHaveLength(4);
-    for (const [i, el] of after.entries()) expect(el).toBe(before[i] as Element);
-    expect(view.container.querySelector(".ac-word")).toBeNull();
-  });
-});
-
-describe("live answer → saved message", () => {
-  test("the text the person was reading stays the same element when the message takes the block's place", async () => {
+  test("while it works nothing of its words shows; its message brings them, once", async () => {
     const { ev } = await open();
     const ids = { threadId: null, runId: "r-live", agentId: ADA_ID };
     const body = "O cache do relatório expirou.\n\nVou refazer a consulta";
     await ev({ type: "agent.run", ...ids, status: "running" });
+    await ev({ type: "agent.typing", ...ids });
     await ev({ type: "agent.delta", ...ids, seq: 0, text: body });
     await settle(3);
-    const row = document.querySelector('[data-run-id="r-live"]') as HTMLElement;
-    const text = row.querySelector(".ac-msg__text") as HTMLElement;
-    expect(text.textContent).toBe("O cache do relatório expirou.Vou refazer a consulta");
+    expect(document.querySelector('[data-run-id="r-live"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("cache do relatório");
     await ev({
       type: "message.created",
       messageId: "m-ada",
@@ -101,10 +62,7 @@ describe("live answer → saved message", () => {
       t.textContent?.includes("cache do relatório"),
     );
     expect(shown).toHaveLength(1);
-    expect(shown[0]).toBe(text);
-    expect(text.isConnected).toBe(true);
-    expect(text.querySelector(".ac-word")).toBeNull();
-    expect(text.closest(".ac-msg")?.classList.contains("ac-msg--streaming")).toBe(false);
+    expect(shown[0]?.closest(".ac-msg")?.classList.contains("ac-msg--streaming")).toBe(false);
   });
 });
 
@@ -219,31 +177,80 @@ describe("following the bottom", () => {
   });
 });
 
-describe("an image in a message", () => {
-  test("keeps its loading size until it is decoded (one size change, not a collapse first)", async () => {
+describe("a message's attachments", () => {
+  const withFiles = async (files: [name: string, type: string][], hold = false) => {
     const state = seedState();
     const api = createFakeApi(state);
-    const image = await api.artifacts.upload(
-      ORG_ID,
-      new File([new Uint8Array([137, 80, 78, 71, 1, 2, 3])], "tela.png", { type: "image/png" }),
-    );
+    const refs = [];
+    for (const [name, type] of files) {
+      const file = await api.artifacts.upload(ORG_ID, new File([new Uint8Array([1, 2, 3])], name, { type }));
+      refs.push({ id: file.id, version: 1, title: name });
+    }
     const base = state.messages[0] as (typeof state.messages)[number];
     state.messages.push({
       ...base,
-      id: "m-image",
+      id: "m-files",
       threadId: null,
-      body: "A tela:",
+      body: "Os arquivos:",
       mentionedAgentIds: [],
-      meta: { artifacts: [{ id: image.id, version: 1 }] },
+      meta: { artifacts: refs },
       createdAt: new Date().toISOString(),
     });
+    // The files' details never arrive: what the tiles are before them.
+    if (hold) api.artifacts.get = () => new Promise(() => {});
     await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
     await settle(10);
-    const thumb = document.querySelector(".artifact-tile__picture") as HTMLElement;
-    const img = thumb.querySelector("img") as HTMLImageElement;
+    return [...document.querySelectorAll<HTMLElement>(".artifact-cards > *")];
+  };
+  /** What decides a tile's box: its classes and kind, and whether it has a cover, a name under it, a player. */
+  const shape = (tile: HTMLElement) => ({
+    tile: tile.classList.contains("artifact-tile"),
+    media: tile.dataset.media ?? null,
+    kind: tile.dataset.kind === "video" ? "video" : null,
+    cover: [...tile.children].some((c) => c.classList.contains("artifact-tile__cover")),
+    name: tile.querySelector(".artifact-tile__foot .artifact-tile__title")?.textContent ?? null,
+    player: tile.querySelector(".ac-video--tile .ac-video__media") !== null,
+  });
+  const FILES: [string, string][] = [
+    ["motor.zip", "application/zip"],
+    ["tela.png", "image/png"],
+    ["clipe.mp4", "video/mp4"],
+    ["notas.pdf", "application/pdf"],
+  ];
+
+  test("each kind has its box before its details load: a file its cover and name, a picture its cover alone, a video its player's box", async () => {
+    const [zip, picture, video, pdf] = (await withFiles(FILES, true)).map(shape);
+    expect(zip).toEqual({ tile: true, media: null, kind: null, cover: true, name: "motor.zip", player: false });
+    expect(picture).toEqual({ tile: true, media: "true", kind: null, cover: true, name: null, player: false });
+    expect(video).toEqual({ tile: true, media: null, kind: "video", cover: false, name: null, player: true });
+    expect(pdf).toEqual({ tile: true, media: null, kind: null, cover: true, name: "notas.pdf", player: false });
+    for (const tile of document.querySelectorAll(".artifact-cards > *")) {
+      expect(tile.classList.contains("artifact-tile--loading")).toBe(true);
+      expect(tile.getAttribute("aria-busy")).toBe("true");
+    }
+  });
+
+  test("and keeps that box once they do, and once the picture is in: no tile changes shape", async () => {
+    const before = (await withFiles(FILES, true)).map(shape);
+    cleanup();
+    const tiles = await withFiles(FILES);
+    expect(tiles.map(shape)).toEqual(before);
+    expect(document.querySelector(".artifact-tile--loading")).toBeNull();
+    const picture = tiles[1]?.querySelector(".artifact-tile__picture") as HTMLElement;
+    const img = picture.querySelector("img") as HTMLImageElement;
     expect(img.getAttribute("src")).toStartWith("blob:");
-    expect(thumb.dataset.loading).toBe("true");
+    // No attribute, class or size of its own marks the picture as loading or loaded: the tile's box is its box.
+    const marks = () => [picture.className, picture.getAttribute("style"), img.getAttribute("style"), img.className];
+    const loading = marks();
     await act(async () => fireEvent.load(img));
-    expect(thumb.dataset.loading).toBeUndefined();
+    expect(marks()).toEqual(loading);
+    expect(picture.dataset.loading).toBeUndefined();
+    expect(document.querySelector(".ac-video")?.hasAttribute("data-ready")).toBe(false);
+  });
+
+  test("a file whose name doesn't say what it is keeps a file's box, its name wrapping as it will", async () => {
+    const [tile] = await withFiles([["Relatório do trimestre (versão final para a diretoria)", "image/png"]], true);
+    expect(shape(tile as HTMLElement).name).toBe("Relatório do trimestre (versão final para a diretoria)");
+    expect(shape(tile as HTMLElement).media).toBeNull();
   });
 });

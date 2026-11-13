@@ -9,6 +9,7 @@ import {
   useUpdateRole,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { can, type RolePermission } from "@agenteschat/client/lib/permissions";
 import {
   COMPUTER_KEYS,
@@ -126,6 +127,7 @@ export function RolesScreen() {
       label={roleName(t, role)}
       sub={roleSummary(t, i18n.language, role, everyone)}
       subLines={2}
+      media
       value={String(peopleWith(role, people).length)}
       chevron
       onPress={() => router.push(rolePath(role.id))}
@@ -146,6 +148,7 @@ export function RolesScreen() {
           label={t("roles.owner")}
           sub={t("rolesPage.summary.owner")}
           subLines={2}
+          media
           value={String(owners.length)}
           chevron
           onPress={() => router.push(rolePath(OWNER_ROLE))}
@@ -223,6 +226,7 @@ function RolePage({ role, people }: { role: OrgRole; people: Person[] }) {
             label={t("rolesPage.administrator")}
             sub={t("rolesPage.administratorDesc")}
             subLines={2}
+            media
             toggle={admin}
             disabled={Boolean(locked)}
             onPress={() => patch({ permissions: withKey(role, "administrator", !admin) })}
@@ -235,6 +239,7 @@ function RolePage({ role, people }: { role: OrgRole; people: Person[] }) {
             label={r.label}
             sub={r.line}
             subLines={2}
+            media
             value={r.value}
             chevron
             onPress={() => openArea(r.id)}
@@ -290,8 +295,7 @@ function RolePage({ role, people }: { role: OrgRole; people: Person[] }) {
           <GroupedRow
             label={t("rolesPage.hoist")}
             labelLines={2}
-            sub={t("rolesPage.hoistDesc")}
-            subLines={2}
+            hint={{ name: t("common.about", { label: t("rolesPage.hoist") }), text: t("rolesPage.hoistDesc") }}
             toggle={role.hoist}
             disabled={Boolean(locked)}
             onPress={() => patch({ hoist: !role.hoist })}
@@ -354,6 +358,8 @@ function PersonRow({ person, mine, onPress }: { person: Person; mine: boolean; o
       leading={<Face who={{ type: "person", id: person.userId }} size={30} live={false} />}
       label={mine ? `${person.name}${t("common.youSuffix")}` : person.name}
       sub={person.email}
+      subLines={2}
+      media
       {...(onPress ? { more: true, onPress } : {})}
     />
   );
@@ -434,6 +440,7 @@ function OwnerScreen({ people }: { people: Person[] }) {
             labelLines={2}
             sub={t(`rolesPage.owner.${i.key}Desc`)}
             subLines={2}
+            media
           />
         ))}
       </GroupedList>
@@ -561,11 +568,13 @@ export function AddToRoleScreen({ roleId }: { roleId: string }) {
   const { t } = useTranslation();
   const fail = useFail();
   const toast = useToast();
-  const { orgId, data, people, failed, viewer } = useRolesData();
+  const { orgId, data, people: live, failed, viewer } = useRolesData();
   const set = useSetMemberRoles(orgId);
   const change = useChangeRole(orgId);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  // Everyone as before Adicionar: the ones being added keep their rows while it adds and the screen goes back.
+  const people = useHeldWhile(live, busy);
   const [query, setQuery] = useState("");
   const owner = roleId === OWNER_ROLE;
   const role = data?.roles.find((r) => r.id === roleId);
@@ -579,6 +588,7 @@ export function AddToRoleScreen({ roleId }: { roleId: string }) {
       : [];
   const add = async () => {
     setBusy(true);
+    let stays = true;
     try {
       const ids = [...picked];
       // Owners as the web makes them: one by one, stopping at a refusal.
@@ -602,9 +612,12 @@ export function AddToRoleScreen({ roleId }: { roleId: string }) {
         toast({ title: t("rolesPage.added", { count: added, name }), icon: "check" });
       }
       if (refused) fail(refused);
-      else goBack();
+      else {
+        stays = false;
+        goBack();
+      }
     } finally {
-      setBusy(false);
+      if (stays) setBusy(false);
     }
   };
   return (
@@ -637,6 +650,8 @@ export function AddToRoleScreen({ roleId }: { roleId: string }) {
               leading={<Face who={{ type: "person", id: p.userId }} size={30} live={false} />}
               label={p.name}
               sub={p.email}
+              subLines={2}
+              media
               checked={picked.has(p.userId)}
               onPress={() =>
                 setPicked((now) => {
@@ -746,7 +761,9 @@ export function RenameRoleScreen({ roleId }: { roleId: string }) {
       action={{ label: t("common.save"), disabled: !ready, onPress: save }}
       locked={update.isPending}
     >
-      <GroupedHeader>{t("rolesPage.name")}</GroupedHeader>
+      <GroupedHeader hint={{ name: t("common.about", { label: t("rolesPage.name") }), text: t("rolesPage.nameDesc") }}>
+        {t("rolesPage.name")}
+      </GroupedHeader>
       <TextArea
         value={value}
         onChangeText={setDraft}
@@ -758,7 +775,6 @@ export function RenameRoleScreen({ roleId }: { roleId: string }) {
         onSubmitEditing={save}
         accessibilityLabel={t("rolesPage.name")}
       />
-      <GroupedFooter>{t("rolesPage.nameDesc")}</GroupedFooter>
     </SettingsPage>
   );
 }

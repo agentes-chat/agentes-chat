@@ -32,6 +32,8 @@ export interface SelectProps<V extends string = string> {
   /** Taken from the surrounding `Field` when omitted. */
   id?: string;
   "aria-label"?: string;
+  /** What the choice means, outside a `Field` (a strip's control: its meaning lives in its tip). */
+  "aria-describedby"?: string;
   placeholder?: string;
   size?: "md" | "sm";
   disabled?: boolean;
@@ -49,10 +51,17 @@ export interface SelectProps<V extends string = string> {
   onCloseAutoFocus?: (event: Event) => void;
 }
 
+/**
+ * What Radix gets for an option whose value is "" ("Ninguém"): Radix reads "" as nothing chosen and shows the
+ * placeholder, so the trigger of a select set to that option would show an empty box.
+ */
+const EMPTY_VALUE = "\u0000";
+const toRadix = (v: string) => (v === "" ? EMPTY_VALUE : v);
+
 /** The options, a line before the first of a run of action rows that follows choices. */
 function renderItems<V extends string>(items: SelectOption<V>[], all: typeof items) {
   return items.map((o) => {
-    const item = <SelectItem key={o.value} option={o} />;
+    const item = <SelectItem key={o.value || EMPTY_VALUE} option={o} />;
     const before = all[all.indexOf(o) - 1];
     if (!o.action || !before || before.action) return item;
     return [<RSelect.Separator key={`${o.value}-sep`} className="ac-menu__separator" />, item];
@@ -73,7 +82,7 @@ function SelectItem<V extends string>({ option: o }: { option: SelectOption<V> }
   return (
     // The chosen option shows by its background and a check at its end, whose room every row keeps: names line up.
     <RSelect.Item
-      value={o.value}
+      value={toRadix(o.value)}
       disabled={o.disabled}
       className="ac-menu__item"
       {...(o.hint
@@ -182,12 +191,20 @@ export function Select<V extends string = string>({
   const chosen = options.find((o) => o.value === value);
   return (
     <div className={cx("ac-select", size === "sm" && "ac-select--sm", className)}>
-      <RSelect.Root value={value} onValueChange={(v) => onValueChange(v as V)} disabled={disabled}>
+      <RSelect.Root
+        // A value none of the options has (a list still loading, an option gone) is nothing chosen to Radix ("", its
+        // placeholder): passed as it is, Radix shows that value with no item to draw it, an empty box.
+        value={chosen ? toRadix(chosen.value) : value === undefined ? undefined : ""}
+        onValueChange={(v) => onValueChange((v === EMPTY_VALUE ? "" : v) as V)}
+        disabled={disabled}
+      >
         <RSelect.Trigger
           className="ac-select__trigger"
           id={wiring.id}
           aria-label={rest["aria-label"]}
-          aria-describedby={wiring["aria-describedby"]}
+          aria-describedby={
+            [wiring["aria-describedby"], rest["aria-describedby"]].filter(Boolean).join(" ") || undefined
+          }
           aria-invalid={wiring["aria-invalid"]}
         >
           <span className="ac-select__value">

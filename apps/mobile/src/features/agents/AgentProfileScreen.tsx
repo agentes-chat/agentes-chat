@@ -27,20 +27,23 @@ import { agentPlan, aiStateOf, planLabel, planOfAccount } from "@agenteschat/cli
 import { can } from "@agenteschat/client/lib/permissions";
 import { planMeterText, usageShown } from "@agenteschat/client/lib/plan-usage";
 import { memoryLine } from "@agenteschat/client/lib/proposals";
-import { AUTO, isAuto } from "@agenteschat/client/lib/providers";
+import { apiModelName, autoMakerOf, isAuto } from "@agenteschat/client/lib/providers";
 import { isRightHand, tellsNameStory } from "@agenteschat/client/lib/right-hand";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { planLine } from "@agenteschat/ui/plan-state";
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { readValueSync, STORED, writeValue } from "@/lib/storage";
 import { useOrg } from "@/providers/org";
 import {
   AgentAvatar,
   Button,
   EmptyState,
+  GROUPED_ROW,
   GroupedFooter,
   GroupedHeader,
   GroupedList,
@@ -53,6 +56,7 @@ import {
   ProviderLogo,
   Segmented,
   Sky,
+  SwipeRow,
   Text,
   useReducedMotion,
   useToast,
@@ -65,13 +69,14 @@ import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
 import { LetMeTalkButton } from "../chat/ReachLines";
 import { AgentComputerButton, AgentComputerPicture } from "../computer/AgentComputerRow";
+import { KeptRunningList } from "../computer/KeptRunning";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { chatHref } from "../links/logic";
 import { UsageQueueSheet } from "../queue/UsageQueueSheet";
 import { openRightHandSettings, RightHandMine } from "../right-hand/SettingsScreen";
 import { useConnectedById } from "../settings/hooks";
 import { agentBadgeInset } from "../shared/Face";
-import { useColors, useDirectory, useMeId, useNow, useOrgId, useWhen } from "../shared/hooks";
+import { useColors, useDirectory, useErrorToast, useMeId, useNow, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
 import { SheetTitle } from "../shared/PromptForm";
 import { PushedHeader } from "../shared/parts";
@@ -84,6 +89,7 @@ import { StatusCard } from "../status/StatusCard";
 import { openAgentUsage } from "../usage/UsageScreen";
 import { openAgentEdit } from "./AgentEditScreen";
 import { useAgentMailboxes } from "./AgentMailSection";
+import { ApprovalsLevelRow } from "./ApprovalsLevelRow";
 import {
   agoOf,
   byPlaybook,
@@ -91,6 +97,7 @@ import {
   type DidLine,
   didLines,
   knownAboutMe,
+  modelRow,
   plainRole,
   spendOf,
   statusCardShown,
@@ -98,9 +105,10 @@ import {
 } from "./logic";
 import { MergeReposSection } from "./MergeReposSection";
 import { MonthPixels } from "./MonthPixels";
+import { openAgentMore } from "./more-link";
 import { AgentSetupCard } from "./setup/SetupCard";
 import { useMemoryOriginText } from "./useMemoryOriginText";
-import { agoText, workTitle, workWhere } from "./work";
+import { agoShort, workTitle, workWhere } from "./work";
 
 /** Rows of "O que fez por você" before "Ver tudo". */
 const DID_SHOWN = 4;
@@ -159,6 +167,7 @@ function Profile({ id }: { id: string }) {
   const dir = useDirectory();
   const c = useColors();
   const toast = useToast();
+  const failed = useErrorToast();
   const sheet = useSheet();
   const when = useWhen();
   const meId = useMeId();
@@ -175,8 +184,16 @@ function Profile({ id }: { id: string }) {
   const details = seesDetails(agent);
   // The team's right hand (ADR 0137): what it is and how it works, its model, Configurar for who manages agents.
   const rightHand = isRightHand(agent);
-  // Which view shows; only for this visit.
-  const [tab, setTab] = useState<ProfileTab>("today");
+  // A personal workspace's agent (ADR 0159 §3): its rules, repositories and the rest in Advanced.
+  const personal = isPersonal(org);
+  // Which view shows: the one last chosen, on every profile (a person who reads memories keeps reading memories).
+  const [tab, setTabState] = useState<ProfileTab>(() => profileTabOf(readValueSync(STORED.agentProfileTab)));
+  const setTab = (next: ProfileTab) => {
+    setTabState(next);
+    void writeValue(STORED.agentProfileTab, next === "today" ? null : next);
+  };
+  // A hello when its profile opens (a rare, small moment): it smiles once, unless it is at work.
+  const hello = useHello();
   const reduced = useReducedMotion();
   const modelLabel = useModelLabel();
   const detail = useAgentDetail(orgId, id);
@@ -184,7 +201,7 @@ function Profile({ id }: { id: string }) {
   const usage = useUsage(orgId);
   const forYou = useAgentForYou(orgId, id);
   const knows = useMemoryAboutMe(orgId, id);
-  const mailboxes = useAgentMailboxes(id, details && !rightHand);
+  const mailboxes = useAgentMailboxes(id, details);
   const work = useWorkingNow().filter((w) => w.agentId === id);
   const asking = useWaitingApprovals().filter((a) => a.agentId === id);
   // On a billing hold an AI comes after the plan: no row to connect one.
@@ -249,6 +266,28 @@ function Profile({ id }: { id: string }) {
   const money = (v: number) =>
     new Intl.NumberFormat(i18n.language || "en", { style: "currency", currency: "USD" }).format(v);
   const originText = useMemoryOriginText();
+  // Forgetting is the list's swipe (as the system's lists delete), confirmed by a system alert that says what stays.
+  const memoryAct = useMemoryAction(orgId, id);
+  const forgetAsk = (m: Memory) =>
+    Alert.alert(
+      t("mobile.intentAgents.knows.forgetTitle"),
+      t("mobile.intentAgents.knows.forgetBody", agentGrammar(name)),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("mobile.intentAgents.knows.forget"),
+          style: "destructive",
+          onPress: () =>
+            memoryAct.mutate(
+              { type: "archive", id: m.id, archived: true },
+              {
+                onSuccess: () => toast({ title: t("mobile.intentAgents.fix.forgotten"), agentId: id }),
+                onError: failed,
+              },
+            ),
+        },
+      ],
+    );
 
   const openDm = (to: { agentId: string } | { userId: string } = { agentId: id }) =>
     api.dms
@@ -257,7 +296,7 @@ function Profile({ id }: { id: string }) {
         void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
         router.push(chatHref(channelId));
       })
-      .catch(() => toast({ title: t("mobile.app.failed"), icon: "x" }));
+      .catch(failed);
 
   const open = (href: DidLine["href"]) => {
     if (!href) return;
@@ -267,37 +306,35 @@ function Profile({ id }: { id: string }) {
     else router.push(`/approval/${href.id}`);
   };
 
-  const fix = (m: Memory) =>
-    sheet.open(
-      <MemoryFix
-        memory={m}
-        agentId={id}
-        agentName={name}
-        g={g}
-        source={m.from ? t("mobile.intentAgents.fix.from", { when: when.short(m.from.at) }) : originText(m)}
-        onSee={
-          m.from
-            ? () => {
-                const from = m.from;
-                sheet.close();
-                if (from) router.push(chatHref(from.channelId, from.threadId));
-              }
-            : undefined
-        }
-        onDone={sheet.close}
-      />,
+  const memoryRow = (m: Memory) => {
+    const row = (
+      <GroupedRow
+        icon="brain"
+        label={m.summary ?? memoryLine(t, m)}
+        labelLines={2}
+        sub={originText(m)}
+        // The same screen Memória opens for it (one place to read, fix or forget a memory).
+        chevron
+        onPress={() => router.push(`/memory/${m.id}`)}
+      />
     );
-
-  const memoryRow = (m: Memory) => (
-    <GroupedRow
-      key={m.id}
-      icon="brain"
-      label={m.summary ?? memoryLine(t, m)}
-      labelLines={2}
-      sub={originText(m)}
-      {...(editable ? { chevron: true, onPress: () => fix(m) } : {})}
-    />
-  );
+    if (!editable) return <Fragment key={m.id}>{row}</Fragment>;
+    return (
+      <SwipeRow
+        key={m.id}
+        right={{
+          label: t("mobile.intentAgents.knows.forget"),
+          icon: "trash",
+          color: c.danger,
+          ink: c.bg,
+          onAction: () => forgetAsk(m),
+        }}
+      >
+        {/* The swipe's pane shows under the row, so the row is opaque, in the list's own white. */}
+        <View style={{ backgroundColor: c.raised }}>{row}</View>
+      </SwipeRow>
+    );
+  };
 
   const ownerLine = rightHand
     ? null
@@ -306,26 +343,16 @@ function Profile({ id }: { id: string }) {
       : owner
         ? t("mobile.intentAgents.owner", { name: owner })
         : null;
+  // The right hand's one role name, as its row in Conversas and its conversation's header say it.
   const roleLine = rightHand
-    ? `${t("rightHand.role")} · ${t("rightHand.label")}`
+    ? t("rightHand.labelCapitalized")
     : [roleName || null, plain ? (roleName ? lowerFirst(plain, i18n.language) : plain) : null]
         .filter(Boolean)
         .join(" · ");
   const shownDid = allDid ? did : did.slice(0, DID_SHOWN);
-  // A line's kind or title, then when: "Document · yesterday".
-  const didKind = (sub: DidLine["sub"]) => {
-    if (!sub) return null;
-    return "text" in sub ? sub.text : t(`mobile.intentAgents.did.${sub.key}`, sub.values ?? {});
-  };
-  const didSub = (l: DidLine) => [didKind(l.sub), when.short(l.at)].filter(Boolean).join(" · ");
-  const didHead = [
-    t("mobile.intentAgents.did.title", agentGrammar(name)),
-    forYou.data && forYou.data.monthCount > 0
-      ? t("mobile.intentAgents.did.month", { count: forYou.data.monthCount })
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // One fact under each line: when. What it was is in the line itself and in its tile.
+  const didSub = (l: DidLine) => when.short(l.at);
+  const didHead = t("mobile.intentAgents.did.title", agentGrammar(name));
 
   // "This month" in one row (ADR 0063 §5): the plan it thinks with, or its model, and how much of it is used; the
   // budget once it spent through the API. The usage page has the rest.
@@ -339,13 +366,14 @@ function Profile({ id }: { id: string }) {
     return `${formatPercent(i18n.language, spend.percent)} ${t("mobile.agent.ofMonthBudget")}`;
   };
   const budgetLine = budgetText();
+  // On Automático, the maker of the key it runs on ("Claude"), as the right hand's panel names its key.
   const apiModel = !agent?.model
     ? null
-    : isAuto(agent.model)
-      ? t("brain.auto.label")
-      : (modelLabel(agent.model) ?? agent.model);
+    : apiModelName(t, agent.model, modelLabel(agent.model) ?? undefined, autoMakerOf(aiStatus.data, id));
   const monthLabel =
     shown.plan?.account ?? thinksPlan ?? thinks?.text ?? apiModel ?? t("usageViews.agent.title", agentGrammar(name));
+  // A plan's maker, or the maker Automático's models come from through the API.
+  const monthMark = thinks?.mark ?? agent?.brain?.maker;
   // A short value fits on the right ("week 40%", "$3.20 of $50.00"); a sentence goes under the name.
   const monthValue = planNow?.top
     ? `${meter.short(planNow.top)} ${planNow.top.used}%`
@@ -390,7 +418,8 @@ function Profile({ id }: { id: string }) {
         <View style={styles.block}>
           <WaitingCard
             agentId={id}
-            kind={{ icon: "shield", label: t("ask.kind.approval") }}
+            // Its name is right above the card: the kind line says what it asks, not who.
+            kind={{ icon: "shield", label: t("mobile.intentAgents.asksApproval") }}
             title={approvalTitle(t, waitingNow)}
             expires={left ? { createdAt: waitingNow.createdAt, expiresAt: waitingNow.expiresAt } : null}
             action={{ label: t("mobile.chats.wait.review"), onPress: review }}
@@ -433,7 +462,7 @@ function Profile({ id }: { id: string }) {
                   </View>
                 }
                 label={workTitle(t, w)}
-                sub={[w.what ? workWhere(t, w) : null, agoText(t, agoOf(w.since, now))].filter(Boolean).join(" · ")}
+                sub={[w.what ? workWhere(t, w) : null, agoShort(t, agoOf(w.since, now))].filter(Boolean).join(" · ")}
                 chevron
                 onPress={() =>
                   w.missionId ? router.push(`/mission/${w.missionId}`) : router.push(chatHref(w.channelId, w.threadId))
@@ -450,6 +479,21 @@ function Profile({ id }: { id: string }) {
     <>
       {nowBlock}
       <AgentComputerPicture agentId={id} />
+      {/* What it keeps running there (ADR 0176), for whoever may watch its computer. */}
+      <KeptRunningList agentId={id} />
+      {/* What it thinks with and how much of it is used this month, one row (ADR 0063 §5): the plan or key as its
+          name, the usage under it. The usage page has the rest. */}
+      <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
+      <GroupedList>
+        <GroupedRow
+          {...(monthMark ? { leading: <ProviderLogo id={monthMark} size="sm" /> } : { icon: "key" as const })}
+          label={monthLabel}
+          {...(monthValue ? { value: monthValue } : {})}
+          {...(monthSub ? { sub: monthSub, subLines: 2 } : {})}
+          chevron
+          onPress={() => openAgentUsage(id)}
+        />
+      </GroupedList>
       {forYou.data || forYou.isError ? (
         <>
           <GroupedHeader>{didHead}</GroupedHeader>
@@ -477,9 +521,11 @@ function Profile({ id }: { id: string }) {
               />
             ))}
             {did.length > DID_SHOWN ? (
+              // The rest of the month folds under one row that says how many there are.
               <GroupedRow
                 key="all"
                 label={allDid ? t("mobile.intentAgents.did.seeLess") : t("mobile.intentAgents.did.seeAll")}
+                {...(allDid ? {} : { value: String(did.length) })}
                 chevron={!allDid}
                 onPress={() => setAllDid((v) => !v)}
               />
@@ -488,18 +534,6 @@ function Profile({ id }: { id: string }) {
           {did.length === 0 ? <GroupedFooter>{t(`mobile.intentAgents.did.empty${g}`, { name })}</GroupedFooter> : null}
         </>
       ) : null}
-      <GroupedHeader>{t("mobile.agent.month")}</GroupedHeader>
-      <GroupedList>
-        {/* The month by account and the plan it thinks with now open on its usage page, as the web's Usage tab. */}
-        <GroupedRow
-          {...(thinks?.mark ? { leading: <ProviderLogo id={thinks.mark} size="sm" /> } : { icon: "chart" as const })}
-          label={monthLabel}
-          {...(monthValue ? { value: monthValue } : {})}
-          {...(monthSub ? { sub: monthSub, subLines: 2 } : {})}
-          chevron
-          onPress={() => openAgentUsage(id)}
-        />
-      </GroupedList>
     </>
   );
 
@@ -514,9 +548,10 @@ function Profile({ id }: { id: string }) {
       : uses.asks
         ? asksNote()
         : null;
+  // The right hand's AI is each person's, on its settings ("Sua IA"): its access shows only what it may use.
   const accessView = (
     <>
-      {thinks ? (
+      {thinks && !rightHand ? (
         <>
           <GroupedHeader>{t("mobile.intentAgents.thinks")}</GroupedHeader>
           <GroupedList>
@@ -558,7 +593,7 @@ function Profile({ id }: { id: string }) {
                 />
               ),
             )}
-            {/* Its mailboxes beside its apps (ADR 0038): a tap on one's own changes the level. */}
+            {/* Its mailboxes beside its apps (ADR 0038): a tap on one's own picks the level. */}
             {mailboxes.map((m) =>
               m.remove ? (
                 <ButtonRow
@@ -585,8 +620,10 @@ function Profile({ id }: { id: string }) {
                   icon="mail"
                   label={m.address}
                   {...(m.sub ? { sub: m.sub, subLines: 2 } : {})}
+                  {...(m.hint ? { hint: m.hint } : {})}
                   value={m.level}
-                  {...(m.onPress ? { onPress: m.onPress } : {})}
+                  // The value changes in its row, through the app's picker: its mark, not a chevron to a screen.
+                  {...(m.onPress ? { menu: true, onPress: m.onPress } : {})}
                 />
               ),
             )}
@@ -604,21 +641,39 @@ function Profile({ id }: { id: string }) {
           {usesNote ? <GroupedFooter>{usesNote}</GroupedFooter> : null}
         </>
       ) : null}
-      <AlwaysApproved agentId={id} name={name} mayRemove={mine || can(org, "approve_actions")} />
-      <MergeReposSection agentId={id} name={name} mayEdit={mine || can(org, "manage_agents")} />
-      {ownerLine ? (
+      {agent ? (
         <View style={styles.apart}>
-          <GroupedList>
-            <GroupedRow icon="person" label={ownerLine} />
-          </GroupedList>
+          <ApprovalsLevelRow agent={agent} />
         </View>
       ) : null}
+      {personal ? (
+        // A personal workspace keeps its rules, repositories and the rest in Advanced (ADR 0159 §3).
+        rightHand ? null : (
+          <View style={styles.apart}>
+            <GroupedList>
+              <GroupedRow icon="more" label={t("agentPage.tabs.advanced")} chevron onPress={() => openAgentMore(id)} />
+            </GroupedList>
+          </View>
+        )
+      ) : (
+        <>
+          <AlwaysApproved agentId={id} name={name} mayRemove={mine || can(org, "approve_actions")} />
+          <MergeReposSection agentId={id} name={name} mayEdit={mine || can(org, "manage_agents")} />
+          {ownerLine ? (
+            <View style={styles.apart}>
+              <GroupedList>
+                <GroupedRow icon="person" label={ownerLine} />
+              </GroupedList>
+            </View>
+          ) : null}
+        </>
+      )}
     </>
   );
 
-  // Who may correct what it knows, said once under the memories.
+  // Who may correct what it knows, said once under the memories (a tap corrects, a swipe forgets).
   const editFoot = editable
-    ? t(`mobile.intentAgents.knows.foot${g}`)
+    ? t("mobile.intentAgents.knows.footSwipe")
     : owner
       ? t("mobile.intentAgents.knows.footOwner", { name: owner })
       : t("mobile.intentAgents.knows.footAdmins");
@@ -631,9 +686,15 @@ function Profile({ id }: { id: string }) {
       </GroupedFooter>
       {learned.playbook.length > 0 ? (
         <>
-          <GroupedHeader>{t("agentPage.memory.playbook", agentGrammar(name))}</GroupedHeader>
+          <GroupedHeader
+            hint={{
+              name: t("common.about", { label: t("agentPage.memory.playbook", agentGrammar(name)) }),
+              text: t("agentPage.memory.playbookNote"),
+            }}
+          >
+            {t("agentPage.memory.playbook", agentGrammar(name))}
+          </GroupedHeader>
           <GroupedList>{learned.playbook.map(memoryRow)}</GroupedList>
-          <GroupedFooter>{t("agentPage.memory.playbookNote")}</GroupedFooter>
           {learned.people.length === 0 ? <GroupedFooter>{editFoot}</GroupedFooter> : null}
         </>
       ) : null}
@@ -641,9 +702,9 @@ function Profile({ id }: { id: string }) {
   );
   const memoryView = (
     <>
-      {/* What people told it to always do first, as the web's Memória. */}
-      <GivenRules agentId={id} />
       {knows.data ? memoryKnows : null}
+      {/* What people told it to always do, under what it learned, as the web's Memória. */}
+      <GivenRules agentId={id} name={name} rightHand={rightHand} />
     </>
   );
 
@@ -664,7 +725,12 @@ function Profile({ id }: { id: string }) {
           {/* Its presence is the badge; a screen reader hears it in words, with why. */}
           <Animated.View style={avatarFade} {...(status ? { accessible: true, accessibilityLabel: status.line } : {})}>
             <WithPresence size={FACE} presence={status?.presence} inset={agentBadgeInset(look, FACE)}>
-              <AgentAvatar agent={look} size={FACE} mode={busy ? "run" : "idle"} />
+              <AgentAvatar
+                agent={look}
+                size={FACE}
+                mode={busy ? "run" : "idle"}
+                {...(hello && !busy ? { expression: "happy" as const } : {})}
+              />
             </WithPresence>
           </Animated.View>
         </View>
@@ -688,7 +754,6 @@ function Profile({ id }: { id: string }) {
                 <Button
                   variant="primary"
                   wide
-                  icon="chat"
                   label={t("mobile.agent.talk")}
                   disabled={!listsAgent(org, agent)}
                   onPress={() => void openDm()}
@@ -697,13 +762,16 @@ function Profile({ id }: { id: string }) {
                 <Button
                   variant="primary"
                   wide
-                  icon="chat"
                   label={t("profile.askAccess")}
                   onPress={() => void openDm({ userId: ownerId })}
                 />
               )}
             </View>
-            {details && !rightHand ? <AgentComputerButton agentId={id} /> : null}
+            {details && !rightHand ? (
+              <View style={styles.grow}>
+                <AgentComputerButton agentId={id} />
+              </View>
+            ) : null}
           </View>
           {agent?.canTalk === false ? (
             <Text variant="small" tone="muted" style={styles.center}>
@@ -731,11 +799,20 @@ function Profile({ id }: { id: string }) {
               <GroupedRow icon="lock" label={t("rightHand.profile.private")} labelLines={2} />
               <GroupedRow icon="hash" label={t("rightHand.profile.channels")} labelLines={2} />
               <GroupedRow
-                icon="brain"
+                {...(agent.brain?.maker
+                  ? { leading: <ProviderLogo id={agent.brain.maker} size="sm" /> }
+                  : { icon: "brain" as const })}
                 label={t("rightHand.profile.model")}
-                value={agent.model === AUTO ? t("brain.auto.label") : (modelLabel(agent.model) ?? agent.model)}
+                {...modelRow(
+                  t,
+                  agent.brain,
+                  apiModelName(t, agent.model, modelLabel(agent.model) ?? undefined, autoMakerOf(aiStatus.data, id)),
+                )}
               />
             </GroupedList>
+            {details ? accessView : null}
+            {/* What it keeps for the viewer and the rules they gave it: theirs to see and take back. */}
+            {memoryView}
           </View>
         ) : details ? (
           <>
@@ -763,14 +840,13 @@ function Profile({ id }: { id: string }) {
         )}
       </Animated.ScrollView>
       <View style={styles.bar} pointerEvents="box-none">
-        {/* Its person changes its look; admins, everything ("Editar", as the web's Configurações). */}
+        {/* Its person changes its look; admins, everything ("Editar", as the web's Configurações). The right hand's
+            settings open for everyone: each person has their own there. */}
         <PushedHeader
           plate
           solid={false}
           {...(rightHand
-            ? can(org, "manage_agents")
-              ? { action: { label: t("rightHand.profile.configure"), onPress: openRightHandSettings } }
-              : {}
+            ? { action: { label: t("rightHand.profile.configure"), onPress: openRightHandSettings } }
             : decides && agent
               ? { action: { label: t("agent.edit"), onPress: () => openAgentEdit(id) } }
               : {})}
@@ -785,10 +861,11 @@ function Profile({ id }: { id: string }) {
  * from a request, by whom and when. Its owner and whoever decides approvals take one back with its ×, at once.
  * Shown only when there is something.
  */
-function AlwaysApproved({ agentId, name, mayRemove }: { agentId: string; name: string; mayRemove: boolean }) {
+export function AlwaysApproved({ agentId, name, mayRemove }: { agentId: string; name: string; mayRemove: boolean }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const toast = useToast();
+  const failed = useErrorToast();
   const when = useWhen();
   const dir = useDirectory();
   const connected = useConnectedById();
@@ -831,7 +908,7 @@ function AlwaysApproved({ agentId, name, mayRemove }: { agentId: string; name: s
                     onPress={() =>
                       remove.mutate(rule.id, {
                         onSuccess: () => toast({ title: t("agentPage.access.always.removed", { name }), agentId }),
-                        onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
+                        onError: failed,
                       })
                     }
                   />
@@ -906,53 +983,76 @@ function ButtonRow({
 
 /**
  * "Regras que as pessoas deram", as on the web's Memória: what people told it to always do, by whom and when. Its
- * giver, the agent's owner and admins take one back with its ×. Shown only when there is something.
+ * giver, the agent's owner and admins take one back with a swipe, confirmed by a system alert (never a bare × that
+ * deletes on the tap). Shown only when there is something.
  */
-function GivenRules({ agentId }: { agentId: string }) {
+function GivenRules({ agentId, name, rightHand }: { agentId: string; name: string; rightHand: boolean }) {
   const { t } = useTranslation();
+  const c = useColors();
   const orgId = useOrgId();
   const toast = useToast();
+  const failed = useErrorToast();
   const when = useWhen();
   const memory = useMemory(orgId, agentId);
   const remove = useMemoryAction(orgId, agentId);
   const list = (memory.data ?? []).filter((m) => m.kind === "rule" && !m.archived);
   if (list.length === 0) return null;
+  const ask = (m: Memory) =>
+    Alert.alert(t("mobile.intentAgents.knows.ruleTitle"), t("mobile.intentAgents.knows.ruleBody", agentGrammar(name)), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("mobile.intentAgents.knows.ruleRemove"),
+        style: "destructive",
+        onPress: () =>
+          remove.mutate(
+            { type: "archive", id: m.id, archived: true },
+            {
+              onSuccess: () => toast({ title: t("agentPage.memory.ruleRemoved"), agentId }),
+              onError: failed,
+            },
+          ),
+      },
+    ]);
   return (
     <>
-      <GroupedHeader>{t("agentPage.memory.rules")}</GroupedHeader>
+      <GroupedHeader
+        hint={{
+          name: t("common.about", { label: t("agentPage.memory.rules") }),
+          text: t(rightHand ? "agentPage.memory.rulesNoteRightHand" : "agentPage.memory.rulesNote"),
+        }}
+      >
+        {t("agentPage.memory.rules")}
+      </GroupedHeader>
       <GroupedList>
-        {list.map((m) => (
-          <ButtonRow
-            key={m.id}
-            icon="flag"
-            label={m.text}
-            labelLines={3}
-            sub={t("agentPage.memory.ruleBy", {
-              name: m.origin?.name ?? t("memory.origin.someone"),
-              date: when.short(m.origin?.at ?? m.updatedAt),
-            })}
-            trailing={
-              m.removable ? (
-                <IconButton
-                  icon="x"
-                  label={t("agentPage.memory.removeRule")}
-                  disabled={remove.isPending}
-                  onPress={() =>
-                    remove.mutate(
-                      { type: "archive", id: m.id, archived: true },
-                      {
-                        onSuccess: () => toast({ title: t("agentPage.memory.ruleRemoved"), agentId }),
-                        onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
-                      },
-                    )
-                  }
-                />
-              ) : undefined
-            }
-          />
-        ))}
+        {list.map((m) => {
+          const row = (
+            <GroupedRow
+              icon="flag"
+              label={m.text}
+              labelLines={3}
+              sub={t("agentPage.memory.ruleBy", {
+                name: m.origin?.name ?? t("memory.origin.someone"),
+                date: when.short(m.origin?.at ?? m.updatedAt),
+              })}
+            />
+          );
+          if (!m.removable) return <Fragment key={m.id}>{row}</Fragment>;
+          return (
+            <SwipeRow
+              key={m.id}
+              right={{
+                label: t("mobile.intentAgents.knows.ruleRemove"),
+                icon: "trash",
+                color: c.danger,
+                ink: c.bg,
+                onAction: () => ask(m),
+              }}
+            >
+              <View style={{ backgroundColor: c.raised }}>{row}</View>
+            </SwipeRow>
+          );
+        })}
       </GroupedList>
-      <GroupedFooter>{t("agentPage.memory.rulesNote")}</GroupedFooter>
     </>
   );
 }
@@ -966,6 +1066,7 @@ export function MemoryFix({
   source,
   onSee,
   onDone,
+  title,
 }: {
   memory: Memory;
   agentId: string;
@@ -974,6 +1075,8 @@ export function MemoryFix({
   source: string;
   onSee: (() => void) | undefined;
   onDone: () => void;
+  /** In place of "Corrigir a memória de…" (the team's memory, ADR 0167). */
+  title?: string;
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
@@ -982,7 +1085,7 @@ export function MemoryFix({
   const action = useMemoryAction(orgId, agentId);
   const [text, setText] = useState(m.text);
   const changed = text.trim() !== "" && text.trim() !== m.text.trim();
-  const failed = () => toast({ title: t("mobile.app.failed"), icon: "x" });
+  const failed = useErrorToast();
   const save = () =>
     action.mutate(
       { type: "edit", id: m.id, text: text.trim() },
@@ -1007,7 +1110,7 @@ export function MemoryFix({
     );
   return (
     <>
-      <SheetTitle title={t(`mobile.intentAgents.fix.title${g}`, { name: agentName })} />
+      <SheetTitle title={title ?? t(`mobile.intentAgents.fix.title${g}`, { name: agentName })} />
       <Locked when={action.isPending}>
         <TextArea value={text} onChangeText={setText} autoFocus maxLength={8000} />
       </Locked>
@@ -1050,6 +1153,22 @@ export function MemoryFix({
 
 const TAB_IN = FadeIn.duration(160);
 
+/** A saved tab, or Hoje. */
+const profileTabOf = (v: string | null): ProfileTab => (v === "access" || v === "memory" ? v : "today");
+
+/** How long the face holds its smile when the profile opens. */
+const HELLO_MS = 900;
+
+/** True for a moment after the profile opens: the face's hello. */
+function useHello() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const off = setTimeout(() => setOn(false), HELLO_MS);
+    return () => clearTimeout(off);
+  }, []);
+  return on;
+}
+
 /** Height of the sky cover, the bar's area included. */
 const COVER_HEIGHT = 250;
 /** The agent's face, unframed, and the room under it at the cover's foot. */
@@ -1064,19 +1183,21 @@ const styles = StyleSheet.create({
   bar: { position: "absolute", top: 0, left: 0, right: 0 },
   // Not clipped: on a pull the sky grows up into the gap above the content.
   cover: { height: COVER_HEIGHT, alignItems: "center", justifyContent: "flex-end", paddingBottom: COVER_FOOT },
-  prof: { paddingHorizontal: 24, gap: 4 },
+  // Face, name 28, what it does 15: 8 apart; the buttons 16 under them.
+  prof: { paddingHorizontal: 24, gap: 8 },
   center: { textAlign: "center" },
-  // Chat takes the row; the computer's square sits beside it.
-  acts: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 14 },
+  // Chat and Computador side by side, the same width (one primary); 16 under the words (8 of `prof` and 8 here).
+  acts: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   setup: { paddingHorizontal: 16, marginTop: 22 },
   grow: { flex: 1, minWidth: 0 },
   bold: { fontWeight: "600" },
   pressed: { opacity: 0.6 },
-  // `Segmented` sizes to its labels: a row centers it under the centered head.
-  tabs: { paddingHorizontal: 16, paddingTop: 20 },
+  // `Segmented` sizes to its labels: a row centers it under the centered head, 16 under the buttons.
+  tabs: { paddingHorizontal: 16, paddingTop: 16 },
   page: { paddingHorizontal: 16 },
   block: { marginTop: 16 },
-  orbit: { width: 30, height: 30, alignItems: "center", justifyContent: "center" },
+  // The orbit centered in the row's 36 leading column, where a tile would sit.
+  orbit: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   pixels: { marginBottom: 12 },
   apart: { marginTop: 24 },
   remove: { marginTop: 6, alignSelf: "flex-start" },
@@ -1085,12 +1206,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    minHeight: 50,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    minHeight: GROUPED_ROW.minHeight,
+    paddingHorizontal: GROUPED_ROW.padX,
+    paddingVertical: GROUPED_ROW.padY,
   },
-  // One leading column for a tile or a mark, as `GroupedRow`'s: the text starts at 58 in every row.
-  lead: { width: 32, alignItems: "center", justifyContent: "center" },
+  // One leading column for a tile or a mark, as `GroupedRow`'s (36, a framed face's width): the text starts at 62 in
+  // every row, these included.
+  lead: { width: 36, alignItems: "center", justifyContent: "center" },
   tile: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   value: { flexShrink: 1, maxWidth: "50%" },
   src: { flexDirection: "row", alignItems: "center", gap: 6 },

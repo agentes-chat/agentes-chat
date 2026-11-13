@@ -9,6 +9,7 @@ import type {
   VaultSourceInfo,
   VaultUse,
 } from "@agenteschat/client";
+import { vaultNoAgents } from "@agenteschat/client/lib/vault";
 import type { TFunction } from "i18next";
 import {
   accessProblem,
@@ -392,6 +393,12 @@ describe("recent uses", () => {
   });
 });
 
+test("a connection no agent may use: neither all of them nor one picked", () => {
+  expect(vaultNoAgents({ allAgents: false, agentIds: [] })).toBe(true);
+  expect(vaultNoAgents({ allAgents: true, agentIds: [] })).toBe(false);
+  expect(vaultNoAgents({ allAgents: false, agentIds: ["a1"] })).toBe(false);
+});
+
 describe("password managers", () => {
   const bitwarden: VaultSourceInfo = {
     kind: "bitwarden",
@@ -534,6 +541,7 @@ describe("the request card and the screens", () => {
       vaultHref.list,
       vaultHref.item("i1"),
       vaultHref.create("team"),
+      vaultHref.env("team"),
       vaultHref.itemAccess("i1"),
       vaultHref.connectionAccess("c1"),
       vaultHref.connect("bitwarden"),

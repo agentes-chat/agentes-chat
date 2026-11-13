@@ -6,14 +6,12 @@ import {
   useNotificationAction,
   useNotifications,
   useRoutines,
-  useToolChanges,
 } from "@agenteschat/client";
 import { approvalDetail, approvalSummary, approvalTitle } from "@agenteschat/client/lib/approval-words";
 import { restrictionLine } from "@agenteschat/client/lib/errors";
 import { timeLeft, upperFirst } from "@agenteschat/client/lib/format";
 import { mediaWord } from "@agenteschat/client/lib/media";
 import { latestText } from "@agenteschat/client/lib/message-body";
-import { can } from "@agenteschat/client/lib/permissions";
 import { usageLimitLine } from "@agenteschat/client/lib/person-usage";
 import { useLocalSearchParams } from "expo-router";
 import type { TFunction } from "i18next";
@@ -33,26 +31,31 @@ import {
   LIST_INSET,
   ListRow,
   PersonAvatar,
+  PULL_TINT,
+  PullOrbit,
   SectionHeader,
+  SkeletonList,
   SwipeRow,
   Text,
   useReducedMotion,
+  useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { approvalAction } from "../approvals/logic";
 import { ApprovalMark, ApprovalWhy, useApprovalSource, useApproveNow } from "../approvals/parts";
 import type { AskKind } from "../chat/ask-store";
 import { ASK_ICON, AskButtons } from "../chat/asks";
-import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { dashboardWaitingCard } from "../dashboards/logic";
+import { isDeviceNotice } from "../devices/logic";
+import { DeviceNoticeActions, DeviceNoticeCard } from "../devices/notices";
 import { notificationHref, notificationWebPath, routineHref } from "../links/logic";
 import { openWebPath } from "../links/open-web";
 import { ChangeRequestCard } from "../right-hand/SettingsCard";
 import { AgentFace, Face } from "../shared/Face";
-import { LoadFailed, useEmptyLook } from "../shared/FirstUse";
 import { useColors, useDirectory, useNow, useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
 import { Tile } from "../shared/parts";
 import { useWaitingApprovals } from "../shared/queries";
+import { RetryLine, TeamSkyEmpty } from "../shared/TeamSkyEmpty";
 import { useTabHeader } from "../shared/tabHeader";
 import { WaitingCard, WaitingSource } from "../shared/WaitingCard";
 import { UsageLimitActions } from "../usage/people";
@@ -74,9 +77,11 @@ import { useNoticeTitle } from "./noticeTitle";
 
 /**
  * Atividade: what waits on you on top as the chat's request cards (who asks, the kind, the deadline, the exact
- * request, why, and the decision on the card), or, with nothing waiting, "Nada esperando você" and the next real
- * event (a routine's next run); then the rest by day as loose rows. How many wait is said once, on the section. Swipe
- * a row right to mark read or unread, left for "Feito". Tapping opens where it happened.
+ * request, why, and the decision on the card: Aprovar · Recusar, the page's one primary on the first card), or,
+ * with nothing waiting, the sky with the team and "Nada esperando você", then the next real event (a routine's next
+ * run); then the rest by day as loose rows. How many wait is said once, on the section (the pills carry no counts).
+ * Swipe a row right to mark read or unread, left for "Feito" (a toast offers Desfazer). Tapping opens where it
+ * happened. Loading: rows of the list's own shape; a load that failed is one gray line over what was kept.
  */
 export function ActivityScreen() {
   const { t } = useTranslation();
@@ -91,20 +96,8 @@ export function ActivityScreen() {
   const list = useNotifications(orgId, filter);
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
   const counts = list.data?.pages[0]?.counts;
-  // What waits on a connector admin among changed tools: a server's card shows only while one of its tools waits.
-  const manages = can(useOrg().org, "manage_connectors");
-  const changes = useToolChanges(orgId, manages).data;
-  const pending = useMemo(
-    () =>
-      changes
-        ? { ids: new Set(changes.map((c) => c.connectionId)), labels: new Set(changes.map((c) => c.connectionLabel)) }
-        : null,
-    [changes],
-  );
-  const { waiting, days, merged, settled } = activitySections(items, filter, undefined, pending);
-  // The server counts each repeated notice of a server, and one with nothing left to review; the screen shows one
-  // card, or none.
-  const waitingCount = Math.max(waiting.length, (counts?.waiting ?? waiting.length) - merged - settled);
+  const { waiting, days } = activitySections(items, filter);
+  const waitingCount = Math.max(waiting.length, counts?.waiting ?? waiting.length);
   const pull = usePullRefresh(list.refetch);
   const header = useTabHeader();
   const reduced = useReducedMotion();
@@ -114,7 +107,8 @@ export function ActivityScreen() {
     <LargeTitleScreen
       title={t("mobile.activity.title")}
       {...header}
-      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} />}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={PULL_TINT} />}
+      pullMark={<PullOrbit refreshing={pull.refreshing} />}
     >
       <Filters
         items={[
@@ -131,21 +125,34 @@ export function ActivityScreen() {
           <SectionHeader title={t("mobile.home.waiting")} count={waitingCount} />
           <LayoutAnimationConfig skipEntering skipExiting>
             <View style={styles.cards}>
-              {waiting.map((n) => (
+              {waiting.map((n, i) => (
                 <Animated.View key={n.id} {...cardMotion}>
-                  <WaitingCardView item={n} />
+                  {isDeviceNotice(n.kind) ? (
+                    <DeviceNoticeCard item={n} first={i === 0} />
+                  ) : (
+                    <WaitingCardView item={n} first={i === 0} />
+                  )}
                 </Animated.View>
               ))}
             </View>
           </LayoutAnimationConfig>
         </>
-      ) : list.isLoading ? null : list.isError && !list.data ? (
-        <LoadFailed onRetry={() => void list.refetch()} />
+      ) : list.isLoading ? (
+        <>
+          <SectionHeader title={t("mobile.activity.day.today")} />
+          <SkeletonList rows={3} />
+          <SectionHeader title={t("mobile.activity.day.yesterday")} />
+          <SkeletonList rows={1} />
+        </>
+      ) : list.isError && !list.data ? (
+        <RetryLine onRetry={() => void list.refetch()} />
       ) : filter !== "done" ? (
         <AllClear />
       ) : days.length === 0 ? (
         <EmptyState size="inline" title={t("mobile.activity.noneDone")} />
       ) : null}
+      {/* Kept rows under a load that failed: the line says so, what loaded stays readable. */}
+      {list.isError && list.data && !list.isLoading ? <RetryLine onRetry={() => void list.refetch()} /> : null}
       {days.map(([group, groupItems]) => (
         <View key={group}>
           <SectionHeader title={t(`mobile.activity.day.${group satisfies DayGroup}`)} />
@@ -174,22 +181,10 @@ export function ActivityScreen() {
  * One thing waiting on you, as the chat's request card (`WaitingCard`): who asks and the kind in the chat's words
  * and icons (amber, the waiting color), the deadline or where and when at the right, the exact request in words, why
  * in muted, what it goes through on one quiet line, and the decision on the card: an approval decided here
- * (Aprovar or Agora não), a server's changed tools opening their review, a question Responder. The whole card opens
- * it too.
+ * (Aprovar or Agora não), a question Responder. The whole card opens it too.
  */
-/**
- * Where a notice opens. A server's changed tools open its Ferramentas; a notice from before notices named their
- * server finds it by its name among the changes waiting (once the server names them all, by id alone).
- */
-function useNoticeHref(n: AppNotification, ai: Parameters<typeof notificationHref>[1]) {
-  const { org, orgId } = useOrg();
-  const unnamed = n.kind === "connector_tool_changed" && !n.source.connectionId;
-  const changes = useToolChanges(orgId, unnamed && can(org, "manage_connectors")).data;
-  const id = unnamed ? changes?.find((c) => c.connectionLabel === n.source.label)?.connectionId : undefined;
-  return id ? `/connectors/tools?id=${id}` : notificationHref(n, ai);
-}
-
-function WaitingCardView({ item: n }: { item: AppNotification }) {
+/** `first`: the page's first card carries its one primary; the others decide or open in secondary. */
+function WaitingCardView({ item: n, first = false }: { item: AppNotification; first?: boolean }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const dir = useDirectory();
@@ -218,13 +213,10 @@ function WaitingCardView({ item: n }: { item: AppNotification }) {
         ? join.text
         : card.kind === "limit"
           ? notice.title
-          : // The server is named over it, so the title says only what it did; its tools are on the line below.
-            card.kind === "tools"
-            ? t("mobile.activityNow.toolsTitle")
-            : (dash?.title ?? card.title);
+          : (dash?.title ?? card.title);
   // A routine's trouble opens the routine; the computer being ready, Connect an AI while no agent has one.
   const ai = useAiStatus(orgId, n.kind === "computer_ready").data;
-  const href = useNoticeHref(n, ai);
+  const href = notificationHref(n, ai);
   // No screen of its own in the app (the workspace's billing hold): its page on the web, so a tap is never a dead end.
   const web = href ? null : notificationWebPath(n, orgId);
   const actor = n.actors[0];
@@ -232,22 +224,17 @@ function WaitingCardView({ item: n }: { item: AppNotification }) {
   const name = dir.nameOf(who);
   const kind = dash ? { icon: "chart" as const, label: dash.kind } : kindOf(t, card.kind, n.source.screen);
   const left = card.expiresAt ? timeLeft(t, card.expiresAt, new Date(now)) : null;
-  // The server is already named over the title.
-  const place = card.kind === "tools" ? null : placeOf(n);
+  const place = placeOf(n);
   const where = [place ? t("mobile.chats.waitIn", { where: place }) : null, when.short(n.updatedAt)]
     .filter(Boolean)
     .join(" · ");
-  const button = dash
-    ? t("mobile.activityNow.open")
-    : card.kind === "tools"
-      ? t("mobile.activityNow.reviewChanges")
-      : t(`mobile.activityNow.${card.action}`);
+  const button = dash ? t("mobile.activityNow.open") : t(`mobile.activityNow.${card.action}`);
   const open = () => {
     if (n.readAt === null) act.mutate({ type: "read", item: n, read: true });
     if (href) router.push(href);
     else if (web) openWebPath(web);
   };
-  // Whoever asks leads the card: an agent (with its sky), a person, the people asking to join, or the server.
+  // Whoever asks leads the card: an agent (with its sky), a person, or the people asking to join.
   const leading =
     who && who.type !== "agent" ? (
       <Face who={who} size={36} live={false} />
@@ -260,40 +247,30 @@ function WaitingCardView({ item: n }: { item: AppNotification }) {
           </View>
         ))}
       </View>
-    ) : card.kind === "tools" ? (
-      <ConnectorIcon def={null} label={n.source.label ?? ""} size={36} />
     ) : null;
-  const tools = card.kind === "tools" ? n.latest.title : null;
   return (
     <WaitingCard
       agentId={who?.type === "agent" ? who.id : null}
       leading={leading}
-      name={name || (card.kind === "tools" ? (n.source.label ?? "") : "")}
+      name={name}
       kind={kind}
       title={title}
       onPress={href || web ? open : undefined}
       accessibilityLabel={[name, kind.label, title].filter(Boolean).join(", ")}
       expires={left !== null && card.expiresAt ? { createdAt: n.createdAt, expiresAt: card.expiresAt } : null}
       where={where}
-      decision={decidable ? <ApproveHere approval={decidable} /> : undefined}
-      action={(href || web) && card.kind !== "limit" ? { label: button, onPress: open } : null}
+      decision={decidable ? <ApproveHere approval={decidable} primary={first} /> : undefined}
+      action={
+        (href || web) && card.kind !== "limit"
+          ? { label: button, onPress: open, variant: first ? "primary" : "secondary" }
+          : null
+      }
     >
       {/* Who asked while nobody watched, then why (ADR 0053 §8), as on the request itself. */}
       {card.kind === "approval" ? (
         <ApprovalWhy approval={{ origin: n.latest.origin ?? null, why: n.latest.text ?? null }} name={name} />
       ) : null}
       {card.kind === "approval" && request && onCard <= 1 ? <ApprovalSource approval={request} /> : null}
-      {card.kind === "tools" ? (
-        <>
-          <Text variant="small" tone="muted">
-            {t("mobile.activityNow.toolsWhy")}
-          </Text>
-          {tools ? (
-            // The server's mark already leads the card: the tools that changed, on their own.
-            <WaitingSource text={tools.split(", ").join(" · ")} />
-          ) : null}
-        </>
-      ) : null}
       {card.kind === "limit" ? (
         <>
           <Text variant="footnote" tone="muted">
@@ -308,7 +285,7 @@ function WaitingCardView({ item: n }: { item: AppNotification }) {
 
 /**
  * Each kind in the chat request card's words and icons ("Pede sua aprovação" with the shield, "Pergunta", "Precisa de
- * você no navegador" or "no computador"); what the chat never asks keeps Atividade's (Membros, Ferramentas, Limite).
+ * você no navegador" or "no computador"); what the chat never asks keeps Atividade's (Membros, Limite).
  */
 function kindOf(t: TFunction, kind: WaitingCardKind, screen?: string): { icon: IconName; label: string } {
   const ask: AskKind | null =
@@ -323,13 +300,14 @@ function kindOf(t: TFunction, kind: WaitingCardKind, screen?: string): { icon: I
   return { icon: OWN_ICON[kind as keyof typeof OWN_ICON], label: t(`mobile.activityNow.kind.${kind}`) };
 }
 
-const OWN_ICON = { join: "members", tools: "bolt", limit: "chart" } as const;
+const OWN_ICON = { join: "members", limit: "chart" } as const;
 
 /**
- * The request's decision on the card, as the chat's: Aprovar (held to approve when it is high risk) and Agora não,
- * which asks why on the request's own screen.
+ * The request's decision on the card, as the chat's: Aprovar (held to approve when it is high risk; the page's
+ * primary only on its first card) and Recusar, which asks why on the request's own screen. Words alone, no icon in
+ * the button.
  */
-function ApproveHere({ approval: a }: { approval: Approval }) {
+function ApproveHere({ approval: a, primary }: { approval: Approval; primary: boolean }) {
   const { t } = useTranslation();
   const { approve, pending, high } = useApproveNow(a);
   return (
@@ -339,10 +317,9 @@ function ApproveHere({ approval: a }: { approval: Approval }) {
           <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
         ) : (
           <Button
-            variant="primary"
+            variant={primary ? "primary" : "secondary"}
             size="card"
             wide
-            icon="check"
             label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
             disabled={pending}
             onPress={() => approve()}
@@ -354,7 +331,7 @@ function ApproveHere({ approval: a }: { approval: Approval }) {
           variant="secondary"
           size="card"
           wide
-          label={t("approval.notNow")}
+          label={t("mobile.approval.refuse")}
           onPress={() => router.push(`/approval/${a.id}?mode=refuse`)}
         />
       }
@@ -375,16 +352,18 @@ function ApprovalSource({ approval: a }: { approval: Approval }) {
 }
 
 /**
- * Nothing waits on you, right on the page: the agent pleased, "Nada esperando você" and one calm line, then
- * the next real event as one line (a routine's next run: its agent, its name and when), which opens the routine.
+ * Nothing waits on you, right on the page: the sky with the team on its horizon, "Nada esperando você" and one calm
+ * line (no card, no button), then the next real event as one line (a routine's next run: its agent, its name and
+ * when), which opens the routine; the history follows within the first thumb.
  */
 function AllClear() {
   const { t } = useTranslation();
   const orgId = useOrgId();
+  const deleting = Boolean(useOrg().org?.deletion);
   const dir = useDirectory();
   const routines = useRoutines(orgId);
-  const look = useEmptyLook();
-  const next = useMemo(() => nextRoutine<Routine>(routines.data ?? []), [routines.data]);
+  // Being deleted, its routines' slots pass: none is next (the server says so too, once the list is read again).
+  const next = useMemo(() => (deleting ? null : nextRoutine<Routine>(routines.data ?? [])), [deleting, routines.data]);
   const nextAgent = next ? dir.agentById.get(next.agentId) : undefined;
   const when = useWhen();
   const date = next?.nextRunAt ? nextRunWords(t, when, next.nextRunAt) : null;
@@ -392,13 +371,7 @@ function AllClear() {
   // The last card decided: the clear page fades in where the cards were.
   return (
     <Animated.View entering={reduced ? undefined : FadeIn.duration(160)}>
-      <EmptyState
-        size="panel"
-        agent={look}
-        mood="deal"
-        title={t("mobile.activityNow.clear.title")}
-        subtitle={t("mobile.activityNow.clear.text")}
-      />
+      <TeamSkyEmpty title={t("mobile.activityNow.clear.title")} text={t("mobile.activityNow.clear.text")} />
       {/* The next run as a row of the list below it: who, the routine's name on one line, and when. */}
       {next ? (
         <>
@@ -457,10 +430,11 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
   const orgId = useOrgId();
   const c = useColors();
   const when = useWhen();
+  const toast = useToast();
   const act = useNotificationAction(orgId);
   // A routine's trouble opens the routine; the computer being ready, Connect an AI while no agent has one.
   const ai = useAiStatus(orgId, n.kind === "computer_ready").data;
-  const href = useNoticeHref(n, ai);
+  const href = notificationHref(n, ai);
   // No screen of its own in the app (the workspace's billing hold): its page on the web, so a tap is never a dead end.
   const web = href ? null : notificationWebPath(n, orgId);
   const unread = n.readAt === null;
@@ -499,9 +473,17 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
 
   // The swipe taps on its own (SwipeRow); VoiceOver's actions call these too.
   const toggleRead = () => act.mutate({ type: "read", item: n, read: unread });
-  // In "Concluídas" the same swipe moves it back to the inbox.
+  // In "Feitas" the same swipe moves it back to the inbox. Marked done, a toast offers the way back for a moment.
   const isDone = Boolean(n.doneAt);
-  const done = () => act.mutate({ type: "done", item: n, done: !isDone });
+  const done = () => {
+    act.mutate({ type: "done", item: n, done: !isDone });
+    if (!isDone)
+      toast({
+        title: t("mobile.activity.doneToast"),
+        subtitle: title,
+        action: { label: t("mobile.activity.undo"), onPress: () => act.mutate({ type: "done", item: n, done: false }) },
+      });
+  };
   const doneLabel = isDone ? t("mobile.activity.restore") : t("mobile.activity.done");
   const open = () => {
     if (unread) act.mutate({ type: "read", item: n, read: true });
@@ -570,6 +552,12 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
           <Button variant="secondary" size="sm" label={t("mobile.activity.chooseModel")} onPress={open} />
         </View>
       ) : null}
+      {/* An agent holds the person's phone: Stop, right here. */}
+      {isDeviceNotice(n.kind) ? (
+        <View style={styles.change}>
+          <DeviceNoticeActions item={n} />
+        </View>
+      ) : null}
       {/* A person asks for more (ADR 0141): raised or refused right here. */}
       {n.kind === "usage_limit" && n.latest.statusTo === "request" && !n.doneAt ? (
         <View style={styles.change}>
@@ -587,7 +575,8 @@ const faceOf = (a: AppNotification["actors"][number] | undefined) =>
   a ? { type: a.type === "agent" ? "agent" : "person", id: a.id } : null;
 
 const styles = StyleSheet.create({
-  cards: { gap: 10, paddingHorizontal: 16 },
+  // Cards 12 apart, at the screen's margin.
+  cards: { gap: 12, paddingHorizontal: 16 },
   change: { paddingHorizontal: 16, paddingBottom: 12 },
   wpressed: { opacity: 0.85 },
   faces: { flexDirection: "row" },

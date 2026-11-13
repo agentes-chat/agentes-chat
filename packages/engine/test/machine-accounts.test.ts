@@ -19,6 +19,7 @@ import {
   type ServerFrame,
   SHARED_ACCOUNTS_PROTOCOL,
   SHARED_CODEX_PROTOCOL,
+  SHARED_GEMINI_PROTOCOL,
   sealSecret,
 } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
@@ -358,6 +359,63 @@ test("hello.accounts: what the runner found since hello, sent the moment welcome
     [CLAUDE_ID, "active"],
     [CODEX_ID, "active"],
   ]);
+});
+
+test("a sign-in that fails on the computer: its code and the CLI's words (masked) reach the poll, an error is logged", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  const ends = new Map<string, unknown>();
+  const { deps } = fakeHub(machineId, (req) => {
+    if (req.action === "begin")
+      return { url: "https://claude.ai/oauth/authorize?code=true", publicKey: "k".repeat(44) };
+    return req.action === "status" ? ends.get(req.loginId) : {};
+  });
+  const logged: { level: string; message: string; data?: Record<string, unknown> }[] = [];
+  const log = {
+    error: (message: string, data?: Record<string, unknown>) => logged.push({ level: "error", message, data }),
+    warn: (message: string, data?: Record<string, unknown>) => logged.push({ level: "warn", message, data }),
+  };
+  const ended = async (end: unknown) => {
+    const login = await beginAccountLogin(deps, f.owner.id, f.org.id, machineId, "claude_code");
+    ends.set(login.loginId, end);
+    const status = await accountLoginStatus({ ...deps, log }, f.owner.id, f.org.id, machineId, login.loginId);
+    expect(await accountRow(login.loginId)).toBeNull();
+    return status;
+  };
+
+  const refused = await ended({
+    state: "failed",
+    error: "Claude Code couldn't sign in with that code",
+    code: "bad_code",
+    message: "OAuth error: invalid_grant for ya29.FAKE-not-a-real-token-xxxx",
+  });
+  expect(refused).toEqual({
+    state: "failed",
+    error: "Claude Code couldn't sign in with that code",
+    code: "bad_code",
+    message: "OAuth error: invalid_grant for ••••",
+  });
+  expect(logged).toHaveLength(1);
+  expect(logged[0]).toMatchObject({
+    level: "error",
+    data: { orgId: f.org.id, userId: f.owner.id, machineId, accountKind: "claude_code", code: "bad_code" },
+  });
+  expect(String(logged[0]?.data?.error)).toBe(
+    "Error: claude_code sign-in failed: bad_code: OAuth error: invalid_grant for ••••",
+  );
+
+  // An older runner's failure, a code this server doesn't know, a cancel and an expiry.
+  expect(await ended({ state: "failed", error: "Canceled" })).toEqual({ state: "failed", error: "Canceled" });
+  expect(await ended({ state: "failed", error: "x", code: "made_up", message: "y" })).toEqual({
+    state: "failed",
+    error: "x",
+  });
+  expect(await ended({ state: "failed", error: "Canceled", code: "canceled" })).toMatchObject({ code: "canceled" });
+  expect(await ended({ state: "expired", error: "The sign-in took too long.", code: "timeout" })).toEqual({
+    state: "expired",
+    code: "timeout",
+  });
+  expect(logged.map((l) => l.level)).toEqual(["error", "warn"]);
 });
 
 test("signing in: the person who connected the computer; the code is sealed to it; done stores the account once", async () => {
@@ -812,6 +870,33 @@ test("ChatGPT's sign-in is made for all of its owner's agents from runner protoc
   };
   expect(await begun(SHARED_CODEX_PROTOCOL)).toBe(true);
   expect(await begun(SHARED_CODEX_PROTOCOL - 1)).toBeUndefined();
+});
+
+test("Gemini's sign-in is made for all of its owner's agents from runner protocol 58 on, never before", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine(SHARED_GEMINI_PROTOCOL);
+  const begun = async (protocol: number, provider?: string) => {
+    const runner = fakeHub(
+      machineId,
+      (req) => (req.action === "begin" ? { url: "https://accounts.google.com/o/oauth2/auth?state=s1" } : {}),
+      { protocol },
+    );
+    await beginAccountLogin(
+      runner.deps,
+      f.owner.id,
+      f.org.id,
+      machineId,
+      "antigravity",
+      undefined,
+      undefined,
+      provider,
+    );
+    return (runner.calls.find((c) => c.action === "begin") as { shared?: boolean } | undefined)?.shared;
+  };
+  expect(await begun(SHARED_GEMINI_PROTOCOL)).toBe(true);
+  // A Gemini Enterprise seat too.
+  expect(await begun(SHARED_GEMINI_PROTOCOL, "enterprise")).toBe(true);
+  expect(await begun(SHARED_GEMINI_PROTOCOL - 1)).toBeUndefined();
 });
 
 test("Claude: an account another agent thinks with signs in again as a login of its own, under the account's name", async () => {
@@ -1613,13 +1698,27 @@ test("an account the runner no longer says is for all agents: the two agents on 
   expect(taken).toMatchObject({ code: "account.in_use" });
 });
 
-test("where each agent is its own OS user, the switch decides: Claude's and ChatGPT's sign-ins and plans' keys for all", async () => {
+test("where each agent is its own OS user, the switch decides: Claude's, ChatGPT's and Gemini's sign-ins and plans' keys for all", async () => {
   f = await setup();
-  const { machineId } = await ownedMachine(SHARED_CODEX_PROTOCOL);
+  const { machineId } = await ownedMachine(SHARED_GEMINI_PROTOCOL);
   const [m] = await f.db.select().from(schema.machines).where(eq(schema.machines.id, machineId));
   await f.db
     .update(schema.machines)
     .set({ executors: { ...m?.executors, mode: "system" } })
+    .where(eq(schema.machines.id, machineId));
+  expect((await listAiAccounts({ db: f.db }, f.owner.id, f.org.id)).computers[0]?.shares).toEqual({
+    claude_code: true,
+    codex: true,
+    cursor: false,
+    opencode: false,
+    grok: false,
+    antigravity: true,
+    key: true,
+  });
+  // A runner before protocol 58 shares Gemini's with no one.
+  await f.db
+    .update(schema.machines)
+    .set({ protocol: SHARED_GEMINI_PROTOCOL - 1 })
     .where(eq(schema.machines.id, machineId));
   expect((await listAiAccounts({ db: f.db }, f.owner.id, f.org.id)).computers[0]?.shares).toEqual({
     claude_code: true,

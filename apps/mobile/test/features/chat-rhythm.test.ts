@@ -36,10 +36,8 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
     expect(row).toContain("quoteAbove && styles.replied");
     expect(row).toContain("[styles.body, { gap: rhythm.part }]");
     expect(row).toContain("[styles.meParts, { gap: rhythm.part }]");
-    expect(await read("chat/LiveRows.tsx")).toContain("rowFrame(rhythm.block, rhythm.turn)");
     const parts: [string, string[]][] = [
       ["chat/MessageRow.tsx", ["msg", "me", "status", "stopped", "talkMore", "reacts"]],
-      ["chat/LiveRows.tsx", ["msg"]],
       ["chat/look.ts", ["bubblesRow", "compactRow"]],
       ["chat/ToolCalls.tsx", ["block", "steps"]],
       ["chat/Receipts.tsx", ["one", "group"]],
@@ -55,8 +53,6 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
       ["chat/EventLine.tsx", ["line"]],
       ["chat/StoppedLine.tsx", ["line"]],
       ["chat/issue-work.tsx", ["line"]],
-      ["agents/ProposalCard.tsx", ["card"]],
-      ["agents/InstructionProposalCard.tsx", ["card"]],
       ["missions/cards.tsx", ["mcard", "askcard", "inv"]],
     ];
     expect(styleOf(row, "msg")).not.toContain("paddingVertical");
@@ -75,10 +71,12 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
     for (const file of [
       "chat/asks.tsx",
       "chat/issue-work.tsx",
+      "chat/WorkLine.tsx",
+      "chat/Receipts.tsx",
+      "chat/TeamChecks.tsx",
+      "chat/ReachLines.tsx",
       "missions/cards.tsx",
       "browser/TrailCard.tsx",
-      "agents/ProposalCard.tsx",
-      "agents/InstructionProposalCard.tsx",
       "right-hand/TeamWeekCard.tsx",
     ]) {
       expect(await read(file)).toContain("useCardTop(");
@@ -111,9 +109,6 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
     expect(row).toContain("marginBottom: PIN_GAP - rhythm.part");
     // A row under its quote keeps its plate off the quote.
     expect(styleOf(row, "replied")).toContain("marginTop: 0");
-    const live = await read("chat/LiveRows.tsx");
-    expect(live).toContain("run.text ? { marginBottom: rhythm.part } : undefined");
-    expect(live).not.toContain("styles.say");
   });
 
   test("the agents' line runs across the conversation, the pair on its middle, under the list's gap", async () => {
@@ -130,5 +125,21 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
     const reach = await read("chat/ReachLines.tsx");
     expect(reach).toContain("list: { gap: LIST_GAP }");
     expect(reach).toContain("gap={talkAbove ? rhythm.part - (rhythm.turn - rhythm.part) - LIST_GAP : undefined}");
+  });
+});
+
+describe("the long work's card", () => {
+  test("one row of at most three actions; sharing with everyone is in the task's menu", async () => {
+    const line = await read("chat/WorkLine.tsx");
+    expect(line).toContain("const MAX_ACTIONS = 3;");
+    expect(line).toContain(".slice(0, MAX_ACTIONS)");
+    expect(line).not.toContain("ShareAction");
+    expect(line).toContain("export function useShareWork(");
+    const screen = await read("issues/IssueScreen.tsx");
+    expect(screen).toContain("const shareWork = useShareWork(i);");
+    expect(screen).toContain('label: t("work.shareEveryone")');
+    // On the task's screen it stands on the screen's margin and card gap, under the work card.
+    expect(screen).toContain("<IssueWorkLine issue={i} style={styles.section} />");
+    expect(screen).toContain("section: { marginHorizontal: 16, marginTop: 12 },");
   });
 });

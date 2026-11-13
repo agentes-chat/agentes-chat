@@ -386,8 +386,12 @@ describe("Instalar skill: private repositories", () => {
     await settle(6);
   };
 
-  /** Connecting GitHub's last two steps, as from Conectores: what it does (Continuar), who uses it (Liberar). */
+  /** After connecting GitHub, as from Conectores: its confirmation, then under Ajustar what it does and who uses it. */
   const finishConnecting = async () => {
+    await click(
+      within(screen().getByRole("dialog", { name: "GitHub conectado" })).getByRole("button", { name: "Ajustar" }),
+    );
+    await settle(4);
     await click(
       within(screen().getByRole("dialog", { name: "O que GitHub faz" })).getByRole("button", { name: "Continuar" }),
     );
@@ -553,8 +557,7 @@ describe("Instalar skill: private repositories", () => {
     expect(state.calls.filter((c) => c.method === "skills.import").map((c) => c.args[1])).toEqual([
       { url: folder, list: true },
     ]);
-    // Signing in ends where connecting with a key does: GitHub's tools, then who uses it.
-    expect(document.body.textContent).toContain("GitHub conectado.");
+    // Signing in ends where connecting with a key does: GitHub's confirmation.
     await finishConnecting();
     const dialog = screen().getByRole("dialog", { name: "Instalar skill" });
     expect((within(dialog).getByRole("textbox", { name: "Link do GitHub" }) as HTMLInputElement).value).toBe(folder);
@@ -562,6 +565,26 @@ describe("Instalar skill: private repositories", () => {
     expect(dialog.textContent).toContain("Lido pela conexão do GitHub do workspace.");
     expect(dialog.textContent).toContain("Este link tem 1 skill. Marque para instalar.");
     expect(state.calls.some((c) => c.method === "skills.importPicked")).toBe(false);
+  });
+
+  test("back with the agent whose card opened it: its box again, only when this tab opened that card", async () => {
+    const folder = `${CONTOSO}/tree/main/skills/deploy`;
+    const back = `/org/${ORG_ID}/settings/skills?install=${encodeURIComponent(folder)}&agent=${ADA_ID}`;
+    const box = () =>
+      within(screen().getByRole("dialog", { name: "Instalar skill" })).queryByRole("checkbox", {
+        name: "Fica ligada para Ada",
+      });
+    sessionStorage.removeItem("agentes.skills.installFor");
+    await renderApp(back, { api: createFakeApi(seedState()) });
+    await settle(8);
+    // A link to Skills that only names an agent turns nothing on for it.
+    expect(box()).toBeNull();
+    cleanup();
+    sessionStorage.setItem("agentes.skills.installFor", JSON.stringify({ url: folder, agentId: ADA_ID }));
+    await renderApp(back, { api: createFakeApi(seedState()) });
+    await settle(8);
+    expect(box()?.getAttribute("aria-checked")).toBe("true");
+    expect(sessionStorage.getItem("agentes.skills.installFor")).toBeNull();
   });
 });
 

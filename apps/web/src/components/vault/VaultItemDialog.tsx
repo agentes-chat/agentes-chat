@@ -12,6 +12,8 @@ import type {
 import { useVaultItem } from "@agenteschat/client";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { MAX_SECRET_BYTES } from "@agenteschat/client/lib/secret-box";
+import { canMoveVaultItem } from "@agenteschat/client/lib/vault";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   Button,
   Chip,
@@ -75,14 +77,17 @@ export function ItemChips({ item }: { item: VaultItem }) {
 /** Personal or Team, with what it means, as a line: its icon in the access lines' column, so the words line up. */
 export function ScopeLine({ scope }: { scope: VaultScope }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
+  // Team reads Shared in a personal workspace (ADR 0159).
+  const team = scope === "team";
   return (
     <span className="vlt-scope">
       <span className="vlt-access__lead" aria-hidden="true">
-        <Icon name={scope === "team" ? "members" : "person"} size={18} />
+        <Icon name={team ? "members" : "person"} size={18} />
       </span>
       <span className="vlt-scope__text">
-        <b>{t(`vault.scope.${scope}`)}</b>
-        <small>{t(`vault.scope.${scope}Text`)}</small>
+        <b>{team ? t(modeKey(org, "vault.scope.team")) : t("vault.scope.personal")}</b>
+        <small>{team ? t(modeKey(org, "vault.scope.teamText")) : t("vault.scope.personalText")}</small>
       </span>
     </span>
   );
@@ -168,8 +173,11 @@ export function ItemFields({
   secret: ReactNode;
 }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
   const fixed = readOnly || locked;
   const origin = vaultOrigin(draft.website);
+  const example =
+    kind === "login" ? t(modeKey(org, "vault.field.loginPlaceholder")) : t(`vault.field.${kind}Placeholder`);
   // Read only, an empty field says nothing: only what has a value shows.
   const filled = (value: string | undefined, fixedHere = readOnly) => !fixedHere || Boolean(value?.trim());
   const title = (
@@ -178,13 +186,19 @@ export function ItemFields({
         value={draft.title}
         maxLength={LIMITS.title}
         readOnly={fixed}
-        placeholder={fixed ? undefined : (kind === "login" && hostOf(origin)) || t(`vault.field.${kind}Placeholder`)}
+        placeholder={fixed ? undefined : (kind === "login" && hostOf(origin)) || example}
         onChange={(e) => onDraft({ title: e.target.value })}
       />
     </Field>
   );
   const description = filled(draft.description) && (
-    <Field label={t("vault.field.description")} help={readOnly ? undefined : t("vault.field.descriptionHelp")}>
+    <Field
+      label={t("vault.field.description")}
+      hint={{
+        name: t("common.about", { label: t("vault.field.description") }),
+        text: readOnly ? undefined : t("vault.field.descriptionHelp"),
+      }}
+    >
       <Textarea
         rows={2}
         autoGrow
@@ -223,7 +237,7 @@ export function ItemFields({
               { value: "site", label: t("vault.match.site") },
             ]}
           />
-          <span className="ac-field__help">
+          <span className="ac-field__example">
             {draft.match === "exact"
               ? origin
                 ? t("vault.match.exactHelp", { origin })
@@ -256,7 +270,10 @@ export function ItemFields({
         <Field
           label={t("vault.field.keyName")}
           error={errors.keyName}
-          help={errors.keyName || readOnly ? undefined : t("vault.field.keyNameHelp")}
+          hint={{
+            name: t("common.about", { label: t("vault.field.keyName") }),
+            text: errors.keyName || readOnly ? undefined : t("vault.field.keyNameHelp"),
+          }}
         >
           <Input
             className="vlt-mono"
@@ -319,7 +336,11 @@ function SecretValue({
   const label = t(item.kind === "login" ? "vault.field.password" : "vault.field.value");
   if (value !== null)
     return (
-      <Field label={label} error={error} help={error ? undefined : t("vault.item.newValueHelp")}>
+      <Field
+        label={label}
+        error={error}
+        hint={{ name: t("common.about", { label: label }), text: error ? undefined : t("vault.item.newValueHelp") }}
+      >
         <span className="vlt-secret__change">
           <Input
             type="password"
@@ -354,7 +375,7 @@ function SecretValue({
         )}
         <span className="vlt-secret__acts">
           {canChange && (
-            <Button size="sm" variant="ghost" icon="edit" onClick={() => onValue("")}>
+            <Button variant="link" onClick={() => onValue("")}>
               {item.hasSecret ? t("vault.item.change") : t("vault.item.add")}
             </Button>
           )}
@@ -363,7 +384,7 @@ function SecretValue({
       {error ? (
         <span className="ac-field__error">{error}</span>
       ) : (
-        canChange && item.hasSecret && <span className="ac-field__help">{t("vault.item.sealedHelp")}</span>
+        canChange && item.hasSecret && <span className="ac-field__example">{t("vault.item.sealedHelp")}</span>
       )}
     </div>
   );
@@ -437,6 +458,7 @@ export function VaultItemDialog({
       usesFailed={detail.isError}
       fieldsPending={fieldsPending}
       unreadable={detail.data?.unreadable === true}
+      movable={canMoveVaultItem(item, overview.canManageTeam)}
       connection={connection}
       onClose={onClose}
     />
@@ -450,6 +472,7 @@ function ItemDialog({
   usesFailed,
   fieldsPending,
   unreadable,
+  movable,
   connection,
   onClose,
 }: {
@@ -462,6 +485,8 @@ function ItemDialog({
   fieldsPending: boolean;
   /** A contact whose saved fields can't be read on the server: who manages it types them again. */
   unreadable: boolean;
+  /** This person may move it between Personal and Team. */
+  movable: boolean;
   connection: VaultConnection | undefined;
   onClose: () => void;
 }) {
@@ -475,6 +500,9 @@ function ItemDialog({
   const [secret, setSecret] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const moveTo: VaultScope = item.scope === "team" ? "personal" : "team";
+  const moveLabel = moveTo === "team" ? t(modeKey(org, "vault.move.toTeam")) : t("vault.move.toPersonal");
   const patch = patchOf(item, draft, secret, external);
   const dirty = Object.keys(patch).length > 0;
   const errors = tried ? draftErrors(t, item.kind, draft, secret ?? undefined, secret !== null) : {};
@@ -497,6 +525,12 @@ function ItemDialog({
     const saved = await actions.update(item.id, on ? { accessFromConnection: true } : { access: item.access });
     if (saved) toast.show(t("vault.access.saved"));
   };
+  const move = async () => {
+    if (!(await actions.move(item.id, moveTo))) return;
+    setMoving(false);
+    toast.show(t("vault.move.moved"));
+    onClose();
+  };
   const remove = async () => {
     if (!(await actions.remove(item.id))) return;
     setDeleting(false);
@@ -518,7 +552,7 @@ function ItemDialog({
         <span className="vlt-details__sub">
           <span>{t(`vault.kind.${item.kind}`)}</span>
           <span aria-hidden="true">·</span>
-          <span>{t(`vault.scope.${item.scope}`)}</span>
+          <span>{item.scope === "team" ? t(modeKey(org, "vault.scope.team")) : t("vault.scope.personal")}</span>
           <ItemChips item={item} />
         </span>
       }
@@ -550,9 +584,9 @@ function ItemDialog({
         )
       }
     >
-      <div className="issue-layout">
+      <div className="vlt-layout">
         <Locked when={actions.updating}>
-          <div className="issue-layout__main vlt-details__main">
+          <div className="vlt-details__main">
             {external && editable && <SettingNote icon="plug">{t("vault.item.editIn", { source })}</SettingNote>}
             {item.missing && <SettingNote icon="alert">{t("vault.item.missingText", { source })}</SettingNote>}
             {unreadable && <SettingNote icon="alert">{t("vault.item.unreadable")}</SettingNote>}
@@ -585,9 +619,14 @@ function ItemDialog({
             )}
           </div>
           {/* The fields on the left; who has access and its recent uses beside them (ADR 0144 §7). */}
-          <aside className="issue-aside vlt-aside">
+          <aside className="vlt-aside">
             <DetailsSection title={t("vault.access.title")}>
               <ScopeLine scope={item.scope} />
+              {movable && (
+                <Button size="sm" className="vlt-move" disabled={actions.moving} onClick={() => setMoving(true)}>
+                  {moveLabel}
+                </Button>
+              )}
               <AccessBlock
                 scope={item.scope}
                 access={item.access}
@@ -631,6 +670,21 @@ function ItemDialog({
           </aside>
         </Locked>
       </div>
+      <Dialog
+        open={moving}
+        onOpenChange={setMoving}
+        title={t("vault.move.title", { title: item.title })}
+        description={t(moveTo === "team" ? "vault.move.toTeamText" : "vault.move.toPersonalText")}
+        closeLabel={t("common.close")}
+        width={440}
+      >
+        <DialogFooter>
+          <Button onClick={() => setMoving(false)}>{t("common.cancel")}</Button>
+          <Button variant="primary" loading={actions.moving} disabled={actions.moving} onClick={() => void move()}>
+            {moveLabel}
+          </Button>
+        </DialogFooter>
+      </Dialog>
       <Dialog
         open={deleting}
         onOpenChange={setDeleting}

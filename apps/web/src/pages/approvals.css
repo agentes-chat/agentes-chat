@@ -13,7 +13,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-4);
 }
 .ap-grow {
   flex: 1;
@@ -265,6 +265,14 @@ html:not([data-pointer]) .ap-conn-mark:focus-visible {
   max-height: 200px;
   overflow-y: auto;
 }
+/* A long value takes a row of its own, whole: no scroll inside the card. */
+.ap-exact__rows > div[data-long] {
+  flex-basis: 100%;
+}
+.ap-exact__rows > div[data-long] dd {
+  max-height: none;
+  overflow-y: visible;
+}
 .ap-exact__tech summary {
   width: fit-content;
   font-size: 13px;
@@ -286,14 +294,14 @@ html:not([data-pointer]) .ap-conn-mark:focus-visible {
   color: var(--ink2);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  max-height: 260px;
+  /* Twelve and a half lines and the padding: a longer text scrolls from the middle of a line, never by a sliver. */
+  max-height: calc(12.5 * 1.55em + 20px);
   overflow-y: auto;
 }
 
 /* Hold to approve: a fill grows while pressed. */
 .ap-hold {
   position: relative;
-  overflow: hidden;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -303,6 +311,7 @@ html:not([data-pointer]) .ap-conn-mark:focus-visible {
   content: "";
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   transform-origin: left;
   transform: scaleX(0);
   background: color-mix(in srgb, var(--bg) 30%, transparent);
@@ -383,13 +392,24 @@ html:not([data-pointer]) .ap-refuse__suggest button:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+/* The note and the two buttons, as a dialog's footer: the buttons one group, beside the note while it keeps one line,
+   else under it at the row's end, never one over the other. */
 .ap-refuse__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-4);
+}
+.ap-refuse__acts {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
 }
 .ap-refuse__learn {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 12.5px;
   color: var(--muted);
 }
@@ -433,7 +453,6 @@ html:not([data-pointer]) .ap-row:focus-visible {
 .ap-mi {
   display: flex;
   flex-direction: column;
-  margin-top: 4px;
 }
 .ap-mi__mission {
   font-weight: 600;
@@ -563,19 +582,18 @@ html:not([data-pointer]) .ap-link:focus-visible {
   flex-direction: column;
   gap: 8px;
 }
-/* An ActionRow: the words, then their two buttons together at the line's end, or together under the words, at
-   their start, where the line can't hold both. */
+/* The heading on the list's edge, then its two decisions under it, the main one first: compact, never floating at the
+   line's end. */
 .ap-group__head {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding: 0 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 0;
   font-size: 13px;
   color: var(--muted);
 }
 .ap-group__who {
-  flex: 1 1 auto;
   min-width: 0;
 }
 /* Two plated buttons: 8 apart, as a dialog's are, and as the run's "Aprovar todos" pair below. */
@@ -584,13 +602,21 @@ html:not([data-pointer]) .ap-link:focus-visible {
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+/* On a phone the pair shares the row, each from its own width. */
+@media (max-width: 640px) {
+  .ap-group__acts {
+    align-self: stretch;
+  }
+  .ap-group__acts > * {
+    flex: 1 1 auto;
+  }
+}
 .ap-group__head b {
   color: var(--ink);
   font-weight: 600;
 }
 .ap-group__note {
   margin: 0;
-  padding: 0 4px;
   font-size: 12.5px;
   color: var(--muted);
 }
@@ -609,26 +635,18 @@ html:not([data-pointer]) .ap-link:focus-visible {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  padding: 12px 16px 24px 0;
+  /* It scrolls: 4 of room on its left for the ring of a button on the list's edge. */
+  margin-left: -4px;
+  padding: 12px 16px 24px 4px;
 }
-.ap-list__section {
+/* A group of requests: 24 from what is above it in the list (whose rows stand 2 apart). */
+.ap-list__section:not(:first-child) {
+  margin-top: 22px;
+}
+.ap-list__rows {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-top: 16px;
-}
-.ap-list__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px 4px;
-}
-.ap-list__head h2 {
-  flex: 1;
-  margin: 0;
-  font-size: 12.5px;
-  font-weight: 650;
-  color: var(--muted);
 }
 
 /* A request in the list, a MediaRow: what it wants on the face's line, its time left at that line's end, where and
@@ -730,8 +748,6 @@ html:not([data-pointer]) .ap-li:focus-visible {
 /* "Ver cada um" unfolds the run: on a line of its own under its buttons, its words on their start edge. */
 .ap-run__more {
   align-self: flex-start;
-  margin-inline: calc(-1 * var(--ghost-plate));
-  padding-inline: var(--ghost-plate);
 }
 .ap-run .ap-run__items {
   margin: 0 -12px;
@@ -749,14 +765,15 @@ html:not([data-pointer]) .ap-li:focus-visible {
   padding: 0 0 16px 28px;
   border-left: 1px solid var(--line);
 }
-/* Its own column (`.page-split`): out to the work area's right edge, where its scrollbar runs. Its decision bar floats
-   16px over the column's bottom, the column's padding (Chrome sets a sticky box's offset inside the padding). */
+/* Its own column (`.page-split`): out over the page's side room to the work area's right edge, where its scrollbar
+   runs. Its decision bar floats 16px over the column's bottom, the column's padding (Chrome sets a sticky box's offset
+   inside the padding). */
 @media (min-width: 941px) and (min-height: 560px) {
-  .ap-review {
-    margin-right: -24px;
-    padding-right: 24px;
+  .page-split > .ap-review {
+    margin-right: calc(-1 * var(--page-x));
+    padding-right: var(--page-x);
   }
-  .ap-review > .ap-bar--float {
+  .page-split > .ap-review > .ap-bar--float {
     bottom: 0;
   }
 }
@@ -779,12 +796,22 @@ html:not([data-pointer]) .ap-li:focus-visible {
   font-weight: 650;
   letter-spacing: -0.02em;
 }
+/* Whether it can be undone, after the title's last word (on the page and in the dialog's title), wrapping with it: a
+   space parts them, so the words read as two, and the chip's margin makes the rest of the gap. */
+.ap-review__titleline > .ap-review__title {
+  display: inline;
+}
+.ap-review__undo.ac-chip {
+  margin-inline-start: 4px;
+  vertical-align: middle;
+  letter-spacing: 0;
+  font-weight: 500;
+}
 .ap-review__body {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-  max-width: 780px;
 }
 .ap-review__facts .connector-icon,
 .ap-review__facts .ap-conn__own {
@@ -850,7 +877,7 @@ html:not([data-pointer]) .ap-li:focus-visible {
 }
 
 /* The decision: a bar floating at the bottom of the request (the selection bar's look); the dialog's footer
-   elsewhere. What approving allows on the left, Refuse and Approve on the right. */
+   elsewhere. Only its buttons, at its end: what each allows is in its tip. */
 .ap-bar {
   position: relative;
   display: flex;
@@ -862,7 +889,6 @@ html:not([data-pointer]) .ap-li:focus-visible {
   position: sticky;
   bottom: 16px;
   z-index: 4;
-  max-width: 780px;
   margin-top: auto;
   padding: 10px 10px 10px 18px;
   border-radius: 18px;
@@ -877,11 +903,22 @@ html:not([data-pointer]) .ap-li:focus-visible {
   font-size: 13.5px;
   color: var(--muted);
 }
+/* As wide as its buttons: on a narrow bar they wrap, from its end. */
 .ap-bar__acts {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* The buttons alone: at the bar's end, the same room on every side of them. */
+.ap-bar--acts {
+  justify-content: flex-end;
+}
+.ap-bar--acts.ap-bar--float {
+  padding: 10px;
 }
 .ap-bar--refuse {
   display: block;

@@ -42,7 +42,7 @@ const click = async (el: Element, rounds = 6) => {
 };
 
 describe("the right hand's row in the sidebar", () => {
-  test("the first row of AGENTES, above the pinned agents, tinted and with its label; never under Mensagens diretas", async () => {
+  test("the first row of Agentes, above the pinned agents, with its label as a tag; never under Mensagens diretas", async () => {
     const state = withRightHand(seedState());
     seedDm(state, { type: "agent", id: LODI_ID }, { ago: 2 });
     seedDm(state, { type: "agent", id: ADA_ID }, { ago: 5 });
@@ -61,10 +61,11 @@ describe("the right hand's row in the sidebar", () => {
     expect(row?.getAttribute("href")).toBe(`/org/${ORG_ID}/dm/agent/${LODI_ID}`);
     expect(row?.querySelector(".sidebar__item-label")?.textContent).toBe("Lodi");
     expect(row?.querySelector(".sidebar__item-role")?.textContent).toBe("seu braço direito");
+    expect(row?.querySelector(".sidebar__item-role")?.classList.contains("ac-tag")).toBe(true);
     const dms = [...nav().querySelectorAll<HTMLElement>("[data-agent-row]")].map((r) => r.dataset.agentRow);
     expect(dms[0]).toBe(ADA_ID);
     expect(dms).not.toContain(LODI_ID);
-    // Closed, AGENTES still shows it (the stylesheet keeps `[data-right-hand]` in sight).
+    // Closed, Agentes still shows it (the stylesheet keeps `[data-right-hand]` in sight).
     await click(agents?.querySelector(".sidebar__section-toggle") as HTMLElement);
     expect(agents?.querySelector(".sidebar__section")?.getAttribute("data-open")).toBe("false");
     expect(body?.firstElementChild).toBe(pinRow());
@@ -140,7 +141,10 @@ describe("the right hand elsewhere", () => {
     const header = document.querySelector(".channel__header") as HTMLElement;
     // As the language writes it; the line's first letter goes up in CSS (no case change on translated text).
     const topic = header.querySelector(".channel__topic[data-right-hand]");
-    expect(topic?.textContent).toContain("seu braço direito · age com as suas permissões");
+    expect(topic?.textContent).toBe("seu braço direito · age com as suas permissões");
+    // Nothing about models: each person's DM with it thinks with their own AI, in the side panel's Como pensa.
+    expect(header.querySelector(".channel__brain")).toBeNull();
+    expect(header.textContent).not.toContain("Automático");
     expect(header.textContent).not.toContain("Computador");
     expect(screen().getByRole("combobox", { name: "Mensagem para Lodi · nada muda sem você" })).toBeTruthy();
   });
@@ -199,14 +203,10 @@ describe("the right hand elsewhere", () => {
     expect(document.querySelector('canvas[data-mood="wave"]')).toBeNull();
   });
 
-  test("Settings › Lodi: its name and face in the nav, the lock line and its audit link", async () => {
-    await go(withRightHand(seedState()), "settings/right_hand");
-    const link = within(screen().getByRole("navigation", { name: "Seções das configurações" })).getByRole("link", {
-      name: "Lodi",
-    });
-    expect(link.getAttribute("aria-current")).toBe("page");
+  test("Lodi's page: its name, the lock line and its audit link", async () => {
+    await go(withRightHand(seedState()), `agents/${LODI_ID}`);
     expect(screen().getByRole("heading", { name: "Lodi" })).toBeTruthy();
-    const body = document.querySelector(".settings__body") as HTMLElement;
+    const body = document.querySelector(".page") as HTMLElement;
     expect(body.textContent).toContain("Na barra lateral ele aparece sempre como “seu braço direito”.");
     expect(body.textContent).toContain("O Lodi não pode ser arquivado nem apagado.");
     expect(within(body).getByRole("link", { name: "Ver o que o Lodi fez" }).getAttribute("href")).toBe(
@@ -215,7 +215,7 @@ describe("the right hand elsewhere", () => {
   });
 
   test("Mudar visual: the face and the choices in the dialog's body, Cancelar and Salvar in its footer", async () => {
-    await go(withRightHand(seedState()), "settings/right_hand");
+    await go(withRightHand(seedState()), `agents/${LODI_ID}`);
     await click(screen().getByRole("button", { name: "Mudar o visual do Lodi" }));
     const dialog = screen().getByRole("dialog", { name: "Mudar visual" });
     const body = dialog.querySelector(":scope > .ac-dialog__body") as HTMLElement;
@@ -226,7 +226,7 @@ describe("the right hand elsewhere", () => {
   });
 
   test("renaming it there saves the name and its @", async () => {
-    const { state } = await go(withRightHand(seedState()), "settings/right_hand");
+    const { state } = await go(withRightHand(seedState()), `agents/${LODI_ID}`);
     const name = screen().getByRole("textbox", { name: "Nome e visual" });
     await act(async () => fireEvent.change(name, { target: { value: "Bento" } }));
     await act(async () => fireEvent.blur(name));
@@ -237,7 +237,7 @@ describe("the right hand elsewhere", () => {
     ]);
   });
 
-  test("a member has no Lodi section", async () => {
+  test("nobody has a Lodi section in the settings", async () => {
     const state = withRightHand(seedState());
     const org = state.me?.organizations[0];
     if (org) org.role = "member";

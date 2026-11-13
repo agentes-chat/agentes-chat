@@ -20,6 +20,7 @@ import { type NoComputer, noComputerChoice, type SetupView, setupPending } from 
 import { clockAt, formatPercent, relativeTime } from "@agenteschat/client/lib/format";
 import { folderName, hostDescKey, isPaused } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
+import { type ModeSwitchLine, personalSettingsHost, personalSettingsNav } from "@agenteschat/client/lib/personal-view";
 import {
   type AreaLevel,
   areaLine,
@@ -48,7 +49,6 @@ import type { IconName } from "@/ui";
 export type SettingsSection =
   | "apps"
   | "general"
-  | "right_hand"
   | "members"
   | "roles"
   | "audit"
@@ -56,14 +56,26 @@ export type SettingsSection =
   | "access"
   | "connectors"
   | "skills"
-  | "keys"
   | "storage"
   | "computers"
   | "usage"
   | "import"
   | "vault";
 
-export type SettingsGroup = "you" | "org" | "agents" | "costs";
+/**
+ * The phone's groups, the web's settings entries (`TEAM_SETTINGS`; Your account is the phone's own tab): Workspace,
+ * People, AI and usage, Connectors, then Advanced.
+ */
+export type SettingsGroup = "org" | "people" | "ai" | "connectors" | "advanced";
+
+/** Each group's name: the words the web's list shows for the same entry. */
+export const GROUP_LABEL = {
+  org: "mobile.settings.group.org",
+  people: "mobile.settings.group.people",
+  ai: "settings.section.usage",
+  connectors: "access.kind.connectors",
+  advanced: "settings.advanced",
+} as const satisfies Record<SettingsGroup, string>;
 
 export interface SettingsEntry {
   id: SettingsSection;
@@ -75,54 +87,98 @@ export interface SettingsEntry {
   allowed: (org: OrgSummary | null | undefined) => boolean;
 }
 
-/** The web's settings, in its order and groups (`settings.group.*`, `settings.section.*`), with the phone's screens. */
+/**
+ * The web's settings (`settings.section.*`) in the phone's groups, each thing once, a screen each: the workspace
+ * itself (what it is, its GIFs), its people (members, roles), AI and usage, connectors (with skills, the Vault, the
+ * agents' access and the AI apps that reach them) and Advanced (devices, storage, import and export, the audit). The
+ * right hand's settings are on its own profile. Each with a neutral icon (the color stays on faces).
+ */
 export const SETTINGS_SECTIONS: readonly SettingsEntry[] = [
-  // AI apps (ADR 0119): each person's own connections in this workspace; connecting one happens on the web.
-  { id: "apps", group: "you", icon: "share", href: "/settings/apps", allowed: () => true },
-  // The workspace itself (its name, zone, what every agent knows of it): who configures it.
-  {
-    id: "general",
-    group: "org",
-    icon: "home",
-    href: "/settings/general",
-    allowed: (o) => can(o, "configure"),
-  },
-  // The team's right hand (ADR 0137): its name, AI, budget and audience, for who manages agents.
-  {
-    id: "right_hand",
-    group: "org",
-    icon: "agent",
-    href: "/settings/right-hand",
-    allowed: (o) => can(o, "manage_agents"),
-  },
-  // Everyone, as on the web: who invites finds the requests there, a member who may not suggests someone (ADR 0090).
-  { id: "members", group: "org", icon: "members", href: "/me/members", allowed: (o) => can(o, "read") },
-  // Papéis e permissões (ADR 0085): who manages roles, as on the web.
-  { id: "roles", group: "org", icon: "lock", href: "/settings/roles", allowed: (o) => can(o, "manage_roles") },
-  // The Vault (ADR 0144): every member keeps their own logins and keys there and sees the team's shared with them.
-  { id: "vault", group: "org", icon: "lock", href: "/settings/vault", allowed: (o) => can(o, "read") },
-  // What agents did and people changed: who may see the audit (it shows everyone's work).
-  { id: "audit", group: "org", icon: "shield", href: "/settings/audit", allowed: (o) => can(o, "view_audit") },
+  // The workspace itself (its name, logo, zone, what every agent knows of it): who configures it.
+  { id: "general", group: "org", icon: "home", href: "/settings/general", allowed: (o) => can(o, "configure") },
   // GIFs and stickers in chat (ADR 0091): who configures the workspace.
   { id: "media", group: "org", icon: "sticker", href: "/settings/media", allowed: (o) => can(o, "configure") },
-  { id: "access", group: "agents", icon: "agent", href: "/settings/access", allowed: (o) => can(o, "manage_agents") },
-  { id: "connectors", group: "agents", icon: "bolt", href: "/connectors", allowed: () => true },
-  { id: "skills", group: "agents", icon: "sparkle", href: "/settings/skills", allowed: (o) => can(o, "manage_agents") },
-  // Every member sees the computers and connects one (ADR 0025).
-  { id: "computers", group: "agents", icon: "laptop", href: "/settings/computers", allowed: (o) => can(o, "read") },
-  // Everyone (ADR 0063): their plans' meters and the agents whose details they see, in tokens and percentages;
-  // money only for who has `view_usage`.
-  { id: "usage", group: "costs", icon: "chart", href: "/usage", allowed: () => true },
-  // "Contas de IA": everyone's own plans; the workspace's API keys only for who manages them.
-  { id: "keys", group: "costs", icon: "brain", href: "/ai-accounts", allowed: (o) => can(o, "read") },
-  { id: "storage", group: "costs", icon: "drive", href: "/settings/storage", allowed: (o) => can(o, "configure") },
-  { id: "import", group: "costs", icon: "archive", href: "/settings/import", allowed: (o) => can(o, "create_agents") },
+  // Everyone, as on the web: who invites finds the requests there, a member who may not suggests someone (ADR 0090).
+  { id: "members", group: "people", icon: "members", href: "/me/members", allowed: (o) => can(o, "read") },
+  // Papéis e permissões (ADR 0085): who manages roles, as on the web.
+  { id: "roles", group: "people", icon: "lock", href: "/settings/roles", allowed: (o) => can(o, "manage_roles") },
+  // "IA e uso", for everyone (ADR 0063): the workspace's AI accounts with their meters and the agents whose details
+  // they see, in tokens and percentages; money only for who has `view_usage`. It leads to the AI accounts screen.
+  { id: "usage", group: "ai", icon: "chart", href: "/usage", allowed: () => true },
+  { id: "connectors", group: "connectors", icon: "join", href: "/connectors", allowed: () => true },
+  {
+    id: "skills",
+    group: "connectors",
+    icon: "sparkle",
+    href: "/settings/skills",
+    allowed: (o) => can(o, "manage_agents"),
+  },
+  // The Vault (ADR 0144): every member keeps their own logins and keys there and sees the team's shared with them.
+  { id: "vault", group: "connectors", icon: "key", href: "/settings/vault", allowed: (o) => can(o, "read") },
+  {
+    id: "access",
+    group: "connectors",
+    icon: "shield",
+    href: "/settings/access",
+    allowed: (o) => can(o, "manage_agents"),
+  },
+  // AI apps (ADR 0119): each person's own connections in this workspace; connecting one happens on the web.
+  { id: "apps", group: "connectors", icon: "share", href: "/settings/apps", allowed: () => true },
+  // Dispositivos: every member sees the computers and the phones they reach, and connects their own (ADR 0025).
+  { id: "computers", group: "advanced", icon: "laptop", href: "/settings/devices", allowed: (o) => can(o, "read") },
+  { id: "storage", group: "advanced", icon: "archive", href: "/settings/storage", allowed: (o) => can(o, "configure") },
+  { id: "import", group: "advanced", icon: "out", href: "/settings/import", allowed: (o) => can(o, "create_agents") },
+  // What agents did and people changed: who may see the audit (it shows everyone's work).
+  { id: "audit", group: "advanced", icon: "list", href: "/settings/audit", allowed: (o) => can(o, "view_audit") },
 ];
 
-export const SETTINGS_GROUPS: readonly SettingsGroup[] = ["you", "org", "agents", "costs"];
+export const SETTINGS_GROUPS: readonly SettingsGroup[] = ["org", "people", "ai", "connectors", "advanced"];
 
 /** The sections this membership opens, in order. */
 export const visibleSections = (org: OrgSummary | null | undefined) => SETTINGS_SECTIONS.filter((s) => s.allowed(org));
+
+// ── A personal workspace's settings (ADR 0159 §3) ───────────────────────────
+
+export interface PersonalSettings {
+  /** The short list, in its order (Your account comes before it: it is the person's own, not a section). */
+  main: SettingsEntry[];
+  /** Every other section this person opens, on the Advanced screen in the phone's groups. */
+  advanced: SettingsEntry[];
+}
+
+/**
+ * A personal workspace's settings on the phone (ADR 0159 §3), from the sections this person opens, as the web lists
+ * them (`personalSettingsNav`): About you, AI and usage, Connectors, Vault and Computers in one list, with People
+ * after About you once someone else is a member (`others`, unknown while loading: it doesn't); every other one under
+ * Advanced. Only where a section is listed changes: each opens the same screen, with the same permission, as in a
+ * team's workspace.
+ */
+export const personalSections = (org: OrgSummary | null | undefined, others: number | undefined): PersonalSettings =>
+  personalSettingsNav(visibleSections(org), others);
+
+/**
+ * What the AI accounts screen lists at its foot in a personal workspace: the sections it holds (`personalSettingsHost`),
+ * those this person opens. No section is held there: Connectors and Skills have rows of their own.
+ */
+export function personalAiParts(org: OrgSummary | null | undefined): SettingsEntry[] {
+  const open = visibleSections(org);
+  const ids = new Set<string>(open.map((s) => s.id));
+  return open.filter((s) => personalSettingsHost(s.id, ids) === "keys");
+}
+
+/** The icon a section has in a personal workspace's short list, where it differs from its usual one. */
+export const PERSONAL_ICON: Partial<Record<SettingsSection, IconName>> = { general: "pen" };
+
+/** A switch of mode's line icon, in the phone's set (`modeSwitchLines` names the web's). */
+export const MODE_LINE_ICON: Record<ModeSwitchLine["icon"], IconName> = {
+  channel: "hash",
+  personAdd: "person",
+  shield: "shield",
+  sidebar: "list",
+  message: "chat",
+  settings: "home",
+  members: "members",
+};
 
 // ── The workspace's page and Editar workspace ──────────────────────────────
 
@@ -137,50 +193,24 @@ export interface TileFacts {
   connectors?: string[] | undefined;
   skills?: number | undefined;
   computers?: { count: number; online: number } | undefined;
-  /** Who manages keys sees the workspace's; anyone else, their own plans. */
-  keys?: { manages: true; live: number; platform: boolean } | { manages: false; plans: number } | undefined;
   storage?: { kind: "agentes" | "s3"; edition: "cloud" | "selfhost" } | undefined;
 }
 
-/** Each area's line under its name on the workspace's page, as the web's tiles (`settings.tileState.*`). */
-export function tileStates(t: TFunction, locale: string, f: TileFacts): Partial<Record<SettingsSection, string>> {
+/**
+ * One value per row on the workspace's page, short, in faint ("5", "2", "1 de 2", "40%"): a count or a state, never
+ * a sentence (that is the area's own screen). Absent while it loads or where there is nothing to count.
+ */
+export function areaValues(t: TFunction, locale: string, f: TileFacts): Partial<Record<SettingsSection, string>> {
   const out: Partial<Record<SettingsSection, string>> = {};
-  const pending = f.invitations ?? 0;
   if (f.overview) {
-    out.members = [
-      t("settings.tileState.members", { count: f.overview.people }),
-      pending > 0 ? t("settings.tileState.invitations", { count: pending }) : null,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-    out.access = t("settings.tileState.agents", { count: f.overview.agents });
-    if (f.usesApi)
-      out.usage = t("settings.tileState.usage", { percent: formatPercent(locale, f.overview.budgetUsedPercent) });
+    out.members = String(f.overview.people);
+    out.access = String(f.overview.agents);
+    if (f.usesApi) out.usage = formatPercent(locale, f.overview.budgetUsedPercent);
   }
-  if (f.connectors) {
-    const names = f.connectors.slice(0, 3).join(", ");
-    out.connectors =
-      f.connectors.length === 0
-        ? t("settings.tileState.noConnectors")
-        : `${t("settings.tileState.connectors", { count: f.connectors.length })} · ${names}`;
-  }
-  if (f.skills !== undefined) out.skills = t("settings.tileState.skills", { count: f.skills });
-  if (f.computers)
-    out.computers =
-      f.computers.count === 0
-        ? t("settings.tileState.noComputers")
-        : t("settings.tileState.computers", { count: f.computers.count, online: f.computers.online });
-  if (f.keys)
-    out.keys = f.keys.manages
-      ? f.keys.live > 0
-        ? t("settings.tileState.keys", { count: f.keys.live })
-        : f.keys.platform
-          ? t("settings.tileState.platformKey")
-          : t("settings.tileState.noKeys")
-      : f.keys.plans > 0
-        ? t("settings.tileState.plans", { count: f.keys.plans })
-        : t("settings.tileState.noPlans");
-  if (f.storage) out.storage = t(storageKey(f.storage.kind, f.storage.edition));
+  if (f.connectors && f.connectors.length > 0) out.connectors = String(f.connectors.length);
+  if (f.skills !== undefined && f.skills > 0) out.skills = String(f.skills);
+  if (f.computers && f.computers.count > 0)
+    out.computers = t("mobile.settings.ofOnline", { online: f.computers.online, count: f.computers.count });
   return out;
 }
 

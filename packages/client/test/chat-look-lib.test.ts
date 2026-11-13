@@ -5,6 +5,7 @@ import {
   facesShown,
   firstUnreadId,
   mineOnRight,
+  openAtOf,
   opensAtLastRead,
   textSizeOf,
 } from "../src/lib/chat-look";
@@ -25,6 +26,20 @@ const said = (id: string, author: { type: "person" | "agent"; id: string }, crea
 test("whoever hasn't chosen: channels on the left, DMs in light bubbles", () => {
   expect(chatLookOf(undefined, false)).toEqual({ style: "left", tone: "light" });
   expect(chatLookOf({}, true)).toEqual({ style: "bubbles", tone: "light" });
+});
+
+test("in a personal workspace every conversation opens in bubbles; a team's channels stay on the left (ADR 0159)", () => {
+  expect(chatLookOf(undefined, false, true)).toEqual({ style: "bubbles", tone: "light" });
+  expect(chatLookOf({}, true, true)).toEqual({ style: "bubbles", tone: "light" });
+  expect(chatLookOf({}, false, false)).toEqual({ style: "left", tone: "light" });
+});
+
+test("the person's own choice wins over a personal workspace's default", () => {
+  expect(chatLookOf({ channelStyle: "left", channelTone: "strong" }, false, true)).toEqual({
+    style: "left",
+    tone: "strong",
+  });
+  expect(chatLookOf({ dmStyle: "compact" }, true, true)).toEqual({ style: "compact", tone: "light" });
 });
 
 test("channels and DMs each keep their own choice", () => {
@@ -48,11 +63,17 @@ test("a DM drops the other side's face where my rows keep the right side; channe
   expect(styles.map((s) => facesShown(s, false))).toEqual([true, true, true, true]);
 });
 
-test("it opens at the last read message only when asked and with something unread", () => {
-  expect(opensAtLastRead(undefined, 3)).toBe(false);
-  expect(opensAtLastRead({ openAt: "latest" }, 3)).toBe(false);
-  expect(opensAtLastRead({ openAt: "read" }, 0)).toBe(false);
+test("it opens at the last read message until the person picks the newest, and only with something unread", () => {
+  expect(openAtOf(undefined)).toBe("read");
+  expect(openAtOf({ dmStyle: "left" })).toBe("read");
+  expect(openAtOf({ openAt: "latest" })).toBe("latest");
+  expect(opensAtLastRead(undefined, 3)).toBe(true);
+  expect(opensAtLastRead({}, 3)).toBe(true);
   expect(opensAtLastRead({ openAt: "read" }, 3)).toBe(true);
+  // An explicit choice of the newest message stays theirs.
+  expect(opensAtLastRead({ openAt: "latest" }, 3)).toBe(false);
+  expect(opensAtLastRead(undefined, 0)).toBe(false);
+  expect(opensAtLastRead({ openAt: "read" }, 0)).toBe(false);
 });
 
 test("the first unread message is past the read mark and not mine", () => {

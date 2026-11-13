@@ -46,13 +46,16 @@ export function normalizeServer(input: string, opts: { allowHttp?: boolean | "lo
   const raw = input.trim();
   // Some URL parsers (Chromium's) keep a space in a host as `%20`: never an address.
   if (/\s/.test(raw)) return null;
+  const schemed = /^[a-z][\w+.-]*:\/\//i.test(raw);
   let url: URL;
   try {
-    url = new URL(/^[a-z][\w+.-]*:\/\//i.test(raw) ? raw : `https://${raw}`);
+    url = new URL(schemed ? raw : `https://${raw}`);
   } catch {
     return null;
   }
   if (url.username || url.password || !url.hostname) return null;
+  // "127.0.0.1:4310" or "localhost:3000" typed as shown: a server on this computer answers plain http, never https.
+  if (!schemed && opts.allowHttp && LOOPBACK_HOST.test(url.hostname)) return `http://${url.host}`;
   if (url.protocol === "https:") return url.origin;
   if (url.protocol !== "http:") return null;
   const allowed = opts.allowHttp === "loopback" ? LOOPBACK_HOST : opts.allowHttp === true ? LOCAL_HOST : null;
@@ -111,6 +114,21 @@ export function connectLink(server: string, { token, claim }: Omit<ConnectLink, 
   if (claim) query.set("claim", claim);
   return `agenteschat://connect?${query}`;
 }
+
+/**
+ * The desktop app connects this computer with a connect link (`link`, as `ABCD-EFGH`) of `server`, after the
+ * person confirms in the app; the link's maker still lets it join on the web.
+ */
+export const pairLink = (server: string, link: string) => `agenteschat://pair?${new URLSearchParams({ server, link })}`;
+
+/**
+ * Whether the desktop app takes a `pairLink` of `server`: https, and not on this computer itself. The app drops any
+ * other one without a word (plain http, and a server here, which comes with this computer already).
+ */
+export const appPairsWith = (server: string) => normalizeServer(server) !== null && !isLoopback(server);
+
+/** A server at a plain http address that isn't this computer: an https address would let the app connect it. */
+export const plainHttpServer = (server: string) => /^http:\/\//i.test(server.trim()) && !isLoopback(server);
 
 /**
  * The server, one-time sign-in and owner claim of a connect link; null for any other text or code, a link over

@@ -1,16 +1,17 @@
-import { useHomeBoard, type Widget } from "@agenteschat/client";
+import { frozenBoard, useHomeBoard, type Widget } from "@agenteschat/client";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useOrg } from "@/providers/org";
 import { Icon, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
 import { newWidgetHref } from "../dashboards/BoardScreen";
 import { HOME, widgetsInOrder } from "../dashboards/logic";
 import { WidgetPeek } from "../dashboards/WidgetPeek";
-import { useColors, useOrgId } from "../shared/hooks";
+import { useColors } from "../shared/hooks";
 import { CollapsibleSection } from "./HomeSection";
 
-/** A widget's width on the strip: two and a bit show, so it reads as one that scrolls. */
-const STRIP_WIDGET = 156;
+/** A widget's width on the strip: two show whole and the third peeks past the edge, so it reads as one that scrolls. */
+const STRIP_WIDGET = 162;
 
 /**
  * The home's widgets (ADR 0135 §15, §18): a head with what Início shows (My Home, or the board chosen with "Use on
@@ -21,10 +22,10 @@ export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onTog
   const { t } = useTranslation();
   const c = useColors();
   const { shadows } = useTheme();
-  const orgId = useOrgId();
+  const { orgId, org } = useOrg();
   const home = useHomeBoard(orgId);
   if (home.loading && !home.board) return null;
-  const board = home.board;
+  const board = home.board && frozenBoard(home.board, org);
   const title = home.chosenId ? (board?.title ?? home.chosenTitle ?? "") : t("dashboards.home");
   const widgets: Widget[] = board ? widgetsInOrder(board.widgets) : [];
   const canAdd = Boolean(board?.canEdit);
@@ -90,7 +91,8 @@ export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onTog
   );
 }
 
-const GAP = 10;
+/** Between the cards: the lists' 12. */
+const GAP = 12;
 
 const styles = StyleSheet.create({
   medium: { fontWeight: "500" },

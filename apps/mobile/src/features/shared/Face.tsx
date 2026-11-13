@@ -1,9 +1,11 @@
 import { opensDetails } from "@agenteschat/client/lib/audience";
 import { isOutOfOffice } from "@agenteschat/client/lib/presence";
 import { splitAtNames } from "@agenteschat/client/lib/text";
+import type { Expression } from "@agenteschat/ui/agent/engine";
 import { Fragment, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text as RNText, StyleSheet, View } from "react-native";
+import type { Gaze } from "@/agent/AgentAvatar";
 import type { AgentLookInput } from "@/agent/looks";
 import { type AgentMode, agentLayout, framedByDefault } from "@/agent/poses";
 import { AgentAvatar, PersonAvatar, WithPresence } from "@/ui";
@@ -88,6 +90,9 @@ export function AgentFace({
   framed,
   presence = false,
   ring,
+  gaze,
+  expression,
+  bodyless,
 }: {
   agentId: string | null | undefined;
   size: number;
@@ -99,14 +104,41 @@ export function AgentFace({
   presence?: boolean;
   /** The surface behind the badge (default the page's color). */
   ring?: string;
+  /** Where it looks for a moment (see `AgentAvatar`). */
+  gaze?: Gaze | undefined;
+  /** A face it holds for a moment (a hello, a cheer). */
+  expression?: Expression | undefined;
+  /** Only its sky in the frame: away on a routine. */
+  bodyless?: boolean | undefined;
 }) {
   const dir = useDirectory();
   const look = agentLook(agentId ? dir.anyAgent(agentId) : undefined);
+  const moment = { gaze, expression, bodyless };
   if (presence && agentId)
     return (
-      <PresentAgentFace agentId={agentId} look={look} size={size} mode={mode} live={live} framed={framed} ring={ring} />
+      <PresentAgentFace
+        agentId={agentId}
+        look={look}
+        size={size}
+        mode={mode}
+        live={live}
+        framed={framed}
+        ring={ring}
+        moment={moment}
+      />
     );
-  return <AgentAvatar agent={look} size={size} mode={mode} live={live} framed={framed} />;
+  return (
+    <AgentAvatar
+      agent={look}
+      size={size}
+      mode={mode}
+      live={live}
+      framed={framed}
+      {...(gaze ? { gaze } : {})}
+      {...(expression ? { expression } : {})}
+      {...(bodyless ? { bodyless } : {})}
+    />
+  );
 }
 
 function PresentAgentFace({
@@ -117,6 +149,7 @@ function PresentAgentFace({
   live,
   framed,
   ring,
+  moment,
 }: {
   agentId: string;
   look: AgentLookInput;
@@ -125,12 +158,22 @@ function PresentAgentFace({
   live: boolean;
   framed: boolean | undefined;
   ring: string | undefined;
+  moment: { gaze?: Gaze | undefined; expression?: Expression | undefined; bodyless?: boolean | undefined };
 }) {
   const status = usePresenceOf().agent(agentId)?.status?.status;
   const asleep = mode === "idle" && isOutOfOffice(status);
   return (
     <Badged who={{ type: "agent", id: agentId }} size={size} ring={ring} inset={agentBadgeInset(look, size, framed)}>
-      <AgentAvatar agent={look} size={size} mode={asleep ? "sleep" : mode} live={live} framed={framed} />
+      <AgentAvatar
+        agent={look}
+        size={size}
+        mode={asleep ? "sleep" : mode}
+        live={live}
+        framed={framed}
+        {...(moment.gaze ? { gaze: moment.gaze } : {})}
+        {...(moment.expression ? { expression: moment.expression } : {})}
+        {...(moment.bodyless ? { bodyless: true } : {})}
+      />
     </Badged>
   );
 }
@@ -187,12 +230,16 @@ export function AgentWho({
   size?: number;
   lead?: boolean;
 }) {
-  const side = { marginLeft: lead ? 0 : Math.round(size * 0.2), marginRight: Math.round(size * 0.4) };
+  // A view inside a line of text sits on the baseline and iOS drops its margins, so the face touched the name: the
+  // room around it is text (a narrow space before, unless it opens the line, and after), and it is lowered to sit on
+  // the words' middle (its bottom on the baseline put it a little high next to lowercase text).
   return (
     <RNText style={whoStyles.who}>
-      <View style={[whoStyles.face, { width: size, height: size }, side]}>
+      {lead ? "" : NARROW}
+      <View style={{ width: size, height: size, transform: [{ translateY: Math.round(size * 0.2) }] }}>
         <AgentFace agentId={agentId} size={size} live={false} />
       </View>
+      {NARROW}
       {name}
     </RNText>
   );
@@ -220,8 +267,10 @@ export function withAgentFaces(
   );
 }
 
+/** A narrow no-break space: the gap between an inline face and its name, as text. */
+const NARROW = "\u202F";
+
 const whoStyles = StyleSheet.create({
   who: { fontWeight: "600" },
-  face: { transform: [{ translateY: 2 }] },
   pressed: { opacity: 0.6 },
 });

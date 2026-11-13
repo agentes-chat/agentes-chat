@@ -16,6 +16,7 @@ mod local_server;
 mod main_window;
 mod menus;
 mod notch;
+mod prepare;
 mod runners;
 mod servers;
 mod tailscale;
@@ -51,6 +52,8 @@ struct AppInfo {
     version: String,
     os: &'static str,
     arch: &'static str,
+    /// The system's own version where it is read (macOS: `15.1`).
+    system: Option<String>,
 }
 
 /// The providers' own sign-in pages the runner gets from `claude auth login` / `codex login --device-auth`
@@ -144,9 +147,32 @@ fn make_window(app: &AppHandle, name: &str) -> Result<tauri::WebviewWindow, Stri
         .find(|w| w.label == name)
         .ok_or("window not found")?
         .clone();
-    tauri::WebviewWindowBuilder::from_config(app, &config)
+    let window = tauri::WebviewWindowBuilder::from_config(app, &config)
         .and_then(|b| b.build())
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    // Named in the app's language (the Dock's list, the Window menu): never a second "agentes.chat".
+    let key = match name {
+        "welcome" => Some("windowWelcome"),
+        "prefs" => Some("windowPrefs"),
+        _ => None,
+    };
+    if let Some(title) = key.and_then(|k| menus::labels(app).get(k).cloned()) {
+        let _ = window.set_title(&title);
+    }
+    Ok(window)
+}
+
+/// A panel (the menu bar's popover, the notch's island) stays out of the Window menu and the Dock's list of
+/// windows: only the app's real windows are listed there, each by its own name.
+#[cfg(target_os = "macos")]
+pub(crate) fn keep_out_of_window_list(ns_window: *mut std::ffi::c_void) {
+    use objc2::{msg_send, runtime::AnyObject};
+    // SAFETY: an NSWindow pointer from Tauri, used on the main thread.
+    unsafe {
+        if let Some(w) = (ns_window as *mut AnyObject).as_ref() {
+            let _: () = msg_send![w, setExcludedFromWindowsMenu: true];
+        }
+    }
 }
 
 /// The launch argument start at login passes, so a login start stays in the menu bar.
@@ -399,6 +425,8 @@ fn hide_window(app: AppHandle, name: String) -> Result<(), String> {
     }
     let Some(window) = app.get_webview_window(&name) else { return Ok(()) };
     if MADE_ON_OPEN.contains(&name.as_str()) {
+        // `destroy` skips CloseRequested, where a setup on screen ends with its window.
+        prepare::closed(&app, &name);
         window.destroy().map_err(|e| e.to_string())?;
     } else {
         window.hide().map_err(|e| e.to_string())?;
@@ -418,6 +446,7 @@ fn app_info(app: AppHandle) -> AppInfo {
         version: app.package_info().version.to_string(),
         os: std::env::consts::OS,
         arch: std::env::consts::ARCH,
+        system: prepare::system_version(),
     }
 }
 
@@ -590,6 +619,7 @@ pub fn run() {
         .manage(dock::Dock::default())
         .manage(menus::MenuParts::default())
         .manage(window_state::LastSaved::default())
+        .manage(prepare::Resumed::default())
         .manage(UpdateDownload::default())
         .invoke_handler(tauri::generate_handler![
             runners_list,
@@ -615,8 +645,10 @@ pub fn run() {
             servers::servers_get,
             servers::server_choose,
             servers::server_remove,
+            servers::server_sign_out,
             discover::discover,
             deep_link::link_take,
+            deep_link::pair_link_info,
             local_server::local_server_status,
             local_server::local_server_install,
             local_server::local_server_cancel,
@@ -627,6 +659,10 @@ pub fn run() {
             local_server::local_server_reach_stop,
             local_server::local_server_usage,
             local_server::local_server_backup,
+            local_server::local_server_backups_set,
+            local_server::local_server_restore,
+            local_server::keep_running,
+            local_server::open_system_settings,
             local_server::local_server_diagnostics,
             local_server::local_server_sync,
             tailscale::tailscale_status,
@@ -636,15 +672,26 @@ pub fn run() {
             main_window::this_mac_reply,
             main_window::this_mac_listening,
             main_window::notify_site_set,
+            main_window::pair_ask,
             workspaces::workspaces_get,
+            workspaces::site_fetch,
             workspaces::welcome_mode_take,
+            workspaces::welcome_add,
             dock::dock_set,
             menus::app_menu_set,
             menus::context_menu,
             cover::page_ready,
             cover::cover_retry,
             cover::cover_hide,
-            cover::cover_server
+            cover::cover_server,
+            cover::cover_details,
+            prepare::screen_access,
+            prepare::screen_request,
+            prepare::disk_access,
+            prepare::network_ask,
+            prepare::privacy_open,
+            prepare::setup_state_get,
+            prepare::setup_state_set
         ])
         .on_menu_event(|app, event| menus::on_event(app, event.id().as_ref()))
         .on_window_event(|window, event| match event {
@@ -668,8 +715,10 @@ pub fn run() {
                 let _ = window.hide();
                 sync_dock(window.app_handle());
             }
-            // Welcome and Preferences really close (made again when they open).
-            WindowEvent::CloseRequested { .. } if MADE_ON_OPEN.contains(&window.label()) => {}
+            // Welcome and Preferences really close (made again when they open), and a setup on screen ends with them.
+            WindowEvent::CloseRequested { .. } if MADE_ON_OPEN.contains(&window.label()) => {
+                prepare::closed(window.app_handle(), window.label());
+            }
             WindowEvent::Destroyed if MADE_ON_OPEN.contains(&window.label()) => sync_dock(window.app_handle()),
             WindowEvent::CloseRequested { api, .. } => {
                 // The other windows are made once and only hidden; quitting goes through "Quit".
@@ -720,27 +769,38 @@ pub fn run() {
             // Before the tray (it lists them).
             servers::load(&handle);
             tray::create(&handle)?;
+            #[cfg(target_os = "macos")]
+            if let Some(ns) = handle.get_webview_window("popover").and_then(|w| w.ns_window().ok()) {
+                keep_out_of_window_list(ns);
+            }
             migrate_login_item(&handle);
             // Start at login written before the flag existed: write it again, now with the flag.
             let launcher = handle.autolaunch();
             if launcher.is_enabled().unwrap_or(false) {
                 let _ = launcher.enable();
             }
-            // The server here first (its own homes start with the rest); nothing starts without homes: in the
-            // Cloud, or with a server whose agents work elsewhere.
+            // The server here first (its own homes start with the rest); nothing starts without homes (no
+            // workspace lets its agents work on this computer yet).
             local_server::load(&handle);
             app.state::<Runners>().start_all(&handle);
             host_sync::start(&handle);
             // Every server's workspaces, for the site's menu and Preferences (ADR 0154).
             workspaces::start(&handle);
+            main_window::stop_from_notices(&handle);
             deep_link::setup(&handle);
             // Started at login: in the background (the popover, the tray). Opened by hand: the main window on
-            // the server open now, or the first run while there is none.
+            // the server open now, or the first run while there is none. Opened again by macOS in the middle of a
+            // setup (the "Quit & Reopen" after a permission): the main window on the page it showed, and the setup's
+            // window over it.
             let at_login = std::env::args().any(|a| a == AUTOSTART_ARG);
+            let resume = prepare::resume(&handle, at_login);
             if servers::current(&handle).is_none() {
                 let _ = present(&handle, "welcome");
             } else if !at_login {
-                let _ = main_window::open(&handle, None);
+                let _ = main_window::open(&handle, resume.as_ref().and_then(|r| r.page.clone()));
+            }
+            if let Some(resume) = resume {
+                let _ = present(&handle, resume.window);
             }
             // In the Dock from the start, like Slack (the popover then applies the person's choice).
             sync_dock(&handle);
@@ -768,7 +828,14 @@ pub fn run() {
         }
         // A click on the Dock icon: bring the app's window back.
         #[cfg(target_os = "macos")]
-        RunEvent::Reopen { .. } => open_app(app),
+        RunEvent::Reopen { .. } => {
+            // A click on a notification of the server here brings the app forward: the popover, which says why.
+            if local_server::take_notice_click() {
+                let _ = present(app, "popover");
+            } else {
+                open_app(app);
+            }
+        }
         _ => {}
     });
 }

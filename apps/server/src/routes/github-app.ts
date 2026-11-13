@@ -3,6 +3,7 @@ import { escapeHtml } from "@agenteschat/client/lib/text";
 import { connectorOAuthApps, githubAppConfig } from "@agenteschat/config";
 import { eq, schema } from "@agenteschat/db";
 import {
+  answerGitHubNotice,
   appOAuthRedirect,
   completeGitHubAppInstall,
   convertGitHubAppManifest,
@@ -21,10 +22,12 @@ import {
   issueManifestState,
   listGitHubAppInstallations,
   listOrgRepositories,
+  missingGitHubAppEvents,
   NotFoundError,
   oauthReturnTo,
   peekOAuthState,
   pinnedOwner,
+  queueGitHubAppEvent,
   readManifestState,
   reconcileGitHubAppInstallations,
   removeGitHubAppInstallation,
@@ -42,6 +45,7 @@ import {
   createAppRouter,
   errors,
   json,
+  noContent,
   OrgParams,
   oauthFailedUrl,
   oauthFailure,
@@ -80,6 +84,13 @@ const Setup = z
       description: "`invalid`: a saved app that doesn't open on this server (another `AGENTES_SECRET`).",
     }),
     canCreate: z.boolean().openapi({ description: "No app yet: `POST /github-app/manifest` makes one." }),
+    events: z
+      .object({ missing: z.array(z.string()), url: z.string() })
+      .optional()
+      .openapi({
+        description:
+          "The events agents hear that the app isn't subscribed to on GitHub (an app made before them, or by hand), by GitHub's names, and its page there where they're ticked. Absent when it has them all, or GitHub didn't answer.",
+      }),
   })
   .openapi("GitHubAppSetup");
 
@@ -146,7 +157,9 @@ export function githubAppRoutes(deps: AppDeps) {
     settings && !isAgentesCloud(deps.config.PUBLIC_URL) && (await pinnedOwner(deps.db)) === userId ? settings : null;
   const setupOf = async (holder: GitHubAppSettings) => {
     const view = await holder.view();
-    return { ...view, canCreate: view.source === null };
+    const app = view.state === "ok" ? holder.current() : null;
+    const events = app ? await missingGitHubAppEvents(app, githubAccess(deps).http) : null;
+    return { ...view, canCreate: view.source === null, ...(events ? { events } : {}) };
   };
 
   app.openapi(
@@ -232,7 +245,7 @@ export function githubAppRoutes(deps: AppDeps) {
       security,
       summary: "Finish installing the GitHub App the phone app started (admins)",
       description:
-        "The phone app opened the install link in the system browser (`returnTo: \"app:connectors\"`); the callback handed `state`, `code` and `installation_id` back to the app, which sends them here with its own session. The state must be this person's and this organization's, unused and not expired. Refusals as on the web: `github_app.not_visible`, `github_app.other_workspace` (409), `github_app.installed_outside`, `oauth.other_account`, and `github_app.misconfigured` (500: GitHub refused this server's app, reported as an error).",
+        "The phone app opened the install link in the system browser (`returnTo: \"app:connectors\"`); the callback handed `state`, `code` and `installation_id` back to the app, which sends them here with its own session. The state must be this person's and this organization's, unused and not expired. Refusals as on the web: `github_app.not_visible`, `github_app.other_workspace` (409), `github_app.installed_outside`, `github_app.owner_required` (an organization's installation, by someone who doesn't own it on GitHub), `github_app.owner_unknown` (GitHub refused to say who owns it, a 403: most likely the server's app lacks Members: read), `oauth.other_account`, and `github_app.misconfigured` (500: GitHub refused this server's app, reported as an error).",
       request: {
         params: OrgParams,
         body: body(
@@ -347,7 +360,7 @@ export function githubAppRoutes(deps: AppDeps) {
       security,
       summary: "GitHub's redirect after installing (browser navigation)",
       description:
-        "Checks the state and that the person's GitHub account can see the installation, binds it to the organization (its GitHub when it had none), then redirects to the web app with `github_app=installed`, or `github_app_error=` `requested`, `cancelled`, `expired`, `used`, `other_account`, `not_visible`, `other_workspace`, `installed_outside`, `not_allowed`, `misconfigured` (GitHub refused this server's app: its client id or secret is wrong, which is logged as an error) or `failed`. A new binding needs an installation GitHub made after the state was issued (`installed_outside` otherwise, also for `setup_action=update` of one not bound here, and for `setup_action=install` without a state: installed from GitHub's own page). `setup_action=update` without a state (repositories changed on GitHub's own page) lands on the web app with nothing to finish. Started by the phone app: no session needed, it redirects to `agenteschat://connectors/oauth` with `state`, `code` and `installation_id` (or `error`).",
+        "Checks the state and that the person's GitHub account can see the installation, binds it to the organization (its GitHub when it had none), then redirects to the web app with `github_app=installed`, or `github_app_error=` `requested`, `cancelled`, `expired`, `used`, `other_account`, `not_visible`, `other_workspace`, `installed_outside`, `owner_required`, `owner_unknown`, `not_allowed`, `misconfigured` (GitHub refused this server's app: its client id or secret is wrong, which is logged as an error) or `failed`. A new binding needs an installation GitHub made after the state was issued (`installed_outside` otherwise, also for `setup_action=update` of one not bound here, and for `setup_action=install` without a state: installed from GitHub's own page). `setup_action=update` without a state (repositories changed on GitHub's own page) lands on the web app with nothing to finish. Started by the phone app: no session needed, it redirects to `agenteschat://connectors/oauth` with `state`, `code` and `installation_id` (or `error`).",
       request: {
         query: z.object({
           state: z.string().optional(),
@@ -398,6 +411,26 @@ export function githubAppRoutes(deps: AppDeps) {
         }
         return fail(reason);
       }
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/messages/{messageId}/github-answer",
+      tags,
+      security,
+      summary: "Ask the agent to answer what someone it doesn't answer wrote on GitHub, from its notice",
+      description:
+        "The id is the notice's (`meta.notice.kind` `github_event` with `refs.outside`). Anyone who reads the conversation and may talk to the agent, once: the notice changes in place (`message.created` with the same id, `refs.answeredBy`), and a new notice with that person behind it wakes the agent. 409 `github_event.answered` when someone already asked, `github_event.agent_not_here` when the agent was taken out of the conversation since; 403 `audience.*` when the agent doesn't answer this person.",
+      request: { params: OrgParams.extend({ messageId: z.uuid() }) },
+      responses: { 204: noContent[204], ...errors },
+    }),
+    async (c) => {
+      const { orgId, messageId } = c.req.valid("param");
+      await answerGitHubNotice({ db: deps.db, pubsub: deps.adapters.pubsub }, c.get("user").id, orgId, messageId);
+      deps.wakeWorkers?.();
+      return c.body(null, 204);
     },
   );
 
@@ -566,8 +599,16 @@ export function registerGitHubAppWebhook(api: OpenAPIHono, deps: AppDeps) {
     } catch {
       return c.json({ error: "invalid JSON" }, 400);
     }
-    const github = { app, http: githubAccess(deps).http };
-    const result = await handleGitHubAppWebhook(deps.db, c.req.header("x-github-event") ?? null, payload, { github });
-    return c.json({ ok: true, result }, 202);
+    const event = c.req.header("x-github-event") ?? null;
+    if (event === "installation" || event === "installation_repositories") {
+      const github = { app, http: githubAccess(deps).http };
+      const result = await handleGitHubAppWebhook(deps.db, event, payload, { github });
+      return c.json({ ok: true, result }, 202);
+    }
+    // What happens on the items: queued once per delivery, so GitHub hears back at once and a redelivery adds nothing.
+    const delivery = c.req.header("x-github-delivery") ?? null;
+    const queued = await queueGitHubAppEvent(deps.db, { event, delivery, payload, slug: app.slug });
+    if (queued) deps.wakeWorkers?.();
+    return c.json({ ok: true, result: queued ? "queued" : "ignored" }, 202);
   });
 }

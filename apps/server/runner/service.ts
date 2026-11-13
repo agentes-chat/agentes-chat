@@ -22,7 +22,7 @@ const AGENT_SLICE_PREFIX = "agents-";
 export const agentSlice = (uid: number) => `${AGENT_SLICE_PREFIX}${uid}.slice`;
 /**
  * Inside it, the agent's Chrome and its AI CLIs each in a slice of their own (`scope-gate.ts`):
- * `agents-<uid>-browser.slice`, `agents-<uid>-cli.slice`. The Cloud's guard reads these names.
+ * `agents-<uid>-browser.slice`, `agents-<uid>-cli.slice`. These names are a contract: an operator's network guard may read them.
  */
 export const agentCategorySlice = (uid: number, kind: ScopeKind) => `${AGENT_SLICE_PREFIX}${uid}-${kind}.slice`;
 /**
@@ -54,7 +54,7 @@ export function agentLimits(memoryBytes: number, host: boolean): { each: string;
 }
 /**
  * The agents' share of the RAM, all of them together. With their swap in RAM at half its size, they take 87.5% at
- * most, about 1 GiB of 8 GB left to the system, the runner and the Cloud's guard. On the server's own computer
+ * most, about 1 GiB of 8 GB left to the system, the runner and any operator's guard beside it. On the server's own computer
  * (`host`) they take 58% at most, about 1.6 GiB of 4 GB left to Docker, Postgres and the server too.
  */
 const AGENTS_SHARE = 75;
@@ -75,8 +75,11 @@ export const AGENT_RAM_ROOT = "/run/agentes-runner-tmp";
 /** Each agent's own /var/tmp (`<uid>/var-tmp`): on disk as the computer's is, in a folder only root can reach. */
 export const AGENT_TMP_ROOT = "/var/lib/agentes-runner-tmp";
 export const agentTmp = (uid: number) => path.join(AGENT_RAM_ROOT, String(uid), "tmp");
-/** systemd-tmpfiles' lines for them: what agents leave goes after 10 days, 30 in /var/tmp, as in a stock system. */
-export const AGENT_TMP_CLEANUP = `# agentes.chat runner: each agent's own temporary folders\ne ${AGENT_RAM_ROOT}/*/* - - - 10d\ne ${AGENT_TMP_ROOT}/*/* - - - 30d\n`;
+/**
+ * systemd-tmpfiles' lines for them: what agents leave goes after 10 days, 30 in /var/tmp, as in a stock system. Each
+ * agent's runtime dir (`run`, ADR 0169) never ages, as logind's don't: a container up for weeks keeps its state there.
+ */
+export const AGENT_TMP_CLEANUP = `# agentes.chat runner: each agent's own temporary folders\ne ${AGENT_RAM_ROOT}/*/* - - - 10d\nx ${AGENT_RAM_ROOT}/*/run\ne ${AGENT_TMP_ROOT}/*/* - - - 30d\n`;
 /** In `/etc/tmpfiles.d`, two folders up from the unit's (`/etc/systemd/system`). */
 export const agentTmpCleanupPath = (unitPath = SYSTEM_UNIT_PATH) =>
   path.join(path.dirname(unitPath), "..", "..", "tmpfiles.d", `${SERVICE_NAME}.conf`);
@@ -289,14 +292,19 @@ export function systemdUserAvailable(run: RunCommand = runSync) {
 /** systemd's version from `systemctl --version` ("systemd 257 (257.13-1~deb13u1)"); 0 when it isn't there. */
 export const systemdVersion = (text: string) => Number(/^systemd (\d+)\b/m.exec(text)?.[1] ?? 0);
 
-let oomPolicyOnScopes: boolean | undefined;
+let systemdHere: number | undefined;
+/** This computer's systemd version (`systemdVersion`), asked once. */
+export function installedSystemd(run: RunCommand = runSync): number {
+  systemdHere ??= systemdVersion(run("systemctl", ["--version"]).output);
+  return systemdHere;
+}
+
 /**
  * Whether this systemd takes `OOMPolicy=` on a scope (253 and later). By default it then stops the whole scope
  * when the kernel stops one of its processes for memory; older ones refuse the setting, and leave the rest running.
  */
 export function scopeOomPolicy(run: RunCommand = runSync): boolean {
-  oomPolicyOnScopes ??= systemdVersion(run("systemctl", ["--version"]).output) >= 253;
-  return oomPolicyOnScopes;
+  return installedSystemd(run) >= 253;
 }
 
 export interface ServiceIo {

@@ -45,12 +45,13 @@
   align-items: center;
   justify-content: space-between;
 }
+/* Out over the page's side room: where the filters scroll, they slide under the work area's edges. */
 .nt-segwrap {
-  max-width: 100%;
+  max-width: calc(100% + 2 * var(--page-x));
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 2px;
-  margin: -2px;
+  padding: 2px var(--page-x);
+  margin: -2px calc(-1 * var(--page-x));
 }
 .nt-segwrap::-webkit-scrollbar {
   display: none;
@@ -64,14 +65,10 @@
 /* ── "Esperando você": what blocks an agent or a decision ───────────────── */
 /* The day groups' head, then each request on a card of its own, the face inside it where a day's row has it, so a
    waiting card and the day's list share both edges and the words' column. */
-.nt-wait {
+.nt-wait__cards {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 4px;
-}
-.nt-wait > .list-group-head {
-  margin-bottom: -4px;
 }
 .nt-wi {
   --nt-wi-side: 16px;
@@ -124,10 +121,10 @@ html:not([data-pointer]) .nt-item:focus-visible {
   color: var(--warn);
   font-weight: 600;
 }
-/* Remind me later and Done end the footer, after the time. */
+/* Remind me later and Done end the footer, after the time. The last one's plate ends 8 from the card's edge, its
+   glyph on the edge the card's words keep. */
 .rq__end > .nt-tail.ac-acts {
   display: flex;
-  margin-right: -6px;
 }
 
 /* ── What only points somewhere: a card of the requests' shape, opened by a click on it ── */
@@ -197,17 +194,15 @@ html:not([data-pointer]) .nt-item:focus-visible {
 }
 
 /* ── Day groups and items ───────────────────────────────────────────────── */
-.nt-day {
-  margin-bottom: 4px;
-}
-/* The shared list card, but tooltips under the last row must not be clipped. */
+/* The shared list card, unclipped. */
 .nt-list {
   overflow: visible;
 }
-/* A MediaRow: the face, who and what on its line with the time at its end, the rest under them at the row's width. */
+/* A MediaRow: the face, who and what on its line with the time at its end, the rest under them at the row's width. The
+   face 10 from the top, so the headline's line, centred on it, is 12 from the top as the last line is from the bottom. */
 .nt-item {
   position: relative;
-  padding: 12px 16px 14px;
+  padding: 10px 16px 12px;
   border-top: 1px solid var(--line);
   outline: none;
   cursor: pointer;
@@ -240,6 +235,10 @@ html:not([data-pointer]) .nt-item:focus-visible {
   font-size: 13.5px;
   color: var(--muted);
 }
+/* A source chip ("Devices", "Routine") never touches the headline above it: 8 under it, like the snippet under them. */
+.nt-item:has(> .ac-mediarow__body > .nt-tags:first-child) {
+  row-gap: var(--space-2);
+}
 /* In the body its parts stand the body's gap apart. */
 .nt-item > .ac-mediarow__body > * {
   margin-block: 0;
@@ -267,16 +266,14 @@ html:not([data-pointer]) .nt-item:focus-visible {
 .nt-tm {
   font-size: 12px;
   color: var(--faint);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* The kit's chips as they are: 22 high, their words 12. */
 .nt-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-.nt-tags .ac-chip {
-  height: 22px;
-  font-size: 11.5px;
 }
 .nt-chip-ink {
   color: var(--ink2);
@@ -426,10 +423,6 @@ html:not([data-pointer]) .nt-more:focus-visible {
   line-height: 1.5;
 }
 /* Reactions: quieter. */
-.nt-item--rx {
-  padding-top: 10px;
-  padding-bottom: 11px;
-}
 .nt-item--rx > .ac-mediarow__head {
   font-size: 13px;
 }
@@ -480,6 +473,10 @@ html:not([data-pointer]) .nt-more:focus-visible {
   margin-top: 7px;
   font-size: 12.5px;
   color: var(--muted);
+}
+/* A device notice's decisions on that line: the kit's line of actions keeps its own column gap, plated pairs 8 apart. */
+.nt-steprow.ac-acts {
+  column-gap: calc(2 * var(--ghost-plate));
 }
 
 /* ── Inline actions: on hover / focus (a floating bar), a row on phones ──── */
@@ -554,24 +551,6 @@ html:not([data-pointer]) .nt-nb:focus-visible {
 .nt-nb__label {
   display: none;
 }
-.nt-nb[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 5px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  color: var(--bg);
-  background: var(--ink);
-  box-shadow: var(--e2);
-  pointer-events: none;
-  animation: nt-fi 0.15s var(--out);
-  z-index: 5;
-}
 
 /* ── The mini composer, opened in place ─────────────────────────────────── */
 .nt-cmp {
@@ -610,6 +589,14 @@ html:not([data-pointer]) .nt-nb:focus-visible {
   color: var(--muted);
   -webkit-text-fill-color: currentColor;
   cursor: not-allowed;
+}
+/* Why it takes nothing (the workspace is being deleted), where the text would start. */
+.nt-cmp__readonly {
+  margin: 0;
+  padding: 2px 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 .nt-cmp__row {
   display: flex;
@@ -712,17 +699,6 @@ html:not([data-pointer]) .nt-nb:focus-visible {
     -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
     mask-image: linear-gradient(90deg, #000 85%, transparent);
   }
-  /* A tap on the row opens it, so the words take Open's room. Open stays for screen readers and the keyboard. */
-  .nt-wr__open:not(:focus-visible) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
   .nt-item {
     padding: 12px 14px;
   }
@@ -768,9 +744,6 @@ html:not([data-pointer]) .nt-nb:focus-visible {
   .nt-nb[data-act="open"] .nt-nb__label {
     display: none;
   }
-  .nt-nb[data-tip]:hover::after {
-    display: none;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .nt-item,
@@ -781,7 +754,6 @@ html:not([data-pointer]) .nt-nb:focus-visible {
   .nt-wi.is-new,
   .nt-item.is-new::after,
   .nt-item.is-pulse,
-  .nt-nb[data-tip]:hover::after,
   .nt-acts,
   .nt-nb,
   .nt-nb::after,

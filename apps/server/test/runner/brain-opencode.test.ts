@@ -198,6 +198,11 @@ test.skipIf(!posix)("detection: OpenCode's semver and its models; another `openc
     version: "1.19.5",
     models: [{ id: "opencode/big-pickle", label: "Big Pickle", free: true }],
   });
+  // OpenCode 2.2 says its name first (`opencode v2.2.7`): still found, its version kept without the name.
+  expect((await detectExecutors(run("opencode v2.2.7"))).found.opencode).toEqual({
+    version: "v2.2.7",
+    models: [{ id: "opencode/big-pickle", label: "Big Pickle", free: true }],
+  });
   expect((await detectExecutors(run("opencode the game"))).found.opencode).toBeUndefined();
 });
 

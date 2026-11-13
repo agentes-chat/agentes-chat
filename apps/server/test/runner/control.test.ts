@@ -11,6 +11,7 @@ import { RunnerDaemon } from "../../runner/daemon";
 import { RUNNER_VERSION } from "../../runner/errors";
 import { ORG_LOGO_MAX_BYTES, orgLogoPath } from "../../runner/org-logo";
 import type { FetchFn } from "../../runner/pairing";
+import { askStandby, standbyAcked } from "../../runner/standby";
 import { removeDirs, tempDir, waitFor } from "./helpers";
 
 const dirs: string[] = [];
@@ -114,6 +115,9 @@ function control(
       dial,
       // No network: the org logo asked after each welcome finds none.
       fetch: async () => new Response(null, { status: 404 }),
+      // Never this computer's own phones or tools.
+      phones: false,
+      toolchains: () => undefined,
       ...daemon,
     },
   });
@@ -151,6 +155,51 @@ function control(
 const sharedGrant = () => ({ path: expect.stringMatching(/[\\/]shared$/), agents: ["*"] });
 
 const stored = (home: string) => JSON.parse(readFileSync(configPath(home), "utf8")) as Record<string, unknown>;
+
+test("hello carries what this computer builds with and the phones it reaches; a phone found after it goes out", async () => {
+  const { home } = pairedHome();
+  const root = tempDir("phones-");
+  dirs.push(root);
+  const bin = path.join(root, "bin");
+  mkdirSync(bin);
+  const fake = path.join(import.meta.dir, "fake-phone-tools.mjs");
+  writeFileSync(path.join(bin, "adb"), `#!/bin/sh\nexec "${process.execPath}" "${fake}" adb "$@"\n`, { mode: 0o755 });
+  const state = path.join(root, "state.json");
+  writeFileSync(
+    state,
+    JSON.stringify({
+      adbDevices: "List of devices attached\nemulator-5554 device model:sdk_gphone64_arm64\n",
+      facts: { "emulator-5554": "model=sdk_gphone64_arm64\nrelease=15\nsdk=35\nboot=1\nqemu=1\navd=Pixel_8_API_35\n" },
+    }),
+  );
+  const c = control(home, {
+    toolchains: () => ({ git: "2.50.1", adb: "36.0.2" }),
+    phones: {
+      env: { PATH: bin, FAKE_PHONE_STATE: state, FAKE_PHONE_LOG: path.join(root, "log") },
+      platform: "linux",
+      home: root,
+      dirs: [],
+      adbServer: async () => null,
+      lockDir: path.join(root, "locks"),
+    },
+  });
+  const s = await c.connect();
+  expect(s.of("hello")[0]).toMatchObject({ toolchains: { git: "2.50.1", adb: "36.0.2" }, phones: expect.any(Array) });
+  const told = () =>
+    s.sent.flatMap((f) =>
+      (f.type === "hello" || f.type === "phones.changed") && Array.isArray(f.phones) ? f.phones : [],
+    );
+  await waitFor(() => told().length > 0);
+  expect(told()[0]).toMatchObject({
+    platform: "android",
+    serial: "emulator-5554",
+    kind: "emulator",
+    model: "Pixel 8 API 35",
+    state: "ready",
+  });
+  c.input.end();
+  expect(await c.done).toBe(0);
+});
 
 test("hello comes first; an unpaired runner answers status; unknown requests are bad_request; stdin closing ends it", async () => {
   const home = tempDir("home-");
@@ -318,6 +367,38 @@ test("a service with no app still looks for the CLIs on a new install, and tells
     type: "executors.changed",
     executors: { codex: { version: "codex-cli 0.164.0" } },
   });
+  await daemon.stop();
+});
+
+test("an operator's standby: the link drops and stays down with the rest running; resume dials at once", async () => {
+  const { home } = pairedHome();
+  const sockets: FakeSocket[] = [];
+  const daemon = new RunnerDaemon({
+    home,
+    mode: "start",
+    log: () => {},
+    print: () => {},
+    watch: false,
+    self: SELF,
+    caffeinate: false,
+    dial: (_url, handlers) => {
+      const s = new FakeSocket(handlers);
+      sockets.push(s);
+      return s;
+    },
+    fetch: async () => new Response(null, { status: 404 }),
+  });
+  void daemon.runStart();
+  await waitFor(() => sockets.length === 1);
+  const s = sockets[0] as FakeSocket;
+  s.handlers.onOpen();
+  s.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+  const ask = askStandby(home, 5);
+  await waitFor(() => s.closed && standbyAcked(home, ask.id), 3000);
+  await Bun.sleep(1500);
+  expect(sockets).toHaveLength(1);
+  const resume = askStandby(home, 0);
+  await waitFor(() => sockets.length === 2 && standbyAcked(home, resume.id), 3000);
   await daemon.stop();
 });
 
@@ -741,6 +822,48 @@ test("device pairing refused on the site: pair.failed with `denied`; cancel stop
   expect(await c.data({ type: "pair.cancel" })).toEqual({ canceled: true });
   expect(await c.data({ type: "pair.cancel" })).toEqual({ canceled: false });
   expect(readStoredConfig(home)).toBeNull();
+});
+
+test("pairing from a connect link: the link goes with the device; a used one fails as link_invalid", async () => {
+  const home = tempDir("home-");
+  const base = tempDir("agentes-");
+  dirs.push(home, base);
+  const bodies: Record<string, unknown>[] = [];
+  let used = false;
+  const fetch: FetchFn = async (url, init) => {
+    if (url.endsWith("/api/machines/device")) {
+      bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      if (used) return Response.json({ error: { code: "machine.link_invalid", message: "Used" } }, { status: 400 });
+      return Response.json({
+        deviceCode: "dc",
+        userCode: "K7Q4ZP",
+        verificationUrl: "x",
+        expiresIn: 600,
+        interval: 3,
+        maker: { name: "Sam Rivera" },
+      });
+    }
+    return Response.json({ token: TOKEN, machineId: "m7", name: "box", org: { id: "o1", name: "Acme" } });
+  };
+  const c = control(home, { fetch, pairSleep: async () => {}, workspaceBase: base });
+  for (const link of ["no spaces", 42, ""])
+    expect(await c.request({ type: "pair.start", server: "https://agentes.test", link })).toMatchObject({
+      ok: false,
+      error: { code: "bad_request" },
+    });
+  expect(bodies).toEqual([]);
+  used = true;
+  await c.data({ type: "pair.start", server: "https://agentes.test", link: "OLD1-CODE" });
+  await waitFor(() => c.events("pair.failed").length === 1);
+  expect(c.events("pair.failed")[0]).toMatchObject({ code: "link_invalid", message: "Used" });
+  used = false;
+  expect(await c.data({ type: "pair.start", server: "https://agentes.test", link: "ABCD-EFGH" })).toEqual({
+    started: true,
+  });
+  await waitFor(() => c.events("pair.done").length === 1);
+  expect(bodies.map((b) => b.link)).toEqual(["OLD1-CODE", "ABCD-EFGH"]);
+  expect(c.events("pair.done")[0]).toMatchObject({ org: { id: "o1", name: "Acme" }, machine: { id: "m7" } });
+  expect(readStoredConfig(home)).toMatchObject({ machineId: "m7", orgId: "o1", managedBy: "desktop" });
 });
 
 test("a second runner on the same home answers every request with the reason, then exits", async () => {

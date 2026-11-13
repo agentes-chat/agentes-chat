@@ -94,18 +94,16 @@ const call = (id: string, tool: string, extra: Partial<Extract<LiveWork, { kind:
 });
 
 describe("the block's lines", () => {
-  test("the same kind in a row is one line counting each; a failure or something said keeps them apart", () => {
+  test("the same kind in a row is one line counting each; a failure keeps them apart", () => {
     const items = toolItemsLive([
       call("1", "browser_open"),
       call("2", "browser_click"),
       call("3", "browser_click", { failed: true }),
-      { kind: "say", text: "Vou tentar de novo." },
       call("4", "browser_click", { running: true, ms: undefined }),
     ]);
     expect(items.map((i) => (i.kind === "call" ? `${i.line.state}×${i.line.count}` : i.kind))).toEqual([
       "done×2",
       "fail×1",
-      "say",
       "run×1",
     ]);
     expect(toolCalls(items)).toBe(4);
@@ -478,6 +476,13 @@ describe("a computer command (its permission check)", () => {
     const none = ((key: string, o?: { defaultValue?: string }) =>
       key.endsWith(".new") ? (o?.defaultValue ?? "") : key) as TFunction;
     expect(toolWhy(none, { why: BECAUSE, refusal: "new" })).toBeNull();
+    // A personal workspace (ADR 0159): its own words where it has them ("This was already done"), else the team's.
+    const known = (key: string) => key === "chat.work.refusal.teamPersonal" || !key.endsWith("Personal");
+    const own = ((key: string, o?: { defaultValue?: string }) =>
+      known(key) ? key : (o?.defaultValue ?? "")) as TFunction;
+    expect(toolWhy(own, { refusal: "team" }, true)).toBe("chat.work.refusal.teamPersonal");
+    expect(toolWhy(own, { refusal: "person" }, true)).toBe("chat.work.refusal.person");
+    expect(toolWhy(own, { refusal: "team" })).toBe("chat.work.refusal.team");
   });
 
   test("a failed tool's own error never shows under its line: the gateway's refusals say why in words", () => {
@@ -553,11 +558,11 @@ describe("each call's service and its logo", () => {
     const [gmail, sales, other, old] = lines(
       toolItemsLive([
         call("1", "mail_wnogueira_search", { connector: "Email", service: "gmail" }),
-        { kind: "say", text: "Agora a de vendas." },
+        { kind: "steer", messageId: "m1" },
         call("2", "mail_vendas_search", { connector: "Email", service: "gmail" }),
-        { kind: "say", text: "Agora a outra caixa." },
+        { kind: "steer", messageId: "m2" },
         call("3", "mail_contato_read", { connector: "Email", service: "custom" }),
-        { kind: "say", text: "E a de antes." },
+        { kind: "steer", messageId: "m3" },
         call("4", "mail_ana_read", { connector: "Email" }),
       ]),
     );
@@ -700,9 +705,7 @@ describe("each call's service and its logo", () => {
       agentId: "theo",
       channelId: "c1",
       threadId: "m1",
-      status: "running" as const,
-      text: "",
-      lastSeq: 0,
+      status: "thinking" as const,
       tool: "mail_wnogueira_search",
       connector: "Email",
       service: "gmail",
@@ -725,16 +728,8 @@ describe("each call's service and its logo", () => {
 describe("one call is its own line (no 'Usou 1 ferramenta' to open)", () => {
   test("one call stands alone; two or more keep the block, a folded line counting each", () => {
     expect(oneCall(toolItemsLive([call("1", "create_routine")]))).toBe(true);
-    // What it said and the messages it read are not calls.
-    expect(
-      oneCall(
-        toolItemsLive([
-          { kind: "say", text: "Vou criar a rotina." },
-          call("1", "create_routine"),
-          { kind: "steer", messageId: "m9" },
-        ]),
-      ),
-    ).toBe(true);
+    // The messages it read are not calls.
+    expect(oneCall(toolItemsLive([call("1", "create_routine"), { kind: "steer", messageId: "m9" }]))).toBe(true);
     // Two browser steps fold into one line ("×2"): still two calls, the block.
     expect(oneCall(toolItemsLive([call("1", "browser_open"), call("2", "browser_click")]))).toBe(false);
     expect(oneCall(toolItemsLive([call("1", "create_routine"), call("2", "create_issue")]))).toBe(false);

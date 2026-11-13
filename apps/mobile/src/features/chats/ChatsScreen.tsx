@@ -1,15 +1,16 @@
-import { keys, useArchivedChannels, useChannelCategories, useChannels } from "@agenteschat/client";
+import { keys, useArchivedChannels, useChannelCategories, useChannels, useMuteChannel } from "@agenteschat/client";
 import { canTalk } from "@agenteschat/client/lib/audience";
 import { waitingComputerByAgent } from "@agenteschat/client/lib/machine-outages";
 import { isRightHand, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { WORKING_POLL_MS } from "@agenteschat/client/lib/working";
+import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsFocused } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { AppState, RefreshControl, StyleSheet } from "react-native";
-import { usePush } from "@/providers/push";
-import { GroupedRow, LargeTitleScreen, Text } from "@/ui";
+import { RefreshControl, StyleSheet, View } from "react-native";
+import { useOrg } from "@/providers/org";
+import { GroupedRow, LargeTitleScreen, PULL_TINT, PullOrbit, SkeletonList, SwipeRow } from "@/ui";
 import { router } from "@/ui/navigation";
 import { workByAgent } from "../agents/logic";
 import { useCategoryMenus } from "../categories/menus";
@@ -20,13 +21,15 @@ import { useOpenDm } from "../new/useOpenDm";
 import { OutageNotices } from "../outages/OutageNotice";
 import { useMachineOutages } from "../outages/queries";
 import { RightHandAsk } from "../right-hand/Pin";
-import { useDirectory, useOrgId, usePullRefresh } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
 import { useActiveWork, useConversations, useHiddenAgents, useWorkingNow } from "../shared/queries";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useTabHeader } from "../shared/tabHeader";
 import { ConversationRowView } from "./ConversationRowView";
+import { DeletingNotice } from "./DeletingNotice";
 import { FirstRunLine } from "./FirstRunLine";
 import { FirstAgentEmpty, Greeting, GreetingSky } from "./Greeting";
+import { Arrive, useHomeEntrance, useWake } from "./HomeEntrance";
 import { CollapsibleSection, SeeAllRow, useHomeCollapsed } from "./HomeSection";
 import { HomeServerError, HomeServerNotice } from "./HomeServerError";
 import { HomeWidgets } from "./HomeWidgets";
@@ -38,31 +41,42 @@ import {
   homeLayout,
   type ListKind,
   rightHandPin,
+  withoutQuietGeneral,
 } from "./logic";
 import { usePins } from "./pins";
 import { useAgentRowStates, useFinished } from "./useHomeNow";
-import { useWaitingItems, WaitingStrip } from "./WaitingStrip";
+import { useWaitingItems } from "./useWaitingItems";
 
 /** Rows of the home whose agent moves (a long list stays light). */
 const LIVE_ROWS = 6;
-/** How long Conversas shows, loaded, before our notifications sheet opens over it (past the launch). */
-const PUSH_OFFER_MS = 2500;
 
 /** A section's "Ver todos", pushed: a kind, or one channel category (ADR 0080). */
 export const openKindList = (kind: ListKind | `category-${string}`) => router.push(`/conversations/${kind}`);
 
 /**
+ * Whether the lists leave a quiet #general out (ADR 0159): in a personal workspace while its person is the only member
+ * (or while the members load), as the web's sidebar. With family in it, #general shows.
+ */
+export function useHidesQuietGeneral(): boolean {
+  const { org } = useOrg();
+  const meId = useMeId();
+  const { memberById } = useDirectory();
+  return isPersonal(org) && ![...memberById.keys()].some((id) => id !== meId);
+}
+
+/**
  * Conversas, the home: the
  * large title with Você and "+" (Novo) in the bar, over a light sky, the greeting under it with what changed
- * (what an agent finished, how many work), the "Esperando você" strip (only while something waits; it opens into
- * the first item's card, and scrolling closes it), then Agentes, Canais and Pessoas by latest activity, each
+ * (what an agent finished, how many work), then Agentes, Canais and Pessoas by latest activity, each
  * collapsible (remembered), five rows and "Ver todos". Under the greeting, the workspace's own computer while it
  * is being prepared, and a notice per computer that went offline with agents waiting for it. Above the sections a
  * Dashboards row pushes the Dashboards list (ADR 0135 §15). An agent's row says it waits on your ok, waits
- * for its computer, or what it is doing. Search and Threads have their own tabs. Empty, it invites the first agent.
- * Our notifications sheet opens over it (never inside a conversation), once it has loaded and once more at the
- * first request to approve, while the phone wasn't asked yet (`@agenteschat/client/lib/push-offer`). When the server doesn't answer
- * it says so (`HomeServerError`), over the kept rows as a card, and tries again on its own.
+ * for its computer, or what it is doing. A row swiped left pins it on top (or takes it off), the long press's menu
+ * has the rest. While the list loads, rows of its own shape stand in (no spinner, nothing moves when it lands).
+ * Search and Threads have their own tabs. Empty, it invites the first agent. Nothing opens over it on its own: the
+ * offer to turn on notifications comes as a line in the right hand's conversation. When the server doesn't answer
+ * it says so (`HomeServerError`), over the kept rows as a card, and tries again on its own. A personal workspace
+ * (ADR 0159) calls its channels group conversations and, while its person is alone in it, leaves a quiet #general out.
  */
 const OTHER_CHANNELS = "otherChannels";
 
@@ -76,7 +90,11 @@ export function ChatsScreen() {
 
 function Home() {
   const { t } = useTranslation();
+  const c = useColors();
   const orgId = useOrgId();
+  const { org } = useOrg();
+  const personal = isPersonal(org);
+  const hideGeneral = useHidesQuietGeneral();
   const qc = useQueryClient();
   const focused = useIsFocused();
   // What the person chose to open when the app starts goes over Conversas, once (ADR 0108).
@@ -94,7 +112,7 @@ function Home() {
   const others = (useChannels(orgId).data ?? []).filter((c) => c.seenAsAdmin);
   const archived = useArchivedChannels(orgId).data?.length ?? 0;
   const menus = useCategoryMenus();
-  const [waitOpen, setWaitOpen] = useState(false);
+  const mute = useMuteChannel(orgId);
 
   useEffect(() => {
     if (!focused) return;
@@ -127,37 +145,58 @@ function Home() {
     [dir.agents, hidden],
   );
   const pins = usePins();
-  const sections = homeLayout(pinned.rows, categories.data ?? [], undefined, starters, pins.pins);
-  // A section's title: a fixed one by its key, a category by its name.
+  const sections = homeLayout(
+    withoutQuietGeneral(pinned.rows, hideGeneral),
+    categories.data ?? [],
+    undefined,
+    starters,
+    pins.pins,
+  );
+  // A section's title: a fixed one by its key (a personal workspace's channels are its group conversations), a
+  // category by its name.
   const sectionTitle = (b: HomeBlock) =>
-    b.name !== undefined ? b.name : t(`mobile.chats.section.${b.key as ListKind}`);
-  // A list that failed to load isn't an empty workspace: it says the server didn't answer.
+    b.name !== undefined
+      ? b.name
+      : personal && b.key === "channels"
+        ? t("shell.channelsPersonal")
+        : t(`mobile.chats.section.${b.key as ListKind}`);
+  // A category's, or a personal workspace's group conversations': the plain "See all" under the section's title.
+  const seeAllLabel = (b: HomeBlock) =>
+    b.categoryId || (personal && b.key === "channels")
+      ? t("mobile.categories.seeAll")
+      : t(`mobile.chats.seeAll.${b.key}`);
+  // A list that failed to load isn't an empty workspace: it says the server didn't answer. A #general left out of
+  // sight still counts: the home keeps its greeting and the right hand's field.
   const failed = list.failed && list.rows.length === 0;
   // Agents already in the team fill the home (Agentes) instead of the invitation to create the first one.
   const empty = !list.loading && !failed && pinned.rows.length === 0 && starters.length === 0;
 
-  const { offer, markOffered } = usePush();
-  const approvalWaits = waiting.items.some((i) => i.kind === "approval");
-  const offerPush = focused && !list.loading && !empty && !failed && (offer.home || (offer.approval && approvalWaits));
-  useEffect(() => {
-    if (!offerPush) return;
-    const timer = setTimeout(() => {
-      if (AppState.currentState !== "active") return;
-      markOffered();
-      router.push("/push-ask");
-    }, PUSH_OFFER_MS);
-    return () => clearTimeout(timer);
-  }, [offerPush, markOffered]);
-  const strip = <WaitingStrip items={waiting.items} open={waitOpen} onOpenChange={setWaitOpen} />;
+  // The first Conversas after the splash arrives as one gesture (once per launch, never holding a tap back): the sky
+  // comes up from the splash's, the greeting rises, the right hand's field follows and its face wakes with a small
+  // hop. The title stays put: it is where the eye lands.
+  const entrance = useHomeEntrance();
+  const wake = useWake(entrance.armed, entrance.play);
+  const arrive = { armed: entrance.armed, play: entrance.play };
 
-  const ask = pinned.pin && !failed && !list.loading ? <RightHandAsk row={pinned.pin} onStart={startDm} /> : null;
+  const ask =
+    pinned.pin && !failed && !list.loading ? (
+      <Arrive {...arrive} delay={90}>
+        <RightHandAsk row={pinned.pin} onStart={startDm} faceMode={wake.mode} faceStyle={wake.style} />
+      </Arrive>
+    ) : null;
 
   let live = 0;
   return (
     <LargeTitleScreen
       title={t("mobile.chats.title")}
       {...header}
-      backdrop={empty || failed ? undefined : <GreetingSky />}
+      backdrop={
+        empty || failed ? undefined : (
+          <Arrive {...arrive} rise={0} duration={700} style={StyleSheet.absoluteFill}>
+            <GreetingSky />
+          </Arrive>
+        )
+      }
       below={
         empty || failed ? undefined : (
           <Greeting
@@ -165,16 +204,23 @@ function Home() {
             finished={finished.finished}
             onFinishedPress={(f) => finished.dismiss(f.key)}
             after={ask}
+            arrive={arrive}
           />
         )
       }
-      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} />}
-      onScrollBeginDrag={waitOpen ? () => setWaitOpen(false) : undefined}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={PULL_TINT} />}
+      pullMark={<PullOrbit refreshing={pull.refreshing} />}
     >
-      <SetupNotice />
-      <OutageNotices />
+      {/* Being deleted, its line comes first and alone: its work stopped, nothing else is news (ADR 0088 §7). */}
+      {org?.deletion ? (
+        <DeletingNotice />
+      ) : (
+        <>
+          <SetupNotice />
+          <OutageNotices />
+        </>
+      )}
       {list.stale && !failed ? <HomeServerNotice retry={list.refetch} /> : null}
-      {strip}
       {failed || empty || list.loading ? null : (
         <>
           {/* Início's widgets, and the way to Dashboards ("See all"), not a tab (ADR 0135 §15). */}
@@ -187,26 +233,68 @@ function Home() {
       ) : empty ? (
         <FirstAgentEmpty />
       ) : list.loading ? (
-        <Text tone="faint" style={styles.center}>
-          {t("mobile.common.loading")}
-        </Text>
+        <>
+          <CollapsibleSection title={t("mobile.chats.section.agents")} count={0} collapsed={false} onToggle={() => {}}>
+            <SkeletonList rows={4} />
+          </CollapsibleSection>
+          {/* A personal workspace's person alone in it rarely has a group conversation: no rows stand in for one. */}
+          {hideGeneral ? null : (
+            <CollapsibleSection
+              title={personal ? t("shell.channelsPersonal") : t("mobile.chats.section.channels")}
+              count={0}
+              collapsed={false}
+              onToggle={() => {}}
+            >
+              <SkeletonList rows={2} />
+            </CollapsibleSection>
+          )}
+        </>
       ) : (
         sections.map((s) => {
           const off = collapsed.includes(s.key);
-          const row = (r: ConversationRow, i: number, shown: boolean) => (
-            <ConversationRowView
-              key={r.key}
-              row={r}
-              divider={i > 0}
-              live={shown && live++ < LIVE_ROWS}
-              agent={agentStates.get(r.key)}
-              pinned={i < (s.pinned ?? 0)}
-              onHold={menus.openRowMenu}
-              holdLabel={t("sidebarPins.pin")}
-              holdActions={menus.rowActionsOf}
-              {...(r.kind === "dm" && !r.channelId ? { onStart: startDm } : {})}
-            />
-          );
+          const row = (r: ConversationRow, i: number, shown: boolean) => {
+            const view = (
+              <ConversationRowView
+                key={r.key}
+                row={r}
+                divider={i > 0}
+                live={shown && live++ < LIVE_ROWS}
+                agent={agentStates.get(r.key)}
+                // The pin mark only for what the person pinned, not day one's default (every agent they made).
+                pinned={pins.chosen && i < (s.pinned ?? 0)}
+                onHold={menus.openRowMenu}
+                holdLabel={t("sidebarPins.pin")}
+                holdActions={menus.rowActionsOf}
+                {...(r.kind === "dm" && !r.channelId ? { onStart: startDm } : {})}
+              />
+            );
+            // Swiped left: Fixar no topo (or Desafixar), the menu's first action, and on a channel Silenciar (or
+            // Reativar) beside it, on panes; the row stays opaque over them (the hairline and the sky never show).
+            const pin = menus.rowActionsOf(r).find((a) => a.key === "pin");
+            if (!pin) return view;
+            const pinPane = {
+              label: pin.label,
+              icon: "pin" as const,
+              color: c.agent,
+              ink: c.onAgent,
+              onAction: pin.run,
+            };
+            const mutePane =
+              r.kind === "channel"
+                ? {
+                    label: t(r.muted ? "mobile.chats.swipe.unmute" : "mobile.chats.swipe.mute"),
+                    icon: "mute" as const,
+                    color: c.muted,
+                    ink: c.bg,
+                    onAction: () => mute.mutate({ channelId: r.channelId, muted: !r.muted }),
+                  }
+                : null;
+            return (
+              <SwipeRow key={r.key} right={mutePane ? [pinPane, mutePane] : pinPane}>
+                <View style={{ backgroundColor: c.bg }}>{view}</View>
+              </SwipeRow>
+            );
+          };
           const hold = s.categoryId ? menus.categoryMenu(s.categoryId, s.name ?? "") : undefined;
           return (
             <CollapsibleSection
@@ -217,12 +305,14 @@ function Home() {
               onToggle={() => toggle(s.key)}
               // A closed category keeps its unread channels in sight, as on the web.
               {...(s.categoryId && s.unread.length > 0 ? { kept: s.unread.map((r, i) => row(r, i, true)) } : {})}
-              {...(hold ? { onLongPress: hold, holdLabel: t("mobile.categories.title") } : {})}
+              {...(hold
+                ? { menu: { label: t("channelCategories.options", { name: s.name ?? "" }), onPress: hold } }
+                : {})}
             >
               {s.rows.map((r, i) => row(r, i, !off))}
               {s.more ? (
                 <SeeAllRow
-                  label={s.categoryId ? t("mobile.categories.seeAll") : t(`mobile.chats.seeAll.${s.key}`)}
+                  label={seeAllLabel(s)}
                   onPress={() => openKindList(s.categoryId ? categoryListKind(s.categoryId) : (s.key as ListKind))}
                 />
               ) : null}
@@ -232,7 +322,7 @@ function Home() {
       )}
       {others.length > 0 ? (
         <CollapsibleSection
-          title={t("shell.otherChannels")}
+          title={t(modeKey(org, "shell.otherChannels"))}
           count={others.length}
           collapsed={collapsed.includes(OTHER_CHANNELS)}
           onToggle={() => toggle(OTHER_CHANNELS)}
@@ -251,7 +341,3 @@ function Home() {
     </LargeTitleScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { textAlign: "center", paddingVertical: 40 },
-});

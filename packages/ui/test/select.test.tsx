@@ -74,6 +74,36 @@ describe("Select", () => {
     expect(document.activeElement === trigger).toBe(true);
   });
 
+  test("an option whose value is empty (Ninguém) shows in the trigger when chosen, and picking it gives back the empty value", async () => {
+    const changes: string[] = [];
+    function Nobody() {
+      const [value, setValue] = useState("ada");
+      return (
+        <Select
+          aria-label="Responde a"
+          value={value}
+          onValueChange={(v) => {
+            setValue(v);
+            changes.push(v);
+          }}
+          options={[
+            { value: "", label: "Ninguém" },
+            { value: "ada", label: "Ada" },
+          ]}
+        />
+      );
+    }
+    render(<Nobody />);
+    const trigger = body().getByRole("combobox", { name: "Responde a" });
+    trigger.focus();
+    await key(trigger, "Enter");
+    await key(document.activeElement ?? document.body, "ArrowUp");
+    await key(document.activeElement ?? document.body, "Enter");
+    expect(changes).toEqual([""]);
+    expect(trigger.textContent).toContain("Ninguém");
+    expect(trigger.hasAttribute("data-placeholder")).toBe(false);
+  });
+
   test("Escape closes without changing the value", async () => {
     const changes: string[] = [];
     render(<Harness onChange={(v) => changes.push(v)} />);
@@ -167,7 +197,7 @@ describe("Select", () => {
     expect(container.querySelector(".mine")?.textContent).toBe("Membro");
   });
 
-  test("an action row is set apart by a line, rows keep a gap, two-line rows the sides' room", async () => {
+  test("an action row is set apart by a line, rows keep a gap, two-line rows a one-line row's room above and below", async () => {
     const options = [...roles, { value: "new", label: "Nova categoria…", action: true }];
     render(<Select aria-label="Categoria" value="member" onValueChange={() => {}} options={options} />);
     const trigger = body().getByRole("combobox", { name: "Categoria" });
@@ -180,15 +210,15 @@ describe("Select", () => {
     const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
     const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
     expect(rule(".ac-menu--select [data-radix-select-viewport]")).toContain("gap: 2px;");
-    expect(rule(".ac-menu__item:has(> .ac-menu__label > .ac-menu__desc)")).toContain(
-      "padding-block: var(--menu-item-px);",
-    );
+    // A two-line row takes the one-line row's room above and below: 32 for one line, 50 with a description.
+    expect(rule(".ac-menu__item:has(> .ac-menu__label > .ac-menu__desc)")).toBe("");
   });
 });
 
 test("a list mixing two-line options and one-line actions gives every row the same room above and below", async () => {
   const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url)).text();
-  expect(css).toContain(".ac-menu:has(.ac-menu__desc) .ac-menu__item {\n  padding-block: var(--menu-item-px);\n}");
+  expect(css).toContain("padding: calc((var(--menu-item-h) - 20px) / 2) var(--menu-item-px);");
+  expect(css).not.toContain(".ac-menu:has(.ac-menu__desc) .ac-menu__item {");
 });
 
 test("a browser translating the trigger's text doesn't break it: the words sit in an element of ours", () => {
@@ -202,4 +232,24 @@ test("a browser translating the trigger's text doesn't break it: the words sit i
   rerender(<Select value="admin" onValueChange={() => {}} options={roles} />);
   expect(container.querySelector(".ac-select__value")?.textContent).toBe("Admin");
   expect(() => unmount()).not.toThrow();
+});
+
+test("a value its options don't have shows the placeholder, never an empty box", () => {
+  const { container, rerender } = render(
+    <Select value="col-gone" onValueChange={() => {}} options={roles} placeholder="A fazer" aria-label="Coluna" />,
+  );
+  const trigger = container.querySelector(".ac-select__trigger") as HTMLElement;
+  expect(trigger.textContent).toBe("A fazer");
+  expect(trigger.hasAttribute("data-placeholder")).toBe(true);
+  // Once the options come, the chosen one's name.
+  rerender(
+    <Select
+      value="col-gone"
+      onValueChange={() => {}}
+      options={[...roles, { value: "col-gone", label: "Aguardando o jurídico" }]}
+      placeholder="A fazer"
+      aria-label="Coluna"
+    />,
+  );
+  expect(trigger.textContent).toBe("Aguardando o jurídico");
 });

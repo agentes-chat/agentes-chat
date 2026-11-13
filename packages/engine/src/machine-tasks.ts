@@ -13,6 +13,8 @@ import {
   type TaskExecutor,
 } from "@agenteschat/adapters";
 import { and, type Database, desc, type Executor, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
+import { serverText } from "@agenteschat/i18n";
+import type { AppLocale } from "@agenteschat/i18n/locale";
 import { isAutoModel } from "@agenteschat/providers";
 import { autoPlanModel, claudeCodeModel, planOf } from "@agenteschat/providers/plans";
 import { getAgentCached } from "./agents";
@@ -21,7 +23,7 @@ import { createAgentRuns, eligibleChannelAgents } from "./dispatch";
 import { publishChannelEvent, publishMessageCreated } from "./events";
 import { cutText } from "./format";
 import { routineDeliveryBlock } from "./hand-off";
-import { taskEndText } from "./machine-task-text";
+import { taskEndLine, taskEndText } from "./machine-task-text";
 import {
   getMachineById,
   MachineDroppedError,
@@ -36,7 +38,7 @@ import { blockedOfTask, missionAllowRules, recordTaskDenials } from "./mission-c
 import { MISSION_RULES } from "./mission-rules";
 import { recordTaskFinished } from "./operator-events";
 import { enqueue } from "./outbox";
-import { personBehindCall } from "./requester";
+import { lineLocale, personBehindCall } from "./requester";
 import { routineBriefOf } from "./routine-brief";
 import { issueRunToolToken } from "./run-tool-tokens";
 import { runnerUpdateWay } from "./runner-update";
@@ -371,10 +373,14 @@ export async function taskSignIn(
  * Records a task and asks the machine to start it. On failure the row is
  * kept as `failed` with the reason, and the error goes up.
  */
-export async function startMachineTask(deps: TaskDeps & { call: TaskCall }, input: StartTaskInput) {
+export async function startMachineTask(
+  deps: TaskDeps & { call: TaskCall },
+  input: StartTaskInput,
+  options: { requeue?: boolean } = {},
+) {
   await checkTaskProtocol(deps.db, input);
   const row = await insertTask(deps.db, input, null);
-  return (await launchTask(deps, row, input)).row;
+  return (await launchTask(deps, row, input, options)).row;
 }
 
 async function checkTaskProtocol(
@@ -557,7 +563,7 @@ export async function queueMachineTask(deps: TaskDeps, input: StartTaskInput) {
 /**
  * Claims the next task of a machine's queue that may start now, oldest first
  * (ADR 0044): its mission is active and its folder ready (a setup task needs
- * neither), and a write item waits while another write item of its mission
+ * neither; a task of no mission, `start_task` on another device, neither), and a write item waits while another write item of its mission
  * holds the folder (running, being started, or interrupted and may come
  * back) and while a turn of the mission's main session that began before it
  * was queued still runs (that turn may be writing in the folder: the item
@@ -577,10 +583,10 @@ export async function claimQueuedTask(
       .from(machineTasks)
       .where(
         sql`${machineTasks.id} = (select q.id from ${machineTasks} q
-          join ${schema.missions} m on m.id = q.mission_id
+          left join ${schema.missions} m on m.id = q.mission_id
           where q.machine_id = ${machineId}::uuid and q.status = 'queued' and q.ended_at is null
             and q.start_request is not null
-            and (q.mode = 'setup' or (m.status in ('active', 'awaiting_close') and m.worktree_state = 'ready'))
+            and (q.mission_id is null or q.mode = 'setup' or (m.status in ('active', 'awaiting_close') and m.worktree_state = 'ready'))
             and (q.mode is distinct from 'write' or (
               not exists (select 1 from ${machineTasks} w
                 where w.mission_id = q.mission_id and w.id <> q.id and w.mode = 'write'
@@ -839,7 +845,9 @@ export type LocalTaskStarter = (input: StartTaskInput) => Promise<MachineTaskRow
  * { interrupted }`, or missing from the journal on reconnect): final as
  * `interrupted`. Claude Code with a session resumes by itself (the machine's
  * `resume_tasks`, at most `MAX_TASK_RESUMES` in a row) and the thread hears
- * "resumed"; anything else wakes the agent to tell the people. A mission's
+ * "resumed"; an agent's shell command (a dev server, a build) starts again
+ * the same way in the folder it ran in, and the thread hears "started again"
+ * (ADR 0168); anything else wakes the agent to tell the people. A mission's
  * task resumes through the mission's queue (ADR 0044: one writer at a time,
  * only in a ready folder), ahead of what queued after it; `startQueued`
  * walks the machine's queue then (without it, the caller does: the computer
@@ -890,8 +898,9 @@ export async function settleInterruptedTask(
       .then((r) => r[0]?.handle)) as string | undefined;
     // Never seen running (its start was cut by a drop): the session may not have its task, so it comes along.
     const asked = claimed.startedAt ? null : claimed.prompt;
+    const shell = claimed.executor === "shell";
     try {
-      const input: StartTaskInput = {
+      const again = {
         orgId: claimed.orgId,
         agent: { id: claimed.agentId, handle: handle ?? "agent" },
         machineId: claimed.machineId,
@@ -902,38 +911,45 @@ export async function settleInterruptedTask(
         runId: null,
         requestedByUserId: claimed.requestedByUserId,
         title: claimed.title,
-        executor: "claude",
-        prompt: asked?.startsWith(RESUME_PROMPT)
-          ? asked
-          : asked
-            ? `${RESUME_PROMPT}\n\nWhat you were asked:\n${asked}`.slice(0, TASK_TEXT_LIMITS.prompt)
-            : RESUME_PROMPT,
-        sessionId: claimed.sessionId,
-        resume: true,
         resumedFromId: claimed.id,
         resumeCount: claimed.resumeCount + 1,
-        // The session lives in its folder (a worktree for a branch): resume it there.
-        cwd: claimed.cwd || null,
-        // In the mission's worktree (ADR 0044): the same kind, and a write item still ends in a commit.
-        mode: taskModeOf(claimed.mode),
-        ...(claimed.mode === "write" && mission?.branch
-          ? { commit: { message: `agentes: ${claimed.title}` }, worktreeBranch: mission.branch }
-          : {}),
-        // The main session's own task: only tagged; an item session gets the mission's tools again.
-        ...(mission && isAgentTask(claimed)
-          ? { missionId: mission.id }
-          : {
-              mission: mission
-                ? {
-                    id: mission.id,
-                    rules: MISSION_RULES,
-                    branchPrefix: `agentes/${mission.id.replace(/-/g, "").slice(-8)}/`,
-                    allow: await missionAllowRules(deps.db, mission.id),
-                    ...(claimed.mode === "read" ? { mode: "plan" as const } : {}),
-                  }
-                : null,
-            }),
       };
+      // The same command in the folder it ran in (a branch's worktree is there already). Nothing a person approved
+      // for the first start carries over: a command the computer holds is refused, and the agent hears it stopped.
+      const input: StartTaskInput = shell
+        ? { ...again, executor: "shell", command: claimed.command, cwd: claimed.cwd || null }
+        : {
+            ...again,
+            executor: "claude",
+            prompt: asked?.startsWith(RESUME_PROMPT)
+              ? asked
+              : asked
+                ? `${RESUME_PROMPT}\n\nWhat you were asked:\n${asked}`.slice(0, TASK_TEXT_LIMITS.prompt)
+                : RESUME_PROMPT,
+            sessionId: claimed.sessionId,
+            resume: true,
+            // The session lives in its folder (a worktree for a branch): resume it there.
+            cwd: claimed.cwd || null,
+            // In the mission's worktree (ADR 0044): the same kind, and a write item still ends in a commit.
+            mode: taskModeOf(claimed.mode),
+            ...(claimed.mode === "write" && mission?.branch
+              ? { commit: { message: `agentes: ${claimed.title}` }, worktreeBranch: mission.branch }
+              : {}),
+            // The main session's own task: only tagged; an item session gets the mission's tools again.
+            ...(mission && isAgentTask(claimed)
+              ? { missionId: mission.id }
+              : {
+                  mission: mission
+                    ? {
+                        id: mission.id,
+                        rules: MISSION_RULES,
+                        branchPrefix: `agentes/${mission.id.replace(/-/g, "").slice(-8)}/`,
+                        allow: await missionAllowRules(deps.db, mission.id),
+                        ...(claimed.mode === "read" ? { mode: "plan" as const } : {}),
+                      }
+                    : null,
+                }),
+          };
       // A started mission's queue (planning before Start has no folder or queue: it resumes at once).
       const queue = mission?.status === "active";
       const next = queue ? await queueResumed(deps.db, input, claimed) : await deps.start(input);
@@ -947,17 +963,18 @@ export async function settleInterruptedTask(
         actor: { type: "system", id: null },
         action: "machine.task_started",
         target: { type: "machine", id: claimed.machineId },
-        details: { taskId: next.id, resumedFromId: claimed.id, executor: "claude", title: claimed.title },
+        details: { taskId: next.id, resumedFromId: claimed.id, executor: claimed.executor, title: claimed.title },
       }).catch(() => undefined);
       // Queued behind a folder that isn't ready (being prepared again, or failed and left for the person):
       // it resumes once the project is ready, not now.
       const waits = queue && mission?.worktreeState !== "ready";
+      const code = shell ? "machine_task_restarted" : waits ? "machine_task_resume_waits" : "machine_task_resumed";
+      const params = { title: claimed.title, computer: machine.name };
+      const locale = await lineLocale(deps.db, claimed.orgId, claimed.requestedByUserId, claimed.runId);
       await postTaskNotice(deps, claimed, {
-        body: waits
-          ? `The computer ${machine.name} is back: "${claimed.title}" resumes where it stopped once the project is ready.`
-          : `The computer ${machine.name} is back: resumed "${claimed.title}" where it stopped.`,
-        code: waits ? "machine_task_resume_waits" : "machine_task_resumed",
-        params: { title: claimed.title, computer: machine.name },
+        body: serverText(locale, `chat.body.${code}`, params),
+        code,
+        params,
         meta: { machineTaskResumed: { fromId: claimed.id, taskId: next.id, ...(waits ? { waits: true } : {}) } },
       });
       await publishTaskEvent(deps.pubsub, linked ?? claimed);
@@ -976,8 +993,9 @@ export async function settleInterruptedTask(
 }
 
 /**
- * Whether an interrupted task resumes by itself once its computer is back: Claude Code with a session, at
- * most `MAX_TASK_RESUMES` in a row, not canceled, when its computer and its mission (still open) allow it.
+ * Whether an interrupted task resumes by itself once its computer is back: Claude Code with a session, or an
+ * agent's own shell command (never a mission's: its queue has its own order), at most `MAX_TASK_RESUMES` in a row,
+ * not canceled, when its computer and its mission (still open) allow it.
  */
 function resumesByItself(
   row: MachineTaskRow,
@@ -986,19 +1004,17 @@ function resumesByItself(
 ) {
   const missionAllows =
     !row.missionId || (mission?.resumeTasks === true && (mission.status === "active" || mission.status === "proposed"));
+  const resumes =
+    (row.executor === "claude" && Boolean(row.sessionId)) ||
+    (row.executor === "shell" && !row.missionId && row.command.trim() !== "");
   return (
-    missionAllows &&
-    row.executor === "claude" &&
-    Boolean(row.sessionId) &&
-    machine?.resumeTasks !== false &&
-    row.resumeCount < MAX_TASK_RESUMES &&
-    !row.canceledBy
+    missionAllows && resumes && machine?.resumeTasks !== false && row.resumeCount < MAX_TASK_RESUMES && !row.canceledBy
   );
 }
 
 /** Whether this task resumes by itself if its computer restarts (`resumesByItself`), for what the agent is told. */
 export async function taskResumesByItself(db: Database, row: MachineTaskRow) {
-  if (row.executor !== "claude") return false;
+  if (row.executor === "codex") return false;
   const machine = await getMachineById(db, row.machineId);
   const [mission] = row.missionId
     ? await db
@@ -1022,8 +1038,8 @@ async function queueResumed(db: Executor, input: StartTaskInput, from: MachineTa
 
 /**
  * A line the server writes in the task's thread, as the task's agent (no
- * run, no routing): offline, resumed. English text plus a code the app
- * shows in the person's language.
+ * run, no routing): offline, resumed. Its text in the language of whom the
+ * task is for, plus a code the apps show in each reader's language.
  */
 export async function postTaskNotice(
   deps: TaskDeps,
@@ -1092,14 +1108,15 @@ export async function interruptOfflineMachineTasks(
   const since = (machine.lastSeenAt ?? new Date()).toISOString();
   for (const { resumes, list } of threads.values()) {
     const first = list[0] as MachineTaskRow;
-    const one = list.length === 1;
-    const then = resumes
-      ? `, and ${one ? "resumes where it" : "resume where they"} stopped if the computer restarted.`
-      : `. If the computer restarted, ${one ? "it stopped and won't resume by itself" : "they stopped and won't resume by themselves"}.`;
+    const locale = await lineLocale(deps.db, first.orgId, first.requestedByUserId, first.runId);
+    // The apps' event line for it (`missions.notice.machine_offline…`): the chat's own is too short for the agent.
+    const body = serverText(locale, `missions.notice.machine_offline${resumes ? "_resumes" : ""}`, {
+      computer: machine.name,
+      title: first.title,
+      count: String(list.length),
+    });
     await postTaskNotice(deps, first, {
-      body: `The computer ${machine.name} went offline (since ${since.slice(11, 16)} UTC): ${
-        one ? `"${first.title}" keeps` : `${list.length} tasks here keep`
-      } running there if only the connection dropped${then}`,
+      body,
       code: "machine_offline",
       // `context`: the apps' wording for tasks that resume by themselves (`machine_offline_resumes`).
       params: {
@@ -1260,18 +1277,16 @@ export async function checkCutTaskStart(
   await settleInterruptedTask(deps, row);
 }
 
-/** The text of a task's end, for the thread (English; the app uses the code). */
-const endText = (row: MachineTaskRow, computer: string, blocked: { command: string }[] = []) =>
-  taskEndText(
-    { title: row.title, status: row.status, seconds: taskSeconds(row), exitCode: row.exitCode, blocked },
-    computer,
-  );
-
-/** A task's end as the notice the agent reads (`meta.machineTask` with the result) and people see. */
-export function taskEndNotice(row: MachineTaskRow, computer: string) {
+/**
+ * A task's end as the notice the agent reads (`text`, and `meta.machineTask` with the result) and people see (`body`,
+ * in `locale`, the language of whom the task is for, kept in `machineTask.locale`). `computer`: null when it's gone.
+ */
+export function taskEndNotice(row: MachineTaskRow, computer: string | null, locale: AppLocale = "en") {
   const files = Array.isArray(row.files) ? row.files : [];
+  const at = computer ?? "the computer";
   return {
-    body: endText(row, computer),
+    body: taskEndLine(locale, row, computer),
+    text: taskEndText({ title: row.title, status: row.status, seconds: taskSeconds(row), exitCode: row.exitCode }, at),
     meta: {
       machineTask: {
         id: row.id,
@@ -1279,8 +1294,9 @@ export function taskEndNotice(row: MachineTaskRow, computer: string) {
         status: row.status,
         exitCode: row.exitCode,
         seconds: taskSeconds(row),
-        computer,
+        computer: at,
         executor: row.executor,
+        locale,
         ...(row.branch ? { branch: row.branch } : {}),
         ...(row.lastLine ? { lastLine: row.lastLine } : {}),
         ...(files.length ? { files: files.slice(0, 20) } : {}),
@@ -1289,7 +1305,7 @@ export function taskEndNotice(row: MachineTaskRow, computer: string) {
       bodyCode: `machine_task_${row.status}`,
       bodyParams: {
         title: row.title,
-        computer,
+        computer: at,
         seconds: String(taskSeconds(row)),
         exitCode: String(row.exitCode ?? ""),
       },
@@ -1317,7 +1333,6 @@ export async function wakeConversationForTask(deps: TaskDeps, taskId: string, op
     return null;
   }
   const machine = await getMachineById(deps.db, row.machineId);
-  const computer = machine?.name ?? "the computer";
   const [origin] = row.runId
     ? await deps.db
         .select({
@@ -1348,7 +1363,8 @@ export async function wakeConversationForTask(deps: TaskDeps, taskId: string, op
     [row.agentId],
     row.requestedByUserId ? { requesterUserId: row.requestedByUserId } : {},
   );
-  const notice = taskEndNotice(row, computer);
+  const locale = await lineLocale(deps.db, row.orgId, row.requestedByUserId, row.runId);
+  const notice = taskEndNotice(row, machine?.name ?? null, locale);
   const machineTask = {
     ...notice.meta.machineTask,
     ...(row.runId ? { runId: row.runId } : {}),
@@ -1410,6 +1426,7 @@ async function claimMissionTaskEnd(deps: TaskDeps, row: MachineTaskRow) {
     !agentLike &&
     row.mode !== "setup" &&
     (row.status === "failed" || row.status === "interrupted" || blocked.length > 0);
+  const locale = notice ? await lineLocale(deps.db, row.orgId, row.requestedByUserId, row.runId) : "en";
   const claimed = await deps.db.transaction(async (tx) => {
     const [won] = await tx
       .update(machineTasks)
@@ -1423,7 +1440,7 @@ async function claimMissionTaskEnd(deps: TaskDeps, row: MachineTaskRow) {
           channelId: row.channelId,
           threadId: row.threadRootId,
           author: { type: "agent", agentId: row.agentId, runId: null, hop: 0, stretchId: null },
-          body: endText(row, computer, blocked),
+          body: taskEndLine(locale, row, machine?.name ?? null),
           meta: {
             machineTask: {
               id: row.id,
@@ -1433,6 +1450,7 @@ async function claimMissionTaskEnd(deps: TaskDeps, row: MachineTaskRow) {
               seconds: taskSeconds(row),
               computer,
               executor: row.executor,
+              locale,
               missionId: row.missionId,
               ...(row.branch ? { branch: row.branch } : {}),
               ...(row.lastLine ? { lastLine: row.lastLine } : {}),

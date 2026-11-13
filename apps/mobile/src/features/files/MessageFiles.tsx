@@ -1,5 +1,6 @@
 import type { ArtifactDetail } from "@agenteschat/client";
 import { formatBytes } from "@agenteschat/client/lib/files";
+import { keepWhole } from "@agenteschat/client/lib/format";
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,16 +14,25 @@ import { useColors, useOrgId } from "../shared/hooks";
 import { useSurface } from "../shared/parts";
 import { AttachmentTile } from "./AttachmentTile";
 import { ImageStack } from "./ImageStack";
-import { encodeFileList, extensionOf, type FileInfo, fileInfo, IMAGE_EXT, singleImageHeight, VIDEO_EXT } from "./logic";
+import {
+  encodeFileList,
+  extensionOf,
+  type FileInfo,
+  fileInfo,
+  IMAGE_EXT,
+  singleImageHeight,
+  VIDEO_EXT,
+  videoHeight,
+} from "./logic";
 import { useArtifacts, useRemoteFile } from "./source";
 import { VideoPlayer } from "./VideoPlayer";
 
 /**
- * A message's files. Pictures alone: one inline at its own shape, or several as a deck to swipe through
- * (`ImageStack`), tapping opens the viewer at that picture. Any other attachment: tiles of one size, two to a row
- * (`AttachmentTile`: what it holds drawn small, its name, kind and size under it), with the pictures beside them as
- * tiles too. A video plays right there (its corner button opens the file screen). `align="end"`: the viewer's own
- * message, its files sit on the right.
+ * A message's files. Pictures alone: one inline, whole in a box of one shape, or several as a deck to swipe through
+ * (`ImageStack`), tapping opens the viewer at that picture. Any other attachment: a tile across the row
+ * (`AttachmentTile`: what it holds drawn small, its name, whole, with its kind and size under it), with the pictures
+ * beside them as tiles of only the picture, two to a row (as on the web's phone width). A video plays right there (its
+ * corner button opens the file screen). `align="end"`: the viewer's own message, its files sit on the right.
  */
 
 export interface MessageFile {
@@ -68,9 +78,16 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
   const removed = files.filter((f) => f.deleted);
   const blockWidth = Math.min(width || MAX_WIDTH, MAX_WIDTH);
   // Beside other attachments, pictures are tiles too: one grid, never a deck next to a file.
-  const tiles = others.length > 0 ? [...images.map((i) => ({ ...i, failed: false })), ...others] : [];
+  const tiles =
+    others.length > 0
+      ? [
+          ...images.map((i) => ({ ...i, failed: false, picture: true })),
+          ...others.map((o) => ({ ...o, picture: false })),
+        ]
+      : [];
   const pictures = tiles.length > 0 ? [] : images;
-  const tileWidth = tiles.length === 1 ? blockWidth : Math.floor((blockWidth - GAP) / 2);
+  // A file's name wraps whole, which half a row would take a word a line: a file takes the row, pictures two to a row.
+  const halfWidth = Math.floor((blockWidth - GAP) / 2);
 
   const [only] = pictures;
   // Opening a file or a picture is plain navigation: the press shows it, with no haptic.
@@ -113,13 +130,14 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
       )}
       {tiles.length > 0 ? (
         <View style={[styles.grid, { width: blockWidth }, align === "end" && styles.gridEnd]}>
-          {tiles.map(({ file, detail, failed }) => (
+          {tiles.map(({ file, detail, failed, picture }) => (
             <AttachmentTile
               key={file.id}
               file={file}
               detail={detail}
               failed={failed}
-              width={tileWidth}
+              picture={picture}
+              width={picture ? halfWidth : blockWidth}
               single={tiles.length === 1}
             />
           ))}
@@ -150,9 +168,8 @@ function InlineImage({
   const c = useColors();
   const version = detail?.shownVersion ?? file.version;
   const link = useRemoteFile(orgId, file.id, version);
-  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const [failed, setFailed] = useState(false);
-  const height = singleImageHeight(width, size);
+  const height = singleImageHeight(width);
   return (
     <Pressable
       onPress={onPress}
@@ -169,10 +186,9 @@ function InlineImage({
         <Image
           source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${file.id}@${version ?? "latest"}` }}
           recyclingKey={`${file.id}@${version ?? "latest"}`}
-          contentFit="cover"
+          contentFit="contain"
           transition={160}
           style={StyleSheet.absoluteFill}
-          onLoad={(e) => setSize({ width: e.source.width, height: e.source.height })}
           onError={() => setFailed(true)}
           accessible={false}
         />
@@ -227,10 +243,7 @@ function InlineVideo({
         />
       ) : (
         <View
-          style={[
-            styles.shot,
-            { width, height: Math.round((width * 9) / 16), backgroundColor: c.sunken, borderColor: c.line2 },
-          ]}
+          style={[styles.shot, { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 }]}
         />
       )}
     </View>
@@ -240,12 +253,15 @@ function InlineVideo({
 /** The type and size line: "Documento · 4 KB". */
 export function useFileLine() {
   const { t, i18n } = useTranslation();
+  // Each fact whole: a narrow line breaks between them, never inside "4 KB" or a name.
   return (info: FileInfo, extra: string[] = []) =>
     [
       t(`mobile.files.type.${info.type}`),
       ...(info.size !== null ? [formatBytes(i18n.language || "en", info.size)] : []),
       ...extra.filter(Boolean),
-    ].join(" · ");
+    ]
+      .map(keepWhole)
+      .join(" · ");
 }
 
 /** The file type's tile: the extension in capitals on a folded page (or the file icon without one). */

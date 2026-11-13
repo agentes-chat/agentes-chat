@@ -19,6 +19,7 @@ import { General } from "../src/windows/prefs/General";
 import { Servers } from "../src/windows/prefs/Servers";
 import { Tools } from "../src/windows/prefs/Tools";
 import { Updates } from "../src/windows/prefs/Updates";
+import { until } from "./until";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -63,11 +64,6 @@ async function pane(
   }
 }
 
-async function until(ready: () => unknown) {
-  for (let i = 0; i < 150 && !ready(); i++) await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
-  expect(Boolean(ready())).toBe(true);
-}
-
 /** What an element is described by, each description in order (a hint's text is in the page while it's closed). */
 const describedBy = (el: Element | null | undefined) =>
   (el?.getAttribute("aria-describedby") ?? "")
@@ -94,19 +90,13 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
     pane(
       "selfhost",
       <General />,
-      (el) => el.querySelectorAll(".dk-card").length >= 3,
+      (el) => row(el, "Name") && row(el, "Open at login"),
       (el) => {
         expect(el.querySelector(".dk-phead .dk-lead")).toBeNull();
         const behavior = [...el.querySelectorAll(".dk-card")].at(-1) as HTMLElement;
         expect(rows(behavior)).toEqual([
           // The language this computer shows the app in (ADR 0122): nothing to explain.
           { title: "Language", hint: null, line: null },
-          {
-            title: "Open at login",
-            hint: "Agents only use this Mac while the app is open.",
-            switch: "Agents only use this Mac while the app is open.",
-            line: null,
-          },
           {
             title: "Let me know about messages and requests",
             hint: "Mentions, direct messages and what waits for you, while the app is in the background.",
@@ -135,13 +125,20 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
             line: null,
           },
         ]);
+        // Open at login closes This Mac's card, where agents use this computer while the app is open.
+        expect(row(el, "Open at login")).toEqual({
+          title: "Open at login",
+          hint: "Agents work only while the app is open.",
+          switch: "Agents work only while the app is open.",
+          line: null,
+        });
         // The computer's name and the organizations: no lines that only describe them.
         expect(row(el, "Name")?.line).toBeNull();
         expect(el.textContent).not.toContain("Each one has its own folders and tasks");
       },
     ));
 
-  test("Servers: the usage switch keeps what changing it does in sight, what it sends behind its ⓘ", () =>
+  test("Servers: what the usage switch sends and that changing it restarts agentes.chat sit behind its ⓘ", () =>
     pane(
       "here",
       <Servers />,
@@ -151,11 +148,10 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       (el) => {
         expect(row(el, "Send anonymous usage statistics to agentes.chat")).toEqual({
           title: "Send anonymous usage statistics to agentes.chat",
-          hint: "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites.",
-          // The switch reads the hint, then what changing it does.
+          hint: "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites. Changing it restarts agentes.chat for a moment.",
           switch:
             "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites. Changing it restarts agentes.chat for a moment.",
-          line: "Changing it restarts agentes.chat for a moment.",
+          line: null,
         });
         expect(el.textContent).not.toContain("nothing is sent");
         expect(el.querySelector(".dk-phead .dk-lead")?.textContent).toBe("Where this app opens agentes.chat.");
@@ -202,74 +198,113 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       },
     ));
 
-  test("Tools: each tool on one line with its ⓘ and its state; the warnings stay in sight", () =>
+  test("Tools: each tool on one line with its ⓘ and its state; Commands one switch per workspace", () =>
     pane(
       "selfhost",
       <Tools />,
       (el) => el.querySelector(".dk-crow .ac-chip") && el.querySelectorAll(".dk-ctitle").length >= 3,
       (el) => {
-        const tools = rows(el.querySelector(".dk-card") as HTMLElement).map(({ title, hint, line }) => ({
-          title,
-          hint,
-          line,
+        const card = el.querySelector(".dk-card") as HTMLElement;
+        const tools = [...card.querySelectorAll(":scope > .dk-crow")].map((r) => ({
+          title: r.querySelector(".dk-crow__title")?.textContent ?? null,
+          hint: describedBy(r.querySelector("button.ac-hint")),
         }));
         expect(tools).toEqual([
           {
             title: "Claude Code",
-            hint: "Writes and changes code in the allowed folders, with your Claude account.",
-            line: null,
+            hint: "Writes and changes code in the allowed folders, with your Claude account. Runs its own commands in the agent's folder, even with Commands off.",
           },
           {
             title: "Codex",
-            hint: "Writes and changes code in the allowed folders, with your ChatGPT account.",
-            line: null,
+            hint: "Writes and changes code in the allowed folders, with your ChatGPT account. Runs its own commands in the agent's folder, even with Commands off.",
+          },
+          {
+            title: "Cursor",
+            hint: "Writes and changes code in the allowed folders, with your Cursor account.",
+          },
+          {
+            title: "OpenCode",
+            hint: "Writes and changes code in the allowed folders, with OpenCode's free models or your key.",
+          },
+          {
+            title: "Grok Build",
+            hint: "Writes and changes code in the allowed folders, with your Grok account.",
+          },
+          {
+            title: "Antigravity CLI",
+            hint: "Writes and changes code in the allowed folders, with your Gemini account.",
           },
           {
             title: "Commands",
-            hint: "Tests, builds and other Terminal commands. Each one shows in Activity.",
-            line: null,
+            hint: "Tests, builds and other Terminal commands. Each one shows in Activity. Commands run as you. They can read anything you can on this Mac, agentes.chat's database and keys included. Turn them on only for workspaces you trust with all of it.",
           },
           {
             title: "Browser",
-            hint: "Opens websites for the agents in a browser of their own, without your logins.",
-            line: null,
+            hint: "Opens websites for the agents in a browser of their own, without your logins. Logins an agent makes stay on this Mac, in its folder. Use only test accounts or the agent's own.",
           },
         ]);
-        const [claude] = el.querySelectorAll(".dk-card .dk-crow");
+        const [claude] = card.querySelectorAll(".dk-crow");
         expect(claude?.querySelector(".ac-hintline > .ac-chip")?.textContent).toBe("Connected");
-        const under = [...el.querySelectorAll(".dk-crow__under")].map((u) => u.textContent);
-        expect(under).toEqual([
-          "Commands can reach the rest of this Mac, other workspaces' folders included.",
-          "Logins an agent makes stay on this Mac, in its folder. Use only test accounts or the agent's own.",
+        // One switch per workspace under Commands, named after it; no warning in sight.
+        const orgs = [...card.querySelectorAll(".dk-crow__under > .dk-crow")].map((r) => [
+          r.querySelector(".dk-crow__title")?.textContent,
+          r.querySelector('[role="switch"]')?.getAttribute("aria-checked"),
         ]);
-        // Their switches read the hint, then the line kept in sight under them.
-        expect(describedBy(el.querySelector("#tool-commands"))).toBe(
-          "Tests, builds and other Terminal commands. Each one shows in Activity. Commands can reach the rest of this Mac, other workspaces' folders included.",
-        );
-        expect(describedBy(el.querySelector("#tool-browser"))).toBe(
-          "Opens websites for the agents in a browser of their own, without your logins. Logins an agent makes stay on this Mac, in its folder. Use only test accounts or the agent's own.",
-        );
+        expect(orgs).toEqual([
+          ["Acme", "true"],
+          ["Horizonte", "true"],
+        ]);
+        // Every warning sits behind its ⓘ.
+        expect(card.querySelectorAll(".dk-honest")).toHaveLength(0);
         expect(row(el, "Protected mode")?.hint).toBe(
-          "Commands only write in the allowed folders and don't read the rest of the Mac. Some tools may get slower.",
+          "Coming: commands that write only in allowed folders and can't read the rest of this Mac.",
         );
+        expect(el.textContent).not.toContain("Soon");
         expect(el.querySelector(".dk-phead .dk-lead")?.textContent).toBe(
           "What agents of every workspace can run on this Mac.",
         );
       },
     ));
 
-  test("Tools: Commands on for only some organizations says where, on screen and to its switch", () =>
+  test("Tools: every coding program has a switch of its own, on or off whether or not it is installed", () =>
     pane(
       "selfhost",
       <Tools />,
-      (el) => el.querySelector("#tool-commands-some"),
-      (el) => {
-        expect(el.querySelector("#tool-commands-some")?.textContent).toBe(
-          "On only for Acme. Turn it on for every workspace here.",
-        );
-        expect(describedBy(el.querySelector("#tool-commands"))).toBe(
-          "Tests, builds and other Terminal commands. Each one shows in Activity. On only for Acme. Turn it on for every workspace here. Commands can reach the rest of this Mac, other workspaces' folders included.",
-        );
+      // The switches are there before the computer's access is: Claude Code's turns on once it arrives.
+      (el) => el.querySelector('#tool-claude[aria-checked="true"]'),
+      async (el) => {
+        const state = (id: string) => el.querySelector(`#tool-${id}`)?.getAttribute("aria-checked");
+        const programs = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"];
+        // One with no switch stored follows Codex's, off here; none of the four is found here.
+        expect(programs.map(state)).toEqual(["true", "false", "false", "false", "false", "false"]);
+        expect(programs.every((id) => !(el.querySelector(`#tool-${id}`) as HTMLButtonElement).disabled)).toBe(true);
+        await act(async () => (el.querySelector("#tool-opencode") as HTMLElement).click());
+        await until(() => state("opencode") === "true");
+        expect(programs.map(state)).toEqual(["true", "false", "false", "true", "false", "false"]);
+      },
+    ));
+
+  test("Tools: turning Commands on for one workspace asks first, and only that workspace changes", () =>
+    pane(
+      "selfhost",
+      <Tools />,
+      (el) =>
+        [...el.querySelectorAll('.dk-crow__under [role="switch"]')].some((s) => !(s as HTMLButtonElement).disabled),
+      async (el) => {
+        const switchOf = (org: string) =>
+          [...el.querySelectorAll(".dk-crow__under > .dk-crow")]
+            .find((r) => r.querySelector(".dk-crow__title")?.textContent === org)
+            ?.querySelector('[role="switch"]') as HTMLButtonElement;
+        expect(switchOf("Horizonte").getAttribute("aria-checked")).toBe("false");
+        await act(async () => switchOf("Horizonte").click());
+        await until(() => document.querySelector('[role="dialog"]'));
+        const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+        expect(dialog.textContent).toContain("Turn on Commands for Horizonte?");
+        expect(dialog.textContent).toContain("agentes.chat's database and keys included");
+        const turnOn = [...dialog.querySelectorAll("button")].find((b) => b.textContent === "Turn on");
+        await act(async () => turnOn?.click());
+        await until(() => switchOf("Horizonte").getAttribute("aria-checked") === "true");
+        expect(switchOf("Acme").getAttribute("aria-checked")).toBe("true");
       },
       { someCommands: true },
     ));

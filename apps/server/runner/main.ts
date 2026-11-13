@@ -25,6 +25,7 @@ import {
   removeFolder,
   resolveAgentHandle,
   setTool,
+  TOOL_LABELS,
   TOOL_NAMES,
 } from "./access";
 import { type AgentUser, AgentUsers, agentGid, denySchedulers, systemLauncher } from "./agent-users";
@@ -61,8 +62,10 @@ import { configFromGrant, deviceInfo, prepareWorkspace, previousMachineFor, Runn
 import { DesktopManager } from "./desktop";
 import { runDesktopBrowser } from "./desktop-browser";
 import { DesktopSessions, type DesktopSessionsOptions, runnerUser, systemDesktopUser } from "./desktop-session";
+import { localSources, runDoctor } from "./doctor";
 import { RUNNER_VERSION } from "./errors";
 import { defaultHostState, HostComputer, readTokenFile, runnerChild } from "./host";
+import { writeJson } from "./json-file";
 import { hasBunTerminal, runningCompiled, thisRunner } from "./launch";
 import { acquireLock, lockedMessage, pidAlive, readLock } from "./lock";
 import { RotatingFile } from "./logfile";
@@ -73,16 +76,20 @@ import {
   type DeviceGrant,
   devicePair,
   formatUserCode,
+  LINK_CODE,
   PairingError,
   redeemIssuedCode,
   takeEnrollCode,
+  whoCanUse,
 } from "./pairing";
 import { agentWorkspace } from "./paths";
 import { connectVnc, type VncConnection, vncInit } from "./rfb";
 import { installService, installSystemService, serviceStatus, uninstallService } from "./service";
+import { askStandby, STANDBY_DEFAULT_MINUTES, STANDBY_MAX_MINUTES, standbyAcked } from "./standby";
 import type { DataListener, DataSocket } from "./streams";
 import { runTaskWrapper } from "./tasks";
 import { runnerTerminalUser, systemTerminalUser, Terminals, type TerminalsOptions } from "./terminal";
+import { probeToolchains, TOOLCHAINS_FILE } from "./toolchains";
 import { runWorker } from "./worker";
 
 const HELP = `agentes-runner ${RUNNER_VERSION}: connects this computer to agentes.chat
@@ -98,6 +105,9 @@ Usage:
   agentes-runner pair --server <url> --enroll-file <path> [--dir <workspace>] [--name <name>] [--no-exec]
       Connects with a code issued for this computer by whoever provisions it. Nobody confirms it.
       The file is removed as soon as it is read.
+  agentes-runner pair --server <url> --link <code> [--dir <workspace>] [--name <name>] [--no-exec]
+      Connects with the code of a link made under Settings > Devices (what curl <server>/i/<code> | sh
+      runs). The link's maker lets this computer join, or says no.
   agentes-runner start
       Connects and stays connected (reconnects on its own).
   agentes-runner service install|uninstall
@@ -121,8 +131,18 @@ Usage:
       Runs host as this computer's service: the root unit from boot on Linux, at login on macOS.
   agentes-runner update
       Downloads the latest runner from the server and restarts the service (keeps the pairing).
+  agentes-runner standby [--minutes <n>]
+      For whoever pauses this computer: the running runner drops its link to the server and keeps
+      everything else running (tasks, the agents' browsers and desktops, their programs). It ends after
+      n minutes the computer is running (default 5), or with resume; ask again to keep it.
+  agentes-runner resume
+      Ends standby: the runner connects again at once.
   agentes-runner status
       The connection, the service, and whether the agents' desktops and the terminal can run here.
+  agentes-runner doctor [--wait | --no-wait] [--json]
+      What this computer gives agents: its connections, the agent apps, the toolchains and the phones,
+      with the fix for whatever needs you. On a terminal it then waits for those fixes (--wait anywhere,
+      --no-wait never). Exits 0 when nothing needs you, 1 otherwise.
   agentes-runner computer
       What this computer has, what is free now, and which agents use the most of it (they share it).
       Agents run it before something heavy.
@@ -181,6 +201,8 @@ const VALUE_FLAGS = new Set([
   "state",
   "enroll-file",
   "rotate",
+  "link",
+  "minutes",
 ]);
 const LIST_FLAGS = new Set(["agent", "rotate"]);
 
@@ -240,7 +262,7 @@ function storedOrNull(home = runnerHome()): StoredConfig | null {
  */
 async function pair(p: Parsed): Promise<number> {
   const usage =
-    "Usage: agentes-runner pair --server <url> [--enroll-file <path>] [--dir <workspace>] [--name <name>] [--no-exec] [--new]";
+    "Usage: agentes-runner pair --server <url> [--enroll-file <path> | --link <code>] [--dir <workspace>] [--name <name>] [--no-exec] [--new]";
   const term = createTerm();
   term.intro("connect this computer");
   // Typed wide: the code's callback sets it, and TypeScript would keep it narrowed to null.
@@ -260,6 +282,11 @@ async function pair(p: Parsed): Promise<number> {
       return refuse(err instanceof Error ? err.message : String(err));
     }
   }
+  const link = p.flags.has("link") ? (flagString(p, "link") ?? "") : undefined;
+  if (link !== undefined && !LINK_CODE.test(link)) {
+    return refuse("--link takes the code at the end of the link (like 7KQ2-M9XD)");
+  }
+  if (link !== undefined && enrollCode) return refuse("--link and --enroll-file each connect this computer: use one");
   if (p.flags.has("code")) {
     return refuse(
       "Pairing codes from the site are gone: run agentes-runner pair --server <url> and confirm the code it shows.",
@@ -284,6 +311,8 @@ async function pair(p: Parsed): Promise<number> {
   const ac = new AbortController();
   const onSignal = () => ac.abort();
   process.once("SIGINT", onSignal);
+  // Looked at while the person confirms, so the first connection already says what this computer builds with.
+  const toolchains = probeToolchains().catch(() => null);
   let grant: DeviceGrant;
   try {
     if (enrollCode) {
@@ -292,8 +321,19 @@ async function pair(p: Parsed): Promise<number> {
     } else {
       grant = await devicePair(
         server,
-        deviceInfo(name, p.flags.has("new") ? undefined : previousMachineFor(prev, server)),
+        {
+          ...deviceInfo(name, p.flags.has("new") ? undefined : previousMachineFor(prev, server)),
+          ...(link ? { link } : {}),
+        },
         (code) => {
+          if (link) {
+            const who = code.maker ?? "the person who made the link";
+            wait = term.spin(
+              `Waiting for ${who} to let this computer join${code.orgName ? ` ${code.orgName}` : ""}…`,
+              "Let it join under Settings › Devices.",
+            );
+            return;
+          }
           term.info(
             `To connect this computer, open this link and confirm the code ${term.accent(formatUserCode(code.userCode))}:`,
           );
@@ -316,6 +356,11 @@ async function pair(p: Parsed): Promise<number> {
         return 130;
       }
       if (enrollCode) return refuse(err.message);
+      if (link && err.code === "denied")
+        return refuse("The link's maker didn't let this computer join. Nothing changed.");
+      if (link && err.code === "expired") {
+        return refuse("Nobody let this computer join in time. Make a new link under Settings › Devices.");
+      }
       if (err.code === "denied") return refuse("The connection was refused on the site. Nothing changed.");
       if (err.code === "expired") return refuse("The code expired before it was confirmed. Run this again.");
       return refuse(err.message);
@@ -334,10 +379,29 @@ async function pair(p: Parsed): Promise<number> {
     desktop: false,
   });
   writeConfig(next, home);
+  const found = await toolchains;
+  if (found) {
+    try {
+      writeJson(path.join(home, TOOLCHAINS_FILE), found);
+    } catch {
+      // the first session looks again
+    }
+  }
   const connected = `Connected${grant.org.name ? ` to ${grant.org.name}` : ""} as "${next.name}"`;
   const details = [`Workspace: ${workspaceReal}${exec ? "" : " (commands off)"}`, `Config: ${configPath(home)}`];
   if (wait) wait.done(connected, ...details);
   else term.step(connected, ...details);
+  // An issued code is a provisioner's (the workspace computer): its rule is the workspace's, not a person's choice.
+  const who = enrollCode ? null : whoCanUse(grant, next.name ?? grant.name);
+  if (who && grant.url) {
+    term.info(`${who} Change it on its page:`);
+    term.command(grant.url);
+  }
+  // Agents run as this OS user unless each has its own (system mode), so other people's read this user's files.
+  if (who && grant.audience !== "owner" && next.mode !== "system" && exec) {
+    const user = os.userInfo().username;
+    term.warn(`Other people's agents will run as ${user} and can read ${user}'s files.`);
+  }
   if (!term.inherited) {
     term.gap();
     term.info("Next: start it, or run it in the background");
@@ -433,7 +497,7 @@ async function app(): Promise<number> {
       input: process.stdin,
       output: process.stdout,
       locked: lock.ok ? null : lock.holder,
-      daemon: { log: write, logFile },
+      daemon: { log: write, logFile, refreshPath: () => adoptLoginPath() },
       signal: ac.signal,
     });
   } finally {
@@ -684,6 +748,41 @@ function printed(
   return code;
 }
 
+/** How long `standby` and `resume` wait for the running runner to answer. */
+const STANDBY_ANSWER_MS = 20_000;
+
+/**
+ * `agentes-runner standby` / `resume` (ADR 0176): the ask goes in the runner's home, and the running runner answers
+ * once it applied it. Exits 0 once nothing here links to the server (in standby, or no runner running), or the
+ * runner took the resume.
+ */
+async function standby(p: Parsed, on: boolean): Promise<number> {
+  const home = runnerHome();
+  const given = flagString(p, "minutes");
+  const minutes = on ? (given === undefined ? STANDBY_DEFAULT_MINUTES : Number(given)) : 0;
+  if (on && (!Number.isInteger(minutes) || minutes < 1 || minutes > STANDBY_MAX_MINUTES)) {
+    console.error(`--minutes takes a whole number from 1 to ${STANDBY_MAX_MINUTES}`);
+    return 1;
+  }
+  const ask = askStandby(home, minutes);
+  const holder = readLock(home);
+  if (!holder || !pidAlive(holder.pid)) {
+    console.log(on ? "No runner is running here: one that starts now stays in standby." : "No runner is running here.");
+    return 0;
+  }
+  for (const until = Date.now() + STANDBY_ANSWER_MS; Date.now() < until; await sleep(100)) {
+    if (!standbyAcked(home, ask.id)) continue;
+    console.log(
+      on
+        ? `In standby for ${minutes} min of running time: no link to the server, everything else runs.`
+        : "Standby is over: connecting to the server.",
+    );
+    return 0;
+  }
+  console.error("The runner didn't answer in time.");
+  return 1;
+}
+
 /** Replaces this script with the server's latest bundle; the pairing and the workspace stay. */
 async function update(): Promise<number> {
   const term = createTerm();
@@ -912,26 +1011,14 @@ function tools(p: Parsed): number {
   if (!paired) return 1;
   const [, sub = "list", tool] = p.positional;
   const access = effectiveAccess(paired.stored);
-  const label: Record<keyof RunnerTools, string> = {
-    claude: "Claude Code",
-    codex: "Codex",
-    cursor: "Cursor",
-    opencode: "OpenCode",
-    grok: "Grok Build",
-    antigravity: "Antigravity CLI (Gemini)",
-    commands: "Commands",
-    browser: "Browser",
-    desktop: "Desktops (each agent's own screen, watched and controlled from the app)",
-    terminal: "Terminal (a shell as the agent, opened from the app)",
-  };
   if (sub === "list") {
-    for (const t of TOOL_NAMES) console.log(`${t.padEnd(9)} ${access.tools[t] ? "on " : "off"}  ${label[t]}`);
+    for (const t of TOOL_NAMES) console.log(`${t.padEnd(9)} ${access.tools[t] ? "on " : "off"}  ${TOOL_LABELS[t]}`);
     return 0;
   }
   if ((sub === "enable" || sub === "disable") && tool && (TOOL_NAMES as readonly string[]).includes(tool)) {
     const t = tool as keyof RunnerTools;
     saveAccess(home, setTool(access, t, sub === "enable"));
-    console.log(`${label[t]} ${sub === "enable" ? "on" : "off"}.`);
+    console.log(`${TOOL_LABELS[t]} ${sub === "enable" ? "on" : "off"}.`);
     return 0;
   }
   console.error(
@@ -1270,6 +1357,18 @@ async function main(argv: string[]): Promise<number> {
       return app();
     case "status":
       return status();
+    case "doctor": {
+      const json = p.flags.has("json");
+      const interactive = process.stdout.isTTY === true && process.stdin.isTTY === true;
+      return runDoctor({
+        // Ctrl-C while it waits: something still needs the person.
+        term: createTerm({ canceled: () => process.exit(1) }),
+        sources: localSources(runnerHome()),
+        wait: p.flags.has("wait") || (!p.flags.has("no-wait") && !json && interactive),
+        json,
+        write: (text) => process.stdout.write(text),
+      });
+    }
     case "computer":
       console.log(await computerNow());
       return 0;
@@ -1324,6 +1423,9 @@ async function main(argv: string[]): Promise<number> {
     }
     case "update":
       return update();
+    case "standby":
+    case "resume":
+      return standby(p, command === "standby");
     case "service": {
       const stored = storedOrNull();
       const hostService = p.flags.has("host");

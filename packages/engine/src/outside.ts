@@ -1,6 +1,7 @@
-import { and, desc, type Executor, eq, inArray, isNull, lte, or, schema, sql } from "@agenteschat/db";
+import { and, desc, type Executor, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
 import { type AuthorityRun, fedByRoutine, type RunAuthority, runAuthority } from "./authority";
 import { caches, cachesEnabled } from "./cache";
+import { postedBySql } from "./message-place";
 
 const { agentRuns, agentRunSteps, messages } = schema;
 
@@ -43,7 +44,8 @@ async function conversationReadOutside(db: Executor, run: OutsideRun, authority?
           eq(messages.orgId, run.orgId),
           eq(messages.channelId, trigger.channelId),
           isNull(messages.threadId),
-          lte(messages.createdAt, trigger.createdAt),
+          // What its context reads (`buildRunContext`).
+          postedBySql(messages, { createdAt: trigger.createdAt, id: run.triggerMessageId }),
         ),
       )
       .orderBy(desc(messages.createdAt))
@@ -226,6 +228,11 @@ function hostsIn(text: string, anyTld = false): string[] {
   for (const m of text.matchAll(IPV4)) out.push(m[0]);
   return out.map((h) => h.toLowerCase().replace(/\.$/, "")).filter(Boolean);
 }
+
+/** Whether `text` holds an email address or a phone number: someone's contact details. */
+export const hasContact = (text: string) =>
+  [...text.matchAll(EMAIL)].length > 0 ||
+  [...text.replace(EMAIL, " ").matchAll(PHONE)].some((m) => digits(m[0]).length >= 8);
 
 /**
  * The first address in `text` (a URL's host, a bare domain, an IP address, an email address, an @handle, a phone

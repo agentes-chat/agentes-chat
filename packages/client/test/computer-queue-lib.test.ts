@@ -5,6 +5,7 @@ import type { ComputerQueue } from "../src/api/types";
 import {
   awayText,
   conversationWaits,
+  durationText,
   fanChipText,
   fanOutOf,
   fanOutText,
@@ -160,6 +161,15 @@ test("rows: what each turn is for, never its content, where, and its estimate", 
   expect(awayText(en, at(-3), NOW)).toBe("Away 3 min");
 });
 
+test("how long something has gone on: seconds, minutes, hours, then days past two of them", () => {
+  const hour = 3_600_000;
+  expect(durationText(pt, 40_000)).toBe("40 s");
+  expect(durationText(pt, 25 * 60_000)).toBe("25 min");
+  expect(durationText(pt, 47 * hour)).toBe("47 h");
+  expect(durationText(pt, 82 * hour)).toBe("3 dias");
+  expect(durationText(en, 82 * hour)).toBe("3 days");
+});
+
 test("what fills the computer, by what each turn is for", () => {
   const of = (...kinds: ("agent" | "routine" | "work")[]) =>
     kinds.map((kind) => ({ purpose: kind === "agent" ? { kind, agentId: "ada" } : { kind } }));
@@ -305,6 +315,20 @@ test("the status note of an agent waiting for its computer says that, never that
   );
   expect(talkerStatusText(en, { minutes: "11", steps: "3" })).toBe(
     "I'm in the middle of a task (11 min) and can't answer yet. Your message is queued and I'll read it at my next step.",
+  );
+});
+
+test("the status note of an agent parked on its plan or budget says that wait and when it is back", () => {
+  const until = new Date(Date.now() + 2 * 24 * 3600_000).toISOString();
+  const day = new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(new Date(until)).replace(/-feira$/, "");
+  const text = talkerStatusText(pt, { minutes: "0", steps: "0", wait: "plan", until }, "pt-BR");
+  expect(text).toStartWith(`Estou esperando o plano voltar (${day} às `);
+  expect(text).toEndWith("). Leio sua mensagem quando ele voltar.");
+  expect(talkerStatusText(pt, { minutes: "0", steps: "0", wait: "plan" }, "pt-BR")).toBe(
+    "Estou esperando o plano voltar. Leio sua mensagem assim que ele voltar.",
+  );
+  expect(talkerStatusText(en, { minutes: "0", steps: "0", wait: "budget" }, "en")).toBe(
+    "I'm waiting for my monthly budget to renew. I'll read your message then, or sooner if an admin raises the limit.",
   );
 });
 

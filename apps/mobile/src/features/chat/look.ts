@@ -6,6 +6,7 @@ import {
   facesShown,
   textSizeOf,
 } from "@agenteschat/client/lib/chat-look";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { createContext, useContext, useMemo } from "react";
 import { StyleSheet } from "react-native";
@@ -38,11 +39,14 @@ export const ROW_LOOK_DEFAULT: RowLook = {
 export const RowLookContext = createContext<RowLook>(ROW_LOOK_DEFAULT);
 export const useRowLook = () => useContext(RowLookContext);
 
-/** The conversation's look. My bubbles take the color of the agent I talk to, and the workspace's sky elsewhere. */
+/**
+ * The conversation's look. My bubbles take the color of the agent I talk to, and the workspace's sky elsewhere. In a
+ * personal workspace every conversation opens in bubbles, as a DM does (ADR 0159); the person's own choice wins.
+ */
 export function useConversationLook(dm: boolean, agentColor?: AgentColorName): RowLook {
   const { org } = useOrg();
   const { colors, scheme } = useTheme();
-  const { style, tone } = chatLookOf(org?.chatPrefs, dm);
+  const { style, tone } = chatLookOf(org?.chatPrefs, dm, isPersonal(org));
   const text = CHAT_TEXT[textSizeOf(org?.chatPrefs)];
   const fill = bubbleFill(agentColor ?? "sky", tone, colors.bg, scheme === "dark");
   return useMemo(
@@ -69,7 +73,7 @@ export const useCardTop = (marginTop = 0) => ({ marginTop: useContext(RowPartCon
 /** `quietInset` in this conversation's look. */
 export const useQuietInset = () => quietInset(useRowLook());
 
-/** The rows' frames per style, shared by the saved row (`MessageRow`) and the live one (`TurnRow`). */
+/** The rows' frames per style. */
 export const lookRows = StyleSheet.create({
   bubblesRow: { paddingLeft: BUBBLES_INSET, paddingRight: 44, gap: 8 },
   bubblesSlot: { width: 30, paddingTop: 0 },

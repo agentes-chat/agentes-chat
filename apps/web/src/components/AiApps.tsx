@@ -14,6 +14,7 @@ import {
   DialogFooter,
   EmptyState,
   Field,
+  GroupHeading,
   Icon,
   Input,
   List,
@@ -29,11 +30,11 @@ import {
   Tabs,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingList } from "@/components/Loading";
-import { CommandBlock } from "@/components/Machines";
+import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useSignInAgain } from "@/hooks/useSignInAgain";
@@ -412,11 +413,7 @@ export function ConnectAppDialog({
             const heading = group && `apps-group-${group}`;
             return (
               <section key={group ?? "other"} className="apps-group" aria-labelledby={heading || undefined}>
-                {group && (
-                  <h3 id={heading || undefined} className="cflow-group__title">
-                    {t(`apps.dialog.group.${group}`)}
-                  </h3>
-                )}
+                {group && <GroupHeading level={3} id={heading || undefined} title={t(`apps.dialog.group.${group}`)} />}
                 <div className="apps-clients">
                   {clients.map((c) => (
                     <button
@@ -528,12 +525,30 @@ function OpenLink({ href, app }: { href: string; app: string }) {
   );
 }
 
-/** One app's guide from `app-clients.ts`: each step's words, then its button, address or command to copy. */
-function ClientSteps({ client, url, onToken }: { client: AppClient; url: string; onToken: () => void }) {
+/**
+ * One app's guide from `app-clients.ts`: each step's words, then its button, address or command to copy. `children`:
+ * more steps of the same list, before the guide's notes.
+ */
+export function ClientSteps({
+  client,
+  url,
+  onToken,
+  children,
+}: {
+  client: AppClient;
+  url: string;
+  onToken?: () => void;
+  children?: ReactNode;
+}) {
   const { t } = useTranslation();
   const guide = client.guide(url);
   const words = (s: GuideStep) => (
-    <Trans i18nKey={`apps.dialog.${s.text}`} values={s.vars} components={CODE} {...TYPED_VALUES} />
+    <Trans
+      i18nKey={`apps.dialog.${s.text}`}
+      values={{ access: t("apps.consent.manage"), ...s.vars }}
+      components={CODE}
+      {...TYPED_VALUES}
+    />
   );
   const installs = guide.steps.filter((s) => s.install);
   const steps = guide.steps.filter((s) => !s.install);
@@ -556,7 +571,7 @@ function ClientSteps({ client, url, onToken }: { client: AppClient; url: string;
                 {s.open && <OpenLink href={s.open} app={client.name ?? ""} />}
                 {s.address && <CommandBlock command={url} copied={t("apps.serverCopied")} />}
                 {s.code && <CommandBlock command={s.code} />}
-                {s.token && (
+                {s.token && onToken && (
                   <span className="row">
                     <Button size="sm" icon="key" onClick={onToken}>
                       {t("apps.dialog.other.toTokens")}
@@ -566,6 +581,7 @@ function ClientSteps({ client, url, onToken }: { client: AppClient; url: string;
               </span>
             </li>
           ))}
+          {children}
         </ol>
       )}
       {guide.notes.map((n) => (

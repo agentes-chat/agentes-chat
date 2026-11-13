@@ -28,10 +28,11 @@ const disabled = (el: Element) => el.hasAttribute("disabled");
 const section = () => within(document.querySelector(".settings__body") as HTMLElement);
 
 describe("Configurações › GIFs e figurinhas (ADR 0091)", () => {
-  test("its own section in the nav, with what it is for", async () => {
+  test("a tab of Workspace, with what it is for", async () => {
     await go();
     const nav = screen().getByRole("navigation", { name: "Seções das configurações" });
-    expect(within(nav).getByRole("link", { name: "GIFs e figurinhas" }).getAttribute("aria-current")).toBe("page");
+    expect(within(nav).getByRole("link", { name: "Workspace" }).getAttribute("aria-current")).toBe("page");
+    expect(section().getByRole("tab", { name: "GIFs e figurinhas" }).getAttribute("aria-selected")).toBe("true");
     expect(section().getByRole("heading", { level: 2, name: "GIFs e figurinhas" })).toBeTruthy();
     expect(section().getByRole("region", { name: "Na conversa" })).toBeTruthy();
     expect(section().getByRole("region", { name: "Agentes" })).toBeTruthy();
@@ -96,13 +97,13 @@ describe("Configurações › GIFs e figurinhas (ADR 0091)", () => {
     const gifs = screen().getByRole("switch", { name: "GIFs" });
     expect(gifs.getAttribute("aria-checked")).toBe("false");
     expect(disabled(gifs)).toBe(true);
-    expect(document.getElementById("media-gifs-help")?.textContent).toBe(
+    expect(document.getElementById("media-gifs-status")?.textContent).toBe(
       "A busca de GIFs ainda não está disponível aqui.",
     );
-    expect(gifs.getAttribute("aria-describedby")).toBe("media-gifs-help");
+    expect(gifs.getAttribute("aria-describedby")).toBe("media-gifs-status");
     expect(screen().getByRole("radio", { name: "Nunca" }).getAttribute("aria-checked")).toBe("true");
     expect(disabled(screen().getByRole("radio", { name: "Às vezes" }))).toBe(true);
-    expect(document.getElementById("media-level-help")?.textContent).toBe("Ainda não disponível aqui.");
+    expect(document.getElementById("media-level-status")?.textContent).toBe("Ainda não disponível aqui.");
     // Each agent's own switch still decides whether it sends one when asked (its sticker, here).
     expect(disabled(screen().getByRole("switch", { name: "Ada manda GIFs e figurinhas" }))).toBe(false);
     // Stickers need nothing from the server.

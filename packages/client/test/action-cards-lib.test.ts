@@ -5,7 +5,10 @@ import {
   actionCardDetail,
   actionCardKey,
   actionCardOf,
+  agentProposalEnd,
   agentProposalOf,
+  cardInstallAgent,
+  cardInstallOf,
   connectAppDone,
   draftLevels,
   draftMailLevels,
@@ -68,6 +71,24 @@ test("where it stands: open until a day passes (also while someone creates it), 
   expect(proposalStatus(card(), NOW + 2 * HOUR)).toBe("expired");
   expect(proposalStatus(card({ state: "created", agentId: "a1" }), NOW + 2 * HOUR)).toBe("created");
   expect(proposalStatus(card({ state: "denied" }), NOW)).toBe("denied");
+});
+
+test("how it ended names who decided: the viewer as you, someone else by name, nobody when it ran out", () => {
+  const t = ((key: string, values?: Record<string, string>) =>
+    values ? `${key}:${JSON.stringify(values)}` : key) as unknown as TFunction;
+  const made = card({ state: "created", agentId: "a1", decidedByUserId: "u-ana" });
+  expect(agentProposalEnd(t, made, "created", "u-ana", "Ana")).toBe("actionCard.agentProposal.createdByYou");
+  expect(agentProposalEnd(t, made, "created", "u-me", "Ana")).toBe('actionCard.agentProposal.createdBy:{"name":"Ana"}');
+  // A name the viewer can't read: only how it ended.
+  expect(agentProposalEnd(t, made, "created", "u-me", undefined)).toBe("actionCard.agentProposal.created");
+  const refused = card({ state: "denied", decidedByUserId: "u-ana" });
+  expect(agentProposalEnd(t, refused, "denied", "u-ana", "Ana")).toBe("rightHand.card.declinedByYou");
+  expect(agentProposalEnd(t, refused, "denied", "u-me", "Ana")).toBe('rightHand.card.declinedBy:{"name":"Ana"}');
+  expect(agentProposalEnd(t, refused, "denied", null, undefined)).toBe("proposals.refused");
+  expect(agentProposalEnd(t, card(), "expired", "u-me", undefined)).toBe("approval.expired");
+  expect(agentProposalEnd(t, card({ state: "superseded" }), "superseded", "u-me", undefined)).toBe(
+    "rightHand.card.superseded",
+  );
 });
 
 test("the draft's levels by connection, and the AI it suggests in words", () => {
@@ -216,6 +237,10 @@ test("connect-an-app and invite cards: read from the message, a plain http addre
   const server = (serverUrl: string) => ({ def: null, server: { serverUrl } as never });
   expect(connectAppDone(app, [server("https://other.dev/mcp")])).toBe(false);
   expect(connectAppDone(app, [server("https://MCP.acme.dev/mcp/")])).toBe(true);
+  // Who can't manage connectors is told a server's origin only: it still settles the card, another host's doesn't.
+  expect(connectAppDone(app, [server("https://mcp.acme.dev")])).toBe(true);
+  expect(connectAppDone(app, [server("https://mcp.acme.dev.example.com")])).toBe(false);
+  expect(connectAppDone(app, [server("https://mcp.acme.dev/other")])).toBe(false);
   const linear = { kind: "connect_app" as const, forUserId: null, connector: "linear", why: "" };
   expect(connectAppDone(linear, [{ def: { id: "linear" } as never, server: null }])).toBe(true);
   // Its sign-in stopped working: the card asks again.
@@ -402,4 +427,17 @@ test("a card of a workspace change shows all it changes, and a card of their own
   expect(mayApplyCard(status, { userId: "u1", may: () => false })).toBe(true);
   expect(mayApplyCard(status, { userId: "u2", may: () => true })).toBe(false);
   expect(actionCardOf({ actionCard: status })).toMatchObject({ params: { self: true } });
+});
+
+test("an install turns its skill on only for the agent whose card opened it, from that card's own link", () => {
+  const link = "https://github.com/acme/skills/tree/main/excel";
+  const from = cardInstallOf(JSON.stringify({ url: link, agentId: "a-dev" }));
+  expect(from).toEqual({ url: link, agentId: "a-dev" });
+  expect(cardInstallAgent(from, ` ${link} `, "a-dev")).toBe("a-dev");
+  // A link to the screen that only names an agent, another agent, a link typed over the card's: nobody.
+  expect(cardInstallAgent(null, link, "a-dev")).toBeUndefined();
+  expect(cardInstallAgent(from, link, "a-other")).toBeUndefined();
+  expect(cardInstallAgent(from, "https://github.com/evil/skills", "a-dev")).toBeUndefined();
+  expect(cardInstallAgent(from, link, undefined)).toBeUndefined();
+  for (const raw of [null, "", "{", "[]", JSON.stringify({ url: link })]) expect(cardInstallOf(raw)).toBeNull();
 });

@@ -175,7 +175,7 @@ export function JevSteps({
             </Button>
           )}
         </span>
-        <p id={below} className={error ? "jev-steps__below ac-field__error" : "jev-steps__below ac-field__help"}>
+        <p id={below} className={error ? "jev-steps__below ac-field__error" : "jev-steps__below ac-field__example"}>
           {error ?? t("jev.steps.sealed")}
         </p>
         {saved && (
@@ -211,6 +211,7 @@ export function WhoPicksSection() {
         action={<HelpLink slug="who-answers">{t("routing.how")}</HelpLink>}
       />
       {line && <p className="who-line">{t(line.key, line.params)}</p>}
+      {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
       {jev.data && <JevCard routing={status.data?.routing?.by} />}
     </Card>
   );

@@ -16,6 +16,7 @@ import type {
   VaultUse,
 } from "@agenteschat/client";
 import { joinNames, namesText, relativeTime } from "@agenteschat/client/lib/format";
+import { isReservedKeyName, VAULT_KEY_NAME } from "@agenteschat/client/lib/vault";
 import type { TFunction } from "i18next";
 import type { IconName } from "@/ui";
 
@@ -234,15 +235,9 @@ export const LIMITS = {
   keyName: 64,
 } as const;
 
-/** A variable name, as the computer takes it (`packages/adapters/src/secret-box.ts`). */
-export const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
-
-/**
- * Names a key can't have: they decide where an AI tool's sign-in or requests go. Mirrors `isReservedSecretName`
- * (`packages/adapters/src/secret-box.ts`), so the form says it before the server refuses.
- */
-export const reservedKeyName = (name: string) =>
-  /^(ANTHROPIC_|CLAUDE_|OPENAI_|CODEX_|OPENCODE_|NODE_|SSL_CERT_|LD_|DYLD_)|_PROXY$/.test(name.toUpperCase());
+/** A variable name, as the computer takes it, and the names a key can't have. */
+export const SECRET_NAME = VAULT_KEY_NAME;
+export const reservedKeyName = isReservedKeyName;
 
 /**
  * What a person types as a key's name, as a variable, while they type it: "stripe key" → `STRIPE_KEY`. An underscore
@@ -496,10 +491,11 @@ export function connectionState(c: Pick<VaultConnection, "status" | "errorCode">
   return { key: "mobile.vault.connection.ready", icon: "check" };
 }
 
-/** "Reads Agents · 12 items · synced 2 min ago". */
+/** "Reads Agents · read-only · 12 items · synced 2 min ago" (read-only: its credential can't save new logins). */
 export function connectionLine(t: TFunction, locale: string, c: VaultConnection, now = new Date()): string {
   return [
     c.label ? t("mobile.vault.connection.reads", { label: c.label }) : null,
+    c.readOnly ? t("mobile.vault.connection.noWrites") : null,
     t("mobile.vault.connection.items", { count: c.itemCount }),
     c.syncedAt ? t("mobile.vault.connection.synced", { when: relativeTime(t, locale, c.syncedAt, now) }) : null,
   ]
@@ -609,6 +605,7 @@ export const vaultHref = {
   list: "/settings/vault",
   item: (id: string) => `/settings/vault-item?${param("id", id)}`,
   create: (scope: VaultScope) => `/settings/vault-new?${param("scope", scope)}`,
+  env: (scope: VaultScope) => `/settings/vault-env?${param("scope", scope)}`,
   itemAccess: (id: string) => `/settings/vault-access?${param("id", id)}`,
   connectionAccess: (id: string) => `/settings/vault-access?${param("connection", id)}`,
   connect: (kind: string) => `/settings/vault-connect?${param("kind", kind)}`,

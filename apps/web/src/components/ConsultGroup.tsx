@@ -7,6 +7,7 @@ import {
   useConsultations,
 } from "@agenteschat/client";
 import {
+  asExchanges,
   type ConsultLineState,
   type ConsultNoticeFold,
   type ConsultPairItem,
@@ -38,12 +39,15 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { useChannelEvents } from "@/realtime/context";
 
 export interface ConsultGroups {
+  /** By the run whose reply draws the row: an exchange's first asking run (`asExchanges`). */
   byRun: Map<string, RunConsultation[]>;
+  /** Every question the list has: a reply's `meta.consulted` adds only those it doesn't. */
+  listed: ReadonlySet<string>;
   /** How each answer's notice draws: hidden under a reply close by, one line to a reply farther up, its card. */
   folds: ReadonlyMap<string, ConsultNoticeFold>;
-  /** Runs whose block shows their questions near the end: the working line doesn't say them again. */
+  /** Runs whose reply shows their questions near the end: the working line doesn't say them again. */
   nearEnd: ReadonlySet<string>;
-  /** Runs drawn as live blocks: a message the run already posted leaves the block to the live one. */
+  /** Runs at work: their questions wait for their reply (a message they already posted leaves them to it). */
   live: ReadonlySet<string>;
   /** The question open in the panel beside the conversation: its line shows pressed. */
   open: string | null;
@@ -53,6 +57,7 @@ export interface ConsultGroups {
 
 const EMPTY: ConsultGroups = {
   byRun: new Map(),
+  listed: new Set(),
   folds: new Map(),
   nearEnd: new Set(),
   live: new Set(),
@@ -68,8 +73,9 @@ const RELOAD_ON = new Set(["agent.consulting", "agent.consulted", "agent.consult
 
 /**
  * The conversation's questions to other agents, by the run that asked; reloaded when one changes. `rows`: the
- * messages drawn here, in order; `live`: the runs drawn as live blocks after them. Both show their questions:
- * the answers' notices close to them fold, and the working line leaves out the ones near the end.
+ * messages drawn here, in order; `live`: the runs at work after them. A reply shows its run's questions: the answers'
+ * notices close to it fold, and the working line leaves out the ones near the end. A run at work draws none until its
+ * reply comes (its answers' notices fold meanwhile): the line says its questions.
  */
 export function useConsultGroups(
   channelId: string,
@@ -91,13 +97,14 @@ export function useConsultGroups(
     return out;
   }, [list.data]);
   return useMemo(() => {
-    const all = list.data ?? [];
+    const all = asExchanges(list.data ?? []);
     // A reply's `meta.consulted` row still shows pressed while its question is open beside the conversation.
     if (all.length === 0) return open === null && live.size === 0 ? EMPTY : { ...EMPTY, live, open };
     return {
       byRun: groupsByRun(all),
+      listed: new Set(all.map((c) => c.id)),
       folds: consultNoticeFolds(rows, all, live),
-      nearEnd: consultBlocksNearEnd(rows, all, live),
+      nearEnd: new Set([...consultBlocksNearEnd(rows, all)].filter((runId) => !live.has(runId))),
       live,
       open,
       helping,
@@ -117,7 +124,8 @@ const NO_ITEMS: ConsultPairItem[] = [];
 
 /**
  * The questions a reply's pair row stands for: its run's (`runId`, null: none) and those its `meta.consulted` names
- * that the list doesn't have. `saved`: a message the run posted while it still works, whose live row shows them.
+ * that the list doesn't have. `saved`: a saved message; one its run posted while it still works shows none, they wait
+ * for the run's reply (the working line says them meanwhile).
  * `reached`: hand-offs the message's reach lines show (`reachHandoffs`), left out here.
  */
 export function useReplyConsults(
@@ -131,9 +139,9 @@ export function useReplyConsults(
     if (saved && runId && groups.live.has(runId)) return NO_ITEMS;
     const all = (runId && groups.byRun.get(runId)) || NO_ITEMS;
     const run = reached.size === 0 ? all : all.filter((c) => !reached.has(c.id));
-    const extra = consulted.filter((c) => !all.some((r) => r.id === c.consultationId)).map(pairItemOf);
+    const extra = consulted.filter((c) => !groups.listed.has(c.consultationId)).map(pairItemOf);
     return extra.length === 0 ? run : [...run, ...extra];
-  }, [groups.byRun, groups.live, runId, consulted, saved, reached]);
+  }, [groups.byRun, groups.listed, groups.live, runId, consulted, saved, reached]);
 }
 
 /**
@@ -165,7 +173,7 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   const [open, setOpen] = useState(false);
   const live = items.some((c) => c.status === "open");
   const now = useNow(live);
-  const pair = consultPair(items, now);
+  const pair = consultPair(items, now, askerId);
   if (!pair) return null;
   // An old reply's question with no id of its own has no conversation to open: it opens in place.
   const openConsultation = openableConsultation(pair.opens) ? panel : undefined;
@@ -189,27 +197,32 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
             }
           : { "aria-expanded": open, onClick: () => setOpen((o) => !o) })}
       >
-        <AgentAvatar agentId={askerId} size="xs" name={from} state="idle" />
-        <span className="consult-pair__name">{from}</span>
-        <Icon name="swap" size={16} className="consult-pair__swap" label={t("newAgent.and")} />
-        <span className="ac-avatar-stack consult-pair__faces">
-          {pair.faces.slice(0, 3).map((f) => (
-            <AgentAvatar
-              key={f.agentId}
-              agentId={f.agentId}
-              size="xs"
-              name={nameOf(f.agentId)}
-              state={live && !f.off ? "thinking" : "idle"}
-              className={f.off ? "consult-pair__off" : undefined}
-            />
-          ))}
+        {/* One sentence that wraps at its spaces: each face keeps its name's first word, the · its name's last. */}
+        <span className="consult-pair__who">
+          <AgentAvatar agentId={askerId} size="xs" name={from} state="idle" />
+          <span className="consult-pair__name">{from}</span>
         </span>
-        <span className="consult-pair__name">{names.length === 1 ? names[0] : namesText(t, names, 1)}</span>
+        <Icon name="swap" size={16} className="consult-pair__swap" label={t("newAgent.and")} />
+        <span className="consult-pair__who">
+          <span className="ac-avatar-stack consult-pair__faces">
+            {pair.faces.slice(0, 3).map((f) => (
+              <AgentAvatar
+                key={f.agentId}
+                agentId={f.agentId}
+                size="xs"
+                name={nameOf(f.agentId)}
+                state={live && !f.off ? "thinking" : "idle"}
+                className={f.off ? "consult-pair__off" : undefined}
+              />
+            ))}
+          </span>
+          <span className="consult-pair__name">{names.length === 1 ? names[0] : namesText(t, names, 1)}</span>
+        </span>
         {(pair.word || pair.seconds !== null) && (
           <span className="consult-pair__sep" aria-hidden="true">
             ·
           </span>
-        )}
+        )}{" "}
         {pair.word && <span className="consult-pair__word">{t(pair.word.key, pair.word.values)}</span>}
         {pair.seconds !== null && (
           <span className="consult-pair__time">{consultTimeText(t, i18n.language, live, pair.seconds)}</span>
@@ -240,12 +253,14 @@ function ConsultInPlace({
   const { t } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
-  const from = agentGrammar(dir.agentById.get(askerId)?.name ?? t("channel.unknownAgent"));
+  // In an exchange the other agent may be the one who asked this part.
+  const askedBy = c.agentId ?? askerId;
+  const from = agentGrammar(dir.agentById.get(askedBy)?.name ?? t("channel.unknownAgent"));
   const to = agentGrammar(dir.agentById.get(c.consultedAgentId)?.name ?? t("channel.unknownAgent"));
   const state = consultLineState(c, now);
   return (
     <div className="ac-consult__body ac-consult__body--inline">
-      <small>{withAgentFace(t(consultAskedKey(c), { name: from.name }), from.name, askerId)}</small>
+      <small>{withAgentFace(t(consultAskedKey(c), { name: from.name }), from.name, askedBy)}</small>
       <div className="ac-consult__text ac-consult__text--q">
         <MessageBody
           body={withoutRelayLine(c.question)}

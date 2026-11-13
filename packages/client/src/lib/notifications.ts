@@ -72,30 +72,6 @@ export function sortWaiting(list: AppNotification[]) {
   );
 }
 
-/**
- * One waiting card per connected server whose approved tools changed (ADR 0117). A server now keeps one open notice,
- * but rows from before that, or from a server not updated yet, repeat the same card; the newest stands for them all,
- * since its review lists every pending change. `merged` is how many were left out, to take from the server's counts.
- */
-export function oneToolChangePerServer<T extends Pick<AppNotification, "kind" | "waiting" | "source" | "updatedAt">>(
-  items: T[],
-): { items: T[]; merged: number } {
-  const keyOf = (n: T) =>
-    n.kind === "connector_tool_changed" && n.waiting ? (n.source.connectionId ?? n.source.label ?? "") : null;
-  const newest = new Map<string, T>();
-  for (const n of items) {
-    const key = keyOf(n);
-    if (key === null) continue;
-    const kept = newest.get(key);
-    if (!kept || n.updatedAt > kept.updatedAt) newest.set(key, n);
-  }
-  const kept = items.filter((n) => {
-    const key = keyOf(n);
-    return key === null || newest.get(key) === n;
-  });
-  return { items: kept, merged: items.length - kept.length };
-}
-
 /** How the counts move when one item changes from `before` to `after` (either may be missing). */
 export function countsDelta(
   counts: NotificationCounts,
@@ -218,7 +194,6 @@ export const askersOf = (n: Pick<AppNotification, "count" | "latest">) => ({
 export function workspaceHeadline(n: Pick<AppNotification, "kind" | "latest">) {
   if (n.kind === "computer_ready") return "computerSetup.notification.ready" as const;
   if (n.kind === "composio_limit") return "connectors.composio.limitNotice" as const;
-  if (n.kind === "connector_tool_changed") return "connectors.toolChanges.notice" as const;
   if (n.kind === "computer_disk_full") return "machines.shared.diskFullNotice" as const;
   if (n.kind === "computer_no_chrome") return "machines.chromeMissingNotice" as const;
   if (n.kind === "skill_update") {
@@ -342,12 +317,25 @@ export function replyTarget(n: AppNotification): ReplyTarget | null {
   }
 }
 
+/**
+ * The island's quick reply: where an answer goes and the answers to pick. A workspace being deleted takes none (ADR
+ * 0088 §7): `readOnly` puts the line saying why in their place.
+ */
+export function quickReply(n: AppNotification, deleting: boolean) {
+  const answerable = replyTarget(n);
+  return {
+    target: deleting ? null : answerable,
+    suggestions: !deleting && n.kind === "agent_question" ? (n.latest.suggestions ?? []) : [],
+    readOnly: deleting && answerable !== null,
+  };
+}
+
 /** Where "Abrir" goes (the app's routes). */
 export type OpenTarget =
   | { to: "/org/$orgId/threads/$threadId"; params: { threadId: string }; search?: { m: string } }
   | { to: "/org/$orgId/c/$channelId"; params: { channelId: string }; search?: { m: string } }
   | { to: "/org/$orgId/dm/agent/$agentId"; params: { agentId: string }; search?: { m: string } }
-  | { to: "/org/$orgId/agents/$agentId"; params: { agentId: string }; search?: { sec: "brain" } }
+  | { to: "/org/$orgId/agents/$agentId"; params: { agentId: string }; search?: { sec: "brain"; brain?: "model" } }
   | { to: "/org/$orgId/dm/person/$userId"; params: { userId: string }; search?: { m: string } }
   | { to: "/org/$orgId/issues/$number"; params: { number: string }; search?: { m: string } }
   | { to: "/org/$orgId/approvals"; search?: { open: string } }
@@ -357,7 +345,7 @@ export type OpenTarget =
   | { to: "/org/$orgId/settings/computers/$machineId"; params: { machineId: string } }
   | {
       to: "/org/$orgId/settings/$section";
-      params: { section: "computers" | "members" | "usage" | "connectors" | "billing" | "approvals" | "keys" };
+      params: { section: "computers" | "members" | "usage" | "connectors" | "billing" | "approvals" | "right_hand" };
     }
   | { to: "/org/$orgId/home"; search?: { widget: string } }
   | { to: "/org/$orgId/dashboards" }
@@ -394,9 +382,10 @@ export function openTarget(n: AppNotification): OpenTarget | null {
   // A change someone sent to whoever decides (ADR 0137) is decided on its card in the row: the DM it came from is theirs.
   if (n.kind === "change_request") return null;
   if (n.kind === "proposal_waiting") return { to: "/org/$orgId/proposals" };
-  // Who approves for whom (ADR 0139) is set, seen and declined in Configurações › Você › Aprovações.
-  if (n.kind === "approval_cover" || n.kind === "right_hand_paused")
-    return { to: "/org/$orgId/settings/$section", params: { section: "approvals" } };
+  // Who approves for whom (ADR 0139) is set, seen and declined in Configurações › Sua conta › Aprovações.
+  if (n.kind === "approval_cover") return { to: "/org/$orgId/settings/$section", params: { section: "approvals" } };
+  // What the right hand does without asking is on its own page, which its old settings address opens.
+  if (n.kind === "right_hand_paused") return { to: "/org/$orgId/settings/$section", params: { section: "right_hand" } };
   // Requests to join are answered in Members (ADR 0068).
   if (n.kind === "join_request") return { to: "/org/$orgId/settings/$section", params: { section: "members" } };
   // Someone accepted an invitation (ADR 0090): a conversation with them, to say hi.
@@ -434,14 +423,15 @@ export function openTarget(n: AppNotification): OpenTarget | null {
       ...(theirs && s.userId ? { search: { person: s.userId } } : {}),
     };
   }
-  // The agent's model left its plan's list: its page, with "Quem pensa" open to choose another.
+  // The agent's model left its plan's list: its page, with "Quem pensa" open on its model to choose another.
   if (n.kind === "plan_model_dropped" && s.agentId)
-    return { to: "/org/$orgId/agents/$agentId", params: { agentId: s.agentId }, search: { sec: "brain" } };
-  // Someone gave an agent the person's plan: Contas de IA, where their plans and the agents on them are.
-  if (n.kind === "plan_lent") return { to: "/org/$orgId/settings/$section", params: { section: "keys" } };
-  // A server changed approved tools: accepted in Conectores.
-  if (n.kind === "connector_tool_changed")
-    return { to: "/org/$orgId/settings/$section", params: { section: "connectors" } };
+    return {
+      to: "/org/$orgId/agents/$agentId",
+      params: { agentId: s.agentId },
+      search: { sec: "brain", brain: "model" },
+    };
+  // Someone gave an agent the person's plan: IA e uso, where their plans and the agents on them are.
+  if (n.kind === "plan_lent") return { to: "/org/$orgId/settings/$section", params: { section: "usage" } };
   // An update of a skill from its link: the skill, in Skills.
   if (n.kind === "skill_update")
     return {
@@ -512,8 +502,14 @@ export function widgetNoticeOf(n: Pick<AppNotification, "kind" | "source" | "lat
   const agentId = s.agentId ?? (n.actors[0]?.type === "agent" ? n.actors[0].id : null);
   const base = { dashboardId: s.dashboardId ?? null, widgetId: s.widgetId ?? null, agentId, title: s.label ?? "" };
   if (n.kind === "widget_alert") return { ...base, kind: "alert" as const, text: n.latest.text ?? "" };
+  // Its failure's detail as the widget keeps it: the agent's words (`agent_reported`), or why its agent has no AI.
   if (n.kind === "widget_failed")
-    return { ...base, kind: "failed" as const, reason: n.latest.reason ?? "error", text: n.latest.text ?? null };
+    return {
+      ...base,
+      kind: "failed" as const,
+      reason: n.latest.reason ?? "error",
+      detail: n.latest.text ?? n.latest.detail ?? null,
+    };
   return {
     ...base,
     kind: "proposal" as const,
@@ -574,7 +570,7 @@ export function snoozeTimes(now = new Date()) {
  * What a waiting item asks of you: approve, answer an agent, help in a browser, give
  * a secret, let someone in, or review tools a connected server changed.
  */
-export type WaitingCardKind = "approval" | "question" | "browser" | "secret" | "join" | "tools" | "limit";
+export type WaitingCardKind = "approval" | "question" | "browser" | "secret" | "join" | "limit";
 
 export interface WaitingCard {
   kind: WaitingCardKind;
@@ -605,9 +601,6 @@ export function waitingCardOf(n: Pick<AppNotification, "kind" | "count" | "lates
   // A board's notice (ADR 0135) has nobody to answer: it opens the widget or the board, where it is decided.
   if (WIDGET_NOTICES.has(n.kind))
     return { kind: "question", title: l.text ?? l.title ?? "", expiresAt: null, action: "open" };
-  // A connected server changed approved tools (ADR 0117): reviewed in Connectors, never answered like a question.
-  if (n.kind === "connector_tool_changed")
-    return { kind: "tools", title: l.title ?? "", expiresAt: null, action: "review" };
   // A person at their limit asks for more (ADR 0141): raised or refused on the card itself.
   if (n.kind === "usage_limit") return { kind: "limit", title: "", expiresAt: null, action: "review" };
   return { kind: "question", title: l.text ?? l.title ?? "", expiresAt: null, action: "answer" };

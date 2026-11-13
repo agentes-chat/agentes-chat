@@ -24,7 +24,7 @@ import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
-import { CONTINUE_ERRORS, errorCode, errorText } from "@agenteschat/client/lib/errors";
+import { CONTINUE_ERRORS, errorCode, errorText, sendFailureText, sendNeedsEdit } from "@agenteschat/client/lib/errors";
 import { mentionsReader } from "@agenteschat/client/lib/everyone";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { issueWorkOf } from "@agenteschat/client/lib/issues";
@@ -44,21 +44,31 @@ import { voiceOf } from "@agenteschat/client/lib/voice";
 import { showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useQueryClient } from "@tanstack/react-query";
-import { memo, type ReactNode, useEffect, useMemo, useState } from "react";
+import { memo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
+import { type GestureResponderEvent, Pressable, StyleSheet, View } from "react-native";
+import Animated, {
+  Easing,
+  type EntryExitAnimationFunction,
+  FadeOut,
+  LayoutAnimationConfig,
+  LinearTransition,
+  withTiming,
+} from "react-native-reanimated";
+import { readValueSync, STORED, writeValueSync } from "@/lib/storage";
 import { useOrg } from "@/providers/org";
 import {
   CHROME_MAX_SCALE,
   Count,
   EventPillAction,
+  haptics,
   Icon,
   InkOrbit,
   LineIcon,
   PressScale,
   ProviderLogo,
   Text,
+  useReducedMotion,
   useTheme,
   useToast,
 } from "@/ui";
@@ -72,6 +82,8 @@ import { StretchCard } from "../ai/StretchCard";
 import { UsagePauseCard, UsageWaitCancel } from "../ai/UsagePauseCard";
 import { HandoffCard } from "../browser/HandoffCard";
 import { TrailCard } from "../browser/TrailCard";
+import { DeviceWait } from "../devices/DeviceWait";
+import { deviceWaitOf } from "../devices/logic";
 import { MessageFiles } from "../files/MessageFiles";
 import { chatHref, consultationHref, routineHref } from "../links/logic";
 import { DecisionCard, MissionCard, PlanCard, ReviewCard, SetupFailedCard } from "../missions/cards";
@@ -87,8 +99,10 @@ import { VoiceMessage } from "../voice/VoiceMessage";
 import { ReceiptMark } from "./AgentReceipts";
 import { secretRequestOf } from "./ask-store";
 import { ChatMedia } from "./ChatMedia";
+import { ClippedMessage } from "./ClippedMessage";
 import { ConsultPairRow, useRunConsults } from "./ConsultGroup";
 import { ApprovalInline, QuestionCard, ThreadLink } from "./cards";
+import { FeedbackOfferRow } from "./FeedbackOffer";
 import { HandedTaskChips, IssueWorkCard } from "./issue-work";
 import { cacheContinued } from "./live";
 import {
@@ -98,6 +112,7 @@ import {
   chatNameOf,
   chatTimeOf,
   consultationsOf,
+  DOUBLE_TAP_MS,
   hangsUnder,
   hidesBody,
   MSG_AVATAR,
@@ -114,14 +129,13 @@ import {
   workStepsOf,
 } from "./logic";
 import { lookRows, RowPartContext, useRhythm, useRowLook } from "./look";
-import { MemoryMarks } from "./MemoryMark";
 import { MessageText } from "./MessageText";
 import { QuoteAbove, QuotePlate } from "./QuoteLine";
 import { ReachLines } from "./ReachLines";
 import { Receipts } from "./Receipts";
 import { SecretCard } from "./SecretCard";
 import { SpeedFallbackLine, StopPill } from "./StoppedLine";
-import { useStoppedRun } from "./stopped-runs";
+import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
 import { recentTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
@@ -277,12 +291,63 @@ export const MessageRow = memo(function MessageRow({
     isAgent && m.agentRunId && !readOnly && !mediaAfter
       ? consultations.data?.find((x) => x.consultedRunId === m.agentRunId)
       : undefined;
-  const press = readOnly
-    ? undefined
-    : () => {
-        tapHaptic();
-        onLongPress?.(m);
-      };
+  // No `onLongPress` where the system's menu takes the hold (iOS): the row adds nothing of its own to it.
+  const press =
+    readOnly || !onLongPress
+      ? undefined
+      : () => {
+          tapHaptic();
+          onLongPress(m);
+        };
+  // Two taps on a message send the thumbs up without opening anything: one light tap, the emoji pops where the
+  // finger was and the pill grows in under the words; holding still opens the menu with every reaction. The line
+  // "Toque duplo = 👍" sits under one agent's message until it has been seen once.
+  const reduced = useReducedMotion();
+  const cachedReactions = useReactions(orgId, m.id, false);
+  const toggleThumbs = useToggleReaction(orgId, m.id);
+  const lastTap = useRef(0);
+  const [pop, setPop] = useState<{ x: number; y: number; at: number } | null>(null);
+  const canReact = !readOnly && !m.local;
+  const onTap = canReact
+    ? (e: GestureResponderEvent) => {
+        const at = Date.now();
+        if (at - lastTap.current > DOUBLE_TAP_MS) {
+          lastTap.current = at;
+          return;
+        }
+        lastTap.current = 0;
+        haptics.light();
+        const mine =
+          reactionPills(cachedReactions.data ?? m.reactions, meId).find((p) => p.reaction === THUMBS)?.mine ?? false;
+        toggleThumbs.mutate({ reaction: THUMBS, on: !mine });
+        setPop({ x: e.nativeEvent.locationX, y: e.nativeEvent.locationY, at });
+        teachDoubleTap();
+      }
+    : undefined;
+  useEffect(() => {
+    if (!pop) return;
+    const timer = setTimeout(() => setPop(null), POP_MS);
+    return () => clearTimeout(timer);
+  }, [pop]);
+  const popNode = pop ? (
+    <Animated.View
+      key={pop.at}
+      pointerEvents="none"
+      entering={reduced ? undefined : POP_IN}
+      exiting={reduced ? undefined : POP_OUT}
+      style={[styles.pop, { left: pop.x - POP / 2, top: pop.y - POP / 2 }]}
+    >
+      <Text style={styles.popEmoji} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
+        👍
+      </Text>
+    </Animated.View>
+  ) : null;
+  const hint = useDoubleTapHint(canReact && isAgent && !groupedIn ? m.id : null);
+  const hintNode = hint ? (
+    <Text variant="caption" tone="faint" style={styles.hint}>
+      {t("mobile.chat.doubleTapHint")}
+    </Text>
+  ) : null;
   const stopped = isAgent && m.agentRunId && !mediaAfter ? stoppedOf(meta) : null;
   // The reply of a run that reached its step limit: the same line, with Continuar.
   const atLimit = isAgent && m.agentRunId && !stopped && !mediaAfter ? stepLimitOf(meta) : null;
@@ -333,7 +398,9 @@ export const MessageRow = memo(function MessageRow({
     ...(trails?.desktop.length ? (["desktop"] as const) : []),
   ];
   // "Esperando o MacBook Air voltar": its brain's computer is offline (the card, when it says which computer).
-  const brainWait = isAgent && Boolean(brainUnavailableOf(meta)?.machineId);
+  // Waiting for a device someone brought (a phone, another computer): its own pill, with what can be done about it.
+  const deviceWait = isAgent && deviceWaitOf(meta) !== null;
+  const brainWait = isAgent && !deviceWait && Boolean(brainUnavailableOf(meta)?.machineId);
   // The root of an issue's work thread (asked an agent to implement it): the issue card.
   const issueWork = issueWorkOf(meta);
   // My own message. In the styles that keep it apart, a bubble on the right with no face or name; in the others, a row
@@ -392,7 +459,8 @@ export const MessageRow = memo(function MessageRow({
         </View>
       ) : null}
       {readOnly ? null : <Reactions message={m} meId={meId} end={onRight} />}
-      {m.local === "pending" || (m.local === "failed" && offline) ? (
+      {m.local === "pending" && meta?.voiceAccepted === true ? null : m.local === "pending" ||
+        (m.local === "failed" && offline) ? (
         <Sending offline={offline} end={onRight} />
       ) : m.local === "failed" ? (
         // A 16-point caption: 14 of slop gives the retry its 44-point target.
@@ -403,8 +471,17 @@ export const MessageRow = memo(function MessageRow({
           style={({ pressed }) => pressed && styles.pressedDim}
         >
           <Text variant="caption" tone="danger" style={onRight ? styles.meStatus : undefined}>
-            {t("mobile.chat.failed")}
+            {sendFailureText(t, m.sendFailure, i18n.language)}
           </Text>
+          <Text variant="caption" tone="ink" style={[styles.retry, onRight ? styles.meStatus : undefined]}>
+            {t(sendNeedsEdit(m.sendFailure) ? "channel.editSend" : "channel.retrySend")}
+          </Text>
+          {/* Why, as it came: a voice note that never left says what stopped it instead of waiting in silence. */}
+          {typeof meta?.sendError === "string" ? (
+            <Text variant="caption" tone="faint" numberOfLines={2} style={onRight ? styles.meStatus : undefined}>
+              {meta.sendError}
+            </Text>
+          ) : null}
         </Pressable>
       ) : null}
     </>
@@ -440,15 +517,17 @@ export const MessageRow = memo(function MessageRow({
       >
         {quote ? <QuotePlate reply={quote} onJump={onQuote} {...(solidInk ? { ink: solidInk } : {})} /> : null}
         <View style={bubbled ? styles.bubbleLine : undefined}>
-          <MessageText
-            body={body}
-            muted={m.local === "pending"}
-            selectable={false}
-            accent={accent}
-            channelRefs={channelRefsOf(m.meta)}
-            everyone={m.meta?.mentionsEveryone === true}
-            {...(solidInk ? { ink: solidInk } : {})}
-          />
+          <ClippedMessage name={name} body={body} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
+            <MessageText
+              body={body}
+              muted={m.local === "pending"}
+              selectable={false}
+              accent={accent}
+              channelRefs={channelRefsOf(m.meta)}
+              everyone={m.meta?.mentionsEveryone === true}
+              {...(solidInk ? { ink: solidInk } : {})}
+            />
+          </ClippedMessage>
           {bubbled && !m.local ? stamp : null}
         </View>
       </View>
@@ -463,6 +542,7 @@ export const MessageRow = memo(function MessageRow({
     ) : null;
     return (
       <Pressable
+        onPress={onTap}
         onLongPress={press}
         delayLongPress={380}
         accessibilityHint={press ? t("mobile.chat.longPressHint") : undefined}
@@ -510,6 +590,7 @@ export const MessageRow = memo(function MessageRow({
             <ReceiptMark message={m} mine receipt={receipt} seenBy={seenBy} />
           </View>
         ) : null}
+        {popNode}
       </Pressable>
     );
   }
@@ -612,36 +693,39 @@ export const MessageRow = memo(function MessageRow({
         </Text>
       </View>
     ) : null;
-  const words = brainWait ? (
-    <BrainWait
-      message={m}
-      fallback={
-        body ? (
-          <MessageText
-            body={body}
-            muted={m.local === "pending"}
-            selectable={false}
-            accent={accent}
-            channelRefs={channelRefsOf(m.meta)}
-            everyone={m.meta?.mentionsEveryone === true}
-          />
-        ) : null
-      }
-    />
-  ) : choiceReply ? (
-    choiceReply
-  ) : body ? (
+  // What is painted behind someone else's words, bottom first: the screen, then the bubble or a mention's tint.
+  const tinted = mentionsMe ? [c.bg, `${c.amber}${bubbled ? "21" : "17"}`] : null;
+  const behindWords = tinted ?? [bubbled ? c.bubble : c.bg];
+  const messageWords = body ? (
     <MessageText
-      body={talk ? talk.lead : body}
-      muted={m.local === "pending" || workOver}
+      body={body}
+      muted={m.local === "pending"}
       selectable={false}
       accent={accent}
       channelRefs={channelRefsOf(m.meta)}
       everyone={m.meta?.mentionsEveryone === true}
     />
   ) : null;
+  const words = deviceWait ? (
+    <DeviceWait message={m} fallback={messageWords} />
+  ) : brainWait ? (
+    <BrainWait message={m} fallback={messageWords} />
+  ) : choiceReply ? (
+    choiceReply
+  ) : body ? (
+    <ClippedMessage name={name} body={talk ? talk.lead : body} behind={behindWords}>
+      <MessageText
+        body={talk ? talk.lead : body}
+        muted={m.local === "pending" || workOver}
+        selectable={false}
+        accent={accent}
+        channelRefs={channelRefsOf(m.meta)}
+        everyone={m.meta?.mentionsEveryone === true}
+      />
+    </ClippedMessage>
+  ) : null;
   // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line.
-  const inBubble = bubbled && Boolean(body) && !brainWait && !choiceReply;
+  const inBubble = bubbled && Boolean(body) && !brainWait && !deviceWait && !choiceReply;
   const tagged = Boolean(reminder || via || routine || talker || helping || m.pinned);
   const opener = opened?.said ? <MessageText body={opened.said} selectable={false} accent={accent} /> : null;
   // Outside a bubble the line it opened with is a part of its own, as the web's second text.
@@ -666,6 +750,7 @@ export const MessageRow = memo(function MessageRow({
       {pair}
       {quote && !inBubble ? <QuoteAbove look={look} reply={quote} onJump={onQuote} gap={rowGap} /> : null}
       <Pressable
+        onPress={onTap}
         onLongPress={press}
         delayLongPress={380}
         accessibilityHint={press ? t("mobile.chat.longPressHint") : undefined}
@@ -776,10 +861,11 @@ export const MessageRow = memo(function MessageRow({
                 limit={providerCut ? "failed" : atLimit ? (atLimit.stuck ? "stuck" : "steps") : undefined}
               />
             ) : null}
-            {isAgent && m.actions?.length ? <Receipts message={m} /> : null}
+            {isAgent && m.actions?.length ? <Receipts message={m} onTap={onTap} onLongPress={press} /> : null}
             {isAgent ? <HandedTaskChips message={m} /> : null}
             {isAgent ? <TeamChecks message={m} /> : null}
             {isAgent ? <ReachLines message={m} /> : null}
+            {isAgent ? <FeedbackOfferRow message={m} /> : null}
             {isAgent && m.longWork ? <MessageWorkLine message={m} threaded={Boolean(thread)} /> : null}
             {files.length > 0 ? <MessageFiles files={files} /> : null}
             {trails && m.author.id && trails.browser.length > 0 ? (
@@ -840,11 +926,52 @@ export const MessageRow = memo(function MessageRow({
             {missionDecision}
             {foot}
           </RowPartContext.Provider>
+          {hintNode}
         </View>
+        {popNode}
       </Pressable>
     </>
   );
 });
+
+/** Reactions are stored by name: the thumbs up is `+1` (feedback to the agent). */
+const THUMBS = "+1";
+/** The emoji that pops where the finger was: its box, and how long it stays. */
+const POP = 24;
+const POP_MS = 420;
+
+let taught: boolean | null = null;
+const isTaught = () => {
+  if (taught === null) taught = readValueSync(STORED.doubleTapTaught) === "1";
+  return taught;
+};
+function teachDoubleTap() {
+  if (taught === true) return;
+  taught = true;
+  writeValueSync(STORED.doubleTapTaught, "1");
+}
+/** The one row that carries the hint this time (the first agent's row to ask for it). */
+let hintOwner: string | null = null;
+/** How long the hint has to be on screen to count as seen. */
+const HINT_SEEN_MS = 6000;
+
+/**
+ * Whether this row shows "Toque duplo = 👍": one row per app run, never again once it has been on screen for a
+ * while or the person double tapped anywhere.
+ */
+function useDoubleTapHint(id: string | null): boolean {
+  const [shown] = useState(() => {
+    if (!id || isTaught()) return false;
+    if (hintOwner === null) hintOwner = id;
+    return hintOwner === id;
+  });
+  useEffect(() => {
+    if (!shown) return;
+    const timer = setTimeout(teachDoubleTap, HINT_SEEN_MS);
+    return () => clearTimeout(timer);
+  }, [shown]);
+  return shown;
+}
 
 /** My message on its way: "Enviando" only past half a second; offline, a clock and when it will go. */
 function Sending({ offline, end }: { offline: boolean; end: boolean }) {
@@ -925,7 +1052,9 @@ function StoppedLine({
       { agentId: m.author.id ?? "", threadId: m.threadId ?? m.id, triggerMessageId: null },
       { meId, manageAgents: can(org, "manage_agents"), agentOwnerId: owner, messages: loaded },
     );
-  const open = may && !continued && !busy;
+  // The agent works here again, or wrote after the stop: it went on, the stop offers nothing.
+  const movedOn = useStopMovedOn(runId);
+  const open = may && !continued && !busy && !movedOn;
   const onContinue = () => {
     setBusy(true);
     api.agents
@@ -1082,7 +1211,7 @@ function PinMark() {
   );
 }
 
-/** People's pills show a count (mine outlined); an agent that reacted shows its face; then the memory marks. */
+/** People's pills show a count (mine outlined); an agent that reacted shows its face. */
 function Reactions({ message: m, meId, end }: { message: Message; meId: string | null; end: boolean }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
@@ -1090,9 +1219,7 @@ function Reactions({ message: m, meId, end }: { message: Message; meId: string |
   const cached = useReactions(orgId, m.id, false);
   const toggle = useToggleReaction(orgId, m.id);
   const pills = reactionPills(cached.data ?? m.reactions, meId);
-  // What an agent saved to memory from this message comes last in the row (the web's memory mark).
-  const remembered = (m.memories?.length ?? 0) > 0;
-  const shown = (pills.length > 0 || remembered) && !m.local;
+  const shown = pills.length > 0 && !m.local;
   // A pill someone adds or takes back while the row shows fades and the others slide aside; those there when the row
   // mounts (scrolling to it) just show, and none lingers when the row goes.
   const motion = reduced ? {} : { entering: PILL_IN, exiting: PILL_OUT, layout: PILL_MOVE };
@@ -1138,7 +1265,6 @@ function Reactions({ message: m, meId, end }: { message: Message; meId: string |
               </Animated.View>
             )),
           ])}
-          {remembered ? <MemoryMarks message={m} divided={pills.length > 0} /> : null}
         </View>
       ) : null}
     </LayoutAnimationConfig>
@@ -1146,9 +1272,35 @@ function Reactions({ message: m, meId, end }: { message: Message; meId: string |
 }
 
 const REACT_SLOP = { top: 7, bottom: 7 };
-const PILL_IN = FadeIn.duration(160);
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+/** A pill arriving: from 0.95 and clear to whole, in 150 ms (never from nothing). */
+const PILL_IN: EntryExitAnimationFunction = () => {
+  "worklet";
+  return {
+    initialValues: { opacity: 0, transform: [{ scale: 0.95 }] },
+    animations: {
+      opacity: withTiming(1, { duration: 150, easing: EASE_OUT }),
+      transform: [{ scale: withTiming(1, { duration: 150, easing: EASE_OUT }) }],
+    },
+  };
+};
 const PILL_OUT = FadeOut.duration(120);
-const PILL_MOVE = LinearTransition;
+const PILL_MOVE = LinearTransition.duration(200);
+/** The emoji at the finger: in at once, rising a little as it leaves. */
+const POP_IN: EntryExitAnimationFunction = () => {
+  "worklet";
+  return {
+    initialValues: { opacity: 0, transform: [{ translateY: 0 }, { scale: 0.95 }] },
+    animations: {
+      opacity: withTiming(1, { duration: 120, easing: EASE_OUT }),
+      transform: [
+        { translateY: withTiming(-10, { duration: 300, easing: EASE_OUT }) },
+        { scale: withTiming(1, { duration: 150, easing: EASE_OUT }) },
+      ],
+    },
+  };
+};
+const POP_OUT = FadeOut.duration(160);
 
 /** The turn's last corner, cut as a card's is, on the side my bubble stands. */
 const BUBBLE_CUT = 6;
@@ -1206,6 +1358,7 @@ const styles = StyleSheet.create({
     columnGap: 8,
   },
   bubbleEnd: { alignSelf: "flex-end" },
+  retry: { fontWeight: "600", textDecorationLine: "underline" },
   stamp: { flexDirection: "row", alignItems: "center", gap: 4, height: 16, marginLeft: "auto" },
   compactLine: { flexDirection: "row", flexWrap: "wrap", alignItems: "baseline", columnGap: 6 },
   name: { fontWeight: "600", fontSize: 14, lineHeight: 19, flexShrink: 1 },
@@ -1261,6 +1414,10 @@ const styles = StyleSheet.create({
   },
   pinLine: { flexDirection: "row", alignItems: "center", gap: 4 },
   reacts: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  // The thumbs up where the finger was, over the row.
+  pop: { position: "absolute", width: POP, height: POP, alignItems: "center", justifyContent: "center" },
+  popEmoji: { fontSize: 22, lineHeight: 26 },
+  hint: { marginTop: 4 },
   // The outline is always there (clear unless it is mine), so a pill keeps its size when I add or take mine.
   react: {
     minHeight: 30,

@@ -34,7 +34,7 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { brainModelLabel } from "@/components/AgentBrain";
-import { MachineIcon } from "@/components/Machines";
+import { MachineIcon } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { lookOf } from "@/lib/look";
@@ -85,7 +85,11 @@ export function MissionSettingsDialog({
       closeLabel={t("common.close")}
       footer={
         <div className="mi-cfg__foot">
-          <span className="mi-cfg__saved" key={savedNow ? "saved" : "idle"} data-saved={savedNow || undefined}>
+          <span
+            className="mi-cfg__saved ac-iconline"
+            key={savedNow ? "saved" : "idle"}
+            data-saved={savedNow || undefined}
+          >
             <Icon name="check" size={14} />
             <span>{savedNow ? t("missions.settings.savedNow") : t("missions.settings.footer")}</span>
           </span>
@@ -252,7 +256,7 @@ function SettingsBody({
       <SettingsSection title={t("missions.settings.defaults.title", g)}>
         <SettingRow
           title={t("missions.settings.defaults.startWith", { value: name(mode) })}
-          description={
+          status={
             !agentDefault
               ? undefined
               : isDefault
@@ -322,7 +326,14 @@ function SettingsBody({
             }))}
           />
           {brainView && brainOption && brainOption.models.length > 0 && (
-            <Field label={t("brain.mission.modelLabel")} id={modelId} help={t("brain.mission.modelHint")}>
+            <Field
+              label={t("brain.mission.modelLabel")}
+              id={modelId}
+              hint={{
+                name: t("common.about", { label: t("brain.mission.modelLabel") }),
+                text: t("brain.mission.modelHint"),
+              }}
+            >
               <Select
                 value={brainView.effectiveModel ?? undefined}
                 disabled={!brainView.canSetModel || setBrain.isPending}
@@ -378,7 +389,10 @@ function SettingsBody({
         <SettingsSection title={t("missions.settings.recovery.title")}>
           <SettingRow
             title={t("missions.settings.recovery.label")}
-            description={t("missions.settings.recovery.hint")}
+            hint={{
+              name: t("common.about", { label: t("missions.settings.recovery.label") }),
+              text: t("missions.settings.recovery.hint"),
+            }}
             htmlFor={resumeId}
           >
             <Switch

@@ -8,6 +8,7 @@ import {
   enableOperatorEvents,
   purgeWorkspace,
   setRestrictionNotices,
+  wantMachine,
 } from "@agenteschat/engine";
 import { createLogger } from "../src/logger";
 import { createOperatorApp, type OperatorDeps, serveOperatorApi } from "../src/operator/app";
@@ -286,6 +287,10 @@ test("user detail: workspaces and at most the 10 newest sessions", async () => {
     createdAt: "2026-01-01T00:10:00.000Z",
   });
   expect(user.sessions.at(-1)?.ip).toBe("198.51.100.2");
+  // Its own area, said once during the onboarding (`PUT /api/app/me/work-area`): null until then.
+  expect(user).toMatchObject({ workArea: null });
+  await t.db.update(schema.users).set({ workArea: "sales" }).where(eq(schema.users.id, acme.ownerId));
+  expect(await body(await op(`/users/${acme.ownerId}`))).toMatchObject({ workArea: "sales" });
 
   expect((await op("/users/nobody")).status).toBe(404);
 });
@@ -594,7 +599,10 @@ test("external provisioning: requests, progress, the workspace's computer and it
 
   const machines = await call("GET", `/orgs/${orgId}/machines`);
   const text = await machines.text();
-  expect((JSON.parse(text) as { machines: unknown[] }).machines).toContainEqual({
+  // Its `busy` and `lastUsedAt` come from the workspace's runs (ADR 0161): the standby test reads them.
+  expect(
+    (JSON.parse(text) as { machines: { id: string }[] }).machines.find((m) => m.id === issued.machineId),
+  ).toMatchObject({
     id: issued.machineId,
     kind: "managed",
     managed: true,
@@ -603,6 +611,7 @@ test("external provisioning: requests, progress, the workspace's computer and it
     lastSeenAt: null,
     runnerVersion: "",
     protocol: 1,
+    standby: false,
   });
   expect(text).not.toMatch(/token|hash/i);
 
@@ -625,6 +634,90 @@ test("external provisioning: requests, progress, the workspace's computer and it
   });
   expect((await put(`/orgs/${orgId}/standing`, { state: "active", reason: "back", notice: "shown" })).status).toBe(200);
   expect((await put(`/orgs/${orgId}/provisioning`, { state: "waiting", reason: "capacity" })).status).toBe(204);
+});
+
+test("the workspace's computer in standby: said and taken back, its wake in the feed, busy and last used (ADR 0161)", async () => {
+  const { orgId } = acme;
+  const NONE = "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b";
+  type Listed = {
+    machines: { id: string; name: string; standby: boolean; busy: boolean; lastUsedAt: string | null }[];
+  };
+  const listed = async () => (await body<Listed>(await op(`/orgs/${orgId}/machines`))).machines;
+  const issue = await createOperatorApp(deps, TOKEN).request(`/api/operator/v1/orgs/${orgId}/machines`, {
+    method: "POST",
+    headers: { authorization: BEARER, "content-type": "application/json" },
+    body: "{}",
+  });
+  const { machineId } = await body<{ machineId: string }>(issue);
+  const own = async () => (await listed()).find((m) => m.id === machineId);
+  const standby = (id: string, json: unknown, org = orgId) => put(`/orgs/${org}/machines/${id}/standby`, json);
+  enableOperatorEvents();
+  try {
+    expect(await own()).toMatchObject({ standby: false });
+
+    // Someone opened its view: in use, and used just now.
+    await wantMachine(t.db, machineId, "view");
+    const wanted = await own();
+    expect(wanted?.busy).toBe(true);
+    expect(Date.now() - Date.parse(wanted?.lastUsedAt ?? "")).toBeLessThan(60_000);
+
+    expect(await body(await standby(machineId, { standby: true }))).toEqual({ standby: true });
+    expect((await own())?.standby).toBe(true);
+    // A run wants it asleep: the feed says so, for the operator to wake it.
+    await wantMachine(t.db, machineId, "run");
+    const { events } = await body<{ events: { type: string; orgId: string | null; data: unknown }[] }>(
+      await op("/events?limit=1000"),
+    );
+    expect(events.filter((e) => e.type === "machine.wake_wanted").map((e) => [e.orgId, e.data])).toEqual([
+      [orgId, { machineId, why: "run" }],
+    ]);
+    expect(await body(await standby(machineId, { standby: false }))).toEqual({ standby: false });
+    expect((await own())?.standby).toBe(false);
+
+    // Only the workspace's own computer sleeps: a computer someone connected, none, another workspace's id.
+    const mac = (await listed()).find((m) => m.name === "Mac");
+    expect(mac).toMatchObject({ standby: false, busy: false, lastUsedAt: null });
+    for (const [id, org] of [
+      [mac?.id ?? NONE, orgId],
+      [NONE, orgId],
+      [machineId, NONE],
+    ] as const) {
+      expect((await standby(id, { standby: true }, org)).status).toBe(404);
+    }
+    expect((await standby(machineId, {})).status).toBe(400);
+    expect((await standby(machineId, { standby: "yes" })).status).toBe(400);
+  } finally {
+    enableOperatorEvents(false);
+  }
+});
+
+test("the workspace's computer's agents waiting for their way out: said, kept and taken back, only for it", async () => {
+  const { orgId } = acme;
+  const NONE = "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b";
+  const issue = await createOperatorApp(deps, TOKEN).request(`/api/operator/v1/orgs/${orgId}/machines`, {
+    method: "POST",
+    headers: { authorization: BEARER, "content-type": "application/json" },
+    body: "{}",
+  });
+  const { machineId } = await body<{ machineId: string }>(issue);
+  const waiting = (id: string, json: unknown, org = orgId) => put(`/orgs/${org}/machines/${id}/egress-waiting`, json);
+  const row = async () => (await t.db.select().from(schema.machines).where(eq(schema.machines.id, machineId)))[0];
+
+  expect(await body(await waiting(machineId, { waiting: true }))).toEqual({ waiting: true });
+  expect((await row())?.egressWaitingAt).toBeInstanceOf(Date);
+  expect(await body(await waiting(machineId, { waiting: false }))).toEqual({ waiting: false });
+  expect((await row())?.egressWaitingAt).toBeNull();
+  const listed = await body<{ machines: { id: string; name: string }[] }>(await op(`/orgs/${orgId}/machines`));
+  const mac = listed.machines.find((m) => m.name === "Mac");
+  for (const [id, org] of [
+    [mac?.id ?? NONE, orgId],
+    [NONE, orgId],
+    [machineId, NONE],
+  ] as const) {
+    expect((await waiting(id, { waiting: true }, org)).status).toBe(404);
+  }
+  expect((await waiting(machineId, {})).status).toBe(400);
+  expect((await waiting(machineId, { waiting: "yes" })).status).toBe(400);
 });
 
 test("billing holds: put on, changed and lifted, never over a hold set through /standing", async () => {

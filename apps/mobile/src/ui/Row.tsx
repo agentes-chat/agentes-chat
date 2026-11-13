@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Icon } from "./Icon";
+import { CARD_PAD } from "./rhythm";
 import { Text, textLineOf } from "./Text";
+import { useFontScale } from "./text-scale";
 import { useTheme } from "./theme";
 import { leadBox } from "./type-scale";
 
@@ -37,7 +39,7 @@ export function Row({
   below,
 }: RowProps) {
   const { colors } = useTheme();
-  const { fontScale } = useWindowDimensions();
+  const fontScale = useFontScale();
   // A subtitle that wraps or something under it: the leading sits at the top and the meta and chevron on the
   // title's line (centred on the whole row they floated between lines). Short rows keep everything centred.
   const tall = subtitleLines > 1 || Boolean(below);
@@ -48,7 +50,8 @@ export function Row({
         flexDirection: "row",
         alignItems: tall ? "flex-start" : "center",
         gap: 12,
-        padding: 14,
+        paddingHorizontal: CARD_PAD,
+        paddingVertical: 14,
         minHeight: 60,
         backgroundColor: pressed ? colors.plate : "transparent",
       }}
@@ -58,7 +61,7 @@ export function Row({
           style={{
             position: "absolute",
             top: 0,
-            left: leading ? 14 + LEAD + 12 : 14,
+            left: leading ? CARD_PAD + LEAD + 12 : CARD_PAD,
             right: 0,
             height: StyleSheet.hairlineWidth,
             backgroundColor: colors.line2,

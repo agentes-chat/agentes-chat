@@ -10,6 +10,7 @@ import {
   homeSections,
   isListedThread,
   isListKind,
+  isQuietGeneral,
   missionState,
   missionsWaiting,
   missionWaitingItems,
@@ -28,9 +29,9 @@ import {
   unreadConversations,
   unreadThreadCount,
   waitingTotal,
+  withoutQuietGeneral,
 } from "../../src/features/chats/logic";
 import {
-  stackLayers,
   waitingChipKey,
   waitingCount,
   waitingInThreads,
@@ -125,6 +126,28 @@ describe("the list", () => {
     expect(rowsOfKind(rows, "channels").map((r) => r.key)).toEqual(["c:c1", "c:c2"]);
     expect(rowsOfKind(rows, "people")).toEqual([]);
     expect(unreadConversations(rows)).toBe(1);
+  });
+});
+
+describe("a personal workspace's #general (ADR 0159)", () => {
+  const rows = (general: Partial<Channel>) =>
+    buildConversations({
+      channels: [channel("c1", "general", true, general), channel("c2", "family")],
+      dms: [dm("d1", "Dev", 0, 10)],
+      threads: [],
+    });
+
+  test("while its person is alone, a quiet #general leaves the home and the list; every other row stays", () => {
+    const quiet = rows({ unreadCount: 0 });
+    expect(quiet.filter(isQuietGeneral).map((r) => r.key)).toEqual(["c:c1"]);
+    expect(withoutQuietGeneral(quiet, true).map((r) => r.key)).toEqual(["d:d1", "c:c2"]);
+    // With family in it (or in a team's workspace), it shows.
+    expect(withoutQuietGeneral(quiet, false).map((r) => r.key)).toEqual(quiet.map((r) => r.key));
+  });
+
+  test("something new there, a message or a mention of me, keeps it in sight", () => {
+    expect(withoutQuietGeneral(rows({ unreadCount: 2 }), true).some((r) => r.key === "c:c1")).toBe(true);
+    expect(withoutQuietGeneral(rows({ mentionCount: 1 }), true).some((r) => r.key === "c:c1")).toBe(true);
   });
 });
 
@@ -460,13 +483,6 @@ describe("the Esperando você strip", () => {
     expect(waitingInThreads(items, new Set(["t-q"])).map((i) => i.key)).toEqual(["m:m1", "q:n1"]);
     expect(waitingInThreads(items, new Set(["t-camp", "t-q"])).map((i) => i.key)).toEqual(["a:ap1", "m:m1", "q:n1"]);
   });
-
-  test("the stack's colors are ink mixed with the background, darker in front", () => {
-    const [p1, p2] = stackLayers("#000000", "#ffffff");
-    expect([p1.translateY, p1.scaleX, p2.translateY, p2.scaleX]).toEqual([7, 0.95, 14, 0.89]);
-    expect(p1.color).toBe("#616161");
-    expect(p2.color).toBe("#adadad");
-  });
 });
 
 describe("the Threads tab", () => {
@@ -545,6 +561,12 @@ describe("the Threads tab", () => {
     ]);
     expect(threadSections(rows.filter((r) => r.kind !== "mission")).map((s) => s.key)).toEqual(["threads"]);
     expect(threadSections([])).toEqual([]);
+  });
+
+  test("a finished mission goes after the live ones (the row carries no mark of it)", () => {
+    const missions = threadSections(rows).find((s) => s.key === "missions")?.rows ?? [];
+    expect(missions.at(-1)?.key).toBe("t:done");
+    expect(missions.slice(0, -1).some((r) => r.key === "t:done")).toBe(false);
   });
 
   test("its collapsed sections are remembered on their own keys", () => {

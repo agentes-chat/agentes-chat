@@ -13,8 +13,9 @@
 #
 # It gets this computer ready, then hands over to the setup (@agenteschat/setup), which asks its few
 # questions, writes .env and starts everything. On Linux it makes sure of Docker and its Compose
-# plugin. On a Mac it needs Docker running (Docker Desktop, OrbStack or Colima). On both it fetches
-# a pinned Bun to run the setup with. Downloads are HTTPS only, and the pinned ones are checked
+# plugin, and starts the engine when it's stopped. On a Mac it starts the Docker it finds (Docker
+# Desktop, OrbStack or Colima), or installs Colima with Homebrew; each after asking (--yes doesn't
+# ask). On both it fetches a pinned Bun to run the setup with. Downloads are HTTPS only, and the pinned ones are checked
 # against the SHA-256 below before anything runs them.
 #
 # Everything is inside main, which the last line calls, so a download cut short runs nothing.
@@ -24,22 +25,27 @@ main() {
 
   # The setup this installer hands over to, the Bun it runs on, and the Compose plugin it installs
   # when Docker has none (or one older than the 2.23.1 the compose file needs).
-  SETUP_VERSION=0.1.0
+  SETUP_VERSION=0.1.1
   BUN_VERSION=1.4.4
   COMPOSE_VERSION=5.5.1
   MIN_COMPOSE=2.23.1
   INSTALL_URL=https://agentes.chat/install
   GUIDE=https://agentes.chat/docs/install-on-a-server
   DOCKER_DOCS=https://docs.docker.com/engine/install/
+  BREW_INSTALL=https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
 
   # Refusals below go to stderr, drawn for stdout until the options say where the rest goes.
   t_init 1
-  PLAN=0 YES=0 DIR='' DIR_FLAG='' OUT=1
+  PLAN=0 YES=0 DIR='' DIR_FLAG='' OUT=1 COMPUTER='' prev=''
   n=$#
   while [ "$n" -gt 0 ]; do
     arg=$1
     shift
     n=$((n - 1))
+    # The setup's --computer, read here too: yes needs root on Linux (below). The last one given wins, as there.
+    case $prev in --computer) COMPUTER=$arg ;; esac
+    case $arg in --computer=*) COMPUTER=${arg#--computer=} ;; esac
+    prev=$arg
     case $arg in
       --plan | --dry-run) PLAN=1 ;;
       --yes | -y) YES=1 ;;
@@ -149,14 +155,21 @@ main() {
     trap 'rm -rf "$WORK"' EXIT
   fi
 
-  # Linux without root and without access to Docker runs this again as root before drawing
-  # anything, so the root run is the one that shows the logo. --plan runs nothing again: it draws first.
-  DOCKER_VERSION='' NEEDS_ROOT=0
+  # Linux without root runs this again as root before drawing anything, so the root run is the one that shows
+  # the logo: without access to Docker, and for --computer yes, whose users and service the setup makes as root
+  # only. --plan runs nothing again: it draws first.
+  DOCKER_VERSION='' ROOT_WHY='' ROOT_FIX=''
   if [ "$OS" = Linux ]; then
     if command -v docker >/dev/null 2>&1; then DOCKER_VERSION=$(docker_version) || DOCKER_VERSION=''; fi
-    if [ -z "$DOCKER_VERSION" ] && [ "$IS_ROOT" = 0 ]; then NEEDS_ROOT=1; fi
+    if [ "$IS_ROOT" = 0 ] && [ -z "$DOCKER_VERSION" ]; then
+      ROOT_WHY="Docker needs root here"
+      ROOT_FIX="Run this as root, or install Docker yourself ($DOCKER_DOCS) and add your user to the docker group."
+    elif [ "$IS_ROOT" = 0 ] && [ "$COMPUTER" = yes ]; then
+      ROOT_WHY="Making this machine your agents' computer (--computer yes) needs root"
+      ROOT_FIX="Run this as root, or leave out --computer yes and connect a computer later in Settings › Devices."
+    fi
   fi
-  if [ "$NEEDS_ROOT" = 1 ] && [ "$PLAN" = 0 ]; then as_root "$@"; fi
+  if [ -n "$ROOT_WHY" ] && [ "$PLAN" = 0 ]; then as_root "$@"; fi
 
   if [ "$PLAN" = 1 ]; then t_intro "install plan (--plan: nothing runs)"; else t_intro install; fi
   if [ "$IS_ROOT" = 1 ]; then t_step "$PLATFORM, as root"; else t_step "$PLATFORM"; fi
@@ -165,17 +178,12 @@ main() {
   else
     t_step "No terminal: the setup takes its defaults and the options given"
   fi
-  if [ "$NEEDS_ROOT" = 1 ]; then as_root "$@"; fi
+  if [ -n "$ROOT_WHY" ]; then as_root "$@"; fi
 
   if [ "$OS" = Linux ]; then
     linux_docker
-  elif DOCKER_VERSION=$(docker_version); then
-    t_step "Docker $DOCKER_VERSION"
-  elif command -v docker >/dev/null 2>&1; then
-    die "Docker is on this Mac, but it doesn't answer." "Start it (Docker Desktop, OrbStack or Colima) and run this again."
   else
-    die "This installer runs agentes.chat on Docker, and this Mac doesn't have it." \
-      "Install Docker Desktop, OrbStack or Colima, start it, and run this again. Or, with no Docker, open the agentes.chat app: Use your own server, then Run agentes.chat on this Mac."
+    mac_docker
   fi
 
   if [ -z "$DIR" ]; then
@@ -229,8 +237,9 @@ Usage: curl -fsSL https://agentes.chat/install | sh -s -- [options] [setup optio
        sh install.sh [options] [setup options]
 
   --dir <folder>      Where agentes.chat lives: /opt/agentes as root, ~/agentes otherwise.
-  --yes               On Linux, install Docker without asking first. A Mac needs Docker Desktop,
-                      OrbStack or Colima running.
+  --yes               Start or install Docker without asking first: on Linux with Docker's own
+                      script; on a Mac the Docker Desktop, OrbStack or Colima it finds, or
+                      Colima with Homebrew.
   --plan              Print what it would do, and do nothing (--dry-run too). Not the setup's
                       plan: stop the setup at its first question (Ctrl-C), then run the setup
                       command this printed again with --dry-run (with sudo if this ran itself
@@ -238,7 +247,8 @@ Usage: curl -fsSL https://agentes.chat/install | sh -s -- [options] [setup optio
   -h, --help
 
 Every other option goes to the setup, like --network local or --email skip (the setup's own
---help lists them). The guide: $GUIDE
+--help lists them). On Linux, --computer yes (this machine as your agents' computer) needs root:
+without it, this runs itself again with sudo. The guide: $GUIDE
 
 AGENTES_INSTALL_SETUP=<file> runs that build of the setup instead of the published one."
 }
@@ -328,7 +338,12 @@ linux_docker() {
     return 0
   fi
   if command -v docker >/dev/null 2>&1; then
-    die "Docker is installed, but its engine doesn't answer." "Start it (systemctl start docker) and run this again."
+    agree "Docker is installed, but its engine isn't running. Start it now (systemctl enable --now docker)?" \
+      "Docker is installed, but its engine doesn't answer." \
+      "Start it (systemctl start docker) and run this again, or pass --yes to start it."
+    start_engine "the Docker engine" systemctl enable --now docker
+    compose_plugin
+    return 0
   fi
 
   if [ "$YES" = 1 ]; then
@@ -354,10 +369,143 @@ linux_docker() {
     die "Docker's install script failed (its last lines above)." \
       "Install Docker by hand ($DOCKER_DOCS), then run this again."
   }
-  DOCKER_VERSION=$(docker_version) ||
-    die "Docker is installed, but its engine doesn't answer." "Start it (systemctl start docker) and run this again."
-  t_step "Docker $DOCKER_VERSION, installed with Docker's own script"
+  if DOCKER_VERSION=$(docker_version); then
+    t_step "Docker $DOCKER_VERSION, installed with Docker's own script"
+  else
+    start_engine "the Docker engine" systemctl enable --now docker
+  fi
   compose_plugin
+}
+
+# agree QUESTION ERROR FIX: yes with --yes, asked on a terminal (no stops with ERROR and FIX), ERROR and FIX with no
+# terminal to ask. --plan asks nothing (the caller shows what it would do), and stops where the real run would.
+agree() {
+  if [ "$YES" = 1 ]; then return 0; fi
+  if [ "$TTY" = /dev/null ]; then die "$2" "$3"; fi
+  if [ "$PLAN" = 1 ]; then return 0; fi
+  t_gap
+  t_ask "$1" || die "$2" "$3"
+}
+
+# start_engine NAME COMMAND…: COMMAND starts Docker's engine (NAME), then the wait until it answers, up to 3 minutes:
+# Docker Desktop and a new Colima take a while the first time. With --plan only the command.
+start_engine() {
+  e_name=$1
+  shift
+  if [ "$PLAN" = 1 ]; then
+    t_shell "$*"
+    t_step "Then waits for Docker to answer"
+    return 0
+  fi
+  t_run "Starting $e_name" "$@" || {
+    t_tail "$T_LOG"
+    die "Starting $e_name failed (its last lines above)." "Start it yourself, then run this again."
+  }
+  t_run "Waiting for Docker to answer" wait_docker ||
+    die "$e_name started, but Docker still doesn't answer after 3 minutes." \
+      "Open $e_name and see what it says, then run this again."
+  DOCKER_VERSION=$(docker_version) || DOCKER_VERSION='?'
+  case $e_name in
+    "the Docker engine") t_step "Docker $DOCKER_VERSION, started" ;;
+    *) t_step "Docker $DOCKER_VERSION, started ($e_name)" ;;
+  esac
+}
+
+# Up to 3 minutes for the engine to answer.
+wait_docker() {
+  w_i=0
+  while [ "$w_i" -lt 90 ]; do
+    if docker_version >/dev/null; then return 0; fi
+    sleep 2
+    w_i=$((w_i + 1))
+  done
+  return 1
+}
+
+# A Mac's Docker: the engine this Mac has (Docker Desktop, OrbStack or Colima), started when it isn't running; with
+# none, Colima (open source, no window to keep open) installed with Homebrew, and Homebrew first when it's missing.
+# Each change after asking (--yes doesn't ask).
+mac_docker() {
+  # Where those put the docker command, often not on the PATH a piped script gets.
+  for d in /opt/homebrew/bin "$HOME/.orbstack/bin" /Applications/Docker.app/Contents/Resources/bin; do
+    if [ -d "$d" ]; then PATH=$PATH:$d; fi
+  done
+  export PATH
+  if DOCKER_VERSION=$(docker_version); then
+    t_step "Docker $DOCKER_VERSION"
+    return 0
+  fi
+  if [ -d /Applications/OrbStack.app ] || [ -d "$HOME/Applications/OrbStack.app" ]; then
+    mac_start OrbStack open -g -a OrbStack
+  elif [ -d /Applications/Docker.app ] || [ -d "$HOME/Applications/Docker.app" ]; then
+    mac_start "Docker Desktop" open -g -a Docker
+  elif command -v colima >/dev/null 2>&1; then
+    mac_start Colima colima start
+  elif command -v docker >/dev/null 2>&1; then
+    die "Docker is on this Mac, but it doesn't answer." "Start it (Docker Desktop, OrbStack or Colima) and run this again."
+  else
+    mac_colima
+  fi
+}
+
+# mac_start NAME COMMAND…: a Docker this Mac has but isn't running, started after asking.
+mac_start() {
+  m_name=$1
+  agree "$m_name is on this Mac, but it isn't running. Start it now?" \
+    "Docker is on this Mac, but it doesn't answer." \
+    "Start it ($m_name) and run this again, or pass --yes to start it."
+  if [ "$PLAN" = 1 ]; then t_step "$m_name isn't running: starting it, once you say yes (--yes doesn't ask)"; fi
+  start_engine "$@"
+}
+
+# No Docker at all: Colima, its docker command and Compose with Homebrew (Homebrew first), then Colima started.
+mac_colima() {
+  agree "This Mac has no Docker. Install Colima (Docker's engine, open source, no window) with Homebrew and start it?" \
+    "This installer runs agentes.chat on Docker, and this Mac doesn't have it." \
+    "Install Docker Desktop, OrbStack or Colima, start it, and run this again (--yes installs Colima with Homebrew). Or, with no Docker, open the agentes.chat app: Use your own server, then Run agentes.chat on this Mac."
+  BREW=$(command -v brew 2>/dev/null) || BREW=''
+  for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [ -z "$BREW" ] && [ -x "$b" ]; then BREW=$b; fi
+  done
+  if [ "$PLAN" = 1 ]; then
+    t_step "No Docker: installing Colima with Homebrew and starting it, once you say yes (--yes doesn't ask)"
+  fi
+  if [ -z "$BREW" ]; then
+    if [ "$TTY" = /dev/null ]; then
+      die "Installing Colima needs Homebrew, and Homebrew's installer needs a terminal to ask for your password." \
+        "Run this in Terminal, or install Homebrew (https://brew.sh) or Docker Desktop, OrbStack or Colima, then run this again."
+    fi
+    fetch "$BREW_INSTALL" "$WORK/brew-install.sh" "Downloading Homebrew's install script"
+    if [ "$PLAN" = 1 ]; then
+      t_shell "/bin/bash $WORK/brew-install.sh"
+      BREW=/opt/homebrew/bin/brew
+    else
+      t_info "Homebrew first: its installer asks for your password, and may install Apple's command line tools"
+      /bin/bash "$WORK/brew-install.sh" </dev/tty >&"$T_FD" 2>&1 ||
+        die "Homebrew's installer stopped (its output above)." "Install Homebrew (https://brew.sh), then run this again."
+      BREW=/opt/homebrew/bin/brew
+      if [ ! -x "$BREW" ]; then BREW=/usr/local/bin/brew; fi
+      [ -x "$BREW" ] || die "Homebrew's installer ended, but brew isn't there." "Open a new Terminal and run this again."
+      t_step "Homebrew, installed"
+    fi
+  fi
+  PATH=${BREW%/brew}:$PATH
+  export PATH
+  if [ "$PLAN" = 1 ]; then
+    t_shell "$BREW install colima docker docker-compose"
+    t_shell "ln -sfn <brew>/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose"
+  else
+    t_run "Installing Colima, Docker's command line and Compose (Homebrew)" "$BREW" install colima docker docker-compose || {
+      t_tail "$T_LOG"
+      die "Homebrew couldn't install Colima (its last lines above)." "Fix what it says, then run this again."
+    }
+    # Docker finds Compose among its plugins.
+    mkdir -p "${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins"
+    ln -sfn "$("$BREW" --prefix)/opt/docker-compose/bin/docker-compose" \
+      "${DOCKER_CONFIG:-$HOME/.docker}/cli-plugins/docker-compose"
+    t_step "Colima, Docker's command line and Compose, installed with Homebrew"
+  fi
+  start_engine Colima colima start
 }
 
 # Docker's install script includes Compose, but distribution packages often don't (Debian 13's
@@ -399,20 +547,20 @@ compose_version() {
   case $version in [0-9]*.[0-9]*) printf '%s' "$version" ;; esac
 }
 
-# Installing Docker needs root: the same install again, as root. Under curl | sh, $0 is the shell
-# and there is no file to run again, so it downloads the published installer.
+# Docker, or the agents' computer, needs root (ROOT_WHY, and ROOT_FIX without sudo): the same install again, as
+# root. Under curl | sh, $0 is the shell and there is no file to run again, so it downloads the published installer.
 as_root() {
-  command -v sudo >/dev/null 2>&1 ||
-    die "Docker needs root here, and this computer has no sudo." \
-      "Run this as root, or install Docker yourself ($DOCKER_DOCS) and add your user to the docker group."
+  command -v sudo >/dev/null 2>&1 || die "$ROOT_WHY, and this computer has no sudo." "$ROOT_FIX"
   script=$0
   if is_installer "$script"; then
-    t_info "Docker needs root here: running this installer again as root"
+    t_info "$ROOT_WHY: running this installer again as root"
   else
     script=$WORK/install.sh
-    t_info "Docker needs root here: downloading this installer to run it again as root"
+    t_info "$ROOT_WHY: downloading this installer to run it again as root"
     fetch "$INSTALL_URL" "$script" "Downloading this installer"
   fi
+  # An install this user has keeps its folder: as root, the default folder is another one.
+  if [ -z "$DIR_FLAG" ] && [ -f "${HOME:-}/agentes/.env" ]; then DIR_FLAG=$HOME/agentes; fi
   if [ -n "$DIR_FLAG" ]; then set -- --dir "$DIR_FLAG" "$@"; fi
   if [ "$YES" = 1 ]; then set -- --yes "$@"; fi
   t_shell "sudo sh $script $*"

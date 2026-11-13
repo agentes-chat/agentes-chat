@@ -2,12 +2,14 @@ import { describe, expect, test } from "bun:test";
 import type { FetchLike } from "../src/api/http";
 import {
   APP_API,
+  appPairsWith,
   checkServer,
   connectLink,
   helpUrl,
   isLoopback,
   isTailnet,
   normalizeServer,
+  pairLink,
   parseConnectLink,
   readInstance,
   serverHost,
@@ -56,6 +58,10 @@ describe("server addresses", () => {
     expect(normalizeServer("http://localhost:3000/login", loopback)).toBe("http://localhost:3000");
     expect(normalizeServer("http://[::1]:4310", loopback)).toBe("http://[::1]:4310");
     expect(normalizeServer("agentes.tail1234.ts.net", loopback)).toBe("https://agentes.tail1234.ts.net");
+    // Typed without its scheme, as Preferences shows it: plain http on this computer.
+    expect(normalizeServer("127.0.0.1:4310", loopback)).toBe("http://127.0.0.1:4310");
+    expect(normalizeServer("localhost:3000/login", loopback)).toBe("http://localhost:3000");
+    expect(normalizeServer("127.0.0.1:4310")).toBe("https://127.0.0.1:4310");
     for (const other of ["http://192.168.1.20:3000", "http://mac-mini.local:3000", "http://chat.example.com"])
       expect(normalizeServer(other, loopback)).toBeNull();
     expect(isLoopback("http://127.0.0.1:4310")).toBe(true);
@@ -142,6 +148,22 @@ describe("connect links", () => {
       "WIFI:S:office;T:WPA;P:secret;;",
     ])
       expect(parseConnectLink(other)).toBeNull();
+  });
+
+  test("the desktop app's pair link: the server and the connect link's code", () => {
+    expect(pairLink("https://app.agentes.chat", "K7QM-4ZPA")).toBe(
+      "agenteschat://pair?server=https%3A%2F%2Fapp.agentes.chat&link=K7QM-4ZPA",
+    );
+    expect(parseConnectLink(pairLink("https://app.agentes.chat", "K7QM-4ZPA"))).toBeNull();
+    // Only where the app takes it: https, not on this computer.
+    expect(["https://app.agentes.chat", "https://chat.example.com:8443"].map(appPairsWith)).toEqual([true, true]);
+    for (const other of [
+      "http://192.168.1.20:3000",
+      "http://chat.example.com",
+      "http://localhost:3000",
+      "https://localhost",
+    ])
+      expect(appPairsWith(other)).toBe(false);
   });
 });
 

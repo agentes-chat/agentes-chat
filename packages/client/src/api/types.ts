@@ -86,6 +86,57 @@ export type PushDeviceInput =
   | { platform: "ios" | "android"; token: string; locale: string }
   | { platform: "web"; endpoint: string; keys: { p256dh: string; auth: string }; locale: string };
 
+/** What the feedback form sends (`POST /api/app/feedback`): `id` is made by the app, so a retry goes once. */
+export interface FeedbackInput {
+  id: string;
+  text: string;
+  /** The workspace the person is in. */
+  orgId?: string;
+  /** The screen they are on (a path), and the app that sends it. */
+  where?: string;
+  app?: string;
+  /** The thing the feedback is about (a right click's), and what it says, as the form showed it. */
+  about?: FeedbackAbout;
+  /** What the app knows of where the person is, label and value, as the form listed it. */
+  facts?: [string, string][];
+  /** Files added with `uploadFeedbackFile`. */
+  files?: string[];
+}
+
+/**
+ * `message.meta.feedbackOffer` (server-made): a report about the app the agent offered on its own, under its reply.
+ * Only `forUserId` sees its row and decides it (`decideFeedbackOffer`); `auto`: it went with the reply, because they
+ * chose Always send.
+ */
+export interface FeedbackOffer {
+  id: string;
+  forUserId: string;
+  /** The problem in a few words, as the row's one line. */
+  summary: string;
+  /** The report, as the email carries it. */
+  text: string;
+  state: "offered" | "sent" | "dismissed";
+  auto?: true;
+  decidedAt?: string;
+}
+
+export interface FeedbackAbout {
+  /** The app's own word for the thing: `message`, `card`, `button`… */
+  kind: string;
+  /** Its name on screen: an author, a title. */
+  label?: string;
+  text?: string;
+}
+
+/** A picture or a video added to the feedback being written (`POST /api/app/feedback/files`). */
+export interface FeedbackFile {
+  id: string;
+  name: string;
+  size: number;
+  kind: "image" | "video";
+  contentType: string;
+}
+
 export interface AuthConfig {
   socialProviders: { google: boolean; github: boolean; apple?: boolean };
   signupOpen: boolean;
@@ -99,6 +150,10 @@ export interface AuthConfig {
   privacyUrl?: string | null;
   /** Where people write to whoever runs this server (a workspace on hold or suspended); null: not given. */
   supportEmail?: string | null;
+  /** The server takes feedback (`POST /api/app/feedback`): the apps show the form; absent: a server too old to. */
+  feedback?: boolean;
+  /** It goes to the agentes.chat team, not to whoever runs this server: the form says so and takes pictures only. */
+  feedbackRelay?: boolean;
   /** Every workspace gets a computer of its own (the Cloud); absent: a server too old to say. */
   workspaceComputer?: boolean;
   /** The billing service (ADR 0079): owners and admins open a workspace's plan there; null or absent: no billing. */
@@ -212,6 +267,8 @@ export interface User {
   locale?: string | null;
   /** The language follows each device's own (Automático) until the person picks one. */
   localeAuto?: boolean;
+  /** Their own area, asked once during the onboarding (`WORK_AREAS`), or `skipped`; null until asked. */
+  workArea?: string | null;
 }
 
 /** ADR 0056 §8: `hold` pauses the agents, `suspended` closes the workspace. */
@@ -247,7 +304,7 @@ export interface OrgSummary {
    * which resumes it, instead of the workspace. Absent: finished, not theirs to set up, or an older server.
    */
   onboarding?: OrgOnboarding;
-  /** From `GET /me` while an owner's deletion is pending, set at once by `org.deleting`: the workspace is closed. */
+  /** From `GET /me` while an owner's deletion is pending, set at once by `org.deleting`: the workspace is read-only. */
   deletion?: OrgDeletion;
   /** From `GET /me`: what opens when the app starts here (ADR 0108). Absent from older servers: the home. */
   start?: StartChoice;
@@ -257,7 +314,16 @@ export interface OrgSummary {
   agentStyle?: AgentStyle | null;
   /** How conversations look to me here: only what I chose (`chatLookOf`); absent from an older server. */
   chatPrefs?: ChatPrefs;
+  /**
+   * Who the workspace is for (ADR 0159): `team` or `personal`. Read it with `isPersonal` (lib/workspace-mode); absent
+   * from an older server, which is a team's.
+   */
+  mode?: WorkspaceMode;
 }
+
+/** Who a workspace is for (ADR 0159): the server's `WORKSPACE_MODES`. */
+export const WORKSPACE_MODES = ["team", "personal"] as const;
+export type WorkspaceMode = (typeof WORKSPACE_MODES)[number];
 
 /** How agents talk to a person (ADR 0147): the server's `AGENT_STYLES`. */
 export const AGENT_STYLES = ["simple", "technical"] as const;
@@ -424,6 +490,11 @@ export interface InvitationPreview {
   kind?: "email" | "link";
   /** Who invited (their name), when known. */
   invitedBy?: string | null;
+  /**
+   * Who the workspace is for (ADR 0159): a personal one's page speaks of the person who invited, not of a team or of
+   * its name. Absent from an older server and on one that no longer works: a team's words.
+   */
+  mode?: WorkspaceMode;
   /**
    * The workspace's logo, served for this invitation or link only (absent without one, or while it is paused or
    * being deleted).
@@ -646,6 +717,8 @@ export interface Agent {
   mediaReplies?: boolean;
   /** Its autonomy brakes (ADR 0131); absent from an older server (the defaults). */
   brakes?: AgentBrakes;
+  /** How much it asks before acting (ADR 0173); absent from an older server (`risky`). */
+  approvalsLevel?: ApprovalsLevel;
   /**
    * Its setup checklist at the top of its chat (ADR 0155 §2): the ready-made role it started from and the steps a
    * person confirmed. Null or absent: an agent made before it (none shows).
@@ -667,10 +740,22 @@ export interface AgentSetupChecklist {
   role: string | null;
   /** The steps a person confirmed (chose in its dialog, or skipped). */
   done: SetupStep[];
+  /** How it introduced itself on its card, in its own voice (ADR 0164): its first message says it. */
+  hello?: string;
+  /** The personal starter it began as ("clara", ADR 0159 §3): its first tasks. */
+  starter?: string;
+  /** The apps it was made to use (catalog connector ids) at their levels (ADR 0164): its checklist suggests them. */
+  apps?: Record<string, "read" | "write">;
 }
 
 /** A costly step unrequested work needs a person's go for (ADR 0131 §3). */
 export type CostKind = "pr" | "install" | "long";
+
+/**
+ * How much an agent asks before acting (ADR 0173): `always` (every write to a connected app), `risky` (what is marked
+ * sensitive, the default) or `never` (only merge, deploy, rollback and the like).
+ */
+export type ApprovalsLevel = "always" | "risky" | "never";
 
 /** What an agent may start that nobody asked for directly, and which agents it may call (ADR 0131). */
 export interface AgentBrakes {
@@ -795,6 +880,8 @@ export interface AgentBrainLine {
   usage?: PlanUsage;
   /** Set to Rápida where that applies to what it thinks with; absent: standard speed. */
   speed?: "fast";
+  /** An API brain on Automático: the maker its models come from, whose logo shows beside it. */
+  maker?: string;
 }
 
 /** `appearance` as stored: the UI only draws known values. */
@@ -825,8 +912,13 @@ export interface AgentInput {
   autonomy?: CommandApproval;
   /** Editing only: its autonomy brakes (ADR 0131); the fields given change. */
   brakes?: Partial<AgentBrakes>;
-  /** Creating only: the ready-made role it starts from, for its setup checklist (ADR 0155 §2). */
-  setup?: { role: RoleId | null };
+  /** How much it asks before acting (ADR 0173); same permission as editing the agent. */
+  approvalsLevel?: ApprovalsLevel;
+  /**
+   * Creating only: the ready-made role it starts from, for its setup checklist (ADR 0155 §2), and what its card said
+   * (ADR 0164): how it introduced itself, the personal starter it began as, the apps it will use at their levels.
+   */
+  setup?: { role: RoleId | null; hello?: string; starter?: string; apps?: Record<string, "read" | "write"> };
 }
 
 /** A person's answer to an agent's proposal of costly work nobody asked for (ADR 0131 §3). */
@@ -897,7 +989,7 @@ export interface TeamAgentDraft {
   line: string;
   instructions: string;
   appearance: Required<AgentLookInput> | null;
-  /** The channel it lives in, by name. */
+  /** The channel it lives in, by name; empty: it lives in its DM with the person (a personal template, ADR 0159). */
   channel: string;
   routines: ProposedRoutine[];
   firstTask: string | null;
@@ -924,8 +1016,6 @@ export interface TeamPlan {
   /** People named as working there, invited after. */
   invite: string[];
   template?: string;
-  /** On a billing hold, from a template: what its first agent delivers, shown labelled and never posted. */
-  example?: string;
 }
 
 /** The right hand's team card (`meta.actionCard`): several agents created in one click ("Criar o time"). */
@@ -1200,8 +1290,6 @@ export interface Message {
   receipts?: MessageReceipts;
   /** Reaction counts (expected from the backend in the message list; else loaded on hover). */
   reactions?: ReactionCount[];
-  /** People's messages: what agents saved to memory from them (the memory mark); live via `message.memories`. */
-  memories?: MessageMemory[];
   /** In lists: true when pinned in its channel (absent: not pinned); live via `message.pinned` / `message.unpinned`. */
   pinned?: boolean;
   /** Agents' messages: what the agent changed with it, as receipts with Undo; live via `message.actions`. */
@@ -1210,6 +1298,8 @@ export interface Message {
   longWork?: WorkView;
   /** Client only: an optimistic message waiting for the server, or one that failed to send. */
   local?: "pending" | "failed";
+  /** Client only, on a `failed` one the server refused: why (`sendFailureText`). */
+  sendFailure?: { status: number; code: string; message: string; params?: Record<string, unknown> };
   createdAt: string;
 }
 
@@ -1306,6 +1396,13 @@ export interface AiStatus {
   routing?: AiRouting;
   /** The organization has a key of its own, or the server's own Claude key. */
   apiKey?: boolean;
+  /** Memory reflects on finished conversations: there is a summary model it can call (absent from an older server). */
+  reflection?: boolean;
+  /**
+   * The right hand's widgets waiting for an AI, or stopped for the lack of one, whose build has one now, among those
+   * the viewer sees (`widgetAiReady`). Absent from an older server.
+   */
+  widgetsReady?: string[];
   agents: {
     agentId: string;
     /** `waiting`: its computer is away for now (not "no AI"). */
@@ -1317,6 +1414,7 @@ export interface AiStatus {
       | "cli_missing"
       | "computer_away"
       | "computer_failed"
+      | "cli_failed"
       | "plan_limit"
       | "model_limit"
       | "model_region"
@@ -1326,6 +1424,13 @@ export interface AiStatus {
       | "plan_not_shared"
       | "runner_outdated"
       | "plan_tools";
+    /** Ready on an API key with Automático: the maker of the key it thinks with (`autoMakerOf`). */
+    provider?: string;
+    /**
+     * Its state for background work (a routine, a widget's build) where that differs from `state`: background work
+     * never falls back on the model brain, and the right hand's thinks with the workspace's own AI, nobody's.
+     */
+    background?: "ready" | "no_ai" | "waiting";
   }[];
 }
 
@@ -1402,15 +1507,16 @@ export interface ActiveRun {
   /** Last sign of life from the worker. */
   heartbeatAt?: string | null;
   createdAt?: string;
+  /**
+   * How long the work it is doing now has taken, in milliseconds, as the server counts it (since it last went back
+   * to work or last posted, else since it was created). A length, not a time: "thinking for …" counts on from it by
+   * this device's clock. Absent on a server from before it.
+   */
+  workingMs?: number;
   /** Messages sent to it while it works that it hasn't read yet (the others steered into it, it read). */
   pendingMessageIds?: string[];
   /** A routine's run working in the background: it holds no conversation and shows no "trabalhando". */
   background?: boolean;
-  /**
-   * What its current model call streamed so far past its last tool: `text` starts at `at` of the call's text, so an
-   * app opened mid-answer goes on from `at` plus its length.
-   */
-  live?: { turn: number; at: number; text: string };
 }
 
 /** Real-time channel events (packages/engine/src/events.ts, docs/adr/0010-realtime.md). */
@@ -1438,7 +1544,6 @@ export type ChannelEvent =
   | { type: "block.state"; channelId: string; block: BlockState }
   /** A choice card was answered (ADR 0124). */
   | { type: "choices.updated"; channelId: string; choices: Choices }
-  | { type: "message.memories"; channelId: string; messageId: string; memories: MessageMemory[] }
   /** A long work changed (ADR 0121): moved, updated, waiting, queued or ended. Its anchor's line redraws. */
   | {
       type: "agent.work";
@@ -1478,6 +1583,7 @@ export type ChannelEvent =
       messageIds?: string[];
     }
   | ArtifactEvent
+  /** From a server that still streams a reply's words: read only as "it writes" (the reply shows whole, once posted). */
   | {
       type: "agent.delta";
       channelId: string;
@@ -1486,12 +1592,6 @@ export type ChannelEvent =
       agentId: string;
       seq: number;
       text: string;
-      /** Which model call of the run this text belongs to (narration is keyed by it). */
-      turn?: number;
-      /** Where `text` starts in its turn's text: past what arrived here, a piece was missed. */
-      at?: number;
-      /** Where its stretch starts in the turn's text (a stretch: the text between two calls of a computer brain). */
-      from?: number;
     }
   | {
       type: "agent.run";
@@ -1501,6 +1601,9 @@ export type ChannelEvent =
       agentId: string;
       status: RunStatus;
       error?: string;
+      /** A failed run's reason by its code, as `run.finished` says it (`runErrorDetail`). */
+      errorCode?: string;
+      errorParams?: Record<string, string>;
       /** The message that started the run (anchors its live row). */
       triggerMessageId?: string | null;
       startedAt?: string | null;
@@ -1528,6 +1631,14 @@ export type ChannelEvent =
       threadId: string | null;
       messageId: string;
       proposal: CalendarProposal;
+    }
+  /** A report an agent offered was sent or turned down: its row (`meta.feedbackOffer`) as it is now. */
+  | {
+      type: "feedback_offer.updated";
+      channelId: string;
+      threadId: string | null;
+      messageId: string;
+      offer: FeedbackOffer;
     }
   /** The right hand's team card changed (ADR 0137 §10): the whole card. */
   | {
@@ -1910,7 +2021,7 @@ export interface ScopeInfo {
   sensitive: boolean;
 }
 
-/** Catalog groups: Desenvolvimento, Produto, Docs, Pagamentos, Suporte, Marketing, Automação. */
+/** Catalog groups: Desenvolvimento, Produto, Docs, Pagamentos, Suporte, Marketing, Automação, Redes sociais. */
 export type ConnectorCategory =
   | "dev"
   | "product"
@@ -1920,7 +2031,8 @@ export type ConnectorCategory =
   | "sales"
   | "support"
   | "marketing"
-  | "automation";
+  | "automation"
+  | "social";
 
 /** A connector agentes.chat knows (`GET /connectors/catalog`: ours and the one-click MCP servers, one per service). */
 export interface ConnectorDef {
@@ -2000,6 +2112,11 @@ export interface GitHubAppSetup {
   state: "off" | "ok" | "invalid";
   /** No app yet: the manifest flow makes one. */
   canCreate: boolean;
+  /**
+   * The events agents hear that the app isn't subscribed to on GitHub (by GitHub's names), and its page there where
+   * they're ticked. Absent when it has them all, or GitHub didn't answer.
+   */
+  events?: { missing: string[]; url: string };
 }
 
 /** `GET …/github-app`: whether the app can be installed here, the organization's installations, the server's app. */
@@ -2110,6 +2227,7 @@ export type ProposalSettingField =
   | "channel_add"
   | "channel_remove"
   | "reply_mode"
+  | "skill"
   | "name"
   | "look"
   | "reports_to"
@@ -2120,14 +2238,16 @@ export type ProposalSettingField =
  * One line of a settings card: `model` a model id; `ai_account` `{ brain, accountId }`; `budget` nano-USD a month or
  * null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` /
  * `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a
- * mention); `name` its name; `look` `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a);
- * `archive` true. `label`: the server's names for ids.
+ * mention); `skill` whether it has the skill in `skillId` on (its name in `label.to`); `name` its name; `look`
+ * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `archive` true. `label`: the server's
+ * names for ids.
  */
 export interface ProposalSettingLine {
   field: ProposalSettingField;
   from: unknown;
   to: unknown;
   channelId?: string;
+  skillId?: string;
   label?: { from?: string; to?: string };
 }
 
@@ -2213,6 +2333,8 @@ export interface OrgSettings {
   gifsAvailable: boolean;
   /** Read only: this server can decide when agents send one (agents send none on their own without it). */
   agentMediaAvailable: boolean;
+  /** Who the workspace is for (ADR 0159); absent from an older server, which is a team's. */
+  mode?: WorkspaceMode;
 }
 
 /** `OrgSettings` the server works out itself: never in a PATCH. */
@@ -2557,19 +2679,6 @@ export interface CustomTool {
   /** Shown to people (approval cards, permissions), in pt-BR. */
   label: string;
   firstSeenAt: string;
-}
-
-/**
- * ADR 0117: an approved MCP tool whose server changed its description or input. Agents keep `before` until a
- * connector admin accepts the change.
- */
-export interface ToolChange {
-  connectionId: string;
-  connectionLabel: string;
-  toolName: string;
-  before: { description: string; inputSchema: Record<string, unknown> };
-  after: { description: string; inputSchema: Record<string, unknown> };
-  changedAt: string;
 }
 
 export interface CustomServer {
@@ -2996,15 +3105,6 @@ export interface UndoAllResult {
   failed: { id: string; code: string; message: string }[];
 }
 
-/** Something an agent saved to its memory from a person's message (the memory mark). */
-export interface MessageMemory {
-  id: string;
-  agentId: string;
-  kind: "fact" | "preference" | "decision" | "note" | "lesson";
-  text: string;
-  createdAt: string;
-}
-
 export interface ReactionCount {
   /** `+1` / `-1` on agent replies are feedback for the agent. */
   reaction: string;
@@ -3085,6 +3185,8 @@ export interface AgentQuestion {
   status: "open" | "answered";
   answer: string | null;
   answeredByUserId: string | null;
+  /** When a person answered or skipped it; absent on a card an older server wrote. */
+  answeredAt?: string | null;
   /** The agent took it back: it no longer needs an answer. */
   withdrawn?: true;
   /** A person (`answeredByUserId`) skipped it: the agent went on without an answer. */
@@ -3483,6 +3585,8 @@ export interface Issue {
   /** Order inside the column, lowest first. */
   boardRank: number;
   priority: IssuePriority;
+  /** Its one project, or none (a server from before projects sends nothing). */
+  project?: IssueProjectRef | null;
   assignee: Actor | null;
   labels: string[];
   /** Day only, `YYYY-MM-DD`. */
@@ -3562,6 +3666,7 @@ export interface IssueInput {
   priority?: IssuePriority;
   dueDate?: string | null;
   labels?: string[];
+  projectId?: string | null;
   githubUrl?: string | null;
   /** Drive files uploaded from the new-issue box (only on create): linked to the issue. */
   attachmentIds?: string[];
@@ -3577,12 +3682,33 @@ export type IssuePatch = Partial<
 > & {
   /** Move to a board column: the issue takes that column's stage. */
   columnId?: string;
+  /** Null takes it out of its project. */
+  projectId?: string | null;
   /**
    * The whole list of acceptance criteria, in order (edited in place): an `id` keeps that criterion and its check,
    * one without is new, one left out is removed.
    */
   criteria?: { id?: string; text: string }[];
 };
+
+/** A task's project as its card shows it: a name and one of the roles' colors. Archived: offered to no new task. */
+export interface IssueProjectRef {
+  id: string;
+  name: string;
+  color: string;
+  archived: boolean;
+}
+
+/** A project in the projects menu, with the open tasks in it that I see. */
+export interface IssueProject extends IssueProjectRef {
+  open: number;
+}
+
+/** The projects by name (archived last) and how many of my open tasks have none. */
+export interface IssueProjects {
+  projects: IssueProject[];
+  unfiled: number;
+}
 
 /** A board column: it sits in a fixed stage; `name` null shows the stage's own name. */
 export interface IssueColumn {
@@ -4008,8 +4134,8 @@ export interface CalendarRange {
   routines: { routineId: string; name: string; agentId: string; at: string; target: RoutineTarget }[];
   /** Pending reminders the viewer may see (absent on an older server). */
   reminders?: CalendarReminder[];
-  /** Issues due in the range (all-day). */
-  deadlines: { issueId: string; number: number; title: string; date: string }[];
+  /** Issues due in the range (all-day), with who has each (absent on an older server). */
+  deadlines: { issueId: string; number: number; title: string; date: string; assignee?: Actor | null }[];
   proposals: CalendarProposal[];
 }
 
@@ -4209,6 +4335,8 @@ export interface SkillChoice {
   path: string;
   name: string;
   description: string;
+  /** A skill of this name is installed (it becomes a new version of it) or was removed (it comes back, on for nobody). */
+  replaces?: "installed" | "removed";
 }
 
 /** A skill a GitHub link holds that can't be installed: its folder and the server's refusal. */
@@ -4305,6 +4433,11 @@ export interface Machine {
   /** The public address measured through an agent process, absent on older runners. */
   egress?: { ip: string; country?: string; at: string } | null;
   networkTransition?: { state: "draining" | "restart_required"; deadline: string; agents: string[] } | null;
+  /**
+   * The workspace's own computer, online, has its agents waiting for their way out: none of the proxies its network
+   * requires works now, so their connections are refused for a while. Absent from an older server: they don't wait.
+   */
+  egressWaiting?: boolean;
   name: string;
   /**
    * Absent from a server that doesn't say: `connected`. A `managed` one can't be removed, and its hostname,
@@ -4313,6 +4446,11 @@ export interface Machine {
   kind?: MachineKind;
   /** Runner connected now (`machine.status` events). */
   online: boolean;
+  /**
+   * ADR 0161: the workspace's own computer is asleep in standby, offline by design: it wakes when something wants it,
+   * and opens as it does. Absent from an older server: not in standby.
+   */
+  standby?: boolean;
   lastSeenAt: string | null;
   hostname: string;
   /** `linux`, `darwin`, `windows` or `other` (`MachineOs`). */
@@ -4334,6 +4472,8 @@ export interface Machine {
   createdAt: string;
   /** ADR 0036 §6: the owner paused it on the machine; nothing new starts until it resumes. Null or absent: not paused. */
   paused?: MachinePause | null;
+  /** Its app takes a pause from the apps (`POST …/pause`); `false` or absent: update the app on it. */
+  remotePause?: boolean;
   /** ADR 0036 §8 (protocol 10): what the machine allows, as last reported. Absent until the machine reports it. */
   access?: MachineAccess | null;
   /** ADR 0040 (protocol 12): whether the agent browser can run there; null or absent when its runner doesn't say. */
@@ -4412,6 +4552,8 @@ export interface MachineBrowser {
 export interface MachinePause {
   paused?: boolean;
   until?: string | null;
+  /** Who paused it from the apps; null or absent: on the computer itself. */
+  by?: { id: string; name: string } | null;
 }
 
 /** A tool the person turns on or off on the machine. */
@@ -4480,6 +4622,8 @@ export interface DesktopRelease {
   minVersion?: string | null;
   /** Bytes, when the server knows it. */
   size?: number | null;
+  /** Linux only: the AppImage, for a distribution that takes no deb (it runs as it is and updates itself). */
+  appImage?: { url: string; sha256: string } | null;
 }
 
 /** A computer brain that runs on a connected machine. */
@@ -4738,9 +4882,9 @@ export interface WikiPageSummary {
   audienceFolder?: string | null;
   /** The start of the text, plain, for cards. */
   excerpt?: string;
-  /** `obsidian` for an imported page. */
+  /** An imported page: `obsidian`, `github` or `files` (`WikiImportSource`). */
   sourceType?: string | null;
-  /** An imported page: the vault's name. */
+  /** An imported page: the name of what was imported (the vault, the repository, the folder). */
   sourceName?: string | null;
   /** The import that brought it (null for pages imported before imports had ids). */
   importId?: string | null;
@@ -4773,8 +4917,11 @@ export interface WikiImportNote {
   attachments?: Record<string, string>;
 }
 
+/** Where an import's notes came from: an Obsidian vault, a GitHub link, or Markdown files. */
+export type WikiImportSource = "obsidian" | "github" | "files";
+
 export interface WikiImportInput {
-  source: { type: "obsidian"; name: string };
+  source: { type: WikiImportSource; name: string };
   notes: WikiImportNote[];
   folder?: string;
   onConflict: "keep_both" | "skip";
@@ -5723,11 +5870,29 @@ export interface AccountLoginStart {
   expiresAt: string;
 }
 
+/** Why a sign-in ended on the computer (mirror of `ACCOUNT_LOGIN_FAILURES` in `@agenteschat/adapters`). */
+export type AccountLoginFailure =
+  | "not_installed"
+  | "no_tty"
+  | "network"
+  | "bad_code"
+  | "cli_exit"
+  | "not_signed_in_after_login"
+  | "status_unknown"
+  | "no_token"
+  | "not_kept"
+  | "timeout"
+  | "canceled";
+
 /** `GET …/account-logins/{loginId}`. */
 export interface AccountLoginStatus {
   state: "waiting" | "done" | "failed" | "expired";
   account?: MachineAccount;
   error?: string;
+  /** `failed` or `expired` on the computer: why (an older runner sends none). */
+  code?: AccountLoginFailure;
+  /** With `code`: what the CLI itself said, in English. */
+  message?: string;
   /** `failed`: the viewer already has this account on that computer, named `label` (an older server sends no `account`). */
   duplicate?: { label: string; account?: MachineAccount };
   /** `failed`: signing in again came back as another account, this email; the account stays signed out. */
@@ -6081,6 +6246,14 @@ export type NotificationKind =
   | "reaction"
   /** ADR 0036 §5: a new computer joined the organization (admins). `source.machineId`; `source.label` = its name. */
   | "machine_connected"
+  /** A computer ran a connect link and asks to join (its maker). `source.requestId`; `source.label` = its name. */
+  | "device.join_request"
+  /** Someone else's agent uses this person's device (once per run). `source.phoneId` or `machineId`; Stop. */
+  | "device.in_use"
+  /** An agent asks to use this person's device. `source.requestId`; Allow once, Always, No. */
+  | "device.access_request"
+  /** Someone's agent waits for this person's device to come back. `source.phoneId` or `machineId`. */
+  | "device.waiting"
   /** ADR 0040 §6: an agent needs a person in its browser (sign in, a code). `source.handoffId`. */
   | "browser_handoff"
   /**
@@ -6112,11 +6285,6 @@ export type NotificationKind =
    * `source.agentId` and its name in `source.label`. Opens the agent's page.
    */
   | "browser_profile_request"
-  /**
-   * ADR 0117: a connected MCP server changed tools an admin approved (connector admins). Waiting; `source.label` the
-   * connection's name, `latest.title` the tools. Opens Conectores, where it is accepted.
-   */
-  | "connector_tool_changed"
   /** ADR 0115: a computer's disk passed 85% in use (admins). `source.machineId`; `latest.diskUse`, `latest.diskFreeGb`. */
   | "computer_disk_full"
   /** ADR 0133: a computer has no Google Chrome for its agents' browsers (who connected it). `source.machineId`. */
@@ -6278,6 +6446,9 @@ export interface NotificationSource {
   accountId?: string;
   /** `machine_connected`: the computer. */
   machineId?: string;
+  /** Bring your own devices: the join or access request, and the phone. */
+  requestId?: string;
+  phoneId?: string;
   /** `browser_handoff`: the request (its chat card has the same id). */
   handoffId?: string;
   /** `change_request`: the proposal to decide. */
@@ -6294,8 +6465,6 @@ export interface NotificationSource {
   dashboardId?: string;
   /** `widget_alert`, `widget_failed`: the widget. */
   widgetId?: string;
-  /** `connector_tool_changed`: the connected server whose approved tools changed (ADR 0117). */
-  connectionId?: string;
   /** Channel name, thread title, issue title, topic title, mission or routine name (or the computer's name). */
   label?: string;
 }
@@ -6328,6 +6497,8 @@ export interface NotificationLatest {
    * Both said in the person's language.
    */
   reason?: string;
+  /** `widget_failed` with `missing_credential`: why its agent has no AI, coded (`widgetFailureKey`'s `detail`). */
+  detail?: string;
   /** `approval`: asked while nobody watched, by a routine or an unattended run (ADR 0053 §8). */
   origin?: ApprovalOrigin;
   /** `org_standing` to `agent_hold` (agentes.chat Cloud): `network` or `operator`, never the hold's reason. */
@@ -6447,6 +6618,27 @@ export interface NotificationPage {
   nextCursor: string | null;
 }
 
+/**
+ * One thing waiting on me (`GET …/waiting`, ADR 0172): a view of an inbox row that waits, so `id` is that
+ * notification's and `source` opens as it does.
+ */
+export interface WaitingItem {
+  id: string;
+  kind: NotificationKind;
+  /** Who asks; null when nobody is behind it (a workspace's notice). */
+  asker: NotificationActor | null;
+  source: NotificationSource;
+  /** What is asked, in one line. */
+  question: string;
+  since: string;
+}
+
+/** `GET …/waiting`: oldest first, at most 100. */
+export interface WaitingList {
+  items: WaitingItem[];
+  count: number;
+}
+
 /** The sidebar badge (`GET …/notifications/count`, `notification.counts`). */
 /**
  * What reaches my devices as a notification, by category (ADR 0071 §8): the phone's and the browser's pushes and
@@ -6471,6 +6663,7 @@ export interface NoticePrefs {
 
 /** A tool at the top of the sidebar (`SIDEBAR_ITEMS` in packages/engine/src/sidebar-items.ts). */
 export type SidebarItem =
+  | "waiting"
   | "approvals"
   | "proposals"
   | "threads"
@@ -6522,7 +6715,7 @@ export interface IssuesView {
   priorities: IssuePriority[];
   showCanceled: boolean;
 }
-export type IssueCardField = "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
+export type IssueCardField = "project" | "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
 
 export interface NotificationCount {
   unread: number;
@@ -6679,6 +6872,8 @@ export interface TaskWait {
   window: string | null;
   /** When the limit resets; null when unknown. */
   resetsAt: string | null;
+  /** When it began waiting on its plan or budget; null when unknown (absent on an older server). */
+  since?: string | null;
   /** You may press Continuar agora. */
   canContinue: boolean;
 }
@@ -7075,6 +7270,30 @@ export interface DesktopStatus {
   browserOnDesktop?: boolean;
 }
 
+/**
+ * What an agent keeps running on its computer (`keep_running`, ADR 0176): one of its programs (it ends with it), its
+ * browser, or a time alone.
+ */
+export interface Hold {
+  id: string;
+  agentId: string;
+  machineId: string;
+  /** In the agent's words, for people. */
+  what: string;
+  why: string;
+  kind: "program" | "browser" | "time";
+  since: string;
+  /** When it ends at the latest; null: when its program stops (or its browser closes). */
+  until: string | null;
+}
+
+/** `GET …/agents/{id}/holds`: for whoever may watch the agent's computer. */
+export interface AgentHolds {
+  holds: Hold[];
+  /** This person may stop them: who may use the agent's computer, and the admins of computers. */
+  canStop: boolean;
+}
+
 /** `GET …/desktop/picture`: a recent picture of the agent's screen, or why there is none. */
 export interface DesktopPictureView {
   picture: {
@@ -7380,6 +7599,8 @@ export interface PersonUsage {
   roleIds: string[];
   owner: boolean;
   money: boolean;
+  /** Some of it was use on a plan, priced at the API's list price ("≈"). */
+  estimated: boolean;
   renewsAt: string;
   since: string;
   until: string;
@@ -7409,4 +7630,158 @@ export interface PersonLimitCard {
   runId: string;
   renewsAt: string;
   byUserId?: string;
+}
+
+/** Bring your own devices: who may point their agents at a device (the words of an agent's audience). */
+export interface DeviceAudience {
+  mode: "everyone" | "people" | "owner";
+  userIds: string[];
+  roleIds: string[];
+}
+
+/** A device's state, worded by the apps. Reason codes: `PhoneReason` in the machine protocol, plus the server's own. */
+export type DeviceStatus =
+  | { kind: "ready" }
+  | {
+      kind: "in_use";
+      agentId: string | null;
+      agentName: string | null;
+      userId: string | null;
+      userName: string | null;
+      label?: string;
+      since: string;
+    }
+  | { kind: "busy"; running: number; max: number }
+  | { kind: "needs_you"; reason: string }
+  | { kind: "preparing"; reason: string }
+  | { kind: "paused"; until: string | null }
+  | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean }
+  | { kind: "unsupported"; reason: string };
+
+export interface PhoneDevice {
+  id: string;
+  platform: "android" | "ios";
+  phoneKind: "device" | "emulator" | "simulator";
+  name: string;
+  model: string;
+  osVersion: string;
+  hostMachineId: string | null;
+  ownerUserId: string | null;
+  /** null: it follows its host's rule (an iPhone). */
+  audience: DeviceAudience | null;
+  status: DeviceStatus;
+  transport: "usb" | "wifi" | "local" | null;
+  lastSeenAt: string | null;
+  mayUse: boolean;
+  mayManage: boolean;
+}
+
+export interface ComputerDevice {
+  id: string;
+  machineKind: "connected" | "host" | "managed";
+  name: string;
+  os: string;
+  arch: string;
+  hostname: string;
+  cpus: number | null;
+  memoryGb: number | null;
+  ownerUserId: string | null;
+  belongsToWorkspace: boolean;
+  systemMode: boolean;
+  audience: DeviceAudience;
+  status: DeviceStatus;
+  maxTasks: number | null;
+  toolchains: Record<string, string>;
+  lastSeenAt: string | null;
+  mayUse: boolean;
+  mayManage: boolean;
+  phones: PhoneDevice[];
+}
+
+/**
+ * A computer that ran a connect link and waits for the link's maker to let it join. Not `JoinRequest`, a person's
+ * request to join the workspace: two interfaces of one name would merge into one.
+ */
+export interface DeviceJoinRequest {
+  id: string;
+  linkId: string;
+  name: string;
+  hostname: string;
+  os: string;
+  arch: string;
+  ip: string;
+  location: string | null;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface DevicesList {
+  devices: ComputerDevice[];
+  requests: DeviceJoinRequest[];
+}
+
+/** A one-line install: works once, for a few minutes, and the computer still asks to join. */
+export interface ConnectLink {
+  id: string;
+  code: string;
+  expiresAt: string;
+  commands: { unix: string; windows: string };
+}
+
+export interface ConnectLinkState {
+  status: "waiting" | "asking" | "joined" | "denied" | "expired";
+  request?: DeviceJoinRequest;
+  machineId?: string;
+}
+
+/** An iPhone on a Mac's Wi-Fi that trusts it, not used until the person who manages the Mac picks it. */
+export interface WifiIphone {
+  /** Its UDID: the phone's `serial` once picked. */
+  serial: string;
+  model: string;
+  name?: string;
+  osVersion: string;
+}
+
+/** The iPhones a Mac offers over Wi-Fi; `update`: its agentes.chat is too old for it. */
+export interface WifiIphones {
+  available: WifiIphone[];
+  update?: true;
+}
+
+/** Pairing an Android phone over Wi-Fi with a computer: where it stands. */
+export interface WifiPairing {
+  id: string;
+  way: "qr" | "code";
+  state: "waiting" | "pairing" | "connecting" | "connected" | "failed";
+  /** Why it failed; `update`: the computer's agentes.chat is too old for it. */
+  reason?: WifiPairFailure;
+  /** Only when it starts: Android's QR text for Wireless debugging. */
+  qr?: string;
+  /** Connected: the phone in the devices list. */
+  phoneId?: string;
+  expiresAt: string;
+}
+
+export type WifiPairFailure =
+  | "mdns_off"
+  | "same_wifi"
+  | "refused"
+  | "timed_out"
+  | "outdated"
+  | "adb_missing"
+  | "canceled"
+  | "failed"
+  | "update";
+
+export interface ComputerDeviceInput {
+  name?: string;
+  audience?: DeviceAudience;
+  belongsToWorkspace?: boolean;
+  maxTasks?: number;
+}
+
+export interface PhoneDeviceInput {
+  name?: string;
+  audience?: DeviceAudience;
 }

@@ -1,14 +1,13 @@
-import { ApiError, keys, useApi, useMe, useSettings } from "@agenteschat/client";
+import { ApiError, useApi, useMe, useSettings } from "@agenteschat/client";
 import { browserTimezone, zoneDisplayName } from "@agenteschat/client/lib/routines";
 import { filterZones, type ZoneOption, zoneOptions } from "@agenteschat/ui/timezones";
 import { useQueryClient } from "@tanstack/react-query";
-import * as ImagePicker from "expo-image-picker";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionSheetIOS, Alert, FlatList, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authClient } from "@/lib/auth";
-import { useOrg } from "@/providers/org";
+import { useOrg, useOrgMaybe } from "@/providers/org";
 import {
   fieldText,
   GroupedField,
@@ -23,18 +22,12 @@ import {
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { SheetHeader } from "../new/parts";
 import { useColors, useDirectory, useMeId } from "../shared/hooks";
 import { goBack, PushedHeader } from "../shared/parts";
 import { usePersonPhoto } from "../shared/photo";
-import {
-  type AccountDraft,
-  accountChanges,
-  accountProblem,
-  handleErrorKey,
-  PHOTO_MAX_BASE64,
-  photoContentType,
-} from "./logic";
-import { Page, setAccountDraft, useAccountDraft } from "./parts";
+import { type AccountDraft, accountChanges, accountProblem, handleErrorKey } from "./logic";
+import { Page, refreshProfile, setAccountDraft, useAccountDraft, useChangePhoto } from "./parts";
 
 /** A zone as the list says it: "Horário de Brasília" (a friendly name) or the city. */
 const zoneName = (zone: string, locale: string) =>
@@ -78,7 +71,7 @@ export function AccountPage() {
   const draft = useAccountDraft() ?? initial;
   const setDraft = setAccountDraft;
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const { changePhoto, uploading } = useChangePhoto();
   const [error, setError] = useState<string | null>(null);
 
   // A message from the last OK goes away once the form changes.
@@ -90,12 +83,6 @@ export function AccountPage() {
   const changed = Boolean(changes.name || changes.profile);
   // Show what's wrong once the person changed something (not on a fresh, untouched form).
   const shownProblem = changed && problem ? t(`mobile.me.account.${problem}`) : null;
-
-  const refresh = () => {
-    void qc.invalidateQueries({ queryKey: keys.me });
-    void qc.invalidateQueries({ queryKey: keys.members(org.orgId) });
-    void qc.invalidateQueries({ queryKey: keys.people(org.orgId) });
-  };
 
   const save = async () => {
     if (saving) return;
@@ -110,7 +97,7 @@ export function AccountPage() {
         if (res.error) throw new Error(res.error.message ?? "");
       }
       if (changes.profile) await api.orgs.updateMe(org.orgId, changes.profile);
-      refresh();
+      refreshProfile(qc, org.orgId);
       toast({ title: t("mobile.me.account.saved") });
       goBack();
     } catch (e) {
@@ -119,84 +106,6 @@ export function AccountPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const upload = async (from: "library" | "camera") => {
-    const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-      base64: true,
-    };
-    if (from === "camera") {
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) {
-        toast({ title: t("mobile.me.account.noCamera"), icon: "camera" });
-        return;
-      }
-    }
-    const res =
-      from === "camera"
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
-    const a = res.canceled ? null : res.assets[0];
-    if (!a?.base64) return;
-    if (a.base64.length > PHOTO_MAX_BASE64) {
-      toast({ title: t("mobile.me.account.photoTooBig"), icon: "x" });
-      return;
-    }
-    setUploading(true);
-    try {
-      await api.orgs.setAvatar(org.orgId, {
-        imageBase64: a.base64,
-        contentType: photoContentType(a.mimeType, a.fileName),
-      });
-      refresh();
-      toast({ title: t("mobile.me.account.photoSaved") });
-    } catch {
-      toast({ title: t("mobile.me.account.photoFailed"), icon: "x" });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const remove = async () => {
-    try {
-      await api.orgs.removeAvatar(org.orgId);
-      refresh();
-      toast({ title: t("mobile.me.account.photoRemoved") });
-    } catch {
-      toast({ title: t("mobile.app.failed"), icon: "x" });
-    }
-  };
-
-  const changePhoto = () => {
-    const hasPhoto = Boolean(mine?.avatarUrl);
-    const labels = [
-      t("mobile.me.account.fromLibrary"),
-      t("mobile.me.account.fromCamera"),
-      ...(hasPhoto ? [t("mobile.me.account.removePhoto")] : []),
-    ];
-    const run = (i: number) => {
-      if (i === 0) void upload("library");
-      else if (i === 1) void upload("camera");
-      else if (i === 2 && hasPhoto) void remove();
-    };
-    if (Platform.OS === "ios")
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [...labels, t("mobile.common.cancel")],
-          cancelButtonIndex: labels.length,
-          ...(hasPhoto ? { destructiveButtonIndex: 2 } : {}),
-        },
-        run,
-      );
-    else
-      Alert.alert(t("mobile.me.account.changePhoto"), undefined, [
-        ...labels.map((text, i) => ({ text, onPress: () => run(i) })),
-        { text: t("mobile.common.cancel"), style: "cancel" as const },
-      ]);
   };
 
   const input = [fieldText("callout"), styles.input, { color: c.ink }];
@@ -295,15 +204,21 @@ export function AccountPage() {
         />
       </GroupedList>
       <GroupedFooter>{t("deleteAccount.card.text")}</GroupedFooter>
-      <GroupedList>
-        <GroupedRow
-          icon="home"
-          label={t(org.org?.role === "owner" ? "deleteAccount.card.oneWorkspace" : "deleteAccount.card.leaveWorkspace")}
-          labelLines={2}
-          chevron
-          onPress={() => router.push(org.org?.role === "owner" ? "/settings/general" : "/me/members")}
-        />
-      </GroupedList>
+      {org.org?.role === "owner" ? (
+        <>
+          <View style={styles.gapBig} />
+          <GroupedList>
+            <GroupedRow
+              icon="x"
+              label={t("deleteOrg.card.title")}
+              danger
+              chevron
+              onPress={() => router.push("/settings/delete")}
+            />
+          </GroupedList>
+          <GroupedFooter>{t("deleteOrg.card.text", { name: org.org.name })}</GroupedFooter>
+        </>
+      ) : null}
     </Page>
   );
 }
@@ -325,30 +240,53 @@ export function ZonePage() {
   );
 }
 
-/**
- * A time zone chosen on a screen of its own (Conta's Fuso, a routine's "Fuso horário"): the search, "Usar o fuso do
- * workspace" (`withWorkspace`: a pick of null), then the suggested zones and every other.
- */
-export function ZoneList({
-  title,
-  value,
-  withWorkspace = false,
-  onPick,
-}: {
+interface ZoneListProps {
   title: string;
   value: string | null;
   withWorkspace?: boolean;
   onPick: (zone: string | null) => void;
+  /**
+   * Shown in a sheet of its own (the first run, which sits outside the navigator): its own bar with × instead of the
+   * pushed screen's native bar, which would retitle the screen under the sheet.
+   */
+  onClose?: () => void;
+}
+
+/**
+ * A time zone chosen on a screen of its own (Conta's Fuso, a routine's "Fuso horário", the first run's "Fuso"): the
+ * search, "Usar o fuso do workspace" (`withWorkspace`: a pick of null), then the suggested zones and every other.
+ * Inside a workspace its zone and its people's are suggested too; before there is one (the first run), the phone's.
+ */
+export function ZoneList(props: ZoneListProps) {
+  const org = useOrgMaybe();
+  return org ? <WorkspaceZoneList {...props} orgId={org.orgId} /> : <ZonePicker {...props} orgZone={null} people="" />;
+}
+
+/** In a workspace: its own zone and its people's suggested first. */
+function WorkspaceZoneList({ orgId, ...props }: ZoneListProps & { orgId: string }) {
+  const settings = useSettings(orgId);
+  const dir = useDirectory();
+  const people = [...dir.memberById.values()].map((m) => m.timezone).join(",");
+  return <ZonePicker {...props} orgZone={settings.data?.timezone ?? null} people={people} />;
+}
+
+function ZonePicker({
+  title,
+  value,
+  withWorkspace = false,
+  onPick,
+  onClose,
+  orgZone,
+  people,
+}: ZoneListProps & {
+  orgZone: string | null;
+  /** The people's zones, comma-separated (a stable dependency). */
+  people: string;
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const org = useOrg();
-  const settings = useSettings(org.orgId);
-  const dir = useDirectory();
   const [query, setQuery] = useState("");
-  const orgZone = settings.data?.timezone ?? null;
-  const people = [...dir.memberById.values()].map((m) => m.timezone).join(",");
   const options = useMemo(() => {
     const suggested = [value ?? "", browserTimezone() ?? "", orgZone ?? "", ...people.split(","), "UTC"].filter(
       Boolean,
@@ -372,7 +310,13 @@ export function ZoneList({
 
   return (
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
-      <PushedHeader title={title} solid={false} grouped />
+      {onClose ? (
+        <View style={styles.sheetBar}>
+          <SheetHeader title={title} onPress={onClose} />
+        </View>
+      ) : (
+        <PushedHeader title={title} solid={false} grouped />
+      )}
       <FlatList
         data={rows}
         keyExtractor={(r) => ("header" in r ? `h:${r.header}` : r.zone)}
@@ -453,6 +397,8 @@ function ZoneRow({
 }
 
 const styles = StyleSheet.create({
+  // The sheet's own bar (the first run): on the 16 margin, clear of the grabber.
+  sheetBar: { paddingHorizontal: 16, paddingTop: 14 },
   fill: { flex: 1 },
   photo: { alignItems: "center", gap: 8, paddingTop: 6, paddingBottom: 14 },
   semibold: { fontWeight: "600" },

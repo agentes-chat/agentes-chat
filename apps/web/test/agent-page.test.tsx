@@ -16,6 +16,7 @@ import {
   type Saved,
 } from "@/lib/agent-edit";
 import { ADA_ID, createFakeApi, ENG_ID, GENERAL_ID, NOW, ORG_ID, seedState } from "./fake-api";
+import { hintOf, shownText } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -257,11 +258,13 @@ describe("agent page: its usage (ADR 0063)", () => {
     expect(week.getAttribute("aria-valuenow")).toBe("41");
     expect(week.querySelector(".ac-meter__part")?.getAttribute("style")).toContain("width: 30%");
     expect(now.textContent).toContain("Parte da Ada: ≈ 30%");
-    expect(now.textContent).toContain("é uma estimativa");
-    // It informs: changing the account is "Quem pensa"'s.
-    expect(within(now).queryByRole("button")).toBeNull();
+    expect(shownText(now)).toContain("Estimativa.");
+    expect(shownText(now)).not.toContain("é uma estimativa");
+    expect(hintOf("Agora", now).text).toContain("a parte de cada agente é uma estimativa");
+    // It informs: changing the account is "Quem pensa"'s. Its one button is the ⓘ.
+    expect(within(now).getAllByRole("button")).toEqual([hintOf("Agora", now).button]);
     const sources = screen().getByRole("region", { name: "Por conta, este mês" });
-    expect(sources.textContent).toContain("≈ US$\u00a076,00 pela API");
+    expect(sources.textContent).toContain("≈ US$\u00a076,00 pelo preço da API");
     expect(sources.textContent).toContain("US$\u00a00,80 pagos");
   });
 
@@ -606,7 +609,18 @@ describe("agent page: inline editing and the save bar", () => {
         .getAllByRole("radio")
         .find((r) => r.getAttribute("aria-checked") === "true")?.textContent;
     expect([level("GitHub"), level("Suporte")]).toEqual(["Sem acesso", "Ler"]);
-    await click(screen().getByRole("button", { name: "Ler e escrever" }));
+    // One quiet action over the list, in the card's head, with the rows' own words.
+    const all = screen().getByRole("button", { name: "Mudar todos" });
+    expect(all.closest(".ac-card__action")).toBeTruthy();
+    await act(async () => fireEvent.pointerDown(all, { button: 0, ctrlKey: false }));
+    await settle(2);
+    const menu = screen().getByRole("menu", { name: "Mudar todos" });
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((r) => r.textContent),
+    ).toEqual(["Sem acesso", "Ler", "Ler e escrever"]);
+    await click(within(menu).getByRole("menuitem", { name: "Ler e escrever" }));
     expect([level("GitHub"), level("Suporte")]).toEqual(["Ler e escrever", "Ler e escrever"]);
     expect(saveBar()?.textContent).toContain("2 alterações");
     await click(within(saveBar() as HTMLElement).getByRole("button", { name: /^Salvar/ }));
@@ -766,12 +780,13 @@ describe("agent page: memory and proposals", () => {
     expect(within(card()).getByText("Um admin decide.")).toBeTruthy();
   });
 
-  test("the side column is one link to how memory works", async () => {
+  test("one column, and under its cards one link to how memory works", async () => {
     await go("?tab=memory");
     const link = screen().getByRole("link", { name: "Como a memória funciona" });
     expect(link.getAttribute("href")).toBe("https://agentes.chat/pt/docs/memory");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
-    expect(link.closest(".agp-col")?.textContent).toBe("Como a memória funciona");
+    expect(link.closest(".agp-cols")?.querySelectorAll(".agp-col")).toHaveLength(1);
+    expect(link.closest(".page__note")?.textContent).toBe("Como a memória funciona");
     const card = screen().getByRole("article", { name: "Atualizar as instruções da Ada" });
     expect(card.textContent).toContain("Recusar ensina a Ada a não propor isso de novo.");
   });
@@ -782,7 +797,7 @@ describe("agent page: memory and proposals", () => {
     expect(
       within(kinds)
         .getAllByRole("radio")
-        // The count is a separate chip (CountChip): no text space between label and number.
+        // The count is a quiet number after the label: no text space between them.
         .map((r) => r.textContent?.replace(/(\D)(\d+)$/, "$1 $2")),
     ).toEqual(["Fatos e decisões 4", "Lições 2", "Aprendizados", "Arquivados 1"]);
     await type(screen().getByRole("searchbox", { name: "Buscar" }), "zzz-nada");
@@ -806,7 +821,8 @@ describe("agent page: memory and proposals", () => {
     );
     const row = screen().getByText("GET the models with the key.").closest("li") as HTMLElement;
     expect(row.textContent).toContain("Como fazer");
-    expect(row.textContent).toContain("Não verificado");
+    // Not verified is the lack of a chip, with Confirmar to change it.
+    expect(row.querySelector(".ac-chip")).toBeNull();
     await click(within(row).getByRole("button", { name: "Esquecer" }));
     expect(state.memories.find((m) => m.id === mine.id)?.archived).toBe(true);
   });
@@ -869,6 +885,13 @@ describe("agent page: memory and proposals", () => {
       within(screen().getByRole("radiogroup", { name: "Tipo" })).getByRole("radio", { name: /Aprendizados/ }),
     );
     const list = screen().getByRole("list", { name: "Como a Ada trabalha" });
+    // Its heading is the kit's list heading, the note behind the ⓘ beside it, not a sentence under it.
+    const group = list.parentElement as HTMLElement;
+    expect(group.querySelector(":scope > .ac-grouphead > h3 > .ac-hintline > :first-child")?.textContent).toBe(
+      "Como a Ada trabalha",
+    );
+    expect(hintText(group, "Como a Ada trabalha")).toStartWith("Jeitos de trabalhar que guardou para si.");
+    expect(group.querySelector(":scope > p")).toBeNull();
     const row = within(list).getByText("Como gravar senhas no Supabase sem expô-las").closest("li") as HTMLElement;
     const details = row.querySelector("details") as HTMLDetailsElement;
     expect(details.open).toBe(false);
@@ -924,6 +947,8 @@ describe("agent page: activity", () => {
     // New input, cached and output tokens per run (the 1.240 of the run, split).
     expect(runs.textContent).toContain("1.140 entrada · 0 cache · 100 saída");
     expect(within(runs).getByRole("region", { name: "Hoje" })).toBeTruthy();
+    // Each day under the kit's list heading, the days 24 apart, as Auditoria's.
+    expect(runs.querySelector(".ac-groups > section > .ac-grouphead")?.textContent).toBe("Hoje");
     const filters = within(runs).getByRole("radiogroup", { name: "Filtrar execuções" });
     await click(within(filters).getByRole("radio", { name: /^Falhas/ }));
     expect(runs.textContent).toContain("roda a suíte de checkout");

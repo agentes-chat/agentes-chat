@@ -24,7 +24,6 @@ import {
 import { relativeTime } from "@agenteschat/client/lib/format";
 import {
   Alert,
-  AvatarStack,
   Button,
   CheckboxPill,
   Chip,
@@ -44,10 +43,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { ConnectedRow } from "@/components/ConnectedRow";
 import { DatabaseRulesPanel } from "@/components/DatabaseRules";
 import { FlowTitle } from "@/components/FlowTitle";
 import { LoadingList, useStepText } from "@/components/Loading";
-import { CommandBlock } from "@/components/Machines";
+import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { reviewNote, ToolReview, type ToolReviewState } from "@/components/ToolReview";
 import { useEdited } from "@/hooks/useEdited";
@@ -273,14 +273,18 @@ function ConnectStep({
               options={DATABASE_PROVIDERS.map((p) => ({ value: p, label: t(`database.provider.${p}`) }))}
             />
           </Field>
-          <Field label={t("connectFlow.name")} id="db-label" help={t("database.nameHelp")}>
+          <Field
+            label={t("connectFlow.name")}
+            id="db-label"
+            hint={{ name: t("common.about", { label: t("connectFlow.name") }), text: t("database.nameHelp") }}
+          >
             <Input
               value={label}
               placeholder={t("database.namePlaceholder")}
               onChange={(e) => setLabel(e.target.value)}
             />
           </Field>
-          <Field label={t("database.url")} id="db-url" help={t("database.urlHelp")} error={urlError}>
+          <Field label={t("database.url")} id="db-url" example={t("database.urlHelp")} error={urlError}>
             <Input
               autoComplete="off"
               data-1p-ignore
@@ -327,14 +331,25 @@ function ConnectStep({
               <Field
                 label={t("database.database")}
                 id="db-database"
-                help={whole ? t("database.databaseOptional") : undefined}
+                hint={
+                  whole
+                    ? {
+                        name: t("common.about", { label: t("database.database") }),
+                        text: t("database.databaseOptional"),
+                      }
+                    : undefined
+                }
               >
                 <Input autoComplete="off" value={database} onChange={(e) => setDatabase(e.target.value)} />
               </Field>
               <Field label={t("mail.username")} id="db-username">
                 <Input autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
               </Field>
-              <Field label={t("database.password")} id="db-password" help={t("mail.passwordHelp")}>
+              <Field
+                label={t("database.password")}
+                id="db-password"
+                hint={{ name: t("common.about", { label: t("database.password") }), text: t("mail.passwordHelp") }}
+              >
                 <Input
                   type="password"
                   // "new-password": the browser must not fill a saved login into this form (it put the
@@ -347,7 +362,7 @@ function ConnectStep({
               <Field
                 label={t("database.ssl")}
                 id="db-ssl"
-                help={sslmode === "disable" ? t("database.sslOffHelp") : undefined}
+                example={sslmode === "disable" ? t("database.sslOffHelp") : undefined}
               >
                 <Select
                   value={sslmode}
@@ -390,7 +405,15 @@ function ScopeFields({
   const { t } = useTranslation();
   return (
     <>
-      <Field label={t("database.scope")} group help={whole ? t("database.scopeAllHelp") : undefined}>
+      <Field
+        label={t("database.scope")}
+        group
+        hint={
+          whole
+            ? { name: t("common.about", { label: t("database.scope") }), text: t("database.scopeAllHelp") }
+            : undefined
+        }
+      >
         <Segmented
           label={t("database.scope")}
           value={whole ? "all" : "one"}
@@ -402,7 +425,11 @@ function ScopeFields({
         />
       </Field>
       {whole && (
-        <Field label={t("database.prefix")} id="db-prefix" help={t("database.prefixHelp")}>
+        <Field
+          label={t("database.prefix")}
+          id="db-prefix"
+          hint={{ name: t("common.about", { label: t("database.prefix") }), text: t("database.prefixHelp") }}
+        >
           <Input
             autoComplete="off"
             spellCheck={false}
@@ -554,7 +581,7 @@ function WhoStep({
               </ul>
             </>
           )}
-          <p className="small muted cflow__asks">
+          <p className="small muted cflow__asks ac-iconline">
             <Icon name="lock" />
             {t("database.readOnly")}
           </p>
@@ -807,13 +834,11 @@ export function DatabaseRow({
         relativeTime(t, i18n.language, connection.createdAt),
       ];
   return (
-    <div className="ac-list__row connected-row ac-mediarow">
-      <span className="ac-mediarow__face">
-        <DatabaseIcon />
-      </span>
-      <span className="ac-mediarow__head">
-        <span className="list-title">
-          <span>{name}</span>
+    <ConnectedRow
+      icon={<DatabaseIcon />}
+      name={name}
+      chips={
+        <>
           {connection.status === "needs_reconnect" ? (
             <Chip icon="alert" tone="waiting">
               {t("mail.status.needs_reconnect")}
@@ -824,33 +849,31 @@ export function DatabaseRow({
             </Chip>
           )}
           <Chip icon="eyeOff">{t("database.readOnlyChip")}</Chip>
-        </span>
-      </span>
-      <div className="ac-mediarow__body">
-        <span className="small muted">{meta.join(" · ")}</span>
-        <span className="connected-row__who small muted">
-          {using.length > 0 && (
-            <AvatarStack>
-              {using.slice(0, 5).map((a) => (
-                <AgentAvatar key={a.id} agentId={a.id} name={a.name} size="xs" />
-              ))}
-            </AvatarStack>
-          )}
-          {using.length > 0
-            ? t("connectors.usedBy", { count: using.length, total: agents.length })
-            : t("connectors.usedByNone")}
-        </span>
-        {admin && (
-          <div className="connected-row__actions">
+        </>
+      }
+      using={using}
+      total={agents.length}
+      details={[meta.join(" · ")]}
+      actions={
+        admin && (
+          <>
             {connection.status === "needs_reconnect" && (
               <Button size="sm" variant="primary" aria-label={t("mail.reconnectName", { name })} onClick={onReconnect}>
                 {t("mail.reconnect")}
               </Button>
             )}
+            <Button variant="link" aria-label={t("connectors.whoName", { name })} onClick={onWho}>
+              {t("connectors.who")}
+            </Button>
+            <Button variant="link" aria-label={t("connectors.toolsName", { name })} onClick={onTools}>
+              {t("connectors.tools")}
+            </Button>
+            <Button variant="link" aria-label={t("database.scopeEditName", { name })} onClick={onScope}>
+              {t("database.scopeEdit")}
+            </Button>
             {connection.wholeServer && (
               <Button
-                size="sm"
-                variant="ghost"
+                variant="link"
                 aria-label={t("database.refreshName", { name })}
                 disabled={servers.refresh.isPending}
                 loading={servers.refresh.isPending}
@@ -859,27 +882,13 @@ export function DatabaseRow({
                 {t("database.refresh")}
               </Button>
             )}
-            <Button size="sm" aria-label={t("connectors.whoName", { name })} onClick={onWho}>
-              {t("connectors.who")}
-            </Button>
-            <Button size="sm" variant="ghost" aria-label={t("database.scopeEditName", { name })} onClick={onScope}>
-              {t("database.scopeEdit")}
-            </Button>
-            <Button size="sm" variant="ghost" aria-label={t("connectors.toolsName", { name })} onClick={onTools}>
-              {t("connectors.tools")}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={t("connectors.disconnectName", { name })}
-              onClick={onDisconnect}
-            >
+            <Button variant="link" aria-label={t("connectors.disconnectName", { name })} onClick={onDisconnect}>
               {t("connectors.disconnect")}
             </Button>
-          </div>
-        )}
-      </div>
-    </div>
+          </>
+        )
+      }
+    />
   );
 }
 
@@ -1059,7 +1068,7 @@ export function DatabaseReconnectDialog({
             <Field
               label={t("database.password")}
               id="db-reconnect-password"
-              help={t("mail.passwordHelp")}
+              hint={{ name: t("common.about", { label: t("database.password") }), text: t("mail.passwordHelp") }}
               error={touched && !password ? t("database.passwordInvalid") : undefined}
             >
               <Input

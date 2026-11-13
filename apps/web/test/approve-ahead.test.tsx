@@ -14,7 +14,7 @@ afterEach(() => cleanup());
 const EXEC = "composio_COMPOSIO_MULTI_EXECUTE_TOOL";
 const TITLE = "Composio: LINKEDIN_PUBLISH_POST";
 /** The same action in the person's words, as the app shows it. */
-const SHOWN = "Publicar post (Linkedin)";
+const SHOWN = "Publicar post (LinkedIn)";
 const RUN_AT = new Date(Date.now() + 26 * 3_600_000).toISOString();
 const WHEN = nextLabel("pt-BR", RUN_AT);
 
@@ -140,7 +140,10 @@ describe("an action approved ahead, on Aprovações", () => {
     expect(pane.querySelector(".ap-card__ahead")?.textContent).toBe(
       `Aprova uma ação futura: roda sozinha ${WHEN}, sem pedir de novo`,
     );
-    expect(pane.querySelector(".ap-bar__text")?.textContent).toBe(`Aprovar agora vale para ${WHEN}.`);
+    expect(pane.querySelector(".ap-bar p")).toBeNull();
+    expect(pane.querySelector("[data-approve]")?.getAttribute("aria-description")).toBe(
+      `Aprovar agora vale para ${WHEN}.`,
+    );
     expect(pane.textContent).not.toContain("Aprovar roda a ação na hora.");
   });
 

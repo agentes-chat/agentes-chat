@@ -95,7 +95,7 @@ describe("Canal", () => {
     expect((box as HTMLTextAreaElement).value).toBe("");
   });
 
-  test("streams an agent reply with the running ring and cursor, then shows the final message", async () => {
+  test("an agent at work: the bar and the running ring say it, none of its words; then its final message, whole", async () => {
     const withDm = seedState();
     seedDm(withDm, { type: "agent", id: ATLAS_ID });
     const { socket } = await open(withDm);
@@ -104,13 +104,15 @@ describe("Canal", () => {
     // Asked in the channel: it answers there, its events carry no thread.
     const run = { threadId: null, runId: "r-9", agentId: ATLAS_ID };
     await ev({ type: "agent.run", ...run, status: "running" });
+    await ev({ type: "agent.typing", ...run });
     await ev({ type: "agent.delta", ...run, seq: 1, text: "Os 401 no Sentry caíram de 312 para" });
     await settle();
-    const streaming = document.querySelector(".ac-msg--streaming");
-    expect(streaming?.textContent).toContain("Atlas");
-    expect(streaming?.textContent).toContain("escrevendo…");
-    expect(streaming?.textContent).toContain("Os 401 no Sentry caíram de 312 para");
-    expect(streaming?.querySelector(".ac-avatar--running")).not.toBeNull();
+    expect(document.querySelector(".ac-msg--streaming")).toBeNull();
+    expect(document.body.textContent).not.toContain("Os 401 no Sentry caíram de 312 para");
+    const bar = document.querySelector('.ac-typing[data-active="true"]') as HTMLElement;
+    expect(bar.textContent).toContain("Atlas");
+    expect(bar.textContent).toContain("escrevendo…");
+    expect(bar.querySelector(".ac-avatar--running")).not.toBeNull();
     // Its DM in the sidebar shows the ring too.
     const nav = screen().getByRole("navigation", { name: "Navegação do workspace" });
     expect(nav.querySelector(".ac-avatar--running")).not.toBeNull();
@@ -321,8 +323,11 @@ describe("Canal", () => {
       "Aprovar sempre",
       "Agora não para todos",
     ]);
-    // What it covers, on a line of its own under the buttons.
-    expect(foot.querySelector(":scope > .ap-always")).not.toBeNull();
+    // Only buttons: what it covers is the button's tip and description.
+    expect([...foot.children].every((el) => el.matches("button, .rq__end"))).toBe(true);
+    expect(within(foot).getByRole("button", { name: "Aprovar sempre" }).getAttribute("aria-description")).toContain(
+      "de agora em diante",
+    );
     await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Ver cada um" })));
     const items = [...card.querySelectorAll(".rq__item")] as HTMLElement[];
     expect(items).toHaveLength(3);
@@ -374,7 +379,7 @@ describe("Canal", () => {
     expect(text).toContain("Month: 2026-12");
   });
 
-  test("a request in the conversation: approve calls the API, shrinks to one line; events update it", async () => {
+  test("a request in the conversation: approve calls the API, the card stays and says who approved; events update it", async () => {
     const r0 = await open();
     const { state, socket } = r0;
     // It lives on the agent message with meta.approvalId: the agent asking, the action in one line.
@@ -388,12 +393,24 @@ describe("Canal", () => {
     await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Aprovar merge" })));
     await settle(4);
     expect(state.calls.find((c) => c.method === "approvals.approve")?.args).toEqual([ORG_ID, "ap-merge", undefined]);
+    // The same card: what it asked and its action stay, and who approved, and when, stand where the buttons were.
     const done = screen().getByRole("group", { name: "Aprovação concluída" });
-    expect(done.textContent).toContain("Aprovado por você: Fazer um merge");
-    expect(done.querySelector(".rq-done__text b")?.textContent).toBe("Fazer um merge");
-    expect(done.querySelector(".rq-done__mark[data-done]")).not.toBeNull();
-    // Nothing behind the line: no reason to show.
-    expect(within(done).queryByRole("button")).toBeNull();
+    expect(done.classList.contains("rq")).toBe(true);
+    expect(done.classList.contains("rq--ended")).toBe(true);
+    expect(done.querySelector(".rq__lead")?.textContent).toBe("Preciso de um ok para seguir:");
+    expect(done.querySelector(".rq__wt b")?.textContent).toBe("Fazer um merge");
+    const answer = done.querySelector(".rq__foot.rq__answer") as HTMLElement;
+    expect(answer.querySelector(".rq__answer-text")?.textContent).toBe("Aprovado por você");
+    expect(answer.querySelector(".rq__answer-time")?.textContent).toBe("agora");
+    expect(answer.querySelector(".rq-done__mark[data-done]")).not.toBeNull();
+    // Nothing left to decide: no button but the one that opens its details, and the bar never brings it back.
+    expect(
+      within(done)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["Ver detalhes"]);
+    expect(done.hasAttribute("data-ask-id")).toBe(false);
+    expect(done.hasAttribute("data-ask-mine")).toBe(false);
     // Someone else refuses another approval: the event updates the card live.
     const deploy = {
       ...state.approvals[1],
@@ -480,7 +497,7 @@ describe("Canal", () => {
     expect(expired.querySelector(".rq-done__mark[data-done]")).toBeNull();
   }, 15_000);
 
-  test("a refused request is one line: 'Ver detalhes' opens its reason under the line and closes it", async () => {
+  test("a refused request keeps its card: 'Ver detalhes' opens its reason with the action and closes it", async () => {
     const state = seedState();
     const merge = state.approvals.find((a) => a.id === "ap-merge");
     if (merge)
@@ -493,14 +510,15 @@ describe("Canal", () => {
     await open(state);
     await settle(2);
     const line = screen().getByRole("group", { name: "Pedido recusado" });
-    expect(line.textContent).toContain("Recusado por você: Fazer um merge");
+    expect(line.querySelector(".rq__wt b")?.textContent).toBe("Fazer um merge");
+    expect(line.querySelector(".rq__answer-text")?.textContent).toBe("Recusado por você");
     expect(line.querySelector(".rq-done__mark[data-done]")).toBeNull();
     expect(line.textContent).not.toContain("Falta a revisão.");
     const see = within(line).getByRole("button", { name: "Ver detalhes" });
     expect(see.getAttribute("aria-expanded")).toBe("false");
     await act(async () => fireEvent.click(see));
     expect(see.getAttribute("aria-expanded")).toBe("true");
-    expect(line.querySelector(".rq__details")?.textContent).toBe("Motivo: Falta a revisão.");
+    expect(line.querySelector(".rq__details")?.textContent).toContain("Motivo: Falta a revisão.");
     await act(async () => fireEvent.click(see));
     expect(see.getAttribute("aria-expanded")).toBe("false");
     expect(line.querySelector(".rq__details")).toBeNull();
@@ -513,7 +531,8 @@ describe("Canal", () => {
     await open(state);
     await settle(2);
     const line = screen().getByRole("group", { name: "Pedido cancelado" });
-    expect(line.textContent).toContain("Cancelado: Fazer um merge");
+    expect(line.querySelector(".rq__wt b")?.textContent).toBe("Fazer um merge");
+    expect(line.querySelector(".rq__answer-text")?.textContent).toBe("Cancelado");
     expect(line.querySelector(".rq-done__mark[data-done]")).toBeNull();
   });
 
@@ -546,6 +565,24 @@ describe("Canal", () => {
     expect(within(dialog).queryByRole("searchbox", { name: "Buscar pessoa ou agente" })).toBeNull();
   });
 
+  test("counts read as the person's language writes them, on the reply's bar and in its pills: 1.284", async () => {
+    const state = seedState();
+    const reply = state.messages.find((m) => m.id === "m-2") as { reactions?: unknown };
+    reply.reactions = [
+      { reaction: "+1", count: 1284, userIds: ["u-walter"] },
+      { reaction: "-1", count: 37, userIds: ["u-x"] },
+    ];
+    await open(state);
+    const row = screen()
+      .getAllByRole("article")
+      .find((a) => a.textContent?.includes("Achei a causa")) as HTMLElement;
+    const bar = within(row).getByRole("toolbar", { name: "Ações da mensagem de Ada" });
+    const counts = [...bar.querySelectorAll(".ac-msg__reaction-count")].map((c) => c.textContent);
+    expect(counts).toEqual(["1.284", "37"]);
+    const pills = [...row.querySelectorAll(".ac-reacts .ac-react .tabular")].map((c) => c.textContent);
+    expect(pills).toEqual(["1.284", "37"]);
+  });
+
   test("agent replies: 👍/👎 toggle with the API and Corrigir resposta sends a correction", async () => {
     const { state } = await open();
     const reply = screen()
@@ -558,7 +595,11 @@ describe("Canal", () => {
     await act(async () => fireEvent.click(up));
     await settle(4);
     expect(state.calls.find((c) => c.method === "chat.react")?.args).toEqual([ORG_ID, "m-2", "+1"]);
-    expect(within(bar).getByRole("button", { name: "Útil" }).getAttribute("aria-pressed")).toBe("true");
+    const pressed = within(bar).getByRole("button", { name: "Útil" });
+    expect(pressed.getAttribute("aria-pressed")).toBe("true");
+    // Pressed with its count: one plate around the icon and the "1", never the square of an icon alone.
+    expect(pressed.querySelector(".ac-msg__reaction-count")?.textContent).toBe("1");
+    expect(pressed.classList.contains("ac-btn--icon")).toBe(false);
     // 👎 replaces 👍.
     await act(async () => fireEvent.click(within(bar).getByRole("button", { name: "Não ajudou" })));
     await settle(4);

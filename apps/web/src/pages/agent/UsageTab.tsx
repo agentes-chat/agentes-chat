@@ -9,7 +9,18 @@ import {
   joinNames,
 } from "@agenteschat/client/lib/format";
 import { apiProviderOf } from "@agenteschat/client/lib/providers";
-import { Card, CardFooter, Icon, Meter, PlanMeter, ProviderLogo, UsageDays, UsageSwatch } from "@agenteschat/ui";
+import {
+  Card,
+  CardFooter,
+  HintLine,
+  Icon,
+  InfoHint,
+  Meter,
+  PlanMeter,
+  ProviderLogo,
+  UsageDays,
+  UsageSwatch,
+} from "@agenteschat/ui";
 import { type CSSProperties, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingList } from "@/components/Loading";
@@ -106,7 +117,17 @@ function Month({ data, tones }: { data: AgentPlanUsage; tones: Map<string, CSSPr
               ),
             })}
             {typeof data.equivalentUsd === "number" && data.equivalentUsd > 0 && (
-              <> {t("usageViews.agent.equivalent", { amount: formatUsd(i18n.language, data.equivalentUsd) })}</>
+              <>
+                {" "}
+                <span className="ac-hintline">
+                  <span>
+                    {t("usageViews.agent.equivalent", { amount: formatUsd(i18n.language, data.equivalentUsd) })}
+                  </span>
+                  <InfoHint name={t("common.about", { label: t("usageViews.apiPrice") })}>
+                    {t("usageViews.apiPriceHint")}
+                  </InfoHint>
+                </span>
+              </>
             )}
           </p>
           <div>
@@ -166,7 +187,14 @@ function Now({ data }: { data: AgentPlanUsage }) {
       ) : (
         <p className="plan-empty">{noWindowsText(t, current)}</p>
       )}
-      <CardFooter>{t("usageViews.agent.estimate", { ...g, brand: brandOf(current) })}</CardFooter>
+      <CardFooter icon={null}>
+        <HintLine
+          name={t("common.about", { label: t("usageViews.agent.now") })}
+          hint={t("usageViews.agent.estimate", { ...g, brand: brandOf(current) })}
+        >
+          {t("usageViews.agent.estimateShort")}
+        </HintLine>
+      </CardFooter>
     </Card>
   );
 }
@@ -236,7 +264,17 @@ function BySource({ data }: { data: AgentPlanUsage }) {
               />
               <span className="plan-source__n">
                 <b>{formatTokensShort(t, i18n.language, s.tokens)}</b>
-                {money && <small>{money}</small>}
+                {money &&
+                  (s.type !== "api" && typeof s.equivalentUsd === "number" ? (
+                    <small className="ac-hintline">
+                      <span>{money}</span>
+                      <InfoHint name={t("common.about", { label: t("usageViews.apiPrice") })}>
+                        {t("usageViews.apiPriceHint")}
+                      </InfoHint>
+                    </small>
+                  ) : (
+                    <small>{money}</small>
+                  ))}
               </span>
             </div>
           );

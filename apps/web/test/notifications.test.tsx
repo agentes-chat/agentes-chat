@@ -123,7 +123,7 @@ const go = async (state: FakeState = seedState({ notifications: inbox() })) => {
 };
 
 describe("Notificações", () => {
-  test("how many are unread is under the title from the first paint, before the list arrives", async () => {
+  test("how many are unread is on the title's row from the first paint, before the list arrives", async () => {
     const state = seedState({
       notifications: [notification({ id: "n-a", kind: "mention" }), notification({ id: "n-b", kind: "mention" })],
     });
@@ -133,19 +133,20 @@ describe("Notificações", () => {
     await renderApp(`/org/${ORG_ID}/notifications`, { api });
     await settle(4);
     const title = screen().getByRole("heading", { level: 1, name: "Notificações" });
-    expect(title.nextElementSibling?.className).toBe("ac-pagehead__meta");
+    expect(title.nextElementSibling?.className).toBe("ac-pagehead__count");
     expect(title.nextElementSibling?.textContent).toContain("2 não lidas");
   });
 
   test("waiting on top with the agent looking up, the rest by day, filters with counts, the badge and the tab title", async () => {
     await go();
     const title = screen().getByRole("heading", { level: 1, name: "Notificações" });
-    // How many are unread: the header's line, right under the title.
-    expect(title.nextElementSibling?.className).toBe("ac-pagehead__meta");
+    // How many are unread: on the title's row, right after it, and no line under the title.
+    expect(title.nextElementSibling?.className).toBe("ac-pagehead__count");
     expect(title.nextElementSibling?.textContent).toContain("3 não lidas");
+    expect(document.querySelector(".ac-pagehead__meta")).toBeNull();
     const waiting = screen().getByRole("region", { name: "Esperando você" });
     // The day groups' head: the title and how many, nothing else.
-    expect(waiting.querySelector(".list-group-head")?.textContent).toBe("Esperando você1");
+    expect(waiting.querySelector(".ac-grouphead")?.textContent).toBe("Esperando você1");
     // The question as the conversation's request card, stopped until I answer.
     const card = waiting.querySelector(".rq") as HTMLElement;
     expect(card.querySelector(".rq__kind")?.textContent).toContain("Pergunta");
@@ -166,7 +167,8 @@ describe("Notificações", () => {
     // My own @mention is highlighted.
     expect(today.querySelector(".ac-mention")?.textContent).toBe("@walter");
     // The list ends with its last day: no note under it.
-    expect(document.querySelector(".nt")?.lastElementChild?.getAttribute("aria-label")).toBe("Ontem");
+    expect(document.querySelector(".nt > .ac-groups")?.lastElementChild?.getAttribute("aria-label")).toBe("Ontem");
+    expect(document.querySelector(".nt")?.lastElementChild?.matches(".ac-groups")).toBe(true);
     const filters = screen().getByRole("radiogroup", { name: "Filtrar notificações" });
     expect(within(filters).getByRole("radio", { name: /Tudo/ }).textContent).toContain("4");
     expect(within(filters).getByRole("radio", { name: /Não lidas/ }).textContent).toContain("3");
@@ -177,6 +179,42 @@ describe("Notificações", () => {
     await settle(4);
     expect(screen().queryByRole("region", { name: "Esperando você" })).toBeNull();
     expect(document.body.textContent).toContain("reagiram à sua mensagem");
+  });
+
+  test("each chip says its thing once: a channel's name after its #, a task's move with its arrow in the words", async () => {
+    const items = [
+      notification({
+        id: "n-mention",
+        kind: "mention",
+        actors: [{ type: "user", id: "u-joao" }],
+        source: { channelId: ENG_ID, messageId: "m-1" },
+        latest: { text: "@walter dá uma olhada no deploy das 9h?" },
+        updatedAt: ago(3),
+      }),
+      notification({
+        id: "n-move",
+        kind: "issue_status",
+        actors: [{ type: "agent", id: ADA_ID }],
+        source: { issueId: "issue-131", issueNumber: 131 },
+        latest: { title: "Corrigir o login com Google", statusFrom: "in_progress", statusTo: "in_review" },
+        updatedAt: ago(6),
+      }),
+      ...inbox().filter((n) => n.kind === "reaction"),
+    ];
+    await go(seedState({ notifications: items }));
+    const chips = [...document.querySelectorAll<HTMLElement>(".nt-tags .ac-chip")];
+    // The channel's # is its icon: the words show the bare name, a screen reader still hears "#eng".
+    const channel = chips.find((c) => c.querySelector(".ac-chip__text")?.textContent === "#eng");
+    expect(channel?.querySelector("svg.ac-icon")).not.toBeNull();
+    expect(channel?.querySelector(".ac-chip__text > .ac-visually-hidden")?.textContent).toBe("#");
+    expect(channel?.querySelector(".ac-chip__text")?.lastChild?.textContent).toBe("eng");
+    const move = chips.find((c) => c.textContent === "Em andamento → Em revisão");
+    expect(move).toBeTruthy();
+    expect(move?.querySelector("svg")).toBeNull();
+    expect(chips.find((c) => c.textContent === "Tarefa #131")?.querySelector("svg.ac-icon")).not.toBeNull();
+    // The kit's chips as they are (22 high, words 12): the inbox sizes none of its own.
+    const sheet = await Bun.file(new URL("../src/pages/notifications.css", import.meta.url).pathname).text();
+    expect(sheet).not.toMatch(/\.nt-tags \.ac-chip[^{]*\{/);
   });
 
   test("an approval is the conversation's card: the agent's why, the action in its well, who asked behind Ver detalhes", async () => {
@@ -259,6 +297,24 @@ describe("Notificações", () => {
     expect(post?.args[1]).toBe(ENG_ID);
     expect(post?.args[2]).toMatchObject({ body: "Sobe sim, às 17h.", threadId: "m-1" });
     expect(row.textContent).toContain("Você respondeu: Sobe sim, às 17h.");
+  });
+
+  test("in a workspace being deleted, an inline reply says why it takes nothing, and Cancelar closes it", async () => {
+    const state = seedState({ notifications: inbox() });
+    if (!state.me) throw new Error("signed in");
+    state.me.organizations = state.me.organizations.map((o) => ({
+      ...o,
+      deletion: { dueAt: new Date(Date.now() + 6 * 86_400_000).toISOString(), requestedAt: ago(60), requestedBy: null },
+    }));
+    await go(state);
+    const row = document.querySelector('[data-n="n-thread"]') as HTMLElement;
+    await click(within(row).getByRole("button", { name: "Responder" }));
+    expect(within(row).queryByRole("textbox")).toBeNull();
+    expect(within(row).getByRole("status").textContent).toBe(
+      "Você não pode enviar mensagens enquanto este workspace está sendo apagado",
+    );
+    await click(within(row).getByRole("button", { name: "Cancelar" }));
+    expect(within(row).queryByRole("status")).toBeNull();
   });
 
   test("grouped task comments expand from the task's conversation (ADR 0145)", async () => {
@@ -505,7 +561,7 @@ describe("a new computer connected (ADR 0036, admins)", () => {
     expect(row.textContent).toContain("Computador");
     await click(within(row).getByRole("button", { name: "Abrir" }));
     await settle(4);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/computers/m-9`);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/m-9`);
   });
 });
 
@@ -535,7 +591,7 @@ describe("someone gave an agent the person's plan (ADR 0059 §3)", () => {
 });
 
 describe("an agent's model left its plan's list", () => {
-  test("which model, which plan, what runs now; Escolher outro modelo opens the agent's Quem pensa", async () => {
+  test("which model, which plan, what runs now; Escolher outro modelo opens the agent's Quem pensa on its model", async () => {
     const dropped = notification({
       id: "n-dropped",
       kind: "plan_model_dropped",
@@ -552,7 +608,12 @@ describe("an agent's model left its plan's list", () => {
     await click(within(row).getByRole("button", { name: "Escolher outro modelo" }));
     await settle(8);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/agents/${ADA_ID}`);
-    expect(screen().getByRole("dialog", { name: "Quem pensa" })).toBeTruthy();
+    // Straight on the model's screen, its models to pick from; back leads to the dialog's first screen.
+    const d = screen().getByRole("dialog", { name: "Modelo da Ada" });
+    expect(within(d).getByRole("radiogroup", { name: "Modelo da Ada" })).toBeTruthy();
+    await click(within(d).getByRole("button", { name: "Voltar" }));
+    await settle(4);
+    expect(screen().getByRole("dialog", { name: "Quem pensa pela Ada" })).toBe(d);
   });
 });
 
@@ -709,10 +770,13 @@ describe("its computer is ready: what comes next", () => {
     const row = () => document.querySelector('[data-n="n-ready"]') as HTMLElement;
     await click(within(row()).getByRole("button", { name: "Abrir" }));
     await settle(8);
-    const dialog = screen().getByRole("dialog", { name: "Conectar uma IA" });
+    // Connect for the team; Claude's steps say the computer is ready first.
+    const dialog = screen().getByRole("dialog", { name: "Conectar uma IA para o time" });
+    await click(within(dialog).getByRole("button", { name: /^Claude/ }));
+    await settle(4);
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
     expect(panel.textContent).toContain("O computador está pronto.");
-    expect((within(panel).getByRole("button", { name: "Entrar com Claude" }) as HTMLButtonElement).disabled).toBe(
+    expect((within(dialog).getByRole("button", { name: "Entrar com Claude" }) as HTMLButtonElement).disabled).toBe(
       false,
     );
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
@@ -725,7 +789,7 @@ describe("its computer is ready: what comes next", () => {
     const other = await go(seedState({ notifications: [ready] }));
     await click(within(row()).getByRole("button", { name: "Abrir" }));
     await settle(4);
-    expect(other.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/computers/m-9`);
+    expect(other.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/m-9`);
   });
 
   test("a plain click opens Connect an AI while no agent has one; then the computer's page, and on a phone it picks the row first", async () => {
@@ -740,7 +804,8 @@ describe("its computer is ready: what comes next", () => {
     const row = () => document.querySelector('[data-n="n-ready"]') as HTMLElement;
     await click(row().querySelector(".nt-what") as HTMLElement);
     await settle(8);
-    expect(screen().getByRole("dialog", { name: "Conectar uma IA" })).toBeTruthy();
+    // Nobody named: Connect for the team (ADR 0160, addendum), Ada being the one without an AI.
+    expect(screen().getByRole("dialog", { name: "Conectar uma IA para o time" })).toBeTruthy();
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
     expect(state.calls.filter((c) => c.method === "notifications.read").map((c) => c.args)).toEqual([
       [ORG_ID, "n-ready", true],
@@ -751,7 +816,7 @@ describe("its computer is ready: what comes next", () => {
     const wide = await go(seedState({ notifications: [ready()] }));
     await click(row());
     await settle(4);
-    expect(wide.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/computers/m-9`);
+    expect(wide.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/m-9`);
     cleanup();
 
     // On a phone the first tap picks the row as any row's does, so Feito and Lembrar depois (shown by that tap) stay
@@ -773,7 +838,7 @@ describe("its computer is ready: what comes next", () => {
       for (const name of ["Feito", "Lembrar depois"]) expect(within(row()).getByRole("button", { name })).toBeTruthy();
       await click(within(row()).getByRole("button", { name: "Abrir" }));
       await settle(4);
-      expect(other.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/computers/m-9`);
+      expect(other.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/m-9`);
     } finally {
       window.matchMedia = matchMedia;
     }
@@ -985,6 +1050,8 @@ describe("Esperando você: what only points somewhere is a card of the requests'
     // box, so a wrap never splits it, and its margin pushes it to the end. The kit spaces what is in it.
     expect(value(".ac-acts > .ac-acts", "display", kit)).toBe("contents");
     expect(value(".rq__end > .nt-tail.ac-acts", "display")).toBe("flex");
+    // The last button's plate keeps 8 from the card's edge: no pull past the footer's padding.
+    expect(value(".rq__end > .nt-tail.ac-acts", "margin-right")).toBeUndefined();
     expect(css).not.toMatch(/\.nt-tail(?:\.ac-acts)? > [^{]*\{[^}]*margin/);
     // What only points somewhere is a request card itself: no corners or padding of its own, its face on the kind's
     // line as every waiting item's.
@@ -994,11 +1061,9 @@ describe("Esperando você: what only points somewhere is a card of the requests'
     expect(px(".nt-wi > .nt-face", "top")).toBe(12);
     expect(value(".nt-wr .rq__lead.nt-what", "white-space")).toBe("normal");
     expect(value(".nt-wr__sub", "-webkit-line-clamp")).toBe("2");
-    // On a phone the tap opens: Open leaves the eye but stays a button for screen readers and the keyboard. The faces
-    // keep their size.
+    // On a phone Open stays in the card's foot, a button like the others, never hidden. The faces keep their size.
     expect(css).not.toMatch(/\.nt-wr__open[^{]*\{[^}]*display: none/);
-    expect(value(".nt-wr__open:not(:focus-visible)", "position", phone)).toBe("absolute");
-    expect(value(".nt-wr__open:not(:focus-visible)", "clip-path", phone)).toBe("inset(50%)");
+    expect(rule(".nt-wr__open:not(:focus-visible)", phone)).toBe("");
     expect(rule(".nt-av28", phone)).toBe("");
     expect(value(".nt-wi", "grid-template-columns", phone)).toBeUndefined();
     // A day's row clips: its ring goes inside. A waiting item is a face and a card, its ring around it.

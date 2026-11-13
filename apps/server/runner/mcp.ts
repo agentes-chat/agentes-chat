@@ -17,6 +17,7 @@ import {
   PUSH_ASK_RULES,
   SECRET_BASH_DENY_RULES,
   SECRET_READ_DENY_RULES,
+  unaskedMessage,
 } from "@agenteschat/adapters/command-policy";
 import {
   isSafeRule,
@@ -104,6 +105,7 @@ export interface DelegatedSurface {
   profile: CommandProfile;
   branches?: readonly string[];
   /** `PromptContext`'s. */
+  asks?: "always" | "never";
   task?: boolean;
   local?: boolean;
   /** `id`: the JSON-RPC request's, for `cancel`. `ask`: the bridge, for the permission prompt. */
@@ -449,7 +451,12 @@ export class McpBridge {
     const known = info.serverToken ? TOOL_NAME.test(tool) : MISSION_MCP_TOOLS.some((t) => t.name === tool);
     if (!known) return { ok: false, error: `Unknown tool ${tool}` };
     const given = req.args && typeof req.args === "object" && !Array.isArray(req.args) ? req.args : {};
-    if (JSON.stringify(given).length > MCP_ARGS_MAX_CHARS) return { ok: false, error: "The arguments are too large." };
+    if (JSON.stringify(given).length > MCP_ARGS_MAX_CHARS) {
+      return {
+        ok: false,
+        error: `The arguments are too large (more than ${MCP_ARGS_MAX_CHARS / (1024 * 1024)} MB). Keep big content in a file in your folder: to change a repository, commit and push it with git.`,
+      };
+    }
     // Secrets never leave the machine through our tools (the server masks again).
     const args = (info.redact ? redactDeep(given, info.redact) : given) as Record<string, unknown>;
     const pathArg = PATH_ARGS[tool];
@@ -566,6 +573,7 @@ export class McpBridge {
       profile: delegated.profile,
       context: {
         ...(delegated.branches ? { branches: delegated.branches } : {}),
+        ...(delegated.asks ? { asks: delegated.asks } : {}),
         ...(delegated.task ? { task: true } : {}),
         ...(delegated.local ? { local: true } : {}),
         delegated,
@@ -877,6 +885,12 @@ export interface PromptContext {
   task?: boolean;
   /** Nobody answers beyond this computer (a background task outside a mission): an ordinary push goes through here. */
   local?: boolean;
+  /**
+   * How much the agent asks, when it isn't the default (`BrainTurnRequest.permissions.asks`). `always`: nothing but a
+   * read is decided here, a push to its own branches included. `never`: a held command is refused with where it
+   * runs (`unaskedMessage`).
+   */
+  asks?: "always" | "never";
 }
 
 /** What an MCP process serves besides the server's tools. */
@@ -922,17 +936,20 @@ export async function permissionPrompt(
   if (!toolName) return { behavior: "deny", message: "Unknown tool." };
   const how = opts.task ? ASK_AFTER_TASK : ASK_IN_CHAT;
   const verdict = localVerdict(toolName, input, opts.scope, opts.profile ?? "work", how);
-  if (verdict?.behavior === "deny") return verdict;
+  // A background task's executor has no run_code to be pointed to: it keeps "stop and say so".
+  const said = (message: string) => (opts.asks === "never" && !opts.task ? unaskedMessage(message) : message);
+  if (verdict?.behavior === "deny") return { behavior: "deny", message: said(verdict.message) };
   if (verdict?.behavior === "allow") return { behavior: "allow", updatedInput: input };
   if (toolName === "Bash" && typeof input.command === "string") {
     const own = opts.branches ?? [];
     const cwd = opts.scope?.cwd ?? null;
     const held = await commandApproval(input.command, { cwd, own, how, script: true });
-    if (held) return { behavior: "deny", message: held.message };
+    if (held) return { behavior: "deny", message: held.never ? held.message : said(held.message) };
     // A push alone to its own branches, or through our git proxy (which decides someone else's branch with a
-    // person's grant, so no card here asks first).
+    // person's grant, so no card here asks first). An agent that always asks is asked for these too.
     const push = lonePush(input.command);
-    if (push && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
+    const alone = opts.local || opts.asks !== "always";
+    if (push && alone && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
       return { behavior: "allow", updatedInput: input };
     }
   }
@@ -1115,13 +1132,19 @@ export function mcpScopeFromEnv(env: NodeJS.ProcessEnv): CommandScope | undefine
   if (!cwd || !path.isAbsolute(cwd)) return undefined;
   const folders = (env.AGENTES_MCP_FOLDERS ?? "").split(path.delimiter).filter((f) => f && path.isAbsolute(f));
   const runnerHome = env.AGENTES_RUNNER_HOME?.trim();
+  // Windows has no HOME, as a rule: the home is USERPROFILE (without one, `~` would read as the agent's folder).
+  const home = env.HOME || (process.platform === "win32" ? env.USERPROFILE : undefined);
   return {
     cwd,
     folders: folders.length ? folders : [cwd],
-    ...(env.HOME ? { home: env.HOME } : {}),
+    ...(home ? { home } : {}),
     ...(runnerHome && path.isAbsolute(runnerHome) ? { runnerHome } : {}),
   };
 }
+
+/** `permissions.asks` of a turn, as the server sent it or as our MCP process's env carries it (`AGENTES_MCP_ASKS`). */
+export const turnAsks = (value: unknown): "always" | "never" | undefined =>
+  value === "always" || value === "never" ? value : undefined;
 
 /** The turn's permission profile for our MCP process (`AGENTES_MCP_PROFILE`): anything but `plan` is `work`. */
 export const mcpProfileFromEnv = (env: NodeJS.ProcessEnv): CommandProfile =>
@@ -1135,8 +1158,10 @@ export const mcpProfileFromEnv = (env: NodeJS.ProcessEnv): CommandProfile =>
 export function mcpContextFromEnv(env: NodeJS.ProcessEnv): PromptContext {
   const branches = (env.AGENTES_MCP_BRANCHES ?? "").split(",").filter((b) => /^[A-Za-z0-9/_.-]+\/$/.test(b));
   const task = env.AGENTES_MCP_TASK;
+  const asks = turnAsks(env.AGENTES_MCP_ASKS);
   return {
     ...(branches.length ? { branches } : {}),
+    ...(asks ? { asks } : {}),
     ...(task === "mission" || task === "local" ? { task: true } : {}),
     ...(task === "local" ? { local: true } : {}),
   };
@@ -1167,6 +1192,8 @@ export function claudeMcpConfig(input: {
   branches?: readonly string[];
   /** A background task's executor: a mission's, or one outside a mission (`local`: only the prompt, answered here). */
   task?: "mission" | "local";
+  /** `PromptContext.asks`. */
+  asks?: "always" | "never";
   /** A delegated CLI: the byte relay to the agent's worker, which serves MCP itself (`runMcpRelay`). */
   relay?: boolean;
 }) {
@@ -1187,6 +1214,7 @@ export function claudeMcpConfig(input: {
           ...(input.runnerHome ? { AGENTES_RUNNER_HOME: input.runnerHome } : {}),
           ...(input.branches?.length ? { AGENTES_MCP_BRANCHES: input.branches.join(",") } : {}),
           ...(input.task ? { AGENTES_MCP_TASK: input.task } : {}),
+          ...(input.asks ? { AGENTES_MCP_ASKS: input.asks } : {}),
         },
       },
     },
@@ -1395,6 +1423,11 @@ export function claudePermissionSettings(
     promptReads?: boolean;
     /** The runner's home when it isn't under `.agentes-runner` (system mode): read by no tool or command either. */
     runnerHome?: string;
+    /**
+     * The agent always asks (ADR 0173): a `work` turn allows only what reads, so every edit and every other command
+     * reaches our prompt tool, and from there the server.
+     */
+    asksFirst?: boolean;
   } = {},
 ) {
   const shellReads = opts.promptReads ? [] : readOnlyShell();
@@ -1423,6 +1456,15 @@ export function claudePermissionSettings(
         ],
         ask: [...PUSH_ASK_RULES],
         deny: [...PLAN_DENY, ...ALWAYS_DENY_RULES, ...homeDeny],
+      },
+    };
+  }
+  if (opts.asksFirst) {
+    return {
+      permissions: {
+        allow: ["mcp__agentes", ...shellReads, ...missionFolderRules(missionFolder, ["Read"])],
+        ask: [...PUSH_ASK_RULES],
+        deny: [...ALWAYS_DENY_RULES, ...homeDeny],
       },
     };
   }

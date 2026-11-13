@@ -7,6 +7,7 @@ import {
   useConsultations,
 } from "@agenteschat/client";
 import {
+  asExchanges,
   type ConsultLineState,
   type ConsultPairItem,
   consultLineKey,
@@ -59,8 +60,9 @@ const NO_REACHED: ReadonlySet<string> = new Set();
 
 /**
  * The questions a pair row stands for: those of run `runId` on the run's first message here (`messageId`; null: its
- * live turn, which shows them until the run posts), and those a reply's `meta.consulted` names that the list
- * doesn't have. `reached`: hand-offs the message's reach lines show (`reachHandoffs`), left out here.
+ * live turn, which shows them until the run posts), with the rest of their exchange when `runId` asked first
+ * (`asExchanges`), and those a reply's `meta.consulted` names that the list doesn't have. `reached`: hand-offs the
+ * message's reach lines show (`reachHandoffs`), left out here.
  */
 export function useRunConsults(
   runId: string | null | undefined,
@@ -72,7 +74,11 @@ export function useRunConsults(
   const orgId = useOrgId();
   const qc = useQueryClient();
   const list = useConsultations(orgId, where.channelId, Boolean(runId));
-  const group = useMemo(() => (runId ? groupsByRun(list.data ?? []).get(runId) : undefined), [list.data, runId]);
+  const group = useMemo(
+    () => (runId ? groupsByRun(asExchanges(list.data ?? [])).get(runId) : undefined),
+    [list.data, runId],
+  );
+  const listed = useMemo(() => new Set((list.data ?? []).map((c) => c.id)), [list.data]);
   const loaded =
     group && runId
       ? [
@@ -85,10 +91,10 @@ export function useRunConsults(
   const draws = group !== undefined && (messageId === null ? first === null : !first || first === messageId);
   return useMemo(() => {
     const run = group ?? NO_ITEMS;
-    const extra = consulted.filter((c) => !run.some((r) => r.id === c.consultationId)).map(pairItemOf);
+    const extra = consulted.filter((c) => !listed.has(c.consultationId)).map(pairItemOf);
     const mine = !draws ? NO_ITEMS : reached.size === 0 ? run : run.filter((c) => !reached.has(c.id));
     return extra.length === 0 ? mine : [...mine, ...extra];
-  }, [group, consulted, draws, reached]);
+  }, [group, listed, consulted, draws, reached]);
 }
 
 /**
@@ -133,7 +139,7 @@ export function ConsultPairRow({
   const c = useColors();
   const live = items.some((x) => x.status === "open");
   const now = useTick(live);
-  const pair = consultPair(items, now);
+  const pair = consultPair(items, now, askerId);
   if (!pair) return null;
   const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("mobile.chat.someone");
   const from = nameOf(askerId);
@@ -168,7 +174,7 @@ export function ConsultPairRow({
         style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.plate }]}
       >
         <AgentFace agentId={askerId} size={FACE} live={false} />
-        <Text variant="footnote" tone="ink2" style={styles.name} numberOfLines={1} ellipsizeMode="clip">
+        <Text variant="footnote" tone="ink2" style={styles.name}>
           {from}
         </Text>
         <Icon name="swap" size={13} color={pair.tone === "live" ? c.agent : c.faint} />
@@ -179,7 +185,7 @@ export function ConsultPairRow({
             </View>
           ))}
         </View>
-        <Text variant="footnote" tone="ink2" style={styles.name} numberOfLines={1} ellipsizeMode="clip">
+        <Text variant="footnote" tone="ink2" style={styles.name}>
           {to}
         </Text>
         {pair.word || pair.seconds !== null ? (
@@ -188,12 +194,7 @@ export function ConsultPairRow({
           </Text>
         ) : null}
         {pair.word ? (
-          <Text
-            variant="footnote"
-            style={[styles.word, { color: pair.tone === "bad" ? c.warn : c.agent }]}
-            numberOfLines={1}
-            ellipsizeMode="clip"
-          >
+          <Text variant="footnote" style={[styles.word, { color: pair.tone === "bad" ? c.warn : c.agent }]}>
             {t(pair.word.key, pair.word.values)}
           </Text>
         ) : null}
@@ -219,10 +220,14 @@ const styles = StyleSheet.create({
   // Across the conversation, the two agents on its middle: a line, as the day and "Novas" are.
   line: { flexDirection: "row", alignItems: "center" },
   rule: { flex: 1, minWidth: 16, height: StyleSheet.hairlineWidth },
+  // Names never cut: what doesn't fit wraps onto a second line, on the row's middle.
   row: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 6,
+    columnGap: 6,
+    rowGap: 2,
     minHeight: 28,
     paddingHorizontal: ROW_INSET,
     borderRadius: 10,

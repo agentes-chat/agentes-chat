@@ -3,6 +3,7 @@ import {
   ACCOUNT_LOGIN_TTL_MS,
   ACCOUNTS_PROTOCOL,
   type AccountKind,
+  type AccountLoginFailure,
   type AccountLoginState,
   ANTIGRAVITY_PROTOCOL,
   type AuthMethod,
@@ -15,6 +16,7 @@ import {
   GROK_PROTOCOL,
   isAccountId,
   isAccountKind,
+  isAccountLoginFailure,
   isClaudeLoginMethod,
   isLoginEmail,
   MAX_MACHINE_ACCOUNTS,
@@ -33,6 +35,7 @@ import {
   type RunnerAccountInfo,
   SHARED_ACCOUNTS_PROTOCOL,
   SHARED_CODEX_PROTOCOL,
+  SHARED_GEMINI_PROTOCOL,
 } from "@agenteschat/adapters";
 import {
   and,
@@ -75,6 +78,7 @@ import {
 import { recordAccountFailure } from "./operator-events";
 import { can, requirePermission } from "./organizations";
 import { runnerUpdateWay } from "./runner-update";
+import { scrubSignIns } from "./tool-detail";
 import { wakeOnRoom } from "./usage-pause";
 
 const { machineAccounts, agents, machines, rightHandBrains, users } = schema;
@@ -167,6 +171,11 @@ export interface MachineAccountDeps {
 
 export interface MachineAccountHubDeps extends MachineAccountDeps {
   hub: Pick<MachineCaller, "call" | "status">;
+  /** A sign-in that failed on the computer is logged here (an error line is reported, ADR 0104). */
+  log?: {
+    error(message: string, data?: Record<string, unknown>): void;
+    warn(message: string, data?: Record<string, unknown>): void;
+  };
 }
 
 const kindOf = (row: Pick<MachineAccountRow, "kind">): AccountKind =>
@@ -852,10 +861,14 @@ export async function refreshAiAccounts(deps: MachineAccountHubDeps, userId: str
   );
 }
 
+/** The runner protocol from which a sign-in of that kind can be made for all agents where each is its own OS user. */
+const sharedSignInProtocol = (kind: string) =>
+  kind === "codex" ? SHARED_CODEX_PROTOCOL : kind === "antigravity" ? SHARED_GEMINI_PROTOCOL : SHARED_ACCOUNTS_PROTOCOL;
+
 /**
  * Whether a new sign-in of that kind on the computer thinks for all of its owner's agents there (protocol 29):
  * every one where the agents are the runner's own user; where each is its own OS user (system mode), as
- * `SHARED_SIGN_INS` says (ChatGPT's from protocol 38, never Cursor's yet).
+ * `SHARED_SIGN_INS` says (ChatGPT's from protocol 38, Gemini's from 58, never Cursor's yet).
  */
 export function sharesSignIns(
   machine: Pick<MachineRow, "protocol" | "executors">,
@@ -863,8 +876,8 @@ export function sharesSignIns(
 ): boolean {
   if (machine.protocol < SHARED_ACCOUNTS_PROTOCOL) return false;
   if (machine.executors?.mode !== "system") return true;
-  if (which === "cursor" || which === "opencode" || which === "grok" || which === "antigravity") return false;
-  return (which !== "codex" || machine.protocol >= SHARED_CODEX_PROTOCOL) && SHARED_SIGN_INS[which];
+  if (which === "cursor" || which === "opencode" || which === "grok") return false;
+  return machine.protocol >= sharedSignInProtocol(which) && SHARED_SIGN_INS[which];
 }
 
 /**
@@ -1126,9 +1139,8 @@ export async function beginAccountLogin(
               ? PLAN_KEYS_PROTOCOL
               : ACCOUNTS_PROTOCOL,
   );
-  // Once for every agent of its owner there, where the runner can (protocol 29; ChatGPT's 38).
-  const shared =
-    protocol >= (kind === "codex" ? SHARED_CODEX_PROTOCOL : SHARED_ACCOUNTS_PROTOCOL) && sharedSignIn(kind, provider);
+  // Once for every agent of its owner there, where the runner can (protocol 29; ChatGPT's 38, Gemini's 58).
+  const shared = protocol >= sharedSignInProtocol(kind) && sharedSignIn(kind, provider);
   const again = accountId !== undefined;
   // A Claude subscription sign-in for all agents (ADR 0150): a new one takes the policy's method once, kept on its
   // row; signing in again keeps the row's, whatever the policy says now (none known: the runner does as before).
@@ -1268,6 +1280,10 @@ export interface AccountLoginStatus {
   account?: MachineAccountView;
   /** `failed`: why, for people. */
   error?: string;
+  /** `failed` or `expired` on the computer: why, as a code (an older runner sends none). */
+  code?: AccountLoginFailure;
+  /** With `code`: what the CLI itself said, credentials masked. */
+  message?: string;
   /**
    * `failed`: the account that signed in is one the person already has on this computer (a new sign-in is removed
    * there): its name, and the account itself, theirs to think with instead.
@@ -1294,11 +1310,30 @@ export async function accountLoginStatus(
   const state: AccountLoginState = LOGIN_STATES.includes(reply.state as AccountLoginState)
     ? (reply.state as AccountLoginState)
     : "failed";
-  const error = typeof reply.error === "string" ? reply.error.slice(0, 300) : undefined;
+  const said = (v: unknown) => (typeof v === "string" ? scrubSignIns(v, "••••").text.slice(0, 300) : undefined);
+  const error = said(reply.error);
+  if (state === "waiting") return { state };
   if (state !== "done") {
+    const code = isAccountLoginFailure(reply.code) ? reply.code : undefined;
+    const message = code ? said(reply.message) : undefined;
+    if (code && code !== "canceled") {
+      const kind = kindOf(row);
+      const fields = { orgId, userId, machineId: machine.id, accountKind: kind, code, message };
+      if (state === "failed") {
+        deps.log?.error("account sign-in failed on the computer", {
+          ...fields,
+          error: new Error(`${kind} sign-in failed: ${code}${message ? `: ${message}` : ""}`),
+        });
+      } else deps.log?.warn("account sign-in expired on the computer", fields);
+    }
     // The runner removed the folder of a new sign-in that ended without signing in.
-    if (state !== "waiting") await dropSignIn(deps.db, orgId, row.id);
-    return { state, ...(state === "failed" && error ? { error } : {}) };
+    await dropSignIn(deps.db, orgId, row.id);
+    return {
+      state,
+      ...(state === "failed" && error ? { error } : {}),
+      ...(code ? { code } : {}),
+      ...(message ? { message } : {}),
+    };
   }
   const [info] = parseAccounts(reply.account ? [reply.account] : []);
   if (!info) {

@@ -7,18 +7,28 @@ import {
   type VaultScope,
   type VaultSourceInfo,
 } from "@agenteschat/client";
-import { errorText } from "@agenteschat/client/lib/errors";
+import { vaultConnectRefusal } from "@agenteschat/client/lib/errors";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { GroupedField, GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Text, useToast } from "@/ui";
+import { Button, GroupedField, GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { Note, openPage } from "../ai/parts";
-import { chooseAction, SettingsPage } from "../settings/parts";
+import { ConnectedNote } from "../connectors/ConnectSheet";
+import { SettingsPage } from "../settings/parts";
 import { useColors, useOrgId } from "../shared/hooks";
+import { pickOne } from "../shared/PickerSheet";
 import { goBack, successHaptic, Tile } from "../shared/parts";
-import { connectInput, connectMissing, fieldKeyboard, initialValues, shownFields, vaultHref } from "./logic";
-import { InputField, ScopeRows } from "./parts";
+import {
+  accessSentence,
+  connectInput,
+  connectMissing,
+  fieldKeyboard,
+  initialValues,
+  shownFields,
+  vaultHref,
+} from "./logic";
+import { InputField, ScopeRows, useVaultNames } from "./parts";
 
 /**
  * Connecting a password manager (ADR 0144 §3), drawn from what the source describes: a warning when it has one
@@ -73,6 +83,8 @@ function ConnectForm({
   const [values, setValues] = useState<Record<string, string>>(() => initialValues(source));
   const [chosen, setChosen] = useState<VaultScope>(canTeam ? "team" : "personal");
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [made, setMade] = useState<VaultConnection | null>(null);
+  const names = useVaultNames();
   const scope: VaultScope = chosen === "team" && canTeam ? "team" : "personal";
   const missing = connectMissing(source, values);
   const busy = connect.isPending || update.isPending;
@@ -84,7 +96,7 @@ function ConnectForm({
     setRefusal(null);
   };
   // The password manager's refusal in plain words (wrong details, a vault too many), from the server's code.
-  const failed = (err: unknown) => setRefusal(errorText(t, err, i18n.language));
+  const failed = (err: unknown) => setRefusal(vaultConnectRefusal(t, k, err, i18n.language));
 
   const submit = () => {
     if (missing.length > 0 || busy) return;
@@ -106,25 +118,45 @@ function ConnectForm({
     connect.mutate(
       { kind: k, scope, input },
       {
-        onSuccess: (made) => {
+        onSuccess: (connected) => {
           successHaptic();
-          toast({ title: t("mobile.vault.connect.connected", { name: source.name }) });
-          router.replace(vaultHref.connection(made.id) as never);
+          setMade(connected);
         },
         onError: failed,
       },
     );
   };
 
+  // A field with set values (a region, a kind) in the app's picker, the one chosen checked.
   const chooseValue = (f: VaultConnectField) =>
-    chooseAction(
-      say(`field.${f.id}`, f.label),
-      (f.choices ?? []).map((choice) => ({
+    void pickOne({
+      title: say(`field.${f.id}`, f.label),
+      value: values[f.id] ?? null,
+      options: (f.choices ?? []).map((choice) => ({
+        key: choice.value,
         label: say(`choice.${f.id}.${choice.value}`, choice.label),
-        onPress: () => set(f.id, choice.value),
       })),
-      t("mobile.common.cancel"),
+    }).then((key) => {
+      if (key !== null) set(f.id, key);
+    });
+
+  // The end of connecting, as a tool's: who can use it, then "Pronto" or "Ajustar" (its access).
+  if (made) {
+    return (
+      <SettingsPage title={t("mobile.vault.connect.title", { name: source.name })}>
+        <View style={styles.done}>
+          <ConnectedNote name={source.name} text={accessSentence(t, made.scope, made.access, names)} />
+          <Button variant="primary" wide label={t("connectFlow.done.ok")} onPress={goBack} />
+          <Button
+            variant="secondary"
+            wide
+            label={t("connectFlow.done.adjust")}
+            onPress={() => router.replace(vaultHref.connectionAccess(made.id) as never)}
+          />
+        </View>
+      </SettingsPage>
     );
+  }
 
   return (
     <SettingsPage
@@ -236,6 +268,7 @@ function ConnectForm({
 
 const styles = StyleSheet.create({
   note: { paddingHorizontal: 4, paddingTop: 10 },
+  done: { gap: 12, paddingTop: 16 },
   loading: { marginVertical: 16 },
   number: { fontWeight: "600" },
 });

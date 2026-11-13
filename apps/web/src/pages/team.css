@@ -1,7 +1,6 @@
 /* Equipe (ADR 0148): one header, five views of the same team. */
 .page.team {
   max-width: none;
-  gap: 20px;
 }
 .team-eyebrow {
   font-size: 11px;
@@ -115,7 +114,7 @@
   font-weight: 650;
 }
 .team-archived__row {
-  padding: 8px;
+  padding: var(--row-py) 8px;
   border-radius: var(--radius-sm);
 }
 .team-archived__row:hover {
@@ -173,9 +172,12 @@
   align-items: center;
   gap: 12px;
 }
+/* A scroller out over the page's side room: a chart wider than the page slides under the page's edges as it scrolls,
+   and the room above it keeps the top node's ring and shadow inside it, where they'd be cut at its edge. */
 .team-tree {
   overflow-x: auto;
-  padding-bottom: 8px;
+  margin: -4px calc(-1 * var(--page-x)) 0;
+  padding: 4px var(--page-x) 8px;
 }
 .team-tree__top {
   position: relative;
@@ -662,9 +664,6 @@
 }
 
 @media (max-width: 720px) {
-  .page.team {
-    gap: 16px;
-  }
   .team-sectors__grid {
     grid-template-columns: 1fr;
   }

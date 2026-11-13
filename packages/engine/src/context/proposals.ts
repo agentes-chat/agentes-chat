@@ -585,7 +585,8 @@ export async function decideProposal(
     caches.agents.delete(`${orgId}:team`);
     caches.scopes.deletePrefix(`${orgId}:${decided.agentId}`);
   }
-  // The right hand keeps no memory (ADR 0137): a refusal teaches it nothing one person could carry to another.
+  // A refusal teaches the right hand nothing (ADR 0137): a lesson is the agent's, and it would carry one person's
+  // refusal to everyone else it answers.
   if (decided.status === "rejected" && !isRightHand(await proposerOf(db, decided)))
     await recordRefusal(db, actorId, decided);
   // Also for a row gone stale: it may be the card's last open one.
@@ -836,7 +837,14 @@ function changeLine(p: ProposedChange) {
       .join(" ");
   if (p.target === "agent_role") return `role: ${p.proposedText}`;
   if (p.target === "agent_settings")
-    return `settings: ${(p.settings ?? []).map((l) => `${l.field} ${JSON.stringify(l.label?.from ?? l.from)} → ${JSON.stringify(l.label?.to ?? l.to)}`).join(", ")}`;
+    return `settings: ${(p.settings ?? [])
+      .map((l) =>
+        // A skill's label is its name, the same either way: on or off says what changed.
+        l.field === "skill"
+          ? `skill ${JSON.stringify(l.label?.to ?? "")} ${l.to === true ? "on" : "off"}`
+          : `${l.field} ${JSON.stringify(l.label?.from ?? l.from)} → ${JSON.stringify(l.label?.to ?? l.to)}`,
+      )
+      .join(", ")}`;
   if (p.target === "skill") return `skill ${p.access?.[0]?.label ?? ""}: ${lines("+")}`.trim();
   if (p.target === "agent_access")
     return `access: ${(p.access ?? []).map((l) => `${l.label} ${l.on ? "on" : "off"}`).join(", ")}`;
@@ -1017,7 +1025,8 @@ async function tellProposer(deps: { db: Database; pubsub?: PubSub }, p: Proposal
       kind: "proposal_result",
       from: "Your proposed change",
       text: await cardResult(tx, run.agentId, rows, via),
-      refs: { proposalCardId: key },
+      // `runId`: the run that proposed it, so what comes next is that run's work, for whoever is behind it.
+      refs: { proposalCardId: key, runId },
     });
   });
   if (delivered) await publishDelivery(deps.pubsub, delivered).catch(() => {});

@@ -8,15 +8,22 @@ import {
 } from "@agenteschat/client";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
 import { approvalOriginShort, approvalOriginWords } from "@agenteschat/client/lib/approval-origin";
+import { approvalEffects } from "@agenteschat/client/lib/approval-review";
 import { alwaysRoutineName, approvalDoing, approvalTitle } from "@agenteschat/client/lib/approval-words";
 import { fromServer, itemName } from "@agenteschat/client/lib/connected";
 import { nextLabel } from "@agenteschat/client/lib/format";
 import { connectorName } from "@agenteschat/client/lib/scopes";
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import type { TFunction } from "i18next";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, View } from "react-native";
-import { Button, Chip, Fuse, LineIcon, Text, useToast } from "@/ui";
+import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
+import { useOrg } from "@/providers/org";
+import { Button, Chip, Fuse, haptics, Text, useToast } from "@/ui";
+import { useInfoHint } from "@/ui/InfoHint";
+import { router } from "@/ui/navigation";
+import { parseInline } from "../chat/logic";
+import { Spans } from "../chat/MessageSpans";
 import { ConnectorIcon, IconTile } from "../connectors/ConnectorIcon";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useNow, useOrgId } from "../shared/hooks";
@@ -47,6 +54,13 @@ const TRAIT_ICON = {
   unsent: "archive",
   deletable: "undo",
 } as const;
+
+/**
+ * A trait's words. What leaves a personal workspace (ADR 0159) leaves its person's workspace, not a company: the one
+ * trait with a personal sibling.
+ */
+export const traitKey = (trait: keyof typeof TRAIT_ICON, personal: boolean) =>
+  trait === "external" && personal ? "mobile.approval.trait.externalPersonal" : `mobile.approval.trait.${trait}`;
 
 /**
  * The action in words, as the web says it: an email's ("Salvar um rascunho de resposta para…"), a tool run by
@@ -142,6 +156,76 @@ export function useApproveNow(a: Approval, onApproved?: () => void) {
       },
     );
   return { approve, pending: decide.isPending, high };
+}
+
+/**
+ * "Recusar" from a card or the request's sheet: the system's alert asks once, with the reason as an optional
+ * field and Recusar in red; Cancelar leaves everything as it was (no mode of the sheet). Where the platform's
+ * alerts take no text (Android), the request's sheet opens on its refusing step instead. A firm tap when it goes
+ * through, then the toast saying the agent learns from it; `onRefused` lets the card's place know it is settled.
+ */
+export function useRefuseApproval(a: Approval, onRefused?: () => void) {
+  const { t } = useTranslation();
+  const orgId = useOrgId();
+  const dir = useDirectory();
+  const toast = useToast();
+  const decide = useDecideApproval(orgId);
+  const name = dir.agentById.get(a.agentId)?.name ?? "";
+  const g = genderOf(name);
+  const send = (reason: string) =>
+    decide.mutate(
+      { id: a.id, decision: "refuse", ...(reason.trim() ? { reason: reason.trim() } : {}) },
+      {
+        onSuccess: () => {
+          haptics.medium();
+          onRefused?.();
+          toast({
+            title: t("mobile.approval.refused"),
+            subtitle: t(`mobile.approval.refusedSub${g}`, { name }),
+            agentId: a.agentId,
+          });
+        },
+        onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
+      },
+    );
+  const refuse = () => {
+    if (Platform.OS !== "ios") {
+      router.push(`/approval/${a.id}?mode=refuse`);
+      return;
+    }
+    Alert.prompt(
+      t("mobile.approval.refuseAsk"),
+      t(`mobile.approval.refuseWhy${g}`, { name }),
+      [
+        { text: t("mobile.common.cancel"), style: "cancel" },
+        { text: t("mobile.approval.refuse"), style: "destructive", onPress: (reason) => send(reason ?? "") },
+      ],
+      "plain-text",
+    );
+  };
+  return { refuse, pending: decide.isPending };
+}
+
+/**
+ * The name of the app a request goes through, for its "Por onde" row: the catalog's ("GitHub"), a server connected
+ * by address by its own name, the raw id until they load.
+ */
+export function useConnectorNamer(a: Pick<Approval, "connector">): (id: string) => string {
+  const { t } = useTranslation();
+  const orgId = useOrgId();
+  const catalog = useCatalog();
+  const customId = a.connector?.startsWith("custom:") ? a.connector.slice("custom:".length) : null;
+  const servers = useCustomServers(orgId, customId !== null);
+  return (id) => {
+    if (customId) {
+      const server = servers.data?.find((s) => s.id === customId);
+      return server
+        ? itemName(t, fromServer(server, catalog.data?.connectors ?? []))
+        : t("approvals.panel.orgConnector");
+    }
+    const def = catalog.data?.connectors.find((d) => d.id === id);
+    return def ? connectorName(t, def) : id;
+  };
 }
 
 /**
@@ -286,7 +370,6 @@ export function ApprovalEmailLetter({
             !flat && { backgroundColor: c.sunken },
           ]}
         >
-          <LineIcon name="reply" size={13} color={c.muted} variant="footnote" />
           <Text variant="footnote" tone="muted" style={styles.grow}>
             {answers}
           </Text>
@@ -323,15 +406,23 @@ export function ApprovalSaid({
 /** "Para todos, em produção", "Dá para desfazer": only what the request itself says. */
 export function ApprovalTraits({ approval: a }: { approval: Approval }) {
   const { t } = useTranslation();
+  const personal = isPersonal(useOrg().org);
   const traits = approvalTraits(a);
   if (traits.length === 0) return null;
   return (
     <View style={styles.chips}>
       {traits.map((tr) => (
-        <Chip key={tr} icon={TRAIT_ICON[tr]} label={t(`mobile.approval.trait.${tr}`)} />
+        <Chip key={tr} icon={TRAIT_ICON[tr]} label={t(traitKey(tr, personal))} />
       ))}
     </View>
   );
+}
+
+/** Whether the request can be undone, as a chip after its title ("Não dá para desfazer"); none when it doesn't say. */
+export function ApprovalUndoChip({ approval: a }: { approval: Approval }) {
+  const { t } = useTranslation();
+  const { undo } = approvalEffects(a);
+  return undo ? <Chip icon={TRAIT_ICON[undo]} label={t(`mobile.approval.trait.${undo}`)} /> : null;
 }
 
 /**
@@ -351,27 +442,8 @@ export function ApprovalDetails({
 }) {
   const { t } = useTranslation();
   const c = useColors();
-  const orgId = useOrgId();
-  const catalog = useCatalog();
-  // A server connected by address (`custom:{connectionId}`) goes by its own name ("Sentry"), as on the web.
-  const customId = a.connector?.startsWith("custom:") ? a.connector.slice("custom:".length) : null;
-  const servers = useCustomServers(orgId, customId !== null);
-  // The connector's name from the catalog ("GitHub"); the raw id until it loads.
-  const rows = approvalTable(
-    a,
-    max,
-    (id) => {
-      if (customId) {
-        const server = servers.data?.find((s) => s.id === customId);
-        return server
-          ? itemName(t, fromServer(server, catalog.data?.connectors ?? []))
-          : t("approvals.panel.orgConnector");
-      }
-      const def = catalog.data?.connectors.find((d) => d.id === id);
-      return def ? connectorName(t, def) : id;
-    },
-    long,
-  );
+  const nameOf = useConnectorNamer(a);
+  const rows = approvalTable(a, max, nameOf, long);
   if (rows.length === 0) return null;
   return (
     // Stacked it opens inside a request card: flat on it, divided by hairlines (never a plate in a card).
@@ -398,7 +470,7 @@ export function ApprovalDetails({
             style={stacked ? styles.wrapAnywhere : styles.grow}
             numberOfLines={long ? undefined : stacked ? 4 : 2}
           >
-            {r.value}
+            <Spans inline={parseInline(r.value)} />
           </Text>
         </View>
       ))}
@@ -419,20 +491,17 @@ export function ApprovalWhy({
   name: string;
 }) {
   const { t } = useTranslation();
-  const c = useColors();
   const said = approvalSaid(a);
   const origin = approvalOriginWords(a);
   if (!said && !origin) return null;
   const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
   return (
     <View style={styles.why}>
+      {/* No icon before it: these words wrap, and an icon would set them in from the title and the quote. */}
       {origin ? (
-        <View style={styles.origin}>
-          <LineIcon name="clock" size={13} color={c.muted} variant="footnote" />
-          <Text variant="footnote" tone="muted" style={styles.grow}>
-            {tt(origin.key, origin.values)}
-          </Text>
-        </View>
+        <Text variant="footnote" tone="muted">
+          {tt(origin.key, origin.values)}
+        </Text>
       ) : null}
       {said ? (
         <Text variant="small" tone="ink2" style={styles.said}>
@@ -450,15 +519,12 @@ export function ApprovalAheadLine({
   approval: Pick<Approval, "runAt" | "status" | "executedAt" | "decidedAt">;
 }) {
   const { t, i18n } = useTranslation();
-  const c = useColors();
   if (aheadPhase(a) !== "asking" || !a.runAt) return null;
+  // No icon before it: the sentence wraps, and an icon would set it in from the words around it.
   return (
-    <View style={styles.origin}>
-      <LineIcon name="clock" size={15} color={c.ink2} variant="small" />
-      <Text variant="small" tone="ink" style={[styles.grow, styles.medium]}>
-        {t("approval.ahead.line", { when: nextLabel(i18n.language, a.runAt) })}
-      </Text>
-    </View>
+    <Text variant="small" tone="ink" style={styles.medium}>
+      {t("approval.ahead.line", { when: nextLabel(i18n.language, a.runAt) })}
+    </Text>
   );
 }
 
@@ -480,34 +546,7 @@ export function useCancelAhead() {
   };
 }
 
-/**
- * "Aprovar sempre" ("Aprovar sempre leituras" for a SQL tool's reads) where the request offers it, and under it
- * exactly what one tap approves for good and where to undo it, as on the web.
- */
-export function ApproveAlways({
-  approval: a,
-  name,
-  disabled,
-  onPress,
-}: {
-  approval: Approval;
-  name: string;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  const { t } = useTranslation();
-  if (!approveAlwaysOffered(a)) return null;
-  return (
-    <View style={styles.always}>
-      <Button variant="ghost" wide label={approveAlwaysLabel(t, a)} disabled={disabled} onPress={onPress} />
-      <Text variant="caption" tone="faint" style={styles.alwaysHint}>
-        {approveAlwaysHint(t, a, name || t("channel.unknownAgent"))}
-      </Text>
-    </View>
-  );
-}
-
-/** "Aprovar sempre" in a request card's row of buttons, the same size as the others (its hint: `ApproveAlwaysHint`). */
+/** "Aprovar sempre" in a request card's row of buttons, the same size as the others (its ⓘ: `ApproveAlwaysInfo`). */
 export function ApproveAlwaysButton({
   approval: a,
   disabled,
@@ -524,14 +563,30 @@ export function ApproveAlwaysButton({
   );
 }
 
-/** What "Aprovar sempre" covers and where to undo it, on a line of its own under the row of buttons. */
-export function ApproveAlwaysHint({ approval: a, name }: { approval: Approval; name: string }) {
+/**
+ * What "Aprovar sempre" covers and where to undo it, behind an ⓘ (a touch screen has no tooltip): `children` puts the
+ * ⓘ after the button, in the row that holds only buttons, and its words under the row (null while closed, so the row
+ * keeps no room for them). Both null where the request doesn't offer it.
+ */
+export function ApproveAlwaysInfo({
+  approval: a,
+  name,
+  children,
+}: {
+  approval: Approval | undefined;
+  name: string;
+  children: (info: { button: ReactNode; text: ReactNode }) => ReactNode;
+}) {
   const { t } = useTranslation();
-  if (!approveAlwaysOffered(a)) return null;
+  const offered = a ? approveAlwaysOffered(a) : false;
+  const info = useInfoHint({
+    name: t("common.about", { label: a ? approveAlwaysLabel(t, a) : "" }),
+    text: a && offered ? approveAlwaysHint(t, a, name || t("channel.unknownAgent")) : "",
+  });
   return (
-    <Text variant="caption" tone="faint">
-      {approveAlwaysHint(t, a, name || t("channel.unknownAgent"))}
-    </Text>
+    <>
+      {children(offered ? { button: info.button, text: info.open ? info.text : null } : { button: null, text: null })}
+    </>
   );
 }
 
@@ -563,7 +618,6 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   said: { lineHeight: 20 },
   why: { gap: 4 },
-  origin: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   fuse: { flexDirection: "row", alignItems: "center", gap: 10 },
   letter: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, borderBottomLeftRadius: 6, overflow: "hidden" },
   letterHead: { gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
@@ -596,6 +650,4 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   saidRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   expiry: { fontWeight: "500", fontVariant: ["tabular-nums"] },
-  always: { gap: 4 },
-  alwaysHint: { textAlign: "center" },
 });

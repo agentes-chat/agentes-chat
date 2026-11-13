@@ -12,6 +12,7 @@ import {
   Count,
   coverBarOptions,
   fonts,
+  GROUPED_ROW,
   GroupedList,
   HeaderCapsule,
   HeaderSlot,
@@ -28,6 +29,7 @@ import {
   useTheme,
 } from "@/ui";
 import { withAlpha } from "@/ui/palette";
+import { useFontScale } from "@/ui/text-scale";
 import { leadBox } from "@/ui/type-scale";
 import { useColors } from "./hooks";
 
@@ -108,7 +110,7 @@ export function ActionList({ items }: { items: ActionItem[] }) {
 /** One action, on a GroupedRow's numbers: 14 pt sides, the 32 pt leading column, 12 apart, 50 tall at least. */
 function ActionRow({ item: it, leading }: { item: ActionItem; leading: ReactNode }) {
   const c = useColors();
-  const { fontScale } = useWindowDimensions();
+  const fontScale = useFontScale();
   const line = textLineOf("body", fontScale);
   // A hint that may wrap: the icon and what is on the right stay on the label's line, not the row's middle.
   const tall = Boolean(it.hint) && !it.oneLine;
@@ -236,7 +238,9 @@ export function PushedHeader({
       ...(plate ? coverBarOptions : solid ? {} : scrollUnder),
       ...(barTone && !plate ? { headerStyle: { backgroundColor: barTone } } : null),
       title: text,
-      headerTitle: custom ? () => <HeaderTitle text={text} node={titleNode} subtitle={subtitle} /> : text,
+      headerTitle: custom
+        ? () => <HeaderTitle text={text} node={titleNode} subtitle={subtitle} beside={word !== null} />
+        : text,
       ...(word !== null && IOS
         ? {
             unstable_headerRightItems: () => [
@@ -281,11 +285,24 @@ export interface HeaderWordAction {
   disabled?: boolean;
 }
 
-/** A title with a subtitle under it, in the native bar (centered on iOS, leading on Android). */
-function HeaderTitle({ text, node, subtitle }: { text: string; node: HeaderSlotStore; subtitle?: string | undefined }) {
+/**
+ * A title with a subtitle under it, in the native bar (centered on iOS, leading on Android). `beside`: a word action
+ * (Save) on the right, wider than the back button: the centered title keeps clear of it on both sides.
+ */
+function HeaderTitle({
+  text,
+  node,
+  subtitle,
+  beside = false,
+}: {
+  text: string;
+  node: HeaderSlotStore;
+  subtitle?: string | undefined;
+  beside?: boolean;
+}) {
   const { width } = useWindowDimensions();
   return (
-    <View style={[styles.headerTitle, { maxWidth: width - 150 }]}>
+    <View style={[styles.headerTitle, { maxWidth: width - (beside ? 200 : 150) }]}>
       {text ? (
         <Text variant="body" numberOfLines={1} style={styles.titleText}>
           {text}
@@ -339,15 +356,26 @@ export function Loaded({ children }: { children: ReactNode }) {
   return <Animated.View entering={reducedMotion ? undefined : LOADED_IN}>{children}</Animated.View>;
 }
 
+/** A screen's one action, pinned under its scroll over the home indicator: always at hand, however long the list. */
+export function BottomBar({ bottom, children }: { bottom: number; children: ReactNode }) {
+  const c = useColors();
+  return (
+    <View style={[styles.bar, { paddingBottom: bottom + 10, backgroundColor: c.grouped, borderTopColor: c.line2 }]}>
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  bar: { paddingHorizontal: 16, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
   tile: { alignItems: "center", justifyContent: "center" },
   action: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    minHeight: 50,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    minHeight: GROUPED_ROW.minHeight,
+    paddingHorizontal: GROUPED_ROW.padX,
+    paddingVertical: GROUPED_ROW.padY,
   },
   // A wrapping hint: the label starts where a one-line row's does (its 22 points centred in 50), as GroupedRow's.
   actionTall: { alignItems: "flex-start", paddingVertical: 14 },

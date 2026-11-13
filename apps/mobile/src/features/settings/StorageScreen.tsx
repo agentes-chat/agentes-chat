@@ -6,6 +6,7 @@ import {
   useStorageMigration,
   useTestStorage,
 } from "@agenteschat/client";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { can } from "@agenteschat/client/lib/permissions";
 import { storageUsageLine } from "@agenteschat/client/lib/storage";
@@ -60,7 +61,7 @@ export function StorageScreen() {
   const usage = config ? storageUsageLine(t, i18n.language, config) : null;
   const inUse = { value: t("storage.current"), belowText: usage ?? undefined };
   return (
-    <SettingsPage title={t("storage.title")}>
+    <SettingsPage title={t("storage.title")} frozen={settingsFrozen(org, "storage")}>
       <GroupedFooter>{t("settings.sectionText.storage")}</GroupedFooter>
       {!admin ? (
         <View style={styles.note}>
@@ -306,8 +307,7 @@ function BucketForm({ config }: { config: StorageConfig }) {
         <GroupedList>
           <GroupedRow
             label={t("storage.pathStyle")}
-            sub={t("storage.pathStyleHelp")}
-            subLines={3}
+            hint={{ name: t("common.about", { label: t("storage.pathStyle") }), text: t("storage.pathStyleHelp") }}
             toggle={form.pathStyle}
             onPress={() => set("pathStyle", !form.pathStyle)}
           />

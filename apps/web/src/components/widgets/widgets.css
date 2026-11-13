@@ -109,7 +109,7 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  padding: 10px 14px;
+  padding: var(--row-py) 14px;
   font-size: 14px;
   line-height: 20px;
 }
@@ -190,6 +190,12 @@
 }
 .wd__ask .ac-composer textarea {
   min-height: 44px;
+}
+/* In place of the box while the workspace is being deleted. */
+.wd__readonly {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 .wd__end {
   display: flex;

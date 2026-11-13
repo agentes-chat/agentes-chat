@@ -19,12 +19,13 @@ import { joinNames } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   Button,
+  Checkbox,
   cx,
   EmptyState,
   FilterBar,
   FilterChip,
   type FilterOption,
-  FilterToggle,
+  GroupHeading,
   Icon,
   Kbd,
   Menu,
@@ -34,6 +35,7 @@ import {
   SearchField,
   Segmented,
   Toolbar,
+  useMatchMedia,
 } from "@agenteschat/ui";
 import { type MouseEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -48,6 +50,7 @@ import { DriveTrash } from "@/components/drive/DriveTrash";
 import { DropOverlay, UploadProgress, useFileDrop } from "@/components/drive/DriveUploads";
 import { useActorFilterOptions } from "@/components/filters";
 import { ErrorState, LoadingList } from "@/components/Loading";
+import { COMPACT_QUERY } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { SelectionBar } from "@/components/SelectionBar";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
@@ -80,6 +83,7 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
   const downloads = useArtifactDownload();
   const share = useFileShare();
   const searchRef = useRef<HTMLInputElement>(null);
+  const phone = useMatchMedia(COMPACT_QUERY);
 
   const [q, setQ] = useState("");
   const [trashOpen, setTrashOpen] = useState(false);
@@ -173,6 +177,7 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
   };
   const openItem = rows.find((a) => a.id === openId);
   const picked = shown.filter((a) => selected.has(a.id));
+  const selectAll = () => setSelected(new Set(shown.map((a) => a.id)));
 
   const toggle = (a: Artifact) => {
     anchor.current = a.id;
@@ -204,8 +209,8 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
   const openViewer = (a: Artifact) => viewer.open(a.id);
 
   // "/" searches, ⌘A selects what's shown, Esc clears the selection.
-  const keys = useRef({ shown, selected, openId, trashOpen });
-  keys.current = { shown, selected, openId, trashOpen };
+  const keys = useRef({ shown, selected, openId, trashOpen, selectAll });
+  keys.current = { shown, selected, openId, trashOpen, selectAll };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = keys.current;
@@ -223,7 +228,7 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
         searchRef.current?.focus();
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a" && s.shown.length > 0) {
         e.preventDefault();
-        setSelected(new Set(s.shown.map((a) => a.id)));
+        s.selectAll();
       }
     };
     document.addEventListener("keydown", onKey);
@@ -274,37 +279,56 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
   const sectionHead = (s: DriveSection) => {
     if (s.key === PRIVATE_SECTION) {
       return (
-        <div className="drive-group__head">
-          <Icon name="lock" size={16} />
-          <h2 className="drive-group__title">{sectionTitle(s)}</h2>
-          <span className="drive-count ac-num">{s.items.length}</span>
-          <span className="drive-group__hint">{t("drive.privateHint")}</span>
-        </div>
+        <GroupHeading
+          className="drive-group__head"
+          title={
+            <>
+              <Icon name="lock" size={16} />
+              {sectionTitle(s)}
+            </>
+          }
+          count={s.items.length}
+          aside={<span className="drive-group__hint">{t("drive.privateHint")}</span>}
+        />
       );
     }
     if (group === "none") return null;
     const first = s.items[0];
     const people = new Map(s.items.map((a) => [`${a.createdBy.type}:${a.createdBy.id}`, a.createdBy]));
     return (
-      <div className="drive-group__head">
-        {group === "author" && first && (
-          <ActorAvatar size="xs" actor={first.createdBy} name={authorName(first.createdBy)} />
-        )}
-        {group === "channel" && <Icon name={s.key ? "channel" : "drive"} size={16} />}
-        <h2 className="drive-group__title">{sectionTitle(s)}</h2>
-        <span className="drive-count ac-num">{s.items.length}</span>
-        {group === "channel" && (
-          <span className="drive-group__stack" aria-hidden="true">
-            {[...people.values()].slice(0, STACK_MAX).map((p) => (
-              <ActorAvatar key={`${p.type}:${p.id}`} size="xs" actor={p} name={authorName(p)} />
-            ))}
-          </span>
-        )}
-      </div>
+      <GroupHeading
+        className="drive-group__head"
+        title={
+          <>
+            {group === "author" && first && (
+              <ActorAvatar size="xs" actor={first.createdBy} name={authorName(first.createdBy)} />
+            )}
+            {group === "channel" && <Icon name={s.key ? "channel" : "drive"} size={16} />}
+            {sectionTitle(s)}
+          </>
+        }
+        count={s.items.length}
+        aside={
+          group === "channel" && (
+            <span className="drive-group__stack" aria-hidden="true">
+              {[...people.values()].slice(0, STACK_MAX).map((p) => (
+                <ActorAvatar key={`${p.type}:${p.id}`} size="xs" actor={p} name={authorName(p)} />
+              ))}
+            </span>
+          )
+        }
+      />
     );
   };
 
-  const kindChips = ARTIFACT_KINDS.filter((k) => (counts.get(k) ?? 0) > 0 || kinds.includes(k));
+  const kindOptions: FilterOption[] = ARTIFACT_KINDS.filter((k) => (counts.get(k) ?? 0) > 0 || kinds.includes(k)).map(
+    (k) => ({
+      value: k,
+      label: t(`drive.kindMany.${k}`),
+      leading: <Icon name={KIND_ICON[k]} size={16} />,
+      count: counts.get(k) ?? 0,
+    }),
+  );
 
   return (
     <div className={cx("page drive drive-drop", drop.over && "drive-drop--over")} {...drop.props}>
@@ -389,10 +413,12 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
                     align="end"
                     label={t("drive.arrange")}
                     trigger={
+                      // On a phone its icon alone, so the search keeps its words whole beside it.
                       <Button
                         size="sm"
                         variant="ghost"
                         icon="layers"
+                        iconOnly={phone}
                         aria-label={t("drive.arrangeValue", { group: t(`drive.group.${group}`) })}
                       >
                         {t(`drive.group.${group}`)}
@@ -510,26 +536,30 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
                       />
                     ),
                   },
+                  ...(kindOptions.length > 0
+                    ? [
+                        {
+                          key: "kind",
+                          active: kinds.length > 0,
+                          node: (
+                            <FilterChip
+                              label={t("drive.kind")}
+                              icon="file"
+                              multiple
+                              options={kindOptions}
+                              value={kinds}
+                              onChange={(v) => setKinds(v as ArtifactKind[])}
+                              countText={(count) => t("filters.kinds", { count })}
+                              clearLabel={clearOf(t("drive.kind"))}
+                              {...chipText}
+                            />
+                          ),
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </Toolbar>
-
-            {kindChips.length > 0 && (
-              <Toolbar label={t("drive.kinds")}>
-                {kindChips.map((k) => (
-                  <FilterToggle
-                    key={k}
-                    icon={KIND_ICON[k]}
-                    pressed={kinds.includes(k)}
-                    count={counts.get(k) ?? 0}
-                    aria-label={t("drive.kindCount", { kind: t(`drive.kindMany.${k}`), count: counts.get(k) ?? 0 })}
-                    onPressedChange={() => setKinds((ks) => (ks.includes(k) ? ks.filter((x) => x !== k) : [...ks, k]))}
-                  >
-                    {t(`drive.kindMany.${k}`)}
-                  </FilterToggle>
-                ))}
-              </Toolbar>
-            )}
 
             {filtered && list.isSuccess && rows.length > 0 && (
               <div className="drive-summary">
@@ -591,7 +621,7 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
             )}
 
             {rows.length > 0 && view === "grid" && (
-              <div className={cx("drive-sections", selected.size > 0 && "drive--selecting")}>
+              <div className={cx("ac-groups", selected.size > 0 && "drive--selecting")}>
                 {sections.map((s) => (
                   <section key={s.key || "all"} className="drive-group">
                     {sectionHead(s)}
@@ -606,12 +636,19 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
             )}
             {rows.length > 0 && view === "list" && (
               <div className={cx("drive-table", selected.size > 0 && "drive--selecting")}>
-                <div className="drive-table__head" aria-hidden="true">
-                  <span />
-                  <span>{t("drive.name")}</span>
-                  <span>{t("drive.by")}</span>
-                  <span className="drive-row__where">{t("drive.where")}</span>
-                  <span>{t("drive.when")}</span>
+                <div className="drive-table__head">
+                  <Checkbox
+                    className="drive-check"
+                    checked={picked.length === shown.length ? true : picked.length > 0 ? "indeterminate" : false}
+                    onCheckedChange={(on) => (on ? selectAll() : setSelected(new Set()))}
+                    aria-label={t("drive.selectAll", { count: shown.length })}
+                  />
+                  <span aria-hidden="true">{t("drive.name")}</span>
+                  <span aria-hidden="true">{t("drive.by")}</span>
+                  <span className="drive-row__where" aria-hidden="true">
+                    {t("drive.where")}
+                  </span>
+                  <span aria-hidden="true">{t("drive.when")}</span>
                   <span />
                 </div>
                 {sections.map((s) => (
@@ -638,6 +675,11 @@ export function DrivePage({ open }: { open?: { id: string; version?: number } })
             {picked.length > 0 && (
               <SelectionBar label={t("drive.selection")}>
                 <span className="drive-selbar__count">{t("drive.selected", { count: picked.length })}</span>
+                {picked.length < shown.length && (
+                  <Button size="sm" variant="ghost" icon="checks" onClick={selectAll}>
+                    <span className="drive-selbar__label">{t("drive.selectAll", { count: shown.length })}</span>
+                  </Button>
+                )}
                 <Button size="sm" variant="ghost" icon="download" onClick={() => void downloadPicked()}>
                   <span className="drive-selbar__label">{t("artifacts.download")}</span>
                 </Button>
