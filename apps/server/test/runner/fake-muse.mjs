@@ -131,6 +131,7 @@ createInterface({ input: process.stdin })
     if (!line.trim()) return;
     const frame = JSON.parse(line);
     if (frame.method === "initialize") {
+      log({ capabilities: frame.params?.capabilities ?? null });
       say({
         id: frame.id,
         result: {
@@ -165,7 +166,16 @@ createInterface({ input: process.stdin })
         return;
       }
       session = frame.params?.sessionId ?? "01a1d1a7-03e4-7e51-a6c0-a531c2a9808c";
-      log({ session: { mode: mode ?? null } });
+      log({
+        session: {
+          mode: mode ?? null,
+          mcp: Object.entries(frame.params?.config?.mcpServers ?? {}).map(([name, s]) => [
+            name,
+            s?.transport ?? null,
+            s?.command ?? null,
+          ]),
+        },
+      });
       if (frame.method === "session/resume" && process.env.FAKE_MUSE_LOST) {
         say({ id: frame.id, error: { code: -32010, message: "sessionNotFound" } });
         return;
