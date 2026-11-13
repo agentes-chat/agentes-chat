@@ -11,6 +11,7 @@ import {
   museApprovalVerdict,
   museChoice,
   museHostEnv,
+  museMcpServer,
   museProblem,
   museServeArgs,
   museSessionsFile,
@@ -83,10 +84,11 @@ const approvalCalls = (events: CodexBrainEvent[]) =>
 
 /** What the fake host was asked and answered (`FAKE_MUSE_APPROVAL_LOG`), in order. */
 type FakeLog = {
-  session?: { mode?: string | null };
+  session?: { mode?: string | null; mcp?: [string, string, string][] };
   requested?: string;
   offered?: string[];
   decide?: { approvalId: string; choiceId: string; commandId: string };
+  capabilities?: { requestedCapabilities?: string[] };
   accepted?: string;
   rejected?: string;
 };
@@ -129,19 +131,23 @@ test("the host runs without a key that could answer for the person, and without 
   expect(env.MUSE_CONTRIBUTOR_MODE).toBe("0");
 });
 
-test("the account's settings document carries our server and none of the machine's hooks", () => {
+test("the settings document keeps the account's ground, and the bridge travels on the wire", () => {
+  // The document: no server of ours (a name in both places is rejected as a conflict), and none of the machine's hooks.
   const doc = JSON.parse(museSettings({ mcp: { token: "t" }, mcpCommand: ["agentes-runner", "mcp"] }));
   expect(doc.schema_version).toBe(1);
   expect(doc.hooks).toEqual({});
   expect(doc.managed_hooks_path).toBeNull();
-  expect(doc.mcpServers.agenteschat_agentes.transport).toBe("stdio");
-  expect(doc.mcpServers.agenteschat_agentes.mode).toBe("required");
-  expect(doc.mcpServers.agenteschat_agentes.command).toBe("agentes-runner");
-  // `agentes-runner mcp` needs the run, and with `mode: required` a bridge that exits ends the turn.
-  expect(doc.mcpServers.agenteschat_agentes.args).toEqual(["mcp", "--run", "${AGENTES_MCP_RUN}"]);
-  expect(doc.mcpServers.agenteschat_agentes.env.AGENTES_MCP_RUN).toBe("${AGENTES_MCP_RUN}");
-  const overHttp = JSON.parse(museSettings({ mcp: { token: "t", url: "https://x/mcp" } }));
-  expect(overHttp.mcpServers.agenteschat_agentes.transport).toBe("streamable_http");
+  expect(doc.mcpServers).toBeUndefined();
+  // The wire: `session/start`'s `config.mcpServers`, which is where an MSP client adds one and where it is typed.
+  const stdio = museMcpServer({ token: "t" }, ["agentes-runner", "mcp"]);
+  expect(stdio).toMatchObject({ transport: "stdio", command: "agentes-runner" });
+  // `agentes-runner mcp` needs the run, as an argument and in the child's environment.
+  expect(stdio?.args).toEqual(["mcp", "--run", "${AGENTES_MCP_RUN}"]);
+  expect((stdio?.env as Record<string, string> | undefined)?.AGENTES_MCP_RUN).toBe("${AGENTES_MCP_RUN}");
+  expect(museMcpServer({ token: "t", url: "https://x/mcp" })).toMatchObject({
+    transport: "streamableHttp",
+    url: "https://x/mcp",
+  });
 });
 
 test("every command carries a UUIDv7, which is what the host demands", () => {
@@ -410,6 +416,18 @@ test("the offer taken is the narrowest the host made: once by default, the sessi
     }),
   ).toBeUndefined();
   expect(museChoice([], { allow: true, always: false })).toBeUndefined();
+});
+
+test("the bridge is handed over on session/start, to a host that granted the capability", async () => {
+  const { file } = askAbout();
+  await turn({}, { mcpCommand: ["agentes-runner", "mcp"] });
+  // The capability is asked for first: without it the host refuses the configuration outright.
+  const init = fakeLog(file).find((l) => l.capabilities)?.capabilities as { requestedCapabilities?: string[] };
+  expect(init.requestedCapabilities).toContain("sessionMcp");
+  // And the server travels typed, on the session, named as our bridge.
+  expect(fakeLog(file).find((l) => l.session)?.session?.mcp).toEqual([
+    ["agenteschat_agentes", "stdio", "agentes-runner"],
+  ]);
 });
 
 test("a read the host asks about is taken with the offer it made, on a UUIDv7 commandId", async () => {

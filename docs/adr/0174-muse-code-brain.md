@@ -144,11 +144,18 @@ always: the runner owns the version, and Muse upgrades itself otherwise. Stored 
   before the brain is offered anywhere.
 - **The installer does not pin.** It writes a launcher that upgrades itself, so a version can change under a running
   parser: the image pins the binary and every host carries `MUSE_NO_AUTO_UPDATE=1`.
+- **`mode` is not on the wire.** The typed session arm has no `required` marker; the bridge coming up (or not) shows as
+  the turn's own failure.
 - **Hooks run outside the sandbox.** A trusted workspace's `.muse/hooks.json` executes through the shell with only a
   cleared environment. Two guards: the account's settings keep `hooks={}` and `managed_hooks_path=null`, and the host
   is started without `--trust-workspace`, so nothing of a cloned repo runs today.
-- **`mode: required` on our own MCP server aborts the run** when the bridge does not come up, which is what we want
-  for the agent's tools — but it also means a bridge failure reads as a Muse failure, so the message has to say so.
+- **The bridge is handed over on the wire.** `session/start` takes `config.mcpServers`, a closed union needing
+  `transport` and typed on each arm, and it is what an MSP client adds a server with; a `capabilities.requestedCapabilities`
+  of `sessionMcp` in `initialize` is required first, or the start is refused. The settings document keeps the account's
+  ground (`schema_version`, `hooks`), and a server declared in *both* is a name conflict, so ours lives only on the wire.
+  Two near-misses cost a lot to find and are worth writing down: the settings key is `mcpServers` (not Codex's
+  `mcp_servers`) and the settings arm is tagged `type` while the wire arm is tagged `transport`, with neither spelling
+  valid in the other place. Measured: the wire form spawns the server (`initialize`, `tools/list`) and a call runs.
 - **`muse usage` answers without a turn** (window, weekly use, reset, tier, since 1.4.13): the plan figures come from
   it rather than from a learned table.
 - **Where the credential rests is undocumented**, only "stores the credential for you", with no config-directory
