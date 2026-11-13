@@ -17,6 +17,7 @@ import {
   WebStandardStreamableHTTPServerTransport,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { agentGroupViews } from "../agent-groups";
 import { type Agent, listAgents } from "../agents";
 import { audienceError, canTalkTo, speakerOf } from "../audience";
 import { recordAudit } from "../audit";
@@ -735,7 +736,7 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
     {
       scope: "read",
       title: "List agents",
-      description: `Lists the agents in this workspace that ${person} can see, with whether ${person} can message each one.`,
+      description: `Lists the agents in this workspace that ${person} can see, with whether ${person} can message each one, its department (name, color, icon, position among the departments) and its look.`,
       input: listAgentsInput,
       readOnly: true,
       destructive: false,
@@ -749,6 +750,14 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
         matches(args.query, a.name, a.handle, a.role),
       );
       const { slice, next_cursor } = page(all, args.cursor, args.limit, `agents:${args.query ?? ""}`);
+      // Its setor (ADR 0148) and look, as the sidebar shows them: what a client needs to draw the team without
+      // asking the workspace's people to type it again.
+      const groups = await agentGroupViews(deps.db, p.orgId);
+      const setorOf = new Map(
+        groups.flatMap((g, position) =>
+          g.agentIds.map((id) => [id, { name: g.name, color: g.color, icon: g.icon, position }] as const),
+        ),
+      );
       return {
         agents: slice.map((a) => ({
           id: a.id,
@@ -756,6 +765,8 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
           handle: a.handle,
           role: a.role,
           can_message: canTalkTo(a, p.userId, talks),
+          department: setorOf.get(a.id) ?? null,
+          appearance: a.appearance ?? null,
         })),
         next_cursor,
       };
