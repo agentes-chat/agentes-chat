@@ -4216,6 +4216,7 @@
       "routine": "Routine „{{name}}“",
       "unattended": "niemand sah zu"
     },
+    "serverAsks": "{{server}} hat diese Freigabe selbst angefragt.",
     "said": "<b>{{name}}:</b> „{{text}}“",
     "askPlain": "Ich brauche dein OK, um weiterzumachen:",
     "askPlainOther": "Ich brauche ein OK, um weiterzumachen:",
@@ -4808,6 +4809,7 @@
     "review": {
       "list": "Anfragen",
       "where": "Wo",
+      "askedBy": "Angefragt von",
       "effect": "Wirkung",
       "effects": {
         "external": "Verlässt das Unternehmen",

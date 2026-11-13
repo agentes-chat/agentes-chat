@@ -4076,6 +4076,7 @@
       "routine": "ルーティン「{{name}}」",
       "unattended": "誰も見ていない間"
     },
+    "serverAsks": "{{server}} 自身がこの承認を求めました。",
     "said": "<b>{{name}}:</b>「{{text}}」",
     "askPlain": "続けるにはあなたの承認が必要です:",
     "askPlainOther": "続けるには承認が必要です:",
@@ -4640,6 +4641,7 @@
     "review": {
       "list": "リクエスト",
       "where": "場所",
+      "askedBy": "依頼元",
       "effect": "影響",
       "effects": {
         "external": "社外に出ます",

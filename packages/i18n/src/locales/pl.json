@@ -4474,6 +4474,7 @@
       "routine": "rutyna «{{name}}»",
       "unattended": "nikt nie patrzył"
     },
+    "serverAsks": "{{server}} sam poprosił o tę zgodę.",
     "said": "<b>{{name}}:</b> „{{text}}”",
     "askPlain": "Potrzebuję twojej zgody, żeby kontynuować:",
     "askPlainOther": "Potrzebuję zgody, żeby kontynuować:",
@@ -5121,6 +5122,7 @@
     "review": {
       "list": "Prośby",
       "where": "Gdzie",
+      "askedBy": "Prośba od",
       "effect": "Skutek",
       "effects": {
         "external": "Wychodzi poza firmę",

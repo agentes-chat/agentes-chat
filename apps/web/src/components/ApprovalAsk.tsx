@@ -9,7 +9,7 @@ import {
   runKeys,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
-import { approvalOriginShort, approvalWords } from "@agenteschat/client/lib/approval-origin";
+import { approvalOriginShort, approvalServerWords, approvalWords } from "@agenteschat/client/lib/approval-origin";
 import {
   aheadEndLine,
   approvalAskLine,
@@ -75,6 +75,7 @@ export function ApprovalAsk({
   const [refusing, setRefusing] = useState(false);
   const why = approvalWords(approval);
   const origin = approvalOriginShort(approval);
+  const server = approvalServerWords(approval);
   const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
   const span = Math.max(1, new Date(approval.expiresAt).getTime() - new Date(approval.createdAt).getTime() || DAY_MS);
   const left = Math.max(0, new Date(approval.expiresAt).getTime() - Date.now()) / span;
@@ -118,6 +119,7 @@ export function ApprovalAsk({
       details={
         <>
           <ExactAction approval={approval} />
+          {server && <p className="rq__origin">{tt(server.key, server.values)}</p>}
           {origin && <p className="rq__origin">{tt(origin.key, origin.values)}</p>}
           {requester && <p className="rq__origin">{requester}</p>}
           {!pending && approval.reason && (

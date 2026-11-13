@@ -2,11 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { resources } from "@agenteschat/i18n";
 import i18next, { type TFunction } from "i18next";
 import type { Approval } from "../src/index";
+import { approvalServerWords } from "../src/lib/approval-origin";
 import {
   actionName,
   approvalDetail,
+  approvalDoing,
   approvalRuleWords,
+  approvalSummary,
   approvalTitle,
+  approvalValues,
   approveAlwaysWords,
 } from "../src/lib/approval-words";
 import { catalogLabel, labelIsName, TOOL_LABELS, toolKey } from "../src/lib/tool-labels";
@@ -153,5 +157,39 @@ describe("tool names where people see them", () => {
     expect(toolLineHint(pt, { kind: "openingSkill", hint: "relatorio", code: undefined, autoApproved: null })).toBe(
       "relatorio",
     );
+  });
+});
+
+describe("a connected server's own approval request (ADR 0180)", () => {
+  const asked = approval({
+    tool: "executor_resume",
+    scope: "custom:c1:write",
+    connector: "custom:c1",
+    title: "Executor: api.calendar.calendars.calendarEventsPatch",
+    detail: "Approve api.calendar.calendars.calendarEventsPatch? It changes the event.",
+    params: { requestId: "apr_1", response: { action: "accept" } },
+    serverRequest: {
+      server: "Executor",
+      action: "api.calendar.calendars.calendarEventsPatch",
+      message: "Approve api.calendar.calendars.calendarEventsPatch? It changes the event.",
+    },
+  });
+  test("reads as the server and its action, never as its resume call", () => {
+    expect(approvalTitle(pt, asked)).toBe("Executor: api.calendar.calendars.calendarEventsPatch");
+    expect(approvalDetail(asked, "pt-BR")).toBe(
+      "Approve api.calendar.calendars.calendarEventsPatch? It changes the event.",
+    );
+    expect(approvalSummary(asked, "en")).toBe(
+      "Approve api.calendar.calendars.calendarEventsPatch? It changes the event.",
+    );
+    expect(approvalDoing(en, asked, "en")).toBe("api.calendar.calendars.calendarEventsPatch");
+    // The resume call's own values (`requestId`, `accept`) aren't shown as what it does.
+    expect(approvalValues(asked, { long: true })).toEqual([]);
+  });
+  test("says who asked, in the person's language", () => {
+    const words = approvalServerWords(asked);
+    expect(words && pt(words.key, words.values)).toBe("Executor pediu esta aprovação.");
+    expect(words && en(words.key, words.values)).toBe("Executor asked for this approval itself.");
+    expect(approvalServerWords(approval({}))).toBeNull();
   });
 });

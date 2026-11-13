@@ -88,7 +88,8 @@ export function useOriginShort(a: Pick<Approval, "origin">) {
  * "mcp.higgsfield.ai: Generate image", which the details keep).
  */
 export function approvalHeadline(t: TFunction, a: Approval, locale: string) {
-  if (a.email || !a.connector) return approvalTitle(t, a);
+  // The server's own request (ADR 0180) keeps its title: the server and the action it named.
+  if (a.email || !a.connector || a.serverRequest) return approvalTitle(t, a);
   const doing = approvalDoing(t, a, locale);
   return doing.charAt(0).toLocaleUpperCase(locale) + doing.slice(1);
 }

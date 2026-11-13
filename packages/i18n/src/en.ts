@@ -4476,6 +4476,8 @@ export const en = {
       routine: "routine «{{name}}»",
       unattended: "nobody watching",
     },
+    /** A connected server asked for this approval itself (ADR 0180): approving answers it. */
+    serverAsks: "{{server}} asked for this approval itself.",
     said: "<b>{{name}}:</b> “{{text}}”",
     /** A request in the conversation, as the agent asking (ApprovalAsk). */
     askPlain: "I need your OK to go on:",
@@ -5072,6 +5074,8 @@ export const en = {
     review: {
       list: "Requests",
       where: "Where",
+      /** The connected server that asked for this approval itself (ADR 0180). */
+      askedBy: "Asked by",
       effect: "Effect",
       effects: {
         external: "Leaves the company",

@@ -4216,6 +4216,7 @@
       "routine": "routine «{{name}}»",
       "unattended": "niemand keek mee"
     },
+    "serverAsks": "{{server}} vroeg zelf om deze goedkeuring.",
     "said": "<b>{{name}}:</b> “{{text}}”",
     "askPlain": "Ik heb je akkoord nodig om door te gaan:",
     "askPlainOther": "Ik heb een akkoord nodig om door te gaan:",
@@ -4815,6 +4816,7 @@
     "review": {
       "list": "Verzoeken",
       "where": "Waar",
+      "askedBy": "Gevraagd door",
       "effect": "Effect",
       "effects": {
         "external": "Gaat buiten het bedrijf",

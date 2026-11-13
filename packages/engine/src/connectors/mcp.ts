@@ -40,6 +40,7 @@ import {
 } from "./custom";
 import { applyToolPins } from "./pins";
 import { presetForServer } from "./presets";
+import { RESUME_TOOL, serverPauseOf } from "./server-approval";
 import type { McpServerInfo } from "./server-icon";
 
 /** A tool as an MCP server lists it. */
@@ -361,6 +362,12 @@ export function createConnectorToolSource(
     const preset = presetForServer(connection.serverUrl)?.id;
     const composio = composioServiceOf(connection.serverUrl);
     const prefix = toolPrefixOfConnection(connection);
+    // A server that asks for approval itself and answers through its own `resume` (ADR 0180): only one connected by
+    // address, not Composio, whose `resume` is listed and not turned off.
+    const resumeWith =
+      !composio && byName.has(RESUME_TOOL) && classified.some((r) => r.name === RESUME_TOOL)
+        ? exposedToolName(prefix, RESUME_TOOL)
+        : undefined;
     return classified.flatMap((row): ToolDefinition[] => {
       const tool = byName.get(row.name);
       const access = row.access as ToolAccess;
@@ -398,6 +405,7 @@ export function createConnectorToolSource(
           // "Aprovar sempre" keeps either by the server's own name.
           rememberAs: tool.name,
           ...(executor ? { actions: composioActions, readScope: customScope(connection.id, "read") } : {}),
+          ...(resumeWith ? { resumeWith } : {}),
           ...(sqlArg ? { sqlReads: { tool: tool.name, arg: sqlArg } } : {}),
           describe: (input) => {
             const actions = executor ? composioActions(input) : null;
@@ -435,10 +443,18 @@ export function createConnectorToolSource(
                 details: { tool: tool.name, runId: ctx.runId, isError: result.isError },
               }).catch(() => {});
             }
+            // Read from the server's own words, before the gateway wraps them as outside text.
+            const serverPause = resumeWith && !result.isError ? serverPauseOf(result.content) : null;
             return {
               content: result.content,
               isError: result.isError,
-              data: { connector: "custom", serverId: connection.id, tool: tool.name, isError: result.isError },
+              data: {
+                connector: "custom",
+                serverId: connection.id,
+                tool: tool.name,
+                isError: result.isError,
+                ...(serverPause ? { serverPause } : {}),
+              },
             };
           },
         },

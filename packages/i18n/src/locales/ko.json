@@ -4074,6 +4074,7 @@
       "routine": "루틴 «{{name}}»",
       "unattended": "보는 사람 없음"
     },
+    "serverAsks": "{{server}}에서 직접 이 승인을 요청했어요.",
     "said": "<b>{{name}}:</b> “{{text}}”",
     "askPlain": "계속하려면 확인이 필요해요:",
     "askPlainOther": "계속하려면 확인이 필요해요:",
@@ -4638,6 +4639,7 @@
     "review": {
       "list": "요청",
       "where": "위치",
+      "askedBy": "요청한 곳",
       "effect": "영향",
       "effects": {
         "external": "회사 밖으로 나갑니다",

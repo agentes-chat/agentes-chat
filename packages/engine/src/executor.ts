@@ -2444,6 +2444,8 @@ async function executeRunInner(
     const moot = transcript.mootRequests ?? {};
     /** Calls nobody decided: withdrawn as moot. Only those leave it free to stay quiet. */
     let mootCalls = 0;
+    /** Approved calls whose server asked for another approval (ADR 0180): the run waits on those cards next. */
+    const askedAgain: { toolUseId: string; approval: Approval }[] = [];
     for (const call of transcript.pending.calls) {
       let result = call.result;
       const mootText = moot[call.questionId ?? call.secretRequestId ?? call.waitId ?? ""];
@@ -2493,14 +2495,31 @@ async function executeRunInner(
         }
         if (approval?.status === "approved" && deps.tools) {
           const output = await deps.tools.executeApproved(ctx, approval);
+          if (output.waitForApproval) {
+            askedAgain.push({ toolUseId: call.toolUseId, approval: output.waitForApproval });
+            // The approved card shows it ran; the next one is posted below.
+            const [ran] = await db.select().from(approvals).where(eq(approvals.id, approval.id));
+            if (ran) await publishApproval({ db, pubsub: deps.pubsub }, ran, "approval.decided").catch(() => {});
+            continue;
+          }
           result = { content: output.content, isError: output.isError === true };
           // The approvals screen shows it ran (and what came back).
           const [ran] = await db.select().from(approvals).where(eq(approvals.id, approval.id));
           if (ran) await publishApproval({ db, pubsub: deps.pubsub }, ran, "approval.decided").catch(() => {});
         } else {
           result = toolResultFor(approval, approval?.status === "refused" ? decider : undefined);
+          // A server's own request (ADR 0180): it hears the refusal, or that nobody answered, through its `resume`.
+          if (approval?.serverRequest && deps.tools) {
+            await deps.tools
+              .answerServerRequest(ctx, approval)
+              .catch((error) =>
+                addRunStep(db, run, "error", { reason: "server_request_answer", message: String(error) }),
+              );
+          }
         }
       }
+      // Kept on the call: a run that waits again (`askedAgain`) reads it from here, without running anything twice.
+      if (result) call.result = result;
       const line = `${call.name}${result?.isError ? " (not done)" : ""}: ${result?.content ?? ""}`;
       if (mootText && result?.content === mootText) mootCalls++;
       // Cut in the middle: a result in an outside envelope keeps its end and closing marker. A moot one decided nothing.
@@ -2517,6 +2536,42 @@ async function executeRunInner(
         content: result?.content ?? "",
         ...(result?.isError ? { isError: true } : {}),
       });
+    }
+    // The server asked again for a call a person approved (ADR 0180): the run waits on the new card, and the model
+    // reads every result once nothing is left to decide.
+    if (askedAgain.length > 0) {
+      const t = transcript;
+      const pending = transcript.pending;
+      t.pending = {
+        calls: pending.calls.map((c) => {
+          const next = askedAgain.find((a) => a.toolUseId === c.toolUseId);
+          return next
+            ? {
+                toolUseId: c.toolUseId,
+                name: c.name,
+                approvalId: next.approval.id,
+                ...(c.bridged ? { bridged: true } : {}),
+              }
+            : c;
+        }),
+      };
+      await deferred;
+      const pause = await db.transaction(async (tx) => {
+        const posted = await postPauseCards(tx, run, {
+          approvals: askedAgain.map((a) => a.approval),
+          questions: [],
+          secretRequestIds: [],
+        });
+        t.postedCount += posted.messages.length;
+        await saveTranscript(tx, t);
+        if (!(await transitionRun(tx, run.id, "running", "waiting_approval")))
+          throw new PermanentJobError("run changed state while executing");
+        return posted;
+      });
+      await publishPauseCards(deps, run, pause);
+      await publishChannelEvent(deps.pubsub, event("waiting_approval"));
+      await finished("waiting_approval");
+      return;
     }
     if (blocks.length > 0) transcript.messages.push({ role: "user", content: blocks });
     if (bridgedLines.length > 0) {

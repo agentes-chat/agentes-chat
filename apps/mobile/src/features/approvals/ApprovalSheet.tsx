@@ -1,5 +1,6 @@
 import { useApproval, useChannels, useDecideApproval } from "@agenteschat/client";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
+import { approvalServerWords } from "@agenteschat/client/lib/approval-origin";
 import { approvalEffects } from "@agenteschat/client/lib/approval-review";
 import {
   aheadEndLine,
@@ -159,14 +160,19 @@ export function ApprovalSheet({
     const where = [name, channel ? `#${channel.name}` : null, origin].filter(Boolean).join(" · ");
     // The request's facts: through which service, then the values it runs with, whole.
     const facts = approvalTable(a, Number.POSITIVE_INFINITY, nameOf, true);
-    // A built-in tool's action in words; a connector's is in its facts, an email is the letter.
-    const detail = !a.connector && !a.email ? approvalDetail(a, i18n.language) : null;
+    // A built-in tool's action in words, and what a server asks in its own (ADR 0180); a connector's is in its facts,
+    // an email is the letter.
+    const detail = (!a.connector || a.serverRequest) && !a.email ? approvalDetail(a, i18n.language) : null;
+    const server = approvalServerWords(a);
     // Whether it can be undone is the chip after the title; what it touches stays in the foot.
     const { undo } = approvalEffects(a);
     const traits = approvalTraits(a)
       .filter((tr) => tr !== undo)
       .map((tr) => t(traitKey(tr, isPersonal(org))));
-    const foot = [traits.join(" · "), requester].filter(Boolean).join("\n");
+    const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
+    const foot = [server ? tt(server.key, server.values) : "", traits.join(" · "), requester]
+      .filter(Boolean)
+      .join("\n");
     const who = (
       <View style={styles.who}>
         <View style={styles.whoHead}>

@@ -4087,6 +4087,7 @@
       "routine": "rutinitas «{{name}}»",
       "unattended": "tidak ada yang memantau"
     },
+    "serverAsks": "{{server}} sendiri yang meminta persetujuan ini.",
     "said": "<b>{{name}}:</b> “{{text}}”",
     "askPlain": "Aku perlu persetujuanmu untuk lanjut:",
     "askPlainOther": "Aku perlu persetujuan untuk lanjut:",
@@ -4655,6 +4656,7 @@
     "review": {
       "list": "Permintaan",
       "where": "Di mana",
+      "askedBy": "Diminta oleh",
       "effect": "Efek",
       "effects": {
         "external": "Keluar dari perusahaan",

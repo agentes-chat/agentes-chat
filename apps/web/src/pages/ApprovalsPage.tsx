@@ -1164,6 +1164,18 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
       value: [via.name, target ?? via.account].filter(Boolean).join(" · "),
       title: [via.name, target ?? via.account].filter(Boolean).join(" · "),
     },
+    // The server asked for this approval itself (ADR 0180): approving answers it.
+    ...(a.serverRequest
+      ? [
+          {
+            key: "server",
+            icon: "approve" as IconName,
+            label: t("approvals.review.askedBy"),
+            value: a.serverRequest.server,
+            title: a.serverRequest.server,
+          },
+        ]
+      : []),
     ...(effect
       ? [
           {
@@ -1293,7 +1305,11 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
             <Markdown source={text.text} variant="message" />
           </div>
         ) : (
-          <ExactAction approval={a} bare />
+          <>
+            {/* A server's own request (ADR 0180): what it asks, in its words, over its `resume` call. */}
+            {a.serverRequest?.message && <p className="ap-review__asks">{a.serverRequest.message}</p>}
+            <ExactAction approval={a} bare />
+          </>
         )}
         {pr && (
           <a className="ap-link" href={pr} target="_blank" rel="noreferrer">

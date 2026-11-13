@@ -4330,6 +4330,7 @@
       "routine": "routine « {{name}} »",
       "unattended": "personne ne regardait"
     },
+    "serverAsks": "{{server}} a demandé cette approbation lui-même.",
     "said": "<b>{{name}} :</b> « {{text}} »",
     "askPlain": "J'ai besoin de votre accord pour continuer :",
     "askPlainOther": "J'ai besoin d'un accord pour continuer :",
@@ -4953,6 +4954,7 @@
     "review": {
       "list": "Demandes",
       "where": "Où",
+      "askedBy": "Demandé par",
       "effect": "Effet",
       "effects": {
         "external": "Sort de l'entreprise",

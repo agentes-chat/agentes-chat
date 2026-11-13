@@ -4201,6 +4201,7 @@
       "routine": "«{{name}}» rutini",
       "unattended": "kimse izlemiyordu"
     },
+    "serverAsks": "Bu onayı {{server}} kendisi istedi.",
     "said": "<b>{{name}}:</b> “{{text}}”",
     "askPlain": "Devam etmek için onayınız gerekiyor:",
     "askPlainOther": "Devam etmek için bir onay gerekiyor:",
@@ -4791,6 +4792,7 @@
     "review": {
       "list": "İstekler",
       "where": "Nerede",
+      "askedBy": "İsteyen",
       "effect": "Etkisi",
       "effects": {
         "external": "Şirket dışına çıkar",

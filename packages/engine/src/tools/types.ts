@@ -74,7 +74,11 @@ export interface ToolOutput {
   waitForAnswer?: { text: string; choices: string[] | null; requestedForUserId: string | null };
   /** `request_secret` only: suspend the run until the person answers this request (ADR 0027). */
   waitForSecret?: { requestId: string };
-  /** `schedule_action` only: suspend the run until a person decides this approval (`prepareAhead` made it). */
+  /**
+   * Suspend the run until a person decides this approval: `schedule_action`'s (`prepareAhead` made it), or the next
+   * one a connected server asked for while an approved call ran (`executeApproved`, ADR 0180). Never read from a
+   * connected server's tool.
+   */
   waitForApproval?: ApprovalRow;
 }
 
@@ -192,6 +196,12 @@ export interface ToolDefinition {
    * connected app's own tools, never on one that runs anything its input says (a code workbench, a raw request).
    */
   ahead?: boolean;
+  /**
+   * A server connected by address that lists its own `resume` tool (ADR 0180): that tool's name as listed. A result
+   * whose `data.serverPause` says the server paused the call for an approval opens our card, and the gateway answers
+   * the server through this tool. Set only by the connector source.
+   */
+  resumeWith?: string;
   /** Human summary of a call, for approval cards. */
   describe?(input: Record<string, unknown>): { title: string; detail?: string };
   /**

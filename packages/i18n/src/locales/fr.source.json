@@ -10230,6 +10230,9 @@
   "approval.originShort.unattended": {
     "value": "nobody watching"
   },
+  "approval.serverAsks": {
+    "value": "{{server}} asked for this approval itself."
+  },
   "approval.said": {
     "value": "<b>{{name}}:</b> “{{text}}”"
   },
@@ -11714,6 +11717,9 @@
   },
   "approvals.review.where": {
     "value": "Where"
+  },
+  "approvals.review.askedBy": {
+    "value": "Asked by"
   },
   "approvals.review.effect": {
     "value": "Effect"

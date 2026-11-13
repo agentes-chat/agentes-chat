@@ -26,6 +26,7 @@ import { type CostKind, costlyGate, costlyKind, LONG_STEPS, unrequested } from "
 import { countToolCall } from "../connector-usage";
 import { actionLevel, nameWords, openEnded } from "../connectors/classify";
 import { missingConnectors, type ServerCatalog } from "../connectors/listing";
+import { type ResumeAction, resumeInput, type ServerPause } from "../connectors/server-approval";
 import { answersAgentsOnly, consultationOrigin } from "../consultations";
 import { recordOutcome } from "../context/outcomes";
 import { sha256 } from "../crypto";
@@ -251,6 +252,10 @@ export const actionHash = (action: {
 }) => sha256(canonicalJson(action));
 
 export const APPROVAL_TTL_MS = 24 * 3600_000;
+/** How many of a server's requests in a row an agent that never asks answers yes on its own (ADR 0180). */
+const SERVER_RESUMES = 5;
+/** What the model would read if a run stopped right after a server paused again; the run waits on the new card. */
+const SERVER_PAUSED_AGAIN = "The server asked for another approval: a person decides it before this goes on.";
 /** How much of a call's `describe().detail` an approval card keeps. */
 export const APPROVAL_DETAIL_CHARS = 2000;
 const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -276,6 +281,9 @@ const shown = (text: string) =>
  * An approved action already claimed (it runs at most once): what it returned, or, with nothing recorded
  * (it still runs elsewhere, or a restart or a dropped connection cut it), that it may not have finished.
  */
+/** A server's own approval request a call's result carries (`data.serverPause`, set by the connector source). */
+const pauseOf = (output: ToolOutput): ServerPause | null =>
+  output.isError ? null : ((output.data?.serverPause as ServerPause | undefined) ?? null);
 const ranBefore = (approval: { result: unknown }): ToolOutput =>
   (approval.result as ToolOutput | null) ?? {
     content:
@@ -887,12 +895,181 @@ export function createToolGateway(deps: {
   }
 
   /**
+   * Where a run's card goes (ADR 0053, 0034): a routine's to the conversation it reports to, never its room; one asked
+   * by another agent where the person is, not in the agents' DM. Null: the run's own conversation.
+   */
+  async function cardPlace(ctx: ToolContext, authority: RunAuthority | null) {
+    // Consulted for a creator outside its agent's audience: it stays in the agents' DM (`answersAgentsOnly`).
+    const deliverTo =
+      authority?.kind === "routine" && !(ctx.runId && (await answersAgentsOnly(ctx.db, ctx.orgId, ctx.runId)))
+        ? authority.brief?.deliverTo
+        : undefined;
+    return deliverTo
+      ? { channelId: deliverTo.channelId, threadRootId: deliverTo.threadId ?? ctx.threadRootId }
+      : ctx.runId
+        ? await consultationOrigin(ctx.db, ctx.orgId, ctx.runId)
+        : null;
+  }
+
+  /**
+   * A connected server paused this call for its own approval (ADR 0180): the request, and the server's `resume` tool
+   * that answers it, when this agent may call that tool in this run. Null: the result goes to the model as it came.
+   */
+  async function serverPauseIn(
+    ctx: ToolContext,
+    authority: RunAuthority | null,
+    level: ApprovalsLevel,
+    tool: ToolDefinition,
+    output: ToolOutput,
+  ): Promise<{ pause: ServerPause; resume: ToolDefinition } | null> {
+    const pause = pauseOf(output);
+    if (!ctx.runId || !pause || !tool.resumeWith || !tool.connectionId) return null;
+    const resume = (await allTools(ctx)).get(tool.resumeWith);
+    if (!resume || resume.connectionId !== tool.connectionId || resume.resumeWith !== tool.resumeWith) return null;
+    const keys = await freshGrantedKeys(ctx.db, ctx.orgId, ctx.agentId);
+    if (!isAllowed(accessWithNeeds(keys, resume).state)) return null;
+    if (policyFor(authority, resume, level).action === "refuse") return null;
+    return { pause, resume };
+  }
+
+  /**
+   * The card for a server's own request (ADR 0180): approving runs the server's `resume` with this request's id, as
+   * hashed, through `runApproved`, so the card is the one gate and `resume` never asks again. `toolUseId`: the call it
+   * answers in the run (a later request of the same call gets its own, after the request id).
+   */
+  async function openServerCard(
+    ctx: ToolContext,
+    authority: RunAuthority | null,
+    asked: { from: ToolDefinition; resume: ToolDefinition; pause: ServerPause; toolUseId: string; why: string },
+  ): Promise<Approval> {
+    const { from, resume, pause, toolUseId } = asked;
+    const place = await cardPlace(ctx, authority);
+    const params = resumeInput(pause.requestId, "accept");
+    const connectionId = resume.connectionId ?? null;
+    const server = from.connectorLabel ?? resume.connectorLabel ?? from.name;
+    const [inserted] = await ctx.db
+      .insert(approvals)
+      .values({
+        orgId: ctx.orgId,
+        runId: ctx.runId,
+        agentId: ctx.agentId,
+        channelId: place?.channelId ?? ctx.channelId,
+        threadRootId: place?.threadRootId ?? ctx.threadRootId,
+        toolUseId,
+        tool: resume.name,
+        scope: resume.scope,
+        connectionId,
+        params,
+        actionHash: actionHash({ tool: resume.name, scope: resume.scope, connectionId, params }),
+        title: cutMarked(`${server}: ${pause.action ?? from.name}`, 300),
+        detail: cutMarked(pause.message, APPROVAL_DETAIL_CHARS),
+        why: asked.why,
+        origin: authority ? approvalOrigin(authority) : null,
+        ownerUserId: await ownerOf(ctx),
+        expiresAt: new Date(now().getTime() + APPROVAL_TTL_MS),
+        requestedByUserId: authority ? (authority.personId ?? routineCreatorOf(authority)) : null,
+        // What it does is the server's to say: it is read as risky.
+        highRisk: true,
+        serverRequest: {
+          requestId: pause.requestId,
+          server,
+          action: pause.action,
+          message: pause.message,
+          from: from.name,
+        },
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (inserted && from.connector) {
+      await countToolCall(ctx.db, {
+        orgId: ctx.orgId,
+        agentId: ctx.agentId,
+        connector: from.connector,
+        approvalsAsked: 1,
+      });
+    }
+    // The same request asked again (a retried job) finds the first card.
+    const row =
+      inserted ??
+      (
+        await ctx.db
+          .select()
+          .from(approvals)
+          .where(and(eq(approvals.runId, ctx.runId), eq(approvals.toolUseId, toolUseId)))
+      )[0];
+    if (!row) throw new Error("approval insert returned nothing");
+    await addRunStep(ctx.db, { id: ctx.runId, orgId: ctx.orgId }, "approval", {
+      approvalId: row.id,
+      toolUseId,
+      title: row.title,
+    });
+    return row;
+  }
+
+  /**
+   * An agent that never asks (ADR 0173): the server's requests are answered yes at once, through its `resume`, as a
+   * person approving them would. A server that keeps pausing stops after a few: the last answer goes to the model.
+   */
+  async function resumeAlone(ctx: ToolContext, paused: { pause: ServerPause; resume: ToolDefinition }) {
+    let { pause } = paused;
+    let output: ToolOutput = { content: "", isError: true };
+    for (let i = 0; i < SERVER_RESUMES; i++) {
+      output = await run(paused.resume, resumeInput(pause.requestId, "accept"), { ...ctx, approved: true });
+      const next = pauseOf(output);
+      if (!next) break;
+      pause = next;
+    }
+    return output;
+  }
+
+  /**
+   * What a call's result does when its server paused it for its own approval (ADR 0180): null when it didn't (or this
+   * agent can't answer it), the server's final answer when this agent never asks (`unasked`), else the card the run
+   * waits on. `card`: the tool-use id and reason the card carries.
+   */
+  async function answerServerPause(
+    ctx: ToolContext,
+    authority: RunAuthority | null,
+    level: ApprovalsLevel,
+    tool: ToolDefinition,
+    output: ToolOutput,
+    card: { toolUseId: string; why: string },
+  ): Promise<{ unasked: ToolOutput } | { card: Approval } | null> {
+    const paused = await serverPauseIn(ctx, authority, level, tool, output);
+    if (!paused) return null;
+    if (unaskedAtNever(level, paused.resume, authority)) return { unasked: await resumeAlone(ctx, paused) };
+    return { card: await openServerCard(ctx, authority, { from: tool, ...paused, ...card }) };
+  }
+
+  /**
+   * A call that ran before (a retried job): what it returned, and the card its server asked for next when that one
+   * still waits (ADR 0180), so the run waits on it again instead of reading on.
+   */
+  async function ranOrWaiting(ctx: ToolContext, approval: Approval, row: { result: unknown }): Promise<ToolOutput> {
+    const [next] = ctx.runId
+      ? await ctx.db
+          .select()
+          .from(approvals)
+          .where(
+            and(
+              eq(approvals.runId, ctx.runId),
+              eq(approvals.status, "pending"),
+              sql`starts_with(${approvals.toolUseId}, ${`${approval.toolUseId}~`})`,
+            ),
+          )
+          .orderBy(desc(approvals.createdAt))
+          .limit(1)
+      : [];
+    return next ? { ...ranBefore(row), content: SERVER_PAUSED_AGAIN, waitForApproval: next } : ranBefore(row);
+  }
+
+  /**
    * Runs an approved action, exactly as hashed: the stored params, the same tool and scope, at most once. Scope and
    * the arguments' rules are re-checked (they may have changed while it waited). `toolUseId`: the call it answers.
    */
   async function runApproved(ctx: ToolContext, approval: Approval, toolUseId: string): Promise<ToolOutput> {
     if (approval.status !== "approved") return { content: "This action was not approved", isError: true };
-    if (approval.executedAt) return ranBefore(approval);
+    if (approval.executedAt) return ranOrWaiting(ctx, approval, approval);
     const expected = actionHash({
       tool: approval.tool,
       scope: approval.scope,
@@ -935,9 +1112,20 @@ export function createToolGateway(deps: {
         if (approval.runAt && row?.status !== "approved") {
           return { content: "This action was not approved", isError: true };
         }
-        return ranBefore(row ?? approval);
+        return ranOrWaiting(ctx, approval, row ?? approval);
       }
       output = await run(tool, approval.params, { ...ctx, toolUseId, approved: true }, 1);
+      // The server paused again (a program with a second action to approve): its next request gets a card of its
+      // own, which the run waits on in turn (ADR 0180). An agent that never asks answers it at once.
+      const authority = await authorityOf(ctx).catch(() => null);
+      const level = await approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId);
+      const pause = pauseOf(output);
+      const answered = await answerServerPause(ctx, authority, level, tool, output, {
+        toolUseId: `${approval.toolUseId}~${pause?.requestId ?? ""}`,
+        why: approval.why,
+      });
+      if (answered && "unasked" in answered) output = answered.unasked;
+      else if (answered) output = { ...output, content: SERVER_PAUSED_AGAIN, waitForApproval: answered.card };
       outside = readsOutsideText(tool, output);
       // Team actions (ADR 0064): what a person approved and went out is the team's too.
       if (isOutsideTool(tool) && !output.isError) {
@@ -1362,18 +1550,7 @@ export function createToolGateway(deps: {
       }
       const askPerson = async (why: string, remember: RememberedKind | null): Promise<InvokeResult> => {
         const owner = await ownerOf(ctx);
-        // A routine's request goes to the conversation it reports to, never its room; one asked by another
-        // agent (ADR 0034) where the person is, not in the agents' DM.
-        // Consulted for a creator outside its agent's audience: it stays in the agents' DM (`answersAgentsOnly`).
-        const deliverTo =
-          authority?.kind === "routine" && !(ctx.runId && (await answersAgentsOnly(ctx.db, ctx.orgId, ctx.runId)))
-            ? authority.brief?.deliverTo
-            : undefined;
-        const origin = deliverTo
-          ? { channelId: deliverTo.channelId, threadRootId: deliverTo.threadId ?? ctx.threadRootId }
-          : ctx.runId
-            ? await consultationOrigin(ctx.db, ctx.orgId, ctx.runId)
-            : null;
+        const origin = await cardPlace(ctx, authority);
         const asked = tool.approvers
           ? await tool.approvers(
               call.input,
@@ -1443,6 +1620,20 @@ export function createToolGateway(deps: {
       // Our own tools only (`schedule_action`), never a connected server's.
       if (!tool.connectionId) runCtx.prepareAhead = (request) => prepareAhead(runCtx, authority, request);
       let output = withRepo(await run(tool, call.input, runCtx));
+      // The server paused the call for its own approval (ADR 0180): our card asks the person, and approving answers
+      // the server through its `resume`. The model never has to call it; an agent that never asks answers yes now.
+      const answered = await answerServerPause(runCtx, authority, level, tool, output, {
+        toolUseId: call.toolUseId,
+        why,
+      });
+      if (answered && "card" in answered) {
+        await audit("pending", { reason: why || null, approvalId: answered.card.id });
+        return { type: "approval", approval: answered.card };
+      }
+      if (answered) {
+        output = answered.unasked;
+        unasked = true;
+      }
       // The computer held a command for a person (a merge, a deploy): the card goes out now, as a call with `why`
       // would have asked, so it never rests on the agent calling again. Approved, it runs the approved way.
       const held = tool.whyAsks && ctx.runId && !ctx.approved ? heldCommandReason(output) : null;
@@ -1510,6 +1701,41 @@ export function createToolGateway(deps: {
       const runAt = approval.runAt;
       if (approval.status === "approved" && runAt) return { content: await aheadNote(ctx, { ...approval, runAt }) };
       return runApproved(ctx, approval, approval.toolUseId);
+    },
+
+    /**
+     * A server's own request a person refused, or nobody decided in time (ADR 0180): the server hears it through its
+     * `resume` (declined, or canceled), so the paused work ends there too. Nothing else asks or runs; what the server
+     * answers isn't the model's to read.
+     */
+    async answerServerRequest(ctx: ToolContext, approval: Approval): Promise<void> {
+      const action: ResumeAction | null =
+        approval.status === "refused" ? "decline" : approval.status === "expired" ? "cancel" : null;
+      if (!approval.serverRequest || !action || approval.executedAt) return;
+      const tool = (await allTools(ctx)).get(approval.tool);
+      if (!tool || tool.connectionId !== approval.connectionId || tool.scope !== approval.scope) return;
+      const input = resumeInput(approval.serverRequest.requestId, action);
+      const output = await run(tool, input, { ...ctx, approved: true });
+      // The audit: what went to the server, beside the decision's own row.
+      const kind = toolKind(tool).kind;
+      const outcome: AuditOutcome = output.isError ? "failed" : "done";
+      if (auditsCall(kind, tool, outcome)) {
+        await recordToolCall(ctx.db, {
+          orgId: ctx.orgId,
+          agentId: ctx.agentId,
+          runId: ctx.runId || null,
+          channelId: approval.channelId,
+          authority: await authorityOf(ctx).catch(() => null),
+          tool: tool.name,
+          kind,
+          connector: tool.connectorLabel ?? null,
+          title: approval.title,
+          input,
+          outcome,
+          reason: outcome === "done" ? null : shown(output.content),
+          approvalId: approval.id,
+        });
+      }
     },
   };
 

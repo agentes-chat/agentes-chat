@@ -75,6 +75,7 @@ export * from "./connectors/oauth-mcp";
 export * from "./connectors/oauth-return";
 export * from "./connectors/pins";
 export * from "./connectors/presets";
+export * from "./connectors/server-approval";
 export * from "./connectors/server-icon";
 export * from "./consultations";
 export * from "./context";

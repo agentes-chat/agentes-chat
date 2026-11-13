@@ -1786,6 +1786,13 @@
       "when": 1794685400000,
       "tag": "0256_connection_trusted",
       "breakpoints": true
+    },
+    {
+      "idx": 266,
+      "version": "7",
+      "when": 1794685500000,
+      "tag": "0266_approval_server_request",
+      "breakpoints": true
     }
   ]
 }

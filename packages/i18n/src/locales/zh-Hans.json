@@ -4076,6 +4076,7 @@
       "routine": "例行工作“{{name}}”",
       "unattended": "无人值守"
     },
+    "serverAsks": "{{server}} 自己请求了此审批。",
     "said": "<b>{{name}}：</b>“{{text}}”",
     "askPlain": "需要你同意才能继续：",
     "askPlainOther": "需要有人同意才能继续：",
@@ -4647,6 +4648,7 @@
     "review": {
       "list": "请求",
       "where": "位置",
+      "askedBy": "请求方",
       "effect": "影响",
       "effects": {
         "external": "会发到公司外部",

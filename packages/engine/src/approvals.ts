@@ -121,6 +121,11 @@ export interface ApprovalView {
    * whose request it was, who decides it only when `requesterDecides` (an approver by role). Null: any other approval.
    */
   approvers: { label: string; requestedByUserId: string | null; requesterDecides: boolean } | null;
+  /**
+   * Asked by the connected server itself (ADR 0180): its name, the action it wants to run and what it asks, in its own
+   * words. Approving answers that server; null for every other approval.
+   */
+  serverRequest: Pick<schema.ServerRequest, "server" | "action" | "message"> | null;
 }
 
 /** What the approval row alone doesn't say: the connector, the issue (and, for one, the trail). */
@@ -425,6 +430,9 @@ export const approvalView = (a: Approval, canDecide = false): ApprovalView => ({
         requestedByUserId: a.approvers.requestedBy,
         requesterDecides: a.approvers.requesterDecides,
       }
+    : null,
+  serverRequest: a.serverRequest
+    ? { server: a.serverRequest.server, action: a.serverRequest.action, message: a.serverRequest.message }
     : null,
 });
 

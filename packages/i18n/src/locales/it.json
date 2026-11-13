@@ -4330,6 +4330,7 @@
       "routine": "routine «{{name}}»",
       "unattended": "nessuno guardava"
     },
+    "serverAsks": "{{server}} ha chiesto questa approvazione.",
     "said": "<b>{{name}}:</b> “{{text}}”",
     "askPlain": "Mi serve il tuo OK per andare avanti:",
     "askPlainOther": "Mi serve un OK per andare avanti:",
@@ -4955,6 +4956,7 @@
     "review": {
       "list": "Richieste",
       "where": "Dove",
+      "askedBy": "Chiesto da",
       "effect": "Effetto",
       "effects": {
         "external": "Esce dall'azienda",

@@ -4371,6 +4371,7 @@ export const ptBR = {
       routine: "rotina «{{name}}»",
       unattended: "sem ninguém acompanhando",
     },
+    serverAsks: "{{server}} pediu esta aprovação.",
     said: "<b>{{name}}:</b> “{{text}}”",
     /** A request in the conversation, as the agent asking (ApprovalAsk). */
     askPlain: "Preciso do seu ok para seguir:",
@@ -4982,6 +4983,7 @@ export const ptBR = {
     review: {
       list: "Pedidos",
       where: "Onde",
+      askedBy: "Pedido por",
       effect: "Efeito",
       effects: {
         external: "Sai da empresa",

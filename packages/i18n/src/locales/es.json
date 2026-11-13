@@ -4325,6 +4325,7 @@
       "routine": "rutina «{{name}}»",
       "unattended": "nadie mirando"
     },
+    "serverAsks": "{{server}} pidió esta aprobación.",
     "said": "<b>{{name}}:</b> “{{text}}”",
     "askPlain": "Necesito tu OK para seguir:",
     "askPlainOther": "Necesito un OK para seguir:",
@@ -4943,6 +4944,7 @@
     "review": {
       "list": "Solicitudes",
       "where": "Dónde",
+      "askedBy": "Pedido por",
       "effect": "Efecto",
       "effects": {
         "external": "Sale de la empresa",

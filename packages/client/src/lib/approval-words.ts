@@ -68,9 +68,11 @@ export const approvalTitle = (t: TFunction, approval: TitledApproval): string =>
   wordedTitle(t, approval) ?? approval.title;
 
 type TitledApproval = Pick<Approval, "tool" | "title" | "params" | "email"> &
-  Partial<Pick<Approval, "connector" | "scope">>;
+  Partial<Pick<Approval, "connector" | "scope" | "serverRequest">>;
 
 function wordedTitle(t: TFunction, approval: TitledApproval): string | null {
+  // The server's own request (ADR 0180): its title names the server and the action it asked for, never its `resume`.
+  if (approval.serverRequest) return null;
   if (approval.email) {
     const words = emailTitleWords(approval.email);
     return (t as unknown as Tt)(words.key, words.values);
@@ -177,9 +179,11 @@ function innerTool(approval: Pick<Approval, "params"> & Partial<Pick<Approval, "
  */
 export function approvalDoing(
   t: TFunction,
-  approval: Pick<Approval, "tool" | "title" | "params" | "connector" | "scope" | "email">,
+  approval: Pick<Approval, "tool" | "title" | "params" | "connector" | "scope" | "email"> &
+    Partial<Pick<Approval, "serverRequest">>,
   locale: string,
 ) {
+  if (approval.serverRequest) return approval.serverRequest.action ?? approval.title;
   // "Ver …" → "ver …"; an acronym ("PR #42") stays.
   return lowerFirst(wordedTitle(t, approval) ?? toolName(t, partsOf(approval.tool), approval.tool), locale);
 }
@@ -196,7 +200,7 @@ export function approvalReadsOnly(approval: Pick<Approval, "tool" | "scope" | "p
  * tool's name. Lists keep them short (`long: false`, at most `max`); the details show every one.
  */
 export function approvalValues(
-  approval: Pick<Approval, "params" | "connector" | "email">,
+  approval: Pick<Approval, "params" | "connector" | "email"> & Partial<Pick<Approval, "serverRequest">>,
   {
     max = Number.POSITIVE_INFINITY,
     long = false,
@@ -215,6 +219,8 @@ export function approvalValues(
     : null;
   // An email is said by its sentence and its letter; its fields aren't values.
   if (approval.email) return [];
+  // A server's own request (ADR 0180) is said by its title and message: its values are the `resume` call's.
+  if (approval.serverRequest) return [];
   const skip = innerTool(approval) ? "name" : null;
   const out: [string, string][] = [];
   const plain = (v: unknown) => typeof v === "string" || typeof v === "number" || typeof v === "boolean";
@@ -239,7 +245,13 @@ export function approvalValues(
  * Its values on one line ("Role: seller · Month: 2026-10 · Revenue: 97.000"): what tells apart two requests
  * for the same tool, on the card while it waits and on the line once decided. The raw call stays in the details.
  */
-export const approvalSummary = (approval: Pick<Approval, "params" | "connector" | "email">, locale: string, max = 4) =>
+export const approvalSummary = (
+  approval: Pick<Approval, "params" | "connector" | "email"> & Partial<Pick<Approval, "tool" | "serverRequest">>,
+  locale: string,
+  max = 4,
+) =>
+  // The server's own request (ADR 0180): what it asks. Its `resume` call's values say nothing to a person.
+  approval.serverRequest?.message ||
   approvalValues(approval, { max, locale })
     .map(([label, value]) => `${label}: ${value}`)
     .join(" · ");
@@ -250,9 +262,12 @@ export const approvalSummary = (approval: Pick<Approval, "params" | "connector" 
  * went), which the title already says in words: its values in words instead, else the rest of the line.
  */
 export function approvalDetail(
-  approval: Pick<Approval, "detail" | "tool" | "params" | "connector" | "email">,
+  approval: Pick<Approval, "detail" | "tool" | "params" | "connector" | "email"> &
+    Partial<Pick<Approval, "serverRequest">>,
   locale: string,
 ) {
+  // The server's own request: what it asks, in its words. Its `resume` call's values say nothing to a person.
+  if (approval.serverRequest) return approval.serverRequest.message || approval.detail;
   if (approval.connector) return approvalSummary(approval, locale);
   const [first = "", ...rest] = approval.detail.split(" · ");
   if (rest.length === 0 || toolKey(first).key !== toolKey(approval.tool).key) return approval.detail;

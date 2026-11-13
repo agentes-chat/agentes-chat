@@ -22,7 +22,7 @@ import {
   runKeys,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
-import { approvalWhy } from "@agenteschat/client/lib/approval-origin";
+import { approvalServerWords, approvalWhy } from "@agenteschat/client/lib/approval-origin";
 import {
   alwaysRoutineName,
   approvalAskLine,
@@ -558,6 +558,7 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
   const c = useColors();
   const asks = useAskStore();
   const origin = useOriginShort(a);
+  const server = approvalServerWords(a);
   const { org } = useOrg();
   const ownerId = a.ownerUserId ?? dir.agentById.get(a.agentId)?.ownerUserId ?? null;
   const owner = approvalWaitsFor(a, ownerId ? dir.memberById.get(ownerId)?.name : undefined);
@@ -604,6 +605,14 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
                   <ApprovalTraits approval={a} />
                 </>
               )}
+              {server ? (
+                <Text variant="footnote" tone="muted">
+                  {(t as unknown as (key: string, options?: Record<string, unknown>) => string)(
+                    server.key,
+                    server.values,
+                  )}
+                </Text>
+              ) : null}
               {origin ? (
                 <View style={styles.origin}>
                   <LineIcon variant="footnote" name="clock" size={13} color={c.muted} />

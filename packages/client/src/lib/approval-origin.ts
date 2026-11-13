@@ -13,6 +13,14 @@ export function approvalOriginWords(a: Pick<Approval, "origin">): Words | null {
   return { key: "approval.origin.unattended", values: {} };
 }
 
+/**
+ * A request the connected server asked for itself (ADR 0180), in words: "Executor asked for this approval…". Null for
+ * any other.
+ */
+export function approvalServerWords(a: Pick<Approval, "serverRequest">): Words | null {
+  return a.serverRequest ? { key: "approval.serverAsks", values: { server: a.serverRequest.server } } : null;
+}
+
 /** Why the agent asks, trimmed; null when it said nothing. */
 export const approvalWhy = (a: Pick<Approval, "why">) => (a.why ? plainLine(a.why) : "") || null;
 /** The same why on one line with its marks kept (code between backticks, bold), for a card that draws them. */

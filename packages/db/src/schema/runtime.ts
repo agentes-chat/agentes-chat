@@ -514,6 +514,20 @@ export interface ApprovalApprovers {
   required?: boolean;
 }
 
+/** A connected server's own approval request (ADR 0180), as the card shows it. */
+export interface ServerRequest {
+  /** The server's id for the paused request (`apr_…`). */
+  requestId: string;
+  /** The connection's name ("Executor"). */
+  server: string;
+  /** The action the server wants to run, in its own words; null when it named none. */
+  action: string | null;
+  /** What the server asks the person, in its own words. */
+  message: string;
+  /** The tool whose call the server paused (`executor_call`). */
+  from: string;
+}
+
 /**
  * A sensitive action an agent wants to take (docs/adr/0015). Bound to the
  * exact action: `action_hash` = SHA-256 of the canonical JSON of (tool,
@@ -595,6 +609,11 @@ export const approvals = pgTable(
     highRisk: boolean().notNull().default(true),
     /** Decided by someone covering this person (`approval_covers`): "Aprovado por Bruno, cobrindo Ana". */
     decidedForUserId: text(),
+    /**
+     * Asked by the connected server itself (ADR 0180): a tool's result said `approval-required`, and approving answers
+     * that request through the server's own `resume` tool (`tool`, `params`). Null for every other approval.
+     */
+    serverRequest: jsonb().$type<ServerRequest>(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

@@ -6,8 +6,11 @@ import { toolActivity } from "../src/lib/activity";
 
 const ENGINE = join(import.meta.dir, "../../engine/src");
 
-/** Not tools a person reads about: the choice to stay silent, and an approval rule's own name. */
-const NO_LINE = new Set(["pass", "command"]);
+/**
+ * Not tools a person reads about: the choice to stay silent, an approval rule's own name, and a connected server's
+ * own `resume` (ADR 0180), which the engine only names to find it on that server.
+ */
+const NO_LINE = new Set(["pass", "command", "resume"]);
 
 /** Every tool the engine defines: `name: "…"` in its tool files, the `*_TOOL` names, and `BUILTIN_TOOL_INFO`. */
 function engineTools() {

@@ -1969,6 +1969,11 @@ export interface Approval {
    * decides it only as an approver by role (`requesterDecides`). Null or absent: any other approval.
    */
   approvers?: { label: string; requestedByUserId: string | null; requesterDecides: boolean } | null;
+  /**
+   * Asked by the connected server itself (ADR 0180): the server's name, the action it wants to run and what it asks,
+   * in its own words. Approving answers that server. Null or absent: any other approval.
+   */
+  serverRequest?: { server: string; action: string | null; message: string } | null;
 }
 
 /** A kind of call the agent runs without asking, approved for good by someone who decides its approvals. */

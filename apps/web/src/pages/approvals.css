@@ -820,7 +820,8 @@ html:not([data-pointer]) .ap-li:focus-visible {
   box-shadow: none;
   background: none;
 }
-.ap-review__why {
+.ap-review__why,
+.ap-review__asks {
   margin: 0;
   font-size: 15px;
   line-height: 1.6;
