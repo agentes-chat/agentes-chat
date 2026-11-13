@@ -791,7 +791,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
     try {
       require("node:fs").appendFileSync(
         "/tmp/muse-events.log",
-        `${new Date().toISOString()} ${method} ${JSON.stringify(params).slice(0, 200)}\n`,
+        `${new Date().toISOString()} ${method} ${JSON.stringify(method === "approval/requested" ? params.subject : params).slice(0, 700)}\n`,
       );
     } catch {}
     if (method === "turn/completed") {

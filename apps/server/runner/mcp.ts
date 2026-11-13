@@ -479,7 +479,10 @@ export class McpBridge {
       this.lists.set(taskId, { run, at: now, reply: kept });
       return kept;
     }
-    const tool = typeof req.tool === "string" ? req.tool.slice(0, 64) : "";
+    // A host hands another server's tools to us with its own naming (`mcp__<server>__<tool>`, and `.` for the last
+    // part in some builds): what our server lists, and answers to, is the bare name.
+    const asked = typeof req.tool === "string" ? req.tool.slice(0, 96) : "";
+    const tool = asked.replace(/^mcp__[A-Za-z0-9_]+?(?:__|\.)/, "").slice(0, 64);
     // A bridge (server token): any tool the server lists; the server decides. Else the fixed mission tools.
     const known = info.serverToken ? TOOL_NAME.test(tool) : MISSION_MCP_TOOLS.some((t) => t.name === tool);
     if (!known) return { ok: false, error: `Unknown tool ${tool}` };
