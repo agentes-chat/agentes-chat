@@ -173,7 +173,13 @@ export function parseOpenRouterModels(body: unknown): Record<string, ModelInfo> 
     const targetPricing = aimed && pricingOf(aimed);
     if (targetPricing) {
       const prices = higher(pricing.prices, targetPricing.prices);
-      const long = pricing.longContext ?? targetPricing.longContext;
+      let long = pricing.longContext ?? targetPricing.longContext;
+      if (pricing.longContext && targetPricing.longContext) {
+        long = {
+          aboveInputTokens: Math.min(pricing.longContext.aboveInputTokens, targetPricing.longContext.aboveInputTokens),
+          prices: higher(pricing.longContext.prices, targetPricing.longContext.prices),
+        };
+      }
       pricing = { prices, ...(long ? { longContext: { ...long, prices: higher(long.prices, prices) } } : {}) };
     }
     const maxOut = obj(m.top_provider)?.max_completion_tokens;
