@@ -5,6 +5,7 @@
 - Builds on: ADR 0032 (one engine, swappable brains), ADR 0034 (agents consult each other), ADR 0037 (agents investigate first, act with undo), the chat-delivery work (background runs, `hand_off`, run inbox)
 - Evaluates: ADRs 0045–0052 and the `feat/agent-runtime` branch (taken where they fit, see the end)
 - Code: `packages/engine/src/authority.ts`, `routine-brief.ts`, `routine-ledger.ts`, `untrusted.ts` (the shared base this ADR builds on)
+- Addendum 2026-11-13 (at the end): §3 — the run a routine's report woke does the routine's job too, by the same brief.
 - Addendum 2026-10-31 (at the end): work by default. Whoever woke it, a run works within the agent's own permissions; only a routine set to only look and tell reads. Changes §1 (`unattended`), §2 (unattended runs), §3 (their profile, a mission thread), the mail rule of §2 and the credential rule of §3.
 
 ## Context
@@ -251,3 +252,11 @@ Found while bringing Codex to Windows, and true on every system: a Codex rule co
 1. **No one's own rules.** Every `codex exec` turn and background task passes `--ignore-rules` (Codex 0.122.0 and later), as the right hand's turns already did. The app-server can't leave them out, so a turn where Codex would load some (in its home, or in a folder at or above the turn's when that home trusts a project: an AI account's home trusts none) runs on exec instead: no messages mid-turn and no approvals there, its sandbox the limit.
 2. **The sandbox is ours.** Its network (off in a turn) and its writable roots (the agent's folders, an empty list when there are none) are the runner's, whatever the home's config says.
 3. **The command policy reads lines as the shell does.** A `#` opening a word is a comment to its line's end, and a backslash before a newline joins two lines, so neither hides a line: a quote opened after either can't swallow the commands below it. Pushes and lone merges are read from the lines the shell runs (a newline inside quotes ends none), and a merge with a comment after it or a line continuation waits for a person.
+
+## Addendum 2026-11-13: the run a report woke does the routine's job too (§3)
+
+A routine set up to post the weekly summary in Slack has that action in `own_actions`, and §2 above lets it post with no card — on *its own* run. Its report is answered by a different run: an agent's message hands it off (`routine_handoff`), a run wakes in the conversation it reports to, and that run is `unattended` with a `routine_report` brief, not `routine`. §3 kept every write from it a card, so the person who set the routine up was asked anyway, every Monday, on the one write they had already allowed — and the card could not be answered well from that path.
+
+1. **The brief decides, not the kind.** `ownJobCovers` reads the brief from the routine's own run or from a run `fedByRoutine` says a routine feeds. Everything else is unchanged and read fresh on every call: the exact action list, `aheadRefusal` (merge, deploy, rollback, and anything that runs whatever its input says), and the routine's creator still deciding the agent's approvals. A removed action or a creator who lost the right asks again at once.
+2. **What stays a card.** Everything §3 names, minus that one case: any other write to a connected app, an action beside an allowed one in the same call, a mailbox's send (ADR 0038), merge, deploy and rollback.
+3. **Not extended, and left to a decision of its own.** A card raised by a woken run still offers the agent's "Aprovar sempre" rather than the routine's "Sempre nesta rotina", and a woken run neither consumes the routine's pre-approved slot nor the Vault keys its creator allowed (§3 of the 2026-11-12 amendment). Those carry their own consent and their own audit.
