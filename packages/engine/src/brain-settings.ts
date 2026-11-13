@@ -1734,7 +1734,7 @@ export interface AgentBrainSummary {
 
 /**
  * The label of a computer brain's model ("opus" → "Opus", "GLM-5.3" on a plan; a typed Codex model as is): what it
- * runs, so a plan's model kept while Claude thinks reads as Sonnet.
+ * runs, so a model kept while Claude thinks is named by its table (`planModelById`) instead of a raw id.
  */
 export function brainModelLabel(
   kind: BrainKind,
@@ -1747,7 +1747,7 @@ export function brainModelLabel(
   const stored = model ?? defaultBrainModel(kind);
   if (!stored) return null;
   const value = kind === "claude_code" && !isAutoModel(stored) ? claudeCodeModel(undefined, stored) : stored;
-  return brainModelOptions(kind).find((o) => o.value === value)?.label ?? value;
+  return brainModelOptions(kind).find((o) => o.value === value)?.label ?? planModelById(value)?.label ?? value;
 }
 
 /** Each agent's brain summary for this viewer (one query for the computers, one for the accounts). */

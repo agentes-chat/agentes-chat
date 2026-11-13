@@ -416,7 +416,9 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
     agent: {
       ...agent,
       brain: own.brain,
-      brainModel: own.brainModel,
+      // The person's own choice first; none made there, the model saved on the agent still speaks for the turn
+      // (issue #221: `own.brainModel` empty used to wipe it and the turn fell to the brain's `sonnet` default).
+      brainModel: own.brainModel ?? agent.brainModel,
       brainEffort: own.brainEffort,
       brainAccountId: own.brainAccountId,
       brainAccountLentBy: own.brainAccountLentBy,

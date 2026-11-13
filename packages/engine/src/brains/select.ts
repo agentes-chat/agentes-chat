@@ -15,7 +15,9 @@ import { isAutoModel } from "@agenteschat/providers";
 import {
   autoPlanModel,
   claudeCodeModel,
+  droppedPlanModel,
   modelLimitOf,
+  modelRunsOnPlan,
   ownLimitsModel,
   PLAN_FORBIDDEN_TEXT,
   PLAN_INACTIVE_TEXT,
@@ -29,7 +31,7 @@ import { pausedMessage } from "../machines";
 import { missionTurnFor } from "../missions-engine";
 import { isRightHand, rightHandPerson, rightHandPlanRefusal, thinkingAgent } from "../right-hand";
 import { runnerUpdateWay } from "../runner-update";
-import type { AgentRun } from "../runs";
+import { type AgentRun, addRunStep } from "../runs";
 import { accountUnavailable, brainSessionId, claudeCodeAvailability, toolOff } from "./claude-code";
 import { codexVersionOk } from "./codex";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
@@ -788,10 +790,11 @@ export async function resolveBrain(
     machineId && deps.machines
       ? await storedPlanUsage(deps.db, agent.orgId, machineId, kind, account?.id).catch(() => null)
       : null;
-  // A plan's model kept while another account thinks (or none): what that one runs instead, so no turn asks a
-  // provider for a model it doesn't have.
-  const runs =
-    kind === "claude_code" && model && !isAutoModel(model) ? claudeCodeModel(planOf(account?.provider), model) : model;
+  // On a coding plan, one of its models by id is what the turn asks for. Another plan's model — or one whose live
+  // list dropped it — is kept as stored instead of being swapped for `sonnet` (issue #221): a model nobody chose
+  // never runs, and the run records both sides below so the next diagnosis reads it instead of guessing.
+  const plan = planOf(account?.provider);
+  const runs = kind === "claude_code" && model && !isAutoModel(model) ? claudeCodeModel(plan, model) : model;
   const effort = brainEffortFor(agent, kind);
   const unavailable =
     (isRightHand(agent) ? await rightHandPlanRefusal(deps.db, agent, run, status) : null) ??
@@ -808,7 +811,21 @@ export async function resolveBrain(
           // "Automático" runs another model where the one it maps to is held (`autoPlanModel`).
           isAutoModel(runs) ? autoPlanModel(account?.provider, runs, usage) : runs,
         ));
-  // A mission's main session stays (its decisions, inbox and items point at it): `settingsChanged` brings the edit.
+  // A model the account's plan never served is kept (issue #221): once this turn will actually run, the run records
+  // what it asked for. One the plan's live list dropped is the executor's (`notifyPlanModelDropped`), whose notice
+  // names the fallback it runs instead — no second record here.
+  if (
+    !unavailable &&
+    kind === "claude_code" &&
+    model &&
+    !isAutoModel(model) &&
+    !modelRunsOnPlan(plan, model) &&
+    !(account?.provider && droppedPlanModel(account.provider, model))
+  ) {
+    await addRunStep(deps.db, run, "context", {
+      brainModel: { stored: model, runs, plan: account?.provider ?? null, offPlan: true },
+    }).catch(() => {});
+  }
   const settingsChanged =
     mission?.session?.resume && options.promptKey !== undefined
       ? await deps.db

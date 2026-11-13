@@ -1725,14 +1725,15 @@ test.if(posix)(
       expect(refused.final).toMatchObject({ type: "error", code: "not_logged_in", retryable: true });
       expect(Date.now() - started).toBeLessThan(10_000);
 
-      // A model that isn't an alias runs as sonnet; Kimi Code reads its key from ANTHROPIC_API_KEY.
+      // A model the key's plan doesn't serve is kept as the turn's `--model`, never swapped for the plan's sonnet
+      // behind the person's back (issue #221): what the endpoint refuses is what the run asked for, visibly.
       await turn(2, "hi", {
         account: KIMI_ACCOUNT,
         model: "claude-opus-5-5",
         session: { id: SESSION(2), resume: false },
       });
       const k = runs()[2];
-      expect(flag(k, "--model")).toBe("sonnet");
+      expect(flag(k, "--model")).toBe("claude-opus-5-5");
       expect(k?.apiKey).toBe(KIMI);
       expect(k?.authToken).toBeNull();
       expect(k?.settingsEnv?.ANTHROPIC_BASE_URL).toBe("https://api.kimi.ai/coding/");
@@ -1767,9 +1768,9 @@ test.if(posix)(
         // A subagent called with `fable` runs the plan's opus, never a Claude model the plan doesn't serve.
         ANTHROPIC_DEFAULT_FABLE_MODEL: "k3.1-pro",
       });
-      // Another plan's model runs the plan's own sonnet.
+      // Another plan's model is kept too, not swapped for the plan's sonnet (issue #221).
       await turn(7, "hi", { account: KIMI_ACCOUNT, model: "minimax-m3", session: { id: SESSION(7), resume: false } });
-      expect(flag(runs()[7], "--model")).toBe("sonnet");
+      expect(flag(runs()[7], "--model")).toBe("minimax-m3");
       // A model the plan's list added after this runner was built: the server chose it, so it runs. On OpenCode Go,
       // whose models are each switched on or off, every call of the turn runs it: no hidden MiniMax or Haiku call.
       await turn(8, "hi", { account: GO_ACCOUNT, model: "glm-6", session: { id: SESSION(8), resume: false } });

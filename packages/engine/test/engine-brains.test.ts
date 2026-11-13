@@ -1556,7 +1556,8 @@ test("the agent's account and effort apply to its own brain; signed out or an ol
   if (!agent || !run) throw new Error("missing rows");
   const plan = await resolveBrain({ db: f.db }, agent, run, question.id);
   expect(plan).toMatchObject({ kind: "claude_code", account: { id: ACCOUNT, status: "active" }, effort: "low" });
-  // One of a coding plan's models by id thinks on that plan; kept while Claude's sign-in thinks, it runs Sonnet.
+  // One of a coding plan's models by id thinks on that plan. An id the account's plan doesn't serve is kept as stored
+  // — never swapped for `sonnet` behind the person's back (issue #221) — and the run records it (a `context` step).
   const picked = { ...agent, brainModel: "k3-256k" };
   await f.db.update(schema.machineAccounts).set({ provider: "kimi" });
   expect(await resolveBrain({ db: f.db }, picked, run, question.id)).toMatchObject({
@@ -1564,9 +1565,9 @@ test("the agent's account and effort apply to its own brain; signed out or an ol
     account: { provider: "kimi" },
   });
   await f.db.update(schema.machineAccounts).set({ provider: "zai" });
-  expect((await resolveBrain({ db: f.db }, picked, run, question.id)).model).toBe("sonnet");
+  expect((await resolveBrain({ db: f.db }, picked, run, question.id)).model).toBe("k3-256k");
   await f.db.update(schema.machineAccounts).set({ provider: null });
-  expect((await resolveBrain({ db: f.db }, picked, run, question.id)).model).toBe("sonnet");
+  expect((await resolveBrain({ db: f.db }, picked, run, question.id)).model).toBe("k3-256k");
   expect((await resolveBrain({ db: f.db }, { ...agent, brainModel: "auto" }, run, question.id)).model).toBe("auto");
   // Another brain (a mission's choice): neither applies; an account of another kind is no account.
   expect(brainEffortFor(agent, "codex")).toBeUndefined();

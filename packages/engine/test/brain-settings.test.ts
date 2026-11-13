@@ -74,12 +74,12 @@ describe("brain settings", () => {
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
     expect(brainModelLabel("claude_code", "opus")).toBe("Opus");
     expect(normalizeBrainModel("claude_code", "haiku")).toBe("haiku");
-    // One of a plan's other models is stored by its id and named after it there; while Claude thinks it runs Sonnet.
+    // One of a plan's other models is stored by its id and named after it there; with no plan it keeps its own name.
     expect(normalizeBrainModel("claude_code", "deepseek-v4.1-flash")).toBe("deepseek-v4.1-flash");
     expect(normalizeBrainModel("claude_code", "k3-256k")).toBe("k3-256k");
     expect(brainModelLabel("claude_code", "deepseek-v4.1-flash", "opencode")).toBe("DeepSeek V4.1 Flash");
     expect(brainModelLabel("claude_code", "deepseek-v4.1-flash", "kimi")).toBe("Kimi for Coding");
-    expect(brainModelLabel("claude_code", "deepseek-v4.1-flash")).toBe("Sonnet");
+    expect(brainModelLabel("claude_code", "deepseek-v4.1-flash")).toBe("DeepSeek V4.1 Flash");
     expect(brainModelLabel("claude_code", "auto")).toBe("auto");
   });
 
