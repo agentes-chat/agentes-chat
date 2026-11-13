@@ -612,6 +612,22 @@ test("a host that refuses to start is `muse_missing` on ENOENT and carries its s
   expect((refused.events.at(-1) as { message: string }).message).toContain("muse login");
 });
 
+test("our bridge's tools are allowed in a work turn too, where a refusal would abort it", () => {
+  // A `tool` subject carries no command and no path: read as unreadable it was refused, and the host offers no plain
+  // "deny" on one — only `abort` — so the turn died silent instead of the call.
+  const base = { cwd: "/w", profile: "work" as const };
+  expect(
+    museApprovalVerdict({
+      ...base,
+      subject: { kind: "tool", toolName: "mcp__agenteschat_agentes__list_files" },
+    }),
+  ).toMatchObject({ allow: true });
+  // Something that isn't ours is still judged — and refused.
+  expect(museApprovalVerdict({ ...base, subject: { kind: "tool", toolName: "read_file" } })).toMatchObject({
+    allow: false,
+  });
+});
+
 test("a right-hand turn runs read-only, on our tools and nothing else", async () => {
   // The posture it is started with, whatever the profile says.
   expect(museServeArgs({ chat: true })).toEqual(["serve", "--disable-write", "--disable-shell"]);

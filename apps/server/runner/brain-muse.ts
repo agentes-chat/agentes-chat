@@ -90,6 +90,8 @@ const TURN_DEADLINE_MS = 30 * 60_000;
  * half an hour before the wall-clock deadline noticed.
  */
 const SILENCE_MS = 4 * 60_000;
+/** How long an unanswered decision waits before the same `choiceId` is sent again. */
+const APPROVAL_RESEND_MS = 10_000;
 
 /** Muse's key variable: an account may carry one, and it must not answer for the sign-in. */
 export const MUSE_KEY_ENV = "META_API_KEY";
@@ -345,9 +347,14 @@ export function museApprovalVerdict(input: {
   const called = (input.subject.toolName ?? "").trim();
   const tool = kind === "shell" || command ? "Bash" : kind === "fileAccess" || file ? "Write" : "";
   const call = tool === "Bash" ? { command } : { file_path: file };
-  // A `chat` turn (the right hand) is our bridge's tools and nothing else, as `--tools ""` is for Claude: a `tool`
-  // subject is one of ours and runs, and its own Bash and Write are refused with the turn going on without them. The
-  // bridge's servers are all named for this install, so the name is the test, not a guess about the kind.
+  // Our own bridge's tools, in **any** turn: they are how the agent reaches the engine, the server already decides what
+  // each one may do (its scopes and run policy), and denying them here had a cost a denial shouldn't have — the host
+  // offers no plain "deny" on a tool subject, only `abort`, so refusing one killed the whole turn and left it silent.
+  if (!tool && called.startsWith("mcp__")) {
+    return { allow: true, always: false, why: "a tool of our bridge, which the server already guards" };
+  }
+  // A `chat` turn (the right hand) is our bridge's tools and nothing else, as `--tools ""` is for Claude: its own Bash
+  // and Write are refused with the turn going on without them.
   if (input.chat && !tool)
     return called.startsWith("mcp__")
       ? { allow: true, always: false, why: "a tool of our bridge, which a right hand runs" }
@@ -786,6 +793,9 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   const shown = (text: string) => (redact ? redact(text) : text);
   /** Approvals already answered: a host that asks again for one gets no second decision in the thread. */
   const answered = new Set<string>();
+  /** What the host said when it wouldn't take a decision, and the asks it has resolved. */
+  let approvalError: string | undefined;
+  const resolved = new Set<string>();
   let finished = false;
   let missingHost = false;
   let failure: string | undefined;
@@ -807,6 +817,10 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       ended = museTurnOutcome(params);
       finished = true;
       done();
+      return;
+    }
+    if (method === "approval/resolved") {
+      resolved.add(str(params.approvalId));
       return;
     }
     if (method === "approval/requested") {
@@ -842,10 +856,20 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       const choice = museChoice(offered, verdict);
       if (!choice) return;
       answered.add(approvalId);
-      // The reply is nobody's business: a host that doesn't answer it must not hold the turn.
-      void host
-        .request("approval/decide", { approvalId, choiceId: choice.choiceId, commandId: uuidv7() })
-        .catch(() => undefined);
+      // A host that takes the decision answers `approval/resolved`; one that doesn't leaves the turn waiting. So the
+      // reply is watched: the error is kept for the message a stuck turn ends with, and a decision the host didn't take
+      // is sent once more before the watchdog has to close the turn.
+      const decide = () =>
+        host
+          .request("approval/decide", { approvalId, choiceId: choice.choiceId, commandId: uuidv7() })
+          .catch((err: unknown) => {
+            approvalError = err instanceof Error ? err.message : String(err);
+          });
+      void decide();
+      setTimeout(() => {
+        if (finished || resolved.has(approvalId)) return;
+        void decide();
+      }, APPROVAL_RESEND_MS).unref?.();
       const takenScope = choice.scope ?? "once";
       opts.emit({
         type: "tool_call",
@@ -911,7 +935,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       if (mapper.inFlight) return;
       if (Date.now() - heard < silenceMs) return;
       finished = true;
-      failure = `The Muse host stopped answering: nothing for ${silenceMs >= 60_000 ? `${Math.round(silenceMs / 60_000)} minutes` : `${silenceMs}ms`}, so the turn was closed.`;
+      failure = `The Muse host stopped answering: nothing for ${silenceMs >= 60_000 ? `${Math.round(silenceMs / 60_000)} minutes` : `${silenceMs}ms`}, so the turn was closed.${approvalError ? ` Its last decision failed: ${approvalError}` : ""}`;
       killTree(child, "SIGKILL");
       done();
     },
