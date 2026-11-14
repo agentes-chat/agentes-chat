@@ -18753,6 +18753,14 @@
       "room": "Ha spazio",
       "computers": "Computer"
     },
+    "capacity": {
+      "label": "Cosa trattiene le attività",
+      "today_one": "Oggi: {{count}} attività completata · {{waiting}} in attesa",
+      "today_many": "Oggi: {{count}} attività completate · {{waiting}} in attesa",
+      "today_other": "Oggi: {{count}} attività completate · {{waiting}} in attesa",
+      "usage": "Vedi utilizzo",
+      "computers": "Vedi computer"
+    },
     "cards": {
       "label": "Agenti",
       "previous": "Agenti precedenti",

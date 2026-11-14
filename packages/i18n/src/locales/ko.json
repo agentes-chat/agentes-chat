@@ -17466,6 +17466,12 @@
       "room": "자리 있음",
       "computers": "컴퓨터"
     },
+    "capacity": {
+      "label": "작업을 막고 있는 것",
+      "today_other": "오늘: {{count}}개 완료 · {{waiting}}개 대기 중",
+      "usage": "사용량 보기",
+      "computers": "컴퓨터 보기"
+    },
     "cards": {
       "label": "에이전트",
       "previous": "이전 에이전트",

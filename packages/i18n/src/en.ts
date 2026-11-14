@@ -18512,6 +18512,14 @@ export const en = {
       room: "Has room",
       computers: "Computers",
     },
+    /** Above the cards: what holds the waiting tasks now, each cause with its way out. Hidden when nothing waits. */
+    capacity: {
+      label: "What holds the tasks",
+      today_one: "Today: {{count}} task done · {{waiting}} waiting",
+      today_other: "Today: {{count}} tasks done · {{waiting}} waiting",
+      usage: "See usage",
+      computers: "See computers",
+    },
     cards: { label: "Agents", previous: "Previous agents", next: "More agents" },
     table: "Tasks",
     noResults: "No task matches this search.",

@@ -153,6 +153,23 @@ describe("one line a row", () => {
     for (const row of ["computer.name", "title"]) expect(screen).toContain(`<OneLine title={${row}}`);
   });
 
+  test("what holds the waiting work: today's line, then up to three causes, each one line that opens its way out", () => {
+    const screen = read("TaskManagerScreen.tsx");
+    expect(screen).toContain("const causes = waitCauses(all).slice(0, CAUSES_MAX);");
+    expect(screen).toContain("const CAUSES_MAX = 3;");
+    expect(screen).toContain('t("taskManager.capacity.today", {');
+    expect(screen).toContain('<OneLine title={row.title} line={row.line} variant="subhead" />');
+    for (const way of [
+      'router.push("/usage")',
+      "openQueue(cause.machineId)",
+      'router.push("/settings/devices")',
+      "router.push(taskHref(first.runId))",
+    ])
+      expect(screen).toContain(way);
+    // Nothing waits, nothing shows.
+    expect(screen).toContain("{causes.length > 0 ? (");
+  });
+
   test("its screen says it whole: the title and what it is about with no limit of lines, the state's words", () => {
     const page = read("TaskScreen.tsx");
     expect(page).toMatch(

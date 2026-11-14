@@ -216,6 +216,41 @@ export function taskWaitGroupText(t: TFunction, locale: string, group: TaskWaitG
   return s("taskManager.waitGroup.planLimit", { ...values, when });
 }
 
+/**
+ * What holds the waiting work now, one entry per cause: a plan's sign-in or a budget at its limit (`limit`, by its
+ * wait key), a computer full or away (`computer`), people asked for an ok or an answer (`person`). The cause holding
+ * the most first. An agent's own line of work holds nothing here: it waits on its other work.
+ */
+export type WaitCause =
+  | { kind: "limit"; key: string; tasks: ManagedTask[] }
+  | { kind: "computer"; key: string; machineId: string; busy: boolean; tasks: ManagedTask[] }
+  | { kind: "person"; key: string; tasks: ManagedTask[] };
+
+export function waitCauses(tasks: ManagedTask[]): WaitCause[] {
+  const causes = new Map<string, WaitCause>();
+  for (const task of tasks) {
+    const why = waitsFor(task);
+    const machineId = task.line?.machineId ?? task.machine?.id;
+    const cause: WaitCause | null =
+      why === "ok" || why === "answer"
+        ? { kind: "person", key: "person", tasks: [] }
+        : why === "plan" || why === "budget"
+          ? { kind: "limit", key: `limit:${task.wait?.key ?? task.wait?.plan ?? why}`, tasks: [] }
+          : (why === "computer_busy" || why === "computer_offline") && machineId && task.wait?.code !== "work_queue"
+            ? { kind: "computer", key: `${why}:${machineId}`, machineId, busy: why === "computer_busy", tasks: [] }
+            : null;
+    if (!cause) continue;
+    const found = causes.get(cause.key) ?? cause;
+    found.tasks.push(task);
+    causes.set(cause.key, found);
+  }
+  return [...causes.values()].sort(
+    (a, b) => b.tasks.length - a.tasks.length || CAUSE_ORDER[a.kind] - CAUSE_ORDER[b.kind],
+  );
+}
+
+const CAUSE_ORDER: Record<WaitCause["kind"], number> = { limit: 0, computer: 1, person: 2 };
+
 /** Since when it counts (a long work's start, else the run's), in ms. */
 export const taskSince = (t: Pick<ManagedTask, "startedAt" | "createdAt">) => Date.parse(t.startedAt ?? t.createdAt);
 

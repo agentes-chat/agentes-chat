@@ -18604,6 +18604,14 @@
       "room": "Tiene espacio",
       "computers": "Computadoras"
     },
+    "capacity": {
+      "label": "Qué frena las tareas",
+      "today_one": "Hoy: {{count}} tarea terminada · {{waiting}} esperando",
+      "today_many": "Hoy: {{count}} tareas terminadas · {{waiting}} esperando",
+      "today_other": "Hoy: {{count}} tareas terminadas · {{waiting}} esperando",
+      "usage": "Ver uso",
+      "computers": "Ver computadoras"
+    },
     "cards": {
       "label": "Agentes",
       "previous": "Agentes anteriores",

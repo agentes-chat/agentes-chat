@@ -18246,6 +18246,13 @@
       "room": "Heeft ruimte",
       "computers": "Computers"
     },
+    "capacity": {
+      "label": "Wat de taken ophoudt",
+      "today_one": "Vandaag: {{count}} taak klaar · {{waiting}} wachtend",
+      "today_other": "Vandaag: {{count}} taken klaar · {{waiting}} wachtend",
+      "usage": "Gebruik bekijken",
+      "computers": "Computers bekijken"
+    },
     "cards": {
       "label": "Agents",
       "previous": "Vorige agents",

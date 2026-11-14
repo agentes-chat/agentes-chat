@@ -19267,6 +19267,15 @@
       "room": "Są wolne miejsca",
       "computers": "Komputery"
     },
+    "capacity": {
+      "label": "Co wstrzymuje zadania",
+      "today_one": "Dziś: {{count}} zadanie ukończone · {{waiting}} czeka",
+      "today_few": "Dziś: {{count}} zadania ukończone · {{waiting}} czeka",
+      "today_many": "Dziś: {{count}} zadań ukończonych · {{waiting}} czeka",
+      "today_other": "Dziś: {{count}} zadania ukończonego · {{waiting}} czeka",
+      "usage": "Zobacz użycie",
+      "computers": "Zobacz komputery"
+    },
     "cards": {
       "label": "Agenci",
       "previous": "Poprzedni agenci",

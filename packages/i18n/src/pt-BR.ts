@@ -18567,6 +18567,14 @@ export const ptBR = {
       room: "Tem espaço",
       computers: "Computadores",
     },
+    /** Above the cards: what holds the waiting tasks now, each cause with its way out. Hidden when nothing waits. */
+    capacity: {
+      label: "O que segura as tarefas",
+      today_one: "Hoje: {{count}} tarefa concluída · {{waiting}} esperando",
+      today_other: "Hoje: {{count}} tarefas concluídas · {{waiting}} esperando",
+      usage: "Ver uso",
+      computers: "Ver computadores",
+    },
     cards: { label: "Agentes", previous: "Agentes anteriores", next: "Mais agentes" },
     table: "Tarefas",
     noResults: "Nenhuma tarefa com essa busca.",

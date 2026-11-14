@@ -18747,6 +18747,14 @@
       "room": "A de la place",
       "computers": "Ordinateurs"
     },
+    "capacity": {
+      "label": "Ce qui retient les tâches",
+      "today_one": "Aujourd’hui : {{count}} tâche terminée · {{waiting}} en attente",
+      "today_many": "Aujourd’hui : {{count}} tâches terminées · {{waiting}} en attente",
+      "today_other": "Aujourd’hui : {{count}} tâches terminées · {{waiting}} en attente",
+      "usage": "Voir l’usage",
+      "computers": "Voir les ordinateurs"
+    },
     "cards": {
       "label": "Agents",
       "previous": "Agents précédents",

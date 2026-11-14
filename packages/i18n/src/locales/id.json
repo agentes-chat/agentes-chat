@@ -17576,6 +17576,12 @@
       "room": "Ada tempat",
       "computers": "Komputer"
     },
+    "capacity": {
+      "label": "Yang menahan tugas",
+      "today_other": "Hari ini: {{count}} tugas selesai · {{waiting}} menunggu",
+      "usage": "Lihat penggunaan",
+      "computers": "Lihat komputer"
+    },
     "cards": {
       "label": "Agen",
       "previous": "Agen sebelumnya",

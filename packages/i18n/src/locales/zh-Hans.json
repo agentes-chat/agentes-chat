@@ -17652,6 +17652,12 @@
       "room": "有空位",
       "computers": "电脑"
     },
+    "capacity": {
+      "label": "是什么卡住了任务",
+      "today_other": "今天：已完成 {{count}} 项 · {{waiting}} 项等待中",
+      "usage": "查看用量",
+      "computers": "查看电脑"
+    },
     "cards": {
       "label": "智能体",
       "previous": "前面的智能体",
