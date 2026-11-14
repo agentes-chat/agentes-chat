@@ -23,6 +23,7 @@ import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { brainTool } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   behindComputer,
@@ -82,6 +83,7 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { SetupWait } from "../computer/SetupWait";
+import { ToolOffWayOut } from "../devices/ToolOneClick";
 import { SheetHeader } from "../new/parts";
 import { AgentFace } from "../shared/Face";
 import { pickOne } from "../shared/PickerSheet";
@@ -282,6 +284,12 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
   const [polls, setPolls] = useState(false);
   const gates = usePlanGates(orgId, forAgent?.id, polls ? PLAN_POLL_MS : false);
   const bareGates = useGatesWithoutAgent(orgId, props.bare === true);
+  const machines = useMachines(orgId);
+  const gateAt = (choice: PlanChoice) => (agentId !== undefined ? gates.gateOf(choice) : bareGates.at(choice).gate);
+  const machineAt = (choice: PlanChoice) => {
+    const id = (gates.view?.computer ?? bareGates.at(choice).computer)?.machineId;
+    return machines.data?.find((m) => m.id === id);
+  };
   // The workspace's keys are offered in Connect an AI (a sheet) only, as on the web: in the first run (inline) the key
   // saved there already serves every agent with no plan.
   const credentials = useCredentials(orgId, mayAddKey && forAgent !== undefined && sheetTitle !== undefined);
@@ -452,7 +460,7 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
           }}
           dims={dims}
           dimmedWhy={(choice) =>
-            dimmedLine(t, agentId !== undefined ? gates.gateOf(choice) : bareGates.at(choice).gate, {
+            dimmedLine(t, gateAt(choice), {
               edition: gates.edition ?? bareGates.edition,
               kind: kindOf(choice),
               computer: computerName(
@@ -461,8 +469,16 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
                 managedNamed(gates.view?.computer ?? bareGates.at(choice).computer),
                 isPersonal(org),
               ),
+              machine: machineAt(choice),
             })
           }
+          dimmedOut={(choice) => {
+            const gate = gateAt(choice);
+            const m = machineAt(choice);
+            return gate.state === "unsupported" && gate.reason === "tool_off" && m && m.kind !== "managed" ? (
+              <ToolOffWayOut machine={m} tool={brainTool(kindOf(choice))} style={styles.footerOut} />
+            ) : null;
+          }}
           have={have}
           haveFor={startAgentId || theirs ? undefined : forAgent?.name}
           busy={busy}
@@ -500,6 +516,7 @@ function Home({
   onView,
   dims,
   dimmedWhy,
+  dimmedOut,
   have,
   haveFor,
   busy,
@@ -509,6 +526,8 @@ function Home({
   dims: (choice: PlanChoice) => boolean;
   /** Why a plan is dimmed, said once under the rows it dims. */
   dimmedWhy: (choice: PlanChoice) => string;
+  /** Its way out where there is one (a program off there), under that line. */
+  dimmedOut: (choice: PlanChoice) => ReactNode;
   have: ReturnType<typeof existingRows>;
   /** The agent they are for, where the screen's title doesn't say it. */
   haveFor?: string;
@@ -554,6 +573,7 @@ function Home({
             ) : null}
           </GroupedList>
           {dimmed && !noPlan ? <GroupedFooter>{dimmedWhy(dimmed)}</GroupedFooter> : null}
+          {dimmed && !noPlan ? dimmedOut(dimmed) : null}
           <GroupedHeader>{t("connectAi.have.other")}</GroupedHeader>
         </>
       ) : null}
@@ -575,6 +595,7 @@ function Home({
         />
       </GroupedList>
       {noPlan ? <GroupedFooter>{dimmedWhy("claude")}</GroupedFooter> : null}
+      {noPlan ? dimmedOut("claude") : null}
     </View>
   );
 }
@@ -1160,15 +1181,9 @@ function GateWait({
   const { colors: c } = useTheme();
   const machines = useMachines(orgId, edition !== null);
   const hold = holdText(t, org?.standing);
+  const row = machines.data?.find((m) => m.id === machineId);
   // Offline or unsupported: what's going on there and what comes next (on the Cloud, by itself: the page asks again).
-  const why = gateLine(t, {
-    gate,
-    edition,
-    kind,
-    computer,
-    hold,
-    machine: machines.data?.find((m) => m.id === machineId),
-  });
+  const why = gateLine(t, { gate, edition, kind, computer, hold, machine: row });
   let wait: ReactNode = null;
   if (gate.state === "loading") wait = <ActivityIndicator color={c.muted} style={styles.loading} />;
   else if (gate.state === "billing") {
@@ -1185,6 +1200,20 @@ function GateWait({
         {setup ? <SetupWait view={setup} workspace={{ orgId, name: org?.name ?? "" }} /> : null}
         <InfoCard icon="clock">{t(coding ? "connectAi.wait.key" : "connectAi.wait.signIn")}</InfoCard>
       </View>
+    );
+  } else if (
+    why &&
+    gate.state === "unsupported" &&
+    gate.reason === "tool_off" &&
+    row &&
+    row.kind !== "managed" &&
+    !hold
+  ) {
+    // Switched off on a computer a person connected: said as that, with its way out.
+    wait = (
+      <InfoCard icon="laptop" action={<ToolOffWayOut machine={row} tool={brainTool(kind)} />}>
+        {why.text}
+      </InfoCard>
     );
   } else if (why && !(gate.state === "offline" && signingIn)) {
     wait = <InfoCard icon={why.rechecks ? "clock" : "laptop"}>{why.text}</InfoCard>;
@@ -1203,7 +1232,7 @@ function GateWait({
       </>
     );
   } else if (gate.state === "locked") {
-    const pairer = machines.data?.find((m) => m.id === machineId)?.pairedBy?.name.split(" ")[0];
+    const pairer = row?.pairedBy?.name.split(" ")[0];
     wait = (
       <InfoCard icon="lock">
         {gate.who === "computer"
@@ -1389,6 +1418,8 @@ const styles = StyleSheet.create({
   bold: { fontWeight: "600" },
   center: { textAlign: "center" },
   start: { alignSelf: "flex-start" },
+  // Under a grouped list's footer, on its edge.
+  footerOut: { paddingTop: 8, paddingHorizontal: 16 },
   gap: { gap: 10 },
   loading: { marginTop: 16 },
   backRow: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", marginBottom: 4 },

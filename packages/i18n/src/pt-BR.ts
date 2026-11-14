@@ -3255,28 +3255,6 @@ export const ptBR = {
       zen: "Conectar o OpenCode",
       api_key: "Adicionar uma chave de API",
     },
-    /**
-     * A plan whose program is switched off on a computer the person connected. `program`: "Claude Code" or "Codex"
-     * (`brain.card`), as its switch is named in that computer's own settings.
-     */
-    toolOff: {
-      text: "O {{computer}} está conectado, mas o {{program}} está desligado nele. Só quem conectou o computador liga.",
-      where: "No {{computer}}",
-      /** `<mark/>`: the app's icon, drawn. */
-      one: "Clique no ícone do agentes.chat <mark/> perto do relógio",
-      oneWindows: "No Windows, ele pode estar atrás da seta ^ da barra de tarefas.",
-      two: "Abra <b>Preferências</b>",
-      three: "Em <b>Ferramentas</b>, ligue <b>{{program}}</b>",
-      /** On a computer that may have no app: its command follows. */
-      terminal: "No terminal do computador, rode:",
-      /** In the app on that very computer: Open Tools follows. */
-      here: "Ligue <b>{{program}}</b> em <b>Ferramentas</b>.",
-      /** The person who connected the computer turns it on from here: the button follows. */
-      oneClick: "<b>{{program}}</b> está desligado nesse computador.",
-      /** Someone else: they ask whoever connected it (the button follows). */
-      oneClickOther: "<b>{{program}}</b> está desligado no computador de {{name}}.",
-      waiting: "Esperando você ligar. Esta tela muda sozinha.",
-    },
     titleFor: "Conectar uma IA para o {{name}}",
     titleFor_female: "Conectar uma IA para a {{name}}",
     /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
@@ -11771,11 +11749,6 @@ export const ptBR = {
       no_computer: "Escolha um computador conectado em Computador para usar.",
       exec_off: "O computador foi conectado sem permissão para rodar programas.",
       runner_old: "Atualize o programa do agentes.chat no computador para usar.",
-      /** `program`: "Claude Code" or "Codex" (`brain.card`). */
-      tool_off:
-        "O {{program}} está desligado no {{computer}}. Ligue lá, no app do agentes.chat: Preferências → Ferramentas.",
-      tool_offLinux:
-        "O {{program}} está desligado no {{computer}}. Ligue lá, no app do agentes.chat ou com {{command}}.",
       /** The button that turns it on follows. */
       tool_offOne: "O {{program}} está desligado no {{computer}}.",
       not_installed: "O {{program}} não está instalado no {{computer}}.",
@@ -14260,6 +14233,8 @@ export const ptBR = {
       asked: "Pedido enviado. {{name}} recebe um botão para ligar.",
       done: "Ligado no {{machine}}.",
       outdated: "Atualize o app do agentes.chat no {{machine}} para ligar daqui.",
+      /** Its computer is offline: the button turns it on once the computer is back, and waits until then. */
+      offline: "O {{machine}} está offline. Assim que ele voltar, o botão liga {{tool}}.",
     },
     remotePause: {
       button: "Pausar",
@@ -14311,7 +14286,6 @@ export const ptBR = {
       device: { mac: "Mac", windows: "PC", linux: "computador" },
       grantHere: "É este {{device}}: libere pastas nas Preferências do app.",
       openFolders: "Abrir Pastas",
-      toolsHere: "É este {{device}}: ligue o navegador nas Preferências do app, em Ferramentas.",
       openTools: "Abrir Ferramentas",
       reconnect: "Reconectar",
       reconnecting: "Reconectando este {{device}}…",
@@ -14319,8 +14293,6 @@ export const ptBR = {
       offline: "Este {{device}} está sem conexão agora.",
       outageTitle: "Este {{device}} perdeu a conexão {{ago}}",
       toolsOff: "Desligado neste {{device}}. Ligue nas Preferências do app, em Ferramentas.",
-      browserTitle: "Ligue o navegador neste {{device}}",
-      browserText: "Um clique nas Preferências do app, em Ferramentas. A página percebe sozinha.",
       noReport: "Este {{device}} ainda não informou o que libera. Atualize o app.",
       update: "Atualizar o app",
     },

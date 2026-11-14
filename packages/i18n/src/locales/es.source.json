@@ -7633,39 +7633,6 @@
   "connectAi.title.api_key": {
     "value": "Add an API key"
   },
-  "connectAi.toolOff.text": {
-    "value": "{{computer}} is connected, but {{program}} is switched off on it. Only whoever connected the computer turns it on."
-  },
-  "connectAi.toolOff.where": {
-    "value": "On {{computer}}"
-  },
-  "connectAi.toolOff.one": {
-    "value": "Click the agentes.chat icon <mark/> by the clock"
-  },
-  "connectAi.toolOff.oneWindows": {
-    "value": "On Windows, it may be behind the taskbar's ^ arrow."
-  },
-  "connectAi.toolOff.two": {
-    "value": "Open <b>Preferences</b>"
-  },
-  "connectAi.toolOff.three": {
-    "value": "Under <b>Tools</b>, turn on <b>{{program}}</b>"
-  },
-  "connectAi.toolOff.terminal": {
-    "value": "In the computer's terminal, run:"
-  },
-  "connectAi.toolOff.here": {
-    "value": "Turn on <b>{{program}}</b> under <b>Tools</b>."
-  },
-  "connectAi.toolOff.oneClick": {
-    "value": "<b>{{program}}</b> is off on this computer."
-  },
-  "connectAi.toolOff.oneClickOther": {
-    "value": "<b>{{program}}</b> is off on {{name}}'s computer."
-  },
-  "connectAi.toolOff.waiting": {
-    "value": "Waiting for you to turn it on. This screen changes by itself."
-  },
   "connectAi.titleFor": {
     "value": "Connect an AI for {{name}}"
   },
@@ -27868,12 +27835,6 @@
   "brain.reasons.runner_old": {
     "value": "Update the agentes.chat program on the computer to use it."
   },
-  "brain.reasons.tool_off": {
-    "value": "{{program}} is turned off on {{computer}}. Turn it on there, in the agentes.chat app: Preferences → Tools."
-  },
-  "brain.reasons.tool_offLinux": {
-    "value": "{{program}} is turned off on {{computer}}. Turn it on there, in the agentes.chat app or with {{command}}."
-  },
   "brain.reasons.tool_offOne": {
     "value": "{{program}} is turned off on {{computer}}."
   },
@@ -34171,6 +34132,9 @@
   "machines.oneClick.outdated": {
     "value": "Update the agentes.chat app on {{machine}} to turn it on from here."
   },
+  "machines.oneClick.offline": {
+    "value": "{{machine}} is offline. Once it's back, the button turns on {{tool}}."
+  },
   "machines.remotePause.button": {
     "value": "Pause"
   },
@@ -34318,9 +34282,6 @@
   "machines.thisMac.openFolders": {
     "value": "Open Folders"
   },
-  "machines.thisMac.toolsHere": {
-    "value": "It's this {{device}}: turn the browser on in the app's Preferences, under Tools."
-  },
   "machines.thisMac.openTools": {
     "value": "Open Tools"
   },
@@ -34341,12 +34302,6 @@
   },
   "machines.thisMac.toolsOff": {
     "value": "Off on this {{device}}. Turn it on in the app's Preferences, under Tools."
-  },
-  "machines.thisMac.browserTitle": {
-    "value": "Turn the browser on on this {{device}}"
-  },
-  "machines.thisMac.browserText": {
-    "value": "One click in the app's Preferences, under Tools. This page notices by itself."
   },
   "machines.thisMac.noReport": {
     "value": "This {{device}} hasn't reported what it allows yet. Update the app."

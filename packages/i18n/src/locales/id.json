@@ -2977,19 +2977,6 @@
       "zen": "Hubungkan OpenCode",
       "api_key": "Tambahkan kunci API"
     },
-    "toolOff": {
-      "text": "{{computer}} terhubung, tetapi {{program}} mati di sana. Hanya orang yang menghubungkan komputer itu yang menyalakannya.",
-      "where": "Di {{computer}}",
-      "one": "Klik ikon agentes.chat <mark/> di dekat jam",
-      "oneWindows": "Di Windows, ikonnya bisa berada di balik panah ^ pada bilah tugas.",
-      "two": "Buka <b>Preferensi</b>",
-      "three": "Di <b>Alat</b>, nyalakan <b>{{program}}</b>",
-      "terminal": "Di terminal komputer itu, jalankan:",
-      "here": "Nyalakan <b>{{program}}</b> di <b>Alat</b>.",
-      "oneClick": "<b>{{program}}</b> mati di komputer ini.",
-      "oneClickOther": "<b>{{program}}</b> mati di komputer {{name}}.",
-      "waiting": "Menunggu Anda menyalakannya. Layar ini berubah sendiri."
-    },
     "titleFor": "Hubungkan AI untuk {{name}}",
     "titleFor_female": "Hubungkan AI untuk {{name}}",
     "have": {
@@ -11012,8 +10999,6 @@
       "no_computer": "Pilih komputer yang terhubung di Komputer untuk memakainya.",
       "exec_off": "Komputer ini terhubung tanpa izin menjalankan program.",
       "runner_old": "Perbarui program agentes.chat di komputer untuk memakainya.",
-      "tool_off": "{{program}} dimatikan di {{computer}}. Nyalakan di sana, di aplikasi agentes.chat: Preferensi → Alat.",
-      "tool_offLinux": "{{program}} dimatikan di {{computer}}. Nyalakan di sana, di aplikasi agentes.chat atau dengan {{command}}.",
       "tool_offOne": "{{program}} mati di {{computer}}.",
       "not_installed": "{{program}} belum terpasang di {{computer}}.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
@@ -13605,7 +13590,8 @@
       "ask": "Minta {{name}}",
       "asked": "Sudah diminta. {{name}} mendapat tombol untuk menyalakannya.",
       "done": "Menyala di {{machine}}.",
-      "outdated": "Perbarui aplikasi agentes.chat di {{machine}} untuk menyalakannya dari sini."
+      "outdated": "Perbarui aplikasi agentes.chat di {{machine}} untuk menyalakannya dari sini.",
+      "offline": "{{machine}} sedang offline. Begitu kembali, tombol ini menyalakan {{tool}}."
     },
     "remotePause": {
       "button": "Jeda",
@@ -13663,7 +13649,6 @@
       },
       "grantHere": "Ini {{device}} ini: izinkan folder di Preferensi aplikasi.",
       "openFolders": "Buka Folder",
-      "toolsHere": "Ini {{device}} ini: nyalakan browser di Preferensi aplikasi, di bagian Alat.",
       "openTools": "Buka Alat",
       "reconnect": "Hubungkan ulang",
       "reconnecting": "Menghubungkan ulang {{device}} ini…",
@@ -13671,8 +13656,6 @@
       "offline": "{{device}} ini sedang offline.",
       "outageTitle": "{{device}} ini kehilangan koneksi {{ago}}",
       "toolsOff": "Mati di {{device}} ini. Nyalakan di Preferensi aplikasi, di bagian Alat.",
-      "browserTitle": "Nyalakan browser di {{device}} ini",
-      "browserText": "Satu klik di Preferensi aplikasi, di bagian Alat. Halaman ini akan tahu dengan sendirinya.",
       "noReport": "{{device}} ini belum melaporkan apa yang diizinkannya. Perbarui aplikasinya.",
       "update": "Perbarui aplikasi"
     },

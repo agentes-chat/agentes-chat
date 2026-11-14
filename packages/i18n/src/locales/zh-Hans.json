@@ -2970,19 +2970,6 @@
       "zen": "连接 OpenCode",
       "api_key": "添加 API 密钥"
     },
-    "toolOff": {
-      "text": "{{computer}} 已连接，但其中的 {{program}} 已关闭。只有连接这台电脑的人能打开它。",
-      "where": "在 {{computer}} 上",
-      "one": "点击时钟旁的 agentes.chat 图标 <mark/>",
-      "oneWindows": "在 Windows 上，它可能藏在任务栏的箭头 ^ 里。",
-      "two": "打开<b>偏好设置</b>",
-      "three": "在<b>工具</b>中开启 <b>{{program}}</b>",
-      "terminal": "在这台电脑的终端中运行：",
-      "here": "在<b>工具</b>中开启 <b>{{program}}</b>。",
-      "oneClick": "这台电脑上的 <b>{{program}}</b> 已关闭。",
-      "oneClickOther": "{{name}} 的电脑上的 <b>{{program}}</b> 已关闭。",
-      "waiting": "正在等待你开启。此界面会自动更新。"
-    },
     "titleFor": "为 {{name}} 连接 AI",
     "titleFor_female": "为 {{name}} 连接 AI",
     "have": {
@@ -11026,8 +11013,6 @@
       "no_computer": "在“电脑”中选择一台已连接的电脑即可使用。",
       "exec_off": "这台电脑连接时没有授予运行程序的权限。",
       "runner_old": "在电脑上更新 agentes.chat 程序即可使用。",
-      "tool_off": "{{program}} 在 {{computer}} 上已关闭。请在那台电脑的 agentes.chat 应用中开启：偏好设置 → 工具。",
-      "tool_offLinux": "{{program}} 在 {{computer}} 上已关闭。请在那台电脑的 agentes.chat 应用中开启，或使用 {{command}}。",
       "tool_offOne": "{{computer}} 上的 {{program}} 已关闭。",
       "not_installed": "{{computer}} 上没有安装 {{program}}。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
@@ -13615,7 +13600,8 @@
       "ask": "请 {{name}} 打开",
       "asked": "已发送请求。{{name}} 会收到一个打开它的按钮。",
       "done": "已在 {{machine}} 上打开。",
-      "outdated": "请更新 {{machine}} 上的 agentes.chat 应用，才能在这里打开。"
+      "outdated": "请更新 {{machine}} 上的 agentes.chat 应用，才能在这里打开。",
+      "offline": "{{machine}} 已离线。它一回来，按钮就会打开{{tool}}。"
     },
     "remotePause": {
       "button": "暂停",
@@ -13673,7 +13659,6 @@
       },
       "grantHere": "就是这台{{device}}：请在应用的偏好设置中允许文件夹。",
       "openFolders": "打开文件夹设置",
-      "toolsHere": "就是这台{{device}}：请在应用的偏好设置的“工具”中开启浏览器。",
       "openTools": "打开工具设置",
       "reconnect": "重新连接",
       "reconnecting": "正在重新连接这台{{device}}…",
@@ -13681,8 +13666,6 @@
       "offline": "这台{{device}}目前离线。",
       "outageTitle": "这台{{device}}在{{ago}}断开了连接",
       "toolsOff": "这台{{device}}上已关闭。请在应用的偏好设置的“工具”中开启。",
-      "browserTitle": "在这台{{device}}上开启浏览器",
-      "browserText": "在应用的偏好设置的“工具”中点一下即可。此页面会自动察觉。",
       "noReport": "这台{{device}}还没有报告它允许的内容。请更新应用。",
       "update": "更新应用"
     },

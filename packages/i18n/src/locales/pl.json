@@ -3320,19 +3320,6 @@
       "zen": "Połącz OpenCode",
       "api_key": "Dodaj klucz API"
     },
-    "toolOff": {
-      "text": "{{computer}} jest podłączony, ale {{program}} jest na nim wyłączony. Włącza go tylko osoba, która podłączyła komputer.",
-      "where": "Na {{computer}}",
-      "one": "Kliknij ikonę agentes.chat <mark/> obok zegara",
-      "oneWindows": "W systemie Windows może być ukryta pod strzałką ^ na pasku zadań.",
-      "two": "Otwórz <b>Preferencje</b>",
-      "three": "W <b>Narzędziach</b> włącz <b>{{program}}</b>",
-      "terminal": "W terminalu komputera uruchom:",
-      "here": "Włącz <b>{{program}}</b> w <b>Narzędziach</b>.",
-      "oneClick": "<b>{{program}}</b> jest wyłączony na tym komputerze.",
-      "oneClickOther": "<b>{{program}}</b> jest wyłączony na komputerze użytkownika {{name}}.",
-      "waiting": "Czekam, aż to włączysz. Ten ekran zmieni się sam."
-    },
     "titleFor": "Połącz AI dla: {{name}}",
     "have": {
       "title": "Już połączone",
@@ -12274,8 +12261,6 @@
       "no_computer": "Wybierz połączony komputer w sekcji Komputer, żeby z tego korzystać.",
       "exec_off": "Komputer połączono bez uprawnienia do uruchamiania programów.",
       "runner_old": "Zaktualizuj program agentes.chat na komputerze, żeby z tego korzystać.",
-      "tool_off": "{{program}} jest wyłączony na komputerze {{computer}}. Włącz go tam, w aplikacji agentes.chat: Preferencje → Narzędzia.",
-      "tool_offLinux": "{{program}} jest wyłączony na komputerze {{computer}}. Włącz go tam, w aplikacji agentes.chat albo poleceniem {{command}}.",
       "tool_offOne": "{{program}} jest wyłączony na {{computer}}.",
       "not_installed": "{{program}} nie jest zainstalowany na komputerze {{computer}}.",
       "not_reported": "{{computer}} wciąż sprawdza, jakie ma programy. To zmieni się samo, gdy skończy.",
@@ -15072,7 +15057,8 @@
       "ask": "Poproś: {{name}}",
       "asked": "Poproszono. {{name}} dostaje przycisk, żeby to włączyć.",
       "done": "Włączone na {{machine}}.",
-      "outdated": "Zaktualizuj aplikację agentes.chat na {{machine}}, żeby włączyć to stąd."
+      "outdated": "Zaktualizuj aplikację agentes.chat na {{machine}}, żeby włączyć to stąd.",
+      "offline": "{{machine}} jest offline. Gdy wróci, przycisk włączy {{tool}}."
     },
     "remotePause": {
       "button": "Wstrzymaj",
@@ -15130,7 +15116,6 @@
       },
       "grantHere": "To ten {{device}}: zezwól na foldery w Preferencjach aplikacji.",
       "openFolders": "Otwórz Foldery",
-      "toolsHere": "To ten {{device}}: włącz przeglądarkę w Preferencjach aplikacji, w sekcji Narzędzia.",
       "openTools": "Otwórz Narzędzia",
       "reconnect": "Połącz ponownie",
       "reconnecting": "Ten {{device}} łączy się ponownie…",
@@ -15138,8 +15123,6 @@
       "offline": "Ten {{device}} jest teraz offline.",
       "outageTitle": "Ten {{device}} stracił połączenie {{ago}}",
       "toolsOff": "Ten {{device}} ma to wyłączone. Włącz w Preferencjach aplikacji, w sekcji Narzędzia.",
-      "browserTitle": "Włącz przeglądarkę – ten {{device}}",
-      "browserText": "Jedno kliknięcie w Preferencjach aplikacji, w sekcji Narzędzia. Ta strona sama to zauważy.",
       "noReport": "Ten {{device}} jeszcze nie zgłosił, na co pozwala. Zaktualizuj aplikację.",
       "update": "Zaktualizuj aplikację"
     },

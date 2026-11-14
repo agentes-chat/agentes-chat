@@ -3082,19 +3082,6 @@
       "zen": "OpenCode'u bağlayın",
       "api_key": "API anahtarı ekleyin"
     },
-    "toolOff": {
-      "text": "{{computer}} bağlı, ama {{program}} orada kapalı. Yalnızca bilgisayarı bağlayan kişi açar.",
-      "where": "{{computer}} üzerinde",
-      "one": "Saatin yanındaki agentes.chat simgesine <mark/> tıklayın",
-      "oneWindows": "Windows'ta görev çubuğundaki ^ okunun arkasında olabilir.",
-      "two": "<b>Tercihler</b>'i açın",
-      "three": "<b>Araçlar</b> altında <b>{{program}}</b> seçeneğini açın",
-      "terminal": "Bilgisayarın terminalinde çalıştırın:",
-      "here": "<b>Araçlar</b> altında <b>{{program}}</b> seçeneğini açın.",
-      "oneClick": "<b>{{program}}</b> bu bilgisayarda kapalı.",
-      "oneClickOther": "<b>{{program}}</b> {{name}} adlı kişinin bilgisayarında kapalı.",
-      "waiting": "Açmanız bekleniyor. Bu ekran kendiliğinden değişir."
-    },
     "titleFor": "{{name}} için bir yapay zeka bağlayın",
     "have": {
       "title": "Zaten bağlı",
@@ -11358,8 +11345,6 @@
       "no_computer": "Kullanmak için Bilgisayar bölümünden bağlı bir bilgisayar seçin.",
       "exec_off": "Bilgisayar, program çalıştırma izni olmadan bağlandı.",
       "runner_old": "Kullanmak için bilgisayardaki agentes.chat programını güncelleyin.",
-      "tool_off": "{{program}}, {{computer}} üzerinde kapalı. Orada, agentes.chat uygulamasında açın: Tercihler → Araçlar.",
-      "tool_offLinux": "{{program}}, {{computer}} üzerinde kapalı. Orada, agentes.chat uygulamasında veya {{command}} ile açın.",
       "tool_offOne": "{{program}}, {{computer}} üzerinde kapalı.",
       "not_installed": "{{program}}, {{computer}} üzerinde yüklü değil.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
@@ -14016,7 +14001,8 @@
       "ask": "{{name}} kişisinden iste",
       "asked": "İstendi. {{name}} açmak için bir düğme alır.",
       "done": "{{machine}} üzerinde açık.",
-      "outdated": "Buradan açmak için {{machine}} üzerindeki agentes.chat uygulamasını güncelleyin."
+      "outdated": "Buradan açmak için {{machine}} üzerindeki agentes.chat uygulamasını güncelleyin.",
+      "offline": "{{machine}} çevrimdışı. Geri geldiğinde düğme {{tool}} açar."
     },
     "remotePause": {
       "button": "Duraklat",
@@ -14074,7 +14060,6 @@
       },
       "grantHere": "Bu, şu anki {{device}}: klasörlere uygulamanın Tercihler bölümünden izin verin.",
       "openFolders": "Klasörleri aç",
-      "toolsHere": "Bu, şu anki {{device}}: tarayıcıyı uygulamanın Tercihler bölümünde, Araçlar altında açın.",
       "openTools": "Araçları aç",
       "reconnect": "Yeniden bağlan",
       "reconnecting": "Bu {{device}} yeniden bağlanıyor…",
@@ -14082,8 +14067,6 @@
       "offline": "Bu {{device}} şu an çevrimdışı.",
       "outageTitle": "Bu {{device}} bağlantısını kaybetti ({{ago}})",
       "toolsOff": "Bu {{device}} üzerinde kapalı. Uygulamanın Tercihler bölümünde, Araçlar altında açın.",
-      "browserTitle": "Bu {{device}} üzerinde tarayıcıyı açın",
-      "browserText": "Uygulamanın Tercihler bölümünde, Araçlar altında tek tık. Bu sayfa kendiliğinden fark eder.",
       "noReport": "Bu {{device}} neye izin verdiğini henüz bildirmedi. Uygulamayı güncelleyin.",
       "update": "Uygulamayı güncelle"
     },
