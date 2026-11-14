@@ -113,7 +113,15 @@ export {
   RadioGroup,
   Switch,
 } from "./components/Checkbox";
-export { AttentionNote, Chip, type ChipProps, type ChipTone, CountBadge, CountChip } from "./components/Chip";
+export {
+  AttentionNote,
+  Chip,
+  ChipButton,
+  type ChipProps,
+  type ChipTone,
+  CountBadge,
+  CountChip,
+} from "./components/Chip";
 export { CodeInput, type CodeInputProps } from "./components/CodeInput";
 export { ColorDot, dotTone } from "./components/ColorDot";
 export { ColorPicker, type ColorPickerLabels } from "./components/ColorPicker";
