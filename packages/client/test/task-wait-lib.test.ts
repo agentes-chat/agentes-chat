@@ -13,6 +13,7 @@ import {
   taskWaitGroupText,
   taskWaitWords,
   taskWhere,
+  waitCauses,
 } from "../src/lib/task-manager";
 
 /** Says the key and its values, so a test reads which words were picked. */
@@ -197,6 +198,38 @@ test("a task with no title of its own is called by its place, said once", () => 
   const base = { routine: null, channelKind: "channel" as const, channelName: "eng", betweenAgents: false };
   expect(taskPlace(t, { ...base, label: null })).toBeNull();
   expect(taskPlace(t, { ...base, label: "Release 8 na loja" })).toBe("#eng");
+});
+
+test("what holds the waiting work: one cause per sign-in, computer or the people asked, the most held first", () => {
+  const limit = { code: "plan_limit", percent: null, window: null };
+  const codex = wait({ ...limit, key: "plan:m1:codex:a2", plan: "ChatGPT" });
+  const busy = (runId: string, machineId: string) =>
+    task("computer_busy", wait({ code: "busy" }), {
+      runId,
+      machine: { id: machineId, name: "MacBook" },
+      line: { machineId, position: 1, of: 2, people: false, estimatedStartAt: null },
+    });
+  const causes = waitCauses([
+    task("plan", wait(limit), { runId: "a" }),
+    task("plan", codex, { runId: "b" }),
+    task("plan", wait(), { runId: "c" }),
+    busy("d", "m1"),
+    busy("e", "m1"),
+    busy("f", "m1"),
+    task("computer_offline", wait({ code: "machine_offline" }), { runId: "g", machine: { id: "m2", name: "PC" } }),
+    task("computer_offline", wait({ code: "work_queue" }), { runId: "h", machine: { id: "m2", name: "PC" } }),
+    task(null, null, { runId: "i", status: "waiting_approval" }),
+    task(null, null, { runId: "j", status: "running" }),
+  ]);
+  expect(causes.map((c) => [c.kind, c.tasks.map((x) => x.runId).join("")])).toEqual([
+    ["computer", "def"],
+    ["limit", "ac"],
+    ["limit", "b"],
+    ["computer", "g"],
+    ["person", "i"],
+  ]);
+  expect(causes[0]).toMatchObject({ machineId: "m1", busy: true });
+  expect(causes[3]).toMatchObject({ machineId: "m2", busy: false });
 });
 
 test("a task in another agent's conversation is called by what it was asked, ahead of the thread it came from", () => {

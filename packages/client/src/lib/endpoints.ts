@@ -131,6 +131,39 @@ export const CHECK_VIEW = {
 export const checksInOrder = (draft: Pick<EndpointDraft, "models">, checks: readonly EndpointCheck[]) =>
   draft.models.flatMap((m) => checks.filter((c) => c.model === m.id));
 
+/** A saved endpoint key with its models' tests just run written in, as the server keeps them (`keyThinks` reads them). */
+export function withChecks<K extends { endpoint?: { models: EndpointModel[] } }>(
+  key: K,
+  checks: readonly EndpointCheck[],
+): K {
+  if (!key.endpoint) return key;
+  const models = key.endpoint.models.map((m) => {
+    const check = checks.find((c) => c.model === m.id)?.check;
+    return check ? { ...m, check } : m;
+  });
+  return { ...key, endpoint: { ...key.endpoint, models } };
+}
+
+/** An endpoint's model list longer than this gets a search field over it. */
+export const ENDPOINT_SEARCH_FROM = 12;
+
+/**
+ * The form's models a search shows: the ones ticked when its words last changed first, whatever is typed, then the
+ * others whose id has the words. `pinned` is taken when the words change, never on a tick: a row never moves under the
+ * pointer.
+ */
+export function modelsShown<M extends { id: string }>(
+  models: readonly M[],
+  query: string,
+  pinned: ReadonlySet<string>,
+) {
+  const q = query.trim().toLocaleLowerCase();
+  return [
+    ...models.filter((m) => pinned.has(m.id)),
+    ...models.filter((m) => !pinned.has(m.id) && m.id.toLocaleLowerCase().includes(q)),
+  ];
+}
+
 /** Whether an agent's model is an endpoint's without prices: its budget then can't count its spend. */
 export const modelUnpriced = (models: readonly { id: string; unpriced?: boolean }[] | undefined, model: string) =>
   models?.find((m) => m.id === model)?.unpriced === true;

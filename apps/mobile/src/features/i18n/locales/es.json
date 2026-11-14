@@ -2166,7 +2166,8 @@
     "everyoneFailed": "No se pudo cambiar el acceso de todos. Inténtalo de nuevo.",
     "disconnectFailed": "No se pudo desconectar {{name}}. Inténtalo de nuevo.",
     "needsReconnect": "La cuenta de {{name}} dejó de funcionar. Los agentes no pueden usarla hasta que alguien la reconecte.",
-    "noTools": "No se pudieron leer las herramientas de {{name}}. Los agentes no las tienen hasta que se lean de nuevo, en Herramientas.",
+    "noTools": "No se pudieron leer las herramientas de {{name}}. Los agentes no las tienen hasta que se lean de nuevo.",
+    "readAgain": "Leer de nuevo",
     "accountTitle": "Cuenta",
     "renameFailed": "No se pudo cambiar el nombre. Inténtalo de nuevo.",
     "whoTitle": "Quién lo usa",
@@ -2576,7 +2577,7 @@
     },
     "import": {
       "title": "Importar desde una computadora",
-      "text": "Para traer contraseñas de un navegador o de un gestor de contraseñas, abre Configuración, Vault en la web y elige Importar."
+      "text": "Para traer contraseñas de un navegador o de un gestor de contraseñas, impórtalas en la web."
     },
     "connections": {
       "text": "Conecta un gestor de contraseñas y tus agentes usan los inicios de sesión guardados allí. No se copia nada: una contraseña solo se lee cuando se usa.",
