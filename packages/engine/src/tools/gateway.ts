@@ -18,6 +18,7 @@ import {
   MAX_OWN_ACTIONS,
   OWN_ACTION_NAME,
   type RememberedKind,
+  rememberedKindOf,
   rulesApprover,
   SQL_READS,
   sqlReadsTarget,
@@ -189,7 +190,7 @@ export async function rememberKinds(
 
 /** Our own tools whose job is asking a person: the agent chose to ask, so one that never asks still does. */
 const ASKING_TOOLS = new Set(["request_approval", REQUEST_PERMISSION_TOOL, "send_feedback"]);
-const asksByChoice = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
+export const asksByChoice = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
   tool.connectionId ? tool.name === "request_branch_push" && serverGitTool(tool) : ASKING_TOOLS.has(tool.name);
 
 /**
@@ -212,6 +213,56 @@ export function unaskedAtNever(level: ApprovalsLevel, tool: ToolDefinition, auth
 const NEVER_IN_ROUTINE =
   /^(delete|deletes|deleted|remove|removes|destroy|drop|purge|erase|wipe|trash|truncate|overwrite|revoke|unbind|pay|pays|payment|payments|payout|payouts|refund|refunds|charge|charges|transfer|transfers|invoice|invoices|purchase|buy|renew|checkout|withdraw|withdrawal|approve|review|reviews)$/;
 const neverInRoutine = (name: string) => nameWords(name).some((w) => NEVER_IN_ROUTINE.test(w));
+
+/** Words of a tool that runs whatever its input says: code, a command, a script, a raw request, a query, a migration. */
+const RUNS_ITS_INPUT = new Set(
+  "run exec execute eval evaluate invoke trigger shell bash script command code terminal workbench proxy raw http query request call api function custom migration apply".split(
+    " ",
+  ),
+);
+/** Words of a call that posts in public, changes who gets in, moves money or puts other people's work away. */
+const REACHES_FAR = new Set(
+  "post posts tweet article pin video upload sharing collaborator member subscription budget clear archive cancel dns".split(
+    " ",
+  ),
+);
+/** A name that says all its call does, and nothing a person reads one by one: no merge, send, post, delete or payment. */
+const plainAction = (name: string) =>
+  !highRisk(name, "") &&
+  actionLevel(name) !== "sensitive" &&
+  !neverInRoutine(name) &&
+  !nameWords(name).some((w) => RUNS_ITS_INPUT.has(w) || REACHES_FAR.has(w));
+
+type AskedCall = Pick<
+  Approval,
+  "tool" | "scope" | "connectionId" | "highRisk" | "approvers" | "approveAlways" | "origin"
+>;
+
+/** A waiting call that is SQL the Postgres guard proved read-only when it asked (`rememberKinds`). */
+export function readsSqlOnly(a: Pick<Approval, "approveAlways">): boolean {
+  const kept = rememberedKindOf(a.approveAlways)?.actions ?? [];
+  return kept.length > 0 && kept.every((action) => action.startsWith(SQL_READS));
+}
+
+/**
+ * Whether a waiting call may be approved together with others in one tap, as far as its row tells. It errs towards
+ * leaving a call on its own card: only a connected app's named action passes, or SQL proven read-only (`readsSqlOnly`).
+ * Never one that is high risk, sends, posts, deletes or pays by any word of its name, runs whatever its input says
+ * (Composio's executor too: nothing vouches for the actions its input names), asks by choice, or names who decides
+ * (`request_approval`, someone's mailbox). Our own tools stay out whole: a command on the agent's computer, its
+ * browser, the workspace's people, keys and settings. A row does not say why its call asked, so a name is never
+ * enough: the connection has its say after this (`routineIds` in `approvals.ts`).
+ */
+export function routineCall(a: AskedCall): boolean {
+  if (!a.connectionId || a.approvers || a.scope.startsWith("mail:")) return false;
+  if (asksByChoice({ name: a.tool, scope: a.scope, connectionId: a.connectionId })) return false;
+  if (readsSqlOnly(a)) return true;
+  // At the level that asks for some things (the only one that offers a kind to keep), a person's run asks a
+  // connected app's call only when the tool is marked to ask.
+  if (!a.origin && a.approveAlways) return false;
+  if (a.highRisk) return false;
+  return [a.tool, ...(rememberedKindOf(a.approveAlways)?.actions ?? [])].every(plainAction);
+}
 
 /** The scope of the GitHub connector's `merge_pull_request`. */
 const GITHUB_MERGE_SCOPE = "github:pr.merge";

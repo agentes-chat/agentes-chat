@@ -7,8 +7,10 @@ import {
   useModels,
   usePlatformKey,
   useSetTeamWeekPrefs,
+  useSettings,
   useTeamWeekPrefs,
   useUpdateAgent,
+  useUpdateSettings,
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
 import { accountAbout, accountChoices, accountTitle } from "@agenteschat/client/lib/ai-accounts";
@@ -21,6 +23,13 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO, modelChoices } from "@agenteschat/client/lib/providers";
 import { mineStatus, RIGHT_HAND_POWERS, rightHandNoComputer } from "@agenteschat/client/lib/right-hand";
+import {
+  type LodiPrefs,
+  type LodiPrefsPatch,
+  type LodiSwitch,
+  type TeamWeekPeriod,
+  teamWeekOn,
+} from "@agenteschat/client/lib/right-hand-prefs";
 import {
   AffixInput,
   BrainLogo,
@@ -35,6 +44,7 @@ import {
   Icon,
   Input,
   ProviderLogo,
+  Switch,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -50,10 +60,11 @@ import type { HaveItem } from "@/components/arrival/ConnectHave";
 import { useConnectAi } from "@/components/ConnectAi";
 import { useAgentComputer } from "@/components/computer/facts";
 import { useOpenComputer } from "@/components/computer/open";
+import { LoadingLine } from "@/components/Loading";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { RightHandBrainDialog, type RightHandLink, type RightHandModel } from "@/components/RightHandBrainDialog";
-import { TeamWeekSchedule } from "@/components/TeamWeekCard";
+import { TeamWeekSchedule } from "@/components/TeamWeekSchedule";
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { fullLook, lookOf } from "@/lib/look";
@@ -61,10 +72,10 @@ import { useToast } from "@/lib/toast";
 
 /**
  * The right hand's page (ADR 0137): what it is (its computer when it has one, what only it does), then its settings in
- * two groups. "Só para você": the AI the viewer's own conversation
- * thinks with, when its weekly card comes, and what it creates and adjusts for them without asking. "Para todo o
- * workspace", only for who manages agents: its name and look, the AI of people with no plan of their own, and who may
- * use it. Its instructions are the product's.
+ * three groups. "Só para você": the AI the viewer's own conversation thinks with, and what it creates and adjusts for
+ * them without asking. What it does by itself, each with its switch. "Para todo o workspace", only for who manages
+ * agents: its name and look, the AI of people with no plan of their own, and who may use it. Its instructions are the
+ * product's.
  */
 export function RightHandSettingsSection({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
@@ -82,11 +93,11 @@ export function RightHandSettingsSection({ agent }: { agent: Agent }) {
         <Card>
           <div className="settings-rows">
             <RightHandMineRow agent={agent} />
-            <TeamWeekPref name={agent.name} />
           </div>
         </Card>
         <RightHandApprovalsCard />
       </section>
+      <RightHandOwn name={agent.name} />
       {can(org, "manage_agents") && (
         <section className="rh-group" aria-labelledby="rh-group-workspace">
           <GroupHeading
@@ -650,34 +661,119 @@ function RightHandForm({ agent }: { agent: Agent }) {
 }
 
 /**
- * "Semana da equipe" (ADR 0137 §9): an admin's own day and hour of Lodi's weekly card, every day instead, or off.
- * Anyone else may get it every day ("Resumo do dia").
+ * What the right hand does without being asked, each a row with its switch (ADR 0177): the daily card with its hour
+ * for everyone, the weekly card with its day and hour for admins (the selects beside the name while the card is on),
+ * then the switches of whatever else this server has built. The person's own come first. The workspace's, for who
+ * configures it, say before their switch that they are for everyone.
  */
-function TeamWeekPref({ name }: { name: string }) {
+function RightHandOwn({ name }: { name: string }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const prefs = useTeamWeekPrefs(org.id).data;
+  return (
+    <section className="rh-group" aria-labelledby="rh-group-own">
+      <GroupHeading id="rh-group-own" title={t("rightHand.settings.own.title", agentGrammar(name))} />
+      {/* The group keeps its place while the person's choice loads: nothing below it jumps. */}
+      <Card>{prefs ? <OwnRows name={name} prefs={prefs} /> : <LoadingLine width={320} />}</Card>
+    </section>
+  );
+}
+
+function OwnRows({ name, prefs }: { name: string; prefs: LodiPrefs }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const admin = can(org, "administrator");
-  const prefs = useTeamWeekPrefs(org.id).data;
+  const configures = can(org, "configure");
   const set = useSetTeamWeekPrefs(org.id);
+  const settings = useSettings(org.id).data;
+  const setSettings = useUpdateSettings(org.id);
   const toast = useToast();
-  if (!prefs) return null;
-  return (
-    <PrefRow
-      id="rh-team-week"
-      icon="calendar"
-      label={t(admin ? "teamWeek.settings.label" : "teamWeek.settings.dayLabel")}
-      hint={t(admin ? "teamWeek.settings.help" : "teamWeek.settings.dayHelp", agentGrammar(name))}
-      actions={
-        <span className="rh-set__week">
-          <TeamWeekSchedule
-            prefs={prefs}
-            admin={admin}
-            locale={i18n.language}
-            plated
-            onChange={(patch) => set.mutate(patch, { onError: (e) => toast.show(errorText(t, e), "error") })}
+  const g = agentGrammar(name);
+  const failed = (e: unknown) => toast.show(errorText(t, e), "error");
+  const save = (patch: LodiPrefsPatch) => set.mutate(patch, { onError: failed });
+  const shows = (s: LodiSwitch) => prefs.switches.includes(s);
+  // One of the two cards: its row's switch stops and starts it, and while it is on its day and hour stand beside its
+  // name. A group by the card's name: the two rows hold the same selects, told apart by it when read aloud.
+  const card = (period: TeamWeekPeriod, id: string, icon: "clock" | "calendar", label: string, hint: string) => {
+    const on = teamWeekOn(prefs, period, admin);
+    return (
+      <PrefRow
+        id={id}
+        icon={icon}
+        label={label}
+        hint={hint}
+        value={
+          on && (
+            // biome-ignore lint/a11y/useSemanticElements: a labelled group inside a settings row, not a fieldset
+            <span className="rh-set__week" role="group" aria-label={label}>
+              <TeamWeekSchedule
+                period={period}
+                prefs={prefs}
+                admin={admin}
+                locale={i18n.language}
+                stop={false}
+                busy={set.isPending}
+                onChange={save}
+              />
+            </span>
+          )
+        }
+        control={
+          <Switch
+            aria-label={label}
+            checked={on}
+            disabled={set.isPending}
+            onCheckedChange={(next) => save(period === "week" ? { weekOff: !next } : { dayOff: !next })}
           />
-        </span>
-      }
-    />
+        }
+      />
+    );
+  };
+  const mine = (id: "digest" | "reminders", icon: "shield" | "bell", off: "digestOff" | "remindOff") =>
+    shows(id) && (
+      <PrefRow
+        id={`rh-own-${id}`}
+        icon={icon}
+        label={t(`rightHand.settings.own.${id}`)}
+        hint={t(`rightHand.settings.own.${id}Help`, g)}
+        control={
+          <Switch
+            aria-label={t(`rightHand.settings.own.${id}`)}
+            checked={!prefs[off]}
+            disabled={set.isPending}
+            onCheckedChange={(on) => save({ [off]: !on })}
+          />
+        }
+      />
+    );
+  const everyones = (id: "teamWatch" | "welcomePeople", icon: "eye" | "personAdd", words: "teamWatch" | "welcome") =>
+    configures &&
+    settings &&
+    shows(id) && (
+      <PrefRow
+        id={`rh-own-${id}`}
+        icon={icon}
+        label={t(`rightHand.settings.own.${words}`)}
+        hint={t(`rightHand.settings.own.${words}Help`, g)}
+        value={t("rightHand.settings.groupWorkspace")}
+        control={
+          <Switch
+            aria-label={t(`rightHand.settings.own.${words}`)}
+            checked={settings[id] !== false}
+            disabled={setSettings.isPending}
+            onCheckedChange={(on) => setSettings.mutate({ [id]: on }, { onError: failed })}
+          />
+        }
+      />
+    );
+  return (
+    <div className="settings-rows">
+      {card("day", "rh-day", "clock", t("teamWeek.settings.dayLabel"), t("teamWeek.settings.dayHelp", g))}
+      {admin && card("week", "rh-team-week", "calendar", t("teamWeek.settings.label"), t("teamWeek.settings.help", g))}
+      {mine("digest", "shield", "digestOff")}
+      {mine("reminders", "bell", "remindOff")}
+      {everyones("teamWatch", "eye", "teamWatch")}
+      {everyones("welcomePeople", "personAdd", "welcome")}
+    </div>
   );
 }

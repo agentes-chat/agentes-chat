@@ -3,8 +3,9 @@ import type { PlanModel } from "@agenteschat/providers/plans";
 import type { DashboardsApi } from "../dashboards/api";
 import type { ChatPrefs } from "../lib/chat-look";
 import type { OnboardingStepId } from "../lib/onboarding";
+import type { LegacyPrefsPatch, LodiPrefs, LodiPrefsPatch } from "../lib/right-hand-prefs";
 import type { Seat } from "../lib/seat";
-import type { TeamWeekAct, TeamWeekPrefs } from "../lib/team-week";
+import type { TeamWeekAct } from "../lib/team-week";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
 import type { WorkAreaAnswer } from "../lib/work-area";
@@ -129,12 +130,14 @@ import type {
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
+  DeviceAccount,
   DeviceAudience,
   DeviceRequest,
   DevicesList,
   DirectMessage,
   DmRead,
   DmTarget,
+  EmailChange,
   EndpointCheck,
   EndpointModel,
   EndpointStyle,
@@ -240,6 +243,7 @@ import type {
   OrgRoles,
   OrgSettings,
   PageTarget,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonalTokenInput,
@@ -429,6 +433,18 @@ export interface ApiClient {
     me(): Promise<Me | null>;
     /** Unread and waiting in each workspace, in one call (`GET /me/unread`, ADR 0154); null signed out. */
     unread(): Promise<{ organizations: { orgId: string; unread: number; waiting: number }[] } | null>;
+    /**
+     * The accounts signed in on this browser, the current one first (`GET /device-accounts`, ADR 0183); empty on a
+     * server from before it and with nobody signed in.
+     */
+    deviceAccounts(): Promise<DeviceAccount[]>;
+    /** Moves this browser to another account signed in on it; every account stays signed in. */
+    switchDeviceAccount(userId: string): Promise<void>;
+    /**
+     * Signs one account out of this browser, the current one without `userId`; the others stay. `signedIn`: the
+     * browser still has an account, the next one when the current one left.
+     */
+    signOutDeviceAccount(userId?: string): Promise<{ signedIn: boolean }>;
     /** My app language (emails and pushes are written in it). */
     updateMe(input: { locale: AppLocale; auto?: boolean }): Promise<void>;
     /** My own area, asked once during the onboarding, or `skipped` (`PUT /me/work-area`). */
@@ -454,6 +470,18 @@ export interface ApiClient {
     delete(input?: DeletionProofInput): Promise<void>;
     /** Brings it back before its date. `account.not_restorable` (409) after. */
     restore(): Promise<void>;
+    /**
+     * My account under `newEmail` (ADR 0088 §2, addendum 2026-11-13): with the `code` emailed to my current address, or
+     * a sign-in in the last 10 minutes, a link goes to it; without either, the code goes first (`code`), or for an
+     * address I never confirmed `reauth.sign_in` (403). On a server that sends no email it changes at once.
+     * `email.same` (400), `email.held` (409), `reauth.code_*` as deleting's.
+     */
+    changeEmail(input: { newEmail: string; code?: string }): Promise<EmailChange>;
+    /**
+     * "This wasn't me", from the page the notice to my old address links to: that address comes back and every
+     * session ends. `email.undo_gone` (404), `email.undo_taken` (409).
+     */
+    undoEmailChange(token: string): Promise<{ email: string }>;
   };
   /** Where my pushes go: phones (ADR 0035) and browsers (ADR 0071). Per person, not per organization. */
   push: {
@@ -622,8 +650,8 @@ export interface ApiClient {
     raisePersonLimit(orgId: string, userId: string, limitUsd: number): Promise<void>;
     refuseMoreUsage(orgId: string, userId: string): Promise<void>;
     /** Lodi's weekly card (ADR 0137 §9): when mine comes, or that it is off. */
-    teamWeek(orgId: string): Promise<TeamWeekPrefs>;
-    setTeamWeek(orgId: string, patch: Partial<Omit<TeamWeekPrefs, "timezone">>): Promise<TeamWeekPrefs>;
+    teamWeek(orgId: string): Promise<LodiPrefs>;
+    setTeamWeek(orgId: string, patch: LodiPrefsPatch | LegacyPrefsPatch): Promise<LodiPrefs>;
     /** A row of my weekly card applied as me (a routine, a message), or "Agora não". */
     actOnTeamWeek(orgId: string, messageId: string, act: TeamWeekAct): Promise<void>;
     /** The audit log, newest first (admins): agents' tool calls and people's changes. `before`: `next`. */
@@ -942,7 +970,12 @@ export interface ApiClient {
      * no-AI card or the person's message. 409 `ai.still_missing` while there's still no AI.
      */
     answerNow(orgId: string, messageId: string): Promise<{ runs: { agentId: string; runId: string }[] }>;
-    /** Cancels an agent's follow-up from its line (`messageId`); 409 `follow_up.not_pending` once it came. */
+    /** The returns agents set in a conversation, still to come, the soonest first (`[]` while the server lacks it). */
+    followUps(orgId: string, channelId: string): Promise<PendingReturn[]>;
+    /**
+     * Cancels a return (`messageId`, its line): the person it is for, the agent's owner or an admin (403
+     * `follow_up.not_yours` otherwise); 409 `follow_up.not_pending` once it came.
+     */
     cancelFollowUp(orgId: string, messageId: string): Promise<void>;
     /**
      * "Pedir resposta" on a GitHub notice of someone the agent doesn't answer (`messageId`): the agent answers them
@@ -963,10 +996,13 @@ export interface ApiClient {
     refuse(orgId: string, approvalId: string, reason?: string, via?: string): Promise<Approval>;
     /** Withdraws an action approved ahead before its time: its routine's run won't do it. */
     cancel(orgId: string, approvalId: string): Promise<Approval>;
-    /** A card's "Aprovar tudo" / "Agora não para todos": exactly these ids; `skipped` the ones not decided. */
+    /**
+     * A card's "Aprovar tudo" / "Agora não para todos": exactly these ids; `skipped` the ones not decided. With
+     * `only: "routine"` the server decides the ones it calls routine (`Approval.routine`) and skips the rest.
+     */
     decideMany(
       orgId: string,
-      input: { ids: string[]; decision: "approve" | "refuse"; reason?: string; via?: string },
+      input: { ids: string[]; decision: "approve" | "refuse"; reason?: string; via?: string; only?: "routine" },
     ): Promise<{ approvals: Approval[]; skipped: string[] }>;
     /** What the agent runs without asking ("Aprovar sempre"), oldest first. */
     rules(orgId: string, agentId: string): Promise<ApprovalRule[]>;
@@ -1824,6 +1860,8 @@ export interface ApiClient {
       orgId: string,
       messageId: string,
       decision: "apply" | "dismiss" | "ask",
+      /** The card's action id, when this build words it. */
+      knows?: string,
     ): Promise<{ card: WorkspaceActionCard }>;
   };
   /** "O que fez por você": what an agent did that involves the viewer (agent profile). */

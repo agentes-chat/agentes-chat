@@ -1379,7 +1379,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "followUps.inTime"
     ],
     "it": [
       "shell.email.label",
@@ -1734,7 +1735,10 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "agentWork.later",
+      "agentWork.laterShort",
+      "threads.status.later"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -3554,7 +3558,10 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "agentWork.later",
+      "agentWork.laterShort",
+      "threads.status.later"
     ],
     "ru": [
       "channel.tooLong.fileName",

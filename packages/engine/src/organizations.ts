@@ -41,6 +41,7 @@ import { recordOperatorEvent } from "./operator-events";
 import { enqueue } from "./outbox";
 import { memberKeysSql, memberRankSql, type Permission, resolvePermissions } from "./permissions";
 import { ensureRightHand, followOwner } from "./right-hand";
+import { queueWelcome } from "./right-hand-welcome";
 import { addMemberRolesInTx, createDefaultRoles, givableRoleIds, rolesStillThere, stillGivableRoleIds } from "./roles";
 import {
   accountClosed,
@@ -872,8 +873,7 @@ export async function setMyWorkArea(db: Database, userId: string, area: string) 
 }
 
 /**
- * The person's name and photo as saved (a session's cached cookie keeps the old ones for minutes after a change
- * elsewhere), their language and whether it follows each device's, and their area.
+ * The person's name and photo as saved, their language and whether it follows each device's, and their area.
  */
 export async function myAccount(db: Database, userId: string) {
   const [row] = await db
@@ -2250,7 +2250,7 @@ export const spentClaimHash = (claimHash: string) => `spent:${sha256(claimHash)}
 
 /**
  * Adds a person to an organization (keeping an existing role), with `roleIds` (those still there), and to
- * `general`, in the caller's transaction. A request to join that they or their address had waiting closes: whoever
+ * `general`, in the caller's transaction. A new member's greeting from the right hand is queued with it. A request to join that they or their address had waiting closes: whoever
  * answers it next finds it answered. A full workspace refuses a new member (`org.members_full`), and a closed one
  * (`closedRefusal`) anyone, under the lock role changes, removals and a deletion take, so two people taking the last
  * seat at once can't both get in, and nobody gets in once a deletion committed.
@@ -2274,6 +2274,8 @@ export async function joinOrganization(
   if (!member) await assertMemberRoom(tx, orgId);
   await tx.insert(organizationMembers).values({ orgId, userId, role }).onConflictDoNothing();
   await addMemberRolesInTx(tx, orgId, userId, roleIds);
+  // The right hand greets who is new here, once: its job's key is spent for good, so a rejoin gets none.
+  if (!member) await queueWelcome(tx, orgId, userId);
   // Nothing a closed request kept stays (ADR 0090): the password it chose goes, and the page's key is spent, so that
   // page reads it closed and signs in no one.
   const closing = await tx

@@ -2,8 +2,8 @@ import { createDashboardsApi } from "../dashboards/api";
 import type { ChatPrefs } from "../lib/chat-look";
 import { humanCheckHeaders } from "../lib/human-check";
 import type { OnboardingStepId } from "../lib/onboarding";
+import { type LodiPrefs, lodiPrefsOf } from "../lib/right-hand-prefs";
 import { CLOUD_SERVER } from "../lib/server";
-import type { TeamWeekPrefs } from "../lib/team-week";
 import { consultSeeds } from "../realtime/consults";
 import { steerStore } from "../realtime/steer";
 import type {
@@ -97,10 +97,12 @@ import type {
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
+  DeviceAccount,
   DeviceRequest,
   DevicesList,
   DirectMessage,
   DmRead,
+  EmailChange,
   EndpointCheck,
   EndpointModel,
   FeedbackFile,
@@ -183,6 +185,7 @@ import type {
   OrgRoles,
   OrgSettings,
   PageTarget,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonLimits,
@@ -335,9 +338,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     actionCards: {
       get: (orgId, messageId) => request<WorkspaceActionCardView>(`${org(orgId)}/action-cards/${enc(messageId)}`),
-      decide: (orgId, messageId, decision) =>
+      decide: (orgId, messageId, decision, knows) =>
         request<{ card: WorkspaceActionCard }>(`${org(orgId)}/action-cards/${enc(messageId)}/${decision}`, {
-          json: {},
+          json: knows ? { knows } : {},
         }),
     },
     agentForYou: {
@@ -601,6 +604,15 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         nullOn(401, () =>
           request<{ organizations: { orgId: string; unread: number; waiting: number }[] }>("/api/app/me/unread"),
         ),
+      deviceAccounts: async () =>
+        (await nullOn(404, () => request<{ accounts: DeviceAccount[] }>("/api/app/device-accounts")))?.accounts ?? [],
+      switchDeviceAccount: (userId) =>
+        request<void>("/api/app/device-accounts/switch", { method: "POST", json: { userId } }),
+      signOutDeviceAccount: (userId) =>
+        request<{ signedIn: boolean }>("/api/app/device-accounts/sign-out", {
+          method: "POST",
+          json: userId ? { userId } : {},
+        }),
       updateMe: (input) => request<void>("/api/app/me", { method: "PATCH", json: input }),
       setWorkArea: (area) => request<void>("/api/app/me/work-area", { method: "PUT", json: { area } }),
       phoneSignIn: () => request<PhoneSignIn>("/api/app/phone-sign-in", { json: {} }),
@@ -609,6 +621,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       deletionCode: () => request<CodeSent>("/api/app/account/deletion/code", { json: {} }),
       delete: (input = {}) => request<void>("/api/app/account", { method: "DELETE", json: input }),
       restore: () => request<void>("/api/app/account/deletion", { method: "DELETE" }),
+      changeEmail: (input) => request<EmailChange>("/api/app/account/email", { json: input }),
+      undoEmailChange: (token) => request<{ email: string }>("/api/app/email-undo", { json: { token } }),
     },
     push: {
       webKey: async () =>
@@ -738,8 +752,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<void>(`${org(orgId)}/usage/people/${enc(userId)}/raise`, { json: { limitUsd } }),
       refuseMoreUsage: (orgId, userId) =>
         request<void>(`${org(orgId)}/usage/people/${enc(userId)}/refuse`, { json: {} }),
-      teamWeek: (orgId) => request<TeamWeekPrefs>(`${org(orgId)}/team-week`),
-      setTeamWeek: (orgId, patch) => request<TeamWeekPrefs>(`${org(orgId)}/team-week`, { method: "PUT", json: patch }),
+      teamWeek: (orgId) => request<LodiPrefs>(`${org(orgId)}/team-week`).then(lodiPrefsOf),
+      setTeamWeek: (orgId, patch) =>
+        request<LodiPrefs>(`${org(orgId)}/team-week`, { method: "PUT", json: patch }).then(lodiPrefsOf),
       actOnTeamWeek: (orgId, messageId, act) =>
         request<void>(`${org(orgId)}/team-week/${enc(messageId)}`, { json: act }),
       audit: (orgId, query = {}) =>
@@ -1043,6 +1058,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<{ runs: { agentId: string; runId: string }[] }>(`${org(orgId)}/messages/${enc(messageId)}/answer-now`, {
           json: {},
         }),
+      followUps: async (orgId, channelId) =>
+        (
+          (await nullOn(404, () =>
+            request<{ followUps: PendingReturn[] }>(`${org(orgId)}/channels/${enc(channelId)}/follow-ups`),
+          )) ?? { followUps: [] }
+        ).followUps,
       cancelFollowUp: (orgId, messageId) =>
         request<void>(`${org(orgId)}/messages/${enc(messageId)}/cancel-follow-up`, { json: {} }),
       answerGitHub: (orgId, messageId) =>

@@ -5,6 +5,7 @@ import { listChannels } from "./channels";
 import type { WorkspaceComputer } from "./context";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
+import { type LodiLane, type LodiSwitch, liveLodiSwitches, lodiPromptBlocks } from "./right-hand-lane";
 import type { SeatState } from "./right-hand-seats";
 import { accountInUse, isBillingHold, orgStanding } from "./standing";
 import { agentBudgetsThisMonth } from "./usage";
@@ -89,6 +90,21 @@ const SNAPSHOT_MAX = 40;
 const usd = (nano: number) => `US$ ${(nano / 1e9).toFixed(2)}`;
 
 /**
+ * What it posts by itself in a person's DM and the one tool that stops, moves or restarts each. The summary of
+ * approvals and the reminders are named once their features are built.
+ */
+export function ownCardsLine(personal: boolean, live: readonly LodiSwitch[]) {
+  const cards = personal
+    ? "They get your 'Resumo do dia' card here each day there is something for them (9h unless they moved it) and your weekly card on how their agents did (Fridays at 17h)."
+    : "Everyone gets your 'Resumo do dia' card here each day there is something for them (9h unless they moved it), and admins also get your weekly 'Semana da equipe' (Fridays at 17h).";
+  const more = [
+    live.includes("digest") ? "your summary of approvals waiting on them" : "",
+    live.includes("reminders") ? "your reminders of what you two agreed on" : "",
+  ].filter(Boolean);
+  return `- ${cards} To stop, resend or move either${more.length ? `, or to turn ${more.join(" or ")} off or on` : ""}: set_team_week.`;
+}
+
+/**
  * Its system block in place of an agent's own instructions (ours, shipped with the product): who it is, who it talks
  * to and what they may do, the team as it is now and what isn't set up yet, read live per run and never cached (the
  * snapshot is what this person may see), and the rules of its cards.
@@ -100,6 +116,8 @@ export async function rightHandPrompt(
     agent: { id: string; name: string; handle: string };
     personId: string;
     inDm: boolean;
+    /** The lanes whose blocks and switches it reads (default: every lane the server has). */
+    lanes?: LodiLane[];
     /** What this run has of a computer (`seatState`); absent, none. */
     computer?: SeatState;
   },
@@ -142,6 +160,16 @@ export async function rightHandPrompt(
     // A personal workspace (ADR 0159): one person and their agents, so no team words and no nudge to invite people.
     isPersonalWorkspace(db, orgId),
   ]);
+  // What each of its own features adds while it talks to this person alone (`right-hand-lane.ts`).
+  const laneBlocks = input.inDm ? await lodiPromptBlocks(db, { orgId, agentId: agent.id, personId }, input.lanes) : [];
+  // Changes that are always a card someone reads first, named once the catalog has them. Loaded here: the catalog
+  // imports what builds a run's context, which imports this file.
+  const { workspaceAction } = await import("./workspace-actions");
+  const removesKeys = workspaceAction("remove_ai_key") !== null;
+  const cardActions = [
+    workspaceAction("invite_people") ? "inviting people" : "",
+    removesKeys ? "removing an API key" : "",
+  ].filter(Boolean);
   const roleNames = membership?.roleIds.length
     ? (
         await db
@@ -332,12 +360,11 @@ export async function rightHandPrompt(
         : "- A teammate's model, AI account, budget, owner, who talks to it, channels, reply mode, skills, name, look or who it reports to: propose_settings_change. Its instructions, role or apps: propose_instruction_change. Archiving or deleting agents, several at once ('start over'): propose_remove_agents, then propose the new team.",
       "- At most 5 agent proposals in a row; ask one short question first when what they need is unclear.",
       "- Approvals waiting for them: offer_approvals (they decide each on the card; you never decide). Someone's ownership, roles or removal: propose_member_changes.",
-      "- Anything else the app lets them do (roles, channels, invitations, their own settings, the workspace, stopping work): workspace_action, find it first, and never say you can't before it does. Billing, deleting the workspace or their account, a password or keys: offer_open_page.",
+      `- Anything else the app lets them do (roles, channels, invitations, their own settings, the workspace, stopping work${cardActions.map((a) => `, ${a}`).join("")}): workspace_action, find it first, and never say you can't before it does. Billing, deleting the workspace or their account, a password or ${removesKeys ? "adding a key" : "keys"}: offer_open_page.`,
       "- Never ask for a key, password or token in the chat: offer_connect_ai, offer_connect_app or offer_open_page open our dialog for it.",
-      personal
-        ? "- They get your weekly card on how their agents did here (Fridays at 17h), or daily if they want. To stop, resend, move it or make it daily: set_team_week."
-        : "- Admins get your weekly 'Semana da equipe' card here (Fridays at 17h); anyone may get it daily instead. To stop, resend, move it or make it daily: set_team_week.",
+      ownCardsLine(personal, liveLodiSwitches(input.lanes)),
     ].join("\n"),
+    ...laneBlocks,
     rightHandTools(input.computer ?? "none"),
     input.inDm
       ? "# Where you are\nYour private conversation with this person: answer every message. Nobody else reads it."

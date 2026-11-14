@@ -54,7 +54,7 @@ const data: OrgRoles = { roles: [mods, everyone], areas: AREAS, colors: ["teal",
 const person = (userId: string, over: Partial<Person> = {}) =>
   ({ userId, name: userId, email: `${userId}@example.com`, role: "member", roleIds: [], ...over }) as Person;
 
-describe("Papéis e permissões on the phone (ADR 0085), as the web's", () => {
+describe("Cargos on the phone (ADR 0085), as the web's", () => {
   test("in Configurações for who manages roles only, a screen for each of its pages in the stack", () => {
     const org = (permissions: string[]) => ({ id: "o", name: "Acme", role: "member" as const, permissions });
     expect(visibleSections(org(["read", "manage_roles"])).map((s) => s.id)).toContain("roles");

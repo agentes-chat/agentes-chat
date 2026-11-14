@@ -104,6 +104,7 @@ import { checkPushReceipts, deliverPush, pushTicketsOf } from "./push";
 import { reachOf, settleReach } from "./reach";
 import { routineCreatorOf } from "./requester";
 import { considerCard, RIGHT_HAND_DECIDE_JOB } from "./right-hand-approvals";
+import { lodiLaneHandlers } from "./right-hand-lanes";
 import {
   createLlmRouterStrategy,
   DEFAULT_ROUTER_POLICY,
@@ -125,7 +126,7 @@ import { TEAM_HELLO_JOB } from "./standing";
 import { purgeOrgFiles, purgeUserFiles, runMigration, type StorageDeps } from "./storage";
 import { postStretchCard, STRETCH_JOB, type StretchHold } from "./stretch";
 import { sayTeamHello } from "./team-templates";
-import { postTeamWeek, TEAM_WEEK_JOB } from "./team-week";
+import { postTeamWeek, TEAM_DAY_JOB, TEAM_WEEK_JOB } from "./team-week";
 import { isAgentesCloud } from "./telemetry";
 import { assessThread } from "./thread-assess";
 import { runVaultSync, VAULT_SYNC_JOB, type VaultDeps } from "./vault";
@@ -1113,10 +1114,16 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         { orgId: orgOf(job), messageId: String(job.payload.messageId) },
       );
     },
-    // A person's monthly AI limit neared or reached (ADR 0141): the person hears 80%, who decides hears 100%.
+    // The right hand's cards: the week's, and the day's under its own kind (`TEAM_DAY_JOB`).
     [TEAM_WEEK_JOB]: async (job) => {
       await postTeamWeek({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), job.payload);
     },
+    [TEAM_DAY_JOB]: async (job) => {
+      await postTeamWeek({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), job.payload);
+    },
+    // What else the right hand does by itself: each lane's own jobs (`right-hand-lane.ts`).
+    ...lodiLaneHandlers(deps),
+    // A person's monthly AI limit neared or reached (ADR 0141): the person hears 80%, who decides hears 100%.
     [PERSON_LIMIT_JOB]: async (job) => {
       await notifyPersonLimit({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), {
         personId: String(job.payload.personId),
