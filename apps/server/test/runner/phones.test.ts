@@ -436,7 +436,7 @@ test("Windows: a phone with no driver shows as no_driver only while a guide asks
   await r.manager.poll();
   expect(r.manager.list()).toEqual([]);
   expect(asked).toBe(0);
-  expect(r.manager.look()).toBe(true);
+  expect(await r.manager.look()).toBe(true);
   await r.manager.poll();
   expect(r.manager.list().map((p) => [p.serial, p.state, p.reason])).toEqual([
     ["38021FDH2000AB", "needs_you", "no_driver"],
@@ -452,7 +452,20 @@ test("Windows: a phone with no driver shows as no_driver only while a guide asks
   expect(r.manager.list()).toEqual([]);
   expect(asked).toBe(1);
   // Other systems don't look.
-  expect(rig({}, { tools: [] }).manager.look()).toBe(false);
+  expect(await rig({}, { platform: "linux", tools: [] }).manager.look()).toBe(false);
+});
+
+test("a Mac: a guide's look reads the iPhones again before it answers, between the polls' own looks", async () => {
+  const r = rig({ devicectl: { result: { devices: [iphone({ transport: "wired", devMode: "disabled" })] } } });
+  await r.manager.poll();
+  expect(r.manager.list().map((p) => p.reason)).toEqual(["developer_mode_off"]);
+  r.setState({ devicectl: { result: { devices: [iphone({ transport: "wired" })] } } });
+  // The next poll reuses the last Apple look (`APPLE_EVERY`): still off.
+  await r.manager.poll();
+  expect(r.manager.list().map((p) => p.reason)).toEqual(["developer_mode_off"]);
+  expect(await r.manager.look()).toBe(true);
+  expect(r.manager.list().map((p) => [p.state, p.reason ?? null])).toEqual([["ready", null]]);
+  expect(r.sent.at(-1)?.map((p) => p.state)).toEqual(["ready"]);
 });
 
 const ANDROID_STATE = {

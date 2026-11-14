@@ -542,8 +542,17 @@ export class PhoneManager {
     });
   }
 
-  /** `phone.look`: a phone guide waits for a phone. True when this computer looks for driverless ones (Windows). */
-  look(): boolean {
+  /**
+   * `phone.look`: a phone guide waits for a phone. A Mac reads its iPhones again now and answers once the list went out
+   * (the iPhone guide's "check again"); Windows looks for driverless phones for the next minute. False elsewhere.
+   */
+  async look(): Promise<boolean> {
+    if (this.platform === "darwin") {
+      await this.polling;
+      this.appleSeen = null;
+      await this.poll();
+      return true;
+    }
     if (this.platform !== "win32") return false;
     this.lookUntil = this.now() + LOOK_MS;
     void this.poll();
