@@ -5,7 +5,7 @@ import {
   CLI_INSTALL_STATES,
   type CliInstall,
   type InstallableCli,
-  type RunnerInfo,
+  parseExecutors,
 } from "@agenteschat/adapters";
 import type { Database } from "@agenteschat/db";
 import { recordAudit } from "./audit";
@@ -48,8 +48,11 @@ export async function checkMachineClis(deps: Deps, actorId: string, orgId: strin
   const machine = await installable(deps.db, actorId, orgId, machineId);
   const status = await deps.hub.status(machine.id);
   if (!status?.online) throw new MachineOfflineError(machine.name, machine.kind);
-  const reply = await deps.hub.call(machine.id, { op: "clis.check" });
-  const executors = reply.executors as NonNullable<RunnerInfo["executors"]>;
+  const reply: { executors?: unknown } = await deps.hub.call(machine.id, { op: "clis.check" });
+  // Checked like `hello.executors`: the row's other fields (`mode`, `ownUsage`…) are never the runner's to set here.
+  const executors = parseExecutors(
+    reply?.executors && typeof reply.executors === "object" ? (reply.executors as Record<string, unknown>) : {},
+  );
   await storeMachineExecutors(deps, machine.id, executors);
   return { found: Object.keys(executors).filter((k) => k !== "broken") };
 }

@@ -13,7 +13,7 @@ import {
   type ServerFrame,
 } from "@agenteschat/adapters/machine-protocol";
 import { testConfig } from "@agenteschat/config";
-import { schema } from "@agenteschat/db";
+import { eq, schema } from "@agenteschat/db";
 import { ARTIFACT_LIMITS, createUpload, issueManagedMachine, setProvisioning } from "@agenteschat/engine";
 import { type ModelRequest, systemText } from "@agenteschat/providers";
 import { handleRequest } from "../runner/handlers";
@@ -750,11 +750,17 @@ test("a coding CLI from the apps: anyone looks again; only whoever connected it 
   expect(sent.at(-1)).toMatchObject({ op: "cli.install", action: "status", tool: "claude" });
 
   // Anyone looks again: what the computer finds is stored at once, and Bia's row is answered.
-  found = { claude: { version: "2.1.300 (Claude Code)" } };
+  found = { claude: { version: "2.1.300 (Claude Code)" }, mode: "system", ownUsage: { claude: {} } };
   const checked = await orgApi(caio)(`${path}/clis/check`, { json: {} });
   expect(checked.status).toBe(200);
   expect(await checked.json()).toEqual({ found: ["claude"] });
   expect(await listed(bia)).toMatchObject({ cliErrors: null });
+  const [row] = await t.db
+    .select({ executors: schema.machines.executors })
+    .from(schema.machines)
+    .where(eq(schema.machines.id, paired.machineId));
+  expect(row?.executors).not.toHaveProperty("mode");
+  expect(row?.executors).not.toHaveProperty("ownUsage");
   expect((await inbox()).filter((n) => n.kind === "device.cli_request")).toHaveLength(0);
 
   // An app too old for it says to update it.
