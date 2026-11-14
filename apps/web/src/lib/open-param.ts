@@ -83,8 +83,9 @@ export function threadSearch(search: Record<string, unknown>): { thread?: string
 /**
  * The thread in a conversation's panel, kept in the URL (`?thread=…`) so a reload, a shared link and Back and Forward
  * keep it. Unlike `useOpenParam` each change is a history entry, so Back closes what was just opened; `replace` is for
- * a thread found gone, which leaves nothing to come back to. One panel at a time: a thread takes the agent's page out. `enabled` false (a thread view, which holds no panel of
- * its own but shares the URL with the conversation beside it): always empty.
+ * a thread found gone, which leaves nothing to come back to. One panel at a time: a thread takes the agent's page out.
+ * `enabled` false (a thread view, which holds no panel of its own but shares the URL with the conversation beside it):
+ * always empty.
  */
 export function useThreadPanel(
   enabled: boolean,

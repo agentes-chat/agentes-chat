@@ -6,8 +6,9 @@ import { ChannelPage } from "@/pages/ChannelPage";
 
 /**
  * A channel; `?m={messageId}` (from "Copiar link") opens it at that message;
- * `?adjust={threadId}` opens "Ajustar trecho" for that thread's range; `?thread=` is the one in its panel, `?agent=` the agent's page there instead; `?paid`:
- * back from paying for the workspace, which opens in #general (the hold banner says the payment is being confirmed).
+ * `?adjust={threadId}` opens "Ajustar trecho" for that thread's range; `?thread=` is the one in its panel, `?agent=`
+ * the agent's page there instead; `?paid`: back from paying for the workspace, which opens in #general (the hold
+ * banner says the payment is being confirmed).
  */
 export const Route = createFileRoute("/org/$orgId/c/$channelId")({
   validateSearch: (
