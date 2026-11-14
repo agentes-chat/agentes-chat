@@ -595,7 +595,7 @@ export function gateLine(
     now?: number;
   },
 ): { text: string; rechecks: boolean } | null {
-  const edition = asked === "cloud" && machine && machine.kind !== "managed" ? "selfhost" : asked;
+  const edition = asked === "cloud" && machine?.kind && machine.kind !== "managed" ? "selfhost" : asked;
   const rechecks = gateRechecks(gate, edition);
   const program = t(`brain.card.${kind}`);
   if (hold && (gate.state === "offline" || gate.state === "unsupported")) return { text: hold, rechecks: false };
