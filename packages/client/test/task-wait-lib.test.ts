@@ -199,18 +199,28 @@ test("a task with no title of its own is called by its place, said once", () => 
   expect(taskPlace(t, { ...base, label: "Release 8 na loja" })).toBe("#eng");
 });
 
-test("a task in another agent's conversation is called by what it was asked, its place after it", () => {
+test("a task in another agent's conversation is called by what it was asked, ahead of the thread it came from", () => {
+  const from = {
+    channelId: "c1",
+    channelKind: "channel" as const,
+    channelName: "eng",
+    threadId: "t1",
+    messageId: null,
+    label: "Release 8",
+  };
   const asked = {
     label: null,
     routine: null,
     channelKind: "dm" as const,
     channelName: null,
     betweenAgents: true,
-    question: "Investigate duplicate notifications. Then tell me who gets them.",
+    delegation: { agentId: "ada", origin: { kind: "agent" as const }, from },
+    subject: "Investigate duplicate notifications.",
   };
   expect(taskTitle(t, asked)).toBe("Investigate duplicate notifications.");
-  expect(taskPlace(t, asked)).toBe("chat.consultPanel.whereDm");
-  // No question (an older server) keeps the generic label, said once.
-  expect(taskTitle(t, { ...asked, question: null })).toBe("chat.consultPanel.whereDm");
-  expect(taskPlace(t, { ...asked, question: null })).toBeNull();
+  expect(taskPlace(t, asked)).toBe("#eng");
+  // No subject (not sent to who doesn't read #eng, or an older server): the thread's title, then the place.
+  expect(taskTitle(t, { ...asked, subject: null })).toBe("Release 8");
+  expect(taskTitle(t, { ...asked, subject: undefined, delegation: null })).toBe("chat.consultPanel.whereDm");
+  expect(taskPlace(t, { ...asked, subject: null, delegation: null })).toBeNull();
 });

@@ -439,10 +439,10 @@ const ManagedTask = z
       })
       .nullable()
       .openapi({ description: "Another agent asked it: who, what started the chain and where." }),
-    question: z
-      .string()
-      .nullable()
-      .openapi({ description: "What that agent asked it, in their private conversation: its row's subject." }),
+    subject: z.string().nullable().openapi({
+      description:
+        "What the latest agent to ask it asked, as one line of at most 120 characters; null unless you read the conversation it was handed off from (`delegation.from`).",
+    }),
     helpers: z
       .number()
       .int()
@@ -507,7 +507,6 @@ const EndedTask = z
     label: z.string().nullable(),
     background: z.boolean(),
     routine: Routine,
-    question: z.string().nullable().openapi({ description: "What another agent asked it, when the work was theirs." }),
     startedAt: z.string().nullable(),
     finishedAt: z.string(),
     stoppedBy: z.object({ userId: z.string(), name: z.string() }).nullable(),

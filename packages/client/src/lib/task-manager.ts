@@ -10,7 +10,6 @@ import type {
 } from "../api/types";
 import { type Activity, toolActivity } from "./activity";
 import { durationText, etaMinutes } from "./computer-queue";
-import { consultSubject } from "./consultations";
 import { agentGrammar } from "./grammar";
 import { usageWhenShort } from "./plan-usage";
 import { usageWindowText } from "./usage-pause";
@@ -311,20 +310,20 @@ export function programKey(p: TaskProgram): string | null {
 }
 
 /**
- * What a task is about, for its row: its label, else its routine's name, else the thread work handed off from (ADR
- * 0084 addendum), else the question another agent asked it, else where it is ("Conversa com Ana", "#produto").
+ * What a task is about, for its row: its label, else its routine's name, else what another agent asked it, else the
+ * thread work handed off from (ADR 0084 addendum), else where it is ("Conversa com Ana", "#produto").
  */
 export function taskTitle(
   t: TFunction,
-  task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents" | "question"> & {
+  task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents"> & {
     delegation?: ManagedTask["delegation"];
+    subject?: ManagedTask["subject"];
   },
 ) {
   if (task.label?.trim()) return task.label.trim();
   if (task.routine?.name) return task.routine.name;
+  if (task.betweenAgents && task.subject) return task.subject;
   if (task.delegation?.from?.label) return task.delegation.from.label;
-  // An agent's task in another agent's conversation is called by what it was asked; older servers send no question.
-  if (task.betweenAgents) return consultSubject(task.question) || taskWhere(t, task);
   return taskWhere(t, task);
 }
 
@@ -366,9 +365,10 @@ export function taskHelping(
 /** Where it is, unless its title already says it (a task with no title of its own is called by its place). */
 export function taskPlace(
   t: TFunction,
-  task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents" | "question"> & {
+  task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents"> & {
     background?: boolean;
     delegation?: ManagedTask["delegation"];
+    subject?: ManagedTask["subject"];
   },
 ) {
   const where = taskWhere(t, task);
