@@ -2,12 +2,14 @@
  * Living agents: one shared loop draws every agent avatar on screen from the
  * agent engine (engine.js). Only visible avatars are drawn: about 24 times a
  * second while the agent works, reacts or follows the gaze, about 12 at rest
- * (every blink still shows; a slow turn reads the same); with reduced motion
- * each one is drawn once, still. A page can set a gaze point (the landing's
+ * (every blink still shows; a slow turn reads the same); with reduced motion,
+ * or while the skies are held (`holdSkies`, the Linux app), each one is drawn
+ * once, still. A page can set a gaze point (the landing's
  * pointer): avatars inside an element marked `data-gaze` turn their heads
  * toward it.
  */
 import { avatarSky } from "../sky/avatar";
+import { skiesHeld, watchSkiesHeld } from "../sky/engine";
 import {
   ACCESSORY_REACH,
   bodyTones,
@@ -123,16 +125,21 @@ const sizes = new WeakMap<HTMLElement, number>();
 let resizes: ResizeObserver | null = null;
 let darkCache = new WeakMap<Element, boolean>();
 let motionQuery: MediaQueryList | null | undefined;
+/** Still: the person asked for reduced motion, or the skies are held (`holdSkies`: the Linux app paints in software). */
 const reduced = () => {
   if (motionQuery === undefined) {
     motionQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
-    // Motion allowed again: the loop starts moving.
-    motionQuery?.addEventListener?.("change", () => {
-      if (!motionQuery?.matches && !raf && agents.size && typeof requestAnimationFrame === "function")
-        raf = requestAnimationFrame(tick);
-    });
+    // Motion allowed again: the loop starts moving. Held again: each agent is drawn once, still (the loop stops itself).
+    const changed = () => {
+      if (reduced()) {
+        const t = clock() / 1000;
+        for (const a of agents) drawLive(a, t);
+      } else if (!raf && agents.size && typeof requestAnimationFrame === "function") raf = requestAnimationFrame(tick);
+    };
+    motionQuery?.addEventListener?.("change", changed);
+    watchSkiesHeld(changed);
   }
-  return motionQuery?.matches === true;
+  return skiesHeld() || motionQuery?.matches === true;
 };
 
 const sizeOf = (box: HTMLElement) => sizes.get(box) ?? box.clientWidth;

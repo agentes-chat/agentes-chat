@@ -61,7 +61,8 @@ if (platform) {
   document.documentElement.dataset.desktop = platform;
   applyDesktopDevice(i18n, platform);
   if (asksForPhone(window.location.search)) askForPhone();
-  // Linux's WebKitGTK paints in software there: the skies stand still, or their frames keep a core busy (holdSkies).
+  // Linux's WebKitGTK paints in software there: the skies and the agents stand still, or their frames keep a core busy
+  // (holdSkies).
   if (platform === "linux") holdSkies();
 }
 // Focus rings only while the keys move the focus (`data-pointer` on <html>, read by the stylesheet).

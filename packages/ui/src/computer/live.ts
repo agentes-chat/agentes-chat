@@ -4,6 +4,7 @@
  * visible portraits are drawn; with reduced motion each one is drawn once,
  * still (and again when its kind or state changes).
  */
+import { prefersReducedMotion, skiesHeld, watchSkiesHeld } from "../sky/engine";
 import { COMPUTER_ART, type ComputerState, drawComputer, type PortraitKind } from "./portrait.js";
 
 export interface LiveComputer {
@@ -15,10 +16,11 @@ export interface LiveComputer {
 const computers = new Set<LiveComputer>();
 const visible = new WeakSet<Element>();
 let timer: ReturnType<typeof setTimeout> | 0 = 0;
+let frame = 0;
 let observer: IntersectionObserver | null = null;
 
-const reduced = () =>
-  typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches === true;
+/** Still: the person asked for reduced motion, or the skies are held (`holdSkies`: the Linux app paints in software). */
+const reduced = () => skiesHeld() || prefersReducedMotion();
 const now = () => (typeof performance === "object" ? performance.now() : Date.now()) / 1000;
 const isDark = (el: Element) => el.closest("[data-theme]")?.getAttribute("data-theme") === "dark";
 
@@ -44,6 +46,7 @@ export function drawLiveComputer(c: LiveComputer, t = now()) {
 
 function tick() {
   timer = 0;
+  frame = 0;
   const t = now();
   if (typeof document === "undefined" || !document.hidden)
     for (const c of computers) if (visible.has(c.canvas)) drawLiveComputer(c, t);
@@ -53,14 +56,25 @@ function tick() {
 function schedule() {
   if (timer || !computers.size || reduced()) return;
   timer = setTimeout(() => {
-    if (typeof requestAnimationFrame === "function") requestAnimationFrame(tick);
+    if (typeof requestAnimationFrame === "function") frame = requestAnimationFrame(tick);
     else tick();
   }, 90);
 }
 
+/** Held or freed while the page is open (`holdSkies`): each portrait stands still at once, or the loop starts again. */
+let hearsHold = false;
+const onHold = () => {
+  if (!reduced()) schedule();
+  else for (const x of computers) drawLiveComputer(x);
+};
+
 /** Starts drawing a portrait; returns the cleanup. */
 export function addLiveComputer(c: LiveComputer): () => void {
   computers.add(c);
+  if (!hearsHold) {
+    hearsHold = true;
+    watchSkiesHeld(onHold);
+  }
   if (typeof IntersectionObserver === "function") {
     observer ??= new IntersectionObserver((entries) => {
       for (const e of entries) {
@@ -74,6 +88,14 @@ export function addLiveComputer(c: LiveComputer): () => void {
   schedule();
   return () => {
     computers.delete(c);
+    // The last one gone: its pending frame goes too, whether still a timer or already a requested frame (a stale tick
+    // would otherwise start a second loop beside the next portrait's).
+    if (!computers.size && timer) {
+      clearTimeout(timer);
+      if (frame && typeof cancelAnimationFrame === "function") cancelAnimationFrame(frame);
+      timer = 0;
+      frame = 0;
+    }
     observer?.unobserve(c.canvas);
     visible.delete(c.canvas);
   };
