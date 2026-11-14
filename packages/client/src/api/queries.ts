@@ -146,6 +146,7 @@ import type {
   NotificationEvent,
   NotificationFilter,
   OrgRoles,
+  PendingReturn,
   Person,
   PersonalTokenInput,
   PersonLimits,
@@ -160,6 +161,7 @@ import type {
   RoutineHook,
   RoutineInput,
   RoutinePatch,
+  RowHolders,
   S3Input,
   SandboxSettingsInput,
   SearchFilterInput,
@@ -560,14 +562,31 @@ export function useReorderRoles(orgId: string) {
   });
 }
 
-/** Sets a person's roles (exactly these). */
+/**
+ * "Quem pode…": who holds one row, `everyone` and the roles in one call (`PUT …/permissions/{row}`); the roles it
+ * answers with replace the cached ones.
+ */
+export function useSetRowHolders(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ row, holders }: { row: string; holders: RowHolders }) => api.roles.setRow(orgId, row, holders),
+    onSuccess: (roles) => qc.setQueryData(keys.roles(orgId), roles),
+    onSettled: () => refreshRoles(qc, orgId),
+  });
+}
+
+/**
+ * Sets a person's roles (exactly these). `mailLossSeen`: the mailboxes they were told agents lose
+ * (`api.roles.mailLoss`); one given since refuses it with `agent.mail_loss_changed`, to ask again.
+ */
 export function useSetMemberRoles(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   const via = useCardVia();
   return useMutation({
-    mutationFn: ({ userId, roleIds }: { userId: string; roleIds: string[] }) =>
-      api.roles.setFor(orgId, userId, roleIds, via),
+    mutationFn: ({ userId, roleIds, mailLossSeen }: { userId: string; roleIds: string[]; mailLossSeen?: string[] }) =>
+      api.roles.setFor(orgId, userId, roleIds, via, mailLossSeen),
     onMutate: async ({ userId, roleIds }) => {
       await qc.cancelQueries({ queryKey: keys.people(orgId) });
       const before = qc.getQueryData<Person[]>(keys.people(orgId));
@@ -2036,6 +2055,8 @@ export function useDecideApproval(orgId: string) {
       playSound(decision === "approve" ? "approved" : "error");
       cacheApproval(qc, orgId, approval);
       void qc.invalidateQueries({ queryKey: keys.approvals(orgId) });
+      // Its run moves on: the chips of the threads it held say so (a hand-off's run posts nothing where they are).
+      void qc.invalidateQueries({ queryKey: keys.threads(orgId) });
       if (always) void qc.invalidateQueries({ queryKey: keys.approvalRules(orgId, approval.agentId) });
       if (always && approval.approveAlways?.routineId) void qc.invalidateQueries({ queryKey: keys.routines(orgId) });
     },
@@ -2071,6 +2092,7 @@ export function useDecideApprovals(orgId: string) {
       playSound(decision === "approve" ? "approved" : "error");
       for (const approval of result.approvals) cacheApproval(qc, orgId, approval);
       void qc.invalidateQueries({ queryKey: keys.approvals(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.threads(orgId) });
     },
   });
 }
@@ -6255,6 +6277,48 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
     clearThreadUnread(qc, orgId, e.threadId);
     refreshThreadUnread(qc, orgId);
   }
+}
+
+/**
+ * The returns agents set in a conversation, still to come, the soonest first (ADR 0037): the bar above the composer
+ * holds them. Live: a `follow_up` line's `message.created` refreshes it (`isReturnLine`).
+ */
+export function useFollowUps(orgId: string, channelId: string, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.followUps(orgId, channelId),
+    queryFn: () => api.chat.followUps(orgId, channelId),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Cancels a return: it leaves the conversation's list at once (also when it had already come or gone: there is nothing
+ * left to cancel), then the lists read again.
+ */
+export function useCancelFollowUp(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const drop = (channelId: string, messageId: string) =>
+    qc.setQueryData<PendingReturn[]>(keys.followUps(orgId, channelId), (old) =>
+      old?.filter((r) => r.messageId !== messageId),
+    );
+  return useMutation({
+    mutationFn: async ({ messageId }: { channelId: string; messageId: string }) => {
+      try {
+        await api.chat.cancelFollowUp(orgId, messageId);
+      } catch (error) {
+        if (!(error instanceof ApiError && (error.status === 404 || error.status === 409))) throw error;
+      }
+    },
+    onSuccess: (_done, { channelId, messageId }) => drop(channelId, messageId),
+    onSettled: (_done, _error, { channelId }) => {
+      void qc.invalidateQueries({ queryKey: keys.followUps(orgId, channelId) });
+      void qc.invalidateQueries({ queryKey: keys.taskManager(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.agentStatus(orgId) });
+    },
+  });
 }
 
 /** A channel's pinned messages, newest pin first (live: `message.pinned` / `message.unpinned`). */

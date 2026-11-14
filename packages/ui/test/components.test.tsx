@@ -1479,9 +1479,9 @@ describe("FilterChip", () => {
   test("each option starts with its face and name; the check sits at its end, kept empty when off", async () => {
     render(
       <FilterChip
-        label="Papel"
+        label="Cargo"
         icon="person"
-        clearLabel="Limpar Papel"
+        clearLabel="Limpar Cargo"
         multiple
         value={["admin"]}
         onChange={() => {}}
@@ -1491,8 +1491,8 @@ describe("FilterChip", () => {
         ]}
       />,
     );
-    await act(async () => fireEvent.click(body().getByRole("button", { name: "Papel: Admin" })));
-    const options = within(body().getByRole("listbox", { name: "Papel" })).getAllByRole("option");
+    await act(async () => fireEvent.click(body().getByRole("button", { name: "Cargo: Admin" })));
+    const options = within(body().getByRole("listbox", { name: "Cargo" })).getAllByRole("option");
     expect(options.map((o) => o.getAttribute("aria-selected"))).toEqual(["true", "false"]);
     expect(options.map((o) => [...o.children].map((c) => c.getAttribute("class")))).toEqual([
       ["face", "ac-filter__label", "ac-tz__check"],
