@@ -83,6 +83,8 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "Toca para permitir una vez, siempre, o decir que no.",
   deviceToolTitle: (a, d) => `${a} te pide activar una herramienta en tu ${d}`,
   deviceToolBody: "Toca para activarla con un clic.",
+  deviceCliTitle: (a, d) => `${a} te pide instalar un programa en tu ${d}`,
+  deviceCliBody: "Toca para instalarlo con un clic.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} te pide añadir un agente a #${l}`

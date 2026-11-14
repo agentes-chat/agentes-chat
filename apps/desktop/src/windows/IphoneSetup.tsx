@@ -313,12 +313,6 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
   const updating =
     setup?.fix?.kind === "update" ? xcodeFixStage(fix, "update", { mayFix: true, terminal: false }) : null;
 
-  const checkButton = (label: string) => (
-    <Button size="sm" icon="refresh" loading={checking} disabled={checking} onClick={check}>
-      {label}
-    </Button>
-  );
-
   /** What the step under way says, and its one action. */
   const line = (step: IphoneSetupStep): ReactNode => {
     switch (step) {
@@ -452,7 +446,11 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
                 ]}
               />
             )}
-            <span className="dk-ip__act">{checkButton(t("devices.iphone.devModeCheck"))}</span>
+            <span className="dk-ip__act">
+              <Button size="sm" icon="refresh" loading={checking} disabled={checking} onClick={check}>
+                {t("devices.iphone.devModeCheck")}
+              </Button>
+            </span>
             {checked && <span>{t("devices.iphone.devModeStillOff")}</span>}
             {stalled || causesAsked ? (
               <section className="dk-ip__causes" aria-labelledby="dk-devmode-title">
@@ -473,10 +471,7 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
                       </Button>
                     )}
                   </li>
-                  <li className="ac-actline">
-                    <span>{t("devices.iphone.devModeMissing.unlock")}</span>
-                    {checkButton(t("devices.iphone.devModeMissing.check"))}
-                  </li>
+                  <li>{t("devices.iphone.devModeMissing.unlock")}</li>
                 </ul>
               </section>
             ) : (

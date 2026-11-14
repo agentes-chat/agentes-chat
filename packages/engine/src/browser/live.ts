@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import {
+  type AgentPointer,
   type AgentScope,
   BROWSER_LIMITS,
   BROWSER_VIEW,
@@ -181,6 +182,8 @@ export function createMemoryStreamRelay(): StreamRelay {
 /** What a viewer's socket receives (`/api/ws`, wrapped by the realtime layer). */
 export type BrowserLiveMessage =
   | BrowserFrameMessage
+  /** Where the agent's pointer goes on the page, as its gesture starts (ADR 0040 §7.2): the apps draw its cursor. */
+  | ({ type: "browser.pointer"; agentId: string } & AgentPointer)
   /**
    * Who is in control and the open handoff, on watch and whenever it changes.
    * `hidden`: someone else is in control, so this viewer gets no frames until
@@ -1292,6 +1295,18 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
           retryView(frame.agentId, state);
         }
         received(state, { agentId: frame.agentId, seq: frame.seq, data: frame.data, metadata: frame.metadata });
+      },
+      pointer(machineId: string, frame: Extract<RunnerFrame, { type: "browser.pointer" }>) {
+        const state = live.get(frame.agentId);
+        // Only from the agent's own computer, while its page shows.
+        if (!state || state.machineId !== machineId || state.mode === null) return;
+        for (const v of state.viewers) {
+          // A page hidden from a viewer says nothing of what happens on it.
+          if (hiddenFrom(state, v.userId)) continue;
+          try {
+            v.send(frame);
+          } catch {}
+        }
       },
       streamEnded(machineId: string, frame: Extract<RunnerFrame, { type: "browser.stream.ended" }>) {
         const state = live.get(frame.agentId);

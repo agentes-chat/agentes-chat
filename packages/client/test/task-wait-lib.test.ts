@@ -3,9 +3,13 @@ import type { TFunction } from "i18next";
 import type { ManagedTask, TaskWait } from "../src/api/types";
 import {
   agentCardLine,
+  CAUSES_SHOWN,
+  causeWords,
+  computersBesides,
   delegationText,
   groupTasks,
   hiddenCount,
+  shownCauses,
   taskPlace,
   taskTime,
   taskTitle,
@@ -230,6 +234,51 @@ test("what holds the waiting work: one cause per sign-in, computer or the people
   ]);
   expect(causes[0]).toMatchObject({ machineId: "m1", busy: true });
   expect(causes[3]).toMatchObject({ machineId: "m2", busy: false });
+});
+
+test("a cause's row: a limit in its tasks' own words and return time, a full computer with its whole facts, shown once", () => {
+  const limit = wait({ code: "plan_limit", percent: null, window: null });
+  const busy = (runId: string, machineId: string) =>
+    task("computer_busy", wait({ code: "busy" }), {
+      runId,
+      machine: { id: machineId, name: "Fallback" },
+      line: { machineId, position: 1, of: 2, people: false, estimatedStartAt: null },
+    });
+  const computers = [
+    { id: "m1", name: "PC", working: 2, inLine: 4 },
+    { id: "m2", name: "Servidor", working: 1, inLine: 0 },
+  ];
+  const [plan, computer] = waitCauses([
+    task("plan", limit, { runId: "a" }),
+    task("plan", limit, { runId: "b" }),
+    busy("c", "m1"),
+  ]);
+  // The wait's own words and time, the one the work goes on at: never a usage meter's.
+  const said = causeWords(t, "en", plan as never, computers, now);
+  expect(said.name).toBe(words(task("plan", limit))?.state as string);
+  expect(said.fact).toBe(`${words(task("plan", limit))?.next} · taskManager.tasks {"count":2}`);
+  expect(said.fact).toContain("chat.usageWhen.on");
+  expect(causeWords(t, "en", computer as never, computers, now)).toEqual({
+    name: "PC",
+    fact: 'taskManager.queue.full {"count":4} · taskManager.working {"count":2}',
+  });
+  // Not in the summaries yet: its own tasks make its line.
+  expect(causeWords(t, "en", computer as never, [], now)).toEqual({
+    name: "Fallback",
+    fact: 'taskManager.queue.full {"count":1}',
+  });
+  // Computadores keeps only what the strip doesn't show.
+  expect(computersBesides(computers, [plan, computer] as never).map((c) => c.id)).toEqual(["m2"]);
+  expect(computersBesides(computers, [plan] as never).map((c) => c.id)).toEqual(["m1", "m2"]);
+});
+
+test("the strip shows the three causes holding the most; a fourth stays only in the count", () => {
+  const limitOn = (key: string) => wait({ code: "plan_limit", percent: null, window: null, key });
+  const tasks = ["k1", "k1", "k2", "k2", "k3", "k3", "k4"].map((key, i) =>
+    task("plan", limitOn(key), { runId: `r${i}` }),
+  );
+  expect(CAUSES_SHOWN).toBe(3);
+  expect(shownCauses(tasks).map((c) => c.key)).toEqual(["limit:k1", "limit:k2", "limit:k3"]);
 });
 
 test("a task in another agent's conversation is called by what it was asked, ahead of the thread it came from", () => {

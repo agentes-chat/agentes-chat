@@ -35,6 +35,7 @@ import {
   type BrowserInputEvent,
   type BrowserLiveStatus,
   type BrowserLiveUnavailable,
+  type BrowserPointer,
   type ConnectionStatus,
   type ConsultsState,
   cacheActionCard,
@@ -66,6 +67,7 @@ import {
   markStopping,
   type OpenConsult,
   openConversation,
+  parseBrowserPointer,
   RealtimeConnection,
   type ReceiptsState,
   realtimeUrl,
@@ -1009,6 +1011,8 @@ export interface BrowserLiveState {
   error: string | null;
   /** How many came, for what says each one: the same refusal again leaves `error` as it was. */
   errors: number;
+  /** Where the agent's pointer last went on the page; `n` counts its gestures (two clicks on one point are two). */
+  pointer: (BrowserPointer & { n: number }) | null;
 }
 
 const EMPTY_LIVE: BrowserLiveState = {
@@ -1019,6 +1023,7 @@ const EMPTY_LIVE: BrowserLiveState = {
   endedBy: null,
   error: null,
   errors: 0,
+  pointer: null,
 };
 
 /**
@@ -1049,6 +1054,7 @@ export function useBrowserLive(agentId: string, enabled = true, maxFps?: number)
         setState((s) => ({ ...s, frame, unavailable: null, ended: false, endedBy: null, error: null })),
       onStatus: (status) =>
         setState((s) => ({ ...s, status, unavailable: null, ended: false, endedBy: null, error: null })),
+      onPointer: (pointer) => setState((s) => ({ ...s, pointer: { ...pointer, n: (s.pointer?.n ?? 0) + 1 } })),
       onUnavailable: (reason, message) =>
         setState((s) => ({ ...s, unavailable: { reason, ...(message ? { message } : {}) } })),
       onEnded: (reason, _message, by) =>
@@ -1084,6 +1090,26 @@ export function useBrowserLive(agentId: string, enabled = true, maxFps?: number)
   const sendInput = useCallback((events: BrowserInputEvent[]) => liveRef.current?.sendInput(events) ?? false, []);
   const retry = useCallback(() => liveRef.current?.retry(), []);
   return { ...state, sendInput, retry };
+}
+
+/**
+ * Where the agent's pointer last went on its desktop (ADR 0062), while this view shows that screen: the server
+ * sends it to whoever has the screen open. `n` counts its gestures.
+ */
+export function useDesktopPointer(agentId: string, enabled = true) {
+  const { connection } = useRealtime();
+  const [pointer, setPointer] = useState<BrowserLiveState["pointer"]>(null);
+  useEffect(() => {
+    setPointer(null);
+    if (!connection || !enabled) return;
+    return connection.onUserEvent((event) => {
+      const said = event as { type: string; agentId?: unknown; pointer?: unknown };
+      if (said.type !== "agent.desktop.pointer" || said.agentId !== agentId) return;
+      const to = parseBrowserPointer(said.pointer);
+      if (to) setPointer((was) => ({ ...to, n: (was?.n ?? 0) + 1 }));
+    });
+  }, [connection, agentId, enabled]);
+  return pointer;
 }
 
 export function useConnectionStatus(): ConnectionStatus {

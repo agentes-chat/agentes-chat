@@ -305,6 +305,8 @@ export type BrainUnavailable =
   | "outdated"
   /** Its runner hasn't said which CLIs it has yet (`detectedAt`): nobody knows whether this one is there. */
   | "not_reported"
+  /** It is there and can't start (`executors.broken`, with its own error): not missing, so installing it won't help. */
+  | "cant_start"
   /** Its runner doesn't run this CLI on the computer's system (`brainRunsOn`): Cursor on Windows, for one. */
   | "system";
 
@@ -334,9 +336,15 @@ type MachineLike = Parameters<typeof machineExecutors>[0] & {
   } | null;
 } & Parameters<typeof machineOnline>[0];
 
-/** A CLI the computer doesn't list: gone only once its runner has looked (the same check the turns make). */
-const missingCli = (machine: MachineLike): BrainUnavailable =>
-  machine.executors?.detectedAt ? "not_installed" : "not_reported";
+/**
+ * A CLI the computer doesn't list: gone only once its runner has looked (the same check the turns make), and there but
+ * unable to start where the runner says so.
+ */
+const missingCli = (
+  machine: MachineLike,
+  cli: keyof NonNullable<schema.MachineExecutors["broken"]>,
+): BrainUnavailable =>
+  machine.executors?.broken?.[cli] ? "cant_start" : machine.executors?.detectedAt ? "not_installed" : "not_reported";
 
 /**
  * What the agent's computer can think with; the model brain always. A
@@ -358,7 +366,7 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
       reason = "runner_old";
     else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     else if (!found?.available.includes(executor))
-      reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine);
+      reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine, executor);
     return {
       kind,
       available: !reason,
@@ -402,7 +410,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
     reason = "runner_old";
   else if (!brainRunsOn(kind, machine.os)) reason = "system";
   else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
-  else if (!machine.executors?.[kind]) reason = missingCli(machine);
+  else if (!machine.executors?.[kind]) reason = missingCli(machine, kind);
   return {
     kind,
     available: !reason,
@@ -522,7 +530,7 @@ async function brainAccounts(
   userId: string,
   orgId: string,
   agent: Pick<Agent, "ownerUserId" | "brainAccountId" | "builtin">,
-  machine: Pick<MachineRow, "id" | "protocol" | "pairedByUserId"> | null,
+  machine: Pick<MachineRow, "id" | "protocol" | "pairedByUserId" | "kind"> | null,
 ): Promise<BrainAccounts> {
   if (!machine) return NO_ACCOUNTS;
   const supported = machine.protocol >= ACCOUNTS_PROTOCOL;
@@ -582,7 +590,7 @@ async function settingsAgent(db: Database, agent: Agent, userId: string, account
       and(
         eq(schema.machines.orgId, agent.orgId),
         isNull(schema.machines.deletedAt),
-        sql`(${schema.machines.kind} = 'managed' or ${schema.machines.pairedByUserId} = ${userId})`,
+        sql`(${schema.machines.kind} in ('managed', 'host') or ${schema.machines.pairedByUserId} = ${userId})`,
       ),
     )
     .orderBy(sql`${schema.machines.kind} = 'managed' desc`, schema.machines.createdAt)
@@ -603,7 +611,11 @@ async function candidateMachines(
     .from(schema.machines)
     .where(and(eq(schema.machines.orgId, orgId), isNull(schema.machines.deletedAt)));
   return rows
-    .filter((m) => (admin || m.pairedByUserId === userId || m.id === current) && (mayBeHome(m) || m.id === current))
+    .filter(
+      (m) =>
+        (admin || m.kind !== "connected" || m.pairedByUserId === userId || m.id === current) &&
+        (mayBeHome(m) || m.id === current),
+    )
     .map((m) => ({ machineId: m.id, name: m.name, online: machineOnline(m), options: brainOptions(m) }));
 }
 
@@ -926,16 +938,16 @@ export async function getAgentBrain(
 }
 
 /**
- * `GET …/brain-machines`: what a new agent could think with ("Criar agente"), before it exists: every computer of
- * the workspace (only admins create agents) with what each offers. The choice is saved on the agent once created.
+ * `GET …/brain-machines`: what a new agent could think with ("Criar agente"), before it exists: the computers its
+ * creator may give it, with what each offers. The choice is saved on the agent once created.
  */
 export async function newAgentBrainMachines(
   deps: BrainDeps,
   userId: string,
   orgId: string,
 ): Promise<BrainMachineOptions[]> {
-  await requirePermission(deps.db, userId, orgId, "create_agents");
-  return candidateMachines(deps.db, userId, orgId, true, null);
+  const membership = await requirePermission(deps.db, userId, orgId, "create_agents");
+  return candidateMachines(deps.db, userId, orgId, can(membership, "manage_agents"), null);
 }
 
 export interface AgentBrainInput {

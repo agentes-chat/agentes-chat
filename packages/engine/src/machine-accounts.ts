@@ -1096,10 +1096,11 @@ export async function getListedAccount(db: Executor, orgId: string, machineId: s
 /**
  * Who adds accounts to a computer: the person who connected it (other
  * people's sign-ins on someone's own computer would need their consent, and
- * outlive it), or any member on one nobody did (the Cloud's, a server's own).
+ * outlive it), or any member on the workspace's own (the Cloud's, nobody's;
+ * a server's own, recorded as its owner's but nobody's own computer).
  */
-export const mayAddAccounts = (machine: Pick<MachineRow, "pairedByUserId">, userId: string) =>
-  machine.pairedByUserId === null || machine.pairedByUserId === userId;
+export const mayAddAccounts = (machine: Pick<MachineRow, "pairedByUserId" | "kind">, userId: string) =>
+  machine.pairedByUserId === null || machine.kind === "host" || machine.pairedByUserId === userId;
 
 /** A member and the machine of the organization. */
 async function memberMachine(db: Database, userId: string, orgId: string, machineId: string) {

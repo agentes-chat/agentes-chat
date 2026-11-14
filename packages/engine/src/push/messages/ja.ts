@@ -85,6 +85,8 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "タップして今回のみ許可、常に許可、または断る",
   deviceToolTitle: (a, d) => `${a} が ${d} のツールをオンにするよう求めています`,
   deviceToolBody: "タップしてワンクリックでオンにする",
+  deviceCliTitle: (a, d) => `${a} が ${d} にプログラムをインストールするよう求めています`,
+  deviceCliBody: "タップしてワンクリックでインストール",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} が #${l} にエージェントを追加するよう求めています`

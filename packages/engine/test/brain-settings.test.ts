@@ -36,7 +36,7 @@ import {
 } from "../src/brain-settings";
 import { contextFields, recordPlanUsage, speedFields } from "../src/brains/claude-code";
 import { brainAccountFor, brainSpeedFor, planIsOwners } from "../src/brains/select";
-import { addMember, type Fixture, setup } from "./fixtures";
+import { addMember, everyoneWithout, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
 const mac = (patch: Record<string, unknown> = {}) => ({
@@ -212,6 +212,12 @@ describe("brain settings", () => {
       ["claude_code", false, "not_installed"],
       ["codex", false, "outdated"],
     ]);
+    // There and failing to start: said as that, never "not installed".
+    const broken = mac({ executors: { codex: { version: "0.170.0" }, broken: { claude: "boom" }, detectedAt: "x" } });
+    expect(reasons(broken).slice(1, 3)).toEqual([
+      ["claude_code", false, "cant_start"],
+      ["codex", true, null],
+    ]);
     const both = mac({ executors: { claude: { version: "2" }, codex: { version: "0.170.0" }, detectedAt: "x" } });
     expect(
       brainOptions(both).every((o) => o.available || ["cursor", "opencode", "grok", "antigravity"].includes(o.kind)),
@@ -293,12 +299,18 @@ async function world() {
 }
 
 describe("Criar agente: what a new agent could think with", () => {
-  test("admins see every computer with what it offers; a member can't create agents", async () => {
+  test("admins see every computer with what it offers; a member the server's own and theirs, never someone else's", async () => {
     const { fx, deps, machineId, bia, caio } = await world();
     const [mine] = await newAgentBrainMachines(deps, caio.id, fx.org.id);
     expect(mine).toMatchObject({ machineId, name: "mac" });
     expect(mine?.options.find((o) => o.kind === "claude_code")?.available).toBe(true);
     expect(mine?.options.find((o) => o.kind === "codex")).toMatchObject({ available: false, reason: "not_installed" });
+    // Ana's Mac is hers: Bia's new agent can't live there.
+    expect(await newAgentBrainMachines(deps, bia.id, fx.org.id)).toEqual([]);
+    // The server's own computer is recorded as its owner's, yet it is the workspace's: Bia's agent may live there.
+    await fx.db.update(schema.machines).set({ kind: "host" }).where(eq(schema.machines.id, machineId));
+    expect((await newAgentBrainMachines(deps, bia.id, fx.org.id)).map((m) => m.machineId)).toEqual([machineId]);
+    await everyoneWithout(fx.db, fx.org.id, "create_agents");
     await expect(newAgentBrainMachines(deps, bia.id, fx.org.id)).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
@@ -332,9 +344,19 @@ describe("context window (Configuração avançada)", () => {
   });
 
   test("a computer turn carries it only to a runner that knows it (protocol 28)", () => {
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, { contextTokens: 400_000 })).toEqual({ contextTokens: 400_000 });
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, { contextTokens: 400_000 })).toEqual({});
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {})).toEqual({});
+    const chosen = { contextTokens: 1_000_000 };
+    for (const kind of ["claude_code", "codex", "cursor"]) {
+      expect(contextFields(CONTEXT_LIMIT_PROTOCOL, chosen, kind)).toEqual(chosen);
+      expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, chosen, kind)).toEqual({});
+    }
+    // "Automático": Claude Code and Codex summarise at 200K; programs that take no limit get none.
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "claude_code")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "codex")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(undefined, {}, "codex")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "cursor")).toEqual({});
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "antigravity")).toEqual({});
+    // An older runner never sees it: it keeps compacting at the model's window.
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, {}, "claude_code")).toEqual({});
   });
 
   test("each model choice says its window: which limits are worth offering with it", () => {

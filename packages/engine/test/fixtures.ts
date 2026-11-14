@@ -114,6 +114,15 @@ export async function makeAdmin(db: Database, orgId: string, userId: string) {
   await db.insert(schema.organizationMemberRoles).values({ orgId, userId, roleId }).onConflictDoNothing();
 }
 
+/** Takes `key` off the workspace's base role ("Todos"), as an admin may in Cargos. */
+export async function everyoneWithout(db: Database, orgId: string, key: string) {
+  await ensureRoles(db, orgId);
+  await db
+    .update(schema.orgRoles)
+    .set({ permissions: sql`array_remove(${schema.orgRoles.permissions}, ${key}::text)` })
+    .where(and(eq(schema.orgRoles.orgId, orgId), eq(schema.orgRoles.kind, "everyone")));
+}
+
 export async function addMember(db: Database, orgId: string, role: TestRole, name: string = role) {
   const user = await addUser(db, name);
   await ensureRoles(db, orgId);

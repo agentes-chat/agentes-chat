@@ -82,6 +82,8 @@ export const ptBR: PushStrings = {
   deviceAccessBody: "Toque para permitir uma vez, sempre, ou dizer não.",
   deviceToolTitle: (a, d) => `${a} pede para você ligar uma ferramenta no seu ${d}`,
   deviceToolBody: "Toque para ligar com um clique.",
+  deviceCliTitle: (a, d) => `${a} pede para você instalar um programa no seu ${d}`,
+  deviceCliBody: "Toque para instalar com um clique.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} pede para adicionar um agente a #${l}`

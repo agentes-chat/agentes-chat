@@ -496,10 +496,11 @@ a.dv-row__detail {
   font-weight: 600;
   color: var(--ink);
 }
+/* 12 between causes, more than the 8 under a cause's words to its own button, so each button reads as its cause's. */
 .dv-slow__list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;

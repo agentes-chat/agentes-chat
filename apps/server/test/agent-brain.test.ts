@@ -478,10 +478,10 @@ test("one agent's setup on others (ADR 0094): a preview keeps nothing, each agen
     effort: "high",
   });
 
-  // A member changes only their own agents, and doesn't create agents.
+  // A member changes only their own agents; creating agents (Todos' by default), she reads what new ones start with.
   const bia = (await (await use({ setup, agentIds: [eva.id] }, asBia)).json()) as Results;
   expect(bia.results).toEqual([{ agentId: eva.id, status: "skipped", reason: "not_allowed" }]);
-  expect((await asBia("/agent-setup")).status).toBe(403);
+  expect((await asBia("/agent-setup")).status).toBe(200);
   expect((await use({ setup, agentIds: [] })).status).toBe(400);
   expect((await use({ setup: { ...setup, effort: "hard" }, agentIds: [eva.id] })).status).toBe(400);
 });
