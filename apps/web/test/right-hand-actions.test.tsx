@@ -400,6 +400,59 @@ describe("a change in the workspace that names all it does", () => {
   });
 
   // Laid out by the geometry check at 1280, 390 and 320: twenty addresses that never break on their own.
+  test("who may do one thing, everyone and the roles at once: the permission, who has it after, and the tap says it read it", async () => {
+    const holders: WorkspaceActionCard = {
+      ...invite(),
+      params: {
+        action: "set_permission_holders",
+        input: {
+          row: "create_channels",
+          everyone: 0,
+          roles: [
+            { id: "r-fin", name: "Financeiro", level: 1 },
+            { id: "r-sup", name: "Suporte", level: 1 },
+          ],
+        },
+        words: { permission: "create_channels" },
+        needs: "manage_roles",
+        why: "Só o Financeiro e o Suporte criam canais.",
+      },
+    };
+    const state = withLodiCard(seedState(), holders);
+    await goWith(state, holders);
+    const c = cardGroup();
+    expect(c.querySelector(".rq__wt b")?.textContent).toBe("Mudar quem pode criar canais");
+    expect(c.querySelector(".rq__wt small")?.textContent).toBe("Financeiro e Suporte");
+    await click(within(c).getByRole("button", { name: "Aplicar" }));
+    expect(state.calls.find((x) => x.method === "actionCards.decide")?.args.slice(2)).toEqual([
+      "apply",
+      "set_permission_holders",
+    ]);
+  });
+
+  test("the computers' ladder: a line per role with its step, long names and many roles inside the card", async () => {
+    const long = "Coordenação de vendas e pós-venda da filial";
+    const roles = Array.from({ length: 12 }, (_, i) => ({ id: `r-${i}`, name: `${long} ${i}`, level: (i % 4) + 1 }));
+    const ladder: WorkspaceActionCard = {
+      ...invite(),
+      params: {
+        action: "set_permission_holders",
+        input: { row: "computers", everyone: 1, roles },
+        words: { permission: "computers", variant: "computers" },
+        needs: "manage_roles",
+        why: "",
+      },
+    };
+    const state = withLodiCard(seedState(), ladder);
+    await goWith(state, ladder);
+    const c = cardGroup();
+    expect(c.querySelector(".rq__wt b")?.textContent).toBe("Mudar quem usa os computadores dos agentes");
+    const lines = (c.querySelector(".rq__wt small")?.textContent ?? "").split("\n");
+    expect(lines).toHaveLength(13);
+    expect(lines[0]).toBe("Todos: usar o navegador dos próprios agentes");
+    expect(lines[4]).toBe(`${long} 3: assumir a tela`);
+  });
+
   test("twenty long addresses and long role names stay inside the card", async () => {
     const emails = Array.from(
       { length: 20 },

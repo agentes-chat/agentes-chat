@@ -43,11 +43,12 @@ outside contribution would stay AGPL-only.
    request has a run of it. A pull request that was open before the workflow existed gets its run from the `cla`
    label: a comment's run belongs to main and leaves no check on the pull request.
 4. **Every pull request is checked, commit by commit.** A maintainer's integration branch can carry an outside
-   author's commits, so the check doesn't go by who opened the pull request. The team (the organization's
-   members), Dependabot and the GitHub App that opens the agents' pull requests are exempt by name, which also
-   keeps a maintainer's fix on a contributor's pull request from asking the maintainer to sign. Commits an AI
-   tool authors under its own name pass only on a pull request the team opened: on anyone else's, a person
-   has to be the author.
+   author's commits, so the check doesn't go by who opened the pull request. The maintainers are exempt by name,
+   which keeps a maintainer's fix on a contributor's pull request from asking the maintainer to sign. Bots
+   (Dependabot, the GitHub App the agents commit through, an AI tool's own account) are exempt only on a branch
+   of this repository, which only the team and its own agents can push. On a fork they are not: anyone's agent
+   commits through that same GitHub App, so a person has to be the author there. A maintainer carries an outside
+   pull request into an integration branch only once its own check is green.
 5. **Earlier contributions.** Five commits by four outside authors reached main before this decision, carried
    in maintainers' integration branches (`b7f0fd9cfe`, `23d7a6638f`, `787168476a`, `cdefe320a9`, `e8aebb2271`).
    They are held only under the AGPL, so the commercial license doesn't cover them until their authors accept

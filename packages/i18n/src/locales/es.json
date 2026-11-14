@@ -2765,6 +2765,9 @@
       "update_role": "Cambiar el rol <b>{{name}}</b>",
       "delete_role": "Eliminar el rol <b>{{name}}</b> para siempre",
       "move_role": "Mover el rol <b>{{name}}</b>",
+      "set_permission_holders": "Cambiar quién puede <b>{{short}}</b>",
+      "set_permission_holders_computers": "Cambiar quién usa <b>las computadoras de los agentes</b>",
+      "holdersOwnersOnly": "Solo los propietarios",
       "set_member_roles": "Cambiar los roles de <b>{{name}}</b>: {{change}}",
       "set_channel_permissions": "Cambiar lo que {{who}} puede hacer en <b>#{{channel}}</b>",
       "set_my_status": "Poner tu estado: <b>{{what}}</b>",
@@ -3589,6 +3592,8 @@
       "changed_update_role": "Cambié el rol <b>{{name}}</b>",
       "changed_delete_role": "Eliminé el rol <b>{{name}}</b>",
       "changed_move_role": "Moví el rol <b>{{name}}</b>",
+      "changed_set_permission_holders": "Cambié quién puede <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "Cambié quién usa <b>las computadoras de los agentes</b>",
       "changed_set_member_roles": "Cambié los roles de <b>{{name}}</b>: {{change}}",
       "changed_set_channel_permissions": "Cambié lo que {{who}} puede hacer en <b>#{{channel}}</b>",
       "changed_set_my_status": "Puse tu estado: <b>{{what}}</b>",
@@ -4569,6 +4574,10 @@
   "approval": {
     "expiredChip": "Vencida · {{when}}",
     "canceledChip": "Cancelada · {{when}}",
+    "line": {
+      "after": "se ejecuta después de “{{title}}”",
+      "notRun": "no se ejecutó: la solicitud anterior no fue aprobada"
+    },
     "waitingFor": "Esperando a {{name}}",
     "waitingAdmin": "Esperando a un admin",
     "reasonLine": "Motivo: {{reason}}",
@@ -5185,8 +5194,15 @@
       "canceled": "Cancelada",
       "failed": "Falló",
       "running": "En ejecución",
-      "scheduled": "Programada"
+      "scheduled": "Programada",
+      "queued": "En cola",
+      "notRun": "No se ejecutó"
     },
+    "queuedLine": "Aprobada. Se ejecuta después de “{{title}}”, solicitada antes.",
+    "notRunRefused": "“{{title}}”, solicitada antes, fue rechazada después de aprobar esta. Por eso esta no se ejecutó.",
+    "notRunExpired": "“{{title}}”, solicitada antes, venció sin decisión después de aprobar esta. Por eso esta no se ejecutó.",
+    "notRunEarlier": "Una solicitud anterior fue rechazada o venció después de aprobar esta. Por eso esta no se ejecutó.",
+    "position": "{{n}} de {{total}}",
     "expiredLine": "Nadie decidió en 24 h, así que no se hizo nada.",
     "canceledLine": "La ejecución se detuvo antes de una decisión.",
     "supersededLine": "El agente volvió a pedirlo con una versión más nueva. Esta no se hizo.",
@@ -5253,8 +5269,10 @@
       "email": "El correo",
       "text": "Lo que va a publicar",
       "textDone": "Lo que publicó",
+      "textNot": "Lo que iba a publicar",
       "values": "Lo que va a hacer",
       "valuesDone": "Lo que hizo",
+      "valuesNot": "Lo que iba a hacer",
       "trail": "Cómo llegó aquí",
       "showSteps": "Ver cada paso",
       "hideSteps": "Ocultar los pasos",
@@ -11478,15 +11496,6 @@
       "nowYours": "Se detuvo para leer tu nota",
       "nowOf": "Se detuvo para leer la nota de {{name}}"
     },
-    "choice": {
-      "label": "Cómo enviar mientras {{name}} trabaja",
-      "label_female": "Cómo enviar mientras {{name}} trabaja",
-      "join": "Sumar a lo que hace {{name}}",
-      "join_female": "Sumar a lo que hace {{name}}",
-      "interrupt": "Detener y enviar",
-      "joins": "suma",
-      "interrupts": "detiene y envía"
-    },
     "strip": {
       "see": "Ver",
       "toStop": "para detener"
@@ -15502,6 +15511,10 @@
         "left": "Salió del espacio de trabajo",
         "role_changed": "Cambió el rol de un miembro",
         "password_link": "Generó un enlace de contraseña nueva para un miembro"
+      },
+      "role": {
+        "permission_set": "Cambió quién puede {{short}}",
+        "permission_set_computers": "Cambió quién usa las computadoras de los agentes"
       },
       "apps": {
         "connected": "Conectó {{app}}",

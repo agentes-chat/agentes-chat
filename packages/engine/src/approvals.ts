@@ -18,6 +18,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { type ActiveCover, activeCoversFrom, activeCoversTo } from "./approval-covers";
+import { resumeHeldRuns, wakeLine } from "./approval-order";
 import { addApprovalRules, addRoutineOwnActions, type RememberedKind, rememberedKindOf } from "./approval-rules";
 import { queueApprovalsDigest } from "./approvals-digest";
 import { recordAudit } from "./audit";
@@ -57,6 +58,7 @@ const {
   issues,
   mailAccounts,
   messages,
+  notifications,
   routines,
   users,
 } = schema;
@@ -103,8 +105,11 @@ export interface ApprovalView {
   ownerUserId: string | null;
   /** When the approved action ran (null: not yet, or never). */
   executedAt: string | null;
-  /** What the action returned once it ran (raw tool output, short). */
-  result: { ok: boolean; text: string } | null;
+  /**
+   * What the action returned once it ran (raw tool output, short). `notRunAfter`: it didn't run, because the request
+   * asked before it on its card (that id) was refused or expired after it was approved (`approval-order.ts`).
+   */
+  result: { ok: boolean; text: string; notRunAfter?: string } | null;
   /** The connector the action goes through (`github`), and its account (`acme`); null for built-in tools. */
   connector: string | null;
   connectorAccount: string | null;
@@ -160,9 +165,12 @@ export function approvalOriginOf(value: Approval["origin"]): ApprovalOrigin | nu
 }
 
 const resultOf = (a: Approval): ApprovalView["result"] => {
-  const r = a.result as { content?: unknown; isError?: unknown } | null;
+  const r = a.result as { content?: unknown; isError?: unknown; notRunAfter?: unknown } | null;
   if (!r) return null;
-  return { ok: r.isError !== true, text: typeof r.content === "string" ? r.content.slice(0, 600) : "" };
+  const text = typeof r.content === "string" ? r.content.slice(0, 600) : "";
+  return typeof r.notRunAfter === "string"
+    ? { ok: false, text, notRunAfter: r.notRunAfter }
+    : { ok: r.isError !== true, text };
 };
 
 /** Batched: connections, the runs' narration up to each approval step, the runs' issues. */
@@ -825,6 +833,7 @@ export async function supersedeApprovals(tx: Executor, newer: Approval): Promise
     await enqueueResume(tx, row);
     await auditDecision(tx, row, null);
   }
+  await wakeLine(tx, rows);
   return rows;
 }
 
@@ -983,6 +992,9 @@ export async function decideApproval(
     }
     if (updated?.status === "refused") await settleAheadRoutine(tx, updated);
     if (updated) await auditDecision(tx, updated, expired ? null : actorId, always, via);
+    // Not approved: what the agent asked after it on its card no longer waits for it. An approved one wakes them once
+    // its run has done it (`approval-order.ts`).
+    if (updated && updated.status !== "approved") await wakeLine(tx, [updated]);
     return expired ? { error: "This request has expired" as const, row: updated } : { row: updated };
   });
   if (outcome.row) await publishApproval(deps, outcome.row, "approval.decided");
@@ -1056,6 +1068,10 @@ export async function decideApprovals(
       if (row.runId) resumed.add(row.runId);
       out.push(updated);
     }
+    await wakeLine(
+      tx,
+      out.filter((r) => r.status !== "approved"),
+    );
     return out;
   });
   if (theirs) throw new ForbiddenError("Only the agent's owner or an admin can decide this");
@@ -1116,6 +1132,7 @@ export async function expireApprovals(deps: { db: Database; pubsub: PubSub }, no
       await enqueueResume(tx, row);
       await auditDecision(tx, row, null);
     }
+    await wakeLine(tx, rows);
     const lapsed = await tx
       .update(approvals)
       .set({ status: "expired" })
@@ -1131,7 +1148,38 @@ export async function expireApprovals(deps: { db: Database; pubsub: PubSub }, no
     return [...rows, ...lapsed];
   });
   for (const row of expired) await publishApproval(deps, row, "approval.decided");
+  await resolveStaleApprovalNotifications(deps).catch(() => {});
+  // The same minute's safety net for runs waiting their turn behind a request whose run ended (`approval-order.ts`).
+  await resumeHeldRuns(deps.db, now).catch(() => 0);
   return expired.length;
+}
+
+/**
+ * An approval's notification left waiting after the request closed (a row canceled in place before each close told
+ * the inbox, a crash between the close and the inbox): out of the inbox, or on to the card's next request still
+ * waiting, so no conversation says a request waits when Approvals has none.
+ */
+export async function resolveStaleApprovalNotifications(deps: { db: Database; pubsub?: PubSub }) {
+  const stale = await deps.db
+    .selectDistinct({ id: approvals.id, orgId: approvals.orgId, messageId: approvals.messageId })
+    .from(notifications)
+    .innerJoin(
+      approvals,
+      and(
+        eq(approvals.orgId, notifications.orgId),
+        sql`${notifications.source}->>'approvalId' = ${approvals.id}::text`,
+      ),
+    )
+    .where(
+      and(
+        eq(notifications.kind, "approval"),
+        eq(notifications.waiting, true),
+        isNull(notifications.doneAt),
+        ne(approvals.status, "pending"),
+      ),
+    );
+  for (const row of stale) await resolveApprovalNotifications(deps, row);
+  return stale.length;
 }
 
 /**
