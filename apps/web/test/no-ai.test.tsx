@@ -1023,7 +1023,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     api.agents.checkCredential = async () => ({ check: "unchecked" });
     await useHave(box, "Gateway Sul");
     expect(calls(state, "agents.update").map((c) => c.args)).toEqual([
-      [ORG_ID, ADA_ID, { credentialId: "cred-cc", model: "auto" }],
+      [ORG_ID, ADA_ID, { credentialId: "cred-cc", model: "custom:cred-cc:deep-flash" }],
     ]);
     expect(document.querySelector(".ac-toast")).toBeNull();
     expect(box.textContent).toContain("Nenhum modelo do Gateway Sul passou no teste ainda.");

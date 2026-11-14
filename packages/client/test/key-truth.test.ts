@@ -124,7 +124,7 @@ test("a key saved for one agent goes on it, and the line names the agent", async
   );
   expect(calls).toEqual([
     ["setBrain", "ada", { brain: "model" }],
-    ["update", "ada", { credentialId: "k2", model: "auto" }],
+    ["update", "ada", { credentialId: "k2", model: "custom:k2:m1" }],
   ]);
   expect(savedKeyLine(t, out, saved)).toBe("Saved. Ada now thinks with Gateway Sul.");
 });
