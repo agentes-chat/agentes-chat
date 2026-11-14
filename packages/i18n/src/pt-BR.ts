@@ -13720,6 +13720,9 @@ export const ptBR = {
     },
     join: {
       linkClosed: "Este link não funciona mais. Peça um novo a quem mandou.",
+      linkFull: "Este link já recebeu todas as pessoas que podia. Peça um link novo a quem mandou.",
+      linkFullApproval:
+        "O link deste pedido já recebeu todas as pessoas que podia. Para aprovar, aumente o máximo de pessoas do link.",
       full: "Este workspace tem muitos pedidos esperando. Tente mais tarde ou peça a alguém de lá para convidar você.",
       rateLimited: "Muitos pedidos daqui. Tente de novo daqui a uma hora.",
       linkBusy: "Muita gente pediu por este link na última hora. Tente de novo mais tarde.",

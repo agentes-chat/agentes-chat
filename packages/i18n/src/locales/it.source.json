@@ -32974,6 +32974,12 @@
   "errors.join.linkClosed": {
     "value": "This link no longer works. Ask whoever sent it for a new one."
   },
+  "errors.join.linkFull": {
+    "value": "This link already took everyone it could. Ask whoever sent it for a new one."
+  },
+  "errors.join.linkFullApproval": {
+    "value": "This request's link already took everyone it could. To approve it, raise the link's maximum."
+  },
   "errors.join.full": {
     "value": "This workspace has many requests waiting. Try again later, or ask someone there to invite you."
   },
