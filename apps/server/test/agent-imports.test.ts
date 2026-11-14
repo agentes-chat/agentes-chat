@@ -350,8 +350,12 @@ describe("imports and the export", () => {
     expect((await b(imports, { json: { bundle: { ...BUNDLE, format: "other" }, dryRun: true } })).status).toBe(400);
     expect((await b(imports, { json: { bundle: { ...BUNDLE, version: 2 }, dryRun: true } })).status).toBe(400);
 
-    // A member: refused, the import and the export.
+    // A member where an admin took Criar agentes off Todos: refused, the import and the export.
     const member = await joinByInvitation(t as TestServer, b, orgId, "member@example.com");
+    await b(`/api/app/organizations/${orgId}/permissions/create_agents`, {
+      method: "PUT",
+      json: { everyone: 0, roles: [] },
+    });
     expect((await member(imports, { json: { bundle: BUNDLE, dryRun: true } })).status).toBe(403);
     expect((await member(imports)).status).toBe(403);
     expect((await member(`/api/app/organizations/${orgId}/export`)).status).toBe(403);
@@ -553,8 +557,9 @@ describe("an imported agent's own files into the Drive", () => {
       "Scout/notes/plan.md",
     ]);
 
-    // Only who imports; and only into an agent of this workspace.
+    // Only who imports (here Todos may not); and only into an agent of this workspace.
     const member = await joinByInvitation(t as TestServer, b, orgId, "member@example.com");
+    await b(`${base}/permissions/create_agents`, { method: "PUT", json: { everyone: 0, roles: [] } });
     expect((await copy("notes/other.md", "x", "other.md", member)).status).toBe(403);
     expect((await send(browser(t as TestServer), `${base}/imports/files`, { path: "a.md" })).status).toBe(401);
     const stranger = await send(b, `${base}/imports/files`, {
