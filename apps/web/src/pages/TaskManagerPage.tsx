@@ -720,7 +720,7 @@ function CapacityStrip({
   const waiting = tasks.filter((task) => taskState(task) === "waiting").length;
   const own = ownPlanLines(t, accounts, dir.agents, me.user.id);
   // The wait's key ends in the sign-in it waits on (`usageWaitKey`): an account's id, or `own` for a computer's own.
-  const planOf = (key: string | undefined) =>
+  const planOf = (key: string | null | undefined) =>
     key ? planNearLimit(own.filter((p) => key === `plan:${p.key}:own` || key.endsWith(`:${p.key}`))) : null;
   const usage = () =>
     void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "usage" } });
