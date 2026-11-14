@@ -655,9 +655,9 @@ export interface GithubFetchOptions {
 /**
  * Minutes until GitHub stops limiting this server, or null when it isn't. GitHub answers 403 or 429 and says when
  * to retry in `retry-after` (seconds), else in `x-ratelimit-reset` once none remain, else "at least one minute"
- * (docs.github.com, "Rate limits for the REST API"). A request without credentials shares this server's address with
- * every other one, and GitHub's secondary limits answer a 403 with none of those headers: to one, a 403 is a limit
- * whether it says so or not. With credentials the 403 means the token can't read it, which is the caller's call.
+ * (docs.github.com, "Rate limits for the REST API"). Without credentials this server shares its address with every
+ * other one, and GitHub's secondary limit can answer a bare 403: without a token any 403 is the limit. With a token a
+ * 403 means the token can't read it, which the caller decides.
  */
 function githubWaitMinutes(res: Response, authenticated: boolean): number | null {
   const retryAfter = Number(res.headers.get("retry-after"));
@@ -921,8 +921,9 @@ type GithubConnectionState = "none" | "refused" | "ok";
  * connection follows it, so a skill never stays stuck on one the workspace replaced).
  *
  * A public read GitHub limits (the server's address is shared, and its 60 an hour run out) is not about the
- * repository: the tokens are on a limit of their own and read it next, and when the workspace has none at all the
- * limit is what the refusal says.
+ * repository: the tokens are on a limit of their own and read it next, and when no token could be tried the limit is
+ * what the refusal says. What they read keeps no `via`: the limit says nothing about who may read the repository, and
+ * a public one must go on updating without the token.
  *
  * None reads it: `github.unreachable` when GitHub left a token request unanswered, `skill.connection_gone` when the
  * workspace no longer has the connection `through` names, else `github.repo_missing` with the connection's state and
@@ -955,6 +956,7 @@ async function workspaceRepository(
   const connection = github && (await activeConnections(deps.db, orgId)).find((c) => c.connector === "github");
   let state: GithubConnectionState = connection ? "ok" : "none";
   let unanswered = false;
+  let tried = false;
   if (github && tokenSafe(target)) {
     const order: SkillVia[] = through === "github" ? ["github", "github_app"] : ["github_app", "github"];
     for (const via of order) {
@@ -974,10 +976,11 @@ async function workspaceRepository(
         if (!token && !made.failed) state = "refused";
       }
       if (!token) continue;
+      tried = true;
       const found = await tokenRepository(deps, target, token);
       if (found === "refused") {
         if (via === "github") state = "refused";
-      } else if (found) return { ...found, via };
+      } else if (found) return { ...found, via: limited ? null : via };
     }
   }
   if (unanswered) throw unreachable();
@@ -990,8 +993,9 @@ async function workspaceRepository(
   if (gone) {
     throw new ValidationError(`The GitHub connection that read ${repo} is gone`, "skill.connection_gone", { repo });
   }
-  // No token was ever tried: whether the repository exists went unanswered, and the limit is what happened.
-  if (limited && state === "none" && installations.length === 0) throw limited;
+  // No token was ever tried: whether the repository exists went unanswered, and the limit is what happened. A
+  // connection whose refresh was refused says the limit too: it passes, and the next try reads without credentials.
+  if (limited && !tried) throw limited;
   throw new ValidationError(`${repo} is private or doesn't exist on GitHub`, "github.repo_missing", {
     repo,
     connection: state,

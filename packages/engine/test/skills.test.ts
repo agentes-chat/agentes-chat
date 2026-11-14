@@ -694,10 +694,14 @@ const PUBLIC_ONE = {
 function limitedPublicGithub() {
   const requests: { url: string; auth: string | null }[] = [];
   const sees = new Set([CONNECTION_TOKEN]);
+  const limit = { on: true };
   const fetch = async (url: string, init?: RequestInit) => {
     const auth = new Headers(init?.headers).get("authorization");
     requests.push({ url, auth });
-    if (url === "https://github.com/acme/skills/archive/HEAD.zip") return new Response("slow down", { status: 403 });
+    if (url === "https://github.com/acme/skills/archive/HEAD.zip") {
+      if (!limit.on) return new Response(zip(PUBLIC_ONE));
+      return new Response("slow down", { status: 403 });
+    }
     if (url === "https://codeload.github.com/acme/skills/legacy.zip/token") return new Response(zip(PUBLIC_ONE));
     const token = auth?.replace(/^Bearer /, "") ?? "";
     if (sees.has(token) && url === "https://api.github.com/repos/acme/skills/zipball") {
@@ -706,7 +710,7 @@ function limitedPublicGithub() {
     }
     return new Response("403: Forbidden", { status: 403 });
   };
-  return { fetch, requests, sees };
+  return { fetch, requests, sees, limit };
 }
 
 /**
@@ -775,12 +779,13 @@ describe("private repositories", () => {
 
   test("a public read GitHub limits reads through the workspace's token, and the install concludes", async () => {
     f = await setup();
-    await connectGithub();
+    const connection = await connectGithub();
     const github = limitedPublicGithub();
     const deps = { ...skillDeps(), fetch: github.fetch, github: { connectors: connectors() } };
     const url = "https://github.com/acme/skills";
     const skill = (await importSkillFromUrl(deps, f.owner.id, f.org.id, url)) as SkillDetail;
-    expect(skill).toMatchObject({ name: "relatorio-semanal", version: 1, sourceVia: "github" });
+    // The limit says nothing about who may read it: the skill stays one of a public repository.
+    expect(skill).toMatchObject({ name: "relatorio-semanal", version: 1, sourceVia: null });
     expect(await listSkills(f.db, f.owner.id, f.org.id)).toMatchObject([{ name: "relatorio-semanal", version: 1 }]);
     // The public read first, limited; then the token, sent to the API only, and the archive from codeload.
     expect(github.requests).toEqual([
@@ -795,6 +800,26 @@ describe("private repositories", () => {
       code: "github.repo_missing",
       params: { repo: "acme/skills", connection: "ok", app: false },
     });
+
+    // GitHub disconnected: while the limit lasts, updating says the limit; once it passes, it reads without one.
+    await revokeConnection(f.db, f.owner.id, f.org.id, connection.id);
+    expect(await refusalOf(reimportSkill(deps, f.owner.id, f.org.id, skill.id))).toMatchObject({
+      code: "github.limited",
+    });
+    github.limit.on = false;
+    expect(await reimportSkill(deps, f.owner.id, f.org.id, skill.id)).toMatchObject({ version: 2, sourceVia: null });
+  });
+
+  test("a limited public read says the limit when no token could be tried, the GitHub App on another account only", async () => {
+    f = await setup();
+    await installApp("someone-else");
+    const github = limitedPublicGithub();
+    const deps = { ...skillDeps(), fetch: github.fetch, github: { connectors: connectors(), app: APP } };
+    expect(await refusalOf(importSkillFromUrl(deps, f.owner.id, f.org.id, "https://github.com/acme/skills"))).toEqual({
+      code: "github.limited",
+      params: { count: 1 },
+    });
+    expect(github.requests.filter((r) => r.url.includes("/zipball"))).toEqual([]);
   });
 
   test("read with the workspace's GitHub connection, its token sent to api.github.com only; updating reads through it", async () => {
