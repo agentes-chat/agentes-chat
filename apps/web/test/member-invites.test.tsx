@@ -93,11 +93,29 @@ function withSupport(state = seedState()) {
 }
 
 /** People › Membros (as Acme's owner, who may invite, unless the state says otherwise). */
-async function members(state = seedState(), path = "members") {
-  const r = await renderApp(`/org/${ORG_ID}/settings/${path}`, { api: createFakeApi(state) });
+async function members(state = seedState(), path = "members", api = createFakeApi(state)) {
+  const r = await renderApp(`/org/${ORG_ID}/settings/${path}`, { api });
   await settle(6);
   return { ...r, state };
 }
+/** `run`, each call held until `release`: it stays pending meanwhile. */
+function hold<A extends unknown[], R>(run: (...args: A) => Promise<R>) {
+  let open = () => {};
+  return {
+    run: async (...args: A) => {
+      await new Promise<void>((r) => {
+        open = r;
+      });
+      return run(...args);
+    },
+    release: async () => {
+      await act(async () => open());
+      await settle(6);
+    },
+  };
+}
+/** Off: its own `disabled`, or inside a `Locked` that runs. */
+const off = (el: HTMLElement) => (el as HTMLButtonElement).disabled || el.closest("fieldset[disabled]") !== null;
 /** The page's own "Convidar pessoas" (the first of that name). */
 async function openInvite() {
   const [open] = screen().getAllByRole("button", { name: "Convidar pessoas" });
@@ -398,6 +416,33 @@ describe("the invite dialog, one screen", () => {
     expect(screen().queryByRole("dialog", { name: "Convidar para a Acme" })).toBeNull();
   });
 
+  test("Link: while a link is made the whole dialog waits on it, the switch and Concluir too, and Esc keeps it", async () => {
+    const state = withSupport();
+    state.inviteLinks = [link({ id: "link-plain" })];
+    const api = createFakeApi(state);
+    const make = hold(api.invites.createLink);
+    api.invites.createLink = make.run;
+    await members(state, "members", api);
+    await openInvite();
+    await click(within(dialog()).getByRole("radio", { name: "Link" }));
+    // Opening at the defaults renews the workspace's link: the dialog waits on that too.
+    expect(off(within(dialog()).getByRole("radio", { name: "E-mail" }))).toBe(true);
+    await make.release();
+    expect(off(within(dialog()).getByRole("radio", { name: "E-mail" }))).toBe(false);
+    await pickRoles("Suporte");
+    await click(within(dialog()).getByRole("button", { name: "Criar link" }));
+    await settle(2);
+    expect(off(within(dialog()).getByRole("radio", { name: "E-mail" }))).toBe(true);
+    expect(off(within(dialog()).getByRole("button", { name: "Concluir" }))).toBe(true);
+    await key(dialog(), "Escape");
+    expect(screen().queryByRole("dialog", { name: "Convidar para a Acme" })).not.toBeNull();
+    await make.release();
+    expect((within(dialog()).getByLabelText("Link") as HTMLInputElement).value).toBe(
+      "http://localhost:3000/invite/link-2",
+    );
+    expect(off(within(dialog()).getByRole("button", { name: "Concluir" }))).toBe(false);
+  });
+
   test("one dialog from everywhere: the workspace menu and ⌘K open it over the page; who may not invite has neither", async () => {
     const { router } = await renderApp(`/org/${ORG_ID}/issues`, { api: createFakeApi(seedState()) });
     await settle(6);
@@ -557,10 +602,11 @@ describe("People › Convites", () => {
     await click(within(edit).getByRole("button", { name: "Remover #suporte" }));
     await click(within(edit).getByRole("button", { name: "Salvar" }));
     await settle(6);
+    // Only what changed goes: the cargo and the agents stay as they are.
     expect(state.calls.find((c) => c.method === "invites.editLink")?.args).toEqual([
       ORG_ID,
       "link-sup",
-      { roleIds: [SUPORTE], channelIds: [], agentIds: [MAX_ID], maxUses: 1 },
+      { channelIds: [], maxUses: 1 },
     ]);
     expect(text()).toContain("Link salvo. O endereço é o mesmo.");
 
@@ -633,12 +679,13 @@ describe("People › Convites", () => {
           ?.querySelectorAll(".ac-token__label") ?? []),
       ].map((l) => l.textContent),
     ).toEqual(["Lodi"]);
+    await click(within(edit).getByRole("button", { name: "Remover #suporte" }));
     await click(within(edit).getByRole("button", { name: "Salvar" }));
     await settle(4);
     expect(state.calls.find((c) => c.method === "orgs.updateInvitation")?.args).toEqual([
       ORG_ID,
       "inv-rafa",
-      { roleIds: [SUPORTE], channelIds: [SUPORTE_CH], agentIds: [] },
+      { channelIds: [] },
     ]);
     expect(text()).toContain("Convite de rafael@acme.com atualizado.");
     expect(state.calls.filter((c) => c.method === "orgs.resendInvitation")).toHaveLength(1);
@@ -663,6 +710,108 @@ describe("People › Convites", () => {
     await wait(120);
     await settle(4);
     expect(state.calls.filter((c) => c.method === "orgs.revokeInvitation").at(-1)?.args).toEqual([ORG_ID, "inv-old"]);
+  });
+
+  test("pending: while a row's call runs its other actions wait; Desativar's dialog holds until the link is off", async () => {
+    const state = withSupport();
+    state.invitations.push(
+      invitation({ id: "inv-rafa", email: "rafael@acme.com" }),
+      invitation({
+        id: "inv-old",
+        email: "old@acme.com",
+        status: "expired",
+        expiresAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+      }),
+    );
+    state.inviteLinks = [link({ id: "link-sup", plain: false, roleIds: [SUPORTE] })];
+    const api = createFakeApi(state);
+    const resend = hold(api.orgs.resendInvitation);
+    api.orgs.resendInvitation = resend.run;
+    const turnOff = hold(api.invites.turnOff);
+    api.invites.turnOff = turnOff.run;
+    await members(state, "invites", api);
+    const row = (email: string) => screen().getByRole("group", { name: `Convite para ${email}` });
+
+    await click(within(row("rafael@acme.com")).getByRole("button", { name: "Reenviar" }));
+    await settle(2);
+    expect(off(within(row("rafael@acme.com")).getByRole("button", { name: "Copiar link" }))).toBe(true);
+    expect(off(within(row("rafael@acme.com")).getByRole("button", { name: "Mais ações para rafael@acme.com" }))).toBe(
+      true,
+    );
+    await resend.release();
+    expect(off(within(row("rafael@acme.com")).getByRole("button", { name: "Copiar link" }))).toBe(false);
+
+    await click(within(row("old@acme.com")).getByRole("button", { name: "Renovar" }));
+    await settle(2);
+    expect(off(within(row("old@acme.com")).getByRole("button", { name: "Tirar" }))).toBe(true);
+    await resend.release();
+
+    const links = screen().getByRole("region", { name: "Links" });
+    await openFrom(within(links).getByRole("button", { name: "Mais ações para o link Suporte" }));
+    await click(screen().getByRole("menuitem", { name: "Desativar link" }));
+    const ask = screen().getByRole("dialog", { name: "Desativar o link?" });
+    await click(within(ask).getByRole("button", { name: "Desativar link" }));
+    await settle(2);
+    expect(off(within(ask).getByRole("button", { name: "Cancelar" }))).toBe(true);
+    await key(ask, "Escape");
+    expect(screen().queryByRole("dialog", { name: "Desativar o link?" })).not.toBeNull();
+    await turnOff.release();
+    expect(screen().queryByRole("dialog", { name: "Desativar o link?" })).toBeNull();
+  });
+
+  test("a cargo above yours that someone higher gave: Editar sends only what changed, and it can go, never come back", async () => {
+    const state = withSupport();
+    // The viewer may not give Suporte here, as an inviter under it.
+    state.roles = (state.roles ?? []).map((r) => (r.id === SUPORTE ? { ...r, givable: false } : r));
+    state.inviteLinks = [
+      link({ id: "link-sup", plain: false, roleIds: [SUPORTE], channelIds: [SUPORTE_CH], agentIds: [MAX_ID] }),
+    ];
+    state.invitations.push(
+      invitation({ id: "inv-sup", email: "sup@example.com", roleIds: [SUPORTE], channelIds: [SUPORTE_CH] }),
+    );
+    await members(state, "invites");
+
+    // Editar link, the maximum alone: what it gives isn't sent, so nothing in it is checked for you again.
+    const links = screen().getByRole("region", { name: "Links" });
+    await openFrom(within(links).getByRole("button", { name: "Mais ações para o link Suporte" }));
+    await click(screen().getByRole("menuitem", { name: "Editar" }));
+    await settle(4);
+    const editLink = screen().getByRole("dialog", { name: "Link de convite" });
+    await openFrom(within(editLink).getByRole("combobox", { name: "Máximo de pessoas" }));
+    await click(screen().getByRole("option", { name: "10 pessoas" }));
+    await click(within(editLink).getByRole("button", { name: "Salvar" }));
+    await settle(6);
+    expect(state.calls.find((c) => c.method === "invites.editLink")?.args).toEqual([
+      ORG_ID,
+      "link-sup",
+      { maxUses: 10 },
+    ]);
+
+    // Editar convite: the cargo shows picked and marked; taken out, it can't be ticked again, and only that goes.
+    await openFrom(
+      within(screen().getByRole("group", { name: "Convite para sup@example.com" })).getByRole("button", {
+        name: "Mais ações para sup@example.com",
+      }),
+    );
+    await click(screen().getByRole("menuitem", { name: "Editar" }));
+    await settle(4);
+    const editInvitation = screen().getByRole("dialog", { name: "Convite de sup@example.com" });
+    await openFrom(within(editInvitation).getByRole("button", { name: /^Cargo/ }));
+    const above = () => screen().getByRole("menuitemcheckbox", { name: /^Suporte/ });
+    expect(above().getAttribute("aria-checked")).toBe("true");
+    expect(above().textContent).toContain("Acima do seu cargo");
+    await click(above());
+    expect(above().getAttribute("aria-checked")).toBe("false");
+    expect(above().getAttribute("aria-disabled")).toBe("true");
+    await act(async () => fireEvent.keyDown(screen().getByRole("menu"), { key: "Escape" }));
+    await settle(2);
+    await click(within(editInvitation).getByRole("button", { name: "Salvar" }));
+    await settle(6);
+    expect(state.calls.find((c) => c.method === "orgs.updateInvitation")?.args).toEqual([
+      ORG_ID,
+      "inv-sup",
+      { roleIds: [] },
+    ]);
   });
 
   test("past 8 rows: a search by e-mail or cargo and the kind of row; nothing open says so with a way to invite", async () => {

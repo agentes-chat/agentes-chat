@@ -7394,6 +7394,8 @@
     "emails": "Einladungen per E-Mail",
     "viaLinkOf": "Über den Link von {{name}} angefragt {{when}}",
     "withLink": "Mit dem Link: {{gives}}.",
+    "roleLeftOut_one": "{{roles}} bleibt außen vor: Sie steht über deiner Rolle.",
+    "roleLeftOut_other": "{{roles}} bleiben außen vor: Sie stehen über deiner Rolle.",
     "linkLabel": "Link {{name}}",
     "linkMore": "Mehr Aktionen für den Link {{name}}",
     "usesOf_one": "{{uses}} von {{count}} Person",

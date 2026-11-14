@@ -43,7 +43,7 @@ import {
   Select,
   Textarea,
 } from "@agenteschat/ui";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type UseMutationResult, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   createContext,
@@ -226,7 +226,14 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
     meta: { silent: true },
     onSettled: () => qc.invalidateQueries({ queryKey: keys.invitations(org.id) }),
   });
-  const unsaved = useEdited(open, [chips, draft, note]) || send.isPending;
+  // Link's: the workspace's link renewed as it opens, or a link of its own. Here, so it locks the whole dialog.
+  const make = useMutation({
+    mutationFn: (c: LinkChoices) => api.invites.createLink(org.id, c),
+    meta: { silent: true },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.inviteLinks(org.id) }),
+  });
+  const pending = send.isPending || make.isPending;
+  const unsaved = useEdited(open, [chips, draft, note]) || pending;
 
   // Who is in already, and who has an invitation waiting: said on their token and left out of the send.
   const members = new Set(dir.members.map((m) => m.email.toLowerCase()));
@@ -351,7 +358,6 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
   }
 
   const toLabel = t("invites.to");
-  const pending = send.isPending;
   return (
     <Dialog
       open={open}
@@ -460,7 +466,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
                 {failure?.kind === "offline" && <FieldLine tone="danger">{t("invites.offline")}</FieldLine>}
               </>
             ) : (
-              <LinkForm choices={choices} fromChannelId={request.channelId} live={open} onGo={goTo} />
+              <LinkForm make={make} choices={choices} fromChannelId={request.channelId} live={open} onGo={goTo} />
             )}
           </FormStack>
         </DialogBody>
@@ -472,7 +478,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
                 variant="primary"
                 icon={failure?.kind === "offline" ? "refresh" : "send"}
                 disabled={ready.length === 0 || full || noteTooLong}
-                loading={pending}
+                loading={send.isPending}
                 onClick={() => void sendNow()}
               >
                 {failure?.kind === "offline"
@@ -500,14 +506,17 @@ interface Made {
 /**
  * Link: the address to copy, until when it works, then the same fields as by e-mail, and Validade and Máximo de
  * pessoas. At the defaults the field shows the workspace's link at once, renewed to 30 days as it opens here. Any other
- * choice empties the field until "Criar link" makes a link of its own; a live link changes only from Editar.
+ * choice empties the field until "Criar link" makes a link of its own; a live link changes only from Editar. `make`:
+ * the dialog's, which locks it all while it runs.
  */
 function LinkForm({
+  make,
   choices,
   fromChannelId,
   live,
   onGo,
 }: {
+  make: UseMutationResult<InviteLinkMade, Error, LinkChoices>;
   choices: ReturnType<typeof useInviteChoices>;
   fromChannelId?: string;
   live: boolean;
@@ -515,8 +524,6 @@ function LinkForm({
 }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
-  const api = useApi();
-  const qc = useQueryClient();
   const channels = useChannels(org.id).data ?? [];
   const [expiresIn, setExpiresIn] = useState<LinkChoices["expiresIn"]>(INVITE_LINK_TTL);
   const [maxUses, setMaxUses] = useState<number | null>(null);
@@ -532,11 +539,6 @@ function LinkForm({
     maxUses,
   };
   const plain = plainLink(now);
-  const make = useMutation({
-    mutationFn: (c: LinkChoices) => api.invites.createLink(org.id, c),
-    meta: { silent: true },
-    onSettled: () => qc.invalidateQueries({ queryKey: keys.inviteLinks(org.id) }),
-  });
   const { mutate } = make;
   // The workspace's own link, renewed to 30 days once as Link opens at the defaults, so "Vale até" says the truth.
   const asked = useRef(false);
@@ -571,7 +573,7 @@ function LinkForm({
       : { icon: "copy", key: "copy" };
   const words = { copy: t("members.copyLink"), copied: t("common.copied"), make: t("members.link.make") };
   return (
-    <Locked when={make.isPending}>
+    <>
       <Field
         label={linkLabel}
         id="invite-link"
@@ -619,7 +621,7 @@ function LinkForm({
         maxUses={maxUses}
         onMaxUses={setMaxUses}
       />
-    </Locked>
+    </>
   );
 }
 

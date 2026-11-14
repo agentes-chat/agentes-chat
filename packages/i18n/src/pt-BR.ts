@@ -7838,6 +7838,9 @@ export const ptBR = {
     emails: "Convites por e-mail",
     viaLinkOf: "Pediu pelo link de {{name}} {{when}}",
     withLink: "Com o link: {{gives}}.",
+    /** A request's link gives a cargo above the approver's: approving leaves it out (ADR 0184 §8). */
+    roleLeftOut_one: "{{roles}} fica de fora: está acima do seu cargo.",
+    roleLeftOut_other: "{{roles}} ficam de fora: estão acima do seu cargo.",
     linkLabel: "Link {{name}}",
     linkMore: "Mais ações para o link {{name}}",
     usesOf_one: "{{uses}} de {{count}} pessoa",

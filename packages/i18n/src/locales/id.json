@@ -7147,6 +7147,7 @@
     "emails": "Undangan lewat email",
     "viaLinkOf": "Meminta lewat tautan {{name}} {{when}}",
     "withLink": "Dengan tautan: {{gives}}.",
+    "roleLeftOut_other": "{{roles}} tidak ikut: di atas peranmu.",
     "linkLabel": "Tautan {{name}}",
     "linkMore": "Tindakan lain untuk tautan {{name}}",
     "usesOf_other": "{{uses}} dari {{count}} orang",

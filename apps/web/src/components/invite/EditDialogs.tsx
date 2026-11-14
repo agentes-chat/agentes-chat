@@ -10,16 +10,7 @@ import { useOrg } from "@/components/org-context";
 import { useToast } from "@/lib/toast";
 import { useCopied } from "./copied";
 import { LinkLimits } from "./InviteDialog";
-import {
-  AgentsField,
-  agentsToSend,
-  ChannelsField,
-  channelsToSend,
-  FieldLine,
-  RoleField,
-  rolesToSend,
-  useInviteChoices,
-} from "./InviteFields";
+import { AgentsField, ChannelsField, changedChoices, FieldLine, RoleField, useInviteChoices } from "./InviteFields";
 import "./invite.css";
 
 /** An agent's page opens over the dialog's place: the dialog closes for it. */
@@ -58,10 +49,8 @@ export function EditLinkDialog({
   const channels = useChannels(org.id).data ?? [];
   const save = useEditInviteLink(org.id);
   const [copied, copy] = useCopied();
-  const choices = useInviteChoices(
-    { roleIds: link.roleIds ?? [], channelIds: link.channelIds ?? [], agentIds: link.agentIds ?? [] },
-    { exact: true },
-  );
+  const was = { roleIds: link.roleIds ?? [], channelIds: link.channelIds ?? [], agentIds: link.agentIds ?? [] };
+  const choices = useInviteChoices(was, { exact: true });
   const [expiresIn, setExpiresIn] = useState<InviteLinkTtl | "keep">("keep");
   const [maxUses, setMaxUses] = useState<number | null>(link.maxUses ?? null);
   const [error, setError] = useState<string | null>(null);
@@ -74,9 +63,7 @@ export function EditLinkDialog({
     save.mutate(
       {
         id: link.id,
-        roleIds: rolesToSend(choices),
-        channelIds: channelsToSend(choices, channels),
-        agentIds: agentsToSend(choices),
+        ...changedChoices(choices, channels, was),
         maxUses,
         ...(expiresIn === "keep" ? {} : { expiresIn }),
       },
@@ -165,26 +152,19 @@ export function EditInvitationDialog({
   const toast = useToast();
   const channels = useChannels(org.id).data ?? [];
   const save = useUpdateInvitation(org.id);
-  const choices = useInviteChoices(
-    {
-      roleIds: invitation.roleIds ?? [],
-      channelIds: invitation.channelIds ?? [],
-      agentIds: invitation.agentIds ?? [],
-    },
-    { exact: true },
-  );
+  const was = {
+    roleIds: invitation.roleIds ?? [],
+    channelIds: invitation.channelIds ?? [],
+    agentIds: invitation.agentIds ?? [],
+  };
+  const choices = useInviteChoices(was, { exact: true });
   const [error, setError] = useState<string | null>(null);
   const goTo = useGoToAgent(onClose);
   const off = invitation.status === "expired" || !timeLeft(t, invitation.expiresAt);
   const submit = () => {
     setError(null);
     save.mutate(
-      {
-        id: invitation.id,
-        roleIds: rolesToSend(choices),
-        channelIds: channelsToSend(choices, channels),
-        agentIds: agentsToSend(choices),
-      },
+      { id: invitation.id, ...changedChoices(choices, channels, was) },
       {
         onSuccess: () => {
           toast.show(t("invites.invitationSaved", { email: invitation.email }));

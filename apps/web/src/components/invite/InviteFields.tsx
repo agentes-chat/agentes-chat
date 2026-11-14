@@ -1,5 +1,6 @@
 import type { Agent, Channel, OrgRole } from "@agenteschat/client";
 import { channelMembersQuery, useApi, useChannelCategories, useChannels, useRoles } from "@agenteschat/client";
+import { sameList } from "@agenteschat/client/lib/agent-edit";
 import { EVERYONE_AUDIENCE, listsAgent } from "@agenteschat/client/lib/audience";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -126,7 +127,8 @@ export function FieldLine({
 
 /**
  * Cargo: each picked cargo's mark and name, or Todos' and "Membro" with none; a menu that stays open while ticking,
- * of the cargos the person may give. A personal workspace says it in its plain words (ADR 0159): "Pode", one choice.
+ * of the cargos the person may give, and a picked one they can't, to take out. A personal workspace says it in its
+ * plain words (ADR 0159): "Pode", one choice.
  */
 export function RoleField({ choices, id }: { choices: InviteChoices; id: string }) {
   const { t } = useTranslation();
@@ -185,7 +187,7 @@ export function RoleField({ choices, id }: { choices: InviteChoices; id: string 
         }
       >
         <MenuHeading>{t("rolesPage.rolesCta")}</MenuHeading>
-        <RoleChoices roles={roles} value={choices.roleIds} onChange={choices.setRoleIds} />
+        <RoleChoices roles={roles} value={choices.roleIds} onChange={choices.setRoleIds} invite />
       </Menu>
     </Field>
   );
@@ -554,6 +556,20 @@ export const rolesToSend = (choices: InviteChoices) => choices.roleIds.filter((i
 export function channelsToSend(choices: InviteChoices, channels: readonly Channel[]) {
   const offered = new Set(invitableChannels(channels, choices.roleIds).map((c) => c.id));
   return choices.start.channelIds.filter((cid) => offered.has(cid));
+}
+
+/**
+ * What Editar sends of a link's or an invitation's choices: only the lists changed from `was`. The server checks every
+ * id it gets for whoever edits, so one left as someone higher made it (a cargo above theirs, a channel they aren't in)
+ * stays as it is instead of refusing the save or dropping out of it.
+ */
+export function changedChoices(choices: InviteChoices, channels: readonly Channel[], was: ChoicesStart) {
+  const roleIds = rolesToSend(choices);
+  return {
+    ...(sameList(roleIds, was.roleIds) ? {} : { roleIds }),
+    ...(sameList(choices.start.channelIds, was.channelIds) ? {} : { channelIds: channelsToSend(choices, channels) }),
+    ...(sameList(choices.start.agentIds, was.agentIds) ? {} : { agentIds: agentsToSend(choices) }),
+  };
 }
 
 /** A role's mark for a row or a link: the first cargo's, or Todos' for a member. */

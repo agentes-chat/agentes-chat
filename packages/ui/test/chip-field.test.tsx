@@ -161,6 +161,13 @@ describe("ChipField: a list under it", () => {
   });
 });
 
+test("on a phone or a touch screen its words are 16px, as every field's there: iOS zooms into a smaller one", async () => {
+  const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
+  const touch = css.split("\n@media (max-width: 760px), (pointer: coarse) {")[1]?.split("\n}")[0] ?? "";
+  const sixteen = touch.split("}").find((rule) => rule.includes("font-size: 16px;")) ?? "";
+  expect(sixteen.split("{")[0]).toContain(".ac-chipfield__input");
+});
+
 describe("Token", () => {
   test("its states: invalid and soft with their word, fixed with no ✕, fresh fading in", () => {
     render(

@@ -18093,6 +18093,12 @@
   "invites.withLink": {
     "value": "With the link: {{gives}}."
   },
+  "invites.roleLeftOut": {
+    "value": {
+      "one": "{{roles}} is left out: it's above your role.",
+      "other": "{{roles}} are left out: they're above your role."
+    }
+  },
   "invites.linkLabel": {
     "value": "Link {{name}}"
   },

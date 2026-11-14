@@ -7836,6 +7836,9 @@ export const en = {
     emails: "Email invitations",
     viaLinkOf: "Asked through {{name}}'s link {{when}}",
     withLink: "With the link: {{gives}}.",
+    /** A request's link gives a role above the approver's: approving leaves it out (ADR 0184 §8). */
+    roleLeftOut_one: "{{roles}} is left out: it's above your role.",
+    roleLeftOut_other: "{{roles}} are left out: they're above your role.",
     linkLabel: "Link {{name}}",
     linkMore: "More actions for the {{name}} link",
     usesOf_one: "{{uses}} of {{count}} person",

@@ -7119,6 +7119,7 @@
     "emails": "メールでの招待",
     "viaLinkOf": "{{when}}に{{name}}さんのリンクからリクエスト",
     "withLink": "リンクの内容: {{gives}}。",
+    "roleLeftOut_other": "ロール「{{roles}}」はあなたのロールより上位のため、含まれません。",
     "linkLabel": "リンク {{name}}",
     "linkMore": "リンク「{{name}}」のその他の操作",
     "usesOf_other": "{{count}}人中{{uses}}人",

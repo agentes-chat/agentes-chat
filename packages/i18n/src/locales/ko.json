@@ -7116,6 +7116,7 @@
     "emails": "이메일 초대",
     "viaLinkOf": "{{when}} {{name}}님의 링크로 요청함",
     "withLink": "링크 내용: {{gives}}.",
+    "roleLeftOut_other": "{{roles}} 역할은 내 역할보다 위라서 빠져요.",
     "linkLabel": "링크 {{name}}",
     "linkMore": "{{name}} 링크의 다른 작업",
     "usesOf_other": "{{count}}명 중 {{uses}}명",

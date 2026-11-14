@@ -10,13 +10,14 @@ import type {
   JoinStatus,
   Member,
   NotificationLatest,
+  OrgRole,
 } from "@agenteschat/client";
 import { ApiError, keys } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { icons } from "@agenteschat/ui";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createI18n } from "@/i18n";
-import { ADA_ID, ADMIN_ROLE_ID, ATLAS_ID, createFakeApi, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, ADMIN_ROLE_ID, ATLAS_ID, createFakeApi, ORG_ID, seedRoles, seedState } from "./fake-api";
 import { createFakeAuth } from "./fake-auth";
 import { notification } from "./fakes/notifications";
 import { hintOf } from "./hint";
@@ -878,6 +879,56 @@ describe("People › Convites › Esperando você", () => {
       "O link deste pedido já recebeu todas as pessoas que podia. Para aprovar, aumente o máximo de pessoas do link.",
     );
     expect(within(bruno).getByRole("button", { name: "Aprovar" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  test("a link's cargo above yours starts out of the approval, said on the row; while Aprovar runs its cargos wait too", async () => {
+    setSystemTime(MIDDAY);
+    const [admin, everyone] = seedRoles() as [OrgRole, OrgRole];
+    const fin: OrgRole = {
+      ...admin,
+      id: "role-fin",
+      name: "Financeiro",
+      icon: "wallet",
+      color: "green",
+      position: 0,
+      permissions: ["approve_actions"],
+      hoist: false,
+      givable: false,
+    };
+    const link = {
+      id: "link-fin",
+      createdBy: "Marina Alves",
+      roleIds: [fin.id, ADMIN_ROLE_ID],
+      channelIds: [],
+      agentIds: [],
+      full: false,
+    };
+    const state = seedState({
+      joinRequests: [{ ...(requests()[0] as JoinRequest), link }],
+      roles: [fin, { ...admin, position: 1 }, { ...everyone, position: 2 }],
+    });
+    const api = createFakeApi(state);
+    const approve = api.joinRequests.approve;
+    let release = () => {};
+    api.joinRequests.approve = async (...args) => {
+      await new Promise<void>((r) => {
+        release = r;
+      });
+      return approve(...args);
+    };
+    await renderApp(`/org/${ORG_ID}/settings/invites`, { api });
+    await settle(6);
+    const ana = card("Ana Souza");
+    expect(ana.textContent).toContain("Com o link: Financeiro e Admin.");
+    expect(ana.textContent).toContain("Financeiro fica de fora: está acima do seu cargo.");
+    const picker = within(ana).getByRole("button", { name: "Cargos para Ana Souza" }) as HTMLButtonElement;
+    expect(picker.textContent).toBe("Admin");
+    await click(within(ana).getByRole("button", { name: "Aprovar" }));
+    await settle(2);
+    expect(picker.disabled).toBe(true);
+    await act(async () => release());
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "joinRequests.approve")?.args).toEqual([ORG_ID, "r1", [ADMIN_ROLE_ID]]);
   });
 });
 

@@ -7354,6 +7354,8 @@
     "emails": "E-posta davetleri",
     "viaLinkOf": "{{name}} kişisinin bağlantısıyla istedi: {{when}}",
     "withLink": "Bağlantıyla: {{gives}}.",
+    "roleLeftOut_one": "{{roles}} dışarıda kalır: rolünüzün üstünde.",
+    "roleLeftOut_other": "{{roles}} dışarıda kalır: rolünüzün üstündeler.",
     "linkLabel": "Bağlantı {{name}}",
     "linkMore": "{{name}} bağlantısı için diğer işlemler",
     "usesOf_one": "{{uses}} / {{count}} kişi",

@@ -7434,6 +7434,8 @@
     "emails": "Uitnodigingen per e-mail",
     "viaLinkOf": "Aangevraagd via de link van {{name}} {{when}}",
     "withLink": "Met de link: {{gives}}.",
+    "roleLeftOut_one": "{{roles}} valt erbuiten: die staat boven je rol.",
+    "roleLeftOut_other": "{{roles}} vallen erbuiten: die staan boven je rol.",
     "linkLabel": "Link {{name}}",
     "linkMore": "Meer acties voor de link {{name}}",
     "usesOf_one": "{{uses}} van {{count}} persoon",

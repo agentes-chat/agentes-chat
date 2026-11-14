@@ -10524,7 +10524,8 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
   .ac-composer textarea,
   .ac-emoji__search input,
   .ac-searchfield__input,
-  .ac-searchfield--sm .ac-searchfield__input {
+  .ac-searchfield--sm .ac-searchfield__input,
+  .ac-chipfield__input {
     font-size: 16px;
   }
   /* The "/" hint doesn't show here (below): an empty field's words take its room. */

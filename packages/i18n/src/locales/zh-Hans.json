@@ -7158,6 +7158,7 @@
     "emails": "邮件邀请",
     "viaLinkOf": "{{when}}通过 {{name}} 的链接申请",
     "withLink": "链接内容：{{gives}}。",
+    "roleLeftOut_other": "{{roles}} 角色高于你的角色，不会包含在内。",
     "linkLabel": "链接 {{name}}",
     "linkMore": "链接 {{name}} 的更多操作",
     "usesOf_other": "{{uses}}/{{count}} 人",

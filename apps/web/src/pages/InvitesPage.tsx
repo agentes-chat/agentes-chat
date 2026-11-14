@@ -19,7 +19,7 @@ import { formatShortDate, joinNames, relativeTime, timeLeft } from "@agenteschat
 import { linkFull } from "@agenteschat/client/lib/invite-start";
 import { approvalNews, JOIN_REASON_MAX, sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { membersFull } from "@agenteschat/client/lib/limits";
-import { sortRoles } from "@agenteschat/client/lib/roles";
+import { isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
 import {
   Alert,
   Avatar,
@@ -269,9 +269,9 @@ export function InviteActions() {
 
 /**
  * Esperando você (ADR 0068, 0090, 0184): who asked through a link and whom members suggested, oldest first, each
- * approved with its cargos (starting on the link's) or turned down with a reason. Approving gives the link's channels
- * and agents too, as far as the approver may give them. `focus` (from the admins' email): that request in view with
- * Aprovar focused, which the admin still presses, or its Recusar dialog open.
+ * approved with its cargos (starting on the link's the approver may give) or turned down with a reason. Approving
+ * gives the link's channels and agents too, as far as the approver may give them. `focus` (from the admins' email):
+ * that request in view with Aprovar focused, which the admin still presses, or its Recusar dialog open.
  */
 function WaitingRequests({
   requests,
@@ -317,7 +317,10 @@ function WaitingRequests({
     button?.focus();
   }, [focus, action, list.data]);
 
-  const rolesOf = (r: JoinRequest) => roles[r.id] ?? r.link?.roleIds ?? [];
+  // Approving gives what the approver picks (ADR 0184 §8): a link's cargo above theirs starts out, and the row says so.
+  const givable = (r: JoinRequest) =>
+    (r.link?.roleIds ?? []).filter((id) => orgRoles.some((x) => x.id === id && x.givable));
+  const rolesOf = (r: JoinRequest) => roles[r.id] ?? givable(r);
   const approveOne = (r: JoinRequest) =>
     approve.mutate(
       { id: r.id, roleIds: rolesOf(r) },
@@ -370,6 +373,9 @@ function WaitingRequests({
               const link = r.link;
               const gives = link ? givesText(t, link, { ...look, general: false }) : "";
               const linkIsFull = link?.full === true;
+              const above = sortRoles(
+                orgRoles.filter((x) => (link?.roleIds ?? []).includes(x.id) && !isEveryone(x) && !x.givable),
+              ).map((x) => x.name);
               return (
                 // biome-ignore lint/a11y/useSemanticElements: a row of the list, named for who it is about
                 <div
@@ -399,6 +405,7 @@ function WaitingRequests({
                       value={rolesOf(r)}
                       onChange={(ids) => setRoles((prev) => ({ ...prev, [r.id]: ids }))}
                       label={t("members.requests.roleOf", { name: r.name })}
+                      disabled={answering}
                     />
                     <Button
                       ref={(el) => {
@@ -425,9 +432,14 @@ function WaitingRequests({
                       {t("members.requests.deny")}
                     </Button>
                   </span>
-                  {(gives || linkIsFull) && (
+                  {(gives || linkIsFull || above.length > 0) && (
                     <span className="ac-mediarow__body members-row__more">
                       {gives && <span className="small muted">{t("invites.withLink", { gives })}</span>}
+                      {above.length > 0 && (
+                        <State icon="lock">
+                          {t("invites.roleLeftOut", { count: above.length, roles: joinNames(above, t) })}
+                        </State>
+                      )}
                       {linkIsFull && (
                         <State icon="alert" tone="soon">
                           {t("errors.join.linkFullApproval")}
@@ -656,14 +668,16 @@ function TurnOffLink({
   return (
     <Dialog
       open={link !== null}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !turnOff.isPending && onClose()}
       title={t("members.link.turnOffTitle")}
       description={t("members.link.turnOffText", { count: link?.waiting ?? 0 })}
       closeLabel={t("common.close")}
       width={440}
     >
       <DialogFooter>
-        <Button onClick={onClose}>{t("common.cancel")}</Button>
+        <Button disabled={turnOff.isPending} onClick={onClose}>
+          {t("common.cancel")}
+        </Button>
         <Button
           variant="danger"
           loading={turnOff.isPending}
@@ -820,7 +834,7 @@ function EmailInvitations({
                     <Button size="sm" icon="refresh" loading={sending} onClick={() => sendAgain(inv, true)}>
                       {t("members.invitations.renew")}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => takeOff(inv, "dropped")}>
+                    <Button variant="ghost" size="sm" disabled={sending} onClick={() => takeOff(inv, "dropped")}>
                       {t("members.invitations.drop")}
                     </Button>
                   </>
@@ -830,6 +844,7 @@ function EmailInvitations({
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={sending}
                         onClick={() =>
                           copy(inv.id, inv.url ?? "", t(`members.invitations.${words.copied}`, { email: inv.email }))
                         }
@@ -862,6 +877,7 @@ function EmailInvitations({
                           size="sm"
                           iconOnly
                           icon="more"
+                          disabled={sending}
                           aria-label={t("members.invitations.more", { email: inv.email })}
                         />
                       }
