@@ -170,7 +170,9 @@ switch (command) {
   case "tab":
     // `tab <n>`: switch to a tab that is on `tabTo` (a link that opened a new tab).
     if (/^\d+$/.test(args[0] ?? "") && state.tabTo) state.url = state.tabTo;
-    out({ success: true, data: {} });
+    // `tab t1`: the tab it holds comes to the front. `tab`: its tabs.
+    if (args[0] === "t1" && !state.staysHidden) state.hidden = false;
+    out({ success: true, data: args.length === 0 ? { tabs: [{ tabId: "t1", active: true }] } : {} });
     break;
   case "batch": {
     const list = JSON.parse(stdin || "[]");
@@ -250,10 +252,19 @@ switch (command) {
     break;
   }
   case "eval":
-    // The page's size, or a settle check (true).
+    // The page's size, whether its tab shows, or a settle check (true).
     out({
       success: true,
-      data: { result: args.join(" ").includes("innerWidth") ? [1280, 800] : true, origin: state.url },
+      data: {
+        result: args.join(" ").includes("innerWidth")
+          ? [1280, 800]
+          : args.at(-1) === "document.visibilityState"
+            ? state.hidden
+              ? "hidden"
+              : "visible"
+            : true,
+        origin: state.url,
+      },
     });
     break;
   case "upload":

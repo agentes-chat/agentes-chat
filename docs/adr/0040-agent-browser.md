@@ -242,6 +242,17 @@ A person in control could type but not click: the page looked enlarged and every
 - The first picture of an idle page (a screenshot) says the size the page answers (`Page.getLayoutMetrics` on the tab's socket, else `window.innerWidth`/`innerHeight`), not the stream's status.
 - A picture that can't be read keeps the stream's label.
 
+### 19. The agent's tab is in front before a command (2026-11-14)
+
+On one computer over a day, 17% of the agents' clicks and 41% of their fills answered "The browser didn't answer within 33 s" (53 of the 61 that took over 30 s), each exactly at the limit of the batch that presses as a person does (`HELD_PRESS_MS`), in headless Chrome and on the agents' desktops alike. Chrome starts with the tabs it had (`--restore-last-session`, section 13) and shows the page it was started on, while `agent-browser` attaches to the first tab it finds: one in the background. A page that doesn't show draws nothing and answers no pointer event. Measured on Chrome 156 with `agent-browser` 0.39.1: each `mouse move` on such a tab waits out 5 s, so a pointer path of twenty moves never ends; its timers run once a second (the settle waits); and a live view gets no picture. Brought to the front, the same move takes 12 ms and the same click 0.7 s.
+
+- Before a command that needs the page, the runner asks the tab whether it shows (`document.visibilityState`), at most once a second, so the commands of one batch share one look. A hidden one is brought to the front by `agent-browser`'s own tab switch, to the tab it already holds (`foreground`).
+- A live view that opens does the same first.
+- It never fails a command. A look that can't be read, or a tab still hidden after it was brought up, is left for 30 s: on an agent's desktop a minimized window comes back up, and one that can't show is not asked at every command.
+- `tab`, `wait`, `dialog` and the page size are not preceded by it.
+
+Not covered here: a click that opens a new window answers after 30 s ("CDP command timed out: Input.dispatchMouseEvent") while the runner's traffic counter is attached with `Target.setAutoAttach` on the browser (5 of the same 61). Measured: with target discovery and `Target.attachToTarget` in its place the same press takes 0.1 s. That connection also guards typed passwords (ADR 0144), so it changes on its own.
+
 ## Order
 
 First version: stages 0–7. Difficulty: **easy** (known pattern, little risk), **medium** (new pieces on known patterns).

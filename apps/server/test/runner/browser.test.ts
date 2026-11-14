@@ -214,7 +214,7 @@ function setup(over: Partial<BrowserManagerOptions> = {}, secrets: Record<string
       ...(extra.allowedDomains ? { allowedDomains: extra.allowedDomains } : {}),
     });
   // The fake appends one line per call: a line still being written (no newline yet) is left for the next read.
-  const logged = (): Logged[] =>
+  const everyCall = (): Logged[] =>
     existsSync(log)
       ? readFileSync(log, "utf8")
           .split("\n")
@@ -222,11 +222,13 @@ function setup(over: Partial<BrowserManagerOptions> = {}, secrets: Record<string
           .filter(Boolean)
           .map((l) => JSON.parse(l) as Logged)
       : [];
+  // Without the runner's own look at whether the agent's tab shows (`foreground`), which goes before any command.
+  const logged = (): Logged[] => everyCall().filter((l) => l.args.at(-1) !== "document.visibilityState");
   const page = (patch: Record<string, unknown>) => {
     const cur = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, "utf8")) : {};
     writeFileSync(stateFile, JSON.stringify({ ...cur, ...patch }));
   };
-  return { ws, home, manager, frames, sockets, folder, act, logged, page, chromes: chromes.started };
+  return { ws, home, manager, frames, sockets, folder, act, logged, everyCall, page, chromes: chromes.started };
 }
 
 class FakeSocket implements StreamSocket {
@@ -654,6 +656,57 @@ test("a click goes as a person's: the box, then a pointer path into it, a check 
   // A drag goes along the browser's own eased curve.
   await t.act("drag", ["@e1", "@e2"]);
   expect(t.logged().at(-1)?.args.slice(-4)).toEqual(["drag", "@e1", "@e2", "--human"]);
+});
+
+test("a tab in the background comes to the front before a command; one that shows is left alone", async () => {
+  let now = 1_000_000;
+  const logs: string[] = [];
+  const t = setup({ now: () => now, log: (l) => logs.push(l) });
+  const calls = () => t.everyCall().map((l) => l.args.slice(l.args.indexOf("--screenshot-dir") + 2).join(" "));
+  const LOOK = "eval document.visibilityState";
+  // Chrome came up with the tabs it had: the one `agent-browser` holds is behind the page Chrome started on.
+  t.page({ hidden: true });
+  expect(await t.act("open", ["https://a.example/"])).toMatchObject({ success: true });
+  // Looked at, found hidden, switched to again (which brings it to the front), then the command.
+  expect(calls()).toEqual([LOOK, "tab", "tab t1", "open https://a.example/"]);
+  expect(logs).toContain("the browser of dev brought its tab to the front");
+
+  // The commands of one batch share that look; a second later it is looked at again, and shows.
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(
+    calls()
+      .slice(4)
+      .filter((c) => c === LOOK),
+  ).toEqual([]);
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === LOOK)).toHaveLength(2);
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(1);
+
+  // A tab that stays hidden (a window that can't come up) doesn't fail the command, and isn't tried at each one.
+  t.page({ hidden: true, staysHidden: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(2);
+  // Once it shows again, the next time it hides it is brought up as before.
+  t.page({ hidden: false, staysHidden: false });
+  now += 30_000;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  t.page({ hidden: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(3);
+
+  // Switching tabs and waiting need no page in front.
+  const before = calls().filter((c) => c === LOOK).length;
+  now += 31_000;
+  expect(await t.act("tab", ["2"])).toMatchObject({ success: true });
+  expect(await t.act("wait", ["10"])).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === LOOK)).toHaveLength(before);
 });
 
 test("an action on a point of the page: the pointer goes along a path, text as keys when a field has the focus", async () => {
