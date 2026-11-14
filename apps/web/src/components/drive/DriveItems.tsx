@@ -24,15 +24,13 @@ export const itemIcon = (a: Pick<Artifact, "kind" | "title">): IconName =>
 
 export interface ItemProps {
   artifact: Artifact;
-  /** Shown in the details panel. */
-  open: boolean;
   selected: boolean;
   /** Where it came from: "#eng", "DM com Theo", "sem canal". */
   channelName: (a: Artifact) => string;
-  /** A click: details, or selection with Shift / ⌘ / while selecting. Shift on a checkbox comes here too. */
+  /** A click: the file opens, or selection with Shift / ⌘ / while selecting. Shift on a checkbox comes here too. */
   onPick: (a: Artifact, e: MouseEvent) => void;
   onToggle: (a: Artifact) => void;
-  /** Straight to the viewer ("Abrir"; a double click goes there through the details it opens). */
+  /** The viewer, from the menu's "Abrir". */
   onOpen: (a: Artifact) => void;
 }
 
@@ -43,7 +41,6 @@ export interface ItemProps {
  */
 export function DriveCard({
   artifact: a,
-  open,
   selected,
   channelName,
   onPick,
@@ -58,7 +55,7 @@ export function DriveCard({
   return (
     <>
       <article
-        className={cx("drive-card", open && "drive-card--open", selected && "drive-card--selected")}
+        className={cx("drive-card", selected && "drive-card--selected")}
         data-kind={a.kind}
         {...menu.props}
       >
@@ -117,7 +114,6 @@ function useItemMenu(a: Artifact, onOpen: (a: Artifact) => void, onDelete: (a: A
 /** A list row: checkbox, small preview + title, who, where, when, "…". */
 export function DriveRow({
   artifact: a,
-  open,
   selected,
   channelName,
   onPick,
@@ -133,7 +129,7 @@ export function DriveRow({
   return (
     <>
       <li
-        className={cx("drive-row", open && "drive-row--open", selected && "drive-row--selected")}
+        className={cx("drive-row", selected && "drive-row--selected")}
         data-kind={a.kind}
         {...menu.props}
       >
