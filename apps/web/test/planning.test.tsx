@@ -221,6 +221,15 @@ describe("Issues (board and list)", () => {
     expect(rows).toHaveLength(7);
     expect(rows[0]?.textContent).toContain("#132");
     expect(rows.find((r) => r.textContent?.includes("#126"))?.textContent).toContain("Feito");
+    // The list gives every row the same columns of facts, one for each fact some task has: labels stand under labels
+    // and priorities under priorities, whatever each row has. How much room they take says when they stand (CSS).
+    const list = rows[0]?.closest(".ac-groups") as HTMLElement;
+    const columns = list.style.getPropertyValue("--issue-facts");
+    expect(Number(list.getAttribute("data-fact-columns")) % 80).toBe(0);
+    const kinds = [...list.querySelectorAll(".issue-card__facts > .ac-factline__fact")].map((f) =>
+      f.getAttribute("data-fact"),
+    );
+    for (const kind of new Set(kinds)) if (kind !== "number") expect(columns).toContain(`[${kind}] `);
     expect(state.issuesView?.layout).toBe("list");
   });
 

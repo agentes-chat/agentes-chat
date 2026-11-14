@@ -2863,6 +2863,9 @@
       "update_role": "Zmień rolę <b>{{name}}</b>",
       "delete_role": "Usuń rolę <b>{{name}}</b> na zawsze",
       "move_role": "Przesuń rolę <b>{{name}}</b>",
+      "set_permission_holders": "Zmień, kto ma uprawnienie: <b>{{short}}</b>",
+      "set_permission_holders_computers": "Zmień, kto używa <b>komputerów agentów</b>",
+      "holdersOwnersOnly": "Tylko właściciele",
       "set_member_roles": "Zmień role osoby <b>{{name}}</b>: {{change}}",
       "set_channel_permissions": "Zmień, co {{who}} może robić w <b>#{{channel}}</b>",
       "set_my_status": "Ustaw swój status: <b>{{what}}</b>",
@@ -3714,6 +3717,8 @@
       "changed_update_role": "Zmieniono rolę <b>{{name}}</b>",
       "changed_delete_role": "Usunięto rolę <b>{{name}}</b>",
       "changed_move_role": "Przesunięto rolę <b>{{name}}</b>",
+      "changed_set_permission_holders": "Zmieniono, kto ma uprawnienie: <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "Zmieniono, kto używa <b>komputerów agentów</b>",
       "changed_set_member_roles": "Zmieniono role osoby <b>{{name}}</b>: {{change}}",
       "changed_set_channel_permissions": "Zmieniono, co {{who}} może robić w <b>#{{channel}}</b>",
       "changed_set_my_status": "Ustawiono twój status: <b>{{what}}</b>",
@@ -4737,6 +4742,10 @@
   "approval": {
     "expiredChip": "Wygasło · {{when}}",
     "canceledChip": "Anulowano · {{when}}",
+    "line": {
+      "after": "wykona się po „{{title}}”",
+      "notRun": "niewykonane: poprzednia prośba nie została zatwierdzona"
+    },
     "waitingFor": "Czeka na: {{name}}",
     "waitingAdmin": "Czeka na administratora",
     "reasonLine": "Powód: {{reason}}",
@@ -5387,8 +5396,15 @@
       "canceled": "Anulowane",
       "failed": "Błąd",
       "running": "W toku",
-      "scheduled": "Zaplanowane"
+      "scheduled": "Zaplanowane",
+      "queued": "W kolejce",
+      "notRun": "Niewykonane"
     },
+    "queuedLine": "Zatwierdzone. Wykona się po „{{title}}”, o które poproszono wcześniej.",
+    "notRunRefused": "„{{title}}”, o które poproszono wcześniej, zostało odrzucone po zatwierdzeniu tej prośby. Dlatego ta nie została wykonana.",
+    "notRunExpired": "„{{title}}”, o które poproszono wcześniej, wygasło bez decyzji po zatwierdzeniu tej prośby. Dlatego ta nie została wykonana.",
+    "notRunEarlier": "Wcześniejsza prośba została odrzucona lub wygasła po zatwierdzeniu tej. Dlatego ta nie została wykonana.",
+    "position": "{{n}} z {{total}}",
     "expiredLine": "Nikt nie zdecydował w ciągu 24 h, więc nic nie zrobiono.",
     "canceledLine": "Uruchomienie zatrzymało się przed decyzją.",
     "supersededLine": "Agent poprosił ponownie o nowszą wersję. Ta nie została wykonana.",
@@ -5457,8 +5473,10 @@
       "email": "E-mail",
       "text": "Co zostanie opublikowane",
       "textDone": "Co zostało opublikowane",
+      "textNot": "Co zostałoby opublikowane",
       "values": "Co zostanie zrobione",
       "valuesDone": "Co zostało zrobione",
+      "valuesNot": "Co zostałoby zrobione",
       "trail": "Jak do tego doszło",
       "showSteps": "Zobacz każdy krok",
       "hideSteps": "Ukryj kroki",
@@ -11978,13 +11996,6 @@
       "nowYours": "Przerwa na przeczytanie twojej notatki",
       "nowOf": "Przerwa na przeczytanie notatki od {{name}}"
     },
-    "choice": {
-      "label": "Jak wysłać, gdy {{name}} pracuje",
-      "join": "Dołącz do tego, co robi {{name}}",
-      "interrupt": "Zatrzymaj i wyślij",
-      "joins": "dołącza",
-      "interrupts": "zatrzymuje i wysyła"
-    },
     "strip": {
       "see": "Zobacz",
       "toStop": "aby zatrzymać"
@@ -16092,6 +16103,10 @@
         "left": "Opuszczono przestrzeń roboczą",
         "role_changed": "Zmieniono rolę członka",
         "password_link": "Utworzono link do nowego hasła dla członka"
+      },
+      "role": {
+        "permission_set": "Zmieniono, kto ma uprawnienie: {{short}}",
+        "permission_set_computers": "Zmieniono, kto używa komputerów agentów"
       },
       "apps": {
         "connected": "Połączono {{app}}",
