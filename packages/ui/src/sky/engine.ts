@@ -128,7 +128,8 @@ const onHold = new Set<() => void>();
  * Holds every sky still, as with reduced motion: drawn once, and again on a resize or a theme change. For the Linux
  * app, whose WebKitGTK paints without the GPU there (its DMA-BUF renderer is off, apps/desktop/src-tauri/src/main.rs):
  * each frame of a moving sky repainted it and everything over it in software, 30 times a second, which kept a core
- * busy and made clicks slow. The living agents (../agent/live) hold still with them, for the same reason.
+ * busy and made clicks slow. The living agents and stickers (../agent), the engine portraits (../brain) and the
+ * computer portraits (../computer) hold still with them, for the same reason.
  */
 export function holdSkies(hold = true) {
   if (held === hold) return;
