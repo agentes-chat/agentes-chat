@@ -1,4 +1,11 @@
-import type { InvitationWithStatus, JoinRequest, MySuggestion, OrgRole, Person } from "@agenteschat/client";
+import type {
+  InvitationWithStatus,
+  JoinRequest,
+  MySuggestion,
+  OrgRole,
+  Person,
+  RoleMailLoss,
+} from "@agenteschat/client";
 import {
   useAllInvitations,
   useApproveJoinRequest,
@@ -84,6 +91,7 @@ import { MembersFull } from "@/components/Limits";
 import { LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
 import { ProfileTrigger } from "@/components/ProfileCard";
+import { MailLoss, mailTitle } from "@/components/roles/RolePeople";
 import { RoleChoices, RolesPicker } from "@/components/roles/RolesPicker";
 import { RoleChip } from "@/components/roles/RolesSection";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -168,6 +176,27 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
   // On a server that sends no email, an owner makes the link for a member who forgot their password (ADR 0158).
   const makesPasswordLinks = org.role === "owner" && authConfig.data !== undefined && !authConfig.data.passwordReset;
   const [passwordLinkFor, setPasswordLinkFor] = useState<{ userId: string; name: string } | null>(null);
+  // A person's ⋯ › Cargos: each tick saves; a cargo that takes a mailbox from an agent asks first (`mail`).
+  const api = useApi();
+  const [giving, setGiving] = useState(false);
+  const [mail, setMail] = useState<{ lost: RoleMailLoss[]; answer: (yes: boolean) => void } | null>(null);
+  const giveRoles = async (m: Person, roleIds: string[]) => {
+    const added = roleIds.filter((id) => !(m.roleIds ?? []).includes(id));
+    setGiving(true);
+    try {
+      const lost = (await Promise.all(added.map((id) => api.roles.mailLoss(org.id, id, [m.userId])))).flat();
+      const yes = lost.length === 0 || (await new Promise<boolean>((answer) => setMail({ lost, answer })));
+      if (!yes) return;
+      setRolesOf.mutate(
+        { userId: m.userId, roleIds, ...(added.length ? { mailLossSeen: lost.map((x) => x.accountId) } : {}) },
+        { onError: (e) => toast.show(errorText(t, e), "error") },
+      );
+    } catch (e) {
+      toast.show(errorText(t, e), "error");
+    } finally {
+      setGiving(false);
+    }
+  };
   // The filter's values: `owner`, or a role's id.
   const people = allPeople.filter(
     (m) =>
@@ -308,21 +337,12 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
                       >
                         <MenuEntries entries={acts.filter((e) => e.id === "dm")} />
                         {gives && (
-                          <MenuSub
-                            icon="shield"
-                            label={t(
-                              m.role === "owner" || held.length > 0 ? "members.rolesChange" : "members.rolesAdd",
-                            )}
-                          >
+                          <MenuSub icon="shield" label={t("rolesPage.rolesCta")}>
                             <RoleChoices
                               roles={orgRoles}
                               value={m.roleIds ?? []}
-                              onChange={(roleIds) =>
-                                setRolesOf.mutate(
-                                  { userId: m.userId, roleIds },
-                                  { onError: (e) => toast.show(errorText(t, e), "error") },
-                                )
-                              }
+                              disabled={setRolesOf.isPending || giving}
+                              onChange={(roleIds) => void giveRoles(m, roleIds)}
                             />
                           </MenuSub>
                         )}
@@ -345,6 +365,38 @@ export function MembersPage({ embedded = false }: { embedded?: boolean } = {}) {
             })}
           </List>
           <PasswordLinkDialog person={passwordLinkFor} onClose={() => setPasswordLinkFor(null)} />
+          <Dialog
+            open={mail !== null}
+            onOpenChange={(open) => {
+              if (open) return;
+              mail?.answer(false);
+              setMail(null);
+            }}
+            title={mail ? mailTitle(t, mail.lost) : ""}
+            closeLabel={t("common.close")}
+            width={440}
+          >
+            <DialogBody>{mail && <MailLoss lost={mail.lost} />}</DialogBody>
+            <DialogFooter bar>
+              <Button
+                onClick={() => {
+                  mail?.answer(false);
+                  setMail(null);
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  mail?.answer(true);
+                  setMail(null);
+                }}
+              >
+                {t("rolesPage.mail.giveAnyway")}
+              </Button>
+            </DialogFooter>
+          </Dialog>
         </section>
 
         <section aria-labelledby="sec-agents" className="section section--tight">

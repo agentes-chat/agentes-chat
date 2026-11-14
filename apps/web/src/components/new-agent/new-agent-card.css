@@ -305,16 +305,11 @@
   color: var(--faint);
   font-size: 13.5px;
 }
-.nac__app,
+/* An app's chip is the kit's ChipButton (its plate on hover); "+" keeps its own outline. */
 .nac__add {
   border: 0;
   font-family: inherit;
   cursor: pointer;
-}
-@media (hover: hover) {
-  .nac__app:hover {
-    box-shadow: inset 0 0 0 1px var(--ink2);
-  }
 }
 .nac__level {
   margin-left: 2px;

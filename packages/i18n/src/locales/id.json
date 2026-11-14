@@ -67,7 +67,7 @@
     "create": "Buat peran",
     "base": "Dasar",
     "everyoneName": "Semua orang",
-    "orderHint": "Urutan itu penting: yang lebih tinggi mengelola peran dan orang di bawahnya.",
+    "orderHint": "Yang lebih tinggi mengelola peran dan orang di bawahnya. Warna nama tiap orang berasal dari peran tertingginya. Seret untuk mengubah urutan.",
     "reorder": "Atur urutan",
     "reorderDone": "Selesai",
     "moveUp": "Naikkan {{name}}",
@@ -108,6 +108,26 @@
         "none": "Tidak ada yang bisa melihat atau memakai komputer atau browser agen, termasuk permintaan login",
         "browser": "Browser agen miliknya sendiri dan permintaan login untuknya, tidak pernah layar penuh",
         "full": "Layar penuh dan terminal agen miliknya sendiri dan komputer yang ia hubungkan"
+      },
+      "steps": {
+        "off": "Tanpa akses",
+        "ownBrowser": "Peramban agen sendiri",
+        "ownComputer": "Komputer agen sendiri",
+        "anyBrowser": "Peramban agen mana pun",
+        "anyComputer": "Komputer agen mana pun"
+      },
+      "short": {
+        "browser": "Peramban",
+        "computer": "Komputer"
+      },
+      "groupOwn": "Agen sendiri",
+      "groupAny": "Agen mana pun",
+      "hint": "Peramban: peramban dan permintaan masuk. Komputer: juga seluruh layar dan terminal. Agen sendiri: agen yang menjadi tanggung jawab orang itu dan komputer yang dihubungkannya.",
+      "with": {
+        "ownBrowser": "peramban agen sendiri",
+        "ownComputer": "komputer agen sendiri",
+        "anyBrowser": "peramban agen mana pun",
+        "anyComputer": "komputer agen mana pun"
       }
     },
     "everyoneNote": "Berlaku untuk setiap orang di ruang kerja. Peran lain hanya menambahkan.",
@@ -143,10 +163,10 @@
     "name": "Nama",
     "nameDesc": "Cara semua orang melihatnya.",
     "color": "Warna",
-    "colorDesc": "Mewarnai tanda peran.",
+    "colorDesc": "Mewarnai lencana peran dan nama orang yang memilikinya sebagai peran tertinggi.",
     "colorOf": "Warna {{color}}",
     "hoist": "Tampilkan terpisah di daftar anggota",
-    "hoistDesc": "Orang dengan peran ini mendapat grup sendiri di kolom anggota.",
+    "hoistDesc": "Yang punya peran ini tampil di grup sendiri di kolom anggota. Agen tetap di grup mereka.",
     "icon": "Ikon",
     "iconDesc": "Ditampilkan di samping nama.",
     "more": "Opsi lainnya",
@@ -165,7 +185,7 @@
     },
     "newTitle": "Buat peran",
     "newSub": "Kamu bisa mengubah semuanya nanti.",
-    "namePlaceholder": "Misalnya Moderator",
+    "namePlaceholder": "Mis.: Dukungan",
     "startFrom": "Mulai dari",
     "templates": {
       "blank": "Kosong",
@@ -187,7 +207,131 @@
     "added_other": "{{count}} orang dengan {{name}}",
     "rolesOf": "Peran {{name}}",
     "rolesCta": "Peran",
-    "aboveYou": "Di atas peranmu"
+    "aboveYou": "Di atas peranmu",
+    "search": "Cari peran",
+    "noneYet": "Belum ada peran. Buat satu untuk memberi lebih kepada beberapa orang.",
+    "noMatch": "Tidak ada peran dengan “{{q}}”.",
+    "full": "Ruang kerja ini sudah punya {{max}} peran. Hapus satu untuk membuat yang lain.",
+    "loadError": "Peran tidak bisa dimuat. {{cause}}",
+    "move": "Pindahkan {{name}}",
+    "moveHint": "Seret, atau gunakan Spasi dan tombol panah.",
+    "reach": {
+      "permissions_other": "+{{count}} izin",
+      "channels_other": "+{{count}} kanal",
+      "agents_other": "+{{count}} agen",
+      "basePermissions_other": "{{count}} izin",
+      "baseChannels_other": "{{count}} kanal",
+      "baseAgents_other": "{{count}} agen",
+      "owner": "Bisa semuanya, selalu",
+      "admin": "Bisa semuanya",
+      "none": "Hanya yang bisa dilakukan Semua orang",
+      "hidden_other": "{{count}} yang tidak kamu lihat"
+    },
+    "switchTo": "Buka peran lain",
+    "look": "Ubah nama, warna, dan ikon",
+    "lookColor": "Ubah warna",
+    "inviteWith": "Undang dengan peran ini",
+    "tabs": {
+      "permissions": "Izin",
+      "channels": "Kanal",
+      "agents": "Agen",
+      "people": "Orang"
+    },
+    "gone": "Seseorang menghapus peran ini.",
+    "backToList": "Kembali ke peran",
+    "searchPermission": "Cari izin",
+    "noPermissionMatch": "Tidak ada izin dengan “{{q}}”.",
+    "everyoneTip": "Semua orang bisa. Klik untuk memilih siapa yang bisa.",
+    "only": "Hanya {{names}}",
+    "notHeld": "Kamu tidak punya izin ini.",
+    "nowAbove": "Peran ini sekarang di atas peranmu. Hanya yang lebih tinggi yang bisa mengubahnya.",
+    "agentsNote": "Peran berlaku untuk orang. Setiap agen punya izin sendiri, di halamannya.",
+    "adminHint": "Bisa semuanya kecuali yang hanya milik pemilik. Berikan hanya kepada yang mengurus ruang kerja.",
+    "adminOn": "Dengan Administrator, {{name}} bisa semuanya kecuali yang hanya milik pemilik.",
+    "adminAsk": {
+      "title": "Nyalakan Administrator di {{name}}?",
+      "text_other": "Yang punya {{name}} jadi bisa semuanya kecuali yang hanya milik pemilik. Ada {{count}} orang.",
+      "confirm": "Nyalakan Administrator"
+    },
+    "who": {
+      "title": "Siapa yang bisa {{short}}",
+      "everyoneDesc": "Setiap orang di ruang kerja",
+      "some": "Hanya beberapa peran",
+      "owners": "Pemilik selalu bisa.",
+      "losing": "Tidak bisa lagi:",
+      "gaining": "Jadi bisa:",
+      "everyoneGains": "Semua orang jadi bisa.",
+      "nobody": "Tidak ada yang kehilangan.",
+      "noRoles": "Belum ada peran lain.",
+      "computersTitle": "Siapa yang tetap punya {{what}}",
+      "computersLow": "Semua orang jadi punya {{what}}.",
+      "computersNone": "Semua orang berhenti memakai komputer agen."
+    },
+    "channels": {
+      "line": "Yang punya {{name}} melihat kanal yang dicentang dan bisa bergabung.",
+      "lineBase": "Semua orang melihat kanal yang dicentang dan bisa bergabung.",
+      "hint": "Berlaku untuk orang. Agen masuk ke kanal saat seseorang menambahkannya.",
+      "search": "Cari kanal",
+      "general": "Semua orang tetap di #general.",
+      "notYours": "Hanya pembuat #{{channel}} atau yang mengatur kanal yang mengubah siapa yang melihatnya.",
+      "removeTitle": "Lepaskan #{{channel}} dari {{name}}?",
+      "leave": "Keluar dari kanal:",
+      "openTitle": "Buka #{{channel}} untuk {{name}}?",
+      "openText": "Yang punya {{name}} melihat kanal dan seluruh riwayatnya, dan bisa bergabung.",
+      "open": "Buka",
+      "openAllTitle": "Buka #{{channel}} untuk semua orang?",
+      "openAllText": "Seluruh riwayatnya terbuka untuk ruang kerja.",
+      "admin": "Dengan Administrator, yang punya {{name}} melihat semua kanal.",
+      "onlyGeneral": "Untuk saat ini baru ada #general.",
+      "noMatch": "Tidak ada kanal dengan “{{q}}”."
+    },
+    "sees": {
+      "title": "Siapa yang melihat #{{channel}}",
+      "private": "Hanya yang ditambahkan",
+      "privateDesc": "Tidak ada orang baru yang melihatnya. Yang sudah di dalam tetap.",
+      "unsee": "Yang sudah di dalam tetap. Tidak melihatnya lagi:"
+    },
+    "agents": {
+      "line": "Yang punya {{name}} berbicara dengan agen yang dicentang.",
+      "lineBase": "Semua orang berbicara dengan agen yang dicentang.",
+      "hint": "Ini tentang orang. Apa yang dikerjakan tiap agen ada di halamannya.",
+      "noTalk": "Yang hanya punya {{name}} tidak berbicara dengan agen.",
+      "turnOnTalk": "Nyalakan Bicara dengan agen",
+      "search": "Cari agen",
+      "notYours": "Hanya {{owner}}, penanggung jawab {{name}}, atau yang mengedit agen mana pun yang mengubahnya.",
+      "notYoursNoOwner": "Hanya yang mengedit agen mana pun yang mengubahnya.",
+      "none": "Belum ada agen.",
+      "noMatch": "Tidak ada agen dengan “{{q}}”."
+    },
+    "talks": {
+      "title": "Siapa yang berbicara dengan {{name}}",
+      "some": "Hanya beberapa peran dan orang",
+      "ownerDesc": "Penanggung jawab {{name}}",
+      "losing": "Tidak berbicara lagi dengan {{agent}}:"
+    },
+    "holders": {
+      "agent": "{{name}} adalah agen. Agen tidak punya peran.",
+      "seeAgents": "Lihat Agen",
+      "removed": "{{person}} tidak lagi punya {{name}}",
+      "undo": "Urungkan",
+      "selfTitle": "Keluarkan dirimu dari {{name}}?",
+      "selfText": "Kamu kehilangan apa yang hanya diberikan {{name}}. Hanya orang di atasmu yang bisa mengembalikannya.",
+      "noMatch": "Tidak ada orang dengan “{{q}}”."
+    },
+    "mail": {
+      "title": "{{agent}} kehilangan kotak surat {{owner}}",
+      "titleMany": "Agen kehilangan kotak surat",
+      "lead": "Dengan lebih banyak orang berbicara dengan mereka, agen berhenti membaca kotak surat ini.",
+      "of": "Kotak surat {{owner}} · {{agent}}",
+      "again": "Hanya yang memberi kotak surat itu yang bisa memberikannya lagi.",
+      "addAnyway": "Tetap tambahkan",
+      "giveAnyway": "Tetap berikan"
+    },
+    "previewWhere": "di chat",
+    "sameAs": "Sama seperti",
+    "deleteLeave": "Keluar dari kanal yang hanya mereka lihat lewat {{name}}:",
+    "deleteReading": "Memeriksa siapa yang keluar dari kanal…",
+    "ownerAdd": "Tambah pemilik"
   },
   "permissions": {
     "areas": {
@@ -6686,6 +6830,7 @@
     "everyoneNote": "Semua berlaku untuk setiap orang di ruang kerja.",
     "everyoneNotePersonal": "Tanpa peran, orang itu memakai agen. Dengan {{role}}, ia membantumu mengelolanya.",
     "noRolesToGive": "Tidak ada peran di bawah peranmu yang bisa diberikan.",
+    "rolesAbove": "Peran di atas peranmu tidak ditampilkan.",
     "roleFilter": "Peran",
     "rolesCount_other": "{{count}} peran",
     "title": "Anggota",
@@ -9977,6 +10122,7 @@
     "someone": "seseorang"
   },
   "palette": {
+    "roleKeywords": "peran buat baru izin",
     "newWikiKeywords": "wiki halaman baru buat",
     "actions": "Tindakan",
     "inviteSub": "lewat email atau tautan",
@@ -13127,7 +13273,7 @@
       "aboveYou": "Hanya orang di atas peran ini yang bisa mengubahnya.",
       "base": "Setiap ruang kerja tetap punya peran Semua orang.",
       "unknown": "Peran itu sudah tidak ada.",
-      "orderIncomplete": "Peran sudah berubah. Muat ulang dan coba lagi."
+      "orderIncomplete": "Peran berubah saat kamu memindahkannya. Muat ulang dan coba lagi."
     },
     "teamProposal": {
       "undoExpired": "Sudah lebih dari sehari sejak tim ini dibuat, jadi tidak bisa dibatalkan di sini. Arsipkan agennya di halaman masing-masing."
@@ -14779,7 +14925,7 @@
       "general": "Umum",
       "right_hand": "Tangan kanan",
       "members": "Anggota dan undangan",
-      "roles": "Peran dan izin",
+      "roles": "Peran",
       "vault": "Vault",
       "access": "Agen dan akses",
       "connectors": "Konektor dan MCP",
@@ -14810,7 +14956,7 @@
       "general": "Nama, zona waktu, dan apa yang diketahui setiap agen tentang ruang kerja.",
       "right_hand": "Asisten yang menyusun tim bersama setiap orang, di DM mereka.",
       "members": "Siapa saja yang ada di ruang kerja, dan undangan.",
-      "roles": "Yang bisa dilakukan tiap orang. Peran saling menambah.",
+      "roles": "Setiap peran menambah izin, kanal, dan agen.",
       "vault": "Kata sandi, kunci, dan kontak agenmu. Mereka tidak pernah melihat kata sandi.",
       "access": "Yang bisa dipakai tiap agen: satu tingkat per konektor.",
       "connectors": "Layanan dan server MCP yang dihubungkan sekali untuk seluruh ruang kerja.",
