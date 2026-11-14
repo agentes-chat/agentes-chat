@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import type { Credential } from "@agenteschat/client";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
@@ -877,60 +878,39 @@ test("Sua conta and Notificações in German and Japanese: every row keeps its �
   }
 });
 
-/**
- * A workspace's own endpoint (ADR 0146) publishes no key format. Rotating one used to run the provider patterns
- * (Claude's `sk-ant-…`), so any key of a gateway such as TokenRouter was refused by the form and could never be
- * replaced, while the server only asks for 8 characters.
- */
+const endpointCred: Credential = {
+  id: "cred-custom",
+  provider: "custom",
+  label: "Gateway",
+  keyHint: "9f3c",
+  createdAt: "2026-11-01T10:00:00.000Z",
+  revokedAt: null,
+  endpoint: { style: "openai", baseURL: "https://llm.example.com/v1", models: [] },
+};
+
 test("a workspace's own endpoint key rotates whatever it looks like", async () => {
-  const seeded = seedState({
-    credentials: [
-      {
-        id: "cred-custom",
-        provider: "custom",
-        label: "TokenRouter",
-        keyHint: "9f3c",
-        createdAt: "2026-11-01T10:00:00.000Z",
-        revokedAt: null,
-        endpoint: { style: "openai", baseURL: "https://api.tokenrouter.com/v1", models: [] },
-      },
-    ],
-  });
-  const { state } = await go(seeded, "settings/keys");
+  const { state } = await go(seedState({ credentials: [endpointCred] }), "settings/keys");
   const keys = screen().getByRole("region", { name: "Chaves de provedor" });
   await click(within(keys).getByRole("button", { name: "Trocar a chave" }));
-  const rotate = screen().getByRole("dialog", { name: "Trocar a chave TokenRouter" });
+  const rotate = screen().getByRole("dialog", { name: "Trocar a chave Gateway" });
   const field = within(rotate).getByLabelText("Chave da API");
   // No provider's example or placeholder: this key is nobody's format.
   expect(rotate.textContent).not.toContain("platform.claude.com");
+  expect(field.getAttribute("placeholder")).toBeNull();
 
-  const key = "tr_live_7c1d9ab24e5f";
-  await type(field, key);
+  await type(field, "tr_fake_endpoint_key");
   await click(within(rotate).getByRole("button", { name: "Trocar a chave" }));
   await settle(4);
   // The fake logs the key redacted: the call itself is the proof the value passed the form's check.
   expect(state.calls.find((c) => c.method === "agents.rotateCredential")?.args[1]).toBe("cred-custom");
-  expect(screen().queryByRole("dialog", { name: "Trocar a chave TokenRouter" })).toBeNull();
+  expect(screen().queryByRole("dialog", { name: "Trocar a chave Gateway" })).toBeNull();
 });
 
 test("an endpoint key shorter than the server's floor is still caught", async () => {
-  const seeded = seedState({
-    credentials: [
-      {
-        id: "cred-custom",
-        provider: "custom",
-        label: "TokenRouter",
-        keyHint: "9f3c",
-        createdAt: "2026-11-01T10:00:00.000Z",
-        revokedAt: null,
-        endpoint: { style: "openai", baseURL: "https://api.tokenrouter.com/v1", models: [] },
-      },
-    ],
-  });
-  const { state } = await go(seeded, "settings/keys");
+  const { state } = await go(seedState({ credentials: [endpointCred] }), "settings/keys");
   const keys = screen().getByRole("region", { name: "Chaves de provedor" });
   await click(within(keys).getByRole("button", { name: "Trocar a chave" }));
-  const rotate = screen().getByRole("dialog", { name: "Trocar a chave TokenRouter" });
+  const rotate = screen().getByRole("dialog", { name: "Trocar a chave Gateway" });
   await type(within(rotate).getByLabelText("Chave da API"), "tr_1");
   await click(within(rotate).getByRole("button", { name: "Trocar a chave" }));
   await settle(4);
