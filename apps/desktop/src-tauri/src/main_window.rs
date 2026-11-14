@@ -232,9 +232,12 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // refuse them, so the sign-in's other server and Storage's "Show the folder" show only where this says
         // so), that a connector's sign-in and the window's own browser sign-in come back here (`deep_link.rs`,
         // older apps don't take them), that it lists the other servers' workspaces (`workspaces`,
-        // ADR 0154) and that it takes the person's app icon (`appIcon`, ADR 0179); nothing else.
+        // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
+        // (`renderer`, and Linux's `system` facts: graphics.rs); nothing else.
         .initialization_script(format!(
-            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true, appIcon: true }});"
+            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
+            renderer = crate::graphics::renderer(),
+            system = serde_json::to_string(&crate::graphics::system()).unwrap_or_else(|_| "null".into()),
         ))
         .on_navigation(move |url| match route_now(&on_nav, url) {
             Route::Stay => true,

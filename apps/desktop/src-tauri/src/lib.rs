@@ -12,6 +12,7 @@ mod cover;
 mod deep_link;
 mod discover;
 mod dock;
+mod graphics;
 mod host_sync;
 mod local_server;
 mod main_window;
@@ -770,6 +771,8 @@ pub fn run() {
             _ => {}
         })
         .setup(|app| {
+            #[cfg(target_os = "linux")]
+            graphics::read_webkit_version();
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let handle = app.handle().clone();
