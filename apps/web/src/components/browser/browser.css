@@ -1568,6 +1568,11 @@ html:not([data-pointer]) .brw-trail__ext:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The name with its face stays on the strip's one line ("Ada · did several steps"): in running text a line may
+   break after it, which here put what the agent does on a second line when the address is long. */
+.brw-mf__now > span > .ac-who > b {
+  white-space: inherit;
+}
 /* The frame's own ink on the agent's color, where gray wouldn't show. */
 html:not([data-pointer]) .brw-mf__now:focus-visible {
   box-shadow: 0 0 0 2px var(--frame-ink);
