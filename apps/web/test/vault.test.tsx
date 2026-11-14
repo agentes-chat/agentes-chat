@@ -13,11 +13,11 @@ import type {
   VaultOverview,
 } from "@agenteschat/client";
 import { ApiError } from "@agenteschat/client";
-import { act, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { generateSecretKeyPair } from "../../../packages/adapters/src/secret-box";
 import { defaultAccess } from "../src/components/vault/lib";
 import { ADA_ID, createFakeApi, ENG_ID, type FakeState, ORG_ID, seedState } from "./fake-api";
-import { renderApp, screen, settle } from "./render";
+import { afterSealing, renderApp, screen, settle } from "./render";
 
 /*
  * Settings › Vault and the secret request card's "Save to the Vault" (ADR 0144), against a fake Vault: the lists and
@@ -713,7 +713,7 @@ describe("the secret request card: Save to the Vault (ADR 0144)", () => {
     expect(within(card()).getByRole("list", { name: t("vault.card.agents") }).textContent).toContain("Ada");
     await type(within(card()).getByLabelText(t("secret.labelKey", { agent: "Ada" })), "npm_live_abc123");
     await click(within(card()).getByRole("button", { name: t("secret.send") }));
-    await settle(6);
+    await afterSealing(() => expect(card().textContent).toContain(t("vault.card.saved")));
 
     const methods = state.calls
       .map((c) => c.method)
@@ -744,7 +744,7 @@ describe("the secret request card: Save to the Vault (ADR 0144)", () => {
       "hunter2-for-the-shop",
     );
     await click(within(card()).getByRole("button", { name: t("secret.send") }));
-    await settle(6);
+    await afterSealing(() => expect(state.calls.some((c) => c.method === "secrets.saveToVault")).toBe(true));
     const call = state.calls.find((c) => c.method === "secrets.saveToVault");
     // Empty: no username, not the agent's guess (absent would keep it).
     expect(call?.args[2]).toMatchObject({ value: "hunter2-for-the-shop", username: "" });
@@ -764,7 +764,7 @@ describe("the secret request card: Save to the Vault (ADR 0144)", () => {
       "hunter2-for-real",
     );
     await click(within(card()).getByRole("button", { name: t("secret.send") }));
-    await settle(6);
+    await afterSealing(() => expect(card().classList.contains("rq--ended")).toBe(true));
     expect(state.calls.some((c) => c.method === "secrets.deliver")).toBe(true);
     expect(state.calls.some((c) => c.method === "secrets.saveToVault")).toBe(false);
     expect(card().textContent).not.toContain(t("vault.card.saved"));
@@ -799,11 +799,7 @@ describe("the secret request card: Save to the Vault (ADR 0144)", () => {
     const filled = within(code).getAllByRole("textbox") as HTMLInputElement[];
     expect(filled.map((b) => b.value)).toEqual(["4", "8", "2", "1", "0", "7"]);
     await click(within(card()).getByRole("button", { name: t("secret.send") }));
-    // Sealing the code is WebCrypto, which runs off the JS thread: on a loaded machine it outlasts any number of
-    // ticks, so this waits for the delivery instead of counting them.
-    await waitFor(() => expect(state.calls.some((c) => c.method === "secrets.deliver")).toBe(true), {
-      timeout: 10_000,
-    });
+    await afterSealing(() => expect(state.calls.some((c) => c.method === "secrets.deliver")).toBe(true));
     expect(state.calls.some((c) => c.method === "secrets.saveToVault")).toBe(false);
   });
 });
