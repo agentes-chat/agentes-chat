@@ -101,8 +101,24 @@ export type BrowserInputEvent =
   /** Whole text into the focused field: accents, paste, the app's own text field. */
   | { kind: "text"; text: string };
 
+/** What the agent's pointer does where it arrives (mirror of `AGENT_POINTER_ACTS` in `@agenteschat/adapters`). */
+export const BROWSER_POINTER_ACTS = ["move", "click", "double", "type"] as const;
+
+/**
+ * Where the agent's pointer goes on its page, said as its gesture starts (ADR 0040 §7.2): a point in the pixels of
+ * a viewport `width`×`height`. The apps draw the agent's cursor going there; `type` stays while the keys go in.
+ */
+export interface BrowserPointer {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  act: (typeof BROWSER_POINTER_ACTS)[number];
+}
+
 export type BrowserLiveMessage =
   | ({ type: "browser.frame" } & BrowserFrame)
+  | ({ type: "browser.pointer"; agentId: string } & BrowserPointer)
   | ({ type: "browser.status" } & BrowserLiveStatus)
   | { type: "browser.unavailable"; agentId: string; reason: BrowserLiveUnavailable; message?: string }
   | {
@@ -168,6 +184,13 @@ export function parseBrowserLiveMessage(v: unknown): BrowserLiveMessage | null {
         },
       };
     }
+    case "browser.pointer": {
+      const act = BROWSER_POINTER_ACTS.find((a) => a === v.act);
+      if (!act || ![v.x, v.y, v.width, v.height].every(num) || !((v.width as number) > 0 && (v.height as number) > 0))
+        return null;
+      const [x, y, width, height] = [v.x, v.y, v.width, v.height] as number[];
+      return { type: "browser.pointer", agentId: v.agentId, x, y, width, height, act } as BrowserLiveMessage;
+    }
     case "browser.status":
       return {
         type: "browser.status",
@@ -213,6 +236,8 @@ export interface BrowserLiveOptions {
   agentId: string;
   onFrame(frame: BrowserFrame): void;
   onStatus(status: BrowserLiveStatus): void;
+  /** The agent's pointer goes somewhere on the page: one call per gesture, even to the point it is on. */
+  onPointer?(pointer: BrowserPointer): void;
   onUnavailable?(reason: BrowserLiveUnavailable, message?: string): void;
   /** The stream ended: the browser closed, an error, or someone pressed Parar (`by`: who and when). */
   onEnded?(reason: "stopped" | "closed" | "error", message?: string, by?: { userId?: string; at?: string }): void;
@@ -379,6 +404,11 @@ export function createBrowserLiveConnection(options: BrowserLiveOptions): Browse
           clearRetry();
           options.onFrame(m);
           return;
+        case "browser.pointer": {
+          const { x, y, width, height, act } = m;
+          options.onPointer?.({ x, y, width, height, act });
+          return;
+        }
         // A status answers every watch before the stream starts, so only a frame resets the backoff
         // (else a closed browser is watched again every 500 ms). One sent on its own (a handoff changed,
         // a page opened) comes with the server restarting the stream itself: the retry isn't needed.

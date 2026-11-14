@@ -35,6 +35,7 @@ import {
   type BrowserInputEvent,
   type BrowserLiveStatus,
   type BrowserLiveUnavailable,
+  type BrowserPointer,
   type ConnectionStatus,
   type ConsultsState,
   cacheActionCard,
@@ -1009,6 +1010,8 @@ export interface BrowserLiveState {
   error: string | null;
   /** How many came, for what says each one: the same refusal again leaves `error` as it was. */
   errors: number;
+  /** Where the agent's pointer last went on the page; `n` counts its gestures (two clicks on one point are two). */
+  pointer: (BrowserPointer & { n: number }) | null;
 }
 
 const EMPTY_LIVE: BrowserLiveState = {
@@ -1019,6 +1022,7 @@ const EMPTY_LIVE: BrowserLiveState = {
   endedBy: null,
   error: null,
   errors: 0,
+  pointer: null,
 };
 
 /**
@@ -1049,6 +1053,7 @@ export function useBrowserLive(agentId: string, enabled = true, maxFps?: number)
         setState((s) => ({ ...s, frame, unavailable: null, ended: false, endedBy: null, error: null })),
       onStatus: (status) =>
         setState((s) => ({ ...s, status, unavailable: null, ended: false, endedBy: null, error: null })),
+      onPointer: (pointer) => setState((s) => ({ ...s, pointer: { ...pointer, n: (s.pointer?.n ?? 0) + 1 } })),
       onUnavailable: (reason, message) =>
         setState((s) => ({ ...s, unavailable: { reason, ...(message ? { message } : {}) } })),
       onEnded: (reason, _message, by) =>
