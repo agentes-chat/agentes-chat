@@ -332,9 +332,19 @@ describe("context window (Configuração avançada)", () => {
   });
 
   test("a computer turn carries it only to a runner that knows it (protocol 28)", () => {
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, { contextTokens: 400_000 })).toEqual({ contextTokens: 400_000 });
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, { contextTokens: 400_000 })).toEqual({});
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {})).toEqual({});
+    const chosen = { contextTokens: 1_000_000 };
+    for (const kind of ["claude_code", "codex", "cursor"]) {
+      expect(contextFields(CONTEXT_LIMIT_PROTOCOL, chosen, kind)).toEqual(chosen);
+      expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, chosen, kind)).toEqual({});
+    }
+    // "Automático": Claude Code and Codex summarise at 200K; programs that take no limit get none.
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "claude_code")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "codex")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(undefined, {}, "codex")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "cursor")).toEqual({});
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "antigravity")).toEqual({});
+    // An older runner never sees it: it keeps compacting at the model's window.
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, {}, "claude_code")).toEqual({});
   });
 
   test("each model choice says its window: which limits are worth offering with it", () => {

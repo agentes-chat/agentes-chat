@@ -17,6 +17,7 @@ import {
   type WireBrainEvent,
 } from "@agenteschat/adapters";
 import { type Database, schema } from "@agenteschat/db";
+import { autoContextFor } from "@agenteschat/providers/context-limits";
 import { getAgentCached } from "../agents";
 import type { CodeSetup } from "../git/machine";
 import { type MachineCaller, MachineRequestError, type MachineStatus } from "../machine-hub";
@@ -204,13 +205,18 @@ export function accountFields(
   };
 }
 
-/** The agent's context limit, sent only to a runner that knows it (`CONTEXT_LIMIT_PROTOCOL`). */
+/**
+ * The agent's context limit, or "Automático"'s for this program (`autoContextFor`), sent only to a runner that knows
+ * it (`CONTEXT_LIMIT_PROTOCOL`): an older one keeps compacting at the model's window.
+ */
 export function contextFields(
   protocol: number | undefined,
   turn: Pick<BrainTurn, "contextTokens">,
+  kind: string,
 ): Pick<BrainTurnRequest, "contextTokens"> {
-  if (!turn.contextTokens || (protocol !== undefined && protocol < CONTEXT_LIMIT_PROTOCOL)) return {};
-  return { contextTokens: turn.contextTokens };
+  const tokens = turn.contextTokens || autoContextFor(kind);
+  if (!tokens || (protocol !== undefined && protocol < CONTEXT_LIMIT_PROTOCOL)) return {};
+  return { contextTokens: tokens };
 }
 
 /** The turn's speed, sent only to a runner that knows it (`SPEED_PROTOCOL`). */
@@ -428,7 +434,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           personalMcp: personalMcp && !chat,
           ...(permissions ? { permissions } : {}),
           ...accountFields(status?.protocol, turn),
-          ...contextFields(status?.protocol, turn),
+          ...contextFields(status?.protocol, turn, "claude_code"),
           ...(turn.personWaiting ? { personWaiting: true } : {}),
         };
         deps.hub
