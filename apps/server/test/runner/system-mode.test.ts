@@ -741,9 +741,9 @@ test.if(posix)(
     expect(r.out).toBe(
       `${head}◒  Installing the packages for the agents' isolation\n◇  The packages for the agents' isolation\n`,
     );
-    // nft for the loopback guard (system mode won't start without it), ss for the bind check. Chrome's libraries
-    // come with Google Chrome's own package.
-    expect(ISOLATION_APT_PACKAGES).toEqual(["nftables", "iproute2"]);
+    // nft for the loopback guard (system mode won't start without it), ss for the bind check, setfacl for the shared
+    // folder and the cached repositories. Chrome's libraries come with Google Chrome's own package.
+    expect(ISOLATION_APT_PACKAGES).toEqual(["nftables", "iproute2", "acl"]);
     expect(r.calls).toBe(update + install(ISOLATION_APT_PACKAGES));
 
     // With --desktop: one install with the screens' packages too.

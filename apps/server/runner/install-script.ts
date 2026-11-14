@@ -75,10 +75,11 @@ export const DESKTOP_CJK_APT_PACKAGES = ["fonts-noto-cjk"] as const;
 export const DESKTOP_DOCK_APT_PACKAGES = ["xfce4-docklike-plugin"] as const;
 
 /**
- * What system mode's isolation runs (`--system`): `nft` for the loopback guard, which won't start without it, and
- * `ss` for the bind check.
+ * What system mode's isolation runs (`--system`): `nft` for the loopback guard, which won't start without it, `ss`
+ * for the bind check, and `setfacl` (`acl`), which lets each agent's user into the shared folder and the cached
+ * repositories (`shared-folder.ts`, `agent-users.ts`). Debian 13's minimal install has no `acl`.
  */
-export const ISOLATION_APT_PACKAGES = ["nftables", "iproute2"] as const;
+export const ISOLATION_APT_PACKAGES = ["nftables", "iproute2", "acl"] as const;
 
 /** System mode: the runner and its Bun (root's, readable by the agents' users), and the command on the PATH. */
 export const SYSTEM_RUNNER_DIR = "/opt/agentes-runner";
