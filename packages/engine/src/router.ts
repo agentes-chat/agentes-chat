@@ -556,7 +556,7 @@ export function parseRouterJson(raw: unknown): {
 }
 
 /** Providers tried for a small model after the default key's, fastest and cheapest first. */
-const SMALL_MODEL_ORDER = ["anthropic", "openai", "deepseek", "gemini", "zai", "minimax", "openrouter"];
+const SMALL_MODEL_ORDER = ["anthropic", "openai", "deepseek", "gemini", "zai", "zhipu", "minimax", "openrouter"];
 
 /**
  * The small model that routes and judges for an organization (ADR 0074 §2), or null: its own `router_model`

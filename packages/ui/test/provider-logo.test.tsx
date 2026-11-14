@@ -73,6 +73,8 @@ describe("provider marks", () => {
     expect(markOf("anthropic")).toBe("claude");
     expect(markOf("moonshot")).toBe("kimi");
     expect(markOf("zai")).toBe("zai");
+    // Zhipu's domestic platform draws Z.ai's mark: the same GLM maker.
+    expect(markOf("zhipu")).toBe("zai");
     expect(markOf("gemini")).toBe("gemini");
     // An AI account's row draws its `provider` before its kind: an OpenCode key is OpenCode's, never a letter Z, and a
     // Gemini Enterprise seat Gemini's.
