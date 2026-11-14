@@ -207,6 +207,12 @@ export const STREAM_FPS: Record<BrowserStreamMode, number> = { watch: 5, control
 const MAX_OUTPUT_CHARS = 50_000;
 /** Bytes of stdout read from one command (a full-page screenshot as JSON stays well under). */
 const MAX_STDOUT = 8 * 1024 * 1024;
+/**
+ * After the CLI exits without a full answer, the command ends once its output has been quiet this long, and
+ * at the latest `EXIT_DRAIN_MAX_MS` after the exit: a daemon that inherited the pipes may hold or keep writing them.
+ */
+const EXIT_QUIET_MS = 1000;
+const EXIT_DRAIN_MAX_MS = 2000;
 /** How often the version of Chrome on disk is read again (it updates itself). */
 const VERSION_CHECK_MS = 5 * 60_000;
 /**
@@ -1636,8 +1642,8 @@ const sha256File = async (file: string) =>
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
-/** `agent-browser`'s JSON answer, or a failure built from what it printed. */
-function parseAnswer(stdout: string, stderr: string, exitCode: number | null): BrowserAnswer {
+/** `agent-browser`'s complete JSON answer, including an unsuccessful command. */
+function jsonAnswer(stdout: string, exitCode: number | null): BrowserAnswer | null {
   const text = stdout.trim();
   for (const candidate of [text, text.split("\n").at(-1) ?? ""]) {
     if (!candidate) continue;
@@ -1656,7 +1662,15 @@ function parseAnswer(stdout: string, stderr: string, exitCode: number | null): B
       // not JSON: fall through
     }
   }
-  const why = (stderr.trim() || text).split("\n").find((l) => l.trim()) ?? `agent-browser exited with ${exitCode}`;
+  return null;
+}
+
+/** `agent-browser`'s JSON answer, or a failure built from what it printed. */
+function parseAnswer(stdout: string, stderr: string, exitCode: number | null): BrowserAnswer {
+  const answer = jsonAnswer(stdout, exitCode);
+  if (answer) return answer;
+  const why =
+    (stderr.trim() || stdout.trim()).split("\n").find((l) => l.trim()) ?? `agent-browser exited with ${exitCode}`;
   return { success: false, data: null, error: why.slice(0, 2000) };
 }
 
@@ -3098,6 +3112,7 @@ export class BrowserManager {
       ...(opts.signal ? { signal: opts.signal } : {}),
       ...(opts.stdin !== undefined ? { stdin: opts.stdin } : {}),
     });
+    if (opts.signal?.aborted) return { success: false, data: null, error: "Stopped" };
     if (out.timedOut) {
       return {
         success: false,
@@ -4189,12 +4204,27 @@ export class BrowserManager {
       let size = 0;
       let timedOut = false;
       let done = false;
+      let exitedAt: number | null = null;
+      let exitedWith: number | null = null;
+      let drain: ReturnType<typeof setTimeout> | undefined;
       const finish = (exitCode: number | null) => {
         if (done) return;
         done = true;
         clearTimeout(timer);
+        clearTimeout(drain);
         opts.signal?.removeEventListener("abort", onAbort);
+        child.stdout.destroy();
+        child.stderr.destroy();
         resolve({ stdout, stderr, exitCode, timedOut });
+      };
+      // On Windows the daemon inherits the CLI's pipes. Its answer and exit finish the command: waiting for
+      // `close` waits for the daemon instead. Data can arrive after `exit`, so both events check for a full answer.
+      const answered = () => {
+        if (exitedAt === null) return;
+        if (args.includes("--json") && jsonAnswer(stdout, exitedWith)) return finish(exitedWith);
+        clearTimeout(drain);
+        const left = exitedAt + EXIT_DRAIN_MAX_MS - Date.now();
+        drain = setTimeout(() => finish(exitedWith), Math.max(0, Math.min(EXIT_QUIET_MS, left)));
       };
       const kill = () => {
         try {
@@ -4206,19 +4236,30 @@ export class BrowserManager {
       const timer = setTimeout(() => {
         timedOut = true;
         kill();
+        finish(exitedWith);
       }, opts.timeoutMs);
-      const onAbort = () => kill();
+      const onAbort = () => {
+        kill();
+        finish(exitedWith);
+      };
       opts.signal?.addEventListener("abort", onAbort, { once: true });
       child.stdout.on("data", (chunk: Buffer) => {
         size += chunk.byteLength;
         if (size <= MAX_STDOUT) stdout += chunk.toString("utf8");
         else kill();
+        answered();
       });
       child.stderr.on("data", (chunk: Buffer) => {
         if (stderr.length < 8192) stderr += chunk.toString("utf8");
+        answered();
       });
       // Through EventEmitter: some @types/node versions lose ChildProcess's event methods.
       const events = child as unknown as EventEmitter;
+      events.on("exit", (code: number | null) => {
+        exitedAt = Date.now();
+        exitedWith = code;
+        answered();
+      });
       events.on("error", (err: Error) => {
         stderr += err.message;
         finish(null);
@@ -4226,6 +4267,8 @@ export class BrowserManager {
       events.on("close", (code: number | null) => finish(code));
       child.stdin.on("error", () => undefined);
       child.stdin.end(opts.stdin ?? "");
+      // An abort listener added after the abort never fires.
+      if (opts.signal?.aborted) onAbort();
     });
   }
 }

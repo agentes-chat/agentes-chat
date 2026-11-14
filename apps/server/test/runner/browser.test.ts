@@ -250,6 +250,96 @@ class FakeSocket implements StreamSocket {
   }
 }
 
+/** Runs `body` while each fake CLI leaves a detached process holding its pipes; fails if `body` takes over `ms`. */
+async function withHeldPipes(t: ReturnType<typeof setup>, ms: number, body: () => Promise<void>) {
+  const pids = path.join(t.home, "daemon-pids");
+  const held = () => (existsSync(pids) ? readFileSync(pids, "utf8").trim().split("\n").map(Number) : []);
+  const previous = process.env.FAKE_AB_HOLD_STDIO;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    process.env.FAKE_AB_HOLD_STDIO = pids;
+    await Promise.race([
+      body(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("waited for the daemon's pipes after the CLI exited")), ms);
+      }),
+    ]);
+    // They are still alive: the command ended on the CLI's side, not on the daemon finally closing its pipes.
+    expect(held().length).toBeGreaterThan(0);
+    for (const pid of held()) expect(() => process.kill(pid, 0)).not.toThrow();
+  } finally {
+    clearTimeout(timer);
+    if (previous === undefined) delete process.env.FAKE_AB_HOLD_STDIO;
+    else process.env.FAKE_AB_HOLD_STDIO = previous;
+    for (const pid of held()) {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch {
+        // Already gone.
+      }
+    }
+    await t.manager.close();
+  }
+}
+
+describe("a browser daemon holding the CLI's pipes open", () => {
+  const actFor = async (t: ReturnType<typeof setup>, timeoutSeconds: number, signal?: AbortSignal) =>
+    t.manager.act(
+      dev,
+      await t.folder(),
+      { op: "browser.act", command: "get", args: ["title"], timeoutSeconds },
+      signal,
+    );
+
+  test("does not block the live view or command errors", async () => {
+    const t = setup({ firstFrameMs: 60_000 });
+    await t.act("open", ["https://shop.example.com"]);
+    await withHeldPipes(t, 3000, async () => {
+      expect(await t.manager.streamStart(dev, "watch")).toEqual({ mode: "watch" });
+      expect(t.sockets).toHaveLength(1);
+      expect(await t.act("get", ["title"])).toMatchObject({ success: false, error: "bad get" });
+    });
+  });
+
+  test("a CLI that exits without an answer still returns", async () => {
+    const t = setup();
+    await t.act("open", ["https://shop.example.com"]);
+    t.page({ silent: true });
+    await withHeldPipes(t, 2500, async () => {
+      expect(await t.act("get", ["title"])).toMatchObject({ success: false, error: "agent-browser exited with 0" });
+    });
+  });
+
+  test("a daemon that keeps writing to the pipes doesn't hold the command until its timeout", async () => {
+    const t = setup();
+    await t.act("open", ["https://shop.example.com"]);
+    t.page({ silent: true, daemonLogs: true });
+    await withHeldPipes(t, 3500, async () => {
+      expect(await t.act("get", ["title"])).toMatchObject({ success: false, error: "daemon log" });
+    });
+  });
+
+  test("a timeout returns at the timeout", async () => {
+    const t = setup();
+    await t.act("open", ["https://shop.example.com"]);
+    t.page({ delayMs: 10_000 });
+    await withHeldPipes(t, 1800, async () => {
+      expect(await actFor(t, 1)).toMatchObject({ success: false, error: "The browser didn't answer within 1 s" });
+    });
+  });
+
+  test("a stopped command returns at once, as stopped", async () => {
+    const t = setup();
+    await t.act("open", ["https://shop.example.com"]);
+    t.page({ delayMs: 10_000 });
+    const stop = new AbortController();
+    setTimeout(() => stop.abort(), 200);
+    await withHeldPipes(t, 1000, async () => {
+      expect(await actFor(t, 30, stop.signal)).toMatchObject({ success: false, error: "Stopped" });
+    });
+  });
+});
+
 // ── Pure parts ───────────────────────────────────────────────────────────────
 
 test("the runner speaks the browser's protocol (12) or later, and the browser is a fourth machine switch", () => {

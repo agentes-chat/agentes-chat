@@ -11,6 +11,7 @@
 // `hit` (`{ tag, type, box: [left, top, right, bottom], ref }`) at any `document.elementFromPoint`; a
 // `mouse down` focuses that `ref`; `frames` (`[[width, height]]`) are the page's iframes.
 // `typingMs`: a batch that presses keys or moves the pointer takes that long (a person can step in meanwhile).
+import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 
 const argv = process.argv.slice(2);
@@ -60,6 +61,21 @@ const out = (o) => {
   process.stdout.write(`${JSON.stringify(o)}\n`);
   save();
 };
+
+// Like the Windows daemon: the CLI exits after its answer, but a background process keeps its pipes open
+// (`daemonLogs`: and keeps writing to them).
+if (process.env.FAKE_AB_HOLD_STDIO) {
+  const script = state.daemonLogs
+    ? "setInterval(() => process.stdout.write('daemon log\\n'), 100); setTimeout(() => process.exit(), 30000)"
+    : "setTimeout(() => {}, 30000)";
+  const daemon = spawn(process.execPath, ["-e", script], {
+    stdio: ["ignore", "inherit", "inherit"],
+    detached: true,
+    windowsHide: true,
+  });
+  daemon.unref();
+  appendFileSync(process.env.FAKE_AB_HOLD_STDIO, `${daemon.pid}\n`);
+}
 
 /** A script run as the page would: its document's focused element, its frame's location, `window` and `top`. */
 const pageEval = (script, focused) => {
@@ -130,6 +146,8 @@ const markedField = (selector) => {
 
 // `delayMs`: every command takes that long (a page busy under it).
 if (state.delayMs) await new Promise((resolve) => setTimeout(resolve, state.delayMs));
+// `silent`: the CLI exits without an answer.
+if (state.silent) process.exit(0);
 
 const [command, ...args] = rest;
 switch (command) {
