@@ -3857,7 +3857,10 @@
     "yourApproval": "deine Freigabe",
     "yourAnswer": "deine Antwort",
     "later": "Rückmeldung {{when}}",
-    "laterShort": "Rückmeldung"
+    "laterShort": "Rückmeldung",
+    "plan": "wartet auf das Abo",
+    "budget": "wartet auf das Budget",
+    "stopping": "wird gestoppt…"
   },
   "followUps": {
     "when": {
@@ -13596,6 +13599,8 @@
     },
     "join": {
       "linkClosed": "Dieser Link funktioniert nicht mehr. Bitte die Person, die ihn geschickt hat, um einen neuen.",
+      "linkFull": "Über diesen Link sind schon alle Personen gekommen, die er aufnehmen konnte. Bitte die Person, die ihn geschickt hat, um einen neuen.",
+      "linkFullApproval": "Über den Link dieser Anfrage sind schon alle Personen gekommen, die er aufnehmen konnte. Erhöhe sein Maximum, um sie freizugeben.",
       "full": "Bei diesem Workspace warten viele Anfragen. Versuch es später noch einmal oder bitte jemanden dort, dich einzuladen.",
       "rateLimited": "Zu viele Anfragen von hier. Versuch es in einer Stunde noch einmal.",
       "linkBusy": "In der letzten Stunde haben viele über diesen Link angefragt. Versuch es später noch einmal.",
@@ -17693,6 +17698,22 @@
       "message": "{{name}} schreiben",
       "chooseOnWeb": "Wähle ihn auf agentes.chat unter Einstellungen › Geräte."
     }
+  },
+  "agora": {
+    "label": "Jetzt",
+    "working_one": "{{count}} Agent arbeitet",
+    "working_other": "{{count}} Agenten arbeiten",
+    "waiting_one": "{{count}} Sache wartet auf dich",
+    "waiting_other": "{{count}} Sachen warten auf dich",
+    "sections": {
+      "you": "Wartet auf dich",
+      "working": "In Arbeit",
+      "waiting": "Wartet"
+    },
+    "allWaiting_one": "{{count}} Sache wartet auf dich",
+    "allWaiting_other": "Alle {{count}} Sachen warten auf dich",
+    "actions": "Weitere Aktionen",
+    "openManager": "Task-Manager öffnen"
   },
   "taskManager": {
     "title": "Task-Manager",

@@ -3728,7 +3728,10 @@
     "yourApproval": "你的批准",
     "yourAnswer": "你的回答",
     "later": "跟进 {{when}}",
-    "laterShort": "跟进"
+    "laterShort": "跟进",
+    "plan": "等待套餐重置",
+    "budget": "等待预算重置",
+    "stopping": "正在停止…"
   },
   "followUps": {
     "when": {
@@ -13141,6 +13144,8 @@
     },
     "join": {
       "linkClosed": "这个链接已失效，请向发送者索要新链接。",
+      "linkFull": "这个链接可加入的人数已满，请向发送者索要新链接。",
+      "linkFullApproval": "这个申请所用的链接可加入的人数已满。要批准它，请提高链接的人数上限。",
       "full": "这个工作区有很多待处理的申请。请稍后再试，或请那里的人邀请你。",
       "rateLimited": "来自这里的请求过多，请一小时后再试。",
       "linkBusy": "过去一小时内很多人通过这个链接申请，请稍后再试。",
@@ -17302,6 +17307,19 @@
       "message": "给 {{name}} 发消息",
       "chooseOnWeb": "请在 agentes.chat 的 设置 › 设备 中选择。"
     }
+  },
+  "agora": {
+    "label": "现在",
+    "working_other": "{{count}} 个智能体在工作",
+    "waiting_other": "{{count}} 件事等你处理",
+    "sections": {
+      "you": "等你处理",
+      "working": "工作中",
+      "waiting": "等待中"
+    },
+    "allWaiting_other": "查看 {{count}} 件等你处理的事",
+    "actions": "更多操作",
+    "openManager": "打开任务管理器"
   },
   "taskManager": {
     "title": "任务管理器",

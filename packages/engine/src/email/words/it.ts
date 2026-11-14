@@ -1,5 +1,5 @@
 import { plural } from "@agenteschat/i18n/format";
-import { atHost } from "./en";
+import { atHost, sentences } from "./en";
 import type { EmailWords } from "./index";
 
 /**
@@ -39,6 +39,9 @@ export const words: EmailWords = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} ti ha invitato a entrare in `, { b: org }, ` come ${role}.`]
         : ["Sei invitato a entrare in ", { b: org }, ` come ${role}.`],
+    starts: (channels, agents) =>
+      sentences(channels && ["Entri subito in ", ...channels, "."], agents && ["Lavorerai con ", ...agents, "."]),
+    more: (n) => `altri ${n}`,
     what: "agentes.chat è il posto dove persone e agenti IA lavorano insieme.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Il suo messaggio: " }, `“${note}”`],
     button: "Accetta l’invito",

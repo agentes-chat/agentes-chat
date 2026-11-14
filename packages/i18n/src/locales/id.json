@@ -3738,7 +3738,10 @@
     "yourApproval": "persetujuanmu",
     "yourAnswer": "jawabanmu",
     "later": "tindak lanjut {{when}}",
-    "laterShort": "tindak lanjut"
+    "laterShort": "tindak lanjut",
+    "plan": "menunggu kuota paket",
+    "budget": "menunggu anggaran",
+    "stopping": "menghentikan…"
   },
   "followUps": {
     "when": {
@@ -13131,6 +13134,8 @@
     },
     "join": {
       "linkClosed": "Tautan ini sudah tidak berlaku. Minta tautan baru ke orang yang mengirimnya.",
+      "linkFull": "Tautan ini sudah menerima semua orang yang bisa diterimanya. Minta tautan baru ke orang yang mengirimnya.",
+      "linkFullApproval": "Tautan permintaan ini sudah menerima semua orang yang bisa diterimanya. Untuk menyetujuinya, naikkan batas maksimum tautan.",
       "full": "Ruang kerja ini punya banyak permintaan yang menunggu. Coba lagi nanti, atau minta seseorang di sana mengundangmu.",
       "rateLimited": "Terlalu banyak permintaan dari sini. Coba lagi dalam satu jam.",
       "linkBusy": "Banyak orang meminta lewat tautan ini dalam satu jam terakhir. Coba lagi nanti.",
@@ -17225,6 +17230,19 @@
       "message": "Kirim pesan ke {{name}}",
       "chooseOnWeb": "Pilih di agentes.chat, di Pengaturan › Perangkat."
     }
+  },
+  "agora": {
+    "label": "Sekarang",
+    "working_other": "{{count}} agen sedang bekerja",
+    "waiting_other": "{{count}} hal menunggumu",
+    "sections": {
+      "you": "Menunggumu",
+      "working": "Sedang bekerja",
+      "waiting": "Menunggu"
+    },
+    "allWaiting_other": "Lihat {{count}} hal yang menunggumu",
+    "actions": "Tindakan lain",
+    "openManager": "Buka pengelola tugas"
   },
   "taskManager": {
     "title": "Pengelola tugas",
