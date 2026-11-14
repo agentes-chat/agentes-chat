@@ -564,8 +564,10 @@ export function agentLines(
   },
 ): { off: boolean; lines: string[] } {
   const everyone = everyoneOf(args.roles);
+  // Every workspace has Todos: none means the cargos are still loading, and nothing is said yet.
+  if (!everyone) return { off: false, lines: [] };
   const picked = sortRoles(args.roles.filter((r) => args.roleIds.includes(r.id)));
-  const talks = [...(everyone ? [everyone] : []), ...picked].some((r) => grants(r.permissions).has("talk_to_agents"));
+  const talks = [everyone, ...picked].some((r) => grants(r.permissions).has("talk_to_agents"));
   if (!talks) return { off: true, lines: [t("invites.line.noTalk")] };
   const admin = picked.find((r) => r.permissions.includes("administrator"));
   const own = inviteStart(args.roles, args.roleIds, NO_START, NO_START).agentIds;

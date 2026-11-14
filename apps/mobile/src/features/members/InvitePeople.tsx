@@ -148,8 +148,11 @@ function InviteForm() {
   const draft = useInviteDraft(KEY) ?? opening;
   const start = useStartFields(KEY, draft, { refused });
   const sending = inviteMany.isPending || make.isPending;
-  // While it sends, nothing goes back from under it.
-  usePreventRemove(sending, () => undefined);
+  // While it sends, nothing goes back from under it; a finished send goes back itself, before the screen has seen it end.
+  const leaving = useRef(false);
+  usePreventRemove(sending, ({ repeat }) => {
+    if (leaving.current) repeat();
+  });
 
   // Who is in already, and who has an invitation waiting: said on their token and left out of the send.
   const members = useHeldWhile(new Set(people.map((m) => m.email.toLowerCase())), inviteMany.isPending);
@@ -226,7 +229,10 @@ function InviteForm() {
       const left = addressesLeft(all, results);
       updateInviteDraft(KEY, (d) => ({ ...d, addresses: left }));
       setTyped("");
-      if (left.length === 0) goBack();
+      if (left.length === 0) {
+        leaving.current = true;
+        goBack();
+      }
     } catch (e) {
       // The form stays as it was, to send again.
       if (!refusedBy(e)) toast({ title: errorText(t, e, i18n.language), icon: "x" });

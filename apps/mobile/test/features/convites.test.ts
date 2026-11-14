@@ -346,6 +346,11 @@ describe("the choices pushed over a form", () => {
       off: false,
       lines: [],
     });
+    // While the cargos load (no Todos yet) nothing is said, never a wrong "doesn't talk to agents".
+    expect(agentLines(pt, { roles: [], roleIds: [], agents: AGENTS, agentIds: [], viewer: VIEWER })).toEqual({
+      off: false,
+      lines: [],
+    });
   });
 
   test("each choice is a pushed screen writing to the form its route names", () => {
@@ -383,7 +388,9 @@ describe("Convidar pessoas on the phone", () => {
 
   test("it sends every good address with the cargos, channels and agents; while it sends nothing goes back", () => {
     expect(invite).toContain("emails: ready.map((a) => a.email),");
-    expect(invite).toContain("usePreventRemove(sending, () => undefined);");
+    expect(invite).toMatch(/usePreventRemove\(sending, \(\{ repeat \}\) => \{\s*if \(leaving\.current\) repeat\(\);/);
+    // A finished send goes back itself, past the hold the screen hasn't let go of yet.
+    expect(invite).toMatch(/leaving\.current = true;\s*goBack\(\);/);
     // A refused pick marks its token and says why, the form kept as it was.
     expect(invite).toContain('if (!refusedBy(e)) toast({ title: errorText(t, e, i18n.language), icon: "x" });');
     expect(invite).toContain('playSound("approved");');

@@ -14,7 +14,7 @@ import { type InviteRefusal, inviteRefusal, inviteRefusalText } from "@agentesch
 import { sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useLocalSearchParams, usePreventRemove } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -98,7 +98,11 @@ export function EditLinkScreen() {
   const draft = useInviteDraft(key);
   const start = useStartFields(key, draft, { refused });
   const busy = edit.isPending || turnOff.isPending;
-  usePreventRemove(busy, () => undefined);
+  // While it saves, nothing goes back from under it; a finished save goes back itself.
+  const leaving = useRef(false);
+  usePreventRemove(busy, ({ repeat }) => {
+    if (leaving.current) repeat();
+  });
   useEffect(() => {
     if (!copied) return;
     const timer = setTimeout(() => setCopied(false), COPIED_MS);
@@ -113,6 +117,7 @@ export function EditLinkScreen() {
       await edit.mutateAsync({ id, ...changes });
       successHaptic();
       toast({ title: t("invites.link.saved") });
+      leaving.current = true;
       goBack();
     } catch (e) {
       if (!take(e)) failed(e);
@@ -122,6 +127,7 @@ export function EditLinkScreen() {
     try {
       await turnOff.mutateAsync(id);
       toast({ title: t("invites.link.turnedOff") });
+      leaving.current = true;
       goBack();
     } catch (e) {
       failed(e);
@@ -229,7 +235,11 @@ export function EditInvitationScreen() {
   const draft = useInviteDraft(key);
   const start = useStartFields(key, draft, { refused });
   const busy = update.isPending || resend.isPending;
-  usePreventRemove(busy, () => undefined);
+  // While it saves, nothing goes back from under it; a finished save goes back itself.
+  const leaving = useRef(false);
+  usePreventRemove(busy, ({ repeat }) => {
+    if (leaving.current) repeat();
+  });
   const expired = Boolean(inv && invitationExpired(inv) && !renewed);
   const changes = inv ? startChanges(inv, start.send) : {};
   const changed = Object.keys(changes).length > 0;
@@ -240,6 +250,7 @@ export function EditInvitationScreen() {
       await update.mutateAsync({ id, ...changes });
       successHaptic();
       toast({ title: t("invites.invitation.saved", { email: inv.email }) });
+      leaving.current = true;
       goBack();
     } catch (e) {
       if (!take(e)) failed(e);
