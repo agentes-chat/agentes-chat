@@ -119,6 +119,32 @@ describe("calls (scripted transport)", () => {
     expect(result.content).toEqual([{ type: "text", text: "oi" }]);
   });
 
+  test("Claude with history and a 1-hour cache asked: every breakpoint stays at 5 minutes", async () => {
+    const { fetcher, requests } = scripted(
+      message([
+        { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1 } },
+      ]),
+    );
+    await createCommandCodeProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+      {
+        model: "commandcode:claude-sonnet-5-5",
+        system: [{ text: "agent", cache: true }],
+        messages: [
+          { role: "user", content: "earlier" },
+          { role: "assistant", content: "seen" },
+          { role: "user", content: "now" },
+        ],
+        notes: { at: 2, text: "notes" },
+        cacheTtl: "1h",
+        maxTokens: 100,
+      },
+      { apiKey: "user_k123456789", onDelta: () => {} },
+    );
+    const body = requests[0]?.body as { messages: { content: Record<string, unknown>[] }[] };
+    expect(body.messages.at(-1)?.content[0]).toEqual({ type: "text", text: "now", cache_control: { type: "ephemeral" } });
+    expect(JSON.stringify(body)).not.toContain('"ttl"');
+  });
+
   test("structured output on Claude (the router's pick) is a forced tool, thinking off; its input is the reply", async () => {
     const { fetcher, requests } = scripted(
       message([
