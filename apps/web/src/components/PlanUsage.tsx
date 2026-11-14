@@ -144,14 +144,7 @@ export function PlanUsageCards() {
         icon="computer"
         title={t("usageViews.accounts.title")}
         hint={{ name: t("common.about", { label: t("usageViews.accounts.title") }), text: t("usageViews.estimate") }}
-        action={
-          accounts.length > 0 && (
-            <>
-              {grokLogins.length > 1 && <RemoveGrokLogins logins={grokLogins} />}
-              {connect}
-            </>
-          )
-        }
+        action={accounts.length > 0 ? connect : undefined}
       />
       {/* What comes first: an invitation to connect a plan would contradict it. */}
       {hold && <PlanHold hold={hold} />}
@@ -184,6 +177,7 @@ export function PlanUsageCards() {
           ))}
         </List>
       )}
+      {grokLogins.length > 1 && <RemoveGrokLogins logins={grokLogins} />}
     </Card>
   );
 }
