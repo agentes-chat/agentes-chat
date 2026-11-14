@@ -42,8 +42,19 @@ function splitAddresses(value: string): string[] {
   const parts: string[] = [];
   let current = "";
   let quoted = false;
+  let escaped = false;
   let angle = 0;
   for (const char of value) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+    if (quoted && char === "\\") {
+      current += char;
+      escaped = true;
+      continue;
+    }
     if (char === '"') quoted = !quoted;
     else if (!quoted && char === "<") angle++;
     else if (!quoted && char === ">") angle = Math.max(0, angle - 1);
@@ -61,12 +72,10 @@ export function parseAddress(value: string): MailAddress | null {
   const trimmed = value.trim();
   const angle = /^(.*)<\s*([^<>\s]+@[^<>\s]+)\s*>\s*$/.exec(trimmed);
   if (angle) {
-    const name = decodeEntities(
-      (angle[1] ?? "")
-        .trim()
-        .replace(/^"(.*)"$/, "$1")
-        .trim(),
-    );
+    const rawName = (angle[1] ?? "").trim();
+    const unquoted =
+      rawName.startsWith('"') && rawName.endsWith('"') ? rawName.slice(1, -1).replace(/\\(.)/g, "$1") : rawName;
+    const name = decodeEntities(unquoted.trim());
     const address = (angle[2] ?? "").toLowerCase();
     return name && name.toLowerCase() !== address ? { name, address } : { address };
   }
