@@ -2808,7 +2808,8 @@ async function executeRunInner(
       rows.map((m) => m.id),
     );
     await saveTranscript(db, t);
-    later(() => addRunStep(db, run, "context", { steeredMessageIds: rows.map((m) => m.id) }));
+    // Awaited, not `later`: the Tool Gateway reads it to take a routine's own actions from the run (`readJoined`).
+    await addRunStep(db, run, "context", { steeredMessageIds: rows.map((m) => m.id) });
     await publishChannelEvent(deps.pubsub, {
       type: "agent.run.read",
       ...where,
@@ -4157,7 +4158,8 @@ async function executeRunInner(
       const t = transcript as Transcript;
       appendUserText(t, read.map((m) => m.text).join("\n\n"));
       widenRequest(t, read.map((m) => m.text).join("\n\n"));
-      later(() => addRunStep(db, run, "context", { steeredMessageIds: read.map((m) => m.id), live: true }));
+      // Awaited, not queued behind slower writes: the brain's next tool call may come before the queue drains.
+      await addRunStep(db, run, "context", { steeredMessageIds: read.map((m) => m.id), live: true }).catch(() => {});
       // Read mid-turn: owed now (a `pass` later in this turn is refused), written without the rest of
       // the transcript (the bridge may be writing it).
       if (
