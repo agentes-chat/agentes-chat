@@ -245,6 +245,9 @@ export class RealtimeConnection {
     const socket = this.socket;
     this.socket = null;
     if (socket) {
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
       socket.onclose = null;
       socket.close(1000, "bye");
     }
@@ -573,10 +576,12 @@ export class RealtimeConnection {
     }
     this.socket = socket;
     socket.onopen = () => {
+      if (this.stopped || this.socket !== socket) return;
       const reconnected = this.everOpened;
       this.everOpened = true;
       this.attempt = 0;
       this.setStatus("open");
+      if (this.stopped || this.socket !== socket) return;
       this.confirmed.clear();
       for (const channelId of this.listeners.keys()) this.send({ type: "subscribe", channelId });
       // The agents' browsers someone is looking at (a watch sent before the socket opened was dropped).
@@ -585,6 +590,7 @@ export class RealtimeConnection {
       if (reconnected) for (const l of this.reconnectListeners) l();
     };
     socket.onmessage = (ev) => {
+      if (this.stopped || this.socket !== socket) return;
       // Anything heard proves the socket alive.
       if (this.pongTimer !== null) this.timers.clearTimeout(this.pongTimer);
       this.pongTimer = null;
@@ -593,7 +599,9 @@ export class RealtimeConnection {
     socket.onerror = () => {
       // `onclose` follows and schedules the retry.
     };
-    socket.onclose = () => this.lost();
+    socket.onclose = () => {
+      if (!this.stopped && this.socket === socket) this.lost();
+    };
   }
 
   private lost() {
