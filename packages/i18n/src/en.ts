@@ -15530,6 +15530,8 @@ export const en = {
         /** The words of every message, in every look, smallest step first. */
         textSize: "Text size",
         textSizeHelp: "Of messages, in every conversation and on all your devices",
+        fullMessages: "Show full messages",
+        fullMessagesHelp: "Show long messages without “See more”, in every conversation and on all your devices.",
         /** On the phone, under the text size slider: the choice sizes the whole app, on top of the system's own setting. */
         textSizePhone: "Applies to the whole app, on top of your phone's text size",
         textXs: "Smaller",

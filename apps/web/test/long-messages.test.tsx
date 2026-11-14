@@ -3,10 +3,10 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import { ApiError, type Message } from "@agenteschat/client";
+import { ApiError, keys, type Message } from "@agenteschat/client";
 import { LONG_MESSAGE, MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { ADA_ID, comfortable, createFakeApi, ENG_ID, NOW, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, comfortable, createFakeApi, ENG_ID, NOW, ORG_ID, seedState, withChatPrefs } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 const ROOT = new URL("../../../", import.meta.url).pathname;
@@ -79,6 +79,35 @@ describe("a tall message in the conversation", () => {
     expect(row("p2").querySelector(".ac-msg__text")?.textContent).toBe("ok");
     // Never cut by an ellipsis: every word is in the row.
     expect(row("p1").textContent).toContain("Linha 80 com números.");
+  });
+
+  test("full messages shows both people and agents without a cut or See more", async () => {
+    await open(
+      withChatPrefs(
+        seedState({
+          messages: [said("p1", "u-joao", body, 3), said("a1", ADA_ID, body, 2)],
+        }),
+        { fullMessages: true },
+      ),
+    );
+    for (const id of ["p1", "a1"]) {
+      expect(row(id).querySelector(".msg-clip--cut")).toBeNull();
+      expect(within(row(id)).queryByRole("button", { name: "Ver mais" })).toBeNull();
+      expect(row(id).textContent).toContain("Linha 80 com números.");
+    }
+  });
+
+  test("a synced preference unfolds and refolds a mounted message", async () => {
+    const { state, services } = await open(withChatPrefs(seedState({ messages: [said("a1", ADA_ID, body, 2)] })));
+    const words = row("a1").querySelector(".msg-clip");
+    for (const fullMessages of [true, false]) {
+      withChatPrefs(state, { fullMessages });
+      await act(async () => services.queryClient.invalidateQueries({ queryKey: keys.me }));
+      await settle(4);
+      expect(row("a1").querySelector(".msg-clip")).toBe(words);
+      expect(row("a1").querySelector(".msg-clip--cut") !== null).toBe(!fullMessages);
+      expect(within(row("a1")).queryByRole("button", { name: "Ver mais" }) !== null).toBe(!fullMessages);
+    }
   });
 
   test("my own tall message, with a word that never breaks, clips the same way inside its bubble", async () => {

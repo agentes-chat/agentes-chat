@@ -512,6 +512,17 @@ export function ChatLookPage() {
   return (
     <Page title={t("settings.account.chat.title")}>
       <View style={styles.gap} />
+      <GroupedList>
+        <GroupedRow
+          label={t("settings.account.chat.fullMessages")}
+          toggle={prefs?.fullMessages === true}
+          onPress={() => save({ fullMessages: prefs?.fullMessages !== true })}
+          hint={{
+            name: t("common.about", { label: t("settings.account.chat.fullMessages") }),
+            text: t("settings.account.chat.fullMessagesHelp"),
+          }}
+        />
+      </GroupedList>
       <Segmented
         wide
         items={[
