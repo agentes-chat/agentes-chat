@@ -2581,6 +2581,7 @@
         "ai_account": "Yalnızca hesabın sahibi verebilir",
         "name": "Bir ajanın adını yalnızca yöneticiler değiştirir",
         "look": "Görünümünü yalnızca yöneticiler ve sorumlusu değiştirir",
+        "group": "Bir ajanın departmanını yalnızca yöneticiler değiştirir",
         "reports_to": "Bir ajanın kime rapor verdiğini yalnızca yöneticiler değiştirir",
         "many": "Bu değişiklikleri yalnızca yöneticiler yapar"
       }
@@ -2595,6 +2596,7 @@
       "channel": "Kanal",
       "name": "Ad",
       "look": "Görünüm",
+      "group": "Departman",
       "reports_to": "Rapor verdiği",
       "skill": "{{name}} becerisi"
     },

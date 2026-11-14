@@ -2759,6 +2759,7 @@
         "ai_account": "Przydziela je tylko właściciel konta",
         "name": "Tylko admini zmieniają nazwę agenta",
         "look": "Tylko admini i opiekun zmieniają jego wygląd",
+        "group": "Tylko admini przenoszą agenta do innego działu",
         "reports_to": "Tylko admini zmieniają, komu podlega agent",
         "many": "Tylko admini wprowadzają te zmiany"
       }
@@ -2773,6 +2774,7 @@
       "channel": "Kanał",
       "name": "Nazwa",
       "look": "Wygląd",
+      "group": "Dział",
       "reports_to": "Podlega",
       "skill": "Umiejętność {{name}}"
     },

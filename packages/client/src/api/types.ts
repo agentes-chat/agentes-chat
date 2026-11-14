@@ -2308,6 +2308,7 @@ export type ProposalSettingField =
   | "skill"
   | "name"
   | "look"
+  | "group"
   | "reports_to"
   | "archive"
   | "delete";
@@ -2317,8 +2318,8 @@ export type ProposalSettingField =
  * null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` /
  * `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a
  * mention); `skill` whether it has the skill in `skillId` on (its name in `label.to`); `name` its name; `look`
- * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `archive` true. `label`: the server's
- * names for ids.
+ * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `group` its department's name or
+ * null; `archive` true. `label`: the server's names for ids.
  */
 export interface ProposalSettingLine {
   field: ProposalSettingField;

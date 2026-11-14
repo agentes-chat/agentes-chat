@@ -4,6 +4,7 @@ import {
   actionsFor,
   addChannelMember,
   askProposal,
+  createAgentGroup,
   createChannel,
   createSetupToolSource,
   createToolGateway,
@@ -193,6 +194,59 @@ describe("a change the person asked for and may make (ADR 0092 §5)", () => {
       },
     );
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.model).toBe("claude-sonnet-5-5");
+  });
+});
+
+describe("a change of department", () => {
+  test("the right hand proposes it, only who manages agents applies it, and Undo puts the agent back", async () => {
+    f = await setup({ rightHand: true });
+    await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, { name: "Vendas" });
+    const groups = await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+      name: "Operações",
+      agentIds: [f.agent.id],
+    });
+    const idOf = (name: string) => groups.find((g) => g.name === name)?.id;
+    const bia = await addMember(f.db, f.org.id, "member", "Bia Rocha");
+    const ctx = await lodiRun(f, bia.id, "coloca o dev no setor de Vendas");
+    // The sector's name however it was typed: the card keeps it as the workspace writes it.
+    const out = await call(f, ctx, { changes: [{ agent: "@dev", group: "vendas" }], reason: "pediu" });
+    expect(out.content).toContain("can't apply it: the card lets them send it to whoever may");
+    const [row] = (await cardRows(f, bia.id)).rows;
+    expect(row).toMatchObject({ status: "pending", canDecide: false });
+    // The card speaks the sectors' names, not their ids.
+    expect(row?.settings).toEqual([{ field: "group", from: "Operações", to: "Vendas" }]);
+    // Who can't decide it doesn't apply it, before or after sending it to an admin.
+    await expect(decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow();
+    await askProposal({ db: f.db, pubsub: f.pubsub }, bia.id, f.org.id, row?.id ?? "");
+    await expect(decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow();
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(idOf("Operações"));
+    await decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept", { pubsub: f.pubsub });
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(idOf("Vendas"));
+    const { card } = await cardRows(f, f.owner.id);
+    const [receipt] = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
+    expect(receipt).toMatchObject({
+      kind: "agent.settings_changed",
+      target: { type: "agent", id: f.agent.id },
+    });
+    await undoAgentAction({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, receipt?.id ?? "");
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(idOf("Operações"));
+  });
+
+  test('a department that isn\'t there is refused, and "none" takes the agent out of every department', async () => {
+    f = await setup({ rightHand: true });
+    const [vendas] = await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+      name: "Vendas",
+      agentIds: [f.agent.id],
+    });
+    const ctx = await lodiRun(f, f.owner.id, "coloca o dev em Marketing", true);
+    const refused = await call(f, ctx, { changes: [{ agent: "@dev", group: "Marketing" }], reason: "pediu" });
+    expect(refused).toMatchObject({ isError: true });
+    expect(refused.content).toContain('no department called "Marketing" here');
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(vendas?.id);
+
+    const out = await call(f, ctx, { changes: [{ agent: "@dev", group: "none" }], reason: "pediu" });
+    expect(out.content).toContain("applied at once");
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBeNull();
   });
 });
 

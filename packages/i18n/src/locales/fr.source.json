@@ -6446,6 +6446,9 @@
   "rightHand.card.only.look": {
     "value": "Only admins and its owner change its look"
   },
+  "rightHand.card.only.group": {
+    "value": "Only admins move an agent to another department"
+  },
   "rightHand.card.only.reports_to": {
     "value": "Only admins change who an agent reports to"
   },
@@ -6478,6 +6481,9 @@
   },
   "rightHand.field.look": {
     "value": "Look"
+  },
+  "rightHand.field.group": {
+    "value": "Department"
   },
   "rightHand.field.reports_to": {
     "value": "Reports to"

@@ -2500,6 +2500,7 @@
         "ai_account": "Hanya pemilik akun yang memberikannya",
         "name": "Hanya admin yang mengganti nama agen",
         "look": "Hanya admin dan penanggung jawabnya yang mengubah tampilannya",
+        "group": "Hanya admin yang memindahkan agen ke departemen lain",
         "reports_to": "Hanya admin yang mengubah kepada siapa agen melapor",
         "many": "Hanya admin yang membuat perubahan ini"
       }
@@ -2514,6 +2515,7 @@
       "channel": "Kanal",
       "name": "Nama",
       "look": "Tampilan",
+      "group": "Departemen",
       "reports_to": "Melapor ke",
       "skill": "Skill {{name}}"
     },
