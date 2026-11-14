@@ -1,3 +1,12 @@
 {
-   "signedContributors": []
+  "signedContributors": [
+    {
+      "name": "Pevelopes",
+      "id": 110319137,
+      "comment_id": 6872302277,
+      "created_at": "2026-11-14T05:19:46Z",
+      "repoId": 1450794567,
+      "pullRequestNo": 439
+    }
+  ]
 }
