@@ -33,7 +33,7 @@ export const paging = {
 export const Next = z.string().nullable().openapi({ description: "`cursor` for the next page; null on the last one." });
 
 // Postgres takes no NUL in text: refused here, it is a 400 and not a failed query.
-const word = () =>
+export const word = () =>
   z
     .string()
     .trim()

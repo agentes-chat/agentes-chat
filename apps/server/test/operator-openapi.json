@@ -3,7 +3,7 @@
   "info": {
     "title": "agentes.chat operator API",
     "version": "test",
-    "description": "Workspace and account lookups, what a run did and why a message started one or none, the job queue and what model calls spent, workspace standing, billing holds and limits (ADR 0079), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056)."
+    "description": "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, workspace standing, billing holds and limits (ADR 0079), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056)."
   },
   "servers": [
     {
@@ -4121,6 +4121,10 @@
                   "type": ["string", "null"],
                   "description": "A tool call's and its result's."
                 },
+                "builtIn": {
+                  "type": ["boolean", "null"],
+                  "description": "A tool call's and its result's. The Tool Gateway resolved the name to one of the server's own tools, so the name is the server's own word. False for a connected app's tool (a connector's, a mailbox's, a database's), for a name it could not resolve, and for a call made before the server kept this."
+                },
                 "connector": {
                   "type": ["string", "null"],
                   "description": "A tool call's: the connection the tool is of."
@@ -4131,7 +4135,7 @@
                 },
                 "refusal": {
                   "type": ["string", "null"],
-                  "description": "A tool result the server refused: `policy`, `noAccess` or `credential`."
+                  "description": "A tool result's. A call the server refused: `policy`, `noAccess`, `credential` or `repo`."
                 },
                 "code": {
                   "type": ["string", "null"],
@@ -4177,6 +4181,7 @@
                 "kind",
                 "at",
                 "tool",
+                "builtIn",
                 "connector",
                 "isError",
                 "refusal",
@@ -4475,6 +4480,162 @@
           "createdAt",
           "completedAt"
         ]
+      },
+      "OperatorToolCallPage": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "to": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "calls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OperatorToolCall"
+            }
+          },
+          "next": {
+            "type": ["string", "null"],
+            "description": "`cursor` for the next page; null on the last one."
+          }
+        },
+        "required": ["from", "to", "calls", "next"]
+      },
+      "OperatorToolCall": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seq": {
+            "type": "integer",
+            "description": "The call's step in its run's trace."
+          },
+          "tool": {
+            "type": ["string", "null"]
+          },
+          "builtIn": {
+            "type": "boolean",
+            "description": "The Tool Gateway resolved the name to one of the server's own tools, so the name is the server's own word. False for a connected app's tool (a connector's, a mailbox's, a database's), for a name it could not resolve, and for a call made before the server kept this."
+          },
+          "connector": {
+            "type": ["string", "null"],
+            "description": "The connection the tool is of, as its workspace named it."
+          },
+          "connectorKind": {
+            "type": ["string", "null"],
+            "description": "The service a connected app's tool works in, from the server's catalog (`github`, `gmail`, `postgres`…); null for a server connected by address and for the server's own tools."
+          },
+          "outcome": {
+            "type": "string",
+            "enum": ["ok", "error", "refused", "pending"],
+            "description": "`ok`; `error` (the tool failed, or the server turned the call down in words alone); `refused` (see `refusal`); `pending` (no result yet: it waits for a person, still runs, or was cut off)."
+          },
+          "refusal": {
+            "type": ["string", "null"],
+            "description": "A call the server refused: `policy`, `noAccess`, `credential` or `repo`."
+          },
+          "code": {
+            "type": ["string", "null"],
+            "description": "The result's own code, when it has one."
+          },
+          "durationMs": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "From the call to its result."
+          },
+          "inputChars": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "How long its input is: the input is never returned."
+          },
+          "resultChars": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "How long its result is: the result is never returned."
+          }
+        },
+        "required": [
+          "at",
+          "runId",
+          "agentId",
+          "seq",
+          "tool",
+          "builtIn",
+          "connector",
+          "connectorKind",
+          "outcome",
+          "refusal",
+          "code",
+          "durationMs",
+          "inputChars",
+          "resultChars"
+        ]
+      },
+      "OperatorToolCallCounts": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "to": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": ["string", "null"],
+                  "description": "The tool's name, the agent's id or the outcome."
+                },
+                "builtIn": {
+                  "type": ["boolean", "null"],
+                  "description": "By tool: some call of that name in the range was of the server's own tool. Null otherwise."
+                },
+                "calls": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "errors": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "refused": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "pending": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": ["group", "builtIn", "calls", "errors", "refused", "pending"]
+            },
+            "description": "Most calls first."
+          },
+          "more": {
+            "type": "boolean",
+            "description": "There are more groups than `limit`: narrow the dates or the filters."
+          }
+        },
+        "required": ["from", "to", "groups", "more"]
       },
       "OperatorTimeline": {
         "type": "object",
@@ -5270,6 +5431,119 @@
         },
         "required": ["message", "verdict", "skipped", "handles", "agents", "routing", "workspace", "postedJob"]
       },
+      "OperatorUnansweredPage": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "to": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "at": {
+                  "type": "string",
+                  "description": "ISO 8601, UTC."
+                },
+                "channelId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "threadRootId": {
+                  "type": ["string", "null"],
+                  "format": "uuid",
+                  "description": "The thread it replies in; null outside any."
+                },
+                "authorUserId": {
+                  "type": ["string", "null"]
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "mission_suggestion",
+                    "kept_on_hold",
+                    "no_ai",
+                    "platform_cap",
+                    "blocked",
+                    "referenced_only",
+                    "nobody_picked",
+                    "picked_not_started",
+                    "job_pending",
+                    "job_failed",
+                    "not_routed"
+                  ],
+                  "description": "Why no run answered it, as `GET /messages/{messageId}/explain` tells it (its `verdict`) from what is stored."
+                },
+                "strategy": {
+                  "type": ["string", "null"],
+                  "description": "Who decided its routing, as the timeline names it; null: no decision was stored for it."
+                }
+              },
+              "required": ["id", "at", "channelId", "threadRootId", "authorUserId", "outcome", "strategy"]
+            }
+          },
+          "next": {
+            "type": ["string", "null"],
+            "description": "`cursor` for the next page; null on the last one."
+          }
+        },
+        "required": ["from", "to", "messages", "next"]
+      },
+      "OperatorUnansweredCounts": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "to": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "counts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "mission_suggestion",
+                    "kept_on_hold",
+                    "no_ai",
+                    "platform_cap",
+                    "blocked",
+                    "referenced_only",
+                    "nobody_picked",
+                    "picked_not_started",
+                    "job_pending",
+                    "job_failed",
+                    "not_routed"
+                  ],
+                  "description": "Why no run answered it, as `GET /messages/{messageId}/explain` tells it (its `verdict`) from what is stored."
+                },
+                "messages": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": ["outcome", "messages"]
+            },
+            "description": "Most messages first."
+          }
+        },
+        "required": ["from", "to", "counts"]
+      },
       "OperatorJobPage": {
         "type": "object",
         "properties": {
@@ -5332,6 +5606,40 @@
           }
         },
         "required": ["at", "counts", "more", "oldestDueAt", "oldestDueSeconds"]
+      },
+      "OperatorEmailJobPage": {
+        "type": "object",
+        "properties": {
+          "jobs": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/OperatorJob"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "template": {
+                      "type": ["string", "null"],
+                      "description": "Which email it sends, as the server names it: `invitation`, `verify_email`, `password_reset`…"
+                    },
+                    "errorCode": {
+                      "type": ["string", "null"],
+                      "description": "A provider's refusal in `lastError`, as its own code: the name it gave (`validation_error`…), else the status (`422`, `429`). Null: no error, or one worded another way."
+                    }
+                  },
+                  "required": ["template", "errorCode"]
+                }
+              ]
+            }
+          },
+          "next": {
+            "type": ["string", "null"],
+            "description": "`cursor` for the next page; null on the last one."
+          }
+        },
+        "required": ["jobs", "next"]
       },
       "OperatorUsage": {
         "type": "object",
@@ -5426,6 +5734,644 @@
           }
         },
         "required": ["from", "to", "total", "groups", "more"]
+      },
+      "OperatorConnectionPage": {
+        "type": "object",
+        "properties": {
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["connector", "mailbox", "database"],
+                  "description": "A connected app or server, a mailbox, or a database."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "connector": {
+                  "type": "string",
+                  "description": "The service it is of, as its use is counted (`GET /analytics`): the server's own id for it (`github`, `gmail`, `postgres`…), or for a server connected by address that is none the server knows, its hostname (it has a dot; no id of the server's does) or `custom`."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "What its workspace calls it: a name a person typed. One nobody named is called by the mailbox's address, the database's host or name, the server's hostname, or the service and the account's name on it."
+                },
+                "authType": {
+                  "type": ["string", "null"],
+                  "description": "How it signs in. A connector's `oauth`, `api_key`, `none` or `github_app`; a mailbox's `composio` or `imap`; null for a database."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`active` or `needs_reconnect`; a mailbox's also `pending` (its sign-in never finished)."
+                },
+                "lastErrorCode": {
+                  "type": ["string", "null"],
+                  "description": "The stored error when it is one word (`account_removed`, `already_connected`…)."
+                },
+                "lastError": {
+                  "type": ["string", "null"],
+                  "description": "The stored error's first 300 characters."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO 8601, UTC."
+                },
+                "createdByUserId": {
+                  "type": ["string", "null"],
+                  "description": "Who connected it."
+                },
+                "revokedAt": {
+                  "type": ["string", "null"],
+                  "description": "Removed, or replaced by a newer sign-in."
+                },
+                "lastUsedDay": {
+                  "type": ["string", "null"],
+                  "description": "The last UTC day (`YYYY-MM-DD`) an agent of the workspace called a tool of this service. Counted by service: two accounts of one service share it."
+                },
+                "tools": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "read": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "write": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "approval": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "off": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "undecided": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": ["read", "write", "approval", "off", "undecided"],
+                  "description": "A server connected by address: how many of the tools it lists now its workspace set to each level (`approval`: writes that always ask a person; `off`: never offered; `undecided`: not classified yet, so not offered). Null otherwise: the tools are the server's own list for the service."
+                }
+              },
+              "required": [
+                "kind",
+                "id",
+                "connector",
+                "label",
+                "authType",
+                "status",
+                "lastErrorCode",
+                "lastError",
+                "createdAt",
+                "createdByUserId",
+                "revokedAt",
+                "lastUsedDay",
+                "tools"
+              ]
+            }
+          },
+          "next": {
+            "type": ["string", "null"],
+            "description": "`cursor` for the next page; null on the last one."
+          }
+        },
+        "required": ["connections", "next"]
+      },
+      "OperatorAuditPage": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "to": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "at": {
+                  "type": "string",
+                  "description": "ISO 8601, UTC."
+                },
+                "actorType": {
+                  "type": "string",
+                  "description": "`person`, `agent` or `system`."
+                },
+                "actorId": {
+                  "type": ["string", "null"]
+                },
+                "action": {
+                  "type": "string",
+                  "description": "What was done, as the server names it: `connector.connected`, `routine.created`, `agent.access_changed`…, and `tool.call` for a tool an agent called."
+                },
+                "targetType": {
+                  "type": "string",
+                  "description": "`agent`, `connector`, `routine`, `tool`, `person`…"
+                },
+                "targetId": {
+                  "type": ["string", "null"],
+                  "description": "Its id. A target with no id of its own goes by its name, which its workspace may have written: a tool's (`tool`), a repository's (`repository`, `git_repo`), a wiki folder's path (`wiki_folder`); one of the server's own settings goes by the server's name for it (`instance_secret`). Null when what is stored is longer than one word."
+                },
+                "outcome": {
+                  "type": ["string", "null"],
+                  "description": "A tool call's: `done`, `failed`, `refused` or `pending` (it waits for a person)."
+                },
+                "runId": {
+                  "type": ["string", "null"],
+                  "format": "uuid",
+                  "description": "An agent's: the run it happened in."
+                },
+                "onBehalfOfUserId": {
+                  "type": ["string", "null"],
+                  "description": "An agent's: the person behind that run."
+                }
+              },
+              "required": [
+                "id",
+                "at",
+                "actorType",
+                "actorId",
+                "action",
+                "targetType",
+                "targetId",
+                "outcome",
+                "runId",
+                "onBehalfOfUserId"
+              ]
+            },
+            "description": "Never an entry's details."
+          },
+          "next": {
+            "type": ["string", "null"],
+            "description": "`cursor` for the next page; null on the last one."
+          }
+        },
+        "required": ["from", "to", "events", "next"]
+      },
+      "OperatorAskPage": {
+        "type": "object",
+        "properties": {
+          "asks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OperatorWorkspaceAsk"
+            }
+          },
+          "next": {
+            "type": ["string", "null"],
+            "description": "`cursor` for the next page; null on the last one."
+          }
+        },
+        "required": ["asks", "next"]
+      },
+      "OperatorWorkspaceAsk": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["approval", "question", "secret", "handoff", "consultation"],
+            "description": "An action to approve, a question to a person, a secret asked for its computer, a person's turn on its screen (`handoff`), or another agent consulted."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "As stored. An approval's `pending`, `approved`, `refused`, `expired` or `canceled`; a question's `open`, `answered`, `expired`, `canceled` or `dismissed`; a secret's `pending`, `delivered`, `declined`, `expired` or `canceled`; a hand-off's `pending` (nobody opened it), `active` (a person in control), `done`, `failed`, `expired`, `cancelled` or `withdrawn`; a consultation's `open`, `answered`, `expired` or `failed`."
+          },
+          "agentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The agent that asked; a hand-off's: whose screen it is."
+          },
+          "runId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "The run that asked."
+          },
+          "channelId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "The conversation it was asked in; a consultation's: the two agents' own. Null for a hand-off."
+          },
+          "threadRootId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "messageId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "The message that shows it."
+          },
+          "tool": {
+            "type": ["string", "null"],
+            "description": "An approval's: the tool it would run."
+          },
+          "variant": {
+            "type": ["string", "null"],
+            "description": "A hand-off's `ask` (the agent asked for a person) or `takeover` (a person took its screen unasked); a consultation's `question` or `note` (work handed to the other agent)."
+          },
+          "forUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Whom it is asked of. An approval's: the people it names, else its agent's owner (whoever may approve actions in the workspace decides it too). The one person a question, a secret or a hand-off is for; empty for a question anyone in its conversation may answer."
+          },
+          "forAgentId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "A consultation's: the agent consulted."
+          },
+          "answerRunId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "A consultation's: the other agent's run."
+          },
+          "byUserId": {
+            "type": ["string", "null"],
+            "description": "Who decided or answered it; a hand-off's: who took control."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO 8601, UTC."
+          },
+          "resolvedAt": {
+            "type": ["string", "null"],
+            "description": "When it was decided, answered or delivered, or the person's turn ended."
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "status",
+          "agentId",
+          "runId",
+          "channelId",
+          "threadRootId",
+          "messageId",
+          "tool",
+          "variant",
+          "forUserIds",
+          "forAgentId",
+          "answerRunId",
+          "byUserId",
+          "createdAt",
+          "expiresAt",
+          "resolvedAt"
+        ]
+      },
+      "OperatorRoutinePage": {
+        "type": "object",
+        "properties": {
+          "routines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "agentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "triggerType": {
+                  "type": "string",
+                  "description": "`schedule`, `once` (one time, at `nextRunAt`) or `event`."
+                },
+                "cron": {
+                  "type": ["string", "null"],
+                  "description": "A schedule's, as stored, in `timezone`. Null for a schedule only its stored rule can say (the last business day of a month…): `nextRunAt` still tells when."
+                },
+                "timezone": {
+                  "type": ["string", "null"]
+                },
+                "event": {
+                  "type": ["string", "null"],
+                  "description": "The event that fires it: `issue.created`, `github.pr_opened`, `email.received`, `webhook.received`…"
+                },
+                "active": {
+                  "type": "boolean",
+                  "description": "On. Off: paused by a person, or by itself (`pausedReason`)."
+                },
+                "pausedReason": {
+                  "type": ["string", "null"],
+                  "description": "Why it paused itself, as a code."
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": ["string", "null"],
+                      "description": "`channel`, `dm` (its creator's conversation with the agent), `artifact` (a file), `conversation` (where it was asked for) or `widget`."
+                    },
+                    "channelId": {
+                      "type": ["string", "null"],
+                      "format": "uuid"
+                    },
+                    "threadRootId": {
+                      "type": ["string", "null"],
+                      "format": "uuid"
+                    }
+                  },
+                  "required": ["type", "channelId", "threadRootId"],
+                  "description": "Where it delivers."
+                },
+                "nextRunAt": {
+                  "type": ["string", "null"],
+                  "description": "ISO 8601, UTC."
+                },
+                "lastRunAt": {
+                  "type": ["string", "null"],
+                  "description": "ISO 8601, UTC."
+                },
+                "createdByUserId": {
+                  "type": ["string", "null"],
+                  "description": "Its runs act for this person."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO 8601, UTC."
+                },
+                "deletedAt": {
+                  "type": ["string", "null"],
+                  "description": "Deleted: it never fires again, its firings stay."
+                },
+                "runs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "at": {
+                        "type": "string",
+                        "description": "The slot it fired for, or when it was fired by hand or by an event."
+                      },
+                      "trigger": {
+                        "type": "string",
+                        "description": "`schedule`, `manual` or `event`."
+                      },
+                      "status": {
+                        "type": "string",
+                        "description": "`queued`, `starting`, `started`, then how it ended: `reported`, `silent` (nothing new), `failed`, `canceled`, `superseded` (the next slot replaced it while it waited), `missed`, or `skipped` (the slot started no run)."
+                      },
+                      "code": {
+                        "type": ["string", "null"],
+                        "description": "Why it was skipped, missed, failed or stopped."
+                      },
+                      "runId": {
+                        "type": ["string", "null"],
+                        "format": "uuid",
+                        "description": "The run it started."
+                      },
+                      "messageId": {
+                        "type": ["string", "null"],
+                        "format": "uuid",
+                        "description": "The message where people saw its result."
+                      },
+                      "finishedAt": {
+                        "type": ["string", "null"],
+                        "description": "ISO 8601, UTC."
+                      }
+                    },
+                    "required": ["id", "at", "trigger", "status", "code", "runId", "messageId", "finishedAt"]
+                  },
+                  "description": "Its latest firings, newest first, at most 5."
+                }
+              },
+              "required": [
+                "id",
+                "agentId",
+                "triggerType",
+                "cron",
+                "timezone",
+                "event",
+                "active",
+                "pausedReason",
+                "target",
+                "nextRunAt",
+                "lastRunAt",
+                "createdByUserId",
+                "createdAt",
+                "deletedAt",
+                "runs"
+              ]
+            }
+          },
+          "next": {
+            "type": ["string", "null"],
+            "description": "`cursor` for the next page; null on the last one."
+          }
+        },
+        "required": ["routines", "next"]
+      },
+      "OperatorNotificationPage": {
+        "type": "object",
+        "properties": {
+          "notifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": ["string", "null"],
+                  "description": "What it tells of, as the server names it: `mention`, `dm`, `thread_reply`, `agent_reply`, `approval`, `agent_question`, `run_failed`, `routine_failed`…"
+                },
+                "waiting": {
+                  "type": "boolean",
+                  "description": "It holds an agent or a decision until the person acts."
+                },
+                "group": {
+                  "type": ["string", "null"],
+                  "description": "What its events gather under: while it is unread, a new one of the same group joins it."
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "How many events it stands for."
+                },
+                "actors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": ["user", "agent"]
+                      },
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["type", "id"]
+                  },
+                  "description": "Who caused it, newest first, at most 10."
+                },
+                "source": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "The ids it points at, by name: `channelId`, `threadId`, `messageId`, `issueId`, `approvalId`, `questionId`, `routineId`, `machineId`, `agentId`, `runId`… Never the title stored beside them."
+                },
+                "readAt": {
+                  "type": ["string", "null"],
+                  "description": "ISO 8601, UTC."
+                },
+                "doneAt": {
+                  "type": ["string", "null"],
+                  "description": "Out of the inbox since: the person's doing (`doneByUser`), or what it waited for ended."
+                },
+                "doneByUser": {
+                  "type": "boolean"
+                },
+                "snoozedUntil": {
+                  "type": ["string", "null"],
+                  "description": "ISO 8601, UTC."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO 8601, UTC."
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "description": "When its latest event joined it."
+                },
+                "push": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OperatorJob"
+                  },
+                  "description": "The jobs that sent it to the person's devices, oldest first: its first, and the one held back while the person was looking at the app. `done`: it ran, and reached the devices registered then that still wanted it; `failed`: none took it. Empty: none was queued (no device, the person's choice for this kind, or read before). A reminder's and a snooze's are in `GET /jobs?kind=push.send`."
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "waiting",
+                "group",
+                "count",
+                "actors",
+                "source",
+                "readAt",
+                "doneAt",
+                "doneByUser",
+                "snoozedUntil",
+                "createdAt",
+                "updatedAt",
+                "push"
+              ]
+            }
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "platform": {
+                  "type": ["string", "null"],
+                  "description": "`ios`, `android` or `web` (a browser)."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO 8601, UTC."
+                },
+                "lastSeenAt": {
+                  "type": "string",
+                  "description": "When it last registered: each launch, each page load."
+                }
+              },
+              "required": ["platform", "createdAt", "lastSeenAt"]
+            },
+            "description": "Where the person's pushes go now, in every workspace of theirs, latest seen first. Never what a push is sent to."
+          },
+          "next": {
+            "type": ["string", "null"],
+            "description": "`cursor` for the next page; null on the last one."
+          }
+        },
+        "required": ["notifications", "devices", "next"]
+      },
+      "OperatorAccess": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "targetKind": {
+            "type": "string",
+            "enum": ["agent", "channel", "task", "file", "computer"]
+          },
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "allowed": {
+            "type": "boolean",
+            "description": "An agent: the person's message starts a run of it. A channel (a direct conversation or a task's too) or a file: they read it. A task: they see it. A computer: their agents may use it."
+          },
+          "rule": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audience_everyone",
+              "audience_person",
+              "audience_role",
+              "workspace",
+              "channel_member",
+              "public_channel",
+              "administrator",
+              "task_reader",
+              "shared_everyone",
+              "shared_person",
+              "shared_role",
+              "granted_once",
+              "not_a_member",
+              "account_closed",
+              "workspace_suspended",
+              "gone",
+              "no_permission",
+              "owner_only",
+              "not_in_audience",
+              "not_joined",
+              "not_channel_member",
+              "not_task_reader",
+              "not_shared",
+              "unknown"
+            ],
+            "description": "What decided. Yes: `owner` (the agent's or the computer's), `audience_everyone`, `audience_person` (named in its audience), `audience_role` (holds a role of its audience), `workspace` (for the whole workspace: a task or a file outside any conversation, a workspace's computer nobody owns), `channel_member` (in the channel, or in the one the task or the file is in), `public_channel` (the task or the file is in one), `administrator`, `task_reader` (sees the task whose conversation it is), `shared_everyone`, `shared_person`, `shared_role` (the file's sharing), `granted_once` (a person let their agents use the computer for now). No: `not_a_member` (of the workspace), `account_closed` (blocked, or being deleted), `workspace_suspended`, `gone` (archived, deleted or removed), `no_permission` (no role of theirs lets them talk to agents), `owner_only`, `not_in_audience`, `not_joined` (a public channel they may join), `not_channel_member`, `not_task_reader`, `not_shared`. `unknown`: the server's own check answered, and no rule here explains it."
+          }
+        },
+        "required": ["userId", "targetKind", "targetId", "allowed", "rule"]
       }
     },
     "parameters": {}
@@ -8677,7 +9623,7 @@
       "get": {
         "tags": ["Operator"],
         "summary": "One run from start to end: its steps, what it asked, its jobs, what it spent and its computer",
-        "description": "Which tool each step called, whether it failed and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
+        "description": "Which tool each step called, whether it is the server's own, whether it failed and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
         "parameters": [
           {
             "schema": {
@@ -8720,6 +9666,167 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OperatorRunTrace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/tool-calls": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "The tools a workspace's agents called, newest first; or how many, by tool, agent or outcome",
+        "description": "Which tool, whether it is the server's own, how the call ended and how long it took, with how long its input and its result are, never either of them.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "agentId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "One run's calls: from when it began unless `from` says, however long ago."
+            },
+            "required": false,
+            "description": "One run's calls: from when it began unless `from` says, however long ago.",
+            "name": "runId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320,
+              "description": "Part of a tool's name; any case, matched literally."
+            },
+            "required": false,
+            "description": "Part of a tool's name; any case, matched literally.",
+            "name": "tool",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["ok", "error", "refused", "pending"]
+            },
+            "required": false,
+            "name": "outcome",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Called at or after. Default: 7 days before `to`."
+            },
+            "required": false,
+            "description": "Called at or after. Default: 7 days before `to`.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Called before. Default: now. At most 31 days after `from`."
+            },
+            "required": false,
+            "description": "Called before. Default: now. At most 31 days after `from`.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["tool", "agent", "outcome"],
+              "description": "Counts by tool, by agent or by outcome instead of calls. `limit` is how many groups; no `cursor`."
+            },
+            "required": false,
+            "description": "Counts by tool, by agent or by outcome instead of calls. `limit` is how many groups; no `cursor`.",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OperatorToolCallPage"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OperatorToolCallCounts"
+                    }
+                  ]
                 }
               }
             }
@@ -8941,6 +10048,157 @@
         }
       }
     },
+    "/orgs/{orgId}/unanswered": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "People's messages no run answered, newest first; or how many, by why",
+        "description": "A person's message that started no run, was taken by none already at work and answered no agent's question, with why. A message people wrote to each other is one too (`not_routed`, or `nobody_picked`). Never what a message says.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Only this conversation's."
+            },
+            "required": false,
+            "description": "Only this conversation's.",
+            "name": "channelId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "mission_suggestion",
+                "kept_on_hold",
+                "no_ai",
+                "platform_cap",
+                "blocked",
+                "referenced_only",
+                "nobody_picked",
+                "picked_not_started",
+                "job_pending",
+                "job_failed",
+                "not_routed"
+              ]
+            },
+            "required": false,
+            "name": "outcome",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Written at or after. Default: 1 day before `to`."
+            },
+            "required": false,
+            "description": "Written at or after. Default: 1 day before `to`.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Written before. Default: now. At most 7 days after `from`."
+            },
+            "required": false,
+            "description": "Written before. Default: now. At most 7 days after `from`.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`true`: counts by outcome instead of messages. `limit` and `cursor` don't apply."
+            },
+            "required": false,
+            "description": "`true`: counts by outcome instead of messages. `limit` and `cursor` don't apply.",
+            "name": "summary",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/OperatorUnansweredPage"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OperatorUnansweredCounts"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/jobs": {
       "get": {
         "tags": ["Operator"],
@@ -9094,6 +10352,79 @@
         }
       }
     },
+    "/email-jobs": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "The emails queued to one address, newest first: which template, its state and its attempts",
+        "description": "The address is compared inside the server with the ones each `email.send` job is to, and never returned; nor is a subject, a body, a link or a code. An email is sent once its job is `done` (`completedAt`). A finished job keeps its addresses for 30 days and is not found after that; the job of a code to type in is deleted once it is sent or given up.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320,
+              "description": "The whole address; any case. Never returned."
+            },
+            "required": true,
+            "description": "The whole address; any case. Never returned.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorEmailJobPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/usage": {
       "get": {
         "tags": ["Operator"],
@@ -9185,6 +10516,700 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OperatorUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/connections": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "What a workspace connected for its agents: apps and servers, mailboxes and databases, newest first",
+        "description": "Removed ones too. Never a credential. No field says where one is, past the hostname of a server connected by address (`connector`): not a server's path, a mailbox's address or a database's host. Only `label` may, for a connection nobody named.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorConnectionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/audit": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "A workspace's audit log, newest first: who did what to what, never an entry's details",
+        "description": "What people changed and what agents did, every entry as stored and without its details: those hold a tool's input and what a change was made of. A tool that writes an entry of its own beside its `tool.call` shows as two.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320,
+              "description": "How the action's name starts: `connector.`, `agent.access_changed`, `tool.call`…"
+            },
+            "required": false,
+            "description": "How the action's name starts: `connector.`, `agent.access_changed`, `tool.call`…",
+            "name": "action",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["person", "agent", "system"]
+            },
+            "required": false,
+            "name": "actorType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320,
+              "description": "A person's or an agent's id."
+            },
+            "required": false,
+            "description": "A person's or an agent's id.",
+            "name": "actorId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320
+            },
+            "required": false,
+            "name": "targetType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320
+            },
+            "required": false,
+            "name": "targetId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "runId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Recorded at or after. Default: 30 days before `to`."
+            },
+            "required": false,
+            "description": "Recorded at or after. Default: 30 days before `to`.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Recorded before. Default: now."
+            },
+            "required": false,
+            "description": "Recorded before. Default: now.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorAuditPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/asks": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "What a workspace's agents asked, newest first: approvals, questions, secrets, screens and consultations",
+        "description": "Who asked, whom, how it stands and when, never what was asked or answered: no approval's title or parameters, no question's or consultation's text, no secret's name or purpose.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["approval", "question", "secret", "handoff", "consultation"]
+            },
+            "required": false,
+            "name": "kind",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`true`: only the ones still waiting. `false`: only the ones that ended."
+            },
+            "required": false,
+            "description": "`true`: only the ones still waiting. `false`: only the ones that ended.",
+            "name": "open",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The agent that asked."
+            },
+            "required": false,
+            "description": "The agent that asked.",
+            "name": "agentId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The run that asked."
+            },
+            "required": false,
+            "description": "The run that asked.",
+            "name": "runId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Asked at or after."
+            },
+            "required": false,
+            "description": "Asked at or after.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Asked before."
+            },
+            "required": false,
+            "description": "Asked before.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorAskPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/routines": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "A workspace's routines, deleted ones too, newest first, each with its latest firings",
+        "description": "When each runs, whether it is on, where it delivers and how its latest firings ended. Never its instructions, nor what a firing reported. Never its name either: one nobody named is called by its instructions' first line.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "agentId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorRoutinePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/notifications": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "One person's notifications in a workspace, newest first, and the pushes that carried them",
+        "description": "What kind each is, whether it was read, done or snoozed, who caused it and the ids it points at. Never its words, nor a title. 404 when the workspace or the account doesn't exist.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320,
+              "description": "Whose: an account's id."
+            },
+            "required": true,
+            "description": "Whose: an account's id.",
+            "name": "userId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320,
+              "description": "Only this kind: `mention`, `approval`, `run_failed`…"
+            },
+            "required": false,
+            "description": "Only this kind: `mention`, `approval`, `run_failed`…",
+            "name": "kind",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Created at or after."
+            },
+            "required": false,
+            "description": "Created at or after.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Created before."
+            },
+            "required": false,
+            "description": "Created before.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorNotificationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/access": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "Whether a person reaches an agent, a channel, a task, a file or a computer, and the rule that decides",
+        "description": "As things are now, by the checks the apps themselves go through. 404 when the account doesn't exist, or the workspace has nothing of that kind by that id.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320,
+              "description": "An account's id."
+            },
+            "required": true,
+            "description": "An account's id.",
+            "name": "userId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["agent", "channel", "task", "file", "computer"],
+              "description": "`computer`: a connected computer."
+            },
+            "required": true,
+            "description": "`computer`: a connected computer.",
+            "name": "targetKind",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "targetId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorAccess"
                 }
               }
             }

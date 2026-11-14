@@ -12,6 +12,7 @@ export * from "./agent-setup";
 export * from "./agent-status";
 export * from "./agent-style";
 export * from "./agent-undo";
+export * from "./agent-work";
 export * from "./agents";
 export * from "./ai-accounts-analytics";
 export * from "./ai-intent";
@@ -21,6 +22,7 @@ export * from "./approval-covers";
 export * from "./approval-requests";
 export * from "./approval-rules";
 export * from "./approvals";
+export * from "./approvals-digest";
 export * from "./apps";
 export * from "./artifact-tools";
 export * from "./artifacts";
@@ -116,6 +118,7 @@ export * from "./dms";
 export * from "./docx";
 export * from "./early-access";
 export * from "./email";
+export * from "./email-change";
 export * from "./email-codes";
 export * from "./endpoints";
 export * from "./errors";
@@ -222,19 +225,23 @@ export {
   OPERATOR_USAGE_DAYS,
   OPERATOR_USAGE_GROUPS,
   OPERATOR_USAGE_MAX_DAYS,
+  operatorEmailJobs,
   operatorJobSummary,
   operatorJobs,
   operatorUsage,
 } from "./operator-jobs";
 export * from "./operator-lookups";
 export * from "./operator-machines";
+export * from "./operator-people";
 export * from "./operator-review";
 export * from "./operator-runs";
+export * from "./operator-workspace";
 export * from "./organizations";
 export * from "./out-of-office";
 export * from "./outbound";
 export * from "./outbox";
 export * from "./parked-asks";
+export * from "./partner-waitlist";
 export * from "./password-link";
 export * from "./pdf";
 export * from "./permissions";
@@ -254,7 +261,14 @@ export * from "./reply-policy";
 export * from "./reporting";
 export * from "./right-hand";
 export * from "./right-hand-approvals";
+export * from "./right-hand-follow";
+export * from "./right-hand-lane";
+export * from "./right-hand-lanes";
+export * from "./right-hand-prefs";
+export * from "./right-hand-proactive";
 export * from "./right-hand-prompt";
+export * from "./right-hand-seats";
+export * from "./right-hand-welcome";
 export * from "./roles";
 export * from "./router";
 export * from "./router-jev";
@@ -303,6 +317,7 @@ export * from "./team-map";
 export * from "./team-proposals";
 export * from "./team-status";
 export * from "./team-templates";
+export * from "./team-watch";
 export * from "./team-week";
 export * from "./telemetry";
 export * from "./thread-assess";

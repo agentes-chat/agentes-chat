@@ -653,6 +653,7 @@
       "format.inMinutes",
       "home.ask.agent",
       "issues.agentRole",
+      "issues.now.agents",
       "issues.conversation.button",
       "issues.conversation.messages",
       "issues.conversation.toggle",
@@ -1378,7 +1379,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "followUps.inTime"
     ],
     "it": [
       "shell.email.label",
@@ -1733,7 +1735,10 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "agentWork.later",
+      "agentWork.laterShort",
+      "threads.status.later"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -1939,6 +1944,7 @@
       "format.usd",
       "home.ask.agent",
       "issues.agentRole",
+      "issues.now.agents",
       "issues.columns.createdDetail",
       "issues.display.field.label",
       "issues.display.field.pullRequest",
@@ -3368,6 +3374,7 @@
       "format.inMinutes",
       "home.ask.agent",
       "issues.agentRole",
+      "issues.now.agents",
       "issues.display.field.pullRequest",
       "issues.pr",
       "issues.statusLabel",
@@ -3551,7 +3558,10 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "agentWork.later",
+      "agentWork.laterShort",
+      "threads.status.later"
     ],
     "ru": [
       "channel.tooLong.fileName",

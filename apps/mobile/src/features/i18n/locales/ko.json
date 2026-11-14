@@ -293,7 +293,7 @@
   },
   "along": {
     "agent": "에이전트",
-    "waits": "{{name}}이(가) 승인을 기다려요",
+    "waits": "{{name}} · 내 확인 대기",
     "on": "{{name}} · {{what}}",
     "working": "{{name}}이(가) 작업 중이에요",
     "more": "+{{count}}"
@@ -769,7 +769,7 @@
     "teamSectionPersonal": "내 에이전트",
     "managerQuiet": "진행 중인 작업이 없어요",
     "state": {
-      "waitsYou": "승인을 기다려요",
+      "waitsYou": "내 확인 대기",
       "noAi": "연결된 AI 없음",
       "connect": "연결",
       "archived": "보관됨",
@@ -1061,6 +1061,9 @@
     "addWorkspaceTeamShort": "팀 서버에 들어가기",
     "addWorkspaceTeamSubShort": "주소 또는 컴퓨터의 QR 코드",
     "addWorkspaceFoot": "어떤 워크스페이스에서도 나가지 않아요.",
+    "addAccount": "다른 계정으로 로그인",
+    "addAccountSub": "{{host}}에서, 이 계정을 유지한 채",
+    "accountNoWorkspace": "아직 워크스페이스가 없습니다",
     "teamServerLeadShort": "팀이 브라우저에서 여는 주소예요.",
     "teamServerQuestion": "팀 주소가 어떻게 되세요?",
     "account": {
@@ -1078,6 +1081,8 @@
       "name": "이름",
       "namePlaceholder": "내 이름",
       "email": "이메일",
+      "emailWebLead": "웹사이트에서 다시 로그인하고, 코드 없이 거기서 바꾸세요.",
+      "emailWeb": "웹사이트에서 다시 로그인",
       "inWorkspace": "이 워크스페이스에서 · {{org}}",
       "handle": "내 @",
       "timezone": "시간대",
@@ -1353,7 +1358,7 @@
       "plain": "작업을 마쳤어요"
     },
     "rowWait": {
-      "approval": "승인을 기다려요",
+      "approval": "내 확인 대기",
       "question": "답변을 기다려요",
       "mission": "검토를 기다려요"
     },
@@ -1391,12 +1396,12 @@
   },
   "intentAgents": {
     "waitingSection": "내 확인 대기",
-    "waitingLine": "{{title}} · 승인 필요",
+    "waitingLine": "{{title}} · 내 확인 대기",
     "waitingMore_other": "{{title}} · 외 {{count}}건이 나를 기다려요",
-    "waitingLabel": "{{name}}, 승인 필요",
+    "waitingLabel": "{{name}}, 내 확인 대기",
     "owner": "소유자: {{name}}",
     "ownerYou": "소유자: 나",
-    "nowWaiting": "승인 필요: {{title}}",
+    "nowWaiting": "내 확인 대기: {{title}}",
     "did": {
       "title": "나를 위해 한 일",
       "title_female": "나를 위해 한 일",
@@ -1414,7 +1419,7 @@
         "image": "이미지",
         "file": "파일"
       },
-      "waitingOnYou": "승인 필요",
+      "waitingOnYou": "내 확인 대기",
       "youApproved": "내가 승인함",
       "youRefused": "내가 거절함",
       "action": {

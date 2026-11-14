@@ -357,6 +357,48 @@ export const words: EmailWords = {
       ],
     },
   },
+  emailChange: {
+    code: {
+      subject: (code) => `${code} to twój kod do zmiany adresu e-mail`,
+      preheader: "Wpisz go w agentes.chat, żeby potwierdzić. Działa przez 10 minut.",
+      headline: "Twój kod",
+      body: (email, newEmail) => [
+        "Wpisz ten kod, żeby zmienić adres e-mail konta ",
+        { b: email },
+        " na ",
+        { b: newEmail },
+        ".",
+      ],
+      support: (address) => [
+        "Działa przez 10 minut i bez niego twój adres e-mail się nie zmieni. Jeśli to nie ty, nikomu go nie podawaj i napisz na ",
+        { mail: address },
+        ".",
+      ],
+      noSupport:
+        "Działa przez 10 minut i bez niego twój adres e-mail się nie zmieni. Jeśli to nie ty, nikomu go nie podawaj i daj znać osobom, które prowadzą ten serwer.",
+      why: "Otrzymujesz tę wiadomość, ponieważ z twojego konta poproszono o zmianę adresu e-mail w agentes.chat.",
+    },
+    link: {
+      subject: "Potwierdź swój nowy e-mail w agentes.chat",
+      preheader: "Jedno kliknięcie i od teraz logujesz się tym adresem. Link działa przez godzinę.",
+      headline: "Potwierdź swój nowy e-mail",
+      body: "Został jeden krok: potwierdź, że ten adres należy do ciebie. Potem twoje konto będzie się logować tym adresem.",
+      button: "Potwierdź nowy e-mail",
+      small: "Link działa przez godzinę. Jeśli to nie twoja prośba, możesz zignorować tę wiadomość.",
+      why: "Otrzymujesz tę wiadomość, ponieważ ktoś chce użyć tego adresu w koncie agentes.chat.",
+    },
+    changed: {
+      subject: "Adres e-mail twojego konta agentes.chat się zmienił",
+      preheader: "Jeśli to nie ty, przez 7 dni możesz przywrócić ten adres.",
+      headline: "Twój adres e-mail się zmienił",
+      body: (email, newEmail) => ["Konto ", { b: email }, " loguje się teraz adresem ", { b: newEmail }, "."],
+      notYou:
+        "To nie ty? Naciśnij przycisk w ciągu 7 dni. Ten adres wróci, wszystkie sesje zostaną wylogowane, aplikacje AI odłączone, a sposoby logowania dodane od tego czasu przestaną działać. Hasło też zostanie usunięte, a następne ustawisz przez „Nie pamiętam hasła”.",
+      button: "To nie ja",
+      small: "Jeśli to ty, nie musisz nic robić.",
+      why: "Otrzymujesz tę wiadomość, ponieważ ten adres był adresem e-mail konta agentes.chat.",
+    },
+  },
   deleting: {
     subject: (day) => `Przestrzeń robocza, w której jesteś, zostanie usunięta ${day}`,
     preheader: "Jest już tylko do odczytu. Do tego czasu właściciel może ją jeszcze przywrócić.",

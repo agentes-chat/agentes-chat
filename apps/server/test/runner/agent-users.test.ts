@@ -1113,8 +1113,8 @@ test("the runner's start ends what its sign-ins' users left running; scopes stop
   expect(calls).toEqual(["systemctl stop --no-block agentes-account-21001-*.scope"]);
 });
 
-test("an agent that left: its rooms and transcripts go from every sign-in, a shared path's stay", () => {
-  const { root, accounts } = accountSetup();
+test("an agent that left: its own processes are killed, its rooms and transcripts go from every sign-in, a shared path's stay", () => {
+  const { root, os, accounts } = accountSetup();
   const stores = [ADA_LOGIN, LIA_LOGIN].map((id) => {
     accounts.ensure(id);
     return path.join(root, id);
@@ -1132,7 +1132,10 @@ test("an agent that left: its rooms and transcripts go from every sign-in, a sha
       mkdirSync(path.join(store, dir), { recursive: true });
     }
   }
+  os.calls.length = 0;
   accounts.sweepAgent(AGENT);
+  // Whatever still ran as its user (a shell a person left, a tunnel) dies with it, before anything else.
+  expect(os.calls[0]).toBe(`pkill -KILL -U ${AGENT.uid}`);
   for (const store of stores) {
     expect(existsSync(path.join(store, "cwd/21000"))).toBe(false);
     expect(existsSync(path.join(store, "run/21000"))).toBe(false);
