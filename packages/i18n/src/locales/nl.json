@@ -11214,13 +11214,6 @@
       "nowYours": "Stopte om je notitie te lezen",
       "nowOf": "Stopte om de notitie van {{name}} te lezen"
     },
-    "choice": {
-      "label": "Hoe je stuurt terwijl {{name}} werkt",
-      "join": "Toevoegen aan waar {{name}} mee bezig is",
-      "interrupt": "Stoppen en sturen",
-      "joins": "voegt toe",
-      "interrupts": "stopt en stuurt"
-    },
     "strip": {
       "see": "Bekijken",
       "toStop": "om te stoppen"

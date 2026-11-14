@@ -11988,13 +11988,6 @@
       "nowYours": "Przerwa na przeczytanie twojej notatki",
       "nowOf": "Przerwa na przeczytanie notatki od {{name}}"
     },
-    "choice": {
-      "label": "Jak wysłać, gdy {{name}} pracuje",
-      "join": "Dołącz do tego, co robi {{name}}",
-      "interrupt": "Zatrzymaj i wyślij",
-      "joins": "dołącza",
-      "interrupts": "zatrzymuje i wysyła"
-    },
     "strip": {
       "see": "Zobacz",
       "toStop": "aby zatrzymać"

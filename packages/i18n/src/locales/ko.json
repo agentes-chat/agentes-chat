@@ -10693,15 +10693,6 @@
       "nowYours": "멈추고 내 메모를 읽었어요",
       "nowOf": "멈추고 {{name}}의 메모를 읽었어요"
     },
-    "choice": {
-      "label": "{{name}}이(가) 작업 중일 때 보내는 방식",
-      "label_female": "{{name}}이(가) 작업 중일 때 보내는 방식",
-      "join": "{{name}}의 작업에 추가",
-      "join_female": "{{name}}의 작업에 추가",
-      "interrupt": "중지하고 보내기",
-      "joins": "추가",
-      "interrupts": "중지 후 전송"
-    },
     "strip": {
       "see": "보기",
       "toStop": "중지"

@@ -11424,13 +11424,6 @@ export const en = {
       nowYours: "Stopped to read your note",
       nowOf: "Stopped to read {{name}}'s note",
     },
-    choice: {
-      label: "How to send while {{name}} works",
-      join: "Add to what {{name}} is doing",
-      interrupt: "Stop and send",
-      joins: "adds",
-      interrupts: "stops and sends",
-    },
     strip: {
       see: "View",
       toStop: "to stop",
