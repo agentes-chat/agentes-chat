@@ -852,7 +852,7 @@ export function PlanPanel(props: PlanPanelProps) {
   );
 }
 
-/** "For [All agents ▾]": every agent of "All agents" first, with their faces and names, then each agent. */
+/** "For [All agents ▾]": "All agents" first, with their faces, then each agent. Every option one line tall. */
 function ForSelect({ agents, all, target, onTarget }: Pick<PlanPanelProps, "agents" | "all" | "target" | "onTarget">) {
   const { t } = useTranslation();
   const face = (a: PlanAgent, size: "xs" | "sm" = "xs") => (
@@ -873,11 +873,6 @@ function ForSelect({ agents, all, target, onTarget }: Pick<PlanPanelProps, "agen
                 {
                   value: ALL_AGENTS,
                   label: t("connectAi.all"),
-                  description: namesText(
-                    t,
-                    all.map((a) => a.name),
-                    NAMES_SHOWN,
-                  ),
                   leading: <AvatarStack>{all.slice(0, 3).map((a) => face(a))}</AvatarStack>,
                 },
               ]
