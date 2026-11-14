@@ -422,17 +422,11 @@ describe("Perfil: o mês, com os limites do plano (ADR 0063 §5)", () => {
     expect(screen).toContain("label={thinksPlan ?? thinks.text}");
     expect(screen).toContain("{...(thinksUnder ? { sub: thinksUnder, subLines: 2 } : {})}");
     expect(screen).toContain("!isAuto(effortView.effectiveModel)");
-    // Its owner and admins change it in place, in the DM header's sheet; the header shows its maker's logo to all.
-    expect(screen).toContain("sheet.open(<ModelPickerSheet agent={agent} />)");
-    const sheet = await Bun.file(
-      new URL("../../src/features/ai/ModelPickerSheet.tsx", import.meta.url).pathname,
-    ).text();
-    const button = sheet.slice(
-      sheet.indexOf("export function DmModelButton("),
-      sheet.indexOf("export function ModelPickerSheet("),
-    );
-    expect(button).toContain('<ProviderLogo id={thinks.mark} size="sm" />');
-    expect(button).toContain('t("brain.picker.readOnly")');
+    // Its owner and admins change it on its AI page, pushed from this row; the conversation's bar has no button for it.
+    expect(screen).toContain("? { chevron: true, onPress: () => openAgentAi(agent.id) }");
+    expect(screen).not.toContain("ModelPickerSheet");
+    const chat = await Bun.file(new URL("../../src/features/chat/ChatScreen.tsx", import.meta.url).pathname).text();
+    expect(chat).not.toContain("DmModelButton");
     const t = await translator("pt-BR");
     expect(t("agentPage.work.cell.effort", { level: "médio" })).toBe("esforço médio");
   });
