@@ -1588,6 +1588,9 @@ const DOING: Record<string, ControlBrowserDoing> = {
   tab: "tabs",
 };
 
+/** How a tidy closes tabs (`tidyTabs`). */
+type TabsClosing = "all" | "idle" | "none";
+
 /** A tab with nothing in it: the agent's start page, Chrome's new tab, a blank page. */
 const isEmptyTab = (url: string) => url === "about:blank" || isStartPage(url);
 
@@ -1942,7 +1945,8 @@ export class BrowserManager {
           opening,
         });
         const told = (acts ? (this.takeCrash(session, true) ?? this.takeBlocked(session)) : null) ?? done;
-        return { ...told, ...(await this.tabsNow(session)) };
+        // A tab command's numbers are the ones the agent was given: nothing closes under them.
+        return { ...told, ...(await this.tabsNow(session, prepared.command === "tab" ? "none" : "all")) };
       } finally {
         opening.close();
       }
@@ -2923,7 +2927,7 @@ export class BrowserManager {
         // blank tabs close.
         else if (s.chrome && (s.tidiedAt ?? 0) <= s.lastUsed && this.now() - s.lastUsed >= TIDY_IDLE_MS) {
           s.tidiedAt = this.now();
-          void this.enqueue(s, () => this.tidyTabs(s, true)).catch(() => undefined);
+          void this.enqueue(s, () => this.tidyTabs(s, "idle")).catch(() => undefined);
         }
         // `agent-browser` stops on its own idle timeout: a command keeps it up for whoever is still on the page.
         // Not a use: once nobody holds it, its idle time counts from the last real one.
@@ -3206,8 +3210,8 @@ export class BrowserManager {
   }
 
   /** The agent's tabs for its answer, tidied first (`tidyTabs`), with what was closed since it last heard. */
-  private async tabsNow(session: Session): Promise<{ tabs?: BrowserTabs }> {
-    const tabs = await this.tidyTabs(session).catch(() => undefined);
+  private async tabsNow(session: Session, close: TabsClosing = "all"): Promise<{ tabs?: BrowserTabs }> {
+    const tabs = await this.tidyTabs(session, close).catch(() => undefined);
     if (!tabs) return {};
     const closed = session.tabsClosed ?? [];
     session.tabsClosed = undefined;
@@ -3217,12 +3221,12 @@ export class BrowserManager {
   /**
    * The agent's tabs, most recently used first, after closing its empty tabs (start pages, blank ones) and, past
    * `BROWSER_TABS_KEPT`, its least recently used ones; `idle` (a kept browser nobody used for a while): its empty tabs
-   * and the older copies of a page open twice, never more. Never closed: the tab its commands act on (every tab on that
+   * and the older copies of a page open twice, never more; `none`: only listed. Never closed: the tab its commands act on (every tab on that
    * page, as which of them is its own isn't known), popups and the tabs a person opened (`keptTabs`), the tab shown to
    * someone watching, and nothing at all while a person's turn is open (a sign-in may be under way). What closed goes
    * in `tabsClosed`. Undefined when Chrome can't be asked, or without its DevTools connection (popups unknown).
    */
-  private async tidyTabs(session: Session, idle = false): Promise<Omit<BrowserTabs, "closed"> | undefined> {
+  private async tidyTabs(session: Session, close: TabsClosing): Promise<Omit<BrowserTabs, "closed"> | undefined> {
     const chrome = session.chrome;
     if (!chrome || !this.counters.has(chrome)) return undefined;
     const call = (p: string) =>
@@ -3240,6 +3244,7 @@ export class BrowserManager {
     const current = pages.length > 1 ? await this.pageUrl(session, undefined, true) : (pages[0]?.url ?? null);
     const shown = this.watched(session) ? pages[0]?.id : undefined;
     const closable = (p: (typeof pages)[number]) =>
+      close !== "none" &&
       current !== null &&
       !this.personsTurn(session.agentId) &&
       p.url !== current &&
@@ -3247,13 +3252,13 @@ export class BrowserManager {
       p.url !== session.stream?.url &&
       !session.keptTabs?.has(p.id);
     const closing = new Set(pages.filter((p) => isEmptyTab(p.url) && closable(p)).map((p) => p.id));
-    if (idle) {
+    if (close === "idle") {
       const seen = new Set<string>();
       for (const p of pages) {
         if (seen.has(p.url) && closable(p)) closing.add(p.id);
         seen.add(p.url);
       }
-    } else {
+    } else if (close === "all") {
       for (const p of [...pages].reverse()) {
         if (pages.length - closing.size <= BROWSER_TABS_KEPT) break;
         if (closable(p)) closing.add(p.id);

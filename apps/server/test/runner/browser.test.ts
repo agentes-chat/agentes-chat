@@ -1044,7 +1044,7 @@ function fakeDevtools(down: number[], answer: (reply: () => void) => void = (rep
   const crash = (n: number) =>
     sockets[n]?.send(JSON.stringify({ method: "Inspector.targetCrashed", params: {}, sessionId: `page-${n}` }));
   /** Connection `n` hears of one more tab (`openerId`: another page opened it). */
-  const attach = (n: number, targetInfo: { targetId: string; openerId?: string }) =>
+  const attach = (n: number, targetInfo: { targetId: string; openerId?: string; canAccessOpener?: boolean }) =>
     sockets[n]?.send(
       JSON.stringify({
         method: "Target.attachedToTarget",
@@ -3443,19 +3443,25 @@ test.if(posix)(
       const first = await t.act("open", ["https://shop.example.com/"]);
       expect(first.tabs).toEqual({ count: 1, open: [{ title: "Shop", host: "shop.example.com", current: true }] });
       // A sign-in window another page opened: never closed, oldest as it is.
-      devtools.attach(0, { targetId: "POPUP", openerId: "CUR" });
+      devtools.attach(0, { targetId: "POPUP", openerId: "CUR", canAccessOpener: true });
+      // A link's new tab names its opener but can't reach it: not a popup.
+      devtools.attach(0, { targetId: "LINK", openerId: "CUR", canAccessOpener: false });
       await Bun.sleep(50);
       json.targets.push(
         { id: "BLANK", url: "about:blank" },
         { id: "NEW", url: "chrome://newtab/", title: "New Tab" },
         ...old,
+        { id: "LINK", url: "https://link.example/", title: "Link" },
         { id: "POPUP", url: "https://accounts.example.com/signin", title: "Sign in" },
       );
+      // A tab command acts on the numbers the agent was given: nothing closes, its tabs are only listed.
+      expect((await t.act("tab", [])).tabs).toMatchObject({ count: 13 });
+      expect(json.closed).toEqual([]);
       const answer = await t.act("snapshot");
-      expect(json.closed).toEqual(["BLANK", "NEW", "T6", "T7"]);
+      expect(json.closed).toEqual(["BLANK", "NEW", "T6", "T7", "LINK"]);
       expect(answer.tabs).toMatchObject({
         count: 8,
-        closed: ["blank", "blank", "site6.example", "site7.example"],
+        closed: ["blank", "blank", "site6.example", "site7.example", "link.example"],
       });
       expect(answer.tabs?.open[0]).toEqual({ title: "Shop", host: "shop.example.com", current: true });
       expect(answer.tabs?.open.at(-1)).toEqual({ title: "Sign in", host: "accounts.example.com" });

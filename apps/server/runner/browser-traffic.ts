@@ -386,7 +386,11 @@ export function countChromeTraffic(
         const target = isObject(p.targetInfo) ? p.targetInfo : {};
         if (!sessionId && target.type === "page" && typeof target.targetId === "string") {
           pages.set(p.sessionId, target.targetId);
-          onPage?.(target.targetId, typeof target.openerId === "string" && target.openerId !== "");
+          // A link's new tab (noopener, as `target=_blank` is by default) names its opener too, but can't reach it.
+          onPage?.(
+            target.targetId,
+            typeof target.openerId === "string" && target.openerId !== "" && target.canAccessOpener !== false,
+          );
           for (const c of emulation ?? []) send(c.method, c.params, p.sessionId);
         }
         if (target.type === "worker") workers.add(p.sessionId);

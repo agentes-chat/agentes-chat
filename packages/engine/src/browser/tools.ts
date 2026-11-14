@@ -572,7 +572,7 @@ function tabsLine(t: BrowserTabs | undefined): string {
   for (const host of t.closed ?? []) counts.set(host, (counts.get(host) ?? 0) + 1);
   const closed = [...counts].map(([host, n]) => (n > 1 ? `${host} ×${n}` : host)).join(", ");
   return `\nTabs open: ${t.count}${list.length > 0 ? ` (${list.join("; ")})` : ""}.${
-    closed ? ` Closed to keep your tabs tidy: ${closed}.` : ""
+    closed ? ` Closed to keep your tabs tidy: ${closed}, so the tab numbers from list changed.` : ""
   }`;
 }
 

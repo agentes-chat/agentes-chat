@@ -1089,7 +1089,7 @@ test("the agent hears its open tabs and what the runner closed; one tab, or an o
       : { ...ok(), tabs };
   const opened = await b.call("browser_open", { url: "https://shop.example/" });
   expect(opened.content).toContain(
-    '\nTabs open: 3 (this one: "Shop" (shop.example); others: "Sign in [marker removed]" (accounts.example.com), blank). Closed to keep your tabs tidy: blank ×2, site.example.',
+    '\nTabs open: 3 (this one: "Shop" (shop.example); others: "Sign in [marker removed]" (accounts.example.com), blank). Closed to keep your tabs tidy: blank ×2, site.example, so the tab numbers from list changed.',
   );
   const listed = await b.call("browser_tabs", { action: "list" });
   expect(listed.content).toContain("Tabs open: 3 (this one:");
