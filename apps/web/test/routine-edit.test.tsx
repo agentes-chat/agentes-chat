@@ -102,7 +102,9 @@ describe("Rotinas: editar, duplicar, apagar", () => {
     const page = screen().getByRole("dialog", { name: "Resumo da semana" });
     expect(within(page).getByRole("list", { name: "Faz sozinha" }).textContent).toBe("Enviar mensagem (Slack)");
     expect(shownText(page)).toContain("Cada execução faz isso sem pedir.");
-    expect(hintOf("Faz sozinha", page).text).toContain("Apagar, enviar, pagar ou convidar pede aprovação antes");
+    expect(hintOf("Faz sozinha", page).text).toContain(
+      "Outros envios, exclusões, pagamentos e convites pedem aprovação antes",
+    );
     await click(within(page).getByRole("button", { name: "Fechar detalhes" }));
     await settle(3);
     await click(screen().getByRole("button", { name: "Nova rotina" }));

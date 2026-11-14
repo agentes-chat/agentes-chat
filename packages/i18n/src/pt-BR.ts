@@ -8591,8 +8591,8 @@ export const ptBR = {
       ownActions: "Faz sozinha",
     },
     ownActions: {
-      hint: "Cada execução faz isso nos seus apps conectados sem pedir. As outras mudanças neles também. Apagar, enviar, pagar ou convidar pede aprovação antes. Se o agente sempre pergunta, tudo pede. Se nunca pergunta, nada pede.",
-      none: "Nos apps conectados, ela faz as mudanças comuns sem pedir, como numa conversa. Apagar, enviar, pagar, convidar e o que um admin marcou para perguntar pedem aprovação antes. Para ela enviar sozinha, diga ao agente no chat quais ações pode fazer. Se o agente sempre pergunta, tudo pede.",
+      hint: "Cada execução faz isso nos seus apps conectados sem pedir, e as outras mudanças comuns também. Outros envios, exclusões, pagamentos e convites pedem aprovação antes. Se o agente sempre pergunta, tudo pede aprovação. Se nunca pergunta, nada pede.",
+      none: "Nos apps conectados, ela faz as mudanças comuns sem pedir, como numa conversa. Apagar, enviar, pagar, convidar e o que um admin marcou para perguntar pedem aprovação antes. Para ela enviar sozinha, diga ao agente no chat quais ações pode fazer. Se o agente sempre pergunta, tudo pede aprovação.",
       /** The one line a screen shows, with `hint` (or `none`) behind its ⓘ. */
       hintShort: "Cada execução faz isso sem pedir.",
       noneShort: "Só pede aprovação antes de apagar, enviar ou pagar.",

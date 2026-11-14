@@ -8598,7 +8598,7 @@ export const en = {
     },
     /** The connected-app actions a routine's runs do without asking: the job its creator set it up for. */
     ownActions: {
-      hint: "Every run does these in your connected apps without asking. Other changes there run without asking too. Deleting, sending, paying or inviting asks a person first. If the agent always asks, everything asks. If it never asks, nothing does.",
+      hint: "Every run does these in your connected apps without asking, and other ordinary changes too. Other sends, deletes, payments and invites ask a person first. If the agent always asks, everything asks. If it never asks, nothing does.",
       none: "In connected apps it makes ordinary changes without asking, as in a chat. Deleting, sending, paying, inviting and what an admin set to ask need a person's approval first. To let it send on its own, tell the agent in the chat which actions it may do. If the agent always asks, everything asks.",
       /** The one line a screen shows, with `hint` (or `none`) behind its ⓘ. */
       hintShort: "Every run does these without asking.",
