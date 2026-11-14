@@ -4,8 +4,7 @@
  * visible portraits are drawn; with reduced motion each one is drawn once,
  * still (and again when its kind or state changes).
  */
-
-import { skiesHeld, watchSkiesHeld } from "../sky/engine";
+import { prefersReducedMotion, skiesHeld, watchSkiesHeld } from "../sky/engine";
 import { COMPUTER_ART, type ComputerState, drawComputer, type PortraitKind } from "./portrait.js";
 
 export interface LiveComputer {
@@ -20,8 +19,7 @@ let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let observer: IntersectionObserver | null = null;
 
 /** Still: the person asked for reduced motion, or the skies are held (`holdSkies`: the Linux app paints in software). */
-const reduced = () =>
-  skiesHeld() || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches === true);
+const reduced = () => skiesHeld() || prefersReducedMotion();
 const now = () => (typeof performance === "object" ? performance.now() : Date.now()) / 1000;
 const isDark = (el: Element) => el.closest("[data-theme]")?.getAttribute("data-theme") === "dark";
 
@@ -88,6 +86,10 @@ export function addLiveComputer(c: LiveComputer): () => void {
   schedule();
   return () => {
     computers.delete(c);
+    if (!computers.size && timer) {
+      clearTimeout(timer);
+      timer = 0;
+    }
     observer?.unobserve(c.canvas);
     visible.delete(c.canvas);
   };

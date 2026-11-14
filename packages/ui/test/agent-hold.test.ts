@@ -53,8 +53,10 @@ test("the living agents and stickers hold still with the skies (the Linux app), 
 test("the engine and computer portraits hold still with the skies, and move again when freed", () => {
   const page = canvasPage({ width: 40, height: 40 });
   const timers = spyOn(globalThis, "setTimeout");
+  const cleared = spyOn(globalThis, "clearTimeout");
   close = () => {
     timers.mockRestore();
+    cleared.mockRestore();
     page.close();
   };
   holdSkies();
@@ -73,4 +75,6 @@ test("the engine and computer portraits hold still with the skies, and move agai
   expect(timers.mock.calls.length).toBe(before + 2);
   stopBrain();
   stopComputer();
+  // The last portrait gone: its pending frame is cancelled, not left to fire later.
+  expect(cleared.mock.calls.map(([id]) => id)).toEqual(timers.mock.results.slice(before).map((r) => r.value));
 });

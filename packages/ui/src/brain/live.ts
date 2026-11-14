@@ -4,8 +4,7 @@
  * portraits are drawn; with reduced motion each one is drawn once, still (and
  * again when what it shows changes).
  */
-
-import { skiesHeld, watchSkiesHeld } from "../sky/engine";
+import { prefersReducedMotion, skiesHeld, watchSkiesHeld } from "../sky/engine";
 import { type BrainAgentLook, type BrainPortraitKind, type BrainPortraitState, drawBrain } from "./portrait.js";
 
 export interface LiveBrain {
@@ -23,8 +22,7 @@ let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let observer: IntersectionObserver | null = null;
 
 /** Still: the person asked for reduced motion, or the skies are held (`holdSkies`: the Linux app paints in software). */
-const reduced = () =>
-  skiesHeld() || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches === true);
+const reduced = () => skiesHeld() || prefersReducedMotion();
 const now = () => (typeof performance === "object" ? performance.now() : Date.now()) / 1000;
 const isDark = (el: Element) => el.closest("[data-theme]")?.getAttribute("data-theme") === "dark";
 
@@ -89,6 +87,10 @@ export function addLiveBrain(b: LiveBrain): () => void {
   schedule();
   return () => {
     brains.delete(b);
+    if (!brains.size && timer) {
+      clearTimeout(timer);
+      timer = 0;
+    }
     observer?.unobserve(b.canvas);
     visible.delete(b.canvas);
   };
