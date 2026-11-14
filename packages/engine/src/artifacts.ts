@@ -224,6 +224,18 @@ export interface ArtifactDeps {
   speech?: () => SpeechEngine[];
 }
 
+/** The largest file one upload may carry, 50 MiB unless the server sets another (`MAX_FILE_MB`). */
+let fileLimitBytes = 50 * 1024 * 1024;
+
+/**
+ * Sets the largest file this server keeps, from `MAX_FILE_MB`, once at boot: a self-hosted install whose agents
+ * deliver long videos raises it. Every path reads it through `ARTIFACT_LIMITS.fileBytes` (a person's upload, an
+ * agent's `upload_file`, the tool's own description), and the refusal names the number in force.
+ */
+export const setFileLimitMb = (mb: number) => {
+  fileLimitBytes = Math.max(1, Math.floor(mb)) * 1024 * 1024;
+};
+
 /** Limits per kind (bytes are UTF-8 of the stored form). */
 export const ARTIFACT_LIMITS = {
   titleChars: 200,
@@ -246,8 +258,10 @@ export const ARTIFACT_LIMITS = {
   tableBytes: 5_000_000,
   diffFiles: 500,
   diffBytes: 2_000_000,
-  /** One `file` version (ADR 0025). */
-  fileBytes: 50 * 1024 * 1024,
+  /** One `file` version (ADR 0025): `MAX_FILE_MB`, 50 MiB unless the server sets another. */
+  get fileBytes() {
+    return fileLimitBytes;
+  },
   fileNameChars: 255,
   /** `file` versions whose text `read_artifact` and the app get (UTF-8 text files only). */
   fileTextChars: 40_000,

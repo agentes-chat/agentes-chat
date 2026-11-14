@@ -139,8 +139,13 @@ const Content = z
   ])
   .openapi("ArtifactContent");
 
-/** A file upload (multipart): at most 50 MB. */
-const fileField = z.any().openapi({ type: "string", format: "binary", description: "The file (≤ 50 MB)." });
+/** A file upload (multipart): at most `MAX_FILE_MB`, 50 MB by default. */
+const fileField = () =>
+  z.any().openapi({
+    type: "string",
+    format: "binary",
+    description: `The file (≤ ${ARTIFACT_LIMITS.fileBytes / 1024 / 1024} MB).`,
+  });
 const multipart = <T extends z.ZodType>(schema: T) => ({
   required: true,
   content: { "multipart/form-data": { schema } },
@@ -426,12 +431,12 @@ export function artifactRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/artifacts/files",
       tags,
       security,
-      summary: "Upload a file as is (any type, ≤ 50 MB) to the Drive, or to a channel you belong to",
+      summary: `Upload a file as is (any type, ≤ ${ARTIFACT_LIMITS.fileBytes / 1024 / 1024} MB) to the Drive, or to a channel you belong to`,
       request: {
         params: OrgParams,
         body: multipart(
           z.object({
-            file: fileField,
+            file: fileField(),
             title: z.string().max(200).optional().openapi({ description: "Default: the file name." }),
             channelId: z.uuid().optional(),
             threadId: z.uuid().optional(),
@@ -461,10 +466,10 @@ export function artifactRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/artifacts/{artifactId}/files",
       tags,
       security,
-      summary: "Upload a new version of a file (≤ 50 MB)",
+      summary: `Upload a new version of a file (≤ ${ARTIFACT_LIMITS.fileBytes / 1024 / 1024} MB)`,
       request: {
         params: ArtifactParams,
-        body: multipart(z.object({ file: fileField, note: z.string().max(500).optional() })),
+        body: multipart(z.object({ file: fileField(), note: z.string().max(500).optional() })),
       },
       responses: { 200: json(ArtifactDetail), 413: errorResponse("The file is too large"), ...errors },
     }),

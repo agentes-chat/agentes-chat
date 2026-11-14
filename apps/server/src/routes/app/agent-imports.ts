@@ -346,7 +346,7 @@ export function agentImportRoutes(deps: AppDeps) {
       security,
       summary: "Copy one of an imported agent's files into its folder in the Drive (admins)",
       description:
-        "The file lands as `<agent's name>/<path>`, keeping the source's folders, made by the agent and seen by the whole workspace. A name the folder already has is never overwritten (`exists`). Files with keys or sign-ins are refused (`import.secret_file`). The Drive's limits apply: 50 MB a file, the workspace's storage and daily uploads (409).",
+        "The file lands as `<agent's name>/<path>`, keeping the source's folders, made by the agent and seen by the whole workspace. A name the folder already has is never overwritten (`exists`). Files with keys or sign-ins are refused (`import.secret_file`). The Drive's limits apply: the largest file this server takes (`MAX_FILE_MB`), the workspace's storage and daily uploads (409).",
       request: {
         params: OrgParams,
         body: {
@@ -354,7 +354,11 @@ export function agentImportRoutes(deps: AppDeps) {
           content: {
             "multipart/form-data": {
               schema: z.object({
-                file: z.any().openapi({ type: "string", format: "binary", description: "The file (≤ 50 MB)." }),
+                file: z.any().openapi({
+                  type: "string",
+                  format: "binary",
+                  description: `The file (≤ ${ARTIFACT_LIMITS.fileBytes / 1024 / 1024} MB).`,
+                }),
                 agentId: z.uuid(),
                 path: z.string().min(1).max(1000).openapi({ description: "Where it goes in the agent's folder." }),
                 note: z.string().max(500).optional().openapi({ description: "For its first version." }),

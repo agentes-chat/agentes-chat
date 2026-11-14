@@ -960,6 +960,13 @@ export const envVars = {
     section: "Push",
     secret: true,
   },
+  MAX_FILE_MB: {
+    schema: z.coerce.number().int().min(1).max(10_240).default(50),
+    description:
+      "Largest single file this server keeps, in MB: a person's upload to the Drive and an agent's `upload_file` (a long video, a zip, an install), and the number the \"file is too large\" refusal names. Raise it when agents deliver videos to a self-hosted install. Each upload is held in the server's memory while it is stored, so leave room for the largest file you allow.",
+    section: "Storage",
+    example: "50",
+  },
   FILES_DIR: {
     // `/data/files`, or on Windows (the desktop app's server) `C:\…` or `\\server\share\…`.
     schema: z

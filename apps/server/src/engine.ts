@@ -122,6 +122,7 @@ import {
   type ScheduleReader,
   type SkillDeps,
   type StorageDeps,
+  setFileLimitMb,
   setWorkOrgCap,
   shareSavedFile,
   smallModelFor,
@@ -396,6 +397,8 @@ export function buildEngine(o: EngineOptions) {
   });
   // The workspace's cap of live background works (ADR 0121 §7).
   setWorkOrgCap(config.AGENT_WORK_MAX_PER_ORG);
+  // The largest file one upload may carry (`MAX_FILE_MB`, ADR 0025), before any route counts its body.
+  setFileLimitMb(config.MAX_FILE_MB);
   const tools = createToolGateway({
     sources: [
       // A question for what the agent could find, or a secret asked in the chat, is held first (ADR 0109).

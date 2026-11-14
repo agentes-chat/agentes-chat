@@ -28,6 +28,7 @@ import {
   rankTools,
   receiveMachineUpload,
   restoreArtifact,
+  setFileLimitMb,
   type ToolContext,
   toolGroupKey,
   UploadTimeoutError,
@@ -222,6 +223,28 @@ describe("file artifacts", () => {
       createFileArtifact(f.artifactDeps, person(), f.org.id, { title: "Sem nome", name: "/", bytes: PNG }),
     ).rejects.toThrow(ValidationError);
     expect(await f.db.select().from(schema.artifacts)).toHaveLength(0);
+  });
+
+  test("MAX_FILE_MB sets the limit (50 MB by default) and the refusal names it", async () => {
+    f = await setup();
+    const big = new Uint8Array(50 * 1024 * 1024 + 1);
+    const file = { title: "Vídeo", name: "video.mp4", bytes: big };
+    // The default, which is what a server that never sets the variable keeps.
+    const error = await createFileArtifact(f.artifactDeps, person(), f.org.id, file).catch((e) => e);
+    expect(error).toBeInstanceOf(ValidationError);
+    expect(error.code).toBe("artifact.file_too_large");
+    expect(error.message).toContain("50 MB");
+    expect(error.params).toEqual({ maxMb: 50 });
+    expect(await f.db.select().from(schema.artifacts)).toHaveLength(0);
+    // MAX_FILE_MB=100, what the server applies at boot: the same file, and an agent's upload, take 100 MB.
+    setFileLimitMb(100);
+    try {
+      const saved = await createFileArtifact(f.artifactDeps, person(), f.org.id, file);
+      expect(saved).toMatchObject({ kind: "file", shownVersion: 1 });
+      expect((await newUpload()).maxBytes).toBe(100 * 1024 * 1024);
+    } finally {
+      setFileLimitMb(50);
+    }
   });
 
   test("trash and restore", async () => {
