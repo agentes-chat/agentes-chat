@@ -1,10 +1,9 @@
 import type { EndedTask, ManagedTask } from "@agenteschat/client";
-import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { endedState, linePlace, taskState, taskTitle } from "@agenteschat/client/lib/task-manager";
 import { formatDuration } from "@agenteschat/client/lib/work";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   GroupedHeader,
@@ -26,7 +25,7 @@ import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
-import { useStopper, useTasksToday } from "./hooks";
+import { askToStop, useStopper, useTasksToday } from "./hooks";
 import { endedText, rowState, taskHref, taskSubline } from "./logic";
 import { StateLine } from "./parts";
 
@@ -81,20 +80,7 @@ function Live({ task }: { task: ManagedTask }) {
   const dir = useDirectory();
   const nameOf = (id: string) => dir.anyAgent(id)?.name;
   const name = nameOf(task.agentId) ?? t("channel.unknownAgent");
-  // One alert, the system's: what stops and what the agent does; a task that asked other agents stops them too.
-  const ask = () =>
-    Alert.alert(
-      t("mobile.taskManager.stopTitle", { title }),
-      task.helpers ? t("taskManager.confirm.chainBody") : t("mobile.taskManager.stopBody", agentGrammar(name)),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("taskManager.confirm.stop", { count: 1 + (task.helpers ?? 0) }),
-          style: "destructive",
-          onPress: () => stop([task.runId], undefined, true),
-        },
-      ],
-    );
+  const ask = () => askToStop(t, task, title, name, stop);
   return (
     <Page
       task={task}

@@ -154,6 +154,7 @@ export * from "./hand-off";
 export * from "./host-computer";
 export * from "./id-refs";
 export * from "./imports";
+export * from "./invite-choices";
 export * from "./invite-requests";
 export * from "./issue-columns";
 export * from "./issue-deletion";
