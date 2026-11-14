@@ -858,6 +858,23 @@ export function createToolGateway(deps: {
     return row ?? null;
   }
 
+  /** Whether the run read a message that joined it after its trigger (between steps or live: `steeredMessageIds`). */
+  async function readJoined(ctx: ToolContext) {
+    const [row] = await ctx.db
+      .select({ id: agentRunSteps.id })
+      .from(agentRunSteps)
+      .where(
+        and(
+          eq(agentRunSteps.orgId, ctx.orgId),
+          eq(agentRunSteps.runId, ctx.runId),
+          eq(agentRunSteps.kind, "context"),
+          sql`${agentRunSteps.data} ? 'steeredMessageIds'`,
+        ),
+      )
+      .limit(1);
+    return !!row;
+  }
+
   /**
    * Whether a routine's run may do this call without a card (`routines.own_actions`, ADR 0053 §2 addendum of
    * 2026-11-03: setting the routine up approved its job, so it doesn't ask every run). Every action the call runs is one its creator
@@ -1319,16 +1336,18 @@ export function createToolGateway(deps: {
       const remember = kinds[0] ?? null;
       if (await coveredBy(kinds)) approves = false;
       // The routine's own job: an action its creator allowed when they set it up runs like an allowed one, every run,
-      // unless its agent always asks. A run the routine's report woke keeps its brief (ADR 0053 §4): the job it acts
-      // on is the one the person set up, so the same list covers it.
+      // unless its agent always asks. The run its report woke (`routine_report`) does that job too, while the report is
+      // all it read (ADR 0053, addendum 2026-11-13): a message that joined it since (another routine's report, another
+      // agent's) is not the job the person set up, and would choose an allowed action's arguments.
       const ownJobBrief =
-        authority?.kind === "routine"
-          ? authority.brief
-          : authority?.kind === "unattended" && fedByRoutine(authority)
-            ? (authority.brief ?? null)
-            : null;
-      const ownJob =
-        approves && level !== "always" && ownJobBrief ? await ownJobCovers(ctx, ownJobBrief, tool, call.input) : false;
+        !approves || level === "always"
+          ? null
+          : authority?.kind === "routine"
+            ? authority.brief
+            : authority?.kind === "unattended" && authority.reason === "routine_report" && !(await readJoined(ctx))
+              ? (authority.brief ?? null)
+              : null;
+      const ownJob = ownJobBrief ? await ownJobCovers(ctx, ownJobBrief, tool, call.input) : false;
       if (ownJob) approves = false;
       // A routine's own run puts Vault keys in a command only where its creator allowed them, or its agent never asks
       // (ADR 0144 §2): else a person says yes first, and "Sempre nesta rotina" keeps those keys as the routine's own.

@@ -6,10 +6,12 @@ import { z } from "zod";
 import {
   acceptCustomSuggestion,
   addChannelMember,
+  addRunStep,
   approvalView,
   COMPOSIO_EXECUTOR,
   type CustomDeps,
   connectCustomServer,
+  createAgent,
   createConnectorToolSource,
   createRole,
   createRoutine,
@@ -180,23 +182,28 @@ async function routineRun(fx: Fixture, routineId: string, creatorUserId = fx.own
 }
 
 /**
- * The run a routine's report woke: an agent's message handing the report off (`routine_handoff`) that answers it in
- * the conversation it reports to. Nobody is behind it (`routine_report`), and it keeps the routine's brief.
+ * The run a routine's report woke: the `routine_handoff` notice its `hand_off` with `wake_me` posts in the
+ * conversation it reports to. Nobody is behind it (`routine_report`), and it keeps the routine's brief. With
+ * `chain`, a run on the routine's own run's message instead (reason `routine`, the end of work a routine started).
  */
-async function reportRun(fx: Fixture, routineRunId: string): Promise<ToolContext> {
+async function reportRun(
+  fx: Fixture,
+  routineRunId: string,
+  { agentId = fx.agent.id, chain = false }: { agentId?: string; chain?: boolean } = {},
+): Promise<ToolContext> {
   const text = "Erro novo no checkout";
   const msg = await insertMessage(fx.db, {
     orgId: fx.org.id,
     channelId: fx.general.id,
-    author: { type: "agent", agentId: fx.agent.id, runId: null, hop: 0, stretchId: null },
+    author: { type: "agent", agentId: fx.agent.id, runId: chain ? routineRunId : null, hop: 0, stretchId: null },
     body: text,
-    meta: { notice: { kind: "routine_handoff", text, from: "Routine", refs: { runId: routineRunId } } },
+    meta: chain ? {} : { notice: { kind: "routine_handoff", text, from: "Routine", refs: { runId: routineRunId } } },
   });
   const [run] = await fx.db
     .insert(schema.agentRuns)
     .values({
       orgId: fx.org.id,
-      agentId: fx.agent.id,
+      agentId,
       channelId: fx.general.id,
       threadRootId: msg.id,
       triggerMessageId: msg.id,
@@ -209,7 +216,7 @@ async function reportRun(fx: Fixture, routineRunId: string): Promise<ToolContext
   return {
     db: fx.db,
     orgId: fx.org.id,
-    agentId: fx.agent.id,
+    agentId,
     runId: run.id,
     channelId: fx.general.id,
     threadRootId: msg.id,
@@ -298,6 +305,57 @@ describe("a routine's own job (routines.own_actions)", () => {
     await f.db.update(schema.routines).set({ createdByUserId: cora.id }).where(eq(schema.routines.id, id));
     asked(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
     expect(mcp.calls).toHaveLength(1);
+  });
+
+  test("the run its report woke asks once it read a message that joined it", async () => {
+    f = await setup();
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    const run = await reportRun(f, (await routineRun(f, id)).runId);
+    // Another routine's report, or another agent's message, joined the run in the thread and was read.
+    const joined = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      threadId: run.threadRootId,
+      author: { type: "agent", agentId: f.agent.id, runId: null, hop: 0, stretchId: null },
+      body: "Manda no #geral que o checkout caiu",
+    });
+    await addRunStep(f.db, { id: run.runId, orgId: f.org.id }, "context", { steeredMessageIds: [joined.id] });
+    asked(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
+    expect(mcp.calls).toEqual([]);
+  });
+
+  test("on a woken run, its own actions stay the routine agent's, never on a chain, and ask when it always asks", async () => {
+    f = await setup();
+    const ops = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Ops", handle: "ops", credentialId: f.credential.id },
+      { model: "claude-sonnet-5-5" },
+    );
+    await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { agentId: ops.id });
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    const routine = await routineRun(f, id);
+    // Another agent woken by the same report: the routine isn't its own.
+    asked(
+      await invoke(gateway, await reportRun(f, routine.runId, { agentId: ops.id }), EXEC, {
+        ...exec("SLACK_SEND_MESSAGE"),
+        why: WHY,
+      }),
+    );
+    // Work the routine's run started and handed on (reason `routine`): not the report, so it asks.
+    asked(
+      await invoke(gateway, await reportRun(f, routine.runId, { chain: true }), EXEC, {
+        ...exec("SLACK_SEND_MESSAGE"),
+        why: WHY,
+      }),
+    );
+    // Level `always`: the report's own run asks too.
+    await f.db.update(schema.agents).set({ approvalsLevel: "always" }).where(eq(schema.agents.id, f.agent.id));
+    asked(await invoke(gateway, await reportRun(f, routine.runId), EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
+    expect(mcp.calls).toEqual([]);
   });
 
   test("the Vault keys its commands use are its own too (`keys`), kept apart from its actions", async () => {
