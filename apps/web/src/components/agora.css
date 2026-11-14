@@ -49,8 +49,8 @@
 }
 
 /*
- * A row (note A: one line): the face, the line (the name, what it does, where and on what in quiet type, cut with "…"),
- * its time and ⋯. 8 around, the ⋯'s 32 its height. The whole row opens its place (`.tm-hit` reaches every edge); ⋯
+ * A row, one line as the task manager's: the face, the line (the name, what it does, where and on what in quiet type,
+ * cut with "…"), its time and ⋯. 8 around, the ⋯'s 32 its height. The whole row opens its place (`.tm-hit` reaches every edge); ⋯
  * stays on top. ⋯ shows on hover and focus, always under a finger: its column is always there, so nothing moves.
  */
 .agora-row {
