@@ -455,7 +455,7 @@ describe("several requests on one card", () => {
     const r2 = goal("g22", { runId: "r2", status: "approved", decidedAt: at(-1) });
     // Approved first, while the one asked before it still waits: in line behind it.
     let line = approvalLine([r1, r2]);
-    expect(line.get("g22")).toMatchObject({ position: 2, count: 2, freeSince: null });
+    expect(line.get("g22")).toMatchObject({ position: 2, count: 2, waitsOnAt: 1, freeSince: null });
     expect(line.get("g22")?.waitsOn?.id).toBe("g1");
     expect(line.get("g1")).toMatchObject({ position: 1, waitsOn: null });
     // The earlier one approved, or claimed by its run, but with no result yet: still before it.
@@ -475,7 +475,7 @@ describe("several requests on one card", () => {
     expect(line.get("g22")).toMatchObject({ waitsOn: null, freeSince: at(-0.2) });
     // Its own run's other request, wherever it sits, holds it too: the run goes on once all of its are decided.
     const sibling = goal("g333", { runId: "r2" });
-    expect(approvalLine([ran, r2, sibling]).get("g22")?.waitsOn?.id).toBe("g333");
+    expect(approvalLine([ran, r2, sibling]).get("g22")).toMatchObject({ waitsOn: { id: "g333" }, waitsOnAt: 3 });
     // Held by both, it names the first in the line.
     expect(approvalLine([r1, r2, sibling]).get("g22")?.waitsOn?.id).toBe("g1");
     // Interleaved runs: a run's place is its earliest action still to do, so r1's later one goes with its first.

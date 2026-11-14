@@ -571,7 +571,10 @@ function ApprovalGroupItem({
                   decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
                   scheduled && t("approval.ahead.scheduled", { when: nextLabel(i18n.language, scheduled) }),
                   place?.waitsOn
-                    ? t("approval.line.after", { title: approvalTitleText(t, place.waitsOn) })
+                    ? t("approval.line.after", {
+                        // With its place on the card: two requests of one kind tell apart by it ("1 de 2").
+                        title: `${approvalTitleText(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
+                      })
                     : a.result?.notRunAfter && t("approval.line.notRun"),
                 ]
                   .filter(Boolean)

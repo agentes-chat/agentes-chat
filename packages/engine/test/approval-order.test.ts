@@ -106,6 +106,8 @@ test("approved before the request asked ahead of it was refused: it doesn't run,
   expect(kept?.status).toBe("approved");
   expect(kept?.executedAt).toBeNull();
   expect(kept?.result).toMatchObject({ isError: true, notRunAfter: first.id });
+  // The earlier request named with its values: two requests of one tool tell apart.
+  expect((kept?.result as { content?: string } | null)?.content).toContain("text=Primeira");
   expect(prompts.some((p) => p.includes("Not done:") && p.includes("was refused after this one was approved"))).toBe(
     true,
   );

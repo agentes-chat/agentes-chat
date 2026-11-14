@@ -12474,11 +12474,17 @@
   "approvals.review.textDone": {
     "value": "What it published"
   },
+  "approvals.review.textNot": {
+    "value": "What it would have published"
+  },
   "approvals.review.values": {
     "value": "What it will do"
   },
   "approvals.review.valuesDone": {
     "value": "What it did"
+  },
+  "approvals.review.valuesNot": {
+    "value": "What it would have done"
   },
   "approvals.review.more": {
     "value": "Show all"

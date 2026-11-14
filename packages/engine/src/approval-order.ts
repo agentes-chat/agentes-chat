@@ -53,11 +53,11 @@ export async function heldBehind(db: Executor, runId: string): Promise<{ id: str
 export async function notRunAfter(
   db: Executor,
   approval: Pick<Approval, "id" | "status" | "messageId" | "runId" | "runAt" | "decidedAt">,
-): Promise<{ id: string; title: string; status: "refused" | "expired" } | null> {
+): Promise<NotRunBefore | null> {
   if (approval.status !== "approved" || !approval.messageId || !approval.runId || approval.runAt) return null;
   if (!approval.decidedAt) return null;
-  const [row] = rowsOf<{ id: string; title: string; status: "refused" | "expired" }>(
-    await db.execute(sql`select b.id, b.title, b.status from approvals a
+  const [row] = rowsOf<NotRunBefore>(
+    await db.execute(sql`select b.id, b.title, b.status, b.params from approvals a
       join approvals b on b.org_id = a.org_id and b.message_id = a.message_id and b.id <> a.id
         and b.run_id is not null and b.run_at is null
         and (b.created_at, b.id) < (a.created_at, a.id)
@@ -69,21 +69,35 @@ export async function notRunAfter(
   return row ?? null;
 }
 
+/** The earlier request that keeps an approved action from running (`notRunAfter`). */
+export interface NotRunBefore {
+  id: string;
+  title: string;
+  status: "refused" | "expired";
+  params?: Record<string, unknown> | null;
+}
+
+/** A request as the agent asked it: its tool and its first short values, so two of one tool tell apart. */
+function askedAs(before: Pick<NotRunBefore, "title" | "params">) {
+  const values = Object.entries(before.params ?? {})
+    .filter((e): e is [string, string | number | boolean] => ["string", "number", "boolean"].includes(typeof e[1]))
+    .slice(0, 3)
+    .map(([k, v]) => `${k}=${String(v).slice(0, 60)}`)
+    .join(", ");
+  return values ? `"${before.title}" (${values})` : `"${before.title}"`;
+}
+
 /** What the agent reads (and the request's result says) for an action kept from running by `notRunAfter`. */
-export function notRunText(before: { title: string; status: "refused" | "expired" }) {
+export function notRunText(before: Pick<NotRunBefore, "title" | "status" | "params">) {
   const what = before.status === "refused" ? "was refused" : "expired unanswered";
-  return `Not done: "${before.title}", asked before this, ${what} after this one was approved, so this didn't run. If it still makes sense on its own, ask for it again.`;
+  return `Not done: ${askedAs(before)}, asked before this, ${what} after this one was approved, so this didn't run. If it still makes sense on its own, ask for it again.`;
 }
 
 /**
  * Keeps an approved action from running (`notRunAfter`): its result says why and names the earlier request
  * (`notRunAfter` in the stored result, read by the apps). Null when it already ran or was kept already.
  */
-export async function markNotRun(
-  db: Executor,
-  approvalId: string,
-  before: { id: string; title: string; status: "refused" | "expired" },
-): Promise<Approval | null> {
+export async function markNotRun(db: Executor, approvalId: string, before: NotRunBefore): Promise<Approval | null> {
   const [row] = await db
     .update(approvals)
     .set({ result: { content: notRunText(before), isError: true, notRunAfter: before.id } })

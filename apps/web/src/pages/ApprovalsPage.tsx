@@ -161,6 +161,11 @@ export function approvalPhase(a: Approval, now = Date.now(), place?: LinePlace):
 /** Each request's place on its card (`approvalLine`), for the rows and the review under them. */
 const LinesContext = createContext<ReadonlyMap<string, LinePlace>>(new Map());
 const useLinePlace = (a: Approval) => useContext(LinesContext).get(a.id);
+/** A request with its place on its card ("Criar issue (1 de 2)"): two requests of one kind tell apart by it. */
+const titleOnCard = (t: TFunction, b: Approval, place: Pick<LinePlace, "position" | "count"> | undefined) =>
+  place && place.count > 1
+    ? `${approvalTitle(t, b)} (${t("approvals.position", { n: place.position, total: place.count })})`
+    : approvalTitle(t, b);
 const usePhase = (a: Approval) => approvalPhase(a, Date.now(), useLinePlace(a));
 
 const bucketOf = (p: ApprovalPhase): Exclude<Filter, "all"> =>
@@ -1206,6 +1211,8 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
   const agent = dir.agentById.get(a.agentId);
   const name = agent?.name ?? t("channel.unknownAgent");
   const p = usePhase(a);
+  // Won't happen (refused, kept from running, expired, canceled): what it would have done, not what it did.
+  const never = p === "refused" || p === "notRun" || p === "expired" || p === "canceled";
   const via = useApprovalVia(a);
   const [unfold, setUnfold] = useState(false);
   const [steps, setSteps] = useState(false);
@@ -1344,8 +1351,20 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
             a.email
               ? t("approvals.review.email")
               : text
-                ? t(p === "done" ? "approvals.review.textDone" : "approvals.review.text")
-                : t(p === "waiting" ? "approvals.review.values" : "approvals.review.valuesDone")
+                ? t(
+                    p === "done"
+                      ? "approvals.review.textDone"
+                      : never
+                        ? "approvals.review.textNot"
+                        : "approvals.review.text",
+                  )
+                : t(
+                    p === "done" || p === "failed"
+                      ? "approvals.review.valuesDone"
+                      : never
+                        ? "approvals.review.valuesNot"
+                        : "approvals.review.values",
+                  )
           }
           subtitle={[via.name, target].filter(Boolean).join(" · ") || undefined}
           action={
@@ -1479,13 +1498,22 @@ function DecisionBar({
   const name = agent?.name ?? t("channel.unknownAgent");
   const g = agentGrammar(name);
   const p = usePhase(a);
-  const waitsOn = useLinePlace(a)?.waitsOn;
+  const place = useLinePlace(a);
+  const waitsOn = place?.waitsOn;
   const deciding = useApprovalsDeciding(org.id, [a.id]);
   // Approved, its turn not come yet: it runs once what the agent asked before it is decided and done.
   if (p === "queued" && waitsOn)
     return (
       <div className={cx("ap-bar", floating && "ap-bar--float")}>
-        <p className="ap-bar__text">{t("approvals.queuedLine", { title: approvalTitle(t, waitsOn) })}</p>
+        <p className="ap-bar__text">
+          {t("approvals.queuedLine", {
+            title: titleOnCard(
+              t,
+              waitsOn,
+              place?.waitsOnAt ? { position: place.waitsOnAt, count: place.count } : undefined,
+            ),
+          })}
+        </p>
       </div>
     );
   if (p === "running")
@@ -1697,6 +1725,7 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
   const p = usePhase(a);
   // Kept from running: the request asked before it whose refusal or expiry did that.
   const earlier = useApprovals(org.id).data?.find((x) => x.id === a.result?.notRunAfter);
+  const earlierPlace = useContext(LinesContext).get(earlier?.id ?? "");
   if (p === "waiting") return null;
   const who =
     a.decidedByUserId === me.user.id
@@ -1707,8 +1736,8 @@ function Outcome({ approval: a, agent }: { approval: Approval; agent: Agent | un
   const notRunLine = !earlier
     ? t("approvals.notRunEarlier")
     : earlier.status === "refused"
-      ? t("approvals.notRunRefused", { title: approvalTitle(t, earlier) })
-      : t("approvals.notRunExpired", { title: approvalTitle(t, earlier) });
+      ? t("approvals.notRunRefused", { title: titleOnCard(t, earlier, earlierPlace) })
+      : t("approvals.notRunExpired", { title: titleOnCard(t, earlier, earlierPlace) });
   const [icon, title, subtitle]: [IconName, string, string | undefined] =
     // In line: the bar under the request says what it runs after.
     p === "queued"

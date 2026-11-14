@@ -66,6 +66,8 @@ export interface LinePlace {
   count: number;
   /** Approved and not done yet: the request it still waits for (asked before it, or its own run's other one). */
   waitsOn: Approval | null;
+  /** `waitsOn`'s own place on the card (1 = the first): two requests of one kind tell apart by it ("1 de 2"). */
+  waitsOnAt: number | null;
   /** Approved and free to run since then: its decision, or the last request it waited for settling. */
   freeSince: string | null;
 }
@@ -112,7 +114,8 @@ export function approvalLine(card: readonly Approval[]): Map<string, LinePlace> 
         freeSince = [a.decidedAt ?? a.createdAt, ...times].reduce((x, y) => (x > y ? x : y));
       }
     }
-    out.set(a.id, { position: i + 1, count: items.length, waitsOn, freeSince });
+    const waitsOnAt = waitsOn ? items.indexOf(waitsOn) + 1 : null;
+    out.set(a.id, { position: i + 1, count: items.length, waitsOn, waitsOnAt, freeSince });
   });
   return out;
 }

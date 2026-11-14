@@ -538,7 +538,10 @@ function GroupItem({
         <p className="rq__item-outcome">
           {decisionOutcome(t, approval, me.user.id, (id) => members.get(id)?.name)}
           {place?.waitsOn
-            ? ` · ${t("approval.line.after", { title: approvalTitle(t, place.waitsOn) })}`
+            ? ` · ${t("approval.line.after", {
+                // With its place on the card: two requests of one kind ("Criar issue") tell apart by it.
+                title: `${approvalTitle(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
+              })}`
             : approval.result?.notRunAfter
               ? ` · ${t("approval.line.notRun")}`
               : null}
