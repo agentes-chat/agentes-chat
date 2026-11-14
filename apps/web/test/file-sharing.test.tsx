@@ -169,13 +169,6 @@ describe("Compartilhar (ADR 0157)", () => {
   test("the viewer's header has Compartilhar beside Baixar", async () => {
     const { report } = await drive();
     await click(screen().getByRole("button", { name: "Relatório de visitas" }));
-    await settle(4);
-    const panel = screen().getByRole("dialog", { name: "Relatório de visitas" });
-    await click(
-      within(panel)
-        .getAllByRole("button", { name: "Abrir" })
-        .find((b) => b.textContent?.trim() === "Abrir") as HTMLElement,
-    );
     await settle(6);
     const viewer = screen().getByRole("dialog", { name: "Relatório de visitas" });
     const share = within(viewer).getByRole("button", { name: "Compartilhar" });
@@ -225,12 +218,9 @@ describe("Compartilhar (ADR 0157)", () => {
     await renderApp(`/org/${ORG_ID}/drive`, { api });
     await settle(8);
     await click(screen().getByRole("button", { name: "Relatório de visitas" }));
-    await settle(4);
+    await settle(6);
+    // The file opens in the viewer; who sees it is in its "Compartilhar".
     const panel = screen().getByRole("dialog", { name: "Relatório de visitas" });
-    expect(panel.querySelector(".drive-audience")?.textContent).toBe(
-      "Só João e Atlas podem ver: veio de uma mensagem direta. Também compartilhado com Walter.",
-    );
-    expect(panel.textContent).toContain("Mensagem direta entre João e Atlas");
     await pick(panel, /^Mais ações: /, "Compartilhar");
     const dialog = shareDialog("Relatório de visitas");
     expect([...dialog.querySelectorAll(".share__name")].map((n) => n.textContent)).toEqual([

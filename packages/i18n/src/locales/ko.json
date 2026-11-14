@@ -2580,6 +2580,9 @@
       "update_role": "역할 <b>{{name}}</b> 변경",
       "delete_role": "역할 <b>{{name}}</b> 영구 삭제",
       "move_role": "역할 <b>{{name}}</b> 순서 바꾸기",
+      "set_permission_holders": "<b>{{short}}</b> 권한을 가진 사람 변경",
+      "set_permission_holders_computers": "<b>에이전트 컴퓨터</b>를 쓰는 사람 변경",
+      "holdersOwnersOnly": "소유자만",
       "set_member_roles": "<b>{{name}}</b>님의 역할 변경: {{change}}",
       "set_channel_permissions": "<b>#{{channel}}</b>에서 {{who}}이(가) 할 수 있는 일 변경",
       "set_my_status": "상태 설정: <b>{{what}}</b>",
@@ -3350,6 +3353,8 @@
       "changed_update_role": "역할 <b>{{name}}</b>을(를) 변경했어요",
       "changed_delete_role": "역할 <b>{{name}}</b>을(를) 삭제했어요",
       "changed_move_role": "역할 <b>{{name}}</b>의 순서를 바꿨어요",
+      "changed_set_permission_holders": "<b>{{short}}</b> 권한을 가진 사람을 변경했어요",
+      "changed_set_permission_holders_computers": "<b>에이전트 컴퓨터</b>를 쓰는 사람을 변경했어요",
       "changed_set_member_roles": "<b>{{name}}</b>님의 역할을 변경했어요: {{change}}",
       "changed_set_channel_permissions": "<b>#{{channel}}</b>에서 {{who}}이(가) 할 수 있는 일을 변경했어요",
       "changed_set_my_status": "상태를 설정했어요: <b>{{what}}</b>",
@@ -4296,6 +4301,10 @@
   "approval": {
     "expiredChip": "만료됨 · {{when}}",
     "canceledChip": "취소됨 · {{when}}",
+    "line": {
+      "after": "“{{title}}” 다음에 실행",
+      "notRun": "실행 안 됨: 앞의 요청이 승인되지 않았어요"
+    },
     "waitingFor": "{{name}}님 대기 중",
     "waitingAdmin": "관리자 대기 중",
     "reasonLine": "이유: {{reason}}",
@@ -4844,8 +4853,15 @@
       "canceled": "취소됨",
       "failed": "실패",
       "running": "실행 중",
-      "scheduled": "예약됨"
+      "scheduled": "예약됨",
+      "queued": "순서 대기 중",
+      "notRun": "실행 안 됨"
     },
+    "queuedLine": "승인됨. 먼저 요청된 “{{title}}” 다음에 실행돼요.",
+    "notRunRefused": "먼저 요청된 “{{title}}”이(가) 이 요청이 승인된 뒤에 거절되어 이 요청은 실행되지 않았어요.",
+    "notRunExpired": "먼저 요청된 “{{title}}”이(가) 이 요청이 승인된 뒤에 결정 없이 만료되어 이 요청은 실행되지 않았어요.",
+    "notRunEarlier": "이 요청이 승인된 뒤에 앞의 요청이 거절되거나 만료되어 이 요청은 실행되지 않았어요.",
+    "position": "{{total}}개 중 {{n}}번째",
     "expiredLine": "24시간 안에 아무도 결정하지 않아 아무것도 하지 않았어요.",
     "canceledLine": "결정 전에 실행이 중지됐어요.",
     "supersededLine": "에이전트가 더 새로운 버전으로 다시 요청해서 이 요청은 실행되지 않았어요.",
@@ -4912,8 +4928,10 @@
       "email": "이메일",
       "text": "게시될 내용",
       "textDone": "게시한 내용",
+      "textNot": "게시될 뻔한 내용",
       "values": "할 일",
       "valuesDone": "한 일",
+      "valuesNot": "하려던 일",
       "trail": "여기까지 온 과정",
       "showSteps": "단계별로 보기",
       "hideSteps": "단계 숨기기",
@@ -10673,15 +10691,6 @@
       "nowYours": "멈추고 내 메모를 읽었어요",
       "nowOf": "멈추고 {{name}}의 메모를 읽었어요"
     },
-    "choice": {
-      "label": "{{name}}이(가) 작업 중일 때 보내는 방식",
-      "label_female": "{{name}}이(가) 작업 중일 때 보내는 방식",
-      "join": "{{name}}의 작업에 추가",
-      "join_female": "{{name}}의 작업에 추가",
-      "interrupt": "중지하고 보내기",
-      "joins": "추가",
-      "interrupts": "중지 후 전송"
-    },
     "strip": {
       "see": "보기",
       "toStop": "중지"
@@ -14524,6 +14533,10 @@
         "left": "워크스페이스를 떠났어요",
         "role_changed": "멤버의 역할을 변경했어요",
         "password_link": "멤버의 새 비밀번호 링크를 만들었어요"
+      },
+      "role": {
+        "permission_set": "{{short}} 권한을 가진 사람을 변경했어요",
+        "permission_set_computers": "에이전트 컴퓨터를 쓰는 사람을 변경했어요"
       },
       "apps": {
         "connected": "{{app}}을(를) 연결했어요",

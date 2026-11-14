@@ -474,6 +474,15 @@ export interface OrgRole {
   editable: boolean;
   /** Whether you may give it to people: it is below your own. */
   givable: boolean;
+  /**
+   * The channels it opens that you see: those limited to it (ADR 0125); for `everyone`, every public channel.
+   * Older servers leave the reach out.
+   */
+  channelIds?: string[];
+  /** Channels limited to it that you don't see: counted, never named. */
+  hiddenChannels?: number;
+  /** The agents it lets people talk to: those whose audience lists it; for `everyone`, those that answer everyone. */
+  agentIds?: string[];
 }
 
 /** A permission area: its "use" keys and every key (its "manage" level). */
@@ -497,6 +506,23 @@ export interface RoleInput {
   permissions?: string[];
   mentionable?: boolean;
   hoist?: boolean;
+  /** Duplicar: a role below yours whose keys you hold; what's left out comes from it, and the copy joins its channels and agents. */
+  copyFrom?: string;
+}
+
+/**
+ * Who holds one permission row (`PUT …/permissions/{row}`): `everyone`'s level and each listed role's; every other
+ * role the sender may change goes to 0. A level is 0 or 1, or a step of the agents' computers (0 to 4).
+ */
+export interface RowHolders {
+  everyone: number;
+  roles: { id: string; level: number }[];
+}
+
+/** A mailbox an agent would lose when someone gets a role (`…/roles/{roleId}/members/preview`). */
+export interface RoleMailLoss extends ForeignMailbox {
+  agentId: string;
+  agentName: string;
 }
 
 export interface InvitationPreview {
@@ -1993,8 +2019,11 @@ export interface Approval {
   ownerUserId?: string | null;
   /** When the approved action ran; null while it runs (or if it never did). */
   executedAt?: string | null;
-  /** What the action returned once it ran (raw tool output, short). */
-  result?: { ok: boolean; text: string } | null;
+  /**
+   * What the action returned once it ran (raw tool output, short). `notRunAfter`: it didn't run, because the request
+   * asked before it on its card (that id) was refused or expired after it was approved.
+   */
+  result?: { ok: boolean; text: string; notRunAfter?: string } | null;
   /** The connector it goes through ("github") and its account. */
   connector?: string | null;
   connectorAccount?: string | null;
@@ -3085,6 +3114,7 @@ export const WORKSPACE_ACTION_IDS = [
   "update_role",
   "delete_role",
   "move_role",
+  "set_permission_holders",
   "set_member_roles",
   "set_channel_permissions",
   "set_my_status",
