@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-03
 - Extends: ADR 0053 (routines and unattended work: a widget is redone by a routine of its own), 0085 (roles and permissions: who sees a board), 0108 (Home: "My Home" is its board), 0113 (live blocks: what is pinned is a chart, not a live block), 0125 (an audience by role, the same model), 0071 (notifications: alerts and requests wait on the person)
-- Code: `packages/db/src/schema/dashboards.ts` (`dashboards`, `dashboard_widgets`, `dashboard_widget_updates`), migration `0199_dashboards.sql`; `packages/ui/src/widgets/spec.ts` (`@agenteschat/ui/widgets/spec`: `WidgetSpec`, `validateWidgetSpec`, `chartBlockToWidgetSpec`, schedules, sizes, caps); `packages/engine/src/dashboards/*` (`access.ts`, `service.ts`, `pin.ts`, `cost.ts`, `suggestions.ts`, `refresh.ts`, `proposals.ts`, `tools.ts`, `events.ts`, `types.ts`), `routines.ts` and `routine-ledger.ts` (the `widget` target), `tools/run-policy.ts` (a widget's refresh run), `notifications.ts` (`widget_alert`, `widget_failed`, `dashboard_proposal`); server `routes/app/dashboards.ts`, `dashboard-schemas.ts`; client `packages/client/src/dashboards/*`; web `packages/ui/src/widgets/*`, `pages/HomePage.tsx` (the mural), `pages/DashboardsPage.tsx`, `pages/DashboardPage.tsx`, `components/dashboards/*`; phone `app/(app)/dashboards.tsx` (pushed from `src/features/chats/DashboardsEntry.tsx` on the home), `src/features/dashboards/*`
+- Code: `packages/db/src/schema/dashboards.ts` (`dashboards`, `dashboard_widgets`, `dashboard_widget_updates`), migration `0199_dashboards.sql`; `packages/ui/src/widgets/spec.ts` (`@agenteschat/ui/widgets/spec`: `WidgetSpec`, `validateWidgetSpec`, `chartBlockToWidgetSpec`, schedules, sizes, caps); `packages/engine/src/dashboards/*` (`access.ts`, `service.ts`, `pin.ts`, `cost.ts`, `suggestions.ts`, `refresh.ts`, `proposals.ts`, `tools.ts`, `events.ts`, `types.ts`), `routines.ts` and `routine-ledger.ts` (the `widget` target), `tools/run-policy.ts` (a widget's refresh run), `notifications.ts` (`widget_alert`, `widget_failed`, `dashboard_proposal`); server `routes/app/dashboards.ts`, `dashboard-schemas.ts`; client `packages/client/src/dashboards/*`; web `packages/ui/src/widgets/*`, `pages/HomePage.tsx` (the mural), `pages/DashboardsPage.tsx`, `pages/DashboardPage.tsx`, `components/dashboards/*`, `components/channel-board/*` (a channel's board, §21, on `channels.dashboard_id`, migration `0274_channel_dashboard.sql`); phone `app/(app)/dashboards.tsx` (pushed from `src/features/chats/DashboardsEntry.tsx` on the home), `src/features/dashboards/*`
 
 ## Context
 
@@ -220,6 +220,26 @@ people than asked.
     A widget's run that reaches its end without `update_widget` taking its data is told once, in the same run, that
     only that call reaches the widget (ADR 0097's one extra turn of a routine); still without it, it fails as
     `no_update`.
+21. **A channel's dashboard.** A channel may keep one board beside its conversation, the same for every member
+    (`channels.dashboard_id`, `on delete set null`). Whoever manages the channel sets it, changes it or takes it away,
+    under the rule of its name and topic (its creator, or `manage_channels` there, ADR 0134): `PATCH …/channels/{id}`
+    with `dashboardId` (null takes it away), only to a board of the workspace they see and never a home board
+    (`dashboard.not_found`, `dashboard.home_fixed`); the column also makes a new board already linked. The link changes
+    nothing about who sees or edits the board (§8, §12): the channel list carries its id alone (none once the board is
+    deleted), the column reads the board as any screen does, and a member it isn't shown to reads only that it isn't
+    shared with them, never its title or widgets. Where the manager picks, a hint says each member sees it only if it is
+    shared with them; a private board may be linked and shows to its owner alone. Where it shows, it is the board's own
+    grid, with Organize and "+" for whoever edits it, and a widget opens in its panel (`?widget=`). That panel is the one beside the channel, as a thread's or an agent's page
+    is: opening one of those takes the widget's place, and an address holding both shows the other. The change goes out
+    as `channels.changed`, so the other members' column follows without a reload. On the web the channel's header gets
+    a button beside the members' when the channel has a board, or for whoever may link one (it then opens the picker over
+    the chat). From 1500px the board is a column between the conversation and the members (26% of the window, 360 to
+    520px, its grid in two columns, one in a column narrower than 360px), below that it floats over the chat as the
+    app's panels do; whether it is open is remembered per person and workspace like the members column (closed at first
+    in a personal workspace, ADR 0159 §3). Its width is fixed, as every side column's. Threads and DMs have none. Left
+    for later: the phone app (a row in the channel pushing the board's screen, the id already reaches it), agents
+    linking a board (the `update_channel` workspace action taking a board, with its undo), and a person's own board
+    overriding the channel's.
 
 ## Consequences
 
@@ -236,6 +256,7 @@ people than asked.
   editor presses Resolve.
 - Migration 0199 adds the three tables, with `draft` and `title_set_by_user` on widgets (§16, §17) and
   `edit_role_ids` on dashboards (§8); notifications gain three kinds.
+- Migration 0274 adds `channels.dashboard_id` (§21).
 - Live blocks (ADR 0113) are not pinnable: they are for using now, and run code a board shouldn't keep running.
 
 ## Alternatives considered
@@ -246,3 +267,6 @@ people than asked.
   wait days for its owner to look, and nothing needs to wait for it (§11).
 - **Posting the refreshed chart in a channel.** What people do today, and what this replaces: the latest number gets
   buried, and the conversation fills with reports nobody asked to read.
+- **Each person's own board beside a channel** (a `chatPrefs` key, no migration). A channel is about the same numbers
+  for everyone in it, and whoever manages it knows which; a personal choice can come later as an override of the
+  channel's (§21).
