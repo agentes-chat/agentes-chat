@@ -1,13 +1,29 @@
 import type { Actor, Issue, IssueColumn, IssuePriority, IssueStatus, IssuesView } from "@agenteschat/client";
-import { useIssueColumns, useIssues, useIssuesView, useSetIssuesView, useTaskUnread } from "@agenteschat/client";
-import { dueLabel, dueTone, relativeTime } from "@agenteschat/client/lib/format";
+import {
+  keys,
+  useIssue,
+  useIssueColumns,
+  useIssueProjectAction,
+  useIssueProjects,
+  useIssues,
+  useIssuesView,
+  useSetIssuesView,
+  useTaskUnread,
+} from "@agenteschat/client";
+import { dueLabel, dueTone, namesText, stoppedLine } from "@agenteschat/client/lib/format";
 import { githubLinkLabel } from "@agenteschat/client/lib/github-link";
+import { NO_PROJECT, projectOfFilter } from "@agenteschat/client/lib/issue-projects";
 import { ISSUES_VIEW_DEFAULT, PRIORITY_ORDER, sortIssues } from "@agenteschat/client/lib/issues-view";
 import { can } from "@agenteschat/client/lib/permissions";
+import { shownSteps } from "@agenteschat/client/lib/work";
 import {
+  AvatarStack,
   Button,
   Chip,
+  ColorDot,
   cx,
+  Dialog,
+  DialogFooter,
   EmptyState,
   FactLine,
   GroupHeading,
@@ -17,14 +33,17 @@ import {
   type LineFact,
   Menu,
   MenuItem,
+  MenuSeparator,
   PageHeader,
   SearchField,
   Toolbar,
   WorkSweep,
 } from "@agenteschat/ui";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useDeferredValue, useEffect, useId, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { type CSSProperties, type ReactNode, useDeferredValue, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useApi } from "@/api/context";
 import { ActorAvatar, ActorWho, AgentAvatar } from "@/components/AgentAvatar";
 import { AskAgentButton } from "@/components/AskAgentButton";
 import { actorFromKey, actorKey, NO_ACTOR, useActors } from "@/components/actors";
@@ -47,7 +66,6 @@ import {
   isCustomBoard,
   isOpen,
   isStalled,
-  isWorking,
   rankAt,
   STATUS_ICON,
   type CardState as TaskState,
@@ -64,6 +82,7 @@ import { type ToastText, useToast } from "@/lib/toast";
 import { AddColumnDialog, Board, type CardState, type IssueGroup, useMoveIssue, usePatchIssue } from "./IssueBoard";
 import { IssueDeleteProvider, useIssueDeleting } from "./IssueDelete";
 import { IssueDialog } from "./IssuePage";
+import { DeleteProjectDialog, ProjectChip, ProjectDialog } from "./IssueProjects";
 import { DisplayButton, IssueFilters, PRIORITY_ICON } from "./IssuesToolbar";
 import { type CardMove, type DropResult, type IssueDrag, useIssueDrag } from "./issue-drag";
 import { NewIssueDialog } from "./NewIssueDialog";
@@ -77,10 +96,29 @@ export function StatusChip({ status }: { status: IssueStatus }) {
 }
 
 /**
+ * The project whose board this is, in the URL (`?project=<id>`, `none` for the tasks with no project): a board of its
+ * own to link to and go back from, so picking one is a new history entry.
+ */
+function useProjectParam(): [string | undefined, (value: string | undefined) => void] {
+  const value = useRouterState({ select: (s) => (s.location.search as { project?: string }).project });
+  const navigate = useNavigate();
+  const set = (next: string | undefined) =>
+    void navigate({
+      to: ".",
+      search: ((prev: Record<string, unknown>) => {
+        const { project: _project, open: _open, m: _m, ...rest } = prev;
+        return next ? { ...rest, project: next } : rest;
+      }) as never,
+    });
+  return [value, set];
+}
+
+/**
  * Tarefas (issues in the code): agents working now, then the tasks as a board or a list, grouped by stage (the org's
  * custom columns in fixed stages), by assignee or by priority, with a details dialog. How the person looks at them
  * (layout, grouping, order, what the cards show, filters) is theirs per workspace, on the server, so every device
- * opens it the same way; the search is not kept.
+ * opens it the same way; the search is not kept. A project's board is this same board with only its tasks, which the
+ * server filters (the list is capped, so filtering here would leave a busy workspace's project half empty).
  */
 export function IssuesPage() {
   const { t } = useTranslation();
@@ -100,7 +138,22 @@ export function IssuesPage() {
   const [creating, setCreating] = useState<false | { columnId: string | null }>(false);
   const [addingColumn, setAddingColumn] = useState(false);
   const search = useDeferredValue(q.trim());
-  const issues = useIssues(org.id, search);
+  const [projectParam, setProjectParam] = useProjectParam();
+  const projectsQuery = useIssueProjects(org.id);
+  const project = projectOfFilter(projectsQuery.data?.projects, projectParam);
+  const projectAction = useIssueProjectAction(org.id);
+  // "Novo projeto", "Editar projeto" and "Excluir projeto", one at a time.
+  const [projectDialog, setProjectDialog] = useState<"new" | "edit" | "delete" | null>(null);
+  // A project deleted elsewhere, or a link to one that is gone: back to every task.
+  const projectGone = Boolean(
+    projectParam && projectParam !== NO_PROJECT && projectsQuery.isSuccess && !projectsQuery.isFetching && !project,
+  );
+  useEffect(() => {
+    if (!projectGone) return;
+    setProjectDialog(null);
+    setProjectParam(undefined);
+  });
+  const issues = useIssues(org.id, search, projectParam);
   const columnsQuery = useIssueColumns(org.id);
   const columns = columnsQuery.data;
   const all = issues.data ?? [];
@@ -109,11 +162,22 @@ export function IssuesPage() {
       (view.assignees.length === 0 || view.assignees.includes(actorKey(i.assignee))) &&
       (view.priorities.length === 0 || view.priorities.includes(i.priority)),
   );
-  const noIssues = issues.isSuccess && all.length === 0 && !search;
+  const noIssues = issues.isSuccess && all.length === 0 && !search && !projectParam;
+  const emptyProject = issues.isSuccess && all.length === 0 && !search && Boolean(projectParam);
+  // A new task on a project's board starts in it. An archived project takes none, so its board offers none.
+  const presetProject = project && !project.archived ? project.id : null;
   const look = useRightHandLook();
   const posts = can(org, "post");
+  const adds = posts && !project?.archived;
   const open = all.filter(isOpen);
-  const opened = all.find((i) => i.number === openNumber) ?? null;
+  const listed = all.find((i) => i.number === openNumber) ?? null;
+  // On a project's board a task that isn't in it still opens (a link, or its project changed in its own dialog).
+  const outside = useIssue(
+    org.id,
+    openNumber ?? 0,
+    Boolean(projectParam) && openNumber !== null && issues.isSuccess && !listed,
+  );
+  const opened = listed ?? (projectParam && outside.data?.number === openNumber ? outside.data : null);
   const toggle = (n: number) => setOpenParam(openNumber === n ? null : n);
   // The saved view decides the layout: until it comes, the skeleton (not the default board, then the list).
   const viewLoading = viewQuery.isLoading;
@@ -125,7 +189,7 @@ export function IssuesPage() {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.toLowerCase() === "n") {
         e.preventDefault();
-        if (posts) setCreating({ columnId: null });
+        if (adds) setCreating({ columnId: null });
       } else if (e.key === "/") {
         e.preventDefault();
         searchRef.current?.focus();
@@ -133,14 +197,24 @@ export function IssuesPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [posts]);
+  }, [adds]);
   return (
     <IssueDeleteProvider onDeleted={() => setOpenParam(null)}>
       <div className="page issues">
         <div className="issues__main">
           <PageHeader
             className="issues-head"
-            title={t("issues.title")}
+            title={
+              projectParam ? (
+                // Inside the title, so the dot stays on the first line of a name that wraps.
+                <>
+                  <ColorDot color={project?.color} />
+                  {project ? project.name : t("issues.projects.none")}
+                </>
+              ) : (
+                t("issues.title")
+              )
+            }
             count={
               <>
                 <span>
@@ -152,19 +226,20 @@ export function IssuesPage() {
                 {open.some((i) => !i.assignee) && (
                   <span> · {t("issues.unassigned", { count: open.filter((i) => !i.assignee).length })}</span>
                 )}
+                {project?.archived && <span> · {t("issues.projects.archivedMark")}</span>}
               </>
             }
             actions={
               // The empty state takes over this button: one way in, in the middle of the page.
               !noIssues &&
-              posts && (
+              adds && (
                 <Button variant="primary" icon="plus" kbd={["N"]} onClick={() => setCreating({ columnId: null })}>
                   {t("issues.new")}
                 </Button>
               )
             }
           />
-          <WorkingNow issues={all} onOpen={toggle} />
+          <StalledNow issues={all} onOpen={toggle} />
           <Toolbar
             label={t("issues.filters")}
             search={
@@ -182,20 +257,48 @@ export function IssuesPage() {
             actions={
               <span className="issues-tools">
                 <DisplayButton view={view} onChange={changeView} />
-                {view.group === "stage" && (
+                {(view.group === "stage" || (project && posts)) && (
                   <Menu
                     align="end"
                     label={t("issues.moreOptions")}
                     trigger={<Button size="sm" iconOnly icon="more" aria-label={t("issues.moreOptions")} />}
                   >
-                    <MenuItem icon="layers" onSelect={() => setAddingColumn(true)} disabled={!columns}>
-                      {t("issues.columns.add")}
-                    </MenuItem>
+                    {view.group === "stage" && (
+                      <MenuItem icon="layers" onSelect={() => setAddingColumn(true)} disabled={!columns}>
+                        {t("issues.columns.add")}
+                      </MenuItem>
+                    )}
+                    {project && posts && (
+                      <>
+                        {view.group === "stage" && <MenuSeparator />}
+                        <MenuItem icon="edit" onSelect={() => setProjectDialog("edit")}>
+                          {t("issues.projects.edit")}
+                        </MenuItem>
+                        <MenuItem
+                          icon="archive"
+                          disabled={projectAction.isPending}
+                          onSelect={() =>
+                            projectAction.mutate({ type: "update", projectId: project.id, archived: !project.archived })
+                          }
+                        >
+                          {t(project.archived ? "issues.projects.unarchive" : "issues.projects.archive")}
+                        </MenuItem>
+                        <MenuItem icon="trash" danger onSelect={() => setProjectDialog("delete")}>
+                          {t("issues.projects.delete")}
+                        </MenuItem>
+                      </>
+                    )}
                   </Menu>
                 )}
               </span>
             }
           >
+            <ProjectChip
+              data={projectsQuery.data}
+              value={projectParam}
+              onChange={setProjectParam}
+              onNew={posts ? () => setProjectDialog("new") : undefined}
+            />
             <IssueFilters view={view} issues={all} onChange={changeView} />
           </Toolbar>
           {(issues.isLoading || viewLoading || (!columns && columnsQuery.isLoading)) &&
@@ -238,6 +341,21 @@ export function IssuesPage() {
               {t(posts ? "issues.empty" : "issues.emptyViewer")}
             </EmptyState>
           )}
+          {emptyProject && (
+            <EmptyState
+              size="panel"
+              actions={
+                adds &&
+                presetProject && (
+                  <Button variant="primary" icon="plus" onClick={() => setCreating({ columnId: null })}>
+                    {t("issues.new")}
+                  </Button>
+                )
+              }
+            >
+              {t(projectParam === NO_PROJECT ? "issues.noResults" : "issues.projects.empty")}
+            </EmptyState>
+          )}
           {issues.isSuccess && filtered.length === 0 && (all.length > 0 || search) && (
             <EmptyState
               size="panel"
@@ -260,13 +378,14 @@ export function IssuesPage() {
           )}
           {!viewLoading && filtered.length > 0 && columns && (
             <IssuesBody
-              view={view}
+              // A project's own board doesn't say its name again on every card.
+              view={projectParam ? { ...view, fields: { ...view.fields, project: false } } : view}
               columns={columns}
               issues={filtered.filter((i) => view.showCanceled || i.status !== "canceled")}
               all={all}
               openNumber={openNumber}
               onOpen={toggle}
-              onNew={posts ? (columnId) => setCreating({ columnId }) : undefined}
+              onNew={adds ? (columnId) => setCreating({ columnId }) : undefined}
             />
           )}
         </div>
@@ -276,9 +395,23 @@ export function IssuesPage() {
         <NewIssueDialog
           open={creating !== false}
           columnId={creating ? creating.columnId : null}
+          projectId={presetProject}
           columns={columns ?? []}
           onClose={() => setCreating(false)}
         />
+        {projectDialog === "new" && (
+          <ProjectDialog onClose={() => setProjectDialog(null)} onDone={(p) => setProjectParam(p.id)} />
+        )}
+        {projectDialog === "edit" && project && (
+          <ProjectDialog project={project} onClose={() => setProjectDialog(null)} />
+        )}
+        {projectDialog === "delete" && project && (
+          <DeleteProjectDialog
+            project={project}
+            onClose={() => setProjectDialog(null)}
+            onDeleted={() => setProjectParam(undefined)}
+          />
+        )}
         {columns && (
           <AddColumnDialog
             open={addingColumn}
@@ -483,78 +616,256 @@ function IssuesBody({
 }
 
 /**
- * The agents on issues right now (live runs), then the stalled ones (in progress, no run alive): the live step, or the
- * last one, and "Pedir para continuar". What each needs is on its card, so the strip never says it again.
+ * Above the board, only the stalled tasks (in progress, no run alive), as one line: an agent at work already shows on
+ * its own card on the board, so the strip says only what needs a person, a nudge. Nothing stalled, no strip.
  */
-function WorkingNow({ issues, onOpen }: { issues: Issue[]; onOpen: (n: number) => void }) {
+function StalledNow({ issues, onOpen }: { issues: Issue[]; onOpen: (n: number) => void }) {
+  const { t } = useTranslation();
+  const stalled = issues.filter((i) => isOpen(i) && isStalled(i) && i.work && i.assignee?.type === "agent");
+  if (stalled.length === 0) return null;
+  return (
+    <section className="issues-now" aria-label={t("issues.now.stalledTitle")}>
+      <StalledLine issues={stalled} onOpen={onOpen} />
+    </section>
+  );
+}
+
+/**
+ * A task's last step in the person's words, never an engine-only one (the silent `pass`), and without the task's own
+ * number ("Updated a task · #86" on #86 says nothing the card doesn't).
+ */
+function useTaskStep() {
+  const stepText = useStepText();
+  return (i: Issue) => {
+    const last = shownSteps(i.work?.steps ?? []).at(-1);
+    if (!last) return "";
+    return stepText(last.detail?.trim() === `#${i.number}` ? { ...last, detail: undefined } : last);
+  };
+}
+
+/** Stalled tasks by agent, the agent with the most first. */
+function stalledByAgent(issues: Issue[], name: (a: Actor) => string) {
+  const groups = new Map<string, { agent: Actor; name: string; issues: Issue[] }>();
+  for (const i of issues) {
+    if (!i.assignee) continue;
+    const g = groups.get(i.assignee.id);
+    if (g) g.issues.push(i);
+    else groups.set(i.assignee.id, { agent: i.assignee, name: name(i.assignee), issues: [i] });
+  }
+  return [...groups.values()].sort((a, b) => b.issues.length - a.issues.length || a.name.localeCompare(b.name));
+}
+
+/**
+ * Asking stalled tasks' agents to pick up where they stopped: the same call as the task's own "Ask to continue", one per
+ * task, all at once. A task counts as asked while its stall is the one it was asked on (`work.since`): its agent
+ * starting leaves the stalled list, and a later stall is a new one. A failed ask reaches the shared error toast.
+ */
+function useResumeStalled() {
+  const { org } = useOrg();
+  const api = useApi();
+  const qc = useQueryClient();
+  const [asked, setAsked] = useState<ReadonlyMap<string, string>>(new Map());
+  const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
+  const mark = (ids: string[], on: boolean) =>
+    setBusy((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  const ask = useMutation({
+    mutationFn: async (list: Issue[]) => {
+      const ids = list.map((i) => i.id);
+      mark(ids, true);
+      const results = await Promise.allSettled(
+        list.map((i) => api.issues.askAgent(org.id, i.id, i.assignee?.id ?? "")),
+      );
+      mark(ids, false);
+      setAsked((prev) => {
+        const next = new Map(prev);
+        for (const [k, r] of results.entries()) {
+          const i = list[k];
+          if (r.status === "fulfilled" && i?.work) next.set(i.id, i.work.since);
+        }
+        return next;
+      });
+      const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+      if (failed) throw failed.reason;
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.issues(org.id) });
+      void qc.invalidateQueries({ queryKey: keys.calendar(org.id) });
+    },
+  });
+  return {
+    send: (list: Issue[]) => list.length > 0 && ask.mutate(list),
+    isAsked: (i: Issue) => i.work !== undefined && i.work !== null && asked.get(i.id) === i.work.since,
+    isBusy: (i: Issue) => busy.has(i.id),
+  };
+}
+
+/**
+ * The stalled tasks as one quiet line: how many, whose (faces and names), "See stalled" for the list and "Continue
+ * all". Once all are asked it says so until their agents start.
+ */
+function StalledLine({ issues, onOpen }: { issues: Issue[]; onOpen: (n: number) => void }) {
+  const { t } = useTranslation();
+  const actors = useActors();
+  const [open, setOpen] = useState(false);
+  const resume = useResumeStalled();
+  const left = issues.filter((i) => !resume.isAsked(i));
+  const groups = stalledByAgent(left.length ? left : issues, actors.name);
+  const names = namesText(
+    t,
+    groups.map((g) => g.name),
+    4,
+  );
+  return (
+    <>
+      {left.length === 0 ? (
+        <div className="issues-stalled is-sent" role="status">
+          <Icon name="play" size={16} className="issues-stalled__icon" />
+          <span className="issues-stalled__text">{t("issues.now.sent", { count: groups.length, names })}</span>
+        </div>
+      ) : (
+        <div className="issues-stalled">
+          <Icon name="pause" size={16} className="issues-stalled__icon" />
+          <span className="issues-stalled__text">
+            <b>{t("issues.now.stalledCount", { count: left.length })}</b>
+            <span className="issues-stalled__who">
+              <AvatarStack>
+                {groups.slice(0, 4).map((g) => (
+                  <AgentAvatar key={g.agent.id} agentId={g.agent.id} name={g.name} size="sm" expression="closed" />
+                ))}
+              </AvatarStack>
+              {names}
+            </span>
+          </span>
+          <span className="issues-stalled__acts">
+            <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+              {t("issues.now.viewStalled")}
+            </Button>
+            <Button
+              size="sm"
+              icon="play"
+              loading={left.length > 0 && left.every(resume.isBusy)}
+              onClick={() => resume.send(left)}
+            >
+              {t("issues.now.continueAll")}
+            </Button>
+          </span>
+        </div>
+      )}
+      <StalledDialog
+        open={open}
+        onOpenChange={setOpen}
+        issues={issues}
+        resume={resume}
+        onOpen={(n) => {
+          setOpen(false);
+          onOpen(n);
+        }}
+      />
+    </>
+  );
+}
+
+/** Every stalled task by agent: what it did last and when it stopped, "Continue" on each and "Continue all". */
+function StalledDialog({
+  open,
+  onOpenChange,
+  issues,
+  resume,
+  onOpen,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  issues: Issue[];
+  resume: ReturnType<typeof useResumeStalled>;
+  onOpen: (n: number) => void;
+}) {
   const { t, i18n } = useTranslation();
   const actors = useActors();
-  const color = useAssigneeColor();
-  const stepText = useStepText();
-  const working = issues.filter((i) => isOpen(i) && isWorking(i));
-  const stalled = issues.filter((i) => isOpen(i) && isStalled(i));
-  if (working.length + stalled.length === 0) return null;
+  const stepOf = useTaskStep();
+  const groups = stalledByAgent(issues, actors.name);
+  const left = issues.filter((i) => !resume.isAsked(i));
   return (
-    <section className="issues-now" aria-label={t("issues.now.title")}>
-      <h2 className="issues-now__title">
-        {t("issues.now.title")}
-        <span>{working.length}</span>
-        {stalled.length > 0 && <span>· {t("issues.now.stalled", { count: stalled.length })}</span>}
-      </h2>
-      <div className="issues-now__list">
-        {[...working, ...stalled].map((i) => {
-          const w = i.work;
-          if (!w || !i.assignee) return null;
-          const name = actors.name(i.assignee);
-          const stall = w.state === "stalled";
-          const waiting = w.state === "waiting_approval" || w.state === "waiting_input";
-          const step = stepText(w.steps.at(-1));
-          const body = stall
-            ? step
-              ? t("issues.work.noRunStep", { step })
-              : t("issues.work.noRun")
-            : waiting
-              ? step && t("issues.work.lastStep", { step })
-              : step || t("issues.work.starting");
-          return (
-            <button
-              key={i.id}
-              type="button"
-              className={cx("issues-now__card ac-mediarow", stall && "is-stalled", waiting && "is-waiting")}
-              onClick={() => onOpen(i.number)}
-            >
-              <span className="ac-mediarow__face">
-                <AgentAvatar
-                  agentId={i.assignee.id}
-                  name={name}
-                  size="md"
-                  state={stall ? "idle" : waiting ? "idle" : "writing"}
-                  running={!stall && !waiting}
-                  expression={stall ? "closed" : undefined}
-                />
-              </span>
-              <span className="ac-mediarow__head">
-                <b>{name}</b>
-                <span className="ac-mediarow__meta">
-                  #{i.number} · {relativeTime(t, i18n.language, w.since)}
-                </span>
-              </span>
-              <span className="ac-mediarow__body">
-                <span className="issues-now__task">{codeAndBold(i.title)}</span>
-                {body && <span className={cx("issues-now__step", !stall && !waiting && "is-live")}>{body}</span>}
-                {stall && (
-                  <span className="issues-now__go">
-                    <Icon name="play" size={14} />
-                    {t("issues.work.continue")}
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("issues.now.stalledTitle")}
+      subtitle={t("issues.now.stalledSub", {
+        tasks: t("issues.now.tasks", { count: issues.length }),
+        agents: t("issues.now.agents", { count: groups.length }),
+      })}
+      description={t("issues.now.stalledText")}
+      closeLabel={t("common.close")}
+      width={560}
+    >
+      <section className="ac-dialog__list issues-stalled__list" aria-label={t("issues.now.stalledTitle")}>
+        {groups.map((g) => (
+          <div key={g.agent.id} className="issues-stalled__group">
+            <h3 className="issues-stalled__grouphead">
+              <AgentAvatar agentId={g.agent.id} name={g.name} size="xs" />
+              {g.name}
+              <span>· {g.issues.length}</span>
+            </h3>
+            {g.issues.map((i) => {
+              const asked = resume.isAsked(i);
+              const step = stepOf(i);
+              const when = i.work ? stoppedLine(t, i18n.language, i.work.since) : "";
+              return (
+                <div key={i.id} className={cx("issues-stalled__task", asked && "is-sent")}>
+                  <span className="issues-stalled__tasktext">
+                    <button type="button" className="issues-stalled__title" onClick={() => onOpen(i.number)}>
+                      <span className="ac-mediarow__num">#{i.number}</span> {codeAndBold(i.title)}
+                    </button>
+                    {asked ? (
+                      <span className="issues-stalled__meta">{t("issues.now.rowSent")}</span>
+                    ) : (
+                      <span className="issues-stalled__meta ac-iconline">
+                        <Icon name="pause" size={14} />
+                        <span>{step ? `${when} · ${step}` : when}</span>
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-              {!stall && <WorkSweep color={color(i) ?? "sky"} waiting={waiting} />}
-            </button>
-          );
-        })}
-      </div>
-    </section>
+                  {!asked && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon="play"
+                      loading={resume.isBusy(i)}
+                      onClick={() => resume.send([i])}
+                    >
+                      {t("issues.now.continue")}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </section>
+      <DialogFooter bar>
+        {left.length > 0 ? (
+          <Button
+            size="sm"
+            variant="primary"
+            icon="play"
+            loading={left.length > 0 && left.every(resume.isBusy)}
+            onClick={() => resume.send(left)}
+          >
+            {t("issues.now.continueAllCount", { count: left.length })}
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => onOpenChange(false)}>
+            {t("common.close")}
+          </Button>
+        )}
+      </DialogFooter>
+    </Dialog>
   );
 }
 
@@ -603,7 +914,8 @@ function CardWho({ issue: i, state, assignee }: { issue: Issue; state: TaskState
 }
 
 /**
- * A card's and a row's one line of facts, each under its view toggle: the number, the label (the line's one pill),
+ * A card's and a row's one line of facts, each under its view toggle: the number, the project (its color's dot and
+ * its name), the label (the line's one pill),
  * the priority, the due date (in the attention tone today, tomorrow and once late), the criteria, GitHub, and the
  * conversation's count (bold while unread, with the red count of mentions of me).
  */
@@ -612,6 +924,13 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
   const { org } = useOrg();
   const { unread, mentions } = useTaskUnread(org.id, i.id);
   const facts: LineFact[] = [{ key: "number", text: `#${i.number}` }];
+  if (fields.project && i.project)
+    facts.push({
+      key: "project",
+      icon: <ColorDot color={i.project.color} />,
+      text: i.project.name,
+      title: t("issues.projects.label"),
+    });
   const [label, ...labels] = i.labels;
   if (fields.label && label) {
     facts.push({ key: "label", text: label, tone: "label" });
@@ -664,6 +983,45 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
       title: talk > 0 ? t("issues.conversation.messages", { count: talk }) : undefined,
     });
   return <FactLine className="issue-card__facts" facts={facts} />;
+}
+
+/** The gap between two facts on a line (`.ac-factline`'s). */
+const FACT_GAP = 12;
+/** The widest set of columns the list lays out, and the step their room is counted in (issues.css has one rule each). */
+const FACT_COLUMNS_MAX = 640;
+const FACT_COLUMNS_STEP = 80;
+
+/**
+ * The list's columns of facts, one for each fact some task shown has (and its view toggle allows), in the facts'
+ * order: every row stands its facts in the same columns, so labels, priorities, dates and criteria line up down the
+ * list instead of each row packing what it has against its end. Each column is as wide as its fact reads at most;
+ * a name longer than its column (a project, a label, a repository) ends in "…". `room`: what the columns take, in
+ * steps, which the list needs beside a title before it stands them (issues.css). With more columns than a list ever
+ * has room for (every fact at once), none: the rows keep packing their facts.
+ */
+function listFactColumns(issues: Issue[], fields: IssuesView["fields"]) {
+  const any = (has: (i: Issue) => unknown) => issues.some((i) => Boolean(has(i)));
+  const columns = (
+    [
+      ["project", 128, fields.project && any((i) => i.project)],
+      ["label", 104, fields.label && any((i) => i.labels.length > 0)],
+      ["labels", 24, fields.label && any((i) => i.labels.length > 1)],
+      ["priority", 72, fields.priority && any((i) => i.priority !== "normal")],
+      ["due", 80, fields.due && any((i) => i.dueDate && isOpen(i))],
+      ["criteria", 60, fields.criteria && any((i) => i.criteria.length > 0)],
+      ["pr", 88, fields.pullRequest && any((i) => i.pullRequests.length > 0)],
+      ["github", 112, fields.pullRequest && any((i) => i.githubUrl)],
+      // Always: a mention of me shows there with no message counted yet, and a fact with no column of its own would
+      // widen its row alone and push its other facts out of line.
+      ["talk", 56, true],
+    ] as const
+  ).filter(([, , shown]) => shown);
+  const width = columns.reduce((sum, [, px]) => sum + px, 0) + FACT_GAP * Math.max(0, columns.length - 1);
+  if (columns.length === 0 || width > FACT_COLUMNS_MAX) return null;
+  return {
+    template: columns.map(([name, px]) => `[${name}] ${px}px`).join(" "),
+    room: Math.ceil(width / FACT_COLUMNS_STEP) * FACT_COLUMNS_STEP,
+  };
 }
 
 /**
@@ -825,6 +1183,15 @@ function IssueList({
   const title = useColumnTitle();
   const custom = isCustomBoard(columns);
   const byId = new Map(groups.map((g) => [g.id, g]));
+  // One set of fact columns for the whole list, whatever its groups: read by every row (issues.css).
+  const facts = listFactColumns(
+    groups.flatMap((g) => g.items),
+    fields,
+  );
+  const factColumns = {
+    "data-fact-columns": facts?.room,
+    style: facts ? ({ "--issue-facts": facts.template } as CSSProperties) : undefined,
+  };
   const zone = (g: IssueGroup, heading?: ReactNode) => (
     <div key={g.id} className={cx("issues-group__col", dnd.over === g.id && "is-over")} data-col>
       {heading}
@@ -833,7 +1200,7 @@ function IssueList({
   );
   if (stages)
     return (
-      <div className="ac-groups">
+      <div className="ac-groups" {...factColumns}>
         {stages.map(({ stage, columns: cols }) => {
           const count = cols.reduce((n, c) => n + dnd.count(c.id), 0);
           if (count === 0 && !dnd.active) return null;
@@ -876,7 +1243,7 @@ function IssueList({
       </div>
     );
   return (
-    <div className="ac-groups">
+    <div className="ac-groups" {...factColumns}>
       {groups.map((g) => {
         const count = dnd.count(g.id);
         if (count === 0 && !dnd.active) return null;

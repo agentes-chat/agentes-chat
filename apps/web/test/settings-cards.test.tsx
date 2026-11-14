@@ -150,10 +150,15 @@ describe("a teammate's settings, on the right hand's card", () => {
     expect(lines[1]?.[2]).toContain("20");
     await click(within(c).getByRole("button", { name: "Aplicar" }));
     expect(state.calls.find((x) => x.method === "proposals.accept")?.args.slice(1, 2)).toEqual(["set-1"]);
-    // As the approved card reads it: "Aplicado por você: Ada · modelo … · orçamento mensal US$ 20".
-    expect(card("Mudar as configurações da Ada").textContent).toMatch(
-      /Aplicado por você: Ada · modelo [^·→]+ · orçamento mensal [^·→]*20/,
-    );
+    // The same card: the lines it changed still there, who applied it where the buttons were.
+    const applied = card("Mudar as configurações da Ada");
+    expect(applied.classList.contains("rq--ended")).toBe(true);
+    expect([...applied.querySelectorAll(".rq__setting dt")].map((dt) => dt.textContent)).toEqual([
+      "Modelo",
+      "Orçamento mensal",
+    ]);
+    expect(applied.querySelector(".rq__answer-text")?.textContent).toBe("Aplicado por você");
+    expect(within(applied).queryByRole("button", { name: "Aplicar" })).toBeNull();
   });
 
   test("Descartar refuses it; once applied, Desfazer on its line undoes it", async () => {
@@ -275,6 +280,23 @@ describe("a teammate's settings, on the right hand's card", () => {
     await click(within(c).getByRole("button", { name: "Recusar" }));
     expect(state.calls.some((x) => x.method === "proposals.refuse" && x.args[1] === "set-1")).toBe(true);
   });
+
+  test("a workspace card sent on reads as a change asked for, never as a new agent", async () => {
+    const state = withCard(seedState(), settingsRow());
+    state.notifications = [
+      notification({
+        id: "n-invite",
+        kind: "change_request",
+        waiting: true,
+        actors: [{ type: "user", id: "u-joao" }],
+        source: { action: "invite_people", agentId: LODI_ID, label: "bia@example.com" },
+        latest: { text: "bia@example.com" },
+      }),
+    ];
+    await go(state, "notifications");
+    const row = document.querySelector('[data-n="n-invite"]') as HTMLElement;
+    expect(row.querySelector(".nt-what")?.textContent).toBe("João pede uma mudança no workspace");
+  });
 });
 
 /** A removal card (`propose_remove_agents`): one row per agent, each archiving it. */
@@ -371,7 +393,8 @@ describe("archiving several agents, on one card", () => {
     for (const p of state.proposals) if (p.id.startsWith("rm-")) p.undoActionId = p.id === "rm-0" ? "act-a" : "act-b";
     await go(state);
     const c = card("Arquivar 2 agentes?");
-    expect(c.textContent).toContain("Aplicado por você: Ada, Atlas");
+    expect(c.querySelector(".rq__answer-text")?.textContent).toBe("Aplicado por você");
+    expect([...c.querySelectorAll(".proposal-row__name")].map((b) => b.textContent)).toEqual(["Ada", "Atlas"]);
     await click(within(c).getByRole("button", { name: "Desfazer" }));
     expect(state.calls.some((x) => x.method === "actions.undoMessage" && x.args[1] === "m-rm")).toBe(true);
   });

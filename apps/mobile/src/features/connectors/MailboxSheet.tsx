@@ -1,6 +1,13 @@
 import { keys, useApi, useMailAccounts, useMailAction } from "@agenteschat/client";
 import type { Level } from "@agenteschat/client/lib/access-levels";
-import { choiceOf, fromMailLevel, MAIL_BRANDS, mailReviewTools, setMailLevel } from "@agenteschat/client/lib/mail";
+import {
+  choiceOf,
+  fromMailLevel,
+  MAIL_BRANDS,
+  mailReviewTools,
+  onlyForOwner,
+  setMailLevel,
+} from "@agenteschat/client/lib/mail";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
@@ -10,7 +17,7 @@ import { useOrg } from "@/providers/org";
 import { Button, GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Text, useToast } from "@/ui";
 import { confirmAction } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
-import { useColors, useDirectory, useOrgId } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { errorHaptic, successHaptic, Tile } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { ConnectorIcon } from "./ConnectorIcon";
@@ -142,6 +149,7 @@ function AgentMailLevel({ agentId, accountId, leading }: { agentId: string; acco
   const orgId = useOrgId();
   const toast = useToast();
   const { org } = useOrg();
+  const meId = useMeId();
   const dir = useDirectory();
   const accounts = useMailAccounts(orgId);
   const agent = dir.agentById.get(agentId);
@@ -173,6 +181,14 @@ function AgentMailLevel({ agentId, accountId, leading }: { agentId: string; acco
       leading={leading}
       label={agent?.name ?? ""}
       {...(agent?.role ? { sub: agent.role } : {})}
+      {...(account && onlyForOwner(account, agent, meId)
+        ? {
+            hint: {
+              name: t("common.about", { label: agent?.name ?? "" }),
+              text: t("mail.agent.onlyYou", { name: agent?.name ?? "" }),
+            },
+          }
+        : {})}
       value={t(`access.level.${current}`)}
       // The value changes in its row, through the app's picker: its mark, not a chevron to a screen.
       menu={mayChange}

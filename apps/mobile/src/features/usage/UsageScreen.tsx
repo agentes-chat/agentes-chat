@@ -1,5 +1,6 @@
-import type { OrgPlanUsage, PlanAccountUsage } from "@agenteschat/client";
+import type { OrgPlanUsage, PlanAccountUsage, PlanServes } from "@agenteschat/client";
 import {
+  keys,
   useAiAccounts,
   useApi,
   useComposioUsage,
@@ -19,8 +20,11 @@ import {
   accountShares,
   brandOf,
   groupUsageAccounts,
+  loginsText,
   noWindowsText,
   planMeterText,
+  servesTerms,
+  servesText,
   shareFacts,
   splitUsage,
 } from "@agenteschat/client/lib/plan-usage";
@@ -29,6 +33,7 @@ import { parseAmount } from "@agenteschat/client/lib/text";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { gradientOf } from "@agenteschat/ui/agent/engine";
 import { PLAN_ALMOST, PLAN_TONE, planLevel, planLine } from "@agenteschat/ui/plan-state";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
@@ -53,7 +58,7 @@ import { LOGO_SIZES } from "@/ui/provider-marks";
 import { PlanHoldNote, usePlanHold } from "../ai/parts";
 import { AgentFace } from "../shared/Face";
 import { FirstUse } from "../shared/FirstUse";
-import { useColors, useDirectory } from "../shared/hooks";
+import { useColors, useDirectory, useErrorToast } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { Loaded, PushedHeader } from "../shared/parts";
 import { Meter, PlanMeter, Tag, UsageCard } from "./parts";
@@ -248,7 +253,7 @@ function AccountRow({
     shares.shown.length > 0 ? (
       <AgentShares shares={shares} window={shares.window ? text.short(shares.window) : null} />
     ) : null;
-  const owner = accountOwner(t, account);
+  const owner = [accountOwner(t, account), servesText(t, account), loginsText(t, account)].filter(Boolean).join(" · ");
   return (
     <View>
       <Pressable
@@ -328,6 +333,9 @@ function AccountRow({
                 </Text>
               )
             ) : null}
+            {account.mine && account.accountId && account.serves ? (
+              <WhoUses accountId={account.accountId} account={account} />
+            ) : null}
             {account.mine && account.accountId ? (
               <View style={styles.start}>
                 <Button variant="secondary" size="sm" label={t("mobile.ai.row")} onPress={openAiAccounts} />
@@ -336,6 +344,57 @@ function AccountRow({
           </View>
         </Loaded>
       ) : null}
+    </View>
+  );
+}
+
+/** "Quem usa" (ADR 0059 §3), for whoever connected the plan, as on the web: saved at once, its terms behind the ⓘ. */
+function WhoUses({ accountId, account }: { accountId: string; account: PlanAccountUsage }) {
+  const { t } = useTranslation();
+  const { orgId } = useOrg();
+  const api = useApi();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const failed = useErrorToast();
+  const [busy, setBusy] = useState(false);
+  const serves = account.serves ?? "everyone";
+  const terms = servesTerms(t, account);
+  const choose = async (next: PlanServes) => {
+    if (next === serves || busy) return;
+    setBusy(true);
+    try {
+      await api.machines.setAccountServes(orgId, accountId, next);
+      toast({
+        title: t(next === "owner" ? "usageViews.serves.savedOwner" : "usageViews.serves.savedEveryone"),
+        icon: "check",
+      });
+      for (const key of [keys.planUsage(orgId), keys.aiAccounts(orgId), keys.agents(orgId), keys.aiStatus(orgId)])
+        void qc.invalidateQueries({ queryKey: key });
+    } catch (error) {
+      failed(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <View style={styles.serves}>
+      <InfoHint
+        name={t("common.about", { label: t("aiAccounts.share.terms.about") })}
+        text={terms.text}
+        variant="small"
+      >
+        <Text variant="small" tone="ink2" style={styles.bold}>
+          {t("usageViews.serves.label")}
+        </Text>
+      </InfoHint>
+      <Segmented
+        value={serves}
+        onChange={(v) => void choose(v === "owner" ? "owner" : "everyone")}
+        items={[
+          { key: "everyone", label: t("usageViews.serves.all") },
+          { key: "owner", label: t("usageViews.serves.me") },
+        ]}
+      />
     </View>
   );
 }
@@ -445,6 +504,7 @@ function DefaultBudgetCard() {
   const settings = useSettings(orgId);
   const update = useUpdateSettings(orgId);
   const toast = useToast();
+  const failed = useErrorToast();
   const { colors: c, shadows } = useTheme();
   const editable = can(org, "configure");
   const saved = settings.data?.defaultAgentBudgetUsd;
@@ -482,7 +542,10 @@ function DefaultBudgetCard() {
               onPress={() =>
                 update.mutate(
                   { defaultAgentBudgetUsd: amount },
-                  { onSuccess: () => toast({ title: t("settings.defaultBudgetSaved"), icon: "check" }) },
+                  {
+                    onSuccess: () => toast({ title: t("settings.defaultBudgetSaved"), icon: "check" }),
+                    onError: failed,
+                  },
                 )
               }
             />
@@ -536,4 +599,5 @@ const styles = StyleSheet.create({
   budget: { gap: 6 },
   input: { minHeight: 46, borderRadius: 13, paddingHorizontal: 14, paddingVertical: 10, ...fieldText("body") },
   start: { alignSelf: "flex-start", marginTop: 4 },
+  serves: { gap: 8 },
 });

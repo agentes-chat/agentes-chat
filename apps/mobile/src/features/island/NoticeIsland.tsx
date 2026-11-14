@@ -2,7 +2,7 @@ import type { AppNotification } from "@agenteschat/client";
 import { useNotificationAction, useNotificationReply } from "@agenteschat/client";
 import { type IslandItem, islandLead, noticeLine } from "@agenteschat/client/lib/island";
 import { mediaWord } from "@agenteschat/client/lib/media";
-import { replyTarget, waitingCardOf } from "@agenteschat/client/lib/notifications";
+import { quickReply, waitingCardOf } from "@agenteschat/client/lib/notifications";
 import { StatusBar } from "expo-status-bar";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring, with
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { setIslandLive } from "@/lib/push";
+import { useOrg } from "@/providers/org";
 import { useRealtime } from "@/providers/realtime";
 import { haptics, Icon, type IconName, LineIcon, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -277,7 +278,8 @@ function Title({ n, lines }: { n: AppNotification; lines: number }) {
 
 const useLine = (n: AppNotification) => {
   const { t } = useTranslation();
-  return noticeLine(n, (kind) => mediaWord(t, kind));
+  // What the right hand found is its headline: nothing under it says it again.
+  return n.kind === "team_watch" ? "" : noticeLine(n, (kind) => mediaWord(t, kind));
 };
 
 /** Closed: the face, who did what and the line; how many more; "Ver" (where it happened) at its end. */
@@ -403,9 +405,8 @@ function IslandRow({ n, onOpened }: { n: AppNotification; onOpened: () => void }
     return () => island.pause(`typing:${n.id}`, false);
   }, [typing, n.id]);
 
-  const target = replyTarget(n);
+  const { target, suggestions, readOnly } = quickReply(n, Boolean(useOrg().org?.deletion));
   const waiting = n.waiting ? waitingCardOf(n) : null;
-  const suggestions = n.kind === "agent_question" ? (n.latest.suggestions ?? []) : [];
   const { canOpen, open } = useOpenNotice(n, onOpened);
 
   const read = () => {
@@ -475,26 +476,36 @@ function IslandRow({ n, onOpened }: { n: AppNotification; onOpened: () => void }
             />
           </View>
         ) : (
-          <View style={styles.acts}>
-            {suggestions.map((s) => (
-              <Chip key={s} label={s} outline disabled={reply.isPending} onPress={() => answer(s, true)} />
-            ))}
-            {primary ? (
-              <Chip
-                label={waiting?.action === "review" ? t("island.review") : t("island.open")}
-                primary
-                onPress={open}
-              />
+          <>
+            {readOnly ? (
+              <View style={styles.done}>
+                <LineIcon name="lock" size={13} color={MUTED} variant="footnote" />
+                <Text variant="footnote" style={[styles.readonly, styles.grow]}>
+                  {t("deleting.composer")}
+                </Text>
+              </View>
             ) : null}
-            {target ? (
-              <Chip
-                icon="reply"
-                label={suggestions.length ? t("island.otherAnswer") : t("island.reply")}
-                onPress={() => setTyping(true)}
-              />
-            ) : null}
-            {!primary && canOpen ? <Chip label={t("island.open")} onPress={open} /> : null}
-          </View>
+            <View style={styles.acts}>
+              {suggestions.map((s) => (
+                <Chip key={s} label={s} outline disabled={reply.isPending} onPress={() => answer(s, true)} />
+              ))}
+              {primary ? (
+                <Chip
+                  label={waiting?.action === "review" ? t("island.review") : t("island.open")}
+                  primary
+                  onPress={open}
+                />
+              ) : null}
+              {target ? (
+                <Chip
+                  icon="reply"
+                  label={suggestions.length ? t("island.otherAnswer") : t("island.reply")}
+                  onPress={() => setTyping(true)}
+                />
+              ) : null}
+              {!primary && canOpen ? <Chip label={t("island.open")} onPress={open} /> : null}
+            </View>
+          </>
         )}
         {failed ? (
           <Text variant="footnote" style={styles.failed}>
@@ -648,6 +659,7 @@ const styles = StyleSheet.create({
   // The check on the first line when an answer's words wrap.
   done: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 10 },
   doneText: { color: "#7ee2a8", fontWeight: "600" },
+  readonly: { color: MUTED },
   failed: { color: "#ff8a80", marginTop: 6 },
   x: { position: "absolute", top: 12, right: 12, padding: 4 },
   pressed: { opacity: 0.7 },

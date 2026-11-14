@@ -216,8 +216,12 @@ describe("Memória e propostas", () => {
     expect(screen().getByRole("tab", { name: /Propostas de melhoria/, selected: true }).textContent).toContain("2");
     expect(screen().getByRole("link", { name: "O que a Ada sabe" })).toBeTruthy();
     const detail = screen().getByRole("article");
-    expect(detail.textContent).toContain("Ada propõe · instruções da Ada");
-    expect(detail.querySelector(".ac-chip--waiting")?.textContent).toBe("Aguardando você");
+    // Who proposes and what it changes, on the requests' head; that it waits on me, in its list row, as words.
+    expect(detail.querySelector(".ap-review__by")?.textContent).toContain("Adainstruções da Ada");
+    expect(detail.querySelector(".ac-chip")).toBeNull();
+    expect(
+      within(screen().getByRole("navigation", { name: "Propostas" })).getAllByRole("button")[0]?.textContent,
+    ).toContain("Aguardando você");
     const added = detail.querySelectorAll(".ac-diff__block--add");
     const removed = detail.querySelectorAll(".ac-diff__block--del");
     expect(added.length).toBe(2);
@@ -233,7 +237,10 @@ describe("Memória e propostas", () => {
     await type(text, "Programa em branches, nunca direto na main.");
     await click(within(detail).getByRole("button", { name: "Aceitar com ajustes" }));
     await settle(4);
-    expect(screen().getByRole("article").querySelector(".ac-chip--done")?.textContent).toBe("Aceita por você · agora");
+    // How it ended: the first of its cards, as a request's outcome is.
+    expect(screen().getByRole("article").querySelector(".ap-outcome--done h2")?.textContent).toBe(
+      "Aceita por você · agora",
+    );
     const accepted = await r.services.api.proposals.list(ORG_ID);
     expect(accepted.find((p) => p.agentId === ADA_ID)?.after).toBe("Programa em branches, nunca direto na main.");
   });
@@ -301,6 +308,23 @@ describe("Memória e propostas (fase 5)", () => {
     expect(rows[0]?.getAttribute("aria-current")).toBe("true");
   });
 
+  test("proposals are drawn on the requests' layout: the same list rows, review column and decision bar", async () => {
+    const state = seedState();
+    for (const p of state.proposals) p.canDecide = true;
+    await go("proposals", state);
+    const list = screen().getByRole("navigation", { name: "Propostas" });
+    expect(list.className).toBe("ap-list");
+    expect(list.parentElement?.className).toBe("ap-split page-split");
+    expect(within(list).getAllByRole("button")[0]?.className).toContain("ap-li ac-mediarow");
+    const open = screen().getByRole("article");
+    expect(open.className).toBe("ap-review");
+    expect(open.querySelector(".ap-review__head .ap-review__title")).not.toBeNull();
+    expect(open.querySelectorAll(".ap-review__body > .ap-review__card").length).toBeGreaterThanOrEqual(2);
+    const bar = open.querySelector(".ap-bar.ap-bar--float");
+    expect(within(bar as HTMLElement).getByRole("button", { name: "Aceitar mudança" })).toBeTruthy();
+    expect(within(bar as HTMLElement).getByRole("button", { name: "Recusar" })).toBeTruthy();
+  });
+
   test("a tab with nothing waiting shows no count", async () => {
     const state = seedState();
     state.approvals = [];
@@ -350,8 +374,21 @@ describe("Memória e propostas (fase 5)", () => {
     const state = seedState();
     for (const p of state.proposals) p.canDecide = false;
     await go(`proposals?agent=${ADA_ID}`, state);
-    expect(screen().getByRole("article").querySelector(".ac-chip--waiting")?.textContent).toBe("Aguardando João");
+    // On the requests' decision bar, as words: no chip, no buttons.
+    expect(screen().getByRole("article").querySelector(".ap-bar__text")?.textContent).toBe("Aguardando João");
     expect(screen().queryByRole("button", { name: "Aceitar mudança" })).toBeNull();
+  });
+
+  test("a role proposal's change reads “Mudança · função da Ada”, never “Mudança em função de” (because of)", async () => {
+    const state = seedState();
+    const [first] = state.proposals;
+    if (!first) throw new Error("a proposal expected");
+    const target = { type: "agent_role" as const, agentId: ADA_ID };
+    state.proposals = [{ ...first, target, before: "Dev", after: "Revisora de código" }];
+    await go("proposals", state);
+    const change = screen().getByRole("region", { name: "Mudança proposta" });
+    expect(within(change).getByRole("heading").textContent).toBe("Mudança · função da Ada");
+    expect(change.textContent).toContain("Função: Dev → Revisora de código");
   });
 });
 
@@ -362,10 +399,11 @@ describe("Membros", () => {
     const people = screen().getByRole("region", { name: "Pessoas" });
     expect(people.textContent).toContain("Walter (você)");
     expect(people.textContent).toContain("Ativo agora");
-    // Each person's roles as chips (ADR 0085), and a "+" to give or take them.
+    // Each person's roles as chips (ADR 0085). Giving or taking them is in the row's menu, never a loose "+".
     const joao = within(people).getByText("João").closest(".ac-list__row") as HTMLElement;
-    expect(joao.querySelector(".members-roles")?.textContent).toContain("Admin");
-    expect(within(joao).getByRole("button", { name: "Papéis de João" })).toBeTruthy();
+    expect(joao.querySelector(".members-roles")?.textContent).toBe("Admin");
+    expect(within(joao).queryByRole("button", { name: "Cargos de João" })).toBeNull();
+    expect(within(joao).getByRole("button", { name: "Mais de João" })).toBeTruthy();
     const agents = screen().getByRole("region", { name: "Agentes" });
     expect(agents.textContent).toContain("Ada · Dev");
     expect(agents.textContent).toContain("Responsável: João");
@@ -394,9 +432,9 @@ describe("Membros", () => {
     atlas.brain = { kind: "codex", model: "GPT", account: "ChatGPT Plus" };
     state.spentUsd = { [ATLAS_ID]: 0 };
     await go("members", state);
-    const [adaRow, atlasRow] = screen().getByRole("region", { name: "Agentes" }).querySelectorAll("a.ac-list__row");
+    const [adaRow, atlasRow] = screen().getByRole("region", { name: "Agentes" }).querySelectorAll(".ac-foldrow");
     expect(adaRow?.querySelector(".ac-planmeter__line")?.textContent).toBe("Claude Team · semana 40% · 5h 12%");
-    expect(adaRow?.textContent).toMatch(/Claude Team · semana 40% · 5h 12%31% do orçamento de \S+$/);
+    expect(adaRow?.textContent).toMatch(/Claude Team · semana 40% · 5h 12%31% do orçamento de \S+Ver perfil$/);
     expect(atlasRow?.querySelector(".ac-planmeter")).toBeNull();
     expect(atlasRow?.textContent).not.toMatch(/orçamento|%/);
   });
@@ -456,7 +494,7 @@ describe("Membros", () => {
 describe("Criar agente", () => {
   test("role presets, validation, and creation in the chosen channels", async () => {
     const { state } = await go("agents/new");
-    expect(screen().getByRole("heading", { level: 1, name: "Qual vai ser o papel?" })).toBeTruthy();
+    expect(screen().getByRole("heading", { level: 1, name: "Qual vai ser a função?" })).toBeTruthy();
     // The page says what the button that opened it said.
     expect(document.querySelector(".newag__rail-title b")?.textContent).toBe("Criar agente");
     await click(screen().getByRole("button", { name: /^Dev/ }));

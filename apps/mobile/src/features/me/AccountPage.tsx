@@ -1,5 +1,9 @@
-import { ApiError, useApi, useMe, useSettings } from "@agenteschat/client";
+import { ApiError, keys, useApi, useMe, useSettings } from "@agenteschat/client";
+import { formatTimeLeft } from "@agenteschat/client/lib/actions";
+import { emailChangeRefusal, errorCode, errorText, REAUTH_SIGN_IN } from "@agenteschat/client/lib/errors";
+import { CODE_LENGTH, typedCode } from "@agenteschat/client/lib/join-requests";
 import { browserTimezone, zoneDisplayName } from "@agenteschat/client/lib/routines";
+import { isEmail } from "@agenteschat/client/lib/text";
 import { filterZones, type ZoneOption, zoneOptions } from "@agenteschat/ui/timezones";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -7,8 +11,10 @@ import { useTranslation } from "react-i18next";
 import { FlatList, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authClient } from "@/lib/auth";
+import { serverUrl } from "@/lib/server";
 import { useOrg, useOrgMaybe } from "@/providers/org";
 import {
+  Button,
   fieldText,
   GroupedField,
   GroupedFooter,
@@ -22,8 +28,9 @@ import {
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
+import { openOwnPage } from "../ai/parts";
 import { SheetHeader } from "../new/parts";
-import { useColors, useDirectory, useMeId } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
 import { goBack, PushedHeader } from "../shared/parts";
 import { usePersonPhoto } from "../shared/photo";
 import { type AccountDraft, accountChanges, accountProblem, handleErrorKey } from "./logic";
@@ -149,8 +156,8 @@ export function AccountPage() {
             style={input}
           />
         </GroupedField>
-        <GroupedField label={t("mobile.me.account.email")}>
-          <Text variant="callout" tone="faint" numberOfLines={1}>
+        <GroupedField label={t("mobile.me.account.email")} onPress={() => router.push("/me/email")}>
+          <Text variant="callout" numberOfLines={1}>
             {me.data?.user.email ?? ""}
           </Text>
         </GroupedField>
@@ -204,15 +211,192 @@ export function AccountPage() {
         />
       </GroupedList>
       <GroupedFooter>{t("deleteAccount.card.text")}</GroupedFooter>
-      <GroupedList>
-        <GroupedRow
-          icon="home"
-          label={t(org.org?.role === "owner" ? "deleteAccount.card.oneWorkspace" : "deleteAccount.card.leaveWorkspace")}
-          labelLines={2}
-          chevron
-          onPress={() => router.push(org.org?.role === "owner" ? "/settings/general" : "/me/members")}
-        />
-      </GroupedList>
+      {org.org?.role === "owner" ? (
+        <>
+          <View style={styles.gapBig} />
+          <GroupedList>
+            <GroupedRow
+              icon="x"
+              label={t("deleteOrg.card.title")}
+              danger
+              chevron
+              onPress={() => router.push("/settings/delete")}
+            />
+          </GroupedList>
+          <GroupedFooter>{t("deleteOrg.card.text", { name: org.org.name })}</GroupedFooter>
+        </>
+      ) : null}
+    </Page>
+  );
+}
+
+/**
+ * E-mail, pushed over Conta: the same account under a new address, as on the web (ADR 0088 §2, addendum 2026-11-13). The
+ * new address, then the code emailed to the current one, then a link to the new address, which changes it once opened.
+ * Someone who can't open that inbox, or whose address was never confirmed (no code goes there), signs in again on the
+ * website, where the same dialog opens: the phone has no sign-in while signed in, and signing out here would drop the
+ * messages it is still sending. On a server that sends no e-mail it changes at once.
+ */
+export function EmailPage() {
+  const { t } = useTranslation();
+  const me = useMe();
+  const api = useApi();
+  const org = useOrg();
+  const qc = useQueryClient();
+  const c = useColors();
+  const [value, setValue] = useState("");
+  const [code, setCode] = useState("");
+  // The code's: where it went, and when another may go.
+  const [sent, setSent] = useState<{ email: string; resendAt: number } | null>(null);
+  const [done, setDone] = useState<{ status: "sent" | "changed"; email: string } | null>(null);
+  const [cantOpen, setCantOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const current = me.data?.user.email ?? "";
+  const left = sent ? Math.max(0, sent.resendAt - Date.now()) : 0;
+  // A repaint every second while the countdown runs; the time itself is read just above.
+  useNow(left > 0 ? 1000 : 60_000);
+  const newEmail = value.trim();
+  const ready = sent ? code.length === CODE_LENGTH : isEmail(newEmail);
+  const codeOut = (email: string, resendIn: number) => setSent({ email, resendAt: Date.now() + resendIn * 1000 });
+  const ask = async (withCode: boolean) => {
+    if (sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      const r = await api.account.changeEmail(withCode ? { newEmail, code } : { newEmail });
+      if (r.status === "code") {
+        codeOut(r.email, r.resendIn);
+        setCode("");
+        return;
+      }
+      setDone(r);
+      await qc.invalidateQueries({ queryKey: keys.me });
+    } catch (e) {
+      const refused = emailChangeRefusal(e);
+      // A code went out a moment ago (another try, another device): that one is still good.
+      if (refused === "wait") codeOut(sent?.email ?? current, e instanceof ApiError ? Number(e.params?.retryIn) : 60);
+      else {
+        if (refused === "code") setCode("");
+        if (errorCode(e) === REAUTH_SIGN_IN) setCantOpen(true);
+        setError(errorText(t, e));
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+  const input = [fieldText("callout"), styles.input, { color: c.ink }];
+  return (
+    <Page
+      title={t("shell.email.title")}
+      {...(done
+        ? {}
+        : {
+            action: {
+              label: t("shell.email.change"),
+              disabled: sending || !ready,
+              onPress: () => void ask(sent !== null),
+            },
+          })}
+      locked={sending}
+    >
+      {done ? (
+        <Text variant="callout" style={styles.error} accessibilityLiveRegion="polite">
+          {t(done.status === "changed" ? "shell.email.changed" : "shell.email.sent", { email: done.email })}
+        </Text>
+      ) : (
+        <>
+          <GroupedList>
+            <GroupedField label={t("shell.email.new")}>
+              <TextInput
+                value={value}
+                onChangeText={(v) => {
+                  setValue(v);
+                  // Another address takes its own code.
+                  setSent(null);
+                  setCode("");
+                  setCantOpen(false);
+                  setError(null);
+                }}
+                placeholder={current}
+                placeholderTextColor={c.faint}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  if (isEmail(newEmail)) void ask(false);
+                }}
+                accessibilityLabel={t("shell.email.new")}
+                style={input}
+              />
+            </GroupedField>
+            {sent ? (
+              <GroupedField label={t("proof.code")}>
+                <TextInput
+                  value={code}
+                  onChangeText={(v) => {
+                    setCode(typedCode(v));
+                    setError(null);
+                  }}
+                  autoFocus
+                  keyboardType="number-pad"
+                  textContentType="oneTimeCode"
+                  autoComplete="one-time-code"
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    if (code.length === CODE_LENGTH) void ask(true);
+                  }}
+                  accessibilityLabel={t("proof.code")}
+                  style={input}
+                />
+              </GroupedField>
+            ) : null}
+          </GroupedList>
+          <GroupedFooter>{sent ? t("proof.sent", { email: sent.email }) : t("shell.email.help")}</GroupedFooter>
+          {error ? (
+            <Text variant="footnote" tone="danger" style={styles.error} accessibilityLiveRegion="polite">
+              {error}
+            </Text>
+          ) : null}
+          {sent ? (
+            <View style={styles.acts}>
+              <Button
+                variant="ghost"
+                size="sm"
+                label={left > 0 ? t("proof.resendIn", { time: formatTimeLeft(left) }) : t("proof.resend")}
+                disabled={left > 0 || sending}
+                onPress={() => void ask(false)}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                label={t("shell.email.cantOpen")}
+                onPress={() => {
+                  setCantOpen((open) => !open);
+                  setError(null);
+                }}
+              />
+            </View>
+          ) : null}
+          {cantOpen ? (
+            <View style={styles.web}>
+              {sent ? (
+                <Text variant="footnote" tone="muted">
+                  {t("mobile.me.account.emailWebLead")}
+                </Text>
+              ) : null}
+              <Button
+                variant="secondary"
+                label={t("mobile.me.account.emailWeb")}
+                onPress={() => openOwnPage(`${serverUrl()}/org/${org.orgId}/settings/account?account=email`)}
+              />
+            </View>
+          ) : null}
+        </>
+      )}
     </Page>
   );
 }
@@ -400,6 +584,10 @@ const styles = StyleSheet.create({
   input: { flex: 1, paddingVertical: 12, paddingHorizontal: 0 },
   handle: { flexDirection: "row", alignItems: "center", gap: 1 },
   error: { paddingTop: 8, paddingHorizontal: 16 },
+  // Under the code's footer: its two quiet actions, their words on the footer's 16 (a small button pads 12), then the
+  // way to the website when asked for.
+  acts: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 4, paddingTop: 4 },
+  web: { gap: 10, paddingHorizontal: 16, paddingTop: 8 },
   gapBig: { height: 24 },
   search: { paddingTop: 4, paddingBottom: 8 },
   zoneList: { paddingHorizontal: 16 },

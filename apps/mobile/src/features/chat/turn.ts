@@ -62,6 +62,11 @@ export function withOpacity(color: string, opacity: number): string {
     return `${color}${Math.round(a * 255)
       .toString(16)
       .padStart(2, "0")}`;
+  const tint = /^(#[0-9a-f]{6})([0-9a-f]{2})$/i.exec(color);
+  if (tint)
+    return `${tint[1]}${Math.round(a * Number.parseInt(tint[2] ?? "ff", 16))
+      .toString(16)
+      .padStart(2, "0")}`;
   const rgba = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(color);
   if (rgba) {
     const base = rgba[4] === undefined ? 1 : Number(rgba[4]);

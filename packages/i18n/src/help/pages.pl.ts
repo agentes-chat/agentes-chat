@@ -9,11 +9,18 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
       "Aplikacja agentes.chat może też uruchomić samo agentes.chat, na Macu, PC albo komputerze z Linuksem, dla ciebie lub małego zespołu.",
     sections: [
       {
+        id: "download",
+        heading: "Pobierz aplikację",
+        blocks: [
+          "[Pobierz aplikację agentes.chat](/download) na Maca, PC lub komputer z Linuksem i otwórz ją. Wybierz **Na własnym serwerze**, naciśnij **Kontynuuj na moim serwerze**, a potem **Uruchom agentes.chat na tym urządzeniu (komputer)**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Jak to działa",
         blocks: [
           "Działa wewnątrz aplikacji, z wbudowaną bazą danych, i trzyma wszystko w jednym folderze na tym komputerze: `.agentes` w twoim folderze domowym. Nie trzeba niczego więcej instalować: bez Dockera, bez konfigurowania bazy danych.",
-          "Uruchamia się razem z aplikacją i zatrzymuje, gdy ją zamkniesz. Przed zamknięciem aplikacja pyta, bo nikt nie skorzysta z agentes.chat, dopóki znów jej nie otworzysz.",
+          "Uruchamia się razem z aplikacją i zatrzymuje, gdy ją zamkniesz. Przed zamknięciem aplikacja pyta, bo nikt nie skorzysta z agentes.chat, dopóki znów jej nie otworzysz. Żeby zatrzymać go na chwilę bez zamykania aplikacji, kliknij ikonę agentes.chat przy zegarze i wybierz **Zatrzymaj** w menu **⋯** jego karty.",
         ],
       },
       {
@@ -28,7 +35,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Niech zostaje włączony",
         blocks: [
-          "Na komputerze, z którego korzystają inni, ustaw to raz:",
+          "Na komputerze, z którego korzystają inni, ustaw to raz. **Utrzymuj działanie**, w **Preferencje\u00a0›\u00a0Serwery**, pokazuje, czego jeszcze brakuje, i otwiera właściwe ustawienia:",
           {
             list: [
               "**Otwieraj po zalogowaniu** włącza się samo po konfiguracji.",
@@ -51,8 +58,8 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "another-workspace",
         heading: "Udostępnij go też innej przestrzeni roboczej",
         blocks: [
-          "Przestrzenie robocze serwera, który tu uruchamiasz, korzystają z tego komputera same. Żeby mogła z niego korzystać także przestrzeń robocza gdzie indziej, na przykład w agentes.chat Cloud, otwórz **Preferencje › Serwery**, naciśnij **Dodaj serwer…**, zaloguj się do tej przestrzeni roboczej i naciśnij **Zezwól**, gdy aplikacja zapyta.",
-          "Każda przestrzeń robocza ma tu własnych agentów i foldery. **Polecenia** są dla niej też domyślnie włączone. Wyłącz je w pytaniu aplikacji, zanim naciśniesz **Zezwól**, albo później w **Preferencje\u00a0›\u00a0Narzędzia**, gdzie jeden przełącznik obowiązuje wszystkie przestrzenie robocze na tym komputerze.",
+          "Przestrzenie robocze serwera, który tu uruchamiasz, korzystają z tego komputera same. Żeby mogła z niego korzystać także przestrzeń robocza gdzie indziej, na przykład w agentes.chat Cloud, naciśnij **Dodaj przestrzeń roboczą…** na dole pierwszej karty w **Preferencje\u00a0›\u00a0Ogólne** albo **Dodaj serwer…** w **Preferencje\u00a0›\u00a0Serwery**. Zaloguj się do tej przestrzeni roboczej i naciśnij **Zezwól**, gdy aplikacja zapyta.",
+          "Każda przestrzeń robocza ma tu własnych agentów i foldery. **Polecenia** są dla niej też domyślnie włączone. Wyłącz je w pytaniu aplikacji, zanim naciśniesz **Zezwól**, albo później w **Preferencje\u00a0›\u00a0Narzędzia**, gdzie każda przestrzeń robocza ma własny przełącznik, a aplikacja pyta, zanim ponownie jakiś włączy.",
         ],
       },
       {
@@ -67,29 +74,29 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Logowanie z innych urządzeń",
         blocks: [
-          "Właściciel zaczyna bez hasła: aplikacja loguje cię na tym komputerze. Żeby zalogować się w przeglądarce na innym komputerze, ustaw hasło w **Ustawienia › Twoje konto**. Aplikacja na telefon łączy się po zeskanowaniu kodu QR z sekcji **Na telefonie**, w **Preferencje › Serwery**. Musi być przy tym włączone **Dostęp z telefonu i dla zespołu**.",
+          "Właściciel zaczyna bez hasła: aplikacja loguje cię na tym komputerze. Żeby zalogować się w przeglądarce na innym komputerze, ustaw hasło w **Ustawienia\u00a0›\u00a0Twoje konto**. Dopóki tego nie zrobisz, **Preferencje\u00a0›\u00a0Serwery** o tym przypomina, a **Dodaj hasło** otwiera tę stronę. Aplikacja na telefon łączy się po zeskanowaniu kodu QR z sekcji **Na telefonie**, w **Preferencje\u00a0›\u00a0Serwery**. Musi być przy tym włączone **Dostęp z telefonu i dla zespołu**.",
         ],
       },
       {
         id: "updates",
         heading: "Aktualizacje",
         blocks: [
-          "Aplikacja sama szuka aktualizacji i instaluje je, gdy naciśniesz **Zaktualizuj i otwórz ponownie** w **Preferencje › Aktualizacje**. Serwer i wszyscy agenci uruchamiają się wtedy ponownie. Najpierw powstaje kopia bazy danych, a jeśli nowa wersja nie odpowie w ciągu 3 minut, aplikacja sama wraca do poprzedniej wersji i jej danych.",
+          "Aplikacja sama szuka aktualizacji. Gdy **Instaluj aktualizacje samodzielnie, w nocy** jest włączone, w **Preferencje\u00a0›\u00a0Aktualizacje**, instaluje je między 3:00 a 5:00, kiedy aplikacja jest otwarta. Jest to włączone od początku, gdy serwer działa tutaj. W przeciwnym razie naciśnij **Zaktualizuj i otwórz ponownie**. Serwer i wszyscy agenci uruchamiają się wtedy ponownie. Najpierw powstaje kopia bazy danych, a jeśli nowa wersja nie odpowie w ciągu 3 minut, aplikacja sama wraca do poprzedniej wersji i jej danych.",
         ],
       },
       {
         id: "backups",
         heading: "Kopie zapasowe",
         blocks: [
-          "Na razie nic nie robi kopii samo. **Zrób kopię zapasową teraz**, w **Preferencje › Serwery**, zatrzymuje na chwilę serwer i zapisuje bazę danych, pliki i `.env` w `.agentes/backups`, w twoim folderze domowym. Zostają dwie najnowsze.",
-          "Co jakiś czas skopiuj je poza ten komputer, na dysk albo do chmury. Zawierają twoje klucze: trzymaj je w tajemnicy.",
+          "Gdy **Rób kopię co noc** jest włączone (aplikacja 0.8.1 i nowsze), w **Preferencje\u00a0›\u00a0Serwery**, aplikacja co noc o 3:00 zapisuje bazę danych, pliki i `.env` w `.agentes/backups`, w twoim folderze domowym. Komputer, który wtedy spał, robi kopię, gdy się obudzi. **Zrób kopię zapasową teraz** robi to samo od razu. Każda kopia na chwilę zatrzymuje serwer, a zostają dwie najnowsze.",
+          "**Kopiuj do** umieszcza też każdą nową kopię w wybranym folderze, na przykład na pendrivie albo w iCloud Drive, gdzie zostają dwie najnowsze. Zawierają twoje klucze: trzymaj je w tajemnicy. **Przywróć…** cofa agentes.chat do kopii: wiadomości, plików i ustawień. Zatrzymuje się na minutę, a to, co było wcześniej, zostaje w folderze kopii.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code i Codex",
         blocks: [
-          "Aplikacja znajduje Claude Code i Codex przez `PATH` twojej powłoki logowania oraz w typowych folderach, takich jak `~/.local/bin`, `/opt/homebrew/bin` i `/usr/local/bin`. Jeśli **Preferencje › Narzędzia** pokazuje **Nie znaleziono**, sprawdź, czy `claude` albo `codex` działa w nowym oknie Terminala, a potem zamknij i otwórz aplikację ponownie.",
+          "Aplikacja znajduje Claude Code i Codex przez `PATH` twojej powłoki logowania oraz w typowych folderach, takich jak `~/.local/bin`, `/opt/homebrew/bin` i `/usr/local/bin`. Jeśli **Preferencje\u00a0›\u00a0Narzędzia** pokazuje **Nie znaleziono**, widać tam też wiersz, który go instaluje. Uruchom go w Terminalu, a potem naciśnij **Sprawdź ponownie**.",
         ],
       },
       {
@@ -161,7 +168,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Z aplikacji agentes.chat",
         blocks: [
           "Zainstaluj aplikację na komputerze, otwórz ją i zaloguj się do swojej przestrzeni roboczej. Zapyta **Pozwolić agentom z <workspace> używać tego urządzenia (Mac)?** (PC na Windowsie, komputer na Linuksie). Wybierz, kto może z niego korzystać, i naciśnij **Zezwól**. To wszystko.",
-          "Jesteś już zalogowany? Włącz przestrzeń roboczą w **Preferencje › Ogólne**, na karcie **Agenci**.",
+          "Jesteś już zalogowany? Otwórz **Preferencje\u00a0›\u00a0Ogólne** i naciśnij **Zezwól** w wierszu przestrzeni roboczej na pierwszej karcie. Nie ma jej tam? Naciśnij **Dodaj przestrzeń roboczą…** na dole tej karty i zaloguj się.",
         ],
       },
       {
@@ -204,7 +211,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Pauza i odłączanie",
         blocks: [
-          "Na komputerze ikona agentes.chat przy zegarze wstrzymuje agentów wszystkich przestrzeni roboczych. W **Preferencje › Ogólne** przełącznik każdej przestrzeni roboczej wstrzymuje tylko ją, a **Odłącz** ją odłącza. Podczas pauzy nic nowego się nie zaczyna, a to, co już działało, kończy się. Po odłączeniu foldery agentów zostają na dysku.",
+          "Na komputerze ikona agentes.chat przy zegarze wstrzymuje agentów wszystkich przestrzeni roboczych albo tylko jednej. W **Preferencje\u00a0›\u00a0Ogólne** przełącznik każdej przestrzeni roboczej wstrzymuje tylko ją, a **Odłącz** w jej menu **⋯** ją odłącza. Podczas pauzy nic nowego się nie zaczyna, a to, co już działało, kończy się. Po odłączeniu foldery agentów zostają na dysku.",
           "Na stronie internetowej urządzenie odłączysz przyciskiem **Usuń** na jego stronie.",
         ],
       },
@@ -215,6 +222,15 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
           "Zaloguj się do każdej przestrzeni roboczej w tej samej aplikacji i naciśnij **Zezwól** dla każdej z nich. Przestrzenie robocze w agentes.chat Cloud i na twoich własnych serwerach mogą dzielić jeden komputer (aplikacja 0.6.1 i nowsze). Każda ma na nim własnych agentów i foldery, a odłączenie jednej nie zmienia nic w pozostałych.",
           "Serwer, który aplikacja uruchamia na tym komputerze, jest już podłączony i nic więcej nie trzeba. Żeby udostępnić ten komputer także przestrzeni roboczej gdzie indziej, zobacz [Udostępnij go też innej przestrzeni roboczej](/help/run-on-your-computer#another-workspace).",
           "Używasz aplikacji na laptopie tylko jako okna do swojej przestrzeni roboczej? Gdy zapyta, czy agenci mogą używać laptopa, **Nie teraz** zostawi ją zwykłym oknem.",
+          "Serwer połączony wierszem z terminala pracuje dla jednego workspace'u. Połączenie go z innego workspace'u przenosi serwer do tamtego, a pierwszy przestaje mieć do niego dostęp. Aby korzystać z kilku workspace'ów na jednym komputerze, użyj aplikacji.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Gdy agenci czekają w kolejce",
+        blocks: [
+          "Każda praca agenta zużywa pamięć komputera. Gdy wolnej pamięci zaczyna brakować, następna czeka w kolejce, aż inna się skończy. Ludzie mają pierwszeństwo. Liczba procesorów tego nie zmienia.",
+          "Komputer z 4 GB pamięci wykonuje dwie lub trzy prace naraz, z 8 GB około dziewięciu. Mac lub PC wykonuje do ośmiu. Przeglądarki i pulpity, które agenci zostawiają otwarte, też zużywają pamięć. Aby skrócić kolejkę, użyj komputera z większą pamięcią albo połącz kolejny i rozdziel agentów między oba. Workspace'y, które dzielą komputer, dzielą też jego pamięć.",
         ],
       },
       {
@@ -237,7 +253,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
               "na komputerze, który uruchamia też agentes.chat, jego bazę danych i klucze w `.agentes`",
             ],
           },
-          "agentes.chat odrzuca polecenia, które wskazują jego klucze, tokeny i dane logowania, ale to zasada, nie mur. **Polecenia** są domyślnie włączone. Wyłącz je w pytaniu aplikacji, zanim naciśniesz **Zezwól**, albo później w **Preferencje\u00a0›\u00a0Narzędzia**, gdzie jeden przełącznik obowiązuje wszystkie przestrzenie robocze na komputerze. Claude Code i Codex uruchamiają własne polecenia w folderze agenta, według własnych zasad.",
+          "agentes.chat odrzuca polecenia, które wskazują jego klucze, tokeny i dane logowania, ale to zasada, nie mur. **Polecenia** są domyślnie włączone. Wyłącz je w pytaniu aplikacji, zanim naciśniesz **Zezwól**, albo później w **Preferencje\u00a0›\u00a0Narzędzia**, gdzie każda przestrzeń robocza ma własny przełącznik (aplikacja 0.8.1 i nowsze), a aplikacja pyta, zanim ponownie jakiś włączy. Claude Code i Codex uruchamiają własne polecenia w folderze agenta, według własnych zasad, nawet przy wyłączonych poleceniach.",
           "Prawdziwy mur da ci serwer z Linuksem. Na Debianie 13, zainstalowanym z `--system`, każdy agent jest osobnym użytkownikiem. Na Ubuntu agenci dzielą jednego użytkownika, `agentes`: widzą nawzajem swoje foldery, ale nie twoje ani serwera. Możesz też dać agentom osobny komputer.",
         ],
       },
@@ -371,7 +387,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "Pamięć nie daje uprawnień",
         blocks: [
-          "Nic w pamięci nie pozwala agentowi zrobić więcej. To, co może robić, określają jego **Narzędzia i dostęp**, a działania wrażliwe zawsze wymagają zatwierdzenia.",
+          "Nic w pamięci nie pozwala agentowi zrobić więcej. To, co może robić, określają jego **Narzędzia i dostęp**.",
         ],
       },
       {
@@ -391,7 +407,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Co wymaga zatwierdzenia",
         blocks: [
-          "Gdy agent chce scalić zmiany, wdrożyć, wycofać wdrożenie, wysłać coś na zewnątrz albo usunąć dane, najpierw pyta, bez względu na to, jaki ma dostęp. Prośba pojawia się w **Zatwierdzenia** i w rozmowie, z dokładnym działaniem i powodem.",
+          "Gdy agent chce scalić zmiany, wdrożyć, wycofać wdrożenie, wysłać coś na zewnątrz albo usunąć dane, najpierw pyta. To poziom **Tylko to, co ryzykowne**, od którego zaczyna każdy agent. Na stronie agenta, w sekcji **Zatwierdzenia**, **Zawsze pytaj** sprawia, że pyta przed każdą zmianą, a przy **Nigdy nie pytaj** nie pyta o nic, także przy scalaniu, wdrożeniach, płatnościach i rutynach. Prośba pojawia się w **Zatwierdzenia** i w rozmowie, z dokładnym działaniem i powodem.",
         ],
       },
       {
@@ -399,7 +415,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Raz albo zawsze",
         blocks: [
           "Zatwierdzenie obejmuje jedno konkretne działanie, z jego wartościami. Jeśli agent cokolwiek zmieni, pyta ponownie.",
-          "**Zawsze zatwierdzaj** pozwala agentowi od teraz robić ten rodzaj działań z dowolnymi wartościami, bez pytania. Przy prośbie z rutyny **Zawsze w tej rutynie** robi to samo tylko dla tej rutyny. Żadna z tych opcji nie pojawia się przy scalaniu, wdrażaniu, wycofywaniu i podobnych. Aby to cofnąć, przejdź do **Narzędzia i dostęp** na stronie agenta albo do ustawień rutyny.",
+          "**Zawsze zatwierdzaj** pozwala agentowi od teraz robić ten rodzaj działań z dowolnymi wartościami, bez pytania. Przy prośbie z rutyny **Zawsze w tej rutynie** robi to samo tylko dla tej rutyny. **Zawsze zatwierdzaj** pojawia się przy każdym rodzaju działania, także przy scalaniu i wdrażaniu, dopóki agent jest na poziomie **Tylko to, co ryzykowne**. **Zawsze w tej rutynie** nie pojawia się przy scalaniu, wdrażaniu, wycofywaniu i podobnych. Aby to cofnąć, przejdź do **Narzędzia i dostęp** na stronie agenta albo do ustawień rutyny.",
         ],
       },
       {
@@ -739,7 +755,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-mail",
         blocks: [
-          "Bez e-maila agentes.chat zapisuje każdą wiadomość w swoim logu zamiast ją wysłać, więc link z zaproszeniem da się stamtąd skopiować. Resetowanie hasła pozostaje wyłączone.",
+          "Bez e-maila agentes.chat zapisuje każdą wiadomość w swoim logu zamiast ją wysłać, więc link z zaproszeniem da się stamtąd skopiować. Resetowanie hasła pozostaje wyłączone, a nowy e-mail konta zmienia się od razu, bez kodu i linku.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

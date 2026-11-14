@@ -14,6 +14,7 @@ import { endRuleBefore, localDate, normalizeRule, ruleOccurrences, type Schedule
 import { bodyCode } from "./run-tools";
 import { replyThreadOf } from "./runs";
 import { userVisibleChannels } from "./search";
+import { closedRefusal } from "./standing";
 import { taskSeenSql } from "./task-access";
 
 const {
@@ -904,7 +905,7 @@ async function visibleEvents(db: Database, userId: string, orgId: string, from: 
 /** The calendar view: events (with recurrences expanded), routine runs, reminders, issue deadlines and my pending proposals. */
 export async function calendarRange(deps: CalendarDeps, userId: string, orgId: string, fromIso: string, toIso: string) {
   const { db } = deps;
-  await requirePermission(db, userId, orgId, "read");
+  const membership = await requirePermission(db, userId, orgId, "read");
   const from = new Date(fromIso);
   const to = new Date(toIso);
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from) {
@@ -920,18 +921,22 @@ export async function calendarRange(deps: CalendarDeps, userId: string, orgId: s
     .map((o) => view(o.row, attendees, o))
     .sort((a, b) => a.start.localeCompare(b.start));
 
-  const routineRows = await db
-    .select()
-    .from(routines)
-    .where(
-      and(
-        eq(routines.orgId, orgId),
-        eq(routines.active, true),
-        eq(routines.triggerType, "schedule"),
-        // A widget's refreshes aren't slots on a calendar (every 30 minutes would fill it; ADR 0135 §4).
-        sql`coalesce(${routines.target}->>'type', '') <> 'widget'`,
-      ),
-    );
+  // Being deleted, its routines and reminders run at none of their times, so none shows (ADR 0088 §7).
+  const closed = closedRefusal(membership.standing) !== null;
+  const routineRows = closed
+    ? []
+    : await db
+        .select()
+        .from(routines)
+        .where(
+          and(
+            eq(routines.orgId, orgId),
+            eq(routines.active, true),
+            eq(routines.triggerType, "schedule"),
+            // A widget's refreshes aren't slots on a calendar (every 30 minutes would fill it; ADR 0135 §4).
+            sql`coalesce(${routines.target}->>'type', '') <> 'widget'`,
+          ),
+        );
   const routineRuns: { routineId: string; name: string; agentId: string; at: string; target: unknown }[] = [];
   const sees = await routineSeer(db, orgId, userId);
   for (const r of routineRows) {
@@ -988,7 +993,7 @@ export async function calendarRange(deps: CalendarDeps, userId: string, orgId: s
       )
   ).map(proposalView);
   const mine = new Set(await userVisibleChannels(db, orgId, userId, { archived: true }));
-  const reminders = await calendarReminders(db, userId, orgId, from, to, mine, sees);
+  const reminders = closed ? [] : await calendarReminders(db, userId, orgId, from, to, mine, sees);
   return { events, routines: routineRuns, reminders, deadlines, proposals };
 }
 

@@ -28,6 +28,7 @@ import {
   STATUSES,
 } from "@agenteschat/client/lib/issues";
 import { aiStateOf } from "@agenteschat/client/lib/no-ai";
+import { shownSteps } from "@agenteschat/client/lib/work";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -55,10 +56,6 @@ import {
   PixelOrbit,
   SCREEN_X,
   Text,
-  TOOL_H,
-  TOUCH,
-  textLineOf,
-  useFontScale,
   useReducedMotion,
   useToast,
 } from "@/ui";
@@ -100,7 +97,7 @@ import {
   taskConversationHref,
   workLines,
 } from "./logic";
-import { GithubChip, useColumnLabel, useStepText } from "./parts";
+import { GithubChip, ProjectDot, PropChip, useColumnLabel, useProjectItems, useStepText } from "./parts";
 import { useStartAgent } from "./useStartAgent";
 
 /**
@@ -321,6 +318,12 @@ function Head({ issue: i }: { issue: Issue }) {
       ) : null}
       <View style={styles.chips}>
         <PropChip
+          label={t("issues.projects.label")}
+          value={i.project?.name ?? t("issues.projects.none")}
+          leading={<ProjectDot color={i.project?.color} />}
+          onPress={pickers.pickProject}
+        />
+        <PropChip
           label={t("issues.column")}
           value={pickers.column ? pickers.columnLabel(pickers.column) : t(`issues.status.${i.status}`)}
           icon={STAGE_ICON[i.status]}
@@ -375,50 +378,6 @@ const STAGE_ICON: Record<IssueStatus, IconName> = {
   done: "checkc",
   canceled: "x",
 };
-
-/** The strip's value line at the default text size: one line makes the 32 control. */
-const PROP_LINE = textLineOf("subhead", 1).height;
-
-/**
- * A field on the head's strip: 32 high in the field look, its icon or face and its value; a press opens its picker. A
- * value wider than the screen wraps inside it, never cut, its icon or face on the first line.
- */
-function PropChip({
-  label,
-  value,
-  icon,
-  leading,
-  onPress,
-}: {
-  label: string;
-  value: string;
-  icon?: IconName;
-  leading?: ReactNode;
-  onPress: () => void;
-}) {
-  const c = useColors();
-  const line = textLineOf("subhead", useFontScale()).height;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${value}`}
-      hitSlop={{ top: (TOUCH - TOOL_H) / 2, bottom: (TOUCH - TOOL_H) / 2 }}
-      style={({ pressed }) => [
-        styles.prop,
-        { backgroundColor: c.sunken, borderColor: c.line2 },
-        pressed && styles.pressed,
-      ]}
-    >
-      <View style={{ height: line, justifyContent: "center" }}>
-        {leading ?? (icon ? <Icon name={icon} size={16} color={c.muted} /> : null)}
-      </View>
-      <Text variant="subhead" style={styles.propText}>
-        {value}
-      </Text>
-    </Pressable>
-  );
-}
 
 /** Pastes, changes or removes the task's GitHub link. */
 function GithubLinkForm({ issue: i }: { issue: Issue }) {
@@ -515,8 +474,10 @@ function WorkCard({ issue: i }: { issue: Issue }) {
         : mins < 1
           ? t("mobile.issues.justStarted")
           : t("mobile.issues.workingFor", { count: mins });
-  const last = w.steps.length - 1;
-  const lines = workLines(t, w.steps, state === "running");
+  // What a person reads: never an engine-only step (the silent `pass`).
+  const steps = shownSteps(w.steps);
+  const last = steps.at(-1);
+  const lines = workLines(t, steps, state === "running");
   return (
     <View style={[styles.work, surface]}>
       <View style={styles.workHead}>
@@ -530,9 +491,9 @@ function WorkCard({ issue: i }: { issue: Issue }) {
       </View>
       {state === "stalled" ? (
         <>
-          {w.steps[last] ? (
+          {last ? (
             <Text variant="small" tone="muted">
-              {t("issues.work.lastStep", { step: stepText(w.steps[last]) })}
+              {t("issues.work.lastStep", { step: stepText(last) })}
             </Text>
           ) : null}
           {noAi ? (
@@ -587,7 +548,7 @@ function WorkCard({ issue: i }: { issue: Issue }) {
               >
                 {/* On the step's first line: a step that wraps had its mark centred between its lines. */}
                 {l.going ? (
-                  <LineIcon variant="small" size={12}>
+                  <LineIcon variant="small" size={12} mark>
                     <PixelOrbit color={color} size={12} />
                   </LineIcon>
                 ) : (
@@ -881,7 +842,7 @@ function ColumnPicker({
 }
 
 /**
- * What changes a task's fields, one sheet each: its column (or its stage while the board's columns load), who does
+ * What changes a task's fields, one sheet each: its project, its column (or its stage while the board's columns load), who does
  * it (an agent is asked and starts), its priority, its due date and who sees it. The head's strip and "…" share them.
  */
 function useIssuePickers(i: Issue) {
@@ -925,6 +886,7 @@ function useIssuePickers(i: Issue) {
   ];
   const board = columns.data ?? [];
   const column = columnOfIssue(i, board);
+  const projectItems = useProjectItems();
   return {
     column,
     columnLabel,
@@ -961,6 +923,8 @@ function useIssuePickers(i: Issue) {
           onPress: () => assign(null),
         },
       ]),
+    pickProject: () =>
+      pick(projectItems(i.project, (projectId) => update({ type: "update", id: i.id, patch: { projectId } }))),
     pickPriority: () =>
       pick(
         PRIORITIES.map((p: IssuePriority) => ({
@@ -1144,19 +1108,6 @@ const styles = StyleSheet.create({
   bigTitle: { marginVertical: 4 },
   number: { fontWeight: "500" },
   chips: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
-  prop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-    minHeight: TOOL_H,
-    maxWidth: "100%",
-    paddingLeft: 10,
-    paddingRight: 12,
-    paddingVertical: (TOOL_H - PROP_LINE) / 2,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  propText: { fontWeight: "600", flexShrink: 1 },
   // The screen's cards: on the 16 margin, 12 apart (the conversation's card gap, CHAT_RHYTHM.card), radius 20 with the
   // cut corner. Measured: work card 16 → 16 from the edges, text at 16 + 14 + 24 face + 8 = 62; the work line's card on
   // the same 16 edges, its text at 16 + 40 = 56.

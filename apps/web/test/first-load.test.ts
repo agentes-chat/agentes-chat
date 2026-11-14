@@ -19,10 +19,16 @@ test("the computers' screens and the import load with their own pages, never wit
   expect(importers("DevicePage")).toEqual(["pages/SettingsPage.tsx"]);
   expect(importers("DevicesSection")).toEqual(["components/devices/DevicePage.tsx", "pages/SettingsPage.tsx"]);
   expect(importers("ImportFlow")).toEqual([
+    "components/new-agent/ImportAgentsDialog.tsx",
     "pages/NewAgentPage.tsx",
     "pages/SettingsPage.tsx",
     "pages/onboarding/TeamSourceBody.tsx",
   ]);
+  // Over the new agent's dialog, which the app's shell holds: only its `lazy(() => import(…))` reaches the import.
+  expect(importers("ImportAgentsDialog")).toEqual([]);
+  expect(SOURCES.find((s) => s.path === "components/new-agent/NewAgentDialog.tsx")?.code).toContain(
+    'import("./ImportAgentsDialog")',
+  );
   // Pages only routes import, which the router splits out of the first load.
   for (const page of ["SettingsPage", "NewAgentPage", "OnboardingPage"])
     for (const by of importers(page)) expect({ page, by }).toEqual({ page, by: expect.stringMatching(/^routes\//) });

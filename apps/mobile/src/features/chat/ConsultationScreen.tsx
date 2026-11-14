@@ -5,11 +5,12 @@ import { groupsWith } from "@agenteschat/client/lib/timeline";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button, LineIcon, PixelOrbit, Text } from "@/ui";
+import { Button, LineIcon, PixelOrbit, SheetSurface, Text } from "@/ui";
 import { chatHref } from "../links/logic";
 import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { FocusLive, goBack, PushedHeader } from "../shared/parts";
+import { SheetTitle } from "../shared/PromptForm";
+import { FocusLive, goBack } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { consultLineLabel } from "./ConsultGroup";
 import { requestComposerText } from "./composer-request";
@@ -18,8 +19,8 @@ import { MessageRow } from "./MessageRow";
 import { MessageText } from "./MessageText";
 
 /**
- * A question an agent asked another from a conversation, on a screen of its own (the web opens it over the
- * channel, as a thread): "Theo ⇄ Iris", where it was asked, the question as it went to the other agent, what that
+ * A question an agent asked another from a conversation, in a sheet over it (the web opens it in a dialog, as a
+ * long message): "Theo ⇄ Iris", where it was asked, the question as it went to the other agent, what that
  * agent wrote and the cards it posted in the conversation (an approval, a question, a secret), drawn as the
  * conversation draws them. Read only: people don't write in the agents' DM; "Falar com o Theo" goes back to the
  * conversation with the agent that asked mentioned in its field. The DM sends the app no events: it reloads while
@@ -30,7 +31,9 @@ export function ConsultationScreen({ consultationId, channelId }: { consultation
   return (
     <SheetHostProvider>
       <FocusLive>
-        <Consultation consultationId={consultationId} channelId={channelId} />
+        <SheetSurface>
+          <Consultation consultationId={consultationId} channelId={channelId} />
+        </SheetSurface>
       </FocusLive>
     </SheetHostProvider>
   );
@@ -65,10 +68,15 @@ function Consultation({ consultationId, channelId }: { consultationId: string; c
   };
   return (
     <View style={[styles.screen, { backgroundColor: c.bg }]}>
-      <PushedHeader
-        title={q ? t("chat.consultPanel.title", { from: from.name, to: to.name }) : ""}
-        subtitle={channelName ? t("chat.consultPanel.where", { channel: channelName }) : t("chat.consultPanel.whereDm")}
-      />
+      <View style={styles.head}>
+        <SheetTitle
+          title={q ? t("chat.consultPanel.title", { from: from.name, to: to.name }) : ""}
+          subtitle={[
+            channelName ? t("chat.consultPanel.where", { channel: channelName }) : t("chat.consultPanel.whereDm"),
+            ...(list.length > 0 ? [t("chat.consultPanel.messages", { count: list.length })] : []),
+          ].join(" · ")}
+        />
+      </View>
       <ScrollView contentContainerStyle={styles.list}>
         {query.isLoading ? <ActivityIndicator color={c.muted} /> : null}
         {!query.isLoading && !query.data ? (
@@ -111,7 +119,7 @@ function Consultation({ consultationId, channelId }: { consultationId: string; c
         {q && state && state !== "answered" ? (
           <View style={[styles.line, styles.pad]} accessibilityLiveRegion="polite">
             {state === "working" ? (
-              <LineIcon variant="caption" size={12}>
+              <LineIcon variant="caption" size={12} mark>
                 <PixelOrbit color={agentLook(consulted).color} size={12} />
               </LineIcon>
             ) : (
@@ -155,6 +163,8 @@ function Consultation({ consultationId, channelId }: { consultationId: string; c
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  // Under the sheet's grabber, the list's side inset.
+  head: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },
   list: { paddingVertical: 12, gap: 2 },
   pad: { paddingHorizontal: 16 },
   // Sentences that wrap: the icon stays on their first line (`LineIcon`), not between the lines.

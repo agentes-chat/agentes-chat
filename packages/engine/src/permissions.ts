@@ -5,9 +5,10 @@ import { type SQL, sql } from "@agenteschat/db";
  * its people, agents and the channels open to them); only an owner may `manage_owners` (give and take ownership,
  * delete the workspace). Agents never hold these: what an agent may do comes from its own scopes (Tool Gateway).
  * The apps draw the roles screen from `PERMISSION_AREAS` (sent by `GET …/roles`) and name each key with i18n.
- * `use_others_plans`: give any agent one may manage a plan someone else connected (ADR 0059 §3); administrators and
- * owners hold it, `everyone` doesn't, so no migration backfills it. `mention_everyone` (Discord's "Mention @everyone"):
- * `@todos` in any conversation but a DM mentions all its members, people and agents; the same holds for it.
+ * `mention_everyone` (Discord's "Mention @everyone"): `@todos` in any conversation but a DM mentions all its members,
+ * people and agents; administrators and owners hold it, `everyone` doesn't, so no migration backfills it. Keys no
+ * longer listed here (`use_others_plans`, retired when plans began serving the whole workspace, ADR 0059 §3) may still
+ * sit in stored roles: every reader skips them (`isRolePermission`).
  */
 export const PERMISSION_AREAS = [
   {
@@ -31,7 +32,6 @@ export const PERMISSION_AREAS = [
       "control_computers",
       "manage_connectors",
       "manage_credentials",
-      "use_others_plans",
     ],
   },
   {
@@ -61,18 +61,33 @@ export type RolePermission = "administrator" | (typeof PERMISSION_AREAS)[number]
 export type Permission = RolePermission | "read" | "manage_owners";
 
 /**
- * The agents' computers, one choice per role on the roles screen (none, the browser, the whole computer), stored as
- * one of two keys per reach. `control_*`: every agent's. `own_*`: an agent the person is responsible for, a computer
- * they connected, a run they asked for and a request addressed to them; `everyone` holds these, the other roles the
- * `control_*` pair. The browser is the agent's browser view and its sign-in requests; the whole computer adds its
- * full screen, taking control of it and its terminal. Each key gives the ones below it, so a check names only the
- * least it needs.
+ * The agents' computers, one ladder of five steps per role (ADR 0085 §12 and its 2026-11-13 addendum): nothing, then
+ * `own_browsers`, `own_computers`, `control_browsers`, `control_computers`. `control_*`: every agent's. `own_*`: an
+ * agent the person is responsible for, a computer they connected, a run they asked for and a request addressed to
+ * them. The browser is the agent's browser view and its sign-in requests; the whole computer adds its full screen,
+ * taking control of it and its terminal. Each key gives the ones below it, so a check names only the least it needs.
  */
 const IMPLIED: Partial<Record<RolePermission, readonly RolePermission[]>> = {
   control_computers: ["control_browsers", "own_computers", "own_browsers"],
-  control_browsers: ["own_browsers"],
+  control_browsers: ["own_computers", "own_browsers"],
   own_computers: ["own_browsers"],
 };
+
+/** The ladder's keys, lowest first: a role on step `n` holds `COMPUTER_STEPS[n - 1]`, step 0 none of them. */
+export const COMPUTER_STEPS = ["own_browsers", "own_computers", "control_browsers", "control_computers"] as const;
+
+/** The one row the four computer keys make on the roles screen and in `setRowHolders`. */
+export const COMPUTERS_ROW = "computers";
+
+/**
+ * The rows of the roles screen, in its order: every key of the areas, the four computer keys as one row in their
+ * place. `administrator` isn't one: it has its own switch.
+ */
+export const PERMISSION_ROWS = PERMISSION_AREAS.flatMap((a) =>
+  a.keys.flatMap((k): string[] =>
+    k === COMPUTER_STEPS[0] ? [COMPUTERS_ROW] : (COMPUTER_STEPS as readonly string[]).includes(k) ? [] : [k],
+  ),
+);
 /** The keys that give `permission`, itself first. */
 const givers = (permission: RolePermission): RolePermission[] => [
   permission,

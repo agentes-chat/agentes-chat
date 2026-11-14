@@ -1,11 +1,13 @@
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
+import { installTitleTips } from "@agenteschat/ui";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import "./styles.css";
 import { AppProvider } from "./app";
+import { toolWords } from "./control/activity";
 import type { LocalPhase, ServeProblem, SetupStep, Tailnet } from "./control/local-server";
-import { DesktopStore } from "./control/store";
+import { DesktopStore, orgName } from "./control/store";
 import { DevFrame } from "./dev/DevFrame";
 import { readPref } from "./hooks";
 import { createFakeHost, SCENARIOS, type Scenario } from "./host/fake";
@@ -76,9 +78,16 @@ const store = new DesktopStore(host, {
     const org = home.status?.org?.name;
     void host.notify(title, org ? `${org} · ${request.reason}` : request.reason).catch(() => {});
   },
+  // Always told, whatever the notification preference: a tool turned on from elsewhere must never go unseen.
+  onToolAllowed: (home, allowed) => {
+    if (host.window !== "popover") return;
+    const values = { name: allowed.byName || orgName(home), tool: toolWords(i18n.t, allowed.tool) };
+    void host.notify(i18n.t("desktop.tray.allowedTitle", values), i18n.t("desktop.tray.allowedBody")).catch(() => {});
+  },
 });
 store.start();
 
+installTitleTips();
 const root = document.getElementById("root");
 if (root) {
   createRoot(root).render(

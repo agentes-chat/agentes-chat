@@ -302,7 +302,7 @@
   },
   "along": {
     "agent": "Ein Agent",
-    "waits": "{{name}} wartet auf dein Okay",
+    "waits": "{{name}} · wartet auf dich",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} arbeitet",
     "more": "+{{count}}"
@@ -370,8 +370,6 @@
     "switchWorking": "arbeitet",
     "join": "Dem Kanal beitreten",
     "sending": "Wird gesendet…",
-    "failed": "Nicht gesendet · Erneut versuchen",
-    "notSent": "Die Nachricht wurde nicht gesendet.",
     "toLatest": "Zu den neuesten Nachrichten",
     "toLatestNew": "Zu den neuesten Nachrichten: {{text}}",
     "stopAgent": "{{name}} stoppen",
@@ -794,7 +792,7 @@
     "teamSectionPersonal": "Deine Agenten",
     "managerQuiet": "Nichts in Arbeit",
     "state": {
-      "waitsYou": "wartet auf dein Okay",
+      "waitsYou": "wartet auf dich",
       "noAi": "Keine KI verbunden",
       "connect": "Verbinden",
       "archived": "Archiviert",
@@ -920,6 +918,9 @@
       "routine_failed_other": "Routinen fehlgeschlagen",
       "run_failed_one": "Ließ sich nicht abschließen",
       "run_failed_other": "Ließen sich nicht abschließen",
+      "admin_ask_channel_agent": "{{names}} bittet dich, {{agent}} zu #{{label}} hinzuzufügen",
+      "admin_ask_create_agents": "{{names}} möchte Agenten erstellen dürfen",
+      "admin_ask_webhook": "{{names}} bittet dich, den {{service}}-Webhook für Routinen einzurichten",
       "routine_paused_one": "Routine pausiert",
       "routine_paused_other": "Routinen pausiert",
       "routine_stalled_one": "Routine wartet auf den Computer",
@@ -980,6 +981,8 @@
       "plan_lent_other": "{{names}} haben dein {{plan}}-Abo mit {{agent}} verbunden",
       "plan_lent_female_one": "{{names}} hat dein {{plan}}-Abo mit {{agent}} verbunden",
       "plan_lent_female_other": "{{names}} haben dein {{plan}}-Abo mit {{agent}} verbunden",
+      "plan_serves_one": "Dein {{plan}} dient jetzt dem ganzen Workspace",
+      "plan_serves_other": "Dein {{plan}} dient jetzt dem ganzen Workspace",
       "plan_model_dropped_one": "{{model}} ist nicht mehr bei {{plan}}. {{names}} nutzt vorerst {{runs}}",
       "plan_model_dropped_other": "{{model}} ist nicht mehr bei {{plan}}. {{names}} nutzt vorerst {{runs}}",
       "computer_disk_full_one": "Die Festplatte eines Computers ist fast voll",
@@ -1135,6 +1138,9 @@
     "addWorkspaceTeamShort": "Dem Server deines Teams beitreten",
     "addWorkspaceTeamSubShort": "Adresse oder QR-Code des Computers",
     "addWorkspaceFoot": "Du verlässt keinen Workspace.",
+    "addAccount": "Bei einem weiteren Konto anmelden",
+    "addAccountSub": "Auf {{host}}, ohne dieses zu verlassen",
+    "accountNoWorkspace": "Noch kein Workspace",
     "teamServerLeadShort": "Was dein Team im Browser öffnet.",
     "teamServerQuestion": "Wie lautet die Adresse deines Teams?",
     "account": {
@@ -1152,6 +1158,8 @@
       "name": "Name",
       "namePlaceholder": "Dein Name",
       "email": "E-Mail",
+      "emailWebLead": "Melde dich auf der Website erneut an und ändere sie dort, ohne den Code.",
+      "emailWeb": "Auf der Website erneut anmelden",
       "inWorkspace": "In diesem Workspace · {{org}}",
       "handle": "Dein @",
       "timezone": "Zeitzone",
@@ -1364,7 +1372,6 @@
     "uses_one": "{{count}}-mal genutzt",
     "uses_other": "{{count}}-mal genutzt",
     "confirmed": "Von einer Person bestätigt",
-    "unconfirmed": "Noch nicht bestätigt",
     "confirm": "Bestätigen",
     "confirmedToast": "Bestätigt",
     "details": "Technische Details",
@@ -1437,7 +1444,7 @@
       "plain": "hat eine Aufgabe abgeschlossen"
     },
     "rowWait": {
-      "approval": "wartet auf dein Okay",
+      "approval": "wartet auf dich",
       "question": "wartet auf deine Antwort",
       "mission": "wartet auf deine Prüfung"
     },
@@ -1475,13 +1482,13 @@
   },
   "intentAgents": {
     "waitingSection": "Wartet auf dich",
-    "waitingLine": "{{title}} · braucht dein Okay",
+    "waitingLine": "{{title}} · wartet auf dich",
     "waitingMore_one": "{{title}} · und {{count}} weitere wartet auf dich",
     "waitingMore_other": "{{title}} · und {{count}} weitere warten auf dich",
-    "waitingLabel": "{{name}}, braucht dein Okay",
+    "waitingLabel": "{{name}}, wartet auf dich",
     "owner": "Inhaber: {{name}}",
     "ownerYou": "Inhaber: du",
-    "nowWaiting": "Braucht dein Okay: {{title}}",
+    "nowWaiting": "Wartet auf dich: {{title}}",
     "did": {
       "title": "Was er für dich getan hat",
       "title_female": "Was sie für dich getan hat",
@@ -1500,7 +1507,7 @@
         "image": "Bild",
         "file": "Datei"
       },
-      "waitingOnYou": "Braucht dein Okay",
+      "waitingOnYou": "Wartet auf dich",
       "youApproved": "Du hast freigegeben",
       "youRefused": "Du hast abgelehnt",
       "action": {
@@ -1577,9 +1584,9 @@
         "setup": "Workspace-Einrichtung",
         "desktop": "Computerbildschirm"
       },
-      "asksYou": "Mergen und Veröffentlichen fragen immer nach deiner Freigabe, auf jeder Stufe.",
-      "asksOwner": "Mergen und Veröffentlichen fragen immer nach der Freigabe von {{name}}, auf jeder Stufe.",
-      "asksAdmins": "Mergen und Veröffentlichen fragen immer nach der Freigabe eines Admins, auf jeder Stufe.",
+      "asksYou": "Mergen und Veröffentlichen fragen nach deiner Freigabe, außer der Agent fragt nie.",
+      "asksOwner": "Mergen und Veröffentlichen fragen nach der Freigabe von {{name}}, außer der Agent fragt nie.",
+      "asksAdmins": "Mergen und Veröffentlichen fragen nach der Freigabe eines Admins, außer der Agent fragt nie.",
       "empty": "Vorerst nur Unterhaltung."
     }
   },
@@ -1678,13 +1685,7 @@
       "open": "Öffnen",
       "expandHint": "Zum Vergrößern tippen",
       "stop": "Stoppen",
-      "giveUp": "Aufgeben",
-      "done": "Erledigt: {{title}}",
-      "failed": "Nicht geschafft: {{title}}",
-      "failedNote": "Nicht geschafft: {{note}}",
-      "expired": "Niemand hat es rechtzeitig geöffnet: {{title}}",
-      "cancelled": "Abgebrochen: {{title}}",
-      "withdrawn": "{{name}} braucht das nicht mehr: {{title}}"
+      "giveUp": "Aufgeben"
     },
     "live": {
       "inControl": "Du hast die Steuerung",
@@ -1994,6 +1995,7 @@
       "access_requestFor": "{{names}} möchte {{device}} für {{person}} nutzen",
       "waiting": "{{names}} wartet auf {{device}}",
       "waitingFor": "{{names}} wartet für {{person}} auf {{device}}",
+      "tool_request": "{{names}} bittet dich, {{tool}} auf deinem {{device}} einzuschalten",
       "allowOnce": "Einmal erlauben",
       "always": "{{name}} immer erlauben",
       "no": "Nein",
@@ -2243,9 +2245,9 @@
     "ofOnline": "{{online}} von {{count}}",
     "deleteName": "{{name}} löschen",
     "deleteFoot": "Du hast 7 Tage Zeit, es dir anders zu überlegen.",
-    "deleteAlert": "Alle verlieren sofort den Zugriff. Wiederherstellen geht noch 7 Tage lang.",
+    "deleteAlert": "Alle können ihn ab sofort nur noch lesen. Wiederherstellen geht noch 7 Tage lang.",
     "deleteAction": "Löschen",
-    "deleteIntro": "{{name}} wird sofort für alle geschlossen und in 7 Tagen endgültig gelöscht.",
+    "deleteIntro": "{{name}} ist ab sofort für alle schreibgeschützt und wird in 7 Tagen endgültig gelöscht.",
     "holdDelete": "Zum Löschen gedrückt halten",
     "deleteFailed": "Der Workspace ließ sich nicht löschen. Versuch es noch einmal.",
     "access": {
@@ -2256,7 +2258,8 @@
       "tooBig": "Das Bild ist zu groß. Versuch ein anderes."
     },
     "machine": {
-      "toolsHow": "Tippe auf ein eingeschaltetes Tool, um es auszuschalten. Wieder einschalten geht nur am Computer selbst."
+      "toolsHow": "Tippe auf ein eingeschaltetes Werkzeug, um es auszuschalten. Wieder einschalten: am Computer selbst, oder hier durch die Person, die ihn verbunden hat.",
+      "toolsHowOwner": "Tippe auf ein Werkzeug, um es ein- oder auszuschalten."
     },
     "roles": {
       "onComputer": "Die Reihenfolge der Rollen und das Symbol jeder Rolle änderst du am Computer.",
@@ -2542,7 +2545,6 @@
     },
     "formatAuto": "{{name}} wählt die beste aus",
     "newWidget": {
-      "titleHint": "Titel · {{name}} schlägt beim Testen einen vor",
       "alerts": "Alarm an",
       "realData": "Echte Daten",
       "editAsk": "Anfrage ändern",

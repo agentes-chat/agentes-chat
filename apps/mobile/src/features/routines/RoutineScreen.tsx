@@ -6,7 +6,7 @@ import {
   useRoutines,
   useRuleDescribe,
 } from "@agenteschat/client";
-import { ownActionName } from "@agenteschat/client/lib/approval-words";
+import { ownActionName, routineVaultKey, splitOwnActions } from "@agenteschat/client/lib/approval-words";
 import { formatTokensShort, formatUsd, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -166,6 +166,7 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
   const pull = usePullRefresh(() => Promise.all([refetch(), runs.refetch()]));
   const agentName = dir.nameOf({ type: "agent", id: r.agentId });
   const title = routineTitle(r);
+  const own = splitOwnActions(r.ownActions ?? []);
   const done = isDoneOnce(r);
   const fired = hasFired(r);
   const running = isRunning(r);
@@ -441,7 +442,7 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
 
           {r.canSeeDetails ? (
             <Section title={t("routines.panel.ownActions")}>
-              {(r.ownActions ?? []).map((name) => (
+              {own.apps.map((name) => (
                 <GroupedRow
                   key={name}
                   label={ownActionName(t, name)}
@@ -460,8 +461,43 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
                 />
               ))}
               <Block>
+                <InfoHint
+                  name={t("common.about", { label: t("routines.panel.ownActions") })}
+                  text={t(own.apps.length ? "routines.ownActions.hint" : "routines.ownActions.none")}
+                  variant="footnote"
+                >
+                  <Text variant="footnote" tone="muted">
+                    {t(own.apps.length ? "routines.ownActions.hintShort" : "routines.ownActions.noneShort")}
+                  </Text>
+                </InfoHint>
+              </Block>
+            </Section>
+          ) : null}
+
+          {r.canSeeDetails && own.keys.length > 0 ? (
+            <Section title={t("routines.vaultKeys.title")}>
+              {own.keys.map((key) => (
+                <GroupedRow
+                  key={key}
+                  icon="key"
+                  label={key}
+                  {...(r.canManage
+                    ? {
+                        toggle: true,
+                        disabled: controls.action.isPending,
+                        onPress: () =>
+                          controls.action.mutate({
+                            type: "update",
+                            id: r.id,
+                            patch: { ownActions: (r.ownActions ?? []).filter((a) => routineVaultKey(a) !== key) },
+                          }),
+                      }
+                    : {})}
+                />
+              ))}
+              <Block>
                 <Text variant="footnote" tone="muted">
-                  {t(r.ownActions?.length ? "routines.ownActions.hint" : "routines.ownActions.none")}
+                  {t("routines.vaultKeys.hint")}
                 </Text>
               </Block>
             </Section>

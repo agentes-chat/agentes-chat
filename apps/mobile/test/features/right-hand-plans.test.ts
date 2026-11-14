@@ -33,7 +33,13 @@ test("Sua IA is one row that opens its choice: what answers me, by its logo and 
   expect(screen).toContain('<ProviderLogo id={status.brain} size="sm" />');
   expect(screen).toContain("value: own ? MINE : WORKSPACE,");
   expect(screen).toContain('{ key: OTHER, label: t("agentPage.work.brain.connectPlan")');
-  expect(screen).toContain("if (picked === OTHER || (picked === MINE && !own)) connect();");
+  expect(screen).toContain("else if (picked === OTHER || (picked === MINE && !own)) connect();");
+  // The plan's model is a choice of the same sheet, under the plan, and opens the model's page: account and model in
+  // one place, as on an agent's AI. The row behind says the model too.
+  expect(screen).toContain('key: MODEL,\n              label: t("agentPage.work.brain.planModel"),');
+  expect(screen).toContain("if (picked === MODEL) openAgentModel(agent.id);");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the screen's source
+  expect(screen).toContain("sub={model ? `${sub} · ${model}` : sub}");
   expect(screen).toContain("else if (picked === WORKSPACE && own) back();");
   expect(screen).not.toContain("value={t(");
   expect(screen).not.toContain("onPress={back}");
@@ -65,23 +71,18 @@ test("Sua IA is one row that opens its choice: what answers me, by its logo and 
   );
 });
 
-test("Lodi's settings: the workspace's plan is lent by a switch for whoever sets its AI, saying what it does once", () => {
+test("Lodi's settings: the workspace's plan has no lending switch, since a plan serves the whole workspace", () => {
   const screen = readFileSync(join(import.meta.dir, "../../src/features/right-hand/SettingsScreen.tsx"), "utf8");
   // The workspace's AI is read and saved as such; the look opens from the row, with no "Mudar visual" on it.
   expect(screen).toContain('useAgentBrain(orgId, agent.id, true, false, "workspace")');
   expect(screen).toContain('{ scope: "workspace", ...input }');
   expect(screen).not.toContain("rightHand.settings.changeLook");
-  // As for any agent on its owner's plan: an admin may override (the plan's owner hears it by email).
-  expect(screen).toContain('label={t("rightHand.settings.lend")}');
-  expect(screen).toContain("set({ onlyOwner: on })");
-  expect(screen).toContain("disabled={!view.canEdit || busy}");
-  // No sentence under the switch: its name says what it does, the plan's terms are behind its ⓘ.
-  expect(screen).not.toContain("sharesOn");
-  expect(screen).toContain("{...(terms ? { hint: { name: terms.about, text: terms.text } } : {})}");
+  // Who a plan serves is its owner's choice in IA e uso (ADR 0059 §3), not a switch here.
+  expect(screen).not.toContain("rightHand.settings.lend");
+  expect(screen).not.toContain("set({ onlyOwner: on })");
   expect(screen).toContain('t("rightHand.settings.planName", { name: a.label })');
-  // The budget only where something bills per use, lending and the audience only with someone else here.
+  // The budget only where something bills per use, the audience only with someone else here.
   expect(screen).toContain("{usesApi ? (");
-  expect(screen).toContain("{kind && view && !solo ? (");
   expect(screen).toContain("{solo ? null : (");
   // What it is now is one row that opens the choice of the key or a plan, the one in use checked: no loose
   // "Usar uma chave de API" row and no second list of plans under another heading.
@@ -90,6 +91,11 @@ test("Lodi's settings: the workspace's plan is lent by a switch for whoever sets
   expect(screen).toContain('if (kind) set({ brain: "model" });');
   expect(screen).toContain("set({ brain: plan.kind, account: plan.id });");
   expect(screen).toContain("disabled={busy || hold}");
+  // On a plan, its model is the row under it (as the key's model is), saved as the workspace's.
+  expect(screen).toContain('onPress={() => openAgentModel(agent.id, "workspace")}');
+  const model = readFileSync(join(import.meta.dir, "../../src/features/ai/AgentAiScreen.tsx"), "utf8");
+  expect(model).toContain("const brain = useAgentBrain(orgId, agentId, true, false, scope);");
+  expect(model).toContain("api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input })");
   expect(screen).not.toContain("noAi.rightHand.useKey");
   expect(screen).not.toContain("workspacePlan");
   // Any plan's CLI: Claude Code's, Codex's, Cursor's, OpenCode's, Grok Build's or the Antigravity CLI's.

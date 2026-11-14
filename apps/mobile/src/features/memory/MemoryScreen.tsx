@@ -325,10 +325,8 @@ function MemoryDetail({ id }: { id: string }) {
             </Pressable>
           ) : null}
           <View style={styles.chips}>
-            <Chip
-              icon={m.verified ? "check" : "sparkle"}
-              label={t(m.verified ? "mobile.memory.confirmed" : "mobile.memory.unconfirmed")}
-            />
+            {/* Only the state that says something: an unconfirmed memory shows its Confirmar button instead. */}
+            {m.verified ? <Chip icon="check" label={t("mobile.memory.confirmed")} /> : null}
             <Chip icon="clock" label={t("mobile.memory.uses", { count: m.uses })} />
           </View>
           <Text variant="subhead" tone="muted">

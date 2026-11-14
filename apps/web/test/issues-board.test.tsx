@@ -208,7 +208,15 @@ describe("Tarefas: a card", () => {
   });
 
   test("each fact goes with its toggle in Exibição; the number and the conversation always show", async () => {
-    const fields = { assignee: false, priority: false, due: false, criteria: false, pullRequest: false, label: false };
+    const fields = {
+      project: false,
+      assignee: false,
+      priority: false,
+      due: false,
+      criteria: false,
+      pullRequest: false,
+      label: false,
+    };
     const state = seedState({ issuesView: view({ fields }) });
     await go(state, withTasks({ 129: { work: work("waiting_input") } }, state));
     expect(facts(cardOf(128))).toEqual(["#128"]);

@@ -21,14 +21,13 @@ import { ScreenError } from "@/features/shared/ScreenError";
 import { catchGlobalErrors, setErrorScope, startErrorReports } from "@/lib/error-reports";
 import { keepLastCrash } from "@/lib/last-crash";
 import { newWorkspaceDone, newWorkspaceMade, newWorkspaceShown, useNewWorkspaceAsk } from "@/lib/new-workspace";
-import { deletingOf, enteringShown, firstRunMounted, suspendedOf } from "@/lib/org-choice";
+import { enteringShown, firstRunMounted, suspendedOf } from "@/lib/org-choice";
 import { useServer } from "@/lib/server";
 import { AppProviders } from "@/providers/AppProviders";
 import { useAppFonts } from "@/providers/fonts";
 import { useOrgGate } from "@/providers/org";
 import { useSession } from "@/providers/session";
 import { DeletingAccount } from "@/ui/auth/DeletingAccount";
-import { DeletingWorkspace } from "@/ui/auth/DeletingWorkspace";
 import { SuspendedWorkspace } from "@/ui/auth/SuspendedWorkspace";
 import { router, useNavigationTheme } from "@/ui/navigation";
 import { useTheme } from "@/ui/theme";
@@ -42,8 +41,8 @@ catchGlobalErrors();
 /**
  * Root: the providers, then the session gate. What breaks while drawing outside `(app)`'s own boundary (the sign-in
  * screens, the server and scan screens, an invitation, a reset, connect, not-found, and the first run, splash,
- * suspended, deleting and entering overlays) gets the same screen, "Tentar de novo" drawing it again, instead of
- * the app closing.
+ * suspended and entering overlays) gets the same screen, "Tentar de novo" drawing it again, instead of the app
+ * closing.
  */
 export default function RootLayout() {
   return (
@@ -88,15 +87,11 @@ function Gate() {
   const orgId = org.state?.orgId;
   useEffect(() => setErrorScope({ orgId, userId }), [orgId, userId]);
   const accountDeletion = ready && signedIn ? me.data?.user.deletion : undefined;
+  // A workspace being deleted opens as ever, read-only, under its notice (ADR 0088 §7): only a suspension covers it.
   const suspended = ready && signedIn && org.state ? suspendedOf(org.state.orgs, org.state.orgId) : null;
-  // Being deleted: its own screen, after the suspension, the stronger fact.
-  const deleting = ready && signedIn && org.state && !suspended ? deletingOf(org.state.orgs, org.state.orgId) : null;
-  // Apagar conta opened from either screen goes over it: those screens step aside while it is open.
+  // Apagar conta opened from that screen goes over it: the screen steps aside while it is open.
   const pathname = usePathname();
   const deletingAccount = pathname === "/account-delete";
-  // "Novo workspace" from a workspace being deleted: the first run, until a new workspace is chosen or they go back.
-  const [freshStart, setFreshStart] = useState(false);
-  if (freshStart && (!signedIn || (ready && deleting === null))) setFreshStart(false);
   // "Criar um workspace novo" from Adicionar workspace (ADR 0154): the first run on that server once signed in there,
   // until the new workspace is chosen or they go back.
   const server = useServer();
@@ -108,7 +103,7 @@ function Gate() {
     if (newWorkspaceMade(ask, openOrg)) newWorkspaceDone();
     else newWorkspaceShown(openOrg);
   }, [ask, server, ready, signedIn, openOrg]);
-  const fresh = freshStart || asking;
+  const fresh = asking;
 
   // Opening the app: the native launch image hands over to the animated splash on its first frame (they look
   // the same), which leaves once the app is ready. The fallback hide covers a splash that never lays out.
@@ -158,16 +153,14 @@ function Gate() {
   );
   if (firstRun !== firstRunBefore) setFirstRunBefore(firstRun);
   const suspendedShown = suspended !== null && !deletingAccount;
-  const deletingShown = deleting !== null && !deletingAccount && !firstRun;
-  const covered = suspendedShown || deletingShown || down !== null || (firstRun && fresh) || !!accountDeletion;
+  const covered = suspendedShown || down !== null || (firstRun && fresh) || !!accountDeletion;
 
   // The navigator is always mounted (so links and pushes can navigate); the splash covers it until ready.
   return (
     // The native bars (headers, back button tint, interface style) read React Navigation's theme: ours.
     <NavigationThemeProvider value={navigationTheme}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      {/* Under the suspended or deleting screen or the waiting splash the app stays mounted, out of screen
-          readers' reach. */}
+      {/* Under the suspended screen or the waiting splash the app stays mounted, out of screen readers' reach. */}
       <View
         style={{ flex: 1 }}
         accessibilityElementsHidden={covered}
@@ -188,22 +181,12 @@ function Gate() {
         <View style={onInvite ? { display: "none" } : StyleSheet.absoluteFill}>
           <OnboardingFlow
             another={fresh ? (org.state?.org?.name ?? null) : null}
-            onLeave={
-              fresh
-                ? () => {
-                    setFreshStart(false);
-                    newWorkspaceDone();
-                  }
-                : undefined
-            }
+            onLeave={fresh ? newWorkspaceDone : undefined}
           />
         </View>
       ) : null}
       {entering ? <Entering org={org.state?.org?.name ?? null} /> : null}
       {org.state && suspended && suspendedShown ? <SuspendedWorkspace state={org.state} suspended={suspended} /> : null}
-      {org.state && deleting && deletingShown ? (
-        <DeletingWorkspace state={org.state} deleting={deleting} onNewWorkspace={() => setFreshStart(true)} />
-      ) : null}
       {accountDeletion ? <DeletingAccount dueAt={accountDeletion.dueAt} /> : null}
       {launching ? (
         <LaunchSplash

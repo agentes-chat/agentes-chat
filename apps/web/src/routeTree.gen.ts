@@ -15,6 +15,7 @@ import { Route as BaixarRouteImport } from './routes/baixar'
 import { Route as ConectandoRouteImport } from './routes/conectando'
 import { Route as ConectarRouteImport } from './routes/conectar'
 import { Route as DownloadRouteImport } from './routes/download'
+import { Route as EmailUndoRouteImport } from './routes/email-undo'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OwnerRouteImport } from './routes/owner'
@@ -45,6 +46,7 @@ import { Route as OrgOrgIdSearchRouteImport } from './routes/org.$orgId.search'
 import { Route as OrgOrgIdSettingsRouteImport } from './routes/org.$orgId.settings'
 import { Route as OrgOrgIdTaskManagerRouteImport } from './routes/org.$orgId.task-manager'
 import { Route as OrgOrgIdTeamRouteImport } from './routes/org.$orgId.team'
+import { Route as OrgOrgIdWaitingRouteImport } from './routes/org.$orgId.waiting'
 import { Route as OrgOrgIdWikiRouteImport } from './routes/org.$orgId.wiki'
 import { Route as OrgOrgIdAgentsNewRouteImport } from './routes/org.$orgId.agents.new'
 import { Route as OrgOrgIdCChannelIdRouteImport } from './routes/org.$orgId.c.$channelId'
@@ -94,6 +96,11 @@ const ConectarRoute = ConectarRouteImport.update({
 const DownloadRoute = DownloadRouteImport.update({
   id: '/download',
   path: '/download',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailUndoRoute = EmailUndoRouteImport.update({
+  id: '/email-undo',
+  path: '/email-undo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -246,6 +253,11 @@ const OrgOrgIdTeamRoute = OrgOrgIdTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => OrgOrgIdRoute,
 } as any)
+const OrgOrgIdWaitingRoute = OrgOrgIdWaitingRouteImport.update({
+  id: '/waiting',
+  path: '/waiting',
+  getParentRoute: () => OrgOrgIdRoute,
+} as any)
 const OrgOrgIdWikiRoute = OrgOrgIdWikiRouteImport.update({
   id: '/wiki',
   path: '/wiki',
@@ -362,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/conectando': typeof ConectandoRoute
   '/conectar': typeof ConectarRoute
   '/download': typeof DownloadRoute
+  '/email-undo': typeof EmailUndoRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/owner': typeof OwnerRoute
@@ -391,6 +404,7 @@ export interface FileRoutesByFullPath {
   '/org/$orgId/settings': typeof OrgOrgIdSettingsRoute
   '/org/$orgId/task-manager': typeof OrgOrgIdTaskManagerRoute
   '/org/$orgId/team': typeof OrgOrgIdTeamRoute
+  '/org/$orgId/waiting': typeof OrgOrgIdWaitingRoute
   '/org/$orgId/wiki': typeof OrgOrgIdWikiRoute
   '/org/$orgId/': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
@@ -420,6 +434,7 @@ export interface FileRoutesByTo {
   '/conectando': typeof ConectandoRoute
   '/conectar': typeof ConectarRoute
   '/download': typeof DownloadRoute
+  '/email-undo': typeof EmailUndoRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/owner': typeof OwnerRoute
@@ -448,6 +463,7 @@ export interface FileRoutesByTo {
   '/org/$orgId/settings': typeof OrgOrgIdSettingsRoute
   '/org/$orgId/task-manager': typeof OrgOrgIdTaskManagerRoute
   '/org/$orgId/team': typeof OrgOrgIdTeamRoute
+  '/org/$orgId/waiting': typeof OrgOrgIdWaitingRoute
   '/org/$orgId/wiki': typeof OrgOrgIdWikiRoute
   '/org/$orgId': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
@@ -478,6 +494,7 @@ export interface FileRoutesById {
   '/conectando': typeof ConectandoRoute
   '/conectar': typeof ConectarRoute
   '/download': typeof DownloadRoute
+  '/email-undo': typeof EmailUndoRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/owner': typeof OwnerRoute
@@ -507,6 +524,7 @@ export interface FileRoutesById {
   '/org/$orgId/settings': typeof OrgOrgIdSettingsRoute
   '/org/$orgId/task-manager': typeof OrgOrgIdTaskManagerRoute
   '/org/$orgId/team': typeof OrgOrgIdTeamRoute
+  '/org/$orgId/waiting': typeof OrgOrgIdWaitingRoute
   '/org/$orgId/wiki': typeof OrgOrgIdWikiRoute
   '/org/$orgId/': typeof OrgOrgIdIndexRoute
   '/org/$orgId/agents/new': typeof OrgOrgIdAgentsNewRoute
@@ -538,6 +556,7 @@ export interface FileRouteTypes {
     | '/conectando'
     | '/conectar'
     | '/download'
+    | '/email-undo'
     | '/login'
     | '/onboarding'
     | '/owner'
@@ -567,6 +586,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings'
     | '/org/$orgId/task-manager'
     | '/org/$orgId/team'
+    | '/org/$orgId/waiting'
     | '/org/$orgId/wiki'
     | '/org/$orgId/'
     | '/org/$orgId/agents/new'
@@ -596,6 +616,7 @@ export interface FileRouteTypes {
     | '/conectando'
     | '/conectar'
     | '/download'
+    | '/email-undo'
     | '/login'
     | '/onboarding'
     | '/owner'
@@ -624,6 +645,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings'
     | '/org/$orgId/task-manager'
     | '/org/$orgId/team'
+    | '/org/$orgId/waiting'
     | '/org/$orgId/wiki'
     | '/org/$orgId'
     | '/org/$orgId/agents/new'
@@ -653,6 +675,7 @@ export interface FileRouteTypes {
     | '/conectando'
     | '/conectar'
     | '/download'
+    | '/email-undo'
     | '/login'
     | '/onboarding'
     | '/owner'
@@ -682,6 +705,7 @@ export interface FileRouteTypes {
     | '/org/$orgId/settings'
     | '/org/$orgId/task-manager'
     | '/org/$orgId/team'
+    | '/org/$orgId/waiting'
     | '/org/$orgId/wiki'
     | '/org/$orgId/'
     | '/org/$orgId/agents/new'
@@ -712,6 +736,7 @@ export interface RootRouteChildren {
   ConectandoRoute: typeof ConectandoRoute
   ConectarRoute: typeof ConectarRoute
   DownloadRoute: typeof DownloadRoute
+  EmailUndoRoute: typeof EmailUndoRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   OwnerRoute: typeof OwnerRoute
@@ -772,6 +797,13 @@ declare module '@tanstack/react-router' {
       path: '/download'
       fullPath: '/download'
       preLoaderRoute: typeof DownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-undo': {
+      id: '/email-undo'
+      path: '/email-undo'
+      fullPath: '/email-undo'
+      preLoaderRoute: typeof EmailUndoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -984,6 +1016,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgOrgIdTeamRouteImport
       parentRoute: typeof OrgOrgIdRoute
     }
+    '/org/$orgId/waiting': {
+      id: '/org/$orgId/waiting'
+      path: '/waiting'
+      fullPath: '/org/$orgId/waiting'
+      preLoaderRoute: typeof OrgOrgIdWaitingRouteImport
+      parentRoute: typeof OrgOrgIdRoute
+    }
     '/org/$orgId/wiki': {
       id: '/org/$orgId/wiki'
       path: '/wiki'
@@ -1141,6 +1180,7 @@ interface OrgOrgIdRouteChildren {
   OrgOrgIdSettingsRoute: typeof OrgOrgIdSettingsRoute
   OrgOrgIdTaskManagerRoute: typeof OrgOrgIdTaskManagerRoute
   OrgOrgIdTeamRoute: typeof OrgOrgIdTeamRoute
+  OrgOrgIdWaitingRoute: typeof OrgOrgIdWaitingRoute
   OrgOrgIdWikiRoute: typeof OrgOrgIdWikiRoute
   OrgOrgIdIndexRoute: typeof OrgOrgIdIndexRoute
   OrgOrgIdAgentsNewRoute: typeof OrgOrgIdAgentsNewRoute
@@ -1178,6 +1218,7 @@ const OrgOrgIdRouteChildren: OrgOrgIdRouteChildren = {
   OrgOrgIdSettingsRoute: OrgOrgIdSettingsRoute,
   OrgOrgIdTaskManagerRoute: OrgOrgIdTaskManagerRoute,
   OrgOrgIdTeamRoute: OrgOrgIdTeamRoute,
+  OrgOrgIdWaitingRoute: OrgOrgIdWaitingRoute,
   OrgOrgIdWikiRoute: OrgOrgIdWikiRoute,
   OrgOrgIdIndexRoute: OrgOrgIdIndexRoute,
   OrgOrgIdAgentsNewRoute: OrgOrgIdAgentsNewRoute,
@@ -1216,6 +1257,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConectandoRoute: ConectandoRoute,
   ConectarRoute: ConectarRoute,
   DownloadRoute: DownloadRoute,
+  EmailUndoRoute: EmailUndoRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   OwnerRoute: OwnerRoute,

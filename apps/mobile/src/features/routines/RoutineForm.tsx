@@ -937,7 +937,14 @@ function Form({ routine }: { routine: Routine | undefined }) {
             routine?.trigger.type === "webhook" ? (
               <WebhookCard routine={routine} runs={routine.recentRuns} />
             ) : (
-              <GroupedFooter>{t("routines.webhook.newNote")}</GroupedFooter>
+              <GroupedFooter
+                hint={{
+                  name: t("common.about", { label: t("routines.webhook.address") }),
+                  text: t("routines.webhook.newNote"),
+                }}
+              >
+                {t("routines.webhook.newShort")}
+              </GroupedFooter>
             )
           ) : null}
 

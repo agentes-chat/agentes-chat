@@ -1,4 +1,5 @@
 import { type AuditRow, useAudit, useAuditRow } from "@agenteschat/client";
+import { auditUnasked } from "@agenteschat/client/lib/approvals-level";
 import {
   AUDIT_HIDDEN,
   AUDIT_SHOWS,
@@ -340,6 +341,11 @@ export function AuditRowScreen({ id }: { id: string }) {
         {connector ? <GroupedRow label={t("audit.panel.via")} value={connector} /> : null}
         {row.approval ? (
           <GroupedRow label={t("audit.panel.approval")} value={auditApprovalText(t, row.approval)} />
+        ) : auditUnasked(row) ? (
+          <GroupedRow
+            label={t("audit.panel.approval")}
+            value={t("audit.panel.unasked", { level: t("approvalsLevel.never.title") })}
+          />
         ) : null}
         {row.secret ? <GroupedRow label={t("audit.panel.secret")} value={auditSecretText(t, row.secret)} /> : null}
         <GroupedRow label={t("audit.panel.when")} value={whenAt(t, i18n.language, row.at)} />

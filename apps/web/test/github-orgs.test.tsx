@@ -8,6 +8,7 @@ import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { setNavigateAway } from "@/lib/navigate";
 import { service } from "./catalog";
 import { createFakeApi, ORG_ID, seedState } from "./fake-api";
+import { hintOf, shownText } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
 const KEY = "agentes.github-orgs";
@@ -52,7 +53,9 @@ describe("Reconectar GitHub", () => {
     await openReconnect(state);
     const dialog = reconnectDialog();
     expect(dialog.textContent).toContain("acme");
-    expect(dialog.textContent).toContain("O GitHub só pergunta pelas organizações na primeira vez");
+    expect(shownText(dialog)).toContain("O GitHub só pergunta pelas organizações na primeira vez.");
+    expect(shownText(dialog)).not.toContain("clique em Grant");
+    expect(hintOf("Organizações que ele alcança", dialog).text).toContain("clique em Grant ao lado dela");
     const link = within(dialog).getByRole("link", { name: "Liberar organizações no GitHub" });
     expect(link.getAttribute("href")).toBe(PAGE);
     expect(link.getAttribute("target")).toBe("_blank");

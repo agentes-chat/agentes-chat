@@ -108,23 +108,6 @@ export interface ComposerWorking {
   onStop: () => void;
 }
 
-/** What a message sent while an agent works does: joins what it is doing, or stops it to be read now. */
-export type SendChoice = "join" | "interrupt";
-
-/** Enter sends with the current choice; ⌘/Ctrl+Enter (`alt`) with the other one. */
-export const sendChoice = (current: SendChoice, alt: boolean): SendChoice =>
-  alt ? (current === "join" ? "interrupt" : "join") : current;
-
-/** The row above the box while an agent works and there is text: "Juntar ao que ele faz" / "Parar e mandar". */
-export interface ComposerChoice {
-  joinLabel: string;
-  interruptLabel: string;
-  /** Accessible name of the choice ("Ao mandar"). */
-  label: string;
-  /** Desktop hint next to it ("↵ junta · ⌘↵ para e manda"); `mod` is "⌘" or "Ctrl". */
-  hint?: (choice: SendChoice, mod: string) => ReactNode;
-}
-
 /** Voice messages in the box: what it says, and what the app does with a recording (ADR 0100). */
 export interface ComposerVoice {
   /** Where this recording would go: when it changes, one under way is dropped. */
@@ -133,6 +116,8 @@ export interface ComposerVoice {
   allowed?: () => Promise<boolean>;
   onTake: (take: VoiceTake) => void;
   onNotice: (notice: VoiceNotice) => void;
+  /** Each second it records, never while starting or paused: the others see "gravando áudio…". */
+  onRecording?: () => void;
   labels: {
     record: string;
     recording: string;
@@ -164,7 +149,7 @@ export interface ComposerProps {
   onChange: (value: string) => void;
   /**
    * Called with the trimmed text on Enter (Shift+Enter adds a line) or the send button. While `working`
-   * or with a `choice`, `opts.interrupt` says whether the person chose "Parar e mandar".
+   * or with `agentBusy`, `opts.interrupt` says whether the person sent it with ⌘/Ctrl+Enter (stop and send).
    */
   onSend: (text: string, opts?: { interrupt?: boolean }) => void;
   /** Accessible name of the text box, e.g. "Mensagem para #eng". */
@@ -190,11 +175,6 @@ export interface ComposerProps {
   channels?: ComposerMentions;
   /** Context pills on a line above the text (the target agent, the active skill, a select of who answers). */
   pills?: ReactNode;
-  /**
-   * The pills open the text's own row instead, before attach, a hairline after them (a DM with an agent: its chip
-   * is context, not a second line).
-   */
-  inlinePills?: boolean;
   /** The send button's tooltip, with the key hint ("Enviar ↵"). */
   sendText?: string;
   /** Formatting (bold, italic, lists…) in a bar that floats over selected text, and its ⌘/Ctrl shortcuts, writing Markdown. */
@@ -217,13 +197,18 @@ export interface ComposerProps {
   canSendEmpty?: boolean;
   /** Not yet (e.g. uploads still running): Enter and the send button wait. */
   sendBlocked?: boolean;
+  /**
+   * Inside the card, above the text's row: why this text can't go and the way out (a draft past the length limit,
+   * with "Enviar como arquivo"). Given together with `sendBlocked`.
+   */
+  notice?: ReactNode;
   /** An agent is working in this conversation (send ↔ stop). */
   working?: ComposerWorking | null;
   /**
-   * While an agent works here and there is text: the choice row above the box. Given on its own (without
-   * `working`) to whoever may write but not stop it: they choose too, there is just no stop button.
+   * An agent works here: Enter adds the message to what it is doing, ⌘/Ctrl+Enter stops it to read the message now.
+   * Given on its own (without `working`) to whoever may write but not stop it: there is just no stop button.
    */
-  choice?: ComposerChoice;
+  agentBusy?: boolean;
   /** The microphone: absent, there is none. */
   voice?: ComposerVoice;
 }
@@ -490,7 +475,6 @@ export function Composer({
   links,
   channels,
   pills,
-  inlinePills,
   sendText,
   format,
   emoji,
@@ -499,10 +483,11 @@ export function Composer({
   onFiles,
   header,
   attachments,
+  notice,
   canSendEmpty,
   sendBlocked,
   working,
-  choice,
+  agentBusy,
   voice,
 }: ComposerProps) {
   const locked = useLocked();
@@ -686,8 +671,6 @@ export function Composer({
   const ready = Boolean(value.trim() || canSendEmpty) && !disabled && !sendBlocked;
   // An agent at work and nothing to send: the send button is the stop button.
   const stopMode = Boolean(working) && !disabled && !value.trim() && !canSendEmpty && !recording;
-  const showChoice = Boolean(choice) && Boolean(value.trim()) && !disabled;
-  const [chosen, setChosen] = useState<SendChoice>("join");
   const [pressed, setPressed] = useState(false);
   // The press flash; cleared if the composer goes away first (a stop that ends the run unmounts it).
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -708,9 +691,8 @@ export function Composer({
       return;
     }
     if (!ready) return;
-    if (working || choice) onSend(value.trim(), { interrupt: showChoice && sendChoice(chosen, alt) === "interrupt" });
+    if (working || agentBusy) onSend(value.trim(), { interrupt: Boolean(agentBusy) && alt });
     else onSend(value.trim());
-    setChosen("join");
     // Keep typing: focus stays in the box (also after clicking the send button).
     ref.current?.focus();
   };
@@ -845,39 +827,6 @@ export function Composer({
     />
   );
 
-  const choiceRow =
-    showChoice && choice ? (
-      <div className="ac-composer-choice">
-        <div className="ac-seg ac-seg--sm" role="radiogroup" aria-label={choice.label}>
-          {(["join", "interrupt"] as const).map((c) => (
-            // biome-ignore lint/a11y/useSemanticElements: a two-way segmented choice, styled like the app's other segments
-            <button
-              key={c}
-              type="button"
-              role="radio"
-              aria-checked={chosen === c}
-              data-on={chosen === c || undefined}
-              className="ac-seg__item"
-              // Keep the text box's focus and selection.
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                setChosen(c);
-                ref.current?.focus();
-              }}
-            >
-              {c === "join" ? <Icon name="arrowRight" size={14} /> : <Icon name="bolt" size={14} />}
-              {c === "join" ? choice.joinLabel : choice.interruptLabel}
-            </button>
-          ))}
-        </div>
-        {choice.hint && (
-          <span className="ac-composer-choice__hint" aria-hidden="true">
-            {choice.hint(chosen, modKey())}
-          </span>
-        )}
-      </div>
-    ) : null;
-
   const sendTitle = stopMode
     ? typeof working?.stopText === "string"
       ? working.stopText
@@ -888,7 +837,6 @@ export function Composer({
 
   return (
     <>
-      {choiceRow}
       <RPopover.Root
         open={open}
         onOpenChange={(o) => {
@@ -899,7 +847,7 @@ export function Composer({
           {/* biome-ignore lint/a11y/noStaticElementInteractions: files dropped anywhere on the card (the attach button is the accessible way), and its empty room is part of the text box, as a mouse sees it */}
           <div
             ref={box}
-            className={cx("ac-composer", inlinePills && "ac-composer--lead", className)}
+            className={cx("ac-composer", className)}
             data-disabled={disabled || undefined}
             data-dragging={dragging || undefined}
             data-voice={recording ? rec.phase : undefined}
@@ -941,10 +889,14 @@ export function Composer({
             }
           >
             {header && <div className="ac-composer__header">{header}</div>}
-            {pills && !inlinePills && <div className="ac-composer__pills">{pills}</div>}
+            {pills && <div className="ac-composer__pills">{pills}</div>}
             {attachments && <div className="ac-composer__attachments">{attachments}</div>}
+            {notice && (
+              <div className="ac-composer__notice" role="alert">
+                {notice}
+              </div>
+            )}
             <div className="ac-composer__row">
-              {pills && inlinePills && <div className="ac-composer__pills">{pills}</div>}
               <div className="ac-composer__tools">
                 {voice && recording && (
                   <Button

@@ -155,6 +155,21 @@ export function cardOutcome(t: TFunction, rows: Proposal[]): { accepted: boolean
   return { accepted: done > 0, label };
 }
 
+/**
+ * How a decided card ended and who did it: "Aplicado por você", "Recusado por Ana" when one person decided every row
+ * the same way, else how it ended (`cardOutcome`: a newer text took its place, or the rows ended apart).
+ */
+export function cardDecidedBy(t: TFunction, rows: Proposal[], meId: string): string {
+  const [first] = rows;
+  const by = first?.decidedBy;
+  const alike = rows.every((p) => !p.stale && p.status === first?.status && p.decidedBy?.userId === by?.userId);
+  if (!first || !by || !alike || first.status === "pending") return cardOutcome(t, rows).label;
+  const mine = by.userId === meId;
+  if (first.status === "accepted")
+    return mine ? t("rightHand.card.appliedByYou") : t("rightHand.card.appliedBy", { name: by.name });
+  return mine ? t("rightHand.card.declinedByYou") : t("rightHand.card.declinedBy", { name: by.name });
+}
+
 /** Rows a decision couldn't apply because what they were made against changed since (409). */
 export const staleCount = (failed: { error: unknown }[]) =>
   failed.filter((f) => (f.error as { status?: unknown } | null)?.status === 409).length;
@@ -165,7 +180,7 @@ export const appLabel = (t: TFunction, line: ProposalAccessLine) =>
     ? line.label
     : scopeText(t, { id: line.id, label: line.label, description: "", sensitive: false }).label;
 
-/** What one proposal changes, after "propõe ·": "instruções da Ada", "papel do Theo", "contexto da Acme". */
+/** What one proposal changes, after "propõe ·": "instruções da Ada", "função do Theo", "contexto da Acme". */
 export function proposalTarget(
   t: TFunction,
   p: Proposal,
@@ -217,7 +232,8 @@ export function cardHead(
 
 /** Why it is proposed, in the person's language: the server's own reasons are codes, an agent's are its words. */
 export function proposalWhy(t: TFunction, p: Pick<Proposal, "why" | "whyCode">): string {
-  switch (p.whyCode) {
+  // As text: a server newer than this build may send a code its type does not list yet.
+  switch (p.whyCode as string | null | undefined) {
     case "refused":
       return t("proposals.whyCode.refused", { text: p.why });
     case "corrected":
@@ -232,6 +248,10 @@ export function proposalWhy(t: TFunction, p: Pick<Proposal, "why" | "whyCode">):
       return t("proposals.whyCode.budget");
     case "no_channel":
       return t("proposals.whyCode.noChannel");
+    case "idle":
+      return t("teamWeek.why.idle");
+    case "light_work":
+      return t("teamWeek.why.lightWork");
     default:
       return p.why;
   }

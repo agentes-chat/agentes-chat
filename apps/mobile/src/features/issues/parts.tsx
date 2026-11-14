@@ -1,11 +1,13 @@
-import type { Issue, IssueColumn } from "@agenteschat/client";
-import { useTaskUnread } from "@agenteschat/client";
+import type { Issue, IssueColumn, IssueProjectRef } from "@agenteschat/client";
+import { useIssueProjects, useTaskUnread } from "@agenteschat/client";
 import { dueLabel, dueTone } from "@agenteschat/client/lib/format";
 import { githubLinkLabel } from "@agenteschat/client/lib/github-link";
+import { pickableProjects } from "@agenteschat/client/lib/issue-projects";
 import { type CardState, cardState, cardStateText, cardWaits, isOpen } from "@agenteschat/client/lib/issues";
 import { codeAndBoldParts } from "@agenteschat/client/lib/markdown";
 import { stepPhrase } from "@agenteschat/client/lib/work";
-import { memo, useCallback } from "react";
+import { bodyTones } from "@agenteschat/ui/agent/engine";
+import { memo, type ReactNode, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text as RNText, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -19,6 +21,7 @@ import {
   Text,
   type TextProps,
   TOOL_H,
+  TOUCH,
   textLineOf,
   useFontScale,
   useReducedMotion,
@@ -29,7 +32,7 @@ import { router } from "@/ui/navigation";
 import { Face } from "../shared/Face";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { MentionCount, MONO, Tile, useSurface } from "../shared/parts";
+import { type ActionItem, MentionCount, MONO, Tile, useSurface } from "../shared/parts";
 import { criteriaProgress, type IssueState, issueState, latestPr } from "./logic";
 
 /** An agent's step in the person's words ("Mexeu nos arquivos do PC · trips.service.ts"), as the web says it. */
@@ -181,10 +184,20 @@ export function StateWords({ issue, state, words }: { issue: Issue; state: CardS
 }
 
 /**
- * A card's one row of facts, wrapping between facts: the number, the label, the priority, the date in words (in the
+ * A card's one row of facts, wrapping between facts: the number, the project, the label, the priority, the date in words (in the
  * attention color today, tomorrow and once late), the criteria, GitHub, the conversation's count with my mentions.
  */
-function CardFacts({ issue: i, mentions, unread }: { issue: Issue; mentions: number; unread: boolean }) {
+function CardFacts({
+  issue: i,
+  mentions,
+  unread,
+  project,
+}: {
+  issue: Issue;
+  mentions: number;
+  unread: boolean;
+  project: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const [label, ...labels] = i.labels;
@@ -199,6 +212,7 @@ function CardFacts({ issue: i, mentions, unread }: { issue: Issue; mentions: num
       <Text variant="caption" tone="muted">
         #{i.number}
       </Text>
+      {project && i.project ? <ProjectName project={i.project} /> : null}
       {label ? <Chip label={label} /> : null}
       {labels.length > 0 ? (
         <Text variant="caption" tone="muted" accessibilityLabel={labels.join(", ")}>
@@ -267,7 +281,16 @@ function CardFacts({ issue: i, mentions, unread }: { issue: Issue; mentions: num
  * moving while its agent works) and its one state. An agent waiting on a person puts its sky at the card's top, faded
  * in. A long name wraps beside the face, on the face's line first; a state that doesn't fit goes under, whole.
  */
-export const BoardCard = memo(function BoardCard({ issue: i, live }: { issue: Issue; live: boolean }) {
+export const BoardCard = memo(function BoardCard({
+  issue: i,
+  live,
+  project = true,
+}: {
+  issue: Issue;
+  live: boolean;
+  /** Its project among the facts. A project's own board leaves it out. */
+  project?: boolean;
+}) {
   const { t } = useTranslation();
   const dir = useDirectory();
   const surface = useSurface();
@@ -302,7 +325,7 @@ export const BoardCard = memo(function BoardCard({ issue: i, live }: { issue: Is
         </Animated.View>
       ) : null}
       <TaskTitle title={i.title} variant="callout" style={styles.title} />
-      <CardFacts issue={i} mentions={mentions} unread={unread > 0} />
+      <CardFacts issue={i} mentions={mentions} unread={unread > 0} project={project} />
       {i.assignee || state ? (
         <View style={styles.who}>
           {i.assignee ? (
@@ -322,7 +345,128 @@ export const BoardCard = memo(function BoardCard({ issue: i, live }: { issue: Is
   );
 });
 
+/** A project's color as one flat tone, as the web's dot: the middle of the five its dither is drawn in. */
+const projectTone = (color: string) => bodyTones(color)[2];
+
+/** A project's dot in its color. No color: a hollow ring ("Sem projeto", "Todos os projetos"). */
+export function ProjectDot({ color }: { color?: string | null | undefined }) {
+  const c = useColors();
+  return (
+    <View style={styles.dotBox}>
+      <View
+        style={[
+          styles.dot,
+          color ? { backgroundColor: projectTone(color) } : { borderWidth: 1.5, borderColor: c.faint },
+        ]}
+      />
+    </View>
+  );
+}
+
+/** A task's project on its card and its row: the dot and the name, which wraps whole inside the line. */
+export function ProjectName({ project }: { project: IssueProjectRef }) {
+  const mark = mediaRowAxis(12, textLineOf("caption", useFontScale())).face;
+  return (
+    <View style={[styles.inline, styles.wraps]}>
+      <View style={{ marginTop: mark }}>
+        <ProjectDot color={project.color} />
+      </View>
+      <Text variant="caption" tone="muted" style={styles.shrink}>
+        {project.name}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * A sheet's rows to pick a task's project: the ones in use (and the task's own, even archived) with their dots, then
+ * "Sem projeto", a check on the current one. Projects are created and changed on the web.
+ */
+export function useProjectItems() {
+  const { t } = useTranslation();
+  const projects = useIssueProjects(useOrgId()).data?.projects ?? [];
+  return (current: IssueProjectRef | null | undefined, onPick: (projectId: string | null) => void): ActionItem[] => {
+    const check = (on: boolean) => (on ? { trailing: <Icon name="check" size={18} /> } : {});
+    return [
+      ...pickableProjects(projects, current).map((p) => ({
+        key: p.id,
+        label: p.name,
+        leading: <ProjectDot color={p.color} />,
+        ...check(p.id === current?.id),
+        onPress: () => onPick(p.id),
+      })),
+      {
+        key: "none",
+        label: t("issues.projects.none"),
+        leading: <ProjectDot />,
+        ...check(!current),
+        onPress: () => onPick(null),
+      },
+    ];
+  };
+}
+
+/** The strip's value line at the default text size: one line makes the 32 control. */
+const PROP_LINE = textLineOf("subhead", 1).height;
+
+/**
+ * A field on a strip: 32 high in the field look, its icon or face and its value; a press opens its picker. A value
+ * wider than the screen wraps inside it, never cut, its icon or face on the first line.
+ */
+export function PropChip({
+  label,
+  value,
+  icon,
+  leading,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  icon?: IconName;
+  leading?: ReactNode;
+  onPress: () => void;
+}) {
+  const c = useColors();
+  const line = textLineOf("subhead", useFontScale()).height;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${value}`}
+      hitSlop={{ top: (TOUCH - TOOL_H) / 2, bottom: (TOUCH - TOOL_H) / 2 }}
+      style={({ pressed }) => [
+        styles.prop,
+        { backgroundColor: c.sunken, borderColor: c.line2 },
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={{ height: line, justifyContent: "center" }}>
+        {leading ?? (icon ? <Icon name={icon} size={16} color={c.muted} /> : null)}
+      </View>
+      <Text variant="subhead" style={styles.propText}>
+        {value}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  // An icon's 12 box with the 8 dot in its middle, so the dot sits where a fact's mark does.
+  dotBox: { width: 12, height: 12, alignItems: "center", justifyContent: "center" },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  prop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    minHeight: TOOL_H,
+    maxWidth: "100%",
+    paddingLeft: 10,
+    paddingRight: 12,
+    paddingVertical: (TOOL_H - PROP_LINE) / 2,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  propText: { fontWeight: "600", flexShrink: 1 },
   card: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 12, gap: 8, overflow: "hidden" },
   pressed: { opacity: 0.85 },
   inline: { flexDirection: "row", alignItems: "center", gap: 4 },

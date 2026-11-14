@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
-import { useInfoHint } from "./InfoHint";
+import { InfoHint, useInfoHint } from "./InfoHint";
 import { MEDIA_ROW } from "./media-row";
 import { GROUPED_ROW } from "./rhythm";
 import { Text, textLineOf } from "./Text";
@@ -149,8 +149,25 @@ function HintedHeader({ children, aside, hint }: GroupedHeaderProps & { hint: { 
 }
 
 /** The faint explanation under a group. */
-export function GroupedFooter({ children }: { children: ReactNode }) {
+export function GroupedFooter({
+  children,
+  hint,
+}: {
+  children: ReactNode;
+  /** An ⓘ after the footer's one sentence, with the rest of the explanation; its text shows under the sentence. */
+  hint?: { name: string; text: string };
+}) {
   const { reducedMotion } = useTheme();
+  if (hint)
+    return (
+      <Animated.View layout={reducedMotion ? undefined : SLIDE} style={styles.footer}>
+        <InfoHint {...hint} variant="footnote">
+          <Text variant="footnote" tone="faint">
+            {children}
+          </Text>
+        </InfoHint>
+      </Animated.View>
+    );
   return (
     <Animated.View layout={reducedMotion ? undefined : SLIDE}>
       <Text variant="footnote" tone="faint" style={styles.footer}>
@@ -167,11 +184,11 @@ export interface GroupedRowProps {
    * which still names the row for VoiceOver.
    */
   labelParts?: readonly { text: string; mark?: boolean }[];
-  /** Lines the label may take (default 1): a setting's long name beside its switch. */
+  /** Lines the label may take (default 1): a setting's long name beside its switch. 0: as many as it needs. */
   labelLines?: number;
   /** A small line under the label. */
   sub?: string;
-  /** Lines the small line may take (default 1). */
+  /** Lines the small line may take (default 1). 0: as many as it needs. */
   subLines?: number;
   /** Under the small line, in the text column (a second line of facts). */
   below?: ReactNode;
@@ -281,7 +298,7 @@ function Row({
   const flat = media && Boolean(icon || leading) && Boolean(sub || below || belowText);
   // Text that can take more than one line: the tile sits at the top and what is on the right stays on the
   // label's line (centred on the whole row it floated between lines). One-line rows keep everything centred.
-  const tall = !flat && (labelLines > 1 || subLines > 1 || Boolean(below) || Boolean(belowText));
+  const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
   const line = tall ? textLineOf("body", fontScale) : null;
   const onLine = (size: number) => (line ? [leadBox(line, size), styles.onLine] : null);
   const lead = (

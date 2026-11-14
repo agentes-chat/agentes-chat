@@ -16,7 +16,15 @@ export type IssuesGroup = (typeof ISSUES_GROUPS)[number];
 export const ISSUES_SORTS = ["manual", "priority", "due"] as const;
 export type IssuesSort = (typeof ISSUES_SORTS)[number];
 /** What a card can show besides its number and title. */
-export const ISSUE_CARD_FIELDS = ["assignee", "priority", "due", "criteria", "pullRequest", "label"] as const;
+export const ISSUE_CARD_FIELDS = [
+  "project",
+  "assignee",
+  "priority",
+  "due",
+  "criteria",
+  "pullRequest",
+  "label",
+] as const;
 export type IssueCardField = (typeof ISSUE_CARD_FIELDS)[number];
 export const ISSUES_VIEW_PRIORITIES = ["high", "normal", "low"] as const;
 /** An assignee filter: `agent:<id>`, `person:<id>` or `none` (no assignee). */
@@ -42,7 +50,7 @@ export const ISSUES_VIEW_DEFAULT: IssuesView = {
   layout: "board",
   group: "stage",
   sort: "manual",
-  fields: { assignee: true, priority: true, due: true, criteria: true, pullRequest: true, label: true },
+  fields: { project: true, assignee: true, priority: true, due: true, criteria: true, pullRequest: true, label: true },
   assignees: [],
   priorities: [],
   showCanceled: false,

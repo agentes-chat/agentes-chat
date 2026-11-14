@@ -6,7 +6,7 @@ import { WORKING_POLL_MS } from "@agenteschat/client/lib/working";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsFocused } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -26,6 +26,7 @@ import { useActiveWork, useConversations, useHiddenAgents, useWorkingNow } from 
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useTabHeader } from "../shared/tabHeader";
 import { ConversationRowView } from "./ConversationRowView";
+import { DeletingNotice } from "./DeletingNotice";
 import { FirstRunLine } from "./FirstRunLine";
 import { FirstAgentEmpty, Greeting, GreetingSky } from "./Greeting";
 import { Arrive, useHomeEntrance, useWake } from "./HomeEntrance";
@@ -44,7 +45,7 @@ import {
 } from "./logic";
 import { usePins } from "./pins";
 import { useAgentRowStates, useFinished } from "./useHomeNow";
-import { useWaitingItems, WaitingStrip } from "./WaitingStrip";
+import { useWaitingItems } from "./useWaitingItems";
 
 /** Rows of the home whose agent moves (a long list stays light). */
 const LIVE_ROWS = 6;
@@ -66,8 +67,7 @@ export function useHidesQuietGeneral(): boolean {
 /**
  * Conversas, the home: the
  * large title with Você and "+" (Novo) in the bar, over a light sky, the greeting under it with what changed
- * (what an agent finished, how many work), the "Esperando você" strip (only while something waits; it opens into
- * the first item's card, and scrolling closes it), then Agentes, Canais and Pessoas by latest activity, each
+ * (what an agent finished, how many work), then Agentes, Canais and Pessoas by latest activity, each
  * collapsible (remembered), five rows and "Ver todos". Under the greeting, the workspace's own computer while it
  * is being prepared, and a notice per computer that went offline with agents waiting for it. Above the sections a
  * Dashboards row pushes the Dashboards list (ADR 0135 §15). An agent's row says it waits on your ok, waits
@@ -113,7 +113,6 @@ function Home() {
   const archived = useArchivedChannels(orgId).data?.length ?? 0;
   const menus = useCategoryMenus();
   const mute = useMuteChannel(orgId);
-  const [waitOpen, setWaitOpen] = useState(false);
 
   useEffect(() => {
     if (!focused) return;
@@ -174,16 +173,10 @@ function Home() {
 
   // The first Conversas after the splash arrives as one gesture (once per launch, never holding a tap back): the sky
   // comes up from the splash's, the greeting rises, the right hand's field follows and its face wakes with a small
-  // hop, and what waits on you lands last. The title stays put: it is where the eye lands.
+  // hop. The title stays put: it is where the eye lands.
   const entrance = useHomeEntrance();
   const wake = useWake(entrance.armed, entrance.play);
   const arrive = { armed: entrance.armed, play: entrance.play };
-
-  const strip = (
-    <Arrive {...arrive} delay={200} rise={10}>
-      <WaitingStrip items={waiting.items} open={waitOpen} onOpenChange={setWaitOpen} />
-    </Arrive>
-  );
 
   const ask =
     pinned.pin && !failed && !list.loading ? (
@@ -217,12 +210,17 @@ function Home() {
       }
       refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={PULL_TINT} />}
       pullMark={<PullOrbit refreshing={pull.refreshing} />}
-      onScrollBeginDrag={waitOpen ? () => setWaitOpen(false) : undefined}
     >
-      <SetupNotice />
-      <OutageNotices />
+      {/* Being deleted, its line comes first and alone: its work stopped, nothing else is news (ADR 0088 §7). */}
+      {org?.deletion ? (
+        <DeletingNotice />
+      ) : (
+        <>
+          <SetupNotice />
+          <OutageNotices />
+        </>
+      )}
       {list.stale && !failed ? <HomeServerNotice retry={list.refetch} /> : null}
-      {strip}
       {failed || empty || list.loading ? null : (
         <>
           {/* Início's widgets, and the way to Dashboards ("See all"), not a tab (ADR 0135 §15). */}

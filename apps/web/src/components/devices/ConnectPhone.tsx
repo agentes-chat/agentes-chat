@@ -4,6 +4,8 @@ import {
   type PhoneDevice,
   useLookForPhones,
   useWifiIphones,
+  useXcodeFix,
+  type XcodeFix,
 } from "@agenteschat/client";
 import {
   ANDROID_SLOW_MS,
@@ -34,6 +36,10 @@ import {
   wifiHosts,
   wifiPairLive,
   wifiPairText,
+  XCODE_FIX_COMMAND,
+  type XcodeFixStage,
+  xcodeBlockedOf,
+  xcodeFixStage,
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerKind } from "@agenteschat/client/lib/machines";
@@ -747,6 +753,104 @@ function PhoneConnected({ phone, host, onClose }: { phone: PhoneDevice; host: Co
 
 const APP_STORE_XCODE = "https://apps.apple.com/app/xcode/id497799835";
 
+const FIX_PHASES = ["select", "license", "firstLaunch"] as const;
+
+/**
+ * The Xcode step's fix by the Mac itself (`select`): the button first and the Terminal way second, the password window
+ * open on the Mac, the three commands ticking, and a way back after a miss or a failure.
+ */
+function XcodeFixActs({
+  stage,
+  fix,
+  canFix,
+  busy,
+  onFix,
+  onCancel,
+  onTerminal,
+}: {
+  stage: XcodeFixStage;
+  fix: XcodeFix | null | undefined;
+  canFix: boolean;
+  busy: boolean;
+  onFix: () => void;
+  onCancel: () => void;
+  onTerminal: () => void;
+}) {
+  const { t } = useTranslation();
+  const fixButton = (label: string, variant: "primary" | "default" = "primary") => (
+    <Button size="sm" variant={variant} loading={busy} disabled={busy} onClick={onFix}>
+      {label}
+    </Button>
+  );
+  if (stage === "terminal")
+    return (
+      <>
+        <CommandBlock command={XCODE_FIX_COMMAND} />
+        <span className="ac-iconline small muted">
+          <Icon name="info" size={14} />
+          <span>{t("devices.iphone.xcodeFix.follows")}</span>
+        </span>
+        {canFix && <span className="dv-step__acts">{fixButton(t("devices.iphone.xcodeFix.fix"), "default")}</span>}
+      </>
+    );
+  if (stage === "still")
+    return (
+      <>
+        <CommandBlock command={XCODE_FIX_COMMAND} />
+        {canFix && <span className="dv-step__acts">{fixButton(t("common.retry"))}</span>}
+      </>
+    );
+  if (stage === "asking")
+    return (
+      <>
+        {/* What macOS shows on the Mac, so the password window isn't a surprise there. */}
+        <div className="dv-mac-ask" aria-hidden="true">
+          <span className="dv-mac-ask__lock">
+            <Icon name="lock" size={16} />
+          </span>
+          <b>{t("devices.iphone.xcodeFix.window")}</b>
+          <span className="dv-mac-ask__field">{t("auth.password")}</span>
+          <span className="dv-mac-ask__buttons">
+            <span>{t("common.cancel")}</span>
+            <span data-default="">{t("devices.iphone.xcodeFix.ok")}</span>
+          </span>
+        </div>
+        <span className="dv-step__acts">
+          <Button size="sm" onClick={onCancel}>
+            {t("common.cancel")}
+          </Button>
+        </span>
+      </>
+    );
+  if (stage === "running" || stage === "done") {
+    const step = stage === "done" ? FIX_PHASES.length : (fix?.step ?? 0);
+    return (
+      <ul className="dv-fix-phases">
+        {FIX_PHASES.map((phase, i) => (
+          <li key={phase} className="ac-iconline small" data-done={i < step ? "" : undefined}>
+            {i < step ? (
+              <Icon name="check" size={14} />
+            ) : i === step ? (
+              <PixelSpinner size={14} />
+            ) : (
+              <Icon name="dash" size={14} />
+            )}
+            <span>{t(`devices.iphone.xcodeFix.phases.${phase}`)}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <span className="dv-step__acts">
+      {fixButton(t(stage === "offer" ? "devices.iphone.xcodeFix.fix" : "common.retry"))}
+      <Button size="sm" onClick={onTerminal}>
+        {t("devices.iphone.xcodeFix.terminal")}
+      </Button>
+    </span>
+  );
+}
+
 /**
  * An iPhone through a Mac: pick the Mac, then the checklist mirrored from what the Mac reports. Steps on the iPhone
  * show their Settings path: no app or page can open those screens.
@@ -771,17 +875,33 @@ export function IphoneFlow({
   const ready = IPHONE_STEPS.every((s) => states[s] === "done");
   const reason = phone && "reason" in phone.status ? phone.status.reason : null;
   const tooOld = phone?.status.kind === "unsupported";
+  const blocked = xcodeBlockedOf(mac);
   const at = IPHONE_STEPS.find((s) => states[s] === "current" || states[s] === "needs") ?? null;
+  const toast = useToast();
+  // The Mac fixes its own Xcode: in use and licensed (`select`), or the support files for a newer iOS (`update`).
+  const fixKind = blocked ? "select" : reason === "xcode_too_old" && phone?.osVersion ? "update" : null;
+  const mayFix = !!mac?.mayManage && mac.status.kind !== "offline";
+  const xfix = useXcodeFix(org.id, mac?.id ?? null, at === "xcode" && !!fixKind && mayFix);
+  const [terminal, setTerminal] = useState(false);
+  const fix = xfix.view?.fix;
+  const stage = fixKind ? xcodeFixStage(fix, fixKind, { mayFix, terminal, outdated: !!xfix.view?.update }) : null;
+  const startFix = () => {
+    if (!fixKind) return;
+    setTerminal(false);
+    xfix.start.mutate(fixKind, { onError: (err) => toast.show(errorText(t, err), "error") });
+  };
+  const cancelFix = () => xfix.cancel.mutate(undefined, { onError: (err) => toast.show(errorText(t, err), "error") });
   // The Mac reports by itself; a step that sits unchanged gets what most likely holds it. Nothing to add for an iPhone
-  // below iOS 17, nor where the step's own text already says what to do (a helper the person must act on, no team),
-  // nor over Wi-Fi: those lines are about the cable.
+  // below iOS 17, nor where the step's own text already says what to do (a helper the person must act on, no team,
+  // Xcode installed but blocked), nor over Wi-Fi: those lines are about the cable.
   const stalled = useStalled(
     at &&
       mac &&
       !tooOld &&
       !(phone && iphoneOverWifi(phone)) &&
       !(at === "helper" && states.helper === "needs") &&
-      !(at === "account" && iphoneNoTeam(mac, phone))
+      !(at === "account" && iphoneNoTeam(mac, phone)) &&
+      !(at === "xcode" && blocked)
       ? [mac.id, at, phone?.id, reason].join(":")
       : null,
   );
@@ -790,6 +910,28 @@ export function IphoneFlow({
   useEffect(() => setTitle(t("devices.iphone.title")), [setTitle, t]);
   const macName = mac?.name ?? "";
   const sdk = mac?.toolchains.xcodeSdk;
+  /** The line a fix under way, done, missed or failed says. */
+  const fixLine = (at: XcodeFixStage) =>
+    at === "asking"
+      ? t("devices.iphone.xcodeFix.asking", { mac: macName })
+      : at === "running"
+        ? t(fixKind === "update" ? "devices.iphone.xcodeFix.updating" : "devices.iphone.xcodeFix.running", {
+            mac: macName,
+          })
+        : at === "done"
+          ? t("devices.iphone.xcodeFix.done", { mac: macName })
+          : at === "missed"
+            ? t("devices.iphone.xcodeFix.missed", { mac: macName })
+            : at === "still"
+              ? t(
+                  fix?.still === "license"
+                    ? "devices.iphone.xcodeFix.stillLicense"
+                    : "devices.iphone.xcodeFix.stillCommandLineTools",
+                  { mac: macName },
+                )
+              : fix?.message
+                ? t("devices.iphone.xcodeFix.failed", { mac: macName, message: fix.message })
+                : t("devices.iphone.xcodeFix.failedAny", { mac: macName });
   const text: Record<IphoneStep, ReactNode> = {
     xcode:
       states.xcode === "done"
@@ -804,7 +946,25 @@ export function IphoneFlow({
                 mac: macName,
               })
             : reasonText(t, reason)
-          : t("devices.iphone.xcodeText", { mac: macName }),
+          : blocked
+            ? stage === "terminal"
+              ? t(
+                  xfix.view?.update
+                    ? "devices.iphone.xcodeFix.outdated"
+                    : blocked === "license"
+                      ? "devices.iphone.xcodeLicense"
+                      : "devices.iphone.xcodeCommandLineTools",
+                  { mac: macName },
+                )
+              : !stage || stage === "offer"
+                ? t(
+                    blocked === "license"
+                      ? "devices.iphone.xcodeFix.license"
+                      : "devices.iphone.xcodeFix.commandLineTools",
+                    { mac: macName },
+                  )
+                : fixLine(stage)
+            : t("devices.iphone.xcodeText", { mac: macName }),
     tools: states.tools === "done" ? t("devices.iphone.toolsDone") : t("devices.iphone.toolsText"),
     account:
       states.account === "done"
@@ -837,18 +997,40 @@ export function IphoneFlow({
           : t("devices.iphone.helperText"),
   };
   const more: Partial<Record<IphoneStep, ReactNode>> = {
-    xcode: (
-      <>
-        <span className="dv-step__acts">
-          <Button asChild size="sm" icon="external">
-            <a href={APP_STORE_XCODE} target="_blank" rel="noopener noreferrer">
-              {t("devices.iphone.getXcode")}
-            </a>
-          </Button>
-        </span>
-        {reason === "xcode_too_old" && phone?.osVersion && <CommandBlock command={DDIS_UPDATE} />}
-      </>
-    ),
+    xcode:
+      blocked && stage ? (
+        <XcodeFixActs
+          stage={stage}
+          fix={fix}
+          canFix={mayFix && !xfix.view?.update && fix?.state !== "unsupported"}
+          busy={xfix.start.isPending}
+          onFix={startFix}
+          onCancel={cancelFix}
+          onTerminal={() => setTerminal(true)}
+        />
+      ) : (
+        <>
+          <span className="dv-step__acts">
+            <Button asChild size="sm" icon="external">
+              <a href={APP_STORE_XCODE} target="_blank" rel="noopener noreferrer">
+                {t("devices.iphone.getXcode")}
+              </a>
+            </Button>
+            {fixKind === "update" && mayFix && !xfix.view?.update && stage !== "running" && (
+              <Button size="sm" loading={xfix.start.isPending} disabled={xfix.start.isPending} onClick={startFix}>
+                {t(stage === "offer" || stage === "terminal" ? "devices.iphone.xcodeFix.update" : "common.retry")}
+              </Button>
+            )}
+          </span>
+          {fixKind === "update" && stage && stage !== "offer" && stage !== "terminal" && (
+            <span className="ac-iconline small" role="status">
+              {stage === "running" ? <PixelSpinner size={14} /> : <Icon name="info" size={14} />}
+              <span>{fixLine(stage)}</span>
+            </span>
+          )}
+          {reason === "xcode_too_old" && phone?.osVersion && <CommandBlock command={DDIS_UPDATE} />}
+        </>
+      ),
     ...(looking && mac
       ? {
           connected: (
@@ -925,7 +1107,14 @@ export function IphoneFlow({
             ) : (
               <ol className="dv-steps">
                 {IPHONE_STEPS.map((s) => (
-                  <Step key={s} state={states[s]} title={t(`devices.iphone.steps.${s}`)} text={text[s]}>
+                  <Step
+                    key={s}
+                    state={states[s]}
+                    title={
+                      s === "xcode" && blocked ? t("devices.iphone.xcodeBlockedTitle") : t(`devices.iphone.steps.${s}`)
+                    }
+                    text={text[s]}
+                  >
                     {s === at && (more[s] || stalled || (looking && plugged)) ? (
                       <>
                         {more[s]}

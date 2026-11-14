@@ -5,6 +5,7 @@ import { approvalTitle } from "./approval-words";
 import { billingHoldOf } from "./billing";
 import { reviewFlaggedOf } from "./errors";
 import { lowerFirst } from "./format";
+import { COMPUTERS_ROW } from "./roles";
 import { stepLabel, toolWhy } from "./work";
 
 /*
@@ -85,6 +86,12 @@ export function auditPhrase(t: TFunction, row: AuditRow): string {
     const what = (["joined", "left", "role_changed"] as const).find((s) => s === rest);
     if (what) return t(`audit.change.member.${what}`);
   }
+  // "Quem pode…" (ADR 0085 addendum of 2026-11-13): the row, in the permission's own words.
+  if (row.action === "role.permission_set") {
+    const key = auditStr(row.details.row);
+    if (key === COMPUTERS_ROW) return t("audit.change.role.permission_set_computers");
+    if (key) return t("audit.change.role.permission_set", { short: t(`permissions.${key}.short` as never) });
+  }
   // AI apps (ADR 0119): the app's or the token's name, as it was shown when it happened.
   if (area === "apps") {
     const what = (
@@ -120,8 +127,10 @@ const VAULT_ACTIONS = [
   "item_created",
   "item_changed",
   "item_deleted",
+  "item_moved",
   "item_used",
   "imported",
+  "keys_imported",
   "connection_added",
   "connection_changed",
   "connection_removed",

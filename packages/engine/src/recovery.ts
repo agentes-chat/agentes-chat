@@ -2,6 +2,7 @@ import type { PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, desc, type Executor, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
 import { textOf } from "@agenteschat/providers";
 import { announceAgentStatus } from "./agent-status";
+import { publishApproval } from "./approvals";
 import { executesHere, RUN_STALE_MS } from "./cancel";
 import { onConsultedRunFinished } from "./consultations";
 import { ValidationError } from "./errors";
@@ -23,6 +24,7 @@ import {
 } from "./runs";
 import { cancelSecretRequests, publishSecret, syncSecretMessage } from "./secrets";
 import { USAGE_WAIT_CODES } from "./usage-pause";
+import { endWork } from "./works";
 
 const { agentRuns, agentRunSteps, outbox, channels, approvals } = schema;
 
@@ -273,10 +275,11 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
     if (!failed) return null;
     // A running run's open requests mostly come from the step that was cut, whose cards were never posted: nobody can
     // answer them. A secret's card may be up, though (a run with two asks, one already answered): it says so at once.
-    await tx
+    const closedApprovals = await tx
       .update(approvals)
       .set({ status: "canceled", decidedAt: at.now })
-      .where(and(eq(approvals.runId, run.id), eq(approvals.status, "pending")));
+      .where(and(eq(approvals.runId, run.id), eq(approvals.status, "pending")))
+      .returning();
     const closedSecrets = await cancelSecretRequests(tx, run.id);
     for (const row of closedSecrets) await syncSecretMessage(tx, row);
     // A routine's background run never posts by itself (ADR 0053 §5): its ledger says it was cut off.
@@ -314,10 +317,12 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
           inArray(outbox.status, ["pending", "processing"]),
         ),
       );
-    return { message, closedSecrets };
+    return { message, closedSecrets, closedApprovals };
   });
   if (!result) return false;
   for (const row of result.closedSecrets) await publishSecret(deps, row, "secret.updated");
+  // One whose card was up leaves the inbox of whoever it waited on.
+  for (const row of result.closedApprovals) await publishApproval(deps, row, "approval.decided").catch(() => {});
   if (run.background) {
     await closeRoutineRun(deps, run, { status: "failed", code: "interrupted" }).catch(() => null);
   }
@@ -353,6 +358,11 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
   });
   // It was answering another agent: the asker hears it now instead of waiting for the question to expire.
   await onConsultedRunFinished({ db, pubsub: deps.pubsub }, run, "failed", INTERRUPTED_BY_RESTART).catch(() => {});
+  // A work ends before the release, which would drop a reply turn's own message passed on to it (`endWork` keeps it).
+  if (run.workId) {
+    const [ended] = await db.select().from(agentRuns).where(eq(agentRuns.id, run.id));
+    if (ended) await endWork(deps, ended, "failed").catch(() => null);
+  }
   // What was sent to it and not read gets a run of its own.
   await releaseInbox(db, deps.pubsub, run, { reason: "interrupted" }).catch(() => null);
   return true;

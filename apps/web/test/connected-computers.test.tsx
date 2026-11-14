@@ -853,7 +853,7 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
     const card = () => document.querySelector('[aria-labelledby="sec-machine-browser"]') as HTMLElement;
     await open();
     expect(card().textContent).toContain(
-      "Só quem está no computador liga, no app do agentes.chat: Preferências → Ferramentas.",
+      "Quem conectou o computador liga aqui ou no app do agentes.chat nele: Preferências → Ferramentas.",
     );
     expect(card().querySelector(".machine-command__code")).toBeNull();
     cleanup();
@@ -862,6 +862,36 @@ describe("the computer page: pause, folders and tools (ADR 0036)", () => {
     expect(card().querySelector(".machine-command__code")?.textContent).toBe(
       "sudo agentes-runner tools enable browser",
     );
+  });
+
+  test("its owner turns the browser and a coding CLI on from here; someone else's computer offers to ask them", async () => {
+    const card = () => document.querySelector('[aria-labelledby="sec-machine-browser"]') as HTMLElement;
+    const allowCalls = (state: ReturnType<typeof seedState>) =>
+      state.calls.filter((c) => c.method === "machines.allowTool").map((c) => c.args);
+    const mine = await open({
+      pairedBy: { id: "u-walter", name: "Walter White" },
+      accessAllow: true,
+      access: { folders: [], tools: { claude: true, codex: false, commands: true, browser: false } },
+    });
+    expect(card().textContent).toContain("O navegador está desligado nesse computador.");
+    await click(within(card()).getByRole("button", { name: "Ligar o navegador" }));
+    await settle(4);
+    expect(allowCalls(mine.state)).toEqual([[ORG_ID, mine.m.id, "browser"]]);
+    // An off coding CLI in the tools list gets its own Ligar.
+    const codex = document.querySelector('[data-tool="codex"]') as HTMLElement;
+    await click(within(codex).getByRole("button", { name: "Ligar Codex" }));
+    expect(allowCalls(mine.state).at(-1)).toEqual([ORG_ID, mine.m.id, "codex"]);
+    cleanup();
+    const theirs = await open({ pairedBy: { id: "u-rui", name: "Rui Tanaka" }, accessAllow: true });
+    expect(card().textContent).toContain("O navegador está desligado no computador de Rui.");
+    await click(within(card()).getByRole("button", { name: "Pedir a Rui" }));
+    expect(theirs.state.calls.filter((c) => c.method === "machines.askTool").map((c) => c.args)).toEqual([
+      [ORG_ID, theirs.m.id, "browser"],
+    ]);
+    // An app too old for it keeps the steps on the computer.
+    cleanup();
+    await open({ pairedBy: { id: "u-walter", name: "Walter White" }, accessAllow: false });
+    expect(within(card()).queryByRole("button", { name: "Ligar o navegador" })).toBeNull();
   });
 
   test("to allow more: the app on a Mac or a PC, the computer's terminal on Linux", async () => {

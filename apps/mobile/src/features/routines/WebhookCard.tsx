@@ -71,10 +71,10 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
       </GroupedList>
     );
   }
-  const run = (what: "address" | "secret" | "unsign" | "test") =>
+  const run = (what: "address" | "secret" | "unsign" | "test" | "onAndTest") =>
     action.mutate(what, {
       onSuccess: (done) => {
-        if (what === "test") toast({ title: t("routines.webhook.tested"), icon: "send" });
+        if (what === "test" || what === "onAndTest") toast({ title: t("routines.webhook.tested"), icon: "send" });
         else if (what === "address") toast({ title: t("routines.webhook.replaced"), icon: "check" });
         else setSecret(done.secret ?? null);
       },
@@ -178,9 +178,9 @@ export function WebhookCard({ routine: r, runs }: { routine: Routine; runs: Rout
       <GroupedList>
         <GroupedRow
           icon="send"
-          label={t("routines.webhook.test")}
+          label={t(r.active ? "routines.webhook.test" : "routines.webhook.turnOnAndTest")}
           disabled={action.isPending}
-          onPress={() => run("test")}
+          onPress={() => run(r.active ? "test" : "onAndTest")}
         />
       </GroupedList>
 

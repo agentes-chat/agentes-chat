@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Button, IconButton, Sky, Text, useTheme, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -222,12 +223,12 @@ export function LiveBlock({
   const [open, setOpen] = useState(keptOf(blockKey).open ?? false);
   const [run, setRun] = useState(screen || (keptOf(blockKey).run ?? false));
   const changedAt = useRef(0);
-  // Taller than the card: cut with a fade, "Show all" under it.
+  // Taller than the card: cut with a fade, "Ver mais" under it, which opens it whole for good.
   const tall = !screen && height > INLINE_HEIGHT;
-  const toggleOpen = () => {
+  const openWhole = () => {
     tapHaptic();
-    keptOf(blockKey).open = !open;
-    setOpen(!open);
+    keptOf(blockKey).open = true;
+    setOpen(true);
   };
 
   useEffect(() => {
@@ -331,15 +332,9 @@ export function LiveBlock({
           <LinearGradient pointerEvents="none" colors={[`${c.raised}00`, c.raised]} style={styles.fade} />
         ) : null}
       </View>
-      {tall ? (
+      {tall && !open ? (
         <View style={styles.more}>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={open ? undefined : "down"}
-            label={open ? t("blocks.showLess") : t("blocks.showAll")}
-            onPress={toggleOpen}
-          />
+          <Button variant="ghost" size="sm" icon="down" label={t("channel.long.more")} onPress={openWhole} />
         </View>
       ) : null}
       {same ? (
@@ -434,6 +429,8 @@ export function BlockScreen({ id, version }: { id: string; version?: number }) {
   const toast = useToast();
   const query = useArtifact(orgId, id, version);
   const keep = useKeepBlock(orgId, id);
+  // The screen's end stays above the home indicator: the button, or the block's last lines when there is none.
+  const insets = useSafeAreaInsets();
   const a = query.data;
   if (a?.content.kind !== "block") {
     return (
@@ -452,14 +449,17 @@ export function BlockScreen({ id, version }: { id: string; version?: number }) {
     <View style={[styles.fill, { backgroundColor: c.bg }]}>
       <PushedHeader title={a.title} />
       {a.content.spec ? (
-        <ScrollView style={styles.fill} contentContainerStyle={styles.screenBody}>
+        <ScrollView
+          style={styles.fill}
+          contentContainerStyle={[styles.screenBody, a.inDrive ? { paddingBottom: insets.bottom + 8 } : null]}
+        >
           <SpecBlock id={a.id} version={a.shownVersion} spec={a.content.spec} agentId={a.createdBy.id} screen />
         </ScrollView>
       ) : (
         <LiveBlock id={a.id} version={a.shownVersion} html={a.content.html ?? ""} agentId={a.createdBy.id} screen />
       )}
       {a.inDrive ? null : (
-        <View style={styles.keep}>
+        <View style={[styles.keep, { paddingBottom: insets.bottom + 12 }]}>
           <Button
             variant="secondary"
             wide

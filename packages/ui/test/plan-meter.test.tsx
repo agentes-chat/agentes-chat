@@ -11,6 +11,7 @@ import {
   PlanMeter,
   type PlanMeterText,
   type PlanMeterUsage,
+  planAttention,
   planLevel,
   planLine,
   planState,
@@ -252,6 +253,18 @@ test("compact says how old its numbers are from 10 minutes, and out of date past
   });
 });
 
+test("at the limit the age always shows, from the last time the plan was asked again", () => {
+  const full: PlanMeterUsage = {
+    windows: [{ kind: "seven_day", usedPercent: 100, resetsAt: at(2 * 86_400_000) }],
+    at: at(-3 * HOUR),
+    checkedAt: at(-4 * 60_000),
+  };
+  expect(planLine(full, text, NOW)).toMatchObject({ state: "limited", stale: false, age: "atualizado 11:56" });
+  expect(planLine({ ...full, checkedAt: undefined, at: at(-60_000) }, text, NOW)?.age).toBe("atualizado 11:59");
+  // With room, a fresh reading says nothing of its age.
+  expect(planLine({ windows: [{ kind: "five_hour", usedPercent: 30 }], at: at(-60_000) }, text, NOW)?.age).toBeNull();
+});
+
 test("compact with no window known yet shows nothing, never 0%", () => {
   const unknown: PlanMeterUsage = { windows: [], at: at(0) };
   expect(planLine(unknown, text, NOW)).toBeNull();
@@ -265,14 +278,33 @@ test("compact: a plan that refused a request before any window was known says it
   const { container } = render(<PlanMeter usage={refused} text={text} now={NOW} compact label="Claude Max" />);
   const el = container.querySelector(".ac-planmeter--compact") as HTMLElement;
   expect(el.dataset.state).toBe("limited");
-  expect(el.querySelector(".ac-planmeter__line")?.textContent).toBe("Claude Max");
+  expect(el.querySelector(".ac-planmeter__line")?.textContent).toBe("Claude Max · atualizado 12:00");
   expect(el.querySelector(".ac-planmeter__state")?.textContent).toBe("No limite");
   expect(el.querySelector("[role=meter]")).toBeNull();
   cleanup();
-  // Without the account's name (Contas de IA): the state alone.
+  // Without the account's name (Contas de IA): the state, and when the plan was last read.
   const bare = render(<PlanMeter usage={refused} text={text} now={NOW} compact />).container;
-  expect(bare.querySelector(".ac-planmeter__line")).toBeNull();
-  expect(bare.textContent).toBe("No limite");
+  expect(bare.querySelector(".ac-planmeter__line")?.textContent).toBe("atualizado 12:00");
+  expect(bare.querySelector(".ac-planmeter__state")?.textContent).toBe("No limite");
+});
+
+test("a closed row's one word: nothing while fine, almost from 80 in its bar's level, at the limit with no time", () => {
+  const week = (usedPercent: number, limited = false): PlanMeterUsage => ({
+    windows: [{ kind: "seven_day", usedPercent, resetsAt: at(HOUR) }],
+    limited,
+    at: at(0),
+  });
+  expect(planAttention(week(79), text, NOW)).toBeNull();
+  expect(planAttention(week(80), text, NOW)).toEqual({ word: "Quase no limite", level: "almost" });
+  expect(planAttention(week(95), text, NOW)).toEqual({ word: "Quase no limite", level: "critical" });
+  expect(planAttention(week(100), text, NOW)).toEqual({ word: "No limite", level: "limited" });
+  // It refused a request before any window was known.
+  expect(planAttention({ windows: [], limited: true, at: at(0) }, text, NOW)).toEqual({
+    word: "No limite",
+    level: "limited",
+  });
+  // A window whose reset passed is empty again.
+  expect(planAttention(week(100), text, NOW + 2 * HOUR)).toBeNull();
 });
 
 test("an agent's part: in full ink inside its window's bar, with its words; none once the window reset", () => {

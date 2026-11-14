@@ -7,10 +7,11 @@ import { CONTROL_PROTOCOL_VERSION, type ControlEvent, type ControlOut } from "@a
 import { configPath, readStoredConfig, type StoredConfig, writeConfig } from "../../runner/config";
 import type { Dial, Socket, SocketHandlers } from "../../runner/connection";
 import { EXIT_LOCKED, type RunControlOptions, runControl } from "../../runner/control";
-import { RunnerDaemon } from "../../runner/daemon";
+import { DEFAULT_LIMITS, RunnerDaemon } from "../../runner/daemon";
 import { RUNNER_VERSION } from "../../runner/errors";
 import { ORG_LOGO_MAX_BYTES, orgLogoPath } from "../../runner/org-logo";
 import type { FetchFn } from "../../runner/pairing";
+import { askStandby, standbyAcked } from "../../runner/standby";
 import { removeDirs, tempDir, waitFor } from "./helpers";
 
 const dirs: string[] = [];
@@ -369,6 +370,38 @@ test("a service with no app still looks for the CLIs on a new install, and tells
   await daemon.stop();
 });
 
+test("an operator's standby: the link drops and stays down with the rest running; resume dials at once", async () => {
+  const { home } = pairedHome();
+  const sockets: FakeSocket[] = [];
+  const daemon = new RunnerDaemon({
+    home,
+    mode: "start",
+    log: () => {},
+    print: () => {},
+    watch: false,
+    self: SELF,
+    caffeinate: false,
+    dial: (_url, handlers) => {
+      const s = new FakeSocket(handlers);
+      sockets.push(s);
+      return s;
+    },
+    fetch: async () => new Response(null, { status: 404 }),
+  });
+  void daemon.runStart();
+  await waitFor(() => sockets.length === 1);
+  const s = sockets[0] as FakeSocket;
+  s.handlers.onOpen();
+  s.frame({ type: "welcome", machineId: "m1", name: "box", heartbeatMs: 25_000 });
+  const ask = askStandby(home, 5);
+  await waitFor(() => s.closed && standbyAcked(home, ask.id), 3000);
+  await Bun.sleep(1500);
+  expect(sockets).toHaveLength(1);
+  const resume = askStandby(home, 0);
+  await waitFor(() => sockets.length === 2 && standbyAcked(home, resume.id), 3000);
+  await daemon.stop();
+});
+
 test("reconnect from the app: the socket is dropped and dialed again at once, with a fresh hello", async () => {
   const unpaired = tempDir("home-");
   dirs.push(unpaired);
@@ -569,6 +602,42 @@ test("access requests: pending until the person answers on the machine; the answ
   expect(lines.some((l) => l.includes(`agentes-runner folders allow ${other} --agent dev`))).toBe(true);
 });
 
+test("a tool turned on from the apps: the switch is written, the server and the app are told, and Undo turns it off", async () => {
+  const { home } = pairedHome();
+  const lines: string[] = [];
+  const c = control(home, { print: (l) => lines.push(l) });
+  const s = await c.connect();
+  await c.data({ type: "tools.set", tool: "browser", on: false });
+  s.frame({ type: "request", id: "w1", op: "access.allow", tool: "browser", by: "u-bia", byName: "Bia Rocha" });
+  await waitFor(() => s.sent.some((f) => f.id === "w1"));
+  expect(s.sent.find((f) => f.id === "w1")).toMatchObject({ ok: true, data: { access: { tools: { browser: true } } } });
+  expect((stored(home).access as { tools: { browser?: boolean } }).tools.browser).toBe(true);
+  expect(s.of("access.changed").at(-1)).toMatchObject({ access: { tools: { browser: true } } });
+  expect(c.events("access.allowed")).toEqual([{ kind: "access.allowed", tool: "browser", byName: "Bia Rocha" }]);
+  expect(lines.some((l) => l.includes("agentes-runner tools disable browser"))).toBe(true);
+
+  // Already on: nothing to tell again.
+  s.frame({ type: "request", id: "w2", op: "access.allow", tool: "browser", by: "u-bia", byName: "Bia Rocha" });
+  await waitFor(() => s.sent.some((f) => f.id === "w2"));
+  expect(c.events("access.allowed")).toHaveLength(1);
+
+  // Undo is the app's own switch.
+  await c.data({ type: "tools.set", tool: "browser", on: false });
+  expect((stored(home).access as { tools: { browser?: boolean } }).tools.browser).toBe(false);
+
+  // A tool the runner doesn't know is refused, and nothing changes.
+  s.frame({
+    type: "request",
+    id: "w3",
+    op: "access.allow",
+    tool: "everything" as never,
+    by: "u-bia",
+    byName: "Bia Rocha",
+  });
+  await waitFor(() => s.sent.some((f) => f.id === "w3"));
+  expect(s.sent.find((f) => f.id === "w3")).toMatchObject({ ok: false, error: { code: "bad_request" } });
+});
+
 test("folders, tools and settings from the app: system folders refused, everything lands in config.json", async () => {
   const { home } = pairedHome();
   const folder = tempDir("proj-");
@@ -612,8 +681,8 @@ test("folders, tools and settings from the app: system folders refused, everythi
     name: "box",
     maxConcurrentTasks: 3,
     taskMaxSeconds: 14400,
-    brainIdleMinutes: 3,
-    brainMaxProcesses: 1,
+    brainIdleMinutes: DEFAULT_LIMITS.brainIdleMinutes,
+    brainMaxProcesses: DEFAULT_LIMITS.brainMaxProcesses,
     workspace: expect.any(String),
     managedBy: "desktop",
   });

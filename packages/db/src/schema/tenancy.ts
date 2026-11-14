@@ -82,8 +82,8 @@ export const organizations = pgTable("organizations", {
   platformAlertMonth: text(),
   platformAlertPercent: smallint(),
   /**
-   * Set while an owner's deletion is pending: when the workspace goes for good. It is closed meanwhile, like a
-   * suspended one (`closedRefusal`, `openOrg` in `standing.ts`), and restoring it clears the three.
+   * Set while an owner's deletion is pending: when the workspace goes for good. It is read-only meanwhile, its work
+   * stopped (`closedRefusal`, `openOrg` in `standing.ts`), and restoring it clears the three.
    */
   deletionDueAt: timestamp({ withTimezone: true }),
   deletionRequestedAt: timestamp({ withTimezone: true }),
@@ -174,9 +174,9 @@ export const organizationMembers = pgTable(
      */
     homeDashboardId: uuid(),
     /**
-     * Lodi's weekly card for this person (ADR 0137 §9): `{ off?, day?, hour? }` (day 0 = Sunday, the hour in the
-     * workspace's time zone); a key not here keeps the default, Friday at 17h. Read through `teamWeekPrefsOf`
-     * (packages/engine/src/team-week.ts).
+     * What this person lets the right hand do for them by itself (ADR 0177): when its daily and weekly cards come or
+     * that they are off, its other switches of theirs and the suggestions they put away. A key not here keeps its
+     * default. Read through `lodiPrefsOf` and saved by merging (packages/engine/src/right-hand-prefs.ts).
      */
     teamWeek: jsonb().$type<Record<string, unknown>>().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

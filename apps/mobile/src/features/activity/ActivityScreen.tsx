@@ -12,6 +12,7 @@ import { restrictionLine } from "@agenteschat/client/lib/errors";
 import { timeLeft, upperFirst } from "@agenteschat/client/lib/format";
 import { mediaWord } from "@agenteschat/client/lib/media";
 import { latestText } from "@agenteschat/client/lib/message-body";
+import { teamWatchOf } from "@agenteschat/client/lib/notifications";
 import { usageLimitLine } from "@agenteschat/client/lib/person-usage";
 import { useLocalSearchParams } from "expo-router";
 import type { TFunction } from "i18next";
@@ -19,6 +20,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
+import { useOrg } from "@/providers/org";
 import {
   Button,
   EmptyState,
@@ -50,6 +52,7 @@ import { DeviceNoticeActions, DeviceNoticeCard } from "../devices/notices";
 import { notificationHref, notificationWebPath, routineHref } from "../links/logic";
 import { openWebPath } from "../links/open-web";
 import { ChangeRequestCard } from "../right-hand/SettingsCard";
+import { AdminAskAdd } from "../shared/AdminAsk";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useDirectory, useNow, useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
 import { Tile } from "../shared/parts";
@@ -203,6 +206,8 @@ function WaitingCardView({ item: n, first = false }: { item: AppNotification; fi
   // Someone asking to join: who asked (the first names, how many in all), with their faces.
   const join = card.kind === "join" ? joinRequestLine(t, n) : null;
   const notice = useNoticeTitle(n);
+  // What the right hand found (ADR 0177 §1): the problem in the reader's language, and its way out on the button.
+  const found = teamWatchOf(n);
   const title =
     card.kind === "approval" && request
       ? [approvalTitle(t, request), onCard > 1 ? t("approval.all.waitingCount", { count: onCard }) : null]
@@ -210,7 +215,7 @@ function WaitingCardView({ item: n, first = false }: { item: AppNotification; fi
           .join(" · ")
       : join
         ? join.text
-        : card.kind === "limit"
+        : card.kind === "limit" || found
           ? notice.title
           : (dash?.title ?? card.title);
   // A routine's trouble opens the routine; the computer being ready, Connect an AI while no agent has one.
@@ -227,7 +232,11 @@ function WaitingCardView({ item: n, first = false }: { item: AppNotification; fi
   const where = [place ? t("mobile.chats.waitIn", { where: place }) : null, when.short(n.updatedAt)]
     .filter(Boolean)
     .join(" · ");
-  const button = dash ? t("mobile.activityNow.open") : t(`mobile.activityNow.${card.action}`);
+  const button = found?.act
+    ? (t as unknown as (key: string) => string)(found.act)
+    : dash
+      ? t("mobile.activityNow.open")
+      : t(`mobile.activityNow.${card.action}`);
   const open = () => {
     if (n.readAt === null) act.mutate({ type: "read", item: n, read: true });
     if (href) router.push(href);
@@ -358,9 +367,11 @@ function ApprovalSource({ approval: a }: { approval: Approval }) {
 function AllClear() {
   const { t } = useTranslation();
   const orgId = useOrgId();
+  const deleting = Boolean(useOrg().org?.deletion);
   const dir = useDirectory();
   const routines = useRoutines(orgId);
-  const next = useMemo(() => nextRoutine<Routine>(routines.data ?? []), [routines.data]);
+  // Being deleted, its routines' slots pass: none is next (the server says so too, once the list is read again).
+  const next = useMemo(() => (deleting ? null : nextRoutine<Routine>(routines.data ?? [])), [deleting, routines.data]);
   const nextAgent = next ? dir.agentById.get(next.agentId) : undefined;
   const when = useWhen();
   const date = next?.nextRunAt ? nextRunWords(t, when, next.nextRunAt) : null;
@@ -454,12 +465,15 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
     ? restrictionLine(t, restriction.code, restriction.facts)
     : n.kind === "usage_limit"
       ? usageLimitLine(t, n)
-      : failed
-        ? failed.sub
-        : // A widget's or routine's name is often its line too: said once ("Assinaturas hoje", not twice).
-          [emojisOf(n).join(" "), [...new Set([line, placeOf(n)].filter(Boolean))].join(" · ")]
-            .filter(Boolean)
-            .join(" ");
+      : // What the right hand found (ADR 0177 §1) is the title itself: nothing under it says it again.
+        n.kind === "team_watch"
+        ? ""
+        : failed
+          ? failed.sub
+          : // A widget's or routine's name is often its line too: said once ("Assinaturas hoje", not twice).
+            [emojisOf(n).join(" "), [...new Set([line, placeOf(n)].filter(Boolean))].join(" · ")]
+              .filter(Boolean)
+              .join(" ");
   const time = when.short(n.updatedAt);
   // As Conversas' rows: line 1 who (the names alone, one line, the time on their baseline), line 2 what they did and
   // where. A sentence that doesn't open with the names (or has none) is line 1 itself, on one line too.
@@ -553,6 +567,12 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
       {isDeviceNotice(n.kind) ? (
         <View style={styles.change}>
           <DeviceNoticeActions item={n} />
+        </View>
+      ) : null}
+      {/* Someone asks to add an agent to a channel: added right here. */}
+      {n.kind === "admin_ask" && n.latest.reason === "channel_agent" && !n.doneAt ? (
+        <View style={styles.change}>
+          <AdminAskAdd n={n} />
         </View>
       ) : null}
       {/* A person asks for more (ADR 0141): raised or refused right here. */}

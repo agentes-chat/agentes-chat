@@ -22,7 +22,6 @@ import {
   GroupedRow,
   Icon,
   type IconName,
-  LineIcon,
   MEDIA_ROW,
   MediaRow,
   PressScale,
@@ -501,15 +500,12 @@ export function AudienceFields({
           </GroupedList>
         </>
       )}
-      <View style={styles.exposure}>
-        {/* Down by the footer's own top padding, onto its first line (at the row's top it sat above the text). */}
-        <View style={styles.exposureIcon}>
-          <LineIcon variant="footnote" name="shield" size={14} color={c.faint} />
-        </View>
-        <View style={styles.grow}>
-          <GroupedFooter>{t("widgets.exposure")}</GroupedFooter>
-        </View>
-      </View>
+      {/* A footer like the others, from the section's edge: an icon before it set it in from them. */}
+      <GroupedFooter
+        hint={{ name: t("common.about", { label: t("dashboards.audience.label") }), text: t("widgets.exposure") }}
+      >
+        {t("widgets.exposureShort")}
+      </GroupedFooter>
     </>
   );
 }
@@ -555,7 +551,4 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   faded: { opacity: 0.35 },
-  exposure: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingLeft: 16, paddingTop: 10 },
-  // GroupedFooter's paddingTop.
-  exposureIcon: { paddingTop: 7 },
 });

@@ -352,6 +352,7 @@ export class FakeRunner {
     const s = this.seed;
     switch (msg.type) {
       case "status":
+      case "executors.check":
         return reply(this.status());
       case "jobs":
         return reply({ jobs: s?.jobs ?? [] });
@@ -526,6 +527,12 @@ export class FakeRunner {
       case "iphone.open":
         console.info("[fake] open", msg.app);
         return reply({ opened: true });
+      case "iphone.fixXcode":
+        this.iphone =
+          msg.action === "cancel"
+            ? { ...this.iphone, ...(this.iphone.fix ? { fix: { ...this.iphone.fix, state: "canceled" } } : {}) }
+            : { ...this.iphone, fix: { kind: msg.kind, state: msg.kind === "select" ? "asking" : "running", step: 0 } };
+        return reply(this.iphone);
       case "shutdown":
         return reply({ stopping: true });
     }

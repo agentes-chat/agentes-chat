@@ -30,6 +30,7 @@ import {
   gateDims,
   kindOf,
   mayConnectAi,
+  noAiLockedLine,
   type PlanChoice,
   type PlanGate,
   planLabel,
@@ -42,7 +43,13 @@ import {
 import { can } from "@agenteschat/client/lib/permissions";
 import { isPlanId, planOf } from "@agenteschat/client/lib/plans";
 import { providerGuess, providerLabel } from "@agenteschat/client/lib/providers";
-import { isRightHand, rightHandOf, rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
+import {
+  isRightHand,
+  rightHandOf,
+  rightHandOnKey,
+  sceneTeam,
+  thinksWithLine,
+} from "@agenteschat/client/lib/right-hand";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   AvatarStack,
@@ -94,7 +101,7 @@ import {
 import { EndpointForm } from "@/components/ai/EndpointForm";
 import { ConnectChoices } from "@/components/arrival/ConnectChoices";
 import { bestHave, ConnectHave, haveId } from "@/components/arrival/ConnectHave";
-import { type SceneAgent, sceneTeam, TeamScene, useDawn } from "@/components/arrival/TeamScene";
+import { ConnectScene, isScenePlan, type SceneAgent, TeamScene, useDawn } from "@/components/arrival/TeamScene";
 import { useOrg } from "@/components/org-context";
 import { KeyRefused, ProviderKeySelect } from "@/components/ProviderKey";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -138,6 +145,8 @@ export interface ConnectAiRequest {
    * stays).
    */
   forNewAgent?: boolean;
+  /** Opened over a form still being filled in (Criar agente's steps): a Settings page opens in a new tab. */
+  overDraft?: boolean;
   /**
    * Opened right after the onboarding (ADR 0160): the team stands asleep beside the choices, which are cards in
    * words, and wakes as the sky turns to day once an AI is connected. The plans' own steps are the same.
@@ -721,25 +730,20 @@ function ConnectAiDialog({
   // Someone else's agent, or no agent of theirs among those: who connects a plan instead.
   const owner = one?.ownerUserId ? dir.memberById.get(one.ownerUserId)?.name : undefined;
   const locked = theirs
-    ? owner
-      ? t("noAi.locked", { name: one.name, owner: owner.split(" ")[0] })
-      : t("noAi.lockedAdmins")
+    ? noAiLockedLine(t, one.name, owner)
     : named && agents.length === 0
       ? t("noAi.lockedAdmins")
       : undefined;
-  const toComputers = settingUp
-    ? undefined
-    : () => {
-        if (request.forNewAgent) {
-          window.open(`/org/${org.id}/settings/devices`, "_blank", "noopener");
-          return;
-        }
-        onClose();
-        void navigate({
-          to: "/org/$orgId/settings/$section",
-          params: { orgId: org.id, section: "devices" },
-        });
-      };
+  // Over a draft a Settings page opens in a new tab: the draft behind this dialog stays.
+  const toSettings = (section: "devices" | "usage") => {
+    if (request.forNewAgent || request.overDraft) {
+      window.open(`/org/${org.id}/settings/${section}`, "_blank", "noopener");
+      return;
+    }
+    onClose();
+    void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section } });
+  };
+  const toComputers = settingUp ? undefined : () => toSettings("devices");
   const keySelect = mayAddKey && !keySaved && (
     <ProviderKeySelect
       value={draft.provider}
@@ -1531,6 +1535,12 @@ function ConnectAiDialog({
       width={600}
     >
       <DialogBody>
+        <ConnectScene
+          agents={dir.agents}
+          connected={connected}
+          waiting={Boolean(hold)}
+          lit={isScenePlan(picked) ? picked : null}
+        />
         {/* A link opens this before the agents and their AI load, and what it opens on follows them. */}
         {hold ? (
           // Every way in lands here, a card's or a key pasted in the composer: nothing connects before the plan.
@@ -1559,17 +1569,7 @@ function ConnectAiDialog({
                     setPickedTarget(forAgent.id);
                     setHeldReader(undefined);
                   }}
-                  {...(settingUp
-                    ? {}
-                    : {
-                        onManageKeys: () => {
-                          onClose();
-                          void navigate({
-                            to: "/org/$orgId/settings/$section",
-                            params: { orgId: org.id, section: "usage" },
-                          });
-                        },
-                      })}
+                  {...(settingUp ? {} : { onManageKeys: () => toSettings("usage") })}
                   onUsed={(id, next) => {
                     setLinked((l) => ({ ...l, [id]: next.choice }));
                     setUsed(next);

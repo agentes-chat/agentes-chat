@@ -293,7 +293,7 @@
   },
   "along": {
     "agent": "에이전트",
-    "waits": "{{name}}이(가) 승인을 기다려요",
+    "waits": "{{name}} · 내 확인 대기",
     "on": "{{name}} · {{what}}",
     "working": "{{name}}이(가) 작업 중이에요",
     "more": "+{{count}}"
@@ -356,8 +356,6 @@
     "switchWorking": "작업 중",
     "join": "채널 참여",
     "sending": "보내는 중…",
-    "failed": "전송 안 됨 · 다시 시도",
-    "notSent": "메시지가 전송되지 않았어요.",
     "toLatest": "최신 메시지로 이동",
     "toLatestNew": "최신 메시지로 이동: {{text}}",
     "stopAgent": "{{name}} 중지",
@@ -771,7 +769,7 @@
     "teamSectionPersonal": "내 에이전트",
     "managerQuiet": "진행 중인 작업이 없어요",
     "state": {
-      "waitsYou": "승인을 기다려요",
+      "waitsYou": "내 확인 대기",
       "noAi": "연결된 AI 없음",
       "connect": "연결",
       "archived": "보관됨",
@@ -881,6 +879,9 @@
       "routine_finished_other": "루틴 완료",
       "routine_failed_other": "루틴 실패",
       "run_failed_other": "마치지 못했어요",
+      "admin_ask_channel_agent": "{{names}} 님이 {{agent}}을(를) #{{label}}에 추가해 달라고 요청합니다",
+      "admin_ask_create_agents": "{{names}} 님이 에이전트를 만들 수 있게 해 달라고 요청합니다",
+      "admin_ask_webhook": "{{names}} 님이 루틴용 {{service}} 웹훅을 설정해 달라고 요청합니다",
       "routine_paused_other": "루틴 일시 중지됨",
       "routine_stalled_other": "루틴이 컴퓨터를 기다리는 중",
       "agent_unreached_other": "루틴이 에이전트를 부르지 못했어요",
@@ -914,6 +915,7 @@
       "desktop_taken_female_other": "{{names}} 님이 {{agent}}의 컴퓨터 화면 제어를 넘겨받았어요",
       "plan_lent_other": "{{names}} 님이 내 {{plan}} 플랜을 {{agent}}에 연결했어요",
       "plan_lent_female_other": "{{names}} 님이 내 {{plan}} 플랜을 {{agent}}에 연결했어요",
+      "plan_serves_other": "내 {{plan}}이(가) 이제 workspace 전체를 지원해요",
       "plan_model_dropped_other": "{{model}} 모델이 {{plan}}에서 빠졌어요. {{names}}은(는) 당분간 {{runs}}을(를) 써요",
       "computer_disk_full_other": "컴퓨터 디스크가 거의 찼어요",
       "computer_no_chrome_other": "컴퓨터에 Google Chrome이 필요해요. google.com/chrome에서 받으세요",
@@ -1059,6 +1061,9 @@
     "addWorkspaceTeamShort": "팀 서버에 들어가기",
     "addWorkspaceTeamSubShort": "주소 또는 컴퓨터의 QR 코드",
     "addWorkspaceFoot": "어떤 워크스페이스에서도 나가지 않아요.",
+    "addAccount": "다른 계정으로 로그인",
+    "addAccountSub": "{{host}}에서, 이 계정을 유지한 채",
+    "accountNoWorkspace": "아직 워크스페이스가 없습니다",
     "teamServerLeadShort": "팀이 브라우저에서 여는 주소예요.",
     "teamServerQuestion": "팀 주소가 어떻게 되세요?",
     "account": {
@@ -1076,6 +1081,8 @@
       "name": "이름",
       "namePlaceholder": "내 이름",
       "email": "이메일",
+      "emailWebLead": "웹사이트에서 다시 로그인하고, 코드 없이 거기서 바꾸세요.",
+      "emailWeb": "웹사이트에서 다시 로그인",
       "inWorkspace": "이 워크스페이스에서 · {{org}}",
       "handle": "내 @",
       "timezone": "시간대",
@@ -1284,7 +1291,6 @@
     "agentLine_other": "메모리 {{count}}개",
     "uses_other": "{{count}}번 사용됨",
     "confirmed": "사람이 확인함",
-    "unconfirmed": "아직 확인되지 않음",
     "confirm": "확인",
     "confirmedToast": "확인됨",
     "details": "기술 세부 정보",
@@ -1352,7 +1358,7 @@
       "plain": "작업을 마쳤어요"
     },
     "rowWait": {
-      "approval": "승인을 기다려요",
+      "approval": "내 확인 대기",
       "question": "답변을 기다려요",
       "mission": "검토를 기다려요"
     },
@@ -1390,12 +1396,12 @@
   },
   "intentAgents": {
     "waitingSection": "내 확인 대기",
-    "waitingLine": "{{title}} · 승인 필요",
+    "waitingLine": "{{title}} · 내 확인 대기",
     "waitingMore_other": "{{title}} · 외 {{count}}건이 나를 기다려요",
-    "waitingLabel": "{{name}}, 승인 필요",
+    "waitingLabel": "{{name}}, 내 확인 대기",
     "owner": "소유자: {{name}}",
     "ownerYou": "소유자: 나",
-    "nowWaiting": "승인 필요: {{title}}",
+    "nowWaiting": "내 확인 대기: {{title}}",
     "did": {
       "title": "나를 위해 한 일",
       "title_female": "나를 위해 한 일",
@@ -1413,7 +1419,7 @@
         "image": "이미지",
         "file": "파일"
       },
-      "waitingOnYou": "승인 필요",
+      "waitingOnYou": "내 확인 대기",
       "youApproved": "내가 승인함",
       "youRefused": "내가 거절함",
       "action": {
@@ -1490,9 +1496,9 @@
         "setup": "워크스페이스 설정",
         "desktop": "컴퓨터 화면"
       },
-      "asksYou": "머지와 게시는 어떤 수준에서든 항상 내 승인을 받아요.",
-      "asksOwner": "머지와 게시는 어떤 수준에서든 항상 {{name}}의 승인을 받아요.",
-      "asksAdmins": "머지와 게시는 어떤 수준에서든 항상 관리자의 승인을 받아요.",
+      "asksYou": "머지와 게시는 에이전트가 묻지 않기로 설정되어 있지 않다면 내 승인을 받아요.",
+      "asksOwner": "머지와 게시는 에이전트가 묻지 않기로 설정되어 있지 않다면 {{name}}의 승인을 받아요.",
+      "asksAdmins": "머지와 게시는 에이전트가 묻지 않기로 설정되어 있지 않다면 관리자의 승인을 받아요.",
       "empty": "지금은 대화만 할 수 있어요."
     }
   },
@@ -1582,13 +1588,7 @@
       "open": "열기",
       "expandHint": "탭해서 펼치기",
       "stop": "중지",
-      "giveUp": "포기",
-      "done": "완료: {{title}}",
-      "failed": "하지 못함: {{title}}",
-      "failedNote": "하지 못함: {{note}}",
-      "expired": "아무도 제때 열지 않았어요: {{title}}",
-      "cancelled": "취소됨: {{title}}",
-      "withdrawn": "{{name}}에게 더 이상 필요하지 않아요: {{title}}"
+      "giveUp": "포기"
     },
     "live": {
       "inControl": "내가 제어 중",
@@ -1897,6 +1897,7 @@
       "access_requestFor": "{{names}}이(가) {{person}} 님을 위해 {{device}} 사용을 요청해요",
       "waiting": "{{names}}이(가) {{device}}을(를) 기다리고 있어요",
       "waitingFor": "{{names}}이(가) {{person}} 님을 위해 {{device}}을(를) 기다리고 있어요",
+      "tool_request": "{{names}}님이 회원님의 {{device}}에서 {{tool}}을(를) 켜 달라고 요청합니다",
       "allowOnce": "한 번 허용",
       "always": "{{name}} 항상 허용",
       "no": "아니요",
@@ -2140,9 +2141,9 @@
     "ofOnline": "{{count}}대 중 {{online}}대",
     "deleteName": "{{name}} 삭제",
     "deleteFoot": "마음을 바꿀 수 있는 시간은 7일이에요.",
-    "deleteAlert": "모두가 바로 나가게 돼요. 7일 동안은 복원할 수 있어요.",
+    "deleteAlert": "모두가 지금부터 읽기만 할 수 있어요. 7일 동안은 복원할 수 있어요.",
     "deleteAction": "삭제",
-    "deleteIntro": "{{name}}은(는) 모두에게 바로 닫히고 7일 후 영구 삭제돼요.",
+    "deleteIntro": "{{name}}은(는) 모두에게 바로 읽기 전용이 되고 7일 후 영구 삭제돼요.",
     "holdDelete": "길게 눌러 삭제",
     "deleteFailed": "워크스페이스를 삭제하지 못했어요. 다시 시도해 주세요.",
     "access": {
@@ -2153,7 +2154,8 @@
       "tooBig": "이미지가 너무 커요. 다른 이미지를 골라 주세요."
     },
     "machine": {
-      "toolsHow": "켜진 도구를 탭하면 꺼져요. 다시 켜는 건 그 컴퓨터에서만 할 수 있어요."
+      "toolsHow": "켜져 있는 도구를 탭하면 꺼집니다. 다시 켜려면 그 컴퓨터에서, 또는 연결한 사람이 여기서 켜세요.",
+      "toolsHowOwner": "도구를 탭해서 켜거나 끄세요."
     },
     "roles": {
       "onComputer": "역할 순서와 각 역할의 아이콘은 컴퓨터에서 바꿔요.",
@@ -2433,7 +2435,6 @@
     },
     "formatAuto": "{{name}}이(가) 가장 좋은 걸 골라요",
     "newWidget": {
-      "titleHint": "제목 · 테스트할 때 {{name}}이(가) 제안해요",
       "alerts": "알림 켜짐",
       "realData": "실제 데이터",
       "editAsk": "요청 바꾸기",

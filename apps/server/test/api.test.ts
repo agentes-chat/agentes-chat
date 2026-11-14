@@ -222,6 +222,28 @@ describe("organizations, agents and credentials", () => {
 });
 
 describe("chat over HTTP", () => {
+  test("a long message goes whole and is listed whole; past the limit the refusal says both sizes", async () => {
+    const owner = browser(t);
+    await signUp(owner, "owner@example.com");
+    const { orgId, channelId } = await seedOrg(owner);
+    const url = `/api/app/organizations/${orgId}/channels/${channelId}/messages`;
+    // Distinct short words: the worst case for the search index.
+    const long = Array.from({ length: 15_000 }, (_, i) => `w${i}`).join(" ");
+    expect(long.length).toBeGreaterThan(45_000);
+    const posted = await owner(url, { json: { body: long } });
+    expect(posted.status).toBe(201);
+    await t.drain();
+    const listed = (await (await owner(url)).json()) as { messages: { body: string }[] };
+    expect(listed.messages.some((m) => m.body === long)).toBe(true);
+
+    const refused = await owner(url, { json: { body: "x".repeat(100_001) } });
+    expect(refused.status).toBe(400);
+    expect(((await refused.json()) as { error: unknown }).error).toMatchObject({
+      code: "message.too_long",
+      params: { length: 100_001, max: 100_000 },
+    });
+  });
+
   test("post a mention, workers run the agent, the reply appears in the channel, usage is billed", async () => {
     const owner = browser(t);
     await signUp(owner, "owner@example.com");

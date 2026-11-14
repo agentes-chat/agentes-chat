@@ -6,13 +6,15 @@ import {
   type SpeechFetch,
   STREAM_CLOSE,
 } from "@agenteschat/adapters";
-import { type Config, connectorOAuthApps, githubAppConfig } from "@agenteschat/config";
+import { type Config, connectorOAuthApps, githubAppConfig, mcpCallerIdentity } from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
 import {
   AntigravityBrain,
   APP_FAULT_HINT,
   type ArtifactDeps,
   agentScopeFromDb,
+  approvalsLevelOf,
+  asksOf,
   authorizeStream,
   type BrainTurn,
   blockSpecAt,
@@ -35,6 +37,7 @@ import {
   createCalendarToolSource,
   createChatToolSource,
   createClaudeCodeBrain,
+  createCoAuthorToolSource,
   createConnectorToolSource,
   createContextToolSource,
   createDashboardToolSource,
@@ -86,6 +89,7 @@ import {
   type EmailArt,
   emailArtAt,
   envSpeechEngines,
+  feedbackDestination,
   type GatewayEmbeddings,
   type GitProxyDeps,
   GrokBrain,
@@ -111,12 +115,14 @@ import {
   reauthorizeStream,
   recheckStream,
   releaseRunPhones,
+  reportLodiLaneErrors,
   resolveSummaryModel,
   type SandboxDeps,
   type ScheduleReader,
   type SkillDeps,
   type StorageDeps,
   setWorkOrgCap,
+  shareSavedFile,
   smallModelFor,
   standingJudge,
   streamClosed,
@@ -415,10 +421,12 @@ export function buildEngine(o: EngineOptions) {
       createSetStatusToolSource({ pubsub: adapters.pubsub }),
       // How the person asked agents to talk to them (ADR 0147).
       createAgentStyleToolSource(),
+      // The agents' own line on their commits, off or on again when a person asks any agent (ADR 0156).
+      createCoAuthorToolSource(),
       // A person's feedback, sent by the agent they asked or offered by it when the app fails, where the server takes
       // feedback (ADR 0160 §11, §12).
       createFeedbackToolSource({
-        to: config.FEEDBACK_EMAIL,
+        to: feedbackDestination(config),
         version,
         rateLimiter: adapters.rateLimiter,
       }),
@@ -455,7 +463,7 @@ export function buildEngine(o: EngineOptions) {
       }),
       createIssueToolSource(artifacts),
       // Dashboards and widgets (ADR 0135 §10): boards for the person, and a widget run's only voice (`update_widget`).
-      createDashboardToolSource({ db, pubsub: adapters.pubsub, context }),
+      createDashboardToolSource({ db, pubsub: adapters.pubsub, context, ai: { gateway, machines: machineHub } }),
       createSkillToolSource({
         ...skillDeps,
         judge: context.judge,
@@ -477,6 +485,7 @@ export function buildEngine(o: EngineOptions) {
         log: o.log,
         judge: context.judge,
         githubApp: githubAppAccess,
+        callerIdentity: mcpCallerIdentity(config),
       }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
       createMailToolSource({
@@ -545,7 +554,7 @@ export function buildEngine(o: EngineOptions) {
     catalog: { oauthApps: connectorDeps.oauthApps, mail: adapters.mail, composio },
     pubsub: adapters.pubsub,
     // One of our own tools broke: where the server takes feedback, the agent may offer a report (ADR 0160 §12).
-    ...(config.FEEDBACK_EMAIL ? { faultHint: APP_FAULT_HINT } : {}),
+    ...(feedbackDestination(config) ? { faultHint: APP_FAULT_HINT } : {}),
   });
   // Mission tasks' tools and computer-brain runs' tools come through the hub's MCP bridge (ADR 0032).
   // Runs waiting for a device (bring your own devices) go on when its computer is back or its phones report it free.
@@ -611,7 +620,8 @@ export function buildEngine(o: EngineOptions) {
    * A computer turn's permission profile (ADR 0053 §3), the same for Claude Code and Codex: a mission run
    * keeps its own (plan before Start and while a write item is live, work otherwise; ADR 0044); every other
    * run works, whoever woke it (ADR 0109: one permission model, the agent's own). Its own branches are
-   * agentes/<handle>/… (what the git proxy accepts).
+   * agentes/<handle>/… (what the git proxy accepts). It carries how much the agent asks when that isn't the default
+   * (ADR 0173); a mission's turn follows the mission's own setting.
    */
   const turnPermissions = async (turn: BrainTurn): Promise<BrainTurnRequest["permissions"]> =>
     // The team's right hand on a plan: our tools and nothing else (ADR 0137 §4).
@@ -620,6 +630,7 @@ export function buildEngine(o: EngineOptions) {
       : ((await missionTurnPermissions(db, turn)) ?? {
           mode: "work",
           branchPrefix: `agentes/${(await agentScope(turn)).handle}/`,
+          ...asksOf(await approvalsLevelOf(db, turn.orgId, turn.agentId)),
         });
   // Before a chat turn on a connected machine: the agent's checkouts updated through the git proxy, the turn
   // started in the repository it is about, and the "# Your code" block (ADR 0024 addendum).
@@ -722,6 +733,8 @@ export function buildEngine(o: EngineOptions) {
       { fetch: o.speechFetch },
     ),
   });
+  // An audio file an agent opens is heard by the same engines as a voice message.
+  artifacts.speech = speech.chain;
   const voice: VoiceDeps = {
     db,
     pubsub: adapters.pubsub,
@@ -740,6 +753,7 @@ export function buildEngine(o: EngineOptions) {
   };
   const jobDeps: JobDeps = {
     feedbackBlobs: adapters.platformBlobs,
+    feedbackFetch: o.http,
     accountEmails: adapters.email.delivers ? { publicUrl: config.PUBLIC_URL, support: config.SUPPORT_EMAIL } : null,
     appleRevoke: o.appleRevoke ?? appleTokenRevoker(config),
     voice,
@@ -782,6 +796,15 @@ export function buildEngine(o: EngineOptions) {
     warmBrowser,
     brains,
     prepareCode,
+    // An image Codex's own tool made on the agent's computer goes to the Drive, as a shared screenshot does.
+    shareFile: (ctx, machineId, path) =>
+      shareSavedFile(
+        { machines: { hub: machineHub }, pubsub: adapters.pubsub, publicUrl: config.PUBLIC_URL },
+        ctx,
+        machineId,
+        path,
+        { content: `Saved ${path} in your folder.` },
+      ),
     machines: machineHub,
     workspaceComputer,
     releaseRunPhones: (run) => releaseRunPhones({ db, hub: machineHub }, run),
@@ -808,6 +831,11 @@ export function buildEngine(o: EngineOptions) {
     },
   };
   const handlers = createJobHandlers(jobDeps);
+  // A failing block of one of the right hand's lanes is left out of its prompt: it shows here.
+  reportLodiLaneErrors((lane, error) => {
+    o.log?.warn("right hand lane failed", { lane, error: String(error) });
+    o.errors?.capture(error, { lane });
+  });
   // Mail accounts, inbound mail and polling (routes and workers).
   const mail: MailDeps = {
     db,

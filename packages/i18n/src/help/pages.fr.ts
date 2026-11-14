@@ -9,11 +9,18 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
       "L’app agentes.chat peut aussi faire tourner agentes.chat lui-même, sur un Mac, un PC ou un ordinateur sous Linux, pour vous ou une petite équipe.",
     sections: [
       {
+        id: "download",
+        heading: "Téléchargez l'application",
+        blocks: [
+          "[Téléchargez l'application agentes.chat](/download) pour votre Mac, PC ou ordinateur Linux et ouvrez-la. Choisissez **Sur votre propre serveur**, appuyez sur **Continuer sur mon serveur**, puis sur **Faire tourner agentes.chat sur ce poste**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Comment ça fonctionne",
         blocks: [
           "Il tourne dans l’app, avec sa propre base de données intégrée, et garde tout dans un seul dossier de cet ordinateur, `.agentes` dans votre dossier personnel. Rien d’autre à installer : ni Docker, ni base de données à configurer.",
-          "Il démarre avec l’app et s’arrête quand vous la quittez. L’app vous demande confirmation avant de quitter, car personne ne peut utiliser agentes.chat tant qu’elle n’est pas rouverte.",
+          "Il démarre avec l’app et s’arrête quand vous la quittez. L’app vous demande confirmation avant de quitter, car personne ne peut utiliser agentes.chat tant qu’elle n’est pas rouverte. Pour l’arrêter un moment sans quitter l’app, cliquez sur l’icône agentes.chat près de l’horloge et choisissez **Arrêter** dans le menu **⋯** de sa carte.",
         ],
       },
       {
@@ -28,7 +35,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Le garder allumé",
         blocks: [
-          "Sur un ordinateur que d’autres utilisent, préparez-le une fois\u00a0:",
+          "Sur un ordinateur que d’autres utilisent, préparez-le une fois. **Le garder en marche**, dans **Préférences\u00a0›\u00a0Serveurs**, montre ce qui manque encore et ouvre les bons réglages\u00a0:",
           {
             list: [
               "**Ouvrir à la connexion** s’active tout seul après la configuration.",
@@ -51,8 +58,8 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "another-workspace",
         heading: "Le prêter aussi à un autre espace de travail",
         blocks: [
-          "Les espaces de travail du serveur que vous faites tourner ici utilisent déjà cet ordinateur, sans rien à faire. Pour qu’un espace de travail d’ailleurs l’utilise aussi, par exemple sur agentes.chat Cloud, ouvrez **Préférences\u00a0›\u00a0Serveurs**, cliquez sur **Ajouter un serveur…**, connectez-vous à cet espace de travail et cliquez sur **Autoriser** quand l’app le demande.",
-          "Chaque espace de travail a ici ses propres agents et dossiers. Les **Commandes** y sont aussi activées par défaut. Désactivez-les dans la question de l’app avant d’appuyer sur **Autoriser**, ou plus tard dans **Préférences\u00a0›\u00a0Outils**, où un seul interrupteur vaut pour tous les espaces de travail de cet ordinateur.",
+          "Les espaces de travail du serveur que vous faites tourner ici utilisent déjà cet ordinateur, sans rien à faire. Pour qu’un espace de travail d’ailleurs l’utilise aussi, par exemple sur agentes.chat Cloud, cliquez sur **Ajouter un espace de travail…** en bas de la première carte de **Préférences\u00a0›\u00a0Général**, ou sur **Ajouter un serveur…** dans **Préférences\u00a0›\u00a0Serveurs**. Connectez-vous à cet espace de travail et cliquez sur **Autoriser** quand l’app le demande.",
+          "Chaque espace de travail a ici ses propres agents et dossiers. Les **Commandes** y sont aussi activées par défaut. Désactivez-les dans la question de l’app avant d’appuyer sur **Autoriser**, ou plus tard dans **Préférences\u00a0›\u00a0Outils**, où chaque espace de travail a son propre interrupteur et où l’app demande confirmation avant d’en réactiver un.",
         ],
       },
       {
@@ -67,29 +74,29 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Se connecter depuis d’autres appareils",
         blocks: [
-          "Le propriétaire commence sans mot de passe\u00a0: l’app vous connecte sur cet ordinateur. Pour vous connecter depuis un navigateur sur un autre ordinateur, ajoutez-en un dans **Paramètres\u00a0›\u00a0Votre compte**. L’app mobile se connecte en scannant le QR code sous **Sur votre téléphone**, dans **Préférences\u00a0›\u00a0Serveurs**. Il faut pour cela que **Y accéder depuis votre téléphone et vos collègues** soit activé.",
+          "Le propriétaire commence sans mot de passe\u00a0: l’app vous connecte sur cet ordinateur. Pour vous connecter depuis un navigateur sur un autre ordinateur, ajoutez-en un dans **Paramètres\u00a0›\u00a0Votre compte**. En attendant, **Préférences\u00a0›\u00a0Serveurs** vous le rappelle, et **Ajouter un mot de passe** ouvre cette page. L’app mobile se connecte en scannant le QR code sous **Sur votre téléphone**, dans **Préférences\u00a0›\u00a0Serveurs**. Il faut pour cela que **Y accéder depuis votre téléphone et vos collègues** soit activé.",
         ],
       },
       {
         id: "updates",
         heading: "Mises à jour",
         blocks: [
-          "L’app cherche les mises à jour toute seule, et en installe une quand vous cliquez sur **Mettre à jour et rouvrir** dans **Préférences\u00a0›\u00a0Mises à jour**. Le serveur et tous les agents redémarrent avec elle. La base de données est d’abord copiée, et si la nouvelle version ne répond pas dans les 3 minutes, l’app revient toute seule à la version précédente et à ses données.",
+          "L’app cherche les mises à jour toute seule. Avec **Installer les mises à jour tout seul, la nuit** activé, dans **Préférences\u00a0›\u00a0Mises à jour**, elle les installe entre 3:00 et 5:00 tant que l’app est ouverte. C’est activé d’office quand le serveur tourne ici. Sinon, cliquez sur **Mettre à jour et rouvrir**. Le serveur et tous les agents redémarrent avec elle. La base de données est d’abord copiée, et si la nouvelle version ne répond pas dans les 3 minutes, l’app revient toute seule à la version précédente et à ses données.",
         ],
       },
       {
         id: "backups",
         heading: "Sauvegardes",
         blocks: [
-          "Rien ne se sauvegarde encore tout seul. **Sauvegarder maintenant**, dans **Préférences\u00a0›\u00a0Serveurs**, arrête le serveur un instant et enregistre la base de données, les fichiers et le `.env` dans `.agentes/backups`, dans votre dossier personnel. Les deux plus récentes sont gardées.",
-          "De temps en temps, copiez-les hors de cet ordinateur, sur un disque ou un stockage en ligne. Elles contiennent vos clés\u00a0: gardez-les privées.",
+          "Avec **Sauvegarder chaque nuit** activé (app 0.8.1 et plus récente), dans **Préférences\u00a0›\u00a0Serveurs**, l’app enregistre chaque nuit à 3:00 la base de données, les fichiers et le `.env` dans `.agentes/backups`, dans votre dossier personnel. Un ordinateur en veille à ce moment-là sauvegarde dès qu’il se réveille. **Sauvegarder maintenant** fait la même chose tout de suite. Chaque sauvegarde arrête le serveur un instant, et les deux plus récentes sont gardées.",
+          "**Copier dans** place aussi chaque nouvelle sauvegarde dans un dossier de votre choix, comme une clé USB ou iCloud Drive, où les deux plus récentes sont gardées. Elles contiennent vos clés\u00a0: gardez-les privées. **Restaurer…** ramène agentes.chat à une sauvegarde\u00a0: messages, fichiers et réglages. Il s’arrête une minute, et ce qui était là avant est gardé dans le dossier des sauvegardes.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code et Codex",
         blocks: [
-          "L’app trouve Claude Code et Codex grâce au `PATH` de votre shell de connexion, plus les dossiers habituels comme `~/.local/bin`, `/opt/homebrew/bin` et `/usr/local/bin`. Si **Préférences\u00a0›\u00a0Outils** indique **Introuvable**, vérifiez que `claude` ou `codex` se lance dans une nouvelle fenêtre du Terminal, puis quittez et rouvrez l’app.",
+          "L’app trouve Claude Code et Codex grâce au `PATH` de votre shell de connexion, plus les dossiers habituels comme `~/.local/bin`, `/opt/homebrew/bin` et `/usr/local/bin`. Si **Préférences\u00a0›\u00a0Outils** indique **Introuvable**, la ligne qui l’installe s’affiche. Lancez-la dans le Terminal, puis cliquez sur **Vérifier à nouveau**.",
         ],
       },
       {
@@ -163,7 +170,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Depuis l’app agentes.chat",
         blocks: [
           "Installez l’app sur l’ordinateur, ouvrez-la et connectez-vous à votre espace de travail. Elle demande **Laisser les agents de <workspace> utiliser ce Mac\u00a0?** (ce PC sous Windows, cet ordinateur sous Linux). Choisissez qui peut l’utiliser et cliquez sur **Autoriser**. C’est tout.",
-          "Déjà connecté\u00a0? Activez l’espace de travail dans **Préférences\u00a0›\u00a0Général**, dans la carte **Agents**.",
+          "Déjà connecté\u00a0? Ouvrez **Préférences\u00a0›\u00a0Général** et cliquez sur **Autoriser** dans la ligne de l’espace de travail, dans la première carte. Il n’y est pas\u00a0? Cliquez sur **Ajouter un espace de travail…** en bas de cette carte et connectez-vous.",
         ],
       },
       {
@@ -206,7 +213,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Mettre en pause et déconnecter",
         blocks: [
-          "Sur l’ordinateur, l’icône agentes.chat près de l’horloge met en pause les agents de tous les espaces de travail. Dans **Préférences\u00a0›\u00a0Général**, l’interrupteur de chaque espace de travail ne met en pause que celui-ci, et **Quitter** le déconnecte. Rien de nouveau ne démarre pendant la pause, et ce qui était en cours se termine. Déconnecter garde les dossiers des agents sur le disque.",
+          "Sur l’ordinateur, l’icône agentes.chat près de l’horloge met en pause les agents de tous les espaces de travail, ou d’un seul. Dans **Préférences\u00a0›\u00a0Général**, l’interrupteur de chaque espace de travail ne met en pause que celui-ci, et **Quitter**, dans son menu **⋯**, le déconnecte. Rien de nouveau ne démarre pendant la pause, et ce qui était en cours se termine. Déconnecter garde les dossiers des agents sur le disque.",
           "Depuis le site, **Retirer** sur la page de l’appareil le déconnecte.",
         ],
       },
@@ -217,6 +224,15 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
           "Connectez-vous à chaque espace de travail dans la même app et cliquez sur **Autoriser** pour chacun. Des espaces de travail sur agentes.chat Cloud et sur vos propres serveurs peuvent partager un ordinateur (app 0.6.1 et plus récente). Chacun y a ses propres agents et dossiers, et en déconnecter un ne touche pas aux autres.",
           "Un serveur que l’app fait tourner sur cet ordinateur est déjà connecté et n’a besoin de rien. Pour prêter aussi cet ordinateur à un espace de travail d’ailleurs, voir [Le prêter aussi à un autre espace de travail](/help/run-on-your-computer#another-workspace).",
           "Vous utilisez l’app sur un portable seulement comme fenêtre sur votre espace de travail\u00a0? Quand elle propose de laisser les agents utiliser le portable, **Plus tard** le garde comme simple fenêtre.",
+          "Un serveur connecté avec la ligne du terminal travaille pour un seul workspace. Le connecter depuis un autre workspace fait passer le serveur à celui-ci, et le premier ne l'atteint plus. Pour plusieurs workspaces sur un ordinateur, utilisez l'app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Quand les agents attendent dans la file",
+        blocks: [
+          "Chaque travail d'un agent utilise la mémoire de l'ordinateur. Quand la mémoire libre vient à manquer, le suivant attend dans la file jusqu'à ce qu'un autre se termine. Les personnes passent en premier. Le nombre de CPU n'y change rien.",
+          "Un ordinateur avec 4 Go de mémoire exécute deux ou trois travaux à la fois, un avec 8 Go environ neuf. Un Mac ou un PC en exécute jusqu'à huit. Les navigateurs et les bureaux que les agents laissent ouverts utilisent aussi de la mémoire. Pour une file plus courte, utilisez un ordinateur avec plus de mémoire, ou connectez-en un autre et répartissez les agents entre eux. Les workspaces qui partagent un ordinateur partagent sa mémoire.",
         ],
       },
       {
@@ -239,7 +255,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
               "sur un ordinateur qui fait aussi tourner agentes.chat, sa base de données et ses clés dans `.agentes`",
             ],
           },
-          "agentes.chat refuse les commandes qui citent ses clés, ses jetons et les connexions enregistrées, mais c’est une règle, pas un mur. Les **Commandes** sont activées par défaut. Désactivez-les dans la question de l’app avant d’appuyer sur **Autoriser**, ou plus tard dans **Préférences\u00a0›\u00a0Outils**, où un seul interrupteur vaut pour tous les espaces de travail de l’ordinateur. Claude Code et Codex lancent leurs propres commandes dans le dossier de l’agent, selon leurs propres règles.",
+          "agentes.chat refuse les commandes qui citent ses clés, ses jetons et les connexions enregistrées, mais c’est une règle, pas un mur. Les **Commandes** sont activées par défaut. Désactivez-les dans la question de l’app avant d’appuyer sur **Autoriser**, ou plus tard dans **Préférences\u00a0›\u00a0Outils**, où chaque espace de travail a son propre interrupteur (app 0.8.1 et plus récente) et où l’app demande confirmation avant d’en réactiver un. Claude Code et Codex lancent leurs propres commandes dans le dossier de l’agent, selon leurs propres règles, même avec les commandes désactivées.",
           "Pour un vrai mur, utilisez un serveur Linux. Sous Debian 13, installé avec `--system`, chaque agent est un utilisateur à part. Sous Ubuntu, les agents partagent un utilisateur, `agentes`\u00a0: ils voient les dossiers les uns des autres, pas les vôtres ni ceux du serveur. Ou donnez aux agents un ordinateur rien qu’à eux.",
         ],
       },
@@ -375,7 +391,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "La mémoire ne donne aucune permission",
         blocks: [
-          "Rien dans la mémoire ne permet à un agent d’en faire plus. Ce qu’il peut faire reste dans ses **Outils et accès**, et les actions sensibles demandent toujours une approbation.",
+          "Rien dans la mémoire ne permet à un agent d’en faire plus. Ce qu’il peut faire reste dans ses **Outils et accès**.",
         ],
       },
       {
@@ -395,7 +411,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Ce qui demande d’abord",
         blocks: [
-          "Quand un agent veut fusionner, déployer, revenir en arrière, envoyer quelque chose à l’extérieur ou supprimer des données, il demande d’abord, quels que soient ses accès. La demande apparaît dans **Approbations** et dans la conversation, avec l’action exacte et sa raison.",
+          "Quand un agent veut fusionner, déployer, revenir en arrière, envoyer quelque chose à l’extérieur ou supprimer des données, il demande d’abord. C’est le niveau **Seulement ce qui est risqué**, celui de tout nouvel agent. Sur la page de l’agent, dans **Approbations**, **Toujours demander** le fait demander avant de modifier quoi que ce soit, et avec **Ne jamais demander** il ne demande rien, même pour fusionner, déployer, payer ou dans une routine. La demande apparaît dans **Approbations** et dans la conversation, avec l’action exacte et sa raison.",
         ],
       },
       {
@@ -403,7 +419,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Une fois, ou toujours",
         blocks: [
           "Approuver couvre une action exacte, avec ses valeurs. Si l’agent change quoi que ce soit, il redemande.",
-          "**Toujours approuver** laisse l’agent faire ce type d’action à partir de maintenant, avec n’importe quelles valeurs, sans demander. Sur la demande d’une routine, **Toujours dans cette routine** fait de même pour cette routine seulement. Aucun des deux n’est proposé pour un merge, un déploiement, un retour arrière et autres. Pour annuler, allez dans **Outils et accès** sur la page de l’agent, ou dans les réglages de la routine.",
+          "**Toujours approuver** laisse l’agent faire ce type d’action à partir de maintenant, avec n’importe quelles valeurs, sans demander. Sur la demande d’une routine, **Toujours dans cette routine** fait de même pour cette routine seulement. **Toujours approuver** est proposé pour tout type d’action, merge et déploiement compris, tant que l’agent est au niveau **Seulement ce qui est risqué**. **Toujours dans cette routine** n’est pas proposé pour un merge, un déploiement, un retour arrière et autres. Pour annuler, allez dans **Outils et accès** sur la page de l’agent, ou dans les réglages de la routine.",
         ],
       },
       {
@@ -747,7 +763,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-mail",
         blocks: [
-          "Sans e-mail, agentes.chat écrit chaque e-mail dans son journal au lieu de l'envoyer, vous pouvez donc y copier un lien d'invitation. La réinitialisation du mot de passe reste désactivée.",
+          "Sans e-mail, agentes.chat écrit chaque e-mail dans son journal au lieu de l'envoyer, vous pouvez donc y copier un lien d'invitation. La réinitialisation du mot de passe reste désactivée, et un nouvel e-mail pour un compte change aussitôt, sans code ni lien.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

@@ -302,7 +302,7 @@
   },
   "along": {
     "agent": "Een agent",
-    "waits": "{{name}} wacht op je akkoord",
+    "waits": "{{name}} · wacht op jou",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} is aan het werk",
     "more": "+{{count}}"
@@ -370,8 +370,6 @@
     "switchWorking": "aan het werk",
     "join": "Lid worden van het kanaal",
     "sending": "Versturen…",
-    "failed": "Niet verstuurd · Probeer opnieuw",
-    "notSent": "Het bericht is niet verstuurd.",
     "toLatest": "Naar de nieuwste berichten",
     "toLatestNew": "Naar de nieuwste berichten: {{text}}",
     "stopAgent": "{{name}} stoppen",
@@ -794,7 +792,7 @@
     "teamSectionPersonal": "Je agents",
     "managerQuiet": "Er loopt niets",
     "state": {
-      "waitsYou": "wacht op je akkoord",
+      "waitsYou": "wacht op jou",
       "noAi": "Geen AI gekoppeld",
       "connect": "Koppelen",
       "archived": "Gearchiveerd",
@@ -920,6 +918,9 @@
       "routine_failed_other": "Routines mislukt",
       "run_failed_one": "Kon niet afronden",
       "run_failed_other": "Kon niet afronden",
+      "admin_ask_channel_agent": "{{names}} vraagt je {{agent}} toe te voegen aan #{{label}}",
+      "admin_ask_create_agents": "{{names}} vraagt om agents te mogen maken",
+      "admin_ask_webhook": "{{names}} vraagt je de {{service}}-webhook voor routines in te stellen",
       "routine_paused_one": "Routine gepauzeerd",
       "routine_paused_other": "Routines gepauzeerd",
       "routine_stalled_one": "Routine wacht op de computer",
@@ -980,6 +981,8 @@
       "plan_lent_other": "{{names}} hebben je {{plan}}-abonnement aan {{agent}} gekoppeld",
       "plan_lent_female_one": "{{names}} heeft je {{plan}}-abonnement aan {{agent}} gekoppeld",
       "plan_lent_female_other": "{{names}} hebben je {{plan}}-abonnement aan {{agent}} gekoppeld",
+      "plan_serves_one": "Je {{plan}} bedient nu de hele workspace",
+      "plan_serves_other": "Je {{plan}} bedient nu de hele workspace",
       "plan_model_dropped_one": "{{model}} is uit {{plan}} gehaald. {{names}} gebruikt voorlopig {{runs}}",
       "plan_model_dropped_other": "{{model}} is uit {{plan}} gehaald. {{names}} gebruikt voorlopig {{runs}}",
       "computer_disk_full_one": "De schijf van een computer is bijna vol",
@@ -1135,6 +1138,9 @@
     "addWorkspaceTeamShort": "Naar de server van je team",
     "addWorkspaceTeamSubShort": "Adres of QR-code van de computer",
     "addWorkspaceFoot": "Je verlaat geen enkele werkruimte.",
+    "addAccount": "Inloggen bij een ander account",
+    "addAccountSub": "Op {{host}}, zonder dit te verlaten",
+    "accountNoWorkspace": "Nog geen werkruimte",
     "teamServerLeadShort": "Wat je team in de browser opent.",
     "teamServerQuestion": "Wat is het adres van je team?",
     "account": {
@@ -1152,6 +1158,8 @@
       "name": "Naam",
       "namePlaceholder": "Je naam",
       "email": "E-mail",
+      "emailWebLead": "Log opnieuw in op de website en wijzig het daar, zonder de code.",
+      "emailWeb": "Opnieuw inloggen op de website",
       "inWorkspace": "In deze werkruimte · {{org}}",
       "handle": "Je @",
       "timezone": "Tijdzone",
@@ -1364,7 +1372,6 @@
     "uses_one": "{{count}} keer gebruikt",
     "uses_other": "{{count}} keer gebruikt",
     "confirmed": "Bevestigd door een persoon",
-    "unconfirmed": "Nog niet bevestigd",
     "confirm": "Bevestigen",
     "confirmedToast": "Bevestigd",
     "details": "Technische details",
@@ -1437,7 +1444,7 @@
       "plain": "heeft een klus afgerond"
     },
     "rowWait": {
-      "approval": "wacht op je akkoord",
+      "approval": "wacht op jou",
       "question": "wacht op je antwoord",
       "mission": "wacht tot je het nakijkt"
     },
@@ -1475,13 +1482,13 @@
   },
   "intentAgents": {
     "waitingSection": "Wacht op jou",
-    "waitingLine": "{{title}} · heeft je akkoord nodig",
+    "waitingLine": "{{title}} · wacht op jou",
     "waitingMore_one": "{{title}} · en nog {{count}} die op je wacht",
     "waitingMore_other": "{{title}} · en nog {{count}} die op je wachten",
-    "waitingLabel": "{{name}}, heeft je akkoord nodig",
+    "waitingLabel": "{{name}}, wacht op jou",
     "owner": "Eigenaar: {{name}}",
     "ownerYou": "Eigenaar: jij",
-    "nowWaiting": "Heeft je akkoord nodig: {{title}}",
+    "nowWaiting": "Wacht op jou: {{title}}",
     "did": {
       "title": "Wat hij voor je deed",
       "title_female": "Wat zij voor je deed",
@@ -1500,7 +1507,7 @@
         "image": "Afbeelding",
         "file": "Bestand"
       },
-      "waitingOnYou": "Heeft je akkoord nodig",
+      "waitingOnYou": "Wacht op jou",
       "youApproved": "Je hebt goedgekeurd",
       "youRefused": "Je hebt geweigerd",
       "action": {
@@ -1577,9 +1584,9 @@
         "setup": "Werkruimte instellen",
         "desktop": "Scherm van de computer"
       },
-      "asksYou": "Mergen en publiceren vragen altijd om jouw goedkeuring, op elk niveau.",
-      "asksOwner": "Mergen en publiceren vragen altijd om goedkeuring van {{name}}, op elk niveau.",
-      "asksAdmins": "Mergen en publiceren vragen altijd om goedkeuring van een beheerder, op elk niveau.",
+      "asksYou": "Mergen en publiceren vragen om jouw goedkeuring, tenzij de agent nooit vraagt.",
+      "asksOwner": "Mergen en publiceren vragen om goedkeuring van {{name}}, tenzij de agent nooit vraagt.",
+      "asksAdmins": "Mergen en publiceren vragen om goedkeuring van een beheerder, tenzij de agent nooit vraagt.",
       "empty": "Voorlopig alleen gesprekken."
     }
   },
@@ -1678,13 +1685,7 @@
       "open": "Openen",
       "expandHint": "Tik om uit te vouwen",
       "stop": "Stoppen",
-      "giveUp": "Opgeven",
-      "done": "Klaar: {{title}}",
-      "failed": "Niet gelukt: {{title}}",
-      "failedNote": "Niet gelukt: {{note}}",
-      "expired": "Niemand heeft het op tijd geopend: {{title}}",
-      "cancelled": "Geannuleerd: {{title}}",
-      "withdrawn": "{{name}} heeft dit niet meer nodig: {{title}}"
+      "giveUp": "Opgeven"
     },
     "live": {
       "inControl": "Jij hebt de controle",
@@ -1994,6 +1995,7 @@
       "access_requestFor": "{{names}} vraagt om {{device}} te gebruiken voor {{person}}",
       "waiting": "{{names}} wacht op {{device}}",
       "waitingFor": "{{names}} wacht op {{device}} voor {{person}}",
+      "tool_request": "{{names}} vraagt je {{tool}} aan te zetten op je {{device}}",
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",
@@ -2243,9 +2245,9 @@
     "ofOnline": "{{online}} van {{count}}",
     "deleteName": "{{name}} verwijderen",
     "deleteFoot": "Je hebt 7 dagen om van gedachten te veranderen.",
-    "deleteAlert": "Iedereen is er meteen uit. Herstellen kan 7 dagen lang.",
+    "deleteAlert": "Iedereen kan hem vanaf nu alleen nog lezen. Herstellen kan 7 dagen lang.",
     "deleteAction": "Verwijderen",
-    "deleteIntro": "{{name}} gaat meteen voor iedereen dicht en wordt over 7 dagen definitief verwijderd.",
+    "deleteIntro": "{{name}} wordt meteen voor iedereen alleen-lezen en wordt over 7 dagen definitief verwijderd.",
     "holdDelete": "Ingedrukt houden om te verwijderen",
     "deleteFailed": "De werkruimte kon niet worden verwijderd. Probeer het opnieuw.",
     "access": {
@@ -2256,7 +2258,8 @@
       "tooBig": "Die afbeelding is te groot. Probeer een andere."
     },
     "machine": {
-      "toolsHow": "Tik op een tool die aan staat om hem uit te zetten. Weer aanzetten kan alleen op de computer zelf."
+      "toolsHow": "Tik op een tool die aan staat om hem uit te zetten. Weer aanzetten: op de computer zelf, of hier door wie hem heeft gekoppeld.",
+      "toolsHowOwner": "Tik op een tool om hem aan of uit te zetten."
     },
     "roles": {
       "onComputer": "De volgorde van de rollen en het pictogram van elke rol wijzig je op de computer.",
@@ -2542,7 +2545,6 @@
     },
     "formatAuto": "{{name}} kiest de beste",
     "newWidget": {
-      "titleHint": "Titel · {{name}} stelt er een voor bij het testen",
       "alerts": "Melding aan",
       "realData": "Echte gegevens",
       "editAsk": "Vraag wijzigen",

@@ -1,4 +1,5 @@
 import { usePrefetchRecent, useSendWaiting } from "@agenteschat/client";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { type ErrorBoundaryProps, Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -67,9 +68,9 @@ function AppStack() {
   // The unread and latest conversations load while the app is idle: opening them is instant.
   usePrefetchRecent(orgId);
   // What I sent while the connection was down goes out once it's back, whatever screen is open.
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
-  useSendWaiting(orgId, useConnection(), () => toast({ title: t("mobile.chat.notSent"), icon: "x" }));
+  useSendWaiting(orgId, useConnection(), (error) => toast({ title: errorText(t, error, i18n.language), icon: "x" }));
   const pushed = usePushedOptions();
   const scrollUnder = useScrollUnderPushedOptions();
   // A request reads as grouped facts (its white groups on the sheet's gray), as the system's own sheets do.
@@ -90,7 +91,8 @@ function AppStack() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, gestureEnabled: true }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="chat/[channelId]" options={pushed} />
-      <Stack.Screen name="consultation/[id]" options={pushed} />
+      {/* Two agents' conversation, read only, over the one it was asked from (the web's dialog). */}
+      <Stack.Screen name="consultation/[id]" options={formSheet} />
       <Stack.Screen name="block/[id]" options={pushed} />
       <Stack.Screen name="conversations/[kind]" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="channel-category" options={{ ...pushed, ...scrollUnder }} />
@@ -175,10 +177,12 @@ function AppStack() {
       <Stack.Screen name="me/account" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="me/status" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="me/zone" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="me/email" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="me/workspaces" options={{ ...pushed, ...scrollUnder }} />
       {/* The same list as a sheet, from a long press on the workspace's mark in the bar (ADR 0154). */}
       <Stack.Screen name="workspaces-sheet" options={workspacesSheet} />
-      {/* Another workspace, on agentes.chat or the team's own server (ADR 0154): two choices, a short sheet. */}
+      {/* Another workspace (ADR 0154): on a server of one's own a new one there first, then agentes.chat or the team's
+          own server; a short sheet fitted to its rows. */}
       <Stack.Screen name="me/add-workspace" options={pushSheet} />
       {/* On the sign-in's ruler: its own sky and back circle, no bar. */}
       <Stack.Screen name="me/team-server" options={{ headerShown: false }} />
@@ -239,6 +243,7 @@ function AppStack() {
       <Stack.Screen name="settings/vault" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-item" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-new" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="settings/vault-env" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-access" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-connect" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/vault-connection" options={{ ...pushed, ...scrollUnder }} />

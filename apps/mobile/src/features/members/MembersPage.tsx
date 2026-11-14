@@ -1,6 +1,7 @@
 import {
   type InvitationWithStatus,
   type Person,
+  type RemovalPreview,
   useAllInvitations,
   useApi,
   useCancelSuggestion,
@@ -11,6 +12,7 @@ import {
   useRemoveMember,
   useRoles,
 } from "@agenteschat/client";
+import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { namesText } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -22,9 +24,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, PersonAvatar, useToast } from "@/ui";
+import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Locked, PersonAvatar, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
+import { openAgentAi } from "../ai/AgentAiScreen";
 import { Page } from "../me/parts";
+import { useOpenDm } from "../new/useOpenDm";
+import { chooseAction } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { useColors, useMeId } from "../shared/hooks";
 import { errorHaptic, Loaded, successHaptic } from "../shared/parts";
@@ -34,6 +39,7 @@ import {
   invitationLine,
   invitationSender,
   invitersOf,
+  memberActions,
   memberLine,
   membersByName,
   pendingInvitations,
@@ -65,9 +71,13 @@ function Members() {
   const invites = can(org, "invite_people");
   const list = people.data;
   const remove = useRemoveFlow();
+  const openDm = useOpenDm();
   const viewer = { role: org?.role ?? "member", rank: org?.rank, userId: meId ?? "", permissions: org?.permissions };
+  // Being deleted, inviting and removing are greyed out, as on the web; leaving stays (the server takes it then too).
+  const frozen = settingsFrozen(org, "members");
   // Remover do workspace for whoever may, Sair on one's own row (not the last owner); the server checks it again.
-  const removable = (m: Person) => (m.userId === meId ? leaves(viewer, list ?? []) : removes(viewer, m, roles));
+  const removable = (m: Person) =>
+    m.userId === meId ? leaves(viewer, list ?? []) : !frozen && removes(viewer, m, roles);
 
   return (
     <Page
@@ -80,33 +90,59 @@ function Members() {
       }
     >
       <View style={styles.gap} />
-      {invites ? (
-        <>
-          <GroupedList>
-            <GroupedRow icon="plus" label={t("members.inviteTitle")} onPress={() => router.push("/invite-people")} />
-          </GroupedList>
-          <WaitingYou />
-          <SentInvitations />
-        </>
-      ) : (
-        <Suggestions />
-      )}
+      <Locked when={frozen} readable>
+        {invites ? (
+          <>
+            <GroupedList>
+              <GroupedRow icon="plus" label={t("members.inviteTitle")} onPress={() => router.push("/invite-people")} />
+            </GroupedList>
+            <WaitingYou />
+            <SentInvitations />
+          </>
+        ) : (
+          <Suggestions />
+        )}
+      </Locked>
 
       <GroupedHeader>{list ? `${t("members.people")} · ${list.length}` : t("members.people")}</GroupedHeader>
       {list ? (
         <Loaded>
           <GroupedList>
-            {membersByName(list, i18n.language).map((m) => (
-              <GroupedRow
-                key={m.userId}
-                leading={
-                  <Face who={{ type: "person", id: m.userId }} size={30} live={false} presence ring={c.raised} />
-                }
-                label={m.userId === meId ? `${m.name}${t("common.youSuffix")}` : m.name}
-                sub={memberLine(t, i18n.language, m, roles)}
-                {...(removable(m) ? { more: true, onPress: () => void remove(m) } : {})}
-              />
-            ))}
+            {membersByName(list, i18n.language).map((m) => {
+              const acts = memberActions(m.userId === meId, Boolean(removable(m)));
+              const run = { dm: () => void openDm({ userId: m.userId }), remove: () => void remove(m) };
+              return (
+                <GroupedRow
+                  key={m.userId}
+                  leading={
+                    <Face who={{ type: "person", id: m.userId }} size={30} live={false} presence ring={c.raised} />
+                  }
+                  label={m.userId === meId ? `${m.name}${t("common.youSuffix")}` : m.name}
+                  sub={memberLine(t, i18n.language, m, roles)}
+                  {...(acts.length > 0
+                    ? {
+                        more: true,
+                        onPress: () =>
+                          chooseAction(
+                            m.name,
+                            acts.map((a) => ({
+                              label: t(
+                                a === "dm"
+                                  ? "profile.dm"
+                                  : a === "leave"
+                                    ? "members.remove.leave"
+                                    : "members.remove.item",
+                              ),
+                              destructive: a !== "dm",
+                              onPress: run[a === "dm" ? "dm" : "remove"],
+                            })),
+                            t("common.cancel"),
+                          ),
+                      }
+                    : {})}
+                />
+              );
+            })}
           </GroupedList>
         </Loaded>
       ) : (
@@ -120,7 +156,7 @@ function Members() {
  * "Remover do workspace" (or "Sair do workspace"): what goes with the person, as the server reads it, in the system's
  * confirmation; then the removal, and the person's own leaving goes back to the start.
  */
-function useRemoveFlow() {
+export function useRemoveFlow() {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const api = useApi();
@@ -133,11 +169,12 @@ function useRemoveFlow() {
     errorHaptic();
     toast({ title: knownErrorText(t, e, i18n.language) ?? t("mobile.app.failed"), icon: "x" });
   };
-  return async (m: Person) => {
+  return async (m: Pick<Person, "userId" | "name">) => {
     const mine = m.userId === meId;
     let lines: string[];
+    let preview: RemovalPreview;
     try {
-      const preview = await qc.fetchQuery({
+      preview = await qc.fetchQuery({
         queryKey: ["org", orgId, "removal", m.userId],
         queryFn: () => api.orgs.removal(orgId, m.userId),
         staleTime: 0,
@@ -150,10 +187,12 @@ function useRemoveFlow() {
       try {
         await remove.mutateAsync(m.userId);
         successHaptic();
+        const lost = mine ? undefined : preview.losePlan[0];
         toast({
           title: mine
             ? t("members.remove.left", { org: orgName })
             : t("members.remove.done", { name: m.name, org: orgName }),
+          ...(lost ? { action: { label: t("usageCard.chooseBrain"), onPress: () => openAgentAi(lost.id) } } : {}),
         });
         if (mine) router.replace("/");
       } catch (e) {

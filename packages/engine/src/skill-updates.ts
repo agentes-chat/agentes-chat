@@ -19,6 +19,7 @@ import {
   skillFolderFiles,
   writeSkillVersion,
 } from "./skills";
+import { closedRefusal, orgStanding } from "./standing";
 
 const { skills } = schema;
 type SkillPendingFile = schema.SkillPendingFile;
@@ -334,14 +335,16 @@ export async function enqueueSkillUpdates(db: Database, now = new Date()) {
  * A workspace's daily update of its skills that update by themselves, one at a time, each with the rights of who
  * turned it on: an update applied is told to them; one that changes what runs waits, told once to who manages skills;
  * a refusal (its link gone, the GitHub connection gone, no longer allowed) is told once, until an update works again.
- * Anything else (GitHub limiting us, a network failure) is left for the next day.
+ * Anything else (GitHub limiting us, a network failure) is left for the next day. A workspace closed to changes
+ * (suspended, or being deleted) keeps its skills as they are and hears nothing.
  */
 export async function runSkillUpdates(deps: SkillDeps, orgId: string) {
+  const done = { updated: 0, waiting: 0, failed: 0 };
+  if (closedRefusal(await orgStanding(deps.db, orgId))) return done;
   const due = await deps.db
     .select()
     .from(skills)
     .where(and(eq(skills.orgId, orgId), dueForUpdate));
-  const done = { updated: 0, waiting: 0, failed: 0 };
   for (const s of due) {
     try {
       if (!s.autoUpdateUserId)

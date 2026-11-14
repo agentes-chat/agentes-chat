@@ -10,6 +10,7 @@ import {
   removeMachineAccount,
   renameMachineAccount,
   sendAccountLoginCode,
+  setAccountServes,
   takeBackPlan,
   ValidationError,
 } from "@agenteschat/engine";
@@ -273,7 +274,7 @@ export function machineAccountRoutes(deps: AppDeps) {
                     })
                     .openapi({
                       description:
-                        "A new sign-in there thinks for all of the caller's agents on it (protocol 29): Claude's, ChatGPT's, a coding plan's key.",
+                        "A new sign-in there thinks for all of the caller's agents on it (protocol 29): Claude's, ChatGPT's, Gemini's (protocol 58), a coding plan's key.",
                     }),
                   off: z
                     .record(z.string(), BrainUnavailable)
@@ -397,6 +398,38 @@ export function machineAccountRoutes(deps: AppDeps) {
         orgId,
         accountId,
         c.req.valid("json").agentId,
+      );
+      if (result.agentIds.length) await publishMachineAgentsChanged(pubsub, orgId);
+      return c.json(result, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/ai-accounts/{accountId}/serves",
+      tags,
+      security,
+      summary: "Choose who a plan thinks for: everyone in the workspace, or only you (the person who connected it)",
+      description:
+        "ADR 0059 §3: `everyone` (the default) lets every person's right hand and any agent think with it; `owner` keeps it to the caller's own, moving other people's agents off it as when a plan is taken back. Every login of the account changes together. Audited as `account.serves`; its `plan_serves` notification is done.",
+      request: {
+        params: PlanParams,
+        body: body(z.object({ serves: z.enum(["everyone", "owner"]) })),
+      },
+      responses: {
+        200: json(z.object({ serves: z.enum(["everyone", "owner"]), agentIds: z.array(z.uuid()) })),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, accountId } = c.req.valid("param");
+      const result = await setAccountServes(
+        { db, pubsub },
+        c.get("user").id,
+        orgId,
+        accountId,
+        c.req.valid("json").serves,
       );
       if (result.agentIds.length) await publishMachineAgentsChanged(pubsub, orgId);
       return c.json(result, 200);

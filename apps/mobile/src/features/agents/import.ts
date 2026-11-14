@@ -6,7 +6,7 @@ import type {
   MigrationBundle,
 } from "@agenteschat/client";
 import { choosable, IMPORT_KINDS, type ImportCard, itemId } from "@agenteschat/client/lib/import/flow";
-import { ARCHIVE_PATH, IMPORT_MAX_BYTES, isSecretPath, TEXT_PATH } from "@agenteschat/client/lib/import/shared";
+import { ARCHIVE_PATH, importFileCap, isSecretPath, TEXT_PATH } from "@agenteschat/client/lib/import/shared";
 import { isIdHandle } from "@agenteschat/tokens/names";
 
 /**
@@ -14,6 +14,9 @@ import { isIdHandle } from "@agenteschat/tokens/names";
  * (agents one by one, the rest by kind), and where the person lands once they arrive. The reading, the plan and the
  * apply are the web's (`@agenteschat/client/lib/import`).
  */
+
+/** Criar agente opened on bringing agents from another app. */
+export const IMPORT_AGENTS_HREF = "/new-agent?import=1";
 
 export { isRequestCard } from "@agenteschat/client/lib/import/flow";
 
@@ -27,12 +30,15 @@ export interface PickedAsset {
 }
 
 /**
- * Which picked files are read as text: the formats' text files under the per-file cap, never a key or login file.
+ * Which picked files are read as text: the formats' text files under their cap (a whole-team export may be larger
+ * than any other file), never a key or login file.
  * The rest still go in, empty, so the preview lists them as left behind. The phone opens no archive: picking only
  * archives is `archive`.
  */
 export function phonePicks<T extends PickedAsset>(assets: readonly T[]): { read: boolean[]; archive: boolean } {
-  const read = assets.map((a) => TEXT_PATH.test(a.name) && !isSecretPath(a.name) && (a.size ?? 0) <= IMPORT_MAX_BYTES);
+  const read = assets.map(
+    (a) => TEXT_PATH.test(a.name) && !isSecretPath(a.name) && (a.size ?? 0) <= importFileCap(a.name),
+  );
   const archive = assets.length > 0 && assets.every((a) => ARCHIVE_PATH.test(a.name));
   return { read, archive };
 }

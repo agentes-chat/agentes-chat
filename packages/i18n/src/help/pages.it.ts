@@ -9,11 +9,18 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
       "L’app agentes.chat può anche far girare agentes.chat stesso, su un Mac, un PC o un computer Linux, per te o per un piccolo team.",
     sections: [
       {
+        id: "download",
+        heading: "Scarica l'app",
+        blocks: [
+          "[Scarica l'app di agentes.chat](/download) per il tuo Mac, PC o computer Linux e aprila. Scegli **Sul tuo server**, premi **Continua sul mio server** e poi **Esegui agentes.chat su questo computer**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Come funziona",
         blocks: [
           "Gira dentro l’app, con un database già incluso, e tiene tutto in una sola cartella di questo computer, `.agentes` nella tua cartella personale. Nient’altro da installare: niente Docker, nessun database da configurare.",
-          "Parte con l’app e si ferma quando la chiudi. Prima di chiudere l’app ti chiede conferma, perché nessuno può usare agentes.chat finché non la riapri.",
+          "Parte con l’app e si ferma quando la chiudi. Prima di chiudere l’app ti chiede conferma, perché nessuno può usare agentes.chat finché non la riapri. Per fermarlo per un po’ senza chiudere l’app, fai clic sull’icona di agentes.chat vicino all’orologio e scegli **Ferma** nel menu **⋯** della sua scheda.",
         ],
       },
       {
@@ -28,7 +35,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Tienilo acceso",
         blocks: [
-          "Su un computer che usano anche altri, preparalo una volta:",
+          "Su un computer che usano anche altri, preparalo una volta. **Tienilo acceso**, in **Preferenze\u00a0›\u00a0Server**, mostra cosa manca ancora e apre le impostazioni giuste:",
           {
             list: [
               "**Apri all’accesso** si attiva da solo dopo la configurazione.",
@@ -51,8 +58,8 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "another-workspace",
         heading: "Prestalo anche a un altro spazio di lavoro",
         blocks: [
-          "Gli spazi di lavoro del server che fai girare qui usano questo computer da soli. Per farlo usare anche a uno spazio di lavoro altrove, come uno su agentes.chat Cloud, apri **Preferenze › Server**, premi **Aggiungi un server…**, accedi a quello spazio di lavoro e premi **Consenti** quando l’app lo chiede.",
-          "Ogni spazio di lavoro ha qui i suoi agenti e le sue cartelle. Anche per lui i **Comandi** sono attivi fin dall’inizio. Disattivali nella domanda dell’app prima di premere **Consenti**, o più tardi in **Preferenze\u00a0›\u00a0Strumenti**, dove un solo interruttore vale per tutti gli spazi di lavoro su questo computer.",
+          "Gli spazi di lavoro del server che fai girare qui usano questo computer da soli. Per farlo usare anche a uno spazio di lavoro altrove, come uno su agentes.chat Cloud, premi **Aggiungi uno spazio di lavoro…** in fondo alla prima scheda di **Preferenze\u00a0›\u00a0Generali**, oppure **Aggiungi un server…** in **Preferenze\u00a0›\u00a0Server**. Accedi a quello spazio di lavoro e premi **Consenti** quando l’app lo chiede.",
+          "Ogni spazio di lavoro ha qui i suoi agenti e le sue cartelle. Anche per lui i **Comandi** sono attivi fin dall’inizio. Disattivali nella domanda dell’app prima di premere **Consenti**, o più tardi in **Preferenze\u00a0›\u00a0Strumenti**, dove ogni spazio di lavoro ha il suo interruttore e l’app chiede conferma prima di riattivarne uno.",
         ],
       },
       {
@@ -67,29 +74,29 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Accedere da altri dispositivi",
         blocks: [
-          "Il proprietario parte senza password: l’app ti fa accedere su questo computer. Per accedere da un browser su un altro computer, aggiungine una in **Impostazioni › Il tuo account**. L’app per il telefono si collega scansionando il codice QR sotto **Sul telefono**, in **Preferenze › Server**. Serve **Raggiungilo dal telefono e dai colleghi** attivo.",
+          "Il proprietario parte senza password: l’app ti fa accedere su questo computer. Per accedere da un browser su un altro computer, aggiungine una in **Impostazioni\u00a0›\u00a0Il tuo account**. Finché non lo fai, **Preferenze\u00a0›\u00a0Server** te lo ricorda, e **Aggiungi una password** apre quella pagina. L’app per il telefono si collega scansionando il codice QR sotto **Sul telefono**, in **Preferenze\u00a0›\u00a0Server**. Serve **Raggiungilo dal telefono e dai colleghi** attivo.",
         ],
       },
       {
         id: "updates",
         heading: "Aggiornamenti",
         blocks: [
-          "L’app cerca gli aggiornamenti da sola e ne installa uno quando premi **Aggiorna e riapri** in **Preferenze › Aggiornamenti**. Il server e tutti gli agenti si riavviano con lei. Prima il database viene copiato, e se la nuova versione non risponde entro 3 minuti, l’app torna da sola alla versione precedente e ai suoi dati.",
+          "L’app cerca gli aggiornamenti da sola. Con **Installa gli aggiornamenti da solo, di notte** attivo, in **Preferenze\u00a0›\u00a0Aggiornamenti**, li installa tra le 3:00 e le 5:00 mentre l’app è aperta. È attivo fin dall’inizio quando il server gira qui. Altrimenti premi **Aggiorna e riapri**. Il server e tutti gli agenti si riavviano con lei. Prima il database viene copiato, e se la nuova versione non risponde entro 3 minuti, l’app torna da sola alla versione precedente e ai suoi dati.",
         ],
       },
       {
         id: "backups",
         heading: "Backup",
         blocks: [
-          "Per ora nessun backup parte da solo. **Fai il backup ora**, in **Preferenze › Server**, ferma il server per un momento e salva il database, i file e `.env` in `.agentes/backups`, nella tua cartella personale. Tiene i due più recenti.",
-          "Ogni tanto copiali fuori da questo computer, su un disco o in un cloud. Contengono le tue chiavi: tienili privati.",
+          "Con **Fai un backup ogni notte** attivo (app 0.8.1 e successive), in **Preferenze\u00a0›\u00a0Server**, l’app salva ogni notte alle 3:00 il database, i file e `.env` in `.agentes/backups`, nella tua cartella personale. Un computer che dormiva a quell’ora fa il backup appena si risveglia. **Fai il backup ora** fa lo stesso subito. Ogni backup ferma il server per un momento, e restano i due più recenti.",
+          "**Copia in** mette anche ogni nuovo backup in una cartella che scegli, come una chiavetta USB o iCloud Drive, dove restano i due più recenti. Contengono le tue chiavi: tienili privati. **Ripristina…** riporta agentes.chat a un backup: messaggi, file e impostazioni. Si ferma per un minuto, e quello che c’era prima resta nella cartella dei backup.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code e Codex",
         blocks: [
-          "L’app trova Claude Code e Codex tramite il `PATH` della tua shell di login, più le cartelle solite come `~/.local/bin`, `/opt/homebrew/bin` e `/usr/local/bin`. Se **Preferenze › Strumenti** dice **Non trovato**, controlla che `claude` o `codex` funzioni in una nuova finestra di Terminale, poi chiudi e riapri l’app.",
+          "L’app trova Claude Code e Codex tramite il `PATH` della tua shell di login, più le cartelle solite come `~/.local/bin`, `/opt/homebrew/bin` e `/usr/local/bin`. Se **Preferenze\u00a0›\u00a0Strumenti** dice **Non trovato**, mostra la riga che lo installa. Eseguila nel Terminale, poi premi **Controlla di nuovo**.",
         ],
       },
       {
@@ -161,7 +168,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Dall’app agentes.chat",
         blocks: [
           "Installa l’app sul computer, aprila e accedi al tuo spazio di lavoro. Ti chiede **Lasciare che gli agenti di <workspace> usino questo Mac?** (questo PC su Windows, questo computer su Linux). Scegli chi può usarlo e premi **Consenti**. Tutto qui.",
-          "Hai già fatto l’accesso? Attiva lo spazio di lavoro in **Preferenze › Generali**, nella scheda **Agenti**.",
+          "Hai già fatto l’accesso? Apri **Preferenze\u00a0›\u00a0Generali** e premi **Consenti** nella riga dello spazio di lavoro, nella prima scheda. Non c’è? Premi **Aggiungi uno spazio di lavoro…** in fondo a quella scheda e accedi.",
         ],
       },
       {
@@ -204,7 +211,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Mettere in pausa e scollegare",
         blocks: [
-          "Sul computer, l’icona di agentes.chat vicino all’orologio mette in pausa gli agenti di tutti gli spazi di lavoro. In **Preferenze › Generali**, l’interruttore di ogni spazio di lavoro mette in pausa solo quello, e **Esci** lo scollega. In pausa non parte niente di nuovo, e quello che era in corso finisce. Scollegando, le cartelle degli agenti restano sul disco.",
+          "Sul computer, l’icona di agentes.chat vicino all’orologio mette in pausa gli agenti di tutti gli spazi di lavoro, o di uno solo. In **Preferenze\u00a0›\u00a0Generali**, l’interruttore di ogni spazio di lavoro mette in pausa solo quello, e **Esci**, nel suo menu **⋯**, lo scollega. In pausa non parte niente di nuovo, e quello che era in corso finisce. Scollegando, le cartelle degli agenti restano sul disco.",
           "Dal sito, **Rimuovi** nella pagina del dispositivo lo scollega.",
         ],
       },
@@ -215,6 +222,15 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
           "Accedi a ogni spazio di lavoro nella stessa app e premi **Consenti** per ognuno. Spazi di lavoro su agentes.chat Cloud e sui tuoi server possono condividere un computer (app 0.6.1 e successive). Ognuno ha lì i suoi agenti e le sue cartelle, e scollegarne uno non tocca gli altri.",
           "Un server che l’app fa girare su questo computer è già collegato e non serve altro. Per prestare quel computer anche a uno spazio di lavoro altrove, vedi [Prestalo anche a un altro spazio di lavoro](/help/run-on-your-computer#another-workspace).",
           "Usi l’app su un portatile solo come finestra sul tuo spazio di lavoro? Quando chiede di lasciare che gli agenti usino il portatile, **Non ora** la lascia una semplice finestra.",
+          "Un server connesso con la riga del terminale lavora per un solo workspace. Connetterlo da un altro workspace passa il server a quello, e il primo non lo raggiunge più. Per più workspace su un computer, usa l'app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Quando gli agenti aspettano in coda",
+        blocks: [
+          "Ogni lavoro di un agente usa la memoria del computer. Quando la memoria libera scarseggia, il successivo aspetta in coda finché un altro non finisce. Le persone passano per prime. Il numero di CPU non cambia nulla.",
+          "Un computer con 4 GB di memoria esegue due o tre lavori alla volta, uno con 8 GB circa nove. Un Mac o un PC ne esegue fino a otto. Anche i browser e i desktop che gli agenti lasciano aperti usano memoria. Per una coda più corta, usa un computer con più memoria, oppure connettine un altro e dividi gli agenti tra i due. I workspace che condividono un computer ne condividono la memoria.",
         ],
       },
       {
@@ -237,7 +253,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
               "su un computer che fa girare anche agentes.chat, il suo database e le sue chiavi in `.agentes`",
             ],
           },
-          "agentes.chat rifiuta i comandi che nominano le sue chiavi, i token e gli accessi salvati, ma è una regola, non un muro. I **Comandi** sono attivi fin dall’inizio. Disattivali nella domanda dell’app prima di premere **Consenti**, o più tardi in **Preferenze\u00a0›\u00a0Strumenti**, dove un solo interruttore vale per tutti gli spazi di lavoro sul computer. Claude Code e Codex eseguono i propri comandi nella cartella dell’agente, con le proprie regole.",
+          "agentes.chat rifiuta i comandi che nominano le sue chiavi, i token e gli accessi salvati, ma è una regola, non un muro. I **Comandi** sono attivi fin dall’inizio. Disattivali nella domanda dell’app prima di premere **Consenti**, o più tardi in **Preferenze\u00a0›\u00a0Strumenti**, dove ogni spazio di lavoro ha il suo interruttore (app 0.8.1 e successive) e l’app chiede conferma prima di riattivarne uno. Claude Code e Codex eseguono i propri comandi nella cartella dell’agente, con le proprie regole, anche con i comandi disattivati.",
           "Per un vero muro, usa un server Linux. Su Debian 13, installato con `--system`, ogni agente è un utente a sé. Su Ubuntu, gli agenti condividono un solo utente, `agentes`: vedono le cartelle degli altri, non le tue né quelle del server. Oppure dai agli agenti un computer tutto loro.",
         ],
       },
@@ -373,7 +389,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "La memoria non dà permessi",
         blocks: [
-          "Niente nella memoria permette a un agente di fare di più. Quello che può fare resta in **Strumenti e accesso**, e le azioni delicate chiedono sempre un’approvazione.",
+          "Niente nella memoria permette a un agente di fare di più. Quello che può fare resta in **Strumenti e accesso**.",
         ],
       },
       {
@@ -393,7 +409,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Cosa chiede prima",
         blocks: [
-          "Quando un agente vuole fare un merge, un deploy, un rollback, mandare qualcosa all’esterno o eliminare dati, chiede prima, qualunque accesso abbia. La richiesta compare in **Approvazioni** e nella conversazione, con l’azione esatta e il motivo.",
+          "Quando un agente vuole fare un merge, un deploy, un rollback, mandare qualcosa all’esterno o eliminare dati, chiede prima. È il livello **Solo ciò che è rischioso**, quello da cui parte ogni agente. Nella pagina dell’agente, in **Approvazioni**, **Chiedere sempre** gli fa chiedere prima di cambiare qualsiasi cosa, e con **Non chiedere mai** non chiede nulla, nemmeno per merge, deploy, pagamenti e routine. La richiesta compare in **Approvazioni** e nella conversazione, con l’azione esatta e il motivo.",
         ],
       },
       {
@@ -401,7 +417,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Una volta, o sempre",
         blocks: [
           "Approvare copre un’azione esatta, con i suoi valori. Se l’agente cambia qualcosa, chiede di nuovo.",
-          "**Approva sempre** lascia che l’agente faccia quel tipo di azione da ora in poi, con qualsiasi valore, senza chiedere. Nella richiesta di una routine, **Sempre in questa routine** fa lo stesso solo per quella routine. Nessuno dei due compare per merge, deploy, rollback e simili. Per annullare, vai in **Strumenti e accesso** nella pagina dell’agente, o nelle impostazioni della routine.",
+          "**Approva sempre** lascia che l’agente faccia quel tipo di azione da ora in poi, con qualsiasi valore, senza chiedere. Nella richiesta di una routine, **Sempre in questa routine** fa lo stesso solo per quella routine. **Approva sempre** compare per qualsiasi tipo di azione, anche merge e deploy, finché l’agente è al livello **Solo ciò che è rischioso**. **Sempre in questa routine** non compare per merge, deploy, rollback e simili. Per annullare, vai in **Strumenti e accesso** nella pagina dell’agente, o nelle impostazioni della routine.",
         ],
       },
       {
@@ -744,7 +760,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "Email",
         blocks: [
-          "Senza email, agentes.chat scrive ogni email nel suo log invece di inviarla, così puoi copiare da lì un link di invito. Il ripristino della password resta spento.",
+          "Senza email, agentes.chat scrive ogni email nel suo log invece di inviarla, così puoi copiare da lì un link di invito. Il ripristino della password resta spento, e una nuova email per un account cambia subito, senza codice né link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

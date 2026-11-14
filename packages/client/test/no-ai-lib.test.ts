@@ -54,6 +54,7 @@ import {
   planOfAccount,
   planOfKind,
   planPickText,
+  plansNotYoursOf,
   signInAgainPlan,
   signsInOnce,
   signsInPerAgent,
@@ -580,11 +581,13 @@ describe("All agents: one login per agent, the key pasted once", () => {
     expect(set("zai", [{ id: "ada" }, { id: "bo" }])).toEqual([]);
   });
 
-  test("one sign-in for all of them where the computer says so: ChatGPT's too", () => {
-    // Where each agent is its own OS user, Claude's and ChatGPT's sign-ins and plans' keys think for all.
-    expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, key: true });
+  test("one sign-in for all of them where the computer says so: ChatGPT's and Gemini's too", () => {
+    // Where each agent is its own OS user, Claude's, ChatGPT's and Gemini's sign-ins and plans' keys think for all.
+    expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, antigravity: true, key: true });
     const sharing = { shares: { claude_code: true, codex: true, key: true } };
     expect(signsInOnce("chatgpt", sharing)).toBe(true);
+    expect(signsInOnce("gemini", sharing)).toBe(false);
+    expect(signsInOnce("gemini", { shares: { ...sharing.shares, antigravity: true } })).toBe(true);
     expect(signsInOnce("zai", { shares: { claude_code: true, codex: false, key: false } })).toBe(false);
     expect(signsInOnce("claude", undefined)).toBe(false);
     const sharedOn = (id: string | null) => id === "m1";
@@ -976,6 +979,30 @@ describe("a card says the real cause, not that the agent has no AI", () => {
     expect(serverBody(pt, "…", meta("commands_off"))).toBe(
       "Agora não consigo responder: os comandos estão desligados no computador do meu plano.",
     );
+  });
+
+  test("every plan here serves only someone else: whose they are, and the person's own plan as the way out", () => {
+    const lodi = { ownerUserId: "u1", builtin: "right_hand" as const };
+    expect(card("plans_not_yours", { owner: "Walter Souza", plan: "Claude" })).toMatchObject({
+      planLine: "plans_not_yours",
+      owner: "Walter",
+      plan: "Claude",
+    });
+    expect(planLineFix("plans_not_yours", lodi, "u2", { permissions: ["manage_agents"] })).toBe("connectMine");
+    expect(pt("noAi.rightHand.plans_not_yours", { owner: "Walter", plan: "Claude" })).toBe(
+      "O Claude daqui é só de Walter. Conecte o seu e eu respondo.",
+    );
+    expect(serverBody(pt, "…", meta("plans_not_yours", { owner: "Walter Souza", plan: "Claude" }))).toBe(
+      "O Claude daqui é só de Walter. Conecte o seu e eu respondo.",
+    );
+    const status: AiStatus = {
+      any: true,
+      agents: [{ agentId: "lodi", state: "no_ai", reason: "plans_not_yours", owner: "Walter Souza", plan: "Claude" }],
+    };
+    const whose = plansNotYoursOf(status, "lodi");
+    expect(whose).toEqual({ owner: "Walter", plan: "Claude" });
+    expect(pt("noAi.notYours.receipt", whose ?? {})).toBe("Ninguém vai responder: o Claude é só de Walter");
+    expect(plansNotYoursOf(status, "other")).toBeNull();
   });
 
   test("the right hand's run nobody asked for never says to connect your plan: only a key, for who sets its AI", () => {

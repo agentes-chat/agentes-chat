@@ -133,6 +133,8 @@ export async function costlyGate(
   authority: RunAuthority | null,
   cost: CostKind,
   what: string,
+  /** The agent never asks (ADR 0173): no proposal card. What a person refused and the hourly PR cap still hold. */
+  neverAsks = false,
 ): Promise<GateRefusal | null> {
   if (!unrequested(authority)) return null;
   const { db } = deps;
@@ -164,7 +166,8 @@ export async function costlyGate(
       code: "autonomy.declined",
       message: `A person said no to ${COST_WORDS[cost]} for this. Don't do it; finish without it and say what is left.`,
     };
-  const go = !own || settings.costly === "go" || settings.go.includes(cost) || said === "go" || said === "always";
+  const go =
+    neverAsks || !own || settings.costly === "go" || settings.go.includes(cost) || said === "go" || said === "always";
   if (go) {
     if (cost !== "pr") return null;
     const [opened] = await db

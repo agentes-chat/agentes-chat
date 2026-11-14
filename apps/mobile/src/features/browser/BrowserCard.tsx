@@ -18,8 +18,10 @@ import {
   useBrowserScreen,
   useBrowserStuck,
   useDesktopPicture,
+  useMachines,
 } from "@agenteschat/client";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
 import { isBlankPage } from "@agenteschat/client/lib/sites";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -37,6 +39,7 @@ import { useAppActive } from "@/lib/useAppActive";
 import { Sky } from "@/sky/Sky";
 import { Button, Fuse, Icon, PixelOrbit, Text, useToast } from "@/ui";
 import { ScreenWatch, type ScreenWatchHandle } from "../computer/ScreenWatch";
+import { MachineToolButton } from "../devices/ToolOneClick";
 import { useColors, useDirectory, useEdition, useMeId, useNow, useOrgId } from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
 import { successHaptic, tapHaptic, useSurface } from "../shared/parts";
@@ -72,7 +75,7 @@ export function BrowserCard({
 }: {
   agentId: string;
   /** A shared browser profile (ADR 0110) instead of the agent's browser: "Fazer login" from the computer's page. */
-  profile?: { id: string; name: string };
+  profile?: { id: string; name: string; machineId?: string };
   /** The agent's run in its browser (what it does now, the log). */
   run?: LiveRun | null;
   /** At work with no run to show here (its profile): closed, the card still shows its small live picture. */
@@ -164,6 +167,10 @@ export function BrowserCard({
     }),
     open ? undefined : BROWSER_FPS.preview,
   );
+  // A profile whose browser is off on its computer: the switch in the page's place (ADR 0036 §8).
+  const offHere = Boolean(profile) && live.unavailable === "unavailable" && browserOffMessage(live.message);
+  const machines = useMachines(orgId, offHere);
+  const profileMachine = offHere ? machines.data?.find((m) => m.id === profile?.machineId) : undefined;
   // Closed on the agent's screen: a recent picture of it, never a stream.
   const shot = useDesktopPicture(orgId, agentId, {
     enabled: onScreen && active && asksPicture(!open && working, screen.status.data ?? null),
@@ -279,6 +286,12 @@ export function BrowserCard({
       return;
     }
     if (mayDrive && !profile) void actions.restart(agentId).catch(failedToast).finally(live.retry);
+    // A profile's Chrome starts again with control taken again (the server warms it, or says why it can't).
+    else if (profile && mayDrive)
+      void profileActions.takeover
+        .mutateAsync(profile.id)
+        .catch((err) => toast({ title: profileRefusalLine(t, err), icon: "x" }))
+        .finally(live.retry);
     else live.retry();
   };
 
@@ -482,18 +495,24 @@ export function BrowserCard({
                       <Icon name="eyeoff" size={18} color={c.muted} />
                     ) : null}
                     <Text variant="small" tone="ink" style={[styles.semibold, styles.centerText]}>
-                      {note.say === "starting"
-                        ? t(`mobile.browser.card.starting${g}`, { name })
-                        : note.say === "hidden"
-                          ? hiddenNote
-                          : t(pageGapKey(note.say, g, cloud), { name })}
+                      {offHere
+                        ? t("browser.profiles.toolOff")
+                        : note.say === "starting" && profile
+                          ? t("browser.profiles.opening", { name: profile.name })
+                          : note.say === "starting"
+                            ? t(`mobile.browser.card.starting${g}`, { name })
+                            : note.say === "hidden"
+                              ? hiddenNote
+                              : t(pageGapKey(note.say, g, cloud), { name })}
                     </Text>
                     {note.help && (note.help !== "stuckHelp" || mayDrive) ? (
                       <Text variant="caption" tone="muted" style={styles.centerText}>
                         {t(`mobile.browser.live.${note.help}${g}`, { name })}
                       </Text>
                     ) : null}
-                    {note.say === "stuck" ? (
+                    {offHere && profileMachine ? (
+                      <MachineToolButton machine={profileMachine} tool="browser" onAllowed={retry} />
+                    ) : note.say === "stuck" || (note.say === "unavailable" && profile) ? (
                       <Button variant="secondary" size="sm" label={t("mobile.common.retry")} onPress={retry} />
                     ) : null}
                   </View>

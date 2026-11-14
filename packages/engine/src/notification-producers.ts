@@ -21,12 +21,12 @@ import {
   remindNotifications,
   resolveNotifications,
   retargetNotifications,
+  unaskedGroup,
 } from "./notifications";
 import { maySql, type RolePermission } from "./permissions";
 import { secretLabelOf } from "./secrets";
 import { stretchCardOf } from "./stretch";
 import { adminChannelSql, taskReadersAmong } from "./task-access";
-import { teamWeekCardOf } from "./team-week";
 
 /**
  * Where notifications come from: each flow calls one of these after
@@ -166,7 +166,11 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
   const media = previewMediaKind(message.body, meta);
   // A body the server wrote: the apps say it in the reader's language, as the conversation lists do.
   const written = previewMeta(meta);
-  const latest = { text, ...(media ? { media } : {}), ...(written ? { meta: written } : {}) };
+  // What the right hand posts by itself with a ring (`postFromLodi`) names its person on the message. Nobody asked,
+  // so it is no reply: it rings as a message it sent them. Its stored text is already in their language, so the
+  // inbox and the push quote it as it is.
+  const unasked = message.authorType === "agent" && !message.agentRunId && typeof meta.forUserId === "string";
+  const latest = { text, ...(media ? { media } : {}), ...(written && !unasked ? { meta: written } : {}) };
   const label = channel.kind === "channel" ? channel.name : undefined;
   const where: NotificationSource = {
     channelId: message.channelId,
@@ -190,14 +194,9 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
   const stoppedAt = card?.agentIds.at(-1);
   const owner = !behind && !card?.forUserId && stoppedAt ? await agentOwner(deps, stoppedAt) : null;
   // The autonomy brakes' proposal card, digest and loop stop (ADR 0131) are for the person they name.
-  // Lodi's weekly card (ADR 0137 §9) is for the admin whose DM it is in.
-  const asker =
-    behind ??
-    card?.forUserId ??
-    proposalCardOf(meta)?.forUserId ??
-    autonomyNoteFor(meta) ??
-    teamWeekCardOf(meta)?.forUserId ??
-    owner;
+  const asker = unasked
+    ? null
+    : (behind ?? card?.forUserId ?? proposalCardOf(meta)?.forUserId ?? autonomyNoteFor(meta) ?? owner);
   const ownerSees =
     asker !== null &&
     asker === owner &&
@@ -230,7 +229,7 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
   // answered above for the person behind them, except what nobody is waiting on: a message the agent started there on
   // someone's behalf, `send_dm`, and a reminder or a routine's report, which come while the app may be closed).
   if (channel.kind === "dm") {
-    if (message.authorType !== "person" && !meta.agentDm && !meta.routine && !meta.viaRoutine) return;
+    if (message.authorType !== "person" && !meta.agentDm && !meta.routine && !meta.viaRoutine && !unasked) return;
     const others = await db
       .select({ userId: channelMembers.userId })
       .from(channelMembers)
@@ -240,7 +239,7 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
       orgId,
       userIds: to,
       kind: "dm",
-      groupKey: `dm:${message.id}`,
+      groupKey: unasked ? `${unaskedGroup(message.channelId)}${message.id}` : `dm:${message.id}`,
       actor,
       source: where,
       latest,
@@ -629,6 +628,9 @@ export type IssueNotifyActor = { type: "person"; id: string } | { type: "agent";
 const issueActor = (a: IssueNotifyActor): NotificationActor =>
   (a.type === "person" ? person(a.id) : agent(a.id)) as NotificationActor;
 
+/** The inbox group of one change of a task's status: the task and the moment it changed. */
+export const issueStatusGroup = (issueId: string, at: number) => `issue_status:${issueId}:${at}`;
+
 /**
  * After an issue changed: a new person assignee hears it (and the previous
  * one's "assigned to you" resolves); a status change reaches the followers.
@@ -664,7 +666,7 @@ export async function notifyIssueChanged(
       orgId: issue.orgId,
       userIds: await issueFollowers(deps, issue),
       kind: "issue_status",
-      groupKey: `issue_status:${issue.id}:${at}`,
+      groupKey: issueStatusGroup(issue.id, at),
       actor: issueActor(actor),
       source: issueSource(issue),
       latest: { title: issue.title, statusFrom: before.status, statusTo: issue.status },
@@ -786,10 +788,19 @@ export async function notifyMissionEnded(
 
 // ── Routines (ADR 0053) ─────────────────────────────────────────────────────────
 
-/** A routine's name, creator and agent, and the agent's owner: who hears about it. */
+/**
+ * A routine's name, creator and agent, and the agent's owner: who hears about it. `draft`: it is a widget's test before
+ * the widget is made (ADR 0135 §16), which raises no notice and is deleted with its routine, so nothing would resolve one.
+ */
 async function routineAudience(deps: Pick<NotificationDeps, "db">, orgId: string, routineId: string) {
   const [r] = await deps.db
-    .select({ name: routines.name, creator: routines.createdByUserId, agentId: routines.agentId })
+    .select({
+      name: routines.name,
+      creator: routines.createdByUserId,
+      agentId: routines.agentId,
+      // Written out: Drizzle drops a column's table in a one-table select, and `id` would read the widget's.
+      draft: sql<boolean>`exists (select 1 from ${schema.dashboardWidgets} w where w.routine_id = routines.id and w.draft)`,
+    })
     .from(routines)
     .where(and(eq(routines.id, routineId), eq(routines.orgId, orgId)));
   if (!r) return null;
@@ -901,7 +912,7 @@ export async function notifyRoutineStalled(
   input: { orgId: string; routineId: string; machineId: string; machineName: string; outageKey: string },
 ) {
   const r = await routineAudience(deps, input.orgId, input.routineId);
-  if (!r) return;
+  if (!r || r.draft) return;
   await notify(deps, {
     orgId: input.orgId,
     userIds: [r.creator, r.owner],
@@ -922,7 +933,7 @@ export async function notifyRoutineWaitingPlan(
   input: { orgId: string; routineId: string; outageKey: string },
 ) {
   const r = await routineAudience(deps, input.orgId, input.routineId);
-  if (!r) return;
+  if (!r || r.draft) return;
   await notify(deps, {
     orgId: input.orgId,
     userIds: [r.creator, r.owner],
@@ -1210,8 +1221,8 @@ export async function notifyWidgetAlert(
 
 /**
  * A widget stopped updating (ADR 0135 §6): `userId` (its creator, else who looks after its routine) hears it once per
- * failure streak (`streakKey`), with the coded reason (`agent_reported`: the agent's words in `latest.text`). Inbox
- * only; resolved by its next good update.
+ * failure streak (`streakKey`), with the coded reason (`agent_reported`: the agent's words in `latest.text`;
+ * `missing_credential`: why its agent has no AI in `latest.detail`). Inbox only; resolved by its next good update.
  */
 export async function notifyWidgetFailed(
   deps: NotificationDeps,
@@ -1225,6 +1236,7 @@ export async function notifyWidgetFailed(
     streakKey: string;
     reason: string;
     text?: string | null;
+    detail?: string | null;
   },
 ) {
   await notify(deps, {
@@ -1238,6 +1250,7 @@ export async function notifyWidgetFailed(
       title: input.title,
       reason: input.reason,
       ...(input.text ? { text: notificationSnippet(input.text) } : {}),
+      ...(input.detail ? { detail: input.detail } : {}),
     },
   });
 }
@@ -1294,7 +1307,7 @@ export async function resolveDashboardProposal(deps: NotificationDeps, orgId: st
 }
 
 /** Who in the organization may `permission` (ADR 0085), or only its owners. */
-const adminsOf = async (deps: NotificationDeps, orgId: string, permission: RolePermission | "owners") =>
+export const adminsOf = async (deps: NotificationDeps, orgId: string, permission: RolePermission | "owners") =>
   (
     await deps.db
       .select({ userId: organizationMembers.userId })

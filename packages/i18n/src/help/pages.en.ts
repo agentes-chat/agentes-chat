@@ -8,11 +8,18 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       "The agentes.chat app can also run agentes.chat itself, on a Mac, a PC or a Linux computer, for you or a small team.",
     sections: [
       {
+        id: "download",
+        heading: "Download the app",
+        blocks: [
+          "[Download the agentes.chat app](/download) for your Mac, PC or Linux computer and open it. Pick **On your own server**, press **Continue on my server**, then **Run agentes.chat on this computer**.",
+        ],
+      },
+      {
         id: "how",
         heading: "How it runs",
         blocks: [
           "It runs inside the app, with its own database built in, and keeps everything in one folder on this computer, `.agentes` in your home folder. Nothing else to install: no Docker, no database to set up.",
-          "It starts with the app and stops when you quit it. Quitting asks first, because nobody can use agentes.chat until the app opens again.",
+          "It starts with the app and stops when you quit it. Quitting asks first, because nobody can use agentes.chat until the app opens again. To stop it for a while without quitting, click the agentes.chat icon by the clock and choose **Stop** in the **⋯** menu of its card.",
         ],
       },
       {
@@ -27,7 +34,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "keep-on",
         heading: "Keep it on",
         blocks: [
-          "On a computer that others use, set it up once:",
+          "On a computer that others use, set it up once. **Keep it running**, in **Preferences\u00a0›\u00a0Servers**, shows what's still missing and opens the right settings:",
           {
             list: [
               "**Open at login** turns on by itself after the setup.",
@@ -50,8 +57,8 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "another-workspace",
         heading: "Lend it to another workspace too",
         blocks: [
-          "The workspaces of the server you run here use this computer by themselves. To let a workspace somewhere else use it too, such as one on agentes.chat Cloud, open **Preferences\u00a0›\u00a0Servers**, press **Add a server…**, sign in to that workspace and press **Allow** when the app asks.",
-          "Each workspace gets its own agents and folders here. **Commands** are on by default for it too. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where one switch counts for every workspace on this computer.",
+          "The workspaces of the server you run here use this computer by themselves. To let a workspace somewhere else use it too, such as one on agentes.chat Cloud, press **Add a workspace…** at the bottom of the first card in **Preferences\u00a0›\u00a0General**, or **Add a server…** in **Preferences\u00a0›\u00a0Servers**. Sign in to that workspace and press **Allow** when the app asks.",
+          "Each workspace gets its own agents and folders here. **Commands** are on by default for it too. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where each workspace has its own switch and the app asks before turning one back on.",
         ],
       },
       {
@@ -66,29 +73,29 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "password",
         heading: "Signing in from other devices",
         blocks: [
-          "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. The phone app connects by scanning the QR code under **On your phone**, in **Preferences\u00a0›\u00a0Servers**. The QR code needs **Reach it from your phone and teammates** on.",
+          "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. Until you do, **Preferences\u00a0›\u00a0Servers** says so, and **Add a password** opens that page. The phone app connects by scanning the QR code under **On your phone**, in **Preferences\u00a0›\u00a0Servers**. The QR code needs **Reach it from your phone and teammates** on.",
         ],
       },
       {
         id: "updates",
         heading: "Updates",
         blocks: [
-          "The app looks for updates by itself, and installs one when you press **Update and reopen** in **Preferences\u00a0›\u00a0Updates**. The server and every agent restart with it. The database is copied first, and if the new version doesn't answer within 3 minutes, the app goes back to the previous version and its data by itself.",
+          "The app looks for updates by itself. With **Install updates by itself, at night** on, in **Preferences\u00a0›\u00a0Updates**, it installs them between 3:00 and 5:00 while the app is open. It's on by default when the server runs here. Otherwise, press **Update and reopen**. The server and every agent restart with it. The database is copied first, and if the new version doesn't answer within 3 minutes, the app goes back to the previous version and its data by itself.",
         ],
       },
       {
         id: "backups",
         heading: "Backups",
         blocks: [
-          "Nothing backs up by itself yet. **Back up now**, in **Preferences\u00a0›\u00a0Servers**, stops the server for a moment and saves the database, the files and `.env` in `.agentes/backups`, in your home folder. It keeps the two newest.",
-          "Copy them off this computer, to a disk or a cloud drive, now and then. They hold your keys: keep them private.",
+          "With **Back up every night** on (app 0.8.1 and later), in **Preferences\u00a0›\u00a0Servers**, the app saves the database, the files and `.env` in `.agentes/backups`, in your home folder, every night at 3:00. A computer that was asleep then backs up once it's awake. **Back up now** does the same at once. Each backup stops the server for a moment, and the two newest stay.",
+          "**Copy to** also puts each new backup in a folder you pick, like a USB drive or iCloud Drive, where the two newest stay. They hold your keys: keep them private. **Restore…** takes agentes.chat back to a backup: messages, files and settings. It stops for a minute, and what was there before is kept in the backups folder.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code and Codex",
         blocks: [
-          "The app finds Claude Code and Codex through your login shell's `PATH`, plus the usual folders such as `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. If **Preferences\u00a0›\u00a0Tools** says **Not found**, check that `claude` or `codex` runs in a new Terminal window, then quit and reopen the app.",
+          "The app finds Claude Code and Codex through your login shell's `PATH`, plus the usual folders such as `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. If **Preferences\u00a0›\u00a0Tools** says **Not found**, it shows the line that installs it. Run that line in Terminal, then press **Check again**.",
         ],
       },
       {
@@ -160,7 +167,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "From the agentes.chat app",
         blocks: [
           "Install the app on the computer, open it and sign in to your workspace. It asks **Let <workspace>'s agents use this Mac?** (this PC on Windows, this computer on Linux). Choose who can use it and press **Allow**. That's all.",
-          "Already signed in? Turn the workspace on in **Preferences\u00a0›\u00a0General**, in the **Agents** card.",
+          "Already signed in? Open **Preferences\u00a0›\u00a0General** and press **Allow** on the workspace's row in the first card. Not there? Press **Add a workspace…** at the bottom of that card and sign in.",
         ],
       },
       {
@@ -203,7 +210,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "pausing",
         heading: "Pausing and disconnecting",
         blocks: [
-          "On the computer, the agentes.chat icon by the clock pauses the agents of every workspace. In **Preferences\u00a0›\u00a0General**, each workspace's switch pauses just that one, and **Leave** disconnects it. Nothing new starts while paused, and what was running finishes. Disconnecting keeps the agents' folders on disk.",
+          "On the computer, the agentes.chat icon by the clock pauses the agents of every workspace, or of just one. In **Preferences\u00a0›\u00a0General**, each workspace's switch pauses just that one, and **Leave**, in its **⋯** menu, disconnects it. Nothing new starts while paused, and what was running finishes. Disconnecting keeps the agents' folders on disk.",
           "From the website, **Remove** on the device's page disconnects it.",
         ],
       },
@@ -214,6 +221,15 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
           "Sign in to each workspace in the same app and press **Allow** for each one. Workspaces on agentes.chat Cloud and on your own servers can share a computer (app 0.6.1 and later). Each has its own agents and folders there, and disconnecting one doesn't touch the others.",
           "A server the app runs on this computer is connected already and needs nothing. To also lend that computer to a workspace somewhere else, see [Lend it to another workspace too](/help/run-on-your-computer#another-workspace).",
           "Using the app on a laptop only as a window onto your workspace? When it asks to let agents use the laptop, **Not now** keeps it a plain window.",
+          "A server connected with the terminal line works for one workspace. Connecting it from another workspace moves the server to that one, and the first no longer reaches it. For several workspaces on one computer, use the app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "When agents wait in line",
+        blocks: [
+          "Each piece of an agent's work uses the computer's memory. When free memory runs short, the next one waits in line until another ends. People go first. The number of CPUs doesn't change this.",
+          "A computer with 4 GB of memory runs two or three at once, one with 8 GB about nine. A Mac or a PC runs up to eight. Browsers and desktops the agents keep open use memory too. For a shorter line, use a computer with more memory, or connect another and split the agents between them in **Settings\u00a0›\u00a0Devices**. Workspaces that share a computer share its memory.",
         ],
       },
       {
@@ -236,7 +252,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
               "on a computer that also runs agentes.chat, its database and keys in `.agentes`",
             ],
           },
-          "agentes.chat refuses commands that name its keys, tokens and sign-ins, but that's a rule, not a wall. **Commands** are on by default. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where one switch counts for every workspace on the computer. Claude Code and Codex run their own commands in the agent's folder, under their own rules.",
+          "agentes.chat refuses commands that name its keys, tokens and sign-ins, but that's a rule, not a wall. **Commands** are on by default. Turn them off in the app's ask before you press **Allow**, or later in **Preferences\u00a0›\u00a0Tools**, where each workspace has its own switch (app 0.8.1 and later) and the app asks before turning one back on. Claude Code and Codex run their own commands in the agent's folder, under their own rules, even with Commands off.",
           "For a real wall, use a Linux server. On Debian 13, installed with `--system`, each agent is a user of its own. On Ubuntu, agents share one user, `agentes`: they see each other's folders, not yours or the server's. Or give the agents a computer of their own.",
         ],
       },
@@ -369,9 +385,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
       {
         id: "permissions",
         heading: "Memory grants no permission",
-        blocks: [
-          "Nothing in memory lets an agent do more. What it can do stays in its **Tools and access**, and sensitive actions always ask for approval.",
-        ],
+        blocks: ["Nothing in memory lets an agent do more. What it can do stays in its **Tools and access**."],
       },
       {
         id: "proposals",
@@ -390,7 +404,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "what",
         heading: "What asks first",
         blocks: [
-          "When an agent wants to merge, deploy, roll back, send something outside or delete data, it asks first, whatever access it has. The request shows up in **Approvals** and in the conversation, with the exact action and why.",
+          "When an agent wants to merge, deploy, roll back, send something outside or delete data, it asks first. That is **Only what is risky**, the level every agent starts at. On the agent's page, under **Approvals**, **Always ask** makes it ask before changing anything, and **Never ask** makes it ask for nothing, merge, deploy, payments and routines included. The request shows up in **Approvals** and in the conversation, with the exact action and why.",
         ],
       },
       {
@@ -398,7 +412,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "Once, or always",
         blocks: [
           "Approving covers one exact action, with its values. If the agent changes anything, it asks again.",
-          "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. Neither is offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
+          "**Always approve** lets the agent do that kind of action from now on, with any values, without asking. On a routine's request, **Always in this routine** does the same for that routine only. **Always approve** is there for any kind of action, merge and deploy too, while the agent is at **Only what is risky**. **Always in this routine** is not offered for merge, deploy, roll back and the like. To undo it, go to **Tools and access** on the agent's page, or to the routine's settings.",
         ],
       },
       {
@@ -737,7 +751,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "email",
         heading: "Email",
         blocks: [
-          "Without email, agentes.chat writes each email to its log instead of sending it, so an invitation link can still be copied from there. Password resets stay off.",
+          "Without email, agentes.chat writes each email to its log instead of sending it, so an invitation link can still be copied from there. Password resets stay off, and a new email for an account changes at once, with no code or link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

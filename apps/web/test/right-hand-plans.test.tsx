@@ -83,7 +83,7 @@ test("its computer's runner too old: the line says to update it, never that it h
   expect(within(card).getByRole("button", { name: "Usar uma chave de API" })).toBeTruthy();
 });
 
-test("Settings › Lodi on someone else's OpenCode plan: an admin may still let other people's DMs use it", async () => {
+test("Settings › Lodi on someone else's OpenCode plan: its row names it, with no lending switch", async () => {
   const state = withRightHand(seedState(), { brain: { kind: "opencode", model: "opencode/glm-5.3" } });
   const api = createFakeApi(state);
   api.agents.brain = async () =>
@@ -113,14 +113,8 @@ test("Settings › Lodi on someone else's OpenCode plan: an admin may still let 
       .getByRole("button", { name: /^IA de quem não tem plano próprio/ })
       .querySelector(".settings-row__status")?.textContent,
   ).toBe("Plano Zen da Ana");
-  const share = within(body).getByRole("switch", { name: "Emprestar este plano a quem não tem um" });
-  expect(share.hasAttribute("disabled")).toBe(false);
-  await act(async () => fireEvent.click(share));
-  await settle(4);
-  expect(state.calls.find((c) => c.method === "agents.setBrain")?.args.slice(1)).toEqual([
-    LODI_ID,
-    { scope: "workspace", onlyOwner: false },
-  ]);
+  // Who a plan serves is its owner's choice in IA e uso (ADR 0059 §3): no lending switch here.
+  expect(within(body).queryByRole("switch", { name: /Emprestar/ })).toBeNull();
 });
 
 test("Connect for it, with a ChatGPT plan another agent already thinks with: that plan first, and no endless spinner", async () => {
@@ -152,7 +146,7 @@ test("Connect for it, with a ChatGPT plan another agent already thinks with: tha
     });
   await renderApp(`/org/${ORG_ID}/dm/agent/${LODI_ID}`, { api });
   await settle(8);
-  const card = [...document.querySelectorAll<HTMLElement>(".rq-open")].find((c) =>
+  const card = [...document.querySelectorAll<HTMLElement>(".rq--note")].find((c) =>
     c.textContent?.includes("Conectar uma IA para o time"),
   ) as HTMLElement;
   await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Conectar" })));

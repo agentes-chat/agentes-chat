@@ -103,6 +103,14 @@ export function memberLine(
   return `${handle}${roleLine(t, person, roles) ?? t("roles.member")} · ${lowerFirst(seen, locale)}`;
 }
 
+/**
+ * What a person's row offers in its menu, in order: a message to anyone but oneself, then removing them (or leaving,
+ * on one's own row) when the viewer may. Empty: the row has no menu.
+ */
+export function memberActions(mine: boolean, removable: boolean): ("dm" | "remove" | "leave")[] {
+  return [...(mine ? [] : (["dm"] as const)), ...(removable ? ([mine ? "leave" : "remove"] as const) : [])];
+}
+
 /** The people who may invite here (ADR 0085): the owners, and whoever holds a role that gives it. */
 export function invitersOf(people: readonly Pick<Person, "name" | "role" | "roleIds">[], roles: readonly OrgRole[]) {
   return people

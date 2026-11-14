@@ -72,7 +72,7 @@ import { useToast } from "@/lib/toast";
 import "./roles.css";
 
 /**
- * Settings › Papéis e permissões (ADR 0085): the roles as rows that each sum themselves up in a sentence; a role
+ * Settings › Cargos (ADR 0085): the roles as rows that each sum themselves up in a sentence; a role
  * opens on its own page, with one level per area (Como Todos · Usar · Gerenciar) and item by item behind
  * "Ajustar", the people who hold it, and its name, color and icon. The owner is shown as a role on top.
  */
@@ -595,8 +595,7 @@ function RolePeople({ role, roles, people }: { role: OrgRole; roles: OrgRole[]; 
               {gives && below(p) && (
                 <span className="ac-mediarow__end">
                   <Button
-                    size="sm"
-                    variant="ghost"
+                    variant="link"
                     aria-label={t("rolesPage.removeOf", { person: p.name, name })}
                     onClick={() =>
                       set.mutate(
@@ -836,8 +835,7 @@ function OwnerPage({ people, onBack }: { people: Person[]; onBack: () => void })
               {mine && owners.length > 1 && (
                 <span className="ac-mediarow__end">
                   <Button
-                    size="sm"
-                    variant="ghost"
+                    variant="link"
                     aria-label={t("rolesPage.removeOf", { person: p.name, name: t("roles.owner") })}
                     onClick={() => change.mutate({ userId: p.userId, role: "member" }, { onError: fail })}
                   >

@@ -181,7 +181,11 @@ function Now({ data, agentId, name }: { data: AgentPlanUsage; agentId: string; n
     <UsageCard
       icon="clock"
       title={t("usageViews.agent.now")}
-      footer={t("usageViews.agent.estimate", { ...g, brand: brandOf(current) })}
+      footer={t("usageViews.agent.estimateShort")}
+      footerHint={{
+        name: t("common.about", { label: t("usageViews.agent.now") }),
+        text: t("usageViews.agent.estimate", { ...g, brand: brandOf(current) }),
+      }}
     >
       <AccountHead
         account={current}

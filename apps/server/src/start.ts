@@ -29,7 +29,6 @@ import {
   createRelayPushSender,
   createS3BlobStore,
   createSmtpEmailSender,
-  createTurnstileCheck,
   createWebPushSender,
   type EmailSender,
   type ErrorReporter,
@@ -53,6 +52,7 @@ import {
 import {
   APP_JOB_KINDS,
   adoptRestoredOperatorEvents,
+  allowPrivateOutbound,
   allowsPrivateEndpoints,
   backfillMemoryTrust,
   composioUsageHook,
@@ -95,7 +95,7 @@ import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { buildEngine } from "./engine";
 import { startFreezeWatch } from "./freeze-watch";
-import { checkHumanCheckAtBoot } from "./http/human-check";
+import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
 import { createLogger, type Logger } from "./logger";
 import { OPERATOR_API_PREFIX, serveOperatorApi } from "./operator/app";
 import { createMachineSockets } from "./realtime/machines";
@@ -261,16 +261,7 @@ async function boot(
     ),
     // People's Postgres databases for agents (ADR 0039): always on; every connection is checked and read-only.
     databases: createPostgresDatabaseDriver(),
-    // agentes.chat Cloud's bot check (ADR 0075), only with both keys: without them nothing reaches Cloudflare.
-    humanCheck:
-      config.TURNSTILE_SITE_KEY && config.TURNSTILE_SECRET_KEY
-        ? createTurnstileCheck({
-            siteKey: config.TURNSTILE_SITE_KEY,
-            secretKey: config.TURNSTILE_SECRET_KEY,
-            hostnames: [new URL(config.PUBLIC_URL).hostname],
-            log,
-          })
-        : null,
+    humanCheck: createHumanCheck(config, { log }),
     // GIFs in chat (ADR 0091), only with a key: without one nothing reaches GIPHY and the app shows no GIFs.
     gifs: gifProvider(config, () => gifKey?.key() ?? null),
     // The Vault's external sources (ADR 0144): nothing reaches them until a person connects one. A self-hosted
@@ -340,6 +331,9 @@ async function boot(
   }
   const ctx: ModuleContext = { ...base, adapters };
 
+  // Addresses a workspace names (custom MCP servers, its own bucket, pages agents read) are pinned to public ones at
+  // every request, except where the operator lets workspaces reach this server's network.
+  allowPrivateOutbound(allowsPrivateEndpoints(config));
   // Per-process caches for agent/org/channel config, scopes, connections, credential rows (30 s TTL).
   enableCaches();
   // A write in any process (the app, a worker) clears what every process cached of it.
@@ -473,6 +467,7 @@ async function boot(
     mail: { deps: engine.mail, pollSeconds: config.MAIL_POLL_SECONDS },
     browserLive: engine.browserLive,
     desktops: engine.desktops,
+    machines: engine.machineHub,
     ...(config.OPS_REPORT_EMAIL?.length
       ? { opsReport: { to: config.OPS_REPORT_EMAIL, publicUrl: config.PUBLIC_URL } }
       : {}),
@@ -611,6 +606,8 @@ async function boot(
     log.info("shutting down", { signal });
     // No new jobs, from now on: one started during the delay below would be cut by the drain.
     workers.stop();
+    // The switch is the process's: a server started after this one sets its own.
+    allowPrivateOutbound(false);
     // `/api/health` answers 503 from now on: the proxy's health check takes this instance out before it stops
     // listening, and holds new requests for the next one instead of failing them.
     if (config.SHUTDOWN_DELAY_MS > 0) await Bun.sleep(config.SHUTDOWN_DELAY_MS);

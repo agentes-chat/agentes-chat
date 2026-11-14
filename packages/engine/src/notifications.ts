@@ -160,6 +160,12 @@ export const NOTIFICATION_KINDS = [
    */
   "plan_lent",
   /**
+   * The person's plan serves everyone in the workspace now (ADR 0059 §3, the `plans_serve_everyone` migration): one row
+   * per account and computer (`plan_serves:{accountId}`), `source.accountId` and `source.machineId`, its name in
+   * `latest.plan`. Inbox only, with "Mudar para Só eu"; done once its owner chooses who it serves.
+   */
+  "plan_serves",
+  /**
    * A model an agent thinks with left its plan's live list (`droppedPlanModel`), so its turns run another one: the
    * agent's owner, once per agent and model (`planModelDroppedGroup`), the agent as actor, `source.agentId` and its
    * name in `source.label`, the model in `latest.title`, the plan's name in `latest.plan` and what it runs now in
@@ -256,6 +262,27 @@ export const NOTIFICATION_KINDS = [
   "device.access_request",
   /** Someone else's agent waits for the device to be back or free, one per wait; done once the wait ends. */
   "device.waiting",
+  /**
+   * Someone needs a tool on this person's computer (`POST …/machines/{id}/access/ask`): its owner, waiting, one row per
+   * computer and tool (`device-tool:<machineId>:<tool>`), the asker as actor, the computer in `source.machineId` with
+   * its name in `source.label`, the tool in `latest.reason`. The row turns it on in one click; done once it is on.
+   */
+  "device.tool_request",
+  /**
+   * "Pedir a um admin" (`POST …/admin-asks`, `admin-asks.ts`): to whoever may do it, the asker as actor, what in
+   * `latest.reason` (`channel_agent`, `create_agents`, `webhook` with the service in `latest.title`). `channel_agent`
+   * names `source.channelId` (its name in `label`) and `agentId`, waits, and is done once the agent is added.
+   */
+  "admin_ask",
+  /**
+   * The right hand found something that stops the team and only this person can fix (`team-watch.ts`): one open row
+   * per person and cause, the right hand as actor, `latest.reason` the cause (`sign_in`, `connector`, `mailbox`,
+   * `database`, `budget_out`, `budget_low`, `computer`), `latest.names` the first things it is about and `count` how
+   * many, `latest.text` the whole sentence with the one way out, in the person's language. `source` names the one
+   * agent, computer or plan when it is about one. Waiting, but for `budget_low`, which stops nothing yet. Done once
+   * nothing of that cause is wrong.
+   */
+  "team_watch",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -339,6 +366,11 @@ export interface NotificationLatest {
    * translates).
    */
   reason?: string;
+  /**
+   * `widget_failed` with `missing_credential`: why its agent has no AI (`AgentAi.reason`, coded), kept apart from
+   * `text`, which the island, the push and the phone show as it is.
+   */
+  detail?: string;
   /** `approval`: asked while nobody watched, by a routine (its name) or an unattended run (ADR 0053 §8). */
   origin?: ApprovalOrigin;
   /** `org_standing` to `agent_hold`: the hold's kind, `network` or `operator`, never its reason. */
@@ -380,6 +412,8 @@ export interface NotificationLatest {
   runs?: number;
   /** `usage_limit`: the share of the requests made with the agent in `title`. */
   share?: number;
+  /** A reminder of what was left unread (`remindUnread`): how many things still wait on the person, this one included. */
+  still?: number;
 }
 
 /** A run that failed, as its `run_failed` row lists it: `key` its agent and conversation, the rest its source. */
@@ -445,6 +479,11 @@ const MERGING: ReadonlySet<NotificationKind> = new Set([
   // One per person, read or not, until nothing waits on them.
   "proposal_waiting",
 ]);
+/**
+ * Group key prefix of what the right hand wrote in a DM by itself (`notifyMessage`): reading the conversation
+ * resolves these rows (`markChannelRead`), as it does an agent's replies there.
+ */
+export const unaskedGroup = (channelId: string) => `unasked:${channelId}:`;
 /** "Menções" in the inbox: what was said to me. */
 const MENTION_KINDS: NotificationKind[] = ["mention", "dm", "agent_reply", "agent_question"];
 /** A read reaction row still takes new reactions for this long (the "9 min" span on the card). */
@@ -915,7 +954,8 @@ export async function retargetNotifications(
 
 /**
  * A reminder: a group's open notifications come back unread and on top, `latest` patched, and go to the person's
- * devices once more (`push.send` keyed by `key`, so once per reminder). Rows done meanwhile stay done.
+ * devices once more (`push.send` keyed by `key`, so once per reminder). Rows done meanwhile stay done. `to`: only
+ * these people's rows, and only the ones they have not read (who read it is not asked twice).
  */
 export async function remindNotifications(
   deps: NotificationDeps,
@@ -923,12 +963,22 @@ export async function remindNotifications(
   groupKey: string,
   latest: NotificationLatest,
   key: string,
+  to?: string[],
 ): Promise<number> {
+  if (to && to.length === 0) return 0;
   const now = nowOf(deps);
   const rows = await deps.db
     .update(notifications)
     .set({ readAt: null, updatedAt: now, latest: sql`${notifications.latest} || ${JSON.stringify(latest)}::jsonb` })
-    .where(and(eq(notifications.orgId, orgId), eq(notifications.groupKey, groupKey), isNull(notifications.doneAt)))
+    .where(
+      and(
+        eq(notifications.orgId, orgId),
+        eq(notifications.groupKey, groupKey),
+        isNull(notifications.doneAt),
+        to ? inArray(notifications.userId, to) : undefined,
+        to ? isNull(notifications.readAt) : undefined,
+      ),
+    )
     .returning();
   for (const row of rows) {
     const prefs = await readNoticePrefs(deps.db, orgId, row.userId);
@@ -944,6 +994,28 @@ export async function remindNotifications(
   return rows.length;
 }
 
+/**
+ * An open notification says something else now (what it lists changed): rewritten where it stands, with no push.
+ * `unread`: it gained something the person has not seen, so it comes back unread and on top.
+ */
+export async function rewriteNotification(
+  deps: NotificationDeps,
+  id: string,
+  next: { count: number; source: NotificationSource; latest: NotificationLatest; unread?: boolean },
+): Promise<void> {
+  const [row] = await deps.db
+    .update(notifications)
+    .set({
+      count: next.count,
+      source: compact(next.source) as Record<string, unknown>,
+      latest: compact(next.latest) as Record<string, unknown>,
+      ...(next.unread ? { readAt: null, updatedAt: nowOf(deps) } : {}),
+    })
+    .where(and(eq(notifications.id, id), isNull(notifications.doneAt)))
+    .returning();
+  if (row) await publishRow(deps, row);
+}
+
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /**
@@ -955,7 +1027,8 @@ export async function wakeSnoozedNotifications(deps: NotificationDeps): Promise<
   const now = nowOf(deps);
   const rows = await deps.db
     .update(notifications)
-    .set({ snoozedUntil: null, updatedAt: now })
+    // A reminder's count of what else waited (`still`) was that day's: the wake's push is this item's own.
+    .set({ snoozedUntil: null, updatedAt: now, latest: sql`${notifications.latest} - 'still'` })
     .where(and(lte(notifications.snoozedUntil, now), isNull(notifications.doneAt)))
     .returning();
   const users = new Map<string, string>();
@@ -1019,6 +1092,9 @@ function visible(orgId: string, userId: string, now: Date): SQL {
     stillDecides(orgId, userId),
   ) as SQL;
 }
+
+/** The inbox's own rule for what a person sees, for the lists built on it (`waiting.ts`). */
+export const inboxVisible = visible;
 
 function filterSql(filter: NotificationFilter): SQL | undefined {
   switch (filter) {

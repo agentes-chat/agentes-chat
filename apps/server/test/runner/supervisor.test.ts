@@ -20,6 +20,7 @@ import { sealSecret, secretAad, vaultAad } from "@agenteschat/adapters/secret-bo
 import { AccountBrains, type AccountBrainsOptions, SHARED_LOGIN_OFF } from "../../runner/account-brains";
 import { AccountManager } from "../../runner/accounts";
 import { AGENT_USERS_FILE, type AgentUser, systemLauncher } from "../../runner/agent-users";
+import { AGY_SIGN_IN_FILE } from "../../runner/agy-home";
 import { BrainManager, PERSONAL_MCP_REFUSED } from "../../runner/brain";
 import { BrowserManager } from "../../runner/browser";
 import { type StoredConfig, writeConfig } from "../../runner/config";
@@ -712,6 +713,20 @@ test("room for a turn: root closes one idle CLI, the least recently used across 
   await waitFor(() => asks(ana).length === 4);
   answer(ana, 3, { closed: false });
   expect(await silent).toBe(false);
+
+  // No CLI left to close: the idle browser used longest ago closes; a worker with none open isn't asked to.
+  const browsers = t.sup.reclaimBrowsers();
+  // Bia's last ask above went unanswered.
+  await waitFor(() => asks(ana).length === 5 && asks(bia).length === 6);
+  expect(asks(ana)[4]).toMatchObject({ peek: true, browser: true });
+  answer(ana, 4, { closed: false });
+  answer(bia, 5, { closed: false, browserIdle: 300 });
+  await waitFor(() => asks(bia).length === 7);
+  expect(asks(bia)[6]).toMatchObject({ browser: true });
+  expect(asks(bia)[6]?.peek).toBeUndefined();
+  answer(bia, 6, { closed: true });
+  expect(await browsers).toBe(true);
+  expect(asks(ana)).toHaveLength(5);
   for (const [w, q] of [
     [ana, await requestOn(ana)],
     [bia, await requestOn(bia)],
@@ -738,7 +753,10 @@ test("room for a turn: root closes one idle CLI, the least recently used across 
   fromRoot.write(`${JSON.stringify({ type: "brain.reclaim", reclaimId: "7", spare: "a:s", peek: true })}\n`);
   fromRoot.write(`${JSON.stringify({ type: "brain.reclaim", reclaimId: "8" })}\n`);
   await waitFor(() => said.length === 2);
-  expect(heard).toEqual([{ spare: "a:s", peek: true }, { peek: false }]);
+  expect(heard).toEqual([
+    { spare: "a:s", peek: true, browser: false },
+    { peek: false, browser: false },
+  ]);
   expect(said).toEqual([
     { type: "brain.reclaimed", reclaimId: "7", closed: false, idle: { since: 5, spare: true } },
     { type: "brain.reclaimed", reclaimId: "8", closed: true },
@@ -1751,6 +1769,27 @@ test("a worker's word that its Chrome is in use on the desktop holds a while; it
   expect(t.sup.onDesktopInUse(ANA.id)).toBe(false);
 });
 
+test("a worker hears that its agent holds its browser (keep_running), and no other worker does", async () => {
+  const kept = new Set<string>();
+  const t = setup({ browserKept: (agentId) => kept.has(agentId) });
+  t.sup.boot();
+  t.sup.attach();
+  void handleRequest(t.ctx, exec(ANA), scope().scope).catch(() => undefined);
+  await waitFor(() => t.workers.length === 1);
+  const ana = t.last(ANA.id);
+  ana.hello();
+  await requestOn(ana);
+  kept.add(ANA.id);
+  kept.add(BIA.id);
+  t.sup.stateChanged();
+  await waitFor(() => ana.of("worker.state").length === 2);
+  expect(ana.of("worker.state")[1]).toEqual({ type: "worker.state", ...STATE, browserKept: true });
+  kept.clear();
+  t.sup.stateChanged();
+  await waitFor(() => ana.of("worker.state").length === 3);
+  expect(ana.of("worker.state")[2]).toEqual({ type: "worker.state", ...STATE });
+});
+
 /** A real worker (`runWorker`) on the other end of in-memory pipes; `at`: the homes of an earlier supervisor (a restart). */
 function realWorkers(over: Partial<SupervisorOptions> = {}, at?: { home: string; agentHome: string; ownHome: string }) {
   const agentHome = at?.agentHome ?? tempDir("agent-home-");
@@ -2415,6 +2454,16 @@ test.if(posix)(
     const agentHome = tempDir("agent-home-");
     const ownHome = tempDir("worker-home-");
     dirs.push(agentHome, ownHome);
+    // The copy of a Gemini sign-in root keeps that its last worker, killed mid-turn, left behind.
+    const left = path.join(
+      ownHome,
+      "accounts",
+      "antigravity",
+      "0193eeee-0000-7000-8000-0000000000a1",
+      AGY_SIGN_IN_FILE,
+    );
+    mkdirSync(path.dirname(left), { recursive: true });
+    writeFileSync(left, "{}");
     const input = new PassThrough();
     const output = new PassThrough();
     const frames: Got[] = [];
@@ -2432,6 +2481,7 @@ test.if(posix)(
     };
     await waitFor(() => frames.length === 1);
     expect(frames[0]).toMatchObject({ type: "hello", token: "", exec: false, workspace: realpathSync(agentHome) });
+    expect(existsSync(left)).toBe(false);
     send({ type: "welcome", machineId: ANA.id, name: "ag-a1b2c3d4", heartbeatMs: 25_000 });
     // Nothing is allowed until the supervisor says what the computer allows.
     send({ type: "request", id: "1", ...exec(ANA, "pwd") });
@@ -4262,6 +4312,8 @@ test.if(posix)("a turn dropped on purpose ends now: its CLI isn't taken for cras
   expect(await errorCode(() => run)).toBe("dropped");
   await sleep(100);
   stop();
+  // The fake CLI may still be writing its last line when the turn ends: read the log once every line is whole.
+  await waitFor(() => readFileSync(h.log, "utf8").endsWith("\n"));
   const started = readFileSync(h.log, "utf8")
     .trim()
     .split("\n")

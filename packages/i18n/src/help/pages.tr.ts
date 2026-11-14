@@ -9,11 +9,18 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
       "agentes.chat uygulaması, agentes.chat'in kendisini de bir Mac, PC ya da Linux bilgisayarda, sizin ya da küçük bir ekip için çalıştırabilir.",
     sections: [
       {
+        id: "download",
+        heading: "Uygulamayı indirin",
+        blocks: [
+          "Mac, PC veya Linux bilgisayarınız için [agentes.chat uygulamasını indirin](/download) ve açın. **Kendi sunucunuzda** seçeneğini seçin, **Kendi sunucumla devam et**'e ve ardından **agentes.chat'i bu bilgisayar üzerinde çalıştır**'a basın.",
+        ],
+      },
+      {
         id: "how",
         heading: "Nasıl çalışır",
         blocks: [
           "Uygulamanın içinde, kendi yerleşik veritabanıyla çalışır ve her şeyi bu bilgisayardaki tek bir klasörde, ana klasörünüzdeki `.agentes` içinde tutar. Başka hiçbir şey kurmanız gerekmez: Docker yok, kurulacak bir veritabanı yok.",
-          "Uygulamayla birlikte başlar ve uygulamadan çıktığınızda durur. Çıkmadan önce uygulama sorar, çünkü uygulama yeniden açılana kadar kimse agentes.chat'i kullanamaz.",
+          "Uygulamayla birlikte başlar ve uygulamadan çıktığınızda durur. Çıkmadan önce uygulama sorar, çünkü uygulama yeniden açılana kadar kimse agentes.chat'i kullanamaz. Uygulamadan çıkmadan bir süre durdurmak için saatin yanındaki agentes.chat simgesine tıklayın ve kartının **⋯** menüsünden **Durdur**'u seçin.",
         ],
       },
       {
@@ -28,7 +35,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "keep-on",
         heading: "Açık tutun",
         blocks: [
-          "Başkalarının da kullandığı bir bilgisayarda bunu bir kez ayarlayın:",
+          "Başkalarının da kullandığı bir bilgisayarda bunu bir kez ayarlayın. **Tercihler\u00a0›\u00a0Sunucular** içindeki **Çalışır halde tut**, hâlâ eksik olanı gösterir ve doğru ayarları açar:",
           {
             list: [
               "**Oturum açılınca başlat** kurulumdan sonra kendiliğinden açılır.",
@@ -51,8 +58,8 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "another-workspace",
         heading: "Başka bir çalışma alanına da açın",
         blocks: [
-          "Burada çalıştırdığınız sunucunun çalışma alanları bu bilgisayarı kendiliğinden kullanır. Başka bir yerdeki bir çalışma alanının da, örneğin agentes.chat Cloud'daki birinin, kullanmasını istiyorsanız **Tercihler\u00a0›\u00a0Sunucular** bölümünü açın, **Sunucu ekle…** düğmesine basın, o çalışma alanında oturum açın ve uygulama sorduğunda **İzin ver** düğmesine basın.",
-          "Her çalışma alanının burada kendi ajanları ve klasörleri olur. **Komutlar** onun için de varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Oradaki tek anahtar bu bilgisayardaki tüm çalışma alanları için geçerlidir.",
+          "Burada çalıştırdığınız sunucunun çalışma alanları bu bilgisayarı kendiliğinden kullanır. Başka bir yerdeki bir çalışma alanının da, örneğin agentes.chat Cloud'daki birinin, kullanmasını istiyorsanız **Tercihler\u00a0›\u00a0Genel** içindeki ilk kartın en altında bulunan **Çalışma alanı ekle…** düğmesine ya da **Tercihler\u00a0›\u00a0Sunucular** içindeki **Sunucu ekle…** düğmesine basın. O çalışma alanında oturum açın ve uygulama sorduğunda **İzin ver** düğmesine basın.",
+          "Her çalışma alanının burada kendi ajanları ve klasörleri olur. **Komutlar** onun için de varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Orada her çalışma alanının kendi anahtarı vardır ve uygulama birini yeniden açmadan önce sorar.",
         ],
       },
       {
@@ -67,29 +74,29 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "password",
         heading: "Diğer cihazlardan giriş",
         blocks: [
-          "Sahibin başta bir şifresi yoktur: uygulama bu bilgisayarda sizin yerinize oturum açar. Başka bir bilgisayardaki tarayıcıdan giriş yapmak için **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden bir şifre ekleyin. Telefon uygulaması, **Tercihler\u00a0›\u00a0Sunucular** içindeki **Telefonunuzda** altında bulunan QR kodunu tarayarak bağlanır. Bunun için **Telefonunuzdan ve ekip arkadaşlarınızdan erişin** açık olmalıdır.",
+          "Sahibin başta bir şifresi yoktur: uygulama bu bilgisayarda sizin yerinize oturum açar. Başka bir bilgisayardaki tarayıcıdan giriş yapmak için **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden bir şifre ekleyin. Eklemediğiniz sürece **Tercihler\u00a0›\u00a0Sunucular** bunu hatırlatır ve **Parola ekle** o sayfayı açar. Telefon uygulaması, **Tercihler\u00a0›\u00a0Sunucular** içindeki **Telefonunuzda** altında bulunan QR kodunu tarayarak bağlanır. Bunun için **Telefonunuzdan ve ekip arkadaşlarınızdan erişin** açık olmalıdır.",
         ],
       },
       {
         id: "updates",
         heading: "Güncellemeler",
         blocks: [
-          "Uygulama güncellemeleri kendisi arar ve **Tercihler\u00a0›\u00a0Güncellemeler** içinde **Güncelle ve yeniden aç** düğmesine bastığınızda yükler. Sunucu ve tüm ajanlar onunla birlikte yeniden başlar. Önce veritabanı kopyalanır ve yeni sürüm 3 dakika içinde yanıt vermezse uygulama kendiliğinden önceki sürüme ve onun verilerine geri döner.",
+          "Uygulama güncellemeleri kendisi arar. **Tercihler\u00a0›\u00a0Güncellemeler** içinde **Güncellemeleri gece kendiliğinden yükle** açıksa, uygulama açık olduğu sürece onları 3:00 ile 5:00 arasında yükler. Sunucu burada çalışıyorsa bu baştan açıktır. Değilse **Güncelle ve yeniden aç** düğmesine basın. Sunucu ve tüm ajanlar onunla birlikte yeniden başlar. Önce veritabanı kopyalanır ve yeni sürüm 3 dakika içinde yanıt vermezse uygulama kendiliğinden önceki sürüme ve onun verilerine geri döner.",
         ],
       },
       {
         id: "backups",
         heading: "Yedekler",
         blocks: [
-          "Henüz hiçbir şey kendiliğinden yedeklenmiyor. **Tercihler\u00a0›\u00a0Sunucular** içindeki **Şimdi yedekle**, sunucuyu kısa bir süre durdurur ve veritabanını, dosyaları ve `.env` dosyasını ana klasörünüzdeki `.agentes/backups` içine kaydeder. En yeni iki yedeği tutar.",
-          "Bunları ara sıra bu bilgisayarın dışına, bir diske ya da bir bulut depolama alanına kopyalayın. İçlerinde anahtarlarınız var: onları gizli tutun.",
+          "**Tercihler\u00a0›\u00a0Sunucular** içinde **Her gece yedekle** açıksa (uygulama 0.8.1 ve sonrası), uygulama her gece saat 3:00'te veritabanını, dosyaları ve `.env` dosyasını ana klasörünüzdeki `.agentes/backups` içine kaydeder. O saatte uykuda olan bir bilgisayar uyandığında yedekler. **Şimdi yedekle** aynısını hemen yapar. Her yedekleme sunucuyu kısa bir süre durdurur ve en yeni iki yedek kalır.",
+          "**Şuraya kopyala**, her yeni yedeği seçtiğiniz bir klasöre de koyar, örneğin bir USB belleğe ya da iCloud Drive'a, ve orada da en yeni iki yedek kalır. İçlerinde anahtarlarınız var: onları gizli tutun. **Geri yükle…** agentes.chat'i bir yedeğe döndürür: mesajlar, dosyalar ve ayarlar. Bir dakikalığına durur ve önceden orada olanlar yedek klasöründe kalır.",
         ],
       },
       {
         id: "ai-programs",
         heading: "Claude Code ve Codex",
         blocks: [
-          "Uygulama Claude Code ve Codex'i oturum açma kabuğunuzun `PATH` değişkeniyle ve `~/.local/bin`, `/opt/homebrew/bin` ve `/usr/local/bin` gibi alışılmış klasörlerde arar. **Tercihler\u00a0›\u00a0Araçlar** **Bulunamadı** diyorsa `claude` ya da `codex` komutunun yeni bir Terminal penceresinde çalıştığını kontrol edin, sonra uygulamadan çıkıp yeniden açın.",
+          "Uygulama Claude Code ve Codex'i oturum açma kabuğunuzun `PATH` değişkeniyle ve `~/.local/bin`, `/opt/homebrew/bin` ve `/usr/local/bin` gibi alışılmış klasörlerde arar. **Tercihler\u00a0›\u00a0Araçlar** **Bulunamadı** diyorsa, onu kuran satırı da gösterir. O satırı Terminal'de çalıştırın, sonra **Tekrar kontrol et** düğmesine basın.",
         ],
       },
       {
@@ -123,7 +130,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "agentes.chat uygulamasından",
         blocks: [
           "Uygulamayı bilgisayara kurun, açın ve çalışma alanınızda oturum açın. Uygulama **<workspace> ajanları bu Mac cihazını kullanabilsin mi?** diye sorar (Windows'ta bu PC, Linux'ta bu bilgisayar). Kimlerin kullanabileceğini seçin ve **İzin ver** düğmesine basın. Hepsi bu.",
-          "Zaten oturum açtınız mı? Çalışma alanını **Tercihler\u00a0›\u00a0Genel** içindeki **Ajanlar** kartında açın.",
+          "Zaten oturum açtınız mı? **Tercihler\u00a0›\u00a0Genel** bölümünü açın ve ilk karttaki çalışma alanı satırında **İzin ver** düğmesine basın. Orada yok mu? O kartın en altındaki **Çalışma alanı ekle…** düğmesine basın ve oturum açın.",
         ],
       },
       {
@@ -166,7 +173,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "pausing",
         heading: "Duraklatma ve bağlantıyı kesme",
         blocks: [
-          "Bilgisayarda, saatin yanındaki agentes.chat simgesi tüm çalışma alanlarının ajanlarını duraklatır. **Tercihler\u00a0›\u00a0Genel** içinde her çalışma alanının anahtarı yalnızca onu duraklatır, **Ayrıl** ise bağlantısını keser. Duraklatılmışken yeni hiçbir şey başlamaz ve çalışmakta olanlar tamamlanır. Bağlantıyı kesmek ajanların klasörlerini diskte bırakır.",
+          "Bilgisayarda, saatin yanındaki agentes.chat simgesi tüm çalışma alanlarının ya da yalnızca birinin ajanlarını duraklatır. **Tercihler\u00a0›\u00a0Genel** içinde her çalışma alanının anahtarı yalnızca onu duraklatır, **⋯** menüsündeki **Ayrıl** ise bağlantısını keser. Duraklatılmışken yeni hiçbir şey başlamaz ve çalışmakta olanlar tamamlanır. Bağlantıyı kesmek ajanların klasörlerini diskte bırakır.",
           "Web sitesinden, cihazın sayfasındaki **Kaldır** onun bağlantısını keser.",
         ],
       },
@@ -177,6 +184,15 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
           "Aynı uygulamada her çalışma alanında oturum açın ve her biri için **İzin ver** düğmesine basın. agentes.chat Cloud'daki ve kendi sunucularınızdaki çalışma alanları aynı bilgisayarı paylaşabilir (uygulama 0.6.1 ve sonrası). Her birinin orada kendi ajanları ve klasörleri olur ve birinin bağlantısını kesmek diğerlerini etkilemez.",
           "Uygulamanın bu bilgisayarda çalıştırdığı bir sunucu zaten bağlıdır ve hiçbir şey gerektirmez. Bu bilgisayarı başka bir yerdeki bir çalışma alanına da açmak için [Başka bir çalışma alanına da açın](/help/run-on-your-computer#another-workspace) bölümüne bakın.",
           "Uygulamayı bir dizüstünde yalnızca çalışma alanınıza açılan bir pencere olarak mı kullanıyorsunuz? Ajanların dizüstünü kullanması için izin istediğinde **Şimdi değil** derseniz uygulama sade bir pencere olarak kalır.",
+          "Terminal satırıyla bağlanan bir sunucu tek bir çalışma alanı için çalışır. Onu başka bir çalışma alanından bağlamak sunucuyu o alana taşır ve ilki artık ona ulaşamaz. Bir bilgisayarda birden çok çalışma alanı için uygulamayı kullanın.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Ajanlar sırada beklediğinde",
+        blocks: [
+          "Bir ajanın her işi bilgisayarın belleğini kullanır. Boş bellek azaldığında sıradaki iş, bir başkası bitene kadar sırada bekler. Önce insanlar gelir. CPU sayısı bunu değiştirmez.",
+          "4 GB belleği olan bir bilgisayar aynı anda iki ya da üç iş çalıştırır, 8 GB olan yaklaşık dokuz. Bir Mac ya da PC en fazla sekiz iş çalıştırır. Ajanların açık bıraktığı tarayıcılar ve masaüstleri de bellek kullanır. Daha kısa bir sıra için daha fazla belleği olan bir bilgisayar kullanın ya da bir tane daha bağlayıp ajanları aralarında paylaştırın. Bir bilgisayarı paylaşan çalışma alanları belleğini de paylaşır.",
         ],
       },
       {
@@ -199,7 +215,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
               "agentes.chat'i de çalıştıran bir bilgisayarda, onun `.agentes` içindeki veritabanı ve anahtarları",
             ],
           },
-          "agentes.chat anahtarların, token'ların ve oturum bilgilerinin adını geçiren komutları reddeder, ama bu bir kuraldır, duvar değil. **Komutlar** varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Oradaki tek anahtar bilgisayardaki tüm çalışma alanları için geçerlidir. Claude Code ve Codex kendi komutlarını ajanın klasöründe, kendi kurallarıyla çalıştırır.",
+          "agentes.chat anahtarların, token'ların ve oturum bilgilerinin adını geçiren komutları reddeder, ama bu bir kuraldır, duvar değil. **Komutlar** varsayılan olarak açıktır. Onları uygulamanın sorusunda **İzin ver**'e basmadan önce ya da daha sonra **Tercihler\u00a0›\u00a0Araçlar** içinde kapatın. Orada her çalışma alanının kendi anahtarı vardır (uygulama 0.8.1 ve sonrası) ve uygulama birini yeniden açmadan önce sorar. Claude Code ve Codex, Komutlar kapalıyken bile kendi komutlarını ajanın klasöründe, kendi kurallarıyla çalıştırır.",
           "Gerçek bir duvar için bir Linux sunucu kullanın. Debian 13'te `--system` ile kurulduğunda her ajan ayrı bir kullanıcıdır. Ubuntu'da ajanlar tek bir kullanıcıyı, `agentes` kullanıcısını paylaşır: birbirlerinin klasörlerini görürler, sizinkileri ya da sunucununkileri görmezler. Ya da ajanlara kendilerine ait bir bilgisayar verin.",
         ],
       },
@@ -375,7 +391,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "Bellek izin vermez",
         blocks: [
-          "Bellekteki hiçbir şey bir ajanın daha fazlasını yapmasına izin vermez. Neler yapabileceği **Araçlar ve erişim** bölümünde kalır ve hassas işlemler her zaman onay ister.",
+          "Bellekteki hiçbir şey bir ajanın daha fazlasını yapmasına izin vermez. Neler yapabileceği **Araçlar ve erişim** bölümünde kalır.",
         ],
       },
       {
@@ -395,7 +411,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Neler önce sorar",
         blocks: [
-          "Bir ajan merge, deploy ya da geri alma yapmak, dışarıya bir şey göndermek veya veri silmek istediğinde, erişimi ne olursa olsun önce sorar. İstek, tam işlem ve nedeniyle birlikte **Onaylar** bölümünde ve konuşmada görünür.",
+          "Bir ajan merge, deploy ya da geri alma yapmak, dışarıya bir şey göndermek veya veri silmek istediğinde, önce sorar. Bu, her ajanın başladığı **Yalnızca riskli olanlar** düzeyidir. Ajanın sayfasındaki **Onaylar** bölümünde **Her zaman sor** bir şeyi değiştirmeden önce sormasını sağlar, **Hiç sorma** ise merge, deploy, ödemeler ve rutinler dahil hiçbir şey sormamasını sağlar. İstek, tam işlem ve nedeniyle birlikte **Onaylar** bölümünde ve konuşmada görünür.",
         ],
       },
       {
@@ -403,7 +419,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Bir kez ya da her zaman",
         blocks: [
           "Onaylamak, değerleriyle birlikte tek bir işlemi kapsar. Ajan herhangi bir şeyi değiştirirse yeniden sorar.",
-          "**Her zaman onayla**, ajanın bu tür bir işlemi bundan sonra her değerle, sormadan yapmasına izin verir. Bir rutinin isteğinde **Bu rutinde her zaman** aynısını yalnızca o rutin için yapar. İkisi de merge, deploy, geri alma ve benzerleri için sunulmaz. Geri almak için ajanın sayfasındaki **Araçlar ve erişim** bölümüne ya da rutinin ayarlarına gidin.",
+          "**Her zaman onayla**, ajanın bu tür bir işlemi bundan sonra her değerle, sormadan yapmasına izin verir. Bir rutinin isteğinde **Bu rutinde her zaman** aynısını yalnızca o rutin için yapar. **Her zaman onayla**, ajan **Yalnızca riskli olanlar** düzeyindeyken merge ve deploy dahil her tür işlem için sunulur. **Bu rutinde her zaman** merge, deploy, geri alma ve benzerleri için sunulmaz. Geri almak için ajanın sayfasındaki **Araçlar ve erişim** bölümüne ya da rutinin ayarlarına gidin.",
         ],
       },
       {
@@ -745,7 +761,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-posta",
         blocks: [
-          "E-posta yoksa agentes.chat her e-postayı göndermek yerine günlüğüne yazar, böylece bir davet bağlantısını oradan kopyalayabilirsiniz. Parola sıfırlama kapalı kalır.",
+          "E-posta yoksa agentes.chat her e-postayı göndermek yerine günlüğüne yazar, böylece bir davet bağlantısını oradan kopyalayabilirsiniz. Parola sıfırlama kapalı kalır ve bir hesabın yeni e-postası kod ya da bağlantı olmadan hemen geçerli olur.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

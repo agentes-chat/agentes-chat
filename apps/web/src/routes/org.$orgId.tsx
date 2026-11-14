@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { requireUserIn } from "@/app/guards";
 import { usePageTextSize } from "@/chat/look";
+import { useFollowPickedAgent } from "@/components/AppIconPicker";
 import { Arrival } from "@/components/arrival/Arrival";
 import { FeedbackHost } from "@/components/arrival/FeedbackDialog";
 import { ArtifactViewerProvider } from "@/components/artifacts/ArtifactViewer";
@@ -28,7 +29,7 @@ import { OrgProvider } from "@/components/org-context";
 import { RemoveMemberProvider } from "@/components/RemoveMember";
 import { Sidebar } from "@/components/Sidebar";
 import { BootSplash } from "@/components/Sky";
-import { DeletingScreen, HoldBanner, SuspendedScreen } from "@/components/Standing";
+import { DeletingBanner, HoldBanner, SuspendedScreen } from "@/components/Standing";
 import { useWebPushClear, useWebPushRefresh } from "@/components/WebPush";
 import { ComputerSetupNotice } from "@/components/WorkspaceComputer";
 import { HeaderSearchProvider } from "@/hooks/useWorkspaceSearch";
@@ -71,6 +72,8 @@ function OrgLayout() {
   // …and the ones it still shows for what was already read elsewhere close.
   useWebPushClear();
   usePageTextSize(membership?.chatPrefs);
+  // An agent picked as the app icon follows its name and look in its workspace (ADR 0179).
+  useFollowPickedAgent(orgId);
   useEffect(() => {
     if (!membership) return;
     storage.set(STORAGE_KEYS.lastOrg, membership.id);
@@ -131,17 +134,6 @@ function OrgLayout() {
     );
   }
 
-  // Being deleted: its own screen, after the suspension, the stronger fact. Its socket is refused, so the screen asks
-  // `GET /me` again instead.
-  if (membership.deletion) {
-    return (
-      <>
-        {strip}
-        <DeletingScreen org={membership} me={me} />
-      </>
-    );
-  }
-
   return (
     <OrgProvider org={membership} me={me}>
       <RealtimeProvider orgId={membership.id}>
@@ -169,11 +161,17 @@ function OrgLayout() {
                           </>
                         )}
                         {/* The work area: notices on top (agents paused, the workspace's computer on its way, a computer
-                    the agents run on went offline), then the page. */}
+                    the agents run on went offline), then the page. Being deleted, it reads as ever under one line that
+                    says so (ADR 0088 §7), in the Criar agente flow too: its work stopped, nothing else is news. */}
                         <div className={focused ? "shell__work shell__work--bare" : "shell__work"}>
-                          {!focused && <HoldBanner />}
-                          {!focused && <ComputerSetupNotice />}
-                          {!focused && <OutageNotices />}
+                          {membership.deletion && <DeletingBanner />}
+                          {!focused && !membership.deletion && (
+                            <>
+                              <HoldBanner />
+                              <ComputerSetupNotice />
+                              <OutageNotices />
+                            </>
+                          )}
                           <div className="shell__pages">
                             <ComputerDialogProvider>
                               <DetailsHost>

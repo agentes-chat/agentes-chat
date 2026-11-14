@@ -86,17 +86,11 @@ export function TeamMemoryCard() {
                     </>
                   ) : (
                     <>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        icon="edit"
-                        onClick={() => setDraft({ id: m.id, text: m.text })}
-                      >
+                      <Button variant="link" onClick={() => setDraft({ id: m.id, text: m.text })}>
                         {t("agentPage.memory.edit")}
                       </Button>
                       <Button
-                        size="sm"
-                        variant="ghost"
+                        variant="link"
                         disabled={act.isPending}
                         onClick={() =>
                           act.mutate(

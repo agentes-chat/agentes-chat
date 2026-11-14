@@ -108,6 +108,8 @@ export class ControlServer {
         return d.foldersSetAgents(str(m.path), m.agents);
       case "tools.set":
         return d.toolsSet(m.tool, m.on);
+      case "executors.check":
+        return d.executorsCheck();
       case "access.pending":
         return { requests: d.accessPending() };
       case "access.answer":
@@ -132,6 +134,10 @@ export class ControlServer {
         return d.iphoneSetup().start();
       case "iphone.open":
         return d.iphoneSetup().open(m.app === "xcode" ? "xcode" : "appStore");
+      case "iphone.fixXcode":
+        return d
+          .iphoneSetup()
+          .fixXcode(m.action === "cancel" ? "cancel" : "start", m.kind === "update" ? "update" : "select");
       case "shutdown":
         return { stopping: true };
       default:

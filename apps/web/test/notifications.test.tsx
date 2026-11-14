@@ -299,6 +299,24 @@ describe("Notificações", () => {
     expect(row.textContent).toContain("Você respondeu: Sobe sim, às 17h.");
   });
 
+  test("in a workspace being deleted, an inline reply says why it takes nothing, and Cancelar closes it", async () => {
+    const state = seedState({ notifications: inbox() });
+    if (!state.me) throw new Error("signed in");
+    state.me.organizations = state.me.organizations.map((o) => ({
+      ...o,
+      deletion: { dueAt: new Date(Date.now() + 6 * 86_400_000).toISOString(), requestedAt: ago(60), requestedBy: null },
+    }));
+    await go(state);
+    const row = document.querySelector('[data-n="n-thread"]') as HTMLElement;
+    await click(within(row).getByRole("button", { name: "Responder" }));
+    expect(within(row).queryByRole("textbox")).toBeNull();
+    expect(within(row).getByRole("status").textContent).toBe(
+      "Você não pode enviar mensagens enquanto este workspace está sendo apagado",
+    );
+    await click(within(row).getByRole("button", { name: "Cancelar" }));
+    expect(within(row).queryByRole("status")).toBeNull();
+  });
+
   test("grouped task comments expand from the task's conversation (ADR 0145)", async () => {
     const state = seedState();
     const api = createFakeApi(state);
@@ -1032,6 +1050,8 @@ describe("Esperando você: what only points somewhere is a card of the requests'
     // box, so a wrap never splits it, and its margin pushes it to the end. The kit spaces what is in it.
     expect(value(".ac-acts > .ac-acts", "display", kit)).toBe("contents");
     expect(value(".rq__end > .nt-tail.ac-acts", "display")).toBe("flex");
+    // The last button's plate keeps 8 from the card's edge: no pull past the footer's padding.
+    expect(value(".rq__end > .nt-tail.ac-acts", "margin-right")).toBeUndefined();
     expect(css).not.toMatch(/\.nt-tail(?:\.ac-acts)? > [^{]*\{[^}]*margin/);
     // What only points somewhere is a request card itself: no corners or padding of its own, its face on the kind's
     // line as every waiting item's.

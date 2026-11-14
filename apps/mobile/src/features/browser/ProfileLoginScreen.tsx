@@ -1,4 +1,4 @@
-import { useBrowserProfiles } from "@agenteschat/client";
+import { useBrowserProfiles, useMachines } from "@agenteschat/client";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +19,7 @@ export function ProfileLoginScreen({ profileId }: { profileId: string }) {
   const insets = useSafeAreaInsets();
   const profiles = useBrowserProfiles(orgId);
   const profile = profiles.data?.find((p) => p.id === profileId);
+  const machine = useMachines(orgId, Boolean(profile)).data?.find((m) => m.id === profile?.machineId);
   return (
     <SheetHostProvider>
       <View style={[styles.screen, { backgroundColor: c.bg }]}>
@@ -26,10 +27,12 @@ export function ProfileLoginScreen({ profileId }: { profileId: string }) {
           <IconButton icon="x" plate label={t("mobile.common.close")} onPress={goBack} />
           <View style={styles.title}>
             <Text variant="subhead" style={styles.bold} accessibilityRole="header">
-              {profile?.name ?? t("browser.profiles.title")}
+              {profile ? t("browser.profiles.loginTitle", { name: profile.name }) : t("browser.profiles.title")}
             </Text>
             <Text variant="footnote" tone="faint">
-              {t("browser.profiles.controlSub")}
+              {machine
+                ? t("browser.profiles.controlSubOn", { machine: machine.name })
+                : t("browser.profiles.controlSub")}
             </Text>
           </View>
         </View>
@@ -42,7 +45,7 @@ export function ProfileLoginScreen({ profileId }: { profileId: string }) {
           {profile ? (
             <BrowserCard
               agentId={`profile:${profile.id}`}
-              profile={{ id: profile.id, name: profile.name }}
+              profile={{ id: profile.id, name: profile.name, machineId: profile.machineId }}
               surface
               style={styles.flush}
             />

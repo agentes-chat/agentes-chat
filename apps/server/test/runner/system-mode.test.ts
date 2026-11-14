@@ -453,6 +453,7 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "account",
     "access.request",
     "access.reduce",
+    "access.allow",
     // Root refuses it, and every op with a browser profile, until profiles have OS users of their own (ADR 0110).
     "browser.profile.delete",
     "desktop.session.start",
@@ -475,9 +476,16 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "phone.pair.code",
     "phone.pair.status",
     "phone.pair.cancel",
+    // Pausing is the whole computer's, set by whoever runs it, not by one agent.
+    "pause.set",
     "phone.look",
     // The Mac's pick of iPhones on its Wi-Fi, kept beside the phones' locks.
     "phone.wifi",
+    // Root takes an agent's holds as that agent's own user, and checks its program is its own (ADR 0176).
+    "keep.start",
+    "keep.end",
+    // Fixing the Mac's own Xcode is the computer's; root answers it can't (no person's screen to ask on).
+    "xcode.fix",
   ]);
 
   if (posix) {

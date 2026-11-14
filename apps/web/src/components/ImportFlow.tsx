@@ -10,8 +10,8 @@ import { aiAppImport } from "@agenteschat/client/lib/apps";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatBytes, MAX_UPLOAD_MB } from "@agenteschat/client/lib/files";
 import { joinNames } from "@agenteschat/client/lib/format";
-import { frontmatter } from "@agenteschat/client/lib/import/shared";
-import { can } from "@agenteschat/client/lib/permissions";
+import { frontmatter, PASTED } from "@agenteschat/client/lib/import/shared";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import {
   AffixInput,
   Alert,
@@ -24,6 +24,7 @@ import {
   CountChip,
   driveFolder,
   Field,
+  HintLine,
   Icon,
   type IconName,
   InfoHint,
@@ -55,6 +56,7 @@ import { failedOffline } from "@/chat/offline";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ClientSteps } from "@/components/AiApps";
 import { HelpLink } from "@/components/HelpLink";
+import { ImportFailureNote } from "@/components/ImportFailure";
 import { useOrg } from "@/components/org-context";
 import {
   type AgentFile,
@@ -87,7 +89,6 @@ import {
   type ImportFailure,
   type ImportMethod,
   importApplyErrorText,
-  importFailureText,
   isGithubLink,
   isRequestCard,
   itemId,
@@ -97,7 +98,6 @@ import {
   NOT_GITHUB,
   picksOf,
   type RequestCard,
-  retryable,
   todoLine,
 } from "@/lib/import-flow";
 import { hasFiles } from "@/lib/obsidian";
@@ -164,6 +164,8 @@ export function useImportFlow(orgId: string | null) {
     skipped: string[];
     /** The agents' own files, for their folders in the Drive. */
     files: AgentFile[];
+    /** System files the reader dropped (dependencies, caches, `.git`). */
+    junk: number;
   } | null>(null);
   const [pick, setPick] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -256,7 +258,7 @@ export function useImportFlow(orgId: string | null) {
         skipped = res.skipped ?? [];
         root = githubRoot(input.url);
       } else if ("text" in input) {
-        files = [{ name: "pasted", text: input.text }];
+        files = [{ name: PASTED, text: input.text }];
       } else {
         ({ files, root, junk } = await readImportFiles(await input.files));
       }
@@ -275,7 +277,7 @@ export function useImportFlow(orgId: string | null) {
       agentIds.current = new Map();
       sent.current = new Set();
       focus.current = "preview";
-      setPlanned({ bundle, items: plan.items, skipped, files: parsed.files });
+      setPlanned({ bundle, items: plan.items, skipped, files: parsed.files, junk: junk.length });
       setPick(new Set(plan.items.filter(choosable).map(itemId)));
       setReport(null);
       setCopyFiles(parsed.files.filter((f) => !f.skip).length <= MANY_FILES);
@@ -456,7 +458,6 @@ function useFocusOn<T extends HTMLElement>(
   return el;
 }
 
-const failureText = (t: TFunction, failure: ImportFailure) => importFailureText(t, failure, failedOffline);
 const applyErrorText = (t: TFunction, error: unknown) => importApplyErrorText(t, error, failedOffline);
 
 /** Why an item doesn't come, in plain words (an existing skill or channel says which). */
@@ -692,16 +693,7 @@ function Picker({ flow, orgId, linked }: { flow: ImportFlowState; orgId: string;
         </Field>
       )}
 
-      {flow.failure && (
-        <div className="imp-failure">
-          <Alert>{failureText(t, flow.failure)}</Alert>
-          {retryable(flow.failure) && (
-            <Button size="sm" icon="refresh" onClick={() => void flow.retry()}>
-              {t("common.retry")}
-            </Button>
-          )}
-        </div>
-      )}
+      {flow.failure && <ImportFailureNote failure={flow.failure} retry={flow.retry} />}
       {/* What a person needs before dropping a folder that holds keys: said on the line, the rest in its ⓘ. */}
       {method === "prompt" && (
         <p className="imp-note ac-iconline">
@@ -1019,7 +1011,7 @@ export function Preview({
     [planned, flow.pick],
   );
   if (!planned) return null;
-  const { bundle, items, skipped } = planned;
+  const { bundle, items, skipped, junk } = planned;
   const origin = bundleOrigin(bundle);
   const applying = flow.progress !== null;
   const picks = picksOf(items, flow.pick, blocked);
@@ -1072,6 +1064,17 @@ export function Preview({
             {t("onboarding.import.linkSkipped", { count: skipped.length })}: {skipped.join(", ")} ·{" "}
             {t("onboarding.import.linkSkippedHelp")}
           </span>
+        </p>
+      )}
+      {junk > 0 && (
+        <p className="imp-note ac-iconline">
+          <Icon name="info" size={16} />
+          <HintLine
+            name={t("common.about", { label: t("onboarding.import.systemFiles", { count: junk }) })}
+            hint={t("onboarding.import.systemFilesHelp")}
+          >
+            {t("onboarding.import.systemFiles", { count: junk })}
+          </HintLine>
         </p>
       )}
       <p className="imp-note ac-iconline">
@@ -1731,7 +1734,8 @@ export function ImportReport({
 
 /**
  * Configurações → Importar e exportar (admins): the import flow, and this workspace as a file, with what it never
- * carries (whoever shares the file needs that); the full list is on the help page.
+ * carries (whoever shares the file needs that); the full list is on the help page. A workspace being deleted takes no
+ * agent, so only its export shows.
  */
 export function ImportExportSection() {
   const { t } = useTranslation();
@@ -1742,10 +1746,12 @@ export function ImportExportSection() {
   const download = () => saveExport(api, org.id);
   return (
     <>
-      <Card aria-labelledby="imp-import-title">
-        <CardHeader icon="upload" id="imp-import-title" title={t("settings.import.title")} />
-        <ImportFlow flow={flow} orgId={org.id} standalone level={3} />
-      </Card>
+      {makesAgents(org) && (
+        <Card aria-labelledby="imp-import-title">
+          <CardHeader icon="upload" id="imp-import-title" title={t("settings.import.title")} />
+          <ImportFlow flow={flow} orgId={org.id} standalone level={3} />
+        </Card>
+      )}
       <Card aria-labelledby="imp-export-title">
         <CardHeader
           icon="download"

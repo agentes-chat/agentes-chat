@@ -61,17 +61,15 @@ describe("Issues (board and list)", () => {
     expect(column("Feito").textContent).toContain("2");
     // The route title link goes to the detail.
     expect(wa.getAttribute("href")).toBe(`/org/${ORG_ID}/issues/131`);
-    // An agent with a live run: "working now" with its step; on the card, its one state and the criteria done.
-    const now = screen().getByRole("region", { name: "Agentes trabalhando agora" });
-    expect(now.textContent).toContain("Timeout no agendamento em horários de pico");
-    expect(now.textContent).toContain("Atualizou uma tarefa · #129");
+    // An agent with a live run shows only on its card (its one state and the criteria done), never above the board.
+    expect(screen().queryByRole("region", { name: "Agentes trabalhando agora" })).toBeNull();
     const timeout = screen().getByRole("link", {
       name: "#129 Timeout no agendamento em horários de pico, Trabalhando",
     });
     expect(timeout.querySelector('[title="1 de 2 critérios de aceite"]')?.textContent).toBe("1/2");
   });
 
-  test("ten agents at work over the board: every card shows, and the board still ends its page for the page to scroll down to", async () => {
+  test("ten agents on tasks: the ones at work stay on the board, the stalled one is the line above it, and the board still ends its page", async () => {
     const state = seedState();
     const [ada] = state.agents;
     if (!ada) throw new Error("no agent");
@@ -106,9 +104,13 @@ describe("Issues (board and list)", () => {
       return [...all, ...extra];
     };
     await go("issues", api);
-    const now = screen().getByRole("region", { name: "Agentes trabalhando agora" });
-    expect(now.querySelectorAll(".issues-now__card")).toHaveLength(10);
-    // Nothing comes after the board's split, up to the work area: when the cards above squeeze it, it keeps a window's
+    // Nobody at work gets a card above the board: their own cards on it already say so.
+    expect(screen().queryByRole("region", { name: "Agentes trabalhando agora" })).toBeNull();
+    const line = screen().getByRole("region", { name: "Tarefas paradas" });
+    expect(line.querySelector(".issues-stalled")).toBeTruthy();
+    expect(line.textContent).toContain("Juno");
+    expect(line.textContent).not.toContain("Bento");
+    // Nothing comes after the board's split, up to the work area: when what is above squeezes it, it keeps a window's
     // height and the page scrolls down to it (over-pages.css), with nothing for its columns to run over.
     let el: Element | null = document.querySelector(".issues-boardframe.page-split");
     expect(el).toBeTruthy();
@@ -219,6 +221,15 @@ describe("Issues (board and list)", () => {
     expect(rows).toHaveLength(7);
     expect(rows[0]?.textContent).toContain("#132");
     expect(rows.find((r) => r.textContent?.includes("#126"))?.textContent).toContain("Feito");
+    // The list gives every row the same columns of facts, one for each fact some task has: labels stand under labels
+    // and priorities under priorities, whatever each row has. How much room they take says when they stand (CSS).
+    const list = rows[0]?.closest(".ac-groups") as HTMLElement;
+    const columns = list.style.getPropertyValue("--issue-facts");
+    expect(Number(list.getAttribute("data-fact-columns")) % 80).toBe(0);
+    const kinds = [...list.querySelectorAll(".issue-card__facts > .ac-factline__fact")].map((f) =>
+      f.getAttribute("data-fact"),
+    );
+    for (const kind of new Set(kinds)) if (kind !== "number") expect(columns).toContain(`[${kind}] `);
     expect(state.issuesView?.layout).toBe("list");
   });
 
@@ -368,7 +379,7 @@ describe("Issues (board and list)", () => {
     expect(strip.classList.contains("ac-props")).toBe(true);
     expect(strip.previousElementSibling?.getAttribute("aria-label")).toBe("Título");
     expect([...strip.querySelectorAll("button")].map((b) => b.getAttribute("aria-label")?.replace(/:.*$/, ""))).toEqual(
-      ["Responsável", "Prioridade", "Quem vê", "Prazo"],
+      ["Projeto", "Responsável", "Prioridade", "Quem vê", "Prazo"],
     );
     const add = within(dialog).getByPlaceholderText("Adicionar critério");
     await type(add, "PDF com o logo");
@@ -472,7 +483,7 @@ describe("Issue detail", () => {
     );
   });
 
-  test("at every width the fields are one strip under who made it, in the order Coluna, Responsável, Prioridade, Prazo, Quem vê", async () => {
+  test("at every width the fields are one strip under who made it, in the order Projeto, Coluna, Responsável, Prioridade, Prazo, Quem vê", async () => {
     await go("issues/131");
     // No side column, however wide the window.
     expect(screen().queryByRole("complementary", { name: "Detalhes da tarefa" })).toBeNull();
@@ -483,6 +494,7 @@ describe("Issue detail", () => {
     expect(strip.previousElementSibling?.classList.contains("issue-details__head")).toBe(true);
     expect(strip.nextElementSibling?.querySelector('[role="tablist"]')).toBeTruthy();
     expect([...strip.querySelectorAll(".issue-prop")].map((p) => p.getAttribute("title"))).toEqual([
+      "Projeto",
       "Coluna",
       "Responsável",
       "Prioridade",
@@ -740,8 +752,33 @@ describe("Rotinas", () => {
     expect(monthly.getAttribute("data-paused")).toBe("true");
     expect(within(monthly).getByText("Pausada")).toBeTruthy();
     expect(within(monthly).queryByRole("checkbox")).toBeNull();
-    // The horizon: one lane per scheduled, active routine.
+    // The horizon: one lane per agent with a scheduled, active routine.
     expect(screen().getByRole("region", { name: "Próximas horas" })).toBeTruthy();
+  });
+
+  test("the horizon has one lane per agent, and a lane's label filters the list by its agent", async () => {
+    const api = createFakeApi(seedState());
+    const list = api.routines.list;
+    const soon = new Date(Date.now() + 10 * 60_000).toISOString();
+    api.routines.list = (async (...args: Parameters<typeof list>) =>
+      (await list(...args)).map((r) => ({ ...r, active: true, nextRunAt: soon }))) as typeof list;
+    await go("routines", api);
+    const horizon = screen().getByRole("region", { name: "Próximas horas" });
+    const labels = () => [...horizon.querySelectorAll<HTMLButtonElement>(".routines-horizon__label")];
+    const names = labels().map((b) => b.querySelector("b")?.textContent ?? "");
+    // An agent with several routines has one lane, and no more lanes than the page shows at once.
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.length).toBeLessThanOrEqual(5);
+    expect(new Set(names).size).toBe(names.length);
+    expect(labels()[0]?.getAttribute("aria-pressed")).toBe("false");
+    await click(labels()[0] as HTMLElement);
+    await settle(4);
+    expect(labels()[0]?.getAttribute("aria-pressed")).toBe("true");
+    for (const row of screen().getAllByRole("article")) expect(row.textContent).toContain(names[0] as string);
+    // Again: the filter goes away.
+    await click(labels()[0] as HTMLElement);
+    await settle(4);
+    expect(labels()[0]?.getAttribute("aria-pressed")).toBe("false");
   });
 
   test("pause with the switch, run now, stop, and see runs in the details", async () => {

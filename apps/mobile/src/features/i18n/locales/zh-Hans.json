@@ -293,7 +293,7 @@
   },
   "along": {
     "agent": "一个智能体",
-    "waits": "{{name}} 在等你确认",
+    "waits": "{{name}} · 等你处理",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} 正在工作",
     "more": "+{{count}}"
@@ -356,8 +356,6 @@
     "switchWorking": "工作中",
     "join": "加入频道",
     "sending": "正在发送…",
-    "failed": "未发送 · 重试",
-    "notSent": "消息未发送。",
     "toLatest": "前往最新消息",
     "toLatestNew": "前往最新消息：{{text}}",
     "stopAgent": "停止 {{name}}",
@@ -771,7 +769,7 @@
     "teamSectionPersonal": "你的智能体",
     "managerQuiet": "没有进行中的事项",
     "state": {
-      "waitsYou": "等你确认",
+      "waitsYou": "等你处理",
       "noAi": "未连接 AI",
       "connect": "连接",
       "archived": "已归档",
@@ -881,6 +879,9 @@
       "routine_finished_other": "例行工作已完成",
       "routine_failed_other": "例行工作失败",
       "run_failed_other": "无法完成",
+      "admin_ask_channel_agent": "{{names}} 请你把 {{agent}} 加入 #{{label}}",
+      "admin_ask_create_agents": "{{names}} 请求获得创建智能体的权限",
+      "admin_ask_webhook": "{{names}} 请你为例行任务设置 {{service}} Webhook",
       "routine_paused_other": "例行工作已暂停",
       "routine_stalled_other": "例行工作正在等待电脑",
       "agent_unreached_other": "一项例行工作无法呼叫智能体",
@@ -914,6 +915,7 @@
       "desktop_taken_female_other": "{{names}} 接管了 {{agent}} 的电脑屏幕",
       "plan_lent_other": "{{names}} 把你的 {{plan}} 套餐连接到了 {{agent}}",
       "plan_lent_female_other": "{{names}} 把你的 {{plan}} 套餐连接到了 {{agent}}",
+      "plan_serves_other": "你的 {{plan}} 现在服务整个 workspace",
       "plan_model_dropped_other": "{{model}} 已从 {{plan}} 下架。{{names}} 暂时使用 {{runs}}",
       "computer_disk_full_other": "一台电脑的磁盘快满了",
       "computer_no_chrome_other": "电脑需要 Google Chrome。请在 google.com/chrome 下载",
@@ -1059,6 +1061,9 @@
     "addWorkspaceTeamShort": "加入团队的服务器",
     "addWorkspaceTeamSubShort": "地址或电脑上的二维码",
     "addWorkspaceFoot": "你不会退出任何工作区。",
+    "addAccount": "登录其他账号",
+    "addAccountSub": "在 {{host}} 上，无需退出当前账号",
+    "accountNoWorkspace": "还没有工作区",
     "teamServerLeadShort": "你的团队在浏览器中打开的地址。",
     "teamServerQuestion": "你团队的地址是什么？",
     "account": {
@@ -1076,6 +1081,8 @@
       "name": "名称",
       "namePlaceholder": "你的名字",
       "email": "邮箱",
+      "emailWebLead": "在网站上重新登录，然后在那里更改，不用验证码。",
+      "emailWeb": "在网站上重新登录",
       "inWorkspace": "在此工作区 · {{org}}",
       "handle": "你的 @",
       "timezone": "时区",
@@ -1284,7 +1291,6 @@
     "agentLine_other": "{{count}} 条记忆",
     "uses_other": "已使用 {{count}} 次",
     "confirmed": "已由成员确认",
-    "unconfirmed": "尚未确认",
     "confirm": "确认",
     "confirmedToast": "已确认",
     "details": "技术细节",
@@ -1352,7 +1358,7 @@
       "plain": "完成了一项任务"
     },
     "rowWait": {
-      "approval": "等你确认",
+      "approval": "等你处理",
       "question": "等你回答",
       "mission": "等你审阅"
     },
@@ -1390,12 +1396,12 @@
   },
   "intentAgents": {
     "waitingSection": "等你处理",
-    "waitingLine": "{{title}} · 需要你确认",
+    "waitingLine": "{{title}} · 等你处理",
     "waitingMore_other": "{{title}} · 还有 {{count}} 项等你处理",
-    "waitingLabel": "{{name}}，需要你确认",
+    "waitingLabel": "{{name}}，等你处理",
     "owner": "所有者：{{name}}",
     "ownerYou": "所有者：你",
-    "nowWaiting": "需要你确认：{{title}}",
+    "nowWaiting": "等你处理：{{title}}",
     "did": {
       "title": "他为你做了什么",
       "title_female": "她为你做了什么",
@@ -1413,7 +1419,7 @@
         "image": "图片",
         "file": "文件"
       },
-      "waitingOnYou": "需要你确认",
+      "waitingOnYou": "等你处理",
       "youApproved": "你已批准",
       "youRefused": "你已拒绝",
       "action": {
@@ -1490,9 +1496,9 @@
         "setup": "工作区设置",
         "desktop": "电脑屏幕"
       },
-      "asksYou": "无论哪个级别，合并和发布都会请你审批。",
-      "asksOwner": "无论哪个级别，合并和发布都会请 {{name}} 审批。",
-      "asksAdmins": "无论哪个级别，合并和发布都会请管理员审批。",
+      "asksYou": "合并和发布会请你审批，除非智能体设为“从不询问”。",
+      "asksOwner": "合并和发布会请 {{name}} 审批，除非智能体设为“从不询问”。",
+      "asksAdmins": "合并和发布会请管理员审批，除非智能体设为“从不询问”。",
       "empty": "目前只能对话。"
     }
   },
@@ -1582,13 +1588,7 @@
       "open": "打开",
       "expandHint": "点按展开",
       "stop": "停止",
-      "giveUp": "放弃",
-      "done": "已完成：{{title}}",
-      "failed": "未能完成：{{title}}",
-      "failedNote": "未能完成：{{note}}",
-      "expired": "没有人及时打开：{{title}}",
-      "cancelled": "已取消：{{title}}",
-      "withdrawn": "{{name}} 不再需要这个：{{title}}"
+      "giveUp": "放弃"
     },
     "live": {
       "inControl": "由你控制",
@@ -1897,6 +1897,7 @@
       "access_requestFor": "{{names}} 请求为 {{person}} 使用 {{device}}",
       "waiting": "{{names}} 正在等待 {{device}}",
       "waitingFor": "{{names}} 正在为 {{person}} 等待 {{device}}",
+      "tool_request": "{{names}} 请你在你的 {{device}} 上打开{{tool}}",
       "allowOnce": "允许一次",
       "always": "始终允许 {{name}}",
       "no": "不允许",
@@ -2140,9 +2141,9 @@
     "ofOnline": "{{online}}/{{count}} 台在线",
     "deleteName": "删除 {{name}}",
     "deleteFoot": "你有 7 天时间改变主意。",
-    "deleteAlert": "所有人会立即无法访问。7 天内可以恢复。",
+    "deleteAlert": "所有人立即只能查看。7 天内可以恢复。",
     "deleteAction": "删除",
-    "deleteIntro": "{{name}} 会立即对所有人关闭，并在 7 天后永久删除。",
+    "deleteIntro": "{{name}} 会立即对所有人变为只读，并在 7 天后永久删除。",
     "holdDelete": "长按以删除",
     "deleteFailed": "无法删除工作区，请重试。",
     "access": {
@@ -2153,7 +2154,8 @@
       "tooBig": "图片太大了，请换一张。"
     },
     "machine": {
-      "toolsHow": "点按已开启的工具可将其关闭。重新开启只能在电脑本机上操作。"
+      "toolsHow": "点按已打开的工具即可关闭。要重新打开：在那台电脑上，或由连接它的人在这里打开。",
+      "toolsHowOwner": "点按工具即可打开或关闭。"
     },
     "roles": {
       "onComputer": "角色的顺序和每个角色的图标需在电脑上更改。",
@@ -2433,7 +2435,6 @@
     },
     "formatAuto": "{{name}} 会选最合适的",
     "newWidget": {
-      "titleHint": "标题 · {{name}} 会在测试时建议一个",
       "alerts": "提醒已开",
       "realData": "真实数据",
       "editAsk": "修改需求",

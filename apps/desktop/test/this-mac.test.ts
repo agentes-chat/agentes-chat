@@ -90,6 +90,16 @@ function setup(statuses: Record<string, ControlStatus>, others = false) {
 
 const settle = () => new Promise((r) => setTimeout(r, 10));
 
+test("privacy: the page opens the microphone's list in System Settings; another pane, or an app without it, is refused", async () => {
+  const { deps } = setup({ h1: paired("o1") });
+  const opened: string[] = [];
+  const withPanes = { ...deps, openPrivacy: async (pane: "microphone") => void opened.push(pane) };
+  expect(await answerThisMac(withPanes, { kind: "privacy", pane: "microphone" })).toEqual({});
+  expect(opened).toEqual(["microphone"]);
+  await expect(answerThisMac(withPanes, { kind: "privacy", pane: "disk" as never })).rejects.toThrow("not_here");
+  await expect(answerThisMac(deps, { kind: "privacy", pane: "microphone" })).rejects.toThrow("not_here");
+});
+
 test("status: only the asking server's organizations, and whether agents may work here for it", async () => {
   const { store, deps } = setup({ h1: paired("o1"), h2: unpaired, h3: paired("o3", "online", OTHER) });
   store.start();
@@ -256,7 +266,7 @@ test("the server here's own new home: the same open tools as any pairing, comman
   ]);
 });
 
-test("Preferences' tools: commands read on only when every organization has them, and say who does", () => {
+test("Preferences' tools: commands read on only when every organization has them", () => {
   const home = (name: string, commands: boolean) =>
     ({
       status: { org: { id: name, name } },
@@ -264,15 +274,12 @@ test("Preferences' tools: commands read on only when every organization has them
     }) as unknown as Home;
   expect(toolsHere([home("Acme", true), home("Beta", false)])).toEqual({
     tools: { claude: true, codex: false, commands: false, browser: true },
-    commandsOnlyFor: ["Acme"],
   });
   expect(toolsHere([home("Acme", true), home("Beta", true)])).toMatchObject({
     tools: { commands: true },
-    commandsOnlyFor: [],
   });
   expect(toolsHere([])).toEqual({
     tools: { claude: false, codex: false, commands: false, browser: false },
-    commandsOnlyFor: [],
   });
 });
 

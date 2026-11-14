@@ -1,6 +1,8 @@
 import {
   ApiError,
+  instanceQuery,
   invitationQuery,
+  meQuery,
   type SignInOptions,
   type SignInProvider,
   useApi,
@@ -15,7 +17,7 @@ import {
 } from "@agenteschat/client/lib/errors";
 import { signInFor } from "@agenteschat/client/lib/guards";
 import { type HumanAction, isHumanCheckRefusal, withHumanCheck } from "@agenteschat/client/lib/human-check";
-import { CLOUD_SERVER, serverHost } from "@agenteschat/client/lib/server";
+import { serverHost } from "@agenteschat/client/lib/server";
 import {
   emailTypoFix,
   isEmail,
@@ -28,13 +30,15 @@ import { Button, Icon, Input, Locked } from "@agenteschat/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useAuth } from "@/auth/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { AuthShell } from "@/components/AuthLayout";
+import { HostingSheet } from "@/components/HostingChoice";
 import { prepareBurst } from "@/components/Sky";
-import { rememberSignIn, SocialButtons, useSocialProviders } from "@/components/SocialButtons";
+import { LastUsed, lastSignIn, rememberSignIn, SocialButtons, useSocialProviders } from "@/components/SocialButtons";
+import { announceAccountChange } from "@/lib/accounts";
 import {
   browserSignInUrl,
   challengeOf,
@@ -129,6 +133,7 @@ export function AuthPage({
   email: initialEmail,
   access,
   refused,
+  adding = false,
 }: {
   start: "in" | "up";
   redirect?: string;
@@ -140,6 +145,8 @@ export function AuthPage({
    * words. An unconfirmed password account's comes with its address in `email`, to make a new password from here.
    */
   refused?: string;
+  /** Opened by "Add account" (ADR 0183): someone is signed in and stays so; the page offers the way back to them. */
+  adding?: boolean;
 }) {
   const { t } = useTranslation();
   const api = useApi();
@@ -168,6 +175,11 @@ export function AuthPage({
   const termsUrl = config.data?.termsUrl;
   const privacyUrl = config.data?.privacyUrl;
   const desktop = inDesktopApp();
+  const instance = useQuery(instanceQuery(api));
+  const [hosting, setHosting] = useState(false);
+  const lastId = useId();
+  // The e-mail's Continue carries "Último usado" too, on the first step, as the providers' buttons do.
+  const emailWasLast = step === "email" && lastSignIn() === "email";
   // Where this sign-in leads, in place of the general line, read from the address alone: only what the page before
   // already showed (an invitation's workspace, by its token; the ready email's Connect your AI or Create an agent).
   const goal = signInFor(redirect);
@@ -220,7 +232,7 @@ export function AuthPage({
   // The owner's session ended (it expired, or this window never had one) on the server the app runs here: the app
   // signs them in again at once, as Continue on this Mac does. Not after Sign out by hand, nor when the page came for
   // something else (an invitation, a provider's refusal, an address to sign in with): the screen waits then.
-  const ownerAgain = local && start === "in" && !refused && !goal && !initialEmail;
+  const ownerAgain = local && start === "in" && !refused && !goal && !initialEmail && !adding;
   const ownerTried = useRef(false);
   useEffect(() => {
     if (!ownerAgain || ownerTried.current || storage.get(STORAGE_KEYS.signedOut) === "1") return;
@@ -229,6 +241,9 @@ export function AuthPage({
     // Refused (too soon after another, the server not up yet): the screen stays, its button one click away.
     void thisMac.signIn().catch(() => setOwnerPending(false));
   }, [ownerAgain]);
+
+  // "Add account": whoever is signed in stays so, one click back.
+  const stays = useQuery({ ...meQuery(api), enabled: adding }).data ?? null;
 
   const go = (next: Step) => {
     setError(null);
@@ -276,6 +291,8 @@ export function AuthPage({
   // OAuth callback that waited for this sign-in) is the server's: a full load.
   const enter = async (to: string) => {
     prepareBurst(header.current ?? document.body)();
+    // An account added beside another (ADR 0183): the browser's other tabs were the other one's.
+    if (adding) announceAccountChange();
     qc.clear();
     if (to.startsWith("/api/")) return window.location.assign(to);
     await navigate({ href: to });
@@ -284,7 +301,12 @@ export function AuthPage({
   const signIn = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) => auth.signIn({ email: email.trim(), password }, token));
+    // The e-mail's lookup passed the bot check: its pass stands for this step's (ADR 0075), so nobody is asked twice.
+    const result = await withHumanCheck(
+      human.check,
+      (token) => auth.signIn({ email: email.trim(), password }, token),
+      options?.pass,
+    );
     setPending(false);
     if (!result.ok) {
       setWrong(result.status === 401);
@@ -299,8 +321,11 @@ export function AuthPage({
   const signUp = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) =>
-      auth.signUp({ name: name.trim(), email: email.trim(), password, ...(access ? { access } : {}) }, token),
+    const result = await withHumanCheck(
+      human.check,
+      (token) =>
+        auth.signUp({ name: name.trim(), email: email.trim(), password, ...(access ? { access } : {}) }, token),
+      options?.pass,
     );
     setPending(false);
     if (!result.ok) {
@@ -320,8 +345,14 @@ export function AuthPage({
   const sendReset = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) =>
-      auth.requestPasswordReset({ email: email.trim(), redirectTo: `${window.location.origin}/reset-password` }, token),
+    const result = await withHumanCheck(
+      human.check,
+      (token) =>
+        auth.requestPasswordReset(
+          { email: email.trim(), redirectTo: `${window.location.origin}/reset-password` },
+          token,
+        ),
+      options?.pass,
     );
     setPending(false);
     if (!result.ok) {
@@ -451,27 +482,38 @@ export function AuthPage({
     </span>
   );
 
-  // In the desktop app, which server this signs in to, on every step, with Change (the app's window of servers): the
-  // app keeps several, and the same screen on another one looks the same (ADR 0158).
+  // Which server this signs in to, on every step, with Change: the desktop app's window of servers (it keeps several,
+  // and the same screen on another one looks the same, ADR 0158), or on the web "Onde fica o seu workspace?". Said
+  // once the server said whether it is the Cloud (and, in the app, whether it is the app's own).
   const here = window.location.origin;
-  const serverLine = desktopPicksServer() && placeKnown && (
-    <span className="auth__who auth__server">
-      <Icon name={local ? "computer" : here === CLOUD_SERVER ? "cloud" : "globe"} size={14} />
-      <span className="auth__who-email">
+  const cloudHere = instance.data?.cloud;
+  const changes = !desktop || desktopPicksServer();
+  const serverLine = cloudHere !== undefined && placeKnown && (
+    <p className="auth__place">
+      <Icon name={local ? "computer" : cloudHere ? "cloud" : "globe"} size={14} />
+      <span className="auth__place-where">
         {local ? (
           <Trans i18nKey="auth.server.intoHere" components={{ b: <b /> }} />
+        ) : cloudHere ? (
+          <Trans i18nKey="auth.server.intoCloud" components={{ b: <b /> }} />
         ) : (
-          <Trans
-            i18nKey="auth.server.into"
-            values={{ server: here === CLOUD_SERVER ? "agentes.chat" : serverHost(here) }}
-            components={{ b: <b /> }}
-          />
+          <Trans i18nKey="auth.server.into" values={{ server: serverHost(here) }} components={{ b: <b /> }} />
         )}
       </span>
-      <button type="button" className="auth__who-change" onClick={() => void thisMac.otherServer().catch(() => {})}>
-        {t("auth.flow.change")}
-      </button>
-    </span>
+      {changes && (
+        <>
+          <span aria-hidden="true">·</span>
+          <button
+            type="button"
+            className="ac-link auth__place-change"
+            aria-label={t("auth.server.change")}
+            onClick={() => (desktop ? void thisMac.otherServer().catch(() => {}) : setHosting(true))}
+          >
+            {t("auth.flow.change")}
+          </button>
+        </>
+      )}
+    </p>
   );
 
   const passwordInput = (fresh: boolean) => (
@@ -526,7 +568,6 @@ export function AuthPage({
   return (
     <AuthShell>
       <form className="auth__form" onSubmit={submit} noValidate>
-        {serverLine}
         <header className="auth__ask" ref={header} data-burst>
           <AgentAvatar
             name="agentes.chat"
@@ -639,17 +680,21 @@ export function AuthPage({
               )}
 
               {submitLabel[step] && (
-                <Button
-                  type="submit"
-                  variant={local && step === "email" ? "default" : "primary"}
-                  size="lg"
-                  block
-                  kbd={["↵"]}
-                  loading={pending}
-                  disabled={!ready}
-                >
-                  {submitLabel[step]}
-                </Button>
+                <div className="auth-last-host">
+                  <Button
+                    type="submit"
+                    variant={local && step === "email" ? "default" : "primary"}
+                    size="lg"
+                    block
+                    kbd={["↵"]}
+                    loading={pending}
+                    disabled={!ready}
+                    aria-describedby={emailWasLast ? lastId : undefined}
+                  >
+                    {submitLabel[step]}
+                  </Button>
+                  {emailWasLast && <LastUsed id={lastId} />}
+                </div>
               )}
 
               {step === "email" && offeredProviders.length > 0 && (
@@ -771,7 +816,16 @@ export function AuthPage({
             </Locked>
           </div>
         )}
+        {serverLine}
+        {stays && (
+          <button type="button" className="auth__quiet" onClick={() => void navigate({ to: "/" })}>
+            {t("auth.flow.backToAccount", { name: stays.user.name })}
+          </button>
+        )}
       </form>
+      {!desktop && cloudHere !== undefined && (
+        <HostingSheet open={hosting} onOpenChange={setHosting} here={here} cloud={cloudHere} />
+      )}
     </AuthShell>
   );
 }

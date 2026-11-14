@@ -100,6 +100,11 @@ export interface ComputerDevice {
   memoryGb: number | null;
   ownerUserId: string | null;
   belongsToWorkspace: boolean;
+  /**
+   * Spill-over: while an agent's own computer is full, the replies people wait on may think here. `own`: replies to
+   * whoever connected it; `others`: replies to anyone else (`machines.spill_*`).
+   */
+  spill: { own: boolean; others: boolean };
   /** Each agent works as its own OS user there (a server install). */
   systemMode: boolean;
   audience: DeviceAudience;
@@ -423,6 +428,7 @@ export async function listDevices(
       memoryGb: m.size?.memoryGb ?? null,
       ownerUserId: m.pairedByUserId,
       belongsToWorkspace: m.belongsToWorkspace,
+      spill: { own: m.spillOwn, others: m.spillOthers },
       systemMode: m.executors?.mode === "system",
       audience: rule.audience,
       status: computerStatus(m, busy.get(m.id) ?? 0, now),
@@ -534,11 +540,13 @@ export interface ComputerDeviceInput {
   name?: string;
   audience?: DeviceAudience;
   belongsToWorkspace?: boolean;
+  spill?: { own?: boolean; others?: boolean };
 }
 
 /**
  * `PATCH …/devices/computers/{machineId}`: its owner changes anything; an admin renames it, marks it the workspace's,
- * and narrows its rule (widens it only on the workspace's own devices). Never the workspace's computer.
+ * and narrows its rule (widens it only on the workspace's own devices). Never the workspace's computer. Spill-over is
+ * its owner's to turn on (other people's agents would think on their plan's computer); an admin only turns it off.
  */
 export async function updateComputerDevice(
   deps: { db: Database; pubsub?: PubSub },
@@ -569,6 +577,15 @@ export async function updateComputerDevice(
     Object.assign(set, { audienceMode: next.mode, audienceUserIds: next.userIds, audienceRoleIds: next.roleIds });
   }
   if (input.belongsToWorkspace !== undefined) set.belongsToWorkspace = input.belongsToWorkspace;
+  for (const [key, column] of [
+    ["own", "spillOwn"],
+    ["others", "spillOthers"],
+  ] as const) {
+    const on = input.spill?.[key];
+    if (on === undefined) continue;
+    if (on && !owner) throw new ForbiddenError("Only the device's owner can turn this on", "device.spill_owner_only");
+    set[column] = on;
+  }
   if (Object.keys(set).length > 0) {
     await deps.db
       .update(machines)

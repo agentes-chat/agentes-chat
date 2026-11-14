@@ -15,7 +15,8 @@ import {
   type TurnContext,
 } from "@agenteschat/adapters/machine-protocol";
 import { realFoldersFor } from "./access";
-import { agentAccountHome, grantOf, lentAccounts } from "./accounts";
+import { agentAccountHome, agentAccountsDir, grantOf, lentAccounts } from "./accounts";
+import { dropAgySignIns } from "./agy-home";
 import { BrainManager, turnContext } from "./brain";
 import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager, type BrowserManagerOptions, launchChrome } from "./browser";
@@ -112,6 +113,7 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
         paused,
         limits,
         desktopViewers: viewers,
+        ...(f.browserKept === true ? { browserKept: true } : {}),
         privateNetwork: f.privateNetwork === true,
         ...account,
         ...accounts,
@@ -149,7 +151,9 @@ export class WorkerLink {
    * Root needs room for a brain turn: with `peek`, what this agent would close (`BrainManager.idleCandidate`),
    * else whether an idle CLI of this agent's closed.
    */
-  onReclaim: (ask: { spare?: string; peek: boolean }) => Promise<BrainReclaimed> = async () => ({ closed: false });
+  onReclaim: (ask: { spare?: string; peek: boolean; browser: boolean }) => Promise<BrainReclaimed> = async () => ({
+    closed: false,
+  });
   /** A delegated CLI's bridge, or its end. */
   onBridge: (bridge: DelegatedBridge) => void = () => {};
   onTurnPrepare: (ask: { agent: AgentScope; cwd?: string; text: boolean }) => Promise<TurnContext> = async () => {
@@ -267,7 +271,11 @@ export class WorkerLink {
       case "brain.reclaim":
         if (typeof f.reclaimId === "string") {
           const reclaimId = f.reclaimId.slice(0, 64);
-          const ask = { ...(typeof f.spare === "string" ? { spare: f.spare } : {}), peek: f.peek === true };
+          const ask = {
+            ...(typeof f.spare === "string" ? { spare: f.spare } : {}),
+            peek: f.peek === true,
+            browser: f.browser === true,
+          };
           void this.onReclaim(ask)
             .catch(() => ({ closed: false }))
             .then((out) =>
@@ -549,6 +557,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     systemdBooted() ? (file, args, options) => spawnGated(kind, file, args, options, link.enterScope) : undefined;
   const cli = gated("cli");
   const chrome = gated("browser");
+  dropAgySignIns(agentAccountsDir(home, "antigravity"));
   // The account folders root lends to this agent's user for its turns and tasks (`AccountManager.lendTo`), and its
   // own folder for an account root keeps, whose credential comes with each turn and task (`AccountManager.grant`).
   // What the turns say about the plan's usage goes to root, which keeps the accounts.
@@ -601,7 +610,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
   // Claude Code's own tools for a CLI root runs on a shared sign-in: nothing here until root opens a bridge.
   const delegatedRuns = new Map<string, McpTaskInfo>();
   const delegated = new DelegatedTools({
-    secrets: () => agentSecrets(secretsDir, { id: o.agentId, handle: "agent" }),
+    secrets: (agent) => agentSecrets(secretsDir, agent ?? { id: o.agentId, handle: "agent" }),
     onNotice: (notice) => link.toolNotice(notice),
     onDenied: (session, tool, input) => tasks.hostedDenial(session, tool, input),
     ...(cli ? { spawn: cli } : {}),
@@ -691,6 +700,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
       status: () => ({ running: desktop !== null, streams: state.desktopViewers ?? 0 }),
     },
     onChange: () => queueMicrotask(lease),
+    kept: () => state.browserKept === true,
     ...(chrome ? { startChrome: (exe, args, profile, env) => launchChrome(exe, args, profile, env, chrome) } : {}),
     // The agents share their memory (`agentLimits`): the limit a page dies at is all of theirs.
     memoryEvents: {
@@ -705,7 +715,12 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
   const counted = setInterval(() => link.traffic(browser.takeTraffic()), LOAD_SAMPLE_MS);
   counted.unref?.();
   void browser.closeAll();
-  link.onReclaim = async ({ spare, peek }) => {
+  link.onReclaim = async ({ spare, peek, browser: ofBrowser }) => {
+    if (ofBrowser) {
+      if (!peek) return { closed: await browser.reclaimIdle() };
+      const since = browser.reclaimCandidate();
+      return { closed: false, ...(since !== null ? { browserIdle: since } : {}) };
+    }
     if (!peek) return { closed: await brains.reclaimIdle(spare) };
     const idle = brains.idleCandidate(spare);
     return { closed: false, ...(idle ? { idle } : {}), ...(spare && brains.warm(spare) ? { warm: true } : {}) };
