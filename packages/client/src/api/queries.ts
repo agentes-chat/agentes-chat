@@ -5815,7 +5815,8 @@ export const useIssuesView = (orgId: string) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.issuesView(orgId),
-    queryFn: () => api.orgs.issuesView(orgId),
+    // Whole even from a server of before a part of it.
+    queryFn: async () => withIssuesView(await api.orgs.issuesView(orgId), {}),
     staleTime: 60_000,
   });
 };

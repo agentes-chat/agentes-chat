@@ -325,9 +325,12 @@ html:not([data-pointer]) .issues-layout:focus-visible {
 }
 /* A stage holds its columns side by side; it grows with how many it has. */
 .issues-stage {
+  /* `--n` open columns and `--f` folded ones (strips of `--fw`). */
   --n: 1;
+  --f: 0;
+  --fw: 44px;
   flex: var(--n) 1 0;
-  min-width: calc(var(--n) * var(--cw) + (var(--n) - 1) * 12px);
+  min-width: calc(var(--n) * var(--cw) + var(--f) * var(--fw) + (var(--n) + var(--f) - 1) * 12px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -370,6 +373,53 @@ html:not([data-pointer]) .issues-layout:focus-visible {
   transition:
     background 0.15s,
     box-shadow 0.15s;
+}
+/* Folded: a strip with its mark, count and name down it, the whole strip the button that opens it. A card dropped on
+   it goes in; one moved in with the keyboard opens the column around itself. */
+.issues-col.is-folded:not(:has(.issues-col__slot)) {
+  flex: 0 0 var(--fw);
+  min-width: var(--fw);
+  padding: 0;
+}
+.issues-col.is-folded > .issues-col__cards {
+  min-height: 0;
+}
+.issues-col__unfold {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 180px;
+  padding: 14px 0;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 650;
+  color: var(--ink2);
+  cursor: pointer;
+}
+.issues-col__unfold:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.issues-col__unfold > .tabular {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--faint);
+}
+.issues-col__vname {
+  writing-mode: vertical-rl;
+  max-height: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+html:not([data-pointer]) .issues-col__unfold:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset);
 }
 /* Where the moving card would land lights up. */
 .issues-col.is-over {
@@ -604,8 +654,6 @@ html:not([data-pointer]) .issue-card:focus-visible {
   margin-top: var(--space-4);
 }
 .issue-list {
-  /* Its rows ask how wide it is, to stand their facts in columns only with room for them. */
-  container: issue-list / inline-size;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -632,9 +680,9 @@ html:not([data-pointer]) .issue-card:focus-visible {
 .issue-list__row {
   position: relative;
   display: grid;
-  /* The facts take what they need up to 40% of the row and wrap inside it: the title keeps the rest. Standing in the
-     list's columns (below), they take the columns' whole width. */
-  grid-template-columns: var(--row-columns, 52px minmax(0, 1fr) fit-content(40%) minmax(0, 200px));
+  /* On its own (the copy a drag carries): the facts take what they need up to 40% of the row and wrap inside it, the
+     title keeps the rest. In the list it is a row of the table below. */
+  grid-template-columns: 52px minmax(0, 1fr) fit-content(40%) minmax(0, 200px);
   grid-template-areas: "num title facts who";
   /* On one line of words: a part that wraps (a long title, a stopped run's reason) grows down from it. */
   align-items: baseline;
@@ -671,141 +719,6 @@ html:not([data-pointer]) .issue-list__row:focus-visible {
   grid-area: facts;
   justify-content: flex-end;
 }
-/* Wide, the facts stand in columns the whole list shares (`--issue-facts`, one for each fact some task shown has):
-   labels under labels, priorities under priorities, down every group. A row leaves empty the column of a fact it
-   doesn't have; a name longer than its column ends in "…". Only where the list has room for the columns beside a
-   title: what they take, counted in steps of 80 (`data-fact-columns`), plus 500 for the number, a title's least and
-   who has it. Narrower, a row packs its facts against its end as before. */
-.issue-list__row > .issue-card__facts {
-  display: var(--facts-display, flex);
-  grid-template-columns: var(--issue-facts, none);
-  grid-auto-flow: column;
-  grid-auto-columns: max-content;
-}
-.issue-list__row > .issue-card__facts > .ac-factline__fact {
-  grid-row: 1;
-  white-space: var(--fact-space, normal);
-}
-.issue-list__row > .issue-card__facts > :is([data-fact="project"], [data-fact="label"], [data-fact="github"]) {
-  justify-self: start;
-  overflow: var(--fact-clip, visible);
-  text-overflow: ellipsis;
-}
-/* A name with its mark, as one line of words that can end in "…": the mark sits in the line, on its middle. */
-.issue-list__row > .issue-card__facts > :is([data-fact="project"], [data-fact="github"]) {
-  display: var(--fact-name, inline-flex);
-}
-.issue-list__row > .issue-card__facts > :is([data-fact="project"], [data-fact="github"]) > :is(svg, .ac-colordot) {
-  margin-inline-end: var(--fact-name-gap, 0);
-  vertical-align: -2px;
-}
-.issue-list__row > .issue-card__facts > [data-fact="project"] {
-  grid-column: project;
-}
-.issue-list__row > .issue-card__facts > [data-fact="label"] {
-  grid-column: label;
-}
-.issue-list__row > .issue-card__facts > [data-fact="labels"] {
-  grid-column: labels;
-}
-.issue-list__row > .issue-card__facts > [data-fact="priority"] {
-  grid-column: priority;
-}
-.issue-list__row > .issue-card__facts > [data-fact="due"] {
-  grid-column: due;
-}
-.issue-list__row > .issue-card__facts > [data-fact="criteria"] {
-  grid-column: criteria;
-}
-.issue-list__row > .issue-card__facts > [data-fact="pr"] {
-  grid-column: pr;
-}
-.issue-list__row > .issue-card__facts > [data-fact="github"] {
-  grid-column: github;
-}
-.issue-list__row > .issue-card__facts > [data-fact="talk"] {
-  grid-column: talk;
-}
-@container issue-list (min-width: 580px) {
-  [data-fact-columns="80"] .issue-list__row {
-    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
-    --facts-display: grid;
-    --fact-space: nowrap;
-    --fact-clip: hidden;
-    --fact-name: block;
-    --fact-name-gap: var(--space-1);
-  }
-}
-@container issue-list (min-width: 660px) {
-  [data-fact-columns="160"] .issue-list__row {
-    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
-    --facts-display: grid;
-    --fact-space: nowrap;
-    --fact-clip: hidden;
-    --fact-name: block;
-    --fact-name-gap: var(--space-1);
-  }
-}
-@container issue-list (min-width: 740px) {
-  [data-fact-columns="240"] .issue-list__row {
-    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
-    --facts-display: grid;
-    --fact-space: nowrap;
-    --fact-clip: hidden;
-    --fact-name: block;
-    --fact-name-gap: var(--space-1);
-  }
-}
-@container issue-list (min-width: 820px) {
-  [data-fact-columns="320"] .issue-list__row {
-    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
-    --facts-display: grid;
-    --fact-space: nowrap;
-    --fact-clip: hidden;
-    --fact-name: block;
-    --fact-name-gap: var(--space-1);
-  }
-}
-@container issue-list (min-width: 900px) {
-  [data-fact-columns="400"] .issue-list__row {
-    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
-    --facts-display: grid;
-    --fact-space: nowrap;
-    --fact-clip: hidden;
-    --fact-name: block;
-    --fact-name-gap: var(--space-1);
-  }
-}
-@container issue-list (min-width: 980px) {
-  [data-fact-columns="480"] .issue-list__row {
-    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
-    --facts-display: grid;
-    --fact-space: nowrap;
-    --fact-clip: hidden;
-    --fact-name: block;
-    --fact-name-gap: var(--space-1);
-  }
-}
-@container issue-list (min-width: 1060px) {
-  [data-fact-columns="560"] .issue-list__row {
-    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
-    --facts-display: grid;
-    --fact-space: nowrap;
-    --fact-clip: hidden;
-    --fact-name: block;
-    --fact-name-gap: var(--space-1);
-  }
-}
-@container issue-list (min-width: 1140px) {
-  [data-fact-columns="640"] .issue-list__row {
-    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
-    --facts-display: grid;
-    --fact-space: nowrap;
-    --fact-clip: hidden;
-    --fact-name: block;
-    --fact-name-gap: var(--space-1);
-  }
-}
 /* Wide, the number has its own column. */
 .issue-list__row > .issue-card__facts > :first-child {
   display: none;
@@ -820,6 +733,223 @@ html:not([data-pointer]) .issue-list__row:focus-visible {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+/*
+ * The list as a table, wider than a phone: one grid for the whole list, which every group, list and row hands down
+ * (subgrid), so a fact stands in the same column in every row of every group. A column is as wide as what it holds
+ * (names up to a width, then "…") and takes no room when no row has it; the title keeps the rest, on two lines at
+ * most. With less room than the columns and a title's least need, the table scrolls sideways.
+ */
+@media (min-width: 721px) {
+  .issue-table {
+    display: grid;
+    grid-template-columns:
+      [num] minmax(52px, auto) [title] minmax(200px, 1fr) [project] auto [label] auto [labels] auto [priority] auto
+      [due] auto [criteria] auto [pr] auto [github] auto [talk] auto [who] auto [end];
+    /* The groups' 24 between rows only: the columns stand apart by their cells' own room, so one no row has takes
+       none. */
+    column-gap: 0;
+    overflow-x: auto;
+    /* As the board: the scroller runs out to the work area's edges, its first column on the page's line, so what
+       slides goes under those edges (and the lists' shadows have room inside it). */
+    margin: -2px calc(-1 * var(--page-x));
+    padding: 2px var(--page-x);
+    scroll-padding-inline: var(--page-x);
+  }
+  .issue-table > *,
+  .issue-table :is(.issues-group, .issues-group__col, .issue-list) > *,
+  .issue-table .issue-list__row {
+    grid-column: 1 / -1;
+  }
+  /* A row is a task's (`data-slot`): where a card would land and what an empty group says are plain lines. */
+  .issue-table
+  :is(
+    .issue-table__head,
+    .issues-group,
+    .issues-group__col,
+    .issue-list,
+    .issue-list > li[data-slot],
+    .issue-list__row
+  ) {
+    display: grid;
+    grid-template-columns: subgrid;
+  }
+  .issue-table .issue-list > li[data-slot][hidden] {
+    display: none;
+  }
+  /* The column names, on the rows' own columns: the list's hairline and the row's side room stand at its ends too. */
+  .issue-table__head {
+    align-items: baseline;
+    margin-bottom: -12px;
+    padding: 0 14px;
+    font-size: 12px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .issue-table__head > [data-column] {
+    margin-inline-start: 16px;
+  }
+  .issue-table__head > [data-column="title"] {
+    grid-column: title;
+    margin-inline-start: 0;
+  }
+  .issue-table__head > [data-column="project"] {
+    grid-column: project;
+  }
+  .issue-table__head > [data-column="label"] {
+    grid-column: label / priority;
+  }
+  .issue-table__head > [data-column="priority"] {
+    grid-column: priority;
+  }
+  .issue-table__head > [data-column="due"] {
+    grid-column: due;
+  }
+  .issue-table__head > [data-column="criteria"] {
+    grid-column: criteria;
+  }
+  .issue-table__head > [data-column="github"] {
+    grid-column: pr / talk;
+  }
+  .issue-table__head > [data-column="who"] {
+    grid-column: who;
+  }
+  /* No named areas here: a cell's column is the table's line of its name. */
+  .issue-table .issue-list__row {
+    grid-template-areas: none;
+    gap: 0;
+  }
+  .issue-table .issue-list__num {
+    grid-area: auto;
+    grid-column: num;
+    padding-inline-end: 8px;
+    white-space: nowrap;
+  }
+  .issue-table .issue-list__title {
+    grid-area: auto;
+    grid-column: title;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  /* The facts are the row's own cells. */
+  .issue-table .issue-list__row > .issue-card__facts {
+    display: contents;
+  }
+  .issue-table .issue-card__facts > .ac-factline__fact {
+    grid-row: 1;
+    justify-self: start;
+    margin-inline-start: 16px;
+    /* Its words' own width, on one line: its column is never narrower than it (the table scrolls instead). */
+    width: max-content;
+    max-width: none;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .issue-table .issue-card__facts > :is([data-fact="project"], [data-fact="label"], [data-fact="github"]) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* A name with its mark, as one line of words that can end in "…": the mark sits in the line, on its middle. */
+  .issue-table .issue-card__facts > :is([data-fact="project"], [data-fact="github"]) {
+    display: block;
+  }
+  .issue-table .issue-card__facts > :is([data-fact="project"], [data-fact="github"]) > :is(svg, .ac-colordot) {
+    margin-inline-end: var(--space-1);
+    vertical-align: -2px;
+  }
+  .issue-table .issue-card__facts > [data-fact="project"] {
+    grid-column: project;
+    max-width: 140px;
+  }
+  .issue-table .issue-card__facts > [data-fact="label"] {
+    grid-column: label;
+    max-width: 120px;
+  }
+  /* "+2" belongs to the label before it. */
+  .issue-table .issue-card__facts > [data-fact="labels"] {
+    grid-column: labels;
+    margin-inline-start: 6px;
+  }
+  .issue-table .issue-card__facts > [data-fact="priority"] {
+    grid-column: priority;
+  }
+  .issue-table .issue-card__facts > [data-fact="due"] {
+    grid-column: due;
+  }
+  .issue-table .issue-card__facts > [data-fact="criteria"] {
+    grid-column: criteria;
+  }
+  .issue-table .issue-card__facts > [data-fact="pr"] {
+    grid-column: pr;
+  }
+  .issue-table .issue-card__facts > [data-fact="github"] {
+    grid-column: github;
+    max-width: 168px;
+  }
+  .issue-table .issue-card__facts > [data-fact="talk"] {
+    grid-column: talk;
+  }
+  .issue-table .issue-list__row > .issue-card__who {
+    grid-area: auto;
+    grid-column: who;
+    grid-row: 1;
+    margin-inline-start: 16px;
+    width: max-content;
+    max-width: 220px;
+  }
+  /* The name on one line, ending in "…"; the state under or after it, on two lines at most. */
+  .issue-table .issue-card__who > .ac-who {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .issue-table .issue-card__who > .ac-who > b {
+    white-space: nowrap;
+  }
+  .issue-table .issue-card__who > .issue-card__state {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .issue-table .issue-card__who > .ac-who + .issue-card__state {
+    margin-inline-start: 0;
+  }
+}
+/* A column's name that orders the list: quiet words, its arrow only while that order is on. */
+.issue-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.issue-table__sort:hover,
+.issue-table__sort[aria-pressed="true"] {
+  color: var(--ink);
+}
+.issue-table__sort > .ac-icon {
+  visibility: hidden;
+}
+.issue-table__sort[aria-pressed="true"] > .ac-icon {
+  visibility: visible;
+}
+html:not([data-pointer]) .issue-table__sort:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+/* A folded group: its name and count, no rows; still where a card can be dropped (its `[data-col]`). */
+.issues-group__col > .issue-list.issue-list--folded {
+  display: none;
 }
 /* An empty group while a card moves: what a drop there does. */
 .issue-list__drop {
@@ -1474,6 +1604,9 @@ html:not([data-pointer]) .issue-ask__other:focus-visible {
   }
   .issues-col {
     scroll-snap-align: start;
+  }
+  .issue-table__head {
+    display: none;
   }
   /* Stacked as a card: the title, its facts with the number among them, who has it. */
   .issue-list__row {

@@ -7013,15 +7013,26 @@ export interface SidebarView {
 export interface IssuesView {
   layout: "board" | "list";
   group: "stage" | "assignee" | "priority";
-  /** `manual`: the board's own order (what people drag); by priority (high first) or by due date (soonest first). */
-  sort: "manual" | "priority" | "due";
+  /**
+   * `manual`: the board's own order (what people drag); by priority (high first), by due date (soonest first) or by
+   * the last change (newest first).
+   */
+  sort: "manual" | "priority" | "due" | "updated";
   /** What the cards show besides their number and title. */
   fields: Record<IssueCardField, boolean>;
   /** Only tasks with one of these assignees: `agent:<id>`, `person:<id>` or `none` (empty: every task). */
   assignees: string[];
   /** Only tasks with one of these priorities (empty: every task). */
   priorities: IssuePriority[];
+  /** Only tasks with one of these labels (empty: every task). */
+  labels: string[];
+  /** Which finished tasks show: every one, the ones changed in the last `DONE_RECENT_DAYS` days, or none. */
+  done: "all" | "recent" | "hidden";
   showCanceled: boolean;
+  /** Groups with no task on screen take no room (they come back while a card moves, to drop it there). */
+  hideEmpty: boolean;
+  /** The groups folded to their name and count: column ids, assignee keys or priorities. */
+  collapsed: string[];
 }
 export type IssueCardField = "project" | "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
 
