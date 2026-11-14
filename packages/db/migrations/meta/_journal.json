@@ -1891,6 +1891,13 @@
       "when": 1794756700000,
       "tag": "0273_push_apns",
       "breakpoints": true
+    },
+    {
+      "idx": 272,
+      "version": "7",
+      "when": 1794757000000,
+      "tag": "0274_channel_dashboard",
+      "breakpoints": true
     }
   ]
 }

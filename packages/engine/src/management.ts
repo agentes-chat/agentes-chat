@@ -17,6 +17,8 @@ import {
 } from "./channels";
 import { proposalsWaitingFor } from "./context/proposals";
 import { invalidateDefaults, modelInfoFor } from "./credentials";
+import { requireDashboard } from "./dashboards/access";
+import { DASHBOARD_ERRORS } from "./dashboards/types";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishChannelsChanged } from "./events";
 import { agentBudgetState } from "./gateway";
@@ -528,16 +530,23 @@ export async function setAgentChannels(
 // ── Channels ─────────────────────────────────────────────────────────────────
 
 /**
- * Renames a channel or changes its topic or who may join (creator or admin). `audienceRoleIds` limits a private
- * channel to departments or roles (ADR 0125; empty: invite only); dropping a role takes out the people who were
- * there through it alone.
+ * Renames a channel or changes its topic, who may join or its dashboard (creator or admin). `audienceRoleIds` limits a
+ * private channel to departments or roles (ADR 0125; empty: invite only); dropping a role takes out the people who
+ * were there through it alone. `dashboardId` puts a board of the workspace that the actor sees beside the
+ * conversation for every member (ADR 0135 §21), never a home board; null takes it away.
  */
 export async function updateChannel(
   db: Database,
   actorId: string,
   orgId: string,
   channelId: string,
-  input: { name?: string; topic?: string; visibility?: "public" | "private"; audienceRoleIds?: string[] },
+  input: {
+    name?: string;
+    topic?: string;
+    visibility?: "public" | "private";
+    audienceRoleIds?: string[];
+    dashboardId?: string | null;
+  },
   options: { pubsub?: PubSub } = {},
 ) {
   const membership = await requireActiveMembership(db, actorId, orgId);
@@ -555,6 +564,12 @@ export async function updateChannel(
   if (channel.name === "general" && name !== undefined && name !== "general")
     throw new ValidationError("#general can't be renamed");
   if (channel.kind === "dm") throw new ValidationError("A direct conversation keeps its participants");
+  if (input.dashboardId) {
+    // Only a board the manager sees (`dashboard.not_found` otherwise, another workspace's too): linking one never
+    // tells them anything about a board hidden from them.
+    const { board } = await requireDashboard(db, actorId, orgId, input.dashboardId, "see");
+    if (board.kind === "home") throw new ValidationError("A home board stays on Home", DASHBOARD_ERRORS.homeFixed);
+  }
   const accessChanges = input.visibility !== undefined || input.audienceRoleIds !== undefined;
   const visibility = input.visibility ?? channel.visibility;
   const asked =
@@ -584,6 +599,7 @@ export async function updateChannel(
         .set({
           ...(name !== undefined ? { name } : {}),
           ...(input.topic !== undefined ? { topic: input.topic } : {}),
+          ...(input.dashboardId !== undefined ? { dashboardId: input.dashboardId } : {}),
           ...access,
         })
         .where(eq(channels.id, channelId))

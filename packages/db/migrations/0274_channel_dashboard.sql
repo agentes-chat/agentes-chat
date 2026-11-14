@@ -1,0 +1,2 @@
+ALTER TABLE "channels" ADD COLUMN "dashboard_id" uuid;--> statement-breakpoint
+ALTER TABLE "channels" ADD CONSTRAINT "channels_dashboard_id_dashboards_id_fk" FOREIGN KEY ("dashboard_id") REFERENCES "public"."dashboards"("id") ON DELETE set null ON UPDATE no action;

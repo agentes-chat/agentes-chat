@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { agents } from "./agents";
 import { users } from "./auth";
+import { dashboards } from "./dashboards";
 import { organizationMembers, organizations, orgRoles } from "./tenancy";
 
 export const channelVisibilityEnum = pgEnum("channel_visibility", ["public", "private"]);
@@ -82,6 +83,11 @@ export const channels = pgTable(
     categoryId: uuid().references(() => channelCategories.id, { onDelete: "set null" }),
     /** Order inside its category (or among the channels with none), from 0. */
     position: integer().notNull().default(0),
+    /**
+     * The dashboard beside the conversation, the same for every member (ADR 0135 §21); null: none. Set by whoever
+     * manages the channel, to a board of the workspace they see; each member sees it only if the board shows to them.
+     */
+    dashboardId: uuid().references(() => dashboards.id, { onDelete: "set null" }),
   },
   (t) => [unique().on(t.orgId, t.name), unique().on(t.orgId, t.id), unique().on(t.orgId, t.dmKey)],
 );
