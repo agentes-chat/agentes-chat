@@ -5950,9 +5950,12 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 .ac-toast {
   --toast-button: var(--control-h-sm);
   --toast-line-pad: calc((var(--toast-button) - 20px) / 2);
+  --toast-pad: var(--space-3);
   align-items: flex-start;
   gap: var(--icon-gap);
-  padding: 12px;
+  padding: var(--toast-pad);
+  /* Concentric: its buttons' corner plus the room around them. */
+  border-radius: calc(var(--control-r-sm) + var(--toast-pad));
 }
 /* The words and their actions in an `.ac-actline`: actions that don't fit beside the words go under them, from their
    edge. The × stays beside the first line. */
@@ -5962,9 +5965,13 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 .ac-toast__close {
   flex: none;
 }
-/* The close's × stands as far from the right edge as the tone's icon from the left: it reaches out by its air. */
+/* The close's × stands as far from the right edge as the tone's icon from the left: it reaches out by its air. So its
+   box is 4 from the side and 12 from the top, where no plate can follow the corner: a hover only darkens the ×. */
 .ac-toast > .ac-toast__close {
   margin-inline-end: calc((var(--control-icon-sm) - var(--toast-button)) / 2);
+}
+.ac-toast > .ac-toast__close:hover {
+  background: transparent;
 }
 .ac-toast > .ac-icon,
 .ac-toast > .ac-actline > .ac-toast__text {
