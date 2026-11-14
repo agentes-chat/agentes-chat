@@ -466,6 +466,10 @@ test("a Mac: a guide's look reads the iPhones again before it answers, between t
   expect(await r.manager.look()).toBe(true);
   expect(r.manager.list().map((p) => [p.state, p.reason ?? null])).toEqual([["ready", null]]);
   expect(r.sent.at(-1)?.map((p) => p.state)).toEqual(["ready"]);
+  // A busy Mac whose devicectl fails on that look keeps the iPhone it saw.
+  r.setState({ devicectlFail: "The operation timed out." });
+  expect(await r.manager.look()).toBe(true);
+  expect(r.manager.list().map((p) => p.serial)).toEqual([IPHONE]);
 });
 
 const ANDROID_STATE = {

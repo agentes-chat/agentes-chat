@@ -467,6 +467,8 @@ export class PhoneManager {
   private reconnecting: Promise<void> | null = null;
   private readonly pairer: WifiPairer;
   private appleSeen: Phone[] | null = null;
+  /** The next look reads the Apple devices whatever the tick, keeping `appleSeen` for a devicectl that fails. */
+  private appleNow = false;
   private appleMisses = 0;
   /** iPhones on this Mac's Wi-Fi that trust it and aren't picked, from the last Apple look. */
   private nearby: WifiIphone[] = [];
@@ -549,7 +551,7 @@ export class PhoneManager {
   async look(): Promise<boolean> {
     if (this.platform === "darwin") {
       await this.polling;
-      this.appleSeen = null;
+      this.appleNow = true;
       await this.poll();
       return true;
     }
@@ -742,7 +744,10 @@ export class PhoneManager {
     if (tools.adb) found.push(...(await this.scanAndroid(tools.adb, reach)));
     found.push(...(await this.scanDriverless(found)));
     if (tools.xcrun) {
-      if (this.appleSeen === null || this.tick % APPLE_EVERY === 0) this.appleSeen = await this.scanApple(tools);
+      if (this.appleSeen === null || this.appleNow || this.tick % APPLE_EVERY === 0) {
+        this.appleNow = false;
+        this.appleSeen = await this.scanApple(tools);
+      }
       found.push(...this.appleSeen);
     } else this.appleSeen = null;
     this.tick++;
