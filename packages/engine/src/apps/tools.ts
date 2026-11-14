@@ -750,10 +750,9 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
         matches(args.query, a.name, a.handle, a.role),
       );
       const { slice, next_cursor } = page(all, args.cursor, args.limit, `agents:${args.query ?? ""}`);
-      // Its setor (ADR 0148) and look, as the sidebar shows them: what a client needs to draw the team without
-      // asking the workspace's people to type it again.
+      // Departments (ADR 0148): position is the sidebar's order.
       const groups = await agentGroupViews(deps.db, p.orgId);
-      const setorOf = new Map(
+      const departmentOf = new Map(
         groups.flatMap((g, position) =>
           g.agentIds.map((id) => [id, { name: g.name, color: g.color, icon: g.icon, position }] as const),
         ),
@@ -765,8 +764,8 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
           handle: a.handle,
           role: a.role,
           can_message: canTalkTo(a, p.userId, talks),
-          department: setorOf.get(a.id) ?? null,
-          appearance: a.appearance ?? null,
+          department: departmentOf.get(a.id) ?? null,
+          appearance: a.appearance,
         })),
         next_cursor,
       };
