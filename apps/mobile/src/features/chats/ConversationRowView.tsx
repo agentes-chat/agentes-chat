@@ -1,3 +1,4 @@
+import { usePrefetchMessages } from "@agenteschat/client";
 import { threadWorkState, threadWorkTone, threadWorkWord, workTime } from "@agenteschat/client/lib/agent-work";
 import { previewBody } from "@agenteschat/client/lib/message-body";
 import { agentFaceWord } from "@agenteschat/client/lib/presence";
@@ -306,6 +307,12 @@ export const ConversationRowView = memo(function ConversationRowView({
     if (onStart && r.kind === "dm") onStart(r.with.id);
     else if (href) router.push(href);
   };
+  // The finger down on a conversation already asks for its messages: they are on their way (or here) by the time
+  // its screen slides in. A thread loads its own replies; a page asked for a moment ago isn't asked for again.
+  const prefetch = usePrefetchMessages(org?.id ?? "");
+  const warm = () => {
+    if (org && r.channelId && r.kind !== "thread" && r.kind !== "mission") prefetch(r.channelId);
+  };
   // iOS's own long press: the conversation itself in the system preview (tapping it opens it), with the row's
   // actions (Pin to the top, a channel's Move to…) in the system menu under it. An agent with no conversation yet
   // peeks at its profile instead, with Talk first; a tap on its row still starts the conversation. Android keeps the
@@ -333,6 +340,7 @@ export const ConversationRowView = memo(function ConversationRowView({
   const row = (press: () => void) => (
     <ListRow
       onPress={press}
+      onPressIn={warm}
       {...(onHold && !peeks
         ? {
             onLongPress: () => onHold(r),

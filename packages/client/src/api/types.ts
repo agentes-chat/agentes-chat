@@ -217,6 +217,11 @@ export interface SignInOptions {
   canSignUp: boolean;
   /** The page's early-access link is for this address, and it expired. */
   accessExpired?: true;
+  /**
+   * With the bot check on: what the next step for this address (the password, the new account, the reset link) sends
+   * in place of a token, so the person passes the check once (`withHumanCheck`'s `pass`).
+   */
+  pass?: string;
 }
 
 /** `GET /api/instance`: what the phone and desktop apps check before using a server. Public, nothing secret. */

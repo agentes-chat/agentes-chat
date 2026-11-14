@@ -526,9 +526,8 @@ describe("working line", () => {
     expect(line).toContain("const stopHere = stop?.runs ?? [];");
     expect(line).toContain('<LineStop runs={stopHere} onStop={stop.onStop} place="word" />');
     const screen = await source("features/chat/ChatScreen.tsx");
-    expect(screen).toContain(
-      "const working = useMemo<ComposerWorking | null>(() => (busyRuns.length === 0 ? null : {}), [busyRuns]);",
-    );
+    expect(screen).toContain("const busy = busyRuns.length > 0;");
+    expect(screen).toContain("const working = useMemo<ComposerWorking | null>(() => (busy ? {} : null), [busy]);");
   });
 
   test("no row of its own while it works, writing or not: the line speaks; the reply rises in whole once posted", async () => {

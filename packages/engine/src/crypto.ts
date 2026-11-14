@@ -23,6 +23,7 @@ export type KeyPurpose =
   | "invitations"
   | "invitation-mail"
   | "routine-hooks"
+  | "human-pass"
   | "github-app-manifest";
 
 function deriveKey(masterSecret: string, purpose: KeyPurpose): Buffer {

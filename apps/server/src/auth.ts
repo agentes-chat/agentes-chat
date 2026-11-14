@@ -64,6 +64,7 @@ import { z } from "zod";
 import { listOf } from "./app-links";
 import { desktopSignIn, FRESH_SIGN_IN_MS } from "./desktop-sign-in";
 import { humanCheckRefusal } from "./http/human-check";
+import { humanPassesFor } from "./http/human-pass";
 import type { Logger } from "./logger";
 import { ownerSignIn } from "./owner-claim";
 import { phoneBrowserSignIn, phoneFlowStarted } from "./phone-browser-sign-in";
@@ -375,7 +376,17 @@ export function createAuth(deps: {
         const action = HUMAN_ACTIONS[ctx.path];
         // Before the sign-up policy: a bot gets the cheap refusal first.
         if (action && ctx.headers) {
-          const refused = await humanCheckRefusal(deps.humanCheck, ctx.headers, action, config.TRUSTED_PROXIES);
+          // The lookup of this address passed the check a moment ago: its pass stands for this step's (ADR 0075).
+          const address = (ctx.body as { email?: unknown } | undefined)?.email;
+          const refused = await humanCheckRefusal(
+            deps.humanCheck,
+            ctx.headers,
+            action,
+            config.TRUSTED_PROXIES,
+            typeof address === "string"
+              ? { passes: humanPassesFor(deriveSecret(config.AGENTES_SECRET, "human-pass")), email: address }
+              : undefined,
+          );
           if (refused) throw new APIError("FORBIDDEN", refused);
         }
         if (ctx.path !== "/sign-up/email") return;
