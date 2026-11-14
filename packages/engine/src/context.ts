@@ -1536,7 +1536,7 @@ async function routineContext(
       ? `Approved ahead for this run: a person already approved these exact actions for this time. Do each now with run_approved_action and its id: it goes out without asking. Don't do them any other way, then report how it went.\n${listed("approved")}`
       : "",
     listed("other")
-      ? `Prepared for this run but not approved in time: do each with run_approved_action and its id. ${agent.approvalsLevel === "never" ? "It runs when you call it." : "It asks a person first."}\n${listed("other")}`
+      ? `Prepared for this run but not approved in time: do each with run_approved_action and its id. ${agent.approvalsLevel === "never" ? "It runs when you call it." : "It asks a person first if that change asks."}\n${listed("other")}`
       : "",
     `When it speaks: ${
       brief.report === "always"

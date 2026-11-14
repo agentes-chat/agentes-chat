@@ -4,6 +4,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  AHEAD_REFUSED,
   acceptCustomSuggestion,
   addChannelMember,
   addRunStep,
@@ -28,6 +29,7 @@ import {
   type McpConnect,
   mcpSessionOver,
   type RoutineBrief,
+  RUN_APPROVED_ACTION,
   setMemberRoles,
   type ToolContext,
   updateRoutine,
@@ -179,7 +181,12 @@ async function personRun(fx: Fixture, userId = fx.owner.id): Promise<ToolContext
 }
 
 /** The routine's scheduled background run, its brief as the server writes it when it fires. */
-async function routineRun(fx: Fixture, routineId: string, creatorUserId = fx.owner.id): Promise<ToolContext> {
+async function routineRun(
+  fx: Fixture,
+  routineId: string,
+  creatorUserId = fx.owner.id,
+  dueAt = new Date(),
+): Promise<ToolContext> {
   const brief: RoutineBrief = {
     routineId,
     routineRunId: crypto.randomUUID(),
@@ -189,7 +196,7 @@ async function routineRun(fx: Fixture, routineId: string, creatorUserId = fx.own
     access: "act",
     report: "when_new",
     trigger: "schedule",
-    dueAt: new Date().toISOString(),
+    dueAt: dueAt.toISOString(),
   };
   const msg = await insertMessage(fx.db, {
     orgId: fx.org.id,
@@ -805,6 +812,40 @@ describe("a routine's writes at Só o arriscado", () => {
     asked(await invoke(gateway, await reportRun(f, routine.runId), app("HUBSPOT_UPDATE_DEAL"), write));
     asked(await invoke(gateway, await answerRun(f, routine.runId, qa.id), app("HUBSPOT_UPDATE_DEAL"), write));
     expect(mcp.calls).toEqual([]);
+  });
+
+  test("a write a person refused ahead for its run never runs, and one they approved runs once", async () => {
+    f = await setup();
+    const { mcp, gateway } = await world(f, WRITES);
+    const { id } = await created(gateway, []);
+    const prepare = async (text: string) =>
+      asked(
+        await invoke(gateway, await personRun(f), "schedule_action", {
+          tool: app("HUBSPOT_UPDATE_DEAL"),
+          arguments: { text },
+          routine: id,
+          title: "Atualizar o negócio",
+          why: WHY,
+        }),
+      );
+    const decide = (approvalId: string, decision: "approve" | "refuse") =>
+      decideApproval({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, approvalId, { decision });
+    const refused = await prepare("Perdido");
+    await decide(refused.id, "refuse");
+    const approved = await prepare("Ganho");
+    await decide(approved.id, "approve");
+    if (!refused.runAt) throw new Error("not prepared ahead");
+    const run = await routineRun(f, id, f.owner.id, refused.runAt);
+    for (const call of [
+      { name: RUN_APPROVED_ACTION, input: { id: refused.id } },
+      { name: app("HUBSPOT_UPDATE_DEAL"), input: { text: "Perdido" } },
+    ]) {
+      expect(answered(await invoke(gateway, run, call.name, call.input))).toMatchObject({ content: AHEAD_REFUSED });
+    }
+    expect(answered(await invoke(gateway, run, RUN_APPROVED_ACTION, { id: approved.id })).isError).toBeFalsy();
+    expect(mcp.calls).toEqual([{ tool: "HUBSPOT_UPDATE_DEAL", args: { text: "Ganho" } }]);
+    const [row] = await f.db.select().from(schema.approvals).where(eq(schema.approvals.id, approved.id));
+    expect(row?.executedAt).not.toBeNull();
   });
 });
 

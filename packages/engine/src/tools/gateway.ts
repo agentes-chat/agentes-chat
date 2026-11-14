@@ -1325,12 +1325,13 @@ export function createToolGateway(deps: {
       }
       if (tool.sensitive && tool.asksNobody?.(call.input)) tool = { ...tool, sensitive: false };
       const builtIn = isBuiltIn(tool);
+      const decides = level === "risky" && (await creatorDecides(ctx, authority));
       // A call that only looks is judged as at the default level: an agent that always asks asks for changes.
       const decision = policyFor(
         authority,
         tool,
         tool.looksOnly?.(call.input) ? DEFAULT_APPROVALS_LEVEL : level,
-        level === "risky" && (await creatorDecides(ctx, authority)),
+        decides,
       );
       if (decision.action === "refuse") {
         return finish(
@@ -1476,9 +1477,9 @@ export function createToolGateway(deps: {
           : null;
       if (mergeAlone) approves = false;
       // Approved ahead: the exact call a person approved for this routine run's slot runs like an allowed one, why
-      // or not; the one they refused never runs, whatever the agent's level.
+      // or not; the one they refused never runs, whatever the agent's level, a write its creator's run does unasked too.
       const ahead =
-        (approves || unasked) && authority?.kind === "routine" && authority.brief
+        (approves || unasked || decides) && authority?.kind === "routine" && authority.brief
           ? await aheadFor(
               ctx,
               authority.brief,
