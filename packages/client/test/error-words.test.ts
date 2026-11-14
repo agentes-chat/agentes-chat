@@ -462,7 +462,11 @@ const PLAIN_LINE = new Set([
   "import.too_many_items",
   "invalid_cursor",
   "invalid_request",
+  // The invite dialog offers only what may go, and words a chip refused in a race by its params (`why`).
+  "invitation.agent",
   "invitation.channel",
+  // The link's choices offer only these lists' values.
+  "invite_link.choice",
   "machine.access_nothing",
   "machine.device_not_found",
   "machine.host_none",

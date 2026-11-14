@@ -3974,7 +3974,10 @@
     "yourApproval": "tu aprobación",
     "yourAnswer": "tu respuesta",
     "later": "seguimiento {{when}}",
-    "laterShort": "seguimiento"
+    "laterShort": "seguimiento",
+    "plan": "esperando el plan",
+    "budget": "esperando el presupuesto",
+    "stopping": "deteniendo…"
   },
   "followUps": {
     "when": {
@@ -14015,6 +14018,8 @@
     },
     "join": {
       "linkClosed": "Este enlace ya no funciona. Pídele uno nuevo a quien te lo envió.",
+      "linkFull": "Este enlace ya recibió a todas las personas que podía. Pídele uno nuevo a quien te lo envió.",
+      "linkFullApproval": "El enlace de esta solicitud ya recibió a todas las personas que podía. Para aprobarla, aumenta el máximo del enlace.",
       "full": "Este espacio de trabajo tiene muchas solicitudes en espera. Intenta más tarde, o pídele a alguien de ahí que te invite.",
       "rateLimited": "Demasiadas solicitudes desde aquí. Intenta de nuevo en una hora.",
       "linkBusy": "Muchas personas pidieron entrar con este enlace en la última hora. Intenta más tarde.",
@@ -18210,6 +18215,25 @@
       "message": "Escribirle a {{name}}",
       "chooseOnWeb": "Elígela en agentes.chat, en Configuración › Dispositivos."
     }
+  },
+  "agora": {
+    "label": "Ahora",
+    "working_one": "{{count}} agente trabajando",
+    "working_many": "{{count}} agentes trabajando",
+    "working_other": "{{count}} agentes trabajando",
+    "waiting_one": "{{count}} cosa te espera",
+    "waiting_many": "{{count}} cosas te esperan",
+    "waiting_other": "{{count}} cosas te esperan",
+    "sections": {
+      "you": "Esperándote",
+      "working": "Trabajando",
+      "waiting": "En espera"
+    },
+    "allWaiting_one": "{{count}} cosa te espera",
+    "allWaiting_many": "Las {{count}} cosas que te esperan",
+    "allWaiting_other": "Las {{count}} cosas que te esperan",
+    "actions": "Más acciones",
+    "openManager": "Abrir el gestor de tareas"
   },
   "taskManager": {
     "title": "Gestor de tareas",
