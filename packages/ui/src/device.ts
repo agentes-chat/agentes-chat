@@ -124,4 +124,6 @@ export const mayTakeFocus = () => {
 export const focusAtEnd = (box: HTMLTextAreaElement | HTMLInputElement) => {
   box.focus({ preventScroll: true });
   box.setSelectionRange(box.value.length, box.value.length);
+  // A draft taller than the box: its end in view, where the caret is (not every browser scrolls to it).
+  box.scrollTop = box.scrollHeight;
 };
