@@ -9,11 +9,11 @@ import {
   costlyGate,
   costlyKind,
   createAgent,
+  createRole,
   DIGEST_AFTER_MS,
   decideCostlyProposal,
   endsAsking,
   FOLLOW_UP_JOB,
-  ForbiddenError,
   getMessage,
   insertMessage,
   type Judge,
@@ -26,6 +26,7 @@ import {
   postAutonomyDigests,
   postPersonMessage,
   type RunAuthority,
+  setMemberRoles,
   signatureOf,
   speakerFor,
   type ToolDefinition,
@@ -670,6 +671,8 @@ describe("who an agent may call (§8)", () => {
     );
     expect(made.autonomyBrakes).toEqual({ maxUnrequested: 20, callAgents: "some", callAgentIds: [f.agent.id] });
     const member = await addMember(f.db, f.org.id, "member", "Caio");
+    const makers = await createRole(f.db, f.owner.id, f.org.id, { name: "Makers", permissions: ["create_agents"] });
+    await setMemberRoles(f.db, f.owner.id, f.org.id, member.id, [makers.id]);
     // Creating one's own agent is open to members; choosing whom it may call is not.
     await expect(
       createAgent(
@@ -679,6 +682,8 @@ describe("who an agent may call (§8)", () => {
         { name: "Edu", handle: "edu", autonomyBrakes: { callAgents: "none" } },
         defaults,
       ),
-    ).rejects.toBeInstanceOf(ForbiddenError);
+    ).rejects.toThrow(/brakes/);
+    const edu = await createAgent(f.db, member.id, f.org.id, { name: "Edu", handle: "edu" }, defaults);
+    expect(edu.autonomyBrakes).toEqual({});
   });
 });

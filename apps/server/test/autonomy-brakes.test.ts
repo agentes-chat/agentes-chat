@@ -28,6 +28,17 @@ test("an agent's brakes: defaults on the agent, given on create, merged on PATCH
     })
   ).json()) as { brakes: Brakes };
   expect(braked.brakes).toMatchObject({ callAgents: "some", callAgentIds: [created.id] });
+  // A member who may create agents still can't set brakes: that's for who manages agents.
+  const makers = await owner(`${org}/roles`, { json: { name: "Makers", permissions: ["create_agents"] } });
+  const biaId = ((await (await bia("/api/app/me")).json()) as { user: { id: string } }).user.id;
+  await owner(`${org}/members/${biaId}/roles`, {
+    method: "PUT",
+    json: { roleIds: [((await makers.json()) as { id: string }).id] },
+  });
+  const refused = await bia(`${org}/agents`, { json: { name: "Edu", handle: "edu", brakes: { callAgents: "none" } } });
+  expect(refused.status).toBe(403);
+  expect(await refused.text()).toContain("brakes");
+  expect((await bia(`${org}/agents`, { json: { name: "Edu", handle: "edu" } })).status).toBe(201);
 
   const patched = await owner(`${org}/agents/${created.id}`, {
     method: "PATCH",
