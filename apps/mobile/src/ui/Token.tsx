@@ -35,7 +35,7 @@ export interface TokenProps {
 
 /**
  * One picked thing in a field, the web's kit Token: a 32-point pill with what leads it, its label on one line (a long
- * address ends in "…", its note and × stay) and, when it can go, an × whose target is 44.
+ * address is cut in its middle, its note and × stay) and, when it can go, an × whose target is 44.
  */
 export function Token({ label, leading, note, tone = "neutral", onPress, onRemove, removeLabel, fresh }: TokenProps) {
   const { colors: c, reducedMotion } = useTheme();
@@ -51,7 +51,13 @@ export function Token({ label, leading, note, tone = "neutral", onPress, onRemov
       ]}
     >
       {leading ? <View style={styles.lead}>{leading}</View> : null}
-      <RNText numberOfLines={1} maxFontSizeMultiplier={CHROME_MAX_SCALE} style={[TEXT, styles.label, { color: ink }]}>
+      {/* Cut in the middle: an address keeps its name and its domain, which tell two apart. */}
+      <RNText
+        numberOfLines={1}
+        ellipsizeMode="middle"
+        maxFontSizeMultiplier={CHROME_MAX_SCALE}
+        style={[TEXT, styles.label, { color: ink }]}
+      >
         {label}
       </RNText>
       {note ? (

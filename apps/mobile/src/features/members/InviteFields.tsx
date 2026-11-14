@@ -64,7 +64,6 @@ export function useStartFields(
   const picked = sortRoles(roles.filter((r) => d.roleIds.includes(r.id)));
   const refused = opts.refused ?? null;
   const open = (what: InvitePick) => (opts.readOnly ? undefined : () => openPick(key, what));
-  const about = (label: string) => t("common.about", { label });
   const roleLabel = personal ? t("invites.can") : t("members.role");
   const channelLabel = personal ? t("shell.channelsPersonal") : t("members.dialog.where.label");
   const agentLabel = t("members.agents");
@@ -85,7 +84,7 @@ export function useStartFields(
       key="cargo"
       stacked
       label={roleLabel}
-      hint={{ name: about(roleLabel), text: t("invites.hint.roles") }}
+      hint={{ name: t("common.about", { label: roleLabel }), text: t("invites.hint.roles") }}
       {...(open("cargo") ? { onPress: open("cargo") } : {})}
     >
       <View style={styles.cargos}>
@@ -115,7 +114,7 @@ export function useStartFields(
             key="channels"
             stacked
             label={channelLabel}
-            hint={{ name: about(channelLabel), text: t("invites.hint.channels") }}
+            hint={{ name: t("common.about", { label: channelLabel }), text: t("invites.hint.channels") }}
             {...(open("channels") ? { onPress: open("channels") } : {})}
           >
             <TokenWrap lines={2} more={more}>
@@ -138,7 +137,7 @@ export function useStartFields(
       key="agents"
       stacked
       label={agentLabel}
-      hint={{ name: about(agentLabel), text: t("invites.hint.agents") }}
+      hint={{ name: t("common.about", { label: agentLabel }), text: t("invites.hint.agents") }}
       {...(open("agents") && !talk.off ? { onPress: open("agents") } : {})}
     >
       <TokenWrap lines={2} more={more}>

@@ -376,7 +376,7 @@ describe("Convidar pessoas on the phone", () => {
     expect(invite).toContain('{ key: "email", label: t("invites.how.email"), icon: "mail" }');
   });
 
-  test("each label over its field, the field at the row's whole width (the owner's note C)", () => {
+  test("each label over its field, the field at the row's whole width, as the app's forms", () => {
     expect(invite).toMatch(/<GroupedField\s+key="to"\s+stacked/);
     const fields = src("features/members/InviteFields.tsx");
     expect(fields.match(/<GroupedField\s+key="\w+"\s+stacked/g)?.length).toBe(3);
@@ -413,8 +413,8 @@ describe("the kit's token (a 32 pt pill with a 44 pt ×)", () => {
     expect(token).toContain("hitSlop={(TOUCH - X_BOX) / 2}");
   });
 
-  test("a long address ends in … and keeps its note and its ×; lines past the limit leave and say how many", () => {
-    expect(token).toMatch(/<RNText numberOfLines=\{1\}[^>]*style=\{\[TEXT, styles\.label/);
+  test("a long address is cut in its middle and keeps its note and its ×; lines past the limit leave and say how many", () => {
+    expect(token).toMatch(/<RNText\s+numberOfLines=\{1\}\s+ellipsizeMode="middle"[^>]*style=\{\[TEXT, styles\.label/);
     expect(token).toContain(
       "const out = limit === null ? 0 : items.filter((it) => (tops[String(it.key)] ?? 0) >= limit).length;",
     );
@@ -556,8 +556,9 @@ describe("the worst case (break-ui): long names, one of each, a thousand of them
     expect(convites).toMatch(/label=\{inv\.email\}\s*labelLines=\{3\}/);
     expect(src("features/members/InviteEdit.tsx")).toContain('t("members.invitations.label", { email: inv.email })');
     expect(pt("members.invitations.label", { email: LONG_EMAIL })).toBe(`Convite para ${LONG_EMAIL}`);
-    // In its token the address ends in "…" while its note and its × stay whole (the plan's choice).
+    // In its token the address is cut in its middle (its name and its domain stay), its note and its × whole.
     const token = src("ui/Token.tsx");
+    expect(token).toContain('ellipsizeMode="middle"');
     expect(token).toMatch(/\{note \? \(\s*<RNText numberOfLines=\{1\}/);
     expect(token).toContain("label: { flexShrink: 1, minWidth: 0 },");
   });
