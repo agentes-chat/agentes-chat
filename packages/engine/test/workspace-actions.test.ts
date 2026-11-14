@@ -726,7 +726,7 @@ describe("what Desfazer, the card and the people card keep to", () => {
   test("a new role's Desfazer waits while a channel's exception holds it; Desfazer tudo takes both back", async () => {
     f = await setup({ rightHand: true });
     const deps = { db: f.db, pubsub: f.pubsub };
-    const ctx = await lodiRun(f, f.owner.id, "cria o papel Site, que só lê o general");
+    const ctx = await lodiRun(f, f.owner.id, "cria o cargo Site, que só lê o general");
     expect((await act(f, ctx, { action: "create_role", input: { name: "Site" } })).content).toContain("Done at once");
     const exception = await act(f, ctx, {
       action: "set_channel_permissions",
@@ -816,7 +816,7 @@ describe("what Desfazer, the card and the people card keep to", () => {
       permissions: ["manage_roles", "manage_members"],
     });
     await setMemberRoles(f.db, f.owner.id, f.org.id, lia.id, [managers.id]);
-    const out = await act(f, await lodiRun(f, lia.id, "apaga o papel Diretoria"), {
+    const out = await act(f, await lodiRun(f, lia.id, "apaga o cargo Diretoria"), {
       action: "delete_role",
       input: { role: "Diretoria" },
     });

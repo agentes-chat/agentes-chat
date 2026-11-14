@@ -32,7 +32,9 @@ import type {
   ConnectorDef,
   ConsultationConversation,
   Credential,
+  DeviceAccount,
   Edition,
+  EmailChange,
   EndpointCheck,
   FeedbackOffer,
   ForeignMailbox,
@@ -69,6 +71,7 @@ import type {
   OrgRole,
   OrgSettings,
   OrgStanding,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonLimits,
@@ -209,6 +212,8 @@ export interface FakeState {
   answeredElsewhere?: Set<string>;
   /** Answers to questions wait for this before the server replies (a slow network). */
   answerHold?: Promise<void>;
+  /** The accounts signed in on this browser (`account.deviceAccounts`, ADR 0183); unset: the server names none. */
+  deviceAccounts?: DeviceAccount[];
   /** Threads I follow with an unread reply (`reads.unreadThreads`). */
   unreadThreads?: number;
   /** Tasks whose conversation has a reply I haven't read (`reads.unreadTasks`). */
@@ -439,6 +444,14 @@ export interface FakeState {
   deletionError?: ApiError;
   /** Make `orgs.deletionCode` and `account.deletionCode` fail with this error (`reauth.code_wait`…). */
   codeError?: ApiError;
+  /** What `account.changeEmail` answers without a code; unset: a code goes to my address first (`code`). */
+  emailChange?: EmailChange;
+  /** Make `account.changeEmail` fail with this error (`email.held`, `reauth.code_wrong`…). */
+  emailChangeError?: ApiError;
+  /** Make `account.undoEmailChange` fail with this error (`email.undo_gone`…). */
+  undoError?: ApiError;
+  /** The address `account.undoEmailChange` brings back; unset: walter@example.com. */
+  undoBack?: string;
   /** The workspace's roles (ADR 0085, `roles.*`); unset: a new workspace's (`seedRoles`). */
   roles?: OrgRole[];
   /** Where I put the sidebar's tools (`orgs.sidebarItems`); unset = none moved. */
@@ -462,6 +475,12 @@ export interface FakeState {
   taskManager?: TaskManagerView;
   /** A task's steps by run (`working.taskSteps`, the task manager's panel); a run not here has none yet. */
   taskSteps?: Record<string, TaskSteps>;
+  /**
+   * The returns agents set, still to come (`chat.followUps`, a conversation's by its channel); canceling one
+   * (`chat.cancelFollowUp`) takes it out. `followUpCancelError` makes the cancel fail.
+   */
+  followUps?: PendingReturn[];
+  followUpCancelError?: Error;
 }
 
 /** A new workspace's "Admin" role (ADR 0085); João holds it. */
@@ -1497,10 +1516,29 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (state.deletionError) throw state.deletionError;
         state.me = null;
       },
+      changeEmail: async (input) => {
+        log("account.changeEmail", input);
+        if (state.emailChangeError) throw state.emailChangeError;
+        if (input.code) return { status: "sent", email: input.newEmail };
+        return state.emailChange ?? { status: "code", email: requireMe().user.email, resendIn: 60 };
+      },
+      undoEmailChange: async (token) => {
+        log("account.undoEmailChange", token);
+        if (state.undoError) throw state.undoError;
+        return { email: state.undoBack ?? "walter@example.com" };
+      },
       unread: async () =>
         state.me
           ? { organizations: state.me.organizations.map((o) => ({ orgId: o.id, unread: 0, waiting: 0 })) }
           : null,
+      deviceAccounts: async () => state.deviceAccounts ?? [],
+      switchDeviceAccount: async (userId) => {
+        state.calls.push({ method: "account.switchDeviceAccount", args: [userId] });
+      },
+      signOutDeviceAccount: async (userId) => {
+        state.calls.push({ method: "account.signOutDeviceAccount", args: [userId] });
+        return { signedIn: false };
+      },
       phoneSignIn: async () => {
         log("account.phoneSignIn");
         return {
@@ -3099,8 +3137,14 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (state.answerNowError) throw state.answerNowError;
         return { runs: state.answerNowRuns ?? [] };
       },
+      followUps: async (orgId, channelId) => {
+        log("chat.followUps", orgId, channelId);
+        return (state.followUps ?? []).filter((r) => r.channelId === channelId);
+      },
       cancelFollowUp: async (orgId, messageId) => {
         log("chat.cancelFollowUp", orgId, messageId);
+        if (state.followUpCancelError) throw state.followUpCancelError;
+        state.followUps = state.followUps?.filter((r) => r.messageId !== messageId);
         const line = state.messages.find((m) => m.id === messageId);
         const notice = line?.meta?.notice as { refs?: Record<string, string> } | undefined;
         if (notice?.refs) notice.refs = { ...notice.refs, state: "canceled" };

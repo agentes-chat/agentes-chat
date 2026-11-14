@@ -107,6 +107,7 @@ import { useOrg } from "@/components/org-context";
 import { colorOf, prepareBurst } from "@/components/Sky";
 import { TaskStepsBlock, useCallLogo } from "@/components/ToolCalls";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useReveal } from "@/hooks/useReveal";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { TYPED_VALUES } from "@/i18n";
 import { inlineWords, Markdown } from "@/lib/markdown";
@@ -1071,7 +1072,7 @@ const EFFECT_ICON: Record<ApprovalEffect, IconName> = {
   readsOnly: "eye",
 };
 const UNDO_ICON: Record<ApprovalUndo, IconName> = { irreversible: "alert", reversible: "undo", deletable: "undo" };
-/** Its text folds past this many characters ("Ver inteiro"). */
+/** Its text folds past this many characters ("Ver mais"). */
 const TEXT_FOLD = 360;
 
 /** The request's head on the page: the agent, who asked and from where, and the action in one line. */
@@ -1147,6 +1148,8 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
   const p = approvalPhase(a);
   const via = useApprovalVia(a);
   const [unfold, setUnfold] = useState(false);
+  const textBox = useRef<HTMLDivElement>(null);
+  const reveal = useReveal(textBox, unfold);
   const [steps, setSteps] = useState(false);
   const [tech, setTech] = useState(false);
   const { effect } = approvalEffects(a);
@@ -1243,7 +1246,7 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
     })),
   ];
   const durationMs = around ? workFromSteps(around.before, run.data?.run).durationMs : null;
-  const long = (text?.text.length ?? 0) > TEXT_FOLD || (text?.text.split("\n").length ?? 0) > 6;
+  const folded = !unfold && ((text?.text.length ?? 0) > TEXT_FOLD || (text?.text.split("\n").length ?? 0) > 6);
 
   return (
     <div className="ap-review__body">
@@ -1278,19 +1281,26 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
                 : t(p === "waiting" ? "approvals.review.values" : "approvals.review.valuesDone")
           }
           subtitle={[via.name, target].filter(Boolean).join(" · ") || undefined}
-          action={
-            text && long ? (
-              <Button variant="ghost" size="sm" aria-expanded={unfold} onClick={() => setUnfold((o) => !o)}>
-                {unfold ? t("approvals.review.less") : t("approvals.review.more")}
-              </Button>
-            ) : undefined
-          }
         />
         {a.email ? (
           <EmailLetter email={a.email} full />
         ) : text ? (
-          <div className={cx("ap-review__text", long && !unfold && "is-folded")}>
-            <Markdown source={text.text} variant="message" />
+          <div>
+            <div ref={textBox} className={cx("ap-review__text", folded && "is-folded")}>
+              <Markdown source={text.text} variant="message" />
+            </div>
+            {folded && (
+              <button
+                type="button"
+                className="ac-link folded-body__more"
+                onClick={() => {
+                  reveal();
+                  setUnfold(true);
+                }}
+              >
+                {t("channel.long.more")}
+              </button>
+            )}
           </div>
         ) : (
           <ExactAction approval={a} bare />

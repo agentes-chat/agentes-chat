@@ -242,7 +242,7 @@ export function InvitationSheet({
 }
 
 /**
- * "Mudar o papel": the roles a pending invitation gives, changed without sending it (the same link, ADR 0090). Several
+ * "Mudar o cargo": the roles a pending invitation gives, changed without sending it (the same link, ADR 0090). Several
  * can be on, as on the web and when approving a request: an invitation may hold more than one, and a single pick would
  * drop the others.
  */

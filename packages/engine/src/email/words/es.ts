@@ -326,6 +326,48 @@ export const words: EmailWords = {
       ],
     },
   },
+  emailChange: {
+    code: {
+      subject: (code) => `${code} es tu código para cambiar tu correo`,
+      preheader: "Escríbelo en agentes.chat para confirmar. Es válido por 10 minutos.",
+      headline: "Tu código",
+      body: (email, newEmail) => [
+        "Escribe este código para cambiar el correo de la cuenta ",
+        { b: email },
+        " a ",
+        { b: newEmail },
+        ".",
+      ],
+      support: (address) => [
+        "Es válido por 10 minutos, y tu correo no cambia sin él. Si no fuiste tú, no lo compartas y escribe a ",
+        { mail: address },
+        ".",
+      ],
+      noSupport:
+        "Es válido por 10 minutos, y tu correo no cambia sin él. Si no fuiste tú, no lo compartas y avisa a quienes administran este servidor.",
+      why: "Recibiste este correo porque tu cuenta pidió cambiar su correo en agentes.chat.",
+    },
+    link: {
+      subject: "Confirma tu nuevo correo en agentes.chat",
+      preheader: "Un clic para entrar con esta dirección de ahora en adelante. El enlace es válido por una hora.",
+      headline: "Confirma tu nuevo correo",
+      body: "Falta un paso: confirmar que esta dirección es tuya. Desde entonces, tu cuenta entra con ella.",
+      button: "Confirmar nuevo correo",
+      small: "El enlace es válido por una hora. Si no lo pediste tú, puedes ignorar este correo.",
+      why: "Recibiste este correo porque alguien pidió usar esta dirección en una cuenta de agentes.chat.",
+    },
+    changed: {
+      subject: "Cambió el correo de tu cuenta de agentes.chat",
+      preheader: "Si no fuiste tú, puedes recuperar esta dirección durante 7 días.",
+      headline: "Tu correo cambió",
+      body: (email, newEmail) => ["La cuenta ", { b: email }, " ahora entra con ", { b: newEmail }, "."],
+      notYou:
+        "¿No fuiste tú? Pulsa el botón antes de que pasen 7 días. Esta dirección vuelve, se cierran todas las sesiones, se desconectan las apps de IA y las formas de iniciar sesión añadidas desde entonces dejan de funcionar. La contraseña también se borra, y “Olvidé mi contraseña” crea la siguiente.",
+      button: "No fui yo",
+      small: "Si fuiste tú, no tienes que hacer nada.",
+      why: "Recibiste este correo porque esta dirección era el correo de una cuenta de agentes.chat.",
+    },
+  },
   deleting: {
     subject: (day) => `Un espacio de trabajo del que formas parte se eliminará el ${day}`,
     preheader: "Ya está en solo lectura. Un propietario aún puede restaurarlo hasta entonces.",

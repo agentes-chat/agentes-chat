@@ -23,7 +23,7 @@ import {
   type WebPushSender,
 } from "@agenteschat/adapters";
 import { testConfig } from "@agenteschat/config";
-import { eq, isNotNull, like, schema } from "@agenteschat/db";
+import { eq, isNotNull, like, rowsOf, schema, sql, tracingLogger } from "@agenteschat/db";
 import { createTestDatabase } from "@agenteschat/db/testing";
 import {
   createFakeJudge,
@@ -118,6 +118,11 @@ export async function createTestServer(
     speechFetch?: typeof fetch;
     /** AI apps (ADR 0119): a fake fetch of apps' metadata documents (CIMD); absent = none answers. */
     appsFetchDocument?: FetchAppDocument;
+    /**
+     * `false`: a server that sends no email from its start, as Better Auth reads it then (no confirmation links, no
+     * password reset). Flipping `t.email.delivers` later reaches only the routes that read it on each request.
+     */
+    emailDelivers?: boolean;
   } = {},
 ) {
   const { db, close } = await createTestDatabase();
@@ -129,7 +134,7 @@ export async function createTestServer(
     ...options.env,
   });
   const log = createLogger("error", options.errors);
-  const email = createFakeEmailSender();
+  const email = createFakeEmailSender({ delivers: options.emailDelivers ?? true });
   const push = createFakePushSender();
   const webPush = options.webPush === undefined ? createFakeWebPushSender() : options.webPush;
   const platformBlobs = createMemoryBlobStore({ kind: options.platformKind, sign: options.signedBlobs });
@@ -194,7 +199,7 @@ export async function createTestServer(
     db,
     config,
     log,
-    emailDelivers: true,
+    emailDelivers: options.emailDelivers ?? true,
     rateLimiter: adapters.rateLimiter,
     humanCheck: adapters.humanCheck,
     pubsub: adapters.pubsub,
@@ -273,6 +278,33 @@ export async function createTestServer(
 }
 
 export type TestServer = Awaited<ReturnType<typeof createTestServer>>;
+
+/**
+ * How the database would run the last statement `read` made on `table`, with its values written in. Nothing in a
+ * test is big enough for the planner to prefer an index on its own, so reading a table whole is off, and whatever
+ * else `off` names.
+ */
+export async function planOfLast(t: TestServer, table: string, read: () => Promise<unknown>, off: string[] = []) {
+  const seen: [string, unknown[]][] = [];
+  const counts = tracingLogger.logQuery;
+  tracingLogger.logQuery = (query = "", params: unknown[] = []) => {
+    seen.push([query, params]);
+    counts();
+  };
+  try {
+    await read();
+  } finally {
+    tracingLogger.logQuery = counts;
+  }
+  const [statement = "", params = []] = seen.filter(([query]) => query.includes(`from "${table}"`)).at(-1) ?? [];
+  const written = statement.replace(/\$(\d+)/g, (_, n) => `'${params[Number(n) - 1]}'`);
+  return t.db.transaction(async (tx) => {
+    for (const setting of ["enable_seqscan", ...off]) await tx.execute(sql.raw(`set local ${setting} = off`));
+    return rowsOf<{ "QUERY PLAN": string }>(await tx.execute(sql.raw(`explain (costs off) ${written}`)))
+      .map((row) => row["QUERY PLAN"])
+      .join("\n");
+  });
+}
 
 /** Starts a real Bun server on a random port (needed for WebSocket tests). */
 export function listen(t: TestServer) {

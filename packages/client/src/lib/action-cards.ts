@@ -732,7 +732,7 @@ export const actionCardWords = (card: WorkspaceActionCard, t: TFunction): Record
  * role or a channel's exception gives or takes in the permissions' own words ("conversar, dar missões e editar a wiki";
  * "+ editar a wiki, − aprovar ações"), a new name, where a role moves, a channel turned private, a new budget. Empty when
  * the sentence says it all. An invite card's lines are each their own (a line break between them), its roles a
- * sentence ("Com os papéis Vendas e Suporte.").
+ * sentence ("Com os cargos Vendas e Suporte.").
  */
 export function actionCardDetail(card: WorkspaceActionCard, t: TFunction, locale = "en"): string {
   const input = card.params.input;

@@ -554,8 +554,7 @@ export async function deletionPending(db: Executor, userId: string) {
 
 /**
  * Blocks an account, or lets it back (the operator API). Blocked, it can't sign in (`auth.ts`), its sessions
- * and phones are gone, and every membership check reads it as no member (`getMembership`): that bites on
- * its next request, even while a browser's cookie cache still holds the session for minutes. Its open
+ * and phones are gone, and every membership check reads it as no member (`getMembership`). Its open
  * sockets in every workspace close (`membership.revoked`). Null when there is no such account.
  */
 export async function setUserBlocked(

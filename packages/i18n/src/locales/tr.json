@@ -486,6 +486,7 @@
       "nameLead": "Ekibiniz size nasıl hitap ediyor?",
       "namePlaceholder": "Adınız",
       "nameIsPassword": "Bu sizin adınız mı? Yazdığınız şifreyle aynı.",
+      "emailHeld": "Bu e-posta az önce buradaki bir hesaptan ayrıldı ve 7 gün ayrılmış kalıyor. O hesap seninse, bu adrese gönderdiğimiz e-postadaki “Bu ben değildim” düğmesine bas.",
       "nameLooksLikePassword": "Bu bir şifreye benziyor. Buraya adınızı yazın.",
       "newPassword": "Şimdi bir şifre.",
       "newPasswordNamed": "Harika, {{name}}. Şimdi bir şifre.",
@@ -507,6 +508,7 @@
       "noPassword": "Bu hesap agentes.chat uygulamasından giriş yapar.",
       "noPasswordLead": "Bu sunucuyu çalıştıran bilgisayarda uygulamayı açın ve Ayarlar › Hesabınız bölümünde Şifre ekle'yi seçin.",
       "backToSignIn": "Girişe dön",
+      "backToAccount": "{{name}} hesabına dön",
       "toAuthorizeApp": "agentes.chat'e bir uygulama bağlamak için."
     },
     "desktop": {
@@ -1477,22 +1479,6 @@
     "moveDown": "Aşağı taşı",
     "restoreOrder": "Varsayılan sırayı geri yükle"
   },
-  "appIcon": {
-    "title": "Uygulama simgesi",
-    "hintWeb": "Bu tarayıcının sekmelerindeki simge.",
-    "hintMac": "Uygulama açıkken Dock'taki simge. Finder ve Launchpad varsayılanı korur.",
-    "hintDesktop": "Uygulama açıkken görev çubuğundaki simge.",
-    "hintAndroid": "Bazı ana ekranların yeni simgeyi göstermesi birkaç saniye sürer.",
-    "failed": "Simge değiştirilemedi. Yeniden deneyin.",
-    "agentsOf": "{{org}} ajanları",
-    "names": {
-      "night": "Gece",
-      "moon": "Ay",
-      "sky": "Gökyüzü",
-      "peekNight": "Gece gözetleyen",
-      "peekSky": "Gökyüzünde gözetleyen"
-    }
-  },
   "install": {
     "frames": "{{system}} için kurulum",
     "step": "Adım {{n}}",
@@ -1600,6 +1586,22 @@
       "activities": "Etkinlikler",
       "readingLists": "Paket listeleri okunuyor... Bitti",
       "settingUp": "agentes-chat ({{version}}) ayarlanıyor ..."
+    }
+  },
+  "appIcon": {
+    "title": "Uygulama simgesi",
+    "hintWeb": "Bu tarayıcının sekmelerindeki simge.",
+    "hintMac": "Uygulama açıkken Dock'taki simge. Finder ve Launchpad varsayılanı korur.",
+    "hintDesktop": "Uygulama açıkken görev çubuğundaki simge.",
+    "hintAndroid": "Bazı ana ekranların yeni simgeyi göstermesi birkaç saniye sürer.",
+    "failed": "Simge değiştirilemedi. Yeniden deneyin.",
+    "agentsOf": "{{org}} ajanları",
+    "names": {
+      "night": "Gece",
+      "moon": "Ay",
+      "sky": "Gökyüzü",
+      "peekNight": "Gece gözetleyen",
+      "peekSky": "Gökyüzünde gözetleyen"
     }
   },
   "legal": {
@@ -1800,7 +1802,12 @@
       "sent": "{{email}} adresine bir bağlantı gönderdik. Bağlantıyı açınca e-postan değişir.",
       "changed": "Tamam: artık {{email}} ile giriş yapıyorsun.",
       "same": "Bu zaten senin e-postan.",
-      "noMail": "Bu sunucu e-posta göndermiyor, bu yüzden yeni adres doğrulanamıyor. Sunucuyu yöneten kişiden e-posta gönderimini ayarlamasını iste."
+      "noMail": "Bu sunucu e-posta göndermiyor, bu yüzden yeni adres doğrulanamıyor. Sunucuyu yöneten kişiden e-posta gönderimini ayarlamasını iste.",
+      "held": "Bu e-posta az önce başka bir hesaptan ayrıldı ve 7 gün o hesaba ayrılmış kalıyor. Başka bir e-posta kullan.",
+      "taken": "Başka bir hesap bu e-postayı zaten kullanıyor. Başka bir e-posta kullan.",
+      "cantOpen": "O gelen kutusunu açamıyor musun?",
+      "signInInstead": "Yeniden giriş yap, kodsuz değiştir. Sonra buraya dönersin.",
+      "useCode": "Kodu kullan"
     },
     "openOnPhone": "Telefonunuzda açın",
     "openOnPhoneHint": "QR koduyla uygulamaya giriş yapın",
@@ -1820,6 +1827,8 @@
     "newWorkspace": "Yeni çalışma alanı",
     "addWorkspace": "Çalışma alanı ekle",
     "addWorkspaceHint": "Var olana katıl, yenisini oluştur ya da ekibinin sunucusunu kullan",
+    "addAccount": "Hesap ekle",
+    "addAccountHint": "Bu hesaptan çıkmadan başka bir hesapla giriş yapın",
     "yourServer": "Sunucunuz",
     "serverHere": "Bu {{device}} üzerindeki agentes.chat",
     "serverStopped": "durduruldu",
@@ -2317,8 +2326,7 @@
       "fileName": "mesaj.txt"
     },
     "long": {
-      "more": "Devamını gör",
-      "title": "{{name}} adlı kişinin mesajı"
+      "more": "Devamını gör"
     },
     "retrySend": "Tekrar dene",
     "thinking": "{{name}} düşünüyor…",
@@ -3729,6 +3737,9 @@
     "hidden": "Görünmez",
     "offline": "Çevrimdışı",
     "out": "Ofis dışında",
+    "available": "Müsait",
+    "working": "Çalışıyor",
+    "waiting": "Sizi bekliyor",
     "lower": {
       "online": "çevrimiçi",
       "away": "uzakta",
@@ -3817,6 +3828,41 @@
     "bySelf": "{{name}} yazdı · iş bitince temizlenir",
     "byAuto": "Şu anda ne yapıyor"
   },
+  "agentWork": {
+    "working": "çalışıyor",
+    "you": "sizi bekliyor",
+    "waiting": "bekliyor",
+    "queued": "sırada",
+    "here": "burada",
+    "routine": "bir rutinde",
+    "yourApproval": "onayınız",
+    "yourAnswer": "yanıtınız",
+    "later": "takip {{when}}",
+    "laterShort": "takip"
+  },
+  "followUps": {
+    "when": {
+      "at": "saat {{time}}",
+      "today": "bugün saat {{time}}",
+      "tomorrow": "yarın saat {{time}}"
+    },
+    "whenLabel": {
+      "at": "Saat {{time}}",
+      "today": "Bugün saat {{time}}",
+      "tomorrow": "Yarın saat {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} {{when}} takip edecek",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} siz yanıtlayınca takip edecek",
+      "held": "{{name}} bir yanıttan sonra takip edecek"
+    },
+    "title": "Takipler",
+    "see": "Mesajı gör",
+    "cancel": "Takibi iptal et",
+    "cancelOf": "{{name}} için {{when}} takibini iptal et",
+    "inTime": "{{time}} içinde"
+  },
   "mentions": {
     "list": "Kişiler ve ajanlar",
     "inChannel": "Bu kanalda",
@@ -3873,7 +3919,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Daha fazla göster",
     "less": "Daha az göster"
   },
   "secret": {
@@ -4453,8 +4498,6 @@
       "noSubject": "(konu yok)",
       "toSender": "Mesajı gönderen kişiye",
       "toList": "Alıcı: {{to}}",
-      "more": "Tümünü oku",
-      "less": "Daha az göster",
       "answers": "<b>“{{subject}}”</b> e-postasını yanıtlar",
       "answersFrom": "{{from}} kişisinden gelen <b>“{{subject}}”</b> e-postasını yanıtlar",
       "forwards": "<b>“{{subject}}”</b> e-postasını iletir",
@@ -5042,8 +5085,6 @@
       "textDone": "Yayımlanan",
       "values": "Yapacağı şey",
       "valuesDone": "Yaptığı şey",
-      "more": "Tümünü göster",
-      "less": "Daha az göster",
       "trail": "Buraya nasıl gelindi",
       "showSteps": "Her adımı gör",
       "hideSteps": "Adımları gizle",
@@ -8634,8 +8675,7 @@
       "releasePaused": "Misyon duraklatıldı: oturumun devam etmesi için misyonu devam ettirin.",
       "releaseClosed": "Misyon kapatıldı: oturum devam etmeyecek.",
       "onlyDeciders": "Komutlara yalnızca bu misyonda karar verenler izin verir.",
-      "pick": "{{command}} için izin ver",
-      "showAll": "Tümünü göster"
+      "pick": "{{command}} için izin ver"
     },
     "decision": {
       "approveAll_one": "{{count}} geçici kararı onayla",
@@ -9041,6 +9081,11 @@
     "status": {
       "needsYou": "Sizi bekliyor",
       "working": "Çalışıyor",
+      "approval": "Onay bekliyor",
+      "input": "Yanıt bekliyor",
+      "computer": "Bilgisayarını bekliyor",
+      "queued": "Sırada",
+      "later": "Takip {{when}}",
       "open": "Açık",
       "closed": "Kapalı",
       "archived": "Arşivlendi"
@@ -11487,8 +11532,6 @@
     "thousand": "B",
     "building": "Hazırlanıyor…",
     "openBig": "Büyük aç",
-    "showAll": "Tümünü göster",
-    "showLess": "Daha az göster",
     "keep": "Drive'da sakla",
     "kept": "Drive'da saklandı",
     "inDrive": "Drive'da",
@@ -13560,6 +13603,9 @@
       "titleTooLong": "Bir başlık en fazla {{max}} karakter olabilir.",
       "noContext": "Bu ileti dizisi bir konuşma aralığından oluşturulmadı.",
       "notUndoable": "Yalnızca bir aralıktan oluşturulan ileti dizisi geri alınabilir."
+    },
+    "followUp": {
+      "notYours": "Bu takibi yalnızca ilgili kişi, agent'ın sahibi veya bir yönetici iptal edebilir."
     },
     "routine": {
       "tooFrequent": "Bir rutin en sık 15 dakikada bir çalışır. Daha uzun bir aralık seçin.",
@@ -15785,7 +15831,13 @@
       "asking": "{{from}}, {{to}} ajanına soruyor",
       "answered": "{{to}} yanıtladı. {{from}} yazıyor",
       "writing": "{{from}} yazıyor",
-      "clock": "Bekleniyor: {{time}}"
+      "clock": "Bekleniyor: {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} onayınızı bekliyor",
+      "yourAnswer": "{{name}} yanıtınızı bekliyor",
+      "done": "{{to}} bitirdi. {{from}} yazıyor",
+      "notDone": "{{to}} bitiremedi. {{from}} yazıyor",
+      "handedOff": "{{to}}, {{from}} ajanının devrettiği iş üzerinde çalışıyor"
     },
     "consultation": {
       "answered": "{{name}} yanıtladı",
@@ -15804,7 +15856,8 @@
       "waitingInput": "{{name}} bir yanıt bekliyor",
       "waitingComputer": "{{name}} bilgisayarı bekliyor",
       "waitingProvider": "{{name}}: yapay zeka sağlayıcısı çalışmıyor · kendiliğinden yeniden dener",
-      "waitingAgents": "{{name}} işin bir kısmını devretti ve yanıt bekliyor"
+      "waitingAgents": "{{name}} işin bir kısmını devretti ve yanıt bekliyor",
+      "queued": "{{name}} sırada"
     },
     "consultPair": {
       "took": "{{time}} sürdü",
@@ -15814,16 +15867,14 @@
       "waitingInput": "yanıt bekliyor",
       "waitingComputer": "bilgisayarını bekliyor",
       "waitingProvider": "yapay zekâ sağlayıcısı çalışmıyor",
+      "waitingYourApproval": "onayınızı bekliyor",
+      "waitingYourAnswer": "yanıtınızı bekliyor",
+      "queued": "sırada",
       "handedOn": "diğer ajanları bekliyor",
       "noAnswer": "yanıt vermedi",
       "notFinished": "bitiremedi",
       "someAnswered": "{{total}} ajandan {{done}} tanesi yanıt verdi",
       "labelMany": "{{from}} ile {{to}} arasındaki konuşmalar"
-    },
-    "talk": {
-      "readAll": "Tümünü oku",
-      "more_one": "{{count}} satır daha",
-      "more_other": "{{count}} satır daha"
     },
     "consultPanel": {
       "label": "{{from}} ile {{to}} arasındaki konuşma",
@@ -15853,14 +15904,6 @@
       "agentNote": "{{from}} ajanından not",
       "agentNoteAnon": "Başka bir ajandan not",
       "waitResult": "{{name}} ajanının beklediği şey geldi",
-      "followUp": "{{name}}, «{{about}}» için saat {{time}} geri dönecek",
-      "followUpOn": "{{name}}, «{{about}}» için {{day}}, saat {{time}} geri dönecek",
-      "followUpDone": "{{name}}, «{{about}}» için saat {{time}} geri döndü",
-      "followUpDoneOn": "{{name}}, «{{about}}» için {{day}}, saat {{time}} geri döndü",
-      "followUpCanceled": "{{name}}, «{{about}}» için saat {{time}} geri dönmeyecek",
-      "followUpCanceledOn": "{{name}}, «{{about}}» için {{day}}, saat {{time}} geri dönmeyecek",
-      "followUpWake": "{{name}}, «{{about}}» için geri döndü",
-      "followUpCancel": "İptal et",
       "other": "{{name}} için bildirim",
       "wakeSkipped": "{{name}} ajanının bahsetmesi {{agents}} ajanına ulaşmadı",
       "wakeSkippedAnon": "{{name}} adlı ajanın bahsetmesi başka bir ajana ulaşmadı",
@@ -16049,6 +16092,7 @@
         "usingTool": "{{tool}} aracını kullandı",
         "thinking": "Düşündü",
         "typing": "Yazdı",
+        "recordingVoice": "Ses kaydetti",
         "writing": "Yazdı"
       }
     },
@@ -16058,6 +16102,7 @@
       "updatingRoutine": "rutini değiştiriyor",
       "thinking": "çalışıyor",
       "typing": "yazıyor",
+      "recordingVoice": "ses kaydediyor",
       "writing": "yazıyor",
       "consulting": "{{app}} kontrol ediyor",
       "creatingIssue": "görev oluşturuyor",
@@ -17114,6 +17159,17 @@
     "type": "Onaylamak için {{name}} yazın",
     "submit": "Çalışma alanını sil"
   },
+  "emailUndo": {
+    "title": "E-postanı geri al",
+    "lead": "Bu bağlantının gittiği adres yeniden hesabının e-postası olur. Tüm oturumlar kapatılır, yapay zekâ uygulamalarının bağlantısı kesilir ve değişiklikten sonra eklenen giriş yolları artık çalışmaz. Şifre de silinir, sonrakini “Şifremi unuttum” ile belirlersin.",
+    "button": "Bu ben değildim",
+    "done": "E-postan geri geldi",
+    "doneLead": "{{email}} yeniden hesabının e-postası oldu ve tüm oturumlar kapatıldı. Değişiklikten sonra eklenen giriş yolları artık çalışmıyor ve şifre silindi: giriş yaparken sonrakini “Şifremi unuttum” ile belirle.",
+    "gone": "Bu bağlantı artık çalışmıyor",
+    "goneLead": "Zaten kullanıldı ya da 7 günü doldu.",
+    "taken": "Bu e-postayı başka bir hesap kullanıyor",
+    "takenLead": "{{email}} artık başka bir hesabın e-postası, bu yüzden geri gelemez. Hiçbir şey değişmedi."
+  },
   "proof": {
     "willSend": "Siz olduğunuzu doğrulamak için {{email}} adresine bir kod göndereceğiz.",
     "send": "Kod gönder",
@@ -17588,11 +17644,12 @@
     "sections": {
       "asked": "Kişilerin istedikleri",
       "delegated": "Ajanların istedikleri",
-      "background": "Arka planda rutinler"
+      "background": "Arka planda rutinler",
+      "returns": "Takipler"
     },
     "state": {
       "working": "Çalışıyor",
-      "ok": "Onayınızı bekliyor",
+      "ok": "Sizi bekliyor",
       "answer": "Yanıt bekliyor",
       "computerBusy": "Bilgisayarda yer bekliyor",
       "inLine": "Sırada · {{position}}.",
@@ -17680,6 +17737,9 @@
       "stopped": "Siz durdurdunuz",
       "stoppedBy": "{{name}} durdurdu",
       "failed": "Bitirilemedi",
+      "returnCanceled": "Takip iptal edildi",
+      "returnCanceledYou": "Takibi iptal ettiniz",
+      "returnCanceledBy": "Takibi {{name}} iptal etti",
       "none": "Bugün henüz biten bir şey yok."
     },
     "empty": {

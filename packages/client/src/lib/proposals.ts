@@ -180,7 +180,7 @@ export const appLabel = (t: TFunction, line: ProposalAccessLine) =>
     ? line.label
     : scopeText(t, { id: line.id, label: line.label, description: "", sensitive: false }).label;
 
-/** What one proposal changes, after "propõe ·": "instruções da Ada", "papel do Theo", "contexto da Acme". */
+/** What one proposal changes, after "propõe ·": "instruções da Ada", "função do Theo", "contexto da Acme". */
 export function proposalTarget(
   t: TFunction,
   p: Proposal,

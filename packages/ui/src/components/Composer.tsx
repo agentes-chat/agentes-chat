@@ -133,6 +133,8 @@ export interface ComposerVoice {
   allowed?: () => Promise<boolean>;
   onTake: (take: VoiceTake) => void;
   onNotice: (notice: VoiceNotice) => void;
+  /** Each second it records, never while starting or paused: the others see "gravando áudio…". */
+  onRecording?: () => void;
   labels: {
     record: string;
     recording: string;

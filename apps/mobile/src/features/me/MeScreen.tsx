@@ -528,7 +528,7 @@ function HorizonTeam({ ids }: { ids: string[] }) {
         agentId={id}
         size={HORIZON_FACE}
         framed={false}
-        mode={presence.agent(id)?.presence === "busy" ? "run" : "idle"}
+        mode={presence.agent(id)?.presence === "working" ? "run" : "idle"}
       />
     </Animated.View>
   );
@@ -550,7 +550,7 @@ function HorizonTeam({ ids }: { ids: string[] }) {
 function AgentRow({ agentId, name, role }: { agentId: string; name: string; role: string | null | undefined }) {
   const dir = useDirectory();
   const shown = usePresenceOf().agent(agentId);
-  const working = shown?.presence === "busy" && shown.line ? shown.line.text : null;
+  const working = shown?.presence === "working" && shown.line ? shown.line.text : null;
   const look = agentLook(dir.agentById.get(agentId));
   return (
     <GroupedRow

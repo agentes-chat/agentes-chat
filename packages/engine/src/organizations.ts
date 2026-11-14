@@ -873,8 +873,7 @@ export async function setMyWorkArea(db: Database, userId: string, area: string) 
 }
 
 /**
- * The person's name and photo as saved (a session's cached cookie keeps the old ones for minutes after a change
- * elsewhere), their language and whether it follows each device's, and their area.
+ * The person's name and photo as saved, their language and whether it follows each device's, and their area.
  */
 export async function myAccount(db: Database, userId: string) {
   const [row] = await db

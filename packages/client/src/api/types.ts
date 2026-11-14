@@ -217,6 +217,11 @@ export interface SignInOptions {
   canSignUp: boolean;
   /** The page's early-access link is for this address, and it expired. */
   accessExpired?: true;
+  /**
+   * With the bot check on: what the next step for this address (the password, the new account, the reset link) sends
+   * in place of a token, so the person passes the check once (`withHumanCheck`'s `pass`).
+   */
+  pass?: string;
 }
 
 /** `GET /api/instance`: what the phone and desktop apps check before using a server. Public, nothing secret. */
@@ -391,6 +396,17 @@ export interface OrgOnboarding {
 export interface Me {
   user: User;
   organizations: OrgSummary[];
+}
+
+/**
+ * An account signed in on this browser (`GET /device-accounts`, ADR 0183): the person, their workspaces and each
+ * one's unread count. `current`: the one the browser is on now.
+ */
+export interface DeviceAccount {
+  current: boolean;
+  user: { id: string; name: string; email: string; image: string | null };
+  organizations: OrgSummary[];
+  unread: { orgId: string; unread: number; waiting: number }[];
 }
 
 export interface Organization extends OrgSummary {
@@ -569,6 +585,12 @@ export interface CodeSent {
   email: string;
   resendIn: number;
 }
+
+/**
+ * Where a new address for my account stands (`account.changeEmail`): a link went to it (`sent`), it changed at once on
+ * a server that sends no email (`changed`), or a code went to my current address first (`code`, as `CodeSent`).
+ */
+export type EmailChange = { status: "sent" | "changed"; email: string } | ({ status: "code" } & CodeSent);
 
 /** A workspace's invitation link people can still ask with (admins). */
 export interface InviteLink {
@@ -1455,13 +1477,16 @@ export interface OpenConsult {
   threadId: string;
   /** When the question went out (ISO). */
   since: string;
+  /** A question (`ask_agent`) or work handed off (`tell_agent`); older servers send questions only, with none. */
+  kind?: ConsultationKind;
 }
 
 /**
  * What a consulted agent waits on before it can answer: an approval, or a person's answer or secret (a person);
- * `computer`: its computer coming back (no one to ask); `agents`: its part done, what it handed on to other agents.
+ * `computer`: its computer coming back (no one to ask); `agents`: its part done, what it handed on to other agents;
+ * `queued`: a worker to take its run.
  */
-export type ConsultationWait = "approval" | "input" | "computer" | "agents" | "outage";
+export type ConsultationWait = "approval" | "input" | "computer" | "agents" | "outage" | "queued";
 
 /**
  * A question an agent asked another agent from a conversation, or work it handed one (`GET
@@ -1480,6 +1505,8 @@ export interface RunConsultation {
   status: "open" | ConsultationStatus;
   /** Open, and the consulted agent waits: on a person, or for its computer to come back. */
   waiting: ConsultationWait | null;
+  /** Since when it waits (`waiting`), ISO. Older servers send none. */
+  waitingSince?: string | null;
   question: string;
   /** The answer once answered; why it couldn't once failed. */
   answer: string | null;
@@ -1534,6 +1561,8 @@ export type ChannelEvent =
       message?: Message;
       threadId?: string | null;
       agentRunId?: string | null;
+      /** With `message` left out: the person who wrote it (null for an agent), so their typing line ends with it. */
+      authorUserId?: string | null;
     }
   /** Someone joined or left, or an agent's way of replying changed (agents carry `autoReply`). */
   | {
@@ -1788,8 +1817,15 @@ export type ChannelEvent =
       waitKind: string;
       outcome: WaitMessageOutcome;
     }
-  /** A person is typing; drop it after `ttlMs`. */
-  | { type: "user.typing"; channelId: string; threadId: string | null; userId: string; ttlMs: number }
+  /** A person is typing, or recording a voice message (`kind: "voice"`); drop it after `ttlMs`. */
+  | {
+      type: "user.typing";
+      channelId: string;
+      threadId: string | null;
+      userId: string;
+      ttlMs: number;
+      kind?: "voice";
+    }
   /** Who saw a message and who will answer. */
   | {
       type: "message.routed";
@@ -2521,6 +2557,80 @@ export interface AgentStatus {
   activeAt: string | null;
   /** Something of its own thinks now (a run, or long work at work). Absent from older servers. */
   working?: boolean;
+  /** Its most important work for you, with where it shows when you read it (ADR 0084). Absent from older servers. */
+  work?: AgentWork | null;
+}
+
+/**
+ * How an agent's run stands for you: it waits on your decision or answer (`you`), it works, it waits on someone else
+ * (`approval`, `answer`), on its computer or its AI provider, or it is in line; `later`: nothing on, a return it set
+ * comes at `at`.
+ */
+export type AgentWorkState = "you" | "working" | "approval" | "answer" | "computer" | "outage" | "queued" | "later";
+
+/** An agent's most important work for you (`AgentStatus.work`): its state, since when and where it shows. */
+export interface AgentWork {
+  state: AgentWorkState;
+  /** With `you`: on what. */
+  ask: "approval" | "answer" | null;
+  /** Working: since the hand-off (work another agent handed it), else since it started. Waiting: since the wait began. */
+  since: string;
+  runId: string;
+  /** Where it shows, when you read that conversation: null otherwise. */
+  channelId: string | null;
+  channelKind: "channel" | "dm" | "task" | null;
+  channelName: string | null;
+  threadId: string | null;
+  /** The reply that handed it off, once posted. */
+  messageId: string | null;
+  /** The agent that handed it off, when you read where. */
+  forAgentId: string | null;
+  /** A routine's work: no conversation holds it. */
+  routine: boolean;
+  /** How many runs it has on. */
+  count: number;
+  /** With `later`: when it comes back to that conversation (ISO). */
+  at?: string;
+}
+
+/**
+ * A return an agent set (its `follow_up`, ADR 0037), still to come (`GET …/channels/{id}/follow-ups`, the task
+ * manager): the bar above the composer says "Ada retorna às 00:32 · rever o deploy de hoje".
+ */
+export interface PendingReturn {
+  /** Its line (`meta.notice.kind` `follow_up`), never drawn in the timeline. */
+  messageId: string;
+  agentId: string;
+  channelId: string;
+  channelKind: "channel" | "dm" | "task";
+  channelName: string | null;
+  /** Null: the conversation's main timeline. */
+  threadId: string | null;
+  at: string;
+  /** The agent's words for it, in the people's language: shown as written. */
+  about: string;
+  runId: string;
+  /** That run's reply, once posted: where "Ver a mensagem" lands. */
+  replyMessageId: string | null;
+  /** Its wake found what the agent asked there unanswered, and it waits for the answer. A late wake isn't held. */
+  held: boolean;
+  /** The person it is for, the agent's owner or an admin. */
+  canCancel: boolean;
+}
+
+/** A return canceled (the task manager's "Terminadas hoje"). */
+export interface CanceledReturn {
+  messageId: string;
+  agentId: string;
+  channelId: string;
+  channelKind: "channel" | "dm" | "task";
+  channelName: string | null;
+  threadId: string | null;
+  at: string;
+  about: string;
+  canceledAt: string;
+  /** Null: its time found it couldn't come (the agent or the person left). */
+  canceledBy: { kind: "person"; userId: string; name: string } | { kind: "agent"; agentId: string } | null;
 }
 
 export interface InvitationWithStatus {
@@ -5243,6 +5353,9 @@ export interface WikiGraph {
 
 export type ThreadState = "open" | "closed" | "archived";
 export type ThreadTab = "all" | "working" | "missions" | "closed" | "archived";
+
+/** What a thread's work waits on when none of it runs (`ThreadInfo.wait`): someone's approval or answer, its computer, a place in line. */
+export type ThreadWait = "approval" | "input" | "computer" | "queued";
 export type ThreadChange =
   | "created"
   | "title"
@@ -5310,9 +5423,18 @@ export interface ThreadInfo {
     createdAt: string;
   } | null;
   participants: ThreadActor[];
-  /** An agent run is in progress (or waiting) in this thread. */
+  /** An agent run is queued or running in this thread, or one a run here handed work to is. */
   working: boolean;
+  /** An agent's question here waits on you, or an approval here that you may decide. */
   needsYou: boolean;
+  /** With nothing of its work running and nothing waiting on you: what it waits on. Older servers send none. */
+  wait?: ThreadWait | null;
+  /** Since when its state holds: what waits on you, the work, or the wait (ISO). Older servers send none. */
+  since?: string | null;
+  /** The agent at it longest: the chip's orbit takes its tones. Older servers send none. */
+  worker?: string | null;
+  /** The soonest return an agent set here, still ahead: "Retorno às 00:32" when nothing else is on. */
+  laterAt?: string | null;
   /** Open, and a model judged its matter done after its last message: offer one-click close. Never closes by itself. */
   /**
    * When "Responder" opened it (its first reply from the thread panel): replies from then on live in
@@ -6875,6 +6997,10 @@ export interface WorkingRun {
   background?: boolean;
   /** Long work in the background (ADR 0121): its title, plan and start. */
   work?: { id: string; title: string; plan: { done: number; total: number } | null; since: string } | null;
+  /** Work another agent handed it: that agent (listed where it was handed off). Older servers send none. */
+  forAgentId?: string | null;
+  /** The reply that handed it off, once posted. */
+  anchorMessageId?: string | null;
 }
 
 /** What a task uses right now: its latest tool call, as the chat's live chip says it (ADR 0128). */
@@ -6891,6 +7017,16 @@ export interface TaskNow {
 export interface TaskDelegation {
   agentId: string;
   origin: { kind: "person"; userId: string; name: string } | { kind: "routine"; name: string } | { kind: "agent" };
+  /** Where it was handed off, when you read that conversation. Older servers send none. */
+  from?: {
+    channelId: string;
+    channelKind: "channel" | "dm" | "task";
+    channelName: string | null;
+    threadId: string | null;
+    messageId: string | null;
+    /** The thread's title; null without one. */
+    label: string | null;
+  } | null;
 }
 
 /** One task in the task manager (`GET …/task-manager`, ADR 0128): a run still on. No cost. */
@@ -7019,6 +7155,10 @@ export interface TaskManagerView {
   computers?: ComputerSummary[];
   /** Per agent with work in the last hour: tool calls per minute, 60 points, oldest first. */
   activity: Record<string, number[]>;
+  /** "Retornos": returns still to come where you read, the soonest first (absent on an older server). */
+  followUps?: PendingReturn[];
+  /** Returns canceled since `since`, the latest first (absent on an older server). */
+  canceledFollowUps?: CanceledReturn[];
 }
 
 /** A one-off reminder in a conversation (`reminders.*`; also a routine in Rotinas). */

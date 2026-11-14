@@ -498,6 +498,7 @@
       "nameLead": "Jak mówi do ciebie twój zespół?",
       "namePlaceholder": "Twoje imię",
       "nameIsPassword": "Czy to twoje imię? Jest takie samo jak wpisane hasło.",
+      "emailHeld": "Ten e-mail właśnie opuścił konto tutaj i jest zarezerwowany przez 7 dni. Jeśli to Twoje konto, naciśnij „To nie ja” w e-mailu, który na niego wysłaliśmy.",
       "nameLooksLikePassword": "To wygląda na hasło. Tu wpisz swoje imię.",
       "newPassword": "Teraz hasło.",
       "newPasswordNamed": "Świetnie, {{name}}. Teraz hasło.",
@@ -519,6 +520,7 @@
       "noPassword": "To konto loguje się z aplikacji agentes.chat.",
       "noPasswordLead": "Na komputerze, na którym działa ten serwer, otwórz aplikację i wybierz Dodaj hasło w Ustawienia › Twoje konto.",
       "backToSignIn": "Wróć do logowania",
+      "backToAccount": "Wróć do {{name}}",
       "toAuthorizeApp": "Żeby połączyć aplikację z agentes.chat."
     },
     "desktop": {
@@ -1562,22 +1564,6 @@
     "moveDown": "Przenieś niżej",
     "restoreOrder": "Przywróć domyślną kolejność"
   },
-  "appIcon": {
-    "title": "Ikona aplikacji",
-    "hintWeb": "Ikona na kartach tej przeglądarki.",
-    "hintMac": "Ikona w Docku, gdy aplikacja jest otwarta. Finder i Launchpad zachowują domyślną.",
-    "hintDesktop": "Ikona na pasku zadań, gdy aplikacja jest otwarta.",
-    "hintAndroid": "Niektóre ekrany główne potrzebują kilku sekund, by pokazać nową ikonę.",
-    "failed": "Nie udało się zmienić ikony. Spróbuj ponownie.",
-    "agentsOf": "Agenci w {{org}}",
-    "names": {
-      "night": "Noc",
-      "moon": "Księżyc",
-      "sky": "Niebo",
-      "peekNight": "Zerkanie nocą",
-      "peekSky": "Zerkanie w niebie"
-    }
-  },
   "install": {
     "frames": "Jak zainstalować na {{system}}",
     "step": "Krok {{n}}",
@@ -1685,6 +1671,22 @@
       "activities": "Podgląd",
       "readingLists": "Czytanie list pakietów... Gotowe",
       "settingUp": "Konfigurowanie pakietu agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Ikona aplikacji",
+    "hintWeb": "Ikona na kartach tej przeglądarki.",
+    "hintMac": "Ikona w Docku, gdy aplikacja jest otwarta. Finder i Launchpad zachowują domyślną.",
+    "hintDesktop": "Ikona na pasku zadań, gdy aplikacja jest otwarta.",
+    "hintAndroid": "Niektóre ekrany główne potrzebują kilku sekund, by pokazać nową ikonę.",
+    "failed": "Nie udało się zmienić ikony. Spróbuj ponownie.",
+    "agentsOf": "Agenci w {{org}}",
+    "names": {
+      "night": "Noc",
+      "moon": "Księżyc",
+      "sky": "Niebo",
+      "peekNight": "Zerkanie nocą",
+      "peekSky": "Zerkanie w niebie"
     }
   },
   "legal": {
@@ -1885,7 +1887,12 @@
       "sent": "Wysłaliśmy link na {{email}}. Twój e-mail zmieni się, gdy go otworzysz.",
       "changed": "Gotowe: teraz logujesz się przez {{email}}.",
       "same": "To już jest Twój e-mail.",
-      "noMail": "Ten serwer nie wysyła e-maili, więc nowego adresu nie da się potwierdzić. Poproś osobę, która zarządza serwerem, o skonfigurowanie wysyłki e-maili."
+      "noMail": "Ten serwer nie wysyła e-maili, więc nowego adresu nie da się potwierdzić. Poproś osobę, która zarządza serwerem, o skonfigurowanie wysyłki e-maili.",
+      "held": "Ten e-mail właśnie opuścił inne konto i jest dla niego zarezerwowany przez 7 dni. Użyj innego.",
+      "taken": "Inne konto już używa tego e-maila. Użyj innego.",
+      "cantOpen": "Nie możesz otworzyć tej skrzynki?",
+      "signInInstead": "Zaloguj się ponownie i zmień go bez kodu. Potem wrócisz tutaj.",
+      "useCode": "Użyj kodu"
     },
     "openOnPhone": "Otwórz na telefonie",
     "openOnPhoneHint": "Zaloguj się w aplikacji kodem QR",
@@ -1905,6 +1912,8 @@
     "newWorkspace": "Nowa przestrzeń robocza",
     "addWorkspace": "Dodaj przestrzeń roboczą",
     "addWorkspaceHint": "Dołącz do istniejącego, utwórz nowy albo użyj serwera swojego zespołu",
+    "addAccount": "Dodaj konto",
+    "addAccountHint": "Zaloguj się na inne konto bez wylogowywania z tego",
     "yourServer": "Twój serwer",
     "serverHere": "agentes.chat na tym urządzeniu ({{device}})",
     "serverStopped": "zatrzymany",
@@ -2461,8 +2470,7 @@
       "fileName": "wiadomosc.txt"
     },
     "long": {
-      "more": "Pokaż więcej",
-      "title": "Wiadomość od: {{name}}"
+      "more": "Pokaż więcej"
     },
     "retrySend": "Spróbuj ponownie",
     "thinking": "{{name}} myśli…",
@@ -3982,6 +3990,9 @@
     "hidden": "Tryb niewidoczny",
     "offline": "Offline",
     "out": "Poza biurem",
+    "available": "Dostępny",
+    "working": "W pracy",
+    "waiting": "Czeka na ciebie",
     "lower": {
       "online": "online",
       "away": "zaraz wracam",
@@ -4070,6 +4081,41 @@
     "bySelf": "Napisane przez {{name}} · zniknie, gdy skończy",
     "byAuto": "Co teraz robi"
   },
+  "agentWork": {
+    "working": "pracuje",
+    "you": "czeka na ciebie",
+    "waiting": "czeka",
+    "queued": "w kolejce",
+    "here": "tutaj",
+    "routine": "w rutynie",
+    "yourApproval": "twoje zatwierdzenie",
+    "yourAnswer": "twoja odpowiedź",
+    "later": "follow-up {{when}}",
+    "laterShort": "follow-up"
+  },
+  "followUps": {
+    "when": {
+      "at": "o {{time}}",
+      "today": "dzisiaj o {{time}}",
+      "tomorrow": "jutro o {{time}}"
+    },
+    "whenLabel": {
+      "at": "O {{time}}",
+      "today": "Dzisiaj o {{time}}",
+      "tomorrow": "Jutro o {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} sprawdzi ponownie {{when}}",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} sprawdzi ponownie, gdy odpowiesz",
+      "held": "{{name}} sprawdzi ponownie po odpowiedzi"
+    },
+    "title": "Follow-upy",
+    "see": "Zobacz wiadomość",
+    "cancel": "Anuluj follow-up",
+    "cancelOf": "Anuluj follow-up od: {{name}} {{when}}",
+    "inTime": "za {{time}}"
+  },
   "mentions": {
     "list": "Osoby i agenci",
     "inChannel": "Na tym kanale",
@@ -4130,7 +4176,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Pokaż więcej",
     "less": "Pokaż mniej"
   },
   "secret": {
@@ -4757,8 +4802,6 @@
       "noSubject": "(bez tematu)",
       "toSender": "Do nadawcy wiadomości",
       "toList": "Do {{to}}",
-      "more": "Czytaj całość",
-      "less": "Pokaż mniej",
       "answers": "Odpowiedź na <b>„{{subject}}”</b>",
       "answersFrom": "Odpowiedź na <b>„{{subject}}”</b>, od {{from}}",
       "forwards": "Przekazanie <b>„{{subject}}”</b>",
@@ -5408,8 +5451,6 @@
       "textDone": "Co zostało opublikowane",
       "values": "Co zostanie zrobione",
       "valuesDone": "Co zostało zrobione",
-      "more": "Pokaż całość",
-      "less": "Pokaż mniej",
       "trail": "Jak do tego doszło",
       "showSteps": "Zobacz każdy krok",
       "hideSteps": "Ukryj kroki",
@@ -9276,8 +9317,7 @@
       "releasePaused": "Misja jest wstrzymana: wznów ją, żeby sesja ruszyła dalej.",
       "releaseClosed": "Misja jest zamknięta: sesja nie ruszy dalej.",
       "onlyDeciders": "Na polecenia zezwalają tylko osoby, które decydują w tej misji.",
-      "pick": "Zezwól na {{command}}",
-      "showAll": "Pokaż wszystko"
+      "pick": "Zezwól na {{command}}"
     },
     "decision": {
       "approveAll_one": "Zatwierdź {{count}} tymczasową",
@@ -9721,6 +9761,11 @@
     "status": {
       "needsYou": "Czeka na ciebie",
       "working": "W pracy",
+      "approval": "Czeka na zgodę",
+      "input": "Czeka na odpowiedź",
+      "computer": "Czeka na komputer",
+      "queued": "W kolejce",
+      "later": "Follow-up {{when}}",
       "open": "Otwarty",
       "closed": "Zamknięty",
       "archived": "Zarchiwizowany"
@@ -12427,8 +12472,6 @@
     "thousand": "tys.",
     "building": "Składanie w całość…",
     "openBig": "Otwórz w dużym widoku",
-    "showAll": "Pokaż wszystko",
-    "showLess": "Pokaż mniej",
     "keep": "Zachowaj na Drive",
     "kept": "Zachowano na Drive",
     "inDrive": "Na Drive",
@@ -14598,6 +14641,9 @@
       "titleTooLong": "Tytuł może mieć maksymalnie {{max}} znaków.",
       "noContext": "Ten wątek nie powstał z zakresu rozmowy.",
       "notUndoable": "Cofnąć można tylko wątek utworzony z zakresu."
+    },
+    "followUp": {
+      "notYours": "Ten follow-up może anulować tylko osoba, której dotyczy, właściciel agenta albo administrator."
     },
     "routine": {
       "tooFrequent": "Rutyna uruchamia się najczęściej co 15 minut. Wybierz dłuższy odstęp.",
@@ -16892,7 +16938,13 @@
       "asking": "{{from}} pyta: {{to}}",
       "answered": "Jest odpowiedź od: {{to}}. {{from}} pisze",
       "writing": "{{from}} pisze",
-      "clock": "Czeka od {{time}}"
+      "clock": "Czeka od {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} czeka na twoje zatwierdzenie",
+      "yourAnswer": "{{name}} czeka na twoją odpowiedź",
+      "done": "{{to}} skończył. {{from}} pisze",
+      "notDone": "{{to}} nie skończył. {{from}} pisze",
+      "handedOff": "{{to}} pracuje nad tym, co przekazał {{from}}"
     },
     "consultation": {
       "answered": "Odpowiedź od: {{name}}",
@@ -16919,7 +16971,8 @@
       "waitingComputer_female": "{{name}} czeka na komputer",
       "waitingProvider": "{{name}}: dostawca AI nie działa · ponowi próbę sam",
       "waitingAgents": "{{name}} przekazał część dalej i czeka na odpowiedź",
-      "waitingAgents_female": "{{name}} przekazała część dalej i czeka na odpowiedź"
+      "waitingAgents_female": "{{name}} przekazała część dalej i czeka na odpowiedź",
+      "queued": "{{name}} jest w kolejce"
     },
     "consultPair": {
       "took": "zajęło {{time}}",
@@ -16929,18 +16982,14 @@
       "waitingInput": "czeka na odpowiedź",
       "waitingComputer": "czeka na komputer",
       "waitingProvider": "dostawca AI nie działa",
+      "waitingYourApproval": "czeka na twoje zatwierdzenie",
+      "waitingYourAnswer": "czeka na twoją odpowiedź",
+      "queued": "w kolejce",
       "handedOn": "czeka na innych agentów",
       "noAnswer": "nie odpowiedział",
       "notFinished": "nie skończył",
       "someAnswered": "odpowiedziało {{done}} z {{total}}",
       "labelMany": "Rozmowy {{from}} z {{to}}"
-    },
-    "talk": {
-      "readAll": "Czytaj całość",
-      "more_one": "jeszcze {{count}} wiersz",
-      "more_few": "jeszcze {{count}} wiersze",
-      "more_many": "jeszcze {{count}} wierszy",
-      "more_other": "jeszcze {{count}} wiersza"
     },
     "consultPanel": {
       "label": "Rozmowa między {{from}} a {{to}}",
@@ -16975,14 +17024,6 @@
       "agentNote": "Notatka od: {{from}}",
       "agentNoteAnon": "Notatka od innego agenta",
       "waitResult": "Dotarło to, na co czeka {{name}}",
-      "followUp": "{{name}} wróci o {{time}} w sprawie «{{about}}»",
-      "followUpOn": "{{name}} wróci {{day}} o {{time}} w sprawie «{{about}}»",
-      "followUpDone": "{{name}}: powrót o {{time}} w sprawie «{{about}}»",
-      "followUpDoneOn": "{{name}}: powrót {{day}} o {{time}} w sprawie «{{about}}»",
-      "followUpCanceled": "{{name}} nie wróci o {{time}} w sprawie «{{about}}»",
-      "followUpCanceledOn": "{{name}} nie wróci {{day}} o {{time}} w sprawie «{{about}}»",
-      "followUpWake": "{{name}} wraca w sprawie «{{about}}»",
-      "followUpCancel": "Anuluj",
       "other": "Powiadomienie dla: {{name}}",
       "wakeSkipped": "Wzmianka od {{name}} nie dotarła do: {{agents}}",
       "wakeSkippedAnon": "Wzmianka {{name}} nie dotarła do innego agenta",
@@ -17175,6 +17216,7 @@
         "usingTool": "Użyto narzędzia {{tool}}",
         "thinking": "Myślenie",
         "typing": "Pisanie",
+        "recordingVoice": "Nagrywanie dźwięku",
         "writing": "Pisanie"
       }
     },
@@ -17184,6 +17226,7 @@
       "updatingRoutine": "zmiana rutyny",
       "thinking": "praca",
       "typing": "pisanie",
+      "recordingVoice": "nagrywanie dźwięku",
       "writing": "pisanie",
       "consulting": "sprawdzanie {{app}}",
       "creatingIssue": "tworzenie zadania",
@@ -18303,6 +18346,17 @@
     "type": "Wpisz {{name}}, aby potwierdzić",
     "submit": "Usuń przestrzeń roboczą"
   },
+  "emailUndo": {
+    "title": "Odzyskaj swój e-mail",
+    "lead": "Adres, na który trafił ten link, znowu staje się e-mailem Twojego konta. Wszystkie sesje zostają wylogowane, aplikacje AI odłączone, a sposoby logowania dodane po zmianie przestają działać. Hasło też zostaje usunięte, a następne ustawisz przez „Nie pamiętam hasła”.",
+    "button": "To nie ja",
+    "done": "Twój e-mail wrócił",
+    "doneLead": "{{email}} znowu jest e-mailem Twojego konta, a wszystkie sesje zostały wylogowane. Sposoby logowania dodane po zmianie już nie działają, a hasło zostało usunięte: następne ustawisz przy logowaniu przez „Nie pamiętam hasła”.",
+    "gone": "Ten link już nie działa",
+    "goneLead": "Został już użyty albo minęło jego 7 dni.",
+    "taken": "Inne konto używa tego e-maila",
+    "takenLead": "{{email}} to teraz e-mail innego konta, więc nie może wrócić. Nic się nie zmieniło."
+  },
   "proof": {
     "willSend": "Wyślemy kod na {{email}}, aby potwierdzić, że to ty.",
     "send": "Wyślij kod",
@@ -18822,11 +18876,12 @@
     "sections": {
       "asked": "Zlecone przez osoby",
       "delegated": "Zlecone przez agentów",
-      "background": "Rutyny w tle"
+      "background": "Rutyny w tle",
+      "returns": "Follow-upy"
     },
     "state": {
       "working": "Pracuje",
-      "ok": "Czeka na twoją zgodę",
+      "ok": "Czeka na ciebie",
       "answer": "Czeka na odpowiedź",
       "computerBusy": "Czeka na miejsce na komputerze",
       "inLine": "W kolejce · {{position}}.",
@@ -18922,6 +18977,9 @@
       "stopped": "Zatrzymane przez ciebie",
       "stoppedBy": "Zatrzymane przez: {{name}}",
       "failed": "Nie udało się skończyć",
+      "returnCanceled": "Follow-up anulowany",
+      "returnCanceledYou": "Anulowano follow-up",
+      "returnCanceledBy": "Follow-up anulowany przez: {{name}}",
       "none": "Dzisiaj nic się jeszcze nie zakończyło."
     },
     "empty": {

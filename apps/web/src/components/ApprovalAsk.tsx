@@ -97,6 +97,7 @@ export function ApprovalAsk({
       id={approval.id}
       kind="approval"
       agent={agent}
+      runId={approval.runId}
       who={who}
       label={t(
         pending
@@ -300,6 +301,7 @@ export function ApprovalGroupAsk({
       id={first.id}
       kind="approval"
       agent={agent}
+      runId={first.runId}
       who={who}
       label={t("approval.group")}
       mine={mine}
