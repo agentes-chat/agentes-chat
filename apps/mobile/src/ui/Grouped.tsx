@@ -537,14 +537,25 @@ interface GroupedFieldProps {
   hint?: { name: string; text: string };
   children: ReactNode;
   onPress?: () => void;
+  /**
+   * The label and its ⓘ on a line of their own, the value under them at the row's whole width (a form whose values
+   * are lists of tokens, as the web's forms put labels over their fields).
+   */
+  stacked?: boolean;
 }
 
 /**
  * A labeled field row ("Nome", "Seu @"): the label in a fixed column, the value or an input after it;
  * with `onPress`, the whole row opens a screen (a chevron on the right).
  */
-export function GroupedField({ label, hint, children, onPress }: GroupedFieldProps) {
+export function GroupedField({ label, hint, children, onPress, stacked = false }: GroupedFieldProps) {
   const { colors: c } = useTheme();
+  if (stacked)
+    return (
+      <StackedField label={label} {...(hint ? { hint } : {})} {...(onPress ? { onPress } : {})}>
+        {children}
+      </StackedField>
+    );
   if (hint)
     return (
       <HintedField label={label} hint={hint} onPress={onPress}>
@@ -619,6 +630,54 @@ function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { h
   );
 }
 
+/**
+ * `GroupedField stacked`: the label (and its ⓘ, on the label's line) over the value, the value at the row's whole
+ * width; with `onPress` the row's button lies under them, as `HintedField`'s, and a chevron ends the row.
+ */
+function StackedField({ label, hint, children, onPress }: Omit<GroupedFieldProps, "stacked">) {
+  const { colors: c } = useTheme();
+  const info = useInfoHint({ name: hint?.name ?? "", text: hint?.text ?? "", variant: "footnote" });
+  const passive = onPress ? "none" : "auto";
+  return (
+    <View>
+      <View style={styles.stack}>
+        {onPress ? (
+          <Pressable
+            onPress={onPress}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            style={({ pressed }) => [StyleSheet.absoluteFill, pressed ? { backgroundColor: c.sunken } : null]}
+          />
+        ) : null}
+        <View style={styles.grow} pointerEvents="box-none">
+          <View style={styles.keyLine} pointerEvents="box-none">
+            <View
+              pointerEvents={passive}
+              style={styles.shrink}
+              accessibilityElementsHidden={Boolean(onPress)}
+              importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
+            >
+              <Text variant="footnote" tone="muted">
+                {label}
+              </Text>
+            </View>
+            {hint ? info.button : null}
+          </View>
+          <View style={styles.stackValue} pointerEvents={passive}>
+            {children}
+          </View>
+        </View>
+        {onPress ? (
+          <View pointerEvents="none">
+            <Icon name="right" size={15} color={c.faint} />
+          </View>
+        ) : null}
+      </View>
+      {hint ? <View style={[styles.hint, info.open ? styles.hintOpen : null]}>{info.text}</View> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   marked: { fontWeight: "600" },
   list: { borderRadius: 14, overflow: "hidden" },
@@ -682,6 +741,16 @@ const styles = StyleSheet.create({
   },
   key: { width: 96 },
   keyLine: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
+  // A stacked field: its label's line, the value 4 under it, the row's own 10 above and below.
+  stack: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: GROUPED_ROW.minHeight,
+    paddingHorizontal: GROUPED_ROW.padX,
+    paddingVertical: GROUPED_ROW.padY,
+  },
+  stackValue: { marginTop: 4 },
   shrink: { flexShrink: 1, minWidth: 0 },
   // The row's own 16 at the end stays: a button's 44 overhangs its glyph by 13 on each side, 2 apart. Into the row's
   // padding it takes 7 above and below, so on the line it is a 30-point mark's height and showing it moves no row.

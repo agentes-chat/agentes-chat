@@ -6,12 +6,13 @@ import {
   addressesLeft,
   addressState,
   batchNews,
+  cargoPicks,
+  cargoWords,
   focusedFirst,
   invitationLine,
   invitationRoles,
   invitationSender,
   invitersOf,
-  joinRoleWord,
   memberActions,
   memberLine,
   offeredChannels,
@@ -160,16 +161,16 @@ describe("Membros e convites (ADR 0090)", () => {
 });
 
 describe("Convidar pessoas (ADR 0090 §5)", () => {
-  test("addresses are read the way they're pasted, once each, each with no role yet", () => {
+  test("addresses are read the way they're pasted, once each", () => {
     const list = withAddresses([], 'Ana Silva <ana@acme.com>, "rui@acme.com"; mailto:bia@acme.com');
     expect(list.map((a) => a.email)).toEqual(["ana@acme.com", "rui@acme.com", "bia@acme.com"]);
-    expect(list.every((a) => a.valid && a.roleId === null)).toBe(true);
-    const picked = [{ email: "ana@acme.com", valid: true, roleId: ADMIN.id }];
+    expect(list.every((a) => a.valid)).toBe(true);
+    const picked = [{ email: "ana@acme.com", valid: true }];
     expect(withAddresses(picked, "ANA@acme.com lia@acme.com")).toEqual([
       ...picked,
-      { email: "lia@acme.com", valid: true, roleId: null },
+      { email: "lia@acme.com", valid: true },
     ]);
-    expect(withAddresses([], "ana@")).toEqual([{ email: "ana@", valid: false, roleId: null }]);
+    expect(withAddresses([], "ana@")).toEqual([{ email: "ana@", valid: false }]);
   });
 
   test("typing stays in the field until a separator; a pasted list goes at once", () => {
@@ -195,10 +196,10 @@ describe("Convidar pessoas (ADR 0090 §5)", () => {
 
   test("only addresses to fix stay after sending", () => {
     const addresses = [
-      { email: "ana@acme.com", valid: true, roleId: null },
-      { email: "rui@acme.com", valid: true, roleId: null },
-      { email: "x@bad", valid: true, roleId: null },
-      { email: "nope", valid: false, roleId: null },
+      { email: "ana@acme.com", valid: true },
+      { email: "rui@acme.com", valid: true },
+      { email: "x@bad", valid: true },
+      { email: "nope", valid: false },
     ];
     const results: BatchInviteResult[] = [
       { email: "ana@acme.com", status: "invited" },
@@ -249,16 +250,16 @@ describe("Invite people in a personal workspace (ADR 0159 §4)", () => {
   const src = (file: string) =>
     readFileSync(join(import.meta.dir, "..", "..", "src", "features", "members", file), "utf8");
 
-  test("each address's role in plain words: uses the agents, helps run it, any other role by its name", async () => {
+  test("the cargos in plain words: uses the agents, helps run it, any other cargo by its name", async () => {
     const pt = await translator("pt-BR");
-    expect(joinRoleWord(pt, ROLES, null, true)).toBe("Usa os agentes");
-    expect(joinRoleWord(pt, ROLES, ADMIN.id, true)).toBe("Ajuda a cuidar daqui");
-    expect(joinRoleWord(pt, ROLES, SALES.id, true)).toBe("Vendas");
-    // A role no longer there reads as no role.
-    expect(joinRoleWord(pt, ROLES, "r-gone", true)).toBe("Usa os agentes");
-    // A team's workspace: Membro, or the role's own name.
-    expect(joinRoleWord(pt, ROLES, null, false)).toBe("Membro");
-    expect(joinRoleWord(pt, ROLES, ADMIN.id, false)).toBe("Admin");
+    expect(cargoWords(pt, ROLES, [], true)).toBe("Usa os agentes");
+    expect(cargoWords(pt, ROLES, [ADMIN.id], true)).toBe("Ajuda a cuidar daqui");
+    expect(cargoWords(pt, ROLES, [SALES.id], true)).toBe("Vendas");
+    // A cargo no longer there reads as none.
+    expect(cargoWords(pt, ROLES, ["r-gone"], true)).toBe("Usa os agentes");
+    // A team's workspace: Membro, or the cargos' own names, top first.
+    expect(cargoWords(pt, ROLES, [], false)).toBe("Membro");
+    expect(cargoWords(pt, ROLES, [SALES.id, ADMIN.id], false)).toBe("Admin e Vendas");
   });
 
   test("it asks first who they are: family goes on, work switches it on the mode screen, locked for the rest", () => {
@@ -266,13 +267,30 @@ describe("Invite people in a personal workspace (ADR 0159 §4)", () => {
     expect(invite).toContain("if (personal && !family) return <WhoQuestion onFamily={() => setFamily(true)} />;");
     expect(invite).toContain('router.push("/settings/mode")');
     expect(invite).toContain('t(switches ? "personalMode.invite.workText" : "personalMode.invite.workLocked")');
-    expect(invite).toContain("joinRoleWord(t, roles, a.roleId, personal)");
+    // Its Cargo field is "Pode", in the plain words.
+    const fields = src("InviteFields.tsx");
+    expect(fields).toContain('const roleLabel = personal ? t("invites.can") : t("members.role");');
+    expect(fields).toContain("cargoWords(t, roles, d.roleIds, true)");
   });
 
-  test("the role sheet offers the two plain choices first, then every other role this person may give", () => {
-    const sheets = src("InviteSheets.tsx");
-    expect(sheets).toContain('label: personal ? t("members.dialog.role.uses") : t("roles.member"),');
-    expect(sheets).toContain("...givable.filter((r) => r.key !== helper.id),");
+  test("the Cargo choice offers the two plain choices first, then every other cargo this person may give", async () => {
+    const pt = await translator("pt-BR");
+    const vendas = role({ id: "r-vendas2", name: "Suporte", position: 2 });
+    const above = role({ id: "r-dir", name: "Diretoria", position: 0, givable: false });
+    const all = [ADMIN, SALES, vendas, above];
+    expect(cargoPicks(pt, all, [], true).map((p) => [p.id, p.label, p.on])).toEqual([
+      [null, "Usa os agentes", true],
+      [ADMIN.id, "Ajuda a cuidar daqui", false],
+      [SALES.id, "Vendas", false],
+      [vendas.id, "Suporte", false],
+    ]);
+    // A team's: Membro first, then the cargos below the viewer, several at once.
+    expect(cargoPicks(pt, all, [SALES.id, vendas.id], false).map((p) => [p.label, p.on])).toEqual([
+      ["Membro", false],
+      ["Admin", false],
+      ["Vendas", true],
+      ["Suporte", true],
+    ]);
   });
 });
 

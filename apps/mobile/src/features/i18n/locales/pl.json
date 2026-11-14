@@ -2326,25 +2326,16 @@
     }
   },
   "joinRequests": {
-    "share": "Udostępnij link",
-    "roles": "Role",
-    "rolesHint": "Dołączają z włączonymi rolami. Bez żadnej mogą robić to, co Wszyscy."
+    "share": "Udostępnij link"
   },
   "humanCheck": {
     "title": "Szybka weryfikacja",
     "blocked": "Weryfikacja się nie wczytała. Spróbuj innej sieci."
   },
   "invitePeople": {
-    "emailsHelp": "Wklej listę albo wpisz. Każda osoba dostanie e-mail i od razu dołączy.",
-    "here": "Już tutaj są",
-    "invited": "Już zaproszeni",
-    "fix": "Sprawdź to",
-    "channels": "Kanały",
     "optional": "Opcjonalnie",
     "ok": "OK",
     "noteHelp": "Pojawi się w e-mailu z twoim imieniem. Maksymalnie {{max}} znaków.",
-    "roleHelp": "Zmienia to, co osoba dostaje po dołączeniu.",
-    "remove": "Usuń z listy",
     "sendAgain": "Wyślij ponownie",
     "cancelTitle": "Anulować zaproszenie dla {{email}}?",
     "cancelText": "Jego link przestanie działać.",

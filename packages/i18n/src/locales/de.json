@@ -718,6 +718,92 @@
       "deniedTextPersonal": "Wenn du das für einen Fehler hältst, bitte die Person, die dir den Link geschickt hat, dich einzuladen."
     }
   },
+  "invites": {
+    "how": {
+      "email": "E-Mail",
+      "link": "Link"
+    },
+    "to": "An",
+    "can": "Darf",
+    "edit": "Bearbeiten",
+    "hint": {
+      "roles": "Was die Person tun kann. Rollen kommen zu dem hinzu, was Alle können. Nur für Personen.",
+      "channels": "Wo die Person startet. Die Kanäle der Rolle sind schon markiert.",
+      "agents": "Mit wem die Person arbeitet. Sie stehen oben in ihrer Liste. Ein eingeschränkter Agent antwortet ihr dann auch."
+    },
+    "rolesFoot": "Rollen kommen zu dem hinzu, was Alle können. Die Kanäle und Agenten der Rolle sind schon markiert.",
+    "fromRole": "Von der Rolle {{role}}",
+    "fromRoles": "Von den Rollen {{roles}}",
+    "byRole": "Über die Rolle {{role}}",
+    "agent": {
+      "everyone": "Alle haben {{name}}",
+      "opens": "Eingeschränkt · du gibst ihn frei",
+      "locked": "Eingeschränkt · nur {{name}} gibt ihn frei",
+      "lockedAdmins": "Eingeschränkt · nur wer Agenten bearbeitet, gibt ihn frei",
+      "mailbox": "Liest die E-Mails von {{names}}",
+      "plan": "Antwortet nur {{name}}"
+    },
+    "line": {
+      "noTalk": "Mit dieser Rolle spricht die Person nicht mit Agenten.",
+      "admin": "Mit {{role}} sieht die Person alle Agenten.",
+      "opens_one": "{{names}} antwortet allen, die mit dieser Einladung beitreten.",
+      "opens_other": "{{names}} antworten allen, die mit dieser Einladung beitreten."
+    },
+    "agentsNone": "Noch keine anderen Agenten.",
+    "onJoin": "Beim Beitritt",
+    "theLink": "Der Link",
+    "ttl": {
+      "label": "Gültigkeit",
+      "30m": "30 Minuten",
+      "1h": "1 Stunde",
+      "1d": "1 Tag",
+      "7d": "7 Tage",
+      "30d": "30 Tage",
+      "never": "Läuft nicht ab",
+      "keep": "Bis {{date}}"
+    },
+    "max": {
+      "label": "Höchstzahl an Personen",
+      "count_one": "{{count}} Person",
+      "count_other": "{{count}} Personen",
+      "none": "Ohne Limit",
+      "used_one": "{{count}} ist schon beigetreten",
+      "used_other": "{{count}} sind schon beigetreten"
+    },
+    "link": {
+      "uses_one": "{{uses}} von {{count}} Person",
+      "uses_other": "{{uses}} von {{count}} Personen",
+      "joined_one": "{{count}} beigetreten",
+      "joined_other": "{{count}} beigetreten",
+      "by": "von {{name}}",
+      "edit": "Link bearbeiten",
+      "saved": "Link gespeichert. Die Adresse bleibt gleich.",
+      "failed": "Der Link konnte nicht erstellt werden. {{cause}}",
+      "makeFirst": "Erstelle den Link, um ihn zu kopieren.",
+      "turnOff": "Link ausschalten",
+      "turnedOff": "Link ausgeschaltet."
+    },
+    "tab": {
+      "links": "Links",
+      "emails": "Einladungen per E-Mail"
+    },
+    "invitation": {
+      "edit": "Einladung bearbeiten",
+      "saved": "Einladung für {{email}} aktualisiert.",
+      "expired": "Diese Einladung ist abgelaufen. Verlängere sie, um zu ändern, was sie gibt."
+    },
+    "request": {
+      "viaLinkOf": "Über den Link von {{name}} angefragt {{when}}"
+    },
+    "refused": {
+      "archived": "#{{channel}} wurde archiviert. Nimm ihn raus, um zu senden.",
+      "left": "Du bist nicht mehr in #{{channel}}. Nimm ihn raus, um zu senden.",
+      "gone": "Einer der Kanäle existiert nicht mehr. Nimm den markierten raus, um zu senden.",
+      "agentGone": "{{name}} hat das Team verlassen. Nimm ihn aus der Einladung, um zu senden.",
+      "agentLocked": "Du kannst {{name}} nicht mehr freigeben. Nimm ihn aus der Einladung, um zu senden.",
+      "agentUnnamed": "Einer der Agenten hat das Team verlassen. Nimm den markierten raus, um zu senden."
+    }
+  },
   "onboarding": {
     "stepsLabel": "Schritte für den Start",
     "deleteLink": "Diesen Workspace löschen",
@@ -7134,7 +7220,8 @@
       "lead": "Hier arbeiten das Team und die Agenten zusammen: Schreib in #{{channel}} oder ruf einen Agenten beim Namen.",
       "sayHi": "Sag Hallo in #{{channel}}",
       "talkTo": "Mit {{name}} sprechen",
-      "team": "Team ansehen"
+      "team": "Team ansehen",
+      "alsoIn": "Du bist auch in {{channels}}."
     },
     "people": "Personen",
     "seen": "Aktiv {{when}}",
@@ -15234,6 +15321,7 @@
       "general": "Allgemein",
       "right_hand": "Rechte Hand",
       "members": "Mitglieder und Einladungen",
+      "invites": "Einladungen",
       "roles": "Rollen und Berechtigungen",
       "vault": "Vault",
       "access": "Agenten und Zugriff",
@@ -15265,6 +15353,7 @@
       "general": "Name, Zeitzone und was jeder Agent über den Workspace weiß.",
       "right_hand": "Der Assistent, der mit jeder Person das Team aufbaut, in ihrer DM.",
       "members": "Wer im Workspace ist, und Einladungen.",
+      "invites": "Wer beitreten kann und was die Person bekommt.",
       "roles": "Was jede Person darf. Rollen addieren sich.",
       "vault": "Passwörter, Schlüssel und Kontakte deiner Agenten. Passwörter sehen sie nie.",
       "access": "Was jeder Agent nutzen kann: eine Stufe pro Konnektor.",

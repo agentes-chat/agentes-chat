@@ -2233,8 +2233,6 @@ export const featureKeysEn = {
   },
   joinRequests: {
     share: "Share the link",
-    roles: "Roles",
-    rolesHint: "They join with the roles turned on. With none, they may do what Everyone may.",
   },
   humanCheck: {
     title: "Quick check",
@@ -2242,16 +2240,9 @@ export const featureKeysEn = {
   },
   /** Convidar pessoas and the sent invitations' sheet (ADR 0090); the other words are the shared `members.*`. */
   invitePeople: {
-    emailsHelp: "Paste a list or type. Each person gets an email and joins right away.",
-    here: "Already here",
-    invited: "Already invited",
-    fix: "Check this",
-    channels: "Channels",
     optional: "Optional",
     ok: "OK",
     noteHelp: "It shows in the email with your name. Up to {{max}} characters.",
-    roleHelp: "Changes what the person gets on joining.",
-    remove: "Take off the list",
     sendAgain: "Send again",
     cancelTitle: "Cancel the invitation to {{email}}?",
     cancelText: "Its link stops opening.",

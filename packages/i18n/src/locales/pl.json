@@ -736,6 +736,102 @@
       "deniedTextPersonal": "Jeśli uważasz, że to pomyłka, poproś osobę, która wysłała ci link, o zaproszenie."
     }
   },
+  "invites": {
+    "how": {
+      "email": "E-mail",
+      "link": "Link"
+    },
+    "to": "Do",
+    "can": "Może",
+    "edit": "Edytuj",
+    "hint": {
+      "roles": "Co ta osoba może robić. Role dodają się do tego, co mogą Wszyscy. Tylko dla osób.",
+      "channels": "Gdzie ta osoba od razu trafia. Kanały roli są już zaznaczone.",
+      "agents": "Z kim ta osoba pracuje. Są na górze jej listy. Agent z ograniczonym dostępem zaczyna jej odpowiadać."
+    },
+    "rolesFoot": "Role dodają się do tego, co mogą Wszyscy. Kanały i agenci roli są już zaznaczeni.",
+    "fromRole": "Z roli {{role}}",
+    "fromRoles": "Z ról {{roles}}",
+    "byRole": "Przez rolę {{role}}",
+    "agent": {
+      "everyone": "Wszyscy mają {{name}}",
+      "opens": "Ograniczony · ty otwierasz",
+      "locked": "Ograniczony · otwiera tylko {{name}}",
+      "lockedAdmins": "Ograniczony · otwierają tylko edytujący agentów",
+      "mailbox": "Czyta e-maile: {{names}}",
+      "plan": "Odpowiada tylko: {{name}}"
+    },
+    "line": {
+      "noTalk": "Z tą rolą osoba nie rozmawia z agentami.",
+      "admin": "Z rolą {{role}} osoba widzi wszystkich agentów.",
+      "opens_one": "{{names}} zacznie odpowiadać każdemu, kto dołączy przez to zaproszenie.",
+      "opens_few": "{{names}} zaczną odpowiadać każdemu, kto dołączy przez to zaproszenie.",
+      "opens_many": "{{names}} zaczną odpowiadać każdemu, kto dołączy przez to zaproszenie.",
+      "opens_other": "{{names}} zaczną odpowiadać każdemu, kto dołączy przez to zaproszenie."
+    },
+    "agentsNone": "Nie ma jeszcze innych agentów.",
+    "onJoin": "Po dołączeniu",
+    "theLink": "Link",
+    "ttl": {
+      "label": "Ważność",
+      "30m": "30 minut",
+      "1h": "1 godzina",
+      "1d": "1 dzień",
+      "7d": "7 dni",
+      "30d": "30 dni",
+      "never": "Nie wygasa",
+      "keep": "Do {{date}}"
+    },
+    "max": {
+      "label": "Maksymalna liczba osób",
+      "count_one": "{{count}} osoba",
+      "count_few": "{{count}} osoby",
+      "count_many": "{{count}} osób",
+      "count_other": "{{count}} osoby",
+      "none": "Bez limitu",
+      "used_one": "{{count}} osoba już dołączyła",
+      "used_few": "{{count}} osoby już dołączyły",
+      "used_many": "{{count}} osób już dołączyło",
+      "used_other": "{{count}} osoby już dołączyły"
+    },
+    "link": {
+      "uses_one": "{{uses}} z {{count}} osoby",
+      "uses_few": "{{uses}} z {{count}} osób",
+      "uses_many": "{{uses}} z {{count}} osób",
+      "uses_other": "{{uses}} z {{count}} osób",
+      "joined_one": "{{count}} osoba dołączyła",
+      "joined_few": "{{count}} osoby dołączyły",
+      "joined_many": "{{count}} osób dołączyło",
+      "joined_other": "{{count}} osoby dołączyły",
+      "by": "od {{name}}",
+      "edit": "Edytuj link",
+      "saved": "Link zapisany. Adres pozostaje ten sam.",
+      "failed": "Nie udało się utworzyć linku. {{cause}}",
+      "makeFirst": "Utwórz link, żeby go skopiować.",
+      "turnOff": "Wyłącz link",
+      "turnedOff": "Link wyłączony."
+    },
+    "tab": {
+      "links": "Linki",
+      "emails": "Zaproszenia e-mailem"
+    },
+    "invitation": {
+      "edit": "Edytuj zaproszenie",
+      "saved": "Zaproszenie dla {{email}} zaktualizowane.",
+      "expired": "To zaproszenie wygasło. Odnów je, żeby zmienić to, co daje."
+    },
+    "request": {
+      "viaLinkOf": "Prośba przez link od {{name}} {{when}}"
+    },
+    "refused": {
+      "archived": "#{{channel}} został zarchiwizowany. Usuń go, żeby wysłać.",
+      "left": "Nie jesteś już w #{{channel}}. Usuń go, żeby wysłać.",
+      "gone": "Jeden z kanałów już nie istnieje. Usuń zaznaczony, żeby wysłać.",
+      "agentGone": "{{name}} nie ma już w zespole. Usuń z zaproszenia, żeby wysłać.",
+      "agentLocked": "Nie możesz już otworzyć {{name}} dla innych. Usuń z zaproszenia, żeby wysłać.",
+      "agentUnnamed": "Jednego z agentów nie ma już w zespole. Usuń zaznaczonego, żeby wysłać."
+    }
+  },
   "onboarding": {
     "stepsLabel": "Pierwsze kroki",
     "deleteLink": "Usuń tę przestrzeń roboczą",
@@ -7621,7 +7717,8 @@
       "lead": "Tutaj zespół i agenci pracują razem: napisz na #{{channel}} albo zawołaj agenta po imieniu.",
       "sayHi": "Przywitaj się na #{{channel}}",
       "talkTo": "Porozmawiaj z {{name}}",
-      "team": "Zobacz zespół"
+      "team": "Zobacz zespół",
+      "alsoIn": "Jesteś też w {{channels}}."
     },
     "people": "Osoby",
     "seen": "Aktywność: {{when}}",
@@ -16248,6 +16345,7 @@
       "general": "Ogólne",
       "right_hand": "Prawa ręka",
       "members": "Członkowie i zaproszenia",
+      "invites": "Zaproszenia",
       "roles": "Role i uprawnienia",
       "vault": "Vault",
       "access": "Agenci i dostęp",
@@ -16279,6 +16377,7 @@
       "general": "Nazwa, strefa czasowa i to, co każdy agent wie o przestrzeni roboczej.",
       "right_hand": "Asystent, który buduje zespół z każdą osobą, w jej DM.",
       "members": "Kto jest w przestrzeni roboczej oraz zaproszenia.",
+      "invites": "Kto może dołączyć i co dostaje.",
       "roles": "Co może każda osoba. Role się sumują.",
       "vault": "Hasła, klucze i kontakty twoich agentów. Haseł nigdy nie widzą.",
       "access": "Z czego może korzystać każdy agent: jeden poziom na konektor.",

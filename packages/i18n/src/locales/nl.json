@@ -718,6 +718,92 @@
       "deniedTextPersonal": "Denk je dat het een vergissing is, vraag dan degene die je de link stuurde om je uit te nodigen."
     }
   },
+  "invites": {
+    "how": {
+      "email": "E-mail",
+      "link": "Link"
+    },
+    "to": "Aan",
+    "can": "Mag",
+    "edit": "Bewerken",
+    "hint": {
+      "roles": "Wat de persoon kan doen. Rollen komen bovenop wat Iedereen kan. Alleen voor mensen.",
+      "channels": "Waar de persoon begint. De kanalen van de rol staan al aangevinkt.",
+      "agents": "Met wie de persoon werkt. Ze staan bovenaan in hun lijst. Een beperkte agent gaat hen ook antwoorden."
+    },
+    "rolesFoot": "Rollen komen bovenop wat Iedereen kan. De kanalen en agents van de rol staan al aangevinkt.",
+    "fromRole": "Van de rol {{role}}",
+    "fromRoles": "Van de rollen {{roles}}",
+    "byRole": "Via de rol {{role}}",
+    "agent": {
+      "everyone": "Iedereen heeft {{name}}",
+      "opens": "Beperkt · jij geeft toegang",
+      "locked": "Beperkt · alleen {{name}} geeft toegang",
+      "lockedAdmins": "Beperkt · alleen wie agents bewerkt geeft toegang",
+      "mailbox": "Leest de e-mail van {{names}}",
+      "plan": "Antwoordt alleen {{name}}"
+    },
+    "line": {
+      "noTalk": "Met deze rol praat de persoon niet met agents.",
+      "admin": "Met {{role}} ziet de persoon alle agents.",
+      "opens_one": "{{names}} gaat iedereen antwoorden die via deze uitnodiging meedoet.",
+      "opens_other": "{{names}} gaan iedereen antwoorden die via deze uitnodiging meedoet."
+    },
+    "agentsNone": "Nog geen andere agents.",
+    "onJoin": "Bij het meedoen",
+    "theLink": "De link",
+    "ttl": {
+      "label": "Geldigheid",
+      "30m": "30 minuten",
+      "1h": "1 uur",
+      "1d": "1 dag",
+      "7d": "7 dagen",
+      "30d": "30 dagen",
+      "never": "Verloopt niet",
+      "keep": "Tot {{date}}"
+    },
+    "max": {
+      "label": "Maximum aantal mensen",
+      "count_one": "{{count}} persoon",
+      "count_other": "{{count}} mensen",
+      "none": "Geen limiet",
+      "used_one": "{{count}} doet al mee",
+      "used_other": "{{count}} doen al mee"
+    },
+    "link": {
+      "uses_one": "{{uses}} van {{count}} persoon",
+      "uses_other": "{{uses}} van {{count}} mensen",
+      "joined_one": "{{count}} doet mee",
+      "joined_other": "{{count}} doen mee",
+      "by": "van {{name}}",
+      "edit": "Link bewerken",
+      "saved": "Link opgeslagen. Het adres blijft hetzelfde.",
+      "failed": "De link kon niet worden gemaakt. {{cause}}",
+      "makeFirst": "Maak de link om hem te kopiëren.",
+      "turnOff": "Link uitzetten",
+      "turnedOff": "Link uitgezet."
+    },
+    "tab": {
+      "links": "Links",
+      "emails": "Uitnodigingen per e-mail"
+    },
+    "invitation": {
+      "edit": "Uitnodiging bewerken",
+      "saved": "Uitnodiging voor {{email}} bijgewerkt.",
+      "expired": "Deze uitnodiging is verlopen. Vernieuw hem om te wijzigen wat hij geeft."
+    },
+    "request": {
+      "viaLinkOf": "Aangevraagd via de link van {{name}} {{when}}"
+    },
+    "refused": {
+      "archived": "#{{channel}} is gearchiveerd. Haal hem weg om te versturen.",
+      "left": "Je zit niet meer in #{{channel}}. Haal hem weg om te versturen.",
+      "gone": "Een van de kanalen bestaat niet meer. Haal de gemarkeerde weg om te versturen.",
+      "agentGone": "{{name}} heeft het team verlaten. Haal deze uit de uitnodiging om te versturen.",
+      "agentLocked": "Je kunt {{name}} niet meer openzetten. Haal deze uit de uitnodiging om te versturen.",
+      "agentUnnamed": "Een van de agents heeft het team verlaten. Haal de gemarkeerde weg om te versturen."
+    }
+  },
   "onboarding": {
     "stepsLabel": "Stappen om te beginnen",
     "deleteLink": "Deze werkruimte verwijderen",
@@ -7174,7 +7260,8 @@
       "lead": "Hier werken het team en de agents samen: schrijf in #{{channel}} of roep een agent bij naam.",
       "sayHi": "Zeg hallo in #{{channel}}",
       "talkTo": "Praat met {{name}}",
-      "team": "Bekijk het team"
+      "team": "Bekijk het team",
+      "alsoIn": "Je zit ook in {{channels}}."
     },
     "people": "Mensen",
     "seen": "Actief {{when}}",
@@ -15298,6 +15385,7 @@
       "general": "Algemeen",
       "right_hand": "Rechterhand",
       "members": "Leden en uitnodigingen",
+      "invites": "Uitnodigingen",
       "roles": "Rollen en rechten",
       "vault": "Vault",
       "access": "Agents en toegang",
@@ -15329,6 +15417,7 @@
       "general": "Naam, tijdzone en wat elke agent over de werkruimte weet.",
       "right_hand": "De assistent die met ieder het team opbouwt, in hun DM.",
       "members": "Wie er in de werkruimte zit, en uitnodigingen.",
+      "invites": "Wie mag meedoen en wat ze krijgen.",
       "roles": "Wat iedereen kan doen. Rollen tellen op.",
       "vault": "Wachtwoorden, sleutels en contacten van je agents. Wachtwoorden zien ze nooit.",
       "access": "Wat elke agent kan gebruiken: één niveau per connector.",

@@ -2124,25 +2124,16 @@
     }
   },
   "joinRequests": {
-    "share": "Bağlantıyı paylaş",
-    "roles": "Roller",
-    "rolesHint": "Açık olan rollerle katılırlar. Hiçbiri açık değilse Herkes'in yapabildiklerini yapabilirler."
+    "share": "Bağlantıyı paylaş"
   },
   "humanCheck": {
     "title": "Hızlı doğrulama",
     "blocked": "Doğrulama yüklenmedi. Başka bir ağ deneyin."
   },
   "invitePeople": {
-    "emailsHelp": "Bir liste yapıştırın ya da yazın. Her kişiye bir e-posta gider ve hemen katılır.",
-    "here": "Zaten burada",
-    "invited": "Zaten davet edildi",
-    "fix": "Bunu kontrol edin",
-    "channels": "Kanallar",
     "optional": "İsteğe bağlı",
     "ok": "Tamam",
     "noteHelp": "E-postada adınızla birlikte görünür. En fazla {{max}} karakter.",
-    "roleHelp": "Kişinin katılırken ne alacağını değiştirir.",
-    "remove": "Listeden çıkar",
     "sendAgain": "Yeniden gönder",
     "cancelTitle": "{{email}} adresine gönderilen davet iptal edilsin mi?",
     "cancelText": "Bağlantısı artık açılmaz.",

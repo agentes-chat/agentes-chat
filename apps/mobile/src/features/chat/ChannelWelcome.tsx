@@ -1,5 +1,5 @@
-import { type Message, useMe, useOverview } from "@agenteschat/client";
-import { joinNames, whenAt } from "@agenteschat/client/lib/format";
+import { type Message, useChannels, useMe, useMembers, useOverview } from "@agenteschat/client";
+import { joinNames, namesText, whenAt } from "@agenteschat/client/lib/format";
 import { agentActivitySince, dayPart, isNewDay, welcomeClock } from "@agenteschat/client/lib/welcome";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,10 +10,15 @@ import { scheduleOnRN } from "react-native-worklets";
 import { readValueSync, STORED, writeValueSync } from "@/lib/storage";
 import { useOrg } from "@/providers/org";
 import { WorkspaceSky } from "@/sky/Sky";
-import { haptics, IconButton, Text, useReducedMotion } from "@/ui";
-import { AgentFace } from "../shared/Face";
+import { Button, haptics, IconButton, Text, useReducedMotion } from "@/ui";
+import { router } from "@/ui/navigation";
+import { usePins } from "../chats/pins";
+import { useOpenDm } from "../new/useOpenDm";
+import { AgentFace, Face } from "../shared/Face";
 import { useDirectory, useOrgId } from "../shared/hooks";
 import { useSurface } from "../shared/parts";
+import { requestComposerText } from "./composer-request";
+import { arrivalOf } from "./logic";
 
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 /** How long after joining someone is still arriving (ADR 0090, as on the web). */
@@ -67,10 +72,12 @@ const firstNameOf = (name: string) => name.trim().split(/\s+/)[0] || name;
 
 /**
  * The top of a channel when it greets you, as the web's (ADR 0090): a newcomer's first #general welcomes them to the
- * workspace; otherwise, on the first channel of a new day, "Boa tarde, Ana." with what its agents left since your last
- * visit and the requests waiting for you. A card on the workspace's sky under the bar, with who did it; it drops in
- * once, and a swipe up or × puts it away (where it came from). The day's greeting also goes by itself a while after
- * the person's first touch elsewhere, never under their finger.
+ * workspace, says the channels they're in besides it (an invitation's, ADR 0184), shows its agents first (the ones
+ * pinned for them first) and a few people, and offers saying hi here, talking to the first agent and meeting the team;
+ * otherwise, on the first channel of a new day, "Boa tarde, Ana." with what its agents left since your last visit and
+ * the requests waiting for you. A card on the workspace's sky under the bar, with who did it; it drops in once, and a
+ * swipe up or × puts it away (where it came from). The day's greeting also goes by itself a while after the person's
+ * first touch elsewhere, never under their finger.
  */
 export function ChannelWelcome({
   channelId,
@@ -96,6 +103,10 @@ export function ChannelWelcome({
   const me = useMe().data;
   const dir = useDirectory();
   const overview = useOverview(orgId);
+  const pins = usePins();
+  const openDm = useOpenDm();
+  const members = useMembers(orgId).data ?? [];
+  const channels = useChannels(orgId).data ?? [];
   const reduced = useReducedMotion();
   const surface = useSurface("e2");
   const [greeting] = useState(() => claimGreeting(orgId, channelId));
@@ -188,10 +199,17 @@ export function ChannelWelcome({
   let title: string;
   let lead: string;
   let crew: string[];
+  let people: string[] = [];
+  let host: string | null = null;
   if (arriving) {
+    const arrival = arrivalOf({ agents: dir.agents, pinned: pins.pins.agents, people: members, meId, channels });
     title = t("members.arrival.title", { org: org?.name ?? "", name });
-    lead = t("members.arrival.lead", { channel: channelName });
-    crew = dir.agents.slice(0, CREW).map((a) => a.id);
+    lead = arrival.alsoIn.length
+      ? t("members.arrival.alsoIn", { channels: namesText(t, arrival.alsoIn, 3) })
+      : t("members.arrival.lead", { channel: channelName });
+    crew = arrival.agents;
+    people = arrival.people;
+    host = arrival.host;
   } else {
     const since = greeting.last ?? Date.now();
     const activity = agentActivitySince(messages ?? [], since);
@@ -247,11 +265,37 @@ export function ChannelWelcome({
           <Text variant="subhead" tone="ink2" numberOfLines={3} style={styles.lead}>
             {lead}
           </Text>
-          {crew.length > 0 ? (
+          {crew.length + people.length > 0 ? (
             <View style={styles.crew} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               {crew.map((id) => (
                 <AgentFace key={id} agentId={id} size={36} framed />
               ))}
+              {people.map((id) => (
+                <Face key={id} who={{ type: "person", id }} size={36} live={false} />
+              ))}
+            </View>
+          ) : null}
+          {arriving ? (
+            // The first things to do, each as wide as the card: say hi here, talk to the first agent, meet the team.
+            <View style={styles.acts}>
+              <Button
+                variant="primary"
+                wide
+                label={t("members.arrival.sayHi", { channel: channelName })}
+                onPress={() => {
+                  requestComposerText(channelId, "");
+                  putAway();
+                }}
+              />
+              {host ? (
+                <Button
+                  variant="ghost"
+                  wide
+                  label={t("members.arrival.talkTo", { name: dir.agentById.get(host)?.name ?? "" })}
+                  onPress={() => void openDm({ agentId: host }, { compose: true })}
+                />
+              ) : null}
+              <Button variant="ghost" wide label={t("members.arrival.team")} onPress={() => router.push("/team")} />
             </View>
           ) : null}
         </View>
@@ -270,4 +314,5 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0, gap: 2 },
   lead: { marginTop: -2 },
   crew: { flexDirection: "row", gap: 8, marginTop: 4 },
+  acts: { gap: 8, marginTop: 8 },
 });

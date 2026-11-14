@@ -727,6 +727,97 @@
       "deniedTextPersonal": "Se pensi che sia un errore, chiedi a chi ti ha mandato il link di invitarti."
     }
   },
+  "invites": {
+    "how": {
+      "email": "E-mail",
+      "link": "Link"
+    },
+    "to": "A",
+    "can": "Può",
+    "edit": "Modifica",
+    "hint": {
+      "roles": "Cosa può fare la persona. I ruoli si sommano a quello che Tutti possono fare. Solo per le persone.",
+      "channels": "Dove entra subito la persona. I canali del ruolo sono già spuntati.",
+      "agents": "Con chi lavora la persona. Restano in cima alla sua lista. Un agente riservato inizia a risponderle."
+    },
+    "rolesFoot": "I ruoli si sommano a quello che Tutti possono fare. I canali e gli agenti del ruolo sono già spuntati.",
+    "fromRole": "Dal ruolo {{role}}",
+    "fromRoles": "Dai ruoli {{roles}}",
+    "byRole": "Tramite il ruolo {{role}}",
+    "agent": {
+      "everyone": "Tutti hanno {{name}}",
+      "opens": "Riservato · lo apri tu",
+      "locked": "Riservato · lo apre solo {{name}}",
+      "lockedAdmins": "Riservato · lo apre solo chi modifica gli agenti",
+      "mailbox": "Legge le e-mail di {{names}}",
+      "plan": "Risponde solo a {{name}}"
+    },
+    "line": {
+      "noTalk": "Con questo ruolo, la persona non parla con gli agenti.",
+      "admin": "Con {{role}}, la persona vede tutti gli agenti.",
+      "opens_one": "{{names}} inizierà a rispondere a chi entra con questo invito.",
+      "opens_many": "{{names}} inizieranno a rispondere a chi entra con questo invito.",
+      "opens_other": "{{names}} inizieranno a rispondere a chi entra con questo invito."
+    },
+    "agentsNone": "Non ci sono ancora altri agenti.",
+    "onJoin": "All'ingresso",
+    "theLink": "Il link",
+    "ttl": {
+      "label": "Validità",
+      "30m": "30 minuti",
+      "1h": "1 ora",
+      "1d": "1 giorno",
+      "7d": "7 giorni",
+      "30d": "30 giorni",
+      "never": "Non scade",
+      "keep": "Fino al {{date}}"
+    },
+    "max": {
+      "label": "Numero massimo di persone",
+      "count_one": "{{count}} persona",
+      "count_many": "{{count}} di persone",
+      "count_other": "{{count}} persone",
+      "none": "Senza limite",
+      "used_one": "{{count}} è già entrata",
+      "used_many": "{{count}} sono già entrate",
+      "used_other": "{{count}} sono già entrate"
+    },
+    "link": {
+      "uses_one": "{{uses}} su {{count}} persona",
+      "uses_many": "{{uses}} su {{count}} di persone",
+      "uses_other": "{{uses}} su {{count}} persone",
+      "joined_one": "{{count}} è entrata",
+      "joined_many": "{{count}} sono entrate",
+      "joined_other": "{{count}} sono entrate",
+      "by": "di {{name}}",
+      "edit": "Modifica link",
+      "saved": "Link salvato. L'indirizzo resta lo stesso.",
+      "failed": "Impossibile creare il link. {{cause}}",
+      "makeFirst": "Crea il link per copiarlo.",
+      "turnOff": "Disattiva link",
+      "turnedOff": "Link disattivato."
+    },
+    "tab": {
+      "links": "Link",
+      "emails": "Inviti via e-mail"
+    },
+    "invitation": {
+      "edit": "Modifica invito",
+      "saved": "Invito per {{email}} aggiornato.",
+      "expired": "Questo invito è scaduto. Rinnovalo per cambiare cosa dà."
+    },
+    "request": {
+      "viaLinkOf": "Ha chiesto tramite il link di {{name}} {{when}}"
+    },
+    "refused": {
+      "archived": "#{{channel}} è stato archiviato. Toglilo per inviare.",
+      "left": "Non sei più in #{{channel}}. Toglilo per inviare.",
+      "gone": "Uno dei canali non esiste più. Togli quello segnato per inviare.",
+      "agentGone": "{{name}} ha lasciato il team. Toglilo dall'invito per inviare.",
+      "agentLocked": "Non puoi più aprire {{name}} ad altre persone. Toglilo dall'invito per inviare.",
+      "agentUnnamed": "Uno degli agenti ha lasciato il team. Togli quello segnato per inviare."
+    }
+  },
   "onboarding": {
     "stepsLabel": "Passaggi per iniziare",
     "deleteLink": "Elimina questo spazio di lavoro",
@@ -7393,7 +7484,8 @@
       "lead": "Qui il team e gli agenti lavorano insieme: scrivi in #{{channel}} o chiama un agente per nome.",
       "sayHi": "Saluta in #{{channel}}",
       "talkTo": "Parla con {{name}}",
-      "team": "Vedi il team"
+      "team": "Vedi il team",
+      "alsoIn": "Sei anche in {{channels}}."
     },
     "people": "Persone",
     "seen": "Attivo {{when}}",
@@ -15749,6 +15841,7 @@
       "general": "Generali",
       "right_hand": "Braccio destro",
       "members": "Membri e inviti",
+      "invites": "Inviti",
       "roles": "Ruoli e permessi",
       "vault": "Vault",
       "access": "Agenti e accessi",
@@ -15780,6 +15873,7 @@
       "general": "Nome, fuso orario e ciò che ogni agente sa dello spazio di lavoro.",
       "right_hand": "L'assistente che costruisce il team con ogni persona, nella sua DM.",
       "members": "Chi fa parte dello spazio di lavoro, e gli inviti.",
+      "invites": "Chi può entrare e cosa riceve.",
       "roles": "Cosa può fare ogni persona. I ruoli si sommano.",
       "vault": "Password, chiavi e contatti dei tuoi agenti. Non vedono mai una password.",
       "access": "Cosa può usare ogni agente: un livello per connettore.",

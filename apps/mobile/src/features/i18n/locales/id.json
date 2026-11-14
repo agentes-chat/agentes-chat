@@ -2023,25 +2023,16 @@
     }
   },
   "joinRequests": {
-    "share": "Bagikan tautan",
-    "roles": "Peran",
-    "rolesHint": "Mereka bergabung dengan peran yang diaktifkan. Tanpa peran, mereka bisa melakukan apa yang boleh dilakukan Semua orang."
+    "share": "Bagikan tautan"
   },
   "humanCheck": {
     "title": "Pemeriksaan singkat",
     "blocked": "Pemeriksaan tidak termuat. Coba jaringan lain."
   },
   "invitePeople": {
-    "emailsHelp": "Tempel daftar atau ketik. Setiap orang menerima email dan langsung bergabung.",
-    "here": "Sudah di sini",
-    "invited": "Sudah diundang",
-    "fix": "Periksa ini",
-    "channels": "Kanal",
     "optional": "Opsional",
     "ok": "Oke",
     "noteHelp": "Muncul di email bersama namamu. Maksimal {{max}} karakter.",
-    "roleHelp": "Mengubah apa yang didapat orang itu saat bergabung.",
-    "remove": "Hapus dari daftar",
     "sendAgain": "Kirim lagi",
     "cancelTitle": "Batalkan undangan untuk {{email}}?",
     "cancelText": "Tautannya tidak akan bisa dibuka lagi.",

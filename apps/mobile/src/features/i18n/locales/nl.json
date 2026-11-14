@@ -2124,25 +2124,16 @@
     }
   },
   "joinRequests": {
-    "share": "De link delen",
-    "roles": "Rollen",
-    "rolesHint": "Ze komen erbij met de rollen die aan staan. Zonder rol mogen ze wat Iedereen mag."
+    "share": "De link delen"
   },
   "humanCheck": {
     "title": "Snelle controle",
     "blocked": "De controle is niet geladen. Probeer een ander netwerk."
   },
   "invitePeople": {
-    "emailsHelp": "Plak een lijst of typ. Iedereen krijgt een e-mail en komt er meteen bij.",
-    "here": "Is er al",
-    "invited": "Al uitgenodigd",
-    "fix": "Controleer dit",
-    "channels": "Kanalen",
     "optional": "Optioneel",
     "ok": "OK",
     "noteHelp": "Staat in de e-mail met je naam. Maximaal {{max}} tekens.",
-    "roleHelp": "Verandert wat de persoon krijgt bij het lid worden.",
-    "remove": "Van de lijst halen",
     "sendAgain": "Opnieuw versturen",
     "cancelTitle": "De uitnodiging aan {{email}} intrekken?",
     "cancelText": "De link ervan werkt dan niet meer.",

@@ -75,8 +75,9 @@ describe("MediaRow", () => {
       ["features/settings/MachineScreen.tsx", 6],
       ["features/chats/ArchivedChannelsScreen.tsx", 1],
       ["features/routines/RoutineScreen.tsx", 1],
-      ["features/members/MembersPage.tsx", 3],
-      ["features/members/InviteLinkRows.tsx", 1],
+      ["features/members/MembersPage.tsx", 1],
+      // Convites: who waits, the links and the e-mail invitations, the web's rows in two lines.
+      ["features/members/InvitesScreen.tsx", 3],
       ["features/roles/RolesScreen.tsx", 3],
       ["features/roles/RoleScreen.tsx", 1],
       ["features/roles/PermissionsScreen.tsx", 1],
@@ -90,9 +91,8 @@ describe("MediaRow", () => {
     for (const [file, count] of uses)
       expect([file, src(file).match(/^\s*media(: true,)?$/gm)?.length ?? 0]).toEqual([file, count]);
     // An invitation's or a suggestion's address wraps instead of ending in "…".
-    const members = src("features/members/MembersPage.tsx");
-    expect(members).toMatch(/label=\{inv\.email\}\s*labelLines=\{2\}/);
-    expect(members).toMatch(/label=\{s\.email\}\s*labelLines=\{2\}/);
+    expect(src("features/members/InvitesScreen.tsx")).toMatch(/label=\{inv\.email\}\s*labelLines=\{2\}/);
+    expect(src("features/members/MembersPage.tsx")).toMatch(/label=\{s\.email\}\s*labelLines=\{2\}/);
   });
 
   test("usage: an agent's API row and a plan account's head keep their mark on the name's line, the rest under", () => {

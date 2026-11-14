@@ -732,6 +732,97 @@ export const ptBR = {
       deniedTextPersonal: "Se acha que foi engano, peça a quem mandou o link para convidar você.",
     },
   },
+  // Inviting (ADR 0184): Convidar pessoas, the links, Convites and its edit screens, on the web and the phone. The
+  // invited person's side is `invite`.
+  invites: {
+    how: { email: "E-mail", link: "Link" },
+    to: "Para",
+    /** A personal workspace's Cargo field (ADR 0159 §4): "Usa os agentes" or "Ajuda a cuidar daqui". */
+    can: "Pode",
+    edit: "Editar",
+    /** Each field's ⓘ. Para's is `members.dialog.pasteHelp`. */
+    hint: {
+      roles: "O que a pessoa pode fazer. Cargos somam ao que Todos podem. Vale só para pessoas.",
+      channels: "Onde a pessoa já entra. Os canais do cargo vêm marcados.",
+      agents: "Com quem a pessoa trabalha. Ficam no topo da lista dela. Um agente restrito passa a responder a ela.",
+    },
+    rolesFoot: "Cargos somam ao que Todos podem. Os canais e os agentes do cargo vêm marcados.",
+    /** What the picked cargos bring, as a group's name. */
+    fromRole: "Do cargo {{role}}",
+    fromRoles: "Dos cargos {{roles}}",
+    byRole: "Pelo cargo {{role}}",
+    /** How each agent would go with an invitation. */
+    agent: {
+      everyone: "Todo mundo tem o {{name}}",
+      everyone_female: "Todo mundo tem a {{name}}",
+      opens: "Restrito · você libera",
+      locked: "Restrito · só {{name}} libera",
+      lockedAdmins: "Restrito · só quem edita agentes libera",
+      mailbox: "Lê o e-mail de {{names}}",
+      plan: "Só atende {{name}}",
+    },
+    line: {
+      noTalk: "Com esse cargo, a pessoa não conversa com agentes.",
+      admin: "Com {{role}}, a pessoa vê todos os agentes.",
+      opens_one: "{{names}} passa a responder a quem entrar por este convite.",
+      opens_other: "{{names}} passam a responder a quem entrar por este convite.",
+    },
+    agentsNone: "Ainda não há outros agentes.",
+    onJoin: "Ao entrar",
+    theLink: "O link",
+    ttl: {
+      label: "Validade",
+      "30m": "30 minutos",
+      "1h": "1 hora",
+      "1d": "1 dia",
+      "7d": "7 dias",
+      "30d": "30 dias",
+      never: "Não expira",
+      /** Editar link's first choice: the link as it is. */
+      keep: "Até {{date}}",
+    },
+    max: {
+      label: "Máximo de pessoas",
+      count_one: "{{count}} pessoa",
+      count_other: "{{count}} pessoas",
+      none: "Sem limite",
+      used_one: "{{count}} já entrou",
+      used_other: "{{count}} já entraram",
+    },
+    link: {
+      /** How full a link is: "0 de 1 pessoa". */
+      uses_one: "{{uses}} de {{count}} pessoa",
+      uses_other: "{{uses}} de {{count}} pessoas",
+      joined_one: "{{count}} entrou",
+      joined_other: "{{count}} entraram",
+      /** Who made a link, when it isn't the person looking. */
+      by: "de {{name}}",
+      edit: "Editar link",
+      saved: "Link salvo. O endereço é o mesmo.",
+      failed: "Não deu para criar o link. {{cause}}",
+      makeFirst: "Crie o link para copiar.",
+      turnOff: "Desativar link",
+      turnedOff: "Link desativado.",
+    },
+    tab: { links: "Links", emails: "Convites por e-mail" },
+    invitation: {
+      edit: "Editar convite",
+      saved: "Convite de {{email}} atualizado.",
+      expired: "Este convite expirou. Renove para mudar o que ele dá.",
+    },
+    request: { viaLinkOf: "Pediu pelo link de {{name}} {{when}}" },
+    /** A pick the server turned down when sending, with the way on. */
+    refused: {
+      archived: "O #{{channel}} foi arquivado. Tire o canal para enviar.",
+      left: "Você não está mais no #{{channel}}. Tire o canal para enviar.",
+      gone: "Um dos canais não existe mais. Tire o marcado para enviar.",
+      agentGone: "O {{name}} saiu do time. Tire do convite para enviar.",
+      agentGone_female: "A {{name}} saiu do time. Tire do convite para enviar.",
+      agentLocked: "Você não pode mais liberar o {{name}}. Tire do convite para enviar.",
+      agentLocked_female: "Você não pode mais liberar a {{name}}. Tire do convite para enviar.",
+      agentUnnamed: "Um dos agentes saiu do time. Tire o marcado para enviar.",
+    },
+  },
   onboarding: {
     stepsLabel: "Passos para começar",
     deleteLink: "Apagar este workspace",
@@ -7533,6 +7624,8 @@ export const ptBR = {
       sayHi: "Dizer oi no #{{channel}}",
       talkTo: "Conversar com {{name}}",
       team: "Ver a equipe",
+      /** The channels an invitation put them in besides #general (ADR 0184). */
+      alsoIn: "Você também está em {{channels}}.",
     },
     people: "Pessoas",
     seen: "Ativo {{when}}",
@@ -15403,6 +15496,7 @@ export const ptBR = {
       general: "Geral",
       right_hand: "Braço direito",
       members: "Membros e convites",
+      invites: "Convites",
       roles: "Cargos",
       vault: "Cofre",
       access: "Agentes e acesso",
@@ -15432,6 +15526,7 @@ export const ptBR = {
       general: "Nome, fuso e o que todo agente sabe do workspace.",
       right_hand: "O assistente que monta o time com cada pessoa, na DM dela.",
       members: "Quem está no workspace e os convites.",
+      invites: "Quem pode entrar e o que recebe.",
       roles: "O que cada pessoa pode fazer. Cargos se somam.",
       vault: "Senhas, chaves e contatos dos agentes. Senhas eles nunca veem.",
       access: "O que cada agente pode usar: um nível por conector.",

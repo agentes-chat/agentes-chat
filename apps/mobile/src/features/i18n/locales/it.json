@@ -2218,25 +2218,16 @@
     }
   },
   "joinRequests": {
-    "share": "Condividi il link",
-    "roles": "Ruoli",
-    "rolesHint": "Entrano con i ruoli attivi. Senza nessuno, possono fare quello che può fare Tutti."
+    "share": "Condividi il link"
   },
   "humanCheck": {
     "title": "Verifica rapida",
     "blocked": "La verifica non si è caricata. Prova un'altra rete."
   },
   "invitePeople": {
-    "emailsHelp": "Incolla un elenco o scrivi. Ogni persona riceve un'email ed entra subito.",
-    "here": "Già qui",
-    "invited": "Già invitato",
-    "fix": "Controlla questo",
-    "channels": "Canali",
     "optional": "Facoltativo",
     "ok": "OK",
     "noteHelp": "Compare nell'email con il tuo nome. Fino a {{max}} caratteri.",
-    "roleHelp": "Cambia quello che la persona ottiene entrando.",
-    "remove": "Togli dall'elenco",
     "sendAgain": "Invia di nuovo",
     "cancelTitle": "Annullare l'invito a {{email}}?",
     "cancelText": "Il suo link smette di aprirsi.",

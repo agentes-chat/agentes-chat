@@ -2023,25 +2023,16 @@
     }
   },
   "joinRequests": {
-    "share": "分享链接",
-    "roles": "角色",
-    "rolesHint": "加入时会获得已开启的角色。如果一个都没开启，就拥有“所有人”的权限。"
+    "share": "分享链接"
   },
   "humanCheck": {
     "title": "快速验证",
     "blocked": "验证没有加载出来。请换个网络试试。"
   },
   "invitePeople": {
-    "emailsHelp": "粘贴列表或直接输入。每个人都会收到一封邮件并立即加入。",
-    "here": "已在这里",
-    "invited": "已邀请",
-    "fix": "请检查",
-    "channels": "频道",
     "optional": "可选",
     "ok": "确定",
     "noteHelp": "会和你的名字一起显示在邮件中。最多 {{max}} 个字符。",
-    "roleHelp": "决定此人加入时获得什么。",
-    "remove": "从列表中移除",
     "sendAgain": "重新发送",
     "cancelTitle": "取消发给 {{email}} 的邀请？",
     "cancelText": "邀请链接将无法再打开。",

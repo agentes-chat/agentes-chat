@@ -7,11 +7,11 @@ import {
   useRoles,
   useWorkspaceLimits,
 } from "@agenteschat/client";
-import { knownErrorText } from "@agenteschat/client/lib/errors";
+import { errorText } from "@agenteschat/client/lib/errors";
+import { type InviteRefusal, inviteRefusal, inviteRefusalText } from "@agenteschat/client/lib/invite-start";
 import { approvalNews, JOIN_REASON_MAX } from "@agenteschat/client/lib/join-requests";
 import { membersFull } from "@agenteschat/client/lib/limits";
 import { can } from "@agenteschat/client/lib/permissions";
-import { sortRoles } from "@agenteschat/client/lib/roles";
 import { Fragment, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Share, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
@@ -21,29 +21,31 @@ import {
   Button,
   Chip,
   EmptyState,
-  GroupedRow,
-  InfoHint,
+  GROUPED_ROW,
   Locked,
   PersonAvatar,
-  RoleMark,
   SheetScreen,
   Text,
   useReducedMotion,
   useToast,
 } from "@/ui";
+import { Note } from "../ai/parts";
 import { useColors } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { errorHaptic, successHaptic, useSurface } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
-import { focusedFirst, requestChips } from "./logic";
+import { EMPTY_INVITE, useDraftStart, useInviteDraft } from "./draft";
+import { useStartFields } from "./InviteFields";
+import { draftFrom, focusedFirst, requestChips, startChanges } from "./logic";
 import { MembersFullNote } from "./MembersFullNote";
 
 /**
- * Requests to join through the invitation link (ADR 0068), as a native form sheet: the web's Members › Requests on
- * the phone, opened by the push, Atividade's card and `agenteschat://join-requests`. Each is approved, with any of
- * the roles the approver may give (ADR 0085; none: only what everyone may do), or denied with a reason the person
- * reads in the email. On a server that sends no email, approving hands the approver the invitation's link to share.
- * `focus`: the request tapped on Membros, on top. With no room left nobody can be approved, as on the web.
+ * Requests to join through an invitation link (ADR 0068, 0184), as a native form sheet: the web's Convites › Esperando
+ * você on the phone, opened by the push, Atividade's card and `agenteschat://join-requests`. Each is approved with
+ * what its link gives (Cargo, Canais, Agentes, changed here first if need be; a suggestion starts on nothing past
+ * Todos), or denied with a reason the person reads in the email. On a server that sends no email, approving hands the
+ * approver the invitation's link to share. `focus`: the request tapped on Convites, on top. With no room left nobody
+ * can be approved, as on the web.
  */
 export function JoinRequestsSheet({ focus, onClose }: { focus?: string | undefined; onClose: () => void }) {
   const { t } = useTranslation();
@@ -53,8 +55,6 @@ export function JoinRequestsSheet({ focus, onClose }: { focus?: string | undefin
   const list = useJoinRequests(orgId, allowed);
   const roles = useRoles(orgId);
   const full = membersFull(useWorkspaceLimits(orgId).data) !== null;
-  // The roles the approver may give: the custom ones below their own (`givable`), top first.
-  const givable = sortRoles((roles.data?.roles ?? []).filter((r) => r.givable));
   // Every link handed over stays until the sheet closes: each is returned once, and the Share sheet can be dismissed.
   const [handOffs, setHandOffs] = useState<{ name: string; url: string }[]>([]);
   const orgName = org?.name ?? "";
@@ -77,7 +77,7 @@ export function JoinRequestsSheet({ focus, onClose }: { focus?: string | undefin
       <RequestCard
         key={r.id}
         request={r}
-        roles={givable}
+        roles={roles.data?.roles ?? []}
         full={full}
         onSend={(url) => {
           setHandOffs((all) => [...all, { name: r.name, url }]);
@@ -121,7 +121,11 @@ function Moving({ style, children }: { style: StyleProp<ViewStyle>; children: Re
   );
 }
 
-/** One request: who and their address, its chips (`requestChips`), their note, and the answer. */
+/**
+ * One request: who and their address, its chips (`requestChips`), their note, then what approving gives (Cargo,
+ * Canais, Agentes, starting on its link's choices, each opening its choice) and the answer. A link that took all its
+ * people says so, and Aprovar waits until its maximum grows.
+ */
 function RequestCard({
   request: r,
   roles,
@@ -129,7 +133,7 @@ function RequestCard({
   onSend,
 }: {
   request: JoinRequest;
-  /** The roles the approver may give; none chosen at first. */
+  /** The workspace's cargos: the link's start on those the approver may give. */
   roles: readonly OrgRole[];
   /** No one more fits: only denying is left. */
   full: boolean;
@@ -144,24 +148,49 @@ function RequestCard({
   const toast = useToast();
   const approve = useApproveJoinRequest(orgId);
   const deny = useDenyJoinRequest(orgId);
-  const [roleIds, setRoleIds] = useState<string[]>([]);
-  const flip = (id: string) => setRoleIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  const key = `request:${r.id}`;
+  // The link's cargos, those still offered to this approver; its channels and agents as the link gives them.
+  const given = (r.link?.roleIds ?? []).filter((id) => roles.some((x) => x.id === id && x.givable));
+  useDraftStart(
+    key,
+    roles.length > 0
+      ? () => ({
+          ...EMPTY_INVITE,
+          ...draftFrom(roles, {
+            roleIds: given,
+            channelIds: r.link?.channelIds ?? [],
+            agentIds: r.link?.agentIds ?? [],
+          }),
+        })
+      : null,
+  );
+  const draft = useInviteDraft(key);
+  const [refused, setRefused] = useState<InviteRefusal | null>(null);
+  const start = useStartFields(key, draft, { refused });
   const [denying, setDenying] = useState(false);
   const [reason, setReason] = useState("");
   const busy = approve.isPending || deny.isPending;
+  const linkFull = r.link?.full === true;
   // Someone else answered first, or it ran out: said in words, and the list refreshes (the hooks refetch).
   const failed = (e: unknown) => {
     errorHaptic();
-    toast({ title: knownErrorText(t, e) ?? t("mobile.app.failed"), icon: "x" });
+    const pick = inviteRefusal(e);
+    if (pick) setRefused(pick);
+    else toast({ title: errorText(t, e, i18n.language), icon: "x" });
   };
 
   // Awaited, not `mutate`'s callbacks: the answered card leaves the list (unmounting) before those would run, and
   // the link a server without email returns must still reach the approver.
   const approveIt = async () => {
     try {
-      // Only roles still offered (one may have gone since it was picked).
-      const given = roleIds.filter((id) => roles.some((x) => x.id === id));
-      const news = approvalNews(await approve.mutateAsync({ id: r.id, roleIds: given }));
+      // Only roles still offered (one may have gone since it was picked); channels and agents only when changed, so
+      // the link's own go as the server finds them now.
+      const offered = start.send.roleIds.filter((id) => roles.some((x) => x.id === id && x.givable));
+      const changed = startChanges(
+        { channelIds: r.link?.channelIds ?? [], agentIds: r.link?.agentIds ?? [] },
+        { ...start.send, roleIds: [] },
+      );
+      const news = approvalNews(await approve.mutateAsync({ id: r.id, roleIds: offered, ...changed }));
       successHaptic();
       if ("send" in news) onSend(news.send);
       else
@@ -183,6 +212,7 @@ function RequestCard({
       failed(e);
     }
   };
+  const lines = [...(refused ? [inviteRefusalText(t, refused)] : []), ...start.lines];
 
   return (
     <Moving style={[styles.card, surface]}>
@@ -196,7 +226,7 @@ function RequestCard({
           <Text variant="body" style={styles.bold} numberOfLines={2}>
             {r.name}
           </Text>
-          <Text variant="small" tone="muted" numberOfLines={1}>
+          <Text variant="small" tone="muted" numberOfLines={2}>
             {r.email}
           </Text>
         </View>
@@ -251,34 +281,21 @@ function RequestCard({
         </Animated.View>
       ) : (
         <Animated.View key="answer" entering={reduced ? undefined : CARD_IN} style={styles.swap}>
-          {roles.length > 0 ? (
-            <View style={styles.field}>
-              <InfoHint
-                name={t("common.about", { label: t("mobile.joinRequests.roles") })}
-                text={t("mobile.joinRequests.rolesHint")}
-                variant="footnote"
-              >
-                <Text variant="footnote" tone="muted">
-                  {t("mobile.joinRequests.roles")}
-                </Text>
-              </InfoHint>
-              {/* Flat in the card (never a card in a card): the rows' text on the card's own 16 pt edge. */}
-              <View style={styles.rows}>
-                {roles.map((role, i) => (
-                  <Fragment key={role.id}>
-                    {i > 0 ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
-                    <GroupedRow
-                      leading={<RoleMark color={role.color} icon={role.icon} size={30} />}
-                      label={role.name}
-                      toggle={roleIds.includes(role.id)}
-                      disabled={busy}
-                      onPress={() => flip(role.id)}
-                    />
-                  </Fragment>
-                ))}
-              </View>
-            </View>
-          ) : null}
+          {/* Flat in the card (never a card in a card): the fields' text on the card's own 16 pt edge. */}
+          <Locked when={busy} style={styles.rows}>
+            {start.fields.map((field, i) => (
+              <Fragment key={field.key}>
+                {i > 0 ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
+                {field}
+              </Fragment>
+            ))}
+          </Locked>
+          {lines.map((line, i) => (
+            <Text key={line} variant="footnote" tone={refused && i === 0 ? "danger" : "faint"}>
+              {line}
+            </Text>
+          ))}
+          {linkFull ? <Note icon="x">{t("errors.join.linkFullApproval")}</Note> : null}
           <View style={styles.acts}>
             <View style={styles.grow}>
               <Button
@@ -287,7 +304,7 @@ function RequestCard({
                 icon="check"
                 label={t("members.requests.approve")}
                 loading={approve.isPending}
-                disabled={busy || full}
+                disabled={busy || full || linkFull || !draft}
                 onPress={() => void approveIt()}
               />
             </View>
@@ -331,9 +348,9 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   bold: { fontWeight: "600" },
   field: { gap: 6 },
-  // A grouped row pads its text 14: pulled out by as much, the text meets the card's 16.
-  rows: { marginHorizontal: -14 },
-  // From the rows' text, after the mark's column (16 + 36 + 12), as GroupedList's.
-  divider: { height: StyleSheet.hairlineWidth, marginLeft: 64, marginRight: 14 },
+  // A field pads its text as a grouped row does: pulled out by as much, the text meets the card's 16.
+  rows: { marginHorizontal: -GROUPED_ROW.padX },
+  // From the fields' text, as GroupedList's hairline for a row with no lead.
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: GROUPED_ROW.padX, marginRight: GROUPED_ROW.padX },
   acts: { flexDirection: "row", gap: 8 },
 });
