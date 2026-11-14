@@ -171,8 +171,9 @@ export interface ManagedTask {
   wait: TaskWait | null;
   /**
    * How it stands for the caller, as an agent's line says it (`workStateOf`, ADR 0084 addendum): waiting on them, at
-   * work, a wait on someone or something else, or in line, and since when by the lists' clock (a wait from its own
-   * start, a card's when it waits on a person). Null: it waits on its plan or budget (`held` says which).
+   * work, a wait on someone or something else, or in line, and since when by the lists' clock (work another agent
+   * handed it from the hand-off, a wait from its own start, a card's when it waits on a person). Null: it waits on its
+   * plan or budget (`held` says which).
    */
   work: {
     state: AgentWorkState;
@@ -275,6 +276,8 @@ type Row = {
   outage: boolean | string;
   wait_since: string | Date | null;
   card_id: string | null;
+  /** Still on only: when another agent handed it this work (`HANDED_AT`). */
+  handed_at: string | Date | null;
 };
 
 /** The fields of `waitingForBrain` (the executor's `Transcript`) the task manager says. */
@@ -315,6 +318,13 @@ const CARD_OF_RUN = sql`(case when r.status in ('waiting_approval', 'waiting_inp
         where s.org_id = r.org_id and s.run_id = r.id and s.status = 'pending'
     ) x where x.message_id is not null order by x.created_at limit 1) end)`;
 
+/**
+ * When another agent handed a run its work: the latest ask it answers, for a run of two agents' DM (not a routine's
+ * room, not a background run), as `anchorsSql`'s `handed_at`. An agent's line counts that work from there.
+ */
+const HANDED_AT = sql`(case when not r.background and ${agentsOnlyIn("c")} and c.dm_key not like 'routine|%' then (
+    select max(ac.created_at) from ${agentConsultations} ac where ac.org_id = r.org_id and ac.target_run_id = r.id) end)`;
+
 /** The runs the caller sees, by status (`active`: still on; else ended since `since`). */
 async function visibleRuns(
   db: Database,
@@ -349,7 +359,8 @@ async function visibleRuns(
         ${which.active ? waitsOnViewerIn("r", userId) : sql`false`} as you,
         ${which.active ? outageIn("r") : sql`false`} as outage,
         ${which.active ? waitSinceIn("r") : sql`null`} as wait_since,
-        ${which.active ? CARD_OF_RUN : sql`null`} as card_id
+        ${which.active ? CARD_OF_RUN : sql`null`} as card_id,
+        ${which.active ? HANDED_AT : sql`null`} as handed_at
       from ${agentRuns} r
       join ${channels} c on c.id = r.channel_id and c.org_id = ${orgId}::uuid
         and c.archived_at is null and c.kind in ('channel', 'dm')
@@ -540,7 +551,7 @@ function workOf(r: Row): ManagedTask["work"] {
     you: truthy(r.you),
   });
   if (!state) return null;
-  const since = state === "working" ? (r.started_at ?? r.created_at) : (r.wait_since ?? r.created_at);
+  const since = state === "working" ? (r.handed_at ?? r.started_at ?? r.created_at) : (r.wait_since ?? r.created_at);
   return { state, since: iso(since) as string, card: r.card_id };
 }
 
