@@ -1925,7 +1925,7 @@ export class BrowserManager {
     req: ActRequest,
     signal?: AbortSignal,
     actor: AgentScope = agent,
-  ): Promise<BrowserAnswer & { setup?: BrowserSetup }> {
+  ): Promise<BrowserAnswer & { setup?: BrowserSetup; tabs?: BrowserTabs }> {
     const allowed = allowedDomainsOf(req.allowedDomains);
     const prepared = this.checkCommand(req.command, req.args, req.timeoutSeconds, folder, allowed);
     const setup: BrowserSetup = {};
