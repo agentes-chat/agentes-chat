@@ -130,14 +130,13 @@ test("a title's `code` and **bold**, the rest as typed: no link or mention, noth
 
 describe("lines that look like a block's start but open none", () => {
   test("are read as prose instead of stopping the parser for good", () => {
-    for (const text of [
-      "```foo``` no começo",
-      "Veja:\n```foo```\nfim",
-      "````\ncódigo\n````",
-      "# Título\u2028continua",
-    ]) {
-      const blocks = parseMarkdown(text, { breaks: true, details: true });
-      expect(blocks.length > 0 && blocks.every((b) => b.type === "paragraph")).toBe(true);
+    for (const [text, types] of [
+      ["```foo``` no começo", ["paragraph"]],
+      ["Veja:\n```foo```\nfim", ["paragraph", "paragraph"]],
+      ["````\ncódigo\n````", ["paragraph", "paragraph"]],
+      ["# Título\u2028continua", ["paragraph"]],
+    ] as const) {
+      expect(parseMarkdown(text, { breaks: true, details: true }).map((b) => b.type)).toEqual([...types]);
     }
   });
 
