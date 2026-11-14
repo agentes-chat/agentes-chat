@@ -1373,6 +1373,11 @@ export class Supervisor {
         if (this.opts.send(f)) this.calls.set(f.callId, w);
         return;
       }
+      case "browser.pointer":
+      case "desktop.pointer":
+        // Its own agent's pointer only.
+        if (f.agentId === w.user.id) this.opts.send(f);
+        return;
       case "browser.frame":
       case "browser.stream.ended": {
         if (f.agentId !== w.user.id) return;

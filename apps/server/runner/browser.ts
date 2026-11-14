@@ -22,6 +22,7 @@ import {
   AGENT_BROWSER_SHA256,
   AGENT_BROWSER_VERSION,
   type AgentBrowserTarget,
+  type AgentPointerAct,
   type AgentScope,
   agentBrowserUrl,
   BROWSER_LIMITS,
@@ -38,6 +39,7 @@ import {
   browserViewportOf,
   CHROME_FAILURES,
   CHROMIUM_LINUX,
+  DESKTOP_SIZE,
   type MachineReplies,
   type MachineRequest,
   parseBrowserInputEvent,
@@ -1048,6 +1050,13 @@ export interface InputState {
 
 /** Agent commands the runner does with a pointer path, a held button and typed keys (`humanSteps`). */
 const HUMAN_COMMANDS = new Set(["click", "dblclick", "hover", "fill", "type"]);
+/** What the pointer does where each of them takes it, for whoever watches (`browser.pointer`). */
+const POINTER_ACTS: Record<string, AgentPointerAct> = {
+  click: "click",
+  dblclick: "double",
+  fill: "type",
+  type: "type",
+};
 /** What `agent-browser` answers to each when the runner did it itself. */
 const HUMAN_DONE: Record<string, string> = { click: "clicked", hover: "hovered", fill: "filled" };
 /** The answer to a command a person's taking control cut short (`stopInput`). */
@@ -1065,6 +1074,15 @@ const BATCH_STEP_MS = 8;
  */
 const HELD_PRESS_MS = 33_000;
 const VIEWPORT = "[window.innerWidth, window.innerHeight]";
+/**
+ * The same, then where the page's top left corner is on the screen: a window on the agent's desktop has its bars
+ * above the page and a frame as thick on each side as the widths differ. For `desktop.pointer` only.
+ */
+const VIEWPORT_ON_SCREEN =
+  "[innerWidth, innerHeight, screenX + (outerWidth - innerWidth) / 2, screenY + outerHeight - innerHeight - (outerWidth - innerWidth) / 2]";
+/** The page's corner on the screen out of `VIEWPORT_ON_SCREEN`'s answer, when it is there. */
+const screenCorner = (seen: unknown[]): Point | undefined =>
+  typeof seen[2] === "number" && typeof seen[3] === "number" ? { x: seen[2], y: seen[3] } : undefined;
 
 /**
  * Run before every `snapshot`: a button or link with no words of its own (an icon, or an icon font's ligature such as
@@ -1520,6 +1538,10 @@ interface Session {
   link?: string;
   /** Where the agent's pointer was left on the page (`humanly`). */
   pointer?: Point;
+  /** The viewport `pointer` was last said in (`pointerGoes`): a press on a point is said in it too. */
+  pointerView?: { width: number; height: number };
+  /** Where the page's corner was on the agent's desktop then, while its window is there. */
+  pointerCorner?: Point;
   /** Where its `hover` left it. While that is still `pointer` (the same object), a menu it opened is taken to be open. */
   hovered?: Point;
   /** Ends the agent's command under way when a person takes control (`stopInput`). */
@@ -2305,6 +2327,25 @@ export class BrowserManager {
   }
 
   /**
+   * Says where the agent's pointer goes, as the gesture starts: whoever watches sees it arrive (ADR 0040 §7.2).
+   * With its window on the agent's desktop (`corner`: the page's corner there), the same point on that screen too.
+   */
+  private pointerGoes(
+    session: Session,
+    to: Point,
+    view: { width: number; height: number },
+    act: AgentPointerAct,
+    corner?: Point,
+  ) {
+    session.pointerView = { width: view.width, height: view.height };
+    session.pointerCorner = corner;
+    const { agentId } = session;
+    this.opts.send({ type: "browser.pointer", agentId, x: to.x, y: to.y, ...session.pointerView, act });
+    if (!corner) return;
+    this.opts.send({ type: "desktop.pointer", agentId, x: corner.x + to.x, y: corner.y + to.y, ...DESKTOP_SIZE, act });
+  }
+
+  /**
    * A `click`, `dblclick`, `hover`, `fill` or `type` on one element as a person does it (`humanSteps`), in two
    * batches: the element's box and the viewport, then the pointer path and the press or the keys. Only an element
    * not all in view is scrolled first, and looked at again: `scrollintoview` centers it even when it is in view, and
@@ -2326,15 +2367,21 @@ export class BrowserManager {
       const seen = batchResults(
         await this.run(session, ["batch", "--bail"], {
           ...opts,
-          stdin: JSON.stringify([...first, ["get", "box", selector], ["eval", VIEWPORT]]),
+          stdin: JSON.stringify([
+            ...first,
+            ["get", "box", selector],
+            ["eval", session.headed ? VIEWPORT_ON_SCREEN : VIEWPORT],
+          ]),
         }),
       );
       const boxOf = (r: unknown) => (isRecord(r) && isRecord(r.result) ? r.result : null);
       const { x, y, width, height } = boxOf(seen?.[first.length]) ?? {};
-      const [vw, vh] = (boxOf(seen?.[first.length + 1])?.result ?? []) as unknown[];
+      const viewed = (boxOf(seen?.[first.length + 1])?.result ?? []) as unknown[];
+      const [vw, vh] = viewed;
       const sizes = [width, height, vw, vh] as number[];
       if (typeof x !== "number" || typeof y !== "number" || !sizes.every((n) => n >= 1)) return null;
-      return { box: { x, y, width, height } as Box, view: { width: vw, height: vh } as Box };
+      const view = { width: vw, height: vh } as Box;
+      return { box: { x, y, width, height } as Box, view, corner: screenCorner(viewed) };
     };
     let seen = await look([]);
     if (!seen) return null;
@@ -2350,6 +2397,7 @@ export class BrowserManager {
         ? [...steps.moves, [command, ...args]]
         : [...steps.moves, ...(steps.check ? [steps.check] : []), ...steps.act];
     session.pointer = steps.to;
+    this.pointerGoes(session, steps.to, seen.view, POINTER_ACTS[command] ?? "move", seen.corner);
     if (command === "hover") session.hovered = steps.to;
     let out = await this.run(session, ["batch", "--bail"], {
       ...opts,
@@ -2400,7 +2448,12 @@ export class BrowserManager {
   ): Promise<BrowserAnswer | null> {
     const opts = { timeoutMs, ...(signal ? { signal } : {}) };
     const [what, a = "", b = ""] = args;
-    if (command === "mouse" && what === "down") session.pressedAt = this.now();
+    if (command === "mouse" && what === "down") {
+      session.pressedAt = this.now();
+      if (session.pointer && session.pointerView) {
+        this.pointerGoes(session, session.pointer, session.pointerView, "click", session.pointerCorner);
+      }
+    }
     if (command === "mouse" && what === "up" && session.pressedAt !== undefined) {
       const left = session.pressedAt + holdMs(randomSource()) - this.now();
       session.pressedAt = undefined;
@@ -2408,14 +2461,16 @@ export class BrowserManager {
     }
     if (command === "mouse" && what === "move" && args.length === 3) {
       const to = { x: Number(a), y: Number(b) };
-      const seen = await this.run(session, ["eval", VIEWPORT], opts);
-      const [width = 0, height = 0] = (isRecord(seen.data) && seen.data.result) as number[];
+      const seen = await this.run(session, ["eval", session.headed ? VIEWPORT_ON_SCREEN : VIEWPORT], opts);
+      const viewed = ((isRecord(seen.data) && seen.data.result) || []) as number[];
+      const [width = 0, height = 0] = viewed;
       if (!Number.isFinite(to.x) || !Number.isFinite(to.y) || width < 1 || height < 1) return null;
       const view = { width, height };
       const rng = randomSource();
       const from = session.pointer ?? startPoint(to, view, rng);
       const path = moveCommands(pointerPath(from, to, rng, { bounds: view, straight: stayed(session) }));
       session.pointer = to;
+      this.pointerGoes(session, to, view, "move", screenCorner(viewed));
       const out = await this.run(session, ["batch", "--bail"], { ...opts, stdin: JSON.stringify(path) });
       const results = batchResults(out);
       return results && !results.some(failedStep) ? { success: true, data: { moved: true, ...to } } : out;

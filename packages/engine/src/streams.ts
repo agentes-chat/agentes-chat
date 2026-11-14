@@ -631,6 +631,16 @@ export function createStreamBroker(deps: StreamBrokerDeps) {
       return n;
     },
 
+    /** Who has an agent's desktop open from that computer now, each person once: the agent's pointer goes to them. */
+    desktopViewers(agentId: string, machineId: string) {
+      const seen = new Map<string, { orgId: string; userId: string }>();
+      for (const s of streams.values()) {
+        if (s.agentId !== agentId || s.machineId !== machineId || s.request.kind !== "desktop") continue;
+        seen.set(`${s.orgId}:${s.userId}`, { orgId: s.orgId, userId: s.userId });
+      }
+      return [...seen.values()];
+    },
+
     /** Ends every stream and data socket (the server restarts: viewers open again on the next one). */
     stop() {
       for (const s of [...streams.values()]) close(s, STREAM_CLOSE.restarting, "server restarting");

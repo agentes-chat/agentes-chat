@@ -107,6 +107,7 @@ import {
   OpencodeBrain,
   platformCapJudge,
   prepareAgentCode,
+  publishUserEvent,
   queueBudgetEmail,
   type ResolveHost,
   RIGHT_HAND_TURN,
@@ -581,7 +582,16 @@ export function buildEngine(o: EngineOptions) {
     warm: warmBrowser,
     log: o.log,
   });
-  machineHub.setBrowserHooks(browserLive.hubHooks);
+  machineHub.setBrowserHooks({
+    ...browserLive.hubHooks,
+    // The agent's pointer on its desktop (ADR 0062): to each person who has that screen open now, never stored.
+    desktopPointer(machineId, { type: _type, agentId, ...pointer }) {
+      for (const viewer of streams.desktopViewers(agentId, machineId)) {
+        const event = { type: "agent.desktop.pointer", agentId, pointer };
+        void publishUserEvent(adapters.pubsub, viewer.orgId, viewer.userId, event);
+      }
+    },
+  });
   // agentes.chat Cloud reads the screen's text while a person is in control (ADR 0076); a self-hosted server never.
   const sessions = config.SESSION_SCREENING ? createSessionScreening({ db, hub: machineHub, log: o.log }) : null;
   // Agents' desktops and terminals (ADR 0058): each person's stream paired with the runner's data socket for it,
