@@ -671,6 +671,7 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
     judge: deps.judge,
     readTools: preset?.readTools,
     writeTools,
+    trustAnnotations: preset?.trustAnnotations,
     cached,
   });
   const seen = new Set<string>();
@@ -678,7 +679,10 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
     seen.add(tool.name);
     const old = byName.get(tool.name);
     const description = (tool.description ?? "").slice(0, 2000);
-    const cls = classes.get(tool.name) ?? classifyByRules(tool, preset?.readTools, writeTools) ?? UNKNOWN_CLASS;
+    const cls =
+      classes.get(tool.name) ??
+      classifyByRules(tool, preset?.readTools, writeTools, preset?.trustAnnotations) ??
+      UNKNOWN_CLASS;
     const suggestion = {
       suggestedAccess: cls.level,
       suggestionSource: cls.source,
