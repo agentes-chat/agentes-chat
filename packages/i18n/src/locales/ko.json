@@ -7296,6 +7296,17 @@
     },
     "assigneeFilter": "담당자",
     "priorityFilter": "우선순위",
+    "labelFilter": "라벨",
+    "table": {
+      "task": "작업",
+      "github": "GitHub",
+      "sortBy": "{{column}} 기준 정렬"
+    },
+    "fold": {
+      "open": "{{name}} 열기",
+      "close": "{{name}} 접기",
+      "column": "열 접기"
+    },
     "title": "작업",
     "summary": "진행 중 {{open}}개 · 에이전트 담당 {{agents}}개",
     "search": "작업 검색",
@@ -7337,8 +7348,16 @@
       "order": {
         "manual": "수동",
         "priority": "우선순위",
-        "due": "마감일"
+        "due": "마감일",
+        "updated": "최근"
       },
+      "done": "완료",
+      "doneIs": {
+        "all": "전체",
+        "recent": "최근 {{days}}일",
+        "hidden": "없음"
+      },
+      "hideEmpty": "빈 그룹 숨기기",
       "field": {
         "project": "프로젝트",
         "assignee": "담당자",

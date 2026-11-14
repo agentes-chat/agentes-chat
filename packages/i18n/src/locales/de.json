@@ -7570,6 +7570,17 @@
     },
     "assigneeFilter": "Zuständig",
     "priorityFilter": "Priorität",
+    "labelFilter": "Label",
+    "table": {
+      "task": "Aufgabe",
+      "github": "GitHub",
+      "sortBy": "Nach {{column}} sortieren"
+    },
+    "fold": {
+      "open": "{{name}} öffnen",
+      "close": "{{name}} einklappen",
+      "column": "Spalte einklappen"
+    },
     "title": "Aufgaben",
     "summary": "{{open}} offen · {{agents}} bei Agenten",
     "search": "Aufgaben durchsuchen",
@@ -7612,8 +7623,16 @@
       "order": {
         "manual": "Manuell",
         "priority": "Priorität",
-        "due": "Fälligkeit"
+        "due": "Fälligkeit",
+        "updated": "Neueste"
       },
+      "done": "Erledigte",
+      "doneIs": {
+        "all": "Alle",
+        "recent": "Letzte {{days}} Tage",
+        "hidden": "Keine"
+      },
+      "hideEmpty": "Leere Gruppen ausblenden",
       "field": {
         "project": "Projekt",
         "assignee": "Zuständig",

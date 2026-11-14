@@ -7299,6 +7299,17 @@
     },
     "assigneeFilter": "担当者",
     "priorityFilter": "優先度",
+    "labelFilter": "ラベル",
+    "table": {
+      "task": "タスク",
+      "github": "GitHub",
+      "sortBy": "{{column}}で並べ替え"
+    },
+    "fold": {
+      "open": "{{name}}を開く",
+      "close": "{{name}}を折りたたむ",
+      "column": "列を折りたたむ"
+    },
     "title": "タスク",
     "summary": "未完了 {{open}} · エージェント担当 {{agents}}",
     "search": "タスクを検索",
@@ -7340,8 +7351,16 @@
       "order": {
         "manual": "手動",
         "priority": "優先度",
-        "due": "期日"
+        "due": "期日",
+        "updated": "最近"
       },
+      "done": "完了",
+      "doneIs": {
+        "all": "すべて",
+        "recent": "過去{{days}}日間",
+        "hidden": "なし"
+      },
+      "hideEmpty": "空のグループを非表示",
       "field": {
         "project": "プロジェクト",
         "assignee": "担当者",

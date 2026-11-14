@@ -7610,6 +7610,17 @@
     },
     "assigneeFilter": "Toegewezen aan",
     "priorityFilter": "Prioriteit",
+    "labelFilter": "Label",
+    "table": {
+      "task": "Taak",
+      "github": "GitHub",
+      "sortBy": "Sorteren op {{column}}"
+    },
+    "fold": {
+      "open": "{{name}} openen",
+      "close": "{{name}} inklappen",
+      "column": "Kolom inklappen"
+    },
     "title": "Taken",
     "summary": "{{open}} open · {{agents}} bij agents",
     "search": "Taken zoeken",
@@ -7652,8 +7663,16 @@
       "order": {
         "manual": "Handmatig",
         "priority": "Prioriteit",
-        "due": "Deadline"
+        "due": "Deadline",
+        "updated": "Recent"
       },
+      "done": "Voltooid",
+      "doneIs": {
+        "all": "Alle",
+        "recent": "Laatste {{days}} dagen",
+        "hidden": "Geen"
+      },
+      "hideEmpty": "Lege groepen verbergen",
       "field": {
         "project": "Project",
         "assignee": "Toegewezen aan",

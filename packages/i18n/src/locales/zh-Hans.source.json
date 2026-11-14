@@ -18315,6 +18315,27 @@
   "issues.priorityFilter": {
     "value": "Priority"
   },
+  "issues.labelFilter": {
+    "value": "Label"
+  },
+  "issues.table.task": {
+    "value": "Task"
+  },
+  "issues.table.github": {
+    "value": "GitHub"
+  },
+  "issues.table.sortBy": {
+    "value": "Sort by {{column}}"
+  },
+  "issues.fold.open": {
+    "value": "Open {{name}}"
+  },
+  "issues.fold.close": {
+    "value": "Fold {{name}}"
+  },
+  "issues.fold.column": {
+    "value": "Fold column"
+  },
   "issues.title": {
     "value": "Tasks"
   },
@@ -18431,6 +18452,24 @@
   },
   "issues.display.order.due": {
     "value": "Due date"
+  },
+  "issues.display.order.updated": {
+    "value": "Recent"
+  },
+  "issues.display.done": {
+    "value": "Done"
+  },
+  "issues.display.doneIs.all": {
+    "value": "All"
+  },
+  "issues.display.doneIs.recent": {
+    "value": "Last {{days}} days"
+  },
+  "issues.display.doneIs.hidden": {
+    "value": "None"
+  },
+  "issues.display.hideEmpty": {
+    "value": "Hide empty groups"
   },
   "issues.display.field.project": {
     "value": "Project"

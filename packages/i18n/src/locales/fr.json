@@ -7831,6 +7831,17 @@
     },
     "assigneeFilter": "Responsable",
     "priorityFilter": "Priorité",
+    "labelFilter": "Étiquette",
+    "table": {
+      "task": "Tâche",
+      "github": "GitHub",
+      "sortBy": "Trier par {{column}}"
+    },
+    "fold": {
+      "open": "Ouvrir {{name}}",
+      "close": "Replier {{name}}",
+      "column": "Replier la colonne"
+    },
     "title": "Tâches",
     "summary": "{{open}} ouvertes · {{agents}} avec des agents",
     "search": "Rechercher des tâches",
@@ -7874,8 +7885,16 @@
       "order": {
         "manual": "Manuel",
         "priority": "Priorité",
-        "due": "Échéance"
+        "due": "Échéance",
+        "updated": "Récentes"
       },
+      "done": "Terminées",
+      "doneIs": {
+        "all": "Toutes",
+        "recent": "{{days}} derniers jours",
+        "hidden": "Aucune"
+      },
+      "hideEmpty": "Masquer les groupes vides",
       "field": {
         "project": "Projet",
         "assignee": "Responsable",

@@ -7530,6 +7530,17 @@
     },
     "assigneeFilter": "Atanan",
     "priorityFilter": "Öncelik",
+    "labelFilter": "Etiket",
+    "table": {
+      "task": "Görev",
+      "github": "GitHub",
+      "sortBy": "{{column}} ölçütüne göre sırala"
+    },
+    "fold": {
+      "open": "{{name}} öğesini aç",
+      "close": "{{name}} öğesini daralt",
+      "column": "Sütunu daralt"
+    },
     "title": "Görevler",
     "summary": "{{open}} açık · {{agents}} ajanlarda",
     "search": "Görevlerde ara",
@@ -7572,8 +7583,16 @@
       "order": {
         "manual": "Elle",
         "priority": "Öncelik",
-        "due": "Son tarih"
+        "due": "Son tarih",
+        "updated": "En yeni"
       },
+      "done": "Tamamlananlar",
+      "doneIs": {
+        "all": "Tümü",
+        "recent": "Son {{days}} gün",
+        "hidden": "Hiçbiri"
+      },
+      "hideEmpty": "Boş grupları gizle",
       "field": {
         "project": "Proje",
         "assignee": "Atanan",

@@ -7779,6 +7779,17 @@
     },
     "assigneeFilter": "Responsable",
     "priorityFilter": "Prioridad",
+    "labelFilter": "Etiqueta",
+    "table": {
+      "task": "Tarea",
+      "github": "GitHub",
+      "sortBy": "Ordenar por {{column}}"
+    },
+    "fold": {
+      "open": "Abrir {{name}}",
+      "close": "Contraer {{name}}",
+      "column": "Contraer columna"
+    },
     "title": "Tareas",
     "summary": "{{open}} abiertas · {{agents}} con agentes",
     "search": "Buscar tareas",
@@ -7822,8 +7833,16 @@
       "order": {
         "manual": "Manual",
         "priority": "Prioridad",
-        "due": "Fecha límite"
+        "due": "Fecha límite",
+        "updated": "Recientes"
       },
+      "done": "Completadas",
+      "doneIs": {
+        "all": "Todas",
+        "recent": "Últimos {{days}} días",
+        "hidden": "Ninguna"
+      },
+      "hideEmpty": "Ocultar grupos vacíos",
       "field": {
         "project": "Proyecto",
         "assignee": "Responsable",
