@@ -20,7 +20,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { overLimitText } from "@agenteschat/client/lib/message-length";
+import { overLimitText, tooLongToSend } from "@agenteschat/client/lib/message-length";
 import { can } from "@agenteschat/client/lib/permissions";
 import { pendingOnAgent } from "@agenteschat/client/lib/proposals";
 import { isAuto } from "@agenteschat/client/lib/providers";
@@ -442,7 +442,7 @@ function AgentProfile({
         ? t("repos.emptyError")
         : undefined,
     instructions:
-      fields.has("instructions") && draft.instructions.trim().length > FIELD_LIMITS.instructions
+      fields.has("instructions") && tooLongToSend(draft.instructions, FIELD_LIMITS.instructions)
         ? overLimitText(t, i18n.language, draft.instructions.trim().length, FIELD_LIMITS.instructions)
         : undefined,
   };
