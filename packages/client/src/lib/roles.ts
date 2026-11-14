@@ -213,10 +213,10 @@ export function rowHolders(
       const own = levelOn(r.permissions, row);
       const level = choice.everyone
         ? own
-        : r.id === step.from?.id
-          ? step.from.level
-          : choice.ticked.has(r.id)
-            ? Math.max(own, step.keep)
+        : choice.ticked.has(r.id)
+          ? Math.max(own, step.keep)
+          : r.id === step.from?.id
+            ? step.from.level
             : Math.max(0, Math.min(own, step.keep - 1));
       return { id: r.id, level };
     }),

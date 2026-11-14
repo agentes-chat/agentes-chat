@@ -228,7 +228,7 @@ function AgentRow({
   const write = (next: AgentAudience) => widen.widen(audiencePatch(next), asks.ask(next), onSaved);
   const change = (next: boolean) => {
     if (base) {
-      if (next) write(EVERYONE_AUDIENCE);
+      if (next) write({ ...EVERYONE_AUDIENCE, consultable: a.consultable });
       else onAsk(false);
       return;
     }

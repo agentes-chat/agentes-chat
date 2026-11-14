@@ -191,3 +191,27 @@ test("moving a cargo one place, never above one the viewer can't change", () => 
   expect(movedOrder(order, editable, "fin", 1)).toBeNull();
   expect(keepsFixedOnTop(["suporte", "diretoria", "fin"], editable)).toBe(false);
 });
+
+describe("REVIEW P1", () => {
+  test("the cargo the change started on, ticked again, keeps the row", () => {
+    const holders = rowHolders(
+      roles,
+      "create_channels",
+      { everyone: false, ticked: new Set(["suporte", "fin"]) },
+      { keep: 1, low: 0, from: { id: "suporte", level: 0 } },
+    );
+    expect(holders.roles).toEqual([
+      { id: "suporte", level: 1 },
+      { id: "fin", level: 1 },
+    ]);
+  });
+  test("computers: the cargo it started on, ticked again, keeps Todos' old step", () => {
+    const holders = rowHolders(
+      roles,
+      "computers",
+      { everyone: false, ticked: new Set(["suporte"]) },
+      { keep: 2, low: 0, from: { id: "suporte", level: 0 } },
+    );
+    expect(holders.roles.find((r) => r.id === "suporte")?.level).toBe(2);
+  });
+});
