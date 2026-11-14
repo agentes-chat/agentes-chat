@@ -663,16 +663,9 @@ test("a run a routine's report woke thinks with the AI its firing picked", async
   });
 });
 
-/*
- * Issue #221: the model saved on the agent never reached the turn — the payload carried the fixed alias `sonnet` and
- * the plan ran `minimax-m3` instead, with no error. These pin the three sides of it: what the person's own brain leaves
- * empty is the agent's (`withPersonalBrain`); what the person chose wins; and an id the account's plan doesn't serve is
- * kept and recorded, never swapped behind anyone's back (`claudeCodeModel`).
- */
-
-test("the model saved on the agent reaches the turn when the person's own brain names none (issue #221)", async () => {
-  const { fx, bia, lodi, runIn } = await world();
-  // Bia picked a plan for her own DM and left the model to the agent.
+test("the model saved on the right hand reaches the turn when the person's own AI names none", async () => {
+  const { fx, deps, bia, lodi, runIn } = await world();
+  // Bia picked a plan for her own DM and left the model to the right hand, saved for the same brain.
   await fx.db.insert(schema.rightHandBrains).values({
     orgId: fx.org.id,
     userId: bia.id,
@@ -681,15 +674,42 @@ test("the model saved on the agent reaches the turn when the person's own brain 
     brainAccountId: BIAS,
   });
   await fx.db.update(schema.machineAccounts).set({ provider: "opencode" }).where(eq(schema.machineAccounts.id, BIAS));
-  await fx.db.update(schema.agents).set({ brainModel: "deepseek-v4.1-flash" }).where(eq(schema.agents.id, lodi.id));
-  const plan = await runIn(bia.id);
-  expect(plan).toMatchObject({ kind: "claude_code", model: "deepseek-v4.1-flash", account: { id: BIAS } });
-  // It is one of the plan's models: nothing was kept off it, so the run records no `brainModel` step.
-  const steps = await fx.db.select().from(schema.agentRunSteps);
-  expect(steps.some((s) => (s.data as { brainModel?: unknown }).brainModel !== undefined)).toBe(false);
+  await fx.db
+    .update(schema.agents)
+    .set({ brain: "claude_code", brainModel: "deepseek-v4.1-flash", brainAccountId: BIAS })
+    .where(eq(schema.agents.id, lodi.id));
+  expect(await runIn(bia.id)).toMatchObject({
+    kind: "claude_code",
+    model: "deepseek-v4.1-flash",
+    account: { id: BIAS },
+  });
+  // Her own settings show the model her DM runs.
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({
+    scope: "mine",
+    model: "deepseek-v4.1-flash",
+    effectiveModel: "deepseek-v4.1-flash",
+  });
 });
 
-test("a model saved for one computer brain doesn't follow the person to another (issue #221)", async () => {
+test("the right hand's API model doesn't follow the person to their own plan", async () => {
+  const { fx, deps, bia, lodi, runIn } = await world();
+  // The right hand as seeded: the API brain with `auto`. Bia's own plan names no model.
+  await fx.db.insert(schema.rightHandBrains).values({
+    orgId: fx.org.id,
+    userId: bia.id,
+    brain: "claude_code",
+    brainModel: null,
+    brainAccountId: BIAS,
+  });
+  await fx.db.update(schema.agents).set({ brain: "model", brainModel: "auto" }).where(eq(schema.agents.id, lodi.id));
+  expect(await runIn(bia.id)).toMatchObject({ kind: "claude_code", model: "sonnet", account: { id: BIAS } });
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({
+    model: null,
+    effectiveModel: "sonnet",
+  });
+});
+
+test("a model saved for one computer brain doesn't follow the person to another", async () => {
   const { fx, bia, lodi } = await world();
   // Bia's own DM runs Codex; the right hand is stored on Claude Code with a Claude model. An Opus is no Codex model.
   await fx.db.insert(schema.rightHandBrains).values({
@@ -710,7 +730,7 @@ test("a model saved for one computer brain doesn't follow the person to another 
   expect(agent.brainModel).toBeNull();
 });
 
-test("a model the person chose for their own DM wins over the agent's", async () => {
+test("a model the person chose for their own DM wins over the right hand's", async () => {
   const { fx, bia, lodi, runIn } = await world();
   await fx.db.insert(schema.rightHandBrains).values({
     orgId: fx.org.id,
@@ -720,27 +740,9 @@ test("a model the person chose for their own DM wins over the agent's", async ()
     brainAccountId: BIAS,
   });
   await fx.db.update(schema.machineAccounts).set({ provider: "opencode" }).where(eq(schema.machineAccounts.id, BIAS));
-  await fx.db.update(schema.agents).set({ brainModel: "deepseek-v4.1-flash" }).where(eq(schema.agents.id, lodi.id));
+  await fx.db
+    .update(schema.agents)
+    .set({ brain: "claude_code", brainModel: "deepseek-v4.1-flash", brainAccountId: BIAS })
+    .where(eq(schema.agents.id, lodi.id));
   expect((await runIn(bia.id)).model).toBe("glm-5.3");
-});
-
-test("a model the account's plan doesn't serve is kept and recorded, not swapped for the alias (issue #221)", async () => {
-  const { fx, bia, runIn } = await world();
-  await fx.db.insert(schema.rightHandBrains).values({
-    orgId: fx.org.id,
-    userId: bia.id,
-    brain: "claude_code",
-    brainModel: "k3-256k",
-    brainAccountId: BIAS,
-  });
-  await fx.db.update(schema.machineAccounts).set({ provider: "opencode" }).where(eq(schema.machineAccounts.id, BIAS));
-  // Kimi's model on an OpenCode plan: the turn asks for what the person has, and the run says it isn't on the plan.
-  expect((await runIn(bia.id)).model).toBe("k3-256k");
-  const step = (await fx.db.select().from(schema.agentRunSteps)).find(
-    (s) => (s.data as { brainModel?: unknown }).brainModel !== undefined,
-  );
-  expect(step?.kind).toBe("context");
-  expect(step?.data).toMatchObject({
-    brainModel: { stored: "k3-256k", runs: "k3-256k", plan: "opencode", offPlan: true },
-  });
 });

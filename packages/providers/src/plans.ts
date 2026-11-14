@@ -366,8 +366,9 @@ interface ListedModel {
 }
 
 /**
- * The plan for a turn on a computer, whose copy of the table may be older than the plan's list: an id of a listed
- * model's shape counts as one of the plan's. Only a plan with a list.
+ * The plan for a turn on a computer, whose copy of the table may be older than the plan's list: the id the server
+ * chose from that list (`claudeCodeModel` there, which has already turned anything else into `sonnet`) counts as one
+ * of the plan's. Only a plan with a list, and only an id of a listed model's shape.
  */
 export function planForTurn(plan: CodingPlan, value: unknown): CodingPlan {
   const { models } = plan.claudeCode;
@@ -476,24 +477,15 @@ export const planModelById = (id: string): PlanModel | undefined =>
 export const isPlanModelId = (v: string) => planModelById(v) !== undefined;
 
 /**
- * Whether a stored value is one the account's plan runs as stored: an alias (the plan names its model), one of the
- * plan's models by id; without a plan, Claude's own ids. False is another plan's model or none (`claudeCodeModel`).
- */
-export function modelRunsOnPlan(plan: CodingPlan | undefined, value: unknown): boolean {
-  if (isAlias(value)) return true;
-  if (typeof value !== "string" || !value) return false;
-  return plan ? plan.claudeCode.models.some((m) => m.id === value) : /^claude-/.test(value);
-}
-
-/**
- * The `--model` of a Claude Code turn for a stored value: an alias as is (on a plan, the plan names its model); with a
- * plan, one of its models by id. Anything else that is a model id is kept as stored — another plan's model, a newer
- * one — and never turned into `sonnet` behind the person's back (issue #221): the turn asks for what the agent has and
- * the caller says it isn't on the plan's list (`modelRunsOnPlan`). A value that is no model id at all keeps `sonnet`.
+ * The `--model` of a Claude Code turn for a stored value: an alias as is (on a plan, the plan names its model);
+ * with a plan, one of its models by id; without one, a Claude id. Anything else (another plan's model, none) runs
+ * `sonnet`.
  */
 export function claudeCodeModel(plan: CodingPlan | undefined, value: unknown): string {
-  if (typeof value === "string" && (modelRunsOnPlan(plan, value) || isListedModelId(value))) return value;
-  return "sonnet";
+  if (isAlias(value)) return value;
+  if (typeof value !== "string") return "sonnet";
+  if (plan) return plan.claudeCode.models.some((m) => m.id === value) ? value : "sonnet";
+  return /^claude-/.test(value) ? value : "sonnet";
 }
 
 /**

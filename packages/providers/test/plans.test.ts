@@ -10,7 +10,6 @@ import {
   learnedPlanModels,
   learnPlanModels,
   modelLimitOf,
-  modelRunsOnPlan,
   PLAN_ALIASES,
   PLAN_FORBIDDEN_TEXT,
   PLAN_IDS,
@@ -158,22 +157,16 @@ describe("coding plans' models", () => {
     expect(planModelById("sonnet")).toBeUndefined();
   });
 
-  test("a turn's --model: an alias or a model id as stored; sonnet only for no id at all", () => {
+  test("a turn's --model: an alias as is, the plan's own model by id, Claude's ids without a plan, else sonnet", () => {
     const kimi = CODING_PLANS.kimi;
     expect(claudeCodeModel(kimi, "opus")).toBe("opus");
     expect(claudeCodeModel(kimi, "k3-256k")).toBe("k3-256k");
-    // Another plan's model, or another Claude id: kept as stored, never swapped for `sonnet` (issue #221).
-    expect(claudeCodeModel(kimi, "glm-5.3")).toBe("glm-5.3");
-    expect(claudeCodeModel(kimi, "claude-opus-5-5")).toBe("claude-opus-5-5");
-    // No model id at all: the CLI's default alias.
-    for (const other of ["auto", "", "sonnet; rm -rf /", undefined, 3])
+    for (const other of ["glm-5.3", "claude-opus-5-5", "auto", undefined, 3])
       expect(claudeCodeModel(kimi, other)).toBe("sonnet");
     expect(claudeCodeModel(undefined, "haiku")).toBe("haiku");
     expect(claudeCodeModel(undefined, "claude-sonnet-4-5")).toBe("claude-sonnet-4-5");
-    // Another plan's model kept while Claude thinks: the turn asks for it rather than another model.
-    expect(claudeCodeModel(undefined, "deepseek-v4.1-flash")).toBe("deepseek-v4.1-flash");
-    expect(modelRunsOnPlan(undefined, "deepseek-v4.1-flash")).toBe(false);
-    expect(modelRunsOnPlan(kimi, "k3-256k")).toBe(true);
+    // Another plan's model kept while Claude thinks.
+    expect(claudeCodeModel(undefined, "deepseek-v4.1-flash")).toBe("sonnet");
     expect(isPlanModelId("deepseek-v4.1-flash")).toBe(true);
     expect(isPlanModelId("MiniMax-M3.1-Flash[1m]")).toBe(true);
     expect(isPlanModelId("gpt-6-sol")).toBe(false);
@@ -296,7 +289,7 @@ describe("a plan's public list of models", () => {
     expect(planOf("opencode")?.claudeCode.models).toHaveLength(models("opencode").length);
   });
 
-  test("once learned, every reader goes by the list: a new model runs, a dropped one is no longer the plan's", () => {
+  test("once learned, every reader goes by the list: a new model runs, a dropped one runs sonnet's", () => {
     expect(planModel(planOf("opencode") as typeof go, "glm-6").id).toBe("minimax-m3");
     expect(isPlanModelId("glm-6")).toBe(false);
     learnPlanModels({ opencode: readPlanModels(go, list) });
@@ -304,9 +297,8 @@ describe("a plan's public list of models", () => {
     expect(planModel(plan, "glm-6").label).toBe("GLM-6");
     expect(claudeCodeModel(plan, "glm-6")).toBe("glm-6");
     expect(planModelById("glm-6")?.maker).toBe("zai");
-    // Both are ids the live list no longer serves: kept, and `droppedPlanModel` is what names them.
-    expect(claudeCodeModel(plan, "hy3")).toBe("hy3");
-    expect(claudeCodeModel(plan, "k3.1-pro")).toBe("k3.1-pro");
+    expect(claudeCodeModel(plan, "hy3")).toBe("sonnet");
+    expect(claudeCodeModel(plan, "k3.1-pro")).toBe("sonnet");
     expect(learnedPlanModels().opencode).toEqual([...plan.claudeCode.models]);
     expect(planOf("kimi")).toBe(CODING_PLANS.kimi);
   });
@@ -402,7 +394,7 @@ test("a model the plan's live list dropped: named, with the table's label; nothi
     expect(droppedPlanModel("opencode", gone.id)).toBeNull();
     learnPlanModels({ opencode: table.filter((m) => m.id !== gone.id) });
     expect(droppedPlanModel("opencode", gone.id)).toEqual(gone);
-    expect(claudeCodeModel(planOf("opencode"), gone.id)).toBe(gone.id);
+    expect(claudeCodeModel(planOf("opencode"), gone.id)).toBe("sonnet");
     learnPlanModels({ opencode: [...table.filter((m) => m.id !== gone.id), { id: "glm-9", label: "GLM-9" }] });
     learnPlanModels({ opencode: table.filter((m) => m.id !== gone.id) });
     expect(droppedPlanModel("opencode", "glm-9")).toEqual({ id: "glm-9", label: "glm-9" });

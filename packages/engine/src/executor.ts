@@ -34,14 +34,7 @@ import {
   type ToolImage,
   textOf,
 } from "@agenteschat/providers";
-import {
-  autoPlanModel,
-  droppedPlanModel,
-  ownLimitsModel,
-  planModel,
-  planModelValue,
-  planOf,
-} from "@agenteschat/providers/plans";
+import { autoPlanModel, droppedPlanModel, ownLimitsModel, planModel, planOf } from "@agenteschat/providers/plans";
 import { PLAN_NOTICE, PLAN_PAUSE } from "@agenteschat/ui/plan-state";
 import { pendingConnectors } from "./access";
 import { linkRunActions, publishMessageActions } from "./agent-actions";
@@ -2853,10 +2846,6 @@ async function executeRunInner(
       : null;
   const droppedFrom = dropped ? planOf(brainPlan.account?.provider) : undefined;
   if (dropped && droppedFrom) {
-    // The plan's live list says this model is gone: the turn runs what the notice names (`planModel`) instead of the
-    // id that is no longer there. Unlike an id the plan never served — kept and recorded by `resolveBrain` (issue
-    // #221) — this drop is known and announced to its owner, so the fallback it names is the one that must run.
-    brainPlan = { ...brainPlan, model: planModelValue(planModel(droppedFrom, brainPlan.model)) };
     await notifyPlanModelDropped(
       { db, pubsub: deps.pubsub },
       {

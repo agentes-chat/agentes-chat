@@ -100,7 +100,7 @@ import {
 import { planLentGroup, planModelDroppedGroup } from "./notification-producers";
 import { resolveNotifications } from "./notifications";
 import { can, getMembership, requirePermission } from "./organizations";
-import { isRightHand, personalBrain } from "./right-hand";
+import { isRightHand, personalBrain, personalModel } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
 import { wakeAgentUsageWaits } from "./usage-pause";
@@ -668,7 +668,7 @@ async function personalAgent(db: Database, agent: Agent, userId: string, account
   const mine: Agent = {
     ...agent,
     brain: own?.brain ?? "model",
-    brainModel: own?.brainModel ?? null,
+    brainModel: own ? personalModel(own, agent) : null,
     brainEffort: own?.brainEffort ?? null,
     brainAccountId: own?.brainAccountId ?? null,
     brainAccountLentBy: own?.brainAccountLentBy ?? null,
@@ -1734,7 +1734,7 @@ export interface AgentBrainSummary {
 
 /**
  * The label of a computer brain's model ("opus" → "Opus", "GLM-5.3" on a plan; a typed Codex model as is): what it
- * runs, so a model kept while Claude thinks is named by its table (`planModelById`) instead of a raw id.
+ * runs, so a plan's model kept while Claude thinks reads as Sonnet.
  */
 export function brainModelLabel(
   kind: BrainKind,
@@ -1747,7 +1747,7 @@ export function brainModelLabel(
   const stored = model ?? defaultBrainModel(kind);
   if (!stored) return null;
   const value = kind === "claude_code" && !isAutoModel(stored) ? claudeCodeModel(undefined, stored) : stored;
-  return brainModelOptions(kind).find((o) => o.value === value)?.label ?? planModelById(value)?.label ?? value;
+  return brainModelOptions(kind).find((o) => o.value === value)?.label ?? value;
 }
 
 /** Each agent's brain summary for this viewer (one query for the computers, one for the accounts). */
