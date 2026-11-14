@@ -1729,8 +1729,10 @@ export function NotificationsPage({ waitingOnly = false }: { waitingOnly?: boole
     <div className="page page--list nt">
       <PageHeader
         title={title}
-        // On the title's row: the counts the sidebar already has show at once, the list's own replace them.
-        count={(list.isSuccess || badge.isSuccess) && summary}
+        // The counts the sidebar already has show at once, the list's own replace them: on the title's row in
+        // Notifications; on "Esperando você" the line under the title, as the Approvals page says what waits.
+        count={waitingOnly ? undefined : (list.isSuccess || badge.isSuccess) && summary}
+        meta={waitingOnly ? ((list.isSuccess || badge.isSuccess) && summary) || undefined : undefined}
         actions={
           <>
             <Menu

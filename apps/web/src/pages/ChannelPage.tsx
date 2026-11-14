@@ -198,7 +198,6 @@ import {
   type IconName,
   Input,
   isIdHandle,
-  Kbd,
   Locked,
   Mention,
   Menu,
@@ -2124,8 +2123,8 @@ function ChannelView({
           },
         }
       : undefined;
-  // While an agent works here: the send button turns into stop (box empty), and typing offers
-  // "Juntar ao que ele faz" (↵) or "Parar e mandar" (⌘↵).
+  // While an agent works here: the send button turns into stop (box empty); a message sent with ↵ joins what it does,
+  // with ⌘↵ stops it to be read now (anyone who writes, the stop button only for who may stop it).
   const stopName = stopTarget ? (dir.agentById.get(stopTarget.agentId)?.name ?? t("channel.unknownAgent")) : "";
   const stopGrammar = agentGrammar(stopName);
   const working = stopTarget
@@ -2135,23 +2134,6 @@ function ChannelView({
         onStop: () => stopRun(stopTarget),
       }
     : null;
-  // The choice is for anyone who writes while an agent works (the stop button only for who may stop it).
-  const busyGrammar = agentGrammar(
-    busyTarget ? (dir.agentById.get(busyTarget.agentId)?.name ?? t("channel.unknownAgent")) : "",
-  );
-  const choice = busyTarget
-    ? {
-        label: t("run.choice.label", busyGrammar),
-        joinLabel: t("run.choice.join", busyGrammar),
-        interruptLabel: t("run.choice.interrupt"),
-        hint: (c: "join" | "interrupt", mod: string) => (
-          <>
-            <Kbd>↵</Kbd> {c === "join" ? t("run.choice.joins") : t("run.choice.interrupts")} · <Kbd>{mod}↵</Kbd>{" "}
-            {c === "join" ? t("run.choice.interrupts") : t("run.choice.joins")}
-          </>
-        ),
-      }
-    : undefined;
   // The round button's count (red for a mention of me), and its label: how many, who spoke, who is writing now.
   const myHandle = dir.memberById.get(me.user.id)?.handle?.toLowerCase();
   const unseenSummary = useMemo(
@@ -2808,7 +2790,7 @@ function ChannelView({
                                 }}
                                 onSend={onSend}
                                 working={chrome?.locked ? null : working}
-                                choice={choice}
+                                agentBusy={Boolean(busyTarget)}
                                 voice={voice}
                                 disabled={Boolean(chrome?.locked)}
                                 label={
