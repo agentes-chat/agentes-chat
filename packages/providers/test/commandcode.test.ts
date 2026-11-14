@@ -153,7 +153,11 @@ describe("calls (scripted transport)", () => {
       { apiKey: "user_k123456789", onDelta: () => {} },
     );
     const body = requests[0]?.body as { messages: { content: Record<string, unknown>[] }[] };
-    expect(body.messages.at(-1)?.content[0]).toEqual({ type: "text", text: "now", cache_control: { type: "ephemeral" } });
+    expect(body.messages.at(-1)?.content[0]).toEqual({
+      type: "text",
+      text: "now",
+      cache_control: { type: "ephemeral" },
+    });
     expect(JSON.stringify(body)).not.toContain('"ttl"');
   });
 
@@ -183,6 +187,8 @@ describe("calls (scripted transport)", () => {
     );
     const body = requests[0]?.body;
     expect(body?.tool_choice).toEqual({ type: "any" });
+    // The adapter reads Anthropic's own row for the bare id, so that row is what turns thinking off here.
+    expect(body?.thinking).toEqual({ type: "disabled" });
     expect(body?.output_config).toBeUndefined();
     expect(JSON.parse(result.content.map((b) => (b.type === "text" ? b.text : "")).join(""))).toEqual({ ok: true });
   });
