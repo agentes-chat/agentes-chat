@@ -93,6 +93,7 @@ export const CONNECTOR_BRANDS: Record<string, { file: string; color: string | nu
   pinterest: { file: "pinterest", color: "#BD081C" },
   reddit: { file: "reddit", color: "#FF4500" },
   whatsapp: { file: "whatsapp", color: "#25D366" },
+  trypost: { file: "trypost", color: null, own: true },
 };
 
 export interface ConnectorListingEntry {

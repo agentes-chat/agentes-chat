@@ -45,6 +45,12 @@ export interface McpPreset {
    * Postgres user). Every other tool keeps our usual suggestion.
    */
   readTools?: readonly string[];
+  /**
+   * The server annotates every tool, and its annotations decide over the verb in a tool's name:
+   * `destructiveHint: false` is a write, `true` asks. Only for an official server whose annotations were read when it
+   * joined the catalog.
+   */
+  trustAnnotations?: true;
   /** The vendor hasn't approved agentes.chat yet: listed greyed out ("Em breve"), not connectable in one click. */
   soon?: true;
   /**
@@ -1255,6 +1261,18 @@ export const MCP_PRESETS: readonly McpPreset[] = [
         "WHATSAPP_SEND_LOCATION",
       ],
     },
+  },
+  {
+    id: "trypost",
+    category: "social",
+    label: "TryPost",
+    description: "TryPost social media post automation.",
+    icon: "trypost",
+    serverUrl: "https://app.trypost.it/mcp/trypost",
+    // A sign-in reaches the one workspace picked on TryPost's consent screen; this tool names it.
+    account: { tool: "get-workspace-tool", id: ["id"], name: "name" },
+    // Every TryPost tool says whether it only reads and whether it destroys (`IsReadOnly`, `IsDestructive`).
+    trustAnnotations: true,
   },
 ];
 

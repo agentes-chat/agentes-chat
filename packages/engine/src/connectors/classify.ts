@@ -39,6 +39,7 @@ export type JudgeReason = (typeof JUDGE_REASONS)[number];
 export type ReasonCode =
   | "read_only_hint"
   | "destructive_hint"
+  | "write_hint"
   | "verb_read"
   | "verb_write"
   | "verb_sensitive"
@@ -169,12 +170,14 @@ const ruleVerb = (w: string) => READ_VERBS.has(w) || WRITE_VERBS.has(w) || SENSI
 
 /**
  * Annotations, a preset's read-only list, its posts (`writeTools`, writes whatever their name), then the verb. Null =
- * ambiguous (the judge decides).
+ * ambiguous (the judge decides). With a preset's `trustAnnotations`, a tool its server says doesn't destroy is a write
+ * whatever its verb.
  */
 export function classifyByRules(
   tool: ToolToClassify,
   readTools: readonly string[] = [],
   writeTools: readonly string[] = [],
+  trustAnnotations = false,
 ): ToolClass | null {
   if (tool.readOnlyHint === true)
     return { level: "read", source: "annotation", reason: "read_only_hint", sensitive: false };
@@ -188,6 +191,8 @@ export function classifyByRules(
     return words.some((w) => SENSITIVE_VERBS.has(w))
       ? locked
       : { level: "approval", source: "annotation", reason: "destructive_hint", sensitive: false };
+  if (trustAnnotations && tool.destructiveHint === false)
+    return { level: "write", source: "annotation", reason: "write_hint", sensitive: false };
   if (readTools.includes(tool.name))
     return { level: "read", source: "preset", reason: "preset_read", sensitive: false };
   if (writeTools.includes(tool.name))
@@ -414,6 +419,8 @@ export async function classifyTools(
     judge?: Judge;
     readTools?: readonly string[];
     writeTools?: readonly string[];
+    /** A preset's `trustAnnotations`: its server's `destructiveHint: false` is a write. */
+    trustAnnotations?: boolean;
     /** Earlier judge answers for this connection, by tool name. */
     cached?: Map<string, ToolClass>;
   },
@@ -421,7 +428,7 @@ export async function classifyTools(
   const out = new Map<string, ToolClass>();
   const ask: ToolToClassify[] = [];
   for (const tool of tools) {
-    const byRules = classifyByRules(tool, options.readTools, options.writeTools);
+    const byRules = classifyByRules(tool, options.readTools, options.writeTools, options.trustAnnotations);
     const hit = options.cached?.get(tool.name);
     if (byRules) out.set(tool.name, byRules);
     else if (hit && hit.source === "judge") out.set(tool.name, hit);

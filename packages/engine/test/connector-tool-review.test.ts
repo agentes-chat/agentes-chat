@@ -306,6 +306,42 @@ describe("listing a connection's tools", () => {
   });
 });
 
+describe("a preset that trusts its server's annotations", () => {
+  test("TryPost: a tool it says doesn't destroy is a write whatever its verb; one it says destroys asks", async () => {
+    f = await setup();
+    const connect: McpConnect = async () => {
+      const server = new McpServer({ name: "trypost", version: "1" });
+      const tool = (name: string, annotations: Record<string, boolean>, text = `${name} done`) =>
+        server.registerTool(name, { description: name, annotations }, async () => ({
+          content: [{ type: "text", text }],
+        }));
+      tool("get-workspace-tool", { readOnlyHint: true }, JSON.stringify({ id: "w1", name: "Acme" }));
+      tool("publish-post-tool", { readOnlyHint: false, destructiveHint: false });
+      tool("delete-post-tool", { readOnlyHint: false, destructiveHint: true });
+      const [client, end] = InMemoryTransport.createLinkedPair();
+      await server.connect(end);
+      return mcpSessionOver(client);
+    };
+    const started = await connectCustomServer(depsOf(f, { connect }), f.owner.id, f.org.id, {
+      serverUrl: "https://app.trypost.it/mcp/trypost",
+      apiKey: "trypost_secret_12345",
+    });
+    if (started.status !== "connected") throw new Error(`expected connected, got ${started.status}`);
+    const tools = started.server.tools;
+    expect(tools.find((t) => t.name === "publish-post-tool")).toMatchObject({
+      level: "write",
+      suggestionReason: "write_hint",
+      sensitive: false,
+    });
+    expect(tools.find((t) => t.name === "delete-post-tool")).toMatchObject({ level: "approval", sensitive: true });
+    // Another server's tool of the same name keeps the rule of its verb.
+    expect(classifyByRules({ name: "publish-post-tool", destructiveHint: false })).toMatchObject({
+      level: "approval",
+      sensitive: true,
+    });
+  });
+});
+
 describe("the person's choices", () => {
   test("saved per tool: off is hidden, approval asks, change runs and is audited; confirming ends 'pending'", async () => {
     f = await setup();
