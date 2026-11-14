@@ -59,6 +59,14 @@ app, a package or the Docker files also boots the image with `docker-compose.yml
 
 - **Migrations are immutable.** Change the schema in `packages/db/src/schema`, then run
   `bun run db:generate <name>`. A committed migration never changes; a fix is a new migration.
+  An index of a table written all the time (`outbox`, `agent_run_steps`) is declared with
+  `.concurrently()`, so that building it holds no write. Its migration runs outside a transaction,
+  and all of it runs again after a failure: by hand, give its other statements `IF NOT EXISTS` and
+  put a `DROP INDEX CONCURRENTLY IF EXISTS` before each concurrent build (`migrateInSteps` in
+  `packages/db/src/client.ts`), with its `-- deploy-safe:` comment on the line before
+  (`bun run check:migrations`). Generate such an index in a migration of its own: nothing else in
+  that migration is undone on a failure either. Not on `messages`: Postgres builds no index
+  concurrently on a partitioned table.
 - **Environment variables** are declared only in `packages/config/src/schema.ts`. Then run
   `bun run docs:env`, which regenerates `.env.example`.
 - **Drizzle operators** come from `@agenteschat/db`, never from `drizzle-orm` directly.

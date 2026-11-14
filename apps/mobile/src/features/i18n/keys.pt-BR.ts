@@ -317,7 +317,7 @@ export const featureKeysPtBR = {
   /** The line over the tab bar that goes with you while an agent does long work or waits on you. */
   along: {
     agent: "Um agente",
-    waits: "{{name}} espera seu ok",
+    waits: "{{name}} · esperando você",
     on: "{{name}} · {{what}}",
     working: "{{name}} está trabalhando",
     more: "+{{count}}",
@@ -816,7 +816,7 @@ export const featureKeysPtBR = {
     managerQuiet: "Nada em andamento",
     /** A row's state, as text in the state's color (amber only for what waits on the person). */
     state: {
-      waitsYou: "espera seu ok",
+      waitsYou: "esperando você",
       routine: "Na rotina · {{time}}",
       routineShort: "na rotina",
       noAi: "Sem IA ligada",
@@ -836,7 +836,7 @@ export const featureKeysPtBR = {
   agentEdit: {
     missing: "Este agente não existe mais.",
     saved: "Alterações salvas",
-    adminsOnly: "Só admins mudam o nome, o cargo e as instruções.",
+    adminsOnly: "Só admins mudam o nome, a função e as instruções.",
     discardTitle: "Descartar as alterações?",
     discardText: "O que você mudou ainda não foi salvo.",
     discard: "Descartar",
@@ -855,7 +855,7 @@ export const featureKeysPtBR = {
     reviewLead: "Toque numa linha para mudar.",
     planHint: "Ou conecte o seu plano de IA: o {{name}} passa a pensar por ele, sem gastar a chave.",
     planHint_female: "Ou conecte o seu plano de IA: a {{name}} passa a pensar por ele, sem gastar a chave.",
-    partly: "O agente foi criado, mas parte do que o papel traz não entrou. Ajuste no perfil dele.",
+    partly: "O agente foi criado, mas parte do que a função traz não entrou. Ajuste no perfil dele.",
     import: {
       where: {
         openbotrun:
@@ -1198,6 +1198,9 @@ export const featureKeysPtBR = {
       name: "Nome",
       namePlaceholder: "Seu nome",
       email: "E-mail",
+      /** E-mail, under the code: someone who can't open that inbox signs in again on the website instead. */
+      emailWebLead: "Entre de novo no site e troque por lá, sem o código.",
+      emailWeb: "Entrar de novo no site",
       inWorkspace: "Neste workspace · {{org}}",
       handle: "Seu @",
       timezone: "Fuso",
@@ -1472,7 +1475,7 @@ export const featureKeysPtBR = {
       plain: "terminou um trabalho",
     },
     rowWait: {
-      approval: "espera seu ok",
+      approval: "esperando você",
       question: "espera sua resposta",
       mission: "espera sua revisão",
     },
@@ -1512,13 +1515,13 @@ export const featureKeysPtBR = {
   // intentional: agents
   intentAgents: {
     waitingSection: "Esperando você",
-    waitingLine: "{{title}} · espera seu ok",
+    waitingLine: "{{title}} · esperando você",
     waitingMore_one: "{{title}} · e mais {{count}} esperando você",
     waitingMore_other: "{{title}} · e mais {{count}} esperando você",
-    waitingLabel: "{{name}}, espera seu ok",
+    waitingLabel: "{{name}}, esperando você",
     owner: "Responsável: {{name}}",
     ownerYou: "Responsável: você",
-    nowWaiting: "Espera seu ok: {{title}}",
+    nowWaiting: "Esperando você: {{title}}",
     did: {
       title: "O que ele fez por você",
       title_female: "O que ela fez por você",
@@ -1537,7 +1540,7 @@ export const featureKeysPtBR = {
         image: "Imagem",
         file: "Arquivo",
       },
-      waitingOnYou: "Espera seu ok",
+      waitingOnYou: "Esperando você",
       youApproved: "Você aprovou",
       youRefused: "Você recusou",
       action: {
@@ -1856,16 +1859,16 @@ export const featureKeysPtBR = {
         owner: "Só eu",
         ownerOf: "Só {{name}}",
         everyone: "Todos no workspace",
-        people: "Só algumas pessoas ou papéis",
+        people: "Só algumas pessoas ou cargos",
       },
       modeText: {
         owner: "Você e os agentes que trabalham para você.",
         ownerOf: "{{name}} e os agentes que trabalham para essa pessoa.",
         everyone: "Os agentes de qualquer pessoa do workspace podem usar.",
-        people: "Escolha as pessoas e os papéis cujos agentes podem usar.",
+        people: "Escolha as pessoas e os cargos cujos agentes podem usar.",
       },
-      people: "Pessoas e papéis",
-      pickSomeone: "Escolha pelo menos uma pessoa ou um papel.",
+      people: "Pessoas e cargos",
+      pickSomeone: "Escolha pelo menos uma pessoa ou um cargo.",
       narrowOnly: "Você pode restringir quem usa o dispositivo de {{name}}, nunca ampliar.",
       runsAs: "Os agentes de outras pessoas vão rodar como você nele e podem ler seus arquivos.",
       phoneOnly: "Isso compartilha só o celular, nunca o {{host}}.",
@@ -2157,8 +2160,8 @@ export const featureKeysPtBR = {
   },
   joinRequests: {
     share: "Compartilhar o link",
-    roles: "Papéis",
-    rolesHint: "A pessoa entra com os papéis ligados. Sem nenhum, ela pode o mesmo que Todos.",
+    roles: "Cargos",
+    rolesHint: "A pessoa entra com os cargos ligados. Sem nenhum, ela pode o mesmo que Todos.",
   },
   humanCheck: {
     title: "Verificação rápida",
@@ -2278,7 +2281,7 @@ export const featureKeysPtBR = {
     },
     section: {
       members: "Membros",
-      roles: "Papéis",
+      roles: "Cargos",
       access: "Acesso dos agentes",
       connectors: "Conectores",
     },
@@ -2305,7 +2308,7 @@ export const featureKeysPtBR = {
     },
     roles: {
       /** Under the roles and a role's name and color: what only the web changes. */
-      onComputer: "A ordem dos papéis e o ícone de cada um mudam no computador.",
+      onComputer: "A ordem dos cargos e o ícone de cada um mudam no computador.",
       /** Over an area's permissions, each with its own switch. */
       items: "Item por item",
       create: "Criar",
@@ -2480,7 +2483,7 @@ export const featureKeysPtBR = {
       teamText: "Escolha quem vê e quais agentes usam para essas pessoas.",
       people: "Pessoas",
       persons: "Pessoas específicas",
-      roles: "Papéis",
+      roles: "Cargos",
       agents: "Agentes",
       allAgents: "Todos os agentes",
       noAgent: "Nenhum agente ainda",
@@ -2491,14 +2494,14 @@ export const featureKeysPtBR = {
       everyoneOut: "Não",
       levelIn: "Tem acesso",
       levelOut: "Sem acesso",
-      everyoneHelp: "Toque em Todos do workspace para escolher papéis e pessoas.",
+      everyoneHelp: "Toque em Todos do workspace para escolher cargos e pessoas.",
       managersHelp: "Quem cuida das chaves do workspace sempre vê os itens da equipe.",
       managersOnly: "Só quem cuida das chaves",
       inRole: "pessoas de {{role}}",
       saved: "Acesso salvo",
       useConnection: "Seguir o acesso da conexão",
       followsConnection: "Segue o acesso da conexão.",
-      tooManyRoles: "Escolha no máximo 100 papéis.",
+      tooManyRoles: "Escolha no máximo 100 cargos.",
       tooManyPeople: "Escolha no máximo 500 pessoas.",
       tooManyAgents: "Escolha no máximo 200 agentes.",
       sentence: {
@@ -2601,7 +2604,7 @@ export const featureKeysPtBR = {
     /** "Who looks after it", pushed from New widget's card. */
     agentPick: {
       search: "Buscar agentes",
-      noMatch: "Nenhum agente com esse nome ou papel.",
+      noMatch: "Nenhum agente com esse nome ou função.",
       note: "Cada agente lê só os apps a que tem acesso.",
       reads: "Lê {{apps}}",
       noApps: "Nenhum app conectado",
@@ -2623,7 +2626,7 @@ export const featureKeysPtBR = {
   empty: {
     agents: {
       title: "Monte seu time de agentes",
-      text: "Cada agente assume um papel e trabalha com vocês no chat.",
+      text: "Cada agente assume uma função e trabalha com vocês no chat.",
       viewerTitle: "O time de agentes fica aqui",
       viewerText: "Quem cria agentes no workspace adiciona o primeiro, e ele aparece aqui.",
       titlePersonal: "Tenha ajuda dos seus próprios agentes",

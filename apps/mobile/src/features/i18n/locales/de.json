@@ -302,7 +302,7 @@
   },
   "along": {
     "agent": "Ein Agent",
-    "waits": "{{name}} wartet auf dein Okay",
+    "waits": "{{name}} · wartet auf dich",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} arbeitet",
     "more": "+{{count}}"
@@ -792,7 +792,7 @@
     "teamSectionPersonal": "Deine Agenten",
     "managerQuiet": "Nichts in Arbeit",
     "state": {
-      "waitsYou": "wartet auf dein Okay",
+      "waitsYou": "wartet auf dich",
       "noAi": "Keine KI verbunden",
       "connect": "Verbinden",
       "archived": "Archiviert",
@@ -1155,6 +1155,8 @@
       "name": "Name",
       "namePlaceholder": "Dein Name",
       "email": "E-Mail",
+      "emailWebLead": "Melde dich auf der Website erneut an und ändere sie dort, ohne den Code.",
+      "emailWeb": "Auf der Website erneut anmelden",
       "inWorkspace": "In diesem Workspace · {{org}}",
       "handle": "Dein @",
       "timezone": "Zeitzone",
@@ -1439,7 +1441,7 @@
       "plain": "hat eine Aufgabe abgeschlossen"
     },
     "rowWait": {
-      "approval": "wartet auf dein Okay",
+      "approval": "wartet auf dich",
       "question": "wartet auf deine Antwort",
       "mission": "wartet auf deine Prüfung"
     },
@@ -1477,13 +1479,13 @@
   },
   "intentAgents": {
     "waitingSection": "Wartet auf dich",
-    "waitingLine": "{{title}} · braucht dein Okay",
+    "waitingLine": "{{title}} · wartet auf dich",
     "waitingMore_one": "{{title}} · und {{count}} weitere wartet auf dich",
     "waitingMore_other": "{{title}} · und {{count}} weitere warten auf dich",
-    "waitingLabel": "{{name}}, braucht dein Okay",
+    "waitingLabel": "{{name}}, wartet auf dich",
     "owner": "Inhaber: {{name}}",
     "ownerYou": "Inhaber: du",
-    "nowWaiting": "Braucht dein Okay: {{title}}",
+    "nowWaiting": "Wartet auf dich: {{title}}",
     "did": {
       "title": "Was er für dich getan hat",
       "title_female": "Was sie für dich getan hat",
@@ -1502,7 +1504,7 @@
         "image": "Bild",
         "file": "Datei"
       },
-      "waitingOnYou": "Braucht dein Okay",
+      "waitingOnYou": "Wartet auf dich",
       "youApproved": "Du hast freigegeben",
       "youRefused": "Du hast abgelehnt",
       "action": {

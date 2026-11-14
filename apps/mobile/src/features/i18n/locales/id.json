@@ -293,7 +293,7 @@
   },
   "along": {
     "agent": "Seorang agen",
-    "waits": "{{name}} menunggu persetujuanmu",
+    "waits": "{{name}} · menunggumu",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} sedang bekerja",
     "more": "+{{count}}"
@@ -769,7 +769,7 @@
     "teamSectionPersonal": "Agenmu",
     "managerQuiet": "Tidak ada yang berjalan",
     "state": {
-      "waitsYou": "menunggu persetujuanmu",
+      "waitsYou": "menunggumu",
       "noAi": "Belum ada AI terhubung",
       "connect": "Hubungkan",
       "archived": "Diarsipkan",
@@ -1078,6 +1078,8 @@
       "name": "Nama",
       "namePlaceholder": "Namamu",
       "email": "Email",
+      "emailWebLead": "Masuk lagi di situs web dan ganti di sana, tanpa kode.",
+      "emailWeb": "Masuk lagi di situs web",
       "inWorkspace": "Di ruang kerja ini · {{org}}",
       "handle": "@ kamu",
       "timezone": "Zona waktu",
@@ -1353,7 +1355,7 @@
       "plain": "menyelesaikan sebuah tugas"
     },
     "rowWait": {
-      "approval": "menunggu persetujuanmu",
+      "approval": "menunggumu",
       "question": "menunggu jawabanmu",
       "mission": "menunggu tinjauanmu"
     },
@@ -1391,12 +1393,12 @@
   },
   "intentAgents": {
     "waitingSection": "Menunggumu",
-    "waitingLine": "{{title}} · butuh persetujuanmu",
+    "waitingLine": "{{title}} · menunggumu",
     "waitingMore_other": "{{title}} · dan {{count}} lainnya menunggumu",
-    "waitingLabel": "{{name}}, butuh persetujuanmu",
+    "waitingLabel": "{{name}}, menunggumu",
     "owner": "Pemilik: {{name}}",
     "ownerYou": "Pemilik: kamu",
-    "nowWaiting": "Butuh persetujuanmu: {{title}}",
+    "nowWaiting": "Menunggumu: {{title}}",
     "did": {
       "title": "Apa yang dia lakukan untukmu",
       "title_female": "Apa yang dia lakukan untukmu",
@@ -1414,7 +1416,7 @@
         "image": "Gambar",
         "file": "File"
       },
-      "waitingOnYou": "Butuh persetujuanmu",
+      "waitingOnYou": "Menunggumu",
       "youApproved": "Kamu menyetujui",
       "youRefused": "Kamu menolak",
       "action": {

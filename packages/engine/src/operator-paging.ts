@@ -14,6 +14,11 @@ import { redactCredentials } from "./tool-detail";
 export const ms = (column: unknown) =>
   sql<Date>`date_trunc('milliseconds', ${column})`.mapWith((v: string | Date) => new Date(v));
 
+// The stored time whole, microseconds included, which a JS Date drops: what a cursor carries when a page is ordered
+// and continued by the stored column itself, which an index on it serves and no expression of it does.
+export const micros = (column: unknown) =>
+  sql<string>`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+
 export const UuidCursor = z.tuple([z.iso.datetime(), z.uuid()]);
 
 export interface PageQuery {
@@ -31,6 +36,21 @@ export function pageOf<T>(rows: T[], limit: number, key: (last: T) => [Date, str
   return { items, next: encodeCursor([at.toISOString(), id]) };
 }
 
+/** `(at, id)` before a page's cursor, for a list newest first. */
+export const olderThan = (at: unknown, id: unknown, after: [string, string] | null) =>
+  after ? sql`(${at}, ${id}) < (${after[0]}::timestamptz, ${after[1]}::uuid)` : undefined;
+
+/**
+ * One page, newest first, of rows read from several tables: each table gave its first `limit + 1` after the cursor,
+ * so the first `limit` of them all are among these. Ids compare as the database orders them.
+ */
+export function mergedPage<T extends { createdAt: Date; id: string }>(lists: T[][], limit: number) {
+  const rows = lists
+    .flat()
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+  return pageOf(rows, limit, (r) => [r.createdAt, r.id]);
+}
+
 export const orgExists = async (db: Database, orgId: string) =>
   (
     await db
@@ -44,5 +64,8 @@ export const orgExists = async (db: Database, orgId: string) =>
 export const CODE = /^[A-Za-z][\w.:/-]{0,99}$/;
 export const codeOf = (v: unknown) => (typeof v === "string" && CODE.test(v) ? v : null);
 export const uuidOf = (v: unknown) => (typeof v === "string" && UUID.test(v) ? v : null);
+/** An id or a name that may start with a digit (an account's id, a time zone, `owner/repository`): one word of it. */
+const WORD = /^[\w.:/+-]{1,200}$/;
+export const wordOf = (v: unknown) => (typeof v === "string" && WORD.test(v) ? v : null);
 /** What a provider, a CLI or the server said went wrong: its start, with anything shaped like a credential masked. */
 export const errorText = (text: string | null, max: number) => (text ? cutText(redactCredentials(text), max) : null);

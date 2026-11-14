@@ -357,8 +357,12 @@ export function useVoiceTake(target: VoiceTarget) {
         setListening(false);
         setSeconds(Math.floor(doneMs.current / 1000));
       },
+      onError: () => {
+        setListening(false);
+        toast({ title: t("voice.noPlayback"), icon: "x" });
+      },
     });
-  }, [progress]);
+  }, [progress, t, toast]);
 
   const scrub = useCallback(
     (at: number) => {

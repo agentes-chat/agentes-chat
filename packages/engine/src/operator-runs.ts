@@ -9,6 +9,7 @@ import {
   gte,
   inArray,
   isNotNull,
+  isNull,
   lt,
   or,
   type SQL,
@@ -24,7 +25,18 @@ import { PLATFORM_CAP } from "./limits";
 import { machineOnline } from "./machines";
 import { type Message, parseMentionHandles, receiptsFor } from "./messages";
 import { jobOf, jobsOfRun, OPERATOR_JOB_ERROR_MAX, selectJobs, spentColumns, spentOf } from "./operator-jobs";
-import { CODE, codeOf, errorText, ms, orgExists, type PageQuery, pageOf, UuidCursor, uuidOf } from "./operator-paging";
+import {
+  CODE,
+  codeOf,
+  errorText,
+  ms,
+  olderThan,
+  orgExists,
+  type PageQuery,
+  pageOf,
+  UuidCursor,
+  uuidOf,
+} from "./operator-paging";
 import { rightHandReaches } from "./right-hand";
 import {
   computerWaitSql,
@@ -80,6 +92,7 @@ const namesOf = (v: unknown) => stringsOf(typeof v === "string" ? JSON.parse(v) 
 // "id" would be the subquery's own: the outer row is named in full.
 const RUN_ID = sql.raw(`"agent_runs"."id"`);
 const AGENT_ID = sql.raw(`"agents"."id"`);
+const STEP = sql.raw(`"agent_run_steps"`);
 
 // ── Runs ─────────────────────────────────────────────────────────────────────
 
@@ -378,6 +391,9 @@ export const OPERATOR_TRACE_ASKS = 100;
 const DATA = agentRunSteps.data;
 const KIND = agentRunSteps.kind;
 
+/** A tool call's step says its tool is the server's own (the Tool Gateway's mark): absent, it isn't known to be. */
+const builtInSql = (data: SQL) => sql<boolean>`coalesce(${data}->'builtIn' = 'true'::jsonb, false)`;
+
 // Each fact is read only from the kind of step that writes it: on another kind the same name may hold text.
 const stepColumns = {
   seq: agentRunSteps.seq,
@@ -385,6 +401,12 @@ const stepColumns = {
   at: agentRunSteps.createdAt,
   toolUseId: sql<string | null>`case when ${KIND} in ('tool_call', 'tool_result') then ${DATA}->>'toolUseId' end`,
   tool: sql<string | null>`case when ${KIND} in ('tool_call', 'tool_result') then ${DATA}->>'name' end`,
+  // Only the call's step holds the mark: a result reads it from the call it answers.
+  builtIn: sql<boolean | null>`case when ${KIND} = 'tool_call' then ${builtInSql(sql`${DATA}`)}
+    when ${KIND} = 'tool_result' then coalesce((select ${builtInSql(sql`c.data`)} from ${agentRunSteps} c
+      where c.run_id = ${STEP}.run_id and c.kind = 'tool_call' and c.seq < ${STEP}.seq
+        and c.data->>'toolUseId' = ${STEP}.data->>'toolUseId'
+      order by c.seq desc limit 1), false) end`,
   connector: sql<string | null>`case when ${KIND} = 'tool_call' then ${DATA}->>'connector' end`,
   isError: sql<
     boolean | null
@@ -523,6 +545,193 @@ export async function operatorRunTrace(db: Database, runId: string, query: { lim
             from: tied.from,
           }
         : null,
+  };
+}
+
+// ── A workspace's tool calls ─────────────────────────────────────────────────
+
+export const OPERATOR_TOOL_OUTCOMES = ["ok", "error", "refused", "pending"] as const;
+type ToolOutcome = (typeof OPERATOR_TOOL_OUTCOMES)[number];
+export const OPERATOR_TOOL_CALL_GROUPS = ["tool", "agent", "outcome"] as const;
+
+/** How far back tool calls are read when no start is given, and the longest stretch one read covers. */
+export const OPERATOR_TOOL_CALL_DAYS = 7;
+export const OPERATOR_TOOL_CALL_MAX_DAYS = 31;
+
+// A call's result: the first step after it, in its run, that answers its id.
+// ponytail: every call in the range is paired with its result before a page or a count is kept. A call's outcome
+// stored on its own step (a write in the Tool Gateway when the result lands) lets a page read only its own rows.
+const RESULT = sql`(select r.created_at, r.data from ${agentRunSteps} r
+  where r.run_id = ${STEP}.run_id and r.kind = 'tool_result' and r.seq > ${STEP}.seq
+    and r.data->>'toolUseId' = ${STEP}.data->>'toolUseId'
+  order by r.seq limit 1) res`;
+const OUTCOME = sql<ToolOutcome>`(case when res.data is null then 'pending'
+  when res.data->'data'->>'refusal' is not null then 'refused'
+  when res.data->'isError' = 'true'::jsonb then 'error' else 'ok' end)`;
+const BUILT_IN = builtInSql(sql`${DATA}`);
+const TOOL_NAME = sql<string | null>`${DATA}->>'name'`;
+
+// Never `input` nor a result's `content`: how long each is, measured in the database.
+const toolCallColumns = {
+  id: agentRunSteps.id,
+  at: ms(agentRunSteps.createdAt),
+  runId: agentRunSteps.runId,
+  agentId: agentRuns.agentId,
+  seq: agentRunSteps.seq,
+  tool: TOOL_NAME,
+  builtIn: BUILT_IN,
+  connector: sql<string | null>`${DATA}->>'connector'`,
+  connectorKind: sql<string | null>`${DATA}->>'service'`,
+  outcome: OUTCOME,
+  refusal: sql<string | null>`res.data->'data'->>'refusal'`,
+  code: sql<string | null>`res.data->'data'->>'code'`,
+  // A null never reaches a decoder: the type says it may still come back.
+  resultAt: ms(sql`res.created_at`) as SQL<Date | null>,
+  inputChars: sql<number>`coalesce(length(${DATA}->>'input'), 0)`.mapWith(Number),
+  resultChars: sql<number | null>`length(res.data->>'content')`.mapWith(Number),
+};
+
+const TOOL_CALL_GROUPS: Record<(typeof OPERATOR_TOOL_CALL_GROUPS)[number], SQL<string | null>> = {
+  tool: TOOL_NAME,
+  agent: sql`${agentRuns.agentId}::text`,
+  outcome: OUTCOME,
+};
+
+interface ToolCallFilters {
+  agentId?: string;
+  runId?: string;
+  /** Part of the tool's name; any case, matched literally. */
+  tool?: string;
+  outcome?: ToolOutcome;
+  /** Called at or after. */
+  from?: Date;
+  /** Called before. */
+  to?: Date;
+}
+
+export interface OperatorToolCallQuery extends ToolCallFilters, PageQuery {}
+
+/** The dates a read of tool calls covers and the calls in them; null: no such workspace, or run in it. */
+async function toolCallsIn(db: Database, orgId: string, q: ToolCallFilters, now: Date) {
+  let began: Date | null = null;
+  if (q.runId) {
+    const [run] = await db
+      .select({ createdAt: agentRuns.createdAt })
+      .from(agentRuns)
+      .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, q.runId)));
+    if (!run) return null;
+    began = run.createdAt;
+  } else if (!(await orgExists(db, orgId))) return null;
+
+  const to = q.to ?? now;
+  const from = q.from ?? began ?? new Date(to.getTime() - OPERATOR_TOOL_CALL_DAYS * 86_400_000);
+  if (from >= to) throw new ValidationError("from must be before to");
+  // One run's steps are few however long ago it began; any other read is held to the range.
+  if (!began && to.getTime() - from.getTime() > OPERATOR_TOOL_CALL_MAX_DAYS * 86_400_000)
+    throw new ValidationError(`from and to are ${OPERATOR_TOOL_CALL_MAX_DAYS} days apart at most`);
+
+  const where = and(
+    // The step's own workspace, which is its run's: `agent_run_steps_tool_calls_idx` starts with it.
+    eq(agentRunSteps.orgId, orgId),
+    eq(agentRuns.orgId, orgId),
+    eq(KIND, "tool_call"),
+    gte(agentRunSteps.createdAt, from),
+    lt(agentRunSteps.createdAt, to),
+    // A second way in, by the runs' own indexes, for a read that names an agent. A call is recorded only while its
+    // run is at work (its own turn, or the bridge, which refuses a run in any other state), so the workspace's runs
+    // at work in the range hold every call in it. The minute is for a call in flight when its run was stopped.
+    lt(agentRuns.createdAt, to),
+    or(isNull(agentRuns.finishedAt), gte(agentRuns.finishedAt, new Date(from.getTime() - 60_000))),
+    q.runId ? eq(agentRunSteps.runId, q.runId) : undefined,
+    q.agentId ? eq(agentRuns.agentId, q.agentId) : undefined,
+    q.tool ? sql`strpos(lower(${TOOL_NAME}), lower(${q.tool}::text)) > 0` : undefined,
+    q.outcome ? sql`${OUTCOME} = ${q.outcome}` : undefined,
+  );
+  return { from, to, where };
+}
+
+/**
+ * The tools a workspace's agents called in a range of dates, newest first, in keyset pages: which tool, whether it
+ * is the server's own or a connected app's, how the call ended and how long it took, with how long its input and
+ * its result are, never either of them. The range is the last 7 days unless said, one run's from when it began.
+ * Null: no such workspace, or no such run in it.
+ */
+export async function operatorToolCalls(db: Database, orgId: string, query: OperatorToolCallQuery, now = new Date()) {
+  const after = query.cursor ? decodeCursor(query.cursor, UuidCursor) : null;
+  const found = await toolCallsIn(db, orgId, query, now);
+  if (!found) return null;
+  const rows = await db
+    .select(toolCallColumns)
+    .from(agentRunSteps)
+    .innerJoin(agentRuns, eq(agentRuns.id, agentRunSteps.runId))
+    .leftJoinLateral(RESULT, sql`true`)
+    .where(
+      and(
+        found.where,
+        after
+          ? sql`(${toolCallColumns.at}, ${agentRunSteps.id}) < (${after[0]}::timestamptz, ${after[1]}::uuid)`
+          : undefined,
+      ),
+    )
+    .orderBy(desc(toolCallColumns.at), desc(agentRunSteps.id))
+    .limit(query.limit + 1);
+  const page = pageOf(rows, query.limit, (r) => [r.at, r.id]);
+  return {
+    from: found.from,
+    to: found.to,
+    calls: page.items.map(({ id, resultAt, ...call }) => ({
+      ...call,
+      tool: codeOf(call.tool),
+      connector: call.connector ? cutText(call.connector, 100) : null,
+      connectorKind: codeOf(call.connectorKind),
+      refusal: codeOf(call.refusal),
+      code: codeOf(call.code),
+      durationMs: resultAt ? resultAt.getTime() - call.at.getTime() : null,
+    })),
+    next: page.next,
+  };
+}
+
+/**
+ * How many tool calls a workspace's agents made in a range of dates, by tool, by agent or by how they ended, most
+ * calls first, with how many of each failed and were refused. Null: no such workspace, or no such run in it.
+ */
+export async function operatorToolCallCounts(
+  db: Database,
+  orgId: string,
+  query: ToolCallFilters & { groupBy: (typeof OPERATOR_TOOL_CALL_GROUPS)[number]; limit: number },
+  now = new Date(),
+) {
+  const found = await toolCallsIn(db, orgId, query, now);
+  if (!found) return null;
+  const group = TOOL_CALL_GROUPS[query.groupBy];
+  const ended = (outcome: ToolOutcome) => sql<number>`count(*) filter (where ${OUTCOME} = ${outcome})`.mapWith(Number);
+  const rows = await db
+    .select({
+      group,
+      // A name is the server's own when any call of it was: the same word names the same tool.
+      builtIn: sql<boolean>`bool_or(${BUILT_IN})`,
+      calls: count(),
+      errors: ended("error"),
+      refused: ended("refused"),
+      pending: ended("pending"),
+    })
+    .from(agentRunSteps)
+    .innerJoin(agentRuns, eq(agentRuns.id, agentRunSteps.runId))
+    .leftJoinLateral(RESULT, sql`true`)
+    .where(found.where)
+    .groupBy(group)
+    .orderBy(desc(count()), asc(group))
+    .limit(query.limit + 1);
+  return {
+    from: found.from,
+    to: found.to,
+    groups: rows.slice(0, query.limit).map(({ builtIn, ...g }) => ({
+      ...g,
+      group: query.groupBy === "agent" ? uuidOf(g.group) : codeOf(g.group),
+      builtIn: query.groupBy === "tool" ? builtIn : null,
+    })),
+    more: rows.length > query.limit,
   };
 }
 
@@ -904,6 +1113,7 @@ export async function operatorExplainMessage(db: Database, messageId: string, op
   const job = posted[0] ? jobOf(posted[0]) : null;
   const outcomes = new Set(explained.map((a) => a.outcome));
   const flags = flagsOf(meta);
+  // `UNANSWERED` tells the same in SQL, for every message of a range at once: a test holds the two together.
   const verdict: (typeof OPERATOR_EXPLAIN_VERDICTS)[number] = outcomes.has("run")
     ? "run"
     : outcomes.has("joined")
@@ -990,4 +1200,160 @@ export async function operatorExplainMessage(db: Database, messageId: string, op
     },
     postedJob: job,
   };
+}
+
+// ── People's messages nobody answered ────────────────────────────────────────
+
+/** What an explanation says of a message no run answered: every verdict but the three that name a run. */
+export const OPERATOR_UNANSWERED_OUTCOMES = [
+  "mission_suggestion",
+  "kept_on_hold",
+  "no_ai",
+  "platform_cap",
+  "blocked",
+  "referenced_only",
+  "nobody_picked",
+  "picked_not_started",
+  "job_pending",
+  "job_failed",
+  "not_routed",
+] as const satisfies readonly (typeof OPERATOR_EXPLAIN_VERDICTS)[number][];
+type Unanswered = (typeof OPERATOR_UNANSWERED_OUTCOMES)[number];
+
+/** How far back unanswered messages are read when no start is given, and the longest stretch one read covers. */
+export const OPERATOR_UNANSWERED_DAYS = 1;
+export const OPERATOR_UNANSWERED_MAX_DAYS = 7;
+
+// A code the server owns, written into the statement as it is: an expression rows are grouped by holds no parameter.
+const literal = (code: string) => sql.raw(`'${code}'`);
+/** A list a message's `meta` holds under `name`, empty when it holds none. */
+const listIn = (name: string) => sql`(case when jsonb_typeof(${messages.meta}->${literal(name)}) = 'array'
+  then ${messages.meta}->${literal(name)} else '[]'::jsonb end)`;
+const REFERENCED = listIn("referencedAgentIds");
+
+// `operatorExplainMessage`'s verdict for a message no run answered, in its order and from the same stored facts.
+const UNANSWERED = sql<Unanswered>`(case
+  when ${messages.meta} ? 'missionSuggestion' then 'mission_suggestion'
+  when ${routingDecisions.strategy} = ${literal(KEPT_ON_HOLD)} then 'kept_on_hold'
+  when ${routingDecisions.error} = ${literal(NO_AI)} then 'no_ai'
+  when ${routingDecisions.error} = ${literal(PLATFORM_CAP)} then 'platform_cap'
+  when not (to_jsonb(${messages.mentionedAgentIds}) <@ ${REFERENCED}) then 'blocked'
+  when jsonb_array_length(${REFERENCED}) > 0 then 'referenced_only'
+  when ${routingDecisions.id} is not null then
+    case when cardinality(${routingDecisions.selectedAgentIds}) > 0 then 'picked_not_started' else 'nobody_picked' end
+  when ${outbox.status} in ('pending', 'processing') then 'job_pending'
+  when ${outbox.status} = 'failed' then 'job_failed'
+  else 'not_routed' end)`;
+
+interface UnansweredFilters {
+  channelId?: string;
+  outcome?: Unanswered;
+  /** Written at or after. */
+  from?: Date;
+  /** Written before. */
+  to?: Date;
+}
+
+export interface OperatorUnansweredQuery extends UnansweredFilters, PageQuery {}
+
+/** The dates a read of unanswered messages covers and the messages in them; null: no such workspace. */
+async function unansweredIn(db: Database, orgId: string, q: UnansweredFilters, now: Date) {
+  if (!(await orgExists(db, orgId))) return null;
+  const to = q.to ?? now;
+  const from = q.from ?? new Date(to.getTime() - OPERATOR_UNANSWERED_DAYS * 86_400_000);
+  if (from >= to) throw new ValidationError("from must be before to");
+  if (to.getTime() - from.getTime() > OPERATOR_UNANSWERED_MAX_DAYS * 86_400_000)
+    throw new ValidationError(`from and to are ${OPERATOR_UNANSWERED_MAX_DAYS} days apart at most`);
+  // A run already at work took the message (the router or a hand-on sent it there): it still waits in that run's
+  // inbox, or a step says the run read it. Such a run began in the day before the message, so in the range's too.
+  // ponytail: no index of `agent_runs` starts with the workspace and the conversation; one on
+  // (org_id, channel_id, created_at) (a migration) once this takes long.
+  const taken = sql`exists (select 1 from ${agentRuns} r
+    where r.org_id = ${messages.orgId} and r.channel_id = ${messages.channelId}
+      and r.created_at >= ${messages.createdAt} - interval '1 day' and r.created_at < ${messages.createdAt}
+      and r.created_at >= ${new Date(from.getTime() - 86_400_000).toISOString()}::timestamptz
+      and r.created_at < ${to.toISOString()}::timestamptz
+      and (${messages.id} = any(r.pending_message_ids) or exists (select 1 from ${agentRunSteps} s
+        where s.run_id = r.id and s.kind = 'context' and s.data->'steeredMessageIds' ? ${messages.id}::text)))`;
+  const where = and(
+    eq(messages.orgId, orgId),
+    // The range is on the stored time itself: `messages` is partitioned by it. Its index starts with the conversation,
+    // so the workspace's conversations lead to its messages.
+    gte(messages.createdAt, from),
+    lt(messages.createdAt, to),
+    q.channelId
+      ? eq(messages.channelId, q.channelId)
+      : sql`${messages.channelId} in (select c.id from ${channels} c where c.org_id = ${orgId}::uuid)`,
+    eq(messages.authorType, "person"),
+    isNull(messages.deletedAt),
+    sql`not exists (select 1 from ${agentRuns} t where t.trigger_message_id = ${messages.id})`,
+    sql`jsonb_array_length(${listIn("steeredRunIds")}) = 0`,
+    sql`not (${messages.meta} ? 'answersQuestionId')`,
+    sql`not ${taken}`,
+    q.outcome ? sql`${UNANSWERED} = ${q.outcome}` : undefined,
+  );
+  return { from, to, where };
+}
+
+/** The job that routes a message, by its name. */
+const POSTED_JOB = eq(outbox.dedupeKey, sql`'message.posted:' || ${messages.id}`);
+
+/**
+ * People's messages in a range of dates that no run answered, newest first, in keyset pages: the ones that started
+ * no run, were taken by none already at work and answered no agent's question. Each with why, as
+ * `operatorExplainMessage` tells it from what is stored, never what the message says. The range is the last day
+ * unless said. Null: no such workspace.
+ */
+export async function operatorUnanswered(
+  db: Database,
+  orgId: string,
+  query: OperatorUnansweredQuery,
+  now = new Date(),
+) {
+  const after = query.cursor ? decodeCursor(query.cursor, UuidCursor) : null;
+  const found = await unansweredIn(db, orgId, query, now);
+  if (!found) return null;
+  const rows = await db
+    .select({
+      id: messages.id,
+      at: messageColumns.at,
+      channelId: messages.channelId,
+      threadRootId: messages.threadId,
+      authorUserId: messages.authorUserId,
+      outcome: UNANSWERED,
+      strategy: routingDecisions.strategy,
+    })
+    .from(messages)
+    .leftJoin(routingDecisions, eq(routingDecisions.messageId, messages.id))
+    .leftJoin(outbox, POSTED_JOB)
+    .where(and(found.where, olderThan(messageColumns.at, messages.id, after)))
+    .orderBy(desc(messageColumns.at), desc(messages.id))
+    .limit(query.limit + 1);
+  const page = pageOf(rows, query.limit, (m) => [m.at, m.id]);
+  return {
+    from: found.from,
+    to: found.to,
+    messages: page.items.map((m) => ({ ...m, strategy: m.strategy ? cutText(m.strategy, 100) : null })),
+    next: page.next,
+  };
+}
+
+/** How many of them there are for each reason, most first. Null: no such workspace. */
+export async function operatorUnansweredCounts(
+  db: Database,
+  orgId: string,
+  query: UnansweredFilters,
+  now = new Date(),
+) {
+  const found = await unansweredIn(db, orgId, query, now);
+  if (!found) return null;
+  const counts = await db
+    .select({ outcome: UNANSWERED, messages: count() })
+    .from(messages)
+    .leftJoin(routingDecisions, eq(routingDecisions.messageId, messages.id))
+    .leftJoin(outbox, POSTED_JOB)
+    .where(found.where)
+    .groupBy(UNANSWERED)
+    .orderBy(desc(count()), asc(UNANSWERED));
+  return { from: found.from, to: found.to, counts };
 }

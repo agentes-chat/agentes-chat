@@ -9,20 +9,31 @@ import {
   OPERATOR_RUN_ERROR_TEXTS,
   OPERATOR_RUN_ERRORS_DAYS,
   OPERATOR_RUN_SHOWN,
+  OPERATOR_TOOL_CALL_DAYS,
+  OPERATOR_TOOL_CALL_GROUPS,
+  OPERATOR_TOOL_CALL_MAX_DAYS,
+  OPERATOR_TOOL_OUTCOMES,
   OPERATOR_TRACE_ASKS,
   OPERATOR_TRACE_JOBS,
+  OPERATOR_UNANSWERED_DAYS,
+  OPERATOR_UNANSWERED_MAX_DAYS,
+  OPERATOR_UNANSWERED_OUTCOMES,
   type OperatorRun,
   operatorExplainMessage,
   operatorRunErrors,
   operatorRuns,
   operatorRunTrace,
   operatorTimeline,
+  operatorToolCallCounts,
+  operatorToolCalls,
+  operatorUnanswered,
+  operatorUnansweredCounts,
 } from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../http/errors";
 import { iso, json, OrgParams } from "../routes/app/context";
 import type { OperatorDeps } from "./app";
-import { Next, paging } from "./lookups";
+import { Next, paging, word } from "./lookups";
 import { StandingState } from "./standing";
 
 const tags = ["Operator"];
@@ -181,6 +192,10 @@ export const Spent = {
   costUsd: z.number().openapi({ description: "What was billed through an API (a plan's tokens are 0)." }),
 };
 
+const BUILT_IN =
+  "The Tool Gateway resolved the name to one of the server's own tools, so the name is the server's own word. False for a connected app's tool (a connector's, a mailbox's, a database's), for a name it could not resolve, and for a call made before the server kept this.";
+const REFUSAL = "A call the server refused: `policy`, `noAccess`, `credential` or `repo`.";
+
 const TraceQuery = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(200).openapi({ description: "How many steps." }),
   beforeSeq: z.coerce.number().int().min(1).optional().openapi({
@@ -198,11 +213,16 @@ const Trace = z
           kind: z.enum(schema.agentRunStepKindEnum.enumValues),
           at: Time,
           tool: z.string().nullable().openapi({ description: "A tool call's and its result's." }),
+          builtIn: z
+            .boolean()
+            .nullable()
+            .openapi({ description: `A tool call's and its result's. ${BUILT_IN}` }),
           connector: z.string().nullable().openapi({ description: "A tool call's: the connection the tool is of." }),
           isError: z.boolean().nullable().openapi({ description: "A tool result's." }),
-          refusal: z.string().nullable().openapi({
-            description: "A tool result the server refused: `policy`, `noAccess` or `credential`.",
-          }),
+          refusal: z
+            .string()
+            .nullable()
+            .openapi({ description: `A tool result's. ${REFUSAL}` }),
           code: z.string().nullable().openapi({ description: "An error's, or a tool result's own." }),
           reason: z.string().nullable().openapi({
             description:
@@ -257,6 +277,80 @@ const Trace = z
       .openapi({ description: "The computer it is tied to; null: none." }),
   })
   .openapi("OperatorRunTrace");
+
+const ToolOutcome = z.enum(OPERATOR_TOOL_OUTCOMES);
+
+const ToolCallQuery = z.object({
+  agentId: z.uuid().optional(),
+  runId: z.uuid().optional().openapi({
+    description: "One run's calls: from when it began unless `from` says, however long ago.",
+  }),
+  tool: word().optional().openapi({ description: "Part of a tool's name; any case, matched literally." }),
+  outcome: ToolOutcome.optional(),
+  from: Instant.optional().openapi({
+    description: `Called at or after. Default: ${OPERATOR_TOOL_CALL_DAYS} days before \`to\`.`,
+  }),
+  to: Instant.optional().openapi({
+    description: `Called before. Default: now. At most ${OPERATOR_TOOL_CALL_MAX_DAYS} days after \`from\`.`,
+  }),
+  groupBy: z.enum(OPERATOR_TOOL_CALL_GROUPS).optional().openapi({
+    description: "Counts by tool, by agent or by outcome instead of calls. `limit` is how many groups; no `cursor`.",
+  }),
+  ...paging,
+});
+
+const ToolCall = z
+  .object({
+    at: Time,
+    runId: z.uuid(),
+    agentId: z.uuid(),
+    seq: z.number().int().openapi({ description: "The call's step in its run's trace." }),
+    tool: z.string().nullable(),
+    builtIn: z.boolean().openapi({ description: BUILT_IN }),
+    connector: z
+      .string()
+      .nullable()
+      .openapi({ description: "The connection the tool is of, as its workspace named it." }),
+    connectorKind: z.string().nullable().openapi({
+      description:
+        "The service a connected app's tool works in, from the server's catalog (`github`, `gmail`, `postgres`…); null for a server connected by address and for the server's own tools.",
+    }),
+    outcome: ToolOutcome.openapi({
+      description:
+        "`ok`; `error` (the tool failed, or the server turned the call down in words alone); `refused` (see `refusal`); `pending` (no result yet: it waits for a person, still runs, or was cut off).",
+    }),
+    refusal: z.string().nullable().openapi({ description: REFUSAL }),
+    code: z.string().nullable().openapi({ description: "The result's own code, when it has one." }),
+    durationMs: Count.nullable().openapi({ description: "From the call to its result." }),
+    inputChars: Count.openapi({ description: "How long its input is: the input is never returned." }),
+    resultChars: Count.nullable().openapi({ description: "How long its result is: the result is never returned." }),
+  })
+  .openapi("OperatorToolCall");
+
+const ToolCallPage = z
+  .object({ from: Time, to: Time, calls: z.array(ToolCall), next: Next })
+  .openapi("OperatorToolCallPage");
+const ToolCallCounts = z
+  .object({
+    from: Time,
+    to: Time,
+    groups: z
+      .array(
+        z.object({
+          group: z.string().nullable().openapi({ description: "The tool's name, the agent's id or the outcome." }),
+          builtIn: z.boolean().nullable().openapi({
+            description: "By tool: some call of that name in the range was of the server's own tool. Null otherwise.",
+          }),
+          calls: Count,
+          errors: Count,
+          refused: Count,
+          pending: Count,
+        }),
+      )
+      .openapi({ description: "Most calls first." }),
+    more: z.boolean().openapi({ description: "There are more groups than `limit`: narrow the dates or the filters." }),
+  })
+  .openapi("OperatorToolCallCounts");
 
 const RunParams = z.object({ runId: z.uuid().openapi({ param: { name: "runId", in: "path" } }) });
 const MessageParams = z.object({ messageId: z.uuid().openapi({ param: { name: "messageId", in: "path" } }) });
@@ -411,6 +505,56 @@ const Explained = z
   })
   .openapi("OperatorMessageExplained");
 
+const UnansweredOutcome = z.enum(OPERATOR_UNANSWERED_OUTCOMES);
+
+const UnansweredQuery = z.object({
+  channelId: z.uuid().optional().openapi({ description: "Only this conversation's." }),
+  outcome: UnansweredOutcome.optional(),
+  from: Instant.optional().openapi({
+    description: `Written at or after. Default: ${OPERATOR_UNANSWERED_DAYS} day before \`to\`.`,
+  }),
+  to: Instant.optional().openapi({
+    description: `Written before. Default: now. At most ${OPERATOR_UNANSWERED_MAX_DAYS} days after \`from\`.`,
+  }),
+  summary: z.stringbool().optional().openapi({
+    description: "`true`: counts by outcome instead of messages. `limit` and `cursor` don't apply.",
+  }),
+  ...paging,
+});
+
+const UNANSWERED =
+  "Why no run answered it, as `GET /messages/{messageId}/explain` tells it (its `verdict`) from what is stored.";
+
+const UnansweredPage = z
+  .object({
+    from: Time,
+    to: Time,
+    messages: z.array(
+      z.object({
+        id: z.uuid(),
+        at: Time,
+        channelId: z.uuid(),
+        threadRootId: z.uuid().nullable().openapi({ description: "The thread it replies in; null outside any." }),
+        authorUserId: z.string().nullable(),
+        outcome: UnansweredOutcome.openapi({ description: UNANSWERED }),
+        strategy: z.string().nullable().openapi({
+          description: "Who decided its routing, as the timeline names it; null: no decision was stored for it.",
+        }),
+      }),
+    ),
+    next: Next,
+  })
+  .openapi("OperatorUnansweredPage");
+const UnansweredCounts = z
+  .object({
+    from: Time,
+    to: Time,
+    counts: z
+      .array(z.object({ outcome: UnansweredOutcome.openapi({ description: UNANSWERED }), messages: Count }))
+      .openapi({ description: "Most messages first." }),
+  })
+  .openapi("OperatorUnansweredCounts");
+
 const runJson = (run: OperatorRun) => ({
   ...run,
   waitResetsAt: iso(run.waitResetsAt),
@@ -487,7 +631,7 @@ export function registerOperatorRuns(api: OpenAPIHono, { db, config }: OperatorD
       tags,
       summary: "One run from start to end: its steps, what it asked, its jobs, what it spent and its computer",
       description:
-        "Which tool each step called, whether it failed and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
+        "Which tool each step called, whether it is the server's own, whether it failed and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
       request: { params: RunParams, query: TraceQuery },
       responses: { 200: json(Trace), ...errors },
     }),
@@ -504,6 +648,35 @@ export function registerOperatorRuns(api: OpenAPIHono, { db, config }: OperatorD
           jobs: trace.jobs.map(jobJson),
           machine: machine && { ...machine, lastSeenAt: iso(machine.lastSeenAt) },
         },
+        200,
+      );
+    },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/orgs/{orgId}/tool-calls",
+      tags,
+      summary: "The tools a workspace's agents called, newest first; or how many, by tool, agent or outcome",
+      description:
+        "Which tool, whether it is the server's own, how the call ended and how long it took, with how long its input and its result are, never either of them.",
+      request: { params: OrgParams, query: ToolCallQuery },
+      responses: { 200: json(z.union([ToolCallPage, ToolCallCounts])), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { groupBy, from, to, ...query } = c.req.valid("query");
+      const range = { ...query, from: from ? new Date(from) : undefined, to: to ? new Date(to) : undefined };
+      const found = groupBy
+        ? await operatorToolCallCounts(db, orgId, { ...range, groupBy })
+        : await operatorToolCalls(db, orgId, range);
+      if (!found) return apiError(c, 404, "not_found", "No such workspace, or no such run in it");
+      const dates = { from: found.from.toISOString(), to: found.to.toISOString() };
+      return c.json(
+        "groups" in found
+          ? { ...dates, groups: found.groups, more: found.more }
+          : { ...dates, calls: found.calls.map(at), next: found.next },
         200,
       );
     },
@@ -567,6 +740,35 @@ export function registerOperatorRuns(api: OpenAPIHono, { db, config }: OperatorD
           routing: found.routing && at(found.routing),
           postedJob: found.postedJob && jobJson(found.postedJob),
         },
+        200,
+      );
+    },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/orgs/{orgId}/unanswered",
+      tags,
+      summary: "People's messages no run answered, newest first; or how many, by why",
+      description:
+        "A person's message that started no run, was taken by none already at work and answered no agent's question, with why. A message people wrote to each other is one too (`not_routed`, or `nobody_picked`). Never what a message says.",
+      request: { params: OrgParams, query: UnansweredQuery },
+      responses: { 200: json(z.union([UnansweredPage, UnansweredCounts])), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { summary, from, to, limit, cursor, ...filters } = c.req.valid("query");
+      const range = { ...filters, from: from ? new Date(from) : undefined, to: to ? new Date(to) : undefined };
+      const found = summary
+        ? await operatorUnansweredCounts(db, orgId, range)
+        : await operatorUnanswered(db, orgId, { ...range, limit, cursor });
+      if (!found) return apiError(c, 404, "not_found", "No workspace with this id");
+      const dates = { from: found.from.toISOString(), to: found.to.toISOString() };
+      return c.json(
+        "counts" in found
+          ? { ...dates, counts: found.counts }
+          : { ...dates, messages: found.messages.map(at), next: found.next },
         200,
       );
     },

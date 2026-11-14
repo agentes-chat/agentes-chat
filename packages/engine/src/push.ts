@@ -424,6 +424,7 @@ export async function deliverPush(
     routine: latest.origin?.kind === "routine" ? latest.origin.routineName : null,
     screen: source.screen ?? null,
     reminder: latest.reminder === true,
+    still: latest.still ?? null,
     status: latest.statusTo ?? null,
     percent: latest.percent ?? null,
     reason: typeof latest.reason === "string" ? latest.reason : null,

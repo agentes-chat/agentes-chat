@@ -311,7 +311,7 @@
   },
   "along": {
     "agent": "Un agente",
-    "waits": "{{name}} espera tu ok",
+    "waits": "{{name}} · esperándote",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} está trabajando",
     "more": "+{{count}}"
@@ -815,7 +815,7 @@
     "teamSectionPersonal": "Tus agentes",
     "managerQuiet": "Nada en curso",
     "state": {
-      "waitsYou": "espera tu ok",
+      "waitsYou": "esperándote",
       "noAi": "Sin IA conectada",
       "connect": "Conectar",
       "archived": "Archivado",
@@ -1229,6 +1229,8 @@
       "name": "Nombre",
       "namePlaceholder": "Tu nombre",
       "email": "Correo",
+      "emailWebLead": "Vuelve a iniciar sesión en el sitio y cámbialo allí, sin el código.",
+      "emailWeb": "Volver a iniciar sesión en el sitio",
       "inWorkspace": "En este espacio de trabajo · {{org}}",
       "handle": "Tu @",
       "timezone": "Zona horaria",
@@ -1520,7 +1522,7 @@
       "plain": "terminó una tarea"
     },
     "rowWait": {
-      "approval": "espera tu aprobación",
+      "approval": "esperándote",
       "question": "espera tu respuesta",
       "mission": "espera tu revisión"
     },
@@ -1558,14 +1560,14 @@
   },
   "intentAgents": {
     "waitingSection": "Esperándote",
-    "waitingLine": "{{title}} · necesita tu aprobación",
+    "waitingLine": "{{title}} · esperándote",
     "waitingMore_one": "{{title}} · y {{count}} más esperándote",
     "waitingMore_many": "{{title}} · y {{count}} más esperándote",
     "waitingMore_other": "{{title}} · y {{count}} más esperándote",
-    "waitingLabel": "{{name}}, necesita tu aprobación",
+    "waitingLabel": "{{name}}, esperándote",
     "owner": "Responsable: {{name}}",
     "ownerYou": "Responsable: tú",
-    "nowWaiting": "Necesita tu aprobación: {{title}}",
+    "nowWaiting": "Esperándote: {{title}}",
     "did": {
       "title": "Lo que hizo por ti",
       "title_female": "Lo que hizo por ti",
@@ -1585,7 +1587,7 @@
         "image": "Imagen",
         "file": "Archivo"
       },
-      "waitingOnYou": "Necesita tu aprobación",
+      "waitingOnYou": "Esperándote",
       "youApproved": "Aprobaste",
       "youRefused": "Rechazaste",
       "action": {

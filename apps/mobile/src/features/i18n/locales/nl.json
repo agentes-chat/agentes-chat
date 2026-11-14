@@ -302,7 +302,7 @@
   },
   "along": {
     "agent": "Een agent",
-    "waits": "{{name}} wacht op je akkoord",
+    "waits": "{{name}} · wacht op jou",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} is aan het werk",
     "more": "+{{count}}"
@@ -792,7 +792,7 @@
     "teamSectionPersonal": "Je agents",
     "managerQuiet": "Er loopt niets",
     "state": {
-      "waitsYou": "wacht op je akkoord",
+      "waitsYou": "wacht op jou",
       "noAi": "Geen AI gekoppeld",
       "connect": "Koppelen",
       "archived": "Gearchiveerd",
@@ -1155,6 +1155,8 @@
       "name": "Naam",
       "namePlaceholder": "Je naam",
       "email": "E-mail",
+      "emailWebLead": "Log opnieuw in op de website en wijzig het daar, zonder de code.",
+      "emailWeb": "Opnieuw inloggen op de website",
       "inWorkspace": "In deze werkruimte · {{org}}",
       "handle": "Je @",
       "timezone": "Tijdzone",
@@ -1439,7 +1441,7 @@
       "plain": "heeft een klus afgerond"
     },
     "rowWait": {
-      "approval": "wacht op je akkoord",
+      "approval": "wacht op jou",
       "question": "wacht op je antwoord",
       "mission": "wacht tot je het nakijkt"
     },
@@ -1477,13 +1479,13 @@
   },
   "intentAgents": {
     "waitingSection": "Wacht op jou",
-    "waitingLine": "{{title}} · heeft je akkoord nodig",
+    "waitingLine": "{{title}} · wacht op jou",
     "waitingMore_one": "{{title}} · en nog {{count}} die op je wacht",
     "waitingMore_other": "{{title}} · en nog {{count}} die op je wachten",
-    "waitingLabel": "{{name}}, heeft je akkoord nodig",
+    "waitingLabel": "{{name}}, wacht op jou",
     "owner": "Eigenaar: {{name}}",
     "ownerYou": "Eigenaar: jij",
-    "nowWaiting": "Heeft je akkoord nodig: {{title}}",
+    "nowWaiting": "Wacht op jou: {{title}}",
     "did": {
       "title": "Wat hij voor je deed",
       "title_female": "Wat zij voor je deed",
@@ -1502,7 +1504,7 @@
         "image": "Afbeelding",
         "file": "Bestand"
       },
-      "waitingOnYou": "Heeft je akkoord nodig",
+      "waitingOnYou": "Wacht op jou",
       "youApproved": "Je hebt goedgekeurd",
       "youRefused": "Je hebt geweigerd",
       "action": {

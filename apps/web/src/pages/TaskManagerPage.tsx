@@ -12,6 +12,7 @@ import {
   groupTasks,
   helpersOf,
   hiddenCount,
+  taskHelping,
   taskPlace,
   taskState,
   tasksOf,
@@ -35,8 +36,17 @@ import {
   PixelSpinner,
   PixelStop,
   SearchField,
+  Tip,
 } from "@agenteschat/ui";
-import { type CSSProperties, Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  type ButtonHTMLAttributes,
+  type CSSProperties,
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -59,6 +69,7 @@ import {
   taskSub,
   UsingNow,
   useProgramText,
+  useTaskStatus,
   useTaskStop,
 } from "@/components/tasks/TaskBits";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
@@ -70,13 +81,23 @@ import "./task-manager.css";
 /*
  * The task manager (ADR 0128), one page: the agents as cards with their last half hour (one chosen shows only its
  * tasks), the tasks now (asked by people, grouped by agent and folded until opened, then the routines' background
- * runs) with their state, what each uses, its time and Parar, and what ended today at the end. No cost anywhere:
- * here people stop work. A row or an agent's card chosen gives the toolbar "Ver passos" and "Parar tarefa" / "Parar
- * tudo de Dev".
+ * runs) with their state, what each uses, its time and Parar, and what ended today at the end. Every row is one line
+ * that ends in "…" when it doesn't fit, its words whole in its tip. No cost anywhere: here people stop work. A row or
+ * an agent's card chosen gives the toolbar "Ver passos" and "Parar tarefa" / "Parar tudo de Dev".
  */
 
 /** Points on a card's line: the last half hour, one per minute. */
 const LINE_POINTS = 30;
+
+/** A row's tip: its words whole, the title first, one fact a line. */
+const rowTip = (title: string, lines: string[]) => (
+  <>
+    <b>{title}</b>
+    {lines.map((line) => (
+      <span key={line}>{line}</span>
+    ))}
+  </>
+);
 
 /** A row's stop that asks first: the square alone, its words on hover and for screen readers (`what`: whose). */
 const stopSquare = (words: string, what?: string) => (
@@ -224,6 +245,7 @@ export function TaskManagerPage({
       meId={me.user.id}
       agentName={nameOf(task.agentId)}
       chain={delegationText(t, task, (id) => dir.anyAgent(id)?.name, me.user.id)}
+      helping={task.delegation?.from ? taskHelping(t, task, (id) => dir.anyAgent(id)?.name) : null}
       stopAll={
         task.helpers && !stopping.has(task.runId)
           ? stopChain(task, stopSquare(t("taskManager.actions.stopAll"), taskTitle(t, task)))
@@ -375,14 +397,17 @@ export function TaskManagerPage({
                 <span className="tm-computer__icon" aria-hidden="true">
                   <Icon name="computer" size={18} />
                 </span>
-                <span className="tm-computer__text">
+                <Tip className="tm-computer__text" tip={rowTip(c.name, [computerText(c)])} look="ac-msg__tip tm-tip">
                   <b>{c.name}</b>
                   <small>{computerText(c)}</small>
-                </span>
+                </Tip>
+                {/* The keys' focus and a long press open the words' tip from here: the words take no focus. */}
                 {(c.inLine > 0 || c.working > 0) && (
-                  <Button variant="link" aria-label={`${t("queue.see")}: ${c.name}`} onClick={() => setQueueOf(c.id)}>
-                    {t("queue.see")}
-                  </Button>
+                  <Tip button look="ac-msg__tip tm-tip" tip={rowTip(c.name, [computerText(c)])}>
+                    <Button variant="link" aria-label={`${t("queue.see")}: ${c.name}`} onClick={() => setQueueOf(c.id)}>
+                      {t("queue.see")}
+                    </Button>
+                  </Tip>
                 )}
               </li>
             ))}
@@ -611,9 +636,32 @@ function TaskSection({
 }
 
 /**
- * One task: what it is (the whole row picks it), its state, what it uses now, its time (shaded as it grows, but not on
- * a wait with a known reason: that isn't stuck) and Parar. `grouped` sits under its agent's row; `flat` (a routine's
- * background run) shows its agent's face; `agent` is the list of one agent's tasks (its card chosen).
+ * A row's words and its press: the title, then what it is about in quiet type, on one line that ends in "…" when it
+ * doesn't fit. Whole in its tip (a resting pointer, the keys' focus, a long press) and, for screen readers, in the
+ * button's description: `tip` is what the row leaves out or cuts.
+ */
+function RowName({
+  title,
+  sub,
+  tip,
+  ...button
+}: { title: string; sub?: string | null; tip: string[] } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <Tip button look="ac-msg__tip tm-tip" tip={rowTip(title, tip)}>
+      <button type="button" className="tm-hit" aria-label={title} aria-description={tip.join(". ")} {...button}>
+        {title}
+        {sub && <small>{sub}</small>}
+      </button>
+    </Tip>
+  );
+}
+
+/**
+ * One task, one line: what it is (the whole row picks it) and what it is about, its state, what it uses now, its time
+ * (shaded as it grows, but not on a wait with a known reason: that isn't stuck) and Parar. What comes next of a wait
+ * and what it does in its program are in its tip. `grouped` sits under its agent's row; `flat` (a routine's
+ * background run, work agents asked) shows its agent's face, and its state as a mark when the columns don't fit;
+ * `agent` is the list of one agent's tasks (its card chosen).
  */
 function TaskRow({
   task,
@@ -622,6 +670,7 @@ function TaskRow({
   meId,
   agentName,
   chain,
+  helping,
   stopAll,
   selected,
   stopping,
@@ -636,6 +685,8 @@ function TaskRow({
   agentName: string;
   /** Who asked it among agents, and what started the chain. */
   chain: string | null;
+  /** Work another agent handed it, where the reader sees where: "ajudando a Ada". */
+  helping: string | null;
   /** A task that asked other agents stops with them: this stop, in place of its own. */
   stopAll: ReactNode;
   selected: boolean;
@@ -646,6 +697,7 @@ function TaskRow({
   onStop: () => void;
 }) {
   const { t } = useTranslation();
+  const status = useTaskStatus();
   const title = taskTitle(t, task);
   const where = taskPlace(t, task);
   const asked = task.requester
@@ -654,9 +706,10 @@ function TaskRow({
       : t("taskManager.askedBy", { name: task.requester.name })
     : null;
   const helpers = task.helpers ? t("taskManager.helpers", { count: task.helpers }) : null;
+  // Work another agent handed it, where its reader can see it: "ajudando a Ada · #vendas" (ADR 0084 addendum).
   const sub = [
     look === "flat"
-      ? [agentName, chain ?? where].filter(Boolean).join(" · ")
+      ? [agentName, helping ?? chain ?? where, helping ? where : null].filter(Boolean).join(" · ")
       : taskSub(t, task, [where, task.background ? null : (chain ?? asked)].filter(Boolean).join(" · ")),
     helpers,
   ]
@@ -672,18 +725,21 @@ function TaskRow({
     <li className="tm-row" data-look={look} data-selected={selected || undefined}>
       <span className="tm-cell tm-cell--name">
         {look === "flat" ? face : <TaskMark task={task} />}
-        <span className="tm-name">
-          <button type="button" className="tm-hit" aria-pressed={selected} onClick={onSelect}>
-            {title}
-          </button>
-          <small>{sub}</small>
-        </span>
+        <RowName
+          title={title}
+          sub={sub}
+          tip={[sub, ...status(task, stopping)].filter(Boolean)}
+          aria-pressed={selected}
+          onClick={onSelect}
+        />
       </span>
       <span className="tm-cell tm-cell--state">
-        <TaskStateChip task={task} stopping={stopping} />
+        <TaskStateChip task={task} stopping={stopping} line />
+        {/* Its face leads the row: with no room for the columns, how it stands is this mark. */}
+        {look === "flat" && <TaskMark task={task} />}
       </span>
       <span className="tm-cell tm-cell--use">
-        <UsingNow task={task} />
+        <UsingNow task={task} line />
       </span>
       <TaskTime task={task} now={now} />
       <span className="tm-cell tm-cell--act">
@@ -692,6 +748,7 @@ function TaskRow({
           variant="ghost"
           iconOnly
           icon="list"
+          className="tm-steps"
           aria-label={`${t("taskManager.actions.steps")}: ${title}`}
           title={t("taskManager.actions.steps")}
           onClick={onSteps}
@@ -725,8 +782,9 @@ function TaskTime({ task, now }: { task: ManagedTask; now: number }) {
 }
 
 /**
- * An agent's row over its tasks, folded until opened (the whole row opens it): its face and count, how it stands,
- * the apps it uses now, the time of the task its state is about (`groupLead`), and its stop for all of them.
+ * An agent's row over its tasks, one line, folded until opened (the whole row opens it): its face and count, how it
+ * stands, the apps it uses now, the time of the task its state is about (`groupLead`), and its stop for all of them.
+ * With no room for the columns, how it stands is that task's mark.
  */
 function AgentRow({
   group,
@@ -744,51 +802,51 @@ function AgentRow({
   stopAll: ReactNode;
 }) {
   const { t } = useTranslation();
+  const status = useTaskStatus();
+  const lead = groupLead(group);
   // Waiting beats queued, working beats both (someone waits on it while it works on something else).
   const working = group.tasks.find((task) => taskState(task) === "working");
   const held = group.tasks.find((task) => taskState(task) === "waiting");
   const state = working ? (
-    <TaskStateChip task={working} />
+    <TaskStateChip task={working} line />
   ) : group.waiting > 0 ? (
     <Chip tone="waiting" lead={<WaitMark />}>
       {t("taskManager.waiting", { count: group.waiting })}
     </Chip>
   ) : held ? (
-    <TaskStateChip task={held} />
+    <TaskStateChip task={held} line />
   ) : (
     <Chip icon="clock">{t("taskManager.state.queued")}</Chip>
   );
+  const count = t("taskManager.tasks", { count: group.tasks.length });
   return (
     <li className="tm-row tm-row--agent" data-open={open || undefined}>
       <span className="tm-cell tm-cell--name">
-        <span className="tm-who">
-          <span className="tm-twist" aria-hidden="true">
-            <Icon name="chevronDown" size={14} />
-          </span>
-          <OpensAgent agentId={group.agentId}>
-            <AgentAvatar agentId={group.agentId} name={name} size="xs" />
-          </OpensAgent>
-          <span className="tm-name">
-            <button
-              type="button"
-              className="tm-hit"
-              aria-expanded={open}
-              aria-label={t("taskManager.toggleAgent", { name })}
-              onClick={onToggle}
-            >
-              {name}
-            </button>
-          </span>
-          <CountChip size="sm" aria-label={t("taskManager.tasks", { count: group.tasks.length })}>
-            {group.tasks.length}
-          </CountChip>
+        <span className="tm-twist" aria-hidden="true">
+          <Icon name="chevronDown" size={14} />
         </span>
+        <OpensAgent agentId={group.agentId}>
+          <AgentAvatar agentId={group.agentId} name={name} size="xs" />
+        </OpensAgent>
+        <RowName
+          title={name}
+          tip={[count, ...status(lead)]}
+          aria-expanded={open}
+          aria-label={t("taskManager.toggleAgent", { name })}
+          onClick={onToggle}
+        />
+        <CountChip size="sm" aria-label={count}>
+          {group.tasks.length}
+        </CountChip>
       </span>
-      <span className="tm-cell tm-cell--state">{state}</span>
+      <span className="tm-cell tm-cell--state">
+        {state}
+        <TaskMark task={lead} />
+      </span>
       <span className="tm-cell tm-cell--use">
         <ProgramStack tasks={group.tasks} />
       </span>
-      <TaskTime task={groupLead(group)} now={now} />
+      <TaskTime task={lead} now={now} />
       <span className="tm-cell tm-cell--act">{stopAll}</span>
     </li>
   );
@@ -865,8 +923,9 @@ const ENDED_ICON: Record<"done" | "stopped" | "failed", IconName> = {
 };
 
 /**
- * What ended today: the task, its agent and where, how it ended (and who stopped it), how long it took. The row opens
- * its panel, as a task still on does: its steps and "Abrir na conversa".
+ * What ended today, one line: the task, its agent and where, how it ended (and who stopped it), how long it took. The
+ * row opens its panel, as a task still on does: its steps and "Abrir na conversa". With no room for the columns, how
+ * it ended is its mark.
  */
 function EndedRow({
   task,
@@ -889,24 +948,32 @@ function EndedRow({
         ? t("taskManager.ended.stoppedBy", { name: task.stoppedBy.name })
         : t("taskManager.ended.stopped")
       : t(state === "done" ? "taskManager.ended.done" : "taskManager.ended.failed");
-  const took = Date.parse(task.finishedAt) - Date.parse(task.startedAt ?? task.finishedAt);
+  const took = formatDuration(
+    t,
+    Math.max(0, Date.parse(task.finishedAt) - Date.parse(task.startedAt ?? task.finishedAt)),
+  );
+  const sub = [agentName, taskPlace(t, task)].filter(Boolean).join(" · ");
   return (
     <li className="tm-row tm-row--ended" data-selected={selected || undefined}>
       <span className="tm-cell tm-cell--name">
         <OpensAgent agentId={task.agentId}>
           <AgentAvatar agentId={task.agentId} name={agentName} size="xs" />
         </OpensAgent>
-        <span className="tm-name">
-          <button type="button" className="tm-hit" aria-pressed={selected} onClick={onOpen}>
-            {taskTitle(t, task)}
-          </button>
-          <small>{[agentName, taskPlace(t, task)].filter(Boolean).join(" · ")}</small>
-        </span>
+        <RowName
+          title={taskTitle(t, task)}
+          sub={sub}
+          tip={[sub, `${word} · ${took}`]}
+          aria-pressed={selected}
+          onClick={onOpen}
+        />
       </span>
       <span className="tm-cell tm-cell--state">
         <Chip icon={ENDED_ICON[state]}>{word}</Chip>
+        <span className="tm-mark" aria-hidden="true">
+          <Icon name={ENDED_ICON[state]} size={14} />
+        </span>
       </span>
-      <span className="tm-cell tm-cell--time ac-num">{formatDuration(t, Math.max(0, took))}</span>
+      <span className="tm-cell tm-cell--time ac-num">{took}</span>
     </li>
   );
 }

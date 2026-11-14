@@ -4,6 +4,7 @@ import type { ChatPrefs } from "../lib/chat-look";
 import type { RoleId } from "../lib/new-agent";
 import type { OnboardingStepId } from "../lib/onboarding";
 import type { Permission } from "../lib/permissions";
+import type { Seat } from "../lib/seat";
 import type { AudienceChoice } from "../lib/who-sees";
 
 /** Whether a person owns the workspace (ADR 0085); what anyone may do comes from their roles (`OrgRole`). */
@@ -216,6 +217,11 @@ export interface SignInOptions {
   canSignUp: boolean;
   /** The page's early-access link is for this address, and it expired. */
   accessExpired?: true;
+  /**
+   * With the bot check on: what the next step for this address (the password, the new account, the reset link) sends
+   * in place of a token, so the person passes the check once (`withHumanCheck`'s `pass`).
+   */
+  pass?: string;
 }
 
 /** `GET /api/instance`: what the phone and desktop apps check before using a server. Public, nothing secret. */
@@ -568,6 +574,12 @@ export interface CodeSent {
   email: string;
   resendIn: number;
 }
+
+/**
+ * Where a new address for my account stands (`account.changeEmail`): a link went to it (`sent`), it changed at once on
+ * a server that sends no email (`changed`), or a code went to my current address first (`code`, as `CodeSent`).
+ */
+export type EmailChange = { status: "sent" | "changed"; email: string } | ({ status: "code" } & CodeSent);
 
 /** A workspace's invitation link people can still ask with (admins). */
 export interface InviteLink {
@@ -1454,13 +1466,16 @@ export interface OpenConsult {
   threadId: string;
   /** When the question went out (ISO). */
   since: string;
+  /** A question (`ask_agent`) or work handed off (`tell_agent`); older servers send questions only, with none. */
+  kind?: ConsultationKind;
 }
 
 /**
  * What a consulted agent waits on before it can answer: an approval, or a person's answer or secret (a person);
- * `computer`: its computer coming back (no one to ask); `agents`: its part done, what it handed on to other agents.
+ * `computer`: its computer coming back (no one to ask); `agents`: its part done, what it handed on to other agents;
+ * `queued`: a worker to take its run.
  */
-export type ConsultationWait = "approval" | "input" | "computer" | "agents" | "outage";
+export type ConsultationWait = "approval" | "input" | "computer" | "agents" | "outage" | "queued";
 
 /**
  * A question an agent asked another agent from a conversation, or work it handed one (`GET
@@ -1479,6 +1494,8 @@ export interface RunConsultation {
   status: "open" | ConsultationStatus;
   /** Open, and the consulted agent waits: on a person, or for its computer to come back. */
   waiting: ConsultationWait | null;
+  /** Since when it waits (`waiting`), ISO. Older servers send none. */
+  waitingSince?: string | null;
   question: string;
   /** The answer once answered; why it couldn't once failed. */
   answer: string | null;
@@ -1946,6 +1963,12 @@ export interface Approval {
   reason: string | null;
   /** You are the agent's owner or an admin, and it is pending. */
   canDecide: boolean;
+  /**
+   * The server calls it routine: nothing that merges, deploys, deletes, sends, publishes or runs what its input
+   * says. A card's one tap for several decides only these (`decideMany` with `only: "routine"`). Absent from a server
+   * that does not tell them apart: then none is.
+   */
+  routine?: boolean;
   /** The agent's owner (they and admins may decide). */
   ownerUserId?: string | null;
   /** When the approved action ran; null while it runs (or if it never did). */
@@ -2286,7 +2309,17 @@ export interface Proposal {
   title: string;
   why: string;
   /** How it came, said by `proposalWhy` in the person's language; `why` holds the words it is about, if any. */
-  whyCode?: "refused" | "corrected" | "seen" | "skill" | "asked" | "budget" | "no_channel" | null;
+  whyCode?:
+    | "refused"
+    | "corrected"
+    | "seen"
+    | "skill"
+    | "asked"
+    | "budget"
+    | "no_channel"
+    | "idle"
+    | "light_work"
+    | null;
   /** `type` names the source for translation; `where` is the server's English text. */
   evidence: {
     where: string;
@@ -2336,6 +2369,10 @@ export interface OrgSettings {
   agentMedia: AgentMediaLevel;
   /** People can send voice messages (ADR 0100); only with `voiceAvailable` too. On by default. */
   voiceMessages: boolean;
+  /** The right hand watches for what stops the team and tells who can fix it. Absent from an older server: on. */
+  teamWatch?: boolean;
+  /** The right hand greets each person who joins, once. Absent from an older server: on. */
+  welcomePeople?: boolean;
   /** Read only: this server has a speech engine. */
   voiceAvailable: boolean;
   /** Read only: this server can search GIFs (it has a GIF provider). */
@@ -2503,6 +2540,37 @@ export interface AgentStatus {
   activeAt: string | null;
   /** Something of its own thinks now (a run, or long work at work). Absent from older servers. */
   working?: boolean;
+  /** Its most important work for you, with where it shows when you read it (ADR 0084). Absent from older servers. */
+  work?: AgentWork | null;
+}
+
+/**
+ * How an agent's run stands for you: it waits on your decision or answer (`you`), it works, it waits on someone else
+ * (`approval`, `answer`), on its computer or its AI provider, or it is in line.
+ */
+export type AgentWorkState = "you" | "working" | "approval" | "answer" | "computer" | "outage" | "queued";
+
+/** An agent's most important work for you (`AgentStatus.work`): its state, since when and where it shows. */
+export interface AgentWork {
+  state: AgentWorkState;
+  /** With `you`: on what. */
+  ask: "approval" | "answer" | null;
+  /** Working: since the hand-off (work another agent handed it), else since it started. Waiting: since the wait began. */
+  since: string;
+  runId: string;
+  /** Where it shows, when you read that conversation: null otherwise. */
+  channelId: string | null;
+  channelKind: "channel" | "dm" | "task" | null;
+  channelName: string | null;
+  threadId: string | null;
+  /** The reply that handed it off, once posted. */
+  messageId: string | null;
+  /** The agent that handed it off, when you read where. */
+  forAgentId: string | null;
+  /** A routine's work: no conversation holds it. */
+  routine: boolean;
+  /** How many runs it has on. */
+  count: number;
 }
 
 export interface InvitationWithStatus {
@@ -2974,6 +3042,8 @@ export const WORKSPACE_ACTION_IDS = [
   "continue_work",
   "update_workspace",
   "set_action_check",
+  "invite_people",
+  "remove_ai_key",
 ] as const;
 
 /** What the change was made to (link it: issue → Issues, wiki_page → Wiki, routine → Rotinas…). */
@@ -4480,6 +4550,11 @@ export interface Machine {
   execAllowed: boolean;
   pairedBy: { id: string; name: string } | null;
   agents: { id: string; name: string; handle: string }[];
+  /**
+   * The built-in agent's id where this computer holds its shared place (ADR 0175) and this person may open it, as
+   * they may any agent's computer here; null or absent otherwise.
+   */
+  sharedSeatOf?: string | null;
   /** Workspace folder on the machine; null unless admin or the person who paired it. */
   workspace: string | null;
   /** This person may rename or remove it (an admin or whoever connected it); they may also reduce its access. */
@@ -5218,6 +5293,9 @@ export interface WikiGraph {
 
 export type ThreadState = "open" | "closed" | "archived";
 export type ThreadTab = "all" | "working" | "missions" | "closed" | "archived";
+
+/** What a thread's work waits on when none of it runs (`ThreadInfo.wait`): someone's approval or answer, its computer, a place in line. */
+export type ThreadWait = "approval" | "input" | "computer" | "queued";
 export type ThreadChange =
   | "created"
   | "title"
@@ -5285,9 +5363,16 @@ export interface ThreadInfo {
     createdAt: string;
   } | null;
   participants: ThreadActor[];
-  /** An agent run is in progress (or waiting) in this thread. */
+  /** An agent run is queued or running in this thread, or one a run here handed work to is. */
   working: boolean;
+  /** An agent's question here waits on you, or an approval here that you may decide. */
   needsYou: boolean;
+  /** With nothing of its work running and nothing waiting on you: what it waits on. Older servers send none. */
+  wait?: ThreadWait | null;
+  /** Since when its state holds: what waits on you, the work, or the wait (ISO). Older servers send none. */
+  since?: string | null;
+  /** The agent at it longest: the chip's orbit takes its tones. Older servers send none. */
+  worker?: string | null;
   /** Open, and a model judged its matter done after its last message: offer one-click close. Never closes by itself. */
   /**
    * When "Responder" opened it (its first reply from the thread panel): replies from then on live in
@@ -6411,7 +6496,14 @@ export type NotificationKind =
    */
   | "right_hand_decided"
   /** ADR 0139 §2: three of its decisions undone in a week stopped it. Waiting until it is turned back on. */
-  | "right_hand_paused";
+  | "right_hand_paused"
+  /**
+   * ADR 0177 §1: the right hand found something that stops the team and this person can fix. One open row per cause
+   * (`latest.reason`: `sign_in`, `connector`, `mailbox`, `database`, `budget_out`, `budget_low`, `computer`),
+   * `latest.names` the first things it is about and `count` how many, `latest.text` the whole sentence in the
+   * person's language. `source.agentId`, `machineId` or `accountId` when it is about one. Done once fixed.
+   */
+  | "team_watch";
 
 /** "O Gerente aprova por você" (ADR 0139 §2): what the person let the workspace's right hand approve. */
 export interface RightHandApprovals {
@@ -6585,6 +6677,8 @@ export interface NotificationLatest {
   runs?: number;
   /** `usage_limit`: the share of the requests made with the agent named in `title`. */
   share?: number;
+  /** A reminder of what was left unread: how many things still wait on the person, this one included. */
+  still?: number;
 }
 
 /** A run a `run_failed` row lists: its agent and where it failed (`key` names both). */
@@ -6841,6 +6935,10 @@ export interface WorkingRun {
   background?: boolean;
   /** Long work in the background (ADR 0121): its title, plan and start. */
   work?: { id: string; title: string; plan: { done: number; total: number } | null; since: string } | null;
+  /** Work another agent handed it: that agent (listed where it was handed off). Older servers send none. */
+  forAgentId?: string | null;
+  /** The reply that handed it off, once posted. */
+  anchorMessageId?: string | null;
 }
 
 /** What a task uses right now: its latest tool call, as the chat's live chip says it (ADR 0128). */
@@ -6857,6 +6955,16 @@ export interface TaskNow {
 export interface TaskDelegation {
   agentId: string;
   origin: { kind: "person"; userId: string; name: string } | { kind: "routine"; name: string } | { kind: "agent" };
+  /** Where it was handed off, when you read that conversation. Older servers send none. */
+  from?: {
+    channelId: string;
+    channelKind: "channel" | "dm" | "task";
+    channelName: string | null;
+    threadId: string | null;
+    messageId: string | null;
+    /** The thread's title; null without one. */
+    label: string | null;
+  } | null;
 }
 
 /** One task in the task manager (`GET …/task-manager`, ADR 0128): a run still on. No cost. */
@@ -7268,6 +7376,11 @@ export interface BrowserHandoff {
   requestedForUserId: string | null;
   /** Who is in control now (null: nobody yet). */
   controllerUserId: string | null;
+  /**
+   * On the workspace's built-in agent: the handoff is of its shared place on the workspace's computer, not of a
+   * person's own (ADR 0175). Absent for every other handoff.
+   */
+  seat?: Seat;
   /** What the person told the agent when it ended ("Não consegui"'s reason, or a note on "Pronto"/"Devolver"). */
   note: string | null;
   /** While nobody has opened it: when it expires. Null once someone is in control (no deadline then). */

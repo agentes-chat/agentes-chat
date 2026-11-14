@@ -34,6 +34,8 @@ export interface ChannelActions {
    * the panel beside the channel, read only (absent in a thread view: the block opens it in place).
    */
   openConsultation?: (consultationId: string) => void;
+  /** A request card here that waits on the viewer (`PendingAsk.id`): scroll to it and light it up. */
+  seeRequest?: (askId: string) => void;
   /** "Pedir correção" after my 👎: my reply in the same conversation, quoting that message and mentioning its agent. */
   requestCorrection?: (message: MessageType, text: string) => void;
   /** A quote was clicked: scroll to the original and highlight it (paging back if needed). */

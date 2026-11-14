@@ -225,7 +225,7 @@ export async function heldHere(
         eq(approvals.orgId, run.orgId),
         eq(approvals.agentId, run.agentId),
         eq(approvals.channelId, run.channelId),
-        // Waiting for a person, or approved and waiting its turn behind a request asked before it (ADR 0179).
+        // Waiting for a person, or approved and waiting its turn behind a request asked before it (ADR 0182).
         or(
           eq(approvals.status, "pending"),
           and(eq(approvals.status, "approved"), isNull(approvals.result), isNull(approvals.runAt)),

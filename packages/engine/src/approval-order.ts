@@ -5,7 +5,7 @@ import type { Approval } from "./tools/gateway";
 const { approvals } = schema;
 
 /**
- * Approvals keep the order they were asked in (ADR 0179). An agent's requests on one card (the same agent in the same
+ * Approvals keep the order they were asked in (ADR 0182). An agent's requests on one card (the same agent in the same
  * conversation, `openApprovalCard`) are its line: a person may decide them in any order, but an approved action runs
  * only once every request asked before it on that card is settled (refused, expired, canceled or done), and one
  * approved before an earlier request was refused or expired doesn't run at all: what it came after never happened.

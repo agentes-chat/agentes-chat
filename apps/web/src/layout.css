@@ -493,6 +493,23 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   color: var(--warn);
   font-weight: 550;
 }
+/* It waits on the person reading (ADR 0095 addendum): amber words, the pulsing wait mark in the arrows' 15px slot, with
+   their margins, so the names don't move. Waiting on someone else: quiet words, the arrows still. */
+.consult-pair__row--you .consult-pair__word {
+  color: var(--warn);
+  font-weight: 550;
+}
+.consult-pair__wait {
+  display: inline-grid;
+  place-items: center;
+}
+.consult-pair__wait > .rq-wait {
+  vertical-align: top;
+}
+.consult-pair__row--wait .consult-pair__word {
+  color: var(--muted);
+  font-weight: 550;
+}
 /* The chevron says it opens: on hover, keyboard focus, and while it is open. */
 .consult-pair__chev {
   position: absolute;
@@ -1185,12 +1202,67 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   background: var(--plate);
   color: var(--ink2);
 }
+/* An agent's work in a list's line (`AgentWorkLine`, ADR 0084 addendum): plain text, no plate, the words in --muted,
+   " · " and the time in --faint and tabular, "esperando você" in amber. One line: short of room it drops its time,
+   then says its short form; only a short form that still doesn't fit ends in "…". In the role's box, so the row keeps
+   its height (`span.` outranks the members column's own line box). */
+span.work-line {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--muted);
+}
+.work-line__words {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.work-line__dot {
+  flex: none;
+  white-space: pre;
+}
+.work-line__time {
+  flex: none;
+}
+/* In the role tag's place, at its height (its 1px above included): the row doesn't move when work starts or ends. */
+.sidebar__item-role.work-line,
+.members-side__line.work-line {
+  margin-top: 1px;
+}
+.work-line[data-tone="you"] .work-line__words {
+  color: var(--warn);
+  font-weight: 600;
+}
+.work-line__dot,
+.work-line__time {
+  color: var(--faint);
+}
+.work-line__time {
+  font-variant-numeric: tabular-nums;
+}
+.sidebar__item[data-status="active"] .work-line:not([data-tone="you"]) {
+  color: var(--ink2);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .work-line__words {
+    animation: work-line-in var(--dur-base) var(--out) both;
+  }
+}
+@keyframes work-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
 /* An agent at work: its pixel orbit beside its name, inside the name's line (what it is on is the orbit's label and
-   the row's title), so the row keeps its height. */
+   the row's title), so the row keeps its height. On the name's capitals' middle by the kit's own rule (`.ac-pixspin`). */
 .sidebar__item-spin {
-  display: inline-block;
   margin-left: 6px;
-  vertical-align: -2px;
 }
 .sidebar[data-rail="true"] .sidebar__item-spin {
   display: none;
@@ -4452,7 +4524,7 @@ html:not([data-pointer]) .settings__link:focus-visible {
 .settings-row:first-child {
   border-top: 0;
 }
-/* A group's heading among a card's rows (Limites' Por papel): on the rows' words, the hairline above it. */
+/* A group's heading among a card's rows (Limites' Por cargo): on the rows' words, the hairline above it. */
 .settings-rows > .ac-grouphead {
   margin: 0;
   padding: var(--space-4) var(--card-pad) var(--space-2);
@@ -4482,11 +4554,13 @@ html:not([data-pointer]) .settings__link:focus-visible {
   font-size: 14px;
   font-weight: 600;
 }
-/* What must stay in sight under the label: why the control is off, what it waits on, what the line opens to. */
+/* What must stay in sight under the label: why the control is off, what it waits on, what the line opens to. An
+   address or a path in it breaks where it must instead of running out of the row. */
 .settings-row__status {
   color: var(--ink-muted);
   font-size: 13px;
   line-height: 18px;
+  overflow-wrap: anywhere;
 }
 /* A value before its control (the plan a line uses: its logo and name). */
 .settings-row__value {
@@ -7690,6 +7764,10 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
 [data-theme="dark"] .ac-typing__sky {
   opacity: 0.45;
 }
+/* A hand-off that waits on someone else (ADR 0095 addendum): its sky quieter still. */
+.ac-typing[data-consult="wait"] .ac-typing__sky {
+  opacity: 0.22;
+}
 
 /* The workspace opening */
 .sky-boot {
@@ -9293,7 +9371,7 @@ html:not([data-pointer]) .onb__step:focus-visible {
   width: var(--option-face);
   height: var(--option-face);
 }
-/* The role step: "Do zero" first (its Cargo field right under it, one card's gap apart), then the groups of presets
+/* The role step: "Do zero" first (its Função field right under it, one card's gap apart), then the groups of presets
    under small headings. */
 .newag__role-groups {
   display: flex;
@@ -14370,7 +14448,7 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
   position: absolute;
   inset: 0;
 }
-.settings-row--toggle :is(.ac-hint, .settings-row__status, .settings-row__end) {
+.settings-row--toggle :is(.ac-hint, .settings-row__status, .settings-row__value, .settings-row__end) {
   position: relative;
   z-index: 1;
 }
@@ -14395,6 +14473,99 @@ html:not([data-pointer]) .settings-row--open:focus-visible {
   height: 28px;
   font-size: 12px;
 }
+/* The app icon (ADR 0179): its picture rounded like a home screen's, as wide as the other lines' icons in the row
+   and larger in the picker, whose lines are the role templates' (roles.css). */
+.app-icon-pic {
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 22.5%;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.app-icon-pic.settings-row__app-icon {
+  width: 28px;
+  height: 28px;
+}
+.app-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -12px;
+}
+.app-icons__item {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.app-icons__item:hover {
+  background: var(--plate);
+}
+.app-icons__item[aria-checked="true"] {
+  background: linear-gradient(180deg, var(--card-face-top), var(--raised));
+  box-shadow: var(--card-key);
+}
+html:not([data-pointer]) .app-icons__item:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.app-icons__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+/* The open workspace's agents (ADR 0179): under the icons, side by side, each drawn as the icon it makes, its name
+   under it; picked, pressed in like every chosen tile (`--chosen-*`): no radio here to say it. */
+.app-icons__group {
+  margin: 0;
+  padding: 16px 0 6px;
+}
+.app-icons__agents {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 -8px;
+}
+.app-icons__agent {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 4px 8px;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: center;
+}
+.app-icons__agent:hover {
+  background: var(--plate);
+}
+.app-icons__agent[aria-checked="true"] {
+  background: var(--chosen-bg);
+  box-shadow: var(--chosen-shadow);
+}
+html:not([data-pointer]) .app-icons__agent:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.app-icons__agent .app-icon-pic {
+  width: 48px;
+  height: 48px;
+}
+.app-icons__agent-name {
+  max-width: 100%;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
 /* On a phone the icon, the words and a switch stay on one line while the words keep their 24 characters there (the
    kit's `.ac-actrow` basis), else the switch goes under them, at the row's end: beside both, at 320, a long name would
    wrap a word a line. A chevron stays on its line, its words shrinking (a line that opens something has no ⓘ). Any
@@ -14416,6 +14587,25 @@ html:not([data-pointer]) .settings-row--open:focus-visible {
     box-sizing: border-box;
     min-width: 0;
     padding-left: calc(28px + var(--space-3));
+  }
+  /* A line with a switch and a value before it (a card's day and hour, who a switch is for): the icon, the name and
+     the switch keep the first line, the value goes under the name, from its edge. */
+  .settings-row--toggle > .settings-row__value {
+    order: 1;
+    flex-basis: 100%;
+    box-sizing: border-box;
+    padding-left: calc(28px + var(--space-3));
+  }
+  /* The name over it keeps, above and below, the room one line has inside the icon's 28: the value stands as far
+     under a name of two lines as under a name of one, which centres on the icon. */
+  .settings-row--toggle:has(> .settings-row__value) > .settings-row__text {
+    /* Browsers without the lh unit: the page's 22px line. */
+    padding-block: 3px;
+  }
+  @supports (top: 1lh) {
+    .settings-row--toggle:has(> .settings-row__value) > .settings-row__text {
+      padding-block: calc((28px - 1lh) / 2);
+    }
   }
   /* A line with a status under its name and a switch or nothing at its end: the icon, the name and the switch on one
      line as above (the name keeps the 24 characters), the status under them at the row's full width, so the icon never

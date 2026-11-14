@@ -38,14 +38,21 @@ import {
   useUnreadThreads,
 } from "@agenteschat/client";
 import { agentSections, groupOf } from "@agenteschat/client/lib/agent-groups";
+import { WORK_TICK_MS, workLine } from "@agenteschat/client/lib/agent-work";
 import { audienceChip, audienceNames, audienceNotice, canTalk, hiddenAgentIds } from "@agenteschat/client/lib/audience";
 import { workspaceNotes } from "@agenteschat/client/lib/deletion";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { formatTime } from "@agenteschat/client/lib/format";
+import { formatTime, upperFirst } from "@agenteschat/client/lib/format";
 import { waitingAgents } from "@agenteschat/client/lib/outages";
 import { can, makesAgents, managesChannel } from "@agenteschat/client/lib/permissions";
-import { AVAILABILITIES, isOutOfOffice, presenceOfAvailability, statusEndNote } from "@agenteschat/client/lib/presence";
+import {
+  AVAILABILITIES,
+  agentFaceWord,
+  isOutOfOffice,
+  presenceOfAvailability,
+  statusEndNote,
+} from "@agenteschat/client/lib/presence";
 import { recentDms } from "@agenteschat/client/lib/recent";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
 import { SERVER_PLACE_ICON } from "@agenteschat/client/lib/server";
@@ -124,7 +131,7 @@ import { useToast } from "@/lib/toast";
 import { offersNewWorkspace } from "@/lib/workspaces";
 import type { SettingsSection } from "@/pages/settings-sections";
 import { useStreams } from "@/realtime/context";
-import { ProfileDialog } from "./AccountSettings";
+import { EmailDialog, ProfileDialog } from "./AccountSettings";
 import { AddPasswordDialog } from "./AddPassword";
 import { AgentAvatar } from "./AgentAvatar";
 import {
@@ -136,6 +143,7 @@ import {
   useGroupEntries,
   useMoveAgent,
 } from "./AgentGroups";
+import { AgentWorkLine } from "./AgentWorkLine";
 import { ArchivedChannelsDialog } from "./ArchivedChannelsDialog";
 import { ChangeAvatarDialog } from "./AvatarBuilder";
 import { FeedbackMark } from "./arrival/FeedbackDialog";
@@ -338,8 +346,13 @@ export function Sidebar() {
   // Agents waiting for an offline computer: "esperando" instead of anything "working".
   const outages = useMachineOutages(orgId);
   const waitingFor = useMemo(() => waitingAgents(outages.data), [outages.data]);
-  // The agents' presence and lines (ADR 0084): the one place that polls them; every face reads the same list.
-  useAgentStatuses(orgId);
+  // The agents' presence and lines (ADR 0084): the one place that polls them; every face reads the same list. Their
+  // work for me, workspace-wide (the addendum of 2026-11-13): who works and who waits, wherever it runs.
+  const agentStatuses = useAgentStatuses(orgId).data;
+  const workKey = (agentStatuses ?? [])
+    .flatMap((s) => (s.work ? [`${s.agentId}:${s.work.state}`] : []))
+    .sort()
+    .join();
   // The tab's title: "(3) agentes.chat", what the sidebar's numbers add up to (agents it doesn't list left out).
   const hiddenAgents = useMemo(() => hiddenAgentIds(org, dir.agents), [org, dir.agents]);
   useUnreadTitle(orgId, hiddenAgents);
@@ -374,12 +387,21 @@ export function Sidebar() {
     0,
   );
 
+  // Who works now: a run this tab hears, or the agents' list (work handed off in two agents' DM too). Who waits on
+  // someone or is in line: a closed group still shows them.
+  const busyKey = useStreams((st) => [...runningAgents(st)].sort().join());
+  const { busy, waits } = useMemo(() => {
+    const work = workKey ? workKey.split(",").map((w) => w.split(":") as [string, string]) : [];
+    return {
+      busy: new Set([
+        ...(busyKey ? busyKey.split(",") : []),
+        ...work.flatMap(([id, s]) => (s === "working" ? [id] : [])),
+      ]),
+      waits: new Set(work.flatMap(([id, s]) => (s === "working" ? [] : [id]))),
+    };
+  }, [busyKey, workKey]);
   // How many of the workspace's agents are working now: the sky at the bottom rises with it.
-  const agentIds = dir.agents.map((a) => a.id).join();
-  const working = useStreams((st) => {
-    const busy = runningAgents(st);
-    return agentIds ? agentIds.split(",").filter((id) => busy.has(id)).length : 0;
-  });
+  const working = dir.agents.filter((a) => busy.has(a.id)).length;
   // Narrow screens: the sidebar is a drawer (id, open state, close on link / swipe).
   const drawer = useNavDrawer();
   // Desktop: the person can shrink the sidebar to an icon rail (remembered). Tablets always get the rail.
@@ -393,8 +415,6 @@ export function Sidebar() {
   const manages = can(org, "manage_agents");
   const team = dir.agents.filter((a) => !isRightHand(a));
   const shownAgents = team.filter((a) => (manages && view.showAllAgents) || canTalk(a));
-  const busyKey = useStreams((st) => [...runningAgents(st)].sort().join());
-  const busy = useMemo(() => new Set(busyKey ? busyKey.split(",") : []), [busyKey]);
   const groups = useAgentGroups(orgId).data ?? [];
   const byGroup = agentSections(shownAgents, groups, (a) => a.id);
   const ordered = (items: Agent[]) => {
@@ -421,6 +441,7 @@ export function Sidebar() {
     onDelete: () => setDeletingGroup(group),
   });
   const agentsUnread = shownAgents.reduce((n, a) => n + (dmOf.get(a.id)?.unread ?? 0), 0);
+  const workingAgents = shownAgents.filter((a) => busy.has(a.id)).length;
   // "Mudar de grupo" in an agent's right click: the keyboard's way to what dragging does.
   const groupEntries = (a: Agent): MenuEntry[] => {
     const current = groupOf(groups, a.id)?.id ?? null;
@@ -466,7 +487,7 @@ export function Sidebar() {
           agent={a}
           unread={unread}
           waitingFor={waitingFor.get(a.id)}
-          live={busy.has(a.id) || waitingFor.has(a.id) || unread > 0}
+          live={busy.has(a.id) || waits.has(a.id) || waitingFor.has(a.id) || unread > 0}
           pinned={pins.agents.includes(a.id)}
           onPrefetch={() => dm && prefetch(dm.channelId)}
           onOpen={() => markOpen(dm?.channelId ?? a.id)}
@@ -614,7 +635,13 @@ export function Sidebar() {
             sections={sections}
             className="sidebar__section--part"
             headProps={sectionMenu("agents")}
-            // Closed, the part hides its groups too: their unread count with its own.
+            // Who works, workspace-wide, at a glance (ADR 0084 addendum); closed, the part hides its groups too: their
+            // unread count with its own.
+            status={
+              workingAgents > 0 && (
+                <span className="sidebar__section-working">{t("sidebarAgents.working", { count: workingAgents })}</span>
+              )
+            }
             summary={agentsUnread > 0 && <UnreadCount count={agentsUnread} />}
             action={
               <>
@@ -1032,6 +1059,7 @@ function SidebarSection({
   sections,
   defaultOpen = true,
   summary,
+  status,
   action,
   drop,
   className,
@@ -1047,6 +1075,8 @@ function SidebarSection({
   /** Open until the person closes it (a long team's groups start closed). */
   defaultOpen?: boolean;
   summary?: ReactNode;
+  /** Open or closed, at the head's end: how many of its agents work ("1 trabalhando"). */
+  status?: ReactNode;
   action?: ReactNode;
   /** It takes a drop: dragged agents (`useAgentDrag`), or channels taken out of their category. */
   drop?: HTMLAttributes<HTMLDivElement> & { "data-drop"?: string | boolean };
@@ -1071,6 +1101,7 @@ function SidebarSection({
           {mark}
           <span className="sidebar__label">{label}</span>
         </button>
+        {status}
         {!open && summary}
         {action}
       </div>
@@ -1717,8 +1748,9 @@ function PinnedMark() {
 
 /**
  * An agent in AGENTES (its row is its DM); while it works, a light sweep in its color runs behind the row (a pulse in
- * the rail) and the line under its name says where. For who manages agents it drags to another group (`drag`) and its
- * right click has Mudar de grupo (`menuExtra`). `live`: it works, waits or wrote to me, so a closed group still shows it.
+ * the rail) and the line under its name says for whom or where and how long, workspace-wide (its work for me, ADR 0084
+ * addendum of 2026-11-13). For who manages agents it drags to another group (`drag`) and its right click has Mudar de
+ * grupo (`menuExtra`). `live`: it works, waits or wrote to me, so a closed group still shows it.
  */
 function AgentRow({
   agent: a,
@@ -1746,19 +1778,30 @@ function AgentRow({
   const { org, me } = useOrg();
   const state = useStreams((st) => agentStateIn(st, a.id));
   const workingIn = useStreams((st) => agentWorkingIn(st, a.id));
-  const busy = state !== "idle" && !waitingFor;
-  const color = colorOf(a);
-  const chip = audienceChip(t, a);
   // Its presence from its work and its line (ADR 0084): the badge on its face, both in the row's title (no emoji in
   // the list: the line shows where the agent is opened).
   const shown = useAgentPresence(a.id);
-  // Background work's minutes move with the anchor's line, every half minute.
-  useNow(shown?.line?.kind === "work", 30_000);
-  const word = shown ? t(`presence.${shown.presence}`) : null;
+  const work = shown?.work ?? null;
+  // At work: a run this tab hears, or its work for me anywhere (work handed off in two agents' DM too).
+  const busy = (state !== "idle" && !waitingFor) || work?.state === "working";
+  const color = colorOf(a);
+  const chip = audienceChip(t, a);
+  // Background work's minutes move with the anchor's line, every half minute; its work's every minute.
+  const clock = useNow(shown?.line?.kind === "work" || work !== null, work ? WORK_TICK_MS : 30_000);
+  const word = shown ? agentFaceWord(t, shown.presence) : null;
   const line = agentLine(t, shown?.line ?? null, i18n.language);
   const dir = useDirectory(org.id);
   const channelList = useChannels(org.id).data;
   const here = workingIn ? channelList?.find((c) => c.id === workingIn)?.name : undefined;
+  const channelName = (id: string) => channelList?.find((c) => c.id === id)?.name;
+  // Under its name: for whom or where it works, what it waits on, and for how long.
+  const doing = workLine(
+    t,
+    i18n.language,
+    work,
+    { agentName: (id) => dir.agentById.get(id)?.name, channelName },
+    clock,
+  );
   const navigate = useNavigate();
   const agentEntries = useAgentMenu();
   const rowMenu = entityMenu(() => agentEntries(a, menuExtra));
@@ -1773,20 +1816,33 @@ function AgentRow({
   const now = busy
     ? here
       ? t("sidebarAgents.workingIn", { channel: here })
-      : t(`sky.busy.${state}`)
+      : state !== "idle"
+        ? t(`sky.busy.${state}`)
+        : agentFaceWord(t, "working")
     : working
       ? line?.text
       : undefined;
-  // Under the name, one line of one height: who it talks to when that is limited, why it is out, else its role (the
-  // agent's fixed label) as a tag.
+  // Under the name, one line of one height: its work (waiting on me, working, a wait, in line), why it is out, who it
+  // talks to when that is limited, else its role (the agent's fixed label) as a tag.
   const out = shown?.presence === "out" && line ? line.text : null;
-  const under = locked
-    ? names.length > 1
-      ? t("sidebarAgents.talksOnlyMore", { name: names[0], count: names.length - 1 })
-      : names[0]
-        ? t("sidebarAgents.talksOnly", { name: names[0] })
-        : chip
-    : (out ?? a.role);
+  const under =
+    out ??
+    (locked
+      ? names.length > 1
+        ? t("sidebarAgents.talksOnlyMore", { name: names[0], count: names.length - 1 })
+        : names[0]
+          ? t("sidebarAgents.talksOnly", { name: names[0] })
+          : chip
+      : a.role);
+  // Its title: who it is over what it does, whole ("Ajudando a Ada · #vendas · 22 min").
+  const place = work?.forAgentId && work.channelId ? (work.channelName ?? channelName(work.channelId)) : undefined;
+  const doingTitle = doing
+    ? [upperFirst(doing.text, i18n.language), place && `#${place}`, doing.time].filter(Boolean).join(" · ")
+    : null;
+  const title = doingTitle
+    ? `${[a.name, a.role].filter(Boolean).join(" · ")}\n${doingTitle}`
+    : [a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ");
+  const roleTag = !locked && !out;
   return (
     <div className="sidebar__row" data-agent-row={a.id} data-live={live || undefined} data-acts={edits ? 1 : undefined}>
       <Link
@@ -1794,7 +1850,7 @@ function AgentRow({
         to="/org/$orgId/dm/agent/$agentId"
         params={{ orgId: org.id, agentId: a.id }}
         className="sidebar__item"
-        title={[a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ")}
+        title={title}
         onMouseEnter={onPrefetch}
         onFocus={onPrefetch}
         onClick={onOpen}
@@ -1816,15 +1872,26 @@ function AgentRow({
           {...(waitingFor ? { state: "idle" as const, expression: "closed" as const } : {})}
         />
         <span className="sidebar__item-text">
-          <span className={under ? "sidebar__item-label ac-captop" : "sidebar__item-label"}>
+          <span className={doing || under ? "sidebar__item-label ac-captop" : "sidebar__item-label"}>
             {a.name}
-            {working && <PixelSpinner size={14} color={color} label={now} className="sidebar__item-spin" />}
+            {working && (
+              <PixelSpinner
+                size={14}
+                color={color}
+                label={state === "idle" && doingTitle ? doingTitle : now}
+                className="sidebar__item-spin"
+              />
+            )}
           </span>
-          {under && <span className={cx("sidebar__item-role", !locked && !out && "ac-tag")}>{under}</span>}
+          {doing ? (
+            <AgentWorkLine line={doing} className="sidebar__item-role" />
+          ) : (
+            under && <span className={cx("sidebar__item-role", roleTag && "ac-tag")}>{under}</span>
+          )}
         </span>
         {unread > 0 ? (
           <UnreadCount count={unread} />
-        ) : waitingFor ? (
+        ) : waitingFor && !doing ? (
           <span className="sidebar__item-meta sidebar__waiting" title={t("outage.sidebar.tip", { name: waitingFor })}>
             <Icon name="waiting" size={14} />
             {t("outage.sidebar.waiting")}
@@ -2188,6 +2255,7 @@ function AccountMenu({ personal = false }: { personal?: boolean }) {
       <ChangeAvatarDialog open={photo} onClose={() => setPhoto(false)} />
       <SetStatusDialog open={statusOpen} onClose={() => setStatusOpen(false)} />
       <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />
+      <EmailDialog open={account === "email"} onClose={() => setAccount(null)} />
       <AddPasswordDialog open={account === "password"} onClose={() => setAccount(null)} />
       <DeleteAccountDialog open={account === "delete"} onClose={() => setAccount(null)} />
     </>

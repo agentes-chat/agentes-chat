@@ -291,7 +291,12 @@ export function AuthPage({
   const signIn = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) => auth.signIn({ email: email.trim(), password }, token));
+    // The e-mail's lookup passed the bot check: its pass stands for this step's (ADR 0075), so nobody is asked twice.
+    const result = await withHumanCheck(
+      human.check,
+      (token) => auth.signIn({ email: email.trim(), password }, token),
+      options?.pass,
+    );
     setPending(false);
     if (!result.ok) {
       setWrong(result.status === 401);
@@ -306,8 +311,11 @@ export function AuthPage({
   const signUp = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) =>
-      auth.signUp({ name: name.trim(), email: email.trim(), password, ...(access ? { access } : {}) }, token),
+    const result = await withHumanCheck(
+      human.check,
+      (token) =>
+        auth.signUp({ name: name.trim(), email: email.trim(), password, ...(access ? { access } : {}) }, token),
+      options?.pass,
     );
     setPending(false);
     if (!result.ok) {
@@ -327,8 +335,14 @@ export function AuthPage({
   const sendReset = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) =>
-      auth.requestPasswordReset({ email: email.trim(), redirectTo: `${window.location.origin}/reset-password` }, token),
+    const result = await withHumanCheck(
+      human.check,
+      (token) =>
+        auth.requestPasswordReset(
+          { email: email.trim(), redirectTo: `${window.location.origin}/reset-password` },
+          token,
+        ),
+      options?.pass,
     );
     setPending(false);
     if (!result.ok) {

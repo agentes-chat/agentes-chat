@@ -195,6 +195,13 @@ const Settings = z
       description:
         "Who the workspace is for (ADR 0159): `team` (the default) or `personal`. It changes the apps' defaults and words, never what anyone may do; a change is audited (`organization.mode_changed`) and reaches every member's apps (`org.mode`).",
     }),
+    teamWatch: z.boolean().openapi({
+      description:
+        "The right hand watches for what stops the team (an ended AI sign-in, an app to reconnect) and tells the one person who can fix it. On by default.",
+    }),
+    welcomePeople: z.boolean().openapi({
+      description: "The right hand greets each person who joins the workspace, once. On by default.",
+    }),
     voiceAvailable: z.boolean().openapi({
       description: "Read only: this server has a speech engine now, from its environment or from its owner's Settings.",
     }),
@@ -413,9 +420,23 @@ const ManagedTask = z
           z.object({ kind: z.literal("routine"), name: z.string() }),
           z.object({ kind: z.literal("agent") }),
         ]),
+        from: z
+          .object({
+            channelId: z.uuid(),
+            channelKind: z.enum(["channel", "dm", "task"]),
+            channelName: z.string().nullable(),
+            threadId: z.uuid().nullable(),
+            messageId: z.uuid().nullable(),
+            label: z.string().nullable().openapi({ description: "The thread's title; null without one." }),
+          })
+          .nullable()
+          .openapi({
+            description:
+              "Where it was handed off, when you read that conversation: its thread and the reply that handed it (once posted).",
+          }),
       })
       .nullable()
-      .openapi({ description: "Another agent asked it: who, and what started the chain." }),
+      .openapi({ description: "Another agent asked it: who, what started the chain and where." }),
     helpers: z
       .number()
       .int()
@@ -578,6 +599,8 @@ export function managementRoutes(deps: AppDeps) {
             agentStickers: z.boolean().optional(),
             agentMedia: z.enum(AGENT_MEDIA_LEVELS).optional(),
             mode: z.enum(WORKSPACE_MODES).optional().openapi({ description: "`team` or `personal` (ADR 0159)." }),
+            teamWatch: z.boolean().optional(),
+            welcomePeople: z.boolean().optional(),
           }),
         ),
       },

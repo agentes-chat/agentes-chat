@@ -42,14 +42,14 @@ describe("channel permissions (ADR 0134)", () => {
     const dialog = await openSettings();
     await click(within(dialog).getByRole("button", { name: "Permissões" }));
     await settle(3);
-    expect(dialog.textContent).toContain("Exceções valem só neste canal. Padrão segue os papéis do workspace.");
-    const targets = within(dialog).getByRole("list", { name: "Papéis e pessoas com exceção" });
+    expect(dialog.textContent).toContain("Exceções valem só neste canal. Padrão segue os cargos do workspace.");
+    const targets = within(dialog).getByRole("list", { name: "Cargos e pessoas com exceção" });
     expect(
       within(targets)
         .getAllByRole("button")
         .map((b) => b.textContent),
     ).toEqual(["Todos"]);
-    expect(dialog.textContent).toContain("Padrão: permitido pelo papel Todos");
+    expect(dialog.textContent).toContain("Padrão: permitido pelo cargo Todos");
     const post = within(dialog).getByRole("radiogroup", { name: "Enviar mensagens para Todos" });
     await click(within(post).getByRole("radio", { name: "Negar" }));
     await settle(4);

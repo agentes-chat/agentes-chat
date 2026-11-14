@@ -78,7 +78,7 @@ function settledAt(a: Approval): string | null {
 }
 
 /**
- * The order on one card (ADR 0179, the server's `approval-order.ts`): the agent's actions run in the order it asked,
+ * The order on one card (ADR 0182, the server's `approval-order.ts`): the agent's actions run in the order it asked,
  * whatever the order they were decided in. An approved action still to do waits for its own run's requests still
  * waiting for a person (the run goes on once all of them are decided), and for every request of another run asked
  * before its run's place (its earliest action still to do) that isn't settled: waiting for a person, or approved with
@@ -190,4 +190,70 @@ export function approvalRuns(items: readonly Approval[]): Approval[][] {
 export function approveAlwaysAlso(card: readonly Approval[], a: Approval): string[] {
   if (!a.approveAlways) return [];
   return card.filter((x) => x.id !== a.id && x.status === "pending" && x.canDecide && sameKind(x, a)).map((x) => x.id);
+}
+
+/**
+ * A digest card's approvals as it draws them (the right hand's summary of what waits on a person): `routine`, the
+ * ones one tap approves together. Routine is the server's word (`Approval.routine`), never worked out here, and the
+ * tap sends `only: "routine"` so the server has the last say. Fewer than two routine ones are no group: each keeps its
+ * own card.
+ */
+export function digestGroups(items: readonly Approval[], now = Date.now()) {
+  const routine = items.filter((a) => asOfNow(a, now).status === "pending" && a.canDecide && a.routine === true);
+  return { routine: routine.length > 1 ? routine : [] };
+}
+
+/**
+ * What a digest's first line counts: how many of its approvals still wait, how many of them go in the routine group
+ * and how many are left to read one by one.
+ */
+export function digestCounts(items: readonly Approval[], now = Date.now()) {
+  const waiting = items.filter((a) => asOfNow(a, now).status === "pending").length;
+  const routine = digestGroups(items, now).routine.length;
+  return { waiting, routine, careful: waiting - routine };
+}
+
+/** How many rows of a routine group show before "Ver os outros". */
+const DIGEST_ROWS = 3;
+/** Up to this many different things a row's requests hold are said under it. More, and "Um por um" reads them. */
+const DIGEST_DETAILS = 3;
+
+export interface DigestRow {
+  /** Its first request's id. */
+  id: string;
+  title: string;
+  agentId: string;
+  /** How many requests it stands for ("Criar página × 10"). */
+  count: number;
+  /** What its requests hold, each once, while they are few enough to say whole. Else nothing. */
+  detail: string;
+}
+
+/**
+ * A routine group's rows: the requests of one agent that read the same (`titleOf`) are one row with how many. The
+ * first rows show and the rest wait behind one "Ver os outros" (`hidden`: the requests it holds back), unless that
+ * would hide a single row. `folds`: there are rows to hold back, so shown whole (`all`) it can close again.
+ */
+export function digestRows(
+  routine: readonly Approval[],
+  titleOf: (a: Approval) => string,
+  detailOf: (a: Approval) => string,
+  all = false,
+) {
+  const byKey = new Map<string, DigestRow & { details: Set<string> }>();
+  for (const a of routine) {
+    const title = titleOf(a);
+    const key = `${a.agentId}\n${title}`;
+    const row = byKey.get(key) ?? { id: a.id, title, agentId: a.agentId, count: 0, detail: "", details: new Set() };
+    row.count += 1;
+    const detail = detailOf(a);
+    if (detail) row.details.add(detail);
+    byKey.set(key, row);
+  }
+  const rows: DigestRow[] = [...byKey.values()].map(({ details, ...row }) => {
+    return { ...row, detail: details.size <= DIGEST_DETAILS ? [...details].join(", ") : "" };
+  });
+  const folds = rows.length > DIGEST_ROWS + 1;
+  const shown = all || !folds ? rows : rows.slice(0, DIGEST_ROWS);
+  return { rows: shown, hidden: rows.slice(shown.length).reduce((n, r) => n + r.count, 0), folds };
 }

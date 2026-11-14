@@ -46,6 +46,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
   const [rate, setRate] = useState(speed);
   const [gone, setGone] = useState(() => expired.has(clipId) || Boolean(voice && voiceExpired(voice)));
   const [open, setOpen] = useState(() => opened.has(message.id));
+  const [broken, setBroken] = useState(false);
   const lastSecond = useRef(-1);
 
   // A recycled row takes on another message.
@@ -55,6 +56,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     setTime(durationMs);
     setGone(expired.has(clipId) || Boolean(voice && voiceExpired(voice)));
     setOpen(opened.has(message.id));
+    setBroken(false);
   }, [clipId, message.id]);
   useEffect(() => {
     if (width <= 0 || !voice) return;
@@ -86,6 +88,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       stopPlayback();
       return;
     }
+    setBroken(false);
     // A player says nothing of why a file failed: the server is asked first.
     const url = voiceAudioUrl(orgId, clipId, serverUrl());
     if (await voiceAudioGone(url, authedFetch as typeof fetch)) {
@@ -100,7 +103,8 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       speed,
       onProgress: report,
       onEnd: ended,
-    });
+      onError: () => setBroken(true),
+    }).catch(() => setBroken(true));
   };
   const seek = (at: number) => {
     report(at);
@@ -224,6 +228,22 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
           </Pressable>
         ) : null}
       </View>
+      {broken ? (
+        // Like a message that didn't go (MessageRow): why, then the way out.
+        <Pressable
+          onPress={() => void toggle()}
+          accessibilityRole="button"
+          hitSlop={14}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Text variant="caption" tone="danger">
+            {t("voice.cantPlay")}
+          </Text>
+          <Text variant="caption" tone="ink" style={styles.retry}>
+            {t("common.retry")}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 });
@@ -257,6 +277,7 @@ const styles = StyleSheet.create({
   },
   speedText: { fontVariant: ["tabular-nums"], fontWeight: "600" },
   pressed: { opacity: 0.6 },
+  retry: { fontWeight: "600", textDecorationLine: "underline" },
   // Under the wave, past the play button; "Ver tudo" on its own line below the words.
   words: { paddingLeft: 38, paddingBottom: 2, gap: 2 },
 });

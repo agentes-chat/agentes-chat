@@ -325,7 +325,7 @@ describe("the wiki", () => {
     await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Acesso" }));
     const dialog = screen().getByRole("dialog", { name: "Acesso a Deploy" });
     await pickLevel(dialog, "O que Todos do workspace pode fazer", "Sem acesso");
-    await pickLevel(dialog, "Adicionar pessoa, papel ou agente", "Admin");
+    await pickLevel(dialog, "Adicionar pessoa, cargo ou agente", "Admin");
     await click(within(dialog).getByRole("button", { name: "Salvar" }));
     await settle(6);
     const call = state.calls.find((c) => c.method === "wiki.audience");
@@ -349,7 +349,7 @@ describe("the wiki", () => {
     await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Acesso" }));
     const dialog = screen().getByRole("dialog", { name: "Acesso a Deploy" });
     await pickLevel(dialog, "O que Todos do workspace pode fazer", "Ver");
-    await pickLevel(dialog, "Adicionar pessoa, papel ou agente", "Admin");
+    await pickLevel(dialog, "Adicionar pessoa, cargo ou agente", "Admin");
     await pickLevel(dialog, "O que Todos os agentes pode fazer", "Sem acesso");
     await click(within(dialog).getByRole("button", { name: "Salvar" }));
     await settle(6);
@@ -371,7 +371,7 @@ describe("the wiki", () => {
     await act(() => new Promise((r) => setTimeout(r, 0)));
     await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Acesso" }));
     const dialog = screen().getByRole("dialog", { name: "Acesso a Deploy" });
-    await pickLevel(dialog, "Adicionar pessoa, papel ou agente", "Admin");
+    await pickLevel(dialog, "Adicionar pessoa, cargo ou agente", "Admin");
     expect(within(dialog).getByRole("combobox", { name: "O que Todos do workspace pode fazer" }).textContent).toContain(
       "Sem acesso",
     );

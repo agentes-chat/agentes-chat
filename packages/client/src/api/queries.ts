@@ -46,6 +46,7 @@ import { setMyReaction } from "../lib/reactions";
 import { recentConversations } from "../lib/recent";
 import { replyOf } from "../lib/reply";
 import { firstVisitOf, teamAnswered } from "../lib/right-hand";
+import { type LodiPrefs, type LodiPrefsPatch, legacyPatch } from "../lib/right-hand-prefs";
 import { usagePauseRefetchMs } from "../lib/routine-view";
 import { withRead } from "../lib/seen";
 import {
@@ -57,7 +58,7 @@ import {
 } from "../lib/sidebar-items";
 import { repinAgent, SIDEBAR_VIEW_DEFAULT, unpinAgents } from "../lib/sidebar-view";
 import { playSound } from "../lib/sounds";
-import type { TeamWeekAct, TeamWeekPrefs } from "../lib/team-week";
+import type { TeamWeekAct } from "../lib/team-week";
 import { threadStartOf } from "../lib/threads";
 import { upsertMessage, withLocalCopies } from "../lib/timeline";
 import { voiceOf } from "../lib/voice";
@@ -199,6 +200,7 @@ import type {
   WorkspaceActionCardView,
   WorkView,
 } from "./types";
+import { WORKSPACE_ACTION_IDS } from "./types";
 
 /**
  * React Query hooks over the `ApiClient`. Reads are cached per organization;
@@ -763,17 +765,32 @@ export function useActionCard(orgId: string, messageId: string | null) {
  * Aplicar, Descartar or Pedir a quem pode on the right hand's card of a workspace change: the card comes back as it is
  * now, and what the change touches (roles, people, channels) is read again.
  */
-export function useDecideActionCard(orgId: string, where: { channelId: string; messageId: string }) {
+export function useDecideActionCard(
+  orgId: string,
+  /** `action`: the card's catalog action. Sent back as `knows` when this build words it, so the server can refuse to
+   * apply a change this build would show without saying what it is. */
+  where: { channelId: string; messageId: string; action?: string },
+) {
   const api = useApi();
   const qc = useQueryClient();
+  const knows = (WORKSPACE_ACTION_IDS as readonly string[]).includes(where.action ?? "") ? where.action : undefined;
   return useMutation({
     mutationFn: (decision: "apply" | "dismiss" | "ask") =>
-      part(api, "actionCards").decide(orgId, where.messageId, decision),
+      part(api, "actionCards").decide(orgId, where.messageId, decision, knows),
     onSuccess: ({ card }) => {
       cacheActionCard(qc, orgId, where, card);
-      for (const key of [keys.roles(orgId), keys.members(orgId), keys.channels(orgId)])
+      for (const key of [
+        keys.roles(orgId),
+        keys.members(orgId),
+        keys.channels(orgId),
+        keys.invitations(orgId),
+        keys.credentials(orgId),
+      ])
         void qc.invalidateQueries({ queryKey: key });
     },
+    // A refusal may have rewritten the card (what it names moved): read it again before anyone taps a second time.
+    // Who reads it from their inbox is not in its conversation, so no event brings them the new card.
+    onError: () => void qc.invalidateQueries({ queryKey: keys.actionCard(orgId, where.messageId) }),
   });
 }
 
@@ -2019,6 +2036,8 @@ export function useDecideApproval(orgId: string) {
       playSound(decision === "approve" ? "approved" : "error");
       cacheApproval(qc, orgId, approval);
       void qc.invalidateQueries({ queryKey: keys.approvals(orgId) });
+      // Its run moves on: the chips of the threads it held say so (a hand-off's run posts nothing where they are).
+      void qc.invalidateQueries({ queryKey: keys.threads(orgId) });
       if (always) void qc.invalidateQueries({ queryKey: keys.approvalRules(orgId, approval.agentId) });
       if (always && approval.approveAlways?.routineId) void qc.invalidateQueries({ queryKey: keys.routines(orgId) });
     },
@@ -2038,19 +2057,23 @@ export function useCancelApproval(orgId: string) {
   });
 }
 
-/** A card's "Aprovar tudo" / "Agora não para todos": exactly the ids it listed at the click. */
+/**
+ * A card's "Aprovar tudo" / "Agora não para todos": exactly the ids it listed at the click. `only: "routine"` leaves
+ * to the server which of them one tap may decide: the others come back in `skipped`, still pending.
+ */
 export function useDecideApprovals(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   const via = useCardVia();
   return useMutation({
     mutationKey: decidingKey(orgId),
-    mutationFn: (input: { ids: string[]; decision: "approve" | "refuse"; reason?: string }) =>
+    mutationFn: (input: { ids: string[]; decision: "approve" | "refuse"; reason?: string; only?: "routine" }) =>
       api.approvals.decideMany(orgId, via ? { ...input, via } : input),
     onSuccess: (result, { decision }) => {
       playSound(decision === "approve" ? "approved" : "error");
       for (const approval of result.approvals) cacheApproval(qc, orgId, approval);
       void qc.invalidateQueries({ queryKey: keys.approvals(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.threads(orgId) });
     },
   });
 }
@@ -2992,7 +3015,7 @@ export const useRefuseMoreUsage = (orgId: string) => {
   return usePeopleUsageMutation(orgId, (userId: string) => api.orgs.refuseMoreUsage(orgId, userId));
 };
 
-/** When Lodi's weekly card comes for me (ADR 0137 §9), or that it is off. */
+/** What Lodi does for me by itself: when its daily and weekly cards come, and its other switches (ADR 0137 §9). */
 export const useTeamWeekPrefs = (orgId: string, enabled = true) => {
   const api = useApi();
   return useQuery({ queryKey: keys.teamWeek(orgId), queryFn: () => api.orgs.teamWeek(orgId), enabled });
@@ -3002,7 +3025,12 @@ export const useSetTeamWeekPrefs = (orgId: string) => {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Partial<Omit<TeamWeekPrefs, "timezone">>) => api.orgs.setTeamWeek(orgId, patch),
+    // A server from before the two cards is saved in the words it knows: it would drop these and answer 200.
+    mutationFn: (patch: LodiPrefsPatch) =>
+      api.orgs.setTeamWeek(
+        orgId,
+        qc.getQueryData<LodiPrefs>(keys.teamWeek(orgId))?.legacy ? legacyPatch(patch) : patch,
+      ),
     onSuccess: (prefs) => qc.setQueryData(keys.teamWeek(orgId), prefs),
   });
 };

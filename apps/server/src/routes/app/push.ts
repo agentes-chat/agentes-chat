@@ -8,6 +8,7 @@ import {
   vapidKeys,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
+import { sessionOf } from "../../auth";
 import { apiError, errorResponse } from "../../http/errors";
 import { type AppDeps, body, createAppRouter, errors, json, noContent, requireSession, security } from "./context";
 
@@ -105,7 +106,7 @@ export function pushRoutes(deps: AppDeps) {
         return c.body(null, 204);
       }
       // A browser hears pushes only while the session that turned them on lasts (ADR 0071).
-      const session = await deps.auth.api.getSession({ headers: c.req.raw.headers });
+      const session = await sessionOf(deps.auth, c.req.raw.headers);
       const sessionId = session?.session.id;
       if (!sessionId || !(await registerPushDevice(db, user.id, { ...input, sessionId }))) {
         return apiError(c, 401, "unauthorized", "Sign in to continue");
