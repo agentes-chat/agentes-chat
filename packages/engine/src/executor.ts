@@ -5702,7 +5702,10 @@ interface BrainStep {
   usageRecordId?: string;
   costNanoUsd?: number;
   usage?: Partial<
-    Record<"inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheWriteTokens" | "calls" | "maxUncached", number>
+    Record<
+      "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheWriteTokens" | "calls" | "maxUncached" | "maxContext",
+      number
+    >
   >;
   thinking?: ModelResult["thinking"];
   imagesLeftOut?: true;
@@ -5880,6 +5883,7 @@ async function thinkOnce(
           // Kept on the step (`model_call`): a turn's uncached input split into its calls.
           ...(usage.calls ? { calls: usage.calls } : {}),
           ...(usage.maxUncached ? { maxUncached: usage.maxUncached } : {}),
+          ...(usage.maxContext ? { maxContext: usage.maxContext } : {}),
         }
       : undefined,
   };
