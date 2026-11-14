@@ -56,7 +56,8 @@
     "closed": "{{title}} · chiuso",
     "reopen": "Mostra di nuovo",
     "answeredBy": "{{name}} ha scelto",
-    "failed": "La tua scelta non è stata inviata. Riprova."
+    "failed": "La tua scelta non è stata inviata. Riprova.",
+    "tooLongFix": "Accorcia la risposta."
   },
   "chart": {
     "table": "Tabella",

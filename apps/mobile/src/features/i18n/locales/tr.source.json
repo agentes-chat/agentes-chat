@@ -146,6 +146,9 @@
   "choices.failed": {
     "value": "Your pick didn't go through. Try again."
   },
+  "choices.tooLongFix": {
+    "value": "Shorten the answer."
+  },
   "chart.table": {
     "value": "Table"
   },

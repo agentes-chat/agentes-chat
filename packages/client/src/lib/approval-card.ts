@@ -2,6 +2,9 @@ import type { Approval } from "../api/types";
 import { approveAlwaysOffered } from "./approval-kind";
 import { approvalOriginShort, approvalWhy } from "./approval-origin";
 
+/** The longest reason a person gives with a decision. Mirror: `APPROVAL_REASON_MAX` in packages/engine approvals.ts. */
+export const APPROVAL_REASON_MAX = 1000;
+
 /**
  * The requests on one approval card, oldest first: the card's own (`first`) and every request of the agent
  * that joined it in that conversation (same `messageId`, server side `openApprovalCard`).

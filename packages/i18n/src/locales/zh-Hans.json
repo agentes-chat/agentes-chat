@@ -24,6 +24,7 @@
     "retry": "重试",
     "soon": "即将推出",
     "unknownError": "出了点问题，请重试。",
+    "overLimit": "文本有 {{length}} 个字符，上限为 {{max}} 个。请缩短。",
     "ourSide": "我们这边出了点问题，请稍后再试。",
     "signedOut": "你的会话已结束，请重新登录以继续。",
     "newVersion": "agentes.chat 有新版本了。",
@@ -11217,7 +11218,8 @@
     "closed": "{{title}} · 已关闭",
     "reopen": "再次显示",
     "answeredBy": "{{name}} 已选择",
-    "failed": "你的选择没有发送成功。请重试。"
+    "failed": "你的选择没有发送成功。请重试。",
+    "tooLongFix": "请缩短回答。"
   },
   "drive": {
     "title": "Drive",

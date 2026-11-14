@@ -52,7 +52,8 @@
     "closed": "{{title}} · ditutup",
     "reopen": "Tampilkan lagi",
     "answeredBy": "{{name}} memilih",
-    "failed": "Pilihanmu tidak terkirim. Coba lagi."
+    "failed": "Pilihanmu tidak terkirim. Coba lagi.",
+    "tooLongFix": "Persingkat jawabannya."
   },
   "chart": {
     "table": "Tabel",

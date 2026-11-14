@@ -54,7 +54,8 @@
     "closed": "{{title}} · geschlossen",
     "reopen": "Wieder anzeigen",
     "answeredBy": "{{name}} hat gewählt",
-    "failed": "Deine Auswahl wurde nicht gesendet. Versuch es noch einmal."
+    "failed": "Deine Auswahl wurde nicht gesendet. Versuch es noch einmal.",
+    "tooLongFix": "Kürze die Antwort."
   },
   "chart": {
     "table": "Tabelle",

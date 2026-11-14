@@ -65,6 +65,9 @@
   "common.unknownError": {
     "value": "Something went wrong. Try again."
   },
+  "common.overLimit": {
+    "value": "The text has {{length}} characters and the limit is {{max}}. Shorten it."
+  },
   "common.ourSide": {
     "value": "Something went wrong on our side. Try again in a little while."
   },
@@ -28318,6 +28321,9 @@
   },
   "choices.failed": {
     "value": "Your pick didn't go through. Try again."
+  },
+  "choices.tooLongFix": {
+    "value": "Shorten the answer."
   },
   "drive.title": {
     "value": "Drive"

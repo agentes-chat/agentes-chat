@@ -696,6 +696,26 @@ textarea.ac-input {
   line-height: 22px;
   resize: vertical;
 }
+/* Grows with its text up to here, then scrolls inside: a long paste never pushes the field's buttons out of view. */
+textarea.ac-input--grow {
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+}
+/* Its thumb shows on hover or while typing, as a scrolling column's (through the token: see the columns' rule). */
+textarea.ac-input:not(:hover, :focus-visible) {
+  --scroll-thumb: transparent;
+}
+/* Under a field with a limit (`LimitLine`): its own line in any parent, the counter quiet at the field's end. */
+.ac-limit {
+  display: block;
+}
+.ac-limit--count {
+  text-align: end;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
 /* Prefixed input, e.g. "agentes.chat/" + slug */
 .ac-input-affix {
   display: flex;

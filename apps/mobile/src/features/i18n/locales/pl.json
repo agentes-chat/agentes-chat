@@ -58,7 +58,8 @@
     "closed": "{{title}} · zamknięte",
     "reopen": "Pokaż ponownie",
     "answeredBy": "Wybór: {{name}}",
-    "failed": "Twój wybór nie został wysłany. Spróbuj ponownie."
+    "failed": "Twój wybór nie został wysłany. Spróbuj ponownie.",
+    "tooLongFix": "Skróć odpowiedź."
   },
   "chart": {
     "table": "Tabela",
