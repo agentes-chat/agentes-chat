@@ -3,7 +3,18 @@ import { keys, useWikiPage, useWikiReads, useWikiTrash, useWikiTree } from "@age
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isImportedPage, outlineOf, type WikiFolder, wikiSlug, wikiTree } from "@agenteschat/client/lib/wiki";
-import { Button, Checkbox, EmptyState, GroupHeading, Icon, Kbd, PageHeader, SearchField } from "@agenteschat/ui";
+import {
+  Button,
+  Checkbox,
+  EmptyState,
+  GroupHeading,
+  Icon,
+  Kbd,
+  Menu,
+  MenuItem,
+  PageHeader,
+  SearchField,
+} from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
@@ -416,6 +427,19 @@ function WikiNav({
             onClick={onNew}
           />
         )}
+        {can(org, "edit_wiki") && (
+          <Menu
+            align="end"
+            label={t("wiki.more")}
+            trigger={
+              <Button size="sm" variant="ghost" iconOnly icon="more" aria-label={t("wiki.more")} title={t("wiki.more")} />
+            }
+          >
+            <MenuItem icon="upload" onSelect={onImport}>
+              {t("wiki.import.cta")}
+            </MenuItem>
+          </Menu>
+        )}
       </div>
       <SearchField
         size="sm"
@@ -555,11 +579,6 @@ function WikiNav({
             ))}
           </div>
         </section>
-      )}
-      {can(org, "edit_wiki") && (
-        <Button icon="upload" className="wiki-import-btn" onClick={onImport}>
-          {t("wiki.import.cta")}
-        </Button>
       )}
     </aside>
   );

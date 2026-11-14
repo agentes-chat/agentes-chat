@@ -809,7 +809,9 @@ describe("Obsidian vaults", () => {
 
   test("import: pick .md files → review → import sends the notes; done opens the home note", async () => {
     const { state, router } = await go("wiki");
-    // "Import" is in the header and at the foot of the side column: either opens the dialog.
+    // "Import" is in the header; the side column keeps it in the "…" beside "New page", no button at its foot.
+    expect(document.querySelector(".wiki-nav .wiki-import-btn")).toBeNull();
+    expect(document.querySelector(".wiki-nav__head button[aria-haspopup='menu']")).not.toBeNull();
     const [open] = screen().getAllByRole("button", { name: /^Importar$/ });
     await click(open as HTMLElement);
     const dialog = screen().getByRole("dialog", { name: "Importar para a wiki" });
