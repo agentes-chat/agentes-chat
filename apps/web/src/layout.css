@@ -1545,51 +1545,6 @@ html:not([data-pointer]) .member-row--add:focus-visible {
 .struck {
   text-decoration: line-through;
 }
-.proposals {
-  container: proposals / inline-size;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
-}
-.proposals__list {
-  flex: 1 1 260px;
-  max-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.proposals__detail {
-  flex: 999 1 480px;
-  min-width: 0;
-  gap: 16px;
-}
-/* Columns of their own (`.page-split`), on one line: a wrapping line would grow to the taller column instead of the
-   split's height. The card keeps its height and scrolls inside once it is taller than the column; the list keeps room
-   for its cards' shadows and focus rings, which its scroll would cut. */
-@media (min-width: 941px) and (min-height: 560px) {
-  .proposals {
-    flex-wrap: nowrap;
-  }
-  .proposals__detail {
-    align-self: flex-start;
-    max-height: 100%;
-  }
-  .proposals__list {
-    flex-basis: 272px;
-    max-width: 332px;
-    margin: -6px -6px 0;
-    padding: 6px;
-  }
-}
-/* Too narrow for the list beside the proposal (260 + 16 + 480): it goes above it at its full width instead of a
-   320px column left alone on the left, whatever the window (the sidebar takes its share of it). */
-@container proposals (max-width: 755px) {
-  .proposals__list {
-    flex-basis: 100%;
-    max-width: none;
-  }
-}
 /* Aceitar todas and Recusar todas at the tabs' right, small and 8 apart, as the tabs bar's toolbar sits; asked again in
    the same spot. Under the tabs, at the right, when the row has no room. */
 .proposals-all {
@@ -1604,14 +1559,6 @@ html:not([data-pointer]) .member-row--add:focus-visible {
   font-size: 13px;
   line-height: 18px;
   color: var(--muted);
-}
-.proposals__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
 }
 .evidence {
   margin: 0;
