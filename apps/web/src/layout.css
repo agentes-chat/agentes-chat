@@ -454,10 +454,9 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   font-weight: 600;
   color: var(--ink2);
 }
-/* What the question is about, after the names: quieter than them, and the first thing to wrap on a narrow row. */
+/* What the question is about, after the names: quieter than them, on hover too (the row's ink turns --ink2). */
 .consult-pair__subject {
   color: var(--muted);
-  overflow-wrap: anywhere;
 }
 .consult-pair__swap,
 .consult-pair__chev {
