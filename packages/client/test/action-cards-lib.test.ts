@@ -417,14 +417,17 @@ test("a Quem pode card says who has it once applied, and its sentence names the 
   });
   const t = ((key: string, o?: Record<string, unknown>) =>
     key === "format.list"
-      ? (o?.names as string[]).join(" e ")
+      ? ((o?.names ?? []) as string[]).join(" e ")
       : key.startsWith("permissions.")
         ? key.split(".")[1]
         : key) as unknown as TFunction;
   const detail = (...a: Parameters<typeof holders>) => actionCardDetail(holders(...a), t);
-  expect(detail("create_channels", 0, [{ name: "Financeiro", level: 1 }, { name: "Suporte", level: 1 }])).toBe(
-    "Financeiro e Suporte",
-  );
+  expect(
+    detail("create_channels", 0, [
+      { name: "Financeiro", level: 1 },
+      { name: "Suporte", level: 1 },
+    ]),
+  ).toBe("Financeiro e Suporte");
   expect(detail("create_channels", 1, [])).toBe("rolesPage.everyoneName");
   // Nobody but the owners: said, never an empty line.
   expect(detail("create_channels", 0, [{ name: "Suporte", level: 0 }])).toBe("rightHand.action.holdersOwnersOnly");
