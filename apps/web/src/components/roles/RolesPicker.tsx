@@ -36,6 +36,9 @@ export function RolesPicker({
 }) {
   const { t } = useTranslation();
   const picked = sortRoles(roles.filter((r) => value.includes(r.id)));
+  // Each picked cargo by its mark and name; none, Todos' mark and "Membro".
+  const everyone = roles.find(isEveryone);
+  const shown = picked.length ? picked : everyone ? [{ ...everyone, name: t("roles.member") }] : [];
   return (
     <Menu
       label={label}
@@ -45,7 +48,14 @@ export function RolesPicker({
         trigger ?? (
           <Button size={size} className="roles-picker" aria-label={label}>
             <span className="roles-picker__value">
-              {picked.length ? picked.map((r) => r.name).join(", ") : t("roles.member")}
+              {shown.length
+                ? shown.map((r) => (
+                    <span key={r.id} className="roles-picker__item ac-iconline">
+                      <RoleMark color={r.color} icon={r.icon} size={18} />
+                      <span>{r.name}</span>
+                    </span>
+                  ))
+                : t("roles.member")}
             </span>
             <Icon name="chevronDown" size={16} />
           </Button>

@@ -1,5 +1,7 @@
 import type { Channel } from "@agenteschat/client";
+import { useChannels, useSidebarView } from "@agenteschat/client";
 import { canTalk, listsAgent } from "@agenteschat/client/lib/audience";
+import { joinNames } from "@agenteschat/client/lib/format";
 import { Avatar, Button } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -40,8 +42,10 @@ export function useArrival(channel: Pick<Channel, "name">) {
 }
 
 /**
- * A newcomer's first #general: the onboarding's welcome card with who works there, and the first things to do: say
- * hi here (the composer takes the focus), talk to an agent, meet the team.
+ * A newcomer's first #general: the onboarding's welcome card with who works there (the agents first, the ones their
+ * invitation started them with ahead, as their sidebar pins them, ADR 0184), the other channels they already joined,
+ * and the first things to do: say hi here (the composer takes the focus), talk to the invitation's first agent, meet
+ * the team.
  */
 export function ArrivalCard({
   channel,
@@ -56,29 +60,50 @@ export function ArrivalCard({
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
   const navigate = useNavigate();
+  const pins = useSidebarView(org.id).pins?.agents ?? [];
+  const joined = (useChannels(org.id).data ?? []).filter((c) => c.isMember && c.name !== channel.name);
   const people = dir.members.filter((m) => m.userId !== me.user.id).slice(0, PEOPLE_SHOWN);
-  const agents = dir.agents.filter((a) => listsAgent(org, a)).slice(0, AGENTS_SHOWN);
+  const pinned = (id: string) => (pins.includes(id) ? pins.indexOf(id) : pins.length);
+  const agents = dir.agents
+    .filter((a) => listsAgent(org, a))
+    .map((a, i) => ({ a, i }))
+    .sort((x, y) => pinned(x.a.id) - pinned(y.a.id) || x.i - y.i)
+    .map(({ a }) => a)
+    .slice(0, AGENTS_SHOWN);
   const host = agents.find((a) => canTalk(a));
+  const lead = t("members.arrival.lead", { channel: channel.name });
   return (
     <WelcomeCard
       className="welcome-card--channel"
       titleId="arrival-title"
       level={2}
       title={t("members.arrival.title", { org: org.name, name: firstName(me.user.name) })}
-      lead={t("members.arrival.lead", { channel: channel.name })}
+      lead={
+        joined.length
+          ? t("common.joinSentences", {
+              a: lead,
+              b: t("members.arrival.alsoIn", {
+                channels: joinNames(
+                  joined.map((c) => `#${c.name}`),
+                  t,
+                ),
+              }),
+            })
+          : lead
+      }
       crew={
         people.length + agents.length > 0 ? (
           <>
-            {people.map((p) => (
-              <span key={p.userId} className="welcome-card__who">
-                <Avatar name={p.name} imageUrl={p.image} size="lg" />
-                <span className="welcome-card__name">{firstName(p.name)}</span>
-              </span>
-            ))}
             {agents.map((a) => (
               <span key={a.id} className="welcome-card__who">
                 <AgentAvatar agent={a} name={a.name} size="lg" />
                 <span className="welcome-card__name">{a.name}</span>
+              </span>
+            ))}
+            {people.map((p) => (
+              <span key={p.userId} className="welcome-card__who">
+                <Avatar name={p.name} imageUrl={p.image} size="lg" />
+                <span className="welcome-card__name">{firstName(p.name)}</span>
               </span>
             ))}
           </>

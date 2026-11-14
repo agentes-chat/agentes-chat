@@ -7,8 +7,24 @@
 .ac-list:has(> .members-row) {
   container-type: inline-size;
 }
+/* A request, a link or an invitation keeps the app's row room, as the people under Membros do: 12 above its face and
+   below its last line. */
+.ac-list__row.members-row {
+  padding-block: var(--space-3);
+}
 .members-row__name {
   overflow-wrap: anywhere;
+}
+/* What a request's link gives, and when the link is full, under who asked. */
+.members-row__more {
+  gap: var(--space-1);
+}
+/* "Mostrar mais 30" at a group's end, its words on the rows' own edge. */
+.members-more {
+  padding-block: var(--space-2);
+}
+.members-more > .ac-btn--ghost {
+  margin-inline-start: calc(-1 * var(--ghost-plate));
 }
 .members-row__line {
   display: flex;

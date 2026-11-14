@@ -6,6 +6,7 @@ import {
   useComposioUsage,
   useComputerSetup,
   useCredentials,
+  useJoinRequests,
   usePlatformKey,
   useRemoveCredential,
   useRotateCredential,
@@ -104,6 +105,7 @@ import { usePersonalView } from "@/hooks/usePersonalView";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
+import { InvitesPage } from "./InvitesPage";
 import { MembersPage } from "./MembersPage";
 import {
   isSettingsSection,
@@ -193,6 +195,7 @@ function Settings({
   const open = visible.map((s) => s.id);
   const marked = settingsNavEntry(current, open, short);
   const tabs = settingsTabs(marked, open, short).filter(isSettingsSection);
+  const waiting = useJoinRequests(org.id, tabs.includes("invites")).data?.length ?? 0;
   const inAdvanced = nav.advanced.some((s) => s.id === marked);
   const [opened, setOpened] = useState(inAdvanced);
   // A section of Advanced opened by its address (⌘K, a card, a notice) shows in the list in that same render (the
@@ -230,28 +233,33 @@ function Settings({
 
   const sections = (
     <>
-      {current !== "members" && current !== "general" && current !== "roles" && current !== "vault" && (
-        <PageHeader
-          level={2}
-          title={sectionName(current)}
-          meta={
-            current !== "devices" ? (
-              t(settingsSectionTextKey(org, current))
-            ) : edition ? (
-              t(edition === "cloud" ? "devices.leadCloud" : "devices.lead")
-            ) : setup.isError ? null : (
-              // Never one edition's words before the server says which this is (the section says if it couldn't).
-              <LoadingLine width={320} />
-            )
-          }
-        />
-      )}
+      {current !== "members" &&
+        current !== "invites" &&
+        current !== "general" &&
+        current !== "roles" &&
+        current !== "vault" && (
+          <PageHeader
+            level={2}
+            title={sectionName(current)}
+            meta={
+              current !== "devices" ? (
+                t(settingsSectionTextKey(org, current))
+              ) : edition ? (
+                t(edition === "cloud" ? "devices.leadCloud" : "devices.lead")
+              ) : setup.isError ? null : (
+                // Never one edition's words before the server says which this is (the section says if it couldn't).
+                <LoadingLine width={320} />
+              )
+            }
+          />
+        )}
       {current === "account" && <AccountSection />}
       {current === "notifications" && <NoticePrefsSection />}
       {current === "approvals" && <ApprovalsSection />}
       {current === "apps" && <AiAppsSection />}
       {current === "general" && <GeneralSection />}
       {current === "members" && <MembersPage embedded />}
+      {current === "invites" && <InvitesPage />}
       {current === "roles" && <RolesSection roleId={role} tab={tab} create={create} />}
       {current === "vault" && <VaultSection />}
       {current === "audit" && <AuditSection agent={agent} />}
@@ -338,6 +346,8 @@ function Settings({
             items={tabs.map((id) => ({
               value: id,
               label: id === "account" ? t("settings.tab.account") : sectionName(id),
+              // Convites says how many wait on the person (ADR 0184).
+              count: id === "invites" && waiting > 0 ? waiting : undefined,
             }))}
           >
             <TabPanel value={current}>{body}</TabPanel>
