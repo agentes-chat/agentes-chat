@@ -2183,7 +2183,8 @@ export const featureKeysEn = {
     everyoneFailed: "Couldn't change everyone's access. Try again.",
     disconnectFailed: "Couldn't disconnect {{name}}. Try again.",
     needsReconnect: "The {{name}} account stopped working. Agents can't use it until someone reconnects it.",
-    noTools: "{{name}}'s tools couldn't be read. Agents go without them until they're read again, in Tools.",
+    noTools: "{{name}}'s tools couldn't be read. Agents go without them until they're read again.",
+    readAgain: "Read again",
     accountTitle: "Account",
     renameFailed: "Couldn't rename it. Try again.",
     whoTitle: "Who uses it",
@@ -2617,7 +2618,7 @@ export const featureKeysEn = {
     },
     import: {
       title: "Import from a computer",
-      text: "To bring passwords from a browser or a password manager, open Settings, Vault on the web and choose Import.",
+      text: "To bring passwords from a browser or a password manager, import them on the web.",
     },
     connections: {
       text: "Connect a password manager and your agents use the logins kept there. Nothing is copied: a password is read only when it's used.",

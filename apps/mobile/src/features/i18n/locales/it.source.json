@@ -5121,7 +5121,10 @@
     "value": "The {{name}} account stopped working. Agents can't use it until someone reconnects it."
   },
   "connectors.noTools": {
-    "value": "{{name}}'s tools couldn't be read. Agents go without them until they're read again, in Tools."
+    "value": "{{name}}'s tools couldn't be read. Agents go without them until they're read again."
+  },
+  "connectors.readAgain": {
+    "value": "Read again"
   },
   "connectors.accountTitle": {
     "value": "Account"
@@ -6037,7 +6040,7 @@
     "value": "Import from a computer"
   },
   "vault.import.text": {
-    "value": "To bring passwords from a browser or a password manager, open Settings, Vault on the web and choose Import."
+    "value": "To bring passwords from a browser or a password manager, import them on the web."
   },
   "vault.connections.text": {
     "value": "Connect a password manager and your agents use the logins kept there. Nothing is copied: a password is read only when it's used."
