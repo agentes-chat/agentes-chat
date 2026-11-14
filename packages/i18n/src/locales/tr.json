@@ -15711,6 +15711,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "ve {{count}} daha",
     "usd": "{{value}} ABD$",
     "tokensMillions": "{{value}} Mn",
     "tokensThousands": "{{value}} B",

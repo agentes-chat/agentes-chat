@@ -38400,6 +38400,9 @@
   "format.list": {
     "value": "{{names, list}}"
   },
+  "format.andMore": {
+    "value": "and {{count}} more"
+  },
   "format.usd": {
     "value": "US$ {{value}}"
   },

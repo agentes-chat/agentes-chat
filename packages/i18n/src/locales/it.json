@@ -16299,6 +16299,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "e altri {{count}}",
     "usd": "{{value}} US$",
     "tokensMillions": "{{value}} Mln",
     "tokensThousands": "{{value}}k",
