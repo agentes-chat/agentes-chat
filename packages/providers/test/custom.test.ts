@@ -296,6 +296,98 @@ describe("calls", () => {
     );
   });
 
+  test("Chat Completions: a picture goes as an image_url only for a model its admin said reads them; a PDF never", async () => {
+    const reply = chat([
+      { choices: [{ index: 0, delta: { content: "ok" }, finish_reason: "stop" }] },
+      { choices: [], usage: { prompt_tokens: 5, completion_tokens: 1 } },
+    ]);
+    const messages = [
+      { role: "user" as const, content: "what is in the files?" },
+      {
+        role: "assistant" as const,
+        content: [
+          { type: "tool_use" as const, id: "t1", name: "read_file", input: {} },
+          { type: "tool_use" as const, id: "t2", name: "read_file", input: {} },
+        ],
+      },
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "tool_result" as const,
+            toolUseId: "t1",
+            content: "shot.png",
+            images: [{ mediaType: "image/png", data: "UE5H" }],
+          },
+          {
+            type: "tool_result" as const,
+            toolUseId: "t2",
+            content: "report.pdf",
+            images: [{ mediaType: "application/pdf", data: "UERG", pages: 2, name: "report.pdf" }],
+          },
+        ],
+      },
+    ];
+    const send = async (reads: boolean) => {
+      setCustomModels(ORG, { [id]: { ...unpriced, ...(reads ? { images: true as const } : {}) } });
+      const { fetcher, requests } = scripted(reply);
+      const result = await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+        { model: id, system: "s", messages, maxTokens: 100 },
+        { apiKey: "k-123456789", endpoint: { style: "openai", baseURL: "https://gw.example/v1" }, onDelta() {} },
+      );
+      return { sent: (requests[0]?.body.messages ?? []) as Record<string, unknown>[], leftOut: result.imagesLeftOut };
+    };
+
+    const plain = await send(false);
+    expect(JSON.stringify(plain.sent)).not.toContain("image_url");
+    expect(JSON.stringify(plain.sent)).toContain("reads text only");
+    expect(plain.leftOut).toBe(true);
+
+    const reads = await send(true);
+    // The tool messages stay together after the assistant's calls; the picture follows in a user message.
+    expect(reads.sent.map((m) => m.role)).toEqual(["system", "user", "assistant", "tool", "tool", "user"]);
+    expect(reads.sent[5]).toEqual({
+      role: "user",
+      content: [
+        { type: "text", text: "Picture returned by tool call t1:" },
+        { type: "image_url", image_url: { url: "data:image/png;base64,UE5H" } },
+      ],
+    });
+    // The PDF is the one thing left out, and the agent is told why.
+    expect(JSON.stringify(reads.sent)).not.toContain("UERG");
+    expect(reads.sent[4]?.content).toContain("The PDF is not shown to you");
+    expect(reads.sent[4]?.content).toContain("reads pictures but not PDFs");
+    expect(reads.leftOut).toBe(true);
+  });
+
+  test("Chat Completions: a Claude id isn't trusted to read pictures there; only the admin's word counts", async () => {
+    const reply = chat([{ choices: [{ index: 0, delta: { content: "ok" }, finish_reason: "stop" }] }]);
+    const { fetcher, requests } = scripted(reply);
+    await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+      {
+        model: customModelId(CRED, "anthropic/claude-sonnet-5-5"),
+        system: "s",
+        messages: [
+          { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "read_file", input: {} }] },
+          {
+            role: "user",
+            content: [
+              {
+                type: "tool_result",
+                toolUseId: "t1",
+                content: "shot.png",
+                images: [{ mediaType: "image/png", data: "UE5H" }],
+              },
+            ],
+          },
+        ],
+        maxTokens: 100,
+      },
+      { apiKey: "k-123456789", endpoint: { style: "openai", baseURL: "https://gw.example/v1" }, onDelta() {} },
+    );
+    expect(JSON.stringify(requests[0]?.body.messages)).not.toContain("image_url");
+  });
+
   test("tool calls without an index, or with object arguments, stay apart and readable", async () => {
     const { fetcher } = scripted(
       chat([

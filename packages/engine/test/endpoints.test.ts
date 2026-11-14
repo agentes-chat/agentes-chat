@@ -267,6 +267,18 @@ describe("calls", () => {
     await expect(run(customModelId(cred.id, "paid"))).rejects.toBeInstanceOf(BudgetExceededError);
   });
 
+  test("a model its admin said reads pictures says so to the providers; the others stay as they were", async () => {
+    f = await setup();
+    const cred = await addEndpoint(f, [{ id: "sees", images: true }, { id: "blind" }]);
+    expect(cred.endpoint?.models).toEqual([{ id: "sees", images: true }, { id: "blind" }]);
+    expect((await modelInfoFor(f.db, customModelId(cred.id, "sees"), f.org.id))?.images).toBe(true);
+    expect((await modelInfoFor(f.db, customModelId(cred.id, "blind"), f.org.id))?.images).toBeUndefined();
+    // Changing the models keeps what the admin sent; the test calls keep their results.
+    const next = await updateEndpointModels(f.db, f.owner.id, f.org.id, cred.id, [{ id: "blind", images: true }]);
+    expect(next.models).toEqual([{ id: "blind", images: true }]);
+    expect((await modelInfoFor(f.db, customModelId(cred.id, "blind"), f.org.id))?.images).toBe(true);
+  });
+
   test("another workspace's endpoint model is unknown here", async () => {
     f = await setup();
     const cred = await addEndpoint(f);

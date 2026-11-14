@@ -15,6 +15,7 @@ import {
   deniedError,
   estimateTokens,
   hasToolImages,
+  hasToolPdfs,
   laidOut,
   type ModelProvider,
   type ModelRequest,
@@ -331,9 +332,11 @@ interface Chunk {
   }[];
 }
 
+type UserPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
 type Message =
   | { role: "system"; content: { type: "text"; text: string; cache_control?: { type: "ephemeral"; ttl?: "1h" } }[] }
-  | { role: "user"; content: string }
+  | { role: "user"; content: string | UserPart[] }
   | { role: "tool"; tool_call_id: string; content: string }
   | {
       role: "assistant";
@@ -361,7 +364,12 @@ export function reasoningFor(
   return best ? { effort: best } : undefined;
 }
 
-function toMessages(request: ModelRequest, claude: boolean): Message[] {
+/**
+ * `images`: the connection takes pictures (a workspace endpoint whose admin said the model reads them, ADR 0146 §7).
+ * Chat Completions carries a picture only in a user message, never in a `tool` one, so a tool result's pictures
+ * follow its `tool` messages as `image_url` parts; PDFs it can't take at all stay out, with a note.
+ */
+function toMessages(request: ModelRequest, claude: boolean, images: boolean): Message[] {
   const blocks = typeof request.system === "string" ? [{ text: request.system, cache: true }] : request.system;
   const system = blocks
     .filter((b) => b.text.length > 0)
@@ -376,8 +384,8 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
         : {}),
     }));
   const out: Message[] = system.length > 0 ? [{ role: "system", content: system }] : [];
-  // ponytail: images left out for every model; send them once the catalog knows which OpenRouter models read images.
-  for (const m of withoutImages(request.messages, request.model)) {
+  // ponytail: images left out for every OpenRouter model; send them once the catalog knows which ones read images.
+  for (const m of withoutImages(request.messages, request.model, images)) {
     const parts: ContentBlock[] = typeof m.content === "string" ? [{ type: "text", text: m.content }] : m.content;
     const text = parts.flatMap((b) => (b.type === "text" && b.text ? [b.text] : [])).join("\n\n");
     if (m.role === "assistant") {
@@ -398,21 +406,29 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
       });
       continue;
     }
+    const pictures: UserPart[] = [];
     for (const b of parts) {
-      if (b.type === "tool_result")
-        out.push({ role: "tool", tool_call_id: b.toolUseId, content: b.isError ? `ERROR: ${b.content}` : b.content });
+      if (b.type !== "tool_result") continue;
+      out.push({ role: "tool", tool_call_id: b.toolUseId, content: b.isError ? `ERROR: ${b.content}` : b.content });
+      for (const i of b.images ?? [])
+        pictures.push(
+          { type: "text", text: `Picture returned by tool call ${b.toolUseId}:` },
+          { type: "image_url", image_url: { url: `data:${i.mediaType};base64,${i.data}` } },
+        );
     }
-    if (text) out.push({ role: "user", content: text });
+    if (pictures.length > 0)
+      out.push({ role: "user", content: [...(text ? [{ type: "text" as const, text }] : []), ...pictures] });
+    else if (text) out.push({ role: "user", content: text });
   }
   return out;
 }
 
-function toBody(request: ModelRequest, compatible: boolean) {
+function toBody(request: ModelRequest, compatible: boolean, images = false) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
   return {
     model: request.model,
-    messages: toMessages(request, claude),
+    messages: toMessages(request, claude, images),
     max_tokens: request.maxTokens,
     stream: true as const,
     ...(request.tools && request.tools.length > 0
@@ -530,8 +546,9 @@ export function createOpenRouterProvider(
     /**
      * Another server's Chat Completions (a workspace's own endpoint, ADR 0146): sent to `baseURL` with no
      * OpenRouter attribution, routing, reasoning or cache markers, usage asked for, and its reported cost ignored.
+     * `images`: the model reads pictures, so tool results' pictures are sent to it as `image_url` parts.
      */
-    compatible?: { id: string; baseURL: string };
+    compatible?: { id: string; baseURL: string; images?: boolean };
   } = {},
 ): ModelProvider {
   const compatible = options.compatible;
@@ -561,7 +578,11 @@ export function createOpenRouterProvider(
           fetch: options.fetch,
         });
         const stream = await client.chat.completions.create(
-          toBody(request, compatible !== undefined) as unknown as ChatCompletionCreateParamsStreaming,
+          toBody(
+            request,
+            compatible !== undefined,
+            compatible?.images === true,
+          ) as unknown as ChatCompletionCreateParamsStreaming,
           { signal: request.signal },
         );
         for await (const raw of stream) {
@@ -640,7 +661,9 @@ export function createOpenRouterProvider(
                 cacheWriteTokens: 0,
               },
           ...(cost !== undefined ? { costNanoUsd: cost } : {}),
-          ...(hasToolImages(request.messages) ? { imagesLeftOut: true as const } : {}),
+          ...((compatible?.images ? hasToolPdfs(request.messages) : hasToolImages(request.messages))
+            ? { imagesLeftOut: true as const }
+            : {}),
         };
       } catch (error) {
         const mapped = request.signal?.aborted

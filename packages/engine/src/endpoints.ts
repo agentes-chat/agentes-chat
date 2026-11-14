@@ -98,7 +98,13 @@ export function cleanEndpointModels(models: EndpointModel[], previous: EndpointM
     if (p && Object.values(p).some((v) => !Number.isSafeInteger(v) || v < 0))
       throw new ValidationError("Prices can't be negative", "endpoint.prices");
     const check = previous.find((o) => o.id === id)?.check;
-    return { id, ...(label ? { label } : {}), ...(p ? { prices: p } : {}), ...(check ? { check } : {}) };
+    return {
+      id,
+      ...(label ? { label } : {}),
+      ...(p ? { prices: p } : {}),
+      ...(check ? { check } : {}),
+      ...(m.images ? { images: true as const } : {}),
+    };
   });
 }
 
@@ -109,6 +115,7 @@ const infoOf = (endpointName: string, m: EndpointModel): ModelInfo => ({
   endpoint: endpointName,
   prices: m.prices ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   ...(m.prices ? {} : { unpriced: true as const }),
+  ...(m.images ? { images: true as const } : {}),
   serverSideFallback: false,
   structuredOutput: false,
 });

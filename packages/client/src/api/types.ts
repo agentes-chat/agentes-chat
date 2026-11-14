@@ -755,6 +755,8 @@ export interface EndpointModel {
   /** Absent: unpriced (its calls cost 0, so no budget limits them). */
   prices?: EndpointPrices;
   check?: EndpointCheckResult;
+  /** The model reads pictures: tool results' pictures are sent to it. */
+  images?: true;
 }
 
 export interface EndpointCheck {

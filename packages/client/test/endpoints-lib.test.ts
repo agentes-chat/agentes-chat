@@ -75,6 +75,13 @@ describe("the endpoint form", () => {
       { id: "x", on: true, input: "1", output: "3" },
       { id: "y", on: true, input: "", output: "" },
     ]);
+    // A model marked as reading pictures keeps the mark through a change of prices.
+    const seen = draftOfEndpoint("GW", {
+      style: "openai",
+      baseURL: "https://gw.example/v1",
+      models: [{ id: "z", images: true }],
+    });
+    expect(endpointModelsOf(seen)).toEqual([{ id: "z", images: true }]);
     expect(
       checksInOrder(d, [
         { model: "y", check: "failed", error: "nope" },
