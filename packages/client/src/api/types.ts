@@ -678,6 +678,9 @@ export interface InviteLinkMade {
   maxUses?: number | null;
 }
 
+/** A link as changed: `url` is null for one made before links could be shown again. */
+export type InviteLinkChanged = Omit<InviteLinkMade, "url"> & { url: string | null };
+
 /** Someone who asked to join through a link, waiting for an admin (ADR 0068). */
 export interface JoinRequest {
   id: string;
@@ -694,8 +697,18 @@ export interface JoinRequest {
   confirmed: boolean;
   /** The member who suggested this person (their name, ADR 0090): it came through no link. */
   suggestedBy?: string | null;
-  /** The link it came through (ADR 0184): who made it, and the cargos, channels and agents an approval starts on. */
-  link?: { id: string; createdBy: string | null; roleIds: string[]; channelIds: string[]; agentIds: string[] } | null;
+  /**
+   * The link it came through (ADR 0184): who made it, and the cargos, channels and agents an approval starts on.
+   * `full`: it took all its people, so approving is refused (`join.link_full_approval`) until its maximum grows.
+   */
+  link?: {
+    id: string;
+    createdBy: string | null;
+    roleIds: string[];
+    channelIds: string[];
+    agentIds: string[];
+    full: boolean;
+  } | null;
   createdAt: string;
   /** Closes unanswered after this. */
   expiresAt: string;

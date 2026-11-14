@@ -14579,6 +14579,7 @@
     "join": {
       "linkClosed": "Ten link już nie działa. Poproś osobę, która go wysłała, o nowy.",
       "linkFull": "Ten link przyjął już wszystkie osoby, które mógł. Poproś osobę, która go wysłała, o nowy.",
+      "linkFullApproval": "Link tej prośby przyjął już wszystkie osoby, które mógł. Aby ją zatwierdzić, zwiększ limit osób w linku.",
       "full": "Ta przestrzeń robocza ma wiele oczekujących próśb. Spróbuj później albo poproś kogoś stamtąd o zaproszenie.",
       "rateLimited": "Zbyt wiele próśb z tego miejsca. Spróbuj ponownie za godzinę.",
       "linkBusy": "W ostatniej godzinie wiele osób prosiło przez ten link. Spróbuj później.",

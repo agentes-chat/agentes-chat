@@ -199,6 +199,7 @@ const KNOWN = {
   "machine.managed_access": "computerSetup.managedAccess",
   "join.link_closed": "errors.join.linkClosed",
   "join.link_full": "errors.join.linkFull",
+  "join.link_full_approval": "errors.join.linkFullApproval",
   "join.full": "errors.join.full",
   "join.rate_limited": "errors.join.rateLimited",
   "join.link_busy": "errors.join.linkBusy",

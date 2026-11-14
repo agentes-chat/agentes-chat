@@ -307,7 +307,10 @@ export const organizationInviteLinks = pgTable(
     channelIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /** Agents an approval starts the person with, as an invitation's. */
     agentIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
-    /** Approvals it takes before asking through it is refused (`join.link_full`); null: no limit. */
+    /**
+     * Approvals it takes, then asking (`join.link_full`) and approving (`join.link_full_approval`) through it are
+     * refused. Null: no limit.
+     */
     maxUses: integer(),
     /**
      * The workspace's own link (`inviteLink`): made with no choice of cargo, channel, agent, expiry or maximum. One made

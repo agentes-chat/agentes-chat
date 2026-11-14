@@ -13141,6 +13141,7 @@
     "join": {
       "linkClosed": "Tautan ini sudah tidak berlaku. Minta tautan baru ke orang yang mengirimnya.",
       "linkFull": "Tautan ini sudah menerima semua orang yang bisa diterimanya. Minta tautan baru ke orang yang mengirimnya.",
+      "linkFullApproval": "Tautan permintaan ini sudah menerima semua orang yang bisa diterimanya. Untuk menyetujuinya, naikkan batas maksimum tautan.",
       "full": "Ruang kerja ini punya banyak permintaan yang menunggu. Coba lagi nanti, atau minta seseorang di sana mengundangmu.",
       "rateLimited": "Terlalu banyak permintaan dari sini. Coba lagi dalam satu jam.",
       "linkBusy": "Banyak orang meminta lewat tautan ini dalam satu jam terakhir. Coba lagi nanti.",

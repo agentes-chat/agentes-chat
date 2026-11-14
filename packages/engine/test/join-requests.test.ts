@@ -9,6 +9,7 @@ import {
   createInvitation,
   createInviteLink,
   createRole,
+  deleteRole,
   denyJoinRequest,
   type EmailTemplate,
   editInviteLink,
@@ -750,6 +751,46 @@ describe("links with choices (ADR 0184)", () => {
     expect((await ask({ user: fay }, token)).created).toBe(true);
   });
 
+  test("a full link takes no more approvals: a request filed before it filled waits for a bigger maximum", async () => {
+    await start();
+    const { token, link } = await createInviteLink(f.db, SECRET, f.owner.id, f.org.id, { maxUses: 1 }, NOW);
+    const erin = await person("erin@example.com", { verified: true });
+    const fay = await person("fay@example.com", { verified: true });
+    await ask({ user: erin }, token);
+    await ask({ user: fay }, token);
+    // Typed while the link had room: the job files it only after it filled.
+    await ask({ user: null, name: "Gus", email: "gus@example.com" }, token);
+    const requestOf = async (email: string) => (await rows()).find((r) => r.email === email);
+    const approve = async (email: string) =>
+      approveJoinRequest(deps(), PUBLIC, f.owner.id, f.org.id, (await requestOf(email))?.id ?? "", [], NOW);
+    expect(await approve(erin.email)).toEqual({ outcome: "joined" });
+    expect(await refusal(approve(fay.email))).toEqual({ code: "join.link_full_approval" });
+    expect((await linkRow(link.id))?.uses).toBe(1);
+    expect(await memberOf(fay.id)).toBeUndefined();
+    expect((await requestOf(fay.email))?.status).toBe("pending");
+    expect((await listWaitingJoinRequests(f.db, f.owner.id, f.org.id, NOW)).map((r) => r.link?.full)).toEqual([true]);
+    await fileQueued();
+    expect(await requestOf("gus@example.com")).toBeUndefined();
+    // A bigger maximum lets the waiting request in.
+    await editInviteLink(f.db, f.owner.id, f.org.id, link.id, { maxUses: 5 }, NOW);
+    expect(await approve(fay.email)).toEqual({ outcome: "joined" });
+    expect((await linkRow(link.id))?.uses).toBe(2);
+  });
+
+  test("a deleted cargo leaves the links and invitations that gave it", async () => {
+    await start();
+    const suporte = await cargo("Suporte");
+    const { link } = await createInviteLink(f.db, SECRET, f.owner.id, f.org.id, { roleIds: [suporte.id] }, NOW);
+    await createInvitation(f.db, f.owner.id, f.org.id, { email: "rita@example.com", roleIds: [suporte.id] }, NOW);
+    await deleteRole(f.db, f.owner.id, f.org.id, suporte.id);
+    expect((await linkRow(link.id))?.roleIds).toEqual([]);
+    const [rita] = await f.db
+      .select({ roleIds: schema.organizationInvitations.roleIds })
+      .from(schema.organizationInvitations)
+      .where(eq(schema.organizationInvitations.email, "rita@example.com"));
+    expect(rita?.roleIds).toEqual([]);
+  });
+
   test("a link's expiry: thirty minutes, then it no longer works", async () => {
     await start();
     const { token } = await createInviteLink(f.db, SECRET, f.owner.id, f.org.id, { expiresIn: "30m" }, NOW);
@@ -809,6 +850,7 @@ describe("links with choices (ADR 0184)", () => {
           roleIds: [suporte.id],
           channelIds: [chamados.id, sala.id],
           agentIds: [fin.id],
+          full: false,
         },
       }),
     ]);

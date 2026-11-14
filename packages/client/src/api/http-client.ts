@@ -128,6 +128,7 @@ import type {
   InvitationState,
   InvitationWithStatus,
   InviteLink,
+  InviteLinkChanged,
   InviteLinkMade,
   Issue,
   IssueActivity,
@@ -1432,7 +1433,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     invites: {
       createLink: (orgId, choices) => request<InviteLinkMade>(`${org(orgId)}/invite-links`, { json: choices ?? {} }),
       editLink: (orgId, linkId, choices) =>
-        request<InviteLinkMade>(`${org(orgId)}/invite-links/${enc(linkId)}`, { method: "PATCH", json: choices }),
+        request<InviteLinkChanged>(`${org(orgId)}/invite-links/${enc(linkId)}`, { method: "PATCH", json: choices }),
       links: async (orgId) => (await request<{ links: InviteLink[] }>(`${org(orgId)}/invite-links`)).links,
       turnOff: (orgId, linkId) => request<void>(`${org(orgId)}/invite-links/${enc(linkId)}`, { method: "DELETE" }),
       renewLink: (orgId, linkId) =>

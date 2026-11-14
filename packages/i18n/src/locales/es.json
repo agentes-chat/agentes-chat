@@ -14019,6 +14019,7 @@
     "join": {
       "linkClosed": "Este enlace ya no funciona. Pídele uno nuevo a quien te lo envió.",
       "linkFull": "Este enlace ya recibió a todas las personas que podía. Pídele uno nuevo a quien te lo envió.",
+      "linkFullApproval": "El enlace de esta solicitud ya recibió a todas las personas que podía. Para aprobarla, aumenta el máximo del enlace.",
       "full": "Este espacio de trabajo tiene muchas solicitudes en espera. Intenta más tarde, o pídele a alguien de ahí que te invite.",
       "rateLimited": "Demasiadas solicitudes desde aquí. Intenta de nuevo en una hora.",
       "linkBusy": "Muchas personas pidieron entrar con este enlace en la última hora. Intenta más tarde.",

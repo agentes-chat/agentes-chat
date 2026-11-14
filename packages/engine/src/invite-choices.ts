@@ -52,7 +52,10 @@ export function linkMaxUses(max: number | null): number | null {
   throw new ValidationError("A link takes 1, 5, 10, 25, 50 or 100 people, or no limit", "invite_link.choice");
 }
 
-/** A link that took all the people it may (`max_uses`): asking through it is refused (`join.link_full`). */
+/**
+ * A link that took all the people it may (`max_uses`): asking (`join.link_full`) and approving
+ * (`join.link_full_approval`) through it are refused.
+ */
 export const inviteLinkFull = (link: { maxUses: number | null; uses: number }) =>
   link.maxUses !== null && link.uses >= link.maxUses;
 

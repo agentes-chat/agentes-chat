@@ -13699,6 +13699,8 @@ export const en = {
     join: {
       linkClosed: "This link no longer works. Ask whoever sent it for a new one.",
       linkFull: "This link already took everyone it could. Ask whoever sent it for a new one.",
+      /** Approving a request whose link took all its people (ADR 0184): the way out is the link's maximum. */
+      linkFullApproval: "This request's link already took everyone it could. To approve it, raise the link's maximum.",
       full: "This workspace has many requests waiting. Try again later, or ask someone there to invite you.",
       rateLimited: "Too many requests from here. Try again in an hour.",
       linkBusy: "Many people asked through this link in the last hour. Try again later.",

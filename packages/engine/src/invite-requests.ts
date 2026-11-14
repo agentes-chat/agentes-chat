@@ -132,6 +132,12 @@ const group = (orgId: string) => `join_requests:${orgId}`;
 const closedLink = () => new NotFoundError("This link no longer works", "join.link_closed");
 /** A link that took all the people it may (ADR 0184): the same for every address. */
 const fullLink = () => new ConflictError("This link already took all the people it may", "join.link_full");
+/** Approving through that link: the approver's way out is a bigger maximum, unlike the asker's. */
+const fullLinkApproval = () =>
+  new ConflictError(
+    "This request's link already took all the people it may. Raise its maximum to approve.",
+    "join.link_full_approval",
+  );
 const fullError = () => new ConflictError("This workspace has many requests waiting", "join.full");
 /** A link's hour used up, by asks or by codes: everyone asking through it shares it, unlike `join.rate_limited`. */
 export const linkBusy = () =>
@@ -729,7 +735,8 @@ export async function joinStatus(db: Database, user: { id: string }, token: stri
  * confirmed account with it asked; false only on a server without email, or for a request typed before codes.
  * `confirmed` (read by phone builds from before `verified`): approving lets an account in at once, as
  * `approveJoinRequest` decides. `suggestedBy`: the member who suggested the person (ADR 0090), whose request came
- * through no link. `link`: the link it came through, who made it and what an approval starts on (ADR 0184).
+ * through no link. `link`: the link it came through, who made it, what an approval starts on (ADR 0184) and whether
+ * it is `full`, which refuses the approval.
  */
 export async function listWaitingJoinRequests(db: Database, actorId: string, orgId: string, now = new Date()) {
   await requirePermission(db, actorId, orgId, "invite_people");
@@ -772,6 +779,7 @@ export async function listWaitingJoinRequests(db: Database, actorId: string, org
             roleIds: found.link.roleIds,
             channelIds: found.link.channelIds,
             agentIds: found.link.agentIds,
+            full: inviteLinkFull(found.link),
           }
         : null,
     };
@@ -860,7 +868,7 @@ export type JoinApproval = { outcome: "joined" } | { outcome: "invited"; url: st
  * (7 days), which opens sign-up for that address. A person who asked is told by email either way; a member's
  * suggestion gets the invitation email itself, since nobody at that address asked (ADR 0090). The channels and agents
  * they start with (ADR 0184): `start`'s, checked as an invitation's, else the link's, as far as the approver may give
- * them at that moment.
+ * them at that moment. A link that took all its people takes no more approvals (`join.link_full_approval`).
  */
 export async function approveJoinRequest(
   /** `secret`: `AGENTES_SECRET`, so an invitation an approval sends has a link that can be copied again. */
@@ -885,10 +893,14 @@ export async function approveJoinRequest(
   let made: string | null = null;
   let opened: string[] = [];
   const result = await deps.db.transaction(async (tx): Promise<JoinApproval> => {
+    // Two approvals through one link take turns, so its uses never pass its maximum.
+    await lockRequests(tx, orgId);
     const row = await waitingRequest(tx, orgId, id, now);
     const [link] = row.linkId
       ? await tx.select().from(organizationInviteLinks).where(eq(organizationInviteLinks.id, row.linkId))
       : [];
+    // A request filed before its link filled waits for a bigger maximum, or a no.
+    if (link && inviteLinkFull(link)) throw fullLinkApproval();
     const channelIds =
       chosen.channelIds ?? (await stillInvitableChannelIds(tx, actorId, orgId, link?.channelIds ?? [], given));
     const agentIds = chosen.agentIds ?? (await stillInvitableAgentIds(tx, actorId, orgId, link?.agentIds ?? [], given));

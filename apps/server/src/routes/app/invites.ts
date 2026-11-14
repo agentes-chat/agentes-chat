@@ -86,7 +86,7 @@ const LinkChoices = z.object({
     .nullable()
     .optional()
     .openapi({
-      description: `People it takes (${INVITE_LINK_MAX_USES.join(", ")}), counted at approval; null: no limit. Asking through a full link answers \`join.link_full\`.`,
+      description: `People it takes (${INVITE_LINK_MAX_USES.join(", ")}), counted at approval; null: no limit. Asking through a full link answers \`join.link_full\`, approving \`join.link_full_approval\`.`,
     }),
   expiresIn: z
     .enum(INVITE_LINK_TTL_KEYS as [string, ...string[]])
@@ -149,6 +149,9 @@ const JoinRequest = z.object({
       roleIds: z.array(z.string()),
       channelIds: z.array(z.string()),
       agentIds: z.array(z.string()),
+      full: z
+        .boolean()
+        .openapi({ description: "It took all its people: approving is refused until its maximum grows." }),
     })
     .nullable()
     .openapi({
@@ -430,7 +433,8 @@ export function inviteRoutes(deps: AppDeps) {
         "mailbox, or that account asking), and so does a proven ask with a password and no account, whose account " +
         "this makes (ADR 0090). Anyone else gets an email invitation to the address: in the answer to their ask, " +
         "or, for a member's suggestion, as the invitation email itself. `emailed: false` on a server that doesn't " +
-        "send email: hand them `url` yourself.",
+        "send email: hand them `url` yourself. 409 `join.link_full_approval`: the request's link took all its " +
+        "people (ADR 0184). Raise its maximum, or deny the request.",
       request: {
         params: RequestParams,
         body: body(

@@ -55,8 +55,11 @@ can say what comes with it.
    `PATCH …/invite-links/{id}` changes one at the same address, which is then a link of its own. Audited
    `invite_link.created` and `invite_link.changed`. Whoever opens any link still only asks (ADR 0068 §1).
 7. **A full link.** Once the approvals through a link reach its maximum, asking through it (its code steps included)
-   answers `join.link_full` for every address alike, and its preview says `full` before anyone asks. A request filed
-   before it filled can still be approved: an admin decides each one.
+   answers `join.link_full` for every address alike, and its preview says `full` before anyone asks. Approving
+   through it is refused too (409 `join.link_full_approval`, with the approver's way out: a bigger maximum). A
+   request filed before it filled waits until it is turned down or the link's maximum grows, and the waiting list
+   marks its link `full`. Approvals in a workspace take turns, under the lock asks are filed under, so two at once
+   never pass the maximum.
 8. **Approving.** The approver gives the cargos they pick (the apps start on the link's), and the link's channels and
    agents as far as the approver may give them at that moment, the rest left out, so approving stays one click. The
    approval may carry `channelIds` and `agentIds` instead, checked as an invitation's. Joined at once, the person

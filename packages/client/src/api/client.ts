@@ -169,6 +169,7 @@ import type {
   InvitationWithStatus,
   InviteBatch,
   InviteLink,
+  InviteLinkChanged,
   InviteLinkChoices,
   InviteLinkMade,
   Issue,
@@ -1810,7 +1811,7 @@ export interface ApiClient {
      */
     createLink(orgId: string, choices?: InviteLinkChoices): Promise<InviteLinkMade>;
     /** Changes what a link gives (ADR 0184): the same address. `expiresIn` counts from now. */
-    editLink(orgId: string, linkId: string, choices: InviteLinkChoices): Promise<InviteLinkMade>;
+    editLink(orgId: string, linkId: string, choices: InviteLinkChoices): Promise<InviteLinkChanged>;
     /** The links people can still ask with, earlier ones (no `url`) included. */
     links(orgId: string): Promise<InviteLink[]>;
     /** Nobody new can ask with it; the requests made through it close without emails. */
