@@ -216,8 +216,10 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "keep.end": "machine",
   // The person's own session: macOS's password window opens on their screen (a system-mode runner answers unsupported).
   "xcode.fix": "machine",
-  // The person's own CLIs, installed and looked up as the runner's user (system mode answers unsupported).
+  // Looking for the coding CLIs only reads the computer's PATH, so root answers it in system mode too.
   "clis.check": "machine",
+  // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
+  // computer's setup, never from an install run as root.
   "cli.install": "machine",
 };
 
@@ -729,7 +731,7 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
   }
   if (req.op === "cli.install") {
     return (
-      ctx.cliInstall?.(req) ?? {
+      (ctx.systemMode?.() ? undefined : ctx.cliInstall?.(req)) ?? {
         install: req.tool ? { tool: req.tool, state: "unsupported" } : null,
       }
     );
