@@ -41439,6 +41439,9 @@
   "browser.inCard.stuck": {
     "value": "Couldn't open {{name}}'s browser."
   },
+  "browser.inCard.noAnswer": {
+    "value": "{{name}}'s browser didn't answer."
+  },
   "browser.inCard.stuckHelp": {
     "value": "Try again restarts the browser. Logins stay saved."
   },

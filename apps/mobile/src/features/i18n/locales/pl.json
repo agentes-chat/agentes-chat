@@ -1936,6 +1936,8 @@
         "offlineCloudM": "Komputer agenta {{name}} teraz nie odpowiada.",
         "stuckF": "Nie udało się otworzyć przeglądarki agenta {{name}}.",
         "stuckM": "Nie udało się otworzyć przeglądarki agenta {{name}}.",
+        "noAnswerF": "Przeglądarka {{name}} nie odpowiedziała.",
+        "noAnswerM": "Przeglądarka {{name}} nie odpowiedziała.",
         "tooManyF": "Za dużo przeglądarek otwartych naraz. Ta pojawi się, gdy inna się zamknie.",
         "tooManyM": "Za dużo przeglądarek otwartych naraz. Ta pojawi się, gdy inna się zamknie."
       }

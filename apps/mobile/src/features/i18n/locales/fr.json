@@ -1834,6 +1834,8 @@
         "offlineCloudM": "L'ordinateur de {{name}} ne répond pas pour le moment.",
         "stuckF": "Impossible d'ouvrir le navigateur de {{name}}.",
         "stuckM": "Impossible d'ouvrir le navigateur de {{name}}.",
+        "noAnswerF": "Le navigateur de {{name}} n'a pas répondu.",
+        "noAnswerM": "Le navigateur de {{name}} n'a pas répondu.",
         "tooManyF": "Trop de navigateurs ouverts en même temps. Celui-ci s'affichera quand un autre se fermera.",
         "tooManyM": "Trop de navigateurs ouverts en même temps. Celui-ci s'affichera quand un autre se fermera."
       }

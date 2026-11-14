@@ -107,14 +107,14 @@ export const browserGranted = (access: Pick<AgentAccess, "builtins"> | null | un
 export type PageGap = BrowserLiveUnavailable | "ended" | "tooMany";
 
 /** The words for why the page shows nothing; the Cloud's computer is always on, so offline there isn't answering. */
-export const pageGapKey = (gap: PageGap | "stuck", gender: "F" | "M", cloud: boolean) =>
+export const pageGapKey = (gap: PageGap | "stuck" | "noAnswer", gender: "F" | "M", cloud: boolean) =>
   `mobile.browser.live.unavailable.${gap === "offline" && cloud ? "offlineCloud" : gap}${gender}` as const;
 
 /** No page yet, but waiting may bring it: opening, reconnecting, or not available for now (the client retries). */
 export const waitsForPage = (gap: PageGap | null) => gap === null || gap === "reconnecting" || gap === "unavailable";
 
 export interface PageNote {
-  say: PageGap | "starting" | "hidden" | "stuck";
+  say: PageGap | "starting" | "hidden" | "stuck" | "noAnswer";
   /** Only while the page may still come by itself. */
   spin: boolean;
   help: "grace" | "closedHelp" | "stuckHelp" | null;
@@ -125,9 +125,17 @@ export interface PageNote {
  * stays theirs), or why it can't be shown, with a line of help where waiting means something. A closed
  * or ended browser holds until a frame comes, and none comes to a hidden view: there, who holds it wins.
  * `stuck`: it waited too long for a page that waiting brings (`useBrowserStuck`): it says it couldn't open,
- * with Try again.
+ * with Try again. `noAnswer`: a profile's browser the computer says didn't answer (`browserNoAnswerMessage`): said at
+ * once, with Try again.
  */
-export function pageNoteOf(gap: PageGap | null, hidden: boolean, mine: boolean, stuck = false): PageNote {
+export function pageNoteOf(
+  gap: PageGap | null,
+  hidden: boolean,
+  mine: boolean,
+  stuck = false,
+  noAnswer = false,
+): PageNote {
+  if (noAnswer && !hidden) return { say: "noAnswer", spin: false, help: "stuckHelp" };
   if (stuck && !hidden && waitsForPage(gap)) return { say: "stuck", spin: false, help: "stuckHelp" };
   if (gap && !(hidden && (gap === "closed" || gap === "ended"))) {
     const help = gap === "closed" ? "closedHelp" : gap === "reconnecting" && mine ? "grace" : null;

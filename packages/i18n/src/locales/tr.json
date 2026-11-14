@@ -16985,6 +16985,7 @@
       "openingLong": "{{name}} ajanının tarayıcısı açılıyor…",
       "openingHelp": "Bu bilgisayarda ilk seferde bir dakika sürebilir.",
       "stuck": "{{name}} ajanının tarayıcısı açılamadı.",
+      "noAnswer": "{{name}} tarayıcısı yanıt vermedi.",
       "stuckHelp": "Tekrar dene tarayıcıyı yeniden başlatır. Oturumlar kayıtlı kalır.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} tarayıcıyı açıyor",

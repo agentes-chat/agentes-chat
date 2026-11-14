@@ -1742,6 +1742,8 @@
         "offlineCloudM": "De computer van {{name}} reageert nu niet.",
         "stuckF": "De browser van {{name}} kon niet worden geopend.",
         "stuckM": "De browser van {{name}} kon niet worden geopend.",
+        "noAnswerF": "De browser van {{name}} reageerde niet.",
+        "noAnswerM": "De browser van {{name}} reageerde niet.",
         "tooManyF": "Te veel browsers tegelijk open. Deze verschijnt zodra er een andere sluit.",
         "tooManyM": "Te veel browsers tegelijk open. Deze verschijnt zodra er een andere sluit."
       }

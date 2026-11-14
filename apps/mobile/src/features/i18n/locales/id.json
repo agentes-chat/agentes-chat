@@ -1645,6 +1645,8 @@
         "offlineCloudM": "Komputer {{name}} sedang tidak merespons.",
         "stuckF": "Tidak bisa membuka browser {{name}}.",
         "stuckM": "Tidak bisa membuka browser {{name}}.",
+        "noAnswerF": "Browser {{name}} tidak merespons.",
+        "noAnswerM": "Browser {{name}} tidak merespons.",
         "tooManyF": "Terlalu banyak browser terbuka sekaligus. Yang ini muncul saat browser lain ditutup.",
         "tooManyM": "Terlalu banyak browser terbuka sekaligus. Yang ini muncul saat browser lain ditutup."
       }

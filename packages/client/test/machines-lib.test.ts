@@ -9,6 +9,7 @@ import {
   allowFolderCommand,
   allowsInApp,
   beginLogin,
+  browserNoAnswerMessage,
   browserOffMessage,
   commandInReason,
   computerKind,
@@ -622,5 +623,11 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(browserOffMessage("The browser is turned off on this computer")).toBe(true);
     expect(browserOffMessage("Too many browsers are open")).toBe(false);
     expect(browserOffMessage(undefined)).toBe(false);
+  });
+
+  test("the runner's own timeout is told apart from the computer's", () => {
+    expect(browserNoAnswerMessage("The browser didn't answer within 15 s")).toBe(true);
+    expect(browserNoAnswerMessage("the computer Desk did not answer within 120 s")).toBe(false);
+    expect(browserNoAnswerMessage(null)).toBe(false);
   });
 });

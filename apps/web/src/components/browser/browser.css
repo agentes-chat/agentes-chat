@@ -728,6 +728,15 @@ html:not([data-pointer]) .brw-ac__page.is-control:focus-visible {
 .brw-dim__row {
   justify-content: center;
 }
+/* Words that wrap stay centred with their icon: the icon is a glyph on the first line, not a column beside them. */
+.brw-dim__row--words {
+  display: block;
+  text-align: center;
+  text-wrap: balance;
+}
+.brw-dim__row--words > .ac-icon {
+  margin-inline-end: var(--space-2);
+}
 .brw-dim__box small {
   font-weight: 400;
   color: var(--muted);

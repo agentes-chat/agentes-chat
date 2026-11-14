@@ -17348,6 +17348,8 @@ export const ptBR = {
       openingHelp: "Na primeira vez neste computador pode levar um minuto.",
       stuck: "Não deu para abrir o navegador do {{name}}.",
       stuck_female: "Não deu para abrir o navegador da {{name}}.",
+      noAnswer: "O navegador do {{name}} não respondeu.",
+      noAnswer_female: "O navegador da {{name}} não respondeu.",
       stuckHelp: "Tentar de novo reinicia o navegador. Os logins continuam salvos.",
       subWorking: "{{name}} · {{now}}",
       subStarting: "{{name}} está abrindo o navegador",

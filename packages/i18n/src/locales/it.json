@@ -17629,6 +17629,8 @@
       "openingHelp": "La prima volta su questo computer può richiedere un minuto.",
       "stuck": "Impossibile aprire il browser di {{name}}.",
       "stuck_female": "Impossibile aprire il browser di {{name}}.",
+      "noAnswer": "Il browser di {{name}} non ha risposto.",
+      "noAnswer_female": "Il browser di {{name}} non ha risposto.",
       "stuckHelp": "Riprova riavvia il browser. Gli accessi restano salvati.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} sta aprendo il browser",

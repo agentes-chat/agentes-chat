@@ -1822,6 +1822,8 @@ export const featureKeysEn = {
         offlineCloudM: "{{name}}'s computer isn't answering right now.",
         stuckF: "Couldn't open {{name}}'s browser.",
         stuckM: "Couldn't open {{name}}'s browser.",
+        noAnswerF: "{{name}}'s browser didn't answer.",
+        noAnswerM: "{{name}}'s browser didn't answer.",
         tooManyF: "Too many browsers open at once. This one shows when another one closes.",
         tooManyM: "Too many browsers open at once. This one shows when another one closes.",
       },
