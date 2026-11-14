@@ -894,6 +894,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           method: "DELETE",
           query: { purge: purge ? "true" : undefined, release: release ? "true" : undefined },
         }),
+      makeDefaultCredential: (orgId, id) =>
+        request<Credential>(`${org(orgId)}/credentials/${enc(id)}/make-default`, { json: {} }),
       checkCredential: (orgId, id) =>
         request<{ check: "ok" | "unchecked" }>(`${org(orgId)}/credentials/${enc(id)}/check`, { json: {} }),
       platformKeyAvailable: async (orgId) =>

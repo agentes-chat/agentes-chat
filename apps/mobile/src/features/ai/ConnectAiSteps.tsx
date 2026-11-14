@@ -1,4 +1,4 @@
-import type { BrainScope, Edition, MachineAccount, MachineAccountKind } from "@agenteschat/client";
+import type { BrainScope, Credential, Edition, MachineAccount, MachineAccountKind } from "@agenteschat/client";
 import {
   keys,
   useAgentBrain,
@@ -50,16 +50,16 @@ import {
 import { can } from "@agenteschat/client/lib/permissions";
 import { geminiPersonal, isPlanId, planOf, providerFitsChoice, signInProviderOf } from "@agenteschat/client/lib/plans";
 import {
-  AUTO,
   keyLooksValid,
-  keyRuns,
+  keyName,
   keyStepHint,
+  keyThinks,
   PROVIDERS,
   providerLabel,
   providerOf,
   providersForKey,
 } from "@agenteschat/client/lib/providers";
-import { rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
+import { agentOnKey, rightHandOnKey, savedKeyLine, thinksWithLine } from "@agenteschat/client/lib/right-hand";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
@@ -242,6 +242,10 @@ export interface ConnectAiFlowProps {
   keyButton?: boolean;
   keySaved?: boolean;
   onSaveKey?: () => void;
+  /** An endpoint ("Outro provedor") was saved on the key page, with its models' tests. */
+  onEndpointSaved?: (key: Credential) => Promise<void>;
+  /** Before saving, whom the key will think for, in place of the usual line. */
+  keyForLine?: string;
   /** The person came because the computer just got ready: said first, once it is. */
   justReady?: boolean;
   /** Self-host with no computer for the agent: where one is connected. */
@@ -342,22 +346,27 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
     const brain = gates.view.brain;
     if (row.kind === "key") {
       const k = row.key;
-      // The workspace's model on that key: the agent's model where the key runs it, else Automático.
-      // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true.
+      // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true. An
+      // endpoint's key has no call of its own to try: its models' last tests say whether it thinks (`keyThinks`).
       const agentRow = agentRows.data?.find((a) => a.id === forAgent.id);
-      const fits = keyRuns(k, agentRow?.model, models.data?.models ?? []);
       const rightHand = gates.view?.scope === "mine" && agentRow;
       return void save(
         forAgent,
         k.label,
         async () => {
           const { check } = await api.agents.checkCredential(orgId, k.id);
-          if (check === "unchecked")
-            toast({ title: t("connectAi.key.savedUnchecked", { provider: providerLabel(k.provider) }), icon: "check" });
+          if (!keyThinks(k)) toast({ title: t("connectAi.key.untested", { name: keyName(k) }), icon: "info" });
+          else if (check === "unchecked" && k.provider !== CUSTOM_PROVIDER)
+            toast({ title: t("connectAi.key.savedUnchecked", { provider: keyName(k) }), icon: "check" });
           // The team's right hand: a key is the workspace's AI, so everyone without their own thinks with it.
           if (rightHand) return rightHandOnKey(api, orgId, rightHand, k, models.data?.models ?? []);
-          if (brain !== "model") await api.agents.setBrain(orgId, forAgent.id, { brain: "model" });
-          await api.agents.update(orgId, forAgent.id, { credentialId: k.id, ...(fits ? {} : { model: AUTO }) });
+          await agentOnKey(
+            api,
+            orgId,
+            { id: forAgent.id, model: agentRow?.model, brain },
+            k,
+            models.data?.models ?? [],
+          );
         },
         rightHand ? "workspace" : undefined,
       );
@@ -1215,6 +1224,8 @@ function KeyPage({
   keyButton = true,
   keySaved,
   onSaveKey,
+  onEndpointSaved,
+  keyForLine,
   onMakers,
 }: ConnectAiFlowProps & { onMakers: () => void }) {
   const { t } = useTranslation();
@@ -1233,12 +1244,24 @@ function KeyPage({
   if (hold) return <PlanHoldNote org={org} keys />;
   if (!mayAddKey) return <InfoCard icon="lock">{t("connectAi.keyLocked")}</InfoCard>;
   if (keySaved || endpointSaved) {
+    const { settled } = form;
     return (
       <View style={styles.done}>
-        <ProviderLogo id={endpointSaved ? CUSTOM_PROVIDER : form.provider} size="hero" />
+        <ProviderLogo id={custom ? CUSTOM_PROVIDER : form.provider} size="hero" />
         <Text variant="title2" tone="ink" style={styles.center}>
-          {(!endpointSaved && form.savedNote) || t("connectAi.key.saved")}
+          {settled
+            ? (keyThinks(settled.key) && form.savedNote) || savedKeyLine(t, settled.outcome, settled.key)
+            : form.savedNote || t("connectAi.key.saved")}
         </Text>
+        {settled?.outcome.kind === "other" && keyThinks(settled.key) ? (
+          <Button
+            variant="secondary"
+            label={t("connectAi.key.useForAll")}
+            loading={form.makingDefault}
+            disabled={form.makingDefault}
+            onPress={() => void form.forAll()}
+          />
+        ) : null}
       </View>
     );
   }
@@ -1259,7 +1282,13 @@ function KeyPage({
       <GroupedFooter>{t("connectAi.key.sub")}</GroupedFooter>
       {custom ? (
         <View style={styles.keySteps}>
-          <EndpointForm orgId={orgId} onDone={() => setEndpointSaved(true)} />
+          <EndpointForm
+            orgId={orgId}
+            onDone={(key) => {
+              setEndpointSaved(true);
+              void onEndpointSaved?.(key);
+            }}
+          />
         </View>
       ) : maker && site ? (
         <View style={styles.keySteps}>
@@ -1333,7 +1362,7 @@ function KeyPage({
               {t("mobile.ai.failed")}
             </Note>
           ) : (
-            <Note icon="info">{t("connectAi.key.forAll")}</Note>
+            <Note icon="info">{keyForLine ?? t("connectAi.key.forAll")}</Note>
           )}
           {keyButton ? (
             <View style={styles.save}>

@@ -7543,8 +7543,32 @@
   "connectAi.key.forAll": {
     "value": "Every agent without a plan thinks with it."
   },
+  "connectAi.key.forAgent": {
+    "value": "{{agent}} will think with it."
+  },
   "connectAi.key.saved": {
     "value": "Saved. Every agent without a plan thinks with it."
+  },
+  "connectAi.key.savedFor": {
+    "value": "Saved. {{agent}} now thinks with {{label}}."
+  },
+  "connectAi.key.savedAll": {
+    "value": "Saved. Agents without their own AI think with it."
+  },
+  "connectAi.key.savedMade": {
+    "value": "Saved. Your agents now think with it instead of {{other}}."
+  },
+  "connectAi.key.savedOther": {
+    "value": "Saved. Your agents still think with {{other}}."
+  },
+  "connectAi.key.useForAll": {
+    "value": "Use this key for everyone"
+  },
+  "connectAi.key.untested": {
+    "value": "None of {{name}}'s models has passed a test yet."
+  },
+  "connectAi.key.testModels": {
+    "value": "Test models"
   },
   "connectAi.key.savedUnchecked": {
     "value": "Saved, but {{provider}} didn't answer, so the key couldn't be checked. If it fails, the chat says why."
@@ -22643,6 +22667,12 @@
   },
   "endpoint.choose": {
     "value": "Choose the models agents may use"
+  },
+  "endpoint.search": {
+    "value": "Search models"
+  },
+  "endpoint.noMatch": {
+    "value": "No model has “{{query}}”."
   },
   "endpoint.addModel": {
     "value": "Add a model"

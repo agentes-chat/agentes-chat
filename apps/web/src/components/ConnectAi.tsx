@@ -1,4 +1,4 @@
-import type { ConnectIntent, MachineAccount } from "@agenteschat/client";
+import type { ConnectIntent, Credential, MachineAccount } from "@agenteschat/client";
 import {
   keys,
   useAddCredential,
@@ -42,12 +42,15 @@ import {
 } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isPlanId, planOf } from "@agenteschat/client/lib/plans";
-import { providerGuess, providerLabel } from "@agenteschat/client/lib/providers";
+import { keyThinks, providerGuess, providerLabel } from "@agenteschat/client/lib/providers";
 import {
   isRightHand,
   rightHandOf,
   rightHandOnKey,
+  type SavedKey,
+  savedKeyLine,
   sceneTeam,
+  settleSavedKey,
   thinksWithLine,
 } from "@agenteschat/client/lib/right-hand";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
@@ -62,6 +65,7 @@ import {
   type IconName,
   OptionCard,
   ProviderLogo,
+  SettingNote,
   Spinner,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -89,6 +93,7 @@ import {
   FaceStrip,
   type KeyDraft,
   KeyPanel,
+  KeyUntested,
   PlanAudience,
   PlanHold,
   PlanPanel,
@@ -687,6 +692,62 @@ function ConnectAiDialog({
         const a = dir.agentById.get(id);
         return a && isRightHand(a) && noAi(a.id) ? [a] : [];
       })[0];
+  // The one agent the dialog is for, the right hand aside: a key saved here goes on it. Else it is for every agent.
+  const keyAgent = one && !hand ? one : undefined;
+  const [savedKey, setSavedKey] = useState<{ key: Credential; outcome: SavedKey }>();
+  const [makingDefault, setMakingDefault] = useState(false);
+  const settleKey = async (key: Credential) => {
+    try {
+      const agent = keyAgent && { ...keyAgent, brain: keyAgent.brain?.kind };
+      const outcome = await settleSavedKey(api, org.id, key, agent, models.data?.models ?? []);
+      setSavedKey({ key, outcome });
+      if (keyAgent) {
+        void qc.invalidateQueries({ queryKey: keys.agents(org.id) });
+        void qc.invalidateQueries({ queryKey: keys.agentBrain(org.id, keyAgent.id) });
+      }
+      if (outcome.kind === "made") void qc.invalidateQueries({ queryKey: keys.settings(org.id) });
+    } catch (error) {
+      toast.show(errorText(t, error), "error");
+    }
+  };
+  const keyForAll = async (key: Credential) => {
+    setMakingDefault(true);
+    try {
+      await api.agents.makeDefaultCredential(org.id, key.id);
+      setSavedKey({ key, outcome: { kind: "all" } });
+      void qc.invalidateQueries({ queryKey: keys.settings(org.id) });
+      void qc.invalidateQueries({ queryKey: keys.aiStatus(org.id) });
+    } catch (error) {
+      toast.show(errorText(t, error), "error");
+    } finally {
+      setMakingDefault(false);
+    }
+  };
+  const savedLine = savedKey ? (
+    keyThinks(savedKey.key) ? (
+      <SettingNote
+        icon="check"
+        live
+        action={
+          savedKey.outcome.kind === "other" && (
+            <Button loading={makingDefault} disabled={makingDefault} onClick={() => void keyForAll(savedKey.key)}>
+              {t("connectAi.key.useForAll")}
+            </Button>
+          )
+        }
+      >
+        {keyNote ?? savedKeyLine(t, savedKey.outcome, savedKey.key)}
+      </SettingNote>
+    ) : (
+      <KeyUntested cred={savedKey.key} onTested={(key) => setSavedKey({ ...savedKey, key })} />
+    )
+  ) : (
+    keyNote && (
+      <SettingNote icon="check" live>
+        {keyNote}
+      </SettingNote>
+    )
+  );
   const saveKey = () => {
     if (draft.provider === CUSTOM_PROVIDER) return;
     setRefused(null);
@@ -720,6 +781,7 @@ function ConnectAiDialog({
                 ? thinksWithLine(t, "workspace", hand.name, key.label)
                 : undefined,
           );
+          if (!hand) await settleKey(key);
           setKeySaved(true);
           done();
         },
@@ -758,14 +820,16 @@ function ConnectAiDialog({
         onDraft={setDraft}
         locked={!mayAddKey}
         saved={keySaved}
-        savedNote={keyNote}
+        savedNote={savedLine || undefined}
+        {...(keyAgent ? { forLine: t("connectAi.key.forAgent", { agent: keyAgent.name }) } : {})}
         refused={refused}
         saving={add.isPending}
         onSave={saveKey}
         endpoint={
           <EndpointForm
             orgId={org.id}
-            onDone={() => {
+            onDone={async (key) => {
+              await settleKey(key);
               setKeySaved(true);
               done();
             }}
