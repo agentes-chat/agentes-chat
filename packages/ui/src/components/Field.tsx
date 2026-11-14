@@ -255,13 +255,17 @@ const LIMIT_NEAR = 0.9;
 export const overLimit = (value: string, limit: TextLimit | undefined) =>
   limit !== undefined && value.trim().length > limit.max;
 
+/** Whether `LimitLine` shows anything for this value: from 90% of the limit. */
+const limitShown = (value: string, limit: TextLimit | undefined) =>
+  limit !== undefined && value.trim().length >= limit.max * LIMIT_NEAR;
+
 /**
  * Under a field with a limit (`Textarea`'s `limit`, or beside a bare textarea): nothing below 90% of it, then a quiet
  * counter, past it the field's error line.
  */
 export function LimitLine({ id, value, limit }: { id?: string; value: string; limit: TextLimit }) {
+  if (!limitShown(value, limit)) return null;
   const length = value.trim().length;
-  if (length < limit.max * LIMIT_NEAR) return null;
   if (length > limit.max)
     return (
       <span id={id} className="ac-limit ac-field__error" aria-live="polite">
@@ -292,7 +296,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   const lineId = `${useId().replace(/:/g, "")}-limit`;
   const { labelledBy: _, ...wiring } = useFieldControl({
     ...rest,
-    "aria-describedby": limit ? cx(rest["aria-describedby"], lineId) : rest["aria-describedby"],
+    "aria-describedby": limitShown(value, limit) ? cx(rest["aria-describedby"], lineId) : rest["aria-describedby"],
     "aria-invalid": overLimit(value, limit) || (invalid ?? rest["aria-invalid"]),
   });
   const box = useRef<HTMLTextAreaElement>(null);
