@@ -287,7 +287,6 @@ test.if(posix)("service install --system: a system home, and it starts only when
     "x /run/agentes-runner-tmp/*/run",
     "e /var/lib/agentes-runner-tmp/*/* - - - 30d",
     "D! /var/cache/agentes-runner-tmp 0700 root root -",
-    "e /var/cache/agentes-runner-tmp/* - - - 10d",
     "",
   ]);
 

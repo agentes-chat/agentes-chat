@@ -83,10 +83,12 @@ export const AGENT_DISK_TMP_ROOT = "/var/cache/agentes-runner-tmp";
 export const agentTmp = (uid: number) => path.join(AGENT_RAM_ROOT, String(uid), "tmp");
 /**
  * systemd-tmpfiles' lines for them: what agents leave goes after 10 days, 30 in /var/tmp, as in a stock system, and
- * the agents' /tmp on disk at every boot (`D!`: never on a later `--remove`). Each agent's runtime dir (`run`, ADR 0169)
- * never ages, as logind's don't: a container up for weeks keeps its state there.
+ * the agents' /tmp on disk at every boot (`D!`: never on a later `--remove`). That /tmp ages through its bind in the
+ * agent's tmpfs (the first line), never by a line of its own under `AGENT_DISK_TMP_ROOT`: systemd 257's boot run leaves
+ * whatever another line covers. Each agent's runtime dir (`run`, ADR 0169) never ages, as logind's don't: a container
+ * up for weeks keeps its state there.
  */
-export const AGENT_TMP_CLEANUP = `# agentes.chat runner: each agent's own temporary folders\ne ${AGENT_RAM_ROOT}/*/* - - - 10d\nx ${AGENT_RAM_ROOT}/*/run\ne ${AGENT_TMP_ROOT}/*/* - - - 30d\nD! ${AGENT_DISK_TMP_ROOT} 0700 root root -\ne ${AGENT_DISK_TMP_ROOT}/* - - - 10d\n`;
+export const AGENT_TMP_CLEANUP = `# agentes.chat runner: each agent's own temporary folders\ne ${AGENT_RAM_ROOT}/*/* - - - 10d\nx ${AGENT_RAM_ROOT}/*/run\ne ${AGENT_TMP_ROOT}/*/* - - - 30d\nD! ${AGENT_DISK_TMP_ROOT} 0700 root root -\n`;
 /** In `/etc/tmpfiles.d`, two folders up from the unit's (`/etc/systemd/system`). */
 export const agentTmpCleanupPath = (unitPath = SYSTEM_UNIT_PATH) =>
   path.join(path.dirname(unitPath), "..", "..", "tmpfiles.d", `${SERVICE_NAME}.conf`);
