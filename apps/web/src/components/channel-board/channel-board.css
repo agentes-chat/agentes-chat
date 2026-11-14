@@ -46,6 +46,10 @@
 .channel-board--float .channel-board__head {
   padding-right: calc(var(--control-h-sm) + var(--space-2));
 }
+/* Anything else on top (the picker, "not shared", loading) starts under the ×. */
+.channel-board--float .channel-board__scroll > :first-child:not(.channel-board__head) {
+  margin-top: calc(var(--control-h-sm) + var(--space-2));
+}
 .channel-board__title {
   flex: 1;
   min-width: 0;
@@ -83,7 +87,7 @@
 .channel-board .wgrid > :is(.wb-cell, .wb-spot)[data-w="2"] {
   grid-column: span 2;
 }
-@container (max-width: 359px) {
+@container (max-width: 439px) {
   .channel-board .wgrid {
     grid-template-columns: minmax(0, 1fr);
   }

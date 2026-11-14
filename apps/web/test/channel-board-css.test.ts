@@ -21,9 +21,13 @@ test("a channel's dashboard: a quarter of the window on the members' surface, it
   expect(last(shipped, ".channel-board__scroll", "overflow")).toBe("hidden auto");
   // The grid follows the column, not the window: two columns, a 2-wide widget across the row.
   expect(last(shipped, ".channel-board .wgrid", "grid-template-columns")).toBe("repeat(2,minmax(0,1fr))");
-  const narrow = atRule(css, "@container (width<=359px)");
+  const narrow = atRule(css, "@container (width<=439px)");
   expect(last(narrow, ".channel-board .wgrid", "grid-template-columns")).toBe("minmax(0,1fr)");
   // Floating: the panels' sheet, a thread's width or less, the whole screen on a phone (threads.css).
   const wide = atRule(css, "@media (width>=861px)");
   expect(last(wide, ".thread-panel.channel-board--float", "width")).toBe("min(480px,100vw - 20px)");
+  // Its × sits over the head's end; whatever else comes first (the picker, "not shared") starts under it.
+  expect(
+    last(shipped, ".channel-board--float .channel-board__scroll>:first-child:not(.channel-board__head)", "margin-top"),
+  ).toBe("calc(var(--control-h-sm) + var(--space-2))");
 });

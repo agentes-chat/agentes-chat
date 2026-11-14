@@ -234,7 +234,7 @@ people than asked.
     as `channels.changed`, so the other members' column follows without a reload. On the web the channel's header gets
     a button beside the members' when the channel has a board, or for whoever may link one (it then opens the picker over
     the chat). From 1500px the board is a column between the conversation and the members (26% of the window, 360 to
-    520px, its grid in two columns, one in a column narrower than 360px), below that it floats over the chat as the
+    520px, its grid in two columns, one in a column narrower than 440px), below that it floats over the chat as the
     app's panels do; whether it is open is remembered per person and workspace like the members column (closed at first
     in a personal workspace, ADR 0159 §3). Its width is fixed, as every side column's. Threads and DMs have none. Left
     for later: the phone app (a row in the channel pushing the board's screen, the id already reaches it), agents
