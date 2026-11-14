@@ -1043,7 +1043,15 @@ function fakeDevtools(down: number[], answer: (reply: () => void) => void = (rep
   });
   const crash = (n: number) =>
     sockets[n]?.send(JSON.stringify({ method: "Inspector.targetCrashed", params: {}, sessionId: `page-${n}` }));
-  return { port: server.port as number, asked, navigated, crash, closing, stop: () => server.stop(true) };
+  /** Connection `n` hears of one more tab (`openerId`: another page opened it). */
+  const attach = (n: number, targetInfo: { targetId: string; openerId?: string }) =>
+    sockets[n]?.send(
+      JSON.stringify({
+        method: "Target.attachedToTarget",
+        params: { sessionId: `s-${targetInfo.targetId}`, targetInfo: { type: "page", ...targetInfo } },
+      }),
+    );
+  return { port: server.port as number, asked, navigated, crash, attach, closing, stop: () => server.stop(true) };
 }
 
 /** Fake Chromes whose endpoint is `devtools`, one connection each: `Browser.close` on it closes that Chrome. */
@@ -3400,6 +3408,109 @@ test.if(posix)(
       expect(logs.some((l) => l.includes("another Chrome on its profile took its start"))).toBe(true);
     } finally {
       late.kill("SIGKILL");
+    }
+  },
+);
+
+/** Chrome's `/json` endpoint for `targets` (most recently active first): `close/<id>` closes one. */
+function jsonTargets(targets: { id: string; url: string; title?: string }[]) {
+  const closed: string[] = [];
+  const fetch = (async (url: string) => {
+    if (url.endsWith("/json/list")) {
+      return new Response(
+        JSON.stringify(targets.filter((t) => !closed.includes(t.id)).map((t) => ({ type: "page", ...t }))),
+      );
+    }
+    const id = /\/json\/close\/(.+)$/.exec(url)?.[1];
+    if (id) closed.push(decodeURIComponent(id));
+    return new Response("Target is closing");
+  }) as unknown as typeof globalThis.fetch;
+  return { targets, closed, fetch };
+}
+
+test.if(posix)(
+  "the agent's tabs: empty ones close, past 8 the oldest closes, the agent is told; its own tab and popups stay",
+  async () => {
+    const devtools = fakeDevtools([]);
+    try {
+      const old = Array.from({ length: 8 }, (_, i) => ({
+        id: `T${i}`,
+        url: `https://site${i}.example/`,
+        title: `Site ${i}`,
+      }));
+      const json = jsonTargets([{ id: "CUR", url: "https://shop.example.com/", title: "Shop" }]);
+      const t = setup({ startChrome: chromesAt(devtools).start, fetch: json.fetch });
+      const first = await t.act("open", ["https://shop.example.com/"]);
+      expect(first.tabs).toEqual({ count: 1, open: [{ title: "Shop", host: "shop.example.com", current: true }] });
+      // A sign-in window another page opened: never closed, oldest as it is.
+      devtools.attach(0, { targetId: "POPUP", openerId: "CUR" });
+      await Bun.sleep(50);
+      json.targets.push(
+        { id: "BLANK", url: "about:blank" },
+        { id: "NEW", url: "chrome://newtab/", title: "New Tab" },
+        ...old,
+        { id: "POPUP", url: "https://accounts.example.com/signin", title: "Sign in" },
+      );
+      const answer = await t.act("snapshot");
+      expect(json.closed).toEqual(["BLANK", "NEW", "T6", "T7"]);
+      expect(answer.tabs).toMatchObject({
+        count: 8,
+        closed: ["blank", "blank", "site6.example", "site7.example"],
+      });
+      expect(answer.tabs?.open[0]).toEqual({ title: "Shop", host: "shop.example.com", current: true });
+      expect(answer.tabs?.open.at(-1)).toEqual({ title: "Sign in", host: "accounts.example.com" });
+      // Tidy now: nothing more closes, and nothing more is told.
+      const next = await t.act("snapshot");
+      expect(next.tabs).toMatchObject({ count: 8 });
+      expect(next.tabs).not.toHaveProperty("closed");
+    } finally {
+      devtools.stop();
+    }
+  },
+);
+
+test.if(posix)(
+  "no tab closes during a person's turn, theirs never do after, and a kept browser left idle loses only copies and empty tabs",
+  async () => {
+    const devtools = fakeDevtools([]);
+    let clock = Date.now();
+    try {
+      const json = jsonTargets([
+        { id: "CUR", url: "https://shop.example.com/" },
+        { id: "MINE", url: "about:blank" },
+        { id: "DUP", url: "https://site.example/" },
+        { id: "DUP2", url: "https://site.example/" },
+        { id: "OTHER", url: "https://other.example/" },
+      ]);
+      const t = setup({
+        startChrome: chromesAt(devtools).start,
+        fetch: json.fetch,
+        kept: () => true,
+        now: () => clock,
+      });
+      t.manager.setHandoff(dev.id, { status: "active" });
+      expect(await t.act("open", ["https://shop.example.com/"])).toMatchObject({ success: true });
+      devtools.attach(0, { targetId: "MINE" });
+      await Bun.sleep(50);
+      expect((await t.act("snapshot")).tabs).toMatchObject({ count: 5 });
+      expect(json.closed).toEqual([]);
+      t.manager.setHandoff(dev.id, null);
+      // Under 8 and nothing empty but the person's own tab: nothing closes.
+      await t.act("snapshot");
+      expect(json.closed).toEqual([]);
+
+      clock += 11 * 60_000;
+      await t.manager.sweep();
+      await waitFor(() => json.closed.length > 0);
+      await Bun.sleep(50);
+      expect(json.closed).toEqual(["DUP2"]);
+      // Once per idle spell.
+      await t.manager.sweep();
+      await Bun.sleep(50);
+      expect(json.closed).toEqual(["DUP2"]);
+      expect((await t.act("snapshot")).tabs).toMatchObject({ count: 4, closed: ["site.example"] });
+    } finally {
+      devtools.stop();
     }
   },
 );

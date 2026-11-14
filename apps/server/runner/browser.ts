@@ -25,12 +25,15 @@ import {
   type AgentScope,
   agentBrowserUrl,
   BROWSER_LIMITS,
+  BROWSER_TABS_KEPT,
+  BROWSER_TABS_LISTED,
   BROWSER_VIEW,
   BROWSER_VIEWPORT_SIDE,
   type BrowserHandoffInfo,
   type BrowserInputEvent,
   type BrowserSetup,
   type BrowserStreamMode,
+  type BrowserTabs,
   type BrowserViewport,
   browserViewportOf,
   CHROME_FAILURES,
@@ -175,6 +178,8 @@ import {
 
 /** A session with no command for this long is closed (its Chrome stops; the profile stays). */
 export const BROWSER_IDLE_MS = 15 * 60_000;
+/** A browser its agent keeps that had no command for this long gets its duplicate and blank tabs closed. */
+const TIDY_IDLE_MS = 10 * 60_000;
 /** How often idle browsers are looked for. */
 const SWEEP_MS = 60_000;
 /**
@@ -1541,6 +1546,12 @@ interface Session {
   heldAt?: number;
   /** The GET guard stopped a request carrying a typed password since the agent last heard (ADR 0144). */
   guardBlocked?: boolean;
+  /** Its tabs a tidy never closes, by target id: popups (sign-in windows) and the ones opened in a person's turn. */
+  keptTabs?: Set<string>;
+  /** What a tidy closed that the agent hasn't heard of yet (`tabLabel`). */
+  tabsClosed?: string[];
+  /** When a sweep last tidied its tabs while it was kept and idle. */
+  tidiedAt?: number;
 }
 
 /** One Chrome in `chromes.json`. */
@@ -1576,6 +1587,15 @@ const DOING: Record<string, ControlBrowserDoing> = {
   pdf: "capturing",
   tab: "tabs",
 };
+
+/** A tab with nothing in it: the agent's start page, Chrome's new tab, a blank page. */
+const isEmptyTab = (url: string) => url === "about:blank" || isStartPage(url);
+
+/** A tab as the agent is told of it: its host, `blank` when empty, else its kind of address (`chrome:`). */
+export function tabLabel(url: string): string {
+  if (isEmptyTab(url)) return "blank";
+  return pageHost(url) ?? url.split(":")[0]?.slice(0, 20) ?? "";
+}
 
 /** `https://app.acme.example/trips` → `app.acme.example`; null for anything that isn't a web page. */
 export function pageHost(url: string): string | null {
@@ -1921,7 +1941,8 @@ export class BrowserManager {
           actor,
           opening,
         });
-        return (acts ? (this.takeCrash(session, true) ?? this.takeBlocked(session)) : null) ?? done;
+        const told = (acts ? (this.takeCrash(session, true) ?? this.takeBlocked(session)) : null) ?? done;
+        return { ...told, ...(await this.tabsNow(session)) };
       } finally {
         opening.close();
       }
@@ -2009,7 +2030,12 @@ export class BrowserManager {
         // Each Vault value this batch opened goes with it (ADR 0144).
         opening.close();
       }
-      return { answers, ...withSetup(setup), ...(session.viewport ? { emulated: session.viewport } : {}) };
+      return {
+        answers,
+        ...withSetup(setup),
+        ...(session.viewport ? { emulated: session.viewport } : {}),
+        ...(await this.tabsNow(session)),
+      };
     });
   }
 
@@ -2699,6 +2725,11 @@ export class BrowserManager {
       `ws://127.0.0.1:${chrome.port}${chrome.wsPath}`,
       this.opts.connectDevtools,
       (page) => this.pageCrashed(session, chrome, page),
+      (targetId, popup) => {
+        if (!popup && !this.personsTurn(session.agentId)) return;
+        session.keptTabs ??= new Set();
+        session.keptTabs.add(targetId);
+      },
     );
     this.counters.set(chrome, counter);
     if (session.viewport) counter.emulate(emulationCommands(session.viewport, session.version ?? null));
@@ -2888,6 +2919,12 @@ export class BrowserManager {
       if (s.stream || s.streamOpening || this.held(agentId)) {
         // Someone on the page holds an update off for a while after; its agent's own hold only as `updateDue` says.
         if (this.watched(s)) s.heldAt = this.now();
+        // Kept for good (ADR 0176), its tabs would pile up from run to run: once each idle spell, its duplicates and
+        // blank tabs close.
+        else if (s.chrome && (s.tidiedAt ?? 0) <= s.lastUsed && this.now() - s.lastUsed >= TIDY_IDLE_MS) {
+          s.tidiedAt = this.now();
+          void this.enqueue(s, () => this.tidyTabs(s, true)).catch(() => undefined);
+        }
         // `agent-browser` stops on its own idle timeout: a command keeps it up for whoever is still on the page.
         // Not a use: once nobody holds it, its idle time counts from the last real one.
         if (s.chrome && this.now() - (s.commandAt ?? 0) >= this.idleMs - 2 * SWEEP_MS) {
@@ -3166,6 +3203,79 @@ export class BrowserManager {
     const open = status.success && isRecord(status.data) && status.data.connected === true;
     session.aliveAt = open ? this.now() : null;
     return open;
+  }
+
+  /** The agent's tabs for its answer, tidied first (`tidyTabs`), with what was closed since it last heard. */
+  private async tabsNow(session: Session): Promise<{ tabs?: BrowserTabs }> {
+    const tabs = await this.tidyTabs(session).catch(() => undefined);
+    if (!tabs) return {};
+    const closed = session.tabsClosed ?? [];
+    session.tabsClosed = undefined;
+    return { tabs: { ...tabs, ...(closed.length > 0 ? { closed } : {}) } };
+  }
+
+  /**
+   * The agent's tabs, most recently used first, after closing its empty tabs (start pages, blank ones) and, past
+   * `BROWSER_TABS_KEPT`, its least recently used ones; `idle` (a kept browser nobody used for a while): its empty tabs
+   * and the older copies of a page open twice, never more. Never closed: the tab its commands act on (every tab on that
+   * page, as which of them is its own isn't known), popups and the tabs a person opened (`keptTabs`), the tab shown to
+   * someone watching, and nothing at all while a person's turn is open (a sign-in may be under way). What closed goes
+   * in `tabsClosed`. Undefined when Chrome can't be asked, or without its DevTools connection (popups unknown).
+   */
+  private async tidyTabs(session: Session, idle = false): Promise<Omit<BrowserTabs, "closed"> | undefined> {
+    const chrome = session.chrome;
+    if (!chrome || !this.counters.has(chrome)) return undefined;
+    const call = (p: string) =>
+      (this.opts.fetch ?? fetch)(`http://127.0.0.1:${chrome.port}/json/${p}`, {
+        redirect: "error",
+        signal: AbortSignal.timeout(QUICK_TIMEOUT_MS),
+      });
+    const listed = (await (await call("list")).json()) as unknown;
+    if (!Array.isArray(listed)) return undefined;
+    // Chrome lists its targets most recently active first.
+    const pages = listed.filter(
+      (t): t is { id: string; url: string; title?: unknown } =>
+        isRecord(t) && t.type === "page" && typeof t.id === "string" && typeof t.url === "string",
+    );
+    const current = pages.length > 1 ? await this.pageUrl(session, undefined, true) : (pages[0]?.url ?? null);
+    const shown = this.watched(session) ? pages[0]?.id : undefined;
+    const closable = (p: (typeof pages)[number]) =>
+      current !== null &&
+      !this.personsTurn(session.agentId) &&
+      p.url !== current &&
+      p.id !== shown &&
+      p.url !== session.stream?.url &&
+      !session.keptTabs?.has(p.id);
+    const closing = new Set(pages.filter((p) => isEmptyTab(p.url) && closable(p)).map((p) => p.id));
+    if (idle) {
+      const seen = new Set<string>();
+      for (const p of pages) {
+        if (seen.has(p.url) && closable(p)) closing.add(p.id);
+        seen.add(p.url);
+      }
+    } else {
+      for (const p of [...pages].reverse()) {
+        if (pages.length - closing.size <= BROWSER_TABS_KEPT) break;
+        if (closable(p)) closing.add(p.id);
+      }
+    }
+    const closed = new Set<string>();
+    for (const p of pages) {
+      if (!closing.has(p.id)) continue;
+      if (!(await call(`close/${encodeURIComponent(p.id)}`).catch(() => null))?.ok) continue;
+      closed.add(p.id);
+      session.tabsClosed = [...(session.tabsClosed ?? []), tabLabel(p.url)];
+    }
+    const open = pages.filter((p) => !closed.has(p.id));
+    const own = open.findIndex((p) => p.url === current);
+    return {
+      count: open.length,
+      open: open.slice(0, BROWSER_TABS_LISTED).map((p, i) => ({
+        title: typeof p.title === "string" ? p.title.slice(0, BROWSER_LIMITS.title) : "",
+        host: tabLabel(p.url),
+        ...(i === own ? { current: true } : {}),
+      })),
+    };
   }
 
   /** The active tab's address, or null when the browser can't say. */
