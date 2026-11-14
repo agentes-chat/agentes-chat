@@ -285,7 +285,9 @@
       "install.scene.finder",
       "install.scene.downloads",
       "devices.armBuild",
-      "devices.iphone.xcodeFix.ok"
+      "devices.iphone.xcodeFix.ok",
+      "invites.how.link",
+      "invites.tab.links"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -945,6 +947,7 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
+      "invites.ttl.30m",
       "rolesPage.tabs.agents",
       "rolesPage.reach.agents",
       "rolesPage.reach.baseAgents"
@@ -1385,6 +1388,8 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "followUps.inTime",
+      "invites.how.link",
+      "invites.tab.links",
       "rolesPage.computer.short.browser",
       "rolesPage.computer.short.computer"
     ],
@@ -1745,6 +1750,7 @@
       "agentWork.later",
       "agentWork.laterShort",
       "threads.status.later",
+      "invites.how.link",
       "rolesPage.computer.short.browser",
       "rolesPage.computer.short.computer"
     ],
@@ -2327,6 +2333,8 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
+      "invites.how.link",
+      "invites.tab.links",
       "rolesPage.computer.short.browser",
       "rolesPage.computer.short.computer",
       "rolesPage.tabs.agents",
@@ -3102,7 +3110,9 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "machines.oneClick.tools.browser",
-      "machines.oneClick.tools.terminal"
+      "machines.oneClick.tools.terminal",
+      "invites.how.email",
+      "invites.edit"
     ],
     "tr": [
       "devices.cpus",
@@ -3575,6 +3585,7 @@
       "agentWork.later",
       "agentWork.laterShort",
       "threads.status.later",
+      "invites.how.link",
       "rolesPage.reach.agents",
       "rolesPage.reach.baseAgents"
     ],
@@ -3800,7 +3811,6 @@
       "files.type.pdf",
       "find.conversations",
       "invitePeople.ok",
-      "joinRequests.roles",
       "me.account.save",
       "mission.minutes",
       "mission.plan.section",

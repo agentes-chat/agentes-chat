@@ -2139,25 +2139,16 @@
     }
   },
   "joinRequests": {
-    "share": "Link teilen",
-    "roles": "Rollen",
-    "rolesHint": "Sie treten mit den eingeschalteten Rollen bei. Ohne Rolle dürfen sie, was Alle dürfen."
+    "share": "Link teilen"
   },
   "humanCheck": {
     "title": "Kurze Prüfung",
     "blocked": "Die Prüfung wurde nicht geladen. Versuch ein anderes Netzwerk."
   },
   "invitePeople": {
-    "emailsHelp": "Füge eine Liste ein oder tippe. Jede Person bekommt eine E-Mail und tritt sofort bei.",
-    "here": "Schon dabei",
-    "invited": "Schon eingeladen",
-    "fix": "Prüf das",
-    "channels": "Kanäle",
     "optional": "Optional",
     "ok": "Fertig",
     "noteHelp": "Erscheint in der E-Mail mit deinem Namen. Bis zu {{max}} Zeichen.",
-    "roleHelp": "Ändert, was die Person beim Beitritt bekommt.",
-    "remove": "Von der Liste nehmen",
     "sendAgain": "Erneut senden",
     "cancelTitle": "Einladung an {{email}} zurückziehen?",
     "cancelText": "Der Link öffnet sich dann nicht mehr.",

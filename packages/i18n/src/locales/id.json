@@ -854,6 +854,87 @@
       "deniedTextPersonal": "Kalau menurutmu ini keliru, minta orang yang mengirim link ini untuk mengundangmu."
     }
   },
+  "invites": {
+    "how": {
+      "email": "Email",
+      "link": "Tautan"
+    },
+    "to": "Kepada",
+    "can": "Bisa",
+    "edit": "Edit",
+    "hint": {
+      "roles": "Apa yang bisa dilakukan orang itu. Peran menambah apa yang bisa dilakukan Semua. Hanya untuk orang.",
+      "channels": "Tempat orang itu langsung bergabung. Kanal dari peran sudah dicentang.",
+      "agents": "Dengan siapa orang itu bekerja. Mereka ada di bagian atas daftarnya. Agen terbatas mulai menjawabnya."
+    },
+    "rolesFoot": "Peran menambah apa yang bisa dilakukan Semua. Kanal dan agen dari peran sudah dicentang.",
+    "fromRole": "Dari peran {{role}}",
+    "fromRoles": "Dari peran {{roles}}",
+    "byRole": "Lewat peran {{role}}",
+    "agent": {
+      "everyone": "Semua punya {{name}}",
+      "opens": "Terbatas · kamu yang membuka",
+      "locked": "Terbatas · hanya {{name}} yang membuka",
+      "lockedAdmins": "Terbatas · hanya yang mengedit agen yang membuka",
+      "mailbox": "Membaca email {{names}}",
+      "plan": "Hanya melayani {{name}}"
+    },
+    "line": {
+      "noTalk": "Dengan peran ini, orang itu tidak berbicara dengan agen.",
+      "admin": "Dengan {{role}}, orang itu melihat semua agen.",
+      "opens_other": "{{names}} mulai menjawab siapa pun yang bergabung lewat undangan ini."
+    },
+    "agentsNone": "Belum ada agen lain.",
+    "onJoin": "Saat bergabung",
+    "theLink": "Tautannya",
+    "ttl": {
+      "label": "Masa berlaku",
+      "30m": "30 menit",
+      "1h": "1 jam",
+      "1d": "1 hari",
+      "7d": "7 hari",
+      "30d": "30 hari",
+      "never": "Tidak kedaluwarsa",
+      "keep": "Sampai {{date}}"
+    },
+    "max": {
+      "label": "Jumlah maksimum orang",
+      "count_other": "{{count}} orang",
+      "none": "Tanpa batas",
+      "used_other": "{{count}} sudah bergabung"
+    },
+    "link": {
+      "uses_other": "{{uses}} dari {{count}} orang",
+      "joined_other": "{{count}} bergabung",
+      "by": "oleh {{name}}",
+      "edit": "Edit tautan",
+      "saved": "Tautan disimpan. Alamatnya tetap sama.",
+      "failed": "Tautan tidak bisa dibuat. {{cause}}",
+      "makeFirst": "Buat tautannya untuk menyalinnya.",
+      "turnOff": "Matikan tautan",
+      "turnedOff": "Tautan dimatikan."
+    },
+    "tab": {
+      "links": "Tautan",
+      "emails": "Undangan lewat email"
+    },
+    "invitation": {
+      "edit": "Edit undangan",
+      "saved": "Undangan untuk {{email}} diperbarui.",
+      "expired": "Undangan ini sudah kedaluwarsa. Perpanjang untuk mengubah isinya."
+    },
+    "request": {
+      "viaLinkOf": "Meminta lewat tautan {{name}} {{when}}"
+    },
+    "refused": {
+      "archived": "#{{channel}} sudah diarsipkan. Hapus dulu untuk mengirim.",
+      "left": "Kamu tidak lagi di #{{channel}}. Hapus dulu untuk mengirim.",
+      "gone": "Salah satu kanal sudah tidak ada. Hapus yang ditandai untuk mengirim.",
+      "agentGone": "{{name}} sudah keluar dari tim. Hapus dari undangan untuk mengirim.",
+      "agentLocked": "Kamu tidak bisa lagi membuka {{name}} untuk orang lain. Hapus dari undangan untuk mengirim.",
+      "agentUnnamed": "Salah satu agen sudah keluar dari tim. Hapus yang ditandai untuk mengirim."
+    }
+  },
   "onboarding": {
     "stepsLabel": "Langkah untuk memulai",
     "deleteLink": "Hapus ruang kerja ini",
@@ -7054,7 +7135,8 @@
       "lead": "Di sini tim dan agen bekerja bersama: tulis di #{{channel}} atau panggil agen dengan namanya.",
       "sayHi": "Sapa di #{{channel}}",
       "talkTo": "Bicara dengan {{name}}",
-      "team": "Lihat tim"
+      "team": "Lihat tim",
+      "alsoIn": "Kamu juga ada di {{channels}}."
     },
     "people": "Orang",
     "seen": "Aktif {{when}}",
@@ -14923,6 +15005,7 @@
       "general": "Umum",
       "right_hand": "Tangan kanan",
       "members": "Anggota dan undangan",
+      "invites": "Undangan",
       "roles": "Peran",
       "vault": "Vault",
       "access": "Agen dan akses",
@@ -14954,6 +15037,7 @@
       "general": "Nama, zona waktu, dan apa yang diketahui setiap agen tentang ruang kerja.",
       "right_hand": "Asisten yang menyusun tim bersama setiap orang, di DM mereka.",
       "members": "Siapa saja yang ada di ruang kerja, dan undangan.",
+      "invites": "Siapa yang bisa bergabung dan apa yang mereka dapat.",
       "roles": "Setiap peran menambah izin, kanal, dan agen.",
       "vault": "Kata sandi, kunci, dan kontak agenmu. Mereka tidak pernah melihat kata sandi.",
       "access": "Yang bisa dipakai tiap agen: satu tingkat per konektor.",

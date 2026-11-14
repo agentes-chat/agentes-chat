@@ -2180,8 +2180,6 @@ export const featureKeysPtBR = {
   },
   joinRequests: {
     share: "Compartilhar o link",
-    roles: "Cargos",
-    rolesHint: "A pessoa entra com os cargos ligados. Sem nenhum, ela pode o mesmo que Todos.",
   },
   humanCheck: {
     title: "Verificação rápida",
@@ -2189,16 +2187,9 @@ export const featureKeysPtBR = {
   },
   /** Convidar pessoas and the sent invitations' sheet (ADR 0090); the other words are the shared `members.*`. */
   invitePeople: {
-    emailsHelp: "Cole uma lista ou digite. Cada pessoa recebe um e-mail e entra direto.",
-    here: "Já está aqui",
-    invited: "Já convidado",
-    fix: "Confira",
-    channels: "Canais",
     optional: "Opcional",
     ok: "OK",
     noteHelp: "Aparece no e-mail com o seu nome. Até {{max}} letras.",
-    roleHelp: "Muda o que a pessoa recebe ao entrar.",
-    remove: "Tirar da lista",
     sendAgain: "Mandar de novo",
     cancelTitle: "Cancelar o convite de {{email}}?",
     cancelText: "O link dele para de abrir.",

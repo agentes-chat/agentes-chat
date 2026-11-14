@@ -2233,25 +2233,16 @@
     }
   },
   "joinRequests": {
-    "share": "Partager le lien",
-    "roles": "Rôles",
-    "rolesHint": "Ils rejoignent avec les rôles activés. Sans aucun, ils peuvent faire ce que Tout le monde peut faire."
+    "share": "Partager le lien"
   },
   "humanCheck": {
     "title": "Vérification rapide",
     "blocked": "La vérification ne s'est pas chargée. Essayez un autre réseau."
   },
   "invitePeople": {
-    "emailsHelp": "Collez une liste ou tapez. Chaque personne reçoit un e-mail et rejoint tout de suite.",
-    "here": "Déjà là",
-    "invited": "Déjà invité",
-    "fix": "À vérifier",
-    "channels": "Canaux",
     "optional": "Facultatif",
     "ok": "OK",
     "noteHelp": "Il apparaît dans l'e-mail avec votre nom. Jusqu'à {{max}} caractères.",
-    "roleHelp": "Change ce que la personne obtient en rejoignant.",
-    "remove": "Retirer de la liste",
     "sendAgain": "Renvoyer",
     "cancelTitle": "Annuler l'invitation de {{email}} ?",
     "cancelText": "Son lien ne s'ouvrira plus.",

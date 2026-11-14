@@ -88,6 +88,7 @@ describe("the workspace's settings on the phone: who opens what (the web's sub-n
       "org:general",
       "org:media",
       "people:members",
+      "people:invites",
       "people:roles",
       "ai:usage",
       "connectors:connectors",
@@ -181,6 +182,7 @@ describe("a personal workspace's settings on the phone (ADR 0159 §3): one short
     expect(ids(advanced)).toEqual([
       "media",
       "members",
+      "invites",
       "roles",
       "skills",
       "access",
@@ -601,7 +603,7 @@ describe("Armazenamento", () => {
   test("VoiceOver reads the line with its option: it is part of the row's label", () => {
     const src = (path: string) => readFileSync(join(import.meta.dir, "..", "..", "src", path), "utf8");
     expect(src("ui/Grouped.tsx")).toContain(
-      'accessibilityLabel={[label, belowText, said, value, valueNote].filter(Boolean).join(", ")}',
+      'accessibilityLabel={[label, sub, belowText, said, value, valueNote].filter(Boolean).join(", ")}',
     );
     expect(src("features/settings/StorageScreen.tsx")).toContain("belowText: usage ?? undefined");
   });

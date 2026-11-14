@@ -2171,6 +2171,192 @@
   "invite.ask.deniedTextPersonal": {
     "value": "If you think it's a mistake, ask whoever sent you the link to invite you."
   },
+  "invites.how.email": {
+    "value": "Email"
+  },
+  "invites.how.link": {
+    "value": "Link"
+  },
+  "invites.to": {
+    "value": "To"
+  },
+  "invites.can": {
+    "value": "Can"
+  },
+  "invites.edit": {
+    "value": "Edit"
+  },
+  "invites.hint.roles": {
+    "value": "What the person can do. Roles add to what Everyone can. Only for people."
+  },
+  "invites.hint.channels": {
+    "value": "Where the person starts. The role's channels come ticked."
+  },
+  "invites.hint.agents": {
+    "value": "Who the person works with. They sit at the top of their list. A restricted agent starts answering them."
+  },
+  "invites.rolesFoot": {
+    "value": "Roles add to what Everyone can. The role's channels and agents come ticked."
+  },
+  "invites.fromRole": {
+    "value": "From the {{role}} role"
+  },
+  "invites.fromRoles": {
+    "value": "From the {{roles}} roles"
+  },
+  "invites.byRole": {
+    "value": "Through the {{role}} role"
+  },
+  "invites.agent.everyone": {
+    "value": "Everyone has {{name}}"
+  },
+  "invites.agent.opens": {
+    "value": "Restricted · you let people in"
+  },
+  "invites.agent.locked": {
+    "value": "Restricted · only {{name}} lets people in"
+  },
+  "invites.agent.lockedAdmins": {
+    "value": "Restricted · only agent editors let people in"
+  },
+  "invites.agent.mailbox": {
+    "value": "Reads {{names}}'s email"
+  },
+  "invites.agent.plan": {
+    "value": "Only answers {{name}}"
+  },
+  "invites.line.noTalk": {
+    "value": "With this role, the person doesn't talk to agents."
+  },
+  "invites.line.admin": {
+    "value": "With {{role}}, the person sees every agent."
+  },
+  "invites.line.opens": {
+    "value": {
+      "one": "{{names}} will answer whoever joins with this invite.",
+      "other": "{{names}} will answer whoever joins with this invite."
+    }
+  },
+  "invites.agentsNone": {
+    "value": "No other agents yet."
+  },
+  "invites.onJoin": {
+    "value": "On joining"
+  },
+  "invites.theLink": {
+    "value": "The link"
+  },
+  "invites.ttl.label": {
+    "value": "Valid for"
+  },
+  "invites.ttl.30m": {
+    "value": "30 minutes"
+  },
+  "invites.ttl.1h": {
+    "value": "1 hour"
+  },
+  "invites.ttl.1d": {
+    "value": "1 day"
+  },
+  "invites.ttl.7d": {
+    "value": "7 days"
+  },
+  "invites.ttl.30d": {
+    "value": "30 days"
+  },
+  "invites.ttl.never": {
+    "value": "Never expires"
+  },
+  "invites.ttl.keep": {
+    "value": "Until {{date}}"
+  },
+  "invites.max.label": {
+    "value": "Maximum people"
+  },
+  "invites.max.count": {
+    "value": {
+      "one": "{{count}} person",
+      "other": "{{count}} people"
+    }
+  },
+  "invites.max.none": {
+    "value": "No limit"
+  },
+  "invites.max.used": {
+    "value": {
+      "one": "{{count}} already joined",
+      "other": "{{count}} already joined"
+    }
+  },
+  "invites.link.uses": {
+    "value": {
+      "one": "{{uses}} of {{count}} person",
+      "other": "{{uses}} of {{count}} people"
+    }
+  },
+  "invites.link.joined": {
+    "value": {
+      "one": "{{count}} joined",
+      "other": "{{count}} joined"
+    }
+  },
+  "invites.link.by": {
+    "value": "by {{name}}"
+  },
+  "invites.link.edit": {
+    "value": "Edit link"
+  },
+  "invites.link.saved": {
+    "value": "Link saved. The address is the same."
+  },
+  "invites.link.failed": {
+    "value": "Couldn't make the link. {{cause}}"
+  },
+  "invites.link.makeFirst": {
+    "value": "Make the link to copy it."
+  },
+  "invites.link.turnOff": {
+    "value": "Turn off link"
+  },
+  "invites.link.turnedOff": {
+    "value": "Link turned off."
+  },
+  "invites.tab.links": {
+    "value": "Links"
+  },
+  "invites.tab.emails": {
+    "value": "Email invites"
+  },
+  "invites.invitation.edit": {
+    "value": "Edit invite"
+  },
+  "invites.invitation.saved": {
+    "value": "Invite for {{email}} updated."
+  },
+  "invites.invitation.expired": {
+    "value": "This invite expired. Renew it to change what it gives."
+  },
+  "invites.request.viaLinkOf": {
+    "value": "Asked through {{name}}'s link {{when}}"
+  },
+  "invites.refused.archived": {
+    "value": "#{{channel}} was archived. Take it out to send."
+  },
+  "invites.refused.left": {
+    "value": "You're no longer in #{{channel}}. Take it out to send."
+  },
+  "invites.refused.gone": {
+    "value": "One of the channels no longer exists. Take out the marked one to send."
+  },
+  "invites.refused.agentGone": {
+    "value": "{{name}} left the team. Take them out of the invite to send."
+  },
+  "invites.refused.agentLocked": {
+    "value": "You can no longer let people talk to {{name}}. Take them out of the invite to send."
+  },
+  "invites.refused.agentUnnamed": {
+    "value": "One of the agents left the team. Take out the marked one to send."
+  },
   "onboarding.stepsLabel": {
     "value": "Steps to get started"
   },
@@ -17812,6 +17998,9 @@
   },
   "members.arrival.team": {
     "value": "See the team"
+  },
+  "members.arrival.alsoIn": {
+    "value": "You're also in {{channels}}."
   },
   "members.people": {
     "value": "People"
@@ -37536,6 +37725,9 @@
   "settings.section.members": {
     "value": "Members and invitations"
   },
+  "settings.section.invites": {
+    "value": "Invites"
+  },
   "settings.section.roles": {
     "value": "Roles"
   },
@@ -37616,6 +37808,9 @@
   },
   "settings.sectionText.members": {
     "value": "Who is in the workspace, and invitations."
+  },
+  "settings.sectionText.invites": {
+    "value": "Who can join and what they get."
   },
   "settings.sectionText.roles": {
     "value": "Each role adds permissions, channels and agents."

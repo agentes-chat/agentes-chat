@@ -189,8 +189,9 @@ function AppStack() {
       <Stack.Screen name="me/scan" options={{ headerShown: false }} />
       <Stack.Screen name="me/members" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="invite-people" options={{ ...pushed, ...scrollUnder }} />
-      <Stack.Screen name="invite-channels" options={{ ...pushed, ...scrollUnder }} />
-      <Stack.Screen name="invite-note" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="invite-pick" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="invite-link" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="invite-edit" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="suggest-person" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="me/notifications" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="me/approvals" options={{ ...pushed, ...scrollUnder }} />
@@ -212,6 +213,7 @@ function AppStack() {
       <Stack.Screen name="settings/zone" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/telemetry" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/access" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="settings/invites" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/roles/index" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/roles/[roleId]" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="settings/roles/permissions" options={{ ...pushed, ...scrollUnder }} />

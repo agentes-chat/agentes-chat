@@ -854,6 +854,87 @@
       "deniedTextPersonal": "如果你认为这是个误会，请让发链接给你的人邀请你。"
     }
   },
+  "invites": {
+    "how": {
+      "email": "邮件",
+      "link": "链接"
+    },
+    "to": "收件人",
+    "can": "可以",
+    "edit": "编辑",
+    "hint": {
+      "roles": "这个人能做什么。角色在“所有人”能做的基础上叠加。只适用于人。",
+      "channels": "这个人一开始就在的频道。角色的频道已勾选。",
+      "agents": "这个人一起工作的智能体。它们会排在这个人列表的最上面。受限的智能体也会开始回复这个人。"
+    },
+    "rolesFoot": "角色在“所有人”能做的基础上叠加。角色的频道和智能体已勾选。",
+    "fromRole": "来自角色 {{role}}",
+    "fromRoles": "来自角色 {{roles}}",
+    "byRole": "通过角色 {{role}}",
+    "agent": {
+      "everyone": "所有人都有 {{name}}",
+      "opens": "受限 · 由你开放",
+      "locked": "受限 · 只有 {{name}} 能开放",
+      "lockedAdmins": "受限 · 只有能编辑智能体的人能开放",
+      "mailbox": "读取 {{names}} 的邮件",
+      "plan": "只回复 {{name}}"
+    },
+    "line": {
+      "noTalk": "使用这个角色，这个人不能和智能体对话。",
+      "admin": "有了 {{role}}，这个人能看到所有智能体。",
+      "opens_other": "{{names}} 会开始回复通过这个邀请加入的人。"
+    },
+    "agentsNone": "还没有其他智能体。",
+    "onJoin": "加入时",
+    "theLink": "链接",
+    "ttl": {
+      "label": "有效期",
+      "30m": "30 分钟",
+      "1h": "1 小时",
+      "1d": "1 天",
+      "7d": "7 天",
+      "30d": "30 天",
+      "never": "永不过期",
+      "keep": "至 {{date}}"
+    },
+    "max": {
+      "label": "最多人数",
+      "count_other": "{{count}} 人",
+      "none": "不限",
+      "used_other": "已有 {{count}} 人加入"
+    },
+    "link": {
+      "uses_other": "{{uses}}/{{count}} 人",
+      "joined_other": "{{count}} 人已加入",
+      "by": "由 {{name}} 创建",
+      "edit": "编辑链接",
+      "saved": "链接已保存。地址不变。",
+      "failed": "无法创建链接。{{cause}}",
+      "makeFirst": "创建链接后即可复制。",
+      "turnOff": "停用链接",
+      "turnedOff": "链接已停用。"
+    },
+    "tab": {
+      "links": "链接",
+      "emails": "邮件邀请"
+    },
+    "invitation": {
+      "edit": "编辑邀请",
+      "saved": "给 {{email}} 的邀请已更新。",
+      "expired": "这个邀请已过期。续期后才能更改它给的内容。"
+    },
+    "request": {
+      "viaLinkOf": "{{when}}通过 {{name}} 的链接申请"
+    },
+    "refused": {
+      "archived": "#{{channel}} 已归档。移除后再发送。",
+      "left": "你已不在 #{{channel}} 中。移除后再发送。",
+      "gone": "有一个频道已不存在。移除标记的那个后再发送。",
+      "agentGone": "{{name}} 已离开团队。从邀请中移除后再发送。",
+      "agentLocked": "你已不能再向其他人开放 {{name}}。从邀请中移除后再发送。",
+      "agentUnnamed": "有一个智能体已离开团队。移除标记的那个后再发送。"
+    }
+  },
   "onboarding": {
     "stepsLabel": "入门步骤",
     "deleteLink": "删除此工作区",
@@ -7065,7 +7146,8 @@
       "lead": "在这里，团队和智能体一起工作：在 #{{channel}} 发消息，或直接叫智能体的名字。",
       "sayHi": "在 #{{channel}} 打个招呼",
       "talkTo": "和 {{name}} 聊聊",
-      "team": "查看团队"
+      "team": "查看团队",
+      "alsoIn": "你也在 {{channels}} 中。"
     },
     "people": "成员",
     "seen": "{{when}}活跃",
@@ -14933,6 +15015,7 @@
       "general": "常规",
       "right_hand": "得力助手",
       "members": "成员和邀请",
+      "invites": "邀请",
       "roles": "角色",
       "vault": "Vault",
       "access": "智能体和访问权限",
@@ -14964,6 +15047,7 @@
       "general": "名称、时区，以及每个智能体都知道的工作区信息。",
       "right_hand": "在每个人的私信中和他们一起组建团队的助手。",
       "members": "工作区里有谁，以及邀请。",
+      "invites": "谁可以加入，以及会得到什么。",
       "roles": "每个角色都会增加权限、频道和智能体。",
       "vault": "你的智能体的密码、密钥和联系人。它们永远看不到密码。",
       "access": "每个智能体可以使用什么：每个连接器一个级别。",

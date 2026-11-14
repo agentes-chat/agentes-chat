@@ -14,7 +14,7 @@ import type {
 } from "@agenteschat/client";
 import { type AccessResource, resourcesOf } from "@agenteschat/client/lib/access-levels";
 import { type NoComputer, noComputerChoice, type SetupView, setupPending } from "@agenteschat/client/lib/computer";
-import { clockAt, formatPercent, relativeTime } from "@agenteschat/client/lib/format";
+import { clockAt, formatInt, formatPercent, relativeTime } from "@agenteschat/client/lib/format";
 import { folderName, hostDescKey, isPaused } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
 import { type ModeSwitchLine, personalSettingsHost, personalSettingsNav } from "@agenteschat/client/lib/personal-view";
@@ -35,6 +35,7 @@ export type SettingsSection =
   | "apps"
   | "general"
   | "members"
+  | "invites"
   | "roles"
   | "audit"
   | "media"
@@ -85,6 +86,8 @@ export const SETTINGS_SECTIONS: readonly SettingsEntry[] = [
   { id: "media", group: "org", icon: "sticker", href: "/settings/media", allowed: (o) => can(o, "configure") },
   // Everyone, as on the web: who invites finds the requests there, a member who may not suggests someone (ADR 0090).
   { id: "members", group: "people", icon: "members", href: "/me/members", allowed: (o) => can(o, "read") },
+  // Convites (ADR 0184): who waits on an answer, the links and the invitations sent, for whoever invites.
+  { id: "invites", group: "people", icon: "mail", href: "/settings/invites", allowed: (o) => can(o, "invite_people") },
   // Cargos (ADR 0085): who manages roles, as on the web.
   { id: "roles", group: "people", icon: "lock", href: "/settings/roles", allowed: (o) => can(o, "manage_roles") },
   // "IA e uso", for everyone (ADR 0063): the workspace's AI accounts with their meters and the agents whose details
@@ -174,6 +177,8 @@ export interface TileFacts {
   usesApi?: boolean | undefined;
   /** Invitations waiting (managers only). */
   invitations?: number | undefined;
+  /** Requests to join waiting for an answer (whoever invites): Convites' value. */
+  waiting?: number | undefined;
   /** The live connections' names. */
   connectors?: string[] | undefined;
   skills?: number | undefined;
@@ -192,6 +197,7 @@ export function areaValues(t: TFunction, locale: string, f: TileFacts): Partial<
     out.access = String(f.overview.agents);
     if (f.usesApi) out.usage = formatPercent(locale, f.overview.budgetUsedPercent);
   }
+  if (f.waiting) out.invites = formatInt(locale, f.waiting);
   if (f.connectors && f.connectors.length > 0) out.connectors = String(f.connectors.length);
   if (f.skills !== undefined && f.skills > 0) out.skills = String(f.skills);
   if (f.computers && f.computers.count > 0)

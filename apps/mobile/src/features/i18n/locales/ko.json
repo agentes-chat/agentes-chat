@@ -2038,25 +2038,16 @@
     }
   },
   "joinRequests": {
-    "share": "링크 공유",
-    "roles": "역할",
-    "rolesHint": "켜진 역할로 참여해요. 아무것도 없으면 모든 사람이 할 수 있는 일만 할 수 있어요."
+    "share": "링크 공유"
   },
   "humanCheck": {
     "title": "간단한 확인",
     "blocked": "확인 화면이 열리지 않았어요. 다른 네트워크로 시도해 보세요."
   },
   "invitePeople": {
-    "emailsHelp": "목록을 붙여넣거나 입력하세요. 한 사람씩 이메일을 받고 바로 참여해요.",
-    "here": "이미 참여 중",
-    "invited": "이미 초대됨",
-    "fix": "확인 필요",
-    "channels": "채널",
     "optional": "선택 사항",
     "ok": "확인",
     "noteHelp": "내 이름과 함께 이메일에 표시돼요. 최대 {{max}}자예요.",
-    "roleHelp": "참여할 때 받는 권한이 달라져요.",
-    "remove": "목록에서 빼기",
     "sendAgain": "다시 보내기",
     "cancelTitle": "{{email}}에게 보낸 초대를 취소할까요?",
     "cancelText": "초대 링크가 더 이상 열리지 않아요.",

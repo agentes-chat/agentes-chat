@@ -871,6 +871,92 @@
       "deniedTextPersonal": "Bir hata olduğunu düşünüyorsanız bağlantıyı size gönderen kişiden sizi davet etmesini isteyin."
     }
   },
+  "invites": {
+    "how": {
+      "email": "E-posta",
+      "link": "Bağlantı"
+    },
+    "to": "Kime",
+    "can": "Yapabilir",
+    "edit": "Düzenle",
+    "hint": {
+      "roles": "Kişinin yapabildikleri. Roller, Herkes'in yapabildiklerine eklenir. Yalnızca kişiler için.",
+      "channels": "Kişinin baştan katıldığı yerler. Rolün kanalları işaretli gelir.",
+      "agents": "Kişinin birlikte çalıştığı ajanlar. Listesinin en üstünde durur. Kısıtlı bir ajan da ona yanıt vermeye başlar."
+    },
+    "rolesFoot": "Roller, Herkes'in yapabildiklerine eklenir. Rolün kanalları ve ajanları işaretli gelir.",
+    "fromRole": "{{role}} rolünden",
+    "fromRoles": "{{roles}} rollerinden",
+    "byRole": "{{role}} rolü üzerinden",
+    "agent": {
+      "everyone": "Herkeste {{name}} var",
+      "opens": "Kısıtlı · siz açarsınız",
+      "locked": "Kısıtlı · yalnızca {{name}} açar",
+      "lockedAdmins": "Kısıtlı · yalnızca ajanları düzenleyenler açar",
+      "mailbox": "{{names}} adlı kişinin e-postalarını okur",
+      "plan": "Yalnızca {{name}} adlı kişiye yanıt verir"
+    },
+    "line": {
+      "noTalk": "Bu rolle kişi ajanlarla konuşmaz.",
+      "admin": "{{role}} ile kişi tüm ajanları görür.",
+      "opens_one": "{{names}}, bu davetle katılan herkese yanıt vermeye başlar.",
+      "opens_other": "{{names}}, bu davetle katılan herkese yanıt vermeye başlar."
+    },
+    "agentsNone": "Henüz başka ajan yok.",
+    "onJoin": "Katılırken",
+    "theLink": "Bağlantı",
+    "ttl": {
+      "label": "Geçerlilik",
+      "30m": "30 dakika",
+      "1h": "1 saat",
+      "1d": "1 gün",
+      "7d": "7 gün",
+      "30d": "30 gün",
+      "never": "Süresi dolmaz",
+      "keep": "{{date}} tarihine kadar"
+    },
+    "max": {
+      "label": "En fazla kişi",
+      "count_one": "{{count}} kişi",
+      "count_other": "{{count}} kişi",
+      "none": "Sınırsız",
+      "used_one": "{{count}} kişi zaten katıldı",
+      "used_other": "{{count}} kişi zaten katıldı"
+    },
+    "link": {
+      "uses_one": "{{uses}}/{{count}} kişi",
+      "uses_other": "{{uses}}/{{count}} kişi",
+      "joined_one": "{{count}} kişi katıldı",
+      "joined_other": "{{count}} kişi katıldı",
+      "by": "oluşturan: {{name}}",
+      "edit": "Bağlantıyı düzenle",
+      "saved": "Bağlantı kaydedildi. Adres aynı kalır.",
+      "failed": "Bağlantı oluşturulamadı. {{cause}}",
+      "makeFirst": "Kopyalamak için bağlantıyı oluşturun.",
+      "turnOff": "Bağlantıyı kapat",
+      "turnedOff": "Bağlantı kapatıldı."
+    },
+    "tab": {
+      "links": "Bağlantılar",
+      "emails": "E-posta davetleri"
+    },
+    "invitation": {
+      "edit": "Daveti düzenle",
+      "saved": "{{email}} için davet güncellendi.",
+      "expired": "Bu davetin süresi doldu. Verdiklerini değiştirmek için yenileyin."
+    },
+    "request": {
+      "viaLinkOf": "{{name}} adlı kişinin bağlantısıyla istedi: {{when}}"
+    },
+    "refused": {
+      "archived": "#{{channel}} arşivlendi. Göndermek için çıkarın.",
+      "left": "Artık #{{channel}} kanalında değilsiniz. Göndermek için çıkarın.",
+      "gone": "Kanallardan biri artık yok. Göndermek için işaretli olanı çıkarın.",
+      "agentGone": "{{name}} ekipten ayrıldı. Göndermek için davetten çıkarın.",
+      "agentLocked": "Artık {{name}} ajanını başkalarına açamazsınız. Göndermek için davetten çıkarın.",
+      "agentUnnamed": "Ajanlardan biri ekipten ayrıldı. Göndermek için işaretli olanı çıkarın."
+    }
+  },
   "onboarding": {
     "stepsLabel": "Başlangıç adımları",
     "deleteLink": "Bu çalışma alanını sil",
@@ -7255,7 +7341,8 @@
       "lead": "Burada ekip ve ajanlar birlikte çalışır: #{{channel}} kanalına yazın ya da bir ajanı adıyla çağırın.",
       "sayHi": "#{{channel}} kanalında merhaba deyin",
       "talkTo": "{{name}} ile konuş",
-      "team": "Ekibi gör"
+      "team": "Ekibi gör",
+      "alsoIn": "Ayrıca {{channels}} kanallarındasınız."
     },
     "people": "Kişiler",
     "seen": "Etkin: {{when}}",
@@ -15352,6 +15439,7 @@
       "general": "Genel",
       "right_hand": "Sağ kol",
       "members": "Üyeler ve davetler",
+      "invites": "Davetler",
       "roles": "Roller",
       "vault": "Vault",
       "access": "Ajanlar ve erişim",
@@ -15383,6 +15471,7 @@
       "general": "Ad, saat dilimi ve her ajanın çalışma alanı hakkında bildikleri.",
       "right_hand": "Her kişiyle kendi DM'inde ekibi kuran asistan.",
       "members": "Çalışma alanında kimler var ve davetler.",
+      "invites": "Kimlerin katılabileceği ve ne alacakları.",
       "roles": "Her rol izin, kanal ve ajan ekler.",
       "vault": "Ajanlarınızın parolaları, anahtarları ve kişileri. Parolaları asla görmezler.",
       "access": "Her ajanın neleri kullanabileceği: bağlayıcı başına bir düzey.",

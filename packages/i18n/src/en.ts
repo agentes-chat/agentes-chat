@@ -914,6 +914,94 @@ export const en = {
       deniedTextPersonal: "If you think it's a mistake, ask whoever sent you the link to invite you.",
     },
   },
+  // Inviting (ADR 0184): Invite people, the links, Invites and its edit screens, on the web and the phone. The invited
+  // person's side is `invite`.
+  invites: {
+    how: { email: "Email", link: "Link" },
+    to: "To",
+    /** A personal workspace's Role field (ADR 0159 §4): "Uses the agents" or "Helps you run it". */
+    can: "Can",
+    edit: "Edit",
+    /** Each field's ⓘ. To's is `members.dialog.pasteHelp`. */
+    hint: {
+      roles: "What the person can do. Roles add to what Everyone can. Only for people.",
+      channels: "Where the person starts. The role's channels come ticked.",
+      agents: "Who the person works with. They sit at the top of their list. A restricted agent starts answering them.",
+    },
+    rolesFoot: "Roles add to what Everyone can. The role's channels and agents come ticked.",
+    /** What the picked roles bring, as a group's name. */
+    fromRole: "From the {{role}} role",
+    fromRoles: "From the {{roles}} roles",
+    byRole: "Through the {{role}} role",
+    /** How each agent would go with an invitation. */
+    agent: {
+      everyone: "Everyone has {{name}}",
+      opens: "Restricted · you let people in",
+      locked: "Restricted · only {{name}} lets people in",
+      lockedAdmins: "Restricted · only agent editors let people in",
+      mailbox: "Reads {{names}}'s email",
+      plan: "Only answers {{name}}",
+    },
+    line: {
+      noTalk: "With this role, the person doesn't talk to agents.",
+      admin: "With {{role}}, the person sees every agent.",
+      opens_one: "{{names}} will answer whoever joins with this invite.",
+      opens_other: "{{names}} will answer whoever joins with this invite.",
+    },
+    agentsNone: "No other agents yet.",
+    onJoin: "On joining",
+    theLink: "The link",
+    ttl: {
+      label: "Valid for",
+      "30m": "30 minutes",
+      "1h": "1 hour",
+      "1d": "1 day",
+      "7d": "7 days",
+      "30d": "30 days",
+      never: "Never expires",
+      /** Edit link's first choice: the link as it is. */
+      keep: "Until {{date}}",
+    },
+    max: {
+      label: "Maximum people",
+      count_one: "{{count}} person",
+      count_other: "{{count}} people",
+      none: "No limit",
+      used_one: "{{count}} already joined",
+      used_other: "{{count}} already joined",
+    },
+    link: {
+      /** How full a link is: "0 of 1 person". */
+      uses_one: "{{uses}} of {{count}} person",
+      uses_other: "{{uses}} of {{count}} people",
+      joined_one: "{{count}} joined",
+      joined_other: "{{count}} joined",
+      /** Who made a link, when it isn't the person looking. */
+      by: "by {{name}}",
+      edit: "Edit link",
+      saved: "Link saved. The address is the same.",
+      failed: "Couldn't make the link. {{cause}}",
+      makeFirst: "Make the link to copy it.",
+      turnOff: "Turn off link",
+      turnedOff: "Link turned off.",
+    },
+    tab: { links: "Links", emails: "Email invites" },
+    invitation: {
+      edit: "Edit invite",
+      saved: "Invite for {{email}} updated.",
+      expired: "This invite expired. Renew it to change what it gives.",
+    },
+    request: { viaLinkOf: "Asked through {{name}}'s link {{when}}" },
+    /** A pick the server turned down when sending, with the way on. */
+    refused: {
+      archived: "#{{channel}} was archived. Take it out to send.",
+      left: "You're no longer in #{{channel}}. Take it out to send.",
+      gone: "One of the channels no longer exists. Take out the marked one to send.",
+      agentGone: "{{name}} left the team. Take them out of the invite to send.",
+      agentLocked: "You can no longer let people talk to {{name}}. Take them out of the invite to send.",
+      agentUnnamed: "One of the agents left the team. Take out the marked one to send.",
+    },
+  },
   onboarding: {
     stepsLabel: "Steps to get started",
     deleteLink: "Delete this workspace",
@@ -7733,6 +7821,8 @@ export const en = {
       sayHi: "Say hi in #{{channel}}",
       talkTo: "Talk to {{name}}",
       team: "See the team",
+      /** The channels an invitation put them in besides #general (ADR 0184). */
+      alsoIn: "You're also in {{channels}}.",
     },
     people: "People",
     seen: "Active {{when}}",
@@ -15655,6 +15745,7 @@ export const en = {
       general: "General",
       right_hand: "Right hand",
       members: "Members and invitations",
+      invites: "Invites",
       roles: "Roles",
       /** The feature's name: it stays “Vault” in every language. */
       vault: "Vault",
@@ -15690,6 +15781,7 @@ export const en = {
       general: "Name, time zone and what every agent knows about the workspace.",
       right_hand: "The assistant that builds the team with each person, in their DM.",
       members: "Who is in the workspace, and invitations.",
+      invites: "Who can join and what they get.",
       roles: "Each role adds permissions, channels and agents.",
       vault: "Your agents' passwords, keys and contacts. They never see a password.",
       access: "What each agent can use: one level per connector.",

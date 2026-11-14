@@ -5280,32 +5280,11 @@
   "joinRequests.share": {
     "value": "Share the link"
   },
-  "joinRequests.roles": {
-    "value": "Roles"
-  },
-  "joinRequests.rolesHint": {
-    "value": "They join with the roles turned on. With none, they may do what Everyone may."
-  },
   "humanCheck.title": {
     "value": "Quick check"
   },
   "humanCheck.blocked": {
     "value": "The check didn't load. Try another network."
-  },
-  "invitePeople.emailsHelp": {
-    "value": "Paste a list or type. Each person gets an email and joins right away."
-  },
-  "invitePeople.here": {
-    "value": "Already here"
-  },
-  "invitePeople.invited": {
-    "value": "Already invited"
-  },
-  "invitePeople.fix": {
-    "value": "Check this"
-  },
-  "invitePeople.channels": {
-    "value": "Channels"
   },
   "invitePeople.optional": {
     "value": "Optional"
@@ -5315,12 +5294,6 @@
   },
   "invitePeople.noteHelp": {
     "value": "It shows in the email with your name. Up to {{max}} characters."
-  },
-  "invitePeople.roleHelp": {
-    "value": "Changes what the person gets on joining."
-  },
-  "invitePeople.remove": {
-    "value": "Take off the list"
   },
   "invitePeople.sendAgain": {
     "value": "Send again"
