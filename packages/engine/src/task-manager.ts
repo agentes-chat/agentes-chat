@@ -1,6 +1,14 @@
 import { and, type Database, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
 import { planOf as codingPlan, PLAN_IDS, planModel } from "@agenteschat/providers/plans";
-import { agentsOnlyIn, anchorsSql } from "./agent-work";
+import {
+  type AgentWorkState,
+  agentsOnlyIn,
+  anchorsSql,
+  outageIn,
+  waitSinceIn,
+  waitsOnViewerIn,
+  workStateOf,
+} from "./agent-work";
 import { runAuthorityById } from "./authority";
 import type { ModelScope } from "./brains/select";
 import { TtlCache } from "./cache";
@@ -161,6 +169,17 @@ export interface ManagedTask {
   } | null;
   /** Why a `waiting_input` run waits on no person's answer yet; null for any other run. */
   wait: TaskWait | null;
+  /**
+   * How it stands for the caller, as an agent's line says it (`workStateOf`, ADR 0084 addendum): waiting on them, at
+   * work, a wait on someone or something else, or in line, and since when by the lists' clock (a wait from its own
+   * start, a card's when it waits on a person). Null: it waits on its plan or budget (`held` says which).
+   */
+  work: {
+    state: AgentWorkState;
+    since: string;
+    /** The card it waits on, when it waits on a person (the oldest): its message, where its row opens. */
+    card: string | null;
+  } | null;
 }
 
 /** A computer with work on it or a line for its room: the task manager's computers row and "Ver fila". */
@@ -251,6 +270,11 @@ type Row = {
   wait_pause: { used?: number; window?: string } | string | null;
   routine_creator: string | null;
   waiting_machine_id: string | null;
+  /** Still on only: it waits on the caller, on its AI provider's outage, and since when it waits. */
+  you: boolean | string;
+  outage: boolean | string;
+  wait_since: string | Date | null;
+  card_id: string | null;
 };
 
 /** The fields of `waitingForBrain` (the executor's `Transcript`) the task manager says. */
@@ -279,6 +303,17 @@ const RUN_COLUMNS = {
   background: sql`r.background`,
   ownerUserId: sql`a.owner_user_id`,
 };
+
+/** The oldest card a run waiting on a person waits on (an approval, a question, a secret): its message. */
+const CARD_OF_RUN = sql`(case when r.status in ('waiting_approval', 'waiting_input') then (
+    select x.message_id from (
+      select pa.message_id, pa.created_at from approvals pa
+        where pa.org_id = r.org_id and pa.run_id = r.id and pa.status = 'pending'
+      union all select q.message_id, q.created_at from agent_questions q
+        where q.org_id = r.org_id and q.run_id = r.id and q.status = 'open'
+      union all select s.message_id, s.created_at from secret_requests s
+        where s.org_id = r.org_id and s.run_id = r.id and s.status = 'pending'
+    ) x where x.message_id is not null order by x.created_at limit 1) end)`;
 
 /** The runs the caller sees, by status (`active`: still on; else ended since `since`). */
 async function visibleRuns(
@@ -310,7 +345,11 @@ async function visibleRuns(
         su.name as stopper_name,
         coalesce(r.transcript->'waitingForBrain', case when r.status = 'running' and r.waiting_machine_id is not null
           then '{"code":"busy"}'::jsonb end) as wait, pause.data as wait_pause, r.waiting_machine_id,
-        rt.created_by_user_id as routine_creator
+        rt.created_by_user_id as routine_creator,
+        ${which.active ? waitsOnViewerIn("r", userId) : sql`false`} as you,
+        ${which.active ? outageIn("r") : sql`false`} as outage,
+        ${which.active ? waitSinceIn("r") : sql`null`} as wait_since,
+        ${which.active ? CARD_OF_RUN : sql`null`} as card_id
       from ${agentRuns} r
       join ${channels} c on c.id = r.channel_id and c.org_id = ${orgId}::uuid
         and c.archived_at is null and c.kind in ('channel', 'dm')
@@ -491,6 +530,20 @@ function heldOf(r: Row): ManagedTask["held"] {
   return "computer_offline";
 }
 
+/** How a run still on stands for the caller, by an agent's line's rule and clock (`workStateOf`, `waitSinceIn`). */
+function workOf(r: Row): ManagedTask["work"] {
+  const state = workStateOf({
+    status: r.status,
+    onMachine: r.waiting_machine_id !== null,
+    outage: truthy(r.outage),
+    waitCode: parsed(r.wait)?.code ?? null,
+    you: truthy(r.you),
+  });
+  if (!state) return null;
+  const since = state === "working" ? (r.started_at ?? r.created_at) : (r.wait_since ?? r.created_at);
+  return { state, since: iso(since) as string, card: r.card_id };
+}
+
 /** The model of a wait on a model's own limit, by the name its plan gives it. */
 export function waitModel(wait: Pick<StoredWait, "scope" | "plan" | "model">) {
   if (!wait.scope) return null;
@@ -597,6 +650,7 @@ export async function taskManager(
     held: heldOf(r),
     line: null,
     wait: waitOf(r),
+    work: workOf(r),
   }));
   await Promise.all(
     active.map(async (r, i) => {
