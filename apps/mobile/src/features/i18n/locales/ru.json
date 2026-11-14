@@ -320,7 +320,7 @@
   },
   "along": {
     "agent": "Агент",
-    "waits": "{{name}} ждёт вашего одобрения",
+    "waits": "{{name}} · ждёт вас",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} работает",
     "more": "+{{count}}"
@@ -838,7 +838,7 @@
     "teamSectionPersonal": "Ваши агенты",
     "managerQuiet": "Ничего не выполняется",
     "state": {
-      "waitsYou": "ждёт вашего одобрения",
+      "waitsYou": "ждёт вас",
       "noAi": "ИИ не подключён",
       "connect": "Подключить",
       "archived": "В архиве",
@@ -1292,6 +1292,9 @@
     "addWorkspaceTeamShort": "Войти на сервер команды",
     "addWorkspaceTeamSubShort": "Адрес или QR-код на компьютере",
     "addWorkspaceFoot": "Вы не выходите ни из одного пространства.",
+    "addAccount": "Войти в другой аккаунт",
+    "addAccountSub": "На {{host}}, не выходя из этого",
+    "accountNoWorkspace": "Пока нет рабочего пространства",
     "teamServerLeadShort": "Тот, что ваша команда открывает в браузере.",
     "teamServerQuestion": "Какой адрес у вашей команды?",
     "account": {
@@ -1613,7 +1616,7 @@
       "plain": "задача выполнена"
     },
     "rowWait": {
-      "approval": "ждёт вашего одобрения",
+      "approval": "ждёт вас",
       "question": "ждёт вашего ответа",
       "mission": "ждёт вашей проверки"
     },
@@ -1651,15 +1654,15 @@
   },
   "intentAgents": {
     "waitingSection": "Ждёт вас",
-    "waitingLine": "{{title}} · ждёт вашего одобрения",
+    "waitingLine": "{{title}} · ждёт вас",
     "waitingMore_one": "{{title}} · и ещё {{count}} ждёт вас",
     "waitingMore_few": "{{title}} · и ещё {{count}} ждут вас",
     "waitingMore_many": "{{title}} · и ещё {{count}} ждут вас",
     "waitingMore_other": "{{title}} · и ещё {{count}} ждут вас",
-    "waitingLabel": "{{name}}, ждёт вашего одобрения",
+    "waitingLabel": "{{name}}, ждёт вас",
     "owner": "Владелец: {{name}}",
     "ownerYou": "Владелец: вы",
-    "nowWaiting": "Ждёт вашего одобрения: {{title}}",
+    "nowWaiting": "Ждёт вас: {{title}}",
     "did": {
       "title": "Что он сделал для вас",
       "title_female": "Что она сделала для вас",
@@ -1680,7 +1683,7 @@
         "image": "Изображение",
         "file": "Файл"
       },
-      "waitingOnYou": "Ждёт вашего одобрения",
+      "waitingOnYou": "Ждёт вас",
       "youApproved": "Вы одобрили",
       "youRefused": "Вы отклонили",
       "action": {

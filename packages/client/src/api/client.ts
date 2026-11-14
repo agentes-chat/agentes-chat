@@ -130,6 +130,7 @@ import type {
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
+  DeviceAccount,
   DeviceAudience,
   DeviceRequest,
   DevicesList,
@@ -242,6 +243,7 @@ import type {
   OrgRoles,
   OrgSettings,
   PageTarget,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonalTokenInput,
@@ -264,12 +266,14 @@ import type {
   RightHandApprovalsInput,
   Role,
   RoleInput,
+  RoleMailLoss,
   RosterMember,
   Routine,
   RoutineHook,
   RoutineInput,
   RoutinePatch,
   RoutineRun,
+  RowHolders,
   RuleInfo,
   Run,
   RunConsultation,
@@ -431,6 +435,18 @@ export interface ApiClient {
     me(): Promise<Me | null>;
     /** Unread and waiting in each workspace, in one call (`GET /me/unread`, ADR 0154); null signed out. */
     unread(): Promise<{ organizations: { orgId: string; unread: number; waiting: number }[] } | null>;
+    /**
+     * The accounts signed in on this browser, the current one first (`GET /device-accounts`, ADR 0183); empty on a
+     * server from before it and with nobody signed in.
+     */
+    deviceAccounts(): Promise<DeviceAccount[]>;
+    /** Moves this browser to another account signed in on it; every account stays signed in. */
+    switchDeviceAccount(userId: string): Promise<void>;
+    /**
+     * Signs one account out of this browser, the current one without `userId`; the others stay. `signedIn`: the
+     * browser still has an account, the next one when the current one left.
+     */
+    signOutDeviceAccount(userId?: string): Promise<{ signedIn: boolean }>;
     /** My app language (emails and pushes are written in it). */
     updateMe(input: { locale: AppLocale; auto?: boolean }): Promise<void>;
     /** My own area, asked once during the onboarding, or `skipped` (`PUT /me/work-area`). */
@@ -651,8 +667,21 @@ export interface ApiClient {
     remove(orgId: string, roleId: string): Promise<void>;
     /** Every role but `everyone`, top first. */
     reorder(orgId: string, ids: string[]): Promise<void>;
-    /** A person's roles, exactly these. */
-    setFor(orgId: string, userId: string, roleIds: string[], via?: string): Promise<{ roleIds: string[] }>;
+    /**
+     * A person's roles, exactly these. `mailLossSeen`: the mailboxes they were told agents lose (`mailLoss`); one
+     * given since refuses it (409 `agent.mail_loss_changed`).
+     */
+    setFor(
+      orgId: string,
+      userId: string,
+      roleIds: string[],
+      via?: string,
+      mailLossSeen?: string[],
+    ): Promise<{ roleIds: string[] }>;
+    /** "Quem pode…": who holds one row (a key, or `computers`), `everyone` and the roles at once; the roles after it. */
+    setRow(orgId: string, row: string, holders: RowHolders): Promise<OrgRoles>;
+    /** The mailboxes agents would lose if `userIds` got the role, taking nothing. */
+    mailLoss(orgId: string, roleId: string, userIds: string[]): Promise<RoleMailLoss[]>;
   };
   /** Groups of agents (ADR 0083): everyone reads them, owners and admins change them; each change answers with all. */
   agentGroups: {
@@ -956,7 +985,12 @@ export interface ApiClient {
      * no-AI card or the person's message. 409 `ai.still_missing` while there's still no AI.
      */
     answerNow(orgId: string, messageId: string): Promise<{ runs: { agentId: string; runId: string }[] }>;
-    /** Cancels an agent's follow-up from its line (`messageId`); 409 `follow_up.not_pending` once it came. */
+    /** The returns agents set in a conversation, still to come, the soonest first (`[]` while the server lacks it). */
+    followUps(orgId: string, channelId: string): Promise<PendingReturn[]>;
+    /**
+     * Cancels a return (`messageId`, its line): the person it is for, the agent's owner or an admin (403
+     * `follow_up.not_yours` otherwise); 409 `follow_up.not_pending` once it came.
+     */
     cancelFollowUp(orgId: string, messageId: string): Promise<void>;
     /**
      * "Pedir resposta" on a GitHub notice of someone the agent doesn't answer (`messageId`): the agent answers them

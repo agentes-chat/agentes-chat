@@ -353,6 +353,18 @@ describe("Memória e propostas (fase 5)", () => {
     expect(screen().getByRole("article").querySelector(".ac-chip--waiting")?.textContent).toBe("Aguardando João");
     expect(screen().queryByRole("button", { name: "Aceitar mudança" })).toBeNull();
   });
+
+  test("a role proposal's change reads “Mudança · função da Ada”, never “Mudança em função de” (because of)", async () => {
+    const state = seedState();
+    const [first] = state.proposals;
+    if (!first) throw new Error("a proposal expected");
+    const target = { type: "agent_role" as const, agentId: ADA_ID };
+    state.proposals = [{ ...first, target, before: "Dev", after: "Revisora de código" }];
+    await go("proposals", state);
+    const change = screen().getByRole("region", { name: "Mudança proposta" });
+    expect(change.querySelector(".ac-eyebrow")?.textContent).toBe("Mudança · função da Ada");
+    expect(change.textContent).toContain("Função: Dev → Revisora de código");
+  });
 });
 
 describe("Membros", () => {
@@ -365,7 +377,7 @@ describe("Membros", () => {
     // Each person's roles as chips (ADR 0085). Giving or taking them is in the row's menu, never a loose "+".
     const joao = within(people).getByText("João").closest(".ac-list__row") as HTMLElement;
     expect(joao.querySelector(".members-roles")?.textContent).toBe("Admin");
-    expect(within(joao).queryByRole("button", { name: "Papéis de João" })).toBeNull();
+    expect(within(joao).queryByRole("button", { name: "Cargos de João" })).toBeNull();
     expect(within(joao).getByRole("button", { name: "Mais de João" })).toBeTruthy();
     const agents = screen().getByRole("region", { name: "Agentes" });
     expect(agents.textContent).toContain("Ada · Dev");
@@ -457,7 +469,7 @@ describe("Membros", () => {
 describe("Criar agente", () => {
   test("role presets, validation, and creation in the chosen channels", async () => {
     const { state } = await go("agents/new");
-    expect(screen().getByRole("heading", { level: 1, name: "Qual vai ser o papel?" })).toBeTruthy();
+    expect(screen().getByRole("heading", { level: 1, name: "Qual vai ser a função?" })).toBeTruthy();
     // The page says what the button that opened it said.
     expect(document.querySelector(".newag__rail-title b")?.textContent).toBe("Criar agente");
     await click(screen().getByRole("button", { name: /^Dev/ }));

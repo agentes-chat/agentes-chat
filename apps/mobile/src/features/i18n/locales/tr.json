@@ -302,7 +302,7 @@
   },
   "along": {
     "agent": "Bir ajan",
-    "waits": "{{name}} onayınızı bekliyor",
+    "waits": "{{name}} · sizi bekliyor",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} çalışıyor",
     "more": "+{{count}}"
@@ -792,7 +792,7 @@
     "teamSectionPersonal": "Ajanlarınız",
     "managerQuiet": "Devam eden bir şey yok",
     "state": {
-      "waitsYou": "onayınızı bekliyor",
+      "waitsYou": "sizi bekliyor",
       "noAi": "Bağlı yapay zeka yok",
       "connect": "Bağla",
       "archived": "Arşivlendi",
@@ -1138,6 +1138,9 @@
     "addWorkspaceTeamShort": "Ekibinizin sunucusuna katıl",
     "addWorkspaceTeamSubShort": "Adres veya bilgisayardaki QR kod",
     "addWorkspaceFoot": "Hiçbir çalışma alanından çıkmazsınız.",
+    "addAccount": "Başka bir hesapla giriş yap",
+    "addAccountSub": "{{host}} üzerinde, bu hesaptan çıkmadan",
+    "accountNoWorkspace": "Henüz çalışma alanı yok",
     "teamServerLeadShort": "Ekibinizin tarayıcıda açtığı adres.",
     "teamServerQuestion": "Ekibinizin adresi nedir?",
     "account": {
@@ -1441,7 +1444,7 @@
       "plain": "bir işi bitirdi"
     },
     "rowWait": {
-      "approval": "onayınızı bekliyor",
+      "approval": "sizi bekliyor",
       "question": "yanıtınızı bekliyor",
       "mission": "incelemenizi bekliyor"
     },
@@ -1479,13 +1482,13 @@
   },
   "intentAgents": {
     "waitingSection": "Sizi bekleyenler",
-    "waitingLine": "{{title}} · onayınızı bekliyor",
+    "waitingLine": "{{title}} · sizi bekliyor",
     "waitingMore_one": "{{title}} · ve sizi bekleyen {{count}} şey daha",
     "waitingMore_other": "{{title}} · ve sizi bekleyen {{count}} şey daha",
-    "waitingLabel": "{{name}}, onayınızı bekliyor",
+    "waitingLabel": "{{name}}, sizi bekliyor",
     "owner": "Sorumlu: {{name}}",
     "ownerYou": "Sorumlu: siz",
-    "nowWaiting": "Onayınızı bekliyor: {{title}}",
+    "nowWaiting": "Sizi bekliyor: {{title}}",
     "did": {
       "title": "Sizin için yaptıkları",
       "title_female": "Sizin için yaptıkları",
@@ -1504,7 +1507,7 @@
         "image": "Görsel",
         "file": "Dosya"
       },
-      "waitingOnYou": "Onayınızı bekliyor",
+      "waitingOnYou": "Sizi bekliyor",
       "youApproved": "Onayladınız",
       "youRefused": "Reddettiniz",
       "action": {

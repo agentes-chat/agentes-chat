@@ -57,13 +57,16 @@ import {
   createAuthMiddleware,
   formCsrfMiddleware,
   getOAuthState,
+  getSessionFromCtx,
   isAPIError,
 } from "better-auth/api";
-import { setSessionCookie } from "better-auth/cookies";
+import { deleteSessionCookie, expireCookie, parseCookies, setSessionCookie } from "better-auth/cookies";
+import { multiSession } from "better-auth/plugins/multi-session";
 import { z } from "zod";
 import { listOf } from "./app-links";
 import { desktopSignIn, FRESH_SIGN_IN_MS } from "./desktop-sign-in";
 import { humanCheckRefusal } from "./http/human-check";
+import { humanPassesFor } from "./http/human-pass";
 import type { Logger } from "./logger";
 import { ownerSignIn } from "./owner-claim";
 import { phoneBrowserSignIn, phoneFlowStarted } from "./phone-browser-sign-in";
@@ -154,13 +157,28 @@ export function createAuth(deps: {
     // a server that sends no email. No app calls them, `deletionProof` calls `verifyPassword` in this process (which
     // this leaves open), and a forgotten password is reset by email. A new address goes only through
     // `changeAccountEmail`, which takes a code or a fresh sign-in first and calls `/change-email` in this process.
-    disabledPaths: ["/verify-password", "/change-password", "/change-email"],
+    // The multi-session paths take and answer session tokens, and no token reaches the browser: the apps go through
+    // `/api/app/device-accounts`, which names accounts by person and calls these in this process (ADR 0183).
+    disabledPaths: [
+      "/verify-password",
+      "/change-password",
+      "/change-email",
+      "/multi-session/list-device-sessions",
+      "/multi-session/set-active",
+      "/multi-session/revoke",
+      KEEP_DEVICE_SESSIONS,
+      LEAVE_DEVICE_SESSION,
+    ],
     // Derived from AGENTES_SECRET so self-hosters manage a single secret.
     secret: deriveSecret(config.AGENTES_SECRET, "sessions"),
     // Apple posts the sign-in result back from its own origin (`response_mode=form_post`).
     trustedOrigins: [config.PUBLIC_URL, ...devOrigins, ...appOrigins, ...(apple ? [APPLE_ORIGIN] : [])],
     plugins: [
       expo(),
+      // Several accounts signed in on one browser (ADR 0183): every sign-in also leaves a cookie of its own, so the
+      // one before it stays signed in and the browser moves between them.
+      multiSession({ maximumSessions: MAX_DEVICE_ACCOUNTS }),
+      deviceAccounts,
       phoneSignIn,
       phoneBrowserSignIn(),
       desktopSignIn(),
@@ -375,7 +393,17 @@ export function createAuth(deps: {
         const action = HUMAN_ACTIONS[ctx.path];
         // Before the sign-up policy: a bot gets the cheap refusal first.
         if (action && ctx.headers) {
-          const refused = await humanCheckRefusal(deps.humanCheck, ctx.headers, action, config.TRUSTED_PROXIES);
+          // The lookup of this address passed the check a moment ago: its pass stands for this step's (ADR 0075).
+          const address = (ctx.body as { email?: unknown } | undefined)?.email;
+          const refused = await humanCheckRefusal(
+            deps.humanCheck,
+            ctx.headers,
+            action,
+            config.TRUSTED_PROXIES,
+            typeof address === "string"
+              ? { passes: humanPassesFor(deriveSecret(config.AGENTES_SECRET, "human-pass")), email: address }
+              : undefined,
+          );
           if (refused) throw new APIError("FORBIDDEN", refused);
         }
         if (ctx.path !== "/sign-up/email") return;
@@ -548,6 +576,167 @@ export type SessionUser = { id: string; name: string; email: string; image?: str
 export function signInPageUrl(publicUrl: string, query?: Record<string, string>) {
   const page = `${publicUrl.replace(/\/$/, "")}/login`;
   return query ? `${page}?${new URLSearchParams(query)}` : page;
+}
+
+/** Accounts a sign-in keeps beside it in one browser (ADR 0183): past these, the plugin adds no cookie by itself. */
+export const MAX_DEVICE_ACCOUNTS = 5;
+const KEEP_DEVICE_SESSIONS = "/device-accounts/keep";
+const LEAVE_DEVICE_SESSION = "/device-accounts/leave";
+
+/** The cookie the multi-session plugin keeps a session under, beside the browser's own session cookie. */
+const deviceCookieName = (sessionCookie: string, token: string) => `${sessionCookie}_multi-${token.toLowerCase()}`;
+
+/**
+ * What the multi-session plugin leaves open, for the accounts a browser holds (ADR 0183). Only in this process: both
+ * paths are off over HTTP, and they take session tokens, which never leave the server.
+ */
+const deviceAccounts = {
+  id: "device-accounts",
+  endpoints: {
+    /**
+     * Every session the browser holds gets its cookie again: the one in use that has none yet (signed in before a
+     * browser kept several, or past the plugin's count) and the others, whose cookies the plugin sets once and never
+     * renews. A session not in use is never read as the request's own, so it is extended here, as Better Auth
+     * extends the one in use.
+     */
+    keepDeviceSessions: createAuthEndpoint(
+      KEEP_DEVICE_SESSIONS,
+      { method: "POST", requireHeaders: true },
+      async (ctx) => {
+        const cookie = ctx.context.authCookies.sessionToken;
+        const tokens = new Set<string>();
+        for (const name of parseCookies(ctx.headers?.get("cookie") ?? "").keys()) {
+          if (!name.includes("_multi-")) continue;
+          const token = await ctx.getSignedCookie(name, ctx.context.secret);
+          if (typeof token === "string" && token) tokens.add(token);
+        }
+        const current = await getSessionFromCtx(ctx);
+        if (current) tokens.add(current.session.token);
+        if (tokens.size === 0) return ctx.json({ status: true });
+        const now = Date.now();
+        const { expiresIn, updateAge } = ctx.context.sessionConfig;
+        const held = await ctx.context.internalAdapter.findSessions([...tokens], { onlyActiveSessions: true });
+        for (const { session } of held) {
+          const expiresAt = new Date(session.expiresAt).getTime();
+          if (expiresAt <= now) continue;
+          if (session.token !== current?.session.token && expiresAt - now < (expiresIn - updateAge) * 1000) {
+            await ctx.context.internalAdapter.updateSession(session.token, {
+              expiresAt: new Date(now + expiresIn * 1000),
+            });
+          }
+          await ctx.setSignedCookie(
+            deviceCookieName(cookie.name, session.token),
+            session.token,
+            ctx.context.secret,
+            cookie.attributes,
+          );
+        }
+        return ctx.json({ status: true });
+      },
+    ),
+    /**
+     * One session the browser holds ends, and only that one (Better Auth's own sign-out ends them all). When it was
+     * the one in use, the browser moves to `nextToken`'s, or to none.
+     */
+    leaveDeviceSession: createAuthEndpoint(
+      LEAVE_DEVICE_SESSION,
+      {
+        method: "POST",
+        requireHeaders: true,
+        body: z.object({ sessionToken: z.string(), nextToken: z.string().optional() }),
+      },
+      async (ctx) => {
+        const cookie = ctx.context.authCookies.sessionToken;
+        const current = await getSessionFromCtx(ctx);
+        const holds = async (token: string) =>
+          current?.session.token === token ||
+          (await ctx.getSignedCookie(deviceCookieName(cookie.name, token), ctx.context.secret)) === token;
+        const { sessionToken, nextToken } = ctx.body;
+        if (!(await holds(sessionToken))) throw new APIError("UNAUTHORIZED");
+        await ctx.context.internalAdapter.deleteSession(sessionToken);
+        expireCookie(ctx, { name: deviceCookieName(cookie.name, sessionToken), attributes: cookie.attributes });
+        if (current?.session.token !== sessionToken) return ctx.json({ signedIn: Boolean(current) });
+        const next =
+          nextToken && (await holds(nextToken)) ? await ctx.context.internalAdapter.findSession(nextToken) : null;
+        if (next && new Date(next.session.expiresAt).getTime() > Date.now()) {
+          await setSessionCookie(ctx, next);
+          return ctx.json({ signedIn: true });
+        }
+        deleteSessionCookie(ctx);
+        return ctx.json({ signedIn: false });
+      },
+    ),
+  },
+} satisfies BetterAuthPlugin;
+
+/** A person signed in on this browser, and whether the request is theirs. */
+export interface DeviceAccount {
+  user: SessionUser;
+  current: boolean;
+  /** Stays in this process: accounts are named by person outside it. */
+  token: string;
+}
+
+/**
+ * The accounts signed in on the browser that sent `headers` (ADR 0183), the request's own first, the others by
+ * address. `cookies`: every one's cookie again (`keepDeviceSessions`), to send back with the answer.
+ */
+export async function deviceAccountsOf(
+  auth: Auth,
+  headers: Headers,
+): Promise<{ accounts: DeviceAccount[]; cookies: string[] }> {
+  const [current, kept, renewed] = await Promise.all([
+    sessionOf(auth, headers),
+    auth.api.listDeviceSessions({ headers }),
+    auth.api.keepDeviceSessions({ headers, returnHeaders: true }),
+  ]);
+  const cookies = renewed.headers.getSetCookie();
+  const others = kept
+    .filter((k) => k.user.id !== current?.user.id)
+    .map((k) => ({ user: k.user as SessionUser, current: false, token: k.session.token }))
+    .sort((a, b) => a.user.email.localeCompare(b.user.email));
+  if (!current) return { accounts: others, cookies };
+  return {
+    accounts: [{ user: current.user as SessionUser, current: true, token: current.session.token }, ...others],
+    cookies,
+  };
+}
+
+/**
+ * Makes `userId`'s session the browser's (ADR 0183): the cookies to send back, or null when that person isn't signed
+ * in on it (their session ended meanwhile). The account it leaves keeps its own cookie, so it stays one switch away.
+ */
+export async function switchDeviceAccount(auth: Auth, headers: Headers, userId: string): Promise<string[] | null> {
+  const { accounts, cookies } = await deviceAccountsOf(auth, headers);
+  const target = accounts.find((a) => a.user.id === userId);
+  if (!target) return null;
+  if (target.current) return cookies;
+  const moved = await auth.api
+    .setActiveSession({ headers, body: { sessionToken: target.token }, returnHeaders: true })
+    .catch(() => null);
+  return moved ? [...cookies, ...moved.headers.getSetCookie()] : null;
+}
+
+/**
+ * Signs one account out of the browser (ADR 0183), the request's own by default: its session ends and the others stay.
+ * When it was the request's own, the browser moves to the next one still signed in (`signedIn`), else to none.
+ */
+export async function signOutDeviceAccount(
+  auth: Auth,
+  headers: Headers,
+  userId?: string,
+): Promise<{ cookies: string[]; signedIn: boolean } | null> {
+  const { accounts, cookies } = await deviceAccountsOf(auth, headers);
+  const target = userId ? accounts.find((a) => a.user.id === userId) : accounts.find((a) => a.current);
+  if (!target) return null;
+  const next = target.current ? accounts.find((a) => !a.current) : undefined;
+  const left = await auth.api.leaveDeviceSession({
+    headers,
+    body: { sessionToken: target.token, ...(next ? { nextToken: next.token } : {}) },
+    returnHeaders: true,
+  });
+  // The leaving account's cookie was renewed a moment before: its removal comes after, so it wins.
+  return { cookies: [...cookies, ...left.headers.getSetCookie()], signedIn: left.response.signedIn };
 }
 
 const sessionReads = new WeakMap<Headers, ReturnType<Auth["api"]["getSession"]>>();

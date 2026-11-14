@@ -320,7 +320,7 @@
   },
   "along": {
     "agent": "Agent",
-    "waits": "{{name}} czeka na twoją zgodę",
+    "waits": "{{name}} · czeka na ciebie",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} pracuje",
     "more": "+{{count}}"
@@ -838,7 +838,7 @@
     "teamSectionPersonal": "Twoi agenci",
     "managerQuiet": "Nic w toku",
     "state": {
-      "waitsYou": "czeka na twoją zgodę",
+      "waitsYou": "czeka na ciebie",
       "noAi": "Brak połączonego AI",
       "connect": "Połącz",
       "archived": "W archiwum",
@@ -1292,6 +1292,9 @@
     "addWorkspaceTeamShort": "Dołącz do serwera swojego zespołu",
     "addWorkspaceTeamSubShort": "Adres lub kod QR z komputera",
     "addWorkspaceFoot": "Nie opuszczasz żadnej przestrzeni roboczej.",
+    "addAccount": "Zaloguj się na inne konto",
+    "addAccountSub": "Na {{host}}, bez wylogowywania z tego",
+    "accountNoWorkspace": "Nie ma jeszcze przestrzeni roboczej",
     "teamServerLeadShort": "To, co twój zespół otwiera w przeglądarce.",
     "teamServerQuestion": "Jaki jest adres twojego zespołu?",
     "account": {
@@ -1613,7 +1616,7 @@
       "plain": "ma gotowe zadanie"
     },
     "rowWait": {
-      "approval": "czeka na twoją zgodę",
+      "approval": "czeka na ciebie",
       "question": "czeka na twoją odpowiedź",
       "mission": "czeka na twoją ocenę"
     },
@@ -1651,15 +1654,15 @@
   },
   "intentAgents": {
     "waitingSection": "Czeka na ciebie",
-    "waitingLine": "{{title}} · potrzebuje twojej zgody",
+    "waitingLine": "{{title}} · czeka na ciebie",
     "waitingMore_one": "{{title}} · i jeszcze {{count}} czeka na ciebie",
     "waitingMore_few": "{{title}} · i jeszcze {{count}} czekają na ciebie",
     "waitingMore_many": "{{title}} · i jeszcze {{count}} czeka na ciebie",
     "waitingMore_other": "{{title}} · i jeszcze {{count}} czeka na ciebie",
-    "waitingLabel": "{{name}}, potrzebuje twojej zgody",
+    "waitingLabel": "{{name}}, czeka na ciebie",
     "owner": "Właściciel: {{name}}",
     "ownerYou": "Właściciel: ty",
-    "nowWaiting": "Potrzebuje twojej zgody: {{title}}",
+    "nowWaiting": "Czeka na ciebie: {{title}}",
     "did": {
       "title": "Co dla ciebie zrobił",
       "title_female": "Co dla ciebie zrobiła",
@@ -1680,7 +1683,7 @@
         "image": "Obraz",
         "file": "Plik"
       },
-      "waitingOnYou": "Potrzebuje twojej zgody",
+      "waitingOnYou": "Czeka na ciebie",
       "youApproved": "Zatwierdzone przez ciebie",
       "youRefused": "Odrzucone przez ciebie",
       "action": {

@@ -212,7 +212,7 @@ export const ptBR: Words = {
     preheader: "Aprove ou recuse em Membros. Nada acontece até você responder.",
     headline: "Um pedido para entrar espera por você",
     body: (org) => ["Essa pessoa abriu o link de convite da ", { b: org }, " e pediu para entrar."],
-    note: "Aprove só quem você espera. A pessoa entra como membro, a não ser que você escolha outro papel na página.",
+    note: "Aprove só quem você espera. A pessoa entra como membro, a não ser que você escolha outro cargo na página.",
     approve: "Aprovar",
     deny: "Recusar",
     more: ["Todos os pedidos ", { nobr: "em espera estão em Membros." }],

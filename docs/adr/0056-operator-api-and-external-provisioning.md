@@ -220,7 +220,7 @@ What these add to the rules above:
 
 Known limits:
 
-- No index serves a run's jobs by their name: the read scans the outbox. An index on `outbox.dedupe_key` with `text_pattern_ops` fixes it when that takes long.
+- A run's jobs are found by how their name starts, through an index of the run jobs' names alone: `outbox_run_jobs_idx`, on `dedupe_key` with `text_pattern_ops` where the kind is `agent_run.execute`. It compares bytes, so it serves a prefix whatever the database's collation, which the unique index on the name does only in the `C` collation.
 - A run's error code is worked out from its stored text in code. Counting and filtering by code read the range's distinct error texts first, 2,000 at most, most frequent first; past that `more` is true and the rarest are left out.
 - A tool result's `durationMs` is null when its call is on an earlier page of steps.
 
@@ -249,7 +249,7 @@ What these add to the rules above:
 
 Known limits:
 
-- Only due and leased jobs are indexed. Every other reading of `/jobs`, the counts included, reads the whole outbox, and so does a run's trace for its jobs; `stuck=true` is the cheap one. The outbox keeps its finished jobs, so on an instance with a long history these are for an occasional look, not for polling. Two indexes fix it when that takes long, and neither exists yet: one on `outbox (created_at, id)` for a page, one on `dedupe_key` with `text_pattern_ops` for `runId` and the trace. A page is ordered and continued by the stored `created_at` itself, its cursor carrying the time to the microsecond, because an index on the column serves no expression of it. The counts still read every job in their dates.
+- Besides the due and the leased jobs, two indexes are on the outbox: `outbox_created_idx` on `(created_at, id)` for a page of `/jobs`, and `outbox_run_jobs_idx` (the addendum on runs and conversations) for `runId` and a run's trace. A page is ordered and continued by the stored `created_at` itself, its cursor carrying the time to the microsecond, because an index on the column serves no expression of it: it walks the index from the newest job and sorts nothing. A filter that few jobs match (`orgId`, `kind`, `status`) still reads on until a page is full, to the oldest job when none does, and the counts still read every job in their dates. The outbox keeps its finished jobs, so on an instance with a long history those two are for an occasional look, not for polling; `stuck=true` and `runId` are the cheap ones.
 - A finished job loses its `lastError` after 30 days (ADR 0005); its row and its name stay.
 - `GET /orgs/{orgId}/machines` lists every computer still in the workspace in one answer, as it did, and at most 200 AI accounts across them; `accountCount` says when a computer has more, and `GET /ai-accounts?orgId=` pages them all.
 - Usage groups have no cursor: past `limit` groups `more` is true and the dates are to be narrowed.
@@ -291,7 +291,7 @@ What these add to the rules above:
 Known limits:
 
 - A step written before the gateway kept the mark has none: its tool reads as not `builtIn`, the server's own tools included. Nothing stored says what those names were resolved to.
-- No index is on a step's time. The read goes through the workspace's runs that were at work in the range (begun before it ends, not ended before it starts) and reads their steps. That holds every call because a call is recorded only while its run is at work: in the run's own turn, or through the runner's bridge, which refuses a run in any other state. A run that waits on a person for weeks is read whole each time.
+- Tool calls are indexed by their workspace and their time: `agent_run_steps_tool_calls_idx`, on `(org_id, created_at)` where the kind is `tool_call`, so no other kind of step is in it. The read names the step's own workspace, which is its run's, and so can take the range's calls from it. It still names the workspace's runs that were at work in the range too (begun before it ends, not ended before it starts), a second way in through the runs' own indexes for a read that names an agent: they hold every call, because a call is recorded only while its run is at work, in the run's own turn or through the runner's bridge, which refuses a run in any other state. Which of the two the planner takes on a large instance was not measured.
 - Every call in the range is paired with its result before a page or a count is kept, so a long range on a busy workspace is for an occasional look. A call's outcome stored on its own step would let a page read only its own rows.
 - Groups have no cursor: past `limit` groups `more` is true and the dates or the filters are to be narrowed.
 
@@ -323,7 +323,7 @@ What these add to the rules above:
 Known limits:
 
 - `lastUsedDay` is counted by service, not by connection (ADR 0103 counts calls under the connector's key): two accounts of one service, or two servers on one host, share it. It is a day, not a time, and only a call counts.
-- No index of `agent_questions` or of `secret_requests` starts with the workspace. The read also names the workspace's conversations for the first and its agents for the second, which each table has an index on, so there is a way in that is not the whole table; which one the planner takes on a large instance was not measured. An index on `(org_id, created_at)` of each settles it. Approvals, hand-offs and consultations are found by the workspace.
+- `agent_questions` and `secret_requests` each have an index on `(org_id, created_at)`: questions and requests for a secret are found by the workspace and the dates. Approvals, hand-offs and consultations are found by the workspace.
 - The audit log is ordered and continued by the stored time itself, its cursor carrying the time to the microsecond, so its index on the workspace and the time serves a page. A filter that few entries match still reads the range's entries until a page is full: the dates bound it, which is why they default to 30 days.
 - A routine whose schedule only its stored rule can say has no `cron`: `nextRunAt` still tells when it runs next.
 - GitHub App installations are not rows of their own: the workspace's GitHub connection is listed, and stands for them.
@@ -357,6 +357,6 @@ Known limits:
 - Access is as things are now, not as they were when something happened. It answers one question per kind: talking to an agent, not seeing how it works; reading a channel, not posting in it nor calling agents there (a channel's exceptions decide those). A phone reached through a computer, a wiki page and an AI account are not kinds it knows.
 - What the router's own exits don't store reads `not_routed`, as in an explanation, whose `skipped` says more for one message. A message people wrote to each other is listed too. An agent that answered a message while answering a later one is not known.
 - To tell that a run already at work took a message, each candidate is compared with the runs of its conversation from the day before. No index of `agent_runs` starts with the workspace and the conversation, which is why the range is 7 days at most. One on `(org_id, channel_id, created_at)` settles it.
-- Like `GET /jobs`, the email read goes through the whole outbox. A finished job keeps its payload 30 days, so an older email is not found by its address; the job of a code to type in is deleted once it is sent or given up. `errorCode` is read from how the server words a provider's refusal, the status and the name in brackets, and is null for an error worded another way. What happened after a provider accepted an email (delivered, bounced) is the provider's to say.
+- No index is on whom a job is to: the email read goes through the outbox newest first until a page is full, all of it for an address with few emails. A finished job keeps its payload 30 days, so an older email is not found by its address; the job of a code to type in is deleted once it is sent or given up. `errorCode` is read from how the server words a provider's refusal, the status and the name in brackets, and is null for an error worded another way. What happened after a provider accepted an email (delivered, bounced) is the provider's to say.
 
 The reads are in `packages/engine/src/operator-people.ts`, `operator-runs.ts` (unanswered) and `operator-jobs.ts` (email jobs), the routes in `apps/server/src/operator/people.ts`, `runs.ts` and `jobs.ts`, the tests in `apps/server/test/operator-people.test.ts`.

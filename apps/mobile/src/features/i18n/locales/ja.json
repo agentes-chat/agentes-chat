@@ -293,7 +293,7 @@
   },
   "along": {
     "agent": "エージェント",
-    "waits": "{{name}}があなたのOKを待っています",
+    "waits": "{{name}} · あなたの対応待ち",
     "on": "{{name}} · {{what}}",
     "working": "{{name}}が作業中",
     "more": "+{{count}}"
@@ -769,7 +769,7 @@
     "teamSectionPersonal": "あなたのエージェント",
     "managerQuiet": "進行中のものはありません",
     "state": {
-      "waitsYou": "あなたのOK待ち",
+      "waitsYou": "あなたの対応待ち",
       "noAi": "AI未接続",
       "connect": "接続",
       "archived": "アーカイブ済み",
@@ -1061,6 +1061,9 @@
     "addWorkspaceTeamShort": "チームのサーバーに参加",
     "addWorkspaceTeamSubShort": "アドレスかコンピューターのQRコード",
     "addWorkspaceFoot": "どのワークスペースからも抜けません。",
+    "addAccount": "別のアカウントにログイン",
+    "addAccountSub": "{{host}} で、このアカウントのまま",
+    "accountNoWorkspace": "ワークスペースはまだありません",
     "teamServerLeadShort": "チームがブラウザで開いているアドレスです。",
     "teamServerQuestion": "チームのアドレスは？",
     "account": {
@@ -1355,7 +1358,7 @@
       "plain": "タスクを完了しました"
     },
     "rowWait": {
-      "approval": "があなたのOKを待っています",
+      "approval": "あなたの対応待ち",
       "question": "があなたの回答を待っています",
       "mission": "があなたのレビューを待っています"
     },
@@ -1393,12 +1396,12 @@
   },
   "intentAgents": {
     "waitingSection": "あなたの対応待ち",
-    "waitingLine": "{{title}} · あなたのOK待ち",
+    "waitingLine": "{{title}} · あなたの対応待ち",
     "waitingMore_other": "{{title}} · ほか{{count}}件があなたの対応待ち",
-    "waitingLabel": "{{name}}、あなたのOK待ち",
+    "waitingLabel": "{{name}}、あなたの対応待ち",
     "owner": "オーナー: {{name}}",
     "ownerYou": "オーナー: あなた",
-    "nowWaiting": "あなたのOK待ち: {{title}}",
+    "nowWaiting": "あなたの対応待ち: {{title}}",
     "did": {
       "title": "あなたのためにしたこと",
       "title_female": "あなたのためにしたこと",
@@ -1416,7 +1419,7 @@
         "image": "画像",
         "file": "ファイル"
       },
-      "waitingOnYou": "あなたのOK待ち",
+      "waitingOnYou": "あなたの対応待ち",
       "youApproved": "あなたが承認",
       "youRefused": "あなたが却下",
       "action": {

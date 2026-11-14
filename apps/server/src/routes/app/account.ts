@@ -17,6 +17,7 @@ import {
   createInvitation,
   createOrganization,
   type DeletionDeps,
+  deriveSecret,
   getOrganization,
   hasPassword,
   invitationLogoFile,
@@ -79,18 +80,22 @@ import {
   authUiConfig,
   changeAccountEmail,
   deletionProof,
+  deviceAccountsOf,
   mintPhoneSignIn,
   replacePassword,
   sessionOf,
   sessionUser,
   signedInLately,
+  signOutDeviceAccount,
   signupOpen,
   signupPolicy,
+  switchDeviceAccount,
   workspacePolicy,
 } from "../../auth";
 import { requestLimitIp } from "../../http/client-ip";
 import { apiError, errorResponse } from "../../http/errors";
 import { humanCheckRefusal } from "../../http/human-check";
+import { humanPassesFor } from "../../http/human-pass";
 import { imageFile } from "../../http/image-file";
 import { releaseOf } from "../../version";
 import {
@@ -442,6 +447,10 @@ export function accountRoutes(deps: AppDeps) {
             accessExpired: z.literal(true).optional().openapi({
               description: "`access` is the link of an invitation to this same address, and it expired.",
             }),
+            pass: z.string().optional().openapi({
+              description:
+                "Only with the bot check on: sent as `x-captcha-response` in place of a token, it stands for the check at this address's sign-in, sign-up or password reset, from the same network, for ten minutes and a few calls (ADR 0075).",
+            }),
           }),
         ),
         429: errorResponse("Too many attempts (`rate_limited`)"),
@@ -460,7 +469,11 @@ export function accountRoutes(deps: AppDeps) {
       );
       if (refused) return apiError(c, 403, refused.code, refused.message);
       const { email, access } = c.req.valid("json");
-      return c.json(await signInOptions(db, email, signupPolicy(config), access), 200);
+      const found = await signInOptions(db, email, signupPolicy(config), access);
+      // Checked once: the step after this one, for this address, goes with the pass and no second check.
+      if (!deps.adapters.humanCheck) return c.json(found, 200);
+      const pass = humanPassesFor(deriveSecret(config.AGENTES_SECRET, "human-pass")).issue(email, ip);
+      return c.json({ ...found, pass }, 200);
     },
   );
 
@@ -617,6 +630,92 @@ export function accountRoutes(deps: AppDeps) {
     );
     return imageFile(file, { "cross-origin-resource-policy": "same-origin" });
   });
+
+  // ── The accounts signed in on this browser (ADR 0183) ─────────────────────
+  // No session guards these: a browser whose own session ended still lists the others and moves to one.
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/device-accounts",
+      tags,
+      summary: "The accounts signed in on this browser",
+      description:
+        "Every account this browser is signed in to on this server (ADR 0183), the request's own first (`current`), each with its workspaces and their unread counts, so one list shows them all. Empty with nobody signed in. Accounts are named by person: no session token is answered.",
+      responses: {
+        200: json(
+          z.object({
+            accounts: z.array(
+              z.object({
+                current: z.boolean(),
+                user: z.object({
+                  id: z.string(),
+                  name: z.string(),
+                  email: z.string(),
+                  image: z.string().nullable(),
+                }),
+                organizations: z.array(Organization),
+                unread: z.array(z.object({ orgId: z.string(), unread: z.number().int(), waiting: z.number().int() })),
+              }),
+            ),
+          }),
+        ),
+      },
+    }),
+    async (c) => {
+      const { accounts, cookies } = await deviceAccountsOf(deps.auth, c.req.raw.headers);
+      const listed = await Promise.all(
+        accounts.map(async (a) => {
+          const [me, unread] = await Promise.all([
+            meBody(a.user),
+            notificationCountsByOrg({ db, pubsub: deps.adapters.pubsub }, a.user.id),
+          ]);
+          if (!me) return null;
+          const { id, name, email, image } = me.user;
+          return { current: a.current, user: { id, name, email, image }, organizations: me.organizations, unread };
+        }),
+      );
+      for (const cookie of cookies) c.header("set-cookie", cookie, { append: true });
+      return c.json({ accounts: listed.filter((a) => a !== null) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/device-accounts/switch",
+      tags,
+      summary: "Move this browser to another account signed in on it",
+      description:
+        "Makes `userId`'s session the browser's (ADR 0183); every account stays signed in. 404 when that person isn't signed in on this browser.",
+      request: { body: body(z.object({ userId: z.string().min(1).max(200) })) },
+      responses: { 204: noContent[204], 404: errors[404] },
+    }),
+    async (c) => {
+      const cookies = await switchDeviceAccount(deps.auth, c.req.raw.headers, c.req.valid("json").userId);
+      if (!cookies) return apiError(c, 404, "not_found", "That account isn't signed in on this browser");
+      for (const cookie of cookies) c.header("set-cookie", cookie, { append: true });
+      return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/device-accounts/sign-out",
+      tags,
+      summary: "Sign one account out of this browser",
+      description:
+        "Ends the session of `userId` on this browser, the request's own without it (ADR 0183); the other accounts stay signed in. `signedIn`: the browser still has an account, the next one when its own left.",
+      request: { body: body(z.object({ userId: z.string().min(1).max(200).optional() })) },
+      responses: { 200: json(z.object({ signedIn: z.boolean() })), 404: errors[404] },
+    }),
+    async (c) => {
+      const out = await signOutDeviceAccount(deps.auth, c.req.raw.headers, c.req.valid("json").userId);
+      if (!out) return apiError(c, 404, "not_found", "That account isn't signed in on this browser");
+      for (const cookie of out.cookies) c.header("set-cookie", cookie, { append: true });
+      return c.json({ signedIn: out.signedIn }, 200);
+    },
+  );
 
   // ── Signed in ─────────────────────────────────────────────────────────────
   app.openapi(

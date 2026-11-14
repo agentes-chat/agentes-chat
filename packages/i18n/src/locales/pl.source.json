@@ -1220,6 +1220,9 @@
   "auth.flow.backToSignIn": {
     "value": "Back to sign in"
   },
+  "auth.flow.backToAccount": {
+    "value": "Back to {{name}}"
+  },
   "auth.flow.toAuthorizeApp": {
     "value": "To connect an app to agentes.chat."
   },
@@ -3632,42 +3635,6 @@
   "contextMenu.restoreOrder": {
     "value": "Restore default order"
   },
-  "appIcon.title": {
-    "value": "App icon"
-  },
-  "appIcon.hintWeb": {
-    "value": "The icon on this browser's tabs."
-  },
-  "appIcon.hintMac": {
-    "value": "The Dock's icon while the app is open. Finder and Launchpad keep the default one."
-  },
-  "appIcon.hintDesktop": {
-    "value": "The taskbar's icon while the app is open."
-  },
-  "appIcon.hintAndroid": {
-    "value": "Some home screens take a few seconds to show the new icon."
-  },
-  "appIcon.failed": {
-    "value": "Couldn't change the icon. Try again."
-  },
-  "appIcon.agentsOf": {
-    "value": "Agents in {{org}}"
-  },
-  "appIcon.names.night": {
-    "value": "Night"
-  },
-  "appIcon.names.moon": {
-    "value": "Moon"
-  },
-  "appIcon.names.sky": {
-    "value": "Sky"
-  },
-  "appIcon.names.peekNight": {
-    "value": "Peeking at night"
-  },
-  "appIcon.names.peekSky": {
-    "value": "Peeking in the sky"
-  },
   "install.frames": {
     "value": "How to install on {{system}}"
   },
@@ -3958,6 +3925,42 @@
   },
   "install.scene.settingUp": {
     "value": "Setting up agentes-chat ({{version}}) ..."
+  },
+  "appIcon.title": {
+    "value": "App icon"
+  },
+  "appIcon.hintWeb": {
+    "value": "The icon on this browser's tabs."
+  },
+  "appIcon.hintMac": {
+    "value": "The Dock's icon while the app is open. Finder and Launchpad keep the default one."
+  },
+  "appIcon.hintDesktop": {
+    "value": "The taskbar's icon while the app is open."
+  },
+  "appIcon.hintAndroid": {
+    "value": "Some home screens take a few seconds to show the new icon."
+  },
+  "appIcon.failed": {
+    "value": "Couldn't change the icon. Try again."
+  },
+  "appIcon.agentsOf": {
+    "value": "Agents in {{org}}"
+  },
+  "appIcon.names.night": {
+    "value": "Night"
+  },
+  "appIcon.names.moon": {
+    "value": "Moon"
+  },
+  "appIcon.names.sky": {
+    "value": "Sky"
+  },
+  "appIcon.names.peekNight": {
+    "value": "Peeking at night"
+  },
+  "appIcon.names.peekSky": {
+    "value": "Peeking in the sky"
   },
   "legal.updated": {
     "value": "Last updated {{date}}"
@@ -4486,6 +4489,12 @@
   },
   "shell.addWorkspaceHint": {
     "value": "Join one you already have, create one, or use your team's server"
+  },
+  "shell.addAccount": {
+    "value": "Add account"
+  },
+  "shell.addAccountHint": {
+    "value": "Sign in to another account without leaving this one"
   },
   "shell.yourServer": {
     "value": "Your server"
@@ -5774,9 +5783,6 @@
   "channel.long.more": {
     "value": "See more"
   },
-  "channel.long.title": {
-    "value": "Message from {{name}}"
-  },
   "channel.retrySend": {
     "value": "Try again"
   },
@@ -6652,6 +6658,15 @@
   },
   "rightHand.action.move_role": {
     "value": "Move the role <b>{{name}}</b>"
+  },
+  "rightHand.action.set_permission_holders": {
+    "value": "Change who can <b>{{short}}</b>"
+  },
+  "rightHand.action.set_permission_holders_computers": {
+    "value": "Change who uses <b>the agents' computers</b>"
+  },
+  "rightHand.action.holdersOwnersOnly": {
+    "value": "Only owners"
   },
   "rightHand.action.set_member_roles": {
     "value": "Change the roles of <b>{{name}}</b>: {{change}}"
@@ -8455,6 +8470,12 @@
   "agentActions.workspace.changed_move_role": {
     "value": "Moved the role <b>{{name}}</b>"
   },
+  "agentActions.workspace.changed_set_permission_holders": {
+    "value": "Changed who can <b>{{short}}</b>"
+  },
+  "agentActions.workspace.changed_set_permission_holders_computers": {
+    "value": "Changed who uses <b>the agents' computers</b>"
+  },
   "agentActions.workspace.changed_set_member_roles": {
     "value": "Changed the roles of <b>{{name}}</b>: {{change}}"
   },
@@ -9156,6 +9177,15 @@
   "presence.out": {
     "value": "Out of office"
   },
+  "presence.available": {
+    "value": "Available"
+  },
+  "presence.working": {
+    "value": "Working"
+  },
+  "presence.waiting": {
+    "value": "Waiting for you"
+  },
   "presence.lower.online": {
     "value": "online"
   },
@@ -9381,6 +9411,81 @@
   "presence.byAuto": {
     "value": "What it's doing now"
   },
+  "agentWork.working": {
+    "value": "working"
+  },
+  "agentWork.you": {
+    "value": "waiting for you"
+  },
+  "agentWork.waiting": {
+    "value": "waiting"
+  },
+  "agentWork.queued": {
+    "value": "in line"
+  },
+  "agentWork.here": {
+    "value": "here"
+  },
+  "agentWork.routine": {
+    "value": "on a routine"
+  },
+  "agentWork.yourApproval": {
+    "value": "your approval"
+  },
+  "agentWork.yourAnswer": {
+    "value": "your answer"
+  },
+  "agentWork.later": {
+    "value": "follow-up {{when}}"
+  },
+  "agentWork.laterShort": {
+    "value": "follow-up"
+  },
+  "followUps.when.at": {
+    "value": "at {{time}}"
+  },
+  "followUps.when.today": {
+    "value": "today at {{time}}"
+  },
+  "followUps.when.tomorrow": {
+    "value": "tomorrow at {{time}}"
+  },
+  "followUps.whenLabel.at": {
+    "value": "At {{time}}"
+  },
+  "followUps.whenLabel.today": {
+    "value": "Today at {{time}}"
+  },
+  "followUps.whenLabel.tomorrow": {
+    "value": "Tomorrow at {{time}}"
+  },
+  "followUps.bar.at": {
+    "value": "{{name}} follows up {{when}}"
+  },
+  "followUps.bar.short": {
+    "value": "{{name}} {{time}}"
+  },
+  "followUps.bar.heldYou": {
+    "value": "{{name}} follows up once you answer"
+  },
+  "followUps.bar.held": {
+    "value": "{{name}} follows up after an answer"
+  },
+  "followUps.title": {
+    "value": "Follow-ups"
+  },
+  "followUps.see": {
+    "value": "See the message"
+  },
+  "followUps.cancel": {
+    "value": "Cancel follow-up"
+  },
+  "followUps.cancelOf": {
+    "value": "Cancel {{name}}'s follow-up {{when}}"
+  },
+  "followUps.inTime": {
+    "value": "in {{time}}"
+  },
   "mentions.list": {
     "value": "People and agents"
   },
@@ -9515,9 +9620,6 @@
   },
   "linkPills.issue": {
     "value": "Issue"
-  },
-  "folded.more": {
-    "value": "Show more"
   },
   "folded.less": {
     "value": "Show less"
@@ -10782,6 +10884,12 @@
   "approval.canceledChip": {
     "value": "Canceled · {{when}}"
   },
+  "approval.line.after": {
+    "value": "runs after “{{title}}”"
+  },
+  "approval.line.notRun": {
+    "value": "not run: the request before it wasn't approved"
+  },
   "approval.waitingFor": {
     "value": "Waiting for {{name}}"
   },
@@ -10940,12 +11048,6 @@
   },
   "approval.email.toList": {
     "value": "To {{to}}"
-  },
-  "approval.email.more": {
-    "value": "Read all"
-  },
-  "approval.email.less": {
-    "value": "Show less"
   },
   "approval.email.answers": {
     "value": "Answers <b>“{{subject}}”</b>"
@@ -12237,6 +12339,27 @@
   "approvals.status.scheduled": {
     "value": "Scheduled"
   },
+  "approvals.status.queued": {
+    "value": "In line"
+  },
+  "approvals.status.notRun": {
+    "value": "Not run"
+  },
+  "approvals.queuedLine": {
+    "value": "Approved. Runs after “{{title}}”, asked before it."
+  },
+  "approvals.notRunRefused": {
+    "value": "“{{title}}”, asked before this, was refused after this was approved, so this didn't run."
+  },
+  "approvals.notRunExpired": {
+    "value": "“{{title}}”, asked before this, expired undecided after this was approved, so this didn't run."
+  },
+  "approvals.notRunEarlier": {
+    "value": "A request asked before this was refused or expired after this was approved, so this didn't run."
+  },
+  "approvals.position": {
+    "value": "{{n}} of {{total}}"
+  },
   "approvals.expiredLine": {
     "value": "Nobody decided within 24 h, so nothing was done."
   },
@@ -12414,17 +12537,17 @@
   "approvals.review.textDone": {
     "value": "What it published"
   },
+  "approvals.review.textNot": {
+    "value": "What it would have published"
+  },
   "approvals.review.values": {
     "value": "What it will do"
   },
   "approvals.review.valuesDone": {
     "value": "What it did"
   },
-  "approvals.review.more": {
-    "value": "Show all"
-  },
-  "approvals.review.less": {
-    "value": "Show less"
+  "approvals.review.valuesNot": {
+    "value": "What it would have done"
   },
   "approvals.review.trail": {
     "value": "How it got here"
@@ -21049,9 +21172,6 @@
   "missions.command.pick": {
     "value": "Allow {{command}}"
   },
-  "missions.command.showAll": {
-    "value": "Show all"
-  },
   "missions.decision.approveAll": {
     "value": {
       "one": "Approve {{count}} provisional",
@@ -22064,6 +22184,21 @@
   },
   "threads.status.working": {
     "value": "Working"
+  },
+  "threads.status.approval": {
+    "value": "Waiting for approval"
+  },
+  "threads.status.input": {
+    "value": "Waiting for an answer"
+  },
+  "threads.status.computer": {
+    "value": "Waiting for its computer"
+  },
+  "threads.status.queued": {
+    "value": "In line"
+  },
+  "threads.status.later": {
+    "value": "Follow-up {{when}}"
   },
   "threads.status.open": {
     "value": "Open"
@@ -28148,12 +28283,6 @@
   "blocks.openBig": {
     "value": "Open large"
   },
-  "blocks.showAll": {
-    "value": "Show all"
-  },
-  "blocks.showLess": {
-    "value": "Show less"
-  },
   "blocks.keep": {
     "value": "Keep in Drive"
   },
@@ -33058,6 +33187,9 @@
   "errors.thread.notUndoable": {
     "value": "Only a thread made from a range can be undone."
   },
+  "errors.followUp.notYours": {
+    "value": "Only the person it's for, the agent's owner or an admin can cancel this follow-up."
+  },
   "errors.routine.tooFrequent": {
     "value": "A routine runs at most every 15 minutes. Pick a longer interval."
   },
@@ -36552,6 +36684,12 @@
   "audit.change.member.password_link": {
     "value": "Made a new-password link for a member"
   },
+  "audit.change.role.permission_set": {
+    "value": "Changed who can {{short}}"
+  },
+  "audit.change.role.permission_set_computers": {
+    "value": "Changed who uses the agents' computers"
+  },
   "audit.change.apps.connected": {
     "value": "Connected {{app}}"
   },
@@ -38610,6 +38748,24 @@
   "chat.consult.clock": {
     "value": "Waiting for {{time}}"
   },
+  "chat.consult.doing": {
+    "value": "{{name}} {{doing}}"
+  },
+  "chat.consult.yourApproval": {
+    "value": "{{name}} is waiting for your approval"
+  },
+  "chat.consult.yourAnswer": {
+    "value": "{{name}} is waiting for your answer"
+  },
+  "chat.consult.done": {
+    "value": "{{to}} is done. {{from}} is writing"
+  },
+  "chat.consult.notDone": {
+    "value": "{{to}} didn't finish. {{from}} is writing"
+  },
+  "chat.consult.handedOff": {
+    "value": "{{to}} is working on what {{from}} handed off"
+  },
   "chat.consultation.answered": {
     "value": "{{name}} answered"
   },
@@ -38655,6 +38811,9 @@
   "chat.consultGroup.waitingAgents": {
     "value": "{{name}} handed part of it on and is waiting to hear back"
   },
+  "chat.consultGroup.queued": {
+    "value": "{{name}} is in line"
+  },
   "chat.consultPair.took": {
     "value": "took {{time}}"
   },
@@ -38676,6 +38835,15 @@
   "chat.consultPair.waitingProvider": {
     "value": "AI provider down"
   },
+  "chat.consultPair.waitingYourApproval": {
+    "value": "waiting for your approval"
+  },
+  "chat.consultPair.waitingYourAnswer": {
+    "value": "waiting for your answer"
+  },
+  "chat.consultPair.queued": {
+    "value": "in line"
+  },
   "chat.consultPair.handedOn": {
     "value": "waiting on other agents"
   },
@@ -38690,15 +38858,6 @@
   },
   "chat.consultPair.labelMany": {
     "value": "{{from}}'s talks with {{to}}"
-  },
-  "chat.talk.readAll": {
-    "value": "Read all"
-  },
-  "chat.talk.more": {
-    "value": {
-      "one": "{{count}} more line",
-      "other": "{{count}} more lines"
-    }
   },
   "chat.consultPanel.label": {
     "value": "Conversation between {{from}} and {{to}}"
@@ -38774,30 +38933,6 @@
   },
   "chat.notice.waitResult": {
     "value": "What {{name}} was waiting for came in"
-  },
-  "chat.notice.followUp": {
-    "value": "{{name}} will be back at {{time}} to «{{about}}»"
-  },
-  "chat.notice.followUpOn": {
-    "value": "{{name}} will be back on {{day}} at {{time}} to «{{about}}»"
-  },
-  "chat.notice.followUpDone": {
-    "value": "{{name}} came back at {{time}} to «{{about}}»"
-  },
-  "chat.notice.followUpDoneOn": {
-    "value": "{{name}} came back on {{day}} at {{time}} to «{{about}}»"
-  },
-  "chat.notice.followUpCanceled": {
-    "value": "{{name}} won't be back at {{time}} to «{{about}}»"
-  },
-  "chat.notice.followUpCanceledOn": {
-    "value": "{{name}} won't be back on {{day}} at {{time}} to «{{about}}»"
-  },
-  "chat.notice.followUpWake": {
-    "value": "{{name}} is back to «{{about}}»"
-  },
-  "chat.notice.followUpCancel": {
-    "value": "Cancel"
   },
   "chat.notice.other": {
     "value": "Notice for {{name}}"
@@ -39332,6 +39467,9 @@
   "chat.work.step.typing": {
     "value": "Wrote"
   },
+  "chat.work.step.recordingVoice": {
+    "value": "Recorded audio"
+  },
   "chat.work.step.writing": {
     "value": "Wrote"
   },
@@ -39349,6 +39487,9 @@
   },
   "chat.activity.typing": {
     "value": "typing"
+  },
+  "chat.activity.recordingVoice": {
+    "value": "recording audio"
   },
   "chat.activity.writing": {
     "value": "writing"
@@ -42898,11 +43039,14 @@
   "taskManager.sections.background": {
     "value": "Routines in the background"
   },
+  "taskManager.sections.returns": {
+    "value": "Follow-ups"
+  },
   "taskManager.state.working": {
     "value": "Working"
   },
   "taskManager.state.ok": {
-    "value": "Waits for your ok"
+    "value": "Waiting for you"
   },
   "taskManager.state.answer": {
     "value": "Waits for an answer"
@@ -43122,6 +43266,15 @@
   },
   "taskManager.ended.failed": {
     "value": "Couldn't finish"
+  },
+  "taskManager.ended.returnCanceled": {
+    "value": "Follow-up canceled"
+  },
+  "taskManager.ended.returnCanceledYou": {
+    "value": "You canceled the follow-up"
+  },
+  "taskManager.ended.returnCanceledBy": {
+    "value": "Follow-up canceled by {{name}}"
   },
   "taskManager.ended.none": {
     "value": "Nothing ended today yet."

@@ -311,7 +311,7 @@
   },
   "along": {
     "agent": "Un agente",
-    "waits": "{{name}} espera tu ok",
+    "waits": "{{name}} · esperándote",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} está trabajando",
     "more": "+{{count}}"
@@ -815,7 +815,7 @@
     "teamSectionPersonal": "Tus agentes",
     "managerQuiet": "Nada en curso",
     "state": {
-      "waitsYou": "espera tu ok",
+      "waitsYou": "esperándote",
       "noAi": "Sin IA conectada",
       "connect": "Conectar",
       "archived": "Archivado",
@@ -1212,6 +1212,9 @@
     "addWorkspaceTeamShort": "Entrar en el servidor de tu equipo",
     "addWorkspaceTeamSubShort": "Dirección o código QR de la computadora",
     "addWorkspaceFoot": "No sales de ningún espacio de trabajo.",
+    "addAccount": "Iniciar sesión con otra cuenta",
+    "addAccountSub": "En {{host}}, sin salir de esta",
+    "accountNoWorkspace": "Aún sin espacio de trabajo",
     "teamServerLeadShort": "Lo que tu equipo abre en el navegador.",
     "teamServerQuestion": "¿Cuál es la dirección de tu equipo?",
     "account": {
@@ -1522,7 +1525,7 @@
       "plain": "terminó una tarea"
     },
     "rowWait": {
-      "approval": "espera tu aprobación",
+      "approval": "esperándote",
       "question": "espera tu respuesta",
       "mission": "espera tu revisión"
     },
@@ -1560,14 +1563,14 @@
   },
   "intentAgents": {
     "waitingSection": "Esperándote",
-    "waitingLine": "{{title}} · necesita tu aprobación",
+    "waitingLine": "{{title}} · esperándote",
     "waitingMore_one": "{{title}} · y {{count}} más esperándote",
     "waitingMore_many": "{{title}} · y {{count}} más esperándote",
     "waitingMore_other": "{{title}} · y {{count}} más esperándote",
-    "waitingLabel": "{{name}}, necesita tu aprobación",
+    "waitingLabel": "{{name}}, esperándote",
     "owner": "Responsable: {{name}}",
     "ownerYou": "Responsable: tú",
-    "nowWaiting": "Necesita tu aprobación: {{title}}",
+    "nowWaiting": "Esperándote: {{title}}",
     "did": {
       "title": "Lo que hizo por ti",
       "title_female": "Lo que hizo por ti",
@@ -1587,7 +1590,7 @@
         "image": "Imagen",
         "file": "Archivo"
       },
-      "waitingOnYou": "Necesita tu aprobación",
+      "waitingOnYou": "Esperándote",
       "youApproved": "Aprobaste",
       "youRefused": "Rechazaste",
       "action": {
