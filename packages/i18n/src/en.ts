@@ -2460,10 +2460,9 @@ export const en = {
       asFile: "Send as a file",
       fileName: "message.txt",
     },
-    /** A tall message, clipped in the conversation: the button under it and the dialog that shows it whole. */
+    /** Under words folded to their start (a tall message, a long text, an email): opens them in place, for good. */
     long: {
       more: "See more",
-      title: "Message from {{name}}",
     },
     retrySend: "Try again",
     thinking: "{{name}} is thinking…",
@@ -4147,6 +4146,34 @@ export const en = {
     /** After "Waiting for you" on the profile card. */
     yourApproval: "your approval",
     yourAnswer: "your answer",
+    /** A return it set comes then (`followUps.when`): "follow-up at 12:32 AM". */
+    later: "follow-up {{when}}",
+    laterShort: "follow-up",
+  },
+  /** An agent comes back to a conversation by itself (its `follow_up`, ADR 0037): a follow-up. */
+  followUps: {
+    /** When it comes: the day only more than 12 h away, so the words never turn at midnight. */
+    when: { at: "at {{time}}", today: "today at {{time}}", tomorrow: "tomorrow at {{time}}" },
+    /** The same, opening a label: "At 12:32 AM". */
+    whenLabel: { at: "At {{time}}", today: "Today at {{time}}", tomorrow: "Tomorrow at {{time}}" },
+    /** The bar above the composer while a follow-up waits here. The agent's words follow after " · ", as written. */
+    bar: {
+      at: "{{name}} follows up {{when}}",
+      /** Where even the sentence doesn't fit: the name and the time. */
+      short: "{{name}} {{time}}",
+      /** Its time came while what it asked here waits on an answer: the reader may answer it. */
+      heldYou: "{{name}} follows up once you answer",
+      held: "{{name}} follows up after an answer",
+    },
+    /** The list of the follow-ups here (the bar's ⋯, the phone's sheet). */
+    title: "Follow-ups",
+    /** A row's tip: it goes to the reply that said it. */
+    see: "See the message",
+    cancel: "Cancel follow-up",
+    /** A row's ×, for screen readers (`when`: "at 12:32 AM"). */
+    cancelOf: "Cancel {{name}}'s follow-up {{when}}",
+    /** The task manager's time column: how soon (`time`: "33 min"). */
+    inTime: "in {{time}}",
   },
   mentions: {
     list: "People and agents",
@@ -4207,9 +4234,8 @@ export const en = {
     merge: "Merge request",
     issue: "Issue",
   },
-  /** A long text an agent wrote, folded on a page: a run's record, a mission's summary. */
+  /** A list folded to its first rows (the approvals' digest): the button that folds it back. */
   folded: {
-    more: "Show more",
     less: "Show less",
   },
   secret: {
@@ -4838,8 +4864,6 @@ export const en = {
       /** A connector's reply: who it goes to is the message's sender, not in its call. */
       toSender: "To whoever sent the message",
       toList: "To {{to}}",
-      more: "Read all",
-      less: "Show less",
       answers: "Answers <b>“{{subject}}”</b>",
       answersFrom: "Answers <b>“{{subject}}”</b>, from {{from}}",
       forwards: "Forwards <b>“{{subject}}”</b>",
@@ -5423,8 +5447,6 @@ export const en = {
       textDone: "What it published",
       values: "What it will do",
       valuesDone: "What it did",
-      more: "Show all",
-      less: "Show less",
       trail: "How it got here",
       showSteps: "See each step",
       hideSteps: "Hide the steps",
@@ -9045,7 +9067,6 @@ export const en = {
       releaseClosed: "The mission is closed: the session won't go on.",
       onlyDeciders: "Only those who decide in this mission allow commands.",
       pick: "Allow {{command}}",
-      showAll: "Show all",
     },
     decision: {
       approveAll_one: "Approve {{count}} provisional",
@@ -9450,6 +9471,8 @@ export const en = {
       input: "Waiting for an answer",
       computer: "Waiting for its computer",
       queued: "In line",
+      /** A follow-up an agent set here (`followUps.when`). */
+      later: "Follow-up {{when}}",
       open: "Open",
       closed: "Closed",
       archived: "Archived",
@@ -11847,8 +11870,6 @@ export const en = {
     thousand: "k",
     building: "Putting it together…",
     openBig: "Open large",
-    showAll: "Show all",
-    showLess: "Show less",
     keep: "Keep in Drive",
     kept: "Kept in Drive",
     inDrive: "In Drive",
@@ -13744,6 +13765,9 @@ export const en = {
       titleTooLong: "A title has at most {{max}} characters.",
       noContext: "This thread didn't come from a range of a conversation.",
       notUndoable: "Only a thread made from a range can be undone.",
+    },
+    followUp: {
+      notYours: "Only the person it's for, the agent's owner or an admin can cancel this follow-up.",
     },
     routine: {
       tooFrequent: "A routine runs at most every 15 minutes. Pick a longer interval.",
@@ -16144,12 +16168,6 @@ export const en = {
       labelMany: "{{from}}'s talks with {{to}}",
     },
     /** A question opened in the panel over the conversation ("Theo ⇄ Iris"): what the two agents said, read only. */
-    /** A long message from one agent to another, folded to its first paragraph: the whole opens in its thread. */
-    talk: {
-      readAll: "Read all",
-      more_one: "{{count}} more line",
-      more_other: "{{count}} more lines",
-    },
     consultPanel: {
       label: "Conversation between {{from}} and {{to}}",
       /** The phone's bar (the web draws the arrows as an icon between the names). */
@@ -16181,14 +16199,6 @@ export const en = {
       agentNote: "Note from {{from}}",
       agentNoteAnon: "Note from another agent",
       waitResult: "What {{name}} was waiting for came in",
-      followUp: "{{name}} will be back at {{time}} to «{{about}}»",
-      followUpOn: "{{name}} will be back on {{day}} at {{time}} to «{{about}}»",
-      followUpDone: "{{name}} came back at {{time}} to «{{about}}»",
-      followUpDoneOn: "{{name}} came back on {{day}} at {{time}} to «{{about}}»",
-      followUpCanceled: "{{name}} won't be back at {{time}} to «{{about}}»",
-      followUpCanceledOn: "{{name}} won't be back on {{day}} at {{time}} to «{{about}}»",
-      followUpWake: "{{name}} is back to «{{about}}»",
-      followUpCancel: "Cancel",
       other: "Notice for {{name}}",
       wakeSkipped: "{{name}}'s mention didn't reach {{agents}}",
       /** The same, on an older line that didn't keep whom. */
@@ -16396,6 +16406,7 @@ export const en = {
         usingTool: "Used the {{tool}} tool",
         thinking: "Thought",
         typing: "Wrote",
+        recordingVoice: "Recorded audio",
         writing: "Wrote",
       },
     },
@@ -16405,6 +16416,8 @@ export const en = {
       updatingRoutine: "changing a routine",
       thinking: "working",
       typing: "typing",
+      /** A person recording a voice message, after their name: "Marina is recording audio…". */
+      recordingVoice: "recording audio",
       writing: "writing",
       consulting: "checking {{app}}",
       creatingIssue: "creating a task",
@@ -18087,6 +18100,7 @@ export const en = {
       asked: "Asked by people",
       delegated: "Asked by agents",
       background: "Routines in the background",
+      returns: "Follow-ups",
     },
     state: {
       working: "Working",
@@ -18185,6 +18199,10 @@ export const en = {
       stopped: "You stopped it",
       stoppedBy: "{{name}} stopped it",
       failed: "Couldn't finish",
+      /** A follow-up that won't come: canceled by its time (the agent or the person left), by you, by someone. */
+      returnCanceled: "Follow-up canceled",
+      returnCanceledYou: "You canceled the follow-up",
+      returnCanceledBy: "Follow-up canceled by {{name}}",
       none: "Nothing ended today yet.",
     },
     empty: {

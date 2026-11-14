@@ -14,9 +14,10 @@ const { approvals } = schema;
 /**
  * How a run stands for the viewer: `you` (it waits on their decision or answer), `working`, a neutral wait (on
  * someone's approval, on someone's answer, on its computer, on its AI provider) or `queued` (in line for a worker or
- * for room on its computer). A run waiting on its plan or its budget is none: out of office says it.
+ * for room on its computer). A run waiting on its plan or its budget is none: out of office says it. `later`: no run on,
+ * a return it set comes at `at` (`pendingReturns`).
  */
-export type AgentWorkState = "you" | "working" | "approval" | "answer" | "computer" | "outage" | "queued";
+export type AgentWorkState = "you" | "working" | "approval" | "answer" | "computer" | "outage" | "queued" | "later";
 
 export interface AgentWork {
   state: AgentWorkState;
@@ -40,6 +41,8 @@ export interface AgentWork {
   routine: boolean;
   /** How many runs it has on, whatever the viewer reads of them. */
   count: number;
+  /** With `later`: when it comes back to that conversation. */
+  at?: string;
 }
 
 const OPEN = sql.raw("('queued', 'running', 'waiting_approval', 'waiting_input')");
@@ -159,6 +162,7 @@ const RANK: Record<AgentWorkState, number> = {
   computer: 2,
   outage: 2,
   queued: 3,
+  later: 4,
 };
 
 /**

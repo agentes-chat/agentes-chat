@@ -2463,8 +2463,7 @@
       "fileName": "message.txt"
     },
     "long": {
-      "more": "Показать ещё",
-      "title": "Сообщение от {{name}}"
+      "more": "Показать ещё"
     },
     "retrySend": "Попробовать снова",
     "thinking": "{{name}} думает…",
@@ -4092,7 +4091,32 @@
     "here": "здесь",
     "routine": "в рутине",
     "yourApproval": "ваше одобрение",
-    "yourAnswer": "ваш ответ"
+    "yourAnswer": "ваш ответ",
+    "later": "повторная проверка {{when}}",
+    "laterShort": "повторная проверка"
+  },
+  "followUps": {
+    "when": {
+      "at": "в {{time}}",
+      "today": "сегодня в {{time}}",
+      "tomorrow": "завтра в {{time}}"
+    },
+    "whenLabel": {
+      "at": "В {{time}}",
+      "today": "Сегодня в {{time}}",
+      "tomorrow": "Завтра в {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} проверит снова {{when}}",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} проверит снова, когда вы ответите",
+      "held": "{{name}} проверит снова после ответа"
+    },
+    "title": "Повторные проверки",
+    "see": "Открыть сообщение",
+    "cancel": "Отменить повторную проверку",
+    "cancelOf": "Отменить повторную проверку от {{name}} {{when}}",
+    "inTime": "через {{time}}"
   },
   "mentions": {
     "list": "Люди и агенты",
@@ -4154,7 +4178,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Показать ещё",
     "less": "Свернуть"
   },
   "secret": {
@@ -4780,8 +4803,6 @@
       "noSubject": "(без темы)",
       "toSender": "Отправителю сообщения",
       "toList": "Кому: {{to}}",
-      "more": "Читать полностью",
-      "less": "Свернуть",
       "answers": "Ответ на <b>«{{subject}}»</b>",
       "answersFrom": "Ответ на <b>«{{subject}}»</b> от {{from}}",
       "forwards": "Пересылка <b>«{{subject}}»</b>",
@@ -5429,8 +5450,6 @@
       "textDone": "Что опубликовано",
       "values": "Что будет сделано",
       "valuesDone": "Что было сделано",
-      "more": "Показать всё",
-      "less": "Показать меньше",
       "trail": "Как до этого дошло",
       "showSteps": "Посмотреть каждый шаг",
       "hideSteps": "Скрыть шаги",
@@ -9267,8 +9286,7 @@
       "releasePaused": "Миссия на паузе: продолжите её, чтобы сеанс пошёл дальше.",
       "releaseClosed": "Миссия закрыта: сеанс не продолжится.",
       "onlyDeciders": "Команды разрешают только те, кто принимает решения в этой миссии.",
-      "pick": "Разрешить {{command}}",
-      "showAll": "Показать все"
+      "pick": "Разрешить {{command}}"
     },
     "decision": {
       "approveAll_one": "Одобрить {{count}} предварительное",
@@ -9716,6 +9734,7 @@
       "input": "Ждёт ответа",
       "computer": "Ждёт компьютер",
       "queued": "В очереди",
+      "later": "Повторная проверка {{when}}",
       "open": "Открыта",
       "closed": "Закрыта",
       "archived": "В архиве"
@@ -12405,8 +12424,6 @@
     "thousand": "тыс.",
     "building": "Собираем…",
     "openBig": "Открыть крупно",
-    "showAll": "Показать всё",
-    "showLess": "Свернуть",
     "keep": "Сохранить в Drive",
     "kept": "Сохранено в Drive",
     "inDrive": "В Drive",
@@ -14576,6 +14593,9 @@
       "titleTooLong": "Название не длиннее {{max}} символов.",
       "noContext": "Эта ветка создана не из диапазона переписки.",
       "notUndoable": "Отменить можно только ветку, созданную из диапазона."
+    },
+    "followUp": {
+      "notYours": "Отменить эту повторную проверку может только тот, для кого она, владелец агента или администратор."
     },
     "routine": {
       "tooFrequent": "Регулярная задача запускается не чаще раза в 15 минут. Выберите интервал побольше.",
@@ -16918,13 +16938,6 @@
       "someAnswered": "ответили {{done}} из {{total}}",
       "labelMany": "Разговоры {{from}} с {{to}}"
     },
-    "talk": {
-      "readAll": "Читать полностью",
-      "more_one": "ещё {{count}} строка",
-      "more_few": "ещё {{count}} строки",
-      "more_many": "ещё {{count}} строк",
-      "more_other": "ещё {{count}} строки"
-    },
     "consultPanel": {
       "label": "Разговор между {{from}} и {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -16955,14 +16968,6 @@
       "agentNote": "Заметка от {{from}}",
       "agentNoteAnon": "Заметка от другого агента",
       "waitResult": "Пришло то, чего ждал {{name}}",
-      "followUp": "{{name}} вернётся в {{time}}: «{{about}}»",
-      "followUpOn": "{{name}} вернётся {{day}} в {{time}}: «{{about}}»",
-      "followUpDone": "{{name}} вернулся в {{time}}: «{{about}}»",
-      "followUpDoneOn": "{{name}} вернулся {{day}} в {{time}}: «{{about}}»",
-      "followUpCanceled": "{{name}} не вернётся в {{time}}: «{{about}}»",
-      "followUpCanceledOn": "{{name}} не вернётся {{day}} в {{time}}: «{{about}}»",
-      "followUpWake": "{{name}} вернулся: «{{about}}»",
-      "followUpCancel": "Отменить",
       "other": "Уведомление для {{name}}",
       "wakeSkipped": "Упоминание от {{name}} не дошло до {{agents}}",
       "wakeSkippedAnon": "Упоминание от {{name}} не дошло до другого агента",
@@ -17155,6 +17160,7 @@
         "usingTool": "Использовал инструмент {{tool}}",
         "thinking": "Подумал",
         "typing": "Написал",
+        "recordingVoice": "Записал аудио",
         "writing": "Написал"
       }
     },
@@ -17164,6 +17170,7 @@
       "updatingRoutine": "меняет регулярную задачу",
       "thinking": "работает",
       "typing": "печатает",
+      "recordingVoice": "записывает аудио",
       "writing": "пишет",
       "consulting": "заглядывает в {{app}}",
       "creatingIssue": "создаёт задачу",
@@ -18793,7 +18800,8 @@
     "sections": {
       "asked": "По просьбе людей",
       "delegated": "Запрошены агентами",
-      "background": "Регулярные задачи в фоне"
+      "background": "Регулярные задачи в фоне",
+      "returns": "Повторные проверки"
     },
     "state": {
       "working": "Работает",
@@ -18893,6 +18901,9 @@
       "stopped": "Вы остановили",
       "stoppedBy": "Остановил(а) {{name}}",
       "failed": "Не удалось завершить",
+      "returnCanceled": "Повторная проверка отменена",
+      "returnCanceledYou": "Вы отменили повторную проверку",
+      "returnCanceledBy": "Повторную проверку отменил(а) {{name}}",
       "none": "Сегодня пока ничего не завершилось."
     },
     "empty": {

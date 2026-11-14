@@ -4,6 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import type { AgentStatus, AgentWork, Message, ThreadInfo } from "@agenteschat/client";
+import { formatTime } from "@agenteschat/client/lib/format";
 import { act, cleanup, within } from "@testing-library/react";
 import { DESKTOP_QUERY } from "@/components/NavDrawer";
 import {
@@ -111,6 +112,40 @@ describe("the sidebar's agents", () => {
     expect(atlas.querySelector(".ac-avatar__badge")?.getAttribute("title")).toBe("Disponível");
     expect(atlas.querySelector(".work-line")).toBeNull();
     expect(atlas.querySelector(".sidebar__item-role.ac-tag")?.textContent).toBe("Ops");
+  });
+});
+
+describe("a return it set (ADR 0037 addendum)", () => {
+  test("free with a return: 'retorno às 00:32' in the quiet tone, its face Disponível, where in its title", async () => {
+    const state = seedState();
+    const at = new Date(Date.now() + 33 * 60_000).toISOString();
+    state.agentStatuses = [
+      status(ATLAS_ID, { work: work({ state: "later", at, since: at, count: 0 }) }),
+      // Out of office says why first: a return comes after it.
+      status(ADA_ID, {
+        presence: "out",
+        status: {
+          by: "wait",
+          kind: "out_of_plan",
+          text: null,
+          subject: null,
+          emoji: null,
+          until: new Date(Date.now() + 3 * 3600_000).toISOString(),
+        },
+        work: work({ state: "later", at, since: at, count: 0 }),
+      }),
+    ];
+    await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}`, { api: createFakeApi(state) });
+    await settle(8);
+    const atlas = agentRow(ATLAS_ID);
+    expect(atlas.querySelector(".work-line")?.textContent).toBe(`retorno às ${formatTime("pt-BR", at)}`);
+    expect(atlas.querySelector(".work-line")?.getAttribute("data-tone")).toBe("neutral");
+    expect(atlas.querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("online");
+    expect(atlas.querySelector(".sidebar__item-label .ac-pixspin")).toBeNull();
+    expect(atlas.querySelector(".sidebar__item")?.getAttribute("title")).toContain(
+      `Retorno às ${formatTime("pt-BR", at)} · #general`,
+    );
+    expect(agentRow(ADA_ID).querySelector(".work-line")).toBeNull();
   });
 });
 
@@ -240,6 +275,23 @@ describe("a thread's chip", () => {
     const css = await Bun.file(new URL("../src/pages/threads.css", import.meta.url)).text();
     const tag = Number(/\.thread-row__end \{[^}]*grid-template-columns: (\d+)px/.exec(css)?.[1]);
     expect(tag).toBeGreaterThanOrEqual(184);
+  });
+
+  test("a return to come: 'Retorno às 00:32' with the quiet clock, its time in its words, no second clock", async () => {
+    const at = new Date(Date.now() + 33 * 60_000).toISOString();
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: await withThread({ laterAt: at }) });
+    await settle(8);
+    const state = chip().querySelector(".thread-line__state") as HTMLElement;
+    expect(state.textContent).toBe(`Retorno às ${formatTime("pt-BR", at)}`);
+    expect(state.classList.contains("thread-line__state--neutral")).toBe(true);
+    expect(state.querySelector(".thread-line__clock")).toBeTruthy();
+    // No last reply's time beside it; on a phone-wide window, where its words go to screen readers, its time alone.
+    expect(chip().querySelector(".thread-line__when:not(.thread-line__later-at)")).toBeNull();
+    const narrow = chip().querySelector(".thread-line__later-at");
+    expect(narrow?.getAttribute("aria-hidden")).toBe("true");
+    expect(narrow?.textContent).toBe(`·${formatTime("pt-BR", at)}`);
+    const css = await Bun.file(new URL("../src/components/threads/threads.css", import.meta.url)).text();
+    expect(css).toMatch(/@media \(min-width: 421px\) \{\s*\.thread-line__later-at \{\s*display: none;/);
   });
 
   test("one state, with how long it has held in place of the last reply's time", async () => {

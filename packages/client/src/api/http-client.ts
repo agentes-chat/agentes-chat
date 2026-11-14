@@ -184,6 +184,7 @@ import type {
   OrgRoles,
   OrgSettings,
   PageTarget,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonLimits,
@@ -1056,6 +1057,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<{ runs: { agentId: string; runId: string }[] }>(`${org(orgId)}/messages/${enc(messageId)}/answer-now`, {
           json: {},
         }),
+      followUps: async (orgId, channelId) =>
+        (
+          (await nullOn(404, () =>
+            request<{ followUps: PendingReturn[] }>(`${org(orgId)}/channels/${enc(channelId)}/follow-ups`),
+          )) ?? { followUps: [] }
+        ).followUps,
       cancelFollowUp: (orgId, messageId) =>
         request<void>(`${org(orgId)}/messages/${enc(messageId)}/cancel-follow-up`, { json: {} }),
       answerGitHub: (orgId, messageId) =>

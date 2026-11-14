@@ -242,6 +242,7 @@ import type {
   OrgRoles,
   OrgSettings,
   PageTarget,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonalTokenInput,
@@ -971,7 +972,12 @@ export interface ApiClient {
      * no-AI card or the person's message. 409 `ai.still_missing` while there's still no AI.
      */
     answerNow(orgId: string, messageId: string): Promise<{ runs: { agentId: string; runId: string }[] }>;
-    /** Cancels an agent's follow-up from its line (`messageId`); 409 `follow_up.not_pending` once it came. */
+    /** The returns agents set in a conversation, still to come, the soonest first (`[]` while the server lacks it). */
+    followUps(orgId: string, channelId: string): Promise<PendingReturn[]>;
+    /**
+     * Cancels a return (`messageId`, its line): the person it is for, the agent's owner or an admin (403
+     * `follow_up.not_yours` otherwise); 409 `follow_up.not_pending` once it came.
+     */
     cancelFollowUp(orgId: string, messageId: string): Promise<void>;
     /**
      * "Pedir resposta" on a GitHub notice of someone the agent doesn't answer (`messageId`): the agent answers them

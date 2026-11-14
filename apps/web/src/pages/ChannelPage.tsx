@@ -53,6 +53,7 @@ import {
   useCreateMission,
   useDmReads,
   useDms,
+  useFollowUps,
   useHeldPlaces,
   useJoinChannel,
   useMarkChannelRead,
@@ -82,14 +83,17 @@ import {
   barConsultTime,
   barElapsed,
   barEntries,
+  bothAtIt,
   consultDetails,
   entriesOffScreen,
   lineStep,
   runElapsed,
+  someoneTypes,
   waitsForWords,
 } from "@agenteschat/client/lib/activity";
 import type { AgentTab } from "@agenteschat/client/lib/agent-edit";
 import { foldTalk, TALK_LINE_CHARS, talksToAgent } from "@agenteschat/client/lib/agent-talk";
+import { returnsHere } from "@agenteschat/client/lib/agent-work";
 import { looksLikeApiKey } from "@agenteschat/client/lib/api-key-text";
 import { approvalCardItems, asOfNow, cardDeadline } from "@agenteschat/client/lib/approval-card";
 import { artifactRefs } from "@agenteschat/client/lib/artifacts";
@@ -366,6 +370,7 @@ import {
   usePendingAsks,
   WaitMark,
 } from "@/components/RequestCard";
+import { ReturnLine } from "@/components/ReturnLine";
 import { SidePanel } from "@/components/SidePanel";
 import { ActivitySky, ChannelWelcome, colorOf } from "@/components/Sky";
 import { isStoppable, StopButton, useContinueRun, useStopRun, useWasContinued } from "@/components/StopRun";
@@ -389,7 +394,7 @@ import {
 import { UsageWaitCancel, UsageWaitClosed } from "@/components/UsagePauseCard";
 import { PushAskContext, PushAskInline, usePushAsk } from "@/components/WebPush";
 import { useWikiLinkRenderer } from "@/components/WikiLinks";
-import { BarAlsoTyping, BarPhrase, BarStep, ConsultClock, WorkingStack } from "@/components/WorkingLine";
+import { BarAlsoTyping, BarPhrase, BarStep, ConsultClock, TypingMark, WorkingStack } from "@/components/WorkingLine";
 import { useChannelSearch } from "@/hooks/useChannelSearch";
 import { useComposerDraft } from "@/hooks/useComposerDraft";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -1261,9 +1266,6 @@ function ChannelView({
       lines: channelList.lines,
     };
   }, [thread, channelList, threadList, older, channelMessages.data, channel.id, panel?.id]);
-  // The agents at work here: a follow-up's line that woke one stays while its turn runs (`settledNotices`).
-  const workingKey = useStreams((s) => [...new Set(scopedRuns(s).map((r) => r.agentId))].sort().join(" "));
-  const agentsAtWork = useMemo(() => new Set(workingKey ? workingKey.split(" ") : []), [workingKey]);
   const timeline = useMemo(() => {
     if (thread) {
       // The thread's conversation. One made from a range: not its root (the channel's marker) nor the
@@ -1280,7 +1282,6 @@ function ChannelView({
         list.filter((m) => !passed.has(m.id)),
         [],
         [],
-        agentsAtWork,
       );
     }
     const visible = channelList?.visible ?? [];
@@ -1289,7 +1290,6 @@ function ChannelView({
       visible.filter((m) => !passed.has(m.id)),
       [],
       [],
-      agentsAtWork,
     );
     // A marker, a closed line or a thread's line is not a message: nothing groups under it.
     const special = (m: MessageType) =>
@@ -1297,7 +1297,7 @@ function ChannelView({
       threadsView?.byId.get(m.id)?.state === "closed" ||
       Boolean(channelList?.lines.has(m.id));
     return ungroupAfter(items, special);
-  }, [thread, channelList, channelMessages.data, threadMessages.data, threadsView, agentsAtWork]);
+  }, [thread, channelList, channelMessages.data, threadMessages.data, threadsView]);
 
   // The agents' blocks (one per run, from "pensando" to its final message: `chat/run-slots.ts`), at the end. They
   // change when runs start or end, never on another of a run's events.
@@ -2067,9 +2067,13 @@ function ChannelView({
             if (!allowed) toast.show(t("voice.limit"));
             return allowed;
           },
+          // "gravando áudio…" for the others while it records and while it uploads (then the server keeps it until the
+          // message comes); the throttle makes it one frame every 3 s, and holds the upload's while they write.
+          onRecording: () => sendTyping(undefined, "voice"),
           onTake: ({ blob, durationMs, peaks }) => {
             toBottom(true);
             setQuote(null);
+            const uploading = setInterval(() => sendTyping(undefined, "voice", true), 1000);
             void sendVoice({
               blob,
               durationMs,
@@ -2077,7 +2081,7 @@ function ChannelView({
               threadId: thread ? thread.id : null,
               replyTo: quote?.id ?? null,
               language: i18n.language.split("-")[0] ?? null,
-            });
+            }).finally(() => clearInterval(uploading));
           },
           onNotice: (notice: VoiceNotice) => {
             if (notice === "blocked") {
@@ -2291,6 +2295,7 @@ function ChannelView({
     followBottom: () => {
       if (stick.current && Date.now() >= autoScrollUntil.current) follow();
     },
+    letGo,
     channelAgents,
     // "Responder": in a thread view the next message answers this one (there are no threads in a thread); in a
     // channel, the message's thread opens in the panel (a reply there starts it).
@@ -2344,6 +2349,7 @@ function ChannelView({
       focusComposer: () => now().focusComposer(),
       fillComposer: (text) => now().fillComposer(text),
       followBottom: () => now().followBottom(),
+      letGo: () => now().letGo(),
       channelAgents,
       reply: replies ? (message) => now().reply(message) : undefined,
       // A thread view has no panel: its links go to the thread's page.
@@ -2687,6 +2693,7 @@ function ChannelView({
                             onSeeWaiting={seeWaiting}
                             stoppable={stopTarget?.runId}
                             consultBlocks={consultGroups.nearEnd}
+                            member={isMember}
                           />
                           {adjustThreadId ? (
                             <RangeBar adjust={adjust} />
@@ -3869,6 +3876,7 @@ function ActivityBar({
   onSeeWaiting,
   stoppable,
   consultBlocks,
+  member,
 }: {
   channelId: string;
   /** A thread view: who types there (null: who types in the conversation itself). */
@@ -3893,10 +3901,14 @@ function ActivityBar({
   stoppable?: string;
   /** Runs whose questions a block near the end shows (`ConsultGroup`): the line doesn't say them again. */
   consultBlocks: ReadonlySet<string>;
+  /** The reader is in this conversation (may answer here). */
+  member: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
+  // The returns agents set here (a thread's own, else the main timeline's): the bar holds them while nobody works.
+  const returns = returnsHere(useFollowUps(org.id, channelId).data, threadId);
   const all = useStreams((s) => runsInChannel(s, channelId).filter((r) => visible?.current(r) ?? true), sameRuns);
   const runs = all.filter((r) => r.status !== "failed");
   const typing = useLive((s) => s.typing[channelId]);
@@ -3969,6 +3981,8 @@ function ActivityBar({
   const away = ask ? undefined : waiting[0];
   const awayAgent = away?.asker?.type === "agent" ? dir.anyAgent(away.asker.id) : undefined;
   const pill = !ask && !away && active;
+  // Nobody at work and nothing waiting on the reader: the soonest return rests in the same box (ADR 0037 addendum).
+  const rest = !ask && !away && !active && returns.length > 0;
   // One agent's question or hand-off still out (ADR 0095 addendum): the consulted agent's state, its sky, its time, and
   // "Ver", which opens their talk (or, when its card waits on me, goes to the card). No stop: that is theirs.
   const consult = agents.length === 1 && firstAgent?.consult?.status === "asking" ? firstAgent.consult : undefined;
@@ -4007,6 +4021,7 @@ function ActivityBar({
         className="ac-typing"
         aria-live="polite"
         data-active={active || Boolean(ask) || Boolean(away)}
+        data-rest={rest || undefined}
         data-ask={ask || away ? true : undefined}
         data-consult={pill && consult ? (consult.yours ? "you" : consult.wait ? "wait" : "work") : undefined}
         data-browser={pill && openBrowser ? true : undefined}
@@ -4075,14 +4090,8 @@ function ActivityBar({
           <>
             {skyOf && !consult?.yours && <ActivitySky color={colorOf(dir.agentById.get(skyOf))} />}
             {/* Agents at work: their faces open the pill (their rows are out of view); people only typing: the dots
-                first. */}
-            {!firstAgent && (
-              <span className="ac-typing__dots" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-            )}
+                first. Who records has a mark of their own by their words, and so has who types beside them. */}
+            {!firstAgent && someoneTypes(entries) && !bothAtIt(entries) && <TypingMark />}
             <WorkingStack entries={entries} />
             {/* The phrase turns: the old one leaves upward, the new one comes from below. Names in ink. */}
             <span className="ac-typing__text" title={consultTip}>
@@ -4128,6 +4137,7 @@ function ActivityBar({
             {soloAway && stoppable === soloAway.runId && <StopButton run={soloAway} onStop={stop} place="bar" />}
           </>
         )}
+        {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}
       </div>
     </>
   );
@@ -4253,17 +4263,16 @@ export const TimelineMessage = memo(function TimelineMessage({
   const choiceReply = Boolean(m.meta?.choiceReply);
   // My own message with a code block or a table: the bubble takes the row's whole width.
   const wide = useMemo(() => own && hasWideBlock(body), [own, body]);
-  // A long message from one agent to another (ADR 0034): its first paragraph here and "Ler tudo", which opens it
-  // whole in its thread, beside the chat. In a thread view (no panel), where it is already read, it stays whole.
-  const openThread = !live && !m.local && !readOnly ? actions?.openThread : undefined;
+  // A long message from one agent to another (ADR 0034): its first paragraph and "Ver mais", which opens the rest in
+  // place. In a thread view (no panel), where it is already read, it stays whole.
+  const foldsTalk = !live && !m.local && !readOnly && Boolean(actions?.openThread);
   const talk = useMemo(
     () =>
-      openThread && talksToAgent(m, (handle) => dir.agentByHandle.get(handle)?.id)
+      foldsTalk && talksToAgent(m, (handle) => dir.agentByHandle.get(handle)?.id)
         ? foldTalk(body, TALK_LINE_CHARS.web)
         : null,
-    [openThread, m, body, dir.agentByHandle],
+    [foldsTalk, m, body, dir.agentByHandle],
   );
-  const talkThread = m.threadId ?? m.id;
   // The reply of a run that reached its step limit, or that stopped because it got stuck: Continuar under it too.
   const ended = stopped.canceled ? undefined : (m.meta?.stepLimit as { stuck?: unknown } | undefined);
   const atLimit = ended ? (ended.stuck === true ? "stuck" : "steps") : undefined;
@@ -4640,11 +4649,11 @@ export const TimelineMessage = memo(function TimelineMessage({
             {routine && report && reportOpen && <RoutineReport text={report} />}
             {bodyShown && (
               <MessageText key="body" style={workOver ? { opacity: 0.6 } : undefined}>
-                <ClippedBody name={name} text={talk ? talk.lead : body}>
-                  {(clip) => (
+                <ClippedBody lead={talk?.lead}>
+                  {(clip, lead) => (
                     <MessageBody
                       className={clip}
-                      body={talk ? talk.lead : body}
+                      body={lead ?? body}
                       resolveMention={dir.mentionName}
                       mentionTone={dir.mentionTone}
                       renderMention={renderMention}
@@ -4659,18 +4668,6 @@ export const TimelineMessage = memo(function TimelineMessage({
                     />
                   )}
                 </ClippedBody>
-                {talk && openThread && (
-                  <button
-                    type="button"
-                    className="msg-talk__more"
-                    aria-pressed={threadsView?.open === talkThread}
-                    onClick={() => openThread(talkThread)}
-                  >
-                    {t("chat.talk.readAll")}
-                    <span className="msg-talk__count">{t("chat.talk.more", { count: talk.more })}</span>
-                    <Icon name="chevronRight" size={14} />
-                  </button>
-                )}
               </MessageText>
             )}
             {choiceReply && (

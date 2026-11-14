@@ -694,10 +694,15 @@ function AgentCardBody({ agent, onDone }: { agent: Agent; onDone: () => void }) 
             <dd>
               {[
                 agentFaceWord(t, shown.presence),
-                agentWhy(t, shown, {
-                  agentName: (id) => dir.agentById.get(id)?.name,
-                  channelName: (id) => channels?.find((c) => c.id === id)?.name,
-                }),
+                agentWhy(
+                  t,
+                  shown,
+                  {
+                    agentName: (id) => dir.agentById.get(id)?.name,
+                    channelName: (id) => channels?.find((c) => c.id === id)?.name,
+                  },
+                  i18n.language,
+                ),
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -811,13 +816,14 @@ function AudienceEdit({ agent }: { agent: Agent }) {
 
 /**
  * What follows an agent's face word on its card (ADR 0084 addendum): whom it helps or where it works ("ajudando a
- * Ada"), what it waits on you for ("sua aprovação"), why it is out or paused; nothing while it is free.
+ * Ada"), what it waits on you for ("sua aprovação"), why it is out or paused; free, only a return it set ("retorno às
+ * 00:32").
  */
-function agentWhy(t: TFunction, shown: AgentShown, names: WorkPlaceNames): string | null {
+function agentWhy(t: TFunction, shown: AgentShown, names: WorkPlaceNames, locale: string): string | null {
   if (shown.noAi) return t("presence.agentWhy.noAi");
   if (shown.presence === "out" || shown.presence === "offline") return t(`presence.agentWhy.${shown.presence}`);
-  if (shown.presence === "online") return null;
-  return workDetail(t, shown.work, names);
+  if (shown.presence === "online" && shown.work?.state !== "later") return null;
+  return workDetail(t, shown.work, names, locale);
 }
 
 function Spend({ agent, locale }: { agent: Agent; locale: string }) {

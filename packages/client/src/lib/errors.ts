@@ -106,6 +106,7 @@ const KNOWN = {
   "thread.range_has_replies": "errors.thread.rangeHasReplies",
   "thread.move_other_channel": "errors.thread.moveOtherChannel",
   "thread.not_allowed": "errors.thread.notAllowed",
+  "follow_up.not_yours": "errors.followUp.notYours",
   "thread.range_invalid": "errors.thread.rangeInvalid",
   "thread.range_empty": "errors.thread.rangeEmpty",
   "thread.range_too_long": "errors.thread.rangeTooLong",

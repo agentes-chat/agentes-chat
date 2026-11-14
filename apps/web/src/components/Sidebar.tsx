@@ -1794,14 +1794,13 @@ function AgentRow({
   const channelList = useChannels(org.id).data;
   const here = workingIn ? channelList?.find((c) => c.id === workingIn)?.name : undefined;
   const channelName = (id: string) => channelList?.find((c) => c.id === id)?.name;
-  // Under its name: for whom or where it works, what it waits on, and for how long.
-  const doing = workLine(
-    t,
-    i18n.language,
-    work,
-    { agentName: (id) => dir.agentById.get(id)?.name, channelName },
-    clock,
-  );
+  const out = shown?.presence === "out" && line ? line.text : null;
+  // Under its name: for whom or where it works, what it waits on, and for how long; a return it set comes after why it
+  // is out.
+  const doing =
+    work?.state === "later" && out
+      ? null
+      : workLine(t, i18n.language, work, { agentName: (id) => dir.agentById.get(id)?.name, channelName }, clock);
   const navigate = useNavigate();
   const agentEntries = useAgentMenu();
   const rowMenu = entityMenu(() => agentEntries(a, menuExtra));
@@ -1822,9 +1821,8 @@ function AgentRow({
     : working
       ? line?.text
       : undefined;
-  // Under the name, one line of one height: its work (waiting on me, working, a wait, in line), why it is out, who it
-  // talks to when that is limited, else its role (the agent's fixed label) as a tag.
-  const out = shown?.presence === "out" && line ? line.text : null;
+  // Under the name, one line of one height: its work (waiting on me, working, a wait, in line), why it is out, a return
+  // it set, who it talks to when that is limited, else its role (the agent's fixed label) as a tag.
   const under =
     out ??
     (locked
@@ -1834,8 +1832,11 @@ function AgentRow({
           ? t("sidebarAgents.talksOnly", { name: names[0] })
           : chip
       : a.role);
-  // Its title: who it is over what it does, whole ("Ajudando a Ada · #vendas · 22 min").
-  const place = work?.forAgentId && work.channelId ? (work.channelName ?? channelName(work.channelId)) : undefined;
+  // Its title: who it is over what it does, whole ("Ajudando a Ada · #vendas · 22 min", "Retorno às 00:32 · #vendas").
+  const place =
+    (work?.forAgentId || work?.state === "later") && work.channelId
+      ? (work.channelName ?? channelName(work.channelId))
+      : undefined;
   const doingTitle = doing
     ? [upperFirst(doing.text, i18n.language), place && `#${place}`, doing.time].filter(Boolean).join(" · ")
     : null;

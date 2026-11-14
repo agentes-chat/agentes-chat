@@ -2396,8 +2396,7 @@
       "fileName": "messaggio.txt"
     },
     "long": {
-      "more": "Mostra altro",
-      "title": "Messaggio di {{name}}"
+      "more": "Mostra altro"
     },
     "retrySend": "Riprova",
     "thinking": "{{name}} sta pensando…",
@@ -3976,7 +3975,32 @@
     "here": "qui",
     "routine": "in una routine",
     "yourApproval": "la tua approvazione",
-    "yourAnswer": "la tua risposta"
+    "yourAnswer": "la tua risposta",
+    "later": "follow-up {{when}}",
+    "laterShort": "follow-up"
+  },
+  "followUps": {
+    "when": {
+      "at": "alle {{time}}",
+      "today": "oggi alle {{time}}",
+      "tomorrow": "domani alle {{time}}"
+    },
+    "whenLabel": {
+      "at": "Alle {{time}}",
+      "today": "Oggi alle {{time}}",
+      "tomorrow": "Domani alle {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} fa un follow-up {{when}}",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} fa un follow-up quando rispondi",
+      "held": "{{name}} fa un follow-up dopo una risposta"
+    },
+    "title": "Follow-up in arrivo",
+    "see": "Vedi il messaggio",
+    "cancel": "Annulla il follow-up",
+    "cancelOf": "Annulla il follow-up di {{name}} {{when}}",
+    "inTime": "tra {{time}}"
   },
   "mentions": {
     "list": "Persone e agenti",
@@ -4036,7 +4060,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Mostra altro",
     "less": "Mostra meno"
   },
   "secret": {
@@ -4622,8 +4645,6 @@
       "noSubject": "(nessun oggetto)",
       "toSender": "A chi ha inviato il messaggio",
       "toList": "A {{to}}",
-      "more": "Leggi tutto",
-      "less": "Mostra meno",
       "answers": "Risponde a <b>“{{subject}}”</b>",
       "answersFrom": "Risponde a <b>“{{subject}}”</b>, da {{from}}",
       "forwards": "Inoltra <b>“{{subject}}”</b>",
@@ -5248,8 +5269,6 @@
       "textDone": "Cosa è stato pubblicato",
       "values": "Cosa farà",
       "valuesDone": "Cosa ha fatto",
-      "more": "Mostra tutto",
-      "less": "Mostra meno",
       "trail": "Come ci è arrivato",
       "showSteps": "Vedi ogni passo",
       "hideSteps": "Nascondi i passi",
@@ -9026,8 +9045,7 @@
       "releasePaused": "La missione è in pausa: riprendila perché la sessione vada avanti.",
       "releaseClosed": "La missione è chiusa: la sessione non andrà avanti.",
       "onlyDeciders": "Solo chi decide in questa missione consente i comandi.",
-      "pick": "Consenti {{command}}",
-      "showAll": "Mostra tutti"
+      "pick": "Consenti {{command}}"
     },
     "decision": {
       "approveAll_one": "Approva {{count}} provvisoria",
@@ -9464,6 +9482,7 @@
       "input": "In attesa di una risposta",
       "computer": "In attesa del computer",
       "queued": "In coda",
+      "later": "Follow-up {{when}}",
       "open": "Aperto",
       "closed": "Chiuso",
       "archived": "Archiviato"
@@ -12025,8 +12044,6 @@
     "thousand": "k",
     "building": "Lo sto preparando…",
     "openBig": "Apri in grande",
-    "showAll": "Mostra tutto",
-    "showLess": "Mostra meno",
     "keep": "Conserva in Drive",
     "kept": "Conservato in Drive",
     "inDrive": "Su Drive",
@@ -14147,6 +14164,9 @@
       "titleTooLong": "Un titolo ha al massimo {{max}} caratteri.",
       "noContext": "Questo thread non è nato da un intervallo di una conversazione.",
       "notUndoable": "Solo un thread creato da un intervallo si può annullare."
+    },
+    "followUp": {
+      "notYours": "Solo la persona a cui è rivolto, il proprietario dell'agente o un admin può annullare questo follow-up."
     },
     "routine": {
       "tooFrequent": "Una routine si esegue al massimo ogni 15 minuti. Scegli un intervallo più lungo.",
@@ -16463,12 +16483,6 @@
       "someAnswered": "{{done}} su {{total}} hanno risposto",
       "labelMany": "Conversazioni di {{from}} con {{to}}"
     },
-    "talk": {
-      "readAll": "Leggi tutto",
-      "more_one": "{{count}} riga in più",
-      "more_many": "{{count}} righe in più",
-      "more_other": "{{count}} righe in più"
-    },
     "consultPanel": {
       "label": "Conversazione tra {{from}} e {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -16501,14 +16515,6 @@
       "agentNote": "Nota di {{from}}",
       "agentNoteAnon": "Nota di un altro agente",
       "waitResult": "È arrivato ciò che {{name}} aspettava",
-      "followUp": "{{name}} tornerà alle {{time}} per «{{about}}»",
-      "followUpOn": "{{name}} tornerà {{day}} alle {{time}} per «{{about}}»",
-      "followUpDone": "{{name}} è tornato alle {{time}} per «{{about}}»",
-      "followUpDoneOn": "{{name}} è tornato {{day}} alle {{time}} per «{{about}}»",
-      "followUpCanceled": "{{name}} non tornerà alle {{time}} per «{{about}}»",
-      "followUpCanceledOn": "{{name}} non tornerà {{day}} alle {{time}} per «{{about}}»",
-      "followUpWake": "{{name}} è tornato per «{{about}}»",
-      "followUpCancel": "Annulla",
       "other": "Avviso per {{name}}",
       "wakeSkipped": "La menzione di {{name}} non ha raggiunto {{agents}}",
       "wakeSkippedAnon": "La menzione di {{name}} non ha raggiunto un altro agente",
@@ -16699,6 +16705,7 @@
         "usingTool": "Ha usato lo strumento {{tool}}",
         "thinking": "Ha pensato",
         "typing": "Ha scritto",
+        "recordingVoice": "Ha registrato un audio",
         "writing": "Ha scritto"
       }
     },
@@ -16708,6 +16715,7 @@
       "updatingRoutine": "cambiando una routine",
       "thinking": "lavorando",
       "typing": "digitando",
+      "recordingVoice": "registrando un audio",
       "writing": "scrivendo",
       "consulting": "consultando {{app}}",
       "creatingIssue": "creando un'attività",
@@ -18378,7 +18386,8 @@
     "sections": {
       "asked": "Chieste da persone",
       "delegated": "Chieste da agenti",
-      "background": "Routine in background"
+      "background": "Routine in background",
+      "returns": "Follow-up in arrivo"
     },
     "state": {
       "working": "Al lavoro",
@@ -18474,6 +18483,9 @@
       "stopped": "L'hai fermata",
       "stoppedBy": "L'ha fermata {{name}}",
       "failed": "Non completata",
+      "returnCanceled": "Follow-up annullato",
+      "returnCanceledYou": "Hai annullato il follow-up",
+      "returnCanceledBy": "Follow-up annullato da {{name}}",
       "none": "Ancora nulla di concluso oggi."
     },
     "empty": {

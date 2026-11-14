@@ -70,6 +70,7 @@ import type {
   OrgRole,
   OrgSettings,
   OrgStanding,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonLimits,
@@ -474,6 +475,12 @@ export interface FakeState {
   taskManager?: TaskManagerView;
   /** A task's steps by run (`working.taskSteps`, the task manager's panel); a run not here has none yet. */
   taskSteps?: Record<string, TaskSteps>;
+  /**
+   * The returns agents set, still to come (`chat.followUps`, a conversation's by its channel); canceling one
+   * (`chat.cancelFollowUp`) takes it out. `followUpCancelError` makes the cancel fail.
+   */
+  followUps?: PendingReturn[];
+  followUpCancelError?: Error;
 }
 
 /** A new workspace's "Admin" role (ADR 0085); João holds it. */
@@ -3134,8 +3141,14 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (state.answerNowError) throw state.answerNowError;
         return { runs: state.answerNowRuns ?? [] };
       },
+      followUps: async (orgId, channelId) => {
+        log("chat.followUps", orgId, channelId);
+        return (state.followUps ?? []).filter((r) => r.channelId === channelId);
+      },
       cancelFollowUp: async (orgId, messageId) => {
         log("chat.cancelFollowUp", orgId, messageId);
+        if (state.followUpCancelError) throw state.followUpCancelError;
+        state.followUps = state.followUps?.filter((r) => r.messageId !== messageId);
         const line = state.messages.find((m) => m.id === messageId);
         const notice = line?.meta?.notice as { refs?: Record<string, string> } | undefined;
         if (notice?.refs) notice.refs = { ...notice.refs, state: "canceled" };
