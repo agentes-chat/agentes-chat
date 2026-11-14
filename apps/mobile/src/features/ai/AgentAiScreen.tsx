@@ -41,7 +41,7 @@ import { router } from "@/ui/navigation";
 import { useColors, useDirectory, useMeId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
-import { PlanMeter } from "../usage/parts";
+import { PlanMeter, PlanModels } from "../usage/parts";
 import { advancedOf, openAgentAdvanced } from "./AgentAdvancedScreen";
 import { openAgentSetup } from "./AgentSetupScreen";
 import { EffortRamp, useEffortChoice } from "./EffortRamp";
@@ -284,6 +284,7 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
                 <GroupedList>
                   <View style={styles.meter}>
                     <PlanMeter usage={usage} />
+                    <PlanModels usage={usage} provider={current?.provider ?? null} />
                   </View>
                   {offers.map(({ account: a, used }) => (
                     <GroupedRow
@@ -499,7 +500,7 @@ const styles = StyleSheet.create({
   hero: { alignItems: "center", gap: 10, paddingTop: 6, paddingBottom: 4 },
   center: { textAlign: "center" },
   loading: { marginTop: 16 },
-  meter: { paddingHorizontal: 14, paddingVertical: 12 },
+  meter: { paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
   // A list without a header keeps a header's room above it.
   advanced: { marginTop: 20 },
   dock: { position: "absolute", left: 10, right: 10, borderRadius: 28 },

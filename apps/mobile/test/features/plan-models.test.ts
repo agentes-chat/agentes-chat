@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { planModelUsage } from "@agenteschat/client/lib/plan-usage";
 import { translator } from "./fixtures";
 
-const source = (file: string) => Bun.file(new URL(`../../src/features/usage/${file}`, import.meta.url).pathname).text();
+const source = (file: string) => Bun.file(new URL(`../../src/features/${file}`, import.meta.url).pathname).text();
 
 describe("Uso: a plan's models at a limit of their own", () => {
   test("one line each in the phone's words, in the plan's order, an expired limit left out", async () => {
@@ -27,11 +27,14 @@ describe("Uso: a plan's models at a limit of their own", () => {
     expect(rows[1]?.text).toMatch(/^Sem cota · renova /);
   });
 
-  test("the workspace's accounts and the agent's Agora list them under the windows", async () => {
-    for (const file of ["UsageScreen.tsx", "AgentUsageScreen.tsx"]) {
+  test("the workspace's accounts, the agent's Agora and its AI's glance list them under the windows", async () => {
+    for (const file of ["usage/UsageScreen.tsx", "usage/AgentUsageScreen.tsx"]) {
       expect(await source(file)).toMatch(
         /<PlanModels usage=\{(account|current)\.usage\} provider=\{\1\.provider\} \/>/,
       );
     }
+    expect(await source("ai/AgentAiScreen.tsx")).toMatch(
+      /<PlanMeter usage=\{usage\} \/>\s*<PlanModels usage=\{usage\} provider=\{current\?\.provider \?\? null\} \/>/,
+    );
   });
 });
