@@ -3857,7 +3857,10 @@
     "yourApproval": "deine Freigabe",
     "yourAnswer": "deine Antwort",
     "later": "Rückmeldung {{when}}",
-    "laterShort": "Rückmeldung"
+    "laterShort": "Rückmeldung",
+    "plan": "wartet auf das Abo",
+    "budget": "wartet auf das Budget",
+    "stopping": "wird gestoppt…"
   },
   "followUps": {
     "when": {
@@ -17692,6 +17695,22 @@
       "message": "{{name}} schreiben",
       "chooseOnWeb": "Wähle ihn auf agentes.chat unter Einstellungen › Geräte."
     }
+  },
+  "agora": {
+    "label": "Jetzt",
+    "working_one": "{{count}} Agent arbeitet",
+    "working_other": "{{count}} Agenten arbeiten",
+    "waiting_one": "{{count}} Sache wartet auf dich",
+    "waiting_other": "{{count}} Sachen warten auf dich",
+    "sections": {
+      "you": "Wartet auf dich",
+      "working": "In Arbeit",
+      "waiting": "Wartet"
+    },
+    "allWaiting_one": "{{count}} Sache wartet auf dich",
+    "allWaiting_other": "Alle {{count}} Sachen warten auf dich",
+    "actions": "Weitere Aktionen",
+    "openManager": "Task-Manager öffnen"
   },
   "taskManager": {
     "title": "Task-Manager",

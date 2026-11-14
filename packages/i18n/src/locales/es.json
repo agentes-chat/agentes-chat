@@ -3974,7 +3974,10 @@
     "yourApproval": "tu aprobación",
     "yourAnswer": "tu respuesta",
     "later": "seguimiento {{when}}",
-    "laterShort": "seguimiento"
+    "laterShort": "seguimiento",
+    "plan": "esperando el plan",
+    "budget": "esperando el presupuesto",
+    "stopping": "deteniendo…"
   },
   "followUps": {
     "when": {
@@ -18204,6 +18207,25 @@
       "message": "Escribirle a {{name}}",
       "chooseOnWeb": "Elígela en agentes.chat, en Configuración › Dispositivos."
     }
+  },
+  "agora": {
+    "label": "Ahora",
+    "working_one": "{{count}} agente trabajando",
+    "working_many": "{{count}} agentes trabajando",
+    "working_other": "{{count}} agentes trabajando",
+    "waiting_one": "{{count}} cosa te espera",
+    "waiting_many": "{{count}} cosas te esperan",
+    "waiting_other": "{{count}} cosas te esperan",
+    "sections": {
+      "you": "Esperándote",
+      "working": "Trabajando",
+      "waiting": "En espera"
+    },
+    "allWaiting_one": "{{count}} cosa te espera",
+    "allWaiting_many": "Las {{count}} cosas que te esperan",
+    "allWaiting_other": "Las {{count}} cosas que te esperan",
+    "actions": "Más acciones",
+    "openManager": "Abrir el gestor de tareas"
   },
   "taskManager": {
     "title": "Gestor de tareas",

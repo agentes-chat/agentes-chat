@@ -7110,6 +7110,16 @@ export interface ManagedTask {
   } | null;
   /** Why a `waiting_input` run waits (absent on an older server). */
   wait?: TaskWait | null;
+  /**
+   * How it stands for you, as an agent's line says it (ADR 0084 addendum), and since when by the lists' clock. Null:
+   * it waits on its plan or budget (`held`). Absent on an older server.
+   */
+  work?: {
+    state: AgentWorkState;
+    since: string;
+    /** The card it waits on, when it waits on a person: its message, where its row opens. */
+    card: string | null;
+  } | null;
 }
 
 /** What a task waits on, in the words the apps need to say why. */

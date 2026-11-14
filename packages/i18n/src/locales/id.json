@@ -3738,7 +3738,10 @@
     "yourApproval": "persetujuanmu",
     "yourAnswer": "jawabanmu",
     "later": "tindak lanjut {{when}}",
-    "laterShort": "tindak lanjut"
+    "laterShort": "tindak lanjut",
+    "plan": "menunggu kuota paket",
+    "budget": "menunggu anggaran",
+    "stopping": "menghentikan…"
   },
   "followUps": {
     "when": {
@@ -17224,6 +17227,19 @@
       "message": "Kirim pesan ke {{name}}",
       "chooseOnWeb": "Pilih di agentes.chat, di Pengaturan › Perangkat."
     }
+  },
+  "agora": {
+    "label": "Sekarang",
+    "working_other": "{{count}} agen sedang bekerja",
+    "waiting_other": "{{count}} hal menunggumu",
+    "sections": {
+      "you": "Menunggumu",
+      "working": "Sedang bekerja",
+      "waiting": "Menunggu"
+    },
+    "allWaiting_other": "Lihat {{count}} hal yang menunggumu",
+    "actions": "Tindakan lain",
+    "openManager": "Buka pengelola tugas"
   },
   "taskManager": {
     "title": "Pengelola tugas",

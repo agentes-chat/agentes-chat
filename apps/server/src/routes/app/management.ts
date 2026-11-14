@@ -107,6 +107,7 @@ import {
   ProviderId,
   Role,
   StartChoice,
+  WorkState,
 } from "./schemas";
 
 const usd = (nano: number | null) => (nano === null ? null : nanoUsdToUsd(nano));
@@ -491,6 +492,20 @@ const ManagedTask = z
       .openapi({
         description:
           "Why a `waiting_input` run waits: its code, the plan or budget (`key` groups the runs on the same one), how far a pause got, since when it waits on its plan or budget (`since`, null when unknown), when the limit resets, and whether you may press Continuar agora.",
+      }),
+    work: z
+      .object({
+        state: WorkState,
+        since: z.string(),
+        card: z
+          .uuid()
+          .nullable()
+          .openapi({ description: "The card it waits on, when it waits on a person: its message." }),
+      })
+      .nullable()
+      .openapi({
+        description:
+          "How it stands for you, as an agent's line says it: `you` (it waits on your decision or answer), `working`, a wait on someone or something else, or `queued`, and since when (a wait from its own start). Null: it waits on its plan or budget (`held`).",
       }),
   })
   .openapi("ManagedTask");

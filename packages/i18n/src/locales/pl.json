@@ -4096,7 +4096,10 @@
     "yourApproval": "twoje zatwierdzenie",
     "yourAnswer": "twoja odpowiedź",
     "later": "follow-up {{when}}",
-    "laterShort": "follow-up"
+    "laterShort": "follow-up",
+    "plan": "czeka na limit planu",
+    "budget": "czeka na budżet",
+    "stopping": "zatrzymywanie…"
   },
   "followUps": {
     "when": {
@@ -18843,6 +18846,28 @@
       "message": "Napisz do {{name}}",
       "chooseOnWeb": "Wybierz go w agentes.chat, w Ustawienia › Urządzenia."
     }
+  },
+  "agora": {
+    "label": "Teraz",
+    "working_one": "{{count}} agent pracuje",
+    "working_few": "{{count}} agenci pracują",
+    "working_many": "{{count}} agentów pracuje",
+    "working_other": "{{count}} agenta pracuje",
+    "waiting_one": "{{count}} rzecz czeka na ciebie",
+    "waiting_few": "{{count}} rzeczy czekają na ciebie",
+    "waiting_many": "{{count}} rzeczy czeka na ciebie",
+    "waiting_other": "{{count}} rzeczy czeka na ciebie",
+    "sections": {
+      "you": "Czeka na ciebie",
+      "working": "W pracy",
+      "waiting": "Oczekuje"
+    },
+    "allWaiting_one": "{{count}} rzecz czeka na ciebie",
+    "allWaiting_few": "{{count}} rzeczy czekają na ciebie",
+    "allWaiting_many": "{{count}} rzeczy czeka na ciebie",
+    "allWaiting_other": "{{count}} rzeczy czeka na ciebie",
+    "actions": "Więcej akcji",
+    "openManager": "Otwórz menedżer zadań"
   },
   "taskManager": {
     "title": "Menedżer zadań",

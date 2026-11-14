@@ -61,7 +61,7 @@ export { Icon, type IconName, type IconProps } from "./Icon";
 export { ICON_BUTTON_SIZE, IconButton, type IconButtonProps, usePlateEdge } from "./IconButton";
 export { InfoHint, type InfoHintOptions } from "./InfoHint";
 export { ICON_NAMES } from "./icons.data";
-export { LargeTitleScreen, type LargeTitleScreenProps } from "./LargeTitleScreen";
+export { LargeTitleScreen, type LargeTitleScreenProps, TabFoot } from "./LargeTitleScreen";
 export { LineIcon, type LineIconProps } from "./LineIcon";
 export { LIST_AVATAR, LIST_INSET, LIST_PREVIEW, LIST_TIME, ListRow, type ListRowProps } from "./ListRow";
 export { Locked } from "./Locked";

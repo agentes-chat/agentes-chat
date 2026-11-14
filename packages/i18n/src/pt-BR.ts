@@ -4059,6 +4059,10 @@ export const ptBR = {
     /** A return it set comes then (`followUps.when`): "retorno às 00:32". */
     later: "retorno {{when}}",
     laterShort: "retorno",
+    /** A run that waits on its plan's or its budget's limit (Agora's rows; the lists leave it to out of office). */
+    plan: "esperando o plano",
+    budget: "esperando o orçamento",
+    stopping: "parando…",
   },
   /** An agent comes back to a conversation by itself (its `follow_up`, ADR 0037): a return. */
   followUps: {
@@ -18151,6 +18155,21 @@ export const ptBR = {
       message: "Mensagem para {{name}}",
       chooseOnWeb: "Escolha no agentes.chat, em Configurações\u00a0›\u00a0Dispositivos.",
     },
+  },
+  /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Ir para…" and its list. */
+  agora: {
+    label: "Agora",
+    /** Its tip, one line each. */
+    working_one: "{{count}} agente trabalhando",
+    working_other: "{{count}} agentes trabalhando",
+    waiting_one: "{{count}} coisa espera você",
+    waiting_other: "{{count}} coisas esperam você",
+    sections: { you: "Esperando você", working: "Trabalhando", waiting: "Em espera" },
+    /** Under "Esperando você", or alone: the sidebar's count of everything that waits on you, a link to that page. */
+    allWaiting_one: "{{count}} coisa espera você",
+    allWaiting_other: "As {{count}} coisas que esperam você",
+    actions: "Mais ações",
+    openManager: "Abrir o gerenciador",
   },
   taskManager: {
     title: "Gerenciador de tarefas",

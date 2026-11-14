@@ -3727,7 +3727,10 @@
     "yourApproval": "あなたの承認",
     "yourAnswer": "あなたの回答",
     "later": "フォローアップ {{when}}",
-    "laterShort": "フォローアップ"
+    "laterShort": "フォローアップ",
+    "plan": "プランのリセット待ち",
+    "budget": "予算のリセット待ち",
+    "stopping": "停止しています…"
   },
   "followUps": {
     "when": {
@@ -17122,6 +17125,19 @@
       "message": "{{name}}にメッセージ",
       "chooseOnWeb": "agentes.chatの「設定 › デバイス」で選択してください。"
     }
+  },
+  "agora": {
+    "label": "今",
+    "working_other": "エージェント {{count}} 件が作業中",
+    "waiting_other": "{{count}}件があなたの対応待ち",
+    "sections": {
+      "you": "あなたの対応待ち",
+      "working": "作業中",
+      "waiting": "待機中"
+    },
+    "allWaiting_other": "対応待ちの{{count}}件を見る",
+    "actions": "その他の操作",
+    "openManager": "タスクマネージャーを開く"
   },
   "taskManager": {
     "title": "タスクマネージャー",
