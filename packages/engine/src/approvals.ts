@@ -58,6 +58,7 @@ const {
   issues,
   mailAccounts,
   messages,
+  notifications,
   routines,
   users,
 } = schema;
@@ -1147,9 +1148,38 @@ export async function expireApprovals(deps: { db: Database; pubsub: PubSub }, no
     return [...rows, ...lapsed];
   });
   for (const row of expired) await publishApproval(deps, row, "approval.decided");
+  await resolveStaleApprovalNotifications(deps).catch(() => {});
   // The same minute's safety net for runs waiting their turn behind a request whose run ended (`approval-order.ts`).
   await resumeHeldRuns(deps.db, now).catch(() => 0);
   return expired.length;
+}
+
+/**
+ * An approval's notification left waiting after the request closed (a row canceled in place before each close told
+ * the inbox, a crash between the close and the inbox): out of the inbox, or on to the card's next request still
+ * waiting, so no conversation says a request waits when Approvals has none.
+ */
+export async function resolveStaleApprovalNotifications(deps: { db: Database; pubsub?: PubSub }) {
+  const stale = await deps.db
+    .selectDistinct({ id: approvals.id, orgId: approvals.orgId, messageId: approvals.messageId })
+    .from(notifications)
+    .innerJoin(
+      approvals,
+      and(
+        eq(approvals.orgId, notifications.orgId),
+        sql`${notifications.source}->>'approvalId' = ${approvals.id}::text`,
+      ),
+    )
+    .where(
+      and(
+        eq(notifications.kind, "approval"),
+        eq(notifications.waiting, true),
+        isNull(notifications.doneAt),
+        ne(approvals.status, "pending"),
+      ),
+    );
+  for (const row of stale) await resolveApprovalNotifications(deps, row);
+  return stale.length;
 }
 
 /**
