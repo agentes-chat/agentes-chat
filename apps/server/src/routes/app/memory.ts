@@ -614,10 +614,10 @@ export function memoryRoutes(deps: AppDeps) {
       await requirePermission(db, viewerId, orgId, "read");
       if (!(await getAgent(db, orgId, agentId))) throw new NotFoundError("Agent not found");
       // Only what the viewer may see: items learned in a DM or private channel they can't read stay out.
-      const { items: rows, visible } = await listAgentMemoryRows(db, viewerId, orgId, agentId);
-      const current = rows
-        .filter((r) => !r.supersededBy)
-        .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.getTime() - a.updatedAt.getTime());
+      const { items: rows, visible } = await listAgentMemoryRows(db, viewerId, orgId, agentId, { current: true });
+      const current = rows.sort(
+        (a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.getTime() - a.updatedAt.getTime(),
+      );
       if (c.req.valid("query").about !== "me") {
         const views = await memoryViews(db, current, visible);
         const rules = new Map(current.filter((i) => i.kind === "rule").map((i) => [i.id, i]));

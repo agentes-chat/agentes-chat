@@ -339,7 +339,21 @@ export function applyMembershipEvent(qc: QueryClient, orgId: string, event: Chan
 export function applyConversationEvent(qc: QueryClient, orgId: string, event: ChannelEvent): boolean {
   const type: string = event.type;
   if (type === "artifact.created" || type === "artifact.updated" || type === "artifact.deleted") {
-    void qc.invalidateQueries({ queryKey: keys.artifacts(orgId) });
+    const e = event as { artifact?: { id?: unknown }; artifactId?: unknown };
+    const id = typeof e.artifact?.id === "string" ? e.artifact.id : e.artifactId;
+    // That file's own queries (its card, versions, bytes) and the lists it may sit in. Not every other file on the
+    // screen: each save used to read all their cards again and download all their previews again.
+    void qc.invalidateQueries(
+      typeof id === "string"
+        ? {
+            predicate: ({ queryKey: k }) =>
+              k[0] === "org" &&
+              k[1] === orgId &&
+              k[2] === "artifacts" &&
+              (k[3] === "list" || k[3] === "trash" || k[4] === id),
+          }
+        : { queryKey: keys.artifacts(orgId) },
+    );
     const channelId = (event as { channelId?: unknown }).channelId;
     if (type === "artifact.deleted" && typeof channelId === "string")
       void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
