@@ -145,7 +145,7 @@ export async function findMember(
 
 /** What `send_dm` does, as the model reads it. */
 const SEND_DM_DESCRIPTION =
-  'Send a direct message to a person in the organization, e.g. "avisa a Ana na DM". `person` is their name, @handle or email. It goes in your DM with them (they get a notification); say in the text who asked and why, in their language, unless they asked in a DM: then only what they told you to say. Attach files (a video, a PDF, an image, a document) with `artifact_ids`: from list_artifacts, files you made, or files attached in this conversation; a file from another DM goes as a copy. Never send only a file\'s name when the person should get the file. Only when someone asked you. If several people match, ask which one. Then reply here saying you sent it.';
+  "Send a direct message to a person in the organization, e.g. \"avisa a Ana na DM\". `person` is their name, @handle or email. It goes in your DM with them (they get a notification); say in the text who asked and why, in their language, unless they asked in a DM: then only what they told you to say. Attach files (a video, a PDF, an image, a document) with `artifact_ids`: from list_artifacts, files you made, or files attached in this conversation; a file from another DM goes as a copy. Never send only a file's name when the person should get the file. Only when someone asked you, or when the person behind another agent's request should hear from you directly. If several people match, ask which one. Then reply here saying you sent it.";
 /** `send_dm` as a personal workspace's agents read it (ADR 0159): the people here are the person and their family. */
 const SEND_DM_PERSONAL = {
   [SEND_DM_TOOL]: SEND_DM_DESCRIPTION.replace(
