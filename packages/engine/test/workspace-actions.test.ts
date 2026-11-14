@@ -422,6 +422,29 @@ describe("roles through the right hand", () => {
     });
   });
 
+  test("a role the card names for holding administrator that no longer does gets nothing from it: the card is read again", async () => {
+    f = await setup({ rightHand: true });
+    const ctx = await lodiRun(f, f.owner.id, "todos usam o navegador dos seus agentes");
+    await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "computers", everyone: 1 },
+      why: "Todos usam o navegador dos seus agentes",
+    });
+    const posted = await lastCard(f);
+    if (!posted) throw new Error("no card");
+    const admin = await roleNamed(f, "Admin");
+    await updateRole(f.db, f.owner.id, f.org.id, admin?.id ?? "", { permissions: [] });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    await expect(
+      decideWorkspaceAction(deps, f.owner.id, f.org.id, posted.id, "apply", "set_permission_holders"),
+    ).rejects.toMatchObject({ code: "action_card.changed" });
+    expect((await roleNamed(f, "Admin"))?.permissions).toEqual([]);
+    expect((await lastCard(f))?.card.params.input).toMatchObject({ roles: [] });
+    // Applied as it reads now, Admin still gets nothing.
+    await decideWorkspaceAction(deps, f.owner.id, f.org.id, posted.id, "apply", "set_permission_holders");
+    expect((await roleNamed(f, "Admin"))?.permissions).toEqual([]);
+  });
+
   test("wrong or unknown input says why and changes nothing", async () => {
     f = await setup({ rightHand: true });
     const ctx = await lodiRun(f, f.owner.id, "faz algo");
