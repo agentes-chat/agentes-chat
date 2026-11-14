@@ -146,10 +146,11 @@ export function savedKeyReach(
   saved: Credential,
   keys: readonly Credential[],
   defaultId: string | null | undefined,
-): { kind: "all" } | { kind: "make" | "other"; other: string } {
+): { kind: "all" } | { kind: "make"; other: string } | { kind: "other"; other: string } {
   const current = keys.find((k) => k.id === defaultId && !k.revokedAt);
   if (!current || current.id === saved.id) return { kind: "all" };
-  return { kind: !keyThinks(current) && keyThinks(saved) ? "make" : "other", other: current.label };
+  if (!keyThinks(current) && keyThinks(saved)) return { kind: "make", other: current.label };
+  return { kind: "other", other: current.label };
 }
 /** A key whose name is only its provider's ("Claude"): a line under it needn't say the provider again. */
 export const keyNamedAfterProvider = (key: Pick<Credential, "label" | "provider">) =>

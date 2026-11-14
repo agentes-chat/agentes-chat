@@ -148,6 +148,7 @@ test("a key saved for everyone says who really thinks with it: it, the default i
   run = keyApi([broken, fresh], "k1");
   out = await settleSavedKey(run.api, "o", fresh, undefined, []);
   expect(run.calls).toEqual([["makeDefault", "k2"]]);
+  expect(out).toEqual({ kind: "made", other: "Northwind" });
   expect(savedKeyLine(t, out, fresh)).toBe("Saved. Your agents now think with it instead of Northwind.");
   // Neither thinks: nothing moves, and the line says none of its models passed.
   const untested = endpoint("k2", "Gateway Sul");
