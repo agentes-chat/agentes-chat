@@ -2652,7 +2652,10 @@ test.if(posix)("delegated: root refuses what the CLI asks on stdout, and the tur
   const s = delegatedSetup();
   (s.m as unknown as { log: (l: string) => void }).log = (l) => lines.push(l);
   const r = await s.turn(1, "ASKCONTROL");
-  expect(r.final).toMatchObject({ type: "done", text: "control error: Not allowed with this sign-in." });
+  // An elicitation is refused with a reason that says nobody was asked, never as if the person had declined (#198).
+  const ended = r.events.flatMap((e) => (e.type === "done" ? [e.text] : [])).join("");
+  expect(ended).toContain("nobody was shown the form");
+  expect(ended).toContain("Not allowed with this sign-in");
   expect(lines.join("\n")).toContain("control_request elicitation");
 });
 
