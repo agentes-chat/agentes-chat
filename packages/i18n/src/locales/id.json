@@ -24,6 +24,7 @@
     "retry": "Coba lagi",
     "soon": "Segera",
     "unknownError": "Ada yang salah. Coba lagi.",
+    "overLimit": "Teks ini {{length}} karakter dan batasnya {{max}}. Persingkat teksnya.",
     "ourSide": "Ada yang salah di pihak kami. Coba lagi sebentar lagi.",
     "signedOut": "Sesimu berakhir. Masuk lagi untuk melanjutkan.",
     "newVersion": "Versi baru agentes.chat sudah tersedia.",
@@ -5091,6 +5092,7 @@
         "effort": "Upaya",
         "efforts": {
           "auto": "Otomatis",
+          "none": "Default model",
           "low": "Rendah",
           "medium": "Sedang",
           "high": "Tinggi",
@@ -5107,6 +5109,8 @@
           "auto": "Model Otomatis memilih upaya tiap tugas. Pilih model untuk menetapkan upayanya.",
           "low": "Menjawab cepat. Cocok untuk pertanyaan sederhana.",
           "medium": "Default. Berpikir cukup hampir setiap saat.",
+          "mediumKey": "Berpikir cukup hampir setiap saat.",
+          "none": "Model berpikir seperti biasanya. Pilih tingkat untuk menetapkan upaya.",
           "high": "Berpikir lebih banyak untuk tugas sulit. Lebih lambat dan lebih mahal.",
           "max": "Berpikir semaksimal mungkin. Jauh lebih lambat dan lebih mahal."
         },
@@ -5134,6 +5138,7 @@
           "defaults": "Kembali ke default",
           "contents": {
             "model": "Jendela konteks",
+            "modelFixed": "Upaya dan jendela konteks",
             "auto": "Jendela konteks dan siapa yang dijawabnya",
             "fixed": "Upaya, jendela konteks, dan siapa yang dijawabnya",
             "autoSpeed": "Kecepatan, jendela konteks, dan siapa yang dijawabnya",
@@ -5242,7 +5247,8 @@
             "not_signed_in_after_login": "{{brand}} menerima login, tetapi akun ini tidak bisa dipakai di sini, mungkin paketnya tidak mencakupnya. Coba akun lain atau kunci API.",
             "status_unknown": "{{brand}} tidak memberi tahu apakah akun sudah masuk. Coba lagi.",
             "no_token": "{{brand}} selesai tanpa menampilkan token akun. Coba lagi.",
-            "not_kept": "Akun sudah masuk, tetapi {{computer}} tidak bisa menyimpan loginnya. Coba lagi."
+            "not_kept": "Akun sudah masuk, tetapi {{computer}} tidak bisa menyimpan loginnya. Coba lagi.",
+            "sandbox": "{{brand}} sudah masuk, tetapi sandbox-nya tidak bisa berjalan di {{computer}}, jadi tidak ada agen yang bisa memakainya. Pakai kunci API saja."
           },
           "geminiNotShared": "Gemini sudah masuk, tetapi sesi masuk itu tidak bisa dibagikan ke semua agen di {{computer}}. Pakai kunci API Gemini saja.",
           "duplicate": {
@@ -5276,6 +5282,8 @@
           "limitBack": "{{account}} kembali {{when}}",
           "limitSoon": "{{account}} kembali saat paketnya diperbarui",
           "limitHelp": "Sementara itu {{name}} bisa berpikir dengan akun lain yang sudah terhubung.",
+          "fullWait": "Di akun ini {{name}} menunggu sampai paketnya diperbarui.",
+          "seeUsage": "Lihat penggunaan",
           "wait": "Tunggu",
           "modelTitle": "Model {{name}}",
           "moreTitle": "Opsi lainnya untuk {{name}}",
@@ -5633,6 +5641,7 @@
         "cli_failed": "Program {{brain}} berhenti karena kesalahan: {{detail}}",
         "cli_stopped": "Program {{brain}} berhenti karena kesalahan.",
         "cli_closed": "Program {{brain}} tertutup tiba-tiba.",
+        "cli_sandbox": "Program {{brain}} tidak bisa menjalankan sandbox-nya di komputer ini. Pilih AI lain di pengaturan agen.",
         "account_missing": "Akun yang dipilih untuk agen ini sudah tidak ada di komputernya. Pilih akun lain di pengaturan agen, atau tambahkan lagi.",
         "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru.",
         "our_error": "Ada yang salah di pihak kami dan tugasnya berhenti. Minta lagi sebentar lagi.",
@@ -9388,7 +9397,11 @@
     "pickReplacesRemoved": "Menggantikan skill {{name}} yang sudah dihapus",
     "forAgent_other": "Aktifkan untuk {{agent}}",
     "installedMany": "{{count}} skill terpasang.",
-    "zipHelp": "File .zip dengan SKILL.md di folder utamanya.",
+    "zipHelp": "File .zip dari folder skill, maksimal {{max}} MB.",
+    "zipAbout": "SKILL.md ada di bagian teratas .zip, atau di satu-satunya folder di dalamnya. Skill menyimpan hingga {{text}} MB teks dan {{assets}} MB gambar serta file lain.",
+    "zipTooLarge": "{{name}} berukuran {{size}}. File .zip skill maksimal {{max}} MB.",
+    "zipUseLink": "Pakai tautan GitHub",
+    "zipSending": "Mengunggah file… {{percent}}",
     "zipPick": "Pilih .zip",
     "zipNone": "Belum ada file yang dipilih",
     "zipMissing": "Pilih file .zip.",
@@ -11217,7 +11230,8 @@
     "closed": "{{title}} · ditutup",
     "reopen": "Tampilkan lagi",
     "answeredBy": "{{name}} memilih",
-    "failed": "Pilihanmu tidak terkirim. Coba lagi."
+    "failed": "Pilihanmu tidak terkirim. Coba lagi.",
+    "tooLongFix": "Persingkat jawabannya."
   },
   "drive": {
     "title": "Drive",
@@ -12995,6 +13009,8 @@
     }
   },
   "errors": {
+    "tooLarge": "Ini lebih besar dari yang diterima server.",
+    "tooLargeMax": "Ini lebih besar dari yang diterima server: maksimal {{max}} MB.",
     "passwordLink": {
       "email": "Server ini mengirim email: orang itu meminta tautannya sendiri di Lupa kata sandi.",
       "serverOwner": "Orang yang memasang server ini masuk dari komputer tempat server berjalan, tanpa tautan.",
@@ -14085,6 +14101,20 @@
       "trustText": "Ketuk Percayai di iPhone dan masukkan kode sandinya.",
       "devModeDone": "Menyala",
       "devModeText": "Nyalakan, lalu ketuk Mulai Ulang. Setelah dimulai ulang, ketuk Nyalakan dan masukkan kode sandimu.",
+      "devModeRestarting": "iPhone sedang dimulai ulang. Setelah kembali, buka kuncinya dan ketuk Nyalakan.",
+      "devModeBack": "iPhone sudah kembali. Buka kuncinya, ketuk Nyalakan, dan masukkan kode sandimu.",
+      "devModeCheck": "Sudah kunyalakan, periksa lagi",
+      "devModeStillOff": "iPhone masih menyatakan Mode Pengembang mati.",
+      "devModeMissing": {
+        "title": "Opsinya tidak muncul?",
+        "hidden": "iPhone menyembunyikan opsi ini sampai Xcode memintanya muncul.",
+        "hiddenOpen": "iPhone menyembunyikan opsi ini sampai Xcode memintanya muncul. Buka Xcode di {{mac}} dengan iPhone tersambung.",
+        "openXcode": "Buka Xcode",
+        "opened": "Xcode terbuka di {{mac}}. Lihat lagi di Pengaturan iPhone, lalu tutup Xcode.",
+        "unlock": "Sudah dinyalakan dan iPhone dimulai ulang? Buka kuncinya. Peringatan dengan Nyalakan baru muncul setelah itu.",
+        "check": "Periksa lagi",
+        "outdated": "Aplikasi agentes.chat di {{mac}} sudah usang. Perbarui aplikasinya, atau jalankan ini di Terminal jika kamu memasangnya dari sana."
+      },
       "uiAutomationText": "Di Pengaturan › Pengembang, setelah dimulai ulang.",
       "helperText": "Dibuat dan diperbarui oleh Mac setiap 7 hari. Apple Account gratis di Xcode sudah cukup.",
       "helperUntrustedText": "Ketuk nama developernya, lalu Percayai.",
@@ -14101,7 +14131,6 @@
         "account": "Sudah masuk? Di Xcode, buat app iOS apa saja, pilih timmu di Signing & Capabilities, lalu jalankan di iPhone sekali.",
         "connected": "{{mac}} belum melihat iPhone. Pakai kabel yang membawa data, bukan hanya daya, buka kunci iPhone, lalu ketuk Percayai jika diminta.",
         "trust": "Tidak muncul Percayai? Cabut iPhone, buka kuncinya, colokkan lagi, lalu ketuk Percayai dan masukkan kode sandinya.",
-        "developerMode": "Mode Pengembang baru menyala setelah iPhone dimulai ulang. Ketuk Mulai Ulang, lalu Nyalakan setelah iPhone menyala lagi. Tidak ada tombolnya? Cabut iPhone dan colokkan lagi.",
         "uiAutomation": "Tombolnya muncul setelah Mode Pengembang menyala dan iPhone dimulai ulang. Biarkan tidak terkunci selama kamu mencarinya.",
         "helper": "{{mac}} membuat helper pengujian dan menjalankannya di iPhone, yang butuh beberapa menit untuk pertama kali. Biarkan iPhone tidak terkunci dan tetap tercolok."
       },
@@ -15242,6 +15271,13 @@
     "logins_other": "{{count}} login",
     "noWindows": "Batasnya muncul setelah akun ini dipakai lagi.",
     "unused": "Tidak ada agen yang memakai akun ini.",
+    "models": {
+      "exhausted": "Kuota habis · direset {{when}}",
+      "exhaustedUnknown": "Kuota habis",
+      "off": "Dimatikan",
+      "region": "Butuh region Global",
+      "inactive": "Tidak ada langganan aktif"
+    },
     "usesNow": "sedang memakainya",
     "monthTokens": "{{tokens}} token bulan ini",
     "tokens": "{{tokens}} token",
@@ -15306,6 +15342,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "dan {{count}} lainnya",
     "usd": "US$ {{value}}",
     "tokensMillions": "{{value}} jt",
     "tokensThousands": "{{value}} rb",

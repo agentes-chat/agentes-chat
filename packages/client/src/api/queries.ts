@@ -68,7 +68,7 @@ import type { RealtimeConnection } from "../realtime/connection";
 import { readUnknownMembers, setOrgDeletion } from "../realtime/machines";
 import type { ApiClient } from "./client";
 import { type AgentReactionEffect, useAgentReaction, useApi, useCardVia } from "./context";
-import { ApiError } from "./http";
+import { ApiError, type UploadOptions } from "./http";
 import { keys } from "./keys";
 import { keepSending, outbox } from "./outbox";
 import type {
@@ -4742,7 +4742,11 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
     ...(silent ? { meta: { silent: true } } : {}),
     mutationFn: (
       action:
-        | { type: "import"; input: { url: string; list?: boolean; forAgentId?: string } | { zipBase64: string } }
+        | {
+            type: "import";
+            input: { url: string; list?: boolean; forAgentId?: string } | { zipBase64: string };
+            upload?: UploadOptions;
+          }
         | { type: "importPicked"; url: string; paths: string[]; forAgentId?: string }
         | { type: "create"; input: SkillInput }
         | { type: "update"; id: string; patch: SkillPatch }
@@ -4756,7 +4760,7 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
     ): Promise<unknown> => {
       switch (action.type) {
         case "import":
-          return api.skills.import(orgId, action.input);
+          return api.skills.import(orgId, action.input, action.upload);
         case "importPicked":
           return api.skills.importPicked(orgId, action.url, action.paths, action.forAgentId);
         case "create":
@@ -6774,6 +6778,25 @@ export function useWifiIphones(orgId: string, machineId: string | null, on: bool
     },
   });
   return { available: on ? (list.data?.available ?? []) : [], pick };
+}
+
+/**
+ * The iPhone guide's Developer Mode step asks its Mac: `look` reads the iPhone again now (the devices refetch once it
+ * answered), `openXcode` opens Xcode there, which shows the switch on a plugged iPhone that hides it.
+ */
+export function useIphoneDevMode(orgId: string, machineId: string | null) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const look = useMutation({
+    mutationFn: () => api.devices.lookForPhones(orgId, machineId ?? ""),
+    meta: { silent: true },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.devices(orgId) }),
+  });
+  const openXcode = useMutation({
+    mutationFn: () => api.devices.openXcode(orgId, machineId ?? ""),
+    meta: { silent: true },
+  });
+  return { look, openXcode };
 }
 
 /**

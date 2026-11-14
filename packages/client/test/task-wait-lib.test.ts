@@ -8,6 +8,7 @@ import {
   hiddenCount,
   taskPlace,
   taskTime,
+  taskTitle,
   taskWaitGroups,
   taskWaitGroupText,
   taskWaitWords,
@@ -229,4 +230,30 @@ test("what holds the waiting work: one cause per sign-in, computer or the people
   ]);
   expect(causes[0]).toMatchObject({ machineId: "m1", busy: true });
   expect(causes[3]).toMatchObject({ machineId: "m2", busy: false });
+});
+
+test("a task in another agent's conversation is called by what it was asked, ahead of the thread it came from", () => {
+  const from = {
+    channelId: "c1",
+    channelKind: "channel" as const,
+    channelName: "eng",
+    threadId: "t1",
+    messageId: null,
+    label: "Release 8",
+  };
+  const asked = {
+    label: null,
+    routine: null,
+    channelKind: "dm" as const,
+    channelName: null,
+    betweenAgents: true,
+    delegation: { agentId: "ada", origin: { kind: "agent" as const }, from },
+    subject: "Investigate duplicate notifications.",
+  };
+  expect(taskTitle(t, asked)).toBe("Investigate duplicate notifications.");
+  expect(taskPlace(t, asked)).toBe("#eng");
+  // No subject (not sent to who doesn't read #eng, or an older server): the thread's title, then the place.
+  expect(taskTitle(t, { ...asked, subject: null })).toBe("Release 8");
+  expect(taskTitle(t, { ...asked, subject: undefined, delegation: null })).toBe("chat.consultPanel.whereDm");
+  expect(taskPlace(t, { ...asked, subject: null, delegation: null })).toBeNull();
 });
