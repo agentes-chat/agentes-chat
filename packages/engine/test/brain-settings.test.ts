@@ -9,7 +9,7 @@ import {
   SPEED_PROTOCOL,
 } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
-import { CODING_PLANS, learnPlanModels, planOf } from "@agenteschat/providers/plans";
+import { CODING_PLANS, claudeCodeModel, learnPlanModels, planOf } from "@agenteschat/providers/plans";
 import {
   ConflictError,
   canTalkTo,
@@ -53,9 +53,13 @@ const mac = (patch: Record<string, unknown> = {}) => ({
 
 describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
-    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Fable", "Opus", "Sonnet", "Haiku"]);
-    // Fable is an alias of Claude Code's own (`claude --help`), so it is stored as one; Sonnet stays the default.
-    expect(normalizeBrainModel("claude_code", "fable")).toBe("fable");
+    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Sonnet", "Opus", "Fable", "Haiku"]);
+    // Each choice runs as itself: a value `claudeCodeModel` doesn't pass through would run Sonnet under another name.
+    for (const o of brainModelOptions("claude_code")) expect(claudeCodeModel(undefined, o.value)).toBe(o.value);
+    // Fable is stored by its id, typed or picked, and named Fable; Sonnet stays the default.
+    expect(normalizeBrainModel("claude_code", "claude-fable-5-2")).toBe("claude-fable-5-2");
+    expect(brainModelLabel("claude_code", "claude-fable-5-2")).toBe("Fable");
+    expect(brainModelId("claude_code", "claude-fable-5-2")).toBe("claude-fable-5-2");
     expect(defaultBrainModel("claude_code")).toBe("sonnet");
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
     // Codex offers the catalog's OpenAI rows, GPT-6.1 Terra and GPT-6 Astra among them; GPT-6.1 Sol stays its default.
