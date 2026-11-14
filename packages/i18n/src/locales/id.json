@@ -1163,6 +1163,8 @@
         "paperclip": "Seret folder paket (yang berisi COMPANY.md), letakkan .zip-nya, atau tempel tautan GitHub-nya.",
         "agenteschat": "Di ruang kerja lain: Pengaturan → Impor dan ekspor → Unduh file. Lalu letakkan .json di sini."
       },
+      "whereOther": "Unduh file dari workspace lain dan letakkan .json di sini.",
+      "whereOtherLink": "Unduh dari {{org}}",
       "request": {
         "grok-bot": {
           "title": "Minta bot-mu mengekspor",
@@ -1778,11 +1780,10 @@
     "browser": "Browser ini",
     "phone": "Ponsel",
     "phoneOn": "Di aplikasi ponsel, bahkan saat ponsel terkunci",
-    "phoneOff": "Nyalakan di aplikasi ponsel, di Kamu › Notifikasi",
+    "phoneOff": "Nyalakan di aplikasi ponsel",
     "mac": "Aplikasi Mac",
     "macHelp": "Selama aplikasi terbuka, bahkan di latar belakang",
     "on": "Aktif",
-    "off": "Mati",
     "failed": "Tidak bisa menyimpan. Coba lagi.",
     "loadFailed": "Tidak bisa memuat pilihanmu saat ini.",
     "category": {
@@ -1833,7 +1834,7 @@
     },
     "inline": {
       "title": "Mau langsung tahu saat {{name}} membalas?",
-      "why": "Bahkan saat tab ditutup. Ubah kapan saja di Pengaturan › Notifikasi."
+      "why": "Bahkan saat tab ditutup. Ubah kapan saja di <link>Notifikasi</link>."
     }
   },
   "shell": {
@@ -2079,7 +2080,8 @@
     "private": "Siapa pun yang memindai kode ini akan masuk sebagai kamu.",
     "failed": "Kode tidak bisa dibuat.",
     "localOnly": "Server ini hanya terbuka di komputer tempat ia berjalan, jadi ponselmu tidak bisa menjangkaunya.",
-    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Preferensi › Server. Lalu kembali ke sini."
+    "localOnlyHow": "Di aplikasi agentes.chat pada komputer itu, nyalakan Akses dari ponselmu dan rekan tim di Preferensi › Server. Lalu kembali ke sini.",
+    "localOnlyHere": "Nyalakan Akses dari ponselmu dan rekan tim. Lalu kembali ke sini."
   },
   "team": {
     "title": "Tim",
@@ -2599,7 +2601,8 @@
     "computerYours": "Tempat Anda sendiri di komputer workspace. Hanya Anda yang bisa melihat atau mengendalikannya.",
     "sharedName": "{{name}} (bersama)",
     "sharedPlace": "Dipakai di kanal dan untuk pekerjaan yang berjalan sendiri. Seluruh workspace berbagi tempat ini. Jangan simpan apa pun yang pribadi di sini.",
-    "computerNoHome": "Belum ada komputer. Komputer tersedia setelah workspace ini punya komputer sendiri, yang ditambahkan di Pengaturan, Komputer.",
+    "computerNoHome": "Belum ada komputer. Komputer tersedia setelah workspace ini punya komputer sendiri.",
+    "addComputer": "Tambahkan komputer",
     "computerOneUser": "Tidak ada komputer di sini. Komputer workspace menjalankan semua agen sebagai satu pengguna, jadi tidak bisa memisahkan tempat tiap orang. Server Linux yang dipasang dengan opsi --system dari penginstal bisa.",
     "powers": {
       "title": "Kemampuan di workspace",
@@ -2977,19 +2980,6 @@
       "zen": "Hubungkan OpenCode",
       "api_key": "Tambahkan kunci API"
     },
-    "toolOff": {
-      "text": "{{computer}} terhubung, tetapi {{program}} mati di sana. Hanya orang yang menghubungkan komputer itu yang menyalakannya.",
-      "where": "Di {{computer}}",
-      "one": "Klik ikon agentes.chat <mark/> di dekat jam",
-      "oneWindows": "Di Windows, ikonnya bisa berada di balik panah ^ pada bilah tugas.",
-      "two": "Buka <b>Preferensi</b>",
-      "three": "Di <b>Alat</b>, nyalakan <b>{{program}}</b>",
-      "terminal": "Di terminal komputer itu, jalankan:",
-      "here": "Nyalakan <b>{{program}}</b> di <b>Alat</b>.",
-      "oneClick": "<b>{{program}}</b> mati di komputer ini.",
-      "oneClickOther": "<b>{{program}}</b> mati di komputer {{name}}.",
-      "waiting": "Menunggu Anda menyalakannya. Layar ini berubah sendiri."
-    },
     "titleFor": "Hubungkan AI untuk {{name}}",
     "titleFor_female": "Hubungkan AI untuk {{name}}",
     "have": {
@@ -3115,7 +3105,15 @@
       "create": "Buat kunci API {{provider}}-mu",
       "paste": "Tempel di sini",
       "forAll": "Semua agen tanpa paket berpikir dengan kunci ini.",
+      "forAgent": "{{agent}} akan berpikir dengannya.",
       "saved": "Tersimpan. Semua agen tanpa paket berpikir dengan kunci ini.",
+      "savedFor": "Tersimpan. {{agent}} sekarang berpikir dengan {{label}}.",
+      "savedAll": "Tersimpan. Agen tanpa AI sendiri berpikir dengannya.",
+      "savedMade": "Tersimpan. Agen Anda sekarang berpikir dengannya, bukan dengan {{other}}.",
+      "savedOther": "Tersimpan. Agen Anda masih berpikir dengan {{other}}.",
+      "useForAll": "Gunakan kunci ini untuk semua",
+      "untested": "Belum ada model {{name}} yang lolos uji.",
+      "testModels": "Uji model",
       "savedUnchecked": "Tersimpan, tetapi {{provider}} tidak menjawab, jadi kunci tidak bisa diperiksa. Jika gagal, percakapan memberi tahu alasannya.",
       "closed": "Kunci API terbuka bersama paket agentes.chat workspace.",
       "notPlan": "Kunci paket coding dimasukkan di opsinya sendiri di atas.",
@@ -7788,8 +7786,8 @@
         "repoPlaceholder": "pemilik/nama",
         "oneClick": "Buat webhook",
         "added": "Webhook dibuat di {{repo}}.",
-        "byHand": "Atau manual: di repositori, Settings › Webhooks › Add webhook.",
-        "open": "Di repositori, buka Settings › Webhooks › Add webhook.",
+        "byHand": "Atau buat manual di GitHub.",
+        "open": "Buat webhook di repositori, di GitHub.",
         "openLink": "Buka di GitHub",
         "url": "Payload URL",
         "type": "Content type: application/json",
@@ -8800,7 +8798,6 @@
       "homeHint": "Misi mendapat utas: di sanalah {{name}} berbicara, meminta keputusan, dan menunjukkan hasil kerjanya.",
       "homeHint_female": "Misi mendapat utas: di sanalah {{name}} berbicara, meminta keputusan, dan menunjukkan hasil kerjanya.",
       "offline": "{{name}} sedang offline. Rencana dimulai saat ia kembali.",
-      "needsMachine": "Misi berjalan di komputer yang terhubung. Hubungkan satu ke {{name}} di Pengaturan › Perangkat.",
       "commandHint": "Kamu juga bisa memulainya dengan mengetik di kolom pesan percakapan mana pun:",
       "approvals": "Secara default, merge, deploy, dan rollback meminta persetujuan",
       "start": "Mulai misi",
@@ -9196,6 +9193,8 @@
     "fetch": "Ambil model",
     "listFailed": "Server tidak mencantumkan model ({{error}}). Ketik id setiap model di bawah.",
     "choose": "Pilih model yang boleh dipakai agen",
+    "search": "Cari model",
+    "noMatch": "Tidak ada model dengan “{{query}}”.",
     "addModel": "Tambahkan model",
     "add": "Tambah",
     "modelPlaceholder": "Id model, seperti llama-4",
@@ -11004,8 +11003,6 @@
       "no_computer": "Pilih komputer yang terhubung di Komputer untuk memakainya.",
       "exec_off": "Komputer ini terhubung tanpa izin menjalankan program.",
       "runner_old": "Perbarui program agentes.chat di komputer untuk memakainya.",
-      "tool_off": "{{program}} dimatikan di {{computer}}. Nyalakan di sana, di aplikasi agentes.chat: Preferensi → Alat.",
-      "tool_offLinux": "{{program}} dimatikan di {{computer}}. Nyalakan di sana, di aplikasi agentes.chat atau dengan {{command}}.",
       "tool_offOne": "{{program}} mati di {{computer}}.",
       "not_installed": "{{program}} belum terpasang di {{computer}}.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
@@ -11153,8 +11150,9 @@
   },
   "access": {
     "matrixTitle": "Akses agen",
-    "matrixHint": "Secara default, tindakan sensitif (merge, deploy, berbagi, bayar) meminta persetujuan. Untuk mengaturnya per alat, buka Alat milik konektor.",
+    "matrixHint": "Secara default, tindakan sensitif (merge, deploy, berbagi, bayar) meminta persetujuan. Untuk mengaturnya per alat, buka konektornya.",
     "matrixHow": "Klik sel untuk mengubahnya:",
+    "openConnectors": "Buka Konektor",
     "kindLabel": "Tampilkan",
     "kind": {
       "connectors": "Konektor",
@@ -13597,7 +13595,8 @@
       "ask": "Minta {{name}}",
       "asked": "Sudah diminta. {{name}} mendapat tombol untuk menyalakannya.",
       "done": "Menyala di {{machine}}.",
-      "outdated": "Perbarui aplikasi agentes.chat di {{machine}} untuk menyalakannya dari sini."
+      "outdated": "Perbarui aplikasi agentes.chat di {{machine}} untuk menyalakannya dari sini.",
+      "offline": "{{machine}} sedang offline. Begitu kembali, tombol ini menyalakan {{tool}}."
     },
     "remotePause": {
       "button": "Jeda",
@@ -13655,7 +13654,7 @@
       },
       "grantHere": "Ini {{device}} ini: izinkan folder di Preferensi aplikasi.",
       "openFolders": "Buka Folder",
-      "toolsHere": "Ini {{device}} ini: nyalakan browser di Preferensi aplikasi, di bagian Alat.",
+      "openServers": "Buka Server",
       "openTools": "Buka Alat",
       "reconnect": "Hubungkan ulang",
       "reconnecting": "Menghubungkan ulang {{device}} ini…",
@@ -13663,8 +13662,6 @@
       "offline": "{{device}} ini sedang offline.",
       "outageTitle": "{{device}} ini kehilangan koneksi {{ago}}",
       "toolsOff": "Mati di {{device}} ini. Nyalakan di Preferensi aplikasi, di bagian Alat.",
-      "browserTitle": "Nyalakan browser di {{device}} ini",
-      "browserText": "Satu klik di Preferensi aplikasi, di bagian Alat. Halaman ini akan tahu dengan sendirinya.",
       "noReport": "{{device}} ini belum melaporkan apa yang diizinkannya. Perbarui aplikasinya.",
       "update": "Perbarui aplikasi"
     },
@@ -14172,6 +14169,7 @@
       "pairingCode": "Kode penyambungan Wi-Fi",
       "pair": "Sambungkan",
       "tryAgain": "Coba lagi",
+      "openLocalNetwork": "Buka Jaringan Lokal",
       "qrLabel": "Kode QR untuk Proses debug nirkabel di ponsel",
       "qrLine": "Jangan dengan kamera",
       "qrCaption": "Kamera menawarkan jaringan Wi-Fi bernama agentes-…, yang tidak ada. Biarkan ponsel tetap di Wi-Fi komputer.",
@@ -15085,6 +15083,7 @@
       "help": "Angka seperti jumlah orang, agen, ukuran mesin, token AI yang terpakai, dan berapa banyak data yang dikirim dan diterima browser agen. Tidak pernah pesan, file, nama, atau situs.",
       "envOff": "Dimatikan di pengaturan server ini (TELEMETRY=off).",
       "envOffDesktop": "Dimatikan di aplikasi agentes.chat di komputer server ini (Preferensi › Server).",
+      "envOffHere": "Dimatikan di aplikasi agentes.chat di komputer ini.",
       "see": "Lihat apa yang dikirim",
       "dialogTitle": "Apa yang dikirim",
       "dialogText": "Sekali sehari. Ini laporan berikutnya, persis apa adanya."
@@ -17035,8 +17034,9 @@
       "meter": "Kamu sudah memakai {{used}} dari {{limit}}.",
       "near": "Kamu sudah memakai {{used}} dari {{limit}}. Unggahan berhenti saat mencapai batas, dan tidak ada yang dihapus.",
       "full": "Unggahan berhenti di {{limit}}. Tidak ada yang dihapus.",
-      "fullAdmin": "Ganti paket agentes.chat, hapus file yang tidak lagi kamu pakai, atau hubungkan bucket milikmu di Pengaturan › Penyimpanan.",
-      "dailyFull": "Unggahan hari ini mencapai {{limit}}. Kamu bisa mengunggah lagi dalam beberapa jam."
+      "fullAdmin": "Ganti paket agentes.chat, hapus file yang tidak lagi kamu pakai, atau hubungkan bucket milikmu.",
+      "dailyFull": "Unggahan hari ini mencapai {{limit}}. Kamu bisa mengunggah lagi dalam beberapa jam.",
+      "connectBucket": "Hubungkan bucket"
     }
   },
   "computerSetup": {
@@ -17411,8 +17411,7 @@
       "touchHint": "Ketuk untuk klik · Seret untuk menggulir · Tahan untuk menyeret · Dua jari untuk menggeser tampilan",
       "turn": "Putar ke samping",
       "upright": "Putar tegak",
-      "message": "Kirim pesan ke {{name}}",
-      "chooseOnWeb": "Pilih di agentes.chat, di Pengaturan › Perangkat."
+      "message": "Kirim pesan ke {{name}}"
     }
   },
   "agora": {
@@ -17578,6 +17577,12 @@
       "full_other": "Penuh · {{count}} antre",
       "room": "Ada tempat",
       "computers": "Komputer"
+    },
+    "capacity": {
+      "label": "Yang menahan tugas",
+      "today_other": "Hari ini: {{count}} tugas selesai · {{waiting}} menunggu",
+      "usage": "Lihat penggunaan",
+      "computers": "Lihat komputer"
     },
     "cards": {
       "label": "Agen",

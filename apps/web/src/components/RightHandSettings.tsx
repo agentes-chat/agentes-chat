@@ -303,11 +303,30 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
  */
 function RightHandComputerRow({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
   const view = useAgentComputer(agent);
   const openComputer = useOpenComputer();
   if (!view.ready || view.forbidden || !view.facts) return null;
   const none = rightHandNoComputer(view.desktop?.reason);
-  if (none) return <PrefRow id="rh-computer" icon="computer" label={t("agentComputer.button")} status={t(none)} />;
+  if (none)
+    return (
+      <PrefRow
+        id="rh-computer"
+        icon="computer"
+        label={t("agentComputer.button")}
+        status={t(none)}
+        control={
+          none === "rightHand.computerNoHome" &&
+          can(org, "pair_computers") && (
+            <Button asChild size="sm" icon="plus">
+              <Link to="/org/$orgId/settings/$section" params={{ orgId: org.id, section: "devices" }} search={{}}>
+                {t("rightHand.addComputer")}
+              </Link>
+            </Button>
+          )
+        }
+      />
+    );
   return (
     <PrefRow
       id="rh-computer"

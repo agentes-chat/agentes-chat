@@ -14,6 +14,7 @@ import {
   deviceRows,
   deviceWaitEventOf,
   deviceWaitOf,
+  failedOnLocalNetwork,
   fixText,
   IPHONE_RESTART_MS,
   type IphoneRestartMemo,
@@ -472,6 +473,13 @@ describe("pairing over Wi-Fi", () => {
       "On that Mac, also turn on agentes.chat in System Settings › Privacy & Security › Local Network.",
     );
     expect(onMac("refused")).toBe("The phone didn't take that code. Check the code and the address, then pair again.");
+    // Those same causes, and only they, get the button to that setting in the app on that Mac.
+    expect(
+      (["same_wifi", "mdns_off", "timed_out", "refused", "outdated"] as const).map((reason) =>
+        failedOnLocalNetwork({ state: "failed", reason }),
+      ),
+    ).toEqual([true, true, true, false, false]);
+    expect(failedOnLocalNetwork({ state: "pairing" })).toBe(false);
     expect([
       wifiPairLive({ state: "connecting" }),
       wifiPairLive({ state: "connected" }),
