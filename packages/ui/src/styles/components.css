@@ -7248,42 +7248,6 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
   transform: none;
   opacity: 1;
 }
-/* While an agent works and there is text: "Juntar ao que ele faz" / "Parar e mandar" above the box. */
-.ac-composer-choice {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 0 4px 6px;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-.ac-composer-choice .ac-seg__item[data-on] {
-  background: var(--raised);
-  box-shadow: var(--seg-plate-ring), var(--top);
-}
-.ac-composer-choice__hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--faint);
-}
-@media (max-width: 760px), (hover: none), (pointer: coarse) {
-  .ac-composer-choice__hint {
-    display: none;
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .ac-composer-choice {
-    animation: ac-composer-choice-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-}
-@keyframes ac-composer-choice-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
 .ac-composer__send-text {
   display: inline-flex;
   align-items: center;
