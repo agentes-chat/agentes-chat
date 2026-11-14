@@ -28,6 +28,7 @@ import {
   DialogFooter,
   Icon,
   LimitLine,
+  limitShown,
   OptionList,
   overLimit,
   PixelSky,
@@ -1160,7 +1161,9 @@ function NewAgentDialog({
                             placeholder={t("newAgentCard.instructionsPlaceholder")}
                             aria-label={t("newAgent.instructions")}
                             aria-invalid={tooLong || undefined}
-                            aria-describedby="nac-instr-limit"
+                            aria-describedby={
+                              limitShown(draft.instructions, instructionsLimit) ? "nac-instr-limit" : undefined
+                            }
                             onChange={(e) => update({ instructions: e.target.value })}
                           />
                           <Icon name="edit" size={14} className="nac__pen" />

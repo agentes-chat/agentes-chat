@@ -64,6 +64,7 @@ import {
   Kbd,
   LimitLine,
   Locked,
+  limitShown,
   overLimit,
   PageHeader,
   SearchInput,
@@ -967,7 +968,7 @@ export function RefuseBox({ approval, agent, onCancel }: { approval: Approval; a
           value={reason}
           placeholder={t("approvals.refusePlaceholder")}
           aria-invalid={tooLong || undefined}
-          aria-describedby={`${id}-limit`}
+          aria-describedby={limitShown(reason, limit) ? `${id}-limit` : undefined}
           onChange={(e) => setReason(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();

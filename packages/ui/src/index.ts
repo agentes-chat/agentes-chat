@@ -185,6 +185,7 @@ export {
   Input,
   LimitLine,
   Locked,
+  limitShown,
   overLimit,
   PickerHeading,
   SearchInput,

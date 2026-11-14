@@ -256,7 +256,7 @@ export const overLimit = (value: string, limit: TextLimit | undefined) =>
   limit !== undefined && value.trim().length > limit.max;
 
 /** Whether `LimitLine` shows anything for this value: from 90% of the limit. */
-const limitShown = (value: string, limit: TextLimit | undefined) =>
+export const limitShown = (value: string, limit: TextLimit | undefined) =>
   limit !== undefined && value.trim().length >= limit.max * LIMIT_NEAR;
 
 /**

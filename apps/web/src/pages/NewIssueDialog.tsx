@@ -18,6 +18,7 @@ import {
   Icon,
   LimitLine,
   Locked,
+  limitShown,
   Menu,
   MenuCheckboxItem,
   MenuItem,
@@ -414,7 +415,7 @@ export function NewIssueDialog({
                       rows={4}
                       value={description}
                       aria-invalid={tooLong || undefined}
-                      aria-describedby="ni-text-limit"
+                      aria-describedby={limitShown(description, limit) ? "ni-text-limit" : undefined}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder={t("issues.form.descriptionPlaceholder")}
                       aria-label={t("issues.description")}
@@ -516,7 +517,7 @@ export function NewIssueDialog({
                 rows={5}
                 value={text}
                 aria-invalid={tooLong || undefined}
-                aria-describedby="ni-text-limit"
+                aria-describedby={limitShown(text, limit) ? "ni-text-limit" : undefined}
                 onChange={(e) => setText(e.target.value)}
                 placeholder={t("issues.form.quickPlaceholder")}
                 aria-label={t("issues.form.description")}

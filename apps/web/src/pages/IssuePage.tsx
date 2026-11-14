@@ -33,6 +33,7 @@ import {
   Input,
   LimitLine,
   Locked,
+  limitShown,
   Menu,
   MenuItem,
   MenuSeparator,
@@ -424,7 +425,7 @@ function IssueDescription({ issue: i, hasFiles, onSaved }: { issue: Issue; hasFi
             rows={4}
             value={draft}
             aria-invalid={overLimit(draft, limit) || undefined}
-            aria-describedby={`issue-description-${i.id}-limit`}
+            aria-describedby={limitShown(draft, limit) ? `issue-description-${i.id}-limit` : undefined}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={save}
             onKeyDown={(e) => {

@@ -103,6 +103,7 @@ import {
   Input,
   LimitLine,
   Locked,
+  limitShown,
   Menu,
   overLimit,
   PageHeader,
@@ -1682,7 +1683,7 @@ function RoutinePrompt({ routine: r, onSaved }: { routine: Routine; onSaved: () 
             rows={8}
             value={draft}
             aria-invalid={overLimit(draft, limit) || undefined}
-            aria-describedby={`routine-prompt-${r.id}-limit`}
+            aria-describedby={limitShown(draft, limit) ? `routine-prompt-${r.id}-limit` : undefined}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={save}
             onKeyDown={(e) => {
