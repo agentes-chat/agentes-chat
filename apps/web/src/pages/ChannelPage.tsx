@@ -953,6 +953,11 @@ function ChannelView({
   );
   const profileNow = useRef(profile);
   profileNow.current = profile;
+  // Closed by the URL (Back, a thread taking its place): a close asked before would close it again on Forward.
+  const profileShown = agentPlace?.agentId;
+  useEffect(() => {
+    if (!profileShown) setProfileAsk(null);
+  }, [profileShown]);
   const askProfileClose = useCallback(() => {
     const agentId = profileNow.current?.agentId;
     if (!agentId) return;
