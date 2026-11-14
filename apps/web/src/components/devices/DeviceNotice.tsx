@@ -185,7 +185,11 @@ export function DeviceNoticeActions({ n, inline = false }: { n: AppNotification;
   if (d.kind === "device.cli_request" && d.machineId && installableCli(d.tool ?? ""))
     return (
       <Wrap inline={inline} onClick={keep}>
-        <CliInstallButton machineId={d.machineId} cli={installableCli(d.tool ?? "") ?? "claude"} />
+        <CliInstallButton
+          machineId={d.machineId}
+          machineName={d.device}
+          cli={installableCli(d.tool ?? "") ?? "claude"}
+        />
       </Wrap>
     );
   if (d.kind === "device.access_request" && d.requestId)

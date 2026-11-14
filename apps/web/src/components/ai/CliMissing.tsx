@@ -2,9 +2,15 @@ import type { InstallableCli, Machine, MachineAccountKind } from "@agenteschat/c
 import { useCheckMachineClis, useCliInstall } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { firstName } from "@agenteschat/client/lib/format";
-import { CLI_GIT_MISSING, cliOneClick, GIT_FOR_WINDOWS_URL, installableCli } from "@agenteschat/client/lib/machines";
+import {
+  CLI_GIT_MISSING,
+  cliInstallFailure,
+  cliOneClick,
+  GIT_FOR_WINDOWS_URL,
+  installableCli,
+} from "@agenteschat/client/lib/machines";
 import { Button, HintLine, Icon, SettingNote, Spinner } from "@agenteschat/ui";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/lib/toast";
 import { useOrg } from "../org-context";
@@ -53,7 +59,8 @@ export function CliMissing({
   let line: ReactNode;
   if (running) {
     line = (
-      <p className="setup-line ac-iconline" role="status">
+      // SettingNote's own line with a spinner for its icon: no shift when the install starts or ends.
+      <p className="ac-setnote ac-iconline ac-setnote--live" role="status">
         <Spinner size={14} />
         <span>{t("connectAi.cli.installing", words)}</span>
       </p>
@@ -61,11 +68,8 @@ export function CliMissing({
   } else {
     const text = gitMissing
       ? t("connectAi.cli.gitMissing", words)
-      : install?.state === "failed"
-        ? install.cause === "still_missing"
-          ? t("connectAi.cli.stillMissing", words)
-          : t("connectAi.cli.failed", { computer, message: install.message ?? "" })
-        : broken !== null
+      : (cliInstallFailure(t, install, words) ??
+        (broken !== null
           ? broken
             ? t("connectAi.cli.cantStart", { ...words, message: broken })
             : t("brain.reasons.cant_start", words)
@@ -76,7 +80,7 @@ export function CliMissing({
                   a: t("connectAi.cli.missing", words),
                   b: t("connectAi.cli.outdated", { computer }),
                 })
-              : null;
+              : null));
     // The Claude chat app is likely on a Mac or a PC, and isn't Claude Code: said once, behind the ⓘ.
     const why = cli === "claude" && (machine.os === "windows" || machine.os === "darwin");
     line = (
@@ -161,12 +165,28 @@ export function CliMissing({
  * The inbox row's one click for whoever connected the computer, when someone asked them for a coding CLI there: it
  * installs it, and says so while it runs.
  */
-export function CliInstallButton({ machineId, cli }: { machineId: string; cli: InstallableCli }) {
+export function CliInstallButton({
+  machineId,
+  machineName,
+  cli,
+}: {
+  machineId: string;
+  machineName: string;
+  cli: InstallableCli;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const toast = useToast();
   const run = useCliInstall(org.id, machineId, cli, true);
   const running = run.install?.state === "running";
+  const program = t(`brain.card.${cli === "claude" ? "claude_code" : "codex"}`);
+  // An install that ended badly says why where it was started; one that ended before this row opened says nothing.
+  const was = useRef(run.install?.state);
+  useEffect(() => {
+    const failed = was.current === "running" && cliInstallFailure(t, run.install, { program, computer: machineName });
+    if (failed) toast.show(failed, "error");
+    was.current = run.install?.state;
+  }, [run.install, t, program, machineName, toast]);
   return (
     <Button
       size="sm"
@@ -174,7 +194,7 @@ export function CliInstallButton({ machineId, cli }: { machineId: string; cli: I
       loading={run.start.isPending || running}
       onClick={() => run.start.mutate(undefined, { onError: (err) => toast.show(errorText(t, err), "error") })}
     >
-      {t("connectAi.cli.install", { program: t(`brain.card.${cli === "claude" ? "claude_code" : "codex"}`) })}
+      {t("connectAi.cli.install", { program })}
     </Button>
   );
 }

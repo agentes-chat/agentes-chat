@@ -10,6 +10,7 @@ import {
   allowsInApp,
   beginLogin,
   browserOffMessage,
+  cliInstallFailure,
   cliOneClick,
   commandInReason,
   computerKind,
@@ -586,6 +587,16 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(cliOneClick({ ...pc, os: "linux", mode: "system" }, "u-bia", "claude")).toBeNull();
     expect(cliOneClick({ ...pc, kind: "managed" }, "u-bia", "claude")).toBeNull();
     expect(installableCli("claude_code")).toBe("claude");
+    const words = { program: "Claude Code", computer: "PC" };
+    const said = (k: string, v?: Record<string, unknown>) => `${k} ${JSON.stringify(v)}`;
+    const t = said as unknown as Parameters<typeof cliInstallFailure>[0];
+    expect(cliInstallFailure(t, { tool: "claude", state: "running" }, words)).toBeNull();
+    expect(cliInstallFailure(t, { tool: "claude", state: "failed", cause: "git_missing" }, words)).toContain(
+      "connectAi.cli.gitMissing",
+    );
+    expect(cliInstallFailure(t, { tool: "claude", state: "failed", message: "curl: (6)" }, words)).toBe(
+      'connectAi.cli.failed {"computer":"PC","message":"curl: (6)"}',
+    );
     expect(installableCli("cursor")).toBeNull();
   });
 

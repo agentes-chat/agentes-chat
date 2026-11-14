@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type {
   AccountLoginFailure,
   AccountLoginStatus,
+  CliInstall,
   DeviceLocation,
   InstallableCli,
   Machine,
@@ -134,6 +135,18 @@ export const GIT_FOR_WINDOWS_URL = "https://git-scm.com/downloads/win";
 /** The coding CLI a brain runs, when the computer installs it from the apps (`INSTALLABLE_CLIS`); null otherwise. */
 export const installableCli = (kind: string): InstallableCli | null =>
   kind === "claude_code" || kind === "claude" ? "claude" : kind === "codex" ? "codex" : null;
+
+/** Why an install of a coding CLI failed, in words, with the installer's own line; null when it didn't fail. */
+export function cliInstallFailure(
+  t: TFunction,
+  install: CliInstall | null | undefined,
+  words: { program: string; computer: string },
+): string | null {
+  if (install?.state !== "failed") return null;
+  if (install.cause === "git_missing") return t("connectAi.cli.gitMissing", words);
+  if (install.cause === "still_missing") return t("connectAi.cli.stillMissing", words);
+  return t("connectAi.cli.failed", { computer: words.computer, message: install.message ?? "" });
+}
 
 /**
  * What one click does where a coding CLI isn't on `m`, for the person `meId`, as `toolOneClick` for a switch: `allow`

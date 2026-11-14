@@ -25,7 +25,13 @@ import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { firstName, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { CLI_GIT_MISSING, cliOneClick, GIT_FOR_WINDOWS_URL, installableCli } from "@agenteschat/client/lib/machines";
+import {
+  CLI_GIT_MISSING,
+  cliInstallFailure,
+  cliOneClick,
+  GIT_FOR_WINDOWS_URL,
+  installableCli,
+} from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   behindComputer,
@@ -682,11 +688,8 @@ function CliMissingCard({
     ? t("connectAi.cli.installing", words)
     : gitMissing
       ? t("connectAi.cli.gitMissing", words)
-      : install?.state === "failed"
-        ? install.cause === "still_missing"
-          ? t("connectAi.cli.stillMissing", words)
-          : t("connectAi.cli.failed", { computer, message: install.message ?? "" })
-        : broken !== null
+      : (cliInstallFailure(t, install, words) ??
+        (broken !== null
           ? broken
             ? t("connectAi.cli.cantStart", { ...words, message: broken })
             : t("brain.reasons.cant_start", words)
@@ -697,7 +700,7 @@ function CliMissingCard({
                   a: t("connectAi.cli.missing", words),
                   b: t("connectAi.cli.outdated", { computer }),
                 })
-              : t("connectAi.cli.missing", words);
+              : t("connectAi.cli.missing", words)));
   const failedBefore = install?.state === "failed" || install?.state === "canceled";
   const actions = running ? (
     <Button
