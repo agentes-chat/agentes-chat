@@ -58,6 +58,7 @@ const {
   issues,
   mailAccounts,
   messages,
+  notifications,
   routines,
   users,
 } = schema;
@@ -162,6 +163,9 @@ export function approvalOriginOf(value: Approval["origin"]): ApprovalOrigin | nu
   }
   return null;
 }
+
+/** The longest reason a person gives with a decision. Mirror: `APPROVAL_REASON_MAX` in packages/client approval-card.ts. */
+export const APPROVAL_REASON_MAX = 1000;
 
 const resultOf = (a: Approval): ApprovalView["result"] => {
   const r = a.result as { content?: unknown; isError?: unknown; notRunAfter?: unknown } | null;
@@ -954,7 +958,7 @@ export async function decideApproval(
               decidedByUserId: actorId,
               decidedForUserId: forUserId,
               decidedAt: at,
-              reason: input.reason?.trim().slice(0, 1000) || null,
+              reason: input.reason?.trim().slice(0, APPROVAL_REASON_MAX) || null,
             },
       )
       .where(eq(approvals.id, approvalId))
@@ -1055,7 +1059,7 @@ export async function decideApprovals(
                 decidedByUserId: actorId,
                 decidedForUserId: forUserOf(row),
                 decidedAt: at,
-                reason: input.reason?.trim().slice(0, 1000) || null,
+                reason: input.reason?.trim().slice(0, APPROVAL_REASON_MAX) || null,
               },
         )
         .where(eq(approvals.id, row.id))
@@ -1147,9 +1151,38 @@ export async function expireApprovals(deps: { db: Database; pubsub: PubSub }, no
     return [...rows, ...lapsed];
   });
   for (const row of expired) await publishApproval(deps, row, "approval.decided");
+  await resolveStaleApprovalNotifications(deps).catch(() => {});
   // The same minute's safety net for runs waiting their turn behind a request whose run ended (`approval-order.ts`).
   await resumeHeldRuns(deps.db, now).catch(() => 0);
   return expired.length;
+}
+
+/**
+ * An approval's notification left waiting after the request closed (a row canceled in place before each close told
+ * the inbox, a crash between the close and the inbox): out of the inbox, or on to the card's next request still
+ * waiting, so no conversation says a request waits when Approvals has none.
+ */
+export async function resolveStaleApprovalNotifications(deps: { db: Database; pubsub?: PubSub }) {
+  const stale = await deps.db
+    .selectDistinct({ id: approvals.id, orgId: approvals.orgId, messageId: approvals.messageId })
+    .from(notifications)
+    .innerJoin(
+      approvals,
+      and(
+        eq(approvals.orgId, notifications.orgId),
+        sql`${notifications.source}->>'approvalId' = ${approvals.id}::text`,
+      ),
+    )
+    .where(
+      and(
+        eq(notifications.kind, "approval"),
+        eq(notifications.waiting, true),
+        isNull(notifications.doneAt),
+        ne(approvals.status, "pending"),
+      ),
+    );
+  for (const row of stale) await resolveApprovalNotifications(deps, row);
+  return stale.length;
 }
 
 /**

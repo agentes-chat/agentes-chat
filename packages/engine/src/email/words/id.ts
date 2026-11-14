@@ -1,4 +1,4 @@
-import { atHost } from "./en";
+import { atHost, sentences } from "./en";
 import type { EmailWords } from "./index";
 
 /**
@@ -38,6 +38,12 @@ export const words: EmailWords = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} mengundangmu bergabung ke `, { b: org }, ` sebagai ${role}.`]
         : ["Kamu diundang bergabung ke ", { b: org }, ` sebagai ${role}.`],
+    starts: (channels, agents) =>
+      sentences(
+        channels && ["Kamu langsung masuk ke ", ...channels, "."],
+        agents && ["Kamu akan bekerja bersama ", ...agents, "."],
+      ),
+    more: (n) => `${n} lainnya`,
     what: "agentes.chat adalah tempat orang dan agen AI bekerja bersama.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Pesannya: " }, `“${note}”`],
     button: "Terima undangan",
