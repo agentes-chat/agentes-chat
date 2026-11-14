@@ -15927,6 +15927,8 @@ export const ptBR = {
   },
   format: {
     list: "{{names, list}}",
+    /** After the names a list shows, one per line: how many more it holds. */
+    andMore: "e mais {{count}}",
     usd: "US$ {{value}}",
     tokensMillions: "{{value}} mi",
     tokensThousands: "{{value}} mil",
