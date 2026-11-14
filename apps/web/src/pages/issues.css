@@ -604,6 +604,8 @@ html:not([data-pointer]) .issue-card:focus-visible {
   margin-top: var(--space-4);
 }
 .issue-list {
+  /* Its rows ask how wide it is, to stand their facts in columns only with room for them. */
+  container: issue-list / inline-size;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -630,8 +632,9 @@ html:not([data-pointer]) .issue-card:focus-visible {
 .issue-list__row {
   position: relative;
   display: grid;
-  /* The facts take what they need up to 40% of the row and wrap inside it: the title keeps the rest. */
-  grid-template-columns: 52px minmax(0, 1fr) fit-content(40%) minmax(0, 200px);
+  /* The facts take what they need up to 40% of the row and wrap inside it: the title keeps the rest. Standing in the
+     list's columns (below), they take the columns' whole width. */
+  grid-template-columns: var(--row-columns, 52px minmax(0, 1fr) fit-content(40%) minmax(0, 200px));
   grid-template-areas: "num title facts who";
   /* On one line of words: a part that wraps (a long title, a stopped run's reason) grows down from it. */
   align-items: baseline;
@@ -670,51 +673,137 @@ html:not([data-pointer]) .issue-list__row:focus-visible {
 }
 /* Wide, the facts stand in columns the whole list shares (`--issue-facts`, one for each fact some task shown has):
    labels under labels, priorities under priorities, down every group. A row leaves empty the column of a fact it
-   doesn't have; a fact longer than its column is cut there, never pushing the next one. */
-@media (min-width: 721px) {
-  .issue-list__row > .issue-card__facts {
-    display: grid;
-    grid-template-columns: var(--issue-facts, none);
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    column-gap: var(--space-3);
+   doesn't have; a name longer than its column ends in "…". Only where the list has room for the columns beside a
+   title: what they take, counted in steps of 80 (`data-fact-columns`), plus 500 for the number, a title's least and
+   who has it. Narrower, a row packs its facts against its end as before. */
+.issue-list__row > .issue-card__facts {
+  display: var(--facts-display, flex);
+  grid-template-columns: var(--issue-facts, none);
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+}
+.issue-list__row > .issue-card__facts > .ac-factline__fact {
+  grid-row: 1;
+  white-space: var(--fact-space, normal);
+}
+.issue-list__row > .issue-card__facts > :is([data-fact="project"], [data-fact="label"], [data-fact="github"]) {
+  justify-self: start;
+  overflow: var(--fact-clip, visible);
+  text-overflow: ellipsis;
+}
+/* A name with its mark, as one line of words that can end in "…": the mark sits in the line, on its middle. */
+.issue-list__row > .issue-card__facts > :is([data-fact="project"], [data-fact="github"]) {
+  display: var(--fact-name, inline-flex);
+}
+.issue-list__row > .issue-card__facts > :is([data-fact="project"], [data-fact="github"]) > :is(svg, .ac-colordot) {
+  margin-inline-end: var(--fact-name-gap, 0);
+  vertical-align: -2px;
+}
+.issue-list__row > .issue-card__facts > [data-fact="project"] {
+  grid-column: project;
+}
+.issue-list__row > .issue-card__facts > [data-fact="label"] {
+  grid-column: label;
+}
+.issue-list__row > .issue-card__facts > [data-fact="labels"] {
+  grid-column: labels;
+}
+.issue-list__row > .issue-card__facts > [data-fact="priority"] {
+  grid-column: priority;
+}
+.issue-list__row > .issue-card__facts > [data-fact="due"] {
+  grid-column: due;
+}
+.issue-list__row > .issue-card__facts > [data-fact="criteria"] {
+  grid-column: criteria;
+}
+.issue-list__row > .issue-card__facts > [data-fact="pr"] {
+  grid-column: pr;
+}
+.issue-list__row > .issue-card__facts > [data-fact="github"] {
+  grid-column: github;
+}
+.issue-list__row > .issue-card__facts > [data-fact="talk"] {
+  grid-column: talk;
+}
+@container issue-list (min-width: 580px) {
+  [data-fact-columns="80"] .issue-list__row {
+    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
+    --facts-display: grid;
+    --fact-space: nowrap;
+    --fact-clip: hidden;
+    --fact-name: block;
+    --fact-name-gap: var(--space-1);
   }
-  .issue-list__row > .issue-card__facts > .ac-factline__fact {
-    grid-row: 1;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
+}
+@container issue-list (min-width: 660px) {
+  [data-fact-columns="160"] .issue-list__row {
+    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
+    --facts-display: grid;
+    --fact-space: nowrap;
+    --fact-clip: hidden;
+    --fact-name: block;
+    --fact-name-gap: var(--space-1);
   }
-  .issue-list__row > .issue-card__facts > [data-fact="label"] {
-    justify-self: start;
-    text-overflow: ellipsis;
+}
+@container issue-list (min-width: 740px) {
+  [data-fact-columns="240"] .issue-list__row {
+    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
+    --facts-display: grid;
+    --fact-space: nowrap;
+    --fact-clip: hidden;
+    --fact-name: block;
+    --fact-name-gap: var(--space-1);
   }
-  .issue-list__row > .issue-card__facts > [data-fact="project"] {
-    grid-column: project;
+}
+@container issue-list (min-width: 820px) {
+  [data-fact-columns="320"] .issue-list__row {
+    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
+    --facts-display: grid;
+    --fact-space: nowrap;
+    --fact-clip: hidden;
+    --fact-name: block;
+    --fact-name-gap: var(--space-1);
   }
-  .issue-list__row > .issue-card__facts > [data-fact="label"] {
-    grid-column: label;
+}
+@container issue-list (min-width: 900px) {
+  [data-fact-columns="400"] .issue-list__row {
+    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
+    --facts-display: grid;
+    --fact-space: nowrap;
+    --fact-clip: hidden;
+    --fact-name: block;
+    --fact-name-gap: var(--space-1);
   }
-  .issue-list__row > .issue-card__facts > [data-fact="labels"] {
-    grid-column: labels;
+}
+@container issue-list (min-width: 980px) {
+  [data-fact-columns="480"] .issue-list__row {
+    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
+    --facts-display: grid;
+    --fact-space: nowrap;
+    --fact-clip: hidden;
+    --fact-name: block;
+    --fact-name-gap: var(--space-1);
   }
-  .issue-list__row > .issue-card__facts > [data-fact="priority"] {
-    grid-column: priority;
+}
+@container issue-list (min-width: 1060px) {
+  [data-fact-columns="560"] .issue-list__row {
+    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
+    --facts-display: grid;
+    --fact-space: nowrap;
+    --fact-clip: hidden;
+    --fact-name: block;
+    --fact-name-gap: var(--space-1);
   }
-  .issue-list__row > .issue-card__facts > [data-fact="due"] {
-    grid-column: due;
-  }
-  .issue-list__row > .issue-card__facts > [data-fact="criteria"] {
-    grid-column: criteria;
-  }
-  .issue-list__row > .issue-card__facts > [data-fact="pr"] {
-    grid-column: pr;
-  }
-  .issue-list__row > .issue-card__facts > [data-fact="github"] {
-    grid-column: github;
-  }
-  .issue-list__row > .issue-card__facts > [data-fact="talk"] {
-    grid-column: talk;
+}
+@container issue-list (min-width: 1140px) {
+  [data-fact-columns="640"] .issue-list__row {
+    --row-columns: 52px minmax(0, 1fr) auto minmax(0, 200px);
+    --facts-display: grid;
+    --fact-space: nowrap;
+    --fact-clip: hidden;
+    --fact-name: block;
+    --fact-name-gap: var(--space-1);
   }
 }
 /* Wide, the number has its own column. */

@@ -274,15 +274,14 @@ describe("Tarefas at their worst", () => {
     expect(row.classList.contains("issue-list__row")).toBe(true);
     expect(row.querySelector(".issue-list__title")?.textContent).toBe(URL_TITLE);
     expect(facts(row)[0]).toBe("#12873");
-    // The list gives every row the same columns of facts, one for each fact some task has, and each fact says which
-    // it is: labels stand under labels and priorities under priorities, whatever each row has.
-    const columns = (row.closest(".ac-groups") as HTMLElement).style.getPropertyValue("--issue-facts");
-    for (const name of ["label", "priority", "due", "criteria"]) expect(columns).toContain(`[${name}]`);
+    // Each fact says which it is, for the list's columns; with every fact at once there are more columns than a list
+    // has room for, so these rows keep packing their facts.
     const kinds = [...row.querySelectorAll(".issue-card__facts > .ac-factline__fact")].map((f) =>
       f.getAttribute("data-fact"),
     );
     expect(kinds[0]).toBe("number");
-    for (const kind of kinds.slice(1)) expect(columns).toContain(`[${kind}]`);
+    expect(kinds).toContain("label");
+    expect((row.closest(".ac-groups") as HTMLElement).hasAttribute("data-fact-columns")).toBe(false);
     expect(cardOf(136).querySelector(".issue-list__title > code.ac-inlinecode")?.textContent).toBe("bun test");
   });
 

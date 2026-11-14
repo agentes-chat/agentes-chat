@@ -247,17 +247,7 @@ export function ProposalsPage({ agentId }: { agentId?: string }) {
                 </Card>
 
                 <Card as="section" className="ap-review__card" aria-label={t("proposals.changeLabel")}>
-                  <CardHeader
-                    icon="edit"
-                    title={t("proposals.change", { target: targetLabel(current) })}
-                    action={
-                      open(current) && current.canDecide && isText(current) ? (
-                        <Button variant="link" disabled={decide.isPending} onClick={() => setEditing((v) => !v)}>
-                          {editing ? t("proposals.viewDiff") : t("proposals.editFirst")}
-                        </Button>
-                      ) : undefined
-                    }
-                  />
+                  <CardHeader icon="edit" title={t("proposals.change", { target: targetLabel(current) })} />
                   {!isText(current) && current.target.type !== "skill" ? (
                     <SettingChange p={current} />
                   ) : editing && current.status === "pending" ? (
@@ -286,10 +276,20 @@ export function ProposalsPage({ agentId }: { agentId?: string }) {
 
               {open(current) &&
                 (current.canDecide ? (
-                  // The requests' decision bar: what refusing does on its line, the two buttons at its end.
+                  // The requests' decision bar: what refusing does on its line; editing first, refusing and accepting at its end.
                   <div className="ap-bar ap-bar--float">
                     <p className="ap-bar__text">{t("proposals.refuseNote", agentGrammar(proposer))}</p>
                     <div className="ap-bar__acts">
+                      {isText(current) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={decide.isPending}
+                          onClick={() => setEditing((v) => !v)}
+                        >
+                          {editing ? t("proposals.viewDiff") : t("proposals.editFirst")}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         disabled={decide.isPending}

@@ -985,27 +985,43 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
   return <FactLine className="issue-card__facts" facts={facts} />;
 }
 
+/** The gap between two facts on a line (`.ac-factline`'s). */
+const FACT_GAP = 12;
+/** The widest set of columns the list lays out, and the step their room is counted in (issues.css has one rule each). */
+const FACT_COLUMNS_MAX = 640;
+const FACT_COLUMNS_STEP = 80;
+
 /**
  * The list's columns of facts, one for each fact some task shown has (and its view toggle allows), in the facts'
  * order: every row stands its facts in the same columns, so labels, priorities, dates and criteria line up down the
  * list instead of each row packing what it has against its end. Each column is as wide as its fact reads at most;
- * only the ones holding a name (a project, a label, a repository) give way when the row is narrow.
+ * a name longer than its column (a project, a label, a repository) ends in "…". `room`: what the columns take, in
+ * steps, which the list needs beside a title before it stands them (issues.css). With more columns than a list ever
+ * has room for (every fact at once), none: the rows keep packing their facts.
  */
 function listFactColumns(issues: Issue[], fields: IssuesView["fields"]) {
   const any = (has: (i: Issue) => unknown) => issues.some((i) => Boolean(has(i)));
-  return [
-    fields.project && any((i) => i.project) && "[project] minmax(0, 128px)",
-    fields.label && any((i) => i.labels.length > 0) && "[label] minmax(0, 104px)",
-    fields.label && any((i) => i.labels.length > 1) && "[labels] 24px",
-    fields.priority && any((i) => i.priority !== "normal") && "[priority] 60px",
-    fields.due && any((i) => i.dueDate && isOpen(i)) && "[due] 80px",
-    fields.criteria && any((i) => i.criteria.length > 0) && "[criteria] 52px",
-    fields.pullRequest && any((i) => i.pullRequests.length > 0) && "[pr] 72px",
-    fields.pullRequest && any((i) => i.githubUrl) && "[github] minmax(0, 112px)",
-    any((i) => (i.conversation?.count ?? 0) > 0) && "[talk] 48px",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const columns = (
+    [
+      ["project", 128, fields.project && any((i) => i.project)],
+      ["label", 104, fields.label && any((i) => i.labels.length > 0)],
+      ["labels", 24, fields.label && any((i) => i.labels.length > 1)],
+      ["priority", 72, fields.priority && any((i) => i.priority !== "normal")],
+      ["due", 80, fields.due && any((i) => i.dueDate && isOpen(i))],
+      ["criteria", 60, fields.criteria && any((i) => i.criteria.length > 0)],
+      ["pr", 88, fields.pullRequest && any((i) => i.pullRequests.length > 0)],
+      ["github", 112, fields.pullRequest && any((i) => i.githubUrl)],
+      // Always: a mention of me shows there with no message counted yet, and a fact with no column of its own would
+      // widen its row alone and push its other facts out of line.
+      ["talk", 56, true],
+    ] as const
+  ).filter(([, , shown]) => shown);
+  const width = columns.reduce((sum, [, px]) => sum + px, 0) + FACT_GAP * Math.max(0, columns.length - 1);
+  if (columns.length === 0 || width > FACT_COLUMNS_MAX) return null;
+  return {
+    template: columns.map(([name, px]) => `[${name}] ${px}px`).join(" "),
+    room: Math.ceil(width / FACT_COLUMNS_STEP) * FACT_COLUMNS_STEP,
+  };
 }
 
 /**
@@ -1168,12 +1184,14 @@ function IssueList({
   const custom = isCustomBoard(columns);
   const byId = new Map(groups.map((g) => [g.id, g]));
   // One set of fact columns for the whole list, whatever its groups: read by every row (issues.css).
+  const facts = listFactColumns(
+    groups.flatMap((g) => g.items),
+    fields,
+  );
   const factColumns = {
-    "--issue-facts": listFactColumns(
-      groups.flatMap((g) => g.items),
-      fields,
-    ),
-  } as CSSProperties;
+    "data-fact-columns": facts?.room,
+    style: facts ? ({ "--issue-facts": facts.template } as CSSProperties) : undefined,
+  };
   const zone = (g: IssueGroup, heading?: ReactNode) => (
     <div key={g.id} className={cx("issues-group__col", dnd.over === g.id && "is-over")} data-col>
       {heading}
@@ -1182,7 +1200,7 @@ function IssueList({
   );
   if (stages)
     return (
-      <div className="ac-groups" style={factColumns}>
+      <div className="ac-groups" {...factColumns}>
         {stages.map(({ stage, columns: cols }) => {
           const count = cols.reduce((n, c) => n + dnd.count(c.id), 0);
           if (count === 0 && !dnd.active) return null;
@@ -1225,7 +1243,7 @@ function IssueList({
       </div>
     );
   return (
-    <div className="ac-groups" style={factColumns}>
+    <div className="ac-groups" {...factColumns}>
       {groups.map((g) => {
         const count = dnd.count(g.id);
         if (count === 0 && !dnd.active) return null;
