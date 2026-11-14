@@ -219,7 +219,7 @@ export function ConsultPairRow({
           </Text>
         ) : null}
         {subject ? (
-          <Text variant="footnote" tone="faint" style={styles.subject} numberOfLines={2}>
+          <Text variant="footnote" tone="faint" style={styles.subject}>
             {subject}
           </Text>
         ) : null}
