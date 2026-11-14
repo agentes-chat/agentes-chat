@@ -959,7 +959,7 @@ export interface AgentInput {
   mediaReplies?: boolean;
   /** The Autonomia it starts with (the last setup's, ADR 0094): only an admin or its own owner sends it. */
   autonomy?: CommandApproval;
-  /** Editing only: its autonomy brakes (ADR 0131); the fields given change. */
+  /** Its autonomy brakes (ADR 0131); the fields given change. Same permission as editing the agent. */
   brakes?: Partial<AgentBrakes>;
   /** How much it asks before acting (ADR 0173); same permission as editing the agent. */
   approvalsLevel?: ApprovalsLevel;

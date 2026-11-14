@@ -1024,7 +1024,7 @@ export function agentRoutes(deps: AppDeps) {
       responses: { 201: json(Agent, "Created"), ...errors },
     }),
     async (c) => {
-      const { monthlyBudgetUsd, audience, appearance, proposal, brakes: _brakes, ...input } = c.req.valid("json");
+      const { monthlyBudgetUsd, audience, appearance, proposal, brakes, ...input } = c.req.valid("json");
       const orgId = c.req.valid("param").orgId;
       const make = () =>
         createAgent(
@@ -1034,6 +1034,7 @@ export function agentRoutes(deps: AppDeps) {
           {
             ...input,
             monthlyBudgetNanoUsd: budget(monthlyBudgetUsd),
+            ...(brakes ? { autonomyBrakes: brakes } : {}),
             // A restricted one is born answering only its owner, so an audience refused below never leaves it open.
             ...(audience && audience.mode !== "everyone" ? { audienceMode: "owner" as const } : {}),
           },

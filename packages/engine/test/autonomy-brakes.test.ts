@@ -9,6 +9,7 @@ import {
   costlyGate,
   costlyKind,
   createAgent,
+  createRole,
   DIGEST_AFTER_MS,
   decideCostlyProposal,
   endsAsking,
@@ -25,6 +26,7 @@ import {
   postAutonomyDigests,
   postPersonMessage,
   type RunAuthority,
+  setMemberRoles,
   signatureOf,
   speakerFor,
   type ToolDefinition,
@@ -651,5 +653,37 @@ describe("who an agent may call (§8)", () => {
       callAgents: "none",
       costly: "ask",
     });
+  });
+
+  test("brakes given at creation are stored as on an edit; only who manages agents sets them", async () => {
+    f = await setup();
+    const defaults = { model: f.agent.model };
+    const made = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      {
+        name: "Bia",
+        handle: "bia",
+        autonomyBrakes: { maxUnrequested: 99, callAgents: "some", callAgentIds: [f.agent.id] },
+      },
+      defaults,
+    );
+    expect(made.autonomyBrakes).toEqual({ maxUnrequested: 20, callAgents: "some", callAgentIds: [f.agent.id] });
+    const member = await addMember(f.db, f.org.id, "member", "Caio");
+    const makers = await createRole(f.db, f.owner.id, f.org.id, { name: "Makers", permissions: ["create_agents"] });
+    await setMemberRoles(f.db, f.owner.id, f.org.id, member.id, [makers.id]);
+    // Who may create agents may not, by that alone, choose whom they may call.
+    await expect(
+      createAgent(
+        f.db,
+        member.id,
+        f.org.id,
+        { name: "Edu", handle: "edu", autonomyBrakes: { callAgents: "none" } },
+        defaults,
+      ),
+    ).rejects.toThrow(/brakes/);
+    const edu = await createAgent(f.db, member.id, f.org.id, { name: "Edu", handle: "edu" }, defaults);
+    expect(edu.autonomyBrakes).toEqual({});
   });
 });
