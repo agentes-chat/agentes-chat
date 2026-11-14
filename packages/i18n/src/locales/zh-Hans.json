@@ -6565,6 +6565,8 @@
     "budget": "每月预算（US$）",
     "budgetHelp": "达到上限时，{{name}} 会停下并告知。",
     "budgetInvalid": "请输入大于零的数值。",
+    "budgetCapped": "使用工作区默认值。只有管理员可以提高。",
+    "budgetCappedAmount": "使用工作区默认值（{{amount}}）。只有管理员可以提高。",
     "warnsOwner": "达到 80% 时我们会提醒 {{name}}。",
     "warnsAdmins": "达到 80% 时我们会提醒管理员。",
     "upTo": "每月最多 {{amount}}",

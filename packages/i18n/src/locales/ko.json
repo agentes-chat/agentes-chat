@@ -6523,6 +6523,8 @@
     "budget": "월 예산(US$)",
     "budgetHelp": "한도에 도달하면 {{name}}이(가) 멈추고 알려 줘요.",
     "budgetInvalid": "0보다 큰 값을 입력하세요.",
+    "budgetCapped": "워크스페이스 기본값을 씁니다. 올릴 수 있는 건 관리자뿐입니다.",
+    "budgetCappedAmount": "워크스페이스 기본값({{amount}})을 씁니다. 올릴 수 있는 건 관리자뿐입니다.",
     "warnsOwner": "80%에 도달하면 {{name}} 님에게 알려요.",
     "warnsAdmins": "80%에 도달하면 관리자에게 알려요.",
     "upTo": "월 최대 {{amount}}",

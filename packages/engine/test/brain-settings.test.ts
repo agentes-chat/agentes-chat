@@ -36,7 +36,7 @@ import {
 } from "../src/brain-settings";
 import { contextFields, recordPlanUsage, speedFields } from "../src/brains/claude-code";
 import { brainAccountFor, brainSpeedFor, planIsOwners } from "../src/brains/select";
-import { addMember, type Fixture, setup } from "./fixtures";
+import { addMember, everyoneWithout, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
 const mac = (patch: Record<string, unknown> = {}) => ({
@@ -293,12 +293,18 @@ async function world() {
 }
 
 describe("Criar agente: what a new agent could think with", () => {
-  test("admins see every computer with what it offers; a member can't create agents", async () => {
+  test("admins see every computer with what it offers; a member the server's own and theirs, never someone else's", async () => {
     const { fx, deps, machineId, bia, caio } = await world();
     const [mine] = await newAgentBrainMachines(deps, caio.id, fx.org.id);
     expect(mine).toMatchObject({ machineId, name: "mac" });
     expect(mine?.options.find((o) => o.kind === "claude_code")?.available).toBe(true);
     expect(mine?.options.find((o) => o.kind === "codex")).toMatchObject({ available: false, reason: "not_installed" });
+    // Ana's Mac is hers: Bia's new agent can't live there.
+    expect(await newAgentBrainMachines(deps, bia.id, fx.org.id)).toEqual([]);
+    // The server's own computer is recorded as its owner's, yet it is the workspace's: Bia's agent may live there.
+    await fx.db.update(schema.machines).set({ kind: "host" }).where(eq(schema.machines.id, machineId));
+    expect((await newAgentBrainMachines(deps, bia.id, fx.org.id)).map((m) => m.machineId)).toEqual([machineId]);
+    await everyoneWithout(fx.db, fx.org.id, "create_agents");
     await expect(newAgentBrainMachines(deps, bia.id, fx.org.id)).rejects.toBeInstanceOf(ForbiddenError);
   });
 });

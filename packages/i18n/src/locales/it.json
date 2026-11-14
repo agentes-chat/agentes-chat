@@ -7021,6 +7021,8 @@
     "budgetHelp": "Al limite, {{name}} si ferma e lo dice.",
     "budgetHelp_female": "Al limite, {{name}} si ferma e lo dice.",
     "budgetInvalid": "Usa un valore maggiore di zero.",
+    "budgetCapped": "Usa il predefinito dello spazio di lavoro. Solo un admin può aumentarlo.",
+    "budgetCappedAmount": "Usa il predefinito dello spazio di lavoro ({{amount}}). Solo un admin può aumentarlo.",
     "warnsOwner": "Avvisiamo {{name}} all'80%.",
     "warnsAdmins": "Avvisiamo gli admin all'80%.",
     "upTo": "fino a {{amount}}/mese",

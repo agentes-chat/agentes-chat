@@ -16556,6 +16556,12 @@
   "newAgent.budgetInvalid": {
     "value": "Use a value greater than zero."
   },
+  "newAgent.budgetCapped": {
+    "value": "Uses the workspace default. Only an admin can raise it."
+  },
+  "newAgent.budgetCappedAmount": {
+    "value": "Uses the workspace default ({{amount}}). Only an admin can raise it."
+  },
   "newAgent.warnsOwner": {
     "value": "We alert {{name}} at 80%."
   },

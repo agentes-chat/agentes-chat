@@ -6736,6 +6736,8 @@
     "budget": "Aylık bütçe (US$)",
     "budgetHelp": "Sınıra gelince {{name}} durur ve bunu söyler.",
     "budgetInvalid": "Sıfırdan büyük bir değer girin.",
+    "budgetCapped": "Çalışma alanı varsayılanını kullanır. Yalnızca bir yönetici artırabilir.",
+    "budgetCappedAmount": "Çalışma alanı varsayılanını ({{amount}}) kullanır. Yalnızca bir yönetici artırabilir.",
     "warnsOwner": "%80'de {{name}} kişisini uyarırız.",
     "warnsAdmins": "%80'de yöneticileri uyarırız.",
     "upTo": "ayda en fazla {{amount}}",

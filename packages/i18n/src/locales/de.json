@@ -6775,6 +6775,8 @@
     "budgetHelp": "Am Limit hält {{name}} an und sagt Bescheid.",
     "budgetHelp_female": "Am Limit hält {{name}} an und sagt Bescheid.",
     "budgetInvalid": "Nutze einen Wert größer als null.",
+    "budgetCapped": "Nutzt den Standard des Workspace. Nur ein Admin kann ihn erhöhen.",
+    "budgetCappedAmount": "Nutzt den Standard des Workspace ({{amount}}). Nur ein Admin kann ihn erhöhen.",
     "warnsOwner": "Wir warnen {{name}} bei 80 %.",
     "warnsAdmins": "Wir warnen die Admins bei 80 %.",
     "upTo": "bis zu {{amount}}/Monat",
