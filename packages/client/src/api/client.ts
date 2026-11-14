@@ -169,6 +169,9 @@ import type {
   InvitationWithStatus,
   InviteBatch,
   InviteLink,
+  InviteLinkChanged,
+  InviteLinkChoices,
+  InviteLinkMade,
   Issue,
   IssueActivity,
   IssueColumn,
@@ -634,8 +637,15 @@ export interface ApiClient {
     inviteMany(orgId: string, input: InviteBatch): Promise<BatchInviteResult[]>;
     /** The same link (ADR 0090; a new one for an invitation sent before that), 7 more days. */
     resendInvitation(orgId: string, invitationId: string): Promise<{ url: string; expiresAt: string }>;
-    /** The roles a pending invitation gives (ADR 0090): the same link, nothing is sent. */
-    setInvitationRoles(orgId: string, invitationId: string, roleIds: string[]): Promise<{ roleIds: string[] }>;
+    /**
+     * What a pending invitation gives (ADR 0090, 0184): its cargos, channels and agents, an omitted one kept. The same
+     * link, nothing is sent.
+     */
+    updateInvitation(
+      orgId: string,
+      invitationId: string,
+      change: { roleIds?: string[]; channelIds?: string[]; agentIds?: string[] },
+    ): Promise<{ roleIds: string[]; channelIds: string[]; agentIds: string[] }>;
     usageReport(orgId: string, since?: string): Promise<UsageReport>;
     /** Every plan account by computer and the API per agent, this month (ADR 0063). */
     planUsage(orgId: string): Promise<OrgPlanUsage>;
@@ -1795,10 +1805,13 @@ export interface ApiClient {
   };
   invites: {
     /**
-     * The workspace's invitation link (admins, ADR 0068): the active one, else a new one for 30 days. Whoever
-     * opens it can only ask to join.
+     * The workspace's invitation link (admins, ADR 0068): the active one, else a new one for 30 days. With `choices`
+     * (ADR 0184), a link of its own that starts an approval on them; at the defaults, the workspace's link renewed to
+     * 30 days. Whoever opens any of them can only ask to join.
      */
-    createLink(orgId: string): Promise<{ id: string; url: string; expiresAt: string }>;
+    createLink(orgId: string, choices?: InviteLinkChoices): Promise<InviteLinkMade>;
+    /** Changes what a link gives (ADR 0184): the same address. `expiresIn` counts from now. */
+    editLink(orgId: string, linkId: string, choices: InviteLinkChoices): Promise<InviteLinkChanged>;
     /** The links people can still ask with, earlier ones (no `url`) included. */
     links(orgId: string): Promise<InviteLink[]>;
     /** Nobody new can ask with it; the requests made through it close without emails. */
@@ -1829,8 +1842,16 @@ export interface ApiClient {
   joinRequests: {
     /** Waiting ones, oldest first. */
     list(orgId: string): Promise<JoinRequest[]>;
-    /** `join.answered` / `join.expired` (409) when someone answered first or it ran out. */
-    approve(orgId: string, requestId: string, roleIds?: string[]): Promise<JoinApproval>;
+    /**
+     * `join.answered` / `join.expired` (409) when someone answered first or it ran out. `start`: the channels and
+     * agents they start with (ADR 0184); absent, the link's, as far as the approver may give them.
+     */
+    approve(
+      orgId: string,
+      requestId: string,
+      roleIds?: string[],
+      start?: { channelIds?: string[]; agentIds?: string[] },
+    ): Promise<JoinApproval>;
     /** `reason` is told to the person by email. */
     deny(orgId: string, requestId: string, reason?: string): Promise<void>;
     /** A member suggests someone to the people who may invite (ADR 0090). */

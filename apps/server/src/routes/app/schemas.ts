@@ -22,6 +22,9 @@ export const AudienceChoice = z
   ])
   .openapi("AudienceChoice");
 
+/** How an agent's run stands for the reader (ADR 0084 addendum): an agent's line (`work`), a task manager's row. */
+export const WorkState = z.enum(["you", "working", "approval", "answer", "computer", "outage", "queued", "later"]);
+
 /** Where a return lands (a `follow_up` line's conversation). */
 const ReturnPlace = {
   messageId: z.uuid().openapi({ description: "The return's line (`meta.notice.kind` `follow_up`)." }),

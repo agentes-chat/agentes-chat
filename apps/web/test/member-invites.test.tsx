@@ -527,10 +527,10 @@ describe("Members › Convites enviados", () => {
     await act(async () => fireEvent.keyDown(screen().getByRole("menu"), { key: "Escape" }));
     await click(within(roles).getByRole("button", { name: "Salvar" }));
     await settle(4);
-    expect(state.calls.find((c) => c.method === "orgs.setInvitationRoles")?.args).toEqual([
+    expect(state.calls.find((c) => c.method === "orgs.updateInvitation")?.args).toEqual([
       ORG_ID,
       "inv-rafa",
-      [ADMIN_ROLE_ID],
+      { roleIds: [ADMIN_ROLE_ID] },
     ]);
     expect(text()).toContain("rafael@acme.com entra como Admin.");
     expect(rafael().textContent).toContain("Admin · convite de João");

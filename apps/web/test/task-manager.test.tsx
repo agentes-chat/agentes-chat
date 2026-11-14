@@ -1560,7 +1560,10 @@ describe("why a task waits", () => {
     // The title, its place and the state on the row cut at their end; the rest of the wait only in the tip.
     const read = (file: string) => readFileSync(join(import.meta.dir, "../src", file), "utf8");
     const css = read("pages/task-manager.css");
-    expect(css).toMatch(/\.tm-hit \{[^}]*white-space: nowrap;[^}]*text-overflow: ellipsis;/);
+    // The row's words and press are the shared pieces' (Agora's rows are the same).
+    expect(read("components/tasks/tasks.css")).toMatch(
+      /\.tm-hit \{[^}]*white-space: nowrap;[^}]*text-overflow: ellipsis;/,
+    );
     expect(css).toMatch(/\.tm-cell--state \.tm-state__text b,\s*\.tm-cell--use \.tm-use__text b \{[^}]*ellipsis/);
     // No row stacks its cells, not even with no room for the columns.
     expect(/line-clamp|grid-row/.test(css)).toBe(false);
