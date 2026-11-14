@@ -97,7 +97,7 @@ export function RoleAgents({
         </HintLine>
       </p>
       {gate && (
-        <p className="roles-adminnote ac-actline">
+        <p className="roles-talkgate ac-actline">
           <span className="ac-iconline">
             <Icon name="lock" size={16} />
             <span>{t("rolesPage.agents.noTalk", { name })}</span>

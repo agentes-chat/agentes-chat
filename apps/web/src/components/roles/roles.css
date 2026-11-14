@@ -408,7 +408,9 @@ html:not([data-pointer]) .roles-head__name:focus-visible {
 .roles-empty.ac-actline {
   align-items: center;
 }
-.roles-adminnote {
+/* Administrador's note, and the agents tab's note when the cargo's people can't talk to agents. */
+.roles-adminnote,
+.roles-talkgate {
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: 14px 14px 14px 4px;
@@ -418,7 +420,7 @@ html:not([data-pointer]) .roles-head__name:focus-visible {
   line-height: 20px;
   color: var(--ink2);
 }
-.roles-adminnote.ac-actline {
+.roles-talkgate.ac-actline {
   align-items: center;
 }
 .roles-agentnote {
@@ -428,7 +430,8 @@ html:not([data-pointer]) .roles-head__name:focus-visible {
   color: var(--muted);
 }
 .roles-agentnote .ac-icon,
-.roles-adminnote .ac-icon {
+.roles-adminnote .ac-icon,
+.roles-talkgate .ac-icon {
   color: var(--faint);
 }
 
@@ -568,7 +571,6 @@ html:not([data-pointer]) .roles-head__name:focus-visible {
   gap: 2px;
   max-height: 320px;
   overflow: auto;
-  scrollbar-width: thin;
 }
 .roles-tick[data-off] {
   color: var(--muted);

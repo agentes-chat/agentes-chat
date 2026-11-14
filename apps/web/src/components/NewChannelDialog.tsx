@@ -73,7 +73,11 @@ export function ChannelAccessChoice({
   );
   const personal = isPersonal(org);
   const label = (mode: ChannelAccessMode) =>
-    !personal ? TEAM_ACCESS[mode] : mode === "roles" ? ("newChannel.roles" as const) : modeKey(org, `newChannel.${mode}` as const);
+    !personal
+      ? TEAM_ACCESS[mode]
+      : mode === "roles"
+        ? ("newChannel.roles" as const)
+        : modeKey(org, `newChannel.${mode}` as const);
   const desc = (mode: ChannelAccessMode) =>
     mode === "roles"
       ? ("newChannel.rolesDesc" as const)

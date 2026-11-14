@@ -75,7 +75,11 @@ describe("the agents' computers on a cargo's page: one choice of five steps", ()
     let options = await open();
     await click(options[4] as HTMLElement);
     await settle(4);
-    expect(saved().at(-1)?.filter((k) => /^(own|control)_/.test(k))).toEqual(["control_computers"]);
+    expect(
+      saved()
+        .at(-1)
+        ?.filter((k) => /^(own|control)_/.test(k)),
+    ).toEqual(["control_computers"]);
     options = await open();
     await click(options[1] as HTMLElement);
     await settle(4);

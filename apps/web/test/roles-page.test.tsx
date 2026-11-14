@@ -266,7 +266,9 @@ describe("the worst case, as the geometry check measures it", () => {
     await open("roles/owner", state);
     expect(screen().getByRole("heading", { level: 2, name: "Dono" })).toBeTruthy();
     expect(screen().getByRole("button", { name: `Tirar ${ALEKSANDRA} de Dono` })).toBeTruthy();
-    expect(screen().getByText("aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com")).toBeTruthy();
+    expect(
+      screen().getByText("aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com"),
+    ).toBeTruthy();
   });
 
   test("no cargo yet: an inline row, no dashed box", async () => {
