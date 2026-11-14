@@ -1040,6 +1040,14 @@ describe("Configurações → Importar e exportar", () => {
       expect(files.textContent).toContain("Arquivos do sistema");
       expect(files.textContent).toContain(".DS_Store, ._rivals.txt");
       expect(text()).not.toContain("agents/scout/files/.env");
+      // The system files the reader dropped, counted once, with what they are behind an ⓘ.
+      const system = [...document.querySelectorAll(".imp-note")].find((n) =>
+        n.textContent?.includes("arquivos de sistema ficaram de fora"),
+      );
+      expect(system?.querySelector(".ac-hintline > span")?.textContent).toBe("2 arquivos de sistema ficaram de fora");
+      expect(system?.querySelector("button.ac-hint")?.getAttribute("aria-label")).toBe(
+        "Sobre 2 arquivos de sistema ficaram de fora",
+      );
       expect(copies(state)).toEqual([]);
 
       await importIt();

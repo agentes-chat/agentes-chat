@@ -1,4 +1,4 @@
-import type { AgentSection, AgentTab } from "@agenteschat/client/lib/agent-edit";
+import type { AgentSection, AgentTab, BrainScreen } from "@agenteschat/client/lib/agent-edit";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { Button } from "@agenteschat/ui";
 import { useEffect, useState } from "react";
@@ -22,7 +22,7 @@ export function AgentPanel({
 }: {
   agentId: string;
   tab?: AgentTab;
-  /** The memory or skill to land on in Memória. */
+  /** The memory or skill to land on in Memória; with `tab` "settings", `brain:<screen>` for "Quem pensa". */
   item?: string;
   closeRequest?: number;
   onClose: () => void;
@@ -31,7 +31,11 @@ export function AgentPanel({
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const name = dir.agentById.get(agentId)?.name ?? "";
-  const [place, setPlace] = useState<{ tab: AgentTab; section?: AgentSection }>({ tab: tab ?? "overview" });
+  // "brain:<screen>" (the model picker's "Mais opções"): "Quem pensa" opens on that screen.
+  const brainAt = tab === "settings" && item?.startsWith("brain:") ? (item.slice(6) as BrainScreen) : undefined;
+  const [place, setPlace] = useState<{ tab: AgentTab; section?: AgentSection }>(() =>
+    brainAt ? { tab: "settings", section: "brain" } : { tab: tab ?? "overview" },
+  );
   const [closeRequest, setCloseRequest] = useState(0);
   const request = () => setCloseRequest((n) => n + 1);
   useEscClose(request);
@@ -54,7 +58,7 @@ export function AgentPanel({
           agentId={agentId}
           tab={place.tab}
           section={place.section}
-          item={item}
+          {...(brainAt ? { brainAt } : { item })}
           onNavigate={(tab, section) => setPlace({ tab, section })}
           onClose={onClose}
           closeRequest={closeRequest}

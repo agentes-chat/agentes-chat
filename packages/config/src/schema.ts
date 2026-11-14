@@ -44,6 +44,11 @@ export interface EnvVarDefinition {
 const DSN = /^https?:\/\/[^@/\s]+@[^/\s]+\/(?:[^\s]*\/)?\d+$/;
 const DSN_MESSAGE = "must be a DSN such as https://<key>@errors.example.com/1";
 
+/** `host=secret` pairs: a bare lower-case host name, and a secret of 32 characters or more with no comma or space. */
+const HOST_NAME = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*";
+const HOST_SECRET = `${HOST_NAME}=[^\\s,]{32,}`;
+const HOST_SECRETS = new RegExp(`^${HOST_SECRET}(?:,${HOST_SECRET})*$`);
+
 /** Claude model ids accepted as defaults. Prices live in `@agenteschat/providers` (`MODEL_CATALOG`). */
 const modelId = z.string().regex(/^[a-z0-9][a-z0-9.-]*$/, "must be a model id such as claude-sonnet-5-5");
 
@@ -74,7 +79,7 @@ export const envVars = {
   LANDING_URL: {
     schema: z.url().optional(),
     description:
-      "Public URL of the agentes.chat landing page (its own site), without a trailing slash. Turns on the waiting list: that origin may call it (CORS on `/api/waitlist` only), and the confirmation email links there. Unset: no waiting list.",
+      "Public URL of the agentes.chat landing page (its own site), without a trailing slash. Turns on the waiting lists, the product's and the partner program's: that origin may call them (CORS on `/api/waitlist` and `/api/partners/waitlist` only), and the confirmation email links there. With the bot check on, a token its page makes on this host counts for these lists and nothing else. Unset: no waiting lists.",
     section: "Server",
     example: "https://agentes.chat",
   },
@@ -221,13 +226,13 @@ export const envVars = {
   TURNSTILE_SITE_KEY: {
     schema: z.string().optional(),
     description:
-      "For agentes.chat Cloud. Unset by default. Cloudflare Turnstile's site key. With `TURNSTILE_SECRET_KEY`, a bot check runs before email lookup, sign-in, sign-up, password reset, the code to ask to join and the waiting list. Unset: no check, and no page loads anything from Cloudflare.",
+      "For agentes.chat Cloud. Unset by default. Cloudflare Turnstile's site key. With `TURNSTILE_SECRET_KEY`, a bot check runs before email lookup, sign-in, sign-up, password reset, the code to ask to join and the waiting lists. The widget's hostnames in Cloudflare hold `PUBLIC_URL`'s host, and `LANDING_URL`'s when it is set. Unset: no check, and no page loads anything from Cloudflare.",
     section: "Sign-in",
   },
   TURNSTILE_SECRET_KEY: {
     schema: z.string().optional(),
     description:
-      "For agentes.chat Cloud. Unset by default. Cloudflare Turnstile's secret key, which this server uses to check each answer with Cloudflare. Set both keys or neither. A secret Cloudflare refuses stops the server at boot.",
+      "For agentes.chat Cloud. Unset by default. Cloudflare Turnstile's secret key, which this server uses to check each answer with Cloudflare. A token counts only for the form it was made for, on `PUBLIC_URL`'s host. One made on `LANDING_URL`'s host counts only for the waiting lists. Set both keys or neither. A secret Cloudflare refuses stops the server at boot.",
     section: "Sign-in",
     secret: true,
   },
@@ -707,6 +712,24 @@ export const envVars = {
     section: "Connectors",
     secret: true,
   },
+  MCP_CALLER_IDENTITY: {
+    schema: z
+      .string()
+      .regex(HOST_SECRETS, {
+        error:
+          "must be host=secret pairs separated by commas, with no spaces: a lower-case host name, and a secret of at least 32 characters",
+      })
+      .refine((value) => {
+        const hosts = value.split(",").map((pair) => pair.slice(0, pair.indexOf("=")));
+        return new Set(hosts).size === hosts.length;
+      }, "names a host more than once")
+      .optional(),
+    description:
+      "MCP servers of your own that are told, verifiably, who is calling (ADR 0181), as `host=secret` pairs separated by commas: the host name of a server connected by address in Settings › Connectors (lower case, with no scheme, port or path) and a secret of at least 32 characters that the server holds too (`openssl rand -base64 48`). Every tool call an agent makes to that server carries, in the request's `params._meta[\"chat.agentes/caller\"]`, a statement signed with the secret (a JWT, HS256): this instance, the workspace, the agent, the run, the connection and the person the run acts for, good for 60 seconds. With it the server can refuse a call that doesn't come from the workspaces and agents it expects, even one that carries its key. Only over https on the default port; a host that isn't listed gets nothing. Unset (default): no call carries it.",
+    section: "Connectors",
+    example: "tools.example.com=<output of openssl rand -base64 48>",
+    secret: true,
+  },
   MILLIONSEND_API_KEY: {
     schema: z.string().optional(),
     description:
@@ -964,6 +987,17 @@ export const envVars = {
       .optional(),
     description:
       "Turns on the operator API (ADR 0056): a second listener on `OPERATOR_API_PORT` that serves `/api/operator/v1` to your own automation, called with this value as `Authorization: Bearer`. It reaches every workspace and account on the instance, so never publish that port or put it behind your reverse proxy. While it is set the server also keeps 90 days of events for it (sign-ups, sign-ins with their IP address, workspaces, agents, runs; metadata only). Unset (default): nothing listens there and nothing is recorded. Generate with `openssl rand -base64 48`.",
+    section: "Operator",
+    example: "<output of openssl rand -base64 48>",
+    secret: true,
+  },
+  OPERATOR_API_READ_TOKEN: {
+    schema: z
+      .string()
+      .min(32, "must be at least 32 characters. Generate one with `openssl rand -base64 48`")
+      .optional(),
+    description:
+      "A second token for the operator API that only reads, for a caller that looks things up and changes nothing: accepted for `GET` requests alone, and never under `/review` (what a run or task did). Anything else it asks for is refused (403). It still reads every workspace's and account's names, emails and IP addresses, so keep it as private as the other. Needs `OPERATOR_API_TOKEN` and must differ from it. Unset (default): only `OPERATOR_API_TOKEN` is accepted. Generate with `openssl rand -base64 48`.",
     section: "Operator",
     example: "<output of openssl rand -base64 48>",
     secret: true,

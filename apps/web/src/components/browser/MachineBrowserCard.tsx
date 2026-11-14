@@ -8,12 +8,14 @@ import {
   useBrowserHandoffMutations,
   usesBrowser,
 } from "@agenteschat/client";
+import { firstName } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   allowsInApp,
   canReduceAccess,
   commandInReason,
   machineReasonText,
+  oneClickTerminal,
   toolOnCommand,
 } from "@agenteschat/client/lib/machines";
 import { Button, Card, CardHeader, Chip, Icon } from "@agenteschat/ui";
@@ -23,7 +25,8 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "@/lib/toast";
 import { useStreams } from "@/realtime/context";
 import { AgentAvatar } from "../AgentAvatar";
-import { CommandBlock } from "../machine-bits";
+import { MachineToolButton, useToolOneClick } from "../devices/ToolOneClick";
+import { CommandBlock, TerminalFallback } from "../machine-bits";
 import { useOrg } from "../org-context";
 import { OpenPrefsButton, useIsThisMac } from "../ThisMac";
 import { BrowserCard } from "./BrowserCard";
@@ -43,6 +46,7 @@ export function MachineBrowserCard({ machine: m, onTurnOff }: { machine: Machine
   const [confirming, setConfirming] = useState<string | null>(null);
   // In the app, on this very Mac: the browser is turned on in Preferences → Ferramentas (ADR 0036).
   const here = useIsThisMac(org.id, m.id);
+  const oneClick = useToolOneClick(m);
   const [seeing, setSeeing] = useState<string | null>(null);
   const agentIds = m.agents.map((a) => a.id);
   const handoffs = useQueries({
@@ -133,7 +137,22 @@ export function MachineBrowserCard({ machine: m, onTurnOff }: { machine: Machine
         {ready && m.browser?.version && <span className="small muted">{m.browser.chrome ?? ""}</span>}
       </div>
       {!switchedOn &&
-        (here ? (
+        (oneClick && oneClick.kind !== "outdated" ? (
+          <>
+            <div className="brw-note brw-note--act">
+              <span className="brw-note__text ac-iconline">
+                <Icon name="computer" size={16} />
+                <span>
+                  {oneClick.kind === "ask"
+                    ? t("browser.profiles.toolOffOther", { name: firstName(oneClick.ownerName) })
+                    : t("browser.profiles.toolOff")}
+                </span>
+              </span>
+              <MachineToolButton machine={m} tool="browser" />
+            </div>
+            <TerminalFallback command={oneClickTerminal(m, oneClick, ["browser"])} />
+          </>
+        ) : here ? (
           <div className="brw-note brw-note--act">
             <span className="brw-note__text ac-iconline">
               <Icon name="computer" size={16} />

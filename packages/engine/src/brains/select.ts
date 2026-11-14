@@ -6,10 +6,11 @@ import {
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   isBrainEffort,
+  OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
   type PlanUsage,
 } from "@agenteschat/adapters";
-import { and, desc, type Executor, eq, isNotNull, ne, schema, sql } from "@agenteschat/db";
+import { and, desc, type Executor, eq, isNotNull, ne, or, schema, sql } from "@agenteschat/db";
 import { isAutoModel } from "@agenteschat/providers";
 import {
   autoPlanModel,
@@ -426,6 +427,13 @@ export function computerBrainUnavailable(
         message: `The runner on ${status.name} is too old for ${name} agents. ${runnerUpdateWay(status)}`,
       };
     }
+    // On Windows a runner before `OPENCODE_ACP_PROTOCOL` refuses every OpenCode turn.
+    if (kind === "opencode" && status.os === "windows" && status.protocol < OPENCODE_ACP_PROTOCOL) {
+      return {
+        code: "runner_outdated",
+        message: `The runner on ${status.name} is too old for ${name} agents on Windows. ${runnerUpdateWay(status)}`,
+      };
+    }
     if (status.executors?.detectedAt && !status.executors[kind]) {
       return { code: `${kind}_missing`, message: `${name}'s CLI is not installed on ${status.name}.` };
     }
@@ -573,11 +581,9 @@ export async function brainAccountFor(
 }
 
 /**
- * A plan thinks only for its owner's agents (ADR 0059 §3): the account's
- * owner, or with the computer's own sign-in the person who connected that
- * computer, must be the agent's owner, still in the organization. The account
- * someone who may use other people's plans gave it (`brainAccountLentBy`)
- * needs only its own owner still there.
+ * Whether the plan may think for this agent (ADR 0059 §3): an account that serves everyone in the workspace
+ * (`machine_accounts.serves`), or one that serves only its owner when that is the agent's owner; either way its owner
+ * still in the organization. The computer's own sign-in thinks only for agents of the person who connected it.
  */
 export async function planIsOwners(
   db: Executor,
@@ -587,7 +593,6 @@ export async function planIsOwners(
 ): Promise<boolean> {
   const owner = agent.ownerUserId;
   if (!owner) return false;
-  const lent = account !== undefined && !!agent.brainAccountLentBy && agent.brainAccountId === account.id;
   const { machineAccounts, machines, organizationMembers: members } = schema;
   const rows = account
     ? await db
@@ -601,7 +606,7 @@ export async function planIsOwners(
           and(
             eq(machineAccounts.orgId, agent.orgId),
             eq(machineAccounts.id, account.id),
-            lent ? undefined : eq(machineAccounts.createdBy, owner),
+            or(eq(machineAccounts.createdBy, owner), eq(machineAccounts.serves, "everyone")),
           ),
         )
     : await db
@@ -679,6 +684,7 @@ async function sessionFor(
   run: AgentRun,
   kind: BrainKind,
   conversation: string,
+  machineId: string,
   options: { fresh?: boolean; promptKey?: string },
   now: Date,
 ): Promise<{ id: string; resume: boolean }> {
@@ -718,6 +724,10 @@ async function sessionFor(
             where r3.org_id = "agent_runs"."org_id" and r3.brain_session_id = "agent_runs"."brain_session_id"
               and r3.id <> ${run.id}
               and (r3.work_id is not null or r3.status in ('queued', 'running', 'waiting_input', 'waiting_approval')))`,
+          // Never one that thought on another computer (spill-over): its files are on that computer's disk.
+          sql`not exists (select 1 from ${usageRecords} u4 where u4.org_id = "agent_runs"."org_id"
+            and u4.run_id = "agent_runs"."id" and u4.provider = ${kind} and u4.machine_id is not null
+            and u4.machine_id <> ${machineId}::uuid)`,
           // Never a session background work thought in (a routine's: it was told to answer NO_REPLY, and a
           // conversation that picked it up answered that). Any run that shared it counts, older rows too.
           sql`not exists (select 1 from ${agentRuns} r2
@@ -828,7 +838,7 @@ export async function resolveBrain(
     mission?.session ??
     (machineId
       ? {
-          ...(await sessionFor(deps.db, agent, run, kind, conversation, options, options.now ?? new Date())),
+          ...(await sessionFor(deps.db, agent, run, kind, conversation, machineId, options, options.now ?? new Date())),
           machineId,
           cwd: "",
         }

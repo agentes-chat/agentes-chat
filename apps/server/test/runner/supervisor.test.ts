@@ -713,6 +713,20 @@ test("room for a turn: root closes one idle CLI, the least recently used across 
   await waitFor(() => asks(ana).length === 4);
   answer(ana, 3, { closed: false });
   expect(await silent).toBe(false);
+
+  // No CLI left to close: the idle browser used longest ago closes; a worker with none open isn't asked to.
+  const browsers = t.sup.reclaimBrowsers();
+  // Bia's last ask above went unanswered.
+  await waitFor(() => asks(ana).length === 5 && asks(bia).length === 6);
+  expect(asks(ana)[4]).toMatchObject({ peek: true, browser: true });
+  answer(ana, 4, { closed: false });
+  answer(bia, 5, { closed: false, browserIdle: 300 });
+  await waitFor(() => asks(bia).length === 7);
+  expect(asks(bia)[6]).toMatchObject({ browser: true });
+  expect(asks(bia)[6]?.peek).toBeUndefined();
+  answer(bia, 6, { closed: true });
+  expect(await browsers).toBe(true);
+  expect(asks(ana)).toHaveLength(5);
   for (const [w, q] of [
     [ana, await requestOn(ana)],
     [bia, await requestOn(bia)],
@@ -739,7 +753,10 @@ test("room for a turn: root closes one idle CLI, the least recently used across 
   fromRoot.write(`${JSON.stringify({ type: "brain.reclaim", reclaimId: "7", spare: "a:s", peek: true })}\n`);
   fromRoot.write(`${JSON.stringify({ type: "brain.reclaim", reclaimId: "8" })}\n`);
   await waitFor(() => said.length === 2);
-  expect(heard).toEqual([{ spare: "a:s", peek: true }, { peek: false }]);
+  expect(heard).toEqual([
+    { spare: "a:s", peek: true, browser: false },
+    { peek: false, browser: false },
+  ]);
   expect(said).toEqual([
     { type: "brain.reclaimed", reclaimId: "7", closed: false, idle: { since: 5, spare: true } },
     { type: "brain.reclaimed", reclaimId: "8", closed: true },

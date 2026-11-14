@@ -11,6 +11,7 @@ import type {
 } from "../../api/types";
 import { IMPORT_APP_CLIENTS } from "../app-clients";
 import { forbiddenText } from "../errors";
+import { formatBytes } from "../files";
 import { joinNames } from "../format";
 import { hiddenRepoOf, hiddenRepoText } from "../skills";
 import {
@@ -278,10 +279,20 @@ export function importFailureText(
   { from, step, cause }: ImportFailure,
   offline: (e: unknown) => boolean,
   mayConnect = false,
+  locale = "en",
 ) {
   if (cause === NOT_GITHUB) return t("onboarding.import.errors.notGithub");
   const hidden = hiddenRepoOf(cause);
   if (hidden) return hiddenRepoText(t, hidden, mayConnect).text;
+  if (cause instanceof ImportError && cause.limit) {
+    const { kind, have, max, name } = cause.limit;
+    const size = (n: number) => (kind === "files" ? new Intl.NumberFormat(locale).format(n) : formatBytes(locale, n));
+    return t(`onboarding.import.errors.limit.${kind}`, {
+      have: size(have),
+      max: size(max),
+      name: name ? baseName(name) : "",
+    });
+  }
   if (cause instanceof ImportError) {
     return cause.code === "unknown" && from === "paste"
       ? t("onboarding.import.errors.unknownPasted")

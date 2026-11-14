@@ -4,10 +4,11 @@ import {
   CODEX_WINDOWS_PROTOCOL,
   channelTopic,
   MACHINE_PROTOCOL_VERSION,
+  OPENCODE_ACP_PROTOCOL,
   orgTopic,
 } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
-import { systemText } from "@agenteschat/providers";
+import { ProviderError, systemText } from "@agenteschat/providers";
 import {
   activeRunsIn,
   addChannelMember,
@@ -20,6 +21,7 @@ import {
   brainModelFor,
   brainSessionId,
   type ChannelEvent,
+  CODEX_IMAGE_NOTE,
   COMPUTER_BUSY_RETRY_MS,
   COMPUTER_QUEUE_NOTE_MS,
   COMPUTER_REACT_NOTE,
@@ -234,6 +236,19 @@ test("availability: no computer, offline, old runner, not logged in, Codex missi
     statusOf("m2", { os: "windows", protocol, executors: { codex: { version: "0.170.0" } } });
   expect(computerBrainUnavailable("codex", "m2", windows(CODEX_WINDOWS_PROTOCOL - 1))?.code).toBe("runner_outdated");
   expect(computerBrainUnavailable("codex", "m2", windows(CODEX_WINDOWS_PROTOCOL))).toBeNull();
+  // The same for OpenCode before OPENCODE_ACP_PROTOCOL.
+  const opencodeOn = (os: string, protocol: number) =>
+    statusOf("m2", {
+      os,
+      protocol,
+      executors: { opencode: { version: "1.19.5" }, detectedAt: new Date().toISOString() },
+    });
+  expect(computerBrainUnavailable("opencode", "m2", opencodeOn("windows", OPENCODE_ACP_PROTOCOL - 1))).toMatchObject({
+    code: "runner_outdated",
+    message: expect.stringContaining("on Windows"),
+  });
+  expect(computerBrainUnavailable("opencode", "m2", opencodeOn("windows", OPENCODE_ACP_PROTOCOL))).toBeNull();
+  expect(computerBrainUnavailable("opencode", "m2", opencodeOn("linux", OPENCODE_ACP_PROTOCOL - 1))).toBeNull();
   expect(
     computerBrainUnavailable(
       "codex",
@@ -1141,6 +1156,34 @@ test("a plan limit falls back to the model brain; the reply carries a quiet note
   expect(computerBrainUnavailable("claude_code", machineId, statusOf(machineId))?.code).toBe("plan_limit");
 });
 
+test("the key standing in is refused for want of credit: the run waits for its own brain, never failed on that key", async () => {
+  f = await setup({ reply: () => new ProviderError("Insufficient Balance", false, 402) });
+  await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [
+    { type: "limit", resetsAt: new Date(Date.now() + 2 * 3600_000).toISOString() },
+    { type: "error", code: "plan_limit", message: "You've hit your limit.", worked: false },
+  ]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+
+  expect(seen.length).toBe(1);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  // Waiting for the plan, as a run with no key to stand in: the key's refusal is nobody's error to read.
+  expect(run?.status).toBe("waiting_input");
+  expect(run?.error).toBeNull();
+  expect(run?.brain).toBe("claude_code");
+  const kept = run?.transcript as { fallback?: unknown; standInRefused?: boolean; usageWait?: unknown };
+  expect(kept.fallback).toBeUndefined();
+  expect(kept.standInRefused).toBe(true);
+  expect(kept.usageWait).toBeDefined();
+  expect((await timeline(f)).some((m) => m.meta.brainFallback)).toBe(false);
+});
+
 test("Fast: the turn of a conversation asks for it; refused, the reply says it came at standard speed", async () => {
   f = await setup({});
   await computerAgent(f, { brain: "codex", brainModel: "gpt-6.1-sol", brainSpeed: "fast" });
@@ -1182,12 +1225,16 @@ test("Fast: the turn of a conversation asks for it; refused, the reply says it c
 test("a file a computer brain's own tool made goes to the Drive and is a card on the reply", async () => {
   f = await setup({});
   const machineId = await computerAgent(f, { brain: "codex" });
-  const { brain } = scriptedComputerBrain(() => [
-    { type: "tool_call", id: "ig-1", name: "image_generation", input: {}, executed: { content: "Saved." } },
-    { type: "file", path: "generated-images/image-1.png" },
-    { type: "file", path: "generated-images/image-2.png" },
-    { type: "done", text: "Aqui está." },
-  ]);
+  const systems: string[] = [];
+  const { brain } = scriptedComputerBrain((_n, turn) => {
+    systems.push(turn.system);
+    return [
+      { type: "tool_call", id: "ig-1", name: "image_generation", input: {}, executed: { content: "Saved." } },
+      { type: "file", path: "generated-images/image-1.png" },
+      { type: "file", path: "generated-images/image-2.png" },
+      { type: "done", text: "Aqui está." },
+    ];
+  });
   const artifactId = crypto.randomUUID();
   const shared: { machineId: string; path: string; channelId: string }[] = [];
   const handlers = createJobHandlers({
@@ -1215,6 +1262,8 @@ test("a file a computer brain's own tool made goes to the Drive and is a card on
     { machineId, path: "generated-images/image-1.png", channelId: f.general.id },
     { machineId, path: "generated-images/image-2.png", channelId: f.general.id },
   ]);
+  // Codex is told its pictures go with its reply, under its words.
+  expect(systems[0]).toContain(CODEX_IMAGE_NOTE);
   const reply = (await timeline(f)).at(-1);
   expect(reply).toMatchObject({ body: "Aqui está." });
   expect(reply?.meta.artifacts).toEqual([{ id: artifactId, version: 1, title: "image-1.png" }]);

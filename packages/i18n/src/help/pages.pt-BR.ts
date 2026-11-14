@@ -8,6 +8,13 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
       "O app do agentes.chat também roda o próprio agentes.chat, num Mac, num PC ou num computador com Linux, para você ou uma equipe pequena.",
     sections: [
       {
+        id: "download",
+        heading: "Baixe o app",
+        blocks: [
+          "[Baixe o app do agentes.chat](/download) para o seu Mac, PC ou computador com Linux e abra. Escolha **No seu servidor**, aperte **Continuar no meu servidor** e depois **Rodar o agentes.chat neste computador**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Como ele roda",
         blocks: [
@@ -189,7 +196,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "who",
         heading: "Quem pode usar",
         blocks: [
-          "Um dispositivo novo é só seu: **Só eu** quer dizer você e os agentes que trabalham para você. Abra para todo o workspace, ou para algumas pessoas e papéis, na hora de permitir ou depois, na página dele em **Configurações\u00a0›\u00a0Dispositivos**.",
+          "Um dispositivo novo é só seu: **Só eu** quer dizer você e os agentes que trabalham para você. Abra para todo o workspace, ou para algumas pessoas e cargos, na hora de permitir ou depois, na página dele em **Configurações\u00a0›\u00a0Dispositivos**.",
         ],
       },
       {
@@ -214,6 +221,15 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
           "Entre em cada workspace no mesmo app e aperte **Permitir** para cada um. Workspaces no agentes.chat Cloud e em servidores próprios podem dividir um computador (app 0.6.1 ou mais novo). Cada um tem ali os próprios agentes e pastas, e desconectar um não mexe nos outros.",
           "Um servidor que o app roda no próprio computador já está conectado e não precisa de nada. Para emprestar esse computador também a um workspace de outro lugar, veja [Emprestar para outro workspace também](/help/run-on-your-computer#another-workspace).",
           "Usa o app num notebook só como uma janela para o workspace? Quando ele pedir para deixar os agentes usarem o notebook, **Agora não** mantém só a janela.",
+          "Um servidor conectado pela linha do terminal atende um workspace só. Conectar ele a partir de outro workspace passa o servidor para esse outro, e o primeiro deixa de alcançá-lo. Para vários workspaces num computador, use o app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Quando os agentes esperam na fila",
+        blocks: [
+          "Cada trabalho de um agente usa a memória do computador. Quando a memória livre fica curta, o próximo espera na fila até outro terminar. Pessoas vão primeiro. O número de CPUs não muda isso.",
+          "Um computador com 4 GB de memória roda dois ou três trabalhos ao mesmo tempo, um com 8 GB cerca de nove. Um Mac ou um PC roda até oito. Navegadores e áreas de trabalho que os agentes deixam abertos também usam memória. Para uma fila menor, use um computador com mais memória, ou conecte outro e divida os agentes entre eles em **Configurações\u00a0›\u00a0Dispositivos**. Workspaces que dividem um computador dividem a memória dele.",
         ],
       },
       {
@@ -253,7 +269,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         blocks: [
           {
             list: [
-              "Agentes, com nome, papel, instruções e aparência.",
+              "Agentes, com nome, função, instruções e aparência.",
               "Skills, ligadas para os agentes que as tinham.",
               "Canais públicos, com os agentes dentro.",
               "Rotinas, ativas e no horário delas. Dá para pausar em **Rotinas** quando quiser.",
@@ -408,7 +424,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
           {
             list: [
               "Quem é responsável pelo agente, nos pedidos dele.",
-              "Quem tem um papel com **Aprovar ações dos agentes**, em todos os agentes.",
+              "Quem tem um cargo com **Aprovar ações dos agentes**, em todos os agentes.",
               "As pessoas que o agente nomeia ao pedir, no lugar do responsável.",
               "Quem cobre alguém em **Quem aprova por mim**, no que é pedido a essa pessoa. Merge, deploy e outras ações de risco só quando isso está ligado.",
             ],
@@ -539,7 +555,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
           {
             list: [
               "O nome e a descrição do canal, a mensagem e as poucas antes dela",
-              "Os nomes e papéis dos agentes, o começo das instruções deles e as ferramentas que eles podem usar",
+              "Os nomes e funções dos agentes, o começo das instruções deles e as ferramentas que eles podem usar",
               "Os itens de memória que ele compara",
               "A tarefa de um agente e o começo dos resultados das ferramentas",
               "O objetivo de uma missão e os comandos que um agente quer rodar nela",
@@ -739,7 +755,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "email",
         heading: "E-mail",
         blocks: [
-          "Sem e-mail, o agentes.chat escreve cada e-mail no log em vez de enviar, então dá para copiar um link de convite de lá. Redefinir a senha fica desligado.",
+          "Sem e-mail, o agentes.chat escreve cada e-mail no log em vez de enviar, então dá para copiar um link de convite de lá. Redefinir a senha fica desligado, e um e-mail novo para uma conta muda na hora, sem código nem link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

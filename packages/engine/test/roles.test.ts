@@ -113,6 +113,24 @@ describe("hierarchy", () => {
     await createRole(f.db, lead.id, f.org.id, { name: "Helpers", permissions: ["post"] });
   });
 
+  test("a stored role with a retired key still loads, grants nothing for it and saves", async () => {
+    const support = await createRole(f.db, f.owner.id, f.org.id, { name: "Support", permissions: ["post"] });
+    await f.db
+      .update(schema.orgRoles)
+      .set({ permissions: ["post", "use_others_plans"] })
+      .where(eq(schema.orgRoles.id, support.id));
+    const admin = await addMember(f.db, f.org.id, "admin", "ada");
+    const member = await addMember(f.db, f.org.id, "member", "max");
+    await setMemberRoles(f.db, f.owner.id, f.org.id, member.id, [support.id]);
+    const { roles } = await listRoles(f.db, admin.id, f.org.id);
+    expect(roles.find((r) => r.id === support.id)).toMatchObject({ permissions: ["post"], editable: true });
+    const membership = await getMembership(f.db, member.id, f.org.id);
+    expect([...(membership?.permissions ?? [])]).not.toContain("use_others_plans");
+    await updateRole(f.db, admin.id, f.org.id, support.id, { permissions: ["post", "edit_wiki"] });
+    const [saved] = await f.db.select().from(schema.orgRoles).where(eq(schema.orgRoles.id, support.id));
+    expect(saved?.permissions.sort()).toEqual(["edit_wiki", "post"]);
+  });
+
   test("roles go only to people below, and only roles below one's own", async () => {
     const lead = await addMember(f.db, f.org.id, "member", "lead");
     const boss = await addMember(f.db, f.org.id, "admin", "boss");

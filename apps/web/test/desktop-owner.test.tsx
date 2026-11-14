@@ -40,8 +40,9 @@ function inTheApp(status: ThisMacStatus) {
   return asked;
 }
 
-const signedOut = (options?: SignInOptions) => {
+const signedOut = (options?: SignInOptions, instance?: { cloud: boolean }) => {
   const state = seedState({ me: null });
+  if (instance) state.instance = instance;
   const api = createFakeApi(state);
   if (options) api.account.signInOptions = async () => options;
   return api;
@@ -115,24 +116,33 @@ describe("Entrar no servidor que o app roda neste computador", () => {
     expect(google()).toBeTruthy();
   });
 
-  test("the line over the sign-in names the server, Trocar opens the app's servers (ADR 0158)", async () => {
+  test("the line under the sign-in names the server, Trocar opens the app's servers (ADR 0158)", async () => {
     byHand();
     const asked = inTheApp({ orgs: [], agentsHere: false, local: true });
     (win().__agentesDesktop as Record<string, unknown>).servers = true;
     await renderApp("/login", { api: signedOut() });
     await settle(6);
-    const line = document.querySelector(".auth__server");
+    const line = document.querySelector(".auth__place");
     expect(line?.textContent).toContain("Entrando no agentes.chat deste Mac");
-    await act(async () => fireEvent.click(within(line as HTMLElement).getByRole("button", { name: "Trocar" })));
+    await act(async () =>
+      fireEvent.click(within(line as HTMLElement).getByRole("button", { name: "Trocar de servidor" })),
+    );
     await settle(2);
     expect(asked.filter((r) => r.kind === "servers")).toEqual([{ kind: "servers" }]);
     cleanup();
     // Another server: by its address, never "this Mac".
     inTheApp({ orgs: [], agentsHere: true, local: false });
     (win().__agentesDesktop as Record<string, unknown>).servers = true;
+    await renderApp("/login", { api: signedOut(undefined, { cloud: false }) });
+    await settle(6);
+    expect(document.querySelector(".auth__place")?.textContent).toContain(`Entrando em ${window.location.host}`);
+    cleanup();
+    // The Cloud: by its name.
+    inTheApp({ orgs: [], agentsHere: true, local: false });
+    (win().__agentesDesktop as Record<string, unknown>).servers = true;
     await renderApp("/login", { api: signedOut() });
     await settle(6);
-    expect(document.querySelector(".auth__server")?.textContent).toContain(`Entrando em ${window.location.host}`);
+    expect(document.querySelector(".auth__place")?.textContent).toContain("Entrando no agentes.chat Cloud");
   });
 
   test("forgot password on this computer's server: Continue on this Mac, then a new password (ADR 0158)", async () => {

@@ -85,6 +85,7 @@ import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } 
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { LevelRow, useConnectedById } from "@/components/AccessLevels";
+import { AskAdminButton } from "@/components/AdminAsk";
 import { AudienceChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import {
@@ -257,7 +258,7 @@ export function NewAgentPage({
             <h1 className="page-title">{t("newAgent.title")}</h1>
           </header>
           {!allowed ? (
-            <EmptyState icon="agent">
+            <EmptyState icon="agent" actions={<AskAdminButton ask={{ what: "create_agents" }} variant="primary" />}>
               {t(keeperKey(org, keeper, "newAgent.adminsOnly"), { org: org.name, keeper })}
             </EmptyState>
           ) : proposal.isPending ? (
@@ -749,7 +750,15 @@ function NewAgentFlow({
         // person's own, its plan's sign-in opens once it's created: only the owner signs a plan in for it.
         signIn = ownerId === me.user.id && needsOwnSignIn(aiAccounts.data?.computers, plan);
       } catch {
-        toast.show(t("newAgent.planNotSaved", { ...g, brain: t(`brain.card.${plan.kind}`) }), "error");
+        toast.show(t("newAgent.planNotSaved", { ...g, brain: t(`brain.card.${plan.kind}`) }), "error", {
+          label: t("usageCard.chooseBrain"),
+          run: () =>
+            void navigate({
+              to: "/org/$orgId/agents/$agentId",
+              params: { orgId: org.id, agentId: agent.id },
+              search: { tab: "settings", sec: "brain", brain: "switch" },
+            }),
+        });
       }
     } else if (start?.brain === "model" && onStart && start.contextTokens !== null) {
       await api.agents.setBrain(org.id, agent.id, { brain: "model", contextTokens: start.contextTokens });

@@ -144,8 +144,9 @@ describe("Quem pensa: the account on the computer and the effort (ADR 0041)", ()
     await toScreen(d, "Trocar de conta");
     expect(brainRows(d).map((r) => [r.group, r.title, r.lines])).toEqual([
       ["Em uso", "A conta que os seus agentes dividem", []],
-      ["Suas", "Trabalho · Team", ["walt@acme.com"]],
-      ["Chave do workspace", "Chave padrão do workspace", ["Claude · termina em 7f2a"]],
+      // Grouped by AI, the workspace's keys last.
+      ["Claude", "Trabalho · Team", ["walt@acme.com"]],
+      ["Chaves de API", "Chave padrão do workspace", ["Claude · termina em 7f2a"]],
     ]);
     await pickRow(d, "Trabalho");
     expect(mainButton(d)?.textContent).toBe("Trocar para Trabalho · Team");
@@ -383,16 +384,18 @@ describe("Quem pensa: the account on the computer and the effort (ADR 0041)", ()
     });
     const d = await brainDialog();
     await toScreen(d, "Trocar de conta");
-    expect(d.textContent).toContain(
-      "Os planos de outras pessoas mostram de quem são. O dono recebe um e-mail e pode tirar de volta.",
-    );
+    expect(d.textContent).toContain("Os planos que atendem o workspace todo mostram de quem são.");
     // Among the ones with most room, each says whose it is.
     expect(brainRows(d).find((r) => r.title === "Max da Bia")).toMatchObject({ lines: ["De Bia"], off: false });
-    // All of them, under their owners: the one another agent has can't be picked.
+    // All of them, under their AI, each saying whose it is: the one another agent has can't be picked.
     await click(within(d).getByRole("button", { name: /^Ver as/ }));
     const rows = brainRows(d);
-    expect(rows.find((r) => r.title === "Max da Bia")).toMatchObject({ group: "De Bia", off: false });
-    expect(rows.find((r) => r.title === "Pro do Caio")).toMatchObject({ group: "De Caio", off: true });
+    expect(rows.find((r) => r.title === "Max da Bia")).toMatchObject({
+      group: "Claude",
+      lines: ["De Bia"],
+      off: false,
+    });
+    expect(rows.find((r) => r.title === "Pro do Caio")).toMatchObject({ lines: ["De Caio"], off: true });
     await pickRow(d, "Max da Bia");
     // Its owner hears of it.
     expect(d.textContent).toContain("Bia recebe um aviso por e-mail.");

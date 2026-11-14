@@ -411,6 +411,27 @@ function ComputerPage({ machineId }: { machineId: string }) {
               }
             />
           )}
+          {/* Spill-over: its owner turns these on; an admin may only turn them off. A server install never takes it. */}
+          {d.mayManage &&
+            d.machineKind === "connected" &&
+            !d.systemMode &&
+            (["own", "others"] as const).map((key) => (
+              <PrefRow
+                key={key}
+                id={`dv-pc-spill-${key}`}
+                icon={key === "own" ? "bolt" : "audiencePeople"}
+                label={t(key === "own" ? "devices.spillOwn" : "devices.spillOthers")}
+                hint={t(key === "own" ? "devices.spillOwnHint" : "devices.spillOthersHint")}
+                control={
+                  <Switch
+                    id={`dv-pc-spill-${key}-switch`}
+                    checked={d.spill[key]}
+                    disabled={update.isPending || (!owner && !d.spill[key])}
+                    onCheckedChange={(on) => save({ id: d.id, spill: { [key]: on } })}
+                  />
+                }
+              />
+            ))}
           {admin && d.machineKind === "connected" && (
             <PrefRow
               id="dv-pc-belongs"

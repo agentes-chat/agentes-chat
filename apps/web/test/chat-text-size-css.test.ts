@@ -83,7 +83,7 @@ test("the name, its time and the clocks beside the words follow the step too", (
   }
   // A grouped row's time and check, my bubble's bar and Compacta's clock and face sit on the words' first line.
   expect(last(".ac-msg__gutter-time", "line-height")).toBe("var(--msg-line)");
-  expect(last(".ac-msg__aside--floating", "line-height")).toBe("var(--msg-line)");
+  expect(last(".ac-msg__gutter--aside > .ac-msg__aside", "line-height")).toBe("var(--msg-line)");
   expect(last(".ac-msg__clock", "top")).toContain("var(--msg-line)");
   expect(last('.ac-msg[data-look="compact"] .ac-msg__avatar', "top")).toContain("var(--msg-line)");
   expect(last('.ac-msg[data-look="compact"]', "min-height")).toBe("var(--msg-line)");

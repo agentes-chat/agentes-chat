@@ -1328,6 +1328,11 @@ export class CodexAppServers implements CodexAppRunner {
               }
               return;
             }
+            // An image takes a while and says nothing until it is done: its call starts now (the chat shows its place).
+            if (method === "item/started" && item.type === "imageGeneration" && str(item.id)) {
+              emit({ type: "tool_started", id: str(item.id), name: "image_generation" });
+              return;
+            }
             if (method !== "item/completed") return;
             const out = mapper.completed(item);
             if (out.text) addText(out.text);

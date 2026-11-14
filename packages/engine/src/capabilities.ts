@@ -89,7 +89,7 @@ export function summarizeGrants(rows: { scope: string; connectionLabel: string |
 export function describeCapabilities(
   tools: Pick<ToolDefinition, "name" | "description" | "scope" | "sensitive" | "connectionId" | "connectorLabel">[],
   pending: { label: string; reason: string }[] = [],
-  /** The right hand (ADR 0137), which never has a computer: no line sends it to a browser, a shell or a clone. */
+  /** The right hand (ADR 0137) with no computer at all (ADR 0175): no line sends it to a browser, a shell or a clone. */
   noComputer = false,
 ) {
   const lines = ["# What you can do"];
@@ -290,9 +290,13 @@ export const CAPABILITIES_LIMIT =
 const COMPUTER_CAPABILITIES_LIMIT =
   "Beyond this list and your computer's own tools, you can't. Never say you did or can do, offer or promise something that isn't on this list or among those tools, and don't deny what is. Say something is made, sent or done only when a call of yours did it. A step needing a person (a sign-in, a QR code, an approval) is not a can't: hand it to them. If you can't do something or a part of it, say so once, clearly, do the rest and suggest who can: a person in the channel or another agent (mention them with @).";
 
-/** What a computer brain (Claude Code, Codex) is told about its own tools. */
+/**
+ * What a computer brain (Claude Code, Codex) is told about its own tools. Its git's `core.hooksPath` is the runner's
+ * hooks folder (ADR 0156, `co-authors.ts`): a hook installer that writes where it points would leave a repository's
+ * hooks there.
+ */
 export const COMPUTER_TOOLS_NOTE =
-  "# Your computer's tools\nYou also have your computer's own tools (read files, search, shell and git in your folder and allowed folders). They are among your means too. Use them freely to read and investigate; that needs no approval. Actions that change things for others (push, merge, deploy) still follow the rules above.";
+  "# Your computer's tools\nYou also have your computer's own tools (read files, search, shell and git in your folder and allowed folders). They are among your means too. Use them freely to read and investigate; that needs no approval. Actions that change things for others (push, merge, deploy) still follow the rules above. Your git's `core.hooksPath` is the computer's own hooks folder (it adds your Co-authored-by line, then runs each repository's own hooks): run a hook installer (pre-commit install, lefthook install, simple-git-hooks, git lfs install or update) with `GIT_CONFIG_PARAMETERS=` before it.";
 
 /**
  * The system prompt as a computer brain reads it (ADR 0037): the limit line

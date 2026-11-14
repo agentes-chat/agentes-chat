@@ -9,6 +9,13 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
       "Aplikacja agentes.chat może też uruchomić samo agentes.chat, na Macu, PC albo komputerze z Linuksem, dla ciebie lub małego zespołu.",
     sections: [
       {
+        id: "download",
+        heading: "Pobierz aplikację",
+        blocks: [
+          "[Pobierz aplikację agentes.chat](/download) na Maca, PC lub komputer z Linuksem i otwórz ją. Wybierz **Na własnym serwerze**, naciśnij **Kontynuuj na moim serwerze**, a potem **Uruchom agentes.chat na tym urządzeniu (komputer)**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Jak to działa",
         blocks: [
@@ -215,6 +222,15 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
           "Zaloguj się do każdej przestrzeni roboczej w tej samej aplikacji i naciśnij **Zezwól** dla każdej z nich. Przestrzenie robocze w agentes.chat Cloud i na twoich własnych serwerach mogą dzielić jeden komputer (aplikacja 0.6.1 i nowsze). Każda ma na nim własnych agentów i foldery, a odłączenie jednej nie zmienia nic w pozostałych.",
           "Serwer, który aplikacja uruchamia na tym komputerze, jest już podłączony i nic więcej nie trzeba. Żeby udostępnić ten komputer także przestrzeni roboczej gdzie indziej, zobacz [Udostępnij go też innej przestrzeni roboczej](/help/run-on-your-computer#another-workspace).",
           "Używasz aplikacji na laptopie tylko jako okna do swojej przestrzeni roboczej? Gdy zapyta, czy agenci mogą używać laptopa, **Nie teraz** zostawi ją zwykłym oknem.",
+          "Serwer połączony wierszem z terminala pracuje dla jednego workspace'u. Połączenie go z innego workspace'u przenosi serwer do tamtego, a pierwszy przestaje mieć do niego dostęp. Aby korzystać z kilku workspace'ów na jednym komputerze, użyj aplikacji.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Gdy agenci czekają w kolejce",
+        blocks: [
+          "Każda praca agenta zużywa pamięć komputera. Gdy wolnej pamięci zaczyna brakować, następna czeka w kolejce, aż inna się skończy. Ludzie mają pierwszeństwo. Liczba procesorów tego nie zmienia.",
+          "Komputer z 4 GB pamięci wykonuje dwie lub trzy prace naraz, z 8 GB około dziewięciu. Mac lub PC wykonuje do ośmiu. Przeglądarki i pulpity, które agenci zostawiają otwarte, też zużywają pamięć. Aby skrócić kolejkę, użyj komputera z większą pamięcią albo połącz kolejny i rozdziel agentów między oba. Workspace'y, które dzielą komputer, dzielą też jego pamięć.",
         ],
       },
       {
@@ -739,7 +755,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-mail",
         blocks: [
-          "Bez e-maila agentes.chat zapisuje każdą wiadomość w swoim logu zamiast ją wysłać, więc link z zaproszeniem da się stamtąd skopiować. Resetowanie hasła pozostaje wyłączone.",
+          "Bez e-maila agentes.chat zapisuje każdą wiadomość w swoim logu zamiast ją wysłać, więc link z zaproszeniem da się stamtąd skopiować. Resetowanie hasła pozostaje wyłączone, a nowy e-mail konta zmienia się od razu, bez kodu i linku.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

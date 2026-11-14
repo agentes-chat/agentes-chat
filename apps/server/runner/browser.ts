@@ -177,6 +177,11 @@ import {
 export const BROWSER_IDLE_MS = 15 * 60_000;
 /** How often idle browsers are looked for. */
 const SWEEP_MS = 60_000;
+/**
+ * A brain turn short of memory may close an agent's browser unused this long (`reclaimIdle`): its profile and logins
+ * stay on disk and the agent's next browser command starts it again.
+ */
+export const BROWSER_RECLAIM_IDLE_MS = 2 * 60_000;
 /** A Chrome that hasn't opened its debugging port by then is given up. */
 const CHROME_START_MS = 20_000;
 /** A Chrome started for Browser on its desktop whose window hasn't shown by then, once its port opened, is given up. */
@@ -1464,6 +1469,8 @@ interface Session {
   folder: string;
   /** Commands run one at a time. */
   queue: Promise<unknown>;
+  /** Commands in `queue` not finished yet. */
+  queued?: number;
   lastUsed: number;
   stream?: Stream;
   /** A stream being opened: a second start (or a stop) waits for it instead of opening another socket. */
@@ -2871,6 +2878,36 @@ export class BrowserManager {
     }
   }
 
+  /** The browser `reclaimIdle` would close: a running Chrome nobody holds, no command under way, unused for a while. */
+  private reclaimable() {
+    let best: Session | null = null;
+    for (const [agentId, s] of this.sessions) {
+      if (!s.chrome || s.queued || s.chromeStarting || this.inView(s) || this.held(agentId)) continue;
+      // Someone watching it a moment ago may come back to the page: that counts as use here.
+      if (this.now() - Math.max(s.lastUsed, s.heldAt ?? 0) < BROWSER_RECLAIM_IDLE_MS) continue;
+      if (!best || s.lastUsed < best.lastUsed) best = s;
+    }
+    return best;
+  }
+
+  /** When the browser `reclaimIdle` would close was last used; null: none may close. */
+  reclaimCandidate(): number | null {
+    return this.reclaimable()?.lastUsed ?? null;
+  }
+
+  /** A turn needs memory: the least recently used idle browser closes (`reclaimable`); false when none could. */
+  async reclaimIdle(): Promise<boolean> {
+    const s = this.reclaimable();
+    if (!s) return false;
+    this.sessions.delete(s.agentId);
+    this.changed();
+    await this.enqueue(s, async () => {
+      await this.run(s, ["close"], { timeoutMs: QUICK_TIMEOUT_MS }).catch(() => undefined);
+      await this.stopChrome(s);
+    }).catch(() => undefined);
+    return true;
+  }
+
   /**
    * Whether the agent's Chrome restarts now on the newer `disk` version (it updated itself): once per version, and
    * only while nobody needs it, so a browser is never restarted mid-task: no command, nobody watching it and no
@@ -3007,8 +3044,13 @@ export class BrowserManager {
   }
 
   private enqueue<T>(session: Session, fn: () => Promise<T>): Promise<T> {
+    session.queued = (session.queued ?? 0) + 1;
     const run = session.queue.catch(() => undefined).then(fn);
-    session.queue = run.catch(() => undefined);
+    session.queue = run
+      .catch(() => undefined)
+      .finally(() => {
+        session.queued = (session.queued ?? 1) - 1;
+      });
     return run;
   }
 

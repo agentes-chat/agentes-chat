@@ -34,6 +34,10 @@ import {
   wifiHosts,
   wifiPairLive,
   wifiPairText,
+  XCODE_FIX_COMMAND,
+  xcodeBlockedOf,
+  xcodeFixLive,
+  xcodeFixStage,
 } from "../src/lib/devices";
 
 const i18n = i18next.createInstance();
@@ -73,6 +77,7 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
   memoryGb: 36,
   ownerUserId: "u-sam",
   belongsToWorkspace: false,
+  spill: { own: true, others: false },
   systemMode: false,
   audience: owner,
   status: { kind: "ready" },
@@ -310,6 +315,51 @@ describe("connecting a phone", () => {
     ]);
   });
 
+  test("iPhone: Xcode installed but blocked stays on the Xcode step, with the command that fixes it", () => {
+    const cli = computer({ toolchains: { xcodeBlocked: "command_line_tools" } });
+    expect(xcodeBlockedOf(cli)).toBe("command_line_tools");
+    expect(iphoneSteps(cli, null)).toMatchObject({ xcode: "needs", tools: "waiting" });
+    // One paste for either cause, with the first-launch packages the iPhone's build needs.
+    expect(XCODE_FIX_COMMAND.split("\n")).toEqual([
+      "sudo xcode-select -s /Applications/Xcode.app &&",
+      "sudo xcodebuild -license accept &&",
+      "sudo xcodebuild -runFirstLaunch",
+    ]);
+    expect(xcodeBlockedOf(computer({ toolchains: { xcodeBlocked: "license" } }))).toBe("license");
+    // Xcode answers (a stale reason never wins), an unknown reason, nothing said: not blocked.
+    expect(xcodeBlockedOf(computer({ toolchains: { xcode: "27.0", xcodeBlocked: "license" } }))).toBeNull();
+    expect(xcodeBlockedOf(computer({ toolchains: { xcodeBlocked: "toString" } }))).toBeNull();
+    expect(xcodeBlockedOf(computer({ toolchains: {} }))).toBeNull();
+    expect(xcodeBlockedOf(undefined)).toBeNull();
+    // A fix polls while the password window is open or its commands run, never after.
+    expect(["asking", "running"].map((state) => xcodeFixLive({ state }))).toEqual([true, true]);
+    expect(["done", "canceled", "no_answer", "failed", "unsupported"].some((state) => xcodeFixLive({ state }))).toBe(
+      false,
+    );
+    expect(xcodeFixLive(null)).toBe(false);
+  });
+
+  test("the Xcode step's fix: the button first, the Terminal way when picked or when the Mac can't", () => {
+    const may = { mayFix: true, terminal: false };
+    const fix = (state: string, kind = "select") => ({ kind, state });
+    expect(xcodeFixStage(null, "select", may)).toBe("offer");
+    expect(xcodeFixStage(fix("asking"), "select", may)).toBe("asking");
+    expect(xcodeFixStage(fix("running"), "select", { ...may, terminal: true })).toBe("running");
+    expect(xcodeFixStage(fix("done"), "select", may)).toBe("done");
+    expect(xcodeFixStage(fix("no_answer"), "select", may)).toBe("missed");
+    expect(xcodeFixStage(fix("canceled"), "select", may)).toBe("missed");
+    expect(xcodeFixStage(fix("failed"), "select", may)).toBe("failed");
+    expect(xcodeFixStage(fix("failed"), "select", { ...may, terminal: true })).toBe("terminal");
+    // Every command ran, yet the Mac still reports Xcode blocked: why, the command and Try again.
+    expect(xcodeFixStage({ ...fix("failed"), still: "license" }, "select", may)).toBe("still");
+    // Another kind's fix says nothing about this one.
+    expect(xcodeFixStage(fix("asking", "update"), "select", may)).toBe("offer");
+    // Someone who doesn't manage the Mac, an app too old, a Mac that can't: the command.
+    expect(xcodeFixStage(null, "select", { mayFix: false, terminal: false })).toBe("terminal");
+    expect(xcodeFixStage(null, "select", { ...may, outdated: true })).toBe("terminal");
+    expect(xcodeFixStage(fix("unsupported"), "select", may)).toBe("terminal");
+  });
+
   test("the new reasons in words, and an iPhone too old names its iOS", () => {
     expect(statusDetail(t, "en-US", { kind: "needs_you", reason: "apple_team_missing" })).toBe(
       "Run an app on the iPhone from Xcode once",
@@ -446,6 +496,21 @@ describe("in the chat and the inbox", () => {
       forName: "Rui",
     });
     expect(deviceNoticeOf({ kind: "mention", source: {}, latest: {} } as never)).toBeNull();
+    // Someone asks the computer's owner to turn a tool on: the tool, and who asked (a person, not an agent).
+    const ask = {
+      kind: "device.tool_request",
+      actors: [{ type: "user", id: "u-caio" }],
+      source: { machineId: "m1", label: "Bia's Mac" },
+      latest: { reason: "browser" },
+    } as never;
+    expect(deviceNoticeOf(ask)).toMatchObject({
+      kind: "device.tool_request",
+      machineId: "m1",
+      device: "Bia's Mac",
+      tool: "browser",
+      askerId: "u-caio",
+      agentId: null,
+    });
   });
 });
 

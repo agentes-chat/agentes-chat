@@ -135,6 +135,7 @@ export const keys = {
   devices: (orgId: string) => ["org", orgId, "machines", "devices"] as const,
   /** Under `devices`: a phone picked over Wi-Fi leaves the offer when the list refetches. */
   wifiIphones: (orgId: string, machineId: string) => ["org", orgId, "machines", "devices", "wifi", machineId] as const,
+  xcodeFix: (orgId: string, machineId: string) => ["org", orgId, "machines", "devices", "xcode", machineId] as const,
   connectLink: (orgId: string, linkId: string) => ["org", orgId, "machines", "devices", "link", linkId] as const,
   /** Under `machines`: a computer that changes refreshes what a new agent could think with. */
   brainMachines: (orgId: string) => ["org", orgId, "machines", "brains"] as const,
@@ -229,6 +230,7 @@ export const keys = {
   wikiReads: (orgId: string) => ["org", orgId, "wiki", "reads"] as const,
   wikiTrash: (orgId: string) => ["org", orgId, "wiki", "trash"] as const,
   pins: (orgId: string, channelId: string) => ["org", orgId, "channel", channelId, "pins"] as const,
+  followUps: (orgId: string, channelId: string) => ["org", orgId, "channel", channelId, "follow-ups"] as const,
   /** Every GIF search (prefix): the workspace's rating or its GIFs switch changing refreshes them all (ADR 0091). */
   gifs: (orgId: string) => ["org", orgId, "gifs"] as const,
   /** One search's pages: free text or a category (neither: what is trending), in the person's language. */

@@ -538,6 +538,13 @@ describe("the plan step (agentes.chat Cloud)", () => {
     await act(async () => answer(list));
     await settle(10);
     expect(document.querySelector(".onb__plan-price")?.textContent).toContain("Plano Equipe · $49 por mês");
+    // Why it costs, behind an ⓘ on the price: one's own server is free.
+    const why = within(document.querySelector(".onb__plan-price") as HTMLElement).getByRole("button", {
+      name: "Por que pago?",
+    });
+    expect(document.getElementById(why.getAttribute("aria-describedby") ?? "")?.textContent).toContain(
+      "Rodar no seu servidor é grátis.",
+    );
   });
 
   test("with no plan data, the plan is named generically and both ways open the billing page", async () => {
@@ -1007,7 +1014,7 @@ describe("inviting people, a team's last step (ADR 0162, amended 2026-11-11)", (
     await act(async () => fireEvent.change(field, { target: { value: "bia@example.com, caio@example.com" } }));
     await act(async () => fireEvent.keyDown(field, { key: "Enter" }));
     await settle(4);
-    await pick(screen().getByRole("combobox", { name: "Papel de caio@example.com" }), "Admin");
+    await pick(screen().getByRole("combobox", { name: "Cargo de caio@example.com" }), "Admin");
     await click(button("Convidar 2 pessoas"), 20);
     expect(calls(state, "orgs.inviteMany").map((c) => c.args[1])).toEqual([
       {

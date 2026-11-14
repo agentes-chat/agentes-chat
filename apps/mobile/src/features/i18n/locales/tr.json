@@ -302,7 +302,7 @@
   },
   "along": {
     "agent": "Bir ajan",
-    "waits": "{{name}} onayınızı bekliyor",
+    "waits": "{{name}} · sizi bekliyor",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} çalışıyor",
     "more": "+{{count}}"
@@ -792,7 +792,7 @@
     "teamSectionPersonal": "Ajanlarınız",
     "managerQuiet": "Devam eden bir şey yok",
     "state": {
-      "waitsYou": "onayınızı bekliyor",
+      "waitsYou": "sizi bekliyor",
       "noAi": "Bağlı yapay zeka yok",
       "connect": "Bağla",
       "archived": "Arşivlendi",
@@ -918,6 +918,9 @@
       "routine_failed_other": "Rutin başarısız oldu",
       "run_failed_one": "Tamamlanamadı",
       "run_failed_other": "Tamamlanamadı",
+      "admin_ask_channel_agent": "{{names}}, {{agent}} ajanını #{{label}} kanalına eklemenizi istiyor",
+      "admin_ask_create_agents": "{{names}}, ajan oluşturabilmek istiyor",
+      "admin_ask_webhook": "{{names}}, rutinler için {{service}} webhook'unu kurmanızı istiyor",
       "routine_paused_one": "Rutin duraklatıldı",
       "routine_paused_other": "Rutin duraklatıldı",
       "routine_stalled_one": "Rutin bilgisayarı bekliyor",
@@ -978,6 +981,8 @@
       "plan_lent_other": "{{names}}, {{plan}} planını {{agent}} ajanına bağladı",
       "plan_lent_female_one": "{{names}}, {{plan}} planını {{agent}} ajanına bağladı",
       "plan_lent_female_other": "{{names}}, {{plan}} planını {{agent}} ajanına bağladı",
+      "plan_serves_one": "{{plan}} artık tüm workspace'e hizmet ediyor",
+      "plan_serves_other": "{{plan}} artık tüm workspace'e hizmet ediyor",
       "plan_model_dropped_one": "{{model}}, {{plan}} listesinden çıktı. {{names}} şimdilik {{runs}} kullanıyor",
       "plan_model_dropped_other": "{{model}}, {{plan}} listesinden çıktı. {{names}} şimdilik {{runs}} kullanıyor",
       "computer_disk_full_one": "Bir bilgisayarın diski neredeyse dolu",
@@ -1133,6 +1138,9 @@
     "addWorkspaceTeamShort": "Ekibinizin sunucusuna katıl",
     "addWorkspaceTeamSubShort": "Adres veya bilgisayardaki QR kod",
     "addWorkspaceFoot": "Hiçbir çalışma alanından çıkmazsınız.",
+    "addAccount": "Başka bir hesapla giriş yap",
+    "addAccountSub": "{{host}} üzerinde, bu hesaptan çıkmadan",
+    "accountNoWorkspace": "Henüz çalışma alanı yok",
     "teamServerLeadShort": "Ekibinizin tarayıcıda açtığı adres.",
     "teamServerQuestion": "Ekibinizin adresi nedir?",
     "account": {
@@ -1150,6 +1158,8 @@
       "name": "Ad",
       "namePlaceholder": "Adınız",
       "email": "E-posta",
+      "emailWebLead": "Web sitesinde yeniden giriş yap ve orada kodsuz değiştir.",
+      "emailWeb": "Web sitesinde yeniden giriş yap",
       "inWorkspace": "Bu çalışma alanında · {{org}}",
       "handle": "@ adınız",
       "timezone": "Saat dilimi",
@@ -1434,7 +1444,7 @@
       "plain": "bir işi bitirdi"
     },
     "rowWait": {
-      "approval": "onayınızı bekliyor",
+      "approval": "sizi bekliyor",
       "question": "yanıtınızı bekliyor",
       "mission": "incelemenizi bekliyor"
     },
@@ -1472,13 +1482,13 @@
   },
   "intentAgents": {
     "waitingSection": "Sizi bekleyenler",
-    "waitingLine": "{{title}} · onayınızı bekliyor",
+    "waitingLine": "{{title}} · sizi bekliyor",
     "waitingMore_one": "{{title}} · ve sizi bekleyen {{count}} şey daha",
     "waitingMore_other": "{{title}} · ve sizi bekleyen {{count}} şey daha",
-    "waitingLabel": "{{name}}, onayınızı bekliyor",
+    "waitingLabel": "{{name}}, sizi bekliyor",
     "owner": "Sorumlu: {{name}}",
     "ownerYou": "Sorumlu: siz",
-    "nowWaiting": "Onayınızı bekliyor: {{title}}",
+    "nowWaiting": "Sizi bekliyor: {{title}}",
     "did": {
       "title": "Sizin için yaptıkları",
       "title_female": "Sizin için yaptıkları",
@@ -1497,7 +1507,7 @@
         "image": "Görsel",
         "file": "Dosya"
       },
-      "waitingOnYou": "Onayınızı bekliyor",
+      "waitingOnYou": "Sizi bekliyor",
       "youApproved": "Onayladınız",
       "youRefused": "Reddettiniz",
       "action": {
@@ -1985,6 +1995,7 @@
       "access_requestFor": "{{names}}, {{person}} için {{device}} cihazını kullanmak istiyor",
       "waiting": "{{names}}, {{device}} cihazını bekliyor",
       "waitingFor": "{{names}}, {{person}} için {{device}} cihazını bekliyor",
+      "tool_request": "{{names}}, {{device}} cihazınızda {{tool}} açmanızı istiyor",
       "allowOnce": "Bir kez izin ver",
       "always": "{{name}} için her zaman izin ver",
       "no": "Hayır",
@@ -2247,7 +2258,8 @@
       "tooBig": "Bu görsel çok büyük. Başka birini deneyin."
     },
     "machine": {
-      "toolsHow": "Kapatmak için açık bir araca dokunun. Yeniden açmak yalnızca bilgisayarın kendisinden yapılabilir."
+      "toolsHow": "Kapatmak için açık bir araca dokunun. Yeniden açmak için: bilgisayarın kendisinde, ya da burada onu bağlayan kişi tarafından.",
+      "toolsHowOwner": "Açmak ya da kapatmak için bir araca dokunun."
     },
     "roles": {
       "onComputer": "Rollerin sırası ve her rolün simgesi bilgisayardan değiştirilir.",

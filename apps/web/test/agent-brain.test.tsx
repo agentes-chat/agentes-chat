@@ -228,7 +228,7 @@ describe("Onde trabalha and the browser (their dialogs)", () => {
     await click(within(d).getByRole("radio", { name: /^Qualquer site/ }));
     const steps = within(d).getByRole("region", { name: "Falta 1 passo, no próprio Servidor" });
     expect(steps.textContent).toContain(
-      "Só quem está no computador liga, no app do agentes.chat: Preferências → Ferramentas.Sem o app? No terminal do computador:",
+      "Quem conectou o computador liga aqui ou no app do agentes.chat nele: Preferências → Ferramentas.Sem o app? No terminal do computador:",
     );
     expect(steps.querySelector(".machine-command__code")?.textContent).toBe("sudo agentes-runner tools enable browser");
     expect(steps.querySelector(".brw-steps__grid")).toBeNull();

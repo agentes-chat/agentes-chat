@@ -131,9 +131,13 @@ export function skillUpdateErrorText(t: TFunction, code: string) {
   const key = code.replace(/^skill\./, "");
   if (key === "no_skill_md" || key === "connection_gone" || key === "link_holds_several" || key === "link_renamed")
     return t(`skills.updateFailed.${key}`);
-  if (key === "auto_update_owner_gone" || code === "forbidden") return t("skills.updateFailed.owner_gone");
+  if (relightsSkillUpdate(code)) return t("skills.updateFailed.owner_gone");
   return t("skills.updateFailed.other");
 }
+
+/** A daily update refused for its starter's rights: "Ligar de novo" turns it on again with the presser's. */
+export const relightsSkillUpdate = (code: string | null | undefined) =>
+  code === "skill.auto_update_owner_gone" || code === "auto_update_owner_gone" || code === "forbidden";
 
 /** The update from its link that waits for a person (not kept out), or null. */
 export const waitingUpdate = (s: Pick<Skill, "pendingUpdate">) =>

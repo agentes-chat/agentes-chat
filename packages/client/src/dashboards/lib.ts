@@ -245,6 +245,8 @@ const NEEDS_AI_WORDS = {
   plan_not_shared: "widgets.needsAi.plan_not_shared",
   // Its run's word for the same: no person is behind a build.
   plan_unattended: "widgets.needsAi.plan_not_shared",
+  // Whoever set it up has no plan that serves them: for a build, the same plan kept to its owner.
+  plans_not_yours: "widgets.needsAi.plan_not_shared",
   computer_away: "widgets.failure.waiting_computer",
   plan_limit: "widgets.failure.waiting_plan",
   model_limit: "widgets.failure.waiting_plan",

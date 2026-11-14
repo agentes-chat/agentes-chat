@@ -213,6 +213,8 @@ export interface BrainReclaimed {
   idle?: { since: number; spare: boolean };
   /** A peek: `spare` has an open CLI. */
   warm?: boolean;
+  /** A browser peek: when the agent's browser `BrowserManager.reclaimIdle` would close was last used. */
+  browserIdle?: number;
 }
 
 export type WorkerLinkFrame =
@@ -248,10 +250,10 @@ export type WorkerLinkFrame =
   /** From the worker: its agent's Chrome is in use on the agent's desktop (`BROWSER_LEASE_MS`). */
   | { type: "browser.desktop" }
   /**
-   * To the worker: close its least recently used idle brain CLI (`BrainManager.reclaimIdle`), `spare` last; with
-   * `peek`, only say which it would (`idleCandidate`).
+   * To the worker: close its least recently used idle brain CLI (`BrainManager.reclaimIdle`), `spare` last, or with
+   * `browser` its agent's idle browser (`BrowserManager.reclaimIdle`); with `peek`, only say which it would.
    */
-  | { type: "brain.reclaim"; reclaimId: string; spare?: string; peek?: boolean }
+  | { type: "brain.reclaim"; reclaimId: string; spare?: string; peek?: boolean; browser?: boolean }
   /** From the worker: whether it closed one, or (`peek`) when the one it would close was last used. */
   | ({ type: "brain.reclaimed"; reclaimId: string } & BrainReclaimed)
   /**
@@ -839,6 +841,18 @@ export class Supervisor {
     return false;
   }
 
+  /** No idle CLI was left to close: the least recently used idle agent's browser across the workers closes instead. */
+  async reclaimBrowsers(): Promise<boolean> {
+    const workers = [...this.workers.values()].filter((w) => w.ready);
+    const peeks = await Promise.all(
+      workers.map(async (w) => ({ w, since: (await this.askBrains(w, { peek: true, browser: true }))?.browserIdle })),
+    );
+    const order = peeks.flatMap(({ w, since }) => (since === undefined ? [] : [{ w, since }]));
+    order.sort((a, b) => a.since - b.since);
+    for (const { w } of order) if ((await this.askBrains(w, { browser: true }))?.closed) return true;
+    return false;
+  }
+
   /** Whether the session `key` (`brainKey`) has an open CLI in its agent's worker. */
   async warmBrain(key: string): Promise<boolean> {
     const w = this.workers.get(key.split(":")[0] ?? "");
@@ -846,7 +860,10 @@ export class Supervisor {
     return (await this.askBrains(w, { spare: key, peek: true }))?.warm === true;
   }
 
-  private askBrains(w: Worker, ask: { spare?: string; peek?: boolean }): Promise<BrainReclaimed | null> {
+  private askBrains(
+    w: Worker,
+    ask: { spare?: string; peek?: boolean; browser?: boolean },
+  ): Promise<BrainReclaimed | null> {
     const reclaimId = String(++this.seq);
     return new Promise((resolve) => {
       const late = setTimeout(() => {
@@ -863,6 +880,7 @@ export class Supervisor {
         reclaimId,
         ...(ask.spare ? { spare: ask.spare } : {}),
         ...(ask.peek ? { peek: true } : {}),
+        ...(ask.browser ? { browser: true } : {}),
       });
     });
   }
@@ -1489,6 +1507,7 @@ export class Supervisor {
         closed: f.closed === true,
         ...(valid ? { idle: { since: idle.since as number, spare: idle.spare as boolean } } : {}),
         ...(f.warm === true ? { warm: true } : {}),
+        ...(typeof f.browserIdle === "number" && Number.isFinite(f.browserIdle) ? { browserIdle: f.browserIdle } : {}),
       });
       return;
     }

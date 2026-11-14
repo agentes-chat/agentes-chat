@@ -7,7 +7,7 @@ import { CONTROL_PROTOCOL_VERSION, type ControlEvent, type ControlOut } from "@a
 import { configPath, readStoredConfig, type StoredConfig, writeConfig } from "../../runner/config";
 import type { Dial, Socket, SocketHandlers } from "../../runner/connection";
 import { EXIT_LOCKED, type RunControlOptions, runControl } from "../../runner/control";
-import { RunnerDaemon } from "../../runner/daemon";
+import { DEFAULT_LIMITS, RunnerDaemon } from "../../runner/daemon";
 import { RUNNER_VERSION } from "../../runner/errors";
 import { ORG_LOGO_MAX_BYTES, orgLogoPath } from "../../runner/org-logo";
 import type { FetchFn } from "../../runner/pairing";
@@ -602,6 +602,42 @@ test("access requests: pending until the person answers on the machine; the answ
   expect(lines.some((l) => l.includes(`agentes-runner folders allow ${other} --agent dev`))).toBe(true);
 });
 
+test("a tool turned on from the apps: the switch is written, the server and the app are told, and Undo turns it off", async () => {
+  const { home } = pairedHome();
+  const lines: string[] = [];
+  const c = control(home, { print: (l) => lines.push(l) });
+  const s = await c.connect();
+  await c.data({ type: "tools.set", tool: "browser", on: false });
+  s.frame({ type: "request", id: "w1", op: "access.allow", tool: "browser", by: "u-bia", byName: "Bia Rocha" });
+  await waitFor(() => s.sent.some((f) => f.id === "w1"));
+  expect(s.sent.find((f) => f.id === "w1")).toMatchObject({ ok: true, data: { access: { tools: { browser: true } } } });
+  expect((stored(home).access as { tools: { browser?: boolean } }).tools.browser).toBe(true);
+  expect(s.of("access.changed").at(-1)).toMatchObject({ access: { tools: { browser: true } } });
+  expect(c.events("access.allowed")).toEqual([{ kind: "access.allowed", tool: "browser", byName: "Bia Rocha" }]);
+  expect(lines.some((l) => l.includes("agentes-runner tools disable browser"))).toBe(true);
+
+  // Already on: nothing to tell again.
+  s.frame({ type: "request", id: "w2", op: "access.allow", tool: "browser", by: "u-bia", byName: "Bia Rocha" });
+  await waitFor(() => s.sent.some((f) => f.id === "w2"));
+  expect(c.events("access.allowed")).toHaveLength(1);
+
+  // Undo is the app's own switch.
+  await c.data({ type: "tools.set", tool: "browser", on: false });
+  expect((stored(home).access as { tools: { browser?: boolean } }).tools.browser).toBe(false);
+
+  // A tool the runner doesn't know is refused, and nothing changes.
+  s.frame({
+    type: "request",
+    id: "w3",
+    op: "access.allow",
+    tool: "everything" as never,
+    by: "u-bia",
+    byName: "Bia Rocha",
+  });
+  await waitFor(() => s.sent.some((f) => f.id === "w3"));
+  expect(s.sent.find((f) => f.id === "w3")).toMatchObject({ ok: false, error: { code: "bad_request" } });
+});
+
 test("folders, tools and settings from the app: system folders refused, everything lands in config.json", async () => {
   const { home } = pairedHome();
   const folder = tempDir("proj-");
@@ -645,8 +681,8 @@ test("folders, tools and settings from the app: system folders refused, everythi
     name: "box",
     maxConcurrentTasks: 3,
     taskMaxSeconds: 14400,
-    brainIdleMinutes: 3,
-    brainMaxProcesses: 1,
+    brainIdleMinutes: DEFAULT_LIMITS.brainIdleMinutes,
+    brainMaxProcesses: DEFAULT_LIMITS.brainMaxProcesses,
     workspace: expect.any(String),
     managedBy: "desktop",
   });

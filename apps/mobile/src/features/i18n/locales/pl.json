@@ -320,7 +320,7 @@
   },
   "along": {
     "agent": "Agent",
-    "waits": "{{name}} czeka na twoją zgodę",
+    "waits": "{{name}} · czeka na ciebie",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} pracuje",
     "more": "+{{count}}"
@@ -838,7 +838,7 @@
     "teamSectionPersonal": "Twoi agenci",
     "managerQuiet": "Nic w toku",
     "state": {
-      "waitsYou": "czeka na twoją zgodę",
+      "waitsYou": "czeka na ciebie",
       "noAi": "Brak połączonego AI",
       "connect": "Połącz",
       "archived": "W archiwum",
@@ -996,6 +996,9 @@
       "run_failed_few": "Nie udało się dokończyć",
       "run_failed_many": "Nie udało się dokończyć",
       "run_failed_other": "Nie udało się dokończyć",
+      "admin_ask_channel_agent": "{{names}} prosi o dodanie {{agent}} do #{{label}}",
+      "admin_ask_create_agents": "{{names}} prosi o możliwość tworzenia agentów",
+      "admin_ask_webhook": "{{names}} prosi o skonfigurowanie webhooka {{service}} dla rutyn",
       "routine_paused_one": "Rutyna wstrzymana",
       "routine_paused_few": "Rutyny wstrzymane",
       "routine_paused_many": "Rutyny wstrzymane",
@@ -1110,6 +1113,10 @@
       "plan_lent_female_few": "Twój plan {{plan}} połączony z agentem {{agent}} przez {{names}}",
       "plan_lent_female_many": "Twój plan {{plan}} połączony z agentem {{agent}} przez {{names}}",
       "plan_lent_female_other": "Twój plan {{plan}} połączony z agentem {{agent}} przez {{names}}",
+      "plan_serves_one": "Twój {{plan}} obsługuje teraz cały workspace",
+      "plan_serves_few": "Twój {{plan}} obsługuje teraz cały workspace",
+      "plan_serves_many": "Twój {{plan}} obsługuje teraz cały workspace",
+      "plan_serves_other": "Twój {{plan}} obsługuje teraz cały workspace",
       "plan_model_dropped_one": "{{model}} zniknął z {{plan}}. {{names}} na razie używa {{runs}}",
       "plan_model_dropped_few": "{{model}} zniknął z {{plan}}. {{names}} na razie używa {{runs}}",
       "plan_model_dropped_many": "{{model}} zniknął z {{plan}}. {{names}} na razie używa {{runs}}",
@@ -1285,6 +1292,9 @@
     "addWorkspaceTeamShort": "Dołącz do serwera swojego zespołu",
     "addWorkspaceTeamSubShort": "Adres lub kod QR z komputera",
     "addWorkspaceFoot": "Nie opuszczasz żadnej przestrzeni roboczej.",
+    "addAccount": "Zaloguj się na inne konto",
+    "addAccountSub": "Na {{host}}, bez wylogowywania z tego",
+    "accountNoWorkspace": "Nie ma jeszcze przestrzeni roboczej",
     "teamServerLeadShort": "To, co twój zespół otwiera w przeglądarce.",
     "teamServerQuestion": "Jaki jest adres twojego zespołu?",
     "account": {
@@ -1302,6 +1312,8 @@
       "name": "Imię",
       "namePlaceholder": "Twoje imię",
       "email": "E-mail",
+      "emailWebLead": "Zaloguj się ponownie na stronie i zmień go tam, bez kodu.",
+      "emailWeb": "Zaloguj się ponownie na stronie",
       "inWorkspace": "W tej przestrzeni roboczej · {{org}}",
       "handle": "Twój @",
       "timezone": "Strefa czasowa",
@@ -1604,7 +1616,7 @@
       "plain": "ma gotowe zadanie"
     },
     "rowWait": {
-      "approval": "czeka na twoją zgodę",
+      "approval": "czeka na ciebie",
       "question": "czeka na twoją odpowiedź",
       "mission": "czeka na twoją ocenę"
     },
@@ -1642,15 +1654,15 @@
   },
   "intentAgents": {
     "waitingSection": "Czeka na ciebie",
-    "waitingLine": "{{title}} · potrzebuje twojej zgody",
+    "waitingLine": "{{title}} · czeka na ciebie",
     "waitingMore_one": "{{title}} · i jeszcze {{count}} czeka na ciebie",
     "waitingMore_few": "{{title}} · i jeszcze {{count}} czekają na ciebie",
     "waitingMore_many": "{{title}} · i jeszcze {{count}} czeka na ciebie",
     "waitingMore_other": "{{title}} · i jeszcze {{count}} czeka na ciebie",
-    "waitingLabel": "{{name}}, potrzebuje twojej zgody",
+    "waitingLabel": "{{name}}, czeka na ciebie",
     "owner": "Właściciel: {{name}}",
     "ownerYou": "Właściciel: ty",
-    "nowWaiting": "Potrzebuje twojej zgody: {{title}}",
+    "nowWaiting": "Czeka na ciebie: {{title}}",
     "did": {
       "title": "Co dla ciebie zrobił",
       "title_female": "Co dla ciebie zrobiła",
@@ -1671,7 +1683,7 @@
         "image": "Obraz",
         "file": "Plik"
       },
-      "waitingOnYou": "Potrzebuje twojej zgody",
+      "waitingOnYou": "Czeka na ciebie",
       "youApproved": "Zatwierdzone przez ciebie",
       "youRefused": "Odrzucone przez ciebie",
       "action": {
@@ -2179,6 +2191,7 @@
       "access_requestFor": "{{names}} prosi o dostęp do urządzenia {{device}} dla {{person}}",
       "waiting": "{{names}} czeka na urządzenie {{device}}",
       "waitingFor": "{{names}} czeka na urządzenie {{device}} dla {{person}}",
+      "tool_request": "{{names}} prosi Cię o włączenie: {{tool}} na {{device}}",
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",
@@ -2453,7 +2466,8 @@
       "tooBig": "Ten obraz jest za duży. Spróbuj innego."
     },
     "machine": {
-      "toolsHow": "Stuknij włączone narzędzie, aby je wyłączyć. Ponowne włączenie jest możliwe tylko na samym komputerze."
+      "toolsHow": "Dotknij włączonego narzędzia, żeby je wyłączyć. Żeby włączyć ponownie: na samym komputerze albo tutaj przez osobę, która go podłączyła.",
+      "toolsHowOwner": "Dotknij narzędzia, żeby je włączyć lub wyłączyć."
     },
     "roles": {
       "onComputer": "Kolejność ról i ikonę każdej z nich zmienisz na komputerze.",

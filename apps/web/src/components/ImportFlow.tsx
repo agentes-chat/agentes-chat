@@ -10,7 +10,7 @@ import { aiAppImport } from "@agenteschat/client/lib/apps";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatBytes, MAX_UPLOAD_MB } from "@agenteschat/client/lib/files";
 import { joinNames } from "@agenteschat/client/lib/format";
-import { frontmatter } from "@agenteschat/client/lib/import/shared";
+import { frontmatter, PASTED } from "@agenteschat/client/lib/import/shared";
 import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import {
   AffixInput,
@@ -24,6 +24,7 @@ import {
   CountChip,
   driveFolder,
   Field,
+  HintLine,
   Icon,
   type IconName,
   InfoHint,
@@ -163,6 +164,8 @@ export function useImportFlow(orgId: string | null) {
     skipped: string[];
     /** The agents' own files, for their folders in the Drive. */
     files: AgentFile[];
+    /** System files the reader dropped (dependencies, caches, `.git`). */
+    junk: number;
   } | null>(null);
   const [pick, setPick] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -255,7 +258,7 @@ export function useImportFlow(orgId: string | null) {
         skipped = res.skipped ?? [];
         root = githubRoot(input.url);
       } else if ("text" in input) {
-        files = [{ name: "pasted", text: input.text }];
+        files = [{ name: PASTED, text: input.text }];
       } else {
         ({ files, root, junk } = await readImportFiles(await input.files));
       }
@@ -274,7 +277,7 @@ export function useImportFlow(orgId: string | null) {
       agentIds.current = new Map();
       sent.current = new Set();
       focus.current = "preview";
-      setPlanned({ bundle, items: plan.items, skipped, files: parsed.files });
+      setPlanned({ bundle, items: plan.items, skipped, files: parsed.files, junk: junk.length });
       setPick(new Set(plan.items.filter(choosable).map(itemId)));
       setReport(null);
       setCopyFiles(parsed.files.filter((f) => !f.skip).length <= MANY_FILES);
@@ -1008,7 +1011,7 @@ export function Preview({
     [planned, flow.pick],
   );
   if (!planned) return null;
-  const { bundle, items, skipped } = planned;
+  const { bundle, items, skipped, junk } = planned;
   const origin = bundleOrigin(bundle);
   const applying = flow.progress !== null;
   const picks = picksOf(items, flow.pick, blocked);
@@ -1061,6 +1064,17 @@ export function Preview({
             {t("onboarding.import.linkSkipped", { count: skipped.length })}: {skipped.join(", ")} ·{" "}
             {t("onboarding.import.linkSkippedHelp")}
           </span>
+        </p>
+      )}
+      {junk > 0 && (
+        <p className="imp-note ac-iconline">
+          <Icon name="info" size={16} />
+          <HintLine
+            name={t("common.about", { label: t("onboarding.import.systemFiles", { count: junk }) })}
+            hint={t("onboarding.import.systemFilesHelp")}
+          >
+            {t("onboarding.import.systemFiles", { count: junk })}
+          </HintLine>
         </p>
       )}
       <p className="imp-note ac-iconline">

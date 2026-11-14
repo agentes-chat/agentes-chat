@@ -6,6 +6,7 @@ import type {
   ConnectLinkState,
   DeviceAudience,
   DeviceStatus,
+  MachineTool,
   PhoneDevice,
   WifiPairing,
 } from "../api/types";
@@ -222,6 +223,10 @@ export function computerLine(t: TFunction, d: ComputerDevice): string {
     .filter(Boolean)
     .join(" · ");
 }
+
+/** A computer in the line's "More computers" list: "Online · macOS · 16 GB · your Claude Max plan" (`plan`: the viewer's there). */
+export const spillDeviceText = (t: TFunction, d: ComputerDevice, plan: string | null) =>
+  [statusPill(t, d.status), computerLine(t, d), plan && t("queue.spill.plan", { plan })].filter(Boolean).join(" · ");
 
 /** "Android 16" or "iOS 27.1". */
 export const phoneSystem = (t: TFunction, p: Pick<PhoneDevice, "platform" | "osVersion">) =>
@@ -570,6 +575,59 @@ export const iosMajor = (version: string) => version.split(".")[0] ?? version;
 
 /** What Xcode needs for an iPhone on a newer iOS than it knows, after installing the matching Xcode. */
 export const DDIS_UPDATE = "xcrun devicectl manage ddis update";
+
+/**
+ * What the Mac runs in Terminal for Xcode installed but blocked (the runner's `toolchains.xcodeBlocked`): the developer
+ * folder left on the Command Line Tools, or the license not agreed to. One paste, one password, both causes, and the
+ * first-launch packages an iPhone's build needs: the same commands the Mac's own fix runs (`xcode.fix` `select`).
+ * Each line ends in `&&` so a paste is read whole before sudo asks: sudo flushes typed-ahead input, which would drop
+ * the lines after the first in a shell without bracketed paste.
+ */
+export const XCODE_FIX_COMMAND = [
+  "sudo xcode-select -s /Applications/Xcode.app &&",
+  "sudo xcodebuild -license accept &&",
+  "sudo xcodebuild -runFirstLaunch",
+].join("\n");
+export const XCODE_BLOCKED = ["command_line_tools", "license"] as const;
+export type XcodeBlocked = (typeof XCODE_BLOCKED)[number];
+
+/** Why the Mac's Xcode doesn't answer, when it's installed and one command fixes it; null otherwise. */
+export function xcodeBlockedOf(host: ComputerDevice | undefined): XcodeBlocked | null {
+  const blocked = host?.toolchains.xcodeBlocked;
+  return !host?.toolchains.xcode && blocked && (XCODE_BLOCKED as readonly string[]).includes(blocked)
+    ? (blocked as XcodeBlocked)
+    : null;
+}
+
+/** How often the iPhone guide asks where a fix of the Mac's Xcode stands while it runs. */
+export const XCODE_FIX_POLL_MS = 1500;
+
+/** A fix of the Mac's Xcode still under way: the password window open, or its commands running. */
+export const xcodeFixLive = (fix: { state: string } | null | undefined) =>
+  fix?.state === "asking" || fix?.state === "running";
+
+export type XcodeFixStage = "offer" | "asking" | "running" | "done" | "missed" | "failed" | "still" | "terminal";
+
+/**
+ * What the Xcode step shows for a fix of `kind`: the button (`offer`), the password window open, the commands
+ * running, done (the Mac looks at Xcode again), nobody typed the password or Cancel (`missed`), failed, every command
+ * ran yet Xcode is still blocked (`still`: why, the command and Try again), or the Terminal command: picked
+ * (`terminal`), for who can't press the button, or a Mac whose app can't fix it.
+ */
+export function xcodeFixStage(
+  fix: { kind: string; state: string; still?: string } | null | undefined,
+  kind: "select" | "update",
+  o: { mayFix: boolean; terminal: boolean; outdated?: boolean },
+): XcodeFixStage {
+  const mine = fix?.kind === kind ? fix : null;
+  if (!o.mayFix || o.outdated || mine?.state === "unsupported") return "terminal";
+  if (mine?.state === "asking" || mine?.state === "running") return mine.state;
+  if (o.terminal) return "terminal";
+  if (mine?.state === "done") return "done";
+  if (mine?.state === "canceled" || mine?.state === "no_answer") return "missed";
+  if (mine?.state === "failed") return mine.still ? "still" : "failed";
+  return "offer";
+}
 
 /** A step under way or waiting on the person this long, unchanged, says what most likely holds it and one way out. */
 export const SETUP_STALL_MS = 45_000;
@@ -978,12 +1036,18 @@ export function screenGesture(
   };
 }
 
-export type DeviceNoticeKind = "device.join_request" | "device.in_use" | "device.access_request" | "device.waiting";
+export type DeviceNoticeKind =
+  | "device.join_request"
+  | "device.in_use"
+  | "device.access_request"
+  | "device.waiting"
+  | "device.tool_request";
 const NOTICE_KINDS = new Set<string>([
   "device.join_request",
   "device.in_use",
   "device.access_request",
   "device.waiting",
+  "device.tool_request",
 ]);
 
 /**
@@ -1006,6 +1070,9 @@ export interface DeviceNotice {
   forName: string | null;
   text: string | null;
   join: { name: string; os: string; ip: string; location: string | null } | null;
+  /** `device.tool_request`: the tool to turn on (`latest.reason`) and who asked (the person actor). */
+  tool: MachineTool | null;
+  askerId: string | null;
 }
 
 export function deviceNoticeOf(
@@ -1017,6 +1084,7 @@ export function deviceNoticeOf(
   const l = n.latest as Record<string, unknown>;
   const join = kind === "device.join_request";
   const actor = n.actors?.find((a) => a.type === "agent");
+  const tool = kind === "device.tool_request" ? (str(l.reason) as MachineTool | null) : null;
   return {
     kind: kind as DeviceNoticeKind,
     requestId: str(s.requestId),
@@ -1036,5 +1104,7 @@ export function deviceNoticeOf(
           location: str(l.location),
         }
       : null,
+    tool,
+    askerId: tool ? (n.actors?.find((a) => a.type === "user")?.id ?? null) : null,
   };
 }

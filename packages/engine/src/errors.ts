@@ -175,7 +175,24 @@ const DOMAIN_ERRORS = new Set([
   "BudgetExceededError",
   "PersonLimitError",
   "MissingCredentialError",
+  "ToolOffError",
 ]);
+
+/**
+ * A tool refused because a switch is off on the agent's computer (`tool`: a key of its tools, `commands` included):
+ * the gateway keeps the switch on the call's result (`data.toolOff`), and the reply carries it (`meta.toolOff`) so the
+ * chat shows its one-click way out under the agent's words.
+ */
+export class ToolOffError extends Error {
+  constructor(
+    message: string,
+    readonly toolOff: { machineId: string; tool: string },
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = "ToolOffError";
+  }
+}
 
 /**
  * An error nobody wrote for the caller: not one of the domain errors above, nor a plain `Error` (whose message a tool

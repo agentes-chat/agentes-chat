@@ -708,7 +708,7 @@
     "value": "An agent"
   },
   "along.waits": {
-    "value": "{{name}} is waiting for your ok"
+    "value": "{{name}} · waiting for you"
   },
   "along.on": {
     "value": "{{name}} · {{what}}"
@@ -1875,7 +1875,7 @@
     "value": "Nothing in progress"
   },
   "agents.state.waitsYou": {
-    "value": "waits for your OK"
+    "value": "waiting for you"
   },
   "agents.state.noAi": {
     "value": "No AI connected"
@@ -2193,6 +2193,15 @@
       "other": "Couldn't finish"
     }
   },
+  "activity.kind.admin_ask_channel_agent": {
+    "value": "{{names}} asks you to add {{agent}} to #{{label}}"
+  },
+  "activity.kind.admin_ask_create_agents": {
+    "value": "{{names}} asks to be able to create agents"
+  },
+  "activity.kind.admin_ask_webhook": {
+    "value": "{{names}} asks you to set up the {{service}} webhook for routines"
+  },
   "activity.kind.routine_paused": {
     "value": {
       "one": "Routine paused",
@@ -2367,6 +2376,12 @@
     "female": {
       "one": "{{names}} connected your {{plan}} plan to {{agent}}",
       "other": "{{names}} connected your {{plan}} plan to {{agent}}"
+    }
+  },
+  "activity.kind.plan_serves": {
+    "value": {
+      "one": "Your {{plan}} now serves the whole workspace",
+      "other": "Your {{plan}} now serves the whole workspace"
     }
   },
   "activity.kind.plan_model_dropped": {
@@ -2783,6 +2798,15 @@
   "me.addWorkspaceFoot": {
     "value": "You don't leave any workspace."
   },
+  "me.addAccount": {
+    "value": "Sign in to another account"
+  },
+  "me.addAccountSub": {
+    "value": "On {{host}}, without leaving this one"
+  },
+  "me.accountNoWorkspace": {
+    "value": "No workspace yet"
+  },
   "me.teamServerLeadShort": {
     "value": "What your team opens in the browser."
   },
@@ -2830,6 +2854,12 @@
   },
   "me.account.email": {
     "value": "Email"
+  },
+  "me.account.emailWebLead": {
+    "value": "Sign in again on the website and change it there, without the code."
+  },
+  "me.account.emailWeb": {
+    "value": "Sign in again on the website"
   },
   "me.account.inWorkspace": {
     "value": "In this workspace · {{org}}"
@@ -3529,7 +3559,7 @@
     "value": "finished a task"
   },
   "homeNow.rowWait.approval": {
-    "value": "waits for your ok"
+    "value": "waiting for you"
   },
   "homeNow.rowWait.question": {
     "value": "waits for your answer"
@@ -3604,7 +3634,7 @@
     "value": "Waiting on you"
   },
   "intentAgents.waitingLine": {
-    "value": "{{title}} · needs your ok"
+    "value": "{{title}} · waiting for you"
   },
   "intentAgents.waitingMore": {
     "value": {
@@ -3613,7 +3643,7 @@
     }
   },
   "intentAgents.waitingLabel": {
-    "value": "{{name}}, needs your ok"
+    "value": "{{name}}, waiting for you"
   },
   "intentAgents.owner": {
     "value": "Owner: {{name}}"
@@ -3622,7 +3652,7 @@
     "value": "Owner: you"
   },
   "intentAgents.nowWaiting": {
-    "value": "Needs your ok: {{title}}"
+    "value": "Waiting for you: {{title}}"
   },
   "intentAgents.did.title": {
     "value": "What he did for you",
@@ -3668,7 +3698,7 @@
     "value": "File"
   },
   "intentAgents.did.waitingOnYou": {
-    "value": "Needs your ok"
+    "value": "Waiting for you"
   },
   "intentAgents.did.youApproved": {
     "value": "You approved"
@@ -4883,6 +4913,9 @@
   "devices.notice.waitingFor": {
     "value": "{{names}} is waiting for {{device}} for {{person}}"
   },
+  "devices.notice.tool_request": {
+    "value": "{{names}} asks you to turn on {{tool}} on your {{device}}"
+  },
   "devices.notice.allowOnce": {
     "value": "Allow once"
   },
@@ -5514,7 +5547,10 @@
     "value": "That image is too big. Try another one."
   },
   "settings.machine.toolsHow": {
-    "value": "Tap a tool that's on to turn it off. Turning it back on happens only on the computer itself."
+    "value": "Tap a tool that's on to turn it off. To turn it back on: on the computer itself, or here by whoever connected it."
+  },
+  "settings.machine.toolsHowOwner": {
+    "value": "Tap a tool to turn it on or off."
   },
   "settings.roles.onComputer": {
     "value": "The roles' order and each role's icon change on the computer."

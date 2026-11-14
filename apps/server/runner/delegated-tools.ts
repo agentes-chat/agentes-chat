@@ -290,6 +290,8 @@ export type ShellStatus = ToolNotice["status"];
 export interface DelegatedScope {
   /** Claude Code's session: the cwd, what was read and the background shells carry over a restarted CLI. */
   session: string;
+  /** The agent as root's turn names it: its commands' commits end with its `coAuthors` (`agentSecrets`). */
+  agent?: AgentScope;
   cwd: string;
   /** The agent's folder and the folders granted to it: edits there need nobody. */
   folder: string;
@@ -319,7 +321,8 @@ type Secrets = {
 } | null;
 
 export interface DelegatedToolsOptions {
-  secrets: () => Promise<Secrets>;
+  /** `agentSecrets` for the session's agent (`DelegatedScope.agent`), or the worker's own. */
+  secrets: (agent?: AgentScope) => Promise<Secrets>;
   /** `tool.notice`, to root. */
   onNotice?: (notice: ToolNotice) => void;
   /** A background task's call was refused with nobody to approve it: its task lists it when it ends. */
@@ -638,7 +641,7 @@ export class DelegatedTools {
     s.calls.set(ctx.id, call);
     let secrets: Secrets = null;
     try {
-      secrets = await this.opts.secrets();
+      secrets = await this.opts.secrets(s.scope.agent);
       return this.finished(await handler({ s, args, ask: ctx.ask, id: ctx.id, call, secrets }), secrets);
     } catch (err) {
       return this.finished(fail(err instanceof Error ? err.message : String(err)), secrets);
@@ -1456,6 +1459,7 @@ export function delegatedTask(
     ...(redact ? { redact } : {}),
     delegated: tools.surface({
       session: bridge.session,
+      agent: bridge.agent,
       cwd: bridge.cwd,
       folder,
       grants,

@@ -9,6 +9,13 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
       "La app de agentes.chat también puede ejecutar el propio agentes.chat, en una Mac, una PC o una computadora con Linux, para ti o un equipo pequeño.",
     sections: [
       {
+        id: "download",
+        heading: "Descarga la app",
+        blocks: [
+          "[Descarga la app de agentes.chat](/download) para tu Mac, PC o computadora con Linux y ábrela. Elige **En tu propio servidor**, pulsa **Continuar en mi servidor** y luego **Ejecutar agentes.chat en esta computadora**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Cómo funciona",
         blocks: [
@@ -217,6 +224,15 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
           "Inicia sesión en cada espacio de trabajo en la misma app y pulsa **Permitir** para cada uno. Los espacios de trabajo en agentes.chat Cloud y en tus propios servidores pueden compartir una computadora (app 0.6.1 y posteriores). Cada uno tiene allí sus propios agentes y carpetas, y desconectar uno no afecta a los demás.",
           "Un servidor que la app ejecuta en esta computadora ya está conectado y no necesita nada. Para prestar también esa computadora a un espacio de trabajo de otro lugar, consulta [Préstala también a otro espacio de trabajo](/help/run-on-your-computer#another-workspace).",
           "¿Usas la app en una laptop solo como ventana a tu espacio de trabajo? Cuando te pida dejar que los agentes usen la laptop, **Ahora no** la deja como una simple ventana.",
+          "Un servidor conectado con la línea de la terminal trabaja para un solo workspace. Conectarlo desde otro workspace pasa el servidor a ese otro, y el primero deja de alcanzarlo. Para varios workspaces en una computadora, usa la app.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Cuando los agentes esperan en la fila",
+        blocks: [
+          "Cada trabajo de un agente usa la memoria de la computadora. Cuando queda poca memoria libre, el siguiente espera en la fila hasta que otro termine. Las personas van primero. El número de CPU no cambia esto.",
+          "Una computadora con 4 GB de memoria ejecuta dos o tres trabajos a la vez, una con 8 GB unos nueve. Un Mac o un PC, hasta ocho. Los navegadores y escritorios que los agentes dejan abiertos también usan memoria. Para una fila más corta, usa una computadora con más memoria, o conecta otra y reparte los agentes entre ellas. Los workspaces que comparten una computadora comparten su memoria.",
         ],
       },
       {
@@ -746,7 +762,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "Correo",
         blocks: [
-          "Sin correo, agentes.chat escribe cada correo en su registro en vez de enviarlo, así que puedes copiar de ahí un enlace de invitación. Restablecer la contraseña queda desactivado.",
+          "Sin correo, agentes.chat escribe cada correo en su registro en vez de enviarlo, así que puedes copiar de ahí un enlace de invitación. Restablecer la contraseña queda desactivado, y un correo nuevo para una cuenta cambia al instante, sin código ni enlace.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

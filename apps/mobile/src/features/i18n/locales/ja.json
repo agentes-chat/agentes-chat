@@ -293,7 +293,7 @@
   },
   "along": {
     "agent": "エージェント",
-    "waits": "{{name}}があなたのOKを待っています",
+    "waits": "{{name}} · あなたの対応待ち",
     "on": "{{name}} · {{what}}",
     "working": "{{name}}が作業中",
     "more": "+{{count}}"
@@ -769,7 +769,7 @@
     "teamSectionPersonal": "あなたのエージェント",
     "managerQuiet": "進行中のものはありません",
     "state": {
-      "waitsYou": "あなたのOK待ち",
+      "waitsYou": "あなたの対応待ち",
       "noAi": "AI未接続",
       "connect": "接続",
       "archived": "アーカイブ済み",
@@ -879,6 +879,9 @@
       "routine_finished_other": "ルーティンが完了しました",
       "routine_failed_other": "ルーティンが失敗しました",
       "run_failed_other": "完了できませんでした",
+      "admin_ask_channel_agent": "{{names}} が {{agent}} を #{{label}} に追加するよう求めています",
+      "admin_ask_create_agents": "{{names}} がエージェントを作成できるよう求めています",
+      "admin_ask_webhook": "{{names}} がルーティン用の {{service}} Webhook の設定を求めています",
       "routine_paused_other": "ルーティンが一時停止しました",
       "routine_stalled_other": "ルーティンがコンピューターを待っています",
       "agent_unreached_other": "ルーティンがエージェントを呼び出せませんでした",
@@ -912,6 +915,7 @@
       "desktop_taken_female_other": "{{names}}が{{agent}}のコンピューターの画面の操作を引き継ぎました",
       "plan_lent_other": "{{names}}があなたの {{plan}} プランを{{agent}}に接続しました",
       "plan_lent_female_other": "{{names}}があなたの {{plan}} プランを{{agent}}に接続しました",
+      "plan_serves_other": "あなたの{{plan}}は workspace 全体で使えるようになりました",
       "plan_model_dropped_other": "{{model}}が{{plan}}から外れました。{{names}}は当面{{runs}}を使います",
       "computer_disk_full_other": "コンピューターのディスクがほぼいっぱいです",
       "computer_no_chrome_other": "コンピューターにGoogle Chromeが必要です。google.com/chromeからダウンロードしてください",
@@ -1057,6 +1061,9 @@
     "addWorkspaceTeamShort": "チームのサーバーに参加",
     "addWorkspaceTeamSubShort": "アドレスかコンピューターのQRコード",
     "addWorkspaceFoot": "どのワークスペースからも抜けません。",
+    "addAccount": "別のアカウントにログイン",
+    "addAccountSub": "{{host}} で、このアカウントのまま",
+    "accountNoWorkspace": "ワークスペースはまだありません",
     "teamServerLeadShort": "チームがブラウザで開いているアドレスです。",
     "teamServerQuestion": "チームのアドレスは？",
     "account": {
@@ -1074,6 +1081,8 @@
       "name": "名前",
       "namePlaceholder": "あなたの名前",
       "email": "メールアドレス",
+      "emailWebLead": "サイトでもう一度ログインして、コードなしでそこで変更してください。",
+      "emailWeb": "サイトでもう一度ログイン",
       "inWorkspace": "このワークスペース内 · {{org}}",
       "handle": "あなたの@",
       "timezone": "タイムゾーン",
@@ -1349,7 +1358,7 @@
       "plain": "タスクを完了しました"
     },
     "rowWait": {
-      "approval": "があなたのOKを待っています",
+      "approval": "あなたの対応待ち",
       "question": "があなたの回答を待っています",
       "mission": "があなたのレビューを待っています"
     },
@@ -1387,12 +1396,12 @@
   },
   "intentAgents": {
     "waitingSection": "あなたの対応待ち",
-    "waitingLine": "{{title}} · あなたのOK待ち",
+    "waitingLine": "{{title}} · あなたの対応待ち",
     "waitingMore_other": "{{title}} · ほか{{count}}件があなたの対応待ち",
-    "waitingLabel": "{{name}}、あなたのOK待ち",
+    "waitingLabel": "{{name}}、あなたの対応待ち",
     "owner": "オーナー: {{name}}",
     "ownerYou": "オーナー: あなた",
-    "nowWaiting": "あなたのOK待ち: {{title}}",
+    "nowWaiting": "あなたの対応待ち: {{title}}",
     "did": {
       "title": "あなたのためにしたこと",
       "title_female": "あなたのためにしたこと",
@@ -1410,7 +1419,7 @@
         "image": "画像",
         "file": "ファイル"
       },
-      "waitingOnYou": "あなたのOK待ち",
+      "waitingOnYou": "あなたの対応待ち",
       "youApproved": "あなたが承認",
       "youRefused": "あなたが却下",
       "action": {
@@ -1888,6 +1897,7 @@
       "access_requestFor": "{{names}}が{{person}}の依頼で{{device}}の使用を求めています",
       "waiting": "{{names}}が{{device}}を待っています",
       "waitingFor": "{{names}}が{{person}}の依頼で{{device}}を待っています",
+      "tool_request": "{{names}} があなたの {{device}} で{{tool}}をオンにするよう頼んでいます",
       "allowOnce": "今回のみ許可",
       "always": "{{name}}を常に許可",
       "no": "許可しない",
@@ -2144,7 +2154,8 @@
       "tooBig": "画像が大きすぎます。別の画像をお試しください。"
     },
     "machine": {
-      "toolsHow": "オンのツールをタップするとオフになります。再びオンにするには、そのコンピューター上で操作する必要があります。"
+      "toolsHow": "オンのツールをタップするとオフになります。再びオンにするには、そのコンピューター上で、またはここで接続した人が行います。",
+      "toolsHowOwner": "ツールをタップしてオン・オフを切り替えます。"
     },
     "roles": {
       "onComputer": "ロールの順番と各ロールのアイコンはコンピューターで変更します。",

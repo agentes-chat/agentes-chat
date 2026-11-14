@@ -116,6 +116,13 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
       line({ type: "brain.event", runId: RUN(1), event: { type: "usage", input: 3.4, output: -1, source: "x" } }),
     ),
   ).toMatchObject({ event: { type: "usage", input: 3, output: 0, source: "plan" } });
+  // A turn's timings travel on its `done`; a malformed one is left out, the answer kept.
+  const done = (timings: unknown) =>
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok", timings } }));
+  expect(done({ warm: false, initMs: 812.4, firstEventMs: -3 })).toMatchObject({
+    event: { type: "done", text: "ok", timings: { warm: false, initMs: 812 } },
+  });
+  expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
 });
 
 test("hello: Claude Code's login state travels (never anything else from auth status)", async () => {
@@ -680,7 +687,14 @@ test.if(posix)(
   async () => {
     const { m, spawns, turn } = setup();
     const a = await turn(1, "first");
-    expect(a.final).toEqual({ type: "done", text: "echo 1: first", session: { id: SESSION(1) } });
+    expect(a.final).toMatchObject({ type: "done", text: "echo 1: first", session: { id: SESSION(1) } });
+    // The first turn started the process: it says how long Claude Code took to be ready and to say something.
+    const timings = (f: WireBrainEvent) => (f.type === "done" ? f.timings : undefined);
+    expect(timings(a.final)).toMatchObject({
+      warm: false,
+      initMs: expect.any(Number),
+      firstEventMs: expect.any(Number),
+    });
     expect(a.events.at(-1)).toEqual(a.final);
     expect(
       a.events
@@ -699,6 +713,8 @@ test.if(posix)(
     });
     const b = await turn(2, "second");
     expect(b.final).toMatchObject({ type: "done", text: "echo 2: second" });
+    expect(timings(b.final)).toMatchObject({ warm: true, firstEventMs: expect.any(Number) });
+    expect(timings(b.final)?.initMs).toBeUndefined();
     expect(spawns()).toHaveLength(1);
     expect(m.size).toBe(1);
     const args = spawns()[0]?.args ?? [];
@@ -1363,9 +1379,9 @@ test.if(posix)(
       },
       { signal: new AbortController().signal, output: () => {}, emit: (f) => frames.push(f) },
     )) as { runId: string; final: WireBrainEvent };
-    expect(reply).toEqual({
+    expect(reply).toMatchObject({
       runId: RUN(9),
-      final: { type: "done", text: "echo 1: hello", session: { id: SESSION(1) } },
+      final: { type: "done", text: "echo 1: hello", session: { id: SESSION(1) }, timings: { warm: false } },
     });
     expect(frames.at(-1)).toEqual({ type: "brain.done", runId: RUN(9) });
     expect(frames.at(-2)).toEqual({ type: "brain.event", runId: RUN(9), event: reply.final });
@@ -1530,6 +1546,20 @@ test.if(posix)(
     // None (or nonsense): the model's own window.
     await turn(4, "fourth", { contextTokens: "lots" as never });
     expect(logged()[2]?.compactWindow).toBeNull();
+  },
+);
+
+test.if(posix)(
+  "other lines for the agent's commits (turned off, the agent renamed) restart the process, resumed",
+  async () => {
+    const { spawns, turn } = setup();
+    const nick = { agent: { ...AGENT, coAuthors: ["Co-authored-by: Nick <noreply@agentes.chat>"] } };
+    await turn(1, "first", {}, undefined, nick);
+    await turn(2, "second", {}, undefined, nick);
+    expect(spawns()).toHaveLength(1);
+    await turn(3, "third", {}, undefined, { agent: AGENT });
+    expect(spawns()).toHaveLength(2);
+    expect(spawns()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
   },
 );
 

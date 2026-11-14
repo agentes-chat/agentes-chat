@@ -245,6 +245,19 @@ export function cliFailureText(
   return of.ended ? `cli_closed: ${of.brain}: ${of.ended}` : `cli_failed: ${of.brain}`;
 }
 
+/**
+ * A computer brain's failure under a code the apps don't word (a runner's `unsupported`, `not_allowed`…): what its
+ * runner said, as that brain's program's error (`cli_failed: OpenCode: …`), so a person never reads a bare code. Null
+ * for a code the apps word (`runErrorDetail` gives it a code of its own, not the plain `run.failed` with the code as
+ * its detail), which is stored as it is.
+ */
+export function brainFailureText(failure: CliFailure, kind: ComputerBrainKind): string | null {
+  const known = runErrorDetail(failure.code);
+  if (known && known.errorCode !== "run.failed") return null;
+  const words = cliErrorWords(failure.message);
+  return words ? `cli_failed: ${BRAIN_NAMES[kind]}: ${words}` : `cli_failed: ${BRAIN_NAMES[kind]}`;
+}
+
 /** `cli_failed: Claude Code: what it said` (`cliFailureText`); `cli_closed` when it ended without a word. */
 const CLI_FAILURE = /^cli_(failed|closed): ([^:]+?)(?:: ([\s\S]*))?$/;
 
@@ -255,6 +268,15 @@ export const OUR_ERROR = "Stopped after an error";
 const PROVIDER_ACCOUNT = "account: ";
 
 const OUR_KEY_CAUSES: ReadonlySet<ProviderCause> = new Set(["no_credit", "invalid_key", "no_access", "rate_limit"]);
+
+/** A key refused for what the key is, on every call until someone fixes it: no retry and no wait gets past it. */
+const KEY_REFUSALS: ReadonlySet<ProviderCause> = new Set(["no_credit", "invalid_key", "no_access"]);
+
+/** Whether a provider refused the call for its key (no credit, a wrong key, no access), whoever's key it is. */
+export function keyRefused(error: ProviderError) {
+  const cause = providerCause(error);
+  return cause !== null && KEY_REFUSALS.has(cause);
+}
 
 /**
  * A provider failure in the terms the apps word it: a known cause, `ours` (it came on the server's own key, so nothing
@@ -366,8 +388,9 @@ export function runErrorDetail(error: string | null | undefined): {
   )
     return { errorCode: "run.credential_revoked" };
   const wrong =
-    /^This agent's model is from (.+), but the chosen key is from (.+)$/.exec(error) ??
-    /^O modelo deste agente é da (.+), mas a chave escolhida é da (.+)$/.exec(error);
+    // A provider's name has no comma: one way to split the sentence, never a quadratic search for it.
+    /^This agent's model is from ([^,]+), but the chosen key is from (.+)$/.exec(error) ??
+    /^O modelo deste agente é da ([^,]+), mas a chave escolhida é da (.+)$/.exec(error);
   if (wrong) {
     return {
       errorCode: "run.credential_wrong_provider",

@@ -9,7 +9,13 @@ import {
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
 import { approvalOriginShort, approvalOriginWords } from "@agenteschat/client/lib/approval-origin";
 import { approvalEffects } from "@agenteschat/client/lib/approval-review";
-import { alwaysRoutineName, approvalDoing, approvalTitle } from "@agenteschat/client/lib/approval-words";
+import {
+  alwaysRoutineName,
+  approvalDoing,
+  approvalLetter,
+  approvalLetterTo,
+  approvalTitle,
+} from "@agenteschat/client/lib/approval-words";
 import { fromServer, itemName } from "@agenteschat/client/lib/connected";
 import { nextLabel } from "@agenteschat/client/lib/format";
 import { connectorName } from "@agenteschat/client/lib/scopes";
@@ -18,10 +24,12 @@ import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
-import { Button, Chip, Fuse, haptics, Text, useToast } from "@/ui";
+import { Button, Chip, Fuse, haptics, Text, useReducedMotion, useToast } from "@/ui";
 import { useInfoHint } from "@/ui/InfoHint";
 import { router } from "@/ui/navigation";
+import { REVEAL } from "../chat/ClippedMessage";
 import { parseInline } from "../chat/logic";
 import { Spans } from "../chat/MessageSpans";
 import { ConnectorIcon, IconTile } from "../connectors/ConnectorIcon";
@@ -262,6 +270,8 @@ export function ApprovalMark({
  */
 export function ApprovalPreview({ approval: a }: { approval: Approval }) {
   const { t } = useTranslation();
+  const letter = approvalLetter(a);
+  if (letter) return <ApprovalLetter letter={letter} />;
   if (!a.email) return null;
   return (
     <View style={styles.previewMail}>
@@ -282,12 +292,39 @@ export function ApprovalPreview({ approval: a }: { approval: Approval }) {
   );
 }
 
-export const hasApprovalPreview = (a: Approval) => Boolean(a.email);
+export const hasApprovalPreview = (a: Approval) => Boolean(a.email || approvalLetter(a));
+
+/**
+ * A connector's message (`approvalLetter`): its subject, to whom, the first three lines of its text; the whole call
+ * under "Ver detalhes".
+ */
+export function ApprovalLetter({ letter }: { letter: NonNullable<ReturnType<typeof approvalLetter>> }) {
+  const { t } = useTranslation();
+  const to = approvalLetterTo(t, letter);
+  return (
+    <View style={styles.previewMail}>
+      {letter.subject ? (
+        <Text variant="subhead" tone="ink" style={styles.medium}>
+          {letter.subject}
+        </Text>
+      ) : null}
+      {to ? (
+        <Text variant="footnote" tone="muted">
+          {to}
+        </Text>
+      ) : null}
+      <Text variant="small" tone="ink2" style={[styles.said, styles.previewBody]} numberOfLines={3}>
+        {letter.body}
+      </Text>
+    </View>
+  );
+}
 
 /**
  * The email an approval writes, as it will be: its subject in bold, then De (the mailbox and its provider), Para,
- * Cc, Cco, each label above its value (never beside it), the text folded to four lines ("Ler tudo") unless `full`,
- * and the message it answers. `flat`: drawn on a request card, no frame of its own (never a box in a card).
+ * Cc, Cco, each label above its value (never beside it), the text folded to four lines until "Ver mais" opens it in
+ * place (unless `full`), and the message it answers. `flat`: drawn on a request card, no frame of its own (never a
+ * box in a card).
  */
 export function ApprovalEmailLetter({
   email,
@@ -300,6 +337,7 @@ export function ApprovalEmailLetter({
 }) {
   const { t } = useTranslation();
   const c = useColors();
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
   const long = email.body.length > 180 || email.body.split("\n").length > 4;
   const rows: { label: string; value: string; note?: string }[] = [
@@ -344,19 +382,21 @@ export function ApprovalEmailLetter({
       </View>
       {email.body ? (
         <View style={flat ? styles.letterBodyFlat : styles.letterBody}>
-          <Text variant="small" tone="ink2" style={styles.said} numberOfLines={full || open ? undefined : 4}>
-            {email.body}
-          </Text>
-          {!full && long ? (
+          <Animated.View layout={open && !reduced ? REVEAL : undefined} style={styles.clip}>
+            <Text variant="small" tone="ink2" style={styles.said} numberOfLines={full || open ? undefined : 4}>
+              {email.body}
+            </Text>
+          </Animated.View>
+          {!full && long && !open ? (
             // An 18-point line: 13 of slop around it gives the 44-point target.
             <Pressable
               accessibilityRole="button"
               hitSlop={13}
-              onPress={() => setOpen((o) => !o)}
+              onPress={() => setOpen(true)}
               style={({ pressed }) => (pressed ? styles.pressed : null)}
             >
               <Text variant="footnote" tone="ink2" style={[styles.medium, styles.underline]}>
-                {open ? t("approval.email.less") : t("approval.email.more")}
+                {t("channel.long.more")}
               </Text>
             </Pressable>
           ) : null}
@@ -617,6 +657,7 @@ const styles = StyleSheet.create({
   factKey: { width: 92 },
   grow: { flex: 1, minWidth: 0 },
   said: { lineHeight: 20 },
+  clip: { overflow: "hidden" },
   why: { gap: 4 },
   fuse: { flexDirection: "row", alignItems: "center", gap: 10 },
   letter: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, borderBottomLeftRadius: 6, overflow: "hidden" },

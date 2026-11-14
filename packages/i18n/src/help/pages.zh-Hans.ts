@@ -8,6 +8,13 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
     summary: "agentes.chat 应用也可以在 Mac、PC 或 Linux 电脑上直接运行 agentes.chat，供你自己或小团队使用。",
     sections: [
       {
+        id: "download",
+        heading: "下载应用",
+        blocks: [
+          "为你的 Mac、PC 或 Linux 电脑[下载 agentes.chat 应用](/download)并打开。选择**在你自己的服务器上**，点击**继续使用我的服务器**，然后点击**在这台电脑上运行 agentes.chat**。",
+        ],
+      },
+      {
         id: "how",
         heading: "运行方式",
         blocks: [
@@ -176,6 +183,15 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
           "在同一个应用中分别登录每个工作区，并为每个工作区点 **允许**。agentes.chat Cloud 上的工作区和你自己服务器上的工作区可以共用一台电脑（应用 0.6.1 及以上版本）。每个工作区在上面都有自己的智能体和文件夹，断开其中一个不会影响其他工作区。",
           "应用在这台电脑上运行的服务器已经连接好，无需任何操作。如果还想把这台电脑借给别处的工作区，请看 [也借给其他工作区](/help/run-on-your-computer#another-workspace)。",
           "只把笔记本电脑上的应用当作打开工作区的窗口？当它询问是否让智能体使用这台笔记本电脑时，点 **以后再说**，它就仍然只是一个窗口。",
+          "用终端命令行连接的服务器只为一个工作区工作。从另一个工作区连接它，服务器就会转到那个工作区，原来的工作区将无法再使用它。要在一台电脑上使用多个工作区，请使用应用。",
+        ],
+      },
+      {
+        id: "line",
+        heading: "智能体排队等待时",
+        blocks: [
+          "智能体的每项工作都会占用电脑的内存。可用内存不足时，下一项工作会排队等待，直到另一项结束。人优先。CPU 的数量不影响这一点。",
+          "4 GB 内存的电脑可同时运行两到三项工作，8 GB 约九项。Mac 或 PC 最多八项。智能体保持打开的浏览器和桌面也会占用内存。想缩短排队，请使用内存更大的电脑，或再连接一台并把智能体分配到两台电脑上。共用一台电脑的工作区也共用它的内存。",
         ],
       },
       {
@@ -726,7 +742,7 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "邮件",
         blocks: [
-          "没有配置邮件时，agentes.chat 会把每封邮件写进日志而不是发出去，所以邀请链接可以从日志里复制。重置密码不可用。",
+          "没有配置邮件时，agentes.chat 会把每封邮件写进日志而不是发出去，所以邀请链接可以从日志里复制。重置密码不可用，账号换新邮箱会立即生效，无需验证码或链接。",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

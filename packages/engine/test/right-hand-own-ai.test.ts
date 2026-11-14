@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { ACCOUNTS_PROTOCOL, MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters";
-import { and, eq, ne, schema } from "@agenteschat/db";
+import { and, eq, inArray, ne, schema } from "@agenteschat/db";
 import {
   askWidgetChange,
   createDashboard,
@@ -17,12 +17,12 @@ import {
   openPersonAgentDm,
   PLAN_LENT_JOB,
   postPersonMessage,
-  queuePlanLent,
   RIGHT_HAND,
   refreshWidgetNow,
   releaseMemberAccounts,
   resolveBrain,
   runAuthority,
+  setAccountServes,
   setAgentBrain,
   sha256,
   TASK_OFFLINE_GRACE_MS,
@@ -128,8 +128,8 @@ test("a member gives their own DM with Lodi their plan; everyone else keeps the 
     canUsePlans: true,
     workspaceAi: { brain: "model", ownerId: null, servesYou: true },
   });
-  // Her own plans only: Ana's and Caio's aren't hers to give.
-  expect(before.accounts.map((a) => a.id)).toEqual([BIAS]);
+  // Every plan that serves the workspace (ADR 0059 §3), hers among them.
+  expect(before.accounts.map((a) => a.id).sort()).toEqual([ANAS, BIAS, CAIOS].sort());
   const view = await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, {
     scope: "mine",
     brain: "claude_code",
@@ -155,56 +155,108 @@ test("a member gives their own DM with Lodi their plan; everyone else keeps the 
   expect((await fx.db.select().from(schema.rightHandBrains)).map((r) => r.userId)).toEqual([caio.id]);
 });
 
-test("someone else's plan: only with use_others_plans, its owner hears it and takes it back", async () => {
-  const { fx, deps, bia, caio, lodi, runIn } = await world();
-  expect(
-    await codeOf(
-      setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: ANAS }),
-    ),
-  ).toBe("account.not_owner");
-  // Caio, an admin, may: Ana's plan serves him though she never opened it to others.
-  await setAgentBrain(deps, caio.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: ANAS });
-  const plan = await runIn(caio.id);
-  expect(plan).toMatchObject({ kind: "claude_code", account: { id: ANAS } });
-  expect(plan.unavailable).toBeUndefined();
-  const jobs = await fx.db.select().from(schema.outbox).where(eq(schema.outbox.kind, PLAN_LENT_JOB));
-  expect(jobs.map((j) => j.payload)).toContainEqual({ agentId: lodi.id, accountId: ANAS, actorId: caio.id });
-  // She hears it though the agent's own row never had her plan.
-  await queuePlanLent({ db: fx.db, pubsub: fx.pubsub }, null, fx.org.id, "job-1", {
-    agentId: lodi.id,
-    accountId: ANAS,
-    actorId: caio.id,
+test("with no key in the workspace, a person with no AI of their own thinks with a plan that serves them, the roomiest", async () => {
+  const { fx, bia, runIn } = await world();
+  // The workspace's AI is the model, with no key: before, everyone's DM read "no AI" despite plans being here.
+  await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
+  const window = (usedPercent: number) => ({
+    windows: [{ kind: "five_hour" as const, usedPercent, resetsAt: new Date(Date.now() + 3_600_000).toISOString() }],
+    source: "probe" as const,
+    at: new Date().toISOString(),
   });
-  const notes = await fx.db.select().from(schema.notifications).where(eq(schema.notifications.kind, "plan_lent"));
-  expect(notes.map((n) => n.userId)).toEqual([fx.owner.id]);
-  await takeBackPlan(deps, fx.owner.id, fx.org.id, ANAS);
-  expect((await runIn(caio.id)).kind).toBe("model");
+  await fx.db
+    .update(schema.machineAccounts)
+    .set({ usage: window(90) })
+    .where(eq(schema.machineAccounts.id, ANAS));
+  await fx.db
+    .update(schema.machineAccounts)
+    .set({ usage: window(10) })
+    .where(eq(schema.machineAccounts.id, CAIOS));
+  await fx.db
+    .update(schema.machineAccounts)
+    .set({ usage: window(50) })
+    .where(eq(schema.machineAccounts.id, BIAS));
+  const dani = await addMember(fx.db, fx.org.id, "member", "dani");
+  const plan = await runIn(dani.id);
+  expect(plan).toMatchObject({ kind: "claude_code", account: { id: CAIOS } });
+  expect(plan.unavailable).toBeUndefined();
+  // Someone with a plan of their own thinks with it first.
+  expect(await runIn(bia.id)).toMatchObject({ account: { id: BIAS } });
+  // A login made for one agent that an agent thinks with stays that agent's: the next roomiest answers.
+  await fx.db.update(schema.machineAccounts).set({ shared: false }).where(eq(schema.machineAccounts.id, CAIOS));
+  await fx.db.update(schema.agents).set({ brainAccountId: CAIOS }).where(eq(schema.agents.id, fx.agent.id));
+  const eva = await addMember(fx.db, fx.org.id, "member", "eva");
+  expect(await runIn(eva.id)).toMatchObject({ account: { id: BIAS } });
 });
 
-test("the workspace's plan serves only its owner until they open it; the AI status says so per person", async () => {
-  const { fx, deps, bia, lodi, runIn } = await world();
+test("someone else's plan: any that serves everyone, never one its owner keeps to themselves", async () => {
+  const { fx, deps, bia, caio, lodi, runIn } = await world();
+  // Ana's plan serves the whole workspace: Bia gives it to her own DM, and nobody needs telling.
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: ANAS });
+  const plan = await runIn(bia.id);
+  expect(plan).toMatchObject({ kind: "claude_code", account: { id: ANAS } });
+  expect(plan.unavailable).toBeUndefined();
+  expect(await fx.db.select().from(schema.outbox).where(eq(schema.outbox.kind, PLAN_LENT_JOB))).toEqual([]);
+  // Only the person who connected it chooses who it serves.
+  expect(await codeOf(setAccountServes(deps, caio.id, fx.org.id, ANAS, "owner"))).toBe("account.not_owner");
+  await fx.db.insert(schema.notifications).values({
+    orgId: fx.org.id,
+    userId: fx.owner.id,
+    kind: "plan_serves",
+    groupKey: `plan_serves:${ANAS}`,
+    source: { accountId: ANAS },
+    latest: { plan: "Claude" },
+  });
+  // "Só eu": Bia's DM goes back to the workspace's, nobody else may pick it, and Ana's note is done.
+  expect(await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "owner")).toMatchObject({ serves: "owner" });
+  expect(await fx.db.select().from(schema.rightHandBrains)).toEqual([]);
+  expect(
+    await codeOf(
+      setAgentBrain(deps, caio.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: ANAS }),
+    ),
+  ).toBe("account.not_owner");
+  const [note] = await fx.db.select().from(schema.notifications).where(eq(schema.notifications.kind, "plan_serves"));
+  expect(note?.doneAt).not.toBeNull();
+  expect((await fx.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "account.serves"))).length).toBe(
+    1,
+  );
+});
+
+test("the workspace's plan kept to its owner serves only them; the AI status says so per person", async () => {
+  const { fx, deps, bia, caio, lodi, runIn } = await world();
   await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { brain: "claude_code", account: ANAS });
+  // Every plan kept to the person who connected it: nothing serves anyone else.
+  await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "owner");
+  await setAccountServes(deps, bia.id, fx.org.id, BIAS, "owner");
+  await setAccountServes(deps, caio.id, fx.org.id, CAIOS, "owner");
   expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({
     workspaceAi: { brain: "claude_code", ownerId: fx.owner.id, servesYou: false },
   });
-  expect((await runIn(bia.id)).unavailable).toMatchObject({ code: "plan_not_shared" });
+  // Her own plan answers her though she chose none: the workspace's serves only Ana.
+  expect(await runIn(bia.id)).toMatchObject({ account: { id: BIAS } });
+  const dani = await addMember(fx.db, fx.org.id, "member", "dani");
   const status = { db: fx.db, gateway: fx.gateway, machines };
   const of = async (viewer: string) =>
     (await orgAiStatus(status, fx.org.id, viewer)).agents.find((a) => a.agentId === lodi.id);
   // Background work nobody set up thinks with the workspace's plan, and no person is behind it: that plan takes none
   // of it, whoever looks.
-  expect(await of(bia.id)).toEqual({ agentId: lodi.id, state: "no_ai", reason: "plan_not_shared" });
+  // Dani has no plan and none serves her: the line names whose the plans are (`plans_not_yours`).
+  expect(await of(dani.id)).toMatchObject({
+    agentId: lodi.id,
+    state: "no_ai",
+    reason: "plans_not_yours",
+    plan: "Claude",
+  });
   expect(await of(fx.owner.id)).toEqual({ agentId: lodi.id, state: "ready", background: "no_ai" });
   // Her own plan answers her whatever the workspace's does; work nobody set up still has none.
   await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
   expect(await of(bia.id)).toEqual({ agentId: lodi.id, state: "ready", background: "no_ai" });
   expect((await runIn(bia.id)).unavailable).toBeUndefined();
   // Opened to everyone, the workspace's serves whoever has none, and background work too.
-  await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { onlyOwner: false });
+  await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "everyone");
   const [agent] = await fx.db.select().from(schema.agents).where(eq(schema.agents.id, lodi.id));
   if (!agent) throw new Error("no right hand");
-  const caio = await addMember(fx.db, fx.org.id, "member", "dani");
-  expect(await agentAiState(status, agent, undefined, caio.id)).toMatchObject({ state: "ready" });
+  expect(await agentAiState(status, agent, undefined, dani.id)).toMatchObject({ state: "ready" });
   expect(await of(fx.owner.id)).toEqual({ agentId: lodi.id, state: "ready" });
   expect(await backgroundAiState(status, agent)).toEqual({ state: "ready" });
   // Its computer away, a chat shows it waiting, but its run never waits for it: a build has no AI meanwhile, unless
@@ -430,9 +482,16 @@ test("a widget's build thinks with its creator's AI, else its routine's creator'
   expect(await pick(await widget({ createdByUserId: null }))).toBe(bia.id);
   expect(await build()).toMatchObject({ account: { id: BIAS } });
 
-  // Neither chose an AI of their own: the workspace's, which answers its plan's owner and nobody else.
+  // Neither has an AI of their own (none chosen, their plans signed out): the workspace's, kept to its plan's owner,
+  // which answers nobody else.
+  await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "owner");
   await fx.db.delete(schema.rightHandBrains).where(ne(schema.rightHandBrains.userId, fx.owner.id));
-  expect(await pick(await widget())).toBe("plan_not_shared");
+  await fx.db
+    .update(schema.machineAccounts)
+    .set({ status: "signed_out" })
+    .where(inArray(schema.machineAccounts.id, [BIAS, CAIOS]));
+  // Bia, the first of its people, hears whose the plan is.
+  expect(await pick(await widget())).toBe("plans_not_yours");
   expect((await build()).unavailable).toMatchObject({ code: "plan_not_shared" });
   expect(await pick(await widget({ createdByUserId: fx.owner.id }))).toBe(fx.owner.id);
   expect((await build()).unavailable).toBeUndefined();
@@ -450,7 +509,7 @@ test("a widget's build thinks with its creator's AI, else its routine's creator'
   await fx.db.update(schema.dashboards).set({ audience: "workspace" }).where(eq(schema.dashboards.id, board.id));
   await fx.db.update(schema.routines).set({ createdByUserId: bia.id });
   await widget({ createdByUserId: null, status: "ok", failureCode: null });
-  await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { onlyOwner: false });
+  await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "everyone");
   expect(await pick(nobody)).toBe("workspace");
   expect(await pick(await widget())).toBe(bia.id);
   expect(await build()).toMatchObject({ kind: "claude_code", account: { id: ANAS } });
@@ -508,16 +567,17 @@ test("a creator whose own AI can't think: the build takes the next AI that can, 
   const w = await world();
   const { fx, deps, bia, caio, lodi } = w;
   // The workspace's plan answers everyone; Bia chose her own, which is signed out.
-  await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { brain: "claude_code", account: ANAS, onlyOwner: false });
+  await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { brain: "claude_code", account: ANAS });
   await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
   await fx.db.update(schema.machineAccounts).set({ status: "signed_out" }).where(eq(schema.machineAccounts.id, BIAS));
   const { build, end, made } = await sharedWidget(w, bia.id);
   expect(await build()).toMatchObject({ pick: null, account: ANAS, unavailable: undefined });
   await end();
-  // The workspace's plan serves only its owner, and nobody chose their own: a widget of Caio's whose routine is the
-  // owner's builds for the owner, whom that plan answers.
+  // The workspace's plan serves only its owner, and nobody else has an AI that thinks: a widget of Caio's whose routine
+  // is the owner's builds for the owner, whom that plan answers.
   await fx.db.delete(schema.rightHandBrains).where(ne(schema.rightHandBrains.userId, fx.owner.id));
-  await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { onlyOwner: true });
+  await fx.db.update(schema.machineAccounts).set({ status: "signed_out" }).where(eq(schema.machineAccounts.id, CAIOS));
+  await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "owner");
   await fx.db.update(schema.dashboardWidgets).set({ createdByUserId: caio.id });
   await fx.db.update(schema.routines).set({ createdByUserId: fx.owner.id });
   await refreshWidgetNow(await sharedDeps(w), fx.owner.id, fx.org.id, made.id);

@@ -187,7 +187,7 @@ describe("a receipt never changes a message's height", () => {
     expect(
       value(
         kit,
-        ".ac-msg:has(> .ac-msg__body > .ac-msg__aside--floating:not(:empty)) > .ac-msg__body > .ac-msg__actions",
+        ".ac-msg:has(> .ac-msg__gutter--aside .ac-msg__aside:not(:empty)) > .ac-msg__body > .ac-msg__actions",
         "right",
       ),
     ).toBeUndefined();
@@ -204,10 +204,12 @@ describe("a receipt never changes a message's height", () => {
     expect(value(app, ".ac-receipt__seen", "width")).toBeUndefined();
     expect(px(value(app, ".ac-receipt__seen", "height"))).toBe(16);
     // The mark ends the first line: right after the time in the name's line (never pushed to the row's far end), or
-    // floated on a grouped message's text.
+    // in a grouped message's gutter, ending 4px short of its words.
     expect(value(kit, ".ac-msg__head > .ac-msg__aside", "align-self")).toBe("center");
     expect(value(kit, ".ac-msg__aside", "margin-left")).toBeUndefined();
-    expect(value(kit, ".ac-msg__aside--floating", "float")).toBe("right");
+    expect(value(kit, ".ac-msg__gutter--aside > .ac-msg__aside", "margin-right")).toBe(
+      "calc(var(--space-1) - var(--space-3))",
+    );
     // On my own rows it ends the time's line, no taller than the time, so it never adds a line either.
     expect(px(value(kit, ".ac-msg__own-foot > .ac-msg__aside", "height"))).toBe(16);
     expect(px(value(kit, ".ac-msg__own-time", "min-height"))).toBe(16);

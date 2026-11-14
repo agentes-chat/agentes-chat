@@ -2,6 +2,7 @@ import type { AppNotification } from "@agenteschat/client";
 import { type DeviceNotice, deviceNoticeOf, joinFacts } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { firstName } from "@agenteschat/client/lib/format";
+import { toolWords } from "@agenteschat/client/lib/machines";
 import { Button, cx, ProviderLogo } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
@@ -14,6 +15,7 @@ import { useToast } from "@/lib/toast";
 import { JoinRequestDialog } from "./dialogs";
 import { osMark } from "./parts";
 import { useDecideAccess, useDenyRequest, useDevices, useStopPhone } from "./queries";
+import { ToolOneClickButton } from "./ToolOneClick";
 
 /** The agent and the person it works for, as a notice names them: "Lia (for Rui)", or the agent alone. */
 function whoFor(dir: Dir, d: DeviceNotice, t: (key: string, o?: Record<string, unknown>) => string) {
@@ -32,12 +34,19 @@ export function DeviceHeadline({ n, dir }: { n: AppNotification; dir: Dir }) {
   const values =
     d.kind === "device.join_request"
       ? { name: d.join?.name ?? d.device, org: org.name }
-      : { who: whoFor(dir, d, tt), deviceName: d.device };
+      : d.kind === "device.tool_request"
+        ? {
+            who: (d.askerId ? dir.memberById.get(d.askerId)?.name : undefined) ?? t("channel.unknownPerson"),
+            tool: d.tool ? toolWords(t, d.tool) : "",
+            deviceName: d.device,
+          }
+        : { who: whoFor(dir, d, tt), deviceName: d.device };
   const key = {
     "device.join_request": "devices.notice.join",
     "device.in_use": "devices.notice.inUse",
     "device.access_request": "devices.notice.access",
     "device.waiting": "devices.notice.waiting",
+    "device.tool_request": "devices.notice.toolRequest",
   }[d.kind];
   return <Trans i18nKey={key as never} values={values} components={{ b: <b /> }} {...TYPED_VALUES} />;
 }
@@ -163,6 +172,12 @@ export function DeviceNoticeActions({ n, inline = false }: { n: AppNotification;
         >
           {t("devices.stop")}
         </Button>
+      </Wrap>
+    );
+  if (d.kind === "device.tool_request" && d.machineId && d.tool)
+    return (
+      <Wrap inline={inline} onClick={keep}>
+        <ToolOneClickButton machineId={d.machineId} machineName={d.device} oneClick={{ kind: "allow" }} tool={d.tool} />
       </Wrap>
     );
   if (d.kind === "device.access_request" && d.requestId)

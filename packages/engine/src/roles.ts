@@ -163,7 +163,7 @@ function settableKeys(actor: Membership, next: readonly string[], before: readon
       throw new ForbiddenError("You can only give what you can do yourself", "role.grant_forbidden", { key: k });
   }
   for (const k of before) {
-    if (mine && !mine.has(k as RolePermission) && !wanted.has(k as RolePermission))
+    if (mine && isRolePermission(k) && !mine.has(k) && !wanted.has(k))
       throw new ForbiddenError("You can only take away what you can do yourself", "role.grant_forbidden", { key: k });
   }
   return [...wanted];

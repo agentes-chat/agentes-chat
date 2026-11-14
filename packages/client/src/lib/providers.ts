@@ -147,7 +147,10 @@ export const keyStepHint = (p: ProviderEntry) =>
         : undefined;
 
 /** Live keys per provider. */
-export function providersWithKeys(credentials: Credential[]) {
+/** A workspace key as far as which models it makes usable goes (`AgentBrain.keys` has no `revokedAt`: live ones only). */
+type KeyLike = Pick<Credential, "id" | "provider"> & { revokedAt?: string | null };
+
+export function providersWithKeys(credentials: readonly KeyLike[]) {
   return new Set(credentials.filter((c) => !c.revokedAt).map((c) => c.provider as string));
 }
 
@@ -163,7 +166,7 @@ export interface ModelChoice {
  * platform key is on (the only one a server offers). A long list's models the
  * workspace can't use are left out: only its good picks show, to say a key opens them.
  */
-export function modelChoices(models: Model[], credentials: Credential[], platform: boolean) {
+export function modelChoices(models: Model[], credentials: readonly KeyLike[], platform: boolean) {
   const withKey = providersWithKeys(credentials);
   const live = new Set(credentials.filter((c) => !c.revokedAt).map((c) => c.id));
   const groups = new Map<string, ModelChoice[]>();
@@ -198,7 +201,7 @@ export const keyRuns = (
   model: string | undefined,
   models: readonly Model[],
 ) =>
-  isAuto(model) ||
+  (isAuto(model) ? key.provider !== "custom" : false) ||
   models.some(
     (m) => m.id === model && m.provider === key.provider && (!m.endpoint || m.endpoint.credentialId === key.id),
   );

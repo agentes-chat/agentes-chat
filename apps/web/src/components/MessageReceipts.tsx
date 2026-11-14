@@ -12,12 +12,12 @@ import {
   useSteerState,
 } from "@agenteschat/client";
 import { errorText, runFailureLine } from "@agenteschat/client/lib/errors";
-import { joinNames } from "@agenteschat/client/lib/format";
-import { mayConnectAi } from "@agenteschat/client/lib/no-ai";
+import { joinNames, sentAtLine } from "@agenteschat/client/lib/format";
+import { mayConnectAi, plansNotYoursOf } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { retryAnswer } from "@agenteschat/client/lib/retry-answer";
-import { deciderOf } from "@agenteschat/client/lib/routing";
-import { Icon, type IconName, PixelSpinner, Popover } from "@agenteschat/ui";
+import { deciderOf, everyoneLineOf } from "@agenteschat/client/lib/routing";
+import { AvatarStack, HintLine, Icon, type IconName, PixelSpinner, Popover } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActorAvatar, AgentAvatar } from "@/components/AgentAvatar";
@@ -155,6 +155,7 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
       : null;
   const view = receiptView(receipt);
   const status = view.status;
+  const aiStatus = useAiStatus(org.id, status?.kind === "no_ai").data;
   // One agent failed: while its failed row is in the conversation the row says why; once it's closed (its ×, a
   // reload), this line does.
   const failedAgent = status?.kind === "failed" && status.agents.length === 1 ? status.agents[0] : undefined;
@@ -180,17 +181,35 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
     (status?.kind === "failed" && actions !== null && message.author.type === "person");
   // An agent's message that called several: one strip says where each stands once they start (`fanShows`).
   const fanned = part === "line" && message.author.type === "agent" && message.mentionedAgentIds.length > 1;
-  // The mark stays where a line says the rest (a failure, no AI): what became of it in the task is its own news.
-  if (part === "line" ? !worded && !fanned : worded && !steered) return null;
-  const marked = view.seen.length > 0 || view.picking === true || steered !== null;
-  if (!marked && status?.kind !== "no_ai" && status?.kind !== "platform_cap") return null;
-
   const name = (id: string) => dir.agentById.get(id)?.name ?? t("channel.unknownAgent");
+  // A mention of everyone one agent answered for all: one quiet line under it, never one reply each.
+  const everyone = part === "line" ? everyoneLineOf(t, message.meta, view, { agent: name }) : null;
+  const everyoneRow = everyone && (
+    <div className="ac-receipt ac-receipt--everyone">
+      <AvatarStack aria-hidden="true">
+        {everyone.faces.slice(0, 5).map((id) => (
+          <AgentAvatar key={id} agentId={id} size="xs" name={name(id)} />
+        ))}
+      </AvatarStack>
+      <span className="ac-receipt__words">
+        <HintLine name={t("common.about", { label: t("receipts.everyone.who") })} hint={everyone.hint}>
+          {everyone.text}
+        </HintLine>
+      </span>
+    </div>
+  );
+  // The mark stays where a line says the rest (a failure, no AI): what became of it in the task is its own news.
+  if (part === "line" ? !worded && !fanned : worded && !steered) return everyoneRow || null;
+  const marked = view.seen.length > 0 || view.picking === true || steered !== null;
+  if (!marked && status?.kind !== "no_ai" && status?.kind !== "platform_cap") return everyoneRow || null;
+
   const names = (ids: string[]) => joinNames(ids.map(name), t);
   const failure = failedAgent && !rowSaysWhy ? receipt?.failures?.[failedAgent] : undefined;
   const failedWhy = failedAgent && failure ? runFailureLine(t, name(failedAgent), failure, i18n.language) : null;
   const only = status?.kind === "no_ai" && status.agents.length === 1 ? status.agents[0] : undefined;
   const mayConnect = mayConnectAi(only ? dir.agentById.get(only) : null, me.user.id, org);
+  // Every plan here serves only someone else: the agent's card has the way out, so the line only says whose.
+  const notYours = plansNotYoursOf(aiStatus, only);
   const mentionNeeded = status?.kind === "nobody" && status.mentionNeeded === true;
   const statusText =
     status === null
@@ -295,6 +314,7 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
           <HelpLink slug="who-answers">{t("routing.how")}</HelpLink>
         </div>
       )}
+      <div className="receipt-sent">{sentAtLine(t, i18n.language, message.createdAt)}</div>
     </Popover>
   );
 
@@ -366,8 +386,8 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
       {status?.kind === "no_ai" && !held && (
         <KeptAnswer message={message} kept={receipt?.server?.kept === true}>
           <span className="ac-receipt__words">
-            <span>{t("noAi.receipt")}</span>
-            {connect && mayConnect && (
+            <span>{notYours ? t("noAi.notYours.receipt", notYours) : t("noAi.receipt")}</span>
+            {connect && mayConnect && !notYours && (
               <ReceiptAction>
                 <button
                   type="button"
@@ -390,7 +410,15 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
       )}
     </div>
   );
-  if (!fanned) return words;
+  if (!fanned)
+    return everyoneRow ? (
+      <>
+        {words}
+        {everyoneRow}
+      </>
+    ) : (
+      words
+    );
   // The strip says where each agent stands; without it (fewer than two started, all done), the receipt as usual.
   return <FanOutStrip message={message} otherwise={worded ? words : null} />;
 }

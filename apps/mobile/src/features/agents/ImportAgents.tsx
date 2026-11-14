@@ -97,7 +97,7 @@ function SourceMark({ card, size = MARK }: { card: ImportCard; size?: number }) 
 }
 
 function Picker({ imp, orgId }: { imp: AgentImport; orgId: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors: c } = useTheme();
   const apps = useApps(orgId);
   const mine = useMe().data?.organizations.find((o) => o.id === orgId);
@@ -130,7 +130,11 @@ function Picker({ imp, orgId }: { imp: AgentImport; orgId: string }) {
     }
     void imp.read({
       files: Promise.all(
-        res.assets.map(async (a, i) => ({ name: a.name, text: read[i] ? await new File(a.uri).text() : "" })),
+        res.assets.map(async (a, i) => ({
+          name: a.name,
+          text: read[i] ? await new File(a.uri).text() : "",
+          ...(a.size ? { size: a.size } : {}),
+        })),
       ),
     });
   };
@@ -255,7 +259,7 @@ function Picker({ imp, orgId }: { imp: AgentImport; orgId: string }) {
       {archive ? <ErrorText text={t("mobile.newAgent.import.archive")} /> : null}
       {imp.failure ? (
         <View style={styles.failure}>
-          <ErrorText text={importFailureText(t, imp.failure, phoneOffline, mayConnect)} />
+          <ErrorText text={importFailureText(t, imp.failure, phoneOffline, mayConnect, i18n.language)} />
           {retryable(imp.failure) ? (
             <Button variant="secondary" size="sm" label={t("common.retry")} onPress={() => void imp.retry()} />
           ) : null}

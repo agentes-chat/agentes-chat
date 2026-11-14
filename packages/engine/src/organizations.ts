@@ -41,6 +41,7 @@ import { recordOperatorEvent } from "./operator-events";
 import { enqueue } from "./outbox";
 import { memberKeysSql, memberRankSql, type Permission, resolvePermissions } from "./permissions";
 import { ensureRightHand, followOwner } from "./right-hand";
+import { queueWelcome } from "./right-hand-welcome";
 import { addMemberRolesInTx, createDefaultRoles, givableRoleIds, rolesStillThere, stillGivableRoleIds } from "./roles";
 import {
   accountClosed,
@@ -872,8 +873,7 @@ export async function setMyWorkArea(db: Database, userId: string, area: string) 
 }
 
 /**
- * The person's name and photo as saved (a session's cached cookie keeps the old ones for minutes after a change
- * elsewhere), their language and whether it follows each device's, and their area.
+ * The person's name and photo as saved, their language and whether it follows each device's, and their area.
  */
 export async function myAccount(db: Database, userId: string) {
   const [row] = await db
@@ -1182,11 +1182,14 @@ export async function removeMember(
   const via = await memberCardVia(db, orgId, options.via, targetUserId);
   // Loaded here: these modules build on this one.
   const { announceReleasedAccounts, forgetAgents, releaseMemberAccounts } = await import("./machine-accounts");
-  const { announceRemovedMachine, detachMachine, personalMachines } = await import("./machines");
+  const { announceRemovedMachine, detachMachine, personalMachines, publishMachineAgentsChanged } = await import(
+    "./machines"
+  );
   const { releaseLeaverDevices } = await import("./devices");
   const { cancelSecretRequestsFor, publishSecret } = await import("./secrets");
   const { cancelMailboxApprovals, publishApproval } = await import("./approvals");
   const { dropMailOfOwner } = await import("./tools/scopes");
+  const { removeSeat } = await import("./right-hand-seats");
   const { dropMemberDashboards } = await import("./dashboards/service");
   const { released, removed, handed, changed, heir, secrets, mailActions } = await db.transaction(async (tx) => {
     await lockOrgMembers(tx, orgId);
@@ -1288,6 +1291,8 @@ export async function removeMember(
     });
     // No agent goes on reading or sending in their name: their mailboxes leave every agent, and what waits to run there doesn't.
     await dropMailOfOwner(tx, orgId, targetUserId, actorId);
+    // Their place on the workspace's computer for the right hand goes too (ADR 0175): coming back starts a new one.
+    await removeSeat(tx, orgId, targetUserId);
     const mailActions = await cancelMailboxApprovals(tx, orgId, targetUserId, actorId);
     // Their AI accounts on the organization's computers are signed out and removed (ADR 0059 §1).
     const released = await releaseMemberAccounts(tx, targetUserId, orgId);
@@ -1329,6 +1334,8 @@ export async function removeMember(
   // Their open WebSocket connections lose every subscription now, not on reconnect.
   const quiet = actorId === targetUserId ? { quiet: true as const } : {};
   await publishOrgEvent(options.pubsub, { type: "membership.revoked", orgId, userId: targetUserId, ...quiet });
+  // The workspace's computer hears their seat is gone: its worker and containers stop there.
+  await publishMachineAgentsChanged(options.pubsub, orgId);
   await announceMembers(options.pubsub, orgId, changed);
   const { releaseQuestionsOf } = await import("./questions");
   await releaseQuestionsOf({ db, pubsub: options.pubsub }, orgId, targetUserId);
@@ -1379,11 +1386,12 @@ export async function deleteAccount(
   const owner = await pinnedOwner(db);
   // Loaded here: these modules build on this one.
   const { announceReleasedAccounts, releaseMemberAccounts } = await import("./machine-accounts");
-  const { announceRemovedMachine, detachMachine } = await import("./machines");
+  const { announceRemovedMachine, detachMachine, publishMachineAgentsChanged } = await import("./machines");
   const { accountDeletionPlan, afterClosing, closeForDeletion, queueAccountDeletedEmail, soleOwnerRefusal } =
     await import("./workspace-deletion");
   const { cancelMailboxApprovals, publishApproval } = await import("./approvals");
   const { dropMailOfOwner } = await import("./tools/scopes");
+  const { removeSeat } = await import("./right-hand-seats");
   const done = await db.transaction(async (tx) => {
     // First, as creating a workspace does: one made in another tab meanwhile is in the plan below and closes with them.
     await lockWorkspacesOf(tx, userId);
@@ -1417,6 +1425,7 @@ export async function deleteAccount(
     const mailActions = [];
     for (const m of mine) {
       await dropMailOfOwner(tx, m.orgId, userId, userId);
+      await removeSeat(tx, m.orgId, userId);
       mailActions.push(...(await cancelMailboxApprovals(tx, m.orgId, userId, userId)));
     }
     for (const org of plan.leaves) {
@@ -1483,6 +1492,7 @@ export async function deleteAccount(
   for (const org of [...plan.closes, ...plan.leaves]) {
     await publishOrgEvent(options.pubsub, { type: "membership.revoked", orgId: org.id, userId, quiet: true });
   }
+  for (const org of plan.leaves) await publishMachineAgentsChanged(options.pubsub, org.id);
   const { releaseQuestionsOf } = await import("./questions");
   for (const org of plan.leaves) {
     await releaseQuestionsOf({ db, pubsub: options.pubsub }, org.id, userId);
@@ -2240,7 +2250,7 @@ export const spentClaimHash = (claimHash: string) => `spent:${sha256(claimHash)}
 
 /**
  * Adds a person to an organization (keeping an existing role), with `roleIds` (those still there), and to
- * `general`, in the caller's transaction. A request to join that they or their address had waiting closes: whoever
+ * `general`, in the caller's transaction. A new member's greeting from the right hand is queued with it. A request to join that they or their address had waiting closes: whoever
  * answers it next finds it answered. A full workspace refuses a new member (`org.members_full`), and a closed one
  * (`closedRefusal`) anyone, under the lock role changes, removals and a deletion take, so two people taking the last
  * seat at once can't both get in, and nobody gets in once a deletion committed.
@@ -2264,6 +2274,8 @@ export async function joinOrganization(
   if (!member) await assertMemberRoom(tx, orgId);
   await tx.insert(organizationMembers).values({ orgId, userId, role }).onConflictDoNothing();
   await addMemberRolesInTx(tx, orgId, userId, roleIds);
+  // The right hand greets who is new here, once: its job's key is spent for good, so a rejoin gets none.
+  if (!member) await queueWelcome(tx, orgId, userId);
   // Nothing a closed request kept stays (ADR 0090): the password it chose goes, and the page's key is spent, so that
   // page reads it closed and signs in no one.
   const closing = await tx

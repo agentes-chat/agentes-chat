@@ -136,6 +136,11 @@ export const desktopPtBR = {
     allowedAll: "{{folder}} liberada para todos os agentes",
     denied: "Recusado. {{agent}} avisa no chat.",
     notifTitle: "{{agent}} quer usar a pasta {{folder}}",
+    allowedTitle: "{{name}} ligou {{tool}} pelo agentes.chat",
+    allowedBody: "Se não foi você, desfaça aqui.",
+    allowedUndo: "Desfazer",
+    allowedOk: "Ok",
+    allowedUndone: "Desligado de novo: {{tool}}",
     quitTitle: "Sair do agentes.chat?",
     quitBody:
       "Os agentes não conseguem usar este {{device}} com o app fechado. O que já está rodando termina e manda o resultado quando você abrir de novo.",
@@ -143,14 +148,8 @@ export const desktopPtBR = {
       "O agentes.chat para neste {{device}}: ninguém consegue usar, aqui, no celular ou na equipe, até você abrir o app de novo.",
     quitConfirm: "Sair",
   },
-  /** First run (FirstRun.tsx): the Cloud is the one big action, your own server a small line under it. */
+  /** First run (FirstRun.tsx), adding a workspace: its title and the Cloud's ways (the choice itself is `hosting`). */
   first: {
-    title: "Sua equipe e seus agentes, juntos",
-    lead: "Conversas, tarefas e documentos onde pessoas e agentes de IA trabalham lado a lado.",
-    cloud: "Entrar no agentes.chat",
-    create: "Primeira vez?",
-    createLink: "Criar uma conta",
-    own: "Usar o seu próprio servidor",
     addTitle: "Adicionar um workspace",
     addLead: "Os que você já tem continuam aqui, cada um com o seu login.",
     addCloud: "Criar um workspace no agentes.chat",
@@ -331,6 +330,8 @@ export const desktopPtBR = {
     offline: "Fora do ar desde {{time}}",
     signIn: "Entrar",
     signOut: "Sair deste servidor",
+    /** A server with several accounts signed in (ADR 0183): one more beside them, from its menu. */
+    addAccount: "Adicionar conta",
     signedOutDone: "Você saiu de {{host}}",
     removeFromApp: "Remover deste app",
     newsOne: "1 notificação nova",
@@ -600,7 +601,7 @@ export const desktopPtBR = {
       whoIn: "Quem pode usar em {{org}}",
       owner: "Só eu",
       everyone: "Todos em {{org}}",
-      people: "Pessoas ou papéis específicos",
+      people: "Pessoas ou cargos específicos",
       edit: "Editar",
       pickTitle: "Quem pode usar este {{device}}",
       search: "Buscar pessoas",
@@ -687,6 +688,8 @@ export const desktopPtBR = {
       addedBody: "Escolha na página de cada agente quem usa esta conta.",
       addedPlan: "plano {{plan}}",
       ok: "OK",
+      /** In "Conta adicionada": the workspace's agents in the main window, to choose who uses it. */
+      chooseAgents: "Escolher agentes",
       failedTitle: "A conta não foi adicionada",
       failedExpired: "O tempo para entrar acabou. Tente de novo.",
       failedLogin: "A entrada não terminou. Tente de novo.",

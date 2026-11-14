@@ -35,6 +35,7 @@ import { type BrowserLink, type BrowserReply, browserSurface } from "../../../..
 import { reduceAccess, setTool, TOOL_NAMES, widens } from "../../runner/access";
 import {
   agentBrowserTarget,
+  BROWSER_RECLAIM_IDLE_MS,
   type BrowserAnswer,
   BrowserManager,
   type BrowserManagerOptions,
@@ -1738,6 +1739,32 @@ test.if(posix)(
     kept.clear();
     await t.manager.sweep();
     expect(t.chromes[1]?.killed).toBe(true);
+  },
+);
+
+test.if(posix)(
+  "a turn short of memory closes the least recently used idle browser, never one held or just used",
+  async () => {
+    let now = 1_000_000;
+    const t = setup({ now: () => now });
+    await t.act("open", ["https://a.example"]);
+    now += 30_000;
+    await t.act("open", ["https://b.example"], { agent: ops });
+    // Used within the last two minutes: nothing closes yet.
+    now += BROWSER_RECLAIM_IDLE_MS - 60_000;
+    expect(t.manager.reclaimCandidate()).toBeNull();
+    expect(await t.manager.reclaimIdle()).toBe(false);
+    // Both idle: the older one goes first, and a help request keeps the other.
+    now += 60_000;
+    t.manager.setHandoff(ops.id, { status: "pending" });
+    expect(t.manager.reclaimCandidate()).toBe(1_000_000);
+    expect(await t.manager.reclaimIdle()).toBe(true);
+    expect(t.chromes[0]?.killed).toBe(true);
+    expect(t.chromes[1]?.killed).toBe(false);
+    expect(await t.manager.reclaimIdle()).toBe(false);
+    // Its next command starts it again on the same profile.
+    await t.act("open", ["https://a.example"]);
+    expect(t.chromes[2]?.profile).toBe(t.chromes[0]?.profile);
   },
 );
 

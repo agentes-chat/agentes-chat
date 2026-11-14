@@ -1,6 +1,7 @@
-import type { PlanAccountInfo, PlanAccountUsage } from "@agenteschat/client";
-import { useAiAccounts, useApi, useModels, usePlanUsage } from "@agenteschat/client";
+import type { PlanAccountInfo, PlanAccountUsage, PlanServes } from "@agenteschat/client";
+import { keys, useAiAccounts, useApi, useModels, usePlanUsage } from "@agenteschat/client";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { formatPercent, formatTokensShort, formatUsd } from "@agenteschat/client/lib/format";
 import { planName } from "@agenteschat/client/lib/plans";
 import { AUTO, apiProviderOf } from "@agenteschat/client/lib/providers";
@@ -11,6 +12,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  HintLine,
   Icon,
   InfoHint,
   List,
@@ -20,9 +22,11 @@ import {
   ProviderLogo,
   planLevel,
   planLine,
+  Segmented,
 } from "@agenteschat/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useId, useState } from "react";
+import { Fragment, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { AccountActions } from "@/components/ai/AiAccounts";
@@ -39,11 +43,15 @@ import {
   accountShares,
   brandOf,
   groupUsageAccounts,
+  loginsText,
   noWindowsText,
   planMeterText,
+  servesTerms,
+  servesText,
   shareFacts,
   splitUsage,
 } from "@/lib/plan-usage";
+import { useToast } from "@/lib/toast";
 import "./plan-usage.css";
 
 /*
@@ -195,13 +203,18 @@ function AccountRow({
   const list = shares.shown.length > 0 && (
     <AgentShares shares={shares} window={shares.window ? text.short(shares.window) : null} />
   );
-  const owner = accountOwner(t, account);
+  // Whose it is, who uses it and how many logins it stands for: each moves to the next line whole.
+  const facts = [accountOwner(t, account), servesText(t, account), loginsText(t, account)].filter((f): f is string =>
+    Boolean(f),
+  );
+  const owner = facts.length > 0;
   const chips = Boolean(account.plan) || Boolean(account.signedOut);
   return (
     <div className="plan-row" data-open={open || undefined}>
       <button
         type="button"
-        className="plan-row__head"
+        // The kit's line of a row that opens under it: the row's room is above the line and below what it unfolds.
+        className="plan-row__head ac-foldrow__head"
         aria-expanded={open}
         aria-controls={body}
         onClick={() => {
@@ -225,7 +238,12 @@ function AccountRow({
                 <span className="plan-acct__chip plan-acct__chip--out">{t("usageViews.signedOut")}</span>
               )}
               {chips && owner && WIDE_SPACE}
-              {owner && <span className="plan-row__owner">{owner}</span>}
+              {facts.map((f, i) => (
+                <Fragment key={f}>
+                  {i > 0 && " "}
+                  <span className="plan-row__owner">{i > 0 ? `· ${f}` : f}</span>
+                </Fragment>
+              ))}
             </span>
           )}
         </span>
@@ -294,6 +312,9 @@ function AccountRow({
                   )}
                 </span>
               )}
+              {account.mine && account.accountId && account.serves && (
+                <WhoUses accountId={account.accountId} account={account} />
+              )}
               {account.mine && account.accountId && (
                 <AccountActions machineId={account.machineId} accountId={account.accountId} />
               )}
@@ -301,6 +322,53 @@ function AccountRow({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * "Quem usa" (ADR 0059 §3), for whoever connected the plan: everyone in the workspace, or only them. Saved at once,
+ * with the plan's terms behind its ⓘ.
+ */
+function WhoUses({ accountId, account }: { accountId: string; account: PlanAccountUsage }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const api = useApi();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const serves = account.serves ?? "everyone";
+  const terms = servesTerms(t, account);
+  const choose = async (next: PlanServes) => {
+    if (next === serves) return;
+    setBusy(true);
+    try {
+      await api.machines.setAccountServes(org.id, accountId, next);
+      toast.show(t(next === "owner" ? "usageViews.serves.savedOwner" : "usageViews.serves.savedEveryone"), "success");
+      for (const key of [keys.planUsage(org.id), keys.aiAccounts(org.id), keys.agents(org.id), keys.aiStatus(org.id)])
+        void qc.invalidateQueries({ queryKey: key });
+    } catch (error) {
+      toast.show(errorText(t, error), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="plan-serves">
+      <HintLine className="plan-serves__label" name={terms.about} hint={terms.text}>
+        {t("usageViews.serves.label")}
+      </HintLine>
+      <Segmented
+        size="sm"
+        label={t("usageViews.serves.label")}
+        value={serves}
+        disabled={busy}
+        onValueChange={(v) => void choose(v)}
+        options={[
+          { value: "everyone", label: t("usageViews.serves.all") },
+          { value: "owner", label: t("usageViews.serves.me") },
+        ]}
+      />
     </div>
   );
 }

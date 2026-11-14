@@ -18,7 +18,7 @@ const GITHUB_MARK = { iconUrl: "/connectors/github.svg", brandColor: null };
  * does, and reads the link again once connected here; signing in on GitHub's site comes back to this page.
  */
 export function ImportFailureNote({ failure, retry }: { failure: ImportFailure; retry: () => unknown }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const org = useOrgIfAny()?.org;
   const catalog = useCatalog();
   const [flow, setFlow] = useState<FlowState | null>(null);
@@ -27,7 +27,9 @@ export function ImportFailureNote({ failure, retry }: { failure: ImportFailure; 
   const mayConnect = Boolean(org && github && can(org, "manage_connectors"));
   return (
     <div className="imp-failure">
-      <Alert tone={hidden ? "neutral" : undefined}>{importFailureText(t, failure, failedOffline, mayConnect)}</Alert>
+      <Alert tone={hidden ? "neutral" : undefined}>
+        {importFailureText(t, failure, failedOffline, mayConnect, i18n.language)}
+      </Alert>
       {hidden && mayConnect && hidden.connection !== "ok" && github && (
         <Button size="sm" variant="primary" onClick={() => setFlow({ step: 0, def: github })}>
           <ConnectorIcon def={GITHUB_MARK} label="GitHub" />

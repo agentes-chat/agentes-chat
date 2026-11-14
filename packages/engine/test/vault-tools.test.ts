@@ -35,7 +35,6 @@ import {
   MachineOfflineError,
   MachineRequestError,
   type MachineStatus,
-  ROUTINE_KEYS_REFUSAL,
   releaseVaultKeys,
   runnerFailureText,
   secretLabelOf,
@@ -847,23 +846,48 @@ test("in a shared browser profile, a login is typed only when every agent grante
   expect((await v.call(own, "browser_type_secret", { target: "e2", login: mine.id })).isError).toBeFalsy();
 });
 
-test("a routine types a saved login but gets no keys in a command", async () => {
+test("a routine's own run uses the Vault keys its creator allowed, and asks a person for any other", async () => {
   const v = await vaultSetup();
   const ctx = await routineCtx();
-  const keys = await v.call(ctx, "run_code", { language: "bash", code: "env", keys: ["ACME_API_KEY"] });
-  expect(keys.isError).toBe(true);
-  expect(keys.content).toBe(ROUTINE_KEYS_REFUSAL);
-  // Refused before anything was released: no key asked of the computer, no command run, no use.
+  const [routine] = await f.db.select().from(schema.routines).where(eq(schema.routines.agentId, f.agent.id));
+  if (!routine) throw new Error("no routine");
+  const invoke = (input: Record<string, unknown>) =>
+    f.tools?.invoke(ctx, { toolUseId: `tu_${crypto.randomUUID()}`, name: "run_code", input });
+  const withKey = { language: "bash", code: "env", keys: ["ACME_API_KEY"] };
+  // Not listed: a person says yes first, and "Sempre nesta rotina" would keep the key as the routine's own.
+  const asked = await invoke(withKey);
+  expect(asked?.type).toBe("approval");
+  if (asked?.type !== "approval") throw new Error("no approval");
+  expect(asked.approval.approveAlways).toEqual({
+    tool: "run_code",
+    actions: ["vault:ACME_API_KEY"],
+    routineId: routine.id,
+  });
+  // Nothing was released while it asks: no key asked of the computer, no command run.
   expect(v.computer.calls.filter((c) => c.op === "vault.key" || c.op === "exec")).toEqual([]);
-  expect(v.computer.opened).toEqual([]);
-  expect((await usesOf(v.items.key.id)).filter((u) => u.action === "key")).toHaveLength(0);
-  // A command without keys runs as before.
-  expect((await v.call(ctx, "run_code", { language: "bash", code: "echo ok" })).isError).toBeFalsy();
+  // Listed by its creator: the key goes to that one command, with no card.
+  await f.db
+    .update(schema.routines)
+    .set({ ownActions: ["vault:ACME_API_KEY"] })
+    .where(eq(schema.routines.id, routine.id));
+  const listed = await v.call(ctx, "run_code", withKey);
+  expect(listed.isError).toBeFalsy();
+  expect(v.computer.opened).toEqual([{ use: "env:ACME_API_KEY", value: KEY_VALUE }]);
+  // Another key still asks.
+  expect((await invoke({ ...withKey, keys: ["ACME_API_KEY", "OTHER_KEY"] }))?.type).toBe("approval");
+  // An agent that always asks asks for every key, listed or not, with no "Sempre nesta rotina" that would change nothing.
+  await f.db.update(schema.agents).set({ approvalsLevel: "always" }).where(eq(schema.agents.id, f.agent.id));
+  const always = await invoke({ ...withKey, why: "The weekly sales export needs the Acme key to read the report." });
+  if (always?.type !== "approval") throw new Error("no approval");
+  expect(always.approval.approveAlways ?? null).toBeNull();
+  // An agent that never asks uses any key its creator may use, listed or not.
+  await f.db.update(schema.routines).set({ ownActions: [] }).where(eq(schema.routines.id, routine.id));
+  await f.db.update(schema.agents).set({ approvalsLevel: "never" }).where(eq(schema.agents.id, f.agent.id));
+  expect((await v.call(ctx, "run_code", withKey)).isError).toBeFalsy();
   // A saved login is still typed for the routine's creator: its value reaches neither the model nor a command.
   await v.call(ctx, "browser_read", {});
   const typed = await v.call(ctx, "browser_type_secret", { target: "e2", login: v.items.login.id });
   expect(typed.isError).toBeFalsy();
-  expect(v.computer.opened).toEqual([{ use: "fill:exact:https://acme.example", value: PASSWORD }]);
 });
 
 test("a key's use is recorded even when the command's answer never comes back", async () => {

@@ -22,6 +22,52 @@ export const AudienceChoice = z
   ])
   .openapi("AudienceChoice");
 
+/** Where a return lands (a `follow_up` line's conversation). */
+const ReturnPlace = {
+  messageId: z.uuid().openapi({ description: "The return's line (`meta.notice.kind` `follow_up`)." }),
+  agentId: z.uuid(),
+  channelId: z.uuid(),
+  channelKind: z.enum(["channel", "dm", "task"]),
+  channelName: z.string().nullable().openapi({ description: "A channel's name; null for a DM or a task's." }),
+  threadId: z.uuid().nullable().openapi({ description: "Null: the conversation's main timeline." }),
+  at: z.string().openapi({ description: "When it comes (ISO)." }),
+  about: z.string().openapi({ description: "The agent's words for it, in the people's language: shown as written." }),
+};
+
+/** A return an agent set, still to come (ADR 0037, amended 2026-11-13): "Ada retorna às 00:32 · …". */
+export const PendingReturn = z
+  .object({
+    ...ReturnPlace,
+    runId: z.uuid().openapi({ description: "The run that set it." }),
+    replyMessageId: z
+      .uuid()
+      .nullable()
+      .openapi({ description: 'That run\'s reply, once posted: where "Ver a mensagem" lands.' }),
+    held: z.boolean().openapi({
+      description:
+        "Its wake found what the agent asked there unanswered, and it waits for the answer (work nobody asked for, ADR 0131 §1). A wake that is only late isn't held.",
+    }),
+    canCancel: z
+      .boolean()
+      .openapi({ description: "You may cancel it: the person it is for, the agent's owner or an admin." }),
+  })
+  .openapi("PendingReturn");
+
+/** A return canceled ("Terminadas hoje"). */
+export const CanceledReturn = z
+  .object({
+    ...ReturnPlace,
+    canceledAt: z.string(),
+    canceledBy: z
+      .discriminatedUnion("kind", [
+        z.object({ kind: z.literal("person"), userId: z.string(), name: z.string() }),
+        z.object({ kind: z.literal("agent"), agentId: z.uuid() }),
+      ])
+      .nullable()
+      .openapi({ description: "Null: its time found it couldn't come (the agent or the person left)." }),
+  })
+  .openapi("CanceledReturn");
+
 /** A last message that was only a GIF or a sticker (ADR 0091): the apps say which, translated, in its preview. */
 export const MediaKind = z.enum(["gif", "sticker", "voice"]).nullable().openapi({
   description:
@@ -865,6 +911,7 @@ export const BrainUnavailable = z.enum([
   "not_installed",
   "outdated",
   "not_reported",
+  "system",
 ]);
 
 export const BrainOption = z
@@ -957,6 +1004,10 @@ export const MachineAccount = z
       description:
         "Claude's organization it is signed in to (opaque, runner protocol 50); only for its owner. Logins of one email in two organizations are two accounts.",
     }),
+    serves: z.enum(["everyone", "owner"]).openapi({
+      description:
+        "Who it thinks for (ADR 0059 §3): everyone in the workspace (the default), or only its owner. Only its owner changes it.",
+    }),
   })
   .openapi("MachineAccount", {
     description:
@@ -1029,7 +1080,7 @@ export const AgentBrain = z
     }),
     canUseOthersPlans: z.boolean().openapi({
       description:
-        "The caller holds `use_others_plans` (ADR 0059 §3): `accounts` lists every plan on its computer, whoever connected it, and they may give it any. Its owner is told and may take it back.",
+        "Always true since plans serve the whole workspace (ADR 0059 §3): `accounts` lists every plan on its computer that serves everyone, whoever connected it, and the caller may give it any. Older apps read it.",
     }),
     ownSignIn: z.boolean().openapi({
       description: "The computer's own sign-in can think for it: the person who connected the computer owns the agent.",
@@ -1041,6 +1092,13 @@ export const AgentBrain = z
       description:
         'Its Autonomia: the autonomy its new missions start with ("Usar como padrão"), copied with its setup.',
     }),
+    keys: z
+      .array(z.object({ id: z.string(), provider: z.string() }))
+      .optional()
+      .openapi({
+        description:
+          "The workspace's live API keys, id and provider only: the providers its owner may move it onto (only admins list the keys).",
+      }),
   })
   .openapi("AgentBrain");
 

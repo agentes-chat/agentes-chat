@@ -220,6 +220,26 @@ test.skipIf(!posix)(
 );
 
 test.skipIf(!posix)(
+  "an image Codex makes: its call starts when Codex starts it, and the picture lands in the agent's folder as a file",
+  async () => {
+    const t = await setup();
+    const turn = start(t.ctx, request(1, "IMAGE please"));
+    await turn.done;
+    const events = notDeltas(turn.events);
+    const started = events.findIndex((e) => e.type === "tool_started");
+    expect(events[started]).toEqual({ type: "tool_started", id: "ig_1", name: "image_generation" });
+    const call = events.findIndex((e) => e.type === "tool_call" && e.name === "image_generation");
+    expect(call).toBeGreaterThan(started);
+    expect(events[call]).toMatchObject({ id: "ig_1", input: { prompt: "A lighthouse at dusk" } });
+    const file = events.find((e) => e.type === "file");
+    expect(file?.type === "file" && file.path).toMatch(/^generated-images\/image-\d{14}-ig1\.png$/);
+    expect(readFileSync(path.join(t.folder, file?.type === "file" ? file.path : ""), "utf8")).toBe("png bytes");
+    expect(events.at(-1)).toMatchObject({ type: "done", text: "Here it is." });
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
   "speed: every turn says its tier, since a thread keeps one until told; the process turns the feature on",
   async () => {
     const t = await setup();

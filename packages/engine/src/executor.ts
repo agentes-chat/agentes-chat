@@ -1,4 +1,5 @@
 import {
+  type BrainTurnTimings,
   CODEX_FOLDER_PROTOCOL,
   PERMISSION_TOOL,
   type PlanUsage,
@@ -179,6 +180,7 @@ import { sha256 } from "./crypto";
 import { widgetRunWaitChanged } from "./dashboards/refresh-fire";
 import { WIDGET_FAILURES } from "./dashboards/types";
 import { publishDelivery } from "./delivery";
+import { kickParkedWakes } from "./dispatch";
 import { isAgentOnlyDm } from "./dms";
 import {
   BudgetExceededError,
@@ -270,6 +272,7 @@ import {
   scrubRightHandReply,
   withPersonalBrain,
 } from "./right-hand";
+import { seatState } from "./right-hand-seats";
 import { routineBriefOf } from "./routine-brief";
 import { missStaleRoutineRun, routineRunWaitingForComputer, routineRunWaitingForPlan } from "./routine-firing";
 import { closeRoutineRun, type RoutineRunEnd, recordRoutineReportMessage, routineFailureEnd } from "./routine-ledger";
@@ -300,11 +303,13 @@ import {
 import {
   type AgentRun,
   addRunStep,
+  brainFailureText,
   cliFailureOf,
   cliFailureText,
   cliRefusedStart,
   cliWords,
   isTerminal,
+  keyRefused,
   NO_AI,
   OUR_ERROR,
   PERSON_LIMIT,
@@ -319,6 +324,7 @@ import {
 import { truncateOutput } from "./sandbox";
 import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
+import { type SpillRecord, spillMayHelp, spillPlan, spillTarget } from "./spill";
 import { billingHold, standingErrorDetail, standingRefusal } from "./standing";
 import { personAskedLately, rerootRun, runStretchOf } from "./stretch";
 import { isStuck, noteStep, STUCK_END_NOTE, STUCK_END_REPLY_NOTE, STUCK_NOTE, type StuckState } from "./stuck";
@@ -570,8 +576,12 @@ export interface Transcript {
   tasks?: HandedTask[];
   /** A report it offered about the app, not yet on a posted message (`meta.feedbackOffer`, ADR 0160 §12). */
   feedbackOffer?: PendingFeedbackOffer;
+  /** A switch a call found off on its computer, not yet on a posted message (`meta.toolOff`, its one-click card). */
+  toolOff?: { machineId: string; tool: string };
   /** The agent reacted (`react`) instead of replying: an empty final answer posts nothing. */
   reacted?: boolean;
+  /** A file it opened was left out by a text-only connection, not yet on a posted message (`meta.filesTextOnly`). */
+  filesTextOnly?: boolean;
   /** It sent a GIF or its sticker (`send_gif`, `send_sticker`, ADR 0091): an empty final answer posts nothing. */
   mediaSent?: boolean;
   /** A mission `report` card was posted this run: it is the answer, an empty final reply posts nothing. */
@@ -622,8 +632,19 @@ export interface Transcript {
   request?: string;
   /** The computer brain couldn't answer and the model brain did (ADR 0032 §5): the reply carries a quiet note. */
   fallback?: { from: BrainKind; code: string; message: string; resetsAt?: string };
+  /**
+   * The key that stood in for the computer brain was refused (no credit, a wrong key) before it answered a turn: the
+   * run went back to its own brain, and no key stands in for it again.
+   */
+  standInRefused?: true;
   /** Fast was refused on a turn of this run, which went on at standard speed (`meta.speedFallback`). */
   speedFallback?: boolean;
+  /**
+   * The plan refused the model "Automático" mapped to, and the turn went again on one the key serves
+   * (`meta.modelStandIn`): labels for the line under the reply, the id that answered, and the computer and account
+   * of the key, for its "Usar o <modelo> em todos".
+   */
+  modelStandIn?: { plan: string; from: string; to: string; model?: string; machineId?: string; account?: string };
   /**
    * The computer brain is unavailable and nothing can stand in: the run waits for the computer. A usage wait
    * (`USAGE_WAIT_CODES`: the plan's limit, the agent's budget) has no computer to wait for: `machineId` is empty,
@@ -689,6 +710,8 @@ export interface Transcript {
   roomAsked?: boolean;
   /** When this run last sent a turn to its computer: agents' turns there are spaced (`roomGate`). */
   roomAsk?: { machineId: string; at: number };
+  /** Its agent's computer was full: it thinks on another computer of the workspace, in a session of its own there. */
+  spill?: SpillRecord;
   /** Caught up after a long wait on its plan or budget (`catch-up.ts`): since when it paused; whether it may pass. */
   catchUp?: { since: number; mayPass?: true };
   /** The check before that catch-up (`catch-up-triage.ts`): its last verdict, reused while nothing new came in. */
@@ -807,6 +830,8 @@ const CONTEXT_TOOLS: readonly string[] = [
 
 /** How long the first call waits for its pre-warm once the quiet window is over. */
 const PREWARM_WAIT_MS = 4000;
+/** A run's last claims whose stage profiles its transcript keeps (`profiles`): long work claims many times. */
+const RUN_PROFILES_KEPT = 10;
 /** How soon a quiet window that ends at once is told from one still running (no pre-warm then). */
 const PREWARM_PROBE_MS = 50;
 /** A pre-warm started less than this before the window ended isn't waited for (token-trim B10). */
@@ -1035,7 +1060,25 @@ export async function executeRun(deps: EngineDeps, runId: string, options: RunJo
     steerGate.close();
     clearInterval(heartbeat);
     unregisterRunAbort(runId, abort);
-    if (prof.stages.length > 0) deps.onRunProfile?.({ runId, stages: prof.stages, total: prof.total() });
+    if (prof.stages.length > 0) {
+      deps.onRunProfile?.({ runId, stages: prof.stages, total: prof.total() });
+      // Kept with the run, so the operator's work analytics can say where time went (`work-analytics.ts`). In its
+      // transcript, not as a step: steps are the run's trail, and its last one marks where a pause began (`whileHeld`).
+      if (prof.run) {
+        const brain = prof.brain.length > 0 ? { brain: prof.brain } : {};
+        const kept = JSON.stringify([{ stages: prof.stages, total: prof.total(), ...brain }]);
+        const list = sql`coalesce(${agentRuns.transcript}->'profiles', '[]'::jsonb) || ${kept}::jsonb`;
+        await deps.db
+          .update(agentRuns)
+          .set({
+            transcript: sql`jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{profiles}',
+              case when jsonb_array_length(${list}) > ${RUN_PROFILES_KEPT} then (${list}) - 0 else ${list} end)`,
+          })
+          .where(and(eq(agentRuns.orgId, prof.run.orgId), eq(agentRuns.id, prof.run.id)))
+          .catch(() => {});
+      }
+    }
+    if (prof.run) await kickParkedWakes(deps.db, prof.run.orgId, prof.run.agentId).catch(() => {});
   }
 }
 
@@ -1062,6 +1105,8 @@ async function executeRunInner(
           string | null
         >`coalesce(${agentRuns.transcript}->'waitingForBrain'->>'waitId', ${agentRuns.transcript}->'outage'->>'waitId')`,
         code: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'code'`,
+        people: sql<boolean | null>`(${agentRuns.transcript}->>'roomPeople')::boolean`,
+        spilled: sql<boolean>`${agentRuns.transcript} ? 'spill'`,
         source: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'source'`,
         cut: sql<string | null>`${agentRuns.transcript}->'interruptedTurn'->>'cause'`,
         orgId: agentRuns.orgId,
@@ -1142,7 +1187,14 @@ async function executeRunInner(
     // claiming.
     if (askingForRoom && row.machineId) {
       const head = await roomHead(db, row.machineId);
-      if (head && head.id !== runId) {
+      // A person's turn behind others looks for another computer itself (spill-over) when one may take it.
+      const spill =
+        row.people === true &&
+        !row.spilled &&
+        !row.workId &&
+        !row.background &&
+        (await spillMayHelp(db, row.orgId, row.machineId).catch(() => false));
+      if (head && head.id !== runId && !spill) {
         const at = Date.now() + COMPUTER_BUSY_RETRY_MS;
         await enqueue(db, {
           orgId: row.orgId,
@@ -1235,6 +1287,7 @@ async function executeRunInner(
   }
   // status is `running` here.
   prof.mark("claim");
+  prof.run = { id: run.id, orgId: run.orgId, agentId: run.agentId };
   steerGate.close = answerNoTurn(deps.pubsub, run.id);
   const claimedAt = Date.now();
   /** Active time across claims (waits excluded): what the long-work safety net counts (ADR 0121 §1). */
@@ -1455,6 +1508,7 @@ async function executeRunInner(
     await publishChannelEvent(deps.pubsub, event("running"));
     await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
     await publishQueueChanged(deps.pubsub, run.orgId, machineId);
+    await kickParkedWakes(db, run.orgId, run.agentId).catch(() => {});
     // A widget says it waits for room once that wait is `COMPUTER_QUEUE_NOTE_MS` old: it hears the turn started.
     const since = transcript?.roomWaitSince;
     if (since !== undefined && Date.now() - since >= COMPUTER_QUEUE_NOTE_MS)
@@ -1520,10 +1574,16 @@ async function executeRunInner(
    * Nothing to think with (ADR 0061): the run fails with `no_ai`, and the conversation gets its agent's
    * card with Connect. Background work only fails, its routine run keeping why (a widget says it, ADR 0135 §20).
    */
-  const failNoAi = async (why: NoAiCardReason, own?: AgentAi["own"], model?: string, said?: string) => {
+  const failNoAi = async (
+    why: NoAiCardReason,
+    own?: AgentAi["own"],
+    model?: string,
+    said?: string,
+    notYours?: Pick<AgentAi, "owner" | "plan">,
+  ) => {
     if (!run.background) {
       const cardDeps = { db, pubsub: deps.pubsub, gateway: deps.gateway, machines: deps.machines };
-      await postNoAiCard({ ...cardDeps, judge: deps.context?.judge }, run, why, own, model, said)
+      await postNoAiCard({ ...cardDeps, judge: deps.context?.judge }, run, why, own, model, said, notYours)
         .catch((error) => addRunStep(db, run, "error", { reason: "no_ai_card", message: String(error) }))
         .catch(() => {});
     }
@@ -1688,7 +1748,7 @@ async function executeRunInner(
   // before the judges below, any context or a model call.
   if (needsContext) {
     const ai = await agentAiState({ db, gateway: deps.gateway, machines: deps.machines }, agent, run);
-    if (ai.state === "no_ai") return failNoAi(ai.reason ?? "no_key", ai.own);
+    if (ai.state === "no_ai") return failNoAi(ai.reason ?? "no_key", ai.own, undefined, undefined, ai);
   }
   if (!askingForRoom) await publishChannelEvent(deps.pubsub, event("running"));
   // Tools on demand (ADR 0043): a new run lists the core tools and the groups the judge expects it to need.
@@ -2155,8 +2215,13 @@ async function executeRunInner(
         ...(deps.blockSpec ? { blockSpec: deps.blockSpec } : {}),
         choices: choicesApply && tools.some((t) => t.name === ASK_CHOICES_TOOL),
         // "What you can do" names the loaded groups: it waits for the judge.
-        capabilities: Promise.resolve(judging).then(() =>
-          [describeCapabilities(tools, pending, isRightHand(agent)), browsers, repositories]
+        capabilities: Promise.resolve(judging).then(async () =>
+          [
+            // The right hand has a computer only as a seat on the workspace's own (ADR 0175).
+            describeCapabilities(tools, pending, isRightHand(agent) && (await seatState(db, run)) === "none"),
+            browsers,
+            repositories,
+          ]
             .filter(Boolean)
             .join("\n\n"),
         ),
@@ -2452,7 +2517,7 @@ async function executeRunInner(
     let mootCalls = 0;
     for (const call of transcript.pending.calls) {
       let result = call.result;
-      const mootText = moot[call.questionId ?? call.secretRequestId ?? call.waitId ?? ""];
+      const mootText = moot[call.questionId ?? call.secretRequestId ?? call.waitId ?? call.approvalId ?? ""];
       if (!result && call.secretRequestId) {
         const [request] = await db.select().from(secretRequests).where(eq(secretRequests.id, call.secretRequestId));
         if (request?.status === "delivered" || request?.status === "declined") {
@@ -2503,6 +2568,9 @@ async function executeRunInner(
           // The approvals screen shows it ran (and what came back).
           const [ran] = await db.select().from(approvals).where(eq(approvals.id, approval.id));
           if (ran) await publishApproval({ db, pubsub: deps.pubsub }, ran, "approval.decided").catch(() => {});
+        } else if (approval?.status === "canceled" && approval.supersededById && mootText) {
+          // Replaced by its newer request (`supersedeApprovals`): nothing was decided here.
+          result = { isError: false, content: mootText };
         } else {
           result = toolResultFor(approval, approval?.status === "refused" ? decider : undefined);
         }
@@ -2776,6 +2844,20 @@ async function executeRunInner(
       },
     ).catch(() => {});
   }
+  // A run that spilled over thinks on in its session there; that computer gone, its own takes it in a fresh session
+  // (the one there isn't on its disk), the conversation so far in its first prompt.
+  const spilled = transcript.spill;
+  const homeSession = brainPlan.kind !== "model" ? brainPlan.session : undefined;
+  if (spilled && homeSession) {
+    const there = await spillPlan(deps, agent, brainPlan, spilled.to, homeSession);
+    if (there) brainPlan = there;
+    else {
+      const fresh = Bun.randomUUIDv7();
+      await db.update(agentRuns).set({ brainSessionId: fresh }).where(eq(agentRuns.id, run.id));
+      brainPlan = { ...brainPlan, session: { ...homeSession, id: fresh, resume: false } };
+      delete transcript.spill;
+    }
+  }
   // A mission's main session can't be replaced mid-mission: its first turn after an edit reads the settings again.
   if (brainPlan.settingsChanged && needsContext) {
     transcript.system = [
@@ -2886,6 +2968,16 @@ async function executeRunInner(
     return { evidence, gather };
   };
   let brain = createBrain(deps, thinker, run, plan.kind, turnToken, () => transcript as Transcript);
+  /**
+   * What the model brain stands in for since this claim's fallback, until it answers a turn: the computer brain's plan
+   * and the tools it listed, taken back if the key is refused first (`backToOwnBrain`).
+   */
+  let standIn: {
+    plan: BrainPlan;
+    brain: typeof brain;
+    toolGroups: Transcript["toolGroups"];
+    loadedGroups: ToolContext["loadedGroups"];
+  } | null = null;
   let triggerText = trigger?.body ?? topTrigger?.body ?? "";
   if (plan.kind !== "model" && !triggerText) {
     triggerText = (await getMessage(db, run.orgId, run.triggerMessageId))?.body ?? "";
@@ -3150,10 +3242,13 @@ async function executeRunInner(
     if (
       !onlyThisComputer &&
       !u.queued &&
+      // A key refused in this run already (`backToOwnBrain`) would be refused again.
+      !t.standInRefused &&
       mayFallBack(agent, run) &&
       (await deps.gateway.hasModelCredential(thinker).catch(() => false))
     ) {
       await leaveLine();
+      standIn = { plan, brain, toolGroups: t.toolGroups, loadedGroups: ctx.loadedGroups };
       t.fallback = { from, code: u.code, message: u.message, ...(u.resetsAt ? { resetsAt: u.resetsAt } : {}) };
       // On "Automático" the API answers with the model and effort chosen for this run.
       const autoEffort = isAutoModel(agent.model) ? t.autoModel?.effort : undefined;
@@ -3319,6 +3414,36 @@ async function executeRunInner(
     await publishChannelEvent(deps.pubsub, event("waiting_input", undefined, undefined, computer));
     await finished("waiting_input", undefined, undefined, computer);
     return "waited";
+  };
+
+  /**
+   * The key standing in for the computer brain was refused (no credit, a wrong key) before it answered a turn: the
+   * run is its own brain's again and waits for it, as when no key can stand in. The person never reads the error of
+   * a key their agent doesn't think with, and a broken key never fails a run its own brain would answer. Null when
+   * the model brain isn't standing in since this claim, or answered a turn already (its transcript is the model's).
+   */
+  const backToOwnBrain = async (error: ProviderError) => {
+    const t = transcript as Transcript;
+    const was = t.fallback;
+    if (!standIn || !was) return null;
+    ({ plan, brain } = standIn);
+    ctx.loadedGroups = standIn.loadedGroups;
+    if (standIn.toolGroups) t.toolGroups = standIn.toolGroups;
+    else delete t.toolGroups;
+    tools = presentTools(granted, isSensitive, ctx.loadedGroups);
+    standIn = null;
+    delete t.fallback;
+    t.standInRefused = true;
+    await recordRunBrain(db, run.id, plan.kind);
+    run = { ...run, brain: plan.kind };
+    const { cause, provider } = providerFailureOf(error);
+    await addRunStep(db, run, "context", { standInRefused: { cause, provider } });
+    const handled = await brainUnavailable({
+      code: was.code,
+      message: was.message,
+      ...(was.resetsAt ? { resetsAt: was.resetsAt } : {}),
+    });
+    return { handled, was };
   };
 
   /** The first question a computer brain asked through the bridge in this pause: when, and when its card was posted. */
@@ -3723,7 +3848,9 @@ async function executeRunInner(
                         ]
                       : [
                           known ? "plan_limit_wait" : "plan_limit_wait_unknown",
-                          `The ${name} plan hit its limit. I'll answer ${known ? "when" : "as soon as"} it resets.`,
+                          known
+                            ? `The ${name} plan hit its limit. I'll answer when it resets. If it's freed sooner on ${name}, I'll notice and answer right away.`
+                            : `The ${name} plan hit its limit. I'll answer as soon as it resets.`,
                         ];
           const m = await post(
             tx,
@@ -4167,14 +4294,46 @@ async function executeRunInner(
         transcript.roomAsked ??=
           !personWaiting && (run.background || (await personAskedLately(db, run.orgId, runStretchOf(run))));
         if (options.lineSince) transcript.roomOrderSince ??= options.lineSince;
+        const spillOver = async () => {
+          const personId = accountablePerson(
+            await runAuthority(db, { ...run, transcript: transcript as unknown as Record<string, unknown> }),
+          );
+          // An agent with repositories works in its checkouts, on its own computer.
+          if (!personId || (await agentRepositoryList(db, run.orgId, agent.id)).length > 0) return null;
+          const session = { id: Bun.randomUUIDv7() };
+          const found = await spillTarget(deps, agent, plan, personId, session);
+          if (found) await db.update(agentRuns).set({ brainSessionId: session.id }).where(eq(agentRuns.id, run.id));
+          return found;
+        };
+        const place = {
+          rank: personWaiting ? 0 : transcript.roomAsked ? 1 : 2,
+          since: transcript.roomOrderSince ?? transcript.roomWaitSince ?? Date.now(),
+        } as const;
         // The right hand is how people find out what the line is doing: it never waits behind it. Its turn is
         // locked down, so the runner lets it in on a lower floor (`admit`).
-        const behind = isRightHand(agent)
-          ? null
-          : await roomGate(db, run, roomMachine, {
-              rank: personWaiting ? 0 : transcript.roomAsked ? 1 : 2,
-              since: transcript.roomOrderSince ?? transcript.roomWaitSince ?? Date.now(),
-            });
+        let behind = isRightHand(agent) ? null : await roomGate(db, run, roomMachine, place);
+        let askOn = roomMachine;
+        // Spill-over: behind others, or refused for room before, a person's first turn may think on another computer.
+        const to =
+          (behind || transcript.roomWaitSince !== undefined) &&
+          personWaiting &&
+          run.turns === 0 &&
+          !run.workId &&
+          !run.background &&
+          !plan.missionId &&
+          !isRightHand(agent) &&
+          !transcript.spill
+            ? await spillOver()
+            : null;
+        if (to) {
+          plan = to.plan;
+          askOn = to.machineId;
+          transcript.spill = { from: roomMachine, to: to.machineId };
+          behind = await roomGate(db, run, to.machineId, place);
+          // Its place in its own computer's line is free: the next one there asks now.
+          await kickRoomQueue(db, roomMachine).catch(() => {});
+          later(() => addRunStep(db, run, "context", { spill: transcript.spill }));
+        }
         if (behind) {
           const handled = await brainUnavailable({
             code: "busy",
@@ -4184,8 +4343,8 @@ async function executeRunInner(
           });
           if (handled === "waited" || handled === "failed") return;
         } else {
-          transcript.roomAsk = { machineId: roomMachine, at: Date.now() };
-          admitted = { machineId: roomMachine, fromLine: transcript.roomWaitSince !== undefined };
+          transcript.roomAsk = { machineId: askOn, at: Date.now() };
+          admitted = { machineId: askOn, fromLine: transcript.roomWaitSince !== undefined };
         }
       }
       const turn = run.turns + 1;
@@ -4563,15 +4722,27 @@ async function executeRunInner(
               : error.resetsAt
                 ? { resetsAt: error.resetsAt }
                 : {};
-          // "Automático" refused on one model: the turn goes again at once on the model that last answered with this key.
-          if (autoBrain && refusal.scope && refusal.scope !== "inactive" && machineId) {
+          // "Automático" refused on one model: the turn goes again at once, once a run, on a model the key serves
+          // (`autoPlanModel`), and the reply says so (`meta.modelStandIn`).
+          if (autoBrain && refusal.scope && refusal.scope !== "inactive" && machineId && !transcript.modelStandIn) {
             const stored = await storedPlanUsage(db, run.orgId, machineId, turnPlan.kind, turnPlan.account?.id).catch(
               () => null,
             );
             const from = turnPlan.model;
             const to = autoPlanModel(turnPlan.account?.provider, from, stored);
+            const provider = turnPlan.account?.provider;
             if (to && to !== from) {
               plan = { ...plan, model: to };
+              const fromModel = ownLimitsModel(provider, from);
+              const toModel = ownLimitsModel(provider, to);
+              transcript.modelStandIn = {
+                plan: planName(turnPlan.kind, provider),
+                from: fromModel?.label ?? from ?? "",
+                to: toModel?.label ?? to,
+                ...(toModel ? { model: toModel.id } : {}),
+                machineId,
+                ...(turnPlan.account?.id ? { account: turnPlan.account.id } : {}),
+              };
               later(() => addRunStep(db, run, "context", { autoModelStandIn: { from: from ?? null, to } }));
               continue;
             }
@@ -4589,11 +4760,23 @@ async function executeRunInner(
         // Held or suspended meanwhile: that is why, whatever the brain made of the refusal.
         const paused = await standingRefusal(db, run.orgId, run.agentId);
         if (paused) return fail(paused.message);
+        // The key standing in for the computer brain was refused before it answered: back to waiting for that brain.
+        if (turnPlan.kind === "model" && error instanceof ProviderError && keyRefused(error)) {
+          const back = await backToOwnBrain(error);
+          if (back?.handled === "waited" || back?.handled === "failed") return;
+          // Nothing to wait for either: the run ends on why its own brain couldn't answer, never on the key's error.
+          if (back) {
+            const { code, message } = back.was;
+            return fail(`brain_unavailable: ${message}`, { code, detail: message });
+          }
+        }
         // A CLI's failure says who failed it and what it said; the computer only ran it. One that refused to start
         // would fail every retry the same way: it ends here too.
+        // A code the apps don't word (a runner's `unsupported`) reads as that brain's program's error, never bare.
         const cli =
           error instanceof BrainFailure && (!error.retryable || cliRefusedStart(error))
-            ? cliFailureText(error, turnPlan.account)
+            ? (cliFailureText(error, turnPlan.account) ??
+              (!error.retryable && isComputerBrain(turnPlan.kind) ? brainFailureText(error, turnPlan.kind) : null))
             : null;
         const reason = cli ?? userFacing(error);
         if (reason) {
@@ -4631,6 +4814,8 @@ async function executeRunInner(
         }
       }
       await deltas.flush();
+      // The model brain answered a turn: from here the transcript is its own, and the run stays with it.
+      if (turnPlan.kind === "model") standIn = null;
       if (transcript.outage?.noteId) await outageOver(transcript.outage.noteId).catch(() => {});
       const passedLine = transcript.outage?.line;
       delete transcript.outage;
@@ -4640,6 +4825,8 @@ async function executeRunInner(
         await kickKeyLine(db, run.orgId, passedLine);
       }
       prof.mark(`model#${run.turns + 1}`);
+      if (result.imagesLeftOut) transcript.filesTextOnly = true;
+      if (result.timings) prof.brain.push(result.timings);
       await deferred;
       // The files its own tools made are cards on this reply too.
       await Promise.all(sharing);
@@ -5334,6 +5521,13 @@ function createBrain(
 export const COMPUTER_REACT_NOTE =
   "# Reacting\nWhen you call the agentes `react` tool, the reaction is your whole answer: end your turn right after it with an empty final reply (no text, no emoji, no confirmation that you reacted).";
 
+/**
+ * For Codex: a picture its own image tool makes goes with the reply, under the text (the runner's `file` event), not
+ * above it as in Codex's own apps, and the people never see the prompt.
+ */
+export const CODEX_IMAGE_NOTE =
+  "# Images\nA picture you make with your image tool is shown to the people with your reply, under your text. Don't say where it appears or that it should show up; a short line about it is enough, or nothing.";
+
 /** For computer brains: a GIF or a sticker through the bridge is posted at once (`tools`: the ones it has). */
 export const computerMediaNote = (tools: string[]) =>
   `# GIFs and stickers\nWhen you call the agentes ${tools.map((t) => `\`${t}\``).join(" or ")} tool, it is posted at once as a message of its own: unless you have something to add, end your turn right after it with an empty final reply (no confirmation that you sent it).`;
@@ -5393,6 +5587,7 @@ function brainTurnOf(
         computer,
         tools.some((d) => d.name === REACT_TOOL) ? COMPUTER_REACT_NOTE : "",
         media.length > 0 ? computerMediaNote(media) : "",
+        plan.kind === "codex" && !isRightHand(agent) ? CODEX_IMAGE_NOTE : "",
       ]
         .filter(Boolean)
         .join("\n\n");
@@ -5460,6 +5655,9 @@ interface BrainStep {
     Record<"inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheWriteTokens" | "calls" | "maxUncached", number>
   >;
   thinking?: ModelResult["thinking"];
+  imagesLeftOut?: true;
+  /** How the computer started the turn (`done.timings`). */
+  timings?: BrainTurnTimings;
 }
 
 /**
@@ -5514,6 +5712,7 @@ async function thinkOnce(
   let executedCount = 0;
   let taken = false;
   let usage: Extract<BrainEvent, { type: "usage" }> | null = null;
+  let timings: BrainTurnTimings | undefined;
   /** The plan said `limit`: the turn is read on until `deadline`, for the answer the brain may still finish. */
   let limit: { resetsAt?: string; deadline: number } | null = null;
   const limitFailure = (message: string, worked?: boolean) =>
@@ -5590,7 +5789,10 @@ async function thinkOnce(
     else if (event.type === "file") hooks.onFile?.(event.path);
     else if (event.type === "speed_fallback") hooks.onSpeedFallback?.(event.message);
     // `event.session`: computer brains keep a stable session per conversation (`brainSessionId`); nothing to store.
-    else if (event.type === "done") text = event.text;
+    else if (event.type === "done") {
+      text = event.text;
+      timings = event.timings;
+    }
   }
   if (text === null) throw new Error(`The ${brain.kind} brain ended the turn without an answer`);
   if (brain instanceof ModelBrain && brain.last) {
@@ -5604,6 +5806,7 @@ async function thinkOnce(
       costNanoUsd: r.costNanoUsd,
       usage: r.usage,
       thinking: r.thinking,
+      ...(r.imagesLeftOut ? { imagesLeftOut: r.imagesLeftOut } : {}),
       executedCount,
     };
   }
@@ -5618,6 +5821,7 @@ async function thinkOnce(
     stopReason: toolCalls.length > 0 ? "tool_use" : "end_turn",
     toolCalls,
     executedCount,
+    ...(timings ? { timings } : {}),
     model: usage?.model,
     usage: usage
       ? {
@@ -5924,7 +6128,8 @@ const FEEDBACK_SEND = "feedbackSend";
  * Moves pending memory updates, artifacts, a proposed mission's link, the
  * agents it consulted, where it browsed and what it did on its desktop onto the
  * message being posted (the "memory updated", file preview, mission link,
- * "message from @agent", browser and desktop cards), and a report it offered about the app (its row under the reply).
+ * "message from @agent", browser and desktop cards), a report it offered about the app (its row under the reply), and
+ * that a file it opened reached it as text only.
  */
 function takeMemoryUpdates(t: Transcript): Record<string, unknown> | undefined {
   const updates = t.memoryUpdates ?? [];
@@ -5935,8 +6140,12 @@ function takeMemoryUpdates(t: Transcript): Record<string, unknown> | undefined {
   const desktop = t.desktop ?? [];
   const tasks = t.tasks ?? [];
   const offer = t.feedbackOffer;
+  const textOnly = t.filesTextOnly === true;
+  const toolOff = t.toolOff;
   if (
     !offer &&
+    !textOnly &&
+    !toolOff &&
     updates.length === 0 &&
     files.length === 0 &&
     !link &&
@@ -5954,7 +6163,12 @@ function takeMemoryUpdates(t: Transcript): Record<string, unknown> | undefined {
   t.desktop = [];
   t.tasks = [];
   t.feedbackOffer = undefined;
+  t.filesTextOnly = undefined;
+  t.toolOff = undefined;
   const meta: Record<string, unknown> = {};
+  // Its reply carries the way out: another AI for this agent ("Trocar modelo" under it).
+  if (textOnly) meta.filesTextOnly = true;
+  if (toolOff) meta.toolOff = toolOff;
   if (updates.length > 0) meta.memoryUpdates = updates;
   if (files.length > 0) meta.artifacts = files;
   if (link) meta.missionLink = link;
@@ -5987,11 +6201,12 @@ const withCode = (meta: Record<string, unknown> | undefined, code: ReturnType<ty
  * Fast was refused and it came at standard speed (`meta.speedFallback`, the apps say so under the reply).
  */
 const withFallback = (t: Transcript, meta: Record<string, unknown> | undefined) =>
-  t.fallback || t.speedFallback
+  t.fallback || t.speedFallback || t.modelStandIn
     ? {
         ...(meta ?? {}),
         ...(t.fallback ? { brainFallback: t.fallback } : {}),
         ...(t.speedFallback ? { speedFallback: true } : {}),
+        ...(t.modelStandIn ? { modelStandIn: t.modelStandIn } : {}),
       }
     : meta;
 

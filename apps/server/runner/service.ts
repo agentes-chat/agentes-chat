@@ -390,6 +390,35 @@ export function removeUserService(d: Pick<ServiceDefinition, "unit" | "label">, 
   return file;
 }
 
+/**
+ * A runner removed from its workspace (`revoked`) takes its own login service away before it exits: a leftover
+ * launchd agent or systemd unit would start it at every login, only to be refused again. Not on `invalid_token`: a
+ * server reset or restored from a backup would uninstall runners still wanted. No `launchctl bootout` (it would kill
+ * this process mid-exit); the exit code already stops launchd and systemd from starting it again. Returns the file
+ * removed, or null when this runner wasn't started by one.
+ */
+export function removeOwnService(
+  o: { manager: string | undefined; home?: string; uid?: number; platform?: NodeJS.Platform },
+  run: RunCommand = runSync,
+): string | null {
+  const platform = o.platform ?? process.platform;
+  const home = o.home ?? os.homedir();
+  if (o.manager === "launchd" && platform === "darwin") {
+    const file = launchdPlistPath(home);
+    if (!existsSync(file)) return null;
+    rmSync(file, { force: true });
+    return file;
+  }
+  if (o.manager !== "systemd" || platform !== "linux") return null;
+  const system = (o.uid ?? process.getuid?.() ?? -1) === 0;
+  const file = system ? SYSTEM_UNIT_PATH : systemdUnitPath(home);
+  if (!existsSync(file)) return null;
+  run("systemctl", [...(system ? [] : ["--user"]), "disable", SERVICE_NAME]);
+  rmSync(file, { force: true });
+  run("systemctl", [...(system ? [] : ["--user"]), "daemon-reload"]);
+  return file;
+}
+
 /** Where the user unit or the launchd agent is installed (with systemd's state), or null. */
 export function userServiceStatus(d: Pick<ServiceDefinition, "unit" | "label">, run: RunCommand = runSync) {
   if (process.platform === "darwin") {
