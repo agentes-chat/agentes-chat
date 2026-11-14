@@ -16,7 +16,7 @@ anything, and every link the app sends come from it. Opened at any other address
 "Invalid origin" and saving fails with `bad_origin`.
 
 The server needs no model key of its own. Each organization adds its own keys (Claude, OpenAI,
-Gemini, DeepSeek, Kimi, Z.ai, MiniMax or OpenRouter) in **Settings → AI and usage**. Keys are stored encrypted with a key derived from `AGENTES_SECRET` and are
+Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code or OpenRouter) in **Settings → AI and usage**. Keys are stored encrypted with a key derived from `AGENTES_SECRET` and are
 never sent to browsers.
 
 **Requirements**
@@ -789,7 +789,7 @@ ones a self-hosted instance usually touches:
 | `COMPOSIO_AUTH_CONFIGS`, `COMPOSIO_CALLS_PER_MONTH` | `0` for the cap (none) | Auth configs of your own per toolkit (`googledrive=ac_…`), and the Composio calls a workspace may make per month. |
 
 **Model keys.** Each organization adds its own keys (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai,
-MiniMax or OpenRouter) in **Settings → AI and usage**, and each agent uses one of them. Usage and cost are recorded per agent.
+MiniMax, Command Code or OpenRouter) in **Settings → AI and usage**, and each agent uses one of them. Usage and cost are recorded per agent.
 
 **Your own models.** **Other provider** there takes any server that speaks OpenAI's Chat Completions or
 Anthropic's Messages: an Ollama, vLLM, LM Studio or LiteLLM next to this server, or a gateway. Give its base
@@ -1071,7 +1071,7 @@ party only when you turn that service on:
 
 | Service | Turned on by | What it receives |
 | --- | --- | --- |
-| Claude (Anthropic), OpenAI, Gemini (Google), DeepSeek, Kimi, Z.ai, MiniMax | An organization's key | What an agent reads to answer: its instructions, the organization's context, recent messages, and the files and tool results it opens. Summaries and memory upkeep use the same key. |
+| Claude (Anthropic), OpenAI, Gemini (Google), DeepSeek, Kimi, Z.ai, MiniMax, Command Code | An organization's key | What an agent reads to answer: its instructions, the organization's context, recent messages, and the files and tool results it opens. Summaries and memory upkeep use the same key. |
 | Another provider (OpenAI- or Anthropic-compatible) | An organization's endpoint (Settings → AI and usage → Other provider) | What the other model providers receive, sent to the address the organization typed. When it is saved, the server also reads that address's model list and makes one small test call per model. |
 | OpenRouter | An organization's key | What the other model providers receive, passed on by OpenRouter to the model's own provider (the organization's OpenRouter privacy settings decide which may keep it). While a workspace has an OpenRouter key, the server also reads OpenRouter's public model list, with no key: about once an hour, and up to once a minute while agents' runs ask for a model the list lacks. |
 | OpenCode | Always on | Nothing of yours: the server reads OpenCode Go's public model list, with no key, at boot and about once an hour, so that plan's model picker stays current. If the list is out of reach, the picker uses the list built into this version. |

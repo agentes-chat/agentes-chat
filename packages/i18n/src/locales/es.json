@@ -1511,7 +1511,8 @@
       "moonshot": "Las claves de Kimi empiezan con sk-. Revísala y pégala de nuevo.",
       "zai": "Pega la clave completa de Z.ai, sin espacios. Revísala y pégala de nuevo.",
       "minimax": "Pega la clave completa de MiniMax, sin espacios. Las claves que empiezan con sk-cp- son del plan y no funcionan aquí.",
-      "openrouter": "Las claves de OpenRouter empiezan con sk-or-v1-. Revísala y pégala de nuevo."
+      "openrouter": "Las claves de OpenRouter empiezan con sk-or-v1-. Revísala y pégala de nuevo.",
+      "commandcode": "Pega la clave completa de Command Code, sin espacios. Revísala y pégala de nuevo."
     },
     "keyFromOther": "¿Es de otro proveedor?",
     "anthropicWorkspace": "ID del espacio de trabajo de Claude Console",

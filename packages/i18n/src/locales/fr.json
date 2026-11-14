@@ -1512,7 +1512,8 @@
       "moonshot": "Les clés Kimi commencent par sk-. Vérifiez-la et collez-la de nouveau.",
       "zai": "Collez la clé Z.ai entière, sans espaces. Vérifiez-la et collez-la de nouveau.",
       "minimax": "Collez la clé MiniMax entière, sans espaces. Les clés qui commencent par sk-cp- appartiennent à l'abonnement et ne fonctionnent pas ici.",
-      "openrouter": "Les clés OpenRouter commencent par sk-or-v1-. Vérifiez-la et collez-la de nouveau."
+      "openrouter": "Les clés OpenRouter commencent par sk-or-v1-. Vérifiez-la et collez-la de nouveau.",
+      "commandcode": "Collez la clé Command Code entière, sans espaces. Vérifiez-la et collez-la de nouveau."
     },
     "keyFromOther": "Elle vient d'un autre fournisseur ?",
     "anthropicWorkspace": "ID d'espace de travail de la Claude Console",

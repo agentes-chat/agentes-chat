@@ -1558,7 +1558,8 @@
       "moonshot": "Klucze Kimi zaczynają się od sk-. Sprawdź go i wklej ponownie.",
       "zai": "Wklej cały klucz Z.ai, bez spacji. Sprawdź go i wklej ponownie.",
       "minimax": "Wklej cały klucz MiniMax, bez spacji. Klucze zaczynające się od sk-cp- należą do planu i tu nie działają.",
-      "openrouter": "Klucze OpenRouter zaczynają się od sk-or-v1-. Sprawdź go i wklej ponownie."
+      "openrouter": "Klucze OpenRouter zaczynają się od sk-or-v1-. Sprawdź go i wklej ponownie.",
+      "commandcode": "Wklej cały klucz Command Code, bez spacji. Sprawdź go i wklej ponownie."
     },
     "keyFromOther": "Jest od innego dostawcy?",
     "anthropicWorkspace": "ID przestrzeni roboczej w Claude Console",

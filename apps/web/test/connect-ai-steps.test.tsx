@@ -1217,6 +1217,7 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "Kimi",
       "Z.ai",
       "MiniMax",
+      "Command Code",
       expect.stringContaining("Outro provedor"),
     ]);
     await closeAiSelect();

@@ -1515,6 +1515,7 @@ export const ptBR = {
       minimax:
         "Cole a chave inteira da MiniMax, sem espaços. As que começam com sk-cp- são do plano e não servem aqui.",
       openrouter: "As chaves da OpenRouter começam com sk-or-v1-. Confira e cole de novo.",
+      commandcode: "Cole a chave inteira do Command Code, sem espaços. Confira e cole de novo.",
     },
     keyFromOther: "É de outro provedor?",
     anthropicWorkspace: "ID do workspace no Claude Console",

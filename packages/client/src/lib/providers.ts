@@ -97,6 +97,13 @@ export const PROVIDERS = [
     site: "platform.minimax.io/user-center/basic-information/interface-key",
     plans: true,
   },
+  {
+    id: "commandcode",
+    label: "Command Code",
+    placeholder: "user_…",
+    pattern: /^user_[A-Za-z0-9_-]{16,}$/,
+    site: "commandcode.ai/settings/keys",
+  },
 ] as const satisfies readonly ProviderEntry[];
 
 export type ProviderId = (typeof PROVIDERS)[number]["id"];

@@ -1420,7 +1420,8 @@
       "moonshot": "Kimi 密钥以 sk- 开头。请检查后重新粘贴。",
       "zai": "请粘贴完整的 Z.ai 密钥，不要有空格。请检查后重新粘贴。",
       "minimax": "请粘贴完整的 MiniMax 密钥，不要有空格。以 sk-cp- 开头的密钥属于套餐，在这里无法使用。",
-      "openrouter": "OpenRouter 密钥以 sk-or-v1- 开头。请检查后重新粘贴。"
+      "openrouter": "OpenRouter 密钥以 sk-or-v1- 开头。请检查后重新粘贴。",
+      "commandcode": "请粘贴完整的 Command Code 密钥，不要有空格。请检查后重新粘贴。"
     },
     "keyFromOther": "是其他服务商的密钥？",
     "anthropicWorkspace": "Claude Console 工作区 ID",

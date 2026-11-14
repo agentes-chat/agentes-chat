@@ -1420,7 +1420,8 @@
       "moonshot": "Kunci Kimi diawali sk-. Periksa lalu tempel lagi.",
       "zai": "Tempel seluruh kunci Z.ai, tanpa spasi. Periksa lalu tempel lagi.",
       "minimax": "Tempel seluruh kunci MiniMax, tanpa spasi. Kunci yang diawali sk-cp- milik paket dan tidak berfungsi di sini.",
-      "openrouter": "Kunci OpenRouter diawali sk-or-v1-. Periksa lalu tempel lagi."
+      "openrouter": "Kunci OpenRouter diawali sk-or-v1-. Periksa lalu tempel lagi.",
+      "commandcode": "Tempel seluruh kunci Command Code, tanpa spasi. Periksa lalu tempel lagi."
     },
     "keyFromOther": "Dari penyedia lain?",
     "anthropicWorkspace": "ID ruang kerja Claude Console",

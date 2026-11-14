@@ -66,7 +66,8 @@ const openBrain = async () => {
 };
 const chooseBrain = async (name: RegExp) => {
   await openBrain();
-  await click(screen().getByRole("option", { name }));
+  // Claude's own, not Command Code's same model.
+  await click(screen().getAllByRole("option", { name })[0] as HTMLElement);
 };
 const groupNames = (list: HTMLElement) =>
   within(list)
@@ -245,7 +246,7 @@ describe("Criar agente: steps", () => {
     const list = await openBrain();
     const [auto, ...rest] = within(list).getAllByRole("option");
     expect(auto?.getAttribute("aria-selected")).toBe("true");
-    const sonnet = screen().getByRole("option", { name: /^Claude Sonnet 5\.5/ });
+    const sonnet = screen().getAllByRole("option", { name: /^Claude Sonnet 5\.5/ })[0] as HTMLElement;
     expect(sonnet.getAttribute("aria-selected")).toBe("false");
     expect(rest.indexOf(sonnet)).toBeGreaterThanOrEqual(0);
     // Claude's models by what each is for, as on the agent's page; a model without a key can't be picked.

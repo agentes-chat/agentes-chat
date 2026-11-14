@@ -1591,6 +1591,7 @@ export const en = {
       minimax:
         "Paste the whole MiniMax key, with no spaces. Keys starting with sk-cp- belong to the plan and don't work here.",
       openrouter: "OpenRouter keys start with sk-or-v1-. Check it and paste it again.",
+      commandcode: "Paste the whole Command Code key, with no spaces. Check it and paste it again.",
     },
     keyFromOther: "Is it from another provider?",
     anthropicWorkspace: "Claude Console workspace ID",

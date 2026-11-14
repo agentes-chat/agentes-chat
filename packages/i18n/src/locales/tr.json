@@ -1465,7 +1465,8 @@
       "moonshot": "Kimi anahtarları sk- ile başlar. Kontrol edip tekrar yapıştırın.",
       "zai": "Z.ai anahtarının tamamını boşluksuz yapıştırın. Kontrol edip tekrar yapıştırın.",
       "minimax": "MiniMax anahtarının tamamını boşluksuz yapıştırın. sk-cp- ile başlayan anahtarlar plana aittir ve burada çalışmaz.",
-      "openrouter": "OpenRouter anahtarları sk-or-v1- ile başlar. Kontrol edip tekrar yapıştırın."
+      "openrouter": "OpenRouter anahtarları sk-or-v1- ile başlar. Kontrol edip tekrar yapıştırın.",
+      "commandcode": "Command Code anahtarının tamamını boşluksuz yapıştırın. Kontrol edip tekrar yapıştırın."
     },
     "keyFromOther": "Başka bir sağlayıcıdan mı?",
     "anthropicWorkspace": "Claude Console çalışma alanı kimliği",
