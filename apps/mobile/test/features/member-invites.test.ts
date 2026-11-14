@@ -162,13 +162,13 @@ describe("Membros e convites (ADR 0090)", () => {
 
 describe("Convidar pessoas (ADR 0090 §5)", () => {
   test("addresses are read the way they're pasted, once each", () => {
-    const list = withAddresses([], 'Ana Silva <ana@acme.com>, "rui@acme.com"; mailto:bia@acme.com');
-    expect(list.map((a) => a.email)).toEqual(["ana@acme.com", "rui@acme.com", "bia@acme.com"]);
+    const list = withAddresses([], 'Ana Silva <ana@example.com>, "rui@example.com"; mailto:bia@example.com');
+    expect(list.map((a) => a.email)).toEqual(["ana@example.com", "rui@example.com", "bia@example.com"]);
     expect(list.every((a) => a.valid)).toBe(true);
-    const picked = [{ email: "ana@acme.com", valid: true }];
-    expect(withAddresses(picked, "ANA@acme.com lia@acme.com")).toEqual([
+    const picked = [{ email: "ana@example.com", valid: true }];
+    expect(withAddresses(picked, "ANA@example.com lia@example.com")).toEqual([
       ...picked,
-      { email: "lia@acme.com", valid: true },
+      { email: "lia@example.com", valid: true },
     ]);
     expect(withAddresses([], "ana@")).toEqual([{ email: "ana@", valid: false }]);
   });
@@ -196,14 +196,14 @@ describe("Convidar pessoas (ADR 0090 §5)", () => {
 
   test("only addresses to fix stay after sending", () => {
     const addresses = [
-      { email: "ana@acme.com", valid: true },
-      { email: "rui@acme.com", valid: true },
+      { email: "ana@example.com", valid: true },
+      { email: "rui@example.com", valid: true },
       { email: "x@bad", valid: true },
       { email: "nope", valid: false },
     ];
     const results: BatchInviteResult[] = [
-      { email: "ana@acme.com", status: "invited" },
-      { email: "rui@acme.com", status: "already_member" },
+      { email: "ana@example.com", status: "invited" },
+      { email: "rui@example.com", status: "already_member" },
       { email: "x@bad", status: "invalid_email" },
     ];
     expect(addressesLeft(addresses, results).map((a) => a.email)).toEqual(["x@bad", "nope"]);
