@@ -17828,6 +17828,8 @@
       "openingHelp": "La première fois sur cet ordinateur, cela peut prendre une minute.",
       "stuck": "Impossible d'ouvrir le navigateur de {{name}}.",
       "stuck_female": "Impossible d'ouvrir le navigateur de {{name}}.",
+      "noAnswer": "Le navigateur de {{name}} n'a pas répondu.",
+      "noAnswer_female": "Le navigateur de {{name}} n'a pas répondu.",
       "stuckHelp": "Réessayer redémarre le navigateur. Les connexions restent enregistrées.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} ouvre le navigateur",

@@ -16777,6 +16777,8 @@
       "openingHelp": "在这台电脑上第一次打开可能需要一分钟。",
       "stuck": "无法打开 {{name}} 的浏览器。",
       "stuck_female": "无法打开 {{name}} 的浏览器。",
+      "noAnswer": "{{name}} 的浏览器没有响应。",
+      "noAnswer_female": "{{name}} 的浏览器没有响应。",
       "stuckHelp": "“重试”会重启浏览器，登录状态会保留。",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} 正在打开浏览器",

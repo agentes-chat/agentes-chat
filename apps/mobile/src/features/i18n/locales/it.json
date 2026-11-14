@@ -1835,6 +1835,8 @@
         "offlineCloudM": "Il computer di {{name}} non risponde in questo momento.",
         "stuckF": "Non è stato possibile aprire il browser di {{name}}.",
         "stuckM": "Non è stato possibile aprire il browser di {{name}}.",
+        "noAnswerF": "Il browser di {{name}} non ha risposto.",
+        "noAnswerM": "Il browser di {{name}} non ha risposto.",
         "tooManyF": "Troppi browser aperti insieme. Questo compare quando se ne chiude un altro.",
         "tooManyM": "Troppi browser aperti insieme. Questo compare quando se ne chiude un altro."
       }

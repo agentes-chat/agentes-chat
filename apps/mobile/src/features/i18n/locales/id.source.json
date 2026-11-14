@@ -4292,6 +4292,12 @@
   "browser.live.unavailable.stuckM": {
     "value": "Couldn't open {{name}}'s browser."
   },
+  "browser.live.unavailable.noAnswerF": {
+    "value": "{{name}}'s browser didn't answer."
+  },
+  "browser.live.unavailable.noAnswerM": {
+    "value": "{{name}}'s browser didn't answer."
+  },
   "browser.live.unavailable.tooManyF": {
     "value": "Too many browsers open at once. This one shows when another one closes."
   },

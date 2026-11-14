@@ -17251,6 +17251,7 @@
       "openingLong": "Browser von {{name}} wird geöffnet…",
       "openingHelp": "Beim ersten Mal auf diesem Computer kann es eine Minute dauern.",
       "stuck": "Der Browser von {{name}} ließ sich nicht öffnen.",
+      "noAnswer": "Der Browser von {{name}} hat nicht geantwortet.",
       "stuckHelp": "Erneut versuchen startet den Browser neu. Anmeldungen bleiben gespeichert.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} öffnet den Browser",

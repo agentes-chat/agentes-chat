@@ -165,6 +165,10 @@ export const toolWords = (t: TFunction, tool: MachineTool) => t(`machines.oneCli
 export const browserOffMessage = (message: string | null | undefined) =>
   /\bbrowser is turned off\b/i.test(message ?? "");
 
+/** The runner's own timeout: the browser took no command in time ("The browser didn't answer within 15 s"). */
+export const browserNoAnswerMessage = (message: string | null | undefined) =>
+  /\bbrowser didn't answer\b/i.test(message ?? "");
+
 /**
  * A refused "Fazer login" in one line: the browser off there (whose computer it is when not this person's), the
  * computer's own words for another cause, else the plain failure.

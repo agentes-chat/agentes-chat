@@ -1743,6 +1743,8 @@
         "offlineCloudM": "{{name}} ajanının bilgisayarı şu an yanıt vermiyor.",
         "stuckF": "{{name}} ajanının tarayıcısı açılamadı.",
         "stuckM": "{{name}} ajanının tarayıcısı açılamadı.",
+        "noAnswerF": "{{name}} tarayıcısı yanıt vermedi.",
+        "noAnswerM": "{{name}} tarayıcısı yanıt vermedi.",
         "tooManyF": "Aynı anda çok fazla tarayıcı açık. Biri kapanınca bu görünecek.",
         "tooManyM": "Aynı anda çok fazla tarayıcı açık. Biri kapanınca bu görünecek."
       }

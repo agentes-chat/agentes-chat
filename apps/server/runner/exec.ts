@@ -140,6 +140,44 @@ export function killTree(
   }
 }
 
+const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+/** Milliseconds between 1601-01-01 (a Windows FILETIME's zero) and the Unix epoch. */
+const FILETIME_EPOCH_MS = 11_644_473_600_000;
+let kernel32: ReturnType<typeof openKernel32> | undefined;
+async function openKernel32() {
+  const { dlopen, FFIType, ptr } = await import("bun:ffi");
+  const { symbols } = dlopen("kernel32.dll", {
+    OpenProcess: { args: [FFIType.u32, FFIType.i32, FFIType.u32], returns: FFIType.ptr },
+    GetProcessTimes: { args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr], returns: FFIType.i32 },
+    CloseHandle: { args: [FFIType.ptr], returns: FFIType.i32 },
+  });
+  return { ...symbols, ptr };
+}
+
+/**
+ * When a process started (ms since the epoch), on Windows; null elsewhere, or when it is gone or can't be read.
+ * Windows hands a freed pid to the next process at once: a pid with its start time names one process. A direct
+ * system call, since asking PowerShell takes about a second.
+ */
+export async function processStartedAt(pid: number): Promise<number | null> {
+  if (process.platform !== "win32") return null;
+  try {
+    kernel32 ??= openKernel32();
+    const k = await kernel32;
+    const handle = k.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+    if (!handle) return null;
+    try {
+      const times = new BigUint64Array(4);
+      const ok = k.GetProcessTimes(handle, k.ptr(times), k.ptr(times, 8), k.ptr(times, 16), k.ptr(times, 24));
+      return ok ? Number((times[0] ?? 0n) / 10_000n) - FILETIME_EPOCH_MS : null;
+    } finally {
+      k.CloseHandle(handle);
+    }
+  } catch {
+    return null;
+  }
+}
+
 export function exitCodeOf(code: number | null, signal: NodeJS.Signals | null): number {
   if (code !== null) return code;
   if (signal) {

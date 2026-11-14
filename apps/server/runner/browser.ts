@@ -57,6 +57,7 @@ import { type CrashedPage, countChromeTraffic, emulationCommands, type TrafficCo
 import { BROWSER_WM_CLASS } from "./desktop-look";
 import type { DesktopSessions } from "./desktop-session";
 import { RunnerError } from "./errors";
+import { processStartedAt } from "./exec";
 import {
   type Box,
   HUMAN,
@@ -804,6 +805,8 @@ async function stopPid(pid: number) {
   } catch {
     return;
   }
+  // On Windows SIGTERM already ends it outright, and 500 ms later its pid may be someone else's.
+  if (process.platform === "win32") return;
   await new Promise((r) => setTimeout(r, 500));
   try {
     process.kill(pid, 0);
@@ -1059,6 +1062,8 @@ const POINTER_ACTS: Record<string, AgentPointerAct> = {
 };
 /** What `agent-browser` answers to each when the runner did it itself. */
 const HUMAN_DONE: Record<string, string> = { click: "clicked", hover: "hovered", fill: "filled" };
+/** A command that timed out. The apps match these words (`browserNoAnswerMessage`): keep them. */
+const NO_ANSWER = "The browser didn't answer";
 /** The answer to a command a person's taking control cut short (`stopInput`). */
 const TOOK_OVER: BrowserAnswer = {
   success: false,
@@ -1452,6 +1457,8 @@ export interface BrowserManagerOptions {
   desktops?: Pick<DesktopSessions, "ensure" | "status"> & { session(agentId: string): ChromeDisplay | null };
   /** Tests: whether a pid left in `chromes.json` is still that Chrome (default: asks the system). */
   isOurChrome?: (pid: number, profile: string) => Promise<boolean>;
+  /** Tests: when a process started (default: `processStartedAt`, Windows only). */
+  startedAt?: (pid: number) => Promise<number | null>;
   /** What `states()` returns may have changed (the desktop app's tray shows it). */
   onChange?: () => void;
 }
@@ -1582,6 +1589,8 @@ interface ChromeEntry {
   profile: string;
   /** Headed: the display of the agent's desktop it is on. */
   display?: number;
+  /** When it started (`processStartedAt`, Windows only): with the pid, which process it is. */
+  started?: number;
 }
 
 /** What a command is, as the desktop app words it ("lendo a página", "preenchendo"). */
@@ -3091,10 +3100,11 @@ export class BrowserManager {
     return write.catch(() => undefined);
   }
 
-  private rememberChrome(pid: number, profile: string, display?: number) {
+  private async rememberChrome(pid: number, profile: string, display?: number) {
+    const started = await (this.opts.startedAt ?? processStartedAt)(pid);
     return this.writePids((list) => [
       ...list.filter((e) => e.pid !== pid),
-      { pid, profile, ...(display !== undefined ? { display } : {}) },
+      { pid, profile, ...(display !== undefined ? { display } : {}), ...(started !== null ? { started } : {}) },
     ]);
   }
 
@@ -3103,19 +3113,17 @@ export class BrowserManager {
   }
 
   /** Whether a pid from `chromes.json` is still a Chrome on that profile (a pid can be reused). */
-  private async isOurChrome(pid: number, profile: string): Promise<boolean> {
+  private async isOurChrome({ pid, profile, started }: ChromeEntry): Promise<boolean> {
     if (this.opts.isOurChrome) return this.opts.isOurChrome(pid, profile);
     try {
       process.kill(pid, 0);
     } catch {
       return false;
     }
-    if (process.platform === "win32") {
-      const out = await this.spawn(["tasklist"], ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], {
-        timeoutMs: QUICK_TIMEOUT_MS,
-        cwd: this.opts.home,
-      });
-      return /chrome\.exe/i.test(out.stdout);
+    // Windows reuses pids at once and shows no command line cheaply: only the start time recorded with the pid tells
+    // our Chrome from the person's own. A pid recorded without one is left alone.
+    if (process.platform === "win32" || started !== undefined) {
+      return started !== undefined && (await (this.opts.startedAt ?? processStartedAt)(pid)) === started;
     }
     const out = await this.spawn(["ps"], ["-p", String(pid), "-o", "command="], {
       timeoutMs: QUICK_TIMEOUT_MS,
@@ -3133,8 +3141,8 @@ export class BrowserManager {
    * True when a Chrome was stopped.
    */
   private async clearStaleLock(profile: string): Promise<boolean> {
-    const listed = await this.killLeftovers(profile);
     const locked = await this.killLockHolder(profile);
+    const listed = await this.killLeftovers(profile);
     await Promise.all(
       ["SingletonLock", "SingletonCookie", "SingletonSocket"].map((f) => rm(path.join(profile, f), { force: true })),
     );
@@ -3146,7 +3154,10 @@ export class BrowserManager {
     const target = await readlink(path.join(profile, "SingletonLock")).catch(() => "");
     const pid = Number(/-(\d+)$/.exec(target)?.[1]);
     if (!Number.isInteger(pid) || pid <= 0 || this.livePids().has(pid)) return false;
-    if (!(await this.isOurChrome(pid, profile).catch(() => false))) return false;
+    // A pid chromes.json lists is judged by its record (its start time, on Windows); one it doesn't list has no start
+    // time, so on Windows it is left alone.
+    const entry = (await this.readPids()).find((e) => e.pid === pid) ?? { pid, profile };
+    if (!(await this.isOurChrome(entry).catch(() => false))) return false;
     await stopPid(pid);
     return true;
   }
@@ -3171,9 +3182,10 @@ export class BrowserManager {
   private async killLeftovers(on?: string): Promise<boolean> {
     const live = this.livePids();
     let stopped = false;
-    for (const { pid, profile } of await this.readPids()) {
+    for (const entry of await this.readPids()) {
+      const { pid, profile } = entry;
       if (live.has(pid) || (on !== undefined && profile !== on)) continue;
-      if (await this.isOurChrome(pid, profile).catch(() => false)) {
+      if (await this.isOurChrome(entry).catch(() => false)) {
         await stopPid(pid);
         stopped = true;
       }
@@ -3241,7 +3253,7 @@ export class BrowserManager {
       return {
         success: false,
         data: null,
-        error: `The browser didn't answer within ${Math.round(opts.timeoutMs / 1000)} s`,
+        error: `${NO_ANSWER} within ${Math.round(opts.timeoutMs / 1000)} s`,
       };
     }
     return parseAnswer(out.stdout, out.stderr, out.exitCode);
@@ -3980,16 +3992,22 @@ export class BrowserManager {
       }
       if (!session.chrome) return null;
       const disconnected = (a: BrowserAnswer) => isRecord(a.data) && a.data.connected !== true;
-      let status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+      // A browser that didn't answer isn't closed: the viewers are told so, in its words.
+      const streamStatus = async () => {
+        const a = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+        if (a.error?.startsWith(NO_ANSWER)) throw new RunnerError("browser_unavailable", a.error);
+        return a;
+      };
+      let status = await streamStatus();
       if (disconnected(status)) {
         if (!held || reopened) return null;
         await reopen();
-        status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+        status = await streamStatus();
         if (disconnected(status)) return null;
       }
       if (!isRecord(status.data) || status.data.enabled !== true) {
         await this.run(session, ["stream", "enable"], { timeoutMs: QUICK_TIMEOUT_MS });
-        status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+        status = await streamStatus();
       }
       const reported = isRecord(status.data) && typeof status.data.port === "number" ? status.data.port : null;
       if (this.opts.fixedPorts && reported !== this.opts.fixedPorts.stream) {

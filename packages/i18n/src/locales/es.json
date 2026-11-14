@@ -17717,6 +17717,7 @@
       "openingLong": "Abriendo el navegador de {{name}}…",
       "openingHelp": "La primera vez en esta computadora puede tardar un minuto.",
       "stuck": "No se pudo abrir el navegador de {{name}}.",
+      "noAnswer": "El navegador de {{name}} no respondió.",
       "stuckHelp": "Intentar de nuevo reinicia el navegador. Las sesiones quedan guardadas.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} está abriendo el navegador",

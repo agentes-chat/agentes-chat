@@ -46,7 +46,7 @@ import {
 } from "@agenteschat/client";
 import { formatTime, lowerFirst } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
+import { browserNoAnswerMessage, browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
 import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { can as canDo } from "@agenteschat/client/lib/permissions";
 import { useSeat } from "@agenteschat/client/lib/seat-context";
@@ -865,6 +865,7 @@ export function BrowserCard({
   // (the switch when the browser is off there). An agent's own browser retries by itself, as before.
   const refusedHere = unavailable?.reason === "unavailable" && Boolean(profile);
   const offHere = refusedHere && browserOffMessage(unavailable?.message);
+  const noAnswer = refusedHere && browserNoAnswerMessage(unavailable?.message);
   // What can't change by waiting is said plainly; everything else is "opening" while it retries.
   const blocker = shows
     ? null
@@ -877,7 +878,11 @@ export function BrowserCard({
           : live.error === "too_many_browsers"
             ? t("browser.inCard.tooMany")
             : refusedHere
-              ? t(offHere ? "browser.profiles.toolOff" : "browser.live.unavailable")
+              ? offHere
+                ? t("browser.profiles.toolOff")
+                : noAnswer
+                  ? t("browser.inCard.noAnswer", g)
+                  : t("browser.live.unavailable")
               : null;
   const starting = !shows && !frame && !blocker && !reconnecting && !closed && !opening && !hidden;
   // Opening or reconnecting for too long says so, with Try again: who may drive it restarts the browser, the
@@ -1166,6 +1171,7 @@ export function BrowserCard({
         color={color}
         icon="alert"
         text={blocker}
+        help={noAnswer && mayDrive ? t("browser.inCard.stuckHelp") : undefined}
         action={
           profile?.machine && offHere ? (
             <MachineToolButton machine={profile.machine} tool="browser" onAllowed={retry} />

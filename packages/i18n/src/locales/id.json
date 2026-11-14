@@ -16733,6 +16733,7 @@
       "openingLong": "Membuka browser {{name}}…",
       "openingHelp": "Pertama kali di komputer ini mungkin butuh semenit.",
       "stuck": "Tidak bisa membuka browser {{name}}.",
+      "noAnswer": "Browser {{name}} tidak merespons.",
       "stuckHelp": "Coba lagi akan memulai ulang browser. Login tetap tersimpan.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} sedang membuka browser",

@@ -17349,6 +17349,8 @@
       "openingHelp": "De eerste keer op deze computer kan het een minuut duren.",
       "stuck": "Kon de browser van {{name}} niet openen.",
       "stuck_female": "Kon de browser van {{name}} niet openen.",
+      "noAnswer": "De browser van {{name}} reageerde niet.",
+      "noAnswer_female": "De browser van {{name}} reageerde niet.",
       "stuckHelp": "Opnieuw proberen herstart de browser. Logins blijven bewaard.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} opent de browser",

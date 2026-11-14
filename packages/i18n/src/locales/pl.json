@@ -18367,6 +18367,7 @@
       "openingHelp": "Za pierwszym razem na tym komputerze może to potrwać minutę.",
       "stuck": "Nie udało się otworzyć przeglądarki agenta {{name}}.",
       "stuck_female": "Nie udało się otworzyć przeglądarki agentki {{name}}.",
+      "noAnswer": "Przeglądarka {{name}} nie odpowiedziała.",
       "stuckHelp": "Spróbuj ponownie uruchamia przeglądarkę od nowa. Logowania zostają zapisane.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} otwiera przeglądarkę",

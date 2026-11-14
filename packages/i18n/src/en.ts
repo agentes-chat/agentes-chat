@@ -17596,6 +17596,7 @@ export const en = {
       openingLong: "Opening {{name}}'s browser…",
       openingHelp: "The first time on this computer it may take a minute.",
       stuck: "Couldn't open {{name}}'s browser.",
+      noAnswer: "{{name}}'s browser didn't answer.",
       stuckHelp: "Try again restarts the browser. Logins stay saved.",
       subWorking: "{{name}} · {{now}}",
       subStarting: "{{name}} is opening the browser",

@@ -16671,6 +16671,7 @@
       "openingLong": "{{name}}의 브라우저를 여는 중…",
       "openingHelp": "이 컴퓨터에서 처음 열 때는 1분 정도 걸릴 수 있어요.",
       "stuck": "{{name}}의 브라우저를 열지 못했어요.",
+      "noAnswer": "{{name}}의 브라우저가 응답하지 않았어요.",
       "stuckHelp": "다시 시도하면 브라우저가 재시작돼요. 로그인은 유지돼요.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}}이(가) 브라우저를 여는 중",
