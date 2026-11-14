@@ -354,7 +354,21 @@ export function AccessMatrixSection() {
         id="sec-access"
         icon="agent"
         title={t("access.matrixTitle")}
-        hint={{ name: t("common.about", { label: t("access.matrixTitle") }), text: t("access.matrixHint") }}
+        hint={{
+          name: t("common.about", { label: t("access.matrixTitle") }),
+          text: (
+            <>
+              {t("access.matrixHint")}{" "}
+              <Link
+                className="ac-link"
+                to="/org/$orgId/settings/$section"
+                params={{ orgId: org.id, section: "connectors" }}
+              >
+                {t("access.openConnectors")}
+              </Link>
+            </>
+          ),
+        }}
         action={
           <Segmented
             size="sm"

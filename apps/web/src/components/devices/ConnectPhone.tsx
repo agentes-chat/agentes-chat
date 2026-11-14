@@ -19,6 +19,7 @@ import {
   androidSteps,
   computerLine,
   DDIS_UPDATE,
+  failedOnLocalNetwork,
   IPHONE_STEPS,
   type IphoneStep,
   iosMajor,
@@ -65,6 +66,8 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
+import { useIsThisMac } from "@/components/ThisMac";
+import { thisMac } from "@/lib/desktop";
 import { useToast } from "@/lib/toast";
 import { FlowFooter, type FlowProps } from "./flow";
 import { DevicePortrait } from "./parts";
@@ -370,9 +373,14 @@ type WifiPair = ReturnType<typeof useWifiPairing>;
  * computer shows beside the steps, or the six-digit code typed here. The last step's line follows the computer:
  * waiting for the scan, found and pairing, connecting, or why it failed with Try again.
  */
-function WifiSteps({ pair, computer, mac }: { pair: WifiPair; computer: string; mac: boolean }) {
+function WifiSteps({ pair, host, mac }: { pair: WifiPair; host: ComputerDevice; mac: boolean }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
+  const computer = host.name;
+  // In the app on that very Mac, System Settings opens on the Local Network list from here.
+  const here = useIsThisMac(org.id, host.id);
   const p = pair.pairing;
+  const localNetwork = mac && here && failedOnLocalNetwork(p);
   const found = p !== undefined && (p.state === "pairing" || p.state === "connecting" || p.state === "connected");
   const failed = Boolean(pair.error) || p?.state === "failed";
   const line = pair.error
@@ -421,11 +429,18 @@ function WifiSteps({ pair, computer, mac }: { pair: WifiPair; computer: string; 
         ) : (
           <p className="dv-step__text dv-narrow">{t("devices.wifiPair.narrow")}</p>
         )}
-        {failed && !code && (
+        {failed && (!code || localNetwork) && (
           <span className="dv-step__acts">
-            <Button size="sm" onClick={pair.retry}>
-              {t("devices.wifiPair.tryAgain")}
-            </Button>
+            {localNetwork && (
+              <Button size="sm" onClick={() => void thisMac.openLocalNetworkSettings().catch(() => {})}>
+                {t("devices.wifiPair.openLocalNetwork")}
+              </Button>
+            )}
+            {!code && (
+              <Button size="sm" onClick={pair.retry}>
+                {t("devices.wifiPair.tryAgain")}
+              </Button>
+            )}
           </span>
         )}
         <button type="button" className="ac-link small" onClick={() => pair.switchWay(code ? "qr" : "code")}>
@@ -611,7 +626,7 @@ export function AndroidFlow({
   const steps =
     way === "cable"
       ? host && <CableSteps key={host.id} host={host} stage={stage} />
-      : host && <WifiSteps pair={wifi} computer={host.name} mac={computerKind(host.os) === "mac"} />;
+      : host && <WifiSteps pair={wifi} host={host} mac={computerKind(host.os) === "mac"} />;
   return (
     <>
       <DialogBody className="dv-android">

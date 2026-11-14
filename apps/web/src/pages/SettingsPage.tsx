@@ -94,6 +94,7 @@ import { RolesSection } from "@/components/roles/RolesSection";
 import { SkillsSection } from "@/components/Skills";
 import { StorageSection } from "@/components/StorageSettings";
 import { TeamMemoryCard } from "@/components/TeamMemory";
+import { OpenPrefsButton, useLocalServerHere } from "@/components/ThisMac";
 import { VoiceSettingsSection } from "@/components/VoiceSettings";
 import { VaultSection } from "@/components/vault/VaultSection";
 import { WorkspaceModeDialog } from "@/components/WorkspaceModeDialog";
@@ -684,8 +685,11 @@ function UsageStatisticsCard() {
   const telemetry = useServerTelemetry();
   const set = useSetServerTelemetry();
   const [open, setOpen] = useState(false);
+  const here = useLocalServerHere();
   const data = telemetry.data;
   if (!data) return null;
+  // Switched off in the app that runs this server: on that very computer, its Preferences › Servers one click away.
+  const inApp = data.envOff && data.report.install === "desktop" && here;
   return (
     <Card aria-labelledby="sec-telemetry">
       <CardHeader
@@ -715,12 +719,21 @@ function UsageStatisticsCard() {
                 {t("settings.telemetry.help")}
               </InfoHint>
             </span>
-            {data.envOff && (
-              <span className="settings-row__status" id="set-telemetry-help">
-                {t(
-                  data.report.install === "desktop" ? "settings.telemetry.envOffDesktop" : "settings.telemetry.envOff",
-                )}
+            {inApp ? (
+              <span className="settings-row__status ac-actline" id="set-telemetry-help">
+                <span>{t("settings.telemetry.envOffHere")}</span>
+                <OpenPrefsButton tab="servers">{t("machines.thisMac.openServers")}</OpenPrefsButton>
               </span>
+            ) : (
+              data.envOff && (
+                <span className="settings-row__status" id="set-telemetry-help">
+                  {t(
+                    data.report.install === "desktop"
+                      ? "settings.telemetry.envOffDesktop"
+                      : "settings.telemetry.envOff",
+                  )}
+                </span>
+              )
             )}
           </div>
           <div className="settings-row__control">
