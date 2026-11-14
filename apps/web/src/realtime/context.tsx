@@ -67,6 +67,7 @@ import {
   markStopping,
   type OpenConsult,
   openConversation,
+  parseBrowserPointer,
   RealtimeConnection,
   type ReceiptsState,
   realtimeUrl,
@@ -1089,6 +1090,26 @@ export function useBrowserLive(agentId: string, enabled = true, maxFps?: number)
   const sendInput = useCallback((events: BrowserInputEvent[]) => liveRef.current?.sendInput(events) ?? false, []);
   const retry = useCallback(() => liveRef.current?.retry(), []);
   return { ...state, sendInput, retry };
+}
+
+/**
+ * Where the agent's pointer last went on its desktop (ADR 0062), while this view shows that screen: the server
+ * sends it to whoever has the screen open. `n` counts its gestures.
+ */
+export function useDesktopPointer(agentId: string, enabled = true) {
+  const { connection } = useRealtime();
+  const [pointer, setPointer] = useState<BrowserLiveState["pointer"]>(null);
+  useEffect(() => {
+    setPointer(null);
+    if (!connection || !enabled) return;
+    return connection.onUserEvent((event) => {
+      const said = event as { type: string; agentId?: unknown; pointer?: unknown };
+      if (said.type !== "agent.desktop.pointer" || said.agentId !== agentId) return;
+      const to = parseBrowserPointer(said.pointer);
+      if (to) setPointer((was) => ({ ...to, n: (was?.n ?? 0) + 1 }));
+    });
+  }, [connection, agentId, enabled]);
+  return pointer;
 }
 
 export function useConnectionStatus(): ConnectionStatus {

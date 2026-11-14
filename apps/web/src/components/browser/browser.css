@@ -1809,6 +1809,8 @@ html:not([data-pointer]) .brw-mf-end__row:focus-visible {
 .brw-cur-layer {
   position: absolute;
   inset: 0;
+  /* Over a desktop's held picture too. */
+  z-index: 2;
   display: grid;
   place-items: center;
   pointer-events: none;

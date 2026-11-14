@@ -116,6 +116,16 @@ export interface BrowserPointer {
   act: (typeof BROWSER_POINTER_ACTS)[number];
 }
 
+/** A pointer out of a message (the browser's, or a desktop's `agent.desktop.pointer` event), or null. */
+export function parseBrowserPointer(v: unknown): BrowserPointer | null {
+  if (typeof v !== "object" || v === null) return null;
+  const { x, y, width, height, act } = v as Record<string, unknown>;
+  const known = BROWSER_POINTER_ACTS.find((a) => a === act);
+  const finite = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
+  if (!known || !finite(x) || !finite(y) || !finite(width) || !finite(height) || width <= 0 || height <= 0) return null;
+  return { x, y, width, height, act: known };
+}
+
 export type BrowserLiveMessage =
   | ({ type: "browser.frame" } & BrowserFrame)
   | ({ type: "browser.pointer"; agentId: string } & BrowserPointer)
@@ -185,11 +195,8 @@ export function parseBrowserLiveMessage(v: unknown): BrowserLiveMessage | null {
       };
     }
     case "browser.pointer": {
-      const act = BROWSER_POINTER_ACTS.find((a) => a === v.act);
-      if (!act || ![v.x, v.y, v.width, v.height].every(num) || !((v.width as number) > 0 && (v.height as number) > 0))
-        return null;
-      const [x, y, width, height] = [v.x, v.y, v.width, v.height] as number[];
-      return { type: "browser.pointer", agentId: v.agentId, x, y, width, height, act } as BrowserLiveMessage;
+      const pointer = parseBrowserPointer(v);
+      return pointer ? { type: "browser.pointer", agentId: v.agentId, ...pointer } : null;
     }
     case "browser.status":
       return {
