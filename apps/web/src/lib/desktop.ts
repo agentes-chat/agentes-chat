@@ -10,7 +10,8 @@ import type { DesktopServerWorkspaces } from "./workspaces";
 
 /**
  * The site inside the agentes.chat desktop app (ADR 0036, ADR 0066): the app's main window loads it and
- * sets `window.__agentesDesktop` before it starts. The site gets nothing of the computer; it draws its own
+ * sets `window.__agentesDesktop` before it starts. The site gets nothing of the computer but how it draws
+ * (`renderer`, and on Linux `system`: distribution, session, WebKitGTK, graphics card). It draws its own
  * title bar and sends Google/Apple sign-in to the browser (`apps/desktop/src-tauri/src/main_window.rs`).
  */
 export const inDesktopApp = () =>
