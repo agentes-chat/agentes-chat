@@ -1,4 +1,11 @@
-import { type ComposerDraft, readDraftBook, withDraft } from "@agenteschat/client/lib/composer-drafts";
+import {
+  type ComposerDraft,
+  type DraftBook,
+  type DraftFile,
+  readDraftBook,
+  withDraft,
+  withDraftFiles,
+} from "@agenteschat/client/lib/composer-drafts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthClient } from "@/auth/client";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
@@ -13,10 +20,20 @@ export function readComposerDraft(userId: string, key: string): ComposerDraft | 
   return readDraftBook(storage.get(bookKey(userId)), Date.now())[key];
 }
 
-/** Writes (or, blank, removes) one entry of this person's book of unsent texts. */
+/** Writes (or, blank, removes) one entry's text in this person's book of unsent texts; its files stay. */
 export function writeComposerDraft(userId: string, key: string, text: string) {
+  changeBook(userId, (book, now) => withDraft(book, key, text, now));
+}
+
+/** Writes (or, none, removes) the files waiting in one conversation's composer; its text stays. */
+export function writeComposerDraftFiles(userId: string, key: string, files: readonly DraftFile[]) {
+  changeBook(userId, (book, now) => withDraftFiles(book, key, files, now));
+}
+
+function changeBook(userId: string, change: (book: DraftBook, now: number) => DraftBook) {
   const name = bookKey(userId);
-  const next = withDraft(readDraftBook(storage.get(name), Date.now()), key, text, Date.now());
+  const now = Date.now();
+  const next = change(readDraftBook(storage.get(name), now), now);
   if (Object.keys(next).length === 0) storage.remove(name);
   else storage.set(name, JSON.stringify(next));
 }
