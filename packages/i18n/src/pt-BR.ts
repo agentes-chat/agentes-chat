@@ -5732,6 +5732,8 @@ export const ptBR = {
         context: "Janela de contexto",
         contextText: {
           auto: "O que o modelo aguenta.",
+          /** "Automático" for an agent on Claude Code or Codex: they summarise at a fixed size (`autoContextFor`). */
+          autoSummarizes: "No Claude Code e no Codex, resume a conversa em {{size}}.",
           "200000": "Mais barato e rápido. Resume cedo em conversas longas.",
           "400000": "Lembra bastante, e cada resposta custa menos que com 1M.",
           "1000000": "Lembra o máximo. Cada resposta relê tudo: mais lenta e cara.",

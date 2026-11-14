@@ -5435,7 +5435,8 @@
           "200000": "Daha ucuz ve daha hızlı. Uzun sohbetlerde erkenden özetler.",
           "400000": "Çok şey hatırlar ve her yanıt 1M ile olduğundan daha ucuzdur.",
           "1000000": "En çok hatırlayan. Her yanıtta her şeyi yeniden okur: daha yavaş ve daha pahalı.",
-          "auto": "Modelin aldığı kadar."
+          "auto": "Modelin aldığı kadar.",
+          "autoSummarizes": "Claude Code ve Codex'te sohbeti {{size}} noktasında özetler."
         },
         "advanced": {
           "title": "Gelişmiş ayarlar",

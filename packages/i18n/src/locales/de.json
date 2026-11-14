@@ -5452,7 +5452,8 @@
           "200000": "Günstiger und schneller. Fasst lange Unterhaltungen früh zusammen.",
           "400000": "Merkt sich viel, und jede Antwort kostet weniger als mit 1M.",
           "1000000": "Merkt sich am meisten. Jede Antwort liest alles neu: langsamer und teurer.",
-          "auto": "Was das Modell zulässt."
+          "auto": "Was das Modell zulässt.",
+          "autoSummarizes": "Bei Claude Code und Codex fasst es das Gespräch bei {{size}} zusammen."
         },
         "advanced": {
           "title": "Erweiterte Einstellungen",

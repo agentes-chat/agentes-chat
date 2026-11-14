@@ -5640,7 +5640,8 @@
           "200000": "Moins cher et plus rapide. Résume tôt dans les longues conversations.",
           "400000": "Retient beaucoup, et chaque réponse coûte moins qu'avec 1M.",
           "1000000": "Retient le plus. Chaque réponse relit tout : plus lent et plus cher.",
-          "auto": "Ce que le modèle accepte."
+          "auto": "Ce que le modèle accepte.",
+          "autoSummarizes": "Sur Claude Code et Codex, résume la conversation à {{size}}."
         },
         "advanced": {
           "title": "Paramètres avancés",
