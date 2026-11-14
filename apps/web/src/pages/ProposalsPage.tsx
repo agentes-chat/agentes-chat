@@ -110,6 +110,10 @@ export function ProposalsPage({ agentId }: { agentId?: string }) {
   };
 
   const open = (p: Proposal) => p.status === "pending" && !p.stale;
+  // How a closed one ended, for its row's mark and its outcome card: accepted reads as done, the rest plain.
+  const accepted = (p: Proposal) => p.status === "accepted" && !p.stale;
+  // Its row's mark takes the requests' own state class (a decided request's `is-<phase>`).
+  const stateClass = (p: Proposal) => (accepted(p) ? "is-done" : undefined);
   const proposer = current ? agentName(proposerOf(current)) : "";
 
   return (
@@ -163,12 +167,12 @@ export function ProposalsPage({ agentId }: { agentId?: string }) {
                     <span className="ac-mediarow__end">
                       {!open(p) && (
                         <span
-                          className={cx("ap-li__state", p.status === "accepted" && !p.stale && "is-done")}
+                          className={cx("ap-li__state", stateClass(p))}
                           role="img"
                           aria-label={statusText(p)}
                           title={statusText(p)}
                         >
-                          <Icon name={p.status === "accepted" && !p.stale ? "check" : "close"} size={16} />
+                          <Icon name={accepted(p) ? "check" : "close"} size={16} />
                         </span>
                       )}
                     </span>
@@ -212,14 +216,9 @@ export function ProposalsPage({ agentId }: { agentId?: string }) {
 
               <div className="ap-review__body">
                 {!open(current) && (
-                  <Card
-                    className={cx(
-                      "ap-review__card ap-outcome",
-                      current.status === "accepted" && !current.stale && "ap-outcome--done",
-                    )}
-                  >
+                  <Card className={cx("ap-review__card ap-outcome", accepted(current) && "ap-outcome--done")}>
                     <CardHeader
-                      icon={current.status === "accepted" && !current.stale ? "check" : "close"}
+                      icon={accepted(current) ? "check" : "close"}
                       title={current.stale ? t("proposals.stale") : decisionText(current)}
                       subtitle={
                         current.stale
