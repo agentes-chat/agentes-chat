@@ -11,6 +11,7 @@ import {
   COMPOSIO_EXECUTOR,
   type CustomDeps,
   connectCustomServer,
+  consultationNotice,
   createAgent,
   createConnectorToolSource,
   createRole,
@@ -19,6 +20,7 @@ import {
   createToolGateway,
   decideApproval,
   deleteRoutine,
+  deliverNoticeToRun,
   type InvokeResult,
   insertMessage,
   type McpConnect,
@@ -237,12 +239,10 @@ async function teammate(fx: Fixture, handle = "qa") {
   return agent;
 }
 
-/**
- * A question run `askerRunId` asked `targetAgentId` (`ask_agent`), answered, and the `consult_reply` notice its
- * answer posts back for the asker's agent.
- */
-async function answerNotice(fx: Fixture, askerRunId: string, targetAgentId: string) {
-  const answer = "Sim, o deploy de ontem quebrou o checkout.";
+const ANSWER = "Sim, o deploy de ontem quebrou o checkout.";
+
+/** A question run `askerRunId` asked `targetAgentId` (`ask_agent`), answered. */
+async function answeredQuestion(fx: Fixture, askerRunId: string, targetAgentId: string) {
   const [consultation] = await fx.db
     .insert(schema.agentConsultations)
     .values({
@@ -256,21 +256,27 @@ async function answerNotice(fx: Fixture, askerRunId: string, targetAgentId: stri
       question: "O erro do checkout é do deploy de ontem?",
       chain: [fx.agent.id],
       status: "answered",
-      answer,
+      answer: ANSWER,
       answeredAt: new Date(),
       expiresAt: new Date(Date.now() + 600_000),
     })
     .returning();
   if (!consultation) throw new Error("no consultation");
+  return consultation;
+}
+
+/** The `consult_reply` notice a teammate's answer to run `askerRunId`'s question posts back for the asker's agent. */
+async function answerNotice(fx: Fixture, askerRunId: string, targetAgentId: string) {
+  const consultation = await answeredQuestion(fx, askerRunId, targetAgentId);
   return insertMessage(fx.db, {
     orgId: fx.org.id,
     channelId: fx.general.id,
     author: { type: "agent", agentId: fx.agent.id, runId: null, hop: 0, stretchId: null },
-    body: answer,
+    body: ANSWER,
     meta: {
       notice: {
         kind: "consult_reply",
-        text: answer,
+        text: ANSWER,
         from: "@qa",
         refs: { consultationId: consultation.id, runId: askerRunId },
       },
@@ -469,6 +475,40 @@ describe("a routine's own job (routines.own_actions)", () => {
     await f.db.update(schema.agents).set({ approvalsLevel: "always" }).where(eq(schema.agents.id, f.agent.id));
     asked(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
     expect(mcp.calls).toHaveLength(3);
+  });
+
+  test("the answer as the server delivers it wakes, in the routine's conversation, a run that does its own actions", async () => {
+    f = await setup();
+    const qa = await teammate(f);
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    const routine = await routineRun(f, id);
+    // The routine's run asked @qa and ended at once; the answer closes later (`closeConsultation`).
+    const [asker] = await f.db
+      .update(schema.agentRuns)
+      .set({ status: "done" })
+      .where(eq(schema.agentRuns.id, routine.runId))
+      .returning();
+    if (!asker) throw new Error("no routine run");
+    const question = await answeredQuestion(f, asker.id, qa.id);
+    const { message, runs } = await f.db.transaction((tx) =>
+      deliverNoticeToRun(tx, asker, consultationNotice(question, "qa")),
+    );
+    const [woken] = runs;
+    if (!woken) throw new Error("the answer woke no run");
+    expect(woken.agentId).toBe(f.agent.id);
+    const run: ToolContext = {
+      db: f.db,
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      runId: woken.id,
+      channelId: woken.channelId,
+      threadRootId: woken.threadRootId,
+      triggerMessageId: message.id,
+    };
+    expect(answered(await invoke(gateway, run, EXEC, exec("SLACK_SEND_MESSAGE"))).isError).toBeFalsy();
+    asked(await invoke(gateway, run, EXEC, { ...exec("GMAIL_SEND_EMAIL"), why: WHY }));
+    expect(mcp.calls).toHaveLength(1);
   });
 
   test("two answers to the routine's questions in one wake keep it covered; anything else joining makes it ask", async () => {
