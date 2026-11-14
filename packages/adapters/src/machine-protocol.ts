@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 64;
+export const MACHINE_PROTOCOL_VERSION = 65;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -663,6 +663,12 @@ export const XCODE_FIX_PROTOCOL = 62;
  * Older runners answer `bad_request`: the server asks none of them.
  */
 export const ACCESS_ALLOW_PROTOCOL = 62;
+/**
+ * The iPhone guide's Developer Mode step: `phone.look` on a Mac reads its iPhones again before it answers (one turned
+ * on the mode, or came back from its restart), and `xcode.open` opens Xcode there, which shows the Developer Mode
+ * switch on a plugged iPhone that hides it. Older runners answer `phone.look` at once and `xcode.open` `bad_request`.
+ */
+export const IPHONE_DEV_MODE_PROTOCOL = 65;
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";
@@ -2581,8 +2587,9 @@ export type MachineRequest = (
   | { op: "pause.set"; paused: boolean; until?: string | null; by: string }
   /**
    * A phone guide is open and waits for a phone: for the next minute, a Windows runner also looks for a plugged phone
-   * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. Older runners answer
-   * `bad_request`, which the server ignores.
+   * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. From `IPHONE_DEV_MODE_PROTOCOL`
+   * a Mac reads its iPhones again and answers once `phones.changed` went out. Older runners answer `bad_request`,
+   * which the server ignores.
    */
   | { op: "phone.look" }
   /**
@@ -2600,6 +2607,8 @@ export type MachineRequest = (
   | { op: "keep.end"; holdId: string; stop?: boolean }
   /** `XCODE_FIX_PROTOCOL`: start a fix (`kind`), or say where the last one stands, or stop it. One at a time. */
   | { op: "xcode.fix"; action: "start" | "status" | "cancel"; kind?: XcodeFixKind }
+  /** `IPHONE_DEV_MODE_PROTOCOL`: open Xcode on this Mac (it shows Developer Mode on a plugged iPhone). */
+  | { op: "xcode.open" }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -2677,6 +2686,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "keep.start",
   "keep.end",
   "xcode.fix",
+  "xcode.open",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -2845,6 +2855,7 @@ export interface MachineReplies {
   /** `false`: no such hold lived here. */
   "keep.end": { ended: boolean };
   "xcode.fix": { fix: XcodeFix | null };
+  "xcode.open": { opened: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */

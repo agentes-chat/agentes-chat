@@ -14095,6 +14095,20 @@
       "trustText": "Ketuk Percayai di iPhone dan masukkan kode sandinya.",
       "devModeDone": "Menyala",
       "devModeText": "Nyalakan, lalu ketuk Mulai Ulang. Setelah dimulai ulang, ketuk Nyalakan dan masukkan kode sandimu.",
+      "devModeRestarting": "iPhone sedang dimulai ulang. Setelah kembali, buka kuncinya dan ketuk Nyalakan.",
+      "devModeBack": "iPhone sudah kembali. Buka kuncinya, ketuk Nyalakan, dan masukkan kode sandimu.",
+      "devModeCheck": "Sudah kunyalakan, periksa lagi",
+      "devModeStillOff": "iPhone masih menyatakan Mode Pengembang mati.",
+      "devModeMissing": {
+        "title": "Opsinya tidak muncul?",
+        "hidden": "iPhone menyembunyikan opsi ini sampai Xcode memintanya muncul.",
+        "hiddenOpen": "iPhone menyembunyikan opsi ini sampai Xcode memintanya muncul. Buka Xcode di {{mac}} dengan iPhone tersambung.",
+        "openXcode": "Buka Xcode",
+        "opened": "Xcode terbuka di {{mac}}. Lihat lagi di Pengaturan iPhone, lalu tutup Xcode.",
+        "unlock": "Sudah dinyalakan dan iPhone dimulai ulang? Buka kuncinya. Peringatan dengan Nyalakan baru muncul setelah itu.",
+        "check": "Periksa lagi",
+        "outdated": "Aplikasi agentes.chat di {{mac}} sudah usang. Perbarui aplikasinya, atau jalankan ini di Terminal jika kamu memasangnya dari sana."
+      },
       "uiAutomationText": "Di Pengaturan › Pengembang, setelah dimulai ulang.",
       "helperText": "Dibuat dan diperbarui oleh Mac setiap 7 hari. Apple Account gratis di Xcode sudah cukup.",
       "helperUntrustedText": "Ketuk nama developernya, lalu Percayai.",
@@ -14111,7 +14125,6 @@
         "account": "Sudah masuk? Di Xcode, buat app iOS apa saja, pilih timmu di Signing & Capabilities, lalu jalankan di iPhone sekali.",
         "connected": "{{mac}} belum melihat iPhone. Pakai kabel yang membawa data, bukan hanya daya, buka kunci iPhone, lalu ketuk Percayai jika diminta.",
         "trust": "Tidak muncul Percayai? Cabut iPhone, buka kuncinya, colokkan lagi, lalu ketuk Percayai dan masukkan kode sandinya.",
-        "developerMode": "Mode Pengembang baru menyala setelah iPhone dimulai ulang. Ketuk Mulai Ulang, lalu Nyalakan setelah iPhone menyala lagi. Tidak ada tombolnya? Cabut iPhone dan colokkan lagi.",
         "uiAutomation": "Tombolnya muncul setelah Mode Pengembang menyala dan iPhone dimulai ulang. Biarkan tidak terkunci selama kamu mencarinya.",
         "helper": "{{mac}} membuat helper pengujian dan menjalankannya di iPhone, yang butuh beberapa menit untuk pertama kali. Biarkan iPhone tidak terkunci dan tetap tercolok."
       },

@@ -14629,6 +14629,20 @@
       "trustText": "Tik op Vertrouw op de iPhone en voer de toegangscode in.",
       "devModeDone": "Aan",
       "devModeText": "Zet hem aan en tik op Herstart. Tik na het herstarten op Zet aan en voer je toegangscode in.",
+      "devModeRestarting": "De iPhone herstart. Als hij terug is, ontgrendel hem en tik op Zet aan.",
+      "devModeBack": "De iPhone is terug. Ontgrendel hem, tik op Zet aan en voer je toegangscode in.",
+      "devModeCheck": "Staat aan, opnieuw controleren",
+      "devModeStillOff": "De iPhone zegt nog dat Ontwikkelaarsmodus uit staat.",
+      "devModeMissing": {
+        "title": "Zie je de optie niet?",
+        "hidden": "De iPhone verbergt de optie tot Xcode vraagt om hem te tonen.",
+        "hiddenOpen": "De iPhone verbergt de optie tot Xcode vraagt om hem te tonen. Open Xcode op {{mac}} met de iPhone aangesloten.",
+        "openXcode": "Xcode openen",
+        "opened": "Xcode is geopend op {{mac}}. Kijk opnieuw in de Instellingen van de iPhone en sluit Xcode daarna.",
+        "unlock": "Aangezet en de iPhone herstartte? Ontgrendel hem. De melding met Zet aan verschijnt pas daarna.",
+        "check": "Opnieuw controleren",
+        "outdated": "De agentes.chat-app op {{mac}} is verouderd. Werk de app bij, of voer dit uit in Terminal als je hem daar hebt geïnstalleerd."
+      },
       "uiAutomationText": "In Instellingen › Ontwikkelaar, na het herstarten.",
       "helperText": "De Mac bouwt en vernieuwt hem elke 7 dagen. Een gratis Apple Account in Xcode is genoeg.",
       "helperUntrustedText": "Tik op de naam van de ontwikkelaar en dan op Vertrouw.",
@@ -14645,7 +14659,6 @@
         "account": "Al ingelogd? Maak in Xcode een willekeurige iOS-app, kies je team bij Signing & Capabilities en voer hem één keer uit op de iPhone.",
         "connected": "{{mac}} ziet nog geen iPhone. Gebruik een kabel die data doorgeeft, niet alleen stroom, ontgrendel de iPhone en tik op Vertrouw als hij erom vraagt.",
         "trust": "Geen Vertrouw-vraag? Koppel de iPhone los, ontgrendel hem en sluit hem weer aan, tik dan op Vertrouw en voer de toegangscode in.",
-        "developerMode": "Ontwikkelaarsmodus gaat pas aan nadat de iPhone herstart. Tik op Herstart en daarna op Zet aan als hij terug is. Geen schakelaar? Koppel de iPhone los en sluit hem weer aan.",
         "uiAutomation": "De schakelaar verschijnt als Ontwikkelaarsmodus aan staat en de iPhone herstart is. Houd hem ontgrendeld terwijl je zoekt.",
         "helper": "{{mac}} bouwt de testhelper en start hem op de iPhone, wat de eerste keer een paar minuten duurt. Houd de iPhone ontgrendeld en aangesloten."
       },

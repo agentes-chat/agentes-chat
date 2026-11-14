@@ -8046,6 +8046,8 @@ export interface ComputerDevice {
   status: DeviceStatus;
   maxTasks: number | null;
   toolchains: Record<string, string>;
+  /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide; absent from an older server. */
+  opensXcode?: boolean;
   lastSeenAt: string | null;
   mayUse: boolean;
   mayManage: boolean;

@@ -1518,6 +1518,7 @@ export class RunnerDaemon implements RequestObserver {
       ...(this.phones ? { phones: this.phones } : {}),
       ...(this.holds && agentUser ? { keep: this.keepOps(this.holds, agentUser) } : {}),
       xcodeFix: (req) => this.xcodeFixer().handle(req),
+      xcodeOpen: () => this.iphoneSetup().open("xcode"),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
     // it lands in `hello` if it finishes first, else comes after as `accounts.changed`. Nothing reaches the
@@ -2219,6 +2220,11 @@ export class RunnerDaemon implements RequestObserver {
     const out = await s.browser.stop({ id: agentId, handle: agent?.handle ?? "agent" });
     this.browsersChanged();
     return out;
+  }
+
+  /** The desktop app's iPhone setup asking to look at the iPhone again now (`phone.look`). */
+  async iphoneLook(): Promise<{ looking: boolean }> {
+    return { looking: (await this.phones?.look()) ?? false };
   }
 
   /** The desktop app's iPhone setup: what the Mac has, a download of the iOS platform, Xcode opened. */

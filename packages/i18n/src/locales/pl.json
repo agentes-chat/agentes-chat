@@ -15550,6 +15550,20 @@
       "trustText": "Stuknij Zaufaj na iPhonie i wpisz jego kod.",
       "devModeDone": "Włączony",
       "devModeText": "Włącz go i stuknij Uruchom ponownie. Po ponownym uruchomieniu stuknij Włącz i wpisz kod.",
+      "devModeRestarting": "iPhone uruchamia się ponownie. Gdy wróci, odblokuj go i stuknij Włącz.",
+      "devModeBack": "iPhone wrócił. Odblokuj go, stuknij Włącz i wpisz kod.",
+      "devModeCheck": "Już włączone, sprawdź ponownie",
+      "devModeStillOff": "iPhone nadal podaje, że tryb dewelopera jest wyłączony.",
+      "devModeMissing": {
+        "title": "Nie widzisz tej opcji?",
+        "hidden": "iPhone ukrywa tę opcję, dopóki Xcode nie poprosi o jej pokazanie.",
+        "hiddenOpen": "iPhone ukrywa tę opcję, dopóki Xcode nie poprosi o jej pokazanie. Otwórz Xcode na {{mac}} z podłączonym iPhone'em.",
+        "openXcode": "Otwórz Xcode",
+        "opened": "Xcode otworzył się na {{mac}}. Zajrzyj jeszcze raz do Ustawień iPhone'a, a potem zamknij Xcode.",
+        "unlock": "Włączone, a iPhone uruchomił się ponownie? Odblokuj go. Alert z Włącz pojawia się dopiero potem.",
+        "check": "Sprawdź ponownie",
+        "outdated": "Aplikacja agentes.chat na {{mac}} jest nieaktualna. Zaktualizuj aplikację albo uruchom to w Terminalu, jeśli była instalowana stamtąd."
+      },
       "uiAutomationText": "W Ustawienia › Deweloper, po ponownym uruchomieniu.",
       "helperText": "Mac go buduje i odnawia co 7 dni. Wystarczy bezpłatne konto Apple Account w Xcode.",
       "helperUntrustedText": "Stuknij nazwę dewelopera, a potem Zaufaj.",
@@ -15566,7 +15580,6 @@
         "account": "Już zalogowano? W Xcode utwórz dowolną aplikację iOS, wybierz swój zespół w Signing & Capabilities i uruchom ją raz na iPhonie.",
         "connected": "{{mac}} nie widzi jeszcze iPhone'a. Użyj kabla, który przesyła dane, a nie tylko ładuje, odblokuj iPhone'a i stuknij Zaufaj, jeśli poprosi.",
         "trust": "Nie ma pytania Zaufaj? Odłącz iPhone'a, odblokuj go i podłącz ponownie, potem stuknij Zaufaj i wpisz jego kod.",
-        "developerMode": "Tryb dewelopera włącza się dopiero po ponownym uruchomieniu iPhone'a. Stuknij Uruchom ponownie, a po starcie Włącz. Nie ma przełącznika? Odłącz iPhone'a i podłącz go ponownie.",
         "uiAutomation": "Przełącznik pojawia się, gdy Tryb dewelopera jest włączony, a iPhone uruchomił się ponownie. Trzymaj go odblokowanego podczas szukania.",
         "helper": "{{mac}} tworzy pomocnika testowego i uruchamia go na iPhonie, co za pierwszym razem trwa kilka minut. Trzymaj iPhone'a odblokowanego i podłączonego."
       },

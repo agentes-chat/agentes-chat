@@ -14565,6 +14565,20 @@
       "trustText": "Tippe auf dem iPhone auf Vertrauen und gib seinen Code ein.",
       "devModeDone": "An",
       "devModeText": "Schalte ihn ein und tippe auf Neustart. Tippe nach dem Neustart auf Aktivieren und gib deinen Code ein.",
+      "devModeRestarting": "Das iPhone startet neu. Wenn es wieder da ist, entsperre es und tippe auf Aktivieren.",
+      "devModeBack": "Das iPhone ist wieder da. Entsperre es, tippe auf Aktivieren und gib deinen Code ein.",
+      "devModeCheck": "Ist eingeschaltet, erneut prüfen",
+      "devModeStillOff": "Das iPhone meldet den Entwicklermodus noch als aus.",
+      "devModeMissing": {
+        "title": "Option nicht zu sehen?",
+        "hidden": "Das iPhone versteckt die Option, bis Xcode sie anzeigen lässt.",
+        "hiddenOpen": "Das iPhone versteckt die Option, bis Xcode sie anzeigen lässt. Öffne Xcode auf {{mac}}, während das iPhone angeschlossen ist.",
+        "openXcode": "Xcode öffnen",
+        "opened": "Xcode ist auf {{mac}} offen. Schau noch einmal in den Einstellungen des iPhones und schließ Xcode danach.",
+        "unlock": "Eingeschaltet und das iPhone hat neu gestartet? Entsperre es. Die Abfrage mit Aktivieren erscheint erst danach.",
+        "check": "Erneut prüfen",
+        "outdated": "Die agentes.chat-App auf {{mac}} ist veraltet. Aktualisiere die App, oder führe das hier im Terminal aus, wenn du sie dort installiert hast."
+      },
       "uiAutomationText": "Unter Einstellungen › Entwickler, nach dem Neustart.",
       "helperText": "Wird vom Mac erstellt und alle 7 Tage erneuert. Ein kostenloser Apple Account in Xcode reicht.",
       "helperUntrustedText": "Tippe auf den Namen des Entwicklers und dann auf Vertrauen.",
@@ -14581,7 +14595,6 @@
         "account": "Schon angemeldet? Erstelle in Xcode eine beliebige iOS-App, wähle unter Signing & Capabilities dein Team und führe sie einmal auf dem iPhone aus.",
         "connected": "{{mac}} sieht noch kein iPhone. Nimm ein Kabel, das Daten überträgt und nicht nur lädt, entsperre das iPhone und tippe auf Vertrauen, wenn es fragt.",
         "trust": "Keine Vertrauen-Abfrage? Zieh das iPhone ab, entsperre es und schließ es wieder an, dann tippe auf Vertrauen und gib seinen Code ein.",
-        "developerMode": "Der Entwicklermodus geht erst nach einem Neustart des iPhones an. Tippe auf Neustart und danach auf Aktivieren. Kein Schalter da? Zieh das iPhone ab und schließ es wieder an.",
         "uiAutomation": "Der Schalter erscheint, wenn der Entwicklermodus an ist und das iPhone neu gestartet hat. Lass es beim Suchen entsperrt.",
         "helper": "{{mac}} erstellt die Test-App und startet sie auf dem iPhone, das dauert beim ersten Mal ein paar Minuten. Lass das iPhone entsperrt und angeschlossen."
       },

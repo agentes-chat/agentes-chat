@@ -15066,6 +15066,20 @@
       "trustText": "Tocca Autorizza sull'iPhone e inserisci il suo codice.",
       "devModeDone": "Attiva",
       "devModeText": "Attivala e tocca Riavvia. Dopo il riavvio, tocca Attiva e inserisci il codice.",
+      "devModeRestarting": "L'iPhone si sta riavviando. Quando torna, sbloccalo e tocca Attiva.",
+      "devModeBack": "L'iPhone è tornato. Sbloccalo, tocca Attiva e inserisci il codice.",
+      "devModeCheck": "L'ho attivata, controlla di nuovo",
+      "devModeStillOff": "L'iPhone dice ancora che la modalità sviluppatore è disattivata.",
+      "devModeMissing": {
+        "title": "Non vedi l'opzione?",
+        "hidden": "L'iPhone nasconde l'opzione finché Xcode non chiede di mostrarla.",
+        "hiddenOpen": "L'iPhone nasconde l'opzione finché Xcode non chiede di mostrarla. Apri Xcode su {{mac}} con l'iPhone collegato.",
+        "openXcode": "Apri Xcode",
+        "opened": "Xcode si è aperto su {{mac}}. Guarda di nuovo nelle Impostazioni dell'iPhone, poi chiudi Xcode.",
+        "unlock": "L'hai attivata e l'iPhone si è riavviato? Sbloccalo. L'avviso con Attiva compare solo dopo.",
+        "check": "Controlla di nuovo",
+        "outdated": "L'app agentes.chat su {{mac}} non è aggiornata. Aggiorna l'app, oppure esegui questo nel Terminale se l'hai installata da lì."
+      },
       "uiAutomationText": "In Impostazioni › Sviluppatore, dopo il riavvio.",
       "helperText": "Creata e rinnovata dal Mac ogni 7 giorni. Basta un Apple Account gratuito in Xcode.",
       "helperUntrustedText": "Tocca il nome dello sviluppatore, poi Autorizza.",
@@ -15082,7 +15096,6 @@
         "account": "Accesso già fatto? In Xcode crea un'app iOS qualsiasi, scegli il tuo team in Signing & Capabilities ed eseguila una volta sull'iPhone.",
         "connected": "{{mac}} non vede ancora un iPhone. Usa un cavo che trasmette dati, non solo ricarica, sblocca l'iPhone e tocca Autorizza se lo chiede.",
         "trust": "Nessuna richiesta Autorizza? Scollega l'iPhone, sbloccalo e ricollegalo, poi tocca Autorizza e inserisci il suo codice.",
-        "developerMode": "La Modalità sviluppatore si attiva solo dopo il riavvio dell'iPhone. Tocca Riavvia, poi Attiva quando si riaccende. Nessun interruttore? Scollega l'iPhone e ricollegalo.",
         "uiAutomation": "L'interruttore compare quando la Modalità sviluppatore è attiva e l'iPhone si è riavviato. Tienilo sbloccato mentre cerchi.",
         "helper": "{{mac}} crea l'app di test e la avvia sull'iPhone, il che richiede qualche minuto la prima volta. Tieni l'iPhone sbloccato e collegato."
       },

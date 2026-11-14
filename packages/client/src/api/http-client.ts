@@ -1290,6 +1290,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<XcodeFixView>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-fix`),
       cancelXcodeFix: (orgId, machineId) =>
         request<XcodeFixView>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-fix`, { method: "DELETE" }),
+      openXcode: (orgId, machineId) =>
+        request<{ opened: boolean }>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-open`, { json: {} }),
     },
     machines: {
       list: async (orgId) => (await request<{ machines: Machine[] }>(`${org(orgId)}/machines`)).machines,

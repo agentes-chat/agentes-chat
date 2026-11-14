@@ -1136,7 +1136,10 @@ export interface ApiClient {
     ): Promise<WifiPairing>;
     wifiPairing(orgId: string, machineId: string, pairingId: string): Promise<WifiPairing>;
     cancelWifiPairing(orgId: string, machineId: string, pairingId: string): Promise<void>;
-    /** Asks the computer to also look for a plugged phone it has no driver for, which adb never lists (Windows). */
+    /**
+     * Asks the computer to also look for a plugged phone it has no driver for, which adb never lists (Windows), or a
+     * Mac to read its iPhones again now (answered once the new list is in).
+     */
     lookForPhones(orgId: string, machineId: string): Promise<void>;
     /** The iPhones on this Mac's Wi-Fi that trust it and aren't used yet (its owner or an admin). */
     wifiIphones(orgId: string, machineId: string): Promise<WifiIphones>;
@@ -1146,6 +1149,8 @@ export interface ApiClient {
     startXcodeFix(orgId: string, machineId: string, kind: "select" | "update"): Promise<XcodeFixView>;
     xcodeFix(orgId: string, machineId: string): Promise<XcodeFixView>;
     cancelXcodeFix(orgId: string, machineId: string): Promise<XcodeFixView>;
+    /** Opens Xcode on the Mac (its owner or an admin): it shows Developer Mode on a plugged iPhone. */
+    openXcode(orgId: string, machineId: string): Promise<{ opened: boolean }>;
   };
   /** Connected computers (ADR 0025): machines running `agentes-runner`. */
   machines: {

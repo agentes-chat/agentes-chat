@@ -14105,6 +14105,20 @@
       "trustText": "在 iPhone 上点按“信任”，然后输入密码。",
       "devModeDone": "已打开",
       "devModeText": "打开它并点按“重新启动”。重启后，点按“打开”并输入你的密码。",
+      "devModeRestarting": "iPhone 正在重新启动。回来后，解锁并点按“打开”。",
+      "devModeBack": "iPhone 已回来。解锁，点按“打开”并输入你的密码。",
+      "devModeCheck": "已经打开，再检查一次",
+      "devModeStillOff": "iPhone 仍然显示开发者模式是关闭的。",
+      "devModeMissing": {
+        "title": "看不到这个选项？",
+        "hidden": "在 Xcode 请求显示之前，iPhone 会隐藏这个选项。",
+        "hiddenOpen": "在 Xcode 请求显示之前，iPhone 会隐藏这个选项。请在连接着 iPhone 时，在 {{mac}} 上打开 Xcode。",
+        "openXcode": "打开 Xcode",
+        "opened": "Xcode 已在 {{mac}} 上打开。请再看看 iPhone 的设置，之后关闭 Xcode。",
+        "unlock": "已经打开并且 iPhone 重新启动了？请解锁。带有“打开”的提示只在那之后出现。",
+        "check": "再检查一次",
+        "outdated": "{{mac}} 上的 agentes.chat 应用已过时。请更新应用，如果你是从终端安装的，就在那里运行下面的命令。"
+      },
       "uiAutomationText": "重启后，在 设置 › 开发者 中。",
       "helperText": "由 Mac 构建，并每 7 天续期一次。在 Xcode 中登录免费的 Apple 账户即可。",
       "helperUntrustedText": "点按开发者的名称，然后点按“信任”。",
@@ -14121,7 +14135,6 @@
         "account": "已经登录了？在 Xcode 中新建任意 iOS App，在 Signing & Capabilities 下选择你的团队，然后在 iPhone 上运行一次。",
         "connected": "{{mac}} 还没有看到 iPhone。请使用能传输数据的线，而不是只能充电的线，解锁 iPhone，如有提示就点按“信任”。",
         "trust": "没有出现“信任”？拔下 iPhone，解锁后重新插上，然后点按“信任”并输入密码。",
-        "developerMode": "开发者模式要在 iPhone 重启后才会打开。点按“重新启动”，开机后点按“打开”。没有这个开关？拔下 iPhone 再重新插上。",
         "uiAutomation": "开发者模式打开且 iPhone 重启后，这个开关才会出现。查找时请保持解锁。",
         "helper": "{{mac}} 会构建测试助手并在 iPhone 上启动它，第一次需要几分钟。请保持 iPhone 解锁并连接。"
       },

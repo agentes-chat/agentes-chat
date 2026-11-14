@@ -6777,6 +6777,25 @@ export function useWifiIphones(orgId: string, machineId: string | null, on: bool
 }
 
 /**
+ * The iPhone guide's Developer Mode step asks its Mac: `look` reads the iPhone again now (the devices refetch once it
+ * answered), `openXcode` opens Xcode there, which shows the switch on a plugged iPhone that hides it.
+ */
+export function useIphoneDevMode(orgId: string, machineId: string | null) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const look = useMutation({
+    mutationFn: () => api.devices.lookForPhones(orgId, machineId ?? ""),
+    meta: { silent: true },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.devices(orgId) }),
+  });
+  const openXcode = useMutation({
+    mutationFn: () => api.devices.openXcode(orgId, machineId ?? ""),
+    meta: { silent: true },
+  });
+  return { look, openXcode };
+}
+
+/**
  * A Mac fixing its own Xcode for the iPhone guide (`on`: the guide shows the Xcode step to who may manage the Mac):
  * where the last fix stands, asked every 1.5 s while macOS's password window is open or the commands run. Once done,
  * the devices refetch: the Mac has already looked at Xcode again.
