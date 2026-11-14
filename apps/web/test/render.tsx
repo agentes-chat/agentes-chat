@@ -9,7 +9,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, fireEvent, render, within } from "@testing-library/react";
+import { act, fireEvent, render, waitFor, within } from "@testing-library/react";
 import { type ReactNode, StrictMode } from "react";
 import { AppProviders, type AppServices } from "@/app/providers";
 import { createQueryClient } from "@/app/query-client";
@@ -50,6 +50,12 @@ export function makeServices(
 export async function settle(times = 3) {
   for (let i = 0; i < times; i++) await act(() => new Promise((r) => setTimeout(r, 0)));
 }
+
+/**
+ * Waits for what a secret's send led to. The value is sealed first (WebCrypto, off the JS thread), which on a loaded
+ * machine outlasts any number of `settle` ticks.
+ */
+export const afterSealing = (check: () => void) => waitFor(check, { timeout: 10_000 });
 
 export const screen = () => within(document.body);
 

@@ -7642,6 +7642,45 @@
   "connectAi.title.api_key": {
     "value": "Add an API key"
   },
+  "connectAi.cli.missing": {
+    "value": "{{program}} isn't on {{computer}} yet."
+  },
+  "connectAi.cli.claudeApp": {
+    "value": "The Claude app isn't enough: agents use Claude Code, which runs on the computer."
+  },
+  "connectAi.cli.install": {
+    "value": "Install {{program}} for me"
+  },
+  "connectAi.cli.check": {
+    "value": "I installed it, check again"
+  },
+  "connectAi.cli.checked": {
+    "value": "Checked just now: {{program}} still isn't on {{computer}}."
+  },
+  "connectAi.cli.installing": {
+    "value": "Installing {{program}} on {{computer}}. It takes about a minute."
+  },
+  "connectAi.cli.failed": {
+    "value": "Couldn't install on {{computer}}: {{message}}"
+  },
+  "connectAi.cli.stillMissing": {
+    "value": "The installer finished, but {{computer}} still doesn't find {{program}}."
+  },
+  "connectAi.cli.gitMissing": {
+    "value": "{{program}} needs Git for Windows on {{computer}}."
+  },
+  "connectAi.cli.getGit": {
+    "value": "Download Git for Windows"
+  },
+  "connectAi.cli.cantStart": {
+    "value": "{{program}} is on {{computer}}, but it won't start: {{message}}"
+  },
+  "connectAi.cli.outdated": {
+    "value": "Update the agentes.chat app on {{computer}} to install from here."
+  },
+  "connectAi.cli.asked": {
+    "value": "Request sent. {{name}} gets a button to install it."
+  },
   "connectAi.titleFor": {
     "value": "Connect an AI for {{name}}"
   },
@@ -13392,6 +13431,9 @@
   "agentPage.work.brain.contextText.auto": {
     "value": "What the model takes."
   },
+  "agentPage.work.brain.contextText.autoSummarizes": {
+    "value": "On Claude Code and Codex, summarizes the conversation at {{size}}."
+  },
   "agentPage.work.brain.advanced.title": {
     "value": "Advanced settings"
   },
@@ -16555,6 +16597,12 @@
   },
   "newAgent.budgetInvalid": {
     "value": "Use a value greater than zero."
+  },
+  "newAgent.budgetCapped": {
+    "value": "Uses the workspace default. Only an admin can raise it."
+  },
+  "newAgent.budgetCappedAmount": {
+    "value": "Uses the workspace default ({{amount}}). Only an admin can raise it."
   },
   "newAgent.warnsOwner": {
     "value": "We alert {{name}} at 80%."
@@ -27886,6 +27934,9 @@
   "brain.reasons.not_installed": {
     "value": "{{program}} isn't installed on {{computer}}."
   },
+  "brain.reasons.cant_start": {
+    "value": "{{program}} is on {{computer}}, but it won't start."
+  },
   "brain.reasons.not_reported": {
     "value": "{{computer}} is still checking which programs it has. This changes by itself when it's done."
   },
@@ -35913,9 +35964,6 @@
   "devices.iphone.devModeMissing.unlock": {
     "value": "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that."
   },
-  "devices.iphone.devModeMissing.check": {
-    "value": "Check again"
-  },
   "devices.iphone.devModeMissing.outdated": {
     "value": "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there."
   },
@@ -36128,6 +36176,9 @@
   },
   "devices.notice.toolRequest": {
     "value": "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>"
+  },
+  "devices.notice.cliRequest": {
+    "value": "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>"
   },
   "devices.notice.once": {
     "value": "Allow once"
@@ -41963,6 +42014,9 @@
   },
   "browser.inCard.stuck": {
     "value": "Couldn't open {{name}}'s browser."
+  },
+  "browser.inCard.noAnswer": {
+    "value": "{{name}}'s browser didn't answer."
   },
   "browser.inCard.stuckHelp": {
     "value": "Try again restarts the browser. Logins stay saved."

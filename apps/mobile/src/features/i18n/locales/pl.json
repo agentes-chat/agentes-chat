@@ -1937,6 +1937,8 @@
         "offlineCloudM": "Komputer agenta {{name}} teraz nie odpowiada.",
         "stuckF": "Nie udało się otworzyć przeglądarki agenta {{name}}.",
         "stuckM": "Nie udało się otworzyć przeglądarki agenta {{name}}.",
+        "noAnswerF": "Przeglądarka {{name}} nie odpowiedziała.",
+        "noAnswerM": "Przeglądarka {{name}} nie odpowiedziała.",
         "tooManyF": "Za dużo przeglądarek otwartych naraz. Ta pojawi się, gdy inna się zamknie.",
         "tooManyM": "Za dużo przeglądarek otwartych naraz. Ta pojawi się, gdy inna się zamknie."
       }
@@ -2192,7 +2194,6 @@
         "openXcode": "Otwórz Xcode",
         "opened": "Xcode otworzył się na {{host}}. Zajrzyj jeszcze raz do Ustawień, a potem zamknij tam Xcode.",
         "unlock": "Włączone i uruchomił się ponownie? Alert z Włącz pojawia się, gdy ten iPhone jest odblokowany.",
-        "checkAgain": "Sprawdź ponownie",
         "outdated": "Aplikacja agentes.chat na {{host}} jest nieaktualna. Zaktualizuj ją na tym Macu."
       }
     },
@@ -2206,6 +2207,7 @@
       "waiting": "{{names}} czeka na urządzenie {{device}}",
       "waitingFor": "{{names}} czeka na urządzenie {{device}} dla {{person}}",
       "tool_request": "{{names}} prosi Cię o włączenie: {{tool}} na {{device}}",
+      "cli_request": "{{names}} prosi o zainstalowanie {{tool}} na Twoim {{device}}",
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",

@@ -85,6 +85,8 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "Ketuk untuk mengizinkan sekali, selalu, atau menolak.",
   deviceToolTitle: (a, d) => `${a} meminta kamu menyalakan alat di ${d} kamu`,
   deviceToolBody: "Ketuk untuk menyalakannya dengan sekali klik.",
+  deviceCliTitle: (a, d) => `${a} meminta kamu memasang program di ${d} kamu`,
+  deviceCliBody: "Ketuk untuk memasangnya dengan sekali klik.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} memintamu menambahkan agen ke #${l}`

@@ -2974,6 +2974,21 @@
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
     },
+    "cli": {
+      "missing": "{{program}} はまだ {{computer}} にありません。",
+      "claudeApp": "Claude アプリだけでは足りません。エージェントはコンピューターで動く Claude Code を使います。",
+      "install": "{{program}} をインストールする",
+      "check": "インストールした。もう一度確認",
+      "checked": "確認しました。{{program}} はまだ {{computer}} にありません。",
+      "installing": "{{computer}} に {{program}} をインストールしています。1 分ほどかかります。",
+      "failed": "{{computer}} にインストールできませんでした: {{message}}",
+      "stillMissing": "インストーラーは終わりましたが、{{computer}} はまだ {{program}} を見つけられません。",
+      "gitMissing": "{{program}} には {{computer}} の Git for Windows が必要です。",
+      "getGit": "Git for Windows をダウンロード",
+      "cantStart": "{{program}} は {{computer}} にありますが、起動しません: {{message}}",
+      "outdated": "ここからインストールするには、{{computer}} の agentes.chat アプリを更新してください。",
+      "asked": "依頼を送りました。{{name}} さんにインストールのボタンが届きます。"
+    },
     "titleFor": "{{name}}のAIを接続",
     "have": {
       "title": "接続済み",
@@ -5257,7 +5272,8 @@
           "200000": "安くて速いです。長い会話では早めに要約します。",
           "400000": "多くのことを覚えていて、1Mより1回の返信のコストが低くなります。",
           "1000000": "最も多く覚えています。返信のたびにすべてを読み直すため、時間とコストがかかります。",
-          "auto": "モデルの対応する範囲で使います。"
+          "auto": "モデルの対応する範囲で使います。",
+          "autoSummarizes": "Claude Code と Codex では、{{size}} で会話を要約します。"
         },
         "advanced": {
           "title": "詳細設定",
@@ -6526,6 +6542,8 @@
     "budget": "月間予算（US$）",
     "budgetHelp": "上限に達すると、{{name}}は停止してそれを伝えます。",
     "budgetInvalid": "0より大きい値を使ってください。",
+    "budgetCapped": "ワークスペースのデフォルトを使います。上げられるのは管理者だけです。",
+    "budgetCappedAmount": "ワークスペースのデフォルト（{{amount}}）を使います。上げられるのは管理者だけです。",
     "warnsOwner": "80%に達したら{{name}}に通知します。",
     "warnsAdmins": "80%に達したら管理者に通知します。",
     "upTo": "月{{amount}}まで",
@@ -10969,6 +10987,7 @@
       "runner_old": "使うには、コンピューターのagentes.chatプログラムをアップデートしてください。",
       "tool_offOne": "{{computer}} では {{program}} がオフです。",
       "not_installed": "{{computer}}に{{program}}がインストールされていません。",
+      "cant_start": "{{program}} は {{computer}} にありますが、起動しません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "outdated": "{{computer}}のバージョンが古くなっています。使うにはCodexをアップデートしてください。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
@@ -14221,7 +14240,6 @@
         "openXcode": "Xcodeを開く",
         "opened": "{{mac}}でXcodeが開きました。iPhoneの設定をもう一度確認し、あとでXcodeを閉じてください。",
         "unlock": "オンにしてiPhoneが再起動しましたか？ロックを解除してください。「オンにする」の通知はそのあとに表示されます。",
-        "check": "もう一度確認",
         "outdated": "{{mac}}のagentes.chatアプリが古くなっています。アプリをアップデートするか、ターミナルでインストールした場合はそこでこれを実行してください。"
       },
       "uiAutomationText": "再起動後に「設定 › デベロッパ」で行います。",
@@ -14308,6 +14326,7 @@
       "access": "<b>{{who}}</b>が<b>{{deviceName}}</b>の使用を求めています",
       "waiting": "<b>{{who}}</b>が<b>{{deviceName}}</b>を待っています",
       "toolRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> で{{tool}}をオンにするよう頼んでいます",
+      "cliRequest": "<b>{{who}}</b> が <b>{{deviceName}}</b> に {{tool}} をインストールするよう求めています",
       "once": "今回のみ許可",
       "always": "常に許可",
       "no": "許可しない",
@@ -16696,6 +16715,7 @@
       "openingLong": "{{name}}のブラウザを開いています…",
       "openingHelp": "このコンピューターで初めて開くときは、1分ほどかかることがあります。",
       "stuck": "{{name}}のブラウザを開けませんでした。",
+      "noAnswer": "{{name}}のブラウザが応答しませんでした。",
       "stuckHelp": "「もう一度試す」でブラウザを再起動します。ログイン情報は保存されたままです。",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}}がブラウザを開いています",

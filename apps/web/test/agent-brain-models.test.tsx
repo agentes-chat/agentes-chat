@@ -559,6 +559,9 @@ describe("Quem pensa: Automático", () => {
     const state = await onClaude({ model: "auto", effectiveModel: "auto", effort: "auto" });
     const d = await brainDialog();
     await toScreen(d, "Mais opções");
+    // Claude Code on Automático summarises at 200K.
+    await toScreen(d, "Janela de contexto");
+    expect(d.textContent).toContain("No Claude Code e no Codex, resume a conversa em 200K.");
     await toScreen(d, "Esforço");
     expect(within(d).queryByRole("slider", { name: "Esforço" })).toBeNull();
     await toScreen(d, "Voltar");
@@ -629,6 +632,10 @@ describe("Quem pensa: Automático", () => {
     expect(lineOf(d, "Mais opções")).toBe("Janela de contexto");
     await toScreen(d, "Mais opções");
     expect(lineOf(d, "Esforço")).toBe("Automático");
+    // A key has its own cap: the line under Automático stays the model's window.
+    await toScreen(d, "Janela de contexto");
+    expect(d.textContent).toContain("O que o modelo aguenta.");
+    expect(d.textContent).not.toContain("resume a conversa em 200K");
     await toScreen(d, "Esforço");
     expect(within(d).queryByRole("slider", { name: "Esforço" })).toBeNull();
   });

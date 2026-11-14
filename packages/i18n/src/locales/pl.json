@@ -3323,6 +3323,21 @@
       "zen": "Połącz OpenCode",
       "api_key": "Dodaj klucz API"
     },
+    "cli": {
+      "missing": "{{program}} nie ma jeszcze na {{computer}}.",
+      "claudeApp": "Sama aplikacja Claude nie wystarczy: agenci używają Claude Code, który działa na komputerze.",
+      "install": "Zainstaluj {{program}} za mnie",
+      "check": "Zainstalowałem, sprawdź ponownie",
+      "checked": "Sprawdzone przed chwilą: {{program}} nadal nie ma na {{computer}}.",
+      "installing": "Instalowanie {{program}} na {{computer}}. Potrwa to około minuty.",
+      "failed": "Nie udało się zainstalować na {{computer}}: {{message}}",
+      "stillMissing": "Instalator skończył, ale {{computer}} nadal nie znajduje {{program}}.",
+      "gitMissing": "{{program}} potrzebuje Git for Windows na {{computer}}.",
+      "getGit": "Pobierz Git for Windows",
+      "cantStart": "{{program}} jest na {{computer}}, ale się nie uruchamia: {{message}}",
+      "outdated": "Zaktualizuj aplikację agentes.chat na {{computer}}, żeby instalować stąd.",
+      "asked": "Prośba wysłana. {{name}} dostanie przycisk do instalacji."
+    },
     "titleFor": "Połącz AI dla: {{name}}",
     "have": {
       "title": "Już połączone",
@@ -5835,7 +5850,8 @@
           "200000": "Taniej i szybciej. W długich rozmowach wcześniej robi podsumowania.",
           "400000": "Pamięta dużo, a każda odpowiedź kosztuje mniej niż przy 1M.",
           "1000000": "Pamięta najwięcej. Przy każdej odpowiedzi czyta wszystko od nowa: wolniej i drożej.",
-          "auto": "Tyle, ile obsługuje model."
+          "auto": "Tyle, ile obsługuje model.",
+          "autoSummarizes": "W Claude Code i Codex streszcza rozmowę przy {{size}}."
         },
         "advanced": {
           "title": "Ustawienia zaawansowane",
@@ -7239,6 +7255,8 @@
     "budget": "Miesięczny budżet (USD)",
     "budgetHelp": "Po osiągnięciu limitu {{name}} zatrzymuje się i o tym informuje.",
     "budgetInvalid": "Użyj wartości większej od zera.",
+    "budgetCapped": "Używa domyślnego budżetu przestrzeni roboczej. Tylko administrator może go podnieść.",
+    "budgetCappedAmount": "Używa domyślnego budżetu przestrzeni roboczej ({{amount}}). Tylko administrator może go podnieść.",
     "warnsOwner": "Przy 80% powiadomimy: {{name}}.",
     "warnsAdmins": "Przy 80% powiadomimy administratorów.",
     "upTo": "do {{amount}}/mies.",
@@ -12284,6 +12302,7 @@
       "runner_old": "Zaktualizuj program agentes.chat na komputerze, żeby z tego korzystać.",
       "tool_offOne": "{{program}} jest wyłączony na {{computer}}.",
       "not_installed": "{{program}} nie jest zainstalowany na komputerze {{computer}}.",
+      "cant_start": "{{program}} jest na {{computer}}, ale się nie uruchamia.",
       "not_reported": "{{computer}} wciąż sprawdza, jakie ma programy. To zmieni się samo, gdy skończy.",
       "outdated": "Wersja na komputerze {{computer}} jest stara. Zaktualizuj Codex, żeby z niego korzystać.",
       "system": "{{program}} nie działa jeszcze w systemie komputera {{computer}}.",
@@ -15754,7 +15773,6 @@
         "openXcode": "Otwórz Xcode",
         "opened": "Xcode otworzył się na {{mac}}. Zajrzyj jeszcze raz do Ustawień iPhone'a, a potem zamknij Xcode.",
         "unlock": "Włączone, a iPhone uruchomił się ponownie? Odblokuj go. Alert z Włącz pojawia się dopiero potem.",
-        "check": "Sprawdź ponownie",
         "outdated": "Aplikacja agentes.chat na {{mac}} jest nieaktualna. Zaktualizuj aplikację albo uruchom to w Terminalu, jeśli była instalowana stamtąd."
       },
       "uiAutomationText": "W Ustawienia › Deweloper, po ponownym uruchomieniu.",
@@ -15841,6 +15859,7 @@
       "access": "<b>{{who}}</b> prosi o dostęp do <b>{{deviceName}}</b>",
       "waiting": "<b>{{who}}</b> czeka na <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> prosi Cię o włączenie: {{tool}} na <b>{{deviceName}}</b>",
+      "cliRequest": "<b>{{who}}</b> prosi o zainstalowanie {{tool}} na Twoim <b>{{deviceName}}</b>",
       "once": "Zezwól raz",
       "always": "Zawsze",
       "no": "Nie",
@@ -18384,6 +18403,7 @@
       "openingHelp": "Za pierwszym razem na tym komputerze może to potrwać minutę.",
       "stuck": "Nie udało się otworzyć przeglądarki agenta {{name}}.",
       "stuck_female": "Nie udało się otworzyć przeglądarki agentki {{name}}.",
+      "noAnswer": "Przeglądarka {{name}} nie odpowiedziała.",
       "stuckHelp": "Spróbuj ponownie uruchamia przeglądarkę od nowa. Logowania zostają zapisane.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} otwiera przeglądarkę",

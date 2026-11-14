@@ -12,6 +12,9 @@
 import type {
   AccountKind,
   AccountLoginState,
+  CliInstall,
+  CliName,
+  InstallableCli,
   RunnerAccess,
   RunnerAccountInfo,
   RunnerExecutorInfo,
@@ -97,7 +100,7 @@ export interface ControlStatus {
   protocol: number;
   paused: RunnerPause;
   /** The coding CLIs found here, as `hello.executors` lists them. */
-  executors: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity", RunnerExecutorInfo>>;
+  executors: Partial<Record<CliName, RunnerExecutorInfo>> & { broken?: Partial<Record<CliName, string>> };
   /** Absolute path of the workspace (the agents' folders live inside it). */
   workspace?: string;
   /** Agents of the organization that use this computer. */
@@ -281,6 +284,11 @@ export type ControlRequest =
   | { type: "iphone.open"; app: "xcode" | "appStore" }
   /** Fixes the Mac's Xcode (macOS asks for the Mac's password for `select`), or stops the fix; answers the setup. */
   | { type: "iphone.fixXcode"; action: "start" | "cancel"; kind: XcodeFixKind }
+  /**
+   * `CLI_INSTALL_PROTOCOL` (the status's `protocol`): installs a coding CLI here through its vendor's installer, or says
+   * where the install stands, or stops it. The machine op `cli.install`, for the app on this computer.
+   */
+  | { type: "cli.install"; action: "start" | "status" | "cancel"; tool: InstallableCli }
   /** Reads the plugged iPhone again now; answers once the status carries what it found. */
   | { type: "iphone.look" }
   /** Finish what's running briefly, then exit 0 (the app quits). */
@@ -324,6 +332,7 @@ export interface ControlReplies {
   "iphone.download": ControlIphoneSetup;
   "iphone.open": { opened: boolean };
   "iphone.fixXcode": ControlIphoneSetup;
+  "cli.install": { install: CliInstall | null };
   "iphone.look": { looking: boolean };
   shutdown: { stopping: true };
 }

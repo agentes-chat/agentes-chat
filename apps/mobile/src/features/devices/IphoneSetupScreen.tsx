@@ -235,19 +235,16 @@ function DevModeHelp({ host, hostName, open }: { host: ComputerDevice; hostName:
   const outdated = host.opensXcode === false;
   const mayOpen = host.mayManage && !outdated && openXcode.data?.opened !== false;
   const fail = (err: unknown) => toast({ title: errorText(t, err), icon: "x" });
-  const check = (label: string) => (
-    <Button
-      size="sm"
-      variant="secondary"
-      label={label}
-      loading={look.isPending}
-      disabled={look.isPending}
-      onPress={() => look.mutate(undefined, { onError: fail })}
-    />
-  );
   return (
     <>
-      {check(t("mobile.devices.iphone.devMode.check"))}
+      <Button
+        size="sm"
+        variant="secondary"
+        label={t("mobile.devices.iphone.devMode.check")}
+        loading={look.isPending}
+        disabled={look.isPending}
+        onPress={() => look.mutate(undefined, { onError: fail })}
+      />
       {look.isSuccess ? (
         <Note icon="info">{t("mobile.devices.iphone.devMode.stillOff", { host: hostName })}</Note>
       ) : null}
@@ -276,9 +273,7 @@ function DevModeHelp({ host, hostName, open }: { host: ComputerDevice; hostName:
               />
             ) : null}
           </Cause>
-          <Cause text={t("mobile.devices.iphone.devMode.unlock")}>
-            {check(t("mobile.devices.iphone.devMode.checkAgain"))}
-          </Cause>
+          <Cause text={t("mobile.devices.iphone.devMode.unlock")} />
           {outdated ? <Cause text={t("mobile.devices.iphone.devMode.outdated", { host: hostName })} /> : null}
         </View>
       ) : (

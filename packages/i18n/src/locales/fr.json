@@ -3208,6 +3208,21 @@
       "zen": "Connecter OpenCode",
       "api_key": "Ajouter une clé API"
     },
+    "cli": {
+      "missing": "{{program}} n'est pas encore sur {{computer}}.",
+      "claudeApp": "L'app Claude ne suffit pas : les agents utilisent Claude Code, qui tourne sur l'ordinateur.",
+      "install": "Installer {{program}} pour moi",
+      "check": "Je l'ai installé, vérifier à nouveau",
+      "checked": "Vérifié à l'instant : {{program}} n'est toujours pas sur {{computer}}.",
+      "installing": "Installation de {{program}} sur {{computer}}. Cela prend environ une minute.",
+      "failed": "Impossible d'installer sur {{computer}} : {{message}}",
+      "stillMissing": "L'installateur a terminé, mais {{computer}} ne trouve toujours pas {{program}}.",
+      "gitMissing": "{{program}} a besoin de Git for Windows sur {{computer}}.",
+      "getGit": "Télécharger Git for Windows",
+      "cantStart": "{{program}} est sur {{computer}}, mais ne démarre pas : {{message}}",
+      "outdated": "Mettez à jour l'app agentes.chat sur {{computer}} pour installer d'ici.",
+      "asked": "Demande envoyée. {{name}} reçoit un bouton pour l'installer."
+    },
     "titleFor": "Connecter une IA pour {{name}}",
     "titleFor_female": "Connecter une IA pour {{name}}",
     "have": {
@@ -5640,7 +5655,8 @@
           "200000": "Moins cher et plus rapide. Résume tôt dans les longues conversations.",
           "400000": "Retient beaucoup, et chaque réponse coûte moins qu'avec 1M.",
           "1000000": "Retient le plus. Chaque réponse relit tout : plus lent et plus cher.",
-          "auto": "Ce que le modèle accepte."
+          "auto": "Ce que le modèle accepte.",
+          "autoSummarizes": "Sur Claude Code et Codex, résume la conversation à {{size}}."
         },
         "advanced": {
           "title": "Paramètres avancés",
@@ -7014,6 +7030,8 @@
     "budget": "Budget mensuel (US$)",
     "budgetHelp": "À la limite, {{name}} s'arrête et le signale.",
     "budgetInvalid": "Utilisez une valeur supérieure à zéro.",
+    "budgetCapped": "Utilise la valeur par défaut de l'espace de travail. Seul un admin peut l'augmenter.",
+    "budgetCappedAmount": "Utilise la valeur par défaut de l'espace de travail ({{amount}}). Seul un admin peut l'augmenter.",
     "warnsOwner": "Nous prévenons {{name}} à 80 %.",
     "warnsAdmins": "Nous prévenons les admins à 80 %.",
     "upTo": "jusqu'à {{amount}}/mois",
@@ -11855,6 +11873,7 @@
       "runner_old": "Mettez à jour le programme agentes.chat sur l'ordinateur pour l'utiliser.",
       "tool_offOne": "{{program}} est désactivé sur {{computer}}.",
       "not_installed": "{{program}} n'est pas installé sur {{computer}}.",
+      "cant_start": "{{program}} est sur {{computer}}, mais ne démarre pas.",
       "not_reported": "{{computer}} vérifie encore quels programmes il a. Ceci change tout seul une fois terminé.",
       "outdated": "La version sur {{computer}} est ancienne. Mettez à jour Codex pour l'utiliser.",
       "system": "{{program}} ne fonctionne pas encore sur le système de {{computer}}.",
@@ -15250,7 +15269,6 @@
         "openXcode": "Ouvrir Xcode",
         "opened": "Xcode s'est ouvert sur {{mac}}. Regardez à nouveau dans les Réglages de l'iPhone, puis fermez Xcode.",
         "unlock": "Vous l'avez activé et l'iPhone a redémarré ? Déverrouillez-le. L'alerte avec Activer n'apparaît qu'après.",
-        "check": "Vérifier à nouveau",
         "outdated": "L'app agentes.chat sur {{mac}} n'est pas à jour. Mettez l'app à jour, ou lancez ceci dans le Terminal si vous l'avez installée par là."
       },
       "uiAutomationText": "Dans Réglages › Développeur, après le redémarrage.",
@@ -15337,6 +15355,7 @@
       "access": "<b>{{who}}</b> demande à utiliser <b>{{deviceName}}</b>",
       "waiting": "<b>{{who}}</b> attend <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> vous demande d'activer {{tool}} sur votre <b>{{deviceName}}</b>",
+      "cliRequest": "<b>{{who}}</b> vous demande d'installer {{tool}} sur votre <b>{{deviceName}}</b>",
       "once": "Autoriser une fois",
       "always": "Toujours",
       "no": "Non",
@@ -17845,6 +17864,8 @@
       "openingHelp": "La première fois sur cet ordinateur, cela peut prendre une minute.",
       "stuck": "Impossible d'ouvrir le navigateur de {{name}}.",
       "stuck_female": "Impossible d'ouvrir le navigateur de {{name}}.",
+      "noAnswer": "Le navigateur de {{name}} n'a pas répondu.",
+      "noAnswer_female": "Le navigateur de {{name}} n'a pas répondu.",
       "stuckHelp": "Réessayer redémarre le navigateur. Les connexions restent enregistrées.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} ouvre le navigateur",

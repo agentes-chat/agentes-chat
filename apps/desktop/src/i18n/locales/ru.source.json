@@ -1337,6 +1337,33 @@
   "tools.stillMissing": {
     "value": "{{tool}} still isn't found. Run the command above, then check again."
   },
+  "tools.install": {
+    "value": "Install for me"
+  },
+  "tools.installing": {
+    "value": "Installing {{tool}}. It takes about a minute."
+  },
+  "tools.installFailed": {
+    "value": "Couldn't install: {{message}}"
+  },
+  "tools.gitMissing": {
+    "value": "{{tool}} needs Git for Windows on this computer."
+  },
+  "tools.getGit": {
+    "value": "Download Git for Windows"
+  },
+  "tools.cantStart": {
+    "value": "It's here, but it won't start: {{message}}"
+  },
+  "tools.cantStartChip": {
+    "value": "Won't start"
+  },
+  "tools.installedNotFound": {
+    "value": "The installer finished, but {{tool}} still isn't found."
+  },
+  "tools.notFoundYet": {
+    "value": "{{tool}} still isn't found."
+  },
   "tools.browserName": {
     "value": "Browser"
   },

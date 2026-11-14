@@ -393,9 +393,12 @@ export class ClaudeStreamParser {
   failure: ProviderFailure = {};
   /** Uncached input of each API call of the turn, by message id (Claude Code repeats a message per content block). */
   private uncached = new Map<string, number>();
+  /** Each API call's whole input (cache included), by message id: the largest is the turn's biggest step. */
+  private context = new Map<string, number>();
 
   beginTurn() {
     this.uncached.clear();
+    this.context.clear();
     this.tools.clear();
     this.sawDelta = false;
     this.streamedMessage = null;
@@ -479,8 +482,14 @@ export class ClaudeStreamParser {
           this.failure = {};
         }
         const messageId = isObj(ev.message) ? str(ev.message.id) : "";
-        if (messageId && isObj(ev.message) && isObj(ev.message.usage))
-          this.uncached.set(messageId, num(ev.message.usage.input_tokens));
+        if (messageId && isObj(ev.message) && isObj(ev.message.usage)) {
+          const u = ev.message.usage;
+          this.uncached.set(messageId, num(u.input_tokens));
+          this.context.set(
+            messageId,
+            num(u.input_tokens) + num(u.cache_read_input_tokens) + num(u.cache_creation_input_tokens),
+          );
+        }
         const streamed = this.sawDelta || (messageId !== "" && messageId === this.streamedMessage);
         const events: WireBrainEvent[] = [];
         // A turn's first reply names the messages that started it (a steered one the CLI read after a result).
@@ -566,10 +575,11 @@ export class ClaudeStreamParser {
     const input = num(usage.input_tokens) + cacheRead + cacheWrite;
     const output = num(usage.output_tokens);
     const models = isObj(ev.modelUsage) ? Object.keys(ev.modelUsage) : [];
-    // `usage` adds up every API call of the turn: how many there were, and the largest uncached one, tell more calls
-    // from bigger ones.
+    // `usage` adds up every API call of the turn: how many there were, and the largest ones (uncached, and whole),
+    // tell more calls from bigger ones.
     const calls = num(ev.num_turns);
     const maxUncached = Math.max(0, ...this.uncached.values());
+    const maxContext = Math.max(0, ...this.context.values());
     if (input > 0 || output > 0) {
       events.push({
         type: "usage",
@@ -581,6 +591,7 @@ export class ClaudeStreamParser {
         ...(cacheWrite > 0 ? { cacheWrite } : {}),
         ...(calls > 0 ? { calls } : {}),
         ...(maxUncached > 0 ? { maxUncached } : {}),
+        ...(maxContext > 0 ? { maxContext } : {}),
       });
     }
     this.tools.clear();

@@ -2973,6 +2973,21 @@
       "zen": "连接 OpenCode",
       "api_key": "添加 API 密钥"
     },
+    "cli": {
+      "missing": "{{computer}} 上还没有 {{program}}。",
+      "claudeApp": "只有 Claude 应用还不够：智能体使用在电脑上运行的 Claude Code。",
+      "install": "帮我安装 {{program}}",
+      "check": "我已安装，再检查一次",
+      "checked": "刚刚检查过：{{computer}} 上仍然没有 {{program}}。",
+      "installing": "正在 {{computer}} 上安装 {{program}}。大约需要一分钟。",
+      "failed": "无法在 {{computer}} 上安装：{{message}}",
+      "stillMissing": "安装程序已完成，但 {{computer}} 仍找不到 {{program}}。",
+      "gitMissing": "{{program}} 需要 {{computer}} 上的 Git for Windows。",
+      "getGit": "下载 Git for Windows",
+      "cantStart": "{{program}} 在 {{computer}} 上，但无法启动：{{message}}",
+      "outdated": "更新 {{computer}} 上的 agentes.chat 应用，即可从这里安装。",
+      "asked": "请求已发送。{{name}} 会收到一个安装按钮。"
+    },
     "titleFor": "为 {{name}} 连接 AI",
     "titleFor_female": "为 {{name}} 连接 AI",
     "have": {
@@ -5280,7 +5295,8 @@
           "200000": "更便宜、更快。长对话中会较早进行总结。",
           "400000": "能记住很多内容，每次回复比 1M 更便宜。",
           "1000000": "记得最多。每次回复都会重读全部内容：更慢，也更贵。",
-          "auto": "使用模型支持的大小。"
+          "auto": "使用模型支持的大小。",
+          "autoSummarizes": "在 Claude Code 和 Codex 上，达到 {{size}} 时总结对话。"
         },
         "advanced": {
           "title": "高级设置",
@@ -6565,6 +6581,8 @@
     "budget": "每月预算（US$）",
     "budgetHelp": "达到上限时，{{name}} 会停下并告知。",
     "budgetInvalid": "请输入大于零的数值。",
+    "budgetCapped": "使用工作区默认值。只有管理员可以提高。",
+    "budgetCappedAmount": "使用工作区默认值（{{amount}}）。只有管理员可以提高。",
     "warnsOwner": "达到 80% 时我们会提醒 {{name}}。",
     "warnsAdmins": "达到 80% 时我们会提醒管理员。",
     "upTo": "每月最多 {{amount}}",
@@ -11036,6 +11054,7 @@
       "runner_old": "在电脑上更新 agentes.chat 程序即可使用。",
       "tool_offOne": "{{computer}} 上的 {{program}} 已关闭。",
       "not_installed": "{{computer}} 上没有安装 {{program}}。",
+      "cant_start": "{{program}} 在 {{computer}} 上，但无法启动。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
       "outdated": "{{computer}} 上的版本太旧。请更新 Codex 后使用。",
       "system": "{{program}} 暂时还不能在 {{computer}} 的系统上运行。",
@@ -14285,7 +14304,6 @@
         "openXcode": "打开 Xcode",
         "opened": "Xcode 已在 {{mac}} 上打开。请再看看 iPhone 的设置，之后关闭 Xcode。",
         "unlock": "已经打开并且 iPhone 重新启动了？请解锁。带有“打开”的提示只在那之后出现。",
-        "check": "再检查一次",
         "outdated": "{{mac}} 上的 agentes.chat 应用已过时。请更新应用，如果你是从终端安装的，就在那里运行下面的命令。"
       },
       "uiAutomationText": "重启后，在 设置 › 开发者 中。",
@@ -14372,6 +14390,7 @@
       "access": "<b>{{who}}</b> 请求使用 <b>{{deviceName}}</b>",
       "waiting": "<b>{{who}}</b> 正在等待 <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> 请你在你的 <b>{{deviceName}}</b> 上打开{{tool}}",
+      "cliRequest": "<b>{{who}}</b> 请你在 <b>{{deviceName}}</b> 上安装 {{tool}}",
       "once": "允许一次",
       "always": "始终允许",
       "no": "不允许",
@@ -16794,6 +16813,8 @@
       "openingHelp": "在这台电脑上第一次打开可能需要一分钟。",
       "stuck": "无法打开 {{name}} 的浏览器。",
       "stuck_female": "无法打开 {{name}} 的浏览器。",
+      "noAnswer": "{{name}} 的浏览器没有响应。",
+      "noAnswer_female": "{{name}} 的浏览器没有响应。",
       "stuckHelp": "“重试”会重启浏览器，登录状态会保留。",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} 正在打开浏览器",

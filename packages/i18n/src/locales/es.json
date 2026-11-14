@@ -3203,6 +3203,21 @@
       "zen": "Conectar OpenCode",
       "api_key": "Agrega una clave de API"
     },
+    "cli": {
+      "missing": "{{program}} todavía no está en {{computer}}.",
+      "claudeApp": "La app de Claude no basta: los agentes usan Claude Code, que se ejecuta en el computador.",
+      "install": "Instalar {{program}} por mí",
+      "check": "Ya lo instalé, comprobar de nuevo",
+      "checked": "Comprobado ahora: {{program}} todavía no está en {{computer}}.",
+      "installing": "Instalando {{program}} en {{computer}}. Tarda alrededor de un minuto.",
+      "failed": "No se pudo instalar en {{computer}}: {{message}}",
+      "stillMissing": "El instalador terminó, pero {{computer}} todavía no encuentra {{program}}.",
+      "gitMissing": "{{program}} necesita Git for Windows en {{computer}}.",
+      "getGit": "Descargar Git for Windows",
+      "cantStart": "{{program}} está en {{computer}}, pero no abre: {{message}}",
+      "outdated": "Actualiza la app de agentes.chat en {{computer}} para instalar desde aquí.",
+      "asked": "Pedido enviado. {{name}} recibe un botón para instalarlo."
+    },
     "titleFor": "Conecta una IA para {{name}}",
     "titleFor_female": "Conecta una IA para {{name}}",
     "have": {
@@ -5614,7 +5629,8 @@
           "200000": "Más barato y rápido. Resume antes en las conversaciones largas.",
           "400000": "Recuerda mucho, y cada respuesta cuesta menos que con 1M.",
           "1000000": "Recuerda lo máximo. Cada respuesta vuelve a leer todo: más lento y más caro.",
-          "auto": "Lo que admite el modelo."
+          "auto": "Lo que admite el modelo.",
+          "autoSummarizes": "En Claude Code y Codex, resume la conversación al llegar a {{size}}."
         },
         "advanced": {
           "title": "Configuración avanzada",
@@ -6962,6 +6978,8 @@
     "budget": "Presupuesto mensual (US$)",
     "budgetHelp": "Al llegar al límite, {{name}} se detiene y lo avisa.",
     "budgetInvalid": "Usa un valor mayor que cero.",
+    "budgetCapped": "Usa el predeterminado del espacio de trabajo. Solo un admin puede subirlo.",
+    "budgetCappedAmount": "Usa el predeterminado del espacio de trabajo ({{amount}}). Solo un admin puede subirlo.",
     "warnsOwner": "Le avisamos a {{name}} al 80%.",
     "warnsAdmins": "Les avisamos a los admins al 80%.",
     "upTo": "hasta {{amount}}/mes",
@@ -11784,6 +11802,7 @@
       "runner_old": "Actualiza el programa de agentes.chat en la computadora para usarlo.",
       "tool_offOne": "{{program}} está desactivado en {{computer}}.",
       "not_installed": "{{program}} no está instalado en {{computer}}.",
+      "cant_start": "{{program}} está en {{computer}}, pero no abre.",
       "not_reported": "{{computer}} todavía está comprobando qué programas tiene. Esto cambia solo cuando termine.",
       "outdated": "La versión de {{computer}} es antigua. Actualiza Codex para usarlo.",
       "system": "{{program}} todavía no funciona en el sistema de {{computer}}.",
@@ -15179,7 +15198,6 @@
         "openXcode": "Abrir Xcode",
         "opened": "Xcode se abrió en {{mac}}. Vuelve a mirar en los Ajustes del iPhone y cierra Xcode después.",
         "unlock": "¿Lo activaste y el iPhone se reinició? Desbloquéalo. El aviso con Activar solo aparece después.",
-        "check": "Comprobar de nuevo",
         "outdated": "La app agentes.chat en {{mac}} está desactualizada. Actualiza la app, o ejecuta esto en Terminal si la instalaste ahí."
       },
       "uiAutomationText": "En Configuración › Desarrollador, después del reinicio.",
@@ -15266,6 +15284,7 @@
       "access": "<b>{{who}}</b> pide usar <b>{{deviceName}}</b>",
       "waiting": "<b>{{who}}</b> está esperando a <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> te pide activar {{tool}} en tu <b>{{deviceName}}</b>",
+      "cliRequest": "<b>{{who}}</b> te pide instalar {{tool}} en tu <b>{{deviceName}}</b>",
       "once": "Permitir una vez",
       "always": "Siempre",
       "no": "No",
@@ -17734,6 +17753,7 @@
       "openingLong": "Abriendo el navegador de {{name}}…",
       "openingHelp": "La primera vez en esta computadora puede tardar un minuto.",
       "stuck": "No se pudo abrir el navegador de {{name}}.",
+      "noAnswer": "El navegador de {{name}} no respondió.",
       "stuckHelp": "Intentar de nuevo reinicia el navegador. Las sesiones quedan guardadas.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} está abriendo el navegador",

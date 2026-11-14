@@ -3257,6 +3257,27 @@ export const ptBR = {
       zen: "Conectar o OpenCode",
       api_key: "Adicionar uma chave de API",
     },
+    /**
+     * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
+     * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
+     */
+    cli: {
+      missing: "O {{program}} ainda não está no {{computer}}.",
+      claudeApp: "O app do Claude não basta: os agentes usam o Claude Code, que roda no computador.",
+      install: "Instalar o {{program}} para mim",
+      check: "Já instalei, verificar de novo",
+      checked: "Verifiquei agora: o {{program}} ainda não está no {{computer}}.",
+      installing: "Instalando o {{program}} no {{computer}}. Leva cerca de um minuto.",
+      failed: "Não deu para instalar no {{computer}}: {{message}}",
+      stillMissing: "O instalador terminou, mas o {{computer}} ainda não acha o {{program}}.",
+      /** Claude Code on Windows can't start without Git for Windows. */
+      gitMissing: "O {{program}} precisa do Git for Windows no {{computer}}.",
+      getGit: "Baixar o Git for Windows",
+      /** It is there and its own check of its version fails: `message` is its error. */
+      cantStart: "O {{program}} está no {{computer}}, mas não abre: {{message}}",
+      outdated: "Atualize o app do agentes.chat no {{computer}} para instalar daqui.",
+      asked: "Pedido enviado. {{name}} recebe um botão para instalar.",
+    },
     titleFor: "Conectar uma IA para o {{name}}",
     titleFor_female: "Conectar uma IA para a {{name}}",
     /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
@@ -5732,6 +5753,8 @@ export const ptBR = {
         context: "Janela de contexto",
         contextText: {
           auto: "O que o modelo aguenta.",
+          /** "Automático" for an agent on Claude Code or Codex: they summarise at a fixed size (`autoContextFor`). */
+          autoSummarizes: "No Claude Code e no Codex, resume a conversa em {{size}}.",
           "200000": "Mais barato e rápido. Resume cedo em conversas longas.",
           "400000": "Lembra bastante, e cada resposta custa menos que com 1M.",
           "1000000": "Lembra o máximo. Cada resposta relê tudo: mais lenta e cara.",
@@ -7161,6 +7184,8 @@ export const ptBR = {
     budgetHelp: "Ao atingir o limite, o {{name}} para e avisa.",
     budgetHelp_female: "Ao atingir o limite, a {{name}} para e avisa.",
     budgetInvalid: "Use um valor maior que zero.",
+    budgetCapped: "Usa o padrão do workspace. Só um admin aumenta.",
+    budgetCappedAmount: "Usa o padrão do workspace ({{amount}}). Só um admin aumenta.",
     warnsOwner: "Avisamos {{name}} aos 80%.",
     warnsAdmins: "Avisamos os admins aos 80%.",
     upTo: "até {{amount}}/mês",
@@ -11758,6 +11783,7 @@ export const ptBR = {
       /** The button that turns it on follows. */
       tool_offOne: "O {{program}} está desligado no {{computer}}.",
       not_installed: "O {{program}} não está instalado no {{computer}}.",
+      cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
       outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
@@ -14913,7 +14939,6 @@ export const ptBR = {
         openXcode: "Abrir o Xcode",
         opened: "O Xcode abriu em {{mac}}. Veja de novo nos Ajustes do iPhone e feche o Xcode depois.",
         unlock: "Já ativou e o iPhone reiniciou? Desbloqueie. O aviso com Ativar só aparece depois disso.",
-        check: "Verificar de novo",
         outdated:
           "O app agentes.chat em {{mac}} está desatualizado. Atualize o app, ou rode isto no Terminal se instalou por lá.",
       },
@@ -15012,6 +15037,7 @@ export const ptBR = {
       access: "<b>{{who}}</b> pede para usar <b>{{deviceName}}</b>",
       waiting: "<b>{{who}}</b> está esperando <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> pede para ligar {{tool}} no seu <b>{{deviceName}}</b>",
+      cliRequest: "<b>{{who}}</b> pede para instalar {{tool}} no seu <b>{{deviceName}}</b>",
       once: "Permitir uma vez",
       always: "Sempre",
       no: "Não",
@@ -17582,6 +17608,8 @@ export const ptBR = {
       openingHelp: "Na primeira vez neste computador pode levar um minuto.",
       stuck: "Não deu para abrir o navegador do {{name}}.",
       stuck_female: "Não deu para abrir o navegador da {{name}}.",
+      noAnswer: "O navegador do {{name}} não respondeu.",
+      noAnswer_female: "O navegador da {{name}} não respondeu.",
       stuckHelp: "Tentar de novo reinicia o navegador. Os logins continuam salvos.",
       subWorking: "{{name}} · {{now}}",
       subStarting: "{{name}} está abrindo o navegador",

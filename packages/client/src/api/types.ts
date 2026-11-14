@@ -4721,6 +4721,16 @@ export interface Machine {
   remotePause?: boolean;
   /** Who paired it turns its tools on from the apps (`POST …/access/allow`); `false` or absent: its app is too old. */
   accessAllow?: boolean;
+  /**
+   * Its coding CLIs are looked for again from the apps (`POST …/clis/check`) and installed there by who paired it
+   * (`…/cli-install`); `false` or absent: its app is too old, or it is the workspace's own computer.
+   */
+  cliInstall?: boolean;
+  /**
+   * The coding CLIs there that can't start (`claude`, `codex`…), each with its own last error line, or
+   * `CLI_GIT_MISSING`; null or absent for people who don't manage it.
+   */
+  cliErrors?: Partial<Record<string, string>> | null;
   /** ADR 0036 §8 (protocol 10): what the machine allows, as last reported. Absent until the machine reports it. */
   access?: MachineAccess | null;
   /** ADR 0040 (protocol 12): whether the agent browser can run there; null or absent when its runner doesn't say. */
@@ -5832,7 +5842,9 @@ export type BrainUnavailable =
   /** Its runner hasn't said which CLIs it has yet. */
   | "not_reported"
   /** Its runner doesn't run this CLI on the computer's system (Cursor on Windows, for one). */
-  | "system";
+  | "system"
+  /** It is there and can't start: the computer's row has its error (`Machine.cliErrors`). */
+  | "cant_start";
 
 export interface BrainModelOption {
   /** What is stored (`opus`, `sonnet`, `haiku`, a Codex model). */
@@ -6541,6 +6553,8 @@ export type NotificationKind =
    * `source.label`, the tool in `latest.reason`, the asker as actor; the row turns it on in one click.
    */
   | "device.tool_request"
+  /** Someone needs a coding CLI installed on this person's computer: `latest.reason` the program, one-click install. */
+  | "device.cli_request"
   /**
    * "Pedir a um admin" (`POST …/admin-asks`): the asker as actor, what in `latest.reason` (`channel_agent` with
    * `source.channelId` and `agentId`, waiting until added; `create_agents`; `webhook` with the service in `latest.title`).
@@ -8129,6 +8143,21 @@ export interface XcodeFix {
   message?: string;
   /** `failed` after every command ran: Xcode is still blocked on the Mac, and why. */
   still?: "command_line_tools" | "license";
+}
+
+/** The coding CLIs a computer installs from the apps (`INSTALLABLE_CLIS`). */
+export type InstallableCli = "claude" | "codex";
+
+/**
+ * Where an install of a coding CLI stands (`…/cli-install`): `failed` with the installer's `message`, or a `cause`:
+ * `git_missing` (Claude Code on Windows without Git for Windows, nothing installed), `still_missing` (installed, and
+ * the computer still doesn't find it). `unsupported`: no installer for it there.
+ */
+export interface CliInstall {
+  tool: InstallableCli;
+  state: "running" | "done" | "failed" | "canceled" | "unsupported";
+  message?: string;
+  cause?: "git_missing" | "still_missing";
 }
 
 /** `fix: null`: none ran; `update`: the Mac's agentes.chat is too old to fix it (the Terminal way instead). */

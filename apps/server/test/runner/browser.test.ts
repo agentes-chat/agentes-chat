@@ -3357,6 +3357,45 @@ test.if(posix)(
 );
 
 test.if(posix)(
+  "a leftover recorded with its start time is stopped only while that pid still started then (Windows reuses pids)",
+  async () => {
+    const ours = Bun.spawn(["sleep", "60"]);
+    const reused = Bun.spawn(["sleep", "60"]);
+    const gone = (p: typeof ours) => p.exitCode !== null || p.signalCode !== null;
+    try {
+      const started = new Map([
+        [ours.pid, 1_700_000_000_000],
+        [reused.pid, 1_700_000_999_000],
+      ]);
+      const t = setup({ isOurChrome: undefined, startedAt: async (pid) => started.get(pid) ?? 1_700_000_500_000 });
+      mkdirSync(path.join(t.home, "browser"), { recursive: true });
+      writeFileSync(
+        path.join(t.home, "browser", "chromes.json"),
+        JSON.stringify([
+          { pid: ours.pid, profile: "/x/.agentes/browser", started: 1_700_000_000_000 },
+          // A person's own Chrome took this pid after ours closed.
+          { pid: reused.pid, profile: "/y/.agentes/browser", started: 1_700_000_000_000 },
+        ]),
+      );
+      await t.manager.closeAll();
+      await ours.exited;
+      expect(gone(ours)).toBe(true);
+      expect(gone(reused)).toBe(false);
+      expect(JSON.parse(readFileSync(path.join(t.home, "browser", "chromes.json"), "utf8"))).toEqual([]);
+
+      // A Chrome it starts is recorded with its start time.
+      await t.act("open", ["https://shop.example.com"]);
+      expect(JSON.parse(readFileSync(path.join(t.home, "browser", "chromes.json"), "utf8"))).toEqual([
+        { pid: 40_001, profile: path.join(await t.folder(), ".agentes", "browser"), started: 1_700_000_500_000 },
+      ]);
+    } finally {
+      ours.kill("SIGKILL");
+      reused.kill("SIGKILL");
+    }
+  },
+);
+
+test.if(posix)(
   "a start stops a Chrome the profile's lock names even when chromes.json never listed it, and starts again after a handoff",
   async () => {
     const leftover = Bun.spawn(["sleep", "60"]);
@@ -3473,6 +3512,50 @@ test.if(posix)(
       devtools.stop();
     }
   },
+);
+
+test.if(posix)(
+  "a Chrome the profile's lock names is judged by its recorded start time: a reused pid is not stopped",
+  async () => {
+    let reusedPid = 0;
+    const t = setup({
+      isOurChrome: undefined,
+      startedAt: async (pid) => (pid === reusedPid ? 1_700_000_999_000 : 1_700_000_500_000),
+    });
+    const profile = path.join(await t.folder(), ".agentes", "browser");
+    // Its command line names the profile, so only the recorded start time tells it is not ours.
+    const reused = Bun.spawn([process.execPath, "-e", "setTimeout(() => {}, 60_000)", `--user-data-dir=${profile}`]);
+    reusedPid = reused.pid;
+    const gone = () => reused.exitCode !== null || reused.signalCode !== null;
+    try {
+      mkdirSync(profile, { recursive: true });
+      symlinkSync(`computer-${reused.pid}`, path.join(profile, "SingletonLock"));
+      mkdirSync(path.join(t.home, "browser"), { recursive: true });
+      writeFileSync(
+        path.join(t.home, "browser", "chromes.json"),
+        JSON.stringify([{ pid: reused.pid, profile, started: 1_700_000_000_000 }]),
+      );
+      expect(await t.act("open", ["https://shop.example.com"])).toMatchObject({ success: true });
+      await Bun.sleep(600);
+      expect(gone()).toBe(false);
+    } finally {
+      reused.kill("SIGKILL");
+    }
+  },
+);
+
+test.if(posix)(
+  "a live view on a browser that didn't answer says so, not that the browser is closed",
+  async () => {
+    const t = setup();
+    await t.act("open", ["https://shop.example.com"]);
+    t.page({ delayMs: 20_000 });
+    expect(await t.manager.streamStart(dev, "watch").catch((e: unknown) => e)).toMatchObject({
+      code: "browser_unavailable",
+      message: expect.stringMatching(/^The browser didn't answer/),
+    });
+  },
+  30_000,
 );
 
 test.if(posix)(

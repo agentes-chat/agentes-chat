@@ -85,6 +85,8 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "탭해서 한 번 허용, 항상 허용 또는 거절을 선택하세요.",
   deviceToolTitle: (a, d) => `${a} 님이 ${d}의 도구를 켜 달라고 요청합니다`,
   deviceToolBody: "탭해서 한 번에 켜세요.",
+  deviceCliTitle: (a, d) => `${a} 님이 ${d}에 프로그램을 설치해 달라고 요청합니다`,
+  deviceCliBody: "탭해서 한 번에 설치하세요.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} 님이 #${l}에 에이전트를 추가해 달라고 요청합니다`

@@ -1724,6 +1724,21 @@ describe("Criar agente with Criar agentes alone: an agent of my own, without app
     expect(screen().getByRole("heading", { name: "Iris entrou no time" })).toBeTruthy();
   });
 
+  test("the budget is the workspace's default, said in one line, with no field to raise it", async () => {
+    const state = await asMaker();
+    await startAs("QA");
+    await proceed(4);
+    expect(title()).toBe("Modelo e orçamento");
+    expect(screen().queryByLabelText("Orçamento mensal (US$)")).toBeNull();
+    expect(screen().getByText(/^Usa o padrão do workspace/).textContent).toMatch(
+      /^Usa o padrão do workspace( \(US\$\u00a050\))?\. Só um admin aumenta\.$/,
+    );
+    await proceed();
+    await click(screen().getByRole("button", { name: "Criar Iris" }));
+    await settle(8);
+    expect(createdWith(state)?.monthlyBudgetUsd).toBeNull();
+  });
+
   test("apps start without access and can't be changed here; Criar saves none, so nothing is refused", async () => {
     const state = await asMaker();
     // QA's apps (GitHub) aren't on its card: they wouldn't come with it.
