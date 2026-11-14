@@ -2,6 +2,7 @@ import type { OrgRole, Person } from "@agenteschat/client";
 import { ApiError, useApi, usePeople, useRoles, useSetMemberRoles } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { everyoneOf, roleName } from "@agenteschat/client/lib/roles";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
@@ -119,13 +120,19 @@ export function useMailLossAsk() {
   };
 }
 
-/** Gives or takes one cargo of one person, the mailbox question first when giving; false when they went back. */
+/**
+ * Gives or takes one cargo of one person, the mailbox question first when giving; false when they went back or one is
+ * running. Busy from the tap, the question included: a second save meanwhile would start from the same cargos and,
+ * written last, drop the first one.
+ */
 export function useSetCargo() {
   const { t } = useTranslation();
   const { orgId } = useRolesData();
   const set = useSetMemberRoles(orgId);
   const askMail = useMailLossAsk();
-  const run = async (person: Pick<Person, "userId" | "roleIds">, roleId: string, on: boolean, anyway?: string) => {
+  const [running, setRunning] = useState(false);
+  const inFlight = useRef(false);
+  const save = async (person: Pick<Person, "userId" | "roleIds">, roleId: string, on: boolean, anyway?: string) => {
     const now = person.roleIds ?? [];
     if (!on) {
       await set.mutateAsync({ userId: person.userId, roleIds: now.filter((id) => id !== roleId) });
@@ -136,7 +143,18 @@ export function useSetCargo() {
     await set.mutateAsync({ userId: person.userId, roleIds: [...new Set([...now, roleId])], mailLossSeen: seen });
     return true;
   };
-  return { run, busy: set.isPending };
+  const run: typeof save = async (...args) => {
+    if (inFlight.current) return false;
+    inFlight.current = true;
+    setRunning(true);
+    try {
+      return await save(...args);
+    } finally {
+      inFlight.current = false;
+      setRunning(false);
+    }
+  };
+  return { run, busy: running || set.isPending };
 }
 
 /** A cargo's mark: its color and icon (Todos' are its own), the owners' violet. */

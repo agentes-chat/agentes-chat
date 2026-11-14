@@ -115,7 +115,7 @@ function InvitePeople() {
   );
   const stateOf = (a: InviteAddress) => addressState(a, members, invited);
   // What's still in the field counts: the button is pressed with the keyboard up, so the field never lost focus.
-  const all = withAddresses(draft.addresses, typed);
+  const all = withAddresses(draft.addresses, typed, draft.roleId ?? null);
   const ready = all.filter((a) => stateOf(a) === "ok");
   const bad = draft.addresses.some((a) => !a.valid);
 

@@ -683,8 +683,9 @@ const styles = StyleSheet.create({
   key: { width: 96 },
   keyLine: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
   shrink: { flexShrink: 1, minWidth: 0 },
-  // The row's own 16 at the end stays: a button's 44 overhangs its glyph by 13 on each side, 2 apart.
-  buttons: { flexDirection: "row", gap: 2, marginVertical: -GROUPED_ROW.padY + 4, marginRight: -13 },
+  // The row's own 16 at the end stays: a button's 44 overhangs its glyph by 13 on each side, 2 apart. Into the row's
+  // padding it takes 7 above and below, so on the line it is a 30-point mark's height and showing it moves no row.
+  buttons: { flexDirection: "row", gap: 2, marginVertical: -GROUPED_ROW.padY + 3, marginRight: -13 },
   button: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   buttonOff: { opacity: 0.3 },
   hint: { paddingHorizontal: GROUPED_ROW.padX },

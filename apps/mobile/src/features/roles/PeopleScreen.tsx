@@ -28,7 +28,8 @@ function useTakeOut() {
   const { viewer } = useRolesData();
   const cargo = useSetCargo();
   const take = (role: OrgRole, name: string, p: Person) =>
-    void cargo.run(p, role.id, false).then(() => {
+    void cargo.run(p, role.id, false).then((done) => {
+      if (!done) return;
       successHaptic();
       toast({
         title: t("mobile.roles.people.removed", { person: p.name, name }),

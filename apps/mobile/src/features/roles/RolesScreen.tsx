@@ -199,6 +199,8 @@ export function RolesScreen() {
             leading={<CargoMark role={OWNER_ROLE} size={30} />}
             label={ownerName}
             sub={t("mobile.roles.reach.owner")}
+            subLines={2}
+            media
             value={formatInt(i18n.language, owners.length)}
             chevron={!ordering}
             disabled={ordering}

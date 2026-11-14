@@ -23,6 +23,7 @@ import {
   agentIntent,
   agentLosingLine,
   agentTicked,
+  agentWhoPatch,
   audienceValid,
   listedAgents,
   talkGate,
@@ -175,7 +176,7 @@ export function AgentWhoScreen({ roleId, agentId }: { roleId: string; agentId: s
   const roleIds = who.roleIds ?? [];
   const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name : undefined;
   const saved = audienceOf(agent);
-  const next = audiencePatch(who);
+  const next = agentWhoPatch(who, saved);
   const changed = !sameAudience(next, saved);
   const valid = audienceValid(who, agent);
   const roles = sortRoles(data.roles.filter((r) => !isEveryone(r)));

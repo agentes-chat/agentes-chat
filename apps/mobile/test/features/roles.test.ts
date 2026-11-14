@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Channel, OrgRole, OrgRoles, Person } from "@agenteschat/client";
+import { audiencePatch } from "@agenteschat/client/lib/audience";
 import { COMPUTERS_ROW, giveRole, newRoleInput, roleLock } from "@agenteschat/client/lib/roles";
 import { memberActions, withAddresses } from "../../src/features/members/logic";
 import {
@@ -10,6 +11,7 @@ import {
   agentIntent,
   agentLosingLine,
   agentTicked,
+  agentWhoPatch,
   audienceValid,
   channelAudienceLine,
   channelGroups,
@@ -42,6 +44,7 @@ import {
 } from "../../src/features/roles/logic";
 import { SETTINGS_SECTIONS, visibleSections } from "../../src/features/settings/logic";
 import { ICON_NAMES } from "../../src/ui/icons.data";
+import { GROUPED_ROW, TOUCH } from "../../src/ui/rhythm";
 import { ditherPaths, roleMarkFit, roleMarkIcon } from "../../src/ui/role-mark";
 import { agent, translator } from "./fixtures";
 
@@ -369,11 +372,12 @@ describe("Quem pode (P5): Todos and the cargos in one call", () => {
     const browser = { ...fin, permissions: ["own_browsers"] };
     const list = [admin, suporte, browser, everyone];
     const who = whoCanStart(list, COMPUTERS_ROW, suporte, 1);
-    expect(who).toMatchObject({ step: 1, keep: 2 });
+    expect(who).toMatchObject({ step: 1, keep: 2, from: "suporte" });
+    // Suporte, where it was picked, gets exactly that step (the web's `rowHolders`).
     expect(whoCanHolders(list, who)).toEqual({
       everyone: 1,
       roles: [
-        { id: "suporte", level: 0 },
+        { id: "suporte", level: 1 },
         { id: "fin", level: 2 },
       ],
     });
@@ -387,6 +391,15 @@ describe("Quem pode (P5): Todos and the cargos in one call", () => {
       { id: "fin", level: 1 },
     ]);
     expect(whoCanLines(t, list, [], none, "me")[0]).toBe("Todos deixam de usar os computadores dos agentes.");
+    // Above Todos' step, "Não usa" on Suporte takes all of it, not down to what is below Todos' old step.
+    const strong = [admin, { ...suporte, permissions: ["control_browsers"] }, fin, everyone];
+    const off = whoCanStart(strong, COMPUTERS_ROW, suporte, 0);
+    expect(whoCanHolders(strong, off).roles).toEqual([
+      { id: "suporte", level: 0 },
+      { id: "fin", level: 2 },
+    ]);
+    // Todos isn't a cargo it started on: from Todos, every unticked cargo keeps what it has below.
+    expect(whoCanStart(strong, COMPUTERS_ROW, everyone, 0).from).toBeUndefined();
   });
 });
 
@@ -495,30 +508,54 @@ describe("Agentes (P7, P7b)", () => {
   test("a tap follows W7's table: narrow from everyone, drop or add the cargo, open to everyone from Todos", () => {
     expect(agentIntent(suporte, max, roles)).toEqual({
       kind: "who",
-      start: { mode: "people", userIds: [], roleIds: ["admin", "fin"] },
+      start: { mode: "people", userIds: [], roleIds: ["admin", "fin"], consultable: true },
     });
     expect(agentIntent(suporte, limitedMax, roles)).toEqual({
       kind: "save",
-      audience: { mode: "people", userIds: ["ana"], roleIds: [] },
+      audience: { mode: "people", userIds: ["ana"], roleIds: [], consultable: true },
     });
     expect(agentIntent(fin, limitedMax, roles)).toEqual({
       kind: "save",
-      audience: { mode: "people", userIds: ["ana"], roleIds: ["suporte", "fin"] },
+      audience: { mode: "people", userIds: ["ana"], roleIds: ["suporte", "fin"], consultable: true },
     });
     expect(agentIntent(fin, ownerOnly, roles)).toEqual({
       kind: "who",
-      start: { mode: "people", userIds: [], roleIds: ["fin"] },
+      start: { mode: "people", userIds: [], roleIds: ["fin"], consultable: true },
     });
     // The cargo was the only one listed besides the owner: only the owner is left.
     const onlySuporte = { ...max, audience: { mode: "people" as const, userIds: [], roleIds: ["suporte"] } };
     expect(agentIntent(suporte, onlySuporte, roles)).toEqual({
       kind: "save",
-      audience: { mode: "owner", userIds: [], roleIds: [] },
+      audience: { mode: "owner", userIds: [], roleIds: [], consultable: true },
     });
     expect(agentIntent(everyone, limitedMax, roles)).toEqual({
       kind: "save",
-      audience: { mode: "everyone", userIds: [], roleIds: [] },
+      audience: { mode: "everyone", userIds: [], roleIds: [], consultable: true },
     });
+  });
+
+  test("a tick, an untick or Quem fala com keeps Outros agentes podem consultar as it was saved", () => {
+    // Off, on someone's plan only its owner turns it back on (ADR 0059 §5): a cargo's tab never does.
+    const closed = {
+      ...max,
+      audience: { mode: "people" as const, userIds: [], roleIds: ["suporte"], consultable: false },
+    };
+    const sent = (intent: ReturnType<typeof agentIntent>) =>
+      audiencePatch(intent.kind === "save" ? intent.audience : intent.start).consultable;
+    expect(sent(agentIntent(fin, closed, roles))).toBe(false);
+    expect(sent(agentIntent(suporte, { ...closed, ownerUserId: null }, roles))).toBe(false);
+    expect(sent(agentIntent(suporte, closed, roles))).toBe(false);
+    const open = { ...max, audience: { mode: "everyone" as const, userIds: [], roleIds: [], consultable: false } };
+    expect(sent(agentIntent(suporte, open, roles))).toBe(false);
+    expect(sent(agentIntent(everyone, closed, roles))).toBe(false);
+    // P7b: whatever is picked, Salvar sends the saved switch.
+    expect(agentWhoPatch({ mode: "people", userIds: ["rui"], roleIds: [] }, { consultable: false })).toEqual({
+      mode: "people",
+      userIds: ["rui"],
+      roleIds: [],
+      consultable: false,
+    });
+    expect(read("features/roles/AgentsScreen.tsx")).toContain("const next = agentWhoPatch(who, saved);");
   });
 
   test("Quem fala com needs someone, and says who stops talking to it", async () => {
@@ -555,6 +592,11 @@ describe("The order (P2's Ordenar), people and new cargos", () => {
     expect(moveRole(mine, "suporte", -1).map((r) => r.id)).toEqual(["admin", "suporte", "fin"]);
     expect(orderChanged(moved, mine)).toBe(true);
     expect(orderChanged(mine, list)).toBe(false);
+    // ▲▼ are 44 targets reaching into the row's padding: on the name's line they take the 30-point mark's height, so
+    // opening Ordenar grows no row and the list doesn't move.
+    const into = read("ui/Grouped.tsx").match(/buttons: \{[^}]*marginVertical: -GROUPED_ROW\.padY \+ (\d+)/)?.[1];
+    expect(TOUCH - 2 * (GROUPED_ROW.padY - Number(into))).toBe(30);
+    expect(read("features/roles/RolesScreen.tsx")).toMatch(/leading=\{<CargoMark role=\{role\} size=\{30\} \/>\}/);
   });
 
   test("a person's Cargos lists what the viewer may give; Criar cargo copies whole only below them", () => {
@@ -619,7 +661,11 @@ describe("The order (P2's Ordenar), people and new cargos", () => {
     ]);
     expect(read("features/members/MembersPage.tsx")).toContain("roles: () => router.push(rolesHref.person(m.userId))");
     expect(read("features/roles/RoleScreen.tsx")).toContain("params: { role: role.id }");
-    expect(read("features/members/InvitePeople.tsx")).toContain("withAddresses(d.addresses, text, d.roleId ?? null)");
+    const invite = read("features/members/InvitePeople.tsx");
+    expect(invite).toContain("withAddresses(d.addresses, text, d.roleId ?? null)");
+    // The docked button sends what is still in the field (the keyboard up): it gets the cargo too.
+    expect(invite).toContain("const all = withAddresses(draft.addresses, typed, draft.roleId ?? null);");
+    expect(invite).not.toMatch(/withAddresses\(draft\.addresses, typed\)/);
   });
 
   test("giving a cargo asks about mailboxes first and sends what was asked; taking one has Desfazer", () => {
@@ -633,6 +679,12 @@ describe("The order (P2's Ordenar), people and new cargos", () => {
     expect(people).toContain("const people = useHeldWhile(live, busy);");
     expect(people).toMatch(/stays = false;\s*goBack\(\);[\s\S]*?if \(stays\) setBusy\(false\);/);
     expect(people).toContain("disabled={cargo.busy}");
+    // Busy from the tap, the mailbox question included: a second switch meanwhile would save from the same cargos.
+    expect(parts).toContain("return { run, busy: running || set.isPending };");
+    expect(parts).toMatch(/if \(inFlight\.current\) return false;\s*inFlight\.current = true;\s*setRunning\(true\);/);
+    expect(parts).toMatch(/finally \{\s*inFlight\.current = false;\s*setRunning\(false\);/);
+    // An ignored take-out says nothing.
+    expect(people).toMatch(/cargo\.run\(p, role\.id, false\)\.then\(\(done\) => \{\s*if \(!done\) return;/);
   });
 });
 

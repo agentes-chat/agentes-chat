@@ -1,5 +1,14 @@
-import type { Agent, AgentAudience, Channel, OrgRole, OrgRoles, Person, RowHolders } from "@agenteschat/client";
-import { audienceAdmits, audienceOf, modeOf } from "@agenteschat/client/lib/audience";
+import type {
+  Agent,
+  AgentAudience,
+  AudienceMode,
+  Channel,
+  OrgRole,
+  OrgRoles,
+  Person,
+  RowHolders,
+} from "@agenteschat/client";
+import { audienceAdmits, audienceOf, audiencePatch, modeOf } from "@agenteschat/client/lib/audience";
 import { accessInput, accessOf } from "@agenteschat/client/lib/channel-access";
 import { namesText } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -232,6 +241,8 @@ export interface WhoCan {
   ticked: ReadonlySet<string>;
   step: number;
   keep: number;
+  /** The cargo the change started on (not Todos): unticked, it goes to exactly `step`, the one picked on it. */
+  from?: string;
 }
 
 /** A cargo the viewer may tick: below them (`editable`), and not Administrador (it may everything, never written). */
@@ -249,13 +260,21 @@ export function whoCanStart(roles: readonly OrgRole[], row: string, from: OrgRol
   const ticked = custom(roles).filter((r) =>
     isEveryone(from) ? tickable(r) && levelOn(r.permissions, row) >= keep : tickable(r) && r.id !== from.id,
   );
-  return { row, mode: "some", ticked: new Set(ticked.map((r) => r.id)), step: step ?? 0, keep };
+  return {
+    row,
+    mode: "some",
+    ticked: new Set(ticked.map((r) => r.id)),
+    step: step ?? 0,
+    keep,
+    ...(isEveryone(from) ? {} : { from: from.id }),
+  };
 }
 
 /**
  * What saving it sends (`PUT …/permissions/{row}`): Todos at the top (Todos) or at `step`; each cargo the viewer may
- * change, a ticked one at `keep` (or its own when higher), an unticked one keeping what it has below `keep` (the web's
- * `rowHolders`). Administrador cargos and cargos above the viewer are left out: the server never changes them.
+ * change, a ticked one at `keep` (or its own when higher), the one it started on at `step`, any other unticked one
+ * keeping what it has below `keep` (the web's `rowHolders`). Administrador cargos and cargos above the viewer are left
+ * out: the server never changes them.
  */
 export function whoCanHolders(roles: readonly OrgRole[], who: WhoCan): RowHolders {
   const everyone = who.mode === "everyone" ? Math.max(who.keep, who.step) : who.step;
@@ -266,7 +285,8 @@ export function whoCanHolders(roles: readonly OrgRole[], who: WhoCan): RowHolder
       .map((r) => {
         const own = levelOn(r.permissions, who.row);
         if (who.mode === "everyone") return { id: r.id, level: own };
-        return { id: r.id, level: who.ticked.has(r.id) ? Math.max(own, who.keep) : Math.min(own, who.keep - 1) };
+        if (who.ticked.has(r.id)) return { id: r.id, level: Math.max(own, who.keep) };
+        return { id: r.id, level: r.id === who.from ? who.step : Math.min(own, who.keep - 1) };
       }),
   };
 }
@@ -496,25 +516,36 @@ export type AgentIntent = { kind: "who"; start: AgentAudience } | { kind: "save"
 export function agentIntent(role: OrgRole, agent: Agent, roles: readonly OrgRole[]): AgentIntent {
   const mode = modeOf(agent);
   const a = audienceOf(agent);
+  // "Outros agentes podem consultar" stays as saved: on someone's plan only its owner turns it back on (ADR 0059 §5).
+  const to = (next: AudienceMode, roleIds: string[] = [], userIds: string[] = []): AgentAudience => ({
+    mode: next,
+    userIds,
+    roleIds,
+    consultable: a.consultable,
+  });
   const others = custom(roles)
     .filter((r) => r.id !== role.id)
     .map((r) => r.id);
   if (isEveryone(role))
     return mode === "everyone"
-      ? { kind: "who", start: { mode: "people", userIds: [], roleIds: others } }
-      : { kind: "save", audience: { mode: "everyone", userIds: [], roleIds: [] } };
-  if (mode === "everyone") return { kind: "who", start: { mode: "people", userIds: [], roleIds: others } };
-  if (mode === "owner") return { kind: "who", start: { mode: "people", userIds: [], roleIds: [role.id] } };
+      ? { kind: "who", start: to("people", others) }
+      : { kind: "save", audience: to("everyone") };
+  if (mode === "everyone") return { kind: "who", start: to("people", others) };
+  if (mode === "owner") return { kind: "who", start: to("people", [role.id]) };
   if (a.roleIds.includes(role.id)) {
     const roleIds = a.roleIds.filter((id) => id !== role.id);
     if (roleIds.length === 0 && a.userIds.length === 0)
       return agent.ownerUserId
-        ? { kind: "save", audience: { mode: "owner", userIds: [], roleIds: [] } }
-        : { kind: "who", start: { mode: "people", userIds: [], roleIds } };
-    return { kind: "save", audience: { mode: "people", userIds: a.userIds, roleIds } };
+        ? { kind: "save", audience: to("owner") }
+        : { kind: "who", start: to("people", roleIds) };
+    return { kind: "save", audience: to("people", roleIds, a.userIds) };
   }
-  return { kind: "save", audience: { mode: "people", userIds: a.userIds, roleIds: [...a.roleIds, role.id] } };
+  return { kind: "save", audience: to("people", [...a.roleIds, role.id], a.userIds) };
 }
+
+/** What Quem fala com's Salvar sends (P7b): the choice, "Outros agentes podem consultar" as saved. */
+export const agentWhoPatch = (who: AgentAudience, saved: Pick<AgentAudience, "consultable">) =>
+  audiencePatch({ ...who, consultable: saved.consultable });
 
 /** A people audience needs someone in it (the owner always talks to it); everyone and only the owner don't. */
 export const audienceValid = (a: AgentAudience, agent: Pick<Agent, "ownerUserId">) =>
