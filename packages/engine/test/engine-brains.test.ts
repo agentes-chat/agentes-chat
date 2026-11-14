@@ -2971,6 +2971,97 @@ test("a CLI that refuses to start on its computer fails the run at once with wha
   expect(pending).toEqual([]);
 });
 
+test("a CLI whose sandbox can't start fails the run at once with that cause, whether the runner calls it retryable or not", async () => {
+  const said =
+    "Grok Build exited with code 1: bwrap: Can't mkdir parents for /var/lib/agentes-runner-agents/accounts: Permission denied";
+  for (const retryable of [true, undefined]) {
+    if (retryable === undefined) await f.close();
+    f = await setup();
+    await computerAgent(f, { brainFallback: false });
+    const { brain, seen } = scriptedComputerBrain(() => [
+      { type: "error", code: "grok_failed", message: said, ...(retryable ? { retryable } : {}) },
+    ]);
+    const handlers = createJobHandlers({
+      ...f.jobDeps,
+      brains: { claude_code: () => brain },
+      machines: { status: async (id) => statusOf(id) },
+    });
+    await post(f, "@dev roda os testes");
+    await drainOutbox(f.db, handlers);
+    await runJobsDue(f);
+    await drainOutbox(f.db, handlers);
+
+    expect(seen.length).toBe(1);
+    const [run] = await f.db.select().from(schema.agentRuns);
+    expect([retryable, run?.status, run?.error]).toEqual([retryable, "failed", "cli_sandbox: Grok Build"]);
+    const pending = (await f.db.select().from(schema.outbox)).filter(
+      (j) => j.kind === "agent_run.execute" && j.status === "pending",
+    );
+    expect(pending).toEqual([]);
+  }
+});
+
+test("woken before its resume, a run parked on its CLI's failure keeps one resume; a sign-in that never answered isn't woken by its computer", async () => {
+  f = await setup();
+  const machineId = await computerAgent(f, { brainFallback: false });
+  const { brain, seen } = scriptedComputerBrain((): BrainEvent[] => [
+    {
+      type: "error",
+      code: "grok_failed",
+      message: "Grok Build exited with code 1: error: connection reset by peer",
+      retryable: true,
+    },
+  ]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const runRow = async () => (await f.db.select().from(schema.agentRuns))[0];
+  const parked = async () => ((await runRow())?.transcript as { outage?: { n: number } } | null)?.outage?.n ?? 0;
+  const resumes = async () =>
+    (await f.db.select().from(schema.outbox)).filter(
+      (j) => j.status === "pending" && j.dedupeKey?.includes(":outage:"),
+    );
+  await post(f, "@dev roda os testes");
+  await drainOutbox(f.db, handlers);
+  for (let i = 0; i < 8 && (await parked()) === 0; i++) {
+    await runJobsDue(f);
+    await drainOutbox(f.db, handlers);
+  }
+  expect(await parked()).toBe(1);
+  expect(await resumes()).toHaveLength(1);
+  const run = await runRow();
+
+  // Its agent's sign-in never answered a turn: the computer coming back changes nothing, its own resume stays.
+  const account = crypto.randomUUID();
+  await f.db.insert(schema.machineAccounts).values({
+    id: account,
+    orgId: f.org.id,
+    machineId,
+    kind: "grok",
+    label: "Grok",
+    status: "active",
+    createdBy: f.owner.id,
+  });
+  await f.db.update(schema.agents).set({ brainAccountId: account }).where(eq(schema.agents.id, f.agent.id));
+  expect(await resumeRunsWaitingForMachine(f.db, machineId)).toEqual([]);
+
+  // One that answered before (a row from before every CLI kept `lastSuccessAt`: `lastUsedAt` alone): woken, it fails
+  // again and parks with one resume, the earlier one replaced.
+  await f.db
+    .update(schema.machineAccounts)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(schema.machineAccounts.id, account));
+  expect(await resumeRunsWaitingForMachine(f.db, machineId)).toEqual([run?.id ?? ""]);
+  await f.db.update(schema.agents).set({ brainAccountId: null }).where(eq(schema.agents.id, f.agent.id));
+  const tries = seen.length;
+  await drainOutbox(f.db, handlers);
+  expect(seen.length).toBe(tries + 1);
+  expect(await parked()).toBe(2);
+  expect(await resumes()).toHaveLength(1);
+});
+
 test("a failure that keeps coming back parks after its tries in a row, though waits for room hand it new jobs", async () => {
   f = await setup();
   await computerAgent(f, { brainFallback: false });

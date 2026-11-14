@@ -13329,6 +13329,9 @@
   "agentPage.work.brain.add.why.not_kept": {
     "value": "The account signed in, but {{computer}} couldn't keep the sign-in. Try again."
   },
+  "agentPage.work.brain.add.why.sandbox": {
+    "value": "{{brand}} signed in, but its sandbox can't start on {{computer}}, so no agent could use it. Use an API key instead."
+  },
   "agentPage.work.brain.add.geminiNotShared": {
     "value": "Gemini signed in, but {{computer}} can't share that sign-in with every agent. Use a Gemini API key instead."
   },
@@ -14397,6 +14400,9 @@
   },
   "agentPage.activity.errors.cli_closed": {
     "value": "The {{brain}} program closed unexpectedly."
+  },
+  "agentPage.activity.errors.cli_sandbox": {
+    "value": "The {{brain}} program can't start its sandbox on this computer. Choose another AI in the agent's settings."
   },
   "agentPage.activity.errors.account_missing": {
     "value": "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again."

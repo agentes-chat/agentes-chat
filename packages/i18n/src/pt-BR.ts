@@ -5706,7 +5706,7 @@ export const ptBR = {
           expired: "O tempo para entrar acabou. Tente de novo.",
           /**
            * Why a sign-in ended on the computer, by its code (`loginFailureLine`). `brand`: the provider or the plan.
-           * `cli_exit` and `not_signed_in_after_login` show the CLI's own words under them.
+           * `cli_exit`, `not_signed_in_after_login` and `sandbox` show the CLI's own words under them.
            */
           why: {
             not_installed: "O {{brand}} não está instalado no {{computer}}. Tente de novo.",
@@ -5719,6 +5719,9 @@ export const ptBR = {
             status_unknown: "O {{brand}} não respondeu se a conta entrou. Tente de novo.",
             no_token: "O {{brand}} terminou sem mostrar o token da conta. Tente de novo.",
             not_kept: "A conta entrou, mas o {{computer}} não conseguiu guardar o login. Tente de novo.",
+            /** Grok Build signed in, but its sandbox doesn't start on the computer for an agent (runner `sandbox`). */
+            sandbox:
+              "O {{brand}} entrou, mas a sandbox dele não abre no {{computer}}, então nenhum agente conseguiria usá-lo. Use uma chave de API.",
           },
           geminiNotShared:
             "O Gemini entrou, mas o {{computer}} não consegue compartilhar esse login com todos os agentes. Use uma chave de API do Gemini.",
@@ -6187,6 +6190,9 @@ export const ptBR = {
         cli_stopped: "O {{brain}} parou com um erro.",
         /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
         cli_closed: "O {{brain}} fechou de repente.",
+        /** The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked. */
+        cli_sandbox:
+          "O {{brain}} não consegue abrir a sandbox dele neste computador. Escolha outra IA nas configurações do agente.",
         account_missing:
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
