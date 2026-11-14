@@ -1053,6 +1053,8 @@
         "paperclip": "Arrastra la carpeta del paquete (la que tiene COMPANY.md), suelta un .zip de ella o pega su enlace de GitHub.",
         "agenteschat": "En el otro espacio de trabajo: Configuración → Importar y exportar → Descargar el archivo. Luego suelta aquí el .json."
       },
+      "whereOther": "Descarga el archivo del otro workspace y suelta el .json aquí.",
+      "whereOtherLink": "Descargar de {{org}}",
       "request": {
         "grok-bot": {
           "title": "Pídele a tu bot que exporte",
@@ -1716,11 +1718,10 @@
     "browser": "Este navegador",
     "phone": "Teléfono",
     "phoneOn": "En la app del teléfono, incluso con el teléfono bloqueado",
-    "phoneOff": "Actívalas en la app del teléfono, en Tú › Notificaciones",
+    "phoneOff": "Actívalas en la app del teléfono",
     "mac": "App de Mac",
     "macHelp": "Mientras la app está abierta, incluso en segundo plano",
     "on": "Activado",
-    "off": "Desactivado",
     "failed": "No se pudo guardar. Inténtalo de nuevo.",
     "loadFailed": "No se pudieron cargar tus opciones ahora.",
     "category": {
@@ -1771,7 +1772,7 @@
     },
     "inline": {
       "title": "¿Quieres saber al momento cuando {{name}} responda?",
-      "why": "Incluso con la pestaña cerrada. Cámbialo cuando quieras en Configuración › Notificaciones."
+      "why": "Incluso con la pestaña cerrada. Cámbialo cuando quieras en <link>Notificaciones</link>."
     }
   },
   "shell": {
@@ -2041,7 +2042,8 @@
     "private": "Quien escanee este código inicia sesión como tú.",
     "failed": "No se pudo generar el código.",
     "localOnly": "Este servidor solo se abre en la computadora donde se ejecuta, así que tu teléfono no llega a él.",
-    "localOnlyHow": "En la app de agentes.chat de esa computadora, activa Accede desde tu teléfono y tu equipo en Preferencias › Servidores. Luego vuelve aquí."
+    "localOnlyHow": "En la app de agentes.chat de esa computadora, activa Accede desde tu teléfono y tu equipo en Preferencias › Servidores. Luego vuelve aquí.",
+    "localOnlyHere": "Activa Accede desde tu teléfono y tu equipo. Luego vuelve aquí."
   },
   "team": {
     "title": "Equipo",
@@ -2623,7 +2625,8 @@
     "computerYours": "Tu propio espacio en la computadora del workspace. Solo tú puedes verlo o controlarlo.",
     "sharedName": "{{name}} (compartido)",
     "sharedPlace": "Se usa en canales y en trabajos que se ejecutan solos. Todo el workspace comparte este espacio. No guardes nada privado aquí.",
-    "computerNoHome": "Aún sin computadora. Tendrá una cuando este workspace tenga una computadora propia, agregada en Configuración, Computadoras.",
+    "computerNoHome": "Aún sin computadora. Tendrá una cuando este workspace tenga una computadora propia.",
+    "addComputer": "Agregar una computadora",
     "computerOneUser": "Aquí no hay computadora. La computadora del workspace ejecuta todos los agentes como un solo usuario, así que no puede separar el espacio de cada persona. Un servidor Linux instalado con la opción --system del instalador sí puede.",
     "powers": {
       "title": "Poderes del workspace",
@@ -8079,8 +8082,8 @@
         "repoPlaceholder": "dueño/nombre",
         "oneClick": "Crear el webhook",
         "added": "Webhook creado en {{repo}}.",
-        "byHand": "O a mano: en el repositorio, Settings › Webhooks › Add webhook.",
-        "open": "En el repositorio, abre Settings › Webhooks › Add webhook.",
+        "byHand": "O créalo a mano en GitHub.",
+        "open": "Crea el webhook en el repositorio, en GitHub.",
         "openLink": "Abrir en GitHub",
         "url": "Payload URL",
         "type": "Content type: application/json",
@@ -9198,7 +9201,6 @@
       "homeHint": "La misión tiene un hilo: ahí {{name}} habla, pide decisiones y muestra su trabajo.",
       "homeHint_female": "La misión tiene un hilo: ahí {{name}} habla, pide decisiones y muestra su trabajo.",
       "offline": "{{name}} está sin conexión. El plan empieza cuando vuelva.",
-      "needsMachine": "Las misiones corren en una computadora conectada. Conecta una a {{name}} en Configuración › Dispositivos.",
       "commandHint": "También puedes empezar una escribiendo en el campo de mensaje de cualquier conversación:",
       "approvals": "Por defecto, merge, deploy y rollback piden aprobación",
       "start": "Empezar misión",
@@ -11739,8 +11741,9 @@
   },
   "access": {
     "matrixTitle": "Acceso de los agentes",
-    "matrixHint": "Por defecto, las acciones sensibles (merge, deploy, compartir, pagar) piden aprobación. Para ajustarlo herramienta por herramienta, abre Herramientas en el conector.",
+    "matrixHint": "Por defecto, las acciones sensibles (merge, deploy, compartir, pagar) piden aprobación. Para ajustarlo herramienta por herramienta, abre el conector.",
     "matrixHow": "Haz clic en una celda para cambiarla:",
+    "openConnectors": "Abrir Conectores",
     "kindLabel": "Mostrar",
     "kind": {
       "connectors": "Conectores",
@@ -14357,6 +14360,7 @@
       },
       "grantHere": "Es esta {{device}}: permite carpetas en las Preferencias de la app.",
       "openFolders": "Abrir Carpetas",
+      "openServers": "Abrir Servidores",
       "openTools": "Abrir Herramientas",
       "reconnect": "Reconectar",
       "reconnecting": "Reconectando esta {{device}}…",
@@ -14879,6 +14883,7 @@
       "pairingCode": "Código de vinculación de Wi-Fi",
       "pair": "Vincular",
       "tryAgain": "Intentar de nuevo",
+      "openLocalNetwork": "Abrir Red local",
       "qrLabel": "Código QR para la Depuración inalámbrica en el teléfono",
       "qrLine": "No con la cámara",
       "qrCaption": "Ofrece una red Wi-Fi llamada agentes-…, que no existe. Deja el teléfono en la red Wi-Fi de la computadora.",
@@ -15807,6 +15812,7 @@
       "help": "Conteos como personas, agentes, tamaños de máquina, tokens de IA usados y cuántos datos envían y reciben los navegadores de los agentes. Nunca mensajes, archivos, nombres ni sitios.",
       "envOff": "Desactivado en la configuración de este servidor (TELEMETRY=off).",
       "envOffDesktop": "Desactivado en la app agentes.chat de la computadora de este servidor (Preferencias › Servidores).",
+      "envOffHere": "Desactivado en la app agentes.chat de esta computadora.",
       "see": "Ver lo que se envía",
       "dialogTitle": "Lo que se envía",
       "dialogText": "Una vez al día. Este es el próximo informe, tal cual."
@@ -17809,8 +17815,9 @@
       "meter": "Usaste {{used}} de {{limit}}.",
       "near": "Usaste {{used}} de {{limit}}. Al llegar al límite se pausan las subidas, y no se borra nada.",
       "full": "Subidas pausadas al llegar a {{limit}}. No se borró nada.",
-      "fullAdmin": "Cambia el plan de agentes.chat, borra archivos que ya no usas o conecta tu propio bucket en Configuración › Almacenamiento.",
-      "dailyFull": "Las subidas de hoy llegaron a {{limit}}. Podrás subir de nuevo en unas horas."
+      "fullAdmin": "Cambia el plan de agentes.chat, borra archivos que ya no usas o conecta tu propio bucket.",
+      "dailyFull": "Las subidas de hoy llegaron a {{limit}}. Podrás subir de nuevo en unas horas.",
+      "connectBucket": "Conectar un bucket"
     }
   },
   "computerSetup": {
@@ -18189,8 +18196,7 @@
       "touchHint": "Toca para hacer clic · Arrastra para desplazarte · Mantén presionado para arrastrar · Dos dedos para mover la vista",
       "turn": "Gira el teléfono",
       "upright": "Ponlo vertical",
-      "message": "Escribirle a {{name}}",
-      "chooseOnWeb": "Elígela en agentes.chat, en Configuración › Dispositivos."
+      "message": "Escribirle a {{name}}"
     }
   },
   "agora": {

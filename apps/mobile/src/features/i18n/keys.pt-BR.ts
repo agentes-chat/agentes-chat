@@ -2093,8 +2093,8 @@ export const featureKeysPtBR = {
     everyoneFailed: "Não deu para mudar o acesso de todos. Tente de novo.",
     disconnectFailed: "Não deu para desconectar o {{name}}. Tente de novo.",
     needsReconnect: "A conta do {{name}} parou de funcionar. Os agentes não usam até alguém reconectar.",
-    noTools:
-      "Não deu para ler as ferramentas do {{name}}. Os agentes ficam sem elas até serem lidas de novo, em Ferramentas.",
+    noTools: "Não deu para ler as ferramentas do {{name}}. Os agentes ficam sem elas até serem lidas de novo.",
+    readAgain: "Ler de novo",
     accountTitle: "Conta",
     renameFailed: "Não deu para renomear. Tente de novo.",
     whoTitle: "Quem usa",
@@ -2511,7 +2511,7 @@ export const featureKeysPtBR = {
     },
     import: {
       title: "Importar de um computador",
-      text: "Para trazer senhas de um navegador ou de um gerenciador de senhas, abra Configurações, Cofre na web e escolha Importar.",
+      text: "Para trazer senhas de um navegador ou de um gerenciador de senhas, importe pela web.",
     },
     connections: {
       text: "Conecte um gerenciador de senhas e seus agentes usam os logins guardados lá. Nada é copiado: a senha só é lida na hora do uso.",

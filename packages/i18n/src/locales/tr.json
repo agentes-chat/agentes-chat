@@ -1035,6 +1035,8 @@
         "paperclip": "Paket klasörünü (COMPANY.md dosyasının olduğu) sürükleyin, .zip halini bırakın ya da GitHub bağlantısını yapıştırın.",
         "agenteschat": "Diğer çalışma alanında: Ayarlar → İçe ve dışa aktarma → Dosyayı indir. Sonra .json dosyasını buraya bırakın."
       },
+      "whereOther": "Dosyayı diğer çalışma alanından indirin ve .json dosyasını buraya bırakın.",
+      "whereOtherLink": "{{org}} çalışma alanından indir",
       "request": {
         "grok-bot": {
           "title": "Botunuzdan dışa aktarmasını isteyin",
@@ -1674,11 +1676,10 @@
     "browser": "Bu tarayıcı",
     "phone": "Telefon",
     "phoneOn": "Telefon uygulamasında, telefon kilitliyken bile",
-    "phoneOff": "Telefon uygulamasında, Siz › Bildirimler altında açın",
+    "phoneOff": "Telefon uygulamasında açın",
     "mac": "Mac uygulaması",
     "macHelp": "Uygulama açıkken, arka planda bile",
     "on": "Açık",
-    "off": "Kapalı",
     "failed": "Kaydedilemedi. Tekrar deneyin.",
     "loadFailed": "Seçimleriniz şu an yüklenemedi.",
     "category": {
@@ -1729,7 +1730,7 @@
     },
     "inline": {
       "title": "{{name}} cevap verdiği anda haberin olsun mu?",
-      "why": "Sekme kapalıyken bile. İstediğin zaman Ayarlar › Bildirimler bölümünden değiştir."
+      "why": "Sekme kapalıyken bile. İstediğin zaman <link>Bildirimler</link> bölümünden değiştir."
     }
   },
   "shell": {
@@ -1987,7 +1988,8 @@
     "private": "Bu kodu tarayan herkes sizin adınıza giriş yapar.",
     "failed": "Kod oluşturulamadı.",
     "localOnly": "Bu sunucu yalnızca çalıştığı bilgisayarda açılıyor, bu yüzden telefonunuz ona ulaşamıyor.",
-    "localOnlyHow": "O bilgisayardaki agentes.chat uygulamasında Tercihler › Sunucular bölümünden Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra buraya dönün."
+    "localOnlyHow": "O bilgisayardaki agentes.chat uygulamasında Tercihler › Sunucular bölümünden Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra buraya dönün.",
+    "localOnlyHere": "Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra buraya dönün."
   },
   "team": {
     "title": "Ekip",
@@ -2535,7 +2537,8 @@
     "computerYours": "Çalışma alanının bilgisayarındaki sana ait yer. Yalnızca sen izleyebilir veya kontrol edebilirsin.",
     "sharedName": "{{name}} (paylaşılan)",
     "sharedPlace": "Kanallarda ve kendi kendine çalışan işlerde kullanılır. Bu yeri tüm çalışma alanı paylaşır. Burada özel hiçbir şey tutma.",
-    "computerNoHome": "Henüz bilgisayar yok. Bu çalışma alanının Ayarlar, Bilgisayarlar bölümünden eklenen kendi bilgisayarı olduğunda bir tane olacak.",
+    "computerNoHome": "Henüz bilgisayar yok. Bu çalışma alanının kendi bilgisayarı olduğunda bir tane olacak.",
+    "addComputer": "Bilgisayar ekle",
     "computerOneUser": "Burada bilgisayar yok. Çalışma alanının bilgisayarı tüm ajanları tek bir kullanıcı olarak çalıştırıyor, bu yüzden her kişinin yerini ayrı tutamıyor. Yükleyicinin --system seçeneğiyle kurulan bir Linux sunucusu bunu yapabilir.",
     "powers": {
       "title": "Çalışma alanı yetkileri",
@@ -7817,8 +7820,8 @@
         "repoPlaceholder": "sahip/ad",
         "oneClick": "Webhook oluştur",
         "added": "{{repo}} içinde webhook oluşturuldu.",
-        "byHand": "Ya da elle: depoda Settings › Webhooks › Add webhook.",
-        "open": "Depoda Settings › Webhooks › Add webhook'u aç.",
+        "byHand": "Ya da GitHub'da elle oluşturun.",
+        "open": "Webhook'u GitHub'da, depoda oluşturun.",
         "openLink": "GitHub'da aç",
         "url": "Payload URL",
         "type": "Content type: application/json",
@@ -8876,7 +8879,6 @@
       "homeHint": "Misyonun bir ileti dizisi olur: {{name}} orada konuşur, karar ister ve çalışmasını gösterir.",
       "homeHint_female": "Misyonun bir ileti dizisi olur: {{name}} orada konuşur, karar ister ve çalışmasını gösterir.",
       "offline": "{{name}} çevrimdışı. Geri gelince plan başlar.",
-      "needsMachine": "Misyonlar bağlı bir bilgisayarda çalışır. Ayarlar › Cihazlar bölümünden {{name}} için bir bilgisayar bağlayın.",
       "commandHint": "Herhangi bir sohbetin mesaj kutusuna yazarak da başlatabilirsiniz:",
       "approvals": "Varsayılan olarak birleştirme, dağıtım ve geri alma onay ister",
       "start": "Misyonu başlat",
@@ -11325,8 +11327,9 @@
   },
   "access": {
     "matrixTitle": "Ajan erişimi",
-    "matrixHint": "Varsayılan olarak hassas işlemler (birleştirme, dağıtım, paylaşım, ödeme) onay ister. Araç araç ayarlamak için bağlayıcının Araçlar bölümünü açın.",
+    "matrixHint": "Varsayılan olarak hassas işlemler (birleştirme, dağıtım, paylaşım, ödeme) onay ister. Araç araç ayarlamak için bağlayıcıyı açın.",
     "matrixHow": "Değiştirmek için bir hücreye tıklayın:",
+    "openConnectors": "Bağlayıcıları aç",
     "kindLabel": "Göster",
     "kind": {
       "connectors": "Bağlayıcılar",
@@ -13880,6 +13883,7 @@
       },
       "grantHere": "Bu, şu anki {{device}}: klasörlere uygulamanın Tercihler bölümünden izin verin.",
       "openFolders": "Klasörleri aç",
+      "openServers": "Sunucuları aç",
       "openTools": "Araçları aç",
       "reconnect": "Yeniden bağlan",
       "reconnecting": "Bu {{device}} yeniden bağlanıyor…",
@@ -14398,6 +14402,7 @@
       "pairingCode": "Wi-Fi eşleme kodu",
       "pair": "Eşle",
       "tryAgain": "Tekrar dene",
+      "openLocalNetwork": "Yerel Ağ'ı aç",
       "qrLabel": "Telefondaki Kablosuz hata ayıklama için QR kodu",
       "qrLine": "Kamerayla değil",
       "qrCaption": "Kamera agentes-… adlı bir Wi-Fi ağı önerir, ama böyle bir ağ yok. Telefonu bilgisayarın Wi-Fi ağında tutun.",
@@ -15312,6 +15317,7 @@
       "help": "Kişi ve ajan sayısı, makine boyutları, kullanılan yapay zeka token'ları ve ajanların tarayıcılarının ne kadar veri gönderip aldığı gibi sayılar. Asla mesajlar, dosyalar, adlar ya da siteler değil.",
       "envOff": "Bu sunucunun ayarlarında kapatıldı (TELEMETRY=off).",
       "envOffDesktop": "Bu sunucunun bilgisayarındaki agentes.chat uygulamasında kapatıldı (Tercihler › Sunucular).",
+      "envOffHere": "Bu bilgisayardaki agentes.chat uygulamasında kapatıldı.",
       "see": "Neyin gönderildiğini gör",
       "dialogTitle": "Ne gönderiliyor",
       "dialogText": "Günde bir kez. Bir sonraki rapor tam olarak bu."
@@ -17278,8 +17284,9 @@
       "meter": "{{limit}} alanın {{used}} kadarını kullandınız.",
       "near": "{{limit}} alanın {{used}} kadarını kullandınız. Sınıra gelince yüklemeler durur, hiçbir şey silinmez.",
       "full": "Yüklemeler {{limit}} sınırında durdu. Hiçbir şey silinmedi.",
-      "fullAdmin": "agentes.chat planını değiştirin, artık kullanmadığınız dosyaları silin ya da Ayarlar › Depolama bölümünden kendi bucket'ınızı bağlayın.",
-      "dailyFull": "Bugünkü yüklemeler {{limit}} sınırına ulaştı. Birkaç saat sonra tekrar yükleyebilirsiniz."
+      "fullAdmin": "agentes.chat planını değiştirin, artık kullanmadığınız dosyaları silin ya da kendi bucket'ınızı bağlayın.",
+      "dailyFull": "Bugünkü yüklemeler {{limit}} sınırına ulaştı. Birkaç saat sonra tekrar yükleyebilirsiniz.",
+      "connectBucket": "Bucket bağla"
     }
   },
   "computerSetup": {
@@ -17608,8 +17615,7 @@
       "touchHint": "Tıklamak için dokunun · Kaydırmak için sürükleyin · Sürüklemek için basılı tutun · Görünümü taşımak için iki parmak",
       "turn": "Yan çevirin",
       "upright": "Dik çevirin",
-      "message": "{{name}} ajanına mesaj gönder",
-      "chooseOnWeb": "agentes.chat üzerinde, Ayarlar › Cihazlar bölümünden seçin."
+      "message": "{{name}} ajanına mesaj gönder"
     }
   },
   "agora": {

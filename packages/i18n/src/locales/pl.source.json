@@ -2537,6 +2537,12 @@
   "onboarding.import.where.agenteschat": {
     "value": "In the other workspace: Settings → Import and export → Download the file. Then drop the .json here."
   },
+  "onboarding.import.whereOther": {
+    "value": "Download the file from the other workspace and drop the .json here."
+  },
+  "onboarding.import.whereOtherLink": {
+    "value": "Download from {{org}}"
+  },
   "onboarding.import.request.grok-bot.title": {
     "value": "Ask your bot to export"
   },
@@ -4140,7 +4146,7 @@
     "value": "In the phone app, even with the phone locked"
   },
   "noticePrefs.phoneOff": {
-    "value": "Turn them on in the phone app, under You › Notifications"
+    "value": "Turn them on in the phone app"
   },
   "noticePrefs.mac": {
     "value": "Mac app"
@@ -4150,9 +4156,6 @@
   },
   "noticePrefs.on": {
     "value": "On"
-  },
-  "noticePrefs.off": {
-    "value": "Off"
   },
   "noticePrefs.failed": {
     "value": "Couldn't save that. Try again."
@@ -4236,7 +4239,7 @@
     "value": "Want to know the moment {{name}} answers?"
   },
   "webPushAsk.inline.why": {
-    "value": "Even with the tab closed. Change it anytime in Settings › Notifications."
+    "value": "Even with the tab closed. Change it anytime in <link>Notifications</link>."
   },
   "shell.otherChannels": {
     "value": "Other channels"
@@ -4936,6 +4939,9 @@
   },
   "openOnPhone.localOnlyHow": {
     "value": "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers. Then come back here."
+  },
+  "openOnPhone.localOnlyHere": {
+    "value": "Turn on Reach it from your phone and teammates. Then come back here."
   },
   "team.title": {
     "value": "Team"
@@ -6321,7 +6327,10 @@
     "value": "Used in channels and in work that runs on its own. The whole workspace shares this place. Keep nothing private here."
   },
   "rightHand.computerNoHome": {
-    "value": "No computer yet. It gets one when this workspace has a computer of its own, added in Settings, Computers."
+    "value": "No computer yet. It gets one when this workspace has a computer of its own."
+  },
+  "rightHand.addComputer": {
+    "value": "Add a computer"
   },
   "rightHand.computerOneUser": {
     "value": "No computer here. The workspace's computer runs every agent as one user, so it can't keep each person's place apart. A Linux server set up with the installer's --system option can."
@@ -19059,10 +19068,10 @@
     "value": "Webhook created in {{repo}}."
   },
   "routines.setup.github.byHand": {
-    "value": "Or by hand: in the repository, Settings › Webhooks › Add webhook."
+    "value": "Or create it by hand on GitHub."
   },
   "routines.setup.github.open": {
-    "value": "In the repository, open Settings › Webhooks › Add webhook."
+    "value": "Create the webhook in the repository, on GitHub."
   },
   "routines.setup.github.openLink": {
     "value": "Open on GitHub"
@@ -21625,9 +21634,6 @@
   },
   "missions.new.offline": {
     "value": "{{name}} is offline. The plan starts when it's back."
-  },
-  "missions.new.needsMachine": {
-    "value": "Missions run on a connected computer. Connect one to {{name}} in Settings › Devices."
   },
   "missions.new.commandHint": {
     "value": "You can also start one by typing in any conversation's composer:"
@@ -27743,10 +27749,13 @@
     "value": "Agent access"
   },
   "access.matrixHint": {
-    "value": "By default, sensitive actions (merge, deploy, share, pay) ask for approval. To set it tool by tool, open the connector's Tools."
+    "value": "By default, sensitive actions (merge, deploy, share, pay) ask for approval. To set it tool by tool, open the connector."
   },
   "access.matrixHow": {
     "value": "Click a cell to change it:"
+  },
+  "access.openConnectors": {
+    "value": "Open Connectors"
   },
   "access.kindLabel": {
     "value": "Show"
@@ -33820,6 +33829,9 @@
   "machines.thisMac.openFolders": {
     "value": "Open Folders"
   },
+  "machines.thisMac.openServers": {
+    "value": "Open Servers"
+  },
   "machines.thisMac.openTools": {
     "value": "Open Tools"
   },
@@ -35165,6 +35177,9 @@
   },
   "devices.wifiPair.tryAgain": {
     "value": "Try again"
+  },
+  "devices.wifiPair.openLocalNetwork": {
+    "value": "Open Local Network"
   },
   "devices.wifiPair.qrLabel": {
     "value": "QR code for Wireless debugging on the phone"
@@ -37445,6 +37460,9 @@
   },
   "settings.telemetry.envOffDesktop": {
     "value": "Turned off in the agentes.chat app on this server's computer (Preferences › Servers)."
+  },
+  "settings.telemetry.envOffHere": {
+    "value": "Turned off in the agentes.chat app on this computer."
   },
   "settings.telemetry.see": {
     "value": "See what is sent"
@@ -42175,10 +42193,13 @@
     "value": "Uploads paused at {{limit}}. Nothing was deleted."
   },
   "limits.storage.fullAdmin": {
-    "value": "Change the agentes.chat plan, delete files you no longer use, or connect your own bucket in Settings › Storage."
+    "value": "Change the agentes.chat plan, delete files you no longer use, or connect your own bucket."
   },
   "limits.storage.dailyFull": {
     "value": "Today's uploads reached {{limit}}. You can upload again in a few hours."
+  },
+  "limits.storage.connectBucket": {
+    "value": "Connect a bucket"
   },
   "computerSetup.managedNotRemovable": {
     "value": "This is the workspace's own computer: it can't be removed."
@@ -42900,9 +42921,6 @@
   },
   "agentComputer.phone.message": {
     "value": "Message {{name}}"
-  },
-  "agentComputer.phone.chooseOnWeb": {
-    "value": "Choose it on agentes.chat, in Settings › Devices."
   },
   "agora.label": {
     "value": "Now"

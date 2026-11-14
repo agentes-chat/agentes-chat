@@ -256,7 +256,7 @@ export const desktopPtBR = {
       start: "O agentes.chat não iniciou neste {{device}}.",
       database: "O banco de dados não foi preparado.",
       account: "A sua conta não foi criada.",
-      retry: "Tente de novo em Preferências\u00a0›\u00a0Servidores.",
+      retry: "Tentar de novo nas Preferências",
     },
     reason: {
       https: "o HTTPS está desligado na sua rede do Tailscale",
@@ -358,7 +358,6 @@ export const desktopPtBR = {
     jev: "Jev",
     jevText:
       "Um modelo rápido da TypeSafe que escolhe quem responde, organiza a memória e deixa os agentes enxergarem a tela. Opcional, com uma chave sua.",
-    jevWhere: "No agentes.chat\u00a0›\u00a0Configurações\u00a0›\u00a0IA e uso.",
     reachFailed: "O acesso pelos aparelhos não ligou: {{reason}}.",
     backup: "Fazer backup agora",
     backedUp: "Backup feito: {{file}}",
@@ -465,7 +464,9 @@ export const desktopPtBR = {
     linkBody: "Se não foi você que pediu, escolha Agora não.",
     waiting: "Esperando {{by}} deixar entrar…",
     done: "Conectado a {{org}}",
-    expired: "Este link expirou. Crie outro em Configurações\u00a0›\u00a0Dispositivos.",
+    addFolders: "Adicionar pastas",
+    expired: "Este link expirou. Crie outro em Dispositivos.",
+    openDevices: "Abrir Dispositivos",
     denied: "{{by}} não deixou entrar. Nada mudou.",
     letOrg: "Deixar os agentes de {{org}} usarem este {{device}}",
     canUse: "Os agentes podem usá-lo",

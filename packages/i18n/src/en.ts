@@ -1142,6 +1142,8 @@ export const en = {
         agenteschat:
           "In the other workspace: Settings → Import and export → Download the file. Then drop the .json here.",
       },
+      whereOther: "Download the file from the other workspace and drop the .json here.",
+      whereOtherLink: "Download from {{org}}",
       request: {
         "grok-bot": {
           title: "Ask your bot to export",
@@ -1809,11 +1811,10 @@ export const en = {
     browser: "This browser",
     phone: "Phone",
     phoneOn: "In the phone app, even with the phone locked",
-    phoneOff: "Turn them on in the phone app, under You\u00a0›\u00a0Notifications",
+    phoneOff: "Turn them on in the phone app",
     mac: "Mac app",
     macHelp: "While the app is open, even in the background",
     on: "On",
-    off: "Off",
     failed: "Couldn't save that. Try again.",
     loadFailed: "Couldn't load your choices right now.",
     category: {
@@ -1841,7 +1842,7 @@ export const en = {
     /** Under an agent's first answer to the person (ADR 0071): never on arrival. */
     inline: {
       title: "Want to know the moment {{name}} answers?",
-      why: "Even with the tab closed. Change it anytime in Settings\u00a0›\u00a0Notifications.",
+      why: "Even with the tab closed. Change it anytime in <link>Notifications</link>.",
     },
   },
   shell: {
@@ -2118,6 +2119,7 @@ export const en = {
     localOnly: "This server only opens on the computer it runs on, so your phone can't reach it.",
     localOnlyHow:
       "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers. Then come back here.",
+    localOnlyHere: "Turn on Reach it from your phone and teammates. Then come back here.",
   },
   team: {
     title: "Team",
@@ -2721,8 +2723,8 @@ export const en = {
     sharedPlace:
       "Used in channels and in work that runs on its own. The whole workspace shares this place. Keep nothing private here.",
     /** The row where it has none for anyone: the workspace has no computer of its own. */
-    computerNoHome:
-      "No computer yet. It gets one when this workspace has a computer of its own, added in Settings, Computers.",
+    computerNoHome: "No computer yet. It gets one when this workspace has a computer of its own.",
+    addComputer: "Add a computer",
     /** The row where the workspace's computer runs every agent as one OS user. */
     computerOneUser:
       "No computer here. The workspace's computer runs every agent as one user, so it can't keep each person's place apart. A Linux server set up with the installer's --system option can.",
@@ -8218,8 +8220,8 @@ export const en = {
         oneClick: "Create the webhook",
         /** After the one-click add: `repo` is owner/name. */
         added: "Webhook created in {{repo}}.",
-        byHand: "Or by hand: in the repository, Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
-        open: "In the repository, open Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
+        byHand: "Or create it by hand on GitHub.",
+        open: "Create the webhook in the repository, on GitHub.",
         openLink: "Open on GitHub",
         url: "Payload URL",
         type: "Content type: application/json",
@@ -9264,7 +9266,6 @@ export const en = {
       homeHint: "The mission gets a thread: that's where {{name}} talks, asks for decisions and shows his work.",
       homeHint_female: "The mission gets a thread: that's where {{name}} talks, asks for decisions and shows her work.",
       offline: "{{name}} is offline. The plan starts when it's back.",
-      needsMachine: "Missions run on a connected computer. Connect one to {{name}} in Settings\u00a0›\u00a0Devices.",
       commandHint: "You can also start one by typing in any conversation's composer:",
       approvals: "By default, merge, deploy and rollback ask for approval",
       start: "Start mission",
@@ -11675,8 +11676,9 @@ export const en = {
   access: {
     matrixTitle: "Agent access",
     matrixHint:
-      "By default, sensitive actions (merge, deploy, share, pay) ask for approval. To set it tool by tool, open the connector's Tools.",
+      "By default, sensitive actions (merge, deploy, share, pay) ask for approval. To set it tool by tool, open the connector.",
     matrixHow: "Click a cell to change it:",
+    openConnectors: "Open Connectors",
     kindLabel: "Show",
     kind: { connectors: "Connectors", builtin: "Built-in" },
     agentCol: "Agent",
@@ -14049,6 +14051,7 @@ export const en = {
       device: { mac: "Mac", windows: "PC", linux: "computer" },
       grantHere: "It's this {{device}}: allow folders in the app's Preferences.",
       openFolders: "Open Folders",
+      openServers: "Open Servers",
       openTools: "Open Tools",
       reconnect: "Reconnect",
       reconnecting: "Reconnecting this {{device}}…",
@@ -14576,6 +14579,7 @@ export const en = {
       pairingCode: "Wi-Fi pairing code",
       pair: "Pair",
       tryAgain: "Try again",
+      openLocalNetwork: "Open Local Network",
       qrLabel: "QR code for Wireless debugging on the phone",
       qrLine: "Not with the camera",
       /** "agentes-…" is how the camera names the Wi-Fi network it reads in the QR: keep it as written. */
@@ -15580,6 +15584,7 @@ export const en = {
       help: "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites.",
       envOff: "Turned off in this server's settings (TELEMETRY=off).",
       envOffDesktop: "Turned off in the agentes.chat app on this server's computer (Preferences\u00a0›\u00a0Servers).",
+      envOffHere: "Turned off in the agentes.chat app on this computer.",
       see: "See what is sent",
       dialogTitle: "What is sent",
       dialogText: "Once a day. This is the next report, exactly.",
@@ -17695,9 +17700,9 @@ export const en = {
       meter: "You've used {{used}} of {{limit}}.",
       near: "You've used {{used}} of {{limit}}. Uploads pause at the limit, and nothing is deleted.",
       full: "Uploads paused at {{limit}}. Nothing was deleted.",
-      fullAdmin:
-        "Change the agentes.chat plan, delete files you no longer use, or connect your own bucket in Settings\u00a0›\u00a0Storage.",
+      fullAdmin: "Change the agentes.chat plan, delete files you no longer use, or connect your own bucket.",
       dailyFull: "Today's uploads reached {{limit}}. You can upload again in a few hours.",
+      connectBucket: "Connect a bucket",
     },
   },
   computerSetup: {
@@ -18055,7 +18060,6 @@ export const en = {
       turn: "Turn sideways",
       upright: "Turn upright",
       message: "Message {{name}}",
-      chooseOnWeb: "Choose it on agentes.chat, in Settings\u00a0›\u00a0Devices.",
     },
   },
   /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Go to…" and its list. */

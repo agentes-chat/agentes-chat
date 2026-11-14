@@ -1062,6 +1062,8 @@ export const ptBR = {
         agenteschat:
           "No outro workspace: Configurações → Importar e exportar → Baixar o arquivo. Depois é só soltar o .json aqui.",
       },
+      whereOther: "Baixe o arquivo do outro workspace e solte o .json aqui.",
+      whereOtherLink: "Baixar de {{org}}",
       request: {
         "grok-bot": {
           title: "Peça para o seu bot exportar",
@@ -1725,11 +1727,10 @@ export const ptBR = {
     browser: "Este navegador",
     phone: "Celular",
     phoneOn: "No app do celular, com o aparelho bloqueado também",
-    phoneOff: "Ative no app do celular, em Você\u00a0›\u00a0Notificações",
+    phoneOff: "Ative no app do celular",
     mac: "App do Mac",
     macHelp: "Enquanto o app estiver aberto, mesmo em segundo plano",
     on: "Ligado",
-    off: "Desligado",
     failed: "Não deu para salvar. Tente de novo.",
     loadFailed: "Não deu para carregar suas escolhas agora.",
     category: {
@@ -1758,7 +1759,7 @@ export const ptBR = {
     inline: {
       title: "Quer saber na hora quando o {{name}} responder?",
       title_female: "Quer saber na hora quando a {{name}} responder?",
-      why: "Mesmo com a aba fechada. Você muda quando quiser em Configurações\u00a0›\u00a0Notificações.",
+      why: "Mesmo com a aba fechada. Você muda quando quiser em <link>Notificações</link>.",
     },
   },
   shell: {
@@ -2025,6 +2026,7 @@ export const ptBR = {
     localOnly: "Este servidor só abre no computador onde ele roda, então o celular não chega a ele.",
     localOnlyHow:
       "No app do agentes.chat desse computador, ligue Acessar pelo celular e pela equipe em Preferências › Servidores. Depois volte aqui.",
+    localOnlyHere: "Ligue Acessar pelo celular e pela equipe. Depois volte aqui.",
   },
   team: {
     title: "Equipe",
@@ -2631,8 +2633,8 @@ export const ptBR = {
     sharedPlace:
       "Usado em canais e em trabalhos que rodam sozinhos. Todo o workspace compartilha este espaço. Não guarde nada privado aqui.",
     /** The row where it has none for anyone: the workspace has no computer of its own. */
-    computerNoHome:
-      "Ainda sem computador. Passa a ter um quando este workspace tiver um computador próprio, adicionado em Configurações, Computadores.",
+    computerNoHome: "Ainda sem computador. Passa a ter um quando este workspace tiver um computador próprio.",
+    addComputer: "Adicionar um computador",
     /** The row where the workspace's computer runs every agent as one OS user. */
     computerOneUser:
       "Sem computador aqui. O computador do workspace roda todos os agentes como um só usuário, então não separa o espaço de cada pessoa. Um servidor Linux instalado com a opção --system do instalador separa.",
@@ -8215,8 +8217,8 @@ export const ptBR = {
         oneClick: "Criar o webhook",
         /** After the one-click add: `repo` is owner/name. */
         added: "Webhook criado no {{repo}}.",
-        byHand: "Ou à mão: no repositório, Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
-        open: "No repositório, abra Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
+        byHand: "Ou crie à mão no GitHub.",
+        open: "Crie o webhook no repositório, no GitHub.",
         openLink: "Abrir no GitHub",
         url: "Payload URL",
         type: "Content type: application/json",
@@ -9273,8 +9275,6 @@ export const ptBR = {
       dmWith: "DM com {{name}}",
       homeHint: "A missão ganha uma thread: é lá que {{name}} conversa, pede decisões e mostra o que fez.",
       offline: "{{name}} está offline. O plano começa quando ele voltar.",
-      needsMachine:
-        "Missões rodam num computador conectado. Conecte um ao {{name}} em Configurações\u00a0›\u00a0Dispositivos.",
       commandHint: "Também dá para começar escrevendo no composer de qualquer conversa:",
       approvals: "Por padrão, merge, deploy e rollback pedem aprovação",
       start: "Começar missão",
@@ -11715,8 +11715,9 @@ export const ptBR = {
   access: {
     matrixTitle: "Acesso dos agentes",
     matrixHint:
-      "Por padrão, ações sensíveis (merge, deploy, compartilhar, pagar) pedem aprovação. Para ajustar ferramenta por ferramenta, abra Ferramentas no conector.",
+      "Por padrão, ações sensíveis (merge, deploy, compartilhar, pagar) pedem aprovação. Para ajustar ferramenta por ferramenta, abra o conector.",
     matrixHow: "Clique numa célula para trocar:",
+    openConnectors: "Abrir Conectores",
     kindLabel: "Mostrar",
     kind: { connectors: "Conectores", builtin: "Nativos" },
     agentCol: "Agente",
@@ -14067,6 +14068,7 @@ export const ptBR = {
       device: { mac: "Mac", windows: "PC", linux: "computador" },
       grantHere: "É este {{device}}: libere pastas nas Preferências do app.",
       openFolders: "Abrir Pastas",
+      openServers: "Abrir Servidores",
       openTools: "Abrir Ferramentas",
       reconnect: "Reconectar",
       reconnecting: "Reconectando este {{device}}…",
@@ -14581,6 +14583,7 @@ export const ptBR = {
       pairingCode: "Código de pareamento por Wi-Fi",
       pair: "Parear",
       tryAgain: "Tentar de novo",
+      openLocalNetwork: "Abrir Rede Local",
       qrLabel: "Código QR para a depuração por Wi-Fi no celular",
       qrLine: "Não pela câmera",
       qrCaption:
@@ -15541,6 +15544,7 @@ export const ptBR = {
       envOff: "Desligado nas configurações deste servidor (TELEMETRY=off).",
       envOffDesktop:
         "Desligado no app do agentes.chat no computador deste servidor (Preferências\u00a0›\u00a0Servidores).",
+      envOffHere: "Desligado no app do agentes.chat deste computador.",
       see: "Ver o que é enviado",
       dialogTitle: "O que é enviado",
       dialogText: "Uma vez por dia. Este é o próximo envio, exatamente.",
@@ -17708,9 +17712,9 @@ export const ptBR = {
       meter: "Vocês usaram {{used}} de {{limit}}.",
       near: "Vocês usaram {{used}} de {{limit}}. Os envios pausam no limite, e nada é apagado.",
       full: "Os envios pausaram em {{limit}}. Nada foi apagado.",
-      fullAdmin:
-        "Mude o plano do agentes.chat, apague arquivos que não usam mais ou conecte o seu próprio bucket em Configurações\u00a0›\u00a0Armazenamento.",
+      fullAdmin: "Mude o plano do agentes.chat, apague arquivos que não usam mais ou conecte o seu próprio bucket.",
       dailyFull: "Os envios de hoje chegaram a {{limit}}. Dá para enviar de novo em algumas horas.",
+      connectBucket: "Conectar um bucket",
     },
   },
   computerSetup: {
@@ -18128,7 +18132,6 @@ export const ptBR = {
       turn: "Deitar a tela",
       upright: "Voltar a tela para em pé",
       message: "Mensagem para {{name}}",
-      chooseOnWeb: "Escolha no agentes.chat, em Configurações\u00a0›\u00a0Dispositivos.",
     },
   },
   /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Ir para…" and its list. */

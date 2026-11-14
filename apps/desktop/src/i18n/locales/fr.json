@@ -241,7 +241,7 @@
       "start": "agentes.chat n'a pas démarré sur ce {{device}}.",
       "database": "La base de données n'a pas été préparée.",
       "account": "Votre compte n'a pas été créé.",
-      "retry": "Réessayez dans Préférences › Serveurs."
+      "retry": "Réessayer dans Préférences"
     },
     "reason": {
       "https": "HTTPS est désactivé sur votre réseau Tailscale",
@@ -336,7 +336,6 @@
     "usageRestart": "Le modifier redémarre agentes.chat un instant.",
     "jev": "Jev",
     "jevText": "Un modèle rapide de TypeSafe qui choisit qui répond, garde la mémoire en ordre et permet aux agents de voir l'écran. Facultatif, avec votre propre clé.",
-    "jevWhere": "Dans agentes.chat › Paramètres › IA et utilisation.",
     "reachFailed": "L'accès depuis vos appareils ne s'est pas activé : {{reason}}.",
     "backup": "Sauvegarder maintenant",
     "backedUp": "Sauvegardé : {{file}}",
@@ -433,7 +432,9 @@
     "linkBody": "Si vous n'avez rien demandé, choisissez Plus tard.",
     "waiting": "En attente que {{by}} le laisse entrer…",
     "done": "Connecté à {{org}}",
-    "expired": "Ce lien a expiré. Créez-en un nouveau dans Paramètres › Appareils.",
+    "addFolders": "Ajouter des dossiers",
+    "expired": "Ce lien a expiré. Créez-en un nouveau dans Appareils.",
+    "openDevices": "Ouvrir Appareils",
     "denied": "{{by}} ne l'a pas laissé entrer. Rien n'a changé.",
     "letOrg": "Laisser les agents de {{org}} utiliser ce {{device}}",
     "canUse": "Les agents peuvent l'utiliser",
