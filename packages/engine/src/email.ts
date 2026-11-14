@@ -162,6 +162,27 @@ export type EmailTemplate =
       personal?: true;
     }
   /**
+   * A code to type before the account's address becomes `newEmail` (ADR 0088 §2, addendum 2026-11-13), to its current
+   * one, `email`. No button: the dialog is already open. `support`: whom to write to if it wasn't them, as
+   * `deletion_code`'s. Its outbox row goes like `join_code`'s.
+   */
+  | {
+      kind: "email_change_code";
+      locale: EmailLocale;
+      code: string;
+      email: string;
+      newEmail: string;
+      support: string | null;
+      url: string;
+    }
+  /** The link that makes this address the account's own, to the new address (`verify_email`'s words are a sign-up's). */
+  | { kind: "email_change_link"; locale: EmailLocale; url: string }
+  /**
+   * To the address the account just left, `email`, now `newEmail`: `url` is "This wasn't me", a page whose button puts
+   * `email` back for 7 days (`EMAIL_UNDO_DAYS`).
+   */
+  | { kind: "email_changed"; locale: EmailLocale; email: string; newEmail: string; url: string }
+  /**
    * Double opt-in for the landing page's waiting list, in the language they
    * joined in. `email` is the address being confirmed (absent in jobs queued
    * before it existed).
@@ -727,6 +748,46 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
           { small: t.support ? c.support(t.support) : c.noSupport },
         ],
         org === null ? c.whyAccount : c.whyWorkspace(org),
+      );
+    }
+    case "email_change_code": {
+      const c = w.emailChange.code;
+      return doc(
+        c.subject(t.code),
+        c.preheader,
+        c.headline,
+        [
+          { p: c.body(inertText(t.email), inertText(t.newEmail)) },
+          { code: t.code },
+          { small: t.support ? c.support(t.support) : c.noSupport },
+        ],
+        c.why,
+      );
+    }
+    case "email_change_link": {
+      const c = w.emailChange.link;
+      return doc(
+        c.subject,
+        c.preheader,
+        c.headline,
+        [{ p: c.body }, { button: c.button, url: t.url }, { small: c.small }, fallback(t.url)],
+        c.why,
+      );
+    }
+    case "email_changed": {
+      const c = w.emailChange.changed;
+      return doc(
+        c.subject,
+        c.preheader,
+        c.headline,
+        [
+          { p: c.body(inertText(t.email), inertText(t.newEmail)) },
+          { note: c.notYou },
+          { button: c.button, url: t.url },
+          { small: c.small },
+          fallback(t.url),
+        ],
+        c.why,
       );
     }
     case "autonomy_report": {

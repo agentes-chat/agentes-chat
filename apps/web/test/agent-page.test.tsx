@@ -609,17 +609,18 @@ describe("agent page: inline editing and the save bar", () => {
         .getAllByRole("radio")
         .find((r) => r.getAttribute("aria-checked") === "true")?.textContent;
     expect([level("GitHub"), level("Suporte")]).toEqual(["Sem acesso", "Ler"]);
-    // One control over the list, from its own edge: no level chosen while the rows differ.
-    const all = screen().getByRole("radiogroup", { name: "Conectores" });
-    expect(all.closest(".newag__quick")).toBeTruthy();
+    // One quiet action over the list, in the card's head, with the rows' own words.
+    const all = screen().getByRole("button", { name: "Mudar todos" });
+    expect(all.closest(".ac-card__action")).toBeTruthy();
+    await act(async () => fireEvent.pointerDown(all, { button: 0, ctrlKey: false }));
+    await settle(2);
+    const menu = screen().getByRole("menu", { name: "Mudar todos" });
     expect(
-      within(all)
-        .getAllByRole("radio")
+      within(menu)
+        .getAllByRole("menuitem")
         .map((r) => r.textContent),
-    ).toEqual(["Sem acesso", "Só ler", "Ler e escrever"]);
-    expect(within(all).queryByRole("radio", { checked: true })).toBeNull();
-    await click(within(all).getByRole("radio", { name: "Ler e escrever" }));
-    expect(within(all).getByRole("radio", { checked: true }).textContent).toBe("Ler e escrever");
+    ).toEqual(["Sem acesso", "Ler", "Ler e escrever"]);
+    await click(within(menu).getByRole("menuitem", { name: "Ler e escrever" }));
     expect([level("GitHub"), level("Suporte")]).toEqual(["Ler e escrever", "Ler e escrever"]);
     expect(saveBar()?.textContent).toContain("2 alterações");
     await click(within(saveBar() as HTMLElement).getByRole("button", { name: /^Salvar/ }));
@@ -779,12 +780,13 @@ describe("agent page: memory and proposals", () => {
     expect(within(card()).getByText("Um admin decide.")).toBeTruthy();
   });
 
-  test("the side column is one link to how memory works", async () => {
+  test("one column, and under its cards one link to how memory works", async () => {
     await go("?tab=memory");
     const link = screen().getByRole("link", { name: "Como a memória funciona" });
     expect(link.getAttribute("href")).toBe("https://agentes.chat/pt/docs/memory");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
-    expect(link.closest(".agp-col")?.textContent).toBe("Como a memória funciona");
+    expect(link.closest(".agp-cols")?.querySelectorAll(".agp-col")).toHaveLength(1);
+    expect(link.closest(".page__note")?.textContent).toBe("Como a memória funciona");
     const card = screen().getByRole("article", { name: "Atualizar as instruções da Ada" });
     expect(card.textContent).toContain("Recusar ensina a Ada a não propor isso de novo.");
   });
@@ -795,7 +797,7 @@ describe("agent page: memory and proposals", () => {
     expect(
       within(kinds)
         .getAllByRole("radio")
-        // The count is a separate chip (CountChip): no text space between label and number.
+        // The count is a quiet number after the label: no text space between them.
         .map((r) => r.textContent?.replace(/(\D)(\d+)$/, "$1 $2")),
     ).toEqual(["Fatos e decisões 4", "Lições 2", "Aprendizados", "Arquivados 1"]);
     await type(screen().getByRole("searchbox", { name: "Buscar" }), "zzz-nada");
@@ -819,7 +821,8 @@ describe("agent page: memory and proposals", () => {
     );
     const row = screen().getByText("GET the models with the key.").closest("li") as HTMLElement;
     expect(row.textContent).toContain("Como fazer");
-    expect(row.textContent).toContain("Não verificado");
+    // Not verified is the lack of a chip, with Confirmar to change it.
+    expect(row.querySelector(".ac-chip")).toBeNull();
     await click(within(row).getByRole("button", { name: "Esquecer" }));
     expect(state.memories.find((m) => m.id === mine.id)?.archived).toBe(true);
   });

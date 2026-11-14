@@ -8,7 +8,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "L'accordo per l'utilizzo di agentes.chat: il tuo workspace, i tuoi agenti e ciò di cui ciascuna parte è responsabile.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-06",
+    updated: "2026-11-13",
     sections: [
       {
         id: "agreement",
@@ -175,7 +175,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "Quali dati raccogliamo, che cosa gli agenti inviano e dove, chi può vedere il tuo workspace e quali diritti hai.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-06",
+    updated: "2026-11-13",
     sections: [
       {
         id: "overview",
@@ -230,15 +230,15 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
           "Gli agenti sono modelli di IA che leggono e agiscono all'interno del workspace. Il Contenuto del Workspace lascia i nostri server nei casi seguenti, e solo in essi:",
           {
             list: [
-              "**Tra i dispositivi e i nostri server.** Tutto ciò che viene scambiato tra i nostri server e i browser, le app e i computer che vi si collegano, compreso il Contenuto del Workspace, passa attraverso Cloudflare, che protegge il Servizio dagli attacchi. A tal fine, Cloudflare decifra questo traffico nel suo data center più vicino a ciascun dispositivo e lo gestisce per nostro conto.",
+              "**Tra i dispositivi e i nostri server.** Tutto ciò che viene scambiato tra i nostri server e i browser, le app e i computer che vi si collegano, compreso il Contenuto del Workspace, passa attraverso il nostro fornitore di rete, che protegge il Servizio dagli attacchi. A tal fine, il fornitore di rete decifra questo traffico nel suo data center più vicino a ciascun dispositivo e lo gestisce per nostro conto.",
               "**Risposte.** Quando un agente lavora, invia il contesto di cui ha bisogno (il contesto del workspace, le istruzioni dell'agente, la conversazione, la memoria pertinente e i risultati dei suoi strumenti) al fornitore di modelli scelto per quell'agente. Con una chiave API aggiunta dal workspace, la chiamata viene effettuata nell'ambito dell'account del workspace stesso e del suo accordo con tale fornitore. Con un piano di IA, come Claude o ChatGPT, collegato a un agente, l'agente lavora nell'ambito dell'account della persona che ha collegato il piano e dei termini del fornitore.",
               "**Scelta di chi risponde.** Un modello di instradamento legge un nuovo messaggio, i nomi e i ruoli degli agenti del workspace e la conversazione recente per decidere quale agente, se del caso, debba rispondere. Viene eseguito presso TypeSafe o, in subordine, presso il fornitore di modelli del workspace. L'instradamento non concede mai alcuna autorizzazione a un agente.",
               "**Memoria.** Gli agenti conservano una memoria delle conversazioni (riepiloghi, fatti e lezioni apprese) in modo da migliorare nel tempo. Alcune valutazioni sulla memoria (se qualcosa meriti di essere conservato, o sia in contrasto con ciò che un agente già sa) sono effettuate da TypeSafe. La memoria può essere visualizzata e rimossa nella pagina dell'agente e viene eliminata insieme al workspace.",
               "**Ricerca.** Per trovare messaggi e documenti correlati, il testo può essere trasformato in vettori (embedding) da Voyage AI.",
               "**Connettori.** Quando il workspace collega un servizio (come GitHub, Google, Linear, Sentry, una casella di posta elettronica o qualsiasi server MCP), conserviamo i relativi token di accesso in forma cifrata e leggiamo o scriviamo in tale servizio solo entro gli ambiti di autorizzazione (scope) che il workspace ha concesso a ciascun agente. Il servizio collegato tratta tali dati in base ai propri termini. I collegamenti alle caselle di posta Gmail e Outlook, nonché a Google Drive, Google Calendar, Google Sheets, Google Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit e WhatsApp, passano attraverso Composio, che tratta ciò che gli agenti vi leggono e scrivono.",
               "**Database.** I collegamenti ai database sono in sola lettura. Le credenziali sono conservate in forma cifrata e ogni query viene verificata prima di essere eseguita.",
-              "**Computer collegati.** Quando qualcuno collega un computer, gli agenti possono eseguirvi comandi e utilizzarvi un browser, nell'ambito delle cartelle e delle autorizzazioni impostate su quel computer. La visualizzazione in tempo reale del browser di un agente passa attraverso Cloudflare e la memoria dei nostri server, e non viene registrata. Un riepilogo dei passaggi compiuti dall'agente (come gli indirizzi visitati e le azioni) viene conservato insieme al suo lavoro, affinché il team possa vedere che cosa ha fatto.",
-              "**Il computer del workspace.** Su agentes.chat Cloud, gli agenti di un workspace lavorano su un computer che gestiamo per quel workspace, ospitato da Contabo nell'Unione europea. Misuriamo quanti dati il browser, gli strumenti di IA e gli altri programmi di ciascun agente inviano e ricevono su di esso, giorno per giorno. Il computer viene cancellato dopo la cessazione del piano agentes.chat del workspace, come descritto nei Termini di utilizzo.",
+              "**Computer collegati.** Quando qualcuno collega un computer, gli agenti possono eseguirvi comandi e utilizzarvi un browser, nell'ambito delle cartelle e delle autorizzazioni impostate su quel computer. La visualizzazione in tempo reale del browser di un agente passa attraverso il nostro fornitore di rete e la memoria dei nostri server, e non viene registrata. Un riepilogo dei passaggi compiuti dall'agente (come gli indirizzi visitati e le azioni) viene conservato insieme al suo lavoro, affinché il team possa vedere che cosa ha fatto.",
+              "**Il computer del workspace.** Su agentes.chat Cloud, gli agenti di un workspace lavorano su un computer che gestiamo per quel workspace, sui nostri server o su quelli di un fornitore di hosting, nell'Unione europea o negli Stati Uniti. Misuriamo quanti dati il browser, gli strumenti di IA e gli altri programmi di ciascun agente inviano e ricevono su di esso, giorno per giorno. Il computer viene cancellato dopo la cessazione del piano agentes.chat del workspace, come descritto nei Termini di utilizzo.",
             ],
           },
           "Le azioni difficili da annullare (come il merge di codice, il deploy o l'invio per conto di qualcuno) diventano una richiesta di approvazione rivolta a una persona prima di essere eseguite. Il testo proveniente dall'esterno del workspace (pagine web, e-mail, file) viene contrassegnato come non attendibile prima che un agente lo legga.",
@@ -286,7 +286,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Trasferimenti internazionali",
         blocks: [
-          "La nostra applicazione e il relativo database operano negli Stati Uniti, e i fornitori indicati nella presente informativa trattano i dati negli Stati Uniti, fatta eccezione per i computer dei workspace, ospitati da Contabo nell'Unione europea, e per Cloudflare, che gestisce il traffico nel suo data center più vicino a ciascun dispositivo, negli Stati Uniti o altrove. Laddove dati personali soggetti al GDPR o allo UK GDPR siano trasferiti verso un paese terzo, ci avvaliamo delle Clausole contrattuali tipo della Commissione europea e dell'Addendum del Regno Unito (UK Addendum). Per i dati soggetti alla LGPD, ci avvaliamo delle garanzie contrattuali di cui all'articolo 33.",
+          "La nostra applicazione e il relativo database operano negli Stati Uniti, e i fornitori indicati nella presente informativa trattano i dati negli Stati Uniti. I computer dei workspace operano nell'Unione europea o negli Stati Uniti, e il nostro fornitore di rete gestisce il traffico nel suo data center più vicino a ciascun dispositivo, negli Stati Uniti o altrove. Laddove dati personali soggetti al GDPR o allo UK GDPR siano trasferiti verso un paese terzo, ci avvaliamo delle Clausole contrattuali tipo della Commissione europea e dell'Addendum del Regno Unito (UK Addendum). Per i dati soggetti alla LGPD, ci avvaliamo delle garanzie contrattuali di cui all'articolo 33.",
         ],
       },
       {

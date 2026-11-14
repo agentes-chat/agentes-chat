@@ -19,7 +19,14 @@ import type { ChoiceAnswer } from "../lib/choices";
 import { newerSetup } from "../lib/computer";
 import { CONSULT_CONVERSATION_POLL_MS, CONSULT_GROUP_POLL_MS, exchangeIds } from "../lib/consult-group";
 import { forPeople } from "../lib/consultations";
-import { PHONE_LOOK_MS, WIFI_IPHONES_POLL_MS, WIFI_PAIR_POLL_MS, wifiPairLive } from "../lib/devices";
+import {
+  PHONE_LOOK_MS,
+  WIFI_IPHONES_POLL_MS,
+  WIFI_PAIR_POLL_MS,
+  wifiPairLive,
+  XCODE_FIX_POLL_MS,
+  xcodeFixLive,
+} from "../lib/devices";
 import { answerWithin, noAnswer, sendFailureOf, sendWaits } from "../lib/errors";
 import { ISSUES_VIEW_DEFAULT, type IssuesViewChange, withIssuesView } from "../lib/issues-view";
 import { LoginReadError, loginReadPasses } from "../lib/machines";
@@ -39,6 +46,7 @@ import { setMyReaction } from "../lib/reactions";
 import { recentConversations } from "../lib/recent";
 import { replyOf } from "../lib/reply";
 import { firstVisitOf, teamAnswered } from "../lib/right-hand";
+import { type LodiPrefs, type LodiPrefsPatch, legacyPatch } from "../lib/right-hand-prefs";
 import { usagePauseRefetchMs } from "../lib/routine-view";
 import { withRead } from "../lib/seen";
 import {
@@ -50,7 +58,7 @@ import {
 } from "../lib/sidebar-items";
 import { repinAgent, SIDEBAR_VIEW_DEFAULT, unpinAgents } from "../lib/sidebar-view";
 import { playSound } from "../lib/sounds";
-import type { TeamWeekAct, TeamWeekPrefs } from "../lib/team-week";
+import type { TeamWeekAct } from "../lib/team-week";
 import { threadStartOf } from "../lib/threads";
 import { upsertMessage, withLocalCopies } from "../lib/timeline";
 import { voiceOf } from "../lib/voice";
@@ -64,6 +72,7 @@ import { ApiError } from "./http";
 import { keys } from "./keys";
 import { keepSending, outbox } from "./outbox";
 import type {
+  AdminAsk,
   Agent,
   AgentAction,
   AgentAudience,
@@ -125,6 +134,7 @@ import type {
   JevKey,
   Machine,
   MachineAccessReduce,
+  MachineTool,
   MailAccountUpdate,
   MailImapInput,
   Me,
@@ -136,6 +146,7 @@ import type {
   NotificationEvent,
   NotificationFilter,
   OrgRoles,
+  PendingReturn,
   Person,
   PersonalTokenInput,
   PersonLimits,
@@ -190,6 +201,7 @@ import type {
   WorkspaceActionCardView,
   WorkView,
 } from "./types";
+import { WORKSPACE_ACTION_IDS } from "./types";
 
 /**
  * React Query hooks over the `ApiClient`. Reads are cached per organization;
@@ -754,17 +766,32 @@ export function useActionCard(orgId: string, messageId: string | null) {
  * Aplicar, Descartar or Pedir a quem pode on the right hand's card of a workspace change: the card comes back as it is
  * now, and what the change touches (roles, people, channels) is read again.
  */
-export function useDecideActionCard(orgId: string, where: { channelId: string; messageId: string }) {
+export function useDecideActionCard(
+  orgId: string,
+  /** `action`: the card's catalog action. Sent back as `knows` when this build words it, so the server can refuse to
+   * apply a change this build would show without saying what it is. */
+  where: { channelId: string; messageId: string; action?: string },
+) {
   const api = useApi();
   const qc = useQueryClient();
+  const knows = (WORKSPACE_ACTION_IDS as readonly string[]).includes(where.action ?? "") ? where.action : undefined;
   return useMutation({
     mutationFn: (decision: "apply" | "dismiss" | "ask") =>
-      part(api, "actionCards").decide(orgId, where.messageId, decision),
+      part(api, "actionCards").decide(orgId, where.messageId, decision, knows),
     onSuccess: ({ card }) => {
       cacheActionCard(qc, orgId, where, card);
-      for (const key of [keys.roles(orgId), keys.members(orgId), keys.channels(orgId)])
+      for (const key of [
+        keys.roles(orgId),
+        keys.members(orgId),
+        keys.channels(orgId),
+        keys.invitations(orgId),
+        keys.credentials(orgId),
+      ])
         void qc.invalidateQueries({ queryKey: key });
     },
+    // A refusal may have rewritten the card (what it names moved): read it again before anyone taps a second time.
+    // Who reads it from their inbox is not in its conversation, so no event brings them the new card.
+    onError: () => void qc.invalidateQueries({ queryKey: keys.actionCard(orgId, where.messageId) }),
   });
 }
 
@@ -1297,23 +1324,35 @@ export const useChannelCard = (orgId: string, channelId: string, enabled = true)
   });
 };
 
-/** A pasted message link's pill: where the message is and who wrote it (an error: one I can't see). */
+/**
+ * The server's "not for you" (403) or "no such thing" (404) as an answer, `null`, instead of an error. A query that
+ * fails keeps no data, so every refetch (a row coming back on screen, the app coming forward, an invalidation
+ * while an agent writes) puts it back in `pending`: a pill fed by it would switch between its loading mark and its
+ * words each time, and the message around it would change height.
+ */
+const orNothing = <T>(ask: Promise<T>): Promise<T | null> =>
+  ask.catch((e: unknown) => {
+    if (e instanceof ApiError && (e.status === 403 || e.status === 404)) return null;
+    throw e;
+  });
+
+/** A pasted message link's pill: where the message is and who wrote it (`null`: one I can't see). */
 export const useMessageCard = (orgId: string, messageId: string) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.messageCard(orgId, messageId),
-    queryFn: () => api.chat.messageCard(orgId, messageId),
+    queryFn: () => orNothing(api.chat.messageCard(orgId, messageId)),
     staleTime: 60_000,
     retry: false,
   });
 };
 
-/** What an internal id in a text names (`IdRef`), for its pill; an error (404) leaves the text as written. */
+/** What an internal id in a text names (`IdRef`), for its pill; `null` (404) leaves the text as written. */
 export const useIdRef = (orgId: string, id: string) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.idRef(orgId, id),
-    queryFn: () => api.chat.idRef(orgId, id),
+    queryFn: () => orNothing(api.chat.idRef(orgId, id)),
     staleTime: 5 * 60_000,
     retry: false,
   });
@@ -1998,6 +2037,8 @@ export function useDecideApproval(orgId: string) {
       playSound(decision === "approve" ? "approved" : "error");
       cacheApproval(qc, orgId, approval);
       void qc.invalidateQueries({ queryKey: keys.approvals(orgId) });
+      // Its run moves on: the chips of the threads it held say so (a hand-off's run posts nothing where they are).
+      void qc.invalidateQueries({ queryKey: keys.threads(orgId) });
       if (always) void qc.invalidateQueries({ queryKey: keys.approvalRules(orgId, approval.agentId) });
       if (always && approval.approveAlways?.routineId) void qc.invalidateQueries({ queryKey: keys.routines(orgId) });
     },
@@ -2017,19 +2058,23 @@ export function useCancelApproval(orgId: string) {
   });
 }
 
-/** A card's "Aprovar tudo" / "Agora não para todos": exactly the ids it listed at the click. */
+/**
+ * A card's "Aprovar tudo" / "Agora não para todos": exactly the ids it listed at the click. `only: "routine"` leaves
+ * to the server which of them one tap may decide: the others come back in `skipped`, still pending.
+ */
 export function useDecideApprovals(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   const via = useCardVia();
   return useMutation({
     mutationKey: decidingKey(orgId),
-    mutationFn: (input: { ids: string[]; decision: "approve" | "refuse"; reason?: string }) =>
+    mutationFn: (input: { ids: string[]; decision: "approve" | "refuse"; reason?: string; only?: "routine" }) =>
       api.approvals.decideMany(orgId, via ? { ...input, via } : input),
     onSuccess: (result, { decision }) => {
       playSound(decision === "approve" ? "approved" : "error");
       for (const approval of result.approvals) cacheApproval(qc, orgId, approval);
       void qc.invalidateQueries({ queryKey: keys.approvals(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.threads(orgId) });
     },
   });
 }
@@ -2971,7 +3016,7 @@ export const useRefuseMoreUsage = (orgId: string) => {
   return usePeopleUsageMutation(orgId, (userId: string) => api.orgs.refuseMoreUsage(orgId, userId));
 };
 
-/** When Lodi's weekly card comes for me (ADR 0137 §9), or that it is off. */
+/** What Lodi does for me by itself: when its daily and weekly cards come, and its other switches (ADR 0137 §9). */
 export const useTeamWeekPrefs = (orgId: string, enabled = true) => {
   const api = useApi();
   return useQuery({ queryKey: keys.teamWeek(orgId), queryFn: () => api.orgs.teamWeek(orgId), enabled });
@@ -2981,7 +3026,12 @@ export const useSetTeamWeekPrefs = (orgId: string) => {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Partial<Omit<TeamWeekPrefs, "timezone">>) => api.orgs.setTeamWeek(orgId, patch),
+    // A server from before the two cards is saved in the words it knows: it would drop these and answer 200.
+    mutationFn: (patch: LodiPrefsPatch) =>
+      api.orgs.setTeamWeek(
+        orgId,
+        qc.getQueryData<LodiPrefs>(keys.teamWeek(orgId))?.legacy ? legacyPatch(patch) : patch,
+      ),
     onSuccess: (prefs) => qc.setQueryData(keys.teamWeek(orgId), prefs),
   });
 };
@@ -4329,17 +4379,21 @@ export const useRoutineHook = (orgId: string, id: string | null) => {
   });
 };
 
-/** A new address, a new signing secret (its `secret` shown once) or none, and Testar. */
+/**
+ * A new address, a new signing secret (its `secret` shown once) or none, and Testar ("Ligar e testar" on a routine
+ * turned off, since a test needs it on).
+ */
 export function useRoutineHookAction(orgId: string, id: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (
-      action: "address" | "secret" | "unsign" | "test",
+      action: "address" | "secret" | "unsign" | "test" | "onAndTest",
     ): Promise<{ hook: RoutineHook; secret?: string; runId?: string | null }> => {
       if (action === "address") return { hook: await api.routines.newHookAddress(orgId, id) };
       if (action === "secret") return api.routines.newHookSecret(orgId, id);
       if (action === "unsign") return { hook: await api.routines.removeHookSecret(orgId, id) };
+      if (action === "onAndTest") await api.routines.setActive(orgId, id, true);
       return api.routines.testHook(orgId, id);
     },
     onSuccess: ({ hook }) => qc.setQueryData(keys.routineHook(orgId, id), hook),
@@ -4996,6 +5050,31 @@ export function useReduceMachineAccess(orgId: string) {
   });
 }
 
+/**
+ * One click where a tool is off on a computer: its owner turns it on (`allow`), anyone else asks them (`ask`). The
+ * machines and devices lists refetch so every screen that waited on it moves on.
+ */
+export function useAllowMachineTool(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ machineId, tool, ask }: { machineId: string; tool: MachineTool; ask?: boolean }) => {
+      if (!ask) return api.machines.allowTool(orgId, machineId, tool);
+      await api.machines.askTool(orgId, machineId, tool);
+      return null;
+    },
+    meta: { silent: true },
+    onSuccess: (access, { machineId }) => {
+      if (access)
+        qc.setQueryData<Machine[]>(keys.machines(orgId), (list) =>
+          list?.map((m) => (m.id === machineId ? { ...m, access } : m)),
+        );
+      void qc.invalidateQueries({ queryKey: keys.machines(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
+    },
+  });
+}
+
 export function useMachineAction(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
@@ -5539,6 +5618,12 @@ export function useSetNoticePref(orgId: string) {
     onError: (_error, _input, context) => qc.setQueryData(keys.noticePrefs(orgId), context?.before),
     onSuccess: (prefs) => qc.setQueryData(keys.noticePrefs(orgId), prefs),
   });
+}
+
+/** "Pedir a um admin" (`admin_ask`): sent to whoever may do it. */
+export function useAskAdmins(orgId: string) {
+  const api = useApi();
+  return useMutation({ mutationFn: (ask: AdminAsk) => api.notifications.askAdmins(orgId, ask) });
 }
 
 /** Where I put the tools at the top of my sidebar in this workspace (only the ones I moved). */
@@ -6176,6 +6261,48 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
   }
 }
 
+/**
+ * The returns agents set in a conversation, still to come, the soonest first (ADR 0037): the bar above the composer
+ * holds them. Live: a `follow_up` line's `message.created` refreshes it (`isReturnLine`).
+ */
+export function useFollowUps(orgId: string, channelId: string, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.followUps(orgId, channelId),
+    queryFn: () => api.chat.followUps(orgId, channelId),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Cancels a return: it leaves the conversation's list at once (also when it had already come or gone: there is nothing
+ * left to cancel), then the lists read again.
+ */
+export function useCancelFollowUp(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const drop = (channelId: string, messageId: string) =>
+    qc.setQueryData<PendingReturn[]>(keys.followUps(orgId, channelId), (old) =>
+      old?.filter((r) => r.messageId !== messageId),
+    );
+  return useMutation({
+    mutationFn: async ({ messageId }: { channelId: string; messageId: string }) => {
+      try {
+        await api.chat.cancelFollowUp(orgId, messageId);
+      } catch (error) {
+        if (!(error instanceof ApiError && (error.status === 404 || error.status === 409))) throw error;
+      }
+    },
+    onSuccess: (_done, { channelId, messageId }) => drop(channelId, messageId),
+    onSettled: (_done, _error, { channelId }) => {
+      void qc.invalidateQueries({ queryKey: keys.followUps(orgId, channelId) });
+      void qc.invalidateQueries({ queryKey: keys.taskManager(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.agentStatus(orgId) });
+    },
+  });
+}
+
 /** A channel's pinned messages, newest pin first (live: `message.pinned` / `message.unpinned`). */
 export function usePins(orgId: string, channelId: string, enabled = true) {
   const api = useApi();
@@ -6612,6 +6739,40 @@ export function useWifiIphones(orgId: string, machineId: string | null, on: bool
     },
   });
   return { available: on ? (list.data?.available ?? []) : [], pick };
+}
+
+/**
+ * A Mac fixing its own Xcode for the iPhone guide (`on`: the guide shows the Xcode step to who may manage the Mac):
+ * where the last fix stands, asked every 1.5 s while macOS's password window is open or the commands run. Once done,
+ * the devices refetch: the Mac has already looked at Xcode again.
+ */
+export function useXcodeFix(orgId: string, machineId: string | null, on: boolean) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const key = keys.xcodeFix(orgId, machineId ?? "");
+  const state = useQuery({
+    queryKey: key,
+    queryFn: () => api.devices.xcodeFix(orgId, machineId ?? ""),
+    enabled: on && machineId !== null,
+    retry: false,
+    refetchInterval: (q) => (xcodeFixLive(q.state.data?.fix) ? XCODE_FIX_POLL_MS : false),
+    meta: { quiet: true },
+  });
+  const done = state.data?.fix?.state === "done";
+  useEffect(() => {
+    if (done) void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
+  }, [done, qc, orgId]);
+  const start = useMutation({
+    mutationFn: (kind: "select" | "update") => api.devices.startXcodeFix(orgId, machineId ?? "", kind),
+    meta: { silent: true },
+    onSuccess: (data) => qc.setQueryData(key, data),
+  });
+  const cancel = useMutation({
+    mutationFn: () => api.devices.cancelXcodeFix(orgId, machineId ?? ""),
+    meta: { silent: true },
+    onSuccess: (data) => qc.setQueryData(key, data),
+  });
+  return { view: on ? state.data : undefined, start, cancel };
 }
 
 /**

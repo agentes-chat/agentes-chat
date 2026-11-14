@@ -47,6 +47,7 @@ import { useColors, useDirectory, useMeId } from "../shared/hooks";
 import { errorHaptic, PushedHeader, successHaptic } from "../shared/parts";
 import { PlanMeter } from "../usage/parts";
 import { AddAccount } from "./AddAccount";
+import { openKeyForAll } from "./KeyForAllScreen";
 import { openConnectAi } from "./NoAiCard";
 import { alertKeyRefused, Note, PlanHoldNote, usePlanHold } from "./parts";
 
@@ -179,6 +180,9 @@ export function AiAccountsScreen() {
           label: t("aiAccounts.page.useFor", agentGrammar(g.name)),
           onPress: () => void give(a, g),
         })),
+        ...(plan && a.status === "active"
+          ? [{ label: t("aiAccounts.page.useAll"), onPress: () => openKeyForAll(a.machineId, a.id) }]
+          : []),
         ...(Platform.OS === "ios" ? [{ label: t("aiAccounts.page.rename"), onPress: () => rename(a) }] : []),
         ...(out || plan
           ? [

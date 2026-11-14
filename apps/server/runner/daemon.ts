@@ -110,6 +110,7 @@ import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun } from "./executors";
 import { systemGitCache } from "./git";
 import type { HandlerContext, RequestObserver, RequestOutcome } from "./handlers";
+import { Holds } from "./holds";
 import { IphoneSetup, type IphoneSetupOptions } from "./iphone-setup";
 import { currentProcess, isCompiled, selfCommand } from "./launch";
 import { tailLines } from "./logfile";
@@ -134,7 +135,7 @@ import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, un
 import { agentId8, agentWorkspace } from "./paths";
 import { iphonesWifiFileOf, PhoneManager, type PhoneManagerOptions } from "./phones";
 import { agentSecrets, dropStoredSiteSecrets, secretValue } from "./secrets";
-import { AGENTS_CGROUP } from "./service";
+import { AGENTS_CGROUP, systemdBooted } from "./service";
 import {
   ensureSingleShared,
   ensureSystemShared,
@@ -144,6 +145,7 @@ import {
   systemShared,
   withShared,
 } from "./shared-folder";
+import { ackStandby, readStandby, STANDBY_POLL_MS, standbyOn } from "./standby";
 import { prepareSystemStartPage } from "./start-page";
 import { DataSockets, RELAYED_FILE, RelayCount } from "./streams";
 import {
@@ -156,7 +158,8 @@ import {
 } from "./supervisor";
 import { type SettledTask, TaskManager } from "./tasks";
 import { runnerTerminalUser, systemTerminalUser, Terminals, type TerminalUser } from "./terminal";
-import { appleToolchains, cachedToolchains, TOOLCHAINS_FILE } from "./toolchains";
+import { appleToolchains, cachedToolchains, TOOLCHAINS_FILE, xcodeBlocked } from "./toolchains";
+import { XcodeFixer, type XcodeFixOptions } from "./xcode-fix";
 
 /**
  * The runner's long-lived core, shared by `agentes-runner start` (terminal,
@@ -174,11 +177,18 @@ import { appleToolchains, cachedToolchains, TOOLCHAINS_FILE } from "./toolchains
  *   activity log (secrets masked).
  */
 
+/**
+ * Where the runner reads free memory (Linux), an idle CLI closes whenever a turn needs its room (`reclaim`), so keeping
+ * it warm costs no admission: follow-ups minutes apart skip a cold start and keep the prompt cache. Elsewhere a count
+ * of turns decides room, so idle CLIs close soon.
+ */
+const MEMORY_READ = process.platform === "linux";
+
 export const DEFAULT_LIMITS = {
   maxConcurrentTasks: 3,
   taskMaxSeconds: 4 * 3600,
-  brainIdleMinutes: 3,
-  brainMaxProcesses: 1,
+  brainIdleMinutes: MEMORY_READ ? 20 : 3,
+  brainMaxProcesses: MEMORY_READ ? 2 : 1,
 } as const;
 
 /** Bounds for `config.set` (the app's Preferences). */
@@ -385,6 +395,8 @@ export interface DaemonOptions {
   phones?: Partial<PhoneManagerOptions> | false;
   /** Tests: the iPhone setup's tools and folders. */
   iphone?: Partial<IphoneSetupOptions>;
+  /** Tests: the Xcode fix's tools and timings. */
+  xcodeFix?: Partial<XcodeFixOptions>;
 }
 
 /** What a task is in its activity words: a shell task's command, or the CLI that works it (the app names it). */
@@ -475,9 +487,17 @@ export class RunnerDaemon implements RequestObserver {
   /** The phones the last `hello` carried (JSON). */
   private toldPhones = "[]";
   /** What this computer builds with, cached (`hello.toolchains`); looked at from the first session on. */
-  private toolchains: { get(): RunnerToolchains | undefined; stop(): void } | null = null;
+  private toolchains: { get(): RunnerToolchains | undefined; stop(): void; lookApple?(): Promise<void> } | null = null;
   /** The Mac's side of an iPhone's setup (the desktop app asks), made on its first request. */
   private iphone: IphoneSetup | null = null;
+  /** System mode under systemd: the agents' holds (ADR 0176), which outlive sessions and this process. */
+  private holds: Holds | null = null;
+  /** An operator's standby is in force (ADR 0176): no link to the server, everything else runs. */
+  private standby = false;
+  /** The last standby ask answered (`standby-ack.json`). */
+  private standbyAsk: string | null = null;
+  /** A fix of the Mac's own Xcode (`xcode.fix`, the desktop app's iPhone window), made on its first request. */
+  private fixer: XcodeFixer | null = null;
 
   constructor(private readonly opts: DaemonOptions) {
     this.uidNetworks = new AgentNetworks({}, readNetworkPins(opts.home));
@@ -766,6 +786,10 @@ export class RunnerDaemon implements RequestObserver {
     sizes.unref?.();
     this.timers.push(sizes);
     // System mode: for an operator's network guard, at most once a minute.
+    this.checkStandby();
+    const standby = setInterval(() => this.checkStandby(), STANDBY_POLL_MS);
+    standby.unref?.();
+    this.timers.push(standby);
     const relayed = setInterval(() => {
       if (!this.session?.supervisor) return;
       try {
@@ -807,8 +831,10 @@ export class RunnerDaemon implements RequestObserver {
     const s = this.session;
     this.session = null;
     if (s) await this.closeSession(s);
+    this.holds?.close();
     await this.phones?.stop();
     this.iphone?.stop();
+    this.fixer?.stop();
     this.toolchains?.stop();
     await this.accounts.close().catch(() => undefined);
     await this.chain.catch(() => undefined);
@@ -1349,6 +1375,7 @@ export class RunnerDaemon implements RequestObserver {
         codexAuth: (accountId, auth) => this.accounts.keepCodexAuth(accountId, auth),
         desktop: (agent, use) => this.workerDesktop(agent, use),
         desktopViewers: (agentId) => this.desktops.status({ id: agentId }).streams,
+        browserKept: (agentId) => this.holds?.kept(agentId) ?? false,
         account: (agentId) => this.agentAccount(agentId),
         accounts: (agentId) => this.agentAccounts(agentId),
         ...(this.opts.workers ? { start: this.opts.workers.start } : { gitCache: rootGitCache() }),
@@ -1361,6 +1388,21 @@ export class RunnerDaemon implements RequestObserver {
         relayed: this.relayed,
         log,
       });
+      // The locks need logind (systemd), and each agent its own user to take them as.
+      if (!this.opts.workers && systemdBooted()) {
+        this.holds ??= new Holds({
+          home,
+          log,
+          onEnded: (holdId, reason) => this.send({ type: "keep.ended", holdId, reason }),
+          onBrowser: () => this.session?.supervisor?.stateChanged(),
+          closeBrowser: (agent) =>
+            this.session?.supervisor?.run(
+              { op: "browser.stop", agent },
+              { signal: new AbortController().signal, output: () => {} },
+            ) ?? Promise.resolve(),
+        });
+        this.holds.watch();
+      }
       if (this.accountUsers) {
         accountBrains = new AccountBrains({
           root: path.join(home, "account-brains"),
@@ -1386,17 +1428,11 @@ export class RunnerDaemon implements RequestObserver {
     if (!supervisor && this.access().tools.browser === true) void browser.prepareInBackground();
     this.toolchains ??= this.opts.toolchains
       ? { get: this.opts.toolchains, stop: () => {} }
-      : cachedToolchains(
-          path.join(home, TOOLCHAINS_FILE),
-          undefined,
-          process.platform === "darwin"
-            ? {
-                look: () => appleToolchains(),
-                // An older server drops the frame: its next hello carries the same.
-                onChange: (toolchains) => this.send({ type: "toolchains.changed", toolchains }),
-              }
-            : null,
-        );
+      : cachedToolchains(path.join(home, TOOLCHAINS_FILE), undefined, {
+          ...(process.platform === "darwin" ? { look: () => appleToolchains() } : {}),
+          // An older server drops the frame: its next hello carries the same.
+          onChange: (toolchains) => this.send({ type: "toolchains.changed", toolchains }),
+        });
     // Phones are reached as the person (adb's key, the Mac's pairing with the iPhone): a system-mode runner has none.
     if (!this.phones && config.mode !== "system" && this.opts.phones !== false) {
       this.phones = new PhoneManager({
@@ -1426,9 +1462,11 @@ export class RunnerDaemon implements RequestObserver {
       brains,
       ...(accountBrains ? { accountBrains } : {}),
       // System mode: root runs only the CLIs of sign-ins several agents share; the others are their workers'.
+      // Idle CLIs first (they restart in seconds), then idle agents' browsers (their logins stay on disk).
       reclaimBrains: supervisor
-        ? (spare) => accountBrains?.reclaim(spare) ?? supervisor.reclaimBrains(spare)
-        : (spare) => brains.reclaimIdle(spare),
+        ? async (spare) =>
+            (await (accountBrains?.reclaim(spare) ?? supervisor.reclaimBrains(spare))) || supervisor.reclaimBrowsers()
+        : async (spare) => (await brains.reclaimIdle(spare)) || browser.reclaimIdle(),
       warmBrain: supervisor
         ? async (spare) => accountBrains?.warm(spare) || supervisor.warmBrain(spare)
         : async (spare) => brains.warm(spare),
@@ -1442,6 +1480,7 @@ export class RunnerDaemon implements RequestObserver {
       accessOps: {
         request: (agent, req) => this.accessRequest(agent, req),
         reduce: (req) => this.accessReduce(req),
+        allow: (req) => this.accessAllow(req),
       },
       browser,
       accounts: this.accounts,
@@ -1458,6 +1497,8 @@ export class RunnerDaemon implements RequestObserver {
         }
       },
       ...(this.phones ? { phones: this.phones } : {}),
+      ...(this.holds && agentUser ? { keep: this.keepOps(this.holds, agentUser) } : {}),
+      xcodeFix: (req) => this.xcodeFixer().handle(req),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
     // it lands in `hello` if it finishes first, else comes after as `accounts.changed`. Nothing reaches the
@@ -1487,6 +1528,7 @@ export class RunnerDaemon implements RequestObserver {
           ...usage,
           // Who may control a desktop or open a terminal follows it (ADR 0058 §4).
           ...(agentUser ? { mode: "system" as const } : {}),
+          ...(this.holds ? { holds: this.holds.report() } : {}),
         };
       },
       executors: () => this.helloExecutors(),
@@ -1564,12 +1606,48 @@ export class RunnerDaemon implements RequestObserver {
       agentUser,
     };
     this.session = session;
+    // Asked before this session started (a runner started again mid-standby): it stays off the server.
+    if (this.standby) connection.standby();
     supervisor?.boot();
     this.observeNetwork();
     log(
       `agentes-runner ${RUNNER_VERSION}: connecting to ${config.server} (workspace ${workspaceReal}${this.access().tools.commands ? "" : ", commands off"})`,
     );
     void connection.run().then((outcome) => this.sessionEnded(session, outcome));
+  }
+
+  /** `keep.*` (ADR 0176): each hold in the agent's slice, its program checked against the agent's user. */
+  private keepOps(holds: Holds, user: (agent: AgentScope) => AgentUser): NonNullable<HandlerContext["keep"]> {
+    return {
+      start: (agent, req) => holds.start(agent, user(agent), req),
+      end: (req) => holds.end(req),
+    };
+  }
+
+  /** An operator's standby (ADR 0176), asked in `standby.json`: while it is in force, no link to the server. */
+  private checkStandby() {
+    const ask = readStandby(this.opts.home);
+    const on = standbyOn(ask);
+    if (on !== this.standby) {
+      this.standby = on;
+      const s = this.session;
+      if (on) {
+        this.opts.log("standby: the link to the server is down; everything else runs on");
+        s?.connection.standby();
+        s?.streams.closeAll();
+      } else {
+        this.opts.log("standby is over: connecting");
+        s?.connection.resume();
+      }
+    }
+    if (ask && ask.id !== this.standbyAsk) {
+      this.standbyAsk = ask.id;
+      try {
+        ackStandby(this.opts.home, ask.id);
+      } catch (err) {
+        this.opts.log(`standby: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
   }
 
   private networkScopesBusy(agentId: string): boolean {
@@ -2126,8 +2204,24 @@ export class RunnerDaemon implements RequestObserver {
 
   /** The desktop app's iPhone setup: what the Mac has, a download of the iOS platform, Xcode opened. */
   iphoneSetup(): IphoneSetup {
-    this.iphone ??= new IphoneSetup({ log: this.opts.log, ...this.opts.iphone });
+    this.iphone ??= new IphoneSetup({ log: this.opts.log, fixer: () => this.xcodeFixer(), ...this.opts.iphone });
     return this.iphone;
+  }
+
+  /**
+   * Fixing the Mac's Xcode: once done, Xcode is looked at again at once, so the setup moves on by itself, and asked
+   * once more why it is still blocked (the look may skip while another is under way).
+   */
+  xcodeFixer(): XcodeFixer {
+    this.fixer ??= new XcodeFixer({
+      log: this.opts.log,
+      onDone: async () => {
+        await this.toolchains?.lookApple?.();
+        return xcodeBlocked({});
+      },
+      ...this.opts.xcodeFix,
+    });
+    return this.fixer;
   }
 
   // ── Accounts (ADR 0041) ────────────────────────────────────────────────────
@@ -2486,6 +2580,25 @@ export class RunnerDaemon implements RequestObserver {
     const before = this.access();
     const next = reduceAccess(before, req);
     if (JSON.stringify(next) !== JSON.stringify(before)) this.writeAccess(next);
+    return { access: this.access() };
+  }
+
+  /**
+   * `access.allow` from the apps (`ACCESS_ALLOW_PROTOCOL`): the computer's owner turned a tool on there. Applied as
+   * its own switch, and whoever is at the computer is told, with a way to turn it back off.
+   */
+  async accessAllow(req: Extract<MachineRequest, { op: "access.allow" }>): Promise<MachineReplies["access.allow"]> {
+    const tool = req.tool;
+    if (!TOOL_NAMES.includes(tool)) throw new RunnerError("bad_request", `Unknown tool ${String(tool).slice(0, 40)}`);
+    const before = this.access();
+    if (before.tools[tool] !== true) {
+      this.writeAccess(setTool(before, tool, true));
+      const byName = (typeof req.byName === "string" ? req.byName : "").slice(0, 80);
+      this.emit({ kind: "access.allowed", tool, byName });
+      this.opts.print?.(
+        `${byName || "Its owner"} turned on ${tool} from agentes.chat. To turn it off: agentes-runner tools disable ${tool}`,
+      );
+    }
     return { access: this.access() };
   }
 

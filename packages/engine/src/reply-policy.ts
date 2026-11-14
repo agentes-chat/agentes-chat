@@ -58,8 +58,26 @@ export const byEveryone = (
   trigger: Pick<Message, "meta"> | null | undefined,
 ) => {
   const ids = trigger?.meta?.everyoneAgentIds;
-  return run.trigger === "mention" && Array.isArray(ids) && ids.includes(run.agentId);
+  return (
+    run.trigger === "mention" && Array.isArray(ids) && ids.includes(run.agentId) && !answersForEveryone(run, trigger)
+  );
 };
+
+/**
+ * The one agent a person's mention of everyone was judged to need (`classifyEveryone`, `everyoneShape.by`): it owes
+ * the answer, for all the agents here.
+ */
+export const answersForEveryone = (
+  run: Pick<AgentRun, "agentId" | "trigger">,
+  trigger: Pick<Message, "meta"> | null | undefined,
+) => {
+  const shape = trigger?.meta?.everyoneShape as { answer?: unknown; by?: unknown } | undefined;
+  return run.trigger === "mention" && shape?.answer === "one" && shape.by === run.agentId;
+};
+
+/** The prompt block of the run that answers a mention of everyone for all the agents (`answersForEveryone`). */
+export const WHY_ANSWER_FOR_EVERYONE =
+  '# Why you were called\nA person mentioned everyone in this conversation (@everyone). One answer serves all of you, so you answer for all the agents here: the others read it and stay quiet. Answer once, for the team. A rule or anything to keep from it is the whole team\'s: save it once with `remember` and for: "team", and never ask the other agents to save copies.';
 
 export interface ReplyPolicy {
   /** Nobody called it by name: it may end without a message (`pass`, an empty or sentinel-only answer). */

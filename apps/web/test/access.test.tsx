@@ -244,7 +244,7 @@ describe("Configurações → Agentes e acesso: the matrix", () => {
     expect(legend.textContent).toBe("Clique numa célula para trocar:Sem acessoLerLer e escreverpede aprovação");
     const about = section.getByRole("button", { name: "Sobre Acesso dos agentes" });
     expect(document.getElementById(about.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
-      "Ações sensíveis (merge, deploy, compartilhar, pagar) sempre pedem aprovação, em qualquer nível. Para ajustar ferramenta por ferramenta, abra Ferramentas no conector.",
+      "Por padrão, ações sensíveis (merge, deploy, compartilhar, pagar) pedem aprovação. Para ajustar ferramenta por ferramenta, abra Ferramentas no conector.",
     );
     // The heading keeps its own name; nothing else is said above the table.
     expect(section.getByRole("heading", { level: 2 }).textContent).toBe("Acesso dos agentes");

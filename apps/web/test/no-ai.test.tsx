@@ -1058,9 +1058,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(shownText(theirs)).toBe("Claude MaxDe Bia");
     expect(theirs.disabled).toBe(false);
     expect((within(picker).getByRole("button", { name: /^Claude Pro/ }) as HTMLButtonElement).disabled).toBe(true);
-    expect(picker.textContent).toContain(
-      "Os planos de outras pessoas mostram de quem são. O dono recebe um e-mail e pode tirar de volta.",
-    );
+    expect(picker.textContent).toContain("Os planos que atendem o workspace todo mostram de quem são.");
     await click(theirs, 8);
     expect(calls(state, "agents.setBrain").map((c) => c.args)).toEqual([
       [ORG_ID, ADA_ID, { brain: "claude_code", account: "acct_bia" }],

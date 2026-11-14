@@ -311,7 +311,7 @@
   },
   "along": {
     "agent": "Un agente",
-    "waits": "{{name}} espera tu ok",
+    "waits": "{{name}} · esperándote",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} está trabajando",
     "more": "+{{count}}"
@@ -815,7 +815,7 @@
     "teamSectionPersonal": "Tus agentes",
     "managerQuiet": "Nada en curso",
     "state": {
-      "waitsYou": "espera tu ok",
+      "waitsYou": "esperándote",
       "noAi": "Sin IA conectada",
       "connect": "Conectar",
       "archived": "Archivado",
@@ -957,6 +957,9 @@
       "run_failed_one": "No se pudo terminar",
       "run_failed_many": "No se pudo terminar",
       "run_failed_other": "No se pudo terminar",
+      "admin_ask_channel_agent": "{{names}} te pide añadir a {{agent}} a #{{label}}",
+      "admin_ask_create_agents": "{{names}} pide poder crear agentes",
+      "admin_ask_webhook": "{{names}} te pide configurar el webhook de {{service}} para rutinas",
       "routine_paused_one": "Rutina en pausa",
       "routine_paused_many": "Rutinas en pausa",
       "routine_paused_other": "Rutinas en pausa",
@@ -1044,6 +1047,9 @@
       "plan_lent_female_one": "{{names}} conectó tu plan de {{plan}} a {{agent}}",
       "plan_lent_female_many": "{{names}} conectaron tu plan de {{plan}} a {{agent}}",
       "plan_lent_female_other": "{{names}} conectaron tu plan de {{plan}} a {{agent}}",
+      "plan_serves_one": "Tu {{plan}} ahora atiende a todo el workspace",
+      "plan_serves_many": "Tu {{plan}} ahora atiende a todo el workspace",
+      "plan_serves_other": "Tu {{plan}} ahora atiende a todo el workspace",
       "plan_model_dropped_one": "{{model}} salió de {{plan}}. {{names}} usa {{runs}} por ahora",
       "plan_model_dropped_many": "{{model}} salió de {{plan}}. {{names}} usa {{runs}} por ahora",
       "plan_model_dropped_other": "{{model}} salió de {{plan}}. {{names}} usa {{runs}} por ahora",
@@ -1206,6 +1212,9 @@
     "addWorkspaceTeamShort": "Entrar en el servidor de tu equipo",
     "addWorkspaceTeamSubShort": "Dirección o código QR de la computadora",
     "addWorkspaceFoot": "No sales de ningún espacio de trabajo.",
+    "addAccount": "Iniciar sesión con otra cuenta",
+    "addAccountSub": "En {{host}}, sin salir de esta",
+    "accountNoWorkspace": "Aún sin espacio de trabajo",
     "teamServerLeadShort": "Lo que tu equipo abre en el navegador.",
     "teamServerQuestion": "¿Cuál es la dirección de tu equipo?",
     "account": {
@@ -1223,6 +1232,8 @@
       "name": "Nombre",
       "namePlaceholder": "Tu nombre",
       "email": "Correo",
+      "emailWebLead": "Vuelve a iniciar sesión en el sitio y cámbialo allí, sin el código.",
+      "emailWeb": "Volver a iniciar sesión en el sitio",
       "inWorkspace": "En este espacio de trabajo · {{org}}",
       "handle": "Tu @",
       "timezone": "Zona horaria",
@@ -1439,7 +1450,6 @@
     "uses_many": "Usado {{count}} veces",
     "uses_other": "Usado {{count}} veces",
     "confirmed": "Confirmado por una persona",
-    "unconfirmed": "Todavía sin confirmar",
     "confirm": "Confirmar",
     "confirmedToast": "Confirmada",
     "details": "Detalles técnicos",
@@ -1515,7 +1525,7 @@
       "plain": "terminó una tarea"
     },
     "rowWait": {
-      "approval": "espera tu aprobación",
+      "approval": "esperándote",
       "question": "espera tu respuesta",
       "mission": "espera tu revisión"
     },
@@ -1553,14 +1563,14 @@
   },
   "intentAgents": {
     "waitingSection": "Esperándote",
-    "waitingLine": "{{title}} · necesita tu aprobación",
+    "waitingLine": "{{title}} · esperándote",
     "waitingMore_one": "{{title}} · y {{count}} más esperándote",
     "waitingMore_many": "{{title}} · y {{count}} más esperándote",
     "waitingMore_other": "{{title}} · y {{count}} más esperándote",
-    "waitingLabel": "{{name}}, necesita tu aprobación",
+    "waitingLabel": "{{name}}, esperándote",
     "owner": "Responsable: {{name}}",
     "ownerYou": "Responsable: tú",
-    "nowWaiting": "Necesita tu aprobación: {{title}}",
+    "nowWaiting": "Esperándote: {{title}}",
     "did": {
       "title": "Lo que hizo por ti",
       "title_female": "Lo que hizo por ti",
@@ -1580,7 +1590,7 @@
         "image": "Imagen",
         "file": "Archivo"
       },
-      "waitingOnYou": "Necesita tu aprobación",
+      "waitingOnYou": "Esperándote",
       "youApproved": "Aprobaste",
       "youRefused": "Rechazaste",
       "action": {
@@ -1657,9 +1667,9 @@
         "setup": "Configuración del espacio de trabajo",
         "desktop": "Pantalla de la computadora"
       },
-      "asksYou": "Hacer merge y publicar siempre piden tu aprobación, en cualquier nivel.",
-      "asksOwner": "Hacer merge y publicar siempre piden la aprobación de {{name}}, en cualquier nivel.",
-      "asksAdmins": "Hacer merge y publicar siempre piden la aprobación de un admin, en cualquier nivel.",
+      "asksYou": "Hacer merge y publicar piden tu aprobación, salvo que el agente no pregunte nunca.",
+      "asksOwner": "Hacer merge y publicar piden la aprobación de {{name}}, salvo que el agente no pregunte nunca.",
+      "asksAdmins": "Hacer merge y publicar piden la aprobación de un admin, salvo que el agente no pregunte nunca.",
       "empty": "Por ahora, solo conversación."
     }
   },
@@ -2078,6 +2088,7 @@
       "access_requestFor": "{{names}} pide usar {{device}} para {{person}}",
       "waiting": "{{names}} está esperando {{device}}",
       "waitingFor": "{{names}} está esperando {{device}} para {{person}}",
+      "tool_request": "{{names}} te pide activar {{tool}} en tu {{device}}",
       "allowOnce": "Permitir una vez",
       "always": "Permitir siempre a {{name}}",
       "no": "No",
@@ -2344,7 +2355,8 @@
       "tooBig": "Esa imagen es demasiado grande. Prueba con otra."
     },
     "machine": {
-      "toolsHow": "Toca una herramienta activada para desactivarla. Volver a activarla solo se puede en la propia computadora."
+      "toolsHow": "Toca una herramienta activada para desactivarla. Para volver a activarla: en el propio ordenador, o aquí quien lo conectó.",
+      "toolsHowOwner": "Toca una herramienta para activarla o desactivarla."
     },
     "roles": {
       "onComputer": "El orden de los roles y el ícono de cada uno se cambian en la computadora.",

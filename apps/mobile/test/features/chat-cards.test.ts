@@ -87,7 +87,7 @@ describe("agents it asked first: one pair row right before the reply, never insi
         at(live, [
           "if (asking && e.consult === asking)",
           '<AgentFace agentId={e.id} size={18} mode="idle" />',
-          '<AgentFace agentId={asking.to} size={18} mode="think" />',
+          '<AgentFace agentId={asking.to} size={18} mode={asking.yours || asking.wait ? "idle" : "think"} />',
         ]),
       ),
     ).toBe(true);
@@ -132,7 +132,7 @@ describe("agents it asked first: one pair row right before the reply, never insi
 describe("an exchange between the same two agents", () => {
   test("is one row on its first asking run's reply, and one conversation when opened", () => {
     expect(source("ConsultGroup.tsx")).toContain("groupsByRun(asExchanges(list.data ?? []))");
-    expect(source("ConsultGroup.tsx")).toContain("consultPair(items, now, askerId)");
+    expect(source("ConsultGroup.tsx")).toContain("consultPair(items, now, askerId,");
     expect(source("ChatScreen.tsx")).toContain("asExchanges(consultData)");
     expect(source("ConsultationScreen.tsx")).toContain("useExchangeConversation(");
   });
@@ -183,21 +183,34 @@ describe("what agents did under each reply: the person's own setting, off by def
   });
 });
 
-describe("what an agent changed reads in one line a row, whole in its sheet", () => {
-  test("a receipt's sentence and each line under it are one line (the sheet says them whole); team checks wrap", () => {
+describe("what an agent changed wraps whole, on a card as wide as its words", () => {
+  test("a receipt's sentence and each line under it wrap whole, never cut with '…'; team checks wrap", () => {
     // No renderer for the phone's components in these tests: the line limits are read from the source.
     const receipts = source("Receipts.tsx");
-    // The sentence, and the one line every line under it is drawn with (its files, what it does alone, who undid it).
+    // The sentence, and the line every line under it is drawn with (its files, what it does alone, who undid it).
     const sentence = receipts.slice(receipts.indexOf("function Sentence("), receipts.indexOf("function ChangesSheet("));
-    expect(sentence).toContain("numberOfLines={1}");
+    expect(sentence).not.toContain("numberOfLines");
     const under = receipts.slice(receipts.indexOf("const UnderLine = "), receipts.indexOf("function UndoneLine("));
-    expect(under).toContain("numberOfLines={1}");
+    expect(under).not.toContain("numberOfLines");
     for (const line of ["lines.files", "lines.own", "lines.undone"])
       expect(receipts).toContain(`<${line === "lines.undone" ? "UndoneLine" : "UnderLine"} text={${line}} />`);
     expect(receipts).toContain(
       "<ChangesSheet row={r} channelId={m.channelId} title={title} under={under} close={sheet.close} />",
     );
     expect(source("TeamChecks.tsx")).not.toContain("numberOfLines");
+  });
+
+  test("a receipt's card, and the cards that look like it, are as wide as their words, up to the column", () => {
+    for (const file of ["Receipts.tsx", "TeamChecks.tsx", "ReachLines.tsx"]) {
+      const text = source(file);
+      expect([file, text.includes('alignSelf: "flex-start",\n    maxWidth: "100%",')]).toEqual([file, true]);
+      // A content-sized row collapses a `flex: 1` child to nothing: the words shrink instead.
+      expect([file, /(fit|line|words|body): \{ flexShrink: 1, minWidth: 0/.test(text)]).toEqual([file, true]);
+    }
+    // The report offer keeps the column's width, as a request does: its report opening inside never widens it.
+    const offer = source("FeedbackOffer.tsx");
+    expect(offer).not.toContain('alignSelf: "flex-start"');
+    expect(offer).toContain("body: { flex: 1, minWidth: 0 },");
   });
 
   test("a receipt is its sentence alone: no Desfazer, no Refazer, no time left, no clock", () => {
@@ -356,9 +369,11 @@ describe("an approval card's layout", () => {
     // A grouped request: its words and its buttons on one line while the words fit theirs, the buttons under the
     // words otherwise (the action line), its words whole and their code drawn as code.
     const item = fn("ApprovalGroupItem");
+    // A replaced request returns its one quiet line first; the line with buttons is the main return.
+    const live = item.slice(item.indexOf("<ApproveAlwaysInfo"));
     expect(
       ascending(
-        at(item, [
+        at(live, [
           "<View style={[ACT_LINE.row, styles.itemWrap]}>",
           "<View style={ACT_LINE.text}>",
           "<View style={styles.itemActs}>",
@@ -483,9 +498,8 @@ describe("an agent's offer card is done for everyone once it's done", () => {
       "input: list ? { url: link, list } : { url: link, ...(forAgent ? { forAgentId: forAgent } : {}) }",
     );
     expect(screen).toContain("forAgentId: sendFor(url)");
-    // Its row only for a live agent the server would turn it on for: not archived or gone, never the right hand.
-    expect(screen).toContain("const forAgent = forAgentId ? dir.agentById.get(forAgentId) : undefined;");
-    expect(screen).toContain("const forName = forAgent && !isRightHand(forAgent) ? forAgent.name : undefined;");
+    // Its row only for a live agent the server would turn it on for: not archived or gone.
+    expect(screen).toContain("const forName = forAgentId ? dir.agentById.get(forAgentId)?.name : undefined;");
     // What a pick replaces, as the server marks it: an installed skill, or a removed one.
     expect(screen).toContain('c.replaces === "removed" ? "skills.pickReplacesRemoved" : "skills.pickReplaces"');
     expect(screen).toContain("turnOn && cardLink !== undefined && link.trim() === cardLink ? forAgentId : undefined");

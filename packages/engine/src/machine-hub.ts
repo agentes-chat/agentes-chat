@@ -9,10 +9,13 @@ import {
   HEARTBEAT_MS,
   HELLO_TIMEOUT_MS,
   IPHONE_WIFI_PROTOCOL,
+  KEEP_RUNNING_PROTOCOL,
+  MAX_FRAME_BYTES,
   type MachineErrorCode,
   type MachineOp,
   type MachineReplies,
   type MachineRequest,
+  MCP_IMAGES_PROTOCOL,
   type McpToolInfo,
   MIN_RUNNER_PROTOCOL,
   machineRpcReplyTopic,
@@ -31,9 +34,12 @@ import {
   type Unsubscribe,
 } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, lt, schema } from "@agenteschat/db";
+import type { ToolImage } from "@agenteschat/providers";
 import { getAgentCached } from "./agents";
+import { UUID } from "./authority";
 import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
+import { agentCoAuthorLine } from "./git/signature";
 import {
   applyAccessDecided,
   storedExecutors,
@@ -48,6 +54,7 @@ import {
   storeOwnUsage,
   syncMachineAccounts,
 } from "./machine-accounts";
+import { holdEndedOnComputer, reconcileHolds } from "./machine-holds";
 import { onManagedMachineHello, type ReadyEmailDeps } from "./machine-provisioning";
 import {
   applyTaskDone,
@@ -77,6 +84,7 @@ import {
   machinePause,
   memberPause,
   pauseForApps,
+  publishMachineAgentsChanged,
   publishMachineStatus,
   publishMachineUpdated,
 } from "./machines";
@@ -87,6 +95,7 @@ import {
   notifyComputerNoChrome,
 } from "./notification-producers";
 import { enqueue } from "./outbox";
+import { isRightHand } from "./right-hand";
 import { assertCanWork, standingRefusal } from "./standing";
 
 const { machines, machineRpc, machineMcpCalls } = schema;
@@ -175,6 +184,8 @@ export interface MachineStatus {
   access?: RunnerAccess | null;
   /** The operator put the workspace's own computer in standby (ADR 0161): asleep, it is woken when wanted. */
   standby?: boolean;
+  /** `system`: each agent works as its own OS user there (ADR 0058 §10); absent, all as the runner's user. */
+  mode?: "system";
 }
 
 /** What the machine provider needs from the hub. */
@@ -187,6 +198,8 @@ export interface MachineCaller {
   status(machineId: string): Promise<MachineStatus | null>;
   /** Something wants the computer now (`wantMachine`): one in standby is asked to wake. */
   wake?(machineId: string, why: WakeWhy): Promise<void>;
+  /** Who a workspace's computers serve changed (a new seat of the right hand): they are told before this resolves. */
+  agentsChanged?(orgId: string): Promise<void>;
 }
 
 /** How long a run waits, still working, for a computer just gone: a runner dialing again is back within seconds. */
@@ -338,6 +351,16 @@ export function requestTimeoutMs(request: MachineRequest) {
 
 type RpcReply = { ok: true; data: unknown } | { ok: false; error: { code: string; message: string } };
 
+/** What a tool of the right hand reads when its request would go out under its own id: nothing was sent. */
+export const RIGHT_HAND_OWN_ID_MESSAGE =
+  "Not done: on a computer you work only in a person's own place, in their private conversation with you, and this can't be done there yet. Say so plainly, or hand it to an agent that has a computer (ask_agent, tell_agent, or create_issue assigned to it). Never ask the person to try again.";
+
+/** The right hand's locked chat turn and what follows it (ADR 0137 §4): all that goes out under its own id. */
+export const isLockedTurn = (request: MachineRequest) =>
+  request.op === "brain.steer" ||
+  request.op === "brain.route" ||
+  (request.op === "brain.turn" && request.permissions?.mode === "chat");
+
 /**
  * Requests that start something new on the machine: refused while it is
  * paused (ADR 0036 §6), its workspace isn't active or the agent is held
@@ -351,6 +374,8 @@ export function isNewWork(request: MachineRequest) {
     case "task.cancel":
     case "task.output":
     case "access.reduce":
+    // Its owner turning a tool on from the apps changes the computer, not the agents' work on it.
+    case "access.allow":
     // A person's message for a turn already running (live steering).
     case "brain.steer":
     // The owner managing the brains' accounts (ADR 0041) isn't agent work.
@@ -372,6 +397,10 @@ export function isNewWork(request: MachineRequest) {
     // A person's guide asking the computer to look for a phone, or its owner picking an iPhone on its Wi-Fi.
     case "phone.look":
     case "phone.wifi":
+    // Letting go of what an agent kept running (its end, a person's Stop) must reach a paused computer too.
+    case "keep.end":
+    // Its owner fixing the Mac's Xcode for an iPhone's setup.
+    case "xcode.fix":
       return false;
     case "secret":
       return request.action !== "discard" && request.action !== "remove" && request.action !== "activate";
@@ -413,7 +442,38 @@ const MCP_REPEAT_WAIT_MS = 30_000;
 const MCP_CUT_OFF =
   "This call was cut off before it finished (the server restarted or lost the connection): it may have run in part. Check before doing it again.";
 
-type McpOutcome = { ok: true; text: string } | { ok: false; error: { code: string; message: string } };
+type McpOutcome =
+  | { ok: true; text: string; images?: ToolImage[] }
+  | { ok: false; error: { code: string; message: string } };
+
+/** What an agent reads where its computer's app is too old to hand it a picture or a PDF the tool returned. */
+export const MCP_IMAGES_TOO_OLD =
+  "[The picture or PDF this tool returned can't reach you: the agentes.chat app on this computer is too old to pass it on. Tell the person exactly that: updating the app on that computer lets it through.]";
+const MCP_IMAGES_TOO_BIG =
+  "[The pictures or PDF this tool returned are too big together to pass to this computer at once. Open them one at a time.]";
+
+/** A bridge answer as a runner at `protocol` takes it: pictures and PDFs only from `MCP_IMAGES_PROTOCOL` on. */
+export function mcpResultFrame(callId: string, out: McpOutcome, protocol: number) {
+  if (!out.ok) return { type: "mcp.result" as const, callId, ok: false as const, error: out.error };
+  const images = out.images?.length ? out.images : null;
+  const note =
+    images && protocol < MCP_IMAGES_PROTOCOL
+      ? MCP_IMAGES_TOO_OLD
+      : // A frame past the runner's limit is dropped there unread: the call would only time out.
+        images && images.reduce((n, i) => n + i.data.length, Buffer.byteLength(out.text)) > MAX_FRAME_BYTES - 64 * 1024
+        ? MCP_IMAGES_TOO_BIG
+        : null;
+  if (note) return { type: "mcp.result" as const, callId, ok: true as const, text: `${out.text}\n${note}` };
+  return {
+    type: "mcp.result" as const,
+    callId,
+    ok: true as const,
+    text: out.text,
+    ...(images
+      ? { images: images.map(({ mediaType, data, name }) => ({ mediaType, data, ...(name ? { name } : {}) })) }
+      : {}),
+  };
+}
 
 /** After our own server stops, a computer still away this long has its running tasks interrupted. */
 export const SERVER_STOP_TASK_GRACE_MS = 10 * 60_000;
@@ -522,7 +582,7 @@ export function createMachineHub(deps: MachineHubDeps) {
     (input) => {
       const call: TaskCall = async (_machineId, request) => {
         if (conn.orgId) await assertCanWork(db, conn.orgId, input.agent.id);
-        return callLocal(conn, await withAgentName(conn.orgId, request));
+        return callLocal(conn, await outgoing(conn.orgId, request));
       };
       return startMachineTask({ db, pubsub, call }, input);
     };
@@ -779,6 +839,17 @@ export function createMachineHub(deps: MachineHubDeps) {
       );
     }
     if (frame.protocol >= PHONES_PROTOCOL && frame.phones) await phonesReported(machine, frame.phones);
+    // ADR 0176: what it holds now, against what people see (not in this frame's path: it may call the computer).
+    const holdCall = (<Op extends "keep.start" | "keep.end">(_: string, request: Extract<MachineRequest, { op: Op }>) =>
+      callLocal(conn, request)) as Parameters<typeof reconcileHolds>[0]["call"];
+    queueMicrotask(
+      () =>
+        void reconcileHolds(
+          { db, pubsub, call: frame.protocol >= KEEP_RUNNING_PROTOCOL ? holdCall : null },
+          machine.id,
+          frame.holds,
+        ).catch((error) => deps.log?.warn("hold reconcile failed", { machineId: machine.id, error: String(error) })),
+    );
     // Missions on this machine: queued messages and `.agentes/` files go out now (not in this frame's path).
     if (hooks.online) {
       const online = hooks.online;
@@ -866,12 +937,27 @@ export function createMachineHub(deps: MachineHubDeps) {
     }
   }
 
-  /** Fills `agent.name` (protocol 9, for the machine's activity log) when a caller left it out. */
-  async function withAgentName<R extends MachineRequest>(orgId: string | null, request: R): Promise<R> {
+  /**
+   * Every request goes out through here. The right hand's own id passes only for its locked chat turn (ADR 0175): on
+   * a computer each person has a seat with its own id, so anything else under the agent's id would put every member
+   * in one home, and is refused. Also fills `agent.name` (protocol 9, for the machine's activity log) when a caller
+   * left it out, and on what runs the agent's programs the agent's own line its commits end with (`coAuthors`,
+   * ADR 0156), unless the workspace turned it off.
+   */
+  async function outgoing<R extends MachineRequest>(orgId: string | null, request: R): Promise<R> {
     const scope = request.agent;
-    if (!scope || scope.name || !orgId) return request;
-    const agent = await getAgentCached(db, orgId, scope.id).catch(() => null);
-    return agent ? { ...request, agent: { ...scope, name: agent.name } } : request;
+    if (!scope || !orgId) return request;
+    // A read that fails sends nothing: who the id is must be known before it goes out. An id that is no row's
+    // (a seat, a shared browser profile's key) is nobody's to look up.
+    const agent = UUID.test(scope.id) ? await getAgentCached(db, orgId, scope.id) : null;
+    if (isRightHand(agent) && !isLockedTurn(request)) {
+      throw new MachineRequestError("not_allowed", RIGHT_HAND_OWN_ID_MESSAGE);
+    }
+    if (!agent) return request;
+    const runs = request.op === "exec" || request.op === "brain.turn" || request.op === "task.start";
+    const line = runs ? await agentCoAuthorLine(db, orgId, agent).catch(() => null) : null;
+    if (scope.name && !line) return request;
+    return { ...request, agent: { ...scope, name: scope.name || agent.name, ...(line ? { coAuthors: [line] } : {}) } };
   }
 
   /** Bridge calls of work already on the machine stop with its workspace (`standing.ts`). */
@@ -896,14 +982,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         ok: false as const,
         error: { code: "internal", message: error instanceof Error ? error.message : String(error) },
       }))
-      .then((out) =>
-        send(
-          conn,
-          out.ok
-            ? { type: "mcp.result", callId: frame.callId, ok: true, text: out.text }
-            : { type: "mcp.result", callId: frame.callId, ok: false, error: out.error },
-        ),
-      );
+      .then((out) => send(conn, mcpResultFrame(frame.callId, out, conn.protocol)));
   }
 
   /**
@@ -938,7 +1017,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         ok: false as const,
         error: { code: "internal", message: error instanceof Error ? error.message : String(error) },
       }));
-      const kept = out.ok ? { ok: true as const, text: cutText(out.text, 50_000) } : out;
+      const kept: McpOutcome = out.ok ? { ...out, text: cutText(out.text, 50_000) } : out;
       await db
         .update(machineMcpCalls)
         .set({ result: kept })
@@ -1473,6 +1552,10 @@ export function createMachineHub(deps: MachineHubDeps) {
           const row = await getMachineById(db, conn.machineId).catch(() => null);
           if (row && !row.deletedAt) await phonesReported(row, frame.phones);
         }
+      } else if (frame.type === "keep.ended") {
+        await holdEndedOnComputer({ db, pubsub }, conn.machineId, frame).catch((error) =>
+          deps.log?.warn("keep.ended failed", { holdId: frame.holdId, error: String(error) }),
+        );
       } else if (frame.type === "access.decided") {
         await applyAccessDecided({ db, pubsub }, conn.machineId, frame).catch((error) =>
           deps.log?.warn("access.decided failed", { requestId: frame.requestId, error: String(error) }),
@@ -1507,7 +1590,7 @@ export function createMachineHub(deps: MachineHubDeps) {
             if (row) await assertNotPaused(db, row);
           }
         }
-        return callLocal(conn, await withAgentName(conn.orgId, request), options);
+        return callLocal(conn, await outgoing(conn.orgId, request), options);
       }
       const row = await getMachineById(db, machineId);
       if (!row || row.deletedAt) throw new MachineOfflineError(row?.name ?? "computer", row?.kind);
@@ -1521,7 +1604,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         await assertCanWork(db, row.orgId, request.agent?.id);
         await assertNotPaused(db, row);
       }
-      const named = await withAgentName(row.orgId, request);
+      const named = await outgoing(row.orgId, request);
       return callRemote({ ...row, connectedReplica: row.connectedReplica }, named, options);
     },
 
@@ -1546,7 +1629,15 @@ export function createMachineHub(deps: MachineHubDeps) {
         paused: pause ? { until: pause.until, timezone: await machineOwnerTimezone(db, row).catch(() => null) } : null,
         access: row.access ?? null,
         standby: inStandby(row),
+        ...(row.executors?.mode === "system" ? { mode: "system" as const } : {}),
       };
+    },
+
+    async agentsChanged(orgId: string) {
+      await Promise.all(
+        [...local.values()].filter((c) => c.orgId === orgId).map((c) => sendAgents(c).catch(() => undefined)),
+      );
+      await publishMachineAgentsChanged(pubsub, orgId);
     },
 
     /** Something wants the computer now: the workspace's own one keeps when, and asks to wake from standby. */

@@ -6,12 +6,12 @@ import {
   useRemoveWidget,
   useUpdateWidget,
   useWidget,
+  useWidgetLacksAi,
   type WidgetDetail,
   type WidgetSchedule,
   type WidgetUpdate,
   type WidgetWait,
   widgetCardStatus,
-  widgetNeedsAi,
   widgetWaitFix,
   widgetWaiting,
 } from "@agenteschat/client";
@@ -105,7 +105,7 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
   const update = useUpdateWidget(orgId);
   const remove = useRemoveWidget(orgId);
   useBuildOnceAi(orgId, w, w.canEdit);
-  const needsAi = widgetNeedsAi(w);
+  const needsAi = useWidgetLacksAi(orgId, w);
   const aiWay = useWidgetAiWay(needsAi ? w.agentId : null, w.failure?.detail);
   const [open, setOpen] = useState<"title" | "schedule" | "alert" | null>(null);
   const [alertOn, setAlertOn] = useState(w.alert.enabled);
@@ -289,7 +289,7 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
                 ) : null}
               </View>
             </View>
-            {/* Waiting for an AI: Connect (or who can), never Resolve (it builds by itself once one is there). */}
+            {/* No AI to build with: Connect (or who can), never Resolve, which comes back once one is there. */}
             {needsAi ? (
               aiWay && "connect" in aiWay ? (
                 <Button size="sm" variant="secondary" label={t("noAi.action")} onPress={aiWay.connect} />

@@ -139,6 +139,27 @@ export function confirmAction({
   ]);
 }
 
+/** "Prefiro no Terminal" under a one-click button (the web's fold): the same switch as a command, shown on a tap. */
+export function TerminalFallback({ command }: { command: string | null }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  if (!command) return null;
+  return (
+    <>
+      <Gap />
+      <GroupedList>
+        <GroupedRow icon="code" label={t("machines.access.preferTerminal")} onPress={() => setOpen((o) => !o)} />
+      </GroupedList>
+      {open ? (
+        <>
+          <Gap />
+          <CommandBlock command={command} />
+        </>
+      ) : null}
+    </>
+  );
+}
+
 /**
  * A terminal command (or anything to paste), in mono (it is code), and Copiar under it; `copiedTitle`: the toast
  * ("Comando copiado. Cole no Terminal…" by default).

@@ -303,8 +303,8 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
     USER: "ag-a1b2c3d4",
     LOGNAME: "ag-a1b2c3d4",
     SHELL: "/bin/bash",
-    // The shared folder's bin/ (ADR 0115) last: a tool an agent put there never stands in for the computer's own.
-    PATH: "/usr/local/bin:/usr/bin:/bin:/home/ag-a1b2c3d4/shared/bin",
+    // The shared folder's bin/ (ADR 0115) is named, never on the PATH: every agent can write there.
+    PATH: "/usr/local/bin:/usr/bin:/bin",
     AGENTES_SHARED_BIN: "/home/ag-a1b2c3d4/shared/bin",
     LANG: "C.UTF-8",
     ANDROID_ADB_SERVER_PORT: "31627",
@@ -313,6 +313,8 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
   };
   const launcher = systemLauncher(user, true, false, false);
   const p = launcher.prefix;
+  for (const systemd of [true, false])
+    expect((systemLauncher(user, systemd, false).env.PATH ?? "").split(":")).not.toContain(env.AGENTES_SHARED_BIN);
   expect(p.slice(0, 8)).toEqual([
     "/usr/bin/systemd-run",
     "--quiet",
@@ -1111,8 +1113,8 @@ test("the runner's start ends what its sign-ins' users left running; scopes stop
   expect(calls).toEqual(["systemctl stop --no-block agentes-account-21001-*.scope"]);
 });
 
-test("an agent that left: its rooms and transcripts go from every sign-in, a shared path's stay", () => {
-  const { root, accounts } = accountSetup();
+test("an agent that left: its own processes are killed, its rooms and transcripts go from every sign-in, a shared path's stay", () => {
+  const { root, os, accounts } = accountSetup();
   const stores = [ADA_LOGIN, LIA_LOGIN].map((id) => {
     accounts.ensure(id);
     return path.join(root, id);
@@ -1130,7 +1132,10 @@ test("an agent that left: its rooms and transcripts go from every sign-in, a sha
       mkdirSync(path.join(store, dir), { recursive: true });
     }
   }
+  os.calls.length = 0;
   accounts.sweepAgent(AGENT);
+  // Whatever still ran as its user (a shell a person left, a tunnel) dies with it, before anything else.
+  expect(os.calls[0]).toBe(`pkill -KILL -U ${AGENT.uid}`);
   for (const store of stores) {
     expect(existsSync(path.join(store, "cwd/21000"))).toBe(false);
     expect(existsSync(path.join(store, "run/21000"))).toBe(false);

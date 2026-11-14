@@ -90,6 +90,16 @@ function setup(statuses: Record<string, ControlStatus>, others = false) {
 
 const settle = () => new Promise((r) => setTimeout(r, 10));
 
+test("privacy: the page opens the microphone's list in System Settings; another pane, or an app without it, is refused", async () => {
+  const { deps } = setup({ h1: paired("o1") });
+  const opened: string[] = [];
+  const withPanes = { ...deps, openPrivacy: async (pane: "microphone") => void opened.push(pane) };
+  expect(await answerThisMac(withPanes, { kind: "privacy", pane: "microphone" })).toEqual({});
+  expect(opened).toEqual(["microphone"]);
+  await expect(answerThisMac(withPanes, { kind: "privacy", pane: "disk" as never })).rejects.toThrow("not_here");
+  await expect(answerThisMac(deps, { kind: "privacy", pane: "microphone" })).rejects.toThrow("not_here");
+});
+
 test("status: only the asking server's organizations, and whether agents may work here for it", async () => {
   const { store, deps } = setup({ h1: paired("o1"), h2: unpaired, h3: paired("o3", "online", OTHER) });
   store.start();

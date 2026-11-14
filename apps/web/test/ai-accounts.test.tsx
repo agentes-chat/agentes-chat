@@ -375,7 +375,7 @@ describe("IA e uso: a plan with a login per agent", () => {
       within(acts)
         .getAllByRole("button")
         .map((b) => b.textContent),
-    ).toEqual(["Renomear", "Trocar a chave", "Desconectar"]);
+    ).toEqual(["Usar em todos os agentes", "Renomear", "Trocar a chave", "Desconectar"]);
   });
 
   test("one login signed out: whose, said under the facts", async () => {

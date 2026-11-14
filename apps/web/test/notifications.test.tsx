@@ -1050,6 +1050,8 @@ describe("Esperando você: what only points somewhere is a card of the requests'
     // box, so a wrap never splits it, and its margin pushes it to the end. The kit spaces what is in it.
     expect(value(".ac-acts > .ac-acts", "display", kit)).toBe("contents");
     expect(value(".rq__end > .nt-tail.ac-acts", "display")).toBe("flex");
+    // The last button's plate keeps 8 from the card's edge: no pull past the footer's padding.
+    expect(value(".rq__end > .nt-tail.ac-acts", "margin-right")).toBeUndefined();
     expect(css).not.toMatch(/\.nt-tail(?:\.ac-acts)? > [^{]*\{[^}]*margin/);
     // What only points somewhere is a request card itself: no corners or padding of its own, its face on the kind's
     // line as every waiting item's.

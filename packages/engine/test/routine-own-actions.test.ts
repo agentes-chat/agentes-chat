@@ -243,6 +243,28 @@ describe("a routine's own job (routines.own_actions)", () => {
     expect(await f.db.select().from(schema.approvals)).toEqual([]);
   });
 
+  test("the Vault keys its commands use are its own too (`keys`), kept apart from its actions", async () => {
+    f = await setup();
+    const { gateway } = await world(f);
+    const ctx = await personRun(f);
+    const out = answered(
+      await invoke(gateway, ctx, "create_routine", {
+        prompt: "Baixa as vendas de ontem da Stripe e manda no Slack.",
+        schedule: "toda segunda às 9h",
+        own_actions: ["SLACK_SEND_MESSAGE"],
+        keys: ["STRIPE_KEY"],
+      }),
+    );
+    const id = (out.data?.routine as { id: string } | undefined)?.id ?? "";
+    expect(out.content).toContain("Its commands may use these Vault keys: STRIPE_KEY");
+    expect((await routineRow(id))?.ownActions).toEqual(["SLACK_SEND_MESSAGE", "vault:STRIPE_KEY"]);
+    // Its actions changed alone keep its keys; its keys changed alone keep its actions.
+    answered(await invoke(gateway, ctx, "update_routine", { id, own_actions: [] }));
+    expect((await routineRow(id))?.ownActions).toEqual(["vault:STRIPE_KEY"]);
+    answered(await invoke(gateway, ctx, "update_routine", { id, own_actions: ["SLACK_SEND_MESSAGE"], keys: [] }));
+    expect((await routineRow(id))?.ownActions).toEqual(["SLACK_SEND_MESSAGE"]);
+  });
+
   test("an action outside its job still asks, alone or beside one of its own", async () => {
     f = await setup();
     const { mcp, gateway } = await world(f);
@@ -269,7 +291,7 @@ describe("a routine's own job (routines.own_actions)", () => {
       }),
     );
     expect(refused.isError).toBe(true);
-    expect(refused.content).toContain("always asks a person");
+    expect(refused.content).toContain("can't be one of a routine's own actions");
     expect(await f.db.select().from(schema.routines)).toEqual([]);
 
     const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
@@ -326,6 +348,19 @@ describe("a routine's own job (routines.own_actions)", () => {
       updateRoutine(deps, cora.id, f.org.id, own.id, { ownActions: ["SLACK_SEND_MESSAGE", "GMAIL_SEND_EMAIL"] }),
     ).rejects.toMatchObject({ code: "routine.act_take_over" });
     expect((await updateRoutine(deps, cora.id, f.org.id, own.id, { ownActions: [] })).ownActions).toEqual([]);
+  });
+
+  test("an agent that always asks: its routine's own actions ask too, and the card offers no way around it", async () => {
+    f = await setup();
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    await f.db.update(schema.agents).set({ approvalsLevel: "always" }).where(eq(schema.agents.id, f.agent.id));
+    const run = await routineRun(f, id);
+    expect(
+      asked(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY })).approveAlways,
+    ).toBeNull();
+    expect(asked(await invoke(gateway, run, EXEC, { ...exec("GMAIL_SEND_EMAIL"), why: WHY })).approveAlways).toBeNull();
+    expect(mcp.calls).toEqual([]);
   });
 
   test("a routine with no own actions asks for every write, as before", async () => {
@@ -385,20 +420,23 @@ describe('"Sempre nesta rotina": a routine\'s card keeps its kind for that routi
     ["a removal", "NOTION_REMOVE_PAGE"],
     ["a payment", "STRIPE_CREATE_PAYMENT_INTENT"],
     ["a refund", "STRIPE_CREATE_REFUND"],
-  ])("never covers %s: the card still asks, without the button", async (_kind, slug) => {
+  ])("never covers %s: its card offers the agent's Aprovar sempre, not the routine's", async (_kind, slug) => {
     f = await setup();
     const { gateway } = await world(f);
     const { id } = await created(gateway, []);
     const card = asked(await invoke(gateway, await routineRun(f, id), EXEC, { ...exec(slug), why: WHY }));
-    expect(card.approveAlways).toBeNull();
+    expect(card.approveAlways).toEqual({ tool: COMPOSIO_EXECUTOR, actions: [slug] });
   });
 
-  test("beside an action it never covers, the whole call goes without the button", async () => {
+  test("beside an action it never covers, the whole call is the agent's to approve for good", async () => {
     f = await setup();
     const { gateway } = await world(f);
     const { id } = await created(gateway, []);
     const input = { ...exec("SLACK_SEND_MESSAGE", "SLACK_DELETE_MESSAGE"), why: WHY };
-    expect(asked(await invoke(gateway, await routineRun(f, id), EXEC, input)).approveAlways).toBeNull();
+    expect(asked(await invoke(gateway, await routineRun(f, id), EXEC, input)).approveAlways).toEqual({
+      tool: COMPOSIO_EXECUTOR,
+      actions: ["SLACK_SEND_MESSAGE", "SLACK_DELETE_MESSAGE"],
+    });
   });
 
   test.each(["GMAIL_MOVE_TO_TRASH", "GITHUB_CREATE_A_REVIEW_FOR_A_PULL_REQUEST", "GOOGLEDOMAINS_RENEW_DOMAIN"])(
@@ -408,7 +446,11 @@ describe('"Sempre nesta rotina": a routine\'s card keeps its kind for that routi
       const { gateway } = await world(f);
       const { id } = await created(gateway, []);
       const input = { ...exec(action), why: WHY };
-      expect(asked(await invoke(gateway, await routineRun(f, id), EXEC, input)).approveAlways).toBeNull();
+      // The agent's own "Aprovar sempre" is offered instead, never the routine's.
+      expect(asked(await invoke(gateway, await routineRun(f, id), EXEC, input)).approveAlways).toEqual({
+        tool: COMPOSIO_EXECUTOR,
+        actions: [action],
+      });
     },
   );
 
@@ -421,7 +463,7 @@ describe('"Sempre nesta rotina": a routine\'s card keeps its kind for that routi
     const card = asked(
       await invoke(gateway, await routineRun(f, id), EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }),
     );
-    expect(card.approveAlways).toBeNull();
+    expect(card.approveAlways).toEqual({ tool: COMPOSIO_EXECUTOR, actions: ["SLACK_SEND_MESSAGE"] });
   });
 
   test("not on a routine that has no room left", async () => {
@@ -434,7 +476,7 @@ describe('"Sempre nesta rotina": a routine\'s card keeps its kind for that routi
     const card = asked(
       await invoke(gateway, await routineRun(f, id), EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }),
     );
-    expect(card.approveAlways).toBeNull();
+    expect(card.approveAlways).toEqual({ tool: COMPOSIO_EXECUTOR, actions: ["SLACK_SEND_MESSAGE"] });
   });
 
   test("a routine deleted while it waited: the decision fails and nothing is approved", async () => {

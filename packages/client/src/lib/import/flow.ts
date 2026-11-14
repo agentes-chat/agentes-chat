@@ -11,7 +11,9 @@ import type {
 } from "../../api/types";
 import { IMPORT_APP_CLIENTS } from "../app-clients";
 import { forbiddenText } from "../errors";
+import { formatBytes } from "../files";
 import { joinNames } from "../format";
+import { hiddenRepoOf, hiddenRepoText } from "../skills";
 import {
   type AgentFile,
   type AgentFileSkip,
@@ -269,14 +271,28 @@ export function cardName(t: TFunction, card: ImportCard): string {
 
 /**
  * What went wrong reading or planning, and what to do next. `offline` tells a request that never got an answer
- * (each app knows its own way).
+ * (each app knows its own way). A private repository none of the workspace's GitHub reads is said as
+ * Skills says it (`hiddenRepoText`), `mayConnect`: whether this person may connect GitHub.
  */
 export function importFailureText(
   t: TFunction,
   { from, step, cause }: ImportFailure,
   offline: (e: unknown) => boolean,
+  mayConnect = false,
+  locale = "en",
 ) {
   if (cause === NOT_GITHUB) return t("onboarding.import.errors.notGithub");
+  const hidden = hiddenRepoOf(cause);
+  if (hidden) return hiddenRepoText(t, hidden, mayConnect).text;
+  if (cause instanceof ImportError && cause.limit) {
+    const { kind, have, max, name } = cause.limit;
+    const size = (n: number) => (kind === "files" ? new Intl.NumberFormat(locale).format(n) : formatBytes(locale, n));
+    return t(`onboarding.import.errors.limit.${kind}`, {
+      have: size(have),
+      max: size(max),
+      name: name ? baseName(name) : "",
+    });
+  }
   if (cause instanceof ImportError) {
     return cause.code === "unknown" && from === "paste"
       ? t("onboarding.import.errors.unknownPasted")

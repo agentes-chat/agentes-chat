@@ -540,8 +540,9 @@ function agentEnv(u: AgentUser, containers: boolean): Record<string, string> {
     USER: u.user,
     LOGNAME: u.user,
     SHELL: AGENT_SHELL,
-    // Last, so a tool an agent put in the shared `bin/` never stands in for the computer's own.
-    PATH: `${AGENT_PATH}:${home}/${SHARED_LINK}/bin`,
+    // The shared `bin/` is never on it: every agent can write there, and a tool found by name would run as
+    // whichever agent called it, with that agent's files and sign-ins. Agents reach it by full path.
+    PATH: AGENT_PATH,
     [SHARED_BIN_ENV]: `${home}/${SHARED_LINK}/bin`,
     LANG: "C.UTF-8",
     ANDROID_ADB_SERVER_PORT: String(adbServerPort(u.uid)),
@@ -1122,11 +1123,13 @@ export class AccountUsers {
   }
 
   /**
-   * The agent was deleted: what every sign-in holds for it goes. Its transcripts are the `projects/` folders
-   * named after a path with its user in it; one on a path it shared stays. Only root and the sign-in's user write
-   * in these folders, and `rmSync` follows no link.
+   * The agent was deleted (or a person's seat of the right hand, when they left): every process of its own user is
+   * killed, so nothing a person started as it (a shell left running, a tunnel) outlives it, and what every sign-in
+   * holds for it goes. Its transcripts are the `projects/` folders named after a path with its user in it; one on a
+   * path it shared stays. Only root and the sign-in's user write in these folders, and `rmSync` follows no link.
    */
   sweepAgent(agent: Pick<AgentUser, "user" | "uid">) {
+    this.kill(agent.uid);
     this.stopScopes(agent.uid);
     const slug = new RegExp(`(^|-)${agent.user}(-|$)`);
     for (const { id } of readAccountUsers(this.opts.home)) {

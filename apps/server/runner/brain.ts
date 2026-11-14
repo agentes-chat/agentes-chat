@@ -58,9 +58,11 @@ import {
   withSignIn,
   yieldRoute,
 } from "./accounts";
+import { coAuthorLines } from "./co-authors";
 import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { RunnerError } from "./errors";
+import { killTree } from "./exec";
 import { cliSpawn } from "./executors";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
@@ -74,6 +76,7 @@ import {
   missionBranchPrefix,
   newMcpToken,
   redactDeep,
+  turnAsks,
 } from "./mcp";
 import { isInside, resolveForAgent } from "./paths";
 import { resetIso } from "./plan-usage";
@@ -859,11 +862,13 @@ export function repoInstructions(cwd: string): string {
  * of Claude Code's own tools (`--tools ""`, each one denied too), no settings files, skills or slash commands, no
  * permission prompt (`dontAsk`: whatever isn't allowed is refused), whatever `personalMcp` says.
  * `delegated`: the same `plan` and `work` for a CLI whose tools the agent's worker serves.
+ * `asksFirst`: the agent always asks (ADR 0173), so a `work` turn accepts no edit by itself: each reaches the prompt.
  */
 export function brainProfileLaunch(
   mode: "plan" | "work" | "chat",
   personalMcp: boolean,
   delegated = false,
+  asksFirst = false,
 ): Pick<
   ClaudeLaunch,
   | "strictMcp"
@@ -889,7 +894,7 @@ export function brainProfileLaunch(
     return {
       strictMcp: true,
       promptTool: true,
-      permissionMode: mode === "plan" ? "default" : "acceptEdits",
+      permissionMode: mode === "plan" || asksFirst ? "default" : "acceptEdits",
       settingSources: "",
       builtinTools: DELEGATED_BUILTIN_TOOLS,
       noSlashCommands: true,
@@ -907,7 +912,7 @@ export function brainProfileLaunch(
   return {
     strictMcp: !personalMcp,
     promptTool: true,
-    permissionMode: "acceptEdits",
+    permissionMode: asksFirst ? "default" : "acceptEdits",
     // With the owner's own MCP servers the owner's settings stay, and so does every tool of Claude Code but the web.
     ...(personalMcp
       ? { disallowedTools: WEB_BUILTIN_TOOLS }
@@ -985,6 +990,8 @@ export class ClaudeProcess {
   stderr = "";
   /** Claude Code said `system` `init` (its version, when it has one, is known from then on). */
   initSeen = false;
+  /** When Claude Code said `system/init`: how long a cold start took. */
+  initAt: number | null = null;
   /** Claude Code's version, from its `system` `init` line (absent: not said yet, or an old CLI). Logs only. */
   cliVersion?: string;
   /** What it can do (`system` `init` `capabilities`): live steering is decided by these (`steerSupport`). */
@@ -1029,12 +1036,14 @@ export class ClaudeProcess {
     /** A token root handed over, on its own descriptor (`TOKEN_FD_ENV`). */
     token?: string,
   ) {
-    // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, cmd.exe
-    // with every argument quoted (an empty `--setting-sources` stays one).
+    // A full path: the compiled runner would look the bare name up on the PATH it started with. On Windows, found on
+    // the PATH (never in the agent's folder), a launcher through cmd.exe with every argument quoted (an empty
+    // `--setting-sources` stays one).
     const run = cliSpawn(command.length ? command : ["claude"], args, env.PATH);
+    const runEnv = run.env ? { ...env, ...run.env } : env;
     this.child = start(run.file, run.args, {
       cwd,
-      env: token ? { ...env, ...TOKEN_FD_ENV } : env,
+      env: token ? { ...runEnv, ...TOKEN_FD_ENV } : runEnv,
       stdio: token ? [...TOKEN_STDIO] : ["pipe", "pipe", "pipe"],
       windowsHide: true,
       windowsVerbatimArguments: run.windowsVerbatimArguments,
@@ -1076,6 +1085,7 @@ export class ClaudeProcess {
       const ev = JSON.parse(line) as Record<string, unknown>;
       if (ev.type !== "system" || ev.subtype !== "init") return;
       this.initSeen = true;
+      this.initAt ??= Date.now();
       if (typeof ev.claude_code_version === "string") this.cliVersion = ev.claude_code_version.slice(0, 40);
       this.capabilities = claudeCapabilities(ev);
       if (!this.lock) return;
@@ -1091,8 +1101,17 @@ export class ClaudeProcess {
     if (this.breach) return;
     this.breach = reason;
     try {
-      this.child.kill("SIGKILL");
+      this.end("SIGKILL");
     } catch {}
+  }
+
+  /**
+   * Ends Claude Code. On Windows its whole tree: started through cmd.exe (npm's `claude.cmd`), killing the child alone
+   * would leave Claude Code running the turn.
+   */
+  private end(signal: NodeJS.Signals) {
+    if (process.platform === "win32") killTree(this.child, signal);
+    else this.child.kill(signal);
   }
 
   private refuseControl(line: string) {
@@ -1231,12 +1250,12 @@ export class ClaudeProcess {
   kill() {
     if (this.exited) return;
     try {
-      this.child.kill("SIGTERM");
+      this.end("SIGTERM");
     } catch {}
     const t = setTimeout(() => {
       if (!this.exited) {
         try {
-          this.child.kill("SIGKILL");
+          this.end("SIGKILL");
         } catch {}
       }
     }, 3000);
@@ -1917,6 +1936,8 @@ export class BrainManager {
       effort: isBrainEffort(req.effort) ? req.effort : null,
       // Another context limit: a new process (resumed), started with it.
       context: isContextTokens(req.contextTokens) ? req.contextTokens : null,
+      // Its commits' lines are in its env (`co-authors.ts`): turned off or the agent renamed, a new one (resumed).
+      coAuthors: coAuthorLines(ctx.agent),
     });
   }
 
@@ -1928,6 +1949,31 @@ export class BrainManager {
     ctx: BrainTurnContext,
   ): Promise<WireBrainEvent> {
     if (ctx.signal?.aborted) return errorEvent("canceled", "The turn was canceled.", false);
+    // The turn's own timings go back on its `done` (the engine stores them with the run's profile).
+    const startedAt = Date.now();
+    let firstEventMs: number | undefined;
+    const emit = ctx.emit;
+    ctx = {
+      ...ctx,
+      emit: (e) => {
+        firstEventMs ??= Date.now() - startedAt;
+        emit(e);
+      },
+    };
+    let warm = false;
+    let started: Live | undefined;
+    const timed = (final: WireBrainEvent): WireBrainEvent => {
+      if (final.type !== "done") return final;
+      const initAt = started?.proc.initAt;
+      return {
+        ...final,
+        timings: {
+          warm,
+          ...(initAt != null && initAt >= startedAt ? { initMs: initAt - startedAt } : {}),
+          ...(firstEventMs !== undefined ? { firstEventMs } : {}),
+        },
+      };
+    };
     // A route on this sign-in stops first: two processes on one sign-in race on its refresh token. Kept right
     // before the process starts, since a route may begin during any await before it.
     await yieldRoute("claude_code", ctx.accountHome);
@@ -1941,17 +1987,19 @@ export class BrainManager {
       live = undefined;
     }
     const keepAlive = req.keepAlive !== false;
+    warm = Boolean(live);
     if (!live && keepAlive) {
       if (this.alive(ctx.agent.id) >= this.max) this.closeIdle(this.lruIdle(ctx.agent.id));
       // Over the cap when every process is busy or holds work: the turn still gets its own (the agent works on
       // several conversations at once); `trim` closes the extra as turns end.
       live = await this.spawn(key, session, cwd, req, ctx, sig, true, this.resumeFor(cwd, session, req, ctx));
+      started = live;
     }
     if (live) {
       const out = await this.onLive(live, req, ctx);
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live);
-      if (out.final) return out.final;
+      if (out.final) return timed(out.final);
       // Died mid-turn: the same turn again, one-shot, resuming the session. Why it died is logged, and kept for the
       // error should the one-shot die without a word.
       const line = redactedLine(live.proc.stderr, ctx);
@@ -2203,7 +2251,8 @@ export class BrainManager {
     const fileMode = delegated ? 0o640 : 0o600;
     const systemFile = path.join(dir, "system.txt");
     const mode = req.permissions?.mode === "plan" || req.permissions?.mode === "chat" ? req.permissions.mode : "work";
-    const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined);
+    const asks = mode === "work" ? turnAsks(req.permissions?.asks) : undefined;
+    const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined, asks === "always");
     const system = typeof req.system === "string" ? req.system : "";
     const ranKey = ranKeyOf(req, session);
     // A `chat` turn reads nothing of the folder, its CLAUDE.md included.
@@ -2277,6 +2326,7 @@ export class BrainManager {
         profile: mode === "work" ? "work" : "plan",
         branches: [...branches],
         allow,
+        ...(asks ? { asks } : {}),
         ...(mode === "chat" ? { chat: true } : {}),
         ...(delegated.task ? { task: delegated.task.kind } : {}),
         ...(persistent ? {} : { oneShot: true as const }),
@@ -2306,6 +2356,7 @@ export class BrainManager {
             ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}),
             // Its own branches: a push there needs nobody (ADR 0053 §3).
             branches,
+            ...(asks ? { asks } : {}),
           }),
         ),
         { mode: 0o600 },
@@ -2334,7 +2385,11 @@ export class BrainManager {
                 allow,
                 undefined,
                 // Every command reaches our prompt tool: plain reads pass there at once, secrets never.
-                { promptReads: true, ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}) },
+                {
+                  promptReads: true,
+                  ...(this.opts.runnerHome ? { runnerHome: this.opts.runnerHome } : {}),
+                  ...(asks === "always" ? { asksFirst: true } : {}),
+                },
               ),
               // With the owner's own settings loaded (`personalMcp`), theirs decide the computer's own sign-in.
               ...(ctx.accountHome

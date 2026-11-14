@@ -20,9 +20,10 @@ import { dashboardRights, requireWidget, viewerOf } from "./access";
 import { publishWidgetChanged, widgetEvent } from "./events";
 import {
   mayContinueWidgetWait,
+  rightHandWidgetsReady,
   WIDGET_CHANGE_EVENT,
   type WidgetRunWait,
-  widgetAgentWithoutAi,
+  widgetAi,
   widgetRunWaits,
 } from "./refresh-fire";
 import {
@@ -76,7 +77,7 @@ export interface WidgetRoutineTarget {
   dashboardId: string;
 }
 
-export { WIDGET_CHANGE_EVENT };
+export { rightHandWidgetsReady, WIDGET_CHANGE_EVENT };
 
 /** Most sources a widget names (what its agent read), and how long each. */
 const SOURCES_MAX = 12;
@@ -346,12 +347,18 @@ async function markBusy(deps: DashboardDeps, widget: WidgetRow, board: Dashboard
  * Its agent has no AI, so no run starts (it would only fail, ADR 0135 §20): the widget says it waits for one, and why
  * (`holdWidgetForAi`), and a person who asked hears it (`widget.needs_ai`, 409). Nothing when the agent can think.
  */
-async function holdUnlessAi(deps: DashboardDeps, actorId: string | null, widget: WidgetRow, board: DashboardRow) {
-  const without = await widgetAgentWithoutAi(deps, widget.orgId, widget.agentId);
-  if (!without) return false;
-  await holdWidgetForAi(deps, widget, board, without.reason);
+async function holdUnlessAi(
+  deps: DashboardDeps,
+  actorId: string | null,
+  widget: WidgetRow,
+  board: DashboardRow,
+  who: Parameters<typeof widgetAi>[3],
+) {
+  const ai = await widgetAi(deps, widget, board, who);
+  if (!ai?.noAi) return false;
+  await holdWidgetForAi(deps, widget, board, ai.noAi.reason);
   if (actorId) {
-    const { name } = without.agent;
+    const { name } = ai.agent;
     throw new ConflictError(`${name} has no AI connected`, DASHBOARD_ERRORS.needsAi, { agentName: name });
   }
   return true;
@@ -382,7 +389,7 @@ async function autoBuildBlocker(
  * The widget turns `updating` (`building` while it has no data) and its event goes out. A run already queued or
  * working answers with the widget as it is; one that waits goes on now or says why it can't (`goOnNow`). `actorId`
  * null: a first build queued by the server (no checks). An agent with no AI gets no run, before any wait: the widget
- * waits for one (`holdUnlessAi`). `auto`: the build the apps start by themselves once the agent of a widget waiting
+ * waits for one (`holdUnlessAi`, once its routine is ready). `auto`: the build the apps start by themselves once the agent of a widget waiting
  * for an AI has one (`useBuildOnceAi`), which only queues (`autoBuildBlocker`), never letting a waiting run go on.
  */
 export async function refreshWidgetNow(
@@ -397,8 +404,9 @@ export async function refreshWidgetNow(
   const viewer = access?.viewer ?? null;
   const asIs = async () => widgetView(deps.db, await widgetRow(deps.db, widget.id), viewer);
   if (options.auto && !widgetNeedsAi(widget)) return asIs();
-  if (await holdUnlessAi(deps, actorId, widget, board)) return asIs();
+  // The routine first: its creator after a takeover is one of the people whose AI its build may think with.
   const routine = await readyRoutine(deps, orgId, widget, board, options.auto ? null : actorId);
+  if (await holdUnlessAi(deps, actorId, widget, board, { routineCreator: routine.createdByUserId })) return asIs();
   const blocker = options.auto ? await autoBuildBlocker(deps.db, orgId, widget, board, routine) : null;
   if (blocker) {
     await failWidget(deps, widget, board, { code: blocker });
@@ -493,8 +501,8 @@ export async function askWidgetChange(
   const words = text.trim().slice(0, WIDGET_CHANGE_MAX);
   if (!words) throw new ValidationError("Say what to change", DASHBOARD_ERRORS.promptRequired);
   await requireTalksTo(deps.db, orgId, actorId, widget.agentId);
-  await holdUnlessAi(deps, actorId, widget, board);
   const routine = await readyRoutine(deps, orgId, widget, board, actorId);
+  await holdUnlessAi(deps, actorId, widget, board, { asker: actorId, routineCreator: routine.createdByUserId });
   const event = { type: WIDGET_CHANGE_EVENT, summary: words, text: words, byUserId: actorId };
   await queueEventRun({ db: deps.db }, routine, { event, merge: mergeChanges });
   const row = await markBusy(deps, await widgetRow(deps.db, widget.id), board);
@@ -582,7 +590,8 @@ export async function applyWidgetUpdate(
   if (done || rr.finishedAt || !OPEN_RUN.includes(rr.status)) {
     throw new ConflictError("This run already updated its widget", "widget.already_updated");
   }
-  const change = widgetChangeOf(rr.event)?.text ?? null;
+  const asked = widgetChangeOf(rr.event);
+  const change = asked?.text ?? null;
 
   if (update.failed !== undefined) {
     const why = update.failed.trim().slice(0, 500);
@@ -659,6 +668,8 @@ export async function applyWidgetUpdate(
         format,
         title,
         prompt,
+        // Instructions a change request rewrote are its asker's words: its builds think with their AI from now on.
+        ...(prompt !== widget.prompt && asked?.byUserId ? { createdByUserId: asked.byUserId } : {}),
         sources: sourcesOf(update.sources, widget.sources),
         status: "ok",
         failureCode: null,

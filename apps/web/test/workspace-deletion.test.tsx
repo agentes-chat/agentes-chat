@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { setupDom } from "@agenteschat/ui/testing/dom";
+import { domWindow, setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
 import { ApiError, keys, type OrgDeletion, type OrgSummary, type Role } from "@agenteschat/client";
+import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createFakeApi, ENG_ID, meAsAdmin, ORG_ID, seedState } from "./fake-api";
@@ -16,9 +17,9 @@ const DAY = 86_400_000;
 const soon = (days: number) => new Date(Date.now() + days * DAY).toISOString();
 const click = (el: Element) => act(async () => fireEvent.click(el));
 const type = (el: Element, value: string) => act(async () => fireEvent.change(el, { target: { value } }));
-/** The onboarding's account menu, on its rail (Radix: keyboard), and the menu it opens. */
-async function accountMenu() {
-  const me = screen().getByRole("button", { name: "Sua conta" });
+/** The onboarding's account menu, on its rail (Radix: keyboard), or the one named `name`, and the menu it opens. */
+async function accountMenu(name: string | RegExp = "Sua conta") {
+  const me = screen().getByRole("button", { name });
   me.focus();
   await act(async () => {
     fireEvent.keyDown(me, { key: "Enter" });
@@ -33,7 +34,7 @@ const meEvery = (qc: QueryClient) =>
     .find({ queryKey: keys.me })
     ?.observers.map((o) => o.options.refetchInterval);
 
-/** Acme with this person's role (and its deletion or standing, when there is one), and Beta, at `path`. */
+/** Acme with this person's role (and its deletion, standing or mode, when there is one), and Beta, at `path`. */
 async function open(
   path: string,
   {
@@ -42,6 +43,7 @@ async function open(
     deletion,
     standing,
     createdAt,
+    mode,
     beta = { id: BETA_ID, name: "Beta", role: "member" },
     state = seedState(),
   }: {
@@ -50,6 +52,7 @@ async function open(
     deletion?: OrgDeletion;
     standing?: OrgSummary["standing"];
     createdAt?: string;
+    mode?: OrgSummary["mode"];
     /** Null: Acme is their only workspace. */
     beta?: OrgSummary | null;
     state?: ReturnType<typeof seedState>;
@@ -64,6 +67,7 @@ async function open(
       ...(deletion ? { deletion } : {}),
       ...(standing ? { standing } : {}),
       ...(createdAt ? { createdAt } : {}),
+      ...(mode ? { mode } : {}),
     },
     ...(beta ? [beta] : []),
   ];
@@ -363,49 +367,102 @@ describe("the desktop app lists every server's workspaces (ADR 0154)", () => {
     await settle(4);
     return within(screen().getByRole("menu", { name: "Seus workspaces" }));
   };
-
-  test("by server with unread counts; another server's opens there; Adicionar workspace opens the app's window", async () => {
-    const app = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+  const text = (el: Element) => el.textContent?.replace(/\s+/g, " ").trim();
+  const names = (menu: ReturnType<typeof within>) => menu.getAllByRole("menuitem").map(text);
+  /** The menu's items and its headings (matched by `heading`), in order: what sits under which server. */
+  const lines = (menu: Element, heading: string) =>
+    [...menu.querySelectorAll(`${heading}, [role="menuitem"]`)].map(text);
+  type App = { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+  let home: string | undefined;
+  /** This page in the desktop app at `here`, which reads Oficina on `other`; what the page asks of the app, listed. */
+  const inDesktop = (here: string, other: string) => {
+    home ??= domWindow().location.href;
+    domWindow().happyDOM.setURL(here);
     const asked: Record<string, unknown>[] = [];
+    const app = window as App;
     app.__agentesDesktop = { version: "0.6.0", workspaces: true };
     app.__TAURI_INTERNALS__ = {
       invoke: async (_cmd: string, args?: { request?: Record<string, unknown> }) => {
         const request = args?.request;
         if (request) asked.push(request);
-        if (request?.kind === "workspaces") {
-          return {
-            servers: [
-              {
-                server: OWN,
-                signedIn: true,
-                orgs: [{ id: "oficina", name: "Oficina", logo: null, unread: 4, waiting: 0 }],
-              },
-            ],
-          };
-        }
-        return {};
+        if (request?.kind !== "workspaces") return {};
+        const orgs = [{ id: "oficina", name: "Oficina", logo: null, unread: 4, waiting: 0 }];
+        return { servers: [{ server: other, signedIn: true, orgs }] };
       },
     };
-    try {
-      await open(`/org/${ORG_ID}/issues`);
-      const menu = await menuRows();
-      expect(menu.getByText("agentes.exemplo.com.br").parentElement?.textContent).toContain("Seu servidor");
-      const items = menu.getAllByRole("menuitem");
-      expect(items.map((i) => i.textContent?.replace(/\s+/g, " ").trim())).toEqual([
-        expect.stringContaining("Acme"),
-        expect.stringContaining("Beta"),
-        expect.stringMatching(/Oficina.*4/),
+    return asked;
+  };
+  afterEach(() => {
+    const app = window as App;
+    delete app.__agentesDesktop;
+    delete app.__TAURI_INTERNALS__;
+    if (home) domWindow().happyDOM.setURL(home);
+  });
+
+  test("by server with unread counts; another server's opens there; on agentes.chat, Adicionar workspace alone opens the app's window", async () => {
+    const asked = inDesktop(CLOUD_SERVER, OWN);
+    await open(`/org/${ORG_ID}/issues`);
+    const menu = await menuRows();
+    expect(menu.getByText("agentes.exemplo.com.br").parentElement?.textContent).toContain("Seu servidor");
+    expect(names(menu)).toEqual([
+      expect.stringContaining("Acme"),
+      expect.stringContaining("Beta"),
+      expect.stringMatching(/Oficina.*4/),
+      expect.stringContaining("Adicionar workspace"),
+      // Another account beside this one (ADR 0183).
+      expect.stringContaining("Adicionar conta"),
+    ]);
+    expect(menu.queryByText("Novo workspace")).toBeNull();
+    await click(menu.getAllByRole("menuitem")[2] as Element);
+    expect(asked).toContainEqual({ kind: "openWorkspace", server: OWN, orgId: "oficina" });
+    const again = await menuRows();
+    await click(again.getByText("Adicionar workspace"));
+    expect(asked).toContainEqual({ kind: "addWorkspace" });
+  });
+
+  test("on a server of one's own, whose window can't make one there, Novo workspace does, under that server", async () => {
+    inDesktop(OWN, CLOUD_SERVER);
+    const { router } = await open(`/org/${ORG_ID}/issues`);
+    const menu = await menuRows();
+    expect(lines(screen().getByRole("menu", { name: "Seus workspaces" }), ".sidebar__menu-server")).toEqual([
+      "agentes.exemplo.com.br· Seu servidor",
+      expect.stringContaining("Acme"),
+      expect.stringContaining("Beta"),
+      "Novo workspace",
+      "agentes.chat",
+      expect.stringMatching(/Oficina.*4/),
+      expect.stringContaining("Adicionar workspace"),
+      expect.stringContaining("Adicionar conta"),
+    ]);
+    await click(menu.getByText("Novo workspace"));
+    await settle(4);
+    expect(router.state.location.pathname).toBe("/onboarding");
+  });
+
+  test("a personal workspace's account menu the same: Novo workspace under one's own server, not on agentes.chat", async () => {
+    const own = "agentes.exemplo.com.br · Seu servidor";
+    const oficina = expect.stringMatching(/Oficina.*4/);
+    for (const [here, other, servers] of [
+      [CLOUD_SERVER, OWN, ["agentes.chat", expect.anything(), "Beta", own, oficina]],
+      [OWN, CLOUD_SERVER, [own, expect.anything(), "Beta", "Novo workspace", "agentes.chat", oficina]],
+    ] as const) {
+      inDesktop(here, other);
+      const { router } = await open(`/org/${ORG_ID}/issues`, { mode: "personal" });
+      const list = await accountMenu(/^Conta: /);
+      const menu = within(list);
+      const all = lines(list, ".ac-menu__heading");
+      expect(all.slice(all.indexOf("Seus workspaces") + 1)).toEqual([
+        ...servers,
         expect.stringContaining("Adicionar workspace"),
+        expect.stringContaining("Adicionar conta"),
+        "Sair",
       ]);
-      expect(menu.queryByText("Novo workspace")).toBeNull();
-      await click(items[2] as Element);
-      expect(asked).toContainEqual({ kind: "openWorkspace", server: OWN, orgId: "oficina" });
-      const again = await menuRows();
-      await click(again.getByText("Adicionar workspace"));
-      expect(asked).toContainEqual({ kind: "addWorkspace" });
-    } finally {
-      delete app.__agentesDesktop;
-      delete app.__TAURI_INTERNALS__;
+      if (here === OWN) {
+        await click(menu.getByText("Novo workspace"));
+        await settle(4);
+        expect(router.state.location.pathname).toBe("/onboarding");
+      }
+      cleanup();
     }
   });
 
@@ -416,6 +473,8 @@ describe("the desktop app lists every server's workspaces (ADR 0154)", () => {
       expect.stringContaining("Acme"),
       expect.stringContaining("Beta"),
       expect.stringContaining("Novo workspace"),
+      // The one thing new in a browser: another account beside this one (ADR 0183).
+      expect.stringContaining("Adicionar conta"),
     ]);
     expect(menu.queryByText("Adicionar workspace")).toBeNull();
   });

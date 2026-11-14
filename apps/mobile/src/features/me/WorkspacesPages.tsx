@@ -1,4 +1,4 @@
-import { type Me, type OrgSummary, useApi } from "@agenteschat/client";
+import { type Me, type OrgSummary, useApi, useMe } from "@agenteschat/client";
 import { workspaceNotes } from "@agenteschat/client/lib/deletion";
 import { CLOUD_SERVER, checkServer, normalizeServer, serverHost } from "@agenteschat/client/lib/server";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -6,11 +6,20 @@ import { useQueries } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { openWorkspace, problemText } from "@/features/server";
+import { addAccount, openWorkspace, problemText } from "@/features/server";
 import { createApi } from "@/lib/api";
-import { askNewWorkspace } from "@/lib/new-workspace";
+import { askNewWorkspace, offersNewWorkspaceHere } from "@/lib/new-workspace";
 import { openOrgs } from "@/lib/org-choice";
-import { ALLOW_HTTP, serverUrl, signedInServers, useServer, useSignedInServers } from "@/lib/server";
+import {
+  ALLOW_HTTP,
+  serverUrl,
+  signedInServers,
+  usePlace,
+  usePlaceAccounts,
+  useServer,
+  useSignedInServers,
+} from "@/lib/server";
+import { serverOf } from "@/lib/server-choice";
 import { useOrg, useOrgMaybe } from "@/providers/org";
 import {
   GroupedFooter,
@@ -44,8 +53,10 @@ const FRESH_MS = 30_000;
  * keeps its group, saying so.
  */
 export function useWorkspacesAcross(): { groups: ServerWorkspaces[]; elsewhere: number } {
-  const server = useServer();
+  // Each place is a server, or one of its accounts (ADR 0183): a group each.
+  const server = usePlace();
   const signedIn = useSignedInServers();
+  const known = usePlaceAccounts();
   const org = useOrgMaybe();
   const api = useApi();
   const servers = orderedServers(signedIn, server);
@@ -64,7 +75,10 @@ export function useWorkspacesAcross(): { groups: ServerWorkspaces[]; elsewhere: 
     const r = results[i];
     const me = s === server && org ? { organizations: org.orgs } : (r?.data?.me ?? null);
     return workspacesOf({
-      server: s,
+      server: serverOf(s),
+      place: s,
+      email: r?.data?.me?.user.email ?? known[s]?.email ?? null,
+      several: servers.filter((other) => serverOf(other) === serverOf(s)).length > 1,
       current: s === server,
       orgs: openOrgs(me?.organizations ?? []),
       unread: r?.data?.unread ?? [],
@@ -97,7 +111,7 @@ export function useOpenWorkspaceRow() {
       return;
     }
     toast({ title: t("mobile.auth.server.now", { host: o.name }) });
-    void openWorkspace(g.server, o.id);
+    void openWorkspace(g.place, o.id);
   };
 }
 
@@ -111,7 +125,7 @@ export function WorkspaceMark({
   size = 30,
 }: {
   org: Pick<OrgSummary, "mode" | "role" | "logo">;
-  /** The server it is on, when it isn't the current one (ADR 0154). */
+  /** The place it is read from (a server, or one of its accounts), when it isn't the current one. */
   server?: string;
   size?: number;
 }) {
@@ -122,7 +136,7 @@ export function WorkspaceMark({
 }
 
 /**
- * The groups of workspaces, one per server (its host as the small header), each workspace with its own mark (logo,
+ * The groups of workspaces, one per server ("Cloud", or "Seu servidor" and its host, as the small header), each workspace with its own mark (logo,
  * or its initial), its role, the check on the current one and the unread count on the others; a server that didn't
  * answer this time keeps its workspaces in their place, faded ("Sem resposta agora" when none is known). Shared by the
  * page and the sheet. A personal workspace of yours (ADR 0159) is you: your face and your name, and whose it is
@@ -146,18 +160,35 @@ export function WorkspaceGroups({
         const notes = workspaceNotes(t, i18n.language, g.orgs);
         const several = g.orgs.filter(mine).length > 1;
         return (
-          <View key={g.server}>
-            <GroupedHeader>{g.host}</GroupedHeader>
+          <View key={g.place}>
+            {/* Where they live: the Cloud by its name, one's own server by its host; and whose account, where the
+                phone has several on that server (ADR 0183). */}
+            <GroupedHeader>
+              {[
+                g.server === CLOUD_SERVER ? t("hosting.badge.cloud") : `${t("hosting.badge.own")} · ${g.host}`,
+                g.several ? g.email : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </GroupedHeader>
             <GroupedList>
               {g.failed ? (
                 <GroupedRow icon="wifi" label={t("mobile.me.workspacesUnreachable")} faint />
+              ) : g.orgs.length === 0 && g.several && !g.current ? (
+                // An account with no workspace yet: its own row is the way to it.
+                <GroupedRow
+                  icon="person"
+                  label={g.email ?? g.host}
+                  sub={t("mobile.me.accountNoWorkspace")}
+                  onPress={() => void openWorkspace(g.place, null)}
+                />
               ) : (
                 g.orgs.map((o) => {
                   const here = g.current && o.id === org.orgId;
                   return (
                     <GroupedRow
                       key={o.id}
-                      leading={<WorkspaceMark org={o} server={g.server} />}
+                      leading={<WorkspaceMark org={o} server={g.place} />}
                       label={mine(o) && !several && face.name ? face.name : o.name}
                       sub={notes.get(o.id) ?? t(modeKey(o, `mobile.me.role.${o.role}`))}
                       checked={here}
@@ -199,11 +230,13 @@ export function WorkspacesPage() {
 }
 
 /**
- * Adicionar workspace, a short sheet (the system's form sheet, sized to its two rows): a new one on agentes.chat,
- * or the team's own server; one line under them says nothing is lost.
+ * Adicionar workspace, a short sheet (the system's form sheet, sized to its rows): on a server of one's own, a new one
+ * there first; a new one on agentes.chat, or the team's own server; one line under them says nothing is lost.
  */
 export function AddWorkspacePage() {
   const { t } = useTranslation();
+  const server = useServer();
+  const me = useMe().data;
   const create = () => {
     askNewWorkspace(CLOUD_SERVER);
     // Signed in to agentes.chat already: its first run opens over the app; otherwise its sign-in comes first.
@@ -215,12 +248,32 @@ export function AddWorkspacePage() {
       {/* The sheets' bar: back to the list it came from, the title centered (as Novo's). */}
       <SheetHeader title={t("mobile.me.addWorkspace")} icon="back" />
       <GroupedList>
+        {offersNewWorkspaceHere(server, me) ? (
+          <GroupedRow
+            icon="plus"
+            label={t("shell.newWorkspace")}
+            sub={serverHost(server)}
+            chevron
+            onPress={() => {
+              // Signed in here already: the root layout opens the first run over the app for the ask.
+              askNewWorkspace(server);
+              router.dismissTo("/");
+            }}
+          />
+        ) : null}
         <GroupedRow
           icon="plus"
           label={t("mobile.me.addWorkspaceCreate")}
           sub={t("mobile.me.addWorkspaceCreateSub")}
           chevron
           onPress={create}
+        />
+        <GroupedRow
+          icon="person"
+          label={t("mobile.me.addAccount")}
+          sub={t("mobile.me.addAccountSub", { host: server === CLOUD_SERVER ? "agentes.chat" : serverHost(server) })}
+          chevron
+          onPress={() => void addAccount(server)}
         />
         <GroupedRow
           icon="server"
@@ -263,7 +316,7 @@ export function TeamServerPage() {
       setError(t(problemText(check.problem, check.server), { host: serverHost(check.server) }));
       return setBusy(false);
     }
-    if (signedInServers().includes(check.server))
+    if (signedInServers().some((place) => serverOf(place) === check.server))
       toast({ title: t("mobile.auth.server.now", { host: serverHost(check.server) }) });
     await openWorkspace(check.server, null);
   };

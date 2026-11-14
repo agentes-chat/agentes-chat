@@ -216,7 +216,8 @@ export interface WidgetView {
   schedule: WidgetSchedule;
   alert: { enabled: boolean; condition: string };
   status: WidgetStatus;
-  failure: { code: string; detail: string | null } | null;
+  /** `cause`: with `failing` (stopped after failing in a row), the code of the last of those failures. */
+  failure: { code: string; detail: string | null; cause?: string } | null;
   /** While it is `building` or `updating`: what its run waits on, the apps say it in place of a spinner. */
   wait: WidgetWaitView | null;
   refreshedAt: string | null;

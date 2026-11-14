@@ -2,14 +2,14 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cx } from "../cx";
 import { Icon, type IconName } from "../icons/Icon";
 
-export type ChipTone = "neutral" | "waiting" | "done";
+export type ChipTone = "neutral" | "waiting" | "done" | "info";
 
 export interface ChipProps extends HTMLAttributes<HTMLSpanElement> {
   /** A state is said with an icon and a word, never a colored dot; a value ("Issue: ACME-177") goes without. */
   icon?: IconName;
   /** In place of the icon: e.g. a `PixelSpinner` in the working agent's color. */
   lead?: ReactNode;
-  /** `waiting` (attention) only for what waits on a person. */
+  /** `waiting` (attention) only for what waits on a person; `info` for a mark that points one out ("Recomendado"). */
   tone?: ChipTone;
   children: ReactNode;
 }

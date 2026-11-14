@@ -5,7 +5,7 @@ setupDom();
 
 import type { Message, RunStep } from "@agenteschat/client";
 import { applyChannelEvent, emptyStreams, reconcileRuns, type StreamsState } from "@agenteschat/client";
-import { splitCanceled, workFromSteps } from "@agenteschat/client/lib/work";
+import { splitCanceled, stopsMovedOn, workFromSteps } from "@agenteschat/client/lib/work";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
@@ -98,6 +98,36 @@ describe("work summary and stopped messages", () => {
   });
 });
 
+describe("stops that are over", () => {
+  const at = (minutes: number) => new Date(Date.UTC(2026, 0, 1, 12, minutes)).toISOString();
+  const row = (runId: string, minutes: number, over: Partial<Message> = {}) =>
+    ({
+      author: { type: "agent", id: "ada" },
+      agentRunId: runId,
+      threadId: null,
+      createdAt: at(minutes),
+      ...over,
+    }) as Message;
+  const stop = row("r1", 1, { meta: { canceled: { byUserId: "u" } } });
+
+  test("the agent wrote again after it in the same thread, or works here now", () => {
+    expect([...stopsMovedOn([stop])]).toEqual([]);
+    expect([...stopsMovedOn([row("r2", 2), stop])]).toEqual(["r1"]);
+    expect([...stopsMovedOn([stop], ["ada"])]).toEqual(["r1"]);
+  });
+
+  test("not what it wrote before, in another thread, in the same run, as a notice, nor another agent", () => {
+    const others = [
+      row("r0", 0),
+      row("r2", 2, { threadId: "t1" }),
+      row("r1", 2),
+      row("r3", 2, { meta: { notice: { kind: "run_stopped" } } }),
+      row("r4", 2, { author: { type: "agent", id: "atlas" } }),
+    ];
+    expect([...stopsMovedOn([stop, ...others], ["atlas"])]).toEqual([]);
+  });
+});
+
 describe("in the channel", () => {
   test("a stopped message shows its text, its pill 'You stopped Ada' and Continue", async () => {
     const state = seedState();
@@ -123,6 +153,92 @@ describe("in the channel", () => {
     await settle(3);
     expect(state.calls.find((c) => c.method === "agents.continueRun")?.args).toEqual([ORG_ID, "r-stopped"]);
     expect(within(msg).queryByRole("button", { name: "Continuar" })).toBeNull();
+  });
+
+  /** Ada's message in the channel, `minutes` ago. */
+  const fromAda = (id: string, body: string, runId: string, minutes: number, meta?: Message["meta"]) =>
+    ({
+      id,
+      channelId: ENG_ID,
+      threadId: null,
+      author: { type: "agent", id: ADA_ID },
+      body,
+      mentionedAgentIds: [],
+      agentRunId: runId,
+      ...(meta ? { meta } : {}),
+      createdAt: new Date(Date.now() - minutes * 60_000).toISOString(),
+    }) as Message;
+
+  test("a message sent with 'Parar e mandar' that stopped the task: no 'You stopped Ada', no Continuar", async () => {
+    const state = seedState();
+    // As the server leaves it: what Ada wrote before the send is a plain message, the sent one names the run.
+    state.messages.push(fromAda("m-before", "Comecei a revisar o PR.", "r-stopped", 3), {
+      id: "m-sent",
+      channelId: ENG_ID,
+      threadId: null,
+      author: { type: "person", id: "u-walter" },
+      body: "Na verdade, só o login.",
+      mentionedAgentIds: [],
+      agentRunId: null,
+      meta: { steerNow: true, stoppedRunIds: ["r-stopped"] },
+      createdAt: new Date(Date.now() - 2 * 60_000).toISOString(),
+    } as Message);
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
+    await settle(5);
+    expect(screen().getByText("Comecei a revisar o PR.")).toBeTruthy();
+    expect(document.querySelector(".run-canceled")).toBeNull();
+    expect(document.body.textContent).not.toContain("Você parou");
+    expect(screen().queryByRole("button", { name: "Continuar" })).toBeNull();
+  });
+
+  test("a stopped reply the agent wrote after keeps its pill and loses Continuar", async () => {
+    const state = seedState();
+    state.messages.push(
+      fromAda("m-stopped", "Comecei a revisar o PR.\n\n_Stopped by Walter._", "r-stopped", 3, {
+        canceled: { byUserId: "u-walter", text: "Comecei a revisar o PR." },
+      }),
+      fromAda("m-after", "Pronto, revisei o login.", "r-next", 1),
+    );
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
+    await settle(5);
+    const line = document.querySelector(".run-canceled") as HTMLElement;
+    expect(line.textContent).toContain("Você parou a Ada");
+    expect(within(line).queryByRole("button", { name: "Continuar" })).toBeNull();
+  });
+
+  test("a stopped reply never offers Continuar while its agent works in the conversation", async () => {
+    const state = seedState();
+    state.messages.push(
+      fromAda("m-stopped", "Comecei a revisar o PR.\n\n_Stopped by Walter._", "r-stopped", 3, {
+        canceled: { byUserId: "u-walter", text: "Comecei a revisar o PR." },
+      }),
+    );
+    const { sockets } = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
+    await settle(5);
+    const line = () => document.querySelector(".run-canceled") as HTMLElement;
+    expect(within(line()).getByRole("button", { name: "Continuar" })).toBeTruthy();
+    const socket = sockets.last();
+    await act(async () => socket.open());
+    await act(async () =>
+      socket.push({
+        type: "event",
+        channelId: ENG_ID,
+        event: {
+          channelId: ENG_ID,
+          type: "agent.run",
+          threadId: null,
+          runId: "r-live",
+          agentId: ADA_ID,
+          status: "running",
+        },
+      }),
+    );
+    await settle(3);
+    expect(document.querySelector('.ac-typing[data-active="true"] .ac-typing__text')?.textContent).toBe(
+      "Ada pensando…",
+    );
+    expect(line().textContent).toContain("Você parou a Ada");
+    expect(within(line()).queryByRole("button", { name: "Continuar" })).toBeNull();
   });
 
   test("a reply at the step limit says so in my language, with Continuar", async () => {

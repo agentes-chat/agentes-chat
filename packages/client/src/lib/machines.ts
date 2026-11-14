@@ -9,11 +9,12 @@ import type {
   MachineAccountKind,
   MachineFolderGrant,
   MachinePause,
+  MachineTool,
   MachineToolName,
 } from "../api/types";
-import { errorCode, sendWaits } from "./errors";
+import { errorCode, errorText, sendWaits } from "./errors";
 import { formatBytes } from "./files";
-import { clockAt } from "./format";
+import { clockAt, firstName } from "./format";
 
 /**
  * Connected computers (ADR 0025, ADR 0036): the device code, the commands the
@@ -100,6 +101,97 @@ export function toolOffReason(
     key: "brain.reasons.tool_offLinux" as const,
     command: toolOnCommand(m, kind === "claude_code" ? "claude" : kind),
   };
+}
+
+/**
+ * What one click does where a tool is off on `m`, for the person `meId`: `allow` turns it on there (they paired it),
+ * `ask` sends whoever paired it the same button, `outdated` means its app must update first; null where nobody can
+ * from here (the workspace's own computer, or one with nobody behind it).
+ */
+export type ToolOneClick =
+  | { kind: "allow" }
+  | { kind: "ask"; ownerId: string; ownerName: string }
+  | { kind: "outdated" };
+export function toolOneClick(
+  m: Pick<Machine, "kind" | "pairedBy" | "accessAllow"> | null | undefined,
+  meId: string | null | undefined,
+): ToolOneClick | null {
+  if (!m || m.kind === "managed" || !m.pairedBy) return null;
+  if (m.pairedBy.id === meId) return m.accessAllow ? { kind: "allow" } : { kind: "outdated" };
+  return { kind: "ask", ownerId: m.pairedBy.id, ownerName: m.pairedBy.name };
+}
+
+/**
+ * "Prefiro no Terminal" under the one-click button: the same switches as a command, for the person who turns them on
+ * themselves on a computer that may have no app (a server). Null where the button is all there is.
+ */
+export function oneClickTerminal(
+  m: Pick<Machine, "mode" | "os">,
+  oneClick: ToolOneClick | null,
+  tools: readonly (keyof MachineAccess["tools"])[],
+) {
+  if (oneClick?.kind !== "allow" || allowsInApp(m.os) || tools.length === 0) return null;
+  return tools.map((tool) => toolOnCommand(m, tool)).join(" && ");
+}
+
+/** The tool off behind a refused "Fazer login" (`browser_profile.tool_off`), with what this person can do about it. */
+export interface ProfileToolOff {
+  machineId: string;
+  machineName: string;
+  tool: MachineTool;
+  oneClick: ToolOneClick | null;
+}
+export function profileToolOff(err: unknown): ProfileToolOff | null {
+  const e = err as { code?: unknown; params?: Record<string, unknown> } | null;
+  if (e?.code !== "browser_profile.tool_off" || !e.params) return null;
+  const p = e.params;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  if (!str(p.machineId)) return null;
+  const ownerId = str(p.ownerId);
+  return {
+    machineId: str(p.machineId),
+    machineName: str(p.machineName),
+    tool: (str(p.tool) || "browser") as MachineTool,
+    oneClick:
+      p.mayAllow === true
+        ? { kind: "allow" }
+        : p.outdated === true
+          ? { kind: "outdated" }
+          : ownerId
+            ? { kind: "ask", ownerId, ownerName: str(p.ownerName) }
+            : null,
+  };
+}
+
+/** "Fazer login" refused for another cause (`browser_profile.unavailable`), on which computer. */
+export function profileUnavailable(err: unknown): { machineName: string } | null {
+  const e = err as { code?: unknown; params?: Record<string, unknown> } | null;
+  if (e?.code !== "browser_profile.unavailable") return null;
+  return { machineName: typeof e.params?.machineName === "string" ? e.params.machineName : "" };
+}
+
+/** A tool in a sentence: "o navegador", "os comandos", "o Claude Code". */
+export const toolWords = (t: TFunction, tool: MachineTool) => t(`machines.oneClick.tools.${tool}`);
+
+/** The runner said the browser is off there (every runner version words it so). */
+export const browserOffMessage = (message: string | null | undefined) =>
+  /\bbrowser is turned off\b/i.test(message ?? "");
+
+/**
+ * A refused "Fazer login" in one line: the browser off there (whose computer it is when not this person's), the
+ * computer's own words for another cause, else the plain failure.
+ */
+export function profileRefusalLine(t: TFunction, err: unknown): string {
+  const off = profileToolOff(err);
+  if (off)
+    return off.oneClick?.kind === "ask"
+      ? t("browser.profiles.toolOffOther", { name: firstName(off.oneClick.ownerName) })
+      : t("browser.profiles.toolOff");
+  // The computer's own words are English: the person's language says what happened.
+  const other = profileUnavailable(err);
+  if (other) return t("browser.profiles.notOpened", { machine: other.machineName });
+  if (errorCode(err) === "browser_profile.busy") return t("browser.profiles.busy");
+  return errorText(t, err);
 }
 
 /** The last part of a path: "/Users/you/Projects/loja-v5" → "loja-v5". */

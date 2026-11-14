@@ -80,13 +80,15 @@ describe("an admin on someone else's agent", () => {
     // Whose accounts these are, said on the first screen.
     expect(shownText(d)).toContain("Só contas de João");
     await toScreen(d, "Trocar de conta");
-    // The one in use; the workspace's key, the admin's to pick, picked; João's other account is his to give: shown
-    // under his name, not to be picked.
-    expect(brainRows(d).map((r) => [r.group, r.title, r.checked, r.off])).toEqual([
+    // The one in use; by AI, João's other account, his to give: saying whose it is, not to be picked; the workspace's
+    // key, the admin's to pick, picked.
+    const rows = brainRows(d);
+    expect(rows.map((r) => [r.group, r.title, r.checked, r.off])).toEqual([
       ["Em uso", "Claude Max", false, false],
-      ["Chave do workspace", "Chave padrão do workspace", true, false],
-      ["De João", "Claude Pro · Max", false, true],
+      ["Claude", "Claude Pro · Max", false, true],
+      ["Chaves de API", "Chave padrão do workspace", true, false],
     ]);
+    expect(rows[1]?.lines).toEqual(["De João"]);
     expect(mainButton(d)?.textContent).toBe("Trocar para Chave padrão do workspace");
     // No sign-in here and no other AI to connect: those are the owner's (ADR 0160, addendum).
     expect(within(d).queryByRole("button", { name: /^Conectar outra IA/ })).toBeNull();

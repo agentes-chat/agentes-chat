@@ -32,6 +32,21 @@
   flex: 1 1 200px;
   gap: 10px;
 }
+/* On a phone the words take their line and the action the note's width under them (rule 23): beside each other the
+   words were squeezed to a few per line. */
+@media (max-width: 640px) {
+  .brw-note--act {
+    padding-inline: 12px;
+  }
+  .brw-note--act > .brw-note__text,
+  .brw-note--act > .ac-btn,
+  .brw-note--act > .ac-acts {
+    flex: 1 1 100%;
+  }
+  .brw-note--act > .ac-acts > .ac-btn {
+    flex: 1 1 0;
+  }
+}
 .brw-note--off {
   opacity: 0.55;
 }
@@ -709,10 +724,9 @@ html:not([data-pointer]) .brw-ac__page.is-control:focus-visible {
 .brw-dim__box {
   flex-direction: column;
 }
+/* Its spinner or icon on the first line's capitals, however many lines the words take (`.ac-iconline`). */
 .brw-dim__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  justify-content: center;
 }
 .brw-dim__box small {
   font-weight: 400;

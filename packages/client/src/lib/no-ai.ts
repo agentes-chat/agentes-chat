@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type {
   Agent,
   AgentBrain,
+  AiAccounts,
   AiComputer,
   AiStatus,
   BrainUnavailable,
@@ -12,10 +13,11 @@ import type {
   MachineAccountKind,
   OrgStanding,
 } from "../api/types";
-import { ownSignInReady } from "./ai-accounts";
+import { ownSignInReady, ownSignIns, planWordOf } from "./ai-accounts";
 import { answersOthers, audienceOf } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
+import { firstName } from "./format";
 import { toolOffReason } from "./machines";
 import { can } from "./permissions";
 import { CODING_PLANS, isPlanId, loginPerAgent, PLAN_IDS, type PlanId } from "./plans";
@@ -60,6 +62,9 @@ export interface NoAiCard {
   missing?: "cli_missing" | "no_computer";
   /** A billing hold stopped the run: the message is kept for after the plan (`keptCardState`). */
   held?: boolean;
+  /** With `plans_not_yours`: whose the workspace's plans are (first name) and what they are ("Claude"). */
+  owner?: string;
+  plan?: string;
 }
 
 /** Why the right hand's plan can't think for this message (`NoAiCard.planLine`). */
@@ -74,6 +79,7 @@ export type RightHandPlanLine =
   | "plan_inactive"
   | "commands_off"
   | "plan_not_shared"
+  | "plans_not_yours"
   | "plan_unattended"
   | "runner_outdated"
   | "plan_tools";
@@ -88,6 +94,7 @@ export const RIGHT_HAND_PLAN_LINES: ReadonlySet<string> = new Set<RightHandPlanL
   "plan_inactive",
   "commands_off",
   "plan_not_shared",
+  "plans_not_yours",
   "plan_unattended",
   "runner_outdated",
   "plan_tools",
@@ -126,7 +133,19 @@ export function noAiCardOf(meta: Record<string, unknown> | null | undefined): No
     ...(o.reason === "cli_failed" && typeof o.why === "string" && o.why ? { why: o.why } : {}),
     ...(o.reason === "cli_missing" || o.reason === "no_computer" ? { missing: o.reason } : {}),
     ...(o.reason === "plan_hold" ? { held: true } : {}),
+    ...(o.reason === "plans_not_yours" && typeof o.owner === "string" && o.owner
+      ? { owner: firstName(o.owner), plan: typeof o.plan === "string" && o.plan ? o.plan : "Claude" }
+      : {}),
   };
+}
+
+/**
+ * "O Claude daqui é só de Walter" (`plans_not_yours`, ADR 0059 §3): whose the workspace's plans are when none serves
+ * this person, from the AI status, for the receipt under their message. Null for any other reason.
+ */
+export function plansNotYoursOf(status: AiStatus | undefined, agentId: string | undefined) {
+  const a = agentId ? status?.agents.find((x) => x.agentId === agentId) : undefined;
+  return a?.reason === "plans_not_yours" && a.owner ? { owner: firstName(a.owner), plan: a.plan ?? "Claude" } : null;
 }
 
 /**
@@ -145,7 +164,7 @@ export const planLineKey = (line: RightHandPlanLine, why?: string) =>
 
 /** A plan line that passes by itself: once the agent can think again, its card offers "Responder agora". */
 export const planLinePasses = (line: RightHandPlanLine | undefined) =>
-  line === "computer_away" || line === "computer_failed" || line === "cli_failed";
+  line === "computer_away" || line === "computer_failed" || line === "cli_failed" || line === "plans_not_yours";
 
 /**
  * The key of a card's line while the agent still can't think (`agentGrammar(name)` fills it): the computer's own
@@ -202,7 +221,9 @@ export function planLineFix(
 ): "connectMine" | "useKey" | null {
   if (line === "plan_unattended") return maySetAgentAi(agent, meId, org) ? "useKey" : null;
   if (!mayConnectAi(agent, meId, org)) return null;
-  return line === "plan_not_shared" || !maySetAgentAi(agent, meId, org) ? "connectMine" : "useKey";
+  return line === "plan_not_shared" || line === "plans_not_yours" || !maySetAgentAi(agent, meId, org)
+    ? "connectMine"
+    : "useKey";
 }
 
 /**
@@ -314,6 +335,17 @@ export const planMark = (choice: PlanChoice) =>
 /** A plan's short name, as its tile and its accounts say it: "Claude", "ChatGPT", "GLM Coding"… */
 export const planLabel = (t: TFunction, choice: PlanChoice) =>
   isPlanId(choice) ? CODING_PLANS[choice].label : t(`aiAccounts.connect.${kindOf(choice)}`);
+/**
+ * The viewer's plan on a computer as people say it ("Claude Max"): its own sign-in there first, else an account of
+ * theirs signed in there; null with none.
+ */
+export function devicePlanName(t: TFunction, view: AiAccounts | undefined, machineId: string): string | null {
+  const own = ownSignIns(view).find((o) => o.machineId === machineId);
+  const a = own ?? view?.accounts.find((x) => x.machineId === machineId && x.mine && x.status === "active");
+  if (!a) return null;
+  const choice = planOfAccount({ kind: a.kind, provider: "provider" in a ? a.provider : null });
+  return [planLabel(t, choice), planWordOf(a.plan)].filter(Boolean).join(" ");
+}
 /** A plan's name in its panel, as its maker sells it: "Your Claude plan", "GLM Coding Plan"… */
 export const planTitle = (t: TFunction, choice: PlanChoice) =>
   isPlanId(choice) ? CODING_PLANS[choice].name : t(`connectAi.plan.${choice}.title`);
@@ -530,6 +562,8 @@ const CLOUD_REASON = {
   outdated: "updating",
   // Said only past the wait: before it, the line says the computer is still looking.
   not_reported: "stuck",
+  // The Cloud's computers run Linux, where every CLI runs: never said there.
+  system: "stuck",
 } as const satisfies Record<BrainUnavailable | "keys", string>;
 
 /**

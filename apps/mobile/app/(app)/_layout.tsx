@@ -91,7 +91,8 @@ function AppStack() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, gestureEnabled: true }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="chat/[channelId]" options={pushed} />
-      <Stack.Screen name="consultation/[id]" options={pushed} />
+      {/* Two agents' conversation, read only, over the one it was asked from (the web's dialog). */}
+      <Stack.Screen name="consultation/[id]" options={formSheet} />
       <Stack.Screen name="block/[id]" options={pushed} />
       <Stack.Screen name="conversations/[kind]" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="channel-category" options={{ ...pushed, ...scrollUnder }} />
@@ -176,10 +177,12 @@ function AppStack() {
       <Stack.Screen name="me/account" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="me/status" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="me/zone" options={{ ...pushed, ...scrollUnder }} />
+      <Stack.Screen name="me/email" options={{ ...pushed, ...scrollUnder }} />
       <Stack.Screen name="me/workspaces" options={{ ...pushed, ...scrollUnder }} />
       {/* The same list as a sheet, from a long press on the workspace's mark in the bar (ADR 0154). */}
       <Stack.Screen name="workspaces-sheet" options={workspacesSheet} />
-      {/* Another workspace, on agentes.chat or the team's own server (ADR 0154): two choices, a short sheet. */}
+      {/* Another workspace (ADR 0154): on a server of one's own a new one there first, then agentes.chat or the team's
+          own server; a short sheet fitted to its rows. */}
       <Stack.Screen name="me/add-workspace" options={pushSheet} />
       {/* On the sign-in's ruler: its own sky and back circle, no bar. */}
       <Stack.Screen name="me/team-server" options={{ headerShown: false }} />

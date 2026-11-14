@@ -177,6 +177,11 @@ import {
 export const BROWSER_IDLE_MS = 15 * 60_000;
 /** How often idle browsers are looked for. */
 const SWEEP_MS = 60_000;
+/**
+ * A brain turn short of memory may close an agent's browser unused this long (`reclaimIdle`): its profile and logins
+ * stay on disk and the agent's next browser command starts it again.
+ */
+export const BROWSER_RECLAIM_IDLE_MS = 2 * 60_000;
 /** A Chrome that hasn't opened its debugging port by then is given up. */
 const CHROME_START_MS = 20_000;
 /** A Chrome started for Browser on its desktop whose window hasn't shown by then, once its port opened, is given up. */
@@ -210,6 +215,12 @@ const VERSION_CHECK_MS = 5 * 60_000;
  * (`BROWSER_IDLE_MS`) comes later.
  */
 const UPDATE_IDLE_MS = 10 * 60_000;
+/**
+ * A browser its agent holds (`keep_running`) waits this long at most for a newer Chrome, from when a sweep first found
+ * it on disk, then restarts on it as any other does: a hold can be renewed for good, and the updates carry Chrome's
+ * security fixes for a browser on the open web.
+ */
+const KEPT_UPDATE_WAIT_MS = 24 * 3600_000;
 const DOWNLOAD_TIMEOUT_MS = 5 * 60_000;
 const QUICK_TIMEOUT_MS = 15_000;
 /** One input command on the relay: a click or a key answers in milliseconds. */
@@ -1364,6 +1375,11 @@ export interface BrowserManagerOptions {
   sharedDir?: string;
   maxSessions?: number;
   idleMs?: number;
+  /**
+   * The agent holds its browser (`keep_running`, ADR 0176): a page that must stay live, so meanwhile it is never
+   * closed as idle or moved to or from the agent's desktop, and restarted for an update only once that waited a day.
+   */
+  kept?: (agentId: string) => boolean;
   now?: () => number;
   /** Tests: opens the session's stream socket. */
   connectStream?: (url: string) => StreamSocket;
@@ -1453,6 +1469,8 @@ interface Session {
   folder: string;
   /** Commands run one at a time. */
   queue: Promise<unknown>;
+  /** Commands in `queue` not finished yet. */
+  queued?: number;
   lastUsed: number;
   stream?: Stream;
   /** A stream being opened: a second start (or a stop) waits for it instead of opening another socket. */
@@ -1499,6 +1517,8 @@ interface Session {
   version?: string;
   /** The newer version on disk it restarts on, or restarted on: once per version. */
   updatedTo?: string;
+  /** When a sweep first found a newer Chrome on disk than the one it runs (`updateDue`). */
+  outdatedAt?: number;
   /** When a sweep last found someone watching it or a person's turn open on it. */
   heldAt?: number;
   /** The GET guard stopped a request carrying a typed password since the agent last heard (ADR 0144). */
@@ -2621,6 +2641,7 @@ export class BrowserManager {
       }
       session.chrome = chrome;
       session.version = version ?? undefined;
+      session.outdatedAt = undefined;
       session.headed = chrome.display !== undefined;
       session.aliveAt = null;
       session.memory = this.memoryCounters();
@@ -2801,9 +2822,16 @@ export class BrowserManager {
     return on ? { display: on.display, xauthority: on.xauthority } : null;
   }
 
-  /** Someone may be looking at the agent's Chrome, or working in it: its live view, a person's turn, its desktop's viewers. */
+  /** Someone may be looking at the agent's Chrome, or working in it (`watched`), or its agent holds it. */
   private inView(session: Session) {
-    return !!session.stream || !!session.streamOpening || this.held(session.agentId) || this.desktopWatched(session);
+    return this.watched(session) || this.opts.kept?.(session.agentId) === true;
+  }
+
+  /** Its live view, a person's turn, its desktop's viewers. */
+  private watched(session: Session) {
+    return (
+      !!session.stream || !!session.streamOpening || this.personsTurn(session.agentId) || this.desktopWatched(session)
+    );
   }
 
   /** The agent's Chrome is on its desktop, and someone watches or controls that desktop. */
@@ -2832,7 +2860,8 @@ export class BrowserManager {
       // A person on its desktop may be working in it without a command: that counts as use.
       if (this.desktopWatched(s)) s.lastUsed = this.now();
       if (s.stream || s.streamOpening || this.held(agentId)) {
-        s.heldAt = this.now();
+        // Someone on the page holds an update off for a while after; its agent's own hold only as `updateDue` says.
+        if (this.watched(s)) s.heldAt = this.now();
         // `agent-browser` stops on its own idle timeout: a command keeps it up for whoever is still on the page.
         // Not a use: once nobody holds it, its idle time counts from the last real one.
         if (s.chrome && this.now() - (s.commandAt ?? 0) >= this.idleMs - 2 * SWEEP_MS) {
@@ -2840,39 +2869,64 @@ export class BrowserManager {
             this.run(s, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS, notUse: true }),
           ).catch(() => undefined);
         }
+      } else if (this.now() - s.lastUsed >= this.idleMs) {
+        this.sessions.delete(agentId);
+        this.changed();
+        await this.enqueue(s, async () => {
+          if (s.chrome) await this.run(s, ["close"], { timeoutMs: QUICK_TIMEOUT_MS }).catch(() => undefined);
+          await this.stopChrome(s);
+        }).catch(() => undefined);
         continue;
       }
-      if (this.now() - s.lastUsed < this.idleMs) {
-        const disk = this.diskVersion();
-        if (disk && this.updateDue(s, disk)) {
-          s.updatedTo = disk;
-          void this.enqueue(s, () => this.restartOnUpdate(s, disk)).catch(() => undefined);
-        }
-        continue;
+      const disk = this.diskVersion();
+      if (disk && this.updateDue(s, disk)) {
+        s.updatedTo = disk;
+        void this.enqueue(s, () => this.restartOnUpdate(s, disk)).catch(() => undefined);
       }
-      this.sessions.delete(agentId);
-      this.changed();
-      await this.enqueue(s, async () => {
-        if (s.chrome) await this.run(s, ["close"], { timeoutMs: QUICK_TIMEOUT_MS }).catch(() => undefined);
-        await this.stopChrome(s);
-      }).catch(() => undefined);
     }
+  }
+
+  /** The browser `reclaimIdle` would close: a running Chrome nobody holds, no command under way, unused for a while. */
+  private reclaimable() {
+    let best: Session | null = null;
+    for (const [agentId, s] of this.sessions) {
+      if (!s.chrome || s.queued || s.chromeStarting || this.inView(s) || this.held(agentId)) continue;
+      // Someone watching it a moment ago may come back to the page: that counts as use here.
+      if (this.now() - Math.max(s.lastUsed, s.heldAt ?? 0) < BROWSER_RECLAIM_IDLE_MS) continue;
+      if (!best || s.lastUsed < best.lastUsed) best = s;
+    }
+    return best;
+  }
+
+  /** When the browser `reclaimIdle` would close was last used; null: none may close. */
+  reclaimCandidate(): number | null {
+    return this.reclaimable()?.lastUsed ?? null;
+  }
+
+  /** A turn needs memory: the least recently used idle browser closes (`reclaimable`); false when none could. */
+  async reclaimIdle(): Promise<boolean> {
+    const s = this.reclaimable();
+    if (!s) return false;
+    this.sessions.delete(s.agentId);
+    this.changed();
+    await this.enqueue(s, async () => {
+      await this.run(s, ["close"], { timeoutMs: QUICK_TIMEOUT_MS }).catch(() => undefined);
+      await this.stopChrome(s);
+    }).catch(() => undefined);
+    return true;
   }
 
   /**
    * Whether the agent's Chrome restarts now on the newer `disk` version (it updated itself): once per version, and
    * only while nobody needs it, so a browser is never restarted mid-task: no command, nobody watching it and no
-   * person's turn for `UPDATE_IDLE_MS`. One that idles out first simply starts on the new version next time.
+   * person's turn for `UPDATE_IDLE_MS`. One that idles out first simply starts on the new version next time. Its
+   * agent's hold keeps it off for `KEPT_UPDATE_WAIT_MS` at most from when the newer one was first seen here.
    */
   private updateDue(s: Session, disk: string) {
-    return (
-      !!s.chrome &&
-      !!s.version &&
-      s.version !== disk &&
-      s.updatedTo !== disk &&
-      !this.inView(s) &&
-      this.now() - Math.max(s.lastUsed, s.heldAt ?? 0) >= UPDATE_IDLE_MS
-    );
+    if (!s.chrome || !s.version || s.version === disk || s.updatedTo === disk) return false;
+    s.outdatedAt ??= this.now();
+    const kept = this.opts.kept?.(s.agentId) === true && this.now() - s.outdatedAt < KEPT_UPDATE_WAIT_MS;
+    return !kept && !this.watched(s) && this.now() - Math.max(s.lastUsed, s.heldAt ?? 0) >= UPDATE_IDLE_MS;
   }
 
   /**
@@ -2998,8 +3052,13 @@ export class BrowserManager {
   }
 
   private enqueue<T>(session: Session, fn: () => Promise<T>): Promise<T> {
+    session.queued = (session.queued ?? 0) + 1;
     const run = session.queue.catch(() => undefined).then(fn);
-    session.queue = run.catch(() => undefined);
+    session.queue = run
+      .catch(() => undefined)
+      .finally(() => {
+        session.queued = (session.queued ?? 1) - 1;
+      });
     return run;
   }
 
@@ -3576,8 +3635,13 @@ export class BrowserManager {
   }
 
   /** A person's turn is open on the agent's browser, or was when the server connection dropped. */
-  private held(agentId: string) {
+  private personsTurn(agentId: string) {
     return this.handoffs.has(agentId) || (this.heldUntil.get(agentId) ?? 0) > this.now();
+  }
+
+  /** A person's turn, or the agent holds its browser. */
+  private held(agentId: string) {
+    return this.personsTurn(agentId) || this.opts.kept?.(agentId) === true;
   }
 
   /** The agent's Chrome process while it runs: its window on the agent's desktop is the browser's, not the desktop's. */

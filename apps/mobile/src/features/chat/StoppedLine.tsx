@@ -1,12 +1,18 @@
-import { type Message, useStopReason } from "@agenteschat/client";
+import { type Message, useAiAccounts, useStopReason } from "@agenteschat/client";
 import { seesDetails } from "@agenteschat/client/lib/audience";
+import { mayPickModel } from "@agenteschat/client/lib/brain-picker";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import type { StoppedNotice } from "@agenteschat/client/lib/notices";
+import { can } from "@agenteschat/client/lib/permissions";
+import { modelStandInKey } from "@agenteschat/client/lib/plan-usage";
+import { planOf } from "@agenteschat/client/lib/plans";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
+import { useOrg } from "@/providers/org";
 import { Button, EventPill, EventPillAction, PixelStop, useToast } from "@/ui";
 import { openAgentAi } from "../ai/AgentAiScreen";
+import { openKeyForAll } from "../ai/KeyForAllScreen";
 import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
 import { ReasonField } from "../task-manager/parts";
 import { useQuietInset } from "./look";
@@ -147,6 +153,45 @@ export function SpeedFallbackLine({ message }: { message: Message }) {
       }
     >
       {t("chat.speedFallback.text")}
+    </EventPill>
+  );
+}
+
+/**
+ * Under a reply "Automático" gave with another model because the plan refused the one it maps to
+ * (`meta.modelStandIn`). Whoever may change the agent gets "Usar o <modelo> em todos" (the key's screen, on that
+ * model) when the key is theirs to share, and "Escolher modelo" (the agent's AI page).
+ */
+export function ModelStandInLine({ message, text }: { message: Message; text: string }) {
+  const { t } = useTranslation();
+  const { org, orgId } = useOrg();
+  const dir = useDirectory();
+  const meId = useMeId();
+  const agent = dir.agentById.get(message.author.id ?? "");
+  const may = mayPickModel(agent, meId, can(org, "manage_agents"));
+  const key = may ? modelStandInKey(message.meta) : null;
+  const ai = useAiAccounts(orgId, Boolean(key));
+  const account = key
+    ? ai.data?.accounts.find((a) => a.id === key.account && a.machineId === key.machineId && a.status === "active")
+    : undefined;
+  return (
+    <EventPill
+      mark="info"
+      actions={
+        agent && may ? (
+          <>
+            {key && account && planOf(account.provider) ? (
+              <EventPillAction
+                label={t("chat.modelStandIn.useAll", { model: key.to })}
+                onPress={() => openKeyForAll(key.machineId, key.account, key.model)}
+              />
+            ) : null}
+            <EventPillAction label={t("chat.modelStandIn.pick")} onPress={() => openAgentAi(agent.id)} />
+          </>
+        ) : null
+      }
+    >
+      {text}
     </EventPill>
   );
 }

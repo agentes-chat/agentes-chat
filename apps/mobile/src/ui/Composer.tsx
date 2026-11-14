@@ -92,8 +92,6 @@ export interface ComposerProps {
   suggestions?: { icon: IconName; label: string; text?: string }[];
   /** The field's `nativeID` (the chat links it to the keyboard's drag-to-dismiss area). */
   inputNativeID?: string;
-  /** A small face inside the empty field, before the placeholder (a DM with an agent: who you write to). */
-  face?: ReactNode;
   /** While "@…" is typed right before the caret (and the field is focused): the card above the field. */
   mention?: (state: ComposerMentionState) => ReactNode;
   /** The "@" (or "#") token at the caret (`mentionQuery`); the composer doesn't know the rules itself. */
@@ -165,8 +163,7 @@ const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
 /**
  * The center of the app: a round glass "+" for attachments and actions,
- * then the field, a raised pill. Empty, it can show who you write to (a small face) before the
- * placeholder; with text, the round ink send button pops in. One line keeps "+", text and send on the
+ * then the field, a raised pill; with text, the round ink send button pops in. One line keeps "+", text and send on the
  * same center line; longer text grows the pill upward and everything stays at the bottom. GIFs and stickers (`media`)
  * have their button at the empty field's end: they go as a message of their own, never with words.
  * Formatting has no button in the row: while words are selected in the field, a bar of them (bold, italic, lists…)
@@ -184,7 +181,6 @@ export function Composer({
   onPlus,
   suggestions,
   inputNativeID,
-  face,
   mention,
   mentionAt,
   insertMention,
@@ -435,16 +431,6 @@ export function Composer({
             voice?.bar ? styles.hidden : null,
           ]}
         >
-          {face && !text ? (
-            <Animated.View
-              entering={reducedMotion ? undefined : FadeIn.duration(140)}
-              exiting={reducedMotion ? undefined : FadeOut.duration(100)}
-              style={styles.face}
-              pointerEvents="none"
-            >
-              {face}
-            </Animated.View>
-          ) : null}
           {/* The placeholder is ours, on one line (cut with "…"): a long one wrapped and grew the empty field. */}
           <View style={styles.inputBox}>
             {!text ? (
@@ -755,7 +741,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: INSET,
   },
   hidden: { display: "none" },
-  face: { height: SEND, justifyContent: "center" },
   holdHint: { paddingTop: 8, minHeight: 20, alignItems: "center" },
   sendBox: { width: SEND, height: SEND },
   // Around the button, 4 past it on every side.

@@ -650,6 +650,18 @@ test("someone else's plan (ADR 0059 §3): the workspace's owner gives Bia's to a
     .from(schema.agents)
     .where(eq(schema.agents.id, agentId));
   expect(row).toEqual({ account: null, lentBy: null });
+  // Who it serves is Bia's alone to choose: "Só eu" keeps it to her own agents.
+  const serves = (as: typeof api, to: string) =>
+    as(`/ai-accounts/${accountId}/serves`, { method: "PUT", json: { serves: to } });
+  expect((await serves(api, "owner")).status).toBe(403);
+  const only = await serves(asBia, "owner");
+  expect(only.status).toBe(200);
+  expect(await only.json()).toEqual({ serves: "owner", agentIds: [] });
+  const refused = await api(`/agents/${agentId}/brain`, {
+    method: "PUT",
+    json: { brain: "claude_code", account: accountId },
+  });
+  expect(refused.status).toBe(403);
 });
 
 test("the team's right hand: `mine` is every member's own by default, `workspace` stays the admins'", async () => {

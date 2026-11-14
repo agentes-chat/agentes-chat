@@ -5,7 +5,7 @@ import { greetingSuggestions } from "@agenteschat/client/lib/chat";
 import { isGone } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
-import { Avatar, BrainIcon, Button, EmptyState, ProviderLogo } from "@agenteschat/ui";
+import { Avatar, Button, EmptyState } from "@agenteschat/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,7 @@ import { AudienceChip } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { AgentSetupIntro, useSetupSteps } from "@/components/AgentSetup";
 import { useAgentPanelShown, useOpenAgentPanel } from "@/components/agent-panel-context";
+import { ModelPickerButton } from "@/components/ai/ModelPicker";
 import { ComputerButton } from "@/components/computer/ComputerDialog";
 import { ErrorState } from "@/components/Loading";
 import { NavToggle } from "@/components/NavDrawer";
@@ -23,7 +24,6 @@ import { LetMeTalkButton } from "@/components/ReachLines";
 import { RightHandIntro } from "@/components/RightHandIntro";
 import { HeaderSearch } from "@/components/search/HeaderSearch";
 import { AgentTasksPill } from "@/components/tasks/AgentTasksPanel";
-import { useAgentThinks } from "@/hooks/useAgentThinks";
 import { useDirectory } from "@/hooks/useDirectory";
 import { rightHandSeen } from "@/lib/storage";
 import { ChannelPage, ChannelSkeleton, type DmSideControl } from "./ChannelPage";
@@ -52,7 +52,6 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
   const person = "userId" in target ? dir.memberById.get(target.userId) : undefined;
   const name = agent?.name ?? person?.name ?? "";
   const rightHand = isRightHand(agent);
-  const thinks = useAgentThinks(agent);
   // A new agent's setup checklist (ADR 0155 §2) for whoever sets it up: its greeting and the checklist on top.
   const setup = useSetupSteps(agent).length > 0;
   // Its DM is open, from its row or any other way in: its row's "Novo" goes.
@@ -106,19 +105,6 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
                   : owner
                     ? t("dm.subtitle", { role, owner: owner.name })
                     : t("dm.subtitleNoOwner", { role })}
-                {thinks?.text && !rightHand && (
-                  <>
-                    {" · "}
-                    <span className="channel__brain ac-iconline">
-                      {thinks.mark ? (
-                        <ProviderLogo id={thinks.mark} size="xs" />
-                      ) : (
-                        <BrainIcon kind={thinks.kind} size={14} />
-                      )}
-                      {thinks.text}
-                    </span>
-                  </>
-                )}
               </span>
             )}
             {person && <span className="channel__topic">{person.email}</span>}
@@ -129,6 +115,7 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
           {agent && <AgentTasksPill />}
           {/* The sidebar has the computer: only a line of turns waiting for it still shows here. A viewer of its public
               card gets the sidebar's head alone, so the way in stays for one who may still watch the computer. */}
+          {agent && !rightHand && <ModelPickerButton agent={agent} className="channel__brain" />}
           {agent && !rightHand && <ComputerButton agent={agent} queueOnly={side?.docked && seesDetails(agent)} />}
           {/* The same field as a channel's, held to this DM. */}
           <HeaderSearch channelId={dm.data.channelId} onOpen={onSearch} dm />

@@ -9,7 +9,7 @@ import { ConflictError, isUniqueViolation, NotFoundError, ValidationError } from
 import type { Judge } from "../judge";
 import { oneLine } from "../mail/text";
 import { assertPublicHttpsUrl } from "../net-guard";
-import { requirePermission } from "../organizations";
+import { can, requirePermission } from "../organizations";
 import { isAgentesCloud } from "../telemetry";
 import {
   classifyByRules,
@@ -53,7 +53,7 @@ import {
 } from "./oauth-mcp";
 import { oauthReturnTo } from "./oauth-return";
 import { seedToolPins } from "./pins";
-import { composioToolkitOf, composioToolName, type McpPreset, presetForServer } from "./presets";
+import { composioToolkitOf, composioToolName, type McpPreset, presetForServer, serverUrlShown } from "./presets";
 import { type McpServerInfo, refreshServerIcon } from "./server-icon";
 
 const { connectorConnections, customTools, oauthStates, agentScopes, agents } = schema;
@@ -96,6 +96,8 @@ export const COMPOSIO_ANY_ACTION: ReadonlySet<string> = new Set([
   "COMPOSIO_REMOTE_BASH_TOOL",
   "COMPOSIO_PROXY_EXECUTE",
 ]);
+
+const COMPOSIO_META: ReadonlySet<string> = new Set([COMPOSIO_EXECUTOR, ...COMPOSIO_ANY_ACTION]);
 
 const COMPOSIO_SLUG = /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/;
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -247,12 +249,13 @@ function toolView(t: ToolRow, prefix: string | null): CustomToolView {
   };
 }
 
-function view(c: ConnectorConnection, tools: ToolRow[]): CustomServerView {
+/** `whole`: the reader manages connectors, so sees the address as it was typed. */
+function view(c: ConnectorConnection, tools: ToolRow[], whole = true): CustomServerView {
   const mine = tools.filter((t) => t.connectionId === c.id);
   const prefix = sharedPrefix(mine.map((t) => t.name));
   return {
     id: c.id,
-    serverUrl: c.serverUrl,
+    serverUrl: whole ? c.serverUrl : serverUrlShown(c.serverUrl),
     label: c.label,
     accountLabel: c.accountLabel,
     authType: c.authType === "oauth" ? "oauth" : "api_key",
@@ -284,7 +287,7 @@ async function loadCustom(db: Database, orgId: string, id: string) {
 }
 
 export async function listCustomServers(db: Database, actorId: string, orgId: string): Promise<CustomServerView[]> {
-  await requirePermission(db, actorId, orgId, "read");
+  const whole = can(await requirePermission(db, actorId, orgId, "read"), "manage_connectors");
   const rows = await db
     .select()
     .from(connectorConnections)
@@ -300,7 +303,7 @@ export async function listCustomServers(db: Database, actorId: string, orgId: st
     db,
     rows.map((r) => r.id),
   );
-  return rows.map((r) => view(r, tools));
+  return rows.map((r) => view(r, tools, whole));
 }
 
 type AccountSpec = NonNullable<McpPreset["account"]>;
@@ -479,7 +482,7 @@ export async function storeCustomConnection(
       action: "connector.custom_reconnected",
       target: { type: "connector_connection", id: row.id },
       details: {
-        serverUrl: input.serverUrl,
+        serverUrl: serverUrlShown(input.serverUrl),
         authType: input.authType,
         label: row.label,
         account: row.accountLabel,
@@ -527,7 +530,7 @@ export async function storeCustomConnection(
           action: "connector.custom_connected",
           target: { type: "connector_connection", id: row.id },
           details: {
-            serverUrl: input.serverUrl,
+            serverUrl: serverUrlShown(input.serverUrl),
             authType: input.authType,
             label,
             account: named,
@@ -680,11 +683,16 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
       suggestedAccess: cls.level,
       suggestionSource: cls.source,
       suggestionReason: cls.reason,
-      sensitive: cls.sensitive,
+      // A Composio action's hint is our own rule for it (its words, its entry's `ask`), which the tool source
+      // enforces on every call, and Composio's meta tools run any action their input names: both stay locked.
+      sensitive:
+        cls.sensitive || (tool.destructiveHint === true && (composio !== null || COMPOSIO_META.has(tool.name))),
     };
     if (old) {
       const free = old.access === "read" || old.access === "write" ? old.access : null;
       const stricter = free && old.confirmedAt === null && ACCESS.indexOf(cls.level) > ACCESS.indexOf(free);
+      // A warning the server did not send when the level was chosen asks again, unlocked: the admin may set it back.
+      const warnedNow = tool.destructiveHint === true && old.destructiveHint !== true;
       await deps.db
         .update(customTools)
         .set({
@@ -692,7 +700,11 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
           readOnlyHint: tool.readOnlyHint ?? null,
           destructiveHint: tool.destructiveHint ?? null,
           ...suggestion,
-          ...(free && cls.sensitive ? { access: "approval" } : stricter ? { access: cls.level } : {}),
+          ...(free && (suggestion.sensitive || warnedNow)
+            ? { access: "approval" }
+            : stricter
+              ? { access: cls.level }
+              : {}),
           removedAt: null,
         })
         .where(eq(customTools.id, old.id));

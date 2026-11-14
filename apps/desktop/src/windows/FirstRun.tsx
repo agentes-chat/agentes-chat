@@ -1,6 +1,6 @@
 /**
- * The welcome window: how the app finds its server. agentes.chat is the one big action; your own server is a
- * small line under it, leading to Connect (an address, or one found on this computer or the Tailscale
+ * The welcome window: how the app finds its server. "Onde fica o seu workspace?" first, the Cloud chosen and one's
+ * own server beside it; one's own server leads to Connect (an address, or one found on this computer or the Tailscale
  * network, and the one-command setup for a server that has none yet) or to running agentes.chat on this
  * computer. A connect link (`agenteschat://connect`) opens here
  * too: the server in large type, nothing changes before Connect. Choosing a server opens the main window there
@@ -10,6 +10,8 @@ import {
   CLOUD_SERVER,
   type ConnectLink,
   connectLink,
+  HOSTING_FOOT,
+  HOSTING_POINTS,
   isLoopback,
   parseConnectLink,
   type ServerCheck,
@@ -20,13 +22,13 @@ import {
   Chip,
   ComputerPortrait,
   Field,
-  glowTones,
+  type Hosting,
+  HostingScene,
   Icon,
   InfoHint,
   Input,
-  PixelSky,
+  OptionList,
   PixelSpinner,
-  type SkyOptions,
   Switch,
   useNow,
 } from "@agenteschat/ui";
@@ -73,18 +75,6 @@ import { CopyDetails, ReachProblem, ReachProgress, ReachRow, ServerTile } from "
 import { hintFor, PrefRow } from "../ui/settings";
 import { elapsedClock, shortPath } from "../ui/time";
 import { PairLinkSheet } from "./Pair";
-
-/** The sky as a horizon at the bottom of the first screen: the surface, then the sky. */
-const HORIZON: SkyOptions = {
-  pixel: 4,
-  palette: (bg) => glowTones("sky", bg),
-  light: 0,
-  base: (u, v, t) => {
-    const top = 1 - 0.7 * (0.8 + 0.2 * Math.sin(u * 4 + t * 0.4));
-    const e = Math.max(0, Math.min(1, (v - top) / (1 - top)));
-    return e * e * (3 - 2 * e) * 0.95;
-  },
-};
 
 const PROBLEM_HOSTLESS: ReadonlySet<ConnectProblem> = new Set(["invalid"]);
 
@@ -315,20 +305,17 @@ export function FirstRun() {
           />
         )}
       </div>
-      {screen === "choose" && (
-        <span className="dk-wel__horizon" aria-hidden="true">
-          <PixelSky options={HORIZON} />
-        </span>
-      )}
     </div>
   );
 }
 
 /**
- * agentes.chat, big; your own server, small. `adding` (the site's "Add a workspace", ADR 0154): signing in to
- * agentes.chat (the workspaces an account already has, or was invited to) is the big one and a new workspace the
- * line under it; with agentes.chat already signed in here, a new workspace is the big one. The team's server stays
- * the small one; the workspaces already there stay.
+ * "Onde fica o seu workspace?": the team's sky on the left, day over the Cloud's always-on server, night over a dark
+ * laptop with the team asleep when one's own server is picked; on the right the two options as cards (the Cloud
+ * chosen, recommended; one's own server free and open source), each said by what it takes on, and one button that
+ * goes on with the chosen one. `adding` (the site's "Add a workspace", ADR 0154): its own title, the Cloud's button
+ * signs in to the workspaces an account has (a new workspace the line under it); with agentes.chat already signed in
+ * here, making one is the button.
  */
 function Choose({
   adding,
@@ -342,43 +329,72 @@ function Choose({
   onOwn: () => void;
 }) {
   const { t } = useTranslation();
+  const [pick, setPick] = useState<Hosting>("cloud");
   const makeFirst = adding && cloudSignedIn;
-  return (
+  const name = (hosting: Hosting) => (
     <>
-      <div className="dk-fr__hello">
-        <span className="dk-fr__mark">
-          <BrandFace size="xl" />
+      {t(`hosting.${hosting}.name`)}
+      <Chip tone={hosting === "cloud" ? "info" : undefined} className="dk-choose__tag">
+        {t(hosting === "cloud" ? "hosting.recommended" : "hosting.free")}
+      </Chip>
+    </>
+  );
+  const points = (hosting: Hosting) => (
+    <span className="dk-choose__points">
+      {HOSTING_POINTS[hosting].map(([key, icon]) => (
+        <span key={key} className="ac-iconline">
+          <Icon name={icon} size={14} />
+          {t(key)}
         </span>
-        <h1>{t(adding ? "desktop.first.addTitle" : "desktop.first.title")}</h1>
-        <p className="dk-lead">{t(adding ? "desktop.first.addLead" : "desktop.first.lead")}</p>
+      ))}
+      <span className="dk-choose__foot">{t(HOSTING_FOOT[hosting])}</span>
+    </span>
+  );
+  return (
+    <div className="dk-choose">
+      <div className="dk-choose__sky">
+        <HostingScene hosting={pick} shape="tall" />
+        <span className="dk-choose__brand" aria-hidden="true">
+          <BrandFace size="sm" />
+          agentes.chat
+        </span>
+      </div>
+      <div className="dk-choose__main">
+        <h1>{t(adding ? "desktop.first.addTitle" : "hosting.title")}</h1>
+        <p className="dk-lead">{t(adding ? "desktop.first.addLead" : "hosting.lead")}</p>
+        <OptionList<Hosting>
+          className="dk-choose__list"
+          aria-label={t("hosting.title")}
+          value={pick}
+          onValueChange={setPick}
+          options={(["cloud", "own"] as const).map((h) => ({
+            value: h,
+            title: name(h),
+            description: pick === h ? points(h) : t(`hosting.${h}.short`),
+          }))}
+        />
         <Button
           variant="primary"
-          className="dk-btn-lg dk-fr__cloud"
+          className="dk-btn-lg dk-choose__go"
           autoFocus
-          onClick={() => onCloud(makeFirst ? "/onboarding" : "/login")}
+          onClick={() => (pick === "own" ? onOwn() : onCloud(makeFirst ? "/onboarding" : "/login"))}
         >
-          {t(makeFirst ? "desktop.first.addCloud" : "desktop.first.cloud")}
+          {pick === "own"
+            ? t("hosting.own.continue")
+            : t(makeFirst ? "desktop.first.addCloud" : "hosting.cloud.continue")}
           <Icon name="arrowRight" size={16} />
         </Button>
-        {/* The other way under it: an account (first run) or a new workspace (adding, signed in there or not). */}
-        {!makeFirst && (
-          <span className="dk-help">
-            {t(adding ? "desktop.first.addNew" : "desktop.first.create")}{" "}
-            <button
-              type="button"
-              className="ac-link dk-link"
-              onClick={() => onCloud(adding ? "/onboarding" : "/signup")}
-            >
-              {t(adding ? "desktop.first.addNewLink" : "desktop.first.createLink")}
+        {/* Adding, not signed in to the Cloud here: a new workspace there is the line under it. */}
+        {adding && !makeFirst && pick === "cloud" && (
+          <span className="dk-help dk-choose__more">
+            {t("desktop.first.addNew")}{" "}
+            <button type="button" className="ac-link dk-link" onClick={() => onCloud("/onboarding")}>
+              {t("desktop.first.addNewLink")}
             </button>
           </span>
         )}
       </div>
-      <button type="button" className="dk-fr__own" onClick={onOwn}>
-        {t(adding ? "desktop.first.addOwn" : "desktop.first.own")}
-        <Icon name="chevronRight" size={14} />
-      </button>
-    </>
+    </div>
   );
 }
 
