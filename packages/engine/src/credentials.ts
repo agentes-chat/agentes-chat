@@ -572,7 +572,6 @@ export async function rotateCredential(
   if (!row) throw new NotFoundError("Credential not found");
   await auditCredential(db, orgId, actorId, "credential.key_changed", row);
   caches.credentials.delete(`${orgId}:${credentialId}`);
-  if (endpoint) caches.credentials.delete(`${orgId}:endpoints`);
   invalidateDefaults(orgId);
   await passed?.record(row.id);
   return { ...summary(row), ...(custom ? {} : { check: passed ? ("ok" as const) : ("unchecked" as const) }) };
