@@ -73,10 +73,21 @@ pub fn cli() -> Option<PathBuf> {
     fixed.iter().map(PathBuf::from).find(|p| p.is_file())
 }
 
+/// The tool as a command. Tailscale's Mac app is its own command-line tool too, but it only acts as one when `TERM`
+/// is set, and an app opened from the Dock has none: without it the tool prints "The Tailscale GUI failed to
+/// start", and a Mac that is connected reads as "not connected".
+fn command(cli: PathBuf) -> Command {
+    let mut command = Command::new(cli);
+    if std::env::var_os("TERM").is_none_or(|t| t.is_empty()) {
+        command.env("TERM", "xterm");
+    }
+    command
+}
+
 /// Runs the tool with `args`: whether it ended well, and what it printed (stdout, then stderr); None when it isn't
 /// there or couldn't start. Taking longer than `wait` stops it (what it printed so far is kept).
 fn run(args: &[&str], wait: Duration) -> Option<(bool, String)> {
-    let ran = crate::run_program(Command::new(cli()?).args(args), wait, &|| false).ok()?;
+    let ran = crate::run_program(command(cli()?).args(args), wait, &|| false).ok()?;
     Some((ran.code == Some(0), ran.out + &ran.err))
 }
 
@@ -174,7 +185,7 @@ pub fn serve(port: u16, asks: &mut dyn FnMut(&str), stopped: &dyn Fn() -> bool) 
             Watch::Wait
         }
     };
-    let mut command = Command::new(cli);
+    let mut command = command(cli);
     command.args(["serve", "--bg", flag.as_str(), target.as_str()]);
     let ran = crate::run_watched(&mut command, SERVE_WAIT, &mut watch).map_err(|_| ServeError::Serve)?;
     match ran.cut {
