@@ -4143,6 +4143,10 @@ export const en = {
     /** A return it set comes then (`followUps.when`): "follow-up at 12:32 AM". */
     later: "follow-up {{when}}",
     laterShort: "follow-up",
+    /** A run that waits on its plan's or its budget's limit (Agora's rows; the lists leave it to out of office). */
+    plan: "waiting for its plan",
+    budget: "waiting for its budget",
+    stopping: "stopping…",
   },
   /** An agent comes back to a conversation by itself (its `follow_up`, ADR 0037): a follow-up. */
   followUps: {
@@ -18063,6 +18067,18 @@ export const en = {
       message: "Message {{name}}",
       chooseOnWeb: "Choose it on agentes.chat, in Settings\u00a0›\u00a0Devices.",
     },
+  },
+  /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Go to…" and its list. */
+  agora: {
+    label: "Now",
+    /** Its tip, one line each. */
+    working_one: "{{count}} agent working",
+    working_other: "{{count}} agents working",
+    waiting_one: "{{count}} thing waiting for you",
+    waiting_other: "{{count}} things waiting for you",
+    sections: { you: "Waiting for you", working: "Working", waiting: "On hold" },
+    actions: "More actions",
+    openManager: "Open the task manager",
   },
   taskManager: {
     title: "Task manager",

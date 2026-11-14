@@ -1478,22 +1478,6 @@
     "moveDown": "Omlaag",
     "restoreOrder": "Standaardvolgorde herstellen"
   },
-  "appIcon": {
-    "title": "App-icoon",
-    "hintWeb": "Het icoon op de tabbladen van deze browser.",
-    "hintMac": "Het Dock-icoon zolang de app open is. Finder en Launchpad houden het standaardicoon.",
-    "hintDesktop": "Het taakbalkicoon zolang de app open is.",
-    "hintAndroid": "Sommige startschermen doen er een paar seconden over om het nieuwe icoon te tonen.",
-    "failed": "Kon het icoon niet wijzigen. Probeer het opnieuw.",
-    "agentsOf": "Agents van {{org}}",
-    "names": {
-      "night": "Nacht",
-      "moon": "Maan",
-      "sky": "Lucht",
-      "peekNight": "Gluren in de nacht",
-      "peekSky": "Gluren in de lucht"
-    }
-  },
   "install": {
     "frames": "Zo installeer je het op {{system}}",
     "step": "Stap {{n}}",
@@ -1601,6 +1585,22 @@
       "activities": "Activiteiten",
       "readingLists": "Pakketlijsten worden ingelezen... Klaar",
       "settingUp": "agentes-chat ({{version}}) wordt ingesteld ..."
+    }
+  },
+  "appIcon": {
+    "title": "App-icoon",
+    "hintWeb": "Het icoon op de tabbladen van deze browser.",
+    "hintMac": "Het Dock-icoon zolang de app open is. Finder en Launchpad houden het standaardicoon.",
+    "hintDesktop": "Het taakbalkicoon zolang de app open is.",
+    "hintAndroid": "Sommige startschermen doen er een paar seconden over om het nieuwe icoon te tonen.",
+    "failed": "Kon het icoon niet wijzigen. Probeer het opnieuw.",
+    "agentsOf": "Agents van {{org}}",
+    "names": {
+      "night": "Nacht",
+      "moon": "Maan",
+      "sky": "Lucht",
+      "peekNight": "Gluren in de nacht",
+      "peekSky": "Gluren in de lucht"
     }
   },
   "legal": {
@@ -3851,7 +3851,10 @@
     "yourApproval": "je goedkeuring",
     "yourAnswer": "je antwoord",
     "later": "opvolging {{when}}",
-    "laterShort": "opvolging"
+    "laterShort": "opvolging",
+    "plan": "wacht op het abonnement",
+    "budget": "wacht op het budget",
+    "stopping": "stoppen…"
   },
   "followUps": {
     "when": {
@@ -17864,6 +17867,20 @@
       "message": "Bericht aan {{name}}",
       "chooseOnWeb": "Kies hem op agentes.chat, in Instellingen › Apparaten."
     }
+  },
+  "agora": {
+    "label": "Nu",
+    "working_one": "{{count}} agent bezig",
+    "working_other": "{{count}} agents bezig",
+    "waiting_one": "{{count}} ding wacht op jou",
+    "waiting_other": "{{count}} dingen wachten op jou",
+    "sections": {
+      "you": "Wacht op jou",
+      "working": "Bezig",
+      "waiting": "In afwachting"
+    },
+    "actions": "Meer acties",
+    "openManager": "Taakbeheer openen"
   },
   "taskManager": {
     "title": "Taakbeheer",

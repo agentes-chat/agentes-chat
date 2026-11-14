@@ -1437,22 +1437,6 @@
     "moveDown": "Pindah ke bawah",
     "restoreOrder": "Kembalikan urutan bawaan"
   },
-  "appIcon": {
-    "title": "Ikon aplikasi",
-    "hintWeb": "Ikon di tab browser ini.",
-    "hintMac": "Ikon Dock selama aplikasi terbuka. Finder dan Launchpad tetap memakai ikon bawaan.",
-    "hintDesktop": "Ikon taskbar selama aplikasi terbuka.",
-    "hintAndroid": "Beberapa layar utama butuh beberapa detik untuk menampilkan ikon baru.",
-    "failed": "Ikon tidak bisa diganti. Coba lagi.",
-    "agentsOf": "Agen di {{org}}",
-    "names": {
-      "night": "Malam",
-      "moon": "Bulan",
-      "sky": "Langit",
-      "peekNight": "Mengintip di malam hari",
-      "peekSky": "Mengintip di langit"
-    }
-  },
   "install": {
     "frames": "Cara memasang di {{system}}",
     "step": "Langkah {{n}}",
@@ -1560,6 +1544,22 @@
       "activities": "Aktivitas",
       "readingLists": "Membaca daftar paket... Selesai",
       "settingUp": "Menyiapkan agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Ikon aplikasi",
+    "hintWeb": "Ikon di tab browser ini.",
+    "hintMac": "Ikon Dock selama aplikasi terbuka. Finder dan Launchpad tetap memakai ikon bawaan.",
+    "hintDesktop": "Ikon taskbar selama aplikasi terbuka.",
+    "hintAndroid": "Beberapa layar utama butuh beberapa detik untuk menampilkan ikon baru.",
+    "failed": "Ikon tidak bisa diganti. Coba lagi.",
+    "agentsOf": "Agen di {{org}}",
+    "names": {
+      "night": "Malam",
+      "moon": "Bulan",
+      "sky": "Langit",
+      "peekNight": "Mengintip di malam hari",
+      "peekSky": "Mengintip di langit"
     }
   },
   "legal": {
@@ -3731,7 +3731,10 @@
     "yourApproval": "persetujuanmu",
     "yourAnswer": "jawabanmu",
     "later": "tindak lanjut {{when}}",
-    "laterShort": "tindak lanjut"
+    "laterShort": "tindak lanjut",
+    "plan": "menunggu kuota paket",
+    "budget": "menunggu anggaran",
+    "stopping": "menghentikan…"
   },
   "followUps": {
     "when": {
@@ -17219,6 +17222,18 @@
       "message": "Kirim pesan ke {{name}}",
       "chooseOnWeb": "Pilih di agentes.chat, di Pengaturan › Perangkat."
     }
+  },
+  "agora": {
+    "label": "Sekarang",
+    "working_other": "{{count}} agen sedang bekerja",
+    "waiting_other": "{{count}} hal menunggumu",
+    "sections": {
+      "you": "Menunggumu",
+      "working": "Sedang bekerja",
+      "waiting": "Menunggu"
+    },
+    "actions": "Tindakan lain",
+    "openManager": "Buka pengelola tugas"
   },
   "taskManager": {
     "title": "Pengelola tugas",

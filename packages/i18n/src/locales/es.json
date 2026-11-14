@@ -1520,22 +1520,6 @@
     "moveDown": "Bajar",
     "restoreOrder": "Restaurar el orden predeterminado"
   },
-  "appIcon": {
-    "title": "Icono de la app",
-    "hintWeb": "El icono en las pestañas de este navegador.",
-    "hintMac": "El icono del Dock mientras la app está abierta. Finder y Launchpad mantienen el predeterminado.",
-    "hintDesktop": "El icono de la barra de tareas mientras la app está abierta.",
-    "hintAndroid": "Algunas pantallas de inicio tardan unos segundos en mostrar el icono nuevo.",
-    "failed": "No se pudo cambiar el icono. Inténtalo de nuevo.",
-    "agentsOf": "Agentes de {{org}}",
-    "names": {
-      "night": "Noche",
-      "moon": "Luna",
-      "sky": "Cielo",
-      "peekNight": "Asomándose de noche",
-      "peekSky": "Asomándose en el cielo"
-    }
-  },
   "install": {
     "frames": "Cómo instalar en {{system}}",
     "step": "Paso {{n}}",
@@ -1643,6 +1627,22 @@
       "activities": "Actividades",
       "readingLists": "Leyendo lista de paquetes... Hecho",
       "settingUp": "Configurando agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Icono de la app",
+    "hintWeb": "El icono en las pestañas de este navegador.",
+    "hintMac": "El icono del Dock mientras la app está abierta. Finder y Launchpad mantienen el predeterminado.",
+    "hintDesktop": "El icono de la barra de tareas mientras la app está abierta.",
+    "hintAndroid": "Algunas pantallas de inicio tardan unos segundos en mostrar el icono nuevo.",
+    "failed": "No se pudo cambiar el icono. Inténtalo de nuevo.",
+    "agentsOf": "Agentes de {{org}}",
+    "names": {
+      "night": "Noche",
+      "moon": "Luna",
+      "sky": "Cielo",
+      "peekNight": "Asomándose de noche",
+      "peekSky": "Asomándose en el cielo"
     }
   },
   "legal": {
@@ -3967,7 +3967,10 @@
     "yourApproval": "tu aprobación",
     "yourAnswer": "tu respuesta",
     "later": "seguimiento {{when}}",
-    "laterShort": "seguimiento"
+    "laterShort": "seguimiento",
+    "plan": "esperando el plan",
+    "budget": "esperando el presupuesto",
+    "stopping": "deteniendo…"
   },
   "followUps": {
     "when": {
@@ -18201,6 +18204,22 @@
       "message": "Escribirle a {{name}}",
       "chooseOnWeb": "Elígela en agentes.chat, en Configuración › Dispositivos."
     }
+  },
+  "agora": {
+    "label": "Ahora",
+    "working_one": "{{count}} agente trabajando",
+    "working_many": "{{count}} agentes trabajando",
+    "working_other": "{{count}} agentes trabajando",
+    "waiting_one": "{{count}} cosa te espera",
+    "waiting_many": "{{count}} cosas te esperan",
+    "waiting_other": "{{count}} cosas te esperan",
+    "sections": {
+      "you": "Esperándote",
+      "working": "Trabajando",
+      "waiting": "En espera"
+    },
+    "actions": "Más acciones",
+    "openManager": "Abrir el gestor de tareas"
   },
   "taskManager": {
     "title": "Gestor de tareas",

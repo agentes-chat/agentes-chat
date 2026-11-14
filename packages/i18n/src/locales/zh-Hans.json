@@ -1437,22 +1437,6 @@
     "moveDown": "下移",
     "restoreOrder": "恢复默认顺序"
   },
-  "appIcon": {
-    "title": "应用图标",
-    "hintWeb": "此浏览器标签页上的图标。",
-    "hintMac": "应用打开时 Dock 中的图标。访达和启动台仍显示默认图标。",
-    "hintDesktop": "应用打开时任务栏中的图标。",
-    "hintAndroid": "部分主屏幕需要几秒钟才会显示新图标。",
-    "failed": "无法更换图标，请重试。",
-    "agentsOf": "{{org}} 的智能体",
-    "names": {
-      "night": "夜晚",
-      "moon": "月亮",
-      "sky": "天空",
-      "peekNight": "夜里探头",
-      "peekSky": "天空探头"
-    }
-  },
   "install": {
     "frames": "如何在 {{system}} 上安装",
     "step": "第 {{n}} 步",
@@ -1560,6 +1544,22 @@
       "activities": "活动",
       "readingLists": "正在读取软件包列表... 完成",
       "settingUp": "正在设置 agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "应用图标",
+    "hintWeb": "此浏览器标签页上的图标。",
+    "hintMac": "应用打开时 Dock 中的图标。访达和启动台仍显示默认图标。",
+    "hintDesktop": "应用打开时任务栏中的图标。",
+    "hintAndroid": "部分主屏幕需要几秒钟才会显示新图标。",
+    "failed": "无法更换图标，请重试。",
+    "agentsOf": "{{org}} 的智能体",
+    "names": {
+      "night": "夜晚",
+      "moon": "月亮",
+      "sky": "天空",
+      "peekNight": "夜里探头",
+      "peekSky": "天空探头"
     }
   },
   "legal": {
@@ -3721,7 +3721,10 @@
     "yourApproval": "你的批准",
     "yourAnswer": "你的回答",
     "later": "跟进 {{when}}",
-    "laterShort": "跟进"
+    "laterShort": "跟进",
+    "plan": "等待套餐重置",
+    "budget": "等待预算重置",
+    "stopping": "正在停止…"
   },
   "followUps": {
     "when": {
@@ -17293,6 +17296,18 @@
       "message": "给 {{name}} 发消息",
       "chooseOnWeb": "请在 agentes.chat 的 设置 › 设备 中选择。"
     }
+  },
+  "agora": {
+    "label": "现在",
+    "working_other": "{{count}} 个智能体在工作",
+    "waiting_other": "{{count}} 件事等你处理",
+    "sections": {
+      "you": "等你处理",
+      "working": "工作中",
+      "waiting": "等待中"
+    },
+    "actions": "更多操作",
+    "openManager": "打开任务管理器"
   },
   "taskManager": {
     "title": "任务管理器",

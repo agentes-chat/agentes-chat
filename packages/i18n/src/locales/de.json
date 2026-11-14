@@ -1478,22 +1478,6 @@
     "moveDown": "Nach unten",
     "restoreOrder": "Standardreihenfolge wiederherstellen"
   },
-  "appIcon": {
-    "title": "App-Symbol",
-    "hintWeb": "Das Symbol in den Tabs dieses Browsers.",
-    "hintMac": "Das Dock-Symbol, solange die App geöffnet ist. Finder und Launchpad behalten das Standardsymbol.",
-    "hintDesktop": "Das Taskleisten-Symbol, solange die App geöffnet ist.",
-    "hintAndroid": "Manche Startbildschirme brauchen ein paar Sekunden, bis das neue Symbol erscheint.",
-    "failed": "Das Symbol konnte nicht geändert werden. Versuch es noch einmal.",
-    "agentsOf": "Agenten in {{org}}",
-    "names": {
-      "night": "Nacht",
-      "moon": "Mond",
-      "sky": "Himmel",
-      "peekNight": "Neugierig bei Nacht",
-      "peekSky": "Neugierig am Himmel"
-    }
-  },
   "install": {
     "frames": "So installierst du es auf {{system}}",
     "step": "Schritt {{n}}",
@@ -1601,6 +1585,22 @@
       "activities": "Aktivitäten",
       "readingLists": "Paketlisten werden gelesen… Fertig",
       "settingUp": "agentes-chat ({{version}}) wird eingerichtet …"
+    }
+  },
+  "appIcon": {
+    "title": "App-Symbol",
+    "hintWeb": "Das Symbol in den Tabs dieses Browsers.",
+    "hintMac": "Das Dock-Symbol, solange die App geöffnet ist. Finder und Launchpad behalten das Standardsymbol.",
+    "hintDesktop": "Das Taskleisten-Symbol, solange die App geöffnet ist.",
+    "hintAndroid": "Manche Startbildschirme brauchen ein paar Sekunden, bis das neue Symbol erscheint.",
+    "failed": "Das Symbol konnte nicht geändert werden. Versuch es noch einmal.",
+    "agentsOf": "Agenten in {{org}}",
+    "names": {
+      "night": "Nacht",
+      "moon": "Mond",
+      "sky": "Himmel",
+      "peekNight": "Neugierig bei Nacht",
+      "peekSky": "Neugierig am Himmel"
     }
   },
   "legal": {
@@ -3850,7 +3850,10 @@
     "yourApproval": "deine Freigabe",
     "yourAnswer": "deine Antwort",
     "later": "Rückmeldung {{when}}",
-    "laterShort": "Rückmeldung"
+    "laterShort": "Rückmeldung",
+    "plan": "wartet auf das Abo",
+    "budget": "wartet auf das Budget",
+    "stopping": "wird gestoppt…"
   },
   "followUps": {
     "when": {
@@ -17688,6 +17691,20 @@
       "message": "{{name}} schreiben",
       "chooseOnWeb": "Wähle ihn auf agentes.chat unter Einstellungen › Geräte."
     }
+  },
+  "agora": {
+    "label": "Jetzt",
+    "working_one": "{{count}} Agent arbeitet",
+    "working_other": "{{count}} Agenten arbeiten",
+    "waiting_one": "{{count}} Sache wartet auf dich",
+    "waiting_other": "{{count}} Sachen warten auf dich",
+    "sections": {
+      "you": "Wartet auf dich",
+      "working": "In Arbeit",
+      "waiting": "Wartet"
+    },
+    "actions": "Weitere Aktionen",
+    "openManager": "Task-Manager öffnen"
   },
   "taskManager": {
     "title": "Task-Manager",

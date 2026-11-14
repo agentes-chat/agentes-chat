@@ -1437,22 +1437,6 @@
     "moveDown": "아래로 이동",
     "restoreOrder": "기본 순서로 되돌리기"
   },
-  "appIcon": {
-    "title": "앱 아이콘",
-    "hintWeb": "이 브라우저 탭에 표시되는 아이콘이에요.",
-    "hintMac": "앱이 열려 있는 동안 Dock에 표시되는 아이콘이에요. Finder와 Launchpad에는 기본 아이콘이 유지돼요.",
-    "hintDesktop": "앱이 열려 있는 동안 작업 표시줄에 표시되는 아이콘이에요.",
-    "hintAndroid": "일부 홈 화면은 새 아이콘을 표시하는 데 몇 초가 걸려요.",
-    "failed": "아이콘을 바꾸지 못했어요. 다시 시도해 주세요.",
-    "agentsOf": "{{org}}의 에이전트",
-    "names": {
-      "night": "밤",
-      "moon": "달",
-      "sky": "하늘",
-      "peekNight": "밤에 빼꼼",
-      "peekSky": "하늘에서 빼꼼"
-    }
-  },
   "install": {
     "frames": "{{system}}에 설치하는 방법",
     "step": "{{n}}단계",
@@ -1560,6 +1544,22 @@
       "activities": "현재 활동",
       "readingLists": "패키지 목록을 읽는 중입니다... 완료",
       "settingUp": "agentes-chat ({{version}}) 설정하는 중입니다 ..."
+    }
+  },
+  "appIcon": {
+    "title": "앱 아이콘",
+    "hintWeb": "이 브라우저 탭에 표시되는 아이콘이에요.",
+    "hintMac": "앱이 열려 있는 동안 Dock에 표시되는 아이콘이에요. Finder와 Launchpad에는 기본 아이콘이 유지돼요.",
+    "hintDesktop": "앱이 열려 있는 동안 작업 표시줄에 표시되는 아이콘이에요.",
+    "hintAndroid": "일부 홈 화면은 새 아이콘을 표시하는 데 몇 초가 걸려요.",
+    "failed": "아이콘을 바꾸지 못했어요. 다시 시도해 주세요.",
+    "agentsOf": "{{org}}의 에이전트",
+    "names": {
+      "night": "밤",
+      "moon": "달",
+      "sky": "하늘",
+      "peekNight": "밤에 빼꼼",
+      "peekSky": "하늘에서 빼꼼"
     }
   },
   "legal": {
@@ -3718,7 +3718,10 @@
     "yourApproval": "내 승인",
     "yourAnswer": "내 답변",
     "later": "후속 확인 {{when}}",
-    "laterShort": "후속 확인"
+    "laterShort": "후속 확인",
+    "plan": "요금제 초기화 대기 중",
+    "budget": "예산 초기화 대기 중",
+    "stopping": "중지하는 중…"
   },
   "followUps": {
     "when": {
@@ -17109,6 +17112,18 @@
       "message": "{{name}}에게 메시지 보내기",
       "chooseOnWeb": "agentes.chat의 설정 › 기기에서 선택하세요."
     }
+  },
+  "agora": {
+    "label": "지금",
+    "working_other": "에이전트 {{count}}개 작업 중",
+    "waiting_other": "{{count}}개 내 확인 대기",
+    "sections": {
+      "you": "내 확인 대기",
+      "working": "작업 중",
+      "waiting": "대기 중"
+    },
+    "actions": "더 보기",
+    "openManager": "작업 관리자 열기"
   },
   "taskManager": {
     "title": "작업 관리자",

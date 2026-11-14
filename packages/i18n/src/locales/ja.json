@@ -1437,22 +1437,6 @@
     "moveDown": "下へ移動",
     "restoreOrder": "デフォルトの順番に戻す"
   },
-  "appIcon": {
-    "title": "アプリのアイコン",
-    "hintWeb": "このブラウザのタブに表示されるアイコン。",
-    "hintMac": "アプリが開いている間のDockのアイコン。FinderとLaunchpadは標準のままです。",
-    "hintDesktop": "アプリが開いている間のタスクバーのアイコン。",
-    "hintAndroid": "ホーム画面によっては、新しいアイコンが表示されるまで数秒かかります。",
-    "failed": "アイコンを変更できませんでした。もう一度お試しください。",
-    "agentsOf": "{{org}} のエージェント",
-    "names": {
-      "night": "夜",
-      "moon": "月",
-      "sky": "空",
-      "peekNight": "夜にのぞく",
-      "peekSky": "空からのぞく"
-    }
-  },
   "install": {
     "frames": "{{system}}へのインストール方法",
     "step": "ステップ{{n}}",
@@ -1560,6 +1544,22 @@
       "activities": "アクティビティ",
       "readingLists": "パッケージリストを読み込んでいます... 完了",
       "settingUp": "agentes-chat ({{version}}) を設定しています ..."
+    }
+  },
+  "appIcon": {
+    "title": "アプリのアイコン",
+    "hintWeb": "このブラウザのタブに表示されるアイコン。",
+    "hintMac": "アプリが開いている間のDockのアイコン。FinderとLaunchpadは標準のままです。",
+    "hintDesktop": "アプリが開いている間のタスクバーのアイコン。",
+    "hintAndroid": "ホーム画面によっては、新しいアイコンが表示されるまで数秒かかります。",
+    "failed": "アイコンを変更できませんでした。もう一度お試しください。",
+    "agentsOf": "{{org}} のエージェント",
+    "names": {
+      "night": "夜",
+      "moon": "月",
+      "sky": "空",
+      "peekNight": "夜にのぞく",
+      "peekSky": "空からのぞく"
     }
   },
   "legal": {
@@ -3720,7 +3720,10 @@
     "yourApproval": "あなたの承認",
     "yourAnswer": "あなたの回答",
     "later": "フォローアップ {{when}}",
-    "laterShort": "フォローアップ"
+    "laterShort": "フォローアップ",
+    "plan": "プランのリセット待ち",
+    "budget": "予算のリセット待ち",
+    "stopping": "停止しています…"
   },
   "followUps": {
     "when": {
@@ -17117,6 +17120,18 @@
       "message": "{{name}}にメッセージ",
       "chooseOnWeb": "agentes.chatの「設定 › デバイス」で選択してください。"
     }
+  },
+  "agora": {
+    "label": "今",
+    "working_other": "エージェント {{count}} 件が作業中",
+    "waiting_other": "{{count}}件があなたの対応待ち",
+    "sections": {
+      "you": "あなたの対応待ち",
+      "working": "作業中",
+      "waiting": "待機中"
+    },
+    "actions": "その他の操作",
+    "openManager": "タスクマネージャーを開く"
   },
   "taskManager": {
     "title": "タスクマネージャー",

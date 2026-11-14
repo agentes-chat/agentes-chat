@@ -81,7 +81,8 @@ export interface WorkLine {
   tone: WorkTone;
 }
 
-const WAIT_WORDS = {
+/** A neutral wait in a list's words: "esperando aprovação", "esperando o computador", "IA fora do ar". */
+export const WAIT_WORDS = {
   approval: "chat.consultPair.waitingApproval",
   answer: "chat.consultPair.waitingInput",
   computer: "chat.consultPair.waitingComputer",

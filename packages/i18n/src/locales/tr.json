@@ -1478,22 +1478,6 @@
     "moveDown": "Aşağı taşı",
     "restoreOrder": "Varsayılan sırayı geri yükle"
   },
-  "appIcon": {
-    "title": "Uygulama simgesi",
-    "hintWeb": "Bu tarayıcının sekmelerindeki simge.",
-    "hintMac": "Uygulama açıkken Dock'taki simge. Finder ve Launchpad varsayılanı korur.",
-    "hintDesktop": "Uygulama açıkken görev çubuğundaki simge.",
-    "hintAndroid": "Bazı ana ekranların yeni simgeyi göstermesi birkaç saniye sürer.",
-    "failed": "Simge değiştirilemedi. Yeniden deneyin.",
-    "agentsOf": "{{org}} ajanları",
-    "names": {
-      "night": "Gece",
-      "moon": "Ay",
-      "sky": "Gökyüzü",
-      "peekNight": "Gece gözetleyen",
-      "peekSky": "Gökyüzünde gözetleyen"
-    }
-  },
   "install": {
     "frames": "{{system}} için kurulum",
     "step": "Adım {{n}}",
@@ -1601,6 +1585,22 @@
       "activities": "Etkinlikler",
       "readingLists": "Paket listeleri okunuyor... Bitti",
       "settingUp": "agentes-chat ({{version}}) ayarlanıyor ..."
+    }
+  },
+  "appIcon": {
+    "title": "Uygulama simgesi",
+    "hintWeb": "Bu tarayıcının sekmelerindeki simge.",
+    "hintMac": "Uygulama açıkken Dock'taki simge. Finder ve Launchpad varsayılanı korur.",
+    "hintDesktop": "Uygulama açıkken görev çubuğundaki simge.",
+    "hintAndroid": "Bazı ana ekranların yeni simgeyi göstermesi birkaç saniye sürer.",
+    "failed": "Simge değiştirilemedi. Yeniden deneyin.",
+    "agentsOf": "{{org}} ajanları",
+    "names": {
+      "night": "Gece",
+      "moon": "Ay",
+      "sky": "Gökyüzü",
+      "peekNight": "Gece gözetleyen",
+      "peekSky": "Gökyüzünde gözetleyen"
     }
   },
   "legal": {
@@ -3836,7 +3836,10 @@
     "yourApproval": "onayınız",
     "yourAnswer": "yanıtınız",
     "later": "takip {{when}}",
-    "laterShort": "takip"
+    "laterShort": "takip",
+    "plan": "plan limitini bekliyor",
+    "budget": "bütçeyi bekliyor",
+    "stopping": "durduruluyor…"
   },
   "followUps": {
     "when": {
@@ -17617,6 +17620,20 @@
       "message": "{{name}} ajanına mesaj gönder",
       "chooseOnWeb": "agentes.chat üzerinde, Ayarlar › Cihazlar bölümünden seçin."
     }
+  },
+  "agora": {
+    "label": "Şimdi",
+    "working_one": "{{count}} ajan çalışıyor",
+    "working_other": "{{count}} ajan çalışıyor",
+    "waiting_one": "{{count}} şey sizi bekliyor",
+    "waiting_other": "{{count}} şey sizi bekliyor",
+    "sections": {
+      "you": "Sizi bekliyor",
+      "working": "Çalışıyor",
+      "waiting": "Beklemede"
+    },
+    "actions": "Diğer işlemler",
+    "openManager": "Görev yöneticisini aç"
   },
   "taskManager": {
     "title": "Görev yöneticisi",

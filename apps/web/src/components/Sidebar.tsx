@@ -144,6 +144,7 @@ import {
   useMoveAgent,
 } from "./AgentGroups";
 import { AgentWorkLine } from "./AgentWorkLine";
+import { AgoraButton } from "./Agora";
 import { ArchivedChannelsDialog } from "./ArchivedChannelsDialog";
 import { ChangeAvatarDialog } from "./AvatarBuilder";
 import { FeedbackMark } from "./arrival/FeedbackDialog";
@@ -877,9 +878,11 @@ export function Sidebar() {
         <WorkspaceSky part="side" rail={rail} />
         {personal ? (
           // A personal workspace (ADR 0159): the person on top (their account, settings and workspaces in one menu),
-          // the bell and the collapse beside them. The desktop app's title bar has its own collapse (desktop.css).
+          // Agora, the bell and the collapse beside them. The desktop app's title bar has its own Agora and collapse
+          // (desktop.css).
           <div className="sidebar__org sidebar__org--person">
             <AccountMenu personal />
+            <AgoraButton below={compact} className="sidebar__agora" />
             {bell}
             {!compact && !tablet && (
               <Button
@@ -908,6 +911,7 @@ export function Sidebar() {
                 <Kbd>{modKey()}</Kbd>
                 <Kbd>K</Kbd>
               </button>
+              <AgoraButton below={compact} className="sidebar__agora" />
               {!compact && !tablet && (
                 <Button
                   variant="ghost"

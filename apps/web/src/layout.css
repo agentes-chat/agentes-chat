@@ -6333,15 +6333,16 @@ html:not([data-pointer]) .sidebar__jump:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
-/* ⌘K and, beside it, the button that shrinks the sidebar to its icon rail (desktop). */
+/* ⌘K and, beside it, Agora and the button that shrinks the sidebar to its icon rail (desktop), their plates 8 apart. */
 .sidebar__jump-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   margin-top: -8px;
 }
-/* The same 32px box as the field beside it, a bare icon until hovered. */
-.sidebar__collapse.ac-btn {
+/* The same 32px box as the field beside it, a bare icon until hovered (Agora's too, beside the bell in a personal
+   workspace). */
+:is(.sidebar__collapse, .sidebar__agora).ac-btn {
   flex: none;
   width: var(--control-h-sm);
   height: var(--control-h-sm);
@@ -6350,7 +6351,7 @@ html:not([data-pointer]) .sidebar__jump:focus-visible {
   box-shadow: none;
   color: var(--muted);
 }
-.sidebar__collapse.ac-btn:hover {
+:is(.sidebar__collapse, .sidebar__agora).ac-btn:hover {
   background: var(--plate);
   box-shadow: none;
   color: var(--ink);
@@ -7576,9 +7577,9 @@ html:not([data-pointer]) .run-continue:focus-visible {
 .sidebar[data-rail="true"] .sidebar__jump {
   flex: none;
 }
-/* ⌘K and its toggle are the rail's 40px tiles, like its items. */
+/* ⌘K, Agora and the toggle are the rail's 40px tiles, like its items. */
 .sidebar[data-rail="true"] .sidebar__jump,
-.sidebar[data-rail="true"] .sidebar__collapse.ac-btn {
+.sidebar[data-rail="true"] :is(.sidebar__collapse, .sidebar__agora).ac-btn {
   height: var(--control-h-md);
   width: var(--control-h-md);
   border-radius: var(--control-r-md);
@@ -13308,7 +13309,7 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
 .sidebar[data-rail="true"] .sidebar__org--person {
   gap: 2px;
 }
-.sidebar[data-rail="true"] .sidebar__head-collapse.ac-btn {
+.sidebar[data-rail="true"] :is(.sidebar__head-collapse, .sidebar__agora).ac-btn {
   width: var(--control-h-md);
   height: var(--control-h-md);
   border-radius: var(--control-r-md);
@@ -13456,11 +13457,11 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   .sidebar__block[data-section="tools"] > .sidebar__grip {
     height: 36px;
   }
-  .sidebar:not([data-rail="true"]) :is(.sidebar__jump, .sidebar__collapse.ac-btn) {
+  .sidebar:not([data-rail="true"]) :is(.sidebar__jump, .sidebar__collapse.ac-btn, .sidebar__agora.ac-btn) {
     height: var(--control-h-md);
     border-radius: var(--control-r-md);
   }
-  .sidebar:not([data-rail="true"]) .sidebar__collapse.ac-btn {
+  .sidebar:not([data-rail="true"]) :is(.sidebar__collapse, .sidebar__agora).ac-btn {
     width: var(--control-h-md);
   }
   .sidebar:not([data-rail="true"]) :is(.sidebar__head-collapse.ac-btn, .sidebar__org--person .sidebar__bell) {

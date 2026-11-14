@@ -3632,42 +3632,6 @@
   "contextMenu.restoreOrder": {
     "value": "Restore default order"
   },
-  "appIcon.title": {
-    "value": "App icon"
-  },
-  "appIcon.hintWeb": {
-    "value": "The icon on this browser's tabs."
-  },
-  "appIcon.hintMac": {
-    "value": "The Dock's icon while the app is open. Finder and Launchpad keep the default one."
-  },
-  "appIcon.hintDesktop": {
-    "value": "The taskbar's icon while the app is open."
-  },
-  "appIcon.hintAndroid": {
-    "value": "Some home screens take a few seconds to show the new icon."
-  },
-  "appIcon.failed": {
-    "value": "Couldn't change the icon. Try again."
-  },
-  "appIcon.agentsOf": {
-    "value": "Agents in {{org}}"
-  },
-  "appIcon.names.night": {
-    "value": "Night"
-  },
-  "appIcon.names.moon": {
-    "value": "Moon"
-  },
-  "appIcon.names.sky": {
-    "value": "Sky"
-  },
-  "appIcon.names.peekNight": {
-    "value": "Peeking at night"
-  },
-  "appIcon.names.peekSky": {
-    "value": "Peeking in the sky"
-  },
   "install.frames": {
     "value": "How to install on {{system}}"
   },
@@ -3958,6 +3922,42 @@
   },
   "install.scene.settingUp": {
     "value": "Setting up agentes-chat ({{version}}) ..."
+  },
+  "appIcon.title": {
+    "value": "App icon"
+  },
+  "appIcon.hintWeb": {
+    "value": "The icon on this browser's tabs."
+  },
+  "appIcon.hintMac": {
+    "value": "The Dock's icon while the app is open. Finder and Launchpad keep the default one."
+  },
+  "appIcon.hintDesktop": {
+    "value": "The taskbar's icon while the app is open."
+  },
+  "appIcon.hintAndroid": {
+    "value": "Some home screens take a few seconds to show the new icon."
+  },
+  "appIcon.failed": {
+    "value": "Couldn't change the icon. Try again."
+  },
+  "appIcon.agentsOf": {
+    "value": "Agents in {{org}}"
+  },
+  "appIcon.names.night": {
+    "value": "Night"
+  },
+  "appIcon.names.moon": {
+    "value": "Moon"
+  },
+  "appIcon.names.sky": {
+    "value": "Sky"
+  },
+  "appIcon.names.peekNight": {
+    "value": "Peeking at night"
+  },
+  "appIcon.names.peekSky": {
+    "value": "Peeking in the sky"
   },
   "legal.updated": {
     "value": "Last updated {{date}}"
@@ -9419,6 +9419,15 @@
   },
   "agentWork.laterShort": {
     "value": "follow-up"
+  },
+  "agentWork.plan": {
+    "value": "waiting for its plan"
+  },
+  "agentWork.budget": {
+    "value": "waiting for its budget"
+  },
+  "agentWork.stopping": {
+    "value": "stopping…"
   },
   "followUps.when.at": {
     "value": "at {{time}}"
@@ -42915,6 +42924,36 @@
   },
   "agentComputer.phone.chooseOnWeb": {
     "value": "Choose it on agentes.chat, in Settings › Devices."
+  },
+  "agora.label": {
+    "value": "Now"
+  },
+  "agora.working": {
+    "value": {
+      "one": "{{count}} agent working",
+      "other": "{{count}} agents working"
+    }
+  },
+  "agora.waiting": {
+    "value": {
+      "one": "{{count}} thing waiting for you",
+      "other": "{{count}} things waiting for you"
+    }
+  },
+  "agora.sections.you": {
+    "value": "Waiting for you"
+  },
+  "agora.sections.working": {
+    "value": "Working"
+  },
+  "agora.sections.waiting": {
+    "value": "On hold"
+  },
+  "agora.actions": {
+    "value": "More actions"
+  },
+  "agora.openManager": {
+    "value": "Open the task manager"
   },
   "taskManager.title": {
     "value": "Task manager"
