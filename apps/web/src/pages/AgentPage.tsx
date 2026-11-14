@@ -79,6 +79,7 @@ import {
 } from "@/lib/agent-edit";
 import { fullLook, lookOf } from "@/lib/look";
 import { handleAfterRename, handleProblemText, readBudget, takenHandles } from "@/lib/new-agent";
+import { agentPanelSearch } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { AccessTab } from "./agent/AccessTab";
 import { ActivityTab } from "./agent/ActivityTab";
@@ -628,7 +629,11 @@ function AgentProfile({
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
   const blocker = useBlocker({
-    shouldBlockFn: ({ current, next }) => dirtyRef.current && current.pathname !== next.pathname,
+    // In a conversation's panel the page is the URL's `?agent=` (`useAgentPanel`): Back to the conversation leaves it too.
+    shouldBlockFn: ({ current, next }) =>
+      dirtyRef.current &&
+      (current.pathname !== next.pathname ||
+        (Boolean(onClose) && agentPanelSearch(next.search as Record<string, unknown>).agent !== agent.id)),
     enableBeforeUnload: () => dirtyRef.current,
     withResolver: true,
   });
@@ -905,6 +910,7 @@ function AgentProfile({
               if (!closing) return blocker.proceed?.();
               setClosing(false);
               setEdits({});
+              dirtyRef.current = false;
               onClose?.();
             }}
           >
