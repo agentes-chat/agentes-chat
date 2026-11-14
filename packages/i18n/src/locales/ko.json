@@ -1163,6 +1163,8 @@
         "paperclip": "패키지 폴더(COMPANY.md가 있는 폴더)를 끌어다 놓거나, 그 폴더의 .zip을 놓거나, GitHub 링크를 붙여넣으세요.",
         "agenteschat": "다른 워크스페이스에서: 설정 → 가져오기 및 내보내기 → 파일 다운로드. 그다음 .json을 여기에 끌어다 놓으세요."
       },
+      "whereOther": "다른 워크스페이스에서 파일을 내려받아 여기에 .json을 놓으세요.",
+      "whereOtherLink": "{{org}}에서 내려받기",
       "request": {
         "grok-bot": {
           "title": "봇에게 내보내기 요청하기",
@@ -1778,11 +1780,10 @@
     "browser": "이 브라우저",
     "phone": "휴대폰",
     "phoneOn": "휴대폰 앱에서, 휴대폰이 잠겨 있어도",
-    "phoneOff": "휴대폰 앱의 나 › 알림에서 켜세요",
+    "phoneOff": "휴대폰 앱에서 켜세요",
     "mac": "Mac 앱",
     "macHelp": "앱이 열려 있는 동안, 백그라운드에서도",
     "on": "켜짐",
-    "off": "꺼짐",
     "failed": "저장하지 못했어요. 다시 시도하세요.",
     "loadFailed": "지금은 설정을 불러올 수 없어요.",
     "category": {
@@ -1833,7 +1834,7 @@
     },
     "inline": {
       "title": "{{name}}님이 답하면 바로 알고 싶으세요?",
-      "why": "탭을 닫아 둬도 알려 드려요. 설정 › 알림에서 언제든지 바꿀 수 있어요."
+      "why": "탭을 닫아 둬도 알려 드려요. <link>알림</link>에서 언제든지 바꿀 수 있어요."
     }
   },
   "shell": {
@@ -2079,7 +2080,8 @@
     "private": "이 코드를 스캔하는 사람은 누구나 내 계정으로 로그인해요.",
     "failed": "코드를 만들지 못했어요.",
     "localOnly": "이 서버는 실행 중인 컴퓨터에서만 열려서 휴대폰으로는 접속할 수 없어요.",
-    "localOnlyHow": "그 컴퓨터의 agentes.chat 앱에서 환경설정 › 서버의 휴대폰과 팀원이 접속할 수 있게 하기를 켠 다음 여기로 돌아오세요."
+    "localOnlyHow": "그 컴퓨터의 agentes.chat 앱에서 환경설정 › 서버의 휴대폰과 팀원이 접속할 수 있게 하기를 켠 다음 여기로 돌아오세요.",
+    "localOnlyHere": "휴대폰과 팀원이 접속할 수 있게 하기를 켠 다음 여기로 돌아오세요."
   },
   "team": {
     "title": "팀",
@@ -2599,7 +2601,8 @@
     "computerYours": "워크스페이스 컴퓨터에 있는 당신만의 공간이에요. 당신만 보고 제어할 수 있어요.",
     "sharedName": "{{name}} (공유)",
     "sharedPlace": "채널과 스스로 실행되는 작업에서 사용돼요. 워크스페이스 전체가 이 공간을 함께 써요. 비공개 내용은 여기에 두지 마세요.",
-    "computerNoHome": "아직 컴퓨터가 없어요. 이 워크스페이스에 자체 컴퓨터가 설정의 컴퓨터에서 추가되면 생겨요.",
+    "computerNoHome": "아직 컴퓨터가 없어요. 이 워크스페이스에 자체 컴퓨터가 추가되면 생겨요.",
+    "addComputer": "컴퓨터 추가",
     "computerOneUser": "여기에는 컴퓨터가 없어요. 워크스페이스 컴퓨터가 모든 에이전트를 하나의 사용자로 실행해서 사람마다 공간을 나눌 수 없어요. 설치 프로그램의 --system 옵션으로 설치한 Linux 서버는 나눌 수 있어요.",
     "powers": {
       "title": "워크스페이스 권한",
@@ -2969,19 +2972,6 @@
       "zen": "OpenCode 연결",
       "api_key": "API 키 추가"
     },
-    "toolOff": {
-      "text": "{{computer}}은(는) 연결되어 있지만 {{program}}이(가) 꺼져 있습니다. 컴퓨터를 연결한 사람만 켤 수 있습니다.",
-      "where": "{{computer}}에서",
-      "one": "시계 옆의 agentes.chat 아이콘 <mark/>을 클릭하세요",
-      "oneWindows": "Windows에서는 작업 표시줄의 화살표 ^ 안에 있을 수 있습니다.",
-      "two": "<b>환경설정</b>을 여세요",
-      "three": "<b>도구</b>에서 <b>{{program}}</b>을(를) 켜세요",
-      "terminal": "컴퓨터의 터미널에서 실행하세요:",
-      "here": "<b>도구</b>에서 <b>{{program}}</b>을(를) 켜세요.",
-      "oneClick": "이 컴퓨터에서 <b>{{program}}</b>이(가) 꺼져 있습니다.",
-      "oneClickOther": "{{name}}님의 컴퓨터에서 <b>{{program}}</b>이(가) 꺼져 있습니다.",
-      "waiting": "켜기를 기다리는 중입니다. 이 화면은 자동으로 바뀝니다."
-    },
     "titleFor": "{{name}}의 AI 연결",
     "have": {
       "title": "이미 연결됨",
@@ -3105,7 +3095,15 @@
       "create": "{{provider}} API 키 만들기",
       "paste": "여기에 붙여넣기",
       "forAll": "요금제가 없는 모든 에이전트가 이 키로 생각해요.",
+      "forAgent": "{{agent}}이(가) 이 키로 생각합니다.",
       "saved": "저장했어요. 요금제가 없는 모든 에이전트가 이 키로 생각해요.",
+      "savedFor": "저장했습니다. {{agent}}이(가) 이제 {{label}}(으)로 생각합니다.",
+      "savedAll": "저장했습니다. 자체 AI가 없는 에이전트는 이 키로 생각합니다.",
+      "savedMade": "저장했습니다. 에이전트가 이제 {{other}} 대신 이 키로 생각합니다.",
+      "savedOther": "저장했습니다. 에이전트는 아직 {{other}}(으)로 생각합니다.",
+      "useForAll": "이 키를 모두에게 사용",
+      "untested": "{{name}}의 모델 중 아직 테스트를 통과한 것이 없습니다.",
+      "testModels": "모델 테스트",
       "savedUnchecked": "저장했지만 {{provider}}에서 응답이 없어 키를 확인하지 못했어요. 실패하면 대화에서 이유를 알려드려요.",
       "closed": "API 키는 워크스페이스의 agentes.chat 요금제와 함께 열려요.",
       "notPlan": "코딩 요금제 키는 위에 있는 전용 옵션에 넣으세요.",
@@ -7746,8 +7744,8 @@
         "repoPlaceholder": "소유자/이름",
         "oneClick": "웹훅 만들기",
         "added": "{{repo}}에 웹훅을 만들었어요.",
-        "byHand": "직접 만들 수도 있어요. 저장소에서 Settings › Webhooks › Add webhook을 여세요.",
-        "open": "저장소에서 Settings › Webhooks › Add webhook을 여세요.",
+        "byHand": "GitHub에서 직접 만들 수도 있어요.",
+        "open": "GitHub 저장소에서 웹훅을 만드세요.",
         "openLink": "GitHub에서 열기",
         "url": "Payload URL",
         "type": "Content type: application/json",
@@ -8749,7 +8747,6 @@
       "dmWith": "{{name}}과(와)의 DM",
       "homeHint": "미션에는 스레드가 생겨요. {{name}}은(는) 그곳에서 이야기하고, 결정을 요청하고, 작업을 보여 줘요.",
       "offline": "{{name}}이(가) 오프라인이에요. 다시 연결되면 계획이 시작돼요.",
-      "needsMachine": "미션은 연결된 컴퓨터에서 실행돼요. 설정 › 기기에서 {{name}}에 컴퓨터를 연결하세요.",
       "commandHint": "어느 대화의 입력창에서든 이렇게 입력해서 시작할 수도 있어요:",
       "approvals": "기본적으로 머지, 배포, 롤백은 승인을 요청해요",
       "start": "미션 시작",
@@ -9139,6 +9136,8 @@
     "fetch": "모델 가져오기",
     "listFailed": "서버가 모델 목록을 주지 않았습니다 ({{error}}). 아래에 각 모델의 ID를 입력하세요.",
     "choose": "에이전트가 사용할 수 있는 모델을 고르세요",
+    "search": "모델 검색",
+    "noMatch": "“{{query}}”이(가) 포함된 모델이 없습니다.",
     "addModel": "모델 추가",
     "add": "추가",
     "modelPlaceholder": "모델 ID, 예: llama-4",
@@ -10943,8 +10942,6 @@
       "no_computer": "사용하려면 컴퓨터에서 연결된 컴퓨터를 선택하세요.",
       "exec_off": "프로그램 실행 권한 없이 연결된 컴퓨터예요.",
       "runner_old": "사용하려면 컴퓨터에서 agentes.chat 프로그램을 업데이트하세요.",
-      "tool_off": "{{computer}}에서 {{program}}이(가) 꺼져 있어요. 그 컴퓨터의 agentes.chat 앱에서 켜세요: 환경설정 → 도구.",
-      "tool_offLinux": "{{computer}}에서 {{program}}이(가) 꺼져 있어요. 그 컴퓨터의 agentes.chat 앱이나 {{command}}(으)로 켜세요.",
       "tool_offOne": "{{computer}}에서 {{program}}이(가) 꺼져 있습니다.",
       "not_installed": "{{computer}}에 {{program}}이(가) 설치되어 있지 않아요.",
       "not_reported": "{{computer}}에 어떤 프로그램이 있는지 아직 확인하는 중이에요. 끝나면 저절로 바뀌어요.",
@@ -11091,8 +11088,9 @@
   },
   "access": {
     "matrixTitle": "에이전트 접근 권한",
-    "matrixHint": "기본적으로 민감한 작업(머지, 배포, 공유, 결제)은 승인을 요청해요. 도구별로 설정하려면 커넥터의 도구를 여세요.",
+    "matrixHint": "기본적으로 민감한 작업(머지, 배포, 공유, 결제)은 승인을 요청해요. 도구별로 설정하려면 커넥터를 여세요.",
     "matrixHow": "셀을 클릭해 변경하세요:",
+    "openConnectors": "커넥터 열기",
     "kindLabel": "표시",
     "kind": {
       "connectors": "커넥터",
@@ -13535,7 +13533,8 @@
       "ask": "{{name}}님께 요청",
       "asked": "요청했습니다. {{name}}님이 켜는 버튼을 받습니다.",
       "done": "{{machine}}에서 켜졌습니다.",
-      "outdated": "여기서 켜려면 {{machine}}의 agentes.chat 앱을 업데이트하세요."
+      "outdated": "여기서 켜려면 {{machine}}의 agentes.chat 앱을 업데이트하세요.",
+      "offline": "{{machine}}이(가) 오프라인입니다. 다시 연결되면 버튼으로 {{tool}}을(를) 켭니다."
     },
     "remotePause": {
       "button": "일시 중지",
@@ -13593,7 +13592,7 @@
       },
       "grantHere": "지금 이 {{device}}예요. 앱의 환경설정에서 폴더를 허용하세요.",
       "openFolders": "폴더 열기",
-      "toolsHere": "지금 이 {{device}}예요. 앱의 환경설정에 있는 도구에서 브라우저를 켜세요.",
+      "openServers": "서버 열기",
       "openTools": "도구 열기",
       "reconnect": "다시 연결",
       "reconnecting": "이 {{device}}를 다시 연결하는 중…",
@@ -13601,8 +13600,6 @@
       "offline": "이 {{device}}는 지금 오프라인이에요.",
       "outageTitle": "이 {{device}}의 연결이 {{ago}} 끊겼어요",
       "toolsOff": "이 {{device}}에서 꺼져 있어요. 앱의 환경설정에 있는 도구에서 켜세요.",
-      "browserTitle": "이 {{device}}에서 브라우저 켜기",
-      "browserText": "앱의 환경설정에 있는 도구에서 클릭 한 번이면 돼요. 이 페이지가 알아서 감지해요.",
       "noReport": "이 {{device}}가 아직 허용 항목을 알려 주지 않았어요. 앱을 업데이트하세요.",
       "update": "앱 업데이트"
     },
@@ -14108,6 +14105,7 @@
       "pairingCode": "Wi-Fi 페어링 코드",
       "pair": "페어링",
       "tryAgain": "다시 시도",
+      "openLocalNetwork": "로컬 네트워크 열기",
       "qrLabel": "휴대폰 무선 디버깅용 QR 코드",
       "qrLine": "카메라로 스캔하지 마세요",
       "qrCaption": "카메라에 agentes-…라는 Wi-Fi 네트워크가 보이지만 그런 네트워크는 없어요. 휴대폰은 컴퓨터와 같은 Wi-Fi에 두세요.",
@@ -15021,6 +15019,7 @@
       "help": "사람 수, 에이전트 수, 머신 크기, 사용한 AI 토큰, 에이전트 브라우저가 주고받은 데이터 양 같은 수치예요. 메시지, 파일, 이름, 사이트는 절대 보내지 않아요.",
       "envOff": "이 서버의 설정에서 꺼져 있어요(TELEMETRY=off).",
       "envOffDesktop": "이 서버 컴퓨터의 agentes.chat 앱에서 꺼져 있어요(환경설정 › 서버).",
+      "envOffHere": "이 컴퓨터의 agentes.chat 앱에서 꺼져 있어요.",
       "see": "보내는 내용 보기",
       "dialogTitle": "보내는 내용",
       "dialogText": "하루에 한 번 보내요. 다음 보고서의 실제 내용이에요."
@@ -16971,8 +16970,9 @@
       "meter": "{{limit}} 중 {{used}}를 사용했어요.",
       "near": "{{limit}} 중 {{used}}를 사용했어요. 한도에 도달하면 업로드가 일시 중지되고, 아무것도 삭제되지 않아요.",
       "full": "{{limit}}에서 업로드가 일시 중지됐어요. 삭제된 것은 없어요.",
-      "fullAdmin": "agentes.chat 요금제를 변경하거나, 더 이상 쓰지 않는 파일을 삭제하거나, 설정 › 저장소에서 내 버킷을 연결하세요.",
-      "dailyFull": "오늘 업로드가 {{limit}}에 도달했어요. 몇 시간 뒤에 다시 업로드할 수 있어요."
+      "fullAdmin": "agentes.chat 요금제를 변경하거나, 더 이상 쓰지 않는 파일을 삭제하거나, 내 버킷을 연결하세요.",
+      "dailyFull": "오늘 업로드가 {{limit}}에 도달했어요. 몇 시간 뒤에 다시 업로드할 수 있어요.",
+      "connectBucket": "버킷 연결"
     }
   },
   "computerSetup": {
@@ -17299,8 +17299,7 @@
       "touchHint": "탭해 클릭 · 드래그해 스크롤 · 길게 눌러 드래그 · 두 손가락으로 화면 이동",
       "turn": "가로로 돌리기",
       "upright": "세로로 돌리기",
-      "message": "{{name}}에게 메시지 보내기",
-      "chooseOnWeb": "agentes.chat의 설정 › 기기에서 선택하세요."
+      "message": "{{name}}에게 메시지 보내기"
     }
   },
   "agora": {
@@ -17466,6 +17465,12 @@
       "full_other": "꽉 참 · {{count}}개 대기 중",
       "room": "자리 있음",
       "computers": "컴퓨터"
+    },
+    "capacity": {
+      "label": "작업을 막고 있는 것",
+      "today_other": "오늘: {{count}}개 완료 · {{waiting}}개 대기 중",
+      "usage": "사용량 보기",
+      "computers": "컴퓨터 보기"
     },
     "cards": {
       "label": "에이전트",

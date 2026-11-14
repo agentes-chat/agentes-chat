@@ -828,6 +828,8 @@ export interface ApiClient {
      * says the person read what happens to them.
      */
     removeCredential(orgId: string, credentialId: string, purge?: boolean, release?: boolean): Promise<void>;
+    /** The key becomes the workspace's default and its provider's: agents without an AI of their own think with it. */
+    makeDefaultCredential(orgId: string, credentialId: string): Promise<Credential>;
     /** One cheap real call with a stored key, before an agent is pointed at it. A refusal comes as on saving one. */
     checkCredential(orgId: string, credentialId: string): Promise<{ check: "ok" | "unchecked" }>;
     /** Whether this server offers the platform key (Cloud). */

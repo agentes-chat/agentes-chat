@@ -1215,6 +1215,8 @@
         "paperclip": "Faites glisser le dossier du paquet (celui qui contient COMPANY.md), déposez-en un .zip ou collez son lien GitHub.",
         "agenteschat": "Dans l'autre espace de travail : Paramètres → Importer et exporter → Télécharger le fichier. Puis déposez le .json ici."
       },
+      "whereOther": "Téléchargez le fichier depuis l'autre workspace et déposez le .json ici.",
+      "whereOtherLink": "Télécharger depuis {{org}}",
       "request": {
         "grok-bot": {
           "title": "Demandez à votre bot d'exporter",
@@ -1878,11 +1880,10 @@
     "browser": "Ce navigateur",
     "phone": "Téléphone",
     "phoneOn": "Dans l'app mobile, même téléphone verrouillé",
-    "phoneOff": "Activez-les dans l'app mobile, sous Vous › Notifications",
+    "phoneOff": "Activez-les dans l'app mobile",
     "mac": "App Mac",
     "macHelp": "Tant que l'app est ouverte, même en arrière-plan",
     "on": "Activé",
-    "off": "Désactivé",
     "failed": "Impossible d'enregistrer. Réessayez.",
     "loadFailed": "Impossible de charger vos choix pour le moment.",
     "category": {
@@ -1933,7 +1934,7 @@
     },
     "inline": {
       "title": "Vous voulez savoir tout de suite quand {{name}} répond ?",
-      "why": "Même avec l'onglet fermé. Modifiez-le quand vous voulez dans Paramètres › Notifications."
+      "why": "Même avec l'onglet fermé. Modifiez-le quand vous voulez dans <link>Notifications</link>."
     }
   },
   "shell": {
@@ -2203,7 +2204,8 @@
     "private": "Toute personne qui scanne ce code se connecte en tant que vous.",
     "failed": "Impossible de créer le code.",
     "localOnly": "Ce serveur ne s'ouvre que sur l'ordinateur où il tourne, donc votre téléphone ne peut pas le joindre.",
-    "localOnlyHow": "Dans l'app agentes.chat de cet ordinateur, activez Y accéder depuis votre téléphone et vos collègues dans Préférences › Serveurs. Puis revenez ici."
+    "localOnlyHow": "Dans l'app agentes.chat de cet ordinateur, activez Y accéder depuis votre téléphone et vos collègues dans Préférences › Serveurs. Puis revenez ici.",
+    "localOnlyHere": "Activez Y accéder depuis votre téléphone et vos collègues. Puis revenez ici."
   },
   "team": {
     "title": "Équipe",
@@ -2789,7 +2791,8 @@
     "computerYours": "Votre propre espace sur l'ordinateur du workspace. Vous seul pouvez le regarder ou le contrôler.",
     "sharedName": "{{name}} (partagé)",
     "sharedPlace": "Utilisé dans les canaux et pour le travail qui s'exécute tout seul. Tout le workspace partage cet espace. N'y gardez rien de privé.",
-    "computerNoHome": "Pas encore d'ordinateur. Il en aura un quand ce workspace aura son propre ordinateur, ajouté dans Paramètres, Ordinateurs.",
+    "computerNoHome": "Pas encore d'ordinateur. Il en aura un quand ce workspace aura son propre ordinateur.",
+    "addComputer": "Ajouter un ordinateur",
     "computerOneUser": "Pas d'ordinateur ici. L'ordinateur du workspace exécute tous les agents sous un seul utilisateur et ne peut donc pas séparer l'espace de chaque personne. Un serveur Linux installé avec l'option --system de l'installateur le peut.",
     "powers": {
       "title": "Pouvoirs dans le workspace",
@@ -3205,19 +3208,6 @@
       "zen": "Connecter OpenCode",
       "api_key": "Ajouter une clé API"
     },
-    "toolOff": {
-      "text": "{{computer}} est connecté, mais {{program}} y est désactivé. Seule la personne qui a connecté l'ordinateur l'active.",
-      "where": "Sur {{computer}}",
-      "one": "Cliquez sur l'icône agentes.chat <mark/> près de l'horloge",
-      "oneWindows": "Sous Windows, elle peut se trouver derrière la flèche ^ de la barre des tâches.",
-      "two": "Ouvrez <b>Préférences</b>",
-      "three": "Dans <b>Outils</b>, activez <b>{{program}}</b>",
-      "terminal": "Dans le terminal de l'ordinateur, lancez :",
-      "here": "Activez <b>{{program}}</b> dans <b>Outils</b>.",
-      "oneClick": "<b>{{program}}</b> est désactivé sur cet ordinateur.",
-      "oneClickOther": "<b>{{program}}</b> est désactivé sur l'ordinateur de {{name}}.",
-      "waiting": "En attente de l'activation. Cet écran change tout seul."
-    },
     "titleFor": "Connecter une IA pour {{name}}",
     "titleFor_female": "Connecter une IA pour {{name}}",
     "have": {
@@ -3349,7 +3339,15 @@
       "create": "Créer votre clé API {{provider}}",
       "paste": "Collez-la ici",
       "forAll": "Tous les agents sans abonnement réfléchissent avec elle.",
+      "forAgent": "{{agent}} pensera avec elle.",
       "saved": "Enregistrée. Tous les agents sans abonnement réfléchissent avec elle.",
+      "savedFor": "Enregistrée. {{agent}} pense maintenant avec {{label}}.",
+      "savedAll": "Enregistrée. Les agents sans IA à eux pensent avec elle.",
+      "savedMade": "Enregistrée. Vos agents pensent maintenant avec elle au lieu de {{other}}.",
+      "savedOther": "Enregistrée. Vos agents pensent encore avec {{other}}.",
+      "useForAll": "Utiliser cette clé pour tous",
+      "untested": "Aucun modèle de {{name}} n’a encore réussi de test.",
+      "testModels": "Tester les modèles",
       "savedUnchecked": "Enregistrée, mais {{provider}} n'a pas répondu et la clé n'a pas pu être vérifiée. Si elle échoue, la conversation dit pourquoi.",
       "closed": "Les clés API s'ouvrent avec l'abonnement agentes.chat du workspace.",
       "notPlan": "La clé d'un abonnement de code va dans sa propre option ci-dessus.",
@@ -8314,8 +8312,8 @@
         "repoPlaceholder": "propriétaire/nom",
         "oneClick": "Créer le webhook",
         "added": "Webhook créé dans {{repo}}.",
-        "byHand": "Ou à la main : dans le dépôt, Settings › Webhooks › Add webhook.",
-        "open": "Dans le dépôt, ouvre Settings › Webhooks › Add webhook.",
+        "byHand": "Ou créez-le à la main sur GitHub.",
+        "open": "Créez le webhook dans le dépôt, sur GitHub.",
         "openLink": "Ouvrir sur GitHub",
         "url": "Payload URL",
         "type": "Content type: application/json",
@@ -9433,7 +9431,6 @@
       "homeHint": "La mission a son fil : c'est là que {{name}} parle, demande des décisions et montre son travail.",
       "homeHint_female": "La mission a son fil : c'est là que {{name}} parle, demande des décisions et montre son travail.",
       "offline": "{{name}} est hors ligne. Le plan démarre à son retour.",
-      "needsMachine": "Les missions tournent sur un ordinateur connecté. Connectez-en un à {{name}} dans Paramètres › Appareils.",
       "commandHint": "Vous pouvez aussi en lancer une en tapant dans la zone de saisie de n'importe quelle conversation :",
       "approvals": "Par défaut, le merge, le déploiement et le rollback demandent une approbation",
       "start": "Démarrer la mission",
@@ -9880,6 +9877,8 @@
     "fetch": "Chercher les modèles",
     "listFailed": "Le serveur n'a listé aucun modèle ({{error}}). Saisissez l'id de chaque modèle ci-dessous.",
     "choose": "Choisissez les modèles que les agents peuvent utiliser",
+    "search": "Rechercher des modèles",
+    "noMatch": "Aucun modèle ne contient « {{query}} ».",
     "addModel": "Ajouter un modèle",
     "add": "Ajouter",
     "modelPlaceholder": "Id du modèle, comme llama-4",
@@ -11835,8 +11834,6 @@
       "no_computer": "Choisissez un ordinateur connecté dans Ordinateur pour l'utiliser.",
       "exec_off": "L'ordinateur a été connecté sans permission d'exécuter des programmes.",
       "runner_old": "Mettez à jour le programme agentes.chat sur l'ordinateur pour l'utiliser.",
-      "tool_off": "{{program}} est désactivé sur {{computer}}. Activez-le sur place, dans l'app agentes.chat : Préférences → Outils.",
-      "tool_offLinux": "{{program}} est désactivé sur {{computer}}. Activez-le sur place, dans l'app agentes.chat ou avec {{command}}.",
       "tool_offOne": "{{program}} est désactivé sur {{computer}}.",
       "not_installed": "{{program}} n'est pas installé sur {{computer}}.",
       "not_reported": "{{computer}} vérifie encore quels programmes il a. Ceci change tout seul une fois terminé.",
@@ -12000,8 +11997,9 @@
   },
   "access": {
     "matrixTitle": "Accès des agents",
-    "matrixHint": "Par défaut, les actions sensibles (merge, déploiement, partage, paiement) demandent une approbation. Pour régler outil par outil, ouvrez les Outils du connecteur.",
+    "matrixHint": "Par défaut, les actions sensibles (merge, déploiement, partage, paiement) demandent une approbation. Pour régler outil par outil, ouvrez le connecteur.",
     "matrixHow": "Cliquez sur une case pour la modifier :",
+    "openConnectors": "Ouvrir Connecteurs",
     "kindLabel": "Afficher",
     "kind": {
       "connectors": "Connecteurs",
@@ -14562,7 +14560,8 @@
       "ask": "Demander à {{name}}",
       "asked": "Demande envoyée. {{name}} reçoit un bouton pour l'activer.",
       "done": "Activé sur {{machine}}.",
-      "outdated": "Mettez à jour l'app agentes.chat sur {{machine}} pour l'activer d'ici."
+      "outdated": "Mettez à jour l'app agentes.chat sur {{machine}} pour l'activer d'ici.",
+      "offline": "{{machine}} est hors ligne. Dès son retour, le bouton active {{tool}}."
     },
     "remotePause": {
       "button": "Mettre en pause",
@@ -14620,7 +14619,7 @@
       },
       "grantHere": "C'est ce {{device}} : autorisez des dossiers dans les Préférences de l'app.",
       "openFolders": "Ouvrir Dossiers",
-      "toolsHere": "C'est ce {{device}} : activez le navigateur dans les Préférences de l'app, sous Outils.",
+      "openServers": "Ouvrir Serveurs",
       "openTools": "Ouvrir Outils",
       "reconnect": "Reconnecter",
       "reconnecting": "Reconnexion de ce {{device}}…",
@@ -14628,8 +14627,6 @@
       "offline": "Ce {{device}} est hors ligne pour le moment.",
       "outageTitle": "Ce {{device}} a perdu sa connexion {{ago}}",
       "toolsOff": "Désactivé sur ce {{device}}. Activez-le dans les Préférences de l'app, sous Outils.",
-      "browserTitle": "Activez le navigateur sur ce {{device}}",
-      "browserText": "Un clic dans les Préférences de l'app, sous Outils. Cette page le remarque toute seule.",
       "noReport": "Ce {{device}} n'a pas encore indiqué ce qu'il autorise. Mettez l'app à jour.",
       "update": "Mettre l'app à jour"
     },
@@ -15145,6 +15142,7 @@
       "pairingCode": "Code d'association Wi-Fi",
       "pair": "Associer",
       "tryAgain": "Réessayer",
+      "openLocalNetwork": "Ouvrir Réseau local",
       "qrLabel": "Code QR pour le Débogage sans fil sur le téléphone",
       "qrLine": "Pas avec l'appareil photo",
       "qrCaption": "Il propose un réseau Wi-Fi nommé agentes-…, qui n'existe pas. Gardez le téléphone sur le Wi-Fi de l'ordinateur.",
@@ -16086,6 +16084,7 @@
       "help": "Des chiffres comme le nombre de personnes, d'agents, la taille des machines, les jetons d'IA utilisés et la quantité de données envoyées et reçues par les navigateurs des agents. Jamais de messages, fichiers, noms ou sites.",
       "envOff": "Désactivé dans les paramètres de ce serveur (TELEMETRY=off).",
       "envOffDesktop": "Désactivé dans l'app agentes.chat sur l'ordinateur de ce serveur (Préférences › Serveurs).",
+      "envOffHere": "Désactivé dans l'app agentes.chat de cet ordinateur.",
       "see": "Voir ce qui est envoyé",
       "dialogTitle": "Ce qui est envoyé",
       "dialogText": "Une fois par jour. Voici exactement le prochain rapport."
@@ -18154,8 +18153,9 @@
       "meter": "Vous avez utilisé {{used}} sur {{limit}}.",
       "near": "Vous avez utilisé {{used}} sur {{limit}}. Les envois s'arrêtent à la limite, et rien n'est supprimé.",
       "full": "Envois en pause à {{limit}}. Rien n'a été supprimé.",
-      "fullAdmin": "Changez l'abonnement agentes.chat, supprimez les fichiers dont vous ne vous servez plus ou connectez votre propre bucket dans Paramètres › Stockage.",
-      "dailyFull": "Les envois du jour ont atteint {{limit}}. Vous pourrez envoyer de nouveau dans quelques heures."
+      "fullAdmin": "Changez l'abonnement agentes.chat, supprimez les fichiers dont vous ne vous servez plus ou connectez votre propre bucket.",
+      "dailyFull": "Les envois du jour ont atteint {{limit}}. Vous pourrez envoyer de nouveau dans quelques heures.",
+      "connectBucket": "Connecter un bucket"
     }
   },
   "computerSetup": {
@@ -18548,8 +18548,7 @@
       "touchHint": "Touchez pour cliquer · Glissez pour défiler · Maintenez pour faire glisser · Deux doigts pour déplacer la vue",
       "turn": "Tourner à l'horizontale",
       "upright": "Tourner à la verticale",
-      "message": "Écrire à {{name}}",
-      "chooseOnWeb": "Choisissez-le sur agentes.chat, dans Paramètres › Appareils."
+      "message": "Écrire à {{name}}"
     }
   },
   "agora": {
@@ -18747,6 +18746,14 @@
       "full_other": "Plein · {{count}} dans la file",
       "room": "A de la place",
       "computers": "Ordinateurs"
+    },
+    "capacity": {
+      "label": "Ce qui retient les tâches",
+      "today_one": "Aujourd’hui : {{count}} tâche terminée · {{waiting}} en attente",
+      "today_many": "Aujourd’hui : {{count}} tâches terminées · {{waiting}} en attente",
+      "today_other": "Aujourd’hui : {{count}} tâches terminées · {{waiting}} en attente",
+      "usage": "Voir l’usage",
+      "computers": "Voir les ordinateurs"
     },
     "cards": {
       "label": "Agents",

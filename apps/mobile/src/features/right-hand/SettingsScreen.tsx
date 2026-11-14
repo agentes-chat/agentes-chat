@@ -127,14 +127,24 @@ function GroupTitle({ children, note }: { children: string; note?: string }) {
  */
 function Computer({ agentId }: { agentId: string }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
   const view = useAgentComputer(agentId);
   if (view.forbidden || !view.ready || !view.facts) return null;
   const none = rightHandNoComputer(view.desktopQ.data?.reason);
+  // No computer of the workspace's own yet: whoever may add one gets there from the row.
+  const add = none === "rightHand.computerNoHome" && can(org, "pair_computers");
   return (
     <>
       <Gap />
       <GroupedList>
-        {none ? (
+        {add ? (
+          <GroupedRow
+            icon="laptop"
+            label={t("rightHand.addComputer")}
+            chevron
+            onPress={() => router.push("/settings/devices")}
+          />
+        ) : none ? (
           <GroupedRow icon="laptop" label={t("agentComputer.button")} />
         ) : (
           <GroupedRow

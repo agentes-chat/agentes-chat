@@ -505,6 +505,10 @@ export const wifiHosts = (hosts: readonly ComputerDevice[]) =>
 
 const LOCAL_NETWORK = new Set(["timed_out", "same_wifi", "mdns_off"]);
 
+/** A Wi-Fi pairing that failed in a way macOS's Local Network permission for the app may cause. */
+export const failedOnLocalNetwork = (p: Pick<WifiPairing, "state" | "reason"> | undefined) =>
+  p?.state === "failed" && LOCAL_NETWORK.has(p.reason ?? "");
+
 /**
  * The line a Wi-Fi pairing shows: where it is while it runs, else why it failed (the cause and the way out). A code
  * the phone refused reads differently from a pairing it stopped. On a Mac, a phone it never heard from, couldn't reach

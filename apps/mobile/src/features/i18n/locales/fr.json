@@ -2164,7 +2164,8 @@
     "everyoneFailed": "Impossible de modifier l'accès de tout le monde. Réessayez.",
     "disconnectFailed": "Impossible de déconnecter {{name}}. Réessayez.",
     "needsReconnect": "Le compte {{name}} ne fonctionne plus. Les agents ne peuvent pas l'utiliser tant que quelqu'un ne l'a pas reconnecté.",
-    "noTools": "Les outils de {{name}} n’ont pas pu être lus. Les agents s’en passent jusqu’à une nouvelle lecture, dans Outils.",
+    "noTools": "Les outils de {{name}} n’ont pas pu être lus. Les agents s’en passent jusqu’à une nouvelle lecture.",
+    "readAgain": "Lire à nouveau",
     "accountTitle": "Compte",
     "renameFailed": "Impossible de le renommer. Réessayez.",
     "whoTitle": "Qui l'utilise",
@@ -2574,7 +2575,7 @@
     },
     "import": {
       "title": "Importer depuis un ordinateur",
-      "text": "Pour importer des mots de passe d'un navigateur ou d'un gestionnaire de mots de passe, ouvrez Paramètres, Vault sur le web et choisissez Importer."
+      "text": "Pour importer des mots de passe d'un navigateur ou d'un gestionnaire de mots de passe, passez par le web."
     },
     "connections": {
       "text": "Connectez un gestionnaire de mots de passe et vos agents utilisent les identifiants qui y sont gardés. Rien n'est copié : un mot de passe n'est lu qu'au moment où il sert.",
