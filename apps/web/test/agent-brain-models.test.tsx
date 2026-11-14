@@ -191,7 +191,7 @@ describe("Quem pensa: a coding plan's models", () => {
     expect(d.textContent).toContain("Os outros modelos do plano seguem funcionando.");
   });
 
-  test("the plan's models at a limit of their own: one line each with what remains, an exhausted one said so (#320)", async () => {
+  test("the plan's models at a limit of their own: one line each with what remains, an exhausted one said so", async () => {
     const at = new Date().toISOString();
     const until = new Date(Date.now() + 2 * 86_400_000).toISOString();
     await onPlan(
@@ -219,25 +219,26 @@ describe("Quem pensa: a coding plan's models", () => {
     // In the plan's order, with the remaining quota in words: no number nobody read.
     expect(rows.map((r) => r[0])).toEqual(["MiniMax M3", "GLM-5.3"]);
     expect(rows[0]?.[1]).toBe("Desligado");
-    expect(rows[1]?.[1]).toMatch(/^Sem quota · renova /);
+    expect(rows[1]?.[1]).toMatch(/^Sem cota · renova /);
     expect(rows.map((r) => r[1]).join(" ")).not.toContain("%");
   });
 
-  test("a plan with no quota source says so, instead of a number (#320)", async () => {
+  test("a plan whose maker shares no usage names the maker, instead of a number", async () => {
     await onPlan("minimax");
     const d = await brainDialog();
-    expect(d.querySelector(".plan-models__none")?.textContent).toBe("Sem leitura de quota");
+    expect(d.querySelector(".plan-models__none")?.textContent).toBe("MiniMax não mostra o uso por aqui.");
     expect(d.querySelector(".plan-model")).toBeNull();
   });
 
-  test("an API key has no quota reading either: said where the account's limits would be (#320)", async () => {
+  test("an API key shows no quota line under its account: its use is spend against a budget", async () => {
     const state = seedState();
     const api = createFakeApi(state);
     pairMac(api, true);
     api.agents.brain = async () => fakeAgentBrain(ADA_ID, { brain: "model", effectiveModel: null });
     await open(state, api);
     const d = await brainDialog();
-    expect(d.querySelector(".plan-models__none")?.textContent).toBe("Sem leitura de quota");
+    expect(d.querySelector(".plan-models__none")).toBeNull();
+    expect(d.querySelector(".plan-model")).toBeNull();
   });
 
   test("every model of the plan as a row, by maker, each with what it's sold as and needs; saved by its id", async () => {

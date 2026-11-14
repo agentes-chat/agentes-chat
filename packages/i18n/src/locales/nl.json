@@ -15802,7 +15802,6 @@
     "noWindows": "De limiet verschijnt zodra dit account weer wordt gebruikt.",
     "unused": "Geen agent gebruikt dit account.",
     "models": {
-      "noReading": "Geen quota-uitlezing",
       "exhausted": "Geen quota meer · reset {{when}}",
       "exhaustedUnknown": "Geen quota meer",
       "off": "Uitgezet",

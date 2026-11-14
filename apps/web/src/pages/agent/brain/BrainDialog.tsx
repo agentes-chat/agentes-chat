@@ -52,11 +52,10 @@ import { TeamScene, useDawn } from "@/components/arrival/TeamScene";
 import { useConnectAi } from "@/components/ConnectAi";
 import { ToolOffNote, useToolOneClick } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
-import { NoQuotaReading } from "@/components/PlanModels";
 import { useWidenAsk } from "@/components/ReachLines";
 import { ToolsOffHereNote, useIsThisMac } from "@/components/ThisMac";
 import { useAdminsLock } from "@/hooks/usePersonalView";
-import { modelLimitText, noQuotaReading } from "@/lib/plan-usage";
+import { modelLimitText, notSharedText } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import { useAgentEdit } from "../context";
 import {
@@ -146,6 +145,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
   const [added, setAdded] = useState<MachineAccount[]>([]);
   const [signingIn, setSigningIn] = useState(false);
   const s = useBrainState(view, { added, signingIn });
+  const notShared = notSharedText(t, s.currentAccount?.provider);
 
   const mayModel = s.kind === "model" ? can("model") : can("brain");
   // The way through the screens: back pops one, a save lands on the first again. At its limit it opens on the way out,
@@ -704,7 +704,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
             {s.usage ? (
               <PlanWindows usage={s.usage} provider={s.currentAccount?.provider ?? null} />
             ) : (
-              (s.savedCard === "key" || noQuotaReading(s.currentAccount?.provider)) && <NoQuotaReading />
+              notShared && <p className="plan-models__none">{notShared}</p>
             )}
           </div>
           {arrived && (

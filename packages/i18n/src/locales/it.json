@@ -16262,7 +16262,6 @@
     "noWindows": "Il limite compare dopo che questo account viene usato di nuovo.",
     "unused": "Nessun agente usa questo account.",
     "models": {
-      "noReading": "Nessuna lettura della quota",
       "exhausted": "Quota esaurita · si azzera {{when}}",
       "exhaustedUnknown": "Quota esaurita",
       "off": "Disattivato",

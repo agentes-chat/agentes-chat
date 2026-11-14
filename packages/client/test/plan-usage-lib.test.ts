@@ -6,7 +6,7 @@ import {
   accountShares,
   groupUsageAccounts,
   loginsText,
-  noQuotaReading,
+  notSharedText,
   ownPlanLines,
   planMeterText,
   planModelUsage,
@@ -474,11 +474,11 @@ describe("the viewer's own logins of one account are one row (IA e uso › Conta
   });
 });
 
-describe("the quota per model of a plan whose models have limits of their own (#320)", () => {
+describe("the quota per model of a plan whose models have limits of their own", () => {
   const NOW = new Date("2026-11-13T12:00:00.000Z");
   const LATER = "2026-11-14T18:00:00.000Z";
   const words: Record<string, string> = {
-    "usageViews.models.noReading": "No quota reading",
+    "aiAccounts.usage.notShared": "{{maker}} doesn't share usage here.",
     "usageViews.models.exhausted": "No quota left · resets {{when}}",
     "usageViews.models.exhaustedUnknown": "No quota left",
     "usageViews.models.off": "Turned off",
@@ -530,15 +530,15 @@ describe("the quota per model of a plan whose models have limits of their own (#
     expect(rows.map((r) => r.text).join(" ")).not.toContain("%");
   });
 
-  test("a plan with no quota source says so; another plan or no plan invents nothing", () => {
-    // MiniMax publishes no usage endpoint (`plans.ts`): nothing to list, and the app says it has no reading.
-    expect(noQuotaReading("minimax")).toBe(true);
+  test("a plan with no usage source names its maker; another plan or no plan invents nothing", () => {
+    // MiniMax publishes no usage endpoint (`plans.ts`): nothing to list, and the line says whose usage it is.
+    expect(notSharedText(t, "minimax")).toBe("MiniMax doesn't share usage here.");
     expect(
       planModelUsage(t, "en", withModels({ "glm-5.3": { at: NOW.toISOString(), off: true } }), "minimax", NOW),
     ).toEqual([]);
     // Plans we do read, and a computer's own sign-in (its CLI reports it), aren't "no reading".
-    expect(noQuotaReading("opencode")).toBe(false);
-    expect(noQuotaReading(null)).toBe(false);
+    expect(notSharedText(t, "opencode")).toBeNull();
+    expect(notSharedText(t, null)).toBeNull();
     expect(planModelUsage(t, "en", withModels({ "glm-5.3": { at: NOW.toISOString() } }), null, NOW)).toEqual([]);
   });
 });

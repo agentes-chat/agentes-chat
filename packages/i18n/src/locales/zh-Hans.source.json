@@ -45640,9 +45640,6 @@
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
   },
-  "usageViews.models.noReading": {
-    "value": "No quota reading"
-  },
   "usageViews.models.exhausted": {
     "value": "No quota left · resets {{when}}"
   },

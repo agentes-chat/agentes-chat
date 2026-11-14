@@ -12,7 +12,7 @@ export {
   groupUsageAccounts,
   loginsText,
   modelLimitText,
-  noQuotaReading,
+  notSharedText,
   noWindowsText,
   ownPlanLines,
   partedUsage,

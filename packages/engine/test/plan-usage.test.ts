@@ -308,7 +308,7 @@ test("parts: use from before a window started stays out of it; a model without a
   ]);
 });
 
-test("a plan's models at a limit of their own reach the usage views, and only those that still hold (#320)", async () => {
+test("a plan's models at a limit of their own reach the usage views, and only those that still hold", async () => {
   const { machineId } = await scene();
   const at = new Date().toISOString();
   const live = hours(48);

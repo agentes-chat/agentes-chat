@@ -117,7 +117,7 @@ describe("IA e uso: the viewer's own accounts", () => {
     expect(mm?.querySelector(".plan-row__body")?.textContent).toBe("");
     await opened(mm);
     expect(mm?.textContent).toContain("chave …MnOp");
-    expect(mm?.textContent).toContain("Sem leitura de quota");
+    expect(mm?.textContent).toContain("MiniMax não mostra o uso por aqui.");
     expect(mm?.querySelector('[data-mark="minimax"]')).not.toBeNull();
     expect(within(mm as HTMLElement).getByRole("button", { name: "Trocar a chave" })).toBeTruthy();
     expect(screen().queryByRole("region", { name: "Chaves de provedor" })).toBeNull();

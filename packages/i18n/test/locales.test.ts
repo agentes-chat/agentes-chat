@@ -46,9 +46,8 @@ describe("the check itself", () => {
   });
 });
 
-describe("the quota per model's words (#320)", () => {
+describe("the quota per model's words", () => {
   const KEYS = [
-    "usageViews.models.noReading",
     "usageViews.models.exhausted",
     "usageViews.models.exhaustedUnknown",
     "usageViews.models.off",

@@ -16181,7 +16181,6 @@
     "noWindows": "El límite aparece cuando esta cuenta se vuelva a usar.",
     "unused": "Ningún agente usa esta cuenta.",
     "models": {
-      "noReading": "Sin lectura de cuota",
       "exhausted": "Sin cuota · se renueva {{when}}",
       "exhaustedUnknown": "Sin cuota",
       "off": "Desactivado",

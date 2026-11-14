@@ -359,7 +359,7 @@ describe("IA e uso › Contas: the quota per model", () => {
     return row;
   };
 
-  test("one line per model at a limit of its own inside the account's row (#320)", async () => {
+  test("one line per model at a limit of its own inside the account's row", async () => {
     await go("settings/usage", onPlans(), [OPENCODE]);
     const row = await openRow("OpenCode");
     const rows = [...row.querySelectorAll(".plan-model")].map((r) => [
@@ -368,10 +368,10 @@ describe("IA e uso › Contas: the quota per model", () => {
     ]);
     expect(rows.map((r) => r[0])).toEqual(["MiniMax M3", "GLM-5.3"]);
     expect(rows[0]?.[1]).toBe("Desligado");
-    expect(rows[1]?.[1]).toMatch(/^Sem quota · renova /);
+    expect(rows[1]?.[1]).toMatch(/^Sem cota · renova /);
   });
 
-  test("an account whose plan has no quota source says so, never a number (#320)", async () => {
+  test("an account whose plan's maker shares no usage names the maker, never a number", async () => {
     const minimax: AiAccounts["accounts"][number] = {
       ...TEAM,
       id: "acct_mm",
@@ -383,7 +383,7 @@ describe("IA e uso › Contas: the quota per model", () => {
     };
     await go("settings/usage", onPlans(), [minimax]);
     const row = await openRow("MiniMax");
-    expect(row.textContent).toContain("Sem leitura de quota");
+    expect(row.textContent).toContain("MiniMax não mostra o uso por aqui.");
     expect(row.textContent).not.toContain("%");
   });
 });

@@ -157,14 +157,13 @@ export function planModelUsage(
 }
 
 /**
- * Nothing reads this plan's quota: its maker has no usage endpoint we can read (`plans.ts` `usage`), as with MiniMax.
- * The app says so rather than showing a number nobody read. False for a plan we read, and for no plan at all (a
- * computer's own sign-in, which its CLI reports).
+ * "MiniMax não mostra o uso por aqui": the plan's maker has no usage endpoint we can read (`plans.ts` `usage`). Null
+ * for a plan we read, and for no plan at all (a computer's own sign-in, which its CLI reports).
  */
-export const noQuotaReading = (provider: string | null | undefined): boolean => {
+export function notSharedText(t: TFunction, provider: string | null | undefined): string | null {
   const plan = planOf(provider);
-  return plan !== undefined && plan.usage === undefined;
-};
+  return plan && !plan.usage ? t("aiAccounts.usage.notShared", { maker: plan.maker }) : null;
+}
 
 /**
  * A model at a limit of its own, in words (`modelLimitOf`'s): the region it needs, its account with no subscription,
@@ -569,11 +568,11 @@ export const accountName = (t: TFunction, a: Pick<PlanAccountInfo, "label" | "ma
 export const brandOf = (a: Pick<PlanAccountInfo, "kind" | "provider">) =>
   planOf(a.provider)?.maker ?? brainName(a.kind);
 
-/** Why an account shows no windows: nothing reads its plan's quota, nobody used it yet, or nobody uses it. */
+/** Why an account shows no windows: its maker doesn't tell them here, nobody used it yet, or nobody uses it. */
 export function noWindowsText(t: TFunction, account: Pick<PlanAccountUsage, "provider" | "agents">) {
-  const plan = planOf(account.provider);
-  if (plan && !plan.usage) return t("usageViews.models.noReading");
-  return account.agents.length ? t("usageViews.noWindows") : t("usageViews.unused");
+  return (
+    notSharedText(t, account.provider) ?? (account.agents.length ? t("usageViews.noWindows") : t("usageViews.unused"))
+  );
 }
 
 /** Where an agent's tokens went, by name: the account, "API", a removed account or the plan before accounts were recorded. */

@@ -15255,7 +15255,6 @@
     "noWindows": "再次使用此账号后会显示限额。",
     "unused": "没有智能体使用此账号。",
     "models": {
-      "noReading": "无法读取配额",
       "exhausted": "配额已用完 · {{when}}重置",
       "exhaustedUnknown": "配额已用完",
       "off": "已关闭",

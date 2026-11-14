@@ -6,9 +6,9 @@
 .plan-models {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  column-gap: 12px;
-  row-gap: 4px;
-  margin: 6px 0 2px;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  margin: var(--space-1) 0 0;
   font-size: 13px;
   line-height: 18px;
 }
@@ -16,17 +16,14 @@
   display: contents;
 }
 .plan-model__name {
-  color: var(--ink);
+  color: var(--ink-muted);
 }
 .plan-model__text {
   color: var(--danger);
   font-size: 12.5px;
 }
-.plan-model[data-level="limited"] .plan-model__name {
-  color: var(--ink-muted);
-}
 .plan-models__none {
-  margin: 6px 0 2px;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
   font-size: 13.5px;
 }
