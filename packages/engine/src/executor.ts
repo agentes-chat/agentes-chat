@@ -1018,6 +1018,9 @@ const toolResultFor = (approval: Approval | undefined, by?: string | null): { co
  */
 export const OUTAGE_PARK = { ladderMinutes: [2, 15, 30, 60], maxMs: 24 * 60 * 60_000, tries: 4 } as const;
 
+/** The job that resumes a run parked on an outage, once per park (`parkOutage`). */
+export const outageJobKey = (runId: string, waitId: string) => `agent_run.execute:${runId}:outage:${waitId}`;
+
 type RunJobOptions = {
   finalAttempt: boolean;
   wait?: string;
@@ -2441,6 +2444,13 @@ async function executeRunInner(
     const minutes = line && people ? Math.min(step, KEY_LINE_PERSON_MINUTES) : step;
     const at = Date.now() + minutes * 60_000;
     const noteId = t.outage?.noteId;
+    // Woken before its resume (its computer back, a person's message): that resume is replaced, never one more.
+    const before = t.outage?.waitId;
+    if (before) {
+      await db
+        .delete(outbox)
+        .where(and(eq(outbox.dedupeKey, outageJobKey(run.id, before)), eq(outbox.status, "pending")));
+    }
     t.outage = { since, n: n + 1, waitId, at, ...(noteId ? { noteId } : {}), ...(line ? { line, people } : {}) };
     // The computer failing on its own waits on the same ladder as a wait for that computer: the apps say it waits for
     // its computer, and the computer coming back resumes it (`resumeRunsWaitingForMachine`).
@@ -2482,7 +2492,7 @@ async function executeRunInner(
       orgId: run.orgId,
       kind: "agent_run.execute",
       payload: { runId: run.id, wait: waitId },
-      dedupeKey: `agent_run.execute:${run.id}:outage:${waitId}`,
+      dedupeKey: outageJobKey(run.id, waitId),
       runAt: new Date(at),
       maxAttempts: 4,
     });
@@ -4582,11 +4592,10 @@ async function executeRunInner(
           computerTurns++;
           nextPrompt = null;
           carried = null;
-          // The account it ran with (ADR 0041): when it was last used, after the turn.
+          // The account it ran with (ADR 0041): when it was last used and last answered, after the turn.
           const account = turnPlan.account;
           if (account && computerTurns === 1) {
-            const succeeded = turnPlan.kind === "claude_code";
-            later(() => touchMachineAccount(db, run.orgId, account.id, { succeeded }));
+            later(() => touchMachineAccount(db, run.orgId, account.id));
           }
           // A turn cut off by its computer is finished now, and one that found room ends that wait.
           delete transcript.interruptedTurn;
