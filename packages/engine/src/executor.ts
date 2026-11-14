@@ -734,11 +734,18 @@ export interface Transcript {
   /**
    * The computer dropped in the middle of a computer brain's turn: the turn is sent again to the same
    * computer once it is back (its session resumes), told which tools already ran so none is repeated.
-   * `prompt`: what the interrupted turn was asked; `drops`: how many times this run was cut off;
-   * `cause`: `restart` when our server stopped in the middle of the turn, not the computer; `plan_limit` when the
+   * `prompt`: what the interrupted turn was asked; `drops`: how many times this run was cut off after its turn said or
+   * did something; `early`: cut before that, with nothing to redo (`MAX_EARLY_COMPUTER_DROPS`); `cause`: `restart`
+   * when our server stopped in the middle of the turn, not the computer; `plan_limit` when the
    * plan refused the rest of the turn (never one of the computer's drops).
    */
-  interruptedTurn?: { prompt: string; executed: string[]; drops: number; cause?: "restart" | "plan_limit" };
+  interruptedTurn?: {
+    prompt: string;
+    executed: string[];
+    drops: number;
+    early?: number;
+    cause?: "restart" | "plan_limit";
+  };
   /** What the computer brain's turn under way was asked: a turn cut by a crash is sent again with it. */
   turnPrompt?: string;
   /**
@@ -847,6 +854,12 @@ export const COMPUTER_DROP_GRACE_MS = 2 * 60_000;
 export const PLAN_LIMIT_GRACE_MS = 2 * 60_000;
 /** A run resumes on its computer after this many drops at most; then it ends like any failed turn. */
 export const MAX_COMPUTER_DROPS = 3;
+/**
+ * Drops before the turn said or did anything don't count toward `MAX_COMPUTER_DROPS` (a computer restarting or out of
+ * memory cuts every turn it is sent, and nothing would be redone): after this many of them the run ends anyway, so a
+ * computer that keeps falling over can't keep a run going forever.
+ */
+export const MAX_EARLY_COMPUTER_DROPS = 10;
 /**
  * How often a run whose computer had no room for its turn asks again (the runner admits turns by room). It asks
  * until it runs: long work (ADR 0121) wakes through agent turns, and a dropped turn could end it halfway.
@@ -3597,7 +3610,8 @@ async function executeRunInner(
    * back (`resumeRunsWaitingForMachine`, or right away when it already is). Still away after the grace:
    * the next attempt finds it unavailable and says so ("I'll answer when it's back"). A drop caused by
    * our own server stopping (`serverStop`) isn't one of the computer's: it never counts toward the limit,
-   * and the turn sent again reads that the server restarted.
+   * and the turn sent again reads that the server restarted. One before the turn said or did anything (`early`)
+   * counts toward its own, larger limit only.
    */
   const waitForDroppedComputer = async (
     from: BrainKind,
@@ -3605,14 +3619,17 @@ async function executeRunInner(
     prompt: string,
     executed: string[],
     serverStop: boolean,
+    early: boolean,
   ) => {
     await deferred;
     const t = transcript as Transcript;
     const prev = t.interruptedTurn;
+    const earlyDrops = (prev?.early ?? 0) + (early && !serverStop ? 1 : 0);
     t.interruptedTurn = {
       prompt: prev?.prompt ?? prompt,
       executed: [...new Set([...(prev?.executed ?? []), ...executed])],
-      drops: (prev?.drops ?? 0) + (serverStop ? 0 : 1),
+      drops: (prev?.drops ?? 0) + (serverStop || early ? 0 : 1),
+      ...(earlyDrops > 0 ? { early: earlyDrops } : {}),
       ...(serverStop ? { cause: "restart" as const } : {}),
     };
     const waitId = Bun.randomUUIDv7();
@@ -4670,14 +4687,17 @@ async function executeRunInner(
           const executed = await executedSince(db, run.id, turnStepSeq, executedNow);
           // The computer dropped mid-turn: the turn resumes there when it is back (its session keeps what it did).
           const machineId = turnPlan.session?.machineId;
-          if (
-            machineId &&
-            error instanceof BrainFailure &&
-            error.code === "machine_offline" &&
-            (error.serverStop || (transcript.interruptedTurn?.drops ?? 0) < MAX_COMPUTER_DROPS)
-          ) {
-            const labels = executed.map((c) => c.label);
-            return waitForDroppedComputer(turnPlan.kind, machineId, prompt, labels, error.serverStop);
+          if (machineId && error instanceof BrainFailure && error.code === "machine_offline") {
+            const early = executed.length === 0 && !deltas.text();
+            const cut = transcript.interruptedTurn;
+            if (
+              error.serverStop ||
+              (early ? (cut?.early ?? 0) < MAX_EARLY_COMPUTER_DROPS : (cut?.drops ?? 0) < MAX_COMPUTER_DROPS)
+            ) {
+              const labels = executed.map((c) => c.label);
+              return waitForDroppedComputer(turnPlan.kind, machineId, prompt, labels, error.serverStop, early);
+            }
+            if (early) return fail(`brain_unavailable: ${error.message}`, { code: error.code, detail: error.message });
           }
           // The folder its session works in isn't on the computer anymore: every later turn would be refused the
           // same way. A fresh session takes the turn in the agent's own folder, told the one before was lost. A
@@ -4706,6 +4726,7 @@ async function executeRunInner(
               prompt: prev?.prompt ?? prompt,
               executed: [...new Set([...(prev?.executed ?? []), ...executed.map((c) => c.label)])],
               drops: prev?.drops ?? 0,
+              ...(prev?.early ? { early: prev.early } : {}),
               cause: "plan_limit",
             };
             return waitForUsage({ code: "plan_limit", message: error.message, ...(await refusalOf(machineId, error)) });

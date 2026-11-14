@@ -56,6 +56,7 @@ import {
   listWorkingRuns,
   loadAgentStatuses,
   MAX_COMPUTER_DROPS,
+  MAX_EARLY_COMPUTER_DROPS,
   type MachineStatus,
   notePlanLimit,
   OUTAGE_PARK,
@@ -2332,6 +2333,72 @@ test("drops caused by our own server stopping aren't the computer's: the turn re
   expect(drops.filter((s) => s.data.reason === "brain_dropped" && s.data.serverStop === true)).toHaveLength(
     MAX_COMPUTER_DROPS + 1,
   );
+});
+
+const offline = {
+  type: "error",
+  code: "machine_offline",
+  message: "The computer MacBook is offline.",
+  retryable: true,
+} as const;
+
+test("drops before the turn said or did anything don't use up the limit: the run goes on past it", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain((n) =>
+    n <= MAX_COMPUTER_DROPS ? [offline] : [{ type: "done", text: "Pronto." }],
+  );
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  expect((await f.db.select().from(schema.agentRuns))[0]?.status).toBe("done");
+  expect(seen.length).toBe(MAX_COMPUTER_DROPS + 2);
+  expect((await timeline(f)).map((m) => m.body)).toEqual(["@dev oi", "Pronto."]);
+});
+
+test("drops after the turn ran something still count: past the limit the run ends on what it did", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(async function* (n) {
+    yield {
+      type: "tool_call",
+      id: `b-${n}`,
+      name: "Bash",
+      input: { command: `step ${n}` },
+      executed: { content: "ok" },
+    };
+    yield offline;
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev publica");
+  await drainOutbox(f.db, handlers);
+  expect(seen.length).toBe(MAX_COMPUTER_DROPS + 1);
+  expect((await timeline(f)).at(-1)?.meta.brainInterrupted).toMatchObject({ code: "machine_offline" });
+});
+
+test("a computer that keeps dropping every turn before it starts: the run ends after the early drops' limit", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [offline]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("failed");
+  expect(run?.error).toStartWith("brain_unavailable:");
+  expect(seen.length).toBe(MAX_EARLY_COMPUTER_DROPS + 1);
 });
 
 test("a message to a run parked for its computer: looked at again now; resumes with it, or parks again quietly", async () => {
